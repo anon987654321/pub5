@@ -1,0 +1,167 @@
+/* Shared empty state — shared/_empty_state.html.erb + legacy .empty-state markup */
+
+/* Separation is space, not a box border (operator 2026-07-28). */
+.empty,
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2xs, 0.25rem);
+  padding: var(--space-6, 2rem) var(--space-4, 1rem);
+  text-align: center;
+  border: 0;
+  border-radius: var(--radius-md, 12px);
+  max-width: 28rem;
+  margin-inline: auto;
+  color: var(--text-secondary, var(--text-dim));
+  font-size: var(--text-base);
+  line-height: 1.5;
+  background: transparent;
+}
+
+.empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-block-end: var(--space-2xs, 0.25rem);
+  border: 0;
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--hover-subtle, color-mix(in srgb, var(--text) 6%, transparent));
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--text-secondary, var(--text-dim));
+  opacity: 0.85;
+}
+
+/* Legacy chrome glyph when no .empty-state-icon child */
+.empty-state:not(:has(.empty-state-icon))::before {
+  content: "○";
+  display: grid;
+  place-items: center;
+  margin: 0 auto var(--space-2xs, 0.25rem);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--hover-subtle, color-mix(in srgb, var(--text) 6%, transparent));
+  font-size: var(--text-xs);
+  color: var(--text-secondary, var(--text-dim));
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: var(--text-title, 1.25rem);
+  font-weight: var(--weight-bold);
+  font-family: var(--font);
+  color: var(--text, var(--text));
+  letter-spacing: -0.01em;
+}
+
+.empty-state-body,
+.empty-state p {
+  margin: 0;
+  max-width: 28em;
+  color: var(--text-secondary, var(--text-dim));
+}
+
+/* :not(.btn) because this rule is more specific (0,1,1) than .btn-primary
+   (0,1,0), so it captured the CTA's colour while .btn-primary kept supplying the
+   background: the button painted --accent (#f2f2f2) on --text (#e0e0e0), a
+   contrast ratio of 1.17. The label was there and unreadable. Prose links keep
+   the accent; anything styled as a button keeps the colour its own rule set. */
+.empty-state a:not(.btn) {
+  color: var(--accent, var(--accent));
+  font-weight: var(--weight-bold);
+}
+
+.empty-state .btn,
+.empty-state-action,
+.empty-state-actions {
+  margin-block-start: var(--space-3, 0.75rem);
+}
+
+.empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  justify-content: center;
+}
+
+/* bsdports CRT: zero radius, mono */
+body.wscons .empty-state,
+body[data-theme="wscons"] .empty-state,
+:root:has(body.bsdports) .empty-state {
+  border-radius: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  background: transparent;
+}
+
+/* Search skeleton (live_search loading) */
+.search-skeleton {
+  display: grid;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+}
+
+.search-skeleton-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: var(--space-3, 0.75rem);
+  align-items: start;
+  padding-block: var(--space-2, 0.5rem);
+  border-bottom: 0;
+}
+
+.search-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill, 9999px);
+}
+
+.search-skeleton-lines {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.search-skeleton-line {
+  height: 0.75rem;
+  width: 100%;
+}
+
+.search-skeleton-line--short { width: 40%; }
+.search-skeleton-line--mid { width: 70%; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shared skeleton if app did not define one */
+.skeleton {
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(
+    90deg,
+    var(--hover-subtle, rgba(216, 214, 224, 0.03)) 0%,
+    var(--hover, rgba(216, 214, 224, 0.1)) 50%,
+    var(--hover-subtle, rgba(216, 214, 224, 0.03)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shared-skeleton-shimmer 1.2s var(--ease-in-out) infinite;
+  min-height: 1rem;
+}
+
+@keyframes shared-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

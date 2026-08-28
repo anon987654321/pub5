@@ -1,0 +1,260 @@
+# Shared social chrome — loaded by the pub4-shared engine for every host app.
+# Apps can override any key in their own config/locales.
+en:
+  actions:
+    copy: "Copy"
+    copied: "Copied"
+    views:
+      one: "1 view"
+      other: "%{count} views"
+    copyable_text: "Text to copy"
+    show: "Show"
+    hide: "Hide"
+    save: "Save"
+    send: "Send"
+    cancel: "Cancel"
+    delete: "Delete"
+    remove: "Remove"
+    update: "Update"
+    create: "Create"
+    follow: "Follow"
+    unfollow: "Unfollow"
+    like: "Like"
+    unlike: "Unlike"
+    report: "Report"
+    message: "Message"
+    mark_read: "Mark read"
+    confirm_delete: "Delete?"
+    search: "Search"
+    accept: "Accept"
+    block: "Block"
+    read_more: "Read more"
+    read_less: "Read less"
+    more: "More"
+  comments:
+    placeholder: "What do you think?"
+    submit: "Comment"
+    reply_placeholder: "Reply…"
+    reply: "Reply"
+    title: "Comments"
+    back: "Back"
+    empty_body: "Be the first to reply — guests can comment without an account."
+    write_reply: "Write a reply"
+    ai_summary: "Show AI summary (via MASTER)"
+    master_summary: "MASTER summary:"
+
+  chat:
+    # The eight strings the ambient chat widget shows while it is asking for, or
+    # failing to get, a location. They lived only as t(..., default: "English")
+    # fallbacks in the view, so amber and bsdports rendered the whole recovery
+    # path in English over an nb page — and a `default:` also suppresses
+    # raise_on_missing_translations, so nothing could report it.
+    nearby_tab: "nearby"
+    status_asking: "Asking for location…"
+    status_denied: "Location blocked — staying in #brgen. Enable location in the browser for #nearby."
+    status_timeout: "Location timed out — staying in #brgen."
+    status_unavailable: "Location unavailable — staying in #brgen."
+    status_blocked: "This page cannot read location — #brgen still works."
+    status_server: "Could not save location — try again."
+    status_network: "Network error saving location — try again."
+    title: "chat"
+    close: "Close"
+    loading: "Loading…"
+    dm_placeholder: "Send a message…"
+    message_label: "Message"
+    anon: "anon"
+    open_brgen: "Open Brgen chat"
+    open_brgen_channel: "Open #brgen"
+    on_brgen: "Chat on Brgen"
+    lobby_body: "The city lobby works without GPS."
+    open_inbox: "Open your inbox to read and send messages on this app."
+    open_messages: "Open messages"
+    sign_in_inbox: "Sign in for this app\u2019s inbox, or chat anonymously on Brgen."
+    sending: "sending\u2026"
+    send_failed: "not sent \u2014 tap to retry"
+  account:
+    deletion_scheduled: "Deletion scheduled for %{on}."
+    cancel_deletion: "Cancel deletion"
+    export: "Export data"
+    two_factor: "Two-factor setup"
+    delete: "Delete account"
+    delete_confirm: "Delete account in 30 days?"
+  auth:
+    enable_2fa: "Enable 2FA"
+    verification_code: "Verification code"
+    # Mirrors social.nb.yml. See there for why these live in the engine.
+    options: "Sign in options"
+    or_email: "or email"
+    with_github: "Sign in with GitHub"
+    with_google: "Sign in with Google"
+    with_snapchat: "Sign in with Snapchat"
+    with_vipps: "Sign in with Vipps"
+    two_factor_lead: "Scan the QR code or enter the secret in your authenticator app."
+    magic_link: "Email me a sign-in link"
+    magic_link_send: "Send the link"
+  # Live regions in shared/_live_search_form and autosave_controller. bsdports had no copy of these and shipped "translation missing" into the announced values.
+  status:
+    updating_results: "Updating results…"
+    results_updated: "Results updated"
+    search_failed: "Search could not be completed"
+    saving: "Saving…"
+    saved: "Saved"
+    saved_locally: "Saved locally"
+    restored: "Restored"
+    loading_more: "Loading more…"
+    loading_results: "Loading results…"
+  theme:
+    region: "Theme"
+    toggle: "Toggle light theme"
+  master:
+    title: "AI"
+    open: "Open"
+    open_full: "Open AI"
+    embed_heading: "AI assistant"
+  messages:
+    # The day-break separator in a conversation log. Rendered by
+    # conversation_log_controller, which cannot reach I18n, so the strings are
+    # handed to it as Stimulus values.
+    today: Today
+    yesterday: Yesterday
+    # shared/_action_bar renders on every host app but these two keys only
+    # existed in brgen's own locale, so amber shipped "translation missing" as
+    # the aria-label on its reply and share buttons — the same gap the comment
+    # above the a11y block describes for bsdports.
+    reply: "Reply"
+    title: "Messages"
+    choose_recipient: "Choose recipient"
+    to: "To %{name}"
+    from: "From %{name}"
+    unread: "was unread"
+    read: "read"
+    inbox_clear: "Inbox clear."
+    unread_count:
+      one: "%{count} unread message — marked read when you open this page."
+      other: "%{count} unread messages — marked read when you open this page."
+    empty_body: "New message, then search for whoever you want to write to."
+    connections: "Connections"
+  newsletter:
+    email_placeholder: "your@email.com"
+    heading: "The city letter"
+    blurb: "One email a week. Curated, not cluttered. Unsubscribe any time."
+    marketing_opt_in: "Send me partner offers and sponsored picks (optional)"
+    subscribe: "Subscribe"
+    unavailable: "Newsletter signup opens after email routes are configured for this app."
+    unsubscribe: "Unsubscribe"
+    affiliate_disclosure: "Some links are affiliate links. We may earn a commission."
+  # Plural, and separate from post: — shared/_action_bar asks for posts.share.
+  posts:
+    share: "Share"
+
+  post:
+    submit: "Post"
+    share_look: "Share a look"
+    body_label: "What are you wearing?"
+    body_placeholder: "Share your outfit…"
+    tag_outfit: "Tag an outfit (optional)"
+    tag_item: "Tag an item (optional)"
+    outfit_label: "Outfit"
+    item_label: "Item"
+    like_count: "♥ %{count}"
+    by_author: "Post by %{name}"
+    comment_aria: "Comment, %{count} comments"
+    repost: "Repost"
+    vote: "Vote"
+    vote_aria: "Vote, score %{score}"
+    more_actions: "More actions"
+    copy_link: "Copy link"
+    view: "View post"
+    share: "Share post"
+    share_short: "Share"
+  a11y:
+    skip_to_content: "Skip to main content"
+  # Engine-owned keys. Namespaced under shared: so an app can keep its own
+  # flash: block without colliding, and because the call sites say
+  # t("shared.flash.…") — appended at top level they resolved to nothing at all.
+  shared:
+    advertisement: "Advertisement"
+    reported: "Reported"
+    view: "View"
+    read_more: "Read more"
+    read_less: "Read less"
+    back: "Back"
+    edit: "Edit"
+    delete: "Delete"
+    confirm: "Are you sure?"
+    errors: "Please review the form"
+    # See the nb file for why this is a whole phrase and not a suffix.
+    time_ago: "%{time} ago"
+    # Mirrors social.nb.yml's flash: block. Both files carry the same key set, and
+    # RAILS/test/app_flash_i18n_test.rb fails if one gains a key the other lacks.
+    flash:
+      account_deletion_scheduled: "Account scheduled for deletion in 30 days. Export emailed if configured."
+      account_deletion_cancelled: "Account deletion cancelled."
+      account_scheduled_for_deletion: "This account is scheduled for deletion."
+      sign_in_required: "Sign in to continue."
+      magic_link_sent: "If that address has an account, a sign-in link is on its way."
+      magic_link_invalid: "That sign-in link has expired or been used already."
+      rate_limited: "Try again later."
+      credentials_invalid: "Try another email address or password."
+      password_reset_sent: "Password reset instructions sent (if a user with that email address exists)."
+      password_reset_done: "Password has been reset."
+      passwords_did_not_match: "Passwords did not match."
+      password_reset_link_invalid: "Password reset link is invalid or has expired."
+      not_authorized: "You do not have access to this."
+      two_factor_required: "Two-factor verification required."
+      two_factor_enabled: "Two-factor authentication enabled."
+      two_factor_disabled: "Two-factor authentication disabled."
+      invalid_code: "Invalid code."
+      verified: "Verified."
+      oauth_failed: "OAuth sign-in failed."
+      signed_in_with: "Signed in with %{provider}."
+      signed_in_via_master: "Signed in via MASTER."
+      sso_link_invalid: "SSO link expired or invalid."
+      sso_session_failed: "Could not create a session for %{email}."
+      reaction_added: "Reaction added."
+      reaction_removed: "Reaction removed."
+      sent_for_review: "Sent for review."
+    errors_prevented:
+      one: "%{count} issue prevented this from being saved"
+      other: "%{count} issues prevented this from being saved"
+  # Chrome these three apps share. Only brgen carried nb entries for them, so
+  # amber and bsdports rendered the English t() defaults over an nb page.
+  legal:
+    site_id_label: "TradeDoubler Site ID"
+    contact_label: "Contact"
+    affiliate_disclosure: "Some links are affiliate links. We may earn a commission at no extra cost to you."
+    partner_programs: "Partner programs include %{list}."
+    aria: "Legal and information"
+    privacy: "Privacy"
+    terms: "Terms"
+    cookies: "Cookies"
+    accept_terms: "I accept the terms and the privacy policy"
+    accept_age: "I am at least 16 years old"
+    dating_age: "I am at least 18. Dating is only for adults."
+  mailer:
+    password_reset_subject: "Reset your password"
+    verify_email_subject: "Confirm your email"
+    sign_in_link_subject: "Sign-in link"
+    sign_in_link_greeting: "Hi %{name},"
+    sign_in_link_action: "Sign in"
+    sign_in_link_expiry: "The link works once and expires in %{minutes} minutes."
+    sign_in_link_ignore: "If you did not ask for this, ignore this email — nothing has changed."
+  pages:
+    account: "Account"
+    two_factor: "Two-factor authentication"
+  search:
+    query: "Search query"
+    submit: "Search"
+    results_for:
+      one: "%{count} result for “%{query}”"
+      other: "%{count} results for “%{query}”"
+  showcase:
+    devices: "The app on desktop and mobile"
+  # The service worker's offline shell. Rendered by all three apps.
+  offline:
+    badge: "Offline"
+    title: "%{app} is offline"
+    lead: "We’ll show the last cached items from this device when they’re available."
+    retry: "Retry"
+    loading: "Loading cached items…"
+    list_label: "Offline content list"

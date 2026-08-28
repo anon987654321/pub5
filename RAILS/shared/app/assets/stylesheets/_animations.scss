@@ -1,0 +1,33 @@
+// The .animate-* utility classes were deleted 2026-08-22: zero markup ever
+// applied one (css_coverage census) — the flat contract made them dead on
+// arrival. What remains is what other sheets actually cite: slideInRight and
+// expandLayout (zen_shell), shimmer (chrome_surfaces, empty_state), the
+// --delay stagger hook, and the reduced-motion guarantee.
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(0.75rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@keyframes expandLayout {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+[style*="--delay:"] {
+  animation-delay: calc(var(--delay) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

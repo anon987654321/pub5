@@ -1,0 +1,83 @@
+/* MASTER face embed — shared by brgen and amber.
+   Flat, no ornament: a labelled bar over a framed viewport, matching the
+   house flat/brutalist direction rather than a floating card.
+
+   Sizing: the face is a centred head, so it reads badly in a wide letterbox.
+   aspect-ratio gives it a near-square viewport on phones and widens gently on
+   desktop, with a hard max-height so it never pushes the feed below the fold. */
+.ai-embed {
+  /* Fallback is --surface's real dark value (brgen-old-dark-tokens in
+     _dialect_tokens.scss), not #000. #000 matched no definition of --surface
+     anywhere, which is exactly the drift fallback_drift_lint exists to catch —
+     and that failing lint had been blocking every brgen deploy. */
+  background: var(--surface, #1a1a1a);
+}
+
+.ai-embed-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+}
+
+.ai-embed-heading {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--text-secondary);
+}
+
+.ai-embed-open {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-secondary);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--text);
+    text-decoration: underline;
+  }
+}
+
+.ai-embed-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #000; // scan: intentional — the MASTER face renders on black in every theme
+  aspect-ratio: 4 / 3;
+  max-block-size: min(70vh, 560px);
+
+  @media (min-width: 40rem) {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* Bare + big: the brgen front page runs the face as its hero rather than as a
+   labelled widget in the feed. Full-bleed out of main's gutter, near-square on
+   a phone so the head is not letterboxed, and given real height on desktop
+   instead of the 560px cap the in-feed variant uses. */
+.ai-embed--bare {
+  margin-inline: calc(50% - 50vw);
+  background: #000; // scan: intentional — the MASTER face renders on black in every theme
+}
+
+.ai-embed--bare .ai-embed-frame {
+  aspect-ratio: 1 / 1;
+  max-block-size: min(78vh, 720px);
+
+  @media (min-width: 40rem) {
+    aspect-ratio: 21 / 9;
+    max-block-size: min(72vh, 760px);
+  }
+}
+
+/* The face animates continuously; honour the same guard the rest of the shell
+   uses so it does not autoplay motion for users who opted out. */
+@media (prefers-reduced-motion: reduce) {
+  .ai-embed-frame {
+    max-block-size: min(50vh, 420px);
+  }
+}

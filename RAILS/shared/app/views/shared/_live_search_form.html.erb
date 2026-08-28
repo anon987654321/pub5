@@ -1,0 +1,45 @@
+<%# Shared live-search form — Turbo Stream responses via pub4-shared.
+    Surface: vYroQxg .search (yep.com) exact styles. %>
+<div
+  class="search"
+  data-controller="live-search search-focus"
+  role="search"
+  aria-label="<%= label %>"
+  data-action="turbo:submit-end->live-search#complete"
+  data-live-search-updating-value="<%= t("status.updating_results") %>"
+  data-live-search-updated-value="<%= t("status.results_updated") %>"
+  data-live-search-failed-value="<%= t("status.search_failed") %>"
+>
+  <%= form_with url: url, method: :get, data: {
+        controller: "auto-submit",
+        action: "change->auto-submit#submit",
+        turbo_stream: true,
+        live_search_target: "form"
+      } do |f| %>
+    <div class="search-form">
+      <%= f.search_field :q,
+            value: query,
+            placeholder: placeholder,
+            data: {
+              live_search_target: "input",
+              action: "input->live-search#input focus->search-focus#focus blur->search-focus#blur"
+            },
+            aria: { label: t("search.query", default: "Search query"), controls: "live_search_results" } %>
+      <% if local_assigns[:filter_fields_proc] %>
+        <%= filter_fields_proc.call(f) %>
+      <% elsif local_assigns[:extra_fields].present? %>
+        <%= extra_fields %>
+      <% end %>
+      <% if local_assigns.fetch(:show_submit, true) %>
+        <%= f.submit t("search.submit", default: "Search"), class: local_assigns.fetch(:submit_class, "btn btn-sm"), aria: { label: t("search.submit", default: "Search") } %>
+      <% end %>
+    </div>
+  <% end %>
+  <span class="visually-hidden" role="status" aria-live="polite" data-live-search-target="status"></span>
+</div>
+
+<div id="search_suggestions">
+  <% if local_assigns.fetch(:show_suggestions, true) && respond_to?(:search_suggestions) && search_suggestions.present? %>
+    <%= render "shared/search_suggestions", suggestions: search_suggestions %>
+  <% end %>
+</div>

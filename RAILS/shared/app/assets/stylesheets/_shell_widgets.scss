@@ -1,0 +1,175 @@
+@use "nearby_chat_widget";
+@use "install_prompt";
+
+.sidebar-card {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar-card h3 {
+  font-size: var(--text-title, 1.25rem);
+  font-weight: var(--weight-heavy);
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  font-family: var(--font);
+}
+
+.sidebar-card ul {
+  list-style: none;
+}
+
+.sidebar-card li {
+  padding: 0.75rem 0; /* 12px — eight_px_rhythm */
+}
+
+.widget-search {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--search-bg);
+  border-radius: var(--radius-pill);
+  padding: 0.75rem 1rem; /* 12/16 */
+  margin-bottom: 1rem;
+  transition: background var(--transition-fast, 180ms) var(--ease-out);
+}
+
+.widget-search:focus-within {
+  background: var(--hover);
+}
+
+.widget-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: inherit;
+  width: 100%;
+  /* The pill around this is padded to 44px, but the input inside it is what
+     takes the tap, and rendered_geometry measured that at 202x38 against
+     design_rules.ux_laws.fitts.target_min_px of 44. Padding on a parent does
+     not enlarge a child's hit area. */
+  min-height: var(--tap-min);
+}
+
+.widget-search input::placeholder {
+  color: var(--text-secondary);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem; /* 12/16 — eight_px_rhythm */
+  min-height: 48px; /* design_rules eight_px_rhythm (was 53px off-grid) */
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+
+.page-header h1 {
+  font-size: var(--text-title, 1.25rem);
+  font-weight: var(--weight-heavy);
+  font-family: var(--font);
+  letter-spacing: -0.02em;
+}
+
+.flash-notice {
+  background: var(--hover);
+  color: var(--text);
+  border-radius: var(--radius-card);
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 1rem;
+}
+
+.flash-alert {
+  background: var(--hover-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-card);
+  padding: 0.75rem 16px;
+  margin: 0.75rem 16px;
+}
+
+.theme-toggle-input {
+  position: fixed;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Theme control — icon only, no circular sphere/chip behind it. The padding
+   is the invisible half of --tap-min: it paints nothing (no background, no
+   border) and the inset compensation keeps the icon exactly where it was,
+   while the corner hit area reaches 44px (probe: 20px icon, 13px input). */
+.theme-toggle {
+  position: fixed;
+  padding: 12px;
+  /* No -12px here. The inline axis compensates for the transparent padding so the
+     icon still sits --chrome-inset from the edge; the block axis must not, because
+     what this has to line up with is the bar, not the top of the screen.
+     .brgen-logo-mark is the same --tap-min box at this same top and centres on 33;
+     subtracting the padding put this one at -1.4 and centred it on 21, 12px above
+     everything beside it. The icon was there before the padding was added too — the
+     compensation preserved the misalignment rather than causing it. */
+  top: calc(var(--chrome-inset-block, 8px) + var(--safe-top, 0px) + var(--top-band-nudge, 0px));
+  inset-inline-end: calc(var(--chrome-inset, 12px) + var(--safe-right, 0px) - 12px);
+  z-index: var(--z-chrome-toggle);
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  /* autofix: removed box-shadow (flat UI) */
+  outline: none !important;
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity var(--transition-fast, 180ms) var(--ease-out), color var(--transition-fast, 180ms) var(--ease-out);
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  /* autofix: removed box-shadow (flat UI) */
+  opacity: 1;
+  text-decoration: none;
+}
+
+section h2 {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  margin-bottom: var(--sp, 8px);
+  font-family: ui-monospace, monospace;
+}
+
+// Pixel-art framing for avatars/thumbnails — hard edges, no smoothing.
+
+/* Unread state on a notification row: weight plus a leading accent dot —
+   two signals, so the state survives grayscale and colour-blindness alike
+   (visual_contract undefined_class: read/unread had no rule anywhere). */
+article.unread .notification-title-link {
+  font-weight: var(--weight-bold, 700);
+}
+article.unread .notification-title-link::before {
+  content: "";
+  display: inline-block;
+  inline-size: var(--space-2, 0.5rem);
+  block-size: var(--space-2, 0.5rem);
+  margin-inline-end: var(--space-2, 0.5rem);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--accent);
+  vertical-align: middle;
+}
+article.read {
+  color: var(--text-secondary, inherit);
+}

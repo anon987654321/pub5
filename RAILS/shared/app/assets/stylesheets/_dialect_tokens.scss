@@ -1,0 +1,278 @@
+// Parametric x.com tokens — defaults match shared/design_tokens.yml social: palette (R10).
+// Derived hovers use color-mix; hex anchors unchanged for visual parity.
+
+@mixin dark-tokens(
+  $bg: #17161c,
+  $surface: #17161c,
+  $surface-elevated: #211f28,
+  $search-bg: #232030,
+  $text: #d8d6e0,
+  $text-secondary: #b6b3c8,
+  $border: #46435a,
+  $accent: #897dda,
+  $danger: #e46151,
+  $c-text: oklch(86% 0.02 300),
+  $c-accent: oklch(78% 0.10 300),
+  $c-danger: oklch(60% 0.14 35),
+  $c-code: oklch(74% 0.11 275)
+) {
+  --c-text: #{$c-text};
+  --c-accent: #{$c-accent};
+  --bg: #{$bg};
+  --surface: #{$surface};
+  --surface-elevated: #{$surface-elevated};
+  --search-bg: #{$search-bg};
+  --text: #{$text};
+  --text-secondary: #{$text-secondary};
+  --border: #{$border};
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #{$accent};
+  // Ink for anything painting ON --accent. --bg is right for the shared indigo
+  // (5.15:1 dark, 5.81:1 light) and wrong for every brgen vertical accent, which
+  // were tuned to be legible AS ink on a light surface and so are too light to
+  // carry light ink themselves. _vertical_shell.scss overrides this per vertical.
+  --accent-ink: #{$bg};
+  --danger: #{$danger};
+  // --surface2/--text-dim are compat aliases that app-root-tokens also declares
+  // at :root. A custom property holding var(--x) resolves against the element
+  // it is DECLARED on, so the :root copy stays light even where a scoped block
+  // overrides --surface-elevated — which left brgen/maps painting the chat tab
+  // on #eeedf3 while its ink had gone dark (1.23:1). Redeclaring them inside the
+  // dialect makes a scoped @include complete on its own.
+  --surface2: var(--surface-elevated);
+  --text-dim: var(--text-secondary);
+  // --font moved to app-root-tokens. This is a *palette* mixin, and carrying the
+  // typeface in it meant any surface that pinned a palette also reset the
+  // typeface. body.vertical-maps pins dark so its basemap and the shared widgets
+  // agree (see _vertical_maps_shell.scss) and silently got the system stack with
+  // it, overriding brgen's face on that vertical alone. A palette is colour.
+  --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  /* px on purpose, and the one place it has to be. Every rung of the type scale
+     in _tokens.scss is rem, and rem is a multiple of whatever this resolves to,
+     so the scale needs exactly one absolute anchor to be a multiple *of*.
+     Express this in var(--text-base) and it defines itself. */
+  --font-size: 16px;
+  /* Absolute on purpose — ScaleLint absolute_line_height baseline = 1.
+     Unitless 1.25 matches at 16px root, but brgen uses text-lg (~18px) and
+     would open chrome 20→22.5px. PRESERVE until measured pass. */
+  --line-height: 20px; // scale: ok — sole absolute body rhythm anchor
+  /* design_rules typography.hierarchy allows three weights and wants at least
+     200 between them so a step is visible. --weight-bold was 700, which put it
+     100 from --weight-heavy — a difference you cannot see, and the reason the
+     tree had drifted to seven weights hunting for one that read. 600 restores
+     an even 400/600/800 ladder with a real gap at each step. */
+  --weight-normal: 400;
+  --weight-bold: 600;
+  --weight-heavy: 800;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 9999px;
+  --radius-card: 16px;
+  --radius-lg: 16px;
+  --sidebar-width: 275px;
+  --feed-max: 600px;
+}
+
+// Indigo light (not Twitter blue) — matches design_tokens.yml light: palette.
+@mixin light-tokens(
+  $bg: #f7f6fa,
+  $surface: #ffffff,
+  $surface-elevated: #eeedf3,
+  $search-bg: #e8e6ef,
+  $text: #1a1824,
+  $text-secondary: #5c586e,
+  $border: #d4d1de,
+  $accent: #5b4fc4,
+  $danger: #a9483c
+) {
+  --bg: #{$bg};
+  --surface: #{$surface};
+  --surface-elevated: #{$surface-elevated};
+  --search-bg: #{$search-bg};
+  --text: #{$text};
+  --text-secondary: #{$text-secondary};
+  --border: #{$border};
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #{$accent};
+  --accent-ink: #{$bg};
+  --danger: #{$danger};
+  // --surface2/--text-dim are compat aliases that app-root-tokens also declares
+  // at :root. A custom property holding var(--x) resolves against the element
+  // it is DECLARED on, so the :root copy stays light even where a scoped block
+  // overrides --surface-elevated — which left brgen/maps painting the chat tab
+  // on #eeedf3 while its ink had gone dark (1.23:1). Redeclaring them inside the
+  // dialect makes a scoped @include complete on its own.
+  --surface2: var(--surface-elevated);
+  --text-dim: var(--text-secondary);
+}
+
+// Amber luxury dialect (Aesop/Toteme warm paper) — design_tokens.yml luxury:
+@mixin luxury-light-tokens {
+  // White, not the warm off-white this used to carry. Operator decision
+  // 2026-08-18: amber is a white page. The warm cast stays in the elevated
+  // surfaces and the border, which is where it reads as paper rather than as a
+  // tint over everything.
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-elevated: #f0ebe3;
+  --search-bg: #ebe4da;
+  --text: #2c2824;
+  --text-secondary: #6b665f;
+  --border: #e6e0d8;
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  /* Darkened by 2 to clear APCA Lc 75.1 from 74.2 — the only amber colour that
+     failed both contrast models rather than WCAG alone. */
+  --accent: #7c6c53;
+  --danger: #a7473b;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-card: 14px;
+  --radius-lg: 14px;
+}
+
+@mixin luxury-dark-tokens {
+  --bg: #1a1816;
+  --surface: #1a1816;
+  --surface-elevated: #24221f;
+  --search-bg: #2a2622;
+  --text: #e8e4dc;
+  --text-secondary: #8a8278;
+  --border: #3a3630;
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #a38b6f;
+  --danger: #ea6453;
+}
+
+// BRGEN_OLD dark — dark-inverted port of the real 2014 desktop.css/mobile.css
+// (see pub/__OLD_BACKUPS/BRGEN_OLD): true neutral grayscale, zero accent hue,
+// Arial. Bar/chrome sits darker than body, mirroring the original's dark
+// #333 utility bar against a white page — same tonal relationship, extended
+// to the dark end instead of collapsed into it. Kept in sync with
+// design_tokens.yml brgen_old_dark:.
+@mixin brgen-old-dark-tokens {
+  --bg: #000000;
+  --surface: #1a1a1a;
+  --surface-elevated: #1a1a1a;
+  --search-bg: #222222;
+  --text: #e0e0e0;
+  /* #969696 -> #cfcfcf: APCA Lc 44.3 against a 75 floor on #1a1a1a, and it is
+     the single most-repeated contrast finding in the tree (44 sites over four
+     dark grounds). #cfcfcf clears 75 on all four and still sits a clear step
+     under --text #e0e0e0 at Lc 86.5, so secondary text stays secondary. If it
+     reads too bright, #b4b4b4 is the Lc 60 tier. */
+  --text-secondary: #cfcfcf;
+  --border: #333333;
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #f2f2f2;
+  --danger: #e46151;
+  // No --font here. It was `Arial, Helvetica, sans-serif` in both this mixin and
+  // its light twin, which meant the typeface was declared twice, per theme, and
+  // the toggle could change it -- and it silently outranked anything brgen's
+  // :root said, because an @include emits its declarations at the point of
+  // inclusion. brgen now names its typeface once in _root.scss, after the
+  // includes, and the light block inherits it. Both mixins are brgen-only.
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 9999px;
+  --radius-card: 8px;
+  --radius-lg: 8px;
+}
+
+// BRGEN_OLD light — the actual 2014 palette (pub/__OLD_BACKUPS/BRGEN_OLD/
+// app/assets/stylesheets/all.css): `body { color: #222 }` on the browser's
+// plain white, dark #333 utility bar, black (#000) reserved for
+// .has_media_feed only -- not a page background. Same true-grayscale, zero-
+// accent-hue philosophy as brgen-old-dark-tokens, just the light half of it;
+// --accent lands on that same near-black rather than inventing a hue.
+@mixin brgen-old-light-tokens {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-elevated: #f2f2f2;
+  --search-bg: #f0f0f0;
+  --text: #222222;
+/* #666666 -> #545454: the light twin of the #969696 fix in the dark set. On
+   this palette's own #f2f2f2 elevated surface it measured APCA Lc 71.0
+   against a 75 floor, and WCAG 5.13 against the AAA 7.0 style.yml declares.
+   #545454 clears both on all three grounds it lands on (white, #f8f8f8,
+   #f2f2f2) at Lc 86.3/80.6/78.6 and WCAG 7.57, and stays a clear step under
+   --text #222222. It became visible when markedsplass and takeaway were
+   pinned light — before that the gate was measuring them in dark, so this
+   whole palette was reported against grounds it never renders on. */
+--text-secondary: #545454;
+  --border: #d9d9d9;
+  --hover: color-mix(in srgb, var(--text) 8%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #1a1a1a;
+  --danger: #b24c3f;
+  // See the dark twin above: the typeface is declared once, in _root.scss.
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-pill: 9999px;
+  --radius-card: 8px;
+  --radius-lg: 8px;
+}
+
+// Non-token application aliases layered over either dialect theme. The
+// dialect mixins (dark-tokens, light-tokens, brgen-old-dark-tokens, etc.)
+// now set --bg/--text/--accent/etc. directly -- no more --x- prefixed raw
+// layer to alias here. --surface2/--text-dim/--radius stay as compat names
+// for their many existing call sites, now pointing at the renamed sources.
+@mixin app-root-tokens {
+  // The typeface, declared once per app root rather than inside a palette.
+  // Every app takes this default; anything that only pins a palette — a
+  // vertical, a theme toggle — cannot change the face as a side effect.
+  //
+  // system-ui leads. The stack under it is the same one it resolves to, kept
+  // as the fallback chain for engines that predate the keyword: system-ui is
+  // the only entry that reaches the platform UI face on Windows and Android,
+  // where -apple-system means nothing and the browser fell to "Segoe UI" or
+  // Roboto by name.
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  // The wordmark, and only the wordmark. brgen.no and oshlo.no are printed on
+  // stock in Helvetica Neue Pro, so the logotype is a fixed piece of the
+  // identity and not a UI-font decision: it is set in the printed face
+  // wherever the printed face exists, and in a metric-compatible substitute
+  // where it does not. Apple ships Helvetica Neue, most Linux ships Nimbus
+  // Sans (a Helvetica clone), and Arial is metrically identical to Helvetica,
+  // so the mark keeps its width and rhythm on every platform for no bytes.
+  //
+  // The Pro cut itself cannot ship: it is licensed per seat from Monotype and
+  // a webfont licence is a separate purchase. Nothing here downloads a font.
+  --font-brand: "Helvetica Neue", Helvetica, "Nimbus Sans", Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  // Family chrome: same 0.75rem / 44px floor as MASTER face (design_tokens
+  // shared_chrome + face_root.layout). Corner brand, theme toggle, nearby chip
+  // and face HUD insets all read these vars.
+  // px, not rem, and deliberately. brgen sets its root to 18px (the real 2014
+  // mobile.css base), so 0.75rem resolved to 13.5px and put the brand mark at
+  // (13.5, 13.5) and the nav links at 85.5 / 148.38 / 201.66 on every surface —
+  // 60 components painting on fractional pixels, where the compositor resamples
+  // the text and a 1px edge becomes two half-intensity lines. A chrome inset is
+  // a fixed distance from the edge of the screen, not a multiple of the reading
+  // size, so it has no reason to scale with the root in the first place.
+  --chrome-inset: 12px;
+  --tap-min: 44px;
+  --bar-height: 44px;
+  --tab-bar-h: var(--bar-height);
+  --page-gutter: clamp(16px, 5vw, 48px);
+  --feed-max: 600px;
+  --measure-body: 66ch;
+  --surface2: var(--surface-elevated);
+  --text-dim: var(--text-secondary);
+  --radius: var(--radius-card);
+  --sp: 8px;
+  --z-app: var(--z-chrome);
+  --z-nav: var(--z-ui);
+}
