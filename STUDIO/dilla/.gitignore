@@ -1,0 +1,23 @@
+.DS_Store
+
+# A/B comparison renders from master-chain work; regenerate, do not track.
+full_track_*.wav
+full_track_*.wav.quality.json
+
+# Audio is irreplaceable and does not belong in git. Source loops, vocal takes
+# and synthesised drums are on disk and backed up as files; a 4.1 GB .git is
+# already the cost of the ones that got in.
+crate/
+samples/
+project/learnings/vocals/**/*.wav
+*.320kbps.original.mp3
+# A sidecar for a render that is not tracked is not tracked either.
+demo.wav
+demo.wav.dilla
+demo.mp3
+demo.mp3.dilla
+
+# Installed tools. The demucs virtualenv is 23,783 files and was living in
+# scratch/, where its own venv .gitignore happened to cover it -- protection
+# that would not extend to the next tool put beside it.
+tools/
