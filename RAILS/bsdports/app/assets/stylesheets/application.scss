@@ -1,0 +1,521 @@
+@use "stack" as *;
+@use "port_graph";
+@use "brand_clearance";
+@use "shell_widgets";
+@use "dialect_tokens" as x;
+@use "jsfiddle_chrome";
+@use "empty_state";
+@use "offline_page";
+@use "auth_form";
+@use "focus_ring";
+
+// Classes the markup asked for and nothing defined, measured by
+// Pub4::CssCoverageLint 2026-08-11. Last on purpose: these complement the
+// components above rather than competing with them.
+@use "shared_coverage_fills";
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* openbsd_wscons — green terminal identity (UI_REFINEMENTS §E) */
+:root {
+  /* wscons status ambers — stale data warns in the console's own voice. */
+  --status-stale-border: #b7791f;
+  --status-stale-text: #f6c453;
+  @include x.app-root-tokens;
+  --bg: #000000;
+  --surface: #000000;
+  --surface-elevated: #0a140a;
+  --search-bg: #0f1a0f;
+  --text: #63c363;
+  /* Was #3d7a3d, which failed WCAG AA on every surface it sits on: 4.05 on
+     --bg, 3.62 on --surface-elevated, 4.45 on --search-bg, all against the 4.5
+     floor at 10-11px. #499149 clears all three (5.43/4.86/4.62) and stays a
+     dimmer green than --text #63c363, so the two-tier terminal palette holds. */
+  --text-secondary: #499149;
+  --border: #1a3a1a;
+  --hover: rgba(99, 195, 99, 0.1);
+  --accent: #63c363;
+  --danger: #ff6b6b;
+  --font: "JetBrains Mono", ui-monospace, monospace;
+  /* rem (not px) so CRT density keeps auditor body_font_px floor */
+  --font-size: var(--text-xs);
+  --line-height: 1rem;
+  --radius-pill: 0;
+  --radius-card: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --focus-ring: 2px solid var(--accent);
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+}
+
+body {
+  padding-block-start: 64px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+/* Secondary green is meta text. It used to be documented as "non-essential
+   ... (contrast ~3:1)", but the geometry gate treats sub-4.5 body text as a hard
+   accessibility failure regardless of importance, and this class lands on
+   <time> and .meta that a reader does need. Now 4.62-5.43 across the three
+   surfaces it sits on. */
+.meta, .text-secondary, time {
+  color: var(--text-secondary);
+}
+
+.port-row,
+.search-result {
+  font-family: var(--font);
+  font-size: var(--font-size);
+  /* CRT list separators (wscons dialect): 1px hairline is allowed; no box-shadow */
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0; /* 8px — design_rules eight_px_rhythm */
+}
+
+.advisory-tag {
+  font-family: var(--font);
+  font-size: var(--text-xs);
+  color: var(--danger);
+  border: 1px solid var(--border);
+  padding: 0 0.3rem;
+}
+
+main#main-content :is(button, input, select, textarea, a):focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+body > nav[aria-label="Primary navigation"] {
+  transform: translateY(0);
+  min-height: 52px;
+}
+
+body > nav[aria-label="Primary navigation"] a[aria-current="page"] {
+  color: var(--text);
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+
+main#main-content {
+  justify-content: flex-start;
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(1rem, 4vw, 2rem) 4rem;
+}
+
+main#main-content :is(button, input[type="submit"], .btn) {
+  min-height: var(--tap-min);
+}
+
+/* Fitts floor at the origin — carried by _autofix_geometry until 2026-08-09.
+   Both controls sit OUTSIDE main#main-content, which is why the rule above
+   never reached them: nav-actions sign-in/out rendered 46x18 and the search
+   submit 58x21, against a 44px floor. The selectors are the autofix's own —
+   `.nav-actions .btn` does NOT match, because the anchor carries `btn-ghost`
+   alone and never `btn`. */
+div.nav-actions > a.btn-ghost,
+div.search-form > input.btn.btn-sm {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+}
+
+main#main-content :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+article,
+#comments {
+  width: 100%;
+}
+
+article > header {
+  display: block;
+  max-width: none;
+  margin-block-end: var(--space-4);
+}
+
+article > header h1 {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+article dl {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin-block: var(--space-6);
+}
+
+article dt {
+  color: var(--text-secondary);
+  font-weight: var(--weight-bold);
+}
+
+article dd,
+article code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+article pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+}
+
+article > h2,
+article > section,
+#comments {
+  margin-block-start: var(--space-8);
+}
+
+/* shell_widgets' .page-header (a slim sticky 53px section bar) and stack's
+   .page-header (a generic unconstrained-height flex intro) both compile in
+   here and collide. This page's header is the intro-block kind — h1 +
+   description + search — so its height needs to fit that content instead
+   of clipping to shell_widgets' sticky bar height, which pushed the overflow
+   up into the logo above it. */
+header.page-header {
+  height: auto;
+  position: static;
+  top: auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-4);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+header.page-header h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.5;
+  letter-spacing: -0.04em;
+}
+
+header.page-header > p {
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+header.page-header > nav {
+  position: static;
+  transform: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+header {
+  width: 100%;
+  max-width: 660px;
+  display: flex;
+  justify-content: flex-end;
+
+  .tabs {
+    display: flex;
+    margin-top: var(--space-4);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: var(--text-sm);
+
+    p {
+      padding: 0 var(--space-1) var(--space-2);
+      margin-inline-end: var(--space-6);
+
+      &.active {
+        color: var(--text);
+        border-bottom: 1px solid var(--accent);
+        font-weight: var(--weight-bold);
+
+        &::before {
+          content: "* ";
+        }
+      }
+    }
+  }
+}
+
+[role="search"] {
+  width: 100%;
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.search-form input[type="search"] {
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  /* 16px absolute, not a token. iOS Safari zooms the viewport on any text field
+     under 16px and does not zoom back, and that threshold is the user agent's —
+     it is not relative to anything this stylesheet controls.
+     var(--text-base) was the previous attempt and it does not hold here:
+     --text-base is 1rem, and this dialect sets its own :root font-size to
+     --text-xs (0.75rem) for CRT density, so a rem is 12px on this app and the
+     field rendered at exactly the size the rule was written to prevent. Every
+     rem token shrinks with that root; only an absolute unit clears a UA floor. */
+  font-size: 16px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--search-bg);
+  color: var(--text);
+}
+
+.search-form input[type="search"]:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+#live_search_results,
+turbo-frame {
+  display: block;
+  width: 100%;
+}
+
+#search {
+  width: 90%;
+  max-width: 584px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-5);
+  font-family: var(--font-mono, ui-monospace, monospace);
+
+  &::before {
+    content: "$";
+    color: var(--text-secondary);
+    margin-inline-end: var(--space-2);
+  }
+
+  &:focus-within {
+    border-color: var(--accent);
+  }
+
+  input {
+    background: transparent;
+    outline: none;
+    border: none;
+    width: 100%;
+    padding: var(--space-4) 0;
+    font-size: var(--text-base);
+    font-family: inherit;
+    color: var(--text);
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+}
+
+.browse-link {
+  margin: var(--space-12) 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.port-list {
+  width: 100%;
+  max-width: none;
+  margin-top: var(--space-8);
+}
+
+.port-row {
+  display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition-fast) var(--ease-out);
+}
+
+.port-row > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.port-row > div code, .install-panel input, article dd code, .data-state { font-family: var(--font-mono); }
+.data-state { display: inline-flex; width: fit-content; padding: 0.15rem 0.4rem; border: 1px solid var(--border); border-radius: var(--radius-xs); color: var(--text-secondary); font-size: var(--text-xs); }
+.data-state--stale { border-color: var(--status-stale-border); color: var(--status-stale-text); }
+.ports-purpose { max-width: 58ch; font-size: var(--text-lg); line-height: 1.5; color: var(--text); }
+kbd { padding: 0.12rem 4px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-xs); font-family: var(--font-mono); }
+.install-panel { margin-block: var(--space-6); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-elevated); }
+.install-panel [data-controller="clipboard"] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
+.install-panel input { min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--border); padding: var(--space-3); }
+
+.port-row:hover {
+  background: var(--hover-subtle);
+}
+
+.port-name {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-weight: var(--weight-bold);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.port-name:hover {
+  text-decoration: underline;
+}
+
+.port-comment {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.categories {
+  width: 100%;
+  max-width: none;
+  margin-top: var(--space-6);
+}
+
+.empty {
+  width: 100%;
+  margin-block-start: var(--space-6);
+  padding: var(--space-8) var(--space-4);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 639px) { // scan: intentional — narrow-screen exception band in a banded system (wave C ruling: inverting is a redesign)
+  body {
+    padding-block-start: 104px;
+  }
+
+  body > nav[aria-label="Primary navigation"] {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  body > nav[aria-label="Primary navigation"] .brand {
+    flex-basis: 100%;
+  }
+
+  .search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .search-form .btn {
+    width: 100%;
+  }
+
+  article dl {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  article dd + dt {
+    margin-block-start: var(--space-3);
+  }
+}
+
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-list .chip {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.category-list .chip:hover {
+  background: var(--hover);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* Empty / search miss — terminal tone */
+.empty-state {
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font);
+  max-width: 36rem;
+}
+
+.empty-state-icon {
+  border-radius: 0;
+  font-family: var(--font);
+}
+
+.empty-state-title {
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Mono skeleton blocks */
+.skeleton {
+  border-radius: 0;
+  min-height: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--border);
+}
+
+.port-row,
+.search-result {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sticky meta strip on port detail */
+article > header {
+  position: sticky;
+  top: 52px;
+  z-index: 5;
+  padding-block: 0.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: var(--text-secondary);
+    --text-secondary: var(--text);
+  }
+  a { text-decoration: underline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
