@@ -1,0 +1,137 @@
+@use "sass:list";
+/* Vertical surfaces — x shell underneath, product chrome on top */
+body[class*="vertical-"] .feed-header,
+body[class*="vertical-"] .compose-box {
+  display: none;
+}
+
+/* Per-vertical accent identity. Overriding --accent cascades to --accent,
+   --upvote, --focus-ring and the turbo bar, so each vertical's buttons, links,
+   and active states read as its own place rather than the shared indigo. The
+   second selector carries the accent into light mode on browsable verticals
+   (immersive ones hide #dark-toggle, so it simply never matches there). */
+/* Single accent map — keep in sync with design_tokens.yml vertical_accents.
+   Do not re-set --accent in ui_refinements or vertical-local sheets. */
+$vertical-accents: (
+  // (dark accent, hover, light accent). Slot 3 exists because the dark-mode
+  // hues were tuned as ink on dark: on white, dating ran 1.91:1, playlist
+  // 2.47:1 and takeaway 2.97:1 (visual_contract_lint low_contrast, WCAG
+  // 1.4.11 wants 3:1), so light mode wears a darkened variant of the same
+  // hue. Verticals whose dark hue already clears 3:1 on white repeat it.
+  marketplace: (#98876e, #6f6149, #98876e), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  tv:          (#dc635c, #b83a33, #dc635c), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  dating:      (#00d4aa, #00b391, #009579), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  takeaway:    (#e07b39, #c26a30, #c26a30), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  playlist:    (#12b6c4, #0f9aa6, #0e8a94), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  maps:        (#5b8fd4, #4a7ab8, #5585c5), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+  messenger:   (#6b7fd7, #5566c4, #6b7fd7), // scan: intentional — definition, mirrors design_tokens.yml vertical_accents
+);
+/* Ink for anything painted ON these accents. Every one of the seven was tuned
+   to be legible as ink on a light surface, which makes them all too light to
+   carry light ink: measured against --bg (#f7f6fa) they run 1.77–3.46:1, and
+   .compose-btn and brgen's own .btn all paint color: var(--bg) on
+   background: var(--accent). Against #1a1824 the same seven run 4.70–9.16:1, so
+   one dark ink clears AA for all of them. Verified per accent, not assumed. */
+$vertical-accent-ink: #1a1824;
+@each $v, $c in $vertical-accents {
+  body.vertical-#{$v} {
+    --accent: #{list.nth($c, 1)};
+    --accent-ink: #{$vertical-accent-ink};
+    --vertical-#{$v}-accent: #{list.nth($c, 1)};
+    --vertical-#{$v}-accent-hover: #{list.nth($c, 2)};
+  }
+  /* Light restates rather than carries: the dataset is the one light path. */
+  :root[data-theme="light"] body.vertical-#{$v} {
+    --accent: #{list.nth($c, 3)};
+    --accent-ink: #{$vertical-accent-ink};
+    --vertical-#{$v}-accent: #{list.nth($c, 3)};
+  }
+}
+
+body[class*="vertical-"] main {
+  padding-top: 0;
+}
+
+/* Immersive verticals: full-screen product surface, all shell chrome hidden.
+   Browsable verticals (marketplace/takeaway/tv) keep the sidebar + widgets and
+   are intentionally excluded. .feed-header is already hidden above for every
+   vertical, so it is omitted here. */
+@each $surface in (maps, dating, messenger, playlist) {
+  /* No tab bar on these, so nothing pinned to the bottom edge needs to clear
+     one — see --tab-bar-h in the shared shell. */
+  body.vertical-#{$surface} { --tab-bar-h: 0px; }
+
+  body.vertical-#{$surface} {
+    .sidebar,
+    .widgets,
+    .tab-bar,
+    .tab-bar-peel,
+    .tab-bar-coach,
+    .theme-toggle,
+    .city-carousel,
+    .widget-search,
+    .mobile-sheet,
+    .mobile-sheet-backdrop,
+    .nav_swiper,
+    .edge-grip {
+      display: none !important;
+    }
+  }
+}
+
+/* Playlist uses the same fixed city brand (.brgen-logo-mark) as every other
+   surface. Kill the tunnel's duplicate radio-header wordmark so nothing can sit
+   on top of / push the brand.
+
+   The .skip-link and .radio-skip-link overrides that used to live here were
+   removed 2026-07-29: both set `display: none`, and a display:none element
+   cannot receive focus — so the `:focus` rule meant to reveal the tunnel's skip
+   link could never fire, and this surface had no working skip-to-content at
+   all. The shared .skip-link in _shell.scss is clipped to 1×1 with clip-path +
+   opacity:0, which is the residue-free hide these rules were reaching for. */
+body.vertical-playlist .radio-header {
+  display: none !important;
+}
+
+/* dat.GUI autoPlace is a light panel that steals the top chrome. */
+body.vertical-playlist .dg.ac {
+  display: none !important;
+}
+
+/* Brand mark sits above the tunnel canvas (z:50). Position and size are the
+   fleet default and stay that way — the wordmark lands in the same place on
+   every surface, so it reads as one product rather than a set of lookalikes.
+
+   This block used to be "a touch larger + tighter to the corner", which put
+   the mark at (6, 4) 53x23 here against (14, 9) 63x44 everywhere else: it
+   visibly jumped when you moved between playlist and anything else. The only
+   thing playlist genuinely needs is to win the stacking contest with the
+   tunnel canvas. */
+body.vertical-playlist .brgen-logo-mark {
+  display: inline-flex !important; /* scan: intentional — re-shows the mark the immersive shell hides with its own !important armor */
+  z-index: calc(var(--z-toast, 1100) + 1);
+  color: var(--color-text, var(--text));
+}
+
+body.vertical-marketplace [data-controller="live-search"],
+body.vertical-takeaway [data-controller="live-search"] {
+  background: var(--search-bg, var(--surface));
+  padding: var(--space-3) var(--space-4);
+}
+
+body.vertical-marketplace .search-form input[type="search"],
+body.vertical-takeaway .search-form input[type="search"] {
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  width: 100%;
+}
+
+body.vertical-marketplace .search-form,
+body.vertical-takeaway .search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}

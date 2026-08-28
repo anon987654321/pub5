@@ -1,0 +1,49 @@
+<% content_for :title, t("pages.home_title", city: city_name) %>
+<% content_for :widgets_includes_communities, true %>
+<% content_for :widgets do %>
+  <aside class="sidebar-card" data-controller="toggle" data-toggle-class="hidden">
+    <div class="row-between">
+      <%= tag.h2 t("nav.communities") %>
+      <button type="button" class="btn btn-ghost btn-sm" data-action="click->toggle#toggle" aria-label="<%= t("nav.hide") %>"><%= t("nav.hide") %></button>
+    </div>
+    <ul data-toggle-target="item">
+      <% @communities.each do |c| %>
+        <li><%= link_to c.name, community_path(c) %></li>
+      <% end %>
+    </ul>
+    <% if authenticated? %>
+      <p><%= link_to t("nav.new_community"), new_community_path, class: "btn btn-ghost btn-sm" %></p>
+    <% end %>
+  </aside>
+  <% trending_tags = Hashtag.trending.where("usage_count > 0").limit(8) %>
+  <% if trending_tags.any? %>
+    <aside class="sidebar-card">
+      <%= tag.h2 t("nav.trending_tags", default: "Trending tags") %>
+      <ul class="tag-cloud">
+        <% trending_tags.each do |tag| %>
+          <li><%= link_to "##{tag.name}", hashtag_path(tag.name) %></li>
+        <% end %>
+      </ul>
+    </aside>
+  <% end %>
+<% end %>
+
+<%# The "Bergen, akkurat nå" intro banner and its paths/AI line were removed:
+    the front page opens straight into the feed. Wayfinding to the verticals
+    (main / AI / playlist / marketplace / dating) lives in the top nav, and the
+    anonymous compose box sits above the posts. %>
+<%# No city-today strip. The city right now IS the feed below -- its posts, its
+    people, the rooms they are in, what is for sale and what is on. A separate
+    strip of links to other hosts said the same thing worse, above the thing
+    itself. Operator decision 2026-08-27. %>
+
+<section id="feed-panel" aria-label="<%= t("home.local_posts") %>" data-visitor-orientation>
+  <%# Hot / New / Following / Communities used to be a second horizontal row
+      here, directly under the swiper offering the same kind of movement. They
+      are on the swiper now — one bar, one scroller. shared/_nav_swiper.html.erb
+      holds them and the reasoning. %>
+  <% if home_feed_following? && !authenticated? %>
+    <p class="feed-hint"><%= link_to t("home.follow_sign_in"), new_session_path %><%= t("home.follow_hint") %></p>
+  <% end %>
+  <%= render "home/live_search_results" %>
+</section>

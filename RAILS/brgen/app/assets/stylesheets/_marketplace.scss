@@ -1,0 +1,295 @@
+/* Marketplace chrome — subnav, filters, cats, PDP, store grid. */
+
+.marketplace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.marketplace-subnav.feed-tabs {
+  padding-inline: 0;
+  mask-image: none;
+  -webkit-mask-image: none;
+  border-bottom: 0;
+}
+
+.marketplace-subnav .feed-tab {
+  flex: 0 0 auto;
+}
+
+/* The kind switcher is the category scroller one row up: goods, jobs,
+   housing, gigs. Same chip geometry, so it reads as the same control. */
+.deal-cats,
+.listing-kinds {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Without this the flex item's automatic minimum size sizes the scroller to
+     its content instead of its parent, so the scroll box itself hung 160px past
+     the viewport on /shops at 390px rather than scrolling inside it. */
+  min-width: 0;
+}
+
+.deal-cats::-webkit-scrollbar,
+.listing-kinds::-webkit-scrollbar {
+  display: none;
+}
+
+.deal-cat {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  color: var(--text);
+  white-space: nowrap;
+  transition: background var(--transition-fast) var(--ease-out), border-color var(--transition-fast) var(--ease-out), color var(--transition-fast) var(--ease-out);
+}
+
+.deal-cat:hover {
+  background: var(--search-bg);
+  border-color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.deal-cat.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.marketplace-listing .listing-price {
+  font: var(--weight-heavy) 1.5rem / 1.2 var(--font);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.marketplace-listing .listing-description {
+  margin-top: var(--space-4);
+  max-width: 66ch;
+}
+
+.marketplace-listing .btn-share {
+  margin-top: var(--space-4);
+}
+
+.marketplace-listing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.listing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .store-grid {
+    grid-template-columns: repeat(auto-fill, minmax(13.75rem, 1fr));
+  }
+}
+
+.featured-deals {
+  padding: var(--space-4) 0 0;
+}
+
+.featured-deals h2 {
+  margin: 0 var(--space-4) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.featured-deals .deal-grid {
+  padding-top: 0;
+}
+
+.deal-grid--featured {
+  padding-bottom: var(--space-4);
+}
+
+.cart-pay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.cart-pay-actions .btn {
+  min-height: var(--tap-min);
+}
+
+// The order page's chat heading. It was a bare h3 under the order h1 -- a
+// skipped level -- and is now an h2 inside <section class="order-chat">.
+//
+// Both halves of that move need this rule. The bare h3 rendered at the UA
+// default, measured 23.6925px; as a plain h2 it would have gone to 30.375px, and
+// wrapping it in a <section> hands it to _zen_shell's `section h2` at --text-xs
+// (13.5px) instead. The class (0,1,1) outranks that pair (0,0,2), and 1.17em is
+// the UA h3 ratio the heading has always rendered at.
+.order-chat h2 {
+  font-size: 1.17em;
+  margin-bottom: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deal-cat {
+    transition: none !important;
+  }
+}
+
+/* Questions on a listing. Answered ones read as the answer they carry; an
+   unanswered one still shows, because it is the question the next buyer has. */
+.listing-questions {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.listing-question {
+  margin: 0;
+  font-weight: var(--weight-bold);
+}
+
+.listing-question-meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.listing-answer {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--border);
+}
+
+/* Facets: what each filter would leave, next to the filter. Counts sit beside
+   their label rather than under it — a number on its own line reads as a
+   heading. */
+.listing-facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-block: var(--space-3);
+}
+
+.listing-facet ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+}
+
+.listing-facet-name {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.listing-facet-count {
+  margin-inline-start: var(--space-1);
+  color: var(--text-secondary);
+}
+
+/* The seller's list of sizes and colours. A row per version, its price and
+   what is left of it — the three things the seller is deciding between. */
+.variant-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.variant-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.variant-label {
+  font-weight: var(--weight-bold);
+}
+
+.variant-price,
+.variant-stock {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* A return on the order page: what was asked, what was answered, and whether
+   the money has moved — three separate facts, and the third is the one people
+   are actually waiting on. */
+.order-returns article {
+  margin-block: var(--space-3);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--border);
+}
+
+.order-return-status {
+  margin: 0;
+  font-weight: var(--weight-bold);
+}
+
+.order-return-note {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.order-return-form {
+  margin-block: var(--space-4);
+}
+
+/* Saved addresses. The default is the selected card: accent border plus the
+   chip the view already renders — state as geometry, not colour alone. */
+.address-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.address p {
+  flex: 1;
+  min-inline-size: 12ch;
+  margin: 0;
+}
+.address--default {
+  border-color: var(--accent);
+}

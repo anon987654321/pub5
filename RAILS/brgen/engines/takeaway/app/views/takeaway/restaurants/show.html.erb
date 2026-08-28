@@ -1,0 +1,148 @@
+<% content_for :title, @restaurant.name %>
+<% content_for :description, meta_description_for(@restaurant) %>
+<% content_for :json_ld, json_ld_for(@restaurant, type: :local_business) %>
+<% content_for :json_ld, json_ld_script(breadcrumb_json_ld([
+      [t("storefront.restaurants"), restaurants_url],
+      [@restaurant.name, request.original_url.split("?").first]
+    ])) %>
+
+<div class="page-header">
+  <%= tag.h1 @restaurant.name %>
+  <nav aria-label="<%= t("takeaway.restaurant_actions") %>">
+    <% if authenticated? && @restaurant.owner?(Current.user) %>
+      <%= link_to t("actions.edit"), edit_restaurant_path(@restaurant), class: "btn btn-ghost btn-sm" %>
+    <% elsif Current.user.present? && @favorited %>
+      <%= button_to t("takeaway.unsave"), restaurant_favorite_restaurant_path(@restaurant), method: :delete, class: "btn btn-ghost btn-sm" %>
+    <% elsif Current.user.present? %>
+      <%= button_to t("takeaway.save_restaurant"), restaurant_favorite_restaurant_path(@restaurant), method: :post, class: "btn btn-primary btn-sm" %>
+    <% end %>
+  </nav>
+</div>
+
+<article>
+  <%= tag.p @restaurant.description %>
+  <p><%= @restaurant.cuisine_type %> · <%= @restaurant.address %>, <%= @restaurant.city_label %></p>
+  <% if @restaurant.place.present? %>
+    <p><%= link_to t("maps.on_the_map"), record_public_href(@restaurant.place), class: "btn btn-ghost btn-sm" %></p>
+  <% end %>
+  <%# pluralize() takes an English noun and applies English rules; t(count:)
+      goes through the locale's own plural rules instead. %>
+  <p><%= t("takeaway.min_order_line", min: @restaurant.min_order_display, fee: @restaurant.delivery_fee_display) %> <%= t("takeaway.saves", count: @restaurant.favorites.size) %></p>
+</article>
+
+<% if authenticated? && @restaurant.owner?(Current.user) %>
+  <section>
+    <%= tag.h2 t("takeaway.add_menu_item") %>
+    <div class="form-wrap">
+      <%= form_with scope: :takeaway_menu_item, url: restaurant_menu_items_path(@restaurant) do |f| %>
+        <div class="field"><%= f.text_field :name, placeholder: t("takeaway.item_name"), aria: { label: t("takeaway.item_name") }, required: true %></div>
+        <div class="field"><%= f.number_field :price_cents, placeholder: t("takeaway.item_price"), aria: { label: t("takeaway.item_price") }, required: true, inputmode: "numeric" %></div>
+        <div class="field"><%= f.text_field :description, placeholder: t("takeaway.item_description"), aria: { label: t("takeaway.item_description") } %></div>
+        <div class="field field--check"><%= f.check_box :available, checked: true %><%= f.label :available %></div>
+        <div class="field field--check"><%= f.check_box :vegetarian %><%= f.label :vegetarian %></div>
+        <div class="field field--check"><%= f.check_box :vegan %><%= f.label :vegan %></div>
+        <div class="field"><%= f.submit t("takeaway.add"), class: "btn btn-primary btn-sm" %></div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<section id="menu">
+  <%= tag.h2 t("takeaway.menu") %>
+  <% if @menu_items.empty? %>
+    <%= render "shared/empty_state",
+          title: t("empty.no_menu"),
+          body: t("empty.kitchen_no_food"),
+          action: { label: t("actions.all_restaurants"), path: restaurants_path } %>
+
+  <% elsif Current.user.present? %>
+    <%= form_with scope: :takeaway_order, url: restaurant_orders_path(@restaurant) do |f| %>
+      <% @menu_items.each do |item| %>
+        <article class="menu-row<%= " sold-out" unless item.available? %>" data-available="<%= item.available? %>">
+          <% if item.photo.attached? %>
+            <%= responsive_image_tag(item.photo, alt: item.name, loading: "lazy", class: "menu-row__photo") %>
+          <% end %>
+          <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
+            <%= tag.strong item.name %> · <%= item.price_display %>
+            <% unless item.available? %><span class="sold-out-badge"><%= t("takeaway.sold_out") %></span><% end %>
+            <% if item.vegetarian? %><span class="chip"><%= t("takeaway.vegetarian") %></span><% end %>
+            <% if item.vegan? %><span class="chip"><%= t("takeaway.vegan") %></span><% end %>
+            <% if item.description.present? %><p><%= item.description %></p><% end %>
+          </div>
+          <% if item.available? %>
+            <%= number_field_tag "takeaway_order[items][#{item.id}]", 0, min: 0, class: "qty-field", aria: { label: t("takeaway.qty_for", name: item.name) } %>
+          <% else %>
+            <span aria-label="<%= t("takeaway.item_sold_out", name: item.name) %>">—</span>
+          <% end %>
+        </article>
+      <% end %>
+      <div class="field">
+        <%= f.label :delivery_address, t("takeaway.delivery_address") %>
+        <%= f.text_field :delivery_address, required: true %>
+      </div>
+      <div class="field">
+        <%= f.label :special_instructions, t("takeaway.special_instructions") %>
+        <div data-controller="character-counter" data-character-counter-countdown-value="true">
+  <%= f.text_area :special_instructions , maxlength: 500, data: { character_counter_target: "input" } %>
+  <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
+</div>
+      </div>
+      <div class="field"><%= f.submit t("takeaway.place_order"), class: "btn btn-primary" %></div>
+    <% end %>
+  <% else %>
+    <% @menu_items.each do |item| %>
+      <article class="menu-row<%= " sold-out" unless item.available? %>" data-available="<%= item.available? %>">
+        <% if item.photo.attached? %>
+          <%= responsive_image_tag(item.photo, alt: item.name, loading: "lazy", class: "menu-row__photo") %>
+        <% end %>
+        <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
+          <%= tag.strong item.name %> · <%= item.price_display %>
+          <% unless item.available? %><span class="sold-out-badge"><%= t("takeaway.sold_out") %></span><% end %>
+          <% if item.description.present? %><p><%= item.description %></p><% end %>
+        </div>
+      </article>
+    <% end %>
+    <p><%= t("takeaway.reload_to_order") %></p>
+    <p><%= link_to t("actions.reload"), restaurant_path(@restaurant), class: "btn btn-primary" %></p>
+
+  <% end %>
+</section>
+
+<section>
+  <%= tag.h2 t("takeaway.reviews_heading") %>
+  <% if @reviews.any? %>
+    <% @reviews.each do |r| %>
+      <article>
+        <p>★<%= r.rating %> · <%= r.user&.display_name || t("takeaway.anon") %> · <%= time_ago(r.created_at) %></p>
+        <% if r.body.present? %><p><%= r.body %></p><% end %>
+      </article>
+    <% end %>
+  <% else %>
+    <%= render "shared/empty_state",
+          title: t("empty.no_reviews"),
+          body: t("empty.order_then_rate"),
+          action: { label: t("takeaway.browse_menu"), path: restaurant_path(@restaurant, anchor: "menu") } %>
+  <% end %>
+</section>
+
+<%= render "shared/also_nearby", items: @nearby_restaurants, title: t("takeaway.nearby_restaurants") %>
+
+<% if @can_review %>
+<section>
+  <%= tag.h2 t("takeaway.leave_review") %>
+  <%= form_with scope: :takeaway_review, url: restaurant_reviews_path(@restaurant) do |f| %>
+    <div class="field">
+      <%= f.label :rating, t("takeaway.rating") %>
+      <%= f.number_field :rating, min: 1, max: 5, required: true, inputmode: "numeric" %>
+    </div>
+    <div class="field">
+      <%= f.label :body, t("takeaway.comments_optional") %>
+      <div data-controller="character-counter" data-character-counter-countdown-value="true">
+  <%= f.text_area :body, rows: 3 , maxlength: 1000, data: { character_counter_target: "input" } %>
+  <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
+</div>
+    </div>
+    <div class="field"><%= f.submit t("marketplace.post_review"), class: "btn btn-primary btn-sm" %></div>
+  <% end %>
+</section>
+<% end %>

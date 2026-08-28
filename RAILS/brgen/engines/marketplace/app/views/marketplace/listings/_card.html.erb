@@ -1,0 +1,49 @@
+<% distance_km = local_assigns[:distance_km] %>
+<% photo = listing.photos.attached? ? listing.photos.first : nil %>
+<% favorited = local_assigns.fetch(:favorited) {
+     @favorited_listing_ids&.include?(listing.id)
+   } %>
+<%# Tise-style tile: photo wall + price first; heart overlays the photo. %>
+<article class="deal-card listing" data-product-id="<%= listing.id %>">
+  <div class="deal-card-fav-slot">
+    <%= render "marketplace/listings/favorite_button", listing: listing, favorited: favorited == true %>
+  </div>
+
+  <%= link_to listing_path(listing),
+        class: "deal-card-hit",
+        aria: { label: "#{listing.title}, #{listing.price_display}" } do %>
+    <%# Sold outranks casual outranks condition, and only sold is loud. %>
+    <% badge, badge_soft =
+         if listing.sold? then [t("marketplace.sold"), false]
+         elsif listing.casual? then [t("marketplace.from_a_person"), true]
+         elsif listing.condition.present?
+           [t("marketplace.conditions.#{listing.condition}", default: listing.condition.tr("_", " ")), true]
+         end %>
+    <%= render "marketplace/card_media", photo:, fallback_char: listing.title.to_s.first&.upcase || "?", badge:, badge_soft: badge_soft == true %>
+
+    <div class="deal-card-body">
+      <%# A job shows its salary and a room its rent; only goods have a
+          price. headline_amount is one reader so the card does not have to know
+          which of the three detail tables to ask. %>
+      <div class="deal-price"><%= listing.headline_amount %></div>
+      <h2 class="deal-card-title"><%= listing.title %></h2>
+      <div class="deal-meta">
+        <% meta_bits = [
+             listing.location,
+             (distance_km ? t("marketplace.distance_km", km: number_with_precision(distance_km, precision: 1)) : nil),
+             listing.category&.name,
+             t("marketplace.views", count: listing.views_count.to_i)
+           ].compact %>
+        <%= meta_bits.join(" · ") %>
+      </div>
+      <% if listing.reviews_count.to_i.positive? %>
+        <div class="deal-meta deal-meta--rating">
+          <span class="deal-rating" aria-label="<%= t("marketplace.rating_of_five", rating: number_with_precision(listing.rating, precision: 1)) %>">
+            <%= number_with_precision(listing.rating, precision: 1) %> ★
+          </span>
+          <%= t("marketplace.reviews_count", count: listing.reviews_count) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</article>

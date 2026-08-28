@@ -1,0 +1,78 @@
+<%# The bar rests visible, then retires — nav_autohide holds the timing and the
+    reasoning. The hidden class is passed rather than hardcoded so the stylesheet
+    keeps naming its own states.
+
+    zone is what brings it back on a mouse, and without it the bar left and
+    stayed gone: the hidden state is translateY(-100%) with opacity 0, so the
+    element is off-screen and pointerenter — the only other mouse route to
+    reveal — can never fire on it. Touch had document-level touchstart and the
+    keyboard had focusin; the mouse had nothing. 64px is the band the cursor
+    arrives in when it goes looking for navigation, the same way a video
+    player's chrome behaves.
+
+    hide-on-scroll because scrolling is the reader saying they are reading the
+    page rather than the bar, and waiting out a timer after that is the bar
+    overstaying a decision already made. %>
+<div class="nav_swiper" data-controller="nav-autohide"
+     data-nav-autohide-zone-value="64"
+     data-nav-autohide-hide-on-scroll-value="true"
+     data-nav-autohide-hidden-class="nav_swiper--hidden">
+  <%# These are links that navigate — /channels, another host entirely — and
+      there is no tabpanel anywhere on the page. Dressing them as
+      role="tablist" > role="group" > role="tab" produced three axe violations at
+      once: the group broke the tablist's required children, the tabs lost their
+      required tablist parent through it, and role="tablist" on <nav> overrode
+      the navigation landmark, so everything inside stopped counting as landmark
+      content. It is a navigation bar, so it says so; aria-current marks the
+      active entry, which is the correct signal for a nav and was already here.
+      Roving tabindex went with the tab roles: a tablist is one tab stop by
+      design, but a nav should let Tab reach every link. %>
+  <nav id="nav_sections" class="nav_swiper_bar" aria-label="<%= t("a11y.sections") %>" data-brgen-shell-target="navSections">
+    <% brgen_nav_groups.each do |group_label, items| %>
+      <div class="nav_swiper_group" role="group" aria-label="<%= group_label.capitalize %>">
+        <% items.each do |label, href| %>
+          <% active = label.downcase == (active_vertical.to_s.presence || "front") %>
+          <%# Every entry opens in a new tab — operator instruction 2026-08-10.
+              rel="noopener" is not optional with target="_blank": without it the
+              opened page gets a window.opener handle back into this one. The
+              verticals are separate hosts, so this is cross-origin.
+              aria-label carries the "new tab" fact, because a sighted user gets
+              it from the tab appearing and a screen-reader user gets nothing. %>
+          <%= link_to label, href,
+                class: "nav_link#{" active" if active}",
+                target: "_blank",
+                rel: "noopener",
+                "aria-label": t("nav.opens_new_tab", label: label, default: "%{label} (opens in a new tab)"),
+                "aria-current": ("page" if active) %>
+        <% end %>
+      </div>
+    <% end %>
+    <%# Hot and New are orderings of the front page, so they ride the bar that is
+        already the wayfinding rather than a second row beneath it: root carries
+        exactly one horizontal scroller and test_root_offers_the_verticals_once
+        pins that. Front page only — on a vertical these would order a feed that
+        is not on screen. These navigate in place, so no target="_blank". %>
+    <% if !vertical_surface? && authenticated? %>
+      <% hot = params[:sort].blank? && params[:feed].blank? %>
+      <div class="nav_swiper_group" role="group" aria-label="<%= t("home.feed_sort", default: "Feed") %>">
+        <%= link_to t("home.feed_hot", default: "Hot"), main_app.root_path,
+              class: "nav_link#{" active" if hot}",
+              "aria-current": ("page" if hot) %>
+        <%= link_to t("home.feed_latest"), main_app.root_path(sort: "latest"),
+              class: "nav_link#{" active" if params[:sort] == "latest"}",
+              "aria-current": ("page" if params[:sort] == "latest") %>
+        <%# Following and Communities move with Hot and New rather than being left
+            behind on a row that no longer exists. Dropping them here would leave
+            feed=following and feed=communities implemented in the controller and
+            reachable only by typing the query string — which is the state New was
+            in before today. %>
+        <%= link_to t("home.feed_following"), main_app.root_path(feed: "following"),
+              class: "nav_link#{" active" if params[:feed] == "following"}",
+              "aria-current": ("page" if params[:feed] == "following") %>
+        <%= link_to t("home.feed_communities"), main_app.root_path(feed: "communities"),
+              class: "nav_link#{" active" if params[:feed] == "communities"}",
+              "aria-current": ("page" if params[:feed] == "communities") %>
+      </div>
+    <% end %>
+  </nav>
+</div>

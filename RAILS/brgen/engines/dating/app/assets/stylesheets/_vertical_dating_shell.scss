@@ -1,0 +1,134 @@
+/* Dating — immersive vertical branding (Inter, neon intro). Core x shell hidden via _vertical_shell. */
+body.vertical-dating {
+  --dating-bg: var(--bg);
+  --dating-ink: var(--text);
+  --dating-muted: var(--text-secondary);
+  --dating-card: var(--surface-elevated);
+  --dating-border: var(--border);
+  --dating-accent: var(--vertical-dating-accent, #00d4aa);
+  /* The Nordic teal is a fill colour. As ink on the light surface this vertical
+     actually renders on it measures 1.77:1 — the BankID trust line, which is
+     the one label on the intro a user is meant to read carefully. Same hue,
+     darkened until it clears AA: 5.62:1 on --bg. Dark mode keeps the bright
+     teal, which is already 9.42:1 there. */
+  /* dating is a DARK surface (operator, 2026-08-24) and the layout pins it, so
+     the bright accent is the ink unconditionally. #00705c was the light-card
+     value and it was the default, which put it on a dark card at APCA Lc 22.2
+     and WCAG 3.47 — below AA. No theme branch: the surface has one theme. */
+  --dating-accent-ink: var(--dating-accent);
+  --dating-accent-warm: var(--vertical-dating-accent-warm, #ff5500);
+  --dating-pass: var(--danger);
+  background: var(--dating-bg);
+  color: var(--dating-ink);
+  font-family: var(--font);
+}
+
+body.vertical-dating #dark-toggle:checked ~ .theme-root {
+  --dating-accent-ink: var(--dating-accent);
+}
+
+/* Immersive-vertical chrome hiding is centralised in _vertical_shell.scss. */
+
+body.vertical-dating .layout {
+  grid-template-areas: "main";
+  grid-template-columns: 1fr;
+  max-width: 100%;
+}
+
+body.vertical-dating main {
+  max-width: 100%;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+body.vertical-dating .app-shell {
+  background: var(--dating-bg);
+}
+
+.dating-app {
+  min-height: 100dvh;
+  background: var(--dating-bg);
+}
+
+body.vertical-dating .match {
+  border-bottom: 1px solid var(--dating-border);
+}
+
+body.vertical-dating .match .feed-card-avatar-img {
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+// The dating immersive splash is a bare swipe surface. dating is already in the
+// immersive chrome-hide list in _vertical_shell.scss (nav/sidebar/tab-bar/etc.),
+// but two host elements still floated over "sveip for å begynne": the feed
+// keyboard-hotkey coach (a desktop hint, meaningless on a touch swipe surface) and
+// the nearby chat widget. Hidden here. The .brgen-logo-mark is deliberately KEPT —
+// _vertical_shell.scss documents it as the one fleet-wide brand mark; removing it
+// on dating is a product decision for the architect, not a cleanup.
+body.vertical-dating .hotkey-coach,
+body.vertical-dating .nearby-chat-widget {
+  display: none !important;
+}
+
+.dating-intro {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-splash);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding:
+    max(var(--space-8), env(safe-area-inset-top))
+    var(--space-5)
+    max(var(--space-10), env(safe-area-inset-bottom));
+  background: var(--dating-bg);
+  color: var(--dating-ink);
+  text-align: center;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-spring);
+}
+
+.dating-intro:active {
+  cursor: grabbing;
+}
+
+.dating-intro--dismissed {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--space-3)));
+  pointer-events: none;
+}
+
+.dating-intro[hidden] {
+  display: none;
+}
+
+/* Left-aligned text in a centred block. The splash keeps its composition —
+   the paragraph is still centred on the page — but six centred lines give the
+   reader a ragged left edge to re-find on every line, which is the case
+   design_rules names when it flags centred prose past three lines. */
+.dating-intro-hint {
+  margin: 0 auto;
+  text-align: start;
+  max-width: var(--measure-narrow, 45ch);
+  padding-top: clamp(48px, 12vh, 96px);
+  /* Was a hand-written stack with Inter LAST, so it rendered system-ui and the
+     Inter in it never had a chance to apply. */
+  font-family: var(--font);
+  font-size: clamp(1rem, 3.8vw, 1.125rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+  color: var(--dating-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

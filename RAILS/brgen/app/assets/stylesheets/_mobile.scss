@@ -1,0 +1,134 @@
+/* Mobile tab bar */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  display: flex;
+  min-height: 54px;
+  background: var(--surface2);
+  z-index: var(--z-nav);
+  padding-bottom: var(--safe-bottom);
+}
+
+.tab-item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  color: var(--text);
+  transition: background var(--transition-fast) var(--ease-out);
+}
+
+.tab-item[aria-current="page"] {
+  color: var(--accent);
+  background: var(--hover-subtle);
+}
+
+.tab-item[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset-block-end: calc(4px + var(--safe-bottom));
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.tab-item-button {
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tab-item:hover { background: var(--hover); text-decoration: none; }
+.tab-item:active,
+.compose-btn:active {
+  background: var(--hover);
+}
+
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim-45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast) var(--ease-out);
+  z-index: calc(var(--z-nav) + 1);
+}
+
+.mobile-sheet-backdrop[data-open="1"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-sheet {
+  position: fixed;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  bottom: 0;
+  min-height: 220px;
+  max-height: 72vh;
+  padding: var(--space-2) var(--space-4) calc(20px + var(--safe-bottom));
+  background: var(--surface2);
+  border-top-left-radius: var(--radius-card);
+  border-top-right-radius: var(--radius-card);
+  transform: translateY(100%);
+  /* Off-screen is not hidden. Parked at translateY(100%) the sheet still sat in
+     the tab order and the accessibility tree, so tabbing the front page walked
+     through an invisible menu -- AI assistant, Live, Channels, New post, New
+     community, Profile, Sign out -- none of which was on screen. visibility
+     takes it out of both; the delayed transition lets the slide finish before it
+     goes, so closing still animates. */
+  visibility: hidden;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 220ms;
+  z-index: calc(var(--z-nav) + 2);
+  display: grid;
+  gap: var(--space-4);
+}
+.mobile-sheet[data-level="1"],
+.mobile-sheet[data-level="2"] {
+  visibility: visible;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s;
+}
+
+
+.mobile-sheet-handle {
+  width: 42px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  justify-self: center;
+}
+
+.mobile-sheet-links {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mobile-sheet-links a {
+  display: block;
+  padding: 0.875rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.mobile-sheet-links a:hover { background: var(--hover); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

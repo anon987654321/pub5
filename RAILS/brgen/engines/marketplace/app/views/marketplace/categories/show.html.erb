@@ -1,0 +1,25 @@
+<% content_for :title, @category.name %>
+
+<div class="page-header">
+  <%= tag.h1 @category.name %>
+</div>
+
+<turbo-frame aria-live="polite" id="marketplace-category" data-turbo-action="replace">
+<div id="marketplace-category-listings" class="deal-grid" role="region" aria-label="<%= t("aria.category_listings") %>">
+<% @listings.each do |listing| %>
+  <%= render "marketplace/listings/card", listing: %>
+<% end %>
+<% if @listings.empty? %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_category"),
+        body: "Be the first to list something here — no signup needed.",
+        action: { label: t("actions.sell_something"), path: new_listing_path } %>
+<% end %>
+</div>
+
+<%= render "shared/infinite_scroll_sentinel",
+           pagy: @pagy,
+           reflex: "CategoryListingsInfiniteScrollReflex#load_more",
+           sentinel_id: "marketplace-category-sentinel",
+           category_id: @category.id %>
+</turbo-frame>

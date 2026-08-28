@@ -1,0 +1,70 @@
+@use "stack_brgen" as *;
+@use "shell";
+@use "search_palette";
+@use "shell_widgets";
+@use "responsive";
+@use "master_embed";
+@use "_root";
+@use "_canvas";
+@use "_nav";
+@use "_nav_swiper";
+@use "messenger_window";
+@use "tiptap";
+@use "_composer";
+@use "_composer_responsive";
+@use "_mobile";
+@use "_posts";
+@use "_communities";
+@use "_forms";
+@use "_feed_post";
+@use "feed_list";
+@use "_popover_tooltip";
+@use "_widgets";
+@use "_marketplace_nav_bar";
+@use "_marketplace_animated_logo";
+@use "_marketplace_cards";
+@use "_marketplace_top_offers";
+@use "_marketplace";
+@use "_marketplace_stores";
+@use "_nearby";
+@use "_channels";
+@use "_share";
+@use "_media";
+@use "_affiliate";
+// Immediately after _affiliate: these rules were its tail before the move, and
+// this keeps the cascade order they had.
+@use "affiliate_feed_unit";
+@use "dating_stack";
+@use "dating_actions";
+@use "dating_media";
+@use "_vertical_dating";
+@use "_maps";
+@use "_vertical_shell";
+@use "_vertical_marketplace";
+@use "_vertical_playlist";
+@use "_vertical_takeaway";
+@use "_vertical_tv";
+@use "_vertical_tv_cards";
+@use "vertical_maps_shell";
+@use "vertical_maps_place";
+@use "vertical_messenger_list";
+@use "vertical_messenger_thread";
+// Must load after vertical_messenger_thread: it turns that file's bubble rules
+// off for the channel log, and the two selectors tie at (0,1,2,2), so order is
+// what decides. Winning by adding a redundant class instead would leave a
+// selector nobody can safely simplify later.
+@use "_channel_irc";
+@use "_card_modifiers";
+@use "_chrome_polish";
+@use "_chrome_surfaces";
+@use "empty_state";
+@use "offline_page";
+@use "auth_form";
+@use "focus_ring";
+@use "chat_reactions";
+
+// Classes the markup asked for and nothing defined, measured by
+// Pub4::CssCoverageLint 2026-08-11. Last on purpose: these complement the
+// components above rather than competing with them.
+@use "shared_coverage_fills";
+@use "coverage_fills";

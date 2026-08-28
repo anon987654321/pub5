@@ -1,0 +1,74 @@
+<% market_title = t("marketplace.home_title", city: city_name) %>
+<% content_for :title, market_title %>
+<% content_for :json_ld, json_ld_script(item_list_schema(@listings, title: market_title)) if @listings.any? %>
+
+<%= render "marketplace/nav_bar",
+      active: "listings",
+      search_url: listings_path,
+      search_placeholder: t("search.marketplace"),
+      cart_count: (Current.user.present? ? Current.user.marketplace_orders.where(status: "pending").count : 0) %>
+
+<%# The front page opened on a hidden h1 and a seven-control filter bar: the
+    densest surface in the family had no entry point and nothing to look at, and
+    its only headline was invisible. Operator instruction 2026-08-17.
+
+    Typography rather than an image. A photograph here would have to be of
+    something, and a marketplace whose stock changes hourly has nothing
+    permanent to photograph — so the city's name at display size is the honest
+    hero, and it costs one font file instead of a picture per city. Set in
+    Bricolage Grotesque, which _fonts_brand vendors for this. %>
+<header class="market-hero">
+  <%= tag.p t("marketplace.hero_kicker"), class: "market-hero-kicker" %>
+  <h1><%= t("marketplace.hero_title", city: city_name) %></h1>
+  <%= tag.p t("marketplace.hero_lede") %>
+  <%# @pagy.count is everything the current filter matches, not the 25 on this
+      page — the number is only worth printing if it is the real one. %>
+  <%= tag.p safe_join([ tag.strong(number_with_delimiter(@pagy&.count.to_i)),
+                        t("marketplace.hero_count_suffix", city: city_name) ], " "),
+            class: "market-hero-count" %>
+</header>
+
+<%# Goods, jobs, housing, gigs. Separate lists rather than one mixed feed: a
+    bicycle search should not turn up a job, and the filters below mean
+    different things for each. %>
+<nav class="listing-kinds" aria-label="<%= t("marketplace.kinds_label") %>">
+  <% Marketplace::Listing::KINDS.each do |kind| %>
+    <%= link_to t("marketplace.kinds.#{kind}"), listings_path(kind: kind),
+          class: "chip#{" active" if @kind == kind}" %>
+  <% end %>
+</nav>
+
+<nav class="deal-cats" aria-label="<%= t("marketplace.listing_kind") %>">
+  <%= link_to t("marketplace.from_anyone"), listings_path(category_id: params[:category_id], q: params[:q].presence),
+        class: "deal-cat#{" active" if params[:from].blank?}" %>
+  <%= link_to t("marketplace.from_a_person"), listings_path(from: "person", category_id: params[:category_id], q: params[:q].presence),
+        class: "deal-cat#{" active" if params[:from] == "person"}" %>
+  <%= link_to t("marketplace.from_a_shop"), listings_path(from: "shop", category_id: params[:category_id], q: params[:q].presence),
+        class: "deal-cat#{" active" if params[:from] == "shop"}" %>
+</nav>
+
+<%= live_search_index url: listings_path, results_partial: "marketplace/listings/live_search_results", placeholder: t("search.marketplace_dots"), label: t("search.marketplace_label"), frame_id: "marketplace-listings" do |f| %>
+  <%= f.select :category_id,
+        options_from_collection_for_select(@categories, :id, :name, params[:category_id]),
+        { include_blank: t("actions.all_categories") }, aria: { label: t("marketplace.filter_category") } %>
+  <%= f.hidden_field :lat, value: @search_lat %>
+  <%= f.hidden_field :lng, value: @search_lng %>
+  <button type="button" class="btn btn-ghost btn-sm" data-controller="geolocation" data-action="geolocation#pin">
+    <%= t("marketplace.near_me") %>
+  </button>
+  <%= f.number_field :radius_km, value: @radius_km, min: 1, max: Marketplace::Listing::MAX_RADIUS_KM, step: 1, placeholder: t("marketplace.radius_km"), aria: { label: t("marketplace.radius_label") }, inputmode: "numeric" %>
+  <%= f.select :sort,
+        options_for_select([[t("marketplace.sort_recent", default: "Newest"), "recent"],
+                            [t("marketplace.sort_price_low", default: "Price ↑"), "price_low"],
+                            [t("marketplace.sort_price_high", default: "Price ↓"), "price_high"]], @sort),
+        {}, aria: { label: t("marketplace.sort_label", default: "Sort") } %>
+  <%= f.number_field :min_price, value: params[:min_price], min: 0, step: 1, placeholder: t("marketplace.min_price", default: "Min"), aria: { label: t("marketplace.min_price", default: "Min price") }, inputmode: "numeric" %>
+  <%= f.number_field :max_price, value: params[:max_price], min: 0, step: 1, placeholder: t("marketplace.max_price", default: "Max"), aria: { label: t("marketplace.max_price", default: "Max price") }, inputmode: "numeric" %>
+<% end %>
+
+<%= render "marketplace/listings/facets", facets: @facets %>
+
+<% content_for :widgets do %>
+  <%= render "shared/affiliate_deals", category: params[:category_id] %>
+  <%= render "shared/newsletter_cta" %>
+<% end %>

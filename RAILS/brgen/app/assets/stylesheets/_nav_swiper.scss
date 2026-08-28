@@ -1,0 +1,147 @@
+/* Permanent, per operator decision 2026-08-08: the primary nav is always
+   visible and is swiped horizontally, not pulled down.
+
+   It was a drawer because when it was last permanent it overlaid the top of
+   main -- brgen's .app-shell is `position: fixed; inset: 0`, so main starts at
+   y=0 and .compose-trigger sat at y=14, inside this bar's band. The drawer
+   dodged the collision instead of resolving it. Resolved properly here: the bar
+   is fixed chrome and .app-shell is inset below it by --nav-swiper-h, so
+   nothing starts underneath it. Content still scrolls *under* the bar, which is
+   what the opaque background is for. */
+.nav_swiper {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-nav);
+  pointer-events: auto;
+  transition: transform var(--transition-normal) var(--ease-out),
+              opacity var(--transition-normal) var(--ease-out);
+}
+
+/* Rests visible, then gets out of the way — operator instruction 2026-08-17,
+   which supersedes the "always visible" note above. The collision that made it a
+   drawer is still resolved; this is a bar that retires, not a drawer that hides.
+
+   It translates rather than collapsing: the wordmark and the theme control are
+   fixed above this bar at a higher z-index, so the band stays occupied when the
+   links leave. Nothing reflows and the page does not jump under a thumb at the
+   moment the timer fires.
+
+   pointer-events stays auto so the band is still a target to bring it back.
+   Visibility and display are both wrong here: the links keep their place in the
+   tab order, and nav_autohide reveals on focusin so a keyboard reader never
+   lands on something they cannot see. */
+.nav_swiper--hidden {
+  transform: translateY(calc(-100% - var(--safe-top, 0px)));
+  opacity: 0;
+}
+
+.nav_swiper_bar {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* auto, not 100%: 100% is the full viewport, and with the inline margins
+     below that made the box wider than what contains it — so its right edge
+     still ran under the theme toggle and the margin bought nothing. auto fills
+     what is left between the two chrome footprints, which is the whole point of
+     the margins.
+     (max-content was the older mistake here, from when this was a drawer: it
+     left the bar ending mid-viewport with the page showing past its edge.) */
+  width: auto;
+  padding-block: var(--space-2);
+  padding-block-start: calc(var(--space-2) + var(--safe-top));
+  /* Leading inset clears the fixed wordmark, which sits above this bar in the
+     stack (--z-nav + 1). Trailing inset clears the theme control opposite it.
+     Both footprints are published as variables in _root.scss precisely so the
+     next piece of top chrome inherits the fix instead of rediscovering it. */
+  /* Centred on the viewport, not on whatever the logo leaves over.
+     The two chrome footprints differ — brand 4.75rem, toggle 4.25rem — so
+     padding of one on each side put the content box half a rem off centre, and
+     the links sat visibly right of middle. Clearing both sides by the LARGER
+     footprint makes the content box symmetric about the viewport, so centring
+     it centres it on the page. Operator instruction 2026-08-10: the nav is
+     centred regardless of where the logo sits.
+     `safe` matters: past the point where the links no longer fit, plain
+     `center` overflows equally in both directions and the first link becomes
+     unreachable behind the leading edge. `safe center` falls back to flex-start
+     exactly then, which is also when the bar becomes a swiper again. */
+  --nav-clear: max(var(--brand-mark-inline), var(--chrome-toggle-inline));
+  /* margin, not padding. Padding insets where the content *starts*; it cannot
+     say where the scrolling viewport ends, so once the run overflows — 1208px
+     against a 390px screen — any link can be dragged under the fixed wordmark
+     or the theme toggle. "sign up" was measured at x 315-410 with its centre at
+     362, directly beneath a toggle occupying 337-381: visible, faded by the
+     mask below, and not pressable. The occlusion gate found it on six surfaces.
+     Making the box itself stop short of both controls means no scroll position
+     can put a link under them. */
+  margin-inline: var(--nav-clear);
+  justify-content: safe center;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--brand-mark-inline) var(--space-2xs);
+  background: var(--bg);
+  /* Fades BOTH edges, and the two do different jobs.
+     Right: the "there is more, drag me" signal the operator asked for.
+     Left: the wordmark is fixed on top of this bar at --z-brand, so a link
+     scrolled to the leading edge would slide out from behind solid type. The
+     fade dissolves it into the background instead — which is what _root.scss's
+     note on the brand stack already said this bar should do, written while the
+     bar was a drawer and so never true until now.
+     Both stops are the footprints of the chrome they sit under, not round
+     numbers: --brand-mark-inline leading, --chrome-toggle-inline trailing. The
+     trailing stop was 86%, which is a fraction of the viewport rather than of
+     the toggle, so on a 390px screen a link was still ~40% opaque where the sun
+     icon starts and the two read as one smudge. Anchoring to the token makes a
+     link fully dissolved before it reaches either control, at any width.
+     The ramp has to FINISH where the toggle starts, not begin there: ending
+     it at the toggle's edge left a link ~59% opaque under the sun icon and
+     the two read as one smudge, so it completes over the 2.5rem before it. */
+  --nav-fade-stop: calc(100% - var(--chrome-toggle-inline));
+  --nav-fade-start: calc(var(--nav-fade-stop) - 2.5rem);
+  mask-image: linear-gradient(to right, transparent 0, var(--bg) var(--brand-mark-inline), var(--bg) var(--nav-fade-start), transparent var(--nav-fade-stop));
+  -webkit-mask-image: linear-gradient(to right, transparent 0, var(--bg) var(--brand-mark-inline), var(--bg) var(--nav-fade-start), transparent var(--nav-fade-stop));
+}
+
+.nav_swiper_bar::-webkit-scrollbar { display: none; }
+
+/* One continuous run. The two role="group" wrappers stay for assistive tech —
+   they carry the "brgen" / "explore" labels — but they are visually seamless, so
+   the bar reads as a single swiper rather than two chunks with a rule between
+   them. The divider that used to sit here was one of the 17 lines removed. */
+.nav_swiper_group {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.nav_link {
+  flex: 0 0 auto;
+  /* Tighter than the old space-4 both ways: twelve destinations in a drawer, so
+     the run should cost as little width as it can while keeping the 44px tap
+     target that comes from min-height in _chrome_polish. */
+  padding: var(--space-3) var(--space-3);
+  /* Big letters — operator, 2026-08-17. --text-sm was sized for twelve
+     destinations in a drawer; there are nine on a bar that now retires, so the
+     run can afford the width and the primary nav should read as primary. */
+  font: var(--text-lg)/1 var(--font);
+  font-weight: var(--weight-bold);
+  color: var(--text-dim);
+  white-space: nowrap;
+  transition: color var(--transition-fast) var(--ease-in-out),
+              background var(--transition-fast) var(--ease-in-out);
+}
+
+.nav_link:hover { color: var(--text); background: var(--hover); text-decoration: none; }
+
+/* Active state is weight and colour, not an underline. aria-current carries it
+   for assistive tech; the 2px border-bottom this replaces was a line. */
+.nav_link.active { color: var(--text); font-weight: var(--weight-bold); }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

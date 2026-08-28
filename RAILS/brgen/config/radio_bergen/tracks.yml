@@ -1,0 +1,209 @@
+# Radio Bergen restored track manifest.
+#
+# The binaries live beside this manifest now, at brgen/public/audio/akmd/, and
+# are tracked: vps-deploy is `git pull --ff-only`, so an untracked file can
+# never reach the box, and a manifest naming files the server does not have is
+# the inert-config shape this repo keeps producing. 113 MB of already-128kbps
+# audio against a 3.3 GB .git is the same trade .gitignore makes for demo-each.
+#
+# Playback rights: cleared by the operator 2026-08-27. AKMD is the crew (Alt
+# Kult Ma Do) and Chase Swayze is its Houston affiliate, so every track here is
+# ours to publish. The one file that was not — a commercially released J Dilla
+# track sitting in the same pub2 folder — was deleted rather than copied.
+
+meta:
+  source_archive: anon987654321/pub2
+  restored_for: pub4
+  product: Radio Bergen
+  review_required:
+    - licensing
+    - attribution
+    - takedown_contact
+    - cache_policy
+
+local_mp3:
+  - artist: Angelo Reira & Johann
+    title: Sandviken Hotell A
+    src: /audio/akmd/sandviken_hotell_a.mp3
+    seconds: 40
+  - artist: Angelo Reira & Johann
+    title: Sandviken Hotell B
+    src: /audio/akmd/sandviken_hotell_b.mp3
+    seconds: 46
+  - artist: Chase Swayze
+    title: Ants
+    src: /audio/akmd/ants.mp3
+    seconds: 290
+  - artist: Chase Swayze
+    title: Chilly
+    src: /audio/akmd/chilly.mp3
+    seconds: 194
+  - artist: Chase Swayze
+    title: Cinnamonsistagirl
+    src: /audio/akmd/cinnamonsistagirl.mp3
+    seconds: 315
+  - artist: Chase Swayze
+    title: Concrete Street
+    src: /audio/akmd/concrete_street.mp3
+    seconds: 187
+  - artist: Chase Swayze
+    title: Eleven
+    src: /audio/akmd/eleven.mp3
+    seconds: 299
+  - artist: Chase Swayze
+    title: Greenery
+    src: /audio/akmd/greenery.mp3
+    seconds: 240
+  - artist: Chase Swayze
+    title: Hannah
+    src: /audio/akmd/hannah.mp3
+    seconds: 250
+  - artist: Chase Swayze
+    title: Ijustwannafucku
+    src: /audio/akmd/ijustwannafucku.mp3
+    seconds: 296
+  - artist: Chase Swayze
+    title: Jimmy Johnson
+    src: /audio/akmd/jimmy_johnson.mp3
+    seconds: 279
+  - artist: Chase Swayze
+    title: Living Daylights
+    src: /audio/akmd/living_daylights.mp3
+    seconds: 353
+  - artist: Chase Swayze
+    title: Revenge
+    src: /audio/akmd/revenge.mp3
+    seconds: 323
+  - artist: Chase Swayze
+    title: Sardines
+    src: /audio/akmd/sardines.mp3
+    seconds: 263
+  - artist: Chase Swayze
+    title: Scott Free
+    src: /audio/akmd/scott_free.mp3
+    seconds: 278
+  - artist: Chase Swayze
+    title: Shit Is Real
+    src: /audio/akmd/shit_is_real.mp3
+    seconds: 258
+  - artist: Chase Swayze
+    title: Strange
+    src: /audio/akmd/strange.mp3
+    seconds: 241
+  - artist: Chase Swayze
+    title: Underated
+    src: /audio/akmd/underated.mp3
+    seconds: 191
+  - artist: Chase Swayze
+    title: Unobtanium
+    src: /audio/akmd/unobtanium.mp3
+    seconds: 213
+  - artist: Haisam & Johann
+    title: PB1
+    src: /audio/akmd/pb1.mp3
+    seconds: 108
+  - artist: Jan Hakim & Johann
+    title: Stailings A
+    src: /audio/akmd/stailings_a.mp3
+    seconds: 31
+  - artist: Jan Hakim & Johann
+    title: Stailings B
+    src: /audio/akmd/stailings_b.mp3
+    seconds: 127
+  - artist: Johann
+    title: Amiga
+    src: /audio/akmd/amiga.mp3
+    seconds: 50
+  - artist: Johann
+    title: Lofi
+    src: /audio/akmd/lofi.mp3
+    seconds: 28
+  - artist: Johann
+    title: Radio Bergen 1
+    src: /audio/akmd/radio_bergen_1.mp3
+    seconds: 186
+  - artist: Mike T Jr
+    title: Rauingar
+    src: /audio/akmd/rauingar.mp3
+    seconds: 19
+  - artist: AKMD & Mike T
+    title: Alt Kan Skje
+    src: /audio/akmd/alt_kan_skje.mp3
+    seconds: 34
+  - artist: Whyppedcream
+    title: Hemmelig 1
+    src: /audio/akmd/hemmelig_1.mp3
+    seconds: 186
+  - artist: Whyppedcream
+    title: Hemmelig 2
+    src: /audio/akmd/hemmelig_2.mp3
+    seconds: 457
+  - artist: Whyppedcream
+    title: Hemmelig 3
+    src: /audio/akmd/hemmelig_3.mp3
+    seconds: 358
+
+external_reference:
+  policy: reference_only_until_rights_review
+  youtube:
+    - artist: J Dilla
+      title: Microphone Master
+      id: 9EGHwkDix78
+    - artist: J Dilla
+      title: In Space
+      id: vO2nWXCVt6o
+    - artist: J Dilla
+      title: Timeless
+      id: dbbfo9_7D8g
+    - artist: AFTA-1
+      title: Due Time
+      id: WC09qDzU9y4
+    - artist: Flying Lotus
+      title: Massage Situation
+      id: 6oUx6wGCekM
+    - artist: Madlib
+      title: Eye
+      id: ScVz2mntmCE
+    - artist: Slum Village
+      title: Players
+      id: KsULjOCYdnY
+    - artist: Jay Electronica
+      title: Exhibit A
+      id: H3UIHZshNQ0
+    - artist: Slum Village
+      title: La La (Instrumental)
+      id: EYJxxHQ7sX0
+    - artist: Slum Village
+      title: Get It Together
+      id: t6T-Q6HMbEo
+    - artist: Slum Village
+      title: Fantastic
+      id: a3ISYWWYgz8
+    - artist: Flying Lotus
+      title: me Yesterday//Corded
+      id: 8DgAhgmpXNA
+    - artist: Flying Lotus
+      title: Camel
+      id: fU9YRGLPDQ8
+    - artist: Flying Lotus
+      title: Golden Diva
+      id: iu4FVvR2QQs
+    - artist: Slum Village
+      title: Worlds Full of Sadness
+      id: MU3nfxsz2XA
+    - artist: A. Mochi & Takaaki Itoh
+      title: Sarria's Mind
+      id: gFKArkiz8vU
+    - artist: Samiyam
+      title: Rounded
+      id: oeaY2h_cKsg
+    - artist: Chase Swayze
+      title: Traffic
+      id: bH-30pDoQdo
+    - artist: Chase Swayze
+      title: Underrated
+      id: 1jjFk2Vp5ok
+    - artist: Flying Lotus
+      title: BTS Radio 2006
+      id: 6nWdggkulHk
+      start: 1364

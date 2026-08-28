@@ -1,0 +1,15 @@
+<% restaurant_content = capture do %>
+  <div class="feed-card-meta">
+    <%= restaurant.city_label %> · ★ <%= restaurant.rating || "—" %>
+  </div>
+  <div class="feed-card-meta">
+    <%= t("takeaway.min_order_delivery", min: restaurant.min_order_display, fee: restaurant.delivery_fee_display) %>
+  </div>
+<% end %>
+<%= render "shared/feed_card",
+  name: restaurant.name,
+  url: restaurant_path(restaurant),
+  handle: restaurant.cuisine_type,
+  content: restaurant_content,
+  actions: link_to(t("actions.open"), restaurant_path(restaurant), class: "feed-action"),
+  class: "takeaway" %>

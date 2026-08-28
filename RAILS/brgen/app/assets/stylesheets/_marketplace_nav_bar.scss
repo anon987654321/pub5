@@ -1,0 +1,297 @@
+/* scan: intentional-colors — the storefront chrome keeps its own dark palette.
+ *
+ * Storefront header, shared by marketplace and takeaway so the two verticals
+ * cannot drift apart. Began as a faithful two-row Amazon clone; flattened
+ * 2026-08-10 toward the front page nav — one line per entry, plain text, no
+ * stacked label/value blocks, no category select, no promo strip.
+ *
+ * What went, and why: the first line of each block ("Deliver to", "Hello
+ * johann", "Returns") repeated what the second line already said; the category
+ * select duplicated the sub row's sections; #subPromo was an ad for ourselves.
+ *
+ * House rules that still bind: flat fills only (no glow, no gradient) and 44px
+ * hit targets on touch.
+ *
+ *   #131921 top row   #232f3e sub row   #febd69 search button (#f3a847 hover)
+ *   #cd9042 cart count
+ */
+
+#navBar {
+  /* Amazon's header is edge-to-edge. This partial renders inside main, which
+     carries a clamp() gutter and a max-width, so break out to the viewport. */
+  margin-inline: calc(50% - 50vw);
+  background-color: #131921;
+  color: #fff;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+}
+
+#topHalf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 60px;
+  padding-inline: 10px;
+  /* Clear the fixed city brand (.brgen-logo-mark) pinned at the viewport's
+     inline start. See --brand-mark-inline in _root.scss. */
+  padding-inline-start: var(--brand-mark-inline);
+}
+
+/* Amazon outlines the hovered block rather than tinting it — 1px, no fill. */
+.nav-hover {
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.nav-hover:hover,
+.nav-hover:focus-visible {
+  border-color: #fff;
+}
+
+/* ---- logo ------------------------------------------------------------- */
+
+#logoWrapper {
+  flex: 0 0 auto;
+}
+
+#navBar .marketplace-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The pen's mark is a fixed composition tuned for a 100px box — its inner
+   scale(1.35)/scale(3) transforms are absolute, so shrinking the box crops it
+   instead of resizing it. Keep the 100px the pen expects and scale the whole
+   thing down into a 44px slot, which preserves its geometry exactly. */
+.nav-logo-mark {
+  display: block;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  overflow: hidden;
+}
+
+#logoWrapper .banner_wrapper {
+  width: 100px;
+  height: 100px; // scan: intentional — a drawn stage: the art has fixed dimensions, not flowing content
+  margin: 0;
+  padding: 0;
+  transform: scale(0.44);
+  transform-origin: top left;
+}
+
+.nav-logo-word {
+  font-size: var(--text-title, 1.25rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.nav-logo-tld {
+  font-size: var(--text-xs);
+  color: #ccc;
+}
+
+/* ---- nav blocks (deliver to, account, cart) ---------------------------- */
+
+/* One line each. These were stacked label/value pairs -- "Deliver to / Bergen",
+   "Hello johann / Account & Lists" -- which is Amazon's density, not this
+   family's. The label carried no information the value did not. */
+#navBar .nav-block {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: var(--tap-min);
+  padding: 4px 9px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: var(--weight-bold);
+}
+
+.nav-deliver svg {
+  flex: 0 0 auto;
+}
+
+/* ---- search ----------------------------------------------------------- */
+
+#navBar .marketplace-nav-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-inline: 6px;
+}
+
+#navBar .marketplace-nav-search form {
+  display: flex;
+  align-items: stretch;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#navBar .nav-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: #111;
+  font-size: var(--text-base);
+  outline: none;
+}
+
+.nav-search-submit {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  border: 0;
+  background-color: #febd69;
+  color: #111;
+  cursor: pointer;
+}
+
+.nav-search-submit:hover {
+  background-color: #f3a847;
+}
+
+/* Amazon rings the whole control on focus. Flat rule forbids a glow, so the
+   ring is a real border on the wrapper instead. */
+#navBar .marketplace-nav-search.focus form,
+#navBar .marketplace-nav-search:focus-within form {
+  outline: 2px solid #febd69;
+  outline-offset: 0;
+}
+
+/* ---- account / cart cluster ------------------------------------------- */
+
+#accountStuff {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+#navBar .nav-cart {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.nav-cart-icon {
+  flex: 0 0 auto;
+}
+
+.nav-cart-count {
+  position: relative;
+  top: -2px;
+  color: #cd9042;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.nav-cart--active {
+  border-color: #febd69;
+}
+
+/* ---- sub row ---------------------------------------------------------- */
+
+#bottomHalf {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 39px;
+  padding-inline: 10px;
+  padding-inline-start: var(--brand-mark-inline);
+  background-color: #232f3e;
+}
+
+#sections {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#sections::-webkit-scrollbar {
+  display: none;
+}
+
+#navBar .section {
+  /* 8px of padding around a 21px line is 37px, and the tap floor in
+     shared/LAYOUT.md is 44px. Centring inside the minimum keeps the row
+     reading as one line rather than growing the bar's text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 8px;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#navBar .section--active {
+  font-weight: var(--weight-bold);
+}
+
+/* ---- live search under the bar (yep.com surface) ---------------------- */
+
+body.vertical-marketplace main > .search,
+body.vertical-marketplace .marketplace-deals > .search,
+body.vertical-marketplace .marketplace-stores > .search,
+body.vertical-marketplace #live_search_results {
+  margin: 16px;
+}
+
+body.vertical-marketplace main > [data-controller*="live-search"],
+body.vertical-marketplace .search {
+  margin-inline: 16px;
+  margin-block: 12px;
+  /* The pill is width: 480px, max-width: 100% — and a percentage max-width
+     is measured against the container, not against what is left after
+     these margins. Without this the search ran 16px past the right edge
+     of every marketplace page on a phone. */
+  max-width: calc(100% - 32px);
+}
+
+/* ---- narrow ----------------------------------------------------------- */
+
+/* Narrow: the search takes its own row at full width, deliver-to follows it. */
+/* 767, not 700: every other bound in the family treats 768 as the tablet
+   edge (see _root.scss), and 700 was the one query on no edge at all —
+   BreakpointLint's only unknown_edge. */
+@media (max-width: 767px) { // scan: intentional — narrow-screen exception band in a banded system (wave C ruling: inverting is a redesign)
+  #topHalf {
+    flex-wrap: wrap;
+    padding-block: 6px;
+    /* Not the brand clearance here. This bar wraps at this width, and
+       padding-inline-start indents every wrapped row, not just the one that sits
+       beside the mark: measured at 390px, all four rows started at x=176, leaving
+       the search 173px of a 390px screen and pushing #logoWrapper's right edge to
+       400. Nothing is cleared by it either — .brand-mark is fixed at y 11–55 and
+       #topHalf sits inside .app-shell, which is pinned at top=62, so the two
+       cannot meet at any scroll offset. */
+    padding-inline-start: 10px;
+  }
+
+  #navBar .nav-deliver {
+    order: 3;
+  }
+
+  #navBar .marketplace-nav-search {
+    order: 4;
+    flex-basis: 100%;
+    margin-inline: 0;
+  }
+
+  #accountStuff {
+    margin-inline-start: auto;
+  }
+}

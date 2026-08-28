@@ -1,0 +1,308 @@
+@use "fonts";
+@use "fonts_brand";
+@use "dialect_tokens" as x;
+
+// One typeface for every brgen surface, written once here and emitted into both
+// token blocks below. Operator decision 2026-08-10, after the verticals were
+// found rendering in three different faces: Inter on dating and maps, "SF Pro
+// Display" on playlist, and Arial (from the BRGEN_OLD palette mixins) on the
+// feed and the commerce verticals — so the font changed as you moved between
+// subapps of one site.
+//
+// Inter rather than a system stack because it is the only real typeface in play:
+// vendored self-hosted in five weights (_fonts_brand.scss, five woff2 under
+// public/fonts), where a system stack resolves to a different font on every
+// operating system — an inconsistency you cannot see from one machine.
+//
+// A SCSS variable rather than a second CSS declaration: both the dark :root and
+// the light toggle block re-include app-root-tokens, which carries the shared
+// default, so each has to override it. This way the stack itself is stated once.
+// The body face is the platform UI face, which is the same default every other
+// app in this tree takes from app-root-tokens. This named Inter first, and
+// Inter is a webfont: five vendored cuts fetched over the wire to render text
+// that system-ui already renders, on a box with 1GB of RAM. The wordmark is
+// what carries the brand, and it has its own token — --font-brand — so the
+// body face no longer has to.
+$brgen-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+:root {
+  // BRGEN_OLD dark — dark-inverted port of the real 2014 desktop.css/
+  // mobile.css (pub/__OLD_BACKUPS/BRGEN_OLD). True grayscale, no accent
+  // hue: this app's identity is the direction itself, not a rotated hue.
+  @include x.brgen-old-dark-tokens;
+  @include x.app-root-tokens;
+  color-scheme: dark;
+  // Real 2014 mobile.css body base ("font: 18px sans-serif") -- this app's
+  // own deliberate size, distinct from the 16px shared default.
+  --font-size: var(--text-lg);
+  --font: #{$brgen-font};
+  --upvote: var(--accent);
+  --downvote: oklch(58% 0.15 30);
+  --z-canvas: 0;
+  /* Decorative-only (pointer-events: none) chrome -- must stay below
+     --z-ui (90, nav_swiper's grip) so it never visually buries the one
+     element in this band that's actually interactive/functional. */
+  --z-carousel: 5;
+  --z-splash: 1000;
+  --focus-ring: 2px solid var(--accent);
+}
+
+.theme-root {
+  min-height: 100vh;
+}
+
+/* The light palette lives once, in the :root[data-theme="light"] restatement
+   below; the checkbox-sibling lane retired with the mechanism. */
+
+/* Shared [data-theme=light] is the social indigo palette and outranks a bare
+   :root. Restate brgen-old here so the checkbox path and the dataset path
+   wear the same 2014 light, not two lights. */
+:root[data-theme="light"] {
+  @include x.brgen-old-light-tokens;
+  @include x.app-root-tokens;
+  color-scheme: light;
+  --font-size: var(--text-lg);
+  --font: #{$brgen-font};
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="light"] {
+    @include x.brgen-old-light-tokens;
+    @include x.app-root-tokens;
+    color-scheme: light;
+    --font-size: var(--text-lg);
+    --font: #{$brgen-font};
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* html only, and that is the whole point.
+ *
+ * This shorthand used to sit on `html, body` together. --font-size is
+ * var(--text-lg), which is 1.125rem, and rem resolves against the root — so html
+ * took 1.125 x 16px = 18px, and then body resolved the *same declaration* against
+ * html's new 18px and took 20.25px. Every unstyled paragraph on brgen rendered
+ * 12.5% larger than --text-base, the token that says what body text is.
+ *
+ * Measured before: html 18px, body 20.25px, 1rem 18px. After: html 18px, body
+ * 18px, 1rem 18px. The rem base does not move, so _canvas.scss's clamp comment
+ * about one rem being 18px here stays true.
+ *
+ * 18px is what this app asked for — see --font-size above, "the real 2014
+ * mobile.css body base, this app's own deliberate size". It has not been getting
+ * it. body inherits rather than restating, so the pair cannot drift again. */
+html {
+  font: var(--font-size)/var(--line-height) var(--font);
+}
+
+body {
+  font: inherit;
+}
+
+/* No large-screen upscale here: the original desktop.css was a fixed,
+   dense information display (Craigslist-like), not a scaling reading
+   experience -- that behavior belonged to the x.com dialect this app is
+   moving away from. */
+
+a { color: var(--text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Keyboard focus floor: fills any interactive element that lacks its own
+   focus style. :where() keeps specificity at 0, so every existing
+   :focus-visible / :focus rule (compose input, tiptap, buttons) still wins. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Brgen-specific shell tweaks on top of the shared x shell. */
+/* Inset below the permanent nav. The bar is fixed chrome at y=0, and this
+   shell is the scroll container -- without the offset main starts at y=0 and
+   .compose-trigger lands inside the bar's band, which is the exact collision
+   that turned the nav into a drawer in the first place. Content scrolls UNDER
+   the bar from here, which is what its opaque background is for. */
+.app-shell {
+  position: fixed;
+  inset: var(--nav-swiper-h, 3.5rem) 0 0 0;
+}
+
+/* Wordmark is lowercase "brgen" (MASTER .top-left-logo) — pure type only. */
+.brand-text {
+  text-transform: none;
+  letter-spacing: -0.03em;
+  font-weight: var(--weight-heavy);
+}
+
+
+/* --brand-mark-inline and --chrome-toggle-inline moved to _layout_chrome.scss
+   with the shared .brand-mark that owns them, so they are declared once for all
+   three apps rather than in brgen only. The reasoning that earned them is kept
+   there. What follows is brgen's own mark styling, which .brand-mark now shares.
+
+   Kept for the record:
+   Footprint published as a variable so anything a surface anchors to the top
+   inline-start can clear it, the way --tab-bar-h works for the bottom edge.
+   The brand is fixed and takes pointer events, so whatever it lands on stops
+   being clickable: the first .feed-tab on the feed and #map-search on maps
+   both had their left ~63px swallowed, and a tap there navigated home instead.
+   #navBar already cleared it with a hardcoded 4.75rem; this is that number,
+   named, so the next top-left surface inherits the fix instead of rediscovering
+   the bug.
+
+   The trailing mirror, --chrome-toggle-inline, exists because .theme-toggle is
+   fixed 44px wide at inset-inline-end 0.75rem with z-index 110, so it covered
+   the last nav item exactly the way the brand covered the first one. */
+
+/* City brand: fixed top-left, identical on core + every vertical.
+   MASTER face.css .top-left-logo — type only. Never a bordered/outlined chip. */
+a.brgen-logo-mark,
+.brgen-logo-mark {
+  position: fixed;
+  /* Above the nav band, not below it. This was calc(--z-chrome + 1) = 11, and
+     .nav_swiper carries --z-nav (--z-ui, 90) with an opaque `background:
+     var(--bg)` on .nav_swiper_bar. Once the nav became always-visible it landed
+     at y 0-55 over the brand's y 14-58, so the wordmark painted behind a solid
+     black rectangle and elementFromPoint at its own centre returned the "front"
+     .nav_link -- the brand corner navigated to front instead of home.
+
+     By the rule stated for --z-carousel above ("must stay below --z-ui so it
+     never visually buries the one element in this band that's actually
+     interactive"), the brand belongs above: it is a link, and it is the one
+     piece of chrome that is identical on every surface. .nav_swiper_bar's
+     padding-inline keeps nav items clear of this footprint at rest, and its
+     left-edge mask fades them out as they scroll under it. */
+  z-index: var(--z-brand, 120);
+  /* Same corner inset as the theme control and the chat widget, and additive
+     over the safe area rather than max()'d against it -- see --chrome-inset.
+     This was 0.5rem top / 0.75rem start, so the brand sat 4px higher than the
+     toggle opposite it and lost its inset entirely on a notched phone.
+
+     No `top` here anymore: the shared .brand-mark owns positioning (with
+     --top-band-nudge centring it on the nav link), and this a.-prefixed
+     duplicate outranked it at (0,1,1) — which is why the nudge landed on
+     brgen.no and missed every vertical (rendered_invariants, 2026-08-22). */
+  inset-inline-start: calc(var(--chrome-inset, 12px) + var(--safe-left, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: 0.25rem 4px;
+  font: var(--weight-heavy) clamp(0.9375rem, 2.8vw, 1.125rem) / 1 var(--font);
+  letter-spacing: -0.03em;
+  color: var(--text);
+  text-decoration: none;
+  text-rendering: optimizeLegibility;
+  /* Kill every chrome that can look like a border around the wordmark. */
+  background: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  /* autofix: removed box-shadow (flat UI) */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.brgen-logo-mark .brand-text {
+  text-transform: none;
+  letter-spacing: inherit;
+  font-weight: inherit;
+  border: none !important;
+  outline: none !important;
+  /* autofix: removed box-shadow (flat UI) */
+  background: transparent !important;
+}
+
+/* :focus-visible is deliberately NOT in this list. It used to be, and because
+   `a.brgen-logo-mark:focus-visible` (0,2,1) outranks the design system's
+   `.brgen-logo-mark:focus-visible` (0,2,0), the wordmark was the one nav element
+   in brgen with no keyboard focus ring at all — keyboard_flow reported it on
+   both /core and /marketplace. The intent here is "no chrome around the
+   wordmark", which `:focus:not(:focus-visible)` expresses without also
+   suppressing the keyboard indicator. */
+a.brgen-logo-mark:hover,
+a.brgen-logo-mark:focus:not(:focus-visible),
+a.brgen-logo-mark:active,
+.brgen-logo-mark:hover,
+.brgen-logo-mark:focus:not(:focus-visible),
+.brgen-logo-mark:active {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  /* autofix: removed box-shadow (flat UI) */
+  text-decoration: none;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+/* Keyboard focus keeps the wordmark's flat look but shows the ring. */
+a.brgen-logo-mark:focus-visible,
+.brgen-logo-mark:focus-visible {
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none;
+  color: var(--text);
+  opacity: 0.85;
+  outline: var(--focus-ring, 2px solid var(--accent)) !important; /* scan: intentional — paints the focus indicator the armor must never suppress */
+  outline-offset: 2px;
+}
+
+/* Verticals: leave room under fixed brand so product chrome is not covered. */
+body[class*="vertical-"] main#main-content,
+body[class*="vertical-"] main[role="main"] {
+  padding-top: 3.25rem;
+}
+
+/* Marketplace Amazon bar sits under the fixed brand strip. */
+body.vertical-marketplace #navBar {
+  margin-top: 0;
+}
+
+.feed-hint { padding: 0 var(--space-4) var(--space-2); }
+
+/* Guest open funnel on the home intro (Live → marketplace → messages). */
+
+@media (min-width: 1265px) {
+  .compose-label { display: inline; }
+  .compose-icon { display: none; }
+}
+
+/* 768, not 769: every other bound in the family treats 768 as the tablet edge,
+   so at exactly 768px the compose control fell through to base styling while
+   the rest of the shell was already in its tablet band. */
+@media (min-width: 768px) and (max-width: 1264px) {
+  .compose-label { display: none; }
+  .compose-icon { display: block; }
+}
+
+@media (max-width: 767px) { // scan: intentional — narrow-screen exception band in a banded system (wave C ruling: inverting is a redesign)
+  .theme-toggle {
+    /* Inline only. The block axis is the shared rule's job — restating it as a
+       bare --space-2 dropped --top-band-nudge and left the control on 31 against
+       the bar's 33, the same misalignment as desktop in a smaller dose. */
+    inset-inline-end: var(--space-2);
+  }
+}
+
+/* Overflow guard at the origin — carried by _autofix_geometry until 2026-08-09
+   (brgen/core, table.lines spilled past a 320px viewport). */
+table.lines {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

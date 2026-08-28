@@ -1,0 +1,33 @@
+<% if live_search_query.present? %>
+ <p><%= t("search.results_for", count: @deals.size, query: live_search_query) %></p>
+<% end %>
+
+<% if @featured_deals&.any? && live_search_query.blank? %>
+ <section class="featured-deals" aria-label="<%= t("aria.featured_deals") %>">
+ <%= tag.h2 t("marketplace.deals.featured", default: "Featured deals") %>
+ <ul class="deal-grid deal-grid--featured feed_list">
+ <% @featured_deals.each do |deal| %>
+   <li><%= render "marketplace/deals/card", deal: deal %></li>
+ <% end %>
+ </ul>
+ </section>
+<% end %>
+
+<% if @deals.any? %>
+<ul class="deal-grid feed_list" id="marketplace-deals-grid">
+ <% @deals.each do |deal| %>
+   <li><%= render "marketplace/deals/card", deal: deal %></li>
+ <% end %>
+</ul>
+
+<%= render "shared/infinite_scroll_sentinel",
+           pagy: @pagy,
+           reflex: "DealsInfiniteScrollReflex#load_more",
+           sentinel_id: "marketplace-deals-sentinel",
+           q: params[:q] %>
+<% else %>
+ <%= render "shared/empty_state",
+       title: t("empty.no_deals"),
+       body: t("empty.no_deals_search"),
+       action: { label: t("empty.clear_search"), path: deals_path } %>
+<% end %>
