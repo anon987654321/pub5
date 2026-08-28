@@ -1,0 +1,30 @@
+---
+# Ceilings for tools/rule_audit.rb — the audit of the rules, not of the tree.
+#
+# blind and saturated are 0 and must stay 0. They are not a backlog: a rule whose
+# fixtures only pass because a fixture is read differently from a real file, or
+# one that flags most of what it reads, produces findings that mean nothing, and
+# it looks green from the inside. FROZEN_STRING_LITERAL sat at 423 of 423 while
+# passing prove! at every boot.
+#
+# silent is a real number and it moves in both directions. A rule that fires on
+# nothing here is usually a CSS or JavaScript law over a mostly-Ruby corpus,
+# which is a property of the sample rather than of the rule — so it is recorded
+# rather than fixed, and it moves when the corpus or the rule set does. It is a
+# ceiling so that a rule going quiet is visible; it is not evidence of a defect
+# on its own.
+#
+# 19 -> 24 as the tree got cleaner, which is the direction this counter cannot
+# read. MEANINGFUL_NAMES, WHY_NOT_WHAT, NO_COLUMN_ALIGN, STRICT_LOADING_MISSING
+# and NO_CHANGELOG_COMMENT all stopped finding anything because their findings
+# were fixed or their detector was narrowed to what it is actually about — and
+# a rule that finds nothing because nothing is left is the goal. Read the names
+# before reading the number.
+#
+# NO_CHANGELOG_COMMENT held exactly three hits in this corpus, one each in
+# rescue_handlers.rb, prune_guest_users_job.rb and _responsive.scss. All three
+# said what the code used to be; each now states why it is what it is.
+blind: 0
+saturated: 0
+silent: 23
+

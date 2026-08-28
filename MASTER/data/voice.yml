@@ -1,0 +1,147 @@
+# Voice output rules — extracted from rules.yml (scan corpus stays in rules.yml).
+# TTS synthesis policy: Ruby (speech.rb, tts_controller) and JS (face_speech_runtime.js) read `tts`.
+# Persona registries (personas.yml, soul.yml) affect LLM text/style only when persona_affects_text_only is true.
+# Engine chain / transcendent mode: data/tts.yml (not used by web TtsJob). VPS env: OPENBSD/etc/rc.d/master.
+tts:
+  # English with a Malay accent (edge-tts / Azure neural). Operator decision
+  # 2026-08-10: MASTER speaks English in Osman's voice, soothing.
+  #
+  # ms-MY-OsmanNeural is a Malay-language voice reading English text — that is
+  # what produces the accent, and it is why soul.yml keeps language.primary:
+  # english and moves only `dialect` to malaysian. The voice is not new to this
+  # tree: it is the `malay` persona in personas.yml, it is already in VOICES and
+  # VOICE_ALIASES on both the Ruby and JS sides, and it already carries an idle
+  # signature in face.part1.txt (breath 1.08, saccade 0.24, blink 3200ms), so the
+  # face has real breath/saccade/blink tuning for it rather than the generic
+  # fallback. That absence was the reason Andrew was chosen over Ryan in August;
+  # it does not apply here.
+  #
+  # The pitch below is the one part of this that is a measurement rather than a
+  # name — see default_pitch.
+  #
+  # Three operator decisions, in order: 2026-08-10 to Osman, 2026-08-11 back to
+  # Pernille (much louder and much slower — the volume and rate below are from
+  # that pass and are kept), 2026-08-13 to Osman again. This is the third.
+  #
+  # Both earlier passes left the tree disagreeing with itself, in opposite
+  # directions, because a name lives in more places than the one that changed:
+  #
+  #   - 08-10 moved four files and the registry kept Pernille — face.runtime.js's
+  #     VOICES and idle-signature tables, expression.rb, and agent_map.yml, which
+  #     said in five places that "TTS voice is always Pernille per data/voice.yml".
+  #   - 08-11 moved this value back and left soul.yml declaring
+  #     `dialect: malaysian`, so the constitution described a Malaysian-accented
+  #     English identity that a Norwegian voice then read aloud. It also left
+  #     face_speech_runtime.js falling back to Osman whenever MASTER_VOICE_POLICY
+  #     failed to load, silently switching accent and language on a load error.
+  #
+  # So this pass moves the registry with the value: lib/voice/policy.rb's
+  # hardcoded defaults, agent_map.yml's note, health_controller's comment, and
+  # personas.yml's header. What did not need moving was already right — the
+  # alias in speech.rb, the idle signatures in expression.rb and face.runtime.js,
+  # soul.yml's dialect, and the JS fallback, which now agrees rather than
+  # contradicting.
+  single_voice: osman
+  neural: ms-MY-OsmanNeural
+  persona_affects_text_only: true
+  # ON as of 2026-08-14. pushLiveStreamTts (face.part1.txt) pulls each finished
+  # sentence off the model's stream and speaks it while the rest is still being
+  # generated. With this false, nothing is spoken until the whole reply has been
+  # generated AND the whole thing synthesised — two serial waits before any
+  # sound, on a box with one CPU.
+  #
+  # Measured on the live box, same text, /chat/tts round trip:
+  #
+  #   idle          four sentences 3.05s   one sentence 2.16s
+  #   under deploy  four sentences 19.31s  split by sentence: first audio 1.98s,
+  #                 all four done by 8.6s
+  #
+  # So splitting is never worse and is dramatically better exactly when the box
+  # is busy, which is when the wait is noticed. It also removes the whole
+  # generation time from the wait, which no synthesis tuning can.
+  #
+  # It was `false` because it shipped as opt-in ("optional /voice stream on",
+  # c129719c2), not because it broke. The guards were already here: listings are
+  # not spoken mid-stream (looksLikeListingStream), and fragments below
+  # TTS_MIN_CHUNK are held back. `/voice stream off` still turns it off per
+  # browser, and that preference wins over this default.
+  stream_live_default: true
+  # With persona_affects_text_only these two ARE the effective rate/pitch for
+  # every utterance (Personality#browser_profile substitutes them for the
+  # persona's own).
+  #
+  # -35Hz is not invented for this change and not carried over from Andrew's
+  # +0Hz. It is the value personas.yml already records for this exact voice,
+  # from someone listening to it: "natural, soothing single voice", settled at
+  # -8%/-35Hz after -32%/-180Hz pushed the engine past the range it renders
+  # cleanly and read as choking. Roughly +-15% rate and +-50Hz pitch is where
+  # Azure neural voices stay natural, so this sits inside it with room.
+  #
+  # That history is also the standing warning here: pitch tuning does not survive
+  # a voice change. -20Hz was once picked for en-GB Ryan and then carried onto a
+  # Norwegian voice it had never been measured against. This value moves with
+  # Osman because it was measured on Osman; the next voice starts at +0Hz until
+  # someone listens.
+  #
+  # -8% rate is unchanged and is a listening preference for long-form comfort
+  # rather than a property of any voice — the same figure the malay persona
+  # arrived at independently.
+  # Much slower, per the operator. -32% was measured as the point where the
+  # engine stops rendering cleanly and reads as choking, so this sits well
+  # short of it while being audibly slower than the -8% it replaces.
+  default_rate: "-22%"
+  # -35Hz, measured on Osman. The standing warning here is that pitch tuning
+  # does not survive a voice change — -20Hz was once picked for en-GB Ryan and
+  # carried onto a Norwegian voice it had never been measured against — which is
+  # why Pernille was reset to +0Hz rather than inheriting this. Coming back to
+  # Osman restores his own measurement rather than carrying hers.
+  default_pitch: "-35Hz"
+  # edge-tts --volume. The browser chain is the other half of "louder"
+  # (face_speech_runtime.js: masterGain 1.9 -> 3.4, partial no longer played at
+  # 0.85); this raises the synthesised signal itself rather than only its
+  # playback gain, so the two do not fight for the same headroom.
+  default_volume: "+40%"
+
+voice:
+  style: openbsd_dmesg
+  # anti_simulation lives once, in soul.yml absolute.anti_simulation. The
+  # copy that stood here was a shadow the accessor only read if soul lost
+  # the key — and it had already drifted one word from the original.
+  banned_output:
+    - headlines
+    - section_markers
+    - bullet_lists_without_content
+    - filler_phrases
+    - hedging
+    - sycophancy
+  strunk:
+    preambles: ["In summary,", "Consequently,", "Therefore,", "Notably,", "Importantly,"]
+    hedges: ["I think that", "I believe", "will", "would", "might", "could", "perhaps", "seems", "appears"]
+    endings: ["as a result.", "for this reason.", "thus.", "in effect.", "accordingly."]
+    code_preambles: ["# TODO: clarify intent", "# FIXME: review edge cases", "# NOTE: performance considerations", "# HACK: temporary workaround", "# REVIEW: assess after refactor"]
+    apply_to: [prose, comments, documentation, strings]
+    never_apply_to: [code_logic, algorithms, data_structures]
+    safeguards:
+      - never_delete_variable_names
+      - never_delete_function_calls
+      - never_simplify_conditional_logic
+      - never_collapse_diagnostic_output
+  inverted_pyramid:
+    - "Lead with the outcome."
+    - "Provide key evidence next."
+    - "Add implementation detail last."
+
+  preserve:
+    boot_message: "5-line dmesg style, never collapse to one line"
+    # The floor the guard enforces, as a number it can actually read. It used
+    # to be extracted with /\d+/ from the sentence below, which has no digits,
+    # so min_lines was permanently the hardcoded fallback of 2 and editing the
+    # sentence changed nothing.
+    diagnostic_min_lines: 2
+    diagnostic_output: "structured multi-line output is intentional, never compress to abbreviations"
+    help_text: "include command name, description, and at least one example"
+    spinner_feedback: "show elapsed time and status, do not remove progress indicators"
+    refinement_scope:
+      streamline: "remove redundancy, not information"
+      polish: "refine wording, not delete output"
+      minimize: "applies to prompt tokens, not diagnostic output"
