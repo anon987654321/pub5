@@ -1,0 +1,165 @@
+# frozen_string_literal: true
+
+require "rake/testtask"
+
+# One process per subject, because every subject here defines its constants and
+# methods at top level on Object and the names collide. postpro and repligen
+# both define `vocab_check`; dilla, postpro and repligen all define PRESETS.
+# Rake::TestTask runs the files it is given in a single process, so isolation
+# has to come from the task split. The tools get one task each -- grouping them
+# was enough to make repligen's self-check assertion read postpro's method.
+#
+# dilla's files share one process deliberately: the engine takes half a second
+# to load and the six files under test/dilla have no name of their own to
+# collide over.
+Rake::TestTask.new("test:dilla") do |t|
+  t.libs << "test"
+  t.test_files = FileList["test/dilla/test_*.rb"]
+  t.warning = false
+end
+
+TOOL_SUITES = FileList["test/tools/test_*.rb"].map { |path| File.basename(path, ".rb").sub(/\Atest_/, "") }
+
+TOOL_SUITES.each do |tool|
+  Rake::TestTask.new("test:#{tool}") do |t|
+    t.libs << "test"
+    t.test_files = ["test/tools/test_#{tool}.rb"]
+    t.warning = false
+  end
+end
+
+Rake::TestTask.new("test:gate") do |t|
+  t.libs << "test"
+  t.test_files = FileList["test/test_*.rb"]
+  t.warning = false
+end
+
+desc "STUDIO's suite — dilla engine arithmetic, the single-file tools, and the gate itself"
+task test: ["test:gate", "test:dilla", *TOOL_SUITES.map { |tool| "test:#{tool}" }]
+
+desc "The parse/inventory/load gate (also reachable as MASTER's `rake studio`)"
+task :gate do
+  ruby File.expand_path("gate.rb", __dir__)
+end
+
+namespace :postpro do
+  desc "Install postpro's runtime dependencies (ruby-vips, tty-prompt, libvips)"
+  task :bootstrap do
+    # The one place installation is allowed. postpro.rb used to do this from
+    # file scope, so `rake gate` — which loads the file to check that it boots —
+    # could gem-install and reach for brew/apt/pkg_add. A check observes the
+    # environment; repairing it is a separate command, and this is it.
+    ENV["POSTPRO_INSTALL_DEPS"] = "1"
+    ruby File.expand_path("postpro/postpro.rb", __dir__), "--vocab-check"
+  end
+end
+
+namespace :repligen do
+  desc "Compare MODEL_CAPABILITIES against the schemas Replicate currently declares"
+  task :schema_audit do
+    # The second-source-of-truth problem, made visible. repligen keeps its own
+    # capability table so it can refuse an unsupported option instead of letting
+    # the API ignore it — the right call, and the reason the table can go stale
+    # without anything noticing: the tests check the table against itself, so
+    # drift surfaces as a 422 in production, or as an operator's setting
+    # silently dropped, which is worse because it looks like it worked.
+    #
+    # Deliberately not part of `rake`. It needs the network and a token, and a
+    # check that cannot run must say so rather than pass.
+    require_relative "../MASTER/lib/io/replicate_client"
+
+    token = Master::Io::ReplicateClient.load_token
+    if token.to_s.strip.empty?
+      puts "repligen: schema_audit skipped — no REPLICATE_API_TOKEN; nothing was measured"
+      next
+    end
+
+    engine = File.read(File.expand_path("repligen/repligen.rb", __dir__))
+    table = engine[/^MODEL_CAPABILITIES = \{.*?^\}\.freeze/m] or abort "repligen: MODEL_CAPABILITIES not found"
+    declared = table.scan(/"([^"]+\/[^"]+)" => \{.*?input_keys: %w\[([^\]]*)\]/m)
+                    .to_h { |model, keys| [ model, keys.split ] }
+    abort "repligen: parsed no models — the table's shape changed, and this would pass having read nothing" if declared.empty?
+
+    client = Master::Io::ReplicateClient.new(token: token)
+    drifted = 0
+    declared.each do |model, ours|
+      live = client.input_keys(model)
+      if live.empty?
+        puts "repligen: #{model} — no schema returned (renamed or withdrawn?)"
+        drifted += 1
+        next
+      end
+
+      gone = ours - live
+      added = live - ours
+      puts "repligen: #{model} ok (#{ours.length} keys)" if gone.empty? && added.empty?
+      next if gone.empty? && added.empty?
+
+      drifted += 1
+      puts "repligen: #{model} DRIFT"
+      puts "  we send keys the model no longer declares: #{gone.join(', ')}" if gone.any?
+      puts "  the model declares keys we never send:     #{added.join(', ')}" if added.any?
+    rescue StandardError => e
+      puts "repligen: #{model} — lookup failed (#{e.class}: #{e.message})"
+      drifted += 1
+    end
+    puts "repligen: #{drifted} of #{declared.length} model(s) need attention"
+    exit(1) unless drifted.zero?
+  end
+
+  desc "Emit a MODEL_CAPABILITIES entry for MODEL=owner/name from its live schema"
+  task :schema_suggest do
+    # Adding a model to repligen means declaring exactly which input keys it
+    # accepts, because the whole design is to refuse an option the model does
+    # not take rather than let the API drop it silently. That makes guessing the
+    # keys worse than not adding the model at all: a wrong declaration either
+    # refuses something valid or sends something invalid, and both look like the
+    # tool working.
+    #
+    # So this reads them off the provider instead of anybody typing them. It
+    # prints an entry to paste; it does not edit the table, because which models
+    # this tool offers is a decision about what the pictures look like.
+    require_relative "../MASTER/lib/io/replicate_client"
+
+    model = ENV["MODEL"].to_s.strip
+    abort "usage: rake repligen:schema_suggest MODEL=owner/name" if model.empty?
+
+    token = Master::Io::ReplicateClient.load_token
+    abort "repligen: no REPLICATE_API_TOKEN — the schema can only come from the provider" if token.empty?
+
+    keys = Master::Io::ReplicateClient.new(token: token).input_keys(model)
+    abort "repligen: #{model} returned no input schema (wrong slug, or private?)" if keys.empty?
+
+    # Named so the two knobs repligen exposes are wired if the model has them,
+    # and left out when it does not — flux-schnell takes steps and no guidance,
+    # and that asymmetry is why the ranges are per-model.
+    guidance = keys.find { |k| %w[guidance guidance_scale cfg cfg_scale].include?(k) }
+    steps = keys.find { |k| %w[num_inference_steps steps].include?(k) }
+    negative = keys.find { |k| k.include?("negative") }
+
+    puts "  # #{model} — input keys read from the live schema on #{Time.now.strftime('%Y-%m-%d')}."
+    puts "  #{model.dump} => {"
+    puts "    input_keys: %w[#{keys.join(' ')}],"
+    puts "    negative_prompt_key: #{negative ? negative.dump : 'nil'},"
+    puts "    guidance_key: #{guidance.dump}, guidance_range: (0.0..10.0), guidance_default: 3.0," if guidance
+    puts "    steps_key: #{steps.dump}, steps_range: (1..50), steps_default: 28," if steps
+    puts "  },"
+    puts
+    puts "repligen: ranges and defaults above are placeholders — the schema gives names, not"
+    puts "repligen: what is musical for this model. Read the model page before pasting."
+  end
+end
+
+desc "Find tests that only pass in company, or only alone (TEST=substring to narrow)"
+task :isolation do
+  # dilla's files share one process on purpose, so every test can see what the
+  # ones before it left behind. Three defects this session had that shape and
+  # all three were found by running one test on its own after a hunch; this does
+  # it for all of them. Not part of `rake`: one process per test is minutes, and
+  # a check nobody will wait for is a check nobody runs.
+  require_relative "tools/isolation"
+  failures = StudioIsolation.run(pattern: ENV["TEST"])
+  exit(1) unless failures.zero?
+end
+
+task default: %i[gate test]
