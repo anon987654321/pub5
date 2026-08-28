@@ -1,0 +1,101 @@
+---
+ownership:
+  README.md:
+    purpose: deploy front door
+    risk: low
+    check: OPENBSD/bin/check
+  START_HERE.md:
+    purpose: first-contact deploy orientation
+    risk: low
+    check: OPENBSD/bin/check
+  RUNBOOK.md:
+    purpose: production runbook
+    risk: high
+    check: OPENBSD/bin/check
+  data/debt.yml:
+    purpose: canonical open operator debt (BACKLOG.yml was removed 2026-07-07;
+      features live in RAILS/apps.yml, debt here, operator recipes in
+      data/operator.yml)
+    risk: medium
+    check: MASTER/bin/pub4 status
+  rails/apps.horizon.yml:
+    purpose: aspirational features (agent ignore)
+    risk: low
+    check: OPENBSD/bin/check-rails
+  bin/vps-state:
+    purpose: dev vs deployed SHA and service posture on vm23
+    risk: medium
+    check: MASTER/bin/pub4 vps state --remote
+  bin/vps-deploy:
+    purpose: serial VPS deploy entrypoint
+    risk: critical
+    check: zsh OPENBSD/bin/vps-deploy <app>
+  deploy_inventory.json:
+    purpose: deploy identity and public service inventory
+    risk: high
+    check: ruby OPENBSD/verify_deploy_identity.rb
+  integrity_gate.rb:
+    purpose: full local deploy gate chain
+    risk: high
+    check: ruby OPENBSD/integrity_gate.rb
+  rails/apps.yml:
+    purpose: canonical app/domain/port/deploy inventory
+    risk: critical
+    check: OPENBSD/bin/check-rails
+  rails/gates/gates.yml:
+    purpose: the gate registry — every RAILS gate is declared here and nowhere else
+    risk: critical
+    check: OPENBSD/bin/check-rails
+  rails/gates/lib/host/production.rb:
+    purpose: production Rails contract
+    risk: high
+    check: OPENBSD/bin/check-rails
+  rails/gates/lib/host/domain_alignment.rb:
+    purpose: domain and inventory consistency
+    risk: high
+    check: OPENBSD/bin/check-rails
+  rails/gates/lib/frontend_*.rb:
+    purpose: frontend production/auditor contracts
+    risk: medium
+    check: OPENBSD/bin/check-rails
+  rails/shared/:
+    purpose: shared Rails engine and deploy helpers
+    risk: high
+    check: OPENBSD/bin/check-rails
+  rails/*/*.sh:
+    purpose: per-app deploy scripts
+    risk: critical
+    check: ruby OPENBSD/verify_deploy_identity.rb
+  OPERATOR.sh:
+    purpose: full OpenBSD installer/deployer
+    risk: critical
+    check: OPENBSD/bin/check-openbsd
+  ../OPENBSD/etc/:
+    purpose: repo mirror of live /etc configs
+    risk: critical
+    check: OPENBSD/bin/check-openbsd
+  home/johann/:
+    purpose: repo mirror of the johann@brgen.no mail client (.muttrc, .mailcap,
+      bin/mailimg), installed by OPERATOR.sh's setup_mail_client
+    risk: low
+    check: OPENBSD/bin/check-openbsd
+  openbsd/sh/vps_ci.sh:
+    purpose: serial app CI entrypoint on vm23
+    risk: high
+    check: zsh -n OPENBSD/vps_ci.sh
+  openbsd/resource_guard.sh:
+    purpose: load shedding on vm23
+    risk: high
+    check: ksh -n OPENBSD/resource_guard.sh
+  tools/:
+    purpose: creative and utility scripts outside core deploy
+    risk: medium
+    check: MASTER/tools/bin/verify
+  archive/:
+    purpose: historical restore notes
+    risk: low
+    check: none
+  quarantine/:
+    purpose: intentionally isolated historical material
+    risk: low
+    check: none

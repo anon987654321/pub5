@@ -1,0 +1,44 @@
+# OPENBSD operator runtime authority — served via /orient deploy and MASTER/bin/pub4.
+# Markdown stubs (START_HERE.md, OPENBSD/RECIPES.md) point here; edit this file.
+
+meta:
+  source: runtime authority
+  vps: dev@46.23.89.226
+  repo_on_vps: /home/dev/pub4
+
+stack:
+  app_server: Falcon only on vm23 (falcon serve in rc.d). No Puma in production.
+  solid_queue: SOLID_QUEUE_IN_PUMA=true runs the supervisor inside the Falcon process (env name is Solid Queue convention, not Puma).
+
+app_layout:
+  summary: Each RAILS/<app>/ is already a full Rails 8 app (app/, config/, db/, test/).
+  bootstrap: Greenfield apps use rails new once; existing apps are maintained in-tree.
+  deploy_entrypoint: RAILS/<app>/<app>.sh copies the tracked tree to /home/<app>/app
+  deployed_tree: /home/<app>/app is what relayd serves — not the dev git checkout alone
+  shared_engine: RAILS/shared (pub4-shared gem)
+
+single_source_of_truth:
+  features: RAILS/apps.yml
+  horizon: RAILS/apps.horizon.yml
+  debt: OPENBSD/data/debt.yml
+  deploy_identity: OPENBSD/deploy_inventory.json
+
+recipes:
+  - want: See where I am
+    run: MASTER/bin/pub4 status
+    expect: mode, ruby, ports, next command
+  - want: Fast local contributor check
+    run: OPENBSD/bin/check --profile=contributor && cd MASTER && bin/check --profile=contributor
+    expect: static gates ok
+  - want: After git pull on vm23
+    run: OPENBSD/bin/post-pull-checklist && MASTER/bin/pub4 vps state
+    expect: drift visible; follow deploy list
+  - want: Deploy one Rails app on VPS
+    run: MASTER/bin/pub4 vps deploy brgen --remote
+    expect: CI + restart + /up ok (serial — one app at a time)
+  - want: Deploy MASTER web
+    run: MASTER/bin/pub4 vps deploy master --remote
+    expect: assets precompiled + master restarted
+  - want: Full integrity on VPS
+    run: ssh brgen 'cd /home/dev/pub4 && ruby34 OPENBSD/integrity_gate.rb'
+    expect: integrity clean after apps deployed

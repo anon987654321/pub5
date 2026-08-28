@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# Print mandatory follow-up after git pull on vm23.
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
+
+cat <<EOF
+post-pull: source updated at ${ROOT}
+post-pull: deployed /home/<app>/app trees are NOT updated by git pull alone.
+
+Next (serial — one app at a time):
+  1. ruby34 OPENBSD/bin/vps-state
+  2. zsh OPENBSD/bin/vps-deploy <app>     # or: zsh OPENBSD/vps_ci.sh <app>
+  3. ruby34 OPENBSD/integrity_gate.rb
+  4. ruby34 OPENBSD/health_check.rb --public --all-ready-apps
+  5. sh OPENBSD/bin/deploy-smoke.sh       # fast local+public smoke (ALLOW_AMBER_DOWN=1 if needed)
+
+MASTER web changes also need:
+  zsh OPENBSD/bin/vps-deploy master
+
+See OPENBSD/RECIPES.md for copy-paste recipes.
+EOF
