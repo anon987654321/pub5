@@ -1,0 +1,160 @@
+{
+  "title": "Spilleliste — Bergen",
+  "viewport": [
+    1440,
+    900
+  ],
+  "scroll_width": 1440,
+  "h1_count": 1,
+  "landmarks": {
+    "main": true,
+    "nav": true,
+    "skip": true
+  },
+  "elements": [
+    {
+      "key": "#main-content",
+      "tag": "main",
+      "rect": {
+        "x": 0,
+        "y": 62,
+        "w": 1440,
+        "h": 900
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#main-content>div.radio-tunnel.radio-tunnel--autostart>nav.playlist-transport-bar",
+      "tag": "nav",
+      "rect": {
+        "x": 0,
+        "y": 840,
+        "w": 1440,
+        "h": 60
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "flex",
+      "position": "fixed"
+    },
+    {
+      "key": "#main-content>div.radio-tunnel.radio-tunnel--autostart>nav.playlist-transport-bar>button.transport-btn",
+      "tag": "button",
+      "rect": {
+        "x": 698,
+        "y": 849,
+        "w": 44,
+        "h": 44
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "#main-content>div.radio-tunnel.radio-tunnel--autostart>nav.playlist-transport-bar>button.transport-btn.transport-btn--primary",
+      "tag": "button",
+      "rect": {
+        "x": 636,
+        "y": 849,
+        "w": 44,
+        "h": 44
+      },
+      "color": "#000000",
+      "bg": "#e0e0e0",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "body.vertical-playlist>footer.site-legal>nav>a",
+      "tag": "a",
+      "rect": {
+        "x": 190,
+        "y": 959,
+        "w": 70,
+        "h": 20
+      },
+      "color": "#969696",
+      "bg": "#000000",
+      "font_size": 13,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-playlist>footer.site-legal",
+      "tag": "footer",
+      "rect": {
+        "x": 170,
+        "y": 940,
+        "w": 1100,
+        "h": 67
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 13,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-playlist>footer.site-legal>nav",
+      "tag": "nav",
+      "rect": {
+        "x": 190,
+        "y": 959,
+        "w": 257,
+        "h": 20
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 13,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-playlist>footer.site-legal>p.affiliate-fine",
+      "tag": "p",
+      "rect": {
+        "x": 465,
+        "y": 961,
+        "w": 785,
+        "h": 18
+      },
+      "color": "#969696",
+      "bg": "#000000",
+      "font_size": 12,
+      "line_height": 18,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-playlist>header>a.brand-mark.brgen-logo-mark",
+      "tag": "a",
+      "rect": {
+        "x": 12,
+        "y": 9,
+        "w": 68,
+        "h": 44
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 20.3,
+      "line_height": 20.3,
+      "display": "flex",
+      "position": "fixed"
+    }
+  ]
+}

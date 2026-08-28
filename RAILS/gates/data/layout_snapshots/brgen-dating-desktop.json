@@ -1,0 +1,112 @@
+{
+  "title": "Dating — Bergen",
+  "viewport": [
+    1440,
+    900
+  ],
+  "scroll_width": 1440,
+  "h1_count": 1,
+  "landmarks": {
+    "main": true,
+    "nav": true,
+    "skip": true
+  },
+  "elements": [
+    {
+      "key": "#main-content",
+      "tag": "main",
+      "rect": {
+        "x": 0,
+        "y": 62,
+        "w": 1440,
+        "h": 968
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#main-content>div.dating-app>section.dating-intro",
+      "tag": "section",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 1440,
+        "h": 900
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "flex",
+      "position": "fixed"
+    },
+    {
+      "key": "#main-content>div.dating-app>section.dating-intro>footer.dating-intro-trust",
+      "tag": "footer",
+      "rect": {
+        "x": 311,
+        "y": 835,
+        "w": 819,
+        "h": 20
+      },
+      "color": "#969696",
+      "bg": "#000000",
+      "font_size": 15.8,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "div.dating-app>section.dating-intro>footer.dating-intro-trust>nav",
+      "tag": "nav",
+      "rect": {
+        "x": 843,
+        "y": 835,
+        "w": 287,
+        "h": 20
+      },
+      "color": "#969696",
+      "bg": "#000000",
+      "font_size": 15.8,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-dating>header>a.brand-mark.brgen-logo-mark",
+      "tag": "a",
+      "rect": {
+        "x": 12,
+        "y": 9,
+        "w": 68,
+        "h": 44
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 20.3,
+      "line_height": 20.3,
+      "display": "flex",
+      "position": "fixed"
+    },
+    {
+      "key": "section.dating-intro>footer.dating-intro-trust>nav>a",
+      "tag": "a",
+      "rect": {
+        "x": 843,
+        "y": 835,
+        "w": 85,
+        "h": 19
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 15.8,
+      "line_height": 20,
+      "display": "inline",
+      "position": "static"
+    }
+  ]
+}

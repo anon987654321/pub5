@@ -1,0 +1,224 @@
+{
+  "title": "Opprett profil — Bergen",
+  "viewport": [
+    1440,
+    900
+  ],
+  "scroll_width": 1440,
+  "h1_count": 1,
+  "landmarks": {
+    "main": true,
+    "nav": true,
+    "skip": true
+  },
+  "elements": [
+    {
+      "key": "#main-content",
+      "tag": "main",
+      "rect": {
+        "x": 0,
+        "y": 62,
+        "w": 1440,
+        "h": 900
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#main-content>div.form-wrap.dating-profile-form>form",
+      "tag": "form",
+      "rect": {
+        "x": 18,
+        "y": 279,
+        "w": 713,
+        "h": 587
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#main-content>div.page-header>h1",
+      "tag": "h1",
+      "rect": {
+        "x": 528,
+        "y": 139,
+        "w": 143,
+        "h": 28
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 22.5,
+      "line_height": 28.1,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_age",
+      "tag": "input",
+      "rect": {
+        "x": 18,
+        "y": 884,
+        "w": 713,
+        "h": 38
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_bio",
+      "tag": "textarea",
+      "rect": {
+        "x": 18,
+        "y": 446,
+        "w": 713,
+        "h": 133
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": 28.8,
+      "display": "inline-block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_gender",
+      "tag": "select",
+      "rect": {
+        "x": 18,
+        "y": 805,
+        "w": 713,
+        "h": 41
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": null,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_location",
+      "tag": "input",
+      "rect": {
+        "x": 18,
+        "y": 980,
+        "w": 713,
+        "h": 38
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_looking_for",
+      "tag": "select",
+      "rect": {
+        "x": 18,
+        "y": 660,
+        "w": 713,
+        "h": 41
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": null,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_neighborhood_id",
+      "tag": "select",
+      "rect": {
+        "x": 18,
+        "y": 1056,
+        "w": 713,
+        "h": 41
+      },
+      "color": "#e0e0e0",
+      "bg": "#1a1a1a",
+      "font_size": 18,
+      "line_height": null,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_photos",
+      "tag": "input",
+      "rect": {
+        "x": 18,
+        "y": 303,
+        "w": 713,
+        "h": 62
+      },
+      "color": "#969696",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "#profile_visible",
+      "tag": "input",
+      "rect": {
+        "x": 18,
+        "y": 1111,
+        "w": 713,
+        "h": 13
+      },
+      "color": "#ffffff",
+      "bg": "#000000",
+      "font_size": 18,
+      "line_height": 20,
+      "display": "block",
+      "position": "static"
+    },
+    {
+      "key": "div.form-wrap.dating-profile-form>form>div.field>input.btn.btn-primary",
+      "tag": "input",
+      "rect": {
+        "x": 18,
+        "y": 799,
+        "w": 713,
+        "h": 44
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 15.8,
+      "line_height": 20,
+      "display": "flex",
+      "position": "static"
+    },
+    {
+      "key": "html>body.vertical-dating>header>a.brand-mark.brgen-logo-mark",
+      "tag": "a",
+      "rect": {
+        "x": 12,
+        "y": 9,
+        "w": 68,
+        "h": 44
+      },
+      "color": "#e0e0e0",
+      "bg": "#000000",
+      "font_size": 20.3,
+      "line_height": 20.3,
+      "display": "flex",
+      "position": "fixed"
+    }
+  ]
+}

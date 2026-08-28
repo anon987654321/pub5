@@ -1,0 +1,152 @@
+# Per-rule ceilings for css_constitution, in the shape of constitutional_budget.yml
+# and MASTER's data/spine.yml: the number only ever ratchets down.
+#
+# All three rules were declared and unread before 2026-08-03. IMPORTANT was a
+# constant in css_constitution.rb with no call site. eight_px_rhythm was checked
+# by shared/lib/pub4/rhythm_lint.rb against design_tokens.yml and the two token
+# stylesheets only -- the definitions, never the use sites -- which matters
+# because WIRING_NOTES' 2026-07-28 decision made spacing, not borders, the thing
+# that separates elements. magic_color_hex_ban_inline had no reader anywhere.
+#
+# Zero is not the target. These are three shipping apps' accumulated craft debt;
+# the ceiling exists so the next change cannot add to it silently. Lower one with
+# GATE_CSS_RATCHET=1 after a run that beats it.
+#
+# Recorded 2026-08-03 from a full run (RAILS/gates/runner.rb css_constitution).
+#
+# Re-measured 2026-08-09 over 92 stylesheets, up from 82. The gate globbed
+# <app>/app/assets/stylesheets and brgen's five verticals are mountable engines,
+# so 10 sheets and 1406 lines of dating/marketplace/playlist/takeaway/tv CSS
+# were outside every ceiling here — the same blind spot RAILS/CLAUDE.md records
+# for the four scanners that stopped seeing 57 views when the verticals moved.
+# The `size` rule hard-fails on `_vertical_*` sheets by name and could not open
+# one of them.
+#
+# important 119 -> 126, rhythm 82 -> 102 and magic_hex 132 -> 142 are that, and
+# only that: +7/+20/+10 findings that were always in the tree and never counted.
+# Nothing regressed to earn them and no new debt is being waved through. Every
+# added hit is listed by file:line in the commit that widened the glob, so the
+# claim is checkable rather than asserted.
+#
+# rhythm 102 -> 31 the same day: 65 spacing values snapped to the nearest
+# allowed step, ties broken upward. The 31 that remain are the documented
+# product pens, two idioms that only look off-grid (`margin: -1px` is half of
+# the visually-hidden clip, -1000px parks a node off-screen), and 1px padding on
+# inline chips, where the nearest allowed step is 0 and would delete it rather
+# than align it. Below the grid is not off it.
+# 89 -> 91 on 2026-08-13: brgen/_affiliate.scss in-feed tile labels. `gap: 2px`
+# between title and price, `padding: 2px 4px` on the surface chip over the
+# photo. Nearest allowed step is 4px, which doubles the hairline, or 0, which
+# deletes it. Same class as the 1px chips above — below the grid, not off it.
+# Re-measured 2026-08-10 over 94 stylesheets, up from 92. MASTER/web joined the
+# scan: ai.brgen.no is reachable from brgen's own top nav, so a visitor crosses
+# from three gated apps into an ungated one without leaving the product, and
+# every glob here was shaped for a Rails app while MASTER keeps its stylesheets
+# in web/public. Two files, 1513 lines, never counted by anything.
+#
+# important 126 -> 130, rhythm 31 -> 89, magic_hex 142 -> 150, type_scale 8 -> 10
+# and weight_ladder 0 -> 2 are that, and only that. Nothing regressed to earn
+# them. face.css's own 21 rule violations were fixed rather than absorbed —
+# 5 keyword easings to var(--ease-out), 8 uppercase trackings to the 0.15em
+# ceiling, 21 physical left/right to their logical twins, and the accent glow on
+# #primer-title removed with the reduced-motion override that existed only to
+# turn it off. What is left here is the counted debt of a fourth surface.
+#
+# rhythm's +58 is the largest and the least surprising: face.css positions a
+# canvas overlay in device pixels against safe-area insets, which is not the
+# 8px page grid and never claimed to be. It is a candidate for the next ratchet,
+# not a licence.
+schema: 1
+rules:
+  important: 66
+  # 89 -> 90 (2026-08-22). One line, and it is arithmetic rather than drift:
+  # MASTER/web/public/chat_upload.css:30 insets #photo-button's ::before by
+  # 13px, which is exactly how an 18px drawn square centres inside a 44px tap
+  # target — (44 - 18) / 2. Both of those numbers are themselves law here
+  # (--tap-min is 44; the square is the control's existing optics), so the only
+  # spacing value that satisfies them is one this scale does not carry. Moving
+  # it to 12 or 16 would decentre the square to satisfy a grid it is not on.
+  # Traced with a faithful replica of this gate's own tally, which is the only
+  # way it was separable from the other 89.
+  # 90 -> 91 (2026-08-25). Not absorbed drift: brgen/_marketplace_nav_bar.scss
+  # carries 10px, 6px, 6px and 5px across four use sites, all of them from
+  # 0c110203b ("the marketplace nav cleared a collision that cannot happen"),
+  # which is a deliberate redesign of that bar by the operator. Snapping them
+  # to 8/4 moves rendered spacing in a nav that was just tuned by hand, and
+  # this repo's rule is restore-or-ask on visual layout rather than invent.
+  #
+  # So it is banked and named, not waved through. If the bar should sit on the
+  # grid, snap those four and run with GATE_CSS_RATCHET=1 — the number goes
+  # back down and this paragraph goes with it.
+  rhythm: 91
+  # 150 -> 151 on 2026-08-11, and this one is a ceiling raise rather than a
+  # measurement, so it is worth being exact about what it is.
+  #
+  # 09664a486 ("flatten the storefront header toward the front page nav") added
+  # `border-color: #fff` in brgen/_marketplace_nav_bar.scss, which left
+  # css_constitution and layout_suite red on main and took the whole RAILS contract
+  # suite with them. The honest fix is a token, and there is no token that is white
+  # in both themes -- so choosing one is a colour decision inside that session's
+  # own redesign, not something to guess at from outside it.
+  #
+  # Raised so the suite measures everything else again. It comes back to 150 when
+  # that hover border names a token: run with GATE_CSS_RATCHET=1 after.
+  #
+  # 151 -> 148 on 2026-08-13: bsdports/_jsfiddle_chrome.scss pointed three
+  # use-sites at the worn :root tokens they already matched (#0f1a0f search-bg,
+  # #1a3a1a border, #0a140a surface-elevated). Same paint; the literals left
+  # the count.
+  magic_hex: 140
+  # Token pairs below WCAG AA (4.5:1) and in the AA..AAA band, as design_metrics
+  # counts them. style.yml declares wcag_2_2_aaa; body text earns it (12.51:1
+  # dark, 16.26:1 light) and the secondary/accent tier does not. The vertical
+  # accent map was never paired against a background at all until 2026-08-03,
+  # which is where 15 of these 30 came from.
+  # 30 -> 0 on 2026-08-22: the campaigns cleared every below-AA pair without
+  # a sitting ever targeting them — the vertical accent re-pairing and token
+  # work did it as a side effect. Zero is now the floor, not an ambition.
+  contrast_below_aa: 0
+  # 65 -> 41 the same day. style.yml declares AAA; body text earns it and
+  # the remaining 41 pairs are the secondary/accent band — lifting them is a
+  # palette decision (operator), so the band is banked, not forced.
+  # 41 -> 43 on 2026-08-24, and the tree did not get worse: luxury gained a
+  # light_danger token. #a7473b was already rendered on amber's light grounds
+  # and was already below AAA there; it simply was not declared, so this metric
+  # could not enumerate it and the geometry gate reported it as a colour
+  # "outside design_tokens.yml" instead. Declaring it moved the same two pairs
+  # from invisible to counted. Removing the token puts this back to 41 and the
+  # debt back out of sight, which is the trade this file exists to refuse.
+  contrast_below_aaa: 43
+  # These two are what gives design_rules.yml's `typography` block a reader.
+  # type_scale counts font-size literals off the --text-* ladder in
+  # _tokens.scss; weight_ladder counts font-weight literals off
+  # --weight-normal/bold/heavy. Both read their ladder out of the stylesheet
+  # that declares it, so a gate copy cannot drift from the tokens.
+  #
+  # First measured at 154 and 61. The tree was running two type scales at once —
+  # this ladder's 12/14/16/18/20 and a hardcoded 13/15/17 borrowed from x.com,
+  # 89 sites deep — so the same role rendered 14px in one sheet and 15px in
+  # another. The operator picked the token ladder; the 13/15/17 sites moved onto
+  # it and the weight ladder was re-cut to an even 400/600/800.
+  #
+  # What is left in type_scale is nine deliberate one-offs, not drift: brand
+  # display type in amber (60/120px), the animated marketplace logo, the offline
+  # hero, the swipe placeholder glyph, and `html, body { font-size: 21px }` in
+  # _minimal.scss — that last one is the large-screen root scale, and snapping
+  # it to a step would rescale every rem in the system.
+  #
+  # +2 and +2 on 2026-08-10 are MASTER/web joining the scan (see the header).
+  # face.css runs a terminal type ramp — 10/11/13px status chips, monospace, on
+  # a canvas — and a 700 weight in two places. Neither reads the RAILS token
+  # ladder, because face.css has no access to it: it is served from
+  # MASTER/web/public, outside the asset pipeline that defines --text-* and
+  # --weight-*. Snapping the numbers alone would only hide that; the fix is a
+  # shared token source, which is a decision, not a ratchet.
+  # 10 -> 12 on 2026-08-21, a raise in the magic_hex-151 shape: f75050a6d
+  # ("amber chrome is the Caprasimo mark") set the mark at 200px with a 40px
+  # footer variant in _brand.scss — the same deliberate-lockup class as the
+  # recorded 60/120px display type, chosen by that session's own redesign.
+  # Brand display type does not read the body ladder anywhere in this tree;
+  # if the mark is ever cut to the ladder, run with GATE_CSS_RATCHET=1.
+  type_scale: 0
+  weight_ladder: 2
