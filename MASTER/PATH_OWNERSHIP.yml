@@ -1,0 +1,175 @@
+---
+ownership:
+  README.md:
+    purpose: project front door
+    risk: low
+    check: bin/check
+  START_HERE.md:
+    purpose: single orientation — agent contract, runtime map, data file budget
+    risk: medium
+    check: bin/check
+  DECISIONS.md:
+    purpose: intentional architecture decisions
+    risk: medium
+    check: bin/check
+  DEBT.md:
+    purpose: known debt separated from actionable TODO
+    risk: medium
+    check: bin/check --profile=agent
+  ../OPENBSD/data/debt.yml:
+    purpose: canonical open operator debt (BACKLOG.yml was removed 2026-07-07;
+      features live in RAILS/apps.yml, debt here, operator recipes in
+      ../OPENBSD/data/operator.yml)
+    risk: medium
+    check: MASTER/bin/pub4 status
+  bin/:
+    purpose: executable entry points and validation wrappers
+    risk: high
+    check: bin/check
+  lib/master.rb:
+    purpose: runtime loader and namespace setup
+    risk: high
+    check: bin/check --profile=full
+  lib/cli/:
+    purpose: CLI, commands, pipeline, web adapters
+    risk: high
+    check: bin/check --profile=agent
+  lib/review/:
+    purpose: scanners, verdicts, routing, review and output checks
+    risk: high
+    check: bin/check --profile=agent
+  lib/fix/:
+    purpose: fix loop, watcher, rollback, self-check
+    risk: high
+    check: bin/check --profile=agent
+  lib/io/:
+    purpose: tools and external actions
+    risk: high
+    check: bin/check --profile=agent
+  lib/ground/:
+    purpose: constitution, config, policy, memory, schema
+    risk: high
+    check: bin/check --profile=agent
+  lib/trace/:
+    purpose: evidence, events, telemetry, replay, snapshots
+    risk: high
+    check: bin/check --profile=agent
+  lib/voice/:
+    purpose: personality, speech, TTS, rendering
+    risk: medium
+    check: bin/check
+  lib/core.rb:
+    purpose: fold spine entrypoint — Effect, VERBS, Verdict, Secret
+    risk: critical
+    check: rake test:core
+  lib/core/:
+    purpose: constitutional fold spine — must not require the rest of lib/
+    risk: high
+    check: rake test:core
+  lib/boot/:
+    purpose: paths, data, runtime setup consumed before Zeitwerk is live
+    risk: high
+    check: bin/check --profile=agent
+  lib/builder/:
+    purpose: boot-phase assembly (ground, io, personality wiring)
+    risk: high
+    check: bin/check --profile=agent
+  lib/deploy/:
+    purpose: operator-facing deploy documentation generation
+    risk: medium
+    check: bin/check
+  lib/design/:
+    purpose: design thresholds and platform/mobile profile data
+    risk: medium
+    check: bin/check
+  lib/grok/:
+    purpose: transcript ingestion for the Grok LoRA pipeline
+    risk: medium
+    check: bin/check
+  lib/ops/:
+    purpose: loop ownership, process budget, runtime loop guards
+    risk: high
+    check: bin/check --profile=agent
+  lib/providers/:
+    purpose: external model/provider catalog indexing
+    risk: medium
+    check: ruby -Ilib:spec spec/providers/catalog_index_spec.rb
+  lib/pub4/:
+    purpose: pub4-level (multi-repo) check/status tooling, separate namespace from Master
+    risk: medium
+    check: MASTER/bin/pub4 status
+  lib/rails/:
+    purpose: Rails-app audits (PWA, routes/views, Hotwire, face3d policy) for the RAILS/ tree
+    risk: medium
+    check: bin/check
+  lib/result/:
+    purpose: Result::Ok/Err chaining and error classification helpers
+    risk: high
+    check: bin/check --profile=agent
+  data/soul.yml:
+    purpose: constitutional identity
+    risk: critical
+    check: bin/check --profile=agent
+  data/rules.yml:
+    purpose: constitutional rule registry and all scanner law (folded 2026-08-12)
+    risk: critical
+    check: bin/check --profile=agent
+  data/providers.yml:
+    purpose: provider registry
+    risk: high
+    check: ruby -Ilib:test test/test_provider_config.rb
+  data/models.yml:
+    purpose: model and routing registry
+    risk: high
+    check: ruby -Ilib:test test/test_provider_config.rb
+  web/app/views/chat/index.html.erb:
+    purpose: face boot shell and primer contract
+    risk: critical
+    check: bin/check --profile=web
+  web/public/face.js:
+    purpose: deferred face loader
+    risk: critical
+    check: bin/check --profile=web
+  web/public/face.part*.txt:
+    purpose: split face runtime payload
+    risk: critical
+    check: bin/check --profile=web
+  web/public/three.face.module.js:
+    purpose: heavy WebGL dependency, deferred until tap
+    risk: critical
+    check: bin/check --profile=web
+  knowledge/:
+    purpose: local-only search corpus for SearchKnowledge
+    risk: local
+    check: none
+  output/:
+    purpose: generated media and training artifacts
+    risk: local
+    check: none
+  .master/:
+    purpose: local runtime state, cache, memory, traces
+    risk: local
+    check: none
+  tools/:
+    purpose: repo-hygiene and verification one-offs (security sweep, inventory,
+      convergence evidence gate) — distinct from script/'s style/canon gates
+      and bin/'s runtime entry points
+    risk: medium
+    check: ruby -Ilib:test spec/tools/lifecycle_tools_spec.rb
+  script/:
+    purpose: style guide sync and canon generation gates run from Rakefile
+    risk: medium
+    check: bin/check
+  docs/:
+    purpose: human-curated reference notes not consumed by code
+    risk: low
+    check: none
+  reports/:
+    purpose: generated report snapshots (dossiers, screenshots) — regenerate,
+      don't hand-edit
+    risk: local
+    check: none
+  completions/:
+    purpose: shell completion script for bin/cli
+    risk: low
+    check: none

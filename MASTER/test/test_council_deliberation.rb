@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+
+class TestCouncilDeliberation < Minitest::Test
+  Persona = Struct.new(:name, :role, :bias, :prompt, :veto_role, :emphasizes, keyword_init: true) do
+    def veto? = !!veto_role
+  end
+
+  class StubAgent
+    def initialize(mapping = {})
+      @mapping = mapping
+    end
+
+    def ask(prompt, **)
+      @mapping.each do |needle, response|
+        return response if prompt.include?(needle)
+      end
+      "looks good"
+    end
+  end
+
+  # Stubbed, not inherited: review refuses without a provider key, and keys
+  # reach ENV through EnvLoader at boot — which neither tests nor bare
+  # requires run. This test failed on any shell without exported keys and
+  # passed on any with them, which is an environment reading, not a test.
+  def test_veto_blocks_review
+    personas = [
+      Persona.new(name: "Security", role: "Attacker", bias: "paranoid", prompt: "be strict", veto_role: true),
+    ]
+    agent = StubAgent.new("You are Security" => "VETO: unsafe eval path")
+
+    result = Master.stub(:any_api_key_present?, true) do
+      Master::Review::Council::Deliberation.new(personas:, agent:, judge_enabled: false)
+                                           .review("eval(params[:x])")
+    end
+
+    assert result.err?
+    assert_equal :validation, result.category
+    assert_match(/veto/i, result.message)
+  end
+
+  # The CLI-lane posture: a dev Mac cannot hear 26 personas inside the budget
+  # (the file writes the arithmetic down), so local runs take one round of a
+  # capped panel, veto roles surviving the cut first. vm23 hears everyone.
+  def test_local_posture_caps_the_panel_and_rounds
+    old = ENV["MASTER_COUNCIL_LOCAL"]
+    ENV["MASTER_COUNCIL_LOCAL"] = "1"
+    assert Master::Review::Council::Deliberation.local_posture?
+    cap = Master::Review::Council::Deliberation.local_panel_size
+    assert_operator cap, :>=, 3, "a panel below quorum cannot deliberate"
+
+    critic = Master::Review::Council::Critique.new(mode: :general, agent: nil, files: [])
+    panel = Array.new(26) do |i|
+      Persona.new(name: i < 2 ? "Veto#{i}" : "P#{i}", role: "r", bias: "b", prompt: "p", veto_role: i < 2)
+    end
+    localized = critic.send(:localize_panel, panel)
+    assert_equal cap, localized.size
+    assert localized.take(2).all?(&:veto?), "veto roles must survive the cut first"
+
+    ENV["MASTER_COUNCIL_LOCAL"] = "0"
+    assert_equal panel, critic.send(:localize_panel, panel)
+  ensure
+    old.nil? ? ENV.delete("MASTER_COUNCIL_LOCAL") : ENV["MASTER_COUNCIL_LOCAL"] = old
+  end
+
+  def test_quorum_error_carries_the_failure_tally
+    failing = Class.new do
+      def ask(_prompt, **) = raise(StandardError, "Insufficient credits. Add more using https://openrouter.ai")
+    end.new
+    personas = Array.new(4) { |i| Persona.new(name: "P#{i}", role: "r", bias: "b", prompt: "p") }
+
+    result = Master.stub(:any_api_key_present?, true) do
+      Master::Review::Council::Deliberation.new(personas:, agent: failing, judge_enabled: false)
+                                           .review("puts :ok")
+    end
+
+    assert result.err?
+    assert_match(/quorum not reached \(0\/4\)/, result.message)
+    assert_match(/4x insufficient_credits/, result.message, "the reason tally is the actionable half")
+  end
+
+  def test_empty_personas_fails_validation
+    result = Master::Review::Council::Deliberation.new(personas: [], agent: StubAgent.new, judge_enabled: false)
+                                        .review("puts :ok")
+
+    assert result.err?
+    assert_equal :validation, result.category
+    assert_match(/no personas/, result.message)
+  end
+end

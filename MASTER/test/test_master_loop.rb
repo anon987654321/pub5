@@ -1,0 +1,71 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+
+class TestMasterLoop < Minitest::Test
+  LOOP_ENVS = %w[MASTER_AUTOFIX MASTER_WATCH MASTER_WATCHER MASTER_HEARTBEAT MASTER_BACKGROUND MASTER_LOOP].freeze
+
+  def with_clean_env
+    saved = LOOP_ENVS.to_h { |key| [key, ENV[key]] }
+    LOOP_ENVS.each { |key| ENV.delete(key) }
+    yield
+  ensure
+    LOOP_ENVS.each { |key| saved[key].nil? ? ENV.delete(key) : ENV[key] = saved[key] }
+  end
+
+  def test_master_loop_fix_enables_autofix_only
+    with_clean_env do
+      ENV["MASTER_LOOP"] = "fix"
+      Master.apply_master_loop!
+      assert_equal "1", ENV["MASTER_AUTOFIX"]
+      assert_equal "0", ENV["MASTER_WATCH"]
+      assert_equal "0", ENV["MASTER_WATCHER"]
+    end
+  end
+
+  # The early-boot mode map and data/limits.yml#process are the same fact in two
+  # places; this pins them so heartbeat->env and the "fix"/"autofix" alias cannot
+  # drift the way they had ("MASTER_BACKGROUND" vs "MASTER_HEARTBEAT").
+  def test_loop_flags_agree_with_process_yaml
+    from_yaml = Master::Ops::ProcessBudget.env_by_loop
+                     .transform_keys { |name| name == "autofix" ? "fix" : name }
+    assert_equal from_yaml, Master::MasterRuntime::LOOP_FLAGS
+  end
+
+  def test_data_file_resolves_renamed_limits
+    assert File.exist?(Master.limits_path)
+    assert Master.limits_path.end_with?("limits.yml")
+    assert File.exist?(Master.state_path)
+    refute File.exist?(Master.data_path("style.yml"))
+    refute File.exist?(Master.data_path("operator_principles.yml"))
+    refute File.exist?(Master.data_path("design_rules.yml"))
+    assert Master.law("style").key?("typography")
+    assert Master.law("design_rules").key?("worn_type")
+  end
+
+  # The operator's standing orders live in soul.yml, not in the catalogue the
+  # file scanner reads. They govern how to work rather than what source text may
+  # look like, so no detector can match one, and rules.yml offered them a shape
+  # with a severity and a tier they could never use. soul reaches the prompt
+  # whole through PersonalityPromptBuilder#add_rules; Ground::Constitution cut
+  # them to 480 characters, which took 358 off FLAT_HIERARCHY alone.
+  def test_operator_conduct_is_a_rule_like_any_other
+    rules = Master::Ground::Rules.new.rules
+
+    %w[OPERATOR_AUTONOMY EXECUTE_NOT_INSTRUCT SHELL_DISCIPLINE VPS_SERIAL_TRUTH NO_NEW_FILES
+       STRUNK_WHITE FLAT_PIXELS VOICE_TERSE_UNIX MICRO_REFINEMENTS].each do |id|
+      assert rules.key?(id), "#{id} binds conduct and must still be a rule"
+    end
+
+    refute Master.load_rules.key?("operator_principles"),
+           "conduct in rules.yml is a rule no detector can ever match"
+    refute Master.load_yaml(Master.data_path("soul.yml")).fetch("absolute").key?("rules"),
+           "one registry: law/, not soul"
+  end
+
+  def test_council_prompts_load_from_council_yml
+    prompts = Master::Review::Council::Deliberation.prompts
+    assert prompts["judge"].to_s.include?("Council judge")
+    assert prompts["juror"].to_s.include?("persona_name")
+  end
+end
