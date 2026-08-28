@@ -1,0 +1,36 @@
+@use "stack" as *;
+@use "shell";
+@use "shell_widgets";
+@use "responsive";
+@use "master_embed";
+// The in-feed affiliate band, shared with brgen.
+@use "affiliate_feed_unit";
+@use "variables";
+@use "base";
+@use "fonts_editorial";
+@use "brand";
+@use "guest_compose";
+@use "layout";
+@use "items";
+@use "items_luxury";
+@use "item_forms";
+@use "dashboard";
+@use "dressing_room";
+@use "visualization";
+@use "organize";
+@use "today_look";
+@use "guest_showcase";
+@use "editorial";
+@use "jsfiddle_chrome";
+@use "empty_state";
+@use "offline_page";
+@use "auth_form";
+@use "tiptap";
+@use "focus_ring";
+@use "chat_reactions";
+
+// Classes the markup asked for and nothing defined, measured by
+// Pub4::CssCoverageLint 2026-08-11. Last on purpose: these complement the
+// components above rather than competing with them.
+@use "shared_coverage_fills";
+@use "coverage_fills";
