@@ -1,0 +1,150 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+$stdout.set_encoding("UTF-8")
+$stderr.set_encoding("UTF-8")
+# Always unbuffered so tee/logs capture progress before EOF (scan can run minutes).
+$stdout.sync = true
+$stderr.sync = true
+
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "ground/env_loader"
+Master::Ground::EnvLoader.load!
+
+if !$stdin.tty? && ENV["MASTER_FAST"] == "1"
+  $stdin.each_line do |line|
+    case line.strip
+    when "/status"
+      puts ["status", "mode    fast pipe", "service master/not-booted fast", "pipeline fast"].join("\n")
+    when "/help", "/?"
+      puts "help: /status /help commands available in fast pipe mode"
+    else
+      puts "fast mode: /status /help only"
+    end
+  end
+  exit!(0)
+end
+
+require "set"
+require "optparse"
+require "master"
+require "cli/boot_banner"
+require "cli/web_server"
+Master.prepare_runtime!(unsafe: ENV["MASTER_UNSAFE_PROCESS_DEFAULTS"] == "1")
+
+def initial_message_from_argv(argv)
+  options = parse_initial_message_options(argv)
+  (options[:message] || argv.join(" ")).to_s.strip
+rescue OptionParser::ParseError => e
+  $stderr.puts "cli: #{e.message}"
+  argv.reject { |arg| arg.start_with?("--") }.join(" ").strip
+end
+
+def parse_initial_message_options(argv)
+  options = {}
+  parser = OptionParser.new do |opts|
+    opts.banner = "Usage: bin/cli [-m MSG] [--fast] [--web|--no-web] [--boot-status]"
+    opts.on("-h", "--help") do
+      puts opts
+      puts ""
+      puts "Pipe mode:  echo '/status' | bin/cli"
+      puts "Fast mode:  bin/cli --fast   (status/orient/tools/help only)"
+      puts "Gates:      MASTER/bin/check --profile=contributor|agent|full"
+      puts "VPS 1GB:    auto-skips TTS/boot-scan/web — use /scan lib not full-repo prompts"
+      exit 0
+    end
+    opts.on("-m", "--message TEXT") { |text| options[:message] = text }
+    opts.on("--fold", "run the message through the core Fold, then exit") { ENV["MASTER_FOLD"] = "1" }
+    opts.on("--web") { ENV["MASTER_WEB"] = "1" }
+    opts.on("--no-web") { ENV["MASTER_WEB"] = "0" }
+    opts.on("--boot-status") { ENV["MASTER_BOOT_STATUS"] = "1" }
+    opts.on("--fast") do
+      ENV["MASTER_FAST"] = "1"
+      ENV["MASTER_SKIP_BOOT_SCAN"] = "1"
+      ENV["MASTER_SKIP_TTS"] = "1"
+      ENV["MASTER_WEB"] = "0"
+    end
+  end
+  parser.parse!(argv)
+  options
+end
+
+cli = nil
+
+def save_cli_session_safely(cli)
+  cli&.container&.dig(:session)&.save!
+rescue StandardError => e
+  warn "cli: session save failed: #{e.class}: #{e.message}"
+end
+
+def stop_cli_background_loop_safely(cli)
+  cli&.send(:stop_background_loop)
+rescue StandardError => e
+  warn "cli: background stop failed: #{e.class}: #{e.message}"
+end
+
+trap("INT") { $stderr.puts "\nexiting"; exit!(130) }
+trap("TERM") { exit!(143) }
+trap("TSTP") do
+  $stderr.puts "\ncli: suspended — fg then /exit; Ctrl-Z leaves ~200MB ruby on 1GB hosts"
+  trap("TSTP", "DEFAULT")
+  Process.kill("STOP", Process.pid)
+end
+
+fast_boot = ARGV.include?("--fast") || ENV["MASTER_FAST"] == "1"
+require "ground/host_budget"
+Master::Ground::HostBudget.warn_or_reap_suspended!
+# Wire new tracker (from kimi patch)
+config = Master::Ground::Config.new(Dir.pwd) rescue nil
+tracker = Master::Ground::HostBudgetTracker.new(config) if config
+Master::CLI::BootBanner.print unless fast_boot
+if $stdin.tty? && !fast_boot
+  cli = Master.boot(root: Dir.pwd)
+elsif $stdin.tty? && fast_boot
+  cli = Master.boot(root: Dir.pwd)
+else
+  ENV["MASTER_PIPE"] = "1"
+  ENV["MASTER_SKIP_BOOT_SCAN"] = "1"
+  ENV["MASTER_SKIP_TTS"] = "1"
+  cli = Master.boot(root: Dir.pwd)
+end
+Master::Ops::RuntimeLoopGuards.install!
+
+# --fold routes one coding goal through the core Fold, then exits. Plain-language
+# agent turns and /run <goal> use the Fold; other slash commands dispatch directly.
+if ENV["MASTER_FOLD"] == "1"
+  goal = initial_message_from_argv(ARGV)
+  container = cli.container
+  puts Master::CLI::CoreBridge.run_string(
+    goal, root: Dir.pwd, bus: container[:bus], model_id: container[:agent]&.model
+  )
+  save_cli_session_safely(cli)
+  exit!(0)
+end
+
+if $stdin.tty?
+  Master::CLI::WebServer.start(cli.container[:config]) unless fast_boot
+
+  message = initial_message_from_argv(ARGV)
+  message = "/status" if fast_boot && message.empty?
+  if fast_boot
+    cli.pipe(message) unless message.empty?
+    stop_cli_background_loop_safely(cli)
+    save_cli_session_safely(cli)
+    exit!(cli.exit_code || 0)
+  else
+    cli.run(message.empty? ? nil : message)
+  end
+else
+  $stdout.sync = true
+  $stdin.each_line { |line| cli.pipe(line) }
+  stop_cli_background_loop_safely(cli)
+  save_cli_session_safely(cli)
+  $stdout.flush
+  $stderr.flush
+  exit!(cli.exit_code || 0)
+end
+
+exit(cli.exit_code || 0)

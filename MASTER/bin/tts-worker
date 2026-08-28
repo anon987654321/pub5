@@ -1,0 +1,242 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+#
+# TTS worker — runs EventMachine in isolation from Falcon Async fibers.
+# Two modes:
+#   one-shot: tts-worker VOICE RATE PITCH OUT_PATH < text
+#   daemon:   tts-worker --daemon SOCKET_PATH
+#
+# Daemon protocol: one JSON request per connection — {voice,rate,pitch,text}\n
+# — followed by raw MP3 bytes back, then EOF. Single-threaded; serialised by
+# EM reactor lifecycle.
+
+ROOT = File.expand_path("..", __dir__)
+# RUBYLIB and BUNDLE_LOCKFILE confirmed live on vm23 (Falcon's own process has both,
+# pointing at MASTER/web's vendored bundler-4.0.7/lib and web/Gemfile.lock) -- neither
+# was covered here, so any spawn path that skips full unsetenv_others isolation (see
+# ENV.delete below) still resolves the wrong Gemfile.lock against MASTER's Gemfile.
+BUNDLE_ISOLATION_KEYS = %w[
+  BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITHOUT BUNDLE_DEPLOYMENT
+  BUNDLE_DISABLE_SHARED_GEMS BUNDLE_APP_CONFIG BUNDLE_LOCKFILE
+  GEM_HOME GEM_PATH RUBYOPT RUBYLIB
+].freeze
+
+# ENV.delete below can't undo damage already done: if the launching process
+# (Falcon's `bundle exec falcon serve`, or any parent shell that ran `bundle
+# exec`) had RUBYOPT=-rbundler/setup in its environment, Ruby's OWN startup
+# already required "bundler/setup" against THAT Gemfile (MASTER/web/Gemfile)
+# before this file's first line ever ran -- deleting RUBYOPT here is too
+# late, and the later `require "bundler/setup"` below is a silent no-op
+# against the wrong, already-resolved Definition. Re-exec into a genuinely
+# clean process image so Ruby's native boot never sees the inherited vars
+# at all, regardless of how this script was launched (rc.d, tts_supervisor's
+# Process.spawn, or a raw shell). One-time guard via TTS_WORKER_REEXEC_DONE
+# avoids re-execing forever.
+if ENV["TTS_WORKER_REEXEC_DONE"] != "1"
+  clean_env = {
+    "HOME" => ENV.fetch("HOME", ""),
+    "USER" => ENV.fetch("USER", ""),
+    "PATH" => ENV.fetch("PATH", "/usr/local/bin:/usr/bin:/bin"),
+    "LANG" => ENV.fetch("LANG", "C.UTF-8"),
+    "LC_ALL" => ENV.fetch("LC_ALL", "C.UTF-8"),
+    "BUNDLE_GEMFILE" => File.join(ROOT, "Gemfile"),
+    "TTS_WORKER_REEXEC_DONE" => "1",
+  }
+  exec(clean_env, RbConfig.ruby, __FILE__, *ARGV, unsetenv_others: true)
+end
+
+BUNDLE_ISOLATION_KEYS.each { |key| ENV.delete(key) }
+ENV["BUNDLE_GEMFILE"] = File.join(ROOT, "Gemfile")
+
+require "bundler/setup"
+require "eventmachine"
+require "rb_edge_tts"
+require "faye/websocket"
+require "json"
+require "socket"
+require "fileutils"
+require "open3"
+require "securerandom"
+
+# OpenBSD verify failed because worker_env wiped SSL_CERT_FILE. Keep
+# verification on and point at the system bundle.
+Faye::WebSocket::Client.singleton_class.prepend(Module.new do
+  def new(url, protocols = [], options = {})
+    cert = ENV["SSL_CERT_FILE"].to_s
+    cert = %w[/etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt].find { |p| File.file?(p) }.to_s if cert.empty?
+    tls = { verify_peer: true }
+    tls[:cert_chain_file] = cert unless cert.empty?
+    super(url, protocols, options.merge(tls: options.fetch(:tls, {}).merge(tls)))
+  end
+end)
+
+def synth(voice, rate, pitch, text, out_path)
+  RbEdgeTTS::Communicate.new(text, voice, rate: rate, pitch: pitch).save_sync(out_path)
+  File.exist?(out_path) && File.size(out_path) > 0
+end
+
+def worker_env
+  wipe = ENV.keys.to_h { |key| [key, nil] }
+  wipe.merge(
+    "HOME" => ENV.fetch("HOME", ""),
+    "USER" => ENV.fetch("USER", ""),
+    "PATH" => ENV.fetch("PATH", "/usr/local/bin:/usr/bin:/bin"),
+    "LANG" => ENV.fetch("LANG", "C.UTF-8"),
+    "LC_ALL" => ENV.fetch("LC_ALL", "C.UTF-8"),
+    "BUNDLE_GEMFILE" => File.join(ROOT, "Gemfile"),
+    "SSL_CERT_FILE" => ENV["SSL_CERT_FILE"].to_s.empty? ? "/etc/ssl/cert.pem" : ENV["SSL_CERT_FILE"],
+    "SSL_CERT_DIR" => ENV.fetch("SSL_CERT_DIR", "/etc/ssl")
+  )
+end
+
+def synth_subprocess(voice, rate, pitch, text, out_path)
+  script = File.expand_path(__FILE__)
+  _out, err, status = Open3.capture3(
+    worker_env, Gem.ruby, script, voice, rate, pitch, out_path,
+    stdin_data: text.to_s
+  )
+  unless status.success?
+    warn "tts-worker: one-shot failed: #{err.to_s.strip}" unless err.to_s.strip.empty?
+    return false
+  end
+  File.exist?(out_path) && File.size(out_path) > 0
+end
+
+# EventMachine's reactor cannot be safely reused within one process across
+# requests (see 4b9da6d2d: a second `save_sync` in the same daemon process
+# silently returned empty audio) -- so each request needs its own fresh
+# process. A full Open3.capture3 re-exec (synth_subprocess above) pays for
+# that isolation with a complete Ruby+Bundler+EventMachine+rb_edge_tts cold
+# boot on *every* request, which is why the "warm daemon" was slower than
+# the plain one-shot path it was meant to replace. fork() gives the same
+# per-request isolation via a copy-on-write child that skips bundler/require
+# entirely, so it inherits the already-loaded interpreter instead of
+# re-booting one.
+def synth_forked(voice, rate, pitch, text, out_path)
+  pid = Process.fork do
+    begin
+      Process.setproctitle("tts-worker: synth")
+    rescue StandardError
+      nil
+    end
+    begin
+      ok = synth(voice, rate, pitch, text, out_path)
+      exit!(ok ? 0 : 1)
+    rescue StandardError => e
+      warn "tts-worker: fork child error: #{e.class}: #{e.message}"
+      exit!(1)
+    end
+  end
+  _pid, status = Process.wait2(pid)
+  status.success? && File.exist?(out_path) && File.size(out_path) > 0
+rescue NotImplementedError, StandardError => e
+  warn "tts-worker: fork unavailable, falling back to subprocess: #{e.class}: #{e.message}"
+  synth_subprocess(voice, rate, pitch, text, out_path)
+end
+
+def require_eventmachine_ssl!
+  return unless EventMachine.respond_to?(:ssl?) && !EventMachine.ssl?
+
+  warn "tts-worker: EventMachine SSL support unavailable; reinstall eventmachine with OpenSSL support or install espeak"
+  exit 69
+end
+
+if ARGV[0] == "--daemon"
+  require_eventmachine_ssl!
+  sock_path = ARGV[1] or abort "tts-worker --daemon: missing SOCKET_PATH"
+  FileUtils.mkdir_p(File.dirname(sock_path))
+  # Refuse to steal a live daemon's socket: if something answers the health
+  # probe at this path, a healthy daemon owns it and a second spawn (racing
+  # supervisor calls, manual runs) must not unlink it. Only clear dead paths.
+  if File.socket?(sock_path)
+    begin
+      UNIXSocket.open(sock_path) do |probe|
+        probe.write(%({"health":true}\n))
+        if IO.select([probe], nil, nil, 1) && probe.gets.to_s.strip == "ok"
+          warn "tts-worker: healthy daemon already bound to #{sock_path}; exiting"
+          exit 0
+        end
+      end
+    rescue SystemCallError, EOFError, IOError
+      # dead socket file — safe to replace
+    end
+  end
+  File.unlink(sock_path) rescue nil
+  server = UNIXServer.new(sock_path)
+  begin
+    File.chmod(0o660, sock_path)
+  rescue Errno::ENOSYS, Errno::EOPNOTSUPP
+    warn "tts-worker: chmod unsupported for #{sock_path}; continuing with filesystem permissions"
+  end
+  warn "tts-worker: daemon ready on #{sock_path}"
+  # Unlink on exit ONLY if the path still refers to the socket this process
+  # bound. An older daemon dying after a newer one has already re-bound the
+  # same path would otherwise unlink the newer daemon's socket out from under
+  # it — the pool then has a live process nobody can reach until the next
+  # respawn, and every synthesis in between burns its full connect timeout.
+  bound_ino = (File.stat(sock_path).ino rescue nil)
+  cleanup = proc do
+    begin
+      File.unlink(sock_path) if bound_ino && File.stat(sock_path).ino == bound_ino
+    rescue StandardError
+      nil
+    end
+    exit 0
+  end
+  trap("INT", &cleanup)
+  trap("TERM", &cleanup)
+
+  loop do
+    client = server.accept
+    begin
+      line = client.gets&.chomp
+      next unless line && !line.empty?
+      req = JSON.parse(line)
+      if req["health"]
+        client.write("ok\n")
+        next
+      end
+      voice = req["voice"].to_s
+      rate  = req["rate"].to_s
+      pitch = req["pitch"].to_s
+      text  = req["text"].to_s
+      next if voice.empty? || text.empty?
+      out = "/tmp/m_tts_#{SecureRandom.hex(8)}.mp3"
+      ok = synth_forked(voice, rate, pitch, text, out)
+      if ok
+        begin
+          File.open(out, "rb") { |f| IO.copy_stream(f, client) }
+        rescue Errno::ENOTCONN, Errno::EPIPE, Errno::ECONNRESET
+          # client hung up before the stream finished — routine with the async job model, not a fault
+        end
+      end
+      File.unlink(out) rescue nil
+    rescue StandardError => e
+      warn "tts-worker: #{e.class}: #{e.message}"
+    ensure
+      client.close rescue nil
+    end
+  end
+end
+
+voice, rate, pitch, out_path = ARGV
+if [voice, rate, pitch, out_path].any?(&:nil?)
+  warn "tts-worker: usage: tts-worker VOICE RATE PITCH OUT_PATH < text"
+  warn "                   tts-worker --daemon SOCKET_PATH"
+  exit 64
+end
+$stdin.set_encoding(Encoding::UTF_8)
+text = $stdin.read.force_encoding(Encoding::UTF_8)
+if text.to_s.strip.empty?
+  warn "tts-worker: empty stdin"
+  exit 65
+end
+require_eventmachine_ssl!
+
+begin
+  ok = synth(voice, rate, pitch, text, out_path)
+  exit(ok ? 0 : 1)
+rescue StandardError => e
+  warn "tts-worker: #{e.class}: #{e.message}"
+  exit 1
+end

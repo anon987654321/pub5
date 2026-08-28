@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require "socket"
+require "yaml"
+
+ROOT = File.expand_path("..", __dir__)
+REPO = File.expand_path("..", ROOT)
+DEBT = File.join(REPO, "OPENBSD", "data", "debt.yml")
+
+def capture(*cmd, chdir: REPO)
+  out, status = Open3.capture2e(*cmd, chdir:)
+  status.success? ? out.strip : nil
+end
+
+def debt_open
+  return [] unless File.file?(DEBT)
+
+  data = YAML.safe_load(File.read(DEBT)) || {}
+  Array(data["open"])
+end
+
+def port_open?(port)
+  socket = Socket.tcp("127.0.0.1", port, connect_timeout: 0.2)
+  socket.close
+  true
+rescue StandardError
+  false
+end
+
+def probe_status(label, env_key)
+  if ENV[env_key] == "1"
+    "#{label}: required"
+  elsif ENV["PROBE_REQUIRE_BROWSER"] == "1" && env_key == "PROBE_REQUIRE_BROWSER"
+    "#{label}: required (PROBE_REQUIRE_BROWSER=1)"
+  else
+    "#{label}: optional (set #{env_key}=1 to require)"
+  end
+end
+
+branch = capture("git", "branch", "--show-current") || "unknown"
+commit = capture("git", "rev-parse", "--short", "HEAD") || "unknown"
+dirty = capture("git", "status", "--porcelain")&.lines&.count.to_i
+behind = capture("git", "rev-list", "--count", "HEAD..@{u}") || "0"
+
+puts "handoff: pub4 agent state"
+puts "repo: #{REPO}"
+puts "branch: #{branch} @ #{commit} (#{dirty} dirty, #{behind} behind upstream)"
+puts
+
+open_items = debt_open
+puts "OPENBSD/data/debt.yml open: #{open_items.size}"
+open_items.first(8).each { |item| puts "  - [#{item['id']}] #{item['summary']}" }
+puts "  …" if open_items.size > 8
+puts
+
+puts "feature inventory: RAILS/apps.yml (horizon: apps.horizon.yml)"
+puts "quick status: bin/pub4 status · /orient deploy"
+puts
+puts "golden checks (contributor profile):"
+puts "  cd MASTER && bin/check --profile=contributor"
+puts "  OPENBSD/bin/check --profile=contributor"
+puts "  OPENBSD/bin/check-rails --profile=contributor"
+puts "  ruby OPENBSD/integrity_gate.rb"
+puts "  cd MASTER && bundle exec ruby bin/cli /scan RAILS/<app>"
+puts
+
+ports = {
+  "MASTER web" => Integer(ENV.fetch("MASTER_WEB_PORT", "53187")),
+  "brgen" => 38_182,
+  "amber" => 61_352,
+  "bsdports" => 47_312,
+}
+puts "dev ports:"
+ports.each do |name, port|
+  state = port_open?(port) ? "listening" : "closed"
+  puts "  #{name.ljust(12)} #{port} (#{state})"
+end
+puts
+
+puts "browser/audio probes:"
+puts "  #{probe_status('WebGL/tap probe', 'PROBE_REQUIRE_BROWSER')}"
+puts "  #{probe_status('Live web tests', 'MASTER_CI_WEB')}"
+puts "  TTS: edge-tts or espeak on PATH (#{capture('which', 'edge-tts') || capture('which', 'espeak') || 'not found'})"
+puts
+puts "recipes: OPENBSD/RECIPES.md"

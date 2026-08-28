@@ -1,0 +1,37 @@
+web/config/master.key
+*.bak
+*.bak2
+*.orig
+.master/
+/log/
+vendor/bundle/
+web/vendor/bundle/
+web/tmp/
+web/log/
+web/public/assets/
+web/public/packs/
+web/.env*
+*.mp3
+*.wav
+*.quality.json
+/tmp/
+.master3/cache/
+.master3/memory.yml
+chrome.core
+*.core
+snapshot.md
+
+# Resumable task state — see data/session_recovery.yml
+.session_recovery
+.session_recovery.archive/
+data/feedback_ledger.jsonl
+data/traces/
+data/learnings.jsonl
+/runtime/
+knowledge/
+
+# Runtime constitutional state — written by soul.yml hooks / scan runs. Keeping it
+# out of the tree means a dirty `git status` always signals human/agent edits, not
+# just that a probe ran.
+.constitutional_violations.jsonl
+.constitutional_locks/

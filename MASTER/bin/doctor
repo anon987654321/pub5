@@ -1,0 +1,168 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require "socket"
+require "yaml"
+
+ROOT = File.expand_path("..", __dir__)
+REPO = File.expand_path("..", ROOT)
+$LOAD_PATH.unshift File.join(ROOT, "lib")
+require "ground/env_loader"
+Master::Ground::EnvLoader.load!
+
+Check = Struct.new(:name, :ok, :detail, keyword_init: true)
+
+def run(*argv, chdir: ROOT)
+  stdout, stderr, status = Open3.capture3(*argv, chdir: chdir)
+  [status.success?, stdout.strip, stderr.strip]
+rescue Errno::ENOENT => e
+  [false, "", e.message]
+end
+
+def check_ruby
+  ok, out, err = run("ruby", "--version")
+  version = out[/ruby (\d+\.\d+\.\d+)/, 1]
+  good = ok && version && Gem::Version.new(version) >= Gem::Version.new("3.3.0")
+  Check.new(name: "ruby", ok: good, detail: out.empty? ? err : out)
+end
+
+def check_command(name, *cmd)
+  ok, out, err = run(*cmd, chdir: REPO)
+  Check.new(name: name, ok: ok, detail: ok ? out.lines.first.to_s.strip : err)
+end
+
+def check_bundle
+  ok, out, err = run("bundle", "check", chdir: ROOT)
+  Check.new(name: "bundle", ok: ok, detail: if ok
+"dependencies satisfied"
+else
+(err.empty? ? out : err)
+end)
+end
+
+def check_yaml
+  errors = Dir.glob(File.join(ROOT, "data", "**", "*.yml")).filter_map do |path|
+    YAML.safe_load_file(path, aliases: true)
+    nil
+  rescue Psych::Exception => e
+    "#{path.sub(ROOT + '/', '')}: #{e.message.lines.first.to_s.strip}"
+  end
+  Check.new(name: "yaml", ok: errors.empty?, detail: errors.empty? ? "ok" : errors.join("; "))
+end
+
+# Advisory only, matching PrincipleMapRepair's dangling-reference check --
+# which duplicate is "correct" when two differ even slightly isn't safe to
+# guess, so this reports rather than fixes (see ContentDedupScan's header).
+def check_content_dedup
+  require "ground/content_dedup_scan"
+  dups = Master::Ground::ContentDedupScan.scan(root: ROOT)
+  detail = dups.empty? ? "no duplicate lines" : "#{dups.size} duplicate line(s), top: #{dups.first.text[0, 50]} (x#{dups.first.count})"
+  # ok: true unconditionally -- advisory only, never fails doctor's exit code.
+  Check.new(name: "content-dedup", ok: true, detail:)
+rescue StandardError => e
+  Check.new(name: "content-dedup", ok: false, detail: "#{e.class}: #{e.message}")
+end
+
+def check_api_keys
+  keys = %w[XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY DEEPSEEK_API_KEY GEMINI_API_KEY]
+  present = keys.select { |var| ENV[var].to_s.length >= 16 }
+  if present.any?
+    return Check.new(name: "api-keys", ok: true, detail: present.join(", "))
+  end
+  keyless = ENV["MASTER_KEYLESS"].to_s != "" || ENV["MASTER_WEB_CHAT"].to_s != "" || present.empty?
+  detail = keyless ? "keyless browser mode (web-chat:grok → chatgpt → kimi)" : "none configured"
+  Check.new(name: "api-keys", ok: keyless, detail: detail)
+end
+
+def check_tts_socket
+  path = File.join(ROOT, ".master", "tts.sock")
+  alive = File.socket?(path) && (UNIXSocket.open(path, &:close); true)
+  Check.new(name: "tts-socket", ok: alive, detail: alive ? path : "not running")
+rescue StandardError => e
+  Check.new(name: "tts-socket", ok: false, detail: e.message)
+end
+
+def check_web_token
+  cfg_path = File.join(ROOT, ".master", "config.yml")
+  cfg = YAML.safe_load_file(cfg_path, aliases: true) rescue {}
+  tok = cfg["web_token"].to_s
+  Check.new(name: "web-token", ok: tok.length >= 8, detail: tok.empty? ? "unset in .master/config.yml" : "configured")
+end
+
+def check_key_rotator
+  count = Master::Ground::KeyRotator.keys.size
+  Check.new(name: "key-rotator", ok: count.positive?, detail: "#{count} OpenRouter key(s)")
+rescue NameError
+  keys = %w[OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3]
+  count = keys.count { |var| ENV[var].to_s.length >= 16 }
+  Check.new(name: "key-rotator", ok: count.positive?, detail: "#{count} OpenRouter key(s)")
+end
+
+def check_model_quota
+  snap = Master::Ground::ModelQuota.snapshot
+  exhausted = snap[:exhausted]
+  detail = exhausted.empty? ? "ok (#{snap[:models].size} tracked)" : "exhausted: #{exhausted.join(', ')}"
+  Check.new(name: "model-quota", ok: exhausted.empty?, detail: detail)
+rescue NameError
+  Check.new(name: "model-quota", ok: true, detail: "module not loaded")
+end
+
+def check_cache_efficiency
+  snap = Master::Trace::CacheEfficiency.snapshot
+  Check.new(name: "cache-efficiency", ok: true,
+            detail: "#{snap[:efficiency_pct]}% (#{snap[:cached_tokens]}/#{snap[:input_tokens]} tokens)")
+rescue NameError
+  Check.new(name: "cache-efficiency", ok: true, detail: "module not loaded")
+end
+
+def check_provider_catalog
+  path = File.join(ROOT, "bin", "provider-catalog")
+  Check.new(name: "provider-catalog", ok: File.exist?(path), detail: File.exist?(path) ? path : "missing")
+end
+
+def check_safety_tests
+  path = File.join(ROOT, "bin", "test-safety")
+  Check.new(name: "test-safety", ok: File.exist?(path), detail: File.exist?(path) ? path : "missing")
+end
+
+$LOAD_PATH.unshift File.join(ROOT, "lib")
+require "master" rescue nil
+
+if ARGV.include?("--fix")
+  require "fileutils"
+  require "set"
+  require "ground/principle_map_repair"
+  fixed = Master::Ground::PrincipleMapRepair.fix!(root: ROOT)
+  if fixed.any?
+    puts "doctor --fix: removed #{fixed.size} dangling rule_id reference(s) from data/principle_map.yml (backup: .bak)"
+    fixed.each { |id, rid| puts "  #{id}: removed #{rid}" }
+  else
+    puts "doctor --fix: principle_map.yml rule_ids clean, nothing to repair"
+  end
+end
+
+checks = [
+  check_ruby,
+  check_command("git", "git", "--version"),
+  check_command("sqlite3", "ruby", "-e", "require 'sqlite3'; puts SQLite3::SQLITE_VERSION"),
+  check_bundle,
+  check_yaml,
+  check_content_dedup,
+  check_api_keys,
+  check_tts_socket,
+  check_web_token,
+  check_key_rotator,
+  check_model_quota,
+  check_cache_efficiency,
+  check_provider_catalog,
+  check_safety_tests,
+]
+
+puts "MASTER doctor"
+checks.each do |check|
+  puts "#{check.ok ? 'OK' : 'FAIL'} #{check.name}: #{check.detail}"
+end
+
+failed = checks.reject(&:ok)
+exit(failed.empty? ? 0 : 1)

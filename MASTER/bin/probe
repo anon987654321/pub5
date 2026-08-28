@@ -1,0 +1,214 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# master-probe — one entrypoint for local and VPS readiness checks.
+# Usage:
+#   bin/probe              # quick local signal
+#   bin/probe all          # smoke + namespace + selftest + core + dogfood + preflight + audit + rails gate
+#   bin/probe smoke rails  # selected checks
+
+Encoding.default_external = Encoding::UTF_8
+
+require "open3"
+require "rbconfig"
+
+MASTER_ROOT = File.expand_path("..", __dir__)
+REPO_ROOT = File.expand_path("..", MASTER_ROOT)
+RUBY = RbConfig.ruby
+RUBY3 = Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0.0")
+
+# Inlined from bin/probe_selfscan (2026-08-19 sprawl collapse): deep-scan
+# lib/master.rb and fail on error/critical findings.
+SELFSCAN_SRC = <<~SCRIPT.freeze
+  $LOAD_PATH.unshift File.join(%q{#{MASTER_ROOT}}, "lib")
+  require "master"
+  container = Master.bootstrap_container(root: %q{#{MASTER_ROOT}})
+  result = container[:scanner].scan(File.join(%q{#{MASTER_ROOT}}, "lib", "master.rb"), depth: :deep)
+  findings = result.ok? ? result.value! : []
+  bad = findings.select { |f| %i[error critical].include?(f[:severity].to_sym) }
+  puts "selfscan: findings=" + findings.size.to_s + " critical=" + bad.size.to_s
+  bad.first(10).each { |f| warn "\#{f[:file]}:\#{f[:line]} [\#{f[:severity]}] \#{f[:rule]}: \#{f[:message]}" }
+  exit(bad.empty? ? 0 : 1)
+SCRIPT
+
+CHECKS = {
+  "smoke" => {
+    desc: "MASTER boot/wiring smoke",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "smoke")],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "smoke-web" => {
+    desc: "MASTER web face HTTP smoke (bootstrap-aware)",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "smoke-web")],
+    cwd: MASTER_ROOT,
+  },
+  "nsaudit" => {
+    desc: "MASTER namespace reference audit",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "nsaudit")],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "selftest" => {
+    desc: "rules.yml self_test laws against MASTER itself",
+    cmd: [RUBY, "-S", "rake", "selftest"],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "data_singularity" => {
+    desc: "top-level data YAML key singularity lint",
+    cmd: [RUBY, "-S", "rake", "lint:data_singularity"],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "models" => {
+    desc: "every declared model id still served by the provider (network)",
+    cmd: [RUBY, "-S", "rake", "lint:models"],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "preflight" => {
+    desc: "MASTER deploy preflight",
+    cmd: [File.join(MASTER_ROOT, "bin", "preflight")],
+    cwd: MASTER_ROOT,
+  },
+  "audit" => {
+    desc: "Staged-file constitutional audit",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "audit")],
+    cwd: REPO_ROOT,
+    needs_ruby3: true,
+    skip: lambda {
+      out, = Open3.capture2e("git", "diff", "--cached", "--name-only", chdir: REPO_ROOT)
+      out.lines.none? { |line| !line.strip.empty? }
+    },
+    skip_reason: "no staged files",
+  },
+  "rails" => {
+    desc: "RAILS production gate",
+    cmd: [RUBY, File.join(REPO_ROOT, "RAILS", "gates", "runner.rb"), "production"],
+    cwd: REPO_ROOT,
+  },
+  "phantom_fk" => {
+    desc: "Rails schema phantom foreign-key targets",
+    cmd: [RUBY, File.join(REPO_ROOT, "RAILS", "gates", "runner.rb"), "phantom_foreign_keys"],
+    cwd: REPO_ROOT,
+  },
+  "playbook" => {
+    desc: "Print operator playbook lessons",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "playbook")],
+    cwd: MASTER_ROOT,
+  },
+  "ci" => {
+    desc: "MASTER unit tests + constitution scan",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "ci")],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "health" => {
+    desc: "OpenBSD VPS stack health",
+    cmd: [RUBY, File.join(REPO_ROOT, "OPENBSD", "openbsd", "health_check.rb")],
+    cwd: REPO_ROOT,
+    skip: -> { !File.file?("/etc/relayd.conf") },
+    skip_reason: "not on OpenBSD VPS (/etc/relayd.conf missing)",
+  },
+  "core" => {
+    desc: "Core integration smoke (Effect → Constitution → World)",
+    cmd: [RUBY, File.join(MASTER_ROOT, "core", "spec", "core_smoke.rb")],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "dogfood" => {
+    desc: "MASTER CLI dogfood (bundle exec ruby bin/cli + chitchat)",
+    cmd: [RUBY, File.join(MASTER_ROOT, "bin", "dogfood")],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+  },
+  "crawl" => {
+    desc: "HTTP crawl manifest + inventory sync (apps.yml ↔ deploy_inventory.json)",
+    cmd: [RUBY, File.join(REPO_ROOT, "RAILS", "tools", "crawl_probe.rb")],
+    cwd: REPO_ROOT,
+  },
+  "crawl-browser" => {
+    desc: "Ferrum element crawl (MASTER face session + Rails landmarks)",
+    cmd: ["sh", "-c",
+          "BUNDLE_WITH=test bundle exec ruby #{File.join(REPO_ROOT, 'RAILS', 'crawl_browser.rb')}"],
+    cwd: MASTER_ROOT,
+    skip: lambda {
+      return true if ENV["MASTER_CRAWL_BROWSER"] == "0"
+      return false if ENV["MASTER_CRAWL_BROWSER"] == "1" || ENV["PROBE_FORCE_BROWSER"] == "1"
+      RUBY_PLATFORM.include?("darwin")
+    },
+    skip_reason: "set MASTER_CRAWL_BROWSER=1 or PROBE_FORCE_BROWSER=1 (skipped on macOS by default)",
+  },
+  "integrity" => {
+    desc: "Full RAILS + OPENBSD/OpenBSD gate chain",
+    cmd: [RUBY, File.join(REPO_ROOT, "OPENBSD", "integrity_gate.rb")],
+    cwd: REPO_ROOT,
+  },
+  "selfscan" => {
+    desc: "Deep-scan lib/master.rb (set MASTER_PROBE_SELF=1)",
+    cmd: [RUBY, "-e", SELFSCAN_SRC],
+    cwd: MASTER_ROOT,
+    needs_ruby3: true,
+    skip: -> { ENV["MASTER_PROBE_SELF"] != "1" },
+    skip_reason: "set MASTER_PROBE_SELF=1",
+  },
+}.freeze
+
+ALIASES = {
+  "quick" => %w[smoke nsaudit selftest data_singularity rails ci],
+  "all" => %w[smoke nsaudit selftest data_singularity core dogfood models preflight audit rails phantom_fk],
+  "deploy" => %w[rails phantom_fk crawl crawl-browser integrity health smoke-web playbook],
+  "integrity" => %w[integrity crawl crawl-browser rails phantom_fk smoke-web],
+  "security" => %w[audit nsaudit selftest data_singularity rails],
+}.freeze
+
+def expand_args(args)
+  selected = args.empty? ? %w[quick] : args
+  selected.flat_map { |arg| ALIASES.fetch(arg, [arg]) }.uniq
+end
+
+def print_usage
+  warn "usage: bin/probe [#{(CHECKS.keys + ALIASES.keys).sort.join("|")}]..."
+  warn
+  warn "checks:"
+  CHECKS.each { |name, meta| warn "  #{name.ljust(9)} #{meta[:desc]}" }
+  warn
+  warn "aliases:"
+  ALIASES.each { |name, checks| warn "  #{name.ljust(9)} #{checks.join(", ")}" }
+end
+
+checks = expand_args(ARGV)
+unknown = checks - CHECKS.keys
+unless unknown.empty?
+  print_usage
+  warn "\nunknown probe check(s): #{unknown.join(", ")}"
+  exit 64
+end
+
+failures = []
+checks.each do |name|
+  meta = CHECKS.fetch(name)
+  if meta[:needs_ruby3] && !RUBY3
+    puts "probe: #{name.ljust(9)} skip - Ruby #{RUBY_VERSION} cannot parse MASTER Ruby 3 syntax; rerun with ruby34"
+    next
+  end
+
+  if meta[:skip]&.call
+    puts "probe: #{name.ljust(9)} skip - #{meta.fetch(:skip_reason)}"
+    next
+  end
+
+  puts "probe: #{name.ljust(9)} #{meta[:desc]}"
+  out, status = Open3.capture2e(*meta[:cmd], chdir: meta[:cwd])
+  puts out unless out.empty?
+  failures << name unless status.success?
+end
+
+if failures.empty?
+  puts "probe: clean"
+  exit 0
+end
+
+warn "probe: #{failures.size} failure(s): #{failures.join(", ")}"
+exit 1

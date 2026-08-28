@@ -1,0 +1,215 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+
+ROOT = File.expand_path("..", __dir__)
+REPO = File.expand_path("..", ROOT)
+# MASTER_AUTOFIX gates the background fix *loop* (lib/ops/loop_slot.rb,
+# builder/ai_boot.rb) -- it has never had anything to do with the deterministic
+# AstFixer pass that /scan runs. That pass reads MASTER_SCAN_AUTOFIX, defaulting
+# to "1", so for as long as this hash listed only MASTER_AUTOFIX the full chain's
+# *first* `/scan .` wrote to the tree before `/fix` was ever reached, and the
+# variable set to prevent it was inert. Scan-only mode was safe by accident,
+# because it passes --no-autofix on the command line instead of trusting the env.
+#
+# Both keys, because they are two different switches and the gate wants both off:
+# no background convergence loop, and no writes from a step whose job is to
+# measure. RAILS/gates/lib/constitutional_scan.rb already carried exactly this
+# pair; this file had drifted from it.
+SAFE_ENV = {
+  "MASTER_SAFE_MODE" => "1",
+  "MASTER_BACKGROUND" => "0",
+  "MASTER_AUTOFIX" => "0",
+  "MASTER_SCAN_AUTOFIX" => "0",
+  "MASTER_WATCH" => "0",
+  "MASTER_WATCHER" => "0",
+  "MASTER_HEARTBEAT" => "0",
+}.freeze
+
+# Full chain mutates the tree via /fix, and only via /fix -- see SAFE_ENV above.
+# Prefer SCAN_ONLY=1 in CI/preflight.
+SCAN_ONLY = ENV["MASTER_GATE_SCAN_ONLY"] == "1" || ARGV.include?("--scan-only")
+
+COMMANDS = {
+  master: (
+    if SCAN_ONLY
+      ["/scan --no-autofix .", "/critique ."].freeze
+    else
+      [
+        "/scan .",
+        "/fix .",
+        "/scan .",
+        "/critique .",
+        "/review .",
+      ].freeze
+    end
+  ),
+  # DEPLOY was renamed to RAILS + OPENBSD (OPERATOR was later folded into
+  # OPENBSD). /scan takes one path per invocation, so each former DEPLOY
+  # child gets its own pass.
+  #
+  # STUDIO added 2026-08-11. CLAUDE.md names four sibling trees and this list
+  # carried two, so dilla, lora, postpro and repligen -- 57 tracked Ruby files
+  # including the whole beat engine -- were never scanned, fixed or reviewed,
+  # and the gate reported the repo clean on the strength of three quarters of
+  # it. A gate whose target list is shorter than the repo is not a gate.
+  #
+  # Caveat for the FULL pass, not scan-only: scanner.rb SKIP_PATH_SEGMENTS
+  # skips `cache` but not `.cache`, so /fix would descend into STUDIO's
+  # generated lora/**/.cache/** copies. Read the printed diff before
+  # committing; do not commit rewrites of generated caches.
+  deploy: %w[../RAILS ../OPENBSD ../STUDIO].flat_map { |path|
+    if SCAN_ONLY
+      ["/scan --no-autofix #{path}", "/critique #{path}"]
+    else
+      ["/scan #{path}", "/fix #{path}", "/scan #{path}", "/critique #{path}", "/review #{path}"]
+    end
+  }.freeze,
+}.freeze
+
+def run_command(*argv, chdir: ROOT)
+  puts "$ #{argv.join(" ")}"
+  stdout, status = Open3.capture2e(*argv, chdir: chdir)
+  puts stdout
+  abort "err: command failed: #{argv.join(" ")}" unless status.success?
+end
+
+# A stage that could not measure did not pass.
+#
+# bin/cli exits 0 when a command runs to completion, and /critique runs to
+# completion whether or not its council answered. On 2026-07-31 a full
+# scan-only gate printed "ok: MASTER gate scan-only complete" and exited 0 with
+# all three of its critique stages dead: MASTER and OPENBSD reached a quorum of
+# 2 personas out of 26, and RAILS reported "critique failed: claude-cli: timed
+# out after 60s" outright. The scanners had run, so the gate called it green --
+# but a green gate is a claim that the code was reviewed, and nothing had been.
+#
+# This is the rule DECISIONS already records for gates in general (932195cf8,
+# "inconclusive should mean nothing measured, not something skipped"). The exit
+# status is not the only signal a stage emits; when a stage says in its own
+# output that it could not reach a verdict, that is the verdict.
+INCONCLUSIVE = [
+  /quorum not reached/,
+  /^critique failed:/,
+  /^scan failed:/,
+  /^review failed:/,
+  # A fix pass that ran out of clock did not finish fixing. Observed on the
+  # 2026-07-31 full-fix run: /fix prescanned, found 233 cross-file risks,
+  # completed ONE pass, printed "wall-clock timeout (1800s) after 1 pass(es)",
+  # exited 0, and the gate counted the stage as done. The scan on either side of
+  # it reported the identical 110 violations in the identical categories, so the
+  # measure/fix/verify sandwich verified that nothing had moved and called it a
+  # pass.
+  #
+  # This is deliberately not softened to a warning. The whole point of the
+  # stage is that the tree afterwards is better than the tree before; if the
+  # budget ran out mid-pass, nobody knows whether it is, and "nobody knows" is
+  # the state this file exists to refuse.
+  /wall-clock timeout/,
+].freeze
+
+# A stage that never returns is the one shape INCONCLUSIVE cannot catch.
+#
+# Every pattern in that list is something a stage SAYS on its way out. A stage
+# that says nothing and does not exit is invisible to all of them, and
+# capture2e has no timeout, so the gate simply stops — no output, no failure,
+# no exit code, indefinitely.
+#
+# Measured 2026-08-11: `/critique ../STUDIO/repligen` ran 16 minutes at 0% CPU
+# and produced zero bytes before being killed by hand, and `/review` the same,
+# on a runtime where a plain prompt answers in under two seconds. Both go
+# through the council's LLM agent; the ordinary reply lane does not. So this is
+# not "no provider keys" — it is one lane blocking on a call that never
+# returns, and the gate had no way to notice.
+#
+# 20 minutes per stage, which is above the slowest honest /scan measured here
+# (38s for STUDIO/dilla) by a wide margin, and MASTER_GATE_STAGE_TIMEOUT raises
+# it for a genuinely long full-fix pass. A timeout is reported as inconclusive
+# rather than as a failure of the code under test, because that is what it is:
+# nothing was measured.
+STAGE_TIMEOUT = Integer(ENV.fetch("MASTER_GATE_STAGE_TIMEOUT", "1200"))
+
+def run_master_line(line)
+  puts "master> #{line}"
+  stdout, status = capture_with_timeout(line)
+  puts stdout
+  abort "err: MASTER command failed: #{line}" unless status.success?
+
+  hit = INCONCLUSIVE.find { |pattern| stdout.match?(pattern) }
+  return unless hit
+
+  evidence = stdout.lines.grep(hit).map(&:strip).first
+  abort "err: #{line} exited 0 but reached no verdict: #{evidence}"
+end
+
+# capture2e, with a wall clock. Streams into a buffer so a stage killed at the
+# deadline still shows whatever it managed to say.
+def capture_with_timeout(line)
+  buffer = +""
+  Open3.popen2e(SAFE_ENV, "bundle", "exec", "ruby", "bin/cli", chdir: ROOT) do |stdin, out, wait|
+    stdin.puts(line)
+    stdin.close
+    reader = Thread.new { out.each_line { |l| buffer << l } }
+    unless wait.join(STAGE_TIMEOUT)
+      Process.kill("TERM", wait.pid)
+      wait.join(10) || Process.kill("KILL", wait.pid)
+      reader.join(5)
+      puts buffer
+      abort "err: #{line} produced no verdict in #{STAGE_TIMEOUT}s and was killed — " \
+            "#{buffer.empty? ? 'it printed nothing at all' : "it printed #{buffer.lines.length} line(s)"}. " \
+            "Nothing was measured; raise MASTER_GATE_STAGE_TIMEOUT only if you know the stage was working."
+    end
+    reader.join
+    return [buffer, wait.value]
+  end
+end
+
+def git_diff(*paths)
+  run_command("git", "diff", "--", *paths, chdir: REPO)
+end
+
+# The chain ends with a clean tree or it does not end.
+#
+# This is not a bug in /fix and the message used to imply it was one. A full-fix
+# gate runs /scan, /fix, /scan, /critique, /review and then asserts nothing is
+# left modified — which says "/fix found nothing to do", i.e. the tree was
+# already conformant. A first run after real work SHOULD fail here: /fix changed
+# files, the diff is printed directly above, and the operator reviews it, commits
+# it and runs again. That is the workflow, and nothing recorded it.
+#
+# What made it look broken was run_command's generic abort:
+#
+#   err: command failed: git diff --exit-code -- MASTER
+#
+# which names a git invocation rather than the situation, gives no hint that the
+# diff above is the thing to look at, and reads identically whether /fix wrote
+# something or the tree was dirty before the gate even started.
+def assert_clean(*paths)
+  _stdout, status = Open3.capture2e("git", "diff", "--exit-code", "--", *paths, chdir: REPO)
+  return if status.success?
+
+  changed, = Open3.capture2e("git", "diff", "--name-only", "--", *paths, chdir: REPO)
+  files = changed.split("\n").reject(&:empty?)
+  abort <<~ERR
+    err: #{paths.join(", ")} is not clean after the chain — #{files.length} file(s) modified:
+    #{files.first(20).map { |f| "      #{f}" }.join("\n")}
+    #{files.length > 20 ? "      ... and #{files.length - 20} more\n" : ""}
+    The diff is printed above. This is the expected outcome when /fix had work to
+    do: review those changes, commit them, and run the gate again. It is only a
+    problem if you did not expect /fix to touch them, or if the tree was already
+    dirty before the gate started.
+  ERR
+end
+
+puts "gate: mode=#{SCAN_ONLY ? 'scan-only' : 'full-fix'}"
+
+COMMANDS[:master].each { |line| run_master_line(line) }
+git_diff("MASTER")
+assert_clean("MASTER") unless SCAN_ONLY
+
+COMMANDS[:deploy].each { |line| run_master_line(line) }
+git_diff("RAILS", "OPENBSD", "STUDIO", "MASTER")
+assert_clean("RAILS", "OPENBSD", "STUDIO", "MASTER") unless SCAN_ONLY
+
+puts SCAN_ONLY ? "ok: MASTER gate scan-only complete" : "ok: MASTER gate clean"

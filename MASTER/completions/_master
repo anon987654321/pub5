@@ -1,0 +1,25 @@
+#compdef master
+
+_master() {
+  local -a commands
+  commands=(
+    'through:scan → fix → critique a path'
+    'status:one-frame health'
+    'undo:revert last recorded change'
+    'commit:record the current diff'
+    'model:show or switch the model'
+    'pair:issue or redeem a pairing code'
+    'doctor:host and exposure health'
+    'help:list commands'
+    'clear:clear the session transcript'
+    'exit:exit MASTER'
+  )
+
+  _arguments -C '1: :->command' '*:: :->args'
+
+  case $state in
+    command) _describe 'master commands' commands ;;
+  esac
+}
+
+_master "$@"

@@ -1,0 +1,268 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+require "open3"
+
+# Two levels: this lives in MASTER/bin/, and every sibling tree is reached
+# from the repo root above it.
+ROOT = File.expand_path("../..", __dir__)
+OPENBSD_OPS = File.join(ROOT, "OPENBSD")
+$LOAD_PATH.unshift(File.join(ROOT, "MASTER", "lib")) unless $LOAD_PATH.include?(File.join(ROOT, "MASTER", "lib"))
+
+require "pub4/environment"
+require "pub4/status_report"
+
+def usage
+  <<~HELP
+    pub4 — repo-wide operator surface
+
+    Usage:
+      bin/pub4 status [--json]
+      bin/pub4 vps state [--json] [--remote]
+      bin/pub4 vps deploy <app|master> [--remote]
+      bin/pub4 vps logs <app> [--lines N] [--remote]
+      bin/pub4 post-pull
+      bin/pub4 measure [--deep] [--json]
+      bin/pub4 test [<path>...]       smallest complete proof for the paths (default: dirty files)
+      bin/pub4 land -m <msg> <path>...  commit, rebase, re-check, push
+      bin/pub4 worktree <name>        own checkout + branch, so agents never share an index
+      bin/pub4 hooks                  install the shared-tree commit guard
+      bin/pub4 readers <path>         who reaches this file, across all four trees
+
+    Profiles (passed through to check scripts):
+      OPENBSD/bin/check --profile=contributor
+      cd MASTER && bin/check --profile=contributor
+  HELP
+end
+
+def ssh_host
+  ENV.fetch("PUB4_SSH_HOST", "dev@46.23.89.226")
+end
+
+def ssh_key
+  File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
+end
+
+def ssh_run(remote_cmd)
+  cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-i", ssh_key, ssh_host, remote_cmd]
+  exec(*cmd)
+end
+
+command = ARGV.shift
+case command
+when "status", nil
+  json = ARGV.include?("--json")
+  puts Pub4::StatusReport.new(root: ROOT).render(json:)
+when "measure"
+  # Every ratchet in the repo, current beside recorded. Non-zero when any is over
+  # its ceiling OR slack beneath it, because a ceiling above the real number is
+  # room the next change grows into without failing anything.
+  require_relative "../MASTER/tools/ratchets"
+  deep = !ARGV.delete("--deep").nil?
+  rows = Pub4::Ratchets.all(deep:)
+  puts ARGV.include?("--json") ? Pub4::Ratchets.json(rows) : Pub4::Ratchets.render(rows)
+  exit(Pub4::Ratchets.ok?(rows) ? 0 : 1)
+when "land"
+  # Commit, rebase onto origin/main, re-check, push — in that order, because the
+  # order is where it goes wrong.
+  #
+  # Every landing in a worktree is the same five steps, and the two that get
+  # skipped are the two that matter. Rebasing onto a main that moved can
+  # invalidate a green run, so the checks run again AFTER the rebase and not
+  # only before it. And `git push` sends every commit beneath yours, so this
+  # prints what is going before it goes.
+  #
+  # Path-scoped by construction: with no paths it commits nothing, rather than
+  # sweeping up whatever else is in a shared checkout.
+  message = nil
+  message_file = nil
+  OptionParser.new do |o|
+    o.on("-m MSG") { |v| message = v }
+    o.on("-F FILE") { |v| message_file = v }
+  end.parse!(ARGV)
+  paths = ARGV
+  abort("usage: bin/pub4 land -m <message> <path>...  (paths are required; nothing is swept)") if paths.empty?
+  abort("usage: bin/pub4 land needs -m <message> or -F <file>") unless message || message_file
+
+  def run!(*cmd, chdir: ROOT)
+    out, status = Open3.capture2e(*cmd, chdir: chdir)
+    [out.strip, status.success?]
+  end
+
+  measure_out, measure_ok = run!(File.join(ROOT, "bin", "pub4"), "measure")
+  unless measure_ok
+    warn measure_out
+    abort("land: a ratchet is off before you started — fix that first, or it lands with your change")
+  end
+  puts "land: ratchets clean"
+
+  commit = ["git", "commit", "-q"]
+  commit += message_file ? ["-F", message_file] : ["-m", message]
+  _, ok = run!(*commit, "--", *paths)
+  abort("land: nothing committed (paths matched no changes?)") unless ok
+
+  run!("git", "fetch", "-q", "origin")
+  rebase_out, rebased = run!("git", "rebase", "-q", "origin/main")
+  abort("land: rebase onto origin/main failed — resolve, then run land again\n#{rebase_out}") unless rebased
+
+  # The same measurement again. A rebase brings other people's commits under
+  # yours, and theirs can put a ceiling over the edge that yours did not.
+  after_out, after_ok = run!(File.join(ROOT, "bin", "pub4"), "measure")
+  unless after_ok
+    warn after_out
+    abort("land: green before the rebase, off after it — origin/main moved under you")
+  end
+
+  ahead, = run!("git", "log", "--oneline", "origin/main..HEAD")
+  puts "land: publishing"
+  ahead.lines.each { |line| puts "  #{line.chomp}" }
+  push_out, pushed = run!("git", "push", "origin", "HEAD:main")
+  abort("land: push refused\n#{push_out}") unless pushed
+  puts "land: on origin/main"
+when "snapshot"
+  # Regenerates snapshot_<TREE>.md — the verbatim packs handed to another model
+  # when it needs the whole tree rather than a summary. The generator that made
+  # them was bin/snapshot, deleted with the DEPLOY tree, so the three files sat
+  # stale at a commit no checkout still has and nothing could refresh them.
+  # Lives in MASTER/tools so it is one implementation, reachable from here.
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "snapshot.rb"), *ARGV)
+when "post-pull"
+  script = File.join(OPENBSD_OPS, "bin", "post-pull-checklist")
+  exec(script, *ARGV)
+when "worktree"
+  # The one command, because the friction was the whole problem. CLAUDE.md has
+  # said "take a worktree if more than one agent is active" for months while the
+  # worktree took a remembered path to a shell script and the shared tree took
+  # nothing. Sessions kept picking nothing, and kept committing each other's work.
+  name = ARGV.shift
+  abort("usage: bin/pub4 worktree <name>   (e.g. bin/pub4 worktree claude)") if name.to_s.empty?
+  exec("sh", File.join(OPENBSD_OPS, "dev", "agent_worktree.sh"), name, *ARGV)
+when "readers"
+  # Before you believe "its only reader is X". That sentence has been wrong four
+  # times in this repo and each time the grep behind it could not see the
+  # reference that mattered — most expensively hash_dig_compat.rb, whose second
+  # reader was in another tree, built its path with File.expand_path, left the
+  # extension off, and sat inside a `rescue LoadError` so the breakage warned
+  # instead of raising and dilla rendered without coltrane for days.
+  require "pub4/readers"
+  target = ARGV.shift
+  abort("usage: bin/pub4 readers <path>   (e.g. bin/pub4 readers MASTER/lib/boot/hash_dig_compat.rb)") if target.to_s.empty?
+
+  hits = Pub4::Readers.find(root: ROOT, target: target)
+  if hits.empty?
+    puts "readers: no reference to #{target} anywhere in #{Pub4::Readers::TREES.join(', ')}"
+    puts "readers: that is the only case where deleting it is a reader-count question and not a judgement call"
+    exit 0
+  end
+
+  by_kind = hits.group_by(&:kind)
+  # Ordered by how load-bearing the reference is, not alphabetically: a require
+  # breaks on delete, a mention is usually a comment.
+  %i[require path_build render test constant mention].each do |kind|
+    rows = by_kind[kind] or next
+    label = { require: "require", path_build: "path built at runtime", render: "rendered by name", test: "asserted by a test",
+              constant: "constant (Zeitwerk or direct)", mention: "mentioned" }.fetch(kind)
+    puts "readers: #{label} — #{rows.length}"
+    rows.first(40).each { |r| puts "  #{r.path}:#{r.line}  #{r.text[0, 120]}" }
+    puts "  … and #{rows.length - 40} more" if rows.length > 40
+  end
+  # A constant reference is a Zeitwerk load and breaks exactly like a require;
+  # prose mentions were reclassified before they got here.
+  hard = (by_kind[:require].to_a + by_kind[:path_build].to_a + by_kind[:render].to_a +
+          by_kind[:test].to_a + by_kind[:constant].to_a).length
+  puts "readers: #{hard} reference(s) would break on delete or move"
+  exit(hard.zero? ? 0 : 1)
+
+when "hooks"
+  # core.hooksPath rather than copying into .git/hooks: a copy is a second
+  # implementation that drifts from the tracked one, silently, which is the
+  # defect this repo has the most of.
+  hooks = File.join(OPENBSD_OPS, "dev", "githooks")
+  system("git", "-C", ROOT, "config", "core.hooksPath", "OPENBSD/dev/githooks") ||
+    abort("pub4 hooks: git config failed")
+  puts "hooks: core.hooksPath -> OPENBSD/dev/githooks"
+  Dir.children(hooks).sort.each { |hook| puts "  #{hook}#{File.executable?(File.join(hooks, hook)) ? '' : '  (NOT EXECUTABLE)'}" }
+  puts "hooks: cross-tree commits now refused unless PUB4_CROSS_TREE=1"
+  puts "hooks: post-commit records this session's SHAs, so pre-push names the foreign ones"
+  puts "hooks: PUB4_SESSION=<name> keys that ledger explicitly; without it the shell is the key"
+when "test"
+  # The smallest COMPLETE proof for the paths given (dirty files when none
+  # are). Complete means whole suites — a green over hand-picked tests is
+  # unmeasured. The mapping that lived in CLAUDE.md prose and session
+  # memory, made executable:
+  #   MASTER/**        -> MASTER rake test (+ dogfood when law/ moved)
+  #   RAILS/shared/**  -> all three app suites (shared lands in three apps)
+  #   RAILS/<app>/**   -> that app suite
+  #   RAILS/gates|test -> the standalone contract suite
+  #   OPENBSD/**       -> its local minitests (box-side proof stays on vm23)
+  #   STUDIO/**        -> refused; that tree belongs to its own session
+  paths = ARGV.dup
+  if paths.empty?
+    paths = IO.popen(%w[git status --porcelain -z], chdir: ROOT, &:read)
+              .split("\0").filter_map { |l| l[3..] }
+  end
+  trees = paths.map { |p| p.split("/").first(2) }
+  abort("pub4 test: STUDIO belongs to its own session — run its checks there") if trees.any? { |t| t.first == "STUDIO" }
+
+  jobs = []
+  rails_parts = trees.select { |t| t.first == "RAILS" }.map(&:last).uniq
+  if trees.any? { |t| t.first == "MASTER" }
+    jobs << ["MASTER suite", %w[bundle exec rake test], File.join(ROOT, "MASTER"), {}]
+    if paths.any? { |p| p.start_with?("MASTER/law/") }
+      jobs << ["MASTER dogfood", %w[bundle exec rake dogfood], File.join(ROOT, "MASTER"), {}]
+    end
+  end
+  app_suites = rails_parts.include?("shared") ? %w[brgen amber bsdports] : (rails_parts & %w[brgen amber bsdports])
+  app_suites.each do |app|
+    jobs << ["#{app} suite", %w[rbenv exec bundle exec bin/rails test],
+             File.join(ROOT, "RAILS", app), { "RBENV_VERSION" => "3.4.9" }]
+  end
+  if rails_parts.any? { |part| %w[gates test].include?(part) } || !app_suites.empty?
+    jobs << ["RAILS contracts", %w[ruby test/run_all.rb], File.join(ROOT, "RAILS"), {}]
+  end
+  if trees.any? { |t| t.first == "OPENBSD" }
+    runner = 'Dir["test/test_*.rb"].sort.each { |f| system(RbConfig.ruby, f) || abort(f) }'
+    jobs << ["OPENBSD minitests", ["ruby", "-e", runner], File.join(ROOT, "OPENBSD"), {}]
+  end
+  abort("pub4 test: no suite maps to #{paths.first(3).join(', ')}") if jobs.empty?
+
+  failed = jobs.reject do |name, cmd, dir, env|
+    puts "== #{name}"
+    system(env, *cmd, chdir: dir)
+  end
+  failed.each { |name, *| warn "pub4 test: FAILED #{name}" }
+  exit(failed.empty? ? 0 : 1)
+when "vps"
+  sub = ARGV.shift
+  case sub
+  when "state"
+    if ARGV.delete("--remote")
+      ssh_run("cd /home/dev/pub4 && ruby34 OPENBSD/bin/vps-state #{ARGV.join(' ')}")
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-state"), *ARGV)
+    end
+  when "deploy"
+    app = ARGV.shift
+    abort(usage) if app.to_s.empty?
+    if ARGV.delete("--remote")
+      ssh_run("cd /home/dev/pub4 && zsh OPENBSD/bin/vps-deploy #{app}")
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-deploy"), app, *ARGV)
+    end
+  when "logs"
+    app = ARGV.shift
+    abort(usage) if app.to_s.empty?
+    if ARGV.delete("--remote")
+      ssh_run("cd /home/dev/pub4 && ruby34 OPENBSD/bin/vps-logs #{app} #{ARGV.join(' ')}")
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-logs"), app, *ARGV)
+    end
+  else
+    warn usage
+    exit 2
+  end
+else
+  warn usage
+  exit 2
+end
