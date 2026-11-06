@@ -1,0 +1,15 @@
+type: object
+required: [knobs]
+additional: false
+properties:
+  knobs:
+    type: object
+    description: One entry per environment variable; names are SCREAMING_SNAKE.
+    additional:
+      type: object
+      required: [type, default, purpose]
+      additional: false
+      properties:
+        type: { enum: [string, integer, number, boolean, path] }
+        default: { type: any }
+        purpose: { type: string }

@@ -1,0 +1,67 @@
+# Every environment variable pub5 may read. Core::Knobs refuses any other
+# name, and refuses this file if it grows past 40 entries.
+#
+# The provider keys are the names pub4's providers.yml and models.yml read;
+# they are kept so an existing ~/.env keeps working at cutover.
+knobs:
+  PUB5_LEDGER:
+    type: path
+    default: log/ledger.jsonl
+    purpose: Where the append-only ledger of effects, refusals and model calls lives.
+  PUB5_HTTP_TIMEOUT:
+    type: integer
+    default: 30
+    purpose: Seconds for one HTTP request (open, write and read each).
+  PUB5_EXEC_TIMEOUT:
+    type: integer
+    default: 120
+    purpose: Seconds a subprocess may run before TERM, then KILL.
+  PUB5_RUN_BUDGET_USD:
+    type: number
+    default: null
+    purpose: Model spend after which a run's next model call is refused; unset means no cap.
+  PUB5_OFFLINE:
+    type: boolean
+    default: false
+    purpose: Refuse every model call (tests, planes, quota outages).
+  PUB5_WRITER:
+    type: string
+    default: operator
+    purpose: The writer (registry/writers.yml) this process acts for.
+  SSH_CONNECTION:
+    type: string
+    default: null
+    purpose: Set by sshd; bin/master reads it only to tell a remote session from a local one.
+  MASTER_WEB_CHAT:
+    type: boolean
+    default: false
+    purpose: Enables the browser web-chat lanes (models.yml ferrum_web_chat).
+  AGY_BIN:
+    type: path
+    default: null
+    purpose: Antigravity CLI binary.
+  ANTIGRAVITY_BIN:
+    type: path
+    default: null
+    purpose: Antigravity CLI binary (alias).
+  ANTHROPIC_API_KEY: { type: string, default: null, purpose: Anthropic API key. }
+  OPENAI_API_KEY: { type: string, default: null, purpose: OpenAI API key. }
+  GEMINI_API_KEY: { type: string, default: null, purpose: Gemini API key. }
+  GOOGLE_API_KEY: { type: string, default: null, purpose: Gemini API key (alias). }
+  OPENROUTER_API_KEY: { type: string, default: null, purpose: OpenRouter key. }
+  OPENROUTER_API_KEY_2: { type: string, default: null, purpose: Second OpenRouter key (quota rotation). }
+  OPENROUTER_API_KEY_3: { type: string, default: null, purpose: Third OpenRouter key (quota rotation). }
+  DEEPSEEK_API_KEY: { type: string, default: null, purpose: DeepSeek API key. }
+  XAI_API_KEY: { type: string, default: null, purpose: xAI API key. }
+  MISTRAL_API_KEY: { type: string, default: null, purpose: Mistral API key. }
+  REPLICATE_API_TOKEN: { type: string, default: null, purpose: Replicate token. }
+  REPLICATE_API_KEY: { type: string, default: null, purpose: Replicate token (alias). }
+  LLM7_API_KEY: { type: string, default: null, purpose: LLM7 key. }
+  GROQ_API_KEY: { type: string, default: null, purpose: Groq key. }
+  GROQ_API_KEY_2: { type: string, default: null, purpose: Second Groq key. }
+  CEREBRAS_API_KEY: { type: string, default: null, purpose: Cerebras key. }
+  CEREBRAS_API_KEY_2: { type: string, default: null, purpose: Second Cerebras key. }
+  NVIDIA_API_KEY: { type: string, default: null, purpose: NVIDIA NIM key. }
+  NVIDIA_API_KEY_2: { type: string, default: null, purpose: Second NVIDIA NIM key. }
+  KILO_API_KEY: { type: string, default: null, purpose: Kilo gateway key. }
+  OVH_AI_ENDPOINTS_TOKEN: { type: string, default: null, purpose: OVH AI Endpoints token. }
