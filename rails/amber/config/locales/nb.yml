@@ -287,7 +287,7 @@ nb:
     recommendations: "Anbefalinger"
     recommendations_body: "Bruk plagg og bygg garderoben — forslag kommer fra de signalene."
     gaps_complete: "Garderoben ser komplett ut for det essensielle."
-    master_recs: "MASTER-kjøpsanbefalinger"
+    master_recs: "master-kjøpsanbefalinger"
     recs_grow: "Legg til flere plagg eller kjør gap-analyse når garderoben vokser."
     edit_profile: "Rediger profil"
     add_more_first: "Legg til flere plagg i garderoben først."
@@ -413,7 +413,7 @@ nb:
     suggest_lead: "OpenRouter + garderobedata%{vision}. Handlelenker påvirker ikke rangeringen."
     suggest_vision: " (bildeanalyse når det finnes bilder)"
     suggest_local_html: "<strong>OpenRouter er ikke satt opp</strong> — forslagene bruker lokale regler fra glede-/aktiv-garderoben din. Sett <code>OPENROUTER_API_KEY</code> for LLM- og bildebasert styling."
-    studio_photo_html: "STUDIO-fotografering er slått på (<code>AMBER_ENABLE_STUDIO_PHOTO=1</code>) — bilder kan følge med når genereringen lykkes."
+    studio_photo_html: "studio-fotografering er slått på (<code>AMBER_ENABLE_STUDIO_PHOTO=1</code>) — bilder kan følge med når genereringen lykkes."
     submit_to_compose: "Send inn skjemaet for å sette sammen antrekk av klær du allerede eier."
   commerce_fit:
     handoff: "Startet fra en vare i BRGEN-markedsplassen. Når du lagrer, følger kilden med garderobeposten."
@@ -893,7 +893,7 @@ nb:
     lead: "Velg om Amber kan sende garderobedetaljer til en ekstern KI-tjeneste. Lokale garderoberegler fungerer fortsatt når dette er slått av."
     ai_heading: "KI-behandling"
     allow_ai_analysis: "Tillat ekstern KI-analyse"
-    ai_description: "Når dette er slått av, bruker Amber lokale regler og sender ikke garderobedetaljer til OpenRouter eller bruker den valgfrie STUDIO-tjenesten for antrekksbilder."
+    ai_description: "Når dette er slått av, bruker Amber lokale regler og sender ikke garderobedetaljer til OpenRouter eller bruker den valgfrie studio-tjenesten for antrekksbilder."
     save: "Lagre personvernvalg"
     saved: "Lagring av personvernvalg er fullført."
   footer:

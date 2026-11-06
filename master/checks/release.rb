@@ -46,8 +46,8 @@ YAML.safe_load_file(manifest_path, aliases: true).then { |manifest| manifest["ch
       require_path = row.fetch("require")
 
       # Paths starting with a known tree (master, rails, openbsd) are repo-relative.
-      # Others are RAILS-relative.
-      full_path = if require_path.match?(%r{\A(?:MASTER|rails|openbsd)/})
+      # Others are rails-relative.
+      full_path = if require_path.match?(%r{\A(?:master|rails|openbsd)/})
                     File.join(repo_root, require_path)
                   else
                     File.join(__dir__, require_path)

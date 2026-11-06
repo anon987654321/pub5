@@ -56,7 +56,7 @@ class RadioBergenManifestTest < ActiveSupport::TestCase
   test "every repo path in the archaeology lines exists" do
     root = Pathname.new(Shared::Contracts.root)
     paths = Brgen::RadioBergenManifest.archaeology_lines.join("\n")
-                                      .scan(%r{\b(?:RAILS|studio|master|openbsd)/[\w./-]+\.\w+})
+                                      .scan(%r{\b(?:rails|studio|master|openbsd)/[\w./-]+\.\w+})
 
     assert_operator paths.size, :>=, 1, "expected the lines to still cite repo paths"
     paths.each { |rel| assert_path_exists root.join(rel).to_s }

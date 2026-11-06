@@ -15,7 +15,7 @@ require "json"
 require "etc"
 
 ROOT = File.expand_path("../..", __dir__)
-master = File.join(ROOT, "master")
+MASTER = File.join(ROOT, "master")
 REMOTE = ARGV.include?("--remote")
 @worst = :ok
 
@@ -46,21 +46,21 @@ def disk
   end
 end
 
-# --- rubies: which one runs master, and the stray json that breaks its boot ---------
+# --- rubies: which one runs MASTER, and the stray json that breaks its boot ---------
 def rubies
   versions = Dir[File.join(Dir.home, ".rbenv", "versions", "*")].map { |d| File.basename(d) }.sort
-  chosen, ok = run(File.join(master, "bin", "ruby"), "-e", "print RUBY_VERSION")
-  say(ok ? :ok : :warn, "ruby", "installed #{versions.join(', ')}; master runs #{ok ? chosen.lines.last.to_s.strip : 'unresolved'}")
+  chosen, ok = run(File.join(MASTER, "bin", "ruby"), "-e", "print RUBY_VERSION")
+  say(ok ? :ok : :warn, "ruby", "installed #{versions.join(', ')}; MASTER runs #{ok ? chosen.lines.last.to_s.strip : 'unresolved'}")
 
 end
 
-# The only honest answer to whether master boots is to boot it. A stray newer json
+# The only honest answer to whether MASTER boots is to boot it. A stray newer json
 # in the gem directory once raised "already activated json" here; the entrypoint
 # now pins the Gemfile's version, so this reports what actually happens.
 def boot
   # "/model" starts the runtime and prints the active model without a model call;
   # "--version" is not a flag bin/master knows and exits non-zero.
-  out, ok = run(File.join(master, "bin", "master"), "/model")
+  out, ok = run(File.join(MASTER, "bin", "master"), "/model")
   if ok && out.lines.any? { |l| l.start_with?("model:") }
     say(:ok, "boot", "bin/master starts")
   else
@@ -71,7 +71,7 @@ end
 
 # --- parse: a file that does not parse stops the runtime before any check can say why ---
 def parse
-  require File.join(master, "lib", "operator", "parse_sweep")
+  require File.join(MASTER, "lib", "operator", "parse_sweep")
   broken = Operator::ParseSweep.failures(ROOT)
   return say(:ok, "parse", "every tracked Ruby file parses") if broken.empty?
 
@@ -114,9 +114,9 @@ end
 
 # --- model lanes: the thing /fix cannot do without -----------------------------------------
 def lanes
-  config = File.join(master, ".master", "config.yml")
+  config = File.join(MASTER, ".master", "config.yml")
   pin = File.file?(config) ? File.read(config)[/^model:\s*(\S+)/, 1] : nil
-  say(pin ? :ok : :warn, "model", pin ? "saved model #{pin}" : "no saved model in master/.master/config.yml: a fresh worktree has none; copy it or set MASTER_MODEL")
+  say(pin ? :ok : :warn, "model", pin ? "saved model #{pin}" : "no saved model in MASTER/.master/config.yml: a fresh worktree has none; copy it or set MASTER_MODEL")
 
   claude = File.executable?(File.join(Dir.home, ".local", "bin", "claude")) || system("which claude", out: File::NULL, err: File::NULL)
   say(claude ? :ok : :warn, "claude", claude ? "claude CLI found (the claude-cli lanes)" : "claude CLI not found: the claude-cli lanes are unreachable")

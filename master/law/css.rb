@@ -81,7 +81,7 @@ end
 # closing delimiter and on prose that mentioned SQL; only an opening heredoc
 # tag smuggles a grammar in.
 Law.define(:NO_MULTIPLE_LANGUAGES) do
-  source "MASTER-native (one language per file)"
+  source "master-native (one language per file)"
   ask "Does this file embed multiple languages or notations, or does the artifact mix incompatible frameworks or media layers?"
   # A regex that matches `<%` is not ERB, and a string naming a heredoc tag is
   # not a heredoc. Unmasked this flagged the scanner's own ERB detectors, the

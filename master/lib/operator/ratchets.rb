@@ -92,7 +92,7 @@ module Operator
 
     module_function
 
-    # trees, when given, leaves out the RAILS-only rows unless rails is named: the
+    # trees, when given, leaves out the rails-only rows unless rails is named: the
     # lint ceilings, the CSS checks and design_baseline, which scans every view.
     def all(deep: false, trees: nil)
       @law_audit = nil

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# MASTER-local check support; sibling implementation imports are forbidden.
+# master-local check support; sibling implementation imports are forbidden.
 
 require "yaml"
 require_relative "../../support/check_result"

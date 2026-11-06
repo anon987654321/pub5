@@ -30,7 +30,7 @@ module Law
   # marks, so the typographic Laws read every file except these.
   TERMINAL_OUTPUT_PATH = %r{
     (?:\A|/)master/(?:bin|lib|tools|checks|law|data|plugins|completions|test)/ |
-    (?:\A|/)(?:OPENBSD|studio)/(?!.*\.(?:md|markdown|tex|html)\z) |
+    (?:\A|/)(?:openbsd|studio)/(?!.*\.(?:md|markdown|tex|html)\z) |
     (?:\A|/)bin/ |
     \.(?:sh|ksh|zsh)\z
   }x.freeze

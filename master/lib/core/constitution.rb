@@ -620,7 +620,7 @@ module Master::Core
       # The constitution judged is the one that tree holds, else this master's own,
       # so a tree without a manifest never makes a sacred file writable. A path
       # outside the master that constitution governs is not its to guard: every
-      # sacred path is MASTER-relative, so rails/ or a test's tmpdir stays writable.
+      # sacred path is master-relative, so rails/ or a test's tmpdir stays writable.
       def self.write_refusal(path, root: nil)
         master = governing_root(root)
 

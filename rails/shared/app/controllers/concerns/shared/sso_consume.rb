@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Shared
-  # Consumes a MASTER-issued SSO token and starts a local session.
+  # Consumes a master-issued SSO token and starts a local session.
   # Host app must implement find_or_create_sso_user(email:, display_name:) and start_sso_session!(user).
   module SsoConsume
     extend ActiveSupport::Concern

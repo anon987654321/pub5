@@ -115,7 +115,7 @@ Law.define(:FAIL_VISIBLY) do
 end
 
 Law.define(:FULL_BY_DEFAULT) do
-  source "MASTER-native (no shallow/lite tiers by default)"
+  source "master-native (no shallow/lite tiers by default)"
   ask "Does this API expose a do-less tier such as shallow, standard, quick, lite, basic, or light alongside a full tier where users routinely need the full behavior? If the cost tradeoff is real, name the cost rather than the quality."
   # Both words have to be list items, not two adjectives that happen to meet.
   # "sculpted soft key light, deep muted tones" is a prompt describing a
@@ -129,7 +129,7 @@ Law.define(:FULL_BY_DEFAULT) do
 end
 
 Law.define(:GUARD_EXPENSIVE_OPS) do
-  source "MASTER-native (guard expensive operations); Nielsen heuristic 5, error prevention"
+  source "master-native (guard expensive operations); Nielsen heuristic 5, error prevention"
   ask "Does this execute an expensive or destructive operation without confirmation, bounds, or relevant preconditions?"
   # `rm -rf` left for NEVER_BATCH_DELETE, which already owned file deletion and
   # already knew a scoped path from an unbounded one. Both laws claiming it was
@@ -335,7 +335,7 @@ Law.define(:UNBOUNDED_RETRY) do
 end
 
 Law.define(:NO_CHANGELOG_COMMENT) do
-  source "MASTER-native - git holds history; comments hold reasons"
+  source "master-native - git holds history; comments hold reasons"
   reads_comments true
   detect do |line|
     line.match?(/^\s*(?:#|\/\/|\*)\s*(?:RAISED|RATCHETED|LOWERED|BUMPED|TRIMMED|UPDATED?|RENAMED|MOVED|CHANGED|REVERTED|REMOVED|ADDED|DEPRECATED|NARROWED|REDUCED|FIXED)\b[^\n]{0,40}\d{4}-\d{2}-\d{2}/i) ||
@@ -514,7 +514,7 @@ Law.define(:MONOLITH_FIRST) do
 end
 
 Law.define(:CONSISTENT_ERROR_STRATEGY) do
-  source "MASTER-native (uniform error handling)"
+  source "master-native (uniform error handling)"
   ask "Does this module mix Result objects, exceptions, and nil returns for equivalent failure paths?"
   fix "Choose one error strategy per module and use it consistently."
   bad <<~'X'
@@ -526,7 +526,7 @@ Law.define(:CONSISTENT_ERROR_STRATEGY) do
 end
 
 Law.define(:EVIDENCE_BY_INTENT) do
-  source "MASTER-native (intent-to-evidence routing)"
+  source "master-native (intent-to-evidence routing)"
   ask "Does an answer depend on current, niche, uncertain, repository, browser, device, or externally verifiable facts without first selecting the evidence surface that can actually observe them?"
   fix "Route the turn by evidence need: read/search the repository for repository facts, use device capability for local hardware, use browser capability for page state, and use local knowledge or current web sources for unfamiliar or time-sensitive facts; never substitute memory for available evidence."
   bad <<~'X'
@@ -539,7 +539,7 @@ Law.define(:EVIDENCE_BY_INTENT) do
 end
 
 Law.define(:DUAL_DETECTION) do
-  source "MASTER-native (lexical + semantic detection)"
+  source "master-native (lexical + semantic detection)"
   ask "Does verification rely only on regex or only on an LLM when the subject can be checked with both deterministic and semantic evidence?"
   fix "Layer deterministic detection with semantic review where both add independent evidence."
   bad <<~'X'
@@ -551,7 +551,7 @@ Law.define(:DUAL_DETECTION) do
 end
 
 Law.define(:MASS_GENERATE_CURATE) do
-  source "MASTER-native (generate then curate)"
+  source "master-native (generate then curate)"
   ask "Is a high-stakes creative or design decision accepting the first plausible draft without exploring alternatives?"
   fix "Generate several materially different candidates, then curate against explicit constraints."
   bad <<~'X'
@@ -760,7 +760,7 @@ Law.define(:DIFFERENT_LAYER_DIFFERENT_ABSTRACTION) do
 end
 
 Law.define(:STRUCTURAL_HONESTY) do
-  source "MASTER-native - structure mirrors intent"
+  source "master-native - structure mirrors intent"
   ask "Does the artifact's structure contradict the conceptual shape of the problem?"
   fix "Align modules, sections, layout, and boundaries with the actual domain."
   bad <<~'X'
@@ -1073,7 +1073,7 @@ Law.define(:LEVELS_OF_SCALE) do
 end
 
 Law.define(:GUARD_EXPENSIVE) do
-  source "MASTER-native - guard expensive operations"
+  source "master-native - guard expensive operations"
   ask "Does this file perform expensive operations without checking relevant preconditions or bounds?"
   fix "Check prerequisites, estimate cost, and bound the operation before executing it."
   bad <<~'X'
@@ -1121,7 +1121,7 @@ Law.define(:SILENCE_ON_SUCCESS) do
 end
 
 Law.define(:PRECOMPUTE_MATH) do
-  source "MASTER-native - precompute constant math"
+  source "master-native - precompute constant math"
   ask "Are invariant trig, noise, or lookup calculations repeated per frame or per object?"
   fix "Precompute invariant values once and reuse them."
   bad <<~'X'
@@ -1133,7 +1133,7 @@ Law.define(:PRECOMPUTE_MATH) do
 end
 
 Law.define(:AUDIO_SMOOTHING) do
-  source "MASTER-native - audio smoothing"
+  source "master-native - audio smoothing"
   ask "Do visual elements jump erratically because raw audio samples drive motion directly?"
   fix "Smooth or envelope audio-derived control values before applying visual motion."
   bad <<~'X'
@@ -1157,7 +1157,7 @@ Law.define(:GRACEFUL_LOAD) do
 end
 
 Law.define(:ANALOG_WARMTH) do
-  source "MASTER-native - Dilla audio aesthetic"
+  source "master-native - Dilla audio aesthetic"
   ask "Is generated audio unnaturally perfect because noise floor, saturation, timing drift, or humanized variation has been eliminated entirely?"
   fix "Introduce restrained, purposeful imperfection where the aesthetic calls for it."
   bad <<~'X'
@@ -1565,7 +1565,7 @@ Law.define(:CONSISTENCY) do
 end
 
 Law.define(:COST_TRANSPARENCY) do
-  source "MASTER-native - surface LLM token cost"
+  source "master-native - surface LLM token cost"
   ask "Are LLM calls made without exposing enough token or cost information to the operator when that information is available?"
   fix "Surface measured input, output, and cost data at the appropriate operator boundary."
   bad <<~'X'
@@ -1577,7 +1577,7 @@ Law.define(:COST_TRANSPARENCY) do
 end
 
 Law.define(:CACHE_LLM) do
-  source "MASTER-native - cache repeat LLM work"
+  source "master-native - cache repeat LLM work"
   ask "Is the same expensive LLM request repeated when the input and relevant context are unchanged?"
   fix "Cache deterministic or safely repeatable requests with an explicit invalidation boundary."
   bad <<~'X'

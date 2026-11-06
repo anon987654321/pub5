@@ -239,7 +239,7 @@ module Master
           %w\[master_cli]
         when %r{\AMASTER/lib/io/(?:web|http|sse)}
           %w\[master_chat]
-        when %r{\A(?:OPENBSD|studio)/}
+        when %r{\A(?:openbsd|studio)/}
           []
         when %r{\AMASTER/checks/}
           relative.match?(%r{face|primer|page_simulation}) ? %w\[master_face cross_cut] : %w\[cross_cut]
@@ -479,7 +479,7 @@ module Master
       end
 
       def test_path?(relative)
-        relative.match?(%r{\A(?:MASTER|rails)/.*(?:_test\.rb|\.test\.mjs|_test\.mjs)\z})
+        relative.match?(%r{\A(?:master|rails)/.*(?:_test\.rb|\.test\.mjs|_test\.mjs)\z})
       end
 
       def matching_test_paths(relative)

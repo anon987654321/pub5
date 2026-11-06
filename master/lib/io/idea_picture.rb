@@ -6,7 +6,7 @@ require_relative "exec"
 
 module Master
   module Io
-    # MASTER-facing adapter for studio photograph generation. master owns the
+    # master-facing adapter for studio photograph generation. master owns the
     # request and the result contract; studio owns provider calls, grading and
     # media creation.
     class IdeaPicture

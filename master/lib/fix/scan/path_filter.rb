@@ -59,7 +59,7 @@ module Master
         # opens with "do not edit by hand" and is rewritten by
         # assets:build_face_runtime, so a fix there survives until the next
         # build and then vanishes — the same loop the db/schema.rb note below
-        # describes. Matching the MASTER-prefixed form too makes the list mean
+        # describes. Matching the master-prefixed form too makes the list mean
         # the same thing from both roots.
         # The four generated face bundles are their own constant because
         # lib/operator/self_findings.rb needs the same four and had its own copy of

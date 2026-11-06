@@ -445,7 +445,7 @@ module Master
         ::Law.define(:FILE_SPRAWL) do
           detector FileSprawlLaw
           tags %i\[FLAT_HIERARCHY COLLAPSE_BEFORE_ADDING]
-          source "MASTER-native - collapse before adding; flat hierarchy"
+          source "master-native - collapse before adding; flat hierarchy"
           ask "Are tiny files or one-file directories adding structure without carrying " \
               "meaningful independent responsibility?"
           fix "Absorb tiny artifacts into their natural owner before creating another boundary."

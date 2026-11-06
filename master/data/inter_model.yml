@@ -1,4 +1,4 @@
-# Machine-checked contract for MASTER-to-model and council peer turns.
+# Machine-checked contract for master-to-model and council peer turns.
 # Human dialogue remains governed by soul.yml#prompt_ordering.
 schema: 1
 version: "1.0.0"

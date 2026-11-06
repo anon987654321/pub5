@@ -149,7 +149,7 @@ module Deploy
       # It fails the way this kind of thing does — not an exception, a rescue
       # that logs "rules unreadable" and runs the check unbudgeted, so the
       # contrast ceiling stops being enforced while the check still reports ok.
-      # One RAILS-prefixed join here once read into a tree without checks/data
+      # One rails-prefixed join here once read into a tree without checks/data
       # at all (2026-10-03); the expand-path cannot, its anchor moves with the
       # file.
       def contrast_budget

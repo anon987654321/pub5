@@ -66,8 +66,8 @@ module Master
         t = text.to_s
         return true if t.match?(/\b(?:every|all|each)\b.*\bfiles?\b/i)
         return true if t.match?(/\b(?:analyze|analyse|audit|scan)\b.*\b(?:recursively|recursive)\b/i)
-        return true if t.match?(/\b(?:autofix|autoalign|autoimplement)\b.*\b(?:MASTER|OPERATOR|repo)\b/i)
-        return true if t.match?(/\b(?:MASTER|OPERATOR)\b.*\b(?:autofix|autoalign|autoimplement)\b/i)
+        return true if t.match?(/\b(?:autofix|autoalign|autoimplement)\b.*\b(?:master|OPERATOR|repo)\b/i)
+        return true if t.match?(/\b(?:master|OPERATOR)\b.*\b(?:autofix|autoalign|autoimplement)\b/i)
 
         false
       end

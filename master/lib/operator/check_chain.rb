@@ -421,7 +421,7 @@ module Operator
       return ["studio"] if abs == File.join(ROOT, "studio") || abs.start_with?("#{File.join(ROOT, "studio")}/")
       return ["master"] if abs == master || abs.start_with?("#{master}/")
 
-      # Check targets like `lib/io` are MASTER-relative shorthand when the
+      # Check targets like `lib/io` are master-relative shorthand when the
       # operator is invoked from the repository root. Keep the four-tree
       # boundary strict while resolving that intentional CLI form first.
       master_relative = File.expand_path(target.to_s, master)

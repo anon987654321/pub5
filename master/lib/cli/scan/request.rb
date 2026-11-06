@@ -96,7 +96,7 @@ module Master
             rest = raw.sub(%r{\Arails[:/]}i, "")
             return File.join(Master::RAILS_ROOT, rest)
           end
-          if raw.match?(%r{\A(?:MASTER|rails|openbsd|studio)(?:/|\z)}i)
+          if raw.match?(%r{\A(?:master|rails|openbsd|studio)(?:/|\z)}i)
             return File.expand_path(raw, Master::REPO_ROOT)
           end
 

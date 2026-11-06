@@ -17,7 +17,7 @@ module Master
       # %r{} delimiters, not /.../ -- the character class needs a literal /
       # (repo-relative paths), which /.../ regex literals cannot hold
       # unescaped. Same bug as visual_pass.rb's SURFACE_RE, same fix.
-      PATH_RE = %r{\b(?:MASTER|rails|openbsd)/[A-Za-z0-9_./-]+\.(?:rb|yml|yaml|md|js|css|scss|erb|html)\b}.freeze
+      PATH_RE = %r{\b(?:master|rails|openbsd)/[A-Za-z0-9_./-]+\.(?:rb|yml|yaml|md|js|css|scss|erb|html)\b}.freeze
       GLOB_RE = /(?:FileList|Dir\.glob)\s*\[(.*?)\]/.freeze
       STRING_RE = /["']([^"']+)["']/.freeze
       MAX_FINDINGS = 20

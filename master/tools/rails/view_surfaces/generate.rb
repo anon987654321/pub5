@@ -3,8 +3,8 @@
 # Regenerates the generated block of checks/data/geometry_surfaces.yml: every
 # HTML GET route of amber, bsdports and brgen that renders for a guest.
 #
-#   master/bin/operator triangle up
-#   ruby master/tools/rails/view_surfaces/generate.rb
+#   MASTER/bin/operator triangle up
+#   ruby MASTER/tools/rails/view_surfaces/generate.rb
 #
 # Per app it lists the GET routes (list_get_routes.rb, under rails runner),
 # fills each parameter from the first local record of the model it names
@@ -16,7 +16,7 @@ require_relative "../../../lib/io/exec"
 require "tmpdir"
 
 HERE = __dir__
-rails = File.expand_path("../../../../rails", HERE)
+RAILS = File.expand_path("../../../../rails", HERE)
 APPS = %w\[amber bsdports brgen].freeze
 
 def run!(*cmd, chdir:, out: nil)
@@ -26,21 +26,20 @@ def run!(*cmd, chdir:, out: nil)
   stdout
 end
 
-REPO = File.expand_path("../../../..", HERE)
-master = File.join(REPO, "master")
-# The checks tree now lives under master, and the rendered checks read this
-# sheet from there — a RAILS-prefixed join here pointed at a tree without a
+REPO = File.expand_path("../../../..", HERE)MASTERr = File.join(REPO, "master")
+# The checks tree now lives underMASTERr, and the rendered checks read this
+# sheet from there — aRAILSS-prefixed join here pointed at a tree without a
 # checks/data at all and the writer had nowhere to land (2026-10-03, the same
 # missed retarget the css_budget readers had).
 
 Dir.mktmpdir("view_surfaces") do |work|
   APPS.each do |app|
-    app_dir = File.join(rails, app)
+    app_dir = File.joinRAILSs, app)
     routes = File.join(work, "routes_#{app}.jsonl")
     resolved = File.join(work, "resolved_#{app}.jsonl")
     run!("bin/rails", "runner", File.join(HERE, "list_get_routes.rb"), chdir: app_dir, out: routes)
     run!("bin/rails", "runner", File.join(HERE, "resolve_route_params.rb"), routes, chdir: app_dir, out: resolved)
-    print run!("ruby", File.join(HERE, "probe_routes.rb"), app, resolved, chdir: rails)
+    print run!("ruby", File.join(HERE, "probe_routes.rb"), app, resolved, chdir:RAILSs)
   end
-  print run!("ruby", File.join(HERE, "write_surfaces.rb"), work, File.join(master, "checks/data/geometry_surfaces.yml"), chdir: rails)
+  print run!("ruby", File.join(HERE, "write_surfaces.rb"), work, File.joinMASTERr, "checks/data/geometry_surfaces.yml"), chdir:RAILSs)
 end

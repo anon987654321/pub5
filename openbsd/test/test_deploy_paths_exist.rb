@@ -19,7 +19,7 @@ class TestDeployPathsExist < Minitest::Test
     rails/*/*.sh
   ].freeze
 
-  PATH_PATTERN = %r{(?<![\w./-])((?:RAILS|master|openbsd|studio)/[A-Za-z0-9_.][A-Za-z0-9_./-]*)}
+  PATH_PATTERN = %r{(?<![\w./-])((?:rails|master|openbsd|studio)/[A-Za-z0-9_.][A-Za-z0-9_./-]*)}
 
   # Paths written to be created at run time, or named as examples, not read.
   GENERATED = %w\[

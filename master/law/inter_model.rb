@@ -16,7 +16,7 @@ Law.define(:INTER_MODEL_CONTRACT) do
     )
   end
   ask <<~'ASK'.strip
-    Does every MASTER-to-model council turn use InterModelContract to construct a structured request envelope,
+    Does every master-to-model council turn use InterModelContract to construct a structured request envelope,
     attach a SHA-256 artifact reference, validate the returned JSON finding schema, and record a bounded metric
     without persisting raw model text? Invalid output must receive one structured rejection and one retry only.
   ASK

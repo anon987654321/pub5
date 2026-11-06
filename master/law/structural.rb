@@ -250,7 +250,7 @@ module Master
         ::Law.define(:PATTERN_EXTRACTION) do
           detector PatternExtractionLaw
           tags %i\[DESIGN OPPORTUNITY]
-          source "MASTER-native - extract recurring structure"
+          source "master-native - extract recurring structure"
           ask "Is the code close to a known reusable pattern whose extraction would genuinely reduce complexity rather than add ceremony?"
           fix "Extract a pattern only when recurring structure earns the abstraction."
           bad <<~'X'

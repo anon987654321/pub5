@@ -627,7 +627,7 @@ trap 'exit 143' TERM
 # The checks (master/lib/operator/canary.rb) ran on the operator's
 # machine when `bin/operator vps deploy --remote` started this run and said so with
 # VPS_DEPLOY_PREFLIGHT_SHA; a direct run on the box has no such word and runs the
-# MASTER-only subset itself on the pinned commit, detached, so a refusal leaves the
+# master-only subset itself on the pinned commit, detached, so a refusal leaves the
 # checkout where it was. VPS_DEPLOY_SKIP_PREFLIGHT=1 is break-glass and, like the
 # runtime-check skip, needs the human-only I_UNDERSTAND_FAST_DEPLOY=1.
 deploy_refuse() { log "refused: $1"; print -u2 "vps-deploy: refused - $1"; print -u2 "            Nothing was stopped."; exit 1 }
