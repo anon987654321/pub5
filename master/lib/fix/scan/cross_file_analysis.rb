@@ -120,7 +120,7 @@ module Master
         # Only compare files that share an extension, and only report the ones
         # that are code.
         #
-        # Measured 2026-07-31 across MASTER: of 57 findings, 44 involved at
+        # Measured 2026-07-31 across master: of 57 findings, 44 involved at
         # least one non-Ruby file and ZERO were duplicated first-party Ruby. A
         # five-line window over three JSON manifests from the same tool matches
         # because they share a schema, not because anyone copied anything, and

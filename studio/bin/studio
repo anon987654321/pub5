@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# studio/bin/studio — the one STUDIO CLI. dilla + postpro (and the photograph
+# studio/bin/studio — the one studio CLI. dilla + postpro (and the photograph
 # / replicate helpers) behind a single entry, as the pub5 port specifies.
 # Reproducible renders: seed/version flags pass through to the projects.
 #

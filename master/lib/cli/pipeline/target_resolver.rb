@@ -23,16 +23,16 @@ module Master
           if text.match?(%r{\Arails[:/]}i)
             return File.join(Master::RAILS_ROOT, text.sub(%r{\Arails[:/]}i, ""))
           end
-          if text.match?(%r{\A(?:\.\./)?RAILS(?:/|\z)})
+          if text.match?(%r{\A(?:\.\./)?rails(?:/|\z)})
             return File.expand_path(text.delete_prefix("../"), Master::REPO_ROOT)
           end
-          if text.match?(%r{\A(?:\.\./)?MASTER(?:/|\z)}i)
+          if text.match?(%r{\A(?:\.\./)?master(?:/|\z)}i)
             return File.expand_path(text.delete_prefix("../"), Master::REPO_ROOT)
           end
-          if text.match?(%r{\A(?:\.\./)?OPENBSD(?:/|\z)}i)
+          if text.match?(%r{\A(?:\.\./)?openbsd(?:/|\z)}i)
             return File.expand_path(text.delete_prefix("../"), Master::REPO_ROOT)
           end
-          if text.match?(%r{\A(?:\.\./)?STUDIO(?:/|\z)}i)
+          if text.match?(%r{\A(?:\.\./)?studio(?:/|\z)}i)
             return File.expand_path(text.delete_prefix("../"), Master::REPO_ROOT)
           end
           path = File.expand_path(text, @root)

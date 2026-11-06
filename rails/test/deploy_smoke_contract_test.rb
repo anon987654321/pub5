@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class DeploySmokeContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  OPENBSD_ROOT = File.expand_path("../../OPENBSD", __dir__)
+  OPENBSD_ROOT = File.expand_path("../../openbsd", __dir__)
   APPS = %w\[amber brgen bsdports].freeze
   RAILS_APPS = APPS
   SMOKE = File.join(OPENBSD_ROOT, "bin", "deploy-smoke.sh")

@@ -11,7 +11,7 @@ module Studio
   module Visual
     class IdeaPicture
       FILM = "prunaai/p-video-2-pro"
-      # The module root is STUDIO. The flatten (b5acc93bc) moved this file one
+      # The module root is studio. The flatten (b5acc93bc) moved this file one
       # level up out of photograph/generators/ but left the two-step climb, so
       # ROOT answered the repository root and every path built from it — the
       # Lora subjects, the output-path safety rails — pointed outside the tree.

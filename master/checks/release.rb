@@ -47,7 +47,7 @@ YAML.safe_load_file(manifest_path, aliases: true).then { |manifest| manifest["ch
 
       # Paths starting with a known tree (master, rails, openbsd) are repo-relative.
       # Others are RAILS-relative.
-      full_path = if require_path.match?(%r{\A(?:MASTER|RAILS|openbsd)/})
+      full_path = if require_path.match?(%r{\A(?:MASTER|rails|openbsd)/})
                     File.join(repo_root, require_path)
                   else
                     File.join(__dir__, require_path)
@@ -56,7 +56,7 @@ YAML.safe_load_file(manifest_path, aliases: true).then { |manifest| manifest["ch
     end
 
 # rails/, where the apps, the shared engine and the contract tests live.
-ROOT = File.expand_path("../../RAILS", __dir__)
+ROOT = File.expand_path("../../rails", __dir__)
 APPS = %w\[amber brgen bsdports].freeze
 FAILURES = [] # scan: intentional — this script's accumulator, appended to by every step below
 STEP_TIMEOUT = Integer(ENV.fetch("RELEASE_CHECK_STEP_TIMEOUT", "180"))

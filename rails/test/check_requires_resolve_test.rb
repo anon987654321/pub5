@@ -42,7 +42,7 @@ class CheckRequiresResolveTest < Minitest::Test
   TREES = {
     "master/checks" => CHECKS,
     "master/lib" => File.expand_path("../../master/lib", __dir__),
-    "openbsd" => File.expand_path("../../OPENBSD", __dir__),
+    "openbsd" => File.expand_path("../../openbsd", __dir__),
   }.freeze
 
   # `require_relative "x"` resolves against the requiring file's directory, and

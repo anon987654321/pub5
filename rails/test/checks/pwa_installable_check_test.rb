@@ -54,7 +54,7 @@ class PwaInstallableCheckTest < Minitest::Test
   end
 
   # CHECK::ROOT is the repository root and the check joins rails/ itself, so the
-  # fixture apps live under <root>/RAILS and that is the root tests edit.
+  # fixture apps live under <root>/rails and that is the root tests edit.
   def with_tree(manifest: MANIFEST)
     Dir.mktmpdir("pwa-installable") do |root|
       rails = File.join(root, "rails")

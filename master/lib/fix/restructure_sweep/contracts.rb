@@ -42,7 +42,7 @@ module Master
           "studio" => <<~TEXT,
             studio, the canonical media and production source tree.
             - master/tools compatibility paths may point here; do not create a second
-              canonical copy under MASTER.
+              canonical copy under master.
             - Media source, model assets, generators and production data keep their
               documented provenance and deterministic entrypoints.
             - Generated renders and caches are evidence/output, not alternate source.

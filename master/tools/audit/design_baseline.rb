@@ -21,7 +21,7 @@ require_relative "../../checks/support/fleet"
 module Operator
   module DesignBaseline
     MASTER_ROOT = File.expand_path("../..", __dir__)
-    RAILS_ROOT = File.expand_path("../../../RAILS", __dir__)
+    RAILS_ROOT = File.expand_path("../../../rails", __dir__)
     WEB_ROOT = File.expand_path("../../web", __dir__)
     CEILING = File.join(MASTER_ROOT, "data", "design_baseline.yml")
 

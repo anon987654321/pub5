@@ -36,7 +36,7 @@ class PathOwnershipTest < Minitest::Test
 
   def test_every_check_names_files_that_exist
     missing = ownership.flat_map do |key, row|
-      row.fetch("check").to_s.scan(%r{\b(?:OPENBSD|MASTER|rails)/[\w./-]+}).reject do |path|
+      row.fetch("check").to_s.scan(%r{\b(?:OPENBSD|master|rails)/[\w./-]+}).reject do |path|
         File.exist?(File.join(REPO, path))
       end.map { |path| "#{key}: #{path}" }
     end

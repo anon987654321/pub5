@@ -38,7 +38,7 @@ class RepoHygieneContractTest < Minitest::Test
   #
   # openbsd/bin/with-ci-lock is the same idea in Ruby, which this box has.
   def test_no_script_reaches_for_a_locking_utility_openbsd_lacks
-    scripts = Dir.glob("#{File.expand_path("../OPENBSD", ROOT)}/**/*.{sh,ksh,zsh}") +
+    scripts = Dir.glob("#{File.expand_path("../openbsd", ROOT)}/**/*.{sh,ksh,zsh}") +
               Dir.glob("#{ROOT}/**/*.sh").reject { |p| p.include?("/vendor/") }
 
     offenders = scripts.flat_map do |path|

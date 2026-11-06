@@ -2,7 +2,7 @@
 
 module Contracts
   module Rails
-    ROOT = File.expand_path("../../RAILS", __dir__).freeze
+    ROOT = File.expand_path("../../rails", __dir__).freeze
 
     module_function
 

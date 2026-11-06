@@ -447,7 +447,7 @@ end
 
   def test_unmeasured_proof_baseline_is_inconclusive_not_green
     pass = Master::CLI::Pipeline::Pass.allocate
-    baseline = Master::CLI::Pipeline::Proof::Reading.parse(false, ["proof suite MASTER: FAIL", "LoadError"])
+    baseline = Master::CLI::Pipeline::Proof::Reading.parse(false, ["proof suite master: FAIL", "LoadError"])
 
     refute baseline.measured?
     assert_match(/INCONCLUSIVE/, pass.send(:baseline_line, baseline))
@@ -598,8 +598,8 @@ end
 
   def test_scoped_fix_does_not_preflight_unrelated_trees
     assert_equal ["rails"], Master::CLI::CommandRegistry.execution_trace_scopes("rails")
-    assert_equal ["rails"], Master::CLI::CommandRegistry.execution_trace_scopes("../RAILS")
-    assert_equal ["openbsd"], Master::CLI::CommandRegistry.execution_trace_scopes("../OPENBSD")
+    assert_equal ["rails"], Master::CLI::CommandRegistry.execution_trace_scopes("../rails")
+    assert_equal ["openbsd"], Master::CLI::CommandRegistry.execution_trace_scopes("../openbsd")
     assert_equal %w\[master rails], Master::CLI::CommandRegistry.execution_trace_scopes("master rails")
     assert_nil Master::CLI::CommandRegistry.execution_trace_scopes("")
   end

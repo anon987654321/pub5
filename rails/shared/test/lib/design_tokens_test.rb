@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require_relative "../../lib/shared/contracts"
-# On vm23 shared sits under /home/<app>, so a path four levels up lands on /home/MASTER and the
+# On vm23 shared sits under /home/<app>, so a path four levels up lands on /home/master and the
 # test never loaded; Shared::Contracts finds the checkout that holds master in either layout.
 require Shared::Contracts.tool_path("design_tokens")
 require Shared::Contracts.tool_path("rails/build_face_css")

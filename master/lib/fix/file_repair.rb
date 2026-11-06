@@ -10,7 +10,7 @@ module Master
     # one prompt, one candidate and one verdict. RepairLoop asks per rule, after
     # an architecture plan for any file over 200 lines, with three candidates,
     # and repairs one finding per file and rule a pass, each prompt carrying the
-    # whole 30 KB constitution. Measured on /fix MASTER: about four calls a
+    # whole 30 KB constitution. Measured on /fix master: about four calls a
     # finding, thirty-odd files an hour. This keeps RepairLoop's extraction,
     # verifier, apply guard, tests and commit, and changes only what it asks.
     class FileRepair < RepairLoop

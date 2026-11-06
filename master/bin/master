@@ -477,7 +477,7 @@ if $stdin.tty?
   end
 else
   $stdout.sync = true
-  # Pipe mode used to ignore ARGV, so `bin/master /scan RAILS` with no TTY
+  # Pipe mode used to ignore ARGV, so `bin/master /scan rails` with no TTY
   # printed nothing and exited 0. Honor the argument, then stdin.
   message = initial_message_from_argv(ARGV)
   cli.pipe(message) unless message.empty?

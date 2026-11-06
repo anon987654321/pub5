@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Static layout drift audit for Brgen, Amber and MASTER.
+# Static layout drift audit for Brgen, Amber and master.
 #
 # Run from any directory:
 #   ruby master/tools/rails/layout_drift_audit.rb
@@ -201,7 +201,7 @@ module Operator
     def audit_feed_lists
       paths = Dir.glob(file("rails/**/*.erb")).sort
       if paths.empty?
-        add("FAIL", "feed_lists.scan", "rails", "No ERB views were found under RAILS.")
+        add("FAIL", "feed_lists.scan", "rails", "No ERB views were found under rails.")
         return
       end
 

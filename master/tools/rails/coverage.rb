@@ -9,7 +9,7 @@ require "rbconfig"
 require "tmpdir"
 require "yaml"
 
-ROOT = File.expand_path("../../../RAILS", __dir__)
+ROOT = File.expand_path("../../../rails", __dir__)
 APPS_FILE = File.join(ROOT, "apps.yml")
 PERSISTED_COVERAGE_ROOT = File.join(ROOT, "coverage")
 VERIFYING = ENV["MASTER_FIX_VERIFY"] == "1"

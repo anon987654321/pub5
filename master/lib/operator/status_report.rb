@@ -130,7 +130,7 @@ module Operator
     # the first line only — so whenever the alphabetically-first dirty file was
     # unstaged-modified, its tree lost a character and was tallied separately.
     # That is where "dirty in ASTER: 1" and "dirty in AILS: 1" came from, beside
-    # a correct master and RAILS: one line short, intermittent, and depending on
+    # a correct master and rails: one line short, intermittent, and depending on
     # which file happened to sort first.
     #
     # Every other caller here is single-value plumbing — branch --show-current,

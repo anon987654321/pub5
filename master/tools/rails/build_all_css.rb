@@ -21,7 +21,7 @@ rescue LoadError
   nil
 end
 
-RAILS_ROOT = File.expand_path("../../../RAILS", __dir__)
+RAILS_ROOT = File.expand_path("../../../rails", __dir__)
 ROOT = File.expand_path("../../..", __dir__)
 SHARED_STYLES = File.join(RAILS_ROOT, "__shared", "app", "assets", "stylesheets")
 def shared_public_dir

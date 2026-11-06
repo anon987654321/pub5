@@ -12,7 +12,7 @@ module Master
     # Repairs the runtime environment before an entrypoint loads application code.
     #
     # The order matters:
-    # 1. use the Ruby that launched MASTER;
+    # 1. use the Ruby that launched master;
     # 2. install the Bundler version recorded by Gemfile.lock when absent;
     # 3. ask Bundler whether the locked graph is installed;
     # 4. install the smallest OS build tool set only after a native build failure;

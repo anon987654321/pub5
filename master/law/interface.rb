@@ -31,7 +31,7 @@ end
 Law.define(:CLI_TREE_TARGET_RESOLUTION) do
   path "master/lib/cli/"
   source "master CLI - four-tree target addressing"
-  ask "When an operator explicitly names master, rails, openbsd or studio, does the command resolve that target from the repository root through the canonical target resolver rather than assuming the current working directory is MASTER? Return CLEAN when every explicit sibling-tree target follows the shared resolver contract."
+  ask "When an operator explicitly names master, rails, openbsd or studio, does the command resolve that target from the repository root through the canonical target resolver rather than assuming the current working directory is master? Return CLEAN when every explicit sibling-tree target follows the shared resolver contract."
   fix "Resolve explicit four-tree targets from Master::REPO_ROOT through TargetResolver; never reinterpret a sibling tree relative to master/lib or the current process directory."
   bad <<~X
     target = File.expand_path("studio/postpro", Dir.pwd)

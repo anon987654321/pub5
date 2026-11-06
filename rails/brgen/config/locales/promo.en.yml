@@ -37,7 +37,7 @@ en:
       body: Discover people who live in the same city you do.
       action: Open Dating
     ai:
-      kicker: Ask MASTER.
+      kicker: Ask master.
       title: AI
       body: A local AI surface for research, writing, planning and more.
       action: Open AI

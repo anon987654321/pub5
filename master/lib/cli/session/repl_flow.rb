@@ -223,7 +223,7 @@ module Master
 
         @refs.ground_truth&.begin_turn! if @refs&.respond_to?(:ground_truth)
         result = command.call(args: match[:args].to_s)
-        # Pipe mode (`bin/master /fix RAILS` with no TTY) reaches commands here, and bin/master
+        # Pipe mode (`bin/master /fix rails` with no TTY) reaches commands here, and bin/master
         # exits with @exit_code: a failed command must not exit 0.
         text = if result.is_a?(Master::Result)
                  @last_ok = result.ok?

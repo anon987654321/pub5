@@ -253,7 +253,7 @@ module Master
         REMOTE_PATH = "backup"
         SSH_OPTS = %w\[-o BatchMode=yes -o ConnectTimeout=10].freeze
 
-        # The repo root is one level above MASTER. This was "../../..", which
+        # The repo root is one level above master. This was "../../..", which
         # climbed three and landed outside the checkout entirely (/home on the
         # VPS), so the order would have rsynced the wrong tree to the remote.
         # Named so the path is assertable without executing the sync.

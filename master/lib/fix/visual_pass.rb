@@ -493,7 +493,7 @@ module Master
 
       # /fix passes master's own directory, so the repository is its parent.
       # "../.." climbed out of pub4 altogether: rails then read as
-      # "pub4/RAILS", applicable? said no, and the visual pass (composition
+      # "pub4/rails", applicable? said no, and the visual pass (composition
       # probes, ghost stack, contact sheet) never ran inside /fix.
       def repo_root
         return @root unless File.basename(@root) == "master"

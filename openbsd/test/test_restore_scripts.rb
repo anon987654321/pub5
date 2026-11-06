@@ -16,7 +16,7 @@ class RestoreScriptsTest < Minitest::Test
   def test_restore_litestream_is_litestream_restore
     source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
     assert_includes source, "litestream restore"
-    refute_includes source, "master/RAILS"
+    refute_includes source, "master/rails"
   end
 
   # litestream is absent from this box and unpackageable, so every precondition

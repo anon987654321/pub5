@@ -3,7 +3,7 @@
 
 require "open3"
 
-# Narrow, auditable OpenBSD administration from MASTER. There is deliberately no
+# Narrow, auditable OpenBSD administration from master. There is deliberately no
 # arbitrary shell mode: every remote operation is one of these named commands.
 module OpenBSDAdmin
   SERVICE_ACTIONS = %w\[check start stop restart enable disable].freeze

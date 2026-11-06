@@ -32,7 +32,7 @@ module Operator
   # grow without someone noticing, which is the property the register row asked
   # for and never had.
   module ModelContractLint
-    RAILS_ROOT = File.expand_path("../../../../RAILS", __dir__)
+    RAILS_ROOT = File.expand_path("../../../../rails", __dir__)
 
     MODEL_GLOBS = [
       "{amber,brgen,bsdports,shared}/app/models/**/*.rb",

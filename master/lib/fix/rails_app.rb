@@ -24,7 +24,7 @@ module Master
 
       # An app or engine, or the rails tree that registers them in apps.yml. A
       # directory that merely holds an app is not Rails: master holds master/web
-      # and is still MASTER.
+      # and is still master.
       def self.rails_dir?(dir)
         return false unless File.directory?(dir)
 

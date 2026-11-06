@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# One check runner for master, rails and OPENBSD.
+# One check runner for master, rails and openbsd.
 # checks/checks.yml is the declaration surface; this file only executes it.
 
 require "json"

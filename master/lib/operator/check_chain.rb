@@ -406,7 +406,7 @@ module Operator
 
       relative = text.delete_prefix("../")
       abs = case relative.upcase
-            # The CLI runs from MASTER: an omitted target or "." means this
+            # The CLI runs from master: an omitted target or "." means this
             # tree, not the repository root. Whole-repo work stays explicit.
             when "", ".", "master" then master
             when "ALL", "EVERYTHING" then ROOT

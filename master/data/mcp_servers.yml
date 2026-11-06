@@ -1,4 +1,4 @@
-# MCP server definitions for MASTER.
+# MCP server definitions for master.
 # Transport options: stdio | sse.
 # Every external MCP capability is governed before execution.
 # Disabled by default on resource-constrained VPS.
@@ -35,7 +35,7 @@ servers:
       - -y
       - "@modelcontextprotocol/server-git"
       - "--repository"
-      - "${MASTER_REPO_ROOT}/MASTER"
+      - "${MASTER_REPO_ROOT}/master"
     description: Expose git operations as tools. Upstream @modelcontextprotocol/server-git has no
       published version to pin (unpublished from the registry), so this entry stays disabled until
       an alternative server is chosen and pinned here. The repository argument follows the repo

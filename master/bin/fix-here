@@ -6,7 +6,7 @@ exec "$(dirname "$0")/ruby" -x "$0" "$@"
 
 # Runs master's /fix over one tree in this checkout, the way that works here.
 #
-#   master/bin/fix-here <MASTER|RAILS|OPENBSD|STUDIO|path> [--model ID|none] [--no-probe] [--no-publish] [--dry]
+#   master/bin/fix-here <master|rails|openbsd|studio|path> [--model ID|none] [--no-probe] [--no-publish] [--dry]
 #
 # This repository writes straight to main, so /fix runs in the checkout and its
 # verified per-pass commits land on main. The wrapper does the things that cost an

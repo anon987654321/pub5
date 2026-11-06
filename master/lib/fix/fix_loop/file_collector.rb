@@ -53,7 +53,7 @@ module Master
         private
 
         # Git paths are relative to the repository root, not to the FixLoop root.
-        # master is normally @root, but rails/openbsd/STUDIO targets are not, and
+        # master is normally @root, but rails/openbsd/studio targets are not, and
         # treating @root as the Git root quietly made incremental collection fall
         # back to a full directory sweep.
         def repository_files(target)

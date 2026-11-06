@@ -37,7 +37,7 @@ nb:
       body: Oppdag folk som bor i samme by som deg.
       action: Åpne Dating
     ai:
-      kicker: Spør MASTER.
+      kicker: Spør master.
       title: AI
       body: En lokal AI-flate for research, skriving, planlegging og mer.
       action: Åpne AI

@@ -10,7 +10,7 @@ module Master
         # One file — views, CSS, Stimulus, touch targets, flat design.
 
         # Pixel-perfect UI/UX rules restored from master.yml aesthetics + design_laws.yml.
-        # Applies to master/web face, ERB views, and pub4/RAILS SCSS/HTML.
+        # Applies to master/web face, ERB views, and pub4/rails SCSS/HTML.
 
         UI_PATH = %r{(?:/app/views/|/app/assets/|/web/public/|/web/app/|face\.|/rails/)}i.freeze
         CSS_LANGS = %i\[css scss].freeze

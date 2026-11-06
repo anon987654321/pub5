@@ -36,10 +36,10 @@ entries:
     The pattern is a `bin/<name>-worker` script that runs EventMachine work and writes a tempfile; the controller calls `Open3.capture3`. Reference implementation: `master/bin/tts-worker` and `master/lib/voice/speech.rb#synthesize_edge`.
 - key: project_master
   name: master project context
-  description: pub4/MASTER - constitutional AI runtime and repo-wide governance kernel
+  description: pub4/master - constitutional AI runtime and repo-wide governance kernel
   type: project
   body: |-
-    master is the constitutional AI runtime in pure Ruby. The repository is governed as four top-level trees: master, rails, openbsd and STUDIO; studio owns media implementations and `master/tools/` exposes compatibility symlinks.
+    master is the constitutional AI runtime in pure Ruby. The repository is governed as four top-level trees: master, rails, openbsd and studio; studio owns media implementations and `master/tools/` exposes compatibility symlinks.
 
     The public runtime surfaces are `master/bin/master` for the agent session and `master/bin/operator` for repository-wide operations. `/fix` is the write/convergence operation; `/fix --dry-run` is read-only and `--critique` invokes the council. `master/bin/operator check` runs the repository ladder with autofix enabled, while `--scan-only` is the measurement-only variant.
 
@@ -95,7 +95,7 @@ entries:
 - key: reference_opencrabs
   name: OpenCrabs (Rust master cousin)
   description: github.com/adolfousier/opencrabs - Rust/Ratatui TUI agent, philosophical
-    cousin of MASTER. ~803 stars, MIT. Worth-stealing patterns listed with master
+    cousin of master. ~803 stars, MIT. Worth-stealing patterns listed with master
     wiring status.
   type: reference
   body: |-
@@ -129,7 +129,7 @@ entries:
 
     (a) A NEW AGE IN COMPUTING - the first pure-Ruby AI. No Python in the spine; Ruby all the way down. Influences the operator cites (to be credited in a forthcoming book): Jeremy Evans (author of Roda + Sequel, and maintainer of the OpenBSD Ruby port - the exact Ruby<->OpenBSD nexus master sits on); adam12 / Adam Daniels (Roda/Sequel/Rack/Hanami minimalist-Ruby school, Gemdocs.org - the operator designed the new Gemdocs logo); DHH (Rails); J Dilla's mastering engineer Dave Cooley (craft and feel); the architecture firm Snohetta; and the wider OpenBSD / Ruby / Rails communities.
 
-    (b) openbsd DESIGN, MIRRORED AS CLOSELY AS POSSIBLE. Correctness and simplicity above all; secure-by-default; ruthless removal of unused code; a small closed surface; sane defaults; docs as first-class. Respect to Theo de Raadt. A future OpenBSD Rust port is planned, likely with a higher-level Ruby overlay. Concretely in MASTER: the core/ fold is an OpenBSD-style minimal kernel - a fixed 7-verb World surface (the syscall table), the immutability rule as pledge(2) (the agent cannot rewrite its own constitution or spine), the Constitution as a security check before every effect, atomic writes.
+    (b) openbsd DESIGN, MIRRORED AS CLOSELY AS POSSIBLE. Correctness and simplicity above all; secure-by-default; ruthless removal of unused code; a small closed surface; sane defaults; docs as first-class. Respect to Theo de Raadt. A future OpenBSD Rust port is planned, likely with a higher-level Ruby overlay. Concretely in master: the core/ fold is an OpenBSD-style minimal kernel - a fixed 7-verb World surface (the syscall table), the immutability rule as pledge(2) (the agent cannot rewrite its own constitution or spine), the Constitution as a security check before every effect, atomic writes.
 
     (c) SNOHETTA-STYLE NORWEGIAN PARAMETRIC ARCHITECTURE. The operator studied architecture (in Malaysia, their father is from there) and favours timeless, well-thought-out design: one clear organizing idea, nothing decorative, form follows the idea.
 
@@ -250,7 +250,7 @@ entries:
     and that is the top gap
   type: reference
   body: '2026-10-03. Top: rb-edge-tts is NOT local - it calls Microsoft''s endpoint;
-    a network cut silences MASTER. Adoptables: Kokoro-82M (ONNX, ~edge quality, Mac-sized)
+    a network cut silences master. Adoptables: Kokoro-82M (ONNX, ~edge quality, Mac-sized)
     for genuinely offline en-US; KittenTTS (15M, <25MB) as vm23-grade rescue voice;
     eSpeak-NG as the final offline rung; KokoClone (3-10s reference) puts Johann''s
     own voice in the rotation; Scylla''s six continuous affect axes -> voice.yml entries
@@ -327,7 +327,7 @@ entries:
 
     arifOS (https://github.com/ariffazil/arifOS): its README's current-verified-state block dated 2026-10-11 reports 2 floors passing, 4 failing, 10 unmeasured, and a mismatch where a HOLD verdict was persisted as ok:true in invocation telemetry; it also says no independent external verifier is bound. This is a caution, not a condemnation: governance slogans, dashboards, and ledgers do not prove correctness unless telemetry preserves the actual verdict and independent reconstruction can verify it. Unmeasured is not pass.
 
-    AXIOM-MESH (https://github.com/Zoverions/AXIOM-MESH) reinforces explicit intent, policy authority, bounded effects and portable evidence, but its Node.js/runtime stack offers no demonstrated missing capability in MASTER. HELIX-CORE (https://github.com/helixprojectai-code/HELIX-CORE) advertises a multi-layer, multi-cloud system; documentation alone did not establish a concrete mechanism master needs. Kestrel Sovereign (https://github.com/KestrelSovereignAI/kestrel-sovereign) is Python-first and pre-1.0; its own README identifies plaintext saved-item/RAG chunk bodies while encryption is incomplete. Neither warrants importing a framework.
+    AXIOM-MESH (https://github.com/Zoverions/AXIOM-MESH) reinforces explicit intent, policy authority, bounded effects and portable evidence, but its Node.js/runtime stack offers no demonstrated missing capability in master. HELIX-CORE (https://github.com/helixprojectai-code/HELIX-CORE) advertises a multi-layer, multi-cloud system; documentation alone did not establish a concrete mechanism master needs. Kestrel Sovereign (https://github.com/KestrelSovereignAI/kestrel-sovereign) is Python-first and pre-1.0; its own README identifies plaintext saved-item/RAG chunk bodies while encryption is incomplete. Neither warrants importing a framework.
 
     AutoDevOps AI (https://github.com/koustubh-v/AutoDevOps-AI) is a React/Node + Python service stack with Gemini and Firebase; CodeHealer (https://github.com/Deepanhp/code-healer) depends on Rails, Sidekiq, Redis, GitHub and OpenAI; both add stacks that conflict with master's small pure-Ruby core. Rubyn Code (https://github.com/MatthewSuttles/rubyn-code) offers useful areas to compare - MCP, context indexing, phased plans and skills - but overlaps existing tooling and is not a reason to add its 112-skill catalog or dependency tree. The supplied iterate URL did not resolve to a README through the repository connector; no implementation claim is accepted from it. Kward, rubycode and Ocak had no repository URLs in the supplied note, so they remain unreviewed rather than guessed.
 

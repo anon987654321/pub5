@@ -121,9 +121,9 @@ module Master
         return "bplans" if value.match?(%r{(?:\A|/)BPLANS(?:/|\z)}i)
         return "music" if value.match?(%r{(?:\A|/)studio/dilla(?:/|\z)}i)
         return "visual" if value.match?(%r{(?:\A|/)studio/postpro(?:/|\z)}i)
-        return "studio" if value.match?(%r{(?:\A|/)STUDIO(?:/|\z)}i)
-        return "rails" if value.match?(%r{(?:\A|/)RAILS(?:/|\z)}i)
-        return "openbsd" if value.match?(%r{(?:\A|/)OPENBSD(?:/|\z)}i)
+        return "studio" if value.match?(%r{(?:\A|/)studio(?:/|\z)}i)
+        return "rails" if value.match?(%r{(?:\A|/)rails(?:/|\z)}i)
+        return "openbsd" if value.match?(%r{(?:\A|/)openbsd(?:/|\z)}i)
 
         "engineering"
       end

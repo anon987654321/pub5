@@ -158,7 +158,7 @@ class TestCliOperatorLayer < Minitest::Test
     assert_equal :direct_shell, grammar.parse("ls && pwd").kind
     assert_equal :direct_shell, grammar.parse("git status; whoami").kind
     assert_equal :direct_shell, grammar.parse("ls -la").kind
-    assert_equal :direct_shell, grammar.parse("ls ~/MASTER").kind
+    assert_equal :direct_shell, grammar.parse("ls ~/master").kind
     assert_equal :direct_shell, grammar.parse("ls ./master/lib").kind
     assert_equal :direct_shell, grammar.parse("git diff --stat").kind
     assert_equal :direct_shell, grammar.parse("ps aux").kind

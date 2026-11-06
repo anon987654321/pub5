@@ -242,7 +242,7 @@ module Master
           @repair_before ? Array(repo_git.paths_since(@repair_before)).grep(%r{\A(?:RAILS|master/web)/}) : []
         end
 
-        # A whole-MASTER pass proves with the tests that name what it changed when it has what was red
+        # A whole-master pass proves with the tests that name what it changed when it has what was red
         # before to judge them by: its baseline if one was kept, else the tree's known-red record
         # (Proof::Affected). Nil keeps the whole suite.
         def narrow_known(abs, baseline)

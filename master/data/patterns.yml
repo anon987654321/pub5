@@ -1021,7 +1021,7 @@ operator_playbook:
     - id: post_sync_vps_proof
       area: deploy
       signal: "Code pushed but services stale or untested on vm23"
-      action: "After git pull: SKIP_MASTER_SCAN=1 I_UNDERSTAND_FAST_DEPLOY=1 zsh openbsd/bin/vps_on_vm_install.sh; doas rcctl restart master; bundle34 exec bin/ci per app; bundle34 exec bin/smoke in MASTER; ruby34 openbsd/checks/health_check.rb; curl https://ai.brgen.no/up"
+      action: "After git pull: SKIP_MASTER_SCAN=1 I_UNDERSTAND_FAST_DEPLOY=1 zsh openbsd/bin/vps_on_vm_install.sh; doas rcctl restart master; bundle34 exec bin/ci per app; bundle34 exec bin/smoke in master; ruby34 openbsd/checks/health_check.rb; curl https://ai.brgen.no/up"
       proof: "doas rcctl check master brgen amber bsdports; browser smoke on ai.brgen.no face"
 
     - id: rails_rcd_canonical_names
@@ -1087,7 +1087,7 @@ operator_playbook:
     - id: vps_ci_shared_tree_path
       area: deploy
       signal: "Importmap/RuboCop still run on VPS despite ci.rb fix; postpro resolves to /home/postpro"
-      action: "config/ci.rb requires ../../shared from app/config -> /home/<app>/shared (not /home/<app>/app/shared). vps_ci.sh syncs full rails/__shared there plus code overlay. Set PUB5_RAILS_ROOT=/home/dev/pub5/RAILS for DeployPaths. Postpro/replicate: Operator::DeployPaths or master/tools/*.rb - never Rails.root/../../postpro alone on copy-tree."
+      action: "config/ci.rb requires ../../shared from app/config -> /home/<app>/shared (not /home/<app>/app/shared). vps_ci.sh syncs full rails/__shared there plus code overlay. Set PUB5_RAILS_ROOT=/home/dev/pub5/rails for DeployPaths. Postpro/replicate: Operator::DeployPaths or master/tools/*.rb - never Rails.root/../../postpro alone on copy-tree."
       proof: "grep unless vps_host /home/brgen/shared/config/ci.rb; ruby -e 'require \"operator/deploy_paths\"' under brgen app finds /home/dev/pub5/studio/postpro/postpro.rb"
 
     - id: vps_ci_lock_perms
@@ -1201,7 +1201,7 @@ skills_registry:
 
       Use the cheapest model that still meets the task, and switch only when the tradeoff is clear. State what changed and why so later turns do not assume a heavier model than necessary.
   - name: process
-    description: Summarize the current operating state of MASTER.
+    description: Summarize the current operating state of master.
     triggers:
     - "\\bprocess\\b"
     body: |-

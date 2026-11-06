@@ -16,7 +16,7 @@ require_relative "../../../lib/io/exec"
 require "tmpdir"
 
 HERE = __dir__
-rails = File.expand_path("../../../../RAILS", HERE)
+rails = File.expand_path("../../../../rails", HERE)
 APPS = %w\[amber bsdports brgen].freeze
 
 def run!(*cmd, chdir:, out: nil)

@@ -16,7 +16,7 @@
 #                         already dropped them for the same reason
 #   data, code, lib, info structured_data_test.rb, code_index.rb, check_lib
 #   service, object       ranking_service.rb (Rails), object_probe.rb
-#   copy                  text copy in RAILS: city_copy_contract_test.rb
+#   copy                  text copy in rails: city_copy_contract_test.rb
 schema: 1
 words:
   # A category: the shape of a box rather than what is in it.

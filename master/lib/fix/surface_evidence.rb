@@ -845,7 +845,7 @@ module Master
         commands
       end
 
-      # master/web is a Rails app inside MASTER: its suite is bin/rails test, not master's rake.
+      # master/web is a Rails app inside master: its suite is bin/rails test, not master's rake.
       def web_test_commands(label, paths)
         argv = [RbConfig.ruby, "bin/rails", "test"]
         rails_app_test_targets(label, paths).map do |_name, app_dir|

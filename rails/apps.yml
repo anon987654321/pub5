@@ -1,4 +1,4 @@
-# Rails deploy matrix — canonical inventory for RAILS.
+# Rails deploy matrix — canonical inventory for rails.
 #
 # deploy_root: tracked tree copied to /home/<app>/app by <app>.sh
 # status: done | port | missing | planned

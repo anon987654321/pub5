@@ -62,7 +62,7 @@ module Master
       def refusal(target, lane = current)
         return unless visual?(lane)
 
-        relative = target.to_s.sub(%r{\A.*?(?=RAILS(?:/|\z))}, "")
+        relative = target.to_s.sub(%r{\A.*?(?=rails(?:/|\z))}, "")
         return if relative == "rails" || relative.start_with?("rails/")
 
         "--lane visual renders the rails apps; #{target} has no rendered surface"

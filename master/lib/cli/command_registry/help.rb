@@ -29,7 +29,7 @@ module Master
             "/run is its spelling.",
             "--prove — the convergence proof with its durable receipts (/fix --prove",
             "history [N] reads the ledger); /prove is its spelling.",
-            "--explain [MASTER|RAILS|OPENBSD|STUDIO] — the measured tree topology; /explain is its spelling.",
+            "--explain [master|rails|openbsd|studio] — the measured tree topology; /explain is its spelling.",
             "--simplify — pin the council to quality-only critique: reuse, simplification, efficiency and",
             "altitude, behavior preserved, no bug hunting; the deterministic instruments keep their findings.",
             "/simplify is its spelling.",

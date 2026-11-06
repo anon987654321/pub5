@@ -370,8 +370,8 @@ class UserPurgeJobTest < ActiveJob::TestCase
   # stale without anything noticing.
   ERASURE_COVERAGE_ROOTS = [
     ENV["PUB5_RAILS_ROOT"],
-    "/home/dev/pub5/RAILS",
-    "/home/#{ENV.fetch('PUB4_CI_APP', 'brgen')}/pub4-rails/RAILS",
+    "/home/dev/pub5/rails",
+    "/home/#{ENV.fetch('PUB4_CI_APP', 'brgen')}/pub4-rails/rails",
     File.expand_path("../../..", __dir__)
   ].compact.freeze
 

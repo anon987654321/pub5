@@ -76,7 +76,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       output: "1 runs, 1 assertions, 0 failures, 0 errors, 0 skips\n",
       expected_command: ["ruby", "-Itest", "test_repair_loop_policy.rb", "--name",
                          "\\Atest_RI_341_fix_repairs_known_small_defect_and_verifies\\z"],
-      expected_chdir_suffix: "/MASTER"
+      expected_chdir_suffix: "/master"
     )
   end
 
@@ -110,7 +110,7 @@ class InteractionCampaignAdapterTest < Minitest::Test
       output: "TAP version 13\n# Subtest: test_RI_361_pwa_manifest_contract\n    ok 1 - manifest contract\n    1..1\nok 1 - test_RI_361_pwa_manifest_contract\n1..1\n# tests 1\n# suites 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n",
       expected_command: ["node", "--test", "--test-reporter=tap", "--test-name-pattern",
                          "^test_RI_361_pwa_manifest_contract$", "test/pwa_offline_store.test.mjs"],
-      expected_chdir_suffix: "/RAILS"
+      expected_chdir_suffix: "/rails"
     )
   end
 end

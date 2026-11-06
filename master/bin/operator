@@ -70,7 +70,7 @@ def usage
       bin/operator ci | coverage          every app's bin/ci, the full Rails coverage run
       bin/operator doctor [--remote]      the environment traps, checked in seconds: disk, rubies, boot, worktrees, model lanes, stray processes
       bin/operator memory review <key> <verdict> --evidence <path> --sha256 <hex> --reviewer <name> --confirm
-      bin/operator laws <ID> [--card] [--health] [--deep] [--json] [--corpus MASTER|all] [path...]
+      bin/operator laws <ID> [--card] [--health] [--deep] [--json] [--corpus master|all] [path...]
                                       the rule, its exemption, then what it finds
       bin/operator hooks                  install the shared-tree commit guard
       bin/operator readers <path>         who reaches this file, across all four governed trees
@@ -603,7 +603,7 @@ when "laws"
   health = !ARGV.delete("--health").nil? || !ARGV.delete("--deep").nil?
   json_health = ARGV.include?("--json")
   id = ARGV.shift.to_s
-  die("laws", "usage, bin/operator laws <ID> [--card] [--json] [--corpus MASTER|all] [path...]", 64) if id.empty?
+  die("laws", "usage, bin/operator laws <ID> [--card] [--json] [--corpus master|all] [path...]", 64) if id.empty?
 
   corpus = "master"
   ARGV.delete_if { |arg| (m = arg.match(/\A--corpus=(.+)\z/)) && (corpus = m[1]) }

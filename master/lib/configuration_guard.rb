@@ -182,7 +182,7 @@ module Master
 
     def validate_soul(data, path: LIVE_SOUL)
       raise ArgumentError, "soul schema must be 1" unless data["schema"] == 1
-      raise ArgumentError, "soul version must match MASTER::Soul::VERSION" unless data["version"] == Master::Soul::VERSION
+      raise ArgumentError, "soul version must match master::Soul::VERSION" unless data["version"] == Master::Soul::VERSION
 
       expected_digest = Master::Soul.print.fetch("body_sha256")
       unless data["body_sha256"].to_s == expected_digest

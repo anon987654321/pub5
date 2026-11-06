@@ -626,7 +626,7 @@ module Master
         tokens.uniq.map { |tree| File.join(repo_root, tree) }
       end
 
-      # `bin/master /fix master rails openbsd STUDIO` names every tree of the
+      # `bin/master /fix master rails openbsd studio` names every tree of the
       # checkout: a whole-checkout run is an improvement run, so it takes the
       # elevate lane unless an explicit --lane= was given. Single-tree runs keep
       # the default lane; convergence first, elevation alongside.

@@ -11,7 +11,7 @@ entry_count: 168
 entries:
 - id: master-on-pinned-ruby-4-0-5-run
   text: >-
-    **MASTER on pinned Ruby 4.0.5.** Run focused Law, Soul, configuration,
+    **master on pinned Ruby 4.0.5.** Run focused Law, Soul, configuration,
     registry, replay-reader, fix-loop oscillation, reachability, run-ledger,
     media and CLI regressions. Then run `MASTER_TEST_START_MARKERS=1 MASTER_TEST_JOBS=1
     MASTER_TEST_PROGRESS_EVERY=25 rake test`, `MASTER_TEST_JOBS=3 rake test`,
@@ -31,7 +31,7 @@ entries:
   done_when_note:
 - id: rails-full-contracts-on-one-current-revision-run
   text: >-
-    **RAILS full contracts on one current revision.** Run `ruby rails/test/run_all.rb`,
+    **rails full contracts on one current revision.** Run `ruby rails/test/run_all.rb`,
     every app's `bin/ci` and `ruby master/checks/runner.rb --all`. The last
     recorded rails run had six red checks: CSS budgets, file-length and
     method-length ratchets, `studio_contract` (possibly a stale diagnosis),
@@ -52,7 +52,7 @@ entries:
   done_when_note:
 - id: rails-focused-gaps-run-billing-api-key-api
   text: >-
-    **RAILS focused gaps.** Run billing, API-key/API-lint, dating identity,
+    **rails focused gaps.** Run billing, API-key/API-lint, dating identity,
     Radio manifest/TrackImport, share and job-concurrency, Amber account-merge,
     Marketplace filter/card/mutation, Takeaway model/migration, empty-state,
     token-projection and design-token tests. Use fresh databases; verify
@@ -66,7 +66,7 @@ entries:
   done_when_note: no runnable command named in the item text
 - id: openbsd-updated-runner-and-native-proof-previous-evidence
   text: >-
-    **OPENBSD updated runner and native proof.** Previous evidence was 45
+    **openbsd updated runner and native proof.** Previous evidence was 45
     files/0 red, rehearsal 16/16, PF policy 11/11 and evidence tool 9/9.
     The runner now rejects empty or invalid Minitest summaries and has new
     regression tests. Run the updated `ruby openbsd/test/run_all.rb` and
@@ -83,7 +83,7 @@ entries:
   done_when_note:
 - id: studio-full-proof-earlier-rake-check-and-dilla
   text: >-
-    **STUDIO full proof.** Earlier `rake check` and Dilla test (17 runs,
+    **studio full proof.** Earlier `rake check` and Dilla test (17 runs,
     386 assertions) passed. The strict per-file runner now forwards keyword
     and positional subprocess environments correctly and rejects empty or
     invalid Minitest summaries. Its new subprocess regressions are source
@@ -147,7 +147,7 @@ entries:
 - id: run-one-genuine-repository-wide-fix-over-master
   text: >-
     Run one genuine repository-wide `/fix` over master, rails, openbsd and
-    STUDIO. Preserve four independent reports, grounded candidates, revision,
+    studio. Preserve four independent reports, grounded candidates, revision,
     receipts and truthful terminal states (DONE, PLATEAU, HUMAN_DECISION,
     BLOCKED, VALIDATION_FAILED, DELIVERY_FAILED or TIMEOUT). Measure actual
     convergence and repair quality; an architecture map is not runtime proof.
@@ -2085,7 +2085,7 @@ entries:
   done_when_note: no runnable command named in the item text
 - id: master-17-android-consent-ux-device-android-termux
   text: >-
-    **MASTER (17):** `android_consent_ux` (device); `android_termux_install`
+    **master (17):** `android_consent_ux` (device); `android_termux_install`
     (device); `selfie_route_live` (provider); `browser_vision_end_to_end`
     (browser); `face_in_a_real_browser` (browser); `voice_by_ear` (ears);
     `worktree_delivery_against_github` (credential); `release_acceptance_on_an_idle_host`
@@ -2107,7 +2107,7 @@ entries:
     decision
 - id: openbsd-15-shell-init-credential-rotation-credential-unregistered
   text: >-
-    **OPENBSD (15):** `shell_init_credential_rotation` (credential); `unregistered_domains`
+    **openbsd (15):** `shell_init_credential_rotation` (credential); `unregistered_domains`
     (registrar); `watched_all_target_deploy` (console); `deploy_failure_trap_window`
     (console); `second_offhost_backup_and_key_recovery` (console); `dnssec_ds_at_registrars`
     (registrar); `monitoring_and_crontab_on_vm23` (console); `two_consecutive_deploys`
@@ -2127,7 +2127,7 @@ entries:
     decision
 - id: rails-16-brgen-first-screen-in-chrome-browser
   text: >-
-    **RAILS (16):** `brgen_first_screen_in_chrome` (browser); `tenant_isolation_live`
+    **rails (16):** `brgen_first_screen_in_chrome` (browser); `tenant_isolation_live`
     (browser); `messenger_journey_in_a_browser` (browser); `payments_in_provider_staging`
     (provider); `pwa_on_real_devices` (device); `city_registry_matches_dns_and_tls`
     (registrar); `journeys_in_all_three_apps` (browser); `amber_dashboard_geometry`
@@ -2148,7 +2148,7 @@ entries:
     decision
 - id: studio-7-lora-source-refresh-and-paid-training
   text: >-
-    **STUDIO (7):** `lora_source_refresh_and_paid_training` (provider);
+    **studio (7):** `lora_source_refresh_and_paid_training` (provider);
     `private_media_and_history` (rights); `person_renders_and_duet_video`
     (material); `dilla_by_ear` (ears); `reference_workflow_with_a_real_link`
     (ears); `lora_route_end_to_end` (provider); `paid_media_cost_proof`

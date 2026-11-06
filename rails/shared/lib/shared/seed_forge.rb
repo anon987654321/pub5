@@ -22,7 +22,7 @@ module Shared
         return Pathname(configured).expand_path if configured != ""
 
         # master is not beside the engine on the box (/home/<app>/shared), so the
-        # engine-relative walk landed on /home/MASTER and the seeds step died.
+        # engine-relative walk landed on /home/master and the seeds step died.
         Pathname(Shared::Contracts.root).join("master", "data", "seed_forge.yml")
       end
     end

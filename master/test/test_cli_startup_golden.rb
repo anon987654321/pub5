@@ -36,7 +36,7 @@ class TestCliStartupGolden < Minitest::Test
 
   def test_the_shape_accepts_the_lines_a_real_boot_prints
     sample = ["master0 at mainbus0: master 1.0.3 #22497, model claude-sonnet-5-5",
-              "host0 at mainbus0: mac@Mac.localdomain:/Users/mac/pub4/MASTER",
+              "host0 at mainbus0: mac@Mac.localdomain:/Users/mac/pub4/master",
               "voice0 at mainbus0: available", "web0 at mainbus0: ready, token set",
               "net0 at mainbus0: wifi en0, power on, link up", "bth0 at mainbus0: on, 1 connected", "root on master0"]
 

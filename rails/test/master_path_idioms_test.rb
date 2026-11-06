@@ -3,7 +3,7 @@
 require "minitest/autorun"
 
 # Runtime code that builds a path to master from its own location works in the repo
-# and lands on /home/MASTER in vm23's copy-tree, where the app lives at /home/<app>/app
+# and lands on /home/master in vm23's copy-tree, where the app lives at /home/<app>/app
 # and master is not beside it. That killed the first deploy that reached the
 # migration (contracts) and then the seeds step (seed_forge). Runtime code asks
 # Shared::Contracts, which honours PUB5_ROOT and finds the checkout on the box.
@@ -43,5 +43,5 @@ class MasterPathIdiomsTest < Minitest::Test
 
   private
 
-  def offending = %r{\.\./[^"']*(MASTER|OPENBSD|studio)|(MASTER|OPENBSD|studio)[^"']*\.\./}
+  def offending = %r{\.\./[^"']*(master|openbsd|studio)|(master|openbsd|studio)[^"']*\.\./}
 end

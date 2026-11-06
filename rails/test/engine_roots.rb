@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # The checks and these tests share one statement of where brgen's engines live.
-# On vm23 this file sits at /home/brgen/test, where the repo-relative path lands on /home/MASTER and the
+# On vm23 this file sits at /home/brgen/test, where the repo-relative path lands on /home/master and the
 # whole brgen suite died loading it on 2026-10-22; so the checkout comes from PUB5_ROOT (exported by
 # ci-run.ksh), then the repo, then the box's own checkout, the order Shared::Contracts uses.
 surfaces = File.join("master", "checks", "support", "brgen_vertical_surfaces.rb")

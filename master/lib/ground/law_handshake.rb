@@ -4,7 +4,7 @@ require "json"
 
 module Master
   module Ground
-    # Protocol-level admission for agents that claim to mirror MASTER.
+    # Protocol-level admission for agents that claim to mirror master.
     # This verifies identity and procedure; it does not trust a prompt claim.
     class LawHandshake
       Verdict = Data.define(:accepted, :reason, :digest, :protocol_version) do

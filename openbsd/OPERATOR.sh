@@ -27,7 +27,7 @@ SCRIPT_DIR=${0:a:h}
 # A box with no Ruby yet still runs the stages that install one.
 source "${SCRIPT_DIR}/lib/ruby_select.sh" || print -u2 "OPERATOR: no Ruby installed; steps that need one will fail"
 REPO_ROOT=${SCRIPT_DIR:h}
-CONFIG_ROOT=${REPO_ROOT}/OPENBSD
+CONFIG_ROOT=${REPO_ROOT}/openbsd
 
 # Usage comes first. Operational stages live in small sourced modules, so the
 # entrypoint stays navigable without depending on a stale file-line count.
@@ -373,7 +373,7 @@ sync_openbsd_apply() {
     mkdir -p "$scan_log_dir" || { log ERROR "cannot create $scan_log_dir"; return 1 }
     chmod 700 "$scan_log_dir"
     log INFO "master rules scan (OPERATOR) - strict pre-apply per laws.yml (ROBUSTNESS/SINGULARITY/LINEARITY/PROXIMITY/ABSTRACTION/DENSITY + veto)"
-    if ! su dev -c "cd /home/dev/pub5/MASTER && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 $BUNDLE exec $RUBY bin/check --scan-only --tree=openbsd" 2>&1 | tee "$scan_log"; then
+    if ! su dev -c "cd /home/dev/pub5/master && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 $BUNDLE exec $RUBY bin/check --scan-only --tree=openbsd" 2>&1 | tee "$scan_log"; then
       log ERROR "master scan found violations - refusing sync/apply (self_violation would occur per laws.yml)"
       return 1
     fi

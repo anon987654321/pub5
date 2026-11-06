@@ -91,7 +91,7 @@ class ProjectTree
 
     apps = rails_apps(repo)
     engines = brgen_engines(repo)
-    line(:ok, "RAILS: #{apps.size} app(s) (#{apps.join(' ')}) + shared engine + apps.yml inventory")
+    line(:ok, "rails: #{apps.size} app(s) (#{apps.join(' ')}) + shared engine + apps.yml inventory")
     line(:ok, "brgen verticals as engines: #{engines.join(' ')}") if engines.any?
 
     libs = subdirs(File.join(repo, "master", "lib"))
@@ -164,7 +164,7 @@ class ProjectTree
     (YAML.safe_load_file(path)["apps"] || {}).keys.sort
   rescue StandardError => e
     # apps.yml is the fleet's feature truth. No apps reads as a tree with none,
-    # which is a report about this file rather than about RAILS.
+    # which is a report about this file rather than about rails.
     warn "tree: rails/apps.yml unreadable (#{e.class}: #{e.message.lines.first.to_s.strip}) - reporting no apps"
     []
   end

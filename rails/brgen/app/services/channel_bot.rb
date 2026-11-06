@@ -153,7 +153,7 @@ class ChannelBot
     bots.sample
   end
 
-  # Draft a reply via MASTER; fall back to a persona-canned line on any failure.
+  # Draft a reply via master; fall back to a persona-canned line on any failure.
   def self.draft(bot, channel, message)
     persona = PERSONAS[bot.username] or return nil
     generate(persona, channel, message).presence || canned_line(bot.username, channel)

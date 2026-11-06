@@ -115,7 +115,7 @@ end
 
 # The four top-level trees, by the name a person types. `.` is master because this script
 # runs from inside it.
-TREE_PATHS = { "master" => ".", "rails" => "../RAILS", "openbsd" => "../OPENBSD", "studio" => "../STUDIO" }.freeze
+TREE_PATHS = { "master" => ".", "rails" => "../rails", "openbsd" => "../openbsd", "studio" => "../studio" }.freeze
 
 # Named trees when --tree is given, all four otherwise. An unknown name is
 # refused rather than silently narrowing the check to nothing — a check that

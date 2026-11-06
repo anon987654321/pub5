@@ -574,7 +574,7 @@ module Master
       end
 
       # A /fix run rooted in master may repair a rails or openbsd file beside it: the transaction
-      # snapshots and restores any file in the repository master sits in, named relative to MASTER.
+      # snapshots and restores any file in the repository master sits in, named relative to master.
       def outer_root
         return File.expand_path(@root) unless defined?(Master::REPO_ROOT)
 

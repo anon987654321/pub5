@@ -23,7 +23,7 @@
 
 require "yaml"
 
-ROOT = File.expand_path("../../../RAILS", __dir__)
+ROOT = File.expand_path("../../../rails", __dir__)
 $LOAD_PATH.unshift(File.join(ROOT, "..", "master", "lib"))
 require "operator/ruby_runner"
 APPS = YAML.safe_load_file(File.join(ROOT, "apps.yml")).fetch("apps").filter_map do |name, app|

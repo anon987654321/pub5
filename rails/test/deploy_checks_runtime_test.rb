@@ -215,7 +215,7 @@ class DeployChecksRuntimeTest < Minitest::Test
     assert_empty incomplete.map { |r| r["want"] }, "recipes missing want, run or expect"
 
     missing = recipes.flat_map do |recipe|
-      recipe["run"].scan(%r{\b(?:MASTER|OPENBSD|RAILS|studio)/[\w./-]+}).reject do |path|
+      recipe["run"].scan(%r{\b(?:MASTER|openbsd|rails|studio)/[\w./-]+}).reject do |path|
         File.exist?(File.join(REPO_ROOT, path))
       end.map { |path| "#{recipe["want"]}: #{path}" }
     end

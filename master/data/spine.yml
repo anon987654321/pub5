@@ -542,7 +542,7 @@ pub4_source_ceilings:
   # one.
   # 1040 -> 1043 and rails 2372 -> 2366: six checks moved to the tree they
   # measure. master_tts, master_web_assets and constitutional_scan check
-  # MASTER; dns_zones, domain_alignment and port_inventory check the box. The
+  # master; dns_zones, domain_alignment and port_inventory check the box. The
   # repo holds the same number of checks it did before — this is one move
   # crossing three ledgers, which is why rails falls by the six that master
   # and openbsd gain.
@@ -659,7 +659,7 @@ pub4_source_ceilings:
   # the Bplans contract plus the Air Superiority and Social Browser plugin READMEs.
   # These are deliberate contract surfaces, not absorbed growth.
   # 718 -> 719: ratchet_sponsor.rb is the one new governed master source file in this series.
-  MASTER: 719
+  master: 719
 
   # 2359 -> 2360 for master/checks/face_capture_probe.rb, which gets the
   # master face past its primer check so it can be recorded. A probe, not a check:
@@ -859,7 +859,7 @@ pub4_source_ceilings:
   # 72 partials left the index and Operator::ScssRules joined it.
   # 1932 -> 1983: retired reference app adds 51 tracked source/docs files. The pre-existing
   # 47-file overage remains visible; only the named ERITEL addition is paid for.
-  RAILS: 1981
+  rails: 1981
   # 106 -> 107 is test/test_githooks.rb. dev/githooks holds the three guards
   # that are the whole defence against a shared index, and nothing tested any of
   # them — a hook that stopped firing looks exactly like a week in which nobody
@@ -935,11 +935,11 @@ pub4_source_ceilings:
 # vps_console.exp and removed bin/tree.sh, whose caller runs tools/tree.rb.
   # 90 -> 92: retired reference deployment adds README.md and bin/preflight.ksh. No other
   # source growth is absorbed by this raise.
-  OPENBSD: 92
+  openbsd: 92
   # 2026-09-30: studio is restored as the governed media tree. The move transfers
-  # 243 source files out of master/tools into STUDIO; the ceiling records that
+  # 243 source files out of master/tools into studio; the ceiling records that
   # exact observed population and absorbs no additional growth.
-  # 2026-10-02: +2 authored Studio files: the canonical photograph entrypoint and\n  # its visual generator. Both replace media creation that previously lived in MASTER.\n  STUDIO: 245
+  # 2026-10-02: +2 authored Studio files: the canonical photograph entrypoint and\n  # its visual generator. Both replace media creation that previously lived in master.\n  studio: 245
   # 220 -> 222 for lora/seed_media.yml and lora/_toolkit/install_seed_media.rb,
   # the prompt set for every seeded photograph and the script that grades and
   # files what comes back from it. Two files, both named, neither foldable:
@@ -1122,6 +1122,6 @@ name_candidates: 23
 # shims became modes of vps_console.exp, their sourced helper folded in, and
 # bin/tree.sh went, since its callers run tools/tree.rb.
 pub4_entrypoint_ceilings:
-  MASTER: 20
-  RAILS: 3
-  OPENBSD: 34
+  master: 20
+  rails: 3
+  openbsd: 34

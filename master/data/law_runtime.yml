@@ -8,7 +8,7 @@
 
 languages:
   ruby:
-    # Whatever Ruby the host has runs MASTER; 4.0.5 is what .ruby-version pins
+    # Whatever Ruby the host has runs master; 4.0.5 is what .ruby-version pins
     # and what the rails apps need.
     version: "any available; 4.0.5 recommended"
 

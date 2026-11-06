@@ -60,7 +60,7 @@ module Master
           img { display: block; width: 100%; height: auto; border: 1px solid #bbb; }
           .cropped img { max-height: 700px; object-fit: cover; object-position: top; }
           </style></head><body>
-          <h1>MASTER rendered visual evidence: #{captures.length} surfaces#{figures.length >= MAX_FIGURES ? " (first #{MAX_FIGURES} figures)" : ""}</h1>
+          <h1>master rendered visual evidence: #{captures.length} surfaces#{figures.length >= MAX_FIGURES ? " (first #{MAX_FIGURES} figures)" : ""}</h1>
           <div class="grid">#{(figures + cross_page_items(captures)).join("\n")}</div>
           </body></html>
         HTML

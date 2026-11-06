@@ -316,7 +316,7 @@ module Master
       end
 
       # The tree a run can write, as a repository-relative prefix ("rails/"), or nil for the whole
-      # repository: another writer's studio edit stopped a rails run, which cannot touch STUDIO.
+      # repository: another writer's studio edit stopped a rails run, which cannot touch studio.
       def guard_scope(target)
         relative = File.expand_path(target.to_s, @root).delete_prefix("#{File.expand_path(Master::REPO_ROOT)}/")
         tree = relative.split("/").first

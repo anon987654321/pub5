@@ -166,7 +166,7 @@ class DialectPurityCheckTest < Minitest::Test
     end
 
     refute result.ok?, "a missing dialect passed"
-    assert_match(/MASTER tokens missing luxury/, result.failures.first)
+    assert_match(/master tokens missing luxury/, result.failures.first)
   end
 
   def test_a_design_doc_that_lost_the_flat_rule_fails

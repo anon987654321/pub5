@@ -4,7 +4,7 @@ module Shared
   # Locates master/contracts for the repo checkout and for the deploy copy-tree,
   # where shared sits beside app/ under /home/<app> and master is outside it.
   # PUB5_ROOT (exported by rc.d and vps_ci.sh) names the checkout that holds
-  # MASTER. A task started as the app user without it (db:prepare and the asset
+  # master. A task started as the app user without it (db:prepare and the asset
   # precompile in vps-deploy) has no PUB5_ROOT, and the repo-relative walk lands
   # on /home/master, which killed the first deploy that reached the migration and
   # left the app stopped. So the root is the first candidate that holds

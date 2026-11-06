@@ -18,7 +18,7 @@ class TestDiskUsage < Minitest::Test
   end
 
   def test_a_healthy_box_passes
-    healthy = OPENBSD.lines.reject { |line| line.include?("/home") }.join
+    healthy = openbsd.lines.reject { |line| line.include?("/home") }.join
 
     assert_empty Deploy::DiskUsage.failures(healthy)
   end

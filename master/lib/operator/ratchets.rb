@@ -302,7 +302,7 @@ module Operator
                      "#{e.class}: #{e.message.lines.first.to_s.strip[0, 120]} @ #{e.backtrace&.first.to_s.sub(master, 'master')}")
     end
 
-    # MASTER: the spine ratchet, read from data/spine.yml.
+    # master: the spine ratchet, read from data/spine.yml.
 
     def spine_rows
       spine = YAML.safe_load_file(File.join(master, "data/spine.yml")).fetch("spine")
@@ -676,7 +676,7 @@ end
                   summary[/#{name}: (\d+)/, 1]&.to_i
                 end
       Row.new(name: "css_budget.#{rule}", current:, ceiling:, direction: :down,
-              source: "RAILS: checks/runner.rb css_constitution",
+              source: "rails: checks/runner.rb css_constitution",
               note: current.nil? ? "neither check printed a count for #{rule} (silent when it passes)" : nil)
     end
 

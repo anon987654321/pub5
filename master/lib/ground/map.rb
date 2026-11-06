@@ -117,7 +117,7 @@ module Master
               path.start_with?("/") || path.match?(/\A[A-Za-z]:/) || path.split("/").include?("..")
 
             relative = path.sub(%r{/+\z}, "")
-            base = relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|studio)/}) ? repository_root : master_root
+            base = relative.match?(%r{\A(?:MASTER|rails|openbsd|studio)/}) ? repository_root : master_root
             resolved = File.expand_path(relative, base)
             unless resolved.start_with?(repository_root + File::SEPARATOR)
               return "agent_map #{context} path escapes the repository: #{path}"

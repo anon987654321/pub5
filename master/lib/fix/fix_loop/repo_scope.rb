@@ -7,7 +7,7 @@ module Master
   module Fix
     class FixLoop
 
-      # /fix runs from master's directory, and its git sees only MASTER: a repair to a rails or
+      # /fix runs from master's directory, and its git sees only master: a repair to a rails or
       # openbsd file was applied, counted, and never committed. The committer also asks the
       # repository root for changes beside master, names them relative to master (../rails/...),
       # and commits through the repository root whenever a commit holds one.

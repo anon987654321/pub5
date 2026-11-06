@@ -37,7 +37,7 @@ module Brgen
       # All four candidates named a subsystem that no longer exists: 41b20306d
       # removed master/tools/radio-bergen ("brgen's playlist replaced what it served"),
       # and the surviving three paths were lowercase `master/tools/` after 2d4551597
-      # renamed the directory to STUDIO. So sonic_learnings returned {} on every
+      # renamed the directory to studio. So sonic_learnings returned {} on every
       # call, and radio_bergen_study_test.rb skipped itself rather than failing.
       # The learnings lived in the dilla engine's own reference file, which left
       # the tree with the engine (tag dilla-engine-final); this app's file is the one.

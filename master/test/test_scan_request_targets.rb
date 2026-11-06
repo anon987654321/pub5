@@ -6,7 +6,7 @@ require "cli/command_registry"
 
 # Three defects, one amplifier, all shipped together on 2026-08-17's slash
 # collapse (7c23a5ee5) and caught live on 2026-08-18 when the rails pass of a
-# four-tree audit scanned master twice and called it RAILS:
+# four-tree audit scanned master twice and called it rails:
 #
 # - "rails" names both a scan.yml scan profile and pub4/rails, and the
 #   profile reading won, leaving an empty target.
@@ -67,11 +67,11 @@ class TestScanRequestTargets < Minitest::Test
 
   def test_parse_pass_flags_reads_no_autofix_as_measure_only
     apply, _critique, _aesthetic, only, path =
-      Master::CLI::CommandRegistry.parse_pass_flags("--no-autofix ../RAILS")
+      Master::CLI::CommandRegistry.parse_pass_flags("--no-autofix ../rails")
 
     assert_equal false, apply
     assert_nil only, "no --only means every stage"
-    assert_equal "../RAILS", path
+    assert_equal "../rails", path
   end
 
   # The stage flag rides beside the path and must not be eaten as one, which is

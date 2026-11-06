@@ -8,7 +8,7 @@ require "fileutils"
 # PATH_PURPOSE is :error, and WriteGuard blocks on error, so this rule can
 # refuse a write, and its exemptions matter more than most: a prefix strip that
 # is a no-op outside the root would refuse every write in rails, openbsd and
-# STUDIO. Both halves are pinned below — the sibling trees are out of scope,
+# studio. Both halves are pinned below — the sibling trees are out of scope,
 # and an unreadable ownership file must not turn into a blanket refusal.
 class TestPathPurposeRule < Minitest::Test
   # The three key forms the rule supports, one of each. The trailing slash is
@@ -73,7 +73,7 @@ class TestPathPurposeRule < Minitest::Test
   end
 
   # PATH_OWNERSHIP.yml describes master and says nothing about its siblings, so it cannot judge
-  # them — and at :error, judging them refused every write outside MASTER.
+  # them — and at :error, judging them refused every write outside master.
   def test_a_path_outside_the_root_is_out_of_scope
     in_tree do |rule, _root|
       assert_empty rule.check("", path: "/somewhere/else/rails/app/models/user.rb"),

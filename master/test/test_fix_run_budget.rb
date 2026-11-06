@@ -337,7 +337,7 @@ class TestFixRunBudget < Minitest::Test
 
   def test_banner_is_dmesg_shaped_with_not_configured_lines
     lines = Master::Fix::RunPulse::Banner.lines(
-      root: "/r/MASTER", target: "rails", max_passes: 8, limits: "budget $50.0 / 480m", now: Time.at(0).utc,
+      root: "/r/master", target: "rails", max_passes: 8, limits: "budget $50.0 / 480m", now: Time.at(0).utc,
       probes: { sha: "abc1234", mem: 17_179_869_184,
                 states: ["claude-cli: live", "agy: quota spent, back in 140h44m (2026-10-17 04:12)"],
                 ports: { "amber" => false, "bsdports" => true } }
