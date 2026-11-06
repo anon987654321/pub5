@@ -348,3 +348,44 @@ its own, one force-push lands it, a tag marks it, and writers resume from the
 tag. A conduct Law triggers the curation at each milestone. Shared history is
 never rewritten between milestones, because several writers push concurrently.
 The first curation point is when /fix and the CLI have landed.
+
+## 17. Port status (2026-11-07)
+
+Measured against pub4 `origin/main` at `ec05e5df1e` with a per-file content
+and name comparison of every tree.
+
+**Complete.** OPENBSD: all 287 files carried (280 verbatim, the rest adapted
+by the port; nothing missing). RAILS: every behavioural file carried -
+3,407 verbatim, the rest adapted or relocated (`__shared` to `shared/`, the
+five brgen engines to `brgen/engines/`); the only tree-wide omissions are
+`refinements.yml` and `TODO.md` prose, dropped by section 3. STUDIO: all
+files carried except `dilla/reference_analyzer.py`, dropped by section 3.
+MASTER: soul.yml byte for byte at `master/data/soul.yml`; the Law engine and
+all 520 catalogue entries imported mechanically through `bin/master
+port-laws` (876 files under `laws/pub4/`, 909 rows in `registry/laws.yml`);
+the 254-file checks surface carried and adapted under `master/checks/`; the
+lib, web, tools and plugins redesign continues under the section 4
+architecture, whose pub4 counterparts (92,000 lib lines, the Rails web face,
+per-tree tooling) are deliberately rebuilt smaller, not copied.
+
+**Landed in this pass.** BPLANS content kept verbatim per section 3, now at
+`bplans/` (40 files plus its README; the build tools' temporary output
+default renamed to `pub5-good-BPLANS`); the 32 golden screenshots of every
+app and engine, now at each app's and engine's `screenshots/` directory;
+`rails/visual_completion.yml`, the operator's bounded layout-campaign
+authorization; and `scripts/analysis/`, the three pyvips contact-sheet
+helpers, retargeted from pub4's `RAILS/` paths to the engines' new homes
+with environment-overridable roots (`REVIEW_ROOT`, `REVIEW_OUT`).
+
+**Not carried, by decision.** pub4's `redeploy` wrapper: it execs
+`MASTER/bin/operator vps deploy`, a command this repo has not ported yet;
+it returns with the Phase 5 CLI rather than as a wrapper that cannot run.
+`scripts/analysis` came instead of `dilla/reference_analyzer.py` because the
+sheets feed the golden-screenshot work; the analyzer stays dropped. pub4's
+MASTER `test/`, `lib/`, `web/`, `tools/` and `plugins/` trees stay out under
+the section 3 redesign list; `core/`, `master/` and `laws/` are their
+successors, and copying 2,000 files the architecture replaces would break
+the one-implementation census. MASTER/data's remaining runtime files wait
+for the Phase 5 plugins that read them; the concern files the architecture
+names (apps, models, tokens, laws, paths, writers, commands, knobs) already
+live in `registry/`.
