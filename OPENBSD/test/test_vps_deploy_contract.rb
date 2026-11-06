@@ -593,16 +593,18 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator master_branch.index("keep_deploy_flag"), :<, master_branch.index("vps_deploy_master.sh")
   end
 
-  # The copy-tree on vm23 keeps path gems beside app/, so every ../X an app
-  # Gemfile names must be a directory vps_ci.sh syncs there. The layout moved
-  # (shared became __shared, engines/ became sibling brgen_* directories) and the
-  # CI mirror kept building the old one until a deploy died on
-  # "The path /home/brgen/__shared does not exist".
-  def test_ci_mirror_syncs_every_sibling_path_gem_the_gemfiles_name
+  # The copy-tree on vm23 keeps path gems where the Gemfiles name them: __shared
+  # beside app/ (synced by ci-sync), and brgen's vertical engines inside the app
+  # tree at engines/ (the copy-tree's rel list carries them). The layout moved
+  # twice (shared became __shared, then the sibling brgen_* directories moved
+  # inside brgen as engines/) and the CI mirror kept building the old one until
+  # a deploy died on "The path /home/brgen/__shared does not exist".
+  def test_ci_mirror_syncs_every_path_gem_the_gemfiles_name
     ci = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
     sync = File.read(File.join(ROOT, "OPENBSD", "usr", "local", "libexec", "ci-sync.ksh"), encoding: "UTF-8")
     assert_includes sync, "shared_dir=$app_home/__shared"
-    assert_includes sync, "RAILS/brgen_*"
+    # The engines ride the brgen app-tree copy: the rel list must carry engines/.
+    assert_includes sync, "for rel in test app lib config bin db engines public vendor/javascript"
     # The suite outlasts the guard's one-hour default on this box.
     assert_includes ci, "ci_timeout=${PUB4_CI_TIMEOUT:-7200}"
     # A directory the repo no longer has must not survive the sync, or its stale tests keep running.
@@ -614,9 +616,14 @@ class VpsDeployContractTest < Minitest::Test
       gemfile = File.join(ROOT, "RAILS", app, "Gemfile")
       next unless File.file?(gemfile)
 
-      File.read(gemfile, encoding: "UTF-8").scan(%r{path:\s*"\.\./([^/"]+)}).flatten.uniq.each do |sibling|
-        synced = sibling == "__shared" || (app == "brgen" && sibling.start_with?("brgen_"))
-        assert synced, "#{app}/Gemfile names ../#{sibling}, which vps_ci.sh does not sync beside app/"
+      File.read(gemfile, encoding: "UTF-8").scan(/path:\s*"([^"]+)"/).flatten.uniq.each do |ref|
+        if ref.start_with?("../")
+          assert ref == "../__shared",
+                 "#{app}/Gemfile names #{ref}, which vps_ci.sh does not sync beside app/"
+        else
+          assert File.directory?(File.join(ROOT, "RAILS", app, ref)),
+                 "#{app}/Gemfile names #{ref}, which is not in the app tree the copy-tree carries"
+        end
       end
     end
   end
