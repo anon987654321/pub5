@@ -253,3 +253,55 @@ Also open, smaller: the knob budget (40) and the size of the starting Law set (6
 3. Writers: the operator and gated Claude push to main; GLM, Fable, Grok, Z.ai and ChatGPT push to inbox/<writer> branches merged only on green CI plus review by a different model.
 4. MASTER's web face: Roda + Sequel.
 Remaining decisions (process layout, rehearsal VM, session continuity, reverse export, Rails version, Python) take the plan's defaults until the operator says otherwise.
+
+## 15. Port phases, mapped from pub4's TODO (2026-11-06)
+
+The port's working plan lives in pub4's TODO.md ("pub5 - a ported fresh
+start") and pub5's TODO rows are done there first. This section maps each
+phase to this plan's milestones and names the gate that closes it, so one
+file says where the port is and what proves it moved.
+
+- Phase 0 - contracts locked in pub4 (M0's measurement face). Rows: route
+  contracts (done: pub4 a772e3470a, amber + brgen hosts in 14be56ec75,
+  checked off), signed-in route contracts (instrument 997af4779c; record
+  needs the triangle booted and a seeded demo user per app), golden
+  screenshots (machinery exists: browser_diagnostics + approve_visual_baselines;
+  widen from the pixel_snapshot opt-in set to every manifest route and
+  dialog state at 390/768/1280 px), one proof fixture per Law generated
+  from laws.yml (the raw bad/good examples live inside every Law.define;
+  what is missing is the generator), data export/import round-trip per app
+  schema (AccountExporter exists and is tested; no round-trip test feeds
+  its CSV back, and brgen draws no export route), MASTER CLI command
+  contract (two entrypoints: bin/master and bin/operator's 47 verbs), and
+  the one acceptance command that runs all of it against a target repo or
+  URL. Gate: the acceptance command green against pub4 at lock time.
+- Phase 1 - skeleton (done: dbb7653. README, AGENTS.md, PLAN.md; one Ruby
+  3.4.9 reconciled with vm23; bin/lint and bin/test refusing to run blind;
+  commit-format hook proven refusing a malformed subject; generated output
+  gitignored).
+- Phase 2 - OPENBSD (M1's deploy face plus the rehearse half of M0/M3):
+  one registry (registry/apps.yml) generates relayd, rc.d and pf; one Ruby
+  deploy tool ships a Mac-built artifact; rehearse per section 7.2 before
+  any cutover. Gate: the generated configs diff-checked against the
+  production-proven relayd/pf/rc.d kept verbatim (section 3), and the
+  artifact lands from a Mac run.
+- Phase 3 - RAILS (M3, then M4, then M5's amber and mrdamascy): rails/
+  holds the shared engine plus each app; per-app SCSS overrides become
+  token-only; build order bsdports, then brgen and its engines, then amber
+  and mrdamascy. Gate per app: its recorded route contracts, signed-in
+  contracts and golden screenshots pass against the ported app before it
+  goes live (the app-by-app gate inside the decided big-bang data
+  cutover, section 14.2).
+- Phase 4 - STUDIO: dilla and postpro behind one CLI. Gate: dilla's output
+  matches pub4 byte for byte on fixtures (M5).
+- Phase 5 - MASTER last (M1 core, M2 laws and /fix): core/ under 5k lines
+  with capability refusals proven per verb; laws/ re-qualified under
+  section 5's lifecycle; /fix per section 6 from its first day; soul.yml
+  and laws.yml move byte for byte. Gate: pub4 MASTER governs until this
+  MASTER passes every Law fixture (M6: archive after 30 rollback-free
+  days).
+
+Cross-cutting, owned by no single phase: registry/ (one file per concern:
+apps, laws, models, knobs, tokens, commands, paths, writers, backlog) lands
+alongside M1; the M0 database restore and parity drill runs before any
+work that touches data, as section 14.2 makes mandatory.
