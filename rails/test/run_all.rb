@@ -61,8 +61,8 @@ module Operator
       # and counts every file it selects as run. The plugins carry source
       # contracts of their own, so their test trees join the suite here.
       all = (
-        Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/test/**/*_test.rb")) +
-        Dir.glob(File.join(RAILS_ROOT, "..", "RAILS/plugins/*/test/**/*_test.rb"))
+        Dir.glob(File.join(RAILS_ROOT, "test/**/*_test.rb")) +
+        Dir.glob(File.join(RAILS_ROOT, "plugins/*/test/**/*_test.rb"))
       ).map { |path| File.expand_path(path) }.uniq.sort
       @filter ? all.select { |path| path.include?(@filter) } : all
     end
