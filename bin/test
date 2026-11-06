@@ -3,8 +3,14 @@
 require "rbconfig"
 
 root = File.expand_path("..", __dir__)
-roots = %w[core laws test]
-files = roots.flat_map { |dir| Dir.glob(File.join(root, dir, "**", "test_*.rb")) + Dir.glob(File.join(root, dir, "test_*.rb")) }.uniq.sort
+roots = %w[core laws rails openbsd studio test]
+files = roots.flat_map do |dir|
+  Dir.glob(File.join(root, dir, "**", "test_*.rb")) +
+    Dir.glob(File.join(root, dir, "**", "*_test.rb")) +
+    Dir.glob(File.join(root, dir, "test_*.rb")) +
+    Dir.glob(File.join(root, dir, "*_test.rb"))
+end
+files = files.uniq.sort
 abort "test: no suites found; refusing to report a blind pass" if files.empty?
 ENV["RUBYOPT"] = "-W2"
 exec(RbConfig.ruby, *files.map { |path| File.expand_path(path) })

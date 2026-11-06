@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+require "yaml"
+require "json"
+require "pathname"
+root = File.expand_path("../..", __dir__)
+manifest = YAML.safe_load_file(File.join(root, "studio", "projects.yml"), aliases: false)
+abort "studio: invalid project registry" unless manifest.is_a?(Hash) && manifest["schema"] == 1
+command = ARGV.shift || "list"
+case command
+when "list"
+  manifest.fetch("projects").each { |name, project| puts "#{name}: #{project.fetch("status")}" }
+when "check"
+  failures = []
+  manifest.fetch("projects").each do |name, project|
+    entry = File.join(root, project.fetch("entrypoint"))
+    failures << "#{name}: missing #{project.fetch("entrypoint")}" unless File.file?(entry)
+    Array(project["data"]).each { |path| failures << "#{name}: missing #{path}" unless File.file?(File.join(root, path)) }
+  end
+  output = File.expand_path(manifest.fetch("output_root").sub("~/", "#{Dir.home}/"))
+  root_prefix = "#{File.realpath(root)}#{File::SEPARATOR}"
+  failures << "output root resolves inside checkout" if output == File.realpath(root) || output.start_with?(root_prefix)
+  abort failures.join("\n") unless failures.empty?
+  puts "studio0: source inventory PASS; renderer execution NOT_RUN"
+else
+  warn "usage: studio list | check"
+  exit 2
+end
