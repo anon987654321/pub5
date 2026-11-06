@@ -1,0 +1,141 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Build nokogiri for OpenBSD and install it into the given bundles.
+#
+#   doas ruby34 OPENBSD/bin/nokogiri-openbsd 1.19.7 /home/brgen/.bundle/gems/ruby/3.4:brgen ...
+#
+# nokogiri 1.19.5 to 1.19.7 vendor a gumbo hashmap.c whose function-pointer
+# variables are named __malloc, __realloc and __free. OpenBSD's <sys/cdefs.h>
+# defines __malloc as a macro, unconditionally, so the extension does not
+# compile there and `bundle install` fails on vm23. No compiler flag wins: the
+# header's definition always comes last. This fetches the upstream release,
+# renames those three identifiers in that one file, rebuilds the gem at the
+# same version and installs it into each bundle as that bundle's owner, so
+# `bundle install` finds it present and never compiles the unpatched source.
+#
+# Delete this tool once an upstream nokogiri release builds on OpenBSD.
+#
+# On 2026-11-03 `gem fetch` grew to 546 MB on vm23 (1 GB RAM), filled swap and
+# took every app down for about 17 minutes. So the .gem is downloaded directly
+# and checked against rubygems.org's SHA-256, and on OpenBSD the tool refuses to
+# start while less than MIN_FREE_SWAP_MB of swap is free (--force overrides).
+
+require "digest"
+require "fileutils"
+require "json"
+require "net/http"
+require "rbconfig"
+require "tmpdir"
+
+module NokogiriOpenbsd
+  HASHMAP = File.join("gumbo-parser", "src", "hashmap.c")
+  CLASHING = /\b__(malloc|realloc|free)\b/
+  MIN_FREE_SWAP_MB = 400
+  RUBYGEMS = "https://rubygems.org"
+
+  module_function
+
+  # The rename is the whole patch; everything else is upstream's.
+  def patch(source) = source.gsub(CLASHING) { "gumbo_hashmap_#{Regexp.last_match(1)}" }
+
+  def gem_cmd(*args) = [RbConfig.ruby, "-S", "gem", *args]
+
+  def run!(*cmd, chdir: Dir.pwd)
+    system(*cmd, chdir:) || abort("nokogiri-openbsd: failed: #{cmd.join(" ")}")
+  end
+
+  def build(version, dir)
+    download(version, dir)
+    run!(*gem_cmd("unpack", "nokogiri-#{version}.gem"), chdir: dir)
+
+    root = File.join(dir, "nokogiri-#{version}")
+    hashmap = File.join(root, HASHMAP)
+    File.write(hashmap, patch(File.read(hashmap)))
+    spec = IO.popen(gem_cmd("spec", File.join(dir, "nokogiri-#{version}.gem"), "--ruby"), &:read)
+    File.write(File.join(root, "nokogiri.gemspec"), spec)
+    run!(*gem_cmd("build", "nokogiri.gemspec"), chdir: root)
+    File.join(root, "nokogiri-#{version}.gem")
+  end
+
+  # One HTTP GET of the .gem, streamed to disk, instead of `gem fetch`, which
+  # loads the remote spec index into memory; the published SHA-256 must match.
+  def download(version, dir)
+    want = published_sha(version)
+    path = File.join(dir, "nokogiri-#{version}.gem")
+    fetch_to(URI("#{RUBYGEMS}/downloads/nokogiri-#{version}.gem"), path)
+    got = Digest::SHA256.file(path).hexdigest
+    abort("nokogiri-openbsd: checksum mismatch for #{version}: #{got} != #{want}") unless got == want
+    path
+  end
+
+  def published_sha(version)
+    uri = URI("#{RUBYGEMS}/api/v2/rubygems/nokogiri/versions/#{version}.json?platform=ruby")
+    sha = JSON.parse(Net::HTTP.get(uri))["sha"].to_s
+    sha.match?(/\A\h{64}\z/) ? sha : abort("nokogiri-openbsd: rubygems.org gave no checksum for #{version}")
+  end
+
+  def fetch_to(uri, path, redirects: 3)
+    Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+      http.request(Net::HTTP::Get.new(uri)) do |response|
+        if response.is_a?(Net::HTTPRedirection) && redirects.positive?
+          return fetch_to(URI(response["location"]), path, redirects: redirects - 1)
+        end
+        abort("nokogiri-openbsd: download failed: #{response.code}") unless response.is_a?(Net::HTTPSuccess)
+
+        File.open(path, "wb") { |io| response.read_body { |chunk| io.write(chunk) } }
+      end
+    end
+  end
+
+  # Free swap in MB from swapctl -s (512-byte blocks), or nil off OpenBSD.
+  def free_swap_mb
+    out = IO.popen(["swapctl", "-s"], err: File::NULL, &:read)
+    blocks = out[/(\d+) available/, 1]
+    blocks&.then { |count| count.to_i * 512 / (1024 * 1024) }
+  rescue SystemCallError => e
+    warn "nokogiri-openbsd: no swapctl (#{e.class}), not OpenBSD; swap guard skipped"
+    nil
+  end
+
+  def memory_guard!(force:)
+    free = free_swap_mb
+    return if force || free.nil? || free >= MIN_FREE_SWAP_MB
+
+    abort("nokogiri-openbsd: only #{free} MB of swap free (needs #{MIN_FREE_SWAP_MB}); a build now risks the " \
+          "running apps. Free memory first, or pass --force.")
+  end
+
+  # Each bundle is installed by its owner, so the files belong to the app
+  # user exactly as `bundle install` would have left them.
+  def install(gem_path, target, version:)
+    dir, user = target.split(":", 2)
+    stale = File.join(dir, "gems", "nokogiri-#{version}")
+    # A failed `bundle install` leaves the unpacked source without a spec.
+    half_built = File.directory?(stale) && !File.exist?(File.join(dir, "specifications", "nokogiri-#{version}.gemspec"))
+    FileUtils.rm_rf(stale) if half_built
+    # Against OpenBSD's libxml2 and libxslt packages, as the box always built
+    # nokogiri; only gumbo stays vendored, and the rename above covers it.
+    cmd = gem_cmd("install", "--local", "--ignore-dependencies", "--no-document", "--install-dir", dir, gem_path,
+                  "--", "--use-system-libraries")
+    user ? run!("su", "-s", "/bin/sh", user, "-c", cmd.map { |part| "'#{part}'" }.join(" ")) : run!(*cmd)
+    puts "nokogiri-openbsd: #{version} installed in #{dir}#{" as #{user}" if user}"
+  end
+
+  def main(argv)
+    force = !argv.delete("--force").nil?
+    version, *targets = argv
+    usage = "usage: nokogiri-openbsd [--force] VERSION BUNDLE_DIR[:USER] [BUNDLE_DIR[:USER] ...]"
+    abort(usage) if version.nil? || targets.empty?
+    memory_guard!(force:)
+
+    Dir.mktmpdir("nokogiri-openbsd") do |dir|
+      File.chmod(0o755, dir)
+      gem_path = build(version, dir)
+      File.chmod(0o644, gem_path)
+      targets.each { |target| install(gem_path, target, version:) }
+    end
+  end
+end
+
+NokogiriOpenbsd.main(ARGV) if $PROGRAM_NAME == __FILE__

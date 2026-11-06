@@ -1,0 +1,969 @@
+#!/usr/local/bin/ruby
+# frozen_string_literal: true
+
+# Root-owned, narrow broker for the production deploy path.
+# Never evaluate a command string or accept a filesystem path from argv.
+require "digest"
+require "etc"
+require "fileutils"
+require "find"
+require "json"
+require "securerandom"
+require "socket"
+require "time"
+
+module Pub4Admin
+  APPS = %w[master brgen amber bsdports mrdamascy].freeze
+  SERVICES = %w[master brgen amber bsdports mrdamascy brgen_jobs amber_jobs bsdports_jobs].freeze
+  SERVICE_ACTIONS = %w[check get start stop restart].freeze
+  RCCTL = "/usr/sbin/rcctl"
+  DU = "/usr/bin/du"
+  DISK_USAGE_PATHS = %w[/home /var].freeze
+  RELAYD_CONFIG = "/etc/relayd.conf"
+  MASTER_WEB_ROOT = "/home/dev/pub4/MASTER/web"
+  RESOURCE_GUARD = "/usr/local/bin/resource_guard.sh"
+  SOLID_QUEUE_PROOF = "/usr/local/libexec/pub4/solid_queue_proof.rb"
+  CI_PREPARE = "/usr/local/libexec/ci-prepare.ksh"
+  CI_RUN = "/usr/local/libexec/ci-run.ksh"
+  CI_SYNC = "/usr/local/libexec/ci-sync.ksh"
+  RAILS_TASK = "/usr/local/libexec/rails-task.ksh"
+  RAILS_SYNC = "/usr/local/libexec/rails-sync.ksh"
+  BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"
+  RAILS_APPS = %w[brgen amber bsdports mrdamascy].freeze
+  RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze
+  STAMP_DIR = "/var/db/pub4"
+  RUBY_CANDIDATES = %w[
+    /usr/local/bin/ruby4.0 /usr/local/bin/ruby40
+    /usr/local/bin/ruby3.4 /usr/local/bin/ruby34
+    /usr/local/bin/ruby3.3 /usr/local/bin/ruby33
+    /usr/local/bin/ruby
+  ].freeze
+
+  module_function
+
+  # A closed argv protocol. Unknown verbs, services and argument shapes refuse.
+  def command_for(argv)
+    args = Array(argv).map(&:to_s)
+    return [DU, "-xk", args[1]] if args.length == 2 && args[0] == "disk-usage" && DISK_USAGE_PATHS.include?(args[1])
+    return [RCCTL, "check", "relayd"] if args == %w[service check relayd]
+    return [RCCTL, "restart", "relayd"] if args == %w[service restart relayd]
+    return [RCCTL, "ls", "started"] if args == %w[service list-started]
+
+    if args.length == 3 && args[0] == "service"
+      action, service = args.drop(1)
+      return [RCCTL, action, service] if SERVICE_ACTIONS.include?(action) && SERVICES.include?(service)
+    end
+
+    nil
+  end
+
+  def filter_started_services(output)
+    output.to_s.lines.map(&:strip).select { |service| SERVICES.include?(service) }.join("\n")
+  end
+
+  def legacy_service_name(app)
+    return nil unless RAILS_APPS.include?(app)
+
+    "#{app}_rails"
+  end
+
+  def trusted_executable?(path)
+    components = File.expand_path(path).split(File::SEPARATOR).reject(&:empty?)
+    current = File::SEPARATOR
+
+    components.each_with_index do |component, index|
+      current = File.join(current, component)
+      stat = File.lstat(current)
+      return false if stat.symlink? || !stat.uid.zero? || (stat.mode & 0o022).positive?
+
+      if index == components.length - 1
+        return stat.file? && stat.executable?
+      end
+      return false unless stat.directory?
+    end
+
+    false
+  rescue SystemCallError
+    false
+  end
+
+  def trusted_script!(path)
+    return if trusted_executable?(path)
+
+    raise "#{path} missing or not a root-owned, non-writable executable"
+  end
+
+  def ruby_path
+    RUBY_CANDIDATES.find { |path| File.file?(path) && File.executable?(path) } ||
+      raise("no supported system Ruby found under /usr/local/bin")
+  end
+
+  def ensure_ci_lock
+    if File.symlink?(STAMP_DIR)
+      raise "#{STAMP_DIR} is a symlink; refusing root write"
+    end
+    FileUtils.mkdir_p(STAMP_DIR, mode: 0o755)
+    directory = File.lstat(STAMP_DIR)
+    raise "#{STAMP_DIR} is not a root-owned, non-writable directory" unless
+      directory.directory? && directory.uid.zero? && (directory.mode & 0o022).zero?
+    File.chmod(0o755, STAMP_DIR) unless (directory.mode & 0o777) == 0o755
+
+    path = File.join(STAMP_DIR, "ci.lock")
+    if File.exist?(path) || File.symlink?(path)
+      lock = File.lstat(path)
+      raise "#{path} is not a regular file" unless lock.file? && !lock.symlink?
+    else
+      File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o644) {}
+    end
+
+    dev = Etc.getpwnam("dev")
+    File.chown(dev.uid, -1, path)
+    File.chmod(0o644, path)
+    puts path
+    0
+  rescue ArgumentError
+    raise "account dev is missing; cannot establish CI lock ownership"
+  end
+
+  def write_stamp(app, sha, status)
+    raise "unknown app: #{app}" unless APPS.include?(app)
+    raise "invalid commit id" unless sha.match?(/\A(?:[0-9a-f]{7,40}|unknown)\z/i)
+    raise "invalid deploy status" unless %w[ok failed ci_ok ci_attested ci_skipped].include?(status)
+
+    if File.symlink?(STAMP_DIR)
+      raise "#{STAMP_DIR} is a symlink; refusing root write"
+    end
+    FileUtils.mkdir_p(STAMP_DIR, mode: 0o755)
+    stat = File.lstat(STAMP_DIR)
+    raise "#{STAMP_DIR} is not a real root-owned directory" unless
+      stat.directory? && stat.uid.zero? && !stat.symlink?
+    File.chmod(0o755, STAMP_DIR) unless (stat.mode & 0o777) == 0o755
+
+    target = File.join(STAMP_DIR, "last_deploy_#{app}.json")
+    temporary = File.join(STAMP_DIR, ".last_deploy_#{app}.#{Process.pid}.#{SecureRandom.hex(6)}")
+    payload = {
+      app: app,
+      sha: sha,
+      at: Time.now.utc.iso8601,
+      status: status,
+      host: Socket.gethostname,
+    }
+    begin
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        file.write(JSON.generate(payload) + "\n")
+        file.flush
+        file.fsync
+      end
+      File.chmod(0o644, temporary)
+      File.rename(temporary, target)
+      puts "stamp0: #{target} status=#{status} sha=#{sha}"
+      0
+    ensure
+      File.unlink(temporary) if File.exist?(temporary)
+    end
+  end
+
+  # Verify an operator-approved Host route; the deploy broker never edits
+  # /etc/relayd.conf. New hostnames must be installed by the operator first.
+  def relayd_check(app, domain, requested_port)
+    return 64 unless RAILS_APPS.include?(app)
+    return 64 unless domain.include?(".") &&
+                     domain.match?(/\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/) &&
+                     !domain.include?("..")
+    return 64 unless requested_port.match?(/\A[0-9]{1,5}\z/) && (1..65_535).cover?(requested_port.to_i)
+
+    stat = File.lstat(RELAYD_CONFIG)
+    raise "#{RELAYD_CONFIG} must be a root-owned, non-writable regular file" unless
+      stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+    original = File.read(RELAYD_CONFIG)
+    escaped_domain = Regexp.escape(domain)
+    keypair = /^\s*tls keypair \"#{escaped_domain}\"\s*$/
+    raise "no installed TLS keypair for #{domain}; provision it through OPERATOR first" unless original.match?(keypair)
+    raise "no installed relayd table for #{app}" unless original.match?(/^\s*table <#{Regexp.escape(app)}>\s*\{/)
+
+    ports = original.scan(/^\s*forward to <#{Regexp.escape(app)}> port ([0-9]+) check http \"\/up\" code 200\s*$/).flatten.uniq
+    raise "no unique root-configured backend port for #{app}" unless ports.length == 1
+    raise "requested port does not match the root-configured backend for #{app}" unless ports.first == requested_port
+
+    protocol_start = original.index('http protocol "https_proxy" {')
+    raise "https_proxy protocol block is missing" unless protocol_start
+    protocol_end = original.index("\n}", protocol_start)
+    raise "https_proxy protocol block is unterminated" unless protocol_end
+    protocol = original[protocol_start..protocol_end]
+    route_pattern = /^\s*match request header \"Host\" value \"#{escaped_domain}\" forward to <([a-z0-9_]+)>\s*$/
+    existing_routes = protocol.lines.filter_map { |line| (match = line.match(route_pattern)) && match[1] }.uniq
+    raise "no operator-approved Host route for #{domain}; update OPENBSD/etc/relayd.conf and run OPERATOR.sh first" if existing_routes.empty?
+    raise "#{domain} routes to #{existing_routes.join(', ')}, not #{app}" unless existing_routes == [app]
+
+    puts "relayd0: verified root-approved route #{domain} -> #{app}:#{requested_port}"
+    0
+  end
+  def app_secret_value(app)
+    raise "unknown app: #{app}" unless APPS.include?(app)
+
+    candidates = ["/etc/#{app}.env", "/etc/rails/#{app}.env"]
+    candidates.each do |path|
+      next unless File.exist?(path) || File.symlink?(path)
+      stat = File.lstat(path)
+      raise "#{path} must be a root-owned regular file" unless
+        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+
+      secret = File.foreach(path).filter_map do |line|
+        match = line.match(/\ASECRET_KEY_BASE=([0-9a-fA-F]{64,256})\s*\z/)
+        match && match[1]
+      end.first
+      return secret if secret
+    end
+
+    raise "no valid SECRET_KEY_BASE for #{app}"
+  end
+  # Create one allowlisted Rails Unix account and its app-owned working directory.
+  # Existing paths must already have the expected owner; never chown a tree from
+  # the checkout or repair a symlinked destination as root.
+  def ensure_app_layout(app)
+    return 64 unless RAILS_APPS.include?(app)
+    useradd = "/usr/sbin/useradd"
+    raise "useradd is not a trusted system executable" unless trusted_executable?(useradd)
+
+    begin
+      account = Etc.getpwnam(app)
+    rescue ArgumentError
+      output = IO.popen([useradd, "-m", "-L", "daemon", "-s", "/bin/ksh", app], err: [:child, :out], &:read)
+      status = $?
+      raise "useradd failed for #{app}: #{output.to_s.strip}" unless status&.success?
+      account = Etc.getpwnam(app)
+    end
+
+    home = "/home/#{app}"
+    raise "account #{app} has unexpected home #{account.dir}" unless account.dir == home
+    home_stat = File.lstat(home)
+    raise "#{home} must be a real app-owned, non-writable directory" unless
+      home_stat.directory? && !home_stat.symlink? && home_stat.uid == account.uid &&
+      home_stat.gid == account.gid && (home_stat.mode & 0o022).zero?
+
+    app_dir = File.join(home, "app")
+    if File.exist?(app_dir) || File.symlink?(app_dir)
+      stat = File.lstat(app_dir)
+      raise "#{app_dir} must be a real app-owned directory" unless
+        stat.directory? && !stat.symlink? && stat.uid == account.uid && stat.gid == account.gid &&
+        (stat.mode & 0o022).zero?
+    else
+      Dir.mkdir(app_dir, 0o755)
+      File.chown(account.uid, account.gid, app_dir)
+      File.chmod(0o755, app_dir)
+    end
+
+    puts "app0: #{app} account and app directory ready"
+    0
+  rescue ArgumentError => e
+    raise "account #{app} could not be established: #{e.message}"
+  end
+  def ensure_app_secret(app, emit: true)
+    return 64 unless APPS.include?(app)
+
+    candidates = ["/etc/#{app}.env", "/etc/rails/#{app}.env"]
+    candidates.each do |path|
+      next unless File.exist?(path) || File.symlink?(path)
+      stat = File.lstat(path)
+      raise "#{path} must be a root-owned regular file" unless
+        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+
+      secret = File.foreach(path).filter_map do |line|
+        match = line.match(/\ASECRET_KEY_BASE=([0-9a-fA-F]{64,256})\s*\z/)
+        match && match[1]
+      end.first
+      if secret
+        puts secret if emit
+        return 0
+      end
+    end
+
+    target = candidates.first
+    raise "#{target} is a symlink; refusing secret write" if File.symlink?(target)
+    if File.exist?(target)
+      stat = File.lstat(target)
+      raise "#{target} must be a root-owned regular file" unless
+        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+
+      raise "#{target} already exists without a valid SECRET_KEY_BASE; refusing to replace the environment file"
+    end
+    secret = SecureRandom.hex(64)
+    temporary = "/etc/.#{app}.env.#{Process.pid}.#{SecureRandom.hex(6)}"
+    begin
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        file.write("SECRET_KEY_BASE=#{secret}\n")
+        file.flush
+        file.fsync
+      end
+      group_id = Etc.getgrnam(app).gid
+      File.chown(0, group_id, temporary)
+      File.chmod(0o640, temporary)
+      begin
+        # Publish only if the name is still absent. Concurrent first deploys may
+        # race, but neither is allowed to silently replace the other's key.
+        File.link(temporary, target)
+      rescue Errno::EEXIST
+        raise "#{target} appeared during secret creation; refusing to replace it"
+      end
+      puts secret if emit
+      0
+    ensure
+      File.unlink(temporary) if File.exist?(temporary)
+    end
+  rescue ArgumentError
+    raise "account or group #{app} is missing; cannot establish app secret"
+  end
+  # Read one app's root-owned progress record through this fixed broker verb.
+  # The directory intentionally remains private (0700); vps-state runs as dev and
+  # must not silently infer "no deploy" because direct filesystem access is denied.
+  def read_deploy_status(app, root: STAMP_DIR, output: $stdout, verify_root: true)
+    raise "unknown app: #{app}" unless APPS.include?(app)
+
+    base = File.expand_path(root)
+    raise "#{base} is a symlink; refusing status read" if File.symlink?(base)
+    if File.exist?(base)
+      root_stat = File.lstat(base)
+      raise "#{base} must be a real directory" unless root_stat.directory? && !root_stat.symlink?
+      raise "#{base} must be root-owned and non-writable by group/other" if
+        verify_root && (!root_stat.uid.zero? || (root_stat.mode & 0o022).positive?)
+    end
+
+    directory = File.join(base, "deploy_status")
+    raise "#{directory} is a symlink; refusing status read" if File.symlink?(directory)
+    unless File.exist?(directory)
+      output.puts("null")
+      return 0
+    end
+    directory_stat = File.lstat(directory)
+    raise "#{directory} must be a real directory" unless directory_stat.directory? && !directory_stat.symlink?
+    raise "#{directory} must be root-owned and private" if
+      verify_root && (!directory_stat.uid.zero? || (directory_stat.mode & 0o077).positive?)
+
+    path = File.join(directory, "#{app}.json")
+    raise "#{path} is a symlink; refusing status read" if File.symlink?(path)
+    unless File.exist?(path)
+      output.puts("null")
+      return 0
+    end
+
+    status_stat = File.lstat(path)
+    raise "#{path} must be a root-owned, private regular file" unless
+      status_stat.file? && !status_stat.symlink? &&
+      (!verify_root || status_stat.uid.zero?) && (status_stat.mode & 0o077).zero?
+
+    record = JSON.parse(File.read(path))
+    raise "#{path} has invalid status schema" unless
+      record.is_a?(Hash) && record["app"] == app &&
+      %w[running done failed].include?(record["state"]) &&
+      record["step"].is_a?(String) && record["pid"] &&
+      record["started_at"].is_a?(String) && record["updated_at"].is_a?(String)
+
+    output.puts(JSON.generate(record))
+    0
+  end
+
+  def write_deploy_status(app, step, state)
+    raise "unknown app: #{app}" unless APPS.include?(app)
+    raise "invalid deploy status" unless %w[running done failed].include?(state)
+    unless step.bytesize.between?(1, 160) && step.match?(/\A[A-Za-z0-9_ .:+(),\/-]+\z/)
+      raise "invalid deploy step"
+    end
+
+    if File.exist?(STAMP_DIR) || File.symlink?(STAMP_DIR)
+      root_stat = File.lstat(STAMP_DIR)
+      raise "#{STAMP_DIR} is a symlink; refusing status write" if root_stat.symlink?
+    end
+    FileUtils.mkdir_p(STAMP_DIR, mode: 0o755)
+    root_stat = File.lstat(STAMP_DIR)
+    raise "#{STAMP_DIR} must be root-owned" unless root_stat.directory? && root_stat.uid.zero?
+    File.chmod(0o755, STAMP_DIR) unless (root_stat.mode & 0o777) == 0o755
+
+    directory = File.join(STAMP_DIR, "deploy_status")
+    raise "#{directory} is a symlink; refusing status write" if File.symlink?(directory)
+    FileUtils.mkdir_p(directory, mode: 0o700)
+    directory_stat = File.lstat(directory)
+    raise "#{directory} must be a root-owned directory" unless
+      directory_stat.directory? && directory_stat.uid.zero? && !directory_stat.symlink?
+    File.chmod(0o700, directory) unless (directory_stat.mode & 0o777) == 0o700
+
+    target = File.join(directory, "#{app}.json")
+    raise "#{target} is a symlink; refusing status write" if File.symlink?(target)
+    if File.exist?(target)
+      target_stat = File.lstat(target)
+      raise "#{target} must be a root-owned regular file" unless
+        target_stat.file? && target_stat.uid.zero? && !target_stat.symlink?
+    end
+
+    now = Time.now.utc.iso8601
+    started_at = now
+    if state != "running" && File.file?(target)
+      begin
+        previous = JSON.parse(File.read(target))
+        value = previous["started_at"]
+        started_at = value if previous["state"] == "running" &&
+                              value.is_a?(String) &&
+                              value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+      rescue JSON::ParserError, SystemCallError
+        nil
+      end
+    elsif state == "running" && File.file?(target)
+      begin
+        previous = JSON.parse(File.read(target))
+        value = previous["started_at"]
+        started_at = value if previous["state"] == "running" &&
+                              value.is_a?(String) &&
+                              value.match?(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/)
+      rescue JSON::ParserError, SystemCallError
+        nil
+      end
+    end
+    payload = { app: app, step: step, state: state, pid: Process.ppid,
+                started_at: started_at, updated_at: now }
+    temporary = File.join(directory, ".#{app}.#{Process.pid}.#{SecureRandom.hex(6)}")
+    begin
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        file.write(JSON.generate(payload) + "\n")
+        file.flush
+        file.fsync
+      end
+      File.rename(temporary, target)
+      puts "deploy_status0: #{app} #{state} step=#{step}"
+      0
+    ensure
+      File.unlink(temporary) if File.exist?(temporary)
+    end
+  end
+
+  def valid_ruby_cache_key?(value)
+    value.match?(/\Aruby(?:[0-9]{2}|[0-9]+\.[0-9]+)\z/)
+  end
+
+  # Validate existing parents without changing their modes; only the fixed cache
+  # leaf requested by bundle_cache receives the leaf mode below.
+  def ensure_root_parent_chain(path)
+    return if path == "/"
+
+    parent = File.dirname(path)
+    ensure_root_parent_chain(parent)
+    unless File.exist?(path) || File.symlink?(path)
+      Dir.mkdir(path, 0o755)
+      File.chown(0, Etc.getgrnam("wheel").gid, path)
+      File.chmod(0o755, path)
+    end
+    stat = File.lstat(path)
+    raise "#{path} must be a real root-owned, non-writable directory" unless
+      stat.directory? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+  end
+
+  def ensure_root_directory(path, mode: 0o755)
+    ensure_root_parent_chain(File.dirname(path))
+    unless File.exist?(path) || File.symlink?(path)
+      Dir.mkdir(path, mode)
+      File.chown(0, Etc.getgrnam("wheel").gid, path)
+      File.chmod(mode, path)
+    end
+    stat = File.lstat(path)
+    raise "#{path} must be a real root-owned, non-writable directory" unless
+      stat.directory? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+    File.chmod(mode, path) unless (stat.mode & 0o777) == mode
+    path
+  end
+  def validate_cache_source!(path, uid: 0)
+    stat = File.lstat(path)
+    raise "#{path} must be a regular non-symlink file owned by uid #{uid}" unless
+      stat.file? && !stat.symlink? && stat.uid == uid && stat.size.between?(1, 128 * 1024 * 1024)
+    stat
+  end
+
+  def bundle_cache_store_file(source, root, owner_uid: 0)
+    validate_cache_source!(source, uid: owner_uid)
+    digest = Digest::SHA256.file(source).hexdigest
+    directory = File.join(root, digest[0, 2], digest[2, 2])
+    ensure_root_directory(directory)
+    target = File.join(directory, "#{digest}.gem")
+
+    if File.exist?(target) || File.symlink?(target)
+      target_stat = validate_cache_source!(target, uid: 0)
+      raise "bundle cache entry has wrong digest: #{target}" unless Digest::SHA256.file(target).hexdigest == digest
+      raise "bundle cache entry is writable: #{target}" unless (target_stat.mode & 0o222).zero?
+      return 0
+    end
+
+    temporary = File.join(directory, ".#{digest}.#{Process.pid}.#{SecureRandom.hex(5)}")
+    begin
+      File.open(temporary, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+        File.open(source, "rb") { |input| IO.copy_stream(input, file) }
+        file.flush
+        file.fsync
+      end
+      raise "bundle cache source changed while copying: #{source}" unless Digest::SHA256.file(temporary).hexdigest == digest
+      File.chown(0, Etc.getgrnam("wheel").gid, temporary)
+      File.chmod(0o444, temporary)
+      begin
+        File.link(temporary, target)
+      rescue Errno::EEXIST
+        existing_stat = validate_cache_source!(target, uid: 0)
+        raise "bundle cache collision has wrong digest: #{target}" unless Digest::SHA256.file(target).hexdigest == digest
+        raise "bundle cache collision is writable: #{target}" unless (existing_stat.mode & 0o222).zero?
+      end
+    ensure
+      File.unlink(temporary) if File.exist?(temporary)
+    end
+    0
+  end
+
+  # This verb knows no caller-provided filesystem paths. It only imports from the
+  # fixed system cache or the selected app's fixed Bundler cache.
+  def bundle_cache(app, action, ruby_key)
+    return 64 unless RAILS_APPS.include?(app)
+    return 64 unless valid_ruby_cache_key?(ruby_key)
+    return 64 unless %w[prepare import capture].include?(action)
+
+    shared = File.join(BUNDLE_CACHE_BASE, ruby_key)
+    cas = File.join(shared, "cas", "sha256")
+    if action == "prepare"
+      ensure_root_directory(shared)
+      ensure_root_directory(File.join(shared, "cache"))
+      ensure_root_directory(cas)
+      return 0
+    end
+
+    ensure_root_directory(cas)
+    if action == "import"
+      source_dir = File.join(shared, "cache")
+      ensure_root_directory(source_dir)
+      source_uid = 0
+    else
+      account = Etc.getpwnam(app)
+      home = "/home/#{app}"
+      app_dir = File.join(home, "app")
+      bundle_dir = File.join(home, ".bundle")
+      source_dir = File.join(bundle_dir, "cache")
+      [["/home", 0], [home, account.uid], [app_dir, account.uid], [bundle_dir, account.uid], [source_dir, account.uid]].each do |directory, expected_uid|
+        stat = File.lstat(directory)
+        raise "#{directory} must be a real, correctly owned directory" unless
+          stat.directory? && !stat.symlink? && stat.uid == expected_uid && (stat.mode & 0o022).zero?
+      end
+      source_uid = account.uid
+    end
+
+    files = Dir.glob(File.join(source_dir, "*.gem"))
+    raise "bundle cache import exceeds 500 files" if files.length > 500
+    files.sort.each do |source|
+      next if File.symlink?(source)
+      bundle_cache_store_file(source, cas, owner_uid: source_uid)
+    end
+    puts "bundle_cache0: #{app} #{action} #{ruby_key} files=#{files.length}"
+    0
+  rescue ArgumentError
+    raise "unknown app or group; cannot prepare bundle cache"
+  end
+  # These tasks touch only the fixed master_web tree; neither accepts a path from argv.
+  def master_web_root!
+    dev = Etc.getpwnam("dev")
+    paths = [File::SEPARATOR]
+    current = File::SEPARATOR
+    MASTER_WEB_ROOT.split(File::SEPARATOR).reject(&:empty?).each do |part|
+      current = File.join(current, part)
+      paths << current
+    end
+    paths << File.join(MASTER_WEB_ROOT, "public")
+    paths.each do |path|
+      expected_uid = [File::SEPARATOR, "/home"].include?(path) ? 0 : dev.uid
+      stat = File.lstat(path)
+      raise "#{path} must be a real, correctly owned directory" unless
+        stat.directory? && !stat.symlink? && stat.uid == expected_uid && (stat.mode & 0o022).zero?
+    end
+    [dev, File.join(MASTER_WEB_ROOT, "public")]
+  rescue ArgumentError
+    raise "dev account is missing; cannot prepare MASTER web paths"
+  end
+  def master_web_tree_paths!(root)
+    paths = []
+    Find.find(root) do |path|
+      stat = File.lstat(path)
+      raise "symlink refused in MASTER web path: #{path}" if stat.symlink?
+      raise "non-file object refused in MASTER web path: #{path}" unless stat.directory? || stat.file?
+      paths << [path, stat]
+    end
+    paths
+  end
+
+  def master_web_assets_reset
+    dev, public_dir = master_web_root!
+    assets = File.join(public_dir, "assets")
+    if File.exist?(assets) || File.symlink?(assets)
+      stat = File.lstat(assets)
+      raise "#{assets} must be a real directory" unless stat.directory? && !stat.symlink?
+      master_web_tree_paths!(assets)
+      FileUtils.rm_rf(assets)
+    end
+    master_web_tree_paths!(public_dir).each do |path, _stat|
+      File.chown(dev.uid, dev.gid, path)
+    end
+    puts "master_web0: public assets reset; public tree owned by dev"
+    0
+  end
+
+  def master_web_runtime_dirs
+    dev, public_dir = master_web_root!
+    root = File.dirname(public_dir)
+    master = Etc.getgrnam("master")
+    %w[tmp log].each do |name|
+      path = File.join(root, name)
+      if File.exist?(path) || File.symlink?(path)
+        stat = File.lstat(path)
+        raise "#{path} must be a real directory" unless stat.directory? && !stat.symlink?
+      else
+        Dir.mkdir(path, 0o2775)
+      end
+      master_web_tree_paths!(path).each do |entry, stat|
+        File.chown(dev.uid, master.gid, entry)
+        mode = stat.mode & 0o7777
+        if stat.directory?
+          mode = 0o2775
+        else
+          mode |= 0o660
+          mode |= 0o110 if (stat.mode & 0o111).positive?
+        end
+        File.chmod(mode, entry)
+      end
+    end
+    puts "master_web0: tmp/log owned by dev:master with group write"
+    0
+  rescue ArgumentError
+    raise "master account or group is missing; cannot prepare runtime directories"
+  end
+  def valid_ci_timeout?(value)
+    value.match?(/\A[0-9]{1,4}\z/) && (1..7200).cover?(value.to_i)
+  end
+
+# Starts the helper in its own process group. With an account it drops to that UID, GID and
+# only the listed groups in the child before exec: the box runs Ruby 3.4, whose spawn takes
+# no groups: option. The order is groups, gid, uid, and it cannot be undone.
+def spawn_helper(environment:, helper:, arguments:, account: nil, groups: nil)
+  unless account
+    return Process.spawn(environment, "/bin/ksh", helper, *arguments, pgroup: true, unsetenv_others: true)
+  end
+
+  fork do
+    Process.setpgid(0, 0)
+
+    Process.groups = groups
+    Process::GID.change_privilege(account.gid)
+    Process::UID.change_privilege(account.uid)
+
+    exec(environment, "/bin/ksh", helper, *arguments, unsetenv_others: true)
+  rescue StandardError => error
+    warn "pub4-admin: cannot start #{File.basename(helper)} as #{account.name}: #{error.class}"
+  ensure
+    exit!(126)
+  end
+end
+
+  # Supervise a single fixed helper with a bounded app name and wall-clock deadline.
+  # CI execution starts as root only long enough to drop to the app via su; tree sync
+  # is spawned directly with that app UID/GID and only the groups it needs.
+  def supervised_helper(helper, app, duration, helper_arguments = nil)
+    raise "unknown helper" unless [CI_RUN, CI_SYNC, RAILS_TASK, RAILS_SYNC].include?(helper)
+    known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS
+    raise "unknown app" unless known_apps.include?(app)
+    raise "invalid helper timeout" unless duration.is_a?(Integer) && (1..7200).cover?(duration)
+
+    arguments = case helper
+                when CI_RUN then [app, duration.to_s]
+                when CI_SYNC then [app]
+                when RAILS_TASK then Array(helper_arguments)
+                when RAILS_SYNC then [app, *Array(helper_arguments)]
+                end
+    trusted_script!(helper)
+    if helper == RAILS_TASK && %w[db-prepare db-seed demo-seed assets-precompile schema-load ci].include?(arguments[1])
+      begin
+        environment_secret = app_secret_value(app)
+      rescue RuntimeError => error
+        raise unless error.message == "no valid SECRET_KEY_BASE for #{app}"
+
+        # First deploy may not have an app secret yet. Create it through the same
+        # fixed, atomic broker code, but never print it into command output/logs.
+        ensure_app_secret(app, emit: false)
+        environment_secret = app_secret_value(app)
+      end
+    end
+    environment = if [CI_SYNC, RAILS_SYNC].include?(helper)
+                    { "PATH" => "/usr/local/bin:/usr/bin:/bin",
+                      "HOME" => "/home/#{app}",
+                      "GIT_CONFIG_NOSYSTEM" => "1",
+                      "GIT_CONFIG_GLOBAL" => "/dev/null" }
+                  else
+                    { "PATH" => "/usr/local/bin:/usr/bin:/bin", "HOME" => "/root" }
+                  end
+    environment["SECRET_KEY_BASE"] = environment_secret if environment_secret
+    account = groups = nil
+    if [CI_SYNC, RAILS_SYNC].include?(helper)
+      account = Etc.getpwnam(app)
+      groups = [account.gid, Etc.getgrnam("_pub4ci").gid].uniq
+    end
+
+    pid = spawn_helper(environment:, helper:, arguments:, account:, groups:)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + duration
+
+    loop do
+      waited = Process.waitpid(pid, Process::WNOHANG)
+      if waited
+        status = $?
+        return status.exitstatus if status.exited?
+        return 128 + status.termsig if status.signaled?
+
+        return 1
+      end
+
+      if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        warn "pub4-admin: helper #{File.basename(helper)} timed out after #{duration}s; stopping process group #{pid}"
+        begin
+          Process.kill("TERM", -pid)
+        rescue Errno::ESRCH
+          nil
+        end
+        grace_deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+        leader_reaped = false
+        loop do
+          unless leader_reaped
+            begin
+              leader_reaped = !Process.waitpid(pid, Process::WNOHANG).nil?
+            rescue Errno::ECHILD
+              leader_reaped = true
+            end
+          end
+
+          group_alive = begin
+            Process.kill(0, -pid)
+            true
+          rescue Errno::ESRCH
+            false
+          end
+          break unless group_alive
+
+          if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= grace_deadline
+            begin
+              Process.kill("KILL", -pid)
+            rescue Errno::ESRCH
+              nil
+            end
+            break
+          end
+          sleep 0.1
+        end
+        unless leader_reaped
+          begin
+            Process.waitpid(pid)
+          rescue Errno::ECHILD
+            nil
+          end
+        end
+        return 124
+      end
+
+      sleep 0.25
+    end
+  end
+
+  def run_ci(app, duration)
+    return 64 unless valid_ci_timeout?(duration.to_s)
+
+    supervised_helper(CI_RUN, app, duration)
+  end
+
+  def run_ci_sync(app)
+    supervised_helper(CI_SYNC, app, 900)
+  end
+
+  def run_rails_sync(app, mode)
+    return 64 unless RAILS_APPS.include?(app)
+    return 64 unless %w[app shared verticals].include?(mode)
+    return 64 if mode == "verticals" && app != "brgen"
+
+    supervised_helper(RAILS_SYNC, app, 900, [mode])
+  end
+
+  def run_rails_task(app, task, database = nil)
+    return 64 unless RAILS_TASK_APPS.include?(app)
+    allowed = %w[bundle-install bundle-check ci-bundle-install db-storage-migrate db-prepare db-seed demo-seed assets-precompile ci npm-cache bundle-cache-prepare bundle-cas-hydrate overlay-initializers overlay-public]
+    if %w[schema-load secondary-db-check].include?(task)
+      return 64 unless %w[cache queue cable].include?(database)
+    elsif task == "bundle-cas-hydrate"
+      return 64 unless RAILS_APPS.include?(app) && valid_ruby_cache_key?(database.to_s)
+    else
+      return 64 unless allowed.include?(task) && database.nil?
+    end
+    return 64 if task == "demo-seed" && !%w[brgen amber].include?(app)
+
+    arguments = [app, task]
+    arguments << database if %w[schema-load secondary-db-check bundle-cas-hydrate].include?(task)
+    supervised_helper(RAILS_TASK, app, 7200, arguments)
+  end
+
+  def call_rcctl(action, service)
+    raise "untrusted rcctl executable" unless trusted_executable?(RCCTL)
+    output = IO.popen([RCCTL, action, service], err: [:child, :out], &:read)
+    status = $?
+    [status&.success? || false, output.to_s]
+  end
+
+  # This is the only operation allowed to pin every production service against
+  # resource_guard shedding. The service set and flag path are both constants.
+  def start_all_apps
+    flag = "/var/db/pub4_all_apps"
+    db_stat = File.lstat("/var/db")
+    raise "/var/db must be a real root-owned, non-writable directory" unless
+      db_stat.directory? && !db_stat.symlink? && db_stat.uid.zero? && (db_stat.mode & 0o022).zero?
+
+    if File.exist?(flag) || File.symlink?(flag)
+      flag_stat = File.lstat(flag)
+      raise "#{flag} must be a root-owned regular file" unless
+        flag_stat.file? && !flag_stat.symlink? && flag_stat.uid.zero? && (flag_stat.mode & 0o022).zero?
+    else
+      begin
+        File.open(flag, File::WRONLY | File::CREAT | File::EXCL, 0o644) {}
+      rescue Errno::EEXIST
+        flag_stat = File.lstat(flag)
+        raise "#{flag} appeared as an unsafe object" unless
+          flag_stat.file? && !flag_stat.symlink? && flag_stat.uid.zero? && (flag_stat.mode & 0o022).zero?
+      end
+    end
+    flag_stat = File.lstat(flag)
+    raise "#{flag} must remain root-owned and non-writable" unless
+      flag_stat.file? && !flag_stat.symlink? && flag_stat.uid.zero? && (flag_stat.mode & 0o022).zero?
+    File.chmod(0o644, flag) unless (flag_stat.mode & 0o777) == 0o644
+
+    services = ["master", *RAILS_APPS]
+    services.each do |service|
+      call_rcctl("enable", service)
+      call_rcctl("start", service)
+    end
+    sleep 5
+    ok, output = call_rcctl("restart", "relayd")
+    raise "relayd restart failed: #{output.strip}" unless ok
+
+    failures = services.filter_map do |service|
+      ok, output = call_rcctl("check", service)
+      "#{service}: #{output.strip}" unless ok
+    end
+    raise "service checks failed: #{failures.join('; ')}" unless failures.empty?
+
+    puts "start_all_apps0: services=#{services.join(',')} flag=#{flag}"
+    0
+  end
+  def main(argv)
+    raise "must run as root through doas" unless Process.euid.zero?
+
+    args = Array(argv).map(&:to_s)
+    if args.length == 2 && args[0] == "ensure-secret" && APPS.include?(args[1])
+      return ensure_app_secret(args[1])
+    end
+
+    if args.length == 2 && args[0] == "ensure-app" && RAILS_APPS.include?(args[1])
+      return ensure_app_layout(args[1])
+    end
+
+    if args.length == 4 && args[0] == "relayd-check"
+      return relayd_check(args[1], args[2], args[3])
+    end
+
+    if args.length == 2 && args[0] == "retire-legacy"
+      service = legacy_service_name(args[1])
+      raise "unknown legacy service target" unless service
+
+      path = "/etc/rc.d/#{service}"
+      return 0 unless File.exist?(path) || File.symlink?(path)
+
+      stat = File.lstat(path)
+      raise "#{path} must be a root-owned, non-writable regular file" unless
+        stat.file? && !stat.symlink? && stat.uid.zero? && (stat.mode & 0o022).zero?
+
+      exec(RCCTL, "disable", service)
+    end
+
+    if args == ["master-web-assets-reset"]
+      return master_web_assets_reset
+    end
+
+    if args == ["master-web-runtime-dirs"]
+      return master_web_runtime_dirs
+    end
+
+    return start_all_apps if args == ["start-all-apps"]
+
+    if args.length == 4 && args[0] == "deploy-status"
+      return write_deploy_status(*args.drop(1))
+    end
+
+    if args.length == 2 && args[0] == "deploy-status-read"
+      return read_deploy_status(args[1])
+    end
+
+    if args.length == 4 && args[0] == "stamp"
+      return write_stamp(*args.drop(1))
+    end
+
+    return ensure_ci_lock if args == ["ci-lock"]
+
+    if args.length == 4 && args[0] == "bundle-cache"
+      return bundle_cache(args[1], args[2], args[3])
+    end
+
+    if args.length == 2 && args[0] == "ci-prepare" && RAILS_APPS.include?(args[1])
+      trusted_script!(CI_PREPARE)
+      exec("/bin/ksh", CI_PREPARE, args[1])
+    end
+
+    if args.length == 3 && args[0] == "ci-run" && RAILS_APPS.include?(args[1]) &&
+       valid_ci_timeout?(args[2])
+      return run_ci(args[1], args[2].to_i)
+    end
+
+    if args.length == 2 && args[0] == "ci-sync" && RAILS_APPS.include?(args[1])
+      return run_ci_sync(args[1])
+    end
+
+    if args.length == 3 && args[0] == "rails-sync" && RAILS_APPS.include?(args[1])
+      return run_rails_sync(args[1], args[2])
+    end
+
+    if args.length == 3 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
+      return run_rails_task(args[1], args[2])
+    end
+
+    if args.length == 4 && args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])
+      return run_rails_task(args[1], args[2], args[3])
+    end
+
+    if args == ["resource-guard"]
+      trusted_script!(RESOURCE_GUARD)
+      exec("/bin/ksh", RESOURCE_GUARD)
+    end
+
+    if args.length == 2 && args[0] == "solid-queue-proof" && APPS.include?(args[1])
+      trusted_script!(SOLID_QUEUE_PROOF)
+      exec(ruby_path, SOLID_QUEUE_PROOF, args[1])
+    end
+
+    if args == %w[service list-started]
+      output = IO.popen([RCCTL, "ls", "started"], &:read)
+      status = $?
+      raise "rcctl ls started failed (#{status&.exitstatus || "no status"})" unless status&.success?
+
+      puts filter_started_services(output)
+      return 0
+    end
+
+    command = command_for(args)
+    raise "refused arguments: #{args.inspect}" unless command
+
+    exec(*command)
+  rescue StandardError => e
+    warn "pub4-admin: refused or failed: #{e.class}: #{e.message}"
+    126
+  end
+end
+
+exit(Pub4Admin.main(ARGV)) if $PROGRAM_NAME == __FILE__
