@@ -21,8 +21,10 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
   frozen for this port and stays archived afterwards.
 - pub4 landed five more commits on the same day (`3e70be3..d6fa34d`, still
   2026-11-06). They are ported as the catch-up below, so the port's source
-  of truth is now `d6fa34d7580214b80b588a08880d0f4439b37f41`, "Let the nav
-  counter pill guard breathe between measure and assert".
+  of truth moved to `d6fa34d7580214b80b588a08880d0f4439b37f41` at first;
+  pub4 then landed `7caa03d` ("Let the marketplace hero lead with its copy
+  when it has no photo"), ported the same way. The port's source of truth
+  is now `7caa03d`, and a fresh fetch of pub4 found nothing further.
 
 ## Structure of the port
 
@@ -128,10 +130,17 @@ paths carry over unchanged):
 - pub4 `e4e08bd` → "Rails: space the dating header test from the test
   before it" — the blank line before the discover-header test in
   `dating_rewind_test.rb`. Whitespace only.
+- pub4 `7caa03d` → "Rails: let the marketplace hero lead with its copy
+  when it has no photo" — inside `_brgen_shared_overrides.scss`'s
+  max-width block the `--empty` media well keeps its place after the copy
+  (`order: 0; min-height: 0`), so a promoted listing without a photo no
+  longer leads a phone with a 300px empty well; the new
+  MarketplaceCheckoutTest case measures it at 390.
 
-The fifth upstream commit's `TODO.md` deletion (the "Nav nytt! badge
-clearance" row) has no counterpart here: pub5's TODO.md is the port
-backlog, which never carried that row.
+The upstream `TODO.md` deletions in `af6ae3d` and `7caa03d` (the "Nav
+nytt! badge clearance" and "Marketplace no-photo state verification"
+rows) have no counterpart here: pub5's TODO.md is the port backlog,
+which never carried those rows.
 
 Same evidence limits as the main port: no Ruby toolchain, so the new
 tests are NOT_RUN here; they are carried as written upstream, where they

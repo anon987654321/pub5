@@ -1,8 +1,8 @@
 # pub5 — remaining work
 
-Port record: `MIGRATION.md`. Source: pub4@`d6fa34d7580214b80b588a08880d0f4439b37f41`
-(the port cut at `3e70be37c8`, then caught up the five commits pub4
-landed later the same day; see "Catch-up port" in `MIGRATION.md`).
+Port record: `MIGRATION.md`. Source: pub4@`7caa03d` (the port cut at
+`3e70be37c8`, then caught up the six commits pub4 landed later the same
+day; see "Catch-up port" in `MIGRATION.md`).
 Rule for the whole port: same behaviour, less code; new features wait.
 A source change, authored test, passing test, full suite, rendered product and
 live deployment are different claims. Use PASS, FAIL, INCONCLUSIVE, BLOCKED,
