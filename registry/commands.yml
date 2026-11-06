@@ -54,6 +54,15 @@ commands:
     verbs:
       read: ["**/*"]
       git: [ls-files, rev-parse]
+  scan:
+    summary: Scan the tree with every deterministic Law and report it as a boot (scan [tree|path] [--dry-run]).
+    plugin: master/commands/scan.rb
+    class: Commands::Scan
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      write: ["tmp/fix/**"]
+      git: [ls-files, diff, rev-parse]
   knobs:
     summary: List the declared environment knobs and the budget.
     plugin: master/commands/knobs.rb
