@@ -1,0 +1,536 @@
+---
+schema: 1
+app: brgen
+widths:
+- 390
+- 768
+- 1280
+rows:
+  "|/|390|page": d92058e258b8fdb967edafd2433c34c858177d2a55d389b82a8735a408b22fa2
+  "|/|390|dialog": c110813b8f4d7ea1299b5f76eb8c0626f787a9113559bda7dfdc8a3d84328eca
+  "|/|768|page": 43d48d070a309530623ddded5ede9af62272e07ec4251c9e2e634be6dd7c9da9
+  "|/|768|dialog": 37fb7cecf2ba441acfcbeeb625925699e9dc6d3b277f06a0b91419ff9afb4308
+  "|/|1280|page": cd5864b034e9df0352d78658c7414cd5ea692ab085bcf019b07789112362a452
+  "|/|1280|dialog": 26349081f0dcec3041f4b1b7f43c54ce42db8c7f77eb2859e10544d550dba595
+  "|/account|390|page": 3ae9bd676cdb9f0fc0cdf09f69697c46993dad055199661da76f9431dddc008c
+  "|/account|390|dialog":
+    present: false
+  "|/account|768|page": 18cd9228e8b60e5e7619bff27e4eb46fdcf87506235c5e3c1692b6e4555b8c81
+  "|/account|768|dialog":
+    present: false
+  "|/account|1280|page": fd71d12309450ff126c7280a2f75cea0d2a0b8ba30cf4888e87e8c1ba17d7571
+  "|/account|1280|dialog":
+    present: false
+  "|/activity_events|390|page": efc51dd064dbbed9cd478c4d95e32fa8f15a6033ee6e8ef9aa2c0fd37d1e3b1f
+  "|/activity_events|390|dialog":
+    present: false
+  "|/activity_events|768|page": 5ce283ad53b0475dc07f86f7f6c86cb5f94df00b0b777567546519453e36c2c1
+  "|/activity_events|768|dialog":
+    present: false
+  "|/activity_events|1280|page": e15d253974acc48b3039f5246aff7570eba4ab93d61c7949d37015fb3622caee
+  "|/activity_events|1280|dialog":
+    present: false
+  markedsplass.brgen.no|/addresses|390|page: f3401d0d5b82e9e05d5e5f977e4d211525052b5996919832db5d54469e98c893
+  markedsplass.brgen.no|/addresses|390|dialog:
+    present: false
+  markedsplass.brgen.no|/addresses|768|page: '01529b6cd9c3a50e05be77e3ebfa7ba5f522cea2ebc1fb62d018f7fb622b0c2e'
+  markedsplass.brgen.no|/addresses|768|dialog:
+    present: false
+  markedsplass.brgen.no|/addresses|1280|page: 92da30ab06c17f17865472df5910a0d01aed40b7e2b6488236d572aab8faab25
+  markedsplass.brgen.no|/addresses|1280|dialog:
+    present: false
+  markedsplass.brgen.no|/cart|390|page: d07b65b5c3e2c16f8446c6a48f3f2ba64110df3e404d92c5ed6be03abe0bb134
+  markedsplass.brgen.no|/cart|390|dialog:
+    present: false
+  markedsplass.brgen.no|/cart|768|page: 8310cfb09af2f2ff6ff89aed31b013c8dc8fee1785e9e3b7cf75f5acfa538c6e
+  markedsplass.brgen.no|/cart|768|dialog:
+    present: false
+  markedsplass.brgen.no|/cart|1280|page: c5cf77d7d46d09a999b37e8f340fe18a9269206f5cc8e5436482c4b82f444114
+  markedsplass.brgen.no|/cart|1280|dialog:
+    present: false
+  "|/changelog|390|page": fdc44a02026d7c7fcc96a7e67e02d1fcade21bc0e3e83a1a3fb3bb9136db238b
+  "|/changelog|390|dialog":
+    present: false
+  "|/changelog|768|page": c7e033f8a3d119ec5cac81b64dbf478ba2f12c9e5e2d17206c7ad96ce2e35a01
+  "|/changelog|768|dialog":
+    present: false
+  "|/changelog|1280|page": 3bb5440cfd5b5bfbf5e4f8d3f074fefcce48b352b031c281eb4e630dd5571213
+  "|/changelog|1280|dialog":
+    present: false
+  "|/channels|390|page": ddace0ce5d87128141da8799b727e63497cdf2d675503cd47257d4e26f1b8a3d
+  "|/channels|390|dialog":
+    present: false
+  "|/channels|768|page": 45b502596071b19ed32dffa90bda4bbad9e81b4664cde787d18dc2f957a4e597
+  "|/channels|768|dialog":
+    present: false
+  "|/channels|1280|page": f6d567253a8b2bdb5f6dca923507634e4ab87eb65c72b5502462aa638c012b4d
+  "|/channels|1280|dialog":
+    present: false
+  "|/communities|390|page": 60c83bfb942e1f3743f62769772ce31b1b27979cec7b1880e4cf2ac767749e15
+  "|/communities|390|dialog":
+    present: false
+  "|/communities|768|page": 631ebc8687ce7b4a25f6016fb23e14f3d503d56b10493d44c15b0ab0849e7acd
+  "|/communities|768|dialog":
+    present: false
+  "|/communities|1280|page": 8ced54e16f2e9bca1dd541363af7fea976b6c6d68cc2ee0b346998fa68aebce7
+  "|/communities|1280|dialog":
+    present: false
+  "|/conversations|390|page": efc0c34925480600b4ff342a048fd6a6da37e2d92414e34da651f97901164381
+  "|/conversations|390|dialog":
+    present: false
+  "|/conversations|768|page": 47cbdb7e732992b46235a03de3112239e2b01d8e4ad501da51ad2b09948bb910
+  "|/conversations|768|dialog":
+    present: false
+  "|/conversations|1280|page": b3f15c93d5bdab103ef086ac8157fe87b6fe22c2b38025a87c96d83bb1c348bb
+  "|/conversations|1280|dialog":
+    present: false
+  "|/conversations/new|390|page": f9a6ca0b0442cb527340712ee91748051ee9558356563eec9bcd39f58dfe0e10
+  "|/conversations/new|390|dialog":
+    present: false
+  "|/conversations/new|768|page": 7b2eaf9951f2656bc81c2642e998abc0c4687005db474fbc2b177e0dd3ff577b
+  "|/conversations/new|768|dialog":
+    present: false
+  "|/conversations/new|1280|page": d0f4bd17bdb61404978ebee184cf9986cb9bbc31caa82d91b5fd6cede7628ef9
+  "|/conversations/new|1280|dialog":
+    present: false
+  "|/conversations/search|390|page": f8c7df0f0ca5724544cfb14cce326ad18773642b8431a973cebfd4548389cf04
+  "|/conversations/search|390|dialog":
+    present: false
+  "|/conversations/search|768|page": '0448ae8694a75f92aa18cc11872db66d3af8f2657e22d6bf19c9d00e18370f35'
+  "|/conversations/search|768|dialog":
+    present: false
+  "|/conversations/search|1280|page": 2bc825c07e4790ee851ad30e9de759a2db9d6364dd3114038382258bb9b22c2c
+  "|/conversations/search|1280|dialog":
+    present: false
+  "|/cookies|390|page": ef013b051c431837351df76eab2e6f0032a20e46074d1e85940bfb09158b1959
+  "|/cookies|390|dialog":
+    present: false
+  "|/cookies|768|page": 2e09a220cb608ef23d180e221da00cdc114e8bb8245304029f384f523784a39f
+  "|/cookies|768|dialog":
+    present: false
+  "|/cookies|1280|page": c86de478a80bca5013cfc6a63a6b53e8cc3175905b7e25938fd165696734a8cc
+  "|/cookies|1280|dialog":
+    present: false
+  markedsplass.brgen.no|/deals|390|page: f2e798040b2ad3e54cb83735548cb36c1cb11b308f4e17553a2dfcecd4cde1e6
+  markedsplass.brgen.no|/deals|390|dialog:
+    present: false
+  markedsplass.brgen.no|/deals|768|page: 6f9450911db99fd92b301dd7398fb50358bcfb4d6626cd64b7e5529a8d5dab5c
+  markedsplass.brgen.no|/deals|768|dialog:
+    present: false
+  markedsplass.brgen.no|/deals|1280|page: 2e472f2da6a53b00ac24c4a1ce3985eff7a9a6d1f5dc80ce909391648b0ff518
+  markedsplass.brgen.no|/deals|1280|dialog:
+    present: false
+  takeaway.brgen.no|/delivery_drivers|390|page: 8afa6ed08b446a1f7e32c75cea081225453d928a79529a6ac629a2aa6fa5c50d
+  takeaway.brgen.no|/delivery_drivers|390|dialog:
+    present: false
+  takeaway.brgen.no|/delivery_drivers|768|page: 2cd39f278c9679ff5e5dfd3aa04606e53a87b7aa4b9501504d97d9487fc85cbd
+  takeaway.brgen.no|/delivery_drivers|768|dialog:
+    present: false
+  takeaway.brgen.no|/delivery_drivers|1280|page: 3d98e9102039dfef5d187300ca1349139350150f7d40a4678abf8f3f906fc824
+  takeaway.brgen.no|/delivery_drivers|1280|dialog:
+    present: false
+  "|/events|390|page": fe89d72156b3be79cc8edf38fd017b7e0c4660ed1bc48644cd31a95b4fa864a8
+  "|/events|390|dialog":
+    present: false
+  "|/events|768|page": a1d91ed6324f4965391a06407254673cdf37bdb5e92123e1c8d3e7f0e452fb5c
+  "|/events|768|dialog":
+    present: false
+  "|/events|1280|page": 84d569d7a344d7beeb59dc71367a69f7afe77e2076f4610c770b60b1dc7bf7b5
+  "|/events|1280|dialog":
+    present: false
+  "|/fediverse_follows|390|page": 344c88cdfb22d28ef9b039b46d5f435f43b076fc0b8a8f6d717315e58c865dce
+  "|/fediverse_follows|390|dialog":
+    present: false
+  "|/fediverse_follows|768|page": 847ac25ae72b4cf0aeaad6c52084ae8dc33fdcce190b3cb6307ccfdc6604455b
+  "|/fediverse_follows|768|dialog":
+    present: false
+  "|/fediverse_follows|1280|page": 03b2ee48a82a4cabc551d58204703963aa540dea108fc134b5fe6443f56b432c
+  "|/fediverse_follows|1280|dialog":
+    present: false
+  tv.brgen.no|/feed|390|page: a7a31c7f326e579420a30042ea33f50bfd7e8d9cf6b8e5017d31bac057624cdb
+  tv.brgen.no|/feed|390|dialog:
+    present: false
+  tv.brgen.no|/feed|768|page: e5bca3604d0bcee415ad474bb25f15f0b4419cf4e34bb0d94b03460ded79cfd6
+  tv.brgen.no|/feed|768|dialog:
+    present: false
+  tv.brgen.no|/feed|1280|page: d6002c3f013ba34c533a7881248e9696d76d2ad0af7b737647d46ee7ce67d855
+  tv.brgen.no|/feed|1280|dialog:
+    present: false
+  "|/groups/new|390|page": 400becbd7a391c603eed611ef1b8002522531b26a07b303a5bd484087752b2b6
+  "|/groups/new|390|dialog":
+    present: false
+  "|/groups/new|768|page": cb576c5f80386fa88db57329167d0a4d0524363a1ca80e7416027aa3c0f32faf
+  "|/groups/new|768|dialog":
+    present: false
+  "|/groups/new|1280|page": cfb3ba4e7a6b6ce8d7882625f4d8b57c0e601937d5ec6fede6d3152709aead3a
+  "|/groups/new|1280|dialog":
+    present: false
+  radio.brgen.no|/hosted_tracks|390|page: 89551bffe7d67eb518536c1b7fc4b7cc2d48b2f80bb3903768efa1f321d6a648
+  radio.brgen.no|/hosted_tracks|390|dialog:
+    present: false
+  radio.brgen.no|/hosted_tracks|768|page: bbe61125e326d755c05f484fa345c58415c2c8b7b5f3dec9194b0b25d4ee66eb
+  radio.brgen.no|/hosted_tracks|768|dialog:
+    present: false
+  radio.brgen.no|/hosted_tracks|1280|page: 65fc94124f1f84122f9d5a5c9349d02b44ff12c943bbae3b1a3ee8b18be87fb7
+  radio.brgen.no|/hosted_tracks|1280|dialog:
+    present: false
+  dating.brgen.no|/likes|390|page: 6bddba096e1a3a86973ab0f6c3f0dafd119b817f6fb0392ee1150cc56bf96b29
+  dating.brgen.no|/likes|390|dialog:
+    present: false
+  dating.brgen.no|/likes|768|page: 14c87c8eb111dfb8779ccc235ea0b9dc8330830365f13abdea2eb9171839bd73
+  dating.brgen.no|/likes|768|dialog:
+    present: false
+  dating.brgen.no|/likes|1280|page: 80cb9fdc45fc3de0c70e0a942596e2cac23002231cda5615eb80034d5f74c2fa
+  dating.brgen.no|/likes|1280|dialog:
+    present: false
+  markedsplass.brgen.no|/listings|390|page: 8ff6919e9bee29056c556232dad12ba20e5c84837ced33d88fff3bc7841f6f64
+  markedsplass.brgen.no|/listings|390|dialog:
+    present: false
+  markedsplass.brgen.no|/listings|768|page: ee8975914b0c7b0c623f868f5a0cbc5d40e1f40e02c39ccfd7c48abd708e4b76
+  markedsplass.brgen.no|/listings|768|dialog:
+    present: false
+  markedsplass.brgen.no|/listings|1280|page: b4abfc081bc2628e4e32fb0766d31ee42dc81f3a68c9aca8bfdb74d8b8b7d614
+  markedsplass.brgen.no|/listings|1280|dialog:
+    present: false
+  markedsplass.brgen.no|/listings/new|390|page: 23b0dc4b4f7cf1b93bfb8b8caa2bbe11d157363b51605ee00e6063c3edb81c94
+  markedsplass.brgen.no|/listings/new|390|dialog:
+    present: false
+  markedsplass.brgen.no|/listings/new|768|page: 8ed40422a41ac71397d5a835577489e342aaedeb235d37543a7d8e666e89d323
+  markedsplass.brgen.no|/listings/new|768|dialog:
+    present: false
+  markedsplass.brgen.no|/listings/new|1280|page: cbd3183fc59b5e98500cb0feda3d39e69bf6fc628f02e402404df2409fd635ff
+  markedsplass.brgen.no|/listings/new|1280|dialog:
+    present: false
+  tv.brgen.no|/live_streams|390|page: cee74f4c2dc5cff2938b8dc573e4f73c7fadd9e08762b8ffe6f0c50da8270880
+  tv.brgen.no|/live_streams|390|dialog:
+    present: false
+  tv.brgen.no|/live_streams|768|page: 58c6f373b9584be6ed2b1d0ae4345884778e07c3f5ae7888d8830ddde8be49e2
+  tv.brgen.no|/live_streams|768|dialog:
+    present: false
+  tv.brgen.no|/live_streams|1280|page: 91e1ee9985ea764a6cea60fa37fe102678f17301b7891118199c6aba6b2dfd3c
+  tv.brgen.no|/live_streams|1280|dialog:
+    present: false
+  dating.brgen.no|/matches|390|page: 28f2f696a37191947b16ae9799f87ccf83f2498175897ddcb759e3138b905cd4
+  dating.brgen.no|/matches|390|dialog:
+    present: false
+  dating.brgen.no|/matches|768|page: d1532dcbc5da153d78df1fce92b16beeee2d92fa78a4fc73f6cc5c1df5a74f01
+  dating.brgen.no|/matches|768|dialog:
+    present: false
+  dating.brgen.no|/matches|1280|page: 75532badf296275de0b8ac9d20aa80112f9636b6d564dd6968df0ffe918140bd
+  dating.brgen.no|/matches|1280|dialog:
+    present: false
+  "|/nearby|390|page": a1073fbb39adfc089586e6ca47e9787da424ffe65179b831728bb1f0b62bf6f2
+  "|/nearby|390|dialog":
+    present: false
+  "|/nearby|768|page": bc0bdc705e7f390948d1ea0c76c4517456a41fff52b52d60c3f7fe8092349fdd
+  "|/nearby|768|dialog":
+    present: false
+  "|/nearby|1280|page": 007412dafa864f64bf1dc9862630cb516879e69d2f1759a1ed4008df0a527c28
+  "|/nearby|1280|dialog":
+    present: false
+  "|/nearby/widget|390|page": 8b45277f566a2f75897b141aa8dd3ee3815311103bf89a0376e99c34d015f43a
+  "|/nearby/widget|390|dialog":
+    present: false
+  "|/nearby/widget|768|page": 1fab2f9e22bb2d873e64e96edf869336deb897c117b73ca70e8ae67462fa0657
+  "|/nearby/widget|768|dialog":
+    present: false
+  "|/nearby/widget|1280|page": fa81b154429c0fd90c4e162e00ab79159be824516e211d3b3025ebb05de3403d
+  "|/nearby/widget|1280|dialog":
+    present: false
+  dating.brgen.no|/next|390|page: 4806968d27392d3a32378ed1aa90e6e929ea76408e97f6c044b59057310b892a
+  dating.brgen.no|/next|390|dialog:
+    present: false
+  dating.brgen.no|/next|768|page: 0f3f3620b8a6f34a8aa41dee541d3ede19f60f7ad80e428bf0d5fac59ea5c638
+  dating.brgen.no|/next|768|dialog:
+    present: false
+  dating.brgen.no|/next|1280|page: e4c74225039659f03dbe26f513ea9648fb6985634df0c888705990959e3b769f
+  dating.brgen.no|/next|1280|dialog:
+    present: false
+  "|/offline|390|page": 34dad47ec27234d0408f2b68d460eb57d11075c6a92a4df8c046ea1716044ba3
+  "|/offline|390|dialog":
+    present: false
+  "|/offline|768|page": 88c9f71b9d7497a29bb2e2e16117df8ff58560a963da4ee0a94c0aca85347abd
+  "|/offline|768|dialog":
+    present: false
+  "|/offline|1280|page": 381699efb9a7d49b44d6338943d5f492b878276b8876e4542bf22f03ec41e209
+  "|/offline|1280|dialog":
+    present: false
+  markedsplass.brgen.no|/orders|390|page: af1bf01e11a6eb59ebfe1ac2c0eeaeddcfddd10d55936d6026773074266fdcda
+  markedsplass.brgen.no|/orders|390|dialog:
+    present: false
+  markedsplass.brgen.no|/orders|768|page: 9a98aa4d1eafbdbae8f066a0b293b4d6dc9f96942432df9a700b49cb7b67aa94
+  markedsplass.brgen.no|/orders|768|dialog:
+    present: false
+  markedsplass.brgen.no|/orders|1280|page: de3c36e2918f98224a68c1a2fdafe203654946c8ce18058c3395dec7d6137093
+  markedsplass.brgen.no|/orders|1280|dialog:
+    present: false
+  "|/partner/programs|390|page": e1339b6d2ab0778aff764e0b210c29e06d8fe33a5e6914c1cd59cf6d6e28d4ab
+  "|/partner/programs|390|dialog":
+    present: false
+  "|/partner/programs|768|page": ad8f4c86b15cefcd227e13c38ddf956607dc1ff42f38a99e393251132b29c956
+  "|/partner/programs|768|dialog":
+    present: false
+  "|/partner/programs|1280|page": b2a830c5acbac2b2df612bb95e33ff0e9f3cef7a8ce2a71a586ea044131e79f0
+  "|/partner/programs|1280|dialog":
+    present: false
+  "|/passwords/new|390|page": 99269676604cba65877b329cecf8b86576958b86fb1225688b049afc4122fa2a
+  "|/passwords/new|390|dialog":
+    present: false
+  "|/passwords/new|768|page": 663d0dc4f2e6ea32138bfc178f6ffe3560f0f84e864602d6cf5be156101c858e
+  "|/passwords/new|768|dialog":
+    present: false
+  "|/passwords/new|1280|page": 403b901201e21e4d29f2aed72ee2680bac4019061067544c507c4ac5df44af95
+  "|/passwords/new|1280|dialog":
+    present: false
+  dating.brgen.no|/path_crossings|390|page: 858ba04f5ccc2f1d2ec54ce71ea4fe2cbb257782bb43d537203d163028f1f4e3
+  dating.brgen.no|/path_crossings|390|dialog:
+    present: false
+  dating.brgen.no|/path_crossings|768|page: 89cbac5061a6b5ee4d8953ac1101cb6d145a727434b3f192057d9ad705815de7
+  dating.brgen.no|/path_crossings|768|dialog:
+    present: false
+  dating.brgen.no|/path_crossings|1280|page: ad435454674e09b5e500dd53dd0a665128f0edb4a95083b0e1d19f9f7efab777
+  dating.brgen.no|/path_crossings|1280|dialog:
+    present: false
+  maps.brgen.no|/places|390|page: 95878c341c4a582712fc0cc0c79167164ad7ca233c89bc2a4d5b734f4d40fcda
+  maps.brgen.no|/places|390|dialog:
+    present: false
+  maps.brgen.no|/places|768|page: e8e5634f1b132d46baad2889c7127a8a690edf262b9011bc50670d66b946fafb
+  maps.brgen.no|/places|768|dialog:
+    present: false
+  maps.brgen.no|/places|1280|page: 271fb9292146330a454c22a753227f5234dbda5449670bce70489da0fedbf823
+  maps.brgen.no|/places|1280|dialog:
+    present: false
+  radio.brgen.no|/playlists|390|page: 69b325c256b3128762c32e647e69f23db8de5937ead8019f776cf5a3ef28fae3
+  radio.brgen.no|/playlists|390|dialog:
+    present: false
+  radio.brgen.no|/playlists|768|page: 75b98dc86753c9d9fbcc5dce18e2fc7859f6c46feca1bc3610368031b8b35100
+  radio.brgen.no|/playlists|768|dialog:
+    present: false
+  radio.brgen.no|/playlists|1280|page: d2549ab75ca079f6734427c6802288fa52e5e5d5c71f8f34b3c2e03c416d8263
+  radio.brgen.no|/playlists|1280|dialog:
+    present: false
+  radio.brgen.no|/playlists/new|390|page: efe1a2d5321be21626f650a43d5e1934560d155eb76b6d5b6b03e928b1a4f75d
+  radio.brgen.no|/playlists/new|390|dialog:
+    present: false
+  radio.brgen.no|/playlists/new|768|page: '0877b2e6959cfb321b072957aedeecfb4010fc9db0b857945ce672aa587b896c'
+  radio.brgen.no|/playlists/new|768|dialog:
+    present: false
+  radio.brgen.no|/playlists/new|1280|page: 7b5d2136004469235b565ef6fb969276bb787b0f5d0f7ccf2e3261629782cae3
+  radio.brgen.no|/playlists/new|1280|dialog:
+    present: false
+  "|/posts|390|page": be05b2d159aea262c34626b7b61ffc57d673b9fc1d5126412d90c6b534f9dd5c
+  "|/posts|390|dialog":
+    present: false
+  "|/posts|768|page": bf5d67613d56b17553efc440f62c18ddec8dcb4a5b1bc89da9060a0d3436e758
+  "|/posts|768|dialog":
+    present: false
+  "|/posts|1280|page": 05ec7c37cf03f766cc91f2c0e62d9b02bf3543b83f4e8576a3d9e5be2b4067a7
+  "|/posts|1280|dialog":
+    present: false
+  "|/posts/new|390|page": 1b475047370629aecb939cd6ab5dafd2e511959bc11b05ee85203c13db9997b0
+  "|/posts/new|390|dialog":
+    present: false
+  "|/posts/new|768|page": a941e8d14b2974fa4f250f79db40c8514c788017f2447f6ff9e898802584e7da
+  "|/posts/new|768|dialog":
+    present: false
+  "|/posts/new|1280|page": f63005860b37a24d0ab6e9f8b634579461324ac92b32721ca81168f49b8e1857
+  "|/posts/new|1280|dialog":
+    present: false
+  "|/privacy|390|page": e33b5e847bb3a9eac6828cabb62b5d0fbde23e06a32f59e5ac07f875f43b6d3d
+  "|/privacy|390|dialog":
+    present: false
+  "|/privacy|768|page": 48a16d8ecd3364fd7829c26e8e120d7f57f796a355a37ddfcd448c20998b2b1f
+  "|/privacy|768|dialog":
+    present: false
+  "|/privacy|1280|page": 4288144e5cece3ae48b588901dc258e3ba48464493c7f2634d858b9f4533634d
+  "|/privacy|1280|dialog":
+    present: false
+  "|/recede_historical_location|390|page": 5bb54ed008a13d5867bd9bd27d9de21ee56a8e5eda40cb27253acbd13ce8465a
+  "|/recede_historical_location|390|dialog":
+    present: false
+  "|/recede_historical_location|768|page": 24041bf99118da2e39901f9dfcb10c78fb17221d167afcc2a8fee5055df1d017
+  "|/recede_historical_location|768|dialog":
+    present: false
+  "|/recede_historical_location|1280|page": 2b1215c48d208dc146fbd31620267c69defb8f3f5d3f5980a381ab1cc6127105
+  "|/recede_historical_location|1280|dialog":
+    present: false
+  "|/refresh_historical_location|390|page": c4417957a03250b8eeac8d67be708e3b58a90fb94a21a56d4a02b50037045d0e
+  "|/refresh_historical_location|390|dialog":
+    present: false
+  "|/refresh_historical_location|768|page": 8c78ca6480d10cd4427e6f257abbfbc9fff8930d4dcbd23b5dcb2b8083359cad
+  "|/refresh_historical_location|768|dialog":
+    present: false
+  "|/refresh_historical_location|1280|page": 1e542a22c4609bf3cf23f821af4f56c056267db4f2aa98c8e13857a8866e0dec
+  "|/refresh_historical_location|1280|dialog":
+    present: false
+  takeaway.brgen.no|/restaurants|390|page: 44a639f40c14dbb4599e46182f172651b3c1f410e3a65a3e2095329acb45e144
+  takeaway.brgen.no|/restaurants|390|dialog:
+    present: false
+  takeaway.brgen.no|/restaurants|768|page: f59ac38f0d27fe354160f61fdc5ca979340d93e52f8431acb2104708f6686f4d
+  takeaway.brgen.no|/restaurants|768|dialog:
+    present: false
+  takeaway.brgen.no|/restaurants|1280|page: fe4ce78302293ca01ca03339bf45bfcef358c0220b6349b3956264dbbe0ed47b
+  takeaway.brgen.no|/restaurants|1280|dialog:
+    present: false
+  "|/resume_historical_location|390|page": 2ffec6542dec3d54617d51992c0d158d7b9bb675cecb55f5ec98147aa6a0b5d0
+  "|/resume_historical_location|390|dialog":
+    present: false
+  "|/resume_historical_location|768|page": 670f0747840f0e2f1146a0a13e8679fc80cfebe2a274627e79f7c9d5ef4412fc
+  "|/resume_historical_location|768|dialog":
+    present: false
+  "|/resume_historical_location|1280|page": 56270f8074e42dbec3d4351318b9f02beea1dd45b49e06786e9031c43ee570a1
+  "|/resume_historical_location|1280|dialog":
+    present: false
+  "|/rules|390|page": 87fa7b158891a29196b7e261720a7563b79186d020ab87ce17733be1def926ce
+  "|/rules|390|dialog":
+    present: false
+  "|/rules|768|page": 4a39ce671e67cfd7f4e9baece843f7df41d020543788f551d167aca414bf7fb7
+  "|/rules|768|dialog":
+    present: false
+  "|/rules|1280|page": 857bef66a84881bb2a5ea74ca4f14528ab5e067bac657b52fda902e295337e69
+  "|/rules|1280|dialog":
+    present: false
+  "|/safety|390|page": 885fe6f7cf2f6c95b5fc2b0e3129a9bab452665b403ea13bef3f7f4add003aac
+  "|/safety|390|dialog":
+    present: false
+  "|/safety|768|page": 0c5ed831f7608f33d9ec4bced8f9ab243a309cbc108e7c9b1b76dbe4fd460ad8
+  "|/safety|768|dialog":
+    present: false
+  "|/safety|1280|page": 642553449d7b9a73f3247826f42b155974a600361617bd56347ba8d608f21ae4
+  "|/safety|1280|dialog":
+    present: false
+  "|/saved|390|page": 4a7384e1d3b941a229a6a39f95b6d59bce6061f9efc13bda1eb7200a06f0517d
+  "|/saved|390|dialog":
+    present: false
+  "|/saved|768|page": aa8eb5aeae4b0595862d63130b00e80abfbffdd395d7305042114e6851aa4323
+  "|/saved|768|dialog":
+    present: false
+  "|/saved|1280|page": 281f6213a20d635c4c919ed9d62ac95b080514e73a4ad48ded1b831c4a02d021
+  "|/saved|1280|dialog":
+    present: false
+  markedsplass.brgen.no|/saved_searches|390|page: 11f62540e0da542b919248ddef22d7d7f1c456582f603ae77eb904981209e5d2
+  markedsplass.brgen.no|/saved_searches|390|dialog:
+    present: false
+  markedsplass.brgen.no|/saved_searches|768|page: c71bcb0cf683efde0803ecf8d6cea17003e1af47f69df60582dae15fa646b5a9
+  markedsplass.brgen.no|/saved_searches|768|dialog:
+    present: false
+  markedsplass.brgen.no|/saved_searches|1280|page: 52989ad819c2dbf4517781c8482004530160c0d95a500175204bffaa89de0ae6
+  markedsplass.brgen.no|/saved_searches|1280|dialog:
+    present: false
+  "|/search|390|page": 8c174480ada83dbd91c737d2e5c515d8699cc5655801a4b9221ad2ba273b47d6
+  "|/search|390|dialog":
+    present: false
+  "|/search|768|page": 68ba9a376b80337430ff685488ffeb4a3b230332293efa92a7bb1b61e835a496
+  "|/search|768|dialog":
+    present: false
+  "|/search|1280|page": 882d12acfaf43ed06eecfd7e151bbd394b063c02eb7ae5d0b8dcf17a620b6140
+  "|/search|1280|dialog":
+    present: false
+  "|/session/new|390|page": 838691b0b1c6af7cca3fbb0d6eb20de2d8de89caa2ab701f040c65112e14a56e
+  "|/session/new|390|dialog":
+    present: false
+  "|/session/new|768|page": 9b77b7c98deba1c80b6c70564aac0eb283d433749c928a149b5c735069f38674
+  "|/session/new|768|dialog":
+    present: false
+  "|/session/new|1280|page": d0e19de90a21c1862022c1c6cc66ed54d0eb80a7499d9ad1fef58deadffaee8c
+  "|/session/new|1280|dialog":
+    present: false
+  radio.brgen.no|/sets|390|page: 9af1a84f639586d29ba43caa9d95870effeafcc0105c24974befa12ee0ba062a
+  radio.brgen.no|/sets|390|dialog:
+    present: false
+  radio.brgen.no|/sets|768|page: c13371aa29da67e090038433ff14c3db3fd24e4a05474ad9b39d71875d4b9e64
+  radio.brgen.no|/sets|768|dialog:
+    present: false
+  radio.brgen.no|/sets|1280|page: ec9b93874ffa05a2df260cebbd0521c67dd68be670abe6da8463d06387cea3da
+  radio.brgen.no|/sets|1280|dialog:
+    present: false
+  radio.brgen.no|/sets/new|390|page: 5db2f9c8206981e7907a4f609b340569d169390b425a70e834ddd65294b07c5e
+  radio.brgen.no|/sets/new|390|dialog:
+    present: false
+  radio.brgen.no|/sets/new|768|page: c613cca184b1e2f42de74bd359169daeae80a7205b9c4465127362bd0bdb88ca
+  radio.brgen.no|/sets/new|768|dialog:
+    present: false
+  radio.brgen.no|/sets/new|1280|page: b30902a50dc89902722cd4af2f6b902bb09a4e9c5e7563842335e22a04cb6ded
+  radio.brgen.no|/sets/new|1280|dialog:
+    present: false
+  markedsplass.brgen.no|/shops|390|page: 7d36ec86b2dd14a74d60ff7cd547aba00d1a651b356a37e26fe8e66c136d2e27
+  markedsplass.brgen.no|/shops|390|dialog:
+    present: false
+  markedsplass.brgen.no|/shops|768|page: c1585797ac87765c194885c1681a03c000534f55498f8244bbcc14b5ca047d6c
+  markedsplass.brgen.no|/shops|768|dialog:
+    present: false
+  markedsplass.brgen.no|/shops|1280|page: 39b2c6273b0a63f31496d41810014e8cc5ca8730f8ff47b8457260ad5c4da486
+  markedsplass.brgen.no|/shops|1280|dialog:
+    present: false
+  tv.brgen.no|/sounds|390|page: c2cd49a7ad2d44e3dcd34242eb2b2772e09b367890fc95fe13175cab92689819
+  tv.brgen.no|/sounds|390|dialog:
+    present: false
+  tv.brgen.no|/sounds|768|page: 34b1f736d533dc198b2d996ec4562068a8d0b9bba3f34773eece9ffa5893968e
+  tv.brgen.no|/sounds|768|dialog:
+    present: false
+  tv.brgen.no|/sounds|1280|page: 793dfdcb5347cf612084c6fd7d8023f6d3fe1d20d83670d9c97fc35e2f44250e
+  tv.brgen.no|/sounds|1280|dialog:
+    present: false
+  "|/stories|390|page": 84b581196aa37733674662d5c2ea8ad43adec71746aa080545a10f28294e825a
+  "|/stories|390|dialog":
+    present: false
+  "|/stories|768|page": caf68b825c57b1dd3d18311719524f3ec2442fbceeb35f26eaa394af5d192d57
+  "|/stories|768|dialog":
+    present: false
+  "|/stories|1280|page": bd6f404026c86a9471713885daae5e53b53380c4415682b70214aecfdea288bf
+  "|/stories|1280|dialog":
+    present: false
+  "|/stories/new|390|page": 9062ba1ad79822c5f45679bc101205d83c877a171547d9a7606122fd7515fe8c
+  "|/stories/new|390|dialog":
+    present: false
+  "|/stories/new|768|page": b569e4019a940499ad20a314cd1f87691b88fe05ce9689359dd45b16c73e3722
+  "|/stories/new|768|dialog":
+    present: false
+  "|/stories/new|1280|page": 8d41acb991fd76a91f86a892c9c6c09710f978eb2f0b65b708b7cd3c5bd38064
+  "|/stories/new|1280|dialog":
+    present: false
+  "|/terms|390|page": 228fcd69b55e8d8269730fa217c848d316b3c5c722ce93773d7a482b6bab1ebc
+  "|/terms|390|dialog":
+    present: false
+  "|/terms|768|page": 42733938d65c85c1bb04539c45c4485f7e87ce670d65ff265319b49f0182a981
+  "|/terms|768|dialog":
+    present: false
+  "|/terms|1280|page": 0413562a73044e9d5bd514e5745091027fe0793a8a5f080090e1dc9f926b6aef
+  "|/terms|1280|dialog":
+    present: false
+  "|/two_factor_setup|390|page": 91ca004a69e0b54410e9b91916b67f5186ec0d2d04f359bc341101230f5ff4dc
+  "|/two_factor_setup|390|dialog":
+    present: false
+  "|/two_factor_setup|768|page": 720f3a12f07b0709666ff8e467d1cf0ddc97a8589d893a1e0ff18cdf40fa6e66
+  "|/two_factor_setup|768|dialog":
+    present: false
+  "|/two_factor_setup|1280|page": 326caa4da6e1d6856bd0611558ca1c0817f5e97a055e4b70e8a587b25f4d9fcd
+  "|/two_factor_setup|1280|dialog":
+    present: false
+  "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
+  "|/up|390|dialog":
+    present: false
+  "|/up|768|page": 4ba6db461a2ee6c888c85028f84997a7ad71bfd397e4f634228d182f8f2858de
+  "|/up|768|dialog":
+    present: false
+  "|/up|1280|page": 62c2410ac72927753a7dd9a0530364a9e02f52826cafdb66a512eafbe3985c70
+  "|/up|1280|dialog":
+    present: false
+  "|/users/new|390|page": 461a1a785f4b837ea3fb4cda1c749c5ac290aa2d152ab45bb2fd209305f08c44
+  "|/users/new|390|dialog":
+    present: false
+  "|/users/new|768|page": f0bc957ca2e891c716ce0c4d497f7cf551e8eea450ec1a03c4a1d9a5596722d6
+  "|/users/new|768|dialog":
+    present: false
+  "|/users/new|1280|page": afedbb30f9f298961f1f60b5ddd765b86730bad30c41b7a47642fdbc21987922
+  "|/users/new|1280|dialog":
+    present: false
+  markedsplass.brgen.no|/wishlist|390|page: 8ad088a25a4892cf8758bc80e8ff0dc787c1a0157f2394b526f9194432edd5ec
+  markedsplass.brgen.no|/wishlist|390|dialog:
+    present: false
+  markedsplass.brgen.no|/wishlist|768|page: 334d20f9afe569434b0d3f3a6ef0703abee519bbd739554c4d9bf72020f6d66c
+  markedsplass.brgen.no|/wishlist|768|dialog:
+    present: false
+  markedsplass.brgen.no|/wishlist|1280|page: 463d813472ad2c254f91b61588e63b933d43c023637bc47be480c2f063ca4005
+  markedsplass.brgen.no|/wishlist|1280|dialog:
+    present: false

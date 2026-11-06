@@ -19,7 +19,12 @@
 # the same CDP session the geometry checks use: one browser for the run, the
 # subdomain hosts mapped to the apps' ports, Math.random seeded per document,
 # and the volatile selectors (clocks, prices, relative times) hidden so the
-# check compares pixels rather than content that changes between runs.
+# check compares pixels rather than content that changes between runs. Each
+# cell is captured settled - after the page's own transitions and animations
+# finish - because a mid-animation frame depends on machine speed, not the
+# route's answer: measured 2026-11-06, brgen's composer dialog re-rasters its
+# text once the open transition ends (0.167 of the pixels move), and a loaded
+# box captures on either side of that line, so neither frame alone is stable.
 #
 # The check walks the same manifest, re-captures the same cells against the
 # running app and names every row whose pixels differ beyond a small
@@ -42,11 +47,24 @@ module GoldenScreenshots
   GEOMETRY = File.join(ROOT, "MASTER", "checks", "data", "geometry_surfaces.yml")
   WIDTHS = [390, 768, 1280].freeze
   CANONICAL_HEIGHT = 900
-  # Byte-identical baselines are the goal; a few antialiasing-flavoured pixels
-  # between font-cache states are not a design change, so the check allows a
-  # small pixel ratio before it names a row.
-  TOLERANCE = 0.002
+  # Byte-identical baselines are the goal. Two floor measurements set the
+  # tolerance instead of a guess: Chrome's own repaint of one unchanged DOM
+  # drifts at 0.0018 of the pixels on stippled or gradient surfaces (this
+  # Mac's headless Chrome, measured 2026-11-06), and two independent loads
+  # sum to ~0.004 worst-case. The 0.002 the tolerance started with sat
+  # inside Chrome's own noise; a real regression of a small block of UI is
+  # an order of magnitude more pixels than 0.005 allows.
+  TOLERANCE = 0.005
   TIMEOUT = Integer(ENV.fetch("GOLDEN_SCREENSHOT_TIMEOUT", "40"))
+  # The settle wait's bounds: how long a cell may keep animating, how long its
+  # images may take, and how long the compositor gets after the last of them
+  # ends before the screenshot. Measured 2026-11-06: the composer's settled
+  # state is identical to a plain one-second wait, and brgen's dating /next
+  # lost its profile photos when a loaded box raced the settle - the photo is
+  # part of what the route answers.
+  SETTLE_DEADLINE = 1.2
+  IMAGE_DEADLINE = 3.0
+  SETTLE_GRACE = 0.25
 
   Target = Data.define(:app, :host, :path, :width, :port, :dialog) do
     def authority = host || "127.0.0.1:#{port}"
@@ -134,6 +152,7 @@ module GoldenScreenshots
     cdp.evaluate(mask_script)
     return nil if target.dialog && !open_dialog(cdp)
 
+    wait_settled(cdp)
     path = File.join(dir, target.app.to_s, target.slug)
     FileUtils.mkdir_p(File.dirname(path))
     cdp.screenshot(path)
@@ -164,6 +183,66 @@ module GoldenScreenshots
     selectors = YAML.safe_load_file(GEOMETRY)["volatile_selectors"]
     rule = selectors.join(", ") + " { visibility: hidden !important; }"
     "const s = document.createElement('style'); s.textContent = #{JSON.generate(rule)}; document.head.appendChild(s);"
+  end
+
+  # Count the running finite animations: transitions and finite keyframes.
+  # Infinite animations (spinners, pulses) never settle, so they do not block
+  # the wait - the deadline handles them - but a finite one left running means
+  # the page has not reached the state the next frame would lock in.
+  STILL_ANIMATING_JS = <<~JS
+    (() => document.getAnimations().filter((animation) =>
+      (animation.pending || animation.playState === "running") &&
+      animation.effect && isFinite(animation.effect.getComputedTiming().endTime)
+    ).length)()
+  JS
+
+  # Incomplete images in the viewport. Below-viewport lazy images never load
+  # until scrolled, and the screenshot is viewport-sized, so only visible ones
+  # are the answer's business. geometry_surfaces.yml may add settle_images:
+  # entries (selector + attribute) for elements whose settled state is a swap
+  # the complete/plain-src check cannot see, so a placeholder that reads as
+  # complete is not captured as the route's answer.
+  def still_loading_js
+    clauses = [<<~JS.strip]
+      Array.from(document.images).filter((image) =>
+        !image.complete && image.currentSrc &&
+        image.getBoundingClientRect().top < innerHeight &&
+        image.getBoundingClientRect().bottom > 0
+      ).length
+    JS
+    (YAML.safe_load_file(GEOMETRY)["settle_images"] || []).each do |entry|
+      selector = JSON.generate(entry["selector"])
+      attribute = JSON.generate(entry["attribute"])
+      clauses << <<~JS.strip
+        Array.from(document.querySelectorAll(#{selector})).filter((image) => {
+          const wanted = image.getAttribute(#{attribute});
+          const box = image.getBoundingClientRect();
+          return !image.complete ||
+            (!!wanted && wanted !== image.src && box.top < innerHeight && box.bottom > 0);
+        }).length
+      JS
+    end
+    "(() => #{clauses.join(' + ')})()"
+  end
+
+  # Poll until no finite animation is running and no image is mid-load or
+  # waiting on a declared swap, then give the compositor its grace before the
+  # screenshot. A settle probe that times out raises: the capture's own error
+  # path reports it, the same as any other cell failure.
+  def wait_settled(cdp)
+    animations_deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + SETTLE_DEADLINE
+    until cdp.evaluate(STILL_ANIMATING_JS).to_i.zero?
+      break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= animations_deadline
+
+      sleep(0.1)
+    end
+    images_deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + IMAGE_DEADLINE
+    until cdp.evaluate(still_loading_js).to_i.zero?
+      break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= images_deadline
+
+      sleep(0.1)
+    end
+    sleep(SETTLE_GRACE)
   end
 
   # Open the page's own openable surface for the dialog state. showDialog is

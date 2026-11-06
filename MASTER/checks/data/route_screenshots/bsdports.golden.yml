@@ -24,7 +24,7 @@ rows:
   "|/categories|1280|page": 88e2f555ea1703c206dc486cca437f0501375ae501585e84f5a8062bad2f406c
   "|/categories|1280|dialog":
     present: false
-  "|/changelog|390|page": 60f4432e333c173ef4970c1f2efe9a4f77b9d10327abab81520eb5bc0b16ca2f
+  "|/changelog|390|page": 92ac96226df088524112f47349c774657f39a9b4ba79b563adb4fc9dd2ded594
   "|/changelog|390|dialog":
     present: false
   "|/changelog|768|page": c3f224038cf3fd25d19d1244122f14d8d14d4a9f2fc9c939566c2f353dcebe44
@@ -78,7 +78,7 @@ rows:
   "|/ports|1280|page": c67720f3964aaa107b289fe01741e2b21b6f51dcc55b2ac1600c93276bae5153
   "|/ports|1280|dialog":
     present: false
-  "|/privacy|390|page": 488d1d51dc8d339e96d0e96b0eb0c4c56f64fd105587f09cfcd1fe6ce8058f69
+  "|/privacy|390|page": 768b10e2dbc4632d739c8f5e668ae2fbdbf0e41f183e94550e3c833fbd1b41af
   "|/privacy|390|dialog":
     present: false
   "|/privacy|768|page": '028a2021076251852745745d6e79d0d1de6a6a6666ee9080d121ab92e74d0d23'

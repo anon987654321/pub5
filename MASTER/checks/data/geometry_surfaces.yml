@@ -196,6 +196,23 @@ volatile_selectors:
   - "[title^=\"guest_\"]"
   - "input[value^=\"guest_\"]"
   - ".auth-form-qr"
+  # The radio vertical's canvas tunnel visualiser paints through its own
+  # requestAnimationFrame loop, which no CSS freeze stops: measured
+  # 2026-11-06, two same-session captures of /playlists differed across the
+  # whole page (0.17 of the pixels) on the nearly invisible spinning texture.
+  - "#radio-canvas"
+
+# Images the golden-screenshot settle step waits for as part of loading: an img
+# matching the selector is settled when it is complete and its src equals the
+# declared attribute's value. brgen's lazy-image controller starts every photo
+# at a blurhash placeholder, which reads as complete the moment it decodes, and
+# swaps the real URL in from data-lazy-image-src-value when its observer fires:
+# a capture that checks img.complete alone shows placeholder instead of photo
+# on a loaded box (measured 2026-11-06, dating /next 768 differed 0.4057 between
+# a record and check walk). Only viewport-visible unsettled images are counted.
+settle_images:
+  - selector: "[data-lazy-image-src-value]"
+    attribute: "data-lazy-image-src-value"
 
 # State matrix (BackstopJS's scenario list, read by Deploy::StateMatrix): each
 # component is captured in its declared states and at each width, one cropped
