@@ -1,0 +1,202 @@
+// Menu: hero, sticky category chips, item cards. The item sheet lives in
+// _item_sheet.scss.
+// Landing hero follows master reading_patterns: z-pattern, primary area
+// top-left — left-aligned, not centered.
+.hero {
+  border: 0;
+  border-radius: var(--radius);
+  padding: var(--space-24) var(--space-20);
+}
+
+.hero-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 0 var(--space-8);
+}
+
+.hero-greeting {
+  color: var(--mint-700);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.hero-title {
+  font-size: var(--text-display);
+}
+
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--ink-soft);
+  font-size: var(--text-meta);
+  margin-bottom: var(--space-2);
+}
+
+// Address and hours each stay on one line.
+.hero-meta span {
+  white-space: nowrap;
+}
+
+.hero-rating {
+  display: inline-flex;
+  color: var(--gold-deep);
+}
+
+// "Yalla igjen" reorder card.
+.reorder-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.reorder-title {
+  color: var(--gold-ink);
+  font-size: var(--text-title);
+  margin: 0;
+}
+
+.reorder-copy p {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-meta);
+}
+
+// Sticky anchor chips under the brand bar (its content height; the 1px
+// hairline tucks beneath).
+.category-chips {
+  position: sticky;
+  top: var(--brand-bar-height);
+  z-index: var(--z-category-chips);
+  display: flex;
+  gap: var(--space-8);
+  overflow-x: auto;
+  margin: var(--space-12) calc(-1 * var(--space-16)) 0;
+  padding: var(--space-12) var(--space-16);
+  background: var(--paper);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  // The fade says "more this way" where the hidden scrollbar cannot.
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+
+.category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+// Cards in a section separate by grid gap, not margins (space_not_lines).
+.menu-section {
+  scroll-margin-top: 130px;
+  display: grid;
+  gap: var(--space-12);
+}
+
+// Item card — emoji tile, facts, price, quick-add.
+.item-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-16);
+}
+
+.item-card-hit {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+  color: inherit;
+}
+
+.item-emoji {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-small);
+  background: var(--mint-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-display);
+}
+
+.item-body {
+  min-width: 0;
+}
+
+.item-name {
+  display: block;
+  font-weight: 700;
+}
+
+.item-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.item-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.item-price {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// Heat dots — 1 mint (Mild), 2 gold (Middels), 3 pom (Sterk!).
+.heat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.heat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.heat-1 .heat-dot.on {
+  background: var(--mint-500);
+}
+
+.heat-2 .heat-dot.on {
+  background: var(--gold);
+}
+
+.heat-3 .heat-dot.on {
+  background: var(--pom);
+}
+
+.heat-label {
+  margin-inline-start: var(--space-4);
+  font-size: var(--text-extra-small);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+// Food photos — same footprint as the emoji tile. Flat rules only (no
+// shadow/blur/glow).
+.item-photo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-small);
+  object-fit: cover;
+  background: var(--mint-100);
+}

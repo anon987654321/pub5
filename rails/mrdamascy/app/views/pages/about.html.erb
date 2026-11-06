@@ -1,0 +1,63 @@
+<% content_for :title, t("about.title") %>
+
+<section class="hero">
+  <%= image_tag "/icon.svg", alt: "", class: "hero-mark" %>
+  <h1 class="hero-title"><%= t("about.title") %></h1>
+  <% if current_kitchen %>
+    <p class="hero-meta">
+      <%= tag.span current_kitchen.address %>
+      <%= tag.span current_kitchen.localized_opening_hours %>
+    </p>
+  <% end %>
+</section>
+
+<section class="card">
+  <h2 class="section-title"><%= t("about.story_title") %></h2>
+  <%= tag.p t("about.story_body") %>
+</section>
+
+<section class="card">
+  <h2 class="section-title"><%= t("about.fairness_title") %></h2>
+  <%= tag.p t("about.fairness_body") %>
+</section>
+
+<section class="card">
+  <h2 class="section-title"><%= t("about.worldtour_title") %></h2>
+  <%= tag.p t("about.worldtour_intro") %>
+  <ul class="about-credits">
+    <li><%= t("about.credit_damaskus") %></li>
+    <li><%= t("about.credit_beirut") %></li>
+    <li><%= t("about.credit_berlin") %></li>
+    <li><%= t("about.credit_adana") %></li>
+    <li><%= t("about.credit_bursa") %></li>
+    <li><%= t("about.credit_gaziantep") %></li>
+    <li><%= t("about.credit_istanbul") %></li>
+    <li><%= t("about.credit_tel_aviv") %></li>
+    <li><%= t("about.credit_dubai") %></li>
+    <li><%= t("about.credit_bergen") %></li>
+    <li><%= t("about.credit_stockholm") %></li>
+    <li><%= t("about.credit_sydney") %></li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2 class="section-title"><%= t("about.vipps_title") %></h2>
+  <%= tag.p t("about.vipps_body") %>
+</section>
+
+<%# Each language is named in itself, so either reader finds theirs. %>
+<%= tag.nav class: "card language-switch", aria: { label: t("about.language") } do %>
+  <%= tag.h2 t("about.language"), class: "section-title" %>
+  <%= link_to "Norsk", about_path(locale: "nb"), class: "chip", lang: "nb",
+        aria: { current: ("true" if I18n.locale == :nb) } %>
+  <%= link_to "English", about_path(locale: "en"), class: "chip", lang: "en",
+        aria: { current: ("true" if I18n.locale == :en) } %>
+<% end %>
+
+<%= tag.nav class: "page-actions", aria: { label: t("about.title") } do %>
+  <% if current_user %>
+    <%= link_to t("about.orders_link"), orders_path, class: "button" %>
+  <% else %>
+    <%= link_to t("auth.login"), new_session_path, class: "button" %>
+  <% end %>
+<% end %>

@@ -1,0 +1,247 @@
+# amber
+
+**A wardrobe that knows what is in it, what you actually wear, and what it is only guessing
+at.** amber is Ragnhild's wardrobe app. It holds garments and outfits, runs the KonMari
+declutter loop, keeps a style timeline of how your taste has moved, and makes recommendations
+that can say where they came from. It is a Rails 8.2.0.alpha app on SQLite behind Falcon, with
+Hotwire, Active Storage, Solid Queue and relayd, and it listens on port 61352.
+
+## Character
+
+Amber is a personal wardrobe intelligence, not a fashion shop. Its territory is warmth, intimacy
+and taste with evidence: the wardrobe is the source of truth, a recommendation explains itself,
+and the product helps its owner wear and understand what already hangs in the closet before it
+encourages another purchase. The design values come from master/data/tokens.yml through
+Master.tokens, and the feature matrix is rails/apps.yml under amber.
+
+The app defaults to Norwegian. The default locale is nb, with en available, and a request picks
+its language from a ?locale= parameter, then the session, then Accept-Language, then nb. A
+switcher in the footer sets it. Chrome, empty states and flash messages all go through I18n, and
+the sentences the shared engine owns, such as not_authorized and rate_limited, come from
+shared.flash. Tests assert through keys and never through English literals.
+
+## Product boundary
+
+Amber is a private wardrobe companion, not a fashion storefront. It helps its owner
+understand and wear what she already owns, then supports deliberate decluttering and
+selective discovery. Its shipped feature inventory lives in `rails/apps.yml`;
+aspirational work lives in `rails/apps.horizon.yml`. Do not promote planned features
+to promises: visual similarity search, garment segmentation, virtual fitting and live
+video remain unshipped. OpenRouter powers selected analysis only when configured;
+otherwise Amber uses explicit rules and heuristics. A garment fingerprint is a local
+CRC32-64 checksum, not semantic image search, and a scheduled style session is not video.
+
+## The wardrobe
+
+An Item is a garment, with its colour, size, material, brand, price, category and photographs,
+and it computes its own cost per wear. An Outfit joins items in order. Wear logs, planned
+outfits and style preferences record how the wardrobe is used and what the owner says she likes.
+A WardrobeItem is not a duplicate of Item: it belongs to one garment and one user and carries
+only the condition of that garment in that wardrobe. Analytics counts in SQL, so a large
+wardrobe is never loaded whole, and four figures draw the picture without a chart library:
+category mix, wear distribution, cost per wear and what sits idle.
+
+Photographs go through WardrobeMediaJob, which makes the variants, gives a portrait one polish
+pass and extracts the dominant colour. It does not cut the garment out of its background, and no
+segmentation or matting exists in the tree. Upload takes a drag and drop onto the item form.
+
+## The declutter loop
+
+The KonMari loop is complete. A garment gets a joy score, and DeclutterScore folds joy, utility
+and fit into one recommendation. A challenge binds a user, an item and a due date, and it ends
+completed, skipped or expired. A release candidate gets a last-chance outfit, a final way to
+wear it before it goes. The decision routes to a destination and a donation bucket.
+DeclutterHygieneJob runs every morning at six, expires overdue challenges and nudges anything
+that has sat in the declutter box for thirty days.
+
+## What the intelligence is
+
+The intelligence is heuristic and says so. When OPENROUTER_API_KEY is set, the joy analysis, the
+outfit suggestions and the capsule path call google/gemini-2.0-flash-001 through OpenRouter.
+When it is not set, which is the usual case on the production box, deterministic rules answer
+and the interface states which one did.
+
+TasteRanker blends declared style preferences with joy, wear count, recency and life phase at
+fixed weights, so it is a formula and not a learned model. StyleAssistant picks one look a day,
+deterministic for each user and date, aware of the weather, and it stores nothing until the
+owner saves the look. The weather is open-meteo for Bergen alone, cached for fifteen minutes,
+with a failed answer cached too and the connection bounded at two seconds to open and three to
+read, because it sits in front of the dashboard.
+
+The scores are targets and not judgements. WardrobeGap compares the closet with a fixed list of
+essentials per category. The sustainability score scales and caps wear count and adds a bonus
+for joy, and it is not a lifecycle assessment. ClosetOrganization offers care, storage, zoning
+and restraint tips, each naming the principle behind it, and WardrobeAnalytics adds its own
+nudges. These are rules and the interface labels them as rules.
+
+Two things that sound like AI are not. A garment fingerprint is a local CRC checksum over the
+image bytes, which finds a repeated upload and never a lookalike, and EmbedGarmentJob survives
+only as an alias of FingerprintGarmentJob so that queued rows still find a class. There are no
+embeddings anywhere, and the vector column is JSON because pgvector would require Postgres.
+DuplicateDetector follows from that: it groups items on an exact key made from category, colour,
+material and brand, so two similar shirts that differ in any of those are not duplicates to it.
+Style sessions carry a calendar date and a status and are not video. Shop the Look ranks the
+affiliate links the owner added herself, and its remote half needs TRADEDOUBLER_TOKEN, which
+lives on brgen, and says so when that half is dark. amber imports no product feed.
+
+## The social side
+
+amber shares the social stack with brgen. It has a feed of posts with comments, reactions,
+follows and mutual connections, messages, and scheduled style sessions. Posts that carry a
+YouTube, SoundCloud, Vimeo or Spotify link show a player facade, and the lookup waits for the
+hourly queue drain, so the plain link shows until then. A creator profile can publish a garment
+for others to remix, under the consent rules in the owner's privacy settings, and
+WardrobeVisibilityPolicy answers every question of who may view, remix or analyse what. master
+can be invited into a message thread. A sign-in from brgen never reaches amber, because the
+session cookie is scoped to the registrable domain, and the one door between them is the
+master-signed token at /sso/from_master.
+
+## Guests
+
+User carries a guest column, so an anonymous visitor gets a soft Current.user and can use the
+product without signing up. For that reason allow_unauthenticated_access is a no-op in amber,
+and require_real_user is the identity check that means anything. A demo wardrobe at /demo is
+seeded for guests, and Shared::PruneGuestUsersJob prunes the guest rows every night. Guests can
+post and message without first creating an account.
+
+## Identity and account continuity
+
+Amber and Brgen use the same registration fields, email-verification policy and shared OAuth
+callback. Email/password, Google, Facebook, Vipps and BankID are available when the matching
+provider credentials and configuration are present. Email confirmation is separate from explicit
+newsletter marketing consent. A high-assurance BankID subject can authenticate without inventing
+mailbox proof from a synthetic email address.
+
+When a visitor registers or signs in while a persisted guest owns activity, the shared merger
+moves the guest's post/comment ownership and applicable conversation or message history inside
+one transaction, records an account-merge audit row, destroys guest sessions, and anonymises the
+source guest row as a non-authenticating audit referent before the registered session is created.
+An old guest cookie is never promoted into a full account session.
+If the merge cannot be committed and audited, the visitor is told that the transfer is blocked
+and the guest session remains available for retry; authentication must not silently strand the
+activity. The federated-identity and account-merge tables are app-owned migrations in
+`db/migrate`, so run Amber's migrations and dump the schema before enabling this path.
+
+## Account deletion
+
+Account deletion sets a 30-day grace period and revokes the active login immediately. Amber's
+`UserPurgeJob` is scheduled daily at 03:50. It removes private wardrobe, profile, connection,
+identity, session, inbox and account-linked outbound-attribution data; deletes click records tied to private wardrobe objects, purges attachments through model callbacks, and anonymises the
+user row. Public posts and comments remain attached to the anonymised row to preserve discussion,
+but references to removed wardrobe items/outfits and deleted inbox messages are removed from posts, recommendations,
+declutter history, reactions, notifications, votes, outbound-click attribution and moderation
+cases so another user's row cannot retain a pointer to erased private data. If a required erasure table is missing or an account cannot be purged, the
+transaction rolls back for that account, its deletion marker remains due for retry, and the job
+reports the failure rather than marking erasure complete.
+
+## Architecture
+
+Amber owns wardrobe-specific records and services. The shared engine supplies common
+identity, authentication, tenancy, media processing and social integration.
+
+- **Identity and privacy:** `User`, `Profile`, `PrivacySetting`,
+  `IdentityVerification`, `ConsentEvent` and `CreatorProfile` govern account
+  identity, wardrobe visibility, analysis consent and creator remix consent.
+- **Wardrobe:** `Item` is the garment. `Outfit`, `OutfitItem`,
+  `PlannedOutfit`, `WearLog` and `StylePreference` describe combinations and use.
+  `WardrobeItem` joins one garment to one user and stores that owner's condition;
+  it is not a second garment record.
+- **Intelligence and media:** `TasteRanker`, `StyleAssistant`,
+  `OutfitGeneration`, `WardrobeAnalytics` and `ClosetOrganization` use
+  declared preferences, wardrobe history and bounded heuristics. The legacy
+  `GarmentEmbedding` record is not an active embedding or vector-search pipeline.
+  `FingerprintGarmentJob` performs exact local deduplication; no garment matting
+  or segmentation pipeline is shipped.
+- **Commerce and travel:** `AffiliateLink` stores owner-selected links;
+  `PackingList` records trip wardrobes. Marketplace lookups use the bounded
+  BRGEN integration, not an Amber-owned product catalogue.
+- **Social and declutter:** posts, comments, reactions, follows, connections,
+  messages and creator publishing use the shared social graph. Challenges,
+  outcomes, reviews and the hygiene job implement the KonMari decision loop.
+
+The app's routes and source define the complete model inventory. `rails/apps.yml`
+remains the authority for shipped feature status; this summary explains ownership.
+
+## Service layer
+
+Where Amber's product intelligence lives, and the layer no document has covered.
+All under `app/services/`.
+
+| Service | Role |
+|---|---|
+| `CapsuleBuilder` | Builds a capsule wardrobe and explains why each item earned its place |
+| `DuplicateDetector` | Groups near-identical garments, ranks them, names a keeper and release candidates |
+| `WardrobeGap` | Finds missing categories and connectors; writes `Recommendation` rows |
+| `OutfitCompatibility` | Scores a combination on category balance, color balance, occasion fit |
+| `OutfitGeneration` | Generates outfits from scoped items, layer-aware, biased toward least-worn |
+| `StyleEvolution` | Wear timeline grouped into life phases |
+| `TasteRanker` | Ranks garments on declared preference plus joy, wear, recency and life phase; `explain` names the reasons |
+| `StyleAssistant` | One outfit for today — deterministic per user and date, weather-aware, rests recent wears, persists nothing |
+| `ClosetOrganization` | Care, storage, zoning and restraint tips, each naming its principle and the wardrobe evidence behind it |
+| `WardrobeAnalytics` | Summary, average cost-per-wear, tips. Counts in SQL — it never loads the wardrobe |
+| `WardrobeCharts` | The four analytics figures: category mix, wear distribution, cost-per-wear, idle |
+| `WardrobeAi` | Joy analysis and outfit suggestion; reports `available?` and degrades when unconfigured |
+| `WardrobeVisibilityPolicy` | Answers view / remix / run-AI-analysis against layer 1 consent |
+| `GarmentTaxonomy` | Category normalization, weather fit, formality score, semantic tags |
+| `ShopTheLook` | Local affiliate links plus remote suggestions for an item |
+| `Weather` | Today's conditions, decoded for planning |
+| `DeclutterScore` | Joy, utility and fit into one score and a recommendation |
+| `DeclutterActionRouter` | Decision to destination, donation bucket, and user-facing copy |
+| `DeclutterDashboard` | Summary, top candidates, decision matrix |
+| `LastChanceOutfit` | Final outfit suggestions for a garment about to leave |
+
+Controllers are discoverable from `config/routes.rb`; service intent is not,
+which is why services are enumerated here and controllers are not.
+
+### Later host integrations
+
+`Vote` stores user-scoped polymorphic scores. `MasterMessageReplyJob` handles
+Amber messages addressed to master through `Shared::MasterMessenger`.
+`BrgenCommerce` and `CommerceFit` provide the bounded BRGEN catalogue integration
+listed in the service table above.
+
+## Running it
+
+amber.sh sources the shared deploy contract and copies the tracked tree at rails/amber to
+/home/amber/app on vm23, with the pub4-shared engine copied beside it at /home/amber/shared. The
+service reads one env file, /etc/amber.env, which needs SECRET_KEY_BASE. Solid Queue clears its
+finished jobs hourly. Falcon is started with a long health-check timeout, because on one vCPU
+beside master and brgen the app does not boot inside Falcon's default thirty seconds, and a
+worker killed at that mark reads as a broken app.
+
+Every deploy of any app sheds amber and bsdports, and relayd keeps answering TLS while amber is
+down, so the failure shows as curl 000 and never as a 5xx. Check the port and not the site.
+ALLOW_AMBER_DOWN=1 waives the check in deploy-smoke.sh where being down is the policy. The
+domain is amberapp.art; apps.yml carries the registration expiry and renewal flag, so read it
+there rather than here before pointing anyone at the name.
+
+The Litestream config is inert by decision, because OpenBSD has no binary for it. The backup is
+a nightly pull from the operator's Mac with openbsd/bin/dr-pull, which checks each database
+before it keeps the copy. When a Solid Queue backlog builds, openbsd/bin/amber_queue_sweep.sh
+clears it with sqlite3, without booting Rails.
+
+## Bringing it up
+
+```zsh
+master/bin/operator triangle up amber
+curl -fsS http://127.0.0.1:61352/up
+doas zsh rails/amber/amber.sh
+```
+
+## Agent notes (ported from pub4 app contract)
+
+# amber — agent notes
+
+- **Domain:** amberapp.art. **Port:** 61352. **Deploy root:** `rails/amber`.
+- **Shared engine:** `rails/shared`.
+- **Inventory:** `apps.yml` (active); wardrobe horizon items in
+  `apps.horizon.yml` (ignore).
+- **Operations:** `rails/amber/README.md` (deployment, queue and backup contract).
+- **Golden checks:** `openbsd/bin/check-rails --profile=contributor`.
+- **VPS:** `master/bin/operator vps deploy amber --remote`.
+- **Honesty:** photo polish ≠ ML segment/matting; fingerprint ≠ embedding; tips
+  = rules; live_streams = style sessions (no video).
+- **AI:** `OPENROUTER_API_KEY` for LLM; otherwise heuristics. studio photos only
+  if `AMBER_ENABLE_STUDIO_PHOTO=1`.
+- **Hygiene:** `DeclutterHygieneJob` daily (challenges + 30d box); see
+  `config/recurring.yml`.
