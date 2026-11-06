@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# The OPENBSD tree's one command: render the serving configs from the
+# registry, or check that the render reproduces the proven bytes.
+#
+#   bin/openbsd check    exit 1 with named diffs, or a one-line pass
+#   bin/openbsd render   print relayd.conf and pf.conf on stdout
+
+require_relative "../lib/openbsd/render"
+
+mode = ARGV.shift
+usage = "usage: bin/openbsd render|check"
+abort usage unless %w[render check].include?(mode)
+
+if mode == "render"
+  puts OpenBsdRender.relayd
+  puts
+  puts OpenBsdRender.pf
+else
+  diffs = OpenBsdRender.check
+  if diffs.empty?
+    puts "openbsd: generated configs match the proven bytes"
+  else
+    diffs.each { |diff| puts diff }
+    puts "openbsd: #{diffs.size} diff(s) against the proven configs"
+    exit 1
+  end
+end

@@ -1,0 +1,83 @@
+type: object
+required: [relayd, pf]
+additional: false
+properties:
+  schema: { type: integer }
+  concern: { type: string }
+  note: { type: string }
+  relayd:
+    type: object
+    required: [prelude, tables, protocol, relay]
+    additional: false
+    properties:
+      prelude: { type: array, items: { type: string } }
+      tables:
+        type: array
+        min_items: 1
+        items: { type: string, pattern: '\A[a-z_][a-z0-9_]*\z' }
+      protocol:
+        type: object
+        required: [header, entries]
+        additional: false
+        properties:
+          header: { type: string }
+          entries:
+            type: array
+            min_items: 1
+            items:
+              type: object
+              required: [kind]
+              additional: false
+              properties:
+                kind: { enum: [blank, keypair, match, directive] }
+                line: { type: string }
+                notes: { type: array, items: { type: string } }
+      relay:
+        type: object
+        required: [header, notes, inner_notes, listen, protocol, forwards]
+        additional: false
+        properties:
+          header: { type: string }
+          notes: { type: array, items: { type: string } }
+          inner_notes: { type: array, items: { type: string } }
+          listen: { type: string }
+          protocol: { type: string }
+          forwards:
+            type: array
+            min_items: 1
+            items:
+              type: object
+              required: [app, port, path, code]
+              additional: false
+              properties:
+                app: { type: string, pattern: '\A[a-z_][a-z0-9_]*\z' }
+                port: { type: integer }
+                path: { type: string }
+                code: { type: integer }
+  pf:
+    type: object
+    required: [vars, rules]
+    additional: false
+    properties:
+      vars:
+        type: object
+        additional:
+          type: object
+          required: [value, notes, raw]
+          additional: false
+          properties:
+            value: { type: string }
+            notes: { type: array, items: { type: string } }
+            raw: { type: array, min_items: 1, items: { type: string } }
+      rules:
+        type: array
+        min_items: 1
+        items:
+          type: object
+          required: [kind]
+          additional: false
+          properties:
+            kind: { enum: [blank, table, rule] }
+            line: { type: string }
+            notes: { type: array, items: { type: string } }
+            raw: { type: array, items: { type: string } }
