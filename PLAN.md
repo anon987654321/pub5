@@ -296,8 +296,9 @@ file says where the port is and what proves it moved.
   artifact lands from a Mac run.
 - Phase 3 - RAILS (M3, then M4, then M5's amber and mrdamascy): rails/
   holds the shared engine plus each app; per-app SCSS overrides become
-  token-only; build order bsdports, then brgen and its engines, then amber
-  and mrdamascy. Gate per app: its recorded route contracts, signed-in
+  token-only; build order decided 2026-11-06 - brgen and its engines
+  first, then amber, then bsdports, then mrdamascy. Gate per app: its
+  recorded route contracts, signed-in
   contracts and golden screenshots pass against the ported app before it
   goes live (the app-by-app gate inside the decided big-bang data
   cutover, section 14.2).
@@ -314,3 +315,18 @@ Cross-cutting, owned by no single phase: registry/ (one file per concern:
 apps, laws, models, knobs, tokens, commands, paths, writers, backlog) lands
 alongside M1; the M0 database restore and parity drill runs before any
 work that touches data, as section 14.2 makes mandatory.
+
+## 16. Tree layouts, chosen (2026-11-06)
+
+TREE_LAYOUTS.md holds the considered set - 18 layouts across the five
+trees, pros and cons grounded in pub4 at e42dc7006c. The per-tree choices
+it lands on: MASTER is a kernel-plus-plugins face (`core/` under 5k lines,
+plugins/ for fix/review/io/web) with law/, checks/, tools/ and data/
+around it; RAILS is the shared engine plus each app with brgen's five
+engines under `brgen/engines/`, built in the decided order brgen first,
+then amber, bsdports, mrdamascy; OPENBSD is registry-generated configs
+over verbatim proven fixtures; STUDIO is one `bin/studio` over engines
+that move byte for byte where proven; BPLANS never becomes a tree - text
+in the plan now, backlog.yml rows at Phase 5. registry/ sits at pub5's
+top level, not under master/. Where this section and phase rows above
+differ in build order, the decided order (brgen first, 2026-11-06) wins.
