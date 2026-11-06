@@ -1,49 +1,51 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../core/core"
-require_relative "../../openbsd/lib/config_renderer"
+require_relative "../../lib/openbsd/render"
 
 class OpenBSDConfigRendererTest < Minitest::Test
-  ROOT = File.expand_path("../..", __dir__)
-
   def setup
-    @renderer = OpenBSD::ConfigRenderer.new(root: ROOT)
+    @rendered = {
+      "relayd.conf" => OpenBsdRender.relayd,
+      "pf.conf" => OpenBsdRender.pf
+    }
   end
 
-  def test_relayd_render_matches_proven_fixture
-    assert_equal File.binread(File.join(ROOT, "openbsd/proven/relayd.conf")), @renderer.render.fetch("relayd.conf")
-  end
-
-  def test_pf_render_matches_proven_fixture
-    assert_equal File.binread(File.join(ROOT, "openbsd/proven/pf.conf")), @renderer.render.fetch("pf.conf")
-  end
-
-  def test_every_rc_script_matches_proven_fixture
-    files = @renderer.render
-    scripts = files.keys.grep(/\Arc\.d\//)
-    refute_empty scripts
-    scripts.each do |relative|
-      assert_equal File.binread(File.join(ROOT, "openbsd/proven", relative)), files.fetch(relative), relative
+  def test_relayd_render_matches_proven_and_generated_files
+    [OpenBsdRender::PROVEN, OpenBsdRender::GENERATED].each do |directory|
+      assert_equal File.binread(File.join(directory, "relayd.conf")), @rendered.fetch("relayd.conf")
     end
   end
 
-  def test_generated_mirror_and_approved_fixtures_match_registry
-    assert @renderer.check!
+  def test_pf_render_matches_proven_and_generated_files
+    [OpenBsdRender::PROVEN, OpenBsdRender::GENERATED].each do |directory|
+      assert_equal File.binread(File.join(directory, "pf.conf")), @rendered.fetch("pf.conf")
+    end
   end
 
-  def test_relayd_serving_facts_match_deployed_apps_only
-    @renderer.render
-    apps = Core::Registry.load(:apps).fetch("apps")
-    relay = Core::Registry.load(:openbsd).fetch("relayd")
-    expected = apps.each_with_object({}) do |(name, app), result|
-      result[name.to_s] = Integer(app.fetch("port")) if app.key?("port")
+  def test_every_rc_script_matches_both_file_sets
+    OpenBsdRender.rc.each do |name, expected|
+      [OpenBsdRender::PROVEN, OpenBsdRender::GENERATED].each do |directory|
+        assert_equal File.binread(File.join(directory, "rc.d", name)), expected, "#{directory}/rc.d/#{name}"
+      end
     end
-    actual = relay.fetch("relay").fetch("forwards").to_h do |row|
-      [row.fetch("app").to_s, Integer(row.fetch("port"))]
-    end
+  end
 
-    assert_equal expected, actual
-    assert_equal expected.keys.sort, relay.fetch("tables").map(&:to_s).sort
+  def test_rc_d_file_sets_have_no_missing_or_extra_scripts
+    [OpenBsdRender::PROVEN, OpenBsdRender::GENERATED].each do |directory|
+      actual = Dir.children(File.join(directory, "rc.d")).sort
+      assert_equal OpenBsdRender.rc.keys.sort, actual
+    end
+  end
+
+  def test_registry_serving_facts_and_rc_skeletons_are_consistent
+    configured = OpenBsdRender.configured_apps
+    relayd = @rendered.fetch("relayd.conf")
+    assert_empty OpenBsdRender.consistency(configured, relayd)
+    assert_empty OpenBsdRender.rc_consistency(OpenBsdRender.rc_scripts, configured)
+  end
+
+  def test_one_gate_checks_proven_generated_and_serving_facts
+    assert_empty OpenBsdRender.check
   end
 end
