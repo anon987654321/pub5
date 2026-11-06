@@ -71,9 +71,9 @@ declared adapters). Path-scoped commits to `main`; never force-push.
 | root | 19 | 8 | ~8 | single AGENTS.md, no competing pointers |
 | master/ | 2,595 | 1270 | 700–900 | web/, plugins/, voice/mobile/device/music/cognition/design libs and the old lib/review tree retired; checks incl. golden layout snapshots and the full flat law surface kept as the oracle |
 | rails/ | 3,722 | 3616 | 1,800–2,200 | engines moved under brgen/engines/; per-app tests + migrations kept (behaviour oracle); further reduction is Phase-3 contract work per app |
-| openbsd/ | 287 | 158 | 100–150 | etc/usr/var/dev/home host mirrors are generated at deploy time, never committed |
+| openbsd/ | 287 | 148 | 100–150 | etc/usr/var/dev/home host mirrors are generated at deploy time, never committed |
 | studio/ | 74 | 74 | 40–50 | one CLI; archaeology notes retired |
-| **total** | 6,735 | **5126** | ~2,700–3,300 | |
+| **total** | 6,735 | **5116** | ~2,700–3,300 | |
 
 The landed total sits above the plan's estimate because the plan's per-tree
 targets assumed cuts that only per-app Phase-0 contract work can prove safe
