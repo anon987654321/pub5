@@ -32,6 +32,24 @@ preserved_sources:
   - path: openbsd/production/rc.conf.local
     source_path: OPENBSD/etc/rc.conf.local
     source_blob: 03b8dc164520a516ddc86af96b91600743f759f5
-  - path: registry/commands.yml
-    source_path: OPENBSD/data/operator.yml
-    source_blob: 0c6e4013bab29fda4c8d94e880f4c195c32e949c
+  - path: openbsd/production/litestream.yml
+    source_path: OPENBSD/etc/litestream.yml
+    source_blob: 7bbd3176c941f2aaaebdb3b73dcfa8f298812448
+  - path: openbsd/production/restore_litestream.sh
+    source_path: OPENBSD/bin/restore_litestream.sh
+    source_blob: 626078bc3585c43b1c6a6cce3e65aa4ac3d93326
+  - path: openbsd/production/dr-pull
+    source_path: OPENBSD/bin/dr-pull
+    source_blob: b25c86ddee375c012d0024a90a34e6cea9fcf51a
+  - path: openbsd/production/vm_resource.yml
+    source_path: OPENBSD/vm_resource.yml
+    source_blob: e370d80132204d27c00b23fa8d6a215b36a6a66d
+  - path: openbsd/production/resource_guard.sh
+    source_path: OPENBSD/usr/local/bin/resource_guard.sh
+    source_blob: 91608256bd4373ea7083c8378e0d6cac20e48a8a
+  - path: openbsd/production/uptime-check.sh
+    source_path: OPENBSD/usr/local/bin/uptime-check.sh
+    source_blob: ad848565d67804628d86ea27018c12bc353062d8
+  - path: openbsd/production/renew-certs.sh
+    source_path: OPENBSD/usr/local/bin/renew-certs.sh
+    source_blob: 28efe4fcf20b2a453f7db407a03fbcf59433d8bf
