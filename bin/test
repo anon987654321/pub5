@@ -1,0 +1,63 @@
+#!/bin/sh
+# The one test command for pub5.
+#
+#   bin/test              # all four trees, in port order
+#   bin/test rails        # one tree
+#
+# Each tree keeps its own runner because each has its own toolchain contract;
+# this dispatches, reports one line per tree, and fails with the first tree
+# that did not pass. Exit status is the number of failed trees, capped at 4.
+
+set -u
+
+root=$(cd -- "$(dirname -- "$0")/.." && pwd)
+
+run_master() {
+    cd "$root/MASTER" || return 1
+    bundle exec rake test
+}
+
+run_rails() {
+    ruby "$root/RAILS/test/run_all.rb"
+}
+
+run_openbsd() {
+    ruby "$root/OPENBSD/test/run_all.rb"
+}
+
+run_studio() {
+    cd "$root/STUDIO" || return 1
+    bundle exec rake check test
+}
+
+usage() {
+    echo "usage: bin/test [master|rails|openbsd|studio]" >&2
+}
+
+case "${1:-all}" in
+    master)   trees="master" ;;
+    rails)    trees="rails" ;;
+    openbsd)  trees="openbsd" ;;
+    studio)   trees="studio" ;;
+    all)      trees="master rails openbsd studio" ;;
+    -h|--help) usage; exit 0 ;;
+    *)        usage; exit 64 ;;
+esac
+
+failed=0
+for tree in $trees; do
+    printf 'test0: %s starting\n' "$tree"
+    if "run_$tree"; then
+        printf 'test0: %s PASS\n' "$tree"
+    else
+        status=$?
+        printf 'test0: %s FAIL (exit %s)\n' "$tree" "$status"
+        failed=$((failed + 1))
+    fi
+done
+
+if [ "$failed" -gt 0 ]; then
+    printf 'test0: %s tree(s) failed\n' "$failed"
+    exit "$failed"
+fi
+printf 'test0: all requested trees passed\n'
