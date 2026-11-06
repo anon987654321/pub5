@@ -1,0 +1,20 @@
+schema: 1
+ruby: 3.4.9
+rails: 8.1.4.1
+rails_source: rubygems
+shared_engine:
+  gem: pub5-shared
+  path: rails/shared
+  status: source_preserved_app_wiring_pending
+  shared_post_contract:
+    partial: rails/shared/app/views/shared/_post_card.html.erb
+    vote_rail: rails/shared/app/views/shared/_post_vote_rail.html.erb
+    structural_styles: [rails/shared/app/assets/stylesheets/_post_voting.scss, rails/shared/app/assets/stylesheets/_feed_list.scss]
+apps:
+  bsdports: { status: next_port, process: independent }
+  brgen: { status: pending, process: single_city_network, engines: [dating, maps, marketplace, messenger, radio, tv] }
+  amber: { status: pending, process: independent }
+  mrdamascy: { status: pending, process: independent, server: puma }
+cutover:
+  status: BLOCKED
+  gate: verified_second_host_restore_and_full_cutover_rehearsal

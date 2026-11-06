@@ -1,0 +1,28 @@
+# frozen_string_literal: true
+
+Gem::Specification.new do |spec|
+  spec.name = "pub5-shared"
+  spec.version = "0.1.0"
+  spec.authors = ["pub4"]
+  spec.summary = "Shared Rails engine for pub5 family apps"
+  spec.files = Dir["{app,config,db,frontend,lib,public,vendor}/**/*", "README.md", "test/**/*"].select { |f| File.file?(f) }
+  spec.metadata = { "sass_load_path" => "app/assets/stylesheets" }
+  spec.require_paths = ["lib"]
+  spec.add_dependency "rails", ">= 8.1.4.1", "< 8.2"
+  # SitemapBuilder's XML writer; arrived only transitively through actionview.
+  spec.add_dependency "builder", ">= 3.2"
+  # AccountExporter's writer. Ruby 3.4 unbundled csv, so requiring it needs a declared dependency.
+  spec.add_dependency "csv", ">= 3.3"
+  spec.add_dependency "pundit", ">= 2.3"
+  spec.add_dependency "rotp", ">= 6.3"
+  spec.add_dependency "rqrcode", ">= 2.2"
+  spec.add_dependency "chunky_png", ">= 1.4"
+  spec.add_dependency "omniauth", ">= 2.1"
+  spec.add_dependency "omniauth-oauth2", ">= 1.9", "< 2"
+  spec.add_dependency "jwt", ">= 2.10", "< 3"
+  spec.add_dependency "omniauth-google-oauth2", ">= 1.1"
+  spec.add_dependency "omniauth-github", ">= 2.0"
+  spec.add_dependency "omniauth-rails_csrf_protection", ">= 1.0"
+  spec.add_dependency "webpush", ">= 1.1"
+  spec.add_dependency "ruby_llm", ">= 2.1.1", "< 3"
+end
