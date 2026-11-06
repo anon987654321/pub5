@@ -1,0 +1,435 @@
+# frozen_string_literal: true
+
+require "English"
+require "yaml"
+require_relative "../../OPENBSD/lib/deploy_inventory"
+require_relative "../../OPENBSD/lib/check_result"
+
+module Deploy
+  class PortInventoryCheck
+    ROOT = File.expand_path("../..", __dir__)
+    DEPLOY_INVENTORY = ENV.fetch("DEPLOY_INVENTORY", File.join(ROOT, "OPENBSD", "deploy_inventory.json"))
+    OPENBSD_DEPLOY = File.join(ROOT, "OPENBSD", "OPERATOR.sh")
+
+    APPS_YML = File.join(ROOT, "RAILS", "apps.yml")
+    RAILS_README = File.join(ROOT, "RAILS", "README.md")
+    PWA_BUILDER = File.join(ROOT, "MASTER", "tools", "rails", "build_workbox.mjs")
+    RELAYD_CONF = File.join(ROOT, "OPENBSD", "etc", "relayd.conf")
+    CRAWL_MANIFEST = File.join(ROOT, "RAILS", "crawl_manifest.yml")
+
+    # Health probes that name a loopback port. They must never probe a port no
+    # app listens on: a retired port here does not fail loudly, it reports the
+    # app down forever, or reports a different app's health under this app's
+    # name once the number is reused.
+    SMOKE_SCRIPTS = [
+      "OPENBSD/bin/deploy-smoke.sh",
+      # keep-warm pairs a host with a port on one line and runs on
+      # a timer against production, so a number that stops being true here does
+      # not fail -- it quietly warms nothing, which is the same shape as a probe
+      # reporting an app healthy on a port it no longer listens on.
+      "OPENBSD/usr/local/bin/keep-warm.sh",
+    ].freeze
+
+    # Every file that states two or more app ports, and why it is allowed to.
+    #
+    # A file naming one port is using a number; a file naming the whole fleet is
+    # a second inventory, and this repo has shipped the failure that follows
+    # from an unchecked one. The rule is not "do not restate the ports" — five
+    # of these must restate them to do their job — it is that restating them
+    # without being checked against apps.yml is what fails. So each row below is
+    # either machine-checked by a method in this class, or carries the reason it
+    # cannot be. A new fleet inventory that appears in neither fails the check.
+    #
+    # Two entries left this list on 2026-08-10: page_simulation.rb and
+    # domain_alignment.rb each held a literal three-app port map. The second one
+    # was the check that exists to prove the fleet agrees, restating the fleet
+    # instead of reading it.
+    FLEET_INVENTORIES = {
+      "RAILS/apps.yml" => "source of truth",
+      "OPENBSD/deploy_inventory.json" => "checked: check_master_json",
+      "OPENBSD/OPERATOR.sh" => "checked: check_openbsd_ports",
+      "OPENBSD/etc/relayd.conf" => "checked: check_relayd_ports",
+      "RAILS/crawl_manifest.yml" => "checked: check_crawl_manifest",
+      "RAILS/README.md" => "checked: check_readmes",
+      "OPENBSD/bin/deploy-smoke.sh" => "checked: check_smoke_probes",
+      "OPENBSD/usr/local/bin/keep-warm.sh" => "checked: check_smoke_probes",
+      "RAILS/test/deploy_smoke_contract_test.rb" => "asserts the smoke scripts' own content",
+      "CLAUDE.md" => "prose: the shed-vs-outage triage note, trap 3",
+      "RAILS/CLAUDE.md" => "prose: the shed-vs-outage triage note",
+      "OPENBSD/CLAUDE.md" => "prose: same triage note",
+      "TREE_CONTRACTS.md" => "checked: check_readmes reads its MASTER/web section; the rest is tree-contract prose",
+      "OPENBSD/RUNBOOK.md" => "prose: operator reference",
+      "MASTER/checks/PAGE_SIM.md" => "generated report",
+      "MASTER/test/test_ai_orientation.rb" => "fixture: a two-app apps.yml and the deploy inventory it generates",
+      "MASTER/test/test_relayd.rb" => "fixture: a relayd.conf excerpt for the parser under test",
+      "OPENBSD/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
+                                                  "to read, and it names only master and brgen, the two it restarts",
+    }.freeze
+
+    FLEET_SCAN_GLOB = "{RAILS,OPENBSD,MASTER,bin}/**/*.{rb,sh,yml,yaml,json,conf,mjs,js,md,erb,exp}"
+    # .master/ is runtime cache and never committed; knowledge/ and output/ are
+    # generated. Scanning them reports the model's own transcript as an inventory.
+    FLEET_SCAN_SKIP = %r{/(\.git|node_modules|\.master|knowledge|output|public/assets|tmp|log|storage)/}
+
+    # Files that must not name a retired app outside a comment: the scripts and
+    # tooling that run, and the config files a retired app leaves itself in. Every
+    # entry is a live file; the retired thing is the name. On 2026-08-12, two months after
+    # the repo recorded baibl and blognet removed — apps, relayd, acme, nsd,
+    # litestream, rc.d, inventories — vm23 still had both users, both home
+    # directories, both rc.d scripts, both /etc/*.env files, both login classes,
+    # both certificate symlinks, both DNS zones, and blognet in litestream.yml.
+    # The config half of this list is where those leftovers lived.
+    SCANNED_FOR_RETIRED_NAMES = [
+      "OPENBSD/bin/vps_console.exp",
+      "OPENBSD/usr/local/bin/relayd-watchdog",
+      "RAILS/env.sample",
+      "MASTER/tools/rails/build_workbox.mjs",
+      "OPENBSD/etc/rc.conf.local",
+      "OPENBSD/etc/login.conf",
+      "OPENBSD/etc/litestream.yml",
+      "OPENBSD/etc/relayd.conf",
+      "OPENBSD/etc/acme-client.conf",
+      "OPENBSD/data/dns.yml",
+      "OPENBSD/var/nsd/etc/nsd.conf",
+    ].freeze
+
+    RETIRED_APP_NAMES = %w[baibl blognet hjerterom].freeze
+
+    def self.run
+      new.run
+    end
+
+    def run
+      inventory = Inventory.new(root: ROOT)
+      apps = inventory.apps
+      result = CheckResult.new
+
+      return result.inconclusive!("port_inventory: the inventory lists no apps - every check below reads that list") if apps.empty?
+
+      # Fourteen checks, all of them unconditional once the inventory loads.
+      result.checked!(14)
+      check_uniques(result, apps, :name)
+      check_uniques(result, apps, :domain)
+      check_uniques(result, apps, :port)
+      check_ports(result, apps)
+      check_master_json(result, apps)
+      check_deploy_scripts(result, apps)
+      check_openbsd_ports(result, apps)
+
+      check_relayd_ports(result, apps)
+      check_crawl_manifest(result, apps)
+      check_smoke_probes(result, apps)
+      check_fleet_inventories(result, apps)
+      check_pwa_builder(result, apps)
+      check_readmes(result, apps)
+      check_retired_names_not_active(result)
+      result
+    end
+
+    private
+
+    # relayd is the only one of these mirrors that carries live traffic, and it
+    # was the only one nothing checked. Changing a port in apps.yml updates the
+    # deploy script, OPERATOR.sh, deploy_inventory.json, the README and the
+    # Workbox list — all five verified above — while relayd keeps forwarding to
+    # the old number. The check passes, the deploy succeeds, rcctl reports the
+    # app running, and the site serves 502 from the one file no check read.
+    def check_relayd_ports(result, apps)
+      unless File.file?(RELAYD_CONF)
+        result.fail("missing OPENBSD/etc/relayd.conf")
+        return
+      end
+
+      body = File.read(RELAYD_CONF)
+      forwards = body.scan(/forward\s+to\s+<([a-z0-9_]+)>\s+port\s+(\d+)/i)
+        .to_h { |name, port| [name, port.to_i] }
+      hosts = body.scan(/value\s+"([^"]+)"\s+forward\s+to\s+<([a-z0-9_]+)>/i)
+        .each_with_object({}) { |(host, table), acc| acc[host] = table }
+
+      apps.each do |app|
+        unless forwards.key?(app.name)
+          result.fail("relayd.conf has no `forward to <#{app.name}> port` line")
+          next
+        end
+
+        actual = forwards.fetch(app.name)
+        next if actual == app.port
+
+        result.fail("#{app.name}: relayd.conf forwards to port #{actual}, apps.yml says #{app.port}")
+      end
+
+      apps.each do |app|
+        table = hosts[app.domain]
+        if table.nil?
+          result.fail("#{app.name}: relayd.conf does not route Host #{app.domain}")
+        elsif table != app.name
+          result.fail("#{app.name}: relayd.conf routes #{app.domain} to <#{table}>")
+        end
+      end
+    end
+
+    def check_crawl_manifest(result, apps)
+      unless File.file?(CRAWL_MANIFEST)
+        result.fail("missing RAILS/crawl_manifest.yml")
+        return
+      end
+
+      manifest = YAML.safe_load(File.read(CRAWL_MANIFEST), aliases: true)
+      declared = manifest.fetch("apps", {})
+      apps.each do |app|
+        entry = declared[app.name]
+
+        if entry.nil?
+          result.fail("crawl_manifest.yml has no target for #{app.name}")
+        elsif entry["port"].to_i != app.port
+          result.fail("#{app.name}: crawl_manifest.yml port #{entry['port']} must mirror apps.yml #{app.port}")
+        end
+      end
+    end
+
+    # These scripts write a port two ways -- `http://127.0.0.1:38182/up` and a
+    # bare `smoke brgen 38182` argument -- so matching only the URL form reads
+    # one of them and calls the file checked. Both forms are five digits, which
+    # is what makes a plain number scan safe here: a four-digit year or a
+    # `-m 5` timeout cannot collide with it.
+    PORT_TOKEN = /(?<![\d.])(\d{5})(?![\d])/
+
+    def check_smoke_probes(result, apps, root: ROOT, scripts: SMOKE_SCRIPTS)
+      by_name = apps.to_h { |app| [app.name, app.port] }
+
+      scripts.each do |relative|
+        path = File.join(root, relative)
+        unless File.file?(path)
+          result.fail("missing smoke script #{relative}")
+          next
+        end
+
+        File.readlines(path).each_with_index do |line, index|
+          check_probe_line(result, line, where: "#{relative}:#{index + 1}", by_name:)
+        end
+      end
+    end
+
+    # A line naming apps may probe only their ports; a line naming none, any app's.
+    def check_probe_line(result, line, where:, by_name:)
+      numbers = line.scan(PORT_TOKEN).flatten.map(&:to_i).uniq
+      return if numbers.empty?
+
+      named = by_name.keys.select { |name| line.include?(name) }
+      allowed = named.empty? ? by_name.values : by_name.values_at(*named)
+
+      (numbers - allowed).each do |port|
+        result.fail(
+          "#{where} probes port #{port}, which no app in apps.yml listens on" \
+          "#{named.empty? ? '' : " (line names #{named.join(', ')})"}",
+        )
+      end
+    end
+
+    # Tracked files plus untracked ones git would not ignore. That is the right
+    # scope as well as the fast one: gitignored trees cannot carry a committed
+    # second inventory, and globbing them measured 44,831 files and 40 seconds,
+    # almost all of it node_modules and asset builds inside the three app trees.
+    # --others is what makes the check catch a new inventory on the run before it
+    # is committed rather than the run after. Falls back to the glob where there
+    # is no git — the copy-tree on vm23 is not a checkout.
+    def fleet_scan_paths
+      tracked = IO.popen(
+        ["git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        &:read
+      )
+
+      raise "git unavailable" unless $CHILD_STATUS&.success?
+
+      paths = tracked.split("\0").grep(/\.(rb|sh|ya?ml|json|conf|mjs|js|md|erb|exp)\z/)
+      raise "empty tree" if paths.empty?
+
+      paths
+    rescue StandardError
+      Dir.glob(File.join(ROOT, FLEET_SCAN_GLOB)).map { |path| path.delete_prefix("#{ROOT}/") }
+    end
+
+    def check_fleet_inventories(result, apps)
+      ports = apps.map { |app| app.port.to_s }
+      fleet_scan_paths.each do |relative|
+        next if "/#{relative}" =~ FLEET_SCAN_SKIP
+        next if FLEET_INVENTORIES.key?(relative)
+
+        path = File.join(ROOT, relative)
+        next unless File.file?(path)
+
+        body = begin
+          File.read(path)
+        rescue StandardError
+          next
+        end
+        next if ports.count { |port| body.include?(port) } < 2
+
+        result.fail(
+          "#{relative} states two or more app ports but is not in " \
+          "PortInventoryCheck::FLEET_INVENTORIES. Either read them from apps.yml, " \
+          "or add a row saying which check covers this file - an undeclared " \
+          "second inventory is how relayd.conf drifted unnoticed.",
+        )
+      end
+    end
+
+    def check_uniques(result, apps, field)
+      apps.group_by { |app| app.public_send(field) }.each do |value, grouped|
+        next if grouped.size == 1
+
+        result.fail("#{field} collision #{value}: #{grouped.map(&:name).join(', ')}")
+      end
+    end
+
+    def check_ports(result, apps)
+      apps.each do |app|
+        unless app.port.between?(1, 65_535)
+          result.fail("#{app.name}: port #{app.port.inspect} must be between 1 and 65535")
+        end
+      end
+    end
+
+    def check_master_json(result, apps)
+      unless File.file?(DEPLOY_INVENTORY)
+        result.fail("missing OPENBSD/deploy_inventory.json mirror: #{DEPLOY_INVENTORY}")
+        return
+      end
+
+      master = Inventory.new(root: ROOT).master_apps(path: DEPLOY_INVENTORY)
+      expected = apps.sort_by(&:name).map { |app| [app.name, app.domain, app.port] }
+      actual = master.sort_by(&:name).map { |app| [app.name, app.domain, app.port] }
+      result.fail("OPENBSD/deploy_inventory.json must mirror RAILS/apps.yml active apps") unless actual == expected
+    end
+
+    def check_deploy_scripts(result, apps)
+      apps.each do |app|
+        name = app.name
+        path = File.join(ROOT, app.deploy_script)
+        unless File.file?(path)
+          result.fail("#{name}: missing deploy script #{app.deploy_script}")
+          next
+        end
+
+        next check_master_rc_port(result, app) if name == "master"
+
+        text = File.read(path)
+
+        {
+          "APP_NAME=#{name}" => "APP_NAME",
+          "APP_DOMAIN=#{app.domain}" => "APP_DOMAIN",
+          "APP_PORT=#{app.port}" => "APP_PORT"
+        }.each do |needle, label|
+          result.fail("#{name}: deploy script #{label} must mirror apps.yml") unless text.include?(needle)
+        end
+      end
+    end
+
+    # master is not a copy-tree app: vps_deploy_master.sh restarts rc.d/master in
+    # place, and the PORT= in that rc.d script is what falcon binds and what
+    # relayd's <master> table reaches, so that line is master's mirror.
+    def check_master_rc_port(result, app)
+      rc = File.join(ROOT, "OPENBSD", "etc", "rc.d", "master")
+      return if File.file?(rc) && File.read(rc).match?(/^PORT=#{app.port}$/)
+
+      result.fail("master: OPENBSD/etc/rc.d/master PORT must mirror apps.yml #{app.port}")
+    end
+
+    def openbsd_ports
+      body = File.read(OPENBSD_DEPLOY)
+      match = body.match(/typeset -A APP_PORTS=\(\n(?<ports>.*?)\n\)/m)
+      return {} unless match
+
+      match[:ports].lines.each_with_object({}) do |line, ports|
+        entry = line.match(/\A\s*(?<name>[a-z0-9_]+)\s+(?<port>\d+)\s*(?:#.*)?\z/i)
+        next unless entry
+
+        ports[entry[:name]] = entry[:port].to_i
+      end
+    end
+
+    def check_openbsd_ports(result, apps)
+      unless File.file?(OPENBSD_DEPLOY)
+        result.fail("missing OpenBSD deploy script: #{OPENBSD_DEPLOY}")
+        return
+      end
+
+      ports = openbsd_ports
+      result.fail("OPENBSD/OPERATOR.sh missing APP_PORTS map") if ports.empty?
+      apps.each do |app|
+        result.fail("#{app.name}: missing fixed OpenBSD APP_PORTS entry") unless ports.key?(app.name)
+        next unless ports.key?(app.name) && ports.fetch(app.name) != app.port
+
+        result.fail("#{app.name}: OpenBSD APP_PORTS #{ports.fetch(app.name)} must mirror apps.yml #{app.port}")
+      end
+    end
+
+    def check_pwa_builder(result, apps)
+      unless File.file?(PWA_BUILDER)
+        result.fail("missing Workbox builder: #{PWA_BUILDER}")
+        return
+      end
+
+      body = File.read(PWA_BUILDER)
+      match = body.match(/const APPS = \[(?<apps>.*?)\]/)
+      unless match
+        result.fail("MASTER/tools/rails/build_workbox.mjs must expose const APPS")
+        return
+      end
+
+      actual = match[:apps].scan(/"([^"]+)"/).flatten.sort
+      # master serves its own public/sw.js, which owns the face's boot and offline
+      # contract, and mrdamascy its own service-worker.js; the shared Workbox worker
+      # is built for the apps whose Gemfile mounts pub4-shared.
+      expected = apps.select { |app| mounts_shared_engine?(app) }.map(&:name).sort
+      result.fail("Workbox APPS must mirror RAILS/apps.yml active apps") unless actual == expected
+    end
+
+    def mounts_shared_engine?(app)
+      gemfile = File.join(ROOT, app.deploy_root, "Gemfile")
+      File.file?(gemfile) && File.read(gemfile, encoding: "UTF-8").include?('gem "pub4-shared"')
+    end
+
+    def check_readmes(result, apps)
+      root_readme = File.read(RAILS_README)
+      # The README states the count in words, once, in its opening line; apps.yml
+      # holds everything else. A phrase pinned to one sentence broke when the README
+      # was rewritten, so the check is the number itself.
+      count_word = %w[Zero One Two Three Four Five Six Seven Eight Nine Ten].fetch(apps.size, apps.size.to_s)
+      result.fail("RAILS/README.md app count must mirror apps.yml (#{count_word} Rails apps)") unless root_readme.match?(/\b#{count_word} Rails apps\b/)
+
+      apps.each do |app|
+        # MASTER/web has no README: its human entry is its TREE_CONTRACTS.md section.
+        readme_path = File.join(ROOT, app.deploy_root, "README.md")
+        readme = File.file?(readme_path) ? File.read(readme_path) : Inventory.new(root: ROOT).tree_contract(app.deploy_root)
+        unless readme
+          result.fail("#{app.name}: missing README.md")
+          next
+        end
+
+        result.fail("#{app.name}: README must point humans to apps.yml feature matrix") unless readme.include?("apps.yml")
+        result.fail("#{app.name}: README deploy command must mirror apps.yml") unless readme.include?(File.basename(app.deploy_script))
+        result.fail("#{app.name}: README health check must mirror apps.yml port") unless readme.include?("127.0.0.1:#{app.port}")
+      end
+    end
+
+    def check_retired_names_not_active(result)
+      SCANNED_FOR_RETIRED_NAMES.each do |relative|
+        path = File.join(ROOT, relative)
+        next unless File.file?(path)
+
+        # Comments are exempt. A retired name in a line explaining why it was
+        # removed is the record of the removal; a retired name in a directive is
+        # the removal not having happened. Matching both would push people to
+        # delete the explanation, which is the half worth keeping.
+        body = File.read(path, encoding: "UTF-8").lines.reject { |line| line.match?(/\A\s*[#;]/) }.join
+
+        RETIRED_APP_NAMES.each do |name|
+          next unless body.match?(/\b#{Regexp.escape(name)}\b/)
+
+          result.fail("#{relative}: retired app #{name} must not appear in active deploy tooling")
+        end
+      end
+    end
+  end
+end

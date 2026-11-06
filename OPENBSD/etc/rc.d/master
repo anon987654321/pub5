@@ -1,0 +1,386 @@
+#!/bin/ksh
+# rc_pre and the post-start block below run bundle, ruby and curl — all
+# packages in /usr/local/bin. rcctl inherits its caller's PATH, and root's cron
+# PATH has no /usr/local/bin, so every one of them resolved when an operator
+# restarted master from a login shell and none of them resolved when
+# resource_guard.sh's cron tick did. For master that was fatal rather than
+# degraded: the asset check reported "bundle: not found", could not tell that
+# apart from broken assets, and took the exit-1 branch that refuses to start.
+# ai.brgen.no was down from 08:20 to 14:50 on 2026-07-31 for exactly this, and
+# again from 15:10 — twice, because the guard's restart is what triggers it.
+export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+PORT=53187
+[[ -r /etc/master.env ]] && . /etc/master.env
+CACHE_VERSION="${CACHE_VERSION:-$(cd /home/dev/pub5 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)}"
+CACHE_VERSION="${CACHE_VERSION:-v2}"
+daemon="/bin/ksh"
+# Falcon workers: keep at 1 on 1GB VPS so amber/bsdports can boot alongside master+brgen.
+# Secrets stay in /etc/master.env and are sourced inside the child so they
+# do not appear in `ps` argv. CACHE_VERSION is not a secret.
+# BUNDLE_FROZEN is load-bearing now that this runs as master rather than dev.
+#
+# Bundler.setup ends in Definition#write_lock, which touches Gemfile.lock on every
+# boot even when the resolution has not changed. The lock is owned by dev, so as
+# dev that write was silent and nobody knew it happened; as master it is EACCES
+# and falcon never binds. ai.brgen.no went down for exactly this the first time
+# daemon_user="master" reached the box, and the stack trace named File.utime
+# rather than anything about permissions or users.
+#
+# Frozen makes the daemon a reader. It also turns the repo's structural lock drift
+# (MASTER/Gemfile declares rb-kqueue on BSD only, and the lock is committed from a
+# Mac) from a silent rewrite into a startup error that says which gem disagrees —
+# which is the failure this box should have, because the rewrite was papering over
+# a lock that does not describe what is installed here.
+# rc.d cannot source the repo, so pick whichever Ruby the package manager
+# installed (OpenBSD ships it by version; none is named here).
+for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
+  if [ -x "$_bundle" ]; then break; fi
+done
+for _ruby in /usr/local/bin/ruby4.0 /usr/local/bin/ruby40 /usr/local/bin/ruby3.4 /usr/local/bin/ruby34 /usr/local/bin/ruby3.3 /usr/local/bin/ruby33 /usr/local/bin/ruby; do
+  if [ -x "$_ruby" ]; then break; fi
+done
+daemon_flags="-c 'cd /home/dev/pub5/MASTER/web && set -a && . /etc/master.env && set +a && export PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 RAILS_ENV=production CACHE_VERSION=${CACHE_VERSION} SECRET_KEY_BASE_DUMMY=1 BUNDLE_FROZEN=true && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+# Prod safety flags (MASTER_SAFE_MODE etc.) live in /etc/master.env (see master.env.sample).
+# rc.d sets a minimal set; env can override for the face runtime. See DeployPaths and
+# MASTER/data/budgets.yml for resource budgets on 1GB VPS.
+# The public-facing process does not run as the user who can become root.
+#
+# This was daemon_user="dev", and dev's doas rule is nopass with no command
+# scoping, so any code execution inside the process serving ai.brgen.no was root
+# without a password — the one app on this box whose daemon_user was not its own
+# user. the old backlog has called that operator-priority since it was written, and the
+# fix it names is a dedicated user, not doas command rules, which cannot narrow
+# dev's rule (etc/doas.conf says why, above that rule).
+#
+# master:1005, in _pub4ci for read on /home/dev -- traverse alone is not enough,
+# because this is the one service whose working directory sits under it and
+# getcwd(3) names an ancestor by reading it. /bin/ksh like every other
+# app user because rc.subr starts a daemon through a login shell. It reads the
+# code and gems from /home/dev/pub5 (0755, so read-only to it) and writes only
+# MASTER/.master, web/tmp and web/log, which are dev:master 2775 — setgid so new
+# files stay group-shared with the dev CLI. /etc/master.env is root:master 0640,
+# the same shape as brgen.env and amber.env.
+#
+# Verified as master before the switch: cd, env, gems, and all three writes
+# succeed; writing repo code is refused and `doas` is refused. That second pair
+# is the whole point — a fold that cannot write code cannot hand dev something
+# to execute, which is the path a shared checkout would otherwise leave open.
+#
+# Note what this does NOT cover: `bin/master` run from a terminal is still dev,
+# and dev is still nopass root. This closes the REMOTE path, which is the one an
+# attacker reaches.
+daemon_user="master"
+daemon_execdir="/home/dev/pub5/MASTER/web"
+daemon_logger="daemon.notice"
+daemon_timeout="300"
+. /etc/rc.d/rc.subr
+pexp="ruby[0-9.]*.*${PORT}"
+rc_bg=YES
+rc_reload=NO
+
+# --- stop path: tolerate a process that is already gone, then prove the port is free ---
+#
+# `rcctl restart master` once printed `kill: 87387: No such process`. The pid was
+# not ours: rc.subr starts a wait-for-start timer, and its `kill -ALRM ${_TIMERSUB}`
+# after rc_start is unguarded, so a timer that already exited (a fast start) prints
+# that line on stderr. It never changed an exit status. This wrapper silences only
+# that signal, so a real kill failure elsewhere in the file still speaks.
+#
+# There is no pidfile on this service: rc.subr finds the daemon with pgrep/pkill on
+# pexp. So "stale pid" cannot occur; the real hazards are a daemon that survives
+# TERM and keeps :53187 held (the next falcon then dies on EADDRINUSE and the
+# restart reports a start that never served), and a stop on an already-dead service.
+kill() {
+  case "$1" in
+    -ALRM) command kill "$@" 2>/dev/null; return 0 ;;
+    *) command kill "$@" ;;
+  esac
+}
+
+master_port_held() { nc -z -w 1 127.0.0.1 "$PORT" >/dev/null 2>&1; }
+
+# Waits up to $1 seconds for the port to free. Returns 1 when it never does.
+master_wait_port_free() {
+  _w=0
+  while master_port_held; do
+    _w=$((_w + 1))
+    [ "$_w" -ge "${1:-20}" ] && return 1
+    sleep 1
+  done
+  return 0
+}
+
+# Signals the process group of every falcon bound to the port. A pid that vanished
+# between pgrep and ps yields no group and is skipped, never an error; rc's own
+# group is never signalled.
+master_group_signal() {
+  _own=$(set -- $(ps -o pgid= -p $$ 2>/dev/null); echo "$1")
+  for _p in $(pgrep -f "falcon.*${PORT}" 2>/dev/null); do
+    _g=$(set -- $(ps -o pgid= -p "$_p" 2>/dev/null); echo "$1")
+    [ -n "$_g" ] || continue
+    [ "$_g" = "$_own" ] && continue
+    pkill "-$1" -g "$_g" 2>/dev/null
+  done
+  return 0
+}
+
+# TERM by pexp (rc.subr's own path, silent when nothing matches), then the group.
+# Always 0: a service that is not running is already stopped.
+rc_stop() {
+  _rc_sendsig ${rc_stop_signal} 2>/dev/null
+  master_group_signal TERM
+  return 0
+}
+
+# Runs after every stop and after a failed start. A port still held after the
+# grace period gets a group KILL; if it is held after that, the stop failed.
+# The group is found through falcon, which is gone by now when its TERM worked,
+# so the fstat holders are KILLed too: on 2026-10-28 a node MCP child the worker
+# spawned kept the inherited :53187 listener, rc_post failed, and rcctl restart
+# never ran start.
+rc_post() {
+  master_wait_port_free 10 && return 0
+  master_group_signal KILL
+  signal_holders KILL
+  master_wait_port_free 10
+}
+# --- end stop path ---
+
+# port holders: begin
+# The pkills match falcon by its argv, so a process bound to the port under any
+# other name (a worker that retitled itself, a hand-started server, a test run)
+# survives them, the next falcon dies on EADDRINUSE, and rc reports a start that
+# never serves. fstat(1) names every process with a socket on the port whatever
+# its argv. Its socket lines read USER CMD PID FD internet stream tcp ADDR
+# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves relayd's
+# connections to the port and the app's accepted ones alone.
+port_holders() {
+  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto _addr _local _rest; do
+    [[ $_kind == internet || $_kind == internet6 ]] || continue
+    [[ $_proto == tcp && -z $_rest ]] || continue
+    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "
+  done
+}
+
+# Sends signal $1 to every holder, one pid at a time.
+signal_holders() {
+  for _p in $(port_holders); do
+    kill "-$1" "$_p" 2>/dev/null
+  done
+}
+
+# TERM whatever still holds the port, KILL it after the grace period, and fail
+# when the port is still held, so the start is refused with the reason logged.
+free_port() {
+  _holders=$(port_holders)
+  [[ -n $_holders ]] || return 0
+  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before start, TERM"
+  signal_holders TERM
+  _w=0
+  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do
+    sleep 1
+    _w=$((_w + 1))
+  done
+  _holders=$(port_holders)
+  [[ -n $_holders ]] || return 0
+  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived TERM, KILL"
+  signal_holders KILL
+  sleep 1
+  [[ -z $(port_holders) ]] && return 0
+  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM and KILL, refusing to start"
+  return 1
+}
+# port holders: end
+
+rc_pre() {
+  # Deploy-in-progress lock, first: resource_guard reads this flag to hold off
+  # shedding during the bundle check and the cold boot that follow.
+  touch /home/dev/pub5/.deploying 2>/dev/null || true
+  # Check, never install. rc_pre runs as root, and a root `bundle install` in
+  # dev's checkout leaves root-owned gems and .bundle/config that the next dev
+  # deploy cannot rewrite. vps_deploy_master.sh installs both bundles as dev; a
+  # failed check here is logged by name so the restart that follows a drifted
+  # lock says why, instead of healing it in a way nothing records.
+  for _gemfile in /home/dev/pub5/MASTER/web/Gemfile /home/dev/pub5/MASTER/Gemfile; do
+    (cd "${_gemfile%/Gemfile}" && BUNDLE_GEMFILE="$_gemfile" BUNDLE_WITHOUT=development:test "$_bundle" check >/dev/null 2>&1) ||
+      logger -t master "bundle check failed for $_gemfile - run vps-deploy master as dev to install"
+  done
+  pkill -f "falcon.*${PORT}" 2>/dev/null
+  pkill -f "ruby[0-9.]*.*${PORT}" 2>/dev/null
+  pkill -f "/home/dev/pub5/MASTER/bin/tts-worker" 2>/dev/null
+  rm -f /home/dev/pub5/MASTER/.master/tts.sock /home/dev/pub5/MASTER/.master/tts-0.sock /home/dev/pub5/MASTER/.master/tts-1.sock 2>/dev/null || true
+  PORT_OWNER=master
+  free_port || { rm -f /home/dev/pub5/.deploying 2>/dev/null; return 1; }
+  # A held port means the next falcon cannot bind; refuse here, with the reason,
+  # instead of reporting a start that never serves.
+  if ! master_wait_port_free 20; then
+    master_group_signal KILL
+    master_wait_port_free 10 || {
+      logger -t master "CRITICAL: :${PORT} still held after TERM and KILL, refusing to start"
+      rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+      exit 1
+    }
+  fi
+  # Propshaft must not re-digest public/assets/ (nested assets/assets wedges boot).
+  rm -rf /home/dev/pub5/MASTER/web/public/assets/assets 2>/dev/null || true
+  _face_ok=1
+  for _f in /home/dev/pub5/MASTER/web/public/face.js /home/dev/pub5/MASTER/web/public/face.modules.bundle.js /home/dev/pub5/MASTER/web/public/face_vision.bundle.js; do
+    [[ -f "$_f" ]] || _face_ok=0
+  done
+  if [[ "$_face_ok" = "0" ]]; then
+    (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle) 2>/dev/null || true
+  fi
+  _manifest=/home/dev/pub5/MASTER/web/public/assets/.manifest.json
+  _stamp=/home/dev/pub5/MASTER/web/tmp/.assets_precompile_stamp
+  # Every asset the chat shell loads comes from web/config/face_assets.yml via
+  # face_asset_paths.rb, so a new face module is covered the moment it is added
+  # to the manifest. The hand-maintained list this replaces covered 23 of 38
+  # files; the 15 it missed included particle_kernel.js, face.runtime.js and
+  # three.face.module.js — edit one of those, restart, and precompile was
+  # silently skipped with a stale fingerprint. The tail below is the non-asset
+  # inputs (stylesheet, service worker, the views themselves), which the
+  # manifest does not and should not describe.
+  _face_assets=$(cd /home/dev/pub5/MASTER/web && "$_ruby" script/face_asset_paths.rb 2>/dev/null)
+  _face_assets_rc=$?
+  _force_precompile=0
+  if [[ "$_face_assets_rc" != "0" ]] || [[ -z "$_face_assets" ]]; then
+    # The same rule the two stamp writes below keep, on the quieter half. An
+    # empty list narrows the digest to the hardcoded tail, which is exactly the
+    # stale fingerprint the paragraph above says this replaced: every
+    # manifest-described asset drops out of the fingerprint, the stamp still
+    # matches, and precompile is skipped with the face wrong. Fail toward the
+    # expensive answer instead.
+    logger -t master "face_asset_paths.rb produced no asset list - digest would be narrowed, precompiling instead of trusting the stamp"
+    _face_assets=""
+    _force_precompile=1
+  fi
+  _digest=$(cksum $_face_assets \
+    /home/dev/pub5/MASTER/web/public/face.part*.txt \
+    /home/dev/pub5/MASTER/web/public/face.css \
+    /home/dev/pub5/MASTER/web/public/face.js \
+    /home/dev/pub5/MASTER/web/public/face.modules.bundle.js \
+    /home/dev/pub5/MASTER/web/public/sw.js \
+    /home/dev/pub5/MASTER/web/app/views/shared/_face_boot.html.erb \
+    /home/dev/pub5/MASTER/web/app/views/chat/index.html.erb 2>/dev/null | cksum)
+  _skip=0
+  if [[ "$_force_precompile" = "0" ]] && [[ -f "$_manifest" ]] && [[ -f "$_stamp" ]] && [[ "$(cat "$_stamp" 2>/dev/null)" = "$_digest" ]]; then
+    _skip=1
+  fi
+  if [[ "$_skip" = "0" ]]; then
+    # Stamp only on success. `|| true` swallowed a failed precompile and the
+    # stamp went down regardless — and because the skip test above is
+    # stamp-equals-digest, one failure then made every later start skip
+    # precompile as well. Nothing retries until an input file changes.
+    #
+    # Measured 2026-08-13 on vm23: MASTER/web had no public/assets directory at
+    # all, a stamp from that day's deploy, and /health reporting
+    # face_runtime_digest: null — the field the deploy-confidence playbook says
+    # to check. It stayed invisible because public/ is served undigested, so the
+    # face kept working while every fingerprinted asset was missing.
+    if (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:precompile) 2>/dev/null; then
+      if [[ "$_force_precompile" = "1" ]]; then
+        logger -t master "precompiled but stamp not written: the digest was computed without the manifest list and would license a skip"
+      else
+        mkdir -p /home/dev/pub5/MASTER/web/tmp
+        echo "$_digest" > "$_stamp"
+      fi
+    else
+      logger -t master "assets:precompile failed - stamp not written, will retry next start"
+    fi
+  fi
+  # Load-bearing asset check: refuse to start serving a broken face.js/manifest
+  # mismatch (the exact class of bug that wedged the primer boot on 2026-07-10).
+  # One self-heal precompile retry before actually blocking the start.
+  _check=/home/dev/pub5/MASTER/checks/runner.rb
+  _check_name=master_web_assets
+  if [[ -f "$_check" ]]; then
+    _check_out=$(cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)
+    _check_rc=$?
+    if [[ "$_check_rc" != "0" ]]; then
+      logger -t master "assets check failed, forcing fresh precompile and retrying once: $_check_out"
+      # Same rule as the stamp above, and this is the path where breaking it
+      # hurts most: the check has already said the assets are wrong, so stamping
+      # a precompile that failed makes every later start skip the retry.
+      if (cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec rails assets:precompile) 2>/dev/null; then
+        if [[ "$_force_precompile" = "1" ]]; then
+          logger -t master "retry precompiled but stamp not written: narrowed digest"
+        else
+          mkdir -p /home/dev/pub5/MASTER/web/tmp
+          echo "$_digest" > "$_stamp"
+        fi
+      else
+        logger -t master "retry precompile failed - stamp not written, the check below decides the start"
+      fi
+      _check_out=$(cd /home/dev/pub5/MASTER/web && RAILS_ENV=production "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)
+      _check_rc=$?
+      if [[ "$_check_rc" != "0" ]]; then
+        logger -t master "CRITICAL: assets check still failing after retry, refusing to start with broken assets: $_check_out"
+        rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+        exit 1
+      fi
+      logger -t master "assets check passed after retry precompile"
+    fi
+  fi
+  sleep 1
+}
+
+rc_cmd $1
+rc=$?
+if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+  if [[ "$rc" = "0" ]]; then
+    # The URL, never the token: rcctl's output lands in ~/vps-deploy.log and in
+    # whatever terminal ran the restart, and a token there is operator access for
+    # anyone who reads either. The line points at /pair issue, which hands out a
+    # one-time code.
+    "$_ruby" -ryaml -e 'c=YAML.load_file("/home/dev/pub5/MASTER/.master/config.yml") rescue {}; u=c["web_public_url"]||"http://127.0.0.1:#{c["web_port"]||53187}"; t=c["web_token"]; puts t ? "web: #{u}, token set, /pair issue for a code" : "web: #{u}"' 2>/dev/null
+    # Wait for Falcon /up, then restart relayd so HTTPS does not stay empty after rcctl restart master.
+    _i=0
+    _up_ok=0
+    while [[ "$_i" -lt 300 ]]; do
+      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1 && { _up_ok=1; break; }
+      sleep 1
+      _i=$((_i + 1))
+    done
+    # Wait for the MASTER container: the face page renders the warming page
+    # until it has booted, then the face canvas. The GET also pages the face
+    # in before the deploy's page checks measure it. A chat turn is POST only,
+    # so it cannot be the probe.
+    _ping_ok=0
+    _j=0
+    while [[ "$_j" -lt 120 ]]; do
+      curl -fsS -m 5 "http://127.0.0.1:${PORT}/" 2>/dev/null |
+        grep -q 'id="face"' && { _ping_ok=1; break; }
+      sleep 2
+      _j=$((_j + 1))
+    done
+    if [[ "$_up_ok" = "1" ]]; then
+      rcctl restart relayd 2>/dev/null || true
+    else
+      logger -t master "relayd skipped: /up not ready after restart"
+    fi
+    if [[ "$_ping_ok" = "0" ]]; then
+      logger -t master "container warmup: face page not ready after 120 tries"
+    fi
+    # Warm TTS with MASTER Gemfile only — never inherit Falcon web/vendor/bundle env.
+    _tts_warm_ok=0
+    if su -m dev -c 'export HOME=/home/dev; unset BUNDLE_PATH GEM_HOME GEM_PATH BUNDLE_BIN_PATH BUNDLE_WITHOUT BUNDLE_DEPLOYMENT RUBYOPT; cd /home/dev/pub5/MASTER && BUNDLE_GEMFILE=/home/dev/pub5/MASTER/Gemfile MASTER_TTS_TIMEOUT=45 '"$_bundle"' exec ruby -Ilib -e "require \"master\"; exit(Master::Voice::TtsSupervisor.ensure_daemon! ? 0 : 1)"' 2>>/var/log/daemon; then
+      _l=0
+      while [[ "$_l" -lt 30 ]]; do
+        [[ -S /home/dev/pub5/MASTER/.master/tts-0.sock ]] && { _tts_warm_ok=1; break; }
+        sleep 1
+        _l=$((_l + 1))
+      done
+    fi
+    if [[ "$_tts_warm_ok" = "0" ]]; then
+      logger -t master "CRITICAL: TTS sockets missing after ensure_daemon (check .master/tts-worker-*.log)"
+    fi
+    "$_ruby" /home/dev/pub5/MASTER/web/script/probe_http 2>/dev/null || logger -t master "probe_http failed after restart"
+  fi
+fi
+# rc_pre touched the deploy flag; it comes off here, after the /up, ping and TTS
+# warmup, so bundle, the Falcon bind and the cold boot are all inside the window
+# resource_guard reads it for.
+if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+  rm -f /home/dev/pub5/.deploying 2>/dev/null || true
+fi
+exit "$rc"
