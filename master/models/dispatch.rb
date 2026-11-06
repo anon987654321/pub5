@@ -80,6 +80,7 @@ module Models
 
     # messages: earlier turns as [{role:, content:}], oldest first.
     def ask(prompt, system: nil, task: nil, messages: [], max_tokens: 4096)
+      refuse_spent!
       chain = @router.chain(task || @router.classify(prompt))
       @gate.before_call(chain.select { |m| @lanes.cooling?(m) }.size == chain.size ? chain : [])
       messages = [*messages, { role: "user", content: prompt.to_s }]

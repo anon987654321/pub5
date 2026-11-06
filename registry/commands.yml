@@ -67,3 +67,30 @@ commands:
       read: ["**/*"]
       write: ["laws/pub4/**/*", registry/laws.yml]
       exec: [git, ruby]
+  repl:
+    summary: The conversation REPL; bin/master with no command on a terminal. In a pipe, one turn per line.
+    plugin: master/cli/repl.rb
+    class: Cli::Repl
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["log/master/*"]
+      write: ["log/master/*"]
+      exec: [claude, grok, codex, agy]
+      llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
+  ask:
+    summary: Ask once and print the answer (ask [-q] [--json] "question", or the question on stdin).
+    plugin: master/cli/ask.rb
+    class: Cli::Ask
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["log/master/*"]
+      write: ["log/master/*"]
+      exec: [claude, grok, codex, agy]
+      llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
+  lanes:
+    summary: The model lanes that are not answering, and until when.
+    plugin: master/cli/ask.rb
+    class: Cli::Lanes
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["log/master/*"]

@@ -5,7 +5,8 @@
 # registry/commands.yml, works out the context it runs in (tty, pipe, remote)
 # instead of needing a binary per place, builds the command's capability
 # manifest, and boots core plus that one plugin. `--boot` prints how long
-# that took before the command ran.
+# that took before the command ran. With no command on a terminal it is the
+# REPL (`repl`); `bin/master ask "..."` asks once.
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 require_relative "../core/core"
 
@@ -29,6 +30,7 @@ argv = ARGV.dup
 show_boot = argv.delete("--boot")
 commands = Core::Registry.load(:commands).fetch("commands")
 name = argv.shift
+name ||= "repl" if $stdin.tty? && $stdout.tty?
 unless name && commands.key?(name)
   warn Master.usage(commands)
   exit(name.nil? || %w[help -h --help].include?(name) ? 0 : 64)
