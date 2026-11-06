@@ -23,12 +23,12 @@ module Master
     module ErrClassification
       # Worth trying again as-is, or after a wait: the failure is in the
       # environment rather than in what was asked.
-      RETRIABLE = %i[infrastructure timeout provider_error llm_failure llm_call_failure delivery_failed reloading
+      RETRIABLE = %i\[infrastructure timeout provider_error llm_failure llm_call_failure delivery_failed reloading
                      rate_limit exhausted offline inconclusive].freeze
 
       # Retrying reproduces it, a decision belongs to the operator, or the
       # outcome already describes a stable stop rather than a transient fault.
-      PERMANENT = %i[validation model_missing axiom_violation invalid_request budget no_api_key auth_error policy
+      PERMANENT = %i\[validation model_missing axiom_violation invalid_request budget no_api_key auth_error policy
                      shutdown abort handler_exception crash skip human_decision plateau failed cancelled unknown_outcome
                      recovery_failed].freeze
 

@@ -37,7 +37,7 @@ class FrontendAuditorCheckTest < Minitest::Test
   def check_over(script_body)
     Dir.mktmpdir do |dir|
       plant(dir, "rails/demo/bin/generate.sh", script_body)
-      CHECK.run(root: dir, apps: %w[demo])
+      CHECK.run(root: dir, apps: %w\[demo])
     end
   end
 

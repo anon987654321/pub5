@@ -24,7 +24,7 @@ module Master
         # fingerprint). A count alone flagged every row of a grown law; an exact match alone read a
         # finding whose message carries a number ("25 lines" to "26") as new. Rows may use symbol or
         # string keys; boyscout, the new-violations summary and the priority check all ask this.
-        MOVES_WITH_AN_EDIT = %w[line fingerprint].freeze
+        MOVES_WITH_AN_EDIT = %w\[line fingerprint].freeze
 
         def introduced_findings(before, after)
           standing = before.map { |row| identity(row) }.tally

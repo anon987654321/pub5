@@ -7,7 +7,7 @@ set -euo pipefail
 # master_scan_dep APP_NAME — laws.yml check via master CLI (requires bundle exec in master/).
 master_scan_dep() {
   local app_name=$1
-  local master=${MASTER_ROOT:-/home/dev/pub4/MASTER}
+  local master=${MASTER_ROOT:-/home/dev/pub5/master}
   local log_dir=/var/db/pub4
   local log=${log_dir}/master_${app_name}_scan.log
   if [[ ${SKIP_MASTER_SCAN:-0} != 0 ]]; then
@@ -107,7 +107,7 @@ rails_runtime_check() {
       log_err "runtime check: missing executable ${app_dir}/bin/ci"
       return 1
     }
-    local rails_tree=${PUB4_RAILS_ROOT:-/home/dev/pub4/RAILS}
+    local rails_tree=${PUB5_RAILS_ROOT:-/home/dev/pub5/rails}
     if [[ -d $rails_tree ]]; then
       # traversal is group-based (710 dev:_pub4ci) — vps_ci.sh converges it;
       # this check must not widen /home/dev to the world.

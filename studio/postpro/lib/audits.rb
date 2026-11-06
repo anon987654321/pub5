@@ -25,7 +25,7 @@ end
 def preset_unregistered_keys(preset_data, key_readers)
   return [[:invalid_preset_data, preset_data.class.name]] unless preset_data.is_a?(Hash)
 
-  base_keys = %i[fx stock intensity iso]
+  base_keys = %i\[fx stock intensity iso]
   invalid_key_types = preset_data.keys.reject { |key| key.is_a?(Symbol) }
     .map { |key| [:invalid_key_type, key.inspect] }
   unknown = preset_data.keys.select { |key| key.is_a?(Symbol) } - base_keys - key_readers.keys

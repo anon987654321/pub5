@@ -120,7 +120,7 @@ class PathGuardEscapeTest < Minitest::Test
 
   def test_search_files_stays_inside_the_root
     search = Master::Io::SearchFiles.new(root: @root)
-    %w[../outside/* link/* **/*].each do |glob|
+    %w\[../outside/* link/* **/*].each do |glob|
       out = search.call(pattern: "root:x", glob:).value!
       refute_includes out, "root:x", "#{glob} reached outside the root"
     end

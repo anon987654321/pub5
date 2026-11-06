@@ -146,12 +146,12 @@ class DnsZonesCheckFixtureTest < Minitest::Test
   # A dropped packet is not a missing record: three timeouts skip, three
   # NXDOMAINs fail.
   def test_a_vertical_our_nameserver_does_not_answer_fails_and_a_timeout_only_skips
-    subject.send(:check_domain, Resolver.new(nil, Resolv::ResolvError), "brgen.no", %w[tv])
+    subject.send(:check_domain, Resolver.new(nil, Resolv::ResolvError), "brgen.no", %w\[tv])
 
     assert_match(/does not answer for brgen\.no, tv\.brgen\.no, www\.brgen\.no/, result.failures.join)
 
     timed_out = CHECK.new.tap { |g| g.instance_variable_set(:@result, Deploy::CheckResult.new) }
-    timed_out.send(:check_domain, Resolver.new(nil, Resolv::ResolvTimeout), "brgen.no", %w[tv])
+    timed_out.send(:check_domain, Resolver.new(nil, Resolv::ResolvTimeout), "brgen.no", %w\[tv])
     outcome = timed_out.instance_variable_get(:@result)
 
     assert_empty outcome.failures
@@ -244,7 +244,7 @@ end
 class OwnedDomainFactsAgreeTest < Minitest::Test
   RAILS_APPS = File.expand_path("../../rails/apps.yml", __dir__)
   OPERATOR = File.expand_path("../OPERATOR.sh", __dir__)
-  EXPECTED = %w[
+  EXPECTED = %w\[
     amberapp.art amberapp.no amberapp.online brgen.no bsdports.net bsdports.org
     cardff.uk denvr.us edinbrgh.uk foball.no frankfrt.de lndon.uk lsangeles.com
     lsangeles.store oshlo.no stvanger.no trndheim.no wshingtondc.com

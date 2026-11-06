@@ -5,13 +5,13 @@ class ItemsController < ApplicationController
   include WardrobeGuards
 
   before_action :require_real_user
-  before_action :set_item, only: %i[show edit update destroy spark_joy clear_joy declutter wear archive restore]
-  before_action :authorize!, only: %i[edit update destroy spark_joy clear_joy declutter wear archive restore]
+  before_action :set_item, only: %i\[show edit update destroy spark_joy clear_joy declutter wear archive restore]
+  before_action :authorize!, only: %i\[edit update destroy spark_joy clear_joy declutter wear archive restore]
   # show was in the set_ list but not the authorize! list, and set_item is an
   # unscoped Item.find — so GET /items/:id returned any user's item (brand,
   # price, purchase date, photos). Check on viewability rather than ownership so
   # public and follower wardrobes still browse.
-  before_action :authorize_view!, only: %i[show]
+  before_action :authorize_view!, only: %i\[show]
   # /share is the PWA Web Share Target: the OS posts multipart form data with no
   # CSRF token, so the skip below is required rather than optional. That leaves
   # the action reachable by a cross-site POST, and it creates a record with a
@@ -207,7 +207,7 @@ class ItemsController < ApplicationController
                                                  category: @category_filter))
     return scope if live_search_query.blank?
 
-    apply_live_search(scope, columns: %w[title brand category color material], vertical: "wardrobe")
+    apply_live_search(scope, columns: %w\[title brand category color material], vertical: "wardrobe")
   end
 
   # The counters over the whole filtered wardrobe; summed from the loaded page

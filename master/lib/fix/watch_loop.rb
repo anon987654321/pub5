@@ -16,8 +16,8 @@ module Master
     class WatchLoop
       DEBOUNCE_SECONDS = 5.0
       MAX_EVENTS_PER_MIN = 20
-      WATCH_EXTENSIONS = %w[.rb .erb .yml .yaml .json .toml .js .css .html].freeze
-      SKIP_DIRS = %w[vendor/ knowledge/ node_modules/ .git/ .bundle/ tmp/ log/ dist/].freeze
+      WATCH_EXTENSIONS = %w\[.rb .erb .yml .yaml .json .toml .js .css .html].freeze
+      SKIP_DIRS = %w\[vendor/ knowledge/ node_modules/ .git/ .bundle/ tmp/ log/ dist/].freeze
 
       def initialize(root:, fix_loop:, bus: nil)
         @root = root

@@ -69,7 +69,7 @@ class MenuItemTest < ActiveSupport::TestCase
     item = seed_item!(@category)
 
     assert item.update(allergens: "gluten, milk")
-    assert_equal %w[gluten milk], item.listed_allergens
+    assert_equal %w\[gluten milk], item.listed_allergens
     assert item.update(allergens: "none")
     assert_empty item.listed_allergens
     assert_not item.update(allergens: "milk,shellfish"), "an unknown key is refused"
@@ -77,7 +77,7 @@ class MenuItemTest < ActiveSupport::TestCase
 
     assert_equal 14, MenuItem::ALLERGENS.size
     MenuItem::ALLERGENS.each do |key|
-      %i[nb en].each { |locale| assert I18n.exists?("menu.allergen_names.#{key}", locale), "#{locale} #{key}" }
+      %i\[nb en].each { |locale| assert I18n.exists?("menu.allergen_names.#{key}", locale), "#{locale} #{key}" }
     end
   end
 end

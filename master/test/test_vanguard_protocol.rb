@@ -13,7 +13,7 @@ class TestVanguardProtocol < Minitest::Test
   end
 
   def test_command_guard_secure_execute_returns_result
-    result = Review::Security::CommandGuard.secure_execute(%w[echo ok])
+    result = Review::Security::CommandGuard.secure_execute(%w\[echo ok])
     assert result.ok?
     assert_includes result.value!, "ok"
   end

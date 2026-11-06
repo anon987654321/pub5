@@ -12,12 +12,12 @@ module Master
     # RepairLoop path, not a second fixer.
     class OpportunityPass
       LAW_ID = "CONVERGENCE_OPPORTUNITY"
-      TEXT_FILES = %w[.md .rb .rake .yml .yaml .erb .html .js .css .scss].freeze
+      TEXT_FILES = %w\[.md .rb .rake .yml .yaml .erb .html .js .css .scss].freeze
       SOURCE_ROOTS = MasterPaths::TREES
       # %r{} delimiters, not /.../ -- the character class needs a literal /
       # (repo-relative paths), which /.../ regex literals cannot hold
       # unescaped. Same bug as visual_pass.rb's SURFACE_RE, same fix.
-      PATH_RE = %r{\b(?:MASTER|RAILS|OPENBSD)/[A-Za-z0-9_./-]+\.(?:rb|yml|yaml|md|js|css|scss|erb|html)\b}.freeze
+      PATH_RE = %r{\b(?:MASTER|RAILS|openbsd)/[A-Za-z0-9_./-]+\.(?:rb|yml|yaml|md|js|css|scss|erb|html)\b}.freeze
       GLOB_RE = /(?:FileList|Dir\.glob)\s*\[(.*?)\]/.freeze
       STRING_RE = /["']([^"']+)["']/.freeze
       MAX_FINDINGS = 20
@@ -88,7 +88,7 @@ module Master
           [base, *Dir.glob(File.join(base, "**", "*"), File::FNM_DOTMATCH)]
         end
         inventory = inventory_paths.uniq.filter_map do |path|
-          next if %w[. ..].include?(File.basename(path))
+          next if %w\[. ..].include?(File.basename(path))
 
           type = if File.symlink?(path)
                    "symlink"
@@ -140,7 +140,7 @@ module Master
         relative = repo_relative(target)
         if relative == "master"
           paths.concat(Dir.glob(File.join(repo_root, "master", "lib", "**", "*.rb")))
-          paths.concat(Dir.glob(File.join(repo_root, "{MASTER,rails,OPENBSD}", "**", "test*", "**", "*_test.rb")))
+          paths.concat(Dir.glob(File.join(repo_root, "{master,rails,openbsd}", "**", "test*", "**", "*_test.rb")))
           paths.concat(Dir.glob(File.join(repo_root, "master", "test", "test_*.rb")))
           paths.concat(Dir.glob(File.join(repo_root, "master", "tools", "*.rb")))
           paths.concat([

@@ -35,7 +35,7 @@ module Master
         return Result.err("lovdata: provide a law title, LOV-/FOR-code, or official Lovdata document URL", category: :validation) if value.empty?
 
         mode = action.to_s.downcase
-        return Result.err("lovdata: action must be search or lookup", category: :validation) unless %w[search lookup].include?(mode)
+        return Result.err("lovdata: action must be search or lookup", category: :validation) unless %w\[search lookup].include?(mode)
 
         permission = @governor.permit?(NAME, TIER, "#{mode} #{value}")
         return permission if permission.err?

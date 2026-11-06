@@ -45,7 +45,7 @@ module Master
       include VisualEvidenceRows
 
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
-      SOURCE_EXTENSIONS = %w[.css .scss .erb .html .htm .js .ts].freeze
+      SOURCE_EXTENSIONS = %w\[.css .scss .erb .html .htm .js .ts].freeze
       # Surfaces rendered per pass: mobile captures first, rotated by pass, wider viewports with the room left.
       # Unbounded (0) it rendered all 212 declared surfaces every pass, each with up to
       # MAX_COMPOSITION_STATES states: the 2026-11-05 rails run spent 13 minutes of each pass on the 58

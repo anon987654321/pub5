@@ -22,7 +22,7 @@ module Master
 
         # Rules whose legitimate work is deleting most of a file. A DEAD_CODE
         # fix can gut a file and be right; a trailing-comma fix cannot.
-        DELETION_RULES = %w[DEAD_CODE FILE_SPRAWL].freeze
+        DELETION_RULES = %w\[DEAD_CODE FILE_SPRAWL].freeze
 
         # The marker a lane leaves where it stopped writing: "# ... rest of the
         # method unchanged", "[truncated]", "<!-- continued". The shrink floor

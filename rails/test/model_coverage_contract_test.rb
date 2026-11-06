@@ -165,7 +165,7 @@ class ModelCoverageContractTest < Minitest::Test
     routes = read_app("amber", "config/routes.rb")
 
     assert_includes connection, "class Connection < ApplicationRecord"
-    assert_includes connection, "STATUSES = %w[pending accepted blocked]"
+    assert_includes connection, "STATUSES = %w\[pending accepted blocked]"
     assert_includes connection, "belongs_to :requester"
     assert_includes connection, "belongs_to :addressee"
     assert_includes connection, "validates :status, inclusion:"

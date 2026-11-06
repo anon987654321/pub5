@@ -4,33 +4,33 @@ module Master
   module CLI
     class IntentRouter
       INTENTS = {
-        codify_policy: %w[codify policy make ruby turn into],
-        refactor_to_ruby: %w[refactor move ruby extract simplify],
-        wire_existing_module: %w[wire connect hook up route plug],
-        create_facade: %w[facade wrap adapter interface],
-        delete_redundant_config: %w[delete remove kill purge drop],
-        verify_patch_landed: %w[verify check confirm did land],
-        run_sound_review: %w[sound review audio critique listen],
-        design_frontend: %w[frontend stylesheet stylesheets css scss landing homepage hero typography palette markup],
-        run_ui_review: %w[ui critique design visual look review],
+        codify_policy: %w\[codify policy make ruby turn into],
+        refactor_to_ruby: %w\[refactor move ruby extract simplify],
+        wire_existing_module: %w\[wire connect hook up route plug],
+        create_facade: %w\[facade wrap adapter interface],
+        delete_redundant_config: %w\[delete remove kill purge drop],
+        verify_patch_landed: %w\[verify check confirm did land],
+        run_sound_review: %w\[sound review audio critique listen],
+        design_frontend: %w\[frontend stylesheet stylesheets css scss landing homepage hero typography palette markup],
+        run_ui_review: %w\[ui critique design visual look review],
         # A film or series request belongs to the media lane (Io::Mov), never
         # to the coding Fold. The words are specific enough to score without
         # swallowing a sentence about anything else.
-        fetch_media: %w[movie movies film films flick flicks series episodes episode],
-        generate_rails_pwa: %w[generate create new rails pwa app scaffold blank],
-        refactor_rails_app: %w[refactor upgrade migrate modernize rails hotwire turbo stimulus],
-        redesign_mobile_pwa: %w[redesign mobile touch layout responsive accessibility],
-        audit_rails_pwa: %w[audit scan check pwa manifest service worker rails],
-        apply_user_style_rules: %w[style format lint clean],
+        fetch_media: %w\[movie movies film films flick flicks series episodes episode],
+        generate_rails_pwa: %w\[generate create new rails pwa app scaffold blank],
+        refactor_rails_app: %w\[refactor upgrade migrate modernize rails hotwire turbo stimulus],
+        redesign_mobile_pwa: %w\[redesign mobile touch layout responsive accessibility],
+        audit_rails_pwa: %w\[audit scan check pwa manifest service worker rails],
+        apply_user_style_rules: %w\[style format lint clean],
         # Continuation depends on the live conversation; only exact phrases may route it.
-        write_repo_changes: %w[land write commit save push apply],
-        prefer_ruby: %w[ruby not markdown no yaml keep ruby],
-        run_full_workflow: %w[
+        write_repo_changes: %w\[land write commit save push apply],
+        prefer_ruby: %w\[ruby not markdown no yaml keep ruby],
+        run_full_workflow: %w\[
           through master tribunal full pass review deliberate deliberation deliberating deliberations
           singularity selfapply self-apply improve sweep rails itself autofix converge
         ],
-        run_rails_through: %w[rails apps brgen amber bsdports through improve scan fix],
-        run_master_through: %w[itself self master singularity dogfood selfscan],
+        run_rails_through: %w\[rails apps brgen amber bsdports through improve scan fix],
+        run_master_through: %w\[itself self master singularity dogfood selfscan],
       }.freeze
 
       # Two doors the keyword score cannot open, both of them ordinary things
@@ -79,16 +79,16 @@ module Master
       }.freeze
 
       RISK_TIERS = {
-        low: %i[
+        low: %i\[
           codify_policy refactor_to_ruby create_facade apply_user_style_rules
           run_sound_review run_ui_review audit_rails_pwa generate_rails_pwa redesign_mobile_pwa
           inspect_repo diagnose_behaviour run_relevant_tests fetch_media
         ],
-        medium: %i[
+        medium: %i\[
           design_frontend wire_existing_module verify_patch_landed continue_prior_plan prefer_ruby refactor_rails_app
           run_full_workflow run_rails_through run_master_through
         ],
-        high: %i[write_repo_changes delete_redundant_config],
+        high: %i\[write_repo_changes delete_redundant_config],
         critical: [],
       }.freeze
 

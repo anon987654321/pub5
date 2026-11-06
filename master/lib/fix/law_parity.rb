@@ -7,7 +7,7 @@ module Master
     # the named detectors; LawRegistryAudit and actual test evidence own that.
     class LawParity
       LAWS_PATH = File.join(Master::ROOT, "data", "laws.yml").freeze
-      COVERAGE_MODES = %w[deterministic semantic].freeze
+      COVERAGE_MODES = %w\[deterministic semantic].freeze
 
       Gap = Data.define(:id, :missing, :reason)
 
@@ -23,7 +23,7 @@ module Master
 
         nodes.flat_map do |entry|
           missing = []
-          %w[mechanical semantic].each do |modality|
+          %w\[mechanical semantic].each do |modality|
             missing << modality if entry[modality].to_s.strip.empty?
           end
           mode = entry["coverage_mode"].to_s

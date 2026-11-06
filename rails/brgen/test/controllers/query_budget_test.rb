@@ -25,7 +25,7 @@ class QueryBudgetTest < ActionDispatch::IntegrationTest
   def count_queries
     seen = 0
     sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |_n, _s, _f, _i, payload|
-      next if payload[:name].to_s.in?(%w[SCHEMA TRANSACTION])
+      next if payload[:name].to_s.in?(%w\[SCHEMA TRANSACTION])
       next if payload[:sql].include?("schema_migrations")
 
       seen += 1
@@ -73,7 +73,7 @@ class QueryBudgetTest < ActionDispatch::IntegrationTest
   def repeated_shapes
     shapes = Hash.new(0)
     sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |_n, _s, _f, _i, payload|
-      next if payload[:name].to_s.in?(%w[SCHEMA TRANSACTION])
+      next if payload[:name].to_s.in?(%w\[SCHEMA TRANSACTION])
       next if payload[:sql].include?("schema_migrations")
 
       shapes[payload[:sql].gsub(/\d+/, "?").gsub(/'[^']*'/, "?").squeeze(" ")] += 1
@@ -143,7 +143,7 @@ def seed_listings(count, categories:)
     email_address: "listing-#{SecureRandom.hex(4)}@brgen.no",
     password: "password123", city: @city,
   )
-  conditions = %w[good satisfactory very_good]
+  conditions = %w\[good satisfactory very_good]
 
   Array.new(count) do |i|
     listing = Marketplace::Listing.create!(

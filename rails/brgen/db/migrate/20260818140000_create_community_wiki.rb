@@ -14,7 +14,7 @@ class CreateCommunityWiki < ActiveRecord::Migration[8.1]
     end
 
     # One page per name per community, and the slug is how it is addressed.
-    add_index :community_wiki_pages, %i[community_id slug], unique: true
+    add_index :community_wiki_pages, %i\[community_id slug], unique: true
 
     # Every save keeps the body it replaced. A revert writes a new revision from
     # an old body rather than deleting the ones after it: a wiki whose history
@@ -26,6 +26,6 @@ class CreateCommunityWiki < ActiveRecord::Migration[8.1]
       t.datetime :created_at, null: false
     end
 
-    add_index :community_wiki_revisions, %i[page_id created_at]
+    add_index :community_wiki_revisions, %i\[page_id created_at]
   end
 end

@@ -6,7 +6,7 @@ module Master
     # under verbose/trace; normal output presents conversation, result, state and
     # only the diagnostic facts an operator can act on.
     module PresentationContract
-      LAYERS = %i[conversation result state diagnostic].freeze
+      LAYERS = %i\[conversation result state diagnostic].freeze
       INTERNAL_EVENT = /\A(?:trace|retry|cache|failover|llm|error)\w*?\d*[:#]/i
 
       module_function

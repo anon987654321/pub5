@@ -169,7 +169,7 @@ module Master
           terminal_puts("queue0: queue is not paused")
           return
         end
-        return exit_cli if queue_control_mode? && %w[/exit /quit].include?(stripped.downcase)
+        return exit_cli if queue_control_mode? && %w\[/exit /quit].include?(stripped.downcase)
         if Thread.current != @turn_worker && terminal_ask_pending?
           return if answer_pending_terminal_ask(stripped)
           accepted = enqueue_interactive_line(line)

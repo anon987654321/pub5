@@ -9,7 +9,7 @@ require "minitest/autorun"
 class TestDeployPathsExist < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
-  SCRIPT_GLOBS = %w[
+  SCRIPT_GLOBS = %w\[
     openbsd/bin/*
     openbsd/lib/*
     openbsd/OPERATOR.sh
@@ -19,10 +19,10 @@ class TestDeployPathsExist < Minitest::Test
     rails/*/*.sh
   ].freeze
 
-  PATH_PATTERN = %r{(?<![\w./-])((?:RAILS|MASTER|OPENBSD|STUDIO)/[A-Za-z0-9_.][A-Za-z0-9_./-]*)}
+  PATH_PATTERN = %r{(?<![\w./-])((?:RAILS|MASTER|OPENBSD|studio)/[A-Za-z0-9_.][A-Za-z0-9_./-]*)}
 
   # Paths written to be created at run time, or named as examples, not read.
-  GENERATED = %w[
+  GENERATED = %w\[
     .master output knowledge log tmp storage coverage node_modules public/assets
   ].freeze
 

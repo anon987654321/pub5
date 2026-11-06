@@ -116,7 +116,7 @@ module Master
       # Discovery traverses directory trees and discovers Antigravity customization roots
       # across workspace projects, declared configs, global and built-in paths.
       class Discovery
-        WORKSPACE_ROOT_DIRS = %w[.agents .agent _agents _agent].freeze
+        WORKSPACE_ROOT_DIRS = %w\[.agents .agent _agents _agent].freeze
         GLOBAL_CONFIG_PATH = "~/.gemini/config"
         BUILTIN_PATH = "~/.gemini/antigravity-cli/builtin"
 
@@ -311,7 +311,7 @@ module Master
         # Which optional subdirectories a skill ships, as the four keys the skill hash
         # carries. Progressive disclosure reads these to decide what to offer.
         def resource_flags(dir)
-          %w[scripts references examples resources].to_h do |kind|
+          %w\[scripts references examples resources].to_h do |kind|
             [:"has_#{kind}", File.directory?(File.join(dir, kind))]
           end
         end

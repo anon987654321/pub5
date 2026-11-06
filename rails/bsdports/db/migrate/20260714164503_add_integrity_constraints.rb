@@ -21,13 +21,13 @@ class AddIntegrityConstraints < ActiveRecord::Migration[8.1]
 
     add_index :comments, :parent_id unless index_exists?(:comments, :parent_id)
 
-    dedup_and_unique_index :dependencies, %i[port_id depends_on_id dep_type]
-    dedup_and_unique_index :watches, %i[user_id port_id]
+    dedup_and_unique_index :dependencies, %i\[port_id depends_on_id dep_type]
+    dedup_and_unique_index :watches, %i\[user_id port_id]
   end
 
   def down
-    remove_index :watches, column: %i[user_id port_id] if index_exists?(:watches, %i[user_id port_id])
-    remove_index :dependencies, column: %i[port_id depends_on_id dep_type] if index_exists?(:dependencies, %i[port_id depends_on_id dep_type])
+    remove_index :watches, column: %i\[user_id port_id] if index_exists?(:watches, %i\[user_id port_id])
+    remove_index :dependencies, column: %i\[port_id depends_on_id dep_type] if index_exists?(:dependencies, %i\[port_id depends_on_id dep_type])
     remove_index :comments, :parent_id if index_exists?(:comments, :parent_id)
 
     change_column_null :port_updates, :new_version, true

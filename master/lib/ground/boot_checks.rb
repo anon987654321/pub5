@@ -11,7 +11,7 @@ module Master
     module BootChecks
       CheckResult = Data.define(:name, :ok, :message, :severity)
 
-      SEVERITIES = %i[fatal warning info].freeze
+      SEVERITIES = %i\[fatal warning info].freeze
 
       class << self
         def run(root: Dir.pwd, strict: false)
@@ -111,7 +111,7 @@ module Master
           dir = File.join(root, "data")
           return fail("data_dir", "missing data/ directory") unless File.directory?(dir)
 
-          required = %w[soul.yml laws.yml console.yml scan.yml budgets.yml]
+          required = %w\[soul.yml laws.yml console.yml scan.yml budgets.yml]
           missing = required.reject { |f| File.exist?(File.join(dir, f)) }
           return fail("data_dir", "missing required: #{missing.join(", ")}") unless missing.empty?
 
@@ -177,7 +177,7 @@ module Master
 
         # console.yml, scan.yml and budgets.yml, which data/limits.yml held until 2026-10-31.
         def check_config_sections_yaml(root)
-          %w[console scan budgets].map { |name| check_catalogue_yaml(root, "data/#{name}.yml", "#{name}_yaml") }
+          %w\[console scan budgets].map { |name| check_catalogue_yaml(root, "data/#{name}.yml", "#{name}_yaml") }
         end
 
         def check_yaml_file(root, rel_path, name, required: true)

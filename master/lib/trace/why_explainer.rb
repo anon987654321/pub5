@@ -41,7 +41,7 @@ module Master
       # 2026-08-31. Ando, Rams and Zen govern every visual decision in this tree
       # and nothing surfaced them.
       def design_law(key)
-        return unless %w[beauty design design_law aesthetic].include?(key.downcase)
+        return unless %w\[beauty design design_law aesthetic].include?(key.downcase)
 
         b = laws["beauty"] || {}
         return if b.empty?
@@ -170,7 +170,7 @@ module Master
 
       def anti_pattern(key)
         ap = laws["anti_patterns"] || {}
-        %w[forbidden discouraged].each do |level|
+        %w\[forbidden discouraged].each do |level|
           Array(ap[level]).each do |entry|
             reason = entry["reason"].to_s
             next unless reason.include?(key) || entry["pattern"].to_s.include?(key)

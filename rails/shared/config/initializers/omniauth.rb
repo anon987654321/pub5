@@ -5,7 +5,7 @@ require Shared::Engine.root.join("lib/omniauth/strategies/bankid").to_s if File.
 
 Rails.application.config.x.oauth_provider_slugs = []
 # POST only. shared/_oauth_links renders every provider with button_to.
-OmniAuth.config.allowed_request_methods = %i[post]
+OmniAuth.config.allowed_request_methods = %i\[post]
 OmniAuth.config.silence_get_warning = true
 
 register_provider = lambda do |builder, name, client_id_env, client_secret_env, options = {}|
@@ -28,7 +28,7 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     scope: "openid email name phoneNumber")
 
   bankid_environment = ENV.fetch("BANKID_OIDC_ENV", "production").downcase
-  if %w[production current].include?(bankid_environment)
+  if %w\[production current].include?(bankid_environment)
     register_provider.call(self, :bankid, "BANKID_CLIENT_ID", "BANKID_CLIENT_SECRET",
       scope: "openid profile", environment: bankid_environment)
   else

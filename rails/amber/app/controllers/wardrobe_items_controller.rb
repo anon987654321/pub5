@@ -2,8 +2,8 @@
 
 class WardrobeItemsController < ApplicationController
   before_action :require_real_user
-  before_action :set_wardrobe_item, only: %i[show edit update destroy]
-  before_action :authorize!, only: %i[show edit update destroy]
+  before_action :set_wardrobe_item, only: %i\[show edit update destroy]
+  before_action :authorize!, only: %i\[show edit update destroy]
 
   # The wardrobe is the items pages. This list and the show page below drew the
   # same garments in a design of their own, and robots.txt kept them out of

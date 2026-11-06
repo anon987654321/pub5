@@ -258,7 +258,7 @@ class FixSupervisorTest < Minitest::Test
         )
       end
 
-      assert_match(/mission already active for RAILS\/brgen/, error.message)
+      assert_match(/mission already active for rails\/brgen/, error.message)
       saved = Master::Fix::Mission.current(root:)
       assert_equal mission.id, saved["id"]
       assert_equal "rails/brgen", saved["scope"]

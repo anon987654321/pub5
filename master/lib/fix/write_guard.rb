@@ -16,7 +16,7 @@ module Master
     # The mechanical half costs 1.2 ms on a 5-line file and 286 ms on a
     # 538-line one, both scans included. A new file pays for one.
     class WriteGuard
-      BLOCKING = %i[veto critical error].freeze
+      BLOCKING = %i\[veto critical error].freeze
 
       Verdict = Data.define(:introduced) do
         def blocking = introduced.select { |f| BLOCKING.include?(f[:severity]) }

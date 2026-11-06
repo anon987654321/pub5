@@ -10,8 +10,8 @@ convention-first repository under the same constitution.
   archive after cut-over.
 - Constitution: `master/data/soul.yml` and `master/data/laws.yml` carry the
   same content as pub4. The only sanctioned textual delta is mechanical
-  tree-path normalization (`MASTER/` -> `master/`, `RAILS/` -> `rails/`,
-  `OPENBSD/` -> `openbsd/`, `STUDIO/` -> `studio/`, `PUB4_ROOT` -> `PUB5_ROOT`)
+  tree-path normalization (`master/` -> `master/`, `rails/` -> `rails/`,
+  `openbsd/` -> `openbsd/`, `studio/` -> `studio/`, `PUB5_ROOT` -> `PUB5_ROOT`)
   required by the lowercase-tree layout. Original pub4 SHA-256 for every
   ported file is recorded in the port ledger (phase commits).
 

@@ -13,8 +13,8 @@ module Master
     # what was observed, which Laws governed it and which adapters were present.
     class FixPlan
       VERSION = 1
-      AUTHORITY_FILES = %w[data/soul.yml data/laws.yml].freeze
-      RUNTIME_FILES = %w[
+      AUTHORITY_FILES = %w\[data/soul.yml data/laws.yml].freeze
+      RUNTIME_FILES = %w\[
         data/law_runtime.yml
         law/definition.rb
         lib/review/scan/detector.rb
@@ -41,8 +41,8 @@ module Master
       # A plan binds the executable Law catalogue and the complete /fix
       # engine that interprets, persists and terminalizes its evidence. Adding
       # or changing an adapter invalidates the same provenance fingerprint.
-      RUNTIME_GLOBS = %w[law/**/*.rb lib/fix/**/*.rb].freeze
-      TOOLCHAIN_FILES = %w[.ruby-version Gemfile.lock].freeze
+      RUNTIME_GLOBS = %w\[law/**/*.rb lib/fix/**/*.rb].freeze
+      TOOLCHAIN_FILES = %w\[.ruby-version Gemfile.lock].freeze
       MAX_EXCLUSION_SAMPLE = 20
 
       Source = Data.define(:path, :sha256, :bytes)
@@ -233,7 +233,7 @@ module Master
         if File.directory?(target)
           discovered = TOOLCHAIN_FILES.flat_map { |name| Dir.glob(File.join(target, "**", name)) }
           discovered = discovered.uniq.reject do |path|
-            path.split(File::SEPARATOR).any? { |part| %w[.git .master vendor node_modules tmp log storage].include?(part) }
+            path.split(File::SEPARATOR).any? { |part| %w\[.git .master vendor node_modules tmp log storage].include?(part) }
           end
           discovered.each do |path|
             paths << [relative(path), Digest::SHA256.file(path).hexdigest] if File.file?(path) && !File.symlink?(path)

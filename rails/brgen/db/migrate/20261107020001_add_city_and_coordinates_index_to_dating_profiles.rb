@@ -7,7 +7,7 @@
 # leads because every deck query is city-scoped first.
 class AddCityAndCoordinatesIndexToDatingProfiles < ActiveRecord::Migration[8.2]
   def change
-    add_index :dating_profiles, %i[city_id latitude longitude],
+    add_index :dating_profiles, %i\[city_id latitude longitude],
               name: "index_dating_profiles_on_city_id_and_latitude_and_longitude"
   end
 end

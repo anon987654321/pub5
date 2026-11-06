@@ -58,7 +58,7 @@ module Master
       end
 
       def ruby?(path)
-        File.extname(path) == ".rb" || %w[Gemfile Rakefile Guardfile].include?(File.basename(path))
+        File.extname(path) == ".rb" || %w\[Gemfile Rakefile Guardfile].include?(File.basename(path))
       end
 
       def git_head(root)

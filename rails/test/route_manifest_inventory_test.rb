@@ -43,7 +43,7 @@ class RouteManifestInventoryTest < Minitest::Test
   end
 
   def test_manifest_covers_every_app_the_inventory_probes
-    assert_equal %w[amber brgen bsdports], manifest.fetch("apps").keys.sort
+    assert_equal %w\[amber brgen bsdports], manifest.fetch("apps").keys.sort
     manifest["apps"].each_value do |row|
       refute_empty row.fetch("routes"), "an app with no routes resolves nothing"
       assert_match(/\A[0-9a-f]{16}\z/, row.fetch("digest"))
@@ -63,7 +63,7 @@ class RouteManifestInventoryTest < Minitest::Test
   # asserted now instead of brgen alone.
   def test_routes_beat_the_filename_convention
     expected = { "brgen/bookmarks/index" => "/saved" }
-    %w[amber brgen bsdports].each do |app|
+    %w\[amber brgen bsdports].each do |app|
       expected["#{app}/shared/pages/privacy"] = "/privacy"
       expected["#{app}/shared/pages/terms"] = "/terms"
       expected["#{app}/shared/pages/cookies"] = "/cookies"
@@ -79,7 +79,7 @@ class RouteManifestInventoryTest < Minitest::Test
   end
 
   def test_engine_verticals_are_in_the_inventory
-    %w[dating marketplace playlist takeaway tv].each do |vertical|
+    %w\[dating marketplace playlist takeaway tv].each do |vertical|
       pages = inventory.select { |page| page[:id].start_with?("brgen/#{vertical}/") }
 
       refute_empty pages, "#{vertical} engine views are outside the simulation"
@@ -102,7 +102,7 @@ class RouteManifestInventoryTest < Minitest::Test
 
   # Every vertical ships a `new` form and each answers 403 to a guest.
   def test_authoring_forms_are_not_guest_surfaces
-    %w[brgen/marketplace/stores/new brgen/playlist/hosted_tracks/new brgen/takeaway/restaurants/new].each do |id|
+    %w\[brgen/marketplace/stores/new brgen/playlist/hosted_tracks/new brgen/takeaway/restaurants/new].each do |id|
       assert_equal "auth", find(id)[:persona], "#{id} is probed as a guest page"
     end
   end
@@ -115,11 +115,11 @@ class RouteManifestInventoryTest < Minitest::Test
   # This used to need a hand-kept exclusion list. It does not: a view with no GET
   # route is one the manifest cannot answer, and the inventory drops it. Three
   # views prove the rule rather than one — an error template rendered with a 403,
-  # and two `new` views for resources routed `only: %i[create destroy]`, which
+  # and two `new` views for resources routed `only: %i\[create destroy]`, which
   # the retired filename ladder gave URLs to (/conversations and
   # /ports/:id/comments) that were not theirs.
   def test_a_view_with_no_get_route_is_not_a_page
-    %w[brgen/shared/members_only brgen/messages/new bsdports/comments/new].each do |id|
+    %w\[brgen/shared/members_only brgen/messages/new bsdports/comments/new].each do |id|
       refute find(id), "#{id} has no GET route and must not be probed as a page"
     end
   end
@@ -127,7 +127,7 @@ class RouteManifestInventoryTest < Minitest::Test
   # The other direction, so the rule above cannot be satisfied by an inventory
   # that dropped everything.
   def test_the_inventory_still_covers_every_app
-    %w[amber brgen bsdports master].each do |app|
+    %w\[amber brgen bsdports master].each do |app|
       refute_empty inventory.select { |page| page[:app] == app }, "#{app} left the inventory"
     end
     assert_operator inventory.size, :>, 150, "the inventory collapsed"

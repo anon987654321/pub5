@@ -8,7 +8,7 @@ module Deploy
   # it is also perfectly valid dead code: the view fills a slot nobody reads.
   class ContentForYieldCheck
     ROOT = File.expand_path("../../../..", __dir__)
-    APPS = %w[amber brgen bsdports].freeze
+    APPS = %w\[amber brgen bsdports].freeze
     PRODUCER = /<%=?\s*(?:content_for|provide)\s*(?:\(\s*)?:([a-zA-Z_][a-zA-Z0-9_]*)|<%=?\s*(?:content_for|provide)\s*(?:\(\s*)?["']([a-zA-Z_][a-zA-Z0-9_]*)["']/
 
     # A consumer is a `yield :key` or `content_for(:key)` anywhere inside an ERB tag, not only

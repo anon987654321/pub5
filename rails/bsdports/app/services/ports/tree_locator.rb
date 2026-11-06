@@ -4,7 +4,7 @@ require "pathname"
 
 module Ports
   class TreeLocator
-    SKIP_ROOTS = %w[CVS distfiles packages templates .git].freeze
+    SKIP_ROOTS = %w\[CVS distfiles packages templates .git].freeze
 
     def self.resolve(platform:, override: nil)
       candidate = override.presence || platform.tree_path.presence || ENV["BSDPORTS_TREE_PATH"]

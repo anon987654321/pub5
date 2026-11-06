@@ -16,7 +16,7 @@ module PlaylistHelper
     # Before that import, retain the existing external-reference radio.
     manifest = radio_interleave(Brgen::RadioBergenManifest.youtube_tracks, Brgen::RadioBergenManifest.whyp_tracks)
     hosted = Playlist::Track
-      .where(source_type: %w[youtube direct])
+      .where(source_type: %w\[youtube direct])
       .where.not(source_url: [ nil, "" ])
       .limit(8)
       .filter_map { |track| radio_track_from_source(track) }

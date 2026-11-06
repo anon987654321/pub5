@@ -11,7 +11,7 @@
 # that edits the front door by default is one a curious run can break.
 # OPERATOR.sh passes --apply, then `relayd -n` validates the result.
 
-if ARGV.intersect?(%w[-h --help])
+if ARGV.intersect?(%w\[-h --help])
   puts "usage: relayd_prune_keypairs.rb [--apply] [PATH]   (default PATH /etc/relayd.conf; report-only without --apply)"
   exit 0
 end

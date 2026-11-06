@@ -27,7 +27,7 @@ class EnsureLocalityTables < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :neighborhoods, %i[city_id slug], unique: true
+    add_index :neighborhoods, %i\[city_id slug], unique: true
 
     create_table :places do |t|
       t.references :city, null: false, foreign_key: true
@@ -41,8 +41,8 @@ class EnsureLocalityTables < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :places, %i[city_id kind]
-    add_index :places, %i[city_id slug]
+    add_index :places, %i\[city_id kind]
+    add_index :places, %i\[city_id slug]
   end
 
   def down

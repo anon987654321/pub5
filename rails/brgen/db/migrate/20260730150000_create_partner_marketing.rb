@@ -30,7 +30,7 @@ class CreatePartnerMarketing < ActiveRecord::Migration[8.1]
       t.text :terms
       t.timestamps
     end
-    add_index :partner_programs, %i[status city_id]
+    add_index :partner_programs, %i\[status city_id]
 
     create_table :partner_memberships do |t|
       t.references :program, null: false, foreign_key: { to_table: :partner_programs }, index: true
@@ -44,7 +44,7 @@ class CreatePartnerMarketing < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :partner_memberships, :token, unique: true
-    add_index :partner_memberships, %i[program_id user_id], unique: true
+    add_index :partner_memberships, %i\[program_id user_id], unique: true
 
     create_table :partner_clicks do |t|
       t.references :membership, null: false, foreign_key: { to_table: :partner_memberships }, index: true
@@ -58,7 +58,7 @@ class CreatePartnerMarketing < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     # The attribution lookup: newest live click for a visitor.
-    add_index :partner_clicks, %i[visitor_digest expires_at]
+    add_index :partner_clicks, %i\[visitor_digest expires_at]
 
     create_table :partner_conversions do |t|
       t.references :membership, null: false, foreign_key: { to_table: :partner_memberships }, index: true
@@ -83,6 +83,6 @@ class CreatePartnerMarketing < ActiveRecord::Migration[8.1]
       t.string :rejected_reason, limit: 200
       t.timestamps
     end
-    add_index :partner_conversions, %i[status payable_after]
+    add_index :partner_conversions, %i\[status payable_after]
   end
 end

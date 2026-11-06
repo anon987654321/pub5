@@ -95,7 +95,7 @@ module Master
         # that /fix may snap such a value to the nearest scale token: the small visible change
         # brings the element into line with the rest of the page. Every snap was refused as
         # "alters rendering" before, so none of these findings could ever be repaired.
-        SCALE_LAWS = %w[EIGHT_PX_RHYTHM LINE_HEIGHT_ON_SCALE WHITESPACE_RHYTHM].freeze
+        SCALE_LAWS = %w\[EIGHT_PX_RHYTHM LINE_HEIGHT_ON_SCALE WHITESPACE_RHYTHM].freeze
 
         def scale_snap_rule(violation, for_verifier: false)
           return "" unless violation[:law].to_s.split("+").intersect?(SCALE_LAWS)
@@ -325,7 +325,7 @@ module Master
             # always reported as unverified rather than passed.
             unavailable_with_tests = status == :unavailable && Array(proof[:test_paths]).any?
             missing_proof = proof[:reason].to_s == "candidate has no simulation result"
-            if %i[regression blocked].include?(status) || unavailable_with_tests || missing_proof
+            if %i\[regression blocked].include?(status) || unavailable_with_tests || missing_proof
               @bus&.publish(
                 "repair_loop:candidate_rejected",
                 law: @law.id, file: path, candidate: index + 1,

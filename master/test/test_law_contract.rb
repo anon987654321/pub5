@@ -146,7 +146,7 @@ class TestLawContract < Minitest::Test
     assert_equal Law::Contract::PROTOCOL, data.fetch("protocol")
     assert_equal Master.law("transformation_policy"), data.fetch("transformation_policy")
     assert data.fetch("law_policy").fetch("lifecycle").key?("states")
-    assert_equal %w[inventory classify], data.fetch("transformation_policy").fetch("preflight")
+    assert_equal %w\[inventory classify], data.fetch("transformation_policy").fetch("preflight")
     assert_operator data.fetch("laws").length, :>, 100
     assert data.fetch("laws").all? { |law| law.key?("id") && law.key?("severity") }
   end
@@ -213,7 +213,7 @@ class TestLawContract < Minitest::Test
     data = JSON.parse(Law::Contract.render)
     roots = data.fetch("law_source").fetch("governing_laws")
 
-    assert_equal %w[
+    assert_equal %w\[
       TRUTHFUL_STATUS ROBUSTNESS SINGULARITY LINEARITY
       PROXIMITY ABSTRACTION DENSITY OPERATOR_RENDERED INTER_MODEL_CONTRACT
     ], roots.map { |entry| entry.fetch("id") }
@@ -252,7 +252,7 @@ class TestLawContract < Minitest::Test
       source: "test",
       severity: :warn,
       mode: :violation,
-      languages: %i[ruby scss],
+      languages: %i\[ruby scss],
       scope: :file,
       surfaces: nil,
       law_scope: :domain,
@@ -292,7 +292,7 @@ class TestLawContract < Minitest::Test
 
   def test_lifecycle_transitions_are_published_on_rule
     assert Law::Definition.const_defined?(:LIFECYCLE_TRANSITIONS, false)
-    assert_equal %i[proposed proven active observed trusted advisory retired],
+    assert_equal %i\[proposed proven active observed trusted advisory retired],
                  Law::Definition::LIFECYCLE_TRANSITIONS.keys
   end
 

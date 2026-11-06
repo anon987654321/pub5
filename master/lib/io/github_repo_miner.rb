@@ -27,7 +27,7 @@ module Master
         query = normalize_query(query)
         return Result.err("github_repo_miner: provide a repository topic", category: :validation) if query.empty?
 
-        sort = %w[stars updated forks].include?(sort.to_s) ? sort.to_s : "stars"
+        sort = %w\[stars updated forks].include?(sort.to_s) ? sort.to_s : "stars"
         limit = [[limit.to_i, 1].max, MAX_RESULTS].min
         perm = @governor.permit?(NAME, TIER, query)
         return perm if perm.err?

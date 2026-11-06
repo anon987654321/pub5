@@ -25,7 +25,7 @@ class FileLengthRatchetTest < Minitest::Test
 
   # kind => [glob roots, limit in code lines]
   LIMITS = { "rb" => 300, "scss" => 400, "erb" => 150 }.freeze
-  BRGEN_AND_APPS = %w[
+  BRGEN_AND_APPS = %w\[
     shared brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio amber bsdports
   ].freeze
 
@@ -222,7 +222,7 @@ class FileLengthRatchetTest < Minitest::Test
 # not suggest, so they are exempt rather than ceilinged: a ceiling here would
 # fail every new rule the rule requires to land in this file. Only these two;
 # brgen keeps its partials and their ceilings.
-ONE_STYLESHEET_PER_APP = %w[
+ONE_STYLESHEET_PER_APP = %w\[
   amber/app/assets/stylesheets/application.scss
   bsdports/app/assets/stylesheets/application.scss
 ].freeze
@@ -300,7 +300,7 @@ COMMENT_STARTS = ["#", "//", "/*", "*", "<%#"].freeze
   def candidates
     @candidates ||= begin
       # The checks and tools moved to master, whose own ratchet governs them; the verticals are sibling gems.
-      apps = BRGEN_AND_APPS + %w[test lib]
+      apps = BRGEN_AND_APPS + %w\[test lib]
       rb = apps.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.rb")) }
       styled = BRGEN_AND_APPS
       scss = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.scss")) }

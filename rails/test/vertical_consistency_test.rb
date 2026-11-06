@@ -148,7 +148,7 @@ class VerticalConsistencyTest < Minitest::Test
   # Verticals whose main column is a reading measure rather than a browse grid.
   # A thread and a track listing want a narrow column; a catalogue wants the
   # page. Operator decision 2026-08-10 kept these as they are.
-  READING_COLUMNS = %w[messenger playlist].freeze
+  READING_COLUMNS = %w\[messenger playlist].freeze
 
   def test_browse_verticals_share_one_content_width
     widths = {}
@@ -163,7 +163,7 @@ class VerticalConsistencyTest < Minitest::Test
     widths.reject! { |vertical, _| READING_COLUMNS.include?(vertical) }
     # "none" and "100%" both leave main without a width of its own.
     hardcoded = widths.reject do |_vertical, value|
-      value.include?("var(--container-max)") || %w[100% none].include?(value)
+      value.include?("var(--container-max)") || %w\[100% none].include?(value)
     end
     assert_empty hardcoded, <<~MSG.strip
       these verticals hardcode their page width instead of using --container-max:

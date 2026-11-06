@@ -103,7 +103,7 @@ module Master
         # would double them and blow the pass budget — and the rails rendered
         # half stays with the ladder, which already reaches the deploy host's
         # browser.
-        STAGES = %w[fix critique map style].freeze
+        STAGES = %w\[fix critique map style].freeze
         # A NameError or TypeError is a master defect, not a target finding; formatting it into the report hid live crashes.
         DEFECT_ERRORS = [NameError, TypeError].freeze
         STAGE_ALIASES = { "converge" => "fix", "council" => "critique", "cosmetic" => "style",
@@ -442,7 +442,7 @@ module Master
 # slash command, and — the one that matters — a sentence. On 2026-09-11 a
 # greeting typed into bin/cli on vm23 ("Hei master … hva er du mest stolt
 # av i denne kodebasen?") was routed to the /fix reading with apply=yes against
-# /home/dev/pub4, which is the checkout the deploy syncs from. It scanned
+# /home/dev/pub5, which is the checkout the deploy syncs from. It scanned
 # 333 of 1109 files before it was interrupted and wrote nothing, and that
 # was luck rather than design.
 #
@@ -505,7 +505,7 @@ def default_apply?(*) = false
           parameters = @fix_loop.method(:run).parameters
           accepts_keyword = lambda do |name|
             parameters.any? do |kind, parameter|
-              kind == :keyrest || (%i[key keyreq].include?(kind) && parameter == name)
+              kind == :keyrest || (%i\[key keyreq].include?(kind) && parameter == name)
             end
           end
           options = { requested: true }

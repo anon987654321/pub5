@@ -101,7 +101,7 @@ class BreakpointLintTest < Minitest::Test
       bounds = L.source_lines(file.path).join.scan(L::QUERY)
 
       assert_equal 1, bounds.size, "only the real query should survive comment stripping"
-      assert_equal %w[min 480 px], bounds.first
+      assert_equal %w\[min 480 px], bounds.first
     end
   end
 

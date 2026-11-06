@@ -71,11 +71,11 @@ module Master
       end
 
       PROFILES = {
-        boot: Profile.new(name: :boot, capabilities: %i[stdio read execute], promises: STAGE1_PROMISES),
-        model: Profile.new(name: :model, capabilities: %i[stdio read model], promises: "stdio rpath inet dns"),
-        fix: Profile.new(name: :fix, capabilities: %i[stdio read write create execute], promises: STAGE2_PROMISES),
-        device: Profile.new(name: :device, capabilities: %i[stdio read device], promises: "stdio rpath"),
-        world: Profile.new(name: :world, capabilities: %i[stdio read world], promises: "stdio rpath"),
+        boot: Profile.new(name: :boot, capabilities: %i\[stdio read execute], promises: STAGE1_PROMISES),
+        model: Profile.new(name: :model, capabilities: %i\[stdio read model], promises: "stdio rpath inet dns"),
+        fix: Profile.new(name: :fix, capabilities: %i\[stdio read write create execute], promises: STAGE2_PROMISES),
+        device: Profile.new(name: :device, capabilities: %i\[stdio read device], promises: "stdio rpath"),
+        world: Profile.new(name: :world, capabilities: %i\[stdio read world], promises: "stdio rpath"),
       }.freeze
 
       def profile(name) = PROFILES.fetch(name.to_sym)

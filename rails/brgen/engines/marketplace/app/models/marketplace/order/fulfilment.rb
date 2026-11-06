@@ -26,7 +26,7 @@ class Marketplace::Order
 
     # A paid parcel the seller can say has gone, correct the tracking of while
     # it is on its way, or say has arrived.
-    def shippable? = payment_status == "paid" && fulfilment_status.in?(%w[unfulfilled shipped])
+    def shippable? = payment_status == "paid" && fulfilment_status.in?(%w\[unfulfilled shipped])
 
     # Delivered on the seller's word and not yet confirmed.
     def awaiting_receipt? = fulfilment_status == "delivered" && receipt_confirmed_at.nil?

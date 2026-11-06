@@ -2,7 +2,7 @@
 
 class Playlist::DillaSketchesController < Playlist::BaseController
   before_action :set_parent
-  before_action :authorize_editor, only: %i[create update destroy render_audio]
+  before_action :authorize_editor, only: %i\[create update destroy render_audio]
 
   def create
     sketch = @parent.dilla_sketches.build(dilla_sketch_params.merge(user: Current.user, render_status: "idle"))
@@ -79,7 +79,7 @@ class Playlist::DillaSketchesController < Playlist::BaseController
     owner = (u && u.id == @parent.user_id)
     editor = false
     if (collab = @parent.collaborations.find_by(user: u))
-      editor = %w[owner editor].include?(collab.role)
+      editor = %w\[owner editor].include?(collab.role)
     end
     unless owner || editor
       redirect_to(parent_path, alert: t("playlist.sketches_not_allowed"))
@@ -87,6 +87,6 @@ class Playlist::DillaSketchesController < Playlist::BaseController
   end
 
   def truthy?(value)
-    %w[1 true yes on].include?(value.to_s.downcase)
+    %w\[1 true yes on].include?(value.to_s.downcase)
   end
 end

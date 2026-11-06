@@ -99,7 +99,7 @@ module Operator
           return
         end
       end
-      return unless %i[evidence sha256 reviewer].all? { |key| options.key?(key) }
+      return unless %i\[evidence sha256 reviewer].all? { |key| options.key?(key) }
 
       options
     end

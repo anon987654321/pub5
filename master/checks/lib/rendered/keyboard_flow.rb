@@ -79,7 +79,7 @@ module Deploy
     STATE_MARK = File.read(File.join(__dir__, "../../support/journey_probe/state_mark.js")).freeze
     STATE_READ = File.read(File.join(__dir__, "../../support/journey_probe/state_read.js")).freeze
 
-    STATES = %w[active disabled busy].freeze
+    STATES = %w\[active disabled busy].freeze
     STATE_WHY = {
       "active" => "a press gives no feedback, so it is pressed again",
       "disabled" => "a control that cannot be pressed looks like one that can",
@@ -136,19 +136,19 @@ module Deploy
     def pick_surfaces
       # Prefer high-traffic triangle surfaces first (home/nearby/wardrobe/feed),
       # then fill remaining slots so keyboard order is not only auth forms.
-      preferred = %w[
+      preferred = %w\[
         brgen/core brgen/nearby brgen/marketplace brgen/session_new
         amber/home amber/wardrobe amber/feed amber/sign_in
         bsdports/home bsdports/ports_index
       ]
 
       responsive = GeometryProbe.surfaces
-                                .select { |surface| %w[desktop mobile].include?(surface.viewport) }
+                                .select { |surface| %w\[desktop mobile].include?(surface.viewport) }
                                 .uniq { |surface| "#{surface.app}/#{surface.label}/#{surface.viewport}" }
       by_key = responsive.group_by { |surface| "#{surface.app}/#{surface.label}" }
       picked = preferred.flat_map do |key|
         rows = by_key.fetch(key, [])
-        %w[desktop mobile].filter_map { |viewport| rows.find { |surface| surface.viewport == viewport } }
+        %w\[desktop mobile].filter_map { |viewport| rows.find { |surface| surface.viewport == viewport } }
       end
 
       # Keep a bounded but balanced sample for every app at each viewport.

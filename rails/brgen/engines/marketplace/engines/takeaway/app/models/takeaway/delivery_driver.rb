@@ -4,7 +4,7 @@ module Takeaway
   class DeliveryDriver < ApplicationRecord
     self.table_name = "takeaway_delivery_drivers"
 
-    VEHICLE_TYPES = %w[bicycle scooter car van walking].freeze
+    VEHICLE_TYPES = %w\[bicycle scooter car van walking].freeze
 
     belongs_to :user
     has_many :orders, class_name: "Takeaway::Order", dependent: :nullify

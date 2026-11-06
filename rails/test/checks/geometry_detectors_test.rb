@@ -150,7 +150,7 @@ class GeometryDetectorsTest < Minitest::Test
   # rect is [x, y, w, h].
   def box(key, rect, fill: "#1a1a1a", under: "#000000", **extra)
     { "key" => key, "tag" => extra.delete(:tag) || "div", "visible" => true, "onscreen" => true,
-      "frect" => %w[x y w h].zip(rect).to_h,
+      "frect" => %w\[x y w h].zip(rect).to_h,
       "fill" => !fill.nil?, "bg" => fill || under, "under" => fill && under }.merge(extra.transform_keys(&:to_s))
   end
 
@@ -228,7 +228,7 @@ class GeometryDetectorsTest < Minitest::Test
                     search_field("header>form>input"), search_field("main>form>input"))
     found = check_findings { |check| check.check_layout(surface, { "elements" => elements }) }
 
-    %w[dominance action_weight duplicate_search].each do |check|
+    %w\[dominance action_weight duplicate_search].each do |check|
       assert found.any? { |m| m.start_with?("geometry #{check}:") }, "#{check} did not run: #{found.inspect}"
     end
   end
@@ -241,19 +241,19 @@ class GeometryDetectorsTest < Minitest::Test
     { "sel" => sel, "hrefs" => hrefs, "onscreen" => onscreen, "nested" => nested }
   end
 
-  TABS = %w[/ /search /notifications /profile].freeze
+  TABS = %w\[/ /search /notifications /profile].freeze
 
   def navs(*bars) = grammar(:check_duplicate_nav, { "groups" => [bar("nav.tab-bar", TABS), *bars] })
 
   def test_duplicate_nav_names_two_bars_offering_the_same_places
-    assert_match(/duplicate_nav: .*nav\.tab-bar and nav\.top/, navs(bar("nav.top", TABS + %w[/tv])).join)
+    assert_match(/duplicate_nav: .*nav\.tab-bar and nav\.top/, navs(bar("nav.top", TABS + %w\[/tv])).join)
   end
 
   # A closed drawer repeats the tab bar by design, and a tablist inside a bar is the bar.
   def test_duplicate_nav_spares_a_drawer_off_screen_and_a_bar_inside_a_bar
     assert_empty navs(bar("aside>nav", TABS, onscreen: false))
     assert_empty navs(bar("nav>div", TABS, nested: true))
-    assert_empty navs(bar("nav.verticals", %w[/tv /dating /maps]))
+    assert_empty navs(bar("nav.verticals", %w\[/tv /dating /maps]))
   end
 
   def search_field(key, input_type: "search")

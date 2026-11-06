@@ -15,7 +15,7 @@ class LogoPlacementTest < ActiveSupport::TestCase
 
   # Anything that moves or resizes the mark. Colour and z-index are fine: a
   # vertical may need to win a stacking contest or invert on its own backdrop.
-  PLACEMENT = %w[
+  PLACEMENT = %w\[
     top bottom left right inset inset-block-start inset-inline-start
     padding margin min-height min-width width height
     font-size font-weight letter-spacing position transform

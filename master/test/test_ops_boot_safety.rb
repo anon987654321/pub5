@@ -48,7 +48,7 @@ class BootSafetySpec < Minitest::Test
   # apply_master_loop! reads, cleared and restored around the block.
   def with_clean_process_env
     keys = Master::MasterRuntime::PROCESS_DEFAULTS.keys +
-           %w[MASTER_UNSAFE_PROCESS_DEFAULTS MASTER_LOOP]
+           %w\[MASTER_UNSAFE_PROCESS_DEFAULTS MASTER_LOOP]
     saved = keys.to_h { |key| [key, ENV.fetch(key, nil)] }
     keys.each { |key| ENV.delete(key) }
     yield

@@ -6,7 +6,7 @@ module Shared
 
     included do
       class_attribute :media_variant_definitions, default: {}
-      after_commit :enqueue_media_variant_processing, on: %i[create update]
+      after_commit :enqueue_media_variant_processing, on: %i\[create update]
     end
 
     class_methods do

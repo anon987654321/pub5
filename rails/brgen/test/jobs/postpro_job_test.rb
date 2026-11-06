@@ -44,7 +44,7 @@ class PostproJobTest < ActiveSupport::TestCase
     PostproJob.perform_now(listing.to_gid.to_s, "portrait", "photos")
     listing.reload
 
-    assert_includes %w[done skipped], listing.photo_status
+    assert_includes %w\[done skipped], listing.photo_status
   ensure
     ActsAsTenant.current_tenant = nil
   end

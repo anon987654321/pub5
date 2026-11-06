@@ -20,9 +20,9 @@ module Operator
     Failure = Class.new(StandardError)
     # Optional modules other agents land; each is used only when its file exists
     # and it answers review_rows(captures) with printable lines.
-    OPTIONAL = { "Layout score" => %w[layout_score LayoutScore], "Stress states" => %w[visual_stress VisualStress],
-                 "Taste memory" => %w[taste_memory TasteMemory] }.freeze
-    DEFAULT_ENGINES = %w[chrome].freeze
+    OPTIONAL = { "Layout score" => %w\[layout_score LayoutScore], "Stress states" => %w\[visual_stress VisualStress],
+                 "Taste memory" => %w\[taste_memory TasteMemory] }.freeze
+    DEFAULT_ENGINES = %w\[chrome].freeze
 
     module_function
 

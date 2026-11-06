@@ -602,7 +602,7 @@ module Dilla
           steps = @drums.fetch(lane, [])
           steps.each do |entry|
             step, vel = entry
-            next if is_bust && %w[kick snare].include?(lane) && lane == "kick" && step >= 8
+            next if is_bust && %w\[kick snare].include?(lane) && lane == "kick" && step >= 8
 
             vel = vel * (1.0 + hat_level_bias) if lane == "hats"
             vel = (vel * (1.0 + ghost_bias)).clamp(0.05, 1.0) if lane == "ghost"
@@ -786,7 +786,7 @@ module Dilla
     end
   end
 
-  DRUM_LANES = %w[kick snare ghost hats ride perc open_hat].freeze
+  DRUM_LANES = %w\[kick snare ghost hats ride perc open_hat].freeze
 end
 
 module Dilla
@@ -1928,7 +1928,7 @@ module Dilla
     mixer.gain!(:drums, opts.drum_balance.to_f) if opts.drum_balance
     mixer.gain!(:chords, opts.chord_balance.to_f) if opts.chord_balance
     curve = mixer.sidechain_curve!(events.fetch(:drum), rig.dig("sidechain", "amount"), rig.dig("sidechain", "release_ms") || 120)
-    %i[chords bass melody sample].each { |b| mixer.duck!(b, curve) }
+    %i\[chords bass melody sample].each { |b| mixer.duck!(b, curve) }
 
     mixer.render_vinyl(plan[:vcs])
     delay = rig.fetch("delay")
@@ -2222,7 +2222,7 @@ module Dilla
   # reads it through master's media intent.
   def reference(opts)
     source = opts.source
-    style = %w[j_dilla industrial_techno general].include?(opts.style) ? opts.style : "j_dilla"
+    style = %w\[j_dilla industrial_techno general].include?(opts.style) ? opts.style : "j_dilla"
     require_relative File.join("..", "output_paths")
     root = Studio::OutputPaths.reference_root
     stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
@@ -2327,7 +2327,7 @@ module Dilla
     stem_root = Dir.glob(File.join(out_dir, "htdemucs", "*")).find { |p| File.directory?(p) }
     return nil unless stem_root
 
-    expected = %w[drums.wav bass.wav other.wav vocals.wav]
+    expected = %w\[drums.wav bass.wav other.wav vocals.wav]
     stems = expected.map { |s| File.join(stem_root, s) }
     return stems.all? { |p| File.file?(p) } ? stem_root : nil
   end

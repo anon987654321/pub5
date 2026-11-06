@@ -12,7 +12,7 @@ class CreateModerationReports < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :moderation_reports, %i[reportable_type reportable_id]
-    add_index :moderation_reports, %i[status created_at]
+    add_index :moderation_reports, %i\[reportable_type reportable_id]
+    add_index :moderation_reports, %i\[status created_at]
   end
 end

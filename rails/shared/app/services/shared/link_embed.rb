@@ -55,7 +55,7 @@ module Shared
     YOUTUBE_PATH = %r{\A/(?:shorts|embed|live)/([\w-]+)/?\z}
     SOUNDCLOUD_PATH = %r{\A/([a-z0-9][\w-]*)/((?:sets/)?[a-z0-9][\w-]*)/?\z}i
     # First path segments that are SoundCloud's own pages rather than an artist.
-    SOUNDCLOUD_PAGES = %w[
+    SOUNDCLOUD_PAGES = %w\[
       discover search stream upload you charts pages jobs terms-of-use mobile settings messages
     ].freeze
     VIMEO_PATH = %r{\A/(\d+)(?:/([0-9a-f]+))?/?\z}
@@ -67,7 +67,7 @@ module Shared
     PROVIDERS = [
       Provider.new(
         key: "youtube", label: "YouTube",
-        hosts: %w[youtube.com www.youtube.com m.youtube.com youtu.be],
+        hosts: %w\[youtube.com www.youtube.com m.youtube.com youtu.be],
         media_id: lambda { |uri|
           id = uri.path[YOUTUBE_PATH, 1]
           id = URI.decode_www_form(uri.query.to_s).to_h["v"] if uri.path == "/watch"
@@ -78,12 +78,12 @@ module Shared
         oembed: "https://www.youtube.com/oembed",
         # youtube-nocookie sets no tracking cookie until the reader presses play.
         player: ->(id) { "https://www.youtube-nocookie.com/embed/#{id}?autoplay=1" },
-        thumbnail_hosts: %w[i.ytimg.com],
+        thumbnail_hosts: %w\[i.ytimg.com],
         allow: "autoplay; encrypted-media; fullscreen; picture-in-picture"
       ),
       Provider.new(
         key: "soundcloud", label: "SoundCloud",
-        hosts: %w[soundcloud.com www.soundcloud.com m.soundcloud.com],
+        hosts: %w\[soundcloud.com www.soundcloud.com m.soundcloud.com],
         media_id: lambda { |uri|
           user, item = uri.path.match(SOUNDCLOUD_PATH)&.captures
           "#{user}/#{item}".downcase if user && !SOUNDCLOUD_PAGES.include?(user.downcase)
@@ -99,7 +99,7 @@ module Shared
       ),
       Provider.new(
         key: "vimeo", label: "Vimeo",
-        hosts: %w[vimeo.com www.vimeo.com],
+        hosts: %w\[vimeo.com www.vimeo.com],
         media_id: lambda { |uri|
           video, unlisted = uri.path.match(VIMEO_PATH)&.captures
           [ video, unlisted ].compact.join("/") if video
@@ -111,12 +111,12 @@ module Shared
           video, unlisted = id.split("/")
           "https://player.vimeo.com/video/#{video}?dnt=1&autoplay=1#{"&h=#{unlisted}" if unlisted}"
         },
-        thumbnail_hosts: %w[i.vimeocdn.com],
+        thumbnail_hosts: %w\[i.vimeocdn.com],
         allow: "autoplay; fullscreen; picture-in-picture"
       ),
       Provider.new(
         key: "spotify", label: "Spotify",
-        hosts: %w[open.spotify.com],
+        hosts: %w\[open.spotify.com],
         media_id: lambda { |uri|
           kind, id = uri.path.match(SPOTIFY_PATH)&.captures
           "#{kind}/#{id}" if kind
@@ -133,7 +133,7 @@ module Shared
       # rest of its markup.
       Provider.new(
         key: "whyp", label: "Whyp",
-        hosts: %w[whyp.it www.whyp.it],
+        hosts: %w\[whyp.it www.whyp.it],
         media_id: lambda { |uri|
           track = uri.path[WHYP_PATH, 1]
           token = URI.decode_www_form(uri.query.to_s).to_h["token"]
@@ -150,7 +150,7 @@ module Shared
           track, token = id.split("/")
           "https://whyp.it/embeds/track/#{track}#{"?token=#{token}" if token}"
         },
-        thumbnail_hosts: %w[cdn.whyp.it],
+        thumbnail_hosts: %w\[cdn.whyp.it],
         allow: "autoplay"
       ),
     ].freeze

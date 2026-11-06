@@ -21,15 +21,15 @@ class AddIntegrityConstraints < ActiveRecord::Migration[8.1]
 
     add_index :comments, :parent_id unless index_exists?(:comments, :parent_id)
 
-    dedup_and_unique_index :follows, %i[follower_id followee_id]
-    dedup_and_unique_index :outfit_items, %i[item_id outfit_id]
-    dedup_and_unique_index :planned_outfits, %i[user_id planned_date]
+    dedup_and_unique_index :follows, %i\[follower_id followee_id]
+    dedup_and_unique_index :outfit_items, %i\[item_id outfit_id]
+    dedup_and_unique_index :planned_outfits, %i\[user_id planned_date]
   end
 
   def down
-    remove_index :planned_outfits, column: %i[user_id planned_date] if index_exists?(:planned_outfits, %i[user_id planned_date])
-    remove_index :outfit_items, column: %i[item_id outfit_id] if index_exists?(:outfit_items, %i[item_id outfit_id])
-    remove_index :follows, column: %i[follower_id followee_id] if index_exists?(:follows, %i[follower_id followee_id])
+    remove_index :planned_outfits, column: %i\[user_id planned_date] if index_exists?(:planned_outfits, %i\[user_id planned_date])
+    remove_index :outfit_items, column: %i\[item_id outfit_id] if index_exists?(:outfit_items, %i\[item_id outfit_id])
+    remove_index :follows, column: %i\[follower_id followee_id] if index_exists?(:follows, %i\[follower_id followee_id])
     remove_index :comments, :parent_id if index_exists?(:comments, :parent_id)
 
     change_column_null :posts, :body, true

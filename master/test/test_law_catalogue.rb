@@ -74,7 +74,7 @@ class TestRuleCatalogue < Minitest::Test
     body = catalogue({ "id" => "BARE_RESCUE", "severity" => "error" },
                      learned_smells: [{ "id" => "bare_rescue", "pattern" => "rescue" }])
     with_body(body) do
-      assert_equal [%w[BARE_RESCUE bare_rescue]], Operator::LawHygiene.id_case_collisions
+      assert_equal [%w\[BARE_RESCUE bare_rescue]], Operator::LawHygiene.id_case_collisions
       assert_equal ["bare_rescue"], Operator::LawHygiene.missing_metadata
     end
   end
@@ -129,7 +129,7 @@ class TestRuleCatalogue < Minitest::Test
       with_populations(laws:) do
         conflicts = Operator::LawHygiene.statement_conflicts
 
-        assert_equal %w[DRIFTED LOUDER], conflicts.map { |c| c[:law] }
+        assert_equal %w\[DRIFTED LOUDER], conflicts.map { |c| c[:law] }
         assert_equal ["fix"], conflicts.first[:reasons]
         assert_match(/info declared, warning enforced/, conflicts.last[:reasons].first)
       end
@@ -148,7 +148,7 @@ class TestRuleCatalogue < Minitest::Test
   # live rule is the defect. Both asserted, because narrowing this check to
   # silence the second would turn it off rather than fix it.
   def test_an_alias_is_reported_only_when_its_subject_is_still_alive
-    body = catalogue({ "id" => "DRY", "severity" => "error", "aliases" => %w[duplicate_code retired_id] },
+    body = catalogue({ "id" => "DRY", "severity" => "error", "aliases" => %w\[duplicate_code retired_id] },
                      { "id" => "duplicate_code", "severity" => "warning" })
     with_body(body) do
       reported = Operator::LawHygiene.alias_shadows_live_law

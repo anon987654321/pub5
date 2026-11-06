@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class SharedSocialRoutesTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  FULL_SOCIAL_APPS = %w[amber brgen].freeze
+  FULL_SOCIAL_APPS = %w\[amber brgen].freeze
 
   def test_social_apps_expose_shared_social_endpoints
     social = File.read(File.join(ROOT, "shared/config/routes/social.rb"))
@@ -25,14 +25,14 @@ class SharedSocialRoutesTest < Minitest::Test
   end
 
   def test_every_app_evals_shared_legal_routes
-    %w[amber brgen bsdports].each do |app|
+    %w\[amber brgen bsdports].each do |app|
       routes = File.read(File.join(ROOT, app, "config/routes.rb"))
       assert_includes routes, "shared/config/routes/legal.rb", "#{app} must eval shared legal routes"
     end
     legal = File.read(File.join(ROOT, "shared/config/routes/legal.rb"))
     assert_includes legal, "PagesController::PAGES", "the legal routes draw from the controller's one list"
     pages = File.read(File.join(ROOT, "shared/app/controllers/pages_controller.rb"))
-    %w[privacy terms cookies safety rules].each do |page|
+    %w\[privacy terms cookies safety rules].each do |page|
       assert_match(/PAGES = %w\[[^\]]*\b#{page}\b/, pages)
     end
   end

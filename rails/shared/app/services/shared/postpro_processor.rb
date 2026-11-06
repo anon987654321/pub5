@@ -8,7 +8,7 @@ require "fileutils"
 module Shared
   # Runs studio/postpro/postpro.rb on Active Storage blobs (seeds, jobs, newsletters).
   module PostproProcessor
-    VALID_PRESETS = %w[portrait landscape street blockbuster cinematic magic_hour indie polaroid].freeze
+    VALID_PRESETS = %w\[portrait landscape street blockbuster cinematic magic_hour indie polaroid].freeze
 
     module_function
 

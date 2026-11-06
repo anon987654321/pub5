@@ -11,13 +11,13 @@ module Deploy
     # face shell inlines its boot script and owns its <main> by its own boot
     # contract (master/web/CLAUDE.md), so every finding there would be the
     # model misapplied rather than a defect.
-    APPS = %w[amber brgen bsdports].freeze
+    APPS = %w\[amber brgen bsdports].freeze
     SHARED = Pathname.new(File.join(ROOT, "rails", "__shared"))
 
     # CHECK_AUDITOR_STRICT=1 fails on warnings. Without it only :error findings
     # block layout_suite and warnings are reported; runner.rb --explain says so.
     def self.strict_warnings?(env = ENV)
-      %w[1 true yes on].include?(env["CHECK_AUDITOR_STRICT"].to_s.strip.downcase)
+      %w\[1 true yes on].include?(env["CHECK_AUDITOR_STRICT"].to_s.strip.downcase)
     end
 
     # root: and apps: name the fleet to walk. The auditor's own code always loads

@@ -15,7 +15,7 @@ require "minitest/autorun"
 # rather than weakening the count.
 class ErbContainerBalanceTest < Minitest::Test
   rails = File.expand_path("..", __dir__)
-  CONTAINERS = %w[div article section main nav header footer aside ul ol form details table].freeze
+  CONTAINERS = %w\[div article section main nav header footer aside ul ol form details table].freeze
 
   def strip_erb(source)
     source.gsub(/<%#.*?%>/m, "").gsub(/<%.*?%>/m, "").gsub(/<!--.*?-->/m, "")
@@ -43,7 +43,7 @@ class ErbContainerBalanceTest < Minitest::Test
 
     offenders = files.filter_map do |file|
       found = imbalances(File.read(file, encoding: "UTF-8"))
-      "#{file.delete_prefix("#{RAILS}/")} — #{found.join(', ')}" unless found.empty?
+      "#{file.delete_prefix("#{rails}/")} — #{found.join(', ')}" unless found.empty?
     end
 
     assert_empty offenders, "templates with unbalanced container tags:\n  #{offenders.join("\n  ")}"

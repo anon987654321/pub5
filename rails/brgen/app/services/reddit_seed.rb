@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class RedditSeed
-  POST_SCHEMA = %w[title url body score author comment_count top_comments].freeze
-  COMMENT_SCHEMA = %w[author body score].freeze
+  POST_SCHEMA = %w\[title url body score author comment_count top_comments].freeze
+  COMMENT_SCHEMA = %w\[author body score].freeze
 
   def initialize(city:, domain:, subs: nil, rewriter: Shared::ContentRewriter)
     @city = city
@@ -135,7 +135,7 @@ class RedditSeed
     rest = Takeaway::Restaurant.find_or_create_by!(name: title.truncate(60)) do |restaurant|
       restaurant.user = seed_user
       restaurant.demo = true
-      restaurant.cuisine_type = %w[Norwegian Italian Chinese Japanese Indian Thai Mexican Pizza].sample
+      restaurant.cuisine_type = %w\[Norwegian Italian Chinese Japanese Indian Thai Mexican Pizza].sample
       restaurant.address = "#{Faker::Address.street_address}, #{@city.name}"
       restaurant.city = @city.name
       restaurant.description = body.truncate(300)

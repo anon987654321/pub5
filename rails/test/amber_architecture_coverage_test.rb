@@ -13,7 +13,7 @@ class AmberArchitectureCoverageTest < Minitest::Test
 
   # Concerns are mixins, not components; ApplicationRecord/Job are framework base
   # classes. Everything else owes the document a mention.
-  SKIP = %w[application_record application_job application_controller].freeze
+  SKIP = %w\[application_record application_job application_controller].freeze
 
   def test_architecture_document_exists
     assert_match(/^## Architecture$/, File.read(DOC),
@@ -44,7 +44,7 @@ class AmberArchitectureCoverageTest < Minitest::Test
   private
 
   def components
-    %w[models services jobs].flat_map do |dir|
+    %w\[models services jobs].flat_map do |dir|
       Dir[File.join(ROOT, "app", dir, "*.rb")].map { |path| File.basename(path, ".rb") }
     end.uniq - SKIP
   end

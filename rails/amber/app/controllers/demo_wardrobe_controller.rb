@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class DemoWardrobeController < ApplicationController
-  allow_unauthenticated_access only: %i[index show]
+  allow_unauthenticated_access only: %i\[index show]
 
   before_action :require_demo!
 

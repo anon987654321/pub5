@@ -115,7 +115,7 @@ end
 
 # Day for night darkens on purpose: holding its exposure to the source's undid
 # the one thing the look is for.
-EXPOSURE_LOOKS = %w[day_for_night].freeze
+EXPOSURE_LOOKS = %w\[day_for_night].freeze
 
 def exposure_is_the_look?(request)
   return true if EXPOSURE_LOOKS.include?(request.take&.look.to_s)

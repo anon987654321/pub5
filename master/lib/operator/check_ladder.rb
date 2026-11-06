@@ -67,7 +67,7 @@ SAFE_ENV = {
 # An unknown argument is refused, because ignoring it means "run everything and
 # write". --explain reads as a dry run on `bin/operator check`, so this surface
 # must never treat it, or any typo, as full-fix.
-KNOWN_FLAGS = %w[--scan-only --lexical-only --semantic-only --explain --help -h].freeze
+KNOWN_FLAGS = %w\[--scan-only --lexical-only --semantic-only --explain --help -h].freeze
 unknown = ARGV.reject { |arg| KNOWN_FLAGS.include?(arg) || arg.start_with?("--tree=") }
 unless unknown.empty?
   warn "check: unknown argument#{"s" if unknown.size > 1}: #{unknown.join(" ")}"

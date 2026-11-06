@@ -22,7 +22,7 @@ module Playlist
 
     def authorize_editor!
       return if Current.user&.id == @playlist.user_id
-      return if @playlist.collaborations.exists?(user: Current.user, role: %w[owner editor])
+      return if @playlist.collaborations.exists?(user: Current.user, role: %w\[owner editor])
 
       redirect_to playlist_path(@playlist), alert: t("shared.flash.not_authorized")
     end

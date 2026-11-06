@@ -31,7 +31,7 @@ class CitySeedTest < ActiveSupport::TestCase
   end
 
   test "US eastern cities are not America/Los_Angeles" do
-    %w[newyrk.us wshingtondc.com dtroit.us].each do |domain|
+    %w\[newyrk.us wshingtondc.com dtroit.us].each do |domain|
       refute_equal "America/Los_Angeles", by_domain.fetch(domain).time_zone, domain
     end
     assert_equal "America/New_York", by_domain.fetch("newyrk.us").time_zone

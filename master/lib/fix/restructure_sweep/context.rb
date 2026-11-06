@@ -7,16 +7,16 @@ module Master
       # directory, the files it might merge into, and every line elsewhere that
       # names it, with the requiring files in full because a move rewrites them.
       class Context
-        SOURCE_EXT = %w[.rb .rake .js .mjs].freeze
+        SOURCE_EXT = %w\[.rb .rake .js .mjs].freeze
         REFERENCE_LINES = 80
         REQUIRERS = 5
         SMALL = 400
         RELATED_LINES = 180
-        PROSE_EXTENSIONS = %w[.md .txt].freeze
-        COMMAND_EXTENSIONS = %w[.rb .rake .sh .zsh].freeze
-        COMMAND_ROOTS = %w[bin tools].freeze
-        CONFIG_EXTENSIONS = %w[.rb .rake .yml .yaml .json].freeze
-        STALE_PATHS = %w[rails/shared rails/mobile rails/visual_contract rails/contracts rails/brgen/engines].freeze
+        PROSE_EXTENSIONS = %w\[.md .txt].freeze
+        COMMAND_EXTENSIONS = %w\[.rb .rake .sh .zsh].freeze
+        COMMAND_ROOTS = %w\[bin tools].freeze
+        CONFIG_EXTENSIONS = %w\[.rb .rake .yml .yaml .json].freeze
+        STALE_PATHS = %w\[rails/shared rails/mobile rails/visual_contract rails/contracts rails/brgen/engines].freeze
 
         # [path, law_id, message, related_paths] for every actionable structural finding.
         def self.structural_findings(target)
@@ -50,7 +50,7 @@ module Master
         # One directory's finding, or nil while anything outside it names it.
         def self.dead_subtree(dir, target, source)
           return if dir == File.join(target.to_s, "lib")
-          return if dir.split("/").any? { |part| %w[test spec fixtures vendor].include?(part) }
+          return if dir.split("/").any? { |part| %w\[test spec fixtures vendor].include?(part) }
 
           all = Dir.glob(File.join(dir, "**", "*.{rb,rake,js,mjs}")).select { |path| File.file?(path) }
           return if all.size < 3
@@ -91,7 +91,7 @@ module Master
           rows = Master::Fix::Scan::CrossFileAnalysis.new(root: target).call(production_files(target))
           findings = rows.flat_map { |_path, result| result.value_or([]) }
           findings.filter_map do |finding|
-            next unless %w[PARALLEL_HIERARCHY CYCLIC_DEPENDENCY].include?(finding[:law].to_s)
+            next unless %w\[PARALLEL_HIERARCHY CYCLIC_DEPENDENCY].include?(finding[:law].to_s)
 
             related = finding[:impact_radius].is_a?(Hash) ? Array(finding[:impact_radius][:files]) : []
             path = related.first
@@ -217,7 +217,7 @@ module Master
         def self.production_files(root)
           repository_files(root).select do |path|
             SOURCE_EXT.include?(File.extname(path)) &&
-              !path.split("/").any? { |part| %w[test spec fixtures].include?(part) } &&
+              !path.split("/").any? { |part| %w\[test spec fixtures].include?(part) } &&
               !Master::Fix::Scanner.skip_path?(path, root: root.to_s)
           end
         end
@@ -424,7 +424,7 @@ module Master
         end
 
         def test_path?(path)
-          path.split("/").any? { |part| %w[test spec fixtures].include?(part) }
+          path.split("/").any? { |part| %w\[test spec fixtures].include?(part) }
         end
 
         def numbered(path) = File.foreach(path, encoding: "UTF-8").with_index(1).map { |line, n| format("%4d  %s", n, line) }.join

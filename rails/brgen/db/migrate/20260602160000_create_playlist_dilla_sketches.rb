@@ -12,7 +12,7 @@ class CreatePlaylistDillaSketches < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :playlist_dilla_sketches, %i[playlist_id created_at], if_not_exists: true
-    add_index :playlist_dilla_sketches, %i[set_id created_at], if_not_exists: true
+    add_index :playlist_dilla_sketches, %i\[playlist_id created_at], if_not_exists: true
+    add_index :playlist_dilla_sketches, %i\[set_id created_at], if_not_exists: true
   end
 end

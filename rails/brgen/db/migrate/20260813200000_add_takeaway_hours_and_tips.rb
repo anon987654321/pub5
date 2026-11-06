@@ -19,7 +19,7 @@ class AddTakeawayHoursAndTips < ActiveRecord::Migration[8.1]
       t.integer :closes_minute, null: false
       t.timestamps
     end
-    add_index :takeaway_opening_hours, %i[restaurant_id weekday]
+    add_index :takeaway_opening_hours, %i\[restaurant_id weekday]
 
     change_table :takeaway_orders, bulk: true do |t|
       # Stored in minor units like every other amount here, so a tip cannot

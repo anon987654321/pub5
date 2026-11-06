@@ -149,7 +149,7 @@ module Master
         return true if first.equal?(second)
         return false if first.nil? || second.nil?
 
-        %i[law file line].all? { |key| finding_value(first, key) == finding_value(second, key) }
+        %i\[law file line].all? { |key| finding_value(first, key) == finding_value(second, key) }
       end
 
       def quality_delta
@@ -270,7 +270,7 @@ module Master
       def normalize_checkpoint_observation(row)
         raise TypeError, "checkpoint observation must be a hash" unless row.is_a?(Hash)
 
-        allowed = %w[pass score snapshot_digest captured_files finding_ids finding_digest risk_vector progressed]
+        allowed = %w\[pass score snapshot_digest captured_files finding_ids finding_digest risk_vector progressed]
         row.each_with_object({}) do |(key, value), out|
           name = key.to_s
           next unless allowed.include?(name)
@@ -429,7 +429,7 @@ module Master
           measurement: "finding count, ground truth, clean proof and next-pass quiescence",
           source: "fix_loop:pass:#{pass}",
           selected: top ? finding_value(top, :law).to_s : "observe",
-          alternatives: %w[repair preserve investigate],
+          alternatives: %w\[repair preserve investigate],
           status: :uncertain,
           cause: "observe pass #{pass}",
           effect: progressed ? "measured tree change" : "no measured tree change",
@@ -533,7 +533,7 @@ module Master
       end
 
       def authority_paths
-        %w[soul.yml laws.yml].map { |name| File.join(Master::ROOT, "data", name) }
+        %w\[soul.yml laws.yml].map { |name| File.join(Master::ROOT, "data", name) }
       end
 
       def authority_state
@@ -570,7 +570,7 @@ module Master
           File.join(@root, "master", "data", "laws.yml"),
           File.join(@root, "master", "data", "soul.yml"),
         ]
-        patterns = %w[
+        patterns = %w\[
           master/lib/fix/**/*.rb
           master/lib/review/scan/**/*.rb
           master/law/*.rb

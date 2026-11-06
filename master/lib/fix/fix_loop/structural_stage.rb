@@ -18,7 +18,7 @@ module Master
             ::Operator::Cohesion.plans_for(dir).map do |plan|
               {
                 law: RULE_ID,
-                laws: %w[SINGULARITY ABSTRACTION DENSITY PROXIMITY KISS],
+                laws: %w\[SINGULARITY ABSTRACTION DENSITY PROXIMITY KISS],
                 source: "cohesion",
                 file: relative_path(plan.fetch(:files).first, dir),
                 line: 1,

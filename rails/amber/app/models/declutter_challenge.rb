@@ -8,7 +8,7 @@ class DeclutterChallenge < ApplicationRecord
   belongs_to :item
   belongs_to :outfit, optional: true
 
-  STATUSES = %w[pending completed skipped expired].freeze
+  STATUSES = %w\[pending completed skipped expired].freeze
 
   validates :status, inclusion: { in: STATUSES }
   validates :due_on, presence: true

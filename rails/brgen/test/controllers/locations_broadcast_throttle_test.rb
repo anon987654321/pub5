@@ -34,7 +34,7 @@ class LocationsBroadcastThrottleTest < ActionDispatch::IntegrationTest
 def queries_during
   count = 0
   counter = ->(_n, _s, _f, _i, payload) do
-    count += 1 unless payload[:name].to_s.in?(%w[SCHEMA TRANSACTION CACHE])
+    count += 1 unless payload[:name].to_s.in?(%w\[SCHEMA TRANSACTION CACHE])
   end
   ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
   count

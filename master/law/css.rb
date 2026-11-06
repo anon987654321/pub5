@@ -431,7 +431,7 @@ module Law
   module PageCss
     MM = { "mm" => 1.0, "cm" => 10.0, "in" => 25.4, "pt" => 25.4 / 72, "px" => 25.4 / 96 }.freeze
     CANON = { "top" => 1.5, "outer" => 2.0, "bottom" => 3.0 }.freeze
-    SIDES = %w[top right bottom left].freeze
+    SIDES = %w\[top right bottom left].freeze
     # Which of the four sides each value of a 1-, 2-, 3- or 4-value margin shorthand sets.
     SHORTHAND = { 1 => [0, 0, 0, 0], 2 => [0, 1, 0, 1], 3 => [0, 1, 2, 1], 4 => [0, 1, 2, 3] }.freeze
     NONZERO = /\s*:\s*(?!0[;\s}]|0\z)[\d.]/
@@ -494,14 +494,14 @@ module Law
       [{ line: line_at(src, src.index(indent[1])), message: "paragraphs are indented and spaced - choose one device" }]
     end
 
-    def paragraphs(**fields) = %w[p.a p.b].map { |key| Deploy::RenderedDesign.element(key, pid: 1, **fields) }
+    def paragraphs(**fields) = %w\[p.a p.b].map { |key| Deploy::RenderedDesign.element(key, pid: 1, **fields) }
   end
 
   P = PageCss
 
   ::Law.define(:PARAGRAPH_SEPARATION_ONE_DEVICE) do
     source "Bringhurst 2.3.1-2.3.2; Butterick, indent or space, don't use both; Tschichold, The Form of the Book"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     snap = Deploy::RenderedDesign
     path Regexp.union(/\.s?css\z/, snap::SNAPSHOT)
     fix "Separate paragraphs by space (p + p { margin-block-start }) or by an indent of one en, never both; " \
@@ -509,7 +509,7 @@ module Law
     bad "p { margin-block: 1.5em; text-indent: 1em; }\n"
     good "p + p { margin-block-start: 1.5em; }\n"
     check { |src, _path| P.both_devices(src).map { |hit| finding(**hit) } }
-    adapter(:rendered_ui, languages: %i[json], example_path: snap::EXAMPLE,
+    adapter(:rendered_ui, languages: %i\[json], example_path: snap::EXAMPLE,
                           bad: snap.fixture(elements: P.paragraphs(text_indent: 16, margin_block: [24, 24])),
                           good: snap.fixture(elements: P.paragraphs(margin_block: [0, 24]))) do |text, file|
       snap.findings(:PARAGRAPH_SEPARATION_ONE_DEVICE, text, file).map { |hit| finding(**hit) }
@@ -518,7 +518,7 @@ module Law
 
   ::Law.define(:PRINT_PAGE_CANON) do
     source "Tschichold, The Form of the Book (1991): the 2:3:4:6 canon from Van de Graaf and Villard; Bringhurst ch. 8"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path %r{(?:\A|/)BPLANS/}
     example_path "/repo/BPLANS/print.css"
     fix "Set @page margins inner < top < outer < bottom near 2:3:4:6 (22mm 33mm 44mm 66mm), mirrored on :left, " \

@@ -59,7 +59,7 @@ module Marketplace
 
     def performance_score
       counts = @listing.events.recent(7)
-                         .where(event_type: %w[click cart purchase return])
+                         .where(event_type: %w\[click cart purchase return])
                          .group(:event_type).count
       clicks = counts.fetch("click", 0)
       carts = counts.fetch("cart", 0)

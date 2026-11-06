@@ -15,13 +15,13 @@ module Deploy
   # states per surface per pass (rotating with the pass, so a long run covers
   # them all).
   module StressStates
-    COMPOUNDS = %w[
+    COMPOUNDS = %w\[
       Rettsmedisinaldokumentasjonsforvaltningen Kommunikasjonsutviklingsavdelingsleder
       Sykehusinnkjøpssamarbeidsorganisasjonen Arbeidsmiljøverneombudsrepresentant
       Skattebetalerforeningsmedlemsregisteret Eiendomsmeglerforetaksregistreringen
     ].freeze
 
-    ORDER = %i[compound narrow320 zoom200 list_200 list_empty list_one landscape reduced_motion dark].freeze
+    ORDER = %i\[compound narrow320 zoom200 list_200 list_empty list_one landscape reduced_motion dark].freeze
     LIST_COUNTS = { list_200: 200, list_empty: 0, list_one: 1 }.freeze
     TALL_PAGE_PX = 8000
     SETTLE = 0.2

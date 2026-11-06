@@ -13,7 +13,7 @@ RECIPROCITY_LOSS = 0.5
 def reciprocity_failure(image, exposure_seconds = 10.0, stock = :cinestill_800t)
   decades = Math.log10([exposure_seconds, 1.0].max)
   shift = RECIPROCITY_SHIFT[stock] || RECIPROCITY_SHIFT[:cinestill_800t]
-  gains = %i[r g b].map { |layer| 2.0**((shift[layer] - RECIPROCITY_LOSS) * decades) }
+  gains = %i\[r g b].map { |layer| 2.0**((shift[layer] - RECIPROCITY_LOSS) * decades) }
   safe_cast(clamp01(image.colourspace("scrgb").linear(gains, [0, 0, 0])).colourspace("srgb"))
 rescue StandardError => e
   $logger.error "reciprocity_failure: #{e.message}"; image

@@ -4,7 +4,7 @@ module Playlist
   class Set < ApplicationRecord
     self.table_name = "playlist_sets"
 
-    PRIVACY_LEVELS = %w[public private unlisted].freeze
+    PRIVACY_LEVELS = %w\[public private unlisted].freeze
 
     tracks_activity created: "PlaylistSetCreated", source_vertical: "playlist", actor: :user
     include Shared::Reactable

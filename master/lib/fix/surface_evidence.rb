@@ -21,21 +21,21 @@ module Master
       DEFAULT_COMMAND_TIMEOUT = Integer(ENV.fetch("MASTER_FIX_SURFACE_COMMAND_TIMEOUT_S", "180"))
       TEST_TIMEOUT = Integer(ENV.fetch("MASTER_FIX_SURFACE_TEST_TIMEOUT_S", "600"))
       RUNTIME_TIMEOUT = Integer(ENV.fetch("MASTER_FIX_SURFACE_RUNTIME_TIMEOUT_S", "180"))
-      IGNORED_DIRECTORIES = %w[
+      IGNORED_DIRECTORIES = %w\[
         .git .master .bundle node_modules vendor/bundle tmp log storage coverage
         .cache .sass-cache
       ].freeze
-      MEDIA_EXTENSIONS = %w[
+      MEDIA_EXTENSIONS = %w\[
         .png .jpg .jpeg .gif .webp .avif .svg .ico .bmp .tif .tiff .pdf
         .wav .mp3 .m4a .aac .ogg .flac .mp4 .mov .webm .woff .woff2 .ttf .otf
       ].freeze
-      RUNTIME_EXTENSIONS = %w[
+      RUNTIME_EXTENSIONS = %w\[
         .rb .rake .gemspec .erb .js .mjs .cjs .ts .tsx .jsx
         .sh .bash .ksh .zsh
       ].freeze
-      SOURCE_TYPES = %w[file directory symlink other].freeze
-      COMPLETE_STATUSES = %w[assessed_clean not_applicable].freeze
-      SURFACES = %w[
+      SOURCE_TYPES = %w\[file directory symlink other].freeze
+      COMPLETE_STATUSES = %w\[assessed_clean not_applicable].freeze
+      SURFACES = %w\[
         repository_tree directories file_names paths cross_file media_assets compiled_assets
         rendered_ui interactive_behavior tests runtime deployment
       ].freeze
@@ -157,7 +157,7 @@ module Master
         return json_safe(@cache[key]) if @cache.key?(key)
 
         result = yield
-        @cache[key] = result if result.is_a?(Hash) && %w[assessed_clean violation_found not_applicable].include?(result["status"].to_s)
+        @cache[key] = result if result.is_a?(Hash) && %w\[assessed_clean violation_found not_applicable].include?(result["status"].to_s)
         result
       rescue StandardError => e
         receipt("inconclusive", reason: "#{name} probe failed: #{error_text(e)}")
@@ -244,7 +244,7 @@ module Master
               end
             end if extension == ".rb" || extension == ".rake" || extension == ".gemspec"
 
-          if %w[.js .mjs .cjs .ts .tsx .jsx].include?(extension)
+          if %w\[.js .mjs .cjs .ts .tsx .jsx].include?(extension)
             body.to_enum(:scan, %r{(?:from\s*|import\s*\()\s*["'](\.{1,2}/[^"']+)["']}).
               each do
                 reference = Regexp.last_match(1)
@@ -320,7 +320,7 @@ module Master
 
       def recognized_asset_records(inventory)
         Array(inventory["records"]).select do |path, type, _size|
-          %w[file symlink].include?(type) && MEDIA_EXTENSIONS.include?(File.extname(path.to_s).downcase)
+          %w\[file symlink].include?(type) && MEDIA_EXTENSIONS.include?(File.extname(path.to_s).downcase)
         end
       end
 
@@ -412,7 +412,7 @@ module Master
             next
           when "assessed_clean"
             failures = actions.select { |action| row_value(action, "status").to_s == "violation_found" }
-            unknown = actions.reject { |action| %w[assessed_clean violation_found].include?(row_value(action, "status").to_s) }
+            unknown = actions.reject { |action| %w\[assessed_clean violation_found].include?(row_value(action, "status").to_s) }
             violations.concat(failures.map { |action| { "surface" => row_value(row, "id"), "action" => action } })
             unresolved << { "surface" => row_value(row, "id"), "actions" => unknown.first(5) } if unknown.any?
           when "violation_found"
@@ -493,7 +493,7 @@ module Master
         deadline = command_deadline(RUNTIME_TIMEOUT)
 
         ruby_paths = @plan.sources.map(&:path).select do |path|
-          %w[.rb .rake .gemspec].include?(File.extname(path).downcase)
+          %w\[.rb .rake .gemspec].include?(File.extname(path).downcase)
         end
         if ruby_paths.any?
           command = [
@@ -525,10 +525,10 @@ module Master
         end
 
         js_paths = @plan.sources.map(&:path).select do |path|
-          %w[.js .mjs .cjs].include?(File.extname(path).downcase)
+          %w\[.js .mjs .cjs].include?(File.extname(path).downcase)
         end
         typed_paths = @plan.sources.map(&:path).select do |path|
-          %w[.jsx .ts .tsx].include?(File.extname(path).downcase)
+          %w\[.jsx .ts .tsx].include?(File.extname(path).downcase)
         end
         unless typed_paths.empty?
           unavailable << "#{typed_paths.size} TypeScript/JSX file(s) need a project-aware parser; Node --check is not evidence for these formats"
@@ -665,7 +665,7 @@ module Master
                 next unless row
 
                 metadata = rails_apps.fetch(name)
-                %w[domain port].each do |key|
+                %w\[domain port].each do |key|
                   problems << "#{name}: deploy inventory #{key} differs from rails/apps.yml" unless row[key].to_s == metadata[key].to_s
                 end
               end
@@ -858,9 +858,9 @@ module Master
 
         app_names = []
         if label == "rails"
-          app_names = %w[amber brgen bsdports]
+          app_names = %w\[amber brgen bsdports]
         elsif label == "rails/__shared" || label.start_with?("rails/__shared/")
-          app_names = %w[amber brgen bsdports]
+          app_names = %w\[amber brgen bsdports]
         else
           app_names = [target_app_name]
         end
@@ -878,7 +878,7 @@ module Master
 
       def target_has_tests?(inventory)
         if @target_label == "rails/__shared" || @target_label.start_with?("rails/__shared/")
-          return %w[amber brgen bsdports].any? do |name|
+          return %w\[amber brgen bsdports].any? do |name|
             File.directory?(File.join(@root, "rails", name, "test"))
           end
         end
@@ -895,8 +895,8 @@ module Master
         @plan.sources.any? do |source|
           path = source.path
           path.match?(%r{(?:\A|/)(?:app/views|views|templates|frontend|src|public)/}) &&
-            %w[.erb .html .htm .css .scss .js .mjs .ts .tsx .jsx].include?(File.extname(path).downcase)
-        end || rails_target? && @plan.sources.any? { |source| %w[.erb .html .htm .css .scss].include?(File.extname(source.path).downcase) }
+            %w\[.erb .html .htm .css .scss .js .mjs .ts .tsx .jsx].include?(File.extname(path).downcase)
+        end || rails_target? && @plan.sources.any? { |source| %w\[.erb .html .htm .css .scss].include?(File.extname(source.path).downcase) }
       end
 
       def target_has_deployment?
@@ -916,7 +916,7 @@ module Master
         return { failures: [], unavailable: ["Rails boot probes deferred until a clean scanner candidate pass"], checked: [] } unless @run_expensive
 
         app_names = if @target_label == "rails" || @target_label == "rails/__shared" || @target_label.start_with?("rails/__shared/")
-                      %w[amber brgen bsdports]
+                      %w\[amber brgen bsdports]
                     else
                       [target_app_name]
                     end
@@ -987,8 +987,8 @@ module Master
 
       def module_reference_candidates(path, reference)
         base = File.expand_path(reference, File.dirname(path))
-        [base, *%w[.js .mjs .cjs .ts .tsx .jsx].map { |extension| "#{base}#{extension}" },
-         *%w[index.js index.mjs index.ts index.tsx].map { |name| File.join(base, name) }].uniq
+        [base, *%w\[.js .mjs .cjs .ts .tsx .jsx].map { |extension| "#{base}#{extension}" },
+         *%w\[index.js index.mjs index.ts index.tsx].map { |name| File.join(base, name) }].uniq
       end
 
       def receipt(status, reason: nil, evidence: {}, findings: [], counts: {})
@@ -1148,7 +1148,7 @@ module Master
         return [["openbsd deploy inventory has no master app"], nil] unless row.is_a?(Hash)
         return [["rails/apps.yml has no master app"], nil] unless metadata.is_a?(Hash)
 
-        drift = %w[domain port].reject { |key| row[key].to_s == metadata[key].to_s }
+        drift = %w\[domain port].reject { |key| row[key].to_s == metadata[key].to_s }
         [drift.map { |key| "master: deploy inventory #{key} differs from rails/apps.yml" }, { "master" => row }]
       end
 
@@ -1229,7 +1229,7 @@ module Master
           "element_count" => row_value(row, "element_count"),
           "journey_status" => row_value(journey, "status"),
           "journey_actions" => Array(row_value(journey, "actions")).map do |action|
-            action.select { |key, _| %w[kind selector label status changed from to].include?(key.to_s) }
+            action.select { |key, _| %w\[kind selector label status changed from to].include?(key.to_s) }
           end,
         }.compact
       end

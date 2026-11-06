@@ -17,7 +17,7 @@ class PortsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def test_legal_pages_are_public
-    %w[/privacy /terms /cookies].each do |path|
+    %w\[/privacy /terms /cookies].each do |path|
       get path
       assert_response :success, path
       assert_includes response.body, "legal-prose"

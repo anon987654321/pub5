@@ -33,11 +33,11 @@ class LastChanceOutfit
 
   def needed_categories
     case @item.category
-    when "Tops" then %w[Bottoms Shoes Outerwear]
-    when "Bottoms" then %w[Tops Shoes Outerwear]
-    when "Shoes" then %w[Tops Bottoms]
-    when "Dresses" then %w[Shoes Outerwear Accessories]
-    else %w[Tops Bottoms Shoes]
+    when "Tops" then %w\[Bottoms Shoes Outerwear]
+    when "Bottoms" then %w\[Tops Shoes Outerwear]
+    when "Shoes" then %w\[Tops Bottoms]
+    when "Dresses" then %w\[Shoes Outerwear Accessories]
+    else %w\[Tops Bottoms Shoes]
     end
   end
 

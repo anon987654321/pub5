@@ -308,7 +308,7 @@ module Master
 
     module ProcessBudget
       CONFIG_PATH = Master.config_path("process").freeze
-      NON_SLOT_LOOPS = %w[heartbeat].freeze
+      NON_SLOT_LOOPS = %w\[heartbeat].freeze
       @last_run = {}
 
       module_function

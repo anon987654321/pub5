@@ -42,7 +42,7 @@ Encoding.default_external = Encoding::UTF_8
 # Reading the checkout is safe in a way that executing it is not: root compares
 # bytes it never runs, so the escalation the installed copy exists to close stays
 # closed. PUB5_ROOT first so a worktree or a test can point it somewhere else.
-DRIFT_ROOT = [ENV["PUB5_ROOT"], File.expand_path("../..", __dir__), "/home/dev/pub4"]
+DRIFT_ROOT = [ENV["PUB5_ROOT"], File.expand_path("../..", __dir__), "/home/dev/pub5"]
        .compact
        .find { |dir| File.file?(File.join(dir, "openbsd", "etc", "doas.conf")) } ||
        File.expand_path("../..", __dir__)
@@ -92,7 +92,7 @@ VERBATIM = {
   "bin/vps_weekly_integrity.sh" => "/usr/local/bin/vps_weekly_integrity.sh",
 }.freeze
 
-EXCLUDED = %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].freeze
+EXCLUDED = %w\[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-client.conf].freeze
 
 # Root's crontab cannot join VERBATIM: OPERATOR.sh merges the tracked lines into
 # whatever is already there rather than overwriting the file, so a byte compare

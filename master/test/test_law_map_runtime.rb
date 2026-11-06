@@ -62,7 +62,7 @@ class TestLawMapRuntime < Minitest::Test
 
   def test_design_law_configuration_is_present_in_the_canonical_token_map
     design = Master.tokens(root: @root)
-    %w[layout_rules kinetic_depth visual_design motion_and_sound data_visualization automated_css_analysis ux_laws worn_type pixel_perfection rams_checklist ui_polish pwa].each do |key|
+    %w\[layout_rules kinetic_depth visual_design motion_and_sound data_visualization automated_css_analysis ux_laws worn_type pixel_perfection rams_checklist ui_polish pwa].each do |key|
       assert_kind_of Hash, design[key], "missing canonical design block #{key}"
     end
     assert_equal design.dig("scale", "space_px"), design.dig("layout_rules", "grid", "allowed_spacing_px")
@@ -73,7 +73,7 @@ class TestLawMapRuntime < Minitest::Test
   def test_laws_register
     require_relative "../lib/review/scan/law_tree"
     ids = Master::Review::Scan::LawTree.ids.map(&:upcase)
-    %w[NO_DECORATIVE_FX FLAT_PIXELS TOUCH_TARGET_MIN EIGHT_PX_RHYTHM RAMS_HONEST].each do |id|
+    %w\[NO_DECORATIVE_FX FLAT_PIXELS TOUCH_TARGET_MIN EIGHT_PX_RHYTHM RAMS_HONEST].each do |id|
       assert_includes ids, id, "missing aesthetic law #{id}"
     end
   end

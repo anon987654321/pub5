@@ -40,18 +40,18 @@ class TestFixKernel < Minitest::Test
 
   def test_replay_returns_the_complete_run_for_a_sequence
     with_workspace do |root|
-      write_log(root, [%w[run_started a], %w[observation b], %w[terminal a]])
+      write_log(root, [%w\[run_started a], %w\[observation b], %w\[terminal a]])
 
       replay = K.replay_events(root: File.join(root, "master"), seq: 3)
       assert_equal "a", replay.fetch("run_id")
-      assert_equal %w[run_started terminal], replay.fetch("events").map { |row| row.fetch("kind") }
+      assert_equal %w\[run_started terminal], replay.fetch("events").map { |row| row.fetch("kind") }
       assert_nil K.replay_events(root:, seq: 9)
     end
   end
 
   def test_replay_cli_exit_codes
     with_workspace do |root|
-      write_log(root, [%w[terminal a]])
+      write_log(root, [%w\[terminal a]])
 
       assert_equal 64, capture_cli(root, "x")
       assert_equal 1, capture_cli(root, "2")
@@ -61,7 +61,7 @@ class TestFixKernel < Minitest::Test
 
   def test_replay_cli_reports_a_corrupt_log
     with_workspace do |root|
-      path = write_log(root, [%w[terminal a]])
+      path = write_log(root, [%w\[terminal a]])
       File.write(path, File.read(path).sub('"kind":"terminal"', '"kind":"changed"'))
 
       assert_equal 1, capture_cli(root, "1")
@@ -98,7 +98,7 @@ class TestFixKernel < Minitest::Test
 
   def test_full_verification_refuses_an_incomplete_final_record
     with_workspace do |root|
-      path = write_log(root, [%w[terminal a]])
+      path = write_log(root, [%w\[terminal a]])
       File.binwrite(path, File.binread(path).delete_suffix("\n"))
 
       assert_raises(K::LedgerCorruption) { K.read_log(path) }
@@ -108,7 +108,7 @@ class TestFixKernel < Minitest::Test
   def test_blank_and_whitespace_only_records_are_refused
     ["\n", " \t\n"].each do |interstitial|
       with_workspace do |root|
-        path = write_log(root, [%w[observation a], %w[terminal a]])
+        path = write_log(root, [%w\[observation a], %w\[terminal a]])
         File.write(path, File.read(path).sub("\n", "\n#{interstitial}"))
         File.chmod(0o600, path)
 
@@ -122,7 +122,7 @@ class TestFixKernel < Minitest::Test
 
   def test_sequence_gap_is_refused
     with_workspace do |root|
-      path = write_log(root, [%w[observation a], %w[terminal a]])
+      path = write_log(root, [%w\[observation a], %w\[terminal a]])
       File.write(path, File.readlines(path).last)
 
       assert_raises(K::LedgerCorruption) { K.read_log(path) }
@@ -152,7 +152,7 @@ class TestFixKernel < Minitest::Test
       directory = File.join(root, ".master")
       FileUtils.mkdir_p(directory, mode: 0o700)
       target = File.join(root, "outside-ledger.jsonl")
-      write_log(root, [%w[terminal run]])
+      write_log(root, [%w\[terminal run]])
       original_path = File.join(root, K::LOG_RELATIVE_PATH)
       File.rename(original_path, target)
       path = File.join(directory, "log.jsonl")
@@ -167,7 +167,7 @@ class TestFixKernel < Minitest::Test
 
   def test_read_log_refuses_group_or_world_readable_ledger
     with_workspace do |root|
-      path = write_log(root, [%w[terminal run]])
+      path = write_log(root, [%w\[terminal run]])
       File.chmod(0o644, path)
 
       error = assert_raises(K::LedgerCorruption) { K.read_log(path) }

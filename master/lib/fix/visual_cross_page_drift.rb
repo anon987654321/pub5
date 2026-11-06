@@ -11,7 +11,7 @@ module Master
       MAX_NAV_ITEMS = 6
       MAX_ACTIONS = 4
       MAX_DRIFTED_ROWS = 8
-      CHROME_TAGS = %w[header nav main footer].freeze
+      CHROME_TAGS = %w\[header nav main footer].freeze
 
       module_function
 
@@ -81,7 +81,7 @@ module Master
 
       def nav_items(elements)
         elements.select do |e|
-          %w[a button].include?(e["tag"]) && e["key"].to_s.split(">").any? { |seg| seg.start_with?("nav") }
+          %w\[a button].include?(e["tag"]) && e["key"].to_s.split(">").any? { |seg| seg.start_with?("nav") }
         end.filter_map { |e| rect_of(e) }
       end
 

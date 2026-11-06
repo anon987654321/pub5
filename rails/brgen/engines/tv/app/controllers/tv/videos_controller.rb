@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Tv::VideosController < Tv::BaseController
-  allow_unauthenticated_access only: %i[show]
+  allow_unauthenticated_access only: %i\[show]
 
   # create takes a video file, which is the most expensive thing a signed-in
   # account can hand this box: a 1 GB VPS transcodes nothing in the background

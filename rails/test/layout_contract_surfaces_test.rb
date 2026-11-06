@@ -10,7 +10,7 @@ class LayoutContractSurfacesTest < Minitest::Test
   include LayoutContractSources
 
   def test_rails_layouts_mark_document_surface_and_main
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       body = File.read(LAYOUTS.fetch(app))
       assert_includes body, 'data-layout="document"', "#{app} missing data-layout"
       assert_includes body, "data-surface=", "#{app} missing data-surface"
@@ -112,7 +112,7 @@ class LayoutContractSurfacesTest < Minitest::Test
   end
 
   def test_theme_root_uses_dynamic_viewport_height
-    %w[brgen amber].each do |app|
+    %w\[brgen amber].each do |app|
       assert app_rules(app, /\A\.theme-root\z/).any? { |rule| rule.declares?(/min-height:\s*100dvh/) },
              "#{app}'s .theme-root must size to the dynamic viewport"
     end

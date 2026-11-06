@@ -33,7 +33,7 @@ end
 # Asks the booted app, not routes.rb: a resource declared without only: routes seven actions
 # whether or not the controller has them, and Rails answers 404 for the ones it does not.
 DEAD_ROUTE_PROBE = <<~RUBY
-  skip = %w[rails/ turbo/ action_mailbox/ active_storage/ solid_queue/ mission_control/]
+  skip = %w\[rails/ turbo/ action_mailbox/ active_storage/ solid_queue/ mission_control/]
   dead = Rails.application.routes.routes.filter_map do |route|
     controller = route.defaults[:controller].to_s
     action = route.defaults[:action].to_s

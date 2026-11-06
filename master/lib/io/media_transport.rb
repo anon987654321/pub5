@@ -39,7 +39,7 @@ module Master
       BadShape = Class.new(StandardError)
       TimedOut = Class.new(StandardError)
 
-      GEMINI_STOPS = %w[SAFETY IMAGE_SAFETY IMAGE_PROHIBITED_CONTENT PROHIBITED_CONTENT BLOCKLIST SPII RECITATION].freeze
+      GEMINI_STOPS = %w\[SAFETY IMAGE_SAFETY IMAGE_PROHIBITED_CONTENT PROHIBITED_CONTENT BLOCKLIST SPII RECITATION].freeze
       REFUSAL_BODY_RE = /moderation|flagged|content[\s_-]?policy|safety|blocked|prohibited/i
       MAGIC = { "image/png" => "\x89PNG".b, "image/jpeg" => "\xFF\xD8\xFF".b, "image/webp" => "RIFF".b }.freeze
       VIDEO_HOST_RE = /(?:\A|\.)(?:googleapis|googleusercontent)\.com\z/
@@ -65,7 +65,7 @@ module Master
       end
 
       def gemini_image(base, model, prompt, key:, opts:, timeout:)
-        config = { responseModalities: %w[TEXT IMAGE] }
+        config = { responseModalities: %w\[TEXT IMAGE] }
         config[:imageConfig] = { aspectRatio: opts[:aspect_ratio] } if opts[:aspect_ratio]
         body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: config }
         reply = json_reply(post("#{base}/models/#{model}:generateContent", body, { "x-goog-api-key" => key }, timeout), "gemini")
@@ -94,7 +94,7 @@ module Master
       end
 
       def openrouter_image(base, model, prompt, key:, timeout:)
-        body = { model:, messages: [{ role: "user", content: prompt }], modalities: %w[image text], stream: false }
+        body = { model:, messages: [{ role: "user", content: prompt }], modalities: %w\[image text], stream: false }
         reply = json_reply(post("#{base}/chat/completions", body, { "Authorization" => "Bearer #{key}" }, timeout), "openrouter")
         parse_openrouter_image(reply)
       end

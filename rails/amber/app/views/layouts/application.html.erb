@@ -48,7 +48,7 @@
   <%= json_ld_script(organization_json_ld(site_name: "Amber", url: root_url)) %>
   <%= javascript_importmap_tags %>
 </head>
-<body class="<%= "auth-surface" if controller_path.in?(%w[sessions passwords registrations]) %>"
+<body class="<%= "auth-surface" if controller_path.in?(%w\[sessions passwords registrations]) %>"
       data-layout="document"
       data-layout-contract="shared-layout"
       data-surface="luxury"
@@ -176,7 +176,7 @@
             aria: { label: t("nav.wardrobe"), current: nav_current(items_path, section: "items") } do %>
         <%= icon :shirt, size: 26 %>
       <% end %>
-      <% outfits_current = nav_current(outfits_path, section: "outfits", except: %w[dressing_room]) %>
+      <% outfits_current = nav_current(outfits_path, section: "outfits", except: %w\[dressing_room]) %>
       <%= link_to outfits_path, class: "tab-item", aria: { label: t("nav.outfits"), current: outfits_current } do %>
         <%= icon :layers, size: 26 %>
       <% end %>

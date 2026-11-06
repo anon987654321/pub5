@@ -80,11 +80,11 @@ module Deploy
     # The search glyph and the sign-in link joined on 2026-09-25: the glyph took
     # its top from --chrome-inset while the corner took it from the bar (12 vs
     # 11), and it cleared only the toggle, so it sat 28px over the sign-in link.
-    TOP_BAND = %w[.nav_link .brgen-logo-mark .theme-toggle .search_palette_trigger .chrome-auth].freeze
+    TOP_BAND = %w\[.nav_link .brgen-logo-mark .theme-toggle .search_palette_trigger .chrome-auth].freeze
 
     # The fixed controls in the band, which must not overlap each other. The nav
     # links are left out: they scroll under a fade by design.
-    BAND_CONTROLS = %w[.brgen-logo-mark .theme-toggle .search_palette_trigger .chrome-auth].freeze
+    BAND_CONTROLS = %w\[.brgen-logo-mark .theme-toggle .search_palette_trigger .chrome-auth].freeze
 
     # The phone pass: the install prompt spans the width above the bottom chrome,
     # and on 2026-09-25 the nearby chat tab covered the lower 32px of its Install

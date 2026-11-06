@@ -17,7 +17,7 @@ class SharedStimulusComponentsTest < Minitest::Test
   # _brgen.js and _amber.js hold what only some apps mount, split out so an
   # app that doesn't use a controller never imports its module. Together
   # they are the registry these tests hold the snippet library and views to.
-  BOOT_FILES = %w[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js stimulus_boot_amber.js].freeze
+  BOOT_FILES = %w\[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js stimulus_boot_amber.js].freeze
 
   def registry_source
     BOOT_FILES.map { |f| read_source(File.join(ROOT, "shared/frontend", f)) }.join("\n")

@@ -30,7 +30,7 @@ class ConstitutionDriftTest < Minitest::Test
   def finding(tags) = { tags: }
 
   def test_it_reports_a_total_and_a_first_run_delta
-    result = order([finding(%i[READABILITY]), finding(%i[CLEAN_CODE])]).call
+    result = order([finding(%i\[READABILITY]), finding(%i\[CLEAN_CODE])]).call
 
     assert_predicate result, :ok?
     assert_equal 2, result.value![:total]
@@ -38,20 +38,20 @@ class ConstitutionDriftTest < Minitest::Test
   end
 
   def test_the_second_run_reads_what_the_first_persisted
-    findings = [finding(%i[READABILITY])]
+    findings = [finding(%i\[READABILITY])]
     order(findings).call
 
     assert_equal 0, order(findings).call.value![:delta]
   end
 
   def test_a_fall_reports_as_a_negative_delta
-    order([finding(%i[READABILITY]), finding(%i[CLEAN_CODE])]).call
+    order([finding(%i\[READABILITY]), finding(%i\[CLEAN_CODE])]).call
 
-    assert_equal(-1, order([finding(%i[READABILITY])]).call.value![:delta])
+    assert_equal(-1, order([finding(%i\[READABILITY])]).call.value![:delta])
   end
 
   def test_it_names_the_worst_axiom
-    result = order([finding(%i[READABILITY]), finding(%i[READABILITY]), finding(%i[CLEAN_CODE])]).call
+    result = order([finding(%i\[READABILITY]), finding(%i\[READABILITY]), finding(%i\[CLEAN_CODE])]).call
 
     assert_equal "READABILITY", result.value![:worst]
   end

@@ -142,7 +142,7 @@ class TestSemanticBudget < Minitest::Test
   end
 
   def test_the_order_resumes_past_the_last_file_read_and_wraps
-    paths = %w[a.rb b.rb c.rb d.rb].map { |name| File.join(@root, name) }
+    paths = %w\[a.rb b.rb c.rb d.rb].map { |name| File.join(@root, name) }
     Master::Fix::FixLoop::StreamCursor.mark_semantic(@root, paths[2])
 
     order = Master::Fix::FixLoop::StreamCursor.semantic_order(@root, paths.reverse)

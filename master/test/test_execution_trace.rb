@@ -8,7 +8,7 @@ require "yaml"
 class TestExecutionTrace < Minitest::Test
   def test_reread_hashes_every_supplied_file
     Dir.mktmpdir("execution_trace") do |root|
-      paths = %w[a.rb b.yml c.txt].map do |name|
+      paths = %w\[a.rb b.yml c.txt].map do |name|
         path = File.join(root, name)
         File.write(path, "#{name}\n")
         path
@@ -31,7 +31,7 @@ class TestExecutionTrace < Minitest::Test
   end
 
   def test_scope_names_become_repository_relative_git_paths
-    trace = Master::Fix::ExecutionTrace.new(root: "/tmp/pub4", scope: %w[master rails openbsd studio], ruby_checker: ->(_path) {})
+    trace = Master::Fix::ExecutionTrace.new(root: "/tmp/pub4", scope: %w\[master rails openbsd studio], ruby_checker: ->(_path) {})
 
     assert_equal [], trace.send(:scope_paths)
   end
@@ -47,7 +47,7 @@ class TestExecutionTrace < Minitest::Test
 
   def test_nested_scope_paths_preserve_lowercase_s_and_commas
     Dir.mktmpdir("execution-trace-nested-scope") do |root|
-      %w[studio/dilla/livesets_midi rails/__shared].each do |path|
+      %w\[studio/dilla/livesets_midi rails/__shared].each do |path|
         FileUtils.mkdir_p(File.join(root, path))
       end
       trace = Master::Fix::ExecutionTrace.new(
@@ -62,7 +62,7 @@ class TestExecutionTrace < Minitest::Test
 
   def test_full_tree_scope_does_not_swallow_an_extra_token
     Dir.mktmpdir("execution-trace-extra-scope") do |root|
-      %w[master rails openbsd studio].each { |path| FileUtils.mkdir_p(File.join(root, path)) }
+      %w\[master rails openbsd studio].each { |path| FileUtils.mkdir_p(File.join(root, path)) }
       trace = Master::Fix::ExecutionTrace.new(
         root:,
         scope: ["master rails openbsd studio,missing"],
@@ -119,7 +119,7 @@ class TestExecutionTrace < Minitest::Test
   end
 
   def test_extracted_fix_and_routing_files_are_in_the_boot_surface
-    %w[
+    %w\[
       master/lib/cli/routing/model_router.rb
       master/lib/cli/routing/model_router/route_policy.rb
       master/lib/cli/routing/model_router/selection.rb

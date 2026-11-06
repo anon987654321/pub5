@@ -68,7 +68,7 @@ class Playlist::TracksController < Playlist::BaseController
     return if Current.user && target&.user_id == Current.user.id
 
     collab = target&.collaborations&.find_by(user: Current.user)
-    return if collab && %w[owner editor].include?(collab.role)
+    return if collab && %w\[owner editor].include?(collab.role)
 
     target_path = target ? target_path(target) : playlists_path
     redirect_to target_path, alert: t("shared.flash.not_authorized")

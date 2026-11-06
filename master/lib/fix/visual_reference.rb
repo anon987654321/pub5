@@ -8,7 +8,7 @@ module Master
       PROFILES = {
         "x" => {
           name: "X-style product surface",
-          signals: %w[
+          signals: %w\[
             strong_typographic_hierarchy
             persistent_navigation
             dense_content_stream
@@ -19,7 +19,7 @@ module Master
         },
         "joi" => {
           name: "Joi-style conversational surface",
-          signals: %w[
+          signals: %w\[
             focused_primary_action
             low_navigation_friction
             conversational_hierarchy
@@ -30,7 +30,7 @@ module Master
         },
         "kaufland" => {
           name: "Kaufland-style marketplace surface",
-          signals: %w[
+          signals: %w\[
             strong_search_discovery
             explicit_category_hierarchy
             broad_catalogue_navigation
@@ -44,7 +44,7 @@ module Master
         },
         "bol" => {
           name: "bol-style marketplace surface",
-          signals: %w[
+          signals: %w\[
             clean_white_catalogue
             prominent_search
             clear_service_promises
@@ -57,7 +57,7 @@ module Master
         },
         "pangram" => {
           name: "Pangram Pangram type-direction reference",
-          signals: %w[
+          signals: %w\[
             contemporary_grotesk
             neutral_with_character
             disciplined_weight_range
@@ -81,7 +81,7 @@ module Master
       Pair = Data.define(:key, :ours, :theirs) do
         def deltas
           boxes = [ours, theirs].map { |element| element["frect"] || {} }
-          moved = %w[x y w h].to_h { |axis| [axis, gap(*boxes.map { |box| box[axis] })] }
+          moved = %w\[x y w h].to_h { |axis| [axis, gap(*boxes.map { |box| box[axis] })] }
           moved.merge("font_size" => gap(ours["font_size"], theirs["font_size"]), "color" => recoloured)
         end
 

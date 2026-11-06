@@ -19,7 +19,7 @@ module Master
         MAX_BYTES = Master::Trace::Log::Event::MAX_BYTES
         HISTORY_READ_BYTES = 5 * 1024 * 1024
         MAX_EVENTS_PER_FILE = 20_000
-        FAILURES = %w[
+        FAILURES = %w\[
           failure timeout rate_limit provider_error quota_exceeded model_missing llm_call_failure
           canary_validation_failure canary_failure
         ].freeze

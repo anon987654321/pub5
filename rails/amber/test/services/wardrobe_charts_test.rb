@@ -17,7 +17,7 @@ class WardrobeChartsTest < ActiveSupport::TestCase
 
     bars = WardrobeCharts.new(owner).category_mix
 
-    assert_equal %w[Tops Bottoms], bars.map(&:label)
+    assert_equal %w\[Tops Bottoms], bars.map(&:label)
     assert_equal [ 3, 1 ], bars.map(&:value)
     # Shares are normalised inside the figure, so the tallest bar is always full.
     assert_in_delta 1.0, bars.first.share, 0.0001

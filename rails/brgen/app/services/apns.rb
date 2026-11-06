@@ -12,14 +12,14 @@
 # asked to allow something that cannot arrive.
 module Apns
   # The token is gone for good: the app was deleted or the device reset.
-  DEAD_TOKEN_REASONS = %w[BadDeviceToken Unregistered DeviceTokenNotForTopic].freeze
+  DEAD_TOKEN_REASONS = %w\[BadDeviceToken Unregistered DeviceTokenNotForTopic].freeze
 
   module_function
 
-  def credentials = %i[key key_id team_id topic].to_h { |name| [ name, ENV["APNS_#{name.upcase}"].to_s.presence ] }
+  def credentials = %i\[key key_id team_id topic].to_h { |name| [ name, ENV["APNS_#{name.upcase}"].to_s.presence ] }
 
   def configured?
-    defined?(::Apnotic) && %i[key key_id team_id topic].all? { |name| credentials[name].present? } ? true : false
+    defined?(::Apnotic) && %i\[key key_id team_id topic].all? { |name| credentials[name].present? } ? true : false
   end
 
   # One connection per environment and call; each token answers on its own, and

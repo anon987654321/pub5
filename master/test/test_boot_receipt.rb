@@ -59,7 +59,7 @@ class TestBootReceipt < Minitest::Test
   end
 
   def test_degraded_capabilities_are_named_not_implied
-    line = Receipt.degraded_line(%w[network])
+    line = Receipt.degraded_line(%w\[network])
 
     assert_includes line, "network"
     assert_includes line, "measured less than it claims"

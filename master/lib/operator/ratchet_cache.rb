@@ -19,7 +19,7 @@ module Operator
   class RatchetCache
     ROOT = File.expand_path("../../..", __dir__)
     PATH = File.join(ROOT, "master", ".master", "ratchet_cache.json")
-    FIELDS = %i[name current ceiling direction source note members].freeze
+    FIELDS = %i\[name current ceiling direction source note members].freeze
 
     def self.enabled? = ENV.fetch("MASTER_RATCHET_CACHE", "1") != "0"
 

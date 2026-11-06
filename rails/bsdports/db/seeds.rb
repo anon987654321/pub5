@@ -42,7 +42,7 @@ else
   if Rails.env.development? || Rails.env.test?
     # Light cleanup for repeatable demo seeds
     ActiveRecord::Base.connection.disable_referential_integrity do
-      %w[Comment Watch].each do |model_name|
+      %w\[Comment Watch].each do |model_name|
         begin
           m = model_name.constantize
           m.delete_all if m.respond_to?(:table_exists?) && m.table_exists?

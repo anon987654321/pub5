@@ -10,7 +10,7 @@
 require "json"
 require_relative "../lib/deploy_inventory"
 
-if ARGV.intersect?(%w[-h --help])
+if ARGV.intersect?(%w\[-h --help])
   puts "usage: ruby openbsd/bin/sync_deploy_inventory.rb [--check]   # rewrites (or verifies) openbsd/deploy_inventory.json from rails/apps.yml"
   exit 0
 end

@@ -11,7 +11,7 @@ class AddLastNotifiedAtToMarketplaceSavedSearches < ActiveRecord::Migration[8.1]
 
     # The job's driving scope. Without it, every run scans the whole table to
     # find the handful of rows with alerts switched on.
-    add_index :marketplace_saved_searches, %i[notify last_notified_at],
+    add_index :marketplace_saved_searches, %i\[notify last_notified_at],
               name: "idx_marketplace_saved_searches_alerting"
   end
 end

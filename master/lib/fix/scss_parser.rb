@@ -47,7 +47,7 @@ module Master
           when ";"
             buf_start = nil
           end
-          buf_start ||= i unless ch.match?(/\s/) || %w[{ } ;].include?(ch)
+          buf_start ||= i unless ch.match?(/\s/) || %w\[{ } ;].include?(ch)
           i += 1
         end
         rules

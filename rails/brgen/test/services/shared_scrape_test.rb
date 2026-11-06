@@ -55,7 +55,7 @@ class SharedScrapeTest < ActiveSupport::TestCase
   end
 
   test "IPv4 and IPv6 special-purpose ranges never become scrape destinations" do
-    blocked = %w[
+    blocked = %w\[
       0.0.0.0
       100.64.0.1
       192.0.2.1
@@ -94,7 +94,7 @@ class SharedScrapeTest < ActiveSupport::TestCase
   end
 
   test "localhost suffixes remain blocked after DNS normalization" do
-    %w[localhost. service.local service.internal printer.home.arpa].each do |host|
+    %w\[localhost. service.local service.internal printer.home.arpa].each do |host|
       refute Shared::Scrape.public_http_url?("http://#{host}/", resolver: public_resolver), host
     end
   end

@@ -105,7 +105,7 @@ class ControllerCoverageContractTest < Minitest::Test
   # InternalController: master reports its build through /health instead, and
   # mrdamascy has no internal surface yet.
   def test_internal_version_endpoint_exists_on_every_token_auth_app
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       internal = read_app(app, "app/controllers/internal_controller.rb")
       routes = read_app(app, "config/routes.rb")
       assert_actions internal, "version"
@@ -151,7 +151,7 @@ class ControllerCoverageContractTest < Minitest::Test
   # shared/_pager.html.erb now renders every pager off page/pages/next, which
   # both majors expose. `prev` is deliberately not among them -- pagy 43 renamed
   # it to `previous`, and that is exactly the kind of difference this guards.
-  VERSION_SPECIFIC_PAGY_HELPERS = %w[pagy_nav pagy_info pagy_bootstrap_nav series_nav].freeze
+  VERSION_SPECIFIC_PAGY_HELPERS = %w\[pagy_nav pagy_info pagy_bootstrap_nav series_nav].freeze
 
   def test_views_do_not_call_a_pagy_helper_their_app_may_not_have
     views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports}", "app", "views", "**", "*.erb")) +

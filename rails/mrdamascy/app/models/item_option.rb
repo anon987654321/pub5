@@ -3,7 +3,7 @@
 class ItemOption < ApplicationRecord
   include LocalizedColumns
 
-  KINDS = %w[sauce topping extra].freeze
+  KINDS = %w\[sauce topping extra].freeze
 
   belongs_to :menu_item
 

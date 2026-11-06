@@ -9,7 +9,7 @@ module Master
     # redesign and not edits to canonical visual tokens.
     module VisualCompletion
       POLICY_PATH = "rails/visual_completion.yml"
-      ELIGIBLE_EXTENSIONS = %w[.css .scss .erb .html .htm].freeze
+      ELIGIBLE_EXTENSIONS = %w\[.css .scss .erb .html .htm].freeze
       # Spelled to match the law catalogue's actual IDs (data/laws.yml); see
       # VisualCustodyBlocking::OPERATOR_OWNED_RULE_IDS for why. A finding's
       # real law_id is never literally "TYPE_SCALE" or "LEADING", so this list
@@ -17,7 +17,7 @@ module Master
       # policy YAML's own allowed_visual_rules still names the old spellings,
       # so this correction alone does not newly authorize autofix; it makes
       # authorized_visual_rule? check against IDs a finding can actually carry.
-      ALLOWED_VISUAL_RULES = %w[
+      ALLOWED_VISUAL_RULES = %w\[
         AESTHETIC_FLAT_SEMANTIC
         TYPE_HIERARCHY
         LINE_HEIGHT_ON_SCALE
@@ -104,7 +104,7 @@ module Master
         "palette/semantic colours and font-family are operator-owned; preserve existing declarations"
       end
 
-      COLOR_PROPERTIES = %w[
+      COLOR_PROPERTIES = %w\[
         color background background-color background-image border border-color
         border-top border-right border-bottom border-left border-top-color
         border-right-color border-bottom-color border-left-color outline

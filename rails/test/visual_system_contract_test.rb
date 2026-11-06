@@ -161,7 +161,7 @@ class VisualSystemContractTest < Minitest::Test
 
   def test_shared_surface_controller_covers_every_surface_signal
     source = VISUAL_SURFACE.read
-    %w[
+    %w\[
       master:visual
       master:emotion
       pub4:visual

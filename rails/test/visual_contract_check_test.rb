@@ -7,14 +7,14 @@ class VisualContractCheckTest < Minitest::Test
   def test_each_app_covers_failure_states_and_all_viewports
     VisualContractCheck::ROUTES.each_key do |app|
       rows = VisualContractCheck.matrix(app)
-      %i[empty error offline].each { |state| assert rows.any? { |row| row[:state] == state } }
+      %i\[empty error offline].each { |state| assert rows.any? { |row| row[:state] == state } }
       assert_equal VisualContractCheck::VIEWPORTS.keys.sort, rows.map { |row| row[:viewport] }.uniq.sort
     end
   end
 
   def test_manifest_schema_records_render_and_accessibility_evidence
     source = File.read(File.expand_path("../../master/checks/visual_contract.rb", __dir__))
-    %w[status title screenshot_sha256 console_errors accessibility_violations pixel_diff_count pixel_diff_ratio pixel_diff_image].each do |field|
+    %w\[status title screenshot_sha256 console_errors accessibility_violations pixel_diff_count pixel_diff_ratio pixel_diff_image].each do |field|
       assert_includes source, "#{field}:"
     end
     assert_equal 5, VisualContractCheck::LENSES.length
@@ -77,13 +77,13 @@ class VisualContractCheckTest < Minitest::Test
   def test_drift_budget_must_be_finite_and_bounded
     assert_equal 0.25, VisualContractCheck.normalize_drift_max("0.25")
 
-    %w[-0.01 1.01 NaN Infinity -Infinity garbage].each do |value|
+    %w\[-0.01 1.01 NaN Infinity -Infinity garbage].each do |value|
       assert_raises(ArgumentError, value) { VisualContractCheck.normalize_drift_max(value) }
     end
   end
 
   def test_accessibility_and_console_are_soft_until_strict
-    rows = [row(state: :public, status: 200, a11y: %w[image_without_alt], console: ["boom"])]
+    rows = [row(state: :public, status: 200, a11y: %w\[image_without_alt], console: ["boom"])]
 
     lenient = VisualContractCheck.grade(rows)
     assert_empty lenient[:hard]
@@ -111,10 +111,10 @@ class VisualContractCheckTest < Minitest::Test
   # captures of an unchanged page; the capture hides each before it diffs.
   def test_capture_hides_volatile_content_before_the_screenshot
     selectors = VisualContractCheck.volatile_selectors
-    %w[time [data-relative-time] [data-controller~=animated-number] [data-money]].each do |needle|
+    %w\[time [data-relative-time] [data-controller~=animated-number] [data-money]].each do |needle|
       assert_includes selectors, needle
     end
-    script = VisualContractCheck.mask_script(%w[time [data-money]])
+    script = VisualContractCheck.mask_script(%w\[time [data-money]])
     assert_includes script, "time, [data-money] { visibility: hidden !important; }"
   end
 
@@ -125,7 +125,7 @@ class VisualContractCheckTest < Minitest::Test
     explain = File.read(File.expand_path("../../master/checks/support/runner_explain.rb", __dir__))
 
     refute_includes runner, "unsetenv_others"
-    %w[VISUAL_CAPTURE VISUAL_CAPTURE_APP VISUAL_CAPTURE_BASE].each { |name| assert_includes explain, name }
+    %w\[VISUAL_CAPTURE VISUAL_CAPTURE_APP VISUAL_CAPTURE_BASE].each { |name| assert_includes explain, name }
   end
 end
 

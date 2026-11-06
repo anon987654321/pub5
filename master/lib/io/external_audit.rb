@@ -93,7 +93,7 @@ module Master
         return Result.err("external_audit: URL required (maximum 2048 bytes)", category: :validation) if text.empty? || text.bytesize > 2_048
 
         uri = URI.parse(text)
-        return Result.err("external_audit: only HTTP(S) URLs", category: :validation) unless %w[http https].include?(uri.scheme)
+        return Result.err("external_audit: only HTTP(S) URLs", category: :validation) unless %w\[http https].include?(uri.scheme)
         return Result.err("external_audit: embedded credentials forbidden", category: :validation) if uri.user || uri.password
         return Result.err("external_audit: hostname required", category: :validation) if uri.host.to_s.empty?
         uri.fragment = nil
@@ -129,7 +129,7 @@ module Master
             return Result.err("external_audit: redirect lacks location", category: :validation) if location.to_s.empty?
             next_uri = URI.join(current.to_s, location)
             return Result.err("external_audit: redirect changes host; assess new host separately", category: :policy) unless next_uri.host.to_s.casecmp(current.host.to_s).zero?
-            return Result.err("external_audit: redirect destination must be HTTP(S)", category: :validation) unless %w[http https].include?(next_uri.scheme)
+            return Result.err("external_audit: redirect destination must be HTTP(S)", category: :validation) unless %w\[http https].include?(next_uri.scheme)
             return Result.err("external_audit: redirect credentials forbidden", category: :validation) if next_uri.user || next_uri.password
             current = next_uri
             redirects += 1

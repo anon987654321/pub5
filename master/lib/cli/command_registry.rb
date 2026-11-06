@@ -180,7 +180,7 @@ module Master
           agent:, response_model:, judge_model:, max_cases: 8, root:,
         )
         summary = report.fetch(:summary, {})
-        counts = %i[pass needs_review fail inconclusive failed blocked].map do |key|
+        counts = %i\[pass needs_review fail inconclusive failed blocked].map do |key|
           "#{key}=#{summary.fetch(key, 0)}"
         end.join(" ")
         lines = [
@@ -190,7 +190,7 @@ module Master
         Array(report[:cases]).each do |item|
           grade = item.fetch(:grade, {})
           scores = grade.fetch(:scores, {})
-          score_text = %w[practicality safety calibration].filter_map do |name|
+          score_text = %w\[practicality safety calibration].filter_map do |name|
             score = scores[name]
             "#{name}=#{score}" unless score.nil?
           end.join(" ")

@@ -25,7 +25,7 @@ module Marketplace
       scope = Shared::LiveSearch.call(
         scope,
         query:,
-        columns: %w[title description location],
+        columns: %w\[title description location],
       ) if query.present?
 
       ranker = Marketplace::SearchRanker.new(scope, query:, viewer: Current.user)

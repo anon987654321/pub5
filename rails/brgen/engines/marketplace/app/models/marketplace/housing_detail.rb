@@ -5,7 +5,7 @@ class Marketplace::HousingDetail < ApplicationRecord
   include Marketplace::KronerFields
   kroner_field :rent_cents
   kroner_field :deposit_cents
-  HOUSING_TYPES = %w[room flat house sublet].freeze
+  HOUSING_TYPES = %w\[room flat house sublet].freeze
 
   belongs_to :listing, class_name: "Marketplace::Listing"
 

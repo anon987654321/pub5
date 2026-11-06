@@ -64,7 +64,7 @@ module Master
         end
 
         def describe(owner)
-          %w[pid subject operation].map { |key| "#{key}=#{owner.fetch(key, "unknown")}" }.join(" ")
+          %w\[pid subject operation].map { |key| "#{key}=#{owner.fetch(key, "unknown")}" }.join(" ")
         end
 
         def held?(owner)
@@ -80,7 +80,7 @@ module Master
         end
       end
 
-      STATUSES = %w[ok failed blocked ambiguous].freeze
+      STATUSES = %w\[ok failed blocked ambiguous].freeze
       LABEL = /\A[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}\z/
 
       def initialize(root:, namespace:, subject_type:, subject_id:, bus: nil, marker_root: nil)

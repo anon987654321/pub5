@@ -21,7 +21,7 @@ module Master
   module Fix
     module Scan
       class FileProcessor
-        RUBY_EXT = %w[.rb .rake .gemspec].freeze
+        RUBY_EXT = %w\[.rb .rake .gemspec].freeze
         include FileLock
         include UnmodelledTier
 
@@ -29,9 +29,9 @@ module Master
         LOCK_TIMEOUT = 30
         MAX_FILE_BYTES = 10 * 1024 * 1024
         MAX_LINES = 10_000
-        STYLE_EXTENSIONS = %w[.css .scss].freeze
+        STYLE_EXTENSIONS = %w\[.css .scss].freeze
         STYLE_MAX_LINES = 12_000
-        STRUCTURED_DATA_EXTENSIONS = %w[.json .yml .yaml].freeze
+        STRUCTURED_DATA_EXTENSIONS = %w\[.json .yml .yaml].freeze
         STRUCTURED_DATA_MAX_LINES = 20_000
         OUTSIDE_SAMPLE = "clean file, outside sample"
         UNCHANGED = "unchanged since its last semantic read"

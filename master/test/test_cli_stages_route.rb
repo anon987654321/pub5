@@ -65,8 +65,8 @@ class TestCliStagesRoute < Minitest::Test
   end
 
   def test_only_the_listed_exit_words_end_the_session
-    %w[exit quit].each { |word| assert_equal :shutdown, route.call(command(word)).category }
-    %w[q bye].each { |word| refute_equal :shutdown, route.call(command(word)).category }
+    %w\[exit quit].each { |word| assert_equal :shutdown, route.call(command(word)).category }
+    %w\[q bye].each { |word| refute_equal :shutdown, route.call(command(word)).category }
   end
 
   def test_llm_intent_routes_to_the_agent

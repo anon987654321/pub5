@@ -141,7 +141,7 @@ class MasterBootTest < Minitest::Test
     end
   end
   def test_termux_native_tts_is_ready_without_the_edge_worker
-    keys = %w[MASTER_SKIP_TTS MASTER_TTS_DEGRADED MASTER_TTS_REASON]
+    keys = %w\[MASTER_SKIP_TTS MASTER_TTS_DEGRADED MASTER_TTS_REASON]
     saved = keys.to_h { |key| [key, ENV[key]] }
     keys.each { |key| ENV.delete(key) }
     ENV["MASTER_TTS_DEGRADED"] = "1"

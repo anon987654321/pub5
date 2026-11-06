@@ -22,7 +22,7 @@ def get_input
       [patterns, variations, { type: :preset, preset: preset_name }]
 
     when "Random Effects (Experimental)"
-      mode = PROMPT.select("Mode:", %w[Professional Experimental])
+      mode = PROMPT.select("Mode:", %w\[Professional Experimental])
       fx_count = PROMPT.ask("Effects per variation:", convert: :int, default: 4) { |q| q.in("2-8") }
       [patterns, variations, { type: :random, mode: mode.downcase, fx: fx_count }]
 
@@ -190,5 +190,5 @@ def one_shot_mode?
 end
 
 def introspect_mode?
-  (ARGV & %w[--vocab-check --capabilities --list-presets --list-stocks --list-lenses --describe-preset --css-filter --export-lut --fit-grain --gallery --map]).any?
+  (ARGV & %w\[--vocab-check --capabilities --list-presets --list-stocks --list-lenses --describe-preset --css-filter --export-lut --fit-grain --gallery --map]).any?
 end

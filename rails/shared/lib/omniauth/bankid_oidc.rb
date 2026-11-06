@@ -34,7 +34,7 @@ module Shared
         cache_fetch("configuration:#{environment}") do
           doc = fetch_json("#{env.fetch(:issuer)}/.well-known/openid-configuration", environment)
           raise InvalidToken, "BankID issuer mismatch" unless doc["issuer"] == env.fetch(:issuer)
-          %w[authorization_endpoint token_endpoint jwks_uri].each { |key| validate_endpoint!(doc.fetch(key), environment) }
+          %w\[authorization_endpoint token_endpoint jwks_uri].each { |key| validate_endpoint!(doc.fetch(key), environment) }
           raise InvalidToken, "BankID does not advertise ES256" unless Array(doc["id_token_signing_alg_values_supported"]).include?("ES256")
           doc
         end

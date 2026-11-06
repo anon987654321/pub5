@@ -28,7 +28,7 @@ class SharedWiringCheckTest < Minitest::Test
 
   def test_shared_wiring_check_checks_extended_shared_artifacts
     source = File.read(File.join(CHECKS, "lib/source/shared_wiring.rb"))
-    %w[
+    %w\[
       omniauth.rb
       auth_extensions.rb
       Shared::ReactionsController
@@ -48,7 +48,7 @@ class SharedWiringCheckTest < Minitest::Test
     }
 
     expected.each do |name, signature|
-      %w[amber brgen bsdports].each do |app|
+      %w\[amber brgen bsdports].each do |app|
         source = File.read(File.join(ROOT, app, "app/controllers", name))
         assert_equal "# frozen_string_literal: true\n\nclass #{signature}\nend\n",
                      source,
@@ -59,7 +59,7 @@ class SharedWiringCheckTest < Minitest::Test
 
   def test_shared_wiring_check_forbids_local_orphan_js_copies
     source = File.read(File.join(CHECKS, "lib/source/shared_wiring.rb"))
-    %w[
+    %w\[
       FORBIDDEN_APP_JS
       controllers/hello_controller.js
       idb-keyval.js
@@ -71,8 +71,8 @@ class SharedWiringCheckTest < Minitest::Test
   end
 
   def test_apps_have_no_forbidden_local_js
-    %w[amber brgen bsdports].each do |app|
-      %w[
+    %w\[amber brgen bsdports].each do |app|
+      %w\[
         controllers/hello_controller.js
         idb-keyval.js
         controllers/bottom_sheet_controller.js
@@ -114,7 +114,7 @@ class SharedWiringCheckTest < Minitest::Test
   # so a page shared carries replaces the page an app carries for itself.
   def test_shared_carries_no_error_page_an_app_carries
     shared = Dir[File.join(ROOT, "shared/public/*.html")].map { |path| File.basename(path) }
-    %w[amber brgen bsdports].each do |app|
+    %w\[amber brgen bsdports].each do |app|
       clobbered = shared & Dir[File.join(ROOT, app, "public/*.html")].map { |path| File.basename(path) }
 
       assert_empty clobbered, "shared/public would overwrite #{app}'s #{clobbered.join(", ")} on deploy"

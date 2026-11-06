@@ -105,7 +105,7 @@ module Master
         end
       end
 
-      TRANSIENT_ERROR_CATEGORIES = %i[timeout no_api_key rate_limit].freeze
+      TRANSIENT_ERROR_CATEGORIES = %i\[timeout no_api_key rate_limit].freeze
 
       private
 

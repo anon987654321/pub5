@@ -63,8 +63,8 @@ class OwnershipGuardContractTest < Minitest::Test
   def test_detector_rejects_a_controller_shaped_like_the_known_bug_class
     fixture = <<~RUBY
       class WidgetsController < ApplicationController
-        before_action :require_real_user, only: %i[update destroy]
-        before_action :set_widget, only: %i[update destroy]
+        before_action :require_real_user, only: %i\[update destroy]
+        before_action :set_widget, only: %i\[update destroy]
 
         def update
           @widget.update(widget_params)

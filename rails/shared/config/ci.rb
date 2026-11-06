@@ -14,11 +14,11 @@ ENV["GIT_CEILING_DIRECTORIES"] ||= "/"
 # no network.
 ENV["BUNDLER_AUDIT_UPDATE"] ||= "1"
 ENV["NPM_CONFIG_CACHE"] ||= File.expand_path("~/.npm")
-monorepo_rails = ENV["PUB4_RAILS_ROOT"].to_s.strip
+monorepo_rails = ENV["PUB5_RAILS_ROOT"].to_s.strip
 monorepo_rails = File.expand_path("../..", __dir__) if monorepo_rails.empty?
-ENV["PUB4_RAILS_ROOT"] ||= monorepo_rails if File.directory?(File.join(monorepo_rails, "shared"))
+ENV["PUB5_RAILS_ROOT"] ||= monorepo_rails if File.directory?(File.join(monorepo_rails, "shared"))
 master_rails_tools = File.expand_path("../master/tools/rails", monorepo_rails)
-master_rails_tools = "/home/dev/pub4/master/tools/rails" unless File.directory?(master_rails_tools)
+master_rails_tools = "/home/dev/pub5/master/tools/rails" unless File.directory?(master_rails_tools)
 require File.join(master_rails_tools, "operator", "ci_guard")
 require File.join(master_rails_tools, "operator", "dmesg")
 
@@ -67,7 +67,7 @@ Operator::CiGuard.run! do
     # instruments under master/tools, and operator-only Rails audits under
     # master/tools/rails/operator. Keep both roots in one resolver so a move
     # between those surfaces cannot turn a real lint into a false "not found".
-    %w[
+    %w\[
       rhythm_lint
       fallback_drift_lint
       empty_state_lint
@@ -82,7 +82,7 @@ Operator::CiGuard.run! do
         step lint, "echo '#{lint}.rb not found in canonical master/tools roots' >&2; exit 1"
       end
     end
-    importmap_audit = %(bundle exec #{RbConfig.ruby} -e 'require "./config/environment"; require "importmap/commands"; Importmap::Commands.start(%w[audit])')
+    importmap_audit = %(bundle exec #{RbConfig.ruby} -e 'require "./config/environment"; require "importmap/commands"; Importmap::Commands.start(%w\[audit])')
     step("importmap_audit", importmap_audit) unless vps_host
     # Two changes, and they belong together.
     #

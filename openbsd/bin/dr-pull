@@ -47,12 +47,12 @@ SSH_USER = HOST.include?("@") ? HOST.split("@").first : ENV.fetch("USER", "dev")
 KEY = File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
 DEST = File.expand_path(ENV.fetch("PUB4_DR_DIR", "~/pub4-dr"))
 KEEP = Integer(ENV.fetch("PUB4_DR_KEEP", "14"))
-APPS = %w[brgen amber bsdports].freeze
+APPS = %w\[brgen amber bsdports].freeze
 
 STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
 
 # Asked before anything else, because a bare run is the pull itself.
-if ARGV.intersect?(%w[-h --help])
+if ARGV.intersect?(%w\[-h --help])
   puts <<~USAGE
     usage: ruby openbsd/bin/dr-pull                     pull and verify a snapshot of every production db
            ruby openbsd/bin/dr-pull --check             exit 1 when the newest pull is over #{STALE_AFTER_DAYS} days old

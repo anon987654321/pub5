@@ -13,9 +13,9 @@ module Master
     # GeometryProbe proves what the browser rendered; this graph explains where
     # that render came from and which surfaces share the same source.
     class RailsVisualGraph
-      SOURCE_EXTENSIONS = %w[.css .scss .erb .html .htm .js .ts].freeze
-      ASSET_EXTENSIONS = %w[.css .scss .js .ts .erb .html .htm .woff .woff2 .ttf .otf .png .jpg .jpeg .webp .svg .gif .ico].freeze
-      PARTIAL_SUFFIXES = %w[.html.erb .turbo_stream.erb .erb .scss .css .js .ts .html].freeze
+      SOURCE_EXTENSIONS = %w\[.css .scss .erb .html .htm .js .ts].freeze
+      ASSET_EXTENSIONS = %w\[.css .scss .js .ts .erb .html .htm .woff .woff2 .ttf .otf .png .jpg .jpeg .webp .svg .gif .ico].freeze
+      PARTIAL_SUFFIXES = %w\[.html.erb .turbo_stream.erb .erb .scss .css .js .ts .html].freeze
       # `rails routes` prints the route name before the verb for every named
       # route, so the verb is not at the start of the line.
       ROUTE_RE = /^\s*(?:\S+\s+)?(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(\/\S*)\s+(\S+#\S+)/

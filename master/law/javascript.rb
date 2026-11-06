@@ -150,7 +150,7 @@ module Master
         VENDORED_JS_RE = %r{/public/three\.module\.js\z}.freeze
 
         ::Law.define(:CONST_BY_DEFAULT) do
-          tags %i[IMMUTABLE]
+          tags %i\[IMMUTABLE]
           fix "use const unless reassigned"
           bad "let total = 0\n"
           good "let total = 0\ntotal += 1\n"
@@ -186,7 +186,7 @@ module Master
         # FOR_OF lives once, in law/javascript.rb — fixtures attached, any narrowing
         # this version had learned ported there (2026-08-21 twin retirement).
         ::Law.define(:QUOTE_VARIABLES) do
-          tags %i[ROBUSTNESS]
+          tags %i\[ROBUSTNESS]
           fix "quote $variables where the shell word-splits"
           bad "#!/bin/bash\ngrep $pattern file\n"
           good "#!/bin/zsh\ngrep $pattern file\n"
@@ -247,7 +247,7 @@ module Master
         end
 
         ::Law.define(:DOUBLE_BRACKET) do
-          tags %i[ROBUSTNESS]
+          tags %i\[ROBUSTNESS]
           fix "use [[ ]] over [ ]"
           bad "#!/bin/zsh\nif [ -f x ]; then echo y; fi\n"
           good "#!/bin/zsh\nif [[ -f x ]]; then echo y; fi\n"
@@ -265,7 +265,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:JS_MODULE_SIZE) do
-          tags %i[SMALL_PARTS]
+          tags %i\[SMALL_PARTS]
           fix "JS files over 300 lines - split at module boundaries"
           bad ("// line\n" * 301)
           good ("// line\n" * 300)
@@ -307,7 +307,7 @@ module Master
       # who chose it can answer. Six passes over this rule removed 596 findings
       # and every one was the rule misreading something; none was a substitution.
         ::Law.define(:MAGIC_COLOR) do
-          tags %i[DESIGN]
+          tags %i\[DESIGN]
           fix "color values must reference design tokens, not raw hex/rgb"
           bad ".btn { color: #c0392b; }\n"
           good ":root { --danger: #c0392b; }\n"
@@ -382,7 +382,7 @@ module Master
 
       # A11 OPTIONAL_CHAINING_JS — && guard chains in JavaScript (OPTIONAL_CHAINING).
         ::Law.define(:OPTIONAL_CHAINING_JS) do
-          tags %i[READABILITY]
+          tags %i\[READABILITY]
           fix "use ?. over && chains"
           bad "const name = user && user.name\n"
           good "const name = user?.name\n"
@@ -489,21 +489,21 @@ module Law
 
   ::Law.define(:GESTURE_HAS_TAP_EQUIVALENT) do
     source "WCAG 2.5.1 Pointer Gestures and 2.2 SC 2.5.7 Dragging Movements, AA; Clark, Designing for Touch"
-    tags %i[ACCESSIBILITY]
+    tags %i\[ACCESSIBILITY]
     path Regexp.union(/_controller\.js\z/, S::SNAP::SNAPSHOT)
     reads_beyond_file true
     fix "Give every swipe or drag result a button calling the same method (click->stack#like); small and low is fine."
     bad S.controller
     good S.controller("  tap() { this.element.addEventListener(\"click\", () => this.like()) }")
     check { |src, path| S.untapped(src, path).map { |hit| finding(**hit) } }
-    adapter(:rendered_ui, languages: %i[json], example_path: S::SNAP::EXAMPLE, bad: S.stack("touchend->stack#like"),
+    adapter(:rendered_ui, languages: %i\[json], example_path: S::SNAP::EXAMPLE, bad: S.stack("touchend->stack#like"),
                           good: S.stack("touchend->stack#like", "click->stack#like"),
                           &S.rendered(:GESTURE_HAS_TAP_EQUIVALENT))
   end
 
   ::Law.define(:AUTO_MOTION_PAUSABLE) do
     source "WCAG 2.2.2 Pause, Stop, Hide, A; visual_identity.motion.default: still"
-    tags %i[ACCESSIBILITY]
+    tags %i\[ACCESSIBILITY]
     path Regexp.union(/\.js\z/, /\.s?css\z/, S::SNAP::SNAPSHOT)
     fix "Hold still by default; anything that advances by itself past five seconds gets a pause button (aria-pressed)."
     carousel = "connect() { this.timer = setInterval(() => this.track.style.transform = next(), 4000) }\n"
@@ -514,17 +514,17 @@ module Law
       message = "content advances by itself with no pause control"
       moving ? [finding(line: S.line_of(src, S::TIMER), message:)] : []
     end
-    adapter(:whole_file, languages: %i[css scss], bad: ".hero-track { animation: drift 8s linear infinite; }\n",
+    adapter(:whole_file, languages: %i\[css scss], bad: ".hero-track { animation: drift 8s linear infinite; }\n",
                          good: ".spinner { animation: spin 1s linear infinite; }\n") do |src, _file|
       S.endless(src).map { |hit| finding(**hit) }
     end
-    adapter(:rendered_ui, languages: %i[json], example_path: S::SNAP::EXAMPLE, bad: S.motion(40), good: S.motion(0),
+    adapter(:rendered_ui, languages: %i\[json], example_path: S::SNAP::EXAMPLE, bad: S.motion(40), good: S.motion(0),
                           &S.rendered(:AUTO_MOTION_PAUSABLE))
   end
 
   ::Law.define(:CHART_DATA_INK) do
     source "Tufte, The Visual Display of Quantitative Information (1983/2001): data-ink, chartjunk, lie factor"
-    tags %i[DESIGN]
+    tags %i\[DESIGN]
     path Regexp.union(/\.js\z/, S::SNAP::SNAPSHOT)
     fix "Start bars at zero, drop 3D and heavy gridlines, label the data directly, share one scale across multiples."
     bad "new Chart(el, { type: \"bar\", options: { scales: { y: { beginAtZero: false } } } })\n"
@@ -536,13 +536,13 @@ module Law
     end
     tilted = S::SNAP.element("svg.chart", text: "", transform: "matrix3d(#{([1, 0, 0, 0, 0] * 3).push(1).join(", ")})")
     flat = S::SNAP.element("svg.chart", text: "", transform: "none", perspective: "none")
-    adapter(:rendered_ui, languages: %i[json], example_path: S::SNAP::EXAMPLE, bad: S::SNAP.fixture(elements: [tilted]),
+    adapter(:rendered_ui, languages: %i\[json], example_path: S::SNAP::EXAMPLE, bad: S::SNAP.fixture(elements: [tilted]),
                           good: S::SNAP.fixture(elements: [flat]), &S.rendered(:CHART_DATA_INK))
   end
 
   ::Law.define(:ORIENTATION_UNLOCKED) do
     source "WCAG 1.3.4 Orientation, AA"
-    tags %i[ACCESSIBILITY]
+    tags %i\[ACCESSIBILITY]
     path %r{manifest(?:\.json)?(?:\.erb)?\z|\.webmanifest\z|\.js\z}
     example_path "/repo/app/views/pwa/manifest.json.erb"
     fix "Drop the orientation key (or use any); lock only where the task needs it, noting `orientation: essential`."

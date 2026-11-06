@@ -12,14 +12,14 @@ module Deploy
     # transfer bytes summed at the first width only, because those cost seconds.
     module Capture
       PROBES = File.expand_path("../geometry_probe", __dir__)
-      PROBE = %w[design_laws design_laws_motion].map { |name| File.read(File.join(PROBES, "#{name}.js")) }.freeze
+      PROBE = %w\[design_laws design_laws_motion].map { |name| File.read(File.join(PROBES, "#{name}.js")) }.freeze
       HEIGHTS = { 390 => 844, 360 => 780, 320 => 640, 1280 => 800 }.freeze
       BUDGETS = File.expand_path("../../data/page_weight.yml", __dir__)
 
       TABS = 30
       FORCED = 12
-      PHASES = %i[forced chrome focus spacing fonts weight].freeze
-      FORCED_STATES = { "hover" => %w[hover], "focus-visible" => %w[focus focus-visible] }.freeze
+      PHASES = %i\[forced chrome focus spacing fonts weight].freeze
+      FORCED_STATES = { "hover" => %w\[hover], "focus-visible" => %w\[focus focus-visible] }.freeze
       TYPES = { "Document" => "document", "Stylesheet" => "stylesheet", "Script" => "script", "Font" => "font",
                 "Image" => "image" }.freeze
 
@@ -152,7 +152,7 @@ module Deploy
 
         # The painted face for each distinct family, weight, style and caps request.
         def fonts
-          %w[DOM.enable CSS.enable].each { |command| @cdp.command(command) }
+          %w\[DOM.enable CSS.enable].each { |command| @cdp.command(command) }
           root = @cdp.command("DOM.getDocument", depth: 0).dig("root", "nodeId")
           requests = Array(phase("fontRequests()")).uniq { |row| row.values_at("family", "weight", "style", "caps") }
           requests.first(16).filter_map { |row| painted(row, root:) }

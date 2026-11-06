@@ -52,7 +52,7 @@ module Maps
     def bbox_key
       return "all" unless bbox
 
-      %i[sw_lat sw_lng ne_lat ne_lng].join("/")
+      %i\[sw_lat sw_lng ne_lat ne_lng].join("/")
     end
 
     # The city's own coordinates, else the middle of what is on the map. A city
@@ -72,7 +72,7 @@ module Maps
     def bbox
       return @bbox if defined?(@bbox)
 
-      values = %i[sw_lat sw_lng ne_lat ne_lng].map { |key| Float(params[key], exception: false) }
+      values = %i\[sw_lat sw_lng ne_lat ne_lng].map { |key| Float(params[key], exception: false) }
       @bbox = if values.all? { |v| v&.finite? } && values[0] <= values[2] && values[1] <= values[3]
                 { latitude: values[0]..values[2], longitude: values[1]..values[3] }
       end

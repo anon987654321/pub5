@@ -10,7 +10,7 @@ module Master
     # paid tier is QuotaCheck (test/test_quota_check.rb), and a free model's daily
     # count is ModelQuota.
     module ModelSkipCache
-      SKIP_CATEGORIES = %i[
+      SKIP_CATEGORIES = %i\[
         rate_limit quota_exceeded no_api_key timeout auth_error
         provider_error llm_call_failure model_missing
       ].freeze
@@ -20,7 +20,7 @@ module Master
       # lane ai.brgen.no could reach for the full ten minutes, and every turn in
       # that window walked a chain of lanes with no credit and failed after 268s
       # (measured 2026-09-15). A spent key, a quota or a rate limit keeps the long park.
-      TRANSIENT_CATEGORIES = %i[timeout provider_error llm_call_failure].freeze
+      TRANSIENT_CATEGORIES = %i\[timeout provider_error llm_call_failure].freeze
 
       # A park the provider did not time escalates with the model's own failures
       # in the last day: the first is transient_skip_ttl_ms, then a minute, then

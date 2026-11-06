@@ -9,11 +9,11 @@ module FlowCoverageSources
   # The flows run against served apps; an app marked deployed: false has none yet.
   FLEET = Deploy::Inventory.new(root: ROOT).app_names
 
-  STEP_KEYS = %w[
+  STEP_KEYS = %w\[
     name get post host params expect_status expect_final_path expect_body expect_any forbid_body
     count number capture capture_final_path needs mail accept asset
   ].freeze
-  FLOW_KEYS = %w[id app host description requires_data requires_credentials mutates steps assert].freeze
+  FLOW_KEYS = %w\[id app host description requires_data requires_credentials mutates steps assert].freeze
 
   def writes?(flow) = flow["steps"].any? { |step| step.key?("post") }
 
@@ -24,13 +24,13 @@ module FlowCoverageSources
   # per-run values FlowJourney binds ($unique and the throwaway passwords), or be
   # a credential the flow declares. Otherwise the request goes out with the
   # literal "$name" and the failure reads as a broken page.
-  RUN_BOUND = %w[unique flow_password flow_wrong_password flow_new_password].freeze
+  RUN_BOUND = %w\[unique flow_password flow_wrong_password flow_new_password].freeze
 
   # vps-deploy runs flow_journey against the apps it has just restarted, and the
   # port it probes serves production. A journey that signs up, posts or orders
   # without being told to stay off that host would write test rows into the live
   # database on every deploy.
-  NO_WRITE_NEEDED = %w[master_unlock_refuses_a_wrong_token].freeze
+  NO_WRITE_NEEDED = %w\[master_unlock_refuses_a_wrong_token].freeze
 
   # brgen is one app and eight hosts. A guest can write on every vertical host
   # below; maps is the one read-only exception (a check-in needs a place, and a
@@ -44,7 +44,7 @@ module FlowCoverageSources
     "radio.brgen.no" => "playlist: create",
     "tv.brgen.no" => "tv: subscribe",
   }.freeze
-  READ_ONLY_VERTICALS = %w[maps.brgen.no].freeze
+  READ_ONLY_VERTICALS = %w\[maps.brgen.no].freeze
 
   def flow_hosts(flow)
     ([flow["host"]] + flow["steps"].select { |s| s.key?("post") }.map { |s| s["host"] }).compact.uniq

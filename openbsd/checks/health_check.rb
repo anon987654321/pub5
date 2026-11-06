@@ -120,7 +120,7 @@ master = master_row(apps, failures)
 app_ports = apps.transform_values { |metadata| metadata.fetch("port") }
 app_domains = apps.transform_values { |metadata| metadata.fetch("domain") }
 
-core_apps = %w[brgen]
+core_apps = %w\[brgen]
 ready_apps = options[:all_ready_apps] ? app_ports.keys.sort : core_apps
 
 # Every check below this line except the HTTPS block needs a tool or a file that
@@ -129,7 +129,7 @@ ready_apps = options[:all_ready_apps] ? app_ports.keys.sort : core_apps
 # so a run cannot look like it checked the box when it checked the internet.
 on_box = !options[:public_only]
 
-core_services = %w[nsd httpd relayd smtpd master] + core_apps
+core_services = %w\[nsd httpd relayd smtpd master] + core_apps
 required_services = on_box ? (core_services + ready_apps).uniq : []
 
 required_services.each do |service|
@@ -202,7 +202,7 @@ end
   elsif File.executable?("/usr/bin/dig")
     dns_ok, dns_out = run("/usr/bin/dig", "@#{nameserver}", "brgen.no", "SOA", "+short", "+time=2", "+tries=1")
     dns_ok &&= !dns_out.empty? && dns_out.include?("brgen.no")
-  elsif (dns_cmd = %w[/usr/sbin/drill /usr/bin/drill].find { |c| File.executable?(c) })
+  elsif (dns_cmd = %w\[/usr/sbin/drill /usr/bin/drill].find { |c| File.executable?(c) })
     dns_ok, dns_out = run(dns_cmd, "@#{nameserver}", "brgen.no", "SOA")
 
     dns_ok &&= dns_out.include?("brgen.no.")
@@ -286,7 +286,7 @@ end
 DEPLOY_DRIFT_LIMIT = Integer(ENV.fetch("DEPLOY_DRIFT_LIMIT", "40"))
 
 if on_box
-  repo = "/home/dev/pub4"
+  repo = "/home/dev/pub5"
   apps.each_key do |name|
     sha = Deploy::DeployStamp.sha(name)
     next unless sha
@@ -371,7 +371,7 @@ if on_box
   failures.concat(Deploy::PermissionAudit.failures(
     secrets: Dir.glob("/etc/*.env").map(&stat_entry),
     private_dirs: Dir.glob("/home/*/app/storage").map(&stat_entry),
-    daemon_logs: Dir.glob("/home/dev/pub4/master/.master/tts-worker-*.log").map(&stat_entry),
+    daemon_logs: Dir.glob("/home/dev/pub5/master/.master/tts-worker-*.log").map(&stat_entry),
     daemon_user: "master"
   ))
 end

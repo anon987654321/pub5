@@ -5,7 +5,7 @@ require "minitest/autorun"
 class SharedTopologyContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   REPO = File.expand_path("..", ROOT)
-  EXTENSIONS = %w[.rb .rake .sh .zsh .yml .yaml .json .js .mjs .scss .css].freeze
+  EXTENSIONS = %w\[.rb .rake .sh .zsh .yml .yaml .json .js .mjs .scss .css].freeze
   INTENTIONAL_RETIRED_PATHS = [
     "master/lib/fix/restructure_sweep/context.rb",
     # Builds a fixture tree that deliberately contains the retired path.
@@ -13,15 +13,15 @@ class SharedTopologyContractTest < Minitest::Test
   ].freeze
 
   def active_files
-    Dir.glob(File.join(REPO, "{MASTER,rails,openbsd,STUDIO}", "**", "*"))
+    Dir.glob(File.join(REPO, "{master,rails,openbsd,studio}", "**", "*"))
        .select { |path| File.file?(path) && EXTENSIONS.include?(File.extname(path).downcase) }
-       .reject { |path| path.split("/").any? { |part| %w[.git vendor node_modules coverage tmp log storage].include?(part) } }
+       .reject { |path| path.split("/").any? { |part| %w\[.git vendor node_modules coverage tmp log storage].include?(part) } }
        .reject { |path| INTENTIONAL_RETIRED_PATHS.include?(path.delete_prefix("#{REPO}/")) }
   end
 
   def retired_path_hits(source)
     source.lines.each_with_index.filter_map do |line, index|
-      next unless line.match?(/RAILS\/shared(?:\/|")/) ||
+      next unless line.match?(/rails\/shared(?:\/|")/) ||
                   line.match?(/(?:File\.|\b)join\(\s*[^\n,)"']+,\s*["']shared["']\s*[,)]/) ||
                   line.match?(/File\.expand_path\([^\n)]*(?:\.\.\/)+shared\//) ||
                   line.match?(/(?:\.\.\/)+shared\/(?:app|config|lib|frontend|public|pwa|design_tokens)/)
@@ -52,7 +52,7 @@ class SharedTopologyContractTest < Minitest::Test
     assert File.file?(File.join(ROOT, "shared", "config", "ci.rb"))
   end
   def test_rails_lockfiles_use_the_canonical_shared_engine_path
-    %w[amber brgen bsdports].each do |app|
+    %w\[amber brgen bsdports].each do |app|
       lockfile = File.read(File.join(ROOT, app, "Gemfile.lock"))
       refute_includes lockfile, "remote: ../shared"
       assert_includes lockfile, "remote: ../shared"

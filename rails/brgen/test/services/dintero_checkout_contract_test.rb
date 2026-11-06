@@ -4,7 +4,7 @@ require "test_helper"
 
 class DinteroCheckoutContractTest < ActiveSupport::TestCase
   setup do
-    @keys = %w[
+    @keys = %w\[
       DINTERO_ACCOUNT_ID DINTERO_CLIENT_ID DINTERO_CLIENT_SECRET DINTERO_PROFILE_ID
       DINTERO_CALLBACK_SECRET DINTERO_CHECKOUT_ENABLED DINTERO_PLATFORM_PAYOUT_DESTINATION_ID
       DINTERO_PLATFORM_COMMISSION_BPS

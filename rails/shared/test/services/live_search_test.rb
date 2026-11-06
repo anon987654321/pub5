@@ -44,7 +44,7 @@ class SharedLiveSearchTest < Minitest::Test
     model.create!(title: "100% ull")
     model.create!(title: "1000 ting")
 
-    found = Shared::LiveSearch.search(model.all, query: "100%", columns: %w[title], app: "test").scope.pluck(:title)
+    found = Shared::LiveSearch.search(model.all, query: "100%", columns: %w\[title], app: "test").scope.pluck(:title)
 
     assert_equal [ "100% ull" ], found
   end
@@ -64,7 +64,7 @@ class SharedLiveSearchTest < Minitest::Test
     child.create!(headline: "Sofa", live_search_parent_id: parent.create!(title: "Stue").id)
 
     scope = child.joins("JOIN live_search_parents ON live_search_parents.id = live_search_children.live_search_parent_id")
-    found = Shared::LiveSearch.search(scope, query: "racer", columns: %w[headline live_search_parents.title], app: "test").scope
+    found = Shared::LiveSearch.search(scope, query: "racer", columns: %w\[headline live_search_parents.title], app: "test").scope
 
     assert_equal [ "Vårsalg" ], found.pluck(:headline)
   end
@@ -77,14 +77,14 @@ class SharedLiveSearchTest < Minitest::Test
       model = Class.new { def self.table_name = "items" }
       scope.define_singleton_method(:klass) { model }
       scope.define_singleton_method(:connection) { raise "no fts probe needed" }
-      assert_equal :filtered, Shared::LiveSearch.call(scope, query: "sykkel", columns: %w[title])
+      assert_equal :filtered, Shared::LiveSearch.call(scope, query: "sykkel", columns: %w\[title])
     end
     assert_empty reported, "a filter on a reader's behalf is not a search they typed"
   end
 
   def test_empty_query_returns_original_scope
     scope = Object.new
-    result = Shared::LiveSearch.search(scope, query: "", columns: %w[title])
+    result = Shared::LiveSearch.search(scope, query: "", columns: %w\[title])
     assert_equal scope, result.scope
     assert_equal 0, result.result_count
   end
@@ -113,7 +113,7 @@ class SharedLiveSearchTest < Minitest::Test
     end
     scope = model.relation
 
-    result = Shared::LiveSearch.search(scope, query: "bicycles", columns: %w[title], vertical: "test", app: "test")
+    result = Shared::LiveSearch.search(scope, query: "bicycles", columns: %w\[title], vertical: "test", app: "test")
     assert_equal 0, result.result_count
     assert_includes result.suggestions, "bicycles"
   end

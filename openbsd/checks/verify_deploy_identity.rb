@@ -11,7 +11,7 @@ require_relative "../lib/utf8"
 require_relative "../lib/deploy_inventory"
 
 # The functions every app's deploy script reaches through _deploy.sh.
-SHARED_FUNCTIONS = %w[deploy_tracked_app need_cmd bundle_install_as_app install_rcd relayd_add_relay].freeze
+SHARED_FUNCTIONS = %w\[deploy_tracked_app need_cmd bundle_install_as_app install_rcd relayd_add_relay].freeze
 
 # Which of `names` the shell does not define after sourcing `library`.
 #

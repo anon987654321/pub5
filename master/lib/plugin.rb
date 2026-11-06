@@ -128,7 +128,7 @@ module Master
     def validate_manifest!(raw, path)
       raise ManifestError, "#{path}: manifest must be a mapping" unless raw.is_a?(Hash)
 
-      required = %w[id version description entrypoint]
+      required = %w\[id version description entrypoint]
       missing = required.reject { |key| raw.key?(key) }
       raise ManifestError, "#{path}: missing #{missing.join(", ")}" unless missing.empty?
 

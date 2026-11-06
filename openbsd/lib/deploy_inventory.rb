@@ -40,7 +40,7 @@ module Deploy
 
     private
 
-    REQUIRED_APP_KEYS = %w[domain port deploy_script deploy_root].freeze unless defined?(REQUIRED_APP_KEYS)
+    REQUIRED_APP_KEYS = %w\[domain port deploy_script deploy_root].freeze unless defined?(REQUIRED_APP_KEYS)
 
     # apps.yml is the fleet's source of truth and is edited by hand, so a missing
     # key has to say which app and which key. It used to raise a bare

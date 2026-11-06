@@ -6,7 +6,7 @@ require "active_support/core_ext/integer/time"
 # plain data file, so amber and bsdports load it for their allowlist too. In the
 # repo it sits in rails/brgen; on the box brgen's checkout is /home/brgen/app,
 # and amber's and bsdports' homes carry no copy, so they go without the cities.
-registry = %w[brgen app].map { |dir| File.expand_path("../../../#{dir}/lib/brgen/domain_registry.rb", __dir__) }
+registry = %w\[brgen app].map { |dir| File.expand_path("../../../#{dir}/lib/brgen/domain_registry.rb", __dir__) }
                         .find { |path| File.file?(path) }
 require registry if registry
 

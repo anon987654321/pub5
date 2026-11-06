@@ -78,7 +78,7 @@ class DeclutterControllerTest < ActionDispatch::IntegrationTest
   def test_moves_that_leave_the_wardrobe_ask_first
     get review_declutter_path(@item)
     question = I18n.t("declutter.confirm_leave_wardrobe", title: @item.title)
-    %w[donate release].each do |target|
+    %w\[donate release].each do |target|
       assert_select "form[action=?][data-turbo-confirm=?]", move_declutter_path(@item, target:), question
     end
     assert_select "form[action=?][data-turbo-confirm]", move_declutter_path(@item, target: "keep"), 0

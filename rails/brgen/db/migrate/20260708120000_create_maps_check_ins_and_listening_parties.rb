@@ -9,7 +9,7 @@ class CreateMapsCheckInsAndListeningParties < ActiveRecord::Migration[8.1]
       t.datetime :checked_in_at, null: false
       t.timestamps
     end
-    add_index :place_check_ins, %i[place_id user_id checked_in_at]
+    add_index :place_check_ins, %i\[place_id user_id checked_in_at]
 
     create_table :playlist_listening_parties do |t|
       t.references :playlist_set, null: false, foreign_key: true
@@ -21,7 +21,7 @@ class CreateMapsCheckInsAndListeningParties < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :playlist_listening_parties, :join_code, unique: true
-    add_index :playlist_listening_parties, %i[playlist_set_id status]
+    add_index :playlist_listening_parties, %i\[playlist_set_id status]
 
     create_table :playlist_party_messages do |t|
       t.references :listening_party, null: false, foreign_key: { to_table: :playlist_listening_parties }
@@ -29,7 +29,7 @@ class CreateMapsCheckInsAndListeningParties < ActiveRecord::Migration[8.1]
       t.string :body, null: false, limit: 500
       t.timestamps
     end
-    add_index :playlist_party_messages, %i[listening_party_id created_at],
+    add_index :playlist_party_messages, %i\[listening_party_id created_at],
               name: "idx_party_messages_on_party_and_created_at"
   end
 end

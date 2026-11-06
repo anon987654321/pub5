@@ -13,10 +13,10 @@ module Master
       VAGUE_WORDS_PATH = File.expand_path("../../data/vague_words.yml", __dir__)
       VAGUE_WORDS = YAML.safe_load_file(VAGUE_WORDS_PATH).fetch("words").map(&:to_s).freeze
       VAGUE_ALTERNATION = VAGUE_WORDS.map { |word| Regexp.escape(word) }.join("|").freeze
-      FOLD_SUFFIXES = %w[_support _helper _util _helpers _utils].freeze
+      FOLD_SUFFIXES = %w\[_support _helper _util _helpers _utils].freeze
       # The vague words, plus articles and a bare version, which carry no subject either.
-      FILLER_TOKENS = (VAGUE_WORDS + %w[the a an v2]).uniq.freeze
-      FORBIDDEN_ABBREVS = %w[idx sig tmp buf val ret obj str arr num cnt ptr msg].freeze
+      FILLER_TOKENS = (VAGUE_WORDS + %w\[the a an v2]).uniq.freeze
+      FORBIDDEN_ABBREVS = %w\[idx sig tmp buf val ret obj str arr num cnt ptr msg].freeze
       SUSPICIOUS = /\b(tmp|misc|old|new|copy|final\d*|v2|_fixed)\b/i.freeze
 
       Issue = Data.define(:action, :from, :to, :reason)

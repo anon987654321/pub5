@@ -86,7 +86,7 @@ puts "Created #{posts.size} posts"
 
 posts.sample(30 * scale).each do |post|
   liker = users.sample
-  post.reactions.create!(user: liker, kind: %w[like love].sample) if post.respond_to?(:reactions)
+  post.reactions.create!(user: liker, kind: %w\[like love].sample) if post.respond_to?(:reactions)
 end
 
 puts "Seeded Amber fictive data successfully."

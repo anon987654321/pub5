@@ -44,7 +44,7 @@ module Master::Core
       profiling_data: %r{\b(?:benchmark|stackprof|ruby-prof|memory_profiler|--profile)},
     }.freeze
 
-    RISK_ORDER = %i[low medium high critical].freeze
+    RISK_ORDER = %i\[low medium high critical].freeze
 
     attr_reader :risk
 
@@ -74,7 +74,7 @@ module Master::Core
       self
     end
 
-    def council_required? = %i[high critical].include?(@risk)
+    def council_required? = %i\[high critical].include?(@risk)
     def council_cleared? = @council_pass || !council_required?
     def ideation_satisfied? = !ideation_required? || @ideation_complete
     def proved? = evidence_score >= PASS_THRESHOLD
@@ -153,7 +153,7 @@ module Master::Core
       remember_probe(effect) if effect.verb == :probe && observation.message.to_s.start_with?("probe result:")
       invalidate_after_unlabelled_exec(effect) if effect.verb == :exec && observation.ok?
       @asked = true if effect.verb == :ask && observation.ok?
-      @acted = true if %i[exec git].include?(effect.verb)
+      @acted = true if %i\[exec git].include?(effect.verb)
       return unless effect.verb == :exec && observation.ok?
 
       kind = effect.args[:evidence].to_s.to_sym
@@ -168,7 +168,7 @@ module Master::Core
 
     # Both are asked only by the two predicates above. Public here would put the
     # count back where this split started.
-    def ideation_required? = %i[medium high critical].include?(@risk)
+    def ideation_required? = %i\[medium high critical].include?(@risk)
 
     # Two narrowings, both of which the old sum allowed.
     #

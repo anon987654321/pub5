@@ -117,7 +117,7 @@ module Master
               path.start_with?("/") || path.match?(/\A[A-Za-z]:/) || path.split("/").include?("..")
 
             relative = path.sub(%r{/+\z}, "")
-            base = relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/}) ? repository_root : master_root
+            base = relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|studio)/}) ? repository_root : master_root
             resolved = File.expand_path(relative, base)
             unless resolved.start_with?(repository_root + File::SEPARATOR)
               return "agent_map #{context} path escapes the repository: #{path}"
@@ -189,8 +189,8 @@ module Master
 
         include Queries
 
-        VALID_STATUSES = %w[covered gap unmapped].freeze
-        VALID_SEVERITIES = %w[critical high medium low].freeze
+        VALID_STATUSES = %w\[covered gap unmapped].freeze
+        VALID_SEVERITIES = %w\[critical high medium low].freeze
 
         Entry = Data.define(:id, :meaning, :detects, :severity, :confidence, :operation, :law_ids, :status, :tags, :immutable, :source)
 
@@ -330,7 +330,7 @@ module Master
 
       class Repo
 
-        DEFAULT_IGNORES = %w[
+        DEFAULT_IGNORES = %w\[
           .git tmp log vendor node_modules coverage .bundle storage public/assets
           knowledge/awesome knowledge/vendor
         ].freeze

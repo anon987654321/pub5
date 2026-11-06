@@ -28,15 +28,15 @@ class MethodLengthRatchetTest < Minitest::Test
   LIMIT = 30
 
   # The checks and tools left rails for master, where SMALL_FUNCTIONS and its own ratchet govern them.
-  BRGEN_TREES = %w[brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio].freeze
-  ROOTS = (%w[shared amber bsdports test lib] + BRGEN_TREES).freeze
+  BRGEN_TREES = %w\[brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio].freeze
+  ROOTS = (%w\[shared amber bsdports test lib] + BRGEN_TREES).freeze
 
   AREAS = {
-    "shared" => %w[shared],
+    "shared" => %w\[shared],
     "brgen" => BRGEN_TREES,
-    "amber" => %w[amber],
-    "bsdports" => %w[bsdports],
-    "test" => %w[test lib],
+    "amber" => %w\[amber],
+    "bsdports" => %w\[bsdports],
+    "test" => %w\[test lib],
   }.freeze
 
   # area => [methods over LIMIT, longest method in code lines]

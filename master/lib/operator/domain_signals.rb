@@ -8,7 +8,7 @@ require "yaml"
 module DomainSignals
   module_function
 
-  BRGEN_VERTICALS = %w[tv dating radio takeaway markedsplass maps messenger].freeze
+  BRGEN_VERTICALS = %w\[tv dating radio takeaway markedsplass maps messenger].freeze
 
   # Returns a hash; blank arrays mean "say nothing on status".
   def scan(root)

@@ -23,7 +23,7 @@ module RouteContracts
   ROOT = File.expand_path("../../..", __dir__)
   MANIFEST = File.join(ROOT, "master", "checks", "data", "route_manifest.yml")
   DIR = File.join(ROOT, "master", "checks", "data", "route_contracts")
-  LANDMARKS = %w[header nav main aside footer form dialog].freeze
+  LANDMARKS = %w\[header nav main aside footer form dialog].freeze
   TIMEOUT = 30
   # Framework routes (Action Mailbox conductor and ingress) differ by
   # environment and are not product behaviour; development answers 500 there.
@@ -152,7 +152,7 @@ if $PROGRAM_NAME == __FILE__
   mode, app, base = ARGV.first(3)
   host = ARGV.include?("--host") ? ARGV[ARGV.index("--host") + 1] : nil
   usage = "usage: route_contracts.rb record|check APP BASE_URL [--host HOST]"
-  abort usage unless %w[record check].include?(mode) && base
+  abort usage unless %w\[record check].include?(mode) && base
   target = RouteContracts::Target.new(app:, base:, host:)
 
   if mode == "record"

@@ -82,7 +82,7 @@ module Master
       end
       private_class_method :command_with_clean_environment
 
-      HOMEBREW_BINS = %w[/opt/homebrew/bin /usr/local/bin].freeze
+      HOMEBREW_BINS = %w\[/opt/homebrew/bin /usr/local/bin].freeze
 
       # Resolve explicit paths or command names on PATH, including PATHEXT on
       # Windows. Preferred directories retain precedence over PATH, and names

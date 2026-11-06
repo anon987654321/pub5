@@ -15,16 +15,16 @@
 # translated. This removes the translation.
 class RenameActivityEventObjectToSubject < ActiveRecord::Migration[8.1]
   def up
-    remove_index :activity_events, %i[object_type object_id]
+    remove_index :activity_events, %i\[object_type object_id]
     rename_column :activity_events, :object_type, :subject_type
     rename_column :activity_events, :object_id, :subject_id
-    add_index :activity_events, %i[subject_type subject_id]
+    add_index :activity_events, %i\[subject_type subject_id]
   end
 
   def down
-    remove_index :activity_events, %i[subject_type subject_id]
+    remove_index :activity_events, %i\[subject_type subject_id]
     rename_column :activity_events, :subject_type, :object_type
     rename_column :activity_events, :subject_id, :object_id
-    add_index :activity_events, %i[object_type object_id]
+    add_index :activity_events, %i\[object_type object_id]
   end
 end

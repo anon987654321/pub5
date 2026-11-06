@@ -40,7 +40,7 @@ class ProviderCatalogIndexSpec < Minitest::Test
           "owner" => "black-forest-labs",
           "name" => "flux-schnell",
           "description" => "fast image model",
-          "tags" => %w[image fast],
+          "tags" => %w\[image fast],
         }],
       }))
 

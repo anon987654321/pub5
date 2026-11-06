@@ -10,7 +10,7 @@
 class BusinessVerification < ApplicationRecord
   include Shared::Notifiable
 
-  STATUSES = %w[pending verified rejected].freeze
+  STATUSES = %w\[pending verified rejected].freeze
   # Which column on each business names its owner. A business type is admitted
   # here or nowhere, so a request cannot point the verdict at an arbitrary table.
   OWNER_KEYS = { "Marketplace::Store" => :owner_id, "Takeaway::Restaurant" => :user_id }.freeze

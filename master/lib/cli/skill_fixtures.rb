@@ -15,9 +15,9 @@ module Master
     module SkillFixtures
       MAX_BYTES = 64 * 1024
       READERS = {
-        %w[.yml .yaml] => ->(text) { YAML.safe_load(text, aliases: false) },
-        %w[.json] => ->(text) { JSON.parse(text) },
-        %w[.md .txt] => ->(text) { raise ArgumentError, "empty" if text.strip.empty? },
+        %w\[.yml .yaml] => ->(text) { YAML.safe_load(text, aliases: false) },
+        %w\[.json] => ->(text) { JSON.parse(text) },
+        %w\[.md .txt] => ->(text) { raise ArgumentError, "empty" if text.strip.empty? },
       }.freeze
 
       Outcome = Data.define(:ref, :status, :sha256) do

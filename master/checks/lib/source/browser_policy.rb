@@ -5,8 +5,8 @@ require "yaml"
 module Deploy
   class BrowserPolicyCheck
     ROOT = File.expand_path("../../..", __dir__).freeze
-    REQUIRED_HOSTS = %w[127.0.0.1 localhost 0.0.0.0 169.254.169.254].freeze
-    REQUIRED_ACTIONS = %w[click set type].freeze
+    REQUIRED_HOSTS = %w\[127.0.0.1 localhost 0.0.0.0 169.254.169.254].freeze
+    REQUIRED_ACTIONS = %w\[click set type].freeze
 
     REQUIRED_INTERACTION_POLICY = {
       "ai_identity_disclosure_required" => true,
@@ -41,10 +41,10 @@ module Deploy
       end
       methods = Array(policy["allowed_network_methods"]).map { |method| method.to_s.upcase }
 
-      return failure("browser policy must allow only GET/HEAD browser requests") unless methods.sort == %w[GET HEAD]
+      return failure("browser policy must allow only GET/HEAD browser requests") unless methods.sort == %w\[GET HEAD]
       return failure("browser session limit must be four") unless policy["max_sessions"] == 4
       read_actions = Array(policy["read_actions"]).map(&:to_s)
-      required_read_actions = %w[status navigate login extract look follow paginate close]
+      required_read_actions = %w\[status navigate login extract look follow paginate close]
       missing_read_actions = required_read_actions - read_actions
       return failure("browser policy missing read actions: #{missing_read_actions.join(", ")}") unless missing_read_actions.empty?
       return failure("browser sessions must be host-bound") unless policy["session_host_bound"] == true
@@ -68,7 +68,7 @@ module Deploy
       if sources.any? { |text| text.match?(evasion_patterns) }
         return failure("Browser must not disguise automation or simulate random browsing")
       end
-      %w[SsrfGuard.pinned_address secure_page :dangerous ensure_session_host! target_from_anchor! save_screenshot(state) MAX_PAGINATION_OUTPUT_BYTES].each do |guard|
+      %w\[SsrfGuard.pinned_address secure_page :dangerous ensure_session_host! target_from_anchor! save_screenshot(state) MAX_PAGINATION_OUTPUT_BYTES].each do |guard|
         return failure("Browser security or capability guard missing: #{guard}") unless content.include?(guard)
       end
 
@@ -78,12 +78,12 @@ module Deploy
       return failure("Browser output limit disagrees with policy") unless content.include?("MAX_PAGINATION_OUTPUT_BYTES = #{policy["max_pagination_output_bytes"] / 1024} * 1024")
       required_transport = File.join(root, "lib", "io", "web_browse.rb")
       transport = File.read(required_transport)
-      %w[request_allowed_for_host? allowed_host reset_page_budget].each do |guard|
+      %w\[request_allowed_for_host? allowed_host reset_page_budget].each do |guard|
         return failure("WebBrowse host-bound transport missing: #{guard}") unless transport.include?(guard)
       end
 
       llm_tool = File.read(File.join(root, "lib", "io", "llm.rb"))
-      %w[status navigate login extract look follow paginate close].each do |action|
+      %w\[status navigate login extract look follow paginate close].each do |action|
         return failure("Browser model-facing action missing: #{action}") unless llm_tool.include?(action)
       end
       unless llm_tool.include?("fresh human approval") && llm_tool.include?("recipient consent") && llm_tool.include?("Do not disguise automation")
@@ -92,7 +92,7 @@ module Deploy
       return failure("Browser session limit disagrees with policy") unless content.include?("MAX_SESSIONS = #{policy["max_sessions"]}")
 
       governor = File.read(File.join(root, "lib", "fix", "governor.rb"))
-      %w[human_consent_required? consent_required @auto].each do |guard|
+      %w\[human_consent_required? consent_required @auto].each do |guard|
         return failure("Governor consent boundary missing: #{guard}") unless governor.include?(guard)
       end
 

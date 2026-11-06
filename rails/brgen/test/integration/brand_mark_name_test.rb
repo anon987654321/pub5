@@ -7,7 +7,7 @@ require "test_helper"
 # speech-control user saying "brgen" found no link of that name.
 class BrandMarkNameTest < ActionDispatch::IntegrationTest
   test "the brand mark is named by its visible wordmark" do
-    %w[brgen.no lsangeles.com].each do |host|
+    %w\[brgen.no lsangeles.com].each do |host|
       host! host
       get "/privacy"
 

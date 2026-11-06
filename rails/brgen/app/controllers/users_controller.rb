@@ -3,7 +3,7 @@
 class UsersController < ApplicationController
   include Shared::EmailRegistration
   allow_unauthenticated_access only: :show
-  unauthenticated_access_only only: %i[new create]
+  unauthenticated_access_only only: %i\[new create]
   # Sign-up writes a user, not a guest row; minting a guest here would give
   # every newcomer a merge of nothing.
   skip_before_action :ensure_guest_user!, only: :create

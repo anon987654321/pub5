@@ -41,7 +41,7 @@ module Deploy
             id: :flat_ui,
             principle: "flat_ui / rejection_of_ornament",
             meaning: "Separation via borders/surfaces, not shadows or blur",
-            paths: %w[
+            paths: %w\[
               brgen/app/assets/stylesheets
               amber/app/assets/stylesheets
               bsdports/app/assets/stylesheets
@@ -62,7 +62,7 @@ module Deploy
             id: :vertical_accent_single_map,
             principle: "consistency / design_tokens exact_token_use",
             meaning: "Vertical accents only from design_tokens, through brgen's accent map",
-            paths: %w[brgen/app/assets/stylesheets],
+            paths: %w\[brgen/app/assets/stylesheets],
             # No rule re-assigns --accent except the @each over $vertical-accents.
             forbidden_rule: {
               declares: /(?<![\w-])--accent\s*:/,
@@ -76,7 +76,7 @@ module Deploy
             # The rule styling the CTA has to carry the floor itself. A sheet that
             # merely mentions the class, or declares 44px for something else,
             # satisfied the file-scoped version of this contract.
-            paths: %w[brgen/app/assets/stylesheets/application.scss],
+            paths: %w\[brgen/app/assets/stylesheets/application.scss],
             required_rule: [/\.listing-buy-bar-cta\b/, /min-height:\s*(?:44px|var\(--tap-min\))/],
           },
         ]
@@ -96,7 +96,7 @@ module Deploy
             id: :skip_to_main,
             principle: "accessibility / SKIP_TO_MAIN",
             meaning: "Every app layout has skip link to #main-content",
-            paths: %w[
+            paths: %w\[
               brgen/app/views/layouts/application.html.erb
               amber/app/views/layouts/application.html.erb
               bsdports/app/views/layouts/application.html.erb
@@ -107,7 +107,7 @@ module Deploy
             id: :single_h1_marketplace_listings,
             principle: "hierarchy / clarity",
             meaning: "Marketplace listings index exposes exactly one document h1",
-            paths: %w[brgen_marketplace/app/views/marketplace/listings/index.html.erb],
+            paths: %w\[brgen_marketplace/app/views/marketplace/listings/index.html.erb],
             required_all: [/<h1\b/i],
             max_h1: 1,
           },
@@ -120,7 +120,7 @@ module Deploy
             id: :fail_visibly_payments,
             principle: "fail_fast / good_design_is_honest",
             meaning: "Checkout without keys must not pretend payment succeeded",
-            paths: %w[brgen/app],
+            paths: %w\[brgen/app],
             required_any: [
               /NotConfigured|not configured|payment not configured|STRIPE_SECRET|VIPPS_.*KEY/i,
               # A file may satisfy this by delegating rather than by spelling it.

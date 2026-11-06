@@ -20,7 +20,7 @@ task :check do
   out, status = Open3.capture2e(RUBY, dilla, "--list", chdir: STUDIO_ROOT)
   raise "dilla --list failed:\n#{out}" unless status.success?
 
-  %w[photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb].each do |entry|
+  %w\[photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb].each do |entry|
     path = File.join(STUDIO_ROOT, entry)
     raise "#{entry} is missing" unless File.file?(path)
 
@@ -80,4 +80,4 @@ task :test do
   puts "test0: #{tests.size} file(s) passed with non-empty Minitest summaries"
 end
 
-task default: %i[check test]
+task default: %i\[check test]

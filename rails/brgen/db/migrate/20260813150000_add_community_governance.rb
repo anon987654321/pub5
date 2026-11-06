@@ -14,7 +14,7 @@ class AddCommunityGovernance < ActiveRecord::Migration[8.1]
     # role that can appoint and remove moderators, so a mod cannot demote the
     # person who made the place.
     add_column :community_memberships, :role, :string, null: false, default: "member"
-    add_index  :community_memberships, %i[community_id role]
+    add_index  :community_memberships, %i\[community_id role]
 
     change_table :communities, bulk: true do |t|
       t.text    :rules
@@ -33,7 +33,7 @@ class AddCommunityGovernance < ActiveRecord::Migration[8.1]
     # posts.flair holds the label itself rather than an id: flairs are edited as
     # a text list, so an id would dangle the moment a community renamed one.
     add_column :posts, :flair, :string
-    add_index  :posts, %i[community_id flair]
+    add_index  :posts, %i\[community_id flair]
 
     reversible do |dir|
       dir.up do

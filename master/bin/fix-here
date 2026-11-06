@@ -33,7 +33,7 @@ MIN_FREE_GIB = begin
 rescue StandardError
   2.0
 end
-TREES = %w[master rails openbsd studio].freeze
+TREES = %w\[master rails openbsd studio].freeze
 
 args = ARGV.dup
 dry = args.delete("--dry")
@@ -51,7 +51,7 @@ end
 if (i = args.index("--lane"))
   args[i, 2] = ["--lane=#{args[i + 1]}"]
 end
-PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks].freeze
+PASSED_FLAGS = %w\[--no-critique --blockers --plan --until-checks].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
 # --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
@@ -154,7 +154,7 @@ if live
   # Booting takes minutes and the run's own handler is installed after it, so a TERM
   # in this window used to kill the wrapper and leave every server it had started
   # holding its port for the next run.
-  %w[TERM INT HUP].each do |sig|
+  %w\[TERM INT HUP].each do |sig|
     trap(sig) do
       system(operator, "triangle", "down", chdir: ROOT, out: File::NULL, err: File::NULL)
       exit 143
@@ -177,7 +177,7 @@ stop_run = lambda do
   term_sent_at ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
   Process.kill("TERM", -pid) rescue nil
 end
-%w[TERM INT HUP].each { |sig| trap(sig) { stop_run.call } }
+%w\[TERM INT HUP].each { |sig| trap(sig) { stop_run.call } }
 # Ends the run when the pulse reports a stall past the limit, instead of waiting out hours.
 stalled = false
 watcher = Thread.new do

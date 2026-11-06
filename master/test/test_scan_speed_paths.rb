@@ -44,23 +44,23 @@ class TestScanSpeedPaths < Minitest::Test
     repo do |root|
       write(root, "c.rb", "class C\nend\n")
       guard = Master::Review::CommitGuard.new(root:, depth: 3)
-      fast = guard.check(paths: %w[a.rb b.rb c.rb d.rb])
-      slow = %w[a.rb b.rb c.rb d.rb].flat_map { |rel| unskipped(root, rel) }
+      fast = guard.check(paths: %w\[a.rb b.rb c.rb d.rb])
+      slow = %w\[a.rb b.rb c.rb d.rb].flat_map { |rel| unskipped(root, rel) }
 
       assert_equal slow.map { |o| o.to_h.values.map(&:to_s) }.sort, fast.map { |o| o.to_h.values.map(&:to_s) }.sort
-      assert_equal %w[A#two C#old], fast.map(&:name).sort
+      assert_equal %w\[A#two C#old], fast.map(&:name).sort
     end
   end
 
   def test_commit_guard_sees_an_edit_made_after_the_index_was_taken
     repo do |root|
       guard = Master::Review::CommitGuard.new(root:, depth: 3)
-      guard.check(paths: %w[b.rb])
+      guard.check(paths: %w\[b.rb])
       sleep 0.05
       write(root, "b.rb", "class B\nend\n")
       File.utime(Time.now + 5, Time.now + 5, File.join(root, "b.rb"))
 
-      assert_equal ["B#keep"], guard.check(paths: %w[b.rb]).map(&:name)
+      assert_equal ["B#keep"], guard.check(paths: %w\[b.rb]).map(&:name)
     end
   end
 
@@ -136,7 +136,7 @@ class TestScanSpeedPaths < Minitest::Test
 
   def test_cross_file_findings_build_with_the_law_key
     Dir.mktmpdir do |root|
-      %w[a b c].each { |name| write(root, "#{name}.rb", "x = ENV.fetch(\"SHARED_KEY\")\n") }
+      %w\[a b c].each { |name| write(root, "#{name}.rb", "x = ENV.fetch(\"SHARED_KEY\")\n") }
       rows = Master::Fix::Scan::CrossFileAnalysis.new(root:).call(Dir.glob(File.join(root, "*.rb")))
 
       assert_equal ["SCATTERED_CONFIG"], rows.flat_map { |_, result| result.value! }.map { |finding| finding[:law] }

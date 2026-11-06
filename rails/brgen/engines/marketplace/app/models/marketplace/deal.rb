@@ -35,7 +35,7 @@ module Marketplace
     # Headline, badge or the listing's title, through Shared::LiveSearch like
     # every other vertical. The controller searches with these columns so the
     # query is counted and suggested; the infinite-scroll reflex uses matching.
-    SEARCH_COLUMNS = %w[headline badge marketplace_listings.title].freeze
+    SEARCH_COLUMNS = %w\[headline badge marketplace_listings.title].freeze
 
     scope :matching, ->(query) {
       Shared::LiveSearch.call(joins(:listing), query:, columns: SEARCH_COLUMNS)

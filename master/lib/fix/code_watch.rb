@@ -15,7 +15,7 @@ module Master
     module CodeWatch
       ENABLED = ENV.fetch("MASTER_FIX_HOT_RELOAD", "1") != "0"
       INTERVAL = Integer(ENV.fetch("MASTER_FIX_HOT_RELOAD_S", 60))
-      PATHS = %w[master/lib master/law master/data master/bin].freeze
+      PATHS = %w\[master/lib master/law master/data master/bin].freeze
 
       LOCK = Mutex.new
       @checked_at = nil

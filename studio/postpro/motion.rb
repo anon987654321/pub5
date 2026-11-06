@@ -132,7 +132,7 @@ module Postpro
 
     def self.grade(input, output, preset:, seed: 1, grain: :moving, io: $stdout, &grade_frame)
       raise ArgumentError, "a frame-grading block is required" unless grade_frame
-      raise Unavailable, "grain must be :moving or :hold" unless %i[moving hold].include?(grain.to_sym)
+      raise Unavailable, "grain must be :moving or :hold" unless %i\[moving hold].include?(grain.to_sym)
 
       raise Unavailable, "video input is not a readable file: #{input}" unless File.file?(input.to_s)
 

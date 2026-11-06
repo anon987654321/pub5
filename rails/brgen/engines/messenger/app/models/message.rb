@@ -52,7 +52,7 @@ class Message < ApplicationRecord
   # A token is a name for one attempt, not content: bounded so a client cannot
   # park a large string in an indexed column.
   validates :client_token, length: { maximum: 64 }, allow_nil: true
-  validates :message_type, inclusion: { in: %w[text image file audio] }
+  validates :message_type, inclusion: { in: %w\[text image file audio] }
 
   # The composer accepts audio/* and image/*, and the server holds the same
   # line: a voice note or a photo, within the shared media size cap. Anything

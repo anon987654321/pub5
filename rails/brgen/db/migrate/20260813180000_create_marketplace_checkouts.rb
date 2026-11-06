@@ -25,7 +25,7 @@ class CreateMarketplaceCheckouts < ActiveRecord::Migration[8.1]
       t.boolean :default_address, null: false, default: false
       t.timestamps
     end
-    add_index :marketplace_addresses, %i[user_id default_address]
+    add_index :marketplace_addresses, %i\[user_id default_address]
 
     create_table :marketplace_checkouts do |t|
       t.references :user, null: false, foreign_key: true
@@ -38,7 +38,7 @@ class CreateMarketplaceCheckouts < ActiveRecord::Migration[8.1]
       t.datetime :paid_at
       t.timestamps
     end
-    add_index :marketplace_checkouts, %i[user_id status]
+    add_index :marketplace_checkouts, %i\[user_id status]
 
     change_table :marketplace_orders, bulk: true do |t|
       t.references :marketplace_checkout, foreign_key: true
@@ -52,7 +52,7 @@ class CreateMarketplaceCheckouts < ActiveRecord::Migration[8.1]
       t.datetime :shipped_at
       t.datetime :delivered_at
     end
-    add_index :marketplace_orders, %i[fulfilment_status]
+    add_index :marketplace_orders, %i\[fulfilment_status]
 
     # nil means one of a kind, which is what a classifieds listing is. A number
     # means a shop with inventory. Defaulting to 1 would have made every private

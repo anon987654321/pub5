@@ -22,7 +22,7 @@ module Shared
   # per-app cache is the correct boundary and needs no shared store.
   module SsoToken
     DEFAULT_TTL = 120
-    APPS = %w[brgen amber bsdports master].freeze
+    APPS = %w\[brgen amber bsdports master].freeze
     NONCE_PREFIX = "shared:sso:jti"
     # Outlives the token so a claim cannot expire while the token is still valid.
     NONCE_GRACE = 60

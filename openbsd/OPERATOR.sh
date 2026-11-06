@@ -14,7 +14,7 @@
 #   helpers exist for future --resume support; certificate-renewal cron must stay append-idempotent.
 # - Data preserved: Rails SQLite under /home/<app>/app/storage, ~/priv, acme certs in /etc/ssl when
 #   stage_1 is skipped. Re-running stage_2 does not drop databases.
-# - Post-deploy verification: ruby /home/dev/pub4/openbsd/checks/health_check.rb
+# - Post-deploy verification: ruby /home/dev/pub5/openbsd/checks/health_check.rb
 # Engine-ize: bootstrap_rails now relies on bundle install for pub4-shared path gem (Gemfiles declare it); legacy sh shared/install_* deprecated in scripts + WIRING. No copy sprawl.
 
 set -euo pipefail
@@ -367,13 +367,13 @@ sync_openbsd_apply() {
       return 1
     fi
     log WARN "master scan skipped by explicit fast-deploy acknowledgement"
-  elif [[ -x /home/dev/pub4/master/bin/master ]]; then
+  elif [[ -x /home/dev/pub5/master/bin/master ]]; then
     typeset scan_log_dir=/var/db/pub4
     typeset scan_log=$scan_log_dir/master_deploy_scan.log
     mkdir -p "$scan_log_dir" || { log ERROR "cannot create $scan_log_dir"; return 1 }
     chmod 700 "$scan_log_dir"
     log INFO "master rules scan (OPERATOR) - strict pre-apply per laws.yml (ROBUSTNESS/SINGULARITY/LINEARITY/PROXIMITY/ABSTRACTION/DENSITY + veto)"
-    if ! su dev -c "cd /home/dev/pub4/MASTER && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 $BUNDLE exec $RUBY bin/check --scan-only --tree=openbsd" 2>&1 | tee "$scan_log"; then
+    if ! su dev -c "cd /home/dev/pub5/MASTER && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 $BUNDLE exec $RUBY bin/check --scan-only --tree=openbsd" 2>&1 | tee "$scan_log"; then
       log ERROR "master scan found violations - refusing sync/apply (self_violation would occur per laws.yml)"
       return 1
     fi
@@ -444,7 +444,7 @@ sync_openbsd_apply() {
   # so the guard is exactly as load-bearing as the install. Nothing installed it:
   # config_drift_check.rb sits under checks/ rather than under usr/local/bin/,
   # so install_root_configs never carried it, and the guard was false on every
-  # run. Live had been edited by hand to run /home/dev/pub4/openbsd/... instead —
+  # run. Live had been edited by hand to run /home/dev/pub5/openbsd/... instead —
   # root executing a file the dev user can rewrite, every morning, which is the
   # escalation the guard's own comment forbids. Deploying daily.local without
   # this would swap that for a check that silently never runs.

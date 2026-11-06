@@ -9,6 +9,6 @@ class CreateBlocks < ActiveRecord::Migration[8.1]
       t.references :blocked, null: false, foreign_key: { to_table: :users }
       t.timestamps
     end
-    add_index :blocks, %i[blocker_id blocked_id], unique: true
+    add_index :blocks, %i\[blocker_id blocked_id], unique: true
   end
 end

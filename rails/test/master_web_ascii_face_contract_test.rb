@@ -11,7 +11,7 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   WEB = File.join(ROOT, "master", "web")
   PUBLIC = File.join(WEB, "public")
-  SOURCES = %w[face.part1.txt face.part2.txt face.part3.txt face_speech_runtime.js face_speech_playback.js face.part5.txt].freeze
+  SOURCES = %w\[face.part1.txt face.part2.txt face.part3.txt face_speech_runtime.js face_speech_playback.js face.part5.txt].freeze
 
   def read(*path) = File.read(File.join(*path))
   def view = @view ||= read(WEB, "app", "views", "chat", "index.html.erb")
@@ -144,9 +144,9 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     assert_equal 3, web.fetch("tone").size
     assert_equal 2, web.fetch("font").size
     source = read(PUBLIC, "face_ascii.js")
-    %w[rows font tone].each { |key| assert_includes source, "web.#{key}" }
+    %w\[rows font tone].each { |key| assert_includes source, "web.#{key}" }
     budget = tokens.dig("tokens", "face_interface", "spatial", "budget")
-    %w[active_fps idle_fps reduced_motion_fps].each { |key| assert_includes budget.keys, key }
+    %w\[active_fps idle_fps reduced_motion_fps].each { |key| assert_includes budget.keys, key }
   end
 
   def test_the_shell_uses_plain_prompt_text_without_ascii_art
@@ -181,7 +181,7 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
   end
 
   def test_type_is_mono_for_the_face_and_shell_and_never_serif
-    %w[face.css chat_upload.css].each do |name|
+    %w\[face.css chat_upload.css].each do |name|
       css = read(PUBLIC, name)
       bare = css.gsub(/ui-sans-serif|sans-serif/i, "")
 

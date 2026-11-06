@@ -40,7 +40,7 @@ class Marketplace::DealTest < ActiveSupport::TestCase
   end
 
   test "countdown copy resolves in both shipped locales" do
-    %i[nb en].each do |locale|
+    %i\[nb en].each do |locale|
       assert I18n.exists?("marketplace.deals.ends_in", locale: locale), locale
       assert I18n.exists?("marketplace.deals.featured", locale: locale), locale
     end

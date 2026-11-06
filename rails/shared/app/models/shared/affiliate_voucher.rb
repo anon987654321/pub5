@@ -8,7 +8,7 @@ module Shared
     # apps migrate it under its own name.
     self.table_name = "affiliate_vouchers"
 
-    SOURCES = %w[tradedoubler].freeze
+    SOURCES = %w\[tradedoubler].freeze
     # 1 voucher code, 2 discount, 3 free article, 4 free shipping, 5 raffle, 6 promotion
     TYPES = {
       1 => "voucher",

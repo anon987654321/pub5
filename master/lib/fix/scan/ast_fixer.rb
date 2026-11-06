@@ -23,9 +23,9 @@ module Master
       # that has to know something — the language's syntax, HTML/JS/CSS, or
       # which lines sit inside multi-line literals — lives in a mixin.
       class AstFixer
-        JS_EXTS = %w[.js .ts .jsx .tsx].freeze
+        JS_EXTS = %w\[.js .ts .jsx .tsx].freeze
 
-        STYLE_EXTS = %w[.css .scss].freeze
+        STYLE_EXTS = %w\[.css .scss].freeze
 
         Result = Struct.new(:path, :changed, :transforms, :content, keyword_init: true)
         Strategy = Struct.new(:predicate, :transforms, keyword_init: true)
@@ -33,14 +33,14 @@ module Master
         STRATEGIES = [
           Strategy.new(
             predicate: :ruby?,
-            transforms: %i[add_frozen_header fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
+            transforms: %i\[add_frozen_header fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
                            add_trailing_commas],
           ),
-          Strategy.new(predicate: :sql_context?, transforms: %i[normalise_null_comparison]),
-          Strategy.new(predicate: :shell?, transforms: %i[add_strict_mode]),
-          Strategy.new(predicate: :html?, transforms: %i[add_html_lang add_meta_charset add_viewport_fit add_skip_to_main add_lazy_loading]),
-          Strategy.new(predicate: :javascript?, transforms: %i[replace_unreassigned_var convert_for_in_arrays convert_string_concat convert_optional_chaining]),
-          Strategy.new(predicate: :style?, transforms: %i[
+          Strategy.new(predicate: :sql_context?, transforms: %i\[normalise_null_comparison]),
+          Strategy.new(predicate: :shell?, transforms: %i\[add_strict_mode]),
+          Strategy.new(predicate: :html?, transforms: %i\[add_html_lang add_meta_charset add_viewport_fit add_skip_to_main add_lazy_loading]),
+          Strategy.new(predicate: :javascript?, transforms: %i\[replace_unreassigned_var convert_for_in_arrays convert_string_concat convert_optional_chaining]),
+          Strategy.new(predicate: :style?, transforms: %i\[
             snap_to_design_scale
             remove_decorative_fx
             enforce_flat_pixels
@@ -52,7 +52,7 @@ module Master
         # heuristics and sit in the ruby? strategy above, not here: on other
         # source Prism.parse fails, literal_lines comes back empty and they run
         # unguarded (a CSS `}` gains a comma; a live JS branch reads as dead).
-        UNIVERSAL_TRANSFORMS = %i[strip_accidental_sub_wrapper expand_tabs collapse_blank_lines strip_trailing_whitespace ensure_final_newline].freeze
+        UNIVERSAL_TRANSFORMS = %i\[strip_accidental_sub_wrapper expand_tabs collapse_blank_lines strip_trailing_whitespace ensure_final_newline].freeze
 
         include SyntaxTransforms
         include WebTransforms
@@ -70,7 +70,7 @@ module Master
         # their findings carry fix: nil, so they never reach lib/fix. A transform
         # whose risk the add-or-delete split cannot state gets its rule classified
         # in laws.yml by hand.
-        DELETING_TRANSFORMS = %w[remove_immediate_dead_code].freeze
+        DELETING_TRANSFORMS = %w\[remove_immediate_dead_code].freeze
 
         # What a person asking looks like from here, and the same signal
         # Fix::RepairLoop reads: the background convergence loop and the unattended
@@ -228,7 +228,7 @@ module Master
         # a module; accepting either keeps the check a syntax test rather than a
         # module-system opinion.
         def javascript_parses?(src)
-          %w[module commonjs].any? { |mode| node_accepts?(src, mode) }
+          %w\[module commonjs].any? { |mode| node_accepts?(src, mode) }
         end
 
         def node_accepts?(src, mode)
@@ -320,16 +320,16 @@ module Master
 
         def generated_bundle? = @source.each_line.any? { |line| line.length > GENERATED_LINE_LENGTH }
 
-        def shell? = %w[.zsh .sh .bash].include?(File.extname(@path).downcase)
+        def shell? = %w\[.zsh .sh .bash].include?(File.extname(@path).downcase)
 
-        def html? = %w[.html .erb .html.erb].any? { |ext| @path.to_s.downcase.end_with?(ext) }
+        def html? = %w\[.html .erb .html.erb].any? { |ext| @path.to_s.downcase.end_with?(ext) }
 
         def javascript? = JS_EXTS.include?(File.extname(@path).downcase)
 
         def style? = STYLE_EXTS.include?(File.extname(@path).downcase)
 
         def sql_context?
-          ruby? || %w[.sql .erb].include?(File.extname(@path).downcase)
+          ruby? || %w\[.sql .erb].include?(File.extname(@path).downcase)
         end
 
         def write_back(content)

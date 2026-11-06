@@ -8,7 +8,7 @@
 # come with it. the old backlog 2.1 defers the same problem for federation; a
 # chat preview is not the place to take it on.
 class LinkPreview < ApplicationRecord
-  STATUSES = %w[pending ok failed].freeze
+  STATUSES = %w\[pending ok failed].freeze
   # A preview goes stale: titles change, articles get taken down.
   MAX_AGE = 30.days
 

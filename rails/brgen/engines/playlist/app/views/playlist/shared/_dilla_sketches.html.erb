@@ -49,7 +49,7 @@
       <% if rich_form %>
         <%= form_with model: [:playlist, parent, Playlist::DillaSketch.new], url: create_url, class: "dilla-sketch-form" do |f| %>
           <%= f.text_field :name, placeholder: t("playlist.sketch_name"), aria: { label: t("playlist.sketch_name") }, required: true %>
-          <%= f.select :style, %w[dilla flylo baroque neo-soul jazz], { selected: "dilla" }, { aria: { label: t("playlist.style") } } %>
+          <%= f.select :style, %w\[dilla flylo baroque neo-soul jazz], { selected: "dilla" }, { aria: { label: t("playlist.style") } } %>
           <%= f.number_field :bars, value: 12, min: 4, max: 64, aria: { label: t("playlist.bars") }, inputmode: "numeric" %>
           <%= f.text_area :state, value: { pat_: {}, aud_: {}, mix_: { style: "dilla", bars: 12 } }.to_json, rows: 3, aria: { label: t("playlist.sketch_state") } %>
           <%= f.text_field :notes, placeholder: t("playlist.notes_optional"), aria: { label: t("playlist.notes_optional") } %>

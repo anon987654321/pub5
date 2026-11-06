@@ -9,10 +9,10 @@ class Dating::Verification < ApplicationRecord
   include Shared::Notifiable
   include Shared::StrictSafeAssociations
 
-  STATUSES = %w[pending verified rejected].freeze
+  STATUSES = %w\[pending verified rejected].freeze
   # Drawn per request, and stored. Asking everybody for the same gesture makes a
   # single stolen photo enough to pass forever.
-  POSES = %w[peace_sign hand_on_head thumbs_up palm_out point_up].freeze
+  POSES = %w\[peace_sign hand_on_head thumbs_up palm_out point_up].freeze
 
   belongs_to :profile, class_name: "Dating::Profile"
   belongs_to :reviewed_by, class_name: "User", optional: true

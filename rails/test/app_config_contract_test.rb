@@ -15,7 +15,7 @@ require_relative "engine_roots"
 # block every reader.
 class AppConfigContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   def job_roots(app)
     [File.join(ROOT, app, "app", "jobs"), File.join(ROOT, "shared", "app", "jobs"),

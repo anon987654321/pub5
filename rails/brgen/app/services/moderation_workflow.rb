@@ -5,7 +5,7 @@ class ModerationWorkflow
   # takes it out of public view at once, pending a moderator: a copyright
   # holder's notice or illegal content cannot wait for the queue. Dismissing
   # the report puts it back; resolving it leaves it held, which is the takedown.
-  HOLD_REASONS = %w[copyright abuse illegal].freeze
+  HOLD_REASONS = %w\[copyright abuse illegal].freeze
 
   def self.report!(reporter:, target:, reason:, details: nil)
     new.report!(reporter: reporter, target: target, reason: reason, details: details)
@@ -19,7 +19,7 @@ class ModerationWorkflow
   # row, which lengthened the queue and counted twice in the trust signals;
   # it now answers with the report already waiting.
   def report!(reporter:, target:, reason:, details: nil)
-    pending = reporter && ModerationReport.find_by(user: reporter, reportable: target, status: %w[open reviewing])
+    pending = reporter && ModerationReport.find_by(user: reporter, reportable: target, status: %w\[open reviewing])
     return pending if pending
 
     ModerationReport.transaction do
@@ -41,7 +41,7 @@ class ModerationWorkflow
 
     ModerationReport.transaction do
       attrs = { status: status }
-      if %w[resolved dismissed].include?(status)
+      if %w\[resolved dismissed].include?(status)
         attrs[:decision_reason] = decision_reason.presence || report.reason
         attrs[:decided_at] = Time.current
       end
@@ -93,7 +93,7 @@ class ModerationWorkflow
     subject = subject_for(report)
     return unless subject.respond_to?(:review_held_at) && subject.review_held_at
 
-    waiting = ModerationReport.where(reportable: subject, reason: HOLD_REASONS, status: %w[open reviewing])
+    waiting = ModerationReport.where(reportable: subject, reason: HOLD_REASONS, status: %w\[open reviewing])
     subject.update_columns(review_held_at: nil, updated_at: Time.current) unless waiting.exists?
   end
 
@@ -104,7 +104,7 @@ class ModerationWorkflow
       flaggable: subject,
       user: user,
       kind: report.reason
-    ).where(status: %w[open reviewing]).first_or_initialize
+    ).where(status: %w\[open reviewing]).first_or_initialize
     flag.reason = report.details.presence || report.reason
     flag.status = status
     flag.save!
@@ -114,7 +114,7 @@ class ModerationWorkflow
     subject = subject_for(report)
     user = accountable_user(subject) || report.user
     ModerationFlag.where(flaggable: subject, user: user, kind: report.reason)
-      .where(status: %w[open reviewing])
+      .where(status: %w\[open reviewing])
       .update_all(status: status, updated_at: Time.current)
   end
 

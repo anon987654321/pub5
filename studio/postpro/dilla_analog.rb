@@ -9,11 +9,11 @@ module Postpro
     NASTY_PHASE_OFFSETS = [0, 13, 29, 47].freeze
 
     DILLA_ANALOG_PRESETS = {
-      "vinyl_hot" => %i[dilla_head_bump dilla_vinyl_bandlimit dilla_phasy],
-      "summing_phasy" => %i[dilla_head_bump dilla_phasy],
-      "acetate" => %i[dilla_head_bump dilla_tape_saturation dilla_vinyl_bandlimit],
-      "tape" => %i[dilla_head_bump dilla_tape_saturation dilla_vinyl_bandlimit],
-      "night_bus" => %i[dilla_head_bump dilla_tape_saturation dilla_phasy],
+      "vinyl_hot" => %i\[dilla_head_bump dilla_vinyl_bandlimit dilla_phasy],
+      "summing_phasy" => %i\[dilla_head_bump dilla_phasy],
+      "acetate" => %i\[dilla_head_bump dilla_tape_saturation dilla_vinyl_bandlimit],
+      "tape" => %i\[dilla_head_bump dilla_tape_saturation dilla_vinyl_bandlimit],
+      "night_bus" => %i\[dilla_head_bump dilla_tape_saturation dilla_phasy],
     }.freeze
 
     def dilla_head_bump(image, intensity = 0.5)

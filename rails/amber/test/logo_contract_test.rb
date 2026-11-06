@@ -50,7 +50,7 @@ class LogoContractTest < ActionView::TestCase
 
   test "public brand icons exist with amber palette" do
     root = Rails.root.join("public")
-    %w[icon.svg icon.png icon-192.png apple-touch-icon.png favicon.ico].each do |name|
+    %w\[icon.svg icon.png icon-192.png apple-touch-icon.png favicon.ico].each do |name|
       path = root.join(name)
       assert File.file?(path), "missing #{name}"
       assert File.size?(path).to_i.positive?, "empty #{name}"

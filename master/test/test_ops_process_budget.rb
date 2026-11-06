@@ -5,7 +5,7 @@ require_relative "../lib/master"
 require_relative "../lib/ops"
 
 class ProcessBudgetSpec < Minitest::Test
-  LOOP_ENVS = %w[MASTER_AUTOFIX MASTER_WATCH MASTER_WATCHER MASTER_BACKGROUND MASTER_HEARTBEAT].freeze
+  LOOP_ENVS = %w\[MASTER_AUTOFIX MASTER_WATCH MASTER_WATCHER MASTER_BACKGROUND MASTER_HEARTBEAT].freeze
 
   def with_clean_loop_env
     saved = LOOP_ENVS.to_h { |key| [key, ENV[key]] }

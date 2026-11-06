@@ -513,13 +513,13 @@ you the truth — don't work around it, find out what's actually missing.
 - `rails/apps.yml` registers master beside brgen, amber and bsdports, with
   its port and domain. It is not a copy-tree app:
   `zsh openbsd/bin/vps-deploy master` runs `openbsd/bin/vps_deploy_master.sh`,
-  which pulls and restarts it in place under `/home/dev/pub4/master/web`.
+  which pulls and restarts it in place under `/home/dev/pub5/master/web`.
 - `rcctl restart master` runs a real `rc_pre()`: kills stale processes,
   regenerates the face bundles if missing, precompiles assets if a content
   digest changed, runs the check above, then starts Falcon and waits for `/up`
   before restarting `relayd` (relayd can keep routing to a dead backend
   connection after a restart until kicked).
-- A `/home/dev/pub4/.deploying-<app>` lock file is touched for the duration
+- A `/home/dev/pub5/.deploying-<app>` lock file is touched for the duration
   of each app's `rc_pre()` — check for it before assuming any app's asset/db
   state is stable if you're debugging remotely while a restart might be in
   flight.
@@ -682,7 +682,7 @@ The repo checkout has `rails/<app>`, `rails/__shared`, `rails/brgen_*`,
 only `/home/<app>/app` (the contents of `rails/<app>`, so the directory is
 called `app`, never `brgen`), `/home/<app>/__shared`, and for brgen the
 `/home/brgen/brgen_*` siblings. master is not in it. `PUB5_ROOT`, exported
-by `rc.d` and by `vps_ci.sh`, names the full checkout at `/home/dev/pub4`,
+by `rc.d` and by `vps_ci.sh`, names the full checkout at `/home/dev/pub5`,
 which holds master and `rails/apps.yml`.
 
 What to write, so both layouts work:

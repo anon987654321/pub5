@@ -11,7 +11,7 @@ module Master
       # emitted into the CSS and changes its bytes without changing a rule.
       # Dart Sass through npx, the way the face bundles build with esbuild.
       module CssBuild
-        APPS = %w[amber brgen bsdports].freeze
+        APPS = %w\[amber brgen bsdports].freeze
         SASS = "sass@1.93.2"
 
         def self.rules(repo_root)

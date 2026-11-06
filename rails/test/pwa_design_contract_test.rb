@@ -7,7 +7,7 @@ require "minitest/autorun"
 class PwaDesignContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   SHARED_ROOT = File.join(ROOT, "shared")
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   # All current apps use the shared Workbox worker. This remains an explicit
   # empty escape hatch: an app that genuinely needs a different worker must name
@@ -171,7 +171,7 @@ class PwaDesignContractTest < Minitest::Test
       manifest = JSON.parse(raw.gsub(ERB_EXPRESSION, '"erb"'))
       assert_equal "/", manifest.fetch("start_url")
       assert_equal "/", manifest.fetch("scope")
-      assert_includes %w[standalone fullscreen minimal-ui], manifest.fetch("display")
+      assert_includes %w\[standalone fullscreen minimal-ui], manifest.fetch("display")
       assert_operator manifest.fetch("icons").size, :>=, 2
       assert manifest.fetch("theme_color").start_with?("#")
       assert manifest.fetch("background_color").start_with?("#")
@@ -220,7 +220,7 @@ class PwaDesignContractTest < Minitest::Test
     shell = read(SHARED_ROOT, "app/assets/stylesheets/_shell.scss")
     standalone = read(SHARED_ROOT, "frontend/pwa_standalone_controller.js")
 
-    %w[top right bottom left].each do |side|
+    %w\[top right bottom left].each do |side|
       assert_includes tokens, "env(safe-area-inset-#{side}, 0px)"
     end
     assert_includes chrome, "--nav-swiper-h"
@@ -237,7 +237,7 @@ class PwaDesignContractTest < Minitest::Test
   def test_shared_typography_uses_optical_and_rhythm_controls
     typography = read(SHARED_ROOT, "app/assets/stylesheets/_typography.scss")
 
-    %w[
+    %w\[
       font-feature-settings
       font-kerning
       font-optical-sizing

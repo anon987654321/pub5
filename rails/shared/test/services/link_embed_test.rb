@@ -20,18 +20,18 @@ class LinkEmbedTest < Minitest::Test
 
   def test_each_provider_names_the_media_in_its_own_link_shapes
     {
-      "https://www.youtube.com/watch?v=d_HlPboLRL8" => %w[youtube d_HlPboLRL8],
-      "https://youtu.be/d_HlPboLRL8" => %w[youtube d_HlPboLRL8],
-      "https://m.youtube.com/watch?feature=share&v=d_HlPboLRL8" => %w[youtube d_HlPboLRL8],
-      "https://www.youtube.com/shorts/d_HlPboLRL8" => %w[youtube d_HlPboLRL8],
-      "https://soundcloud.com/kygo/stars-will-align" => %w[soundcloud kygo/stars-will-align],
-      "https://soundcloud.com/kygo/sets/kids-in-love" => %w[soundcloud kygo/sets/kids-in-love],
-      "https://vimeo.com/1084537" => %w[vimeo 1084537],
-      "https://open.spotify.com/intl-no/track/4cOdK2wGLETKBW3PvgPWqT" => %w[spotify track/4cOdK2wGLETKBW3PvgPWqT],
+      "https://www.youtube.com/watch?v=d_HlPboLRL8" => %w\[youtube d_HlPboLRL8],
+      "https://youtu.be/d_HlPboLRL8" => %w\[youtube d_HlPboLRL8],
+      "https://m.youtube.com/watch?feature=share&v=d_HlPboLRL8" => %w\[youtube d_HlPboLRL8],
+      "https://www.youtube.com/shorts/d_HlPboLRL8" => %w\[youtube d_HlPboLRL8],
+      "https://soundcloud.com/kygo/stars-will-align" => %w\[soundcloud kygo/stars-will-align],
+      "https://soundcloud.com/kygo/sets/kids-in-love" => %w\[soundcloud kygo/sets/kids-in-love],
+      "https://vimeo.com/1084537" => %w\[vimeo 1084537],
+      "https://open.spotify.com/intl-no/track/4cOdK2wGLETKBW3PvgPWqT" => %w\[spotify track/4cOdK2wGLETKBW3PvgPWqT],
 
-      "https://whyp.it/tracks/292777?token=zaB8x" => %w[whyp 292777/zaB8x],
-      "https://www.whyp.it/tracks/292777/players-second-version?token=zaB8x&in=abc" => %w[whyp 292777/zaB8x],
-      "https://whyp.it/tracks/292777" => %w[whyp 292777],
+      "https://whyp.it/tracks/292777?token=zaB8x" => %w\[whyp 292777/zaB8x],
+      "https://www.whyp.it/tracks/292777/players-second-version?token=zaB8x&in=abc" => %w\[whyp 292777/zaB8x],
+      "https://whyp.it/tracks/292777" => %w\[whyp 292777],
     }.each do |url, (provider, id)|
       found = match(url)
       refute_nil found, url
@@ -219,7 +219,7 @@ def test_the_first_recognised_link_in_prose_or_editor_html_is_found
   # The seeders' catalogue, read offline. Every post resolves to an ok embed on
   # a privacy host, and every post's text carries the link it claims.
   def test_the_demo_catalogue_gives_every_seeded_post_an_ok_embed
-    %w[brgen amber].each do |app|
+    %w\[brgen amber].each do |app|
       rows = Shared::LinkEmbed.demo_posts(app)
       refute_empty rows, app
       rows.each do |row|

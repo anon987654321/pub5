@@ -10,7 +10,7 @@ require "minitest/autorun"
 # extracted in the 2026-07-28 sweep and what was deliberately left.
 class AppDuplicationTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
   MAX_DUPLICATED_LINES = 12
 
   def duplicates
@@ -36,7 +36,7 @@ class AppDuplicationTest < Minitest::Test
   end
 
   def test_equivalent_turbo_stream_actions_reuse_the_canonical_template
-    retired = %w[
+    retired = %w\[
       amber/app/views/follows/destroy.turbo_stream.erb
       amber/app/views/planned_outfits/destroy.turbo_stream.erb
       bsdports/app/views/ports/unwatch.turbo_stream.erb

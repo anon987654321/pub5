@@ -11,7 +11,7 @@ class DatingProfilesTest < ActionDispatch::IntegrationTest
     # these accounts pass it the way a real one does: Vipps configured and a
     # verified Vipps identity on record.
     @previous_slugs = Rails.application.config.x.oauth_provider_slugs
-    Rails.application.config.x.oauth_provider_slugs = %w[vipps]
+    Rails.application.config.x.oauth_provider_slugs = %w\[vipps]
     @me = user_with_profile("dp_me", visible: false)
   end
 
@@ -182,7 +182,7 @@ class DatingProfilesTest < ActionDispatch::IntegrationTest
 
   test "a profile with three answers is offered no form for a fourth" do
     profile = profile_for(@me)
-    profile.prompts.create!(%w[q_meal q_song q_never].map { |q| { question: "dating.prompts.#{q}", answer: "ja" } })
+    profile.prompts.create!(%w\[q_meal q_song q_never].map { |q| { question: "dating.prompts.#{q}", answer: "ja" } })
     sign_in_as(@me)
 
     get dating.edit_profile_path

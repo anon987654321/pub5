@@ -89,7 +89,7 @@ module PartnerMarketing
     end
 
     def order_value_cents(order)
-      %i[total_cents amount_cents price_cents].each do |attribute|
+      %i\[total_cents amount_cents price_cents].each do |attribute|
         next unless order.respond_to?(attribute)
 
         value = order.public_send(attribute)

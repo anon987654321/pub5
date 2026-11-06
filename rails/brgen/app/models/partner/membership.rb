@@ -15,7 +15,7 @@ class Partner::Membership < ApplicationRecord
   has_many :conversions, class_name: "Partner::Conversion", foreign_key: :membership_id,
            dependent: :restrict_with_error, inverse_of: :membership
 
-  STATUSES = %w[pending approved rejected suspended].freeze
+  STATUSES = %w\[pending approved rejected suspended].freeze
 
   validates :status, inclusion: { in: STATUSES }
   validates :token, presence: true, uniqueness: true, length: { maximum: 32 }

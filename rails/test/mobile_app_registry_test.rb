@@ -38,7 +38,7 @@ class MobileAppRegistryTest < Minitest::Test
   end
 
   def test_registry_covers_every_brgen_store_product_and_amber
-    assert_equal %i[brgen radio dating tv takeaway marketplace maps messenger amber],
+    assert_equal %i\[brgen radio dating tv takeaway marketplace maps messenger amber],
                  REGISTRY.all.map(&:key)
   end
 
@@ -71,7 +71,7 @@ class MobileAppRegistryTest < Minitest::Test
     native = File.expand_path("../../master/tools/rails/native", __dir__)
 
     assert_equal "production", base.fetch("APS_ENVIRONMENT")
-    %w[Pub4Mobile.entitlements Info.plist].each do |file|
+    %w\[Pub4Mobile.entitlements Info.plist].each do |file|
       assert_includes File.read(File.join(native, file)), "$(APS_ENVIRONMENT)", file
     end
   end

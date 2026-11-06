@@ -72,7 +72,7 @@ class TestFinalCleanup < Minitest::Test
 
     assert_equal "clean", receipt.fetch(:status)
     assert_nil @committer.lease_guard
-    assert_equal %i[runtime artifacts], @runner.calls
+    assert_equal %i\[runtime artifacts], @runner.calls
     assert_includes @journal.calls, [:assessment, ["run-current"]]
     assert_includes @journal.calls, :architecture
     assert_equal "cleanup_completed", @kernel.events.fetch(0).fetch(0)
@@ -86,7 +86,7 @@ class TestFinalCleanup < Minitest::Test
 
     assert_equal "warning", receipt.fetch(:status)
     assert_nil @committer.lease_guard
-    assert_equal %i[runtime artifacts], @runner.calls
+    assert_equal %i\[runtime artifacts], @runner.calls
     assert_equal "visual_runtime", receipt.fetch(:warnings).fetch(0).fetch(:step)
     assert_equal "cleanup_warning", @kernel.events.fetch(0).fetch(0)
   end

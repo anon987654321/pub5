@@ -19,7 +19,7 @@ module Shared
       def embeds_links_from(attribute)
         self.link_embed_source = attribute
         before_save :track_link_embed, if: -> { will_save_change_to_attribute?(attribute) }
-        after_commit :resolve_link_embed_later, on: %i[create update], if: :link_embed_awaits_provider?
+        after_commit :resolve_link_embed_later, on: %i\[create update], if: :link_embed_awaits_provider?
       end
     end
 

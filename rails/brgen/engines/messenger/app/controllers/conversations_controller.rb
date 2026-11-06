@@ -59,7 +59,7 @@ class ConversationsController < ApplicationController
   # pointed at people, and every row carries the button that opens the thread.
   def new
     scope = User.messageable.unblocked_with(Current.user).where.not(id: Current.user.id)
-    scope = apply_live_search(scope, columns: %w[username display_name], vertical: "people")
+    scope = apply_live_search(scope, columns: %w\[username display_name], vertical: "people")
     # No query yet: show who is around rather than an empty box, the people the
     # reader follows or has talked to first.
     @people = PeoplePicker.rank(scope, Current.user).limit(24)
@@ -75,7 +75,7 @@ class ConversationsController < ApplicationController
     scope = Message.visible.unexpired.where(conversation_id: searchable_conversation_ids)
     scope = scope.where(conversation_id: @conversation.id) if @conversation
     @pagy, @messages = pagy(
-      Shared::LiveSearch.call(scope, query: @query, columns: %w[content])
+      Shared::LiveSearch.call(scope, query: @query, columns: %w\[content])
                         .includes(:sender, :conversation).order(created_at: :desc)
     )
   end
@@ -187,7 +187,7 @@ class ConversationsController < ApplicationController
   # Which of the three lists this page is: its threads, its heading and the id
   # the inbox stream prepends into (only the inbox's own list takes new rows).
   LISTS = {
-    inbox: %w[in_inbox messages.title inbox_conversations],
+    inbox: %w\[in_inbox messages.title inbox_conversations],
     archive: [ "in_archive", "messages.archive_title", "archived_conversations" ],
     requests: [ "in_requests", "messages.requests_title", "requested_conversations" ]
   }.freeze

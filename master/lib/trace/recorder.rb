@@ -13,7 +13,7 @@ module Master
   # write target inside the law tree read as config). One turn record per line.
   # /why formats the last turn.
     class Recorder
-      EVENT_PATTERNS = %w[gateway:* pipeline:* tool:after route:* council:* memo:* lint:* governor:*].freeze
+      EVENT_PATTERNS = %w\[gateway:* pipeline:* tool:after route:* council:* memo:* lint:* governor:*].freeze
       MAX_EVENTS_PER_TURN = 200
       KEEP_DAYS = 14
 
@@ -234,7 +234,7 @@ module Master
         message = turn[:message]
         if message.is_a?(Hash) && message[:sha256].to_s.match?(/\A[0-9a-f]{64}\z/) &&
            message[:bytes].is_a?(Integer) && message[:bytes] >= 0 &&
-           message.keys.all? { |key| %i[sha256 bytes].include?(key) }
+           message.keys.all? { |key| %i\[sha256 bytes].include?(key) }
           turn[:message] = { sha256: message[:sha256], bytes: message[:bytes] }
         else
           raw_message = message.is_a?(String) ? message : JSON.generate(message)

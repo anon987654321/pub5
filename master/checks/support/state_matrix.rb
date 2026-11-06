@@ -13,7 +13,7 @@ module Deploy
     COLUMNS = 4
 
     LOCALES = { "nb" => "nb-NO,nb;q=0.9", "en" => "en-US,en;q=0.9" }.freeze
-    PSEUDO = { "hover" => %w[hover], "focus-visible" => %w[focus focus-visible], "active" => %w[active] }.freeze
+    PSEUDO = { "hover" => %w\[hover], "focus-visible" => %w\[focus focus-visible], "active" => %w\[active] }.freeze
     SCRIPTED = {
       "disabled" => "el.disabled = true; el.setAttribute('aria-disabled', 'true');",
       "loading" => "el.setAttribute('aria-busy', 'true');",

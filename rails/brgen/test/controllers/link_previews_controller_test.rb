@@ -21,7 +21,7 @@ class LinkPreviewsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "figure.link-embed button.link-embed-play[data-media-exclusive-src-param]"
-    assert_equal %w[www.youtube.com], asked, "only the provider's oEmbed endpoint is asked"
+    assert_equal %w\[www.youtube.com], asked, "only the provider's oEmbed endpoint is asked"
   end
 
   test "a link no provider recognises gets no answer and no request" do

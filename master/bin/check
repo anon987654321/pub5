@@ -6,7 +6,7 @@ Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
 
 # The ladder, law/ and the scan registry and then the critique tier, is a mode of this command rather than
 # a second one: --ladder, or any of its own flags, hands the arguments to lib/operator/check_ladder.rb.
-LADDER_FLAGS = %w[--ladder --scan-only --lexical-only --semantic-only --explain].freeze
+LADDER_FLAGS = %w\[--ladder --scan-only --lexical-only --semantic-only --explain].freeze
 if ARGV.any? { |arg| LADDER_FLAGS.include?(arg) || arg.start_with?("--tree=") }
   ARGV.delete("--ladder")
   load File.expand_path("../lib/operator/check_ladder.rb", __dir__)
@@ -46,7 +46,7 @@ OptionParser.new do |parser|
   parser.on("--profile=NAME") { |value| profile = value }
   parser.on("--format=NAME") { |value| format = value }
 end.parse!
-unless %w[human brief].include?(format)
+unless %w\[human brief].include?(format)
   Master::Trace::Dmesg.status("check0", "unknown format #{format}, have human or brief")
   exit 64
 end
@@ -126,7 +126,7 @@ end
 
 # rake audit already runs selftest, core_smoke and constitution, so full lists
 # the CI steps that audit does not cover rather than the whole of ci.
-full_ci = ci_steps.reject { |step| %w[selftest core_smoke constitution].include?(step.first) }
+full_ci = ci_steps.reject { |step| %w\[selftest core_smoke constitution].include?(step.first) }
 
 PROFILES = {
   "operator"    => [law_syntax, boot_smoke, rake["test"], rake["test:subsystems"], rake["security_sweep"],

@@ -63,7 +63,7 @@ class TestLawInventory < Minitest::Test
 
     Master.stub(:load_yaml, loader) do
       rows = Operator::LawInventory.council_rows
-      assert_equal %w[Operator Reviewer], rows.map { |row| row.fetch("name") }
+      assert_equal %w\[Operator Reviewer], rows.map { |row| row.fetch("name") }
     end
     assert_equal Master::COUNCIL_PATH, observed_path
   end

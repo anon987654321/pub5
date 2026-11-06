@@ -208,7 +208,7 @@ class ApplicationHelperTest < ActionView::TestCase
     # authenticated? is mixed in from Authentication in controllers; stub for helper unit tests.
     def authenticated? = true
 
-    assert_equal %w[front ai playlist marketplace takeaway messenger maps tv],
+    assert_equal %w\[front ai playlist marketplace takeaway messenger maps tv],
                  brgen_nav_items.map(&:first)
   end
 
@@ -219,7 +219,7 @@ class ApplicationHelperTest < ActionView::TestCase
     def authenticated? = false
 
     slugs = brgen_nav_items.map(&:first)
-    %w[dating channels sign_up].each { |gone| refute_includes slugs, gone }
+    %w\[dating channels sign_up].each { |gone| refute_includes slugs, gone }
   end
 
   # Radio is the playlist vertical wearing the name the operator gave the bar.

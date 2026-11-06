@@ -5,8 +5,8 @@ module Master
     # Context is typed before it is compacted. State and telemetry are machine
     # memory, not conversation, so they do not enter the model by default.
     module ContextLayers
-      LAYERS = %i[conversation task execution state telemetry].freeze
-      MODEL_LAYERS = %i[conversation task execution].freeze
+      LAYERS = %i\[conversation task execution state telemetry].freeze
+      MODEL_LAYERS = %i\[conversation task execution].freeze
 
       module_function
 
@@ -20,7 +20,7 @@ module Master
       end
 
       def machine?(value)
-        %i[state telemetry].include?(normalize(value))
+        %i\[state telemetry].include?(normalize(value))
       end
     end
   end

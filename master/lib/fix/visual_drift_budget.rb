@@ -16,7 +16,7 @@ module Master
     module VisualDriftBudget
       TOLERANCE_PX = 0.5
       CHROME_TAG = /\A(header|nav|footer)(\.|\z)/
-      CHROME_ROLE = %w[banner navigation contentinfo].freeze
+      CHROME_ROLE = %w\[banner navigation contentinfo].freeze
 
       module_function
 
@@ -70,7 +70,7 @@ module Master
       def deltas(key, old, new, anchors)
         return [] if anchors.any? { |a| key.include?(a) }
 
-        %w[x y w h].each_with_index.filter_map do |axis, i|
+        %w\[x y w h].each_with_index.filter_map do |axis, i|
           d = new[i].to_f - old[i].to_f
           "#{key} #{axis}#{d.positive? ? "+" : ""}#{d.round(2)}" if d.abs > TOLERANCE_PX
         end

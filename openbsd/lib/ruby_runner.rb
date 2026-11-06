@@ -58,7 +58,7 @@ module Deploy
     def openbsd_path(name, root: Environment.repo_root)
       return unless RUBY_PLATFORM.match?(/openbsd/)
 
-      %w[ruby34 ruby33].each do |ruby_command|
+      %w\[ruby34 ruby33].each do |ruby_command|
         command = name == "ruby" ? ruby_command : ruby_command.sub("\\Aruby", "bundle")
         path = command_path(command)
         return path unless path.empty?

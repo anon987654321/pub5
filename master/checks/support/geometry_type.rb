@@ -104,8 +104,8 @@ module Deploy
     # width asked. A control label is the button's own text or a span inside
     # it: the key's last two steps carry the control's name either way.
     PHONE_MAX_WIDTH = 480
-    CONTROL_TAGS = %w[button summary].freeze
-    CONTROL_ROLES = %w[button tab menuitem switch].freeze
+    CONTROL_TAGS = %w\[button summary].freeze
+    CONTROL_ROLES = %w\[button tab menuitem switch].freeze
     CONTROL_KEY = /\b(?:btn|button|tab-item|chip)\b/
     HEADING_TAG = /\Ah[1-6]\z/
 

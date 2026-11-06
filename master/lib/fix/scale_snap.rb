@@ -36,7 +36,7 @@ module Master
       CONTEXT_FUNCTIONS = /\b(calc|clamp|min|max)\(|\$|#\{/.freeze
       OPT_OUT = %r{(scale|snap):\s*ok}.freeze
       AT_CONTEXT = /@(media|container|supports)\b/.freeze
-      EXTENSIONS = %w[.css .scss].freeze
+      EXTENSIONS = %w\[.css .scss].freeze
 
       module_function
 

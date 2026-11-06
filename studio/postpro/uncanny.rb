@@ -178,7 +178,7 @@ module Postpro
     # hue worth naming and counts as neutral, which is how a black-and-white frame
     # reads as all neutral rather than as noise spread across every hue.
     HUE_BOUNDARIES = [21.5, 50.0, 81.5, 118.5, 165.0, 240.5, 297.0, 318.0, 345.5].freeze
-    HUE_NAMES = %w[rose red orange yellow green cyan azure blue magenta rose].freeze
+    HUE_NAMES = %w\[rose red orange yellow green cyan azure blue magenta rose].freeze
     CHROMA_FLOOR = 8.0
 
     def self.palette(image)

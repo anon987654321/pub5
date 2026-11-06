@@ -10,6 +10,6 @@ class ScopeChannelsToCity < ActiveRecord::Migration[8.1]
     add_index :conversations, :city_id
 
     remove_index :conversations, name: "index_conversations_on_slug"
-    add_index :conversations, %i[slug city_id], unique: true, name: "index_conversations_on_slug_and_city"
+    add_index :conversations, %i\[slug city_id], unique: true, name: "index_conversations_on_slug_and_city"
   end
 end

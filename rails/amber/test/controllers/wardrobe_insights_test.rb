@@ -17,7 +17,7 @@ class WardrobeInsightsTest < ActionDispatch::IntegrationTest
     get analytics_wardrobe_items_path
 
     assert_response :success
-    %w[viz-category-mix-title viz-wear-distribution-title viz-cost-per-wear-title viz-idle-title].each do |id|
+    %w\[viz-category-mix-title viz-wear-distribution-title viz-cost-per-wear-title viz-idle-title].each do |id|
       assert_select "##{id}", count: 1
     end
     assert_select ".viz-fill", minimum: 2

@@ -137,7 +137,7 @@ class UserPurgeJobTest < ActiveJob::TestCase
     assert_equal "purged-#{@user.id}@deleted.invalid", @user.email_address
     assert_not_nil @user.deleted_at
     assert_nil @user.deletion_scheduled_at
-    %i[email_verification_token magic_link_token magic_link_expires_at otp_secret remember_token].each do |field|
+    %i\[email_verification_token magic_link_token magic_link_expires_at otp_secret remember_token].each do |field|
       assert_nil @user.public_send(field), "#{field} survived erasure"
     end
     assert_not_nil @user.password_digest

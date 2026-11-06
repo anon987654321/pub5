@@ -83,7 +83,7 @@ end
 test "a story takes a photo or a clip and nothing else" do
   assert story_with(blob(content_type: "video/mp4", filename: "klipp.mp4")).valid?
 
-  [ %w[text/html side.html], %w[application/pdf doc.pdf], %w[image/svg+xml tegning.svg] ].each do |type, name|
+  [ %w\[text/html side.html], %w\[application/pdf doc.pdf], %w\[image/svg+xml tegning.svg] ].each do |type, name|
     s = story_with(blob(content_type: type, filename: name))
     refute s.valid?, type
     assert s.errors.of_kind?(:media, :file_type_not_allowed), type

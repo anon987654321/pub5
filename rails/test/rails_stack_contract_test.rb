@@ -11,14 +11,14 @@ class RailsStackContractTest < Minitest::Test
   RAILS_SOURCE = STACK.fetch("rails_source")
   RAILS_REF = STACK.fetch("rails_ref")
 
-  APP_ROOTS = %w[
+  APP_ROOTS = %w\[
     rails/brgen
     rails/amber
     rails/bsdports
     master/web
   ].freeze
 
-  LOCKED_ROOTS = %w[
+  LOCKED_ROOTS = %w\[
     rails/brgen
     rails/amber
     rails/bsdports

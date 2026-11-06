@@ -18,7 +18,7 @@ module Master::Core
     end
 
     REPO_TREES = MasterPaths::TREES
-    FORBIDDEN_BASENAMES = %w[summary.md analysis.md report.md todo.md notes.md changelog.md].freeze
+    FORBIDDEN_BASENAMES = %w\[summary.md analysis.md report.md todo.md notes.md changelog.md].freeze
     TWO_HATS_LINES = 200
     SCOPE_TREES = 4
     SCOPE_SECONDS = 1_800
@@ -186,7 +186,7 @@ module Master::Core
     # fold's seven-file concept budget (data/spine.yml core_files), so it is
     # resolved through the shared loader rather than required from lib/.
     def self.configuration_invariant_rule(workspace_root:)
-      Law.new(id: :configuration_invariant, verbs: %i[write], judge: lambda { |effect, _memory|
+      Law.new(id: :configuration_invariant, verbs: %i\[write], judge: lambda { |effect, _memory|
         reason = Master::ConfigurationGuard.validate(
           path: effect.args[:path],
           content: effect.args[:content].to_s,
@@ -203,7 +203,7 @@ module Master::Core
     # The agent may not rewrite the constitution it is judged by or the spine
     # that folds its effects. A write, or a git stage or commit of such a path, is blocked.
     def self.immutable_paths_rule(immutable, master_root: nil, workspace_root: nil)
-      Law.new(id: :immutable_paths, verbs: %i[write git], judge: lambda { |effect, _memory|
+      Law.new(id: :immutable_paths, verbs: %i\[write git], judge: lambda { |effect, _memory|
         targets = effect.verb == :write ? [effect.args[:path]] : Array(effect.args[:paths])
         hit = targets.compact.map(&:to_s).find do |path|
           immutable_hit?(path, immutable, master_root:, workspace_root:)
@@ -230,7 +230,7 @@ module Master::Core
 
     # No credential ever reaches disk, a transcript, a command or commit history.
     def self.no_secret_rule(veto)
-      Law.new(id: :no_secret, verbs: %i[write note exec git], judge: lambda { |effect, _memory|
+      Law.new(id: :no_secret, verbs: %i\[write note exec git], judge: lambda { |effect, _memory|
         pattern = veto["secrets"]
         next Verdict::Block.new(
           reason: "veto_pattern_config.secrets missing or invalid - effects are unjudgeable for secrets",
@@ -248,7 +248,7 @@ module Master::Core
     # Every Ruby file the agent writes must parse. The check that was missing
     # while 109 lib files rotted; here it cannot be skipped.
     def self.ruby_parses_rule
-      Law.new(id: :ruby_parses, verbs: %i[write], judge: lambda { |effect, _memory|
+      Law.new(id: :ruby_parses, verbs: %i\[write], judge: lambda { |effect, _memory|
         next nil unless effect.args[:path].to_s.end_with?(".rb")
 
         err = ruby_syntax_error(effect.args[:content].to_s)
@@ -260,7 +260,7 @@ module Master::Core
     # to it. Blocking on the whole file would refuse the first repair of any file
     # that already breaks a rule.
     def self.scan_clean_rule(verify)
-      Law.new(id: :scan_clean, verbs: %i[write], judge: lambda { |effect, _memory|
+      Law.new(id: :scan_clean, verbs: %i\[write], judge: lambda { |effect, _memory|
         blocking = verify.call(path: effect.args[:path], content: effect.args[:content].to_s)
         next nil if blocking.empty?
 
@@ -285,7 +285,7 @@ module Master::Core
     # would otherwise be the same value meaning opposite things. A sandbox that
     # only ever returns a String or nil keeps exactly its old behaviour.
     def self.sandboxed_exec_rule(sandbox)
-      Law.new(id: :sandboxed_exec, verbs: %i[exec], judge: lambda { |effect, _memory|
+      Law.new(id: :sandboxed_exec, verbs: %i\[exec], judge: lambda { |effect, _memory|
         answer = sandbox.call(Array(effect.args[:argv]).map(&:to_s)) or next nil
 
         if answer.is_a?(Hash) && answer[:ask]
@@ -305,7 +305,7 @@ module Master::Core
     # A read-only diagnostic has its own capability and exact allowlist. It is
     # not an alternate spelling of exec: a missing policy blocks it.
     def self.read_only_probe_rule(probe)
-      Law.new(id: :read_only_probe, verbs: %i[probe], judge: lambda { |effect, _memory|
+      Law.new(id: :read_only_probe, verbs: %i\[probe], judge: lambda { |effect, _memory|
         next Verdict::Block.new(reason: "read-only probe policy unavailable", by: :read_only_probe) unless probe
 
         reason = probe.call(Array(effect.args[:argv]).map(&:to_s))
@@ -317,7 +317,7 @@ module Master::Core
 
     # Unsafe shell never executes.
     def self.safe_exec_rule(veto)
-      Law.new(id: :safe_exec, verbs: %i[exec], judge: lambda { |effect, _memory|
+      Law.new(id: :safe_exec, verbs: %i\[exec], judge: lambda { |effect, _memory|
         command = Array(effect.args[:argv]).join(" ")
         next nil unless veto["unsafe_calls"] && command.match?(veto["unsafe_calls"])
 
@@ -348,7 +348,7 @@ module Master::Core
     end
 
     def self.batch_delete_rule
-      reason_rule(:batch_delete, %i[exec]) { |effect, _memory| batch_delete_reason(effect.args[:argv]) }
+      reason_rule(:batch_delete, %i\[exec]) { |effect, _memory| batch_delete_reason(effect.args[:argv]) }
     end
 
     def self.forbidden_file_reason(path)
@@ -359,7 +359,7 @@ module Master::Core
     end
 
     def self.forbidden_file_rule
-      reason_rule(:forbidden_file, %i[write]) { |effect, _memory| forbidden_file_reason(effect.args[:path]) }
+      reason_rule(:forbidden_file, %i\[write]) { |effect, _memory| forbidden_file_reason(effect.args[:path]) }
     end
 
     def self.scope_creep_reason(path, proof)
@@ -374,7 +374,7 @@ module Master::Core
     end
 
     def self.scope_creep_rule
-      reason_rule(:scope_creep, %i[write]) { |effect, memory| scope_creep_reason(effect.args[:path], memory.proof) }
+      reason_rule(:scope_creep, %i\[write]) { |effect, memory| scope_creep_reason(effect.args[:path], memory.proof) }
     end
 
     def self.two_hats_reason(message, lines)
@@ -387,7 +387,7 @@ module Master::Core
     end
 
     def self.two_hats_rule
-      reason_rule(:two_hats, %i[git]) do |effect, memory|
+      reason_rule(:two_hats, %i\[git]) do |effect, memory|
         next nil unless effect.args[:operation].to_s.to_sym == :commit
 
         two_hats_reason(effect.args[:message], memory.proof.scope[:write_lines])
@@ -429,7 +429,7 @@ module Master::Core
     end
 
     def self.structured_exec_rule
-      Law.new(id: :structured_exec, verbs: %i[exec], judge: lambda { |effect, _memory|
+      Law.new(id: :structured_exec, verbs: %i\[exec], judge: lambda { |effect, _memory|
         argv = effect.args[:argv]
         next nil if argv.is_a?(Array) && argv.all? { |arg| arg.is_a?(String) } && !argv.empty?
 
@@ -441,7 +441,7 @@ module Master::Core
     # A fold that only read is answering, not claiming a change; see
     # Proof#answered_from_reads?.
     def self.evidence_for_done_rule
-      Law.new(id: :evidence_for_done, verbs: %i[done], judge: lambda { |_effect, memory|
+      Law.new(id: :evidence_for_done, verbs: %i\[done], judge: lambda { |_effect, memory|
         next nil if memory.proof.proved? || memory.proof.answered_from_reads?
 
         Verdict::Block.new(reason: "no passing evidence on record", by: :evidence_for_done)
@@ -449,7 +449,7 @@ module Master::Core
     end
 
     def self.git_commit_evidence_rule
-      Law.new(id: :git_commit_evidence, verbs: %i[git], judge: lambda { |effect, memory|
+      Law.new(id: :git_commit_evidence, verbs: %i\[git], judge: lambda { |effect, memory|
         next nil unless effect.args[:operation].to_s.to_sym == :commit
         next nil if memory.proof.proved?
 
@@ -461,7 +461,7 @@ module Master::Core
     # verified, path-scoped checkpoint land without a second prompt while keeping
     # other sessions' and the operator's work outside its authority.
     def self.git_commit_scope_rule
-      Law.new(id: :git_commit_scope, verbs: %i[git], judge: lambda { |effect, memory|
+      Law.new(id: :git_commit_scope, verbs: %i\[git], judge: lambda { |effect, memory|
         next nil unless effect.args[:operation].to_s.to_sym == :commit
 
         paths = Array(effect.args[:paths]).map(&:to_s).map(&:strip).reject(&:empty?).uniq
@@ -492,7 +492,7 @@ module Master::Core
     # Staging is part of one path-scoped commit, never a separate fold action.
     # The World stages only exact new files and preserves the shared index.
     def self.git_stage_rule
-      Law.new(id: :git_stage_disabled, verbs: %i[git], judge: lambda { |effect, _memory|
+      Law.new(id: :git_stage_disabled, verbs: %i\[git], judge: lambda { |effect, _memory|
         next nil unless effect.args[:operation].to_s.to_sym == :stage
 
         Verdict::Block.new(
@@ -504,7 +504,7 @@ module Master::Core
 
     # High-risk goals require an in-process council critique before done.
     def self.council_for_done_rule
-      Law.new(id: :council_for_done, verbs: %i[done], judge: lambda { |_effect, memory|
+      Law.new(id: :council_for_done, verbs: %i\[done], judge: lambda { |_effect, memory|
         next nil unless memory.proof.council_required?
         next nil if memory.proof.council_cleared?
 
@@ -514,7 +514,7 @@ module Master::Core
 
     # Medium+ goals must carry ideation notes seeded before the first write.
     def self.ideation_before_write_rule
-      Law.new(id: :ideation_before_write, verbs: %i[write], judge: lambda { |_effect, memory|
+      Law.new(id: :ideation_before_write, verbs: %i\[write], judge: lambda { |_effect, memory|
         next nil if memory.proof.ideation_satisfied?
 
         Verdict::Block.new(reason: "ideation not complete - approaches/chosen must be in memory", by: :ideation_before_write)
@@ -524,7 +524,7 @@ module Master::Core
     # Medium+ unread path: read it first (edit) or ask (new file). The January
     # delete-and-recreate incident wrote over approved work without a read.
     def self.new_path_reason(path, proof)
-      return unless %i[medium high critical].include?(proof.risk)
+      return unless %i\[medium high critical].include?(proof.risk)
       return if Array(proof.scope[:read_paths]).include?(path.to_s)
       return if proof.scope[:asked]
 
@@ -532,7 +532,7 @@ module Master::Core
     end
 
     def self.new_path_rule
-      reason_rule(:new_path_ask, %i[write]) { |effect, memory| new_path_reason(effect.args[:path], memory.proof) }
+      reason_rule(:new_path_ask, %i\[write]) { |effect, memory| new_path_reason(effect.args[:path], memory.proof) }
     end
 
     # Reversibility is derived from the actual Effect, not accepted as a model

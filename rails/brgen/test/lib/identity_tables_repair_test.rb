@@ -4,7 +4,7 @@ require "test_helper"
 
 class IdentityTablesRepairTest < ActiveSupport::TestCase
   REPAIR = File.expand_path("../../db/migrate/20260813230000_repair_missing_identity_and_trust_tables.rb", __dir__)
-  TABLES = %w[
+  TABLES = %w\[
     identity_providers external_identities identity_assurances
     trust_signals reputation_scores account_merges moderation_flags
   ].freeze

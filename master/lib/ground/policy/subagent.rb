@@ -4,31 +4,31 @@ module Master
   module Ground
     module Policy
       module Subagent
-        ALWAYS_EXCLUDED = %w[
+        ALWAYS_EXCLUDED = %w\[
           spawn_agent resume_agent wait_agent send_input close_agent
           team_create team_delete team_broadcast rebuild evolve self_improve
         ].freeze
 
         TOOL_ALIASES = {
-          "read_file" => %w[ReadFile read_file],
-          "list_dir" => %w[ListDir list_dir],
-          "search_files" => %w[SearchFiles search_files glob grep],
-          "search_knowledge" => %w[SearchKnowledge search_knowledge search],
-          "symbol_lookup" => %w[SymbolLookup symbol_lookup],
-          "tree" => %w[Tree tree],
-          "str_replace" => %w[StrReplace str_replace],
-          "write_file" => %w[WriteFile write_file atomic_write],
-          "ast_edit" => %w[AstEdit ast_edit],
-          "batch_replace" => %w[BatchReplace batch_replace],
-          "shell" => %w[zsh Shell shell bash],
-          "web_search" => %w[WebSearch web_search],
-          "web_fetch" => %w[WebFetch web_fetch fetch http_request],
-          "codepen" => %w[CodePen codepen],
-          "gist" => %w[Gist gist],
-          "youtube_transcript" => %w[YouTubeTranscript youtube_transcript],
-          "scan" => %w[scan],
-          "council_call" => %w[council_call],
-          "deepwiki" => %w[deepwiki],
+          "read_file" => %w\[ReadFile read_file],
+          "list_dir" => %w\[ListDir list_dir],
+          "search_files" => %w\[SearchFiles search_files glob grep],
+          "search_knowledge" => %w\[SearchKnowledge search_knowledge search],
+          "symbol_lookup" => %w\[SymbolLookup symbol_lookup],
+          "tree" => %w\[Tree tree],
+          "str_replace" => %w\[StrReplace str_replace],
+          "write_file" => %w\[WriteFile write_file atomic_write],
+          "ast_edit" => %w\[AstEdit ast_edit],
+          "batch_replace" => %w\[BatchReplace batch_replace],
+          "shell" => %w\[zsh Shell shell bash],
+          "web_search" => %w\[WebSearch web_search],
+          "web_fetch" => %w\[WebFetch web_fetch fetch http_request],
+          "codepen" => %w\[CodePen codepen],
+          "gist" => %w\[Gist gist],
+          "youtube_transcript" => %w\[YouTubeTranscript youtube_transcript],
+          "scan" => %w\[scan],
+          "council_call" => %w\[council_call],
+          "deepwiki" => %w\[deepwiki],
         }.freeze
 
         SWARM_ROLE_MAP = {
@@ -47,13 +47,13 @@ module Master
           explore: {
             label: "explore",
             prompt: "Codebase exploration agent. Search and read thoroughly. Do not modify files.",
-            allow: %w[read_file list_dir search_files symbol_lookup tree glob grep ls search fetch fetch_file],
+            allow: %w\[read_file list_dir search_files symbol_lookup tree glob grep ls search fetch fetch_file],
           },
           plan: {
             label: "plan",
             prompt: "Architecture planning agent. Read current state and produce a concrete " \
                     "file-by-file plan. Do not modify files.",
-            allow: %w[read_file search_knowledge list_dir glob grep ls search fetch fetch_file],
+            allow: %w\[read_file search_knowledge list_dir glob grep ls search fetch fetch_file],
           },
           code: {
             label: "code",
@@ -63,12 +63,12 @@ module Master
           research: {
             label: "research",
             prompt: "Research agent. Search/read public or local sources. Do not modify files.",
-            allow: %w[read_file search_files search_knowledge web_search web_fetch glob grep ls search fetch fetch_file],
+            allow: %w\[read_file search_files search_knowledge web_search web_fetch glob grep ls search fetch fetch_file],
           },
           verify: {
             label: "verify",
             prompt: "Verification agent. Run checks and report pass/fail with evidence.",
-            allow: %w[shell scan council_call zsh],
+            allow: %w\[shell scan council_call zsh],
           },
         }.freeze
 

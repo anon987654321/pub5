@@ -96,7 +96,7 @@ module HD
 
   def build_lut(stock_data)
     hd = stock_data[:hd] or return
-    bands = %i[r g b].map { |c| Vips::Image.new_from_array([channel_curve(hd[c])]) }
+    bands = %i\[r g b].map { |c| Vips::Image.new_from_array([channel_curve(hd[c])]) }
     Vips::Image.bandjoin(bands).cast("uchar")
   end
 

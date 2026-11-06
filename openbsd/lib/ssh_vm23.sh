@@ -8,7 +8,7 @@ set -euo pipefail
 #   vm23_tmux deploy "doas zsh openbsd/OPERATOR.sh 2>&1 | tee /tmp/deploy.log"
 #
 # Direct invocation:
-#   zsh openbsd/lib/ssh_vm23.sh 'cd /home/dev/pub4 && git pull'
+#   zsh openbsd/lib/ssh_vm23.sh 'cd /home/dev/pub5 && git pull'
 #   zsh openbsd/lib/ssh_vm23.sh tmux deploy 'doas zsh openbsd/OPERATOR.sh'
 #
 # Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB4
@@ -21,7 +21,7 @@ set -euo pipefail
 : "${SSH_USER:=dev}"
 : "${SSH_HOST:=brgen.no}"
 : "${SSH_KEY:=${HOME}/.ssh/id_ed25519_brgen}"
-: "${REMOTE_PUB4:=/home/dev/pub4}"
+: "${REMOTE_PUB4:=/home/dev/pub5}"
 
 # One copy of the usage, above the functions rather than in the dispatch at the
 # foot of the file, and reachable as -h so an operator does not have to run the

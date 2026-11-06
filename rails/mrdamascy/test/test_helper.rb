@@ -59,7 +59,7 @@ module VippsHttpStubbing
     VippsClient.instance_variable_set(:@access_token, nil)
     VippsClient.instance_variable_set(:@access_token_expires_at, nil)
     VippsClient.instance_variable_set(:@calls, nil)
-    %w[VIPPS_MOCK VIPPS_CLIENT_ID VIPPS_CLIENT_SECRET VIPPS_SUBSCRIPTION_KEY VIPPS_MSN].each do |key|
+    %w\[VIPPS_MOCK VIPPS_CLIENT_ID VIPPS_CLIENT_SECRET VIPPS_SUBSCRIPTION_KEY VIPPS_MSN].each do |key|
       ENV.delete(key)
     end
   end
@@ -122,7 +122,7 @@ module StripeHttpStubbing
       sc.send(:remove_method, :orig_perform_request)
     end
     StripeClient.instance_variable_set(:@calls, nil)
-    %w[STRIPE_MOCK STRIPE_SECRET_KEY STRIPE_API_BASE STRIPE_WEBHOOK_SECRET].each do |key|
+    %w\[STRIPE_MOCK STRIPE_SECRET_KEY STRIPE_API_BASE STRIPE_WEBHOOK_SECRET].each do |key|
       ENV.delete(key)
     end
   end

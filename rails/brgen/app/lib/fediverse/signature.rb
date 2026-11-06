@@ -16,7 +16,7 @@ module Fediverse
     # Headers the signature must cover. Without (request-target)
     # a signature for one path is valid for another; without digest a signed
     # request can have its body swapped; without date it replays forever.
-    REQUIRED_COVERAGE = %w[(request-target) host date digest].freeze
+    REQUIRED_COVERAGE = %w\[(request-target) host date digest].freeze
 
     module_function
 
@@ -33,7 +33,7 @@ module Fediverse
         "Content-Type" => "application/activity+json"
       }.merge(extra_headers)
 
-      covered = %w[(request-target) host date digest]
+      covered = %w\[(request-target) host date digest]
       signing_string = covered.map do |header|
         if header == "(request-target)"
           "(request-target): #{method.to_s.downcase} #{uri.request_uri}"

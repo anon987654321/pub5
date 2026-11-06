@@ -26,7 +26,7 @@ module Deploy
         return if min_px <= 0
 
         source_stylesheets.each do |path|
-          rel = path.sub("#{RAILS}/", "")
+          rel = path.sub("#{rails}/", "")
           each_rule(read_css(path)) do |selector, block, line_no|
             next unless selector.match?(TEXT_ENTRY)
             next unless (m = block.match(/font-size\s*:\s*([^;]+)/))
@@ -54,7 +54,7 @@ module Deploy
 
         seen = {}
         source_stylesheets.each do |path|
-          rel = path.sub("#{RAILS}/", "")
+          rel = path.sub("#{rails}/", "")
           each_rule(read_css(path)) do |selector, block, line_no|
             level = selector[/\bh([123])\b/, 1]
             next unless level
@@ -80,7 +80,7 @@ module Deploy
 
         return unless step.positive?
 
-        [%w[h1 h2], %w[h2 h3]].each do |bigger, smaller|
+        [%w\[h1 h2], %w\[h2 h3]].each do |bigger, smaller|
           next unless seen[bigger] && seen[smaller] && seen[smaller].positive?
 
           ratio = (seen[bigger] / seen[smaller]).round(2)
@@ -163,7 +163,7 @@ module Deploy
         return if @rules.dig("typography", "letter_spacing", "lowercase_body_should_letterspace")
 
         source_stylesheets.each do |path|
-          rel = path.sub("#{RAILS}/", "")
+          rel = path.sub("#{rails}/", "")
           each_rule(read_css(path)) do |selector, block, line_no|
             next if block.match?(/text-transform\s*:\s*uppercase/)
             next unless (m = block.match(/letter-spacing\s*:\s*(-?[\d.]+)em/))

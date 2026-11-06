@@ -61,10 +61,10 @@ module Operator
     # These names do not replace any tree's authority; they catch accidental deletion
     # of the front door while leaving Rails and OpenBSD free to keep their own shape.
     BASE_TREE_ANCHORS = {
-      "master" => %w[AGENTS.md data/soul.yml data/laws.yml bin/operator bin/check],
-      "rails" => %w[CLAUDE.md __shared/README.md __shared/design_tokens.yml apps.yml],
-      "openbsd" => %w[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml bin/check],
-      "studio" => %w[README.md postpro/postpro.rb replicate/replicate.rb replicate/lora/lora.rb dilla/dilla.rb],
+      "master" => %w\[AGENTS.md data/soul.yml data/laws.yml bin/operator bin/check],
+      "rails" => %w\[CLAUDE.md __shared/README.md __shared/design_tokens.yml apps.yml],
+      "openbsd" => %w\[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml bin/check],
+      "studio" => %w\[README.md postpro/postpro.rb replicate/replicate.rb replicate/lora/lora.rb dilla/dilla.rb],
     }.freeze
 
     # Defined below module_function: a def above it is a private instance
@@ -207,7 +207,7 @@ module Operator
 
       recorded = ceilings
       if growth_only
-        keys = %w[tracked_files tracked_directories]
+        keys = %w\[tracked_files tracked_directories]
         keys.each { |key| puts "sprawl_census: #{key} #{now.fetch(key)} (ceiling #{recorded.fetch(key)})" }
         over = keys.select { |key| now.fetch(key) > recorded.fetch(key) }
         over.each do |key|

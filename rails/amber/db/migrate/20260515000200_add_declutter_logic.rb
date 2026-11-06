@@ -14,7 +14,7 @@ class AddDeclutterLogic < ActiveRecord::Migration[8.1]
       t.json :metadata
       t.timestamps
     end
-    add_index :declutter_reviews, %i[user_id item_id], unique: true
+    add_index :declutter_reviews, %i\[user_id item_id], unique: true
 
     create_table :declutter_challenges do |t|
       t.references :user, null: false, foreign_key: true
@@ -27,7 +27,7 @@ class AddDeclutterLogic < ActiveRecord::Migration[8.1]
       t.json :metadata
       t.timestamps
     end
-    add_index :declutter_challenges, %i[user_id status due_on]
+    add_index :declutter_challenges, %i\[user_id status due_on]
 
     create_table :declutter_outcomes do |t|
       t.references :user, null: false, foreign_key: true
@@ -38,6 +38,6 @@ class AddDeclutterLogic < ActiveRecord::Migration[8.1]
       t.json :metadata
       t.timestamps
     end
-    add_index :declutter_outcomes, %i[user_id action created_at]
+    add_index :declutter_outcomes, %i\[user_id action created_at]
   end
 end

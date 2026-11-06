@@ -20,7 +20,7 @@ module Master
       VERSION = 1
       MAX_HISTORY = 32
       PATH = File.join(Master::ROOT, ".master", "sensory_state.json")
-      INTERESTING = %w[
+      INTERESTING = %w\[
         heartbeat:** fix_loop:** stt:** tts:** voice:** model:** check:**
         scan:** task:** tool:** ui:** web:** system:**
       ].freeze

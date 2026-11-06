@@ -12,7 +12,7 @@ class AddGuestAccountMergesToAmber < ActiveRecord::Migration[8.1]
       t.datetime :merged_at
       t.timestamps
     end
-    add_index :account_merges, %i[guest_user_id user_id], unique: true,
+    add_index :account_merges, %i\[guest_user_id user_id], unique: true,
                                                            if_not_exists: true
   end
 

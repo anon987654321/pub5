@@ -44,7 +44,7 @@ Rails.application.configure do
   # The demo host. /up and /health answer any Host, so rc.d and relayd can probe
   # the loopback without one.
   config.hosts = [ "mrd.brgen.no" ]
-  config.host_authorization = { exclude: ->(request) { %w[/up /health].include?(request.path) } }
+  config.host_authorization = { exclude: ->(request) { %w\[/up /health].include?(request.path) } }
 
   # Log to STDOUT by default, tagged with the request id so interleaved
   # requests stay readable.

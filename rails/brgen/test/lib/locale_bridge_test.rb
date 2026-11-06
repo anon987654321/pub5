@@ -14,7 +14,7 @@ require "test_helper"
 # behaviour reversed on purpose, and a test that quietly changed sides would
 # make that indistinguishable from a regression.
 class LocaleBridgeTest < ActiveSupport::TestCase
-  SHIPPED = %i[nb en].freeze
+  SHIPPED = %i\[nb en].freeze
 
   test "supported locales resolve to themselves" do
     SHIPPED.each { |locale| assert_equal locale, Brgen::LocaleBridge.resolve(locale) }
@@ -26,7 +26,7 @@ class LocaleBridgeTest < ActiveSupport::TestCase
   end
 
   test "nordic languages fall back to bokmal" do
-    %i[da sv fi is].each { |locale| assert_equal :nb, Brgen::LocaleBridge.resolve(locale) }
+    %i\[da sv fi is].each { |locale| assert_equal :nb, Brgen::LocaleBridge.resolve(locale) }
   end
 
   # Was :fr. mlan.it and lisbon.pt were served French chrome under a rule that
@@ -34,12 +34,12 @@ class LocaleBridgeTest < ActiveSupport::TestCase
   # mistake the Polish note records — narrowed at the time rather than dropped.
   # French on an Italian city is not nearer than English.
   test "romance languages fall back to english now that french does not ship" do
-    %i[it pt fr fr-BE].each { |locale| assert_equal :en, Brgen::LocaleBridge.resolve(locale) }
+    %i\[it pt fr fr-BE].each { |locale| assert_equal :en, Brgen::LocaleBridge.resolve(locale) }
   end
 
   # Was :de for the Swiss and Liechtenstein variants, and :nl for Dutch.
   test "germanic languages fall back to english now that german and dutch do not ship" do
-    %i[de de-CH de-LI nl].each { |locale| assert_equal :en, Brgen::LocaleBridge.resolve(locale) }
+    %i\[de de-CH de-LI nl].each { |locale| assert_equal :en, Brgen::LocaleBridge.resolve(locale) }
   end
 
   test "unknown locales fall back to english" do

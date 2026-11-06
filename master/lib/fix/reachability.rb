@@ -79,11 +79,11 @@ module Master
           path = Master::Fix::RailsApp.app_dir(name, repo_root: @repo_root)
           raise "rails app missing from filesystem: #{name}" unless File.directory?(path)
 
-          surfaces = %w[Gemfile bin/rails bin/ci config/routes.rb]
+          surfaces = %w\[Gemfile bin/rails bin/ci config/routes.rb]
           # An app that does not mount pub4-shared (master) has no engine layout or
           # application.scss: its pages are single-file shells over public/ CSS.
           if engine_names.include?(name)
-            surfaces += %w[app/views/layouts/application.html.erb app/assets/stylesheets/application.scss]
+            surfaces += %w\[app/views/layouts/application.html.erb app/assets/stylesheets/application.scss]
           end
 
           surfaces.each do |rel|
@@ -161,7 +161,7 @@ module Master
       end
 
       def publish_layout_sweep(result)
-        counts = %i[failures warnings unchecked errors].to_h { |kind| [kind, result.public_send(kind).size] }
+        counts = %i\[failures warnings unchecked errors].to_h { |kind| [kind, result.public_send(kind).size] }
         @bus&.publish("fix_loop:layout_sweep", outcome: result.outcome, checks: result.checks_ran, **counts)
 
         detail = counts.except(:errors).map { |kind, size| "#{kind}=#{size}" }.join(", ")

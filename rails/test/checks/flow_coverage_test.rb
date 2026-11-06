@@ -31,7 +31,7 @@ class FlowCoverageTest < Minitest::Test
       flow["steps"].each do |step|
         label = "#{flow["id"]}/#{step["name"]}"
         assert_empty step.keys - STEP_KEYS, "#{label}: unknown step key"
-        assert_equal 1, (step.keys & %w[get post mail]).size, "#{label}: exactly one of get/post/mail"
+        assert_equal 1, (step.keys & %w\[get post mail]).size, "#{label}: exactly one of get/post/mail"
         assert step["name"], "#{label}: a step needs a name so a failure can say which"
         Array(step["expect_status"]).each { |code| assert_kind_of Integer, code, "#{label}: expect_status holds integers" }
       end
@@ -43,7 +43,7 @@ class FlowCoverageTest < Minitest::Test
       bound = RUN_BOUND + Array(flow["requires_credentials"])
       flow["steps"].each do |step|
         label = "#{flow["id"]}/#{step["name"]}"
-        used = strings_in(step.reject { |key, _| %w[capture number count mail needs].include?(key) })
+        used = strings_in(step.reject { |key, _| %w\[capture number count mail needs].include?(key) })
         used += strings_in(step["mail"]["to"]) if step["mail"]
         used += Array(step["capture"]).flat_map { |c| strings_in(c["pattern"]) }
         used += Array(step["number"]).flat_map { |c| strings_in(c["pattern"]) }

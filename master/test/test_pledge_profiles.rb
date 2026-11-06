@@ -5,11 +5,11 @@ require_relative "test_helper"
 class PledgeProfileTest < Minitest::Test
   def test_profiles_have_declared_capabilities
     expected = {
-      boot: %i[stdio read execute],
-      model: %i[stdio read model],
-      fix: %i[stdio read write create execute],
-      device: %i[stdio read device],
-      world: %i[stdio read world],
+      boot: %i\[stdio read execute],
+      model: %i\[stdio read model],
+      fix: %i\[stdio read write create execute],
+      device: %i\[stdio read device],
+      world: %i\[stdio read world],
     }
 
     expected.each do |name, capabilities|
@@ -22,12 +22,12 @@ class PledgeProfileTest < Minitest::Test
   def test_profile_constructor_normalizes_values
     profile = Master::Ground::Pledge::Profile.new(
       name: "fix",
-      capabilities: %w[stdio write],
+      capabilities: %w\[stdio write],
       promises: +"stdio rpath",
     )
 
     assert_equal :fix, profile.name
-    assert_equal %i[stdio write], profile.capabilities
+    assert_equal %i\[stdio write], profile.capabilities
     assert_equal "stdio rpath", profile.promises
     assert profile.capabilities.frozen?
     assert profile.promises.frozen?
@@ -89,7 +89,7 @@ class PledgeProfileTest < Minitest::Test
   def test_the_runtime_promises_cover_locks_and_file_modes
     stage1, stage2 = [Master::Ground::Pledge::STAGE1_PROMISES, Master::Ground::Pledge::STAGE2_PROMISES].map(&:split)
 
-    [stage1, stage2].each { |promises| assert_empty %w[flock fattr] - promises }
+    [stage1, stage2].each { |promises| assert_empty %w\[flock fattr] - promises }
     assert_empty stage2 - stage1
   end
 
@@ -98,7 +98,7 @@ class PledgeProfileTest < Minitest::Test
     ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
 
     entries = Master.law_catalogue.fetch("entries")
-    ids = %w[BOUNDED_OPERATION_LIFECYCLE PROACTIVE_DEFECT_AUDIT]
+    ids = %w\[BOUNDED_OPERATION_LIFECYCLE PROACTIVE_DEFECT_AUDIT]
 
     ids.each do |id|
       assert entries.key?(id), "#{id} is missing from laws.yml#law_catalogue"

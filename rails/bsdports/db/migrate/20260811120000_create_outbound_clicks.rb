@@ -29,7 +29,7 @@ class CreateOutboundClicks < ActiveRecord::Migration[8.1]
     end
 
     add_index :outbound_clicks, :created_at
-    add_index :outbound_clicks, %i[merchant created_at]
-    add_index :outbound_clicks, %i[subject_type subject_id]
+    add_index :outbound_clicks, %i\[merchant created_at]
+    add_index :outbound_clicks, %i\[subject_type subject_id]
   end
 end

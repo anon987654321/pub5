@@ -5,7 +5,7 @@ class NearbyController < ApplicationController
   MAX_RADIUS_KM = 25.0
 
   # Anonymous stranger chat is abuse-prone — cap how fast conversations start.
-  rate_limit to: 15, within: 5.minutes, only: %i[create],
+  rate_limit to: 15, within: 5.minutes, only: %i\[create],
     with: -> { redirect_to nearby_path, alert: t("flash.chats_rate_limited") }
 
   # #widget IS a turbo-frame body. Inside the application layout it answered

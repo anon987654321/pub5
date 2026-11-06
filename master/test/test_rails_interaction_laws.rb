@@ -3,7 +3,7 @@
 require_relative "test_helper"
 
 class TestRailsInteractionLaws < Minitest::Test
-  IDS = %w[
+  IDS = %w\[
     DIRECT_MANIPULATION_FEEDBACK
     INTERACTION_PERFORMANCE
     STATE_CHOREOGRAPHY

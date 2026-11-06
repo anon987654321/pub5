@@ -10,7 +10,7 @@ module Master
       HARD_THRESHOLD = 0.90
       KEEP_TAIL = 4
       CONTEXT_SCHEMA = 1
-      STRUCTURED_KEYS = %w[goal decisions facts files open_work constraints uncertainty].freeze
+      STRUCTURED_KEYS = %w\[goal decisions facts files open_work constraints uncertainty].freeze
       private_constant :SOFT_THRESHOLD, :HARD_THRESHOLD, :KEEP_TAIL, :CONTEXT_SCHEMA, :STRUCTURED_KEYS
 
       attr_reader :session, :agent, :model_context

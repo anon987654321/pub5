@@ -17,7 +17,7 @@ class Event < ApplicationRecord
   include Shared::Notifiable
   tracks_activity created: "EventCreated", updated: "EventUpdated", source_vertical: "social", actor: :user
 
-  STATUSES = %w[draft published cancelled].freeze
+  STATUSES = %w\[draft published cancelled].freeze
 
   belongs_to :user
   belongs_to :place, optional: true
@@ -164,7 +164,7 @@ class Event < ApplicationRecord
   end
 
   # When, until when and where: the three things an attendee planned around.
-  ATTENDEE_FACING_COLUMNS = %w[starts_at ends_at venue_name place_id].freeze
+  ATTENDEE_FACING_COLUMNS = %w\[starts_at ends_at venue_name place_id].freeze
 
   def attendee_facing_change?
     !cancelled? && saved_changes.keys.intersect?(ATTENDEE_FACING_COLUMNS)
@@ -175,7 +175,7 @@ class Event < ApplicationRecord
   def notify_attendees_of_change
     body = I18n.t("events.changed_body", when: I18n.l(starts_at, format: :long), where: venue_name.presence || "–")
     others = rsvps.where.not(user_id:)
-    coming = others.where(status: %w[going interested])
+    coming = others.where(status: %w\[going interested])
     coming.includes(:user).find_each do |rsvp|
       deliver_notification(rsvp.user, title: I18n.t("events.changed_notification", title:), body:,
                                       source: self, kind: "alert")
@@ -184,7 +184,7 @@ class Event < ApplicationRecord
 
   # Everyone who said they were coming needs telling when it is called off.
   def notify_attendees_of_cancellation
-    rsvps.where(status: %w[going interested]).includes(:user).find_each do |rsvp|
+    rsvps.where(status: %w\[going interested]).includes(:user).find_each do |rsvp|
       deliver_notification(
         rsvp.user,
         title: I18n.t("events.cancelled_notification", title: title),

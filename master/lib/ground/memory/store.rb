@@ -107,7 +107,7 @@ module Master
         # Contradicted/obsolete entries remain auditable through #recall.
         def review(key, verdict:, evidence:, reviewer:)
           verdict = verdict.to_s
-          allowed = %w[confirmed contradicted uncertain obsolete]
+          allowed = %w\[confirmed contradicted uncertain obsolete]
           raise ArgumentError, "unknown memory review verdict: #{verdict}" unless allowed.include?(verdict)
 
           receipt = Master::Cognition::OutcomeModel.validate_evidence!(evidence, root: @root)
@@ -161,7 +161,7 @@ module Master
 
           provenance = row["provenance"]
           status = provenance.is_a?(Hash) ? provenance["status"].to_s : ""
-          !%w[contradicted obsolete].include?(status)
+          !%w\[contradicted obsolete].include?(status)
         end
 
         def provenance(key)

@@ -101,7 +101,7 @@ class TestRepairLoopPolicy < Minitest::Test
     selected = loop.send(:routing_model_ids)
 
     assert_equal({ strong: "grok-cli:auto", fast: "ollama:glm-5.3-flash:cloud" }, selected)
-    assert_equal %i[file_write code_generation], calls
+    assert_equal %i\[file_write code_generation], calls
   end
 
   def test_visual_custody_is_limited_to_frontend_rails_sources
@@ -709,11 +709,11 @@ class TestRepairLoopPolicy < Minitest::Test
       previous = ENV["MASTER_CONSENSUS_FIXES"]
 
       ENV.delete("MASTER_CONSENSUS_FIXES")
-      %i[error critical].each do |severity|
+      %i\[error critical].each do |severity|
         violation = { file: File.join(root, "sample.rb"), law: "TEST_RULE", severity: }
         refute loop.send(:consensus_approves?, violation, "candidate-#{severity}")
       end
-      assert_equal %w[candidate-error candidate-critical], asked
+      assert_equal %w\[candidate-error candidate-critical], asked
     ensure
       previous.nil? ? ENV.delete("MASTER_CONSENSUS_FIXES") : ENV["MASTER_CONSENSUS_FIXES"] = previous
     end

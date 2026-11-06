@@ -12,11 +12,11 @@ class TestContentDedupScan < Minitest::Test
       "data/a.yml" => "meaning: this exact sentence appears more than once here\n",
       "data/b.yml" => "meaning: this exact sentence appears more than once here\n",
     ) do |root|
-      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w[data/a.yml data/b.yml])
+      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w\[data/a.yml data/b.yml])
 
       assert_equal 1, dups.size
       assert_equal 2, dups.first.count
-      assert_equal %w[data/a.yml:1 data/b.yml:1], dups.first.locations
+      assert_equal %w\[data/a.yml:1 data/b.yml:1], dups.first.locations
     end
   end
 
@@ -24,10 +24,10 @@ class TestContentDedupScan < Minitest::Test
     with_fixtures(
       "data/a.yml" => "meaning: this exact sentence appears more than once here\nsomething else entirely\nmeaning: this exact sentence appears more than once here\n",
     ) do |root|
-      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w[data/a.yml])
+      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w\[data/a.yml])
 
       assert_equal 1, dups.size
-      assert_equal %w[data/a.yml:1 data/a.yml:3], dups.first.locations
+      assert_equal %w\[data/a.yml:1 data/a.yml:3], dups.first.locations
     end
   end
 
@@ -36,7 +36,7 @@ class TestContentDedupScan < Minitest::Test
       "data/a.yml" => "status: ok\n",
       "data/b.yml" => "status: ok\n",
     ) do |root|
-      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w[data/a.yml data/b.yml])
+      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w\[data/a.yml data/b.yml])
 
       assert_empty dups, "short structural lines shouldn't count as meaningful duplication"
     end
@@ -46,7 +46,7 @@ class TestContentDedupScan < Minitest::Test
     with_fixtures(
       "data/a.yml" => "meaning: this line only appears exactly one single time\n",
     ) do |root|
-      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w[data/a.yml])
+      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w\[data/a.yml])
 
       assert_empty dups
     end
@@ -54,7 +54,7 @@ class TestContentDedupScan < Minitest::Test
 
   def test_missing_files_are_skipped_without_error
     Dir.mktmpdir do |root|
-      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w[data/does_not_exist.yml])
+      dups = Master::Fix::ContentDedupScan.scan(root:, files: %w\[data/does_not_exist.yml])
 
       assert_empty dups
     end

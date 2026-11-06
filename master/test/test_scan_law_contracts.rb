@@ -15,10 +15,10 @@ class TestScanLawContracts < Minitest::Test
 
   def test_small_files_rule_reads_code_with_modules_and_leaves_data_and_javascript
     long = Array.new(Laws::SmallFilesLaw::LIMIT + 1, "x").join("\n")
-    %w[bin/operator app.scss deploy.sh].each do |path|
+    %w\[bin/operator app.scss deploy.sh].each do |path|
       refute_empty Laws::SmallFilesLaw.new.check(long, path:), path
     end
-    %w[nb.yml snapshot.json TODO.md Gemfile.lock app.js face.part1.txt].each do |path|
+    %w\[nb.yml snapshot.json TODO.md Gemfile.lock app.js face.part1.txt].each do |path|
       assert_empty Laws::SmallFilesLaw.new.check(long, path:), path
     end
   end
@@ -145,7 +145,7 @@ class TestScanLawContracts < Minitest::Test
       sprawl = ->(path) { Laws::FileSprawlLaw.new(root:).check(File.read(path), path:) }
 
       write.call("site/config/application.rb")
-      %w[site/app/models/tag.rb site/app/models/city.rb site/config/initializers/a.rb site/config/initializers/b.rb
+      %w\[site/app/models/tag.rb site/app/models/city.rb site/config/initializers/a.rb site/config/initializers/b.rb
          site/db/seeds.rb site/db/cache_schema.rb].each { |rel| assert_empty sprawl.call(write.call(rel)), rel }
 
       write.call("site/engines/tv/lib/tv/engine.rb")
@@ -185,7 +185,7 @@ class TestScanLawContracts < Minitest::Test
 
   # Every canonical Law detector must reach the scanner through the same
   # adapter used in production, at a path its declared detector scope accepts.
-  RETIRED_TWINS = %w[
+  RETIRED_TWINS = %w\[
     ARIA_INTERACTIVE BUTTON_OVER_ANCHOR CLAMP_TYPOGRAPHY DOLLAR_PAREN
     I18N_COVERAGE MEANINGFUL_NAMES MEASURE_OPTIMUM
     MIGRATION_ADD_REFERENCE_NO_FK MIGRATION_FIND_OR_CREATE_BY
@@ -217,7 +217,7 @@ class TestScanLawContracts < Minitest::Test
   # Dir[] follows a word character and is an index, not a literal.
   def test_never_batch_delete_spares_a_receiver_enumerated_in_the_source
     [
-      %(%w[.mp3 .job].each { |ext| FileUtils.rm_f(base + ext) }\n),
+      %(%w\[.mp3 .job].each { |ext| FileUtils.rm_f(base + ext) }\n),
       %([old, older].each { |f| File.delete(f) }\n),
     ].each do |source|
       assert_empty law_findings("NEVER_BATCH_DELETE", source, path: "cleanup.rb"),
@@ -336,7 +336,7 @@ class TestScanLawContracts < Minitest::Test
   end
 
   def test_code_hierarchy_rule_flags_many_top_level_constants
-    code = %w[Alpha Beta Gamma Delta Epsilon Zeta].map { |name| "class #{name}; end" }.join("\n")
+    code = %w\[Alpha Beta Gamma Delta Epsilon Zeta].map { |name| "class #{name}; end" }.join("\n")
 
     assert_finding Laws::CodeHierarchyLaw.new, code, "many.rb", "top-level constants"
   end

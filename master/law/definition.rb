@@ -30,7 +30,7 @@ module Law
   # marks, so the typographic Laws read every file except these.
   TERMINAL_OUTPUT_PATH = %r{
     (?:\A|/)master/(?:bin|lib|tools|checks|law|data|plugins|completions|test)/ |
-    (?:\A|/)(?:OPENBSD|STUDIO)/(?!.*\.(?:md|markdown|tex|html)\z) |
+    (?:\A|/)(?:OPENBSD|studio)/(?!.*\.(?:md|markdown|tex|html)\z) |
     (?:\A|/)bin/ |
     \.(?:sh|ksh|zsh)\z
   }x.freeze
@@ -166,7 +166,7 @@ module Law
     # A rule proves itself before it may judge anything else.
     #
     # The reach half is proved too, because it was the half that broke:
-    # NEVER_BATCH_DELETE declared `languages %i[ruby shell]` and no file can
+    # NEVER_BATCH_DELETE declared `languages %i\[ruby shell]` and no file can
     # carry the language "shell" — FILE_LANGUAGE_MAP emits "zsh" — so a law
     # written after a batch-delete incident could not read a single shell
     # script, and passed prove! every boot because prove! called scan directly
@@ -436,7 +436,7 @@ module Law
     end
   end
 
-  AUTOFIX_POLICIES = %i[never review automatic].freeze
+  AUTOFIX_POLICIES = %i\[never review automatic].freeze
 
   # `ask` is the semantic half: a rule whose subject cannot be matched by a
   # regex states the question instead, and the model answers it. It sits beside
@@ -451,7 +451,7 @@ module Law
   # checkable offline by a task that has a model. A semantic rule with no
   # example of what it is looking for is the unfalsifiable shape this file
   # already refuses in the lexical case.
-  MEMBERS = %i[
+  MEMBERS = %i\[
     id source severity mode languages scope surfaces law_scope lifecycle autofix
     path path_exclude absent detect check detector ask practice fix bad good reads_comments tags example_path
     reads_beyond_file transform proved_by measures adapters
@@ -460,7 +460,7 @@ module Law
   # The surfaces a whole-repository read measures: what files exist and where,
   # not what any one of them says. A tree adapter judges these; the per-file
   # scanner never can, because no single file carries them.
-  TREE_SURFACES = %i[repository_tree directories file_names paths].freeze
+  TREE_SURFACES = %i\[repository_tree directories file_names paths].freeze
 
   # One more detector for the same Law, on its own surfaces and languages: DRY
   # over code and DRY over config are one Law with two adapters, not two Laws.
@@ -528,7 +528,7 @@ module Law
       return measures if measures
       return detector.surfaces if detector&.surfaces
 
-      detect && scope != :file ? %i[lines] : %i[whole_file]
+      detect && scope != :file ? %i\[lines] : %i\[whole_file]
     end
 
     # The surfaces some deterministic adapter of this Law actually reads. The
@@ -552,7 +552,7 @@ module Law
     # Lifecycle controls whether a law may affect enforcement. Existing laws
     # default to active for compatibility; candidates can enter proposed/proven
     # without silently becoming merge blockers.
-    def enforceable? = %i[active trusted].include?(lifecycle)
+    def enforceable? = %i\[active trusted].include?(lifecycle)
 
     def can_transition_to?(state)
       ::Law::Definition::LIFECYCLE_TRANSITIONS.fetch(lifecycle).include?(state.to_sym)
@@ -621,13 +621,13 @@ module Law
   # Data.define's block is lexical; publish this graph on the generated Law
   # definition explicitly because Contract, Index and callers use it as Law API.
   Definition.const_set(:LIFECYCLE_TRANSITIONS, {
-    proposed: %i[proven retired],
-    proven: %i[active advisory retired],
-    active: %i[observed advisory retired],
-    observed: %i[trusted active advisory retired],
-    trusted: %i[active observed advisory retired],
-    advisory: %i[proven active retired],
-    retired: %i[proposed],
+    proposed: %i\[proven retired],
+    proven: %i\[active advisory retired],
+    active: %i\[observed advisory retired],
+    observed: %i\[trusted active advisory retired],
+    trusted: %i\[active observed advisory retired],
+    advisory: %i\[proven active retired],
+    retired: %i\[proposed],
   }.freeze)
 
   # Ruby declares what a Law detects and how it reads; its policy comes from
@@ -636,7 +636,7 @@ module Law
   # block declares is `path`, the files its subject lives in, because laws.yml
   # no longer carries one.
   class Builder
-    %i[source scope absent ask practice fix bad good reads_comments].each { |a| define_method(a) { |v| @h[a] = v } }
+    %i\[source scope absent ask practice fix bad good reads_comments].each { |a| define_method(a) { |v| @h[a] = v } }
 
     def initialize(id)
       @h = {
@@ -652,7 +652,7 @@ module Law
 
     # One more detector for this Law on other surfaces, with its own two
     # examples: `adapter(:file_names, bad: [...], good: [...]) { |paths| ... }`
-    # for the tree, `adapter(:structured_data, languages: %i[yaml], bad:, good:)
+    # for the tree, `adapter(:structured_data, languages: %i\[yaml], bad:, good:)
     # { |text, file| ... }` for a file.
     def adapter(*surfaces, **examples, &check) = @h[:adapters] += [Adapter.declare(surfaces, check, **examples)]
 
@@ -714,7 +714,7 @@ module Law
     def refuse(reason) = raise(ArgumentError, "#{@h[:id]}: #{reason}")
 
     def refuse_shape!
-      detectors = %i[detect check detector].count { |k| @h[k] }
+      detectors = %i\[detect check detector].count { |k| @h[k] }
       evidence = detectors + @h[:adapters].size
       refuse "needs detect, check, detector, adapter, ask or practice" if evidence.zero? && !@h[:ask] && !@h[:practice]
       refuse "detect, check and detector are three detectors; keep one" if detectors > 1
@@ -732,7 +732,7 @@ module Law
     # Named here so a law missing one hears about the law, not Data#initialize.
     # A Law proved by a named test may carry its fixtures there instead.
     def refuse_missing!
-      missing = (@h[:proved_by] ? %i[fix] : %i[bad good fix]).reject { |k| @h.key?(k) }
+      missing = (@h[:proved_by] ? %i\[fix] : %i\[bad good fix]).reject { |k| @h.key?(k) }
       refuse "missing #{missing.join(', ')}" unless missing.empty?
     end
   end

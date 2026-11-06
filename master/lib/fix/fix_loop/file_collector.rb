@@ -145,7 +145,7 @@ module Master
               dropped << file
               @skip_reasons[reason.to_s] += 1
               @excluded_path_reasons[repository_relative(file)] = reason.to_s
-              @blocking_skips[reason.to_s] += 1 if %i[too_large too_many_lines].include?(reason)
+              @blocking_skips[reason.to_s] += 1 if %i\[too_large too_many_lines].include?(reason)
             else
               kept << file
             end

@@ -3,7 +3,7 @@
 module Master
   module Trace
     class Triggers
-      DEFAULTS = %i[after_scan on_error budget_low tool_after].freeze
+      DEFAULTS = %i\[after_scan on_error budget_low tool_after].freeze
       ERROR_TRUNCATE = 200
 
       def initialize(event_bus:, scanner: nil, agent: nil)

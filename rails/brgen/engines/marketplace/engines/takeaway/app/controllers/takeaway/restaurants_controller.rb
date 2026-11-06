@@ -4,18 +4,18 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
   include Shared::FindableBySlug
   include StorefrontSearch
 
-  allow_unauthenticated_access only: %i[index show]
-  before_action :require_real_user, except: %i[index show]
-  before_action :set_restaurant, only: %i[show edit update destroy]
-  before_action :authorize_owner!, only: %i[edit update destroy]
-  before_action :load_city_places, only: %i[new create edit update]
+  allow_unauthenticated_access only: %i\[index show]
+  before_action :require_real_user, except: %i\[index show]
+  before_action :set_restaurant, only: %i\[show edit update destroy]
+  before_action :authorize_owner!, only: %i\[edit update destroy]
+  before_action :load_city_places, only: %i\[new create edit update]
 
   def index
     # :city as well as :user — the card renders restaurant.city, which was one
     # query per restaurant (14 on a full page).
     scope = Takeaway::Restaurant.indexable.with_attached_cover.includes(:user, :city)
     scope = scope.where(cuisine_type: params[:cuisine]) if params[:cuisine].present?
-    scope = apply_live_search(scope, columns: %w[name city cuisine_type description], vertical: "takeaway") if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[name city cuisine_type description], vertical: "takeaway") if live_search_query.present?
     if params[:lat].present? && params[:lng].present?
       scope = scope.near(params[:lat], params[:lng], params[:radius_km] || 5) if scope.respond_to?(:near)
     end

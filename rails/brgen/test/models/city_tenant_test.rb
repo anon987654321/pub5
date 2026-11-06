@@ -5,7 +5,7 @@ require "test_helper"
 class CityTenantTest < ActiveSupport::TestCase
   setup do
     Brgen::CitySeed.sync! if City.table_exists?
-    @cities = %w[brgen.no oshlo.no lsangeles.com cardff.uk frankfrt.de].index_with do |domain|
+    @cities = %w\[brgen.no oshlo.no lsangeles.com cardff.uk frankfrt.de].index_with do |domain|
       City.find_by!(domain:)
     end
   end

@@ -47,12 +47,12 @@ class Port < ApplicationRecord
       key = :"term_#{index}"
       binds[key] = "%#{term}%"
       like = ->(column) { "#{column} LIKE :#{key}" }
-      fields = %w[ports.pkgpath ports.version ports.description ports.maintainer].map(&like)
-      fields.concat(%w[ports.name ports.comment].map(&like)) if ids.nil?
-      category_fields = %w[name slug description].map { |column| like.call("categories.#{column}") }
+      fields = %w\[ports.pkgpath ports.version ports.description ports.maintainer].map(&like)
+      fields.concat(%w\[ports.name ports.comment].map(&like)) if ids.nil?
+      category_fields = %w\[name slug description].map { |column| like.call("categories.#{column}") }
       fields << "EXISTS (SELECT 1 FROM categories WHERE categories.id = ports.category_id AND (#{category_fields.join(" OR ")}))"
       fields << "EXISTS (SELECT 1 FROM maintainers WHERE maintainers.id = ports.maintainer_id AND #{like.call('maintainers.name')})"
-      dependency_fields = %w[name pkgpath comment description].map { |column| like.call("dependency_ports.#{column}") }
+      dependency_fields = %w\[name pkgpath comment description].map { |column| like.call("dependency_ports.#{column}") }
       fields << <<~SQL.squish
         EXISTS (
           SELECT 1 FROM dependencies
@@ -60,7 +60,7 @@ class Port < ApplicationRecord
           WHERE dependencies.port_id = ports.id AND (#{dependency_fields.join(" OR ")})
         )
       SQL
-      advisory_fields = %w[identifier title description].map { |column| like.call("security_advisories.#{column}") }
+      advisory_fields = %w\[identifier title description].map { |column| like.call("security_advisories.#{column}") }
       fields << <<~SQL.squish
         EXISTS (
           SELECT 1 FROM security_advisories

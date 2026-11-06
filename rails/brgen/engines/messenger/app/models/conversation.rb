@@ -13,7 +13,7 @@ class Conversation < ApplicationRecord
   has_many :messages, dependent: :destroy
   has_many :typing_indicators, dependent: :destroy
 
-  validates :conversation_type, inclusion: { in: %w[direct group] }
+  validates :conversation_type, inclusion: { in: %w\[direct group] }
 
   # A shared login is not a shared inbox. City-owned threads stay in their
   # city; nearby cells are intentionally global; unassigned legacy private

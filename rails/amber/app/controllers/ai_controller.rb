@@ -20,11 +20,11 @@ class AiController < ApplicationController
   # GETs — WriteThrottle exempts GET by design, so without this a scripted
   # loop over /ai/search could spend OpenRouter budget unbounded.
   rate_limit to: 10, within: 10.minutes, name: :premium,
-             only: %i[suggest_outfits generate_outfit analyze_item tag_item packing_list style_profile],
+             only: %i\[suggest_outfits generate_outfit analyze_item tag_item packing_list style_profile],
              by: -> { Current.user ? "u#{Current.user.id}" : "ip#{request.remote_ip}" },
              with: -> { redirect_to items_path, alert: t("shared.flash.rate_limited") }
   rate_limit to: 10, within: 10.minutes, name: :read,
-             only: %i[search mood_board capsule color_palette declutter_guide],
+             only: %i\[search mood_board capsule color_palette declutter_guide],
              by: -> { Current.user ? "u#{Current.user.id}" : "ip#{request.remote_ip}" },
              with: -> { redirect_to items_path, alert: t("shared.flash.rate_limited") }
 
@@ -135,7 +135,7 @@ class AiController < ApplicationController
 
     @duration = Integer(params[:duration].to_s, exception: false)
     @duration = @duration ? @duration.clamp(1, 14) : 1
-    @climate = params[:climate].to_s.presence_in(%w[hot cold mild rainy dry]) || "mild"
+    @climate = params[:climate].to_s.presence_in(%w\[hot cold mild rainy dry]) || "mild"
     @result = WardrobeAi.new(Current.user).suggest_packing_list(@duration, @climate)
     return unless @result["outfits"]
 

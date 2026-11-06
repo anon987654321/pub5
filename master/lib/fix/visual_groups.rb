@@ -12,14 +12,14 @@ module Master
     # is one cause, repaired once, with its members as evidence; its key is what a repair would
     # change (see key_for).
     module VisualGroups
-      FIELDS = %i[key id law file selector locator impact members surfaces fix fix_detail before after].freeze
+      FIELDS = %i\[key id law file selector locator impact members surfaces fix fix_detail before after].freeze
 
       Group = Struct.new(*FIELDS, keyword_init: true) do
         def member_count = members.size
 
         def runtime? = impact == :runtime
 
-        def repaired? = %i[mechanical model].include?(fix)
+        def repaired? = %i\[mechanical model].include?(fix)
 
         # The findings themselves, for the model: a few in full and the size of the rest.
         def evidence(limit = 8)

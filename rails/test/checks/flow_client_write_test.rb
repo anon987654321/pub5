@@ -94,7 +94,7 @@ class FlowClientWriteTest < Minitest::Test
   # run and never counted among the passes.
   def test_a_flow_missing_its_credentials_is_unchecked_not_passed
     @check.instance_variable_set(:@result, Deploy::CheckResult.new)
-    flow = { "id" => "signed_in_write", "requires_credentials" => %w[FLOW_NOT_SET_ANYWHERE] }
+    flow = { "id" => "signed_in_write", "requires_credentials" => %w\[FLOW_NOT_SET_ANYWHERE] }
 
     assert_nil @check.send(:credentials_for, flow)
     result = @check.instance_variable_get(:@result)
@@ -105,7 +105,7 @@ class FlowClientWriteTest < Minitest::Test
 
   def test_run_flow_does_not_count_a_missing_credential_journey_as_measured
     @check.instance_variable_set(:@result, Deploy::CheckResult.new)
-    flow = { "id" => "signed_in_write", "requires_credentials" => %w[FLOW_NOT_SET_ANYWHERE] }
+    flow = { "id" => "signed_in_write", "requires_credentials" => %w\[FLOW_NOT_SET_ANYWHERE] }
 
     assert_equal :skipped, @check.send(:run_flow, flow, 38_182, "brgen")
     result = @check.instance_variable_get(:@result)

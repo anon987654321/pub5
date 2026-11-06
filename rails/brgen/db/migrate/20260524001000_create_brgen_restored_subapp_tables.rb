@@ -18,7 +18,7 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.string :role, null: false, default: 'editor'
       t.timestamps
     end
-    add_index :playlist_collaborations, %i[user_id set_id playlist_id], unique: true,
+    add_index :playlist_collaborations, %i\[user_id set_id playlist_id], unique: true,
                                                                         name: 'idx_playlist_collab_unique', if_not_exists: true
 
     create_table :playlist_likes, if_not_exists: true do |t|
@@ -27,7 +27,7 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.references :playlist
       t.timestamps
     end
-    add_index :playlist_likes, %i[user_id set_id playlist_id], unique: true, name: 'idx_playlist_likes_unique',
+    add_index :playlist_likes, %i\[user_id set_id playlist_id], unique: true, name: 'idx_playlist_likes_unique',
                                                                if_not_exists: true
 
     create_table :takeaway_delivery_drivers, if_not_exists: true do |t|
@@ -39,7 +39,7 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.decimal :current_lng, precision: 10, scale: 6
       t.timestamps
     end
-    add_index :takeaway_delivery_drivers, %i[available current_lat current_lng],
+    add_index :takeaway_delivery_drivers, %i\[available current_lat current_lng],
               name: 'idx_takeaway_drivers_available_location', if_not_exists: true
 
     create_table :tv_live_streams, if_not_exists: true do |t|
@@ -55,7 +55,7 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.timestamps
     end
     add_index :tv_live_streams, :stream_key, unique: true, if_not_exists: true
-    add_index :tv_live_streams, %i[status updated_at], if_not_exists: true
+    add_index :tv_live_streams, %i\[status updated_at], if_not_exists: true
 
     create_table :tv_stream_chats, if_not_exists: true do |t|
       t.references :live_stream, null: false, foreign_key: { to_table: :tv_live_streams }
@@ -63,7 +63,7 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.text :message, null: false
       t.timestamps
     end
-    add_index :tv_stream_chats, %i[live_stream_id created_at], if_not_exists: true
+    add_index :tv_stream_chats, %i\[live_stream_id created_at], if_not_exists: true
 
     create_table :tv_video_notes, if_not_exists: true do |t|
       t.references :video, null: false, foreign_key: { to_table: :tv_videos }
@@ -72,6 +72,6 @@ class CreateBrgenRestoredSubappTables < ActiveRecord::Migration[8.0]
       t.integer :timestamp
       t.timestamps
     end
-    add_index :tv_video_notes, %i[video_id timestamp created_at], if_not_exists: true
+    add_index :tv_video_notes, %i\[video_id timestamp created_at], if_not_exists: true
   end
 end

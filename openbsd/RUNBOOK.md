@@ -96,7 +96,7 @@ Internet
 
 Runtime contract: TLS terminates at relayd; apps listen on loopback-only ports;
 Rails uses SQLite plus Solid Queue/Cache; secrets live in `/etc/*.env`; source
-of truth on the VPS is `/home/dev/pub4`; long deploys run under tmux.
+of truth on the VPS is `/home/dev/pub5`; long deploys run under tmux.
 
 Check flow — local: `openbsd/bin/check` → `verify_deploy_identity` → Rails
 production/domain/ phantom/frontend checks → OpenBSD deploy smoke. Operator: `git
@@ -124,7 +124,7 @@ root accepts only app-owned `.gem` inputs, stores SHA-256-addressed read-only co
 and the app copies objects back without hard links.
 
 The master web deploy has two argument-free broker verbs for the fixed
-`/home/dev/pub4/master/web` tree: `master-web-assets-reset` and
+`/home/dev/pub5/master/web` tree: `master-web-assets-reset` and
 `master-web-runtime-dirs`. `vps_deploy_master.sh` refuses a `ROOT` override and
 compares the tracked `rc.d/master` with the installed root-owned service file;
 a mismatch requires a deliberate `OPERATOR.sh` sync instead of copying checkout
@@ -351,7 +351,7 @@ When SSH to vm23 is required, use normal paths — but note which of them takes
 | `zsh openbsd/bin/vps_ci.sh <app>` | **dev** |
 
 `vps-deploy` runs as root. Git fetch/checkout still run as `dev` so the
-`/home/dev/pub4` tree and GitHub deploy key are never used by root. Typing the
+`/home/dev/pub5` tree and GitHub deploy key are never used by root. Typing the
 command as `dev` is fine: passwordless doas re-executes it as root.
 
 **Laws:**
@@ -702,8 +702,8 @@ as its first argument: `expect -f openbsd/bin/vps_console.exp <mode>`.
 | `start_install` | `nohup /tmp/vps_on_vm_install.sh` from console |
 | `poll_install` | Tail on-vm install log + process/rcctl snapshot |
 | `install` | Full master bundle + per-app deploy from console (long) |
-| `sync_and_install` | Base64 tarball sync to `/home/dev/pub4` then on-vm install |
-| `drop_install` | Base64-embed `vps_on_vm_install.sh` only; it execs `vps_install_all.sh`, so the tree must already be at `/home/dev/pub4` |
+| `sync_and_install` | Base64 tarball sync to `/home/dev/pub5` then on-vm install |
+| `drop_install` | Base64-embed `vps_on_vm_install.sh` only; it execs `vps_install_all.sh`, so the tree must already be at `/home/dev/pub5` |
 
 Laptop SSH to vm23: `source openbsd/lib/ssh_vm23.sh` or `zsh
 openbsd/lib/ssh_vm23.sh <cmd>`. Long deploys: `vm23_tmux deploy 'doas zsh
@@ -720,7 +720,7 @@ Gemfiles, and no test file leaves a test call outside its class. It does not boo
 Rails; `rails_test` on the box is where the remaining failures live.
 
 ```zsh
-cd /home/dev/pub4 && git pull --ff-only
+cd /home/dev/pub5 && git pull --ff-only
 zsh openbsd/bin/vps-deploy brgen       # canonical serial deploy
 zsh openbsd/bin/vps-deploy amber       # or: all
 ruby openbsd/checks/health_check.rb --public --all-ready-apps
@@ -733,7 +733,7 @@ source code from the dev-writable checkout. Do not run them with `doas`.
 The supervisor handles asset precompile before restart.
 
 ```zsh
-cd /home/dev/pub4 && git gc --quiet && git count-objects -v
+cd /home/dev/pub5 && git gc --quiet && git count-objects -v
 ```
 
 ## Checks

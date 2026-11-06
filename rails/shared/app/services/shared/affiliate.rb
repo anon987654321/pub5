@@ -25,7 +25,7 @@ module Shared
     # Named, not referenced: holding the classes here would make this file load
     # its adapters, and an adapter that wants Affiliate::Deal would then load
     # this file back. Zeitwerk resolves the names at call time instead.
-    NETWORK_NAMES = %w[Tradedoubler AmazonAssociates].freeze
+    NETWORK_NAMES = %w\[Tradedoubler AmazonAssociates].freeze
 
     class << self
       # Resolved inside Shared. Bare "Tradedoubler" would look for a top-level

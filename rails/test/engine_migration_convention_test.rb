@@ -15,10 +15,10 @@ require "minitest/autorun"
 # enforceable rather than remembered.
 class EngineMigrationConventionTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   # The three that predate the convention. They are history, not a pattern to copy.
-  HISTORICAL = %w[
+  HISTORICAL = %w\[
     20260524000200_create_shared_social_tables.rb
     20260615120000_add_guest_to_users.rb
     20260625140000_create_anonymous_post_quotas.rb

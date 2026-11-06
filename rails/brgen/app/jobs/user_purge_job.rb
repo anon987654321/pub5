@@ -87,18 +87,18 @@ class UserPurgeJob < ApplicationJob
   # transitioning, and a constant like "[slettet]" would be personal data's
   # shape without its content.
   NULLIFY = [
-    { model: "Takeaway::Order", key: :user_id, columns: %i[delivery_address special_instructions] },
-    { model: "Post",            key: :user_id, columns: %i[latitude longitude] },
-    { model: "Story",           key: :user_id, columns: %i[latitude longitude] },
+    { model: "Takeaway::Order", key: :user_id, columns: %i\[delivery_address special_instructions] },
+    { model: "Post",            key: :user_id, columns: %i\[latitude longitude] },
+    { model: "Story",           key: :user_id, columns: %i\[latitude longitude] },
     # Where the goods are is usually where the seller lives. The listing itself
     # stays, because a sold item is half of somebody else's order.
-    { model: "Marketplace::Listing",  key: :user_id, columns: %i[latitude longitude location] },
+    { model: "Marketplace::Listing",  key: :user_id, columns: %i\[latitude longitude location] },
     # Points at a marketplace_addresses row this job destroys. Left set, it is
     # an id with nothing behind it.
-    { model: "Marketplace::Checkout", key: :user_id, columns: %i[marketplace_address_id] },
+    { model: "Marketplace::Checkout", key: :user_id, columns: %i\[marketplace_address_id] },
     # An event has a venue rather than a home, but the coordinates on one
     # somebody hosted themselves are theirs.
-    { model: "Event",                 key: :user_id, columns: %i[latitude longitude] }
+    { model: "Event",                 key: :user_id, columns: %i\[latitude longitude] }
   ].freeze
 
   def perform
@@ -192,7 +192,7 @@ class UserPurgeJob < ApplicationJob
     attrs[:username] = "deleted_#{user.id}"                if user.has_attribute?(:username)
     attrs[:display_name] = nil                                 if user.has_attribute?(:display_name)
     attrs[:password_digest] = BCrypt::Password.create(SecureRandom.hex(24)) if user.has_attribute?(:password_digest)
-    %i[otp_secret magic_link_token magic_link_expires_at remember_token remember_token_expires_at email_verification_token private_key public_key latitude longitude location].each do |col|
+    %i\[otp_secret magic_link_token magic_link_expires_at remember_token remember_token_expires_at email_verification_token private_key public_key latitude longitude location].each do |col|
       attrs[col] = nil if user.has_attribute?(col)
     end
     user.update_columns(attrs)

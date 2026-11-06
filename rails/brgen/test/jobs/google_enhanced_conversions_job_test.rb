@@ -7,7 +7,7 @@ require "minitest/mock"
 # must stay silent until every Ads variable is set, and a failure must end rather
 # than queue copies of the payload behind itself.
 class GoogleEnhancedConversionsJobTest < ActiveJob::TestCase
-  ENV_KEYS = %w[GOOGLE_ENHANCED_CONVERSIONS GOOGLE_ADS_CUSTOMER_ID GOOGLE_ADS_CONVERSION_ACTION_ID
+  ENV_KEYS = %w\[GOOGLE_ENHANCED_CONVERSIONS GOOGLE_ADS_CUSTOMER_ID GOOGLE_ADS_CONVERSION_ACTION_ID
                 GOOGLE_ADS_ACCESS_TOKEN].freeze
 
   PaidOrder = Struct.new(:id, :paid_at, :google_conversion_uploaded_at, keyword_init: true)

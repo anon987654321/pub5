@@ -31,7 +31,7 @@ class StrictLoadingJobPathsTest < ActiveSupport::TestCase
   def test_cascading_associations_are_exempt_from_strict_loading
     fresh = Item.find(make_item.id)
 
-    exempt = %i[declutter_review declutter_challenges sustainability_metric garment_embedding]
+    exempt = %i\[declutter_review declutter_challenges sustainability_metric garment_embedding]
     raising = exempt.reject do |assoc|
       fresh.public_send(assoc)
       true

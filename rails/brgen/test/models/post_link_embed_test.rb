@@ -126,7 +126,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
       perform_enqueued_jobs(only: Shared::LinkEmbedJob)
     end
 
-    assert_equal %w[vimeo.com], asked
+    assert_equal %w\[vimeo.com], asked
     assert_equal "vimeo", post.reload.link_embed["provider"]
     assert_equal "Big Buck Bunny", post.link_embed_record.title
   end

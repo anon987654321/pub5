@@ -34,7 +34,7 @@ class AddDinteroMarketplaceState < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :marketplace_webhook_deliveries,
-              %i[provider event_delivery],
+              %i\[provider event_delivery],
               unique: true,
               name: "index_marketplace_webhook_deliveries_identity"
     add_index :marketplace_webhook_deliveries, :status

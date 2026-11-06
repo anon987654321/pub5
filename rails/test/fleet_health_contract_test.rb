@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class FleetHealthContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  ACTIVE_APPS = %w[amber brgen bsdports].freeze
+  ACTIVE_APPS = %w\[amber brgen bsdports].freeze
 
   def test_active_apps_expose_health_route
     ACTIVE_APPS.each do |app|
@@ -16,7 +16,7 @@ class FleetHealthContractTest < Minitest::Test
   end
 
   def test_shared_security_initializers_present
-    %w[security_headers.rb content_security_policy.rb].each do |name|
+    %w\[security_headers.rb content_security_policy.rb].each do |name|
       path = File.join(ROOT, "shared", "config", "initializers", name)
       assert File.file?(path), "missing #{name}"
       refute_includes File.read(path), "# Rails.application.configure do\n#", "#{name} should be active"

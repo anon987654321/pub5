@@ -37,7 +37,7 @@ class VpsDeployContractTest < Minitest::Test
   # the restore into the same pass instead of leaving a window with nobody looking.
   def test_the_order_that_survives_its_own_side_effects
     assert_equal "master", deploy_all.first
-    assert_equal %w[amber bsdports], deploy_all.last(2).sort
+    assert_equal %w\[amber bsdports], deploy_all.last(2).sort
     degraded = SOURCE[/^DEPLOY_ALL_DEGRADED=\(([^)]*)\)/, 1]&.split
     assert_equal "master", degraded&.last, "when the box cannot take master first, master goes last"
     assert_equal deploy_all.sort, degraded.sort
@@ -63,7 +63,7 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_master_deploy_refuses_root_override
     source = File.read(File.join(ROOT, "openbsd", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
-    assert_includes source, 'if [ "$ROOT" != "/home/dev/pub4" ]; then'
+    assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
     assert_includes source, 'pub4-admin master-web-assets-reset'
     assert_includes source, 'pub4-admin master-web-runtime-dirs'
     refute_includes source, 'doas rm -rf public/assets'
@@ -82,7 +82,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator CI_SOURCE.index("case $app in"), :<, CI_SOURCE.index("app_dir=/home/${app}/app")
 
     out = IO.popen(
-      ["zsh", "-c", "app='../outside'; #{guard}; print accepted", { err: %i[child out] }],
+      ["zsh", "-c", "app='../outside'; #{guard}; print accepted", { err: %i\[child out] }],
       &:read
     )
 
@@ -288,7 +288,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_rails_app_deploy_wrappers_refuse_root_execution
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       source = File.read(File.join(ROOT, "rails", app, "#{app}.sh"), encoding: "UTF-8")
       assert_includes source, 'if [[ $(id -u) -eq 0 ]]', "#{app} wrapper must refuse root"
       assert_includes source, 'refusing to run checkout code as root', "#{app} refusal should be explicit"
@@ -374,10 +374,10 @@ class VpsDeployContractTest < Minitest::Test
   # The CI stamp says how the commit was tested; it said ci_ok even when the
   # break-glass had skipped every suite.
   def test_the_ci_stamp_names_how_the_commit_was_tested
-    %w[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
+    %w\[ci_stamp=ci_ok ci_stamp=ci_attested ci_stamp=ci_skipped].each { |line| assert_includes CI_SOURCE, line }
     assert_includes CI_SOURCE, %q{doas /usr/local/sbin/pub4-admin stamp "$app" "$sha" "$ci_stamp"}
     admin = File.read(File.join(ROOT, "openbsd", "usr", "local", "sbin", "pub4-admin"), encoding: "UTF-8")
-    assert_includes admin, "%w[ok failed ci_ok ci_attested ci_skipped].include?(status)"
+    assert_includes admin, "%w\[ok failed ci_ok ci_attested ci_skipped].include?(status)"
   end
 
   def test_it_runs_as_root_and_keeps_git_as_the_deploy_user
@@ -416,7 +416,7 @@ class VpsDeployContractTest < Minitest::Test
   # and gone when the script exits.
   def test_the_deploy_flag_is_held_for_the_whole_deploy_and_released_on_exit
     refute_nil flag_block, "the deploy flag block is gone - the scan broke, or the flag did"
-    guard_glob = GUARD[%r{^DEPLOY_FLAGS="(/home/dev/pub4/\.deploying\S*)"$}, 1]
+    guard_glob = GUARD[%r{^DEPLOY_FLAGS="(/home/dev/pub5/\.deploying\S*)"$}, 1]
     assert_includes GUARD, "for _flag in $DEPLOY_FLAGS; do", "the guard no longer loops over DEPLOY_FLAGS"
     refute_nil guard_glob, "resource_guard no longer reads a deploy flag glob"
 
@@ -426,7 +426,7 @@ class VpsDeployContractTest < Minitest::Test
       flag = out.first
 
       assert_equal "held", out.last, "the flag is not on disk while the deploy runs"
-      assert File.fnmatch?(guard_glob.sub("/home/dev/pub4", repo), flag, File::FNM_DOTMATCH),
+      assert File.fnmatch?(guard_glob.sub("/home/dev/pub5", repo), flag, File::FNM_DOTMATCH),
              "#{flag} is not a name resource_guard's #{guard_glob} reads"
       refute File.exist?(flag), "the flag outlived the script, so shedding stays off for 30 minutes"
 
@@ -443,7 +443,7 @@ class VpsDeployContractTest < Minitest::Test
   # Runs the lock block alone in zsh against a scratch directory; returns [output, exit status].
   def lock_run(dir, ttl: 7200, body: "print acquired")
     script = "export VPS_DEPLOY_LOCK_DIR=#{dir}/deploy.lock VPS_DEPLOY_LOCK_TTL=#{ttl}\n#{lock_block}\n#{body}\n"
-    out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["zsh", "-c", script, { err: %i\[child out] }], &:read)
     [out, $?.exitstatus]
   end
 
@@ -639,7 +639,7 @@ class VpsDeployContractTest < Minitest::Test
       touch $deploy_flag
       #{body}
     ZSH
-    out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["zsh", "-c", script, { err: %i\[child out] }], &:read)
     [out, $?.exitstatus, File.exist?(log) ? File.read(log) : ""]
   end
 
@@ -687,7 +687,7 @@ class VpsDeployContractTest < Minitest::Test
 
   def test_a_kill_or_a_dropped_session_is_a_recorded_failure_not_a_silent_end
     Dir.mktmpdir do |dir|
-      %w[TERM HUP].each do |signal|
+      %w\[TERM HUP].each do |signal|
         out, status, log = finish_run(dir, "deploy_stage=precompile; kill -#{signal} $$; sleep 5")
         assert_equal({ "TERM" => 143, "HUP" => 129 }.fetch(signal), status, signal)
         assert_includes out, 'FAILED at stage "precompile"'
@@ -722,7 +722,7 @@ class VpsDeployContractTest < Minitest::Test
     stub = "set_stage() { :; }; admin_service() { print \"admin_service $*\" >> #{calls}; }"
     script = "app=brgen; jobs_service=brgen_jobs; jobs_was_up=1; VPS_DEPLOY_SWAPCTL=#{swapctl}\n" \
              "#{stub}\n#{swap_block}\nprint passed\n"
-    out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["zsh", "-c", script, { err: %i\[child out] }], &:read)
     [out + (File.exist?(calls) ? File.read(calls) : ""), $?.exitstatus]
   end
 
@@ -753,7 +753,7 @@ class VpsDeployContractTest < Minitest::Test
     File.chmod(0o755, File.join(dir, "df"))
     File.write(File.join(dir, "df"), "#!/bin/sh\nfor last; do :; done\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted on\\n/dev/x 17000000 1000 #{free_kb} 80%% %s\\n' \"$last\"\n")
     script = "app=brgen; VPS_DEPLOY_DF=#{dir}/df; set_stage() { :; }\n#{disk_block}\nprint passed\n"
-    out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["zsh", "-c", script, { err: %i\[child out] }], &:read)
     [out, $?.exitstatus]
   end
 
@@ -821,7 +821,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_every_environment_driven_wait_and_capacity_setting_is_validated_before_locking
-    %w[
+    %w\[
       VPS_DEPLOY_LOCK_TTL
       VPS_DEPLOY_RESTORE_WAIT
       VPS_DEPLOY_POLL

@@ -39,13 +39,13 @@ class KeyboardReachableControlsTest < Minitest::Test
   TAG = /<([a-z][a-z0-9-]*)((?:\s+[^\s=>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>/mi
 
   # ARIA roles whose contract includes keyboard operation.
-  WIDGET_ROLES = %w[
+  WIDGET_ROLES = %w\[
     slider button link tab option menuitem switch checkbox radio
     combobox spinbutton textbox searchbox treeitem
   ].freeze
 
   # Elements the browser makes focusable without help.
-  NATIVE = %w[button a input select textarea].freeze
+  NATIVE = %w\[button a input select textarea].freeze
 
   # Judged, not swept — which is what the register entry asks for.
   #
@@ -79,12 +79,12 @@ class KeyboardReachableControlsTest < Minitest::Test
   # A drag is a start event and a move event bound on one element. A move with
   # no start is a hover effect — parallax-tilt on the affiliate unit — and the
   # browser taking the pan there is the right outcome.
-  MOVE_EVENTS = %w[pointermove touchmove mousemove].freeze
-  START_EVENTS = %w[pointerdown touchstart mousedown].freeze
+  MOVE_EVENTS = %w\[pointermove touchmove mousemove].freeze
+  START_EVENTS = %w\[pointerdown touchstart mousedown].freeze
   # A press-and-hold binds a move only to cancel once the finger travels. The
   # browser taking the pan is the outcome it wants (the scroll cancels the hold),
   # so it is not a drag and declares no touch-action.
-  HOLD_CONTROLLERS = %w[long-press].freeze
+  HOLD_CONTROLLERS = %w\[long-press].freeze
   MOVE_LISTENER = /(\w+(?:\.\w+)*)\.addEventListener\(\s*["'](?:pointermove|touchmove|mousemove)["']/
   START_LISTENER = /this\.element\.addEventListener\(\s*["'](?:pointerdown|touchstart|mousedown)["']/
 
@@ -92,9 +92,9 @@ class KeyboardReachableControlsTest < Minitest::Test
   # scroll and a drag. manipulation is pan-x pan-y pinch-zoom: it drops the
   # double-tap delay and keeps every pan, which is why .app-shell declaring it
   # covers none of the surfaces inside the shell.
-  PANNING_TOUCH_ACTION = %w[auto manipulation inherit initial unset revert].freeze
+  PANNING_TOUCH_ACTION = %w\[auto manipulation inherit initial unset revert].freeze
 
-  VOID_TAGS = %w[area base br col embed hr img input link meta source track wbr].freeze
+  VOID_TAGS = %w\[area base br col embed hr img input link meta source track wbr].freeze
   MARKUP = Regexp.new("</[a-z][a-z0-9-]*\\s*>|#{TAG.source}", Regexp::IGNORECASE | Regexp::MULTILINE)
 
   # Surfaces that drag without a touch-action, each with the reason it is still
@@ -279,7 +279,7 @@ class KeyboardReachableControlsTest < Minitest::Test
 
   def test_controller_inventory_keeps_duplicate_basenames_from_distinct_trees
     Dir.mktmpdir("controller-census") do |root|
-      %w[brgen shared].each do |tree|
+      %w\[brgen shared].each do |tree|
         path = File.join(root, tree, "app/javascript/controllers", "drag_controller.js")
         FileUtils.mkdir_p(File.dirname(path))
         source = tree == "brgen" ?
@@ -389,7 +389,7 @@ class KeyboardReachableControlsTest < Minitest::Test
   # and a listener controller mounted from a helper hash is one it cannot find.
   def test_every_move_listener_is_placed_and_mounted
     unplaced = controller_sources.flat_map do |name, source|
-      (source.scan(MOVE_LISTENER).flatten - %w[this.element window document]).map { |target| "#{name}: #{target}" }
+      (source.scan(MOVE_LISTENER).flatten - %w\[this.element window document]).map { |target| "#{name}: #{target}" }
     end
     unmounted = listener_controllers - listener_surfaces.map(&:controller)
 

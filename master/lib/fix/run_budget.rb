@@ -560,7 +560,7 @@ module Master
 
       def limit(raw, default)
         return default if raw.to_s.strip.empty?
-        return Float::INFINITY if %w[0 off none unlimited].include?(raw.to_s.strip.downcase)
+        return Float::INFINITY if %w\[0 off none unlimited].include?(raw.to_s.strip.downcase)
 
         value = raw.to_f
         value.positive? ? value : default

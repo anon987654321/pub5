@@ -28,7 +28,7 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.datetime :last_used_at
       t.timestamps
     end
-    add_index :external_identities, %i[identity_provider_id subject], unique: true,
+    add_index :external_identities, %i\[identity_provider_id subject], unique: true,
                                                                       name: "index_external_identities_on_provider_and_subject",
                                                                       if_not_exists: true
 
@@ -40,7 +40,7 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.datetime :expires_at
       t.timestamps
     end
-    add_index :identity_assurances, %i[user_id level], unique: true, if_not_exists: true
+    add_index :identity_assurances, %i\[user_id level], unique: true, if_not_exists: true
 
     create_table :trust_signals, if_not_exists: true do |t|
       t.references :user, null: false, foreign_key: true
@@ -50,7 +50,7 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.text :metadata
       t.timestamps
     end
-    add_index :trust_signals, %i[user_id kind], if_not_exists: true
+    add_index :trust_signals, %i\[user_id kind], if_not_exists: true
 
     create_table :reputation_scores, if_not_exists: true do |t|
       t.references :user, null: false, foreign_key: true
@@ -59,7 +59,7 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.datetime :calculated_at
       t.timestamps
     end
-    add_index :reputation_scores, %i[user_id scope], unique: true, if_not_exists: true
+    add_index :reputation_scores, %i\[user_id scope], unique: true, if_not_exists: true
 
     create_table :account_merges, if_not_exists: true do |t|
       t.references :guest_user, null: false, foreign_key: { to_table: :users }
@@ -68,7 +68,7 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.datetime :merged_at
       t.timestamps
     end
-    add_index :account_merges, %i[guest_user_id user_id], unique: true, if_not_exists: true
+    add_index :account_merges, %i\[guest_user_id user_id], unique: true, if_not_exists: true
 
     create_table :moderation_flags, if_not_exists: true do |t|
       t.references :user, null: false, foreign_key: true
@@ -79,8 +79,8 @@ class RepairMissingIdentityAndTrustTables < ActiveRecord::Migration[8.0]
       t.text :reason
       t.timestamps
     end
-    add_index :moderation_flags, %i[flaggable_type flaggable_id], if_not_exists: true
-    add_index :moderation_flags, %i[user_id status], if_not_exists: true
+    add_index :moderation_flags, %i\[flaggable_type flaggable_id], if_not_exists: true
+    add_index :moderation_flags, %i\[user_id status], if_not_exists: true
   end
 
   def down

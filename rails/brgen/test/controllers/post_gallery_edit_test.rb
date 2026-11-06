@@ -47,7 +47,7 @@ class PostGalleryEditTest < ActionDispatch::IntegrationTest
     patch post_path(@post), params: { post: form }
 
     assert_redirected_to post_path(@post)
-    assert_equal %w[bilde-1.png bilde-0.png tiny.png], gallery_names
+    assert_equal %w\[bilde-1.png bilde-0.png tiny.png], gallery_names
 
     get post_path(@post)
     shown = css_select(".post-images img").map { _1["alt"] }

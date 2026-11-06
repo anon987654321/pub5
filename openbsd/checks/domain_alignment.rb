@@ -12,8 +12,8 @@ module Deploy
     REGISTRY = ROOT.join("rails", "brgen", "lib", "brgen", "domain_registry.rb")
     DEPLOY_INVENTORY = ROOT.join("openbsd", "deploy_inventory.json")
     RELAYD = ROOT.join("openbsd", "etc", "relayd.conf")
-    COMMON_SUBAPPS = %w[radio dating tv takeaway maps messenger].freeze
-    MASTER_ONLY_SUBAPPS = %w[ai].freeze
+    COMMON_SUBAPPS = %w\[radio dating tv takeaway maps messenger].freeze
+    MASTER_ONLY_SUBAPPS = %w\[ai].freeze
 
     def self.run
       new.run
@@ -39,7 +39,7 @@ module Deploy
         result.fail("#{domain}: DNS extra #{extra.join(', ')}") if extra.any?
       end
 
-      %w[tv dating takeaway maps messenger].each do |subapp|
+      %w\[tv dating takeaway maps messenger].each do |subapp|
         routes.fetch(subapp.to_sym).each do |label|
           next if COMMON_SUBAPPS.include?(label) || MASTER_ONLY_SUBAPPS.include?(label)
 
@@ -165,7 +165,7 @@ module Deploy
       match = text.match(/#{name}\s*=\s*%w\[([^\]]+)\]/)
       raise "missing #{name} in domain_registry.rb" unless match
 
-      # reject(&:empty?), because a %w[] wrapped across lines starts with a
+      # reject(&:empty?), because a %w\[] wrapped across lines starts with a
       # newline and split leaves an empty first element — which then compares
       # unequal against every real list and fails the check on formatting.
       match[1].split(/\s+/).reject(&:empty?)

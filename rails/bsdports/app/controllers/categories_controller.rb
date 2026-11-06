@@ -3,11 +3,11 @@
 class CategoriesController < ApplicationController
   include Shared::LiveSearchable
 
-  allow_unauthenticated_access only: %i[index show]
+  allow_unauthenticated_access only: %i\[index show]
 
   def index
     scope = Category.order(:name)
-    scope = apply_live_search(scope, columns: %w[name description], vertical: "categories") if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[name description], vertical: "categories") if live_search_query.present?
     @pagy, @categories = pagy(scope)
     # One grouped COUNT for the page; includes(:ports) loaded every port row
     # of every category on it to print a number.

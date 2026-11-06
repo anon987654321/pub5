@@ -272,7 +272,7 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
 
   test "index leaves out posts by people the reader blocks" do
     city = brgen_city
-    reader, blocked = %w[reader blocked].map do |role|
+    reader, blocked = %w\[reader blocked].map do |role|
       User.create!(email_address: "post-#{role}-#{SecureRandom.hex(4)}@example.com", password: "password12345", city:)
     end
     theirs = ActsAsTenant.with_tenant(city) { Post.create!(user: blocked, title: "Blokkert", content: "x", city:) }

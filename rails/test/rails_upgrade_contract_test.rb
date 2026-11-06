@@ -8,7 +8,7 @@ class RailsUpgradeContractTest < Minitest::Test
   def self.test(name, &block) = define_method("test_#{name.gsub(/\W+/, "_")}", &block)
 
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[brgen amber bsdports].freeze
+  APPS = %w\[brgen amber bsdports].freeze
   ROOTS = APPS + ["../master/web"]
   RAILS_REF = "c9e85dbe297e248dd2f217d04f84a94881ac046a"
 
@@ -80,7 +80,7 @@ class RailsUpgradeContractTest < Minitest::Test
   end
 
   test "SQLite foreign-key rebuild migrations restore enforcement" do
-    migrations = %w[
+    migrations = %w\[
       brgen/db/migrate/20260623221000_fix_dating_foreign_keys.rb
       brgen/db/migrate/20260623220000_fix_marketplace_order_foreign_keys.rb
       brgen/db/migrate/20260623222000_fix_takeaway_order_item_foreign_keys.rb
@@ -106,7 +106,7 @@ class RailsUpgradeContractTest < Minitest::Test
   end
 
   test "every locked application names the audited 8.2 source revision" do
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       source = read("#{app}/Gemfile.lock")
       assert_match(/^  remote: https:\/\/github.com\/rails\/rails\.git$/m, source)
       assert_match(/^  revision: #{Regexp.escape(RAILS_REF)}$/m, source)
@@ -127,7 +127,7 @@ class RailsUpgradeContractTest < Minitest::Test
   end
 
   test "Rails 8.2 locks keep dependency specs out of PLATFORMS" do
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       source = read("#{app}/Gemfile.lock")
       assert_equal 1, source.lines.count { |line| line.chomp == "GEM" }
 

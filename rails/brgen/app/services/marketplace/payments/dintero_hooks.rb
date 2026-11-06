@@ -6,7 +6,7 @@ require "uri"
 module Marketplace
   module Payments
     class DinteroHooks
-      EVENTS = %w[
+      EVENTS = %w\[
         checkout_authorization
         checkout_transaction
         approval_payout_destination_update
@@ -74,7 +74,7 @@ module Marketplace
           uri = URI.parse(url)
           raise ArgumentError, "DINTERO_HOOK_URL must use HTTPS" unless uri.is_a?(URI::HTTPS)
           raise ArgumentError, "DINTERO_HOOK_URL must include a host" if uri.host.blank?
-          raise ArgumentError, "DINTERO_HOOK_URL must not point to localhost" if %w[localhost 127.0.0.1 ::1].include?(uri.host)
+          raise ArgumentError, "DINTERO_HOOK_URL must not point to localhost" if %w\[localhost 127.0.0.1 ::1].include?(uri.host)
           raise ArgumentError, "DINTERO_HOOK_URL must not point to Dintero" if uri.host == "dintero.com" || uri.host.end_with?(".dintero.com")
           true
         end

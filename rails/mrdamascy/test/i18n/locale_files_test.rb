@@ -5,7 +5,7 @@ require "test_helper"
 # Every string exists in both languages, and every static key the app asks
 # for is there.
 class LocaleFilesTest < ActiveSupport::TestCase
-  PLURAL_KEYS = %w[zero one two few many other].freeze
+  PLURAL_KEYS = %w\[zero one two few many other].freeze
 
   test "nb and en carry the same keys" do
     nb = locale_keys("nb")

@@ -27,7 +27,7 @@ module Master
           CATALOG_MODEL_LIMIT = 5_000
           CREDITS_URL = "https://openrouter.ai/api/v1/credits"
           KEY_FILES = "~/.config/master/env (or /etc/master.env on OpenBSD)"
-          LANE_SOURCES = %i[dead].freeze
+          LANE_SOURCES = %i\[dead].freeze
 
           def reachable?(model_id) = unreachable_reason(model_id).nil?
 
@@ -236,7 +236,7 @@ module Master
               token = line.strip.split(/\s+/, 2).first.to_s
               next unless token.match?(/\A[a-z0-9][a-z0-9._-]{2,}\z/i)
               next unless token.include?("-")
-              next if %w[model models reasoning additional available usage remaining].include?(token.downcase)
+              next if %w\[model models reasoning additional available usage remaining].include?(token.downcase)
               token
             end.uniq
           end
@@ -252,7 +252,7 @@ module Master
             @live_catalog_models = catalog_rows("openrouter").filter_map do |row|
               id = row["id"].to_s
               # The list lives as long as the router, so only the day-long refusal keeps a model out.
-              next if id.empty? || !Master::Io::LaneState.usable?(id, sources: %i[daily_quota])
+              next if id.empty? || !Master::Io::LaneState.usable?(id, sources: %i\[daily_quota])
               next unless chat_catalog_model?(row)
 
               id
@@ -490,7 +490,7 @@ module Master
 
           def replicate_models = Array(@rules["replicate_chat"]).map { |slug| "replicate:#{slug}" }
 
-          def replicate_key? = %w[REPLICATE_API_TOKEN REPLICATE_API_KEY].any? { |env| Master.api_key_present?(env) }
+          def replicate_key? = %w\[REPLICATE_API_TOKEN REPLICATE_API_KEY].any? { |env| Master.api_key_present?(env) }
         end
       end
     end

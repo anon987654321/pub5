@@ -8,7 +8,7 @@ class ImportmapIntegrityContractTest < Minitest::Test
   def self.test(name, &block) = define_method("test_#{name.gsub(/\W+/, "_")}", &block)
 
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[brgen amber bsdports].freeze
+  APPS = %w\[brgen amber bsdports].freeze
 
   def read(app, path)
     File.read(File.join(ROOT, app, path))
@@ -38,7 +38,7 @@ class ImportmapIntegrityContractTest < Minitest::Test
   test "the shared importmap stays the single pin source for framework modules" do
     source = File.read(File.join(ROOT, "shared", "config", "importmap_baseline.rb"))
 
-    %w[
+    %w\[
       @hotwired/turbo-rails
       @hotwired/stimulus
       @rails/request.js

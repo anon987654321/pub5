@@ -22,7 +22,7 @@ module Master
     # still carries SNI, certificate verification and the Host header. Every
     # caller connects through `http_for`, never `Net::HTTP.start(uri.host, ...)`.
     module SsrfGuard
-      RESERVED_RANGES = %w[
+      RESERVED_RANGES = %w\[
         0.0.0.0/8
         100.64.0.0/10
         192.0.0.0/24

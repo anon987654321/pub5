@@ -40,7 +40,7 @@ module Deploy
     # only correct until the next engine, and the last one cost 71 pages of
     # coverage before anybody noticed. Some engines nest inside another
     # (brgen_radio/tv, brgen_marketplace/engines/takeaway), hence the **.
-    VIEW_PATHS = (%w[brgen/app/views amber/app/views bsdports/app/views] +
+    VIEW_PATHS = (%w\[brgen/app/views amber/app/views bsdports/app/views] +
                   Dir.glob(File.join(RAILS_ROOT, "brgen_*/**/app/views"))
                      .map { |path| path.sub("#{RAILS_ROOT}/", "") }.uniq.sort).freeze
 
@@ -110,7 +110,7 @@ module Deploy
       "brgen" => {
         "marketplace cart" => ["#{MP}/controllers/marketplace/carts_controller.rb", "#{MP}/views/marketplace/carts/show.html.erb"],
         "marketplace nav bar" => ["#{MP}/views/marketplace/_nav_bar.html.erb"],
-        "yep search surface" => %w[../__shared/app/assets/stylesheets/_search_yep.scss],
+        "yep search surface" => %w\[../__shared/app/assets/stylesheets/_search_yep.scss],
         "payment scaffold or honest stub" => [
           "app/services/marketplace/payments/stripe_checkout.rb",
           "app/services/marketplace/payments/vipps_checkout.rb",

@@ -10,7 +10,7 @@ module Playlist
     belongs_to :set, class_name: "Playlist::Set", optional: true
     belongs_to :playlist, class_name: "Playlist::Playlist", optional: true
 
-    validates :user_id, uniqueness: { scope: %i[set_id playlist_id] }
+    validates :user_id, uniqueness: { scope: %i\[set_id playlist_id] }
     validate :target_present
 
     private

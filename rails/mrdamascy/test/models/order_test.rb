@@ -179,7 +179,7 @@ class OrderTest < ActiveSupport::TestCase
     assert_difference "@user.stamp_count", 1 do
       order.deliver!
     end
-    %i[nb en].each do |locale|
+    %i\[nb en].each do |locale|
       rule = I18n.t("loyalty.rule_one", locale:)
       assert_no_match(/\d/, rule, "#{locale} loyalty.rule_one promises a minimum the code does not keep")
     end

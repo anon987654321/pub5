@@ -24,7 +24,7 @@ class DraftsControllerTest < ActionDispatch::IntegrationTest
     patch draft_path("post_new"), params: { title: "x" }
 
     draft = session[:drafts]["post_new"]
-    %w[controller action id authenticity_token _method].each do |key|
+    %w\[controller action id authenticity_token _method].each do |key|
       refute draft.key?(key), "draft kept #{key}"
     end
   end

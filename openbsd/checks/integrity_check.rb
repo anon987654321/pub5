@@ -44,7 +44,7 @@ def integrity_run(checks, root: INTEGRITY_ROOT, on_vps: Deploy::Environment.on_v
     # A check that measured nothing is neither a pass nor a failure. It is listed
     # as skipped with its own reason, and blocks only under
     # CHECK_STRICT_INCONCLUSIVE=1, the same policy the rails runner applies.
-    if ok == :inconclusive && !%w[1 true yes on].include?(ENV["CHECK_STRICT_INCONCLUSIVE"].to_s.downcase)
+    if ok == :inconclusive && !%w\[1 true yes on].include?(ENV["CHECK_STRICT_INCONCLUSIVE"].to_s.downcase)
       report[:skipped] << "#{check.name}: measured nothing - #{out.lines.first.to_s.strip}"
 
       io.puts "#{label} inconclusive"

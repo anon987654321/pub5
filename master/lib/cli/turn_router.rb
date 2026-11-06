@@ -99,9 +99,9 @@ module Master
       FIX_SUBJECT = /\b(?:bugs?|violations?|lint|tests?|specs?|errors?|failures?|code|build|checks?)\b/i
       FIX_COMMAND = /\A\s*fix(?:\s*[.!]?\s*\z|#{FIX_TARGET}|\b(?=.*#{FIX_SUBJECT}))/i
 
-      DEPLOY_ACTION_WORDS = %w[deploy release ship publish launch push promote rollout].freeze
-      DEPLOY_DESTINATION_WORDS = %w[vm23 production prod live].freeze
-      DEPLOY_NEGATIVE_WORDS = %w[why when what how status check inspect logs log failed failing failure worked work working].freeze
+      DEPLOY_ACTION_WORDS = %w\[deploy release ship publish launch push promote rollout].freeze
+      DEPLOY_DESTINATION_WORDS = %w\[vm23 production prod live].freeze
+      DEPLOY_NEGATIVE_WORDS = %w\[why when what how status check inspect logs log failed failing failure worked work working].freeze
 
       def deployment_intent?(text)
         value = text.to_s.strip
@@ -154,18 +154,18 @@ module Master
       # PIPELINE_COMMANDS is what a person types. There is one operation, /fix:
       # it observes, critiques, repairs and observes again; its reading half is
       # /fix --dry-run --critique (READING_FLAGS). /scan rewrites to /fix.
-      PIPELINE_COMMANDS = %w[fix].freeze
+      PIPELINE_COMMANDS = %w\[fix].freeze
 
       # MODEL_ALIASES is what the intent router accepts from a model, which is not
       # ours to shrink. A model asked to name the command may answer "sweep",
       # "council" or "review", words no person types here, and the cost of not
       # accepting them is a request that falls silently to chat. They are read as
       # /fix; the ones that do not write (READING_WORDS) as its reading half.
-      MODEL_ALIASES = %w[through workflow triad sweep self council review critique].freeze
-      READING_WORDS = %w[council review critique].freeze
+      MODEL_ALIASES = %w\[through workflow triad sweep self council review critique].freeze
+      READING_WORDS = %w\[council review critique].freeze
       PIPELINE_WORDS = (PIPELINE_COMMANDS + MODEL_ALIASES).freeze
-      FOLD_SLASH = %w[fold run].freeze
-      READ_SLASH = %w[why laws].freeze
+      FOLD_SLASH = %w\[fold run].freeze
+      READ_SLASH = %w\[why laws].freeze
       # The reads that are /fix flags now; the standalone names still answer.
       CONVERGENCE_SLASH = { "prove" => "--prove", "explain" => "--explain" }.freeze
       # The words that pin the write run's critique: /simplify is /fix whose
@@ -180,7 +180,7 @@ module Master
       # chat is a worse answer than one that still works. They rewrite to /fix,
       # the one command advertised.
       PIPELINE_SLASH = (
-        %w[fix review critique council scan self workflow triad sweep through] +
+        %w\[fix review critique council scan self workflow triad sweep through] +
         CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys
       ).uniq.freeze
 
@@ -407,7 +407,7 @@ module Master
       # The words that mean "go through the tree and change it". They are
       # spellings of /fix: a sweep with its own reading-and-repair lifecycle
       # beside the engine's is a second engine, which is what /fix absorbed.
-      WRITING_SLASH = %w[fix scan sweep through workflow triad self].freeze
+      WRITING_SLASH = %w\[fix scan sweep through workflow triad self].freeze
 
       def rewrite_slash(input)
         name, rest = input.sub(%r{\A/}, "").split(/\s+/, 2)

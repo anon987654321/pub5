@@ -30,16 +30,16 @@ class AddIntegrityConstraints < ActiveRecord::Migration[8.1]
     add_index :marketplace_saved_searches, :category_id unless index_exists?(:marketplace_saved_searches, :category_id)
     add_index :messages, :sender_id unless index_exists?(:messages, :sender_id)
 
-    dedup_and_unique_index :dating_dislikes, %i[disliker_id dislikee_id]
-    dedup_and_unique_index :dating_likes, %i[liker_id likee_id]
-    dedup_and_unique_index :dating_matches, %i[initiator_id receiver_id]
-    dedup_and_unique_index :follows, %i[follower_id followed_id]
-    dedup_and_unique_index :marketplace_categories, %i[slug]
-    dedup_and_unique_index :playlist_playlist_tracks, %i[playlist_playlist_id playlist_track_id]
-    dedup_and_unique_index :takeaway_reviews, %i[order_id user_id]
-    dedup_and_unique_index :tv_channels, %i[slug]
-    dedup_and_unique_index :tv_subscriptions, %i[user_id tv_channel_id]
-    dedup_and_unique_index :votes, %i[user_id votable_type votable_id]
+    dedup_and_unique_index :dating_dislikes, %i\[disliker_id dislikee_id]
+    dedup_and_unique_index :dating_likes, %i\[liker_id likee_id]
+    dedup_and_unique_index :dating_matches, %i\[initiator_id receiver_id]
+    dedup_and_unique_index :follows, %i\[follower_id followed_id]
+    dedup_and_unique_index :marketplace_categories, %i\[slug]
+    dedup_and_unique_index :playlist_playlist_tracks, %i\[playlist_playlist_id playlist_track_id]
+    dedup_and_unique_index :takeaway_reviews, %i\[order_id user_id]
+    dedup_and_unique_index :tv_channels, %i\[slug]
+    dedup_and_unique_index :tv_subscriptions, %i\[user_id tv_channel_id]
+    dedup_and_unique_index :votes, %i\[user_id votable_type votable_id]
 
     rename_duplicate_usernames
     add_index :users, :username, unique: true unless index_exists?(:users, :username, unique: true)
@@ -47,16 +47,16 @@ class AddIntegrityConstraints < ActiveRecord::Migration[8.1]
 
   def down
     remove_index :users, :username if index_exists?(:users, :username, unique: true)
-    remove_index :votes, column: %i[user_id votable_type votable_id] if index_exists?(:votes, %i[user_id votable_type votable_id])
-    remove_index :tv_subscriptions, column: %i[user_id tv_channel_id] if index_exists?(:tv_subscriptions, %i[user_id tv_channel_id])
+    remove_index :votes, column: %i\[user_id votable_type votable_id] if index_exists?(:votes, %i\[user_id votable_type votable_id])
+    remove_index :tv_subscriptions, column: %i\[user_id tv_channel_id] if index_exists?(:tv_subscriptions, %i\[user_id tv_channel_id])
     remove_index :tv_channels, :slug if index_exists?(:tv_channels, :slug)
-    remove_index :takeaway_reviews, column: %i[order_id user_id] if index_exists?(:takeaway_reviews, %i[order_id user_id])
-    remove_index :playlist_playlist_tracks, column: %i[playlist_playlist_id playlist_track_id] if index_exists?(:playlist_playlist_tracks, %i[playlist_playlist_id playlist_track_id])
+    remove_index :takeaway_reviews, column: %i\[order_id user_id] if index_exists?(:takeaway_reviews, %i\[order_id user_id])
+    remove_index :playlist_playlist_tracks, column: %i\[playlist_playlist_id playlist_track_id] if index_exists?(:playlist_playlist_tracks, %i\[playlist_playlist_id playlist_track_id])
     remove_index :marketplace_categories, :slug if index_exists?(:marketplace_categories, :slug)
-    remove_index :follows, column: %i[follower_id followed_id] if index_exists?(:follows, %i[follower_id followed_id])
-    remove_index :dating_matches, column: %i[initiator_id receiver_id] if index_exists?(:dating_matches, %i[initiator_id receiver_id])
-    remove_index :dating_likes, column: %i[liker_id likee_id] if index_exists?(:dating_likes, %i[liker_id likee_id])
-    remove_index :dating_dislikes, column: %i[disliker_id dislikee_id] if index_exists?(:dating_dislikes, %i[disliker_id dislikee_id])
+    remove_index :follows, column: %i\[follower_id followed_id] if index_exists?(:follows, %i\[follower_id followed_id])
+    remove_index :dating_matches, column: %i\[initiator_id receiver_id] if index_exists?(:dating_matches, %i\[initiator_id receiver_id])
+    remove_index :dating_likes, column: %i\[liker_id likee_id] if index_exists?(:dating_likes, %i\[liker_id likee_id])
+    remove_index :dating_dislikes, column: %i\[disliker_id dislikee_id] if index_exists?(:dating_dislikes, %i\[disliker_id dislikee_id])
 
     remove_index :messages, :sender_id if index_exists?(:messages, :sender_id)
     remove_index :marketplace_saved_searches, :category_id if index_exists?(:marketplace_saved_searches, :category_id)

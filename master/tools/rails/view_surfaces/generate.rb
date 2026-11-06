@@ -17,7 +17,7 @@ require "tmpdir"
 
 HERE = __dir__
 rails = File.expand_path("../../../../RAILS", HERE)
-APPS = %w[amber bsdports brgen].freeze
+APPS = %w\[amber bsdports brgen].freeze
 
 def run!(*cmd, chdir:, out: nil)
   stdout, stderr, status = Master::Io::Exec.capture3(*cmd, chdir:)

@@ -24,7 +24,7 @@ class AdVisualContractTest < Minitest::Test
   CONTRACT = TOKENS.fetch("tokens").fetch("ad_visual_contract")
 
   def test_shared_ad_partials_exist
-    %w[_ad_slot.html.erb _affiliate_feed_unit.html.erb _affiliate_disclosure.html.erb].each do |partial|
+    %w\[_ad_slot.html.erb _affiliate_feed_unit.html.erb _affiliate_disclosure.html.erb].each do |partial|
       assert File.file?(File.join(SHARED, partial)), "missing shared ad partial #{partial}"
     end
   end
@@ -53,7 +53,7 @@ class AdVisualContractTest < Minitest::Test
   end
 
   def test_ad_partials_carry_no_hard_coded_hex_colors
-    %w[_ad_slot.html.erb _affiliate_feed_unit.html.erb _affiliate_disclosure.html.erb].each do |partial|
+    %w\[_ad_slot.html.erb _affiliate_feed_unit.html.erb _affiliate_disclosure.html.erb].each do |partial|
       hexes = read(partial).scan(/#[0-9a-fA-F]{3,8}\b/)
       assert_empty hexes, "#{partial} hard-codes colors #{hexes.uniq}; every color resolves through a token"
     end
@@ -66,7 +66,7 @@ class AdVisualContractTest < Minitest::Test
 
   def test_master_audit_tool_covers_the_manifest_contract
     tool = File.read(File.expand_path("../../master/tools/visual/audit_ad.rb", __dir__), encoding: "UTF-8")
-    %w[html css placement].each do |key|
+    %w\[html css placement].each do |key|
       assert tool.include?(key), "tools/visual/audit_ad.rb must require #{key} evidence in every manifest"
     end
     assert tool.include?("BrowserlessMeasurements"),
@@ -74,7 +74,7 @@ class AdVisualContractTest < Minitest::Test
   end
 
   def test_tradedoubler_service_and_conversion_model_survive_the_contract
-    %w[app/services/shared/tradedoubler.rb app/models/shared/affiliate_product.rb].each do |path|
+    %w\[app/services/shared/tradedoubler.rb app/models/shared/affiliate_product.rb].each do |path|
       full = File.expand_path("../shared/#{path}", __dir__)
       assert File.file?(full), "the monetisation stack lost #{path}; the ad contract depends on it"
     end

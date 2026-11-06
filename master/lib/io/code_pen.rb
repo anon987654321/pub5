@@ -55,7 +55,7 @@ module Master
 
         user, slug = match.captures
         base = "https://codepen.io/#{user}/pen/#{slug}"
-        payload = %w[html css js].filter_map do |ext|
+        payload = %w\[html css js].filter_map do |ext|
           response = fetch(rewrite(base, ext))
           next unless response
 

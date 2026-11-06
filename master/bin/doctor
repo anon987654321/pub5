@@ -98,7 +98,7 @@ rescue StandardError => e
 end
 
 def check_api_keys
-  keys = %w[XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY DEEPSEEK_API_KEY GEMINI_API_KEY]
+  keys = %w\[XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY DEEPSEEK_API_KEY GEMINI_API_KEY]
   present = keys.select { |var| ENV[var].to_s.length >= 16 }
   if present.any?
     return Check.new(name: "api-keys", state: :pass, detail: present.join(", "))
@@ -157,7 +157,7 @@ def check_key_rotator
   count = Master::Io::KeyRotator.keys.size
   Check.new(name: "key-rotator", state: (count.positive?) ? :pass : :fail, detail: "#{count} OpenRouter key(s)")
 rescue NameError
-  keys = %w[OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3]
+  keys = %w\[OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3]
   count = keys.count { |var| ENV[var].to_s.length >= 16 }
   Check.new(name: "key-rotator", state: (count.positive?) ? :pass : :fail, detail: "#{count} OpenRouter key(s)")
 end

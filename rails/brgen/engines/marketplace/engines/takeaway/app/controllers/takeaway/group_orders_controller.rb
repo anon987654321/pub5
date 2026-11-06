@@ -17,7 +17,7 @@ class Takeaway::GroupOrdersController < Takeaway::BaseController
   # Anyone with the link. The token is the invitation — an order id in a link
   # pasted into a group chat would let somebody read the next lunch by counting.
   def show
-    @order = Takeaway::Order.includes(:restaurant, order_items: %i[menu_item user]).find_by!(group_token: params[:id])
+    @order = Takeaway::Order.includes(:restaurant, order_items: %i\[menu_item user]).find_by!(group_token: params[:id])
     return redirect_to(root_path, alert: t("flash.takeaway.group_closed")) unless @order.joinable?
 
     @menu_items = @order.restaurant.menu_items.where(available: true).order(:name)

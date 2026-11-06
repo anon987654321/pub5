@@ -18,7 +18,7 @@ module Master::Core
   # An Effect is something the agent wants to do. Nothing reaches the world
   # except by proposing an Effect and having the Constitution admit it. The verb
   # set is closed and small; that closure is what makes the agent auditable.
-  VERBS = %i[read write probe exec git http ask note critique done].freeze
+  VERBS = %i\[read write probe exec git http ask note critique done].freeze
 
   # Cooperative cancellation shared by hosts and the Fold. A cancellation is
   # sticky: the first reason remains authoritative across racing callers.
@@ -71,7 +71,7 @@ module Master::Core
   Reversibility = Data.define(:kind, :scope, :compensation, :reason) do
     def initialize(kind:, scope: nil, compensation: nil, reason: nil)
       kind = kind.to_sym
-      allowed = %i[non_mutating session_state reversible compensatable approval_required policy_gated unknown]
+      allowed = %i\[non_mutating session_state reversible compensatable approval_required policy_gated unknown]
       raise ArgumentError, "unknown reversibility kind: #{kind}" unless allowed.include?(kind)
 
       super(kind:, scope: scope&.to_s&.freeze, compensation:, reason: reason.to_s.freeze)
@@ -229,7 +229,7 @@ module Master::Core
       raise ArgumentError, "compensation must be an object with argv and reason" unless raw.is_a?(Hash)
 
       data = raw.to_h { |key, value| [key.to_sym, value] }
-      extra = data.keys - %i[argv reason]
+      extra = data.keys - %i\[argv reason]
       raise ArgumentError, "unknown compensation fields: #{extra.join(", ")}" unless extra.empty?
 
       CompensatingAction.new(argv: data[:argv], reason: data[:reason])
@@ -301,18 +301,18 @@ module Master::Core
   # halfway through a task.
   class Capabilities
     PROFILES = {
-      boot: %i[stdio read probe execute],
-      model: %i[stdio read model],
+      boot: %i\[stdio read probe execute],
+      model: %i\[stdio read model],
       # Reading the web is observing: the http verb is a guarded GET, so a
       # question about a page runs in observe or plan mode and must be able to
       # fetch it. Writing and executing stay out.
-      observe: %i[stdio read probe network],
-      plan: %i[stdio read probe model network],
-      fix: %i[stdio read probe write create execute network],
-      repair: %i[stdio read probe write create execute network],
-      deploy: %i[stdio read probe write create execute network deploy],
-      device: %i[stdio read device],
-      world: %i[stdio read world],
+      observe: %i\[stdio read probe network],
+      plan: %i\[stdio read probe model network],
+      fix: %i\[stdio read probe write create execute network],
+      repair: %i\[stdio read probe write create execute network],
+      deploy: %i\[stdio read probe write create execute network deploy],
+      device: %i\[stdio read device],
+      world: %i\[stdio read world],
     }.freeze
 
     def self.for(name)
@@ -321,7 +321,7 @@ module Master::Core
     end
 
     def self.read_only
-      new(name: :read_only, capabilities: %i[stdio read probe])
+      new(name: :read_only, capabilities: %i\[stdio read probe])
     end
 
     def initialize(name:, capabilities:)

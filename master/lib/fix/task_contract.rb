@@ -12,7 +12,7 @@ module Master
       class Invalid < StandardError; end
 
       PATH = File.expand_path("../../data/task_contract.yml", __dir__).freeze
-      REQUIRED = %w[intent scope preserve proof].freeze
+      REQUIRED = %w\[intent scope preserve proof].freeze
       EVIDENCE_KEY = :master_fix_task_contract_preservation_evidence
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
@@ -90,7 +90,7 @@ module Master
       def normalize_new_paths(value, scope:, schema:)
         raise Invalid, "task contract new_paths must be an array" unless value.is_a?(Array)
 
-        fields = Array(schema.fetch("new_path_fields", %w[path reason])).map(&:to_s)
+        fields = Array(schema.fetch("new_path_fields", %w\[path reason])).map(&:to_s)
         rows = value.map do |row|
           raise Invalid, "each new_paths entry must be a mapping" unless row.is_a?(Hash)
 
@@ -258,7 +258,7 @@ module Master
           "schema" => schema.fetch("schema"),
           "required_fields" => schema.fetch("required_fields"),
           "optional_fields" => schema.fetch("optional_fields", []),
-          "new_path_fields" => schema.fetch("new_path_fields", %w[path reason]),
+          "new_path_fields" => schema.fetch("new_path_fields", %w\[path reason]),
           "common_proof" => schema.fetch("common_proof"),
           "intents" => schema.fetch("intents").transform_values { |value| value.slice("description", "must_preserve") },
         }

@@ -7,9 +7,9 @@ require "brgen/city_content"
 
 class DomainRegistryTest < ActiveSupport::TestCase
   test "network readiness separates live, pending and not-yet-live domains" do
-    assert_equal %w[brgen.no cardff.uk edinbrgh.uk frankfrt.de oshlo.no stvanger.no trndheim.no],
+    assert_equal %w\[brgen.no cardff.uk edinbrgh.uk frankfrt.de oshlo.no stvanger.no trndheim.no],
                  Brgen::DomainRegistry.live_network_domains.sort
-    assert_equal %w[denvr.us lndon.uk lsangeles.com wshingtondc.com],
+    assert_equal %w\[denvr.us lndon.uk lsangeles.com wshingtondc.com],
                  Brgen::DomainRegistry.pending_network_domains.sort
     assert_equal Brgen::DomainRegistry.live_network_domains.sort,
                  Brgen::DomainRegistry.live_network_entries.map(&:domain).sort
@@ -20,10 +20,10 @@ class DomainRegistryTest < ActiveSupport::TestCase
   end
 
   test "nordic readiness helper uses country identity rather than locale aliases" do
-    %w[brgen.no oshlo.no reykjavk.is kbenhvn.dk gtebrg.se hlsinki.fi].each do |domain|
+    %w\[brgen.no oshlo.no reykjavk.is kbenhvn.dk gtebrg.se hlsinki.fi].each do |domain|
       assert Brgen::DomainRegistry.nordic?(domain), "#{domain} should be Nordic"
     end
-    %w[cardff.uk frankfrt.de lsangeles.com].each do |domain|
+    %w\[cardff.uk frankfrt.de lsangeles.com].each do |domain|
       refute Brgen::DomainRegistry.nordic?(domain), "#{domain} should not be Nordic"
     end
     refute Brgen::DomainRegistry.nordic?("missing.example")
@@ -93,9 +93,9 @@ class DomainRegistryTest < ActiveSupport::TestCase
   end
 
   test "subdomain constants match routes constraints" do
-    assert_equal %w[tv], Brgen::DomainRegistry::TV_SUBDOMAINS
-    assert_equal %w[dating], Brgen::DomainRegistry::DATING_SUBDOMAINS
-    assert_equal %w[radio], Brgen::DomainRegistry::RADIO_SUBDOMAINS
+    assert_equal %w\[tv], Brgen::DomainRegistry::TV_SUBDOMAINS
+    assert_equal %w\[dating], Brgen::DomainRegistry::DATING_SUBDOMAINS
+    assert_equal %w\[radio], Brgen::DomainRegistry::RADIO_SUBDOMAINS
     assert_includes Brgen::DomainRegistry::MARKETPLACE_SUBDOMAINS, "markedsplass"
   end
 

@@ -7,11 +7,11 @@
 class Communities::WikiController < ApplicationController
   include Shared::FindableBySlug
 
-  allow_unauthenticated_access only: %i[index show]
+  allow_unauthenticated_access only: %i\[index show]
   before_action :set_community
   before_action :require_readable!
-  before_action :require_moderator!, only: %i[new create edit update revert]
-  before_action :set_page, only: %i[show edit update revert]
+  before_action :require_moderator!, only: %i\[new create edit update revert]
+  before_action :set_page, only: %i\[show edit update revert]
 
   def index
     @pages = @community.wiki_pages.order(:title)

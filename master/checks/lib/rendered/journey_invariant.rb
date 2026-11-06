@@ -96,7 +96,7 @@ module Deploy
 
     def journeys = @journeys ||= Hash.new(0)
 
-    def journey_counts = %w[frame focus reconnect pager].map { |name| "#{name} #{journeys[name]}" }.join(", ")
+    def journey_counts = %w\[frame focus reconnect pager].map { |name| "#{name} #{journeys[name]}" }.join(", ")
 
     SURFACE_JOURNEYS = { "frame" => [TurboJourneys::FRAME, :judge_frame],
                          "focus" => [TurboJourneys::FOCUS, :judge_focus] }.freeze
@@ -259,7 +259,7 @@ module Deploy
 
     def structural_diff(a, b)
       diffs = []
-      %w[title h1_count scroll_width].each do |field|
+      %w\[title h1_count scroll_width].each do |field|
         diffs << "#{field} #{a[field].inspect}->#{b[field].inspect}" if a[field] != b[field]
       end
       (a["landmarks"] || {}).each do |mark, was|
@@ -274,7 +274,7 @@ module Deploy
       (old.keys & new.keys).each do |key|
         next if diffs.size > 12
 
-        %w[w h].each do |axis|
+        %w\[w h].each do |axis|
           was = old[key].dig("rect", axis).to_i
           now = new[key].dig("rect", axis).to_i
           diffs << "#{key} #{axis} #{was}->#{now}" if (was - now).abs > 2

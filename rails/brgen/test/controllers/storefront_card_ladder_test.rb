@@ -12,7 +12,7 @@ require "test_helper"
 # or delivery window is stored anywhere, so none is drawn. Price leads the title
 # because layout_search holds that as a hard floor.
 class StorefrontCardLadderTest < ActionDispatch::IntegrationTest
-  LADDER = %w[deal-card-img deal-price deal-card-title deal-card-subtitle store-stars deal-meta store-badge].freeze
+  LADDER = %w\[deal-card-img deal-price deal-card-title deal-card-subtitle store-stars deal-meta store-badge].freeze
 
   setup do
     Brgen::CitySeed.sync! if City.table_exists?
@@ -83,7 +83,7 @@ class StorefrontCardLadderTest < ActionDispatch::IntegrationTest
     get marketplace.deals_path
 
     deal = css_select(".deal-card.deal").first
-    assert_equal %w[deal-card-img deal-price deal-card-title deal-card-subtitle store-stars deal-meta], rungs_in(deal).uniq
+    assert_equal %w\[deal-card-img deal-price deal-card-title deal-card-subtitle store-stars deal-meta], rungs_in(deal).uniq
   end
 
   test "takeaway tiles keep the ladder" do

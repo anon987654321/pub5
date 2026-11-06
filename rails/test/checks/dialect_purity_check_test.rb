@@ -184,6 +184,6 @@ class DialectPurityCheckTest < Minitest::Test
     end
 
     refute result.ok?, "missing master design rules passed"
-    assert_match(/missing MASTER\/data\/tokens\.yml/, result.failures.first)
+    assert_match(/missing master\/data\/tokens\.yml/, result.failures.first)
   end
 end

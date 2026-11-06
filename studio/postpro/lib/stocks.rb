@@ -95,7 +95,7 @@ STOCKS = {
 # equal per-channel curves only discard a colour cast, so a chain on one of them
 # kept the photograph's colour (a "silver gelatin" take came out in colour).
 # film_curve develops these from a panchromatic luminance image instead.
-MONOCHROME_STOCKS = %i[tri_x ilford_hp5 ilford_delta3200].freeze
+MONOCHROME_STOCKS = %i\[tri_x ilford_hp5 ilford_delta3200].freeze
 
 def panchromatic(image)
   r, g, b = rgb_bands(image).cast("float").bandsplit
@@ -216,7 +216,7 @@ PUSH_RESPONSE = {
 }.freeze
 
 # Stocks with integral colored couplers (C-41 process) — get orange mask treatment.
-C41_STOCKS = %i[
+C41_STOCKS = %i\[
   kodak_portra kodak_vision3 kodak_vision3_50d kodak_vision3_500t cinestill_800t
   kodak_ektar100 fuji_pro400h
 ].freeze

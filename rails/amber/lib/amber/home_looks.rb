@@ -12,7 +12,7 @@ module Amber
 
     # A look with no outfit name of its own takes the name for its place, so
     # the page never shows a numbered placeholder.
-    NAME_KEYS = %i[weekend studio dinner morning].freeze
+    NAME_KEYS = %i\[weekend studio dinner morning].freeze
 
     Garment = Data.define(:title, :color, :category, :zone)
     Look = Data.define(:name, :garments) do
@@ -31,7 +31,7 @@ module Amber
 
     # Listed first to last, so a coat comes after the trousers and the
     # sunglasses after the hat.
-    LAYER_ORDER = %i[legs feet dress torso hand crown ears eyes].freeze
+    LAYER_ORDER = %i\[legs feet dress torso hand crown ears eyes].freeze
 
     module_function
 

@@ -10,7 +10,7 @@ class KeyRotatorTest < Minitest::Test
   Rotator = Master::Io::KeyRotator
   # Two variables of our own, so the multi-key branches run whatever
   # models.yml happens to list.
-  TWO_VARS = %w[TEST_ROTATOR_KEY_A TEST_ROTATOR_KEY_B].freeze
+  TWO_VARS = %w\[TEST_ROTATOR_KEY_A TEST_ROTATOR_KEY_B].freeze
 
   def setup
     @index = Rotator.instance_variable_get(:@index)

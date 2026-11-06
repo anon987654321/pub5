@@ -185,7 +185,7 @@ module Ports
     end
 
     def queue_dependencies(port, metadata)
-      keys = %i[build_depends run_depends test_depends lib_depends]
+      keys = %i\[build_depends run_depends test_depends lib_depends]
       # Thin or partial rows do not describe the full dependency state. Reconcile
       # only when the source explicitly supplies all four dependency classes.
       return unless keys.all? { |key| metadata.key?(key) && !metadata[key].nil? }

@@ -35,7 +35,7 @@ queries = Hash.new(0)
 view_ms = Hash.new(0.0)
 
 ActiveSupport::Notifications.subscribe("sql.active_record") do |_n, _s, _f, _i, payload|
-  next if payload[:name].to_s.in?(%w[SCHEMA TRANSACTION CACHE])
+  next if payload[:name].to_s.in?(%w\[SCHEMA TRANSACTION CACHE])
 
   queries[payload[:sql].gsub(/\d+/, "?").gsub(/'[^']*'/, "?").squeeze(" ")] += 1
 end

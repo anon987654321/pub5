@@ -1,4 +1,4 @@
-<% kinds = defined?(Shared::Reaction) ? Shared::Reaction::KINDS : %w[like love laugh wow sad angry local] %>
+<% kinds = defined?(Shared::Reaction) ? Shared::Reaction::KINDS : %w\[like love laugh wow sad angry local] %>
 <span id="reactions_<%= dom_id(target) %>">
   <% kinds.each do |k| %>
     <% label = t("reactions.kinds.#{k}") %>

@@ -198,7 +198,7 @@ module Shared
         # Each reply reads its author and, for its reply form, the thread it is
         # on; neither is loaded by a query this shape, and strict loading
         # refuses the lazy read. A post page with a single reply raised on it.
-        loads = %i[user commentable].select { |name| klass.reflect_on_association(name) }
+        loads = %i\[user commentable].select { |name| klass.reflect_on_association(name) }
         replies = klass.where(parent_id: comment.id)
         replies = replies.where.not(user_id: blocked_comment_author_ids)
         replies.best.preload(*loads)
@@ -484,7 +484,7 @@ module Shared
     end
 
     def legal_social_network?
-      %w[brgen amber].include?(legal_app_key)
+      %w\[brgen amber].include?(legal_app_key)
     end
   end
 end

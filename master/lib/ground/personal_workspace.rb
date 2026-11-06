@@ -56,7 +56,7 @@ module Master
         end
 
         dir = ensure!(root:, subject:)
-        paths = %w[USER.md MEMORY.md].to_h { |name| [name, File.join(dir, name)] }
+        paths = %w\[USER.md MEMORY.md].to_h { |name| [name, File.join(dir, name)] }
         total = paths.values.sum do |path|
           raise PermissionDenied, "personal workspace files must not be symlinks" if File.symlink?(path)
           raise PermissionDenied, "personal workspace file is not a regular file" unless File.file?(path)

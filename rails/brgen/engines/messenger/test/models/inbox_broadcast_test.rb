@@ -37,7 +37,7 @@ class InboxBroadcastTest < ActiveSupport::TestCase
     streams = capture_turbo_stream_broadcasts(inbox_of(@me)) { perform_enqueued_jobs(only: InboxBroadcastJob) }
 
     moved = streams.select { |stream| stream["action"] == "prepend" }
-    assert_equal %w[inbox_conversations rail_conversations], moved.map { |stream| stream["target"] }
+    assert_equal %w\[inbox_conversations rail_conversations], moved.map { |stream| stream["target"] }
     assert_includes moved.first.to_html, "Kino i kveld?"
     assert_includes moved.first.to_html, @friend.display_name, "the row is named as the recipient sees it"
     badge = streams.find { |stream| stream["target"] == "messenger_unread_badge" }

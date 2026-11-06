@@ -85,9 +85,9 @@ class DeployPreflightTest < Minitest::Test
   def fake_git(head: SHA, origin: SHA, dirty: "")
     lambda do |_root, *argv|
       case argv.first(2)
-      when %w[rev-parse HEAD] then head
-      when %w[rev-parse origin/main] then origin
-      when %w[status --porcelain] then dirty
+      when %w\[rev-parse HEAD] then head
+      when %w\[rev-parse origin/main] then origin
+      when %w\[status --porcelain] then dirty
       else ""
       end
     end
@@ -109,7 +109,7 @@ class DeployPreflightTest < Minitest::Test
 
     assert ok
     assert_equal ["brgen"], ran
-    assert_equal "cd /home/dev/pub4 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} " \
+    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} " \
                  "VPS_DEPLOY_CI_SHA=#{SHA} zsh openbsd/bin/vps-deploy brgen", command
   end
 
@@ -131,7 +131,7 @@ class DeployPreflightTest < Minitest::Test
   def test_remote_command_pins_the_sha_and_attests_the_preflight
     ok, command = remote
     assert ok
-    assert_equal "cd /home/dev/pub4 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} zsh openbsd/bin/vps-deploy all", command
+    assert_equal "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{SHA} VPS_DEPLOY_PREFLIGHT_SHA=#{SHA} zsh openbsd/bin/vps-deploy all", command
   end
 
   def test_remote_command_refuses_a_failed_preflight_and_sends_nothing

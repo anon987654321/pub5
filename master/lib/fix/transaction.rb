@@ -28,7 +28,7 @@ module Master
       ROOT_DIR = ".master/fix_transactions"
       LOCK = ".master/fix_transaction.lock"
       MANIFEST = "manifest.json"
-      DELIVERY_FIELDS = %i[state active head_before head_after marked].freeze
+      DELIVERY_FIELDS = %i\[state active head_before head_after marked].freeze
 
       def self.normalize_id(id)
         value = id.to_s
@@ -242,7 +242,7 @@ module Master
 
       def rollback!
         # A committed pass is delivered work; undoing it is a new change, never a rollback.
-        if %w[committed rolled_back].include?(@state)
+        if %w\[committed rolled_back].include?(@state)
           return Result.err("rollback refused: transaction already #{@state.tr("_", " ")}", category: :policy)
         end
         raise "transaction not active" unless @active || persisted?
@@ -429,7 +429,7 @@ module Master
           safe[:paths_digest] = Digest::SHA256.hexdigest(paths.join("\0"))
         end
 
-        %i[error result message detail output].each do |key|
+        %i\[error result message detail output].each do |key|
           value = safe.delete(key)
           next unless value.is_a?(String)
 
@@ -677,7 +677,7 @@ module Master
       def validate_manifest!(data)
         raise "transaction manifest malformed" unless data.is_a?(Hash) && data["version"].to_i == 1 && data["id"] == @id
         state, paths, snapshots, seen = data.values_at("state", "paths", "snapshots", "seen")
-        raise "transaction manifest state unsupported" unless %w[open delivering committed rolled_back conflict trace_failed].include?(state)
+        raise "transaction manifest state unsupported" unless %w\[open delivering committed rolled_back conflict trace_failed].include?(state)
         raise "transaction manifest delivery mark malformed" unless [nil, true, false].include?(data["delivery_marked"])
         raise "transaction manifest delivery heads malformed" unless data.values_at("delivery_head_before", "delivery_head_after").all? { |head| head.nil? || head.is_a?(String) }
         raise "transaction manifest paths malformed: unsafe or non-canonical path" unless paths.is_a?(Array) && paths.all? { |p| p.is_a?(String) && p != "." && normalize(p) == p }
@@ -685,7 +685,7 @@ module Master
 
         paths.each do |path|
           item = snapshots[path]
-          valid = item.is_a?(Hash) && item["path"] == path && %w[missing file symlink].include?(item["kind"]) &&
+          valid = item.is_a?(Hash) && item["path"] == path && %w\[missing file symlink].include?(item["kind"]) &&
                   (item["kind"] == "missing" ? item["exists"] == false && item["mode"].nil? :
                     item["exists"] == true && item["mode"].is_a?(Integer) && item["mode"].between?(0, 0o7777))
           raise "transaction manifest snapshot invalid: #{path}" unless valid
@@ -696,7 +696,7 @@ module Master
             dir = File.expand_path(File.join(@dir, "files"))
             valid = item["link"].nil? && File.dirname(File.expand_path(store)) == dir &&
                     File.basename(store).match?(/\A#{Regexp.escape(encoded(path))}(?:\.[0-9a-f]{16})?\z/) &&
-                    !File.symlink?(store) && !File.directory?(store) && (!%w[open delivering].include?(state) || File.file?(store))
+                    !File.symlink?(store) && !File.directory?(store) && (!%w\[open delivering].include?(state) || File.file?(store))
             raise "transaction manifest snapshot invalid: #{path}" unless valid
           else
             raise "transaction manifest snapshot invalid: #{path}" if item["link"] || item["store"]

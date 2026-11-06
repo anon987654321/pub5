@@ -28,7 +28,7 @@ module Master
       MAX_CAPTURES = 500
       MAX_PAGINATION_OUTPUT_BYTES = 128 * 1024
       SESSION_ID = /\A[A-Za-z0-9_-]{1,40}\z/.freeze
-      OPERATIONS = %w[click set type].freeze
+      OPERATIONS = %w\[click set type].freeze
       DEFAULT_NEXT_SELECTORS = [
         "a[rel='next']",
         "a[aria-label*='Next' i]",
@@ -418,7 +418,7 @@ module Master
       end
 
       def web_uri?(uri)
-        %w[http https].include?(uri.scheme.to_s.downcase) &&
+        %w\[http https].include?(uri.scheme.to_s.downcase) &&
           !uri.host.to_s.empty? && uri.userinfo.nil?
       end
     end

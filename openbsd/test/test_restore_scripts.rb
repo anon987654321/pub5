@@ -139,7 +139,7 @@ class RestoreScriptsTest < Minitest::Test
     case cmd
     when /VACUUM INTO/
       FileUtils.mkdir_p(remote)
-      %w[brgen amber bsdports].each do |app|
+      %w\[brgen amber bsdports].each do |app|
         db = File.join(remote, "#{app}-production.sqlite3")
         system("sqlite3", db, "CREATE TABLE IF NOT EXISTS schema_migrations(version); INSERT INTO schema_migrations VALUES ('20260928090000'); CREATE TABLE users(id integer); INSERT INTO users VALUES (1);")
       end

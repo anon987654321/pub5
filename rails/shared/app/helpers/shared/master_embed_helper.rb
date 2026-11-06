@@ -13,8 +13,8 @@ module Shared
 
       uri = URI.parse(base)
       q = URI.decode_www_form(String(uri.query))
-      q << %w[autostart 1] if autostart
-      q << %w[embed 1] if embed
+      q << %w\[autostart 1] if autostart
+      q << %w\[embed 1] if embed
       uri.query = URI.encode_www_form(q)
       uri.to_s
     rescue URI::InvalidURIError

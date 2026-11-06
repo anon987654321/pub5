@@ -36,7 +36,7 @@ class AssetUrlLintTest < Minitest::Test
   def test_amber_can_resolve_the_lightgallery_icon_font
     sheet = File.join(L::RAILS_ROOT, "shared/public/lightgallery.css")
 
-    %w[../fonts/lg.woff2 ../fonts/lg.woff ../images/loading.gif].each do |ref|
+    %w\[../fonts/lg.woff2 ../fonts/lg.woff ../images/loading.gif].each do |ref|
       assert L.satisfied_everywhere?(ref, sheet),
              "#{ref} must resolve for every app that links shared's lightgallery.css, not just brgen"
     end

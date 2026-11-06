@@ -14,7 +14,7 @@ module Master
       # Labels a translator owns. Body copy, headings and links in lists are
       # user content that reads the same in both locales, so they are not held
       # to the identical-text check.
-      UI_TAGS = %w[button label legend th summary option].freeze
+      UI_TAGS = %w\[button label legend th summary option].freeze
       CHROME = /\A(header|nav|footer)(\.|\z)/
       LIMIT = 50
 

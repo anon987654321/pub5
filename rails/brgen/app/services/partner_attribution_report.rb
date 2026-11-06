@@ -10,7 +10,7 @@ require "set"
 # short route hash, never a visitor identity, slug or individual page path.
 class PartnerAttributionReport
   DEFAULT_WINDOW = 7.days
-  DIMENSIONS = %w[city surface route].freeze
+  DIMENSIONS = %w\[city surface route].freeze
 
   def initialize(window: DEFAULT_WINDOW, now: Time.current)
     @window = window

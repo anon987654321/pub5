@@ -5,7 +5,7 @@ class Marketplace::JobDetail < ApplicationRecord
   include Marketplace::KronerFields
   kroner_field :salary_min_cents
   kroner_field :salary_max_cents
-  EMPLOYMENT_TYPES = %w[full_time part_time contract seasonal internship].freeze
+  EMPLOYMENT_TYPES = %w\[full_time part_time contract seasonal internship].freeze
 
   belongs_to :listing, class_name: "Marketplace::Listing"
 

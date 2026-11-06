@@ -6,7 +6,7 @@ class SurfaceMicroRefinementContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   SHEET = File.join(ROOT, "shared/app/assets/stylesheets/_surface_micro_refinements.scss")
   MATRIX = File.join(ROOT, "docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX.md")
-  STACKS = %w[
+  STACKS = %w\[
     shared/app/assets/stylesheets/_stack.scss
     shared/app/assets/stylesheets/_stack_brgen.scss
   ].freeze

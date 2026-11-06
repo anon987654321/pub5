@@ -20,6 +20,6 @@ class CreateMarketplaceReturns < ActiveRecord::Migration[8.1]
     end
 
     # One open return per order; a second is the same argument twice.
-    add_index :marketplace_returns, %i[order_id status]
+    add_index :marketplace_returns, %i\[order_id status]
   end
 end

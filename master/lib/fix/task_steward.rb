@@ -121,7 +121,7 @@ module Master
 
       def continuation_only?(record)
         goal = record["goal"].to_s.downcase.strip.split.join(" ")
-        goal = goal[0...-1] while %w[! . ? ...].include?(goal[-1])
+        goal = goal[0...-1] while %w\[! . ? ...].include?(goal[-1])
         intent = record.dig("operator", "intent").to_s
         intent == "continue_prior_plan" || CONTEXTLESS_GOALS.include?(goal.delete("'"))
       end
@@ -130,7 +130,7 @@ module Master
         return false unless record
         return false unless record["origin"].to_s == "fold"
         return false unless record["auto_continue"] == true
-        return false unless %w[running waiting].include?(record["state"].to_s)
+        return false unless %w\[running waiting].include?(record["state"].to_s)
 
         due?(record)
       end

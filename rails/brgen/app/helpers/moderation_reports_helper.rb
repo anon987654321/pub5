@@ -31,7 +31,7 @@ module ModerationReportsHelper
   end
 
   def report_excerpt(subject)
-    text = %i[title name content body description].lazy.map { subject.try(_1).to_s }.find(&:present?)
+    text = %i\[title name content body description].lazy.map { subject.try(_1).to_s }.find(&:present?)
     text = strip_tags(text.to_s).squish
     text.present? ? truncate(text, length: EXCERPT_LENGTH) : subject.model_name.human
   end

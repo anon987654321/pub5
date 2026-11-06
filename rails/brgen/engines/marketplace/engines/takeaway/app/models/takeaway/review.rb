@@ -15,7 +15,7 @@ class Takeaway::Review < ApplicationRecord
   validates :rating, presence: true, inclusion: { in: 1..5 }
   validates :order_id, uniqueness: { scope: :user_id }, allow_nil: true
 
-  after_commit :refresh_restaurant_rating, on: %i[create destroy]
+  after_commit :refresh_restaurant_rating, on: %i\[create destroy]
 
   private
 

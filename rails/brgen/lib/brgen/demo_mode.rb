@@ -12,7 +12,7 @@ module Brgen
     end
 
     def seed_allowed?(environment: Rails.env.to_s, env: ENV)
-      %w[development test].include?(environment.to_s) || disclosure_enabled?(env:)
+      %w\[development test].include?(environment.to_s) || disclosure_enabled?(env:)
     end
   end
 end

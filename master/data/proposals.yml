@@ -300,7 +300,7 @@ proposals:
     reason: >
       The tree holds neither, and this row asserted both from a laptop by listing
       what the repo contains rather than what the box does. Measured on vm23:
-      /home/dev/pub4/RAILS has no master.key and no .env anywhere in it, and one
+      /home/dev/pub5/RAILS has no master.key and no .env anywhere in it, and one
       production.sqlite3 - amber's, 4096 bytes, zero tables, untracked. The real
       databases live under /home/<app>/app/storage and are not on the path the
       chmod touches. What it widens there is source code already public on GitHub.

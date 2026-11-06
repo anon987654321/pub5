@@ -209,7 +209,7 @@ module Master
         entries = case options
                   when Array then options
                   when Hash
-                    if %i[name label value].any? { |key| options.key?(key) || options.key?(key.to_s) }
+                    if %i\[name label value].any? { |key| options.key?(key) || options.key?(key.to_s) }
                       [options]
                     else
                       options.map { |name, value| { name:, value: } }

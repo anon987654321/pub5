@@ -24,7 +24,7 @@ class AddPlaylistTimestampedCommentsAndAudioVersions < ActiveRecord::Migration[8
     add_index :playlist_timestamped_comments, :track_id
     add_index :playlist_timestamped_comments, :user_id
     # Backs Playlist::TimestampedComment.chronological.
-    add_index :playlist_timestamped_comments, %i[track_id timestamp_seconds created_at],
+    add_index :playlist_timestamped_comments, %i\[track_id timestamp_seconds created_at],
               name: "index_playlist_timestamped_comments_chronological"
 
     create_table :playlist_audio_versions do |t|

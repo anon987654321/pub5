@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class AddCityTenantColumns < ActiveRecord::Migration[8.1]
-  TABLES = %i[posts users].freeze
+  TABLES = %i\[posts users].freeze
 
   def up
     TABLES.each do |table|

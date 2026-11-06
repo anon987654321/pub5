@@ -14,7 +14,7 @@ module Master
     # cross-file analyzers, browser probes and model reviewers each keep their
     # own evidence contract while sharing one convergence and coverage ledger.
     class FourStreamAssessment
-      STREAMS = %i[
+      STREAMS = %i\[
         lexical_violations
         lexical_opportunities
         semantic_violations
@@ -24,9 +24,9 @@ module Master
 
       SURFACES = ::Law::ASSESSMENT_SURFACES
 
-      FINDING_STATES = %i[violation_found opportunity_found].freeze
+      FINDING_STATES = %i\[violation_found opportunity_found].freeze
 
-      STATES = %i[
+      STATES = %i\[
         assessed_clean violation_found opportunity_found not_applicable inconclusive
       ].freeze
 
@@ -96,7 +96,7 @@ module Master
         state = status.to_sym
         raise ArgumentError, "unknown assessment state: #{state}" unless STATES.include?(state)
         detail = reason.to_s.strip
-        raise ArgumentError, "#{state} requires a reason" if %i[not_applicable inconclusive].include?(state) && detail.empty?
+        raise ArgumentError, "#{state} requires a reason" if %i\[not_applicable inconclusive].include?(state) && detail.empty?
 
         evidence_rows = evidence.nil? ? [] : Array(evidence)
         finding_rows = findings.nil? ? [] : Array(findings)
@@ -201,7 +201,7 @@ module Master
 
       def clean?
         complete? && cells.all? do |key|
-          %i[assessed_clean not_applicable].include?(history[key].last.status)
+          %i\[assessed_clean not_applicable].include?(history[key].last.status)
         end
       end
 
@@ -229,7 +229,7 @@ module Master
           stream_summary:,
           open_findings: latest_by_cell.filter_map do |key, row|
             next unless row && (
-              %i[violation_found opportunity_found].include?(row.status) ||
+              %i\[violation_found opportunity_found].include?(row.status) ||
               (row.status == :inconclusive && (row.evidence.any? || row.findings.any?))
             )
 
@@ -429,7 +429,7 @@ module Master
         row[:status] = row.fetch(:status).to_sym
         raise ArgumentError, "unknown assessment state: #{row[:status]}" unless STATES.include?(row[:status])
 
-        if %i[not_applicable inconclusive].include?(row[:status]) && row[:reason].to_s.strip.empty?
+        if %i\[not_applicable inconclusive].include?(row[:status]) && row[:reason].to_s.strip.empty?
           raise ArgumentError, "#{row[:status]} needs a reason"
         end
         if row[:status] == :assessed_clean && Array(row[:evidence]).compact.empty?

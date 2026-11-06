@@ -96,7 +96,7 @@ module Operator
       # chat views belong in the same instrument; generated bundles stay out.
       surfaces + engines +
         Dir[File.join(WEB_ROOT, "app/views/**/*.erb")] +
-        %w[face.css chat_upload.css].map { |name| File.join(WEB_ROOT, "public", name) }.select { |f| File.file?(f) }
+        %w\[face.css chat_upload.css].map { |name| File.join(WEB_ROOT, "public", name) }.select { |f| File.file?(f) }
     end
 
     def app_for(file)

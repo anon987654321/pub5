@@ -33,7 +33,7 @@ require "minitest/autorun"
 # decision someone takes rather than one that arrives.
 class RawSchemaObjectsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   # CREATE <kind> <name>, in raw SQL inside a migration.
   RAW = /CREATE\s+(VIRTUAL\s+TABLE|TRIGGER|VIEW)\s+(?:IF\s+NOT\s+EXISTS\s+)?["`]?(\w+)/i

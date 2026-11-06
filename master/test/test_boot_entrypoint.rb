@@ -66,7 +66,7 @@ class TestBootEntrypoint < Minitest::Test
   def test_supported_ruby_window_spans_openbsd_packages_and_ruby_four
     env = Operator::Environment
 
-    %w[3.3.9 3.4.9 4.0.5 4.0.7].each do |version|
+    %w\[3.3.9 3.4.9 4.0.5 4.0.7].each do |version|
       assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new(version) && Gem::Version.new(version) < env::SUPPORTED_RUBY_MAX, version
     end
     refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.9")

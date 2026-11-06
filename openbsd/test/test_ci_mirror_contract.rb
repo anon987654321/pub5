@@ -16,11 +16,11 @@ class CiMirrorContractTest < Minitest::Test
 
   # Whole directories the sync archives, plus the files it names one by one.
   def mirrored_trees
-    %w[master/tools master/lib/operator]
+    %w\[master/tools master/lib/operator]
   end
 
   def mirrored_files
-    list = SYNC[/for rel in (MASTER\/lib\/.*?); do/m, 1]
+    list = SYNC[/for rel in (master\/lib\/.*?); do/m, 1]
     refute_nil list, "the master/lib file list not found in ci-sync.ksh -- the scan broke, not the sync"
     list.delete("\\").split + SYNC.scan(%r{archive HEAD (master/data/\S+)}).flatten
   end
@@ -37,11 +37,11 @@ class CiMirrorContractTest < Minitest::Test
   def ci_tools
     names = CI[/%w\[\s*(.*?)\s*\]\.each/m, 1].split
     refute_empty names
-    roots = %w[master/tools master/tools/rails/operator]
+    roots = %w\[master/tools master/tools/rails/operator]
     lints = names.map do |name|
       roots.map { |r| "#{r}/#{name}.rb" }.find { |p| File.file?(File.join(ROOT, p)) } or flunk("#{name}.rb is in no tool root")
     end
-    lints + %w[master/tools/rails/build_all_css.rb master/tools/rails/operator/ci_guard.rb
+    lints + %w\[master/tools/rails/build_all_css.rb master/tools/rails/operator/ci_guard.rb
                master/tools/rails/operator/dmesg.rb]
   end
 

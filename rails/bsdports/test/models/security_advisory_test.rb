@@ -47,7 +47,7 @@ class SecurityAdvisoryTest < ActiveSupport::TestCase
   end
 
   test "the four severities are ordered from low to critical" do
-    assert_equal %w[low medium high critical], SecurityAdvisory.severities.keys
+    assert_equal %w\[low medium high critical], SecurityAdvisory.severities.keys
     assert_equal (0..3).to_a, SecurityAdvisory.severities.values
   end
 

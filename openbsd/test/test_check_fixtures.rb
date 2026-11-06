@@ -158,12 +158,12 @@ class DeployIdentityFixtureTest < Minitest::Test
       File.write(File.join(dir, "helper.sh"), "need_cmd() { :; }\n")
       library = File.join(dir, "_deploy.sh")
       File.write(library, body)
-      shell_functions_missing(library, %w[deploy_tracked_app need_cmd])
+      shell_functions_missing(library, %w\[deploy_tracked_app need_cmd])
     end
   end
 
   def test_a_function_named_only_in_a_comment_is_missing
-    assert_equal %w[deploy_tracked_app need_cmd], missing("# deploy_tracked_app() lives here\n")
+    assert_equal %w\[deploy_tracked_app need_cmd], missing("# deploy_tracked_app() lives here\n")
   end
 
   def test_a_function_from_a_sourced_file_counts
@@ -311,7 +311,7 @@ class DeploySmokeFixtureTest < Minitest::Test
   openbsd = File.expand_path("..", __dir__)
   require File.join(openbsd, "checks", "deploy_smoke_check.rb")
 
-  PUBLIC = %w[/up /health].freeze
+  PUBLIC = %w\[/up /health].freeze
 
   def rc_findings(body)
     failures = []

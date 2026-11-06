@@ -13,7 +13,7 @@ class Playlist::DillaSketch < ApplicationRecord
   has_one_attached :render
 
   MAX_NAME = 100
-  STATUSES = %w[idle queued rendering ready failed].freeze
+  STATUSES = %w\[idle queued rendering ready failed].freeze
 
   validates :name, presence: true, length: { maximum: MAX_NAME }
   validates :state, presence: true

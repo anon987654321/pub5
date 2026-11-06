@@ -22,15 +22,15 @@ module Master
     # an explicit Bundler operation, not a surprise hidden inside boot.
     class DependencyManager
       SYSTEM_PACKAGES = {
-        termux: %w[git clang make cmake pkg-config sqlite openssl libffi],
-        openbsd: %w[pkgconf gmake sqlite3 libffi],
-        macos: %w[pkg-config openssl@3 libyaml libffi sqlite],
-        debian: %w[build-essential pkg-config libssl-dev libyaml-dev libffi-dev libsqlite3-dev],
-        fedora: %w[gcc gcc-c++ make cmake pkgconf-pkg-config openssl-devel libyaml-devel libffi-devel sqlite-devel],
-        arch: %w[base-devel cmake pkgconf openssl libyaml libffi sqlite],
+        termux: %w\[git clang make cmake pkg-config sqlite openssl libffi],
+        openbsd: %w\[pkgconf gmake sqlite3 libffi],
+        macos: %w\[pkg-config openssl@3 libyaml libffi sqlite],
+        debian: %w\[build-essential pkg-config libssl-dev libyaml-dev libffi-dev libsqlite3-dev],
+        fedora: %w\[gcc gcc-c++ make cmake pkgconf-pkg-config openssl-devel libyaml-devel libffi-devel sqlite-devel],
+        arch: %w\[base-devel cmake pkgconf openssl libyaml libffi sqlite],
       }.freeze
 
-      BUNDLE_CONTEXT_KEYS = %w[
+      BUNDLE_CONTEXT_KEYS = %w\[
         BUNDLE_APP_CONFIG
         BUNDLE_BIN
         BUNDLE_DEPLOYMENT
@@ -605,7 +605,7 @@ module Master
         # A parent that ran bundler/setup leaves RUBYOPT and RUBYLIB pointing at
         # its own Bundler; the pinned `bundle` then loads a second copy beside it
         # and Bundler::Thor dies with a superclass mismatch.
-        (BUNDLE_CONTEXT_KEYS + %w[RUBYOPT RUBYLIB BUNDLE_BIN_PATH BUNDLER_SETUP BUNDLER_VERSION]).each { |key| env[key] = nil }
+        (BUNDLE_CONTEXT_KEYS + %w\[RUBYOPT RUBYLIB BUNDLE_BIN_PATH BUNDLER_SETUP BUNDLER_VERSION]).each { |key| env[key] = nil }
         env.merge!(
           "BUNDLE_GEMFILE" => File.join(@root, "Gemfile"),
           "BUNDLE_RETRY" => "3",
@@ -775,7 +775,7 @@ module Master
           [[["brew", "install", *packages], "brew"]]
         when :debian
           [
-            privileged(%w[apt-get update], "apt-get"),
+            privileged(%w\[apt-get update], "apt-get"),
             privileged(["apt-get", "install", "-y", *packages], "apt-get"),
           ].compact
         when :fedora

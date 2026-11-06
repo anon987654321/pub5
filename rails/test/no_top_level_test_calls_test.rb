@@ -39,6 +39,6 @@ class NoTopLevelTestCallsTest < Minitest::Test
 
     offenders = files.select { |f| !top_level_test_calls(File.read(f, encoding: "UTF-8")).empty? }
 
-    assert_empty offenders.map { |f| f.delete_prefix("#{RAILS}/") }
+    assert_empty offenders.map { |f| f.delete_prefix("#{rails}/") }
   end
 end

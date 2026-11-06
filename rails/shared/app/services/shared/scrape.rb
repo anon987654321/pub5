@@ -16,8 +16,8 @@ module Shared
   class Scrape
     MODEL = ENV.fetch("SCRAPE_MODEL", Shared::Llm::DEFAULT_MODEL)
     HTML_MAX = 60_000
-    BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
-    BLOCKED_NETWORKS = %w[
+    BLOCKED_HOST_SUFFIXES = %w\[.localhost .local .internal .home.arpa .onion].freeze
+    BLOCKED_NETWORKS = %w\[
       0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
       172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 192.168.0.0/16
       198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
@@ -62,7 +62,7 @@ module Shared
     # This application-level guard complements, but does not replace, host firewalling.
     def self.public_http_url?(value, resolver: ->(host) { Shared::OutboundHttp.resolve_addresses(host) })
       uri = URI.parse(value.to_s)
-      return false unless %w[http https].include?(uri.scheme&.downcase)
+      return false unless %w\[http https].include?(uri.scheme&.downcase)
       return false if uri.userinfo || uri.hostname.to_s.empty?
 
       host = uri.hostname.downcase.delete_suffix(".")
@@ -81,7 +81,7 @@ module Shared
 
     def self.safe_request_url?(value, resolver: ->(host) { Shared::OutboundHttp.resolve_addresses(host) })
       uri = URI.parse(value.to_s)
-      return true if %w[data blob about].include?(uri.scheme&.downcase)
+      return true if %w\[data blob about].include?(uri.scheme&.downcase)
 
       public_http_url?(value, resolver:)
     rescue URI::InvalidURIError, ArgumentError

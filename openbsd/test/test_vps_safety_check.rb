@@ -49,7 +49,7 @@ class VpsSafetyCheckTest < Minitest::Test
                    File.join(dir, "rails", "_runtime_check.sh"))
       FileUtils.cp(File.join(ROOT, "..", "rails", "_bundle.sh"),
                    File.join(dir, "rails", "_bundle.sh"))
-      %w[_service.sh _sync.sh _deploy.sh].each do |name|
+      %w\[_service.sh _sync.sh _deploy.sh].each do |name|
         FileUtils.cp(File.join(ROOT, "..", "rails", name), File.join(dir, "rails", name))
       end
       FileUtils.mkdir_p(File.join(openbsd, "bin"))
@@ -152,7 +152,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_root_resource_guard_must_not_source_checkout_helper
     with_fixture do |dir, _|
       path = File.join(dir, "openbsd", "usr", "local", "bin", "resource_guard.sh")
-      text = File.read(path) + "\nGUARD_REPO=/home/dev/pub4\n"
+      text = File.read(path) + "\nGUARD_REPO=/home/dev/pub5\n"
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -175,7 +175,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_emergency_cpu_runner_must_not_source_checkout_helper
     with_fixture do |dir, _|
       path = File.join(dir, "openbsd", "usr", "local", "bin", "emergency_cpu.sh")
-      text = File.read(path) + "\nGUARD_REPO=/home/dev/pub4\n"
+      text = File.read(path) + "\nGUARD_REPO=/home/dev/pub5\n"
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -484,7 +484,7 @@ class VpsSafetyCheckTest < Minitest::Test
   # The ack is the whole safety of the console scripts, so hold the behaviour:
   # with it unset the script refuses before it spawns anything.
   def test_console_automation_refuses_without_the_ack
-    expect = %w[/usr/bin/expect /usr/local/bin/expect].find { |path| File.executable?(path) }
+    expect = %w\[/usr/bin/expect /usr/local/bin/expect].find { |path| File.executable?(path) }
     skip "expect not installed" unless expect
 
     env = { "I_UNDERSTAND_CONSOLE_RISK" => nil }
@@ -504,7 +504,7 @@ class VpsSafetyCheckTest < Minitest::Test
   end
 
   def test_console_scripts_live_in_openbsd_bin
-    %w[validate_doas.ksh vps_console.exp].each do |name|
+    %w\[validate_doas.ksh vps_console.exp].each do |name|
       assert File.file?(File.join(ROOT, "bin", name)), "missing #{name} in openbsd/bin"
     end
   end

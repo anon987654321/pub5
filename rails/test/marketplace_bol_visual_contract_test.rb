@@ -49,7 +49,7 @@ class MarketplaceBolVisualContractTest < Minitest::Test
     refute_nil shared, "the storefront token block must apply to both verticals"
     declarations = shared.split("\n}", 2).first
 
-    %w[--store-ink --store-page --store-rule --store-well --store-text-meta
+    %w\[--store-ink --store-page --store-rule --store-well --store-text-meta
        --store-text-heading --store-text-price --store-text-action --store-text-brand
        --store-text-brand-compact --store-text-hero-compact --store-text-glyph
        --store-icon-size].each do |token|

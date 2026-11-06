@@ -78,7 +78,7 @@ module Brgen
       order = Takeaway::Order.new(
         user: buyer,
         restaurant: rest,
-        status: %w[pending out_for_delivery delivered].sample,
+        status: %w\[pending out_for_delivery delivered].sample,
         delivery_address: Faker::Address.street_address,
         special_instructions: [ nil, Faker::Lorem.sentence ].sample
       )

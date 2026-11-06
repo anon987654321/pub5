@@ -5,7 +5,7 @@
 class NativePushToken < ApplicationRecord
   # sandbox for a development build, production for TestFlight and the store:
   # APNs keeps them apart, and a token sent to the wrong one is rejected.
-  ENVIRONMENTS = %w[production sandbox].freeze
+  ENVIRONMENTS = %w\[production sandbox].freeze
 
   belongs_to :user
 

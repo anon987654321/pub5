@@ -235,7 +235,7 @@ module Deploy
     # answers, the certificate dates and whether its names cover the host, and the
     # HTTPS status. Reads only; every external call is bounded. A host that does not
     # answer is reported as that, never as healthy.
-    TLS_VERTICALS = %w[markedsplass dating radio takeaway tv messenger maps].freeze
+    TLS_VERTICALS = %w\[markedsplass dating radio takeaway tv messenger maps].freeze
     RELAYD_CONF = File.join(ROOT, "openbsd/etc/relayd.conf")
 
     def tls_hosts
@@ -386,7 +386,7 @@ end
 
 if $PROGRAM_NAME == __FILE__
   # Before the scan, which queries whois for every zone.
-  if ARGV.intersect?(%w[-h --help])
+  if ARGV.intersect?(%w\[-h --help])
     puts "usage: ruby openbsd/bin/domain_watch.rb [--update|--json]"
     puts "  whois every served or owned domain and diff the answers against data/domain_inventory.yml"
     exit 0

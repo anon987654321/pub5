@@ -13,7 +13,7 @@ class SharedCommerceTest < Minitest::Test
   end
 
   def test_query_normalization_is_small_and_deterministic
-    assert_equal %w[wool coat black], Shared::Commerce.normalize_query("Wool, coat. BLACK wool")
+    assert_equal %w\[wool coat black], Shared::Commerce.normalize_query("Wool, coat. BLACK wool")
   end
 
   def test_scores_are_bounded

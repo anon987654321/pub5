@@ -22,7 +22,7 @@ usage() {
   VPS_DEPLOY_LOG_DIR=/path        log directory (default /var/log/pub4)
   VPS_DEPLOY_RUN_LOG=/path        per-run log (default auto under LOG_DIR/runs/)
 
-  Git fetch/checkout always runs as user dev so the /home/dev/pub4 tree and the
+  Git fetch/checkout always runs as user dev so the /home/dev/pub5 tree and the
   GitHub deploy key stay owned and reachable. Service control uses pub4-admin
   directly when already root."
 }
@@ -371,7 +371,7 @@ if [[ -z ${VPS_DEPLOY_LOGGING:-} ]]; then
   log "argv: $*"
 fi
 
-repo=${PUB5_ROOT:-/home/dev/pub4}
+repo=${PUB5_ROOT:-/home/dev/pub5}
 
 # Transitional adapter: use the fixed root-owned broker once installed. The
 # fallback remains until the operator sync has installed it on vm23.

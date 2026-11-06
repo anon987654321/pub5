@@ -9,7 +9,7 @@ module Master
     # Source of truth: data/scan.yml#session_modes + ENV MASTER_MODE.
     class ModePosture
       include ::Master::Io::AtomicWrite
-      MODES = %w[loose balanced strict].freeze
+      MODES = %w\[loose balanced strict].freeze
       STATE_REL = File.join(".master", "mode").freeze
 
       def self.current(root: Master::ROOT)

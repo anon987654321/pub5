@@ -3,7 +3,7 @@
 class Marketplace::OrdersController < Marketplace::BaseController
   before_action :require_user_session
   before_action :set_listing, only: :create
-  before_action :set_order, only: %i[show update capture ship deliver confirm_receipt]
+  before_action :set_order, only: %i\[show update capture ship deliver confirm_receipt]
 
   # Buyer's order history — a paid order used to vanish (the cart only lists
   # pending). Scoped to Current.user's own orders.
@@ -129,5 +129,5 @@ class Marketplace::OrdersController < Marketplace::BaseController
 
   def set_listing = (@listing = find_by_slug_or_id(Marketplace::Listing.includes(:user), params[:listing_id]))
 
-  def set_order = (@order = Marketplace::Order.includes(listing: %i[user store], buyer: {}).find(params[:id]))
+  def set_order = (@order = Marketplace::Order.includes(listing: %i\[user store], buyer: {}).find(params[:id]))
 end

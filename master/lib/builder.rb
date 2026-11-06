@@ -7,15 +7,15 @@ require_relative "trace/ledger"
 
 module Master
   module Builder
-    MUTATING_TOOLS = %w[write_file str_replace ast_edit].freeze
+    MUTATING_TOOLS = %w\[write_file str_replace ast_edit].freeze
     RING_SIZE = 1000
     # AskLlm needs the live Review::Agent, so ai_boot attaches it after constructing
     # the agent instead of using a factory in DEFAULT_TOOL_MAP.
-    SPECIAL_TOOL_NAMES = %w[AskLlm].freeze
-    TOOL_FIELDS = %w[
+    SPECIAL_TOOL_NAMES = %w\[AskLlm].freeze
+    TOOL_FIELDS = %w\[
       name elevated visitor default description file_types required_context usage_rules error_recovery
     ].freeze
-    REQUIRED_TOOL_FIELDS = %w[name elevated visitor default description].freeze
+    REQUIRED_TOOL_FIELDS = %w\[name elevated visitor default description].freeze
 
     # Default tool factories. data/tools.yml overrides them.
     DEFAULT_TOOL_MAP = {
@@ -216,7 +216,7 @@ module Master
         end
         names << name
 
-        %w[elevated visitor default].each do |field|
+        %w\[elevated visitor default].each do |field|
           errors << "#{name}.#{field} must be boolean" unless [true, false].include?(definition[field])
         end
         errors << "#{name}.description must be non-empty text" unless
@@ -228,7 +228,7 @@ module Master
             errors << "#{name}.file_types must be a list of dotted extensions"
           end
         end
-        %w[required_context error_recovery].each do |field|
+        %w\[required_context error_recovery].each do |field|
           next unless definition.key?(field)
 
           errors << "#{name}.#{field} must be non-empty text" unless

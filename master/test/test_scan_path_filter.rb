@@ -57,14 +57,14 @@ class TestScanPathFilter < Minitest::Test
 
   def test_authored_views_named_reports_and_the_committed_claude_settings_are_scanned
     root = Master::REPO_ROOT
-    scanned = %w[rails/brgen/app/views/admin/reports/index.html.erb .claude/settings.json]
+    scanned = %w\[rails/brgen/app/views/admin/reports/index.html.erb .claude/settings.json]
 
     scanned.each { |relative| refute Scanner.skip_path?(File.join(root, relative), root:), relative }
   end
 
   def test_generated_reports_and_agent_worktrees_are_still_skipped
     root = Master::REPO_ROOT
-    skipped = %w[master/checks/reports/run.json .claude/worktrees/a/master/lib/x.rb]
+    skipped = %w\[master/checks/reports/run.json .claude/worktrees/a/master/lib/x.rb]
 
     skipped.each { |relative| assert Scanner.skip_path?(File.join(root, relative), root:), relative }
   end

@@ -4,8 +4,8 @@ module Shared
   class ReviewCase < ApplicationRecord
     self.table_name = "review_cases"
 
-    STATES = %w[open reviewing closed ignored].freeze
-    REASONS = %w[spam abuse duplicate off_topic unsafe other].freeze
+    STATES = %w\[open reviewing closed ignored].freeze
+    REASONS = %w\[spam abuse duplicate off_topic unsafe other].freeze
 
     belongs_to :reporter, class_name: "User", optional: true
     belongs_to :reviewer, class_name: "User", optional: true
@@ -14,7 +14,7 @@ module Shared
     validates :state, inclusion: { in: STATES }
     validates :reason, inclusion: { in: REASONS }, allow_blank: true
 
-    scope :active, -> { where(state: %w[open reviewing]) }
+    scope :active, -> { where(state: %w\[open reviewing]) }
     scope :recent, -> { order(created_at: :desc) }
 
     # No broadcast: nothing subscribes to shared:review_cases and no

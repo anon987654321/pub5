@@ -13,7 +13,7 @@ module Operator
   # Ruby that no longer parses is returned as it was.
   module SnapshotMinify
     PURPOSE_WIDTH = 110
-    NAMED_RUBY = %w[Gemfile Rakefile Guardfile Capfile Brewfile Vagrantfile config.ru].freeze
+    NAMED_RUBY = %w\[Gemfile Rakefile Guardfile Capfile Brewfile Vagrantfile config.ru].freeze
     PRAGMA = /\A#\s*(frozen_string_literal|encoding|coding|typed|rubocop|-\*-)/i
     DECORATION = /\A[-=_*#]+\z/
 

@@ -74,7 +74,7 @@ class LinkEmbedRefreshTest < ActiveSupport::TestCase
   end
 
   test "both apps schedule the refresh" do
-    %w[brgen amber].each do |app|
+    %w\[brgen amber].each do |app|
       schedule = YAML.load_file(Rails.root.join("..", app, "config", "recurring.yml")).fetch("production")
       entry = schedule.values.find { |row| row["class"] == "Shared::LinkEmbedRefreshJob" }
 

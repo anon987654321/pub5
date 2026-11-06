@@ -6,7 +6,7 @@ module Master
     module DestructiveRoutes
       SECURITY_PATH = Master.data_path("security.yml").freeze
       PATTERNS_PATH = Master.data_path("patterns.yml").freeze
-      FALLBACK = %w[clear rebuild resync shell rollback].freeze
+      FALLBACK = %w\[clear rebuild resync shell rollback].freeze
 
       module_function
 

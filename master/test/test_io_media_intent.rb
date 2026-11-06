@@ -132,8 +132,8 @@ class MediaIntentSpec < Minitest::Test
       render = calls.last
       assert_equal "dilla", render[:tool]
       words = Shellwords.split(render[:arg])
-      assert_includes %w[0 1], words[words.index("--progression") + 1]
-      assert_includes %w[boom_bap offbeat_inversion sparse], words[words.index("--drums") + 1]
+      assert_includes %w\[0 1], words[words.index("--progression") + 1]
+      assert_includes %w\[boom_bap offbeat_inversion sparse], words[words.index("--drums") + 1]
       assert_match(/\.wav\z/, words[words.index("--out") + 1])
     end
   end
@@ -146,7 +146,7 @@ class MediaIntentSpec < Minitest::Test
         assert result.ok?
       end
       words = Shellwords.split(calls.last[:arg])
-      assert_equal %w[--progression 1 --out], [words[0], words[1], words[2]]
+      assert_equal %w\[--progression 1 --out], [words[0], words[1], words[2]]
       assert_equal "offbeat_inversion", words[words.index("--drums") + 1]
     end
   end
@@ -264,7 +264,7 @@ class MediaIntentSpec < Minitest::Test
       with_player do |played|
         calls = []
         with_dispatch_stub(dilla_runner(calls)) do
-          %w[list --list].each do |word|
+          %w\[list --list].each do |word|
             result = MediaIntent.play_live_music(word)
             assert result.ok?, result.inspect
             assert_match(/progressions \d+\.\.\d+/, result.value![:rendered])
@@ -431,7 +431,7 @@ class MediaIntentSpec < Minitest::Test
   end
 
   def test_reference_batch_limit_fails_closed_before_running_tools
-    ids = %w[aaaaaaaaaaa bbbbbbbbbbb ccccccccccc ddddddddddd eeeeeeeeeee fffffffffff]
+    ids = %w\[aaaaaaaaaaa bbbbbbbbbbb ccccccccccc ddddddddddd eeeeeeeeeee fffffffffff]
     request = "study these techno tracks: #{ids.map { |id| "https://youtu.be/#{id}" }.join(' and ')}"
     calls = []
     with_dispatch_stub(lambda do |**kwargs|

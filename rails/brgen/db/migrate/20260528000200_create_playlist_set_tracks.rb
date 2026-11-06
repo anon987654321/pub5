@@ -11,6 +11,6 @@ class CreatePlaylistSetTracks < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :playlist_set_tracks, %i[playlist_set_id playlist_track_id], unique: true
+    add_index :playlist_set_tracks, %i\[playlist_set_id playlist_track_id], unique: true
   end
 end

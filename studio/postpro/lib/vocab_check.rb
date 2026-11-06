@@ -59,12 +59,12 @@ def vocab_check
   # noir each declared a push with nothing to push, and tungsten an eight-second
   # exposure with nothing to fail reciprocity over. Same shape, four keys.
   key_readers = {
-    stops: %w[push_pull], age: %w[faded_print dye_fade expired_film],
-    print_stock: %w[print_film], exposure_secs: %w[reciprocity_failure],
-    k1: %w[lens_distortion], f_number: %w[diffraction_blur], tonemap_ev: %w[tonemap],
-    temp: %w[spectral_temp color_temp], tonemap: %w[tonemap],
-    lens: %w[vintage_lens], azimuth: %w[relight], shape: %w[relight],
-    aspect_ratio: %w[cinemascope_bars], border_style: %w[polaroid_frame]
+    stops: %w\[push_pull], age: %w\[faded_print dye_fade expired_film],
+    print_stock: %w\[print_film], exposure_secs: %w\[reciprocity_failure],
+    k1: %w\[lens_distortion], f_number: %w\[diffraction_blur], tonemap_ev: %w\[tonemap],
+    temp: %w\[spectral_temp color_temp], tonemap: %w\[tonemap],
+    lens: %w\[vintage_lens], azimuth: %w\[relight], shape: %w\[relight],
+    aspect_ratio: %w\[cinemascope_bars], border_style: %w\[polaroid_frame]
   }
 
   # Validate the effect implementation as well as the preset's list. Otherwise
@@ -152,7 +152,7 @@ def vocab_check
   # spelling failed a path whose behaviour was right. A check that measures a
   # spelling measures a spelling.
   calls_by_method = source_methods.transform_values { |body| postpro_method_calls(body) }
-  ungrained = %w[process_file run_random run_uplift run_one_shot run_watch].reject do |name|
+  ungrained = %w\[process_file run_random run_uplift run_one_shot run_watch].reject do |name|
     postpro_method_reaches?(source_methods, name, "apply_finishing_grain", calls: calls_by_method)
   end
   unless ungrained.empty?
@@ -164,7 +164,7 @@ def vocab_check
   # Generated files pass through because they have no EXIF body; a real camera
   # source must not get a different negative because it arrived via one-shot,
   # watch, uplift, or a stock comparison.
-  camera_paths = %w[process_file run_uplift run_one_shot run_watch grade_watched run_stock_sheet].reject do |name|
+  camera_paths = %w\[process_file run_uplift run_one_shot run_watch grade_watched run_stock_sheet].reject do |name|
     postpro_method_reaches?(source_methods, name, "camera_corrected", calls: calls_by_method)
   end
   unless camera_paths.empty?
@@ -199,7 +199,7 @@ def vocab_check
   # The grain model has its own vocabulary now, and the same rule applies to it:
   # a table nothing reads and a name nothing implements both fail quietly.
   problems << "GRAIN_CRYSTAL_FIELD is #{GRAIN_CRYSTAL_FIELD}, which grain_crystals does not build" \
-    unless %i[worley perlin].include?(GRAIN_CRYSTAL_FIELD)
+    unless %i\[worley perlin].include?(GRAIN_CRYSTAL_FIELD)
   stale = RANDOM_WEAR - RECIPE_ALLOWED
   problems << "RANDOM_WEAR names effects no chain can call: #{stale.join(", ")}" unless stale.empty?
   STOCKS.each do |name, data|
@@ -239,7 +239,7 @@ def vocab_check
   # 8x8 pixels through four presets chosen to cover the machinery the table
   # checks cannot reach: HD.apply (film_curve), Spectral.adaptation_matrix
   # (spectral_temp), a black-and-white chain and a print chain. Milliseconds.
-  smoke = %i[portrait cinematic noir masterpiece].select { |name| valid_presets.key?(name) }
+  smoke = %i\[portrait cinematic noir masterpiece].select { |name| valid_presets.key?(name) }
   begin
     probe = Vips::Image.black(8, 8).add(128).cast("uchar").bandjoin([128, 128]).copy(interpretation: :srgb)
     problems.concat(preset_smoke_problems(smoke, probe) { |image, name| preset(image, name) })

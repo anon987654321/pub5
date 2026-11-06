@@ -6,7 +6,7 @@ module Shared
 
     included do
       allow_unauthenticated_access
-      before_action :set_user_by_token, only: %i[edit update]
+      before_action :set_user_by_token, only: %i\[edit update]
       # name: is required once a controller has more than one rate_limit — the
       # cache key is ["rate-limit", controller_path, name, by], so two unnamed
       # limits share a counter. See rails/test/rate_limit_naming_test.rb.

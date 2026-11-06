@@ -9,7 +9,7 @@ class FleetHealthController < ActionController::API
       cable: cable_ok?,
     }
 
-    critical = %i[database]
+    critical = %i\[database]
     critical_ok = critical.all? { |key| checks[key] }
     status = critical_ok ? (checks.values.all? ? "ok" : "degraded") : "unavailable"
     http = critical_ok ? :ok : :service_unavailable

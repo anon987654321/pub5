@@ -56,7 +56,7 @@ module Operator
     # The host and all five brgen_* verticals are separate source roots. The
     # rails README explicitly forbids measuring brgen without them: doing so
     # silently drops the vertical code from this census.
-    TREES = %w[
+    TREES = %w\[
       master/lib master/law master/tools master/web rails/__shared/lib openbsd
       rails/amber rails/brgen rails/brgen_dating rails/brgen_maps
       rails/brgen_marketplace rails/brgen_messenger rails/brgen_radio rails/bsdports

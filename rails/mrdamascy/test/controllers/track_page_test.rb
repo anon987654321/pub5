@@ -35,7 +35,7 @@ class TrackPageTest < ActionDispatch::IntegrationTest
     get track_url(order.tracking_token)
     radios = Nokogiri::HTML(response.body).css("input[type=radio][name=rating]")
 
-    assert_equal %w[5 4 3 2 1], radios.map { |r| r["value"] }
+    assert_equal %w\[5 4 3 2 1], radios.map { |r| r["value"] }
     assert_includes radios.first.parent.text, "5 av 5 stjerner"
   end
   test "a given review is shown back instead of a fresh form" do

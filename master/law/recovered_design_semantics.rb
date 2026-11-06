@@ -93,7 +93,7 @@ Law.define(:VISUAL_IDENTITY_SOURCE_OF_TRUTH) do
       (high + 0.05) / (low + 0.05)
     end
     valid_hex = ->(value) { value.to_s.match?(/\A#[0-9a-f]{6}\z/i) }
-    required_adapters = %w[master brgen amber bsdports openbsd studio]
+    required_adapters = %w\[master brgen amber bsdports openbsd studio]
 
     !identity.fetch("name").eql?("signal_and_stillness") ||
       !valid_hex.call(signal) || !valid_hex.call(ink) || !valid_hex.call(light_ink) ||
@@ -189,10 +189,10 @@ Law.define(:VISUAL_PARTICLE_STIPPLE_PRIMARY) do
     forces = face.fetch("stipple_force")
     memberships = face.fetch("stipple_membership")
 
-    force_words = %w[residual ripple gather fragment settle]
-    membership_words = %w[unturned transitional turned locked]
-    required_terms = %w[pluribus unum signal turned unturned residual void gather ripple fragment settle]
-    required_bans = %w[solid_mesh_as_primary_face_material motion_without_semantic_state
+    force_words = %w\[residual ripple gather fragment settle]
+    membership_words = %w\[unturned transitional turned locked]
+    required_terms = %w\[pluribus unum signal turned unturned residual void gather ripple fragment settle]
+    required_bans = %w\[solid_mesh_as_primary_face_material motion_without_semantic_state
                        signal_as_large_background_fill erasing_all_residual_individuality_in_idle]
 
     tokens.fetch("visual_identity").fetch("material") != "greyscale_particle_stipple" ||

@@ -13,7 +13,7 @@ module Shared
   # there is no href, no style, no class and nothing to sanitise a URL scheme
   # out of.
   module RichTextHelper
-    TAGS = %w[p br strong em b i ul ol li].freeze
+    TAGS = %w\[p br strong em b i ul ol li].freeze
 
     def rich_text(html)
       sanitize(emojify(html.to_s), tags: TAGS, attributes: [])

@@ -73,7 +73,7 @@ class TestFixModelGate < Minitest::Test
     asked = []
     loop = Master::Fix::RepairLoop.new(law: Struct.new(:id, :severity).new("TEST_RULE", :warning),
                                        agent: Agent.new("pinned:model"), scanner: nil, root: Dir.tmpdir)
-    %i[autofix_allowed? fingerprint_matches?].each { |name| loop.define_singleton_method(name) { |*| true } }
+    %i\[autofix_allowed? fingerprint_matches?].each { |name| loop.define_singleton_method(name) { |*| true } }
     loop.define_singleton_method(:request_fix) { |*| nil }
 
     outcome = Gate.stub(:before_call, ->(agent, **) { asked << agent.model }) do

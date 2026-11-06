@@ -5,10 +5,10 @@
 # resolves to the Playlist::Playlist *model* first, so `Playlist::Set` became
 # `Playlist::Playlist::Set` and both index actions raised NameError.
 class Playlist::HostedTracksController < Playlist::BaseController
-  allow_unauthenticated_access only: %i[index show]
-  before_action :require_real_user, except: %i[index show]
-  before_action :set_track, only: %i[show edit update destroy]
-  before_action :authorize_owner!, only: %i[edit update destroy]
+  allow_unauthenticated_access only: %i\[index show]
+  before_action :require_real_user, except: %i\[index show]
+  before_action :set_track, only: %i\[show edit update destroy]
+  before_action :authorize_owner!, only: %i\[edit update destroy]
 
   def index
     @tracks = Playlist::Track.publicly_visible.unexpired.recent.limit(100)

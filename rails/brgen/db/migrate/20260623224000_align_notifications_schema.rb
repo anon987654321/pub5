@@ -12,7 +12,7 @@ class AlignNotificationsSchema < ActiveRecord::Migration[8.1]
 
     change_column_null :notifications, :title, true if column_exists?(:notifications, :title)
 
-    add_index :notifications, %i[notifiable_type notifiable_id], if_not_exists: true
+    add_index :notifications, %i\[notifiable_type notifiable_id], if_not_exists: true
 
     execute <<~SQL.squish if column_exists?(:notifications, :source_type)
       UPDATE notifications
@@ -22,7 +22,7 @@ class AlignNotificationsSchema < ActiveRecord::Migration[8.1]
   end
 
   def down
-    remove_index :notifications, %i[notifiable_type notifiable_id], if_exists: true
+    remove_index :notifications, %i\[notifiable_type notifiable_id], if_exists: true
     change_column_null :notifications, :title, false if column_exists?(:notifications, :title)
 
     change_table :notifications, bulk: true do |t|

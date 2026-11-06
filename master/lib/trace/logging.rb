@@ -3,7 +3,7 @@
 module Master
   module Trace
     module DmesgUnit
-      ATTACHED = %w[
+      ATTACHED = %w\[
         llm route infer tool scan repair_loop council git test validation runtime pipeline fix_loop
       ].freeze
 

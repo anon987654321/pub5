@@ -28,7 +28,7 @@ class LocaleShadowingCheckTest < Minitest::Test
       plant(dir, "rails/shared/config/locales/social.nb.yml", shared)
       plant(dir, "rails/brgen/config/locales/nb.yml", app)
       budget_path = plant(dir, "locale_shadowing.yml", budget)
-      CHECK.run(root: dir, apps: %w[brgen], budget: budget_path)
+      CHECK.run(root: dir, apps: %w\[brgen], budget: budget_path)
     end
   end
 
@@ -46,7 +46,7 @@ class LocaleShadowingCheckTest < Minitest::Test
       plant(dir, "rails/shared/config/locales/social.nb.yml", locale('"Home"'))
       plant(dir, "rails/brgen/config/locales/nb.yml", locale('"Brgen home"'))
       budget = plant(dir, "locale_shadowing.yml", "not: [valid")
-      result = CHECK.run(root: dir, apps: %w[brgen], budget:)
+      result = CHECK.run(root: dir, apps: %w\[brgen], budget:)
       assert_equal :inconclusive, result.outcome
     end
   end
@@ -56,7 +56,7 @@ class LocaleShadowingCheckTest < Minitest::Test
       plant(dir, "rails/shared/config/locales/social.nb.yml", shared)
       plant(dir, "rails/brgen/config/locales/nb.yml", app)
       budget_path = budget && plant(dir, "locale_shadowing.yml", budget)
-      CHECK.run(root: dir, apps: %w[brgen], budget: budget_path || File.join(dir, "missing.yml"))
+      CHECK.run(root: dir, apps: %w\[brgen], budget: budget_path || File.join(dir, "missing.yml"))
     end
   end
 
@@ -66,7 +66,7 @@ class LocaleShadowingCheckTest < Minitest::Test
       plant(dir, "rails/shared/config/locales/broken.yml", "nb: [broken")
       plant(dir, "rails/brgen/config/locales/nb.yml", "nb:\n  nav:\n    home: \"Home\"\n")
       budget = plant(dir, "locale_shadowing.yml", "brgen: 0\n")
-      result = CHECK.run(root: dir, apps: %w[brgen], budget:)
+      result = CHECK.run(root: dir, apps: %w\[brgen], budget:)
       assert_equal :inconclusive, result.outcome
     end
   end
@@ -123,7 +123,7 @@ class LocaleShadowingCheckTest < Minitest::Test
   def test_no_shared_locales_at_all_is_inconclusive
     result = Dir.mktmpdir do |dir|
       plant(dir, "rails/brgen/config/locales/nb.yml", locale('"Brgen home"'))
-      CHECK.run(root: dir, apps: %w[brgen], budget: File.join(dir, "none.yml"))
+      CHECK.run(root: dir, apps: %w\[brgen], budget: File.join(dir, "none.yml"))
     end
 
     assert_equal :inconclusive, result.outcome

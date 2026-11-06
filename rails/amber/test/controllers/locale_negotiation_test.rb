@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-# Amber shipped `available_locales = %i[nb en]` and no way to reach `en`.
+# Amber shipped `available_locales = %i\[nb en]` and no way to reach `en`.
 class LocaleNegotiationTest < ActionDispatch::IntegrationTest
   test "a visitor with no preference gets the default" do
     get root_url

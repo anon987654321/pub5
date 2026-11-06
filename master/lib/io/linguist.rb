@@ -13,12 +13,12 @@ module Master
       DESCRIPTION = "Find trusted dictionary, etymology and language-authority references for meaning, usage, grammar, idioms, register and pragmatics. Returns sources, not an automatic linguistic verdict.".freeze
       MAX_TERM_CHARS = 100
       MAX_RESULTS = 5
-      FOCUSES = %w[meaning etymology usage grammar idiom register pragmatics].freeze
+      FOCUSES = %w\[meaning etymology usage grammar idiom register pragmatics].freeze
       SOURCES = {
-        "nb" => %w[ordbokene.no naob.no sprakradet.no],
-        "nn" => %w[ordbokene.no sprakradet.no],
-        "en" => %w[dictionary.cambridge.org etymonline.com collinsdictionary.com],
-        "auto" => %w[ordbokene.no naob.no sprakradet.no dictionary.cambridge.org etymonline.com collinsdictionary.com],
+        "nb" => %w\[ordbokene.no naob.no sprakradet.no],
+        "nn" => %w\[ordbokene.no sprakradet.no],
+        "en" => %w\[dictionary.cambridge.org etymonline.com collinsdictionary.com],
+        "auto" => %w\[ordbokene.no naob.no sprakradet.no dictionary.cambridge.org etymonline.com collinsdictionary.com],
       }.freeze
 
       def initialize(governor:, event_bus: nil)

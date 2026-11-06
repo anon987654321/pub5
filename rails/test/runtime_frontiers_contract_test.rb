@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class RuntimeFrontiersContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   def read(app, relative)
     File.read(File.join(ROOT, app, relative))

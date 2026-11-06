@@ -112,7 +112,7 @@ class TestWhitespaceNormalizer < Minitest::Test
   end
 
   def test_a_squiggly_and_a_dash_heredoc_both_close
-    %w[<<~ <<- <<].each do |opener|
+    %w\[<<~ <<- <<].each do |opener|
       source = "x = #{opener}SQL\n  a    b\nSQL\ny  = 1\n"
       out = rb(source)
 
@@ -148,7 +148,7 @@ class TestWhitespaceNormalizer < Minitest::Test
       %(puts "a    b"\n),
       "x = <<~SQL\n  select  1\nSQL\n",
       "h = { a:  1, bb:  2 }\n",
-      "x = %w[a  b]\n",
+      "x = %w\[a  b]\n",
       "s = 'it\\'s'\n",
     ]
 

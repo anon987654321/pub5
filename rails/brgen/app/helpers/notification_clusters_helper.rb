@@ -6,7 +6,7 @@
 # rows behind a disclosure so each can still be read or dismissed. A follow's
 # target is always the reader, so all follows on a page fold into one.
 module NotificationClustersHelper
-  FOLDED_KINDS = %w[like reaction follow].freeze
+  FOLDED_KINDS = %w\[like reaction follow].freeze
 
   # items is one kind's notifications, newest first; so is each cluster.
   def notification_clusters(kind, items)

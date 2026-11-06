@@ -165,7 +165,7 @@ module Master
 
         ::Law.define(:adversarial) do
           detector AdversarialLaw
-          tags %i[ONE_JOB CQS GUARD_EXPENSIVE FAIL_VISIBLY COMPOSABLE]
+          tags %i\[ONE_JOB CQS GUARD_EXPENSIVE FAIL_VISIBLY COMPOSABLE]
           fix "Red-team scan: steelman then challenge - suppresses false positives"
           proved_by "test/test_adversarial_law.rb"
         end
@@ -204,7 +204,7 @@ module Master
             # Keep violation detection and improvement discovery as distinct
             # model calls, cache entries, operations, prompts and verdicts. A
             # combined CLEAN reply previously hid whether both questions ran.
-            %i[violation opportunity].flat_map do |stream|
+            %i\[violation opportunity].flat_map do |stream|
               cache_key = "#{base_key}:#{stream}"
               next @cache[cache_key] if @cache.key?(cache_key)
 
@@ -572,7 +572,7 @@ module Master
 
         ::Law.define(:comment_drift) do
           detector CommentDriftLaw
-          tags %i[SELF_EXPLAINING EXPLICIT]
+          tags %i\[SELF_EXPLAINING EXPLICIT]
           fix "Comment claim doesn't match method body - comment is lying"
           proved_by "test/test_comment_drift_law.rb"
         end

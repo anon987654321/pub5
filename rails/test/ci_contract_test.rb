@@ -8,7 +8,7 @@ class CiContractTest < Minitest::Test
   def self.test(name, &block) = define_method("test_#{name.gsub(/\W+/, "_")}", &block)
 
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[brgen amber bsdports].freeze
+  APPS = %w\[brgen amber bsdports].freeze
   SHARED_CI = File.join(ROOT, "shared", "config", "ci.rb")
 
   def read(path)
@@ -25,13 +25,13 @@ class CiContractTest < Minitest::Test
   end
 
   test "shared apps delegate to the shared ci contract" do
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       source = read(File.join(ROOT, app, "bin", "ci"))
       assert_match(/config\/ci/, source, "#{app}/bin/ci bypassed shared CI")
     end
 
     shared = read(SHARED_CI)
-    %w[
+    %w\[
       bin/setup --skip-server
       rubocop
       bundler-audit
@@ -48,7 +48,7 @@ class CiContractTest < Minitest::Test
   test "mrdamascy ci runs the static checks the shared apps run" do
     source = read(File.join(ROOT, "mrdamascy", "config", "ci.rb"))
 
-    %w[rubocop bundler-audit brakeman db:test:prepare rails\ test].each do |token|
+    %w\[rubocop bundler-audit brakeman db:test:prepare rails\ test].each do |token|
       assert_includes source, token, "mrdamascy CI lost #{token}"
     end
     assert File.file?(File.join(ROOT, "mrdamascy", "config", "bundler-audit.yml")),
@@ -88,7 +88,7 @@ class CiContractTest < Minitest::Test
   test "shared ci resolves tooling from master, never rails/tools" do
     shared = read(SHARED_CI)
 
-    refute_includes shared, 'File.join(ENV["PUB4_RAILS_ROOT"], "tools"'
+    refute_includes shared, 'File.join(ENV["PUB5_RAILS_ROOT"], "tools"'
     refute_includes shared, 'require_relative "../../tools/operator'
     assert_includes shared, 'master/tools/rails'
   end
@@ -105,7 +105,7 @@ class CiContractTest < Minitest::Test
       File.join(repo_root, "master", "tools", "rails", "operator"),
     ]
 
-    %w[
+    %w\[
       rhythm_lint
       fallback_drift_lint
       empty_state_lint

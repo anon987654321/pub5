@@ -14,10 +14,10 @@ class OutfitCompatibility
   # label. Wool is useful in cold weather, cotton can be a mild-weather layer,
   # and leather footwear is not automatically wrong just because it is cold.
   WEATHER_FIT_COMPATIBILITY = {
-    "cold" => %w[cold mild dry all_weather],
-    "warm" => %w[warm mild dry all_weather],
-    "rain" => %w[rain all_weather],
-    "dry" => %w[dry cold mild warm all_weather],
+    "cold" => %w\[cold mild dry all_weather],
+    "warm" => %w\[warm mild dry all_weather],
+    "rain" => %w\[rain all_weather],
+    "dry" => %w\[dry cold mild warm all_weather],
   }.freeze
 
   def initialize(user)
@@ -54,10 +54,10 @@ class OutfitCompatibility
 
   def category_balance(items)
     categories = items.map(&:category).compact
-    required = %w[Tops Bottoms Shoes]
+    required = %w\[Tops Bottoms Shoes]
     dress_covers_separates = categories.include?("Dresses")
     coverage = required.count do |category|
-      categories.include?(category) || (dress_covers_separates && %w[Tops Bottoms].include?(category))
+      categories.include?(category) || (dress_covers_separates && %w\[Tops Bottoms].include?(category))
     end / required.size.to_f
     [ coverage, 1.0 ].min
   end

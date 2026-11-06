@@ -9,11 +9,11 @@ class PaymentGateway
   # Stripe existed carry payment_method "vipps", and a tampered param must
   # never pick a PSP the checkout did not intend.
   DEFAULT_METHOD = "vipps"
-  METHODS = %w[vipps stripe].freeze
+  METHODS = %w\[vipps stripe].freeze
   # Captured and failed are where a payment ends (failed covers Vipps
   # ABORTED/EXPIRED/TERMINATED and an expired Stripe session); asking the PSP
   # again only spends a call from every open tracking tab.
-  SETTLED = %w[captured failed].freeze
+  SETTLED = %w\[captured failed].freeze
 
   class << self
     def normalize!(value)

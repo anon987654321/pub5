@@ -54,13 +54,13 @@ module Master
 
             {
               "base" => base.chomp("/"),
-              "key_env" => %w[MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY],
+              "key_env" => %w\[MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY],
               "keyless" => {},
             }
           end
 
           def loopback_gateway_host?(host)
-            %w[localhost 127.0.0.1 ::1 [::1]].include?(host.to_s.downcase)
+            %w\[localhost 127.0.0.1 ::1 [::1]].include?(host.to_s.downcase)
           end
 
           def hosted_index

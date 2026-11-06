@@ -7,7 +7,7 @@ require_relative "../lib/convergence/receipt"
 class TestConvergenceReceipt < Minitest::Test
   def test_receipt_contains_identity_and_inventory
     Dir.mktmpdir do |dir|
-      %w[master rails openbsd studio].each { |tree| FileUtils.mkdir_p(File.join(dir, tree)) }
+      %w\[master rails openbsd studio].each { |tree| FileUtils.mkdir_p(File.join(dir, tree)) }
       FileUtils.mkdir_p(File.join(dir, "master", "data"))
       File.write(File.join(dir, "master", "data", "soul.yml"), "schema: 1\n")
       File.write(File.join(dir, "master", "data", "laws.yml"), "ROBUSTNESS: {priority: 1, principle: safe}\n")

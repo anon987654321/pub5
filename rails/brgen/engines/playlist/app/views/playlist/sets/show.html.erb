@@ -6,7 +6,7 @@
     <p><%= t("playlist.set_kicker") %></p>
     <%= tag.h1 @set.name %>
   </hgroup>
-  <% if authenticated? && (Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
+  <% if authenticated? && (Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w\[owner editor])) %>
     <div class="cluster">
       <%= link_to t("actions.edit"), edit_set_path(@set), class: "button button-ghost button-small" %>
       <%= button_to t("actions.delete"), set_path(@set), method: :delete, data: { turbo_confirm: t("actions.confirm_delete") }, class: "button button-danger button-small" %>
@@ -43,7 +43,7 @@
 </article>
 
 <% if authenticated? %>
-  <% set_can_manage = Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor]) %>
+  <% set_can_manage = Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w\[owner editor]) %>
   <%= render "playlist/shared/collaborators",
         parent: @set,
         collaborations: @set.collaborations,
@@ -74,7 +74,7 @@
         <% if set_track.track.artist.present? %> — <%= set_track.track.artist %><% end %>
          · <%= set_track.track.duration_formatted %>
       </div>
-      <% if authenticated? && (Current.user == set_track.user || Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
+      <% if authenticated? && (Current.user == set_track.user || Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w\[owner editor])) %>
         <%# destructive: no-confirm-ok — reversible — this takes the track out of the set; the track and its audio stay %>
         <%= button_to t("actions.remove"), set_track_path(@set, set_track), method: :delete, class: "button button-ghost button-small" %>
       <% end %>
@@ -87,7 +87,7 @@
         action: { label: t("playlist.browse_sets"), path: sets_path } %>
 <% end %>
 
-<% if authenticated? && (Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
+<% if authenticated? && (Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w\[owner editor])) %>
   <div class="section-divider">
     <p class="section-heading"><%= t("playlist.add_track") %></p>
     <div class="form-wrap form-wrap--flush">

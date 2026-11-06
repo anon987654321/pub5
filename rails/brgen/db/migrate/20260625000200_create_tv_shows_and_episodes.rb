@@ -10,7 +10,7 @@ class CreateTvShowsAndEpisodes < ActiveRecord::Migration[8.1]
       t.boolean :published, null: false, default: false
       t.timestamps
     end
-    add_index :tv_shows, %i[channel_id slug], unique: true
+    add_index :tv_shows, %i\[channel_id slug], unique: true
 
     create_table :tv_episodes do |t|
       t.references :show, null: false, foreign_key: { to_table: :tv_shows }
@@ -19,6 +19,6 @@ class CreateTvShowsAndEpisodes < ActiveRecord::Migration[8.1]
       t.integer :number, null: false
       t.timestamps
     end
-    add_index :tv_episodes, %i[show_id number], unique: true
+    add_index :tv_episodes, %i\[show_id number], unique: true
   end
 end

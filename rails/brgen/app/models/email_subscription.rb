@@ -2,7 +2,7 @@
 
 class EmailSubscription < ApplicationRecord
   MARKETING_CONSENT_VERSION = "newsletter-affiliate-disclosure-v1".freeze
-  MARKETING_CONSENT_SOURCES = %w[signup_form preference_center].freeze
+  MARKETING_CONSENT_SOURCES = %w\[signup_form preference_center].freeze
 
   before_create :generate_token
 

@@ -6,7 +6,7 @@ module Shared
     include Shared::PasswordlessAuth
 
     included do
-      allow_unauthenticated_access only: %i[new create magic request_magic]
+      allow_unauthenticated_access only: %i\[new create magic request_magic]
       # Both named: ActionController::RateLimiting keys unnamed limits to one
       # shared counter per controller, so login would spend the magic-link
       # budget and the 3-minute window would win for both (see

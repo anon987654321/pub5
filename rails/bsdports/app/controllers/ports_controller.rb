@@ -8,12 +8,12 @@ class PortsController < ApplicationController
   # Reverse dependencies listed before "show all"; a popular library has hundreds.
   RDEPS_SHOWN = 20
 
-  allow_unauthenticated_access only: %i[index show explore]
-  before_action :set_port, only: %i[show explore watch unwatch crossref_cves review]
+  allow_unauthenticated_access only: %i\[index show explore]
+  before_action :set_port, only: %i\[show explore watch unwatch crossref_cves review]
   # watch/unwatch called require_authentication inside the action body,
   # where its redirect does not halt the action — so the next line ran
   # find_or_create_by!(user: Current.user) for an unauthenticated visitor.
-  before_action :require_authentication, only: %i[crossref_cves review watch unwatch]
+  before_action :require_authentication, only: %i\[crossref_cves review watch unwatch]
   before_action :require_nvd_operator, only: :crossref_cves
 
   def index
@@ -146,7 +146,7 @@ class PortsController < ApplicationController
   def index_scope
     scope = Port.includes(:category)
     if live_search_query.present?
-      scope = apply_live_search(scope, columns: %w[name comment description], vertical: "ports")
+      scope = apply_live_search(scope, columns: %w\[name comment description], vertical: "ports")
     end
     scope = scope.by_category(params[:category_id]) if params[:category_id].present?
     scope.ordered_for(live_search_query, params[:sort])

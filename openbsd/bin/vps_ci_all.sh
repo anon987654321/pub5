@@ -8,7 +8,7 @@ if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   exit 0
 fi
 
-repo=${PUB5_ROOT:-/home/dev/pub4}
+repo=${PUB5_ROOT:-/home/dev/pub5}
 script=${repo}/openbsd/bin/vps_ci.sh
 source "${repo}/openbsd/lib/ruby_select.sh"
 # The fleet is apps.yml's, in its order; a literal list here keeps testing three

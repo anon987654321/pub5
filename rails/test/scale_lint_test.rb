@@ -154,7 +154,7 @@ class ScaleLintTest < Minitest::Test
     sheets = LINT.stylesheets
 
     assert_operator sheets.size, :>, 30, "the sheet glob has stopped matching"
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       assert sheets.any? { |p| p.end_with?("/#{app}/app/assets/stylesheets/application.scss") },
              "#{app}'s application.scss is not being read"
     end
@@ -163,7 +163,7 @@ class ScaleLintTest < Minitest::Test
   end
 
   def test_generated_and_vendored_output_is_not_source
-    %w[
+    %w\[
       /rails/brgen/app/assets/builds/application.css
       /rails/shared/node_modules/x/y.css
       /rails/brgen/public/assets/application-abc123.css
@@ -172,7 +172,7 @@ class ScaleLintTest < Minitest::Test
   end
 
   def test_a_computed_value_is_not_a_step_someone_chose
-    %w[
+    %w\[
       calc(var(--space-sm)\ +\ 3px)
       clamp(16px,\ 5vw,\ 48px)
       var(--chrome-inset)

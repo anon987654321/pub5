@@ -69,7 +69,7 @@ module Master
       # toward that year; quoted titles are searched as named.
       RECENT_YEAR_RE = /\b(20[2-9]\d)\b/.freeze
 
-      STOPWORDS = %w[
+      STOPWORDS = %w\[
         grab download fetch get find pick pull us me some few bunch heap pile
         lots many one two three four five six seven eight nine ten new latest
         fresh recent recently movies movie films film cinema flick flicks
@@ -87,7 +87,7 @@ module Master
       # Channels owned by a studio, distributor or streamer. A full film or a
       # trailer pulled from these is an official free upload; anonymous
       # channels posting "full movie" rips are not and are never touched.
-      OFFICIAL_CHANNELS = %w[
+      OFFICIAL_CHANNELS = %w\[
         a24 neon mubi netflix hbo max prime video amazon mgm hulu disney
         peacock universal pictures focus features searchlight pictures
         warner bros. paramount sony pictures classic lionsgate apple tv
@@ -104,88 +104,88 @@ module Master
       SHELF = [
         { title: "Sinners", year: 2025, kind: :film, where: "HBO Max",
           note: "Coogler's juke-joint vampire smash, the critics' best-of-2025 pick",
-          tags: %w[horror vampire music drama] },
+          tags: %w\[horror vampire music drama] },
         { title: "One Battle After Another", year: 2025, kind: :film, where: "HBO Max",
           note: "Paul Thomas Anderson's revolutionary chase, nine Golden Globe nominations",
-          tags: %w[thriller drama action comedy] },
+          tags: %w\[thriller drama action comedy] },
         { title: "Anora", year: 2024, kind: :film, where: "Hulu",
           note: "Palme d'Or 2024; Best Picture, Director and Actress at the 2025 Oscars",
-          tags: %w[drama comedy romance indie] },
+          tags: %w\[drama comedy romance indie] },
         { title: "The Substance", year: 2024, kind: :film, where: "MUBI, Hulu",
           note: "Cannes best-screenplay body horror with Demi Moore",
-          tags: %w[horror drama satire sci-fi] },
+          tags: %w\[horror drama satire sci-fi] },
         { title: "Project Hail Mary", year: 2026, kind: :film, where: "Prime Video",
           note: "the year's best-reviewed sci-fi hit, streaming since summer",
-          tags: %w[sci-fi adventure space drama] },
+          tags: %w\[sci-fi adventure space drama] },
         { title: "It Was Just an Accident", year: 2025, kind: :film, where: "Hulu, Kanopy (free with a library card)",
           note: "Jafar Panahi's Palme d'Or winner",
-          tags: %w[drama indie thriller] },
+          tags: %w\[drama indie thriller] },
         { title: "Secret Mall Apartment", year: 2024, kind: :film, where: "Netflix",
           note: "Vulture top-ten doc: eight artists secretly lived inside a mall for four years",
-          tags: %w[documentary indie gem art] },
+          tags: %w\[documentary indie gem art] },
         { title: "Sentimental Value", year: 2025, kind: :film, where: "Prime Video (rent)",
           note: "Joachim Trier's Cannes Grand Prix family drama",
-          tags: %w[drama indie family] },
+          tags: %w\[drama indie family] },
         { title: "Frankenstein", year: 2025, kind: :film, where: "Netflix",
           note: "del Toro's Gothic Netflix adaptation",
-          tags: %w[horror gothic drama] },
+          tags: %w\[horror gothic drama] },
         { title: "Flow", year: 2024, kind: :film, where: "Max",
           note: "wordless Latvian indie that took the animated-feature Oscar",
-          tags: %w[animation indie gem fantasy] },
+          tags: %w\[animation indie gem fantasy] },
         { title: "The Brutalist", year: 2024, kind: :film, where: "Max",
           note: "Venice Silver Lion epic, three 2025 Oscars",
-          tags: %w[drama epic architecture] },
+          tags: %w\[drama epic architecture] },
         { title: "Conclave", year: 2024, kind: :film, where: "Peacock",
           note: "papal thriller, adapted-screenplay Oscar",
-          tags: %w[thriller drama mystery] },
+          tags: %w\[thriller drama mystery] },
         { title: "A Real Pain", year: 2024, kind: :film, where: "Hulu",
           note: "Eisenberg's Oscar-winning dramedy of grief and heritage",
-          tags: %w[drama comedy indie] },
+          tags: %w\[drama comedy indie] },
         { title: "All We Imagine as Light", year: 2024, kind: :film, where: "Max",
           note: "Cannes Grand Prix Mumbai nocturne",
-          tags: %w[drama indie romance] },
+          tags: %w\[drama indie romance] },
         { title: "Dune: Part Two", year: 2024, kind: :film, where: "Max",
           note: "Villeneuve's sandworm epic, 2025 Oscar winner",
-          tags: %w[sci-fi adventure epic] },
+          tags: %w\[sci-fi adventure epic] },
         { title: "The Wild Robot", year: 2024, kind: :film, where: "Peacock",
           note: "DreamWorks' widely loved robot fable",
-          tags: %w[animation family sci-fi] },
+          tags: %w\[animation family sci-fi] },
         { title: "Challengers", year: 2024, kind: :film, where: "Prime Video",
           note: "Guadagnino's tennis love triangle",
-          tags: %w[drama romance sports] },
+          tags: %w\[drama romance sports] },
         { title: "A Complete Unknown", year: 2024, kind: :film, where: "Hulu, Disney+",
           note: "Chalamet sings as Bob Dylan",
-          tags: %w[music drama biography] },
+          tags: %w\[music drama biography] },
         { title: "Nosferatu", year: 2024, kind: :film, where: "Peacock",
           note: "Eggers's gothic vampire remake",
-          tags: %w[horror gothic drama] },
+          tags: %w\[horror gothic drama] },
         { title: "Longlegs", year: 2024, kind: :film, where: "Hulu",
           note: "Neon's serial-killer horror phenomenon",
-          tags: %w[horror thriller crime] },
+          tags: %w\[horror thriller crime] },
         { title: "Wicked", year: 2024, kind: :film, where: "Peacock",
           note: "the stage sensation's screen first act",
-          tags: %w[musical fantasy family] },
+          tags: %w\[musical fantasy family] },
         { title: "Emilia Pérez", year: 2024, kind: :film, where: "Netflix",
           note: "Cannes jury-prize musical thriller",
-          tags: %w[musical drama crime] },
+          tags: %w\[musical drama crime] },
         { title: "Train Dreams", year: 2025, kind: :film, where: "Netflix",
           note: "underseen plainspoken Americana gem",
-          tags: %w[drama indie gem history] },
+          tags: %w\[drama indie gem history] },
         { title: "Griffin in Summer", year: 2024, kind: :film, where: "Prime Video (rent)",
           note: "a fourteen-year-old playwright's summer, 2025's beloved underseen comedy",
-          tags: %w[comedy indie gem] },
+          tags: %w\[comedy indie gem] },
         { title: "Adolescence", year: 2025, kind: :series, where: "Netflix",
           note: "the one-shot crime drama that became 2025's biggest breakout",
-          tags: %w[drama crime] },
+          tags: %w\[drama crime] },
         { title: "Pluribus", year: 2025, kind: :series, where: "Apple TV",
           note: "Vince Gilligan's acclaimed new series",
-          tags: %w[sci-fi drama thriller] },
+          tags: %w\[sci-fi drama thriller] },
         { title: "The Pitt", year: 2025, kind: :series, where: "HBO Max",
           note: "Emmy-winning ER-shift drama",
-          tags: %w[drama medical] },
+          tags: %w\[drama medical] },
         { title: "Severance", year: 2025, kind: :series, where: "Apple TV",
           note: "season two of the office-split thriller",
-          tags: %w[sci-fi thriller mystery] },
+          tags: %w\[sci-fi thriller mystery] },
       ].freeze
 
       # Percentage progress for one yt-dlp stream. The spinner row carries the
@@ -502,7 +502,7 @@ module Master
 
       # Supported link hosts: the three yt-dlp lanes mov speaks natively.
       # Anything else — DRM'd commercial streamers above all — is refused.
-      SUPPORTED_LINK_HOSTS = %w[youtube.com youtu.be vimeo.com archive.org].freeze
+      SUPPORTED_LINK_HOSTS = %w\[youtube.com youtu.be vimeo.com archive.org].freeze
 
       def download_url(url, title: nil, bus: nil)
         host = URI.parse(url).host.to_s.downcase

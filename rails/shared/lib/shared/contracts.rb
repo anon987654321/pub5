@@ -6,12 +6,12 @@ module Shared
   # PUB5_ROOT (exported by rc.d and vps_ci.sh) names the checkout that holds
   # MASTER. A task started as the app user without it (db:prepare and the asset
   # precompile in vps-deploy) has no PUB5_ROOT, and the repo-relative walk lands
-  # on /home/MASTER, which killed the first deploy that reached the migration and
+  # on /home/master, which killed the first deploy that reached the migration and
   # left the app stopped. So the root is the first candidate that holds
   # master/contracts: PUB5_ROOT, the repo root four levels above this file, then
   # the box's own checkout.
   module Contracts
-    CHECKOUT_ON_BOX = "/home/dev/pub4"
+    CHECKOUT_ON_BOX = "/home/dev/pub5"
 
     module_function
 

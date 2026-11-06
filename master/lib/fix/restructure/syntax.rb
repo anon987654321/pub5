@@ -13,7 +13,7 @@ module Master
       # JSON by their parsers. A file of no kind it knows passes; the tests
       # stand behind it.
       module Syntax
-        SHELLS = %w[sh zsh bash ksh].freeze
+        SHELLS = %w\[sh zsh bash ksh].freeze
 
         def self.valid?(path)
           case kind(path)
@@ -29,7 +29,7 @@ module Master
 
         def self.kind(path)
           ext = File.extname(path)
-          return :ruby if %w[.rb .rake .ru].include?(ext) || %w[Rakefile Gemfile].include?(File.basename(path))
+          return :ruby if %w\[.rb .rake .ru].include?(ext) || %w\[Rakefile Gemfile].include?(File.basename(path))
           return { ".sh" => :shell, ".js" => :javascript, ".mjs" => :javascript, ".yml" => :yaml,
                    ".yaml" => :yaml, ".json" => :json, ".erb" => :erb }[ext] unless ext.empty?
 

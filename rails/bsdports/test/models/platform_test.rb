@@ -20,7 +20,7 @@ class PlatformTest < ActiveSupport::TestCase
   # below hard-code exactly those spellings. Slugs here avoid the fixture's
   # `openbsd`, so a uniqueness failure cannot be read as a format one.
   test "a slug is lowercase alphanumeric with no separators" do
-    %w[freebsd netbsd2].each { |slug| assert Platform.new(name: "x", slug:).valid?, "#{slug} refused" }
+    %w\[freebsd netbsd2].each { |slug| assert Platform.new(name: "x", slug:).valid?, "#{slug} refused" }
     [ "free-bsd", "free_bsd", "FreeBSD", "free bsd" ].each do |slug|
       refute Platform.new(name: "x", slug:).valid?, "#{slug.inspect} accepted"
     end
@@ -48,7 +48,7 @@ class PlatformTest < ActiveSupport::TestCase
 
   # A finder whose slug this model would refuse can never find anything.
   test "every named finder looks for a slug the format allows" do
-    %i[openbsd freebsd netbsd].each do |tree|
+    %i\[openbsd freebsd netbsd].each do |tree|
       assert_respond_to Platform, tree
       assert_match(/\A[a-z0-9]+\z/, tree.to_s,
                    "Platform.#{tree} looks for a slug this model's format rejects")

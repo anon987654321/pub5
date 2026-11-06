@@ -187,7 +187,7 @@ def browser_available?
 
   Deploy::CdpSession.available?
 rescue LoadError, StandardError
-  %w[google-chrome chromium chromium-browser].any? do |command|
+  %w\[google-chrome chromium chromium-browser].any? do |command|
     system("command", "-v", command, out: File::NULL, err: File::NULL)
   end
 end
@@ -384,7 +384,7 @@ names.each_with_index do |name, index|
   if options[:json]
     log_retired("#{CHECK_UNIT} at #{CHECK_PARENT}: #{name} #{outcome}")
   elsif outcome == :passed
-    result.render(row["pass"]) if %w[
+    result.render(row["pass"]) if %w\[
       css_constitution design_metrics rendered_suite layout_suite flow_journey page_simulation mobile_flow
     ].include?(name)
 

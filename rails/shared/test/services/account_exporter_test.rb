@@ -36,7 +36,7 @@ class SharedAccountExporterTest < Minitest::Test
 
     assert_equal [ "7" ], values_for(rows, "account", "id")
     assert_equal [ "a@b.no" ], values_for(rows, "account", "email_address")
-    assert_empty rows.select { |row| %w[password_digest otp_secret remember_token private_key].include?(row["field"]) }
+    assert_empty rows.select { |row| %w\[password_digest otp_secret remember_token private_key].include?(row["field"]) }
   end
 
   def test_exports_owned_associations_and_numbers_their_records
@@ -45,8 +45,8 @@ class SharedAccountExporterTest < Minitest::Test
 
     rows = export(owner)
 
-    assert_equal %w[first second], values_for(rows, "posts", "title")
-    assert_equal %w[0 1], rows.select { |row| row["section"] == "posts" }.map { |row| row["record"] }
+    assert_equal %w\[first second], values_for(rows, "posts", "title")
+    assert_equal %w\[0 1], rows.select { |row| row["section"] == "posts" }.map { |row| row["record"] }
   end
 
   # An association reachable only through another one would be exported twice.

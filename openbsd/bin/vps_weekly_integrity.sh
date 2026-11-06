@@ -3,7 +3,7 @@
 # installs it to /usr/local/bin and etc/crontab.vm23 runs it Sunday 03:30 as root.
 set -eu
 
-ROOT="${PUB5_ROOT:-/home/dev/pub4}"
+ROOT="${PUB5_ROOT:-/home/dev/pub5}"
 RUNAS="${PUB4_WEEKLY_USER:-dev}"
 LOG=/var/log/pub4/weekly_integrity.log
 

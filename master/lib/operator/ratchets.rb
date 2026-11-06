@@ -101,7 +101,7 @@ module Operator
 
       # The placeholders only when the real numbers are not being fetched, or
       # every css_budget rule would appear twice under --deep.
-      rows += deep && rails ? cached("css_constitution", %w[master rails]) { css_constitution_rows } : css_budget_rows
+      rows += deep && rails ? cached("css_constitution", %w\[master rails]) { css_constitution_rows } : css_budget_rows
       rows += deep_rows(rails:) if deep
       rows.compact
     end
@@ -124,8 +124,8 @@ module Operator
 
     # The trees each cached group reads (RatchetCache). master is always one: it holds the laws, the
     # scanners and the recorded ceilings every row compares against.
-    AUDIT_TREES = %w[master rails/__shared].freeze
-    SELF_FINDINGS_TREES = %w[master rails openbsd].freeze
+    AUDIT_TREES = %w\[master rails/__shared].freeze
+    SELF_FINDINGS_TREES = %w\[master rails openbsd].freeze
 
     def cached(group, trees, &) = RatchetCache.fetch(group, trees:, row_class: Row, &)
 
@@ -359,7 +359,7 @@ module Operator
     # try shadowed something real: `log` hid lib/trace/log/, three tracked Ruby
     # files the census never saw.
     TREE_EXCLUDE = %r{/(\.git|node_modules|tmp|renders|[\w.-]*stems|samples|scratch|project|crate|venv|\.venv|site-packages|vendor|storage|\.cache|builds|coverage|\.master|knowledge|output)/|/public/assets/|\.wav\.quality\.json\z}
-    TREE_SOURCE_EXT = %w[.rb .rake .erb .scss .css .js .mjs .yml .yaml .md .sh .ksh .exp .html .json].freeze
+    TREE_SOURCE_EXT = %w\[.rb .rake .erb .scss .css .js .mjs .yml .yaml .md .sh .ksh .exp .html .json].freeze
 
     # Tests are not sprawl. A row that cannot tell a new test from a new god class
     # charges coverage and sprawl against one allowance, so a path under a test/
@@ -644,7 +644,7 @@ end
       # css_constitution, and the two contrast rules from design_metrics. The
       # ceilings all live in one file, which is what made them look like one
       # check's business.
-      output = %w[css_constitution design_metrics].map do |check|
+      output = %w\[css_constitution design_metrics].map do |check|
         Master::Io::Exec.capture2e(RUBY, File.join(master, "checks", "runner.rb"), check, chdir: ROOT, timeout: 1_800).first
       end.join("\n")
 
@@ -696,20 +696,20 @@ def deep_rows(rails: true)
     # Fast means "reads files" in this register and name_candidates reads 2,500
     # of them through a parser, which is the line the header draws.
     *name_rows,
-        *cached("selftest", %w[master]) do
+        *cached("selftest", %w\[master]) do
           [shell_row("selftest", "master", "bundle exec rake selftest", /self-test: (\d+) violation/, 0)]
         end,
         shell_row("selfcheck", "master", "bundle exec rake selfcheck", /selfcheck: (\d+) violation/, nil),
         # Deep because the rule registry is global and a suite run has test-defined
         # rules in it: measured in-process it reads high and fails a green tree.
-        *cached("law_trace", %w[master]) do
+        *cached("law_trace", %w\[master]) do
           [shell_row("law_trace", "master", "bundle exec rake lint:law_trace",
                      /law_trace: (\d+)[\/ ]/, law_trace_ceiling)]
         end,
         # Deep because it scans every rails view and stylesheet with the full
         # design rule set — the layout campaign's ratchet (2026-08-21).
         *(if rails
-             cached("design_baseline", %w[master rails]) do
+             cached("design_baseline", %w\[master rails]) do
                [shell_row("design_baseline", "master", "bundle exec ruby tools/audit/design_baseline.rb",
                           /design_baseline: (\d+) violation/,
                           YAML.safe_load_file(File.join(master, "data/design_baseline.yml")).fetch("total", nil))]

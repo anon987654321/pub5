@@ -9,6 +9,6 @@ module Master
   module Convergence
     VERSION = 1
     ROOTS = MasterPaths::TREES
-    STATES = %i[landed partial evidence operator missing rejected].freeze
+    STATES = %i\[landed partial evidence operator missing rejected].freeze
   end
 end

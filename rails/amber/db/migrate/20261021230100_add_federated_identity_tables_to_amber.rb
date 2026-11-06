@@ -27,7 +27,7 @@ class AddFederatedIdentityTablesToAmber < ActiveRecord::Migration[8.1]
       t.datetime :last_used_at
       t.timestamps
     end
-    add_index :external_identities, %i[identity_provider_id subject], unique: true,
+    add_index :external_identities, %i\[identity_provider_id subject], unique: true,
                                                                       name: "index_external_identities_on_provider_and_subject",
                                                                       if_not_exists: true
   end

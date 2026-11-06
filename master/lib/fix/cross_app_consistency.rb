@@ -18,20 +18,20 @@ module Master
     # are listed as informational deviations and never proposed for change.
     class CrossAppConsistency
       LAW = "CROSS_APP_CONSISTENCY"
-      EDITORIAL_APPS = %w[amber].freeze
-      IGNORED_APPS = %w[master].freeze
+      EDITORIAL_APPS = %w\[amber].freeze
+      IGNORED_APPS = %w\[master].freeze
       SHARED_SHEETS = {
         "header" => "_layout_chrome.scss", "nav_link" => "_layout_chrome.scss", "footer" => "_layout_chrome.scss",
         "button" => "_buttons.scss", "form_control" => "_components.scss"
       }.freeze
       SHARED_DIR = "rails/__shared/app/assets/stylesheets"
-      NUMERIC = %w[font_size line_height height letter_spacing].freeze
+      NUMERIC = %w\[font_size line_height height letter_spacing].freeze
       TOLERANCE = 0.5
       PER_SURFACE = 3
       # Properties compared; each present in the geometry payload.
-      PROPS = %w[height font_size font_weight line_height letter_spacing border_radius border_width border_color
+      PROPS = %w\[height font_size font_weight line_height letter_spacing border_radius border_width border_color
                     padding box_shadow color bg].freeze
-      TOKEN_PROPS = %w[color bg border_color].freeze
+      TOKEN_PROPS = %w\[color bg border_color].freeze
 
       Sample = Data.define(:app, :viewport, :primitive, :selector, :style)
 
@@ -71,13 +71,13 @@ module Master
 
       def self.primitives(elements)
         nav = ->(e) { e["key"].to_s.split(">").any? { |seg| seg.start_with?("nav") } }
-        controls = elements.select { |e| e["tag"] == "input" || %w[select textarea].include?(e["tag"]) }
+        controls = elements.select { |e| e["tag"] == "input" || %w\[select textarea].include?(e["tag"]) }
         {
           "header" => elements.select { |e| e["tag"] == "header" },
-          "nav_link" => elements.select { |e| %w[a button].include?(e["tag"]) && nav.(e) },
+          "nav_link" => elements.select { |e| %w\[a button].include?(e["tag"]) && nav.(e) },
           "footer" => elements.select { |e| e["tag"] == "footer" },
           "button" => elements.select { |e| VisualCrossPageDrift.action?(e) && !nav.(e) },
-          "form_control" => controls.reject { |e| %w[submit hidden checkbox radio button].include?(e["input_type"]) },
+          "form_control" => controls.reject { |e| %w\[submit hidden checkbox radio button].include?(e["input_type"]) },
         }
       end
 

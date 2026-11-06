@@ -127,7 +127,7 @@ end
 # photograph, `postpro.rb ~/Pictures` a few random picks from the folder. Flag
 # values are not paths (`--count 3` is not a file called 3), so every
 # value-taking flag's token is set aside before the hunt.
-VALUE_FLAGS = %w[
+VALUE_FLAGS = %w\[
   --input --output --preset --reference --count -n --watch --describe-preset
   --css-filter --export-lut --size --stock-sheet --random --rescue --measure
   --against --set --fit-grain --quality --style-contract

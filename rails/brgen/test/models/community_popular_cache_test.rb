@@ -20,7 +20,7 @@ class CommunityPopularCacheTest < ActiveSupport::TestCase
   def count_selects
     queries = 0
     counter = ->(_name, _start, _finish, _id, payload) do
-      queries += 1 unless payload[:name].to_s.in?(%w[SCHEMA TRANSACTION CACHE])
+      queries += 1 unless payload[:name].to_s.in?(%w\[SCHEMA TRANSACTION CACHE])
     end
     ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
     queries

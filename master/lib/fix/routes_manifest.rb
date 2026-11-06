@@ -16,9 +16,9 @@ module Master
     class RoutesManifest
       Route = Data.define(:verb, :path, :controller, :action, :parametric, :constrained, :file)
 
-      VERBS = %w[get post put patch delete].freeze
-      RESOURCE_ACTIONS = %w[index new create show edit update destroy].freeze
-      SINGULAR_ACTIONS = %w[new create show edit update destroy].freeze
+      VERBS = %w\[get post put patch delete].freeze
+      RESOURCE_ACTIONS = %w\[index new create show edit update destroy].freeze
+      SINGULAR_ACTIONS = %w\[new create show edit update destroy].freeze
       BLOCK_OPEN = /\A(?:if|unless|case|begin|while|until)\b|\bdo(?:\s*\|[^|]*\|)?\s*\z/
       Frame = Struct.new(:path, :module_name, :controller, :constrained, keyword_init: true)
 

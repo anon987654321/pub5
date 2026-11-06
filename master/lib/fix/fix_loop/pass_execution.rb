@@ -97,7 +97,7 @@ module Master
           return cancellation_terminal if cancellation_requested?
 
           state = terminal_state_for(result)
-          return result unless %i[done plateau].include?(state)
+          return result unless %i\[done plateau].include?(state)
 
           reflection = @reflection.call(
             target:, state: state.to_s, files:, history: @convergence_discipline.history,
@@ -118,7 +118,7 @@ module Master
           return cancellation_terminal if cancellation_requested?
 
           state = terminal_state_for(result)
-          return result unless wishlist_rounds.positive? && %i[done plateau].include?(state)
+          return result unless wishlist_rounds.positive? && %i\[done plateau].include?(state)
 
           wishlist_message = @wishlist.call(state: state.to_s, target:, run_id:)
           @bus&.publish("fix_loop:wishlist", state:, target:, message: wishlist_message)
@@ -174,13 +174,13 @@ module Master
             end
 
             rounds += 1
-            next if %i[done plateau].include?(terminal_state_for(result))
+            next if %i\[done plateau].include?(terminal_state_for(result))
 
             break
           end
 
           remaining_pending = @wishlist.pending_count(target:)
-          if remaining_pending.positive? && %i[done plateau].include?(terminal_state_for(result))
+          if remaining_pending.positive? && %i\[done plateau].include?(terminal_state_for(result))
             result = terminal(
               :plateau,
               "wishlist queue retained #{remaining_pending} supported proposal(s) after #{rounds} bounded round(s)",
@@ -248,7 +248,7 @@ module Master
           )
           RunBudget.pass_end(pass)
           @convergence_discipline.note_progress! if @pass_runner.respond_to?(:pass_progress?) && @pass_runner.pass_progress?
-          if %i[continue reloading].include?(result.status) && wishlist_proposals.any?
+          if %i\[continue reloading].include?(result.status) && wishlist_proposals.any?
             @wishlist.mark_delivered(
               proposal_ids: wishlist_proposals.map { |proposal| proposal["uid"] },
               run_id:,
@@ -326,7 +326,7 @@ module Master
         # sends the loop back into repair with the new file list.
         def structural_repair?(result, files:, target:, state:, run_id:, pass:)
           return false unless structural_enabled?
-          return false unless %i[clean plateau].include?(result.status)
+          return false unless %i\[clean plateau].include?(result.status)
 
           structural = sweep_tree(target, run_id, phase: :normal)
           return false if structural.empty?

@@ -24,10 +24,10 @@ module Master
       MAX_TITLE_BYTES = 200
       MAX_DESCRIPTION_BYTES = 2_000
       MAX_NOTE_BYTES = 1_200
-      TASK_STATES = %w[open in_progress blocked completed].freeze
-      STEP_STATES = %w[pending in_progress blocked verified].freeze
-      PRIORITIES = %w[low normal high].freeze
-      MUTATIONS = %w[create update add_step start_step block_step verify_step block resume complete reminded].freeze
+      TASK_STATES = %w\[open in_progress blocked completed].freeze
+      STEP_STATES = %w\[pending in_progress blocked verified].freeze
+      PRIORITIES = %w\[low normal high].freeze
+      MUTATIONS = %w\[create update add_step start_step block_step verify_step block resume complete reminded].freeze
       # Said when a due time is accepted, so no one is told a reminder will ring that will not.
       DELIVERY = "Rings in an open interactive master session (bin/master) once it is due; " \
                  "nothing rings while no session is open.".freeze
@@ -49,7 +49,7 @@ module Master
         raise Error, "personal task access is local-owner only" if Fiber[:master_visitor] == true
 
         action = action.to_s
-        raise Error, "unknown task action: #{action}" unless (%w[list show] + MUTATIONS).include?(action)
+        raise Error, "unknown task action: #{action}" unless (%w\[list show] + MUTATIONS).include?(action)
 
         with_lock do
           state = read_state
@@ -268,7 +268,7 @@ module Master
       end
 
       def require_open!(task)
-        raise Error, "task is #{task["state"]}; resume it before changing progress" unless %w[open in_progress].include?(task["state"])
+        raise Error, "task is #{task["state"]}; resume it before changing progress" unless %w\[open in_progress].include?(task["state"])
       end
 
       def normalize_priority(value)
@@ -403,7 +403,7 @@ module Master
 
       def sanitize(subject)
         value = subject.to_s.gsub(/[^a-zA-Z0-9_-]/, "_")[0, 32]
-        raise Error, "personal task subject is invalid" if value.to_s.empty? || %w[. ..].include?(value)
+        raise Error, "personal task subject is invalid" if value.to_s.empty? || %w\[. ..].include?(value)
 
         value
       end

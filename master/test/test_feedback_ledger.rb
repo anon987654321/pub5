@@ -73,7 +73,7 @@ class TestFeedbackLedger < Minitest::Test
     phoenix_log = File.join(root, Master::Phoenix::JOURNAL)
     assert File.exist?(phoenix_log)
     entries = File.readlines(phoenix_log).map { |line| JSON.parse(line) }
-    assert_equal %w[change], entries.map { |entry| entry.fetch("kind") }
+    assert_equal %w\[change], entries.map { |entry| entry.fetch("kind") }
     assert_equal "fix_loop: llm-fix [pass 1]", entries.first.fetch("goal")
     assert_equal 1, entries.first.fetch("evidence").fetch("findings")
   ensure
@@ -103,8 +103,8 @@ class TestFeedbackLedger < Minitest::Test
 
     db = SQLite3::Database.new(File.join(root, ".master", "knowledge.sqlite3"))
     tally = db.execute("SELECT dimension, event_type FROM feedback_events").tally
-    assert_equal({ %w[read_file tool_success] => 1, %w[read_file tool_failure] => 1,
-                   %w[write_file tool_success] => 1, %w[zsh tool_failure] => 1 }, tally)
+    assert_equal({ %w\[read_file tool_success] => 1, %w\[read_file tool_failure] => 1,
+                   %w\[write_file tool_success] => 1, %w\[zsh tool_failure] => 1 }, tally)
     refute(learnings.opportunities.any? { |row| row[:dimension] == "read_file" })
   ensure
     db&.close
@@ -138,7 +138,7 @@ class TestFeedbackLedger < Minitest::Test
     db = SQLite3::Database.new(File.join(root, ".master", "knowledge.sqlite3"))
     db.results_as_hash = true
     rows = db.execute("SELECT dimension FROM feedback_events WHERE event_type = 'fix_improvement'")
-    assert_equal %w[T205 T205], rows.map { |row| row["dimension"] }
+    assert_equal %w\[T205 T205], rows.map { |row| row["dimension"] }
     refute Dir.exist?(File.join(root, "runtime")), "retired runtime namespace was created"
   ensure
     db&.close
@@ -161,12 +161,12 @@ class TestFeedbackLedger < Minitest::Test
 
     # Three different pages: the same call three times running is refused as a
     # loop rather than run, which is what test_opencrabs_guards holds.
-    %w[one two three].each { |page| assert_match(/\AError: timeout/, wrapper.execute(url: "https://example.org/#{page}")) }
+    %w\[one two three].each { |page| assert_match(/\AError: timeout/, wrapper.execute(url: "https://example.org/#{page}")) }
     3.times { bus.publish("tool:after", tool: "dynamic_http", status: 503) }
     3.times { bus.publish("tool:after", tool: "read_file") }
 
     failures = learnings.opportunities.select { |row| row[:category] == :high_failure }
-    assert_equal %w[dynamic_http web_fetch], failures.map { |row| row[:dimension] }.sort
+    assert_equal %w\[dynamic_http web_fetch], failures.map { |row| row[:dimension] }.sort
     # 70ab4875c keeps opportunities out of the quiet status; verbose shows them.
     status = with_env("MASTER_CLI_VERBOSE", "1") do
       Master::CLI::CommandRegistry.render_status_lines(

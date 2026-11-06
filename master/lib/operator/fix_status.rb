@@ -218,7 +218,7 @@ module Operator
       fields << "files=#{evidence["files_observed"]}" if evidence.key?("files_observed")
       fields << "findings=#{evidence["findings"]}" if evidence.key?("findings")
       fields << "delta=#{evidence["quality_delta"]}" if evidence.key?("quality_delta")
-      %w[finding_digest snapshot_digest authority_digest].each do |key|
+      %w\[finding_digest snapshot_digest authority_digest].each do |key|
         value = evidence[key]
         fields << "#{key.delete_suffix("_digest")}=#{value[0, 12]}" if value.is_a?(String) && value.match?(/\A[0-9a-f]{64}\z/)
       end

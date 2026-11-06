@@ -234,7 +234,7 @@ module Master
 
       private
 
-      APPROVAL_KEYS = %w[name revision approved_by approved_at fixtures].freeze
+      APPROVAL_KEYS = %w\[name revision approved_by approved_at fixtures].freeze
       # Where a registry skill, which has no directory of its own, keeps its fixtures.
       REGISTRY_FIXTURES = File.join("test", "fixtures", "skills")
 

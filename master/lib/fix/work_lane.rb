@@ -9,7 +9,7 @@ module Master
       # sweep grouped by cause, mechanical fixers first. all: both, as /fix ran before lanes.
       # elevate: the improvement lane — /fix does not only repair, it improves, ideates and
       # restructures toward each domain's ideal (code, prose, visual, music) per laws.yml.
-      NAMES = %i[code visual all elevate].freeze
+      NAMES = %i\[code visual all elevate].freeze
       DEFAULT = :code
 
       # The stages a lane may start. A stage absent from a lane's row is skipped and
@@ -24,10 +24,10 @@ module Master
       }.freeze
 
       RUNS = {
-        code: %i[code_passes],
-        visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
-        all: %i[research architecture layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
-        elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
+        code: %i\[code_passes],
+        visual: %i\[layout_sweep browser_checks screenshot_sweep visual_groups],
+        all: %i\[research architecture layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
+        elevate: %i\[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze
 
       @current = DEFAULT

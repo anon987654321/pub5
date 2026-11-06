@@ -11,7 +11,7 @@ class Mention < ApplicationRecord
   # writing nothing. Shared::Mentionable already de-duplicates the handles, so
   # this guards the second writer rather than the one that exists; the table
   # carries no unique index, so nothing else does.
-  validates :mentioned_user_id, uniqueness: { scope: %i[mentionable_type mentionable_id] }
+  validates :mentioned_user_id, uniqueness: { scope: %i\[mentionable_type mentionable_id] }
 
   def self.extract(text)
     text.to_s.scan(/(?<![a-zA-Z0-9_])@([a-zA-Z0-9_]+)/).flatten.uniq

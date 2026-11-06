@@ -15,7 +15,7 @@ require "test_helper"
 # markedsplass and getting an off-site link would notice. maps and messenger are
 # not engines, which is exactly why those two always worked and hid the pattern.
 class AmbientChatParityTest < ActionDispatch::IntegrationTest
-  VERTICAL_HOSTS = %w[
+  VERTICAL_HOSTS = %w\[
     markedsplass.brgen.no
     dating.brgen.no
     tv.brgen.no

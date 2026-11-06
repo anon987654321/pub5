@@ -114,7 +114,7 @@ class LayoutContractTest < Minitest::Test
                       "#{app} must load its declared shared stack before dialect overrides"
     end
 
-    %w[stack stack_brgen].each do |stack_name|
+    %w\[stack stack_brgen].each do |stack_name|
       stack = File.read(File.join(SHARED, "app/assets/stylesheets/_#{stack_name}.scss"))
       assert_includes stack, '@forward "typography";', "#{stack_name} dropped the shared reading grammar"
       assert_match(/@forward "tokens"(?:\s+with\s+\([^;]+\))?;/, stack, "#{stack_name} dropped the shared type scale")

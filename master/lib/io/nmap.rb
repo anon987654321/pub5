@@ -15,7 +15,7 @@ module Master
       TIER = :dangerous
       DESCRIPTION = "Bounded Nmap assessment for one authorized hostname or IP.".freeze
       TIMEOUT = 180
-      PROFILES = %w[basic services safe].freeze
+      PROFILES = %w\[basic services safe].freeze
       HOSTNAME_RE = /\A(?=.{1,253}\z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i.freeze
 
       def initialize(governor:, root: Master::ROOT, event_bus: nil, timeout_s: TIMEOUT)
@@ -44,7 +44,7 @@ module Master
         argv = [executable, "-n", "-Pn", "-sT", "-T2", "--top-ports", "100",
                 "--max-retries", "1", "--host-timeout", "120s", "--max-rate", "100"]
         argv << "-6" if family == 6
-        argv.concat(["-sV", "--version-light"]) if %w[services safe].include?(profile)
+        argv.concat(["-sV", "--version-light"]) if %w\[services safe].include?(profile)
         argv.concat(["--script", "safe"]) if profile == "safe"
         argv.concat(["-oN", "-", scan_ip])
 

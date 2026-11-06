@@ -8,7 +8,7 @@
 # composite serves filter and sort at once, newest first.
 class AddMessagesConversationCreatedAtIndex < ActiveRecord::Migration[8.2]
   def change
-    add_index :messages, %i[conversation_id created_at],
+    add_index :messages, %i\[conversation_id created_at],
               name: "index_messages_on_conversation_id_and_created_at"
   end
 end

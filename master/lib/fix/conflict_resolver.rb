@@ -21,7 +21,7 @@ module Master
       # is discarded, so a slow-burn conflict-heavy period doesn't just move
       # the unbounded-growth problem from one file to an unbounded set of them.
       LOG_GENERATIONS = 3
-      DRY_LAWS = %w[DRY duplicate_code].freeze
+      DRY_LAWS = %w\[DRY duplicate_code].freeze
       WET_AHA = "WET/AHA".freeze
       DUPLICATION_THRESHOLD = 3
 
@@ -68,7 +68,7 @@ module Master
 
       def alias_name(row)
         law = row["law"].to_s
-        return law unless %w[rubocop reek].include?(law)
+        return law unless %w\[rubocop reek].include?(law)
 
         rule = row["message"].to_s[%r{\A(?:rubocop: |reek: )?([A-Z]\w+(?:/\w+)?)}, 1]
         "#{law}:#{rule}"

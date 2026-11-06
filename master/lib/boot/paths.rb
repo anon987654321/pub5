@@ -11,7 +11,7 @@ module MasterPaths
   REPORTS = File.join(ROOT, "reports")
   STATE = File.expand_path("~/.master")
   # The four governed trees, the one list every caller reads.
-  TREES = %w[master rails openbsd studio].freeze
+  TREES = %w\[master rails openbsd studio].freeze
 
   module_function
 

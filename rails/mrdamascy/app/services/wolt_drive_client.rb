@@ -47,7 +47,7 @@ class WoltDriveClient
 
   # Mock status lifecycle mirrors the webhook events Wolt Drive sends:
   # created → courier_assigned → picked_up → delivered.
-  MOCK_STATUSES = %w[created courier_assigned picked_up delivered].freeze
+  MOCK_STATUSES = %w\[created courier_assigned picked_up delivered].freeze
 
   class << self
     # Request a courier for a ready delivery order. Fills

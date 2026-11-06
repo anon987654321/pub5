@@ -53,7 +53,7 @@ class EngineBoundariesCheckTest < Minitest::Test
     result = over(
       { "dating/app/controllers/dating/home_controller.rb" => "Takeaway::Order.where(user_id: 1)\n",
         "dating/app/controllers/dating/other_controller.rb" => "Takeaway::Order.where(user_id: 1)\n" },
-      exempt: { "brgen_dating" => { "app/controllers/dating/home_controller.rb" => %w[Takeaway] } }
+      exempt: { "brgen_dating" => { "app/controllers/dating/home_controller.rb" => %w\[Takeaway] } }
     )
 
     assert_equal 1, result.failures.size, result.failures.join(", ")
@@ -63,7 +63,7 @@ class EngineBoundariesCheckTest < Minitest::Test
   def test_an_exemption_whose_read_is_gone_fails
     result = over(
       { "dating/app/controllers/dating/home_controller.rb" => "Dating::Profile.first\n" },
-      exempt: { "dating" => { "app/controllers/dating/home_controller.rb" => %w[Takeaway] } }
+      exempt: { "dating" => { "app/controllers/dating/home_controller.rb" => %w\[Takeaway] } }
     )
 
     assert_equal 1, result.failures.size, result.failures.join(", ")

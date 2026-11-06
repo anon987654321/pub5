@@ -60,9 +60,9 @@ class CreateAffiliateProducts < ActiveRecord::Migration[8.1]
     end
 
     # Upsert key.
-    add_index :affiliate_products, %i[source external_id], unique: true
+    add_index :affiliate_products, %i\[source external_id], unique: true
     # Backs the deals sidebar: fresh, in-stock, market- and category-scoped.
-    add_index :affiliate_products, %i[market category last_seen_at],
+    add_index :affiliate_products, %i\[market category last_seen_at],
               name: "index_affiliate_products_on_market_category_freshness"
     add_index :affiliate_products, :last_seen_at
   end

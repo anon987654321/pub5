@@ -30,14 +30,14 @@ module Deploy
     DEFAULT_SETTLE_MS = 500
     MAX_SETTLE_MS = 5_000
     HARD_HTTP_STATUS = 500
-    CRITICAL_RESOURCE_TYPES = %w[Script Stylesheet].freeze
+    CRITICAL_RESOURCE_TYPES = %w\[Script Stylesheet].freeze
     VISUAL_BASELINE_DIR = File.join(ROOT, "master", "checks", "data", "visual_baselines").freeze
     DEFAULT_PIXEL_DIFF_MAX_RATIO = "0.01".freeze
 
     def self.run = new.run
 
     def self.pixel_baseline_strict?(env = ENV)
-      %w[1 true yes on].include?(env["CHECK_PIXEL_BASELINE_STRICT"].to_s.strip.downcase)
+      %w\[1 true yes on].include?(env["CHECK_PIXEL_BASELINE_STRICT"].to_s.strip.downcase)
     end
 
     def self.pixel_diff_max_ratio(env = ENV)
@@ -217,7 +217,7 @@ module Deploy
       end
 
       replay.remember(key:, manifest:)
-      measured = rows.count { |row| %w[PASS FAIL].include?(row.fetch("status")) }
+      measured = rows.count { |row| %w\[PASS FAIL].include?(row.fetch("status")) }
       @result.checked!(measured)
       if measured.zero?
         @result.inconclusive!("browser_diagnostics: no route produced a conclusive browser result")
@@ -238,7 +238,7 @@ module Deploy
       print_replay(since)
       rows.each { |row| replay_row(row) }
 
-      measured = rows.count { |row| %w[PASS FAIL].include?(row["status"]) }
+      measured = rows.count { |row| %w\[PASS FAIL].include?(row["status"]) }
       @result.checked!(measured)
       @result.warn("browser_diagnostics: #{measured}/#{rows.size} route/viewport cells replayed, rails unchanged")
       @result
@@ -309,9 +309,9 @@ module Deploy
       runtime_failures = verdict[:hard].uniq
       runtime_status = runtime_failures.empty? ? "PASS" : "FAIL"
       pixel = pixel_evidence(surface:, screenshot:, screenshot_dir:, screenshot_error:)
-      if %w[REGRESSION DIMENSION_MISMATCH].include?(pixel["status"])
+      if %w\[REGRESSION DIMENSION_MISMATCH].include?(pixel["status"])
         verdict[:hard] << pixel.fetch("reason")
-      elsif %w[MISSING UNSUPPORTED].include?(pixel["status"])
+      elsif %w\[MISSING UNSUPPORTED].include?(pixel["status"])
         message = pixel.fetch("reason")
 
         if self.class.pixel_baseline_strict?
@@ -452,7 +452,7 @@ module Deploy
 
       detail = row["failure_reasons"].empty? ? counts.join(" ") : row["failure_reasons"].join("; ")
       pixel_status = row["pixel_baseline_status"]
-      if %w[COMPARED REGRESSION DIMENSION_MISMATCH MISSING UNSUPPORTED].include?(pixel_status)
+      if %w\[COMPARED REGRESSION DIMENSION_MISMATCH MISSING UNSUPPORTED].include?(pixel_status)
         detail += " pixel=#{pixel_status}"
 
         if row["pixel_diff_ratio"]

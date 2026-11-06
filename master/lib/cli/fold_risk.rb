@@ -12,7 +12,7 @@ module Master
       # execute: classified low it ran in observe and every exec was refused by capability.
       EXEC_PATTERNS = /\b(create|start|launch|spawn|open|run|attach)\b.{0,40}\b(terminal|pty|shell|screen|tmux|session|process|server|daemon|command|script)\b/i.freeze
       MEDIUM_PATTERNS = /\b(fix|implement|add|migrate|workflow|scan|refactor|clean|polish)\b/i.freeze
-      REPOSITORY_DELIVERY_INTENTS = %i[
+      REPOSITORY_DELIVERY_INTENTS = %i\[
         write_repo_changes run_full_workflow run_rails_through run_master_through
         design_frontend refactor_rails_app redesign_mobile_pwa generate_rails_pwa
         codify_policy wire_existing_module create_facade refactor_to_ruby apply_user_style_rules
@@ -41,12 +41,12 @@ module Master
         { risk: :critical, intent: :unknown }
       end
 
-      def ideation_required?(risk) = %i[medium high critical].include?(risk.to_sym)
-      def council_required?(risk) = %i[high critical].include?(risk.to_sym)
+      def ideation_required?(risk) = %i\[medium high critical].include?(risk.to_sym)
+      def council_required?(risk) = %i\[high critical].include?(risk.to_sym)
 
       def bump_risk(risk, intent)
         return :critical if intent == :delete_redundant_config
-        return :high if %i[
+        return :high if %i\[
           write_repo_changes run_full_workflow run_rails_through run_master_through
           design_frontend refactor_rails_app redesign_mobile_pwa generate_rails_pwa
         ].include?(intent) && risk != :critical

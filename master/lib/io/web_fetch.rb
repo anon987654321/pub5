@@ -63,7 +63,7 @@ module Master
       def fetch_codepen(user, slug, full: false)
         base = "https://codepen.io/#{user}/pen/#{slug}"
         failures = []
-        parts = %w[html css js].filter_map do |ext|
+        parts = %w\[html css js].filter_map do |ext|
           result = fetch_one("#{base}.#{ext}", full:)
           if result.is_a?(Master::Result) && result.ok?
             "// #{ext}\n#{result.value!}"
@@ -80,7 +80,7 @@ module Master
 
       def fetch_one(url, full: false)
         uri = URI(url)
-        return Result.err("web_fetch: only http(s)", category: :validation) unless %w[http https].include?(uri.scheme)
+        return Result.err("web_fetch: only http(s)", category: :validation) unless %w\[http https].include?(uri.scheme)
         address = SsrfGuard.pinned_address(uri)
         return Result.err("web_fetch: refused internal/reserved address", category: :validation) unless address
 

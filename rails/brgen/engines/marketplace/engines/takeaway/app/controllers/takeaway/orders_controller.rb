@@ -8,7 +8,7 @@ class Takeaway::OrdersController < Takeaway::BaseController
 
   # Guest checkout — no signup to place a takeaway order.
   before_action :require_user_session
-  before_action :set_restaurant, only: %i[new create]
+  before_action :set_restaurant, only: %i\[new create]
 
   def index
     @pagy, @orders = pagy(Current.user.takeaway_orders.recent.includes(:restaurant))

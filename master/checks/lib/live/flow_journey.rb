@@ -393,7 +393,7 @@ module Deploy
       # JavaScript that says "Exception" legitimately), which an error-page
       # heuristic would misread.
       unless step["asset"]
-        %w[Exception].each do |bad|
+        %w\[Exception].each do |bad|
           @result.fail("#{label}: response contains #{bad}") if body.include?(bad)
         end
         @result.fail("#{label}: response contains Routing Error") if body.include?("Routing Error")
@@ -414,7 +414,7 @@ module Deploy
     def capture_values(label, step, body, captures, vars)
       ok = true
 
-      %w[capture number].each do |kind|
+      %w\[capture number].each do |kind|
         Array(step[kind]).each do |spec|
           match = Regexp.new(interpolate(spec.fetch("pattern"), vars)).match(body)
           next if match.nil? && spec["optional"]

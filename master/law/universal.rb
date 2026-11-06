@@ -138,7 +138,7 @@ Law.define(:GUARD_EXPENSIVE_OPS) do
   # — or prose in a runbook. This law is the database sweep.
   #
   # A symbol list names the operations; it does not perform them.
-  # `%i[drop_table force_push]` is a list of what needs confirming, and reading
+  # `%i\[drop_table force_push]` is a list of what needs confirming, and reading
   # it as a drop_table is reading a menu as a meal.
   detect do |line|
     next false if line.match?(/%[iw]\[/)
@@ -1878,7 +1878,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:FEW_ARGUMENTS) do
-          tags %i[SMALL_PARTS]
+          tags %i\[SMALL_PARTS]
           fix "ideal is zero to two positional arguments"
           bad "def place(north, east, depth)\nend\n"
           good "def place(north:, east:, depth:)\nend\n"
@@ -1898,7 +1898,7 @@ module Master
         end
 
         ::Law.define(:N_PLUS_ONE) do
-          tags %i[PERFORMANCE]
+          tags %i\[PERFORMANCE]
           fix "loading records one-by-one inside a loop"
           example_path "/repo/rails/x/app/models/y.rb"
           bad "posts.each { |post| post.author.name }\n"
@@ -1917,7 +1917,7 @@ module Master
         ::Law.define(:NO_FLAG_ARGUMENTS) do
           source "Clean Code - no flag arguments"
           ask "Does a boolean argument make one function perform two different jobs or select unrelated behavior?"
-          tags %i[SMALL_PARTS]
+          tags %i\[SMALL_PARTS]
           fix "Split the responsibilities into named operations or objects."
           bad "def render(body, cache = true)\nend\n"
           good "def render(body, cache: true)\nend\n"
@@ -1945,7 +1945,7 @@ module Master
       # `?` needs a word character to follow. A chain is read from its head
       # only; one rooted in a constant (Rails.application.config.x) starts at
       # a global the caller already knows, and is not matched halfway along.
-        DEMETER_TRANSFORMS = %w[
+        DEMETER_TRANSFORMS = %w\[
           map select reject filter filter_map flat_map each each_with_index each_with_object with_index
           each_line each_char lines chars bytes split uniq sort sort_by min_by max_by group_by partition
           tally sum count flatten compact reverse first last take drop zip keys values to_a to_h to_s
@@ -1958,7 +1958,7 @@ module Master
 
         DEMETER_CHAIN = /(?<![\w.@$])(?:@{1,2}|\$)?\b[a-z_]\w*[?!]?(?:\(\))?(?:\.[a-z_]\w*[?!]?(?:\(\))?){3,}/
         # Platform globals every caller already knows, as a constant receiver is.
-        DEMETER_GLOBALS = %w[document window globalThis].freeze
+        DEMETER_GLOBALS = %w\[document window globalThis].freeze
 
         DEMETER_NOISE = [
           %r{\w+://\S+},
@@ -1971,12 +1971,12 @@ module Master
         ::Law.define(:LAW_OF_DEMETER) do
           source "Law of Demeter (Ian Holland)"
           ask "Does this code reach through several objects or expose knowledge of a collaborator's internals?"
-          tags %i[COUPLING]
+          tags %i\[COUPLING]
           fix "Talk only to immediate collaborators and encapsulate the traversal."
           bad "city = order.buyer.profile.address\n"
           good "names = files.uniq.sort.reject(&:empty?)\n"
           check do |src, path|
-            next [] unless %w[ruby javascript html].include?(language(path))
+            next [] unless %w\[ruby javascript html].include?(language(path))
             src.each_line.with_index(1).filter_map do |line, n|
               next if line.lstrip.start_with?("#", "//", "*")
 
@@ -2008,7 +2008,7 @@ module Master
           /\b(?:puts|warn|print|printf|logger|abort|\$stderr|\$stdout|console\.(?:log|warn|error))\b/.freeze
 
         ::Law.define(:TYPOGRAPHIC_EXCELLENCE) do
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "typographic excellence in user-facing text: the ellipsis, and a spaced en dash for an aside"
           example_path "/repo/rails/brgen/app/helpers/search_helper.rb"
           bad %(placeholder = "..."\n)
@@ -2037,7 +2037,7 @@ module Master
         BOX_DRAWING = /[─-╿]/
 
         ::Law.define(:TYPOGRAPHY_DISCIPLINE) do
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "hierarchy via weight and brightness, not decoration"
           bad "# ╭──── section ────╮\n"
           good "| name | purpose |\n|------|---------|\n"
@@ -2060,7 +2060,7 @@ module Master
         ::Law.define(:NO_SHOUTING_FRONT_PAGE) do
           source "Operator directive 2026-11-06 - front-page headlines are never set in capitals; Bringhurst, Elements of Typographic Style 2.1.6-2.1.7 (capitals take tracking, lowercase never does)"
           ask "Is the headline a reader meets first - title page, cover, landing or document H1 - set in full capitals?"
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "Set the front-page headline in the text face: mixed case, or true small caps where the face cuts them. Tracked capitals are 2.1.6's repair for labels, not the shape a front page opens with."
           example_path "/repo/docs/example.md"
           bad "# THE ELEMENTS OF TYPOGRAPHIC STYLE\n"
@@ -2109,7 +2109,7 @@ module Master
         ::Law.define(:ONE_SOURCE) do
           source "DRY - The Pragmatic Programmer (Hunt & Thomas, 1999)"
           ask "Is the same logic or data defined in multiple authoritative places?"
-          tags %i[COUPLING]
+          tags %i\[COUPLING]
           fix "Extract one authoritative representation and make all consumers reference it."
           bad %(COUNCIL_PATH = "data/council.yml"\n)
           good "path = Master::COUNCIL_PATH\n"
@@ -2142,7 +2142,7 @@ module Master
         /x
 
         ::Law.define(:SIMULATION) do
-          tags %i[ANTI_SIMULATION DENSITY]
+          tags %i\[ANTI_SIMULATION DENSITY]
           fix "future tense implies without evidence - use indicative past"
           bad %(warn "the deploy will restart relayd"\n)
           good %(assert ok, "this test would pass having measured nothing"\n)
@@ -2207,10 +2207,10 @@ module Master
         HASH_COMMENT = /(?<![$\\])\#(?!\{).*\z/
 
         SLASH_COMMENT = %r{//.*\z|/\*.*?(?:\*/|\z)}
-        SLASH_COMMENT_EXTENSIONS = %w[.js .mjs .ts .jsx .tsx .css .scss].freeze
+        SLASH_COMMENT_EXTENSIONS = %w\[.js .mjs .ts .jsx .tsx .css .scss].freeze
 
         ::Law.define(:COMPLETION_THEATER) do
-          tags %i[ROBUSTNESS COMPLETENESS]
+          tags %i\[ROBUSTNESS COMPLETENESS]
           fix "ellipsis or etcetera as placeholder violates completeness"
           bad "handle(first, second, etc.)\n"
           good %(require "etc"\n)
@@ -2259,7 +2259,7 @@ module Master
         INTERPOLATION = /\#\{([^{}]*)\}/
 
         ::Law.define(:SQL_INJECTION) do
-          tags %i[SECURITY]
+          tags %i\[SECURITY]
           fix "parameterize all SQL - never interpolate user input"
           bad %q(conn.execute("DELETE FROM #{table}")) + "\n"
           good %q(conn.execute("DELETE FROM #{conn.quote_table_name(table)}")) + "\n"
@@ -2301,7 +2301,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:CONTROL_CHARS) do
-          tags %i[ROBUSTNESS]
+          tags %i\[ROBUSTNESS]
           fix "no non-printable control characters in source"
           bad "value = 1\u0001\n"
           good "value = 1\t\n"
@@ -2336,7 +2336,7 @@ module Master
         # call from a mention — and an `include Pledge` caller writing bare
         # `pledge("stdio")` is outside this rule's reach.
         ::Law.define(:PLEDGE_STAGED) do
-          tags %i[SECURITY]
+          tags %i\[SECURITY]
           fix "Use Ground::Pledge's staged promises: stage 2 may only remove stage 1 authority, then lock unveil after paths are declared. Never widen a sealed stage or issue raw promises."
           bad %q(Master::Ground::Pledge.unveil("/", "r")) + "\n"
           good "Master::Ground::Pledge.stage1_boot!(root)\n"
@@ -2371,7 +2371,7 @@ module Master
         # to read — so a tool that mutates without publishing is outside its reach
         # and stays the gap data/laws.yml#law_map audit_logging records.
         ::Law.define(:AUDIT_APPEND_ONLY) do
-          tags %i[SECURITY]
+          tags %i\[SECURITY]
           fix "an audit sink appends to its log and never truncates it"
           bad %Q(bus.subscribe("tool:before") { |e| record(e) }\nFile.open(@path, "w") { |f| f.puts(line) }\n)
           good %Q(bus.subscribe("tool:before") { |e| record(e) }\nFile.open(@path, "a") { |f| f.puts(line) }\n)

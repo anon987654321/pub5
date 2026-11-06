@@ -7,7 +7,7 @@ require "yaml"
 
 class CoveragePolicyTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   def test_every_rails_app_starts_coverage_before_application_boot
     APPS.each do |app|
@@ -41,7 +41,7 @@ class CoveragePolicyTest < Minitest::Test
 
   def test_coverage_policy_has_explicit_application_groups
     source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
-    %w[Application Libraries Engines Shared].each do |group|
+    %w\[Application Libraries Engines Shared].each do |group|
       assert_includes source, %Q[group "#{group}"],
                       "missing SimpleCov group #{group.inspect}"
     end
@@ -110,7 +110,7 @@ class CoveragePolicyTest < Minitest::Test
     floors = YAML.safe_load_file(File.join(ROOT, "shared/test/coverage_floors.yml"))
 
     APPS.each do |app|
-      %w[line branch method].each do |criterion|
+      %w\[line branch method].each do |criterion|
         value = floors.dig(app, criterion)
         assert_kind_of Numeric, value, "#{app}: no #{criterion} floor in coverage_floors.yml"
         assert_operator value, :>, 0, "#{app}: #{criterion} floor must be above zero"

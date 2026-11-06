@@ -31,18 +31,18 @@ module Master
       }.freeze
 
       OPERATION_ALTERNATIVES = {
-        "defragment" => %w[defragment merge relocate simplify],
-        "decouple" => %w[decouple split relocate simplify],
-        "flatten" => %w[flatten merge remove simplify],
-        "merge" => %w[merge defragment flatten simplify],
-        "split" => %w[split decouple relocate simplify],
-        "relocate" => %w[relocate defragment flatten rename],
-        "rename" => %w[rename relocate simplify],
-        "reorder" => %w[reorder reflow simplify],
-        "remove" => %w[remove defragment flatten simplify],
-        "reflow" => %w[reflow reorder simplify],
-        "simplify" => %w[simplify flatten remove merge],
-        "recommend" => %w[recommend],
+        "defragment" => %w\[defragment merge relocate simplify],
+        "decouple" => %w\[decouple split relocate simplify],
+        "flatten" => %w\[flatten merge remove simplify],
+        "merge" => %w\[merge defragment flatten simplify],
+        "split" => %w\[split decouple relocate simplify],
+        "relocate" => %w\[relocate defragment flatten rename],
+        "rename" => %w\[rename relocate simplify],
+        "reorder" => %w\[reorder reflow simplify],
+        "remove" => %w\[remove defragment flatten simplify],
+        "reflow" => %w\[reflow reorder simplify],
+        "simplify" => %w\[simplify flatten remove merge],
+        "recommend" => %w\[recommend],
       }.freeze
 
       Problem = Data.define(

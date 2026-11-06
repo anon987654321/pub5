@@ -7,7 +7,7 @@ module Master
       # policy names the lowest useful capability we may descend to and the
       # maximum age of health evidence before a cloud lane becomes inconclusive.
       class AvailabilityPolicy
-        LEVELS = %w[L0 L1 L2 L3 L4].freeze
+        LEVELS = %w\[L0 L1 L2 L3 L4].freeze
         DEFAULTS = {
           "health_freshness_s" => 120,
           "dispatch_deadline_s" => 300,

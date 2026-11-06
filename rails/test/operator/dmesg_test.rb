@@ -67,7 +67,7 @@ class DmesgTest < Minitest::Test
     end
     running, lines = out.lines.map(&:chomp).partition { |line| line.start_with?("ci0 at demo: running ") }
 
-    assert_equal %w[quiet_step fallback_drift_lint rubocop_autocorrect].map { |name| "ci0 at demo: running #{name}" }, running
+    assert_equal %w\[quiet_step fallback_drift_lint rubocop_autocorrect].map { |name| "ci0 at demo: running #{name}" }, running
     assert_match(/\Aci0 at demo: fallback_drift_lint failed in \d+\.\ds\z/, lines[0])
     assert_equal "  fallback_drift_lint: a.scss:3 drifts", lines[1]
     assert_equal "ci0 at demo: rubocop_autocorrect warn: rubocop autocorrected a.rb, not in git", lines[2]

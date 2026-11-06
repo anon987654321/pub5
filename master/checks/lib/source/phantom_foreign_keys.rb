@@ -5,7 +5,7 @@ require_relative "../../support/check_result"
 module Deploy
   class PhantomForeignKeysCheck
     ROOT = File.expand_path("../../../..", __dir__)
-    PHANTOM_TABLES = %w[
+    PHANTOM_TABLES = %w\[
       buyers listings likers likees dislikers dislikees initiators receivers orders menu_items
       followees followers followed
     ].freeze

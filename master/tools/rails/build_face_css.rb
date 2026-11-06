@@ -14,7 +14,7 @@ module MasterFaceStylesheet
   ROOT = File.expand_path("../../..", __dir__)
   SOURCE_DIR = File.join(ROOT, "master", "web", "styles", "face")
   OUTPUT = File.join(ROOT, "master", "web", "public", "face.css")
-  PARTS = %w[
+  PARTS = %w\[
     00_base.css
     10_foundation.css
     20_chrome.css

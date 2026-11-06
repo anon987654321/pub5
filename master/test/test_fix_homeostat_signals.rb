@@ -66,8 +66,8 @@ class TestHomeostatSignals < Minitest::Test
   end
 
   def test_health_status_is_always_one_of_three
-    assert_includes %i[healthy degraded critical], homeostat(fatigue: 0.65).health_status
-    assert_includes %i[healthy degraded critical], H.new.health_status
+    assert_includes %i\[healthy degraded critical], homeostat(fatigue: 0.65).health_status
+    assert_includes %i\[healthy degraded critical], H.new.health_status
   end
 
   # --- mood ---------------------------------------------------------------
@@ -83,7 +83,7 @@ class TestHomeostatSignals < Minitest::Test
       focused: H.new,
     }.transform_values(&:mood)
 
-    assert_equal %i[tense weary curious focused].sort, reachable.values.sort
+    assert_equal %i\[tense weary curious focused].sort, reachable.values.sort
     reachable.each { |expected, actual| assert_equal expected, actual }
   end
 
@@ -168,7 +168,7 @@ class TestHomeostatSignals < Minitest::Test
   # silent no-op there rather than an error.
   def test_the_bias_is_always_a_tier_the_selector_knows
     [H.new, homeostat(error_rate: 1.0), homeostat(fatigue: 1.0), homeostat(energy: 0.0)].each do |unit|
-      assert_includes %i[default cheap], unit.model_tier_bias
+      assert_includes %i\[default cheap], unit.model_tier_bias
     end
   end
 
@@ -187,7 +187,7 @@ class TestHomeostatSignals < Minitest::Test
     snapshot = H.new.to_h
 
     assert_equal H::DRIVES.keys.sort, snapshot.fetch(:state).keys.sort
-    %i[mood phase tier health].each { |key| refute_nil snapshot[key], "#{key} is nil in the snapshot" }
+    %i\[mood phase tier health].each { |key| refute_nil snapshot[key], "#{key} is nil in the snapshot" }
   end
 
   def test_the_snapshot_is_a_copy_rather_than_the_live_state

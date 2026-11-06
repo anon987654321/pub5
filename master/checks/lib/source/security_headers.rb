@@ -37,7 +37,7 @@ module Deploy
 
     SHARED_CSP_FRAGMENTS = [
       "config.content_security_policy_nonce_generator",
-      "config.content_security_policy_nonce_directives = %w[script-src]",
+      "config.content_security_policy_nonce_directives = %w\[script-src]",
       "policy.object_src :none",
       "policy.frame_ancestors :self",
       "policy.script_src",

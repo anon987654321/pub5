@@ -27,7 +27,7 @@ module Shared
 
     def idempotency_request?
       request.headers[KEY_HEADER].to_s.match?(/\A[0-9a-fA-F-]{16,128}\z/) &&
-        %w[POST PUT PATCH DELETE].include?(request.request_method)
+        %w\[POST PUT PATCH DELETE].include?(request.request_method)
     end
 
     def idempotency_cache_key

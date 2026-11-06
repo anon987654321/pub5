@@ -8,7 +8,7 @@ require_relative "../lib/operator/services"
 class OperatorServicesTest < Minitest::Test
   def test_status_has_named_subsystems
     status = Master::Operator.status
-    assert_equal %w[cognition mission model memory device voice web], status.keys
+    assert_equal %w\[cognition mission model memory device voice web], status.keys
   end
 
   # One vocabulary: a status opens with a HEALTH word, and ready only where something was observed.

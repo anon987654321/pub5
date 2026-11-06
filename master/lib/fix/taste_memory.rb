@@ -23,7 +23,7 @@ module Master
       PER_VERDICT = 3
       SUMMARY_BYTES = 800
       MAX_TERMS = 8
-      VERDICTS = %w[approved rejected].freeze
+      VERDICTS = %w\[approved rejected].freeze
       LOCK = Mutex.new
 
       def initialize(root:, clock: -> { Time.now })

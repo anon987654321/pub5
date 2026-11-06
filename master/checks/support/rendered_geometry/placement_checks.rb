@@ -124,7 +124,7 @@ module Deploy
           next false unless el["key"].to_s.match?(PRIMARY_ACTION)
           next false if el["key"].to_s.match?(REPEATED_ITEM)
           # Fixed chrome follows the scroll, so it is reachable by definition.
-          !%w[fixed sticky].include?(el["position"])
+          !%w\[fixed sticky].include?(el["position"])
         end
       end
 
@@ -241,7 +241,7 @@ module Deploy
         )
       end
 
-      BUTTON_INPUTS = %w[submit button].freeze
+      BUTTON_INPUTS = %w\[submit button].freeze
       BUTTON_KEY = /\bbutton\b/
 
       def button_like?(el)

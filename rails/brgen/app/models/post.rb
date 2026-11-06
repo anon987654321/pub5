@@ -57,7 +57,7 @@ class Post < ApplicationRecord
   # and the post page show; a new image or community alone does not.
   # An edit. The gallery is arranged apart from the text (Post::Gallery):
   # assigning images would replace the whole set, where the edit form adds to it.
-  GALLERY_FIELDS = %i[images remove_image_ids image_positions].freeze
+  GALLERY_FIELDS = %i\[images remove_image_ids image_positions].freeze
 
   def revise(attributes)
     gallery = attributes.to_h.symbolize_keys.slice(*GALLERY_FIELDS)

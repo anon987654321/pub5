@@ -25,7 +25,7 @@ class TestAutofixSafetyTier < Minitest::Test
   end
 
   def test_an_adding_transform_runs_unattended
-    %w[HTML_LANG LAZY_IMAGES TRAILING_COMMAS].each do |rule|
+    %w\[HTML_LANG LAZY_IMAGES TRAILING_COMMAS].each do |rule|
       assert allowed?(rule), "#{rule} adds and is visible in its own diff"
     end
   end

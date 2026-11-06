@@ -13,8 +13,8 @@ module Master
         # Applies to master/web face, ERB views, and pub4/RAILS SCSS/HTML.
 
         UI_PATH = %r{(?:/app/views/|/app/assets/|/web/public/|/web/app/|face\.|/rails/)}i.freeze
-        CSS_LANGS = %i[css scss].freeze
-        HTML_LANGS = %i[html].freeze
+        CSS_LANGS = %i\[css scss].freeze
+        HTML_LANGS = %i\[html].freeze
 
         module_function
 
@@ -50,7 +50,7 @@ module Master
         end
 
         ::Law.define(:NO_DECORATIVE_FX) do
-          tags %i[DESIGN AESTHETIC PIXEL]
+          tags %i\[DESIGN AESTHETIC PIXEL]
           fix "flat UI - no blur, glow, or ornamental shadow"
           ask "Does the element use shadows or glows that serve no functional purpose?"
           # Structural question: Check for 'glow' or 'shadow' in filenames or directory names
@@ -96,7 +96,7 @@ module Master
             alpha, with no fake depth or parallax. Exception: pixels that collectively
             resemble a 3D model, as in face mode.
           TEXT
-          tags %i[DESIGN AESTHETIC PIXEL]
+          tags %i\[DESIGN AESTHETIC PIXEL]
           fix "Keep the surface flat: uniform size and alpha, no fake depth or parallax."
           ask "Is the rendering intent 'crisp' or 'pixel-art', yet smoothing is enabled?"
           # Structural question: Check for 'smoothing' or 'blur' in JS filename/path
@@ -104,7 +104,7 @@ module Master
           bad "ctx.imageSmoothingEnabled = true;\n"
           good "ctx.imageSmoothingEnabled = false;\n"
           check do |src, path|
-            next [] unless %w[css scss javascript].include?(language(path))
+            next [] unless %w\[css scss javascript].include?(language(path))
             findings = []
 
             if path.to_s.match?(/\.(js|ts)\z/) || File.basename(path.to_s).match?(/face/)
@@ -139,7 +139,7 @@ module Master
         # The static pass catches only a high-signal anti-pattern; it leaves unusual
         # but legitimate overlays to the semantic review and rendered geometry checks.
         ::Law.define(:GRID_STRUCTURE) do
-          tags %i[DESIGN LAYOUT]
+          tags %i\[DESIGN LAYOUT]
           fix "grid structure - shared tracks, consistent alignment and parent-owned gap"
           ask "Does the interface express repeated relationships with coherent grid or flex tracks and parent-owned gap rather than arbitrary per-child offsets and widths?"
           # Structural question: Find grid-like containers whose direct children combine absolute positioning, a fixed physical offset and a fixed wide width.
@@ -177,7 +177,7 @@ module Master
         # beside the declared steps, so 52px passed here and failed ScaleLint, and the
         # 8px snap that repaired it turned the scale's own 1px hairline into 0px.
         ::Law.define(:EIGHT_PX_RHYTHM) do
-          tags %i[DESIGN AESTHETIC]
+          tags %i\[DESIGN AESTHETIC]
           fix "spacing on the declared scale (tokens.yml scale.space_px) - Müller-Brockmann grid module"
           ask "Does the spacing step off the declared scale rather than follow its rhythm?"
           transform "snap_to_design_scale"
@@ -222,7 +222,7 @@ module Master
         end
 
         ::Law.define(:LINE_HEIGHT_ON_SCALE) do
-          tags %i[DESIGN TYPOGRAPHY RHYTHM]
+          tags %i\[DESIGN TYPOGRAPHY RHYTHM]
           fix "unitless line-height must be on the declared scale (tokens.yml scale.line_height)"
           transform "snap_to_design_scale"
           example_path "/repo/app/assets/stylesheets/_example.scss"
@@ -259,7 +259,7 @@ module Master
         end
 
         ::Law.define(:TOUCH_TARGET_MIN) do
-          tags %i[DESIGN UX ACCESSIBILITY]
+          tags %i\[DESIGN UX ACCESSIBILITY]
           fix "Fitts - interactive targets >=44px"
           ask "Is the interactive element's hit area too small for comfortable thumb use?"
           # Structural question: Check if mobile-specific views lack minimum target constraints
@@ -300,7 +300,7 @@ module Master
         end
 
         ::Law.define(:CHOICE_OVERLOAD) do
-          tags %i[DESIGN UX]
+          tags %i\[DESIGN UX]
           fix "Hick - too many peer choices without grouping"
           bad "<nav>#{(1..8).map { |n| "<a href=\"/#{n}\">#{n}</a>" }.join}</nav>\n"
           good "<ul>#{(1..8).map { |n| "<li>#{n}</li>" }.join}</ul>\n"
@@ -364,13 +364,13 @@ module Master
         ::Law.define(:PROGRESSIVE_DISCLOSURE) do
           source "Progressive disclosure (Jakob Nielsen, NN/g)"
           ask "Does this present all complexity at once instead of revealing detail as the user's task requires it?"
-          tags %i[DESIGN UX]
+          tags %i\[DESIGN UX]
           fix "Lead with the common path and reveal advanced controls when they become relevant."
           example_path "/repo/app/views/settings/edit.html.erb"
           bad %(<form class="settings">\n<input name=\"f1\">\n<input name=\"f2\">\n<input name=\"f3\">\n<input name=\"f4\">\n<input name=\"f5\">\n<input name=\"f6\">\n</form>\n)
           good %(<form class="settings">\n<details><summary>Advanced</summary>\n<input name=\"f1\">\n<input name=\"f2\">\n<input name=\"f3\">\n<input name=\"f4\">\n<input name=\"f5\">\n<input name=\"f6\">\n</details>\n</form>\n)
           check do |src, path|
-            next [] unless %w[html].include?(language(path))
+            next [] unless %w\[html].include?(language(path))
             next [] unless path.to_s.include?("/app/views/") || path.to_s.include?("web/")
 
             # "Dumping all options at once" needs options to dump. This fired on any
@@ -388,7 +388,7 @@ module Master
         end
 
         ::Law.define(:WHITESPACE_RHYTHM) do
-          tags %i[DESIGN AESTHETIC]
+          tags %i\[DESIGN AESTHETIC]
           fix "ma - breathing room via gap/section spacing tokens"
           bad ".card { color: red; }\n"
           good ".card { gap: var(--sp); }\n"
@@ -409,7 +409,7 @@ module Master
         end
 
         ::Law.define(:TYPE_HIERARCHY) do
-          tags %i[DESIGN TYPOGRAPHY]
+          tags %i\[DESIGN TYPOGRAPHY]
           fix "modular type scale - flag one-off font sizes"
           bad ".s1 { font-size: 11px; }\n.s2 { font-size: 12px; }\n.s3 { font-size: 13px; }\n.s4 { font-size: 14px; }\n.s5 { font-size: 15px; }\n.s6 { font-size: 16px; }\n.s7 { font-size: 17px; }\n.s8 { font-size: 18px; }\n.s9 { font-size: 19px; }\n"
           good ".s1 { font-size: 11px; }\n.s2 { font-size: 12px; }\n.s3 { font-size: 13px; }\n.s4 { font-size: 14px; }\n.s5 { font-size: 15px; }\n.s6 { font-size: 16px; }\n.s7 { font-size: 17px; }\n.s8 { font-size: 18px; }\n"
@@ -427,7 +427,7 @@ module Master
         end
 
         ::Law.define(:CONTRAST_TOKENS) do
-          tags %i[DESIGN ACCESSIBILITY]
+          tags %i\[DESIGN ACCESSIBILITY]
           fix "prefer token colors over low-contrast gray-on-gray magic"
           bad ".meta { color: #ccc; }\n"
           good ".meta { color: var(--text-secondary); }\n"
@@ -457,7 +457,7 @@ module Master
         end
 
         ::Law.define(:PIXEL_EXACT) do
-          tags %i[DESIGN AESTHETIC PIXEL]
+          tags %i\[DESIGN AESTHETIC PIXEL]
           fix "avoid subpixel/fractional layout that breaks integer grids"
           bad ".card { width: 12.5px; }\n"
           good ".card { width: 12px; }\n"
@@ -471,7 +471,7 @@ module Master
 
         # Family polish (design_rules ui_polish) — ERB chrome must be i18n; titles use tokens.
         ::Law.define(:ERB_HARDCODED_CHROME) do
-          tags %i[DESIGN I18N rails VIEWS]
+          tags %i\[DESIGN I18N rails VIEWS]
           fix "empty/search chrome uses t() not hardcoded English (default_locale nb)"
           bad %(<%= render "shared/empty", title: "No results" %>\n)
           good %(<%= render "shared/empty", title: t("empty.results") %>\n)
@@ -499,7 +499,7 @@ module Master
         end
 
         ::Law.define(:TYPE_TITLE_TOKEN) do
-          tags %i[DESIGN TYPOGRAPHY]
+          tags %i\[DESIGN TYPOGRAPHY]
           fix "page titles use --text-title token not raw 20px"
           bad ".page-header h1 { font-size: 20px; }\n"
           good ".page-header h1 { font-size: var(--text-title, 1.25rem); }\n"
@@ -524,7 +524,7 @@ module Master
         end
 
         ::Law.define(:FORM_FOLLOWS_FUNCTION) do
-          tags %i[DESIGN AESTHETIC]
+          tags %i\[DESIGN AESTHETIC]
           fix "decorative empty wrappers without content/role"
           bad %(<div class="decor"></div>\n)
           good %(<div class="decor"><%= yield %></div>\n)
@@ -537,7 +537,7 @@ module Master
         end
 
         ::Law.define(:SIGNAL_NOISE) do
-          tags %i[DESIGN AESTHETIC]
+          tags %i\[DESIGN AESTHETIC]
           fix "too many competing visual classes on one node"
           bad %(<div class="card card--wide is-open u-mt-2 u-p-1 shadow rounded muted">x</div>\n)
           good %(<div class="card card--wide is-open">x</div>\n)
@@ -556,7 +556,7 @@ module Master
         end
 
         ::Law.define(:AFFORDANCE_CLARITY) do
-          tags %i[DESIGN UX]
+          tags %i\[DESIGN UX]
           fix "clickable non-buttons need clear affordance"
           bad %(<div data-action="click->dropdown#toggle">Menu</div>\n)
           good %(<div data-action="click@window->dropdown#hide">Menu</div>\n)
@@ -587,13 +587,13 @@ module Master
         ::Law.define(:AESTHETIC_MINIMALISM) do
           source "Nielsen Heuristic #8 - aesthetic and minimalist design"
           ask "Does this output contain information that does not earn its place for the current task?"
-          tags %i[DESIGN AESTHETIC]
+          tags %i\[DESIGN AESTHETIC]
           fix "Remove redundant status, decoration, and secondary detail from the primary path."
           example_path "/repo/app/views/example.html.erb"
           bad %(<button class="btn"><svg class="icon"></svg><span>Save</span></button>\n)
           good %(<button class="btn">Save</button>\n)
           check do |src, path|
-            next [] unless %w[html].include?(language(path))
+            next [] unless %w\[html].include?(language(path))
             next [] unless ::Master::Review::Scan::Laws.ui_path?(path)
 
             scan_lines(src, /<(button|a)[^>]*>.*?<(svg|img|i)[^>]*>.*?<(span|small|badge)/im,
@@ -618,9 +618,9 @@ module Master
                          %(<form action="/search"><input name="q"><span class="error"></span></form>\n)],
         }.freeze
 
-        %w[USEFUL UNDERSTANDABLE UNOBTRUSIVE HONEST THOROUGH].each do |trait|
+        %w\[USEFUL UNDERSTANDABLE UNOBTRUSIVE HONEST THOROUGH].each do |trait|
           ::Law.define(:"RAMS_#{trait}") do
-            tags %i[DESIGN RAMS]
+            tags %i\[DESIGN RAMS]
             fix "Rams checklist tag: #{trait.downcase}"
             bad RAMS_FIXTURES.fetch(trait)[0]
             good RAMS_FIXTURES.fetch(trait)[1]
@@ -662,7 +662,7 @@ module Master
         end
 
         ::Law.define(:HOST_CAPACITY) do
-          tags %i[OPS]
+          tags %i\[OPS]
           fix "carrying capacity - avoid full-repo scan/fix in hot paths"
           example_path "/repo/lib/example.rb"
           bad "scanner.scan_dir(Master::ROOT)\n"
@@ -708,7 +708,7 @@ module Master
         end
 
         ::Law.define(:THIN_CONTROLLER) do
-          tags %i[rails ARCHITECTURE]
+          tags %i\[rails ARCHITECTURE]
           fix "thin controllers - business logic belongs in models/services"
           example_path "/repo/app/controllers/example_controller.rb"
           bad %(def index\n  @posts = Post.where("created_at > ? AND city_id = ? AND published = ?", a, b, c)\nend\n)
@@ -746,10 +746,10 @@ module Master
         end
 
         ::Law.define(:FAT_MODEL_CALLBACK_SOUP) do
-          tags %i[rails ARCHITECTURE]
+          tags %i\[rails ARCHITECTURE]
           fix "limit model callback piles"
           example_path "/repo/app/models/example.rb"
-          bad %w[before_validation before_save after_save after_create after_update after_commit]
+          bad %w\[before_validation before_save after_save after_create after_update after_commit]
                  .map { |cb| "  #{cb} :touch_feed\n" }.join
           good "  before_validation :normalise_slug\n  after_commit :broadcast\n"
           check do |src, path|
@@ -766,7 +766,7 @@ module Master
         # retirement). Its exemption for t() was dropped: that is PREFER's own bad example.
 
         ::Law.define(:STIMULUS_CONTROLLER_SIZE) do
-          tags %i[rails JAVASCRIPT]
+          tags %i\[rails JAVASCRIPT]
           fix "Stimulus controllers stay focused"
           bad "export default class extends Controller {\n#{"  step();\n" * 199}}\n"
           good "export default class extends Controller {\n  connect() {}\n}\n"
@@ -787,7 +787,7 @@ module Master
         end
 
         ::Law.define(:STIMULUS_PROGRESSIVE) do
-          tags %i[rails JAVASCRIPT UX]
+          tags %i\[rails JAVASCRIPT UX]
           fix "interactive UI should degrade without JS when possible"
           bad %(<div data-controller="map"></div>\n)
           good %(<div data-controller="map"><a href="/kart">Kart</a></div>\n)
@@ -801,7 +801,7 @@ module Master
         end
 
         ::Law.define(:NO_LOGIC_IN_VIEW) do
-          tags %i[rails VIEWS]
+          tags %i\[rails VIEWS]
           fix "views present; models/helpers compute"
           bad %(<% @posts.select { |p| p.published? }.each do |post| %>\n)
           good %(<%= render @posts %>\n)
@@ -823,7 +823,7 @@ module Master
         end
 
         ::Law.define(:HELPER_VIEW_ONLY) do
-          tags %i[rails]
+          tags %i\[rails]
           fix "helpers format for views only"
           example_path "/repo/app/helpers/example_helper.rb"
           bad "def recent_posts\n  Post.where(published: true)\nend\n"
@@ -837,7 +837,7 @@ module Master
         end
 
         ::Law.define(:SCSS_NESTING_DEPTH) do
-          tags %i[rails CSS DESIGN]
+          tags %i\[rails CSS DESIGN]
           fix "avoid deep SCSS nesting / preprocessor bloat"
           bad ".a {\n  .b {\n    .c {\n      .d {\n        .e {\n          color: red;\n        }\n      }\n    }\n  }\n}\n"
           good ".a {\n  .b {\n    color: red;\n  }\n}\n"
@@ -859,7 +859,7 @@ module Master
         end
 
         ::Law.define(:PWA_MANIFEST_HINT) do
-          tags %i[rails PWA]
+          tags %i\[rails PWA]
           fix "PWA surfaces declare manifest"
           example_path "/repo/app/views/layouts/application.html.erb"
           bad "<html>\n<head><title>Brgen</title></head>\n</html>\n"

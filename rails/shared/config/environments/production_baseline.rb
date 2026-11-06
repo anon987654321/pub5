@@ -63,7 +63,7 @@ def apply_production_baseline(config, hosts:, mailer_host: nil, vapid_note: nil,
 
   config.hosts = Array(hosts)
   config.host_authorization = {
-    exclude: ->(request) { %w[/up /health].include?(request.path) },
+    exclude: ->(request) { %w\[/up /health].include?(request.path) },
   }
 end
 

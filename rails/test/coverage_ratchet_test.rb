@@ -18,8 +18,8 @@ require_relative "engine_roots"
 # controller, which is not coverage improving.
 class CoverageRatchetTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
-  KINDS = %w[controllers models].freeze
+  APPS = %w\[amber brgen bsdports].freeze
+  KINDS = %w\[controllers models].freeze
 
   # app => { kind => number of sources with a matching *_test.rb }
   # Measured 2026-08-01. Raise a number when you add tests; never lower one —

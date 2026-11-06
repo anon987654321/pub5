@@ -21,7 +21,7 @@ module Operator
     ROOT = File.realpath(File.expand_path("../..", __dir__))
     MANIFEST = File.join(ROOT, "rails", "test", "interaction_campaign_400.json")
     DEFAULT_EVIDENCE_ROOT = File.join(ROOT, ".master", "interaction_campaign_runs")
-    STATES = %w[PASS FAIL BLOCKED SKIPPED].freeze
+    STATES = %w\[PASS FAIL BLOCKED SKIPPED].freeze
     DEFAULT_TIMEOUT = 240
 
     def initialize(case_ids: nil, all: false, root: ROOT, manifest_path: nil,

@@ -25,8 +25,8 @@ class Playlist::Track < ApplicationRecord
     cover: { resize_to_limit: [ 1_024, 1_024 ], format: :webp }
   }
 
-  SOURCE_TYPES = %w[upload youtube spotify soundcloud whyp direct dilla].freeze
-  PRIVACY_LEVELS = %w[private unlisted public].freeze
+  SOURCE_TYPES = %w\[upload youtube spotify soundcloud whyp direct dilla].freeze
+  PRIVACY_LEVELS = %w\[private unlisted public].freeze
 
   validates :title, presence: true
   validates :artist, presence: true, allow_blank: true
@@ -137,7 +137,7 @@ class Playlist::Track < ApplicationRecord
     return unless id
 
     share = Rack::Utils.parse_query(uri.query).select do |key, value|
-      %w[token in].include?(key) && value.present?
+      %w\[token in].include?(key) && value.present?
     end
     query = URI.encode_www_form(share)
     "https://whyp.it/embeds/track/#{id}#{"?#{query}" unless query.empty?}"

@@ -20,7 +20,7 @@ class SyncRedactionTest < Minitest::Test
   def test_redacts_the_patterns_that_always_worked
     body = "OPENAI_API_KEY=sk-abc\nACCESS_TOKEN=tok\nDB_PASSWORD=pw\nJWT_SECRET=s\n"
     out = R.redact(body)
-    %w[OPENAI_API_KEY ACCESS_TOKEN DB_PASSWORD JWT_SECRET].each do |name|
+    %w\[OPENAI_API_KEY ACCESS_TOKEN DB_PASSWORD JWT_SECRET].each do |name|
       assert_match %r{^#{name}=#{R::PLACEHOLDER}$}, out, "#{name} must reach the placeholder"
     end
   end

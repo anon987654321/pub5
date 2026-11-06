@@ -12,7 +12,7 @@ module Master
         MIN_FILES = 3
         BLOCK_LINES = 5
         MAGIC_NUMBER = /(?<![\w.])-?\b(?:[2-9]|[1-9]\d{2,})\b(?![\w.])/
-        CONCERN_WORDS = %w[cost auth policy cache notify notification search activity provider].freeze
+        CONCERN_WORDS = %w\[cost auth policy cache notify notification search activity provider].freeze
 
         def initialize(root:)
           @root = root
@@ -127,7 +127,7 @@ module Master
         # "extract a module or template" is not a thing you can do to a data
         # file. Grouping by extension stops the cross-language matches;
         # REFACTORABLE keeps the advice attached to files where it is possible.
-        REFACTORABLE = %w[.rb .rake .erb .js .ts .jsx .tsx .zsh .sh].freeze
+        REFACTORABLE = %w\[.rb .rake .erb .js .ts .jsx .tsx .zsh .sh].freeze
 
         def copy_paste_blocks(files)
           grouped = Hash.new { |hash, key| hash[key] = [] }
@@ -158,7 +158,7 @@ module Master
         # those two methods hash equal, so DRY fires on shared structure rather
         # than shared spelling — and it needs no model, so it runs on a keyless
         # tree where the semantic pass returns nothing.
-        CLONE_RUBY = %w[.rb .rake].freeze
+        CLONE_RUBY = %w\[.rb .rake].freeze
         CLONE_MIN_MASS = 24 # nodes in a def body; below this it is an accessor, not logic
         CLONE_MIN_FILES = 2
 
@@ -362,7 +362,7 @@ module Master
         # CrossFileAnalysis.new(root:).call(paths) and read the findings before
         # treating it as work.
         def build(rule, message, impact_radius: nil)
-          Review::Scan::Finding.build(law: rule, line: 1, severity: :warning, message:, tags: %i[DRY SPRAWL], impact_radius:)
+          Review::Scan::Finding.build(law: rule, line: 1, severity: :warning, message:, tags: %i\[DRY SPRAWL], impact_radius:)
         end
 
         def rel(path)

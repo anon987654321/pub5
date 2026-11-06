@@ -20,6 +20,6 @@ class CreateMarketplaceQuestions < ActiveRecord::Migration[8.1]
 
     # The listing page reads them newest-first and the seller's queue reads the
     # unanswered ones.
-    add_index :marketplace_questions, %i[listing_id answered_at]
+    add_index :marketplace_questions, %i\[listing_id answered_at]
   end
 end

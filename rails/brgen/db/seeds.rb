@@ -43,7 +43,7 @@ puts 'Seeding Brgen (core + subapps) with rich fictive data...'
 if Rails.env.development? || Rails.env.test?
   # Cleanup for dev replant only — never wipe production data.
   Faker::UniqueGenerator.clear
-  keep = %w[schema_migrations ar_internal_metadata cities]
+  keep = %w\[schema_migrations ar_internal_metadata cities]
   conn = ActiveRecord::Base.connection
   conn.disable_referential_integrity do
     conn.tables.each do |table|
@@ -99,7 +99,7 @@ end
 
 puts "Created #{users.size + 1} users (incl admin)"
 
-communities = %w[news tech bergen norge kultur food music film].map do |slug|
+communities = %w\[news tech bergen norge kultur food music film].map do |slug|
   # Norwegian copy naming the seeded city. This wrote "#{slug} community for
   # #{Faker::Address.city}", which put invented English towns on a Bergen page.
   name, description = Brgen::PlausibleContent.community(slug, seed_city&.name.presence || 'Bergen')
@@ -133,7 +133,7 @@ end
 
 posts.each do |post|
   voter = users.sample
-  post.reactions.find_or_create_by!(user: voter, kind: %w[like love].sample)
+  post.reactions.find_or_create_by!(user: voter, kind: %w\[like love].sample)
   post.votes.find_or_create_by!(user: users.sample) { |v| v.value = [ 1, -1 ].sample }
 end
 
@@ -142,11 +142,11 @@ puts seed_city&.domain == 'brgen.no' ? "Core generated posts: skipped; BergenDem
 
 # Marketplace subapp
 categories = {
-  'electronics' => %w[phones computers audio gaming],
-  'clothing' => %w[shirts trousers shoes outerwear],
-  'furniture' => %w[sofas tables chairs storage],
-  'vehicles' => %w[cars bikes motorcycles parts],
-  'services' => %w[repair moving cleaning tutoring]
+  'electronics' => %w\[phones computers audio gaming],
+  'clothing' => %w\[shirts trousers shoes outerwear],
+  'furniture' => %w\[sofas tables chairs storage],
+  'vehicles' => %w\[cars bikes motorcycles parts],
+  'services' => %w\[repair moving cleaning tutoring]
 }
 
 categories.each do |root_name, children|
@@ -260,7 +260,7 @@ listings.sample(20).each do |listing|
   order = Marketplace::Order.create!(
     buyer: buyer,
     listing: listing,
-    status: %w[pending accepted completed].sample,
+    status: %w\[pending accepted completed].sample,
     message: ORDER_MESSAGES.sample,
     created_at: rand(1..30).days.ago
   )
@@ -303,7 +303,7 @@ dating_profiles = users.sample(num_dating).map do |user|
     looking_for: Dating::Profile::LOOKING_FOR.sample,
     latitude: user.latitude,
     longitude: user.longitude,
-    bydel: %w[Sentrum Nordnes Sandviken Kalfaret].sample
+    bydel: %w\[Sentrum Nordnes Sandviken Kalfaret].sample
   )
   # A photograph from the generated pool for this gender, drawn by user id so a
   # replant gives the same face to the same user. Catalogue only: a bulk seed
@@ -366,7 +366,7 @@ users.sample(8).map do |user|
   Playlist::Set.create!(
     user: user,
     name: "Set #{Faker::Number.number(digits: 2)}",
-    privacy: %w[public private unlisted].sample
+    privacy: %w\[public private unlisted].sample
   )
 end
 
@@ -424,7 +424,7 @@ if ActiveRecord::Base.connection.table_exists?(:places)
   city = City.first
   num_places = (25 * SEED_SCALE).clamp(10, 500)
   places = num_places.times.map do
-    kind = %w[cafe bar shop park restaurant].sample
+    kind = %w\[cafe bar shop park restaurant].sample
     kind_label = { 'cafe' => 'Kafé', 'bar' => 'Bar', 'shop' => 'Butikk',
                    'park' => 'Park', 'restaurant' => 'Restaurant' }.fetch(kind)
     Place.create!(

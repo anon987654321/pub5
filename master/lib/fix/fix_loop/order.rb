@@ -11,12 +11,12 @@ module Master
         # Law#id values, so tier2? was false for every rule and the primary
         # key was constant. NO_GOD_CLASS is SIMPLEST_WORKS, FEATURE_ENVY is
         # the SRP detector, FEW_ARGUMENTS is the conciseness one.
-        TIER2_QUALITY_LAW_IDS = %w[NO_GOD_CLASS FEATURE_ENVY FEW_ARGUMENTS].freeze
+        TIER2_QUALITY_LAW_IDS = %w\[NO_GOD_CLASS FEATURE_ENVY FEW_ARGUMENTS].freeze
         # What a user meets first outranks what a reviewer reads. A JavaScript exception, a
         # route answering 4xx/5xx or a stylesheet that never arrives breaks the page; a
         # rendered defect makes it worse; a code law makes the source worse. The browser
         # checks found the first kind and /fix repaired a RuboCop line before any of them.
-        IMPACT_TIERS = %i[runtime rendered code].freeze
+        IMPACT_TIERS = %i\[runtime rendered code].freeze
         RUNTIME_EVIDENCE = Regexp.union(
           /uncaught JavaScript exception/i,
           /browser console error/i,
@@ -25,7 +25,7 @@ module Master
           /network-error page/i,
           /broken asset|asset (?:missing|not found)/i,
         )
-        RENDERED_LAW_IDS = %w[RENDERED_VISUAL_REFINEMENT SCALE_SNAP].freeze
+        RENDERED_LAW_IDS = %w\[RENDERED_VISUAL_REFINEMENT SCALE_SNAP].freeze
         AGE_PATH = File.join("data", "violation_age.yml").freeze
 
         def initialize(laws:, learnings:, bus:, root:)

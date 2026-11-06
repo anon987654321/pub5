@@ -11,8 +11,8 @@ module Master
     # Findings are repairable; this is not a second policy engine. The scanner and
     # constitutional self-test remain the sources of rule findings.
     class Preflight
-      RUBY_EXTENSIONS = %w[.rb .rake .ru .gemspec].freeze
-      YAML_EXTENSIONS = %w[.yml .yaml].freeze
+      RUBY_EXTENSIONS = %w\[.rb .rake .ru .gemspec].freeze
+      YAML_EXTENSIONS = %w\[.yml .yaml].freeze
 
       def initialize(root:, bus: nil)
         @root = File.expand_path(root)

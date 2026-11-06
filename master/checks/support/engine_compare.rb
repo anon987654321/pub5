@@ -23,7 +23,7 @@ module Deploy
       moved = (ours.keys & theirs.keys).filter_map do |key|
         a = ours.fetch(key)
         b = theirs.fetch(key)
-        delta = %w[x y w h].to_h { |axis| [axis, b[axis].to_i - a[axis].to_i] }
+        delta = %w\[x y w h].to_h { |axis| [axis, b[axis].to_i - a[axis].to_i] }
 
         size = delta.values.map(&:abs).max
         { "key" => key, "delta" => delta, "size" => size } if size > tolerance

@@ -4,7 +4,7 @@ module Master
   module Trace
     # Accumulates mutation paths per pipeline turn for Lint and post-edit hooks.
     class WriteTracker
-      MUTATING_TOOLS = %w[write_file str_replace ast_edit batch_replace replace].freeze
+      MUTATING_TOOLS = %w\[write_file str_replace ast_edit batch_replace replace].freeze
 
       class << self
         attr_accessor :current

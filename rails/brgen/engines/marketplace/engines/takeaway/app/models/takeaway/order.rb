@@ -23,13 +23,13 @@ class Takeaway::Order < ApplicationRecord
   has_many :order_items, class_name: "Takeaway::OrderItem", dependent: :destroy
   has_many :reviews, class_name: "Takeaway::Review", dependent: :destroy
 
-  STATUSES = %w[pending confirmed preparing out_for_delivery delivered cancelled].freeze
-  TERMINAL_STATUSES = %w[delivered cancelled].freeze
+  STATUSES = %w\[pending confirmed preparing out_for_delivery delivered cancelled].freeze
+  TERMINAL_STATUSES = %w\[delivered cancelled].freeze
   TRANSITIONS = {
-    "pending" => %w[confirmed cancelled],
-    "confirmed" => %w[preparing cancelled],
-    "preparing" => %w[out_for_delivery cancelled],
-    "out_for_delivery" => %w[delivered],
+    "pending" => %w\[confirmed cancelled],
+    "confirmed" => %w\[preparing cancelled],
+    "preparing" => %w\[out_for_delivery cancelled],
+    "out_for_delivery" => %w\[delivered],
     "delivered" => [],
     "cancelled" => [],
   }.freeze
@@ -131,7 +131,7 @@ class Takeaway::Order < ApplicationRecord
 
   # Reorder belongs to the diner, once the order is over.
   def reorderable_by?(user)
-    user.present? && user_id == user.id && %w[delivered cancelled].include?(status)
+    user.present? && user_id == user.id && %w\[delivered cancelled].include?(status)
   end
 
   private

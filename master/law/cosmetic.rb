@@ -8,7 +8,7 @@ module Master
         # inside the rule block, which is instance_exec'd once per file and
         # would rebuild them every time.
         module CosmeticRuleSupport
-          LITERAL_QUOTE_CALLS = %w[require require_relative gem].freeze
+          LITERAL_QUOTE_CALLS = %w\[require require_relative gem].freeze
 
           MEANING_CHANGES_RE = Regexp.union('"', "\\", '#{', "\#$", "\#@")
 
@@ -118,7 +118,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:RUBY_TERNARY_NOT_NESTED) do
-          tags %i[STYLE]
+          tags %i\[STYLE]
           fix "no nested ternaries"
           bad "value = a ? (b ? 1 : 2) : 3\n"
           good "value = a ? 1 : 2\n"
@@ -142,7 +142,7 @@ module Master
         end
 
         ::Law.define(:NO_ABBREVIATED_IDENTIFIERS) do
-          tags %i[STYLE]
+          tags %i\[STYLE]
           fix "spell identifiers in full - no tmp/idx/cfg/ctx"
           bad "def call(tmp)\nend\n"
           good "def call(temporary_path)\nend\n"
@@ -172,7 +172,7 @@ module Master
         # once the parse tree is read instead of the line, master holds 376
         # single-quoted strings and every one of them sits inside a `#{}`.
         ::Law.define(:DOUBLE_QUOTES_RUBY) do
-          tags %i[STYLE]
+          tags %i\[STYLE]
           fix "double-quoted strings per style.yml"
           bad %(name = 'osman'\n)
           good %(name = "osman"\n)
@@ -199,7 +199,7 @@ module Master
         end
 
         ::Law.define(:EN_DASH_RANGE) do
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "numeric ranges use en dash not hyphen"
           example_path "/repo/docs/example.md"
           bad "The band is 45-75 wide.\n"
@@ -222,7 +222,7 @@ module Master
         end
 
         ::Law.define(:ALL_CAPS_NO_TRACKING) do
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "all-caps labels need letter-spacing"
           bad ".label { text-transform: uppercase; }\n"
           good ".label { text-transform: uppercase; letter-spacing: 0.08em; }\n"
@@ -237,10 +237,10 @@ module Master
         # tabs by definition, and login.conf and newsyslog.conf are kept as the
         # base system ships them, $OpenBSD$ id and tab-aligned columns included,
         # so a diff against the base file stays readable.
-        TAB_DELIMITED_BASENAMES = %w[login.conf newsyslog.conf].freeze
+        TAB_DELIMITED_BASENAMES = %w\[login.conf newsyslog.conf].freeze
 
         ::Law.define(:TAB_CHARACTER) do
-          tags %i[HYGIENE]
+          tags %i\[HYGIENE]
           fix "tabs forbidden - use two spaces"
           bad "def call\n\tvalue\nend\n"
           good "def call\n  value\nend\n"
@@ -252,7 +252,7 @@ module Master
         end
 
         ::Law.define(:FINAL_NEWLINE) do
-          tags %i[HYGIENE]
+          tags %i\[HYGIENE]
           fix "files end with a single newline"
           bad "puts 1"
           good "puts 1\n"
@@ -280,7 +280,7 @@ module Master
         # Content words only, and a floor of three, because "# Cache the user"
         # over `def cache_user` is a two-word coincidence and flagging it would
         # train people to delete the comments that earn their place.
-        COMMENT_STOPWORDS = %w[the and for that with not its this are was were does def end
+        COMMENT_STOPWORDS = %w\[the and for that with not its this are was were does def end
                                self new nil true false].freeze
 
         COMMENT_RESTATEMENT_FLOOR = 3
@@ -295,12 +295,12 @@ module Master
         ::Law.define(:COMMENTS_AS_DEODORANT) do
           source "Refactoring - comments as deodorant (Fowler/Beck)"
           ask "Is a comment compensating for code or prose that could instead be rewritten to make the intent obvious?"
-          tags %i[CLEAN_CODE SELF_EXPLAINING]
+          tags %i\[CLEAN_CODE SELF_EXPLAINING]
           fix "Refactor the underlying artifact first; keep comments for rationale that cannot be encoded directly."
           bad "# increment the wear count\nincrement_wear_count\n"
           good "# a torn hem is still a wearing\nincrement_wear_count\n"
           check do |src, path|
-            next [] unless %w[ruby].include?(language(path))
+            next [] unless %w\[ruby].include?(language(path))
             lines = src.lines
             lines.each_with_index.filter_map do |line, index|
               next unless line.strip.start_with?("#")
@@ -339,7 +339,7 @@ module Master
         end
 
         ::Law.define(:VERTICAL_BREATH) do
-          tags %i[BEAUTY]
+          tags %i\[BEAUTY]
           fix "vertical breath - avoid 10+ statements without a blank line"
           bad (1..10).map { |i| "line#{i} = 1\n" }.join
           good "a = 1\n\nb = 2\n# a doc comment\n# runs on\n# for several\n# lines\n# above\n# the\n# def\n# it\n# names\n" \
@@ -376,7 +376,7 @@ module Master
         end
 
         ::Law.define(:CODE_SYMMETRY) do
-          tags %i[BEAUTY]
+          tags %i\[BEAUTY]
           fix "source symmetry - avoid jagged indentation shifts"
           bad "def foo\n        return true\nend\n"
           good "def foo\n  return true\nend\n"
@@ -403,7 +403,7 @@ module Master
         end
 
         ::Law.define(:TYPOGRAPHIC_GRID) do
-          tags %i[TYPOGRAPHY]
+          tags %i\[TYPOGRAPHY]
           fix "typographic grid - maintain line length and vertical rhythm"
           example_path "/repo/README.md"
           bad "#{"x" * 105}\n"
@@ -423,7 +423,7 @@ module Master
         end
 
         ::Law.define(:README_PROSE) do
-          tags %i[TYPOGRAPHY DOMAIN_LANGUAGE]
+          tags %i\[TYPOGRAPHY DOMAIN_LANGUAGE]
           fix "a README is prose - a bold visionary opening, " \
             "tables never, code only under the final heading"
           example_path "/repo/README.md"

@@ -56,7 +56,7 @@ module Deploy
         }
       end
 
-      SPACING_SIDES = %w[padding-top padding-right padding-bottom padding-left margin-top margin-bottom row-gap
+      SPACING_SIDES = %w\[padding-top padding-right padding-bottom padding-left margin-top margin-bottom row-gap
                          column-gap].freeze
 
       # On the 8px rhythm with its 4px fine step, or a step tokens.yml declares (the 1-3px hairlines).
@@ -92,7 +92,7 @@ module Deploy
 
       def off_palette(element)
         # Text colour is check_token_conformance's; this adds the ground it is painted on.
-        %w[bg].filter_map do |field|
+        %w\[bg].filter_map do |field|
           hex = element[field].to_s.downcase
           "#{element["key"]} #{field} #{hex}" if hex.start_with?("#") && !@palette.include?(hex)
         end
@@ -122,7 +122,7 @@ module Deploy
       # painting #6b7fd7 "outside master/data/tokens.yml" — a colour that is declared
       # in master/data/tokens.yml, on the line above its own contrast measurement.
       def token_palette
-        set = %w[#000000 #ffffff]
+        set = %w\[#000000 #ffffff]
 
         collect_hexes(@tokens, set)
         set.compact.uniq

@@ -47,7 +47,7 @@ module Operator
     def tree_kind
       cwd = Dir.pwd
       return :deployed_app if cwd.match?(%r{/home/[^/]+/app\z})
-      return :dev_checkout if cwd.include?("/home/dev/pub4") ||
+      return :dev_checkout if cwd.include?("/home/dev/pub5") ||
                                File.directory?(File.join(repo_root, "openbsd"))
       :local
     end

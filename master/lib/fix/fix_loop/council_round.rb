@@ -11,7 +11,7 @@ module Master
     # the dispatch that set it, the same one-command lifetime the other
     # execution overrides have.
     module CritiquePin
-      FOCI = %i[simplify security].freeze
+      FOCI = %i\[simplify security].freeze
 
       module_function
 

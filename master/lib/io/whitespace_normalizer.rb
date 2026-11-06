@@ -8,7 +8,7 @@ module Master
     module WhitespaceNormalizer
       module_function
 
-      COLLAPSE_INTERNAL_EXTS = %w[.rb].freeze
+      COLLAPSE_INTERNAL_EXTS = %w\[.rb].freeze
 
       def normalize(content, path: nil)
         return content unless content.is_a?(String) && !content.empty?

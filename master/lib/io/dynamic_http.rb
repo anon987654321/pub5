@@ -45,7 +45,7 @@ module Master
       def resolve_and_validate_uri(defn, params)
         url = interpolate(defn.fetch("url").to_s, params)
         uri = URI(url)
-        return Result.err("dynamic_http: only http(s)", category: :validation) unless %w[http https].include?(uri.scheme)
+        return Result.err("dynamic_http: only http(s)", category: :validation) unless %w\[http https].include?(uri.scheme)
         return Result.err("dynamic_http: refused internal/reserved address", category: :validation) unless SsrfGuard.safe_uri?(uri)
 
         uri

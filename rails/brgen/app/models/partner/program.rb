@@ -17,9 +17,9 @@ class Partner::Program < ApplicationRecord
   has_many :partners, through: :memberships, source: :user
   has_many :conversions, through: :memberships, source: :conversions
 
-  STATUSES = %w[draft open paused closed].freeze
+  STATUSES = %w\[draft open paused closed].freeze
   # cpa_percent: basis points of the order value. cpa_flat and cpl: cents.
-  COMMISSION_MODELS = %w[cpa_percent cpa_flat cpl].freeze
+  COMMISSION_MODELS = %w\[cpa_percent cpa_flat cpl].freeze
 
   # A percentage commission above this is either a typo or a business that will
   # not survive the month, and both are worth refusing at the boundary.

@@ -29,12 +29,12 @@ module Master
         MAX_RUNS = 24
         ASSESSMENT_DIR = ".master/fix_assessments"
         ARCHITECTURE_DIR = ".master/fix_architecture"
-        SURFACE_COVERAGE_SURFACES = %w[
+        SURFACE_COVERAGE_SURFACES = %w\[
           repository_tree directories file_names paths cross_file media_assets compiled_assets
           rendered_ui interactive_behavior tests runtime deployment
         ].freeze
-        SURFACE_EVIDENCE_STATES = %w[assessed_clean not_applicable violation_found inconclusive].freeze
-        RESUMABLE_STATES = %w[active crashed delivery_failed].freeze
+        SURFACE_EVIDENCE_STATES = %w\[assessed_clean not_applicable violation_found inconclusive].freeze
+        RESUMABLE_STATES = %w\[active crashed delivery_failed].freeze
 
         class ArtifactReadError < StandardError
           attr_reader :status, :details
@@ -85,7 +85,7 @@ module Master
           manifest = plan.respond_to?(:to_h) ? plan.to_h : plan
           raise ArgumentError, "fix plan manifest must be a hash" unless manifest.is_a?(Hash)
 
-          dimensions = %w[
+          dimensions = %w\[
             scope_digest source_digest law_digest law_source_digest authority_digest
             toolchain_digest exclusion_digest adapter_digest identity_digest
           ]
@@ -183,7 +183,7 @@ module Master
               Array(cell[:readings] || cell["readings"]).size
             end,
           }
-          %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest].each do |key|
+          %w\[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest].each do |key|
             value = report[key.to_sym] || report[key]
             receipt[key] = json_safe_value(value) unless value.nil?
           end
@@ -425,7 +425,7 @@ module Master
           unless report["status"].to_s == receipt["matrix_status"].to_s
             return { "status" => "artifact_status_mismatch" }
           end
-          dimensions = %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest]
+          dimensions = %w\[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest]
           dimensions.each do |key|
             expected = receipt[key]
             actual = report[key]
@@ -464,7 +464,7 @@ module Master
           cells = Array(ledger["cells"])
           blockers = cells.filter_map do |cell|
             next unless cell.is_a?(Hash)
-            next unless %w[pending inconclusive violation_found opportunity_found].include?(cell["status"].to_s)
+            next unless %w\[pending inconclusive violation_found opportunity_found].include?(cell["status"].to_s)
 
             latest = Array(cell["readings"]).last
             {
@@ -479,7 +479,7 @@ module Master
           surface_rows = surface_report["surfaces"].is_a?(Hash) ? surface_report["surfaces"] : {}
           surface_blockers = surface_rows.filter_map do |name, row|
             next unless row.is_a?(Hash)
-            next if %w[assessed_clean not_applicable].include?(row["status"].to_s)
+            next if %w\[assessed_clean not_applicable].include?(row["status"].to_s)
 
             { "surface" => name, "status" => row["status"].to_s, "reason" => row["reason"].to_s[0, 180] }
           end.first(8)
@@ -500,7 +500,7 @@ module Master
             "surface_coverage" => {
               "status" => surface_report["complete"] == true ? "complete" : "incomplete",
               "digest" => surface_report["digest"],
-              "measured" => surface_rows.count { |_name, row| %w[assessed_clean not_applicable].include?(row["status"].to_s) },
+              "measured" => surface_rows.count { |_name, row| %w\[assessed_clean not_applicable].include?(row["status"].to_s) },
               "expected" => surface_rows.size,
               "blockers" => surface_blockers,
               "surfaces" => surface_rows,
@@ -568,7 +568,7 @@ module Master
         end
 
         def active_pass(run)
-          Array(run["passes"]).reverse.find { |row| %w[active delivery_failed].include?(row["state"].to_s) }
+          Array(run["passes"]).reverse.find { |row| %w\[active delivery_failed].include?(row["state"].to_s) }
         end
 
         def next_pass(run)
@@ -601,7 +601,7 @@ module Master
           return unless surface.is_a?(Hash)
           return { "status" => "surface_coverage_schema_unsupported" } unless surface["schema_version"].to_i == 1
           return { "status" => "surface_coverage_target_mismatch" } unless surface["target_absolute"].to_s == report["target"].to_s
-          %w[plan_digest source_digest].each do |key|
+          %w\[plan_digest source_digest].each do |key|
             return { "status" => "surface_coverage_provenance_mismatch", "dimension" => key } unless surface[key] == report[key]
           end
 
@@ -621,7 +621,7 @@ module Master
             return { "status" => "surface_coverage_evidence_malformed", "surface" => name } unless evidence.is_a?(Hash)
             evidence_sha = Digest::SHA256.hexdigest(JSON.generate(evidence))
             return { "status" => "surface_coverage_evidence_digest_mismatch", "surface" => name } unless evidence_sha == receipt["evidence_sha256"]
-            %w[status reason evidence_sha256 counts].each do |key|
+            %w\[status reason evidence_sha256 counts].each do |key|
               expected = receipt[key]
               actual = row[key]
               next if expected.nil? && actual.nil?
@@ -643,7 +643,7 @@ module Master
             source_manifest["status"] == "captured" && source_manifest["verified_after_assessment"] == true &&
             source_manifest["digest"] == source_manifest["digest_after_assessment"]
           calculated_complete = snapshot_stable && details.values.all? do |receipt|
-            %w[assessed_clean not_applicable].include?(receipt["status"].to_s)
+            %w\[assessed_clean not_applicable].include?(receipt["status"].to_s)
           end
           return { "status" => "surface_coverage_truth_mismatch" } unless surface["complete"] == calculated_complete
           expected_digest = Digest::SHA256.hexdigest(JSON.generate(
@@ -694,7 +694,7 @@ module Master
           inventory_valid = inventory.all? do |row|
             row.is_a?(Array) && row.size == 2 &&
               row.all? { |value| value.is_a?(String) } &&
-              %w[file directory symlink other].include?(row[1])
+              %w\[file directory symlink other].include?(row[1])
           end
           return { "status" => "opportunity_inventory_malformed" } unless inventory_valid
           return { "status" => "opportunity_inventory_duplicate" } unless inventory.uniq.size == inventory.size
@@ -749,7 +749,7 @@ module Master
           return { "status" => "matrix_report_schema_unsupported" } unless report["schema_version"].to_i == 3
 
           status = report["status"].to_s
-          return { "status" => "matrix_status_unknown" } unless %w[complete incomplete not_measured].include?(status)
+          return { "status" => "matrix_status_unknown" } unless %w\[complete incomplete not_measured].include?(status)
           surface_failure = validate_surface_coverage_report(report, required: status == "complete")
           return surface_failure if surface_failure
 
@@ -806,7 +806,7 @@ module Master
           finding_cells = 0
           complete = true
           clean = true
-          allowed_readings = %w[assessed_clean violation_found opportunity_found not_applicable inconclusive]
+          allowed_readings = %w\[assessed_clean violation_found opportunity_found not_applicable inconclusive]
 
           cells.each_with_index do |cell, index|
             cell_status = cell["status"].to_s
@@ -843,8 +843,8 @@ module Master
                      reading_generation <= generation && allowed_readings.include?(reading_status)
                 return { "status" => "matrix_reading_order_invalid", "cell" => keys[index] }
               end
-              if keys[index] == %w[CONVERGENCE_OPPORTUNITY lexical_opportunities whole_file] &&
-                 %w[assessed_clean opportunity_found].include?(reading_status)
+              if keys[index] == %w\[CONVERGENCE_OPPORTUNITY lexical_opportunities whole_file] &&
+                 %w\[assessed_clean opportunity_found].include?(reading_status)
                 receipt_failure = validate_opportunity_reading(report, reading)
                 return receipt_failure.merge("cell" => keys[index]) if receipt_failure
               end
@@ -854,10 +854,10 @@ module Master
               if reading_status == "assessed_clean" && reading_evidence.empty?
                 return { "status" => "matrix_clean_without_evidence", "cell" => keys[index] }
               end
-              if %w[not_applicable inconclusive].include?(reading_status) && reason.empty?
+              if %w\[not_applicable inconclusive].include?(reading_status) && reason.empty?
                 return { "status" => "matrix_reason_missing", "cell" => keys[index] }
               end
-              if %w[violation_found opportunity_found].include?(reading_status) && reading_evidence.empty? && reading_findings.empty?
+              if %w\[violation_found opportunity_found].include?(reading_status) && reading_evidence.empty? && reading_findings.empty?
                 return { "status" => "matrix_finding_without_evidence", "cell" => keys[index] }
               end
 
@@ -875,7 +875,7 @@ module Master
             if cell_status == "inconclusive"
               inconclusive += 1
               clean = false
-            elsif %w[violation_found opportunity_found].include?(cell_status)
+            elsif %w\[violation_found opportunity_found].include?(cell_status)
               finding_cells += 1
               clean = false
             elsif cell_status == "not_applicable"
@@ -899,7 +899,7 @@ module Master
             (cell["status"] == "not_applicable" && cell["readings"].last&.fetch("generation", nil).to_i == generation) ||
               (cell["status"] == "assessed_clean" && cell["clean_streak"].to_i >= required_clean_passes)
           end
-          clean &&= complete && cells.all? { |cell| %w[assessed_clean not_applicable].include?(cell["status"]) }
+          clean &&= complete && cells.all? { |cell| %w\[assessed_clean not_applicable].include?(cell["status"]) }
 
           counts = {
             "recorded_cells" => recorded,

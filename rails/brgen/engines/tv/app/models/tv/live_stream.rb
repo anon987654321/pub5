@@ -8,7 +8,7 @@ module Tv
 
     self.table_name = "tv_live_streams"
 
-    STATUSES = %w[scheduled live ended cancelled].freeze
+    STATUSES = %w\[scheduled live ended cancelled].freeze
 
     belongs_to :user
     belongs_to :channel, class_name: "Tv::Channel", optional: true

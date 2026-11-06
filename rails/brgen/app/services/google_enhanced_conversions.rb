@@ -34,7 +34,7 @@ module GoogleEnhancedConversions
 
   class << self
     def enabled?
-      %w[1 true yes on].include?(ENV["GOOGLE_ENHANCED_CONVERSIONS"].to_s.strip.downcase)
+      %w\[1 true yes on].include?(ENV["GOOGLE_ENHANCED_CONVERSIONS"].to_s.strip.downcase)
     end
 
     def customer_id = ENV["GOOGLE_ADS_CUSTOMER_ID"].to_s.gsub(/\D/, "").presence

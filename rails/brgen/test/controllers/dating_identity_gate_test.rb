@@ -37,7 +37,7 @@ class DatingIdentityGateTest < ActionDispatch::IntegrationTest
   end
 
   def with_vipps(available:)
-    Rails.application.config.x.oauth_provider_slugs = available ? %w[vipps] : []
+    Rails.application.config.x.oauth_provider_slugs = available ? %w\[vipps] : []
   end
 
   test "without Vipps configured the profile form stays locked" do
@@ -86,7 +86,7 @@ class DatingIdentityGateTest < ActionDispatch::IntegrationTest
   end
 
   test "a BankID identity at LOA 4 opens the gate where BankID is the verifier" do
-    Rails.application.config.x.oauth_provider_slugs = %w[bankid]
+    Rails.application.config.x.oauth_provider_slugs = %w\[bankid]
     verify(@user, slug: "bankid")
     sign_in_as(@user)
 
@@ -96,7 +96,7 @@ class DatingIdentityGateTest < ActionDispatch::IntegrationTest
   end
 
   test "a BankID login below LOA 4 does not" do
-    Rails.application.config.x.oauth_provider_slugs = %w[bankid]
+    Rails.application.config.x.oauth_provider_slugs = %w\[bankid]
     verify(@user, slug: "bankid", assurance: "account")
     sign_in_as(@user)
 
@@ -108,7 +108,7 @@ class DatingIdentityGateTest < ActionDispatch::IntegrationTest
   # The first screen names the check the gate really makes, and none when
   # there is none, so it never claims a protection the server does not run.
   test "the first visit opens on the splash, naming the configured verifier" do
-    Rails.application.config.x.oauth_provider_slugs = %w[vipps bankid]
+    Rails.application.config.x.oauth_provider_slugs = %w\[vipps bankid]
     host! "dating.brgen.no"
 
     get dating.root_path

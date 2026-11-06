@@ -30,8 +30,8 @@ module Deploy
 
     LEDGER = File.join(ROOT, "master", "checks", "data", "craft_ledger.yml")
     CATALOGUE = File.join(ROOT, "master", "data", "laws.yml")
-    LAW_DIRS = %w[master/law].freeze
-    REQUIRED_FIELDS = %w[id law surface reason recorded review_by].freeze
+    LAW_DIRS = %w\[master/law].freeze
+    REQUIRED_FIELDS = %w\[id law surface reason recorded review_by].freeze
     WARN_WINDOW_DAYS = 30
 
     def self.run(ledger_path: LEDGER, catalogue_path: CATALOGUE, law_root: ROOT)

@@ -31,7 +31,7 @@ class MetaFactsContractTest < Minitest::Test
   end
 
   def test_fact_views_keep_independent_metadata_elements
-    paths = %w[
+    paths = %w\[
       brgen/app/views/users/show.html.erb
       brgen/app/views/partner/memberships/show.html.erb
       brgen_maps/app/views/maps/places/_card.html.erb

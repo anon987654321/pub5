@@ -81,7 +81,7 @@ def print_film(image, stock = :kodak_2383, intensity = 0.70)
   pdata = PRINT_STOCKS[stock]
   return image unless pdata
   hd = pdata[:hd]
-  bands = %i[r g b].map { |c| Vips::Image.new_from_array([HD.channel_curve(hd[c])]) }
+  bands = %i\[r g b].map { |c| Vips::Image.new_from_array([HD.channel_curve(hd[c])]) }
   lut = Vips::Image.bandjoin(bands).cast("uchar")
   # maplut hands back the LUT's interpretation, which is :matrix, so the
   # colourspace("b-w") below was a no-op returning three bands: hi_mask became

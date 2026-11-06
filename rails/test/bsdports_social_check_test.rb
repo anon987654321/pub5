@@ -19,7 +19,7 @@ class BsdportsSocialCheckTest < Minitest::Test
   ROUTES = File.read(File.join(ROOT, "bsdports/config/routes.rb"))
   SCHEMA = File.read(File.join(ROOT, "bsdports/db/schema.rb"))
 
-  SOCIAL_TABLES = %w[reactions notifications review_cases].freeze
+  SOCIAL_TABLES = %w\[reactions notifications review_cases].freeze
 
   def has_table?(name) = SCHEMA.include?(%(create_table "#{name}"))
 

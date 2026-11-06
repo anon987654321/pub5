@@ -220,7 +220,7 @@ module Master
             false
           end
 
-          # Closing lines of %w[], %i[] and %W[] arrays. Their items are bare words, so a comma
+          # Closing lines of %w\[], %i\[] and %W[] arrays. Their items are bare words, so a comma
           # before the bracket becomes part of the last word. Found from the parse, not by walking
           # lines back to an opener: a glob item such as {a,b}/c starts with a brace.
           def percent_array_close_lines(src)

@@ -39,7 +39,7 @@ Law.define(:NEVER_BATCH_DELETE) do
   # three already test for. A glob, a bare `$var` and a `Dir[]` are all
   # dangerous because the set is unknown until the line runs; the `.each { rm }`
   # branch asked only whether there was a loop, so it read a receiver spelled out
-  # in full as the same hazard. `%w[.mp3 .job .err .meta.json].each { |ext|
+  # in full as the same hazard. `%w\[.mp3 .job .err .meta.json].each { |ext|
   # rm_f(dir + ext) }` — the tts test's teardown — names how many files go and
   # which, and each call removes one named path, which is what the fix line asks.
   # `Dir[...]` keeps firing: the `[` there follows a word character, so the
@@ -62,7 +62,7 @@ Law.define(:NEVER_BATCH_DELETE) do
     FileUtils.rm("tmp/session.txt")
     system("rm", "-f", "build/main.o")
     File.delete(path) if confirmed?(path)
-    %w[.mp3 .job].each { |ext| FileUtils.rm_f(base + ext) }
+    %w\[.mp3 .job].each { |ext| FileUtils.rm_f(base + ext) }
   RUBY
 end
 

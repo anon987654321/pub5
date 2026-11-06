@@ -6,7 +6,7 @@ class Kitchen < ApplicationRecord
   has_many :orders, dependent: :destroy
 
   # weekly_hours keys, in Date#wday order. A day the hash leaves out is closed.
-  DAYS = %w[sun mon tue wed thu fri sat].freeze
+  DAYS = %w\[sun mon tue wed thu fri sat].freeze
   CLOCK = /\A([01]\d|2[0-3]):[0-5]\d\z/
 
   validates :name, presence: true

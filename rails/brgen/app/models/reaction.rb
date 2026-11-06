@@ -4,14 +4,14 @@ class Reaction < ApplicationRecord
   # Engine-ized Shared (tranche10)
   tracks_activity created: "ReactionCreated", source_vertical: "social"
 
-  KINDS = %w[like love laugh wow sad angry local].freeze
+  KINDS = %w\[like love laugh wow sad angry local].freeze
 
   belongs_to :user
   belongs_to :reactable, polymorphic: true, optional: true
   belongs_to :post, optional: true
 
   validates :kind, inclusion: { in: KINDS }, allow_blank: true
-  validates :user_id, uniqueness: { scope: %i[reactable_type reactable_id post_id kind] }
+  validates :user_id, uniqueness: { scope: %i\[reactable_type reactable_id post_id kind] }
 
   before_validation :backfill_reactable_from_post
 

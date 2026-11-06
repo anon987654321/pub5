@@ -58,7 +58,7 @@ module Deploy
     # Every source check this check runs, and the number it reports as measured.
     # A list rather than fourteen call lines, so the count cannot drift from the
     # calls the way a hand-typed 13 does.
-    SOURCE_CHECKS = %i[
+    SOURCE_CHECKS = %i\[
       check_rules_floor check_token_type_and_measure check_token_contrast
       check_touch_targets check_line_height_and_body check_spacing_rhythm
       check_type_scale_budget check_mobile_input_size check_heading_hierarchy
@@ -141,7 +141,7 @@ module Deploy
     # ultraminimalism.color.max_palette_roles — the number of *roles* the palette
     # carries, not the number of hexes. accent/danger/success/warning/info is the
     # set that paints meaning; bg/surface/text/border are structure.
-    ROLE_TOKENS = %w[accent danger success warning info].freeze
+    ROLE_TOKENS = %w\[accent danger success warning info].freeze
 
     def check_palette_roles
       max_roles = @rules.dig("ultraminimalism", "color", "max_palette_roles").to_i
@@ -342,7 +342,7 @@ module Deploy
       max_sizes = 8 if max_sizes <= 0
       chrome = @tokens["shared_chrome"] || {}
 
-      sizes = %w[font_size_meta font_size_body font_size_title font_size_display].filter_map do |k|
+      sizes = %w\[font_size_meta font_size_body font_size_title font_size_display].filter_map do |k|
         DesignMetrics.to_px(chrome[k]) if chrome[k]
       end
       if sizes.uniq.size > max_sizes
@@ -366,7 +366,7 @@ module Deploy
     end
 
     def optional_browser_hit_targets
-      return unless %w[1 true yes on].include?(ENV["DESIGN_METRICS_BROWSER"].to_s.strip.downcase)
+      return unless %w\[1 true yes on].include?(ENV["DESIGN_METRICS_BROWSER"].to_s.strip.downcase)
 
       inventory = Inventory.new(root: ROOT).apps.find { |a| a.name == "brgen" }
       unless inventory && CrawlSupport.port_open?("127.0.0.1", inventory.port)

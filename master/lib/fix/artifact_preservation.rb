@@ -27,7 +27,7 @@ module Master
         mode = intent.to_s
         kind = format.to_s.downcase.delete_prefix(".")
         return result("INCONCLUSIVE", [], "redesign requires rendered visual and accessibility evidence") if mode == "redesign"
-        unless %w[content_only content_and_structure functional_change].include?(mode)
+        unless %w\[content_only content_and_structure functional_change].include?(mode)
           return result("INCONCLUSIVE", [], "unknown task intent: #{mode}")
         end
 
@@ -60,18 +60,18 @@ module Master
         if mode == "content_only"
           unchanged = before.scan(HTML_TOKENS) == after.scan(HTML_TOKENS) &&
             raw_blocks(before) == raw_blocks(after)
-          return result("PASS", %w[html_markup inline_style_script_svg], nil) if unchanged
-          return result("FAIL", %w[html_markup inline_style_script_svg],
+          return result("PASS", %w\[html_markup inline_style_script_svg], nil) if unchanged
+          return result("FAIL", %w\[html_markup inline_style_script_svg],
                         "content-only edit changed tags, attributes, comments, templates or protected inline content")
         end
 
         unless visual_contract(before) == visual_contract(after)
-          return result("FAIL", %w[html_visual_contract], "stylesheet links, font links, inline styles or SVG assets changed")
+          return result("FAIL", %w\[html_visual_contract], "stylesheet links, font links, inline styles or SVG assets changed")
         end
         if mode == "content_and_structure" && script_contract(before) != script_contract(after)
-          return result("FAIL", %w[html_behavior_contract], "content-and-structure edit changed script tags, sources or inline behavior")
+          return result("FAIL", %w\[html_behavior_contract], "content-and-structure edit changed script tags, sources or inline behavior")
         end
-        result("PASS", %w[html_visual_contract], nil)
+        result("PASS", %w\[html_visual_contract], nil)
       end
 
       def raw_blocks(source)

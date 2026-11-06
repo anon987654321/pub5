@@ -18,7 +18,7 @@ module Postpro
       File.expand_path("../../master/law/definition.rb", __dir__),
     ].freeze
 
-    REQUIRED_LAWS = %w[
+    REQUIRED_LAWS = %w\[
       ONE_SOURCE
       NO_SIDE_EFFECTS
       TRANSFORMATIONS
@@ -30,7 +30,7 @@ module Postpro
 
     DEFAULT_VARIATION_RANGE = (5..10).freeze
 
-    ANALOG_CORE = %w[
+    ANALOG_CORE = %w\[
       film_curve
       grain
       halation

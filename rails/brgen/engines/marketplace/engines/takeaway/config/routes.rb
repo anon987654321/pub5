@@ -5,13 +5,13 @@
 Takeaway::Engine.routes.draw do
     root "restaurants#index"
     resources :restaurants do
-      resource :favorite_restaurant, only: %i[create destroy]
-      resources :menu_items, only: %i[create update destroy]
-      resources :orders, only: %i[new create]
-      resources :reviews, only: %i[create]
+      resource :favorite_restaurant, only: %i\[create destroy]
+      resources :menu_items, only: %i\[create update destroy]
+      resources :orders, only: %i\[new create]
+      resources :reviews, only: %i\[create]
     end
-    resources :delivery_drivers, only: %i[index show update]
-    resources :orders, only: %i[index show update] do
+    resources :delivery_drivers, only: %i\[index show update]
+    resources :orders, only: %i\[index show update] do
       post :again, on: :member
       # Vipps for the food; see Takeaway::Order::Payment.
       post :pay, on: :member
@@ -21,5 +21,5 @@ Takeaway::Engine.routes.draw do
     # The shared ticket, addressed by its token rather than its id: an order id
     # in a link pasted into a group chat lets somebody read the next lunch by
     # counting.
-    resources :group_orders, only: %i[show update destroy], param: :id, path: "group"
+    resources :group_orders, only: %i\[show update destroy], param: :id, path: "group"
 end

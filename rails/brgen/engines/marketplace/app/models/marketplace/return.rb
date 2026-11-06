@@ -14,7 +14,7 @@ class Marketplace::Return < ApplicationRecord
   # requested -> approved|refused, approved -> received. Money is a fourth thing
   # (refunded_at): the selected payment provider confirms it, or the row stays
   # pending. Dintero, Stripe and Vipps refund; any other provider stays pending.
-  STATUSES = %w[requested approved refused received].freeze
+  STATUSES = %w\[requested approved refused received].freeze
   # Fourteen days from delivery, which is the statutory floor for a distance
   # purchase from a business in Norway.
   WINDOW = 14.days
@@ -26,9 +26,9 @@ class Marketplace::Return < ApplicationRecord
   validates :reason, presence: true, length: { maximum: 1_000 }
   validate :one_open_return_per_order, on: :create
 
-  scope :open_returns, -> { where(status: %w[requested approved]) }
+  scope :open_returns, -> { where(status: %w\[requested approved]) }
 
-  def open? = status.in?(%w[requested approved])
+  def open? = status.in?(%w\[requested approved])
   def refunded? = refunded_at.present?
 
   def approve!(by:, note: nil)

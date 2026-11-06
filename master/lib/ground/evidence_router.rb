@@ -3,7 +3,7 @@
 module Master
   module Ground
     module EvidenceRouter
-      MODES = %i[conversation opinion repository web_current deep_research browser device unknown].freeze
+      MODES = %i\[conversation opinion repository web_current deep_research browser device unknown].freeze
 
       # Weather and tomorrow are current too: "what is the weather in Bergen tomorrow" was
       # :unknown and answered from memory.
@@ -16,7 +16,7 @@ module Master
       RESEARCH = /\b(?:research|investigate|deep\s+dive|look\s+into|study|compare\s+(?:sources|options|approaches)|survey|literature|find\s+out)\b/i
       # Not "master": it is the assistant's name, and "hei master, hvordan går det?" was routed as a
       # repository question with tools and a long model wait.
-      REPOSITORY_TERMS = %w[repo repository codebase code file files module class method gemfile rails git commit
+      REPOSITORY_TERMS = %w\[repo repository codebase code file files module class method gemfile rails git commit
                             branch diff source].freeze
       REPOSITORY_WORDS = /\b(?:#{REPOSITORY_TERMS.join("|")})\b/i
       # %r{} because the path class holds a literal slash.
@@ -107,7 +107,7 @@ module Master
       end
 
       def web_required?(mode)
-        %i[web_current deep_research].include?(mode)
+        %i\[web_current deep_research].include?(mode)
       end
 
       def prompt_for(mode)

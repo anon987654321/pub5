@@ -42,7 +42,7 @@ class RcMasterStopTest < Minitest::Test
       #{HOLDERS}
       #{call}; echo "exit=$?"
     SH
-    out = IO.popen(["ksh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["ksh", "-c", script, { err: %i\[child out] }], &:read)
     [out, File.exist?(File.join(dir, "calls")) ? File.read(File.join(dir, "calls")) : ""]
   end
 

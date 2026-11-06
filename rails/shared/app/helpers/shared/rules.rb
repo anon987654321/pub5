@@ -8,9 +8,9 @@ module Shared
   # data; those were legal terms, not community rules, and stay out.
   module Rules
     RULE_SECTIONS = {
-      forbidden: %w[multiple_accounts url_shorteners harvesting copying automated_access harm],
-      posting: %w[illegal affiliate_marketing wrong_category repeats on_behalf automated_posting],
-      impersonation: %w[pretending],
+      forbidden: %w\[multiple_accounts url_shorteners harvesting copying automated_access harm],
+      posting: %w\[illegal affiliate_marketing wrong_category repeats on_behalf automated_posting],
+      impersonation: %w\[pretending],
     }.freeze
 
     def rules_sections

@@ -36,7 +36,7 @@ class CreateFediverse < ActiveRecord::Migration[8.1]
       t.timestamps
     end
     add_index :fedi_actors, :uri, unique: true
-    add_index :fedi_actors, %i[username domain]
+    add_index :fedi_actors, %i\[username domain]
 
     # A remote actor following a local user. Kept even while pending, because
     # Follow and Accept are separate round trips and a dropped Accept must be
@@ -48,8 +48,8 @@ class CreateFediverse < ActiveRecord::Migration[8.1]
       t.string :activity_uri
       t.timestamps
     end
-    add_index :fedi_follows, %i[fedi_actor_id user_id], unique: true
-    add_index :fedi_follows, %i[user_id state]
+    add_index :fedi_follows, %i\[fedi_actor_id user_id], unique: true
+    add_index :fedi_follows, %i\[user_id state]
 
     # Delivery receipts, so a redelivery does not duplicate and an inbox POST
     # that arrives twice — which happens routinely — is processed once.

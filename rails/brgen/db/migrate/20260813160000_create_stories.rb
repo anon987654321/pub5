@@ -23,7 +23,7 @@ class CreateStories < ActiveRecord::Migration[8.1]
     end
 
     # The only query any story surface makes: whose stories are still alive.
-    add_index :stories, %i[user_id expires_at]
+    add_index :stories, %i\[user_id expires_at]
     # The sweep's driving index.
     add_index :stories, :expires_at
 
@@ -35,6 +35,6 @@ class CreateStories < ActiveRecord::Migration[8.1]
 
     # Seen is a set, not a log: opening a story twice is one view, and the
     # author's viewer list must not repeat a name.
-    add_index :story_views, %i[story_id user_id], unique: true
+    add_index :story_views, %i\[story_id user_id], unique: true
   end
 end

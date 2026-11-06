@@ -7,12 +7,12 @@ module Master
   module ConfigSectionsGuard
     module_function
 
-    SCAN_PROFILE_FIELDS = %w[laws aliases description severity].freeze
-    SESSION_MODE_FIELDS = %w[
+    SCAN_PROFILE_FIELDS = %w\[laws aliases description severity].freeze
+    SESSION_MODE_FIELDS = %w\[
       scan_profile council autofix_llm autofix_mechanical semantic_sample
       max_fix_passes description severity_floor
     ].freeze
-    TIME_FIELDS = %w[file_s run_s stall_s].freeze
+    TIME_FIELDS = %w\[file_s run_s stall_s].freeze
 
     # Section => its validator and the sections it checks references against.
     # Each validator returns at once when its section is absent, so one table
@@ -41,7 +41,7 @@ module Master
     def shape_errors(data, file)
       expected = sections_of(file)
       present = data.keys.map(&:to_s)
-      not_mappings = (expected - %w[scan_workers]).reject { |section| data[section].is_a?(Hash) }
+      not_mappings = (expected - %w\[scan_workers]).reject { |section| data[section].is_a?(Hash) }
       unknown = present - expected
       missing = expected - present
       [
@@ -106,7 +106,7 @@ module Master
         if row.key?("severity")
           severity = row["severity"]
           unless severity.is_a?(Array) && !severity.empty? &&
-                 severity.all? { |level| %w[info warning error critical veto].include?(level.to_s) }
+                 severity.all? { |level| %w\[info warning error critical veto].include?(level.to_s) }
             errors << "scan_profiles.#{name}.severity must be a non-empty list of severity names"
           end
         end
@@ -116,8 +116,8 @@ module Master
     def validate_autoloop(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[scan_file_sleep_s poll_interval], "autoloop", errors)
-      %w[scan_file_sleep_s poll_interval].each do |field|
+      strict_keys(value, %w\[scan_file_sleep_s poll_interval], "autoloop", errors)
+      %w\[scan_file_sleep_s poll_interval].each do |field|
         minimum = field == "scan_file_sleep_s" ? 0 : 1
         number = value[field]
         errors << "autoloop.#{field} must be numeric and >= #{minimum}" unless
@@ -128,14 +128,14 @@ module Master
     def validate_dmesg(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[enabled verbosity style format env through scan_progress milestones flush boot_sgr
+      strict_keys(value, %w\[enabled verbosity style format env through scan_progress milestones flush boot_sgr
                             boot_sgr_basic], "dmesg", errors)
-      %w[boot_sgr boot_sgr_basic].each { |key| validate_boot_sgr(value, errors, key:) }
-      %w[verbosity style format env].each do |field|
+      %w\[boot_sgr boot_sgr_basic].each { |key| validate_boot_sgr(value, errors, key:) }
+      %w\[verbosity style format env].each do |field|
         errors << "dmesg.#{field} must be non-empty text" unless
           value[field].is_a?(String) && !value[field].strip.empty?
       end
-      %w[enabled through scan_progress milestones flush].each do |field|
+      %w\[enabled through scan_progress milestones flush].each do |field|
         errors << "dmesg.#{field} must be boolean" unless [true, false].include?(value[field])
       end
     end
@@ -151,7 +151,7 @@ module Master
     def validate_session_modes(value, profiles, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[default env modes], "session_modes", errors)
+      strict_keys(value, %w\[default env modes], "session_modes", errors)
       modes = value["modes"]
       unless modes.is_a?(Hash) && !modes.empty?
         errors << "session_modes.modes must be a non-empty mapping"
@@ -173,7 +173,7 @@ module Master
         errors << "session_modes.modes.#{name} has unknown field(s): #{unknown.sort.join(', ')}" unless unknown.empty?
         errors << "session_modes.modes.#{name}.scan_profile must reference a declared profile" unless
           row["scan_profile"].is_a?(String) && profile_names.include?(row["scan_profile"])
-        %w[autofix_llm autofix_mechanical].each do |field|
+        %w\[autofix_llm autofix_mechanical].each do |field|
           errors << "session_modes.modes.#{name}.#{field} must be boolean" unless
             [true, false].include?(row[field])
         end
@@ -190,7 +190,7 @@ module Master
           row["description"].is_a?(String) && !row["description"].strip.empty?
         if row.key?("severity_floor")
           errors << "session_modes.modes.#{name}.severity_floor must be a severity name" unless
-            %w[info warning error critical veto].include?(row["severity_floor"].to_s)
+            %w\[info warning error critical veto].include?(row["severity_floor"].to_s)
         end
       end
     end
@@ -209,7 +209,7 @@ module Master
     def validate_fix_budget(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[law_share run_tokens law_shares], "fix_budget", errors)
+      strict_keys(value, %w\[law_share run_tokens law_shares], "fix_budget", errors)
       share = value["law_share"]
       errors << "fix_budget.law_share must be between 0 and 1" unless
         share.is_a?(Numeric) && share.positive? && share <= 1
@@ -226,7 +226,7 @@ module Master
     def validate_fix_time(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[default lanes], "fix_time", errors)
+      strict_keys(value, %w\[default lanes], "fix_time", errors)
       validate_time_row(value["default"], "fix_time.default", errors)
       lanes = value["lanes"]
       unless lanes.is_a?(Hash) && !lanes.empty?
@@ -252,13 +252,13 @@ module Master
     def validate_process(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[defaults loops load resources], "process", errors)
+      strict_keys(value, %w\[defaults loops load resources], "process", errors)
       defaults = value["defaults"]
       unless defaults.is_a?(Hash)
         errors << "process.defaults must be a mapping"
       else
         errors << "process.defaults.safe_mode must be boolean" unless [true, false].include?(defaults["safe_mode"])
-        %w[max_active_loops loop_cooldown_seconds].each do |field|
+        %w\[max_active_loops loop_cooldown_seconds].each do |field|
           number = defaults[field]
           errors << "process.defaults.#{field} must be non-negative numeric" unless
             number.is_a?(Numeric) && number >= 0
@@ -275,14 +275,14 @@ module Master
           end
           errors << "process.loops.#{name}.env must be an environment variable name" unless
             row["env"].is_a?(String) && row["env"].match?(/\A[A-Z][A-Z0-9_]*\z/)
-          %w[max_run_seconds min_sleep_seconds].each do |field|
+          %w\[max_run_seconds min_sleep_seconds].each do |field|
             number = row[field]
             errors << "process.loops.#{name}.#{field} must be non-negative numeric" unless
               number.is_a?(Numeric) && number >= 0
           end
         end
       end
-      %w[load resources].each do |section|
+      %w\[load resources].each do |section|
         mapping = value[section]
         unless mapping.is_a?(Hash) && !mapping.empty?
           errors << "process.#{section} must be a non-empty mapping"
@@ -306,9 +306,9 @@ module Master
         errors << "#{label} must be a mapping"
         return
       end
-      unknown = value.keys.map(&:to_s) - %w[warn crit]
+      unknown = value.keys.map(&:to_s) - %w\[warn crit]
       errors << "#{label} has unknown field(s): #{unknown.sort.join(', ')}" unless unknown.empty?
-      %w[warn crit].each do |field|
+      %w\[warn crit].each do |field|
         number = value[field]
         errors << "#{label}.#{field} must be positive numeric" unless number.is_a?(Numeric) && number.positive?
       end
@@ -317,7 +317,7 @@ module Master
     def validate_orientation(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[tree tree_max_bytes read_in_full], "orientation", errors)
+      strict_keys(value, %w\[tree tree_max_bytes read_in_full], "orientation", errors)
       errors << "orientation.tree must be non-empty text" unless value["tree"].is_a?(String) && !value["tree"].empty?
       errors << "orientation.tree_max_bytes must be a positive integer" unless
         value["tree_max_bytes"].is_a?(Integer) && value["tree_max_bytes"].positive?
@@ -328,7 +328,7 @@ module Master
     def validate_governor(value, errors)
       return unless value.is_a?(Hash)
 
-      strict_keys(value, %w[rate_limits auto_allowlist auto_dangerous_budget], "governor", errors)
+      strict_keys(value, %w\[rate_limits auto_allowlist auto_dangerous_budget], "governor", errors)
       limits = value["rate_limits"]
       unless limits.is_a?(Hash) && !limits.empty? &&
              limits.all? { |tier, amount| tier.is_a?(String) && amount.is_a?(Numeric) && amount.positive? }

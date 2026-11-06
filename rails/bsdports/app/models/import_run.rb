@@ -3,7 +3,7 @@
 class ImportRun < ApplicationRecord
   belongs_to :platform
 
-  STATUSES = %w[running succeeded failed].freeze
+  STATUSES = %w\[running succeeded failed].freeze
 
   validates :status, inclusion: { in: STATUSES }
   validates :started_at, presence: true

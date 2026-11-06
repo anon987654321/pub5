@@ -57,23 +57,23 @@ module Deploy
     # shared/config/routes/{auth,social}.rb, so no filename convention yields them.
     # uncovered_shared_views fails the simulation when a new one lands without a row.
     SHARED_PAGES = {
-      %w[account_settings show] => { path: "/account", persona: "auth" },
-      %w[two_factor_setups show] => { path: "/two_factor_setup", persona: "auth" },
-      %w[passwords new] => { path: "/passwords/new", persona: "guest" },
-      %w[passwords edit] => { path: "/passwords/:token/edit", persona: "guest", needs_id: true },
+      %w\[account_settings show] => { path: "/account", persona: "auth" },
+      %w\[two_factor_setups show] => { path: "/two_factor_setup", persona: "auth" },
+      %w\[passwords new] => { path: "/passwords/new", persona: "guest" },
+      %w\[passwords edit] => { path: "/passwords/:token/edit", persona: "guest", needs_id: true },
       # bsdports keeps the social routes behind BSDPORTS_SOCIAL=1.
-      %w[notifications index] => { path: "/notifications", persona: "auth", apps: %w[brgen amber] },
-      %w[pages privacy] => { path: "/privacy", persona: "guest" }, %w[pages terms] => { path: "/terms", persona: "guest" }, %w[pages cookies] => { path: "/cookies", persona: "guest" },
-      %w[pages safety] => { path: "/safety", persona: "guest" },
-      %w[pages rules] => { path: "/rules", persona: "guest" },
-      %w[shared changelog] => { path: "/changelog", persona: "guest" },
+      %w\[notifications index] => { path: "/notifications", persona: "auth", apps: %w\[brgen amber] },
+      %w\[pages privacy] => { path: "/privacy", persona: "guest" }, %w\[pages terms] => { path: "/terms", persona: "guest" }, %w\[pages cookies] => { path: "/cookies", persona: "guest" },
+      %w\[pages safety] => { path: "/safety", persona: "guest" },
+      %w\[pages rules] => { path: "/rules", persona: "guest" },
+      %w\[shared changelog] => { path: "/changelog", persona: "guest" },
       # Paid plans (970aa52d6): a singular resource eval'd from the apps'
       # routes.rb that sell one, controller Shared::BillingController.
-      %w[billing show] => { path: "/billing", persona: "auth", apps: %w[brgen amber] }
+      %w\[billing show] => { path: "/billing", persona: "auth", apps: %w\[brgen amber] }
     }.freeze
 
     # Rendered by MasterGuestHome inside each app's own home action, so the home row covers it.
-    SHARED_VIEWS_WITHOUT_ROUTE = [%w[shared master_guest]].freeze
+    SHARED_VIEWS_WITHOUT_ROUTE = [%w\[shared master_guest]].freeze
 
     # These live under an app's `shared/` directory so controllers can render
     # them as error templates. They are not controller actions, and inventing a
@@ -356,7 +356,7 @@ module Deploy
     end
 
     # Sign-in and sign-up are the only authoring forms a guest reaches.
-    GUEST_AUTHORING_PATHS = %w[/session/new /registration/new /passwords/new].freeze
+    GUEST_AUTHORING_PATHS = %w\[/session/new /registration/new /passwords/new].freeze
 
     def guest_open_brgen?(path, rel)
       return false if rel.match?(%r{\Aadmin/|activity_events|notifications|saved_searches|matches|profiles/edit|orders/})
@@ -374,7 +374,7 @@ module Deploy
     end
 
     def guest_open_amber?(path, _rel)
-      open_exact = %w[/ /items /demo /posts /posts/feed /session/new /registration/new /outfits /passwords/new]
+      open_exact = %w\[/ /items /demo /posts /posts/feed /session/new /registration/new /outfits /passwords/new]
       return true if open_exact.include?(path)
       return true if path.start_with?("/demo") || path.start_with?("/ai/")
       return false if path.end_with?("/edit") || path.include?("/new")

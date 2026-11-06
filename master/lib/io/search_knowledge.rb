@@ -8,7 +8,7 @@ module Master
       NAME = "search_knowledge".freeze
       DESCRIPTION = "Search local knowledge base (ruby_llm docs, OpenBSD man pages, system prompts, gem docs).".freeze
       MAX_RESULTS = 30
-      TEXT_EXTENSIONS = %w[.rb .md .txt .yml .yaml .json .sh .conf .html .rst .rdoc].freeze
+      TEXT_EXTENSIONS = %w\[.rb .md .txt .yml .yaml .json .sh .conf .html .rst .rdoc].freeze
 
       def initialize(root:, event_bus: nil)
         # knowledge/ is gitignored and skipped by scanners and snapshots, and this is its reader:

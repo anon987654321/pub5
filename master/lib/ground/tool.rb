@@ -11,10 +11,10 @@ module Master
       # operator. Elevation still checks dangerous tools inside full.
       module Profile
         CONFIG_PATH = Master.data_path("security.yml").freeze
-        NAMES = %i[public messaging full elevated].freeze
+        NAMES = %i\[public messaging full elevated].freeze
         FALLBACK = {
-          "public" => %w[AskLlm WebSearch SubdomainOrchestrator],
-          "messaging" => %w[AskLlm WebSearch SubdomainOrchestrator WebFetch MemoryRecord],
+          "public" => %w\[AskLlm WebSearch SubdomainOrchestrator],
+          "messaging" => %w\[AskLlm WebSearch SubdomainOrchestrator WebFetch MemoryRecord],
         }.freeze
 
         module_function
@@ -31,7 +31,7 @@ module Master
 
         def allowlist(profile = current)
           key = profile.to_s
-          return if %w[full elevated].include?(key)
+          return if %w\[full elevated].include?(key)
 
           configured = Array(profiles_config[key]).map(&:to_s)
           configured.empty? ? FALLBACK.fetch(key, []) : configured
@@ -116,7 +116,7 @@ module Master
         CONSENT_PATH = File.join(Master::ROOT, ".master", "domain_consent.yml").freeze
         # What each capability puts in an order's container. A key no domain
         # reaches is removed, so callable code cannot find it by accident.
-        CONTAINER_KEYS = { "commands" => %i[commands agent tools pipeline scanner], "memory" => %i[memory] }.freeze
+        CONTAINER_KEYS = { "commands" => %i\[commands agent tools pipeline scanner], "memory" => %i\[memory] }.freeze
 
         module_function
 

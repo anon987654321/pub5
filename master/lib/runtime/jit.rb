@@ -3,7 +3,7 @@
 module Master
   module Runtime
     module Jit
-      MODES = %w[auto off yjit zjit].freeze
+      MODES = %w\[auto off yjit zjit].freeze
 
       module_function
 

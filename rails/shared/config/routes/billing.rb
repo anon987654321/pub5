@@ -2,6 +2,6 @@
 
 # Paid plans (Shared::BillingController, plans in shared/config/plans.yml).
 # instance_eval from each app's config/routes.rb that sells one.
-resource :billing, only: %i[show create], controller: "billing" do
+resource :billing, only: %i\[show create], controller: "billing" do
   post :portal
 end

@@ -19,7 +19,7 @@ class DestructiveConfirmationTest < Minitest::Test
   IRREVERSIBLE_KEY = /(?:\A|[._])(?:delete|delete_permanent|unsend|remove_listing|end_party|unmatch|group_leave)\z/
 
   def views
-    own = %w[amber brgen bsdports shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
+    own = %w\[amber brgen bsdports shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
     (own + Dir.glob(File.join(ROOT, EngineRoots::GLOB, "app/views/**/*.erb"))).sort
   end
 

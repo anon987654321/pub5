@@ -50,7 +50,7 @@ module Master
         end
         requested_mode = mode ? Master::Operator::Mode.for(mode) : :repair
         delivery_authorized = Master::CLI::FoldRisk.repository_delivery_authorized?(incoming_intent, mode: requested_mode)
-        risk = :high if delivery_authorized && !%i[high critical].include?(risk.to_s.downcase.to_sym)
+        risk = :high if delivery_authorized && !%i\[high critical].include?(risk.to_s.downcase.to_sym)
 
         mission = start_mission(
           goal,
@@ -100,7 +100,7 @@ module Master
             bus: lifecycle_bus, mission_id: mission.id, attempt_id: mission_attempt_id(mission),
           )
           done = build_fold(root: workspace_root, model:, memory:, world:, max_turns:, observer:, effect_observer:, capabilities:, cancellation:, probe: probe_policy).run(goal)
-          unless %i[cancelled trace_failed needs_user blocked unknown_outcome recovery_failed].include?(done.reason)
+          unless %i\[cancelled trace_failed needs_user blocked unknown_outcome recovery_failed].include?(done.reason)
             mission.transition!(:verify, summary: continuation_summary(done))
           end
           settle_mission(mission, done)
@@ -118,13 +118,13 @@ module Master
       # drop and cannot acquire, so a tool the profile lacks stays refused.
       # Reading and bounded read-only probes are always held; an empty list never grants exec.
       TOOL_CAPABILITIES = {
-        "read" => %i[read], "glob" => %i[read], "grep" => %i[read], "ls" => %i[read],
-        "edit" => %i[write], "multiedit" => %i[write], "notebookedit" => %i[write],
-        "write" => %i[write create],
-        "bash" => %i[execute],
-        "webfetch" => %i[network], "websearch" => %i[network]
+        "read" => %i\[read], "glob" => %i\[read], "grep" => %i\[read], "ls" => %i\[read],
+        "edit" => %i\[write], "multiedit" => %i\[write], "notebookedit" => %i\[write],
+        "write" => %i\[write create],
+        "bash" => %i\[execute],
+        "webfetch" => %i\[network], "websearch" => %i\[network]
       }.freeze
-      ALWAYS_HELD = %i[stdio read probe].freeze
+      ALWAYS_HELD = %i\[stdio read probe].freeze
       TOOL_ENTRY = /[^\s,()]+(?:\([^)]*\))?/
 
       # `plan` reads and proposes; every other permission mode runs the repair
@@ -172,7 +172,7 @@ module Master
         workspace = File.realpath(root)
         lambda do |argv|
           values = Array(argv)
-          if values == %w[git ls-files] || values == %w[git --no-pager diff --check --no-ext-diff]
+          if values == %w\[git ls-files] || values == %w\[git --no-pager diff --check --no-ext-diff]
             nil
           elsif values.length == 3 && values[0] == "ruby" && values[1] == "-c"
             path = values[2]
@@ -209,7 +209,7 @@ module Master
       def resumable_repository_mission?(record)
         return false unless record && record["origin"].to_s == "fold"
         return false unless record["auto_continue"] == true
-        return false unless %w[running waiting].include?(record["state"].to_s)
+        return false unless %w\[running waiting].include?(record["state"].to_s)
 
         operator = record["operator"].is_a?(Hash) ? record["operator"] : {}
         Master::CLI::FoldRisk.repository_delivery_authorized?(operator["intent"], mode: operator["mode"])
@@ -230,7 +230,7 @@ module Master
 
       def defer_mission_on_error(mission, error)
         record = Master::Fix::Mission.current(root: mission.root)
-        return unless record && %w[running waiting].include?(record["state"].to_s)
+        return unless record && %w\[running waiting].include?(record["state"].to_s)
 
         mission.fail!("#{error.class}: #{error.message}")
       rescue StandardError => e
@@ -260,13 +260,13 @@ module Master
       def settle_mission(mission, done)
         if done.reason == :complete
           mission.finish!(state: "completed", summary: done.summary)
-        elsif %i[needs_user blocked].include?(done.reason)
+        elsif %i\[needs_user blocked].include?(done.reason)
           mission.block!(reason: done.summary.to_s)
         elsif done.reason == :trace_failed
           # The effect may already have happened, but its after-record is missing.
           # Preserve ambiguity explicitly; never auto-continue and repeat the effect.
           mission.finish!(state: "unknown_outcome", summary: done.summary)
-        elsif %i[cancelled unknown_outcome recovery_failed].include?(done.reason)
+        elsif %i\[cancelled unknown_outcome recovery_failed].include?(done.reason)
           # Explicit stop or an outcome that could not be reconciled is terminal
           # for this attempt. The supervisor must not replay it as a blind retry.
           mission.finish!(state: done.reason.to_s, summary: done.summary)
@@ -468,7 +468,7 @@ module Master
 
       # Keep useful speech/dashboard measurements, never the text being measured.
       def public_output_metrics(effect, observation)
-        return {} unless %i[read probe exec].include?(effect.verb)
+        return {} unless %i\[read probe exec].include?(effect.verb)
 
         output = observation.message.to_s
         { output_bytes: output.bytesize, output_lines: output.lines.size }

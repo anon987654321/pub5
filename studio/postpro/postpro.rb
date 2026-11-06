@@ -38,7 +38,7 @@ POSTPRO_DIR = __dir__
 
 # Loaded in this order after the boot sections below: constants read the
 # tables loaded before them.
-POSTPRO_LIB = %w[
+POSTPRO_LIB = %w\[
   stocks presets presets_more hd spectral grain
   relight effects_optical effects_process effects_video effects_print take_check
   effects_finish tonemap grade_step random_chain random_takes recipe
@@ -52,7 +52,7 @@ POSTPRO_SOURCE_FILES = [
   POSTPRO_ENTRY,
   File.join(POSTPRO_DIR, "legacy_effects.rb"),
   File.join(POSTPRO_DIR, "dilla_analog.rb"),
-  *(%w[early_modes] + POSTPRO_LIB).map { |name| File.join(POSTPRO_DIR, "lib", "#{name}.rb") },
+  *(%w\[early_modes] + POSTPRO_LIB).map { |name| File.join(POSTPRO_DIR, "lib", "#{name}.rb") },
   File.join(POSTPRO_DIR, "uncanny.rb"),
   File.join(POSTPRO_DIR, "motion.rb"),
   File.join(POSTPRO_DIR, "motion_process.rb"),
@@ -98,7 +98,7 @@ POSTPRO_USAGE = <<~TXT
     --export-lut NAME [--output FILE] [--size N]
     CONFIG is the built-in tables unless POSTPRO_CONFIG or master.json beside this file names more.
 TXT
-if (ARGV & %w[-h --help]).any?
+if (ARGV & %w\[-h --help]).any?
   puts POSTPRO_USAGE
   exit 0
 end
@@ -113,13 +113,13 @@ end
 # A lone --preset falls through to the interactive chooser and can look like a
 # hung non-interactive job. Named one-shot grades are only valid with input and
 # output paths; watch and stock-sheet have their own documented preset routes.
-one_shot_flags = %w[--input --output --preset]
+one_shot_flags = %w\[--input --output --preset]
 one_shot_requested = one_shot_flags.any? { |flag| ARGV.include?(flag) }
 complete_one_shot = one_shot_flags.all? do |flag|
   value = argv_flag(flag)
   value && !value.start_with?("--")
 end
-dedicated_mode = (%w[--watch --stock-sheet --rescue --export-lut --video --quality] & ARGV).any?
+dedicated_mode = (%w\[--watch --stock-sheet --rescue --export-lut --video --quality] & ARGV).any?
 if one_shot_requested && !complete_one_shot && !dedicated_mode
   message = [
     "ERROR one-shot mode requires --input FILE, --output FILE and --preset NAME",

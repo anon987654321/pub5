@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class FormAndOverlaySurfaceContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  CSS = %w[
+  CSS = %w\[
     components/_forms.scss
     components/_overlays.scss
     components/_fields.scss

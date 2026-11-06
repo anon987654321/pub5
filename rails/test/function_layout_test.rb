@@ -18,7 +18,7 @@ require_relative "../../master/checks/support/fleet"
 class FunctionLayoutTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   DATA = File.join(ROOT, "test", "data", "function_layout")
-  APPS = %w[brgen amber bsdports].freeze
+  APPS = %w\[brgen amber bsdports].freeze
 # From apps.yml rather than restated here. A literal map is a second
 # inventory, and a test carrying one asserts against a number that can stop
 # being true without the test noticing.

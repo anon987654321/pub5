@@ -12,8 +12,8 @@ module Master
       SCHEMA_VERSION = 1
       CATALOGUE_ID = "MASTER_UX_REFINEMENTS"
       TREE_NAMES = MasterPaths::TREES
-      AREA_NAMES = %w[input terminal diagnostics command_help browser_recovery visual_accessibility].freeze
-      PROOF_TYPES = %w[accessibility browser source terminal unit visual].freeze
+      AREA_NAMES = %w\[input terminal diagnostics command_help browser_recovery visual_accessibility].freeze
+      PROOF_TYPES = %w\[accessibility browser source terminal unit visual].freeze
 
       def self.load(path: PATH, root: Master::REPO_ROOT)
         payload = YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: false)
@@ -43,7 +43,7 @@ module Master
         raise ArgumentError, "UX catalog IDs must be the ordered UX001-UX090 sequence" unless ids == expected_ids
         raise ArgumentError, "UX catalog expected_count disagrees" unless payload["expected_count"] == EXPECTED_COUNT
         rows.each do |row|
-          %w[id area title owner_trees proof contract state].each do |field|
+          %w\[id area title owner_trees proof contract state].each do |field|
             raise ArgumentError, "UX catalog row missing #{field}" if row[field].to_s.strip.empty?
           end
           raise ArgumentError, "UX catalog row has no valid owner tree" unless row["owner_trees"].is_a?(Array) &&

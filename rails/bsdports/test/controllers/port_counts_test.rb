@@ -10,7 +10,7 @@ class PortCountsTest < ActionDispatch::IntegrationTest
     platform = platforms(:openbsd)
     @category = Category.create!(platform:, name: "devel", slug: "devel")
     @maintainer = Maintainer.create!(name: "Jane Porter")
-    %w[git gettext].each do |name|
+    %w\[git gettext].each do |name|
       Port.create!(platform:, category: @category, name:, version: "1", pkgpath: "devel/#{name}",
                    maintainer_id: @maintainer.id)
     end

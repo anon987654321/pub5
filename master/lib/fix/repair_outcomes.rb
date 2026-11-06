@@ -25,9 +25,9 @@ module Master
       LOCK = Mutex.new
 
       # RepairLoop's per-violation outcome symbols, folded to three verdicts.
-      ACCEPTED = %i[applied commit_refused].freeze
-      REVERTED = %i[rejected].freeze
-      REJECTED = %i[no_proposal reflexion_rejected consensus_rejected].freeze
+      ACCEPTED = %i\[applied commit_refused].freeze
+      REVERTED = %i\[rejected].freeze
+      REJECTED = %i\[no_proposal reflexion_rejected consensus_rejected].freeze
 
       def initialize(root:, clock: -> { Time.now })
         root = File.expand_path(root)
@@ -117,14 +117,14 @@ module Master
 
       def decay_row(row, at)
         scale = factor(at)
-        %w[accepted rejected reverted].each { |name| row[name] = (row[name] * scale).round(3) }
+        %w\[accepted rejected reverted].each { |name| row[name] = (row[name] * scale).round(3) }
         row["reasons"].transform_values! { |value| (value * scale).round(3) }
       end
 
       def decayed(data)
         data["classes"].filter_map do |key, row|
           scale = factor(row["at"])
-          accepted, rejected, reverted = %w[accepted rejected reverted].map { |name| row[name].to_f * scale }
+          accepted, rejected, reverted = %w\[accepted rejected reverted].map { |name| row[name].to_f * scale }
           total = accepted + rejected + reverted
           next if total < MIN_WEIGHT
 

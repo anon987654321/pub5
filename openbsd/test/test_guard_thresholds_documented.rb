@@ -19,7 +19,7 @@ class GuardThresholdsDocumentedTest < Minitest::Test
   DOC = File.join(openbsd, "CLAUDE.md")
 
   # The checks the prose discusses by name.
-  VARIABLES = %w[MEM_WARN MEM_RESTORE LOAD_WARN LOAD_RESTORE].freeze
+  VARIABLES = %w\[MEM_WARN MEM_RESTORE LOAD_WARN LOAD_RESTORE].freeze
 
   def script_values
     source = File.read(SCRIPT)

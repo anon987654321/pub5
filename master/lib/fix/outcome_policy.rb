@@ -12,7 +12,7 @@ module Master
     module OutcomePolicy
       TERMINAL_STATES = Master::Execution::Contract::TERMINAL_STATES
 
-      PARTIAL_ENDINGS = %i[
+      PARTIAL_ENDINGS = %i\[
         plateau timeout blocked human_decision inconclusive cancelled unknown_outcome recovery_failed
       ].freeze
 

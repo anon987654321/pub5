@@ -5,7 +5,7 @@ require "yaml"
 module Operator
   class ConstitutionContract
     ROOT = File.expand_path("../../..", __dir__)
-    REQUIRED = %w[
+    REQUIRED = %w\[
       master/data/soul.yml
       master/data/laws.yml
       master/lib/soul.rb

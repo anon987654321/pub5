@@ -25,7 +25,7 @@ if deploy_bundle
 end
 boot_lockfile = File.join(boot_root, "Gemfile.lock")
 boot_lock = File.file?(boot_lockfile) ? File.binread(boot_lockfile) : ""
-%w[json date psych].each do |name|
+%w\[json date psych].each do |name|
   pin = boot_lock[/^    #{name} \(([\d.]+)\)$/, 1]
   next unless pin
 
@@ -97,8 +97,8 @@ module Master
         end
 
         clean_env = env.to_h.dup
-        %w[RUBYOPT RUBYLIB].each { |key| clean_env.delete(key) }
-        %w[
+        %w\[RUBYOPT RUBYLIB].each { |key| clean_env.delete(key) }
+        %w\[
           BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_DEPLOYMENT BUNDLE_FROZEN
           BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
           BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG
@@ -167,7 +167,7 @@ module Master
         # being left; the new Ruby must derive its own, or it loads native gems
         # linked to the old libruby.
         clean_env = env.to_h.dup
-        (%w[RUBYOPT RUBYLIB GEM_HOME GEM_PATH] + DependencyManager::BUNDLE_CONTEXT_KEYS).each { |key| clean_env.delete(key) }
+        (%w\[RUBYOPT RUBYLIB GEM_HOME GEM_PATH] + DependencyManager::BUNDLE_CONTEXT_KEYS).each { |key| clean_env.delete(key) }
         clean_env.delete_if { |key, _| key.start_with?("BUNDLER_") || key == "BUNDLE_BIN_PATH" }
         clean_env["MASTER_RUBY_REEXEC_DONE"] = "1"
         # exec merges env into the inherited one; only unsetenv_others drops the keys deleted above.

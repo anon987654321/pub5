@@ -3,15 +3,15 @@
 class CommunitiesController < ApplicationController
   include Shared::LiveSearchable
 
-  before_action :require_real_user, only: %i[new create edit update destroy]
-  before_action :set_community, only: %i[show edit update destroy]
+  before_action :require_real_user, only: %i\[new create edit update destroy]
+  before_action :set_community, only: %i\[show edit update destroy]
   helper_method :header_posts_count
-  before_action :authorize_owner, only: %i[edit update destroy]
+  before_action :authorize_owner, only: %i\[edit update destroy]
 
   def index
     # A private community is not listed to people who are not in it.
     scope = Community.visible_to(Current.user).popular.includes(:user)
-    scope = apply_live_search(scope, columns: %w[name description], vertical: "communities") if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[name description], vertical: "communities") if live_search_query.present?
     @pagy, @communities = pagy(scope)
     # One query for every card's Join or Leave.
     @joined_community_ids = Current.user&.community_memberships&.pluck(:community_id).to_a.to_set
@@ -104,7 +104,7 @@ class CommunitiesController < ApplicationController
   end
 
   def community_params
-    allowed = %i[name description rules flairs icon banner]
+    allowed = %i\[name description rules flairs icon banner]
     allowed << :privacy if action_name == "create" || @community&.owner?(Current.user)
     params.require(:community).permit(*allowed)
   end

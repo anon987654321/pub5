@@ -119,7 +119,7 @@ module Brgen
         vote_target = row[:votes].to_i.positive? ? row[:votes].to_i : rand(2..5)
         vote_target.times do |index|
           voter = voters[index % voters.size]
-          post.reactions.find_or_create_by!(user: voter, kind: %w[like love].sample)
+          post.reactions.find_or_create_by!(user: voter, kind: %w\[like love].sample)
           post.votes.find_or_create_by!(user: voter) { |vote| vote.value = 1 }
         end
       end

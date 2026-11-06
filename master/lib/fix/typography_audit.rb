@@ -13,7 +13,7 @@ module Master
     # ("--dry-run"), globs and paths are exempt by shape, so a finding is a
     # sentence that reached a person wearing the wrong mark.
     class TypographyAudit
-      SCOPE = %w[lib/cli lib/voice lib/trace].freeze
+      SCOPE = %w\[lib/cli lib/voice lib/trace].freeze
       # The marks proper typography sets in copy and a terminal does not print.
       TERMINAL_MARK = /[\u2014\u2013\u00B7\u2022\u2026\u201C\u201D\u2018\u2019\u2192\u2190\u00D7\u2265\u2264]/.freeze
       PROSE_DOUBLE_DASH = /(?<=\s)--(?=\s)/.freeze
@@ -21,7 +21,7 @@ module Master
       # Where a machine reads the line, the marks stay literal: fixtures that
       # demonstrate the wrong mark, and usage notation ("<path>...") that
       # follows the man-page convention.
-      EXEMPT_MARKERS = %w[bad: fixtures example: usage <path>].freeze
+      EXEMPT_MARKERS = %w\[bad: fixtures example: usage <path>].freeze
       MAX_FINDINGS = 40
 
       Finding = Data.define(:file, :line, :kind, :snippet)

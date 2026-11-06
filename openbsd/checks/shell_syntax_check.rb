@@ -21,7 +21,7 @@
 ROOT = ENV.fetch("SHELL_SYNTAX_ROOT", File.expand_path("../..", __dir__))
 Dir.chdir(ROOT)
 
-INTERPRETERS = %w[zsh ksh sh bash].freeze
+INTERPRETERS = %w\[zsh ksh sh bash].freeze
 SHEBANG = %r{\A\#!\s*(?:/usr/bin/env\s+)?(?:\S*/)?(#{INTERPRETERS.join('|')})\b}
 
 # ksh -n on OpenBSD warns about `[[ -gt ]]` in scripts that are otherwise valid.

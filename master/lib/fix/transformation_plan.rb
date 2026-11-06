@@ -11,7 +11,7 @@ module Master
       Operation = Data.define(:name, :position, :purpose)
 
       # Membership only; the authoritative order lives in data/laws.yml.
-      REQUIRED = %w[
+      REQUIRED = %w\[
         decouple defragment flatten hoist merge recommend relocate remove rename
         reorder reflow simplify split
       ].freeze
@@ -182,7 +182,7 @@ module Master
         overlap = (pre & order) | (post & order)
         raise ArgumentError, "transformation appears in multiple phases: #{overlap.join(", ")}" unless overlap.empty?
 
-        expected_preservation = %w[semantic_meaning public_contracts reference_graph side_effect_order]
+        expected_preservation = %w\[semantic_meaning public_contracts reference_graph side_effect_order]
         missing_preservation = expected_preservation - @policy.fetch("preservation").keys.map(&:to_s)
         unless missing_preservation.empty?
           raise ArgumentError, "preservation contract missing: #{missing_preservation.join(", ")}"
@@ -218,11 +218,11 @@ module Master
 
       def validate_playbook!
         playbook = refactoring_playbook
-        required = %w[characterize_before_change one_hat delete_before_abstract same_reason_to_change preparatory_refactoring history_as_evidence make_deletion_easy domain_first]
+        required = %w\[characterize_before_change one_hat delete_before_abstract same_reason_to_change preparatory_refactoring history_as_evidence make_deletion_easy domain_first]
         ids = playbook.fetch("methods").map { |entry| entry.fetch("id") }
         missing = required - ids
         raise ArgumentError, "refactoring methods missing: #{missing.join(", ")}" unless missing.empty?
-        required_domains = %w[ruby rails prose visual]
+        required_domains = %w\[ruby rails prose visual]
         missing_domains = required_domains - playbook.fetch("technique_by_domain").keys
         raise ArgumentError, "refactoring domains missing: #{missing_domains.join(", ")}" unless missing_domains.empty?
         raise ArgumentError, "refactoring checks missing" if playbook.fetch("checks").empty?
@@ -233,20 +233,20 @@ module Master
         ids = evidence_hierarchy.map { |entry| entry.fetch("id") }
         raise ArgumentError, "evidence hierarchy is empty" if ids.empty?
         raise ArgumentError, "duplicate evidence level" unless ids.uniq.length == ids.length
-        required = %w[characterization structural runtime history visual semantic taste]
+        required = %w\[characterization structural runtime history visual semantic taste]
         missing = required - ids
         raise ArgumentError, "evidence hierarchy missing: #{missing.join(", ")}" unless missing.empty?
       end
 
       def validate_smells!
-        required = %w[code ruby rails prose visual]
+        required = %w\[code ruby rails prose visual]
         missing = required - smell_catalog.keys
         raise ArgumentError, "smell catalog missing: #{missing.join(", ")}" unless missing.empty?
         raise ArgumentError, "empty smell catalog" if smell_catalog.values.any?(&:empty?)
       end
 
       def validate_adapters!
-        required = %w[ruby rails prose visual]
+        required = %w\[ruby rails prose visual]
         missing = required - domain_adapters.keys
         raise ArgumentError, "domain adapters missing: #{missing.join(", ")}" unless missing.empty?
       end
@@ -275,7 +275,7 @@ module Master
         raise ArgumentError, "invalid fetched-source budget" unless (2..6).cover?(max_sources)
 
         domains = protocol.fetch("domains")
-        required = %w[engineering rails openbsd studio music visual bplans]
+        required = %w\[engineering rails openbsd studio music visual bplans]
         missing = required - domains.keys.map(&:to_s)
         raise ArgumentError, "research domains missing: #{missing.join(", ")}" unless missing.empty?
         domains.each do |name, row|
@@ -307,7 +307,7 @@ module Master
       end
 
       def validate_restructure_contract!
-        required_invariants = %w[public_api public_import_paths dependency_direction out_of_scope behavior file_creation deletion]
+        required_invariants = %w\[public_api public_import_paths dependency_direction out_of_scope behavior file_creation deletion]
         missing = required_invariants - invariants.keys
         raise ArgumentError, "restructure invariants missing: #{missing.join(", ")}" unless missing.empty?
 
@@ -316,13 +316,13 @@ module Master
         raise ArgumentError, "invalid distinct target minimum" unless Integer(map.fetch("minimum_distinct_target_paths")).positive?
         range = Array(map.fetch("score_range")).map { |value| Integer(value) }
         raise ArgumentError, "invalid payoff/risk score range" unless range.size == 2 && range.first >= 1 && range.last <= 5 && range.first <= range.last
-        missing = %w[convergence plateau veto bounded_run] - loop_policy.keys
+        missing = %w\[convergence plateau veto bounded_run] - loop_policy.keys
         raise ArgumentError, "restructure terminal states missing: #{missing.join(", ")}" unless missing.empty?
 
         missing = REQUIRED - operation_rules.keys
         raise ArgumentError, "operation trigger/veto missing: #{missing.join(", ")}" unless missing.empty?
         operation_rules.each do |name, row|
-          %w[when not_when].each do |key|
+          %w\[when not_when].each do |key|
             raise ArgumentError, "#{name} operation rule missing #{key}" if row.fetch(key).to_s.empty?
           end
         end
@@ -330,7 +330,7 @@ module Master
         raise ArgumentError, "DRY/KISS decision table incomplete" unless choices.any? { |choice| choice.include?("KISS") } && choices.any? { |choice| choice.include?("DRY") }
 
         scorecard = scorecard_policy
-        required_metrics = %w[cohesion coupling domain_depth decision_duplication traceability concepts loc]
+        required_metrics = %w\[cohesion coupling domain_depth decision_duplication traceability concepts loc]
         missing = required_metrics - Array(scorecard.fetch("metrics")).map(&:to_s)
         raise ArgumentError, "scorecard metrics missing: #{missing.join(", ")}" unless missing.empty?
         missing = required_metrics - scorecard.fetch("measurements").keys.map(&:to_s)
@@ -338,12 +338,12 @@ module Master
         raise ArgumentError, "invalid scorecard history window" unless (1..500).cover?(Integer(scorecard.fetch("history_window_commits")))
         raise ArgumentError, "scorecard tie rule missing" unless scorecard.fetch("acceptance").fetch("tie") == "keep_current_tree"
 
-        required_evidence = %w[pass_set_before_after public_constant_diff require_path_diff source_hashes_before_after scorecard_before_after ratchet_delta residual_risk]
+        required_evidence = %w\[pass_set_before_after public_constant_diff require_path_diff source_hashes_before_after scorecard_before_after ratchet_delta residual_risk]
         missing = required_evidence - Array(proof_of_equivalence.fetch("required")).map(&:to_s)
         raise ArgumentError, "equivalence evidence missing: #{missing.join(", ")}" unless missing.empty?
-        %w[UNALIASED_MOVE MIXED_COMMIT SINGLE_CHILD_DIR BATCH_DELETE].each do |id|
+        %w\[UNALIASED_MOVE MIXED_COMMIT SINGLE_CHILD_DIR BATCH_DELETE].each do |id|
           row = structural_checks.fetch(id)
-          %w[detector positive_fixture negative_fixture].each do |key|
+          %w\[detector positive_fixture negative_fixture].each do |key|
             raise ArgumentError, "#{id} check missing #{key}" if row.fetch(key).to_s.empty?
           end
         end

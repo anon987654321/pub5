@@ -251,7 +251,7 @@ module Master
       class Backup < Base
         REMOTE_HOST = "s4vm23@wingman1.openbsd.amsterdam"
         REMOTE_PATH = "backup"
-        SSH_OPTS = %w[-o BatchMode=yes -o ConnectTimeout=10].freeze
+        SSH_OPTS = %w\[-o BatchMode=yes -o ConnectTimeout=10].freeze
 
         # The repo root is one level above MASTER. This was "../../..", which
         # climbed three and landed outside the checkout entirely (/home on the

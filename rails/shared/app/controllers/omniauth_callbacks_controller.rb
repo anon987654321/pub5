@@ -169,7 +169,7 @@ class OmniauthCallbacksController < ::ApplicationController
   # prove mailbox control. An unverified new address is allowed to register,
   # but only after the shared confirmation flow does it gain write permissions.
   def verified_provider_email?(auth)
-    return false unless %w[google_oauth2 vipps].include?(auth.provider.to_s)
+    return false unless %w\[google_oauth2 vipps].include?(auth.provider.to_s)
     return false if auth.info&.email.to_s.strip.empty?
 
     extra = auth.extra

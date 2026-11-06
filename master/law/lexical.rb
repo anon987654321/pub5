@@ -92,7 +92,7 @@ module Master
   end
 
   ::Law.define(:NO_DEBUG) do
-    tags %i[CLEAN_CODE]
+    tags %i\[CLEAN_CODE]
     fix "no debug breakpoints in committed code"
     bad "  binding.pry\n"
     good "debugger_enabled = false\n"
@@ -116,7 +116,7 @@ module Master
   PROGRAM_PATH = %r{/test/|/db/seeds(?:\.rb\z|/)|\.rake\z|/Rakefile\z}
 
   ::Law.define(:NO_PUTS) do
-    tags %i[CLEAN_CODE]
+    tags %i\[CLEAN_CODE]
     fix "no puts, p or pp in library code"
     bad "  puts(\"ready\")\n"
     good "  @bus.publish(\"ready\")\n  p = point\n  p.x\n  p == q\n  p\n"
@@ -153,7 +153,7 @@ module Master
   end
 
   ::Law.define(:FROZEN_LITERAL) do
-    tags %i[PERFORMANCE]
+    tags %i\[PERFORMANCE]
     fix "missing frozen_string_literal magic comment"
     bad "value = 1\n# frozen_string_literal: true\n"
     good "#!/usr/bin/env ruby\n# frozen_string_literal: true\n\nvalue = 1\n"
@@ -167,7 +167,7 @@ module Master
   end
 
   ::Law.define(:LONG_LINE) do
-    tags %i[READABILITY]
+    tags %i\[READABILITY]
     fix "lines exceeding 120 characters"
     bad "#{"x" * 121}\n"
     good "#{"x" * 120}\n#{"x" * 100} # scan: intentional - the marker is not the defect\n"
@@ -186,7 +186,7 @@ module Master
   end
 
   ::Law.define(:TRAILING_WHITESPACE) do
-    tags %i[HYGIENE]
+    tags %i\[HYGIENE]
     fix "trailing whitespace"
     bad "value = 1   \n"
     good "value = 1\n\n"
@@ -198,7 +198,7 @@ module Master
   end
 
   ::Law.define(:TODO_FIXME) do
-    tags %i[COMPLETENESS]
+    tags %i\[COMPLETENESS]
     fix "unresolved work markers"
     bad "  # FIXME: the retry has no cap\n"
     good "  # the reasoning is in TODO.md\n  MARKERS = /TODO|FIXME|XXX/\n"
@@ -223,7 +223,7 @@ module Master
   # has no slot for one, so it takes the comment on the line above.
   ::Law.define(:NO_SILENT_TEST_SKIP) do
     path %r{(?:\A|/)(?:test|spec)/}
-    tags %i[COMPLETENESS]
+    tags %i\[COMPLETENESS]
     fix "a test skipped without saying why"
     bad "  def test_parse\n    skip\n  end\n"
     good "  def test_parse\n    skip \"needs /proc\" unless File.readable?(\"/proc/meminfo\")\n  end\n"
@@ -247,7 +247,7 @@ module Master
   # drive in code is someone's checkout leaking in. Tests and comments quote
   # such paths on purpose, as fixtures and as history, and are left alone.
   ::Law.define(:HARDCODED_ABSOLUTE_PATH) do
-    tags %i[PORTABILITY]
+    tags %i\[PORTABILITY]
     fix "a path to one machine's home directory in code"
     bad "ROOT = \"/Users/mac/Documents/GitHub/pub4\"\n"
     good "ROOT = File.expand_path(\"..\", __dir__)\n"
@@ -264,7 +264,7 @@ module Master
   end
 
   ::Law.define(:RESCUE_EXCEPTION) do
-    tags %i[ERROR_HANDLING]
+    tags %i\[ERROR_HANDLING]
     fix "rescue StandardError not Exception"
     bad "begin\nrescue Exception => e\nend\n"
     good "begin\n  # rescue Exception belongs to this rule\nrescue StandardError => e\nend\n"
@@ -296,7 +296,7 @@ module Master
   # boolean rule; `x ? true : false` is Ruby's coercion idiom and stays, but its
   # `? false : false` cousin hid in checks/support/page_inventory.rb.
   ::Law.define(:IDENTICAL_BRANCHES) do
-    tags %i[COMPLETENESS]
+    tags %i\[COMPLETENESS]
     fix "a conditional whose branches are identical"
     bad "def auth?(path) = PATHS.include?(path) ? false : false\n"
     good "def auth?(path) = PATHS.include?(path) ? false : true\n"
@@ -323,7 +323,7 @@ module Master
   end
 
   ::Law.define(:SILENT_RESCUE) do
-    tags %i[ERROR_HANDLING FAIL_VISIBLY]
+    tags %i\[ERROR_HANDLING FAIL_VISIBLY]
     fix "blanket rescue discards error without logging or re-raising"
     bad "begin\n  risky\nrescue StandardError\n  nil\nend\n"
     good "begin\n  risky\nrescue StandardError => e\n  warn e\nend\n"
@@ -339,7 +339,7 @@ module Master
   end
 
   ::Law.define(:NARROW_SILENT_RESCUE) do
-    tags %i[ERROR_HANDLING]
+    tags %i\[ERROR_HANDLING]
     fix "narrow-class rescue discards error without logging or re-raising"
     bad "begin\n  risky\nrescue Errno::ENOENT\n  nil\nend\n"
     good "begin\n  risky\nrescue Errno::ENOENT => e\n  warn e\nend\n"
@@ -354,7 +354,7 @@ module Master
   MODIFIER_RESCUE_DISCARD = %r{(?<![=!<>*+/%|&^-])=(?!=)[^=\n]*\S\s+rescue\s+(?:nil|false|\[\]|\{\})\s*(?:#.*)?$}
 
   ::Law.define(:MODIFIER_SILENT_RESCUE) do
-    tags %i[ERROR_HANDLING]
+    tags %i\[ERROR_HANDLING]
     fix "modifier rescue binds a discarded error to a name"
     bad "value = parse(raw) rescue nil\n"
     good "File.delete(path) rescue nil\n"
@@ -383,7 +383,7 @@ module Master
   # NARROW_SILENT_RESCUE.
 
   ::Law.define(:CONSECUTIVE_BLANK_LINES) do
-    tags %i[HYGIENE]
+    tags %i\[HYGIENE]
     fix "no consecutive blank lines"
     bad "a = 1\n\n\nb = 2\n"
     good "a = 1\n\nb = 2\n"
@@ -401,7 +401,7 @@ module Master
   end
 
   ::Law.define(:DEBUG_OUTPUT) do
-    tags %i[FAIL_VISIBLY]
+    tags %i\[FAIL_VISIBLY]
     fix "debug output left in lib/"
     example_path "/repo/lib/example.rb"
     bad "p value\n"
@@ -430,7 +430,7 @@ module Master
   end
 
   ::Law.define(:OMIT_NEEDLESS_WORDS) do
-    tags %i[BE_CONCISE]
+    tags %i\[BE_CONCISE]
     fix "Strunk & White: omit needless words in comments"
     bad "# This is a helper for totals\n"
     good "# Sums the line items\n"
@@ -448,7 +448,7 @@ module Master
   end
 
   ::Law.define(:TRAILING_COMMENT) do
-    tags %i[BE_CONCISE]
+    tags %i\[BE_CONCISE]
     fix "trailing comment after code"
     bad "value = 1 # why one\n"
     good "# why one\nvalue = 1\nvalue = 2 # scan: intentional - the exemption is not the defect\n"
@@ -466,7 +466,7 @@ module Master
   end
 
   ::Law.define(:TIME_ZONE_UNSAFE) do
-    tags %i[ROBUSTNESS]
+    tags %i\[ROBUSTNESS]
     fix "bare Time.now/Date.today bypasses Rails Time.zone"
     example_path "/repo/app/models/example.rb"
     bad "stamp = Time.now.beginning_of_day\n"
@@ -507,7 +507,7 @@ module Master
   IDENTITY_COMPARISON = /[\w)\]}'"]\s*===\s*[\w({\[!'"@$:]/
 
   ::Law.define(:NO_ASCII_LINE_ART) do
-    tags %i[BE_CONCISE]
+    tags %i\[BE_CONCISE]
     fix "ASCII divider decorations"
     bad "# --- section\n"
     good "# -- section\n"
@@ -540,7 +540,7 @@ module Master
         "the face itself and the fixtures that prove its rendering. Ordinary text, a real wordmark " \
         "set in a font, shell prompt characters, and dmesg-like status lines are not ASCII art. " \
         "Return CLEAN when no decorative ASCII picture exists outside the face."
-    tags %i[BE_CONCISE]
+    tags %i\[BE_CONCISE]
     fix "Delete ASCII-art banners, wordmarks, and prompt drawings. Keep ASCII geometry only inside " \
         "the terminal/browser face renderer and its matching fixtures."
     bad "ascii_art: true\n"

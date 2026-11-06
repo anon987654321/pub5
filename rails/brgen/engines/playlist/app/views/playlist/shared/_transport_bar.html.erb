@@ -17,7 +17,7 @@
     height here means the chat tab moves with the bar instead of playlist
     hardcoding 72px and 88px in two rules 340 lines apart. %>
 <% scope = local_assigns.fetch(:scope, "playlist-player") %>
-<% controls = local_assigns.fetch(:controls, %w[previous toggle stop next volume]) %>
+<% controls = local_assigns.fetch(:controls, %w\[previous toggle stop next volume]) %>
 <% act = ->(name) { "click->#{scope}##{name}" } %>
 
 <%# Rests visible, retires, and comes back when the pointer reaches the bottom

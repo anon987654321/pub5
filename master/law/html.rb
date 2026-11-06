@@ -239,7 +239,7 @@ end
 # merchant. The visible label beside the link is VISUAL_DISCLOSURE_PROMINENCE's.
 Law.define(:SPONSORED_LINK_REL) do
   source "Google Search Central, qualifying outbound links (rel=sponsored); markedsføringsloven § 3"
-  tags %i[COMPLIANCE]
+  tags %i\[COMPLIANCE]
   fix "add rel=\"sponsored\" (with noopener) to the affiliate link"
   bad "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\">Buy</a>\n"
   good "<a href=\"<%= deal.affiliate_url %>\" target=\"_blank\" rel=\"sponsored noopener\">Buy</a>\n"
@@ -478,7 +478,7 @@ module Law
 
   ::Law.define(:FIELD_PURPOSE_DECLARED) do
     source "WCAG 1.3.5 Identify Input Purpose, AA; Wroblewski, Web Form Design (2008); Baymard checkout research"
-    tags %i[ACCESSIBILITY]
+    tags %i\[ACCESSIBILITY]
     path M::TEMPLATES
     fix "Give each personal-data field its autofill token (autocomplete: \"postal-code\") and inputmode for digits."
     bad "<%= f.text_field :postnummer %>\n"
@@ -490,7 +490,7 @@ module Law
 
   ::Law.define(:AUTH_ALLOWS_PASTE) do
     source "WCAG 2.2 SC 3.3.8 Accessible Authentication (Minimum), AA"
-    tags %i[ACCESSIBILITY SECURITY]
+    tags %i\[ACCESSIBILITY SECURITY]
     path Regexp.union(M::TEMPLATES, /\.js\z/)
     fix "Let password and one-time-code fields take paste and autofill (current-password, one-time-code); " \
         "no puzzle without an alternative."
@@ -502,7 +502,7 @@ module Law
         (message = M.paste_blocker(line, auth)) && finding(line: n, message:)
       end
     end
-    adapter(:whole_file, languages: %i[javascript], bad: "el.addEventListener(\"paste\", (e) => e.preventDefault())\n",
+    adapter(:whole_file, languages: %i\[javascript], bad: "el.addEventListener(\"paste\", (e) => e.preventDefault())\n",
                          good: "el.addEventListener(\"input\", (e) => this.check(e))\n") do |src, _file|
       blocks = src.match?(/addEventListener\(\s*["']paste["']|\.onpaste\s*=/) && src.include?("preventDefault")
       at = src.lines.index { |line| line.include?("paste") }.to_i + 1
@@ -512,7 +512,7 @@ module Law
 
   ::Law.define(:ACTION_LABEL_BRIEF) do
     source "Krug, Don't Make Me Think: omit half the words, then half again; minimalism.yml microcopy.label_max_words"
-    tags %i[BE_CONCISE]
+    tags %i\[BE_CONCISE]
     path %r{\.(?:html\.)?erb\z}
     reads_beyond_file true
     ask "Does each button or action label lead with its verb? Rank the labels that do not and explain why; " \
@@ -532,7 +532,7 @@ module Law
 
   ::Law.define(:SELF_EVIDENT_DATA_UNLABELLED) do
     source "Refactoring UI, labels are a last resort"
-    tags %i[DESIGN UX]
+    tags %i\[DESIGN UX]
     path %r{/app/views/(?!.*_form).*\.erb\z}
     ask "Does this display view label data whose form already says what it is (an email, a phone number, a price, " \
         "a date)? Rank and explain; a person decides."
@@ -550,7 +550,7 @@ module Law
 
   ::Law.define(:EMPHASIS_ONE_DEVICE) do
     source "Butterick, bold or italic sparingly, never both; underline only for links"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path Regexp.union(M::VIEWS, /\.s?css\z/)
     fix "Emphasise with one device: <strong> or <em>, never both; keep underline for links."
     bad "<p><strong><em>Gratis levering</em></strong></p>\n"
@@ -561,7 +561,7 @@ module Law
         finding(line: n, message: "bold and italic at once") if line.match?(nested)
       end
     end
-    adapter(:whole_file, languages: %i[css scss], bad: ".deal { font-weight: 700; font-style: italic; }\n",
+    adapter(:whole_file, languages: %i\[css scss], bad: ".deal { font-weight: 700; font-style: italic; }\n",
                          good: ".deal { font-weight: 700; }\n") do |src, _file|
       src.scan(/[^{}]*\{([^{}]*)\}/).filter_map do |(body)|
         next unless body.match?(/font-weight:\s*(?:bold|[6-9]00)/) && body.match?(/font-style:\s*italic/)
@@ -570,13 +570,13 @@ module Law
       end
     end
     underlined = M::SNAP.element("span.deal", decoration: "underline")
-    adapter(:rendered_ui, languages: %i[json], example_path: M::SNAP::EXAMPLE, bad: M.page(underlined),
+    adapter(:rendered_ui, languages: %i\[json], example_path: M::SNAP::EXAMPLE, bad: M.page(underlined),
                           good: M.page(M::SNAP.element("span.deal")), &M.rendered(:EMPHASIS_ONE_DEVICE))
   end
 
   ::Law.define(:ONE_PRIMARY_ACTION) do
     source "Refactoring UI, button hierarchy; Von Restorff (Yablonski, Laws of UX); visual_identity.composition"
-    tags %i[DESIGN UX]
+    tags %i\[DESIGN UX]
     path M::VIEWS
     fix "Fill one action per view (button-primary); give the rest button-ghost or button-link."
     publish = M.erb("button_to \"Publiser\", posts_path, class: \"button-primary\"")
@@ -588,7 +588,7 @@ module Law
       hits.drop(1).map { |_line, n| finding(line: n, message:) }
     end
     fill = [0, 80, 200, 1]
-    adapter(:rendered_ui, languages: %i[json], example_path: M::SNAP::EXAMPLE,
+    adapter(:rendered_ui, languages: %i\[json], example_path: M::SNAP::EXAMPLE,
                           bad: M.page(M.control("button.a", bg: fill), M.control("button.b", bg: fill)),
                           good: M.page(M.control("button.a", bg: fill), M.control("button.b")),
                           &M.rendered(:ONE_PRIMARY_ACTION))
@@ -596,7 +596,7 @@ module Law
 
   ::Law.define(:LABEL_IN_NAME) do
     source "WCAG 2.5.3 Label in Name, A"
-    tags %i[ACCESSIBILITY]
+    tags %i\[ACCESSIBILITY]
     path M::VIEWS
     fix "Make the accessible name contain the visible text: drop the aria-label, or extend the words shown."
     bad "<button aria-label=\"Send inn\">Lagre</button>\n"
@@ -606,14 +606,14 @@ module Law
         (message = M.name_mismatch(line)) && finding(line: n, message:)
       end
     end
-    adapter(:rendered_ui, languages: %i[json], example_path: M::SNAP::EXAMPLE,
+    adapter(:rendered_ui, languages: %i\[json], example_path: M::SNAP::EXAMPLE,
                           bad: M.page(M.named("Send inn", "Lagre")), good: M.page(M.named("Lagre annonse", "Lagre")),
                           &M.rendered(:LABEL_IN_NAME))
   end
 
   ::Law.define(:ICON_CARRIES_WORD) do
     source "Norman, signifiers; Krug; minimalism.yml law.icon_policy, words before icons"
-    tags %i[ACCESSIBILITY DESIGN]
+    tags %i\[ACCESSIBILITY DESIGN]
     path M::VIEWS
     fix "Give the icon its word (\"Fremhev\") or use the word alone; minimalism.yml icon_words_optional may go bare."
     bad "<button class=\"boost\"><svg viewBox=\"0 0 9 9\"><path d=\"M0 0h9\"/></svg></button>\n"
@@ -624,7 +624,7 @@ module Law
         finding(line: n, message: "icon-only #{tag[1]} with no word") if M.icon_only?(tag[3]) && !M.icon_named?(tag[2])
       end
     end
-    adapter(:rendered_ui, languages: %i[json], example_path: M::SNAP::EXAMPLE,
+    adapter(:rendered_ui, languages: %i\[json], example_path: M::SNAP::EXAMPLE,
                           bad: M.page(M.control("button.boost", icon: true, visible_text: "", name: "Boost")),
                           good: M.page(M.control("button.boost", icon: true, visible_text: "Fremhev", name: "Fremhev")),
                           &M.rendered(:ICON_CARRIES_WORD))

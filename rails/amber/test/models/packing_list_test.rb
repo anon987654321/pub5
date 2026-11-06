@@ -19,7 +19,7 @@ class PackingListTest < ActiveSupport::TestCase
     blank = PackingList.new(user: @user)
 
     assert_not blank.valid?
-    %i[name starts_on ends_on].each { |field| assert_includes blank.errors.attribute_names, field }
+    %i\[name starts_on ends_on].each { |field| assert_includes blank.errors.attribute_names, field }
   end
 
   test "a list belongs to somebody" do

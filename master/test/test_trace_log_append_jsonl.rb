@@ -337,7 +337,7 @@ class TraceLogAppendJsonlTest < Minitest::Test
 
       rows = event_log.recent(3)
 
-      assert_equal %w[fixture_2 fixture_3 fixture_4], rows.map { |row| row.fetch("event") }
+      assert_equal %w\[fixture_2 fixture_3 fixture_4], rows.map { |row| row.fetch("event") }
       assert_equal [2, 3, 4], rows.map { |row| row.dig("payload", "index") }
     end
   end

@@ -35,7 +35,7 @@ class PostCardActionsTest < ApplicationSystemTestCase
   def grant_clipboard
     browser = page.driver.browser
     browser.execute_cdp("Browser.grantPermissions", origin: URI.join(current_url, "/").to_s.chomp("/"),
-                                                    permissions: %w[clipboardReadWrite clipboardSanitizedWrite])
+                                                    permissions: %w\[clipboardReadWrite clipboardSanitizedWrite])
   end
 
   def clipboard_text = evaluate_async_script("navigator.clipboard.readText().then(arguments[0])")

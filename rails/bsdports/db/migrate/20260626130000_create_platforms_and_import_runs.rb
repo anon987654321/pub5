@@ -28,7 +28,7 @@ class CreatePlatformsAndImportRuns < ActiveRecord::Migration[8.1]
       t.text :error_message
       t.timestamps
     end
-    add_index :import_runs, %i[platform_id started_at]
+    add_index :import_runs, %i\[platform_id started_at]
 
     PLATFORMS.each do |attrs|
       execute <<~SQL.squish
@@ -52,15 +52,15 @@ class CreatePlatformsAndImportRuns < ActiveRecord::Migration[8.1]
     remove_index :ports, :name
     add_index :ports, :name
     remove_index :ports, :pkgpath
-    add_index :ports, %i[platform_id pkgpath], unique: true
+    add_index :ports, %i\[platform_id pkgpath], unique: true
     remove_index :categories, :slug
-    add_index :categories, %i[platform_id slug], unique: true
+    add_index :categories, %i\[platform_id slug], unique: true
   end
 
   def down
-    remove_index :categories, column: %i[platform_id slug]
+    remove_index :categories, column: %i\[platform_id slug]
     add_index :categories, :slug, unique: true
-    remove_index :ports, column: %i[platform_id pkgpath]
+    remove_index :ports, column: %i\[platform_id pkgpath]
     add_index :ports, :pkgpath, unique: true
     remove_index :ports, :name
     add_index :ports, :name, unique: true

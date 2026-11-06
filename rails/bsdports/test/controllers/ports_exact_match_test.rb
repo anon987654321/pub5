@@ -9,7 +9,7 @@ class PortsExactMatchTest < ActionDispatch::IntegrationTest
     platform = platforms(:openbsd)
     category = Category.create!(platform:, name: "devel", slug: "devel")
     @git = Port.create!(platform:, category:, name: "git", version: "2", pkgpath: "devel/git")
-    %w[git-annex git-crypt].each do |name|
+    %w\[git-annex git-crypt].each do |name|
       Port.create!(platform:, category:, name:, version: "1", pkgpath: "devel/#{name}")
     end
   end

@@ -7,11 +7,11 @@ module Deploy
     # and a first load that only ratchets down.
     module AccessLaws
       STATE = { "aria-current" => nil, "aria-selected" => "true", "aria-pressed" => "true", "data-state" => nil }.freeze
-      CUE = %w[font_weight font_style decoration border_width box_shadow text name visible_text text_transform
+      CUE = %w\[font_weight font_style decoration border_width box_shadow text name visible_text text_transform
                outline_width icon].freeze
-      CHANGES = %w[decoration border_width font_weight box_shadow outline_width].freeze
+      CHANGES = %w\[decoration border_width font_weight box_shadow outline_width].freeze
 
-      PROSE_PARENTS = %w[p li dd td blockquote].freeze
+      PROSE_PARENTS = %w\[p li dd td blockquote].freeze
       CONTROL_TYPES = /\A(?:text|email|tel|url|search|password|number|date|)\z/
       GESTURE = /\b(?:touch(?:start|move|end)|pointer(?:down|move|up)|swipe\w*)->([\w-]+)#(\w+)/
       TAP = /\b(?:click|submit|keydown[\w.]*)->([\w-]+#\w+)/
@@ -65,11 +65,11 @@ module Deploy
 
       def control?(element)
         tag = element["tag"]
-        %w[select textarea].include?(tag) || (tag == "input" && element.dig("attrs", "type").to_s.match?(CONTROL_TYPES))
+        %w\[select textarea].include?(tag) || (tag == "input" && element.dig("attrs", "type").to_s.match?(CONTROL_TYPES))
       end
 
       def icon_only?(element)
-        %w[button a].include?(element["tag"]) && element["icon"] && !element["visible_text"].to_s.match?(/[\p{L}\p{N}]/)
+        %w\[button a].include?(element["tag"]) && element["icon"] && !element["visible_text"].to_s.match?(/[\p{L}\p{N}]/)
       end
 
       def boundary(element)
@@ -190,7 +190,7 @@ module Deploy
         end
       end
 
-      def chart?(element) = %w[svg canvas].include?(element["tag"]) || classes(element).match?(/chart/)
+      def chart?(element) = %w\[svg canvas].include?(element["tag"]) || classes(element).match?(/chart/)
 
       def classes(element) = element.dig("attrs", "class").to_s
 

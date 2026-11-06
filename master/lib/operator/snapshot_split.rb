@@ -64,7 +64,7 @@ module Operator
     def candidates(path, body, lines)
       if ruby?(path, body)
         ruby_boundaries(body, lines)
-      elsif %w[.css .scss].include?(File.extname(path).downcase)
+      elsif %w\[.css .scss].include?(File.extname(path).downcase)
         stylesheet_boundaries(body, lines)
       else
         column_zero_boundaries(lines)

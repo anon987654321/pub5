@@ -17,7 +17,7 @@ class TestLawCommerce < Minitest::Test
   def definition(id) = Law.definitions.fetch(id)
 
   def test_every_commerce_law_scope_names_a_directory_that_exists
-    %i[COMMERCE_AMBER_DOES_NOT_OWN_BRGEN COMMERCE_BRGEN_DOES_NOT_OWN_AMBER
+    %i\[COMMERCE_AMBER_DOES_NOT_OWN_BRGEN COMMERCE_BRGEN_DOES_NOT_OWN_AMBER
        COMMERCE_EXTERNAL_SOURCES_STAY_EXPLAINABLE].each do |id|
       scope = definition(id).path
 

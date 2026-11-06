@@ -7,8 +7,8 @@
 module User::NotificationPreferences
   extend ActiveSupport::Concern
 
-  CHOOSABLE_KINDS = %w[mention reply message follow].freeze
-  CHANNELS = %w[push email].freeze
+  CHOOSABLE_KINDS = %w\[mention reply message follow].freeze
+  CHANNELS = %w\[push email].freeze
   DEFAULTS = { "push" => true, "email" => false }.freeze
 
   def notify_by?(channel, kind)

@@ -24,7 +24,7 @@ module Deploy
 
     rails = File.join(ROOT, "rails")
     APPS = Fleet.asset_roots.freeze
-    MASTER_WEB = %w[master/web/public/face.css master/web/public/chat_upload.css].freeze
+    MASTER_WEB = %w\[master/web/public/face.css master/web/public/chat_upload.css].freeze
 
     def self.run = new.run
 

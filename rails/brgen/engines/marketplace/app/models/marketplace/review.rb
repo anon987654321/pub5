@@ -13,12 +13,12 @@ class Marketplace::Review < ApplicationRecord
   validate :buyer_has_completed_interaction
   validate :seller_cannot_review_own_listing
 
-  after_commit :refresh_listing_rating, on: %i[create update destroy]
+  after_commit :refresh_listing_rating, on: %i\[create update destroy]
 
   private
 
   def buyer_has_completed_interaction
-    return if listing&.orders&.where(buyer: user, status: %w[accepted completed paid])&.exists?
+    return if listing&.orders&.where(buyer: user, status: %w\[accepted completed paid])&.exists?
 
     errors.add(:base, :requires_completed_order)
   end

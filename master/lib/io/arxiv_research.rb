@@ -23,7 +23,7 @@ module Master
       MAX_RESULTS = 10
       MAX_ABSTRACT_CHARS = 1_200
       MAX_FULL_TEXT_CHARS = 12_000
-      ALLOWED_SORTS = %w[relevance submittedDate lastUpdatedDate].freeze
+      ALLOWED_SORTS = %w\[relevance submittedDate lastUpdatedDate].freeze
       ID_RE = /\A(?:\d{4}\.\d{4,5}(?:v\d+)?|[A-Za-z.-]+\/\d{7}(?:v\d+)?)\z/.freeze
 
       def initialize(governor:, event_bus: nil)
@@ -100,7 +100,7 @@ module Master
 
       def get_response(uri)
         raise "refused unexpected research host" unless uri.is_a?(URI::HTTPS) &&
-          %w[export.arxiv.org ar5iv.labs.arxiv.org].include?(uri.host.to_s.downcase)
+          %w\[export.arxiv.org ar5iv.labs.arxiv.org].include?(uri.host.to_s.downcase)
 
         address = SsrfGuard.pinned_address(uri)
         raise "refused internal/reserved address" unless address
@@ -140,7 +140,7 @@ module Master
 
       def arxiv_id(value)
         uri = URI.parse(value.to_s)
-        return unless %w[arxiv.org export.arxiv.org].include?(uri.host.to_s.downcase)
+        return unless %w\[arxiv.org export.arxiv.org].include?(uri.host.to_s.downcase)
         match = %r{\A/abs/(.+)\z}.match(uri.path.to_s)
         id = match && match[1]
         id if id && ID_RE.match?(id)

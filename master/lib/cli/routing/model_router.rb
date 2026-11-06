@@ -34,7 +34,7 @@ module Master
           "i need more"
         ].freeze
 
-        ESCALATION_CHAIN = %w[cheap default strong].freeze
+        ESCALATION_CHAIN = %w\[cheap default strong].freeze
         DEFAULT_THRESHOLD = 0.3
 
         def initialize(config:, root: Master::ROOT, provider_health: nil)

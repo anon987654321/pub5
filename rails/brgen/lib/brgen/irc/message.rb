@@ -34,7 +34,7 @@ module Brgen
       def self.build(command, params = [], prefix: nil)
         # PRIVMSG/NOTICE text is always a trailing param, even one word, so clients
         # render it as message body rather than a bare token.
-        force_trailing = %w[PRIVMSG NOTICE].include?(command.to_s.upcase)
+        force_trailing = %w\[PRIVMSG NOTICE].include?(command.to_s.upcase)
         parts = []
         parts << ":#{prefix}" if prefix
         parts << command

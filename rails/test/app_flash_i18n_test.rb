@@ -97,7 +97,7 @@ class AppFlashI18nTest < Minitest::Test
 
   # I18n pluralisation: a controller asks for flash.x.y and I18n picks the
   # branch from the count, so the branches are part of one key, not keys.
-  PLURAL_BRANCHES = %w[zero one two few many other].freeze
+  PLURAL_BRANCHES = %w\[zero one two few many other].freeze
 
   # Dotted paths to the leaves. flash_block.keys only ever returned the top
   # level, so once the verticals gained their own namespaces (flash.dating.*,

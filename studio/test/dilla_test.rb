@@ -160,7 +160,7 @@ class TestDillaTheory < Minitest::Test
   def test_voicer_keeps_inner_voices_close_and_top_voice_high
     voicer = Dilla::Voicer.new(Dilla.theory)
     rng = Dilla::Rng.new(12)
-    chords = %w[Fm9 Ab13 Dbmaj7#11 C7b9].map { |s| Dilla::ChordParser.parse(s, Dilla.theory) }
+    chords = %w\[Fm9 Ab13 Dbmaj7#11 C7b9].map { |s| Dilla::ChordParser.parse(s, Dilla.theory) }
     voiced = voicer.voice(chords, rng)
     voiced.each_cons(2) do |a, b|
       b.each do |note|
@@ -219,7 +219,7 @@ class TestDillaRender < Minitest::Test
       _out, err, status = Open3.capture3(RbConfig.ruby, dilla, "--progression", "1", "--bars", "1",
                                          "--seed", "7", "--out", base, chdir: File.dirname(dilla))
       assert status.success?, err
-      %w[.quality.json .session.json .provenance.json].each do |suffix|
+      %w\[.quality.json .session.json .provenance.json].each do |suffix|
         assert File.file?("#{base}#{suffix}"), "missing sidecar #{suffix}"
       end
       quality = JSON.parse(File.read("#{base}.quality.json"))
@@ -326,7 +326,7 @@ class TestDillaReferenceProfile < Minitest::Test
     assert_in_delta 87.6, profile.fetch("target_bpm"), 0.01
     assert_equal "dilla_shadow", profile.fetch("groove_profile")
     feats = profile.fetch("features")
-    %w[onset_density_per_bar offbeat_onset_share timing_spread_ms drums_energy_share other_energy_share].each do |key|
+    %w\[onset_density_per_bar offbeat_onset_share timing_spread_ms drums_energy_share other_energy_share].each do |key|
       assert feats.key?(key), "media_intent reads features[#{key}]"
     end
   end
@@ -387,7 +387,7 @@ class TestDillaReferenceProfile < Minitest::Test
       refute_match(/NaN/, text, "the analyzer must not emit non-standard NaN tokens")
       feats = JSON.parse(text)
       assert_in_delta 86.0, feats.fetch("bpm"), 3.0, "a two-bar 86 BPM fixture must be measured near 86"
-      %w[onset_density_per_bar offbeat_onset_share timing_spread_ms swing_ratio].each do |key|
+      %w\[onset_density_per_bar offbeat_onset_share timing_spread_ms swing_ratio].each do |key|
         assert feats.key?(key)
       end
     end

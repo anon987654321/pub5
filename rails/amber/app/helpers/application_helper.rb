@@ -116,7 +116,7 @@ def declutter_target_options(targets)
 end
 
   STYLE_PROFILE_ANSWERS = {
-    "body_type" => %w[slim athletic curvy plus],
+    "body_type" => %w\[slim athletic curvy plus],
     "lines" => [ "minimal clean lines", "bold patterns and colors" ],
     "timeless" => [ "classic timeless pieces", "trendy current styles" ],
     "colors" => [ "neutrals and basics", "vibrant pops of color" ],

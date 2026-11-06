@@ -28,8 +28,8 @@ module Master
       MAX_PROPOSALS = 96
       BATCH_SIZE = 6
       MAX_ATTEMPTS = 3
-      TERMINAL_STATUSES = %w[verified blocked rejected stale superseded].freeze
-      AUTO_IMPLEMENTATIONS = %w[next_fix].freeze
+      TERMINAL_STATUSES = %w\[verified blocked rejected stale superseded].freeze
+      AUTO_IMPLEMENTATIONS = %w\[next_fix].freeze
       LAW_ID = "CONVERGENCE_WISHLIST"
 
       Law = PassLaw
@@ -175,7 +175,7 @@ module Master
         if fixed.to_i.positive?
           proposal["status"] = "claimed"
           proposal["last_fixed"] = fixed.to_i
-        elsif %i[human_decision needs_person].include?(status.to_sym)
+        elsif %i\[human_decision needs_person].include?(status.to_sym)
           proposal["status"] = "blocked"
         elsif attempts >= MAX_ATTEMPTS
           proposal["status"] = "blocked"
@@ -526,8 +526,8 @@ module Master
           next if item["change"].to_s.strip.empty? || item["evidence"].to_s.strip.empty?
           next unless valid_anchor?(anchor)
 
-          reversibility = normalize_choice(item["reversibility"], %w[reversible guarded operator], "guarded")
-          implementation = normalize_choice(item["implementation"], %w[next_fix research operator], "operator")
+          reversibility = normalize_choice(item["reversibility"], %w\[reversible guarded operator], "guarded")
+          implementation = normalize_choice(item["implementation"], %w\[next_fix research operator], "operator")
           implementation = "operator" if reversibility == "operator" && implementation == "next_fix"
           implementation = "operator" unless anchor_file(anchor) || implementation != "next_fix"
 
@@ -537,7 +537,7 @@ module Master
             "rationale" => item["rationale"].to_s.strip,
             "anchor" => anchor,
             "change" => item["change"].to_s.strip,
-            "effort" => normalize_choice(item["effort"], %w[cheap medium deep], "medium"),
+            "effort" => normalize_choice(item["effort"], %w\[cheap medium deep], "medium"),
             "reversibility" => reversibility,
             "implementation" => implementation,
             "evidence" => item["evidence"].to_s.strip,

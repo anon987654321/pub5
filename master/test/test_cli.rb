@@ -479,13 +479,13 @@ end
         release << true
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2
         while Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
-          break if seen == %w[first second] && @cli.instance_variable_get(:@turn_worker).nil?
+          break if seen == %w\[first second] && @cli.instance_variable_get(:@turn_worker).nil?
           sleep 0.01
         end
       end
     end
 
-    assert_equal %w[first second], seen
+    assert_equal %w\[first second], seen
     assert_nil @cli.instance_variable_get(:@turn_worker)
   end
 
@@ -598,7 +598,7 @@ end
   # A pass hands the critique a file as its root; git -C needs the file's directory.
   def test_the_critique_diff_of_a_file_runs_in_its_directory_limited_to_the_file
     Dir.mktmpdir do |dir|
-      identity = %w[-c user.email=t@t -c user.name=t]
+      identity = %w\[-c user.email=t@t -c user.name=t]
       git = ->(*args) { Master::Io::Exec.capture2e("git", "-C", dir, *identity, *args) }
 
       file = File.join(dir, "a.rb")
@@ -634,7 +634,7 @@ end
   def test_model_list_shows_the_pool_and_model_refuses_what_it_cannot_reach
     router = Object.new
     def router.unreachable_reason(id, wait: false) = id == "gemini-2.5-flash" || id == "o3" ? "set GEMINI_API_KEY" : nil
-    def router.pool(wait: false) = %w[nvidia/nemotron-3-super-120b-a12b:free google/gemini-2.5-flash]
+    def router.pool(wait: false) = %w\[nvidia/nemotron-3-super-120b-a12b:free google/gemini-2.5-flash]
     def router.pool_growth(wait: false) = ["set GEMINI_API_KEY"]
     def router.lane_label(_id) = "free"
     agent = Struct.new(:model, :model_router).new("nvidia/nemotron-3-super-120b-a12b:free", router)
@@ -691,7 +691,7 @@ end
   def test_help_names_the_closed_set
     summary = Master::CLI::CommandRegistry.help_text
 rows = summary.scan(%r{(?<=\s)/(\w+)}).flatten
-%w[status undo commit model doctor laws why orders soul help clear].each do |name|
+%w\[status undo commit model doctor laws why orders soul help clear].each do |name|
   assert_includes rows, name
 end
 assert_includes rows, "fix"
@@ -847,7 +847,7 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
   end
 
   def test_a_paste_arrives_as_one_message
-    lines = %w[second third]
+    lines = %w\[second third]
     Reline.stub(:readline, ->(*) { lines.shift || "first" }) do
       Reline::IOGate.stub(:in_pasting?, -> { !lines.empty? }) do
         lines.unshift("first")

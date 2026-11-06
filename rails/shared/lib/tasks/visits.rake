@@ -31,7 +31,7 @@ namespace :visits do
   end
 
   desc "Visits per route, optionally for one host: rake visits:routes[oshlo.no,30]"
-  task :routes, %i[host days] => :environment do |_, args|
+  task :routes, %i\[host days] => :environment do |_, args|
     days = (args[:days].presence || 30).to_i
     since = days.days.ago.to_date
     by_route = Shared::VisitCount.by_route(host: args[:host].presence, since:)

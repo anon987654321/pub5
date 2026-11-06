@@ -73,7 +73,7 @@ class DeclutterScore
   end
 
   def repair_pressure
-    return 0.0 unless @item.lifecycle_state.in?(%w[repair clean_needed tailor])
+    return 0.0 unless @item.lifecycle_state.in?(%w\[repair clean_needed tailor])
     estimate = @item.sustainability_metric&.repair_cost_estimate.to_f
     price = @item.price_cents.to_i / 100.0
     return 0.5 if price.zero?
@@ -102,7 +102,7 @@ class DeclutterScore
   def high_utility? = utility_score >= 0.45
 
   def sentimental_signal?
-    @item.declutter_review&.reason_kept.in?(%w[memory gift rare]) || @item.life_phase == "past-self"
+    @item.declutter_review&.reason_kept.in?(%w\[memory gift rare]) || @item.life_phase == "past-self"
   end
 
   def resale_candidate?

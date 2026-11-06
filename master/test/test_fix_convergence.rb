@@ -82,7 +82,7 @@ class TestFixConvergence < Minitest::Test
 ProvenPlan = Struct.new(:digest, :manifest) do
   def to_h = manifest
 end
-PLAN_KEYS = %w[identity_digest scope_digest source_digest law_digest law_source_digest authority_digest
+PLAN_KEYS = %w\[identity_digest scope_digest source_digest law_digest law_source_digest authority_digest
                toolchain_digest exclusion_digest adapter_digest].freeze
 
 def prove(loop)
@@ -600,7 +600,7 @@ end
     assert_equal ["rails"], Master::CLI::CommandRegistry.execution_trace_scopes("rails")
     assert_equal ["rails"], Master::CLI::CommandRegistry.execution_trace_scopes("../RAILS")
     assert_equal ["openbsd"], Master::CLI::CommandRegistry.execution_trace_scopes("../OPENBSD")
-    assert_equal %w[master rails], Master::CLI::CommandRegistry.execution_trace_scopes("master rails")
+    assert_equal %w\[master rails], Master::CLI::CommandRegistry.execution_trace_scopes("master rails")
     assert_nil Master::CLI::CommandRegistry.execution_trace_scopes("")
   end
 
@@ -690,9 +690,9 @@ end
   end
 
   def test_check_chain_recognizes_all_four_tree_names
-    assert_equal %w[master rails openbsd studio],
+    assert_equal %w\[master rails openbsd studio],
                  Operator::CheckChain.trees_for_target("master rails openbsd studio")
-    assert_equal %w[master rails openbsd studio],
+    assert_equal %w\[master rails openbsd studio],
                  Operator::CheckChain.trees_for_target("openbsd,rails,master,studio")
   end
 
@@ -700,8 +700,8 @@ end
     assert_equal ["master"], Operator::CheckChain.trees_for_target("")
     assert_equal ["master"], Operator::CheckChain.trees_for_target(".")
     assert_equal ["master"], Operator::CheckChain.trees_for_target("master")
-    assert_equal %w[master rails openbsd studio], Operator::CheckChain.trees_for_target("all")
-    assert_equal %w[master rails openbsd studio], Operator::CheckChain.trees_for_target("everything")
+    assert_equal %w\[master rails openbsd studio], Operator::CheckChain.trees_for_target("all")
+    assert_equal %w\[master rails openbsd studio], Operator::CheckChain.trees_for_target("everything")
   end
 
   def test_check_chain_resolves_master_relative_internal_paths
@@ -750,13 +750,13 @@ end
     loop = build_loop([])
     sweep = Object.new
     sweep.define_singleton_method(:preview) do |target:, run_id:|
-      [{ problem_id: "p1", candidate_operations: %w[split simplify], target:, run_id: }]
+      [{ problem_id: "p1", candidate_operations: %w\[split simplify], target:, run_id: }]
     end
     loop.instance_variable_set(:@sweeps, [sweep])
 
     result = loop.preview(@root)
 
-    assert_equal [%w[split simplify]], result.value!.fetch(:structure).map { |row| row.fetch(:candidate_operations) }
+    assert_equal [%w\[split simplify]], result.value!.fetch(:structure).map { |row| row.fetch(:candidate_operations) }
     assert_equal Master.law("transformation_policy").fetch("order"), result.value!.fetch(:transformation_order)
   end
 
@@ -919,7 +919,7 @@ end
 
   def test_fix_status_target_is_single_line_and_bounded
     label = Master::CLI::CommandRegistry.display_fix_target(
-      "RAILS\nfix0: mode=write\t\e[31m",
+      "rails\nfix0: mode=write\t\e[31m",
     )
 
     refute_match(/[\x00-\x1f\x7f]/, label)
@@ -1011,7 +1011,7 @@ end
     end
 
     # Named trees run one at a time in the order typed, each proved on its own.
-    assert_equal %w[master rails openbsd].map { |tree| File.join(Master::REPO_ROOT, tree) }, repaired
+    assert_equal %w\[master rails openbsd].map { |tree| File.join(Master::REPO_ROOT, tree) }, repaired
     assert_equal repaired, verified
   end
 
@@ -1693,8 +1693,8 @@ end
 
     # The expired run is closed and a fresh one opened; this fixture's journal
     # hands back no budget for the fresh run either, so it ends there.
-    assert_equal %w[run-timeout run-fresh], opened
-    assert_equal %w[run-timeout run-fresh], terminal_rows.map { |row| row[:run_id] }
+    assert_equal %w\[run-timeout run-fresh], opened
+    assert_equal %w\[run-timeout run-fresh], terminal_rows.map { |row| row[:run_id] }
     assert_equal :timeout, terminal_rows.first[:state]
     assert_match(/budget exhausted before resume/, terminal_rows.first[:message])
     assert_equal 2, deferred.size
@@ -1919,7 +1919,7 @@ end
   end
 
   def test_a_canonical_repo_leaves_a_hashed_outcome_receipt_the_terminal_event_names
-    %w[master rails openbsd studio].each { |tree| FileUtils.mkdir_p(File.join(@root, tree)) }
+    %w\[master rails openbsd studio].each { |tree| FileUtils.mkdir_p(File.join(@root, tree)) }
     loop = build_loop([])
     journal = Object.new
     journal.define_singleton_method(:history) { |**| [] }
@@ -2410,14 +2410,14 @@ end
       :fix_targets, "master rails openbsd studio", root:
     )
 
-    assert_equal %w[master rails openbsd studio].map { |tree| File.join(root, tree) }, targets
+    assert_equal %w\[master rails openbsd studio].map { |tree| File.join(root, tree) }, targets
   end
 
   def test_named_trees_resolve_against_the_checkout_from_a_session_started_inside_a_tree
     inside = File.join(Master::REPO_ROOT, "rails", "brgen")
     targets = Master::CLI::CommandRegistry.send(:fix_targets, "master rails openbsd studio", root: inside)
 
-    assert_equal %w[master rails openbsd studio].map { |tree| File.join(Master::REPO_ROOT, tree) }, targets
+    assert_equal %w\[master rails openbsd studio].map { |tree| File.join(Master::REPO_ROOT, tree) }, targets
   end
 
   def test_single_target_and_mixed_arguments_are_not_reinterpreted

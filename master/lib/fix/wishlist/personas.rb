@@ -19,7 +19,7 @@ module Master
         }.freeze
         PER_PERSONA = 4
         SIMILARITY = 0.5
-        OPEN = %w[stale rejected superseded].freeze
+        OPEN = %w\[stale rejected superseded].freeze
 
         Voice = Data.define(:name, :focus, :question)
 

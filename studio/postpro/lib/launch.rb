@@ -44,7 +44,7 @@ def run_watch
   # reject guard the other two batch paths use, so every graded file was seen
   # as new and graded again: one seed image produced fourteen nested
   # generations in thirty seconds, on a directory that is a phone camera roll.
-  already_graded = Regexp.union(PRESETS.keys.map(&:to_s) + %w[processed masterpiece postpro])
+  already_graded = Regexp.union(PRESETS.keys.map(&:to_s) + %w\[processed masterpiece postpro])
   watch_glob = lambda do
     Dir.glob(File.join(dir, "IMG_*.{jpg,jpeg,JPG,JPEG}"))
        .reject { |f| File.basename(f).match?(already_graded) || File.basename(f).match?(/_v\d+_/) }

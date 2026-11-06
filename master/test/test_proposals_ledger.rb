@@ -12,7 +12,7 @@ require "yaml"
 class TestProposalsLedger < Minitest::Test
   LEDGER = File.expand_path("../data/proposals.yml", __dir__)
 
-  RETIREMENTS = %w[
+  RETIREMENTS = %w\[
     capability-feature-flags
     target-stack-auto-detection
     multi-temperature-best-of-n

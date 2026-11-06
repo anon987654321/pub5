@@ -86,7 +86,7 @@ module Deploy
     JS
 
     # Triangle + every brgen vertical root — mobile is where subapps feel alien.
-    PREFERRED = %w[
+    PREFERRED = %w\[
       brgen/core brgen/nearby brgen/marketplace brgen/marketplace_cart
       brgen/dating brgen/playlist brgen/tv brgen/takeaway brgen/maps brgen/messenger
       brgen/channels brgen/conversations brgen/search brgen/communities
@@ -122,7 +122,7 @@ module Deploy
 
       # Source floor: vertical surface list must cover subapps (even if offline).
       vertical_labels = BrgenVerticalSurfaces::SURFACES.map { |s| s[:label].to_s }
-      %w[marketplace dating playlist tv takeaway maps messenger].each do |sub|
+      %w\[marketplace dating playlist tv takeaway maps messenger].each do |sub|
         unless vertical_labels.any? { |l| l.start_with?(sub) || l == sub }
           @result.fail("mobile_flow: BrgenVerticalSurfaces missing subapp #{sub}")
         end
@@ -272,7 +272,7 @@ module Deploy
       end
 
       # Social shells should expose a progressive tab bar on phone.
-      if %w[brgen amber].include?(app) && %w[core home live wardrobe marketplace].include?(surface_label)
+      if %w\[brgen amber].include?(app) && %w\[core home live wardrobe marketplace].include?(surface_label)
         unless m["has_tab_bar"]
           @result.fail("mobile_flow: #{label} expected mobile tab bar chrome", severity: :soft)
         end

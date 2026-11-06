@@ -22,7 +22,7 @@ class CheckRequiresResolveTest < Minitest::Test
   # table naming the same fourteen checks drifts from the first the moment one is
   # added. Both halves — no precondition word nothing checks, and no copy of the
   # list left behind in the runner.
-  KNOWN_PRECONDITIONS = %w[browser].freeze
+  KNOWN_PRECONDITIONS = %w\[browser].freeze
 
   def test_preconditions_are_declared_once_and_read_from_the_registry
     require "yaml"

@@ -115,10 +115,10 @@ module Master
           # [label, command, ...]: the commands run in order and stop at the first that fails.
           def boot_check(root)
             production = File.join(root, "config", "environments", "production.rb")
-            return ["boots and eager-loads", %w[db:prepare zeitwerk:check]] unless
+            return ["boots and eager-loads", %w\[db:prepare zeitwerk:check]] unless
               File.file?(production) && File.read(production).match?(LAZY)
 
-            ["boots", %w[db:prepare], ["runner", "puts Rails.application.class.name"]]
+            ["boots", %w\[db:prepare], ["runner", "puts Rails.application.class.name"]]
           end
 
           def run(root, *args)

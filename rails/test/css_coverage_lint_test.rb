@@ -45,7 +45,7 @@ class CssCoverageLintTest < Minitest::Test
   # by a test and by nothing else is the thing this file exists to catch, not a
   # thing for it to require.
   def test_the_legal_pages_are_styled
-    %w[legal-prose legal-updated].each do |name|
+    %w\[legal-prose legal-updated].each do |name|
       assert_includes L.defined_names, name, "#{name} must remain styled"
       refute_includes L.undefined_classes, name
     end
@@ -63,7 +63,7 @@ class CssCoverageLintTest < Minitest::Test
   def test_class_names_arguments_are_class_lists
     view = %(<%= tag.span "x", class: class_names("data-state", "data-state--stale": stale) %>)
 
-    assert_includes L.class_lists_in(view), %w[data-state data-state--stale]
+    assert_includes L.class_lists_in(view), %w\[data-state data-state--stale]
   end
 
   # An interpolated class cannot be resolved statically and must never be reported.
@@ -97,7 +97,7 @@ class CssCoverageLintTest < Minitest::Test
     stylesheets = File.join(ROOT, "brgen", "app", "assets", "stylesheets")
     application = File.read(File.join(stylesheets, "application.scss"))
 
-    %w[01 02 03 06].each do |section|
+    %w\[01 02 03 06].each do |section|
       refute_includes application, %(@use "section_#{section}";),
                       "section_#{section} has no stylesheet content to load"
       refute File.file?(File.join(stylesheets, "_section_#{section}.scss")),

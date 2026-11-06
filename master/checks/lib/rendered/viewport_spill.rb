@@ -31,16 +31,16 @@ module Deploy
     # Signed out, so this is the guest view of each surface. The forms behind a
     # session are the other half and are not measured here.
     SURFACES = [
-      { app: "brgen", host: "brgen.no", paths: %w[/ /communities /posts/new /users/new] },
-      { app: "brgen", host: "markedsplass.brgen.no", paths: %w[/ /listings /deals /shops] },
-      { app: "brgen", host: "dating.brgen.no", paths: %w[/] },
-      { app: "brgen", host: "tv.brgen.no", paths: %w[/ /feed /channels] },
-      { app: "brgen", host: "takeaway.brgen.no", paths: %w[/] },
-      { app: "brgen", host: "radio.brgen.no", paths: %w[/] },
-      { app: "brgen", host: "maps.brgen.no", paths: %w[/] },
-      { app: "brgen", host: "messenger.brgen.no", paths: %w[/] },
-      { app: "amber", host: "amberapp.art", paths: %w[/ /items] },
-      { app: "bsdports", host: "bsdports.org", paths: %w[/] },
+      { app: "brgen", host: "brgen.no", paths: %w\[/ /communities /posts/new /users/new] },
+      { app: "brgen", host: "markedsplass.brgen.no", paths: %w\[/ /listings /deals /shops] },
+      { app: "brgen", host: "dating.brgen.no", paths: %w\[/] },
+      { app: "brgen", host: "tv.brgen.no", paths: %w\[/ /feed /channels] },
+      { app: "brgen", host: "takeaway.brgen.no", paths: %w\[/] },
+      { app: "brgen", host: "radio.brgen.no", paths: %w\[/] },
+      { app: "brgen", host: "maps.brgen.no", paths: %w\[/] },
+      { app: "brgen", host: "messenger.brgen.no", paths: %w\[/] },
+      { app: "amber", host: "amberapp.art", paths: %w\[/ /items] },
+      { app: "bsdports", host: "bsdports.org", paths: %w\[/] },
     ].freeze
 
     PROBE = <<~JS

@@ -22,7 +22,7 @@ class TestLawEvidence < Minitest::Test
       bus.publish("tool:before", tool: "shell")
 
       records = File.readlines(File.join(root, Master::Trace::Log::Audit::LOG_PATH)).map { |line| JSON.parse(line) }
-      assert_equal %w[read_file shell], records.map { |record| record["tool"] }
+      assert_equal %w\[read_file shell], records.map { |record| record["tool"] }
     end
   end
 

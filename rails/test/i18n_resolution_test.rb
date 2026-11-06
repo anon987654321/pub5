@@ -14,10 +14,10 @@ require "yaml"
 # from brgen and bsdports, so per-app copies are intent, not duplication.
 class I18nResolutionTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[brgen amber bsdports].freeze
-  LOCALES = %w[en nb].freeze
+  APPS = %w\[brgen amber bsdports].freeze
+  LOCALES = %w\[en nb].freeze
   # rails-i18n and ActiveModel supply these; they are not ours to carry.
-  FRAMEWORK_PREFIXES = %w[errors. activerecord. activemodel. time. date. datetime. number. helpers. support.].freeze
+  FRAMEWORK_PREFIXES = %w\[errors. activerecord. activemodel. time. date. datetime. number. helpers. support.].freeze
 
   def test_every_defaultless_key_resolves_in_every_app
     unresolved = APPS.flat_map { |app| unresolved_keys(app) }

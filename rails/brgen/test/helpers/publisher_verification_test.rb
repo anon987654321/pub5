@@ -25,7 +25,7 @@ class PublisherVerificationTest < ActionDispatch::IntegrationTest
   end
 
   test "privacy terms and cookies are public" do
-    %w[/privacy /terms /cookies].each do |path|
+    %w\[/privacy /terms /cookies].each do |path|
       get path
       assert_response :success, path
       assert_includes response.body, "legal-prose"

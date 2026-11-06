@@ -7,7 +7,7 @@ module Master
     module Scan
       module Laws
         ::Law.define(:PARAMETERIZED_SLUG) do
-          tags %i[FLAT_HIERARCHY DRY]
+          tags %i\[FLAT_HIERARCHY DRY]
           fix "path is dense Rails-parameterize slug - Strunk-clean snake_case"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
           proved_by "test/test_parameterized_slug.rb"
@@ -50,7 +50,7 @@ module Master
           DIGEST = /(?:prev|last|stable|content|commit|file|source|body|digest|checksum|chain|enacted)_hash\z/
           # old_string / new_string are the edit-tool schema this runtime
           # exposes to a model, so they are an external contract like to_hash.
-          KEEP = %w[
+          KEEP = %w\[
             allow_list block_list deny_list mailing_list free_list watch_list
             skip_list word_list wait_list short_list packing_list price_list
             play_list guest_list old_string new_string old_str new_str
@@ -91,7 +91,7 @@ module Master
 
         ::Law.define(:TYPE_IN_NAME) do
           detector TypeInNameLaw
-          tags %i[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
+          tags %i\[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
           fix "a name that encodes its own type says nothing the code did not"
           proved_by "test/test_smell_detectors.rb"
         end
@@ -154,7 +154,7 @@ module Master
 
         ::Law.define(:NUMBERED_NAME) do
           detector NumberedNameLaw
-          tags %i[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
+          tags %i\[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
           fix "numbered siblings name no difference between themselves"
           proved_by "test/test_smell_detectors.rb"
         end
@@ -173,7 +173,7 @@ module Master
         # the name says how; if it cannot, they are one file or the difference
         # is not yet understood.
         ::Law.define(:FILE_SEQUENCE_NAME) do
-          tags %i[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]
+          tags %i\[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]
           fix "a filename records what a thing is, never where it sat in a sequence"
           reads_beyond_file true
           # A path rule that reads its siblings on disk; its test builds them.
@@ -207,7 +207,7 @@ module Master
         # data/vague_words.yml, shared with the sprawl census, the rename sweep and
         # the slug filler; why base, common and shared are not among them is there.
         ::Law.define(:FILE_VAGUE_NAME) do
-          tags %i[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]
+          tags %i\[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]
           fix "a filename names its subject, not a category"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
           proved_by "test/test_vague_words.rb"

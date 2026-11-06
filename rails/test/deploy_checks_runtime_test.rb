@@ -91,7 +91,7 @@ class DeployChecksRuntimeTest < Minitest::Test
   end
 
   def test_manifest_registers_the_leaf_checks
-    %w[
+    %w\[
       apps_yml generated_asset human_walkthrough port_inventory schema_migration
       phantom_foreign_keys shared_wiring surface_schema design_metrics visual_quality
       page_simulation flow_journey mobile_flow keyboard_flow
@@ -103,7 +103,7 @@ class DeployChecksRuntimeTest < Minitest::Test
   end
 
   def test_check_support_files_exist
-    %w[dom_surface_schema guest_flow_persona exemplar_structure visual_quality page_inventory]
+    %w\[dom_surface_schema guest_flow_persona exemplar_structure visual_quality page_inventory]
       .each do |name|
         assert File.file?(File.join(MASTER_CHECKS, "support", "#{name}.rb")), "missing checks/support/#{name}.rb"
       end
@@ -187,7 +187,7 @@ class DeployChecksRuntimeTest < Minitest::Test
   end
 
   def test_deploy_at_aliases_are_retired
-    %w[@core.sh @database.sh @deploy.sh @runtime_check.sh @scaffold.sh @service.sh @sync.sh].each do |name|
+    %w\[@core.sh @database.sh @deploy.sh @runtime_check.sh @scaffold.sh @service.sh @sync.sh].each do |name|
       refute File.exist?(File.join(ROOT, name)),
              "#{name} resurrected — canonical scripts are the _*.sh files"
     end
@@ -198,7 +198,7 @@ class DeployChecksRuntimeTest < Minitest::Test
     checks = File.read(File.join(OPENBSD_ROOT, "lib", "check_environment.rb"))
     assert_includes integrity, "check_environment"
     assert_includes integrity, "CheckEnvironment::INTEGRITY_CHECKS"
-    %w[schema_migration asset_freshness human_walkthrough vps_health].each do |check|
+    %w\[schema_migration asset_freshness human_walkthrough vps_health].each do |check|
       assert_includes checks, check
     end
   end
@@ -211,11 +211,11 @@ class DeployChecksRuntimeTest < Minitest::Test
     recipes = YAML.safe_load_file(File.join(OPENBSD_ROOT, "data", "operator.yml"), aliases: true).fetch("recipes")
     refute_empty recipes, "operator.yml has no recipes — the parse broke, not the tree"
 
-    incomplete = recipes.reject { |r| %w[want run expect].all? { |k| r[k].to_s.strip != "" } }
+    incomplete = recipes.reject { |r| %w\[want run expect].all? { |k| r[k].to_s.strip != "" } }
     assert_empty incomplete.map { |r| r["want"] }, "recipes missing want, run or expect"
 
     missing = recipes.flat_map do |recipe|
-      recipe["run"].scan(%r{\b(?:MASTER|OPENBSD|RAILS|STUDIO)/[\w./-]+}).reject do |path|
+      recipe["run"].scan(%r{\b(?:MASTER|OPENBSD|RAILS|studio)/[\w./-]+}).reject do |path|
         File.exist?(File.join(REPO_ROOT, path))
       end.map { |path| "#{recipe["want"]}: #{path}" }
     end
@@ -223,7 +223,7 @@ class DeployChecksRuntimeTest < Minitest::Test
   end
 
   def test_operator_surface_files_exist
-    %w[bin/vps-state bin/vps-deploy bin/vps-logs bin/post-pull-checklist lib/check_environment.rb].each do |rel|
+    %w\[bin/vps-state bin/vps-deploy bin/vps-logs bin/post-pull-checklist lib/check_environment.rb].each do |rel|
       path = File.join(OPENBSD_ROOT, rel)
       assert File.exist?(path), "missing openbsd/#{rel}"
     end

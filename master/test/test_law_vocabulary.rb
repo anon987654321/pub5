@@ -3,7 +3,7 @@
 require_relative "test_helper"
 
 class TestLawVocabulary < Minitest::Test
-  ROOTS = %w[lib law bin tools].freeze
+  ROOTS = %w\[lib law bin tools].freeze
   FORBIDDEN = [
     /\bRuleFactory\b/,
     /\bRuleHealth\b/,

@@ -30,8 +30,8 @@ class CreateAffiliateVouchersAndConversions < ActiveRecord::Migration[8.1]
       t.datetime :last_seen_at
       t.timestamps
     end
-    add_index :affiliate_vouchers, %i[source external_id], unique: true
-    add_index :affiliate_vouchers, %i[market ends_at]
+    add_index :affiliate_vouchers, %i\[source external_id], unique: true
+    add_index :affiliate_vouchers, %i\[market ends_at]
     add_index :affiliate_vouchers, :site_specific
 
     create_table :affiliate_conversions do |t|
@@ -58,7 +58,7 @@ class CreateAffiliateVouchersAndConversions < ActiveRecord::Migration[8.1]
       t.json :raw_payload
       t.timestamps
     end
-    add_index :affiliate_conversions, %i[source transaction_id message_type_id],
+    add_index :affiliate_conversions, %i\[source transaction_id message_type_id],
               name: "index_affiliate_conversions_on_source_txn_message",
               unique: true
     add_index :affiliate_conversions, :order_number

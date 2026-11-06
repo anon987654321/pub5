@@ -91,7 +91,7 @@ module Master
       def due_for_target?(record)
         return false unless record
         return false unless record["scope"].to_s == relative_target
-        return false unless %w[running waiting].include?(record["state"].to_s)
+        return false unless %w\[running waiting].include?(record["state"].to_s)
         return false unless due?(record)
 
         return true unless record["state"].to_s == "running"

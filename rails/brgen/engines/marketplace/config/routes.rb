@@ -10,18 +10,18 @@ Marketplace::Engine.routes.draw do
   resources :shops, controller: "stores" do
     resources :payouts, only: :create
   end
-  resources :deals, only: %i[index show]
+  resources :deals, only: %i\[index show]
   resources :listings do
     member { post :renew }
-    resource :favorite, only: %i[create destroy]
-    resources :orders, only: %i[create update]
-    resources :reviews, only: %i[create]
+    resource :favorite, only: %i\[create destroy]
+    resources :orders, only: %i\[create update]
+    resources :reviews, only: %i\[create]
     # Public questions on the listing, answered by whoever is selling it.
-    resources :questions, only: %i[create update]
+    resources :questions, only: %i\[create update]
     # Size and colour, the seller's side of it.
-    resources :variants, only: %i[index create update destroy]
+    resources :variants, only: %i\[index create update destroy]
   end
-resources :orders, only: %i[index show update] do
+resources :orders, only: %i\[index show update] do
   member do
     post :capture
     # The parcel: the seller says it has gone and that it arrived, the buyer
@@ -31,19 +31,19 @@ resources :orders, only: %i[index show update] do
     post :confirm_receipt
   end
   # Sending it back. Offered only against a shop — see Marketplace::Return.
-  resources :returns, only: %i[create update]
+  resources :returns, only: %i\[create update]
 end
 
   # Amazon-like cart (pending orders act as cart items for the buyer)
   resource :cart, only: :show, controller: "carts" do
     post :send_offers
-    resources :items, only: %i[update destroy], controller: "cart_items"
+    resources :items, only: %i\[update destroy], controller: "cart_items"
   end
-  resource :checkout, only: %i[create show], controller: "checkouts"
+  resource :checkout, only: %i\[create show], controller: "checkouts"
   # Where the parcel goes. Its own record rather than fields on the checkout, so
   # a second purchase does not mean typing it again and a later edit does not
   # rewrite the address printed on last month's label.
-  resources :addresses, only: %i[index create update destroy]
+  resources :addresses, only: %i\[index create update destroy]
   # Not `namespace :webhooks` — inside the marketplace scope that resolved to
   # Marketplace::Webhooks::WebhooksController, which does not exist, so PSP
   # callbacks never reached mark_paid! and orders stayed unpaid. Explicit paths
@@ -56,7 +56,7 @@ end
   get "webhooks/dintero/callback", to: "webhooks#dintero_callback", as: :webhooks_dintero_callback
   post "webhooks/dintero", to: "webhooks#dintero", as: :webhooks_dintero
   resources :categories, only: :show, param: :id
-  resources :saved_searches, only: %i[index create update destroy]
+  resources :saved_searches, only: %i\[index create update destroy]
   # The saved list. The star on every card had nowhere to lead until now.
   #
   # /wishlist, not /saved: the host declares `get "saved" => "bookmarks#index"`

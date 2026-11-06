@@ -28,7 +28,7 @@ class WardrobeSwatchInkTest < ActiveSupport::TestCase
 
   # One colour word per branch, plus a word matching nothing so the default
   # pair is covered too.
-  COLOURS = %w[navy charcoal ivory blush sage terracotta camel nude tortoise chartreuse].freeze
+  COLOURS = %w\[navy charcoal ivory blush sage terracotta camel nude tortoise chartreuse].freeze
 
   def setup
     skip "no master/checks beside this app, so no contrast maths to measure with" unless File.exist?(CONTRAST_SOURCE)

@@ -67,9 +67,9 @@ class BrowserDiagnosticsCheckTest < Minitest::Test
     surfaces = Deploy::GeometryProbe.surfaces
     apps = surfaces.map(&:app).uniq
 
-    %w[brgen amber bsdports master].each { |app| assert_includes apps, app }
+    %w\[brgen amber bsdports master].each { |app| assert_includes apps, app }
     hosts = surfaces.filter_map(&:host)
-    %w[brgen.no markedsplass.brgen.no dating.brgen.no tv.brgen.no takeaway.brgen.no maps.brgen.no messenger.brgen.no].each do |host|
+    %w\[brgen.no markedsplass.brgen.no dating.brgen.no tv.brgen.no takeaway.brgen.no maps.brgen.no messenger.brgen.no].each do |host|
       assert_includes hosts, host
     end
     assert surfaces.any? { |surface| surface.app == "brgen" && surface.label == "core" && surface.viewport == "mobile" }
@@ -211,7 +211,7 @@ class BrowserDiagnosticsCheckTest < Minitest::Test
     assert Deploy::BrowserDiagnosticsCheck.pixel_baseline_strict?("CHECK_PIXEL_BASELINE_STRICT" => "true")
     assert_equal 0.01, Deploy::BrowserDiagnosticsCheck.pixel_diff_max_ratio({})
     assert_equal 0.02, Deploy::BrowserDiagnosticsCheck.pixel_diff_max_ratio("CHECK_PIXEL_DIFF_MAX_RATIO" => "0.02")
-    %w[-0.1 1.1 NaN Infinity unknown].each do |value|
+    %w\[-0.1 1.1 NaN Infinity unknown].each do |value|
       assert_raises(ArgumentError, value) do
         Deploy::BrowserDiagnosticsCheck.pixel_diff_max_ratio("CHECK_PIXEL_DIFF_MAX_RATIO" => value)
       end
@@ -227,7 +227,7 @@ class BrowserDiagnosticsCheckTest < Minitest::Test
     assert_operator pixel_surfaces.size, :<, structural_surfaces.size
     # bsdports/home renders the same structure as bsdports/ports_index
     # (snapshot_aliases), so only ports_index carries the pixel baseline.
-    %w[master/chat amber/home amber/wardrobe bsdports/ports_index
+    %w\[master/chat amber/home amber/wardrobe bsdports/ports_index
        brgen/core brgen/marketplace brgen/dating brgen/maps brgen/messenger].each do |key|
       app, label = key.split("/", 2)
       assert pixel_surfaces.any? { |surface| surface.app == app && surface.label == label }, key

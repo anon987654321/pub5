@@ -7,7 +7,7 @@ require "minitest/mock"
 # lives about a day, and a refused token call surfaced as a KeyError on the
 # missing access_token rather than as the provider's answer.
 class VippsAccessTokenTest < ActiveSupport::TestCase
-  KEYS = %w[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN
+  KEYS = %w\[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN
             VIPPS_SUBSCRIPTION_KEY VIPPS_API_BASE VIPPS_TEST_MODE].freeze
 
   setup do

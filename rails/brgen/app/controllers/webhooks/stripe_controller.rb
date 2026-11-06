@@ -59,7 +59,7 @@ module Webhooks
     end
 
     def handle_checkout_completed(session)
-      return unless session["payment_status"].to_s.in?(%w[paid no_payment_required])
+      return unless session["payment_status"].to_s.in?(%w\[paid no_payment_required])
 
       order = Webhooks::PaymentPaid.find_order_from_stripe_session(session)
       return if order.nil?

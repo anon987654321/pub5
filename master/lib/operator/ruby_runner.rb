@@ -9,7 +9,7 @@ module Operator
 
     # The order openbsd/lib/ruby_select.sh and bin/ruby use: the newest Ruby the
     # host's packages or Homebrew installed wins, the generic name is last.
-    RUBY_NAMES = %w[ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby].freeze
+    RUBY_NAMES = %w\[ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby].freeze
 
     def ruby_cmd(root: Environment.repo_root)
       explicit = ENV["PUB4_RUBY"].to_s

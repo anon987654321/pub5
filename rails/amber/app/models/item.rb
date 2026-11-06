@@ -64,7 +64,7 @@ class Item < ApplicationRecord
   scope :underused,    -> { where("COALESCE(times_worn, 0) < 3") }
   scope :aging_unworn, -> { never_worn.where("purchase_date < ?", 6.months.ago) }
   scope :embeddable,   -> { where.not(title: [ nil, "" ]).where.not(category: [ nil, "" ]) }
-  scope :active_wardrobe, -> { where.not(lifecycle_state: %w[released donated sold recycled]) }
+  scope :active_wardrobe, -> { where.not(lifecycle_state: %w\[released donated sold recycled]) }
   # What is still in rotation: active_wardrobe minus the declutter box.
   #
   # The distinction matters for anything that *recommends* a garment. A boxed
@@ -100,12 +100,12 @@ class Item < ApplicationRecord
     category.present? ? scope.where(category:) : scope
   end
 
-  CATEGORIES = %w[Tops Bottoms Dresses Shoes Accessories Outerwear].freeze
-  SEASONS = %w[Spring Summer Autumn Winter All-Season].freeze
-  MOOD_EFFECTS = %w[energising calming confident playful neutral].freeze
-  LIFE_PHASES = %w[current past-self aspirational].freeze
-  OCCASIONS = %w[work casual formal gym date travel].freeze
-  LIFECYCLE_STATES = %w[active repair clean_needed tailor declutter_box sentimental_archive seasonal_archive resale donate sold donated recycled released].freeze
+  CATEGORIES = %w\[Tops Bottoms Dresses Shoes Accessories Outerwear].freeze
+  SEASONS = %w\[Spring Summer Autumn Winter All-Season].freeze
+  MOOD_EFFECTS = %w\[energising calming confident playful neutral].freeze
+  LIFE_PHASES = %w\[current past-self aspirational].freeze
+  OCCASIONS = %w\[work casual formal gym date travel].freeze
+  LIFECYCLE_STATES = %w\[active repair clean_needed tailor declutter_box sentimental_archive seasonal_archive resale donate sold donated recycled released].freeze
 
   def cost_per_wear
     return nil unless price_cents.present? && times_worn.to_i.positive?
@@ -151,7 +151,7 @@ class Item < ApplicationRecord
   end
 
   def in_declutter_box? = lifecycle_state == "declutter_box"
-  def released? = %w[released donated sold recycled].include?(lifecycle_state)
+  def released? = %w\[released donated sold recycled].include?(lifecycle_state)
   def sentimental? = lifecycle_state == "sentimental_archive"
 
   def current_season

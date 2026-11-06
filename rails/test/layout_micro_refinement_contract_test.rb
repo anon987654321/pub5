@@ -5,18 +5,18 @@ require "minitest/autorun"
 class LayoutMicroRefinementContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
-  LAYOUTS = %w[
+  LAYOUTS = %w\[
     amber/app/views/layouts/application.html.erb
     brgen/app/views/layouts/application.html.erb
     bsdports/app/views/layouts/application.html.erb
   ].freeze
 
-  SHARED_STACKS = %w[
+  SHARED_STACKS = %w\[
     shared/app/assets/stylesheets/_stack.scss
     shared/app/assets/stylesheets/_stack_brgen.scss
   ].freeze
 
-  EXPERIMENTAL_SHEETS = %w[
+  EXPERIMENTAL_SHEETS = %w\[
     layout_micro_refinements
     surface_micro_refinements
     surface_micro_refinements_two

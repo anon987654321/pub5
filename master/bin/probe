@@ -29,7 +29,7 @@ SELFSCAN_SRC = <<~'SCRIPT'.freeze
   container = Master.bootstrap_container(root:)
   result = container[:scanner].scan(File.join(root, "lib", "master.rb"), depth: :deep)
   findings = result.ok? ? result.value! : []
-  bad = findings.select { |f| %i[error critical].include?(f[:severity].to_sym) }
+  bad = findings.select { |f| %i\[error critical].include?(f[:severity].to_sym) }
   Master::Trace::Dmesg.status("scan0", "#{findings.size} finding(s), #{bad.size} critical")
   bad.first(10).each { |f| Master::Trace::Dmesg.status("scan0", "#{f[:file]}:#{f[:line]}, #{f[:severity]}, #{f[:law]}, #{f[:message]}") }
   exit(bad.empty? ? 0 : 1)
@@ -156,15 +156,15 @@ CHECKS = {
 }.freeze
 
 ALIASES = {
-  "quick" => %w[smoke nsaudit selftest data_singularity rails ci],
-  "all" => %w[smoke nsaudit selftest data_singularity core dogfood models ci audit rails phantom_fk],
-  "deploy" => %w[rails phantom_fk crawl crawl-browser integrity health smoke-web playbook],
-  "integrity" => %w[integrity crawl crawl-browser rails phantom_fk smoke-web],
-  "security" => %w[audit nsaudit selftest data_singularity rails],
+  "quick" => %w\[smoke nsaudit selftest data_singularity rails ci],
+  "all" => %w\[smoke nsaudit selftest data_singularity core dogfood models ci audit rails phantom_fk],
+  "deploy" => %w\[rails phantom_fk crawl crawl-browser integrity health smoke-web playbook],
+  "integrity" => %w\[integrity crawl crawl-browser rails phantom_fk smoke-web],
+  "security" => %w\[audit nsaudit selftest data_singularity rails],
 }.freeze
 
 def expand_args(args)
-  selected = args.empty? ? %w[quick] : args
+  selected = args.empty? ? %w\[quick] : args
   selected.flat_map { |arg| ALIASES.fetch(arg, [arg]) }.uniq
 end
 

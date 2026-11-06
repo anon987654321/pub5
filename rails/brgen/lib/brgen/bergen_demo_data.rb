@@ -20,21 +20,21 @@ module Brgen
     RADIO_BERGEN_PLAYLIST = "Radio Bergen"
 
     USERS = [
-      %w[Emilie emilie_floyen],
-      %w[Henrik henrik_vestland],
-      %w[Kari kari_bybanen],
-      %w[Ola ola_nordnes],
-      %w[Ingrid ingrid_ulriken],
-      %w[Magnus magnus_student],
-      %w[Sofie sofie_regnby],
-      %w[Anders anders_fisketorget],
-      %w[Marte marte_kode24],
-      %w[Jonas jonas_7fjell],
-      %w[Hanne hanne_sandviken],
-      %w[Per per_laksevag],
-      %w[Silje silje_korall],
-      %w[Torbjørn tor_fana],
-      %w[Live live_bergenlive]
+      %w\[Emilie emilie_floyen],
+      %w\[Henrik henrik_vestland],
+      %w\[Kari kari_bybanen],
+      %w\[Ola ola_nordnes],
+      %w\[Ingrid ingrid_ulriken],
+      %w\[Magnus magnus_student],
+      %w\[Sofie sofie_regnby],
+      %w\[Anders anders_fisketorget],
+      %w\[Marte marte_kode24],
+      %w\[Jonas jonas_7fjell],
+      %w\[Hanne hanne_sandviken],
+      %w\[Per per_laksevag],
+      %w\[Silje silje_korall],
+      %w\[Torbjørn tor_fana],
+      %w\[Live live_bergenlive]
     ].freeze
 
     FEATURED_POSTS = BergenDemoFeaturedPosts::FEATURED_POSTS
@@ -112,15 +112,15 @@ module Brgen
     ].freeze
 
     DATING_MUTUAL_PAIRS = [
-      %w[emilie_floyen magnus_student],
-      %w[silje_korall jonas_7fjell],
-      %w[henrik_vestland ingrid_ulriken],
-      %w[hanne_sandviken per_laksevag]
+      %w\[emilie_floyen magnus_student],
+      %w\[silje_korall jonas_7fjell],
+      %w\[henrik_vestland ingrid_ulriken],
+      %w\[hanne_sandviken per_laksevag]
     ].freeze
 
     DATING_ONE_WAY_LIKES = [
-      %w[sofie_regnby anders_fisketorget],
-      %w[marte_kode24 live_bergenlive]
+      %w\[sofie_regnby anders_fisketorget],
+      %w\[marte_kode24 live_bergenlive]
     ].freeze
 
     NEIGHBORHOODS = [

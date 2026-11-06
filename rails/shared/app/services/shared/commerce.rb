@@ -5,7 +5,7 @@ require "uri"
 module Shared
   module Commerce
     PROTOCOL = "pub4-commerce-v1".freeze
-    SOURCES = %w[brgen amber].freeze
+    SOURCES = %w\[brgen amber].freeze
 
     Reference = Data.define(:id, :source, :type, :url)
     Candidate = Data.define(
@@ -13,7 +13,7 @@ module Shared
       :condition, :availability, :delivery, :trust, :url, :image_url, :reasons, :metadata
     )
 
-    EVENT_NAMES = %w[
+    EVENT_NAMES = %w\[
       product_viewed
       product_clicked
       cart_added

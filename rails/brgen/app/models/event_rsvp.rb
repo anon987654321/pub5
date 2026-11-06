@@ -8,7 +8,7 @@
 class EventRsvp < ApplicationRecord
   include Shared::Notifiable
 
-  STATUSES = %w[going interested not_going].freeze
+  STATUSES = %w\[going interested not_going].freeze
 
   belongs_to :event
   belongs_to :user

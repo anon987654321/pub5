@@ -23,7 +23,7 @@ RANDOM_ALWAYS = "grain"
 RANDOM_VARIATIONS = (5..10)
 RANDOM_VARIATION_RANGE = RANDOM_VARIATIONS.freeze
 
-RANDOM_ANALOG_CORE = %w[
+RANDOM_ANALOG_CORE = %w\[
   film_curve halation stock_matrix dir_coupler adjacency_effects film_base_density
   orange_mask print_film paper_texture dilla_head_bump dilla_tape_saturation
   dilla_vinyl_bandlimit dilla_phasy dilla_console_sum
@@ -36,7 +36,7 @@ RANDOM_ANALOG_CORE = %w[
 
 RANDOM_LANES = {
   subtle_analog: {
-    effects: %w[
+    effects: %w\[
       spectral_temp film_curve stock_matrix dir_coupler adjacency_effects halation
       film_base_density orange_mask print_film shadow_lift highlight_roll micro_contrast
       warmth
@@ -44,14 +44,14 @@ RANDOM_LANES = {
     strength: (0.16..0.42),
   },
   cinematic_color: {
-    effects: %w[
+    effects: %w\[
       spectral_temp color_temp film_curve stock_matrix halation orange_mask print_film
       tonemap split_toning teal_orange warmth shadow_lift highlight_roll micro_contrast
     ].freeze,
     strength: (0.24..0.58),
   },
   artistic_analog: {
-    effects: %w[
+    effects: %w\[
       film_curve halation stock_matrix dir_coupler adjacency_effects bloom_pro
       double_exposure lith_print cyanotype technicolor faded_print polaroid_frame
       soft_focus golden_hour_glow cross_process lens_flare film_scratches
@@ -60,7 +60,7 @@ RANDOM_LANES = {
     strength: (0.34..0.72),
   },
   bleeding_edge_analog: {
-    effects: %w[
+    effects: %w\[
       film_curve halation stock_matrix dilla_head_bump dilla_tape_saturation
       dilla_vinyl_bandlimit dilla_phasy dilla_console_sum vhs_luma_bleed
       vhs_chroma_delay vhs_head_switch_band vhs_tracking_noise vhs_interlace_comb
@@ -83,7 +83,7 @@ RANDOM_LEADS = (1..2)
 # Every chain shapes the light, because a chain that leaves the light alone is
 # a chain about texture, and texture is the shallow half of a photograph. One
 # of these runs in every picture, and it leads.
-RANDOM_SHAPES = %w[relight aerial_depth].freeze
+RANDOM_SHAPES = %w\[relight aerial_depth].freeze
 
 # The wear shelf: dust, scanner noise, tape dropouts, fogged fixer, gate weave.
 #
@@ -94,7 +94,7 @@ RANDOM_SHAPES = %w[relight aerial_depth].freeze
 # `--rough` brings them back for the runs that want a handled print, still
 # capped and still never leading. A preset is free to disagree; a preset was
 # written by somebody.
-RANDOM_WEAR = %w[dust_and_hair newton_rings scan_noise gate_weave
+RANDOM_WEAR = %w\[dust_and_hair newton_rings scan_noise gate_weave
                         dodgeburn_artifacts fixing_bath_fog reticulation
                         film_curl_vignette lens_ghosting anamorphic_flare
                         vhs_luma_bleed vhs_chroma_delay vhs_head_switch_band
@@ -128,7 +128,7 @@ HEAVY_MAX_STEPS = 10
 # five-to-ten range: heavy's lane deal goes round twice and HEAVY_LOOKS has
 # eighteen looks, so no two of ten share one. --count sets any other number.
 RANDOM_TAKES = 10
-HEAVY_LANE_DEAL = %i[
+HEAVY_LANE_DEAL = %i\[
   subtle_analog cinematic_color artistic_analog bleeding_edge_analog bleeding_edge_analog
 ].freeze
 
@@ -155,13 +155,13 @@ end
 
 # What softens: lens and defocus simulations, diffusion, cross-fades, and the
 # two effects that blur as a side effect (faded_print, vinyl band-limit).
-RANDOM_SOFTENING = %w[
+RANDOM_SOFTENING = %w\[
   optical_blur emulsion_defocus diffraction_blur tilt_shift bokeh_rendering soft_focus
   cross_fade cross_process bloom_pro golden_hour_glow vintage_lens faded_print dilla_vinyl_bandlimit
 ].freeze
 
 # What prints a relief or a halo, fringes or bends the frame, or lays something over it.
-RANDOM_ARTEFACTS = %w[
+RANDOM_ARTEFACTS = %w\[
   dilla_head_bump adjacency_effects micro_contrast clarity selective_sharpen edge_aware_nr
   chromatic_aberration longitudinal_ca lens_distortion dilla_phasy lens_flare
   polaroid_frame film_scratches double_exposure

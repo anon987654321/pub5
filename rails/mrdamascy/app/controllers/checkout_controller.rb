@@ -223,7 +223,7 @@ class CheckoutController < ApplicationController
   # choice on the cart lets the toggle show it when the guest goes back.
   def remember_mode
     mode = params[:mode].to_s
-    current_cart.update!(delivery_mode: mode) if %w[delivery pickup].include?(mode)
+    current_cart.update!(delivery_mode: mode) if %w\[delivery pickup].include?(mode)
   end
 
   # Outside the kitchen's hours: when it opens next, today or on a weekday.

@@ -7,7 +7,7 @@ module Brgen
     # rail. Keep the cadence local to Brgen; Amber keeps its own shared rhythm.
     AFFILIATE_EVERY = 2
     PROMOTION_EVERY = AFFILIATE_EVERY * 3
-    VERTICAL_PROMOTIONS = %i[
+    VERTICAL_PROMOTIONS = %i\[
       radio
       marketplace
       takeaway

@@ -13,7 +13,7 @@ module Master
       TIER = :guarded
       NAME = "subdomain_orchestrator".freeze
 
-      CLUSTER_DOMAINS = %w[
+      CLUSTER_DOMAINS = %w\[
         marketplace playlist takeaway tv messages maps
         amber bsdports brgen ai dating messenger
       ].freeze

@@ -17,7 +17,7 @@ module Shared
   module VerticalEngine
     # A vertical does not carry app/views here: views come in through the
     # view_paths initializer below, not through autoloading.
-    AUTOLOAD_DIRS = %w[
+    AUTOLOAD_DIRS = %w\[
       app/controllers app/controllers/concerns
       app/models app/models/concerns
       app/helpers app/services app/jobs app/reflexes app/channels
@@ -26,7 +26,7 @@ module Shared
     # No stylesheets. brgen styles every vertical from its one application.scss,
     # so an engine directory on the Sass load path would only let a second,
     # engine-owned stylesheet creep back in.
-    ASSET_DIRS = %w[app/javascript].freeze
+    ASSET_DIRS = %w\[app/javascript].freeze
 
     def self.included(engine)
       super

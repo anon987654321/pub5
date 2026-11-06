@@ -7,7 +7,7 @@ require "minitest/autorun"
 # files are minified, so each is checked for the minified spelling.
 class ServiceWorkerPageCacheTest < Minitest::Test
   rails = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
 
   def test_source_worker_falls_back_after_four_seconds_and_caches_only_200
     worker = File.read(File.join(rails, "shared/pwa/service_worker.js"))
@@ -32,7 +32,7 @@ class ServiceWorkerPageCacheTest < Minitest::Test
   # and in every built copy, which is what a phone actually runs.
   def test_private_pages_stay_out_of_every_cache_and_only_new_content_replays
     source = File.read(File.join(rails, "shared/pwa/service_worker.js"))
-    %w[/conversations /messages /notifications /session /checkout].each do |path|
+    %w\[/conversations /messages /notifications /session /checkout].each do |path|
       assert_includes source, %("#{path}"), "#{path} must be a private prefix"
     end
     assert_includes source, "const REPLAYABLE_POST = /(^|\\/)(posts|comments|replies|messages)$/"

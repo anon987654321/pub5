@@ -6,13 +6,13 @@ class MenuItem < ApplicationRecord
   # The "best of the world's kebab" tour — every I18n origins.<origin> story
   # key comes from this list.
   # Bergen, not Oslo: one kitchen, Solheimsgaten 60 (Danmarksplass) — the home city origin.
-  ORIGINS = %w[damaskus beirut berlin adana bergen dubai tel_aviv bursa gaziantep familie stockholm sydney].freeze
+  ORIGINS = %w\[damaskus beirut berlin adana bergen dubai tel_aviv bursa gaziantep familie stockholm sydney].freeze
 
   # The 14 allergens food sold at a distance must name before purchase
   # (matinformasjonsforskriften vedlegg II, the EU's Annex II). allergens holds
   # a comma list of these keys, or "none"; blank means the kitchen has not
   # recorded the dish yet, and the item sheet says so instead of guessing.
-  ALLERGENS = %w[gluten crustaceans eggs fish peanuts soybeans milk nuts celery mustard sesame sulphites
+  ALLERGENS = %w\[gluten crustaceans eggs fish peanuts soybeans milk nuts celery mustard sesame sulphites
                  lupin molluscs].freeze
   NO_ALLERGENS = "none"
 

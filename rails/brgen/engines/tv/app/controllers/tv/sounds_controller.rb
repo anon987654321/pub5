@@ -2,7 +2,7 @@
 
 # The clips built on one piece of audio.
 class Tv::SoundsController < Tv::BaseController
-  allow_unauthenticated_access only: %i[index show]
+  allow_unauthenticated_access only: %i\[index show]
 
   def index
     @pagy, @sounds = pagy(Tv::Sound.publicly_visible.popular.includes(:user))

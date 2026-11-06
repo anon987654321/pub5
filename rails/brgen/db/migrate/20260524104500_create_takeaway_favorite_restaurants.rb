@@ -9,7 +9,7 @@ class CreateTakeawayFavoriteRestaurants < ActiveRecord::Migration[8.1]
     end
 
     add_index :takeaway_favorite_restaurants,
-              %i[user_id restaurant_id],
+              %i\[user_id restaurant_id],
               unique: true,
               name: 'idx_takeaway_favorites_user_restaurant'
   end

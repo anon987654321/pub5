@@ -158,9 +158,9 @@ module Deploy
     # master is here too, and it is not a duplicate of `rake selfcheck`: that
     # runs error and critical severities over lib and law, while this is the
     # whole registry over the whole tree, against a recorded number.
-    DEFAULT_TARGETS = %w[
+    DEFAULT_TARGETS = %w\[
       ../rails/brgen ../rails/amber ../rails/bsdports ../rails/__shared
-      ../OPENBSD ../MASTER
+      ../openbsd ../master
     ].freeze
 
     # rails/brgen for an app, master and openbsd for their repository trees — the
@@ -397,7 +397,7 @@ module Deploy
     def self.check_host_backend(result)
       return unless ENV["MASTER_TTS_REQUIRE_HOST_BACKEND"] == "1"
 
-      host_backend = %w[edge-tts espeak].any? { |name| on_path?(name) } ||
+      host_backend = %w\[edge-tts espeak].any? { |name| on_path?(name) } ||
         File.executable?("/usr/local/bin/espeak") ||
         File.executable?("/usr/bin/espeak")
       result.fail("host missing edge-tts/espeak backend") unless host_backend
@@ -426,7 +426,7 @@ module Deploy
     WEB_ROOT = File.join(ROOT, "master", "web")
     ASSETS_DIR = File.join(WEB_ROOT, "public", "assets")
     MANIFEST = File.join(ASSETS_DIR, ".manifest.json")
-    REQUIRED = %w[face.css face.js face.runtime.js chat.js three.face.module.js].freeze
+    REQUIRED = %w\[face.css face.js face.runtime.js chat.js three.face.module.js].freeze
     # Same two files Operator::CiGuard uses to recognise vm23. Only there is a missing
     # precompiled manifest a deploy fault rather than an unbuilt checkout.
     DEPLOY_HOST_MARKERS = ["/etc/relayd.conf", "/var/db/pub4_vps"].freeze

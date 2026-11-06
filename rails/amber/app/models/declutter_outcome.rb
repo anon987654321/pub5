@@ -7,7 +7,7 @@ class DeclutterOutcome < ApplicationRecord
   belongs_to :user
   belongs_to :item
 
-  ACTIONS = %w[sold donated gifted recycled repaired archived released].freeze
+  ACTIONS = %w\[sold donated gifted recycled repaired archived released].freeze
 
   validates :action, inclusion: { in: ACTIONS }
   validates :notes, length: { maximum: 1_000 }

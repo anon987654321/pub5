@@ -73,7 +73,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, titles[:named]
-    %i[anonymous live removed private].each do |kind|
+    %i\[anonymous live removed private].each do |kind|
       refute_includes response.body, titles[kind], "the profile shows the #{kind} post"
     end
   end

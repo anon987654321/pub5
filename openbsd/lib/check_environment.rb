@@ -23,16 +23,16 @@ module Deploy
     # Every check here needs the repo, so saying so decided nothing.
     INTEGRITY_CHECKS = [
       Check.new(name: "deploy_identity", path: "openbsd/checks/verify_deploy_identity.rb"),
-      Check.new(name: "production", path: RAILS_CHECKS, args: %w[production]),
-      Check.new(name: "phantom_fk", path: RAILS_CHECKS, args: %w[phantom_foreign_keys]),
-      Check.new(name: "frontend", path: RAILS_CHECKS, args: %w[frontend_production]),
+      Check.new(name: "production", path: RAILS_CHECKS, args: %w\[production]),
+      Check.new(name: "phantom_fk", path: RAILS_CHECKS, args: %w\[phantom_foreign_keys]),
+      Check.new(name: "frontend", path: RAILS_CHECKS, args: %w\[frontend_production]),
       Check.new(name: "relayd_smoke", path: "openbsd/checks/deploy_smoke_check.rb"),
-      Check.new(name: "domain_align", path: RAILS_CHECKS, args: %w[domain_alignment]),
+      Check.new(name: "domain_align", path: RAILS_CHECKS, args: %w\[domain_alignment]),
       Check.new(name: "crawl_inventory", path: "master/tools/rails/crawl_probe.rb"),
-      Check.new(name: "schema_migration", path: RAILS_CHECKS, args: %w[schema_migration]),
-      Check.new(name: "asset_freshness", path: RAILS_CHECKS, args: %w[generated_asset]),
-      Check.new(name: "human_walkthrough", path: RAILS_CHECKS, args: %w[human_walkthrough]),
-      Check.new(name: "vps_health", path: "openbsd/checks/health_check.rb", args: ["--core"], needs: %i[vps]),
+      Check.new(name: "schema_migration", path: RAILS_CHECKS, args: %w\[schema_migration]),
+      Check.new(name: "asset_freshness", path: RAILS_CHECKS, args: %w\[generated_asset]),
+      Check.new(name: "human_walkthrough", path: RAILS_CHECKS, args: %w\[human_walkthrough]),
+      Check.new(name: "vps_health", path: "openbsd/checks/health_check.rb", args: ["--core"], needs: %i\[vps]),
     ].freeze
 
     module_function
@@ -57,7 +57,7 @@ module Deploy
       return unless Deploy::Environment.on_vps?
 
       <<~WARN
-        integrity: note - source updated in /home/dev/pub4; deployed /home/<app>/app trees are unchanged.
+        integrity: note - source updated in /home/dev/pub5; deployed /home/<app>/app trees are unchanged.
         integrity: note - run: zsh openbsd/bin/vps-deploy <app>  (serial, one app at a time)
         integrity: note - then: ruby openbsd/checks/integrity_check.rb
       WARN

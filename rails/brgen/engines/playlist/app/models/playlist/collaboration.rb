@@ -6,14 +6,14 @@ module Playlist
 
     tracks_activity created: "PlaylistCollaborationCreated", source_vertical: "playlist", visibility: "private", actor: :user
 
-    ROLES = %w[owner editor viewer].freeze
+    ROLES = %w\[owner editor viewer].freeze
 
     belongs_to :user
     belongs_to :set, class_name: "Playlist::Set", optional: true
     belongs_to :playlist, class_name: "Playlist::Playlist", optional: true
 
     validates :role, inclusion: { in: ROLES }, allow_blank: true
-    validates :user_id, uniqueness: { scope: %i[set_id playlist_id] }
+    validates :user_id, uniqueness: { scope: %i\[set_id playlist_id] }
 
     before_validation :default_role
 

@@ -71,7 +71,7 @@ class PackageIndexFetcherRedirectTest < ActiveSupport::TestCase
   test "a redirect within the mirror is followed" do
     with(redirect("/pub/OpenBSD/snapshots/INDEX"), success("INDEX BODY")) do |visited, options|
       assert_equal "INDEX BODY", fetcher.send(:get, "https://cdn.openbsd.org/pub/OpenBSD/INDEX")
-      assert_equal %w[cdn.openbsd.org cdn.openbsd.org], visited
+      assert_equal %w\[cdn.openbsd.org cdn.openbsd.org], visited
       assert_equal 15, options.first[:open_timeout]
       assert_equal 60, options.first[:read_timeout]
       assert_equal Ports::Openbsd::PackageIndexFetcher::MAX_INDEX_BODY_BYTES, options.first[:max_body]
@@ -81,21 +81,21 @@ class PackageIndexFetcherRedirectTest < ActiveSupport::TestCase
   test "a redirect to another host is refused and never fetched" do
     with(redirect("http://169.254.169.254/latest/meta-data/")) do |visited|
       assert_nil fetcher.send(:get, "https://cdn.openbsd.org/pub/OpenBSD/INDEX")
-      assert_equal %w[cdn.openbsd.org], visited, "the metadata endpoint must never be contacted"
+      assert_equal %w\[cdn.openbsd.org], visited, "the metadata endpoint must never be contacted"
     end
   end
 
   test "a redirect that drops TLS on the same host is refused" do
     with(redirect("http://cdn.openbsd.org/pub/OpenBSD/INDEX")) do |visited|
       assert_nil fetcher.send(:get, "https://cdn.openbsd.org/pub/OpenBSD/INDEX")
-      assert_equal %w[cdn.openbsd.org], visited
+      assert_equal %w\[cdn.openbsd.org], visited
     end
   end
 
   test "an unusable Location is refused rather than raised" do
     with(redirect("http://[bad")) do |visited|
       assert_nil fetcher.send(:get, "https://cdn.openbsd.org/pub/OpenBSD/INDEX")
-      assert_equal %w[cdn.openbsd.org], visited
+      assert_equal %w\[cdn.openbsd.org], visited
     end
   end
 end

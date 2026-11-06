@@ -195,7 +195,7 @@ module Master
         return unless File.directory?(source)
 
         entities = intent&.entities || {}
-        recent = %w[latest recent].include?(entities[:recency].to_s)
+        recent = %w\[latest recent].include?(entities[:recency].to_s)
         count = entities[:count].to_i if entities[:count]
         count = recent_count_default if recent && (!count || count <= 0)
         count = text.match(/\b(\d+)\s+(?:latest|newest|most\s+recent)\b/i)&.captures&.first&.to_i if (!count || count <= 0)
@@ -430,7 +430,7 @@ module Master
       end
 
       def reference_profile_path(style = nil)
-        return File.join(reference_root, "latest_profile.json") unless %w[j_dilla industrial_techno].include?(style.to_s)
+        return File.join(reference_root, "latest_profile.json") unless %w\[j_dilla industrial_techno].include?(style.to_s)
 
         File.join(reference_root, "profiles", style.to_s, "latest_profile.json")
       end
@@ -441,10 +441,10 @@ module Master
 
       def active_reference_style
         style = stored_active_style
-        return style if %w[j_dilla industrial_techno].include?(style)
+        return style if %w\[j_dilla industrial_techno].include?(style)
 
         remembered = latest_reference_profile&.fetch("style_key", nil)
-        %w[j_dilla industrial_techno].include?(remembered) ? remembered : "general"
+        %w\[j_dilla industrial_techno].include?(remembered) ? remembered : "general"
       end
 
       def stored_active_style
@@ -594,7 +594,7 @@ module Master
                     end
         dilla_pocket = !named_other_style && (reference || explicit_dilla)
         named_pattern = choices[:drums].find { |id| text.match?(/\b#{Regexp.escape(id)}\b/) }
-        dilla_patterns = %w[dilla_shadow_full dilla_broken_full dilla_shadow dilla_broken dusty_laid_back boom_bap]
+        dilla_patterns = %w\[dilla_shadow_full dilla_broken_full dilla_shadow dilla_broken dusty_laid_back boom_bap]
         density = reference_feature(reference, "onset_density_per_bar") if dilla_pocket
         offbeat = reference_feature(reference, "offbeat_onset_share") if dilla_pocket
         ranked_patterns = []
@@ -733,7 +733,7 @@ module Master
 
       # What this surface writes: tones and kicks as master-*.wav, beats as
       # <progression>-<UTC stamp>.wav.
-      RENDERED_MEDIA = %w[master-*.wav *-2???????T??????Z.wav].freeze
+      RENDERED_MEDIA = %w\[master-*.wav *-2???????T??????Z.wav].freeze
 
       def last_media(dir = MEDIA_OUTPUT_DIR)
         RENDERED_MEDIA.flat_map { |pattern| Dir.glob(File.join(dir, pattern)) }.max_by { |path| File.mtime(path) }

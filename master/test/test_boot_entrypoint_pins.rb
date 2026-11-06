@@ -17,7 +17,7 @@ class TestBootEntrypointPins < Minitest::Test
   end
 
   def test_the_locked_default_gems_are_the_ones_active_after_the_entrypoint_loads
-    %w[json date].each do |name|
+    %w\[json date].each do |name|
       pin = locked(name)
       next unless pin && Gem::Specification.find_all_by_name(name, pin).any?
 

@@ -17,7 +17,7 @@ module Master
       MIN_LINE_LEN = 30
       MIN_DUPLICATE_COUNT = 2
 
-      DEFAULT_FILES = %w[
+      DEFAULT_FILES = %w\[
         data/soul.yml data/laws.yml data/laws.yml#law_map
         data/patterns.yml
       ].freeze

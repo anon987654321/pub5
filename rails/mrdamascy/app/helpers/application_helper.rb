@@ -86,7 +86,7 @@ module ApplicationHelper
 
   # The menu's own badges on a dish (signature, veg, sharing, secret, deal),
   # one span each in their words; unknown badges are left out.
-  MENU_BADGES = %w[signature veg sharing secret deal].freeze
+  MENU_BADGES = %w\[signature veg sharing secret deal].freeze
 
   def badge_tags(item)
     badges = item.badges.to_s.split(",").map(&:strip) & MENU_BADGES

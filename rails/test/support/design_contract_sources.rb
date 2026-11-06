@@ -22,7 +22,7 @@ module DesignContractSources
   ENGINE_RB = File.join(SHARED, "lib", "shared", "engine.rb")
   HOTWIRE_JS = File.join(SHARED, "frontend", "hotwire.js")
   FLEET_ROUTES = File.join(SHARED, "config", "routes", "fleet.rb")
-  APPS = %w[amber brgen bsdports].freeze
+  APPS = %w\[amber brgen bsdports].freeze
   # Match real decorative depth, not "none" resets. Whitespace belongs inside
   # the lookahead so Ruby cannot backtrack past it and treat "none" as a value.
   # Flat UI also forbids blur/drop-shadow filters; semantic borders and outlines

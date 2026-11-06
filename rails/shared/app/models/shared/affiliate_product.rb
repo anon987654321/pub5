@@ -13,7 +13,7 @@ module Shared
     # apps migrate it under its own name.
     self.table_name = "affiliate_products"
 
-    SOURCES = %w[tradedoubler amazon].freeze
+    SOURCES = %w\[tradedoubler amazon].freeze
 
     # A feed row older than this is assumed withdrawn. Showing a delisted product
     # is worse than showing none: the click either 404s or pays nothing.

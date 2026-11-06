@@ -49,7 +49,7 @@ module Deploy
 
     # CHECK_LEDGER=off disables recording entirely, for runs that should leave no
     # trace (a bisect, someone else's tree).
-    def enabled? = !%w[off 0 false no].include?(File.basename(@path.to_s).downcase)
+    def enabled? = !%w\[off 0 false no].include?(File.basename(@path.to_s).downcase)
 
     def record(check:, outcome:, run_id:, failures: 0, warnings: 0, errors: 0, duration_ms: nil, verification: nil)
       return self unless enabled?

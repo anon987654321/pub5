@@ -34,7 +34,7 @@
 <% end %>
 
 <% filter_params = request.query_parameters.except("page", "format") %>
-<% removable_filter_keys = %w[from category_id condition min_price max_price lat lng radius_km] %>
+<% removable_filter_keys = %w\[from category_id condition min_price max_price lat lng radius_km] %>
 <% active_filter_chips = [] %>
 <% if params[:from] == "person" %>
   <% active_filter_chips << [t("marketplace.from_a_person"), filter_params.except("from")] %>

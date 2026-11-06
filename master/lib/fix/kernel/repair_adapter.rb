@@ -66,7 +66,7 @@ module Master
         GENETIC_AUTOFIX_CANDIDATES = 3
 
         MIN_SEVERITY = :warning
-        VISUAL_EXTENSIONS = %w[.css .scss .erb .html .htm .js .ts].freeze
+        VISUAL_EXTENSIONS = %w\[.css .scss .erb .html .htm .js .ts].freeze
 
         # The same diligence the seven-point checklist asked for, compressed:
         # every candidate prompt repeated the list, and a model that answered it
@@ -252,7 +252,7 @@ module Master
         # One repair, and when the verifier refuses it for a reason the model can act on, one
         # more with that reason in the prompt. The two-rejects-per-file limit still ends it, and
         # MASTER_FIX_RETRY=0 switches the second try off.
-        RETRYABLE = %i[out_of_scope reflexion_rejected consensus_rejected rejected].freeze
+        RETRYABLE = %i\[out_of_scope reflexion_rejected consensus_rejected rejected].freeze
 
         def fix_violation(violation)
           RunLedger.take_refusal
@@ -407,7 +407,7 @@ module Master
         # A safety interlock must not become optional merely because the operator
         # forgot an environment variable.
         def consensus_required?(violation)
-          %i[error critical].include?(violation[:severity].to_s.to_sym) ||
+          %i\[error critical].include?(violation[:severity].to_s.to_sym) ||
             ENV["MASTER_CONSENSUS_FIXES"] == "1"
         end
 
@@ -445,12 +445,12 @@ module Master
             return :rejected
           end
 
-          if %w[html htm erb].include?(format) && result.status != "PASS"
+          if %w\[html htm erb].include?(format) && result.status != "PASS"
             reject_preservation(path, result)
             return :rejected
           end
 
-          if %w[css scss].include?(format) && result.status == "INCONCLUSIVE" &&
+          if %w\[css scss].include?(format) && result.status == "INCONCLUSIVE" &&
              contract.preserve.include?("visual_identity") && !@visual_custody
             failure = ArtifactPreservation::Result.new(
               "INCONCLUSIVE", result.checks,
@@ -466,7 +466,7 @@ module Master
           Master::Ground::Swallow.log(e, context: "RepairAdapter.artifact_preservation", event_bus: @bus, path:)
           failure = ArtifactPreservation::Result.new("INCONCLUSIVE", [], "#{e.class}: #{e.message}")
           TaskContract.record_preservation!(path:, format: File.extname(path), before:, after:, result: failure)
-          if %w[html htm erb css scss].include?(format.to_s)
+          if %w\[html htm erb css scss].include?(format.to_s)
             reject_preservation(path, failure)
             return :rejected
           end

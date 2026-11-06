@@ -60,7 +60,7 @@ class SharedChromeSourceContractTest < Minitest::Test
       body = File.read(path, encoding: "UTF-8")
       next unless body.match?(/data-controller="live-search|controller: "live-search/)
 
-      %w[updating updated failed].each do |value|
+      %w\[updating updated failed].each do |value|
         where = path.delete_prefix("#{ROOT}/")
         assert_match(/live[-_]search[-_]#{value}[-_]value/, body, "#{where} names no #{value} text")
       end
@@ -83,7 +83,7 @@ class SharedChromeSourceContractTest < Minitest::Test
 
   # shared-047
   def test_two_scrims
-    assert_equal %w[--scrim --scrim-deep], tokens.scan(/^\s*(--scrim[\w-]*):/).flatten
+    assert_equal %w\[--scrim --scrim-deep], tokens.scan(/^\s*(--scrim[\w-]*):/).flatten
     refute_match(/var\(--scrim-\d+\)/, app_sources("*.scss").map { File.read(_1, encoding: "UTF-8") }.join)
   end
 
@@ -91,7 +91,7 @@ class SharedChromeSourceContractTest < Minitest::Test
   def test_luxury_tokens_live_in_amber
     refute_match(/^\s*--luxury-[\w-]+:/, tokens)
     amber = read("amber/app/assets/stylesheets/application.scss")
-    %w[--luxury-bg --luxury-surface --luxury-space-large --luxury-font-meta --luxury-line-relaxed].each do |token|
+    %w\[--luxury-bg --luxury-surface --luxury-space-large --luxury-font-meta --luxury-line-relaxed].each do |token|
       assert_match(/^\s*#{token}:/, amber, "#{token} is not declared in amber")
     end
   end

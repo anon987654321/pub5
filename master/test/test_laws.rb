@@ -144,7 +144,7 @@ class TestAxioms < Minitest::Test
     anti = @laws.constitution["anti_simulation"]
     refute_nil anti, "TRUTHFUL_STATUS must own its anti-simulation evidence contract"
     assert_equal "repository_work_claims", anti["scope"]
-    assert_equal %w[will would could might], anti["forbidden"]
+    assert_equal %w\[will would could might], anti["forbidden"]
     assert anti.dig("require_evidence", "completion"), "evidence contract must survive"
     assert_equal anti["forbidden"], @laws.soul_data.dig("absolute", "anti_simulation", "forbidden")
   end

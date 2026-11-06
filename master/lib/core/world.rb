@@ -174,7 +174,7 @@ module Master::Core
       seconds = [seconds, 30].min
       command = argv.first == "ruby" ? [RbConfig.ruby, "--disable-gems", *argv.drop(1)] : argv
       child_env = ENV.keys.grep(CREDENTIAL_ENV_RX).to_h { |name| [name, nil] }
-      %w[RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS].each { |name| child_env[name] = nil }
+      %w\[RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS].each { |name| child_env[name] = nil }
       out, status = bounded_capture2e(*command, env: child_env, chdir: @root, timeout: seconds)
       detail = "probe result: exit=#{status.exitstatus || status}\n#{out}".strip
       status.success? ? Observation.ok(detail) : Observation.no(detail)
@@ -218,7 +218,7 @@ module Master::Core
       worker = File.join(Master::ROOT, "bin", "master")
       child_env = ENV.keys.grep(CREDENTIAL_ENV_RX).to_h { |name| [name, nil] }
       # These variables run code before Ruby starts the worker, ahead of pledge.
-      %w[RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS].each { |name| child_env[name] = nil }
+      %w\[RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS].each { |name| child_env[name] = nil }
       out, status = bounded_capture2e(
         RbConfig.ruby, "--disable-gems", worker, "--exec-worker", "--", *argv,
         env: child_env,

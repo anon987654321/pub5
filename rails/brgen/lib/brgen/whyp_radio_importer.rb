@@ -52,7 +52,7 @@ module Brgen
 
     def validate_url(value)
       uri = URI.parse(value.to_s)
-      abort "radio: collection must be a Whyp URL" unless %w[whyp.it www.whyp.it].include?(uri.host.to_s.downcase)
+      abort "radio: collection must be a Whyp URL" unless %w\[whyp.it www.whyp.it].include?(uri.host.to_s.downcase)
 
       value.to_s
     rescue URI::InvalidURIError
@@ -69,7 +69,7 @@ module Brgen
     end
 
     def require_commands!
-      %w[yt-dlp ffmpeg].each do |command|
+      %w\[yt-dlp ffmpeg].each do |command|
         available = Shared::Subprocess.on_path?(command)
         abort "radio: #{command} is required" unless available
       end
@@ -168,7 +168,7 @@ module Brgen
     # tracks.yml's credit first: yt-dlp names the uploader's account on every track.
     def artist_for(id, info)
       credits.dig(id.to_s, :artist).presence ||
-        %w[artist creator uploader].lazy.filter_map { |key| info[key].presence }.first || "Brgen Radio"
+        %w\[artist creator uploader].lazy.filter_map { |key| info[key].presence }.first || "Brgen Radio"
     end
 
     def audio_file_for(id)
@@ -177,7 +177,7 @@ module Brgen
     end
 
     def artwork_file_for(id)
-      %w[jpg jpeg png webp].map { |ext| audio_root.join("#{id}.#{ext}") }.find(&:file?)
+      %w\[jpg jpeg png webp].map { |ext| audio_root.join("#{id}.#{ext}") }.find(&:file?)
     end
 
     def relative_public_path(path)

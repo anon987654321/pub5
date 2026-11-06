@@ -13,7 +13,7 @@ module Master
             Prism::ProgramNode, Prism::ClassNode, Prism::ModuleNode, Prism::SingletonClassNode
           ].freeze
 
-          VISIBILITY_MARKERS = %w[public private protected].freeze
+          VISIBILITY_MARKERS = %w\[public private protected].freeze
 
 
           def check(code, path:)
@@ -108,7 +108,7 @@ module Master
 
         ::Law.define(:FILE_LAYOUT) do
           detector FileLayoutLaw
-          tags %i[PROXIMITY CONVENTION]
+          tags %i\[PROXIMITY CONVENTION]
           fix "frozen header -> requires -> module/class -> public -> private"
           proved_by "test/test_structural_shape_laws.rb"
         end
@@ -145,7 +145,7 @@ module Master
 
         ::Law.define(:EXPLICIT) do
           detector ExplicitLaw
-          tags %i[EXPLICIT CONVENTION]
+          tags %i\[EXPLICIT CONVENTION]
           fix "no implicit requires or magic coupling"
           example_path "/repo/lib/example.rb"
           bad %(autoload :Thing, "thing"\n)
@@ -187,7 +187,7 @@ module Master
 
         ::Law.define(:CYCLOMATIC_COMPLEXITY) do
           detector CyclomaticComplexityLaw
-          tags %i[LINEARITY SMALL_PARTS]
+          tags %i\[LINEARITY SMALL_PARTS]
           fix "cyclomatic complexity under 10 per method"
           proved_by "test/test_operator_lint.rb"
         end
@@ -249,7 +249,7 @@ module Master
 
         ::Law.define(:PATTERN_EXTRACTION) do
           detector PatternExtractionLaw
-          tags %i[DESIGN OPPORTUNITY]
+          tags %i\[DESIGN OPPORTUNITY]
           source "MASTER-native - extract recurring structure"
           ask "Is the code close to a known reusable pattern whose extraction would genuinely reduce complexity rather than add ceremony?"
           fix "Extract a pattern only when recurring structure earns the abstraction."
@@ -272,9 +272,9 @@ module Master
               next unless node.is_a?(Prism::ClassNode)
               next unless node.body
               children = node.body.child_nodes.compact
-              accessor_calls = children.count { |n| n.is_a?(Prism::CallNode) && %w[attr_accessor attr_reader attr_writer].include?(n.name.to_s) }
+              accessor_calls = children.count { |n| n.is_a?(Prism::CallNode) && %w\[attr_accessor attr_reader attr_writer].include?(n.name.to_s) }
 
-              real_defs = children.count { |n| n.is_a?(Prism::DefNode) && !%w[initialize to_s inspect].include?(n.name.to_s) }
+              real_defs = children.count { |n| n.is_a?(Prism::DefNode) && !%w\[initialize to_s inspect].include?(n.name.to_s) }
               next unless accessor_calls >= 2 && real_defs == 0
               findings << finding(line: node.location.start_line,
                 message: "#{node.constant_path.slice} has #{accessor_calls} accessors and no behavior - " \
@@ -289,7 +289,7 @@ module Master
 
         ::Law.define(:DATA_CLASS) do
           detector DataClassLaw
-          tags %i[SRP SOLID]
+          tags %i\[SRP SOLID]
           source "Refactoring - Data Class (Fowler)"
           ask "Does this class mainly hold data while behavior that belongs with that data is scattered across other modules?"
           fix "Move cohesive behavior toward the data owner or replace the holder with a meaningful domain abstraction."
@@ -326,7 +326,7 @@ module Master
           # retirement landed flat_law_catalogue, law_catalogue_preflight and
           # the four *_guard files beside it — the same one file, one
           # top-level constant shape.
-          ALLOWED_ROOT_FILES = %w[
+          ALLOWED_ROOT_FILES = %w\[
             builder.rb config_sections_guard.rb configuration_guard.rb content.rb
             convergence.rb core.rb design.rb device.rb face.rb flat_law_catalogue.rb
             gap.rb law_catalogue_preflight.rb law_vocabulary.rb master.rb md.rb
@@ -361,7 +361,7 @@ module Master
 
         ::Law.define(:LIB_ROOT_DISCIPLINE) do
           detector LibRootDisciplineLaw
-          tags %i[ABSTRACTION ARCHITECTURE]
+          tags %i\[ABSTRACTION ARCHITECTURE]
           fix "new files shouldn't land directly in lib/ root"
           proved_by "test/test_lib_root_discipline_law.rb"
         end
@@ -380,8 +380,8 @@ module Master
         class SmallFilesLaw < Detector
           LIMIT = 300
 
-          NOT_MODULAR = %w[json yaml markdown javascript].freeze
-          DATA_EXTENSIONS = %w[.lock .txt .conf .ipynb .csv].freeze
+          NOT_MODULAR = %w\[json yaml markdown javascript].freeze
+          DATA_EXTENSIONS = %w\[.lock .txt .conf .ipynb .csv].freeze
 
 
           def check(code, path:)
@@ -397,7 +397,7 @@ module Master
 
         ::Law.define(:SMALL_FILES) do
           detector SmallFilesLaw
-          tags %i[SMALL_PARTS]
+          tags %i\[SMALL_PARTS]
           fix "files under 300 lines"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -454,7 +454,7 @@ module Master
 
         ::Law.define(:SMALL_FUNCTIONS) do
           detector SmallFunctionsLaw
-          tags %i[SMALL_PARTS]
+          tags %i\[SMALL_PARTS]
           fix "methods under 10 lines ideal, max 20"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -529,7 +529,7 @@ module Master
 
         ::Law.define(:NO_GOD_CLASS) do
           detector GodClassLaw
-          tags %i[SOLID SRP]
+          tags %i\[SOLID SRP]
           source "Refactoring code smell: Large Class / God Object (Fowler)"
           ask "Does one class accumulate unrelated responsibilities that should have separate owners?"
           fix "Decompose into focused objects with explicit responsibilities."
@@ -577,7 +577,7 @@ module Master
 
         ::Law.define(:NESTING_DEPTH) do
           detector NestingDepthLaw
-          tags %i[LINEARITY]
+          tags %i\[LINEARITY]
           fix "nesting depth under 4"
           proved_by "test/test_structural_shape_laws.rb"
         end
@@ -653,7 +653,7 @@ module Master
 
         ::Law.define(:CQS) do
           detector CqsLaw
-          tags %i[CQS CLEAN_CODE]
+          tags %i\[CQS CLEAN_CODE]
           fix "command-query separation - mutate OR return, not both"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -706,7 +706,7 @@ module Master
 
         ::Law.define(:OPEN_CLOSED) do
           detector OpenClosedLaw
-          tags %i[SOLID OCP]
+          tags %i\[SOLID OCP]
           source "Open-Closed Principle (Bertrand Meyer; SOLID)"
           ask "Must existing core code be modified whenever a new supported variant is added?"
           fix "Extend through stable interfaces, registries, or composition where that reduces repeated core edits."
@@ -783,7 +783,7 @@ module Master
 
         ::Law.define(:LISKOV) do
           detector LiskovLaw
-          tags %i[SOLID LSP]
+          tags %i\[SOLID LSP]
           source "Liskov Substitution Principle (Barbara Liskov, 1987)"
           ask "Does a subtype violate assumptions or guarantees established by the type it replaces?"
           fix "Make subtype behavior satisfy the established contract or use a different abstraction."
@@ -834,7 +834,7 @@ module Master
 
         ::Law.define(:DEPENDENCY_INVERSION) do
           detector DependencyInversionLaw
-          tags %i[SOLID DIP]
+          tags %i\[SOLID DIP]
           source "SOLID - Dependency Inversion Principle"
           ask "Does high-level policy directly instantiate concrete dependencies that should be replaceable?"
           fix "Depend on stable abstractions and inject concrete implementations at the boundary."
@@ -898,7 +898,7 @@ module Master
 
         ::Law.define(:INTERFACE_SEGREGATION) do
           detector InterfaceSegregationLaw
-          tags %i[SOLID ISP]
+          tags %i\[SOLID ISP]
           source "SOLID - Interface Segregation"
           ask "Does an interface force implementations to stub or ignore methods they do not need?"
           fix "Split broad interfaces into focused contracts."
@@ -967,7 +967,7 @@ module Master
 
         ::Law.define(:MIDDLE_MAN) do
           detector MiddleManLaw
-          tags %i[ENGINEERING_FIT ABSTRACTION]
+          tags %i\[ENGINEERING_FIT ABSTRACTION]
           source "Refactoring - Middle Man (Fowler)"
           ask "Does this class mostly delegate methods to another object without adding meaningful policy?"
           fix "Remove the unnecessary middle layer or give it a real abstraction."

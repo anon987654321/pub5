@@ -43,11 +43,11 @@ class TakeawayAllergensTest < ActionDispatch::IntegrationTest
   test "the kitchen states a dish's allergens and the diner reads them" do
     sign_in_as(@owner)
     dish = add_dish(allergens: [ "", "milk", "fish", "made_up" ], allergens_stated: "1")
-    assert_equal %w[fish milk], dish.allergen_keys
+    assert_equal %w\[fish milk], dish.allergen_keys
 
     sign_in_as(@diner)
     get takeaway.restaurant_path(@restaurant)
-    names = %w[fish milk].map { I18n.t("takeaway.allergen_names.#{_1}") }.to_sentence
+    names = %w\[fish milk].map { I18n.t("takeaway.allergen_names.#{_1}") }.to_sentence
     assert_includes response.body, I18n.t("takeaway.allergens_list", list: names)
 
     get takeaway.new_restaurant_order_path(@restaurant)
@@ -79,12 +79,12 @@ class TakeawayAllergensTest < ActionDispatch::IntegrationTest
     patch takeaway.restaurant_menu_item_path(@restaurant, dish), params: {
       takeaway_menu_item: { allergens: [ "gluten", "eggs" ], allergens_stated: "1" }
     }
-    assert_equal %w[gluten eggs], dish.reload.allergen_keys
+    assert_equal %w\[gluten eggs], dish.reload.allergen_keys
 
     sign_in_as(@diner)
     patch takeaway.restaurant_menu_item_path(@restaurant, dish), params: {
       takeaway_menu_item: { allergens: [], allergens_stated: "1" }
     }
-    assert_equal %w[gluten eggs], dish.reload.allergen_keys
+    assert_equal %w\[gluten eggs], dish.reload.allergen_keys
   end
 end

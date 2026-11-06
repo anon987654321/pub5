@@ -5,7 +5,7 @@
 class PagesController < ApplicationController
   # The public pages every app serves without an account; config/routes/legal.rb
   # draws a route for each.
-  PAGES = %w[privacy terms cookies safety rules].freeze
+  PAGES = %w\[privacy terms cookies safety rules].freeze
 
   # The day the privacy, terms and cookies pages last changed, once for every
   # locale: each locale used to hand-type its own copy of the date.

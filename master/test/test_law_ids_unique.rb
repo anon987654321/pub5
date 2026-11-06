@@ -14,7 +14,7 @@ require_relative "../lib/review/scan/law_tree"
 # walks on every file.
 class TestLawIdsUnique < Minitest::Test
   def test_scanner_registry_uses_law_as_the_canonical_concept
-    %i[LawTree Detector CanonicalLawAdapter LawRegistryAudit].each do |name|
+    %i\[LawTree Detector CanonicalLawAdapter LawRegistryAudit].each do |name|
       assert Master::Review::Scan.const_get(name, false), "Master::Review::Scan::#{name} is the scanner's Law vocabulary"
     end
   end

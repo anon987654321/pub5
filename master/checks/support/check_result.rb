@@ -38,7 +38,7 @@ module Deploy
   class CheckResult
     attr_reader :failures, :warnings, :soft_failures, :unchecked, :errors
 
-    TRUTHY = %w[1 true yes on].freeze
+    TRUTHY = %w\[1 true yes on].freeze
 
     def self.flag?(name, env = ENV)
       TRUTHY.include?(env[name].to_s.strip.downcase)
@@ -319,7 +319,7 @@ module Deploy
     end
 
     def report!(success_message)
-      exit 1 if %i[failed errored].include?(render(success_message))
+      exit 1 if %i\[failed errored].include?(render(success_message))
     end
 
     private

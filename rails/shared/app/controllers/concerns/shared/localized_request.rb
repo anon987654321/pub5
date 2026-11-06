@@ -2,7 +2,7 @@
 
 # Which language an app answers in. amber and bsdports share it.
 #
-# `config.i18n.available_locales = %i[nb en]` and `default_locale = :nb` have
+# `config.i18n.available_locales = %i\[nb en]` and `default_locale = :nb` have
 # been set since the app was built, but nothing ever read Accept-Language and
 # there was no switcher anywhere — so every visitor got Norwegian and the whole
 # English half of the locale files was unreachable. Four hundred keys that CI
@@ -38,7 +38,7 @@ module Shared
     def locale_url(locale)
       # GET and HEAD, not request.get?: HEAD routes like GET but request.get? is
       # false for it, which would send a HEAD-rendered page's switcher to root.
-      base = %w[GET HEAD].include?(request.request_method) ? request.path : root_path
+      base = %w\[GET HEAD].include?(request.request_method) ? request.path : root_path
       query = request.query_parameters.merge(locale:).to_query
       "#{base}?#{query}"
     end

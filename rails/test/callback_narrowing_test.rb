@@ -13,7 +13,7 @@
 #     create, edit, update and destroy were left open; an anonymous
 #     GET /items/new returned 200 on the running app.
 #
-#   brgen PostsController      before_action :require_real_user, only: %i[edit update destroy]
+#   brgen PostsController      before_action :require_real_user, only: %i\[edit update destroy]
 #                              before_action :require_real_user, only: [:share]
 #     edit/update/destroy lost the check. authorize_owner still covered them, so
 #     nothing failed visibly -- which is exactly why a source read did not catch

@@ -35,7 +35,7 @@ class SvgTypeScaleTest < Minitest::Test
   RELATIVE_UNIT = /\b\d*\.?\d+(rem|em)\b|var\(\s*--text-/
 
   def stylesheets
-    @stylesheets ||= %w[shared brgen amber bsdports].flat_map do |app|
+    @stylesheets ||= %w\[shared brgen amber bsdports].flat_map do |app|
       Dir.glob(File.join(ROOT, app, "app/assets/stylesheets/**/*.scss")) +
         EngineRoots.glob(ROOT, app, "app/assets/stylesheets/**/*.scss")
     end.reject { |path| path.include?("/vendor/") || path.include?("/public/") }.sort

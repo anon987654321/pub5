@@ -12,7 +12,7 @@ class CreateSearchRecents < ActiveRecord::Migration[8.2]
       t.datetime :last_searched_at, null: false
       t.timestamps
     end
-    add_index :search_recents, %i[user_id query], name: "index_search_recents_on_user_id_and_query", unique: true
-    add_index :search_recents, %i[user_id last_searched_at], name: "index_search_recents_on_user_id_and_last_searched_at"
+    add_index :search_recents, %i\[user_id query], name: "index_search_recents_on_user_id_and_query", unique: true
+    add_index :search_recents, %i\[user_id last_searched_at], name: "index_search_recents_on_user_id_and_last_searched_at"
   end
 end

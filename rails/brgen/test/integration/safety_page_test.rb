@@ -18,7 +18,7 @@ class SafetyPageTest < ActionDispatch::IntegrationTest
 
   # A phone in a hand in trouble should dial, not ask the reader to copy digits.
   test "the emergency and helpline numbers are tel: links in both languages" do
-    %w[brgen.no lsangeles.com].each do |host|
+    %w\[brgen.no lsangeles.com].each do |host|
       host! host
       get "/safety"
 

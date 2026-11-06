@@ -30,10 +30,10 @@ Rails.application.routes.draw do
     Rails.env.development? || Rails.env.test?
   }
 
-  resource :registration, only: %i[new create]
-  resource :privacy_setting, only: %i[show update]
+  resource :registration, only: %i\[new create]
+  resource :privacy_setting, only: %i\[show update]
 
-  resource :session, only: %i[new create destroy] do
+  resource :session, only: %i\[new create destroy] do
     # Passwordless sign-in. The mailer, the token generator and the columns
     # have existed since 20260709120000; the route the link pointed at never
     # did, so nothing could send one and nothing could consume one.
@@ -50,7 +50,7 @@ Rails.application.routes.draw do
   post "fingerprint" => "fingerprints#create"
   instance_eval(File.read(File.expand_path("../../shared/config/routes/social.rb", __dir__)))
   instance_eval(File.read(File.expand_path("../../shared/config/routes/fleet.rb", __dir__)))
-  resources :passwords, param: :token, only: %i[new create edit update]
+  resources :passwords, param: :token, only: %i\[new create edit update]
 
   resources :items do
     member do
@@ -66,7 +66,7 @@ Rails.application.routes.draw do
       post :resurface_seasonal
       get :shopping_list
     end
-    resources :affiliate_links, only: %i[create destroy]
+    resources :affiliate_links, only: %i\[create destroy]
   end
   patch "drafts/:id", to: "drafts#update", as: :draft
 
@@ -75,7 +75,7 @@ Rails.application.routes.draw do
     member { post :like; patch :reorder; post :share; post :wear }
   end
 
-  resources :planned_outfits, only: %i[index create destroy]
+  resources :planned_outfits, only: %i\[index create destroy]
 
   resources :wardrobe_items do
     collection do
@@ -84,18 +84,18 @@ Rails.application.routes.draw do
       get :timeline
     end
   end
-  resources :connections, only: %i[index create update]
-  resources :live_streams, only: %i[index show create update destroy]
-  resources :messages, only: %i[index create]
+  resources :connections, only: %i\[index create update]
+  resources :live_streams, only: %i\[index show create update destroy]
+  resources :messages, only: %i\[index create]
   post "messages/invite_master" => "messages#invite_master", as: :invite_master_messages
   get "messages/widget" => "messages#widget", as: :messages_widget
 
   # Chatroulette-style random pairing: one ask, one stranger, one thread.
-  resources :encounters, only: %i[create destroy]
+  resources :encounters, only: %i\[create destroy]
   get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
 
-  resources :posts, only: %i[index show new create destroy] do
-    resources :comments, only: %i[create destroy]
+  resources :posts, only: %i\[index show new create destroy] do
+    resources :comments, only: %i\[create destroy]
     member { post :like }
     resource :vote, only: [ :create ], controller: "votes"
     collection { get :feed }
@@ -109,9 +109,9 @@ Rails.application.routes.draw do
   end
 
   get "creators/:handle", to: "creator_profiles#show", as: :creator_profile
-  resource :creator_profile, only: %i[new create edit update], as: :my_creator_profile
+  resource :creator_profile, only: %i\[new create edit update], as: :my_creator_profile
   scope "creators/:handle", as: :creator_profile do
-    resources :wardrobe_items, only: %i[create destroy], controller: "creator_wardrobe_items"
+    resources :wardrobe_items, only: %i\[create destroy], controller: "creator_wardrobe_items"
   end
 
   resources :declutter, only: :index, param: :id do

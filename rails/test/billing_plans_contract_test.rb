@@ -10,7 +10,7 @@ require "yaml"
 class BillingPlansContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   PLANS = YAML.safe_load_file(File.join(ROOT, "shared/config/plans.yml")).fetch("plans")
-  CURRENCIES = %w[NOK EUR GBP USD SEK DKK].freeze
+  CURRENCIES = %w\[NOK EUR GBP USD SEK DKK].freeze
   # A plan with a quota is an API plan, sold as a key rather than to a user.
   USER_APPS = PLANS.values.reject { |plan| plan.key?("quota") }.map { |plan| plan.fetch("app") }.uniq
   API_APPS = PLANS.values.select { |plan| plan.key?("quota") }.map { |plan| plan.fetch("app") }.uniq
@@ -21,7 +21,7 @@ class BillingPlansContractTest < Minitest::Test
     PLANS.each do |key, plan|
       assert_operator Integer(plan.fetch("amount")), :>, 0, key
       assert_includes CURRENCIES, plan.fetch("currency"), key
-      assert_includes %w[month year], plan.fetch("interval"), key
+      assert_includes %w\[month year], plan.fetch("interval"), key
       assert_match(/\ASTRIPE_PRICE_[A-Z0-9_]+\z/, plan.fetch("price_env"), key)
       refute_empty Array(plan.fetch("entitlements")), key
     end
@@ -30,7 +30,7 @@ class BillingPlansContractTest < Minitest::Test
   end
 
   def test_every_plan_is_named_and_described_in_both_locales
-    %w[en nb].each do |locale|
+    %w\[en nb].each do |locale|
       names = YAML.safe_load_file(File.join(ROOT, "shared/config/locales/billing.#{locale}.yml"))
                   .dig(locale, "billing", "plans")
       PLANS.each_key do |key|
@@ -89,7 +89,7 @@ class BillingPlansContractTest < Minitest::Test
   def test_paid_presence_listings_carry_the_sponsored_label
     partial = read("brgen_marketplace/app/views/marketplace/_top_offers.html.erb")
     assert_includes partial, %(t("marketplace.sponsored"))
-    %w[en nb].each do |locale|
+    %w\[en nb].each do |locale|
       label = YAML.safe_load_file(File.join(ROOT, "brgen_marketplace/config/locales/#{locale}.yml"))
                   .dig(locale, "marketplace", "sponsored")
       assert label.to_s.strip != "", locale

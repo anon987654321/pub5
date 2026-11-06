@@ -36,7 +36,7 @@ module Master
       end
 
       Status = Data.define(:state, :code, :message, :details) do
-        STATES = %i[healthy degraded failed].freeze
+        STATES = %i\[healthy degraded failed].freeze
 
         def self.healthy(message = nil, details: {}) = new(:healthy, :ok, message, details)
         def self.degraded(message, code: :degraded, details: {}) = new(:degraded, code, message, details)

@@ -37,7 +37,7 @@ module Master
 
       def pageable_output?(text)
         return false unless $stdout.tty?
-        return false if %w[0 off no false].include?(ENV["MASTER_PAGER"].to_s.downcase)
+        return false if %w\[0 off no false].include?(ENV["MASTER_PAGER"].to_s.downcase)
 
         height = TTY::Screen.height.to_i
         text.to_s.lines.count >= [height - 2, 12].max
@@ -67,10 +67,10 @@ module Master
 
       def terminal_pager_command
         selected = ENV.fetch("MASTER_PAGER", "auto").strip.downcase
-        return if %w[0 off no false].include?(selected)
+        return if %w\[0 off no false].include?(selected)
 
         candidates = case selected
-                     when "auto" then %w[less more]
+                     when "auto" then %w\[less more]
                      when "less", "more" then [selected]
                      else
                        Master::Trace::Dmesg.status("pager0", "unsupported MASTER_PAGER value; use auto, less, more or 0")
@@ -128,7 +128,7 @@ module Master
           elsif line.match?(%r{\A/\S*\z})
             SLASH_COMMANDS.select { |cmd| cmd.start_with?(target.to_s) }
           elsif line.strip.empty?
-            SLASH_COMMANDS.reject { |cmd| %w[/exit /quit].include?(cmd) }.map { |cmd| "#{cmd} " }
+            SLASH_COMMANDS.reject { |cmd| %w\[/exit /quit].include?(cmd) }.map { |cmd| "#{cmd} " }
           else
             []
           end

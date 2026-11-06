@@ -250,9 +250,9 @@ module Master
 
   # Each runtime section lives in the data file named for what it holds; a reader asks for its section by
   # name, so a move breaks in this one map.
-  CONFIG_FILES = { "console.yml" => %w[dmesg orientation],
-                   "scan.yml" => %w[law_groups scan_profiles scan_workers session_modes],
-                   "budgets.yml" => %w[fix_budget fix_time governor process convergence_discipline autoloop] }
+  CONFIG_FILES = { "console.yml" => %w\[dmesg orientation],
+                   "scan.yml" => %w\[law_groups scan_profiles scan_workers session_modes],
+                   "budgets.yml" => %w\[fix_budget fix_time governor process convergence_discipline autoloop] }
                  .flat_map { |file, sections| sections.map { |section| [section, file] } }.to_h.freeze
   def self.config_path(section, root: ROOT) = File.join(root, "data", CONFIG_FILES.fetch(section.to_s))
   def self.config_section(section, root: ROOT) = load_yaml(config_path(section, root:), default: {}).to_h[section.to_s]

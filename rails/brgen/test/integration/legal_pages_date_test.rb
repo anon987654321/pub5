@@ -12,7 +12,7 @@ class LegalPagesDateTest < ActionDispatch::IntegrationTest
   test "every legal page dates itself from the one constant, in both languages" do
     { "brgen.no" => /12\. august 2026/, "lsangeles.com" => /August 12, 2026|12 August 2026/ }.each do |host, words|
       host! host
-      %w[/privacy /terms /cookies].each do |path|
+      %w\[/privacy /terms /cookies].each do |path|
         get path
 
         assert_response :success
@@ -23,7 +23,7 @@ class LegalPagesDateTest < ActionDispatch::IntegrationTest
 
   test "the legal pages' own nav has a name of its own" do
     host! "brgen.no"
-    %w[/privacy /terms /cookies].each do |path|
+    %w\[/privacy /terms /cookies].each do |path|
       get path
 
       assert_select "article.legal-prose nav[aria-label=?]", "Andre juridiske sider"

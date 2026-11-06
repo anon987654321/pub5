@@ -55,7 +55,7 @@ module Deploy
     # The per-app summary every flow check prints: the outcome of each flow, grouped.
     def summary_line(check, app, port, outcomes)
       tally = outcomes.values.tally
-      parts = %i[passed failed inconclusive skipped].filter_map do |state|
+      parts = %i\[passed failed inconclusive skipped].filter_map do |state|
         next unless tally[state]
 
         label = state == :skipped ? "skipped:app-down" : state.to_s

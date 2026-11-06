@@ -7,7 +7,7 @@ module Master
     module ConstitutionalCheck
       module_function
 
-      ERROR_SEVERITIES = %i[error veto critical fatal].freeze
+      ERROR_SEVERITIES = %i\[error veto critical fatal].freeze
 
       def constitutional_error?(finding)
         row = finding.respond_to?(:to_h) ? finding.to_h : finding

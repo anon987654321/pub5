@@ -263,7 +263,7 @@ module Deploy
     def press(key, shift: false)
       code, dom_key = KEY_CODES.fetch(key)
       modifiers = shift ? 8 : 0
-      %w[rawKeyDown keyUp].each do |type|
+      %w\[rawKeyDown keyUp].each do |type|
         send_cmd("Input.dispatchKeyEvent",
                  type:, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code,
                  key: dom_key, code: dom_key, modifiers:)

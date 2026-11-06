@@ -59,7 +59,7 @@ class DeployChecksContractTest < Minitest::Test
 
   # The counters checks.yml interpolates into its pass lines.
   def test_pass_message_placeholders_are_known
-    known = %w[apps schemas assets]
+    known = %w\[apps schemas assets]
     CHECKS.each do |name, row|
       next unless row["pass"]
 
@@ -110,7 +110,7 @@ class DeployChecksContractTest < Minitest::Test
   def test_check_rails_wires_checks_by_name
     source = File.read(File.join(OPENBSD_ROOT, "bin", "check-rails"))
     assert_includes source, "master/checks/runner.rb"
-    %w[schema_migration generated_asset port_inventory production].each do |check|
+    %w\[schema_migration generated_asset port_inventory production].each do |check|
       assert_match(/"#{check}"/, source, "check-rails should run the #{check} check")
     end
   end

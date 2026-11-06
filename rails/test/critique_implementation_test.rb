@@ -126,7 +126,7 @@ class CritiqueImplementationTest < Minitest::Test
   def test_shared_feed_text_uses_the_existing_leading_tokens
     minimal = read("shared/app/assets/stylesheets/_minimal.scss")
 
-    %w[feed-card-text feed-card-body feed-card-meta].each do |selector|
+    %w\[feed-card-text feed-card-body feed-card-meta].each do |selector|
       assert_match(/\.#{selector}\s*\{[^}]*line-height:\s*var\(--leading-normal\);/m, minimal)
     end
     refute_match(/\.feed-card-(?:text|body|meta)\s*\{[^}]*line-height:\s*1\.5;/m, minimal)
@@ -156,7 +156,7 @@ class CritiqueImplementationTest < Minitest::Test
     refute_match(/\.commerce-fit-source\s*\{[^}]*font-size:\s*11px;/m, amber_polish)
     assert_includes seller, 'class="store-seller-center"'
     # The fit list composes with layout utilities (stack, tag), so assert the class token.
-    %w[commerce-fit-list commerce-fit-source commerce-fit-reasons].each do |name|
+    %w\[commerce-fit-list commerce-fit-source commerce-fit-reasons].each do |name|
       assert_match(/class="[^"]*\b#{name}\b[^"]*"/, item)
     end
   end
@@ -277,7 +277,7 @@ class CritiqueImplementationTest < Minitest::Test
   end
 
   def test_feed_lists_keep_safari_list_roles_and_post_item_boxes
-    feed_paths = %w[
+    feed_paths = %w\[
       brgen/app/views/home/_live_search_results.html.erb
       brgen/app/views/hashtags/show.html.erb
       brgen/app/views/bookmarks/index.html.erb
@@ -301,7 +301,7 @@ class CritiqueImplementationTest < Minitest::Test
       end
     end
 
-    post_lists = %w[
+    post_lists = %w\[
       brgen/app/views/home/_live_search_results.html.erb
       brgen/app/views/hashtags/show.html.erb
       brgen/app/views/bookmarks/index.html.erb

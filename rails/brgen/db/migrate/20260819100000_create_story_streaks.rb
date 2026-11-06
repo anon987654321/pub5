@@ -17,6 +17,6 @@ class CreateStoryStreaks < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :story_streaks, %i[user_a_id user_b_id], unique: true
+    add_index :story_streaks, %i\[user_a_id user_b_id], unique: true
   end
 end

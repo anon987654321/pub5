@@ -178,7 +178,7 @@ module Deploy
       token_literals(File.read(build)).each do |name, values|
         # Same exemption fallback_drift_lint carries: --accent is a different
         # hex per vertical, so "not in the mixin default" is the design.
-        next if %w[accent accent-hover].include?(name)
+        next if %w\[accent accent-hover].include?(name)
         next if allowed[name].empty?
         # A token some source also sets by interpolation compiles to hexes no
         # literal spells, so its literals are not the whole list: --accent-ink

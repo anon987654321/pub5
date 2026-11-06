@@ -7,8 +7,8 @@ class AddOutboundFederation < ActiveRecord::Migration[8.1]
     # One table, two directions, rather than a second table of the same shape.
     # Everything that predates this is a remote actor following a local user.
     add_column :fedi_follows, :direction, :string, null: false, default: "inbound"
-    remove_index :fedi_follows, column: %i[fedi_actor_id user_id] if index_exists?(:fedi_follows, %i[fedi_actor_id user_id])
-    add_index :fedi_follows, %i[fedi_actor_id user_id direction], unique: true
+    remove_index :fedi_follows, column: %i\[fedi_actor_id user_id] if index_exists?(:fedi_follows, %i\[fedi_actor_id user_id])
+    add_index :fedi_follows, %i\[fedi_actor_id user_id direction], unique: true
 
     # A whole instance, refused. Domain rather than actor: the reason to block
     # one is usually that moderating it actor by actor is the problem.

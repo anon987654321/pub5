@@ -161,7 +161,7 @@ groups = if ARGV.include?("--apps") then [:apps]
          elsif ARGV.include?("--coverage") then [:coverage]
          elsif ARGV.include?("--checks") then [:checks]
          elsif ARGV.include?("--interactions") then [:interactions]
-         else %i[apps pwa contracts coverage checks interactions]
+         else %i\[apps pwa contracts coverage checks interactions]
          end
 
 steps = steps_for(groups)

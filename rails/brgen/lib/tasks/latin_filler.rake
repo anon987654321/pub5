@@ -20,7 +20,7 @@ require "set"
 # but only 692 of the 195340 users match that and the Latin posts predate the
 # current scheme. The Latin itself is the only marker on every affected row.
 module BrgenLatinFiller
-  MARKERS = %w[
+  MARKERS = %w\[
     dolor ipsum voluptat eveniet iusto aliquid tenetur suscipit
     eligendi consequatur repellendus necessitatibus quisquam
   ].freeze

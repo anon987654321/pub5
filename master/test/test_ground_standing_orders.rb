@@ -77,7 +77,7 @@ class StandingOrdersTest < Minitest::Test
   def test_availability_posture_order_reports_ladder_levels_without_mutation
     agent = Object.new
     router = Object.new
-    router.define_singleton_method(:pool) { |wait:| %w[ollama:qwen3 web-chat:grok] }
+    router.define_singleton_method(:pool) { |wait:| %w\[ollama:qwen3 web-chat:grok] }
     agent.define_singleton_method(:model_router) { router }
     bus = Struct.new(:events) do
       def publish(name, **payload)
@@ -115,7 +115,7 @@ class StandingOrdersTest < Minitest::Test
     evented = order("name" => "evented", "trigger" => "event", "last_run_at" => 0)
 
     with_orders([stale, fresh, disabled, evented]) do
-      assert_equal %w[stale], @orders.due.map { |o| o["name"] }
+      assert_equal %w\[stale], @orders.due.map { |o| o["name"] }
     end
   end
 
@@ -125,7 +125,7 @@ class StandingOrdersTest < Minitest::Test
 
     with_orders([mine, theirs]) do
       assert_equal ["mine"], @orders.due(owner: "owner123").map { |o| o["name"] }
-      assert_equal %w[mine theirs], @orders.due.map { |o| o["name"] }
+      assert_equal %w\[mine theirs], @orders.due.map { |o| o["name"] }
     end
   end
 
@@ -135,7 +135,7 @@ class StandingOrdersTest < Minitest::Test
     with_orders([order("name" => "running", "state" => "running"),
                  order("name" => "errored", "state" => "error"),
                  order("name" => "done", "state" => "done")]) do
-      assert_equal %w[done], @orders.due.map { |o| o["name"] }
+      assert_equal %w\[done], @orders.due.map { |o| o["name"] }
     end
   end
 
@@ -389,9 +389,9 @@ class StandingOrdersTest < Minitest::Test
 
     results = orders.run_due!
 
-    assert_equal %w[scan], routed
+    assert_equal %w\[scan], routed
     refused = results.reject { |r| r[:result].ok? }.map { |r| r[:name] }
-    assert_equal %w[o0 o1 o2], refused
+    assert_equal %w\[o0 o1 o2], refused
     assert_match(/standing order refused/, results.first[:result].message)
     assert_equal "error", list.first["state"]
   end
@@ -401,7 +401,7 @@ class StandingOrdersTest < Minitest::Test
       @orders.send(:persist)
       written = YAML.safe_load_file(@state_path)
 
-      assert_equal %w[last_error last_run_at state], written.fetch("test_order").keys.sort
+      assert_equal %w\[last_error last_run_at state], written.fetch("test_order").keys.sort
       assert_equal 42, written.dig("test_order", "last_run_at")
     end
   end
@@ -439,7 +439,7 @@ class StandingOrdersTest < Minitest::Test
     end
 
     restored = Orders.new.instance_variable_get(:@orders).find { |o| o["name"] == "deploy_window" }
-    assert_equal %w[johann coding heartbeat], restored.values_at("owner", "domain", "trigger")
+    assert_equal %w\[johann coding heartbeat], restored.values_at("owner", "domain", "trigger")
     assert_equal "verified", restored["state"]
     assert_equal "window-open", restored["evidence"].last["output"], "the check's own output is the evidence"
   end
@@ -465,7 +465,7 @@ class StandingOrdersTest < Minitest::Test
 
       assert_equal "done", pending["state"]
       refute pending["evidence"].last["ok"]
-      assert_equal %w[deploy_window], @orders.due.map { |o| o["name"] }
+      assert_equal %w\[deploy_window], @orders.due.map { |o| o["name"] }
     end
   end
 

@@ -26,7 +26,7 @@ module Shared
     # — a sound that outlives the clip it came from — raised
     # StrictLoadingViolationError on destroy, which is the crash this concern
     # exists to stop and not an N+1 anyone could have preloaded away.
-    CASCADES = %i[destroy destroy_async delete_all nullify].freeze
+    CASCADES = %i\[destroy destroy_async delete_all nullify].freeze
 
     class_methods do
       def has_many(name, scope = nil, **options, &extension)

@@ -183,7 +183,7 @@ module Operator
       value_body = original[/static\s+values\s*=\s*\{(.*?)\}/m, 1] if values_declared
       values = value_body ? value_body.scan(/(?:\A|[,\n])\s*([a-z][\w-]*)\s*:\s*(?:String|Number|Boolean|Array|Object)\b/).flatten.uniq : []
       methods = original.scan(/^\s{2,}(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^\n;]*?\)\s*\{/)
-                       .flatten.uniq - %w[if for while switch catch function constructor]
+                       .flatten.uniq - %w\[if for while switch catch function constructor]
 
       return if targets.empty? && values.empty?
 

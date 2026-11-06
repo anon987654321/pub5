@@ -22,7 +22,7 @@ topics:
       - test/test_yaml_registries.rb
       - master/web/test/controllers/health_controller_test.rb
       - master/web/test/face_boot.test.mjs
-    deploy: zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh
+    deploy: zsh /home/dev/pub5/openbsd/bin/vps_deploy_master.sh
     playbook: master_web_single_voice_defaults
     proof: curl -fsS http://127.0.0.1:53187/health | jq '{status, checks, deploy}'
 
@@ -44,7 +44,7 @@ topics:
       - master/web/test/face_boot.test.mjs
       - bin/check --profile=web
       - master/web/script/probe_http
-    deploy: zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh
+    deploy: zsh /home/dev/pub5/openbsd/bin/vps_deploy_master.sh
     playbook: master_web_single_voice_defaults
     note: No WebGL before primer tap. Rebuild face.runtime.js after editing face.part* or speech modules.
 
@@ -82,7 +82,7 @@ topics:
       - openbsd/bin/vps-deploy
     tests:
       - master/web/script/probe_http
-    command: ssh dev@46.23.89.226 'zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh'
+    command: ssh dev@46.23.89.226 'zsh /home/dev/pub5/openbsd/bin/vps_deploy_master.sh'
     playbook: post_sync_vps_proof
 
   persona:

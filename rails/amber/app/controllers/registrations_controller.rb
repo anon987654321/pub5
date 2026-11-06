@@ -2,7 +2,7 @@
 
 class RegistrationsController < ApplicationController
   include Shared::EmailRegistration
-  unauthenticated_access_only only: %i[new create]
+  unauthenticated_access_only only: %i\[new create]
   skip_before_action :ensure_guest_user!, only: :create
   # brgen's UsersController#create — the same job in the other app — has carried
   # 10 per 10 minutes since it was written, and this one carried nothing: signup

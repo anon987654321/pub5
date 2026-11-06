@@ -40,7 +40,7 @@ module Master
           "analyze" => "review",
         }.freeze
 
-        INFER_DESTRUCTIVE = %w[rebuild resync shell rollback].freeze
+        INFER_DESTRUCTIVE = %w\[rebuild resync shell rollback].freeze
         CONSENT_PREFIX = /\A\s*(?:yes|do\s+it|confirm(?:ed)?|go\s+ahead|i\s+mean\s+it)\b/i.freeze
         CONSENT_NEGATION = /\b(?:no|not|don['\u2019]t|do\s+not|never|stop|cancel|without)\b/i.freeze
         # The words Pipeline::Pass#resolve_target maps to a tree.

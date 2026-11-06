@@ -236,7 +236,7 @@ module Master
       end
 
       def tool_failure_opportunities(events)
-        grouped_events(events, %w[tool_success tool_failure]).filter_map do |tool, rows|
+        grouped_events(events, %w\[tool_success tool_failure]).filter_map do |tool, rows|
           total = rows.size
           failures = rows.count { |row| row["event_type"] == "tool_failure" }
           rate = total.zero? ? 0.0 : failures.to_f / total

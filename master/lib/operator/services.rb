@@ -7,15 +7,15 @@ module Master
   module Operator
     # Named cognitive subsystems. Embedded services are observed here; only the
     # OS-backed web service has an independent rcctl control plane.
-    SERVICES = %w[cognition mission model memory device voice web].freeze
+    SERVICES = %w\[cognition mission model memory device voice web].freeze
     SYSTEM_SERVICE = { "web" => "master" }.freeze
     # One vocabulary for every service, provider and channel status: ready only when
     # something observed it working, configured when its prerequisites exist but
     # nothing has tried it, not_tested when nothing was measured. A reason follows a
     # colon. memory and device read "ready" from a literal before, which is the false
     # ready CAPABILITY_STATUS_MUST_BE_TRUTHFUL forbids.
-    HEALTH = %w[ready configured degraded failed unavailable not_tested].freeze
-    MODEL_CLIS = %w[claude codex grok gemini].freeze
+    HEALTH = %w\[ready configured degraded failed unavailable not_tested].freeze
+    MODEL_CLIS = %w\[claude codex grok gemini].freeze
 
     module_function
 
@@ -119,7 +119,7 @@ module Master
     end
 
     def run_rcctl(action, service)
-      allowed = service == "master" && %w[stop restart].include?(action.to_s)
+      allowed = service == "master" && %w\[stop restart].include?(action.to_s)
       raise SecurityError, "service action is not allowlisted" unless allowed
 
       broker = "/usr/local/sbin/pub4-admin"

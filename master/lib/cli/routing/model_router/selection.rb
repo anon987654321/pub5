@@ -35,7 +35,7 @@ module Master
             reachable = candidates.select { |id| reachable?(id) }
             # Parked apart from unusable: a silent or spent lane stays a candidate when
             # nothing is usable, so the dispatcher can name why; a parked model does not.
-            parked = reachable.reject { |id| Io::LaneState.usable?(id, sources: %i[parked]) }
+            parked = reachable.reject { |id| Io::LaneState.usable?(id, sources: %i\[parked]) }
             unparked = reachable.reject { |id| parked.include?(id) }
 
             recently_failed = unparked.select { |id| recently_failed?(id) }
@@ -77,7 +77,7 @@ module Master
             lanes = { pref: [preferred(task_type:)], tiers: tier_ids.reject { |id| ollama_model?(id) },
                       free: continuity_models + hosted_models + browser_chat_models + local_server_models,
                       subscription: agy_catalog_models + Ground::AuthProfileLane.models_for_router(self) + primary_models + cli_lane_models }
-            order = task_type.to_sym == :chitchat ? %i[pref tiers free subscription] : %i[subscription pref tiers free]
+            order = task_type.to_sym == :chitchat ? %i\[pref tiers free subscription] : %i\[subscription pref tiers free]
             order.flat_map { |lane| lanes.fetch(lane) } + Io::PaidTail.models + replicate_models + local_models + [@config.model]
           end
 

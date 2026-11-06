@@ -40,7 +40,7 @@ class VisualContractBlindnessTest < Minitest::Test
     assert_equal 1, blind.size
     states = blind.values.flatten.map { |row| row[:state] }
 
-    assert_equal %i[public results], states.sort
+    assert_equal %i\[public results], states.sort
   end
 
   # Remove the defect: each route its own page, and the check reports nothing.

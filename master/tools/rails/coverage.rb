@@ -78,7 +78,7 @@ script = <<~'RUBY'
   SimpleCov.coverage_path(ENV.fetch("PUB4_COVERAGE_ROOT", File.join(rails_root, "coverage")))
 
   SimpleCov.collate ARGV do
-    %i[line branch method].each do |criterion|
+    %i\[line branch method].each do |criterion|
       coverage criterion do
         minimum 100
         minimum 100, per: :file

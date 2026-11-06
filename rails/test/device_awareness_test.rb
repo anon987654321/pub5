@@ -7,10 +7,10 @@ class DeviceAwarenessTest < Minitest::Test
   SHARED = File.join(ROOT, "shared")
 
   CONTROLLERS = {
-    "network_aware" => %w[connect disconnect],
-    "haptics" => %w[tick success match warning play],
-    "geolocation" => %w[connect disconnect prompt pin alertArrival],
-    "viewport_aware" => %w[connect disconnect schedule apply],
+    "network_aware" => %w\[connect disconnect],
+    "haptics" => %w\[tick success match warning play],
+    "geolocation" => %w\[connect disconnect prompt pin alertArrival],
+    "viewport_aware" => %w\[connect disconnect schedule apply],
   }.freeze
 
   def test_importmap_pins_the_four_controllers
@@ -25,7 +25,7 @@ class DeviceAwarenessTest < Minitest::Test
     boot = File.read(File.join(SHARED, "frontend/stimulus_boot.js"))
     # battery-aware is parked in plugins/install_and_battery; the boot file
     # must not name a controller whose source no longer ships.
-    %w[network-aware haptics geolocation viewport-aware].each do |id|
+    %w\[network-aware haptics geolocation viewport-aware].each do |id|
       assert_includes boot, %("#{id}"), "boot must register #{id}"
     end
   end
@@ -67,7 +67,7 @@ class DeviceAwarenessTest < Minitest::Test
   def test_layouts_mount_network_and_viewport_awareness
     # battery-aware moved to plugins/install_and_battery with its controller,
     # stylesheet and view; the layouts must not mount it either.
-    %w[
+    %w\[
       brgen/app/views/layouts/application.html.erb
       amber/app/views/layouts/application.html.erb
       bsdports/app/views/layouts/application.html.erb

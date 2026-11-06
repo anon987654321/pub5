@@ -21,7 +21,7 @@ module Master
 
     LAW_MODALITIES = LawVocabulary::MODALITIES
 
-    REQUIRED_RUNTIME_CONFIG_SECTIONS = %w[
+    REQUIRED_RUNTIME_CONFIG_SECTIONS = %w\[
       veto_pattern_config law_map transformation_policy
     ].freeze
     # The Soul manifest owns the protected-path boundary. Broad data/ or
@@ -29,14 +29,14 @@ module Master
     # that must evolve, so the shared Soul validator refuses those entries.
     TOO_BROAD_SACRED_PATHS = Master::Soul::FORBIDDEN_SACRED_PATHS
     LIVE_SOUL = File.expand_path("../data/soul.yml", __dir__)
-    REQUIRED_TOKEN_MAPS = %w[
+    REQUIRED_TOKEN_MAPS = %w\[
       visual_identity viewport shared_chrome system storefront_art radio luxury promotional_art
       face_root face_interface brgen_old_dark brgen_old_light openbsd_wscons social light
       vertical_accents scale layout_rules kinetic_depth visual_design motion_and_sound
       data_visualization automated_css_analysis ux_laws typography worn_type pixel_perfection
       rams_checklist ui_polish pwa ultraminimalism ad_visual_contract
     ].freeze
-    TOKEN_ROOT_FIELDS = %w[tokens].freeze
+    TOKEN_ROOT_FIELDS = %w\[tokens].freeze
     def validate(path:, content:, root: nil)
       absolute = File.expand_path(path.to_s, root || Dir.pwd)
       kind = kind_for(absolute)
@@ -104,29 +104,29 @@ module Master
       end
 
       identity = tokens["visual_identity"].is_a?(Hash) ? tokens["visual_identity"] : {}
-      %w[name signal signal_ink signal_on_light display_size].each do |field|
+      %w\[name signal signal_ink signal_on_light display_size].each do |field|
         errors << "tokens.visual_identity.#{field} must be non-empty text" unless
           identity[field].is_a?(String) && !identity[field].strip.empty?
       end
 
       chrome = tokens["shared_chrome"].is_a?(Hash) ? tokens["shared_chrome"] : {}
-      %w[font font_code transition_fast transition_normal chrome_inset].each do |field|
+      %w\[font font_code transition_fast transition_normal chrome_inset].each do |field|
         errors << "tokens.shared_chrome.#{field} must be non-empty text" unless
           chrome[field].is_a?(String) && !chrome[field].strip.empty?
       end
 
       social = tokens["social"].is_a?(Hash) ? tokens["social"] : {}
-      %w[bg surface surface_elevated search_bg text text_secondary border accent danger
+      %w\[bg surface surface_elevated search_bg text text_secondary border accent danger
          radius_extra_small radius_small radius_medium radius_card radius_large radius_pill].each do |field|
         errors << "tokens.social.#{field} must be non-empty text" unless
           social[field].is_a?(String) && !social[field].strip.empty?
       end
 
       face_root = tokens["face_root"].is_a?(Hash) ? tokens["face_root"] : {}
-      %w[anchors derived layout palette].each do |field|
+      %w\[anchors derived layout palette].each do |field|
         errors << "tokens.face_root.#{field} must be a mapping" unless face_root[field].is_a?(Hash)
       end
-      %w[font_mono font_label face_bg].each do |field|
+      %w\[font_mono font_label face_bg].each do |field|
         errors << "tokens.face_root.#{field} must be non-empty text" unless
           face_root[field].is_a?(String) && !face_root[field].strip.empty?
       end
@@ -136,7 +136,7 @@ module Master
       prompt = interface["prompt"].is_a?(Hash) ? interface["prompt"] : {}
       state = interface["state"].is_a?(Hash) ? interface["state"] : {}
       stipple = interface["stipple"].is_a?(Hash) ? interface["stipple"] : {}
-      %w[font measure_ch max_ch line_height user_token master_token].each do |field|
+      %w\[font measure_ch max_ch line_height user_token master_token].each do |field|
         errors << "tokens.face_interface.prompt.#{field} is required" unless prompt.key?(field)
       end
       modes = state["modes"]
@@ -169,7 +169,7 @@ module Master
 
       ad = tokens["ad_visual_contract"].is_a?(Hash) ? tokens["ad_visual_contract"] : {}
       errors << "tokens.ad_visual_contract.version must be 1" unless ad["version"] == 1
-      %w[colors typography spacing radius placement render].each do |field|
+      %w\[colors typography spacing radius placement render].each do |field|
         value = ad[field]
         errors << "tokens.ad_visual_contract.#{field} must be a mapping" unless value.is_a?(Hash)
       end
@@ -195,7 +195,7 @@ module Master
       Master::Soul.validate_authority_order!(data["authority_order"])
       absolute = data.fetch("absolute") { raise KeyError, "absolute.sacred_paths is required" }
       raise ArgumentError, "absolute must be a mapping" unless absolute.is_a?(Hash)
-      unknown_absolute = absolute.keys.map(&:to_s) - %w[sacred_paths anti_simulation]
+      unknown_absolute = absolute.keys.map(&:to_s) - %w\[sacred_paths anti_simulation]
       raise ArgumentError, "absolute has unknown field(s): #{unknown_absolute.join(', ')}" unless unknown_absolute.empty?
       Master::Soul.validate_sacred_paths!(absolute["sacred_paths"])
       Master::Soul.validate_anti_simulation!(absolute["anti_simulation"])
@@ -214,7 +214,7 @@ module Master
         raise ArgumentError, "references.golden_law must resolve to an existing preservation Law in laws.yml"
       end
 
-      forbidden = %w[precedence precedence_graph priority severity severity_rank
+      forbidden = %w\[precedence precedence_graph priority severity severity_rank
                      severity_vocabulary roots_vocabulary sacred_paths protected_paths
                      enforcement law_catalogue law_map]
       shadowed = forbidden.select { |key| data.key?(key) }
@@ -222,13 +222,13 @@ module Master
 
       temperament = data.fetch("temperament") { raise KeyError, "temperament profile is required" }
       raise ArgumentError, "temperament.profile must be non-empty text" unless temperament.is_a?(Hash) && temperament["profile"].is_a?(String) && !temperament["profile"].strip.empty?
-      %w[method guardrails].each do |key|
+      %w\[method guardrails].each do |key|
         values = temperament[key]
         unless values.is_a?(Array) && !values.empty? && values.all? { |value| value.is_a?(String) && !value.strip.empty? }
           raise ArgumentError, "temperament.#{key} must be a non-empty list of statements"
         end
       end
-      %w[delivery contexts].each do |key|
+      %w\[delivery contexts].each do |key|
         value = temperament[key]
         raise ArgumentError, "temperament.#{key} must be a non-empty mapping" unless value.is_a?(Hash) && !value.empty?
       end

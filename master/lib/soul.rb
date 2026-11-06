@@ -19,14 +19,14 @@ module Master
     VERSION = "3.0.0"
     ROOT = File.expand_path("..", __dir__).freeze
 
-    AUTHORITY_ORDER_IDS = %w[
+    AUTHORITY_ORDER_IDS = %w\[
       soul laws executable_laws_and_gates tree_contracts git_history
     ].freeze
-    REQUIRED_SACRED_PATHS = %w[
+    REQUIRED_SACRED_PATHS = %w\[
       data/laws.yml data/soul.yml data/project_context.yml
       lib/soul.rb lib/ground/pledge.rb bin/master
     ].freeze
-    FORBIDDEN_SACRED_PATHS = %w[
+    FORBIDDEN_SACRED_PATHS = %w\[
       data/ data lib/review/scan/ lib/review/scan/laws lib/review/scan/laws/
     ].freeze
 
@@ -345,14 +345,14 @@ module Master
         raise IntegrityError, "soul temperament must be a mapping" unless temperament.is_a?(Hash)
         raise IntegrityError, "soul temperament profile is missing" if temperament["profile"].to_s.strip.empty?
 
-        %w[method guardrails].each do |key|
+        %w\[method guardrails].each do |key|
           values = temperament[key]
           unless values.is_a?(Array) && !values.empty? && values.all? { |value| value.is_a?(String) && !value.strip.empty? }
             raise IntegrityError, "soul temperament #{key} must be a non-empty list of statements"
           end
         end
 
-        %w[delivery contexts].each do |key|
+        %w\[delivery contexts].each do |key|
           value = temperament[key]
           raise IntegrityError, "soul temperament #{key} must be a non-empty mapping" unless value.is_a?(Hash) && !value.empty?
         end

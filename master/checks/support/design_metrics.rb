@@ -62,7 +62,7 @@ module Deploy
     # Raising the ceiling to absorb those would have been worse than the finding:
     # contrast_below_aa is 0 precisely so a real one is visible the day it lands.
     def light_only_vertical_keys(rails_root)
-      globs = %w[
+      globs = %w\[
         {__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss
         {brgen_*,brgen_radio/*,brgen_marketplace/engines/*}/app/assets/stylesheets/*.scss
       ]
@@ -297,7 +297,7 @@ decls.compact.each { |_, v, _| values << v }
       @read_custom_properties ||= {}
 
       @read_custom_properties[rails_root] ||= begin
-        globs = %w[
+        globs = %w\[
           {__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss
           {brgen_*,brgen_radio/*,brgen_marketplace/engines/*}/app/assets/stylesheets/*.scss
           {__shared,brgen,amber,bsdports}/app/**/*.erb
@@ -420,7 +420,7 @@ decls.compact.each { |_, v, _| values << v }
     end
 
     def extract_spacing_px(css, root_px: 16.0)
-      props = %w[margin padding gap row-gap column-gap margin-block margin-inline padding-block padding-inline]
+      props = %w\[margin padding gap row-gap column-gap margin-block margin-inline padding-block padding-inline]
       values = []
       props.each do |prop|
         extract_declarations(css, prop).each do |raw|
@@ -463,7 +463,7 @@ decls.compact.each { |_, v, _| values << v }
     ].freeze
 
     def extract_box_mins(css)
-      %w[min-height min-width height width].flat_map do |prop|
+      %w\[min-height min-width height width].flat_map do |prop|
         extract_declarations(css, prop).filter_map { |v| to_px(v) }
       end
     end

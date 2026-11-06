@@ -19,7 +19,7 @@ class CommentsController < ApplicationController
              by: -> { Current.user&.id ? "u#{Current.user.id}" : request.remote_ip }
   before_action :set_commentable, :refuse_banned_commenter, only: :create
   before_action :set_own_comment, only: :destroy
-  before_action :set_editable_comment, only: %i[edit update]
+  before_action :set_editable_comment, only: %i\[edit update]
   before_action :set_moderated_comment, only: :remove
   helper_method :comment_return_path
   before_action :set_summary_comment, :authorize_summary_comment, only: :generate_summary

@@ -486,7 +486,7 @@ module Master
           end
 
           # Define-style calls make methods; they never call the target by a name this graph cannot see.
-          DYNAMIC_DEFINERS = %w[define_method define_singleton_method].freeze
+          DYNAMIC_DEFINERS = %w\[define_method define_singleton_method].freeze
 
           # Callers the graph cannot see: a dynamic call in the target or in a file that calls it, a
           # name-based caller whose receiver is unknown, an import in the target that did not resolve.

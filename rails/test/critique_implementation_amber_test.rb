@@ -89,7 +89,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
 
   def test_amber_enum_selectors_localize_labels_and_keep_enum_values
     helper = read("amber/app/helpers/application_helper.rb")
-    season_views = %w[outfits/index.html.erb outfits/_form.html.erb items/_form.html.erb ai/suggest_outfits.html.erb]
+    season_views = %w\[outfits/index.html.erb outfits/_form.html.erb items/_form.html.erb ai/suggest_outfits.html.erb]
     item_form = read("amber/app/views/items/_form.html.erb")
     category_filter = read("amber/app/views/items/_live_search_results.html.erb")
     en = YAML.safe_load_file(File.join(ROOT, "amber/config/locales/en.yml")).fetch("en")

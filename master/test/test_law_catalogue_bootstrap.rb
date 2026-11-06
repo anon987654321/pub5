@@ -45,8 +45,8 @@ class TestLawCatalogueBootstrap < Minitest::Test
       end
 
       assert_match(/missing catalogue entry for MISSING_ID/, error.message)
-      assert_match(/OTHER_ID declares at MASTER\/law\/misplaced\.rb/, error.message)
-      assert_match(/OTHER_ID names MASTER\/law\/actual\.rb, but that source does not define OTHER_ID/, error.message)
+      assert_match(/OTHER_ID declares at master\/law\/misplaced\.rb/, error.message)
+      assert_match(/OTHER_ID names master\/law\/actual\.rb, but that source does not define OTHER_ID/, error.message)
     end
   end
 
@@ -68,7 +68,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
         Master::LawCataloguePreflight.validate!(law_dir:, catalogue:, repo_root: root)
       end
 
-      assert_match(/orphan_detector names MASTER\/law\/detector\.rb, but that source does not define orphan_detector/, error.message)
+      assert_match(/orphan_detector names master\/law\/detector\.rb, but that source does not define orphan_detector/, error.message)
       refute_match(/actual_detector names/, error.message)
     end
   end
@@ -88,7 +88,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
         )
       end
 
-      assert_match(/missing catalogue entry for unlisted_detector \(MASTER\/law\/detector\.rb/, error.message)
+      assert_match(/missing catalogue entry for unlisted_detector \(master\/law\/detector\.rb/, error.message)
     end
   end
 
@@ -116,7 +116,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
       File.write(File.join(law_dir, "actual.rb"), "Law.define(:ACTUAL_ID) do\nend\n")
 
       catalogue = {
-        "modalities" => %w[lexical semantic visual],
+        "modalities" => %w\[lexical semantic visual],
         "surfaces" => ["whole_file"],
         "defaults" => {},
         "entries" => {
@@ -142,7 +142,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
       law_dir = File.join(root, "master", "law")
       FileUtils.mkdir_p(law_dir)
       File.write(File.join(law_dir, "detector.rb"), <<~'DETECTOR')
-        %w[USEFUL HONEST].each do |trait|
+        %w\[USEFUL HONEST].each do |trait|
           ::Law.define(:"RAMS_#{trait}") do
           end
         end
@@ -150,7 +150,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
 
       declarations = Master::LawCataloguePreflight.source_declarations(law_dir, root)
 
-      assert_equal %w[RAMS_HONEST RAMS_USEFUL], declarations.map { |row| row.fetch(:id) }.sort
+      assert_equal %w\[RAMS_HONEST RAMS_USEFUL], declarations.map { |row| row.fetch(:id) }.sort
     end
   end
 
@@ -161,7 +161,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
       File.write(File.join(law_dir, "actual.rb"), "Law.define(:ACTUAL_ID) do\nend\n")
 
       catalogue = {
-        "modalities" => %w[lexical semantic visual],
+        "modalities" => %w\[lexical semantic visual],
         "surfaces" => ["whole_file"],
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review" },
         "unknown_registry" => true,
@@ -194,8 +194,8 @@ class TestLawCatalogueBootstrap < Minitest::Test
       File.write(File.join(law_dir, "live.rb"), "Law.define(:LIVE_ID) do\nend\n")
       catalogue = {
         "schema" => 1,
-        "modalities" => %w[lexical semantic visual],
-        "surfaces" => %w[whole_file],
+        "modalities" => %w\[lexical semantic visual],
+        "surfaces" => %w\[whole_file],
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review", "languages" => [] },
         "entries" => {
           "LIVE_ID" => { "definition_sources" => ["master/law/live.rb"], "severity" => "warning" },
@@ -217,8 +217,8 @@ class TestLawCatalogueBootstrap < Minitest::Test
       FileUtils.mkdir_p(law_dir)
       File.write(File.join(law_dir, "live.rb"), "Law.define(:LIVE_ID) do\nend\n")
       catalogue = {
-        "modalities" => %w[lexical semantic visual],
-        "surfaces" => %w[whole_file],
+        "modalities" => %w\[lexical semantic visual],
+        "surfaces" => %w\[whole_file],
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review", "languages" => [] },
         "entries" => {
           "LIVE_ID" => { "definition_sources" => ["master/law/../outside.rb"] }
@@ -242,8 +242,8 @@ class TestLawCatalogueBootstrap < Minitest::Test
       FileUtils.mkdir_p(law_dir)
       File.write(File.join(law_dir, "live.rb"), "Law.define(:LIVE_ID) do\nend\n")
       catalogue = {
-        "modalities" => %w[lexical semantic visual],
-        "surfaces" => %w[whole_file],
+        "modalities" => %w\[lexical semantic visual],
+        "surfaces" => %w\[whole_file],
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review", "languages" => [] },
         "entries" => {
           "LIVE_ID" => {

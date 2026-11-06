@@ -13,7 +13,7 @@
       hidden: local_assigns[:hidden],
       data: (local_assigns[:picker_target] ? { media_picker_target: "presets" } : {}) do %>
   <legend class="preset-strip-legend"><%= t("media.preset_legend") %></legend>
-  <% %w[none portrait landscape street blockbuster].each do |preset| %>
+  <% %w\[none portrait landscape street blockbuster].each do |preset| %>
     <label class="preset-opt">
       <%# checked passes only when a default was asked for: forcing
           checked: false otherwise would override the record's own value. %>

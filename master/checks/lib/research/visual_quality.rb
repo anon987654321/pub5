@@ -144,7 +144,7 @@ module Deploy
     end
 
     def optional_png_ink
-      samples = %w[
+      samples = %w\[
         brgen-public-desktop.png
         brgen-marketplace-desktop.png
         brgen-public-mobile.png

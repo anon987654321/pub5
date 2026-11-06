@@ -40,7 +40,7 @@ module Master
 
         ::Law.define(:ast_omission) do
           detector AstOmissionLaw
-          tags %i[COMPLETENESS]
+          tags %i\[COMPLETENESS]
           fix "symbol dropped vs recent commits"
           proved_by "test/test_ast_omission_law.rb"
         end
@@ -120,14 +120,14 @@ module Master
 
         ::Law.define(:law_coverage) do
           detector LawCoverageLaw
-          tags %i[TEST_COVERAGE]
+          tags %i\[TEST_COVERAGE]
           fix "Law subclass has no corresponding test file"
           proved_by "test/test_law_coverage_law.rb"
         end
 
         # Runtime authority lives in YAML — not markdown under data/.
         ::Law.define(:RUNTIME_DOCS_YAML) do
-          tags %i[CONSTITUTION DOCS]
+          tags %i\[CONSTITUTION DOCS]
           fix "runtime-read docs must be YAML - forbid stray .md under data/"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
           proved_by "test/test_scan_law_contracts.rb"
@@ -302,7 +302,7 @@ module Master
           end
 
           def smell_tags(smell)
-            Array(smell["tags"]).map(&:to_sym) + %i[LEARNED_SMELL]
+            Array(smell["tags"]).map(&:to_sym) + %i\[LEARNED_SMELL]
           end
 
           def applies_to_smell?(smell, language)
@@ -316,7 +316,7 @@ module Master
 
         ::Law.define(:LEARNED_SMELLS) do
           detector LearnedSmellsLaw
-          tags %i[LEARNED_SMELLS SESSION]
+          tags %i\[LEARNED_SMELLS SESSION]
           fix "session-learned smell patterns from laws.yml"
           proved_by "test/test_learned_smells_law.rb"
         end
@@ -444,7 +444,7 @@ module Master
 
         ::Law.define(:FILE_SPRAWL) do
           detector FileSprawlLaw
-          tags %i[FLAT_HIERARCHY COLLAPSE_BEFORE_ADDING]
+          tags %i\[FLAT_HIERARCHY COLLAPSE_BEFORE_ADDING]
           source "MASTER-native - collapse before adding; flat hierarchy"
           ask "Are tiny files or one-file directories adding structure without carrying " \
               "meaningful independent responsibility?"
@@ -554,7 +554,7 @@ module Master
 
         ::Law.define(:PATH_PURPOSE) do
           detector PathPurposeLaw
-          tags %i[ONE_SOURCE COLLAPSE_BEFORE_ADDING]
+          tags %i\[ONE_SOURCE COLLAPSE_BEFORE_ADDING]
           fix "every directory declares its purpose in PATH_OWNERSHIP.yml"
           proved_by "test/test_path_purpose_law.rb"
         end

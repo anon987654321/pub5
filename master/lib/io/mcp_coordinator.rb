@@ -67,7 +67,7 @@ module Master
         return unless cfg.is_a?(Hash) && cfg["enabled"] != false
 
         transport = (cfg["transport"] || "stdio").to_sym
-        return unless %i[stdio sse].include?(transport)
+        return unless %i\[stdio sse].include?(transport)
 
         client = build_mcp_client(name, transport, cfg)
         client.connect
@@ -100,8 +100,8 @@ module Master
       # process into an arbitrary internal-network HTTP client.
       def local_sse_url!(value)
         uri = URI.parse(value.to_s)
-        loopback = %w[localhost 127.0.0.1 ::1].include?(uri.hostname.to_s.downcase)
-        valid = %w[http https].include?(uri.scheme) && loopback &&
+        loopback = %w\[localhost 127.0.0.1 ::1].include?(uri.hostname.to_s.downcase)
+        valid = %w\[http https].include?(uri.scheme) && loopback &&
                 uri.userinfo.nil? && uri.fragment.nil? && uri.query.nil? &&
                 !uri.path.empty? && uri.path.start_with?("/")
         raise ArgumentError, "MCP SSE URL must be a loopback HTTP(S) endpoint without credentials or query" unless valid

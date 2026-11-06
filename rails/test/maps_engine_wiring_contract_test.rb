@@ -47,7 +47,7 @@ class MapsEngineWiringContractTest < Minitest::Test
   end
 
   def test_places_are_reachable_from_index_and_home
-    %w[app/views/maps/places/index.html.erb
+    %w\[app/views/maps/places/index.html.erb
        app/views/maps/home/index.html.erb].each do |view|
       assert_includes read(view), "places_path", "#{view} lost its link into places"
     end

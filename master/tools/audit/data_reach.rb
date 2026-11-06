@@ -41,7 +41,7 @@ module Operator
     MASTER_DIR = File.expand_path("../..", __dir__)
     CEILING = File.join(MASTER_DIR, "data", "data_reach.yml")
 
-    CODE_GLOBS = %w[lib/**/*.rb ../master/web/app/**/*.rb ../master/web/config/**/*.rb
+    CODE_GLOBS = %w\[lib/**/*.rb ../master/web/app/**/*.rb ../master/web/config/**/*.rb
                     ../rails/test/**/*.rb bin/* tools/**/*.rb test/**/*.rb law/*.rb Rakefile].freeze
 
     module_function
@@ -84,19 +84,19 @@ module Operator
     # forty-five misattributions were readers doing exactly what they are told
     # to, `Master.load_laws`, `Master::LAWS_PATH` and `@rules.data(:soul)`.
     ACCESSORS = {
-      "laws.yml" => %w[LAWS_PATH load_laws Master.law flatten_rules],
+      "laws.yml" => %w\[LAWS_PATH load_laws Master.law flatten_rules],
       "soul.yml" => ["soul_data", 'data("soul")', "data(:soul)"],
-      "runtime.yml" => %w[RuntimeCatalog],
-      "console.yml" => %w[config_section config_path],
-      "scan.yml" => %w[config_section config_path],
-      "budgets.yml" => %w[config_section config_path ProcessBudget],
-      "state.yml" => %w[state_path standing_orders],
+      "runtime.yml" => %w\[RuntimeCatalog],
+      "console.yml" => %w\[config_section config_path],
+      "scan.yml" => %w\[config_section config_path],
+      "budgets.yml" => %w\[config_section config_path ProcessBudget],
+      "state.yml" => %w\[state_path standing_orders],
     }.freeze
 
     # The words inside every %w, %i, %W and %I literal in one file. A word list
     # is a run of bare strings with no quote and no colon in front of any of
     # them, so the quoted needle below cannot see one: nine of the thirty-seven
-    # keys this census called unnamed were sitting in a `%w[]` in plain sight,
+    # keys this census called unnamed were sitting in a `%w\[]` in plain sight,
     # five of them in RuntimeCatalog::SECTIONS, the constant that lists the
     # sections of the very file whose keys were reported unread.
     def word_list_words(src)

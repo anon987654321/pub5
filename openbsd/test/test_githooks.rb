@@ -78,7 +78,7 @@ class TestGitHooks < Minitest::Test
   # --- the hooks are actually installed ------------------------------------
 
   def test_every_hook_is_executable_and_runnable
-    %w[pre-commit commit-msg pre-push post-commit].each do |hook|
+    %w\[pre-commit commit-msg pre-push post-commit].each do |hook|
       path = File.join(HOOKS, hook)
 
       assert File.file?(path), "#{hook} is missing"
@@ -137,7 +137,7 @@ class TestGitHooks < Minitest::Test
     out, status = commit("one tree, one file left behind")
 
     refute_committed out, status, /REFUSED - untracked file\(s\)/
-    assert_match(/MASTER\/forgotten\.rb/, out, "the refusal should name the file it is refusing over")
+    assert_match(/master\/forgotten\.rb/, out, "the refusal should name the file it is refusing over")
     assert_match(/PUB4_UNTRACKED=1/, out)
   end
 
@@ -157,7 +157,7 @@ class TestGitHooks < Minitest::Test
     write("rails/two.rb", "# 2\n")
     out, _status = commit("one tree")
 
-    assert_match(/leaving uncommitted:.*RAILS \(2\)/, out)
+    assert_match(/leaving uncommitted:.*rails \(2\)/, out)
     assert_match(/may belong to another session/, out)
   end
 
@@ -185,7 +185,7 @@ class TestGitHooks < Minitest::Test
     git!("add", "master/tools/.session", "master/tools/beat.rb")
     out, status = commit("touch master/tools")
 
-    refute_committed out, status, /REFUSED - MASTER\/tools is owned by session 'other-session'/
+    refute_committed out, status, /REFUSED - master\/tools is owned by session 'other-session'/
   end
 
   def test_the_claiming_session_may_commit_master_tools
@@ -251,7 +251,7 @@ class TestGitHooks < Minitest::Test
     commit_executable
     out, status = commit("drop the bit")
 
-    refute_committed out, status, /REFUSED - this commit removes the execute bit from:\n\s+MASTER\/bin\/run/
+    refute_committed out, status, /REFUSED - this commit removes the execute bit from:\n\s+master\/bin\/run/
     assert_match(/PUB4_MODE_CHANGE=1/, out)
   end
 

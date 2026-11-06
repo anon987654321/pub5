@@ -43,7 +43,7 @@ class PromotionalArtTest < ActiveSupport::TestCase
   test "caps a campaign at the canonical product count" do
     assert_raises(ArgumentError) do
       Shared::PromotionalArt.build(
-        product: %w[a b c d e],
+        product: %w\[a b c d e],
         headline: "Five is too many"
       )
     end

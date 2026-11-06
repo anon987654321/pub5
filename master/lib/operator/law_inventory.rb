@@ -297,7 +297,7 @@ module Operator
     def twin_status(id, sources: nil)
       sources ||= twin_sources
       key = id.to_s.downcase
-      present = %i[catalogue law registry].select { |source| sources.fetch(source).include?(key) }
+      present = %i\[catalogue law registry].select { |source| sources.fetch(source).include?(key) }
       {
         duplicate: present.size > 1,
         kind: present.join("+"),
@@ -307,7 +307,7 @@ module Operator
     end
 
     def history(id)
-      paths = %w[master/law master/data/laws.yml]
+      paths = %w\[master/law master/data/laws.yml]
       format = "--format=%h %cs %s"
       output, status = Master::Io::Exec.capture2("git", "-C", ROOT, "log", "-n", "5", format, "--", *paths)
       return "history unavailable" unless status.success?

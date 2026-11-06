@@ -38,10 +38,10 @@ class TestLawMapRepair < Minitest::Test
     with_fixture do |root|
       fixed = Master::Fix::LawMapRepair.fix!(root:)
 
-      assert_equal [%w[accessibility FAKE_DANGLING_LAW], %w[other_law ANOTHER_FAKE_LAW]], fixed
+      assert_equal [%w\[accessibility FAKE_DANGLING_LAW], %w\[other_law ANOTHER_FAKE_LAW]], fixed
 
       rewritten = Master::Ground::Map::LawMap.load(root:)
-      assert_equal %w[ARIA_INTERACTIVE IMG_ALT], rewritten.laws["accessibility"].law_ids
+      assert_equal %w\[ARIA_INTERACTIVE IMG_ALT], rewritten.laws["accessibility"].law_ids
       assert_equal [], rewritten.laws["other_law"].law_ids
     end
   end
@@ -51,8 +51,8 @@ class TestLawMapRepair < Minitest::Test
       row = '    flow_law: {"law_ids": ["IMG_ALT", "FLOW_DANGLING"], "status": "covered"}'
       File.write(File.join(root, "data", "laws.yml"), "#{FIXTURE}#{row}\n")
 
-      assert_includes Master::Fix::LawMapRepair.fix!(root:), %w[flow_law FLOW_DANGLING]
-      assert_equal %w[IMG_ALT], Master::Ground::Map::LawMap.load(root:).laws["flow_law"].law_ids
+      assert_includes Master::Fix::LawMapRepair.fix!(root:), %w\[flow_law FLOW_DANGLING]
+      assert_equal %w\[IMG_ALT], Master::Ground::Map::LawMap.load(root:).laws["flow_law"].law_ids
     end
   end
 

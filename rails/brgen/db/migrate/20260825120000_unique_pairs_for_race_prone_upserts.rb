@@ -27,15 +27,15 @@
 class UniquePairsForRaceProneUpserts < ActiveRecord::Migration[8.1]
   def up
     merge_duplicate_participants
-    add_index :conversation_participants, %i[conversation_id user_id],
+    add_index :conversation_participants, %i\[conversation_id user_id],
               unique: true, name: "index_conversation_participants_on_pair"
 
     dedupe_trust_signals
-    add_index :trust_signals, %i[user_id kind source],
+    add_index :trust_signals, %i\[user_id kind source],
               unique: true, name: "index_trust_signals_on_user_kind_source"
 
     dedupe_typing_indicators
-    add_index :typing_indicators, %i[conversation_id user_id],
+    add_index :typing_indicators, %i\[conversation_id user_id],
               unique: true, name: "index_typing_indicators_on_pair"
   end
 

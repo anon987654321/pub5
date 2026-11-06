@@ -23,10 +23,10 @@ module Shared
 
     MB = 1024 * 1024
 
-    IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif image/heic image/heif image/avif].freeze
+    IMAGE_TYPES = %w\[image/jpeg image/png image/webp image/gif image/heic image/heif image/avif].freeze
     # Both time-based kinds take either family: webm, mp4 and ogg are shared
     # containers, and an audio-only recording from Safari identifies as video/mp4.
-    TIME_BASED_TYPES = %w[audio/ video/ application/ogg].freeze
+    TIME_BASED_TYPES = %w\[audio/ video/ application/ogg].freeze
 
     # Each type is matched as a prefix, so "audio/" admits the family and an
     # empty string admits anything.
@@ -36,7 +36,7 @@ module Shared
       video: { max_bytes: Integer(ENV.fetch("RAILS_SHARED_VIDEO_MAX_BYTES", 200 * MB)), types: TIME_BASED_TYPES },
       mixed: { max_bytes: Integer(ENV.fetch("RAILS_SHARED_UPLOAD_MAX_BYTES", 200 * MB)), types: [ "" ] },
       # A subtitle file is text a <track> element reads; a megabyte is hours of it.
-      captions: { max_bytes: Integer(ENV.fetch("RAILS_SHARED_CAPTIONS_MAX_BYTES", 1 * MB)), types: %w[text/vtt] },
+      captions: { max_bytes: Integer(ENV.fetch("RAILS_SHARED_CAPTIONS_MAX_BYTES", 1 * MB)), types: %w\[text/vtt] },
     }.freeze
 
     NAMED_KINDS = {

@@ -2679,7 +2679,7 @@ style_guides:
     method_length_max: 15
     line_length_max: 120
     naming: snake_case
-    percent_literals: "%w[] %i[] for static lists"
+    percent_literals: "%w\[] %i\[] for static lists"
     trailing_commas: multiline_only
   rails_style_guide:
     controllers:

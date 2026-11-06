@@ -40,7 +40,7 @@ class MasterClientTest < Minitest::Test
   end
 
   def test_uses_only_the_ingress_token
-    previous = %w[MASTER_INGRESS_TOKEN MASTER_BRIDGE_TOKEN MASTER_INTERNAL_TOKEN].to_h { |k| [k, ENV.fetch(k, nil)] }
+    previous = %w\[MASTER_INGRESS_TOKEN MASTER_BRIDGE_TOKEN MASTER_INTERNAL_TOKEN].to_h { |k| [k, ENV.fetch(k, nil)] }
 
     ENV.delete("MASTER_INGRESS_TOKEN")
     ENV["MASTER_BRIDGE_TOKEN"] = "legacy-bridge-token"

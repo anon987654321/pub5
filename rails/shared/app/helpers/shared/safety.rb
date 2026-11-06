@@ -6,9 +6,9 @@ module Shared
   # entries of each section and the sites worth knowing.
   module Safety
     SAFETY_SECTIONS = {
-      dating: %w[meet_in_public no_strangers_home carry_phone bring_friend tell_someone],
-      trading: %w[deal_locally no_transfers no_links no_gifts no_proxy_ads research trust_gut],
-      health: %w[not_medical_html no_liability_html ask_doctor_html emergency_html helpline_html],
+      dating: %w\[meet_in_public no_strangers_home carry_phone bring_friend tell_someone],
+      trading: %w\[deal_locally no_transfers no_links no_gifts no_proxy_ads research trust_gut],
+      health: %w\[not_medical_html no_liability_html ask_doctor_html emergency_html helpline_html],
     }.freeze
 
     SAFETY_SITES = {

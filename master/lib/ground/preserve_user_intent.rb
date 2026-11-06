@@ -11,7 +11,7 @@ module Master
       RETURN_RE = /^[+-].*\breturn\b/.freeze
       LOG_RE = /^[+-].*\b(?:log|logger|puts|warn|error)\b/i.freeze
 
-      FORBIDDEN_CHANGES = %w[
+      FORBIDDEN_CHANGES = %w\[
         public_method_signature
         error_class_raised
         return_type_shape

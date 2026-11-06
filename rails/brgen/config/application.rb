@@ -29,7 +29,7 @@ module App
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w\[assets tasks])
 
     config.middleware.insert_before 0, Fediverse::InboxBodyLimit
 
@@ -56,7 +56,7 @@ module App
     # Two, because two ship. de/fr/nl held five keys each against en's 1579 and
     # were deleted 2026-08-25; see Brgen::LocaleBridge for why a stub locale is
     # worse than none.
-    config.i18n.available_locales = %i[nb en]
+    config.i18n.available_locales = %i\[nb en]
     config.i18n.fallbacks = Brgen::LocaleBridge.fallbacks_map
     # config.eager_load_paths << Rails.root.join("extras")
 

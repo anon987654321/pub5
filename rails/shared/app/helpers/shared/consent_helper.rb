@@ -8,7 +8,7 @@ module Shared
   module ConsentHelper
     CONSENT_COOKIE = "pub4_consent"
     CONSENT_VERSION = "v1"
-    PURPOSES = %w[analytics advertising].freeze
+    PURPOSES = %w\[analytics advertising].freeze
 
     def advertising_consent?
       consented_for?("advertising")

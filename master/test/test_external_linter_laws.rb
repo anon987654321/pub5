@@ -273,7 +273,7 @@ class TestExternalLinterLaws < Minitest::Test
   # One reek process answers a whole batch, and each file then reads its own share from the cache.
   def test_a_batch_prefetch_spawns_once_and_answers_each_file_from_the_cache
     Dir.mktmpdir do |root|
-      files = %w[a.rb b.rb].map { |name| File.join(root, name).tap { |path| File.write(path, "x = 1\n") } }
+      files = %w\[a.rb b.rb].map { |name| File.join(root, name).tap { |path| File.write(path, "x = 1\n") } }
       spawns, findings = prefetch_then_check(root, files)
 
       assert_equal [1, [1, 0]], [spawns, findings]

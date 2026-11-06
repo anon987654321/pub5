@@ -32,9 +32,9 @@ class CreateEvents < ActiveRecord::Migration[8.1]
     end
 
     # Sluggable is unique per city, matching Post and Community.
-    add_index :events, %i[city_id slug], unique: true
+    add_index :events, %i\[city_id slug], unique: true
     # The only ordering any events surface wants: what is on next, in this city.
-    add_index :events, %i[city_id status starts_at]
+    add_index :events, %i\[city_id status starts_at]
     add_index :events, :starts_at
 
     create_table :event_rsvps do |t|
@@ -46,7 +46,7 @@ class CreateEvents < ActiveRecord::Migration[8.1]
 
     # One answer per person per event. The controller toggles, so without this a
     # double submit leaves two rows and both counter caches count them.
-    add_index :event_rsvps, %i[event_id user_id], unique: true
-    add_index :event_rsvps, %i[event_id status]
+    add_index :event_rsvps, %i\[event_id user_id], unique: true
+    add_index :event_rsvps, %i\[event_id status]
   end
 end

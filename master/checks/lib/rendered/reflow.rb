@@ -279,7 +279,7 @@ module Deploy
 
       transitions = []
       ordered.each_cons(2) do |(w1, a), (w2, b)|
-        changed = %w[columns tab_bar sidebar].select { |k| a[k] != b[k] }
+        changed = %w\[columns tab_bar sidebar].select { |k| a[k] != b[k] }
         next if changed.empty?
 
         transitions << "#{w1}->#{w2}px: #{changed.map { |k| "#{k} #{a[k]}->#{b[k]}" }.join(', ')}"

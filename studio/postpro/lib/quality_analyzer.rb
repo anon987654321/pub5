@@ -30,7 +30,7 @@ module Postpro
         },
         contrast: { rms_contrast: Math.sqrt(variance(values)) },
         colour: colour_report(rgb_samples),
-        not_assessed: %i[composition focus_quality subject_expression simplicity],
+        not_assessed: %i\[composition focus_quality subject_expression simplicity],
       }
     end
 

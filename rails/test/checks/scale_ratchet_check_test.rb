@@ -15,7 +15,7 @@ require_relative "../../../master/checks/lib/source/scale_ratchet"
 class ScaleRatchetCheckTest < Minitest::Test
   CHECK = Deploy::ScaleRatchetCheck
   LINT = Operator::ScaleLint
-  MEMOS = %i[@app_stylesheets @face_stylesheets @baselines].freeze
+  MEMOS = %i\[@app_stylesheets @face_stylesheets @baselines].freeze
 
   # radius_px declares 8 and not 7, so one of these is on the scale and the
   # other is the defect.

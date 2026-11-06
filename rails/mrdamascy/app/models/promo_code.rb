@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class PromoCode < ApplicationRecord
-  KINDS = %w[percent fixed free_delivery].freeze
+  KINDS = %w\[percent fixed free_delivery].freeze
 
   normalizes :code, with: ->(code) { code.to_s.strip.upcase }
 

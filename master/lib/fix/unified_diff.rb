@@ -24,7 +24,7 @@ module Master
       HEADER = /\A@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
       FILE_START = /\Adiff --git /
       # --text: a NUL or an invalid byte otherwise makes "Binary files differ" and no hunks.
-      GIT_DIFF = %w[git -c core.autocrlf=false diff --no-index --no-ext-diff --no-color --text].freeze
+      GIT_DIFF = %w\[git -c core.autocrlf=false diff --no-index --no-ext-diff --no-color --text].freeze
 
       class << self
         # git's diff of two sources, as UTF-8, or nil when git cannot say.
@@ -83,7 +83,7 @@ module Master
 
         def hunk(header, text)
           old_first, old_count, new_first, new_count =
-            header.captures.zip(%w[0 1 0 1]).map { |value, default| (value || default).to_i }
+            header.captures.zip(%w\[0 1 0 1]).map { |value, default| (value || default).to_i }
           Hunk.new(old_first:, old_count:, new_first:, new_count:, text:)
         end
 

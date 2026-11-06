@@ -2,7 +2,7 @@
 
 Maps::Engine.routes.draw do
   root "home#index"
-  resources :places, only: %i[index show] do
+  resources :places, only: %i\[index show] do
     member do
       post :check_in
     end

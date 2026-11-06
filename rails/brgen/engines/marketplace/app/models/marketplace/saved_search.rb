@@ -45,7 +45,7 @@ class Marketplace::SavedSearch < ApplicationRecord
     Shared::LiveSearch.call(
       Marketplace::Listing.where(id: listing.id),
       query: query,
-      columns: %w[title description location]
+      columns: %w\[title description location]
     ).exists?
   end
 
@@ -59,7 +59,7 @@ class Marketplace::SavedSearch < ApplicationRecord
     scope = scope.where(location: location) if location.present?
     # Same columns the listings page searches, so an alert cannot disagree with
     # what the "run search" link on this row would show.
-    scope = Shared::LiveSearch.call(scope, query: query, columns: %w[title description location]) if query.present?
+    scope = Shared::LiveSearch.call(scope, query: query, columns: %w\[title description location]) if query.present?
     scope.order(created_at: :desc)
   end
 
@@ -82,10 +82,10 @@ class Marketplace::SavedSearch < ApplicationRecord
 
     if query.present?
       listing_hits = Shared::LiveSearch.call(
-        Marketplace::Listing.publicly_visible, query: query, columns: %w[title description location]
+        Marketplace::Listing.publicly_visible, query: query, columns: %w\[title description location]
       )
       headline_hits = Shared::LiveSearch.call(
-        Marketplace::Deal.live, query: query, columns: %w[headline]
+        Marketplace::Deal.live, query: query, columns: %w\[headline]
       )
       scope = scope.where(listing_id: listing_hits.select(:id))
                    .or(scope.where(id: headline_hits.select(:id)))

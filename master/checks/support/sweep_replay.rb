@@ -14,7 +14,7 @@ module Deploy
   # CHECK_BROWSER_DIAGNOSTICS_REPLAY=0 always renders.
   class SweepReplay
     TTL = 6 * 3600
-    SETTINGS = %w[CHECK_BROWSER_DIAGNOSTICS_SETTLE_MS CHECK_PIXEL_BASELINE_STRICT CHECK_PIXEL_DIFF_MAX_RATIO].freeze
+    SETTINGS = %w\[CHECK_BROWSER_DIAGNOSTICS_SETTLE_MS CHECK_PIXEL_BASELINE_STRICT CHECK_PIXEL_DIFF_MAX_RATIO].freeze
 
     def self.enabled?(env = ENV) = env["CHECK_BROWSER_DIAGNOSTICS_REPLAY"] != "0"
 
@@ -27,7 +27,7 @@ module Deploy
       git = ->(*args) { Open3.capture2e("git", "-C", root, *args).first }
       inventory = File.join(root, "master", "checks", "data", "geometry_surfaces.yml")
 
-      [git.("rev-parse", "HEAD:RAILS"), git.("diff", "HEAD", "--", "rails"),
+      [git.("rev-parse", "HEAD:rails"), git.("diff", "HEAD", "--", "rails"),
        git.("ls-files", "--others", "--exclude-standard", "--", "rails"),
        File.read(inventory), File.read(check_code), SETTINGS.map { |name| ENV[name].to_s }, live_ids.sort]
     end

@@ -19,7 +19,7 @@ require_relative "engine_roots"
 # agreement between the two rather than banning the long key outright.
 class EngineParamKeyTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  ENGINES = %w[marketplace dating playlist takeaway tv maps].freeze
+  ENGINES = %w\[marketplace dating playlist takeaway tv maps].freeze
 
   def engine_root(engine) = File.join(ROOT, EngineRoots::PATHS.fetch(engine))
 

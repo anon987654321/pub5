@@ -6,7 +6,7 @@
 
 <p><%= t("playlist.set_stats", plays: @playlist.plays_count.to_i, tracks: @tracks.size, comments: @comments.size) %></p>
 
-<% if authenticated? && (Current.user == @playlist.user || @playlist.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
+<% if authenticated? && (Current.user == @playlist.user || @playlist.collaborations.exists?(user: Current.user, role: %w\[owner editor])) %>
   <section class="playlist-admin" aria-label="<%= t("playlist.management") %>">
     <nav class="cluster" aria-label="<%= t("playlist.actions") %>">
       <%= link_to t("actions.edit"), edit_playlist_path(@playlist), class: "button button-ghost button-small" %>
@@ -68,7 +68,7 @@
 <% end %>
 
 <% if authenticated? %>
-  <% pl_can_manage = Current.user == @playlist.user || @playlist.collaborations.exists?(user: Current.user, role: %w[owner editor]) %>
+  <% pl_can_manage = Current.user == @playlist.user || @playlist.collaborations.exists?(user: Current.user, role: %w\[owner editor]) %>
   <details>
     <summary><%= t("playlist.collaborators_sketches") %></summary>
     <%= render "playlist/shared/collaborators",

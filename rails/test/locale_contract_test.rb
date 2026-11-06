@@ -53,7 +53,7 @@ class LocaleContractTest < Minitest::Test
   # Each unit that owns a locale directory, so a vertical's strings are held to
   # the same parity as the app mounting it.
   def locale_units
-    @locale_units ||= %w[brgen amber bsdports shared] +
+    @locale_units ||= %w\[brgen amber bsdports shared] +
                       Dir.glob(File.join(ROOT, "#{EngineRoots::GLOB}/config/locales")).sort
                           .map { |dir| rel(dir).delete_suffix("/config/locales") }
   end
@@ -185,7 +185,7 @@ class LocaleContractTest < Minitest::Test
   end
 
   def test_the_reader_search_flags_an_unread_key_and_spares_every_way_a_key_is_built
-    keys = %w[
+    keys = %w\[
       nav.home nav.dead errors.messages.blank save
       listings.index.heading orders.show.flash.done kinds.bike
       status.open cta.buy mark_open review.issue.spam app.title nav.from_config
@@ -204,7 +204,7 @@ class LocaleContractTest < Minitest::Test
       "app/helpers/quiz_helper.rb" => %(t("quiz.\#{question}.\#{answer}")),
     }
 
-    assert_equal %w[nav.dead], unread_keys(keys, sources)
+    assert_equal %w\[nav.dead], unread_keys(keys, sources)
   end
 
   private
@@ -223,7 +223,7 @@ class LocaleContractTest < Minitest::Test
   end
 
   # rails-i18n, ActiveModel and the form builder read these by convention.
-  FRAMEWORK_ROOTS = %w[errors activerecord activemodel time date datetime number helpers support i18n].freeze
+  FRAMEWORK_ROOTS = %w\[errors activerecord activemodel time date datetime number helpers support i18n].freeze
   KEY_LITERAL = /["'`:]([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)(?![\w.])/
   # A config file names a key as a bare YAML value.
   YAML_KEY_VALUE = /:[ \t]+([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)[ \t]*$/
@@ -286,8 +286,8 @@ class LocaleContractTest < Minitest::Test
   # of their sources can read the others' keys; shared's keys are read by all three apps.
   def sources_for(unit)
     trees = case unit
-            when "shared" then %w[brgen amber bsdports shared]
-            when %r{\Abrgen(?:[/_]|\z)} then %w[brgen shared]
+            when "shared" then %w\[brgen amber bsdports shared]
+            when %r{\Abrgen(?:[/_]|\z)} then %w\[brgen shared]
             else [unit, "shared"]
             end
 

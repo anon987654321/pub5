@@ -12,12 +12,12 @@ module Deploy
   class AccessibilityTreeCheck
     ROOT = File.expand_path("../../../..", __dir__)
 
-    CONTROL_ROLES = %w[
+    CONTROL_ROLES = %w\[
       button link textbox searchbox combobox checkbox radio switch slider tab
       menuitem option treeitem spinbutton
     ].freeze
     NAMED_ROLES = (CONTROL_ROLES + ["image"]).freeze
-    VIEWPORTS = %w[desktop mobile].freeze
+    VIEWPORTS = %w\[desktop mobile].freeze
     MAX_SURFACES_PER_APP_VIEWPORT = 2
 
     def self.run = new.run

@@ -12,7 +12,7 @@ module Master
         # (test_scan_rule_contracts proves each reaches findings through the bridge).
 
         ::Law.define(:HTML_LANG) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "lang attribute on <html>"
           bad %(<html>\n)
           good %(<html lang="nb">\n)
@@ -29,7 +29,7 @@ module Master
         # TAG, and law/ scans lines — the attribute-per-line spelling made
         # every multi-line <img> a finding. tag_source flattens first.
         ::Law.define(:IMG_ALT) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "require alt on every <img>"
           bad %(<img src="a.png">\n)
           good %(<img src="a.png" alt="a garment">\n)
@@ -39,7 +39,7 @@ module Master
         end
 
         ::Law.define(:LAZY_IMAGES) do
-          tags %i[PERFORMANCE]
+          tags %i\[PERFORMANCE]
           fix "loading=lazy on below-fold images"
           bad %(<img src="a.png" alt="a">\n)
           good %(<img src="a.png" alt="a" loading="lazy">\n)
@@ -49,7 +49,7 @@ module Master
         end
 
         ::Law.define(:NO_IMPORTANT) do
-          tags %i[MAINTAINABILITY]
+          tags %i\[MAINTAINABILITY]
           fix "no !important"
           bad ".btn { background: #c00 !important; }\n"
           good ".btn { border: none !important; }\n"
@@ -99,7 +99,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:ARIA_LABELS) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "interactive controls need accessible names"
           bad %(<button class="icon-only"><svg></svg></button>\n)
           good %(<button class="icon-only" aria-label="Close"><svg></svg></button>\n)
@@ -113,7 +113,7 @@ module Master
         end
 
         ::Law.define(:NO_TODO_IN_VIEWS) do
-          tags %i[MAINTAINABILITY]
+          tags %i\[MAINTAINABILITY]
           fix "no TODO/FIXME in shipped views"
           bad %(<%# FIXME: wire the filter %>\n)
           good %(<%# the filter is Marketplace::ListingFacets %>\n)
@@ -124,7 +124,7 @@ module Master
         end
 
         ::Law.define(:ANTI_DIVITIS) do
-          tags %i[DESIGN]
+          tags %i\[DESIGN]
           fix "avoid styling-only wrappers and semantic div substitutes"
           bad %(<div class="header">\n)
           good %(<header class="header">\n)
@@ -145,7 +145,7 @@ module Master
         }ix.freeze
 
         ::Law.define(:PREFER_TAG_HELPERS) do
-          tags %i[DESIGN RAILS_IDIOM]
+          tags %i\[DESIGN RAILS_IDIOM]
           fix "prefer Rails tag helpers over raw HTML wrapping a single ERB expression"
           bad %(<p><%= t("hello_world") %></p>\n)
           good %(<%= tag.p t("hello_world") %>\n)
@@ -164,7 +164,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:ERB_HTML_SAFE) do
-          tags %i[SECURITY]
+          tags %i\[SECURITY]
           fix "html_safe only after sanitize"
           bad %(<%= @post.body.html_safe %>\n)
           good %(<%= sanitize(@post.body).html_safe %>\n)
@@ -215,7 +215,7 @@ module Master
         end
 
         ::Law.define(:SINGLE_H1) do
-          tags %i[SEO ACCESSIBILITY]
+          tags %i\[SEO ACCESSIBILITY]
           fix "one h1 per view surface"
           bad %(<h1>Bergen</h1>\n<h1>Oslo</h1>\n)
           good %(<h1>Bergen</h1>\n<h2>Oslo</h2>\n)
@@ -231,7 +231,7 @@ module Master
         end
 
         ::Law.define(:FORM_LABEL) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "inputs require labels or aria-label"
           bad %(<input type="text" name="query">\n)
           good %(<label>Search<input type="text" name="query"></label>\n)
@@ -246,7 +246,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:ASYNC_STATUS) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "async regions expose status for screen readers"
           bad %(<turbo-frame id="feed"></turbo-frame>\n)
           good %(<turbo-frame id="feed" aria-live="polite"></turbo-frame>\n)
@@ -265,7 +265,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:REDUCED_MOTION) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "animations respect prefers-reduced-motion"
           example_path "/repo/app/assets/stylesheets/_example.scss"
           bad "@keyframes spin { to { transform: rotate(360deg); } }\n"
@@ -285,7 +285,7 @@ module Master
         end
 
         ::Law.define(:TABINDEX_ABOVE_ZERO) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "tabindex above zero disrupts natural tab order"
           bad %(<a href="/" tabindex="3">Home</a>\n)
           good %(<a href="/" tabindex="0">Home</a>\n)
@@ -297,7 +297,7 @@ module Master
         end
 
         ::Law.define(:NO_JS_ERB) do
-          tags %i[HOTWIRE]
+          tags %i\[HOTWIRE]
           fix "RJS and format.js - migrate to Turbo Streams"
           bad %(<%= render "posts/create.js.erb" %>\n)
           good %(<%= render "posts/create.turbo_stream.erb" %>\n)
@@ -310,7 +310,7 @@ module Master
         end
 
         ::Law.define(:DATA_REMOTE) do
-          tags %i[HOTWIRE]
+          tags %i\[HOTWIRE]
           fix "rails-ujs data-remote - use Turbo native forms"
           bad %(<%= link_to "Slett", post_path(post), remote: true %>\n)
           good %(<%= link_to "Slett", post_path(post), data: { turbo_method: :delete } %>\n)
@@ -328,7 +328,7 @@ module Master
         /ix.freeze
 
         ::Law.define(:INPUT_TYPE_SPECIFIC) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "semantic input types for email/url/tel/date"
           bad %(<input type="text" name="email_address">\n)
           good %(<input type="email" name="email_address">\n)
@@ -340,7 +340,7 @@ module Master
         end
 
         ::Law.define(:FOCUS_VISIBLE) do
-          tags %i[ACCESSIBILITY]
+          tags %i\[ACCESSIBILITY]
           fix "interactive surfaces expose visible focus"
           example_path "/repo/app/assets/stylesheets/application.scss"
           bad ".btn:hover { background: var(--hover); }\n"

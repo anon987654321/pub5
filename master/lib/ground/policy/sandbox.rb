@@ -83,15 +83,15 @@ module Master
 
         module_function
 
-        SHELL_WRAPPERS = %w[sh bash zsh ksh fish csh tcsh dash].freeze
+        SHELL_WRAPPERS = %w\[sh bash zsh ksh fish csh tcsh dash].freeze
         INLINE_FLAGS = {
-          "ruby" => %w[-e --eval],
-          "python" => %w[-c],
-          "python3" => %w[-c],
-          "node" => %w[-e],
-          "nodejs" => %w[-e],
-          "perl" => %w[-e],
-          "php" => %w[-r],
+          "ruby" => %w\[-e --eval],
+          "python" => %w\[-c],
+          "python3" => %w\[-c],
+          "node" => %w\[-e],
+          "nodejs" => %w\[-e],
+          "perl" => %w\[-e],
+          "php" => %w\[-r],
         }.freeze
 
         # This is the argv/workspace boundary, not an operating-system jail.

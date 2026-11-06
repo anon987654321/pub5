@@ -88,7 +88,7 @@ module Master
       # root may name a file: the repository is its directory and the diff is limited to it.
       def diff_artifact(root, scope:)
         repo = File.directory?(root) ? root : File.dirname(root)
-        only = File.directory?(root) ? [] : %w[--].push(root)
+        only = File.directory?(root) ? [] : %w\[--].push(root)
 
         case scope.to_s
         when "diff", "" then git_capture(repo, "diff", "HEAD", *only)

@@ -292,7 +292,7 @@ class CssBudgetRulesTest < Minitest::Test
     root = File.expand_path("../..", __dir__)
     styles = File.join(root, "rails", "shared", "app", "assets", "stylesheets")
     wrapper = File.read(File.join(styles, "_components.scss"))
-    names = %w[forms overlays feedback fields progress_and_uploads content_controls]
+    names = %w\[forms overlays feedback fields progress_and_uploads content_controls]
     uses = wrapper.scan(/@use "components\/([^"]+)"/).flatten
     ceiling = Shared::FrontendLawSet::TYPOGRAPHY.fetch(:max_css_file_lines)
 

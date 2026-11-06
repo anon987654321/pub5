@@ -5,7 +5,7 @@ class Marketplace::Payout < ApplicationRecord
 
   self.table_name = "marketplace_payouts"
 
-  STATUSES = %w[pending sent blocked].freeze
+  STATUSES = %w\[pending sent blocked].freeze
 
   belongs_to :store, class_name: "Marketplace::Store"
   belongs_to :order, class_name: "Marketplace::Order", optional: true

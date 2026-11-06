@@ -12,7 +12,7 @@ module Shared
     # apps migrate it under its own name.
     self.table_name = "affiliate_conversions"
 
-    SOURCES = %w[tradedoubler].freeze
+    SOURCES = %w\[tradedoubler].freeze
     MESSAGE_TYPES = {
       1 => "tracked",
       2 => "invalid",
@@ -27,7 +27,7 @@ module Shared
 
     validates :source, inclusion: { in: SOURCES }
     validates :message_type_id, presence: true, inclusion: { in: MESSAGE_TYPES.keys }
-    validates :transaction_id, uniqueness: { scope: %i[source message_type_id] }, allow_nil: true
+    validates :transaction_id, uniqueness: { scope: %i\[source message_type_id] }, allow_nil: true
 
     scope :approved, -> { where(message_type_id: [ 5, 6 ]) }
     scope :paid, -> { where(message_type_id: 9) }
@@ -50,8 +50,8 @@ module Shared
       raw = payload_hash(params).dup
       # TradeDoubler's visitorId is not needed for the EPI join. Do not retain
       # a network visitor identifier in either a dedicated field or raw payload.
-      %w[visitorId visitor_id].each { |key| raw.delete(key) }
-      %i[visitorId visitor_id].each { |key| raw.delete(key) }
+      %w\[visitorId visitor_id].each { |key| raw.delete(key) }
+      %i\[visitorId visitor_id].each { |key| raw.delete(key) }
       attrs = normalize_params(raw)
       return nil if attrs[:message_type_id].blank?
 

@@ -32,7 +32,7 @@ class CheckLibTest < Minitest::Test
   def test_integrity_checks_include_expected_entries
     names = Deploy::CheckEnvironment::INTEGRITY_CHECKS.map(&:name)
 
-    %w[
+    %w\[
       deploy_identity
       production
       phantom_fk
@@ -72,7 +72,7 @@ class CheckLibTest < Minitest::Test
   end
 
   def test_skip_reason_consults_the_needs_it_declares
-    vps_check = Deploy::CheckEnvironment::Check.new(name: "x", path: "y", needs: %i[vps])
+    vps_check = Deploy::CheckEnvironment::Check.new(name: "x", path: "y", needs: %i\[vps])
     plain = Deploy::CheckEnvironment::Check.new(name: "x", path: "y")
 
     assert_equal "not on VPS", Deploy::CheckEnvironment.skip_reason(vps_check, on_vps: false)
@@ -84,7 +84,7 @@ class CheckLibTest < Minitest::Test
   # exactly these three.
   def test_integrity_checks_declare_only_needs_skip_reason_reads
     needs = Deploy::CheckEnvironment::INTEGRITY_CHECKS.flat_map(&:needs).uniq
-    assert_empty needs - %i[vps bundle browser]
+    assert_empty needs - %i\[vps bundle browser]
   end
 
   def test_every_integrity_check_script_exists
@@ -109,7 +109,7 @@ class IntegrityRunTest < Minitest::Test
 
   def setup
     @root = Dir.mktmpdir("integrity")
-    %w[pass.rb fail.rb soft.rb box.rb].each { |name| File.write(File.join(@root, name), "") }
+    %w\[pass.rb fail.rb soft.rb box.rb].each { |name| File.write(File.join(@root, name), "") }
     @ran = []
   end
 
@@ -125,7 +125,7 @@ class IntegrityRunTest < Minitest::Test
   end
 
   def test_a_vps_check_off_the_box_is_skipped_and_never_executed
-    report = run_chain([Check.new(name: "vps_health", path: "box.rb", needs: %i[vps])], on_vps: false)
+    report = run_chain([Check.new(name: "vps_health", path: "box.rb", needs: %i\[vps])], on_vps: false)
 
     assert_equal ["vps_health: not on VPS"], report[:skipped]
     assert_empty @ran
@@ -134,7 +134,7 @@ class IntegrityRunTest < Minitest::Test
 
   def test_a_vps_check_on_the_box_runs_and_its_failure_blocks
     report = nil
-    _, err = capture_io { report = run_chain([Check.new(name: "vps_health", path: "box.rb", needs: %i[vps])], on_vps: true) }
+    _, err = capture_io { report = run_chain([Check.new(name: "vps_health", path: "box.rb", needs: %i\[vps])], on_vps: true) }
 
     assert_equal ["box.rb"], @ran
     assert_equal ["vps_health"], report[:failures]
@@ -149,7 +149,7 @@ class IntegrityRunTest < Minitest::Test
     ]
     report = run_chain(checks, on_vps: false)
 
-    assert_equal %w[pass.rb fail.rb soft.rb], @ran
+    assert_equal %w\[pass.rb fail.rb soft.rb], @ran
     assert_equal ["bad"], report[:failures]
     assert_equal ["soft: boom"], report[:warnings]
   end

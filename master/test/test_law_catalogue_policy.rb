@@ -11,13 +11,13 @@ require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
 # in, which the catalogue no longer carries.
 class TestLawCataloguePolicy < Minitest::Test
   POLICY = {
-    "severity" => "error", "mode" => "opportunity", "languages" => %w[ruby],
-    "path_exclude" => %w[/test/ /spec/], "lifecycle" => "advisory", "autofix" => "never",
-    "surfaces" => %w[whole_file lines]
+    "severity" => "error", "mode" => "opportunity", "languages" => %w\[ruby],
+    "path_exclude" => %w\[/test/ /spec/], "lifecycle" => "advisory", "autofix" => "never",
+    "surfaces" => %w\[whole_file lines]
   }.freeze
 
   def test_catalogue_rejects_unknown_assessment_surfaces
-    with_catalogue_entry(:ASSESSMENT_SURFACE_PROBE, "severity" => "info", "surfaces" => %w[made_up_surface]) do
+    with_catalogue_entry(:ASSESSMENT_SURFACE_PROBE, "severity" => "info", "surfaces" => %w\[made_up_surface]) do
       error = assert_raises(ArgumentError) { build(:ASSESSMENT_SURFACE_PROBE) }
 
       assert_includes error.message, "unknown assessment surfaces"
@@ -28,9 +28,9 @@ class TestLawCataloguePolicy < Minitest::Test
     with_catalogue_entry(:CATALOGUE_POLICY_PROBE, POLICY) do
       law = build(:CATALOGUE_POLICY_PROBE)
 
-      assert_equal %i[error opportunity advisory never], [law.severity, law.mode, law.lifecycle, law.autofix]
+      assert_equal %i\[error opportunity advisory never], [law.severity, law.mode, law.lifecycle, law.autofix]
       assert_equal ["ruby"], law.languages
-      assert_equal %i[whole_file lines], law.assessment_surfaces
+      assert_equal %i\[whole_file lines], law.assessment_surfaces
     end
   end
 
@@ -48,7 +48,7 @@ class TestLawCataloguePolicy < Minitest::Test
   end
 
   def test_a_law_block_cannot_declare_policy
-    declared = %i[severity mode languages path_exclude lifecycle autofix surfaces law_scope]
+    declared = %i\[severity mode languages path_exclude lifecycle autofix surfaces law_scope]
 
     assert_empty declared & Law::Builder.public_instance_methods(false), "a second source beside laws.yml"
   end
@@ -69,7 +69,7 @@ class TestLawCataloguePolicy < Minitest::Test
       policy = Law.catalogue_policy(:CATALOGUE_DEFAULT_PROBE)
       defaults = Law::LAW_CATALOGUE.fetch("defaults")
 
-      assert_equal %w[mode lifecycle autofix].map { |key| defaults.fetch(key).to_sym },
+      assert_equal %w\[mode lifecycle autofix].map { |key| defaults.fetch(key).to_sym },
                    policy.values_at(:mode, :lifecycle, :autofix)
       assert_nil policy.fetch(:surfaces)
     end

@@ -29,7 +29,7 @@ class ClosetOrganization
     def to_h = { id:, register:, title:, body:, principle:, count: }
   end
 
-  REGISTERS = %i[care storage zoning restraint].freeze
+  REGISTERS = %i\[care storage zoning restraint].freeze
 
   # Hanging distorts anything heavy and knitted; folding creases anything
   # structured. Matched against Item#material.

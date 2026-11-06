@@ -38,7 +38,7 @@ class PwaServingTest < ActionDispatch::IntegrationTest
     refute_empty manifest["icons"], "an installable manifest needs an icon"
     assert_match(/\ASosial mote\./, manifest["description"].to_s)
     assert_equal "nb", manifest["lang"]
-    assert_includes %w[standalone fullscreen minimal-ui], manifest["display"]
+    assert_includes %w\[standalone fullscreen minimal-ui], manifest["display"]
   end
 
   test "the service worker is served as javascript" do

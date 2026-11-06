@@ -108,7 +108,7 @@ end
 # must not reject them or drop them: a dropped --dry-run is a write run.
 COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane)=|
                  (?:dry-run|no-autofix|apply|(?:no-)?critique|no-aesthetic|blockers|plan|until-checks|normal|quiet)\z)}x
-COMMAND_FLAG_WITH_VALUE = %w[--only].freeze
+COMMAND_FLAG_WITH_VALUE = %w\[--only].freeze
 
 def initial_message_from_argv(argv)
   kept = []
@@ -186,7 +186,7 @@ def initial_message_parser(options)
     opts.on("-h", "--help") { print_master_help }
     opts.on("-m", "--message TEXT") { |text| options[:message] = text }
     opts.on("-p", "--prompt TEXT") { |text| options[:message] = text }
-    opts.on("--effort LEVEL", %w[low medium high]) { |level| ENV["MASTER_EFFORT"] = level }
+    opts.on("--effort LEVEL", %w\[low medium high]) { |level| ENV["MASTER_EFFORT"] = level }
     opts.on("--headless", "run one autonomous goal and emit one JSON mission receipt") do
       ENV["MASTER_HEADLESS"] = "1"
       ENV["MASTER_FOLD"] = "1"
@@ -202,12 +202,12 @@ def initial_message_parser(options)
     opts.on("--sessions") { options[:message] = "/session" }
     opts.on("--fold", "run the message through the core Fold, then exit") { ENV["MASTER_FOLD"] = "1" }
     opts.on("--model ID", "force one model on every lane (MASTER_MODEL)") { |id| ENV["MASTER_MODEL"] = id }
-    opts.on("--output-format FORMAT", %w[text json stream-json],
+    opts.on("--output-format FORMAT", %w\[text json stream-json],
             "text, json (one result object) or stream-json (a line per turn, then the result); runs the Fold") do |format|
       ENV["MASTER_OUTPUT_FORMAT"] = format
       ENV["MASTER_FOLD"] = "1"
     end
-    opts.on("--permission-mode MODE", %w[default acceptEdits plan bypassPermissions],
+    opts.on("--permission-mode MODE", %w\[default acceptEdits plan bypassPermissions],
             "plan reads and proposes; the rest run the repair profile, and the Constitution still judges every effect") do |mode|
       ENV["MASTER_PERMISSION_MODE"] = mode
       if mode == "bypassPermissions"

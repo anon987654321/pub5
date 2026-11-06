@@ -15,8 +15,8 @@ module Master
 
       module_function
 
-      FIELDS = %w[name enabled method url elevated description body_template content_type].freeze
-      METHODS = %w[GET POST PUT PATCH].freeze
+      FIELDS = %w\[name enabled method url elevated description body_template content_type].freeze
+      METHODS = %w\[GET POST PUT PATCH].freeze
       NAME_PATTERN = /\A[a-z][a-z0-9_-]*\z/
 
       def paths = PATHS
@@ -89,7 +89,7 @@ module Master
               raise URI::InvalidURIError, "malformed interpolation braces" if sample.include?("{") || sample.include?("}")
 
               uri = URI.parse(sample)
-              unless %w[http https].include?(uri.scheme) && !uri.host.to_s.empty? && uri.userinfo.nil? && uri.fragment.nil?
+              unless %w\[http https].include?(uri.scheme) && !uri.host.to_s.empty? && uri.userinfo.nil? && uri.fragment.nil?
                 errors << "#{label}.url must be HTTP(S), have a host, and omit credentials/fragments"
               end
             rescue URI::InvalidURIError => error

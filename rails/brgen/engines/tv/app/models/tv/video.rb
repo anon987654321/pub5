@@ -36,7 +36,7 @@ class Tv::Video < ApplicationRecord
     thumb: { resize_to_limit: [ 480, 270 ], format: :webp },
   }
 
-  STATUSES = %w[processing ready published unlisted].freeze
+  STATUSES = %w\[processing ready published unlisted].freeze
   validates :title, presence: true
   validates :status, inclusion: { in: STATUSES }, allow_nil: true
 

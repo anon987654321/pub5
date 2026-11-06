@@ -17,7 +17,7 @@ module Master
     # or a gem this scan does not see, so nothing here deletes.
     class DeadRouteSweep
       FRAMEWORK_CONTROLLERS = %r{\A(?:rails|active_storage|action_mailbox|turbo|devise)/}
-      INFRASTRUCTURE_DIRS = %w[layouts shared pwa mailers kaminari errors].freeze
+      INFRASTRUCTURE_DIRS = %w\[layouts shared pwa mailers kaminari errors].freeze
 
       Candidate = Data.define(:kind, :app, :subject, :detail)
 

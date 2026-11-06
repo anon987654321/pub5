@@ -66,7 +66,7 @@ class TestSemanticLawScope < Minitest::Test
     semantic = Master::Review::Scan::Laws::SemanticLaw.new(agent:)
     findings = semantic.check("class PostsController; end\n", path: "posts_controller.rb")
 
-    assert_equal %i[scan_semantic_violations scan_semantic_opportunities], observations.map(&:first)
+    assert_equal %i\[scan_semantic_violations scan_semantic_opportunities], observations.map(&:first)
     assert_includes observations[0][1], "SEMANTIC VIOLATIONS"
     assert_includes observations[1][1], "SEMANTIC OPPORTUNITIES"
     assert_equal [:violation, :opportunity], findings.map { |finding| finding[:tags].last }
@@ -74,7 +74,7 @@ class TestSemanticLawScope < Minitest::Test
   end
 
   def test_all_semantic_laws_are_available_for_every_language
-    %w[ruby css markdown html javascript yaml zsh json scss].each do |language|
+    %w\[ruby css markdown html javascript yaml zsh json scss].each do |language|
       assert_includes scoped(language), "RAILS_THIN_CONTROLLER_SEMANTIC", language
       assert_includes scoped(language), "AESTHETIC_FLAT_SEMANTIC", language
     end
@@ -86,7 +86,7 @@ class TestSemanticLawScope < Minitest::Test
     unscoped = rule.send(:load_semantic_laws).select { |_, a| a[:languages].empty? }
     refute_empty unscoped, "most of the corpus declares no language"
 
-    %w[ruby css markdown html javascript yaml zsh json scss].each do |language|
+    %w\[ruby css markdown html javascript yaml zsh json scss].each do |language|
       assert_empty unscoped.keys - scoped(language), "#{language} lost an unscoped rule"
     end
   end
@@ -96,7 +96,7 @@ class TestSemanticLawScope < Minitest::Test
     response = "RAILS_THIN_CONTROLLER_SEMANTIC:3:controller cohesion\nAESTHETIC_FLAT_SEMANTIC:4:gradient coherence\n"
     ids = rule.send(:parse_findings, response, laws).map { |finding| finding[:law] }
 
-    assert_equal %w[RAILS_THIN_CONTROLLER_SEMANTIC AESTHETIC_FLAT_SEMANTIC], ids
+    assert_equal %w\[RAILS_THIN_CONTROLLER_SEMANTIC AESTHETIC_FLAT_SEMANTIC], ids
   end
 
   def test_prompt_frame_is_language_independent

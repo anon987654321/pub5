@@ -20,7 +20,7 @@ Deploy::BrgenVerticalSurfaces::SURFACES.each { |s| declared << ["brgen", s[:host
 labels = Hash.new { |h, k| h[k] = Array(config["surfaces"]).select { |s| s["app"] == k }.map { |s| s["label"] } }
 Deploy::BrgenVerticalSurfaces::SURFACES.each { |s| labels["brgen"] << s[:label] }
 
-rows = %w[amber bsdports brgen].flat_map do |app|
+rows = %w\[amber bsdports brgen].flat_map do |app|
   File.readlines(File.join(dir, "probed_#{app}.jsonl")).map { |l| JSON.parse(l) }
       .select { |r| r["kind"] == "page" }.map { |r| r.merge("app" => app) }
 end

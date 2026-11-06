@@ -2,7 +2,7 @@
 
 class DeclutterController < ApplicationController
   before_action :require_real_user
-  before_action :set_item, only: %i[review update_review move challenge complete_challenge outcome last_chance create_last_chance_outfit]
+  before_action :set_item, only: %i\[review update_review move challenge complete_challenge outcome last_chance create_last_chance_outfit]
 
   def index
     @summary = DeclutterDashboard.new(Current.user).summary

@@ -92,7 +92,7 @@ class PortfolioContractTest < Minitest::Test
     ])
     funnel = { "views" => 10, "paid" => 2 }
     report = Shared::PortfolioReport.new(app: "amber", rows:, since: now - 86_400, funnel:)
-    plans = %w[amber_premium_monthly amber_premium_yearly]
+    plans = %w\[amber_premium_monthly amber_premium_yearly]
 
     assert_equal 2, report.paying_subscribers(plans)
     assert_equal 799 + (6900 / 12), report.mrr(plans)

@@ -15,7 +15,7 @@ class AddListingExpiry < ActiveRecord::Migration[8.1]
     end
 
     # The scope every listing surface reads: still live.
-    add_index :marketplace_listings, %i[status expires_at]
+    add_index :marketplace_listings, %i\[status expires_at]
 
     reversible do |dir|
       dir.up do

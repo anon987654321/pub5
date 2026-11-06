@@ -46,7 +46,7 @@ module Shared
         # inside the wardrobe app -- which either does not exist, and the catalog
         # silently becomes picsum, or exists under a name that lies about what is
         # in it.
-        %w[default bergen].each do |name|
+        %w\[default bergen].each do |name|
           candidate = Rails.root.join("config/demo_media/#{name}.yml")
           return candidate if candidate.file?
         end

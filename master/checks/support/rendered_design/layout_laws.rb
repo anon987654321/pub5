@@ -6,12 +6,12 @@ module Deploy
     # where the thumb and the eye land, and how quiet the frame stays.
     module LayoutLaws
       BLOCK = /\A(?:block|flex|grid|list-item|table|flow-root)\z/
-      MEDIA = %w[img video picture canvas svg].freeze
-      FILL_TAGS = %w[button a].freeze
+      MEDIA = %w\[img video picture canvas svg].freeze
+      FILL_TAGS = %w\[button a].freeze
 
-      CUE = %w[font_weight decoration border_width box_shadow font_style text_transform outline_width].freeze
-      CONTROLS = %w[input select textarea button].freeze
-      MARKS = %w[aria-current aria-selected data-state].freeze
+      CUE = %w\[font_weight decoration border_width box_shadow font_style text_transform outline_width].freeze
+      CONTROLS = %w\[input select textarea button].freeze
+      MARKS = %w\[aria-current aria-selected data-state].freeze
       HIDDEN = { "display" => "none", "visibility" => "hidden" }.freeze
 
       module_function
@@ -115,7 +115,7 @@ module Deploy
         x, y = RenderedDesign.center(element["rect"])
         width = view["width"].to_f
         height = view["height"].to_f
-        sticky = %w[sticky fixed].include?(element["position"])
+        sticky = %w\[sticky fixed].include?(element["position"])
         return "warning: sticky #{element["key"]} sits in the top half at #{view["width"]}" if sticky && y < height / 2
 
         corner = y < height / 4 && (x < width / 4 || x > width * 0.75)

@@ -7,7 +7,7 @@ class NotificationsController < Shared::NotificationsController
   skip_before_action :require_current_user
   before_action :require_real_user
 
-  GROUP_ORDER = %w[mention match message reply like reaction follow order alert custom].freeze
+  GROUP_ORDER = %w\[mention match message reply like reaction follow order alert custom].freeze
   PER_PAGE = 100
 
   def index

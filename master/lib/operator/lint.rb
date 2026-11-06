@@ -24,7 +24,7 @@ module Operator
   # --staged judges what the commit will hold, and --changed-lines only what
   # the diff changed; each is explained where it is read below.
   class Lint
-    FILE_SIZE_LAWS = %w[SMALL_FILES JS_MODULE_SIZE].freeze
+    FILE_SIZE_LAWS = %w\[SMALL_FILES JS_MODULE_SIZE].freeze
     BASE = "HEAD"
 
     # +root+ is the git checkout; +scanner+ answers scan(path, depth:).

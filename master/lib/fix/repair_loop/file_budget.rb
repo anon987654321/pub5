@@ -97,7 +97,7 @@ module Master
         def methods_defined_in(old_lines, range)
           old_lines[[range.begin - 1, 0].max..(range.end - 1)].to_a
             .filter_map { |line| line[/\bdef\s+(?:self\.)?([a-z_]\w*[?!=]?)/, 1] }
-            .reject { |name| name.length < 4 || %w[call initialize].include?(name) }
+            .reject { |name| name.length < 4 || %w\[call initialize].include?(name) }
             .uniq
         end
       end

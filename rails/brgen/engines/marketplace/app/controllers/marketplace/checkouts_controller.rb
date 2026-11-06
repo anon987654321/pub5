@@ -17,9 +17,9 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
   # provider's API, and an open redirect would hand a buyer mid-payment to
   # whatever that reply named.
   PROVIDER_HOSTS = {
-    "stripe" => %w[checkout.stripe.com],
-    "vipps" => %w[vipps.no],
-    "dintero" => %w[checkout.dintero.com],
+    "stripe" => %w\[checkout.stripe.com],
+    "vipps" => %w\[vipps.no],
+    "dintero" => %w\[checkout.dintero.com],
   }.freeze
 
   # POST /checkout  provider=stripe|vipps
@@ -105,7 +105,7 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
     return return_from_basket if params[:checkout_id].present?
 
     order = Current.user.marketplace_orders.find_by(id: params[:order_id])
-    if order && params[:provider].present? && order.payment_status.in?(%w[pending authorized paid failed refunded])
+    if order && params[:provider].present? && order.payment_status.in?(%w\[pending authorized paid failed refunded])
       redirect_to order_path(order),
                   notice: t("flash.marketplace.payment_recorded",
                             status: t("flash.marketplace.payment_statuses.#{order.payment_status}"),

@@ -10,7 +10,7 @@
     delivery, so the timeline keeps everything through ready lit
     mid-courier. %>
 <% last_step = order.pickup? ? "picked_up" : "delivered" %>
-<% steps = %w[placed confirmed preparing ready] << last_step %>
+<% steps = %w\[placed confirmed preparing ready] << last_step %>
 <% current_index = steps.index(order.state) || { "picked_up" => 3, "delivered" => 4 }[order.state] %>
 
 <section class="track-head card"

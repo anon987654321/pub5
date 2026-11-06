@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class CreatorProfilesController < ApplicationController
-  before_action :require_real_user, only: %i[new create edit update]
-  before_action :set_own_profile, only: %i[edit update]
+  before_action :require_real_user, only: %i\[new create edit update]
+  before_action :set_own_profile, only: %i\[edit update]
   before_action :set_public_profile, only: :show
 
   def show

@@ -20,7 +20,7 @@ module Master
     module Dmesg
       module_function
 
-      LEVELS = %w[quiet normal verbose trace].freeze
+      LEVELS = %w\[quiet normal verbose trace].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
 
       def enabled?
@@ -29,7 +29,7 @@ module Master
 
         env = ENV["MASTER_DMESG"].to_s.downcase
         return false if env == "0" || env == "quiet"
-        return true if %w[1 normal verbose trace].include?(env)
+        return true if %w\[1 normal verbose trace].include?(env)
 
         cfg.fetch("enabled", true) != false
       end
@@ -46,7 +46,7 @@ module Master
       end
 
       def verbose?
-        %w[verbose trace].include?(verbosity)
+        %w\[verbose trace].include?(verbosity)
       end
 
       def trace?
@@ -433,11 +433,11 @@ module Master
       # in the event log.
       class Console
         TOOL_UNITS = {
-          "read_file" => %w[read io0], "list_dir" => %w[list io0], "search_files" => %w[grep io0],
-          "search_knowledge" => %w[grep io0], "symbol_lookup" => %w[grep io0], "write_file" => %w[write io0],
-          "str_replace" => %w[edit io0], "replace" => %w[edit io0], "ast_edit" => %w[edit io0],
-          "zsh" => %w[exec io0], "git_context" => %w[git io0], "web_fetch" => %w[fetch net0],
-          "web_search" => %w[search net0], "dynamic_http" => %w[http net0], "ask_llm" => %w[ask io0]
+          "read_file" => %w\[read io0], "list_dir" => %w\[list io0], "search_files" => %w\[grep io0],
+          "search_knowledge" => %w\[grep io0], "symbol_lookup" => %w\[grep io0], "write_file" => %w\[write io0],
+          "str_replace" => %w\[edit io0], "replace" => %w\[edit io0], "ast_edit" => %w\[edit io0],
+          "zsh" => %w\[exec io0], "git_context" => %w\[git io0], "web_fetch" => %w\[fetch net0],
+          "web_search" => %w\[search net0], "dynamic_http" => %w\[http net0], "ask_llm" => %w\[ask io0]
         }.freeze
         FOLD_UNITS = { "read" => "read", "write" => "write", "exec" => "exec", "git" => "git",
                        "ask" => "ask", "critique" => "crit" }.freeze
@@ -586,7 +586,7 @@ module Master
         # each finding a hook sees, each cognition tick. A chat turn that set off
         # a background self-scan printed 2,657 of these ahead of a one-line
         # reply. Verbose shows the work; trace shows every item of it.
-        CHURN = %w[scan:file_read scan:pass scan:complete scan:semantic_skipped scan:progress
+        CHURN = %w\[scan:file_read scan:pass scan:complete scan:semantic_skipped scan:progress
                    hook:on_violation_found cognition:tick homeostat:observe conflict:resolved].freeze
 
         def verbose_event(payload)
@@ -608,10 +608,10 @@ module Master
           detail.empty? ? "#{unit}: #{action || "event"}" : "#{unit}: #{action || "event"}, #{detail}"
         end
 
-        EVENT_FIELDS = %i[target path file pass file_count count rule status state fixed violations changes stage reason category ms bytes critiques files].freeze
+        EVENT_FIELDS = %i\[target path file pass file_count count rule status state fixed violations changes stage reason category ms bytes critiques files].freeze
 
         def trace_detail(payload)
-          data = payload.reject { |key, _| %i[event ts].include?(key.to_sym) }
+          data = payload.reject { |key, _| %i\[event ts].include?(key.to_sym) }
           rendered = Master::Ground::Redactor.payload(data).to_s
           clip(rendered, DETAIL_CHARS)
         rescue StandardError

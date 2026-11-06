@@ -18,12 +18,12 @@ class TestAutofixGuard < Minitest::Test
 
   def teardown
     Guard.reset!
-    %w[MASTER_AUTOFIX_MODE MASTER_AUTOFIX_MAX_FILES].each { |key| ENV.delete(key) }
+    %w\[MASTER_AUTOFIX_MODE MASTER_AUTOFIX_MAX_FILES].each { |key| ENV.delete(key) }
     @env.each { |key, value| ENV[key] = value }
   end
 
   def test_the_rendered_and_irreplaceable_paths_are_protected
-    %w[
+    %w\[
       /r/master/lib/cli/face/ascii.rb
       /r/master/lib/voice/policy.rb
       /r/master/lib/io/local_tts.rb
@@ -42,7 +42,7 @@ class TestAutofixGuard < Minitest::Test
 
   # Operator decision 2026-10-28: the live soul declares the laws and itself sacred, so no autofix opens them.
   def test_the_live_laws_and_soul_are_refused_with_a_reason
-    %w[laws.yml soul.yml].each do |name|
+    %w\[laws.yml soul.yml].each do |name|
       reason = Guard.protected_reason(File.join(Master::ROOT, "data", name), root: Master::ROOT)
       assert_match(/data\/#{name} is sacred: no automated writer may change it/, reason)
     end

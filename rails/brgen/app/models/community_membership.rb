@@ -3,7 +3,7 @@
 class CommunityMembership < ApplicationRecord
   include Shared::Notifiable
 
-  ROLES = %w[member moderator owner].freeze
+  ROLES = %w\[member moderator owner].freeze
 
   belongs_to :user
   belongs_to :community, counter_cache: :members_count
@@ -13,9 +13,9 @@ class CommunityMembership < ApplicationRecord
   validate :owner_cannot_be_demoted_to_nothing, on: :update
   before_destroy :last_owner_cannot_leave
 
-  scope :moderating, -> { where(role: %w[moderator owner]) }
+  scope :moderating, -> { where(role: %w\[moderator owner]) }
 
-  def moderator? = role.in?(%w[moderator owner])
+  def moderator? = role.in?(%w\[moderator owner])
   def owner? = role == "owner"
 
   private

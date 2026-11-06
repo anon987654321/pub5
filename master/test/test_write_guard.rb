@@ -111,7 +111,7 @@ class WriteGuardTest < Minitest::Test
   # Operator decision 2026-10-28: an automated write to the laws or the soul is refused with a reason,
   # whatever its content.
   def test_an_automated_write_to_the_laws_or_the_soul_is_refused
-    %w[laws.yml soul.yml].each do |name|
+    %w\[laws.yml soul.yml].each do |name|
       file = File.join(Master::ROOT, "data", name)
       verdict = @guard.verdict(path: file, content: File.read(file, encoding: "UTF-8"))
 

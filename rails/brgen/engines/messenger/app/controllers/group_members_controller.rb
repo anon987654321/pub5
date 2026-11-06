@@ -14,7 +14,7 @@ class GroupMembersController < ApplicationController
   def new
     members = ConversationParticipant.where(conversation_id: @group.id).select(:user_id)
     scope = User.messageable.unblocked_with(Current.user).where.not(id: members)
-    scope = apply_live_search(scope, columns: %w[username display_name], vertical: "people")
+    scope = apply_live_search(scope, columns: %w\[username display_name], vertical: "people")
     @people = PeoplePicker.rank(scope, Current.user).limit(24)
     finish_live_search(partial: "group_members/people_results")
   end

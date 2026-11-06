@@ -48,7 +48,7 @@ class VisualCaptureDistinctnessTest < Minitest::Test
 
     assert_equal 1, duplicates.length
     states = duplicates.values.first.map { |r| r[:state] }
-    assert_equal %w[public marketplace], states
+    assert_equal %w\[public marketplace], states
   end
 
   def test_the_same_route_at_two_viewports_is_not_a_duplicate
@@ -121,8 +121,8 @@ end
   # The historical shape, from bsdports-manifest.json as committed: eight states,
   # one image. If a recapture ever produces this again the check now fails on it.
   def test_the_bsdports_shape_is_caught
-    states = %w[public empty results detail advisory dependency error offline]
-    routes = %w[/ /ports?q=x /ports?q=git /ports/1 /ports/1#cves /ports/1#deps /404 /offline]
+    states = %w\[public empty results detail advisory dependency error offline]
+    routes = %w\[/ /ports?q=x /ports?q=git /ports/1 /ports/1#cves /ports/1#deps /404 /offline]
     results = states.zip(routes).map { |state, route| row(state:, route:, sha: "cc28fcad" * 8) }
 
     duplicates = check.identical_captures(results)

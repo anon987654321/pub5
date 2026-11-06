@@ -34,11 +34,11 @@ module Deploy
       raw = env["CHECK_AUTOFIX"]
       return true if raw.nil? || raw.to_s.strip.empty?
 
-      !%w[0 false no off].include?(raw.to_s.strip.downcase)
+      !%w\[0 false no off].include?(raw.to_s.strip.downcase)
     end
 
     def dry_run?(env = ENV)
-      %w[1 true yes on].include?(env["CHECK_AUTOFIX_DRY"].to_s.strip.downcase)
+      %w\[1 true yes on].include?(env["CHECK_AUTOFIX_DRY"].to_s.strip.downcase)
     end
 
     def max_rounds(env = ENV)

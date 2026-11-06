@@ -98,11 +98,11 @@ class PlaylistPlayerControllerTest < Minitest::Test
   def test_lock_screen_skip_buttons_walk_the_queue_and_labels_follow_the_locale
     result = run_page(SKIP_BUTTONS)
 
-    assert_equal %w[next previous], result["steps"]
+    assert_equal %w\[next previous], result["steps"]
     assert_equal "Spill av", result["label"]
   end
 
   def test_each_track_loaded_records_one_listen
-    assert_equal({ "posts" => %w[1 2] }, run_page(LISTENS))
+    assert_equal({ "posts" => %w\[1 2] }, run_page(LISTENS))
   end
 end

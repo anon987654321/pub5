@@ -41,7 +41,7 @@ class AmberBacklogTest < Minitest::Test
     assert_includes migration, "create_table :connections"
     assert_includes migration, "create_table :live_streams"
     assert_includes migration, "create_table :messages"
-    assert_includes read("app/models/connection.rb"), "STATUSES = %w[pending accepted blocked]"
+    assert_includes read("app/models/connection.rb"), "STATUSES = %w\[pending accepted blocked]"
     assert_includes read("app/models/live_stream.rb"), "def start!"
     assert_includes read("app/models/message.rb"), "scope :unread"
     assert_includes user, "connections_requested"

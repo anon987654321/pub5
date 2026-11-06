@@ -10,20 +10,20 @@ Playlist::Engine.routes.draw do
         get :analytics
       end
       resources :imports, only: :create
-      resources :tracks, only: %i[create update destroy]
-      resources :collaborations, only: %i[create destroy]
-      resources :dilla_sketches, only: %i[create update destroy] do
+      resources :tracks, only: %i\[create update destroy]
+      resources :collaborations, only: %i\[create destroy]
+      resources :dilla_sketches, only: %i\[create update destroy] do
         member { post :render_audio }
       end
     end
     resources :sets do
-      resources :tracks, only: %i[create destroy]
-      resources :collaborations, only: %i[create destroy]
-      resources :dilla_sketches, only: %i[create update destroy] do
+      resources :tracks, only: %i\[create destroy]
+      resources :collaborations, only: %i\[create destroy]
+      resources :dilla_sketches, only: %i\[create update destroy] do
         member { post :render_audio }
       end
-      resource :like, only: %i[create destroy]
-      resource :listening_party, only: %i[create show update destroy], controller: "listening_parties" do
+      resource :like, only: %i\[create destroy]
+      resource :listening_party, only: %i\[create show update destroy], controller: "listening_parties" do
         resources :party_messages, only: :create
       end
     end

@@ -23,7 +23,7 @@ module Master
         end
 
         # Measured on the tree before the plan is applied.
-        SCORECARD_EXTENSIONS = %w[
+        SCORECARD_EXTENSIONS = %w\[
           .rb .rake .js .mjs .css .scss .html .erb .yml .yaml .json .md .sh .zsh
         ].freeze
 
@@ -51,7 +51,7 @@ module Master
             .uniq.select do |path|
               File.file?(File.join(@repo_root, path)) &&
                 SCORECARD_EXTENSIONS.include?(File.extname(path).downcase) &&
-                !path.split("/").any? { |part| %w[node_modules vendor].include?(part) }
+                !path.split("/").any? { |part| %w\[node_modules vendor].include?(part) }
             end
           contents = paths.to_h { |path| [path, File.read(File.join(@repo_root, path), encoding: "UTF-8")] }
           children = Hash.new { |hash, key| hash[key] = Set.new }
@@ -62,7 +62,7 @@ module Master
           end
           singleton_dirs = children.count do |parent, names|
             !parent.empty? && names.size == 1 &&
-              parent.split("/").none? { |part| %w[test spec fixtures vendor node_modules].include?(part) }
+              parent.split("/").none? { |part| %w\[test spec fixtures vendor node_modules].include?(part) }
           end
           definitions = contents.values.sum do |body|
             body.lines.count { |line| line.match?(/^\s*(?:class|module|def|function)\s+/) }
@@ -77,7 +77,7 @@ module Master
             "coupling_edges" => static_edges,
             "domain_depth" => relative_paths.map { |path| path.split("/").size }.max.to_i,
             "single_child_directories" => singleton_dirs,
-            "unmeasured" => %w[cohesion decision_duplication traceability],
+            "unmeasured" => %w\[cohesion decision_duplication traceability],
           }.freeze
         end
 
@@ -91,8 +91,8 @@ module Master
           paths = (out.lines.map(&:strip).select { |path| path.start_with?(prefix) } + Array(extra_paths).map(&:to_s))
             .uniq.select do |path|
               File.file?(File.join(@repo_root, path)) &&
-                %w[.rb .rake .js .mjs .erb .html].include?(File.extname(path).downcase) &&
-                !path.split("/").any? { |part| %w[test spec fixtures].include?(part) }
+                %w\[.rb .rake .js .mjs .erb .html].include?(File.extname(path).downcase) &&
+                !path.split("/").any? { |part| %w\[test spec fixtures].include?(part) }
             end
           constants = []
           references = []
@@ -200,7 +200,7 @@ module Master
 
           out.lines.map { |line| File.join(@repo_root, line.strip) }.select do |file|
             File.file?(file) && !plan.paths.include?(file.delete_prefix("#{@repo_root}/")) && !test_path?(file) &&
-              %w[.rb .rake .js .mjs].include?(File.extname(file))
+              %w\[.rb .rake .js .mjs].include?(File.extname(file))
           end
         end
 
@@ -209,7 +209,7 @@ module Master
         end
 
         def test_path?(path)
-          path.to_s.split("/").any? { |part| %w[test spec fixtures].include?(part) }
+          path.to_s.split("/").any? { |part| %w\[test spec fixtures].include?(part) }
         end
 
         def test_failure(before)

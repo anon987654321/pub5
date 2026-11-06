@@ -3,7 +3,7 @@
 # Nonce-based CSP with a report-only escape hatch.
 # Set PUB4_CSP_ENFORCE=1 in production to enforce (default: report-only).
 Rails.application.configure do
-  embed_frame_hosts = %w[
+  embed_frame_hosts = %w\[
     https://www.youtube-nocookie.com
     https://www.youtube.com
     https://w.soundcloud.com
@@ -13,7 +13,7 @@ Rails.application.configure do
   ]
 
   config.content_security_policy_nonce_generator = ->(_request) { SecureRandom.base64(16) }
-  config.content_security_policy_nonce_directives = %w[script-src]
+  config.content_security_policy_nonce_directives = %w\[script-src]
 
   config.content_security_policy do |policy|
     policy.default_src :self, :https

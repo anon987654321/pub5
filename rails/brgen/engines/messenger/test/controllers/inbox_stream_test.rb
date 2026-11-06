@@ -31,10 +31,10 @@ class InboxStreamTest < ActionDispatch::IntegrationTest
 
     body = response.body
     assert_includes body, %(signed-stream-name="#{Turbo::StreamsChannel.signed_stream_name([ @user, :inbox ])}")
-    %w[inbox_conversations rail_conversations messenger_unread_badge].each do |id|
+    %w\[inbox_conversations rail_conversations messenger_unread_badge].each do |id|
       assert_includes body, %(id="#{id}")
     end
-    %i[inbox rail].each do |prefix|
+    %i\[inbox rail].each do |prefix|
       assert_includes body, %(id="#{ActionView::RecordIdentifier.dom_id(@conversation, prefix)}")
     end
   end

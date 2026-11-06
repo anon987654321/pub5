@@ -25,7 +25,7 @@ module Master
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
       MAX_N = 8
       TIE = 0.05
-      STYLE_EXTENSIONS = %w[.css .scss].freeze
+      STYLE_EXTENSIONS = %w\[.css .scss].freeze
       VARIANTS = [
         "Candidate approach: change as little as possible, only the property the finding names.",
         "Candidate approach: reach the same goal through a different selector or property than the obvious one.",
@@ -132,7 +132,7 @@ module Master
         },
       ].map(&:freeze).freeze
 
-      RUNTIME_STATES = %w[NOT_RUN PASS FAIL BLOCKED SKIPPED].freeze
+      RUNTIME_STATES = %w\[NOT_RUN PASS FAIL BLOCKED SKIPPED].freeze
       MAX_TEST_FILES = 4
       DEFAULT_TIMEOUT_S = 60
       MIN_TEST_TIMEOUT_S = 5
@@ -208,45 +208,45 @@ module Master
 
         case relative
         when %r{\ARAILS/brgen_dating/}
-          %w[dating]
+          %w\[dating]
         when %r{\ARAILS/brgen_marketplace/}
-          %w[market_discovery market_checkout]
+          %w\[market_discovery market_checkout]
         when %r{\ARAILS/brgen_messenger/}
-          %w[messenger]
+          %w\[messenger]
         when %r{\ARAILS/brgen_maps/}
-          %w[maps_events]
+          %w\[maps_events]
         when %r{\ARAILS/brgen_takeaway/}
-          %w[takeaway]
+          %w\[takeaway]
         when %r{\ARAILS/brgen_radio/}
-          %w[radio_playlist]
+          %w\[radio_playlist]
         when %r{\ARAILS/brgen_tv/}
-          %w[tv]
+          %w\[tv]
         when %r{\ARAILS/brgen/}
           brgen_surfaces(relative)
         when %r{\ARAILS/amber/}
           amber_surfaces(relative)
         when %r{\ARAILS/bsdports/}
-          %w[bsdports]
+          %w\[bsdports]
         when %r{\AMASTER/web/}
           master_web_surfaces(relative)
         when %r{\ARAILS/__shared/}
-          relative.match?(%r{pwa|offline|service.?worker|manifest}) ? %w[pwa] : %w[cross_cut]
+          relative.match?(%r{pwa|offline|service.?worker|manifest}) ? %w\[pwa] : %w\[cross_cut]
         when %r{\ARAILS/test/}
-          relative.match?(%r{pwa|offline|stimulus}) ? %w[pwa] : %w[cross_cut]
+          relative.match?(%r{pwa|offline|stimulus}) ? %w\[pwa] : %w\[cross_cut]
         when %r{\AMASTER/lib/fix/}, %r{\AMASTER/test/test_(?:fix|repair_loop|best_of_n|user_simulation)}
-          %w[master_fix]
+          %w\[master_fix]
         when %r{\AMASTER/lib/cli/}, %r{\AMASTER/bin/}
-          %w[master_cli]
+          %w\[master_cli]
         when %r{\AMASTER/lib/io/(?:web|http|sse)}
-          %w[master_chat]
-        when %r{\A(?:OPENBSD|STUDIO)/}
+          %w\[master_chat]
+        when %r{\A(?:OPENBSD|studio)/}
           []
         when %r{\AMASTER/checks/}
-          relative.match?(%r{face|primer|page_simulation}) ? %w[master_face cross_cut] : %w[cross_cut]
+          relative.match?(%r{face|primer|page_simulation}) ? %w\[master_face cross_cut] : %w\[cross_cut]
         when %r{\AMASTER/}
-          %w[master_fix]
+          %w\[master_fix]
         else
-          %w[cross_cut]
+          %w\[cross_cut]
         end
       end
 
@@ -421,7 +421,7 @@ module Master
           action_ids = surface.fetch("actions").map { |action| action.fetch("id") }
           raise "#{row.fetch("id")} references an unknown action" unless action_ids.include?(row.fetch("action_id"))
           raise "invalid runtime status" unless RUNTIME_STATES.include?(row.fetch("runtime_status"))
-          if %w[PASS FAIL].include?(row.fetch("runtime_status")) && row.fetch("runtime_evidence").to_s.empty?
+          if %w\[PASS FAIL].include?(row.fetch("runtime_status")) && row.fetch("runtime_evidence").to_s.empty?
             raise "#{row.fetch("id")} has a runtime verdict without evidence"
           end
         end
@@ -451,35 +451,35 @@ module Master
       end
 
       def brgen_surfaces(relative)
-        return %w[brgen_auth cross_cut] if relative.match?(%r{session|registration|password|auth|oauth|user\.rb})
-        return %w[market_discovery market_checkout] if relative.match?(%r{marketplace|listing|storefront|cart|checkout|payout|wishlist|affiliate})
-        return %w[dating] if relative.match?(%r{dating|swipe|match|profile})
-        return %w[messenger] if relative.match?(%r{message|conversation|inbox|messenger})
-        return %w[takeaway] if relative.match?(%r{takeaway|restaurant|menu.?item|group.?order})
-        return %w[maps_events] if relative.match?(%r{maps?|nearby|location|event|rsvp})
-        return %w[radio_playlist] if relative.match?(%r{playlist|radio|track.?import})
-        return %w[tv] if relative.match?(%r{tv|video|broadcast|watch.?time})
+        return %w\[brgen_auth cross_cut] if relative.match?(%r{session|registration|password|auth|oauth|user\.rb})
+        return %w\[market_discovery market_checkout] if relative.match?(%r{marketplace|listing|storefront|cart|checkout|payout|wishlist|affiliate})
+        return %w\[dating] if relative.match?(%r{dating|swipe|match|profile})
+        return %w\[messenger] if relative.match?(%r{message|conversation|inbox|messenger})
+        return %w\[takeaway] if relative.match?(%r{takeaway|restaurant|menu.?item|group.?order})
+        return %w\[maps_events] if relative.match?(%r{maps?|nearby|location|event|rsvp})
+        return %w\[radio_playlist] if relative.match?(%r{playlist|radio|track.?import})
+        return %w\[tv] if relative.match?(%r{tv|video|broadcast|watch.?time})
 
-        %w[brgen_social]
+        %w\[brgen_social]
       end
 
       def amber_surfaces(relative)
-        return %w[amber_wardrobe] if relative.match?(%r{wardrobe|item|garment|photo|upload})
-        return %w[amber_outfits] if relative.match?(%r{outfit|style|closet|declutter|wear|analytics|dressing})
-        return %w[amber_social] if relative.match?(%r{post|connection|message|social|feed|follow})
+        return %w\[amber_wardrobe] if relative.match?(%r{wardrobe|item|garment|photo|upload})
+        return %w\[amber_outfits] if relative.match?(%r{outfit|style|closet|declutter|wear|analytics|dressing})
+        return %w\[amber_social] if relative.match?(%r{post|connection|message|social|feed|follow})
 
-        %w[amber_wardrobe]
+        %w\[amber_wardrobe]
       end
 
       def master_web_surfaces(relative)
-        return %w[pwa] if relative.match?(%r{pwa|manifest|sw\.js|service.?worker})
-        return %w[master_chat] if relative.match?(%r{chat|sse|stream|rate.?limit|message|auth})
+        return %w\[pwa] if relative.match?(%r{pwa|manifest|sw\.js|service.?worker})
+        return %w\[master_chat] if relative.match?(%r{chat|sse|stream|rate.?limit|message|auth})
 
-        %w[master_face]
+        %w\[master_face]
       end
 
       def test_path?(relative)
-        relative.match?(%r{\A(?:MASTER|RAILS)/.*(?:_test\.rb|\.test\.mjs|_test\.mjs)\z})
+        relative.match?(%r{\A(?:MASTER|rails)/.*(?:_test\.rb|\.test\.mjs|_test\.mjs)\z})
       end
 
       def matching_test_paths(relative)
@@ -505,7 +505,7 @@ module Master
         when %r{\AMASTER/}
           [File.join(@root, "master", "test")]
         when %r{\ARAILS/__shared/}
-          %w[brgen amber bsdports].map { |app| File.join(@root, "rails", app, "test") }
+          %w\[brgen amber bsdports].map { |app| File.join(@root, "rails", app, "test") }
         when %r{\ARAILS/brgen_[^/]+/}
           [File.join(@root, "rails", "brgen", "test")]
         when %r{\ARAILS/(brgen|amber|bsdports)/}
@@ -614,7 +614,7 @@ module Master
             :regression
           elsif candidate.all? { |row| row[:state] == :pass }
             :pass
-          elsif candidate.any? { |row| %i[blocked timeout].include?(row[:state]) }
+          elsif candidate.any? { |row| %i\[blocked timeout].include?(row[:state]) }
             :blocked
           elsif improvements.any?
             :improved

@@ -340,7 +340,7 @@ module Operator
       end
     end
 
-    PASS_PROVEN_TREES = %w[master openbsd rails].freeze
+    PASS_PROVEN_TREES = %w\[master openbsd rails].freeze
 
     def verification_stages(target)
       trees = trees_for_target(target)
@@ -419,7 +419,7 @@ module Operator
       return ["rails"] if abs == File.join(ROOT, "rails") || abs.start_with?("#{File.join(ROOT, "rails")}/")
       return ["openbsd"] if abs == File.join(ROOT, "openbsd") || abs.start_with?("#{File.join(ROOT, "openbsd")}/")
       return ["studio"] if abs == File.join(ROOT, "studio") || abs.start_with?("#{File.join(ROOT, "studio")}/")
-      return ["master"] if abs == master || abs.start_with?("#{MASTER}/")
+      return ["master"] if abs == master || abs.start_with?("#{master}/")
 
       # Check targets like `lib/io` are MASTER-relative shorthand when the
       # operator is invoked from the repository root. Keep the four-tree
@@ -733,7 +733,7 @@ module Operator
       [
         ["master", [RUBY, File.join(master, "bin", "check"), "--profile=ci"], master, {}, "master"],
         ["rails contracts", [RUBY, "test/run_all.rb"], File.join(ROOT, "rails"), {}, "rails"],
-        *%w[brgen amber bsdports].map do |app|
+        *%w\[brgen amber bsdports].map do |app|
           ["#{app} suite", [RUBY, BUNDLE, "exec", RUBY, "-S", "rails", "test"],
            File.join(ROOT, "rails", app), {}, "rails"]
         end,

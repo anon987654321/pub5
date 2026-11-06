@@ -34,19 +34,19 @@ class Ports::Openbsd::MakefileParserTest < ActiveSupport::TestCase
   test "+= appends to the value before it" do
     metadata = Ports::Openbsd::MakefileParser.parse(Rails.root.join("test/fixtures/ports/openbsd/devel/git/Makefile"))
 
-    assert_equal %w[devel/gettext textproc/asciidoc], metadata[:run_depends]
+    assert_equal %w\[devel/gettext textproc/asciidoc], metadata[:run_depends]
   end
 
   test "+= on an unset variable starts it" do
     metadata = parse_makefile("RUN_DEPENDS += devel/gettext\n")
 
-    assert_equal %w[devel/gettext], metadata[:run_depends]
+    assert_equal %w\[devel/gettext], metadata[:run_depends]
   end
 
   test "parses TEST_DEPENDS as a distinct dependency type" do
     metadata = parse_makefile("TEST_DEPENDS = devel/ruby-minitest\n")
 
-    assert_equal %w[devel/ruby-minitest], metadata[:test_depends]
+    assert_equal %w\[devel/ruby-minitest], metadata[:test_depends]
   end
 
   test "a restricted port does not permit distfiles" do

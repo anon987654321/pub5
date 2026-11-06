@@ -16,17 +16,17 @@ require "yaml"
 
 class CityCopyContractTest < Minitest::Test
   ROOT = File.expand_path("../brgen", __dir__)
-  LOCALES = %w[en nb].freeze
+  LOCALES = %w\[en nb].freeze
 
   # Cities brgen serves. A locale value naming one of these has baked a single
   # city into copy every other city also renders.
-  CITIES = %w[Bergen Oslo Trondheim Stavanger London Amsterdam Birmingham
+  CITIES = %w\[Bergen Oslo Trondheim Stavanger London Amsterdam Birmingham
               Cardiff Edinburgh Glasgow Liverpool Manchester Copenhagen
               Stockholm Helsinki Reykjavik Gothenburg Malmo].freeze
 
   # Prose that legitimately names Bergen: legal text naming a jurisdiction, and
   # bot personas written for the one city that has them.
-  ALLOWED_KEYS = %w[terms privacy legal jurisdiction about].freeze
+  ALLOWED_KEYS = %w\[terms privacy legal jurisdiction about].freeze
 
   def flatten(node, path = [], out = {})
     case node
@@ -66,7 +66,7 @@ class CityCopyContractTest < Minitest::Test
   def test_the_city_bearing_keys_interpolate
     LOCALES.each do |locale|
       values = values_for(locale)
-      %w[pages.home_title pages.default_description posts.community_platform empty.post_to_city marketplace.home_title marketplace.deals.show_title hashtag.also_in_city communities.also_in_city marketplace.stores.also_in_city].each do |key|
+      %w\[pages.home_title pages.default_description posts.community_platform empty.post_to_city marketplace.home_title marketplace.deals.show_title hashtag.also_in_city communities.also_in_city marketplace.stores.also_in_city].each do |key|
         assert values.key?(key), "#{locale}.yml lost #{key}"
         assert_includes values[key], "%{city}", "#{locale}.yml #{key} no longer interpolates the city"
       end

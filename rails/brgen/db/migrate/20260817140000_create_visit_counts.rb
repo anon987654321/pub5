@@ -36,7 +36,7 @@ class CreateVisitCounts < ActiveRecord::Migration[8.1]
     # Unique, because it is the increment target: VisitCount.record updates this
     # row or creates it, and a duplicate would silently split a day's count in
     # two. Ordered host-first so "which domain gets traffic" reads the index.
-    add_index :visit_counts, %i[app host route day], unique: true, name: "index_visit_counts_on_key"
-    add_index :visit_counts, %i[day host]
+    add_index :visit_counts, %i\[app host route day], unique: true, name: "index_visit_counts_on_key"
+    add_index :visit_counts, %i\[day host]
   end
 end

@@ -26,10 +26,10 @@ class AddSlugsToContent < ActiveRecord::Migration[8.1]
 
     # Unique indexes matching Shared::Sluggable's scope: [city_id, slug] where the
     # table is tenant-scoped, plain slug otherwise.
-    add_index :posts, %i[city_id slug], unique: true, name: "index_posts_on_city_and_slug"
-    add_index :takeaway_restaurants, %i[city_id slug], unique: true, name: "index_takeaway_restaurants_on_city_and_slug"
-    add_index :playlist_playlists, %i[city_id slug], unique: true, name: "index_playlist_playlists_on_city_and_slug"
-    add_index :marketplace_listings, %i[city_id slug], unique: true, name: "index_marketplace_listings_on_city_and_slug"
+    add_index :posts, %i\[city_id slug], unique: true, name: "index_posts_on_city_and_slug"
+    add_index :takeaway_restaurants, %i\[city_id slug], unique: true, name: "index_takeaway_restaurants_on_city_and_slug"
+    add_index :playlist_playlists, %i\[city_id slug], unique: true, name: "index_playlist_playlists_on_city_and_slug"
+    add_index :marketplace_listings, %i\[city_id slug], unique: true, name: "index_marketplace_listings_on_city_and_slug"
     add_index :tv_videos, :slug, unique: true, name: "index_tv_videos_on_slug"
   end
 

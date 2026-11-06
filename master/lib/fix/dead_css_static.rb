@@ -9,14 +9,14 @@ module Master
     # class sharing its fixed prefix or suffix, and vendor runtime prefixes are
     # never judged. A class that survives all that is named nowhere.
     class DeadCssStatic
-      CORPUS_GLOBS = %w[
+      CORPUS_GLOBS = %w\[
         app/views/**/* app/helpers/**/*.rb app/javascript/**/* app/components/**/*
         app/controllers/**/*.rb app/models/**/*.rb app/assets/javascripts/**/*
         lib/**/*.rb config/**/*.rb config/**/*.yml public/*.html
       ].freeze
-      TEXT_EXTENSIONS = %w[.erb .rb .js .mjs .ts .yml .yaml .html .htm .haml .slim .json .svg].freeze
+      TEXT_EXTENSIONS = %w\[.erb .rb .js .mjs .ts .yml .yaml .html .htm .haml .slim .json .svg].freeze
       # Written by libraries, never by this repo's markup.
-      VENDOR_PREFIXES = %w[maplibregl- mapboxgl- ProseMirror- trix- swiper adsbygoogle turbo- cm- hljs- leaflet- flatpickr].freeze
+      VENDOR_PREFIXES = %w\[maplibregl- mapboxgl- ProseMirror- trix- swiper adsbygoogle turbo- cm- hljs- leaflet- flatpickr].freeze
       PREFIX_RE = /([A-Za-z_][\w-]*[-_])(?=\#\{|<%|\$\{)|([A-Za-z_][\w-]*[-_])["']\s*(?:\+|<<|\.concat)/
       SUFFIX_RE = /(?:\#\{[^}]*\}|<%=?[^%]*%>|\$\{[^}]*\})([-_][\w-]+)/
       WORD_RE = /[A-Za-z_][\w-]*/

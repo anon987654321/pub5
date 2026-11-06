@@ -4,7 +4,7 @@ require "test_helper"
 require "minitest/mock"
 
 class StripePaymentsTest < ActiveSupport::TestCase
-  KEYS = %w[STRIPE_SECRET_KEY STRIPE_TEST_MODE].freeze
+  KEYS = %w\[STRIPE_SECRET_KEY STRIPE_TEST_MODE].freeze
 
   setup { @saved = KEYS.to_h { |k| [ k, ENV[k] ] }; KEYS.each { |k| ENV.delete(k) } }
   teardown { @saved.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v } }

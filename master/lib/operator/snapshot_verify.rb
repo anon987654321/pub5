@@ -18,7 +18,7 @@ module Operator
     LEFT_OUT = /\Aleft out \([^)]*\): (.+)\n\z/
     PACK_LINE = /^Pack: tree=(\S+) git=(\S+) part=(\d+)\/(\d+) variant=(\S+)/
     SHOWN = 8
-    NOISE = %i[on_comment on_sp on_nl on_ignored_nl on_embdoc_beg on_embdoc on_embdoc_end].freeze
+    NOISE = %i\[on_comment on_sp on_nl on_ignored_nl on_embdoc_beg on_embdoc on_embdoc_end].freeze
 
     module_function
 

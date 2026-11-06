@@ -36,7 +36,7 @@ class PathOwnershipTest < Minitest::Test
 
   def test_every_check_names_files_that_exist
     missing = ownership.flat_map do |key, row|
-      row.fetch("check").to_s.scan(%r{\b(?:OPENBSD|MASTER|RAILS)/[\w./-]+}).reject do |path|
+      row.fetch("check").to_s.scan(%r{\b(?:OPENBSD|MASTER|rails)/[\w./-]+}).reject do |path|
         File.exist?(File.join(REPO, path))
       end.map { |path| "#{key}: #{path}" }
     end
@@ -44,7 +44,7 @@ class PathOwnershipTest < Minitest::Test
   end
 
   def test_every_row_declares_purpose_risk_and_check
-    incomplete = ownership.reject { |_, row| row.is_a?(Hash) && (%w[purpose risk check] - row.keys).empty? }
+    incomplete = ownership.reject { |_, row| row.is_a?(Hash) && (%w\[purpose risk check] - row.keys).empty? }
     assert_empty incomplete.keys
   end
 end

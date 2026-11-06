@@ -14,13 +14,13 @@ module Master
     class RunPulse
       WAITING_AFTER = 5
       FILE_CHARS = 24
-      BUS_PATTERNS = %w[llm:* fix_loop:* repair_loop:* scan:* council:*].freeze
+      BUS_PATTERNS = %w\[llm:* fix_loop:* repair_loop:* scan:* council:*].freeze
       # No file finished (fixed, failed or rejected) in this long is a stall.
       FINISH_WINDOW_SECONDS = 300
       # A run with this many attempts and nothing fixed after this long has no yield worth waiting for.
       NOYIELD_SECONDS = 1200
       NOYIELD_ATTEMPTS = 5
-      ERROR_EVENTS = %w[repair_loop:file_timeout repair_loop:fix_error repair_loop:error repair_loop:fail_fast repair_loop:write_error].freeze
+      ERROR_EVENTS = %w\[repair_loop:file_timeout repair_loop:fix_error repair_loop:error repair_loop:fail_fast repair_loop:write_error].freeze
       # The stages that name themselves with a "fix_loop:phase" event, as the log words them.
       PHASES = {
         "fast_fixes" => "fast fixes", "structure" => "structure", "council" => "council", "council_improve" => "council",
@@ -29,10 +29,10 @@ module Master
       }.freeze
       # Stages that make model calls themselves; in any other stage a call in
       # flight is another activity, and the label says so.
-      MODEL_STAGES = %w[council model_fixes improvements_fix opportunities visual wishlist stream].freeze
+      MODEL_STAGES = %w\[council model_fixes improvements_fix opportunities visual wishlist stream].freeze
       # Advisory stages: a stall here is cut short (PassClock.cancel!), never waited out.
-      SKIPPABLE = %w[council council_improve opportunities wishlist].freeze
-      NOT_SKIPS = %w[pass fixed clean applied ok].freeze
+      SKIPPABLE = %w\[council council_improve opportunities wishlist].freeze
+      NOT_SKIPS = %w\[pass fixed clean applied ok].freeze
 
       def self.human_count(count)
         return count.to_s if count < 1000

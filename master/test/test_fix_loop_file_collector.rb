@@ -101,7 +101,7 @@ class TestFixLoopFileCollector < Minitest::Test
 
   def test_collector_and_scanner_agree_on_what_is_off_limits
     Dir.mktmpdir do |dir|
-      %w[
+      %w\[
         master/web/public/three.face.module.js
         master/web/public/face.runtime.js
         reports/run.yml

@@ -30,8 +30,8 @@ class TestScanEngines < Minitest::Test
 
   # The flattening masks move a wrapped tag onto its opening line, so they keep
   # line count but not length; every other mask keeps both.
-  FLATTENING = %i[with_tags_flattened tag_source control_source].freeze
-  MASKS = %i[without_comment_lines without_law_fixtures without_regex_literals without_erb_tags
+  FLATTENING = %i\[with_tags_flattened tag_source control_source].freeze
+  MASKS = %i\[without_comment_lines without_law_fixtures without_regex_literals without_erb_tags
              without_labelled_controls without_block_comments
              without_var_fallbacks without_erb_comments without_mask_gradients declaration_values_only
              without_override_media without_foreign_heredocs with_erb_output_as_text].freeze
@@ -113,14 +113,14 @@ class TestScanEngines < Minitest::Test
 
   def test_scan_since_keeps_existing_scannable_files_under_the_scan_root
     repo = File.realpath(Dir.mktmpdir("transport_"))
-    %w[app/a.rb app/b.png other/c.rb master/lib/d.rb app/vendor/e.rb].each do |rel|
+    %w\[app/a.rb app/b.png other/c.rb master/lib/d.rb app/vendor/e.rb].each do |rel|
       FileUtils.mkdir_p(File.dirname(File.join(repo, rel)))
       File.write(File.join(repo, rel), "")
     end
-    changed = %w[app/a.rb app/b.png other/c.rb master/lib/d.rb app/vendor/e.rb app/gone.rb app/a.rb]
+    changed = %w\[app/a.rb app/b.png other/c.rb master/lib/d.rb app/vendor/e.rb app/gone.rb app/a.rb]
 
     paths = Host.new.scan_since_paths(changed, dir: File.join(repo, "app"), repo_root: repo)
-    assert_equal %w[app/a.rb master/lib/d.rb], paths.map { |p| p.delete_prefix("#{repo}/") }
+    assert_equal %w\[app/a.rb master/lib/d.rb], paths.map { |p| p.delete_prefix("#{repo}/") }
   ensure
     FileUtils.rm_rf(repo)
   end
@@ -150,7 +150,7 @@ class TestScanEngines < Minitest::Test
       ["", "git timed out", failed_status]
     }) do
       result = Host.new.git_capture("git", "status")
-      assert_equal [ %w[git status], 5 ], seen
+      assert_equal [ %w\[git status], 5 ], seen
       refute result.last.success?
       assert_equal "git timed out", result[1]
     end
@@ -168,9 +168,9 @@ class TestScanEngines < Minitest::Test
 
   def test_progress_tallies_violations_dirty_files_and_top_rules
     reporter = Reporter.new
-    reporter.update_scan_progress_state(2, %w[long_line magic_number])
+    reporter.update_scan_progress_state(2, %w\[long_line magic_number])
     reporter.update_scan_progress_state(0, [])
-    done, total, violations, dirty, top = reporter.update_scan_progress_state(1, %w[long_line])
+    done, total, violations, dirty, top = reporter.update_scan_progress_state(1, %w\[long_line])
 
     assert_equal [3, 3, 3, 2], [done, total, violations, dirty]
     assert_equal [["LONG_LINE", 2], ["MAGIC_NUMBER", 1]], top

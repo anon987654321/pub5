@@ -18,7 +18,7 @@ module Master
     # constitution: soul.yml and executable law remain authoritative.
     module Protocol
       VERSION = 7
-      STAGES = %w[load trace inventory structure architecture_exploration scan semantic repair verify repeat report].freeze
+      STAGES = %w\[load trace inventory structure architecture_exploration scan semantic repair verify repeat report].freeze
       TERMINAL_STATES = OutcomePolicy::TERMINAL_STATES.map { |state| state.to_s.upcase }.freeze
 
       module_function
@@ -443,7 +443,7 @@ end
           DEPLOYMENT
           openbsd/bin/vps-deploy is the canonical serial deploy path for master
           and the rails apps. Its production endpoint is www.openbsd.amsterdam
-          (vm23, /home/dev/pub4). From a workstation, use bin/operator vps deploy
+          (vm23, /home/dev/pub5). From a workstation, use bin/operator vps deploy
           <app> --remote; do not invent a second deploy path.
 
           LIVE TARGET

@@ -5,7 +5,7 @@ require "test_helper"
 class LiveSearchTest < ActiveSupport::TestCase
   test "empty query returns original scope without filtering" do
     scope = Marketplace::Listing.none
-    result = Shared::LiveSearch.search(scope, query: "", columns: %w[title])
+    result = Shared::LiveSearch.search(scope, query: "", columns: %w\[title])
     assert_equal scope, result.scope
     assert_equal 0, result.result_count
   end
@@ -24,7 +24,7 @@ class LiveSearchTest < ActiveSupport::TestCase
     result = Shared::LiveSearch.search(
       Marketplace::Listing.where(id: listing.id),
       query: "Bicycle",
-      columns: %w[title description],
+      columns: %w\[title description],
       vertical: "marketplace",
       app: "brgen"
     )

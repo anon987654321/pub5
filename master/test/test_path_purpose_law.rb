@@ -104,7 +104,7 @@ class TestPathPurposeRule < Minitest::Test
 
   def test_test_and_vendor_paths_are_skipped
     in_tree do |rule, root|
-      %w[test/thing.rb vendor/gem/lib/thing.rb tmp/thing.rb].each do |rel|
+      %w\[test/thing.rb vendor/gem/lib/thing.rb tmp/thing.rb].each do |rel|
         assert_empty rule.check("", path: File.join(root, rel)), "#{rel} should be skipped"
       end
     end

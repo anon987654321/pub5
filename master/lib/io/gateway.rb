@@ -3,7 +3,7 @@
 module Master
   module Io
     class Gateway
-      CHANNELS = %i[cli web irc matrix api].freeze
+      CHANNELS = %i\[cli web irc matrix api].freeze
 
       def initialize(pipeline:, session:, event_bus: nil, container: nil)
         @pipeline = pipeline

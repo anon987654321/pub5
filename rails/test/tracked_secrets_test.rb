@@ -49,7 +49,7 @@ class TrackedSecretsTest < Minitest::Test
   ].freeze
 
   def tracked
-    @tracked ||= Dir.chdir(ROOT) { IO.popen(%w[git ls-files -z], &:read) }.split("\0")
+    @tracked ||= Dir.chdir(ROOT) { IO.popen(%w\[git ls-files -z], &:read) }.split("\0")
   end
 
   def test_no_key_material_or_encrypted_credentials_is_tracked
@@ -79,7 +79,7 @@ class TrackedSecretsTest < Minitest::Test
   def test_nothing_reads_rails_credentials_outside_a_comment
     readers = []
     Dir.chdir(ROOT) do
-      %w[rails master].each do |tree|
+      %w\[rails master].each do |tree|
         Dir.glob("#{tree}/**/*.{rb,erb,yml}").each do |path|
           next if path.match?(%r{vendor/bundle|node_modules|/builds/|/test/})
 

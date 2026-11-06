@@ -8,7 +8,7 @@ module Master
   module Fix
     class ArchitectureExploration
       TREE_NAMES = MasterPaths::TREES
-      REPORT_FIELDS = %w[tree status requested accepted qualified decision winner shortlist rejections candidates evidence_manifest].freeze
+      REPORT_FIELDS = %w\[tree status requested accepted qualified decision winner shortlist rejections candidates evidence_manifest].freeze
       DEFAULT_CANDIDATES = 36
       MIN_CANDIDATES = 30
       MAX_CANDIDATES = 40
@@ -72,7 +72,7 @@ module Master
           "score_weights" => SCORES, "model_scores" => "ignored",
           "quality_gate" => { "minimum_score" => MIN_WINNER_SCORE, "minimum_qualified_candidates" => MIN_QUALIFIED_CANDIDATES,
             "dimension_floors" => QUALITY_FLOORS },
-          "required_consequence_fields" => %w[benefits tradeoffs risks],
+          "required_consequence_fields" => %w\[benefits tradeoffs risks],
           "diversity_gate" => "reject highly similar plans, especially when they target nearly identical path sets",
           "mutation" => "planning_only; selected architecture never authorizes a rewrite",
           "persistence" => "checksum_verified per-run revisions; reuse only complete tree rows whose provenance still matches",
@@ -170,7 +170,7 @@ module Master
 
       def provenance
         supplied = @provided_provenance.respond_to?(:to_h) ? @provided_provenance.to_h : {}
-        keys = %w[
+        keys = %w\[
           source_digest scope_digest law_digest law_source_digest authority_digest toolchain_digest
           exclusion_digest adapter_digest identity_digest
         ]
@@ -388,7 +388,7 @@ module Master
         selected = 0
         ordered.filter_map do |path|
           next if selected >= 12 || used >= 12_000
-          next unless %w[.md .yml .yaml .json .toml .rb .sh .zsh .js .ts .css .scss .erb .html .txt].include?(File.extname(path).downcase)
+          next unless %w\[.md .yml .yaml .json .toml .rb .sh .zsh .js .ts .css .scss .erb .html .txt].include?(File.extname(path).downcase)
           content = File.read(path, encoding: "UTF-8")
           next unless content.valid_encoding? && !content.include?("\0")
           remaining_bytes = 12_000 - used
@@ -451,7 +451,7 @@ module Master
           cited_tests = valid_paths(row["test_paths"], tree, true)
           tests = cited_tests.select { |path| available_tests.include?(path) }
           changes = valid_changes(row["change_paths"], tree)
-          fields = %w[title thesis core_boundary verification_plan rollback_plan law_alignment]
+          fields = %w\[title thesis core_boundary verification_plan rollback_plan law_alignment]
           missing = fields.select { |field| row[field].to_s.strip.empty? }
           benefits = clean_phrases(row["benefits"])
           tradeoffs = clean_phrases(row["tradeoffs"])
@@ -563,7 +563,7 @@ module Master
 
       def signature(text)
         text.downcase.scan(/[a-z0-9_]{4,}/).reject do |word|
-          %w[architecture boundary existing candidate preserve behavior plan system tree].include?(word)
+          %w\[architecture boundary existing candidate preserve behavior plan system tree].include?(word)
         end.to_set
       end
 

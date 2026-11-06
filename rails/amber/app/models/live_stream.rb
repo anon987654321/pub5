@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class LiveStream < ApplicationRecord
-  STATUSES = %w[scheduled live ended cancelled].freeze
+  STATUSES = %w\[scheduled live ended cancelled].freeze
 
   belongs_to :user
 

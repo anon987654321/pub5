@@ -496,7 +496,7 @@ class TestIoTools < Minitest::Test
 
       coordinator.connect_all
 
-      assert_equal %w[good bad], built, "a disabled server is never built"
+      assert_equal %w\[good bad], built, "a disabled server is never built"
       # The event carries a digest of the error, not its text.
       failed = bus.events.find { |event, _| event == "mcp:server_failed" }&.last
       assert_equal "bad", failed[:name]
@@ -507,7 +507,7 @@ class TestIoTools < Minitest::Test
 
   # --- IngressRunner -----------------------------------------------------------
 
-  FIBER_KEYS = %i[master_elevated master_visitor master_paired master_pair_subject].freeze
+  FIBER_KEYS = %i\[master_elevated master_visitor master_paired master_pair_subject].freeze
 
   def with_clean_fiber
     FIBER_KEYS.each { |k| Fiber[k] = nil }

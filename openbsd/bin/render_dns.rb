@@ -327,7 +327,7 @@ module RenderDns
   TEXT
 
   def run(argv)
-    if argv.intersect?(%w[-h --help])
+    if argv.intersect?(%w\[-h --help])
       puts USAGE
       return 0
     end

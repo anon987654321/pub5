@@ -4,10 +4,10 @@ class Playlist::PlaylistsController < Playlist::BaseController
   include Shared::FindableBySlug
   include Playlist::OwnerVisibility
   include Playlist::WaveformComments
-  allow_unauthenticated_access only: %i[index show embed]
-  before_action :require_user_session, only: %i[new create analytics]
-  before_action :set_playlist, only: %i[show embed analytics edit update destroy]
-  before_action :authorize_owner_or_editor, only: %i[edit update destroy]
+  allow_unauthenticated_access only: %i\[index show embed]
+  before_action :require_user_session, only: %i\[new create analytics]
+  before_action :set_playlist, only: %i\[show embed analytics edit update destroy]
+  before_action :authorize_owner_or_editor, only: %i\[edit update destroy]
   before_action :authorize_analytics_owner, only: :analytics
   # The embed is the page the playlist hands out as an iframe snippet, so any
   # site may frame it; every other page keeps the app-wide frame_ancestors :self.
@@ -126,7 +126,7 @@ class Playlist::PlaylistsController < Playlist::BaseController
   def authorize_owner_or_editor
     return if Current.user == @playlist.user
     collab = @playlist.collaborations.find_by(user: Current.user)
-    return if collab && %w[owner editor].include?(collab.role)
+    return if collab && %w\[owner editor].include?(collab.role)
     redirect_to(playlist_path(@playlist), alert: t("shared.flash.not_authorized"))
   end
 

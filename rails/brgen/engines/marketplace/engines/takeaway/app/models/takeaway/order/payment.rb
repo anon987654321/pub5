@@ -10,7 +10,7 @@ class Takeaway::Order
   module Payment
     extend ActiveSupport::Concern
 
-    PAYMENT_STATUSES = %w[unpaid pending paid failed refunded].freeze
+    PAYMENT_STATUSES = %w\[unpaid pending paid failed refunded].freeze
 
     included do
       validates :payment_status, inclusion: { in: PAYMENT_STATUSES }
@@ -30,11 +30,11 @@ class Takeaway::Order
     # A new payment can start on an order the kitchen has not finished with,
     # that has a total, and that is not already paid or with Vipps.
     def startable?
-      status.in?(%w[pending confirmed preparing]) && payment_status.in?(%w[unpaid failed]) && total_cents.to_i.positive?
+      status.in?(%w\[pending confirmed preparing]) && payment_status.in?(%w\[unpaid failed]) && total_cents.to_i.positive?
     end
 
     def payable?
-      status != "cancelled" && payment_status.in?(%w[unpaid pending failed])
+      status != "cancelled" && payment_status.in?(%w\[unpaid pending failed])
     end
 
     def paid? = payment_status == "paid"
@@ -53,7 +53,7 @@ class Takeaway::Order
       transitioned = false
       transaction do
         lock!
-        next if payment_status.in?(%w[paid refunded])
+        next if payment_status.in?(%w\[paid refunded])
 
         update!(paid_attributes(reference))
         transitioned = true
@@ -71,11 +71,11 @@ class Takeaway::Order
     # The diner may call off their own order while the kitchen has not
     # confirmed it and no money is with Vipps; after that the restaurant decides.
     def cancellable_by_diner?(user)
-      user.present? && user_id == user.id && status == "pending" && payment_status.in?(%w[unpaid failed])
+      user.present? && user_id == user.id && status == "pending" && payment_status.in?(%w\[unpaid failed])
     end
 
     def fail_payment!(provider: payment_provider, **)
-      return self if payment_status.in?(%w[paid refunded])
+      return self if payment_status.in?(%w\[paid refunded])
 
       update!(payment_status: "failed", payment_provider: provider)
     end

@@ -109,10 +109,10 @@ class TraceDmesgTest < Minitest::Test
     sgr = Master::Trace::Dmesg.cfg.fetch("boot_sgr")
 
     painted = with_colorterm("truecolor") do
-      Master::Trace::Dmesg.console_paint("master0 at mainbus0: MASTER\n\nroot on master0", tty)
+      Master::Trace::Dmesg.console_paint("master0 at mainbus0: master\n\nroot on master0", tty)
     end
 
-    assert_equal "\e[#{sgr}mmaster0 at mainbus0: MASTER\e[0m\n\n\e[#{sgr}mroot on master0\e[0m", painted
+    assert_equal "\e[#{sgr}mmaster0 at mainbus0: master\e[0m\n\n\e[#{sgr}mroot on master0\e[0m", painted
     assert_equal "root on master0", Master::Trace::Dmesg.console_paint("root on master0", StringIO.new)
   end
 

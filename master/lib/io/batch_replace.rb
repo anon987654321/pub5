@@ -10,7 +10,7 @@ module Master
       TIER = :guarded
       NAME = "replace".freeze
       DESCRIPTION = "Find and replace text across all files in a directory.".freeze
-      SAFE_EXTENSIONS = %w[.rb .erb .yml .yaml .md .sh .js .css .html .json .txt].freeze
+      SAFE_EXTENSIONS = %w\[.rb .erb .yml .yaml .md .sh .js .css .html .json .txt].freeze
 
       def initialize(root:, governor:, event_bus: nil)
         @root = File.realpath(root)

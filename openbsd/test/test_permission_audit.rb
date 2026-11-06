@@ -12,7 +12,7 @@ class TestPermissionAudit < Minitest::Test
     assert_empty audit(
       secrets: [{ path: "/etc/brgen.env", mode: 0o100640 }],
       private_dirs: [{ path: "/home/brgen/app/storage", mode: 0o040750 }],
-      daemon_logs: [{ path: "/home/dev/pub4/master/.master/tts-worker-0.log", owner: "master" }]
+      daemon_logs: [{ path: "/home/dev/pub5/master/.master/tts-worker-0.log", owner: "master" }]
     )
   end
 

@@ -21,7 +21,7 @@ class FixTraceTest < Minitest::Test
   end
 
   def teardown
-    %w[MASTER_FIX_TRANSCRIPT_ROOT MASTER_FIX_RUN_ID MASTER_FIX_VERBOSE].each { |key| ENV.delete(key) }
+    %w\[MASTER_FIX_TRANSCRIPT_ROOT MASTER_FIX_RUN_ID MASTER_FIX_VERBOSE].each { |key| ENV.delete(key) }
     @saved.each { |key, value| ENV[key] = value }
     Trace.reset!
     FileUtils.rm_rf(@root)
@@ -63,7 +63,7 @@ class FixTraceTest < Minitest::Test
   end
 
   def test_round_summary_line_and_record
-    result = Master::Result.ok({ feedback: "raw", issues: %w[a b], cherry_picks: %w[p], status: nil })
+    result = Master::Result.ok({ feedback: "raw", issues: %w\[a b], cherry_picks: %w\[p], status: nil })
     capture = { surface: Struct.new(:id).new("home") }
     out = lines { Trace.round(result, captures: [capture], images: [{ name: "x.png" }], context: "ctx") }
     assert_equal ["crit0: council round, 1 surfaces, 1 images, 2 findings, 1 picks"], out
@@ -111,13 +111,13 @@ class FixTraceTest < Minitest::Test
     refute transcript.append("fixes", { prompt: "word " * 400 })
     assert_includes File.read(File.join(transcript.dir, "critique.ndjson")), "truncated"
 
-    %w[old1 old2 old3].each_with_index do |name, i|
+    %w\[old1 old2 old3].each_with_index do |name, i|
       dir = File.join(@root, Transcript::DIR, name)
       FileUtils.mkdir_p(dir)
       File.utime(Time.now - 1000 + i, Time.now - 1000 + i, dir)
     end
     Transcript.new(root: @root, run_id: "new", keep: 2).append("critique", { a: 1 })
-    assert_equal %w[new r], Dir.children(File.join(@root, Transcript::DIR)).sort
+    assert_equal %w\[new r], Dir.children(File.join(@root, Transcript::DIR)).sort
   end
 
   def test_tail_prints_history_then_new_lines

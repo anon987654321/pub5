@@ -11,7 +11,7 @@ module Brgen
 
       # Norwegian small-business naming patterns, assembled rather than listed so
       # the pool scales to hundreds of stores without visible repetition.
-      STORE_PREFIXES = %w[
+      STORE_PREFIXES = %w\[
       Vest Berg Fjord Nord Sør Vestland Bryggen Sentrum Nygård Solheim
       Haukeland Minde Landås Eidsvåg Nesttun Paradis
       ].freeze

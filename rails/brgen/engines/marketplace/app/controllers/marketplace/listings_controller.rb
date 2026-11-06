@@ -5,18 +5,18 @@ class Marketplace::ListingsController < Marketplace::BaseController
   include StorefrontSearch
   include Shared::TwoFactorAuth
 
-  rate_limit to: 20, within: 3.minutes, only: %i[create],
+  rate_limit to: 20, within: 3.minutes, only: %i\[create],
     with: -> { redirect_to listings_path, alert: t("flash.listings_rate_limited") }
 
-  allow_unauthenticated_access only: %i[index show]
-  before_action :require_user_session, only: %i[new create]
-  before_action :set_listing, only: %i[show edit update destroy renew]
+  allow_unauthenticated_access only: %i\[index show]
+  before_action :require_user_session, only: %i\[new create]
+  before_action :set_listing, only: %i\[show edit update destroy renew]
   # 2FA only for real accounts; guests list without identity ceremony.
-  before_action -> { require_two_factor!(Current.user) }, only: %i[new create], if: :authenticated?
+  before_action -> { require_two_factor!(Current.user) }, only: %i\[new create], if: :authenticated?
 
   def index
     scope = policy_scope(Marketplace::Listing).with_attached_photos.includes(:user, :category)
-    scope = apply_live_search(scope, columns: %w[title description location], vertical: "marketplace", filters: { category_id: params[:category_id] }.compact) if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[title description location], vertical: "marketplace", filters: { category_id: params[:category_id] }.compact) if live_search_query.present?
     @kind = Marketplace::Listing.kind_from(params[:kind])
     scope = scope.where(kind: @kind)
     scope = scope.casual if params[:from] == "person"
@@ -165,11 +165,11 @@ class Marketplace::ListingsController < Marketplace::BaseController
     params.require(:listing).permit(
       :title, :description, :price_kroner, :price_cents, :condition, :status, :location,
       :latitude, :longitude, :category_id, :preset, :kind, :delivery_promise, :fulfilment_method, :source, :store_id, :buy_box_key, :video, photos: [],
-      job_detail_attributes: %i[employer employment_type salary_min_kroner salary_max_kroner
+      job_detail_attributes: %i\[employer employment_type salary_min_kroner salary_max_kroner
                                 salary_min_cents salary_max_cents remote],
-      housing_detail_attributes: %i[rent_kroner deposit_kroner rent_cents deposit_cents
+      housing_detail_attributes: %i\[rent_kroner deposit_kroner rent_cents deposit_cents
                                     rooms size_sqm available_from housing_type],
-      gig_detail_attributes: %i[pay_kroner pay_cents starts_at hours]
+      gig_detail_attributes: %i\[pay_kroner pay_cents starts_at hours]
     )
   end
 
@@ -195,7 +195,7 @@ class Marketplace::ListingsController < Marketplace::BaseController
 
   def listing_params_for_kind(kind)
     permitted = listing_params
-    %w[job housing gig].each do |other_kind|
+    %w\[job housing gig].each do |other_kind|
       permitted.delete("#{other_kind}_detail_attributes") unless kind == other_kind
     end
     permitted

@@ -32,7 +32,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
   def test_yep_search_is_the_shared_rails_default
     stack = read("shared/app/assets/stylesheets/_stack.scss")
     brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
-    %w[amber bsdports].each do |app|
+    %w\[amber bsdports].each do |app|
       application = read("#{app}/app/assets/stylesheets/application.scss")
       assert_includes application, '@include meta.load-css("stack")'
     end
@@ -99,7 +99,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
   def test_yep_search_is_the_shared_rails_default
     stack = read("shared/app/assets/stylesheets/_stack.scss")
     brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
-    %w[amber bsdports].each do |app|
+    %w\[amber bsdports].each do |app|
       application = read("#{app}/app/assets/stylesheets/application.scss")
       assert_includes application, '@include meta.load-css("stack")'
     end
@@ -153,7 +153,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
     source = radio_source
     importmap = read("brgen/config/importmap.rb")
 
-    %w[
+    %w\[
       9EGHwkDix78
       jnP3tRG-LZs
       1XJLtZJ9Ook

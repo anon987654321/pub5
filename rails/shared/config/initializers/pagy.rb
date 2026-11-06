@@ -6,7 +6,7 @@ rescue LoadError
   nil
 end
 
-%w[overflow metadata].each do |extra|
+%w\[overflow metadata].each do |extra|
   require "pagy/extras/#{extra}"
 rescue LoadError
   nil

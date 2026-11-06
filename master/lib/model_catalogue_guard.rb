@@ -9,19 +9,19 @@ module Master
   module ModelCatalogueGuard
     module_function
 
-    MODEL_TOP_LEVEL_FIELDS = %w[
+    MODEL_TOP_LEVEL_FIELDS = %w\[
       schema routing weights fallback_policy failover defaults model_defs models routes
       task_strengths vision_families tool_capable_prefixes operation_constraints continuity
       openrouter ferrum_web_chat three_mirror_redundancy subscription_lanes cli_lanes
       local_servers openai_compatible replicate_chat ollama free_tier paid_tail media_lanes
     ].freeze
-    MODEL_MAP_SECTIONS = %w[
+    MODEL_MAP_SECTIONS = %w\[
       routing weights fallback_policy failover defaults model_defs models routes task_strengths
       vision_families operation_constraints continuity openrouter ferrum_web_chat
       three_mirror_redundancy cli_lanes openai_compatible ollama free_tier paid_tail media_lanes
     ].freeze
-    MODEL_ARRAY_SECTIONS = %w[tool_capable_prefixes subscription_lanes local_servers replicate_chat].freeze
-    MODEL_SCORE_FIELDS = %w[quality speed cost].freeze
+    MODEL_ARRAY_SECTIONS = %w\[tool_capable_prefixes subscription_lanes local_servers replicate_chat].freeze
+    MODEL_SCORE_FIELDS = %w\[quality speed cost].freeze
     def validate(data, path:)
       errors = []
       errors << "models.yml schema must be 1" unless data["schema"] == 1
@@ -39,7 +39,7 @@ module Master
       end
 
       routing = data["routing"].is_a?(Hash) ? data["routing"] : {}
-      %w[enabled escalation_enabled].each do |field|
+      %w\[enabled escalation_enabled].each do |field|
         errors << "models.yml routing.#{field} must be boolean" unless [true, false].include?(routing[field])
       end
       errors << "models.yml routing.strategy must be non-empty text" unless
@@ -75,7 +75,7 @@ module Master
       unless sequence.is_a?(Array) && !sequence.empty? && sequence.all? { |tier| tiers.key?(tier) }
         errors << "models.yml failover.sequence must reference declared model tiers"
       end
-      %w[cooldown_seconds skip_ttl_ms transient_skip_ttl_ms].each do |field|
+      %w\[cooldown_seconds skip_ttl_ms transient_skip_ttl_ms].each do |field|
         value = failover[field]
         errors << "models.yml failover.#{field} must be positive" unless value.is_a?(Numeric) && value.positive?
       end
@@ -110,7 +110,7 @@ module Master
           window = row["context_window"]
           errors << "model_defs.#{name}.context_window must be a positive integer" unless window.is_a?(Integer) && window.positive?
         end
-        extras = row.keys.map(&:to_s) - %w[id score context_window]
+        extras = row.keys.map(&:to_s) - %w\[id score context_window]
         errors << "model_defs.#{name} has unknown field(s): #{extras.sort.join(', ')}" unless extras.empty?
       end
       errors << "models.yml model_defs must be a non-empty mapping" if definitions.empty?
@@ -129,7 +129,7 @@ module Master
               errors << "models.#{tier}[#{index}] must be a mapping"
               next
             end
-            unknown_fields = row.keys.map(&:to_s) - %w[id score context_window]
+            unknown_fields = row.keys.map(&:to_s) - %w\[id score context_window]
             errors << "models.#{tier}[#{index}] has unknown field(s): #{unknown_fields.sort.join(', ')}" unless unknown_fields.empty?
             id = row["id"]
             unless id.is_a?(String) && definition_ids.key?(id)
@@ -158,7 +158,7 @@ module Master
       end
 
       vision = data["vision_families"].is_a?(Hash) ? data["vision_families"] : {}
-      %w[reads_images blind].each do |field|
+      %w\[reads_images blind].each do |field|
         patterns = vision[field]
         unless patterns.is_a?(Array) && !patterns.empty? && patterns.all? { |value| value.is_a?(String) && !value.empty? }
           errors << "models.yml vision_families.#{field} must be a list of regex strings"
@@ -179,7 +179,7 @@ module Master
           errors << "models.yml operation_constraints.#{operation} must be a mapping"
           next
         end
-        unknown_fields = row.keys.map(&:to_s) - %w[min_quality preferred_tier]
+        unknown_fields = row.keys.map(&:to_s) - %w\[min_quality preferred_tier]
         errors << "models.yml operation_constraints.#{operation} has unknown field(s): #{unknown_fields.sort.join(', ')}" unless unknown_fields.empty?
         quality = row["min_quality"]
         unless quality.is_a?(Numeric) && quality >= 0 && quality <= 1

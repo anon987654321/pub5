@@ -109,7 +109,7 @@ module Master
         tree_names = MasterPaths::TREES
         target_names = value.split(/[\s,]+/).reject(&:empty?)
         expanded = File.expand_path(value.empty? ? "." : value, @root)
-        full_tree = expanded == @root || %w[. ./].include?(value) ||
+        full_tree = expanded == @root || %w\[. ./].include?(value) ||
           value == File.basename(@root) || (tree_names - target_names).empty?
         return protocol.fetch("domains").keys.map(&:to_s) if full_tree
 

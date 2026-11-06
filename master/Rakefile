@@ -25,7 +25,7 @@ end
 # before moving tests by subsystem, and never run fixture Ruby as a test.
 # rack/test lives in the web bundle, which is not installable on a contributor Mac;
 # leaving test_web_ui.rb in the glob aborted `rake test` before any other file ran.
-MASTER_TEST_EXCLUDED = %w[test/fixtures/**/* test/test_browser.rb test/test_web_http.rb test/test_web_ui.rb].freeze
+MASTER_TEST_EXCLUDED = %w\[test/fixtures/**/* test/test_browser.rb test/test_web_http.rb test/test_web_ui.rb].freeze
 
 MASTER_TEST_FILES = FileList["test/**/test_*.rb", "test/**/*_test.rb"].exclude(*MASTER_TEST_EXCLUDED)
 # Tools and parked check-campaign tests still exercise live readers/detectors;
@@ -223,7 +223,7 @@ task "gem:build_proof" do
         raise "gemspec lists #{missing.size} paths that do not exist: #{missing.first(8).join(', ')}"
       end
 
-      %w[lib/master.rb bin/master data/mcp_servers.yml].each do |anchor|
+      %w\[lib/master.rb bin/master data/mcp_servers.yml].each do |anchor|
         raise "gemspec file list is missing #{anchor}" unless spec.files.include?(anchor)
       end
 
@@ -247,7 +247,7 @@ end
 desc "Run every discovered tree's native tests plus source/config smoke checks"
 task "test:all_trees" do
   root = File.expand_path("..", __dir__)
-  ignored = %w[.git .bundle node_modules vendor tmp log coverage storage cache dist build]
+  ignored = %w\[.git .bundle node_modules vendor tmp log coverage storage cache dist build]
   ignored_path = ->(path) { ignored.any? { |part| path.split(File::SEPARATOR).include?(part) } }
   trees = Dir.children(root).select do |name|
     path = File.join(root, name)
@@ -256,7 +256,7 @@ task "test:all_trees" do
   failures = []
   inconclusive = []
   inventory = {}
-  node_bin = %w[node nodejs].find do |candidate|
+  node_bin = %w\[node nodejs].find do |candidate|
     system(candidate, "--version", out: File::NULL, err: File::NULL)
   end
 
@@ -343,7 +343,7 @@ task "test:all_trees" do
     end
   end
 
-  %w[yml yaml json].each do |ext|
+  %w\[yml yaml json].each do |ext|
     Dir.glob(File.join(root, "**", "*.#{ext}")).reject { |file| ignored_path.call(file) }.each do |file|
       loader = ext == "json" ? "require 'json'; JSON.parse(File.read(ARGV.fetch(0)))" : "require 'yaml'; YAML.safe_load_file(ARGV.fetch(0), permitted_classes: [Symbol], aliases: true)"
       failures << "#{file}: #{ext} parse" unless system(RbConfig.ruby, "-e", loader, file, out: File::NULL, err: File::NULL)
@@ -385,7 +385,7 @@ namespace :test do
 
   desc "Live web HTTP/browser tests (requires Falcon on MASTER_WEB_PORT)"
   task :integration_web do
-    %w[test/test_web_http.rb test/test_browser.rb].each { |file| ruby "-Itest", file }
+    %w\[test/test_web_http.rb test/test_browser.rb].each { |file| ruby "-Itest", file }
   end
 
   # Outside master's bundle, for the reason tools carries a paragraph
@@ -685,7 +685,7 @@ end
     # Renaming on each change is the mechanism: a stale number becomes a load
     # error instead of a silent pass, this time at roughly 5% slack. Both older
     # keys are refused by name so neither can be carried across quietly.
-    %w[lib_ceiling lib_code_ceiling].each do |stale|
+    %w\[lib_ceiling lib_code_ceiling].each do |stale|
       next unless config.key?(stale) && !config.key?("lib_body_ceiling")
 
       abort "lint:spine: data/spine.yml still carries #{stale}. This task counts body lines now - " \
@@ -930,7 +930,7 @@ task "lint:alias_sites" do
   sh RbConfig.ruby, File.join(__dir__, "tools", "alias_site_guard.rb")
 end
 
-AUDIT_CHECKS = %w[
+AUDIT_CHECKS = %w\[
   dogfood constitution selftest selfcheck tools core_smoke architecture boot_smoke kernel_autoload_smoke security_sweep
   lint:frozen lint:data_singularity lint:spine lint:autoload
   lint:law_trace lint:law_parity lint:agent_contracts lint:scan_coverage lint:agent_map lint:reader_singularity lint:doc_citations lint:alias_sites
@@ -1044,7 +1044,7 @@ namespace :constitution do
       text = text.gsub(percent_re) do
         symbols = Regexp.last_match(0).scan(/:[a-z_]+/).map { |sym| sym.delete_prefix(":") }.join(" ")
         fixed[:percent_literal] += 1
-        "%i[#{symbols}]"
+        "%i\[#{symbols}]"
       end
 
       if text != updated

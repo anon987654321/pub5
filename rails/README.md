@@ -33,7 +33,7 @@ loads it by local path. On the box, the copy-tree deploy puts each app at
 a sibling and never a subdirectory. Syncing to the wrong one makes the asset
 precompile a silent no-op. `shared/README.md` describes what the engine owns.
 master does not mount the engine and is not copied: it runs in place under
-`/home/dev/pub4/master/web`, deployed by `openbsd/bin/vps_deploy_master.sh`,
+`/home/dev/pub5/master/web`, deployed by `openbsd/bin/vps_deploy_master.sh`,
 and its own `CLAUDE.md` governs it.
 
 Everything that builds, tests or probes these apps now lives under master. The
@@ -130,7 +130,7 @@ The rails contract suite also rejects literal JSON-LD `<script>` elements in vie
   nested takeaway engine), dating, messenger, maps, playlist, tv. Engine
   *names* (routes, modules, mounts) are unchanged; only the in-repo paths
   moved.
-- Host-side identities (`pub4-admin`, `_pub4ci`, `/home/dev/pub4`) are
+- Host-side identities (`pub4-admin`, `_pub4ci`, `/home/dev/pub5`) are
   deployment identities and are renamed only at cut-over (phase 6-7).
 - Per-app "live" status still requires its Phase-0 contracts and golden
   screenshots to pass against this tree (see apps.yml statuses).

@@ -37,7 +37,7 @@ module Shared
     # handful of substrings is imprecise on purpose, because the cost of missing
     # a bot is a slightly high number and the cost of storing a user agent to
     # classify it properly is a personal-data record we do not want.
-    BOT_HINTS = %w[bot crawl spider slurp curl wget headless preview monitor probe].freeze
+    BOT_HINTS = %w\[bot crawl spider slurp curl wget headless preview monitor probe].freeze
 
     def self.bot?(user_agent)
       ua = user_agent.to_s.downcase

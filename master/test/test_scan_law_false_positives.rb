@@ -213,7 +213,7 @@ class TestScanRuleFalsePositives < Minitest::Test
       %(dropped = @entries[0...(@entries.length - keep.length)]\n),
       %((1...lines.length).each { |i| check(i) }\n),
       %(@pending = []\n),
-      %(VALID_STATES = %w[pending running done error].freeze\n),
+      %(VALID_STATES = %w\[pending running done error].freeze\n),
       %(# constant from lib/review and depending on its load order\n),
       %(text + "\\n... [truncated]"\n),
       %(scan_lines(src, /\\b(TODO|FIXME|HACK|XXX)\\b/, message: "unresolved marker")\n),
@@ -633,7 +633,7 @@ class TestScanRuleFalsePositives < Minitest::Test
       "def probe\n  work\nrescue StandardError\n  warn \"probe failed\"\nend\n",
       "def probe\n  work\nrescue StandardError\n  DEFAULT_BUDGET\nend\n",
     ].each do |source|
-      %i[SILENT_RESCUE NARROW_SILENT_RESCUE].each do |id|
+      %i\[SILENT_RESCUE NARROW_SILENT_RESCUE].each do |id|
         assert_empty findings(id, source), "#{source.lines[2].strip.inspect} handles the error"
       end
     end
@@ -707,7 +707,7 @@ class TestScanRuleFalsePositives < Minitest::Test
   # the file's comment syntax, with reads_comments for rules whose subject IS
   # comments.
 
-  LINE_RULES = %w[FAIL_VISIBLY GUARD_EXPENSIVE_OPS].freeze
+  LINE_RULES = %w\[FAIL_VISIBLY GUARD_EXPENSIVE_OPS].freeze
 
   def universal_line_findings(source, path: "lib/example.rb")
     absolute = File.join(Master::ROOT, path)

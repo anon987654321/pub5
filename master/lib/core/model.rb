@@ -36,7 +36,7 @@ module Master::Core
     # spends the turn on a move that can land. The Constitution still judges
     # every effect: a lane that ignores the schema meets the same refusal it
     # always did.
-    GIT_OPERATIONS = %w[diff commit].freeze
+    GIT_OPERATIONS = %w\[diff commit].freeze
 
     def self.schema(verbs: VERBS, operations: GIT_OPERATIONS)
       {
@@ -59,14 +59,14 @@ module Master::Core
                   argv: { type: "array", minItems: 1, items: { type: "string" } },
                   reason: { type: "string", minLength: 1, maxLength: 200 },
                 },
-                required: %w[argv reason],
+                required: %w\[argv reason],
                 additionalProperties: false,
               },
             },
             additionalProperties: true,
           },
         },
-        required: %w[why verb args],
+        required: %w\[why verb args],
         additionalProperties: false,
       }
     end

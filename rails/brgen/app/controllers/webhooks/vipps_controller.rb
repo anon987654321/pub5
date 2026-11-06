@@ -28,10 +28,10 @@ module Webhooks
     self.write_throttle_limit = 300
 
     # Events that mean money is reserved / taken — treat as paid for marketplace.
-    PAID_NAMES = %w[AUTHORIZED CAPTURED].freeze
+    PAID_NAMES = %w\[AUTHORIZED CAPTURED].freeze
     # The buyer backed out, or the payment lapsed or was stopped. Ignoring these
     # left the order or basket pending_payment for good, with no way to retry.
-    FAILED_NAMES = %w[ABORTED EXPIRED CANCELLED TERMINATED].freeze
+    FAILED_NAMES = %w\[ABORTED EXPIRED CANCELLED TERMINATED].freeze
 
     def create
       payload = request.raw_post

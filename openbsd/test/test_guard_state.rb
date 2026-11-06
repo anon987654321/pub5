@@ -54,7 +54,7 @@ class TestGuardState < Minitest::Test
   # This is the state vm23 was left in on 2026-08-14: both apps up, both still
   # listed, unchanged across three further guard ticks.
   def test_names_entries_left_behind_by_a_restore_that_never_ran
-    assert_equal %w[amber bsdports],
+    assert_equal %w\[amber bsdports],
                  Deploy::GuardState.stale_entries(shed: "amber\nbsdports\n", running: ALL_UP)
     assert_empty Deploy::GuardState.stale_entries(shed: "amber\n", running: ALL_DOWN)
   end

@@ -6,7 +6,7 @@ module Master
   module ProviderCatalogueGuard
     module_function
 
-    PROVIDER_FIELDS = %w[
+    PROVIDER_FIELDS = %w\[
       env command strengths default_model model_pattern ruby_llm_key min_key_length
     ].freeze
     def validate(data)

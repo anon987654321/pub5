@@ -4,7 +4,7 @@
 meta:
   source: runtime authority
   vps: dev@brgen.no
-  repo_on_vps: /home/dev/pub4
+  repo_on_vps: /home/dev/pub5
 
 stack:
   app_server: Falcon only on vm23 (falcon serve in rc.d). No Puma in production.
@@ -88,7 +88,7 @@ recipes:
     run: master/bin/operator vps deploy master --remote
     expect: assets precompiled + master restarted
   - want: Full integrity on VPS
-    run: ssh brgen 'cd /home/dev/pub4 && ruby34 openbsd/checks/integrity_check.rb'
+    run: ssh brgen 'cd /home/dev/pub5 && ruby34 openbsd/checks/integrity_check.rb'
     expect: integrity clean after apps deployed
   - want: OpenBSD service/system administration
     run: master/bin/operator vps admin status --remote

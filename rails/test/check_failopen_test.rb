@@ -81,7 +81,7 @@ class CheckFailOpenTest < Minitest::Test
       rows = ledger.summary
       by_check = rows.to_h { |r| [r[:check], r] }
 
-      assert_equal %w[missing_class ok_after ok_before raiser], by_check.keys.sort
+      assert_equal %w\[missing_class ok_after ok_before raiser], by_check.keys.sort
       assert_equal 1, by_check.fetch("raiser")[:errored]
       assert_equal 1, by_check.fetch("ok_after")[:passed]
       assert_equal 1, ledger.entries.map { |e| e["run"] }.uniq.size,

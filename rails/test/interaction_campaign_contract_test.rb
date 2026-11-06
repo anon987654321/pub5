@@ -6,10 +6,10 @@ require "minitest/autorun"
 class InteractionCampaignContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   MANIFEST = File.join(__dir__, "interaction_campaign_400.json")
-  REQUIRED_CASE_FIELDS = %w[
+  REQUIRED_CASE_FIELDS = %w\[
     id surface_id action_id fault_mode assessment runtime_status runtime_evidence
   ].freeze
-  VALID_RUNTIME_STATES = %w[NOT_RUN PASS FAIL BLOCKED SKIPPED].freeze
+  VALID_RUNTIME_STATES = %w\[NOT_RUN PASS FAIL BLOCKED SKIPPED].freeze
 
   def setup
     @campaign = JSON.parse(File.read(MANIFEST))
@@ -169,7 +169,7 @@ class InteractionCampaignContractTest < Minitest::Test
       state = row.fetch("runtime_status")
       assert_includes VALID_RUNTIME_STATES, state, "#{row.fetch("id")}: unknown runtime state"
 
-      next unless %w[PASS FAIL].include?(state)
+      next unless %w\[PASS FAIL].include?(state)
 
       evidence = row.fetch("runtime_evidence").to_s.strip
       refute_empty evidence, "#{row.fetch("id")}: #{state} requires saved runtime evidence"

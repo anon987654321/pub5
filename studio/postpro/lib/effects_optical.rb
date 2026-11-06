@@ -34,7 +34,7 @@ def light_leaks(image, intensity = 0.5, edge: nil)
   return image if intensity <= 0
 
   picker = Random.new(postpro_seed(31))
-  edge ||= %i[left right top bottom][picker.rand(4)]
+  edge ||= %i\[left right top bottom][picker.rand(4)]
   # How far across the frame the fog reaches: a seam leak is narrow, a failing
   # back is wide.
   reach = 0.18 + picker.rand * 0.22

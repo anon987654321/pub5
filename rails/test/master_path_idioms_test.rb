@@ -11,13 +11,13 @@ class MasterPathIdiomsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   # Dev tooling and CI run from the checkout, where the relative walk is correct.
-  EXEMPT = %w[
+  EXEMPT = %w\[
     shared/lib/shared/contracts.rb
     shared/lib/shared/mobile_ios_project.rb
     shared/config/ci.rb
   ].freeze
 
-  RUNTIME_DIRS = %w[app lib config db].freeze
+  RUNTIME_DIRS = %w\[app lib config db].freeze
 
   def runtime_files
     apps = Dir[File.join(ROOT, "*")].select { |d| File.directory?(d) && File.basename(d) =~ /\A(shared|amber|bsdports|brgen(_\w+)?)\z/ }
@@ -43,5 +43,5 @@ class MasterPathIdiomsTest < Minitest::Test
 
   private
 
-  def offending = %r{\.\./[^"']*(MASTER|OPENBSD|STUDIO)|(MASTER|OPENBSD|STUDIO)[^"']*\.\./}
+  def offending = %r{\.\./[^"']*(MASTER|OPENBSD|studio)|(MASTER|OPENBSD|studio)[^"']*\.\./}
 end

@@ -18,7 +18,7 @@ module Master
 
     ARCHITECTURE_KEY = "architecture"
     JOURNAL = ".master/phoenix.ndjson"
-    PROVENANCE_KEYS = %w[goal constraints alternatives evidence decision].freeze
+    PROVENANCE_KEYS = %w\[goal constraints alternatives evidence decision].freeze
 
     class << self
       def boundaries(root: Master::ROOT)

@@ -366,7 +366,7 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal :dispatch_android, built.fetch("android").method_name
     assert_equal :dispatch_ios, built.fetch("ios").method_name
     assert_equal :dispatch_pair, built.fetch("pair").method_name
-    %w[device owner].each { |gone| refute built.key?(gone), "/#{gone} is replaced by /android or /ios" }
+    %w\[device owner].each { |gone| refute built.key?(gone), "/#{gone} is replaced by /android or /ios" }
     assert Registry.respond_to?(:dispatch_device)
   end
 
@@ -597,7 +597,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   # The reading half of /fix is its --dry-run --critique flags. No registry verb, router spelling or help
   # page answers to review, critique or council, and the /fix page names the flags.
   def test_the_reading_is_a_flag_of_fix_not_a_word
-    %w[review critique council].each do |word|
+    %w\[review critique council].each do |word|
       refute built.key?(word), "#{word} is a registry verb again"
       refute_includes Registry::HELP_TOPICS.keys, word
       refute Registry.respond_to?(:"dispatch_#{word}"), "dispatch_#{word} came back"
@@ -610,9 +610,9 @@ class TestCommandRegistryDispatch < Minitest::Test
   # A `*_commands` method is a table of verbs. Only control_commands exists,
   # and build merges it; slash_commands is the help list, not a table.
   def test_no_command_table_is_left_unmerged
-    tables = Registry.singleton_methods.map(&:to_s).grep(/_commands\z/) - %w[slash_commands]
+    tables = Registry.singleton_methods.map(&:to_s).grep(/_commands\z/) - %w\[slash_commands]
 
-    assert_equal %w[control_commands], tables.sort,
+    assert_equal %w\[control_commands], tables.sort,
                  "a new command table has to be merged by build, or it is a verb with no route"
   end
 
@@ -670,7 +670,7 @@ class TestCommandRegistryDispatch < Minitest::Test
 
   def test_session_commands_are_one_verb
     assert_equal :dispatch_session, built.fetch("session").method_name
-    %w[sessions continue resume fork].each { |gone| refute built.key?(gone), "/#{gone} is /session #{gone}" }
+    %w\[sessions continue resume fork].each { |gone| refute built.key?(gone), "/#{gone} is /session #{gone}" }
     assert_includes Registry.help_text("session"), "/session fork"
   end
   def test_voice_controls_have_sensible_defaults_and_plain_language_presets

@@ -50,7 +50,7 @@ module Operator
     def yaml_laws
       body = master_laws
       rows = Master.law_entries_in(body).select { |r| r.is_a?(Hash) && r["id"] }
-      legacy = rows.select { |row| %w[detect_lexical detect_structural].any? { |key| row.key?(key) } }
+      legacy = rows.select { |row| %w\[detect_lexical detect_structural].any? { |key| row.key?(key) } }
       unless legacy.empty?
         ids = legacy.map { |row| row["id"] }.join(", ")
         raise "legacy YAML detector fields are unsupported (#{ids}); implement the detector in Ruby and register its source in law_catalogue"

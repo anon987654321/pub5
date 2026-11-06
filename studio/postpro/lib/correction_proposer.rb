@@ -30,7 +30,7 @@ module Postpro
         proposals[:s_curve_strength] = ((0.18 - contrast[:rms_contrast]) / 0.18).clamp(0.0, 0.5)
       end
 
-      proposals[:not_addressed] = report.fetch(:not_assessed, %i[composition focus_quality subject_expression])
+      proposals[:not_addressed] = report.fetch(:not_assessed, %i\[composition focus_quality subject_expression])
       proposals[:requires_operator_review] = true
       proposals
     end

@@ -15,7 +15,7 @@ module Master
         def to_s = "#{rule} #{surface}@#{viewport} #{selector}: #{detail}"
       end
 
-      GENERIC = %w[serif sans-serif monospace cursive fantasy system-ui ui-serif ui-sans-serif ui-monospace ui-rounded -apple-system].freeze
+      GENERIC = %w\[serif sans-serif monospace cursive fantasy system-ui ui-serif ui-sans-serif ui-monospace ui-rounded -apple-system].freeze
 
       # Font stacks arrive as computed `font-family` text; tokens are lowercased
       # and unquoted so a rule compares names, not spelling.

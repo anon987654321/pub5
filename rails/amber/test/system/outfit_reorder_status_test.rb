@@ -8,7 +8,7 @@ class OutfitReorderStatusTest < ApplicationSystemTestCase
   test "a reorder says it was saved, and a failed one says so and reverts" do
     user = create_user("reorder")
     outfit = Outfit.create!(user: user, name: "Autumn")
-    %w[Coat Scarf].each_with_index do |title, position|
+    %w\[Coat Scarf].each_with_index do |title, position|
       item = Item.create!(user: user, title: title, category: "Outerwear")
       OutfitItem.create!(outfit: outfit, item: item, position: position)
     end

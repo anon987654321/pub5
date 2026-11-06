@@ -27,7 +27,7 @@ def stylesheet_failure(path, entries)
   shared = File.expand_path("../__shared/app/assets/stylesheets", Dir.pwd)
   (entries.empty? ? [path] : entries).each do |entry|
     Sass.compile(entry, load_paths: [File.dirname(entry), shared], quiet_deps: true,
-                        silence_deprecations: %w[import global-builtin])
+                        silence_deprecations: %w\[import global-builtin])
   rescue Sass::CompileError => e
     return "#{File.basename(path)}: #{File.basename(entry)} does not compile: #{e.message.lines.first(2).join.strip}"
   end

@@ -24,9 +24,9 @@ module Master
       LEASE_RENEW_SECONDS = 60
       RETRY_BASE_SECONDS = 60
       RETRY_MAX_SECONDS = 3_600
-      STATES = %w[queued running waiting completed failed blocked interrupted cancelled unknown_outcome recovery_failed].freeze
-      RESUMABLE_STATES = %w[running waiting].freeze
-      STAGES = %w[discover plan execute verify deliver].freeze
+      STATES = %w\[queued running waiting completed failed blocked interrupted cancelled unknown_outcome recovery_failed].freeze
+      RESUMABLE_STATES = %w\[running waiting].freeze
+      STAGES = %w\[discover plan execute verify deliver].freeze
 
       attr_reader :root, :id
 
@@ -67,7 +67,7 @@ module Master
         with_lock do
           current = load_record
           if current && current["goal"].to_s == goal.to_s && current["scope"].to_s == relative(scope).to_s &&
-             %w[running waiting].include?(current["state"].to_s)
+             %w\[running waiting].include?(current["state"].to_s)
             @record = current
             @id = current["id"]
             return self
@@ -498,7 +498,7 @@ module Master
         out = record.dup
         operator = record["operator"].is_a?(Hash) ? record["operator"] : {}
         mode = operator["mode"].to_s
-        mode = "repair" unless %w[observe plan repair deploy].include?(mode)
+        mode = "repair" unless %w\[observe plan repair deploy].include?(mode)
         out["operator"] = {
           "mode" => mode,
           "risk" => operator["risk"],
@@ -516,7 +516,7 @@ module Master
 
       def self.migrate_v1(record, now:)
         state = record["state"].to_s
-        unless %w[running completed failed interrupted].include?(state)
+        unless %w\[running completed failed interrupted].include?(state)
           raise "mission v1 state #{state.inspect} is unsupported"
         end
 
@@ -528,7 +528,7 @@ module Master
           "goal" => record["goal"].to_s.byteslice(0, MAX_GOAL_BYTES).to_s,
           "scope" => record["scope"].to_s,
           "model" => record["model"].to_s,
-          "effort" => %w[low medium high].include?(record["effort"].to_s.downcase) ? record["effort"].to_s.downcase : "medium",
+          "effort" => %w\[low medium high].include?(record["effort"].to_s.downcase) ? record["effort"].to_s.downcase : "medium",
           "operator" => {
             "mode" => "repair",
             "risk" => nil,
@@ -776,7 +776,7 @@ module Master
 
       def normalize_effort(value)
         text = value.to_s.downcase
-        %w[low medium high].include?(text) ? text : "medium"
+        %w\[low medium high].include?(text) ? text : "medium"
       end
 
       def assign_payload(key, value)

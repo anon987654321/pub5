@@ -8,14 +8,14 @@ module Master
     TREE_PATHS = MasterPaths::TREES.to_h { |tree| [tree, tree] }.freeze
     DEFAULT_TREES = TREE_PATHS.keys.freeze
     DEFAULT_OUTPUT = File.join(REPO_ROOT, "snapshot_MASTER.md")
-    SKIP = %w[.git .bundle node_modules vendor tmp temp log logs coverage storage cache dist build output generated].freeze
-    BINARY_EXTENSIONS = %w[
+    SKIP = %w\[.git .bundle node_modules vendor tmp temp log logs coverage storage cache dist build output generated].freeze
+    BINARY_EXTENSIONS = %w\[
       .7z .aac .avi .bin .bmp .class .db .db3 .dll .dmg .doc .docx .eot .exe .flac
       .gif .gz .ico .jpeg .jpg .m4a .mov .mp3 .mp4 .ogg .otf .pdf .png .ppt .pptx
       .so .sqlite .sqlite3 .tar .tif .tiff .ttf .wav .webm .webp .woff .woff2 .xls .xlsx .zip
     ].freeze
-    TEXT_EXTENSIONS = %w[.rb .rake .gemspec .ru .yml .yaml .json .js .mjs .ts .tsx .jsx .css .scss .html .erb .sh .zsh .md .txt].freeze
-    NAMED_TEXT = %w[Gemfile Rakefile Guardfile Capfile Brewfile Vagrantfile config.ru].freeze
+    TEXT_EXTENSIONS = %w\[.rb .rake .gemspec .ru .yml .yaml .json .js .mjs .ts .tsx .jsx .css .scss .html .erb .sh .zsh .md .txt].freeze
+    NAMED_TEXT = %w\[Gemfile Rakefile Guardfile Capfile Brewfile Vagrantfile config.ru].freeze
 
     def initialize(root: ROOT, output: DEFAULT_OUTPUT)
       @root = File.realpath(root)

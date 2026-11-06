@@ -271,7 +271,7 @@ class TestRunJournalLifecycle < Minitest::Test
       run = start_journal(root, bus)
       events = bus.events.select { |name, _| name.start_with?("fix:journal_lifecycle:") }
 
-      assert_equal %w[fix:journal_lifecycle:before fix:journal_lifecycle:after], events.map(&:first)
+      assert_equal %w\[fix:journal_lifecycle:before fix:journal_lifecycle:after], events.map(&:first)
       assert_equal events.first.last.fetch(:audit_id), events.last.last.fetch(:audit_id)
       assert_equal "persist", events.first.last.fetch(:operation)
       assert_equal "ok", events.last.last.fetch(:status)

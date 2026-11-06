@@ -136,7 +136,7 @@ class RepoHygieneContractTest < Minitest::Test
   end
 
   def test_openbsd_has_operator_surfaces
-    %w[
+    %w\[
       openbsd/OPERATOR.sh
       openbsd/bin/check
       openbsd/lib/check_environment.rb
@@ -168,11 +168,11 @@ class RepoHygieneContractTest < Minitest::Test
   end
 
   def test_shared_search_partials_are_not_duplicated_per_app
-    %w[_search_loading.html.erb _search_suggestions.html.erb].each do |partial|
+    %w\[_search_loading.html.erb _search_suggestions.html.erb].each do |partial|
       canonical = File.join(ROOT, "shared", "app", "views", "shared", partial)
       assert_path_exists canonical
 
-      %w[amber brgen bsdports].each do |app|
+      %w\[amber brgen bsdports].each do |app|
         duplicate = File.join(ROOT, app, "app", "views", "shared", partial)
         refute_path_exists duplicate, "#{app} must use shared/#{partial} from the shared engine"
       end
@@ -183,7 +183,7 @@ class RepoHygieneContractTest < Minitest::Test
     canonical = File.join(ROOT, "shared", "app", "views", "comments", "destroy.turbo_stream.erb")
     assert_path_exists canonical
 
-    %w[amber brgen bsdports].each do |app|
+    %w\[amber brgen bsdports].each do |app|
       duplicate = File.join(ROOT, app, "app", "views", "comments", "destroy.turbo_stream.erb")
       refute_path_exists duplicate, "#{app} must use the shared comment destroy stream"
     end

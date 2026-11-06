@@ -4,7 +4,7 @@ namespace :scrape do
   desc "Fashion/wardrobe inspiration via Ferrum + vision LLM (subs: comma-separated, default: femalefashionadvice,30PlusSkinCare,PetiteFashion)"
   task :fashion, [ :subs ] => :environment do |_, args|
     subs = (args[:subs] || "femalefashionadvice,30PlusSkinCare,PetiteFashion").split(",").map(&:strip)
-    schema = %w[title description url upvotes comments image_hints]
+    schema = %w\[title description url upvotes comments image_hints]
     subs.each do |sub|
       Shared::Scrape.call(
         "https://www.reddit.com/r/#{sub}/hot/",
@@ -17,7 +17,7 @@ namespace :scrape do
   desc "Seed fictive wardrobe/outfit data from fashion scrape into amber. Requires OPENROUTER_API_KEY. Supplements Faker seeds."
   task :fashion_seed, [ :subs ] => :environment do |_, args|
     subs = (args[:subs] || "femalefashionadvice,30PlusSkinCare,PetiteFashion").split(",").map(&:strip)
-    schema = %w[title description url upvotes comments image_hints]
+    schema = %w\[title description url upvotes comments image_hints]
 
     # A scrape sink, never a login: throw away the password the same moment it
     # is created, so the task cannot leave a known credential behind on a box.
@@ -37,9 +37,9 @@ namespace :scrape do
         item_rec = Item.create!(
           user: seed_user,
           title: "#{item['title'][0..50]} (inspired by r/#{sub})",
-          category: %w[shirt jacket pants shoes dress coat sweater accessory hat].sample,
-          color: %w[black navy white gray beige olive burgundy teal mustard].sample,
-          brand: %w[Acne Arket COS Uniqlo Zara H&M Everlane Patagonia].sample,
+          category: %w\[shirt jacket pants shoes dress coat sweater accessory hat].sample,
+          color: %w\[black navy white gray beige olive burgundy teal mustard].sample,
+          brand: %w\[Acne Arket COS Uniqlo Zara H&M Everlane Patagonia].sample,
           description: [ item["description"] || item["title"], "Sourced/fictivized from r/#{sub} via Ferrum vision scrape (upvotes: #{item["upvotes"]})." ].compact.join(" "),
           price_cents: rand(1500..15000),
           worn_count: rand(0..25),
@@ -54,7 +54,7 @@ namespace :scrape do
             name: "#{sub.titleize} Look #{rand(100)}",
             description: "Fictive outfit capsule inspired by scraped Reddit content",
             items: outfit_items,
-            context_label: %w[casual work date travel party].sample,
+            context_label: %w\[casual work date travel party].sample,
             estimated_value: outfit_items.sum(&:price_cents),
             total_wears: rand(0..15),
             last_worn_at: rand(1..60).days.ago

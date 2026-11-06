@@ -61,13 +61,13 @@ class Marketplace::Listing < ApplicationRecord
     card: { resize_to_limit: [ 800, 800 ], format: :webp }
   }
 
-  CONDITIONS = %w[new_with_tags new_without_tags very_good good satisfactory].freeze
+  CONDITIONS = %w\[new_with_tags new_without_tags very_good good satisfactory].freeze
   # What is being listed. goods is a thing with a price; the other three are the
   # Craigslist half — same city scoping, search, expiry and messaging, different
   # facts about them, which live in a table each rather than in columns that are
   # null for every bicycle.
-  KINDS = %w[goods job housing gig].freeze
-  STATUSES = %w[active sold reserved removed].freeze
+  KINDS = %w\[goods job housing gig].freeze
+  STATUSES = %w\[active sold reserved removed].freeze
 
   DELIVERY_PROMISES = {
     same_day_bergen: 0,
@@ -90,7 +90,7 @@ class Marketplace::Listing < ApplicationRecord
   # finding no postpro script on this box -- the vm23 caveat -- as well as an
   # attachment that vanished before the job ran; failed is the script running
   # and erroring.
-  PHOTO_STATUSES = %w[pending done skipped failed].freeze
+  PHOTO_STATUSES = %w\[pending done skipped failed].freeze
   DEFAULT_RADIUS_KM = 5.0
   MAX_RADIUS_KM = 50.0
 
@@ -146,7 +146,7 @@ class Marketplace::Listing < ApplicationRecord
   scope :recent,   -> { order(created_at: :desc) }
   # The three orders a browsing buyer asks for. Anything else in the param is
   # newest first, which is the page as it arrives.
-  SORTS = %w[rank recent price_low price_high].freeze
+  SORTS = %w\[rank recent price_low price_high].freeze
   scope :sorted_by, lambda { |sort|
     case sort
     when "rank" then order(ranking_score: :desc, created_at: :desc)
@@ -346,7 +346,7 @@ class Marketplace::Listing < ApplicationRecord
     return false if account.blank? || account == user
     return false if reviews.exists?(user: account)
 
-    orders.where(buyer: account, status: %w[accepted completed]).exists?
+    orders.where(buyer: account, status: %w\[accepted completed]).exists?
   end
 
   def update_rating!

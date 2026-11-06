@@ -15,13 +15,13 @@ module Master
     class PersonalPermissions
       include ::Master::Io::AtomicWrite
 
-      SCOPES = %w[
+      SCOPES = %w\[
         microphone speech_recognition camera location contacts messages
         notifications personal_memory calendar_read financial_data financial_actions
         tradedoubler.claims.read tradedoubler.claims.prepare tradedoubler.claims.submit
         external_messages purchases deployment destructive_actions
       ].freeze
-      SUBJECT_SCOPES = %w[personal_memory calendar_read].freeze
+      SUBJECT_SCOPES = %w\[personal_memory calendar_read].freeze
       MICROPHONE_PURPOSE = "capture live voice input for a master CLI conversation"
       SPEECH_RECOGNITION_PURPOSE = "transcribe live microphone audio using the configured transcription provider"
       VOICE_GRANT_SECONDS = 3_600

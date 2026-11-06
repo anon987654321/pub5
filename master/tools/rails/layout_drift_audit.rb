@@ -78,7 +78,7 @@ module Operator
     end
 
     def summary
-      %w[PASS FAIL NOT_RUN].to_h do |status|
+      %w\[PASS FAIL NOT_RUN].to_h do |status|
         [status, findings.count { |finding| finding.status == status }]
       end
     end
@@ -161,7 +161,7 @@ module Operator
       shared_view = read(shared_view_path)
       shared_css = read(shared_css_path)
 
-      %w[brgen amber].each do |app|
+      %w\[brgen amber].each do |app|
         view_path = "rails/#{app}/app/views/posts/_post.html.erb"
         view = read(view_path)
         expect("post_card.shared_renderer.#{app}", view_path, view, 'render "shared/post_card"',
@@ -186,7 +186,7 @@ module Operator
       expect("post_card.touch_targets", shared_css_path, shared_css, "min-inline-size: var(--tap-min);",
              "Author and title links must retain the shared tap floor.")
 
-      %w[stack stack_brgen].each do |stack|
+      %w\[stack stack_brgen].each do |stack|
         path = "rails/__shared/app/assets/stylesheets/_#{stack}.scss"
         expect("post_card.stack.#{stack}", path, read(path), '@forward "post_voting";',
                "Both app stacks must load the same post-card structure.")
@@ -282,7 +282,7 @@ module Operator
         "amber" => "rails/amber/app/views/layouts/application.html.erb"
       }.each do |app, path|
         source = read(path)
-        %w[class="skip-link" id="main-content" data-layout="document"].each do |needle|
+        %w\[class="skip-link" id="main-content" data-layout="document"].each do |needle|
           expect("landmark.#{app}.#{needle}", path, source, needle,
                  "#{app} must retain its skip link, document layout and main landmark.")
         end

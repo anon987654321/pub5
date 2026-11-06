@@ -8,7 +8,7 @@ module Master
     # the top-left of one stage at its own pixel scale, so the same chrome on
     # two pages lands on the same pixels and any difference shows as a smear.
     module VisualCrossPagePages
-      PALETTE = %w[#06b6d4 #a855f7 #f59e0b #22c55e #ef4444 #3b82f6 #ec4899 #84cc16].freeze
+      PALETTE = %w\[#06b6d4 #a855f7 #f59e0b #22c55e #ef4444 #3b82f6 #ec4899 #84cc16].freeze
       STAGE_CSS = ".stage{position:relative;overflow:hidden;background:#fff;border:1px solid #bbb;line-height:0}" \
                   ".stage img{position:absolute;left:0;top:0;width:auto;height:auto;max-width:none}" \
                   ".stage svg{position:absolute;left:0;top:0;pointer-events:none}" \

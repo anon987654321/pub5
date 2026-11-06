@@ -3,8 +3,8 @@
 class Playlist::ListeningPartiesController < Playlist::BaseController
     before_action :require_user_session
     before_action :set_set
-    before_action :set_party,     only: %i[show update destroy]
-    before_action :require_host!, only: %i[update destroy]
+    before_action :set_party,     only: %i\[show update destroy]
+    before_action :require_host!, only: %i\[update destroy]
 
     def show
       unless party_viewer_allowed?
@@ -64,7 +64,7 @@ class Playlist::ListeningPartiesController < Playlist::BaseController
     def set_owner_or_editor?
       Current.user && (
         @set.user_id == Current.user.id ||
-        @set.collaborations.exists?(user_id: Current.user.id, role: %w[owner editor])
+        @set.collaborations.exists?(user_id: Current.user.id, role: %w\[owner editor])
       )
     end
 

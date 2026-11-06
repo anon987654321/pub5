@@ -100,7 +100,7 @@ class TestIoMov < Minitest::Test
     Mov::SHELF.each do |entry|
       assert_operator entry[:year], :>=, 2024, "#{entry[:title]} predates the floor"
       assert_operator entry[:year], :<=, 2026, "#{entry[:title]} is from the future"
-      assert_includes %i[film series], entry[:kind]
+      assert_includes %i\[film series], entry[:kind]
       refute_empty entry[:where], "#{entry[:title]} must say where it streams"
       refute_empty entry[:note], "#{entry[:title]} must carry its critical case"
       refute_empty entry[:tags], "#{entry[:title]} must be findable by theme"
@@ -306,7 +306,7 @@ class TestIoMov < Minitest::Test
   end
 
   def test_download_queue_stops_after_requested_successes
-    entries = [%w[One], %w[Two], %w[Three]].map { |(title)| { title:, year: 2025, where: "Max" } }
+    entries = [%w\[One], %w\[Two], %w\[Three]].map { |(title)| { title:, year: 2025, where: "Max" } }
     calls = []
     resolver = lambda do |entry, bus: nil|
       calls << entry[:title]
@@ -319,7 +319,7 @@ class TestIoMov < Minitest::Test
       assert result.ok?, result.to_s
       assert_equal 2, result.value!.fetch(:saved)
     end
-    assert_equal %w[One Two], calls
+    assert_equal %w\[One Two], calls
   end
 
   def test_yt_output_template_bumps_past_existing_names

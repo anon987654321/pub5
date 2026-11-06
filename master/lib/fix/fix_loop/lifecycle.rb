@@ -55,7 +55,7 @@ module Master
           )
           @pass_runner.plan_refresh_succeeded! if @pass_runner.respond_to?(:plan_refresh_succeeded!)
           current = @fix_plan
-          dimensions = %i[
+          dimensions = %i\[
             scope_digest source_digest law_digest law_source_digest authority_digest
             toolchain_digest exclusion_digest adapter_digest
           ]
@@ -257,7 +257,7 @@ module Master
 
             result = Transaction::Recovery.recover!(root: @transaction_root, id:, bus: @bus, release_conflicts: true)
             # A rollback answers the paths it restored, recovery of a closed one its state.
-            next if result.ok? && (result.value!.is_a?(Array) || %i[committed rolled_back].include?(result.value!))
+            next if result.ok? && (result.value!.is_a?(Array) || %i\[committed rolled_back].include?(result.value!))
 
             outcome = result.ok? ? result.value!.inspect : result.message
             Master::Trace::Dmesg.status("fix0", "stranded transaction #{id}: #{outcome[0, 160]}")

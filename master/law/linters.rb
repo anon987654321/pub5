@@ -44,7 +44,7 @@ module Master
           end
 
           # Files that change a linter's verdict besides the file it reads.
-          LINT_INPUTS = %w[.rubocop.yml .reek.yml config.reek Gemfile.lock].freeze
+          LINT_INPUTS = %w\[.rubocop.yml .reek.yml config.reek Gemfile.lock].freeze
           PREFETCH_BATCH = 200
 
           # One linter process over many uncached files, its report split into the entries a run on each
@@ -219,7 +219,7 @@ module Master
 
         ::Law.define(:rubocop) do
           detector RubocopLaw
-          tags %i[STYLE LINT]
+          tags %i\[STYLE LINT]
           fix "RuboCop style/lint violation"
           proved_by "test/test_external_linter_laws.rb"
         end
@@ -272,7 +272,7 @@ module Master
 
         ::Law.define(:reek) do
           detector ReekLaw
-          tags %i[SMELL ONE_JOB]
+          tags %i\[SMELL ONE_JOB]
           fix "Reek code smell detected"
           proved_by "test/test_external_linter_laws.rb"
         end

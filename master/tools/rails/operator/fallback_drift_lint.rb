@@ -30,7 +30,7 @@ module Operator
     FALLBACK = /var\(\s*--([\w-]+)\s*,\s*#([0-9a-fA-F]{3,8})\s*\)/
     LITERAL_DEF = /--([\w-]+)\s*:\s*#([0-9a-fA-F]{3,8})/
     MIXIN_PARAM_DEF = /\$([\w-]+)\s*:\s*#([0-9a-fA-F]{3,8})/
-    EXEMPT = %w[accent accent-hover].freeze
+    EXEMPT = %w\[accent accent-hover].freeze
 
     USE = /var\(\s*(--[\w-]+)\s*(,)?/
     DECLARED = /(--[\w-]+)\s*:/

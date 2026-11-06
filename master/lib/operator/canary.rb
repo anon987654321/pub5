@@ -30,8 +30,8 @@ module Operator
   module Canary
     HEADER_LIMIT_BYTES = 8 * 1024
     DEFAULT_BUDGET_MS = 3000
-    SERVICES = %w[master brgen amber bsdports relayd].freeze
-    SKIPPED_PREFIXES = %w[/internal /rails /cable /admin].freeze
+    SERVICES = %w\[master brgen amber bsdports relayd].freeze
+    SKIPPED_PREFIXES = %w\[/internal /rails /cable /admin].freeze
     Reply = Struct.new(:status, :headers, :body, :elapsed_ms, keyword_init: true)
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
 
@@ -187,7 +187,7 @@ module Operator
 
         problems = out.to_s.lines.filter_map { |line| FLOW_PROBLEM.match(line) }.to_h { |m| [m[:id], m[:why].strip] }
         rows.map do |m|
-          bad = %w[FAIL ERROR].include?(m[:state])
+          bad = %w\[FAIL ERROR].include?(m[:state])
           Result.new(name: "flow #{m[:app]}/#{m[:id]}", ok: !bad, detail: bad ? (problems[m[:id]] || m[:state]) : m[:state].downcase)
         end
       rescue SystemCallError => e
@@ -236,7 +236,7 @@ module Operator
   #                it loads rails tests the box has no reason to carry)
   module DeployPreflight
     Result = Struct.new(:name, :ok, :detail, keyword_init: true)
-    SWEEP_GLOBS = %w[master/lib/**/*.rb master/law/**/*.rb rails/*/app/**/*.rb].freeze
+    SWEEP_GLOBS = %w\[master/lib/**/*.rb master/law/**/*.rb rails/*/app/**/*.rb].freeze
     TIMEOUT = 900
 
     module_function
@@ -321,7 +321,7 @@ module Operator
       dirty = git.call(root, "status", "--porcelain", "-uno", "--", "master", "rails", "openbsd")
       return [false, "commit these first:\n#{dirty.lines.first(5).join}"] unless dirty.empty?
 
-      lead = "cd /home/dev/pub4 && VPS_DEPLOY_SHA=#{sha}"
+      lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
       tail = "zsh openbsd/bin/vps-deploy #{app}"
       if env["VPS_DEPLOY_SKIP_PREFLIGHT"] == "1"
         return [false, "VPS_DEPLOY_SKIP_PREFLIGHT=1 needs the human-only I_UNDERSTAND_FAST_DEPLOY=1"] unless env["I_UNDERSTAND_FAST_DEPLOY"] == "1"
@@ -343,7 +343,7 @@ module Operator
       [true, ["#{lead} VPS_DEPLOY_PREFLIGHT_SHA=#{sha}", ci_word, tail].compact.join(" ")]
     end
 
-    CI_APPS = %w[brgen amber bsdports].freeze
+    CI_APPS = %w\[brgen amber bsdports].freeze
 
     # [true, nil] when the box keeps its own suite, [true, "VPS_DEPLOY_CI_SHA=..."]
     # after a green bin/ci here, [false, reason] after a red one.
@@ -362,7 +362,7 @@ module Operator
       version = File.read(File.join(dir, ".ruby-version")).strip
       rbenv_ruby = File.join(Dir.home, ".rbenv", "versions", version, "bin", "ruby")
       ruby = File.executable?(rbenv_ruby) ? rbenv_ruby : RbConfig.ruby
-      cleared = %w[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
+      cleared = %w\[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
       env = cleared.merge("PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}", "PUB4_CI_APP" => app)
       system(env, ruby, "bin/ci", chdir: dir)
     end

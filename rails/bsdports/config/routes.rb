@@ -14,7 +14,7 @@ Rails.application.routes.draw do
     session_id.present? && ::Session.exists?(id: session_id)
   }
 
-  resource :session, only: %i[new create destroy] do
+  resource :session, only: %i\[new create destroy] do
     # Passwordless sign-in. The mailer, the token generator and the columns
     # have existed since 20260709120000; the route the link pointed at never
     # did, so nothing could send one and nothing could consume one.
@@ -30,17 +30,17 @@ Rails.application.routes.draw do
     instance_eval(File.read(File.expand_path("../../shared/config/routes/social.rb", __dir__)))
   end
   instance_eval(File.read(File.expand_path("../../shared/config/routes/fleet.rb", __dir__)))
-  resources :passwords, param: :token, only: %i[new create edit update]
+  resources :passwords, param: :token, only: %i\[new create edit update]
 
   root "ports#index"
   constraints(jobs_constraint) do
     mount SolidQueue::Engine, at: "/admin/jobs"
   end
 
-  resources :categories, only: %i[index show]
-  resources :maintainers, only: %i[index show]
+  resources :categories, only: %i\[index show]
+  resources :maintainers, only: %i\[index show]
 
-  resources :ports, only: %i[index show] do
+  resources :ports, only: %i\[index show] do
     member do
       get :explore
       post :watch
@@ -48,7 +48,7 @@ Rails.application.routes.draw do
       post :crossref_cves
       post :review
     end
-    resources :comments, only: %i[create destroy]
+    resources :comments, only: %i\[create destroy]
   end
 
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest

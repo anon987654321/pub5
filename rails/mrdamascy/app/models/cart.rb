@@ -90,7 +90,7 @@ class Cart < ApplicationRecord
   # The order this cart placed moments ago and is still waiting for its
   # payment: where a repeat post of the same confirm form belongs.
   def unpaid_order_just_placed
-    orders.where(state: "placed", payment_state: %w[pending authorised], created_at: CHECKOUT_WINDOW.ago..)
+    orders.where(state: "placed", payment_state: %w\[pending authorised], created_at: CHECKOUT_WINDOW.ago..)
           .order(:id).last
   end
 

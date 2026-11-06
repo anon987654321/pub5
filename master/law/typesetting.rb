@@ -20,7 +20,7 @@ module Law
     MARKS = POINTS.transform_values { |point| [point].pack("U") }.freeze
     KEY_LINE = /\A(?<indent>\s*)(?:-\s+)?(?<key>[\w.-]+|"[^"]+"|'[^']+'):(?:\s+(?<value>.*))?\z/
 
-    CHROME_KEYS = %w[nav buttons actions empty flash notices errors auth search onboarding].freeze
+    CHROME_KEYS = %w\[nav buttons actions empty flash notices errors auth search onboarding].freeze
     SKIP_BLOCK = %r{<(script|style|pre|code)\b}i
     BLOCK_SCALAR = /\A[|>][-+]?\s*\z/
     READERS = { /\.yml\z/ => :locale_values, /\.erb\z/ => :erb_text, /\.md\z/ => :markdown_text }.freeze
@@ -170,7 +170,7 @@ module Law
 
   ::Law.define(:QUOTES_BY_LOCALE) do
     source "Butterick, Practical Typography: curly quotes, apostrophes point down; regjeringen.no: guillemets in nb"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path C::PATH
     example_path "/repo/rails/brgen/config/locales/nb.yml"
     fix "Set nb quotations in guillemets (curly singles inside), en in curly doubles, the apostrophe as U+2019."
@@ -181,7 +181,7 @@ module Law
 
   ::Law.define(:PARENTHETICAL_DASH) do
     source "Bringhurst 5.2.1, spaced en dashes for asides; Butterick, no double hyphens; skatteetaten.no, tankestrek"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path C::PATH
     example_path "/repo/rails/brgen/config/locales/nb.yml"
     fix "Set an aside with a spaced en dash (U+2013); a hyphen joins words and never stands for a dash."
@@ -192,7 +192,7 @@ module Law
 
   ::Law.define(:TRUE_SYMBOLS) do
     source "Butterick, use the proper symbols, not (c) or (tm); Bringhurst ch. 5, multiplication and minus signs"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path C::PATH
     example_path "/repo/rails/brgen/config/locales/nb.yml"
     fix "Write U+00D7 for a dimension, U+2212 for a negative value, U+00A9, U+2122 and U+00AE for the marks."
@@ -203,7 +203,7 @@ module Law
 
   ::Law.define(:SINGLE_SENTENCE_SPACE) do
     source "Bringhurst 2.1.4; Butterick, one space between sentences, no multiple word spaces"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     # HTML collapses a run of spaces, so ERB text is out; locale values and Markdown keep theirs.
     path %r{(?:/config/locales/[^/]+\.yml|/docs/[^/]+\.md)\z}
     example_path "/repo/rails/brgen/config/locales/nb.yml"
@@ -218,7 +218,7 @@ module Law
 
   ::Law.define(:CHROME_COPY_CALM) do
     source "Butterick, one exclamation mark is enough; Krug, happy talk must die; the operator's dmesg voice"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path %r{/config/locales/[^/]+\.yml\z}
     example_path "/repo/rails/brgen/config/locales/nb.yml"
     fix "State the fact and end it with a full stop: \"Annonsen er publisert.\""
@@ -235,7 +235,7 @@ module Law
 
   ::Law.define(:NUMBER_UNIT_UNBROKEN) do
     source "Bringhurst 2.4.6, link short numerical expressions with hard spaces; nb groups thousands with a space"
-    tags %i[TYPOGRAPHY]
+    tags %i\[TYPOGRAPHY]
     path Regexp.union(C::PATH, Deploy::RenderedDesign::SNAPSHOT)
     example_path "/repo/rails/brgen/config/locales/nb.yml"
     fix "Join a number to its unit and its digit groups with U+00A0 (&nbsp; in ERB, delimiter U+00A0), " \
@@ -245,7 +245,7 @@ module Law
     check { |src, path| C.unit_breaks(src, path).map { |hit| finding(**hit) } }
     snap = Deploy::RenderedDesign
     broken, joined = [2, 1].map { |tops| snap.fixture(numbers: [{ "text" => "1 299 kr", "tops" => tops }]) }
-    adapter(:rendered_ui, languages: %i[json], example_path: snap::EXAMPLE, bad: broken, good: joined) do |text, file|
+    adapter(:rendered_ui, languages: %i\[json], example_path: snap::EXAMPLE, bad: broken, good: joined) do |text, file|
       snap.findings(:NUMBER_UNIT_UNBROKEN, text, file).map { |hit| finding(**hit) }
     end
   end

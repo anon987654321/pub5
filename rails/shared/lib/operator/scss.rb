@@ -42,7 +42,7 @@ module Operator
       def declares?(pattern) = body.match?(pattern)
     end
 
-    STRUCTURAL = %w[{ } ;].freeze
+    STRUCTURAL = %w\[{ } ;].freeze
 
     module_function
 

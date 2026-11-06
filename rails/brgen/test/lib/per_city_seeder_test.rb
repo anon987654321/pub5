@@ -128,7 +128,7 @@ class PerCitySeederTest < ActiveSupport::TestCase
 
   test "the flagship keeps its Bergen community while other Norwegian cities do not" do
     assert_includes Brgen::CityContent.community_slugs_for("NO", domain: "brgen.no"), "bergen"
-    assert_equal %w[lokalt norge kultur mat musikk],
+    assert_equal %w\[lokalt norge kultur mat musikk],
                  Brgen::CityContent.community_slugs_for("NO", domain: "oshlo.no")
     assert_equal [ "Lokalt", "Lokale nyheter og samtaler fra Oslo og omegn." ],
                  Brgen::PlausibleContent.community("lokalt", "Oslo")

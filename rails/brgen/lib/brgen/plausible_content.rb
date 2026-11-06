@@ -33,7 +33,7 @@ module Brgen
       "Neumanns gate", "Danmarksplass"
     ].freeze
 
-    BERGEN_BYDELER = %w[
+    BERGEN_BYDELER = %w\[
       Sentrum Nordnes Sandviken Kalfaret Møhlenpris Laksevåg
       Fyllingsdalen Fana Årstad Åsane Arna Ytrebygda
     ].freeze

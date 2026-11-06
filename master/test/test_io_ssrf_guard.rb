@@ -9,7 +9,7 @@ class SsrfGuardTest < Minitest::Test
   Guard = Master::Io::SsrfGuard
 
   def test_blocks_loopback_link_local_and_private
-    %w[127.0.0.1 ::1 169.254.169.254 10.0.0.1 172.16.4.5 192.168.1.1 fe80::1].each do |address|
+    %w\[127.0.0.1 ::1 169.254.169.254 10.0.0.1 172.16.4.5 192.168.1.1 fe80::1].each do |address|
       assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} must be blocked"
     end
   end
@@ -31,7 +31,7 @@ class SsrfGuardTest < Minitest::Test
   end
 
   def test_allows_ordinary_public_addresses
-    %w[1.1.1.1 93.184.216.34 2606:4700:4700::1111].each do |address|
+    %w\[1.1.1.1 93.184.216.34 2606:4700:4700::1111].each do |address|
       refute Guard.blocked_ip?(IPAddr.new(address)), "#{address} should be allowed"
     end
   end
@@ -103,7 +103,7 @@ class SsrfGuardTest < Minitest::Test
 
   # Reserved, 6to4 relay and NAT64/6to4 forms that embed a private IPv4 address.
   def test_blocks_reserved_and_translated_forms
-    %w[240.0.0.1 192.88.99.1 64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1].each do |address|
+    %w\[240.0.0.1 192.88.99.1 64:ff9b::a00:1 64:ff9b:1::a00:1 2002:0a00:0001::1].each do |address|
       assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} must be blocked"
     end
   end

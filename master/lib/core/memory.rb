@@ -123,7 +123,7 @@ module Master::Core
     # whichever model made it, and costs no second copy of the file.
     def observe_text(effect, observation)
       text = observation.to_s
-      return clip_result(text) if %i[exec probe].include?(effect.verb)
+      return clip_result(text) if %i\[exec probe].include?(effect.verb)
       return text unless effect.verb == :read && observation.ok?
 
       hex = Digest::SHA256.hexdigest(observation.message)[0, 12]
@@ -248,7 +248,7 @@ module Master::Core
 
     class View
       Permission = Data.define(:path, :mode)
-      MODES = %i[read write].freeze
+      MODES = %i\[read write].freeze
 
       def initialize
         @entries = []

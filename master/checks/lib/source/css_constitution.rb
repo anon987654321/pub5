@@ -109,7 +109,7 @@ VAR_FALLBACK = /var\(\s*--[\w-]+\s*,[^()]*\)/
 
     # The palette lives here; a hex literal in either file is the definition the
     # rest of the tree is supposed to reference.
-    TOKEN_SOURCES = %w[_tokens.scss _dialect_tokens.scss].freeze
+    TOKEN_SOURCES = %w\[_tokens.scss _dialect_tokens.scss].freeze
 
     # Three rules laws.yml and style.yml declare and nothing read.
     # IMPORTANT sat in this file with zero call sites while 119 !important
@@ -258,7 +258,7 @@ VAR_FALLBACK = /var\(\s*--[\w-]+\s*,[^()]*\)/
       return unless (m = line.match(FONT_WEIGHT))
 
       value = m[1].strip
-      return if value.start_with?("var(", "$") || %w[inherit normal bold].include?(value)
+      return if value.start_with?("var(", "$") || %w\[inherit normal bold].include?(value)
 
       @tally["weight_ladder"] << "#{where} #{value}" unless weight_ladder.include?(value.to_i)
     end
@@ -375,7 +375,7 @@ VAR_FALLBACK = /var\(\s*--[\w-]+\s*,[^()]*\)/
     # Named files, not a glob: web/public also holds fingerprinted precompile
     # output (24 face-*.css copies at the last count), and scanning build
     # artifacts is what the "source of truth only" note above forbids.
-    MASTER_WEB = %w[master/web/public/face.css master/web/public/chat_upload.css].freeze
+    MASTER_WEB = %w\[master/web/public/face.css master/web/public/chat_upload.css].freeze
 
     def master_web_files
       MASTER_WEB.map { |rel| File.join(ROOT, rel) }.select { |p| File.file?(p) }

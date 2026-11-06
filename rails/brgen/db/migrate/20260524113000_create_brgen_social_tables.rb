@@ -8,7 +8,7 @@ class CreateBrgenSocialTables < ActiveRecord::Migration[8.0]
         t.references :followed, null: false, foreign_key: { to_table: :users }
         t.timestamps
       end
-      add_index :follows, %i[follower_id followed_id], unique: true
+      add_index :follows, %i\[follower_id followed_id], unique: true
     end
 
     if table_exists?(:reactions) && !column_exists?(:reactions, :reactable_type)
@@ -20,7 +20,7 @@ class CreateBrgenSocialTables < ActiveRecord::Migration[8.0]
     return unless table_exists?(:reactions) && column_exists?(:reactions, :reactable_type)
 
     add_index :reactions,
-              %i[user_id reactable_type reactable_id post_id kind],
+              %i\[user_id reactable_type reactable_id post_id kind],
               unique: true,
               name: 'idx_reactions_unique_user_target_kind',
               if_not_exists: true

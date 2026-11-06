@@ -11,8 +11,8 @@ module Master
     module SourceCompile
       CHECKER = File.expand_path("../../tools/rails/compile_check.rb", __dir__)
 
-      IN_APP = %w[.erb .scss .css].freeze
-      RAILS_PATH = %r{\A(?<rails>.+/RAILS)/(?<component>[^/]+)/}
+      IN_APP = %w\[.erb .scss .css].freeze
+      RAILS_PATH = %r{\A(?<rails>.+/rails)/(?<component>[^/]+)/}
       # Matched against the path below rails/, so a checkout or export under /tmp/
       # is still read; only an app's own vendor, builds, node_modules and tmp trees are skipped.
       SKIPPED = %r{(?:\A|/)(?:vendor|builds|node_modules|tmp)/}
@@ -40,7 +40,7 @@ module Master
 
       def script_failure(path)
         source = File.read(path, encoding: "UTF-8")
-        command = source.match?(MODULE) ? %w[node --input-type=module --check] : ["node", "--check", path]
+        command = source.match?(MODULE) ? %w\[node --input-type=module --check] : ["node", "--check", path]
         out, status = Master::Io::Exec.capture2e(*command, stdin_data: source, timeout: 30)
         status.success? ? nil : "#{File.basename(path)}: #{out.lines.grep(/Error/).first.to_s.strip[0, 200]}"
       rescue Errno::ENOENT

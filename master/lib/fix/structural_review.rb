@@ -20,7 +20,7 @@ module Master
     # further pass per subsystem was weighed and refused: it repeats this read at many more calls,
     # and per-file semantic reads already cover changed files and a rotating slice of the rest.
     class StructuralReview
-      CATEGORIES = %w[stands_out odd over_engineered under_engineered refactor do_over adherence].freeze
+      CATEGORIES = %w\[stands_out odd over_engineered under_engineered refactor do_over adherence].freeze
       HEADER = "FINDING"
       MAX_PROMPT_BYTES = 28_000
 

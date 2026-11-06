@@ -7,7 +7,7 @@ require "minitest/mock"
 # refunded, a reservation is cancelled, and every write carries the return's
 # idempotency key. Nothing here reaches Vipps; call_api is stubbed.
 class VippsRefundTest < ActiveSupport::TestCase
-  KEYS = %w[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN VIPPS_SUBSCRIPTION_KEY].freeze
+  KEYS = %w\[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN VIPPS_SUBSCRIPTION_KEY].freeze
   Order = Struct.new(:payment_reference, :total_cents, :payment_currency, keyword_init: true)
 
   setup do

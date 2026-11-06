@@ -30,8 +30,8 @@ module Deploy
 
     # Chrome installs on one 192 and one 512 with purpose "any". Maskable and
     # monochrome are polish; these two are the requirement.
-    REQUIRED_SIZES = %w[192x192 512x512].freeze
-    REQUIRED_KEYS = %w[name short_name start_url display icons].freeze
+    REQUIRED_SIZES = %w\[192x192 512x512].freeze
+    REQUIRED_KEYS = %w\[name short_name start_url display icons].freeze
 
     def self.run = new.run
 
@@ -58,7 +58,7 @@ module Deploy
     end
 
     def manifest_path(app)
-      candidates = %w[app/views/pwa/manifest.json app/views/pwa/manifest.json.erb]
+      candidates = %w\[app/views/pwa/manifest.json app/views/pwa/manifest.json.erb]
       candidates.map { |path| File.join(rails_root, app, path) }.find { |path| File.file?(path) }
     end
 

@@ -9,7 +9,7 @@ class Dating::Match < ApplicationRecord
   belongs_to :initiator, class_name: "User"
   belongs_to :receiver,  class_name: "User"
   validates :initiator_id, uniqueness: { scope: :receiver_id }
-  validates :status, inclusion: { in: %w[pending matched unmatched] }
+  validates :status, inclusion: { in: %w\[pending matched unmatched] }
   # One registration covering both transitions, not two.
   #
   # after_create_commit and after_update_commit are both after_commit, and
@@ -22,7 +22,7 @@ class Dating::Match < ApplicationRecord
   # previously_new_record? is what distinguishes the two cases inside one
   # callback: true for the row that arrived matched, false for the pending row
   # that just changed.
-  after_commit :announce_match, on: %i[create update],
+  after_commit :announce_match, on: %i\[create update],
                if: -> { status == "matched" && (previously_new_record? || saved_change_to_status?) }
 
   scope :active, -> { where(status: "matched") }

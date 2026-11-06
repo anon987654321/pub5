@@ -8,7 +8,7 @@ class DeclutterDashboard
   def summary
     items = @user.items
     active = items.active_wardrobe
-    released = items.where(lifecycle_state: %w[released donated sold recycled])
+    released = items.where(lifecycle_state: %w\[released donated sold recycled])
 
     {
       total_items: items.count,

@@ -143,7 +143,7 @@ def remote
   return unless REMOTE
 
   key = File.join(Dir.home, ".ssh", "id_ed25519_brgen")
-  out, ok = run("ssh", "-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "dev@brgen.no", "cd /home/dev/pub4 && echo $(git rev-parse --short HEAD) $(ls -d /home/dev/.pub4-vps-deploy.lock 2>/dev/null | wc -l) $(tmux ls 2>/dev/null | wc -l)")
+  out, ok = run("ssh", "-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "dev@brgen.no", "cd /home/dev/pub5 && echo $(git rev-parse --short HEAD) $(ls -d /home/dev/.pub4-vps-deploy.lock 2>/dev/null | wc -l) $(tmux ls 2>/dev/null | wc -l)")
   return say(:FAIL, "vm23", "ssh failed: key #{key}") unless ok
 
   sha, lock, tmux = out.lines.last.to_s.split

@@ -14,7 +14,7 @@ class CreateMarketplaceStores < ActiveRecord::Migration[8.0]
     end
 
     add_index :marketplace_stores, :slug, unique: true, if_not_exists: true
-    add_index :marketplace_stores, %i[vertical active], if_not_exists: true
+    add_index :marketplace_stores, %i\[vertical active], if_not_exists: true
     add_reference :marketplace_listings, :store, foreign_key: { to_table: :marketplace_stores }, if_not_exists: true
   end
 end

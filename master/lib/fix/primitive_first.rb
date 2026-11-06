@@ -11,7 +11,7 @@ module Master
     module PrimitiveFirst
       SHARED_DIR = File.join("rails", "__shared", "app", "assets", "stylesheets")
       MIN_PAGES = 2
-      CSS_EXT = %w[.css .scss].freeze
+      CSS_EXT = %w\[.css .scss].freeze
       CLASS_RE = /\.(-?[A-Za-z_][\w-]*)/
       RULE_RE = /([^{}]+)\{/
       PART_RE = /#[\w-]+|\[[^\]]*\]|\.[\w-]+|[a-z][\w-]*/

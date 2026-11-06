@@ -4,7 +4,7 @@ namespace :scrape do
   desc "X (Twitter) posts via Ferrum + vision LLM (queries: comma-separated, default: bergen,oslo,norge)"
   task :x, [ :queries ] => :environment do |_, args|
     queries = (args[:queries] || "bergen,oslo,norge").split(",").map(&:strip)
-    schema = %w[author text timestamp likes retweets url]
+    schema = %w\[author text timestamp likes retweets url]
     queries.each do |q|
       url = "https://x.com/search?q=#{CGI.escape(q)}&src=typed_query&f=live"
       Shared::Scrape.call(
@@ -19,7 +19,7 @@ namespace :scrape do
   task :x_seed, [ :queries ] => :environment do |_, args|
     require "cgi"
     queries = (args[:queries] || "bergen,oslo,norge").split(",").map(&:strip)
-    schema = %w[author text timestamp likes retweets url]
+    schema = %w\[author text timestamp likes retweets url]
 
     user = User.first || User.create!(email_address: "seed@x.local", password: "password123",
                                       password_confirmation: "password123", username: "xseed")
@@ -61,7 +61,7 @@ namespace :scrape do
         if /mat|food|restaurant|kafe|delivery|takeaway|spise/i.match?(text_lower)
           rest = Takeaway::Restaurant.find_or_create_by!(name: item["text"][0..50]) do |r|
             r.user = user
-            r.cuisine_type = %w[Norwegian Italian Pizza].sample
+            r.cuisine_type = %w\[Norwegian Italian Pizza].sample
             r.address = "Bergen"
             r.description = body[0..200]
           end
@@ -96,7 +96,7 @@ namespace :scrape do
         # Maps / local places (if location or local buzz)
         if text_lower =~ /bergen|oslo|place|spot|cafe|park|bar|location/i || q =~ /bergen|oslo/i
           Place.find_or_create_by!(name: item["text"][0..40]) do |p|
-            p.kind = %w[cafe bar shop park restaurant].sample
+            p.kind = %w\[cafe bar shop park restaurant].sample
             p.address = "Bergen area"
             p.latitude = 60.39 + rand(-0.05..0.05)
             p.longitude = 5.33 + rand(-0.05..0.05)

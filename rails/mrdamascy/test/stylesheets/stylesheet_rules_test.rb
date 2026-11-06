@@ -18,7 +18,7 @@ class StylesheetRulesTest < ActiveSupport::TestCase
     block = PARTIALS.fetch("_buttons.scss")[/@media \(forced-colors: active\) \{.*?\n\}/m]
 
     assert block, "no forced-colors block"
-    %w[.button-primary .button-vipps .button-stripe .button-reorder .chip].each do |selector|
+    %w\[.button-primary .button-vipps .button-stripe .button-reorder .chip].each do |selector|
       assert_includes block, selector
     end
     assert_includes block, "ButtonText"
@@ -46,7 +46,7 @@ test "spacing takes the scale, not raw pixels" do
     assert_match(/\.page-title \{[^}]*text-wrap: balance;/, PARTIALS.fetch("_base.scss"))
     numerals = PARTIALS.fetch("_base.scss")[/((?:\.[\w-]+,\n)+\.[\w-]+) \{\n  font-variant-numeric: tabular-nums;/, 1]
     assert numerals, "no tabular-nums rule"
-    %w[.item-price .sheet-total .line-sum .totals .cart-bar-meta .board-count].each do |selector|
+    %w\[.item-price .sheet-total .line-sum .totals .cart-bar-meta .board-count].each do |selector|
       assert_includes numerals, selector
     end
   end

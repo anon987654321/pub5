@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class NewsletterEdition < ApplicationRecord
-  KINDS = %w[daily weekly_deals].freeze
+  KINDS = %w\[daily weekly_deals].freeze
 
   validates :kind, inclusion: { in: KINDS }
   validates :edition_date, :subject, :lede, presence: true

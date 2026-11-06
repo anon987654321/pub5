@@ -69,7 +69,7 @@ module Master
         permissions = Master::Ground::PersonalPermissions.new(root:)
         voice_args = Shellwords.split(arg_for(ctx).to_s)
         voice_scope = voice_args[1].to_s.downcase
-        if voice_args[0].to_s.downcase == "grant" && %w[microphone speech_recognition].include?(voice_scope)
+        if voice_args[0].to_s.downcase == "grant" && %w\[microphone speech_recognition].include?(voice_scope)
           purpose = voice_scope == "microphone" ?
             Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE :
             Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE
@@ -86,7 +86,7 @@ module Master
           )
           return "privacy: #{voice_scope} enabled for one hour; OS microphone permission is still required"
         end
-        if voice_args[0].to_s.downcase == "revoke" && %w[microphone speech_recognition].include?(voice_scope)
+        if voice_args[0].to_s.downcase == "revoke" && %w\[microphone speech_recognition].include?(voice_scope)
           permissions.revoke(scope: voice_scope, confirmed_by: "local operator",
                              reason: "voice input revoked by local operator")
           return "privacy: #{voice_scope} revoked immediately"
@@ -185,7 +185,7 @@ module Master
           scopes = if requested_scope.nil? || scope == "all"
                      preferences::SCOPES
                    else
-                     %w[all].concat([scope])
+                     %w\[all].concat([scope])
                    end
           lines = ["preferences: learning=#{state.fetch("learning_enabled") ? "on" : "off"}"]
           scopes.each do |name|
@@ -205,14 +205,14 @@ module Master
         when "set"
           key_value = args.shift.to_s
           key, value = key_value.split("=", 2)
-          options = parse_preference_options(args, %w[scope])
+          options = parse_preference_options(args, %w\[scope])
           return "preferences: usage /preferences set KEY=VALUE [scope=SCOPE]" unless key && value && options
           result = preferences.set(root:, subject:, key:, value:, scope: options.fetch("scope", "all"))
           "preferences: set #{result.fetch("scope")} #{result.fetch("key")}=#{result.fetch("value")}"
         when "suggest"
           key_value = args.shift.to_s
           key, value = key_value.split("=", 2)
-          options = parse_preference_options(args, %w[scope reason confidence])
+          options = parse_preference_options(args, %w\[scope reason confidence])
           return "preferences: usage /preferences suggest KEY=VALUE [scope=SCOPE] [reason=\"...\"] [confidence=0.7]" unless key && value && options
           confidence = options.key?("confidence") ? Float(options.fetch("confidence")) : 0.7
           candidate = preferences.suggest(
@@ -230,12 +230,12 @@ module Master
           preferences.reject(root:, subject:, id: args.first) ? "preferences: suggestion rejected" : "preferences: suggestion not found"
         when "forget"
           key = args.shift.to_s
-          options = parse_preference_options(args, %w[scope])
+          options = parse_preference_options(args, %w\[scope])
           return "preferences: usage /preferences forget KEY [scope=SCOPE]" if key.empty? || !options
           preferences.forget(root:, subject:, key:, scope: options.fetch("scope", "all")) ?
             "preferences: forgot #{options.fetch("scope", "all")} #{key}" : "preferences: no such preference"
         when "learn"
-          return "preferences: usage /preferences learn on|off" unless args.size == 1 && %w[on off].include?(args.first.downcase)
+          return "preferences: usage /preferences learn on|off" unless args.size == 1 && %w\[on off].include?(args.first.downcase)
           enabled = args.first.downcase == "on"
           preferences.set_learning(root:, subject:, enabled:)
           "preferences: learning #{enabled ? "enabled" : "disabled"}; repeated low-risk correction signals can stage inactive suggestions; owner acceptance is still required"
@@ -432,7 +432,7 @@ module Master
           field = args.shift.to_s
           value = args.join(" ")
           return "task: usage /task update <id> title|description|priority|due_at <value>" if id.empty? || value.empty?
-          return "task: update field must be title, description, priority or due_at" unless %w[title description priority due_at].include?(field)
+          return "task: update field must be title, description, priority or due_at" unless %w\[title description priority due_at].include?(field)
           task = tasks.call(action: "update", id:, **{ field.to_sym => value })
           "task: updated #{task["id"]} - #{task["title"]}"
         else
@@ -544,7 +544,7 @@ module Master
       def dispatch_deploy(_root, ctx: nil)
         target = arg_for(ctx).split(/\s+/).reject { |token| token.start_with?("--") }.first.to_s.downcase
         target = "all" if target.empty?
-        allowed = %w[all master brgen amber bsdports]
+        allowed = %w\[all master brgen amber bsdports]
         return "deploy: usage /deploy all|master|brgen|amber|bsdports --confirm" unless allowed.include?(target)
 
         operator = File.join(MasterPaths.repo, "master", "bin", "operator")

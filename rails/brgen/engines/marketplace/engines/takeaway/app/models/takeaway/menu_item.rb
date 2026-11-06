@@ -16,7 +16,7 @@ class Takeaway::MenuItem < ApplicationRecord
   # order. A dish stores the keys it contains. nil means the kitchen has not
   # said, which the menu shows as exactly that; [] means none of the fourteen.
   # Only the kitchen knows what is in its food, so nothing here guesses.
-  ALLERGENS = %w[
+  ALLERGENS = %w\[
     gluten crustaceans eggs fish peanuts soybeans milk nuts celery mustard sesame sulphites lupin molluscs
   ].freeze
   serialize :allergens, coder: JSON

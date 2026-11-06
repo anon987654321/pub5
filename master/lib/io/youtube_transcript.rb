@@ -15,9 +15,9 @@ module Master
       TIMEOUT = 15
       MAX_BYTES = 2 * 1024 * 1024
       VIDEO_ID_RE = /\A[A-Za-z0-9_-]{11}\z/.freeze
-      YOUTUBE_HOSTS = %w[youtube.com www.youtube.com m.youtube.com music.youtube.com].freeze
-      SHORT_HOSTS = %w[youtu.be www.youtu.be].freeze
-      CLIENTS = %w[ANDROID WEB TVHTML5_SIMPLY_EMBEDDED_PLAYER].freeze
+      YOUTUBE_HOSTS = %w\[youtube.com www.youtube.com m.youtube.com music.youtube.com].freeze
+      SHORT_HOSTS = %w\[youtu.be www.youtu.be].freeze
+      CLIENTS = %w\[ANDROID WEB TVHTML5_SIMPLY_EMBEDDED_PLAYER].freeze
 
       def initialize(governor:, event_bus: nil)
         @governor = governor

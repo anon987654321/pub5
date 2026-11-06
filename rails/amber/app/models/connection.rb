@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Connection < ApplicationRecord
-  STATUSES = %w[pending accepted blocked].freeze
+  STATUSES = %w\[pending accepted blocked].freeze
 
   belongs_to :requester, class_name: "User"
   belongs_to :addressee, class_name: "User"

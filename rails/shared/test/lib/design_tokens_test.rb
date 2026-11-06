@@ -157,7 +157,7 @@ DesignTokens.face_root_css.lines.grep(/--#{key.to_s.tr('_', '-')}/).first.to_s.s
 
   def test_social_tokens_yaml_present
     social = DesignTokens.load.fetch("social")
-    %w[bg surface text accent border].each do |key|
+    %w\[bg surface text accent border].each do |key|
       assert social.key?(key), "master tokens#social missing #{key}"
     end
   end
@@ -168,7 +168,7 @@ def test_only_amber_owns_four_luxury_properties_and_the_check_still_passes
   amber = File.join(DesignTokens::ROOT, "rails/amber/app/assets/stylesheets/application.scss")
   brgen = File.join(DesignTokens::ROOT, "rails/brgen/app/assets/stylesheets/application.scss")
 
-  %w[luxury-bg luxury-text luxury-muted luxury-border].each do |var|
+  %w\[luxury-bg luxury-text luxury-muted luxury-border].each do |var|
     assert DesignTokens.app_owned?(amber, var), "amber should own --#{var}"
     refute DesignTokens.app_owned?(brgen, var), "brgen must not own --#{var}"
   end
@@ -179,11 +179,11 @@ end
 # The exemption is exactly amber's four luxury properties (in its two
 # stylesheets) and bsdports' Arial-first font; no other app owns anything.
 def test_the_app_owned_palette_names_only_amber_and_bsdports
-  luxury = %w[luxury-bg luxury-text luxury-muted luxury-border]
+  luxury = %w\[luxury-bg luxury-text luxury-muted luxury-border]
   expected = {
     "rails/amber/app/assets/stylesheets/application.scss" => luxury,
     "rails/amber/app/assets/stylesheets/_amber_late_product_finish.scss" => luxury,
-    "rails/bsdports/app/assets/stylesheets/application.scss" => %w[font],
+    "rails/bsdports/app/assets/stylesheets/application.scss" => %w\[font],
   }
 
   assert_equal expected, DesignTokens::APP_OWNED_PALETTE
@@ -201,7 +201,7 @@ end
 
     shared = DesignTokens.static_tokens_css
     face = DesignTokens.face_root_css
-    %w[pub4-signal pub4-signal-ink pub4-signal-on-light].each do |name|
+    %w\[pub4-signal pub4-signal-ink pub4-signal-on-light].each do |name|
       assert_includes shared, "--#{name}:"
       assert_includes face, "--#{name}:"
     end

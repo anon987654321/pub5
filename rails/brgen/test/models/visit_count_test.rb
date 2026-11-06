@@ -66,7 +66,7 @@ class VisitCountTest < ActiveSupport::TestCase
 
   # "Which city has traffic" must not answer "the one the crawlers like".
   test "obvious crawlers are recognised, and a real browser is not" do
-    %w[
+    %w\[
       Googlebot/2.1
       Mozilla/5.0\ (compatible;\ bingbot/2.0)
       curl/8.4.0

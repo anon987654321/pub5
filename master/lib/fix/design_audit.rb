@@ -22,7 +22,7 @@ module Master
       LOOP_WINDOW = 12
 
       # File names that repeat by Ruby convention, one per namespace.
-      CONVENTIONAL = %w[engine version base index railtie].freeze
+      CONVENTIONAL = %w\[engine version base index railtie].freeze
 
       module_function
 
@@ -73,7 +73,7 @@ module Master
 
       # A test that mostly asserts on the text of source files breaks when code moves and proves little.
       def spelling_tests(repo_root:)
-        tests = Dir.glob(File.join(repo_root, "{MASTER,rails,OPENBSD}", "**", "test*", "**", "*_test.rb")) +
+        tests = Dir.glob(File.join(repo_root, "{master,rails,openbsd}", "**", "test*", "**", "*_test.rb")) +
                 Dir.glob(File.join(repo_root, "master", "test", "test_*.rb"))
         tests.uniq.filter_map { |path| spelling_row(path) }.first(8)
       end

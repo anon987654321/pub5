@@ -9,7 +9,7 @@ class ChangelogContractTest < Minitest::Test
     source = File.read(File.join(ROOT, "shared/config/changelog.yml"))
     assert_includes source, 'title: "Convergence"'
 
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       routes = File.read(File.join(ROOT, app, "config/routes.rb"))
       assert_includes routes, 'get "changelog" => "shared/changelog#show"'
     end

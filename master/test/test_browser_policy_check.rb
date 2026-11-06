@@ -37,7 +37,7 @@ class TestBrowserPolicyCheck < Minitest::Test
 
   def test_check_enforces_session_browser_capabilities
     policy = YAML.safe_load_file(File.join(ROOT, "data/laws.yml"), aliases: true).fetch("browser_policy")
-    assert_equal %w[status navigate login extract look follow paginate close], policy.fetch("read_actions")
+    assert_equal %w\[status navigate login extract look follow paginate close], policy.fetch("read_actions")
     assert_equal true, policy.fetch("session_host_bound")
     assert_equal true, policy.fetch("screenshot_evidence_required")
     assert_equal 500, policy.fetch("max_capture_files")

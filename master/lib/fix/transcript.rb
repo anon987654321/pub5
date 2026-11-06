@@ -65,7 +65,7 @@ module Master
         File.foreach(path) do |raw|
           count += 1
           row = JSON.parse(raw)
-          body = row.reject { |key, _| %w[prev hash].include?(key) }
+          body = row.reject { |key, _| %w\[prev hash].include?(key) }
           return Verdict.new(ok: false, lines: count, broken_at: count, reason: "prev does not match the line before") unless row["prev"] == previous
           return Verdict.new(ok: false, lines: count, broken_at: count, reason: "hash does not match the line's body") unless row["hash"] == digest(previous, body)
 

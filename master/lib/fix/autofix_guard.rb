@@ -20,10 +20,10 @@ module Master
     #
     # State is per process, which is per run: one /fix is one process.
     module AutofixGuard
-      MODES = %w[off dry on].freeze
+      MODES = %w\[off dry on].freeze
       DEFAULT_MAX_FILES = 15
       TEST_TIMEOUT_S = 120
-      DATA_EXTENSIONS = %w[.yml .yaml .json .tsv .csv .toml .conf].freeze
+      DATA_EXTENSIONS = %w\[.yml .yaml .json .tsv .csv .toml .conf].freeze
 
       # Rendered or irreplaceable output, matched against the absolute path.
       # laws.yml declares the protected paths through SACRED_AUTHORSHIP.

@@ -27,7 +27,7 @@ def test_brgen_feature_styles_are_loaded_at_their_original_boundaries
   # former partials into these module banners, in the cascade order the old
   # meta.load-css calls held. The order is the contract; the feature rules
   # prove each folded file's text survived the fold.
-  assert_equal %w[
+  assert_equal %w\[
     post_gallery
     local_activity
     vertical_promo
@@ -194,7 +194,7 @@ def test_brgen_marketplace_badge_offsets_are_valid_css
     # The targets it must have, not the exact spelling of the line: pinning the
     # whole array meant adding a target failed a test about sharing the
     # controller, which is not what this asserts.
-    %w[sheet backdrop].each { |target| assert_match(/static targets = \[[^\]]*"#{target}"/, js) }
+    %w\[sheet backdrop].each { |target| assert_match(/static targets = \[[^\]]*"#{target}"/, js) }
     assert_includes js, "pointerDown(event)"
 
     # Closed, the sheet must be out of the tab order and the accessibility tree.
@@ -240,7 +240,7 @@ def test_brgen_marketplace_badge_offsets_are_valid_css
     assert_includes partial, 'data-clipboard-target="source"'
     assert_includes partial, 'like_count.positive? ? like_count : ""'
     assert File.file?(ICON_PARTIAL)
-    %w[reply repost like share].each do |name|
+    %w\[reply repost like share].each do |name|
       assert File.file?(File.join(SHARED, "app", "views", "shared", "icons", "_#{name}.html.erb")),
              "missing icons/_#{name}.html.erb"
     end

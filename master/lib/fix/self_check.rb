@@ -10,7 +10,7 @@ module Master
       # them unconditional merge blockers — so the fast check reported clean while
       # four vetoes stood in the tree it had read. One severity set, two
       # readers, is the shape that let them disagree.
-      QUICK_SEVERITIES = %i[veto critical error].freeze
+      QUICK_SEVERITIES = %i\[veto critical error].freeze
 
       Report = Data.define(:total, :by_rule, :by_severity, :error, :findings) do
         def clean? = total.zero? && error.nil?

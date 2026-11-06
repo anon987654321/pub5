@@ -54,7 +54,7 @@ class AccountMerger
     reflection = guest_user.class.reflect_on_association(:conversation_participants)
     if reflection&.macro == :has_many
       model = reflection.klass
-      if model.table_exists? && %w[user_id conversation_id].all? { |column| model.column_names.include?(column) }
+      if model.table_exists? && %w\[user_id conversation_id].all? { |column| model.column_names.include?(column) }
         model.where(user_id: guest_user.id).find_each do |source|
           destination = model.find_by(conversation_id: source.conversation_id, user_id: user.id)
           if destination
@@ -76,7 +76,7 @@ class AccountMerger
     if columns.include?("last_read_at")
       values[:last_read_at] = [destination.last_read_at, source.last_read_at].compact.max
     end
-    %i[pinned_at muted_at].each do |column|
+    %i\[pinned_at muted_at].each do |column|
       next unless columns.include?(column.to_s)
 
       values[column] = [destination.public_send(column), source.public_send(column)].compact.max
@@ -101,13 +101,13 @@ class AccountMerger
     return unless reflection&.macro == :has_many
 
     model = reflection.klass
-    return unless model.table_exists? && %w[user_id message_id].all? { |column| model.column_names.include?(column) }
+    return unless model.table_exists? && %w\[user_id message_id].all? { |column| model.column_names.include?(column) }
 
     model.where(user_id: guest_user.id).find_each do |source|
       destination = model.find_by(message_id: source.message_id, user_id: user.id)
       if destination
         values = {}
-        %w[delivered_at read_at].each do |column|
+        %w\[delivered_at read_at].each do |column|
           next unless model.column_names.include?(column)
 
           times = [destination.public_send(column), source.public_send(column)].compact

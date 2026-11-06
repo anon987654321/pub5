@@ -36,7 +36,7 @@ checks:
   - {id: compose.expand, in: amber/app/views/shared/_feed_compose.html.erb, has: [feed-compose#expand, amber-compose-footer]}
   - {id: compose.blur_keeps_filled, in: shared/frontend/feed_compose_controller.js,
      has: ["inputTarget.value.trim().length > 0"]}
-  - {id: posts.create_guest, in: amber/app/controllers/posts_controller.rb, has: ["def create", AnonymousPost, "except: %i[index show create]"]}
+  - {id: posts.create_guest, in: amber/app/controllers/posts_controller.rb, has: ["def create", AnonymousPost, "except: %i\[index show create]"]}
   - {id: posts.body_limit, in: amber/app/models/post.rb, has: ["validates :body", "maximum: 500"]}
   - {id: posts.show, in: amber/app/views/posts/show.html.erb, has: [comments/form, json_ld]}
   - {id: posts.new, in: amber/app/views/posts/new.html.erb, has: ["text_area :body"]}

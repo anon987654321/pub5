@@ -39,7 +39,7 @@ class AddAmberIdentityAndIntelligence < ActiveRecord::Migration[8.1]
       t.integer :position, null: false, default: 0
       t.timestamps
     end
-    add_index :creator_wardrobe_items, %i[creator_profile_id item_id], unique: true
+    add_index :creator_wardrobe_items, %i\[creator_profile_id item_id], unique: true
 
     create_table :garment_embeddings do |t|
       t.references :item, null: false, foreign_key: true, index: { unique: true }
@@ -88,7 +88,7 @@ class AddAmberIdentityAndIntelligence < ActiveRecord::Migration[8.1]
       t.json :metadata
       t.timestamps
     end
-    add_index :style_preferences, %i[user_id kind name], unique: true
+    add_index :style_preferences, %i\[user_id kind name], unique: true
 
     create_table :recommendations do |t|
       t.references :user, null: false, foreign_key: true
@@ -101,7 +101,7 @@ class AddAmberIdentityAndIntelligence < ActiveRecord::Migration[8.1]
       t.json :metadata
       t.timestamps
     end
-    add_index :recommendations, %i[user_id kind dismissed_at]
+    add_index :recommendations, %i\[user_id kind dismissed_at]
 
     create_table :packing_lists do |t|
       t.references :user, null: false, foreign_key: true
@@ -120,7 +120,7 @@ class AddAmberIdentityAndIntelligence < ActiveRecord::Migration[8.1]
       t.boolean :packed, null: false, default: false
       t.timestamps
     end
-    add_index :packing_list_items, %i[packing_list_id item_id], unique: true
+    add_index :packing_list_items, %i\[packing_list_id item_id], unique: true
 
     create_table :identity_verifications do |t|
       t.references :user, null: false, foreign_key: true

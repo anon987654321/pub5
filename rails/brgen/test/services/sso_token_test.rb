@@ -14,7 +14,7 @@ class Shared::SsoTokenTest < ActiveSupport::TestCase
   SECRET = "x" * 32
 
   def with_secret(value = SECRET)
-    saved = %w[MASTER_SSO_SECRET MASTER_INTERNAL_TOKEN MASTER_BRIDGE_TOKEN].to_h { |k| [ k, ENV.fetch(k, nil) ] }
+    saved = %w\[MASTER_SSO_SECRET MASTER_INTERNAL_TOKEN MASTER_BRIDGE_TOKEN].to_h { |k| [ k, ENV.fetch(k, nil) ] }
     ENV["MASTER_SSO_SECRET"] = value
     ENV.delete("MASTER_INTERNAL_TOKEN")
     ENV.delete("MASTER_BRIDGE_TOKEN")

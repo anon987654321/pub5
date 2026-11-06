@@ -18,7 +18,7 @@ class CreateReposts < ActiveRecord::Migration[8.1]
 
     # One repost per user per post. The toggle is create-or-destroy, so without
     # this a double submit leaves two rows and the counter cache counts both.
-    add_index :reposts, %i[user_id post_id], unique: true
+    add_index :reposts, %i\[user_id post_id], unique: true
 
     # Counter cache: the feed renders a count on every card, and the button is
     # on all 25 of them.

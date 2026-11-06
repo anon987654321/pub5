@@ -11,6 +11,6 @@ class AddMuteAndArchiveToConversationParticipants < ActiveRecord::Migration[8.1]
     add_column :conversation_participants, :archived_at, :datetime
 
     # The list and the badge both filter one user's rows by archive state.
-    add_index :conversation_participants, %i[user_id archived_at]
+    add_index :conversation_participants, %i\[user_id archived_at]
   end
 end

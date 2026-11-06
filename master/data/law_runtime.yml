@@ -584,7 +584,7 @@ architecture:
       entry: openbsd/bin/vps-deploy
       host: www.openbsd.amsterdam
       ssh_alias: vm23
-      deploy_root: /home/dev/pub4
+      deploy_root: /home/dev/pub5
       deploys: [master, rails]
       owner: openbsd
       depends_on:

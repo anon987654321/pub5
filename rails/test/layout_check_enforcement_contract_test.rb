@@ -22,16 +22,16 @@ class LayoutCheckEnforcementContractTest < Minitest::Test
     data = YAML.safe_load_file(LAW_MAP, aliases: true).fetch("law_map")
 
     {
-      "grid_based_layouts" => %w[GRID_STRUCTURE EIGHT_PX_RHYTHM],
-      "grid_systems" => %w[GRID_STRUCTURE EIGHT_PX_RHYTHM],
-      "typography_hierarchy" => %w[TYPE_HIERARCHY TYPE_TITLE_TOKEN],
-      "aesthetic_integrity" => %w[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL TYPE_HIERARCHY],
-      "clean_lines" => %w[NO_DECORATIVE_FX AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
-      "content_prioritized" => %w[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL TYPE_HIERARCHY],
-      "essential_elements_only" => %w[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
-      "minimal_materials" => %w[AESTHETIC_MINIMALISM NO_DECORATIVE_FX],
-      "remove_non_essentials" => %w[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
-      "visual_hierarchy_clarity" => %w[TYPE_HIERARCHY NO_EYEBROW_LABEL],
+      "grid_based_layouts" => %w\[GRID_STRUCTURE EIGHT_PX_RHYTHM],
+      "grid_systems" => %w\[GRID_STRUCTURE EIGHT_PX_RHYTHM],
+      "typography_hierarchy" => %w\[TYPE_HIERARCHY TYPE_TITLE_TOKEN],
+      "aesthetic_integrity" => %w\[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL TYPE_HIERARCHY],
+      "clean_lines" => %w\[NO_DECORATIVE_FX AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
+      "content_prioritized" => %w\[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL TYPE_HIERARCHY],
+      "essential_elements_only" => %w\[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
+      "minimal_materials" => %w\[AESTHETIC_MINIMALISM NO_DECORATIVE_FX],
+      "remove_non_essentials" => %w\[AESTHETIC_MINIMALISM NO_EYEBROW_LABEL],
+      "visual_hierarchy_clarity" => %w\[TYPE_HIERARCHY NO_EYEBROW_LABEL],
     }.each do |name, law_ids|
       entry = find_entry(data, name)
       refute_nil entry, "missing declared design principle #{name}"
@@ -76,7 +76,7 @@ class LayoutCheckEnforcementContractTest < Minitest::Test
     assert_includes source, "main#main-content :where("
     assert_includes source, "box-shadow: none;"
     assert_includes source, "main#main-content .amber-editorial-nav a"
-    %w[.feed-post .match .organize-tip .brand .amber-look .amber-editorial-nav .post-show-actions .port-row].each do |selector|
+    %w\[.feed-post .match .organize-tip .brand .amber-look .amber-editorial-nav .post-show-actions .port-row].each do |selector|
       assert_includes source, selector, "minimal chrome must cover #{selector}"
     end
 

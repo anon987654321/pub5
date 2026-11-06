@@ -90,7 +90,7 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 4, page.css(".tab-bar .tab-icon svg").size
     assert page.at_css(".hero-rating svg polygon")
-    %w[app/views/layouts/application.html.erb app/views/menu/show.html.erb].each do |path|
+    %w\[app/views/layouts/application.html.erb app/views/menu/show.html.erb].each do |path|
       assert_not_includes Rails.root.join(path).read, "<svg", "#{path} draws an icon inline"
     end
   end

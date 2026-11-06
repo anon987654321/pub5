@@ -20,7 +20,7 @@ module Master
       # unknown name keeps the default <tool>/<tool>.rb probe and reports a
       # missing entrypoint instead of silently widening the search.
       TOOL_ENTRYPOINTS = { "replicate" => File.join("replicate", "client.rb") }.freeze
-      RETIRED_TOOLS = %w[lora postpro].freeze
+      RETIRED_TOOLS = %w\[lora postpro].freeze
 
       def run(root:, tool:, arg: "", env: {})
         name = tool.to_s

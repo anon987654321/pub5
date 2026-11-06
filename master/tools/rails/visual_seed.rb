@@ -32,7 +32,7 @@ require_relative "../../lib/operator/ruby_runner"
 module Deploy
   class VisualSeed
     ROOT = File.expand_path("../../..", __dir__)
-    APPS = %w[brgen amber bsdports].freeze
+    APPS = %w\[brgen amber bsdports].freeze
     SCALE = 2
     TIMEOUT = Integer(ENV.fetch("VISUAL_SEED_TIMEOUT", "900"))
 
@@ -45,7 +45,7 @@ module Deploy
 
     def refusal
       return "refusing: this is an OpenBSD box, the seed is for the local triangle" if RbConfig::CONFIG["host_os"].to_s.match?(/openbsd/i)
-      return "refusing: /home/dev/pub4 exists, this looks like vm23" if File.directory?("/home/dev/pub4")
+      return "refusing: /home/dev/pub5 exists, this looks like vm23" if File.directory?("/home/dev/pub5")
       return "refusing: DATABASE_URL is set, the seed only touches storage/development.sqlite3" if ENV["DATABASE_URL"]
 
       nil
@@ -122,7 +122,7 @@ module Deploy
 
     def back_up(app)
       FileUtils.mkdir_p(backup_dir(app))
-      %w[.sqlite3 .sqlite3-wal .sqlite3-shm].filter_map do |suffix|
+      %w\[.sqlite3 .sqlite3-wal .sqlite3-shm].filter_map do |suffix|
         source = database(app).sub(/\.sqlite3\z/, suffix)
         next unless File.file?(source)
 
@@ -133,7 +133,7 @@ module Deploy
 
     def restore(app, record)
       live = File.dirname(database(app))
-      %w[development.sqlite3 development.sqlite3-wal development.sqlite3-shm].each { |name| FileUtils.rm_f(File.join(live, name)) }
+      %w\[development.sqlite3 development.sqlite3-wal development.sqlite3-shm].each { |name| FileUtils.rm_f(File.join(live, name)) }
       Array(record["files"]).each { |name| FileUtils.cp(File.join(backup_dir(app), name), File.join(live, name)) }
     end
 

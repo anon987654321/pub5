@@ -48,7 +48,7 @@ module Marketplace
 
     def recent_order(variant)
       mine = @listing.orders.where(buyer_id: @buyer.id, variant:, quantity: 1)
-      recent = mine.where(created_at: REUSE_WINDOW.ago.., payment_status: %w[unpaid pending failed])
+      recent = mine.where(created_at: REUSE_WINDOW.ago.., payment_status: %w\[unpaid pending failed])
       recent.order(:id).last
     end
 

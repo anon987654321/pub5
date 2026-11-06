@@ -113,10 +113,10 @@ class TestFixRunBudget < Minitest::Test
   # An open pass that wrote a.rb itself; b.rb was then saved by another writer.
   def pass_with_a_model_edit_and_a_foreign_save
     system("git", "-C", @root, "init", "-q")
-    ours, theirs = %w[a.rb b.rb].map { |name| File.join(@root, name).tap { |path| File.write(path, "X = 1\n") } }
+    ours, theirs = %w\[a.rb b.rb].map { |name| File.join(@root, name).tap { |path| File.write(path, "X = 1\n") } }
     committer = Master::Fix::FixLoop::Committer.new(git: Struct.new(:changed_paths).new([]), root: @root)
     committer.baseline!
-    committer.begin_transaction!(Master::Fix::Transaction.new(root: @root, paths: %w[a.rb b.rb]))
+    committer.begin_transaction!(Master::Fix::Transaction.new(root: @root, paths: %w\[a.rb b.rb]))
 
     File.write(ours, "X = 1\n\ndef half_applied\n")
     committer.attest_written!(ours)
@@ -133,7 +133,7 @@ class TestFixRunBudget < Minitest::Test
   # Two committed files the autofix rewrote; the second was then saved by someone else.
   def autofixed_pair
     system("git", "-C", @root, "init", "-q")
-    paths = %w[a.rb b.rb].map { |name| File.join(@root, name) }
+    paths = %w\[a.rb b.rb].map { |name| File.join(@root, name) }
     paths.zip(["A = 1\n", "B = 1\n"]) { |path, body| File.write(path, body) }
     system("git", "-C", @root, "add", "a.rb", "b.rb")
     system("git", "-C", @root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base")
@@ -344,7 +344,7 @@ class TestFixRunBudget < Minitest::Test
     )
 
     assert_match(/\AMASTER \S+ \(FIX\) #abc1234: /, lines[0])
-    assert_match(/\A    \S+@\S+:\/r\/MASTER\z/, lines[1])
+    assert_match(/\A    \S+@\S+:\/r\/master\z/, lines[1])
     assert_equal "real mem = 17179869184 (16384MB)", lines[2]
     assert_includes lines, "lane0 at fix0: claude-cli"
     assert_includes lines, "agy at fix0: not configured, quota spent, back in 140h44m (2026-10-17 04:12)"

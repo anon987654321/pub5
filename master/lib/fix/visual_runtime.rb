@@ -135,7 +135,7 @@ module Master
       def unsafe_boot_reason
         return "DATABASE_URL is set; automatic db:prepare may target a non-local database" unless @database_url.to_s.empty?
         return "this is an OpenBSD host" if @host_os.match?(/openbsd/i)
-        return "this is the production deployment checkout" if File.directory?("/home/dev/pub4") || @root == "/home/dev/pub4"
+        return "this is the production deployment checkout" if File.directory?("/home/dev/pub5") || @root == "/home/dev/pub5"
 
         nil
       end

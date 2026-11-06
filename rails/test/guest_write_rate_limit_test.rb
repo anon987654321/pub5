@@ -27,7 +27,7 @@ require_relative "engine_roots"
 class GuestWriteRateLimitTest < Minitest::Test
   RAILS_ROOT = File.expand_path("..", __dir__)
 
-  WRITE_ACTIONS = %w[create update destroy].freeze
+  WRITE_ACTIONS = %w\[create update destroy].freeze
 
   # brgen checks guests with a `require_real_user` before_action rather than with
   # Rails' own allow_unauthenticated_access, so skipping it is the second way an

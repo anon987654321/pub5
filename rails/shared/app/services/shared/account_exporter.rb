@@ -5,9 +5,9 @@ require "csv"
 module Shared
   # GDPR article 15 export. AccountSettingsController#export named this class from AN212 on; nobody wrote it.
   class AccountExporter
-    HEADERS = %w[section record field value].freeze
-    SECRET_COLUMNS = %w[password_digest otp_secret private_key].freeze
-    SECRET_SUFFIXES = %w[_token _digest _secret].freeze
+    HEADERS = %w\[section record field value].freeze
+    SECRET_COLUMNS = %w\[password_digest otp_secret private_key].freeze
+    SECRET_SUFFIXES = %w\[_token _digest _secret].freeze
 
     def self.call(user) = new(user).to_csv
 
@@ -29,7 +29,7 @@ module Shared
     # brgen, amber and bsdports share almost no associations, so ownership is read off the model rather than listed.
     def owned_associations
       @user.class.reflect_on_all_associations
-           .select { |reflection| %i[has_one has_many].include?(reflection.macro) }
+           .select { |reflection| %i\[has_one has_many].include?(reflection.macro) }
            .reject { |reflection| reflection.options[:through] }
            .sort_by(&:name)
     end

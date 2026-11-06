@@ -4,7 +4,7 @@ module Master
   module Trace
   # /diag — composed snapshot of internal state. Replaces ad-hoc grep over logs.
     class Diag
-      SECTIONS = %i[drives breaker cache laws ring].freeze
+      SECTIONS = %i\[drives breaker cache laws ring].freeze
       RING_LINES = 8
       CACHE_EVENT_LIMIT = 12
 

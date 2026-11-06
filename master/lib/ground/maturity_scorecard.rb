@@ -9,7 +9,7 @@ module Master
     # (SURFACE_ERRORS_FIRST / anti_simulation: prove completion,
     # don't just claim it).
     class MaturityScorecard
-      STATUSES = %w[verified smoke broken].freeze
+      STATUSES = %w\[verified smoke broken].freeze
       PATH = File.join(Master::DATA, "maturity.yml").freeze
       # A verification has a shelf life, and this file exists to say that a
       # claim is not evidence. Thirty days is the interval over which this

@@ -8,7 +8,7 @@
 # install_root_configs copies etc/, usr/ and var/ from the repo, and the script
 # lives at openbsd/checks/config_drift_check.rb, outside usr/local/bin/. So the guard was
 # false on every run and the check had never executed. Live had been hand-edited
-# to run it out of /home/dev/pub4 instead — root executing a file the dev user
+# to run it out of /home/dev/pub5 instead — root executing a file the dev user
 # can rewrite, every morning.
 #
 # Both halves of that were invisible for the same reason: a guard, its target,
@@ -50,7 +50,7 @@ module Deploy
 
     # Base-system and package binaries. The check is about what THIS repo is
     # responsible for installing, not about auditing the OpenBSD ports tree.
-    PROVIDED_BY_PACKAGES = %w[
+    PROVIDED_BY_PACKAGES = %w\[
       git sqlite3 psql rcctl relayctl nsd-control acme-client
       vips ffmpeg node npm doas su tee logger newsyslog drill dig sendmail curl wget
     ].freeze
@@ -58,7 +58,7 @@ module Deploy
     # Ruby arrives by version (openbsd/lib/ruby_select.sh lists them); every
     # suffix it may pick is provided by the package of that version.
     RUBY_SUFFIXES = ["4.0", "40", "3.4", "34", "3.3", "33", ""].freeze
-    RUBY_PACKAGE_BINARIES = RUBY_SUFFIXES.flat_map { |suffix| %w[ruby bundle gem].map { |tool| "#{tool}#{suffix}" } }.freeze
+    RUBY_PACKAGE_BINARIES = RUBY_SUFFIXES.flat_map { |suffix| %w\[ruby bundle gem].map { |tool| "#{tool}#{suffix}" } }.freeze
 
     module_function
 

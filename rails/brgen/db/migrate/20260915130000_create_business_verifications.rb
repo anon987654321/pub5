@@ -21,7 +21,7 @@ class CreateBusinessVerifications < ActiveRecord::Migration[8.1]
       t.text :review_note
       t.timestamps
     end
-    add_index :business_verifications, %i[business_type business_id status], name: "index_business_verifications_on_business_and_status"
+    add_index :business_verifications, %i\[business_type business_id status], name: "index_business_verifications_on_business_and_status"
 
     add_column :takeaway_restaurants, :verified, :boolean, default: false, null: false
   end

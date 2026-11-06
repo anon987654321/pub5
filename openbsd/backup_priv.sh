@@ -6,7 +6,7 @@
 # It stays at the top of openbsd/ while the rest of the operator shell lives in
 # bin/, because vm23's /etc/daily.local names this path on line 28:
 #
-#   su dev -c 'cd /home/dev/pub4 && zsh openbsd/backup_priv.sh' ||
+#   su dev -c 'cd /home/dev/pub5 && zsh openbsd/backup_priv.sh' ||
 #
 # Moving it means changing that line on the box and in etc/daily.local together,
 # which takes root on vm23.

@@ -183,7 +183,7 @@ module Master
                 scanner_law: nil,
                 yaml_entry: nil,
                 streams: [:visual].freeze,
-                surfaces: %i[rendered_ui interactive_behavior].freeze,
+                surfaces: %i\[rendered_ui interactive_behavior].freeze,
                 unmeasurable_reason: nil,
               }
             end
@@ -232,7 +232,7 @@ module Master
             owned = LEXICAL_STREAM_FOR_MODE.fetch(mode.to_sym, :lexical_violations)
             {
               mode: mode.to_sym,
-              unowned_streams: (%i[lexical_violations lexical_opportunities] - [owned]).freeze,
+              unowned_streams: (%i\[lexical_violations lexical_opportunities] - [owned]).freeze,
               unmeasurable_streams: (measurable ? [] : [owned]).freeze,
             }
           end
@@ -386,10 +386,10 @@ module Master
             {
               status: report["complete"] == true ? "complete" : "incomplete",
               digest: report["digest"],
-              measured: surfaces.count { |_name, row| %w[assessed_clean not_applicable].include?(row["status"].to_s) },
+              measured: surfaces.count { |_name, row| %w\[assessed_clean not_applicable].include?(row["status"].to_s) },
               expected: surfaces.size,
               blockers: surfaces.filter_map do |name, row|
-                next if %w[assessed_clean not_applicable].include?(row["status"].to_s)
+                next if %w\[assessed_clean not_applicable].include?(row["status"].to_s)
 
                 { surface: name, status: row["status"], reason: row["reason"].to_s[0, 180] }
               end.first(8),
@@ -781,12 +781,12 @@ module Master
             end
             assessment_result_for_scope(
               stream:, applicable: scoped_files, found:, observation:, signatures_stable:,
-              semantic: %i[semantic_violations semantic_opportunities].include?(stream),
+              semantic: %i\[semantic_violations semantic_opportunities].include?(stream),
               semantic_gaps:, pending:, evidence: cell_evidence
             )
           end
 
-          VISUAL_SURFACES = %i[rendered_ui interactive_behavior].freeze
+          VISUAL_SURFACES = %i\[rendered_ui interactive_behavior].freeze
 
           # The visual stream reads rendered output. The rendered evaluator reports
           # its own RENDERED_VISUAL_REFINEMENT findings, not a verdict per Law, so
@@ -829,21 +829,21 @@ module Master
           def assessment_surface_supported?(info, surface, stream:)
             return true if SurfaceEvidence::SURFACES.include?(surface.to_s)
 
-            semantic = %i[semantic_violations semantic_opportunities].include?(stream)
+            semantic = %i\[semantic_violations semantic_opportunities].include?(stream)
             case info[:source_kind]
             when :canonical
-              return true if %i[whole_file lines documentation structured_data].include?(surface)
+              return true if %i\[whole_file lines documentation structured_data].include?(surface)
               return semantic if surface == :sections
 
               false
             when :scanner
-              return true if %i[whole_file documentation structured_data].include?(surface)
+              return true if %i\[whole_file documentation structured_data].include?(surface)
               return semantic || !info[:scanner_law]&.respond_to?(:check_ast) if surface == :lines
               return semantic if surface == :sections
               return surface == :syntax_tree && info[:scanner_law]&.respond_to?(:check_ast)
               false
             when :yaml_declarative
-              %i[whole_file lines documentation structured_data].include?(surface)
+              %i\[whole_file lines documentation structured_data].include?(surface)
             when :opportunity
               info[:surfaces].include?(surface)
             when :visual
@@ -854,7 +854,7 @@ module Master
           end
 
           def assessment_law_applies?(info, path, stream:)
-            semantic = %i[semantic_violations semantic_opportunities].include?(stream)
+            semantic = %i\[semantic_violations semantic_opportunities].include?(stream)
             case info[:source_kind]
             when :canonical
               law = info[:law]
@@ -885,7 +885,7 @@ module Master
           def assessment_surface_applies?(info, surface, path, stream:)
             extension = File.extname(path).downcase
             language = Master.language_for(path).to_s
-            semantic = %i[semantic_violations semantic_opportunities].include?(stream)
+            semantic = %i\[semantic_violations semantic_opportunities].include?(stream)
             case surface
             when :repository_tree, :directories
               File.directory?(@assessment_plan.target)
@@ -898,15 +898,15 @@ module Master
             when :sections
               semantic
             when :syntax_tree
-              !language.empty? && !%w[markdown yaml json toml].include?(language)
+              !language.empty? && !%w\[markdown yaml json toml].include?(language)
             when :cross_file
               @assessment_plan.sources.size > 1
             when :structured_data
-              %w[.yml .yaml .json .toml].include?(extension) || %w[yaml json toml].include?(language)
+              %w\[.yml .yaml .json .toml].include?(extension) || %w\[yaml json toml].include?(language)
             when :documentation
-              %w[.md .markdown .rst .txt].include?(extension) || language == "markdown"
+              %w\[.md .markdown .rst .txt].include?(extension) || language == "markdown"
             when :media_assets
-              assessment_target_has_assets?(%w[.png .jpg .jpeg .webp .gif .svg .pdf .wav .mp3 .m4a .flac .mp4 .mov .webm])
+              assessment_target_has_assets?(%w\[.png .jpg .jpeg .webp .gif .svg .pdf .wav .mp3 .m4a .flac .mp4 .mov .webm])
             when :compiled_assets
               assessment_target_has_compiled_assets?
             when :rendered_ui, :interactive_behavior
@@ -914,7 +914,7 @@ module Master
             when :tests
               assessment_target_has_tests?
             when :runtime
-              runtime_extensions = %w[.rb .rake .sh .zsh .js .jsx .ts .tsx .html .erb .css .scss]
+              runtime_extensions = %w\[.rb .rake .sh .zsh .js .jsx .ts .tsx .html .erb .css .scss]
               @assessment_plan.sources.any? { |source| runtime_extensions.include?(File.extname(source.path).downcase) }
             when :deployment
               assessment_target_has_deployment_surface?
@@ -949,7 +949,7 @@ module Master
             @assessment_surface_presence[:compiled_assets] = paths.any? do |path|
               path.match?(%r{(?:public/assets|app/assets/builds|vendor/assets)/}) ||
                 File.basename(path).match?(/\A(?:manifest(?:-[a-f0-9]+)?\.json|.+\.min\.(?:css|js))\z/i)
-            end || assessment_target_has_assets?(%w[.map])
+            end || assessment_target_has_assets?(%w\[.map])
           rescue StandardError
             @assessment_surface_presence[:compiled_assets] = true
           end
@@ -961,7 +961,7 @@ module Master
             target = @assessment_plan.target
             front_end = @assessment_plan.sources.any? do |source|
               source.path.match?(%r{(?:app/views|views|templates|frontend|src)/}) &&
-                %w[.erb .html .htm .css .scss .js .jsx .ts .tsx].include?(File.extname(source.path).downcase)
+                %w\[.erb .html .htm .css .scss .js .jsx .ts .tsx].include?(File.extname(source.path).downcase)
             end
             # Inventory UI independently of adapter availability. If a
             # target contains a frontend but has no visual adapter, its UI
@@ -1086,7 +1086,7 @@ module Master
             ) if refused.any?
 
             if found.any?
-              status = %i[lexical_opportunities semantic_opportunities].include?(stream) ? :opportunity_found : :violation_found
+              status = %i\[lexical_opportunities semantic_opportunities].include?(stream) ? :opportunity_found : :violation_found
               return assessment_result(status, evidence:, findings: found)
             end
 

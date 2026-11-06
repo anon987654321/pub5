@@ -9,7 +9,7 @@
 class Marketplace::Checkout < ApplicationRecord
   include Shared::Notifiable
 
-  STATUSES = %w[open pending_payment paid cancelled].freeze
+  STATUSES = %w\[open pending_payment paid cancelled].freeze
 
   belongs_to :user
   belongs_to :marketplace_address, class_name: "Marketplace::Address", optional: true
@@ -47,7 +47,7 @@ class Marketplace::Checkout < ApplicationRecord
     update!(total_cents: order_lines.sum(&:total_cents))
   end
 
-  def payable? = status.in?(%w[open pending_payment]) && order_lines.any?
+  def payable? = status.in?(%w\[open pending_payment]) && order_lines.any?
 
   # A basket already sent to the PSP is payable (webhook) but not startable.
   def startable? = status == "open" && order_lines.any?

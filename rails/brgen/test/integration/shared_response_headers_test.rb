@@ -79,7 +79,7 @@ class SharedResponseHeadersTest < ActionDispatch::IntegrationTest
   test "the policy names its style, connect and frame hosts instead of every https host" do
     get "/privacy"
 
-    %w[style-src connect-src frame-src].each do |name|
+    %w\[style-src connect-src frame-src].each do |name|
       refute_includes directive(name), "https:", "#{name} admits every HTTPS host"
     end
     assert_includes directive("style-src"), "https://cdn.jsdelivr.net"

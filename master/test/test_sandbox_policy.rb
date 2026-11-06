@@ -52,10 +52,10 @@ class TestSandboxPolicy < Minitest::Test
   def test_scope_rejects_explicit_paths_outside_the_workspace
     root = Dir.mktmpdir("sandbox_scope")
     assert_equal "execution path escapes workspace: /etc/passwd",
-                 POLICY.scope_violation(%w[cat /etc/passwd], root:)
+                 POLICY.scope_violation(%w\[cat /etc/passwd], root:)
     assert_equal "git -C target escapes the workspace",
-                 POLICY.scope_violation(%w[git -C /tmp status], root:)
-    assert_nil POLICY.scope_violation(%w[git status], root:)
+                 POLICY.scope_violation(%w\[git -C /tmp status], root:)
+    assert_nil POLICY.scope_violation(%w\[git status], root:)
   ensure
     FileUtils.rm_rf(root) if root
   end
@@ -67,11 +67,11 @@ class TestSandboxPolicy < Minitest::Test
     File.symlink(outside, File.join(root, "escape"))
 
     assert_equal "execution path escapes workspace: escape/secret",
-                 POLICY.scope_violation(%w[cat escape/secret], root:)
+                 POLICY.scope_violation(%w\[cat escape/secret], root:)
     assert_equal "git -C target escapes the workspace",
-                 POLICY.scope_violation(%w[git -C escape status], root:)
+                 POLICY.scope_violation(%w\[git -C escape status], root:)
     assert_equal "git -C target escapes the workspace",
-                 POLICY.scope_violation(%w[git -Cescape status], root:)
+                 POLICY.scope_violation(%w\[git -Cescape status], root:)
     assert_equal "git -C target escapes the workspace",
                  POLICY.scope_violation(["git", "--git-dir=#{outside}/.git", "status"], root:)
     assert_equal "git -C target escapes the workspace",
@@ -93,8 +93,8 @@ class TestSandboxPolicy < Minitest::Test
 
   def test_scope_allows_workspace_relative_paths
     root = Dir.mktmpdir("sandbox_scope")
-    assert_nil POLICY.scope_violation(%w[cat lib/example.rb], root:)
-    assert_nil POLICY.scope_violation(%w[git -C . status], root:)
+    assert_nil POLICY.scope_violation(%w\[cat lib/example.rb], root:)
+    assert_nil POLICY.scope_violation(%w\[git -C . status], root:)
   ensure
     FileUtils.rm_rf(root) if root
   end

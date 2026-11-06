@@ -43,7 +43,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_scans_every_target_by_default
     check = build(changed: [], changed_only: false)
 
-    assert_equal %w[brgen amber bsdports shared openbsd master], names(check.targets)
+    assert_equal %w\[brgen amber bsdports shared openbsd master], names(check.targets)
     assert_empty check.skipped
   end
 
@@ -53,7 +53,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_every_tree_is_a_target
     check = build(changed: [], changed_only: false)
 
-    %w[openbsd master].each do |tree|
+    %w\[openbsd master].each do |tree|
       assert_includes names(check.targets), tree, "#{tree} is not scanned by the constitutional check"
     end
   end
@@ -62,7 +62,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_a_change_in_a_tree_selects_that_tree
     check = build(changed: ["openbsd/lib/check_result.rb"])
 
-    assert_equal %w[openbsd], names(check.targets)
+    assert_equal %w\[openbsd], names(check.targets)
   end
 
   # Both, now that master is a target of its own: a change under master/lib used
@@ -71,8 +71,8 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_changed_only_scans_just_what_moved
     check = build(changed: ["rails/brgen/app/models/post.rb", "master/lib/master.rb"])
 
-    assert_equal %w[brgen master], names(check.targets)
-    assert_equal %w[amber bsdports shared openbsd], names(check.skipped)
+    assert_equal %w\[brgen master], names(check.targets)
+    assert_equal %w\[amber bsdports shared openbsd], names(check.skipped)
   end
 
   # Silent truncation reads as "covered everything". Whatever is dropped has to
@@ -80,7 +80,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_skipped_targets_are_recorded_not_discarded
     check = build(changed: ["rails/shared/app/models/concerns/shared/votable.rb"])
 
-    assert_equal %w[shared], names(check.targets)
+    assert_equal %w\[shared], names(check.targets)
     refute_empty check.skipped
     assert_equal 6, check.targets.size + check.skipped.size
   end

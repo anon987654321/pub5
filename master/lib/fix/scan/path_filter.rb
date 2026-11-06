@@ -37,7 +37,7 @@ module Master
         # them — today. One scan widened to the repo root walks 160 MB of
         # duplicate findings that nothing can attribute, so the whole segment is
         # off the walk for the same reason `reports` is.
-        SKIP_PATH_SEGMENTS = %w[
+        SKIP_PATH_SEGMENTS = %w\[
           .git vendor node_modules tmp log coverage .bundle storage cache dist build
           knowledge fixtures var .cache scratch
           site-packages venv .venv venv-demucs __pycache__
@@ -48,7 +48,7 @@ module Master
         GENERATED_REPORTS = "reports"
 
         # The agent worktrees under .claude are full second trees; .claude/settings.json is authored and linted.
-        AGENT_WORKTREES = %w[.claude/worktrees].freeze
+        AGENT_WORKTREES = %w\[.claude/worktrees].freeze
 
         # Spelled relative to master, and matched relative to whatever root the
         # scan was given — which are the same thing only when master scans
@@ -64,12 +64,12 @@ module Master
         # The four generated face bundles are their own constant because
         # lib/operator/self_findings.rb needs the same four and had its own copy of
         # them inside a regex. One fact, one home; the census reads this.
-        GENERATED_FACE_BUNDLES = %w[
+        GENERATED_FACE_BUNDLES = %w\[
           master/web/public/three.face.module.js master/web/public/face.runtime.js
           master/web/public/face.modules.bundle.js master/web/public/face_vision.bundle.js
         ].freeze
-        MASTER_LOCAL_PATHS = %w[.master runtime].flat_map { |path| [path, "master/#{path}"] }.freeze
-        SKIP_RELATIVE_PATHS = (MASTER_LOCAL_PATHS + AGENT_WORKTREES + GENERATED_FACE_BUNDLES + %w[
+        MASTER_LOCAL_PATHS = %w\[.master runtime].flat_map { |path| [path, "master/#{path}"] }.freeze
+        SKIP_RELATIVE_PATHS = (MASTER_LOCAL_PATHS + AGENT_WORKTREES + GENERATED_FACE_BUNDLES + %w\[
           master/web/public/assets master/web/script/three_build
           master/web/node_modules master/web/tmp master/web/log
         ]).freeze
@@ -85,7 +85,7 @@ module Master
         #
         # public/assets/ is what Propshaft precompiles into, gitignored in every
         # app, and a finding there is a finding against a digest copy.
-        SKIP_PATH_FRAGMENTS = %w[
+        SKIP_PATH_FRAGMENTS = %w\[
           public/assets/
           app/assets/builds/
         ].freeze
@@ -111,7 +111,7 @@ module Master
         # app/views/pwa/service-worker.js is Workbox's minified bundle, written per
         # app by `npm run build:pwa` (master/tools/rails/build_workbox.mjs): every finding
         # in it is about Workbox, and the next build undoes any fix.
-        SKIP_PATH_SUFFIXES = %w[db/schema.rb db/structure.sql app/views/pwa/service-worker.js].freeze
+        SKIP_PATH_SUFFIXES = %w\[db/schema.rb db/structure.sql app/views/pwa/service-worker.js].freeze
 
         def skip_path?(path, root: nil)
           segments = relative_segments(path, root)

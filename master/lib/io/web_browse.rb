@@ -20,13 +20,13 @@ module Master
       MAX_REQUESTS = 120
       MAX_RESOURCE_BYTES = 4 * 1024 * 1024
       MAX_TOTAL_BYTES = 16 * 1024 * 1024
-      REQUEST_METHODS = %w[GET HEAD].freeze
-      REQUEST_HEADER_ALLOWLIST = %w[
+      REQUEST_METHODS = %w\[GET HEAD].freeze
+      REQUEST_HEADER_ALLOWLIST = %w\[
         accept accept-language cookie origin referer user-agent
         sec-fetch-dest sec-fetch-mode sec-fetch-site sec-ch-ua
         sec-ch-ua-mobile sec-ch-ua-platform
       ].freeze
-      HOP_BY_HOP_HEADERS = %w[
+      HOP_BY_HOP_HEADERS = %w\[
         connection keep-alive proxy-authenticate proxy-authorization
         te trailer transfer-encoding upgrade content-length
       ].freeze
@@ -216,7 +216,7 @@ module Master
       end
 
       def web_uri?(uri)
-        %w[http https].include?(uri.scheme.to_s.downcase) && !uri.host.to_s.empty? && uri.userinfo.nil?
+        %w\[http https].include?(uri.scheme.to_s.downcase) && !uri.host.to_s.empty? && uri.userinfo.nil?
       end
 
       def request_allowed_for_host?(uri, allowed_host)

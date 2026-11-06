@@ -65,7 +65,7 @@ class AuthorizationBoundariesTest < ActionDispatch::IntegrationTest
       community = Community.create!(name: "Mod #{SecureRandom.hex(3)}", slug: "mod-#{SecureRandom.hex(4)}")
       post = Post.create!(user: author, community:, title: "Reported", content: "…")
 
-      %w[open open reviewing resolved].each do |status|
+      %w\[open open reviewing resolved].each do |status|
         ModerationReport.create!(user: reporter, reportable: post, reason: "spam", status:)
       end
 

@@ -11,11 +11,11 @@ class AddAcceptedAtToConversationParticipants < ActiveRecord::Migration[8.1]
     # Every thread that exists today was already in someone's inbox. Accepted
     # as of when they joined it, so nothing moves into Requests on deploy.
     execute "UPDATE conversation_participants SET accepted_at = created_at"
-    add_index :conversation_participants, %i[user_id accepted_at]
+    add_index :conversation_participants, %i\[user_id accepted_at]
   end
 
   def down
-    remove_index :conversation_participants, %i[user_id accepted_at]
+    remove_index :conversation_participants, %i\[user_id accepted_at]
     remove_column :conversation_participants, :accepted_at
   end
 end

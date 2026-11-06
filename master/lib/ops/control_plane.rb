@@ -104,7 +104,7 @@ module Master
 
       def fetch!
         result = command("git", "-C", @repo, "fetch", "--prune", "origin", "main")
-        raise CommandError.new(%w[git fetch origin main], result[:stderr]) unless result[:status].success?
+        raise CommandError.new(%w\[git fetch origin main], result[:stderr]) unless result[:status].success?
       end
 
       def synchronize_refs!
@@ -123,11 +123,11 @@ module Master
           report("control0: synced <- origin/main #{short(remote)}")
         elsif ancestor?(remote, head)
           raise CommandError.new(
-            %w[git sync main],
+            %w\[git sync main],
             "local main is ahead of origin/main; publish from a working session with bin/operator land, never from the control plane",
           )
         else
-          raise CommandError.new(%w[git sync main], "main and origin/main have diverged")
+          raise CommandError.new(%w\[git sync main], "main and origin/main have diverged")
         end
       end
 

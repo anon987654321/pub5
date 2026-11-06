@@ -152,7 +152,7 @@ private
 
     # Anything that is not a clear yes is a no.
     def affirmative?(answer)
-      %w[y yes ja ok approve allow].include?(answer.to_s.strip.downcase)
+      %w\[y yes ja ok approve allow].include?(answer.to_s.strip.downcase)
     end
 
     # The admitted half of the loop. Returns Done when the effect ends the fold

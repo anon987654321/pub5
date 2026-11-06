@@ -11,7 +11,7 @@ class CspReportsController < ApplicationController
   # A page full of violations sends one report each; a flood is not data.
   rate_limit to: 60, within: 1.minute, name: "csp_reports", with: -> { head :too_many_requests }
 
-  REPORT_FIELDS = %w[document-uri violated-directive effective-directive blocked-uri source-file line-number].freeze
+  REPORT_FIELDS = %w\[document-uri violated-directive effective-directive blocked-uri source-file line-number].freeze
 
   def create
     report = JSON.parse(request.raw_post).fetch("csp-report", {})

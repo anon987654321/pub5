@@ -14,7 +14,7 @@ module Master
 
       def call(action:, query: nil, name: nil, root: Master::ROOT)
         verb = action.to_s.downcase
-        raise ArgumentError, "action must be list, search or describe" unless %w[list search describe].include?(verb)
+        raise ArgumentError, "action must be list, search or describe" unless %w\[list search describe].include?(verb)
 
         tools = builtin_tools(root:)
         plugins = plugin_entries

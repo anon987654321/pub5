@@ -46,7 +46,7 @@ class BrgenIrcSessionTest < ActiveSupport::TestCase
 
     def channel_for(name)
       slug = name.to_s.sub(/\A#/, "")
-      %w[brgen marketplace].include?(slug) ? Chan.new(slug) : nil
+      %w\[brgen marketplace].include?(slug) ? Chan.new(slug) : nil
     end
 
     def channel_name(chan) = "##{chan.slug}"

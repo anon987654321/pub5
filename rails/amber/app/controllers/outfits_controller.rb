@@ -5,19 +5,19 @@ class OutfitsController < ApplicationController
   include WardrobeGuards
 
   before_action :require_real_user
-  before_action :set_outfit, only: %i[show edit update destroy like reorder share wear]
+  before_action :set_outfit, only: %i\[show edit update destroy like reorder share wear]
   # reorder mutates outfit_items via update_all and was set_ but never
   # authorized — any signed-in user could reorder another user's outfit.
-  before_action :authorize!, only: %i[edit update destroy share wear reorder]
+  before_action :authorize!, only: %i\[edit update destroy share wear reorder]
   # show and like were likewise unauthorized. Check them on viewability rather
   # than ownership: liking someone else's outfit is legitimate, reading a
   # private wardrobe is not.
-  before_action :authorize_view!, only: %i[show like]
+  before_action :authorize_view!, only: %i\[show like]
 
   def index
     scope = Current.user.outfits.with_images_for_display.order(created_at: :desc)
     if live_search_query.present?
-      scope = apply_live_search(scope, columns: %w[name season category occasion], vertical: "outfits")
+      scope = apply_live_search(scope, columns: %w\[name season category occasion], vertical: "outfits")
       item_ids = Current.user.items.where("title LIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(live_search_query)}%").pluck(:id)
       scope = scope.joins(:outfit_items).where(outfit_items: { item_id: item_ids }).distinct if item_ids.any?
     end
@@ -172,7 +172,7 @@ class OutfitsController < ApplicationController
   end
 
   def outfit_params
-    params.require(:outfit).permit(:name, :description, :category, :season, :occasion, outfit_items_attributes: %i[id item_id position _destroy])
+    params.require(:outfit).permit(:name, :description, :category, :season, :occasion, outfit_items_attributes: %i\[id item_id position _destroy])
   end
 
   def zone_for(item)
@@ -180,7 +180,7 @@ class OutfitsController < ApplicationController
   end
 
   def default_look_name(items)
-    lead = items.find { |item| item.category.in?(%w[Tops Dresses Outerwear]) } || items.first
+    lead = items.find { |item| item.category.in?(%w\[Tops Dresses Outerwear]) } || items.first
     [ lead.color.presence&.then { |c| c.start_with?("#") ? nil : c }, lead.title, "look" ].compact.join(" ")
   end
 

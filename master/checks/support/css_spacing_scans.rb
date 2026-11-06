@@ -70,7 +70,7 @@ module Deploy
       return if floor <= 0
 
       source = File.read(token_path("_dialect_tokens.scss"))
-      %w[--tap-min --bar-height].each do |name|
+      %w\[--tap-min --bar-height].each do |name|
         value = source[/#{Regexp.escape(name)}\s*:\s*(\d+)px\s*;/, 1]
         if value.nil?
           @result.warn("css_constitution touch: #{name} is not declared in _dialect_tokens.scss")

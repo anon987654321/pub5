@@ -4,7 +4,7 @@
 # Print the DS record for every signed zone, derived from the KSK that is
 # actually in the signed zone right now.
 #
-# Run on vm23:  doas ruby /home/dev/pub4/openbsd/bin/ds-records
+# Run on vm23:  doas ruby /home/dev/pub5/openbsd/bin/ds-records
 #
 # Why this exists rather than a checked-in list of DS records:
 #
@@ -32,7 +32,7 @@ require "digest"
 
 ZONE_DIR = ENV.fetch("NSD_ZONE_DIR", "/var/nsd/zones/master")
 
-if ARGV.intersect?(%w[-h --help])
+if ARGV.intersect?(%w\[-h --help])
   puts "usage: doas ruby openbsd/bin/ds-records   (NSD_ZONE_DIR=dir, default #{ZONE_DIR})"
   puts "  one DS record per KSK in every *.zone.signed, derived from the zone rather than any .ds file"
   exit 0

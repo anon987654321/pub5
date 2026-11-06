@@ -61,13 +61,13 @@ class TestSoul < Minitest::Test
   def test_soul_owns_the_five_tier_source_authority_order
     ids = Master::Soul.authority_order.map { |row| row.fetch("id") }
 
-    assert_equal %w[soul laws executable_laws_and_gates tree_contracts git_history], ids
+    assert_equal %w\[soul laws executable_laws_and_gates tree_contracts git_history], ids
     assert_equal "master/data/soul.yml", Master::Soul.authority_order.first.fetch("source")
     assert_equal "Git history", Master::Soul.authority_order.last.fetch("source")
   end
 
   def test_constitutional_precedence_is_a_healthy_nine_node_graph
-    expected = %w[
+    expected = %w\[
       truthful_status robustness singularity linearity proximity abstraction
       density operator_rendered inter_model_contract
     ]
@@ -80,7 +80,7 @@ class TestSoul < Minitest::Test
 
   def test_soul_owns_anti_simulation_words
     data = Master.load_yaml(Master.data_path("soul.yml"))
-    assert_equal %w[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
+    assert_equal %w\[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
   end
 
   def test_soul_write_guard_protects_the_ruby_authority
@@ -96,7 +96,7 @@ class TestSoul < Minitest::Test
     refute data.key?("evolution_log"), "Git is the history of Soul"
     refute data.key?("research"), "research is not constitutional identity"
     refute data.fetch("negotiable").key?("tts_voice"), "voice has one authority at the top level"
-    assert_equal %w[schema version body_sha256 constitution authority_order absolute persona voice language temperament references prompt_ordering negotiable hooks], data.keys
+    assert_equal %w\[schema version body_sha256 constitution authority_order absolute persona voice language temperament references prompt_ordering negotiable hooks], data.keys
   end
 
   def test_soul_temperament_is_live_and_keeps_its_restraint

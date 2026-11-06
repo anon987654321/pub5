@@ -20,7 +20,7 @@ module Shared
   # That is the divergence this module exists to prevent: brgen's copy is the one
   # that would have drifted unnoticed.
   module DestroyCascadeExamples
-    CASCADING = %i[destroy destroy_async delete_all].freeze
+    CASCADING = %i\[destroy destroy_async delete_all].freeze
 
     def self.included(base)
       base.class_eval do

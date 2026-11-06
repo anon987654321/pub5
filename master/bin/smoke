@@ -51,7 +51,7 @@ failures << "builder" unless step("builder.build") do
   [res.is_a?(Hash) && !res.empty?, "got #{res.class}"]
 end
 
-%i[agent pipeline scanner config bus renderer].each do |key|
+%i\[agent pipeline scanner config bus renderer].each do |key|
   failures << "wire:#{key}" unless step("wire #{key}") do
     [container && container[key], "missing"]
   end

@@ -8,19 +8,19 @@ Dating::Engine.routes.draw do
   resources :path_crossings, only: :index do
     collection { post :locate }
   end
-  resource :profile, only: %i[new create edit update show] do
+  resource :profile, only: %i\[new create edit update show] do
     # Three answers, because a profile answering eight is a bio in disguise.
-    resources :prompts, only: %i[create destroy]
+    resources :prompts, only: %i\[create destroy]
   end
   # index is "who liked you" — a different decision from the deck, so a
   # different page rather than folded into it.
-  resources :likes, only: %i[create index]
+  resources :likes, only: %i\[create index]
   resources :dislikes, only: :create
   resource :rewind, only: :create, controller: "rewinds"
-  resources :matches, only: %i[index destroy]
+  resources :matches, only: %i\[index destroy]
   # Proof that the person in the photos is the one holding the phone. index and
   # update are the reviewer's; new and create are the profile owner's.
-  resources :verifications, only: %i[new create index update]
+  resources :verifications, only: %i\[new create index update]
   # A short list for today, instead of a deck with no bottom.
   resources :picks, only: :index
 end

@@ -169,7 +169,7 @@ module Deploy
     # inherits its size is invisible to it — which is exactly how bsdports'
     # search field sat at 13.5px. Here the tag is known and the size is the one
     # the browser computed, root scaling and inheritance included.
-    TEXT_INPUT_TAGS = %w[input textarea select].freeze
+    TEXT_INPUT_TAGS = %w\[input textarea select].freeze
     NON_TEXT_INPUT = /\A(?:radio|checkbox|range|color|file|submit|button|image|hidden)\z/
 
     def check_input_zoom(surface, elements)
@@ -416,7 +416,7 @@ module Deploy
 
     def check_landmarks(surface, data)
       marks = data["landmarks"] || {}
-      %w[main nav skip].each do |mark|
+      %w\[main nav skip].each do |mark|
         next if marks[mark]
 
         @result.fail("geometry landmarks: #{surface.id} rendered page has no #{mark} landmark (principle=accessibility)")
@@ -563,7 +563,7 @@ module Deploy
 
     def critical?(el)
       "#{el["key"]} #{el["role"]} #{el["tag"]}".match?(CRITICAL) ||
-        %w[button].include?(el["tag"]) ||
+        %w\[button].include?(el["tag"]) ||
         el["role"] == "button"
     end
   end

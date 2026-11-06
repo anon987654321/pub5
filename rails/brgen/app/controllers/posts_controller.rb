@@ -9,10 +9,10 @@ class PostsController < ApplicationController
   # counter for every signed-out request. See rails/test/rate_limit_naming_test.rb.
   rate_limit to: 12, within: 1.minute, only: :create, name: "burst",
              by: -> { Current.user&.id ? "u#{Current.user.id}" : request.remote_ip }
-  before_action :require_verified_email, only: %i[create share]
+  before_action :require_verified_email, only: %i\[create share]
   include Shared::LiveSearchable
 
-  rate_limit to: 30, within: 3.minutes, only: %i[create share], name: "sustained",
+  rate_limit to: 30, within: 3.minutes, only: %i\[create share], name: "sustained",
     with: -> { redirect_to posts_path, alert: t("shared.flash.rate_limited") }
 
   # ONE declaration. Rails deduplicates callbacks by filter name, so declaring
@@ -22,12 +22,12 @@ class PostsController < ApplicationController
   # authorize_owner still covered those three here, which is why nothing broke
   # visibly; amber's ItemsController had the identical pattern with nothing
   # behind it and served an anonymous GET /items/new 200.
-  before_action :require_real_user, only: %i[edit update destroy share]
+  before_action :require_real_user, only: %i\[edit update destroy share]
   before_action :set_post,          only: [ :show, :edit, :update, :destroy ]
   before_action :authorize_owner,   only: [ :edit, :update, :destroy ]
   before_action :set_community,     only: [ :new, :create ]
   # Update too: an edit that moves a post into a community is posting there.
-  before_action :enforce_community_posting_rules, only: %i[create update]
+  before_action :enforce_community_posting_rules, only: %i\[create update]
   skip_before_action :verify_authenticity_token, only: [ :share ]
 
   def index
@@ -36,14 +36,14 @@ class PostsController < ApplicationController
     # A block holds on /posts as it does on the front page.
     scope = Brgen::HomeFeed.exclude_blocked(scope, Current.user)
     scope = scope.with_attached_image.with_attached_images.includes(:user, :community, :votes)
-    scope = apply_live_search(scope, columns: %w[title content], vertical: "feed") if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[title content], vertical: "feed") if live_search_query.present?
     @pagy, @posts = pagy(scope)
     # The cached list the front page reads, not a query on every render.
     @popular_communities = Community.popular_cached(limit: 8)
     finish_live_search(partial: "posts/live_search_results")
   end
 
-  COMMENT_SORTS = %w[best new top controversial].freeze
+  COMMENT_SORTS = %w\[best new top controversial].freeze
   COMMENT_SORT_SCOPES = {
     "best" => :best, "new" => :new_first, "top" => :top, "controversial" => :controversial
   }.freeze

@@ -38,7 +38,7 @@
           <td><%= report.reason %></td>
           <td><%= report.status %></td>
           <td class="cluster">
-            <% %w[reviewing resolved dismissed].each do |status| %>
+            <% %w\[reviewing resolved dismissed].each do |status| %>
               <% next if report.status == status %>
               <%= button_to t("community.mark_#{status}"),
                     community_moderation_path(@community, report, status: status),

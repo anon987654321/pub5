@@ -49,7 +49,7 @@ class LoadAverageTest < Minitest::Test
   def test_parses_the_brace_wrapped_bsd_format
     numbers = "{ 7.94 4.61 3.67 }".scan(/\d+(?:\.\d+)?/)
 
-    assert_equal %w[7.94 4.61 3.67], numbers.first(3)
+    assert_equal %w\[7.94 4.61 3.67], numbers.first(3)
   end
 
   # Split so that this file is not its own first offender — the matcher covers

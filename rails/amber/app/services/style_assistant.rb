@@ -29,12 +29,12 @@ class StyleAssistant
 
   # Head to toe. A dress replaces top and bottom rather than joining them.
   ZONES = {
-    outer: %w[Outerwear],
-    top: %w[Tops],
-    bottom: %w[Bottoms],
-    dress: %w[Dresses],
-    shoes: %w[Shoes],
-    accessory: %w[Accessories],
+    outer: %w\[Outerwear],
+    top: %w\[Tops],
+    bottom: %w\[Bottoms],
+    dress: %w\[Dresses],
+    shoes: %w\[Shoes],
+    accessory: %w\[Accessories],
   }.freeze
 
   # Rotate within the top of each zone. Wider than this and "your best" turns
@@ -91,7 +91,7 @@ class StyleAssistant
 
   def picks
     @picks ||= begin
-      zones = dress_leads? ? %i[dress shoes] : %i[top bottom shoes]
+      zones = dress_leads? ? %i\[dress shoes] : %i\[top bottom shoes]
       zones << :outer if layer?
       zones << :accessory
       choose_composition(zones)

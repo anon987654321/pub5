@@ -132,7 +132,7 @@ class CheckLiveAndCssBudgetTest < Minitest::Test
     check = Deploy::CssConstitutionCheck.run_once
 
     assert check.ok?, "css_constitution: #{check.failures.join(', ')}"
-    %w[important rhythm magic_hex child_margin card_padding].each do |rule|
+    %w\[important rhythm magic_hex child_margin card_padding].each do |rule|
       assert_kind_of Integer, budget[rule], "#{rule} has no ceiling, so it checks nothing"
     end
   end

@@ -6,7 +6,7 @@ require "test_helper"
 # copies of the tokens they use; those copies must match _tokens.scss.
 class ErrorPagesTest < ActiveSupport::TestCase
   test "the error pages use the app's tokens, flat" do
-    %w[404 500].each do |code|
+    %w\[404 500].each do |code|
       page = Rails.public_path.join("#{code}.html").read
       root = page[/:root \{(.*?)\}/m, 1]
       assert root, "#{code}.html declares no tokens"

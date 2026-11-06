@@ -7,7 +7,7 @@
   </div>
   <div class="field">
     <%= f.label :category %>
-    <%= f.select :category, %w[Casual Formal Work Workout Evening].map { |c| [t("outfits.categories.#{c}"), c] }, include_blank: t("outfits.select_blank") %>
+    <%= f.select :category, %w\[Casual Formal Work Workout Evening].map { |c| [t("outfits.categories.#{c}"), c] }, include_blank: t("outfits.select_blank") %>
   </div>
   <div class="field">
     <%= f.label :season %>

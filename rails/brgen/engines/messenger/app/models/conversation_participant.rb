@@ -6,7 +6,7 @@ class ConversationParticipant < ApplicationRecord
 
   # IRC modes. RANK orders the roster (ops first) and lets join! only ever raise
   # a role, never demote a bot that re-joins.
-  ROLES = %w[member voice op].freeze
+  ROLES = %w\[member voice op].freeze
   RANK = { "member" => 0, "voice" => 1, "op" => 2 }.freeze
   PREFIX = { "op" => "@", "voice" => "+", "member" => "" }.freeze
 

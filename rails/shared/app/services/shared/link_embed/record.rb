@@ -76,7 +76,7 @@ module Shared
       end
     end
 
-    Record::STATUSES = %w[pending ok failed].freeze
+    Record::STATUSES = %w\[pending ok failed].freeze
     Record::TITLE_MAX = 200
     Record::AUTHOR_MAX = 100
     Record::RETRY_FAILED_AFTER = 86_400

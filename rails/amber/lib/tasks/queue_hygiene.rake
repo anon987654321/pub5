@@ -14,7 +14,7 @@ namespace :amber do
       cleared = SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.2)
       puts "cleared_finished=#{cleared}"
 
-      %w[WardrobeMediaJob Shared::MediaProcessingJob].each do |klass|
+      %w\[WardrobeMediaJob Shared::MediaProcessingJob].each do |klass|
         dupes = SolidQueue::Job.where(finished_at: nil, class_name: klass)
           .order(:id).pluck(:id, :arguments)
         seen = {}

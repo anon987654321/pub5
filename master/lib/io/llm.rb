@@ -133,8 +133,8 @@ module Master
 
         def tool_failure_status(result)
           category = result.respond_to?(:category) ? result.category.to_s.to_sym : :unknown
-          return "blocked" if %i[policy validation axiom_violation human_decision].include?(category)
-          return "unknown_outcome" if %i[unknown infrastructure timeout handler_exception crash delivery_failed cancelled
+          return "blocked" if %i\[policy validation axiom_violation human_decision].include?(category)
+          return "unknown_outcome" if %i\[unknown infrastructure timeout handler_exception crash delivery_failed cancelled
                                          unknown_outcome recovery_failed].include?(category)
 
           "error"
@@ -164,7 +164,7 @@ module Master
 
         # What the call is about, in the order a person would name it. Content
         # and replacement text stay out: they are the payload, not the subject.
-        SUBJECT_KEYS = %i[path url command query pattern name domain key operation prompt].freeze
+        SUBJECT_KEYS = %i\[path url command query pattern name domain key operation prompt].freeze
 
         def subject_of(args)
           key = SUBJECT_KEYS.find { |name| !args[name].to_s.empty? }
@@ -193,10 +193,10 @@ module Master
         # passes through it. The streak lives in fiber storage, which
         # Agent#prepare_chat_turn clears.
         REPEAT_LIMIT = 3
-        REPEAT_EXEMPT = %w[read_file].freeze
+        REPEAT_EXEMPT = %w\[read_file].freeze
 
-        ORIENTATION_TOOLS = %w[Tree tree ListDir list_dir].freeze
-        ORIENTATION_REQUIRED_TOOLS = %w[ReadFile read_file SearchFiles search_files SymbolLookup symbol_lookup WriteFile write_file StrReplace str_replace AstEdit ast_edit atomic_write].freeze
+        ORIENTATION_TOOLS = %w\[Tree tree ListDir list_dir].freeze
+        ORIENTATION_REQUIRED_TOOLS = %w\[ReadFile read_file SearchFiles search_files SymbolLookup symbol_lookup WriteFile write_file StrReplace str_replace AstEdit ast_edit atomic_write].freeze
 
         def orientation_tool? = ORIENTATION_TOOLS.include?(tool_name.to_s)
 
@@ -223,7 +223,7 @@ module Master
             "bytes" => bytes,
             "error" => error,
           }
-          %w[path command url operation].each do |key|
+          %w\[path command url operation].each do |key|
             value = args[key.to_sym]
             event[key] = value.to_s unless value.nil?
           end

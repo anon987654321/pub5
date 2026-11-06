@@ -11,7 +11,7 @@ module Master
       DESCRIPTION = "Record a feedback event for RSI self-improvement. " \
                     "Call after tool success/failure or when user corrects output.".freeze
 
-      VALID_EVENTS = %w[tool_success tool_failure user_correction provider_error user_feedback].freeze
+      VALID_EVENTS = %w\[tool_success tool_failure user_correction provider_error user_feedback].freeze
 
       def initialize(learnings:)
         @learnings = learnings

@@ -9,7 +9,7 @@ class ShareDraftsController < ApplicationController
 
   before_action :require_real_user
   before_action :require_verified_email
-  before_action :set_share_draft, only: %i[show publish destroy]
+  before_action :set_share_draft, only: %i\[show publish destroy]
 
   def show
     load_communities

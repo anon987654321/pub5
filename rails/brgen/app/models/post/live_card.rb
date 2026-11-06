@@ -143,7 +143,7 @@ class Post
       broadcast_refresh_to self
     end
 
-    TOUCH_COLUMNS = %w[updated_at score comments_count reposts_count crossposts_count].freeze
+    TOUCH_COLUMNS = %w\[updated_at score comments_count reposts_count crossposts_count].freeze
     private_constant :TOUCH_COLUMNS
 
     def refresh_worthy_commit?

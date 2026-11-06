@@ -19,7 +19,7 @@ case $app in
   *) print -u2 "vps_ci: unknown app \"$app\" - allowed: brgen, amber, bsdports, mrdamascy"; exit 2 ;;
 esac
 
-repo=${PUB5_ROOT:-/home/dev/pub4}
+repo=${PUB5_ROOT:-/home/dev/pub5}
 app_dir=/home/${app}/app
 # The Gemfiles name path gems relative to the app dir (../__shared, ../brgen_*),
 # so the copy-tree keeps them as siblings of app/, the layout rails/_deploy.sh builds.
@@ -33,7 +33,7 @@ app_dir=/home/${app}/app
 command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
 
 export PUB4_CI_GUARD=1
-export PUB4_RAILS_ROOT=${PUB4_RAILS_ROOT:-$repo/RAILS}
+export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/rails}
 
 # Path and safe creation live in openbsd/lib/ci_lock.sh — the lock moved out of
 # world-writable /var/tmp, where root was chmod'ing a caller-chosen, symlinkable path.

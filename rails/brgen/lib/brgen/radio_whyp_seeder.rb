@@ -4,7 +4,7 @@ require "yaml"
 
 module Brgen
   class RadioWhypSeeder
-    DEFAULT_CITIES = %w[brgen.no lsangeles.com].freeze
+    DEFAULT_CITIES = %w\[brgen.no lsangeles.com].freeze
 
     Result = Data.define(:cities, :tracks, :playlists)
 

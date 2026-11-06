@@ -11,7 +11,7 @@ module Playlist
   # stored URL and never performs network work.
   class WhypEmbedResolver
     ENDPOINT = URI("https://api.whyp.it/api/oembed").freeze
-    SOURCE_HOSTS = %w[whyp.it www.whyp.it].freeze
+    SOURCE_HOSTS = %w\[whyp.it www.whyp.it].freeze
     EMBED_HOST = "whyp.it"
     OPEN_TIMEOUT = 2
     READ_TIMEOUT = 4
@@ -92,7 +92,7 @@ module Playlist
     def preserve_share_parameters(embed, source)
       query = URI.decode_www_form(embed.query.to_s).to_h
       share = URI.decode_www_form(source.query.to_s).to_h
-      %w[token in].each do |key|
+      %w\[token in].each do |key|
         query[key] = share[key] if share.key?(key)
       end
       embed.query = URI.encode_www_form(query) unless query.empty?

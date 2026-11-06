@@ -113,7 +113,7 @@ module Shared
     # `a%2812345%29=` — a link that tracks nothing and goes nowhere. Found by
     # running it rather than by reading it.
     def server_side_wrap_enabled?
-      %w[1 true yes on].include?(ENV["TRADEDOUBLER_SERVER_SIDE_WRAP"].to_s.strip.downcase)
+      %w\[1 true yes on].include?(ENV["TRADEDOUBLER_SERVER_SIDE_WRAP"].to_s.strip.downcase)
     end
 
     def wrap(url, epi: nil)

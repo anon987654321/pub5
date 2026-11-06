@@ -18,7 +18,7 @@ class AmberErasureContractTest < Minitest::Test
   def test_private_identity_and_wardrobe_rows_are_explicitly_erased
     job = read("rails/amber/app/jobs/user_purge_job.rb")
 
-    %w[
+    %w\[
       Profile CreatorProfile PrivacySetting ExternalIdentity IdentityVerification ConsentEvent
       AccountMerge Notification Shared::OutboundClick Reaction Vote Follow Connection Message LiveStream
       WearLog DeclutterReview DeclutterChallenge DeclutterOutcome Recommendation PackingList

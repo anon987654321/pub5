@@ -34,7 +34,7 @@ class Takeaway::Restaurant < ApplicationRecord
   has_many :reviews, class_name: "Takeaway::Review", dependent: :destroy
   has_many :opening_hours, class_name: "Takeaway::OpeningHour", dependent: :destroy
 
-  CUISINE_TYPES = %w[Norwegian Italian Chinese Japanese Indian Thai Mexican Pizza Burger Kebab Sushi Vegetarian Vegan].freeze
+  CUISINE_TYPES = %w\[Norwegian Italian Chinese Japanese Indian Thai Mexican Pizza Burger Kebab Sushi Vegetarian Vegan].freeze
   CENTS_PER_KRONE = 100.0
 
   # Upper bound on a stated delivery radius. Bergen end to end is about 10 km
@@ -43,7 +43,7 @@ class Takeaway::Restaurant < ApplicationRecord
   MAX_DELIVERY_RADIUS_KM = 50
 
   MAX_COVER_BYTES = 8.megabytes
-  COVER_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
+  COVER_CONTENT_TYPES = %w\[image/jpeg image/png image/webp].freeze
 
   validates :name, :address, :cuisine_type, presence: true
   validate :cover_must_be_a_supported_image

@@ -12,20 +12,20 @@ module Deploy
 
     # Each Law and the axe rules whose violations it owns.
     LAWS = {
-      "IMG_ALT" => %w[image-alt input-image-alt role-img-alt svg-img-alt area-alt object-alt],
-      "FORM_LABEL" => %w[label label-title-only select-name form-field-multiple-labels],
-      "ARIA_LABELS" => %w[button-name link-name aria-command-name aria-input-field-name aria-toggle-field-name
+      "IMG_ALT" => %w\[image-alt input-image-alt role-img-alt svg-img-alt area-alt object-alt],
+      "FORM_LABEL" => %w\[label label-title-only select-name form-field-multiple-labels],
+      "ARIA_LABELS" => %w\[button-name link-name aria-command-name aria-input-field-name aria-toggle-field-name
                           aria-meter-name aria-progressbar-name aria-tooltip-name aria-dialog-name frame-title],
-      "ARIA_INTERACTIVE" => %w[aria-allowed-attr aria-allowed-role aria-required-attr aria-required-children
+      "ARIA_INTERACTIVE" => %w\[aria-allowed-attr aria-allowed-role aria-required-attr aria-required-children
                                aria-required-parent aria-roles aria-valid-attr aria-valid-attr-value
                                aria-hidden-focus aria-prohibited-attr],
 
-      "INTERACTION_SEMANTICS" => %w[nested-interactive scrollable-region-focusable focus-order-semantics
+      "INTERACTION_SEMANTICS" => %w\[nested-interactive scrollable-region-focusable focus-order-semantics
                                     tabindex],
-      "HTML_HEADING_HIERARCHY" => %w[heading-order page-has-heading-one empty-heading],
-      "CONTRAST_TOKENS" => %w[color-contrast color-contrast-enhanced link-in-text-block],
-      "TOUCH_TARGET_MIN" => %w[target-size],
-      "MOBILE_ACCESSIBILITY_DEFAULTS" => %w[meta-viewport meta-viewport-large html-has-lang html-lang-valid
+      "HTML_HEADING_HIERARCHY" => %w\[heading-order page-has-heading-one empty-heading],
+      "CONTRAST_TOKENS" => %w\[color-contrast color-contrast-enhanced link-in-text-block],
+      "TOUCH_TARGET_MIN" => %w\[target-size],
+      "MOBILE_ACCESSIBILITY_DEFAULTS" => %w\[meta-viewport meta-viewport-large html-has-lang html-lang-valid
                                             landmark-one-main region bypass document-title],
     }.freeze
 

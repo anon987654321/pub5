@@ -22,7 +22,7 @@ class VisualIdentityContractTest < Minitest::Test
   FACE_MOTION = Dir[File.join(ROOT, "..", "master", "web", "styles", "face", "4[0-4]_*.css")].sort
   SHARED_MOTION = File.join(ROOT, "shared", "app", "assets", "stylesheets", "_interaction_craft.scss")
   # laws.yml states each Law; law_runtime.yml carries the executable requirements.
-  LAW_FILES = %w[laws.yml law_runtime.yml].map { |name| File.expand_path("../../master/data/#{name}", __dir__) }
+  LAW_FILES = %w\[laws.yml law_runtime.yml].map { |name| File.expand_path("../../master/data/#{name}", __dir__) }
   LAWS_SOURCE = LAW_FILES.map { |path| File.read(path, encoding: "UTF-8") }.join("\n")
 
   def test_signal_is_canonical_original_and_semantically_named
@@ -138,7 +138,7 @@ class VisualIdentityContractTest < Minitest::Test
   end
 
   def test_canonical_visual_contract_requires_runtime_and_performance_proof
-    %w[
+    %w\[
       reduced_motion_runtime
       aggregate_render_budget
       renderer_lifecycle

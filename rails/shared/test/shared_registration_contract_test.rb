@@ -10,7 +10,7 @@ ROOT = File.expand_path("../..", __dir__)
 # to compare and is skipped rather than failing on ENOENT.
 def setup
   skip "brgen and amber are not beside shared in this layout" unless
-    %w[brgen amber].all? { |app| File.directory?(File.join(ROOT, app, "app")) }
+    %w\[brgen amber].all? { |app| File.directory?(File.join(ROOT, app, "app")) }
 end
 
   def test_brgen_and_amber_render_the_same_registration_fields

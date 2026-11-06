@@ -207,7 +207,7 @@ class TestFixTransaction < Minitest::Test
       bus = Object.new
       bus.define_singleton_method(:publish) { |event, **payload| events << [event, payload] }
 
-      tx = Master::Fix::Transaction.new(root: dir, paths: %w[one.txt two.txt], id: "snapshot-metrics", bus:).begin!
+      tx = Master::Fix::Transaction.new(root: dir, paths: %w\[one.txt two.txt], id: "snapshot-metrics", bus:).begin!
       _event, payload = events.find { |event, _data| event == "fix:transaction_snapshot_summary" }
 
       refute_nil payload
@@ -234,7 +234,7 @@ class TestFixTransaction < Minitest::Test
   end
 
   def two_files(dir)
-    %w[ours.txt theirs.txt].map { |name| File.join(dir, name).tap { |path| File.write(path, "before") } }
+    %w\[ours.txt theirs.txt].map { |name| File.join(dir, name).tap { |path| File.write(path, "before") } }
   end
 
   def test_a_released_foreign_change_is_left_alone_and_the_rest_rolls_back
@@ -247,7 +247,7 @@ class TestFixTransaction < Minitest::Test
 
       assert_equal ["theirs.txt"], tx.release!(tx.conflicts)
       assert tx.rollback!.ok?
-      assert_equal %w[before outside-change], [File.read(ours), File.read(theirs)]
+      assert_equal %w\[before outside-change], [File.read(ours), File.read(theirs)]
     end
   end
 

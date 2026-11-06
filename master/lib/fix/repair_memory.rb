@@ -19,8 +19,8 @@ module Master
       PATH = File.join(".master", "fix_memory.json")
       RETIRE_AFTER = 20
       RETIRE_RATIO = 0.8
-      DECLINED = %i[no_proposal].freeze
-      APPLIED = %i[applied commit_refused].freeze
+      DECLINED = %i\[no_proposal].freeze
+      APPLIED = %i\[applied commit_refused].freeze
       LOCK = Mutex.new
       ANNOUNCED = Set.new
       # A rule's detector fingerprint, once per process: the code a process

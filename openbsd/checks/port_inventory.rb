@@ -66,7 +66,7 @@ module Deploy
                                                   "to read, and it names only master and brgen, the two it restarts",
     }.freeze
 
-    FLEET_SCAN_GLOB = "{RAILS,openbsd,master,bin}/**/*.{rb,sh,yml,yaml,json,conf,mjs,js,md,erb,exp}"
+    FLEET_SCAN_GLOB = "{rails,openbsd,master,bin}/**/*.{rb,sh,yml,yaml,json,conf,mjs,js,md,erb,exp}"
     # .master/ is runtime cache and never committed; knowledge/ and output/ are
     # generated. Scanning them reports the model's own transcript as an inventory.
     FLEET_SCAN_SKIP = %r{/(\.git|node_modules|\.master|knowledge|output|public/assets|tmp|log|storage)/}
@@ -93,7 +93,7 @@ module Deploy
       "openbsd/var/nsd/etc/nsd.conf",
     ].freeze
 
-    RETIRED_APP_NAMES = %w[baibl blognet hjerterom].freeze
+    RETIRED_APP_NAMES = %w\[baibl blognet hjerterom].freeze
 
     def self.run
       new.run
@@ -395,7 +395,7 @@ module Deploy
       # The README states the count in words, once, in its opening line; apps.yml
       # holds everything else. A phrase pinned to one sentence broke when the README
       # was rewritten, so the check is the number itself.
-      count_word = %w[Zero One Two Three Four Five Six Seven Eight Nine Ten].fetch(apps.size, apps.size.to_s)
+      count_word = %w\[Zero One Two Three Four Five Six Seven Eight Nine Ten].fetch(apps.size, apps.size.to_s)
       result.fail("rails/README.md app count must mirror apps.yml (#{count_word} Rails apps)") unless root_readme.match?(/\b#{count_word} Rails apps\b/)
 
       apps.each do |app|

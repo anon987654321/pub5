@@ -18,16 +18,16 @@ class Marketplace::Order < ApplicationRecord
   belongs_to :checkout, class_name: "Marketplace::Checkout",
              foreign_key: :marketplace_checkout_id, optional: true, inverse_of: :orders
 
-  STATUSES = %w[pending pending_payment paid accepted declined completed].freeze
+  STATUSES = %w\[pending pending_payment paid accepted declined completed].freeze
   # Fulfilment is a separate axis from payment. A paid order that has not
   # shipped and a shipped order awaiting payment are both real, and collapsing
   # them into one column is why "where is my parcel" goes unanswered.
-  FULFILMENT_STATUSES = %w[unfulfilled shipped delivered cancelled returned].freeze
-  PAYMENT_STATUSES = %w[unpaid pending authorized paid failed refunded].freeze
-  PAYMENT_PROVIDERS = %w[stripe vipps dintero].freeze
+  FULFILMENT_STATUSES = %w\[unfulfilled shipped delivered cancelled returned].freeze
+  PAYMENT_STATUSES = %w\[unpaid pending authorized paid failed refunded].freeze
+  PAYMENT_PROVIDERS = %w\[stripe vipps dintero].freeze
   # The statuses an order can still be paid from. accepted is an offer the
   # seller said yes to; its price_cents is the price the two agreed.
-  PAYABLE_STATUSES = %w[pending pending_payment accepted].freeze
+  PAYABLE_STATUSES = %w\[pending pending_payment accepted].freeze
 
   validates :status, inclusion: { in: STATUSES }
   validates :fulfilment_status, inclusion: { in: FULFILMENT_STATUSES }
@@ -118,7 +118,7 @@ class Marketplace::Order < ApplicationRecord
     transitioned = false
     transaction do
       lock!
-      next if payment_status.in?(%w[paid refunded])
+      next if payment_status.in?(%w\[paid refunded])
 
       consume_stock_for_paid!
       update!(
@@ -144,7 +144,7 @@ class Marketplace::Order < ApplicationRecord
   def payment_description = listing_title
 
   def authorize_payment!(transaction_id:)
-    return self if payment_status.in?(%w[paid refunded])
+    return self if payment_status.in?(%w\[paid refunded])
 
     update!(
       payment_provider: "dintero",
@@ -154,7 +154,7 @@ class Marketplace::Order < ApplicationRecord
   end
 
   def fail_payment!(transaction_id: nil, provider: payment_provider)
-    return self if payment_status.in?(%w[paid refunded])
+    return self if payment_status.in?(%w\[paid refunded])
 
     update!(
       payment_status: "failed",
@@ -164,13 +164,13 @@ class Marketplace::Order < ApplicationRecord
   end
 
   def payable?
-    payment_status.in?(%w[unpaid pending failed]) && status.in?(PAYABLE_STATUSES)
+    payment_status.in?(%w\[unpaid pending failed]) && status.in?(PAYABLE_STATUSES)
   end
 
   # start! / find_payable_order. pending means a PSP session already exists —
   # starting another overwrote payment_reference and the first webhook missed.
   def startable?
-    return false unless payment_status.in?(%w[unpaid failed])
+    return false unless payment_status.in?(%w\[unpaid failed])
     return false unless status.in?(PAYABLE_STATUSES)
 
     listed = association(:listing).loaded? ? listing : Marketplace::Listing.find_by(id: listing_id)

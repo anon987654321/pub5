@@ -13,10 +13,10 @@ class WardrobeGap
   # translated rather than baked in, because these reasons render beside
   # translated chrome on the Shop smarter page.
   CONNECTORS = [
-    { key: :neutral_top, category: "Tops", colors: %w[white black navy grey beige] },
-    { key: :dark_bottom, category: "Bottoms", colors: %w[black navy denim charcoal] },
-    { key: :weather_layer, category: "Outerwear", colors: %w[black navy beige olive] },
-    { key: :versatile_shoe, category: "Shoes", colors: %w[black white brown] },
+    { key: :neutral_top, category: "Tops", colors: %w\[white black navy grey beige] },
+    { key: :dark_bottom, category: "Bottoms", colors: %w\[black navy denim charcoal] },
+    { key: :weather_layer, category: "Outerwear", colors: %w\[black navy beige olive] },
+    { key: :versatile_shoe, category: "Shoes", colors: %w\[black white brown] },
   ].freeze
 
   def initialize(user)

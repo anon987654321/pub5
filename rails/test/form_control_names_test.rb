@@ -26,9 +26,9 @@ require_relative "engine_roots"
 class FormControlNamesTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
-  SKIP_INPUT_TYPES = %w[hidden submit button image reset].freeze
+  SKIP_INPUT_TYPES = %w\[hidden submit button image reset].freeze
 
-  FORM_HELPERS = %w[
+  FORM_HELPERS = %w\[
     text_field text_area email_field password_field number_field search_field
     telephone_field phone_field url_field date_field time_field datetime_field
     datetime_local_field month_field week_field color_field range_field
@@ -54,7 +54,7 @@ class FormControlNamesTest < Minitest::Test
   ].freeze
 
   def views
-    own = %w[amber brgen bsdports shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
+    own = %w\[amber brgen bsdports shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
     @views ||= (own + engine_views).reject { |f| f.include?("/vendor/") }.sort
   end
 

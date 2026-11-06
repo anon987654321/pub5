@@ -51,7 +51,7 @@ class ImportmapEnginePinsTest < ActiveSupport::TestCase
   end
 
   test "known user-facing vertical controllers remain pinned" do
-    %w[marketplace_logo playlist_player tv_player].each do |name|
+    %w\[marketplace_logo playlist_player tv_player].each do |name|
       assert_includes controller_specifiers, "controllers/#{name}_controller",
                       "#{name} is unpinned and its visible control would be inert"
     end

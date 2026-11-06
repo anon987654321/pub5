@@ -91,7 +91,7 @@ module Master
       end
 
       def clear_wal_sidecars(path)
-        %w[-wal -shm -journal].each do |suffix|
+        %w\[-wal -shm -journal].each do |suffix|
           sidecar = "#{path}#{suffix}"
           File.delete(sidecar) if File.exist?(sidecar)
         end

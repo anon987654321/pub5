@@ -13,7 +13,7 @@
 # the memoised numbers instead of re-asking.
 class WardrobeAnalytics
   # Item.active_wardrobe is the complement of these.
-  RELEASED_STATES = %w[released donated sold recycled].freeze
+  RELEASED_STATES = %w\[released donated sold recycled].freeze
 
   def initialize(user)
     @user = user

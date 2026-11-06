@@ -50,7 +50,7 @@ class GovernorTest < Minitest::Test
     Master::Fix::Governor.stub(:rate_limits, { "dangerous" => 2 }) do
       results = Array.new(3) { governor.check_permit("zsh", :dangerous, "ls") }
 
-      assert_equal %i[ok ok rate_limit], results.map { |result| result.ok? ? :ok : result.category }
+      assert_equal %i\[ok ok rate_limit], results.map { |result| result.ok? ? :ok : result.category }
     end
   end
 

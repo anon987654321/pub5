@@ -8,7 +8,7 @@ module Studio
   # makes every emulation direction discoverable by master, addressable by a
   # stable id, and regression-testable after the design notes are gone.
     module AnalogCapabilities
-      POSTPRO = %i[
+      POSTPRO = %i\[
         exposure_linked_grain per_channel_grain_size shadow_grain_clumping halation_threshold
         red_sensitive_halation gate_weave light_leaks lens_flare_ghosts aperture_bokeh
         focus_breathing chromatic_focus_shift focal_length_vignette film_coordinate_dust
@@ -29,7 +29,7 @@ module Studio
         temporal_consistency_check codec_artifact_preview reversible_recipe
       ].freeze
 
-      REPLICATE = %i[
+      REPLICATE = %i\[
         stock_prompt lens_prompt camera_height distance_crop lighting_direction plastic_skin_negative
         identity_first_pass style_second_pass candidate_ranking likeness_confidence face_crop_comparison
         expression_diversity pose_diversity wardrobe_diversity background_diversity duplicate_detection
@@ -44,7 +44,7 @@ module Studio
         postpro_handoff alt_text gallery_manifest
       ].freeze
 
-      DILLA = %i[
+      DILLA = %i\[
         hit_microtiming nonrepeating_swing velocity_drift note_length_drift late_kick_lane
         early_snare_lane ahead_hat_clusters ghost_accent_maps triplet_intrusions tuplet_fills
         pattern_mutation call_response_fills hihat_choke_groups mpc_velocity_curve mpc_twelve_bit
@@ -69,7 +69,7 @@ module Studio
       # implemented. Promotion out of :unverified requires a concrete code path
       # and a regression test; otherwise readiness would be a guess.
       IMPLEMENTATION_STATUS = {}.freeze
-      STATUSES = %i[verified unavailable unverified].freeze
+      STATUSES = %i\[verified unavailable unverified].freeze
 
       module_function
 

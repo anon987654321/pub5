@@ -31,7 +31,7 @@ module Shared
       attrs = { email_address: email, password:, password_confirmation: password }
       return attrs if display_name.blank?
 
-      %w[display_name name].each do |column|
+      %w\[display_name name].each do |column|
         attrs[column.to_sym] = display_name if User.column_names.include?(column)
       end
       attrs

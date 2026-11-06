@@ -285,7 +285,7 @@ module Studio
 
         File.foreach(path) do |line|
           key, value = line.strip.sub(/\Aexport\s+/, "").split("=", 2)
-          if %w[REPLICATE_API_TOKEN REPLICATE_API_KEY].include?(key) && !value.to_s.empty?
+          if %w\[REPLICATE_API_TOKEN REPLICATE_API_KEY].include?(key) && !value.to_s.empty?
             return value.to_s.delete(%("'))
           end
         end

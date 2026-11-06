@@ -39,14 +39,14 @@ class FediverseSsrfTest < Minitest::Test
   end
 
   def test_ipv6_targets_must_be_global_unicast_and_not_documentation_space
-    %w[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 fd00::1 fe80::1 ff02::1].each do |address|
+    %w\[4000::1 5f00::1 2d00::1 2e00::1 3000::1 3800::1 3c00::1 3e00::1 3f00::1 3ffe::1 3fff::1 2001:db8::1 fd00::1 fe80::1 ff02::1].each do |address|
       assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
     end
     refute Shared::OutboundHttp.unsafe_ip?("2606:4700:4700::1111")
   end
 
   def test_special_ipv4_ranges_are_refused
-    %w[0.1.2.3 100.64.0.1 169.254.1.1 192.168.1.1 198.18.0.1 203.0.113.1 224.0.0.1 240.0.0.1 255.255.255.255].each do |address|
+    %w\[0.1.2.3 100.64.0.1 169.254.1.1 192.168.1.1 198.18.0.1 203.0.113.1 224.0.0.1 240.0.0.1 255.255.255.255].each do |address|
       assert Shared::OutboundHttp.unsafe_ip?(address), "#{address} must not be an outbound target"
     end
     refute Shared::OutboundHttp.unsafe_ip?("93.184.216.34")
@@ -87,7 +87,7 @@ class FediverseSsrfTest < Minitest::Test
   end
 
   def test_request_refuses_reserved_ipv6_before_connecting
-    %w[4000::1 3fff::1].each do |address|
+    %w\[4000::1 3fff::1].each do |address|
       error = with_stubbed_dns(address) do
         assert_raises(SocketError) do
           Shared::OutboundHttp.request(URI("https://reserved-ipv6.test/actor"))
@@ -127,7 +127,7 @@ class FediverseSsrfTest < Minitest::Test
   # The cap is enforced while reading, so a hostile server cannot make this
   # process hold its whole answer before anything checks the size.
   def test_a_body_past_the_cap_stops_the_read
-    response = ChunkedResponse.new(%w[aaaa bbbb cccc])
+    response = ChunkedResponse.new(%w\[aaaa bbbb cccc])
 
     with_stubbed_exchange(response) do
       assert_raises(Shared::OutboundHttp::BodyTooLarge) do
@@ -138,7 +138,7 @@ class FediverseSsrfTest < Minitest::Test
   end
 
   def test_a_body_inside_the_cap_is_kept_whole
-    response = ChunkedResponse.new(%w[aaaa bbbb])
+    response = ChunkedResponse.new(%w\[aaaa bbbb])
 
     with_stubbed_exchange(response) do
       Shared::OutboundHttp.request(URI("https://rebind.test/actor"), max_body: 8)
@@ -209,7 +209,7 @@ end
 # call is refused outright, because it cannot be given one.
 class OutboundHttpTimeoutTest < Minitest::Test
   rails = File.expand_path("..", __dir__)
-  SOURCE_DIRECTORIES = %w[app lib engines].freeze
+  SOURCE_DIRECTORIES = %w\[app lib engines].freeze
 
   UNBOUNDABLE = /Net::HTTP\.(get|get_response|post|post_form)\s*\(/
   OPENS = /Net::HTTP\.(start|new)\s*\(|URI\.open\s*\(/
@@ -233,14 +233,14 @@ class OutboundHttpTimeoutTest < Minitest::Test
   def test_no_app_file_makes_an_unbounded_call
     files = self.class.source_files
     assert_operator files.size, :>, 0, "the outbound HTTP inventory matched no Ruby files"
-    required = %w[
+    required = %w\[
       shared/app/services/shared/outbound_http.rb
       bsdports/app/services/ports/openbsd/package_index_fetcher.rb
       bsdports/app/services/ports/openbsd/ports_tarball.rb
     ].map { |path| File.join(rails, path) }
     assert_empty required - files, "the outbound HTTP inventory missed a core network client"
 
-    found = files.flat_map { |path| self.class.findings(File.read(path).scrub, path.delete_prefix("#{RAILS}/")) }
+    found = files.flat_map { |path| self.class.findings(File.read(path).scrub, path.delete_prefix("#{rails}/")) }
     assert_empty found, found.join("\n")
   end
 

@@ -51,7 +51,7 @@ class PostScoreTest < ActiveSupport::TestCase
   end
 
   test "ranking scopes no longer aggregate the votes table" do
-    %i[hot top].each do |scope|
+    %i\[hot top].each do |scope|
       sql = Post.public_send(scope).to_sql
       assert_not_includes sql.upcase, %(JOIN "VOTES"), "#{scope} should not join votes"
       assert_includes sql, "posts.score", "#{scope} should order by the column"

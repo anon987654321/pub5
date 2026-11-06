@@ -29,12 +29,12 @@ module Master
       MODELS = File.expand_path("../../data/models.yml", __dir__)
       CLI_BINARIES = { "claude-cli" => "claude", "grok-cli" => "grok", "llama-cli" => "llama-cli" }.freeze
       KIND_RANK = { remote: 0, paid_tail: 1, local: 2, free: 3 }.freeze
-      FREE_CLASS_KINDS = %i[free local].freeze
+      FREE_CLASS_KINDS = %i\[free local].freeze
       NOT_SUBSCRIPTION = 10_000
       NEUTRAL_LATENCY_S = 45
       UNMEASURED_TIMEOUT_S = 60
       SLOW_S = 600
-      CATALOGUE_TIERS = %w[default strong local].freeze
+      CATALOGUE_TIERS = %w\[default strong local].freeze
 
       # The lane a model id travels: the text before ":" for CLI lanes, else the
       # vendor slug of an API id.
@@ -287,7 +287,7 @@ module Master
         return false unless ollama_enabled?
         return false if LaneQuota.dead?(id)
 
-        %i[up started].include?(LaneHealth.ensure_ollama.state)
+        %i\[up started].include?(LaneHealth.ensure_ollama.state)
       end
 
       def on_path?(binary) = !Master::Io::Exec.cli_binary(binary).nil?

@@ -3,10 +3,10 @@
 module Partner
   # Store owners manage partner programs; city creators browse open ones.
   class ProgramsController < ApplicationController
-    allow_unauthenticated_access only: %i[index show]
-    before_action :require_authentication, except: %i[index show]
+    allow_unauthenticated_access only: %i\[index show]
+    before_action :require_authentication, except: %i\[index show]
     before_action :set_public_program, only: :show
-    before_action :set_program, only: %i[edit update]
+    before_action :set_program, only: %i\[edit update]
 
     def index
       @programs = Partner::Program.publicly_visible.includes(:store).order(created_at: :desc).limit(100)

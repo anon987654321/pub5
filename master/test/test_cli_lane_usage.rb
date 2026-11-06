@@ -43,7 +43,7 @@ class TestCliLaneUsage < Minitest::Test
       result = lane.send(:claude_cli_call, "claude-sonnet-5-5", [{ role: "user", content: "fix" }], nil)
 
       assert_equal "ok", result.value!
-      assert_equal %w[--output-format json], lane.instance_variable_get(:@asked).last.last(2)
+      assert_equal %w\[--output-format json], lane.instance_variable_get(:@asked).last.last(2)
       assert_equal [0.014567, 7328], run.spend
     ensure
       run&.stop!

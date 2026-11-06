@@ -69,8 +69,8 @@ class WebVitalsBudgetCheckTest < Minitest::Test
     previous = ENV.delete("CHECK_SURFACES")
     with_methods(PROBE, surfaces: proc { |*, **| rows }) do
       selected = CHECK.new.send(:selected_surfaces)
-      assert_equal %w[amber brgen bsdports master], selected.map(&:app)
-      assert_equal %w[amber/home/mobile brgen/core/mobile bsdports/home/mobile master/chat/mobile],
+      assert_equal %w\[amber brgen bsdports master], selected.map(&:app)
+      assert_equal %w\[amber/home/mobile brgen/core/mobile bsdports/home/mobile master/chat/mobile],
                    selected.map(&:id)
     end
   ensure

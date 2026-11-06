@@ -21,7 +21,7 @@ class CheckoutPageTest < ActionDispatch::IntegrationTest
   test "both pay buttons lock while the order is being created" do
     buttons = page.css("button[name=payment_method]")
 
-    assert_equal %w[stripe vipps], buttons.map { |b| b["value"] }.sort
+    assert_equal %w\[stripe vipps], buttons.map { |b| b["value"] }.sort
     buttons.each { |b| assert_equal I18n.t("checkout.paying"), b["data-turbo-submits-with"] }
   end
   test "the delivery or pickup choice is kept on the cart" do

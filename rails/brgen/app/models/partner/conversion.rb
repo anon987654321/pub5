@@ -15,7 +15,7 @@ class Partner::Conversion < ApplicationRecord
   has_one :program, through: :membership
   has_one :partner, through: :membership, source: :user
 
-  STATUSES = %w[pending approved rejected paid].freeze
+  STATUSES = %w\[pending approved rejected paid].freeze
 
   validates :status, inclusion: { in: STATUSES }
   validates :order_id, uniqueness: true

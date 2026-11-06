@@ -9,7 +9,7 @@ module Master
 
       # Directories the boot tree never descends into: dependencies, build output
       # and runtime state.
-      SKIP_SEGS = %w[
+      SKIP_SEGS = %w\[
         .git .master vendor tmp var node_modules .bundle coverage log dist knowledge
         runtime .venv renders storage quarantine .cache
       ].freeze

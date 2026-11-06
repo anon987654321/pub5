@@ -43,7 +43,7 @@ class UniqueMessageReceiptPerReader < ActiveRecord::Migration[8.0]
       say "no duplicate message receipts - skipping the merge"
     end
 
-    add_index :message_receipts, %i[message_id user_id], unique: true,
+    add_index :message_receipts, %i\[message_id user_id], unique: true,
               name: "index_message_receipts_on_message_and_user"
   end
 

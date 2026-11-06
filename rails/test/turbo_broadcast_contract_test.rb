@@ -30,7 +30,7 @@ require_relative "engine_roots"
 #      removed ones, so re-adding a subscriber without a partial fails this test.
 class TurboBroadcastContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[brgen amber bsdports].freeze
+  APPS = %w\[brgen amber bsdports].freeze
   BROADCAST = /broadcast_\w*(?:append|prepend|replace|update|remove|before|after)\w*_(?:later_)?to\b/
 
   # engines/tv/app/models/tv/stream_chat.rb -> tv/stream_chats/_stream_chat.html.erb
@@ -88,7 +88,7 @@ class TurboBroadcastContractTest < Minitest::Test
   # above catches the missing partial; this pins the models themselves clean so the
   # intent (explicit-or-nothing) is legible at the source, not just the view side.
   def test_the_shared_social_models_do_not_broadcast_implicitly
-    %w[reaction notification review_case].each do |name|
+    %w\[reaction notification review_case].each do |name|
       body = File.read(File.join(ROOT, "shared/app/models/shared/#{name}.rb"))
       broadcasts = body.lines.reject { |l| l.strip.start_with?("#") }.select { |l| l.match?(BROADCAST) }
 
@@ -103,8 +103,8 @@ class TurboBroadcastContractTest < Minitest::Test
   # the page actually renders.
   def test_the_tv_broadcasts_name_both_partial_and_target
     {
-      "brgen_radio/tv/app/models/tv/stream_chat.rb" => %w[tv/stream_chats/stream_chat tv-live-stream-],
-      "brgen_radio/tv/app/models/tv/video_note.rb" => %w[tv/video_notes/video_note video_notes_],
+      "brgen_radio/tv/app/models/tv/stream_chat.rb" => %w\[tv/stream_chats/stream_chat tv-live-stream-],
+      "brgen_radio/tv/app/models/tv/video_note.rb" => %w\[tv/video_notes/video_note video_notes_],
     }.each do |file, (partial, target)|
       body = File.read(File.join(ROOT, file))
 
@@ -114,7 +114,7 @@ class TurboBroadcastContractTest < Minitest::Test
   end
 
   def test_the_wired_partials_exist
-    %w[
+    %w\[
       brgen_radio/tv/app/views/tv/stream_chats/_stream_chat.html.erb
       brgen_radio/tv/app/views/tv/video_notes/_video_note.html.erb
     ].each { |path| assert File.file?(File.join(ROOT, path)), "missing #{path}" }
@@ -159,7 +159,7 @@ class TurboBroadcastContractTest < Minitest::Test
     later = /broadcast_\w+_later_to\b|^\s*broadcasts_refreshes\b/
     hits = []
 
-    roots = (APPS - %w[brgen]).map { |app| File.join(ROOT, app, "app/models") } +
+    roots = (APPS - %w\[brgen]).map { |app| File.join(ROOT, app, "app/models") } +
             [ File.join(ROOT, "shared/app/models"), File.join(ROOT, "shared/app/reflexes") ]
 
     roots.each do |glob|

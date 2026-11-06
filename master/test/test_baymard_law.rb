@@ -56,13 +56,13 @@ class TestBaymardLaw < Minitest::Test
       "evidence_policy" => {
         "required" => {
           "source" => {
-            "pass" => %w[source_files source_inventory_sha256],
-            "finding" => %w[finding_path line source_sha256],
+            "pass" => %w\[source_files source_inventory_sha256],
+            "finding" => %w\[finding_path line source_sha256],
           },
-          "task" => %w[method participants summary artifacts sha256],
+          "task" => %w\[method participants summary artifacts sha256],
         },
         "task_privacy" => "Use anonymised aggregate observations only; redact images and screen captures.",
-        "verdicts" => %w[pass fail inconclusive not_applicable],
+        "verdicts" => %w\[pass fail inconclusive not_applicable],
       },
     }
   end

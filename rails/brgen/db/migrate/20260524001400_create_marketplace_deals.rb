@@ -14,7 +14,7 @@ class CreateMarketplaceDeals < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :marketplace_deals, %i[featured priority], if_not_exists: true
-    add_index :marketplace_deals, %i[starts_at ends_at], if_not_exists: true
+    add_index :marketplace_deals, %i\[featured priority], if_not_exists: true
+    add_index :marketplace_deals, %i\[starts_at ends_at], if_not_exists: true
   end
 end

@@ -46,7 +46,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   test "registration shares the configured identity providers with sign-in" do
     previous = Rails.application.config.x.oauth_provider_slugs
     begin
-      Rails.application.config.x.oauth_provider_slugs = %w[bankid vipps google_oauth2 facebook]
+      Rails.application.config.x.oauth_provider_slugs = %w\[bankid vipps google_oauth2 facebook]
       get new_registration_url
 
       assert_response :success

@@ -35,7 +35,7 @@ module Master
       # caller who *has* done that judgment call once can tag it, and the
       # next diagnostic hunt can filter for :load_bearing instead of reading
       # every line.
-      SEVERITIES = %i[load_bearing cosmetic].freeze
+      SEVERITIES = %i\[load_bearing cosmetic].freeze
       # Errors that mean the code is wrong rather than the world. A caller's
       # :cosmetic does not hold for them: WebChat swallowed "undefined method
       # inner_html" on every reply as cosmetic and four lanes sat dead with

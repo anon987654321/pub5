@@ -11,7 +11,7 @@ class Notification < ApplicationRecord
   # as "custom" — the column default, because Shared::Notifiable dropped the
   # kind on the title/body branch — so none of it could ever reach a lock
   # screen no matter how time-critical it was.
-  KINDS = %w[like reaction follow mention reply message match order alert custom].freeze
+  KINDS = %w\[like reaction follow mention reply message match order alert custom].freeze
 
   belongs_to :user
   belongs_to :actor, class_name: "User", optional: true
@@ -26,7 +26,7 @@ class Notification < ApplicationRecord
   # notification, one read or dismissed, and read_all (an update_all, so the
   # controller calls broadcast_unread_badge itself) each redraw it on the
   # reader's own signed stream.
-  after_commit :broadcast_own_unread_badge, on: %i[create destroy]
+  after_commit :broadcast_own_unread_badge, on: %i\[create destroy]
   # Its own name: Rails keeps only the last of two commit callbacks that share one.
   after_update_commit :broadcast_unread_badge_on_read, if: :saved_change_to_read_at?
 
@@ -43,7 +43,7 @@ class Notification < ApplicationRecord
 
   # Beside Varsler in the More sheet, and on the tab bar's More button, which is
   # all a closed sheet shows.
-  UNREAD_BADGE_IDS = %w[notifications-unread-badge notifications-unread-badge-tab].freeze
+  UNREAD_BADGE_IDS = %w\[notifications-unread-badge notifications-unread-badge-tab].freeze
 
   def self.broadcast_unread_badge(user_id)
     reader = User.find_by(id: user_id)
@@ -64,7 +64,7 @@ class Notification < ApplicationRecord
   # so the lock screen doesn't become noise. `order` and `alert` are here
   # because both are things the reader is actively waiting on — a parcel moving,
   # a saved search finally matching — which is the case a push is for.
-  PUSHABLE_KINDS = %w[message match reply mention follow order alert].freeze
+  PUSHABLE_KINDS = %w\[message match reply mention follow order alert].freeze
 
   # Live, by refresh rather than by row. The prepend that stood here rendered
   # notifications/_notification on the creating request and published it to a

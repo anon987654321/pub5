@@ -83,7 +83,7 @@ pin "idb-keyval", to: "idb-keyval.js"
 pin "stimulus-glow", to: "@stimulus-components--glow.js"
 pin "stimulus-places-autocomplete", to: "stimulus-places-autocomplete.js"
 
-%w[
+%w\[
   animated-number auto-submit carousel character-counter chartjs checkbox-select-all clipboard
   color-picker confirmation content-loader dialog dropdown hotkey lightbox notification
   password-visibility popover prefetch rails-nested-form read-more remote-rails reveal

@@ -84,7 +84,7 @@ class ChannelBotLanguageTest < ActiveSupport::TestCase
 
   test "every persona has offline lines in both shipped locales" do
     ChannelBot::PERSONAS.each_key do |handle|
-      %i[nb en].each do |locale|
+      %i\[nb en].each do |locale|
         assert_operator ChannelBot.canned_lines(handle, locale).size, :>=, 1, "#{handle} has no #{locale} lines"
       end
     end

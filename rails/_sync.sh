@@ -30,7 +30,7 @@ rails_sync_app_tree() {
 # overlay_shared_initializers APP_DIR — shared config wins over stale per-app copies
 overlay_shared_initializers() {
   local app_dir=$1
-  local shared_init=${PUB4_RAILS_ROOT:-/home/dev/pub4/RAILS}/shared/config/initializers
+  local shared_init=${PUB5_RAILS_ROOT:-/home/dev/pub5/rails}/shared/config/initializers
   [[ -d $shared_init ]] || return 0
   local app_name=${app_dir:h:t}
   [[ -x /usr/local/sbin/pub4-admin ]] || {
@@ -45,7 +45,7 @@ overlay_shared_initializers() {
 # Never clobber per-app brand icons/manifests (amber palette, etc.).
 overlay_shared_public() {
   local app_dir=$1
-  local shared_public=${PUB4_RAILS_ROOT:-/home/dev/pub4/RAILS}/shared/public
+  local shared_public=${PUB5_RAILS_ROOT:-/home/dev/pub5/rails}/shared/public
   [[ -d $shared_public ]] || return 0
   local app_name=${app_dir:h:t}
   [[ -x /usr/local/sbin/pub4-admin ]] || {

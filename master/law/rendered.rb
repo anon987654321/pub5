@@ -59,7 +59,7 @@ module Law
     def rendered(law, law_id, **said)
       law.instance_exec(law_id, said) do |id, words|
         source words.fetch(:source)
-        tags %i[DESIGN UX]
+        tags %i\[DESIGN UX]
         measures :rendered_ui
         path PATH
         example_path EXAMPLE
@@ -98,7 +98,7 @@ module Law
                bad: F.snap(fonts: [F.font(700, "ArialMT")]), good: F.snap(fonts: [F.font(700, "Arial-BoldMT")]))
 text = /(?:\A|[\s,>])(?:h[1-6]|p|a|span|li|label|strong|em)\b|title|label|text/
 stretch = /transform\s*:[^;]*scale[XY]\(|font-stretch\s*:\s*(?!normal|100%)/
-adapter(:whole_file, languages: %i[css scss], bad: "h1 { transform: scaleX(1.2); }\n",
+adapter(:whole_file, languages: %i\[css scss], bad: "h1 { transform: scaleX(1.2); }\n",
                      good: "h1 { font-weight: 700; }\n") do |src, _file|
   src.scan(/([^{}]*)\{([^{}]*)\}/).filter_map do |selector, body|
     next unless body.match?(stretch) && selector.match?(text)
@@ -152,7 +152,7 @@ adapter(:whole_file, languages: %i[css scss], bad: "h1 { transform: scaleX(1.2);
                bad: F.page(focus: [{ "key" => "a.more", "covers" => [{ "key" => "header", "share" => 1.0 }] }]),
                good: F.page(focus: [{ "key" => "a.more", "covers" => [] }]))
     bars = /header|nav|tab-bar|\bbar\b/
-    adapter(:whole_file, languages: %i[css scss], bad: "header { position: sticky; top: 0; }\n",
+    adapter(:whole_file, languages: %i\[css scss], bad: "header { position: sticky; top: 0; }\n",
                          good: "html { scroll-padding-block: 52px; }\nheader { position: sticky; }\n") do |src, file|
       pinned = /position\s*:\s*(?:sticky|fixed)/
       sticky = src.scan(/([^{}]*)\{([^{}]*)\}/).find { |selector, body| selector.match?(bars) && body.match?(pinned) }

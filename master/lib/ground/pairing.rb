@@ -11,7 +11,7 @@ module Master
     # (irc/matrix) stay visitor-public until a code is redeemed.
     module Pairing
       CONFIG_PATH = Master.data_path("security.yml").freeze
-      REMOTE = %i[irc matrix].freeze
+      REMOTE = %i\[irc matrix].freeze
       ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
       CODE_BYTES = 8
       TOKEN_BYTES = 24

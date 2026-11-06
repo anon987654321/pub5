@@ -14,7 +14,7 @@ module Shared
   module Emoji
     TABLE_PATH = File.expand_path("../../../config/emoji_shortcodes.yml", __dir__)
     SHORTCODE = /(?<![\w:]):([a-z0-9_+-]{1,40}):(?![\w:])/
-    VERBATIM = %w[code pre].freeze
+    VERBATIM = %w\[code pre].freeze
     TAG = /<[^>]*>/
 
     module_function

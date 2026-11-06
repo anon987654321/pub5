@@ -12,7 +12,7 @@
 module Master
   module Ground
     module Policy
-      TIERS = %i[deny ask allow].freeze
+      TIERS = %i\[deny ask allow].freeze
 
       class Sandbox
         def decide(command)

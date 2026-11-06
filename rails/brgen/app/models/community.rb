@@ -4,14 +4,14 @@ class Community < ApplicationRecord
   include CityTenantable
   include Shared::MediaProcessable
 
-  PRIVACIES = %w[public restricted private].freeze
+  PRIVACIES = %w\[public restricted private].freeze
 
   belongs_to :user, optional: true
 
   has_many :posts, dependent: :destroy
   has_many :community_memberships, dependent: :destroy
   has_many :members, through: :community_memberships, source: :user
-  has_many :moderator_memberships, -> { where(role: %w[moderator owner]) },
+  has_many :moderator_memberships, -> { where(role: %w\[moderator owner]) },
            class_name: "CommunityMembership", inverse_of: :community, dependent: nil
   has_many :moderators, through: :moderator_memberships, source: :user
   has_many :community_bans, dependent: :destroy
@@ -67,7 +67,7 @@ class Community < ApplicationRecord
   def member?(user) = membership_for(user).present?
 
   def moderator?(user)
-    membership_for(user)&.role.in?(%w[moderator owner])
+    membership_for(user)&.role.in?(%w\[moderator owner])
   end
 
   # Whether user moderates (or owns) the community with this id.

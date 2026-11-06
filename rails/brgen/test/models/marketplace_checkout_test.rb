@@ -60,7 +60,7 @@ class MarketplaceCheckoutTest < ActiveSupport::TestCase
     checkout.mark_paid!(reference: "ref-replay")
     assert_equal "paid", checkout.reload.status
     assert_equal "ref-123", checkout.reload.payment_reference
-    assert_equal %w[paid paid], [ first.reload.payment_status, second.reload.payment_status ]
+    assert_equal %w\[paid paid], [ first.reload.payment_status, second.reload.payment_status ]
   end
 
   # A half-paid basket — some orders paid, some not, one card charged — is the

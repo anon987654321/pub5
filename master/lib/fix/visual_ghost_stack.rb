@@ -173,7 +173,7 @@ module Master
       def rect_delta(old, new)
         old_rect = old["frect"] || old["rect"] || {}
         new_rect = new["frect"] || new["rect"] || {}
-        [old_rect, new_rect, %w[x y w h].to_h { |axis| [axis, new_rect[axis].to_f - old_rect[axis].to_f] }]
+        [old_rect, new_rect, %w\[x y w h].to_h { |axis| [axis, new_rect[axis].to_f - old_rect[axis].to_f] }]
       end
 
       def png_dimensions(path)

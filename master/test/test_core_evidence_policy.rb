@@ -26,11 +26,11 @@ class EvidencePolicyTest < Minitest::Test
   # ["true"] for all of them, which is the forgery PRODUCERS now closes — the
   # suite was demonstrating the hole while pinning the policy around it.
   PRODUCER_ARGV = {
-    test_pass: %w[bundle exec rake test],
-    scan_clean: %w[bin/check],
-    code_review: %w[bin/review],
-    log_analysis: %w[rcctl check brgen],
-    profiling_data: %w[stackprof tmp/profile.dump],
+    test_pass: %w\[bundle exec rake test],
+    scan_clean: %w\[bin/check],
+    code_review: %w\[bin/review],
+    log_analysis: %w\[rcctl check brgen],
+    profiling_data: %w\[stackprof tmp/profile.dump],
   }.freeze
 
   def proof_with(*kinds)
@@ -43,8 +43,8 @@ class EvidencePolicyTest < Minitest::Test
   # literal here — this is the one place in the suite that should use it.
   def test_a_command_that_proves_nothing_scores_nothing
     proof = Master::Core::Proof.new(risk: :low)
-    %i[test_pass scan_clean code_review].each do |kind|
-      proof.record_evidence(E.exec(%w[true], evidence: kind), OK)
+    %i\[test_pass scan_clean code_review].each do |kind|
+      proof.record_evidence(E.exec(%w\[true], evidence: kind), OK)
     end
 
     refute proof.proved?, "exec(['true']) laundered into a passing proof"
@@ -80,7 +80,7 @@ class EvidencePolicyTest < Minitest::Test
     proof = proof_with(:test_pass, :scan_clean, :code_review)
     assert proof.proved?
 
-    proof.record_evidence(E.exec(%w[echo mutate]), OK)
+    proof.record_evidence(E.exec(%w\[echo mutate]), OK)
 
     refute proof.proved?, "an unlabeled exec preserved evidence from an earlier state"
   end
@@ -109,7 +109,7 @@ class EvidencePolicyTest < Minitest::Test
     proof.record_evidence(E.write("master/lib/thing.rb", "CHANGED = 1\n"), OK)
     refute proof.proved?
 
-    %i[test_pass scan_clean code_review].each do |kind|
+    %i\[test_pass scan_clean code_review].each do |kind|
       proof.record_evidence(E.exec(PRODUCER_ARGV.fetch(kind), evidence: kind), OK)
     end
     assert proof.proved?, "a fold that re-proves its work after a change is stuck"

@@ -13,7 +13,7 @@ class CreateTakeawayReviews < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :takeaway_reviews, %i[restaurant_id created_at], if_not_exists: true
+    add_index :takeaway_reviews, %i\[restaurant_id created_at], if_not_exists: true
 
     # support hyperlocal by adding location to restaurants (geocode + neighbour radius)
     add_column :takeaway_restaurants, :latitude, :decimal, precision: 10, scale: 7

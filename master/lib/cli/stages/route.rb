@@ -10,7 +10,7 @@ module Master
       class Route
         # The two words help lists. A one-letter alias ends the session on a typo
         # of any verb that starts with q.
-        EXIT_ALIASES = %w[exit quit].freeze
+        EXIT_ALIASES = %w\[exit quit].freeze
 
         def initialize(commands:, agent:, bus: nil)
           @commands = commands

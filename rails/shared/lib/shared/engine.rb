@@ -4,7 +4,7 @@ module Shared
   class Engine < ::Rails::Engine
     isolate_namespace Shared
     # Use << not += — Rails 8.2 freezes path arrays during engine boot; += breaks later engines.
-    %w[app/models app/models/concerns app/services app/controllers app/controllers/concerns app/policies app/helpers
+    %w\[app/models app/models/concerns app/services app/controllers app/controllers/concerns app/policies app/helpers
 app/jobs app/reflexes].each do |dir|
       config.autoload_paths << root.join(dir).to_s
     end
@@ -32,7 +32,7 @@ app/jobs app/reflexes].each do |dir|
 
     config.active_record.schema_format = :ruby if config.respond_to?(:active_record)
 
-    %w[app/channels].each { |dir| config.autoload_paths << root.join(dir).to_s }
+    %w\[app/channels].each { |dir| config.autoload_paths << root.join(dir).to_s }
 
     # No i18n initializer. Rails::Engine already adds config/locales/**/*.yml to
     # I18n.load_path ahead of the host app, which is what lets an app word a

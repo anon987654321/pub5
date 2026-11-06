@@ -37,7 +37,7 @@ module Deploy
     ROOT = File.expand_path("../../../..", __dir__)
 
     RAILS_ROOT = File.join(ROOT, "rails")
-    APPS = %w[amber brgen bsdports].freeze
+    APPS = %w\[amber brgen bsdports].freeze
 
     # stimulus_boot.js holds what every app registers. stimulus_boot_social.js
     # (brgen + amber, not bsdports), stimulus_boot_brgen.js and
@@ -52,9 +52,9 @@ module Deploy
     }.freeze
 
     APP_BOOT_FILES = {
-      "amber" => %i[universal social amber],
-      "brgen" => %i[universal social brgen],
-      "bsdports" => %i[universal],
+      "amber" => %i\[universal social amber],
+      "brgen" => %i\[universal social brgen],
+      "bsdports" => %i\[universal],
     }.freeze
 
     # ERB interpolation inside an identifier list means that part of the value is

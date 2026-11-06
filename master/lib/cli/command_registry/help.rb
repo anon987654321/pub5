@@ -338,7 +338,7 @@ module Master
       def help_text(command = nil)
         key = command.to_s.strip.sub(/\A\//, "").downcase
         return help_summary if key.empty?
-        return "/#{key} - leave the current master session." if %w[exit quit].include?(key)
+        return "/#{key} - leave the current master session." if %w\[exit quit].include?(key)
 
         # scan and the other pipeline words rewrite to /fix, so their help is the
         # /fix page rather than "unknown command".
@@ -359,7 +359,7 @@ module Master
       end
 
       def slash_commands
-        (HELP_TOPICS.keys.map { |k| "/#{k}" } + %w[/exit /quit]).uniq.sort
+        (HELP_TOPICS.keys.map { |k| "/#{k}" } + %w\[/exit /quit]).uniq.sort
       end
 
       # This taxonomy feeds both the terminal overview and the web palette.
@@ -383,13 +383,13 @@ module Master
       FIX_SUMMARY = "/fix [path] writes and ends with its wishlist;" \
                     " /review and /critique are its reading; /help <command> shows syntax."
 
-      CATEGORY_ORDER =%w[fix health session model review change interface media constitution help].freeze
+      CATEGORY_ORDER =%w\[fix health session model review change interface media constitution help].freeze
 
       def command_surface
         slash_commands.filter_map do |slash|
           key = slash.delete_prefix("/")
           topic = HELP_TOPICS[key]
-          next unless topic || %w[exit quit].include?(key)
+          next unless topic || %w\[exit quit].include?(key)
 
           {
             cmd: slash,

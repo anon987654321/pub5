@@ -36,7 +36,7 @@
       <% if brgen_surface %>
         <%# The pen's three lines, laid over the collage; words, not links, so
             each deal stays one plain paid link. %>
-        <% %w[buy_now be_happy feel_good].each_with_index do |line, slot| %>
+        <% %w\[buy_now be_happy feel_good].each_with_index do |line, slot| %>
           <%= tag.span t("affiliate.cta.#{line}"), class: "affiliate_feed_cta affiliate_feed_cta--#{slot + 1}",
                        aria: { hidden: true } %>
         <% end %>

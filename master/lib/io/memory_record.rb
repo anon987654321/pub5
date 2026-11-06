@@ -92,7 +92,7 @@ module Master
 
       def relative(path) = path.sub("#{@root}/", "")
 
-      VALID_TYPES = %w[user feedback project reference general].freeze
+      VALID_TYPES = %w\[user feedback project reference general].freeze
       KEY_RE = /\A[a-z0-9][a-z0-9_]{1,60}\z/.freeze
     end
   end

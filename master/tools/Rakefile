@@ -21,4 +21,4 @@ task :check do
   ruby File.expand_path("check.rb", __dir__)
 end
 
-task default: %i[check test]
+task default: %i\[check test]

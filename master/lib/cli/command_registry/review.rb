@@ -23,8 +23,8 @@ module Master
       SNAPSHOT_DIR_FILE_BYTES = 1_200
       SNAPSHOT_DIR_TOTAL_BYTES = 32_000
       SNAPSHOT_DIR_FILE_LIMIT = 40
-      SNAPSHOT_EXTENSIONS = %w[.rb .erb .yml].freeze
-      SNAPSHOT_SKIP_SEGMENTS = %w[
+      SNAPSHOT_EXTENSIONS = %w\[.rb .erb .yml].freeze
+      SNAPSHOT_SKIP_SEGMENTS = %w\[
         .git .bundle node_modules vendor tmp log coverage storage cache dist build knowledge public var
       ].freeze
 
@@ -645,7 +645,7 @@ module Master
       def fix_stage_selected?(only)
         return true if only.nil?
 
-        Array(only.to_s.split(",")).map(&:strip).any? { |stage| %w[fix converge].include?(stage.downcase) }
+        Array(only.to_s.split(",")).map(&:strip).any? { |stage| %w\[fix converge].include?(stage.downcase) }
       end
 
       # The canonical /fix command writes unless a caller explicitly asks for
@@ -713,7 +713,7 @@ module Master
       def display_fix_target(target)
         display = target.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip
         display = "master" if display.empty? || display == "." || display.casecmp?("master")
-        display = "all trees" if %w[all everything].any? { |name| display.casecmp?(name) }
+        display = "all trees" if %w\[all everything].any? { |name| display.casecmp?(name) }
         display[0, 80]
       end
 

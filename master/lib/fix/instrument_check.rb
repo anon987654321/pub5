@@ -20,7 +20,7 @@ module Master
     class InstrumentCheck
       class Unavailable < StandardError; end
 
-      PROBES = %i[disk git patch_tool ruby_child cache_dir linter].freeze
+      PROBES = %i\[disk git patch_tool ruby_child cache_dir linter].freeze
 
       def initialize(root:, bus: nil, probes: PROBES)
         @root = File.expand_path(root)
@@ -66,7 +66,7 @@ module Master
 
       def verify!
         verification = verification_result
-        return true if %i[pass not_applicable].include?(verification.status)
+        return true if %i\[pass not_applicable].include?(verification.status)
 
         broken = Array(@last_failures)
         @bus&.publish(

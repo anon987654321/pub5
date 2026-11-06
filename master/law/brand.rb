@@ -80,12 +80,12 @@ require_relative "../checks/support/rendered_design"
 
 module Law
   module DialectContrast
-    ROLES = { "text" => %w[text], "muted" => %w[muted text_secondary], "border" => %w[border],
-              "accent" => %w[accent] }.freeze
+    ROLES = { "text" => %w\[text], "muted" => %w\[muted text_secondary], "border" => %w\[border],
+              "accent" => %w\[accent] }.freeze
     NAMES = ROLES.keys.freeze
     FLOOR = { "text" => 7.0, "muted" => 4.5 }.freeze
-    DRIFT = %w[muted border].freeze
-    TWINS = [%w[brgen_old_light brgen_old_dark], %w[light social]].freeze
+    DRIFT = %w\[muted border].freeze
+    TWINS = [%w\[brgen_old_light brgen_old_dark], %w\[light social]].freeze
 
     # One dialect's two modes, each a block of colours and the prefix its keys carry.
     Mode = Data.define(:block, :prefix) do
@@ -158,7 +158,7 @@ module Law
 
   Law.define(:DIALECT_CONTRAST_PARITY) do
     source "Albers, Interaction of Color (1963); WCAG 1.4.3; operator 2026-11-06: 4.5:1 minimum, 7:1 for body text"
-    tags %i[DESIGN ACCESSIBILITY]
+    tags %i\[DESIGN ACCESSIBILITY]
     path %r{master/data/tokens\.yml\z}
     example_path "/repo/master/data/tokens.yml"
     fix "Bring the drifting role into the band in both modes: muted >= 4.5:1, text >= 7:1, borders within 35%."

@@ -16,9 +16,9 @@
 # listing_id indexes on the detail tables duplicate their unique twins.
 class CountersAndStatusesNeverNull < ActiveRecord::Migration[8.1]
   NULLABLE_ZERO = {
-    marketplace_listings: %i[views_count],
-    tv_videos: %i[views_count],
-    playlist_playlists: %i[plays_count]
+    marketplace_listings: %i\[views_count],
+    tv_videos: %i\[views_count],
+    playlist_playlists: %i\[plays_count]
   }.freeze
 
   def up
@@ -32,7 +32,7 @@ class CountersAndStatusesNeverNull < ActiveRecord::Migration[8.1]
          SET likes_count = (SELECT COUNT(*) FROM playlist_likes l WHERE l.playlist_id = playlist_playlists.id)
        WHERE likes_count IS NULL
     SQL
-    %i[tracks_count likes_count].each { |column| never_null(:playlist_playlists, column, 0) }
+    %i\[tracks_count likes_count].each { |column| never_null(:playlist_playlists, column, 0) }
 
     NULLABLE_ZERO.each do |table, columns|
       columns.each do |column|
@@ -54,18 +54,18 @@ class CountersAndStatusesNeverNull < ActiveRecord::Migration[8.1]
 
     add_index :messages, :expires_at, where: "expires_at IS NOT NULL", if_not_exists: true
     add_index :typing_indicators, :expires_at, if_not_exists: true
-    add_index :marketplace_listings, %i[city_id kind category_id], if_not_exists: true
+    add_index :marketplace_listings, %i\[city_id kind category_id], if_not_exists: true
 
-    %w[gig housing job].each do |kind|
+    %w\[gig housing job].each do |kind|
       remove_index :"marketplace_#{kind}_details", name: "index_marketplace_#{kind}_details_on_listing_id", if_exists: true
     end
   end
 
   def down
-    %w[gig housing job].each do |kind|
+    %w\[gig housing job].each do |kind|
       add_index :"marketplace_#{kind}_details", :listing_id, name: "index_marketplace_#{kind}_details_on_listing_id", if_not_exists: true
     end
-    remove_index :marketplace_listings, %i[city_id kind category_id], if_exists: true
+    remove_index :marketplace_listings, %i\[city_id kind category_id], if_exists: true
     remove_index :typing_indicators, :expires_at, if_exists: true
     remove_index :messages, :expires_at, if_exists: true
 
@@ -74,7 +74,7 @@ class CountersAndStatusesNeverNull < ActiveRecord::Migration[8.1]
     nullable(:takeaway_orders, :status)
     nullable(:marketplace_listings, :status)
     NULLABLE_ZERO.each { |table, columns| columns.each { |column| nullable(table, column) } }
-    %i[tracks_count likes_count].each { |column| nullable(:playlist_playlists, column) }
+    %i\[tracks_count likes_count].each { |column| nullable(:playlist_playlists, column) }
   end
 
   private

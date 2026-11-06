@@ -59,6 +59,6 @@ class HealthCheckBehaviourTest < Minitest::Test
   def test_documented_flags_are_accepted
     out, _, status = Open3.capture3(RbConfig.ruby, SCRIPT, "--help")
     assert status.success?
-    %w[--core --all-ready-apps --public --public-only --json].each { |flag| assert_includes out, flag }
+    %w\[--core --all-ready-apps --public --public-only --json].each { |flag| assert_includes out, flag }
   end
 end

@@ -3,7 +3,7 @@
 # Asking to be verified, and — for whoever reviews — answering.
 class Dating::VerificationsController < Dating::BaseController
   before_action :require_user_session
-  before_action :set_profile, only: %i[new create]
+  before_action :set_profile, only: %i\[new create]
   # Each request is a photo a person has to review.
   rate_limit to: 5, within: 1.hour, only: :create, name: "verification_requests",
     with: -> { redirect_back fallback_location: root_path, alert: t("shared.flash.rate_limited") }

@@ -205,7 +205,7 @@ class WardrobeAi
     result = @client ? chat(prompt) : {}
     return result if result["aesthetic"].present?
 
-    { "aesthetic" => "minimal", "reason" => "Default without AI key", "suggestions" => %w[tops bottoms shoes], "source" => "heuristic" }
+    { "aesthetic" => "minimal", "reason" => "Default without AI key", "suggestions" => %w\[tops bottoms shoes], "source" => "heuristic" }
   end
 
   def suggest_packing_list(duration, climate)

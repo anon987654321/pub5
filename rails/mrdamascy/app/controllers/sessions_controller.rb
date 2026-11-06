@@ -14,7 +14,7 @@ class SessionsController < ApplicationController
   def self.sms_mocked? = Rails.env.local? || VippsClient.mock_mode?
 
   # Guessing a code or spraying phone numbers costs a visitor ten tries.
-  rate_limit to: 10, within: 10.minutes, only: %i[request_code create], name: "phone_sign_in",
+  rate_limit to: 10, within: 10.minutes, only: %i\[request_code create], name: "phone_sign_in",
              with: -> { redirect_to new_session_path, alert: t("auth.too_many_attempts") }
 
   def new

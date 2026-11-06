@@ -101,7 +101,7 @@ module Master
       # bundle; nil unsets them, and the app's bin/rails finds its own Gemfile. MT_NO_PLUGINS is
       # master's test setting: Rails' test runner is a minitest plugin, and with it off
       # `bin/rails test a_test.rb b_test.rb` ran 0 tests and exited 0.
-      FOREIGN_BUNDLE = %w[
+      FOREIGN_BUNDLE = %w\[
         GEM_HOME GEM_PATH RUBYOPT RUBYLIB BUNDLE_GEMFILE BUNDLE_LOCKFILE BUNDLE_PATH BUNDLE_APP_CONFIG
         BUNDLE_USER_CONFIG BUNDLE_DISABLE_SHARED_GEMS BUNDLE_FROZEN BUNDLE_BIN_PATH BUNDLER_VERSION BUNDLER_SETUP
         MT_NO_PLUGINS

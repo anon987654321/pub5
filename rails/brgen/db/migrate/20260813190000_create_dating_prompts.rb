@@ -20,7 +20,7 @@ class CreateDatingPrompts < ActiveRecord::Migration[8.1]
       t.integer :position, null: false, default: 0
       t.timestamps
     end
-    add_index :dating_prompts, %i[profile_id position]
+    add_index :dating_prompts, %i\[profile_id position]
 
     change_table :dating_likes, bulk: true do |t|
       # Hinge's whole interaction: the like points at the thing it is about.
@@ -33,6 +33,6 @@ class CreateDatingPrompts < ActiveRecord::Migration[8.1]
       # processed in the background and would otherwise read as activity.
       t.datetime :last_active_at
     end
-    add_index :dating_profiles, %i[visible last_active_at]
+    add_index :dating_profiles, %i\[visible last_active_at]
   end
 end

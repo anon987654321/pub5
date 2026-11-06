@@ -11,7 +11,7 @@
 class AddMarketplaceListingKinds < ActiveRecord::Migration[8.1]
   def change
     add_column :marketplace_listings, :kind, :string, null: false, default: "goods"
-    add_index :marketplace_listings, %i[kind city_id]
+    add_index :marketplace_listings, %i\[kind city_id]
 
     create_table :marketplace_job_details do |t|
       t.references :listing, null: false, foreign_key: { to_table: :marketplace_listings }

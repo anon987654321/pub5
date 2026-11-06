@@ -5,7 +5,7 @@ require "minitest/mock"
 
 class DinteroClientTest < ActiveSupport::TestCase
   setup do
-    @saved = %w[DINTERO_API_BASE DINTERO_CHECKOUT_BASE DINTERO_TEST_MODE]
+    @saved = %w\[DINTERO_API_BASE DINTERO_CHECKOUT_BASE DINTERO_TEST_MODE]
       .to_h { |key| [ key, ENV[key] ] }
     ENV.delete("DINTERO_API_BASE")
     ENV.delete("DINTERO_CHECKOUT_BASE")

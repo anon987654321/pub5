@@ -10,7 +10,7 @@ class PremergeInteractionCampaignContractTest < Minitest::Test
   end
 
   def test_default_premerge_includes_the_interaction_campaign
-    assert_includes @source, "else %i[apps pwa contracts coverage checks interactions]"
+    assert_includes @source, "else %i\[apps pwa contracts coverage checks interactions]"
     assert_includes @source, "elsif ARGV.include?(\"--interactions\") then [:interactions]"
     assert_match(/system\(\*RUBY, runner, \"--all\", chdir: ROOT\)/, @source)
   end

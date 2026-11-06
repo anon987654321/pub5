@@ -19,7 +19,7 @@ class CreateDatingVerificationsAndPicks < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :dating_verifications, %i[profile_id status]
+    add_index :dating_verifications, %i\[profile_id status]
 
     # Denormalised onto the profile because every deck card reads it and a join
     # per card is the shape that made the feed slow before.
@@ -34,7 +34,7 @@ class CreateDatingVerificationsAndPicks < ActiveRecord::Migration[8.1]
       t.datetime :created_at, null: false
     end
 
-    add_index :dating_daily_picks, %i[user_id picked_on]
-    add_index :dating_daily_picks, %i[user_id profile_id picked_on], unique: true
+    add_index :dating_daily_picks, %i\[user_id picked_on]
+    add_index :dating_daily_picks, %i\[user_id profile_id picked_on], unique: true
   end
 end

@@ -12,11 +12,11 @@ module Master
       MAX_CONTEXT_BYTES = 24_000
       MAX_FIELD_BYTES = 1_000
       MIN_REMAINING_SECONDS = 120
-      VERDICTS = %w[KEEP REPAIR INVESTIGATE HUMAN INCONCLUSIVE].freeze
+      VERDICTS = %w\[KEEP REPAIR INVESTIGATE HUMAN INCONCLUSIVE].freeze
 
       Result = Data.define(:verdict, :summary, :law, :anchor, :evidence, :next_action) do
         def repair? = verdict == "REPAIR"
-        def actionable? = %w[REPAIR INVESTIGATE HUMAN].include?(verdict)
+        def actionable? = %w\[REPAIR INVESTIGATE HUMAN].include?(verdict)
       end
 
       def initialize(agent:, root:, bus: nil)

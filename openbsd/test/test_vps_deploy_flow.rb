@@ -21,7 +21,7 @@ class VpsDeployFlowTest < Minitest::Test
   # so they come from the same source rather than being stubbed. Without its own
   # `log`, zsh falls through to its `log` builtin and every call errors.
   DEPLOY_USER_LINES = SOURCE[/^DEPLOY_USER=.*\n^DEPLOY_HOME=.*$/]
-  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry].freeze
+  HELPER_NAMES = %w\[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry].freeze
   HELPERS = HELPER_NAMES.to_h { |name| [name, SOURCE[/^#{name}\(\) \{.*?^\}$/m]] }
   HELPER_SOURCE = HELPERS.values.join("\n")
   # su stands in for root changing to the deploy user: it refuses any other user
@@ -230,7 +230,7 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_a_halted_pass_restores_every_missing_service_one_at_a_time_in_serving_order
     Dir.mktmpdir do |dir|
-      out, status, log = restore_run(dir, down: %w[master amber bsdports], body: "deploy_stage=all:master; halted_app=master; exit 1")
+      out, status, log = restore_run(dir, down: %w\[master amber bsdports], body: "deploy_stage=all:master; halted_app=master; exit 1")
       assert_equal 1, status, "the failing exit status must survive the restore"
       assert_equal ["restart amber", "up amber", "restart bsdports", "up bsdports", "restart master", "up master"], log,
                    "serving order; each answers /up before the next is started; brgen was up"
@@ -244,7 +244,7 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_a_service_that_never_answers_is_reported_and_does_not_stop_the_others
     Dir.mktmpdir do |dir|
-      out, status, log = restore_run(dir, down: %w[brgen amber], never: %w[brgen])
+      out, status, log = restore_run(dir, down: %w\[brgen amber], never: %w\[brgen])
       assert_equal 1, status
       assert_includes out, "restore brgen FAILED"
       assert_includes out, "STILL DOWN after restore: brgen"
@@ -257,7 +257,7 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_shed_services_are_counted_apart_from_the_deploys_own_stops
     Dir.mktmpdir do |dir|
-      out, = restore_run(dir, down: %w[amber bsdports brgen], shed: "bsdports", body: "own_stops+=(brgen); exit 1")
+      out, = restore_run(dir, down: %w\[amber bsdports brgen], shed: "bsdports", body: "own_stops+=(brgen); exit 1")
       assert_includes out, "restore brgen (stopped by this deploy)"
       assert_includes out, "restore bsdports (shed by resource_guard)"
       assert_includes out, "restore amber (down for another reason"
@@ -275,10 +275,10 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_a_clean_exit_restores_nothing_and_a_child_never_restores
     Dir.mktmpdir do |dir|
-      _out, status, log = restore_run(dir, down: %w[amber], body: "exit 0")
+      _out, status, log = restore_run(dir, down: %w\[amber], body: "exit 0")
       assert_equal 0, status
       assert_empty log
-      _out, status, log = restore_run(dir, down: %w[amber], body: "lock_owner=0; exit 1")
+      _out, status, log = restore_run(dir, down: %w\[amber], body: "lock_owner=0; exit 1")
       assert_equal 1, status
       assert_empty log, "only the process that owns the lock restores"
     end
@@ -286,7 +286,7 @@ class VpsDeployFlowTest < Minitest::Test
 
   def test_the_lock_is_released_whichever_way_the_run_ends
     Dir.mktmpdir do |dir|
-      %w[exit\ 1 kill\ -TERM\ $$;\ sleep\ 5].each do |body|
+      %w\[exit\ 1 kill\ -TERM\ $$;\ sleep\ 5].each do |body|
         out, = restore_run(dir, down: [], body: body)
         assert_includes out, "released", body
       end

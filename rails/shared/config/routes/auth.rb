@@ -2,7 +2,7 @@
 
 # Shared auth routes — instance_eval from each app's config/routes.rb
 
-resource :account, only: %i[show destroy], controller: "account_settings" do
+resource :account, only: %i\[show destroy], controller: "account_settings" do
   post :cancel_deletion, on: :member
   get :export, on: :member
   patch :email, on: :member
@@ -10,7 +10,7 @@ resource :account, only: %i[show destroy], controller: "account_settings" do
   delete :other_sessions, on: :member
 end
 
-resource :two_factor_setup, only: %i[show create update], controller: "two_factor_setups"
+resource :two_factor_setup, only: %i\[show create update], controller: "two_factor_setups"
 post "two_factor/verify" => "two_factor_setups#verify", as: :two_factor_verify
 
 # Every controller named here ships in the engine, as FingerprintsController does — but

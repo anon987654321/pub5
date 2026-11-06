@@ -8,13 +8,13 @@ class Conversation
 
     # `bots` names the personas (see ChannelBot::PERSONAS) that hang out there.
     CHANNELS = {
-      "brgen" => { name: "#brgen",       vertical: nil,           blurb: "The city-wide lobby — anything goes.",              bots: %w[master echo] },
-      "marketplace" => { name: "#marketplace", vertical: "marketplace", blurb: "Buying, selling, haggling, and finds.",              bots: %w[curator echo] },
-      "dating" => { name: "#dating",      vertical: "dating",      blurb: "Flirt, vent, and swap first-date ideas.",           bots: %w[cupid echo] },
-      "playlist" => { name: "#playlist",    vertical: "playlist",    blurb: "Now playing — share tracks and listening parties.", bots: %w[dj echo] },
-      "tv" => { name: "#tv",          vertical: "tv",          blurb: "Live threads for shows and streams.",               bots: %w[critic echo] },
-      "takeaway" => { name: "#takeaway",    vertical: "takeaway",    blurb: "What's good to order right now?",                   bots: %w[foodie echo] },
-      "maps" => { name: "#maps",        vertical: "maps",        blurb: "Local spots, tips, and directions.",                bots: %w[scout echo] },
+      "brgen" => { name: "#brgen",       vertical: nil,           blurb: "The city-wide lobby — anything goes.",              bots: %w\[master echo] },
+      "marketplace" => { name: "#marketplace", vertical: "marketplace", blurb: "Buying, selling, haggling, and finds.",              bots: %w\[curator echo] },
+      "dating" => { name: "#dating",      vertical: "dating",      blurb: "Flirt, vent, and swap first-date ideas.",           bots: %w\[cupid echo] },
+      "playlist" => { name: "#playlist",    vertical: "playlist",    blurb: "Now playing — share tracks and listening parties.", bots: %w\[dj echo] },
+      "tv" => { name: "#tv",          vertical: "tv",          blurb: "Live threads for shows and streams.",               bots: %w\[critic echo] },
+      "takeaway" => { name: "#takeaway",    vertical: "takeaway",    blurb: "What's good to order right now?",                   bots: %w\[foodie echo] },
+      "maps" => { name: "#maps",        vertical: "maps",        blurb: "Local spots, tips, and directions.",                bots: %w\[scout echo] },
     }.freeze
 
     # Channels are ephemeral: messages fade so a room reads as "what's happening

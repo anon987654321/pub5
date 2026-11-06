@@ -10,6 +10,6 @@ class AddPinnedAtToConversationParticipants < ActiveRecord::Migration[8.1]
     add_column :conversation_participants, :pinned_at, :datetime
 
     # The messenger list orders on this column for one user at a time.
-    add_index :conversation_participants, %i[user_id pinned_at]
+    add_index :conversation_participants, %i\[user_id pinned_at]
   end
 end

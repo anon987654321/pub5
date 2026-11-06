@@ -6,16 +6,16 @@ module Deploy
   class SharedWiringCheck
     ROOT = File.expand_path("../../../..", __dir__)
     RAILS_ROOT = File.join(ROOT, "rails")
-    APPS = %w[amber brgen bsdports].freeze
+    APPS = %w\[amber brgen bsdports].freeze
 
-    REQUIRED_ROUTE_FILES = %w[auth.rb fleet.rb social.rb legal.rb].freeze
-    REQUIRED_PUBLIC_FILES = %w[404.html 422.html 500.html styles/errors.css].freeze
-    REQUIRED_STIMULUS_REGISTRATIONS = %w[
+    REQUIRED_ROUTE_FILES = %w\[auth.rb fleet.rb social.rb legal.rb].freeze
+    REQUIRED_PUBLIC_FILES = %w\[404.html 422.html 500.html styles/errors.css].freeze
+    REQUIRED_STIMULUS_REGISTRATIONS = %w\[
       autosave draft-store media-picker feed-compose scroll-reveal offline-feed pwa-standalone post-progressive
     ].freeze
 
-    REQUIRED_SHARED_INITIALIZERS = %w[omniauth.rb auth_extensions.rb].freeze
-    REQUIRED_SHARED_CONTROLLERS = %w[
+    REQUIRED_SHARED_INITIALIZERS = %w\[omniauth.rb auth_extensions.rb].freeze
+    REQUIRED_SHARED_CONTROLLERS = %w\[
       shared/reactions_controller.rb
       shared/outbound_clicks_controller.rb
     ].freeze
@@ -31,7 +31,7 @@ module Deploy
     }.freeze
 
     # Orphans that must live in shared/ only (not per-app copies).
-    FORBIDDEN_APP_JS = %w[
+    FORBIDDEN_APP_JS = %w\[
       controllers/hello_controller.js
       idb-keyval.js
       controllers/bottom_sheet_controller.js
@@ -50,7 +50,7 @@ module Deploy
       # mount them, bsdports does not, so they moved out of the file every
       # app imports; post-progressive is brgen's own, in stimulus_boot_brgen.js.
       # The three texts are checked together below.
-      boot_files = %w[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js].map { |f| File.join(RAILS_ROOT, "__shared/frontend", f) }
+      boot_files = %w\[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js].map { |f| File.join(RAILS_ROOT, "__shared/frontend", f) }
 
       result.fail("missing shared importmap baseline") unless File.file?(baseline)
       boot_files.each { |f| result.fail("missing #{File.basename(f)}") unless File.file?(f) }
@@ -58,7 +58,7 @@ module Deploy
       baseline_text = File.read(baseline)
       boot_text = boot_files.select { |f| File.file?(f) }.map { |f| File.read(f) }.join("\n")
       result.checked!(1 + boot_files.size)
-      %w[
+      %w\[
         pub4/autosave pub4/draft_store pub4/media_picker pub4/feed_compose pub4/post_progressive pub4/scroll_reveal
         pub4/offline_feed pub4/pwa_standalone
       ].each do |pin|

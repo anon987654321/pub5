@@ -68,14 +68,14 @@ SimpleCov.start "rails" do
   # can legitimately be exercised by a different consumer than the current app.
   if ENV["PUB4_COVERAGE_STRICT"] == "1"
     own_source = %r{\A#{Regexp.escape(app_dir)}/(?:app|engines|lib)/}
-    %i[line branch method].each do |criterion|
+    %i\[line branch method].each do |criterion|
       coverage criterion do
         minimum 100, per: own_source
       end
     end
   elsif ENV["FULL_COVERAGE"] == "1" || ENV["PUB4_CI_GUARD"] == "1"
     floors = YAML.safe_load_file(File.join(__dir__, "coverage_floors.yml")).fetch(app)
-    %i[line branch method].each do |criterion|
+    %i\[line branch method].each do |criterion|
       coverage criterion do
         minimum floors.fetch(criterion.to_s)
       end

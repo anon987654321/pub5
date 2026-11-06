@@ -5,14 +5,14 @@ set -euo pipefail
 
 # master_web_assets_precompile — Propshaft digest manifest + digested files for production face UI.
 master_web_assets_precompile() {
-  local web_root=${1:-${PUB4:-/home/dev/pub4}/master/web}
+  local web_root=${1:-${PUB4:-/home/dev/pub5}/master/web}
   [[ -d $web_root ]] || { log_warn "master_web_assets_precompile: missing ${web_root}"; return 0; }
   log "master web assets:precompile"
   (
     cd "$web_root"
     rm -rf public/assets
     RAILS_ENV=production SECRET_KEY_BASE="${SECRET_KEY_BASE:-dummy}" bundle_exec exec rails assets:precompile
-    bundle_exec exec ruby "${PUB4:-/home/dev/pub4}/master/checks/runner.rb" master_web_assets
+    bundle_exec exec ruby "${PUB4:-/home/dev/pub5}/master/checks/runner.rb" master_web_assets
   ) || { log_err "master web assets precompile failed"; return 1; }
   log_ok "master web assets ready"
 }

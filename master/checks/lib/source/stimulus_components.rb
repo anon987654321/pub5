@@ -11,7 +11,7 @@ module Deploy
     # in their app-scoped boot files rather than stimulus_boot.js, so every
     # app that doesn't mount them never imports the module. The three files
     # together are this check's "boot" vocabulary.
-    BOOT_FILES = %w[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js stimulus_boot_amber.js]
+    BOOT_FILES = %w\[stimulus_boot.js stimulus_boot_social.js stimulus_boot_brgen.js stimulus_boot_amber.js]
       .map { |f| File.join(RAILS_ROOT, "__shared/frontend", f) }.freeze
     BASELINE = File.join(RAILS_ROOT, "__shared/config/importmap_baseline.rb")
     VENDOR = File.join(RAILS_ROOT, "__shared/vendor/javascript")
@@ -26,15 +26,15 @@ module Deploy
     # nothing consumes is the futurism shape removed at 3415d7ab7, where a pin
     # was fetched eagerly on every page load to register a controller no ERB
     # referenced. Add dialog back here when a view actually asks for it.
-    REQUIRED_CONTROLLERS = %w[
+    REQUIRED_CONTROLLERS = %w\[
       password-visibility nested-form character-counter
       checkbox-select-all read-more
     ].freeze
 
-    REQUIRED_PACKAGES = %w[password-visibility rails-nested-form].freeze
+    REQUIRED_PACKAGES = %w\[password-visibility rails-nested-form].freeze
 
     # Current upstream catalogue, verified against stimulus-components.com.
-    UPSTREAM_COMPONENTS = %w[
+    UPSTREAM_COMPONENTS = %w\[
       animated-number auto-submit carousel character-counter chartjs checkbox-select-all clipboard
       color-picker confirmation content-loader dialog dropdown glow hotkey lightbox notification
       password-visibility places-autocomplete popover prefetch rails-nested-form read-more remote-rails
@@ -109,13 +109,13 @@ module Deploy
       /data-char-counter-target/,
     ].freeze
 
-    FORBIDDEN_CONTROLLER_FILES = %w[
+    FORBIDDEN_CONTROLLER_FILES = %w\[
       char_counter_controller.js
       textarea_autogrow_controller.js
       stimulus_rails_nested_form_controller.js
     ].freeze
 
-    # The baseline pins components two ways: names in a %w[] list handed to
+    # The baseline pins components two ways: names in a %w\[] list handed to
     # sc_pin, and single `pin "@stimulus-components/x", to: ...` lines.
     def self.pinned_components(baseline)
       listed = baseline.scan(/%w\[([^\]]*)\]\s*\.each\s*\{\s*\|\w+\|\s*sc_pin/).flatten.flat_map(&:split)

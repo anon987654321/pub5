@@ -18,16 +18,16 @@ class TestLanePolicyFromYaml < Minitest::Test
   end
 
   def test_subscription_lanes_come_from_models_yml
-    assert_equal %w[claude-cli grok-cli codex-cli agy], Selection.subscription_lanes
+    assert_equal %w\[claude-cli grok-cli codex-cli agy], Selection.subscription_lanes
   end
 
   # An owner/name id goes through OpenRouter, a bare id through its vendor.
   def test_api_key_routing_comes_from_providers_yml
     envs = ->(id) { Selection.api_keys.find { |pattern, _envs| pattern.match?(id) }&.last }
 
-    assert_equal %w[OPENROUTER_API_KEY], envs.call("deepseek/deepseek-chat")
-    assert_equal %w[DEEPSEEK_API_KEY], envs.call("deepseek-chat")
-    assert_equal %w[GOOGLE_API_KEY GEMINI_API_KEY], envs.call("gemini-3.1-pro")
+    assert_equal %w\[OPENROUTER_API_KEY], envs.call("deepseek/deepseek-chat")
+    assert_equal %w\[DEEPSEEK_API_KEY], envs.call("deepseek-chat")
+    assert_equal %w\[GOOGLE_API_KEY GEMINI_API_KEY], envs.call("gemini-3.1-pro")
     assert_nil envs.call("mistral-large")
   end
 

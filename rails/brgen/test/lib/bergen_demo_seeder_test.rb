@@ -155,7 +155,7 @@ class BergenDemoSeederTest < ActiveSupport::TestCase
     embedded = Post.where(city: @city, title: linked.map { |row| row[:title] }).to_a
     assert_equal linked.size, embedded.size
     assert embedded.all? { |post| post.link_embed_record&.ok? }
-    assert_equal %w[soundcloud youtube], embedded.map { |post| post.link_embed["provider"] }.uniq.sort
+    assert_equal %w\[soundcloud youtube], embedded.map { |post| post.link_embed["provider"] }.uniq.sort
     assert_includes embedded.map { |post| post.link_embed_record.player_url },
                     "https://www.youtube-nocookie.com/embed/yeTdadYSSGo?autoplay=1"
   end

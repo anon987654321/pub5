@@ -8,5 +8,5 @@ class TrustSignal < ApplicationRecord
   # duplicate credit. The unique index in 20260825120000 is the real guard;
   # this validation also covers the case the index cannot, because SQLite
   # treats NULLs as distinct and `source` is nullable.
-  validates :kind, uniqueness: { scope: %i[user_id source] }
+  validates :kind, uniqueness: { scope: %i\[user_id source] }
 end

@@ -4,7 +4,7 @@ module Playlist
   class ListeningParty < ApplicationRecord
     self.table_name = "playlist_listening_parties"
 
-    STATUSES = %w[active ended].freeze
+    STATUSES = %w\[active ended].freeze
     # The host's player reports every few seconds while it plays. A party
     # synced longer ago than this is taken to be paused where it stopped.
     HEARTBEAT = 20.seconds

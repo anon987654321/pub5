@@ -31,7 +31,7 @@ class TestFixRefusals < Minitest::Test
 
     assert_equal "fix0: master/lib/a.rb refused by scope: changes lines 90-91, finding range is 1-35\n", out
     row = rows.last
-    assert_equal %w[scope master/lib/a.rb FEW_ARGUMENTS], row.values_at("gate", "file", "law")
+    assert_equal %w\[scope master/lib/a.rb FEW_ARGUMENTS], row.values_at("gate", "file", "law")
     assert_equal 1, Refusals.counts[:scope]
   end
 

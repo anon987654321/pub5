@@ -42,7 +42,7 @@ class TestFixLoopPriorities < Minitest::Test
       laws = [Law.new("A", :warning), Law.new("B", :error)]
       order = Master::Fix::FixLoop::LawOrder.new(laws:, learnings: nil, bus: nil, root: dir)
 
-      assert_equal %w[B A], order.ordered(violation_counts: {}).map(&:id)
+      assert_equal %w\[B A], order.ordered(violation_counts: {}).map(&:id)
     end
   end
 
@@ -87,7 +87,7 @@ class TestFixLoopPriorities < Minitest::Test
               Law.new("RENDERED_VISUAL_REFINEMENT", :warning)]
       order = Master::Fix::FixLoop::LawOrder.new(laws:, learnings: nil, bus: nil, root: dir)
 
-      assert_equal %w[RENDERED_VISUAL_REFINEMENT FEATURE_ENVY GENERIC], order.ordered(violation_counts: {}).map(&:id)
+      assert_equal %w\[RENDERED_VISUAL_REFINEMENT FEATURE_ENVY GENERIC], order.ordered(violation_counts: {}).map(&:id)
     end
   end
 end

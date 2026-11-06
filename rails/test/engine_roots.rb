@@ -5,5 +5,5 @@
 # whole brgen suite died loading it on 2026-10-22; so the checkout comes from PUB5_ROOT (exported by
 # ci-run.ksh), then the repo, then the box's own checkout, the order Shared::Contracts uses.
 surfaces = File.join("master", "checks", "support", "brgen_vertical_surfaces.rb")
-roots = [ENV["PUB5_ROOT"].to_s.strip, File.expand_path("../..", __dir__), "/home/dev/pub4"].reject(&:empty?)
+roots = [ENV["PUB5_ROOT"].to_s.strip, File.expand_path("../..", __dir__), "/home/dev/pub5"].reject(&:empty?)
 require File.join(roots.find { |root| File.file?(File.join(root, surfaces)) } || roots.first, surfaces)

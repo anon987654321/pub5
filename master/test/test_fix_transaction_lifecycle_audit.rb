@@ -38,7 +38,7 @@ class TestFixTransactionLifecycleAudit < Minitest::Test
       tx = Master::Fix::Transaction.new(root: dir, paths: ["private-note.txt"], id: "audit-safe", bus:).begin!
       lifecycle = bus.events.select { |name, _payload| name.start_with?("fix:transaction_lifecycle:") }
 
-      assert_equal %w[fix:transaction_lifecycle:before fix:transaction_lifecycle:after], lifecycle.map(&:first)
+      assert_equal %w\[fix:transaction_lifecycle:before fix:transaction_lifecycle:after], lifecycle.map(&:first)
       assert_equal lifecycle.first.last.fetch(:audit_id), lifecycle.last.last.fetch(:audit_id)
       assert_equal "begin", lifecycle.first.last.fetch(:operation)
       assert_equal "ok", lifecycle.last.last.fetch(:status)

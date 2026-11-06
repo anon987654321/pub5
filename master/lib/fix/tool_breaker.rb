@@ -21,7 +21,7 @@ module Master
     # reader that keeps a tripped fuse from being silent.
     class ToolBreaker
       LIMIT = 3
-      COUNTED = %i[no_proposal reflexion_rejected consensus_rejected rejected].freeze
+      COUNTED = %i\[no_proposal reflexion_rejected consensus_rejected rejected].freeze
       Entry = Struct.new(:state, :count)
 
       class << self
@@ -59,7 +59,7 @@ module Master
       def record(tool, finding, state, outcome)
         tuple = key(tool, finding)
         fused = @lock.synchronize do
-          next @entries.delete(tuple) && false if %i[applied commit_refused].include?(outcome)
+          next @entries.delete(tuple) && false if %i\[applied commit_refused].include?(outcome)
           next false unless COUNTED.include?(outcome)
 
           entry = @entries[tuple]

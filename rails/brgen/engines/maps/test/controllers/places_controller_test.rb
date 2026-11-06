@@ -75,7 +75,7 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
     rows = JSON.parse(response.body)
     assert_equal 2, rows.size
     row = rows.find { |r| r["name"] == "Kafeteket" }
-    assert_equal %w[city id kind lat lng name neighborhood], row.keys.sort
+    assert_equal %w\[city id kind lat lng name neighborhood], row.keys.sort
     assert_equal cafe.latitude.to_f, row["lat"].to_f
     assert_equal cafe.longitude.to_f, row["lng"].to_f
     assert_equal @city.name, row["city"]

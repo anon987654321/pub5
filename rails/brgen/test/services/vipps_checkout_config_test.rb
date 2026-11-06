@@ -8,7 +8,7 @@ require "test_helper"
 # marked paid, no money). api_base's decision table is that contract, and it
 # had no test calling it.
 class VippsCheckoutConfigTest < ActiveSupport::TestCase
-  KEYS = %w[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN
+  KEYS = %w\[VIPPS_EPAYMENT_CLIENT_ID VIPPS_EPAYMENT_CLIENT_SECRET VIPPS_MSN
             VIPPS_SUBSCRIPTION_KEY VIPPS_API_BASE VIPPS_TEST_MODE].freeze
 
   setup { @saved = KEYS.to_h { |k| [ k, ENV[k] ] }; KEYS.each { |k| ENV.delete(k) } }

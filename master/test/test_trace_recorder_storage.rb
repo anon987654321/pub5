@@ -194,7 +194,7 @@ class TestTraceRecorderStorage < Minitest::Test
 
   # File.owned? is false for path, and chmod of it raises EPERM as the kernel does.
   def as_another_owner_of(path)
-    real = %i[owned? chmod].to_h { |name| [name, File.method(name)] }
+    real = %i\[owned? chmod].to_h { |name| [name, File.method(name)] }
     File.define_singleton_method(:owned?) { |target| target == path ? false : real[:owned?].call(target) }
     File.define_singleton_method(:chmod) do |mode, *targets|
       raise Errno::EPERM, path if targets.include?(path)

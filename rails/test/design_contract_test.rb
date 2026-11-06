@@ -34,7 +34,7 @@ def test_bsdports_styles_load_as_ordered_feature_modules
   # module banners, and their order is still the cascade contract.
   names = stylesheet_module_names("bsdports")
 
-  assert_equal %w[
+  assert_equal %w\[
     bsdports_base
     bsdports_components
     bsdports_shared_chrome
@@ -93,7 +93,7 @@ def test_bsdports_primary_nav_rules_target_the_rendered_landmark
 def test_amber_feature_styles_are_loaded_at_their_original_boundaries
   names = stylesheet_module_names("amber")
 
-  assert_equal %w[
+  assert_equal %w\[
     commerce_polish
     amber_chrome
     amber_guest_compose
@@ -249,7 +249,7 @@ def test_brgen_old_dialect_outranks_the_social_stack
   end
 
   def test_product_roots_preserve_shared_keyboard_focus_indicators
-    roots = %w[amber brgen bsdports].to_h { |app| [app, stylesheet_source(app)] }
+    roots = %w\[amber brgen bsdports].to_h { |app| [app, stylesheet_source(app)] }
     roots.each do |app, source|
       assert_includes source, '@include meta.load-css("focus_ring");',
                       "#{app} must load the shared focus indicator after local styles"

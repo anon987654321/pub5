@@ -22,7 +22,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.datetime :last_used_at
       t.timestamps
     end
-    add_index :external_identities, %i[identity_provider_id subject], unique: true,
+    add_index :external_identities, %i\[identity_provider_id subject], unique: true,
                                                                       name: 'index_external_identities_on_provider_and_subject'
 
     create_table :identity_assurances do |t|
@@ -33,7 +33,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.datetime :expires_at
       t.timestamps
     end
-    add_index :identity_assurances, %i[user_id level], unique: true
+    add_index :identity_assurances, %i\[user_id level], unique: true
 
     create_table :trust_signals do |t|
       t.references :user, null: false, foreign_key: true
@@ -43,7 +43,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.text :metadata
       t.timestamps
     end
-    add_index :trust_signals, %i[user_id kind]
+    add_index :trust_signals, %i\[user_id kind]
 
     create_table :reputation_scores do |t|
       t.references :user, null: false, foreign_key: true
@@ -52,7 +52,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.datetime :calculated_at
       t.timestamps
     end
-    add_index :reputation_scores, %i[user_id scope], unique: true
+    add_index :reputation_scores, %i\[user_id scope], unique: true
 
     create_table :account_merges do |t|
       t.references :guest_user, null: false, foreign_key: { to_table: :users }
@@ -61,7 +61,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.datetime :merged_at
       t.timestamps
     end
-    add_index :account_merges, %i[guest_user_id user_id], unique: true
+    add_index :account_merges, %i\[guest_user_id user_id], unique: true
 
     create_table :moderation_flags do |t|
       t.references :user, null: false, foreign_key: true
@@ -72,7 +72,7 @@ class CreateIdentityAndTrustPrimitives < ActiveRecord::Migration[8.0]
       t.text :reason
       t.timestamps
     end
-    add_index :moderation_flags, %i[flaggable_type flaggable_id]
-    add_index :moderation_flags, %i[user_id status]
+    add_index :moderation_flags, %i\[flaggable_type flaggable_id]
+    add_index :moderation_flags, %i\[user_id status]
   end
 end

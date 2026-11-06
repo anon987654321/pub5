@@ -42,10 +42,10 @@ class CategoryTest < ActiveSupport::TestCase
   end
 
   test "a slug must be lowercase alphanumeric and hyphens" do
-    %w[Net net_work net.work "net work"].each do |slug|
+    %w\[Net net_work net.work "net work"].each do |slug|
       refute category(slug:).valid?, "#{slug.inspect} was accepted as a slug"
     end
-    %w[net net-work net2].each do |slug|
+    %w\[net net-work net2].each do |slug|
       assert category(slug:).valid?, "#{slug.inspect} was refused"
     end
   end

@@ -143,7 +143,7 @@ end
 
 # law/rails.rb was deleted here on 2026-08-21. Its four rules — FIND_EACH,
 # N_PLUS_ONE, NO_UPDATE_ATTRIBUTE, PLUCK_OVER_MAP — declared `languages
-# %i[rails]`, and FILE_LANGUAGE_MAP produces no such language: every .rb
+# %i\[rails]`, and FILE_LANGUAGE_MAP produces no such language: every .rb
 # file is "ruby". The four laws had never matched a single file; the
 # registry twins (ruby_laws.rb, universal_laws.rb), path-scoped to
 # /app/, were the only live implementations all along — the inert-config
@@ -200,9 +200,9 @@ end
 Law.define(:PERCENT_LITERAL) do
   source "Ruby Style Guide - %w/%i array literals"
   detect { |line| line.match?(/\[:[a-z_]+,\s*:[a-z_]+,\s*:[a-z_]+/) }
-  fix "Use %i[a b c] for symbol arrays."
+  fix "Use %i\[a b c] for symbol arrays."
   bad  "[:a, :b, :c]"
-  good "%i[a b c]"
+  good "%i\[a b c]"
 end
 
 Law.define(:RATE_LIMITING_MISSING) do
@@ -575,13 +575,13 @@ module Master
         # Flat here on purpose: one guard, one dispatch to a lookup, no nesting
         # to reintroduce.
         module RubyRuleSupport
-          ASSIGNMENT_NODES = %i[
+          ASSIGNMENT_NODES = %i\[
             LocalVariableWriteNode InstanceVariableWriteNode ClassVariableWriteNode
             GlobalVariableWriteNode ConstantWriteNode LocalVariableOperatorWriteNode
             InstanceVariableOperatorWriteNode MultiWriteNode
           ].freeze
 
-          CONDITION_NODES = %i[
+          CONDITION_NODES = %i\[
             IfNode UnlessNode WhileNode UntilNode CaseNode WhenNode AndNode OrNode RescueNode
           ].freeze
 
@@ -614,7 +614,7 @@ module Master
 
           # A multi-line array or hash whose last element is not followed by a
           # comma before the closing bracket. Percent literals are excluded
-          # because %w[] and %i[] separate on whitespace, so a comma inside one
+          # because %w\[] and %i\[] separate on whitespace, so a comma inside one
           # becomes part of an element.
           def self.unterminated_collection?(node, src)
             opening = node.opening_loc
@@ -646,7 +646,7 @@ module Master
         # Scoped to /app/ rather than /app/controllers/ because a service or
         # model object handed the params hash carries the same risk.
         ::Law.define(:STRONG_PARAMETERS) do
-          tags %i[SECURITY]
+          tags %i\[SECURITY]
           fix "mass assignment goes through explicitly permitted attributes"
           bad "Post.create(params[:post])\n"
           good "Post.create(params.require(:post).permit(:title))\n"
@@ -669,7 +669,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:HASH_FETCH) do
-          tags %i[READABILITY]
+          tags %i\[READABILITY]
           fix "prefer Hash#fetch over [] with ||"
           bad "value = options[:size] || 10\n"
           good "value = options.fetch(:size, 10)\n"
@@ -698,7 +698,7 @@ module Master
         # this version had learned ported there (2026-08-21 twin retirement).
 
         ::Law.define(:FIND_EACH) do
-          tags %i[PERFORMANCE]
+          tags %i\[PERFORMANCE]
           fix "use find_each for batch processing"
           bad "  User.all.each { |u| u.touch }\n"
           good "  User.find_each(batch_size: 500) { |u| u.touch }\n"
@@ -710,7 +710,7 @@ module Master
         end
 
         ::Law.define(:NO_UPDATE_ATTRIBUTE) do
-          tags %i[DATA_INTEGRITY]
+          tags %i\[DATA_INTEGRITY]
           fix "replace update_attribute with update!"
           bad "  user.update_attribute(:name, name)\n"
           good "  user.update!(name: name)\n"
@@ -721,7 +721,7 @@ module Master
         end
 
         ::Law.define(:PLUCK_OVER_MAP) do
-          tags %i[PERFORMANCE]
+          tags %i\[PERFORMANCE]
           fix "prefer pluck over map for single columns"
           example_path "/repo/rails/brgen/app/models/example.rb"
           bad "  ids = order.items.map(&:id)\n"
@@ -740,7 +740,7 @@ module Master
         # :warn and one at :info, and every 3+-positional def carried both.
 
         ::Law.define(:DEAD_CODE) do
-          tags %i[CLEAN_CODE]
+          tags %i\[CLEAN_CODE]
           fix "eliminate unreachable code"
           transform "remove_immediate_dead_code"
           bad "  return value\n  log(value)\n"
@@ -790,7 +790,7 @@ module Master
         # worst (top: 85.5 in brgen's application_helper); walk it down as
         # they fall: 40 -> 30 (81) -> 25 (169) -> 17 (560).
         ::Law.define(:ABC_SIZE) do
-          tags %i[COMPLEXITY]
+          tags %i\[COMPLEXITY]
           fix "method ABC size over the ratchet threshold - extract until the pieces name themselves"
           example_path "/repo/lib/example.rb"
           bad "def dense(x)\n" + Array.new(20) { |i| "  v#{i} = x.call(#{i}) if x.ok?(#{i})\n" }.join + "end\n"
@@ -826,12 +826,12 @@ module Master
         ::Law.define(:TRAILING_COMMAS) do
           source "Ruby/JS style - trailing commas in multiline literals"
           ask "Does a multiline collection or argument list omit a trailing comma that stabilizes diffs?"
-          tags %i[STYLE]
+          tags %i\[STYLE]
           fix "Add the trailing comma to multiline collections and argument lists."
           bad %(LIST = [\n  "one"\n]\n)
           good %(LIST = [\n  "one",\n]\n)
           check do |src, path|
-            next [] unless %w[ruby].include?(language(path))
+            next [] unless %w\[ruby].include?(language(path))
             next [] if Master::Fix::Scan::AstFixer::DeadCodeAndCommas.rubocop_forbids_trailing_comma?(path)
 
             parsed = Prism.parse(src)

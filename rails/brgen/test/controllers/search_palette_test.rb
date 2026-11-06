@@ -95,7 +95,7 @@ class SearchPaletteTest < ActionDispatch::IntegrationTest
   # blocked the reader is offered as a result.
   test "people search leaves out both sides of a block" do
     tag = "srchblk_#{SecureRandom.hex(3)}"
-    people = %w[me blocked blocker open].to_h do |role|
+    people = %w\[me blocked blocker open].to_h do |role|
       user = User.create!(email_address: "#{tag}-#{role}@brgen.no", password: "password123", username: "#{tag}_#{role}")
       [ role, user ]
     end

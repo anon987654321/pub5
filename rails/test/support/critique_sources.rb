@@ -22,7 +22,7 @@ module CritiqueSources
   # The radio tunnel was split into tunnel, audio and visual modules; the
   # contract is about the radio as a whole, so it reads all three.
   def radio_source
-    %w[tunnel audio visual].map { |part| read("brgen/app/javascript/radio_brgen_#{part}.js") }.join("\n")
+    %w\[tunnel audio visual].map { |part| read("brgen/app/javascript/radio_brgen_#{part}.js") }.join("\n")
   end
 
   def amber_css_source

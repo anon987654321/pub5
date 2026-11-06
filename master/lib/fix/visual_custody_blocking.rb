@@ -22,7 +22,7 @@ module Master
       # silently returned false for every finding in these five categories —
       # the operator-decision gate RENDERED_VALUES exists to enforce was dead
       # for exactly the findings it was written to hold.
-      OPERATOR_OWNED_RULE_IDS = %w[
+      OPERATOR_OWNED_RULE_IDS = %w\[
         CONTRAST_TOKENS
         AESTHETIC_FLAT_SEMANTIC
         TYPE_HIERARCHY

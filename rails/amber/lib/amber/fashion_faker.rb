@@ -5,18 +5,18 @@ require "faker"
 module Amber
   # Realistic female fashion copy for dev/test seeds — not generic Commerce.product_name.
   class FashionFaker
-    BRANDS = %w[
+    BRANDS = %w\[
       &\ Other\ Stories Reformation Sézane Ganni COS Arket Totême Staud Nanushka
       Zimmermann Mango Zara H&M Everlane Aritzia Veja Samsoe\ Samsoe Rouje
       Faithfull\ the\ Brand Baum\ und\ Pferdgarten The\ Frankie\ Shop
     ].freeze
 
-    MATERIALS = %w[
+    MATERIALS = %w\[
       linen silk cotton wool cashmere denim leather viscose satin knit suede
       merino tweed crepe jersey corduroy chiffon
     ].freeze
 
-    COLORS = %w[
+    COLORS = %w\[
       ivory blush sage terracotta camel charcoal navy burgundy rose gold black
       cream oatmeal rust indigo sand mauve espresso pearl
     ].freeze
@@ -59,12 +59,12 @@ module Amber
       "Brunch with friends", "Capsule workweek", "Date night", "Festival layers"
     ].freeze
 
-    HASHTAGS = %w[#ootd #capsulewardrobe #styleinspo #outfitoftheday #slowfashion #wardrobeaudit].freeze
+    HASHTAGS = %w\[#ootd #capsulewardrobe #styleinspo #outfitoftheday #slowfashion #wardrobeaudit].freeze
 
     OCCASIONS = Item::OCCASIONS
     SEASONS = Item::SEASONS
     MOODS = Item::MOOD_EFFECTS
-    SIZES = %w[XXS XS S M L XL].freeze
+    SIZES = %w\[XXS XS S M L XL].freeze
 
     class << self
       def item_title(category: nil)

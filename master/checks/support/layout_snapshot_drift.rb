@@ -31,7 +31,7 @@ module Deploy
       #
       # style is a sixth class because a colour change is none of the other
       # five, and filing it as a nudge would understate it.
-      CLASSES = %w[hierarchy wrap density reflow style nudge].freeze
+      CLASSES = %w\[hierarchy wrap density reflow style nudge].freeze
 
       NUDGE_FACTOR = 4
       # A derived ratio has to move by a tenth of itself to be reported, so a
@@ -42,10 +42,10 @@ module Deploy
       # a whole number of lines, which padding or a border change does not.
       WRAP_SLACK = 0.25
 
-      LANDMARK_TAGS = %w[header nav main footer aside].freeze
-      TEXT_TAGS = %w[h1 h2 a button p label].freeze
-      STYLE_FIELDS = %w[color bg font_size line_height].freeze
-      FLOW_FIELDS = %w[display position].freeze
+      LANDMARK_TAGS = %w\[header nav main footer aside].freeze
+      TEXT_TAGS = %w\[h1 h2 a button p label].freeze
+      STYLE_FIELDS = %w\[color bg font_size line_height].freeze
+      FLOW_FIELDS = %w\[display position].freeze
 
       def initialize(baseline, current)
         @was = baseline
@@ -87,7 +87,7 @@ module Deploy
 
       def heading_ratio(elements)
         heading = elements.select { |el| el["tag"] == "h1" }.filter_map { |el| number(el["font_size"]) }.max
-        body = median(elements.reject { |el| %w[h1 h2].include?(el["tag"]) }.filter_map { |el| number(el["font_size"]) })
+        body = median(elements.reject { |el| %w\[h1 h2].include?(el["tag"]) }.filter_map { |el| number(el["font_size"]) })
         heading / body if heading && body&.positive?
       end
 
@@ -114,7 +114,7 @@ module Deploy
       end
 
       def outline
-        rows = %w[title h1_count].map { |field| field_row("hierarchy", field) }
+        rows = %w\[title h1_count].map { |field| field_row("hierarchy", field) }
         rows << field_row("reflow", "scroll_width")
         (@was["landmarks"] || {}).each do |mark, was|
           now = @now.dig("landmarks", mark)
@@ -171,7 +171,7 @@ module Deploy
 
       def geometry
         shared_keys.filter_map do |key|
-          axes = %w[x y w h].select { |axis| shift(key, axis) > TOLERANCE_PX }
+          axes = %w\[x y w h].select { |axis| shift(key, axis) > TOLERANCE_PX }
           geometry_row(key, axes) unless axes.empty?
         end
       end

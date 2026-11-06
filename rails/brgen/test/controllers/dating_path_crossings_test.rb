@@ -11,7 +11,7 @@ class DatingPathCrossingsTest < ActionDispatch::IntegrationTest
     @city = City.find_by!(domain: "brgen.no")
     ActsAsTenant.current_tenant = @city
     @previous_slugs = Rails.application.config.x.oauth_provider_slugs
-    Rails.application.config.x.oauth_provider_slugs = %w[vipps]
+    Rails.application.config.x.oauth_provider_slugs = %w\[vipps]
     @me = user_with_profile("pc_me")
     @other = user_with_profile("pc_other")
   end

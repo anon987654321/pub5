@@ -8,7 +8,7 @@ require_relative "../io/exec"
 
 module Operator
   class CapabilityGraph
-    NODE_ORDER = %w[constitution model voice web audio rails openbsd studio].freeze
+    NODE_ORDER = %w\[constitution model voice web audio rails openbsd studio].freeze
 
     def initialize(root:, path: File.join(root, ".master", "capabilities.json"))
       @root = root
@@ -19,11 +19,11 @@ module Operator
       payload = {
         "updated_at" => Time.now.utc.iso8601,
         "nodes" => {
-          "constitution" => file_state(%w[master/data/laws.yml master/data/soul.yml]),
+          "constitution" => file_state(%w\[master/data/laws.yml master/data/soul.yml]),
           "model" => model_state(model),
           "voice" => ENV["MASTER_TTS_DEGRADED"] == "1" ? "degraded" : "available",
-          "web" => file_state(%w[master/web/public/face.css]),
-          "audio" => executable_state(%w[afplay termux-media-player pactl]),
+          "web" => file_state(%w\[master/web/public/face.css]),
+          "audio" => executable_state(%w\[afplay termux-media-player pactl]),
           "rails" => tree_state("rails"),
           "openbsd" => tree_state("openbsd"),
           "studio" => tree_state("studio"),

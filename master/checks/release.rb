@@ -30,7 +30,7 @@ require_relative "../lib/io/exec"
 # composite loaded three of the four and left the fourth undefined at line 152.
 require "yaml"
 
-RELEASE_CHECK_CLASSES = %w[
+RELEASE_CHECK_CLASSES = %w\[
   Deploy::DomainAlignmentCheck
   Deploy::FrontendAuditorCheck
   Deploy::FrontendProductionCheck
@@ -47,7 +47,7 @@ YAML.safe_load_file(manifest_path, aliases: true).then { |manifest| manifest["ch
 
       # Paths starting with a known tree (master, rails, openbsd) are repo-relative.
       # Others are RAILS-relative.
-      full_path = if require_path.match?(%r{\A(?:MASTER|RAILS|OPENBSD)/})
+      full_path = if require_path.match?(%r{\A(?:MASTER|RAILS|openbsd)/})
                     File.join(repo_root, require_path)
                   else
                     File.join(__dir__, require_path)
@@ -57,7 +57,7 @@ YAML.safe_load_file(manifest_path, aliases: true).then { |manifest| manifest["ch
 
 # rails/, where the apps, the shared engine and the contract tests live.
 ROOT = File.expand_path("../../RAILS", __dir__)
-APPS = %w[amber brgen bsdports].freeze
+APPS = %w\[amber brgen bsdports].freeze
 FAILURES = [] # scan: intentional — this script's accumulator, appended to by every step below
 STEP_TIMEOUT = Integer(ENV.fetch("RELEASE_CHECK_STEP_TIMEOUT", "180"))
 
@@ -112,7 +112,7 @@ if BUNDLE
     run("#{app} dartsass", [*BUNDLE, "exec", *RUBY, "bin/rails", "dartsass:build"], chdir: dir)
     importmap_audit = [
       *BUNDLE, "exec", *RUBY, "-e",
-      'require "./config/environment"; require "importmap/commands"; Importmap::Commands.start(%w[audit])'
+      'require "./config/environment"; require "importmap/commands"; Importmap::Commands.start(%w\[audit])'
     ]
 
     run("#{app} importmap", importmap_audit, chdir: dir)
@@ -189,7 +189,7 @@ if FAILURES.any?
   exit 1
 end
 
-if UNCHECKED.any? && %w[1 true yes on].include?(ENV["CHECK_STRICT_INCONCLUSIVE"].to_s.strip.downcase)
+if UNCHECKED.any? && %w\[1 true yes on].include?(ENV["CHECK_STRICT_INCONCLUSIVE"].to_s.strip.downcase)
   warn "Release check: CHECK_STRICT_INCONCLUSIVE is set and #{UNCHECKED.size} precondition(s) were missing."
   exit 1
 end

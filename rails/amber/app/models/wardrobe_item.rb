@@ -3,7 +3,7 @@
 # One owner's care record on an Item, not a second garment model: the Item is
 # what the garment is, and condition belongs to one owner's copy of it.
 class WardrobeItem < ApplicationRecord
-  CONDITIONS = %w[new excellent good worn repair retire].freeze
+  CONDITIONS = %w\[new excellent good worn repair retire].freeze
 
   belongs_to :user
   belongs_to :item
@@ -13,7 +13,7 @@ class WardrobeItem < ApplicationRecord
   validate :item_belongs_to_user
 
   scope :recent, -> { order(created_at: :desc) }
-  scope :needs_attention, -> { where(condition: %w[repair retire]) }
+  scope :needs_attention, -> { where(condition: %w\[repair retire]) }
 
   def item_belongs_to_user
     return if item_id.blank? || user_id.blank?

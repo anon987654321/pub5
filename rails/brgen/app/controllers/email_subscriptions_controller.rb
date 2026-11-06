@@ -21,7 +21,7 @@ class EmailSubscriptionsController < ApplicationController
   # the property that makes it safe lives in a `before_create` in another file,
   # and "unguessable" is a claim about a token generator that nothing stops
   # someone shortening. A limit costs one line and does not depend on that.
-  rate_limit to: 30, within: 1.minute, only: %i[confirm show update destroy one_click], name: "token_lookup",
+  rate_limit to: 30, within: 1.minute, only: %i\[confirm show update destroy one_click], name: "token_lookup",
     with: -> { redirect_to root_path, alert: t("shared.flash.rate_limited") }
   # RFC 8058 one-click: the mail client POSTs from no page and no session, so
   # there is no CSRF token to check. The bearer is the unguessable token in the

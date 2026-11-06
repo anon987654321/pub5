@@ -6,8 +6,8 @@ require "test_helper"
 # the order is refused with when the kitchen opens. Empty hours, the live
 # kitchen's default, leave ordering open at any hour.
 class OpeningHoursTest < ActionDispatch::IntegrationTest
-  WEEKDAYS = %w[11:00 21:00].freeze
-  WEEKEND = %w[14:00 21:00].freeze
+  WEEKDAYS = %w\[11:00 21:00].freeze
+  WEEKEND = %w\[14:00 21:00].freeze
 
   setup do
     @kitchen = seed_kitchen!
@@ -16,7 +16,7 @@ class OpeningHoursTest < ActionDispatch::IntegrationTest
   end
 
   def set_hours!
-    hours = %w[mon tue wed thu fri].index_with { WEEKDAYS }.merge(%w[sat sun].index_with { WEEKEND })
+    hours = %w\[mon tue wed thu fri].index_with { WEEKDAYS }.merge(%w\[sat sun].index_with { WEEKEND })
     @kitchen.update!(weekly_hours: hours)
   end
 
@@ -68,9 +68,9 @@ class OpeningHoursTest < ActionDispatch::IntegrationTest
   end
 
   test "hours must be weekday keys with an opening before a closing" do
-    assert_not @kitchen.update(weekly_hours: { "mon" => %w[21:00 11:00] })
-    assert_not @kitchen.update(weekly_hours: { "monday" => %w[11:00 21:00] })
-    assert_not @kitchen.update(weekly_hours: { "mon" => %w[11 21] })
-    assert @kitchen.update(weekly_hours: { "mon" => %w[11:00 21:00] })
+    assert_not @kitchen.update(weekly_hours: { "mon" => %w\[21:00 11:00] })
+    assert_not @kitchen.update(weekly_hours: { "monday" => %w\[11:00 21:00] })
+    assert_not @kitchen.update(weekly_hours: { "mon" => %w\[11 21] })
+    assert @kitchen.update(weekly_hours: { "mon" => %w\[11:00 21:00] })
   end
 end

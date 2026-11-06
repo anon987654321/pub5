@@ -39,7 +39,7 @@ class VippsClient
   # ePayment states → what we do with them (APP_SPEC §5). Capture is
   # immediate: food is made to be eaten, and Foodora captures at placement too.
   CAPTURE_ON = "AUTHORIZED"
-  FAIL_ON = %w[ABORTED EXPIRED TERMINATED].freeze
+  FAIL_ON = %w\[ABORTED EXPIRED TERMINATED].freeze
 
   class << self
     # Guards the access-token cache — one token fetch per process, not one
@@ -140,7 +140,7 @@ class VippsClient
     # verified phone + name + address — the reason a Vipps user never types a
     # checkout form here (Foodora makes you type all three, every time).
     def login_authorize_url(redirect_uri:, state:, nonce:)
-      scopes = %w[openid email phoneNumber address]
+      scopes = %w\[openid email phoneNumber address]
       params = {
         client_id: login_env("VIPPS_CLIENT_ID"),
         redirect_uri: redirect_uri,

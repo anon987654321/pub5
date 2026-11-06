@@ -27,21 +27,21 @@ module Master
     # checked again. Quoted words, heredoc bodies, comments and redirect targets
     # are data and never trip it.
     class GnuTextTools
-      RESERVED = %w[if then else elif fi do done while until for in case esac select function time ! { } [[ ]]].freeze
-      SHELLS = %w[sh bash zsh ksh dash].freeze
+      RESERVED = %w\[if then else elif fi do done while until for in case esac select function time ! { } [[ ]]].freeze
+      SHELLS = %w\[sh bash zsh ksh dash].freeze
       ASSIGNMENT = /\A[A-Za-z_]\w*(\[[^\]]*\])?=/
 
       # Wrappers run the command that follows them. Each entry lists the flags that take a value.
       WRAPPERS = {
-        "env" => %w[-u -C -S], "exec" => %w[-a], "command" => [], "builtin" => [], "noglob" => [],
-        "nohup" => [], "sudo" => %w[-u -g -C -D -h -p -U], "doas" => %w[-u -C], "nice" => %w[-n],
-        "timeout" => %w[-s -k --signal --kill-after], "xargs" => %w[-n -I -J -L -P -d -E -s -R -S],
-        "caffeinate" => %w[-t -w], "stdbuf" => %w[-i -o -e]
+        "env" => %w\[-u -C -S], "exec" => %w\[-a], "command" => [], "builtin" => [], "noglob" => [],
+        "nohup" => [], "sudo" => %w\[-u -g -C -D -h -p -U], "doas" => %w\[-u -C], "nice" => %w\[-n],
+        "timeout" => %w\[-s -k --signal --kill-after], "xargs" => %w\[-n -I -J -L -P -d -E -s -R -S],
+        "caffeinate" => %w\[-t -w], "stdbuf" => %w\[-i -o -e]
       }.freeze
 
       # The bare operand a wrapper takes before its command: timeout's duration, nice's old-style increment.
       WRAPPER_OPERANDS = { "timeout" => /\A[\d.]+[smhd]?\z/, "nice" => /\A-?\d+\z/ }.freeze
-      SSH_VALUE_FLAGS = %w[-b -c -D -E -e -F -I -i -J -L -l -m -O -o -p -Q -R -S -W -w].freeze
+      SSH_VALUE_FLAGS = %w\[-b -c -D -E -e -F -I -i -J -L -l -m -O -o -p -Q -R -S -W -w].freeze
       MAX_DEPTH = 4
 
       def self.load(laws_path)

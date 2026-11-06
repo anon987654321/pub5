@@ -9,7 +9,7 @@ module Shared
     extend ActiveSupport::Concern
 
     included do
-      rate_limit to: 10, within: 10.minutes, only: %i[email password other_sessions],
+      rate_limit to: 10, within: 10.minutes, only: %i\[email password other_sessions],
                  name: "account_security", by: -> { "u#{Current.user&.id}" }
     end
 

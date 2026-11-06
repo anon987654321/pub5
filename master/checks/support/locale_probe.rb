@@ -26,7 +26,7 @@ module Deploy
 
     def normalize(code)
       base = code.to_s.strip.downcase.split(/[-_]/).first.to_s
-      %w[no nn].include?(base) ? "nb" : base
+      %w\[no nn].include?(base) ? "nb" : base
     end
 
     # payload["locales"] = {"nb" => {"lang", "texts" => {key => [text, tag]}}, "en" => {...} | {"status" => "unavailable"}}

@@ -64,7 +64,7 @@ class DemoMediaTest < Minitest::Test
     skip "bergen catalog missing" unless CATALOG.file?
 
     images = YAML.safe_load_file(CATALOG, permitted_classes: [], aliases: true).fetch("images", {})
-    %w[bergen-floyen-morning bergen-bryggen-rain bergen-fish-market bergen-place-bryggen].each do |seed|
+    %w\[bergen-floyen-morning bergen-bryggen-rain bergen-fish-market bergen-place-bryggen].each do |seed|
       assert images.key?(seed), "missing catalog seed #{seed}"
     end
   end

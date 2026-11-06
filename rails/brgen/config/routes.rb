@@ -14,7 +14,7 @@ Rails.application.routes.draw do
   # Browsers often request the .js suffix; 422/HTML here breaks SW registration.
   get "service-worker.js" => "rails/pwa#service_worker"
   post "share" => "posts#share", as: :share_post
-  resources :share_drafts, only: %i[show destroy] do
+  resources :share_drafts, only: %i\[show destroy] do
     member { post :publish }
   end
   # Loopback-only in practice (see InternalController's shared-secret check);
@@ -60,15 +60,15 @@ Rails.application.routes.draw do
   MAPS_SUBDOMAINS = Brgen::DomainRegistry::MAPS_SUBDOMAINS
   MESSENGER_SUBDOMAINS = Brgen::DomainRegistry::MESSENGER_SUBDOMAINS
 
-  resource :session, only: %i[new create destroy] do
+  resource :session, only: %i\[new create destroy] do
     # Passwordless sign-in. The mailer, the token generator and the columns
     # have existed since 20260709120000; the route the link pointed at never
     # did, so nothing could send one and nothing could consume one.
     get  "magic", to: "sessions#magic", as: :magic
     post "magic", to: "sessions#request_magic", as: :request_magic
   end
-  resources :passwords, param: :token, only: %i[new create edit update]
-  %w[auth email_verification verification billing].each do |shared|
+  resources :passwords, param: :token, only: %i\[new create edit update]
+  %w\[auth email_verification verification billing].each do |shared|
     instance_eval(File.read(File.expand_path("../../shared/config/routes/#{shared}.rb", __dir__)))
   end
   post "fingerprint" => "fingerprints#create"
@@ -81,8 +81,8 @@ Rails.application.routes.draw do
   end
 
   namespace :admin do
-    resources :reports, only: %i[index update]
-    resources :business_verifications, only: %i[index update]
+    resources :reports, only: %i\[index update]
+    resources :business_verifications, only: %i\[index update]
   end
 
   # A business owner asks for the verified badge; kind is store or restaurant.
@@ -98,7 +98,7 @@ Rails.application.routes.draw do
   get "posts/since" => "post_catch_ups#feed", as: :posts_since
   get "posts/:post_id/comments/since" => "post_catch_ups#comments", as: :post_comments_since
   resources :posts do
-    resources :comments, shallow: true, only: %i[create destroy]
+    resources :comments, shallow: true, only: %i\[create destroy]
     resource :vote, only: [ :create ], controller: "votes"
     # POST toggles: the action Stimulus controller only ever sends POST.
     resource :repost, only: [ :create ], controller: "reposts"
@@ -135,11 +135,11 @@ Rails.application.routes.draw do
 
 # Following out. The inbound half — somebody on another instance following a
 # brgen account — arrives at the inbox above and needs no route of its own.
-resources :fediverse_follows, only: %i[index create destroy], controller: "fediverse/follows", param: :uri
+resources :fediverse_follows, only: %i\[index create destroy], controller: "fediverse/follows", param: :uri
 
   # Stories delete themselves after 24h; `alive` hides an expired one from every
   # surface whether or not the sweep has run yet.
-  resources :stories, only: %i[index show new create destroy] do
+  resources :stories, only: %i\[index show new create destroy] do
     # A reply is a DM carrying the story it answers, so it outlives the story.
     resources :replies, only: [ :create ], controller: "story_replies"
   end
@@ -151,26 +151,26 @@ resources :fediverse_follows, only: %i[index create destroy], controller: "fediv
       post :rsvp, to: "event_rsvps#create"
       patch :cancel
     end
-    resources :comments, shallow: true, only: %i[create destroy]
+    resources :comments, shallow: true, only: %i\[create destroy]
   end
 
   resources :communities do
     # A community's own moderators work this queue. Admin::Reports is every
     # report in the app behind a single BRGEN_ADMIN_EMAIL check; this is the
     # per-community one, derived from the posts that belong here.
-    resources :moderation, only: %i[index update], controller: "communities/moderation"
-    resources :moderators, only: %i[index create destroy], controller: "communities/moderators"
+    resources :moderation, only: %i\[index update], controller: "communities/moderation"
+    resources :moderators, only: %i\[index create destroy], controller: "communities/moderators"
     # Scoped to this community, never site-wide: one community's moderator
     # silencing someone everywhere is not a lever that should exist.
-    resources :bans, only: %i[index create destroy], controller: "communities/bans"
+    resources :bans, only: %i\[index create destroy], controller: "communities/bans"
     # The community's own reference pages. Readable by whoever can read the
     # community, written by its moderators.
-    resources :wiki, only: %i[index show new create edit update], controller: "communities/wiki" do
+    resources :wiki, only: %i\[index show new create edit update], controller: "communities/wiki" do
       member { post :revert }
     end
     resources :posts, shallow: true do
-      resources :comments, shallow: true, only: %i[create destroy] do
-        resources :comments, shallow: true, only: %i[create destroy], as: :replies
+      resources :comments, shallow: true, only: %i\[create destroy] do
+        resources :comments, shallow: true, only: %i\[create destroy], as: :replies
       end
       resource :vote, only: [ :create ], controller: "votes"
       resource :repost, only: [ :create ], controller: "reposts"
@@ -179,7 +179,7 @@ resources :fediverse_follows, only: %i[index create destroy], controller: "fediv
   patch "drafts/:id", to: "drafts#update", as: :draft
 
   # edit/update: the author rewrites a comment within Comment::EDIT_WINDOW.
-  resources :comments, only: %i[create edit update destroy] do
+  resources :comments, only: %i\[create edit update destroy] do
     resource :vote, only: [ :create ], controller: "votes"
     resources :comments, only: [ :create ], as: :replies
     member do
@@ -189,7 +189,7 @@ resources :fediverse_follows, only: %i[index create destroy], controller: "fediv
     end
   end
 
-  resources :users, only: %i[show new create edit update] do
+  resources :users, only: %i\[show new create edit update] do
     # The profile form's live hint; a collection route, so it is matched
     # before /users/:id would read "username_availability" as an id.
     get :username_availability, on: :collection
@@ -206,7 +206,7 @@ resources :fediverse_follows, only: %i[index create destroy], controller: "fediv
 # what it is.
 get "i/:token" => "invites#show", as: :invite
 
-  resources :conversations, only: %i[index new show update] do
+  resources :conversations, only: %i\[index new show update] do
     member { post :invite_master }
     # Search over the reader's own threads; ?conversation_id= narrows it to one.
     collection { get :search }
@@ -214,22 +214,22 @@ get "i/:token" => "invites#show", as: :invite
     # the newest fifty and hands the log the URL for the fifty behind them.
     # update is a bounded edit; destroy is an unsend, which keeps the row so a
     # threaded reply is not orphaned. forward writes a copy; forward_to picks where.
-    resources :messages, only: %i[index create update destroy] do
+    resources :messages, only: %i\[index create update destroy] do
       member { post :forward; get :forward_to }
     end
     resources :typing_indicators, only: [ :create ]
-    resource :presence, only: %i[create destroy]
-    resource :pin, only: %i[create destroy], controller: "conversation_pins"
-    resource :mute, only: %i[create destroy], controller: "conversation_mutes"
-    resource :archive, only: %i[create destroy], controller: "conversation_archives"
-    resource :request, only: %i[create destroy], controller: "conversation_requests"
+    resource :presence, only: %i\[create destroy]
+    resource :pin, only: %i\[create destroy], controller: "conversation_pins"
+    resource :mute, only: %i\[create destroy], controller: "conversation_mutes"
+    resource :archive, only: %i\[create destroy], controller: "conversation_archives"
+    resource :request, only: %i\[create destroy], controller: "conversation_requests"
   end
 
   # A group DM is a Conversation with a name and no slug; a #channel is one with
   # a slug. Rename lives here rather than on conversations#update, which owns
   # the disappearing setting every conversation shares.
-  resources :groups, only: %i[new create update], controller: "group_conversations" do
-    resources :members, only: %i[new create destroy], controller: "group_members"
+  resources :groups, only: %i\[new create update], controller: "group_conversations" do
+    resources :members, only: %i\[new create destroy], controller: "group_members"
   end
 
   # TV vertical, extracted to a mountable engine (../brgen_radio/tv). Routes now live in
@@ -274,14 +274,14 @@ get "i/:token" => "invites#show", as: :invite
 
   constraints(subdomain: MESSENGER_SUBDOMAINS) do
     root "conversations#index", as: :messenger_root
-    resources :conversations, only: %i[show update create] do
-      resources :messages, only: %i[index create]
-      resources :typing_indicators, only: %i[create]
-      resource :presence, only: %i[create destroy]
-      resource :pin, only: %i[create destroy], controller: "conversation_pins"
-      resource :mute, only: %i[create destroy], controller: "conversation_mutes"
-      resource :archive, only: %i[create destroy], controller: "conversation_archives"
-      resource :request, only: %i[create destroy], controller: "conversation_requests"
+    resources :conversations, only: %i\[show update create] do
+      resources :messages, only: %i\[index create]
+      resources :typing_indicators, only: %i\[create]
+      resource :presence, only: %i\[create destroy]
+      resource :pin, only: %i\[create destroy], controller: "conversation_pins"
+      resource :mute, only: %i\[create destroy], controller: "conversation_mutes"
+      resource :archive, only: %i\[create destroy], controller: "conversation_archives"
+      resource :request, only: %i\[create destroy], controller: "conversation_requests"
     end
   end
 
@@ -295,27 +295,27 @@ get "i/:token" => "invites#show", as: :invite
 
   # Partner program index also available on main city domain (not only markedsplass).
   namespace :partner do
-    resources :programs, only: %i[index show new create edit update] do
+    resources :programs, only: %i\[index show new create edit update] do
       resources :memberships, only: :create
     end
     resources :memberships, only: :show
   end
 
-  resources(:email_subscriptions, only: %i[show create update destroy], param: :token) { post :one_click, on: :member }
+  resources(:email_subscriptions, only: %i\[show create update destroy], param: :token) { post :one_click, on: :member }
   get "confirm_email/:token" => "email_subscriptions#confirm", as: :confirm_email_subscription
 
   constraints(jobs_constraint) { mount SolidQueue::Engine, at: "/admin/jobs" }
 
   patch "location" => "locations#update", as: :location
-  resources :push_subscriptions, only: %i[create destroy]
-  resources :native_push_tokens, only: %i[create destroy], param: :token
+  resources :push_subscriptions, only: %i\[create destroy]
+  resources :native_push_tokens, only: %i\[create destroy], param: :token
   get "nearby" => "nearby#index", as: :nearby
   get "nearby/room" => "nearby#room", as: :nearby_room
   get "nearby/widget" => "nearby#widget", as: :nearby_widget
   post "nearby" => "nearby#create"
   # Chatroulette-style random pairing: one ask, one stranger, one conversation.
   # Guests play - the ask is the consent.
-  resources :encounters, only: %i[create destroy]
+  resources :encounters, only: %i\[create destroy]
   get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
   # /live was a Jodel-shaped feed of short anonymous posts ranked by local
   # votes. It is the ambient chat room now, per operator 2026-08-17: brgen had
@@ -326,7 +326,7 @@ get "i/:token" => "invites#show", as: :invite
   # from /nearby and the city home. #room handles the unlocated case already —
   # it sends you back to /nearby with a "turn on location" alert.
   get "live" => redirect("/nearby/room"), as: :live
-  resources :channels, only: %i[index show], param: :slug
+  resources :channels, only: %i\[index show], param: :slug
   get "search" => "search#index", as: :global_search
   delete "search/recent" => "search#clear_recent", as: :clear_recent_searches
   get "sitemap.xml" => "sitemaps#index", as: :sitemap

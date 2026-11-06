@@ -26,7 +26,7 @@ module Deploy
     # Faker::Lorem's own wordlist. Deliberately not "lorem"/"ipsum" alone: that
     # pair appears in almost no generated sentence, which is why eyeballing for
     # "lorem ipsum" had missed a thousand rows.
-    MARKERS = %w[
+    MARKERS = %w\[
       dolor voluptat eveniet iusto aliquid tenetur suscipit
       eligendi consequatur repellendus necessitatibus quisquam
     ].freeze

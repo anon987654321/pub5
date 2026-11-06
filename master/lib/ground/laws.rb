@@ -90,14 +90,14 @@ module Master
       include LawPromptBlocks
 
       DATA_ALIASES = {
-        workflow: %w[limits workflow],
+        workflow: %w\[limits workflow],
         # The path is the style block itself: these accessors dig into it for
-        # ruby/html/css/typography, and the old %w[style ruby_style] pointed at a
+        # ruby/html/css/typography, and the old %w\[style ruby_style] pointed at a
         # key that has never existed, so data(:ruby_style) returned nil and every
         # language-style line was silently dropped from the prompt.
-        ruby_style: %w[style],
-        rails_stack: %w[rails_stack],
-        standing_orders: %w[state standing_orders],
+        ruby_style: %w\[style],
+        rails_stack: %w\[rails_stack],
+        standing_orders: %w\[state standing_orders],
       }.freeze
 
       def initialize(root: nil)

@@ -6,7 +6,7 @@ class SurfaceMicroRefinementTwoContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   SHEET = File.join(ROOT, "shared/app/assets/stylesheets/_surface_micro_refinements_two.scss")
   MATRIX = File.join(ROOT, "docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX_II.md")
-  STACKS = %w[
+  STACKS = %w\[
     shared/app/assets/stylesheets/_stack.scss
     shared/app/assets/stylesheets/_stack_brgen.scss
   ].freeze
@@ -28,7 +28,7 @@ class SurfaceMicroRefinementTwoContractTest < Minitest::Test
 
   def test_requested_secondary_surfaces_remain_documented_in_the_matrix
     source = File.read(MATRIX, encoding: "UTF-8")
-    %w[.ad-slot .store-promo .amber-message .item-card .listing-step .cart-item .playlist-comment .radio-now-playing].each do |selector|
+    %w\[.ad-slot .store-promo .amber-message .item-card .listing-step .cart-item .playlist-comment .radio-now-playing].each do |selector|
       assert_includes source, selector
     end
   end

@@ -288,7 +288,7 @@ end
 # anyway, the freshness check refused it, and /fix master ended DELIVERY_FAILED with its own
 # verified repair undelivered.
 def test_the_end_of_a_pass_delivers_only_what_the_pass_wrote
-  paths = %w[lib/ok.rb lib/observed.rb]
+  paths = %w\[lib/ok.rb lib/observed.rb]
   write_file("lib/ok.rb", "OK = 1\n")
   write_file("lib/observed.rb", "SEEN = 1\n")
 
@@ -310,7 +310,7 @@ end
 # them with AutofixGuard only; delivery called them "/fix did not write" and left them in the tree,
 # neither committed nor put back. Still holding the autofix's bytes, they deliver with the pass.
 def test_the_observations_autofix_writes_deliver_with_the_pass
-  paths = %w[lib/ok.rb AGENTS.md]
+  paths = %w\[lib/ok.rb AGENTS.md]
   committer, git = autofixed_agents_pass(paths)
 
   out, = capture_io { committer.finish_transaction(OK_MESSAGE, owned_paths: paths) }
@@ -378,7 +378,7 @@ end
 # delivery. A file only the autofix wrote goes back and the pass's own repair still lands.
 def test_an_autofix_write_the_house_lint_refuses_goes_back_and_the_repair_delivers
   wide = autofixed_wide_file
-  git = FakeGit.new([], %w[lib/ok.rb lib/wide.rb])
+  git = FakeGit.new([], %w\[lib/ok.rb lib/wide.rb])
   committer = Master::Fix::FixLoop::Committer.new(git:, bus: FakeBus.new, root: @dir)
   committer.baseline!
 

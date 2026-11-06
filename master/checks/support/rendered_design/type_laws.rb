@@ -4,8 +4,8 @@ module Deploy
   module RenderedDesign
     # Type on the rendered page: Bringhurst, Butterick and Vignelli, measured.
     module TypeLaws
-      PROSE = %w[p li dd].freeze
-      ROLES = %w[meta body title display].freeze
+      PROSE = %w\[p li dd].freeze
+      ROLES = %w\[meta body title display].freeze
       WEIGHT_NAMES = {
         /thin|hairline/i => 100, /extralight|ultralight/i => 200, /light/i => 300, /medium/i => 500,
         /semibold|demibold/i => 600, /extrabold|ultrabold/i => 800, /black|heavy/i => 900, /bold/i => 700

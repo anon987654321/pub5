@@ -17,7 +17,7 @@ module Master
     # are checked explicitly.
     class ExecutionTrace
       include ExecutionSnapshot
-      BOOT_CHAIN = %w[
+      BOOT_CHAIN = %w\[
         master/bin/ruby
         master/bin/master
         master/lib/boot/entrypoint.rb
@@ -47,11 +47,11 @@ module Master
       ].freeze
 
       BOOT_CONFIG = {
-        "master/data/soul.yml" => %w[
+        "master/data/soul.yml" => %w\[
           constitution authority_order absolute references persona voice language
           temperament prompt_ordering negotiable hooks
         ],
-        "master/data/laws.yml" => %w[
+        "master/data/laws.yml" => %w\[
           TRUTHFUL_STATUS ROBUSTNESS SINGULARITY LINEARITY PROXIMITY ABSTRACTION
           DENSITY OPERATOR_RENDERED INTER_MODEL_CONTRACT SACRED_AUTHORSHIP
           SOUL_SUBORDINATE_TO_LAW PRESERVE_FIRST

@@ -58,7 +58,7 @@ module Master
         envs.any? { |var| Master.api_key_present?(var.to_s) }
       end
 
-      API_KEY_LANES = %w[
+      API_KEY_LANES = %w\[
         OPENROUTER_API_KEY XAI_API_KEY DEEPSEEK_API_KEY GOOGLE_API_KEY
         GEMINI_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY MISTRAL_API_KEY
       ].freeze

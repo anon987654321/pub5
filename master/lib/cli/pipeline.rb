@@ -123,7 +123,7 @@ module Master
       private
 
       DEPLOY_RE = /\b(deploy|ship|shipping|release|publish)\b/i
-      TIER1_CRITICAL_LAW_IDS = %w[PRESERVE_FIRST DECOUPLE DEGRADE_GRACEFULLY].freeze
+      TIER1_CRITICAL_LAW_IDS = %w\[PRESERVE_FIRST DECOUPLE DEGRADE_GRACEFULLY].freeze
 
       def initial_context_result(initial)
         return Result.ok(initial) if initial.is_a?(PipelineContext)

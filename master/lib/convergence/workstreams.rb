@@ -67,7 +67,7 @@ module Master
       end
 
       def path_present?(_root, implementation)
-        return true if %w[rails openbsd studio].include?(implementation)
+        return true if %w\[rails openbsd studio].include?(implementation)
 
         path = File.expand_path(implementation, Master::REPO_ROOT)
         File.exist?(path)

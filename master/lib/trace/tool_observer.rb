@@ -18,8 +18,8 @@ module Master
       AFTER_EVENT = "tool:execution:after".freeze
       RECONCILED_EVENT = "tool:execution:reconciled".freeze
 
-      STATUSES = %w[success error blocked unknown_outcome].freeze
-      RECONCILIATIONS = %w[confirmed_success confirmed_failure safe_to_retry still_unknown].freeze
+      STATUSES = %w\[success error blocked unknown_outcome].freeze
+      RECONCILIATIONS = %w\[confirmed_success confirmed_failure safe_to_retry still_unknown].freeze
       MAX_ARGUMENT_BYTES = 16 * 1024 * 1024
       MAX_ARGUMENT_NODES = 100_000
       MAX_ARGUMENT_DEPTH = 64

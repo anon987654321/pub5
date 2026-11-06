@@ -23,7 +23,7 @@ class Playlist::TrackImportTest < ActiveSupport::TestCase
       https://youtube.com.evil.test/watch?v=fake
     LINES
 
-    assert_equal %w[youtube spotify soundcloud direct], results.map { |r| r.track.source_type }
+    assert_equal %w\[youtube spotify soundcloud direct], results.map { |r| r.track.source_type }
     assert results.all?(&:created)
     assert_equal "Regn Over Byen", results[2].track.title
     assert_equal 4, @playlist.tracks.count

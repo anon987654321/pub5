@@ -7,7 +7,7 @@ module Master
     # parse, names an unknown kind, or names a path the tree does not hold is counted and dropped:
     # a model that invents a path has not read the tree.
     module TreeProposals
-      KINDS = %w[move merge delete rename split keep].freeze
+      KINDS = %w\[move merge delete rename split keep].freeze
       MAX = 12
       MAX_FIELD_BYTES = 400
 

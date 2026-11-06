@@ -111,7 +111,7 @@ module Master
 
         ::Law.define(:interconnect) do
           detector InterconnectLaw
-          tags %i[ONE_SOURCE]
+          tags %i\[ONE_SOURCE]
           fix "Phantom YAML key reads and orphan data keys"
           proved_by "test/test_interconnect_law.rb"
         end
@@ -180,7 +180,7 @@ module Master
 
         ::Law.define(:co_change_coupling) do
           detector CoChangeCouplingLaw
-          tags %i[DECOUPLE ONE_JOB]
+          tags %i\[DECOUPLE ONE_JOB]
           fix "Files co-change with N+ peers across module boundaries - hidden coupling"
           proved_by "test/test_co_change_coupling_law.rb"
         end

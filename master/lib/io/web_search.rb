@@ -143,7 +143,7 @@ module Master
           target = URI.decode_www_form(uri.query.to_s).to_h["uddg"]
           uri = URI.parse(CGI.unescapeHTML(target)) unless target.to_s.empty?
         end
-        return unless uri.is_a?(URI::HTTP) && %w[http https].include?(uri.scheme) && !uri.host.to_s.empty?
+        return unless uri.is_a?(URI::HTTP) && %w\[http https].include?(uri.scheme) && !uri.host.to_s.empty?
         uri.fragment = nil
         uri.to_s
       rescue URI::InvalidURIError, ArgumentError

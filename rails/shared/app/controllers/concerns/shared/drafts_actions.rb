@@ -7,7 +7,7 @@ module Shared
     extend ActiveSupport::Concern
 
     MAX_BYTES = 3_000
-    SENSITIVE_PARTS = %w[
+    SENSITIVE_PARTS = %w\[
       password password_confirmation token secret api_key private_key otp authenticity
     ].freeze
 

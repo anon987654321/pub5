@@ -6,7 +6,7 @@ require_relative "../lib/convergence/measure"
 class TestConvergenceMeasure < Minitest::Test
   def test_all_four_trees_are_measured
     data = Master::Convergence::Measure.inventory(root: Master::REPO_ROOT)
-    assert_equal %w[master rails openbsd studio], data[:trees].keys
+    assert_equal %w\[master rails openbsd studio], data[:trees].keys
     assert_operator data[:totals][:files], :>, 0
     assert_operator data[:totals][:bytes], :>, 0
   end

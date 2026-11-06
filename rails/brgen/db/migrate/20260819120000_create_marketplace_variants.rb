@@ -31,8 +31,8 @@ class CreateMarketplaceVariants < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :marketplace_variant_options, %i[variant_id name], unique: true
-    add_index :marketplace_variant_options, %i[name value]
+    add_index :marketplace_variant_options, %i\[variant_id name], unique: true
+    add_index :marketplace_variant_options, %i\[name value]
 
     # Which variant an order is for. Nullable: a listing with no variants is the
     # classifieds case, and that is most of them.

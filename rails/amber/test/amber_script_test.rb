@@ -16,7 +16,7 @@ class AmberScriptTest < ActiveSupport::TestCase
     local = Rails.root.join("..")
     return local if local.join("_deploy.sh").exist?
 
-    Pathname.new(ENV.fetch("PUB4_RAILS_ROOT") { File.join(Shared::Contracts.root, "rails") })
+    Pathname.new(ENV.fetch("PUB5_RAILS_ROOT") { File.join(Shared::Contracts.root, "rails") })
   end
 
   test "deploy script is configured for amber instead of a template placeholder" do

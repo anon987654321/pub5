@@ -14,7 +14,7 @@ module Maps
 
     helper_method :place_kinds
 
-    allow_unauthenticated_access only: %i[index show]
+    allow_unauthenticated_access only: %i\[index show]
     before_action :require_user_session, only: :check_in
     # Soft guests may check in, and nothing bounded how fast they wrote rows.
     rate_limit to: 20, within: 1.hour, only: :check_in, name: "check_ins",
@@ -95,7 +95,7 @@ module Maps
       scope = scope.where(kind: params[:kind]) if params[:kind].present?
       return scope if live_search_query.blank?
 
-      apply_live_search(scope, columns: %w[name kind], vertical: "maps")
+      apply_live_search(scope, columns: %w\[name kind], vertical: "maps")
     end
 
     def nearby_places_for(place)

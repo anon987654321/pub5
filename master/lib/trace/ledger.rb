@@ -14,13 +14,13 @@ module Master
       # Feedback mirrors high-signal execution feedback into the SQLite
       # knowledge store so RSI can inspect tool results, corrections, and provider failures.
       class Feedback
-        SAFE_METADATA_FIELDS = %w[
+        SAFE_METADATA_FIELDS = %w\[
           tool model status category exit_code bytes ms latency_ms tokens_in tokens_out
           cost cost_usd tokens cached cache_write estimated approximate count mode operation
           error_digest error_bytes files_count files_digest paths_count paths_digest
           url_digest url_bytes path_digest path_bytes query_digest query_bytes subject_digest subject_bytes
         ].freeze
-        SENSITIVE_METADATA_FIELDS = %w[
+        SENSITIVE_METADATA_FIELDS = %w\[
           error message output result content prompt args input path paths file files url query
           subject stdout stderr body command argv headers cookie credential token authorization source
         ].freeze
@@ -110,7 +110,7 @@ module Master
             end
           end
 
-          extra_keys = fields.keys - SAFE_METADATA_FIELDS - SENSITIVE_METADATA_FIELDS - %w[event ts conversation]
+          extra_keys = fields.keys - SAFE_METADATA_FIELDS - SENSITIVE_METADATA_FIELDS - %w\[event ts conversation]
           unless extra_keys.empty?
             result[:extra_fields_count] = extra_keys.size
             result[:extra_fields_digest] = Digest::SHA256.hexdigest(extra_keys.sort.join("\0"))

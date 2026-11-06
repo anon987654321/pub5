@@ -4,7 +4,7 @@ module Marketplace
   class DealsController < Marketplace::BaseController
     include StorefrontSearch
 
-    allow_unauthenticated_access only: %i[index show]
+    allow_unauthenticated_access only: %i\[index show]
 
     def index
       scope = Marketplace::Deal.live.includes(listing: { photos_attachments: :blob })

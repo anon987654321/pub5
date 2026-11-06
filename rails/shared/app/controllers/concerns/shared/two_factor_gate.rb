@@ -24,7 +24,7 @@ module Shared
     # reachable (a member who cannot produce a code can still leave); account
     # settings is deliberately behind the gate, because disabling 2FA goes
     # through TwoFactorSetupsController#update, which demands a working code.
-    CHALLENGE_CONTROLLER_PATHS = %w[sessions two_factor_setups].freeze
+    CHALLENGE_CONTROLLER_PATHS = %w\[sessions two_factor_setups].freeze
 
     included do
       # After Shared::Authentication's resume_session: Current.user must be

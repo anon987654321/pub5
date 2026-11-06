@@ -62,7 +62,7 @@ module Master
           # Pipeline commands already streamed their live dmesg units. Other
           # commands get their human-readable result attached to their command
           # unit. Explicit JSON payloads remain payloads, not terminal prose.
-          unless %w[fix review critique].include?(command)
+          unless %w\[fix review critique].include?(command)
             if structured_payload?(text)
               puts text
             else

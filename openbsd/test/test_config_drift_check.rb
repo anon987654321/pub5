@@ -36,7 +36,7 @@ class ConfigDriftCheckCrontabTest < Minitest::Test
 
   def test_the_command_is_the_first_absolute_path_not_the_environment_or_the_redirect
     assert_equal(
-      %w[/usr/local/bin/relayd-watchdog /usr/local/bin/uptime-check.sh /usr/local/bin/vps_weekly_integrity.sh],
+      %w\[/usr/local/bin/relayd-watchdog /usr/local/bin/uptime-check.sh /usr/local/bin/vps_weekly_integrity.sh],
       scheduled_commands(REPO)
     )
   end

@@ -8,7 +8,7 @@ module Deploy
     REPO_ROOT = File.expand_path("../../../..", __dir__)
     ROOT = File.join(REPO_ROOT, "rails")
     APPS_YML = File.join(ROOT, "apps.yml")
-    VALID_STATUSES = %w[done planned].freeze
+    VALID_STATUSES = %w\[done planned].freeze
 
     def self.run
       new.run

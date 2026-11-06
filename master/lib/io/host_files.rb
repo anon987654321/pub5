@@ -18,7 +18,7 @@ module Master
       MAX_READ_BYTES = 2 * 1024 * 1024
       DEFAULT_LINES = 200
       MAX_LINES = 500
-      ACTIONS = %w[list read search info].freeze
+      ACTIONS = %w\[list read search info].freeze
       SENSITIVE_PATHS = [
         %r{(?:\A|/)\.aws/credentials\z}i,
         %r{(?:\A|/)\.config/gh/hosts\.yml\z}i,

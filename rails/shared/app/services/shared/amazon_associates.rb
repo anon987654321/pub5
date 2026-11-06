@@ -42,7 +42,7 @@ module Shared
     PAGE_SIZE = 10
     MAX_PAGES = 10
     TOKEN_CACHE_KEY = "amazon_associates/creators_access_token"
-    DEFAULT_RESOURCES = %w[
+    DEFAULT_RESOURCES = %w\[
       images.primary.medium
       itemInfo.title
       itemInfo.byLineInfo

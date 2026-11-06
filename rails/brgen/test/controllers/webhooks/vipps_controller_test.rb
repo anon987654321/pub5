@@ -122,7 +122,7 @@ class Webhooks::VippsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_equal "paid", basket.reload.status
     lines.each(&:reload)
-    assert_equal %w[paid paid], lines.map(&:payment_status)
+    assert_equal %w\[paid paid], lines.map(&:payment_status)
     paid_at = lines.map(&:paid_at)
     assert paid_at.all?, "a line has no paid_at"
 

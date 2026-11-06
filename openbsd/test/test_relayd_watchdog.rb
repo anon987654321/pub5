@@ -41,7 +41,7 @@ class TestRelaydWatchdog < Minitest::Test
     3.times { |i| record_restart("relayd check failed", now: 1_000 + i * 60) }
 
     assert_equal 1, alerts.size
-    assert_equal %w[pub4-alert-under-test raise relayd-restarts], alerts.first.first(3)
+    assert_equal %w\[pub4-alert-under-test raise relayd-restarts], alerts.first.first(3)
     assert_includes alerts.first.last, "restarted 3 times in 60 minutes"
     assert_includes alerts.first.last, "/var/log/daemon"
   end

@@ -23,8 +23,8 @@ class CreateCommunityBans < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :community_bans, %i[community_id user_id], unique: true
+    add_index :community_bans, %i\[community_id user_id], unique: true
     # The question every posting check asks: is this person banned here, now.
-    add_index :community_bans, %i[user_id expires_at]
+    add_index :community_bans, %i\[user_id expires_at]
   end
 end

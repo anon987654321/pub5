@@ -32,8 +32,8 @@ class CreateAuditEvents < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :audit_events, %i[context_type context_id occurred_at]
-    add_index :audit_events, %i[action occurred_at]
-    add_index :audit_events, %i[target_type target_id]
+    add_index :audit_events, %i\[context_type context_id occurred_at]
+    add_index :audit_events, %i\[action occurred_at]
+    add_index :audit_events, %i\[target_type target_id]
   end
 end

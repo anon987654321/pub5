@@ -10,7 +10,7 @@ module Master
     # excluded an idle opus. MASTER_FIX_FREE_OK=1 accepts the free lane.
     module LanePreflight
 
-      OPERATIONS = %i[tree structural_review file_write code_generation].freeze
+      OPERATIONS = %i\[tree structural_review file_write code_generation].freeze
 
       Row = Data.define(:operation, :model, :kind)
 

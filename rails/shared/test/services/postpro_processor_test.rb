@@ -6,7 +6,7 @@ require_relative "../../app/services/shared/postpro_processor"
 
 class PostproProcessorTest < Minitest::Test
   def test_script_resolves_to_studio_postpro
-    with_env("PUB5_ROOT" => repo_root, "PUB4_RAILS_ROOT" => rails_root) do
+    with_env("PUB5_ROOT" => repo_root, "PUB5_RAILS_ROOT" => rails_root) do
       script = Shared::PostproProcessor.script
       assert script, "postpro script not found"
       # The media tools live under studio after the four-tree reset.

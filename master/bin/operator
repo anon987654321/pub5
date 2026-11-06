@@ -118,7 +118,7 @@ end
 # The resolution happens there, through openbsd/lib/ruby_select.sh, never here.
 def remote_ruby(*argv)
   resolver = %q(. openbsd/lib/ruby_select.sh && exec "$RUBY" "$@")
-  "cd /home/dev/pub4 && #{Shellwords.join(["sh", "-c", resolver, "sh", *argv])}"
+  "cd /home/dev/pub5 && #{Shellwords.join(["sh", "-c", resolver, "sh", *argv])}"
 end
 
 def ssh_base_argv
@@ -214,7 +214,7 @@ when "fix"
   # /fix log beside the newest run's transcript. The main checkout is searched
   # too, because a /fix child writes its transcript there and not in its worktree.
   sub = ARGV.shift
-  die("fix", "usage, bin/operator fix status [--trees=A,B] [--json] | fix tail [--tail[=N]] [--transcript] [--once]", 64) unless %w[tail status].include?(sub)
+  die("fix", "usage, bin/operator fix status [--trees=A,B] [--json] | fix tail [--tail[=N]] [--transcript] [--once]", 64) unless %w\[tail status].include?(sub)
   following = sub == "tail" || ARGV.any? { |arg| arg == "--transcript" || arg.start_with?("--tail") }
   if following
     require "operator/fix_tail"
@@ -475,7 +475,7 @@ when "design"
   exit Operator::DesignRun.main(ARGV, root: ROOT)
 when "visual"
   # seed|unseed|status load local development content; approve blesses.
-  exec(RbConfig.ruby, File.join(ROOT, "master", "tools", "rails", "visual_seed.rb"), *ARGV) if %w[seed unseed status].include?(ARGV.first)
+  exec(RbConfig.ruby, File.join(ROOT, "master", "tools", "rails", "visual_seed.rb"), *ARGV) if %w\[seed unseed status].include?(ARGV.first)
   # Blesses a parked chrome-geometry baseline; the /fix loop never does this itself.
   require File.join(ROOT, "master", "lib", "fix", "visual_drift_budget")
   if ARGV.first == "sweep"
@@ -497,7 +497,7 @@ when "visual"
     # The operator's verdict on a rendered layout; the loop never writes one.
     verdict, id = ARGV[1], ARGV[2]
     note = ARGV[(ARGV.index("--note").to_i + 1)..].first if ARGV.include?("--note")
-    abort("usage: visual taste approve|reject <app/label/viewport> [--note TEXT]") unless %w[approve reject].include?(verdict) && id
+    abort("usage: visual taste approve|reject <app/label/viewport> [--note TEXT]") unless %w\[approve reject].include?(verdict) && id
     entry = Master::Fix::TasteMemory.operator(root: ROOT, surface: id, verdict: verdict == "approve" ? "approved" : "rejected", note:)
     puts "visual: #{id} #{entry["verdict"]} (#{entry["role"]}, #{entry["selectors"].size} selector(s))"
     exit
@@ -704,7 +704,7 @@ when "laws"
     lines << "law #{card[:id]}, #{reach}" if reach
     lines << "law #{card[:id]}" unless reach
     if declared
-      %w[name statement priority source tier severity autofix fix detect detect_semantic detect_structural].each do |key|
+      %w\[name statement priority source tier severity autofix fix detect detect_semantic detect_structural].each do |key|
         lines << "#{key}, #{declared[key]}" if declared[key]
       end
     end
@@ -768,7 +768,7 @@ when "readers"
   by_kind = hits.group_by(&:kind)
   # Ordered by how load-bearing the reference is, not alphabetically: a require
   # breaks on delete, a mention is usually a comment.
-  %i[require path_build render test constant mention].each do |kind|
+  %i\[require path_build render test constant mention].each do |kind|
     rows = by_kind[kind] or next
     label = { require: "require", path_build: "path built at runtime", render: "rendered by name", test: "asserted by a test",
               constant: "constant (Zeitwerk or direct)", mention: "mentioned" }.fetch(kind)
@@ -836,12 +836,12 @@ when "test"
       jobs << ["master dogfood", [BUNDLE, "exec", "rake", "dogfood"], File.join(ROOT, "master"), {}]
     end
   end
-  app_suites = rails_parts.include?("shared") ? %w[brgen amber bsdports] : (rails_parts & %w[brgen amber bsdports])
+  app_suites = rails_parts.include?("shared") ? %w\[brgen amber bsdports] : (rails_parts & %w\[brgen amber bsdports])
   app_suites.each do |app|
     jobs << ["#{app} suite", [BUNDLE, "exec", RUBY, "bin/rails", "test"],
              File.join(ROOT, "rails", app), {}]
   end
-  if rails_parts.any? { |part| %w[checks test].include?(part) } || !app_suites.empty?
+  if rails_parts.any? { |part| %w\[checks test].include?(part) } || !app_suites.empty?
     jobs << ["rails contracts", [RUBY, "test/run_all.rb"], File.join(ROOT, "rails"), {}]
   end
   if trees.any? { |t| t.first == "openbsd" }
@@ -867,11 +867,11 @@ when "vps"
   when "master"
     action = ARGV.shift.to_s
     remote = !ARGV.delete("--remote").nil?
-    die("vps", "usage, bin/operator vps master <status|start|stop|restart> [--remote]", 64) unless %w[status start stop restart].include?(action) && ARGV.empty?
+    die("vps", "usage, bin/operator vps master <status|start|stop|restart> [--remote]", 64) unless %w\[status start stop restart].include?(action) && ARGV.empty?
     # Literal heredoc: the probe below carries Ruby interpolation meant for the box, not for this process.
     script = <<~'ZSH'.sub("__ACTION__", Shellwords.escape(action))
       set -e
-      cd /home/dev/pub4
+      cd /home/dev/pub5
       case __ACTION__ in
       status)
         sessions="$(screen -ls 2>/dev/null || true)"
@@ -892,14 +892,14 @@ when "vps"
         if [[ "$sessions" == *".master"* ]]; then
           print "master0: screen master already active"
         else
-          screen -dmS master zsh -lc 'cd /home/dev/pub4; exec master/bin/master --daemon'
+          screen -dmS master zsh -lc 'cd /home/dev/pub5; exec master/bin/master --daemon'
           print "master0: screen master started"
         fi
         ;;
       restart)
         screen -S master -X quit 2>/dev/null || true
         sleep 1
-        screen -dmS master zsh -lc 'cd /home/dev/pub4; exec master/bin/master --daemon'
+        screen -dmS master zsh -lc 'cd /home/dev/pub5; exec master/bin/master --daemon'
         print "master0: screen master restarted"
         ;;
       esac
@@ -946,7 +946,7 @@ when "vps"
       mode = follow ? "follow" : (detach ? "detach" : "wait")
       remote_script = <<~ZSH
         set -euo pipefail
-        cd /home/dev/pub4
+        cd /home/dev/pub5
         session=#{session}
         marker=#{marker}
         if ! command -v tmux >/dev/null 2>&1; then

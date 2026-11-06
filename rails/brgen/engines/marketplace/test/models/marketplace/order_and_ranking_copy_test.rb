@@ -6,7 +6,7 @@ require "test_helper"
 # notification and the "why you see this" ranking badges. Both had English
 # literals or English-only defaults, so a Norwegian reader met English.
 class Marketplace::OrderAndRankingCopyTest < ActiveSupport::TestCase
-  REASONS = %w[title_match title_partial description_match category_match
+  REASONS = %w\[title_match title_partial description_match category_match
                preferred_category fast_delivery trusted_seller quality_signal].freeze
 
   setup do
@@ -34,7 +34,7 @@ class Marketplace::OrderAndRankingCopyTest < ActiveSupport::TestCase
   end
 
   test "every ranking reason is translated in both languages" do
-    %i[nb en].each do |locale|
+    %i\[nb en].each do |locale|
       REASONS.each do |reason|
         assert I18n.exists?("marketplace.ranking_reasons.#{reason}", locale),
                "marketplace.ranking_reasons.#{reason} is missing in #{locale}"

@@ -6,24 +6,24 @@ class Order < ApplicationRecord
   class InvalidTransition < StandardError; end
 
   # placed → confirmed → preparing → ready → picked_up → delivered, plus cancelled.
-  FLOW = %w[placed confirmed preparing ready picked_up delivered].freeze
-  STATES = (FLOW + %w[cancelled]).freeze
-  PAYMENT_STATES = %w[pending authorised captured failed].freeze
+  FLOW = %w\[placed confirmed preparing ready picked_up delivered].freeze
+  STATES = (FLOW + %w\[cancelled]).freeze
+  PAYMENT_STATES = %w\[pending authorised captured failed].freeze
   # Money reserved or taken: a cancelled order in one of these owes it back.
-  PAID_STATES = %w[authorised captured].freeze
+  PAID_STATES = %w\[authorised captured].freeze
   # Neither payment client can refund, so a cancelled paid order is refunded
   # by hand in the provider's portal: manual_due until staff mark it refunded.
-  REFUND_STATES = %w[manual_due refunded].freeze
+  REFUND_STATES = %w\[manual_due refunded].freeze
 
   # The staff board advances only through the kitchen's states; the courier
   # owns picked_up/delivered, and cancel is mercy before the pan heats up.
-  ADVANCEABLE = %w[placed confirmed preparing].freeze
-  CANCELABLE = %w[placed confirmed].freeze
+  ADVANCEABLE = %w\[placed confirmed preparing].freeze
+  CANCELABLE = %w\[placed confirmed].freeze
   # The moves whose moment is kept (placed_at is set on create), so ETAs
   # and the board can be measured.
-  TIMED_STATES = %w[confirmed ready picked_up delivered].freeze
+  TIMED_STATES = %w\[confirmed ready picked_up delivered].freeze
   # The staff board's columns; from ready the courier takes over.
-  BOARD_STATES = %w[placed confirmed preparing ready].freeze
+  BOARD_STATES = %w\[placed confirmed preparing ready].freeze
 
   belongs_to :user, optional: true
   belongs_to :kitchen
@@ -40,7 +40,7 @@ class Order < ApplicationRecord
   validates :state, inclusion: { in: STATES }
   validates :payment_state, inclusion: { in: PAYMENT_STATES }
   validates :refund_state, inclusion: { in: REFUND_STATES }, allow_nil: true
-  validates :delivery_mode, inclusion: { in: %w[delivery pickup] }, allow_nil: true
+  validates :delivery_mode, inclusion: { in: %w\[delivery pickup] }, allow_nil: true
   validates :phone, presence: true
   validates :customer_name, length: { maximum: 80 }
   validates :delivery_note, length: { maximum: 200 }
@@ -58,13 +58,13 @@ class Order < ApplicationRecord
   # its grid for every open board.
   # (One after_commit: create and update hooks naming the same method keep
   # only the last.)
-  after_commit :refresh_board, on: %i[create update], if: -> { previously_new_record? || saved_change_to_state? }
+  after_commit :refresh_board, on: %i\[create update], if: -> { previously_new_record? || saved_change_to_state? }
   # A free wrap that is never paid for or never made gives its stamps back.
   after_update :release_redeemed_stamps,
                if: -> { saved_change_to_state?(to: "cancelled") || saved_change_to_payment_state?(to: "failed") }
 
   scope :recent, -> { order(placed_at: :desc, id: :desc) }
-  scope :live, -> { where(state: %w[placed confirmed preparing ready picked_up]) }
+  scope :live, -> { where(state: %w\[placed confirmed preparing ready picked_up]) }
   scope :for_state, ->(state) { where(state: state) }
   scope :refunds_due, -> { where(refund_state: "manual_due").order(:updated_at, :id) }
 

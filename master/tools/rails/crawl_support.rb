@@ -39,7 +39,7 @@ module CrawlSupport
 
     yml.each_key do |name|
       next if json_by_name.key?(name)
-      next if %w[aight_production_ai multimedia_tts].include?(name)
+      next if %w\[aight_production_ai multimedia_tts].include?(name)
       out << "inventory: #{name} in apps.yml but missing from deploy_inventory.json"
     end
     out

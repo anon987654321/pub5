@@ -7,14 +7,14 @@ module Master
     # Bounded TracePoint tracing for selected object identities. Call arguments
     # and return values are deliberately omitted because they often hold secrets.
     #
-    #   probe = Master::Trace::ObjectProbe.new(receivers: [service], methods: %i[call execute])
+    #   probe = Master::Trace::ObjectProbe.new(receivers: [service], methods: %i\[call execute])
     #   result = probe.capture { service.call }
     #   probe.events
     #   Master::Trace::ObjectProbe.method_chain(service, :call)
     class ObjectProbe
       MAX_EVENTS = 200
       MAX_EVENT_LIMIT = 10_000
-      EVENT_TYPES = %i[call return c_call c_return raise].freeze
+      EVENT_TYPES = %i\[call return c_call c_return raise].freeze
 
       Event = Struct.new(
         :event, :receiver_id, :receiver_class, :owner, :method_id,

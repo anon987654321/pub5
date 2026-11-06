@@ -15,7 +15,7 @@ module Master
   #                  (a rendered value or a baseline: no measurement settles it)
   Gap = Data.define(:horizon, :cost_to_check, :decidability) do
     def initialize(horizon: :never, cost_to_check: :operator, decidability: :fact)
-      raise ArgumentError, "horizon: #{horizon.inspect}" unless %i[never operator].include?(horizon) || (horizon.is_a?(Numeric) && horizon.positive?)
+      raise ArgumentError, "horizon: #{horizon.inspect}" unless %i\[never operator].include?(horizon) || (horizon.is_a?(Numeric) && horizon.positive?)
       raise ArgumentError, "cost_to_check: #{cost_to_check.inspect}" unless Gap::COSTS.key?(cost_to_check)
       raise ArgumentError, "decidability: #{decidability.inspect}" unless Gap::DECIDABILITIES.key?(decidability)
 

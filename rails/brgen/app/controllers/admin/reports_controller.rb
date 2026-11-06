@@ -6,7 +6,7 @@ class Admin::ReportsController < ApplicationController
   before_action :require_admin!
   before_action :set_report, only: :update
 
-  FILTERS = (ModerationReport::STATUSES + %w[all]).freeze
+  FILTERS = (ModerationReport::STATUSES + %w\[all]).freeze
 
   def index
     # Open by default: the queue is the work still to do, and a moderator who

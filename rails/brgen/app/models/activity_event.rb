@@ -32,11 +32,11 @@ class ActivityEvent < ApplicationRecord
 
   # The verticals the activity page offers as filters, in the order shown.
   # "general" stands where "core" stood: no event was ever filed under core.
-  FILTER_VERTICALS = %w[marketplace takeaway dating tv playlist general].freeze
+  FILTER_VERTICALS = %w\[marketplace takeaway dating tv playlist general].freeze
 
   # Public vertical births for the city-home strip. Posts stay on the feed;
   # this is interconnection, not a second timeline.
-  HOME_STRIP_EVENTS = %w[
+  HOME_STRIP_EVENTS = %w\[
     ListingCreated
     TakeawayRestaurantCreated
     MarketplaceStoreCreated
@@ -68,7 +68,7 @@ class ActivityEvent < ApplicationRecord
       klass = type.to_s.safe_constantize
       next unless klass.respond_to?(:where)
 
-      preload = %i[channel listing].select { |name| klass.reflect_on_association(name) }
+      preload = %i\[channel listing].select { |name| klass.reflect_on_association(name) }
       scope = preload.any? ? klass.includes(*preload) : klass
       scope.where(id: group.map(&:subject_id)).each { |record| out[[ type.to_s, record.id ]] = record }
     rescue StandardError

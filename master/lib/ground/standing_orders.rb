@@ -80,15 +80,15 @@ module Master
       EVIDENCE_KEEP = 5
       DEFS_PATH = Master.state_path
       STATE_PATH = File.join(Master::ROOT, ".master", "standing_orders_state.yml")
-      STATE_KEYS = %w[state last_run_at last_error evidence].freeze
-      DEFINITION_KEYS = %w[
+      STATE_KEYS = %w\[state last_run_at last_error evidence].freeze
+      DEFINITION_KEYS = %w\[
         name description trigger interval_s command enabled domain owner verify event filter exclude
       ].freeze
-      VALID_STATES = %w[pending running done error verified].freeze
-      EVENT_SUBSCRIPTIONS = %w[tool:after].freeze
+      VALID_STATES = %w\[pending running done error verified].freeze
+      EVENT_SUBSCRIPTIONS = %w\[tool:after].freeze
       # What a wake runs on its own: a schedule is due when its interval has
       # passed, a heartbeat order on every heartbeat tick past its interval.
-      WAKES = %w[scheduled heartbeat].freeze
+      WAKES = %w\[scheduled heartbeat].freeze
 
       # nightly_dreams sent "dreams consolidate", a word no command answers, so
       # each night it went to the model as chat; the heartbeat's prune_memory
@@ -120,7 +120,7 @@ module Master
           o["enabled"] &&
             (owner.nil? || o["owner"].to_s == owner.to_s) &&
             WAKES.include?(o["trigger"]) &&
-            %w[pending done].include?(state_of(o)) &&
+            %w\[pending done].include?(state_of(o)) &&
             (now - o["last_run_at"].to_i) >= o["interval_s"].to_i
         end
       end

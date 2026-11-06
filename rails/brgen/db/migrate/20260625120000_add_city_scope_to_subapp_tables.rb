@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class AddCityScopeToSubappTables < ActiveRecord::Migration[8.1]
-  TABLES = %i[
+  TABLES = %i\[
     communities
     marketplace_listings
     marketplace_stores
@@ -24,12 +24,12 @@ class AddCityScopeToSubappTables < ActiveRecord::Migration[8.1]
     return unless table_exists?(:communities) && index_exists?(:communities, :slug)
 
     remove_index :communities, :slug
-    add_index :communities, %i[city_id slug], unique: true
+    add_index :communities, %i\[city_id slug], unique: true
   end
 
   def down
-    if table_exists?(:communities) && index_exists?(:communities, %i[city_id slug])
-      remove_index :communities, column: %i[city_id slug]
+    if table_exists?(:communities) && index_exists?(:communities, %i\[city_id slug])
+      remove_index :communities, column: %i\[city_id slug]
       add_index :communities, :slug, unique: true
     end
 
@@ -60,7 +60,7 @@ class AddCityScopeToSubappTables < ActiveRecord::Migration[8.1]
       SQL
     end
 
-    %i[posts users].each do |table|
+    %i\[posts users].each do |table|
       next unless table_exists?(table)
       next unless column_exists?(table, :city_id)
 

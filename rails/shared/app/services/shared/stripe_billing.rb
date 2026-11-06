@@ -18,8 +18,8 @@ module Shared
     API = "https://api.stripe.com/v1"
     # The subscription statuses that give access; past_due, unpaid, incomplete
     # and canceled do not.
-    ENTITLING_STATUSES = %w[active trialing].freeze
-    SUBSCRIPTION_EVENTS = %w[customer.subscription.created customer.subscription.updated
+    ENTITLING_STATUSES = %w\[active trialing].freeze
+    SUBSCRIPTION_EVENTS = %w\[customer.subscription.created customer.subscription.updated
                              customer.subscription.deleted].freeze
 
     class Error < StandardError; end

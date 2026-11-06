@@ -9,7 +9,7 @@ class AddMarketplaceRankingAndEvents < ActiveRecord::Migration[8.1]
 
     add_index :marketplace_listings, :delivery_promise
     add_index :marketplace_listings, :ranking_score
-    add_index :marketplace_listings, %i[city_id ranking_score],
+    add_index :marketplace_listings, %i\[city_id ranking_score],
               name: "index_marketplace_listings_on_city_and_ranking"
 
     create_table :marketplace_listing_events do |t|
@@ -21,7 +21,7 @@ class AddMarketplaceRankingAndEvents < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :marketplace_listing_events, %i[listing_id event_type occurred_at],
+    add_index :marketplace_listing_events, %i\[listing_id event_type occurred_at],
               name: "index_marketplace_listing_events_on_listing_type_time"
     add_index :marketplace_listing_events, :occurred_at
   end

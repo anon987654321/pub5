@@ -25,7 +25,7 @@ module Deploy
     # layer on the maps page plots the viewer's own takeaway orders that are out
     # for delivery, which is a read of another vertical's data by design.
     EXEMPT = {
-      "brgen_maps" => { "app/controllers/maps/home_controller.rb" => %w[Takeaway] },
+      "brgen_maps" => { "app/controllers/maps/home_controller.rb" => %w\[Takeaway] },
     }.freeze
 
     def self.run(root: ROOT, exempt: EXEMPT)

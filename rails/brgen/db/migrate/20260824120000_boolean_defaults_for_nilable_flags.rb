@@ -19,13 +19,13 @@
 # finished" is a different claim from "it was not finished".
 class BooleanDefaultsForNilableFlags < ActiveRecord::Migration[8.1]
   COLUMNS = [
-    %w[dating_profiles visible],
-    %w[playlist_playlists public_access],
-    %w[posts anonymous],
-    %w[takeaway_menu_items vegan],
-    %w[takeaway_menu_items vegetarian],
-    %w[takeaway_restaurants active],
-    %w[tv_subscriptions notify_on_upload]
+    %w\[dating_profiles visible],
+    %w\[playlist_playlists public_access],
+    %w\[posts anonymous],
+    %w\[takeaway_menu_items vegan],
+    %w\[takeaway_menu_items vegetarian],
+    %w\[takeaway_restaurants active],
+    %w\[tv_subscriptions notify_on_upload]
   ].freeze
 
   def up

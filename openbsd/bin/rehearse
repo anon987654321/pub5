@@ -19,7 +19,7 @@ require "rbconfig"
 ROOT = File.expand_path("../..", __dir__)
 RUBY = RbConfig.ruby
 
-LINTS = %w[
+LINTS = %w\[
   master/tools/rhythm_lint.rb
   master/tools/rails/operator/fallback_drift_lint.rb
   master/tools/empty_state_lint.rb
@@ -28,7 +28,7 @@ LINTS = %w[
   master/tools/rails/operator/dialect_token_drift_check.rb
 ].freeze
 
-CONTRACTS = %w[
+CONTRACTS = %w\[
   openbsd/test/test_deploy_paths_exist.rb
   openbsd/test/test_vps_deploy_contract.rb
   openbsd/test/test_ci_mirror_contract.rb

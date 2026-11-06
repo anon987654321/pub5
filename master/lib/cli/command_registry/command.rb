@@ -62,7 +62,7 @@ module Master
 
         def dependency_kwargs(ctx)
           parameters = @receiver.method(@method_name).parameters
-          keys = parameters.filter_map { |type, name| name if %i[key keyreq].include?(type) && name != :ctx }
+          keys = parameters.filter_map { |type, name| name if %i\[key keyreq].include?(type) && name != :ctx }
           # A dependency can legitimately *be* nil, so only optional (:key)
           # params may fall back to their own default when one is. Required
           # (:keyreq) params are passed through nil and all: compacting them
@@ -73,7 +73,7 @@ module Master
 
             acc[name] = value
           end.merge(@kwargs)
-          accepts_ctx = parameters.any? { |type, name| %i[key keyreq].include?(type) && name == :ctx }
+          accepts_ctx = parameters.any? { |type, name| %i\[key keyreq].include?(type) && name == :ctx }
           accepts_ctx ? mapped.merge(ctx:) : mapped
         end
       end

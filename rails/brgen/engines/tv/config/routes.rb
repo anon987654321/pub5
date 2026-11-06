@@ -15,26 +15,26 @@ Tv::Engine.routes.draw do
       post :subscribe
       delete :unsubscribe
     end
-    resources :videos, only: %i[new create]
-    resources :live_streams, only: %i[new create]
-    resources :shows, param: :slug, only: %i[index show] do
+    resources :videos, only: %i\[new create]
+    resources :live_streams, only: %i\[new create]
+    resources :shows, param: :slug, only: %i\[index show] do
       get "episodes/:number", to: "episodes#show", as: :episode, on: :member
     end
   end
 
   # The clips built on one piece of audio — a video had no audio identity, so
   # there was nothing to browse more of.
-  resources :sounds, only: %i[index show]
+  resources :sounds, only: %i\[index show]
 
-  resources :videos, only: %i[show destroy] do
+  resources :videos, only: %i\[show destroy] do
     resources :video_notes, only: :create
     resources :comments, only: :create
     # videos#show creates its own row; the vertical feed creates one per video
     # as it scrolls into view. Both PATCH watch time onto it.
-    resources :view_events, only: %i[create update]
+    resources :view_events, only: %i\[create update]
   end
 
-  resources :live_streams, only: %i[index show update destroy] do
+  resources :live_streams, only: %i\[index show update destroy] do
     resources :stream_chats, only: :create
     member do
       patch :go_live

@@ -47,7 +47,7 @@ module Master
       extend FactoryMethods
 
       # Keys every stage may read or write. Unknown keys raise on construction.
-      KNOWN_KEYS = %i[
+      KNOWN_KEYS = %i\[
         user_message on_chunk
         intent command args message original_message inferred_command
         task_type pressure locale infer_confidence
@@ -63,7 +63,7 @@ module Master
         _timings _parallel_errors _parallel_timeout _stage_error
       ].freeze
 
-      REQUIRED = %i[user_message].freeze
+      REQUIRED = %i\[user_message].freeze
 
       KEY_TYPES = {
         user_message: [String],
@@ -80,12 +80,12 @@ module Master
 
       # Stage prerequisite contracts — checked before each stage runs.
       STAGE_PREREQUISITES = {
-        infer: %i[user_message],
-        route: %i[user_message],
-        execute: %i[user_message handler],
-        council: %i[output],
-        lint: %i[output],
-        render: %i[output],
+        infer: %i\[user_message],
+        route: %i\[user_message],
+        execute: %i\[user_message handler],
+        council: %i\[output],
+        lint: %i\[output],
+        render: %i\[output],
       }.freeze
 
       def initialize(hash)

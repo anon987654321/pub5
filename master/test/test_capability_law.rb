@@ -16,7 +16,7 @@ class CapabilityLawTest < Minitest::Test
   end
 
   def test_read_only_modes_fetch_the_web_but_never_write_or_execute
-    %i[observe plan].each do |profile|
+    %i\[observe plan].each do |profile|
       capabilities = Master::Core::Capabilities.for(profile)
 
       assert capabilities.allows?(:network), "#{profile} cannot fetch a page"

@@ -31,7 +31,7 @@ class TestBootModelPin < Minitest::Test
 
     attr_writer :chain
 
-    def routed_chain(_message, task_type:) = @chain || %w[free/a free/b]
+    def routed_chain(_message, task_type:) = @chain || %w\[free/a free/b]
     def model = "free/a"
     attr_writer :local_only
 
@@ -50,7 +50,7 @@ class TestBootModelPin < Minitest::Test
     ]
     router.define_singleton_method(:fallback_chain) { |task_type:| chain }
     router.define_singleton_method(:tier_for_model) do |model|
-      %w[openrouter/free-model:free ollama:gemma3:4b].include?(model) ? "cheap" : "strong"
+      %w\[openrouter/free-model:free ollama:gemma3:4b].include?(model) ? "cheap" : "strong"
     end
     router.define_singleton_method(:priority_fallback_order) do |models, task_type: :exploration|
       models.each_with_index.sort_by do |model, index|
@@ -86,13 +86,13 @@ class TestBootModelPin < Minitest::Test
   def test_a_saved_model_leads_the_chain_without_the_session
     agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
 
-    assert_equal %w[claude-cli:claude-sonnet-5-5 free/a free/b], agent.routed_models
+    assert_equal %w\[claude-cli:claude-sonnet-5-5 free/a free/b], agent.routed_models
   end
 
   def test_an_unreachable_saved_model_leaves_the_pool_order_alone
     agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: false))
 
-    assert_equal %w[free/a free/b], agent.routed_models
+    assert_equal %w\[free/a free/b], agent.routed_models
   end
 
   # ask(..., operation:) takes this path, which is the one /fix's semantic laws and
@@ -114,16 +114,16 @@ class TestBootModelPin < Minitest::Test
 
   def test_a_saved_free_model_never_leads_a_live_subscription_chain
     agent = FakeAgent.new(saved: "nvidia/nemotron-3-super-120b-a12b:free", router: FakeRouter.new(reachable: true))
-    agent.chain = %w[claude-cli:claude-opus-5-5 deepseek-chat]
+    agent.chain = %w\[claude-cli:claude-opus-5-5 deepseek-chat]
 
-    assert_equal %w[claude-cli:claude-opus-5-5 deepseek-chat], agent.routed_models
+    assert_equal %w\[claude-cli:claude-opus-5-5 deepseek-chat], agent.routed_models
   end
 
   def test_a_saved_cloud_model_is_never_pinned_in_local_only_mode
     agent = FakeAgent.new(saved: "claude-cli:claude-sonnet-5-5", router: FakeRouter.new(reachable: true))
     agent.local_only = true
 
-    assert_equal %w[free/a free/b], agent.routed_models
+    assert_equal %w\[free/a free/b], agent.routed_models
     assert_equal "agy:gemini-3.8-flash-medium", agent.model_for(operation: :semantic_law)
   end
 
@@ -154,7 +154,7 @@ class TestBootModelPin < Minitest::Test
       raise IOError, "router cache unavailable for #{task_type}"
     end
     probe = RouteFailureProbe.new(router:, model: "configured/last-resort")
-    catalogue = %w[paid/primary local/secondary free/final]
+    catalogue = %w\[paid/primary local/secondary free/final]
 
     chain = Master::Io::LaneSelection.stub(:explicit_models, catalogue) do
       Master::Io::LaneSelection.stub(:order_or_all, ->(models) { models.reverse }) do
@@ -162,7 +162,7 @@ class TestBootModelPin < Minitest::Test
       end
     end
 
-    assert_equal %w[free/final local/secondary paid/primary configured/last-resort], chain
+    assert_equal %w\[free/final local/secondary paid/primary configured/last-resort], chain
   end
 
   def test_empty_router_ladder_uses_the_independent_fallback_catalogue
@@ -170,7 +170,7 @@ class TestBootModelPin < Minitest::Test
     router.define_singleton_method(:fallback_chain) { |task_type:| [] }
     router.define_singleton_method(:priority_fallback_order) { |models, task_type:| models }
     probe = RouteFailureProbe.new(router:, model: "configured/last-resort")
-    catalogue = %w[paid/primary local/secondary free/final]
+    catalogue = %w\[paid/primary local/secondary free/final]
 
     chain = Master::Io::LaneSelection.stub(:explicit_models, catalogue) do
       Master::Io::LaneSelection.stub(:order_or_all, ->(models) { models.reverse }) do
@@ -178,6 +178,6 @@ class TestBootModelPin < Minitest::Test
       end
     end
 
-    assert_equal %w[free/final local/secondary paid/primary configured/last-resort], chain
+    assert_equal %w\[free/final local/secondary paid/primary configured/last-resort], chain
   end
 end

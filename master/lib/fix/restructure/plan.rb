@@ -69,7 +69,7 @@ module Master
         private
 
         def mixed_test_and_production_paths?
-          is_test_path = ->(path) { path.to_s.split("/").any? { |part| %w[test spec fixtures].include?(part) } }
+          is_test_path = ->(path) { path.to_s.split("/").any? { |part| %w\[test spec fixtures].include?(part) } }
           paths.any?(&is_test_path) && paths.any? { |path| !is_test_path.call(path) }
         end
       end

@@ -15,44 +15,44 @@ class Pub4AdminTest < Minitest::Test
                  ADMIN.command_for(["disk-usage", "/home"])
     assert_equal ["/usr/bin/du", "-xk", "/var"],
                  ADMIN.command_for(["disk-usage", "/var"])
-    assert_nil ADMIN.command_for(["disk-usage", "/home/dev/pub4"])
+    assert_nil ADMIN.command_for(["disk-usage", "/home/dev/pub5"])
     assert_nil ADMIN.command_for(["disk-usage", "/etc"])
     assert_nil ADMIN.command_for(["disk-usage", ";id"])
   end
   def test_relayd_restart_is_the_only_brokered_relayd_mutation
     assert_equal ["/usr/sbin/rcctl", "restart", "relayd"],
-                 ADMIN.command_for(%w[service restart relayd])
+                 ADMIN.command_for(%w\[service restart relayd])
     assert_equal ["/usr/sbin/rcctl", "check", "relayd"],
-                 ADMIN.command_for(%w[service check relayd])
-    assert_nil ADMIN.command_for(%w[service stop relayd])
+                 ADMIN.command_for(%w\[service check relayd])
+    assert_nil ADMIN.command_for(%w\[service stop relayd])
   end
   def test_service_action_maps_to_fixed_argv
     assert_equal ["/usr/sbin/rcctl", "restart", "brgen"],
-                 ADMIN.command_for(%w[service restart brgen])
+                 ADMIN.command_for(%w\[service restart brgen])
     assert_equal ["/usr/sbin/rcctl", "check", "master"],
-                 ADMIN.command_for(%w[service check master])
+                 ADMIN.command_for(%w\[service check master])
   end
 
   def test_relayd_health_check_is_read_only
     assert_equal ["/usr/sbin/rcctl", "check", "relayd"],
-                 ADMIN.command_for(%w[service check relayd])
+                 ADMIN.command_for(%w\[service check relayd])
   end
   def test_only_known_service_targets_are_admitted
-    %w[master brgen amber bsdports brgen_jobs amber_jobs bsdports_jobs].each do |service|
+    %w\[master brgen amber bsdports brgen_jobs amber_jobs bsdports_jobs].each do |service|
       refute_nil ADMIN.command_for(["service", "check", service])
     end
 
-    assert_nil ADMIN.command_for(%w[service restart sshd])
+    assert_nil ADMIN.command_for(%w\[service restart sshd])
     assert_nil ADMIN.command_for(["service", "restart", "../root"])
   end
 
   def test_service_verb_and_argument_shape_are_closed
-    assert_nil ADMIN.command_for(%w[service set brgen flags arbitrary])
-    assert_nil ADMIN.command_for(%w[service shell brgen])
-    assert_nil ADMIN.command_for(%w[service restart brgen extra])
-    assert_nil ADMIN.command_for(%w[service restart])
-    assert_nil ADMIN.command_for(%w[run sh -c id])
-    assert_nil ADMIN.command_for(%w[stamp brgen abc1234 ok])
+    assert_nil ADMIN.command_for(%w\[service set brgen flags arbitrary])
+    assert_nil ADMIN.command_for(%w\[service shell brgen])
+    assert_nil ADMIN.command_for(%w\[service restart brgen extra])
+    assert_nil ADMIN.command_for(%w\[service restart])
+    assert_nil ADMIN.command_for(%w\[run sh -c id])
+    assert_nil ADMIN.command_for(%w\[stamp brgen abc1234 ok])
   end
 
   def test_deploy_status_is_a_fixed_atomic_app_record
@@ -163,7 +163,7 @@ class Pub4AdminTest < Minitest::Test
     assert_includes source, 'args.length == 4 && args[0] == "bundle-cache"'
     assert_includes source, "def bundle_cache(app, action, ruby_key)"
     assert_includes source, 'BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"'
-    assert_includes source, "%w[prepare import capture].include?(action)"
+    assert_includes source, "%w\[prepare import capture].include?(action)"
     assert_includes source, "File.link(temporary, target)"
     assert_includes source, "File::CREAT | File::EXCL"
     assert_includes source, "128 * 1024 * 1024"
@@ -171,7 +171,7 @@ class Pub4AdminTest < Minitest::Test
   end
   def test_master_web_preparation_is_fixed_path_and_symlink_safe
     source = File.read(File.expand_path("../usr/local/sbin/pub4-admin", __dir__))
-    assert_includes source, 'MASTER_WEB_ROOT = "/home/dev/pub4/master/web"'
+    assert_includes source, 'MASTER_WEB_ROOT = "/home/dev/pub5/master/web"'
     assert_includes source, 'args == ["master-web-assets-reset"]'
     assert_includes source, 'args == ["master-web-runtime-dirs"]'
     assert_includes source, "def master_web_root!"
@@ -238,7 +238,7 @@ class Pub4AdminTest < Minitest::Test
   def test_rails_task_uses_its_own_app_allowlist
     source = File.read(File.expand_path("../usr/local/sbin/pub4-admin", __dir__))
     assert_includes source, "known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS"
-    assert_includes source, "RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze"
+    assert_includes source, "RAILS_TASK_APPS = %w\[master brgen amber bsdports mrdamascy].freeze"
   end
   def test_npm_cache_task_is_app_owned_and_symlink_safe
     broker = File.read(File.expand_path("../usr/local/sbin/pub4-admin", __dir__))
@@ -305,7 +305,7 @@ class Pub4AdminTest < Minitest::Test
     helper = File.read(File.expand_path("../usr/local/libexec/rails-task.ksh", __dir__))
     assert_includes source, 'args[0] == "rails-task" && RAILS_TASK_APPS.include?(args[1])'
     assert_includes source, 'args[0] == "ensure-secret" && APPS.include?(args[1])'
-    assert_includes source, "RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze"
+    assert_includes source, "RAILS_TASK_APPS = %w\[master brgen amber bsdports mrdamascy].freeze"
     assert_includes helper, "master|brgen|amber|bsdports"
     assert_includes helper, "rails-task: /home must be a real root-owned directory"
     assert_includes helper, "app .bundle must be a real app-owned directory"
@@ -317,7 +317,7 @@ class Pub4AdminTest < Minitest::Test
     assert_includes helper, "case \"$database\" in cache|queue|cable)"
     assert_includes helper, "secondary-db-check)"
     assert_includes helper, 'table=$("$ruby_path" -e '
-    assert_includes source, '%w[schema-load secondary-db-check].include?(task)'
+    assert_includes source, '%w\[schema-load secondary-db-check].include?(task)'
     assert_includes helper, "export SECRET_KEY_BASE"
     refute_includes helper, 'command="SECRET_KEY_BASE=$secret'
     refute_includes helper, "sh -c \"$command\""
@@ -392,7 +392,7 @@ class Pub4AdminTest < Minitest::Test
 
     assert_includes source, "overlay-initializers overlay-public"
     assert_includes helper, "overlay-initializers|overlay-public"
-    assert_includes helper, 'shared=/home/dev/pub4/rails/__shared/config/initializers'
+    assert_includes helper, 'shared=/home/dev/pub5/rails/__shared/config/initializers'
     assert_includes helper, "icon.svg|icon.png|icon-192.png|apple-touch-icon.png|favicon.ico|manifest.json|manifest.webmanifest"
     assert_includes runtime, "overlay-initializers|overlay-public"
     assert_includes sync, 'run_rails_as_app "$app_name" "$app_dir" "overlay-initializers"'
@@ -409,7 +409,7 @@ class Pub4AdminTest < Minitest::Test
     assert_includes source, "Process::UID.change_privilege(account.uid)"
     assert_includes source, "Process::GID.change_privilege(account.gid)"
     assert_includes source, "groups = [account.gid, Etc.getgrnam(\"_pub4ci\").gid].uniq"
-    assert_includes helper, 'repo=/home/dev/pub4'
+    assert_includes helper, 'repo=/home/dev/pub5'
     assert_includes helper, '[ "$(id -un)" = "$app" ]'
     refute_match(/^\s*(?:doas|sudo|chown)\b/, helper)
   end
@@ -456,7 +456,7 @@ class Pub4AdminTest < Minitest::Test
 
   def test_started_service_inventory_is_a_fixed_read_operation
     assert_equal ["/usr/sbin/rcctl", "ls", "started"],
-                 ADMIN.command_for(%w[service list-started])
+                 ADMIN.command_for(%w\[service list-started])
   end
 
   def test_started_services_are_filtered_to_the_broker_allowlist
@@ -469,9 +469,9 @@ class Pub4AdminTest < Minitest::Test
   def test_privileged_action_set_excludes_service_configuration_mutation
     refute_includes ADMIN::SERVICE_ACTIONS, "enable"
     refute_includes ADMIN::SERVICE_ACTIONS, "disable"
-    refute_nil ADMIN.command_for(%w[service restart brgen])
-    assert_nil ADMIN.command_for(%w[service enable brgen])
-    assert_nil ADMIN.command_for(%w[service disable brgen])
+    refute_nil ADMIN.command_for(%w\[service restart brgen])
+    assert_nil ADMIN.command_for(%w\[service enable brgen])
+    assert_nil ADMIN.command_for(%w\[service disable brgen])
   end
 
   def test_root_script_does_not_evaluate_shell_command_strings

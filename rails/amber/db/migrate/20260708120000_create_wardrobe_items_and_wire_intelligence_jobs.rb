@@ -10,6 +10,6 @@ class CreateWardrobeItemsAndWireIntelligenceJobs < ActiveRecord::Migration[8.1]
       t.text :notes
       t.timestamps
     end
-    add_index :wardrobe_items, %i[user_id item_id], unique: true
+    add_index :wardrobe_items, %i\[user_id item_id], unique: true
   end
 end

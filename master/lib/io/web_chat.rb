@@ -165,7 +165,7 @@ module Master
       # nodes marked as user input and the prompt echo before deciding that a
       # visible change is a new assistant answer.
       def reply_candidate?(node)
-        roles = %w[data-message-author-role data-role role].filter_map do |name|
+        roles = %w\[data-message-author-role data-role role].filter_map do |name|
           value = node.attribute(name).to_s.strip.downcase
           value unless value.empty?
         rescue StandardError
@@ -174,7 +174,7 @@ module Master
         return false if roles.any? { |value| value.match?(/\b(user|human|prompt|question|query)\b/) }
         return true if roles.any? { |value| value.match?(/\b(assistant|bot|model)\b/) }
 
-        metadata = %w[class data-testid aria-label].filter_map do |name|
+        metadata = %w\[class data-testid aria-label].filter_map do |name|
           value = node.attribute(name).to_s.strip.downcase
           value unless value.empty?
         rescue StandardError

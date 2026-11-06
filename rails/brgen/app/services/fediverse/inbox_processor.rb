@@ -8,7 +8,7 @@ module Fediverse
   # allowed to act on the object — a verified actor can still send a Delete for
   # somebody else's post, and each handler checks that separately.
   class InboxProcessor
-    HANDLED = %w[Follow Undo Accept Reject Create Announce Like Delete].freeze
+    HANDLED = %w\[Follow Undo Accept Reject Create Announce Like Delete].freeze
 
     def initialize(activity, actor)
       @activity = activity

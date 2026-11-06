@@ -6,12 +6,12 @@ require "minitest/autorun"
 # With the file missing, that answer was itself an ArgumentError, so the visitor got a 500.
 class PublicErrorPagesTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  MASTER_WEB_PAGES = %w[400 404 422 500].freeze
+  MASTER_WEB_PAGES = %w\[400 404 422 500].freeze
   MASTER_WEB_FONT = 'font-family: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;'
 
-  %w[brgen amber bsdports].each do |app|
+  %w\[brgen amber bsdports].each do |app|
     define_method("test_#{app}_has_every_page_rails_renders_for_a_status") do
-      %w[404 406-unsupported-browser 422 500].each do |name|
+      %w\[404 406-unsupported-browser 422 500].each do |name|
         path = File.join(ROOT, app, "public", "#{name}.html")
         assert File.file?(path), "#{app}/public/#{name}.html is missing"
         source = File.read(path)
@@ -88,7 +88,7 @@ class PublicErrorPagesTest < Minitest::Test
     assert_includes tokens, "--tap-min: 44px;"
     assert_includes tokens, "--radius-extra-small: 4px;"
     assert_includes tokens, "--focus-ring: 2px solid var(--accent, currentColor);"
-    %w[top right bottom left].each do |edge|
+    %w\[top right bottom left].each do |edge|
       assert_includes source, "env(safe-area-inset-#{edge}, 0px)",
                       "shared error-page padding must respect the #{edge} safe area"
     end
@@ -105,7 +105,7 @@ class PublicErrorPagesTest < Minitest::Test
   # errors.css the 400 page and every app's error pages read, so its type,
   # safe-area padding and focus ring come from the stylesheet tested above.
   def test_shared_error_pages_link_the_shared_stylesheet_and_carry_no_palette_of_their_own
-    %w[400 503].each do |status|
+    %w\[400 503].each do |status|
       source = File.read(File.join(ROOT, "shared", "public", "#{status}.html"))
 
       assert_includes source, %(<link rel="stylesheet" href="/styles/errors.css">), "#{status}: must read errors.css"

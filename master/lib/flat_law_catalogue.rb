@@ -11,12 +11,12 @@ module Master
   class FlatLawCatalogue
     class Invalid < StandardError; end
 
-    SCOPE_FIELDS = %w[applies_to domain path path_pattern exclude].freeze
-    LEGACY_RANK_FIELDS = %w[priority tier].freeze
-    SEVERITIES = %w[info warning error critical veto].freeze
-    RESOLUTIONS = %w[automatic review never].freeze
-    MODALITY_COVERAGE = %w[deterministic semantic].freeze
-    METADATA_PREFIXES = %w[KIND_ RATCHET_ LINT_ META_].freeze
+    SCOPE_FIELDS = %w\[applies_to domain path path_pattern exclude].freeze
+    LEGACY_RANK_FIELDS = %w\[priority tier].freeze
+    SEVERITIES = %w\[info warning error critical veto].freeze
+    RESOLUTIONS = %w\[automatic review never].freeze
+    MODALITY_COVERAGE = %w\[deterministic semantic].freeze
+    METADATA_PREFIXES = %w\[KIND_ RATCHET_ LINT_ META_].freeze
 
     class << self
       def load(root: Master::ROOT)
@@ -142,7 +142,7 @@ module Master
       def validate_invariant_modalities!(rows)
         rows.select { |row| row["node"] }.each do |row|
           id = row.fetch("id")
-          %w[mechanical semantic].each do |modality|
+          %w\[mechanical semantic].each do |modality|
             value = row[modality]
             raise Invalid, "#{id} must declare #{modality} enforcement" unless
               value.is_a?(String) && !value.strip.empty?

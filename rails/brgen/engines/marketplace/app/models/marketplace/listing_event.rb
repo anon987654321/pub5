@@ -8,7 +8,7 @@ class Marketplace::ListingEvent < ApplicationRecord
 
   serialize :metadata, coder: JSON
 
-  EVENT_TYPES = %w[click cart purchase return review shipped delivered cancelled].freeze
+  EVENT_TYPES = %w\[click cart purchase return review shipped delivered cancelled].freeze
 
   validates :event_type, inclusion: { in: EVENT_TYPES }
   validates :occurred_at, presence: true

@@ -23,7 +23,7 @@ module Master
       def env_vars
         vars = Master.models_config.dig("openrouter", "keys_env")
         configured = Array(vars).map(&:to_s).reject(&:empty?)
-        configured.empty? ? %w[OPENROUTER_API_KEY] : configured
+        configured.empty? ? %w\[OPENROUTER_API_KEY] : configured
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "KeyRotator.env_vars")
         raise "key rotation policy unreadable: #{e.class}: #{e.message}"

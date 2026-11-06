@@ -58,7 +58,7 @@ class StyleAssistantTest < ActiveSupport::TestCase
     weather = { temp: 2.0, description: "Rain" }
     assistant = StyleAssistant.new(owner, weather:, date:)
 
-    zones = assistant.send(:dress_leads?) ? %i[dress shoes] : %i[top bottom shoes]
+    zones = assistant.send(:dress_leads?) ? %i\[dress shoes] : %i\[top bottom shoes]
     zones << :outer if assistant.send(:layer?)
     zones << :accessory
     zone_picks = zones.filter_map do |zone|
@@ -173,7 +173,7 @@ class StyleAssistantTest < ActiveSupport::TestCase
     zones = StyleAssistant.new(owner).suggest
 
     assert_includes zones.items, dress
-    assert_equal %i[dress shoes], zones.picks.map(&:zone)
+    assert_equal %i\[dress shoes], zones.picks.map(&:zone)
   end
 
   test "out-of-season garments are not suggested" do

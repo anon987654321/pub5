@@ -7,7 +7,7 @@
 # create_outbound_clicks migration.
 class IndexOutboundClicksOnUser < ActiveRecord::Migration[8.1]
   def change
-    add_index :outbound_clicks, %i[user_id created_at],
+    add_index :outbound_clicks, %i\[user_id created_at],
               name: "index_outbound_clicks_on_user_id_and_created_at"
   end
 end

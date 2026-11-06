@@ -10,7 +10,7 @@ class FederatedIdentityContractTest < Minitest::Test
   end
 
   def test_federated_identity_models_have_one_shared_owner
-    %w[external_identity.rb identity_provider.rb].each do |name|
+    %w\[external_identity.rb identity_provider.rb].each do |name|
       assert File.file?(File.join(ROOT, "rails/shared/app/models", name)), "shared model missing: #{name}"
       refute File.exist?(File.join(ROOT, "rails/brgen/app/models", name)),
              "Brgen must not shadow the shared #{name} implementation"
@@ -19,7 +19,7 @@ class FederatedIdentityContractTest < Minitest::Test
 
   def test_amber_has_app_owned_migration_for_shared_oauth_callback_tables
     migration = read("rails/amber/db/migrate/20261021230100_add_federated_identity_tables_to_amber.rb")
-    %w[identity_providers external_identities].each do |table|
+    %w\[identity_providers external_identities].each do |table|
       assert_includes migration, "create_table :#{table}, if_not_exists: true"
     end
     assert_includes migration, "index_external_identities_on_provider_and_subject"

@@ -65,7 +65,7 @@ module VisualContractCheck
     },
   }.freeze
 
-  LENSES = %w[task_completion accessibility editorial_character system_trust first_use].freeze
+  LENSES = %w\[task_completion accessibility editorial_character system_trust first_use].freeze
   DEFAULT_OUTPUT = File.join(Dir.tmpdir, "pub4-visual-contract").freeze
 
   SURFACES = File.expand_path("data/geometry_surfaces.yml", __dir__)
@@ -96,7 +96,7 @@ module VisualContractCheck
 
   def validate!
     raise "visual crawl needs five critique lenses" unless LENSES.length == 5
-    raise "missing empty/error/offline contract" unless ROUTES.values.all? { |routes| %i[empty error offline].all? { |state| routes.key?(state) } }
+    raise "missing empty/error/offline contract" unless ROUTES.values.all? { |routes| %i\[empty error offline].all? { |state| routes.key?(state) } }
     rows = ROUTES.keys.flat_map { |app| matrix(app) }
     keys = rows.map { |row| row.values_at(:app, :state, :viewport) }
     raise "duplicate visual crawl cell" unless keys.uniq.length == keys.length
@@ -311,7 +311,7 @@ File.write(path, JSON.pretty_generate(generated_at: Time.now.utc.iso8601, result
 # A check that sees a 500 on the sign-in page and reports "ok" is a report.
 verdict = VisualContractCheck.grade(
   results,
-  strict: %w[1 true yes on].include?(ENV["VISUAL_STRICT"].to_s.strip.downcase),
+  strict: %w\[1 true yes on].include?(ENV["VISUAL_STRICT"].to_s.strip.downcase),
   drift_max: VisualContractCheck.normalize_drift_max(
     ENV.fetch("VISUAL_DRIFT_MAX_RATIO", DEFAULT_DRIFT_MAX_RATIO),
   ),

@@ -66,7 +66,7 @@ class WalkthroughChecksTest < Minitest::Test
   SCSS
 
   def first_screen_tree(tap_min: "44px")
-    sheets = %w[
+    sheets = %w\[
       brgen/app/assets/stylesheets/_brgen_navigation.scss
       brgen/app/assets/stylesheets/_brgen_marketplace.scss
       amber/app/assets/stylesheets/application.scss
@@ -209,7 +209,7 @@ class WalkthroughChecksTest < Minitest::Test
     result = check(Deploy::HumanWalkthroughCheck, walkthrough_tree)
 
     assert_equal 3, result.unchecked.size, "one reason per app, or a parked app speaks for none"
-    %w[brgen amber bsdports].each do |app|
+    %w\[brgen amber bsdports].each do |app|
       assert result.unchecked.any? { |r| r.start_with?("#{app}: live walkthrough not run") },
              "#{app} was not named among #{result.unchecked.inspect}"
     end

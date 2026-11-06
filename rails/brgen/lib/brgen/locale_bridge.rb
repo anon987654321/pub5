@@ -24,7 +24,7 @@ module Brgen
   # translation budget and a product decision — the old backlog carries it — and
   # until then these cities get one language, consistently.
   module LocaleBridge
-    NORDIC = %i[nb is da sv fi].freeze
+    NORDIC = %i\[nb is da sv fi].freeze
 
     module_function
 
@@ -41,16 +41,16 @@ module Brgen
     # locale either (see CityContent::LOCALE_BY_COUNTRY).
     #
     # en is terminal, and nothing falls back to it from below. It used to: the
-    # map read `en: %i[nb]`, so a key missing from en.yml would have rendered
+    # map read `en: %i\[nb]`, so a key missing from en.yml would have rendered
     # one Norwegian sentence inside an English paragraph, which reads as a bug
     # rather than as a gap. It never fired — rails/test/locale_contract_test.rb
     # asserts en and nb declare the same keys, and they do, all 1579 of them.
     # A fallback reachable only by breaking a contract test, and wrong when it
     # is reached, is not a safety net.
     def fallbacks_map
-      nordic = NORDIC.reject { |code| code == :nb }.to_h { |code| [ code, %i[nb en] ] }
+      nordic = NORDIC.reject { |code| code == :nb }.to_h { |code| [ code, %i\[nb en] ] }
 
-      { nb: %i[en], "en-US": %i[en], "en-GB": %i[en] }.merge(nordic)
+      { nb: %i\[en], "en-US": %i\[en], "en-GB": %i\[en] }.merge(nordic)
     end
   end
 end

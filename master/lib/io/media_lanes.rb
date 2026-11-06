@@ -35,7 +35,7 @@ module Master
         def lane = "media-#{provider}"
         def id = "#{lane}:#{model}"
       end
-      KINDS = %i[image video].freeze
+      KINDS = %i\[image video].freeze
       EXT = { "image/png" => "png", "image/jpeg" => "jpg", "image/webp" => "webp", "video/mp4" => "mp4" }.freeze
       PER_MILLION = 1_000_000.0
       LOCK = Monitor.new

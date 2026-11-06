@@ -11,7 +11,7 @@ class TestConvergenceCommands < Minitest::Test
       ai: { agent: nil },
       root: Master::ROOT,
     )
-    %w[wishlist size explain prove].each do |verb|
+    %w\[wishlist size explain prove].each do |verb|
       assert_equal "dispatch_#{verb}", commands.fetch(verb).method_name.to_s
     end
   end

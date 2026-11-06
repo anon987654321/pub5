@@ -23,7 +23,7 @@ module Operator
     MIN_ROOM = 1_000
     # A big file starts in the room left in a part only when that is at least this fraction of a part.
     MIN_FILL = 4
-    VARIANTS = %i[exact code].freeze
+    VARIANTS = %i\[exact code].freeze
     NO_NEWLINE = "[no trailing newline]"
     FROM_PREVIOUS = "[continues from the previous block]"
     INTO_NEXT = "[continued in the next block]"

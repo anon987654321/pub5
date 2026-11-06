@@ -12,7 +12,7 @@ module Operator
   module Branches
     ACTIVE_SECONDS = 3600
     DELETION_WARN = 5_000
-    SKIP = %w[main origin/main origin/HEAD origin].freeze
+    SKIP = %w\[main origin/main origin/HEAD origin].freeze
     LINE = "%-16s %-52s +%-3d -%-3d %5dm %6d deleted %s"
 
     Ref = Data.define(:name, :stamp, :worktree)

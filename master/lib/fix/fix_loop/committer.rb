@@ -639,7 +639,7 @@ def stage_commit_mode?
 
         # The lint the pre-commit hook runs, and rubocop beside it, are the lint gate; every other
         # refusal here is the commit gate.
-        LINT_REFUSALS = %w[house_lint rubocop rubocop_unavailable].freeze
+        LINT_REFUSALS = %w\[house_lint rubocop rubocop_unavailable].freeze
 
         # The bus event for subscribers, and one refusal row (Fix::Refusals) so the log says why a
         # fix that passed every check was still not committed.

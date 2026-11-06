@@ -28,7 +28,7 @@ class FlowRuntimeTest < Minitest::Test
     result = Deploy::CheckResult.new
     result.checked!(40)
     with_env("CHECK_SOURCE_ONLY" => nil, "CHECK_REQUIRE_LIVE" => nil) do
-      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "amber", port: 61_352, flows: %w[amber_signup_sign_out_in])
+      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "amber", port: 61_352, flows: %w\[amber_signup_sign_out_in])
     end
 
     assert_equal :inconclusive, result.outcome, "forty checks ran and one app did not; the check must not read as a pass"
@@ -51,7 +51,7 @@ class FlowRuntimeTest < Minitest::Test
     result = Deploy::CheckResult.new
     result.checked!(3)
     with_env("CHECK_SOURCE_ONLY" => "1", "CHECK_REQUIRE_LIVE" => nil) do
-      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "amber", port: 1, flows: %w[a b])
+      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "amber", port: 1, flows: %w\[a b])
     end
 
     assert_equal :passed, result.outcome
@@ -62,7 +62,7 @@ class FlowRuntimeTest < Minitest::Test
   def test_require_live_turns_the_skip_into_a_failure
     result = Deploy::CheckResult.new
     with_env("CHECK_REQUIRE_LIVE" => "1", "CHECK_SOURCE_ONLY" => nil) do
-      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "brgen", port: 38_182, flows: %w[x])
+      Deploy::FlowCoverage.record_app_down(result, check: "flow_journey", app: "brgen", port: 38_182, flows: %w\[x])
     end
 
     assert_equal :failed, result.outcome

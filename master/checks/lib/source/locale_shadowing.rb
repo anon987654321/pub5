@@ -29,7 +29,7 @@ module Deploy
   class LocaleShadowingCheck
     ROOT = File.expand_path("../../../..", __dir__)
 
-    APPS = %w[amber brgen bsdports].freeze
+    APPS = %w\[amber brgen bsdports].freeze
     BUDGET = File.join(__dir__, "../../data/locale_shadowing.yml")
 
     # runner.rb calls the class, not an instance — `klass.run` at runner.rb:132.
@@ -75,7 +75,7 @@ module Deploy
     # app; shared's own files load in sorted order, so a bare key in social wipes
     # the same subtree from affiliate and legal.
     def judge_orphans
-      %w[__shared amber brgen bsdports].each do |tree|
+      %w\[__shared amber brgen bsdports].each do |tree|
         Dir[File.join(@rails_root, tree, "config/locales/**/*.yml")].sort.each do |path|
           doc = begin
             YAML.safe_load_file(path, aliases: true)

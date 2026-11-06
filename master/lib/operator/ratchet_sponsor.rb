@@ -12,7 +12,7 @@ module Operator
   # real master/lib body-line growth without rerunning the full ratchet census.
   module RatchetSponsor
     TREE_CEILING = "master/data/spine.yml"
-    SOURCE_EXTENSIONS = %w[.rb .rake .erb .scss .css .js .mjs .yml .yaml .md .sh .ksh .exp .html .json].freeze
+    SOURCE_EXTENSIONS = %w\[.rb .rake .erb .scss .css .js .mjs .yml .yaml .md .sh .ksh .exp .html .json].freeze
     TREES = MasterPaths::TREES
     EXCLUDED_DIRS = %r{/(vendor|node_modules|tmp|coverage|log|\.master|knowledge|output|renders|samples)/}
 

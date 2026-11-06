@@ -42,7 +42,7 @@ deploy_tracked_app() {
   }
 
   # Group access to the checkout is needed even on SKIP_CI deployments.
-  # Ensure the app is in _pub4ci before the app-user sync traverses /home/dev/pub4.
+  # Ensure the app is in _pub4ci before the app-user sync traverses /home/dev/pub5.
   ${_PRIV} /usr/local/sbin/pub4-admin ci-prepare "$app_name" || {
     log_err "app checkout access preparation failed for $app_name"
     return 1

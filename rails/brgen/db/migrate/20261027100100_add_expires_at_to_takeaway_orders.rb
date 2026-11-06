@@ -13,6 +13,6 @@ class AddExpiresAtToTakeawayOrders < ActiveRecord::Migration[8.2]
     add_column :takeaway_orders, :expires_at, :datetime
     # The sweep reads exactly this pair every 15 minutes; the user-facing
     # ticket page reads by id and needs nothing new.
-    add_index :takeaway_orders, %i[status expires_at], name: "index_takeaway_orders_on_status_and_expires_at"
+    add_index :takeaway_orders, %i\[status expires_at], name: "index_takeaway_orders_on_status_and_expires_at"
   end
 end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RECIPE_ALLOWED = %w[
+RECIPE_ALLOWED = %w\[
   grain film_curve highlight_roll shadow_lift micro_contrast color_separate
   chromatic_aberration vintage_lens split_toning split_grade bleach_bypass
   push_pull halation optical_blur tonemap dir_coupler spectral_temp color_temp
@@ -149,7 +149,7 @@ else
 p[:fx].include?("desaturate")  ? 0.65 : 1.0
 end
   parts = ["contrast(#{contrast})", "saturate(#{saturate})"]
-  parts << "sepia(0.12)"    if %i[kodak_portra kodak_vision3_50d].include?(p[:stock])
+  parts << "sepia(0.12)"    if %i\[kodak_portra kodak_vision3_50d].include?(p[:stock])
   parts << "grayscale(0.9)" if p[:stock] == :tri_x
   parts.join(" ")
 end

@@ -42,7 +42,7 @@ module Deploy
 
     def self.run = new.run
 
-    def self.update? = %w[1 true yes on].include?(ENV["CHECK_SNAPSHOT_UPDATE"].to_s.strip.downcase)
+    def self.update? = %w\[1 true yes on].include?(ENV["CHECK_SNAPSHOT_UPDATE"].to_s.strip.downcase)
 
     def run
       @result = CheckResult.new
@@ -202,7 +202,7 @@ module Deploy
     # The design question underneath — whether a tab whose width depends on
     # whether GPS is on is the intended behaviour — is the operator's, not this
     # check's.
-    STRUCTURAL_TAG = %w[header nav main footer aside form h1 h2 button a input select textarea].freeze
+    STRUCTURAL_TAG = %w\[header nav main footer aside form h1 h2 button a input select textarea].freeze
 
     def distill(payload)
       rows = Array(payload["elements"]).select do |el|

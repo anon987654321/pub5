@@ -14,7 +14,7 @@ require "tmpdir"
 # holder.
 class RcPortHoldersTest < Minitest::Test
   RC_D = File.expand_path("../etc/rc.d", __dir__)
-  APPS = %w[brgen amber bsdports master].freeze
+  APPS = %w\[brgen amber bsdports master].freeze
   MARKERS = /^# port holders: begin$.*?^# port holders: end$/m
   PORT = 38_182
   FALCON = 71_359
@@ -72,7 +72,7 @@ class RcPortHoldersTest < Minitest::Test
       #{helpers(app)}
       free_port; echo "exit=$?"
     SH
-    out = IO.popen(["ksh", "-c", script, { err: %i[child out] }], &:read)
+    out = IO.popen(["ksh", "-c", script, { err: %i\[child out] }], &:read)
     calls_file = File.join(dir, "calls")
     [out, File.exist?(calls_file) ? File.read(calls_file) : ""]
   end

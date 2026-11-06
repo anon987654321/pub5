@@ -89,7 +89,7 @@ module Master
     end
 
     def validate_manifest!(catalogue, entries, errors)
-      allowed_manifest_fields = %w[schema identity_source universal_by_default modalities surfaces missing_assessor defaults entries]
+      allowed_manifest_fields = %w\[schema identity_source universal_by_default modalities surfaces missing_assessor defaults entries]
       unknown_manifest_fields = catalogue.keys.map(&:to_s) - allowed_manifest_fields
       errors << "law_catalogue has unknown field(s): #{unknown_manifest_fields.sort.join(', ')}" unless unknown_manifest_fields.empty?
       errors << "law_catalogue.schema must be 1" unless catalogue["schema"] == 1
@@ -101,7 +101,7 @@ module Master
       # definition source is the file that holds its detector. path and
       # path_pattern are retired too: a Law's subject is its Law.define `path`,
       # so a catalogue scope would be one no reader honours, and is refused.
-      allowed_entry_fields = %w[
+      allowed_entry_fields = %w\[
         universal definition_sources severity mode lifecycle autofix
         languages surfaces path_exclude
       ]
@@ -120,10 +120,10 @@ module Master
       errors << "law_catalogue.defaults must be a mapping" unless defaults_valid
       defaults = {} unless defaults_valid
 
-      allowed_severities = %w[info warn warning error critical veto]
-      allowed_modes = %w[violation opportunity]
-      allowed_lifecycles = %w[proposed proven active observed trusted advisory retired]
-      allowed_autofix = %w[never review automatic]
+      allowed_severities = %w\[info warn warning error critical veto]
+      allowed_modes = %w\[violation opportunity]
+      allowed_lifecycles = %w\[proposed proven active observed trusted advisory retired]
+      allowed_autofix = %w\[never review automatic]
       allowed_languages = Master::FILE_LANGUAGE_MAP.values.uniq
       default_severity = defaults["severity"]
       if !default_severity.nil? && !allowed_severities.include?(default_severity.to_s)
@@ -262,13 +262,13 @@ module Master
       method = call[3]
       # `Law.define` in law/, `::Law.define` in a file whose Laws sit
       # inside Master::Review::Scan::Laws where a bare Law names another constant.
-      return unless receiver.is_a?(Array) && %i[var_ref top_const_ref].include?(receiver[0]) &&
+      return unless receiver.is_a?(Array) && %i\[var_ref top_const_ref].include?(receiver[0]) &&
                     receiver[1].is_a?(Array) && receiver[1][0] == :@const && receiver[1][1] == "Law"
       return unless method.is_a?(Array) && method[0] == :@ident && method[1] == "define"
 
       symbol = first_node(node[2]) { |candidate| candidate[0] == :symbol_literal }
       token = symbol && symbol.dig(1, 1)
-      return unless token.is_a?(Array) && %i[@const @ident].include?(token[0])
+      return unless token.is_a?(Array) && %i\[@const @ident].include?(token[0])
 
       # Catalogue identities are case-sensitive and a few detector Laws are lower case (rubocop, reek).
       id = token[1]

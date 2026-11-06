@@ -8,7 +8,7 @@ module Shared
   # killed on one number once its window has run. Plain Ruby, so the rule is
   # tested without booting an app; +today+ is always passed, as Date.current.
   PortfolioBet = Data.define(:key, :app, :plans, :started_on, :metric, :below, :hypothesis, :window_days) do
-    def self.metrics = %w[paying_subscribers mrr]
+    def self.metrics = %w\[paying_subscribers mrr]
 
     def self.all
       @all ||= begin

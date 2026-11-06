@@ -19,7 +19,7 @@
   <% end %>
   <%= link_to outfits_path,
         class: "nav-item",
-        aria: { current: nav_current(outfits_path, section: "outfits", except: %w[dressing_room]) } do %>
+        aria: { current: nav_current(outfits_path, section: "outfits", except: %w\[dressing_room]) } do %>
     <%= icon :layers, size: 26 %>
     <%= t("nav.outfits") %>
   <% end %>

@@ -10,15 +10,15 @@
 # round trips: if the Accept never lands, the other side believes it succeeded
 # and we have to be able to tell that from never having been asked.
 class FediFollow < ApplicationRecord
-  STATES = %w[pending accepted].freeze
-  DIRECTIONS = %w[inbound outbound].freeze
+  STATES = %w\[pending accepted].freeze
+  DIRECTIONS = %w\[inbound outbound].freeze
 
   belongs_to :fedi_actor
   belongs_to :user
 
   validates :state, inclusion: { in: STATES }
   validates :direction, inclusion: { in: DIRECTIONS }
-  validates :fedi_actor_id, uniqueness: { scope: %i[user_id direction] }
+  validates :fedi_actor_id, uniqueness: { scope: %i\[user_id direction] }
 
   scope :accepted, -> { where(state: "accepted") }
   scope :inbound, -> { where(direction: "inbound") }

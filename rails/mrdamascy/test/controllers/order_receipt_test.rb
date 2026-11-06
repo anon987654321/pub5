@@ -28,6 +28,6 @@ class OrderReceiptTest < ActionDispatch::IntegrationTest
     print = Rails.root.join("app/assets/stylesheets/_utilities.scss").read[/@media print \{.*?\n\}/m]
 
     assert print, "no print rules"
-    %w[.brand-bar .tab-bar .app-footer #toasts .page-actions].each { |selector| assert_includes print, selector }
+    %w\[.brand-bar .tab-bar .app-footer #toasts .page-actions].each { |selector| assert_includes print, selector }
   end
 end

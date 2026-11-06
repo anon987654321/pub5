@@ -13,9 +13,9 @@ module Master
   # lands on Master, where every module nested in it would read Master::SOURCES.
   class Proof
     SOURCES = { deterministic: 0, council: 1, llm: 2 }.freeze
-    STATUSES = %i[proven failed open].freeze
+    STATUSES = %i\[proven failed open].freeze
 
-    ENVELOPE = %i[evidence source status metadata].freeze
+    ENVELOPE = %i\[evidence source status metadata].freeze
 
     # The claim and what it is about, then the envelope: evidence, source (:deterministic),
     # status (:open) and metadata.

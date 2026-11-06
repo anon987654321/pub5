@@ -13,7 +13,7 @@ module Master
         # A quoted span counts as one piece, so a parenthesis inside quotes never moves the depth.
         PAREN_PIECES = /'[^']*'?|"[^"]*"?|[()]|[^'"()]+/
         PAREN_DEPTH = { "(" => 1, ")" => -1 }.freeze
-        REDIRECT_CHARS = %w[< > & |].freeze
+        REDIRECT_CHARS = %w\[< > & |].freeze
 
         private
 

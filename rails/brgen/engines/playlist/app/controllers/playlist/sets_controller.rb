@@ -9,14 +9,14 @@ class Playlist::SetsController < ApplicationController
   include Playlist::OwnerVisibility
   include Playlist::WaveformComments
 
-  before_action :require_user_session, only: %i[new create]
-  before_action :set_set, only: %i[show edit update destroy]
-  before_action :authorize_owner_or_editor, only: %i[edit update destroy]
+  before_action :require_user_session, only: %i\[new create]
+  before_action :set_set, only: %i\[show edit update destroy]
+  before_action :authorize_owner_or_editor, only: %i\[edit update destroy]
 
   def index
     scope = Playlist::Set.publicly_listed
     if live_search_query.present?
-      set_ids = apply_live_search(scope, columns: %w[name description], vertical: "playlist").pluck(:id)
+      set_ids = apply_live_search(scope, columns: %w\[name description], vertical: "playlist").pluck(:id)
       # playlist_tracks has `title`, not `name`, and carries no playlist_set_id —
       # sets reach tracks through playlist_set_tracks. The previous raw query
       # named both missing columns, so any non-blank search raised
@@ -112,7 +112,7 @@ class Playlist::SetsController < ApplicationController
     # strict_loading_by_default raises on the association read.
     return if user && user.id == @set.user_id
     collab = @set.collaborations.find_by(user: user)
-    return if collab && %w[owner editor].include?(collab.role)
+    return if collab && %w\[owner editor].include?(collab.role)
     redirect_to(set_path(@set), alert: t("shared.flash.not_authorized"))
   end
 end

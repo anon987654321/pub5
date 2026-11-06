@@ -49,7 +49,7 @@ class TestScanAutofix < Minitest::Test
       tags: [],
       confidence: 0.9,
       why: "frozen header",
-      genealogy: %w[STYLE FROZEN],
+      genealogy: %w\[STYLE FROZEN],
       dedupe_key: "#{rule}:frozen",
     }
   end

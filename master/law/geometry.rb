@@ -13,13 +13,13 @@ module Law
     G = Deploy::RenderedDesign::GeometryLaws
     SWISS_TREES = %r{rails/(?:brgen[^/]*|__shared|amber)/.*\.(?:s?css|erb|html)\z}
     FAMILY = /font-family\s*:\s*([^;}]+)/i
-    VENDORED = %w[lightgallery.css].freeze
+    VENDORED = %w\[lightgallery.css].freeze
 
     module_function
 
     def declare(law, law_id)
       law.instance_exec(law_id) do |id|
-        tags %i[TYPOGRAPHY DESIGN]
+        tags %i\[TYPOGRAPHY DESIGN]
         measures :rendered_ui
         example_path G::EXAMPLE
         check(&GeometryPayload.checker(id))
@@ -58,7 +58,7 @@ module Law
         "BPLANS/ may use serifs."
     bad GP::G.fixture(elements: [GP::G.leaf("h1", font_family: "Georgia, serif")])
     good GP::G.fixture(elements: [GP::G.leaf("h1"), GP::G.leaf("pre.terminal", font_family: "Menlo, monospace")])
-    adapter(:whole_file, languages: %i[css scss html], example_path: "/repo/rails/brgen/app/assets/stylesheets/_t.scss",
+    adapter(:whole_file, languages: %i\[css scss html], example_path: "/repo/rails/brgen/app/assets/stylesheets/_t.scss",
                          bad: "h1 { font-family: \"Iowan Old Style\", Georgia, serif; }\n",
                          good: "body { font-family: var(--font), sans-serif; }\n") do |src, file|
       GP.serif_rows(src, file).map { |hit| finding(**hit) }

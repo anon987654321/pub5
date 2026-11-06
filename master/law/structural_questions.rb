@@ -28,7 +28,7 @@ module Master
 
             ext = File.extname(path).downcase
             return json_findings(code) if ext == ".json"
-            return yaml_findings(code) if %w[.yml .yaml].include?(ext)
+            return yaml_findings(code) if %w\[.yml .yaml].include?(ext)
 
             []
           end
@@ -149,7 +149,7 @@ module Master
 
         ::Law.define(:CONFIG_HIERARCHY) do
           detector ConfigHierarchyLaw
-          tags %i[CONFIG HIERARCHY]
+          tags %i\[CONFIG HIERARCHY]
           fix "config keys are grouped, non-duplicated, and shallow"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -184,7 +184,7 @@ module Master
 
         ::Law.define(:CODE_HIERARCHY) do
           detector CodeHierarchyLaw
-          tags %i[ARCHITECTURE HIERARCHY]
+          tags %i\[ARCHITECTURE HIERARCHY]
           fix "related classes are grouped under clear namespaces"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -212,7 +212,7 @@ module Master
 
         ::Law.define(:LONG_PARAMETER_LIST) do
           detector LongParameterListLaw
-          tags %i[BLOATERS API]
+          tags %i\[BLOATERS API]
           fix "methods accept at most four parameters"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -238,7 +238,7 @@ module Master
 
         ::Law.define(:PRIMITIVE_OBSESSION) do
           detector PrimitiveObsessionLaw
-          tags %i[BLOATERS DOMAIN_MODELING]
+          tags %i\[BLOATERS DOMAIN_MODELING]
           source "Refactoring - Primitive Obsession (Fowler)"
           ask "Are primitives carrying domain rules that would be clearer and safer as a value object?"
           fix "Create a focused value object when the primitive has behavior or invariants."
@@ -280,7 +280,7 @@ module Master
 
         ::Law.define(:BOOLEAN_TRAP) do
           detector BooleanTrapLaw
-          tags %i[API DOMAIN_LANGUAGE]
+          tags %i\[API DOMAIN_LANGUAGE]
           fix "a positional boolean parameter makes every call site a riddle"
           proved_by "test/test_smell_detectors.rb"
         end
@@ -339,7 +339,7 @@ module Master
 
         ::Law.define(:DATA_CLUMPS) do
           detector DataClumpsLaw
-          tags %i[BLOATERS DOMAIN_MODELING]
+          tags %i\[BLOATERS DOMAIN_MODELING]
           fix "the same parameters travelling together are a record struggling to be born"
           proved_by "test/test_smell_detectors.rb"
         end
@@ -369,7 +369,7 @@ module Master
 
         ::Law.define(:COUPLER_SMELLS) do
           detector CouplerLaw
-          tags %i[COUPLING DEMETER]
+          tags %i\[COUPLING DEMETER]
           fix "inappropriate intimacy through reflective access"
           proved_by "test/test_scan_law_contracts.rb"
         end
@@ -426,7 +426,7 @@ module Master
 
         ::Law.define(:FEATURE_ENVY) do
           detector FeatureEnvyLaw
-          tags %i[COUPLING DEMETER]
+          tags %i\[COUPLING DEMETER]
           source "Refactoring - Feature Envy (Fowler)"
           ask "Is this method more interested in another object's data than its own?"
           fix "Move the behavior toward the data it operates on or extract a suitable collaborator."
@@ -463,7 +463,7 @@ module Master
 
         ::Law.define(:LAZY_CLASS) do
           detector LazyClassLaw
-          tags %i[DISPENSABLES SRP]
+          tags %i\[DISPENSABLES SRP]
           source "Refactoring - Lazy Class (Fowler)"
           ask "Is this class too small or trivial to justify a separate abstraction boundary?"
           fix "Inline or merge it unless the boundary provides independent value."

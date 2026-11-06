@@ -22,7 +22,7 @@ INVENTORY_ROOT = File.expand_path("../../..", __dir__)
 # native .claude/settings.json path is a symlink into studio/agent-guidance;
 # Copilot reads root AGENTS.md, so no generated .github directory is needed.
 # test/test_lifecycle_tools.rb holds both lists to the tree in both directions.
-ALLOWED_ROOT_FILES = %w[
+ALLOWED_ROOT_FILES = %w\[
   .claude
   .cursorlaws
   .gitattributes
@@ -38,19 +38,19 @@ ALLOWED_ROOT_FILES = %w[
   VERSION
   redeploy
 ].freeze
-GENERATED_ROOT_FILES = %w[
+GENERATED_ROOT_FILES = %w\[
   snapshot_MASTER.md
   snapshot_RAILS.md
   snapshot_OPENBSD.md
   snapshot_STUDIO.md
 ].freeze
-ALLOWED_ROOT_DIRS = %w[
+ALLOWED_ROOT_DIRS = %w\[
   master
   openbsd
   rails
   studio
 ].freeze
-SKIP_DIRS = %w[
+SKIP_DIRS = %w\[
   .git
   .bundle
   node_modules

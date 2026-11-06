@@ -105,7 +105,7 @@ end
 # Looks that commit. A heavy take starts from one of these named presets at full
 # strength, so five takes of one frame differ in what they decided and not only in
 # how much they changed it. They span stocks and colour worlds on purpose.
-HEAVY_LOOKS = %i[
+HEAVY_LOOKS = %i\[
   noir neon_night tokyo_night bleached magic_hour kodachrome_look technicolor_3strip
   cross_process cyanotype_look infrared_look cinematic blockbuster golden_age
   day_for_night process_e6 reversal dream silver_gelatin
@@ -135,7 +135,7 @@ def look_step_params(data, fx, intensity, stock)
   params["exposure_seconds"] = data[:exposure_secs].to_f if fx == "reciprocity_failure" && data[:exposure_secs]
   params["print_stock"] = data[:print_stock].to_s if fx == "print_film" && data[:print_stock]
   params["lens"] = data[:lens].to_s if fx == "vintage_lens" && data[:lens]
-  params["age"] = data[:age].to_f if data[:age] && %w[faded_print dye_fade expired_film].include?(fx)
+  params["age"] = data[:age].to_f if data[:age] && %w\[faded_print dye_fade expired_film].include?(fx)
   params["tonemap"] = data[:tonemap].to_s if fx == "tonemap" && data[:tonemap]
   params
 end

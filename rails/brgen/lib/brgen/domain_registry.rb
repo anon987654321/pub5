@@ -29,8 +29,8 @@ module Brgen
       "mercato" => :marketplace
     }.freeze
 
-    TV_SUBDOMAINS = %w[tv].freeze
-    DATING_SUBDOMAINS = %w[dating].freeze
+    TV_SUBDOMAINS = %w\[tv].freeze
+    DATING_SUBDOMAINS = %w\[dating].freeze
     # `radio` in every city, and nothing else. It was `playlist` until 2026-09-12,
     # when the public name changed; no alias was kept, so playlist.<city> is gone
     # rather than deprecated.
@@ -48,11 +48,11 @@ module Brgen
     # The engine is still Playlist: its directory, module and tables keep that name,
     # and the constant below is RADIO_SUBDOMAINS because what it constrains is the
     # host. Renaming the engine is a separate pass.
-    RADIO_SUBDOMAINS = %w[radio].freeze
-    TAKEAWAY_SUBDOMAINS = %w[takeaway].freeze
+    RADIO_SUBDOMAINS = %w\[radio].freeze
+    TAKEAWAY_SUBDOMAINS = %w\[takeaway].freeze
     MARKETPLACE_SUBDOMAINS = SUBAPP_ALIASES.select { |_subdomain, subapp| subapp == :marketplace }.keys.freeze
-    MAPS_SUBDOMAINS = %w[maps].freeze
-    MESSENGER_SUBDOMAINS = %w[messenger].freeze
+    MAPS_SUBDOMAINS = %w\[maps].freeze
+    MESSENGER_SUBDOMAINS = %w\[messenger].freeze
 
     LOCAL_HOSTS = [ "127.0.0.1", "localhost" ].freeze
 
@@ -112,7 +112,7 @@ module Brgen
     # separate from LIVE_DOMAINS: a network link is a product relationship, while
     # LIVE_DOMAINS is the deployment/TLS fact set. Never use LIVE_DOMAINS to infer
     # which cities exist, and never use CITY_NETWORK_DOMAINS to assert a certificate.
-    CITY_NETWORK_DOMAINS = %w[
+    CITY_NETWORK_DOMAINS = %w\[
       brgen.no oshlo.no stvanger.no trndheim.no cardff.uk edinbrgh.uk frankfrt.de
       lndon.uk denvr.us lsangeles.com wshingtondc.com
     ].freeze
@@ -147,7 +147,7 @@ module Brgen
 
     def self.nordic?(entry)
       record = entry.is_a?(Entry) ? entry : ENTRIES_BY_DOMAIN[entry.to_s]
-      record ? %w[DK FI IS NO SE].include?(record.country.to_s.upcase) : false
+      record ? %w\[DK FI IS NO SE].include?(record.country.to_s.upcase) : false
     end
 
     # The city apexes that actually serve this app. Every other ENTRIES row is a
@@ -179,7 +179,7 @@ module Brgen
     # domain_alignment parses these lines with a six-argument regex. A seventh
     # field makes that scan return nothing, and the check then compares two empty
     # sets and passes having measured nothing.
-    LIVE_DOMAINS = %w[
+    LIVE_DOMAINS = %w\[
       brgen.no oshlo.no stvanger.no trndheim.no cardff.uk edinbrgh.uk frankfrt.de
     ].freeze
 

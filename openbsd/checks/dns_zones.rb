@@ -114,7 +114,7 @@ module Deploy
 
     def generated_output_matches
       _written, stale = RenderDns.render_zones(check: true)
-      %w[nsd.conf acme-client.conf].zip([RenderDns::NSD_CONF, RenderDns::ACME_CONF]).each do |label, path|
+      %w\[nsd.conf acme-client.conf].zip([RenderDns::NSD_CONF, RenderDns::ACME_CONF]).each do |label, path|
         body = label == "nsd.conf" ? RenderDns.nsd_conf_body : RenderDns.acme_conf_body
         stale << label unless File.exist?(path) && File.read(path, encoding: "UTF-8") == body
       end

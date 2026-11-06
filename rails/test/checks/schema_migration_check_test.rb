@@ -23,7 +23,7 @@ class SchemaMigrationCheckTest < Minitest::Test
   # A tree the check calls clean, so each test can spoil exactly one thing.
   def sound_tree(dir)
     plant_apps_yml(dir, "demo")
-    plant(dir, "rails/demo/db/schema.rb", schema(VERSION, "posts", %w[title body]))
+    plant(dir, "rails/demo/db/schema.rb", schema(VERSION, "posts", %w\[title body]))
     plant(dir, "rails/demo/db/migrate/#{VERSION}_create_posts.rb", migration("posts"))
     plant(dir, "rails/demo/config/routes.rb", %(Rails.application.routes.draw do\n  get "/p", to: "posts#index"\nend\n))
     plant(dir, "rails/demo/app/controllers/posts_controller.rb", "class PostsController; end\n")
@@ -71,11 +71,11 @@ class SchemaMigrationCheckTest < Minitest::Test
   # that never matched, so the comparison above never ran on a real schema.rb.
   def test_a_schema_dumped_with_digit_separators_is_read
     behind = check_over do |dir|
-      plant(dir, "rails/demo/db/schema.rb", schema("2026_01_01_000000", "posts", %w[title body]))
+      plant(dir, "rails/demo/db/schema.rb", schema("2026_01_01_000000", "posts", %w\[title body]))
       plant(dir, "rails/demo/db/migrate/20260202000000_add_slug.rb", migration("slugs"))
     end
     current = check_over do |dir|
-      plant(dir, "rails/demo/db/schema.rb", schema("2026_01_01_000000", "posts", %w[title body]))
+      plant(dir, "rails/demo/db/schema.rb", schema("2026_01_01_000000", "posts", %w\[title body]))
     end
 
     assert_match(/schema version #{VERSION} != latest migration 20260202000000/, behind.failures.first.to_s)
@@ -86,7 +86,7 @@ class SchemaMigrationCheckTest < Minitest::Test
     result = check_over do |dir|
       plant(dir, "rails/demo/db/migrate/#{VERSION}_create_posts.rb", migration("posts"))
       plant(dir, "rails/demo/db/migrate/20260102000000_create_posts_again.rb", migration("posts"))
-      plant(dir, "rails/demo/db/schema.rb", schema("20260102000000", "posts", %w[title body]))
+      plant(dir, "rails/demo/db/schema.rb", schema("20260102000000", "posts", %w\[title body]))
     end
 
     refute result.ok?, "a table created twice passed"
@@ -106,7 +106,7 @@ class SchemaMigrationCheckTest < Minitest::Test
     GUARDS.each do |guard|
       result = check_over do |dir|
         plant(dir, "rails/demo/db/migrate/20260102000000_again.rb", migration("posts", guard))
-        plant(dir, "rails/demo/db/schema.rb", schema("20260102000000", "posts", %w[title body]))
+        plant(dir, "rails/demo/db/schema.rb", schema("20260102000000", "posts", %w\[title body]))
       end
 
       spared = result.failures.none? { |line| line.include?("create_table posts") }
@@ -138,7 +138,7 @@ class SchemaMigrationCheckTest < Minitest::Test
 
   def test_a_column_declared_twice_on_one_table_fails
     result = check_over do |dir|
-      plant(dir, "rails/demo/db/schema.rb", schema(VERSION, "posts", %w[title title]))
+      plant(dir, "rails/demo/db/schema.rb", schema(VERSION, "posts", %w\[title title]))
     end
 
     refute result.ok?, "a column declared twice passed"
@@ -166,9 +166,9 @@ class SchemaMigrationCheckTest < Minitest::Test
     assert_equal latest, version, "Amber's schema must be dumped at the latest migration version"
 
     expected_columns = {
-      "account_merges" => %w[guest_user_id user_id status merged_at created_at updated_at],
-      "external_identities" => %w[user_id identity_provider_id subject email_address phone_number assurance_level last_used_at created_at updated_at],
-      "identity_providers" => %w[name slug issuer client_id active created_at updated_at],
+      "account_merges" => %w\[guest_user_id user_id status merged_at created_at updated_at],
+      "external_identities" => %w\[user_id identity_provider_id subject email_address phone_number assurance_level last_used_at created_at updated_at],
+      "identity_providers" => %w\[name slug issuer client_id active created_at updated_at],
     }
     expected_columns.each do |table, columns|
       definition = schema.match(/^  create_table "#{Regexp.escape(table)}".*?^  end/m)

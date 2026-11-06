@@ -30,7 +30,7 @@ if File.file?(doas_conf)
     # script — --stage-1's DNS-wipe check, the console check, production seeds, the
     # deploy scan skip, the mail image format.
     allowlist = dev_rule[/setenv\s*\{([^}]*)\}/, 1].to_s.split
-    %w[I_UNDERSTAND_DNS_WIPE I_UNDERSTAND_CONSOLE_RISK I_UNDERSTAND_FAST_DEPLOY RUN_PRODUCTION_SEEDS SKIP_MASTER_SCAN MAIL_IMG_FMT].each do |name|
+    %w\[I_UNDERSTAND_DNS_WIPE I_UNDERSTAND_CONSOLE_RISK I_UNDERSTAND_FAST_DEPLOY RUN_PRODUCTION_SEEDS SKIP_MASTER_SCAN MAIL_IMG_FMT].each do |name|
       failures << "etc/doas.conf: dev rule must setenv-allowlist #{name}" unless allowlist.include?(name)
     end
   end
@@ -66,7 +66,7 @@ if File.file?(guard_wrapper_path) && !File.symlink?(guard_wrapper_path) &&
   guard_impl_contract = guard_impl.include?('GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh') &&
                         guard_impl.include?('[[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]') &&
                         !guard_impl.include?("GUARD_REPO") &&
-                        !guard_impl.include?("/home/dev/pub4/openbsd/usr/local/libexec/stale_ci_cleanup.ksh")
+                        !guard_impl.include?("/home/dev/pub5/openbsd/usr/local/libexec/stale_ci_cleanup.ksh")
   failures << "root load guard must be separate from its checkout wrapper and reject symlinked helpers" unless guard_impl_contract
   operator = File.read(File.join(openbsd, "OPERATOR.sh"))
   source_list = operator[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
@@ -95,7 +95,7 @@ if File.file?(emergency_wrapper_path) && !File.symlink?(emergency_wrapper_path) 
   runner_contract = emergency_impl.include?('GUARD_HELPER=/usr/local/libexec/stale_ci_cleanup.ksh') &&
                     emergency_impl.include?('[[ -f $GUARD_HELPER && ! -L $GUARD_HELPER ]]') &&
                     !emergency_impl.include?("GUARD_REPO") &&
-                    !emergency_impl.include?("/home/dev/pub4/openbsd/usr/local/libexec/stale_ci_cleanup.ksh")
+                    !emergency_impl.include?("/home/dev/pub5/openbsd/usr/local/libexec/stale_ci_cleanup.ksh")
   failures << "emergency CPU runner must not source stale cleanup from checkout" unless runner_contract
   installer = File.read(File.join(openbsd, "OPERATOR.sh"))
   source_list = installer[/typeset -a privileged_sources=\(.*?^  \)/m].to_s
@@ -141,10 +141,10 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
                     admin.include?("File.link(temporary, target)") &&
                     admin.include?('raise "#{target} is a symlink; refusing status write"')
   failures << "deploy-status writes must use the atomic fixed-path broker" unless status_contract
-  disk_usage_contract = admin.include?('DISK_USAGE_PATHS = %w[/home /var].freeze') &&
+  disk_usage_contract = admin.include?('DISK_USAGE_PATHS = %w\[/home /var].freeze') &&
                        admin.include?('return [DU, "-xk", args[1]] if args.length == 2 && args[0] == "disk-usage" && DISK_USAGE_PATHS.include?(args[1])')
   failures << "pub4-admin disk usage must be restricted to deploy mount roots" unless disk_usage_contract
-  master_web_contract = admin.include?('MASTER_WEB_ROOT = "/home/dev/pub4/master/web"') &&
+  master_web_contract = admin.include?('MASTER_WEB_ROOT = "/home/dev/pub5/master/web"') &&
                        admin.include?('args == ["master-web-assets-reset"]') &&
                        admin.include?('args == ["master-web-runtime-dirs"]') &&
                        admin.include?("def master_web_root!") &&
@@ -158,7 +158,7 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
                     admin.include?("SERVICES")
   failures << "pub4-admin must be a fixed-path closed broker" unless broker_contract
   task_app_scope = admin.include?("known_apps = helper == RAILS_TASK ? RAILS_TASK_APPS : RAILS_APPS") &&
-                   admin.include?("RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze")
+                   admin.include?("RAILS_TASK_APPS = %w\[master brgen amber bsdports mrdamascy].freeze")
   failures << "pub4-admin must validate each helper against its own app allowlist" unless task_app_scope
   fixed_spawn = 'Process.spawn(environment, "/bin/ksh", helper, *arguments, pgroup: true, unsetenv_others: true)'
   safe_spawn = admin.include?(fixed_spawn) &&
@@ -180,7 +180,7 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
   if File.file?(sync_path)
     sync = File.read(sync_path)
     sync_contract = sync.include?("brgen|amber|bsdports") &&
-                    sync.include?('repo=/home/dev/pub4') &&
+                    sync.include?('repo=/home/dev/pub5') &&
                     sync.include?('[ "$(id -un)" = "$app" ]') &&
                     sync.include?('tar xf - -C "$app_dir"') &&
                     sync.scan('git -c safe.directory="$repo" -C "$repo"').length >= 3 &&
@@ -351,7 +351,7 @@ if File.file?(admin_path) && !File.symlink?(admin_path)
   bundle_cache_contract = admin.include?('args.length == 4 && args[0] == "bundle-cache"') &&
                          admin.include?("def bundle_cache(app, action, ruby_key)") &&
                          admin.include?('BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"') &&
-                         admin.include?('%w[prepare import capture].include?(action)') &&
+                         admin.include?('%w\[prepare import capture].include?(action)') &&
                          admin.include?("File.link(temporary, target)") &&
                          admin.include?("File::CREAT | File::EXCL") &&
                          admin.include?("valid_ruby_cache_key?(ruby_key)") &&
@@ -435,7 +435,7 @@ else
   failures << "missing tracked usr/local/sbin/pub4-admin"
 end
 
-%w[ci-prepare.ksh ci-run.ksh ci-sync.ksh rails-task.ksh rails-sync.ksh].each do |name|
+%w\[ci-prepare.ksh ci-run.ksh ci-sync.ksh rails-task.ksh rails-sync.ksh].each do |name|
   path = File.join(openbsd, "usr", "local", "libexec", name)
   failures << "usr/local/libexec/#{name} must not be a symlink" if File.symlink?(path)
 end
@@ -529,7 +529,7 @@ if File.file?(master_deploy_path)
   master_deploy_contract = master_deploy.include?("pub4-admin master-web-assets-reset") &&
                            master_deploy.include?("pub4-admin master-web-runtime-dirs") &&
                            master_deploy.include?("pub4-admin service restart master") &&
-                           master_deploy.include?('if [ "$ROOT" != "/home/dev/pub4" ]; then') &&
+                           master_deploy.include?('if [ "$ROOT" != "/home/dev/pub5" ]; then') &&
                            admin.include?("MASTER_WEB_ROOT.split(File::SEPARATOR)") &&
                            master_deploy.include?("cmp -s \"$ROOT/openbsd/etc/rc.d/master\" /etc/rc.d/master") &&
                            !master_deploy.include?("doas rm -rf public/assets") &&

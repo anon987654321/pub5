@@ -9,8 +9,8 @@ module Amber
   module DressingRoom
     ZONES = {
       head: [ "Accessories" ],
-      top: %w[Tops Outerwear],
-      bottom: %w[Bottoms Dresses],
+      top: %w\[Tops Outerwear],
+      bottom: %w\[Bottoms Dresses],
       shoes: [ "Shoes" ],
     }.freeze
 

@@ -16,6 +16,6 @@ class CreateBillingSubscriptions < ActiveRecord::Migration[8.2]
     end
 
     add_index :billing_subscriptions, :stripe_subscription_id, unique: true
-    add_index :billing_subscriptions, %i[user_id status]
+    add_index :billing_subscriptions, %i\[user_id status]
   end
 end

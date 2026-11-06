@@ -25,6 +25,6 @@ class AddMessageRepliesAndEdits < ActiveRecord::Migration[8.1]
 
     add_index :messages, :parent_id unless index_exists?(:messages, :parent_id)
     # The scope every conversation render uses: what is still here.
-    add_index :messages, %i[conversation_id deleted_at]
+    add_index :messages, %i\[conversation_id deleted_at]
   end
 end

@@ -27,9 +27,9 @@ module Operator
 
     def mode(env = ENV)
       value = env["MASTER_STRICT"].to_s.strip.downcase
-      return :contribute if value.empty? || %w[0 false contribute].include?(value)
-      return :deploy if %w[deploy release].include?(value)
-      return :strict if %w[strict 1 true].include?(value)
+      return :contribute if value.empty? || %w\[0 false contribute].include?(value)
+      return :deploy if %w\[deploy release].include?(value)
+      return :strict if %w\[strict 1 true].include?(value)
 
       raise ArgumentError, "MASTER_STRICT must be contribute, deploy, strict, 0 or 1"
     end
@@ -39,7 +39,7 @@ module Operator
     end
 
     def enabled?(env = ENV)
-      %i[deploy strict].include?(mode(env))
+      %i\[deploy strict].include?(mode(env))
     end
   end
 end

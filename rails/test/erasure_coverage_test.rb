@@ -41,7 +41,7 @@ class ErasureCoverageTest < Minitest::Test
     |special_instructions)\z
   /x
 
-  DISPOSITIONS = %i[destroy nullify handled not_personal].freeze
+  DISPOSITIONS = %i\[destroy nullify handled not_personal].freeze
 
   # User-owned private/relationship rows that do not survive account erasure.
   PRIVATE_RELATIONS = {

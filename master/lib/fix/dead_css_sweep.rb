@@ -50,7 +50,7 @@ module Master
 
       def findings(results)
         results.flat_map do |app, res|
-          res[:verdicts].select { |v| %i[dead static].include?(v.kind) }.map do |v|
+          res[:verdicts].select { |v| %i\[dead static].include?(v.kind) }.map do |v|
             { law: LAW, severity: :info, advisory: true, app:, file: rel(v.rule.file), line: v.rule.line,
               selector: v.rule.selectors.join(", "), evidence: v.kind == :dead ? "coverage+static" : "static only",
               message: "#{v.rule.selectors.join(", ")} requires #{v.unnamed.join(" ")} which nothing names" }
@@ -114,7 +114,7 @@ module Master
 
       def summary(app, sheets, rules, verdicts, coverage, static)
         count = ->(kind) { verdicts.count { |v| v.kind == kind } }
-        dead_lines = verdicts.select { |v| %i[dead static].include?(v.kind) }.flat_map { |v| (v.rule.line..v.rule.end_line).to_a }.to_set
+        dead_lines = verdicts.select { |v| %i\[dead static].include?(v.kind) }.flat_map { |v| (v.rule.line..v.rule.end_line).to_a }.to_set
         total_lines = sheets.sum { |f| File.foreach(f).count }
         { app:, stylesheets: sheets.map { |f| rel(f) }, rules_total: rules.size, rules_judged: verdicts.size,
           dead: count.(:dead), static_only: count.(:static), state_only: count.(:state),

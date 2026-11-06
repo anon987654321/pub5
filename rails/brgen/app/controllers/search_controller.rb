@@ -29,23 +29,23 @@ class SearchController < ApplicationController
     return if @query.blank?
 
     @results[:people] = people_results
-    @results[:posts] = apply_live_search(Post.kept.visible_to(Current.user), columns: %w[title content], vertical: "feed")
+    @results[:posts] = apply_live_search(Post.kept.visible_to(Current.user), columns: %w\[title content], vertical: "feed")
     # The two core social verticals beside the feed. The same scopes their own
     # index pages list: what has not finished yet, and no private community the
     # reader is outside. Not .popular: its GROUP BY makes a count a hash.
-    @results[:events] = apply_live_search(Event.upcoming, columns: %w[title description venue_name], vertical: "events")
-    @results[:communities] = apply_live_search(Community.active.visible_to(Current.user), columns: %w[name description],
+    @results[:events] = apply_live_search(Event.upcoming, columns: %w\[title description venue_name], vertical: "events")
+    @results[:communities] = apply_live_search(Community.active.visible_to(Current.user), columns: %w\[name description],
                                                vertical: "communities")
     @results[:listings] = apply_live_search(
       Marketplace::Listing.publicly_visible.includes(:category),
-      columns: %w[title description location],
+      columns: %w\[title description location],
       vertical: "marketplace"
     )
-    @results[:channels] = apply_live_search(Tv::Channel.publicly_visible, columns: %w[name description], vertical: "tv")
-    @results[:videos] = apply_live_search(Tv::Video.publicly_visible, columns: %w[title description], vertical: "tv")
-    @results[:sets] = apply_live_search(Playlist::Set.publicly_listed, columns: %w[name description], vertical: "playlist")
-    @results[:restaurants] = apply_live_search(Takeaway::Restaurant.indexable, columns: %w[name city cuisine_type], vertical: "takeaway")
-    @results[:places] = apply_live_search(Place.all, columns: %w[name kind], vertical: "maps")
+    @results[:channels] = apply_live_search(Tv::Channel.publicly_visible, columns: %w\[name description], vertical: "tv")
+    @results[:videos] = apply_live_search(Tv::Video.publicly_visible, columns: %w\[title description], vertical: "tv")
+    @results[:sets] = apply_live_search(Playlist::Set.publicly_listed, columns: %w\[name description], vertical: "playlist")
+    @results[:restaurants] = apply_live_search(Takeaway::Restaurant.indexable, columns: %w\[name city cuisine_type], vertical: "takeaway")
+    @results[:places] = apply_live_search(Place.all, columns: %w\[name kind], vertical: "maps")
 
     # html/turbo_stream declare themselves but render nothing here, so the
     # fallthrough below handles them. Without them respond_to knows only json,
@@ -85,7 +85,7 @@ class SearchController < ApplicationController
   def people_results
     people = User.public_profiles.where(bot: false)
     people = people.unblocked_with(Current.user) if Current.user
-    apply_live_search(people, columns: %w[username display_name], vertical: "people")
+    apply_live_search(people, columns: %w\[username display_name], vertical: "people")
   end
 
   def global_search_label(record)

@@ -25,7 +25,7 @@ module Operator
     ROOT = File.expand_path("../../..", __dir__)
 
     # Files that orchestrate other files. Each is read for glob literals.
-    RUNNERS = %w[
+    RUNNERS = %w\[
       master/Rakefile
       master/tools/Rakefile
       master/bin/check
@@ -76,10 +76,10 @@ module Operator
     # npm scripts name their test files inside `node --test ...` strings, so no
     # literal survives the source-glob reader. These runners are parsed as JSON
     # and every script value that names a test file counts as its runner.
-    JSON_RUNNERS = %w[rails/package.json].freeze
+    JSON_RUNNERS = %w\[rails/package.json].freeze
 
     # Support files named like tests. A runner loads these; nothing runs them.
-    HELPERS = %w[test_helper.rb test_defaults.rb test_support.rb].freeze
+    HELPERS = %w\[test_helper.rb test_defaults.rb test_support.rb].freeze
 
     # A string literal that looks like it selects ruby files.
     GLOB = /["']([A-Za-z0-9_.\-\/*\[\]{}]*\*[A-Za-z0-9_.\-\/*\[\]{}]*\.rb)["']/
@@ -139,8 +139,8 @@ module Operator
       # The census covers language-neutral test inventories, not just Ruby.
       # The prior .rb-only glob omitted 23 Node runtime tests and OpenBSD's
       # resource-guard shell test; those can be orphaned while the count stays green.
-      patterns = %w[**/*.rb **/*.test.mjs **/test_*.sh **/*_test.sh]
-      @test_files ||= %w[master rails openbsd studio].flat_map do |tree|
+      patterns = %w\[**/*.rb **/*.test.mjs **/test_*.sh **/*_test.sh]
+      @test_files ||= %w\[master rails openbsd studio].flat_map do |tree|
         patterns.flat_map { |pattern| Dir[File.join(ROOT, tree, pattern)] }
       end.uniq
        .map { |path| path.sub("#{ROOT}/", "") }

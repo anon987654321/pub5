@@ -7,12 +7,12 @@ class Dependency < ApplicationRecord
   belongs_to :port
   belongs_to :depends_on, class_name: "Port"
 
-  TYPES = %w[build run test lib].freeze
+  TYPES = %w\[build run test lib].freeze
   MAX_GRAPH_DEPTH = 6
   MAX_GRAPH_NODES = 60
 
   validates :dep_type, inclusion: { in: TYPES }, allow_nil: true
-  validates :port_id, uniqueness: { scope: %i[depends_on_id dep_type] }
+  validates :port_id, uniqueness: { scope: %i\[depends_on_id dep_type] }
 
   scope :runtime, -> { where(dep_type: "run") }
   scope :buildtime, -> { where(dep_type: "build") }

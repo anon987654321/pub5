@@ -5,28 +5,28 @@ module Master
     module Policy
       class Orchestration
         MODEL_TIERS = {
-          cheap: %i[low],
-          fast: %i[low medium],
-          strong: %i[high critical],
-          local: %i[low medium],
-          browser_local: %i[low],
+          cheap: %i\[low],
+          fast: %i\[low medium],
+          strong: %i\[high critical],
+          local: %i\[low medium],
+          browser_local: %i\[low],
         }.freeze
 
-        COUNCIL_TIERS = %i[high critical].freeze
+        COUNCIL_TIERS = %i\[high critical].freeze
 
         COUNCIL_ROLES = {
-          "Security" => %i[auth secrets tool_execution permission_changes],
-          "Reliability" => %i[network provider runtime fallback],
-          "Maintainer" => %i[code_mutation refactor file_deletion],
-          "Architect" => %i[system_shape migration design],
-          "User Advocate" => %i[ui mobile accessibility],
-          "Accessibility" => %i[ui mobile accessibility],
-          "Music Producer" => %i[sonic visual_rhythm pacing],
-          "Hip-Hop Producer" => %i[sonic visual_rhythm pacing],
+          "Security" => %i\[auth secrets tool_execution permission_changes],
+          "Reliability" => %i\[network provider runtime fallback],
+          "Maintainer" => %i\[code_mutation refactor file_deletion],
+          "Architect" => %i\[system_shape migration design],
+          "User Advocate" => %i\[ui mobile accessibility],
+          "Accessibility" => %i\[ui mobile accessibility],
+          "Music Producer" => %i\[sonic visual_rhythm pacing],
+          "Hip-Hop Producer" => %i\[sonic visual_rhythm pacing],
         }.freeze
 
         # Required output sections for high/critical risk responses.
-        EVIDENCE_CONTRACT = %i[observed_facts inferred_plan uncertainty rollback_path verification_path].freeze
+        EVIDENCE_CONTRACT = %i\[observed_facts inferred_plan uncertainty rollback_path verification_path].freeze
 
         def initialize(router: Master::CLI::IntentRouter.new, registry: nil)
           @router = router

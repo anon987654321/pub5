@@ -23,7 +23,7 @@ class LinkConverterTest < Minitest::Test
   end
 
   def teardown
-    %w[TRADEDOUBLER_WEBSITE_ID TRADEDOUBLER_SERVER_SIDE_WRAP].each { |key| ENV.delete(key) }
+    %w\[TRADEDOUBLER_WEBSITE_ID TRADEDOUBLER_SERVER_SIDE_WRAP].each { |key| ENV.delete(key) }
     @saved.each { |key, value| ENV[key] = value }
   end
 

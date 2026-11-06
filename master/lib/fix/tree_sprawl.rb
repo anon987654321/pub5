@@ -10,10 +10,10 @@ module Master
       WIDE = 28
       MAX_CONCEPT_DEPTH = 3
       ROOT_FILE_LIMIT = 18
-      IMPORTANT_CONCEPTS = %w[core fix law runtime soul].freeze
+      IMPORTANT_CONCEPTS = %w\[core fix law runtime soul].freeze
       # Repeated framework entrypoints and standard Rails templates do not
       # represent a domain concept scattered across owners.
-      GENERIC_CONCEPT_STEMS = %w[
+      GENERIC_CONCEPT_STEMS = %w\[
         .rubocop Gemfile README Rakefile application application_controller base base_controller
         config create.turbo_stream create.turbo_stream.html database development edit.html engine
         environment Gemfile.lock helper home_controller index index.html manifest master new.html
@@ -21,7 +21,7 @@ module Master
         application_reflex _card.html _form.html _live_search_results.html
       ].freeze
       UGLY_NAME_PATTERN = /(?:\A__|_{2,}|_(?:helper|utils|old)\z)/
-      SIGNALS = %i[
+      SIGNALS = %i\[
         single_file_dirs tiny_files deep_dirs wide_dirs name_twins
         ugly_names concept_scatter depth_tax root_clutter
       ].freeze

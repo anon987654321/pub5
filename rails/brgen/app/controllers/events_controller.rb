@@ -6,15 +6,15 @@ class EventsController < ApplicationController
   # that made every vote from a feed card 404. See VotesController.
   include Shared::FindableBySlug
 
-  allow_unauthenticated_access only: %i[index show]
-  before_action :require_real_user, only: %i[new create edit update destroy cancel]
-  before_action :set_event, only: %i[show edit update destroy cancel]
-  before_action :authorize_organiser, only: %i[edit update destroy cancel]
+  allow_unauthenticated_access only: %i\[index show]
+  before_action :require_real_user, only: %i\[new create edit update destroy cancel]
+  before_action :set_event, only: %i\[show edit update destroy cancel]
+  before_action :authorize_organiser, only: %i\[edit update destroy cancel]
   helper_method :neighborhood_choices
 
   def index
     scope = Event.upcoming.includes(:user, :place, :neighborhood).with_attached_cover
-    scope = apply_live_search(scope, columns: %w[title description venue_name], vertical: "events") if live_search_query.present?
+    scope = apply_live_search(scope, columns: %w\[title description venue_name], vertical: "events") if live_search_query.present?
     scope = scope.where(neighborhood_id: params[:neighborhood_id]) if params[:neighborhood_id].present?
     @pagy, @events = pagy(scope)
     # Shown as a separate strip rather than mixed in: an archive and a listing

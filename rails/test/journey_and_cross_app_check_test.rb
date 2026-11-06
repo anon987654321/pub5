@@ -166,7 +166,7 @@ class JourneyAndCrossAppCheckTest < Minitest::Test
   end
 
   # One chrome payload per app. Every field here comes from shared/frontend.
-  def chrome(main_id: "main-content", skip: "#main-content", footer: true, controllers: %w[nav theme])
+  def chrome(main_id: "main-content", skip: "#main-content", footer: true, controllers: %w\[nav theme])
     { "skip_href" => skip, "skip_text" => "Hopp til innhold", "main_id" => main_id,
       "main_tag" => "main", "nav_aria" => "Hoved", "has_footer" => footer,
       "lang" => "nb", "viewport_meta" => "width=device-width", "controllers" => controllers }
@@ -237,7 +237,7 @@ class JourneyAndCrossAppCheckTest < Minitest::Test
   # A controller the shared layout mounts renders in every app, necessarily. One
   # app missing it is drift in code all three render.
   def test_a_layout_mounted_controller_missing_from_one_app_is_a_soft_finding
-    result = controllers_verdict({ "brgen" => chrome, "amber" => chrome(controllers: %w[nav]) }, %w[nav theme])
+    result = controllers_verdict({ "brgen" => chrome, "amber" => chrome(controllers: %w\[nav]) }, %w\[nav theme])
 
     assert result.soft_failures.any? { |f| f.match?(/"theme" is mounted by the shared layout but renders only in brgen/) },
            "expected a soft finding; got #{result.soft_failures.inspect}"
@@ -246,7 +246,7 @@ class JourneyAndCrossAppCheckTest < Minitest::Test
   # bsdports has no feed, so a shared controller it never mounts is not drift.
   # Asserting otherwise is the false-positive factory the check's comment names.
   def test_a_shared_controller_no_app_mounts_is_an_inventory_warning_not_a_finding
-    result = controllers_verdict({ "brgen" => chrome, "amber" => chrome }, %w[nav theme feed-compose])
+    result = controllers_verdict({ "brgen" => chrome, "amber" => chrome }, %w\[nav theme feed-compose])
 
     assert_empty result.failures
     assert_empty result.soft_failures
