@@ -39,10 +39,13 @@ about 2,700-3,300 files from about 6,000.
 
 ## Running what exists
 
-- `bin/lint` - syntax-checks every tracked Ruby file, and fails loudly when
-  it finds none to read.
-- `bin/test` - runs the minitest suites under `test/`, same refusal when
-  the tree has none.
+- `bin/master` - the one entrypoint; `bin/master` alone lists its commands
+  (registry/commands.yml). `bin/master --boot <command>` prints boot time.
+- `bin/check` - the gate: parse (Ruby, YAML, JSON, ERB), enforced Laws, tests.
+- `bin/lint` - the parse gate and enforced Laws; `bin/test` - the minitest
+  suites under `test/`.
+- `bin/setup` - once per clone: points git at `.githooks/` (pre-commit runs
+  the gate on the staged bytes, commit-msg checks the subject).
 
-Both are blind-tool proofed: a command that measures nothing reports that,
-not a pass.
+Each is blind-tool proofed: a stage that measured nothing reports NOT_RUN
+and fails, not a pass.

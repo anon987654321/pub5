@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Developer shorthand for `bin/master check`: parse gate, enforced Laws, tests.
+exec(RbConfig.ruby, File.expand_path("master", __dir__), "check", *ARGV)

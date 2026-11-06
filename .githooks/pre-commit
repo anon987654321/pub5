@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# The gate every commit passes (AGENTS.md): parse, enforced Laws and tests,
+# judged on the staged bytes. Install once per clone with bin/setup.
+exec(RbConfig.ruby, File.expand_path("../bin/master", __dir__), "check", "--staged")

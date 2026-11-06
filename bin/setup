@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Developer shorthand for `bin/master setup`: installs the gate as the
+# pre-commit hook. Run once per clone.
+exec(RbConfig.ruby, File.expand_path("master", __dir__), "setup", *ARGV)

@@ -1,22 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# One test command for pub5. It runs every minitest suite under test/ in one
-# interpreter, sorted, on Ruby 3.4.9 (.ruby-version). It refuses to run blind:
-# a test command with no suites must fail loudly, because a green run that
-# measured nothing is the exact failure this command exists to catch.
-#
-# Nothing it writes goes to git (AGENTS.md, rule 5).
-
-root = File.expand_path("..", __dir__)
-# Ruby 3.4+: ** no longer matches zero directories, so test/ and its nested
-# suites are globbed separately and uniq'd.
-files = (Dir.glob(File.join(root, "test", "**", "test_*.rb")) +
-         Dir.glob(File.join(root, "test", "test_*.rb"))).uniq.sort
-
-if files.empty?
-  abort "test: no suites under test/ - a test command that measures nothing must fail loudly, not pass"
-end
-
-ENV["RUBYOPT"] = "-W2"
-exec(RbConfig.ruby, "-I#{File.join(root, 'test')}", "-I#{File.join(root, 'lib')}", *files.map { |f| File.join(root, f) })
+# Developer shorthand for `bin/master test`: every minitest suite under
+# test/ in one interpreter. It refuses to run blind: no test summary, or
+# zero runs, reports NOT_RUN and fails.
+exec(RbConfig.ruby, File.expand_path("master", __dir__), "test", *ARGV)

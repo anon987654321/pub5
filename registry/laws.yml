@@ -1,0 +1,38 @@
+# The Law index: one row per Law, the only place a Law's policy lives. Its
+# detector and fixtures are in the row's file. A Law enters as advisory; it
+# is enforced only with a census over the real tree (false positives at most
+# 5% of a sample), fixtures proved at load, and the operator's ratification.
+# Law.load! refuses an enforced row that lacks any of these.
+laws:
+  ONE_IMPLEMENTATION_PER_OPERATION:
+    statement: HTTP, file writes, environment reads, subprocesses and YAML loading each have one implementation, in core/.
+    kind: structural
+    severity: error
+    lifecycle: enforced
+    autofix: never
+    enacted: "2026-11-06"
+    file: laws/one_implementation_per_operation.rb
+    census:
+      measured_on: "2026-11-06"
+      files: 35
+      findings: 0
+      sampled: 0
+      false_positives: 0
+      ratified_by: operator
+      ratification: The operator's P1 brief requires this census Law to enforce one implementation per operation (PLAN.md M1).
+  GENERATED_FILE_MATCHES_GENERATOR:
+    statement: A file listed as generated in registry/paths.yml equals what its generator writes; it is never edited by hand.
+    kind: structural
+    severity: error
+    lifecycle: enforced
+    autofix: never
+    enacted: "2026-11-06"
+    file: laws/generated_file_matches_generator.rb
+    census:
+      measured_on: "2026-11-06"
+      files: 4
+      findings: 0
+      sampled: 0
+      false_positives: 0
+      ratified_by: operator
+      ratification: The operator asked that a Law fail any hand edit of the generated AGENTS.md (2026-11-06).

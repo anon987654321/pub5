@@ -1,0 +1,60 @@
+# Every bin/master command. bin/master is the one entrypoint for every
+# surface (terminal, pipe, ssh, scripts; the web face and /fix arrive as
+# commands, not as more binaries). Each command names the plugin that
+# implements it, the contexts it runs in and its capability manifest: the
+# World verbs it may use and what each may reach. bin/master boots core
+# plus that one plugin and nothing else.
+commands:
+  check:
+    summary: The gate every push passes - parse, enforced Laws, tests.
+    plugin: master/commands/check.rb
+    class: Commands::Check
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      exec: [ruby]
+      git: [ls-files, diff, show]
+  lint:
+    summary: The parse gate and the enforced Laws, without tests (bin/lint).
+    plugin: master/commands/check.rb
+    class: Commands::Lint
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      git: [ls-files, diff, show]
+  test:
+    summary: The minitest suites under test/ (bin/test).
+    plugin: master/commands/check.rb
+    class: Commands::Test
+    contexts: [tty, pipe, remote]
+    verbs:
+      exec: [ruby]
+      git: [ls-files, diff]
+  setup:
+    summary: Point git at .githooks so the gate and the commit format run on every commit.
+    plugin: master/commands/setup.rb
+    class: Commands::Setup
+    contexts: [tty, pipe, remote]
+    verbs:
+      git: [config, rev-parse]
+  generate:
+    summary: Rewrite every generated file from its registry sources.
+    plugin: master/commands/generate.rb
+    class: Commands::Generate
+    contexts: [tty, pipe, remote]
+    verbs:
+      write: [AGENTS.md, CLAUDE.md]
+  laws:
+    summary: List the Laws, or run one Law's census over the tree (laws census ID).
+    plugin: master/commands/laws.rb
+    class: Commands::Laws
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      git: [ls-files, rev-parse]
+  knobs:
+    summary: List the declared environment knobs and the budget.
+    plugin: master/commands/knobs.rb
+    class: Commands::Knobs
+    contexts: [tty, pipe, remote]
+    verbs: {}
