@@ -1,0 +1,31 @@
+<% slug = promotion.to_s %>
+<% href, host = case slug
+                when "marketplace"
+                  ["//#{marketplace_host}/", marketplace_host]
+                when "ai"
+                  [brgen_ai_url, "ai.brgen.no"]
+                else
+                  current_host = "#{slug}.#{Current.domain}"
+                  ["//#{current_host}/", current_host]
+                end %>
+
+<%# Named by the post it follows: the feed carries several, and each landmark
+    needs its own name. %>
+<aside class="brgen-vertical-promo" data-promo="<%= slug %>"
+       aria-label="<%= t("promo.aria_label", position: local_assigns.fetch(:position)) %>">
+  <%= link_to href, class: "promo-link", data: { turbo: false } do %>
+    <span class="promo-disc" aria-hidden="true">
+      <span class="promo-host"><%= host %></span>
+      <span class="promo-dot"></span>
+    </span>
+
+    <span class="promo-copy">
+      <span class="promo-kicker"><%= t("promo.#{slug}.kicker") %></span>
+      <strong class="promo-title"><%= t("promo.#{slug}.title") %></strong>
+      <span class="promo-body"><%= t("promo.#{slug}.body") %></span>
+      <span class="promo-action">
+        <%= t("promo.#{slug}.action") %>
+      </span>
+    </span>
+  <% end %>
+</aside>
