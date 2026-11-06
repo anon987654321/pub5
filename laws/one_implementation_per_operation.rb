@@ -5,8 +5,8 @@
 # directly, 3 atomic writes, 77 YAML-loading call sites and 1,711 env reads.
 #
 # The patterns are assembled from pieces so this file does not match itself.
-# rails/ and studio/ arrive moved, not rewritten (PLAN.md section 14); they
-# keep their framework's idioms until P3 decides each one. laws/pub4/ is
+# rails/, studio/ and openbsd/ arrive moved, not rewritten (PLAN.md section
+# 14); they keep their own idioms until their phase decides each one. laws/pub4/ is
 # pub4's Law Ruby moved the same way by `bin/master port-laws` (P2): its
 # fixtures spell the calls they forbid, and the pub4 helpers beside them
 # still read ENV and YAML themselves. A Law cleaned out of laws/pub4/ into
@@ -21,7 +21,7 @@ Law.define(:ONE_IMPLEMENTATION_PER_OPERATION) do
   }.transform_values { |sources| Regexp.union(sources.map { |s| Regexp.new(s) }) }
   owners = { "http" => "Core::HTTP", "file write" => "World#write (Core::Atomic)", "env" => "Core::Knobs",
              "exec" => "World#exec or World#git", "yaml load" => "Core::Registry" }
-  exempt = %r{\A(core|rails|studio|laws/pub4)/}
+  exempt = %r{\A(core|rails|studio|openbsd|laws/pub4)/}
 
   source "PLAN.md sections 4 and 11 (M1); OpenBSD's one canonical implementation per operation"
   languages :ruby
