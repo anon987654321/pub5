@@ -39,17 +39,22 @@ module Core
       ERB.new(File.read(allow(:render, template)), trim_mode: "-").result_with_hash(locals)
     end
 
-    def exec(*argv, timeout: @knobs.fetch("PUB5_EXEC_TIMEOUT"), chdir: @manifest.root, stdin: nil)
+    # unset: environment names the child must not inherit. It can only take
+    # names away, never set one, so it widens nothing a manifest declared: a
+    # `claude --print` that inherits a parent Claude Code session hangs, and one
+    # that inherits an API key bills the key instead of the subscription.
+    def exec(*argv, timeout: @knobs.fetch("PUB5_EXEC_TIMEOUT"), chdir: @manifest.root, stdin: nil, unset: [])
       allow(:exec, File.basename(argv.first.to_s))
-      run = spawn(argv, timeout:, chdir:, stdin:)
-      @ledger.append(:effect, verb: "exec", plugin: @manifest.name, argv:, exit: run.status&.exitstatus, timed_out: run.timed_out)
+      run = spawn(argv, timeout:, chdir:, stdin:, env: unset.to_h { |name| [name.to_s, nil] })
+      @ledger.append(:effect, verb: "exec", plugin: @manifest.name, argv:, exit: run.status&.exitstatus, timed_out: run.timed_out,
+                              **(unset.empty? ? {} : { unset: unset.map(&:to_s) }))
       run
     end
 
     def git(subcommand, *args, timeout: @knobs.fetch("PUB5_EXEC_TIMEOUT"))
       allow(:git, subcommand.to_s)
       argv = ["git", "-C", @manifest.root, subcommand.to_s, *args]
-      run = spawn(argv, timeout:, chdir: @manifest.root, stdin: nil)
+      run = spawn(argv, timeout:, chdir: @manifest.root, stdin: nil, env: {})
       @ledger.append(:effect, verb: "git", plugin: @manifest.name, argv: [subcommand.to_s, *args], exit: run.status&.exitstatus)
       run
     end
@@ -80,8 +85,8 @@ module Core
 
     # argv only, never a shell string; a child that outlives its timeout gets
     # TERM, then KILL after TERM_GRACE, and the run reports timed_out.
-    def spawn(argv, timeout:, chdir:, stdin:)
-      Open3.popen3(*argv, chdir:) do |input, out, err, thread|
+    def spawn(argv, timeout:, chdir:, stdin:, env:)
+      Open3.popen3(env, *argv, chdir:) do |input, out, err, thread|
         input.write(stdin) if stdin
         input.close
         readers = [Thread.new { out.read }, Thread.new { err.read }]
