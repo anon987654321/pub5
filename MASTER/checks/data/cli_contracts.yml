@@ -1,0 +1,54 @@
+---
+schema: 1
+root: pub4
+entrypoints:
+  MASTER/bin/master:
+    exit: 0
+    head: master - instruct the MASTER runtime with the whole repo in scope
+    tokens:
+    - "--daemon"
+    - "--fast"
+    - "--fix-context"
+    - "--fold"
+    - "-p"
+    - "<instruction>"
+    - core
+    - replay
+    digest: 27f3a1985f4433cf94d448fb229607679ef4fcd15a51d2ca8f1ab40016c25b53
+  MASTER/bin/operator:
+    exit: 2
+    head: operator - repo-wide operator surface
+    tokens:
+    - affiliate
+    - branches
+    - check
+    - ci
+    - cities
+    - deploy-story
+    - design
+    - doctor
+    - domain-ghosts
+    - event-bus
+    - fix
+    - hooks
+    - land
+    - law-weight
+    - laws
+    - lint
+    - measure
+    - memory
+    - post-pull
+    - premerge
+    - push
+    - pushed?
+    - readers
+    - snapshot
+    - spark
+    - status
+    - test
+    - tree-weight
+    - triangle
+    - visual
+    - vps
+    - wishlist
+    digest: e6d20f47b9a62f3922196575880d30c94e3f8a7c02e152a7ebf2d7ec1348852f
