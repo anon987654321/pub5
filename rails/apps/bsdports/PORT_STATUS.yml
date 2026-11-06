@@ -1,11 +1,8 @@
 schema: 1
 product: bsdports
-status: source_import_started
+status: source_import_in_progress
 runtime: NOT_RUN
 contracts: NOT_RUN
+source_counts: { bootstrap_files: 10, models: 7, controllers: 2, schema_and_seeds: 2, views: 1 }
 database_restore: BLOCKED
 production_cutover: BLOCKED
-notes:
-  - Rails stable 8.1.4.1; Ruby 3.4.9.
-  - Production SQLite stores and ports data are not imported into Git.
-  - Shared route adapters point at rails/shared.
