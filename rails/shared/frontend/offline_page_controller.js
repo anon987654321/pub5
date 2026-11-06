@@ -1,0 +1,105 @@
+import { Controller } from "@hotwired/stimulus"
+
+const STORE_NAME = "snapshots"
+
+export default class extends Controller {
+  static targets = ["list"]
+  static values = { storageKey: String, emptyText: String }
+
+  connect() {
+    this.load()
+  }
+
+  retry() {
+    if (navigator.onLine) {
+      window.location.reload()
+      return
+    }
+    this.load()
+  }
+
+  async load() {
+    if (!("indexedDB" in window)) {
+      this.renderEmpty()
+      return
+    }
+
+    try {
+      const items = await this.readSnapshots()
+      this.render(items)
+    } catch {
+      this.renderEmpty()
+    }
+  }
+
+  dbName() {
+    return `${this.storageKeyValue}-idb-keyval`
+  }
+
+  openDb() {
+    return new Promise((resolve, reject) => {
+      // No version: idb-keyval raises the database's version when it adds a store, and opening
+      // a lower one than the database holds fails with VersionError.
+      const request = indexedDB.open(this.dbName())
+      request.onupgradeneeded = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME)
+      }
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  readSnapshots() {
+    return this.openDb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly")
+      const request = tx.objectStore(STORE_NAME).get(this.storageKeyValue)
+      request.onsuccess = () => resolve(request.result || [])
+      request.onerror = () => reject(request.error)
+      tx.oncomplete = () => db.close()
+    }))
+  }
+
+  render(items) {
+    if (!items.length) {
+      this.renderEmpty()
+      return
+    }
+
+    this.listTarget.innerHTML = items.map(item => `
+      <li class="offline-page-item">
+        <a href="${this.safeUrl(item.url)}">${this.escape(item.title)}</a>
+        <div class="offline-page-meta">${this.escape(item.meta || "")}</div>
+      </li>
+    `).join("")
+  }
+
+  renderEmpty() {
+    // The words come from the page, in its locale; the English literal here was
+    // what every Norwegian visitor read.
+    const item = document.createElement("li")
+    item.className = "offline-page-item"
+    item.textContent = this.emptyTextValue
+    this.listTarget.replaceChildren(item)
+  }
+
+  safeUrl(value) {
+    const raw = String(value ?? "").trim()
+    if (!raw) return "#"
+
+    try {
+      const url = new URL(raw, window.location.origin)
+      return url.origin === window.location.origin ? this.escape(url.href) : "#"
+    } catch (_) {
+      return "#"
+    }
+  }
+
+  escape(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+  }
+}

@@ -1,0 +1,69 @@
+# frozen_string_literal: true
+
+require "shared/contracts"
+Shared::Contracts.require_contract("master_client")
+
+module Shared
+  # One messenger adapter for every mounted app. It talks to master through authenticated
+  # ingress, so brgen and Amber invite the same runtime rather than
+  # maintaining separate assistant personalities or memory.
+  class MasterMessenger
+    MAX_CONTEXT = 24
+    MAX_PROMPT_BYTES = 12_000
+
+    def initialize(client: ::Contracts::MasterClient::Client.new)
+      @client = client
+    end
+
+    def available? = @client.available?
+
+    def reply(messages:, sender:, message:, session_key:, channel:, context: nil)
+      result = @client.turn(
+        prompt(messages:, sender:, message:, context:),
+        session_key:,
+        channel:,
+      )
+      return unless result["ok"]
+
+      output = result["output"].to_s.strip
+      output unless output.empty?
+    rescue StandardError
+      nil
+    end
+
+    private
+
+    def prompt(messages:, sender:, message:, context:)
+      <<~TEXT.byteslice(0, MAX_PROMPT_BYTES)
+        You are master, the shared assistant invited into a messenger conversation.
+        You are a participant, not the owner of the conversation. Answer the latest human
+        message directly, preserve participant privacy, and never invent access to data or actions.
+        Re-read or research when the question needs current evidence.
+        #{context_section(context)}
+        Conversation:
+        #{transcript(messages)}
+
+        Latest sender: #{sender_name(sender)}
+        Latest message:
+        #{message_text(message)}
+      TEXT
+    end
+
+    def context_section(context)
+      value = context.to_s.strip
+      value.empty? ? "" : "Additional context:\n#{value}\n"
+    end
+
+    def transcript(messages)
+      Array(messages).last(MAX_CONTEXT).map { |row| "#{sender_name(row.sender)}: #{message_text(row)}" }.join("\n")
+    end
+
+    def message_text(message)
+      message.respond_to?(:body) ? message.body.to_s : message.content.to_s
+    end
+
+    def sender_name(sender)
+      sender.respond_to?(:channel_handle) ? sender.channel_handle : sender.display_name
+    end
+  end
+end

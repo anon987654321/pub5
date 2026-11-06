@@ -1,0 +1,134 @@
+/* vYroQxg — shared Yep-style search surface for every rails app. */
+/* scan: intentional-colors — exact reference palette and focus treatment. */
+
+.search {
+  width: 480px;
+  max-width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  background-color: #ccc;
+  border: 1px solid #ccc;
+  border-radius: 30px;
+  font-size: 18px;
+  transition: all 100ms var(--ease-in-out);
+}
+
+/* Only the query field gets the transparent inner treatment; submit controls
+   remain usable where a non-live search needs an explicit action. */
+.search input:not([type]),
+.search input[type="search"],
+.search input[type="text"] {
+  background: transparent;
+  border: none;
+  width: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  padding: 16px 24px;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Keep a keyboard-visible indicator on the shared surface while the input
+   itself remains borderless, as in the original Yep field. */
+.search:has(input:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.search input::placeholder {
+  color: #aaa;
+}
+
+/* The pen lifts the focused field with a shadow; the interface is flat
+   (shared/README.md, design_contract_test), so grey turning white is the cue,
+   which is the larger half of the pen's own. */
+.search.focus,
+.search.active {
+  background-color: white;
+  border-color: white;
+  box-shadow: none;
+}
+
+.search.active {
+  border-radius: 16px;
+}
+
+/* State visuals follow the completed request and actual result region. The
+   field stays borderless; only its background changes meaning. */
+.search[data-state="loading"] {
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.search[data-state="empty"] {
+  background-color: var(--surface-elevated, var(--surface));
+}
+
+.search[data-state="error"] {
+  background-color: color-mix(in srgb, var(--color-danger, var(--danger)) 10%, var(--surface));
+}
+
+/* Search suggestions and palette results share the expanded field surface.
+   The full index result frame deliberately remains below its field on index
+   pages; those pages are lists, not autocomplete menus. */
+.search.active :is(
+  #live_results,
+  #live_search_results,
+  #search_suggestions,
+  #search_palette_suggestions,
+  #search_palette_results
+):not(:empty) {
+  border-top: 1px solid #ccc;
+  padding: 0 24px;
+}
+
+.search.active :is(
+  #live_results,
+  #live_search_results,
+  #search_suggestions,
+  #search_palette_suggestions,
+  #search_palette_results
+):not(:empty) a {
+  display: block;
+}
+
+/* Adapt the shared Rails search form to the same surface. */
+.search .search-form {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.search .search-form input[type="submit"],
+.search .search-form .button {
+  display: none;
+}
+
+/* A filter select a live index passes in (maps' place kind, amber's outfit
+   filter) stays reachable: it ends the pill's row instead of vanishing, which
+   left those filters with no control at all. Number fields stay hidden. */
+.search .search-form:has(> select) {
+  display: flex;
+  align-items: center;
+}
+
+.search .search-form:has(> select) > input {
+  flex: 1 1 auto;
+}
+
+.search .search-form select {
+  flex: 0 1 auto;
+  width: auto;
+  min-inline-size: 0;
+  max-inline-size: 45%;
+  margin-inline-end: 16px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.search .search-form input[type="number"] {
+  display: none;
+}

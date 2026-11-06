@@ -1,0 +1,164 @@
+/* Shared empty state — shared/_empty_state.html.erb + legacy .empty-state markup */
+
+/* Separation is space, not a box border (operator 2026-07-28). */
+.empty,
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  border: 0;
+  border-radius: var(--radius-medium);
+  max-width: 28rem;
+  margin-inline: auto;
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  background: transparent;
+}
+
+.empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-block-end: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--hover-subtle);
+  font-size: var(--text-extra-small);
+  line-height: var(--leading-none);
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+/* The stipple mark an empty state wears when its caller has no icon: dots on a
+   fixed grid fading to nothing at the edge, the same dot-and-density language as
+   the master face. Drawn, not typed, so it needs no glyph font; still, so it
+   needs no reduced-motion branch; the 2.5rem box is unchanged, so layout is. */
+.empty-state:not(:has(.empty-state-icon))::before {
+  content: "";
+  display: block;
+  margin: 0 auto var(--space-1);
+  width: 2.5rem;
+  height: 2.5rem;
+  background: radial-gradient(circle at center, var(--text-secondary) 0 0.55px, transparent 0.7px) 0 0 / 5px 5px;
+  -webkit-mask: radial-gradient(circle at center, black 0 45%, transparent 72%);
+  mask: radial-gradient(circle at center, black 0 45%, transparent 72%);
+  opacity: 0.85;
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: var(--text-large);
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-bold);
+  font-family: var(--font);
+  color: var(--text);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.empty-state-body,
+.empty-state p {
+  margin: 0;
+  max-width: 28em;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+/* :not(.button) because this rule is more specific (0,1,1) than .button-primary
+   (0,1,0), so it captured the CTA's colour while .button-primary kept supplying the
+   background: the button painted --accent (#f2f2f2) on --text (#e0e0e0), a
+   contrast ratio of 1.17. The label was there and unreadable. Prose links keep
+   the accent; anything styled as a button keeps the colour its own rule set. */
+.empty-state a:not(.button) {
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
+
+.empty-state .button,
+.empty-state-action {
+  margin-block-start: var(--space-3);
+}
+
+/* bsdports: zero radius */
+body.wscons .empty-state,
+body[data-theme="wscons"] .empty-state,
+:root:has(body.bsdports) .empty-state {
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Search loading: a short visible status names the wait; skeletons preserve layout. */
+.search-loading-message {
+  margin-inline: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+}
+
+.search-skeleton {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.search-skeleton-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding-block: var(--space-2);
+  border-bottom: 0;
+}
+
+.search-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+}
+
+.search-skeleton-lines {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.search-skeleton-line {
+  height: 0.75rem;
+  width: 100%;
+}
+
+.search-skeleton-line--short { width: 40%; }
+.search-skeleton-line--mid { width: 70%; }
+
+/* .visually-hidden is _components.scss's, alongside the other resets, and every
+   app reaches that sheet through its stack. It was declared here identically
+   too — an accessibility utility with two definitions is one that can be
+   half-fixed. */
+
+/* Shared skeleton if app did not define one */
+.skeleton {
+  border-radius: var(--radius-small);
+  background: linear-gradient(
+    90deg,
+    var(--hover-subtle) 0%,
+    var(--hover) 50%,
+    var(--hover-subtle) 100%
+  );
+  background-size: 200% 100%;
+  animation: shared-skeleton-shimmer 1.2s var(--ease-in-out) infinite;
+  min-height: 1rem;
+}
+
+@keyframes shared-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
