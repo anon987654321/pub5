@@ -189,6 +189,13 @@ volatile_selectors:
   - "[data-money]"
   - ".deal-card-price"
   - ".post-meta"
+  # amber's anonymous sessions mint a fresh guest identity and a fresh 2FA
+  # secret per request: the identity paragraph, the identity prefilled into
+  # the email input, and the setup page's QR block are volatile by the same
+  # rule as the clocks above (measured 2026-11-06, three probes).
+  - "[title^=\"guest_\"]"
+  - "input[value^=\"guest_\"]"
+  - ".auth-form-qr"
 
 # State matrix (BackstopJS's scenario list, read by Deploy::StateMatrix): each
 # component is captured in its declared states and at each width, one cropped

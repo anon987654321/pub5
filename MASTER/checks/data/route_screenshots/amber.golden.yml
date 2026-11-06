@@ -1,0 +1,197 @@
+---
+schema: 1
+app: amber
+widths:
+- 390
+- 768
+- 1280
+rows:
+  "|/|390|page": ebe80513e357d50ef0f20fd6c3181b186586f9639e88fbb4f6c195529da8b344
+  "|/|390|dialog":
+    present: false
+  "|/|768|page": 5e6296f272271faa41a3b045b37ddc09f9ff53c9f3aa9c1ff462f95acc84a9df
+  "|/|768|dialog":
+    present: false
+  "|/|1280|page": a70ebecb3ef83202fa786c2205d247ad2d69ef0ffbb87df28cd7d20ee344d052
+  "|/|1280|dialog":
+    present: false
+  "|/account|390|page": d29908cf64e7d9432e1899d0b63b2d81f16ce03c89d2bcc4ff80ae6869d51cda
+  "|/account|390|dialog":
+    present: false
+  "|/account|768|page": 91aa9b2d6bb0cd6276e54c9e646562e802e04867d8f5c812549e5112a143b2c6
+  "|/account|768|dialog":
+    present: false
+  "|/account|1280|page": 0fd4b60442be1d3d104bc331586bc8b7394bf844038bb86e27d1f6fde80346e7
+  "|/account|1280|dialog":
+    present: false
+  "|/changelog|390|page": ea58eaf100fcac6f63c4f35952cb953b5a8f261f22bbacca26c11244d9f5e7e7
+  "|/changelog|390|dialog":
+    present: false
+  "|/changelog|768|page": bebcfd9943e116e892c57289ee7e147c4e351ec5ab5fd59ae0c465a9fc26eeab
+  "|/changelog|768|dialog":
+    present: false
+  "|/changelog|1280|page": e26b6383c058ba4de558261883f21a49d1e0a87facbc88a8342b9b4f71a6fd60
+  "|/changelog|1280|dialog":
+    present: false
+  "|/cookies|390|page": 1fd756c20dfb8b62e99b503200cc5e704a30756a177fdb186ed3635cd105c04c
+  "|/cookies|390|dialog":
+    present: false
+  "|/cookies|768|page": a179717d6d0378eac411d16a2ff70d796f6005b18e4082d109bd70939fa3d628
+  "|/cookies|768|dialog":
+    present: false
+  "|/cookies|1280|page": 9c6fc2d89751ea24b1f1d4ad3cc8e56875855c15a8caaccc49751cfcb3577e43
+  "|/cookies|1280|dialog":
+    present: false
+  "|/demo|390|page": d24328499de2c76862c847d3c3a7bb0b3f64d497a8ccceb0ba660e96897db34f
+  "|/demo|390|dialog":
+    present: false
+  "|/demo|768|page": 51714f3ff674be407341e0a65c96d68f75b6092480c1e3fbcb18fef205864897
+  "|/demo|768|dialog":
+    present: false
+  "|/demo|1280|page": e11ee67797c1f40743900b818e118afbc09031754f4a9f0f3cf503a7becbfc7f
+  "|/demo|1280|dialog":
+    present: false
+  "|/messages|390|page": 2f576f416efb44b6800309eba9ef9be9d76e62c715b631e3baf671808d99116f
+  "|/messages|390|dialog":
+    present: false
+  "|/messages|768|page": 966255229bf5843a2ef47d87625d664f342fcdcd6d455c8ea10827c4ab54db4f
+  "|/messages|768|dialog":
+    present: false
+  "|/messages|1280|page": 0cfd81b0d97bcad262e16002d1b8255520c43704bdbde57e8048b90f9816ebaf
+  "|/messages|1280|dialog":
+    present: false
+  "|/messages/widget|390|page": ae28b15e6a9a05201cb655e4eef56356c7118926e546f9ed67b7113a01635698
+  "|/messages/widget|390|dialog":
+    present: false
+  "|/messages/widget|768|page": c8581af71290dced422a920a973bdb545211acfd7c2e0bdebdea84ecfd0ba47b
+  "|/messages/widget|768|dialog":
+    present: false
+  "|/messages/widget|1280|page": 5f3cf73ef9e24d36b951fa37f626d27f166cb5dc20ef5b72aba5f888ac1c4182
+  "|/messages/widget|1280|dialog":
+    present: false
+  "|/notifications|390|page": f893cc33df6195a5c108737b1166244ce4192ee362d21e09e1e8dc76456f0cf5
+  "|/notifications|390|dialog":
+    present: false
+  "|/notifications|768|page": 64c76b4d6be62b43a2bbf7a84d4c23e98753be95e5876e499522f94376271897
+  "|/notifications|768|dialog":
+    present: false
+  "|/notifications|1280|page": 977cd976d5e9388cac10b94ab4bc5efde3fae11c6d579b14fcb47d657ef6a926
+  "|/notifications|1280|dialog":
+    present: false
+  "|/offline|390|page": c0deb78a92c4c5f20d896a4027c3c006b38dcb51364ef33184ec41d5eccff288
+  "|/offline|390|dialog":
+    present: false
+  "|/offline|768|page": 86913fcef764aa4295328e62d71b27684a9117120c11b6c5ecb3ead6db1fe64c
+  "|/offline|768|dialog":
+    present: false
+  "|/offline|1280|page": cd26a1cb111013b106b7f2f31e3d8306da38030a270ca0539536c3406ffecbbf
+  "|/offline|1280|dialog":
+    present: false
+  "|/passwords/new|390|page": 624cb0786231e2c1baf09d41e788f645e4d57c0761641f394c097a41585af163
+  "|/passwords/new|390|dialog":
+    present: false
+  "|/passwords/new|768|page": bee57fba19acb8f2fb73075d44ca04b57b5b7ac35d200a5f7ef463132ec95c87
+  "|/passwords/new|768|dialog":
+    present: false
+  "|/passwords/new|1280|page": 98c1589dc3ed4f5c417b4b0eaf0b701e71d86e59bcc82b5df621a036ee69f93f
+  "|/passwords/new|1280|dialog":
+    present: false
+  "|/posts|390|page": 12bba52d4c5a5743985a9b71d9e6b2dcf9a749829e04168c896ea6d855be8da3
+  "|/posts|390|dialog":
+    present: false
+  "|/posts|768|page": c956d45875148a8b63199b06f11534b0ebef933360fcad97c4cb1e2fe7bb4e52
+  "|/posts|768|dialog":
+    present: false
+  "|/posts|1280|page": ef40816701de928d2608026a13f55d970196c1f75895677dba2c9cc4b2503f28
+  "|/posts|1280|dialog":
+    present: false
+  "|/privacy|390|page": 87561faf031b97b0dbea529a3d974156b4e55f05b7d423fe433c97bdffc09dad
+  "|/privacy|390|dialog":
+    present: false
+  "|/privacy|768|page": '06883d8fc55ed37a7a5f6491fd1626d7e3f03e7123ca6b0ab989ff05f3c1b918'
+  "|/privacy|768|dialog":
+    present: false
+  "|/privacy|1280|page": 69901d7e8919e924ef557850620b7879aa0719724caa80454accd003a51461d1
+  "|/privacy|1280|dialog":
+    present: false
+  "|/recede_historical_location|390|page": 5bb54ed008a13d5867bd9bd27d9de21ee56a8e5eda40cb27253acbd13ce8465a
+  "|/recede_historical_location|390|dialog":
+    present: false
+  "|/recede_historical_location|768|page": 24041bf99118da2e39901f9dfcb10c78fb17221d167afcc2a8fee5055df1d017
+  "|/recede_historical_location|768|dialog":
+    present: false
+  "|/recede_historical_location|1280|page": 2b1215c48d208dc146fbd31620267c69defb8f3f5d3f5980a381ab1cc6127105
+  "|/recede_historical_location|1280|dialog":
+    present: false
+  "|/refresh_historical_location|390|page": c4417957a03250b8eeac8d67be708e3b58a90fb94a21a56d4a02b50037045d0e
+  "|/refresh_historical_location|390|dialog":
+    present: false
+  "|/refresh_historical_location|768|page": 8c78ca6480d10cd4427e6f257abbfbc9fff8930d4dcbd23b5dcb2b8083359cad
+  "|/refresh_historical_location|768|dialog":
+    present: false
+  "|/refresh_historical_location|1280|page": 1e542a22c4609bf3cf23f821af4f56c056267db4f2aa98c8e13857a8866e0dec
+  "|/refresh_historical_location|1280|dialog":
+    present: false
+  "|/registration/new|390|page": e5edad748273ac7cfadac28d10a3a20bd44794e6cfb8015139fb90797891f717
+  "|/registration/new|390|dialog":
+    present: false
+  "|/registration/new|768|page": 1e18f0a3b4f5cd1d7a505b2ae19d4c12109d66b7a40ea04406d5a72d063e15bf
+  "|/registration/new|768|dialog":
+    present: false
+  "|/registration/new|1280|page": cc1f0c4de6eba9b527393acf7c13a1f2d49249edf4d8213a98a99bb7039e0163
+  "|/registration/new|1280|dialog":
+    present: false
+  "|/resume_historical_location|390|page": 2ffec6542dec3d54617d51992c0d158d7b9bb675cecb55f5ec98147aa6a0b5d0
+  "|/resume_historical_location|390|dialog":
+    present: false
+  "|/resume_historical_location|768|page": 670f0747840f0e2f1146a0a13e8679fc80cfebe2a274627e79f7c9d5ef4412fc
+  "|/resume_historical_location|768|dialog":
+    present: false
+  "|/resume_historical_location|1280|page": 56270f8074e42dbec3d4351318b9f02beea1dd45b49e06786e9031c43ee570a1
+  "|/resume_historical_location|1280|dialog":
+    present: false
+  "|/safety|390|page": a499830b2ccb147b58c4724f76e5bf6b40e515888450fbeb4ce64220d3b6290f
+  "|/safety|390|dialog":
+    present: false
+  "|/safety|768|page": 261cd195c43c6b1ad02dba5ffa227a1411b8b57e0d97c3b2855704a2ca5372c2
+  "|/safety|768|dialog":
+    present: false
+  "|/safety|1280|page": f23367acf3ec55853da204b86927e4ee14927d8ffd678dec6ca01123afa9aa07
+  "|/safety|1280|dialog":
+    present: false
+  "|/session/new|390|page": 3f060363b2e6d0b9573fa627da1e2c706079be95af6e57ce479bedc21814b415
+  "|/session/new|390|dialog":
+    present: false
+  "|/session/new|768|page": 304c3ff9fdf17dfa5a73503dc87ecbea66a0ae3ec777f33db815d7c9e1685bf3
+  "|/session/new|768|dialog":
+    present: false
+  "|/session/new|1280|page": f055a2a6f24991f161ef13f1e970d2c251ba407a01eba36b760413ad97b28780
+  "|/session/new|1280|dialog":
+    present: false
+  "|/terms|390|page": 9597001af92f03105eafa21edb0605358abbfe05249fbdf6b43820cc3b84ae3d
+  "|/terms|390|dialog":
+    present: false
+  "|/terms|768|page": 40b1a27a43aa8304595e09326db2975ffa4b233e9ed34f90a2bf1bd0f8d46e09
+  "|/terms|768|dialog":
+    present: false
+  "|/terms|1280|page": a91b33a1d842d14467390b54ac28bfab8bbfde1af5e51844df4c4a5b96c1e77b
+  "|/terms|1280|dialog":
+    present: false
+  "|/two_factor_setup|390|page": f43d876791eaa3740719efe7dfc6ea2ad3bfee6674146aa58f29056b1c97d615
+  "|/two_factor_setup|390|dialog":
+    present: false
+  "|/two_factor_setup|768|page": 9050d398bb1254f866c19362ef527c51483be6ff3f842c1854c97147ef060f67
+  "|/two_factor_setup|768|dialog":
+    present: false
+  "|/two_factor_setup|1280|page": 4182bbe37330d879169796e4579844d1253dcaf1c6c31f7d505927193c81e4fb
+  "|/two_factor_setup|1280|dialog":
+    present: false
+  "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
+  "|/up|390|dialog":
+    present: false
+  "|/up|768|page": 4ba6db461a2ee6c888c85028f84997a7ad71bfd397e4f634228d182f8f2858de
+  "|/up|768|dialog":
+    present: false
+  "|/up|1280|page": 62c2410ac72927753a7dd9a0530364a9e02f52826cafdb66a512eafbe3985c70
+  "|/up|1280|dialog":
+    present: false

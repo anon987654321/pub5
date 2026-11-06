@@ -10,11 +10,12 @@ require_relative "../tools/acceptance"
 class TestAcceptance < Minitest::Test
   PASS = Struct.new(:success?)
 
-  def with_spawn_swaps(tool: nil, app: nil, route: nil)
-    originals = %i[spawn_tool spawn_app spawn_route].to_h { |name| [name, Acceptance.method(name)] }
+  def with_spawn_swaps(tool: nil, app: nil, route: nil, screenshot: nil)
+    originals = %i[spawn_tool spawn_app spawn_route spawn_screenshot].to_h { |name| [name, Acceptance.method(name)] }
     Acceptance.define_singleton_method(:spawn_tool) { |_script, _args| tool } if tool
     Acceptance.define_singleton_method(:spawn_app) { |_dir| app } if app
     Acceptance.define_singleton_method(:spawn_route) { |*_args| route } if route
+    Acceptance.define_singleton_method(:spawn_screenshot) { |*_args| screenshot } if screenshot
     yield
   ensure
     originals.each { |name, method| Acceptance.define_singleton_method(name, method) }
@@ -95,6 +96,63 @@ class TestAcceptance < Minitest::Test
   def test_the_recorded_apps_name_themselves_from_the_data_dir
     assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".yml").sort
     assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".signed.yml").sort
+  end
+
+  def test_the_screenshot_half_names_every_recorded_manifest_drift
+    with_spawn_swaps(screenshot: ["manifest has 2 rows that diverged", "", PASS.new(false)]) do
+      report = Acceptance.golden_screenshots(screenshots: true)
+
+      assert_equal "fail", report.state
+      assert_includes report.detail, "(amber)"
+      assert_includes report.detail, "diverged"
+    end
+  end
+
+  def test_the_screenshot_half_passes_when_every_recording_holds
+    with_spawn_swaps(screenshot: ["check: every recorded cell matches", "", PASS.new(true)]) do
+      report = Acceptance.golden_screenshots(screenshots: true)
+
+      assert_equal "pass", report.state
+    end
+  end
+
+  def test_the_screenshot_half_asks_before_spending_the_recapture
+    report = Acceptance.golden_screenshots(screenshots: false)
+
+    assert_equal "pending", report.state
+    assert_includes report.detail, "--screenshots"
+    assert_includes report.detail, "re-capture"
+  end
+
+  def test_a_tree_without_screenshot_manifests_is_pending_not_skipped
+    original = Acceptance.method(:golden_apps)
+    Acceptance.define_singleton_method(:golden_apps) { [] }
+    report = Acceptance.golden_screenshots(screenshots: true)
+    Acceptance.define_singleton_method(:golden_apps, original)
+
+    assert_equal "pending", report.state
+    assert_includes report.detail, "no manifest recorded yet"
+  end
+
+  def test_main_wires_the_screenshots_flag_through
+    original = Acceptance.method(:golden_screenshots)
+    seen = nil
+
+    with_spawn_swaps(tool: ["", "", PASS.new(true)], app: ["", "1 runs, 0 failures", PASS.new(true)], route: ["", "", PASS.new(true)]) do
+      # Both mains answer through the fake: the real half would spend a full
+      # Chrome re-capture of every recorded manifest inside a unit test.
+      [[ ["--screenshots"], true ], [[], false ]].each do |argv, want|
+        seen = nil
+        Acceptance.define_singleton_method(:golden_screenshots) do |**kw|
+          seen = kw.fetch(:screenshots)
+          Acceptance::Report.new("golden screenshots", "pass", "")
+        end
+        assert_equal 0, Acceptance.main(argv), "main runs green under argv #{argv.inspect}"
+        assert_equal want, seen, "main passes the --screenshots flag through as it was given"
+      end
+    end
+  ensure
+    Acceptance.define_singleton_method(:golden_screenshots, original)
   end
 
   # One real anchor: against this checkout every runnable instrument holds,

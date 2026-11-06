@@ -9,9 +9,9 @@
 # Root instruments (CLI contracts, Law proof fixtures) run against the tree;
 # so do the round-trip suites, one rails boot per app. Route contracts run
 # only against a booted base URL: without one they are named, never claimed.
-# Signed-in contracts carry no recorded half yet; they answer as what is left
-# to record, so the command's verdict is the whole truth of Phase 0 for the
-# target it was handed.
+# The golden screenshot half costs a full Chrome re-capture of every recorded
+# manifest, so --screenshots asks for it; unrecorded or unasked-for halves
+# answer as what is left to do, never a skip that reads as a pass.
 
 require "open3"
 
@@ -32,7 +32,8 @@ module Acceptance
     base = flags.call("--base-url")
     user = flags.call("--user")
 
-    reports = [root_contracts(root), round_trips(root), route_contracts(base), signed_contracts(base, user)]
+    reports = [root_contracts(root), round_trips(root), route_contracts(base), signed_contracts(base, user),
+               golden_screenshots(screenshots: argv.include?("--screenshots"))]
     reports.each do |report|
       puts format("%-24s %s", report.name, report.failed ? "fail: #{report.detail}" : report.state)
     end
@@ -124,6 +125,36 @@ module Acceptance
   end
 
   def signed_apps = recorded_apps(".signed.yml")
+
+  # The screenshot half re-captures every recorded manifest row against the
+  # booted app ports through Chrome, at a cost of tens of minutes for the
+  # whole corpus - so --screenshots asks for it explicitly. A manifest that
+  # no longer verifies fails with the instrument's own named diffs; pending
+  # is what an unrecorded or unasked-for half answers, never a pass.
+  def golden_screenshots(screenshots: false)
+    recorded = golden_apps
+    return Report.new("golden screenshots", "pending", "no manifest recorded yet (golden_screenshots.rb record APP)") if recorded.empty?
+
+    return Report.new("golden screenshots", "pending",
+                      "re-run with --screenshots to re-capture #{recorded.join(', ')}" \
+                      " (needs Chrome and the recorded app ports booted)") unless screenshots
+
+    detail = recorded.filter_map do |app|
+      out, err, status = spawn_screenshot("check", app)
+      "(#{app}) #{(out + err).lines.last(2).join.strip}" unless status.success?
+    end
+    Report.new("golden screenshots", detail.empty? ? "pass" : "fail", detail.join("\n"))
+  end
+
+  def spawn_screenshot(*args) = Open3.capture3(RbConfig.ruby, File.join(TOOLS, "rails", "golden_screenshots.rb"), *args)
+
+  # The recorded screenshot half, named from its own data dir.
+  def golden_apps
+    dir = File.join(ROOT, "MASTER", "checks", "data", "route_screenshots")
+    return [] unless Dir.exist?(dir)
+
+    Dir.children(dir).filter_map { |f| f[/\A(\w+)\.golden\.yml\z/, 1] }.sort
+  end
 end
 
 if $PROGRAM_NAME == __FILE__
