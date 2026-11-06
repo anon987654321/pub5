@@ -915,7 +915,6 @@ Not before the operator decides: which cities open, whether demo mode
 (clearly-badged fictive content) is wanted instead of a wipe, and the
 announcement noindex question. Those are product calls, not runbook steps.
 
-
 ## Source-level PF policy guard
 
 Run `ruby OPENBSD/checks/pf_policy_check.rb` for the tracked `OPENBSD/etc/pf.conf` policy invariants, and `ruby OPENBSD/test/test_pf_policy_check.rb` for positive and negative fixtures. The guard checks that a default-deny rule precedes pass rules, inbound passes are scoped to `$ext_if`, and the explicit SSH exception precedes the quick `<bruteforce>` block. It rejects pass rules without explicit `$ext_if` scope, including protocol-specific passes such as `pass inet proto tcp all`. The only unscoped exception is the current explicit ICMP type allowlist (`echoreq`, `unreach`, `timex`), whose scope is retained as a deliberate tracked-policy exception.

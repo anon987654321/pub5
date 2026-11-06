@@ -76,7 +76,6 @@ Applied migrations stay where they ran, and an engine owns its db/migrate only f
 shared models, authentication and design system live in the pub4-shared engine, and no vertical
 redefines them.
 
-
 ## Marketplace integration
 
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns

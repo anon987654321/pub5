@@ -71,7 +71,6 @@ class PortMutationsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, watch_port_path(@port)
   end
 
-
   test "legacy executable homepage values render as text rather than links" do
     @port.update_column(:homepage, "javascript:alert(1)")
 

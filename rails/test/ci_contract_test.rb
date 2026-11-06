@@ -118,7 +118,6 @@ class CiContractTest < Minitest::Test
     end
   end
 
-
   test "all Rails apps remain on the audited framework source" do
     ref = "c9e85dbe297e248dd2f217d04f84a94881ac046a"
 

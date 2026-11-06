@@ -241,7 +241,7 @@ var penner = (function () {
       var a = minMax(amplitude, 1, 10);
       var p = minMax(period, .1, 2);
       return function (t) {
-        return (t === 0 || t === 1) ? t : 
+        return (t === 0 || t === 1) ? t :
           -a * Math.pow(2, 10 * (t - 1)) * Math.sin((((t - 1) - (p / (Math.PI * 2) * Math.asin(1 / a))) * (Math.PI * 2)) / p);
       }
     }
@@ -257,9 +257,9 @@ var penner = (function () {
     var easeIn = functionEasings[name];
     eases['easeIn' + name] = easeIn;
     eases['easeOut' + name] = function (a, b) { return function (t) { return 1 - easeIn(a, b)(1 - t); }; };
-    eases['easeInOut' + name] = function (a, b) { return function (t) { return t < 0.5 ? easeIn(a, b)(t * 2) / 2 : 
+    eases['easeInOut' + name] = function (a, b) { return function (t) { return t < 0.5 ? easeIn(a, b)(t * 2) / 2 :
       1 - easeIn(a, b)(t * -2 + 2) / 2; }; };
-    eases['easeOutIn' + name] = function (a, b) { return function (t) { return t < 0.5 ? (1 - easeIn(a, b)(1 - t * 2)) / 2 : 
+    eases['easeOutIn' + name] = function (a, b) { return function (t) { return t < 0.5 ? (1 - easeIn(a, b)(1 - t * 2)) / 2 :
       (easeIn(a, b)(t * 2 - 1) + 1) / 2; }; };
   });
 
@@ -516,7 +516,7 @@ function getRectLength(el) {
 
 function getLineLength(el) {
   return getDistance(
-    {x: getAttribute(el, 'x1'), y: getAttribute(el, 'y1')}, 
+    {x: getAttribute(el, 'x1'), y: getAttribute(el, 'y1')},
     {x: getAttribute(el, 'x2'), y: getAttribute(el, 'y2')}
   );
 }
@@ -676,7 +676,6 @@ function normalizePropertyTweens(prop, tweenSettings) {
     return obj;
   }).map(function (k) { return mergeObjects(k, settings); });
 }
-
 
 function flattenKeyframes(keyframes) {
   var propertyNames = filterArray(flattenArray(keyframes.map(function (key) { return Object.keys(key); })), function (p) { return is.key(p); })
@@ -915,7 +914,6 @@ function isDocumentHidden() {
 
 function anime(params) {
   if ( params === void 0 ) params = {};
-
 
   var startTime = 0, lastTime = 0, now = 0;
   var children, childrenLength = 0;

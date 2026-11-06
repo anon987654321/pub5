@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
                               MIT License
-  Applies to: 
+  Applies to:
   - colorjs.io; Copyright (c) 2021 Lea Verou, Chris Lilley
   - core-js-pure; Copyright (c) 2014-2023 Denis Pushkarev
   - css-selector-parser; Copyright (c) 2013 Dulin Marat
@@ -38,10 +38,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-
 -----------------------------------------------------------------------------
                               ISC License
-  Applies to: 
+  Applies to:
   - d; Copyright (c) 2013-2019, Mariusz Nowak, @medikoo, medikoo.com
   - es5-ext; Copyright (c) 2011-2022, Mariusz Nowak, @medikoo, medikoo.com
   - es6-symbol; Copyright (c) 2013-2019, Mariusz Nowak, @medikoo, medikoo.com

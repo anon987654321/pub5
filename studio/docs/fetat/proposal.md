@@ -1,11 +1,11 @@
 # FETAT.md
 ## Consolidated FETAT / Familieetaten proposal, source history, evidence audit, and implementation blueprint
 
-**Status:** Working master document; not government policy, legal advice, or proof of individual allegations.  
-**Prepared:** 29 October 2026  
-**Canonical destination:** `anon987654321/pub4/STUDIO/docs/fetat/proposal.md`  
-**Project source:** https://fetat.no/  
-**Related source repository:** https://github.com/anon987654321/pub  
+**Status:** Working master document; not government policy, legal advice, or proof of individual allegations.
+**Prepared:** 29 October 2026
+**Canonical destination:** `anon987654321/pub4/STUDIO/docs/fetat/proposal.md`
+**Project source:** https://fetat.no/
+**Related source repository:** https://github.com/anon987654321/pub
 **Historical source period:** principally October 2024–January 2025.
 
 ## 0. Purpose and rules
@@ -101,7 +101,6 @@ For every material external factual, statistical or legal claim, maintain a veri
 A URL in the source register establishes a lead, not that the linked material was inspected or that it supports the surrounding sentence. Record “not checked” when the source has not been opened and the relevant passage confirmed. Preserve previous verification results when a source changes; append a new record rather than silently overwriting the old result. Treat identical files as one textual source unless independent provenance is established. Search results, summaries and AI-generated citations are discovery aids, not substitutes for the primary record.
 
 For this document, the checks recorded during the 29 October 2026 maintenance pass are limited to the official SSB statistics page and the current consolidated Barnevernsloven page, plus the separately published 2026 amendment law linked in Sections 11 and 19. This is not a full independent verification of every number, legal proposition, historical post or GitHub-history claim. Those remain open unless a claim-level record says otherwise.
-
 
 The website uses “FETAT,” “F-ETAT” and “FAMILIEETATEN.” This document preserves these source forms without inventing another acronym expansion. The connection between the project and the exact hostname fetat.no is directly evidenced by the live site itself. The broader GitHub proposal is related material but is narrower than the website’s full restructuring plan.
 
@@ -311,7 +310,6 @@ No agency or individual should have a financial incentive to remove a child, ret
 
 **Verification protocol:** For each number, record the official table identifier and title, indicator label, unit, population and age range, geography, reference period, annual-flow versus point-in-time basis, extraction date, footnotes, any denominator, and the arithmetic used. Retain the source's original value alongside any corrected or recalculated value; never silently replace a transcription. Where the historical FETAT post has not been reconciled to the official table, label the value “transcribed from FETAT; independent match pending.”
 
-
 ### 10.1 Concern reports
 
 FETAT's 11 October 2024 post lists:
@@ -371,7 +369,6 @@ The NOK 1.9 billion / NOK 8.41 billion budget comparison and the approximately 6
 ## 11. Current legal baseline
 
 **Legal verification rule:** A general statute link does not establish that a particular power, duty or procedure is current or applicable. Before treating a proposition as law, cite the exact section and paragraph in the consolidated text, check amendments and commencement provisions, and identify the date and circumstances to which the rule applies. Distinguish enacted law, provisions not yet commenced, bills/propositions, administrative guidance, case-law interpretation and this document's policy preferences. If the point is unresolved, mark it as an open legal question. A proposed new agency does not automatically acquire existing statutory powers or remove the jurisdiction of an existing body; those changes require explicit legal analysis and, where necessary, legislation.
-
 
 Norway's principal child-welfare statute is the Barnevernsloven, Act of 18 June 2021 No. 97, in force from 1 January 2023; it replaced the 1992 Act. Historical legal identifiers must not be reused as current law.
 
@@ -672,14 +669,11 @@ The historical proposal recommends collecting new records, seeking independent r
 - 2023 tribunal annual report supplied by FETAT: https://fetat.no/wp-content/uploads/2024/10/ArsrapportBVHN2023-Endelig.pdf
 - Helsetilsynet report on shortcomings in eight of nine inspected services: https://www.helsetilsynet.no/publikasjoner/tilsynsmeldingen/2022/svikt-i-8-av-9-barneverntjenester/
 
-
-
 ## 19. Latest official statistics: update the proposal beyond 2023
 
 **Primary-source spot-check recorded 29 October 2026:** The SSB “Barnevern” statistics page states that it was updated 3 June 2026 and displays the 2023–2025 totals shown below. The five displayed series and their 2023, 2024 and 2025 values were matched to that page during this pass. This verifies the displayed transcription against the page snapshot inspected, not the underlying data collection, every related figure elsewhere in this document, or any causal interpretation. The 334 figure is separately shown on the same page under table 3, “Undersøkingar avslutta etter konklusjon, alder og kjønn” (source table 10665), for 2023; it must not be described as the total number of all care orders without preserving that indicator's definition.
 
 The official consolidated statute page identifies Barnevernsloven as last amended by Act LOV-2025-12-22-115 effective 23 January 2026, and a separate amendment law dated 19 June 2026 (LOV-2026-06-19-35) states that its commencement is to be determined by the King. Therefore, do not assume every provision in the June 2026 amendment was in force on the retrieval date; check commencement orders and the applicable consolidated wording for each relevant provision.
-
 
 SSB's national child-welfare table was updated on 3 June 2026 and provides data through 2025:
 https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern
@@ -735,7 +729,6 @@ For each test fixture, retain the dataset/fixture version, test ID, expected res
 
 Add explicit fixtures for: duplicate records and near-duplicates; contradictory dates; missing pages and OCR corruption; unsupported factual assertions; a citation that exists but does not support the claim; invented or broken citations; translation errors; an allegation paired with contrary evidence; a record with no source locator; correction and version history; unauthorized access; unauthorized export; and accidental transmission to an unapproved model provider. Fail the release gate if a material unsupported claim is presented as established, material counterevidence is suppressed, unauthorized disclosure occurs, or source originals cannot be recovered. Passing these tests is evidence about system behaviour under tested conditions, not proof that a legal conclusion or case decision is correct.
 
-
 A prototype must pass these gates before use with real case material:
 
 1. **Source fidelity:** every material factual claim has a source locator or a visible “source not located” label; duplicate documents are not counted as independent corroboration.
@@ -758,14 +751,12 @@ The brief should distinguish a personal account, a documented fact, an allegatio
 - Renamed the proposed evidence-visualization system and its release-test sections from AI³ to MASTER to align with the current project name.
 - Preserved AI³ in historical source descriptions where it is the original name used by the source material.
 
-
 **1.0.1 — 29 October 2026 — evidence-hardening pass**
 - Added a claim-level verification-ledger schema and clarified that linked sources are not automatically verified evidence.
 - Added a statistical metadata protocol and retained a narrow SSB spot-check record for the current published totals.
 - Added exact-section, amendment and commencement checks for legal claims, including the June 2026 amendment law's commencement caveat.
 - Expanded AI³ release evidence requirements with expected/actual outcomes, failure conditions and adversarial fixtures.
 - Scope: targeted documentation edits to this file on GitHub main; no local MASTER /fix process was run, and no Ruby scanners, application tests, or real-case MASTER tests were executed. Historical FETAT claims, legal interpretations and the broader source-history inventory remain only partially verified.
-
 
 **1.0.0 — 29 October 2026**
 - Consolidated the public FETAT project and the narrower historical GitHub Barnevern drafts.

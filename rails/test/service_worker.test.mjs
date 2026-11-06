@@ -39,7 +39,6 @@ const opened = []
 const shown = []
 let preloadEnabled = false
 
-
 globalThis.__APP_NAME__ = "brgen"
 globalThis.self = globalThis
 self.__WB_MANIFEST = []
