@@ -89,6 +89,72 @@ module OpenBsdRender
     out.join("\n") << "\n"
   end
 
+  # rc.d: one script per app, moved row for row into the registry (comments
+  # included - each app's incident prose lives in its own script).
+  def rc_script(name)
+    rc_scripts.fetch(name)["rows"].map { |row| row["line"] }.join("\n") << "\n"
+  end
+
+  def rc_scripts = registry["rc"]["scripts"]
+
+  def rc = rc_scripts.keys.sort.to_h { |name| [name, rc_script(name)] }
+
+  # The app-name tokens the skeleton gate substitutes, so per-app facts may
+  # not hide a copy from being recognised as one.
+  APP_TOKENS = /amber|brgen|bsdports|mrdamascy/i
+  PORT_TOKEN = /\b\d{5}\b/
+
+  # The tokenized code rows of one script: the shape's shared skeleton. Only
+  # daemon_flags is per-app (each app's export list is a decision), so the
+  # rest cannot drift apart in many silently different copies.
+  def skeleton(rows)
+    rows.select { |row| row["kind"] == "code" }
+        .map { |row| row["line"].gsub(APP_TOKENS, "APP").gsub(PORT_TOKEN, "PORT") }
+        .reject { |line| line.start_with?("daemon_flags=") }
+  end
+
+  # rc.d gates, same shape as consistency(): the caller passes the registry
+  # and the serving view, and gets back named diffs - nothing skips.
+  def rc_consistency(scripts, apps)
+    diffs = []
+
+    # Serving facts are web-app gates: the jobs, master and irc scripts bind
+    # no port and serve no app of their own.
+    scripts.each do |name, script|
+      next unless %w[falcon puma].include?(script["shape"])
+
+      diffs.concat(rc_facts(name, script, apps))
+    end
+    scripts.keys.group_by { |name| scripts[name]["shape"] }.each_value do |names|
+      names.sort.each_cons(2) do |a, b|
+        next if skeleton(scripts[a]["rows"]) == skeleton(scripts[b]["rows"])
+
+        diffs << "rc: #{a} and #{b} are both #{scripts[a]["shape"]} but their code skeletons diverge"
+      end
+    end
+    diffs
+  end
+
+  # Serving facts of one script, checked against the app registry.
+  def rc_facts(name, script, apps)
+    diffs = []
+    app = apps[name]
+    port_row = script["rows"].find { |r| r["line"] =~ /\APORT=(\d+)\z/ }
+
+    diffs << "rc: #{name} serves no registered app" unless app
+    diffs << "rc: #{name} carries no PORT line" unless port_row
+    return diffs if app.nil? || port_row.nil?
+
+    port = Regexp.last_match(1).to_i
+    unless app["port"] == port
+      diffs << "rc: #{name} PORT=#{port} disagrees with the registry port #{app["port"]}"
+    end
+    diffs << "rc: #{name} does not run as its own user" unless script["rows"].find { |r| r["line"] =~ /\Adaemon_user="#{name}"\z/ }
+    diffs << "rc: #{name} does not exec from /home/#{name}/app" unless script["rows"].find { |r| r["line"] == "APP_DIR=/home/#{name}/app" }
+    diffs << "rc: #{name} does not source /etc/#{name}.env" unless script["rows"].any? { |r| r["line"].include?("/etc/#{name}.env") }
+    diffs
+  end
+
   # The gate: the registry must generate the proven bytes, and the two
   # registries must agree. Nothing here skips: a missing host match, a port
   # disagreement, or a byte difference is a named diff.
@@ -104,8 +170,17 @@ module OpenBsdRender
         diffs << "#{name}: no proven fixture at #{path}"
       end
     end
+    rc.each do |name, text|
+      path = File.join(dir, "rc.d", name)
+      if File.file?(path)
+        diffs << "rc.d/#{name}: differs from proven" unless File.read(path) == text
+      else
+        diffs << "rc.d/#{name}: no proven fixture at #{path}"
+      end
+    end
 
     diffs.concat(consistency(configured_apps, rendered["relayd.conf"]))
+    diffs.concat(rc_consistency(rc_scripts, configured_apps))
     diffs
   end
 

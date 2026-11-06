@@ -170,5 +170,53 @@ abort "bootstrap: stray pf comments" unless pf_notes.empty?
 
 openbsd_registry["pf"] = { "vars" => pf_vars, "rules" => pf_rules }
 
+# --- rc.d -> registry structure ---------------------------------------------
+#
+# Every script moves row for row (comments included - they carry the proven
+# incident prose). The per-script code skeletons are not compared here: the
+# renderer's check() enforces that all falcon scripts (and all jobs scripts)
+# share one tokenized skeleton, which is the template guarantee.
+
+SRC = Dir.children(File.join(PROVEN, "rc.d")).sort
+rc_scripts = SRC.to_h do |name|
+  rows = File.readlines(File.join(PROVEN, "rc.d", name), chomp: true).map do |line|
+    kind = if line.empty? then "blank"
+           elsif line.start_with?("#") then "comment"
+           else "code"
+           end
+    { "kind" => kind, "line" => line }
+  end
+  shape = if name.end_with?("_jobs") then "jobs"
+          elsif name == "master" then "master"
+          elsif name == "irc_gateway" then "irc"
+          elsif rows.any? { |r| r["line"].include?("falcon serve") } then "falcon"
+          elsif rows.any? { |r| r["line"].include?("puma") } then "puma"
+          else
+            abort "bootstrap: #{name} does not read as falcon or puma"
+          end
+  [name, { "shape" => shape, "rows" => rows }]
+end
+
+# Web scripts must agree with the ported app registry on the serving port.
+rc_scripts.each do |name, script|
+  next unless %w[falcon puma].include?(script["shape"])
+  app = name
+  row = script["rows"].find { |r| r["line"] =~ /\APORT=(\d+)\z/ }
+  abort "bootstrap: #{name} carries no PORT line" unless row
+  port = Regexp.last_match(1).to_i
+  unless port == ports[app]
+    abort "bootstrap: #{name} PORT=#{port} disagrees with the registry port #{ports[app]}"
+  end
+end
+
+openbsd_registry["rc"] = {
+  "note" => "rc.d scripts moved row for row (comments included). The" \
+            " renderer checks: bytes against proven, serving facts against" \
+            " the app registry ports, and one shared tokenized code skeleton" \
+            " per shape - the scripts are generated, not maintained, in four" \
+            " copies.",
+  "scripts" => rc_scripts,
+}
+
 Core::Atomic.write(File.join(ROOT, "registry", "openbsd.yml"), YAML.dump(openbsd_registry))
-puts "registry/openbsd.yml: #{entries.size} relayd protocol entries, #{relay_notes.size} relay notes, #{pf_rules.size} pf rules, #{pf_vars.size} vars"
+puts "registry/openbsd.yml: #{entries.size} relayd protocol entries, #{relay_notes.size} relay notes, #{pf_rules.size} pf rules, #{pf_vars.size} vars, #{rc_scripts.size} rc.d scripts"
