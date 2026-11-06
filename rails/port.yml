@@ -11,8 +11,17 @@ status: INCOMPLETE
 shared_engine:
   gem: pub5-shared
   path: rails/shared
-  source_files_in_pub4: 612
-  source_import_from_pub4: NOT_RUN
+  source_files_in_pub4: 613
+  source_files_imported: 602
+  source_files_adapted: 2
+  source_files_deferred: 9
+  source_import_from_pub4: PARTIAL
+  source_import_notes:
+    - README.md retained in pub5 form with migration status.
+    - pub4-shared.gemspec adapted as pub5-shared.gemspec for Rails 8.1.4.1.
+    - Three db/migrate files remain protected and require operator-owned import.
+    - Four Tiptap builder inputs deferred; the source build script is shell, while pub5 requires Ruby scripts.
+    - Two non-contract Markdown documents omitted; font license text retained.
   app_wiring: NOT_RUN
   post_contract:
     partial: rails/shared/app/views/shared/_post_card.html.erb
