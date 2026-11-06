@@ -38,10 +38,11 @@ module Deploy
     # brgen/app/views scan never saw the 71 vertical pages — the blind spot that
     # let the sub-apps drift. Read off disk rather than listed, because a list is
     # only correct until the next engine, and the last one cost 71 pages of
-    # coverage before anybody noticed. Some engines nest inside another
-    # (brgen/engines/radio/tv, brgen/engines/marketplace/engines/takeaway), hence the **.
+    # coverage before anybody noticed. The engine layout comes from EngineRoots,
+    # which enumerates the nested engines too (radio holds tv and playlist;
+    # marketplace holds takeaway).
     VIEW_PATHS = (%w[brgen/app/views amber/app/views bsdports/app/views] +
-                  Dir.glob(File.join(RAILS_ROOT, "brgen_*/**/app/views"))
+                  EngineRoots.glob(RAILS_ROOT, "brgen", "app/views")
                      .map { |path| path.sub("#{RAILS_ROOT}/", "") }.uniq.sort).freeze
 
     def self.run
@@ -104,7 +105,7 @@ module Deploy
     # Marketplace controllers/views live in the brgen/engines/marketplace engine;
     # only the payment services stayed in the host app. These are
     # relative to RAILS/<app>, so the engine prefix rides along here.
-    MP = "RAILS/brgen/engines/marketplace/app"
+    MP = "../#{EngineRoots::PATHS.fetch("marketplace")}/app"
 
     SOURCE_FLOW_MARKERS = {
       "brgen" => {

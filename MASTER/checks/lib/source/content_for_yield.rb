@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "../../support/brgen_vertical_surfaces"
 require_relative "../../support/check_result"
 
 module Deploy
@@ -61,7 +62,7 @@ module Deploy
     def view_files(app)
       roots = [ File.join(@rails, app, "app", "views") ]
       if app == "brgen"
-        roots.concat(Dir.glob(File.join(@rails, "brgen_*/{,*/}app/views")))
+        roots.concat(EngineRoots.glob(@rails, "brgen", "app/views"))
       end
 
       roots.flat_map do |root|
@@ -74,7 +75,7 @@ module Deploy
     def layout_files(app)
       roots = [ File.join(@rails, app, "app", "views", "layouts") ]
       if app == "brgen"
-        roots.concat(Dir.glob(File.join(@rails, "brgen_*/{,*/}app/views/layouts")))
+        roots.concat(EngineRoots.glob(@rails, "brgen", "app/views/layouts"))
       end
 
       roots.flat_map { |root| Dir.glob(File.join(root, "**", "*.{erb,html}")) }

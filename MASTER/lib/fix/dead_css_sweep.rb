@@ -4,6 +4,7 @@ require "fileutils"
 require "json"
 require "set"
 require "yaml"
+require_relative "../../checks/support/brgen_vertical_surfaces"
 require_relative "scss_parser"
 require_relative "dead_css_static"
 require_relative "dead_css_coverage"
@@ -130,8 +131,9 @@ module Master
       end
 
       def engine_roots
-        # radio holds two engines one level down (playlist, tv).
-        dirs = Dir.glob(File.join(rails, "brgen", "engines", "*")) + Dir.glob(File.join(rails, "brgen", "engines", "*", "*"))
+        # The nested engines too: radio holds playlist and tv one level down,
+        # marketplace holds takeaway, and EngineRoots spells the whole shape.
+        dirs = Dir.glob(File.join(rails, EngineRoots::GLOB))
         dirs.select { |d| File.directory?(File.join(d, "app")) }.to_h { |d| [d.delete_prefix(rails + "/"), d] }
       end
 

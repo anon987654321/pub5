@@ -53,7 +53,8 @@ module Operator
     # FACE_POINT_IS_ONE_PIXEL and NO_JQUERY all have their subject there and
     # nowhere else, so five laws written for the face were enforced against no
     # file at all.
-    # The host and all five brgen_* verticals are separate source roots. The
+    # The host and its vertical engines under RAILS/brgen/engines/ are separate
+    # source roots. The
     # RAILS README explicitly forbids measuring brgen without them: doing so
     # silently drops the vertical code from this census.
     TREES = %w[

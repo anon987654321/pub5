@@ -55,7 +55,7 @@ module Master
 
         def apps(plan)
           registered = RailsApp.named_apps(repo_root: @repo_root)
-          # A brgen vertical is an engine at RAILS/brgen_<name>, proved through brgen.
+          # A brgen vertical is an engine under RAILS/brgen/engines/<name>, proved through brgen.
           named = plan.paths.flat_map do |path|
             app = path.split("/")[1].to_s.sub(/\Abrgen_\w+\z/, "brgen")
             app == "__shared" ? registered : [app]
@@ -69,8 +69,7 @@ module Master
           apps(plan).flat_map do |app|
             root = File.join(@tree_root, app)
             [
-              *Dir.glob(File.join(root, "test", "**", "*_test.rb")),
-              *Dir.glob(File.join(root, "..", "brgen_*", "test", "**", "*_test.rb")),
+              *Dir.glob(File.join(root, "{test,engines/*/test,engines/*/*/test,engines/*/engines/*/test}", "**", "*_test.rb")),
             ]
           end
         end

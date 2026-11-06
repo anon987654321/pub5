@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../../checks/support/brgen_vertical_surfaces"
+
 module Master
   module Review
     class BaymardLaw
@@ -28,7 +30,7 @@ module Master
           end
 
           unless @requested_apps
-            paths.concat(Dir.glob(File.join(@rails_root, "brgen_*")).select { |path| valid_app_root?(path) })
+            paths.concat(Dir.glob(File.join(@rails_root, EngineRoots::GLOB)).select { |path| valid_app_root?(path) })
             shared = File.join(@rails_root, "__shared")
             paths << shared if valid_app_root?(shared)
           end

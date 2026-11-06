@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../../../tools/master_design"
+require_relative "../../support/brgen_vertical_surfaces"
 require_relative "../../support/check_result"
 require_relative "../../../tools/scss"
 
@@ -104,7 +105,7 @@ module Deploy
 
     def brgen_stylesheets
       Dir.glob(File.join(@rails, "brgen/app/assets/stylesheets/**/*.scss")) +
-        Dir.glob(File.join(@rails, "brgen_*/{,*/,engines/*/}app/assets/stylesheets/**/*.scss"))
+        EngineRoots.glob(@rails, "brgen", "app/assets/stylesheets/**/*.scss")
     end
 
     # The dialect must not paint twitter blue. The one exemption is the token
@@ -114,7 +115,7 @@ module Deploy
     # use-site carrying the literal still fails.
     def check_no_twitter_blue
       sheets = Dir.glob(File.join(@rails, "{brgen,amber,bsdports,__shared}/app/assets/stylesheets/**/*.{scss,css}")) +
-               Dir.glob(File.join(@rails, "brgen_*/{,*/,engines/*/}app/assets/stylesheets/**/*.{scss,css}"))
+               EngineRoots.glob(@rails, "brgen", "app/assets/stylesheets/**/*.{scss,css}")
       sheets.each do |path|
         next if path.include?("/builds/")
 

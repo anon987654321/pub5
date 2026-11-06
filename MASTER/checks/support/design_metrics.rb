@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "set"
+require_relative "brgen_vertical_surfaces"
 require_relative "design_metrics/contrast"
 
 module Deploy
@@ -62,9 +63,9 @@ module Deploy
     # Raising the ceiling to absorb those would have been worse than the finding:
     # contrast_below_aa is 0 precisely so a real one is visible the day it lands.
     def light_only_vertical_keys(rails_root)
-      globs = %w[
-        {__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss
-        {brgen_*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}/app/assets/stylesheets/*.scss
+      globs = [
+        "{__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss",
+        "#{EngineRoots::GLOB}/app/assets/stylesheets/*.scss",
       ]
 
       light_only = {}
@@ -297,13 +298,13 @@ decls.compact.each { |_, v, _| values << v }
       @read_custom_properties ||= {}
 
       @read_custom_properties[rails_root] ||= begin
-        globs = %w[
-          {__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss
-          {brgen_*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}/app/assets/stylesheets/*.scss
-          {__shared,brgen,amber,bsdports}/app/**/*.erb
-          {brgen_*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}/app/**/*.erb
-          __shared/frontend/**/*.js
-          {__shared,brgen,amber,bsdports}/app/javascript/**/*.js
+        globs = [
+          "{__shared,brgen,amber,bsdports}/app/assets/stylesheets/**/*.scss",
+          "#{EngineRoots::GLOB}/app/assets/stylesheets/*.scss",
+          "{__shared,brgen,amber,bsdports}/app/**/*.erb",
+          "#{EngineRoots::GLOB}/app/**/*.erb",
+          "__shared/frontend/**/*.js",
+          "{__shared,brgen,amber,bsdports}/app/javascript/**/*.js",
         ]
 
         names = Set.new

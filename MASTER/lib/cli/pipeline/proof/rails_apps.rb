@@ -159,12 +159,14 @@ module Master
           def constant(path) = File.basename(path, ".rb").split("_").map(&:capitalize).join
 
           # brgen's suite reaches its verticals and the shared engine (__shared/config/test_scope.rb).
+          # The verticals are the engines inside brgen's tree (engines/*/test, radio's
+          # tv and playlist one level down, marketplace's takeaway under engines/).
           def test_roots(app, repo_root:)
             rails = File.join(repo_root, "RAILS")
             own = [File.join(Master::Fix::RailsApp.app_dir(app, repo_root:), "test")]
             return own unless app == "brgen"
 
-            own + Dir.glob(File.join(rails, "brgen_*", "**", "test")) + [File.join(rails, "__shared", "test")]
+            own + Dir.glob(File.join(rails, "brgen", "engines", "**", "test")) + [File.join(rails, "__shared", "test")]
           end
         end
       end
