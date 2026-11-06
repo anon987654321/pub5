@@ -1,7 +1,7 @@
 # pub5 — remaining work
 
-Port record: `MIGRATION.md`. Source: pub4@`7caa03d` (the port cut at
-`3e70be37c8`, then caught up the six commits pub4 landed later the same
+Port record: `MIGRATION.md`. Source: pub4@`2c12470` (the port cut at
+`3e70be37c8`, then caught up the nine commits pub4 landed later the same
 day; see "Catch-up port" in `MIGRATION.md`).
 Rule for the whole port: same behaviour, less code; new features wait.
 A source change, authored test, passing test, full suite, rendered product and

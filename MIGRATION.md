@@ -23,8 +23,11 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
   2026-11-06). They are ported as the catch-up below, so the port's source
   of truth moved to `d6fa34d7580214b80b588a08880d0f4439b37f41` at first;
   pub4 then landed `7caa03d` ("Let the marketplace hero lead with its copy
-  when it has no photo"), ported the same way. The port's source of truth
-  is now `7caa03d`, and a fresh fetch of pub4 found nothing further.
+  when it has no photo") and, after that, `fdfe31d`, `2e47738` and
+  `2c12470` (the consent-banner geometry, the messenger-rail guard and the
+  shared chat label) — all ported the same way, each file byte-identical
+  to its upstream state. The port's source of truth is now `2c12470`, and
+  a fresh fetch of pub4 found nothing further.
 
 ## Structure of the port
 
@@ -136,11 +139,25 @@ paths carry over unchanged):
   (`order: 0; min-height: 0`), so a promoted listing without a photo no
   longer leads a phone with a 300px empty well; the new
   MarketplaceCheckoutTest case measures it at 390.
+- pub4 `fdfe31d` → "Rails: keep the consent choices equal and above the
+  floating chat pill" — `_cookie_banner.scss` gets equal auto-fit grid
+  columns for the three choices on a phone (flex-end row from 768px) and
+  sits one z-step above `--z-toast`, which the nearby-chat pill shares;
+  the SharedChromeBehaviourTest case measures widths and reachability
+  through real CDP device metrics at 390x844.
+- pub4 `2e47738` → "Rails: hold the messenger rail to one letter per room
+  with its full name" — a ChannelsControllerTest case holds every rail
+  chip to a single capital with the full "#name" as its accessible name.
+- pub4 `2c12470` → "Rails: give the shared chat widget's pairing label to
+  every app" — `chat.random` moves from brgen's locales (where amber
+  raised "Translation missing" on every page once it offered pairing) to
+  the widget's own shared `social.{nb,en}.yml`, one owner, values
+  unchanged.
 
-The upstream `TODO.md` deletions in `af6ae3d` and `7caa03d` (the "Nav
-nytt! badge clearance" and "Marketplace no-photo state verification"
-rows) have no counterpart here: pub5's TODO.md is the port backlog,
-which never carried those rows.
+The upstream `TODO.md` deletions in `af6ae3d`, `7caa03d`, `fdfe31d` and
+`2e47738` (the nav-badge, marketplace no-photo, consent-banner and
+messenger-rail backlog rows) have no counterpart here: pub5's TODO.md is
+the port backlog, which never carried those rows.
 
 Same evidence limits as the main port: no Ruby toolchain, so the new
 tests are NOT_RUN here; they are carried as written upstream, where they
