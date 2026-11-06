@@ -1,9 +1,9 @@
 # Ported from pub4 94cc874ad6 (RAILS/apps.yml) by tools/port_pub4_registries.rb.
 # Edit here from now on; pub4's comments explaining each value live at that commit.
 rails_stack:
-  rails: 8.2.0.alpha
-  rails_source: rails/rails
-  rails_ref: c9e85dbe297e248dd2f217d04f84a94881ac046a
+  rails: "8.1.4.1"
+  rails_source: rubygems
+  rails_ref: "8.1.4.1"
 owned_domain_facts:
   amberapp.art:
     expires: '2027-09-25'
@@ -132,11 +132,11 @@ apps:
       vertical_architecture: Verticals inherit Brgen identity and gain a surface dialect;
         they become standalone brands only when they have a distinct market and promise.
     port: 38182
-    stack_now: SQLite3, Rails 8.2.0.alpha, Hotwire, Falcon, Active Storage, Solid
+    stack_now: SQLite3, Rails 8.1.4.1, Hotwire, Falcon, Active Storage, Solid
       Queue, Solid Cache, OpenBSD, relayd
     stack_later: PostgreSQL where needed, city graph scaling, richer SNI/domain routing
-    deploy_script: RAILS/brgen/brgen.sh
-    deploy_root: RAILS/brgen
+    deploy_script: rails/apps/brgen/brgen.sh
+    deploy_root: rails/apps/brgen
     public: true
     mobile:
       brgen:
@@ -718,9 +718,9 @@ apps:
       - voice_first
       - useful_over_noisy
     port: 53187
-    stack_now: SQLite3, Rails 8.2.0.alpha, Falcon, MASTER runtime, OpenBSD, relayd
-    deploy_script: OPENBSD/bin/vps_deploy_master.sh
-    deploy_root: MASTER/web
+    stack_now: Roda + Sequel, Falcon, MASTER runtime, OpenBSD, relayd
+    deploy_script: openbsd/bin/vps_deploy_master.sh
+    deploy_root: master/web
     public: true
     features:
       core:
@@ -766,11 +766,11 @@ apps:
       - intelligence_with_honest_boundaries
     domain: amberapp.art
     port: 61352
-    stack_now: SQLite3, Rails 8.2.0.alpha, Hotwire, Falcon, Active Storage, OpenBSD,
+    stack_now: SQLite3, Rails 8.1.4.1, Hotwire, Falcon, Active Storage, OpenBSD,
       relayd
     stack_later: PostgreSQL, pgvector, multimodal retrieval, richer PWA/offline features
-    deploy_script: RAILS/amber/amber.sh
-    deploy_root: RAILS/amber
+    deploy_script: rails/apps/amber/amber.sh
+    deploy_root: rails/apps/amber
     public: true
     mobile:
       amber:
@@ -976,12 +976,12 @@ apps:
       - security_first
       - no_friction
     port: 47312
-    stack_now: SQLite3, Rails 8.2.0.alpha, Hotwire, Falcon, Active Storage, OpenBSD,
+    stack_now: SQLite3, Rails 8.1.4.1, Hotwire, Falcon, Active Storage, OpenBSD,
       relayd
     stack_later: PostgreSQL, pgvector, infrastructure knowledge graph, OpenBSD package
       intelligence
-    deploy_script: RAILS/bsdports/bsdports.sh
-    deploy_root: RAILS/bsdports
+    deploy_script: rails/apps/bsdports/bsdports.sh
+    deploy_root: rails/apps/bsdports
     public: true
     features:
       core:
@@ -1067,11 +1067,11 @@ apps:
       - tip_goes_to_the_courier
       - kvartover_honest_portions
     port: 47314
-    stack_now: SQLite3, Rails 8.2.0.alpha, Hotwire, PWA (manifest + service worker
+    stack_now: SQLite3, Rails 8.1.4.1, Hotwire, PWA (manifest + service worker
       + offline), Vipps Express mock + Stripe Checkout
     stack_later: production Vipps + Stripe live keys and the restaurant's own domain
-    deploy_script: RAILS/mrdamascy/mrdamascy.sh
-    deploy_root: RAILS/mrdamascy
+    deploy_script: rails/apps/mrdamascy/mrdamascy.sh
+    deploy_root: rails/apps/mrdamascy
     public: true
     promoted: 2026-11-02 — moved out of the retired RAILS/__other/ junk drawer to
       a first-class app path (migration retained in Git history)
@@ -1103,13 +1103,13 @@ apps:
         notes: needs a zone, an acme-client block, a keypair
 archived_subsystems:
   baibl:
-    recovery_source: MASTER/data/recovery/legacy_manifest.yml
-    notes: Retired from active stack; the former OPENBSD/archive/recovery/manifest.json
+    recovery_source: master/data/recovery/legacy_manifest.yml
+    notes: Retired from active stack; the former openbsd/archive/recovery/manifest.json
       path is absent from pub4. The manifest records provenance, not restored app
       code.
   blognet:
-    recovery_source: MASTER/data/recovery/legacy_manifest.yml
-    notes: Retired from active stack; the former OPENBSD/archive/recovery/references/build_blognet.rb
+    recovery_source: master/data/recovery/legacy_manifest.yml
+    notes: Retired from active stack; the former openbsd/archive/recovery/references/build_blognet.rb
       path is absent from pub4. The manifest records provenance, not restored app
       code.
   hjerterom:
@@ -1121,12 +1121,12 @@ archived_subsystems:
       and DNS zones were all still there on 2026-08-12. port_inventory now scans the
       config files where that residue lives.'
   aight_production_ai:
-    recovery_source: MASTER/lib/io/
+    recovery_source: master/lib/io/
     notes: Absorbed — semantic cache + scrape in MASTER io; shared Scrape service
       in pub4-shared.
   ai3_assistants:
-    recovery_source: MASTER/
+    recovery_source: master/
     notes: Absorbed — constitutional pipeline replaces pub ai3 orchestration.
   multimedia_tts:
-    recovery_source: MASTER/lib/voice/
+    recovery_source: master/lib/voice/
     notes: Absorbed — MASTER voice/TTS is canonical; legacy operator scripts retired.

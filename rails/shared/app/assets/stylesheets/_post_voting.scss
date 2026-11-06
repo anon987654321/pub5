@@ -1,0 +1,218 @@
+// Shared post voting and reading geometry. Dialects own colour; this file owns structure.
+// Feed post cards use one measured rhythm in Brgen and Amber. The surrounding
+// page and palette stay dialect-owned; the shared post itself does not drift.
+.feed-card.post-reading-card {
+  margin: 0;
+  padding: var(--space-4) var(--space-3);
+}
+@media (min-width: 480px) {
+  .feed-card.post-reading-card {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
+/* Post-card actions are one family across Brgen and Amber. The controls
+   distribute evenly on phones and return to a compact left-aligned row on
+   wider screens; each app keeps its own accent and action set. */
+.feed-card.post-reading-card .feed-card-actions {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin-block-start: var(--space-3);
+  padding-inline: var(--space-1);
+}
+.feed-card.post-reading-card .feed-card-actions > :is(
+  .feed-action, .feed-action-form, .feed-action-menu, span
+) {
+  flex: 1 1 0;
+  display: inline-flex;
+  justify-content: center;
+  min-inline-size: 0;
+}
+.feed-card.post-reading-card .feed-card-actions .feed-action {
+  justify-content: center;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+}
+.feed-card.post-reading-card .feed-action-form .feed-action {
+  inline-size: 100%;
+}
+.feed-card.post-reading-card .feed-card-name a,
+.feed-card.post-reading-card .feed-card-text a {
+  display: inline-block;
+  min-inline-size: var(--tap-min);
+  padding-block: max(0px, (var(--tap-min) - 1lh) / 2);
+  margin-block: min(0px, (1lh - var(--tap-min)) / 2);
+}
+.feed-card.post-reading-card .feed-card-time {
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+  .feed-card.post-reading-card .feed-card-actions {
+    width: auto;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-block-start: var(--space-2);
+    padding-inline: 0;
+  }
+  .feed-card.post-reading-card .feed-card-actions > :is(
+    .feed-action, .feed-action-form, .feed-action-menu, span
+  ) {
+    flex: 0 1 auto;
+    min-inline-size: auto;
+  }
+  .feed-card.post-reading-card .feed-card-actions > .feed-action {
+    min-inline-size: var(--tap-min);
+  }
+  .feed-card.post-reading-card .feed-card-actions .feed-action {
+    justify-content: flex-start;
+    padding-block: 8px;
+    padding-inline: 12px;
+  }
+}
+.post-reading-layout {
+  display: grid;
+  grid-template-columns: var(--vote-target) minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+.post-reading-main { min-width: 0; }
+.post-vote-rail {
+  position: sticky;
+  top: calc(var(--top-band-block, 0px) + var(--space-3));
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  inline-size: var(--vote-target);
+}
+.post-vote-form { margin: 0; }
+.post-vote-button {
+  display: grid;
+  place-items: center;
+  inline-size: var(--vote-target);
+  min-inline-size: var(--vote-target);
+  block-size: var(--vote-target);
+  min-block-size: var(--vote-target);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+/* The arrow fills most of its target. Drawn by the icon set at 18px; sized here
+   so a retune is the token's, and the SVG attribute loses to this rule. */
+.post-vote-button svg {
+  inline-size: var(--vote-icon);
+  block-size: var(--vote-icon);
+}
+/* Colour answers a hover; a filled disc behind an arrow this large is chrome.
+   Keyboard focus keeps the shared focus ring (_focus_ring.scss). */
+.post-vote-button:hover,
+.post-vote-button:focus-visible {
+  background: transparent;
+  color: var(--text);
+}
+.post-vote-button.is-active {
+  background: transparent;
+  color: var(--accent);
+}
+.post-vote-score {
+  display: grid;
+  place-items: center;
+  min-inline-size: var(--vote-target);
+  min-block-size: var(--vote-target);
+  font-size: var(--vote-score-size);
+  font-weight: var(--weight-heavy);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: var(--leading-none);
+  color: var(--text);
+}
+@media (min-width: 480px) {
+  .post-reading-layout {
+    gap: var(--space-3);
+  }
+}
+
+.post-vote-frame { display: block; inline-size: var(--vote-target); }
+
+
+/* Shared post-card presentation.
+   Brgen and Amber use the same card geometry and action treatment; their
+   surrounding site chrome and palette tokens remain app-owned. */
+.post-reading-card.feed-card {
+  display: block;
+  margin: 0;
+  padding: var(--space-4) var(--space-3);
+  transition: background var(--transition-fast) var(--ease-out);
+}
+.post-reading-card.feed-card:hover {
+  background: var(--hover-subtle);
+}
+.post-reading-card.feed-card .feed-card-byline {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-normal);
+}
+.post-reading-card.feed-card .feed-card-byline .feed-card-name {
+  color: var(--text);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+}
+.post-reading-card.feed-card .feed-card-byline :is(.feed-card-handle, .feed-card-time) {
+  color: var(--text-secondary);
+  font-size: var(--text-extra-small);
+}
+.post-reading-card.feed-card .post-reading-preview {
+  position: relative;
+  max-inline-size: 66ch;
+}
+.post-reading-card.feed-card .post-reading-body-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  max-inline-size: 66ch;
+  line-height: var(--leading-normal);
+}
+.post-reading-card.feed-card .post-reading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-block-start: var(--space-2);
+}
+.post-reading-card.feed-card .post-reading-actions .feed-action {
+  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.post-reading-card.feed-card .post-reading-actions .feed-action:hover {
+  background: var(--hover);
+}
+.post-reading-card.feed-card .post-reading-actions .feed-action-form {
+  margin: 0;
+}
+@media (min-width: 480px) {
+  .post-reading-card.feed-card {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+.post-feed .post-reading-card.feed-card {
+  margin: 0;
+  padding: var(--space-4) var(--space-3);
+}
+@media (min-width: 480px) {
+  .post-feed .post-reading-card.feed-card {
+    padding: var(--space-5) var(--space-4);
+  }
+}
