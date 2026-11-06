@@ -59,7 +59,7 @@ Measured against pub4 `origin/main` at `bcc6e038da` (27,356 commits). Nothing wa
 
 **Non-goals.**
 - Matching every pub4 feature on day one.
-- Porting the 520 Laws one for one.
+- Rewriting pub4's Laws by hand: they are imported mechanically (section 5).
 - Keeping pub4's internal APIs.
 - New product features during the migration.
 - Python in the spine.
@@ -81,7 +81,7 @@ Measured against pub4 `origin/main` at `bcc6e038da` (27,356 commits). Nothing wa
 - BPLANS content.
 - pf, relayd and rc.d configurations that are proven in production.
 - Litestream and restore scripts.
-- The 15 trusted Laws and the 50 Laws with `proved_by`, as candidates that must re-qualify under §5.
+- Every pub4 Law: its laws.yml statement and catalogue entry and its Ruby (`Law.define`, detectors, fixtures), imported as advisory and re-qualified under §5.
 
 **Redesign:**
 - MASTER/lib, taking fix, review, cli and io from about 92,000 lines to a core plus plugins.
@@ -107,14 +107,17 @@ pub5/
              manifest checker, registry loader with schemas, atomic write, ledger
              (append-only JSONL), one HTTP/LLM client, config (knobs.yml), parse gate
   master/    agent runtime as plugins: cli, fix, review, voice, face, cognition, each with manifest.yml
-  laws/      one file per Law: detector, fixtures/{bad,good}, proof test
+  laws/      the Law engine, then one file per Law: detector, bad/good fixtures, proof test
   rails/     shared engine + brgen (dating, maps, marketplace, messenger, radio, tv as engines),
              amber, bsdports, mrdamascy
   openbsd/   rc.d, relayd, pf, deploy, rehearse; all generated from registry/apps.yml
   studio/    dilla, postpro, replicate
   bplans/
   registry/  apps, laws, models, knobs, tokens, commands, paths, writers, backlog (one each)
+  bin/       master (the one entrypoint); check and setup are thin calls into it
 ```
+
+**One entrypoint.** `bin/master` serves every surface: the terminal REPL, one-shot commands, /fix, the web face server, mobile and remote use, and scripts. pub4's separate binaries (bin/master, bin/operator, bin/fix-here, bin/spark, bin/check, bin/test, tts-worker and more) become commands. `bin/master` dispatches from `registry/commands.yml`, where each command names its plugin, the contexts it runs in and its capability manifest. It detects the context (tty, pipe, remote over ssh, web) instead of needing a binary per place, and boots only core plus the one plugin the command needs; `bin/master --boot <command>` prints the boot time.
 
 **Capability boundaries.** Each plugin's manifest declares which World verbs it may use and which paths it may touch. Core refuses anything undeclared. Laws forbid `Net::HTTP`, `File.write` and `ENV[` outside core, and reading an environment variable that knobs.yml does not declare. A test per verb proves the refusal.
 
@@ -125,18 +128,22 @@ pub5/
 - `writers.yml` holds each AI writer's identity, allowed trees and trust level.
 - Every registry has a schema, and a Law fails any hand edit to a generated file.
 
-## 5. Laws: fewer, stricter, proven
+## 5. Laws: every pub4 Law, stricter, proven
 
-A Law has: id, statement, kind (lexical, structural, rendered, runtime or ratchet), detector, at least one bad and one good fixture, a proof test, severity, autofix policy and an enactment date.
+Rules and Laws are the same thing. All of pub4 MASTER's Laws carry over: their laws.yml statements and catalogue entries and their Ruby (`Law.define`, detectors, fixtures). pub4's checks, ratchets and house lint become kinds of Law in the same engine (`check`, `ratchet`, `lint`). The operator's directives (pub4's project_context.yml `operator_*` entries) and the agent rules are Laws too, of kind `conduct`, not a separate rules file.
+
+A Law has: id, statement, kind (lexical, structural, rendered, runtime, ratchet, check, lint, semantic or conduct), detector, at least one bad and one good fixture, a proof test, severity, autofix policy and an enactment date.
+
+**Policy and Ruby.** A Law's policy (statement, kind, severity, lifecycle, autofix, enactment date, census) lives only in its row in registry/laws.yml; its Ruby in laws/ holds the detector and fixtures. The engine accepts every word of pub4's `Law::Builder` DSL, so a pub4 Law body imports unchanged and its catalogue policy moves into the row.
 
 **Lifecycle.**
-1. A Law enters as `advisory`.
-2. It becomes `enforced` only after a census over the real tree shows a false-positive rate of 5% or less, by sampled human or independent-model agreement, and the operator ratifies it.
+1. Every Law, imported or new, enters as `advisory`.
+2. It becomes `enforced` only when its fixtures prove at load, a census over the real tree shows a false-positive rate of 5% or less on a sample (sampled human or independent-model agreement), and the operator ratifies it. The engine refuses an enforced row that lacks any of these.
 3. A Law may be judged by a model (`ask`) only if it has a rubric and a measured agreement rate of at least 80%. Otherwise it stays advisory forever.
 
 **Bulk changes.** Any Law whose autofix would touch more than 20 files must publish a dry-run census first. This is the ASCII_PUNCTUATION lesson. Laws never rewrite text written before their enactment date.
 
-**Starting set.** Target 60 to 100 Laws. Every finding names its Law and the measurement behind it. A census Law enforces one implementation per operation.
+**Import, then promote.** P2 imports all of pub4's Laws (520 catalogue entries, 514 `Law.define`) mechanically, plus the directives and agent rules as `conduct` Laws. A `conduct` Law with no detector stays advisory; it is still shown to every writer. Enforced Laws grow by promotion, one census at a time. Every finding names its Law and the measurement behind it. A census Law enforces one implementation per operation.
 
 ## 6. /fix from day one
 
@@ -200,7 +207,7 @@ A Law has: id, statement, kind (lexical, structural, rendered, runtime or ratche
 |---|---|
 | M0 Freeze and measure | Every production DB restored on a second host, with integrity_check ok and counts and hashes equal; full pub4 suite measured; pub4 frozen for features |
 | M1 Kernel | Core ≤5k lines; CI green; 40 or fewer knobs; one implementation per operation proven by the census Law; capability refusal test for each verb |
-| M2 Laws and /fix | 60–100 enforced Laws with fixtures and false-positive rate ≤5%; /fix ran 7 days on pub5 with 0 red main and 0 unrolled-back refusals; tokens accounted |
+| M2 Laws and /fix | Every pub4 Law imported as advisory (statements, catalogue entries, `Law.define` Ruby), with checks, ratchets and house lint as kinds of Law and the operator directives and agent rules as `conduct` Laws; Laws promoted to enforced only by fixtures proved at load plus a census with false-positive rate ≤5% and ratification; /fix ran 7 days on pub5 with 0 red main and 0 unrolled-back refusals; tokens accounted |
 | M3 bsdports live | 7 days on pub5 within its RSS budget; 5xx at or below pub4's baseline; rollback rehearsed |
 | M4 brgen and engines live | Row and blob parity 100%; 7-day reverse export unused or exercised once; mobile visual lane green at 390, 360 and 320 px |
 | M5 amber, mrdamascy, MASTER face, STUDIO live | Same as M3, plus dilla output matches pub4 byte for byte on fixtures |
@@ -233,7 +240,7 @@ The same ten questions as in the summary, with options and recommended defaults:
 9. MASTER web face. Options: Rails or Roda+Sequel. **Default: Roda+Sequel.**
 10. Python. Options: remove it from the spine or keep it as an optional tool. **Default: remove.**
 
-Also open, smaller: the knob budget (40) and the size of the starting Law set (60–100).
+Also open, smaller: the knob budget (40).
 
 ### Critical files for implementation
 - /Users/mac/Documents/GitHub/pub4/MASTER/data/laws.yml
@@ -252,6 +259,8 @@ Also open, smaller: the knob budget (40) and the size of the starting Law set (6
    parity of every app's key journeys (sign-in, post, message, pay, upload) proven in rehearsal before the switch.
 3. Writers: the operator and gated Claude push to main; GLM, Fable, Grok, Z.ai and ChatGPT push to inbox/<writer> branches merged only on green CI plus review by a different model.
 4. MASTER's web face: Roda + Sequel.
+5. Laws: rules and Laws are one thing; every pub4 Law carries over, enters as advisory and is promoted by census (section 5). Operator directives and agent rules are `conduct` Laws.
+6. One entrypoint: `bin/master` for every surface, dispatching from registry/commands.yml (section 4).
 Remaining decisions (process layout, rehearsal VM, session continuity, reverse export, Rails version, Python) take the plan's defaults until the operator says otherwise.
 
 ## 15. Port phases, mapped from pub4's TODO (2026-11-06)
