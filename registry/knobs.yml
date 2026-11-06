@@ -28,6 +28,14 @@ knobs:
     type: string
     default: operator
     purpose: The writer (registry/writers.yml) this process acts for.
+  PUB5_MODEL:
+    type: string
+    default: null
+    purpose: Pin every model call to one id (claude-cli:claude-opus-5-5); the only lane, waited for in its cool-off, never dropped.
+  PUB5_MODEL_TIMEOUT:
+    type: integer
+    default: 300
+    purpose: Seconds one command-line model lane (claude, grok, codex, agy) may take; pub4 measured 115-203s for a council prompt.
   SSH_CONNECTION:
     type: string
     default: null
