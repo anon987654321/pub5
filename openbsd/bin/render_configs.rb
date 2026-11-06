@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require_relative "../lib/config_renderer"
+require_relative "../../core/core"
 
 mode = ARGV.shift
 unless ARGV.empty? && [nil, "--check", "--write"].include?(mode)
@@ -9,16 +10,18 @@ unless ARGV.empty? && [nil, "--check", "--write"].include?(mode)
   exit 64
 end
 
-renderer = OpenBSD::ConfigRenderer.new
-begin
-  if mode == "--write"
-    renderer.write!
-    puts "openbsd config: generated mirror updated; proven baseline unchanged"
-  else
-    renderer.check!
-    puts "openbsd config: registry, proven fixtures and generated mirror agree"
-  end
-rescue OpenBSD::ConfigRenderer::Failure, Core::Refusal, KeyError, ArgumentError => e
-  warn "openbsd config: FAIL: #{e.message}"
+if mode == "--write"
+  files = OpenBsdRender.generated_files
+  manifest = Core::Manifest.new(name: "openbsd-render", verbs: { write: files.keys })
+  ledger = Core::Ledger.new(Core::Knobs.fetch("PUB5_LEDGER"))
+  world = Core::World.new(manifest:, ledger:)
+  files.each { |path, (content, file_mode)| world.write(path, content, mode: file_mode) }
+end
+
+diffs = OpenBsdRender.check
+if diffs.empty?
+  puts "openbsd: registry, proven fixtures and generated mirror agree"
+else
+  diffs.each { |diff| warn "openbsd: #{diff}" }
   exit 1
 end
