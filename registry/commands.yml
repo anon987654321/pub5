@@ -60,6 +60,17 @@ commands:
     class: Commands::Knobs
     contexts: [tty, pipe, remote]
     verbs: {}
+  gate:
+    summary: Judge each new commit on main with its own bin/check and merge green in-tree inbox branches (gate --status).
+    plugin: master/commands/gate.rb
+    class: Commands::Gate
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["log/gate/*"]
+      write: ["log/gate/*"]
+      # git runs through exec so the hook environment can be withheld
+      # (master/gate/repo.rb).
+      exec: [git, ruby, ruby34, rm]
   port-laws:
     summary: Import every pub4 Law into laws/pub4/ and registry/laws.yml (port-laws PUB4 [--ref REF] [--agent-rules FILE]).
     plugin: master/commands/port_laws.rb
