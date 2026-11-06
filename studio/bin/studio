@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# studio/bin/studio — the one STUDIO CLI. dilla + postpro (and the photograph
+# / replicate helpers) behind a single entry, as the pub5 port specifies.
+# Reproducible renders: seed/version flags pass through to the projects.
+#
+#   bin/studio dilla [args]      -> dilla/dilla.rb
+#   bin/studio postpro [args]    -> postpro/postpro.rb
+#   bin/studio photograph [args] -> photograph.rb
+#   bin/studio replicate [args]  -> replicate/client.rb
+#   bin/studio test [args]       -> test_runner.rb
+
+here = __dir__
+root = File.expand_path("..", here)
+
+targets = {
+  "dilla"      => File.join(root, "dilla/dilla.rb"),
+  "postpro"    => File.join(root, "postpro/postpro.rb"),
+  "photograph" => File.join(root, "photograph.rb"),
+  "replicate"  => File.join(root, "replicate/client.rb"),
+  "test"       => File.join(root, "test_runner.rb"),
+}
+
+cmd = ARGV.shift
+usage = "usage: bin/studio <#{targets.keys.join('|')}> [args]"
+abort usage if cmd.nil? || cmd.start_with?("-")
+target = targets.fetch(cmd) do
+  warn "studio: unknown subcommand: #{cmd}"
+  abort usage
+end
+abort "studio: missing entry: #{target}" unless File.file?(target)
+
+exec(RbConfig.ruby, target, *ARGV)
