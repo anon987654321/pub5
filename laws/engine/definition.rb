@@ -1,0 +1,134 @@
+# frozen_string_literal: true
+
+module Law
+  # One more detector for the same Law, on its own surfaces: DRY over code and
+  # DRY over config are one Law with two adapters. A tree adapter's check takes
+  # the repository's paths; a file adapter's takes (text, file).
+  Adapter = Data.define(:surfaces, :languages, :check, :bad, :good, :example_path) do
+    def tree? = surfaces.intersect?(%i[repository_tree directories file_names paths])
+  end
+
+  # What a `check` block or adapter runs on: `finding(line:, message:)` builds a hit.
+  class Runner
+    def finding(line:, message: nil) = { line:, message: }
+  end
+
+  class Definition
+    EXAMPLE_PATHS = { "ruby" => "example.rb", "yaml" => "example.yml", "json" => "example.json", "erb" => "example.html.erb",
+                      "javascript" => "example.js", "css" => "example.css", "shell" => "example.sh",
+                      "markdown" => "example.md", "html" => "example.html" }.freeze
+
+    attr_reader :id, :options
+    attr_accessor :policy
+
+    def initialize(options)
+      @options = options.freeze
+      @id = options.fetch(:id)
+      @policy = {}
+    end
+
+    def [](word) = @options[word]
+
+    def lifecycle = @policy.fetch("lifecycle", "advisory")
+    def severity = @policy.fetch("severity", "warning")
+    def enforced? = lifecycle == "enforced"
+    def deterministic? = !!(self[:detect] || self[:check] || self[:detector] || self[:adapters].any?)
+    def semantic? = !self[:ask].nil?
+
+    def applies?(file, text = nil)
+      return false if self[:path].is_a?(String) && !file.include?(self[:path])
+      return false if self[:path].is_a?(Regexp) && !file.match?(self[:path])
+
+      self[:languages].empty? || self[:languages].include?(Law.language(file, text))
+    end
+
+    # Findings for one file's text. A Law that only asks or only states a
+    # practice has no deterministic finding to give.
+    def scan(text, file)
+      return [] unless applies?(file, text)
+      return [] if self[:absent] && text.match?(self[:absent])
+
+      hits = main_hits(text, file)
+      self[:adapters].reject(&:tree?).each do |a|
+        next unless a.languages.empty? || a.languages.include?(Law.language(file, text))
+
+        hits += findings(Runner.new.instance_exec(text, file, &a.check), text, file)
+      end
+      hits
+    end
+
+    def scan_tree(paths) = self[:adapters].select(&:tree?).flat_map { |a| findings(Runner.new.instance_exec(paths, &a.check), "", nil) }
+
+    # Every bad fixture must be found and every good one must not, at load.
+    def prove!
+      if self[:proved_by]
+        raise Invalid, "#{id}: proved_by #{self[:proved_by]} does not exist" unless File.file?(File.join(Core::ROOT, self[:proved_by]))
+      end
+      prove_main! if self[:detect] || self[:check] || self[:detector]
+      self[:adapters].each { |a| prove_adapter!(a) }
+      self
+    end
+
+    private
+
+    def main_hits(text, file)
+      if self[:check]
+        findings(Runner.new.instance_exec(text, file, &self[:check]), text, file)
+      elsif self[:detector]
+        findings(self[:detector].new.check(text, path: file), text, file)
+      elsif self[:detect] && self[:scope] == :file
+        self[:detect].call(text) ? [Finding.new(id, file, 1, text[/.*/].to_s, nil)] : []
+      elsif self[:detect]
+        line_hits(text, file)
+      else
+        []
+      end
+    end
+
+    def line_hits(text, file)
+      comment = COMMENT[Law.language(file, text)]
+      text.each_line.with_index(1).filter_map do |line, number|
+        next if line.match?(INTENTIONAL)
+        next if comment && !self[:reads_comments] && line.match?(comment)
+
+        Finding.new(id, file, number, line.chomp, nil) if self[:detect].call(line)
+      end
+    end
+
+    def findings(hits, text, file)
+      lines = text.lines
+      Array(hits).map do |hit|
+        line = hit.fetch(:line, 1).to_i
+        Finding.new(id, hit.fetch(:file, file), line, lines[line - 1].to_s.chomp, hit[:message])
+      end
+    end
+
+    def example_path
+      self[:example_path] || EXAMPLE_PATHS.fetch(self[:languages].first || "ruby")
+    end
+
+    def prove_main!
+      raise Invalid, "#{id}: example path #{example_path} is outside this Law's path" unless applies?(example_path)
+
+      Array(self[:bad]).each do |bad|
+        bad = bad.call if bad.respond_to?(:call)
+        raise Invalid, "#{id}: bad fixture not found: #{bad.inspect[0, 120]}" if main_hits(bad, example_path).empty?
+      end
+      Array(self[:good]).each do |good|
+        good = good.call if good.respond_to?(:call)
+        hit = main_hits(good, example_path).first
+        raise Invalid, "#{id}: good fixture flagged: #{hit}" if hit
+      end
+    end
+
+    def prove_adapter!(adapter)
+      run = if adapter.tree?
+              ->(input) { Array(Runner.new.instance_exec(input, &adapter.check)) }
+            else
+              ->(input) { Array(Runner.new.instance_exec(input, adapter.example_path || example_path, &adapter.check)) }
+            end
+      raise Invalid, "#{id}: adapter #{adapter.surfaces.join(',')} misses its bad fixture" if run.call(adapter.bad).empty?
+      raise Invalid, "#{id}: adapter #{adapter.surfaces.join(',')} flags its good fixture" if run.call(adapter.good).any?
+    end
+  end
+end

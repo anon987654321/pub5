@@ -1,0 +1,50 @@
+type: object
+required: [schema, routing, failover, model_defs, tiers, routes, providers, lanes, inter_model, operator, prices]
+properties:
+  schema: { enum: [1] }
+  routing: { type: object, required: [enabled, strategy] }
+  failover: { type: object, required: [sequence, max_retries] }
+  model_defs:
+    type: object
+    additional: { type: object, required: [id] }
+  tiers:
+    type: object
+    additional:
+      type: array
+      items: { type: object, required: [id] }
+  routes:
+    type: object
+    additional: { type: string }
+  providers:
+    type: object
+    additional:
+      type: object
+      required: [env, strengths, default_model]
+      additional: false
+      properties:
+        env: { type: array, items: { type: string, pattern: '\A[A-Z][A-Z0-9_]*\z' } }
+        strengths: { type: array, items: { type: string } }
+        default_model: { type: string }
+        command: { type: string }
+        model_pattern: { type: string }
+        ruby_llm_key: { type: string }
+        min_key_length: { type: integer }
+        protocol: { enum: [anthropic, openai] }
+        base: { type: string, pattern: '\Ahttps://' }
+  lanes:
+    type: object
+    required: [dead]
+    additional: false
+    properties:
+      dead: { type: array, items: { type: string } }
+  inter_model: { type: object, required: [message, response, finding] }
+  operator: { type: object }
+  prices:
+    type: object
+    additional:
+      type: object
+      required: [prompt_usd_per_m, completion_usd_per_m]
+      additional: false
+      properties:
+        prompt_usd_per_m: { type: number }
+        completion_usd_per_m: { type: number }

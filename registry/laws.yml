@@ -1,43 +1,38 @@
-schema: 1
-lifecycle:
-  entry: advisory
-  enforcement_requires: { false_positive_rate_max: 0.05, independent_agreement: true, operator_ratification: true }
-  model_judgement: { agreement_rate_min: 0.80, rubric_required: true }
-  bulk_autofix: { census_before_more_than_files: 20, never_rewrite_pre_enactment_text: true }
+# The Law index: one row per Law, the only place a Law's policy lives. Its
+# detector and fixtures are in the row's file. A Law enters as advisory; it
+# is enforced only with a census over the real tree (false positives at most
+# 5% of a sample), fixtures proved at load, and the operator's ratification.
+# Law.load! refuses an enforced row that lacks any of these.
 laws:
-  - id: ONE_HTTP_CLIENT
-    statement: All outbound HTTP and model traffic passes through the single core client.
+  ONE_IMPLEMENTATION_PER_OPERATION:
+    statement: HTTP, file writes, environment reads, subprocesses and YAML loading each have one implementation, in core/.
     kind: structural
-    detector: laws/detectors/one_http_client.rb
-    proof: laws/test/one_http_client_test.rb
-    severity: high
-    status: advisory
+    severity: error
+    lifecycle: enforced
     autofix: never
-    enacted: 2026-11-06
-  - id: DECLARED_ENVIRONMENT
-    statement: Only core reads environment variables declared in registry/knobs.yml.
+    enacted: "2026-11-06"
+    file: laws/one_implementation_per_operation.rb
+    census:
+      measured_on: "2026-11-06"
+      files: 35
+      findings: 0
+      sampled: 0
+      false_positives: 0
+      ratified_by: operator
+      ratification: The operator's P1 brief requires this census Law to enforce one implementation per operation (PLAN.md M1).
+  GENERATED_FILE_MATCHES_GENERATOR:
+    statement: A file listed as generated in registry/paths.yml equals what its generator writes; it is never edited by hand.
     kind: structural
-    detector: laws/detectors/declared_environment.rb
-    proof: laws/test/declared_environment_test.rb
-    severity: high
-    status: advisory
+    severity: error
+    lifecycle: enforced
     autofix: never
-    enacted: 2026-11-06
-  - id: CAPABILITY_BEFORE_IO
-    statement: Plugins require an explicit World capability before external effects.
-    kind: runtime
-    detector: core/lib/pub5/core/capability_manifest.rb
-    proof: core/test/core_test.rb
-    severity: critical
-    status: advisory
-    autofix: never
-    enacted: 2026-11-06
-  - id: ATOMIC_WRITES
-    statement: Writes use one atomic writer and protected paths require an operator transaction.
-    kind: runtime
-    detector: core/lib/pub5/core/atomic_writer.rb
-    proof: core/test/core_test.rb
-    severity: critical
-    status: advisory
-    autofix: never
-    enacted: 2026-11-06
+    enacted: "2026-11-06"
+    file: laws/generated_file_matches_generator.rb
+    census:
+      measured_on: "2026-11-06"
+      files: 4
+      findings: 0
+      sampled: 0
+      false_positives: 0
+      ratified_by: operator
+      ratification: The operator asked that a Law fail any hand edit of the generated AGENTS.md (2026-11-06).

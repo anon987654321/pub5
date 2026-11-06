@@ -52,4 +52,6 @@ preserved_sources:
     source_blob: ad848565d67804628d86ea27018c12bc353062d8
   - path: openbsd/production/renew-certs.sh
     source_path: OPENBSD/usr/local/bin/renew-certs.sh
-    source_blob: 28efe4fcf20b2a453f7db407a03fbcf59433d8bf
+    source_blob: 28efe4fcf20b2a453f7db407a03fbcf59433d8bf  - path: openbsd/production/operator.yml
+    source_path: OPENBSD/data/operator.yml
+    source_blob: 0c6e4013bab29fda4c8d94e880f4c195c32e949c

@@ -1,9 +1,38 @@
-schema: 1
+# Who owns each top-level tree, and which paths no automated writer may
+# change. Core::Manifest refuses a write verb on a protected path whatever a
+# plugin's manifest declares, so /fix can propose a change there but never
+# make it; the operator edits them by hand.
+owners:
+  core: { owner: kernel, purpose: "World verbs, capability checker, registry loader, atomic write, ledger, HTTP/LLM client, knobs, parse gate" }
+  laws: { owner: laws, purpose: "The Law engine and one file per Law" }
+  registry: { owner: registry, purpose: "One registry per concern, each with a schema" }
+  master: { owner: master, purpose: "Agent runtime as plugins, each with manifest.yml" }
+  rails: { owner: rails, purpose: "Shared engine, brgen and its engines, amber, bsdports, mrdamascy" }
+  openbsd: { owner: openbsd, purpose: "rc.d, relayd, pf, deploy, rehearse; generated from registry/apps.yml" }
+  studio: { owner: studio, purpose: "dilla, postpro, replicate" }
+  bplans: { owner: bplans, purpose: "Business plans" }
+  test: { owner: kernel, purpose: "Tests for core, laws and registries" }
+  bin: { owner: kernel, purpose: "check, setup, generate" }
+  tools: { owner: kernel, purpose: "Generators and one-off ports" }
 protected:
-  - registry/**
-  - laws/**
+  - PLAN.md
+  - AGENTS.md
+  - CLAUDE.md
   - core/**
-  - db/migrate/**
-  - config/credentials.yml.enc
-operator_transaction_required: [registry/**, laws/**, core/**]
-generated_from: [registry/apps.yml, registry/knobs.yml, registry/models.yml, registry/tokens.yml, registry/paths.yml]
+  - laws/**
+  - registry/**
+  - bin/**
+  - .githooks/**
+  - .ruby-version
+  - .github/**
+  - "**/db/migrate/**"
+  - "**/db/schema.rb"
+  - "**/config/credentials*"
+  - "**/config/credentials/**"
+  - "**/config/master.key"
+  - "**/config/environments/production.rb"
+  - "**/.env*"
+  - log/ledger.jsonl
+generated:
+  AGENTS.md: { from: [registry/writers.yml, registry/laws.yml], by: generate }
+  CLAUDE.md: { from: [], by: generate }

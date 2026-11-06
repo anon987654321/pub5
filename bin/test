@@ -1,16 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-require "rbconfig"
 
-root = File.expand_path("..", __dir__)
-roots = %w[core laws rails openbsd studio test]
-files = roots.flat_map do |dir|
-  Dir.glob(File.join(root, dir, "**", "test_*.rb")) +
-    Dir.glob(File.join(root, dir, "**", "*_test.rb")) +
-    Dir.glob(File.join(root, dir, "test_*.rb")) +
-    Dir.glob(File.join(root, dir, "*_test.rb"))
-end
-files = files.uniq.sort
-abort "test: no suites found; refusing to report a blind pass" if files.empty?
-ENV["RUBYOPT"] = "-W2"
-exec(RbConfig.ruby, *files.map { |path| File.expand_path(path) })
+# Developer shorthand for `bin/master test`: every minitest suite under
+# test/ in one interpreter. It refuses to run blind: no test summary, or
+# zero runs, reports NOT_RUN and fails.
+exec(RbConfig.ruby, File.expand_path("master", __dir__), "test", *ARGV)

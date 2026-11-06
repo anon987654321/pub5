@@ -1,18 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-require "open3"
-require "rbconfig"
 
-root = File.expand_path("..", __dir__)
-trees = %w[core master laws rails openbsd studio bplans test]
-files = trees.flat_map { |tree| Dir.glob(File.join(root, tree, "**", "*.rb")) + Dir.glob(File.join(root, tree, "*.rb")) }
-files += Dir.glob(File.join(root, "bin", "*")) + Dir.glob(File.join(root, "core", "bin", "*")) + Dir.glob(File.join(root, "master", "bin", "*")) + Dir.glob(File.join(root, "openbsd", "bin", "*")) + Dir.glob(File.join(root, "studio", "bin", "*"))
-files = files.select { |path| File.file?(path) && (File.extname(path) == ".rb" || File.open(path, "rb", &:gets).to_s.start_with?("#!") && File.open(path, "rb", &:gets).to_s.include?("ruby")) }.uniq.sort
-files.reject! { |path| path.include?("/vendor/") || path.include?("/tmp/") || path.include?("/coverage/") }
-abort "lint: no Ruby files to read" if files.empty?
-broken = files.filter_map do |file|
-  _out, _err, status = Open3.capture3(RbConfig.ruby, "-c", file)
-  file unless status.success?
-end
-abort "lint: #{broken.length}/#{files.length} files failed: #{broken.join(", ")}" unless broken.empty?
-puts "lint: #{files.length} Ruby files parse clean"
+# Developer shorthand for `bin/master lint`: every tracked Ruby, YAML, JSON
+# and ERB file parses and no enforced Law has a finding. It refuses to run
+# blind: a lint that read no files reports NOT_RUN and fails.
+exec(RbConfig.ruby, File.expand_path("master", __dir__), "lint", *ARGV)

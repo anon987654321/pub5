@@ -1,0 +1,26 @@
+type: object
+required: [commands]
+additional: false
+properties:
+  commands:
+    type: object
+    additional:
+      type: object
+      required: [summary, plugin, class, contexts, verbs]
+      additional: false
+      properties:
+        summary: { type: string }
+        plugin: { type: string, pattern: '\Amaster/[a-z0-9_/]+\.rb\z' }
+        class: { type: string, pattern: '\A[A-Z]\w*(::[A-Z]\w*)*\z' }
+        contexts: { type: array, min_items: 1, items: { enum: [tty, pipe, remote, web] } }
+        verbs:
+          type: object
+          additional: false
+          properties:
+            read: { type: array, items: { type: string } }
+            write: { type: array, items: { type: string } }
+            render: { type: array, items: { type: string } }
+            exec: { type: array, items: { type: string } }
+            net: { type: array, items: { type: string } }
+            llm: { type: array, items: { type: string } }
+            git: { type: array, items: { type: string } }

@@ -1,0 +1,35 @@
+type: object
+required: [laws]
+additional: false
+properties:
+  laws:
+    type: object
+    description: One row per Law id; the Ruby lives in the row's file.
+    additional:
+      type: object
+      required: [statement, kind, severity, lifecycle, autofix, enacted, file]
+      additional: false
+      properties:
+        statement: { type: string }
+        kind: { enum: [lexical, structural, rendered, runtime, ratchet, check, lint, semantic, conduct] }
+        severity: { enum: [info, warning, error, critical] }
+        lifecycle: { enum: [advisory, enforced, retired] }
+        autofix: { enum: [never, review, automatic] }
+        enacted: { type: string, pattern: '\A\d{4}-\d{2}-\d{2}\z' }
+        file: { type: string, pattern: '\Alaws/[a-z0-9_]+\.rb\z' }
+        parent: { type: string }
+        pub4: { type: string, description: "The pub4 Law id this row was imported from" }
+        census:
+          type: object
+          required: [measured_on, files, findings, sampled, false_positives]
+          additional: false
+          properties:
+            measured_on: { type: string, pattern: '\A\d{4}-\d{2}-\d{2}\z' }
+            commit: { type: string }
+            files: { type: integer }
+            findings: { type: integer }
+            sampled: { type: integer }
+            false_positives: { type: integer }
+            agreement: { type: number }
+            ratified_by: { enum: [operator] }
+            ratification: { type: string }

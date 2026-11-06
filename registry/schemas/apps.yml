@@ -1,0 +1,40 @@
+type: object
+required: [rails_stack, owned_domain_facts, owned_domains, apps]
+additional: false
+properties:
+  rails_stack:
+    type: object
+    required: [rails]
+  owned_domain_facts:
+    type: object
+    additional:
+      type: object
+      required: [expires, renew, registrar]
+      additional: false
+      properties:
+        expires: { type: string, pattern: '\A\d{4}-\d{2}-\d{2}\z' }
+        renew: { type: boolean }
+        registrar: { type: string }
+  owned_domains:
+    type: array
+    items: { type: string, pattern: '\A[a-z0-9.-]+\.[a-z]+\z' }
+  apps:
+    type: object
+    additional:
+      type: object
+      required: [title, domain, port, deploy_root, public, features]
+      properties:
+        title: { type: string }
+        domain: { type: string }
+        port: { type: integer }
+        deploy_root: { type: string }
+        deploy_script: { type: string }
+        public: { type: boolean }
+        promoted: { type: string }
+        stack_now: { type: string }
+        stack_later: { type: string }
+        brand: { type: object }
+        mobile: { type: object }
+        features: { type: any }
+  archived_subsystems:
+    type: object

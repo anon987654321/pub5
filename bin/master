@@ -1,0 +1,58 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# The one entrypoint. `bin/master <command> [args]` looks the command up in
+# registry/commands.yml, works out the context it runs in (tty, pipe, remote)
+# instead of needing a binary per place, builds the command's capability
+# manifest, and boots core plus that one plugin. `--boot` prints how long
+# that took before the command ran.
+started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+require_relative "../core/core"
+
+module Master
+  module_function
+
+  def context(knobs, stdin: $stdin, stdout: $stdout)
+    return "remote" if knobs.fetch("SSH_CONNECTION")
+
+    stdin.tty? && stdout.tty? ? "tty" : "pipe"
+  end
+
+  def usage(commands)
+    width = commands.keys.map(&:size).max
+    "usage: bin/master [--boot] <command> [args]\n" +
+      commands.map { |name, c| "  #{name.ljust(width)}  #{c['summary']}" }.join("\n")
+  end
+end
+
+argv = ARGV.dup
+show_boot = argv.delete("--boot")
+commands = Core::Registry.load(:commands).fetch("commands")
+name = argv.shift
+unless name && commands.key?(name)
+  warn Master.usage(commands)
+  exit(name.nil? || %w[help -h --help].include?(name) ? 0 : 64)
+end
+
+command = commands.fetch(name)
+begin
+  knobs = Core::Knobs.default
+  context = Master.context(knobs)
+  unless command.fetch("contexts").include?(context)
+    warn "master: #{name} does not run in the #{context} context"
+    exit 64
+  end
+
+  manifest = Core::Manifest.new(name:, verbs: command.fetch("verbs"))
+  world = Core::World.new(manifest:, ledger: Core::Ledger.new(knobs.fetch("PUB5_LEDGER")), knobs:)
+  require File.join(Core::ROOT, command.fetch("plugin"))
+  plugin = Object.const_get(command.fetch("class"))
+  if show_boot
+    warn format("master: boot %<ms>.1f ms (core + %<plugin>s, %<context>s)",
+                ms: (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000, plugin: command["plugin"], context:)
+  end
+  exit Integer(plugin.new(world:, context:).call(argv))
+rescue Core::Refusal => e
+  warn "master: #{e.message}"
+  exit 70
+end
