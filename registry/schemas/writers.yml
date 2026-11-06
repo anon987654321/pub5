@@ -1,0 +1,16 @@
+type: object
+required: [writers]
+additional: false
+properties:
+  writers:
+    type: object
+    additional:
+      type: object
+      required: [trust, branches, trees, git_authors]
+      additional: false
+      properties:
+        trust: { enum: [main, inbox] }
+        branches: { type: array, min_items: 1, items: { type: string, pattern: '\A(main|inbox/[a-z]+)\z' } }
+        trees: { type: array, min_items: 1, items: { enum: [all, core, master, laws, rails, openbsd, studio, bplans, registry, test, bin, tools] } }
+        git_authors: { type: array, items: { type: string } }
+        gated_by: { type: string }

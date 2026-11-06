@@ -1,0 +1,1179 @@
+# Ported from pub4 94cc874ad6 (MASTER/data models.yml, providers.yml, lanes.yml, inter_model.yml, operator_model.yml) by tools/port_pub4_registries.rb.
+# Edit here from now on; pub4's comments explaining each value live at that commit.
+# prices: per model id, prompt_usd_per_m and completion_usd_per_m. Empty until
+# measured from an invoice or a provider's price page; until then the ledger
+# records cost as unmeasured (null), never as zero.
+schema: 1
+routing:
+  enabled: true
+  strategy: weighted
+  escalation_enabled: true
+  escalation_tier: strong
+  provider: agy
+weights:
+  quality: 0.5
+  speed: 0.25
+  cost: 0.25
+fallback_policy:
+  'on':
+  - timeout
+  - no_api_key
+  - offline
+  - auth_error
+  - rate_limit
+  - budget
+  - model_missing
+  - invalid_request
+failover:
+  sequence:
+  - fast
+  - default
+  - medium
+  - strong
+  cooldown_seconds: 300
+  cooldown_tiers:
+  - 2
+  - 5
+  - 30
+  skip_ttl_ms: 600000
+  transient_skip_ttl_ms: 30000
+  max_retries: 2
+defaults:
+  score:
+    quality: 0.0
+    speed: 0.0
+    cost: 0.0
+model_defs:
+  agy_auto:
+    id: agy:auto
+    score:
+      quality: 0.99
+      speed: 0.95
+      cost: 1.0
+    context_window: 1000000
+  agy_gemini_pro:
+    id: agy:gemini-3.1-pro-high
+    score:
+      quality: 0.98
+      speed: 0.85
+      cost: 1.0
+    context_window: 1000000
+  agy_gemini_flash:
+    id: agy:gemini-3.8-flash-medium
+    score:
+      quality: 0.92
+      speed: 0.98
+      cost: 1.0
+    context_window: 1000000
+  agy_gemini_flash_thinking:
+    id: agy:gemini-3.8-flash-high
+    score:
+      quality: 0.99
+      speed: 0.88
+      cost: 1.0
+    context_window: 1000000
+  gemini_flash:
+    id: gemini-2.5-flash
+    score:
+      quality: 0.88
+      speed: 0.9
+      cost: 0.95
+  mistral_large:
+    id: mistralai/mistral-large
+    score:
+      quality: 0.9
+      speed: 0.75
+      cost: 0.7
+  mistral_small:
+    id: mistralai/mistral-small-3.1-24b-instruct
+    score:
+      quality: 0.78
+      speed: 0.85
+      cost: 0.9
+  deepseek_chat:
+    id: deepseek-chat
+    score:
+      quality: 0.96
+      speed: 0.85
+      cost: 0.95
+    context_window: 64000
+  deepseek_reasoner:
+    id: deepseek-reasoner
+    score:
+      quality: 0.97
+      speed: 0.55
+      cost: 0.85
+    context_window: 64000
+  deepseek_coder:
+    id: deepseek-coder
+    score:
+      quality: 0.85
+      speed: 0.7
+      cost: 0.95
+    context_window: 64000
+  claude_sonnet:
+    id: claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.75
+      cost: 0.6
+    context_window: 1000000
+  gemini_flash_openrouter:
+    id: google/gemini-2.5-flash
+    score:
+      quality: 0.9
+      speed: 0.6
+      cost: 0.92
+  nemotron_super:
+    id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  gpt_4o:
+    id: openai/gpt-4o
+    score:
+      quality: 0.93
+      speed: 0.8
+      cost: 0.55
+  claude_cli_sonnet:
+    id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  claude_cli_opus:
+    id: claude-cli:claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.55
+      cost: 1.0
+    context_window: 200000
+  claude_opus_api:
+    id: claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.5
+      cost: 0.2
+    context_window: 1000000
+  grok_cli_auto:
+    id: grok-cli:auto
+    score:
+      quality: 0.9
+      speed: 0.5
+      cost: 0.3
+  gemma_2_27b:
+    id: google/gemma-2-27b-it
+    score:
+      quality: 0.82
+      speed: 0.78
+      cost: 0.92
+  command_r_plus:
+    id: cohere/command-r-plus-08-2024
+    score:
+      quality: 0.86
+      speed: 0.72
+      cost: 0.65
+  grok_4_3:
+    id: x-ai/grok-4.3
+    score:
+      quality: 0.92
+      speed: 0.92
+      cost: 0.78
+  web_chat_grok:
+    id: web-chat:grok
+    score:
+      quality: 0.85
+      speed: 0.35
+      cost: 1.0
+  web_chat_chatgpt:
+    id: web-chat:chatgpt
+    score:
+      quality: 0.82
+      speed: 0.35
+      cost: 1.0
+  web_chat_kimi:
+    id: web-chat:kimi
+    score:
+      quality: 0.8
+      speed: 0.35
+      cost: 1.0
+  web_chat_gemini:
+    id: web-chat:gemini
+    score:
+      quality: 0.83
+      speed: 0.35
+      cost: 1.0
+  ollama_gemma:
+    id: ollama:gemma3:4b
+    score:
+      quality: 0.9
+      speed: 0.76
+      cost: 1.0
+    context_window: 128000
+tiers:
+  grok_primary:
+  - id: grok-cli:auto
+    score:
+      quality: 0.9
+      speed: 0.5
+      cost: 0.3
+  - id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  keyless:
+  - id: web-chat:grok
+    score:
+      quality: 0.85
+      speed: 0.35
+      cost: 1.0
+  - id: web-chat:chatgpt
+    score:
+      quality: 0.82
+      speed: 0.35
+      cost: 1.0
+  - id: web-chat:kimi
+    score:
+      quality: 0.8
+      speed: 0.35
+      cost: 1.0
+  - id: web-chat:gemini
+    score:
+      quality: 0.83
+      speed: 0.35
+      cost: 1.0
+  default:
+  - id: claude-cli:claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.55
+      cost: 1.0
+    context_window: 200000
+  - id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  - id: agy:auto
+    score:
+      quality: 0.99
+      speed: 0.95
+      cost: 1.0
+    context_window: 1000000
+  - id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  - id: google/gemini-2.5-flash
+    score:
+      quality: 0.9
+      speed: 0.6
+      cost: 0.92
+  - id: ollama:gemma3:4b
+    score:
+      quality: 0.9
+      speed: 0.76
+      cost: 1.0
+    context_window: 128000
+  primary:
+  - id: claude-cli:claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.55
+      cost: 1.0
+    context_window: 200000
+  - id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  - id: agy:auto
+    score:
+      quality: 0.99
+      speed: 0.95
+      cost: 1.0
+    context_window: 1000000
+  - id: claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.5
+      cost: 0.2
+    context_window: 1000000
+  - id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  - id: ollama:gemma3:4b
+    score:
+      quality: 0.9
+      speed: 0.76
+      cost: 1.0
+    context_window: 128000
+  strong:
+  - id: claude-cli:claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.55
+      cost: 1.0
+    context_window: 200000
+  - id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  - id: claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.5
+      cost: 0.2
+    context_window: 1000000
+  - id: deepseek-reasoner
+    score:
+      quality: 0.97
+      speed: 0.55
+      cost: 0.85
+    context_window: 64000
+  - id: deepseek-chat
+    score:
+      quality: 0.96
+      speed: 0.85
+      cost: 0.95
+    context_window: 64000
+  - id: mistralai/mistral-large
+    score:
+      quality: 0.9
+      speed: 0.75
+      cost: 0.7
+  - id: claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.75
+      cost: 0.6
+    context_window: 1000000
+  - id: openai/gpt-4o
+    score:
+      quality: 0.93
+      speed: 0.8
+      cost: 0.55
+  - id: gemini-2.5-flash
+    score:
+      quality: 0.88
+      speed: 0.9
+      cost: 0.95
+  - id: cohere/command-r-plus-08-2024
+    score:
+      quality: 0.86
+      speed: 0.72
+      cost: 0.65
+  - id: grok-cli:auto
+    score:
+      quality: 0.9
+      speed: 0.5
+      cost: 0.3
+  - id: ollama:gemma3:4b
+    score:
+      quality: 0.9
+      speed: 0.76
+      cost: 1.0
+    context_window: 128000
+  vision:
+  - id: gemini-2.5-flash
+    score:
+      quality: 0.88
+      speed: 0.9
+      cost: 0.95
+  - id: claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.75
+      cost: 0.6
+    context_window: 1000000
+  medium:
+  - id: deepseek-chat
+    score:
+      quality: 0.96
+      speed: 0.85
+      cost: 0.95
+    context_window: 64000
+  - id: google/gemini-2.5-flash
+    score:
+      quality: 0.9
+      speed: 0.6
+      cost: 0.92
+  - id: mistralai/mistral-large
+    score:
+      quality: 0.9
+      speed: 0.75
+      cost: 0.7
+  - id: x-ai/grok-4.3
+    score:
+      quality: 0.92
+      speed: 0.92
+      cost: 0.78
+  - id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  - id: cohere/command-r-plus-08-2024
+    score:
+      quality: 0.86
+      speed: 0.72
+      cost: 0.65
+  cheap:
+  - id: google/gemini-2.5-flash
+    score:
+      quality: 0.9
+      speed: 0.6
+      cost: 0.92
+  - id: gemini-2.5-flash
+    score:
+      quality: 0.88
+      speed: 0.9
+      cost: 0.95
+  - id: mistralai/mistral-small-3.1-24b-instruct
+    score:
+      quality: 0.78
+      speed: 0.85
+      cost: 0.9
+  fast:
+  - id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  - id: grok-cli:auto
+    score:
+      quality: 0.9
+      speed: 0.5
+      cost: 0.3
+  - id: x-ai/grok-4.3
+    score:
+      quality: 0.92
+      speed: 0.92
+      cost: 0.78
+  - id: gemini-2.5-flash
+    score:
+      quality: 0.88
+      speed: 0.9
+      cost: 0.95
+  - id: google/gemini-2.5-flash
+    score:
+      quality: 0.9
+      speed: 0.6
+      cost: 0.92
+  free:
+  - id: nvidia/nemotron-3-super-120b-a12b:free
+    score:
+      quality: 0.9
+      speed: 0.05
+      cost: 1.0
+  claude_code:
+  - id: claude-cli:claude-opus-5-5
+    score:
+      quality: 0.99
+      speed: 0.55
+      cost: 1.0
+    context_window: 200000
+  - id: claude-cli:claude-sonnet-5-5
+    score:
+      quality: 0.95
+      speed: 0.85
+      cost: 1.0
+    context_window: 200000
+  local:
+  - id: ollama:gemma3:4b
+    score:
+      quality: 0.9
+      speed: 0.76
+      cost: 1.0
+    context_window: 128000
+routes:
+  detect_lexical: free
+  code_generation: default
+  code: default
+  refactoring: default
+  architecture: strong
+  review: fast
+  council: fast
+  name_review: fast
+  scan_comment_drift: fast
+  scan_semantic_violations: fast
+  scan_semantic_opportunities: fast
+  scan_adversarial: fast
+  explanation: free
+  exploration: free
+  chitchat: free
+  help: free
+  fallback_default: default
+  vision: vision
+task_strengths:
+  chitchat:
+  - fast
+  help:
+  - fast
+  detect_lexical:
+  - fast
+  scan_comment_drift:
+  - fast
+  scan_semantic_violations:
+  - fast
+  scan_semantic_opportunities:
+  - fast
+  scan_adversarial:
+  - reasoning
+  explanation:
+  - fast
+  - long_context
+  exploration:
+  - fast
+  - long_context
+  code:
+  - coding
+  code_generation:
+  - coding
+  refactoring:
+  - coding
+  - reasoning
+  architecture:
+  - reasoning
+  - long_context
+  - coding
+  review:
+  - reasoning
+  - coding
+  council:
+  - reasoning
+  - long_context
+  name_review:
+  - fast
+  - reasoning
+  file_write:
+  - coding
+  - reasoning
+  autoloop:
+  - reasoning
+  - coding
+  sweep:
+  - reasoning
+  - coding
+  destructive:
+  - reasoning
+  - coding
+vision_families:
+  reads_images:
+  - gemini-\d
+  - claude
+  - gpt-4o
+  - gpt-4\.1
+  - llama-4
+  - qwen.*vl
+  - pixtral
+  - gemma-[34]
+  - vision
+  blind:
+  - glm
+  - nemotron
+  - deepseek(?!.*vl)
+  - qwen3-next
+  - gpt-oss
+  - phi-4
+tool_capable_prefixes:
+- agy
+- 'agy:'
+- claude
+- claude-cli
+- codex-cli
+- grok-cli
+- gpt-4
+- gpt-4o
+- gemini
+- mistral
+- mistralai
+- mixtral
+- llama-3.1
+- llama-3.3
+- llama-4
+- qwen
+- command-r
+- cohere/command
+- deepseek
+- stepfun
+- nvidia
+- nemotron
+- meta/meta-llama
+- anthropic/claude
+- openai/gpt
+- google/gemini
+- google/gemma
+- microsoft/phi
+- z-ai/glm
+- 01-ai/yi
+- x-ai/grok
+- rekaai/reka
+- groq
+- cerebras
+operation_constraints:
+  file_write:
+    min_quality: 0.88
+    preferred_tier: strong
+  autoloop:
+    min_quality: 0.88
+    preferred_tier: strong
+  sweep:
+    min_quality: 0.88
+    preferred_tier: strong
+  council:
+    min_quality: 0.88
+    preferred_tier: fast
+  detect_lexical:
+    min_quality: 0.7
+    preferred_tier: fast
+  code_generation:
+    min_quality: 0.8
+    preferred_tier: default
+  architecture:
+    min_quality: 0.88
+    preferred_tier: strong
+  destructive:
+    min_quality: 0.9
+    preferred_tier: strong
+continuity:
+  enabled: true
+  updated_at: '2026-05-01T00:00:00Z'
+openrouter:
+  use_live_catalog: true
+  daily_quota_per_model: 50
+  keys_env:
+  - OPENROUTER_API_KEY
+  - OPENROUTER_API_KEY_2
+  - OPENROUTER_API_KEY_3
+  free_latest:
+  - nvidia/nemotron-3-super-120b-a12b:free
+ferrum_web_chat:
+  enabled_when_env: MASTER_WEB_CHAT
+  auto_when_keyless: true
+  profile_dir: "~/.config/master/web-chat-profile"
+  free_latest:
+  - web-chat:grok
+  - web-chat:chatgpt
+  - web-chat:kimi
+  - web-chat:gemini
+  providers:
+    grok:
+      url: https://grok.com/
+      input_selector: textarea, div[contenteditable='true'], div[role='textbox']
+      reply_selector: div[class*='message'], article, div.markdown
+      timeout: 120
+    chatgpt:
+      url: https://chatgpt.com/
+      input_selector: div#prompt-textarea, textarea#prompt-textarea, div[contenteditable='true']
+      reply_selector: div[data-message-author-role='assistant']
+      timeout: 120
+    kimi:
+      url: https://kimi.com/
+      input_selector: textarea, div[contenteditable='true'], div[role='textbox']
+      reply_selector: div.markdown-body, div[class*='assistant'], div[class*='message']
+      timeout: 120
+    gemini:
+      url: https://gemini.google.com/app
+      input_selector: div.ql-editor[contenteditable='true'], div[contenteditable='true']
+      reply_selector: message-content, div[class*='response']
+      timeout: 120
+three_mirror_redundancy:
+  pool:
+  - claude-sonnet-5-5
+  - grok-cli:auto
+  - moonshotai/kimi-k2
+  quorum: 2
+subscription_lanes:
+- claude-cli
+- grok-cli
+- codex-cli
+- agy
+cli_lanes:
+  codex-cli:
+    binary: codex
+    signed_in:
+      args:
+      - login
+      - status
+      match: Logged in
+    ask:
+    - exec
+    - "--skip-git-repo-check"
+    - "--sandbox"
+    - read-only
+    - "--ephemeral"
+    - "--output-last-message"
+    - "%{reply_file}"
+    - "-"
+    model_flag: "--model"
+    models:
+    - auto
+    login: codex login
+  grok-cli:
+    binary: grok
+    signed_in:
+      args:
+      - models
+      refuse: not authenticated
+    ask:
+    - "--single"
+    - "%{prompt}"
+    model_flag: "--model"
+    models:
+    - auto
+    login: grok login
+local_servers:
+- http://localhost:1234/v1
+- http://localhost:8080/v1
+openai_compatible:
+  llm7:
+    base: https://api.llm7.io/v1
+    key_env:
+    - LLM7_API_KEY
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 20
+    quota_bucket: llm7
+    keyless:
+      tier: turbo
+      usage_based_only: false
+  groq:
+    base: https://api.groq.com/openai/v1
+    key_env:
+    - GROQ_API_KEY
+    - GROQ_API_KEY_2
+    daily_quota: 14400
+  cerebras:
+    base: https://api.cerebras.ai/v1
+    key_env:
+    - CEREBRAS_API_KEY
+    - CEREBRAS_API_KEY_2
+    daily_quota: 100
+  nvidia:
+    base: https://integrate.api.nvidia.com/v1
+    key_env:
+    - NVIDIA_API_KEY
+    - NVIDIA_API_KEY_2
+  kilo:
+    base: https://api.kilo.ai/api/gateway/v1
+    key_env:
+    - KILO_API_KEY
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 20
+    quota_bucket: kilo
+    keyless:
+      isFree: true
+  ovh:
+    base: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+    key_env:
+    - OVH_AI_ENDPOINTS_TOKEN
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 30
+    quota_bucket: ovh
+    keyless:
+      allow:
+      - gpt-oss-120b
+      - gpt-oss-20b
+      - Meta-Llama-3_3-70B-Instruct
+      - Mistral-Small-3.2-24B-Instruct-2506
+      - Qwen2.5-VL-72B-Instruct
+      - Qwen3.5-9B
+      - Qwen3.5-397B-A17B
+      - Qwen3.6-27B
+      - Qwen3.8-27B
+replicate_chat:
+- anthropic/claude-4.5-sonnet
+- openai/gpt-5
+- deepseek-ai/deepseek-v3.1
+- google/gemini-2.5-flash
+- moonshotai/kimi-k2.5
+ollama:
+  enabled: false
+  default_base_url: http://localhost:11434
+  keep_alive: 30m
+  max_num_ctx: 16384
+  local_model_allowlist:
+  - ollama:gemma3:4b
+free_tier:
+  neutral_latency_s: 45
+  unmeasured_timeout_s: 60
+  call_timeout_s: 60
+paid_tail:
+  enabled: true
+  max_prompt_usd_per_m: 1.0
+  max_completion_usd_per_m: 3.0
+  run_cap_usd: 5.0
+  max_models: 12
+media_lanes:
+  budget_usd:
+    image: 2.0
+    video: 5.0
+  call_cap_usd:
+    image: 1.0
+    video: 4.0
+  image_tokens: 1290
+  video_seconds: 8
+  timeouts:
+    call_s: 120
+    video_total_s: 600
+    poll_s: 10
+    max_polls: 90
+  catalog_merge:
+    max_prompt_usd_per_m: 3.0
+    max_models: 4
+  providers:
+    gemini:
+      env:
+      - GEMINI_API_KEY
+      - GOOGLE_API_KEY
+      base: https://generativelanguage.googleapis.com/v1beta
+    openrouter:
+      env:
+      - OPENROUTER_API_KEY
+      base: https://openrouter.ai/api/v1
+    replicate:
+      env:
+      - REPLICATE_API_TOKEN
+      - REPLICATE_API_KEY
+  image:
+  - provider: gemini
+    model: gemini-2.5-flash-image
+    price_id: google/gemini-2.5-flash-image
+    usd_per_call: 0.039
+  - provider: gemini
+    model: gemini-3.1-flash-lite-image
+    price_id: google/gemini-3.1-flash-lite-image
+    usd_per_call: 0.039
+  - provider: gemini
+    model: gemini-nano-banana-2.1
+    price_id: google/gemini-nano-banana-2.1
+    usd_per_call: 0.039
+  - provider: gemini
+    model: gemini-3.1-flash-image
+    price_id: google/gemini-3.1-flash-image
+    usd_per_call: 0.077
+  - provider: gemini
+    model: nano-banana-pro-preview
+    price_id: google/gemini-3-pro-image-preview
+    usd_per_call: 0.155
+  - provider: gemini
+    model: gemini-3-pro-image
+    price_id: google/gemini-3-pro-image
+    usd_per_call: 0.155
+  - provider: openrouter
+    model: google/gemini-2.5-flash-image
+    usd_per_call: 0.039
+  - provider: openrouter
+    model: google/gemini-3.1-flash-lite-image
+    usd_per_call: 0.039
+  - provider: openrouter
+    model: google/gemini-nano-banana-2.1
+    usd_per_call: 0.039
+  - provider: openrouter
+    model: google/gemini-3.1-flash-image
+    usd_per_call: 0.077
+  - provider: openrouter
+    model: google/gemini-3-pro-image
+    usd_per_call: 0.155
+  - provider: openrouter
+    model: openai/gpt-5-image-mini
+    image_tokens: 4160
+    usd_per_call: 0.05
+  - provider: openrouter
+    model: openai/gpt-5.4-image-2
+    image_tokens: 4160
+    usd_per_call: 0.13
+  - provider: openrouter
+    model: openai/gpt-5-image
+    image_tokens: 4160
+    usd_per_call: 0.17
+  - provider: replicate
+    model: black-forest-labs/flux-2-pro
+    usd_per_call: 0.05
+  video:
+  - provider: gemini
+    model: veo-3.1-lite-generate-preview
+    usd_per_second: 0.05
+  - provider: gemini
+    model: veo-3.1-fast-generate-preview
+    usd_per_second: 0.15
+  - provider: gemini
+    model: veo-3.1-generate-preview
+    usd_per_second: 0.4
+  - provider: replicate
+    model: google/veo-3.1-fast
+    usd_per_second: 0.15
+providers:
+  agy:
+    env:
+    - AGY_BIN
+    - ANTIGRAVITY_BIN
+    command: agy
+    strengths:
+    - reasoning
+    - coding
+    - long_context
+    - multimodal
+    - agentic
+    default_model: agy:auto
+  openai:
+    env:
+    - OPENAI_API_KEY
+    ruby_llm_key: openai_api_key
+    min_key_length: 40
+    strengths:
+    - reasoning
+    - coding
+    - multimodal
+    default_model: gpt-5.5-thinking
+    protocol: openai
+    base: https://api.openai.com/v1
+  anthropic:
+    env:
+    - ANTHROPIC_API_KEY
+    model_pattern: "\\Aclaude-"
+    ruby_llm_key: anthropic_api_key
+    min_key_length: 80
+    strengths:
+    - coding
+    - long_context
+    - instruction_following
+    default_model: claude-sonnet-5-5
+    protocol: anthropic
+    base: https://api.anthropic.com/v1
+  gemini:
+    env:
+    - GOOGLE_API_KEY
+    - GEMINI_API_KEY
+    model_pattern: "\\Agemini"
+    ruby_llm_key: gemini_api_key
+    min_key_length: 20
+    strengths:
+    - long_context
+    - multimodal
+    default_model: gemini-2.5-flash
+  openrouter:
+    env:
+    - OPENROUTER_API_KEY
+    model_pattern: "/"
+    ruby_llm_key: openrouter_api_key
+    min_key_length: 40
+    strengths:
+    - cheap
+    - routing
+    - free_tier
+    default_model: nvidia/nemotron-3-super-120b-a12b:free
+    protocol: openai
+    base: https://openrouter.ai/api/v1
+  deepseek:
+    env:
+    - DEEPSEEK_API_KEY
+    model_pattern: "\\Adeepseek"
+    ruby_llm_key: deepseek_api_key
+    min_key_length: 20
+    strengths:
+    - coding
+    - cheap
+    default_model: deepseek-chat
+    protocol: openai
+    base: https://api.deepseek.com/v1
+  xai:
+    env:
+    - XAI_API_KEY
+    model_pattern: "\\Agrok-\\d"
+    ruby_llm_key: xai_api_key
+    min_key_length: 20
+    strengths:
+    - reasoning
+    - coding
+    - fast
+    default_model: grok-4.3
+    protocol: openai
+    base: https://api.x.ai/v1
+  mistral:
+    env:
+    - MISTRAL_API_KEY
+    ruby_llm_key: mistral_api_key
+    min_key_length: 20
+    strengths:
+    - reasoning
+    - coding
+    default_model: mistralai/mistral-large
+    protocol: openai
+    base: https://api.mistral.ai/v1
+  replicate:
+    env:
+    - REPLICATE_API_TOKEN
+    - REPLICATE_API_KEY
+    strengths:
+    - image_generation
+    - video_generation
+    - tts
+    - fast_inference
+    - specialized_models
+    - edge
+    default_model: black-forest-labs/flux-2-pro
+  local:
+    env: []
+    strengths:
+    - privacy
+    - offline
+    - cheap
+    default_model: local
+lanes:
+  dead:
+  - codex-cli
+  - gemini
+inter_model:
+  version: 1.0.0
+  message:
+    roles:
+    - proposer
+    - critic
+    - synthesizer
+    - repair
+    - judge
+    required:
+    - role
+    - authority_boundary
+    - task
+    - success_criteria
+    - constraints
+    - artifact_ref
+    optional:
+    - prior_findings
+    - budget
+    - forbidden
+    authority_boundary: one concise sentence naming what the model may and may not
+      do
+    constraints: list of applicable Law identifiers or explicit hard limits
+    artifact_ref: sha256 of the exact bounded artifact supplied for this turn
+    prior_findings: structured finding objects, never a narrative summary
+    forbidden_in_body:
+    - greetings
+    - thanks
+    - hedging_openers
+    - reciprocal_persona
+    - shared_team_language
+  response:
+    format: json
+    required:
+    - position
+    - position_reason
+    - position_evidence
+    - findings
+    positions:
+    - independent
+    - concur
+    - dissent
+    - mixed
+    additional_properties: false
+    position_evidence:
+      required:
+      - location
+      - evidence
+      additional_properties: false
+    rules:
+    - Use independent when no prior findings were supplied.
+    - When prior findings exist, state concur, dissent, or mixed; silence is not concurrence.
+    - Concurrence and dissent need an explicit reason and evidence tied to the supplied
+      artifact.
+    - Return a single info finding with the exact claim "no actionable issue under
+      charge" when no actionable issue is found.
+    - Do not use encouragement, praise, agreement, or tone as a substitute for evidence.
+  finding:
+    required:
+    - severity
+    - location
+    - evidence
+    - claim
+    - proposed_repair
+    severity:
+    - info
+    - warning
+    - error
+    - critical
+    additional_properties: false
+    rules:
+    - claim is one sentence describing an observation or problem.
+    - evidence identifies the observed source, location, measurement, or command result;
+      do not invent provenance.
+    - proposed_repair is a concrete action or the literal value "none".
+    - the no-actionable finding must be the only finding and use severity info.
+  rejection:
+    required:
+    - violated_rule
+    - observed
+    - required_shape
+    - retry_allowed
+    optional:
+    - observed_sha256
+    - validation_errors
+    prose_negotiation: false
+    retry_attempts: 1
+    max_observed_bytes: 12000
+  measures:
+    handoff_cleanliness:
+      description: Fraction of completed outbound turns that needed structured rejection
+        or clarification.
+      numerator: repair_attempted
+      denominator: outbound_turns
+      direction: minimize
+      ceiling:
+      baseline_status: required_before_blocking
+    schema_compliance:
+      description: Fraction of outbound message envelopes that pass required-field
+        validation.
+      numerator: valid_outbound_envelopes
+      denominator: outbound_turns
+      direction: maximize
+    first_response_schema_compliance:
+      description: Fraction of turns whose first model response passed response validation
+        without repair.
+      numerator: first_response_valid
+      denominator: outbound_turns
+      direction: maximize
+  examples:
+    good_outbound:
+      role: critic
+      authority_boundary: Return evidence-backed findings only; do not edit or claim
+        completion.
+      task: Review the supplied artifact for ROBUSTNESS and SINGULARITY.
+      success_criteria: A valid JSON response with explicit position, evidence, and
+        findings.
+      constraints:
+      - ROBUSTNESS
+      - SINGULARITY
+      - INTER_MODEL_CONTRACT
+      artifact_ref: sha256:0123456789abcdef
+      forbidden:
+      - invent findings
+      - expand scope
+      - social padding
+    bad_outbound: Hi, could you review this and share your thoughts? Thanks!
+operator:
+  register:
+    formality: low
+    humor: dry
+    verbosity: terse
+    languages:
+    - nb
+    - en
+  boundaries:
+    never_nudge_hours: 23:00-08:00
+    topics_off_limits_for_drafts:
+    - politics
+    - politikk
+    never_store: []
+prices: {}

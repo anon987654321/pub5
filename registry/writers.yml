@@ -1,0 +1,47 @@
+# Who writes pub5, where, and how far they are trusted (PLAN.md section 9,
+# decision 3). AGENTS.md is generated from this file; edit here.
+#
+# main: pushes straight to main behind bin/check.
+# inbox: pushes only to inbox/<writer>, one task per branch; the branch merges
+#   when bin/check is green and a different model reviewed it, and only if
+#   every changed path sits under the writer's trees.
+#
+# git_authors lists author names seen for the writer in pub4's history. The
+# pub4 name anon987654321 is shared by several writers, so it identifies none.
+writers:
+  operator:
+    trust: main
+    branches: [main]
+    trees: [all]
+    git_authors: [gktepsta]
+  claude:
+    trust: main
+    branches: [main]
+    trees: [all]
+    git_authors: [Claude]
+    gated_by: bin/check
+  glm:
+    trust: inbox
+    branches: [inbox/glm]
+    trees: [master, rails, openbsd, studio, bplans, test]
+    git_authors: [GLM]
+  fable:
+    trust: inbox
+    branches: [inbox/fable]
+    trees: [master, rails, openbsd, studio, bplans, test]
+    git_authors: []
+  grok:
+    trust: inbox
+    branches: [inbox/grok]
+    trees: [master, rails, openbsd, studio, bplans, test]
+    git_authors: []
+  zai:
+    trust: inbox
+    branches: [inbox/zai]
+    trees: [master, rails, openbsd, studio, bplans, test]
+    git_authors: [Z User, Z.ai]
+  chatgpt:
+    trust: inbox
+    branches: [inbox/chatgpt]
+    trees: [master, rails, openbsd, studio, bplans, test]
+    git_authors: []
