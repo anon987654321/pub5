@@ -1,0 +1,575 @@
+# frozen_string_literal: true
+
+require "ruby_llm"
+require "digest"
+require "json"
+require "open3"
+require "timeout"
+require_relative "../execution/contract"
+require_relative "llm_dispatcher/cli_sender"
+require_relative "llm_dispatcher/model_pin"
+require_relative "llm_dispatcher/pass_clock"
+require_relative "llm_dispatcher/react_loop"
+require_relative "llm_dispatcher/ollama_sender"
+require_relative "llm_dispatcher/ruby_llm_sender"
+require_relative "llm_dispatcher/tool_registry"
+require_relative "../io/lane_silence"
+require_relative "../io/lane_state"
+require_relative "llm_dispatcher/http_sender"
+require_relative "../cli/routing/availability_policy"
+
+module Master
+  module Review
+    class LLMDispatcher
+      COST_PER_TOKEN = 0.000_015
+      CACHE_READ_RATIO = 0.10
+      CACHE_WRITE_RATIO = 1.25
+      CACHE_WINDOW = 4
+      REACT_MAX_STEPS = 8
+      MS_PER_SECOND = 1000
+      # 60 was below the floor for the work the council does — not tight, but
+      # unreachable. Measured 2026-07-31 on this machine, `claude --print
+      # --model sonnet` against a 5KB code-review prompt (a SMALL one by council
+      # standards, 120 lines and no persona system prompt):
+      #
+      #   one call, nothing else running   134s, 115s, 114s
+      #   two concurrent                   118s, both finished
+      #   four concurrent (MAX_CONCURRENT) 203s wall, one call still unfinished
+      #                                    when a 200s outer timeout killed it
+      #
+      # A single persona could not answer inside 60s with the machine otherwise
+      # idle, so whichever two personas the scheduler happened to favour decided
+      # every council. That is what "quorum not reached (2/26)" was: not
+      # disagreement, not an outage, a stopwatch set below the length of the
+      # task.
+      #
+      # 300 covers the four-concurrent case with headroom. MASTER_CLAUDE_CLI_TIMEOUT
+      # still overrides it. Note the shape of those numbers if this needs tuning
+      # again: going from two concurrent to four roughly doubles per-call
+      # latency for the same total throughput, so MAX_CONCURRENT buys nothing
+      # here and costs margin.
+      CLAUDE_CLI_TIMEOUT_S = 300
+      AGY_CLI_TIMEOUT_S = 300
+      CLAUDE_RE = /\Aclaude-|anthropic\/claude/i.freeze
+      # Capability by id pattern, not ruby_llm's Model::Info#supports_vision? or
+      # #function_calling?. The gem's registry carries none of the :free ids
+      # MASTER routes to most, and ruby_llm_patch.rb answers an unknown id with a
+      # capability-less stand-in, so every free model reads as unable. Vision is
+      # Io::LaneSelection.vision?'s answer; tools are TOOL_CAPABLE_RE below.
+      LLAMA_NEMOTRON_RE = /llama.*nemotron|nemotron.*llama/i.freeze
+      TOOL_CALL_RE = /<tool_call>(.*?)<\/tool_call>/m.freeze
+      TOOL_RESULT_ROLE = "user"
+      LLM_TOOL_MAP = {
+        Io::ReadFile => Io::LLM::ReadFile,
+        Io::WriteFile => Io::LLM::WriteFile,
+        Io::StrReplace => Io::LLM::StrReplace,
+        Io::Tree => Io::LLM::Tree,
+        Io::ListDir => Io::LLM::ListDir,
+        Io::SearchFiles => Io::LLM::SearchFiles,
+        Io::Shell => Io::LLM::Shell,
+        Io::WebSearch => Io::LLM::WebSearch,
+        Io::HostFiles => Io::LLM::HostFiles,
+        Io::WebFetch => Io::LLM::WebFetch,
+        Io::ExternalAudit => Io::LLM::ExternalAudit,
+        Io::VulCheck => Io::LLM::VulCheck,
+        Io::Nmap => Io::LLM::Nmap,
+        Io::WebBrowse => Io::LLM::WebBrowse,
+        Io::BrowserAgent => Io::LLM::Browser,
+        Io::Lovdata => Io::LLM::Lovdata,
+        Io::Linguist => Io::LLM::Linguist,
+        Io::CodePen => Io::LLM::CodePen,
+        Io::Gist => Io::LLM::Gist,
+        Io::YoutubeTranscript => Io::LLM::YoutubeTranscript,
+        Io::GitHubRepoMiner => Io::LLM::GitHubRepoMiner,
+        Io::ArxivResearch => Io::LLM::ArxivResearch,
+        Io::PluginObserve => Io::LLM::PluginObserve,
+        Io::AssistantTasks => Io::LLM::AssistantTasks,
+        Io::CapabilityCatalog => Io::LLM::CapabilityCatalog,
+        Io::AskLlm => Io::LLM::AskLlm,
+        Io::GitContext => Io::LLM::GitContext,
+        Io::AstEdit => Io::LLM::AstEdit,
+        Io::SearchKnowledge => Io::LLM::SearchKnowledge,
+        Io::FeedbackRecord => Io::LLM::FeedbackRecord,
+        Io::MemoryRecord => Io::LLM::MemoryRecord,
+        Io::SubdomainOrchestrator => Io::LLM::SubdomainOrchestrator,
+        Io::DynamicHttp => Io::LLM::DynamicHttp,
+      }.freeze
+
+      def self.build_tool_capable_re
+        prefixes = Master.models_config.fetch("tool_capable_prefixes", [])
+        escaped = prefixes.map { |p| Regexp.escape(p) }
+        Regexp.new("\\A(?:#{escaped.join("|")})(?:[:\\/@\\-.].+)?\\z", Regexp::IGNORECASE).freeze
+      end
+
+      TOOL_CAPABLE_RE = build_tool_capable_re.freeze
+
+      # The local tier's settings, read here with the rest of models.yml rather
+      # than by the sender: one reader per data file.
+      def self.ollama_settings
+        @ollama_settings ||= Master.models_config.fetch("ollama", {})
+      end
+
+      # One lookup per model id, held for the process. The registry is 1,170
+      # entries parsed from the gem's models.json, and a cost is recorded on
+      # every reply. nil means the registry does not carry the model, which the
+      # caller reads as "keep the flat rate" rather than as "free".
+      def self.model_info(model)
+        @model_info ||= {}
+        key = model.to_s
+        return @model_info[key] if @model_info.key?(key)
+
+        @model_info[key] = begin
+          RubyLLM.models.find(key)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "LLMDispatcher.model_info(#{key})")
+          nil
+        end
+      end
+
+      include CliSender
+      include ReactLoop
+      include OllamaSender
+      include RubyLLMSender
+      include ToolRegistry
+      include ProviderFailure
+      include HttpSender
+
+      def initialize(deps:, system_prompt:)
+        @config, @cache, @circuit_breaker = deps.config, deps.cache, deps.circuit_breaker
+        @tools, @bus, @system_prompt_proc = deps.tools, deps.bus, system_prompt
+        @model_router = deps.model_router
+        @availability = Master::CLI::Routing::AvailabilityPolicy.new(root: Master::ROOT)
+        @session = deps.session
+        @tool_registry = load_tool_registry
+      end
+
+      # Every LLM call in the tree arrives here — ideation, the council, the
+      # semantic rules, the fix loop. With no provider key each one fails slowly
+      # somewhere below, so a /fix reading sat at "crit0 deliberation" for ten
+      # minutes and printed nothing. One refusal, at the one door.
+      #
+      # format is a JSON schema a caller needs the reply to obey. The local tier
+      # enforces it while decoding; the other providers ignore it, and the
+      # caller's parser stays the backstop.
+      def send_with_cache(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
+                          &blk)
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        selected_model = answering_model(selected_model, image)
+        refusal = local_only_refusal(selected_model) || refusal_before_send(selected_model)
+        return refusal if refusal
+
+        @bus&.publish("llm:send", model: selected_model)
+        Io::LaneSelection.note_use(selected_model, Fiber[:master_operation])
+        cache_key = cache_key_for(messages.last[:content], messages[0...-1], selected_model, system, temperature)
+        result = breaker_for(selected_model).call(estimate_cost(messages.last[:content], selected_model)) do
+          Timeout.timeout(call_deadline_for(selected_model)) do
+            @cache.fetch(cache_key, selected_model) do
+              send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &blk)
+            end
+          end
+        end
+        settle(result, selected_model, started)
+      rescue Io::CircuitBreaker::CircuitError => err
+        record_provider_outcome(selected_model, err.category, latency_ms: elapsed_ms(started), error: err.message)
+        Result.err(redact_secrets(err.message), category: err.category)
+      rescue Timeout::Error
+        # Every dispatcher deadline is actionable, not just council deadlines:
+        # park the lane and record a timeout so fallback does not ask it again.
+        call_deadline_exceeded(selected_model, started)
+      rescue StandardError => err
+        record_provider_outcome(selected_model, :llm_call_failure, latency_ms: elapsed_ms(started), error: err.message)
+        classified_call_failure(err)
+      end
+
+      def agy_model?(model_id) = model_id.to_s.start_with?("agy:") || model_id.to_s == "agy"
+      def claude_cli_model?(model_id) = model_id.to_s.start_with?("claude-cli:")
+      def web_chat_model?(model_id) = model_id.to_s.start_with?("web-chat:")
+      def tool_capable?(model_id) = TOOL_CAPABLE_RE.match?(model_id.to_s.downcase)
+      def claude_model?(model_id) = CLAUDE_RE.match?(model_id.to_s)
+
+      private
+
+      # Ground::Redactor owns the pattern list. It was copied here verbatim, and
+      # a redaction list that exists twice is a list where the next pattern
+      # added to one copy leaves the other still printing the key.
+      def redact_secrets(text) = Ground::Redactor.text(text)
+
+      # MASTER_MODEL first, then a vision model when an image rides along.
+      def answering_model(selected_model, image)
+        # A pin is the first choice, not the only one: a pinned lane that is quota-dead
+        # or has just failed (parked in the skip cache) yields to the router's lane,
+        # so a failover hop is not sent back to the lane that failed.
+        # A pin is the only lane unless MASTER_MODEL_STRICT=0 asks for failover: an operator who
+        # asked for one model on every lane had a quota-dead Opus hand /fix's repairs to grok-cli
+        # mid-run, because the strict switch was a second flag the run had been started without.
+        # A per-call pin (MASTER_FIX_VERIFIER_MODEL) is also the operator's, so it still wins.
+        return ModelPin.current || forced_model if strict_pin?
+
+        model = [ModelPin.current, forced_model].find { |m| m && Io::LaneState.usable?(m) } || selected_model
+        image_present?(image) ? vision_model_for(model) : model
+      end
+
+      def strict_pin? = Io::LaneSelection.strict_pin?(ENV) && !forced_model.nil?
+
+      # One model for every lane, for one run. Set MASTER_MODEL and the router's
+      # choice is overridden at the single door every request passes through —
+      # cheap, default, strong, vision, the council's personas and the fix
+      # loop's consensus alike.
+      #
+      # It exists for the case where the machine running MASTER has credit with
+      # one provider and not another. On vm23 and ai.brgen.no it is unset and
+      # routing is unchanged; from a workstation with a Claude subscription,
+      # `MASTER_MODEL=claude-cli:claude-opus-4-8` sends everything through the
+      # local claude binary instead of OpenRouter.
+      #
+      # Deliberately not a config key: a setting that silently redirects every
+      # model call belongs to a shell session, not to a file that deploys.
+      def forced_model
+        value = ENV["MASTER_MODEL"].to_s.strip
+        return if value.empty?
+
+        # Once per process: every lane builds its own dispatcher, and a flag on
+        # each printed the line eight times before the first reply.
+        Master::Trace::Dmesg.once("master0", "MASTER_MODEL forces #{value} on every lane")
+        value
+      end
+
+      def vision_capable?(model_id) = Io::LaneSelection.vision?(model_id)
+
+      # The dispatcher's deadline is tightened inside a council and for every
+      # free-tier completion. A small probe cannot predict the cost of a large prompt.
+      def call_deadline_for(model)
+        deadline = PassClock.call_deadline(@availability.dispatch_deadline_s)
+        return deadline unless Io::LaneSelection.kind(model) == :free
+
+        [deadline, Io::LaneSelection.free_call_timeout_s].min
+      end
+
+      # A call past its hard deadline is parked for the cool-off and recorded as a
+      # provider timeout. Subsequent requests can move to the next available lane.
+      def call_deadline_exceeded(model, started)
+        seconds = elapsed_ms(started) / 1000
+        lane = Io::LaneSilence.lane_of(model)
+        Io::LaneSilence.silence(lane, reason: "no answer in #{seconds}s")
+        record_provider_outcome(model, :timeout, latency_ms: elapsed_ms(started), error: "deadline")
+        unit = PassClock.active? ? "council0" : "llm0"
+        cooloff = Io::LaneSilence::SILENCE_COOLOFF_S / 60
+        Master::Trace::Dmesg.status(unit,
+                                    "#{model} gave no answer in #{seconds}s; #{lane} is skipped for #{cooloff} minutes")
+        Result.err("#{model} exceeded its #{call_deadline_for(model)}s call deadline", category: :timeout)
+      end
+
+      # A billing or rate-limit refusal cannot succeed on an in-place retry,
+      # and :llm_call_failure is not in fallback_policy.on — classified as
+      # :budget / :rate_limit, the chain and the single-shot hop walk on.
+      def classified_call_failure(err)
+        native_category = ruby_llm_error_category(err)
+        if native_category
+          category = native_category == :auth_error && !Master.any_api_key_present? ? :no_api_key : native_category
+          return Result.err(redact_secrets(err.message.to_s), category:)
+        end
+
+        return Result.err(redact_secrets(err.message.to_s), category: :offline) if offline_error?(err)
+        return Result.err(key_refusal(err), category: :no_api_key) if missing_key_error?(err)
+        return Result.err(redact_secrets(err.message.to_s), category: :budget) if billing_error?(err)
+        return Result.err(redact_secrets(err.message.to_s), category: :rate_limit) if rate_limit_error?(err)
+        return Result.err(redact_secrets(err.message.to_s), category: :invalid_request) if invalid_request_error?(err)
+
+        Result.err(redact_secrets(err.message.to_s), category: :llm_call_failure)
+      end
+
+      # The two conditions that stop a call before it is made: every lane gone
+      # quiet, and this model unreachable. Both answer :no_api_key, which callers
+      # treat as permanent and skip rather than retry.
+      def refusal_before_send(selected_model)
+        return Result.err(PassClock.refusal, category: :timeout) if PassClock.expired?
+        down = Io::LaneState.verdict(selected_model, sources: Io::LaneState::DOWN)
+        return Result.err(down.reason, category: :no_api_key) unless down.usable?
+
+        reason = forced_lane_unavailable(selected_model)
+        return Result.err(reason[:message], category: reason[:category]) if reason
+
+        return if Master.llm_reachable?(selected_model)
+
+        Result.err(Master.no_api_key_message, category: :no_api_key)
+      end
+
+      def local_only_refusal(model)
+        return unless ENV["MASTER_LOCAL_ONLY"] == "1"
+        return if local_model_id?(model)
+
+        Result.err("local-only mode rejects non-local model #{model}", category: :offline)
+      end
+
+      def local_model_id?(model)
+        id = model.to_s
+        return true if id.start_with?("local:")
+        return false unless id.start_with?("ollama:", "ollama/")
+
+        !id.sub(%r{\Aollama[:/]}, "").match?(/\A.+(?::cloud|-cloud)\z/)
+      end
+
+      def forced_lane_unavailable(model)
+        return unless @model_router&.respond_to?(:unreachable_reason)
+
+        id = model.to_s
+        return unless id.start_with?("ollama:", "ollama/", "local:")
+
+        reason = @model_router.unreachable_reason(id, wait: false)
+        return if reason.to_s.empty? || reason.to_s.start_with?("checking ")
+
+        return revive_local_daemon(model, reason) if reason.start_with?("ollama unreachable")
+
+        category =
+          if reason.start_with?("ollama pull")
+            :model_missing
+          else
+            :provider_error
+          end
+        { message: reason, category: }
+      rescue StandardError => e
+        @bus&.publish("llm:preflight_error", model:, error_class: e.class.name, **Master::Execution::Contract.diagnostic_fields(e.message))
+        nil
+      end
+
+      # A local daemon that is down is started once; if it stays down the lane is
+      # dead for a minute, so failover does not ask it again on every call.
+      def revive_local_daemon(model, reason)
+        outcome = Io::LaneHealth.ensure_ollama(base: ollama_base_url)
+        return if %i[started up].include?(outcome.state)
+
+        Io::LaneQuota.note(model, reason)
+        { message: "#{reason}; #{outcome.message}", category: :offline }
+      end
+
+      # The circuit breaker returns provider failures as Err(:provider_error)
+      # rather than raising, so send_with_cache's rescue never sees them — and
+      # :provider_error is deliberately not failover-eligible (a transient 5xx
+      # wants in-place retry). Billing and rate refusals are not transient;
+      # measured 2026-08-20: an out-of-credit call arrives here as
+      # :provider_error and no lane ever walked.
+      #
+      # The model is stamped after MASTER_MODEL and the vision swap, so it names
+      # the model that was actually asked rather than the one the caller passed.
+      def settle(result, selected_model, started)
+        # MASTER's own fault says nothing about the lane, so it is neither silenced nor scored.
+        return result if result.is_a?(Master::Result::Err) && result.category == :crash
+
+        result = reclassify_provider_error(result, model: selected_model)
+        note_lane_silence(result, selected_model)
+        record_provider_result(model: selected_model, result:, started:)
+        result.is_a?(Master::Result::Ok) ? result.with_model(selected_model) : result
+      end
+
+      # With no key at all, the setup message. With a key the provider refused,
+      # its own words: "not wired to any LLM" read false while OpenRouter answered.
+      # One line when the last lane goes quiet, so the operator learns it once
+      # rather than reading it two hundred times.
+      def note_lane_silence(result, model)
+        outcome = Result.wrap(result)
+        failure = outcome.ok? ? nil : outcome.message.to_s
+        Io::LaneQuota.note(model, failure) if failure
+        lane = Io::LaneSilence.lane_of(model)
+        return silence_local_runtime(lane, failure) if failure && local_runtime_failure?(model, failure)
+        return unless Io::LaneSilence.record(failure.nil?, lane, reason: failure)
+
+        Master::Trace::Dmesg.once("llm0-#{lane}", Io::LaneSilence.message(lane))
+        @bus&.publish("llm:lanes_silent", lane:, after: Io::LaneSilence::SILENT_AFTER)
+      end
+
+      def silence_local_runtime(lane, failure)
+        cooloff = Io::LaneSilence::SILENCE_COOLOFF_S
+        Io::LaneSilence.silence(lane, reason: failure)
+        last = failure.lines.first.to_s.strip[0, 160]
+        Master::Trace::Dmesg.once("llm0-#{lane}",
+                                  "#{lane} local runtime failed; skipped for #{cooloff / 60} minutes (last: #{last})")
+        @bus&.publish("llm:lanes_silent", lane:, after: cooloff, reason: :local_runtime_failure)
+      end
+
+      # One local runner crash affects every model using its daemon until it recovers.
+      def local_runtime_failure?(model, message)
+        return false unless model.to_s.start_with?("ollama:", "ollama/", "local:")
+
+        message.to_s.match?(/llama-server process has terminated|failed to create (?:shared )?library|model runner.*(?:terminated|crashed|exited)|runner process.*(?:terminated|crashed|exited)/i)
+      end
+
+      def key_refusal(err)
+        return Master.no_api_key_message unless Master.any_api_key_present?
+
+        "key refused: #{redact_secrets(err.message.to_s)}"
+      end
+
+      def reclassify_provider_error(result, model: nil)
+        return result unless result.is_a?(Master::Result::Err) && result.category == :provider_error
+        # A crashed local model runner is not a transient 5xx: retrying the
+        # same runner cannot create its missing native library. Classify it as
+        # offline so failover skips the lane instead of spending retry delays.
+        return Master::Result.err(result.message, category: :offline) if model && local_runtime_failure?(model, result.message)
+        return Master::Result.err(result.message, category: :offline) if offline_error?(result)
+        return Master::Result.err(result.message, category: :budget) if billing_error?(result)
+        return Master::Result.err(result.message, category: :rate_limit) if rate_limit_error?(result)
+        return Master::Result.err(result.message, category: :invalid_request) if invalid_request_error?(result)
+
+        result
+      end
+
+      def image_present?(image)
+        return false if image.nil?
+        return !image.empty? if image.respond_to?(:empty?)
+        image != ""
+      end
+
+      def vision_model_for(current)
+        return current if vision_capable?(current)
+        @model_router&.preferred(task_type: :vision) || current
+      end
+
+      def system_prompt
+        result = @system_prompt_proc.call
+        return result unless result.is_a?(Hash)
+        [result[:static], result[:dynamic]].compact.join("\n\n").then { |s| s.empty? ? nil : s }
+      end
+
+      def send_llm_request(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
+                           &blk)
+        sys = system || system_prompt
+        # The Redactor used to stand only on the log and persistence paths; the
+        # outbound provider call was the one path it never covered, so content
+        # that legitimately entered prompt context went to providers verbatim.
+        # Prompt context routinely quotes the repository the agent runs in, and
+        # a secret that reached a prompt would reach the provider verbatim.
+        # Every lane branches below this point, so redacting here covers all of
+        # them. The 32+ character alphanumeric run is redacted too — a bare git
+        # SHA is the accepted collateral, the same trade the persistence path
+        # already makes.
+        messages = redact_outbound_messages(messages)
+        sys = sys.nil? ? nil : Ground::Redactor.text(sys.to_s)
+        # Claude CLI is deliberately text-only (--tools "" and strict MCP config),
+        # even when its underlying model supports native tools. Give it MASTER's
+        # guarded ReAct loop before the provider-specific early return.
+        if format.nil? && !Fiber[:master_no_tools] && @tools.any? &&
+           (claude_cli_model?(selected_model) || !tool_capable?(selected_model))
+          return react_tool_loop(selected_model, messages, sys:, stream:, image:, &blk)
+        end
+
+        return send_agy_cli(selected_model.delete_prefix("agy:"), messages, sys:, stream:, &blk) if agy_model?(selected_model)
+        if claude_cli_model?(selected_model)
+          return send_claude_cli(selected_model.delete_prefix("claude-cli:"), messages, sys:, image:, &(blk if stream))
+        end
+        return send_web_chat(selected_model.delete_prefix("web-chat:"), messages, sys:) if web_chat_model?(selected_model)
+        return send_cli_lane(selected_model, messages, sys:) if cli_lane_model?(selected_model)
+        return send_local_server(selected_model, messages, sys:, temperature:) if local_server_model?(selected_model)
+        return send_hosted(selected_model, messages, sys:, temperature:) if hosted_lane?(selected_model)
+        return send_replicate_chat(selected_model, messages, sys:) if replicate_chat_model?(selected_model)
+        return send_ollama(selected_model, messages, sys:, stream:, temperature:, format:, &blk) if ollama_model?(selected_model)
+        # A schema-bound call wants one object back, not a tool conversation.
+        # The ReAct completion sets master_no_tools while it asks for each step.
+        send_ruby_llm(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk)
+      end
+
+      # Message rows are {role:, content:} hashes. Only String content is
+      # redacted: a structured content payload (content blocks a lane builds
+      # for itself) passes through untouched rather than being flattened by
+      # #to_s, and a row a lane adds for its own bookkeeping rides along
+      # unchanged. Redaction never mutates the caller's array: a frozen entry
+      # or a frozen array stays readable by whoever handed it over, and what
+      # leaves is a fresh copy.
+      def redact_outbound_messages(messages)
+        messages.map do |entry|
+          next entry unless entry.is_a?(Hash) && entry[:content].is_a?(String)
+
+          entry.merge(content: Ground::Redactor.text(entry[:content]))
+        end
+      end
+
+      def send_web_chat(provider, messages, sys:)
+        Result.ok(Io::WebChat.call(provider:, prompt: text_prompt_for(messages), system: sys))
+      rescue StandardError => e
+        Result.err("web-chat: #{e.message}", category: :provider_error)
+      end
+
+      def breaker_for(model_id)
+        @circuit_breaker.respond_to?(:for) ? @circuit_breaker.for(model_id) : @circuit_breaker
+      end
+
+      # system must be part of the key: two calls can share the same message
+      # text (e.g. Enhance's ask_once and the real turn's chat both receive
+      # the identical user message) but mean entirely different requests
+      # under different instructions — omitting it let one call's cached
+      # completion serve back as the other's answer.
+      def cache_key_for(message, context, model = nil, system = nil, temperature = nil)
+        parts = model ? "#{model}\n#{message}" : message
+        parts = "#{parts}\nsys:#{system}" if system
+        parts = "#{parts}\ntemp:#{temperature}" if temperature
+        return Digest::SHA256.hexdigest(parts) if context.empty?
+        window = context.last(CACHE_WINDOW).map { |msg| "#{msg[:role]}:#{msg[:content]}" }.join("\n")
+        Digest::SHA256.hexdigest("#{parts}\n#{window}")
+      end
+
+      # A subscription CLI lane (claude-cli, codex, grok, agy) is paid for by
+      # the subscription, not by the call. Priced like an API call, a /fix run
+      # forced through claude-cli reached the $10 session budget and refused
+      # every repair after it, though no call had cost anything.
+      def estimate_cost(prompt, model = nil)
+        return 0.0 if model && (claude_cli_model?(model) || cli_lane_model?(model))
+
+        Master::Trace::Session.estimate_tokens(prompt) * COST_PER_TOKEN
+      end
+
+      def elapsed_ms(started)
+        return 0 unless started
+        ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * MS_PER_SECOND).round
+      end
+
+      def record_provider_result(model:, result:, started:)
+        latency_ms = elapsed_ms(started)
+        if Result.wrap(result).ok?
+          record_provider_outcome(model, :success, latency_ms:)
+        else
+          record_provider_outcome(model, failure_status(result), latency_ms:,
+                                  error: result.respond_to?(:message) ? result.message : result.to_s)
+        end
+      end
+
+      def failure_status(result)
+        cat = result.respond_to?(:category) ? result.category : :provider_error
+        case cat
+        when :rate_limit then :rate_limit
+        when :timeout then :timeout
+        when :budget, :exhausted then :quota_exceeded
+        when :provider_error then :provider_error
+        when :model_missing then :model_missing
+        else :failure
+        end
+      end
+
+      def record_provider_outcome(model, status, latency_ms: nil, error: nil)
+        # Every model call in the tree passes here, so this is the one place a
+        # provider limit can be observed to have lifted. A paid call that came
+        # back is the only evidence that matters; the check re-probes on its own
+        # backoff and this is what closes the loop when the probe succeeds.
+        if status == :success
+          Io::ModelQuota.record(model)
+          Io::QuotaCheck.clear!
+          Io::ModelSkipCache.succeeded!(model)
+        else
+          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
+        end
+        @model_router&.record_provider_outcome(model:, status:, latency_ms:, error:)
+        @bus&.publish(
+          "llm:provider_outcome",
+          model:, status:, latency_ms:,
+          **Master::Execution::Contract.diagnostic_fields(error)
+        )
+        Io::KeyRotator.rotate_for(model) if %i[rate_limit quota_exceeded].include?(status)
+      rescue StandardError => e
+        @bus&.publish(
+          "provider_health:record_error",
+          model:,
+          **Master::Execution::Contract.diagnostic_fields(e.message),
+        )
+      end
+
+    end
+  end
+end

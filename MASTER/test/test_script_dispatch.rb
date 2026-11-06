@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "fileutils"
+require "tmpdir"
+
+class TestScriptDispatch < Minitest::Test
+  def test_finds_master_tool_when_operating_from_workspace_root
+    workspace = File.expand_path("../..", __dir__)
+    path = Master::Io::ScriptDispatch.script_path(workspace, "repo_inventory")
+
+    assert_equal File.join(Master::ROOT, "tools", "repo_inventory.rb"), path
+  end
+
+  def test_uses_workspace_as_working_directory_for_fallback_tool
+    workspace = File.expand_path("../..", __dir__)
+    script = Master::Io::ScriptDispatch.script_path(workspace, "repo_inventory")
+
+    assert_equal workspace, Master::Io::ScriptDispatch.working_directory(workspace, script)
+  end
+
+  def test_finds_media_tool_under_studio
+    workspace = File.expand_path("../..", __dir__)
+    path = Master::Io::ScriptDispatch.script_path(workspace, "replicate")
+
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "replicate", "client.rb"), path
+    assert File.file?(path)
+  end
+
+  def test_uses_own_directory_as_working_directory_for_studio_tool
+    workspace = File.expand_path("../..", __dir__)
+    script = Master::Io::ScriptDispatch.script_path(workspace, "replicate")
+
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "replicate"), Master::Io::ScriptDispatch.working_directory(workspace, script)
+  end
+
+  def test_retired_tools_fail_closed_without_searching_for_similar_scripts
+    workspace = File.expand_path("../..", __dir__)
+
+    %w[lora].each do |tool|
+      path = Master::Io::ScriptDispatch.script_path(workspace, tool)
+
+      assert_equal File.join(MasterPaths.repo, "STUDIO", tool, "#{tool}.rb"), path
+      refute File.file?(path)
+      result = Master::Io::ScriptDispatch.run(root: workspace, tool:)
+      refute result.ok?
+      assert_match(/retired/, result.message)
+      assert_match(/no executable entrypoint/, result.message)
+    end
+  end
+
+  # b5acc93bcf deleted postpro by accident on 2026-11-01; the 2026-11-03
+  # restore dispatches it through the default <tool>/<tool>.rb probe.
+  def test_finds_postpro_under_studio
+    workspace = File.expand_path("../..", __dir__)
+    path = Master::Io::ScriptDispatch.script_path(workspace, "postpro")
+
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "postpro", "postpro.rb"), path
+    assert File.file?(path)
+  end
+
+  def test_finds_dilla_engine_under_studio
+    workspace = File.expand_path("../..", __dir__)
+    path = Master::Io::ScriptDispatch.script_path(workspace, "dilla")
+
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "dilla", "dilla.rb"), path
+    assert File.file?(path)
+  end
+
+  def test_tool_child_inherits_master_bundle_environment
+    Dir.mktmpdir("master-tool-dispatch") do |root|
+      tool_dir = File.join(root, "tools", "probe")
+      FileUtils.mkdir_p(tool_dir)
+      script = File.join(tool_dir, "probe.rb")
+      File.write(script, <<~'RUBY')
+        puts [ENV["BUNDLE_GEMFILE"], ENV["BUNDLE_PATH"], ENV["GEM_HOME"], ENV["RUBYOPT"]].map(&:inspect).join(" ")
+      RUBY
+
+      # The runner's own BUNDLER_SETUP and BUNDLE_LOCKFILE would pair its lockfile with the fake Gemfile.
+      runtime = %w[GEM_HOME GEM_PATH RUBYOPT RUBYLIB]
+      previous = ENV.to_h.select { |key, _value| key.start_with?("BUNDLE") || runtime.include?(key) }
+      begin
+        previous.each_key { |key| ENV.delete(key) }
+
+        File.write(File.join(root, "Gemfile"), "source \"https://rubygems.org\"\n")
+        ENV["BUNDLE_GEMFILE"] = File.join(root, "Gemfile")
+        ENV["BUNDLE_PATH"] = File.join(root, "bundle")
+        ENV["GEM_HOME"] = File.join(root, "gems")
+        ENV["GEM_PATH"] = File.join(root, "gems")
+        ENV["RUBYOPT"] = ""
+
+        result = Master::Io::ScriptDispatch.run(root:, tool: "probe")
+
+        assert result.ok?, -> { result.message.to_s }
+        assert_equal %Q{"#{ENV["BUNDLE_GEMFILE"]}" "#{ENV["BUNDLE_PATH"]}" "#{ENV["GEM_HOME"]}" ""}, result.value!
+      ensure
+        ENV.keys.grep(/\ABUNDLE/).each { |key| ENV.delete(key) }
+        %w[GEM_HOME GEM_PATH RUBYOPT RUBYLIB].each { |key| ENV.delete(key) }
+        previous.each { |key, value| ENV[key] = value }
+      end
+    end
+  end
+end

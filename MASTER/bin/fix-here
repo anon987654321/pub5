@@ -1,0 +1,234 @@
+#!/bin/sh
+# bin/ruby picks an installed Ruby; a rbenv shim would refuse MASTER/.ruby-version when it names one this machine lacks.
+exec "$(dirname "$0")/ruby" -x "$0" "$@"
+#!ruby
+# frozen_string_literal: true
+
+# Runs MASTER's /fix over one tree in this checkout, the way that works here.
+#
+#   MASTER/bin/fix-here <MASTER|RAILS|OPENBSD|STUDIO|path> [--model ID|none] [--no-probe] [--no-publish] [--dry]
+#
+# This repository writes straight to main, so /fix runs in the checkout and its
+# verified per-pass commits land on main. The wrapper does the things that cost an
+# agent a rediscovery each time: it proves the model lane answers before the run,
+# refuses to start with too little disk (a /fix run plus its tests writes logs and
+# caches, and disk filled twice in one session), boots the apps for a RAILS run,
+# and stops them afterwards. --no-publish holds the run's commits local, so
+# nothing reaches origin/main until its operator pushes; read `git log
+# origin/main..HEAD` first.
+# --resume continues a stopped run with its leftover budget instead of starting fresh.
+
+require "open3"
+require "fileutils"
+require "json"
+
+ROOT = File.expand_path("../..", __dir__)
+MASTER = File.join(ROOT, "MASTER")
+# The run's own floor, read where the run reads it (data/budgets.yml disk_free_gb crit): a second
+# hard-coded 2.0 here refused to start a run the budgets allowed.
+MIN_FREE_GIB = begin
+  require "yaml"
+  budgets = YAML.safe_load_file(File.join(MASTER, "data", "budgets.yml"), aliases: true)
+  Float(budgets.dig("process", "resources", "disk_free_gb", "crit"))
+rescue StandardError
+  2.0
+end
+TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+
+args = ARGV.dup
+dry = args.delete("--dry")
+probe = !args.delete("--no-probe")
+no_publish = args.delete("--no-publish")
+resume = args.delete("--resume")
+model_flag = nil
+if (i = args.index("--model"))
+  abort "fix-here: --model requires an ID or 'none'" if args[i + 1].to_s.empty? || args[i + 1].start_with?("--")
+
+  args.delete_at(i)
+  model_flag = args.delete_at(i)
+end
+# --lane code|visual|all picks which half of /fix runs; /fix reads the joined spelling.
+if (i = args.index("--lane"))
+  args[i, 2] = ["--lane=#{args[i + 1]}"]
+end
+PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks].freeze
+passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
+args -= passthrough
+# --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
+checks_flag = args.find { |arg| arg.start_with?("--checks=") }
+args -= [checks_flag] if checks_flag
+check_stages = checks_flag.to_s.delete_prefix("--checks=")
+tree = args.shift
+USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
+        "[--dry] [--autofix=off|dry|on] [--max-files=N] [--lane code|visual|all] [--resume] " \
+        "[--blockers] [--plan] [--until-checks] " \
+        "[--no-critique] [--checks=lexical,sprawl,...]"
+abort USAGE if tree.to_s.empty? || args.any?
+abort "fix-here: #{tree} is not one of #{TREES.join(', ')} and not a path in this checkout" unless TREES.include?(tree) || File.exist?(File.join(ROOT, tree))
+
+# 2. Disk: a /fix run plus its tests writes logs and caches; below this tools start failing.
+out, status = Open3.capture2e("df", "-kP", ROOT)
+available_kib = out.lines.last.to_s.split[3]
+free = if status.success? && available_kib&.match?(/\A\d+\z/)
+         available_kib.to_f / (1024 * 1024)
+       end
+abort "fix-here: cannot read free disk" unless free
+abort format("fix-here: %.1f GiB free, need %.1f. Free some space (bin/operator doctor lists what is large).", free, MIN_FREE_GIB) if free < MIN_FREE_GIB
+
+# 3. The saved model: .master is gitignored. Read the operator's choice from it.
+common, = Open3.capture2e("git", "-C", ROOT, "rev-parse", "--git-common-dir")
+main_root = File.expand_path("..", File.expand_path(common.strip, ROOT))
+source_config = File.join(main_root, "MASTER", ".master", "config.yml")
+target_config = File.join(MASTER, ".master", "config.yml")
+if !dry && !File.file?(target_config) && File.file?(source_config)
+  FileUtils.mkdir_p(File.dirname(target_config))
+  FileUtils.cp(source_config, target_config)
+end
+saved = [target_config, source_config].map { |f| File.file?(f) ? File.read(f)[/^model:\s*(\S+)/, 1] : nil }.compact.first
+model = model_flag == "none" ? nil : (model_flag || saved)
+
+env = { "MASTER_INTERNAL_CHILD" => "1" }
+env["MASTER_FIX_NO_PUBLISH"] = "1" if no_publish
+env["MASTER_FIX_FRESH"] = "1" unless resume
+env["MASTER_FIX_CHECK_STAGES"] = check_stages unless check_stages.empty?
+if model_flag == "none"
+  env["MASTER_MODEL"] = nil
+elsif model
+  env["MASTER_MODEL"] = model
+end
+log = File.join(MASTER, ".master", "fix-#{File.basename(tree)}.log")
+
+puts "fix0 at fix-here: tree=#{tree} root=#{ROOT}"
+puts "fix0 at fix-here: disk=#{format('%.1f', free)} GiB free, model=#{model || 'pool (none forced)'}, log=#{log}"
+if dry
+  puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
+  exit 0
+end
+
+# 3b. A file that does not parse stops the runtime before any model is asked, and the lane
+# check below then fails for a reason that looks like a lane. Say the real one, in seconds.
+$LOAD_PATH.unshift(File.join(MASTER, "lib"))
+require "operator/parse_sweep"
+require "operator/stall_watch"
+broken = Operator::ParseSweep.failures(ROOT)
+unless broken.empty?
+  warn Operator::ParseSweep.render(broken.first(10))
+  abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
+end
+
+# 4. Prove the lane before a run that takes hours: one real call, and the model that
+# served it is read from MASTER's own record, not assumed.
+if probe && model
+  before = File.file?(File.join(MASTER, ".master", "metrics.jsonl")) ? File.readlines(File.join(MASTER, ".master", "metrics.jsonl"), encoding: "UTF-8", invalid: :replace).size : 0
+  question = "In one sentence: what bug does def total(items) items.sum { |i| i.price * i.qty } / items.size end have when items is empty?"
+  probe_out, probe_status = Open3.capture2e(env, File.join(MASTER, "bin", "master"), question)
+  # capture2e returns a Process::Status, which is always truthy; the exit code is the verdict.
+  probe_ok = probe_status.success?
+  probe_tail = probe_out.to_s.lines.map(&:strip).reject(&:empty?).last(8).join("\n  ")
+  metrics = File.join(MASTER, ".master", "metrics.jsonl")
+  abort "fix-here: the lane check wrote no metrics (call ok=#{probe_ok}); the call never reached a model. Fix the lane or run with --no-probe.\nlast output of the call:\n  #{probe_tail}" unless File.file?(metrics)
+
+  rows = File.readlines(metrics, encoding: "UTF-8", invalid: :replace).drop(before).grep(/llm_response/)
+  served = rows.filter_map { |r| JSON.parse(r).dig("llm_response", "model") rescue nil }.last
+  abort "fix-here: the lane check failed (call ok=#{probe_ok}, served by #{served.inspect}, wanted #{model}). Run with --no-probe to skip, or fix the lane first.\nlast output of the call:\n  #{probe_tail}" unless probe_ok && served == model
+  puts "fix0 at fix-here: lane proven, #{served} answered"
+end
+
+FileUtils.mkdir_p(File.dirname(log))
+# Read before the run overwrites the log: when the last run reached its first repair.
+puts Operator::RunPlan.line(File.basename(tree), log)
+puts "fix0 at fix-here: running; follow it with: tail -f #{log}"
+
+# 5. A RAILS run is judged on what is rendered: the visual pass, the layout snapshot, the
+# geometry and tap-target checks all answer "nothing listening" and count as inconclusive
+# when no app is up, and a run that measured no layout cannot improve one. So the apps
+# are booted around the run and stopped after it, whatever the run did. The code lane (the
+# default) renders nothing, so it leaves them down: booting four apps cost minutes and a
+# gigabyte of an 8 GB machine for a run that only reads source.
+lane = passthrough.find { |arg| arg.start_with?("--lane=") }.to_s.delete_prefix("--lane=")
+live = (tree == "RAILS" || tree.start_with?("RAILS/")) && !["", "code"].include?(lane) &&
+       (check_stages.empty? || check_stages.split(/[,\s]+/).include?("source"))
+operator = File.join(MASTER, "bin", "operator")
+triangle_log = File.join(File.dirname(log), "triangle-#{File.basename(tree)}.log")
+if live
+  # Booting takes minutes and the run's own handler is installed after it, so a TERM
+  # in this window used to kill the wrapper and leave every server it had started
+  # holding its port for the next run.
+  %w[TERM INT HUP].each do |sig|
+    trap(sig) do
+      system(operator, "triangle", "down", chdir: ROOT, out: File::NULL, err: File::NULL)
+      exit 143
+    end
+  end
+  puts "fix0 at fix-here: booting the apps for the rendered checks, log=#{triangle_log}"
+  up = system(operator, "triangle", "up", chdir: ROOT, out: [triangle_log, "w"], err: [:child, :out])
+  puts "fix0 at fix-here: #{up ? 'apps are up' : 'the apps did not all boot; layout evidence will be partial (see the triangle log)'}"
+end
+
+status = nil
+begin
+  pid = Process.spawn(env, File.join(MASTER, "bin", "master"), "/fix", tree, *passthrough, chdir: ROOT, out: [log, "w"], err: [:child, :out], pgroup: true)
+# A TERM or INT aimed at the wrapper must reach the whole run, grandchildren and their MCP
+# servers included; otherwise it keeps the quota. A run that is still alive
+# KILL_AFTER_S seconds after TERM is killed, because a handler can be stuck inside a model call.
+KILL_AFTER_S = Integer(ENV.fetch("FIX_HERE_KILL_AFTER_S", "20"))
+term_sent_at = nil
+stop_run = lambda do
+  term_sent_at ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  Process.kill("TERM", -pid) rescue nil
+end
+%w[TERM INT HUP].each { |sig| trap(sig) { stop_run.call } }
+# Ends the run when the pulse reports a stall past the limit, instead of waiting out hours.
+stalled = false
+watcher = Thread.new do
+  loop do
+    sleep 15
+    next unless Operator::StallWatch.abort?(Operator::StallWatch.tail(log))
+
+    stalled = true
+    stop_run.call
+    break
+  end
+end
+loop do
+  status = Process.wait2(pid, Process::WNOHANG)&.last
+  break if status
+
+  if term_sent_at && Process.clock_gettime(Process::CLOCK_MONOTONIC) - term_sent_at > KILL_AFTER_S
+    Process.kill("KILL", -pid) rescue nil
+    term_sent_at = nil
+  end
+  sleep 1
+end
+watcher.kill
+if stalled
+  warn "fix-here: stopped, the run reported no file attempted for over #{Operator::StallWatch.limit / 60} minutes (MASTER_FIX_ABORT_S). Log: #{log}"
+  exit 75
+end
+ensure
+  system(operator, "triangle", "down", chdir: ROOT, out: File::NULL, err: File::NULL) if live
+  # The run's own checks boot apps too (VisualRuntime), on any lane. A run that died past its traps
+  # left them serving for hours; their lease files name the dead owner, so they are stopped here.
+  begin
+    require_relative "../lib/fix/server_leases"
+    reaped = Master::Fix::ServerLeases.reap_orphans!(File.join(ROOT, "RAILS", "tmp", "triangle"))
+    puts "fix0 at fix-here: stopped #{reaped.join(", ")}, left serving by the run" if reaped.any?
+  rescue StandardError, LoadError => e
+    warn "fix-here: orphan server reap failed, #{e.class}: #{e.message}"
+  end
+end
+
+# The child can exit 0 having done nothing: an option error is printed and the message
+# is dropped. A /fix run always writes fix0 lines, so a log without one is a failure.
+code = status&.exitstatus || 1
+if code.zero?
+  text = File.file?(log) ? File.read(log, encoding: "UTF-8", invalid: :replace, undef: :replace) : ""
+  reason = if text.match?(/option error|invalid option/) then "the runtime rejected an option"
+           elsif !text.match?(/^fix0 /) then "the run wrote no fix0 line, so /fix never started"
+           end
+  if reason
+    warn "fix-here: the child exited 0 but #{reason}. Log: #{log}"
+    code = 70
+  end
+end
+exit code

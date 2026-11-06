@@ -1,0 +1,8 @@
+/* scan: intentional-colors — the face is one-theme black by design
+   (SURFACES.md): its #000 grounds and print inversion follow no palette. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* No font is downloaded: the face sets brgen's one sans family (--font,
+   Helvetica Neue Pro to Arial) for chrome and the mono stack for the chat,
+   both installed faces. */
+

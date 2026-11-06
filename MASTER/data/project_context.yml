@@ -1,0 +1,507 @@
+---
+meta:
+  source: runtime authority - edit this file or use MemoryRecord; do not add data/claude/*.md
+  count: 35
+entries:
+- key: personality_rb_comment_audit
+  name: personality rb comment audit
+  description: Comment audit results for personality.rb
+  type: feedback
+  body: Audit of the `personality.rb` comment at line 55 found the comment accurately
+    describes the code. No violations were found.
+- key: project_defrag_plan_2026_05
+  name: pub4 defrag/dedup/rename plan (2026-05-07)
+  description: Multi-commit refactor plan from a sister chat - collapse duplication
+    across docs, shrink data/, flatten repo root, rename for clarity. Priority-1 (Master::Orient)
+    shipped then reverted on 2026-05-20 as a useless wrapper.
+  type: project
+  body: |-
+    On 2026-05-20, `Master::Orient` and `/orient` were removed - the five constitutional YAMLs already appear in every system prompt via Constitution and Personality. The rest of the plan stands.
+
+    The 2026-05-07 proposal aimed for a single source of truth with one yml per fact and prose references only; shrinking `data/` from eleven to eight files by merging council, infer, sweep, and zsh into `patterns.yml`; flattening the repo root from twenty-six to ten entries including `__predecessors/`, `audio/`, `scripts/`, `web/`, and `memory/`; renames such as `deploy/openbsd.sh`, `state.yml`, `limits.yml`, `voice.yml`, and `style.yml`, with CONVENTIONS.md generated or deleted; and smoothing work - stash before `git reset --hard`, explicit `scope:` on `Master.build`, unified `Result`, per-stage budget in `limits.yml`, reconciled Guard and auto-approve, unified `exe/master` boot, and generalized WhyExplainer lookup-then-LLM.
+
+    Priority-1 Orient work -`orient.rb`, slim AGENTS and CLAUDE, `/orient` plus subcommand, zshrc `[[ -t 0 ]]` guard - shipped then reverted as a useless wrapper. One fact equals one place; commits stay small and reversible; smoothing items remain follow-up tickets.
+
+    2026-07 doc consolidation: top-level MASTER stubs (SOURCE_TREE, TRACE, REPLICATE, CONVENTIONS, QUICKSTART, AGENT_CONTRACT, RUNTIME_MAP, root IDENTITY.md) removed or folded into START_HERE.md. Runtime shards were merged into data/runtime.yml.
+
+    2026-07-15 tier-5 YAML pass: data/ went from 77 to 54 files. 9 genuinely dead files removed (architectures.yml, gems.yml, llm_operators.yml, rails.yml, why_command.yml, epistemics.yml, templates.yml, ui.yml, budget.yml - none had any real code consumer, despite a couple of their own header comments claiming otherwise), 13 folded into patterns.yml under namespaced top-level keys (closings, motd, webhooks, cron_jobs, violation_priors, stale_namespaces, auth_profiles, cli, heartbeat, refusal_templates, operator_playbook, skills_registry), 1 folded without a real consumer but kept as reference documentation (vocabulary.yml - its "sacred_terms" claim was never enforced by code, but documents naming conventions actively used in the codebase). Deliberately NOT folded: council.yml, state.yml, topologies.yml, tts.yml, tools.dynamic.yml, openbsd.yml - each has a specific architectural reason (see START_HERE.md's Data File Budget section). This tier-5 pass is done; remaining data/ files are either Tier 1-4 or one of these documented exceptions.
+- key: project_falcon_em_subprocess
+  name: Falcon Async + EventMachine = subprocess pattern
+  description: EM-based gems (rb-edge-tts, em-http) inside Falcon request handlers
+    must shell out to a subprocess; Process.fork and direct EM.run both fail
+  type: project
+  body: |-
+    Falcon uses Async and io-event fibers. `Process.fork` from a request fiber raises `RuntimeError: Closing scheduler with blocked operations!`. `EventMachine.run` conflicts with Falcon's reactor and hangs or closes prematurely. This surfaced in `Master::Speech.synthesize_edge` via rb-edge-tts and applies to any `em-*` gem inside a request handler.
+
+    The pattern is a `bin/<name>-worker` script that runs EventMachine work and writes a tempfile; the controller calls `Open3.capture3`. Reference implementation: `MASTER/bin/tts-worker` and `MASTER/lib/voice/speech.rb#synthesize_edge`.
+- key: project_master
+  name: MASTER project context
+  description: pub4/MASTER - constitutional AI runtime and repo-wide governance kernel
+  type: project
+  body: |-
+    MASTER is the constitutional AI runtime in pure Ruby. The repository is governed as four top-level trees: MASTER, RAILS, OPENBSD and STUDIO; STUDIO owns media implementations and `MASTER/tools/` exposes compatibility symlinks.
+
+    The public runtime surfaces are `MASTER/bin/master` for the agent session and `MASTER/bin/operator` for repository-wide operations. `/fix` is the write/convergence operation; `/fix --dry-run` is read-only and `--critique` invokes the council. `MASTER/bin/operator check` runs the repository ladder with autofix enabled, while `--scan-only` is the measurement-only variant.
+
+    Production is vm23. OpenBSD deploy behavior belongs under `OPENBSD/`; Rails product truth belongs under `RAILS/apps.yml`. `MASTER/data/soul.yml` and `MASTER/data/laws.yml` are the law. Current runtime structure is the code under `MASTER/lib/`, the media implementations under `STUDIO/`, and the MASTER-owned utilities under `MASTER/tools/`; do not substitute an abandoned module target or a historical shell workflow for the present tree.
+- key: project_master_dual_gemfile
+  name: MASTER has two Gemfiles
+  description: MASTER/Gemfile (CLI) and MASTER/web/Gemfile (Falcon web) are independent
+    - adding a gem to one does NOT make it available in the other
+  type: project
+  body: |-
+    `MASTER/Gemfile` serves the CLI and `MASTER/web/Gemfile` serves the Falcon web tier. They are independent - adding a gem to one does not make it available in the other.
+
+    `MASTER/web/Gemfile` declares `gem "master", path: ".."`, which loads via the gemspec, not the parent Gemfile. Gems used in `MASTER/lib/` from web handlers must appear in both `MASTER/Gemfile` and `MASTER/web/Gemfile`, or in `master.gemspec` as a runtime dependency. Bundling only once leaves Falcon unable to `require` the gem - a LoadError that surfaces as a controller rescue and 503. `rb-edge-tts` exhibited this: CLI worked while `/chat/tts` failed.
+
+    When adding a dependency, edit both Gemfiles, run `bundle install` in `MASTER/` and `MASTER/web/`, and verify the gem appears in `MASTER/web/Gemfile.lock`.
+- key: project_master_seven_module_refactor
+  name: historical seven-module refactor proposal
+  description: Reverted architecture proposal retained only as provenance
+  type: reference
+  body: |-
+    The seven-module layout (`now`, `loop`, `judge`, `voice`, `ground`, `reach`, `trace`) was proposed on 2026-05-08 and later abandoned. The current repository does not use that target structure: the live `MASTER/lib/` tree has its present domain directories, and the public operator surfaces are `bin/master` and `bin/operator`.
+
+    Treat this entry as historical context only. Do not create, restore, or route code toward the seven-module layout unless a new architectural decision explicitly establishes it. Git history holds the old implementation and branch work.
+- key: project_master_yml_json_authority
+  name: master.yml/master.json migration is complete - soul.yml/laws.yml are sole
+    authority
+  description: The predecessor master.yml/master.json drift-closing effort (started
+    2026-05-05) is finished; both predecessor files are deleted. Authority chain is
+    CLAUDE.md's "Authority order" - soul.yml, then laws.yml.
+  type: project
+  body: |-
+    Historical: on 2026-05-05, the directive was that MASTER should implement what predecessor `master.json` (v43.0.1, November-December 2025, 130 commits) and `master.yml` (v31-v49.75, December 2025-February 2026, 668 commits) described, mined from their deleted history. That drift-closing work is done - the priority gaps listed at the time (Universal Laws ladder, Strunk & White safeguards, biases section, structural_ops taxonomy, council personas, evidence logging, beauty section, per-language templates, and the rest) now live in `soul.yml` and `laws.yml`.
+
+    Neither predecessor file exists in the repo anymore. `soul.yml` (constitution) and `laws.yml` (scan rules + `principle_priorities`) are the sole authoritative sources - see the "Authority order" line in `CLAUDE.md`. Do not look for law in `master.yml`/`master.json`; they are gone.
+- key: reference_grok_ui_cli_patterns
+  name: Grok-inspired UI/CLI patterns (chatlog dump 2026-05-07)
+  description: Reference dump from a sister chat - StyleCoach UI prompt, htmx+SSE
+    streaming, tty-prompt/tty-spinner advanced features, multi-line editor, character-stream
+    LLM CLI. For MASTER's web UI and CLI polish.
+  type: reference
+  body: |-
+    This is a Grok-style design dump from 2026-05-07. Cherry-pick ideas; do not bulk-import.
+
+    StyleCoach critiques MASTER output across CLI, web, and screenshots. Rules: the interface disappears; zero visual debt; personality lives in words, spacing, and timing; speed beats everything; mobile-first dark; every element must earn its place. Format is `ELEMENT/Current/Suggested/Reason` plus `distilled_ui_lesson`. Examples include at most two accent colors, spinners of at most three dots, and a prompt bar fixed at the bottom.
+
+    Web streaming uses htmx+SSE with `sse-connect="/stream/:id"` and `event: chunk`, plus `X-Accel-Buffering: no` and sleep `rand(0.02..0.08)`. Alternatively use chunked HTTP with `hx-swap="innerHTML"`.
+
+    CLI traits favor char-stream via ANSI `\r` over `Thinking...`, a terse happy path, subtle personality on success and failure, stateful context in SQLite or `~/.master/context.json`, a plain-ASCII spinner after 1.5s (Braille is retired from MASTER's terminal, 2026-10-12), and one-command install.
+
+    tty-prompt offers `select(filter:)`, `multi_select`, `expand`, `editor(syntax:, word_wrap:)`, `mask`, `slider`, and validators (`in`, `validate`, `convert`, `modify`). Theme uses bright_cyan with `❯` and `◉`. tty-spinner defaults to `:dots_9`, supports `Multi` for parallel work, and uses `hide_cursor: true`. Multi-line input uses `PROMPT.editor` with Anthropic stream char-by-char at `sleep(rand(0.008..0.035))`.
+
+    MASTER already streams SSE on `POST /chat/message` and CLI via `chunk_accumulator`. Borrow Thinking cleanup, ambiguity menus, and tty `editor` for `<<` mode. StyleCoach fits as `/crit` plus a vision tool.
+- key: reference_opencrabs
+  name: OpenCrabs (Rust MASTER cousin)
+  description: github.com/adolfousier/opencrabs - Rust/Ratatui TUI agent, philosophical
+    cousin of MASTER. ~803 stars, MIT. Worth-stealing patterns listed with MASTER
+    wiring status.
+  type: reference
+  body: |-
+    OpenCrabs is the Rust cousin of MASTER - [opencrabs](https://github.com/adolfousier/opencrabs) with [docs](https://docs.opencrabs.com), v0.3.47 as of June 2026, four thousand plus tests, MIT license, roughly eight hundred stars. It targets Linux, macOS, and Windows; it does not support OpenBSD or `pledge`. Architecture is TUI/CLI -> Brain -> Services -> SQLx/SQLite -> LLM providers, built with Rust, Tokio, and Ratatui.
+
+    As of 2026-06-24, MASTER wired brain-files re-read (`data/*.yml`); FTS5 BM25 memory; inline compaction via `ContextWindow`, web SSE, and daily log; `/rebuild` hot-restart; sub-agent tool exclusion (`Policy::Subagent`, `AgentPool`, swarm); typed sub-agents (`agent_taxonomy.yml`, `/btw`); hashline edits (`Io::Hashline`); RTK output filter (`/rtk`); plan pinning (`Ground::ActivePlan`); mission dashboard (`/dashboard`); phantom recovery; skills slash triggers (`CLI::Skills#trigger_for`); soft and hard compaction at 65% and 90%; per-model quota (`Io::ModelQuota`); prompt-cache card (`Trace::CacheEfficiency`, `/chat/metrics`); OpenRouter key rotation (`Io::KeyRotator`); and unified health (`bin/doctor`, `/doctor`).
+
+    OpenCrabs gaps remain: high priority for OAuth-before-key auth rotation, `self_improve` brain writes, and NL `config_manager`; medium for offline STT/TTS, multi-channel inbox, cron DSL, dynamic `tools.toml`, video and PDF multimodal, and usage categorization; low for A2A RPC, `zeroize` key hygiene, and upstream brain sync.
+
+    OpenClaw ([openclaw/openclaw](https://github.com/openclaw/openclaw), 355k+ stars, [docs](https://docs.openclaw.ai)) overlaps partially: MASTER now has pairing before personal tools (`Ground::Pairing`, `/pair`, POST /pair), tool profiles public/messaging/full (`Ground::Tool::Profile`), per-subject USER.md/MEMORY.md, HEARTBEAT_OK `personal_pulse` (off by default), and `/security-audit`. Still lacks OAuth/cooldown tiers, Docker sandbox, ClawHub, Live Canvas/A2UI, Voice Wake; webhook/cron ingress exists. Do not treat pairing as sentience or a bodyguard.
+
+    Similar repos include [OpenHands](https://github.com/All-Hands-AI/OpenHands) for sandbox GUI; [Aider](https://github.com/Aider-AI/aider) for repo map (`GitContext`, `CodeIndex` partial); [SWE-agent](https://github.com/SWE-agent/SWE-agent) for issue-to-patch (`/fix` partial); [crewAI](https://github.com/crewAIInc/crewAI) for roles (council and swarm partial); [nekro-agent](https://github.com/KroMiose/nekro-agent) for chat sandbox; and [OpenClaw-RL](https://github.com/Gen-Verse/OpenClaw-RL) for online RL (`Ledger::Feedback` only). Clusters live in `patterns.yml` as `openclaw_like_personal_agents`, `bleeding_edge_experimental_repos`, and `agi_agent_ecosystem`.
+
+    Risks include unapproved RSI brain writes, hallucinated tools in corrupted sessions, bus factor one, and headless web-chat ToS per `ROUTING_REARCHITECTURE.md` §6. Do not conflate `mo-vic/OpenCrab` (distillation) or the empty `opencrab` org with this project.
+- key: user_architect_aesthetics
+  name: User is an architect; aesthetic proposals usually pass
+  description: User's primary discipline is architecture; treat typography, layout,
+    design-philosophy proposals as in-scope and likely approved
+  type: user
+  body: |-
+    The operator is an architect by training. Aesthetic, typographic, and design-philosophy proposals - even ones LLMs dismiss as fluff - are usually approved.
+
+    Surface aesthetic content from Bringhurst, Ando, Rams, wabi-sabi, ma, and kanso, plus beauty sections in YAML, without self-censoring. Treat these as engineering anchors, not disclaimers. Propose UI, prose, and config refinements actively. Do not argue that beauty or zen YAML is "not actionable."
+- key: master_design_vision
+  name: MASTER design vision (pure-Ruby AI, OpenBSD-mirrored, Snohetta parametric)
+  description: Guiding vision and influences - steer every design/refactor decision
+    toward it
+  type: project
+  body: |-
+    The operator's guiding vision for MASTER, to steer every design and refactor decision.
+
+    (a) A NEW AGE IN COMPUTING - the first pure-Ruby AI. No Python in the spine; Ruby all the way down. Influences the operator cites (to be credited in a forthcoming book): Jeremy Evans (author of Roda + Sequel, and maintainer of the OpenBSD Ruby port - the exact Ruby<->OpenBSD nexus MASTER sits on); adam12 / Adam Daniels (Roda/Sequel/Rack/Hanami minimalist-Ruby school, Gemdocs.org - the operator designed the new Gemdocs logo); DHH (Rails); J Dilla's mastering engineer Dave Cooley (craft and feel); the architecture firm Snohetta; and the wider OpenBSD / Ruby / Rails communities.
+
+    (b) OPENBSD DESIGN, MIRRORED AS CLOSELY AS POSSIBLE. Correctness and simplicity above all; secure-by-default; ruthless removal of unused code; a small closed surface; sane defaults; docs as first-class. Respect to Theo de Raadt. A future OpenBSD Rust port is planned, likely with a higher-level Ruby overlay. Concretely in MASTER: the core/ fold is an OpenBSD-style minimal kernel - a fixed 7-verb World surface (the syscall table), the immutability rule as pledge(2) (the agent cannot rewrite its own constitution or spine), the Constitution as a security check before every effect, atomic writes.
+
+    (c) SNOHETTA-STYLE NORWEGIAN PARAMETRIC ARCHITECTURE. The operator studied architecture (in Malaysia, their father is from there) and favours timeless, well-thought-out design: one clear organizing idea, nothing decorative, form follows the idea.
+
+    HOW TO APPLY: prefer collapse over accretion - one parametric form with data-driven variants over many near-duplicate files (e.g. the four bin/check-* scripts collapsed to one bin/check --profile). Closed minimal surfaces. When in doubt, remove. Match the surrounding restraint. Craft is not accretion - the TTS voice engines were deliberately kept.
+- key: bsdports_openbsd_ports_index
+  name: bsdports is the official next-gen OpenBSD ports index (Solene blessing)
+  description: RAILS/bsdports - sanctioned successor to Solene Rapenne's ports index
+  type: project
+  body: RAILS/bsdports is being built as the official next-generation OpenBSD ports
+    index - the operator has the blessing and go-ahead of Solene Rapenne (solene@,
+    former OpenBSD developer, now Qubes OS core team; blog at dataswamp.org) to create
+    the next version of her ports index. Treat bsdports as a first-class, real-world
+    OpenBSD-community deliverable, not a demo.
+- key: semantic_index_comment_audit
+  name: semantic index comment audit
+  description: Audit of semantic_index.rb comments for drift - all accurate
+  type: reference
+  body: |-
+    Checked three comment/code pairs in semantic_index.rb:
+    [0] nearest method comment: accurately describes returning nearest entry value within threshold or nil
+    [1] remember method comment: accurately describes storing embedding->value with LRU eviction
+    [2] fetch method comment: accurately describes near-hit return or block computation with storage
+    All comments match code behavior. No drift detected.
+- key: user
+  name: user
+  description: User is an architect by training and primary discipline
+  type: user
+  body: User is an architect by training and primary discipline. Aesthetic, typographic,
+    and design-philosophy proposals - even ones that LLMs typically dismiss as garbage,
+    irrelevant, or "out of scope for code" - are usually approved by this user.
+- key: path_guard_comment_audit
+  name: path guard comment audit
+  description: Audit of path_guard.rb comments for accuracy
+  type: feedback
+  body: |-
+    Index 0: Comment accurately describes the symlink handling logic in inside_real_root?.
+    Index 1: Comment accurately describes that credential files are refused for both reads and writes via Core::World.secret? delegation.
+    All comments are accurate.
+- key: operator_directive_memory_lands_in_master
+  name: operator directive - memory, rules, logic land in MASTER first
+  description: Durable session knowledge is written to MASTER/data/project_context.yml,
+    not left in sidecar memory
+  type: feedback
+  body: 'Operator directive, 2026-10-03: ALWAYS write memory, rules, logic and harvested
+    findings directly into MASTER - it is the primary surface for external LLMs (Claude,
+    Grok, Codex et al.), so a lesson that exists only in one harness''s private memory
+    is invisible to the other sessions and to the runtime. Session memory files remain
+    a per-agent convenience; MASTER is the shared source of truth. Concretely: research
+    harvests, learned constraints and standing directives get an entries: row here
+    (or an edit to the owning data file), with the date in the key.'
+- key: reference_agent_evolution_harvest_2026_10
+  name: agent-evolution harvest (EvoMap + kyrolabs lists)
+  description: 12 adoptable council/memory ideas from the agent-evolution awesome-lists,
+    2026-10-03
+  type: reference
+  body: 'Ideas, never frameworks (all Python). (1) SWE-Milestone: instruments must
+    measure LONGITUDINAL decay - isolated task rate can hold while sustained behavior
+    collapses (80%->38%); run past checks across evolution cycles and record the curve.
+    (2) Agent0: derive curriculum from the failure ledger - unresolved scan debts/flaky
+    checks become synthesized check cases, difficulty escalating. (3) Competition: candidate
+    diffs in parallel worktrees, check ladder scores them, verifier merges only the
+    survivor. (4) Agent Workflow Memory: distill successful repair sequences keyed
+    by failure class; consult before improvising. (5) A-MEM: memory notes auto-linked;
+    a new note may rewrite an older one it contradicts. (6) MemoryBank: forgetting
+    curve - reinforcement on access, aging on silence, deletion as governed policy.
+    (7) MemSkill: a declared policy (voice.yml-shaped) decides durable vs session-local
+    memory. (8) TextGrad/OPRO/EvoPrompt: evolve the council''s critique prompts, scored
+    against measured scanner false-positive rate. (9) Darwin Gödel Machine: evolution
+    triggers archive variant+score (orders ledger), never single rewrites; rollback
+    stays possible. (10) TMLR survey taxonomy: triggers declare their target (prompt/memory/rule)
+    and timing (intra/between session) as YAML. (11) Latitude: cluster past failures
+    by rule id, auto-generate regression cases per cluster. (12) ReflAct: state the
+    intended terminal check-ladder state BEFORE a repair pass, diff actual against
+    it. Already stronger than the lists: adversarial critique council, governance
+    corpus, worktree isolation, self-consistency. Known gap: no runtime benchmark
+    loop like SWE-bench.'
+- key: reference_openbsd_awesome_harvest_2026_10
+  name: OpenBSD harvest (ligurio/awesome-openbsd)
+  description: What the OpenBSD awesome-list offers vm23; thin on memory-pressured
+    services
+  type: reference
+  body: '2026-10-03. The list curates hosting/community/virtualization; relayd appears
+    once and nothing touches httpd/rc.d/swap - man pages stay the law. Adoptables:
+    OpenBSD CI runners (Sourcehut builds or GitHub vmactions/openbsd-vm) take OPENBSD/
+    suites off vm23''s 1GB; bupstash - encrypted client-separated backups off the
+    box; eradman''s autoinstall site-tarball - scripted full reprovision, the pipeline''s
+    missing bottom rung; qbit/snap - sysmerge+package upgrades in one pass, lighter
+    on 1 vCPU; M:Tier binpatches/LTS - base+package security fixes without rebuild
+    cycles; snmpd (in base) with SNMP v3 for external load/swap watching (cold-TTFB
+    evidence before symptoms); dmesgd.nycbug.org for peer comparison; dank-selfhosted
+    and vedetta as relayd/pf reference boilerplate; upobsd for bsd.rd ritual. Anti-recommendation:
+    K3s-over-vmm would eat the whole box. Nothing addresses relayd''s 8KB header limit,
+    swap thrash, boot storms or per-app shared engine copies.'
+- key: reference_face_restoration_harvest_2026_10
+  name: face-restoration harvest (sczhou + polarisZhao lists)
+  description: CPU-qualified face instruments for postpro; relight path is parse +
+    3DMM normals over the DA-V2 near-map
+  type: reference
+  body: '2026-10-03. postpro has no face detection/parsing/3D fit - skin_protect (postpro.rb:1518)
+    is an HSV hue+saturation mask that also catches wood, brick and rust. CPU-qualified
+    adoptables: YuNet/libfacedetection (pure-C ms-class detector, most Ruby-friendly
+    via FFI/ONNX); RetinaFace-MobileNet0.25 (~1.7MB ONNX) for true face detection;
+    CelebAMask-HQ/BiSeNet parsing (19 classes) - grade skin only, leave eye whites/irises,
+    give relight region masks (highest value); 3DDFA_V2 (few hundred ms CPU) - the
+    one thing monocular depth cannot give: per-pixel face normals on the convex face
+    plane where the DA-V2 near-map is least reliable; PRNet/2D-3D FAN - standardized
+    head crops across both lora subjects before curate; ArcFace ONNX - identity-drift
+    guard (refuse on similarity drop) plus dataset dedupe; CodeFormer/GFPGAN ONNX
+    - pre-restore pass for degraded sources entering datasets; PSFRGAN''s pipeline
+    order (parse -> per-region transform) as pure design; PPR10K corpus to fit the
+    skin_protect band against real portrait pairs. Adoptable path: parse regions;
+    3DMM normals light face pixels; DA-V2 near-map demoted to scene. Too heavy: DR2,
+    DifFace, PULSE, MyStyle (MyStyle ≈ what the lora tree already is), GPEN/VQFR training.
+    No relighting models in either list.'
+- key: reference_tts_voice_harvest_2026_10
+  name: TTS/voice harvest (TouchSky + isaacgounton + wildminder lists)
+  description: 12 adoptables and 5 gaps for the voice stack; edge-tts is cloud-reliant
+    and that is the top gap
+  type: reference
+  body: '2026-10-03. Top: rb-edge-tts is NOT local - it calls Microsoft''s endpoint;
+    a network cut silences MASTER. Adoptables: Kokoro-82M (ONNX, ~edge quality, Mac-sized)
+    for genuinely offline en-US; KittenTTS (15M, <25MB) as vm23-grade rescue voice;
+    eSpeak-NG as the final offline rung; KokoClone (3-10s reference) puts Johann''s
+    own voice in the rotation; Scylla''s six continuous affect axes -> voice.yml entries
+    as affect coordinates Voice::Policy interpolates, not named-voice picks; inline
+    delivery tags (<laugh>, [pause 3.2s], <|emotion|>) as a markup convention in the
+    utterance stream, mapped by post_chain today and engine-agnostic tomorrow; NovaSR
+    (~52kB) upsamples 16k->48k to close the speech/bed spectral gap; ZipEnhancer/PASE
+    denoise before Speech#shaped for the mic path (the echo/"random facts" bugs came
+    from there); UTMOS/DNSMOS + ECAPA2 speaker-similarity + WER round-trip through
+    a tiny ASR - the quality ratchet MASTER ships without. Gap decisions to make explicitly:
+    open-weight local models have NO nb-NO coverage (keep edge for nb, go local for
+    en?); no cloning path; no closed audio loop (ASR+VAD around the mic). Do-not-chase:
+    gTTS/pyttsx3, gateway+Redis+React duplicates, hand-rolled vocoders, latent-diffusion
+    foley (dilla''s bespoke bed outranks one), dataset fine-tuning (no budget).'
+- key: reference_grain_emulation_harvest_2026_10
+  name: film-grain + grading harvest (Dehancer/Nuke/Ansel/agx/Oxio sources)
+  description: Sourced grain-calibration numbers, pipeline order and destroyed-vs-emulated
+    criticism - basis for postpro heavy-mode tuning
+  type: reference
+  body: '2026-10-03, prompted by postpro renders reading destroyed rather than enhanced.
+    Ground truth: silver crystals are 2-8um (~5-6um fast colour neg), smaller than
+    a 4K pixel on a 35mm frame - visible grain is CLUMPS, never pixel-locked (video.stackexchange
+    q19394). Calibration: Dehancer auto-scales grain to format with its Film Resolution
+    rule (smallest film detail can''t be smaller than grain size - grain amount must
+    COST detail); Nuke Grain node = Proportional + Base Resolution reference width
+    (postpro''s GRAIN_REFERENCE_WIDTH already matches); Ansel photographic-grain =
+    4px crystals at 100% zoom, log-normal, ~30 layers; agx-emulsion fits per-stock
+    Gaussian local-SD tables from real HP5/Delta/Tri-X scans. Print grain coarser
+    than negative grain. PIPELINE ORDER: NR -> curves -> sharpen -> halation/glow
+    -> grain LAST, exactly once; grain added over halation gets glowed (blackmagicforum
+    t175096); stacking passes forbidden (r/NukeVFX). Chroma: one correlated mono signal
+    split ~0.25R/0.6G/0.15B in linear light (Oxio); independent per-channel noise
+    reads CG. Destroyed-look criticism: uniform exaggerated strength, static pattern,
+    halation on everything (Fstoppers'' "cheugy" essay - halation belongs to wide-open
+    speculars on specific stocks like 800T on digital). Yedlin: model quality beats
+    scan plates. Repos: andre-gfx/agx-emulsion, EaryChow/AgX, darktable dtgrainjulia,
+    JanLohse/spectral_film_lut, spektrafilm-rs (spectral neg->print with DIR couplers,
+    postpro''s twin), ComfyUI-Darkroom, imazen/zenfilters, IPOL Newson 2017 + ChickenDream
+    (the Boolean-disk reference). Applied same day: HEAVY_STRENGTH 2.0->1.35, HEAVY_AMPLITUDE_STRENGTH
+    1.1 exempting grain+wear from widening, grain removed from all four lane pools
+    (the always-grain is the only pass), vocab-check pin added.'
+- key: brgen_typography_swiss_only
+  name: brgen type is Swiss sans only
+  description: Operator directive 2026-10-11 - no serifs anywhere in brgen, amber or the shared layer (amber added 2026-10-11)
+  type: project
+  body: |-
+    brgen, RAILS/amber and RAILS/__shared set type in the Helvetica Neue Pro, Helvetica Neue, Arial sans stack (var(--font)), plus one monospace stack (var(--font-mono)) for the terminal chats. No serif, no other family. Editorial and display moments get contrast from scale and weight, never a serif. Enforced by the TYPEFACE_PER_ROLE Law (MASTER/law/geometry.rb; scope RAILS/brgen*, RAILS/__shared and RAILS/amber, lightgallery.css excepted as vendored, BPLANS/ exempt), by Master::Design::Pairing routing editorial and luxury to the swiss_house pairing, and by Master::Design::Typeface::HOUSE_RULE in the /fix visual critique prompt. A council proposal that adds a serif or another family is refused.
+- key: project_ascii_face_replaces_braille_2026_10
+  name: the terminal face is plain ASCII, Braille is retired
+  description: Operator decision 2026-10-12 - replaces the Braille terminal face approved 2026-09-25; web and CLI render the same way
+  type: project
+  body: |-
+    Operator, 2026-10-12: "i dont want to use braille anymore ... it has to look better. ideally just monospaced characters", then, after seeing AndrewSink/STL-to-ASCII-Generator, "a face like that would be nice!" and "the web face should be like this too, web and cli the same". This replaces the Braille point-cloud face approved on 2026-09-25. There is no Braille toggle and no Braille code.
+
+    The renderer is Master::CLI::Face::Ascii (lib/cli/face/ascii.rb, glyphs.rb, features.rb, mesh.rb, pose.rb). It draws a lit triangle mesh (2026-10-12, operator: "go ahead with the proper 3d mesh face", replacing the point cloud): Face::Head builds a closed, outward-wound grid mesh of a few thousand triangles from the painted depth map and morphology, a CPU z-buffered rasteriser (supersampled, backface culled, identical in Ruby and in the web port, no WebGL) lights it with an orbiting key light, a fill, a rim and a cheap specular term plus cavity darkening, and each cell takes the mean tone of its samples. A mask is the same mesh under other numbers and a morph is vertex interpolation. Layers: contours (silhouette and creases only) (| - / \ with the cell aspect corrected, and ' - _ for half-cell edges), a dithered ink ramp ordered by measured glyph ink (tools/face_ascii_fixtures.rb ink; the ink column in tokens.yml) for the surface (integer ordered dither fixed in screen space, so turning does not shimmer), explicit glyph features (eyes, brows, nose line, mouth), and depth as bold near and dim far. Any ASCII STL or OBJ (Face::Mesh) shows the same way. The ramp is replaceable (MASTER_FACE_CHARS), MASTER_FACE_MODE=light inverts it, MASTER_CLI_QUIET=1 draws the plain state word, MASTER_REDUCED_MOTION=1 holds the head still. Motion is a constant slow turn with a breath, a pitch sway, blinks and glances.
+
+    Every tunable and the algorithm steps live in data/tokens.yml, face_interface.ascii, read by Ruby and by the web face. test/fixtures/face_ascii_frames.json (written by tools/face_ascii_fixtures.rb) holds exact frames the web port asserts under node. Boot, prompt and status chrome remain ordinary text; the face renderer alone owns ASCII art.
+- key: reference_openbsd_kernel_philosophy_2026_10
+  name: OpenBSD kernel philosophy and agent-framework review (2026-10-13)
+  description: Architectural intent plus evidence-led review of Rubik, constitutional governance projects, and repair agents.
+  type: reference
+  body: |-
+    Intent: adopt OpenBSD engineering discipline, not copy its kernel literally. Simplicity and regularity reduce the surface that people must understand and audit. Correctness is the foundation of security. Implementations and changes should be inspectable; invalid states should become visible early; authority should be limited at explicit boundaries; platform differences should remain at real seams. Preserve observable behavior, public contracts, and side-effect order unless a deliberate change is justified and verified. Unknown, blocked, timed-out, skipped, and inconclusive are distinct from success.
+
+    Primary OpenBSD sources: https://www.openbsd.org/goals.html ; https://man.openbsd.org/style.9 ; https://www.openbsd.org/papers/dev-sw-hostile-env.html ; https://www.openbsd.org/security.html ; https://man.openbsd.org/pledge.2 ; https://man.openbsd.org/unveil.2 .
+
+    Existing pub4 mechanisms already embody much of this: soul.yml sets PRESERVE_THEN_IMPROVE_NEVER_BREAK and truthful-evidence constraints; laws.yml defines ROBUSTNESS, SINGULARITY, LINEARITY, PROXIMITY, ABSTRACTION and DENSITY, plus evidence-ranked transformation policy preserving semantics, public contracts, references, and side-effect order. The four-tree ownership and dependency contract lives in MASTER/data/laws.yml#architecture; the live Core::Fold, Constitution, World, Memory and Proof implementations plus their tests enforce the runtime sequence and separate observation/planning/verification from mutation. Core::World has atomic writes, symlink-aware workspace containment, secret-path refusal, and path-scoped rollback for a failed write. Core::Proof checks real command producers and distinct evidence kinds. Reinforce these; do not add duplicate registries or grow the kernel spine merely to resemble another project.
+
+    Rubik (MIT, https://github.com/ozgurulukir/rubik): source docs describe fail-closed command/path/synthesis checks, atomic writes, audit records, a reviewable file buffer, and an LIFO inverse runtime. SECURITY.md explicitly says the optional OS sandbox is disabled by default; policy gating and OS isolation must be treated as separate controls. Study only bounded inverse/compensation semantics if a demonstrated gap justifies them; do not import Rubik's full agent/runtime architecture.
+
+    Ruby Agent (https://github.com/stiller/ruby-agent): approved patch flow, Git checkpoint, rollback and transcript. Those primitives overlap MASTER's effect admission, scoped checkpoints and observations; no dependency is justified.
+
+    repo-bug-hunter (https://github.com/Manishmaurya89/repo-bug-hunter): valuable evaluation method - reproduce a bug with a failing test, re-run it at submit, grade against hidden regression tests, replay every step, and compare variants on paired tasks. It is Python/Docker-based and should not become a MASTER runtime dependency; adapt its test-first experimental method in Ruby if needed.
+
+    arifOS (https://github.com/ariffazil/arifOS): its README's current-verified-state block dated 2026-10-11 reports 2 floors passing, 4 failing, 10 unmeasured, and a mismatch where a HOLD verdict was persisted as ok:true in invocation telemetry; it also says no independent external verifier is bound. This is a caution, not a condemnation: governance slogans, dashboards, and ledgers do not prove correctness unless telemetry preserves the actual verdict and independent reconstruction can verify it. Unmeasured is not pass.
+
+    AXIOM-MESH (https://github.com/Zoverions/AXIOM-MESH) reinforces explicit intent, policy authority, bounded effects and portable evidence, but its Node.js/runtime stack offers no demonstrated missing capability in MASTER. HELIX-CORE (https://github.com/helixprojectai-code/HELIX-CORE) advertises a multi-layer, multi-cloud system; documentation alone did not establish a concrete mechanism MASTER needs. Kestrel Sovereign (https://github.com/KestrelSovereignAI/kestrel-sovereign) is Python-first and pre-1.0; its own README identifies plaintext saved-item/RAG chunk bodies while encryption is incomplete. Neither warrants importing a framework.
+
+    AutoDevOps AI (https://github.com/koustubh-v/AutoDevOps-AI) is a React/Node + Python service stack with Gemini and Firebase; CodeHealer (https://github.com/Deepanhp/code-healer) depends on Rails, Sidekiq, Redis, GitHub and OpenAI; both add stacks that conflict with MASTER's small pure-Ruby core. Rubyn Code (https://github.com/MatthewSuttles/rubyn-code) offers useful areas to compare - MCP, context indexing, phased plans and skills - but overlaps existing tooling and is not a reason to add its 112-skill catalog or dependency tree. The supplied iterate URL did not resolve to a README through the repository connector; no implementation claim is accepted from it. Kward, rubycode and Ocak had no repository URLs in the supplied note, so they remain unreviewed rather than guessed.
+
+    Decision: no wholesale agent framework, new gem, multi-agent layer, cloud stack or self-modifying
+    constitution. Implemented 2026-10-13: `MASTER/lib/core.rb` derives a typed reversibility
+    contract from each Effect rather than trusting a model-supplied label;
+    `MASTER/lib/core/constitution.rb` requires operator approval for Git stage/commit and blocks
+    unhandled operations; `MASTER/lib/core/fold.rb` re-admits a declared argv compensation and
+    requires operator approval after the original exec fails. A successful compensation never
+    turns the original failure into success. `MASTER/lib/core/model.rb` exposes the structured
+    compensation schema, `MASTER/test/test_core_reversibility.rb` covers classification,
+    approval, malformed compensation, successful compensation and refusal, and
+    `MASTER/data/laws.yml` is the design authority; tests pin the runtime behavior. Git history and the shared index have no automatic
+    inverse. Generic exec and HTTP remain policy-gated, not presumed reversible. Do not claim
+    verification yet: the tests were added but have not been run in a Ruby checkout. Future work
+    must test idempotency, partial failure and concurrent changes before expanding the set of
+    compensators.
+- key: feedback_write_straight_to_main_2026_10_19
+  name: historical direct-to-main restriction superseded
+  description: Historical 2026-10-19 restriction; superseded by the explicit 2026-10-27 directive to restore managed worktrees and short-lived branches.
+  type: feedback
+  body: >-
+    The 2026-10-19 instruction to write every change directly to main is historical
+    and superseded by the explicit 2026-10-27 decision to restore isolated worktrees.
+    Use a managed worktree and short-lived topic branch for broad, parallel or
+    architectural work; use path-scoped direct-to-main landing only for small
+    corrections made from a clean main checkout. Never use git commit -a in a
+    shared checkout. Worktree creation refuses dirty source state unless the
+    operator explicitly opts out, and worktree removal refuses dirty trees while
+    preserving the branch. bin/operator land pushes only the current branch; a
+    topic branch reaches main only after deliberate integration.
+- key: feedback_stream_long_runs_live_2026_10_22
+  name: stream long runs live
+  description: 2026-10-22 directive, Johann - a suite, check or /fix run reports as it goes, never only at its end
+  type: feedback
+  body: >-
+    Johann, 2026-10-22: "why do i have to wait 20 minutes? why cant you read the result in real time?
+    ... i dont wanna have to wait days for some results only to find out it got stuck and never wrote
+    any output". Why - a run that reports only at its end hides a hang or a silent death until the
+    whole budget is spent; a MASTER rake test once stopped after 3,632 tests with no report at all.
+    How to apply - every long run writes its output as it happens and is watched: each failing test
+    named when it fails, progress at least once a minute, and a stall called when nothing finishes
+    for two minutes. bin/check streams each step to .master/check/<step>.log as it runs; fix-here
+    stops a run its StallWatch finds stalled. Run minitest with TESTOPTS="-v --seed=N" (the = form;
+    rake splits a space).
+- key: feedback_fix_the_fixer_offline_2026_10_22
+  name: fix /fix before running it
+  description: 2026-10-22 directive, Johann - /fix is repaired through its suites and code, not by trial runs
+  type: feedback
+  body: >-
+    Johann, 2026-10-22: "i told you to fully fix /fix before using it". Three bounded trials that day
+    each stopped on a /fix defect (a spent run journal resumed, HEAD in the baseline key, a known-red
+    record naming steps not tests, a test that exits ending the suite). Why - a trial costs over thirty
+    minutes, writes autofix edits into the shared checkout and finds defects the suites and code
+    should have shown. How to apply - find and fix /fix defects through test_fix_*, test_proof_*,
+    test_check_chain and the full suite; run /fix only when Johann says so after hearing what is fixed.
+- key: rails_markup_names_and_semantics_2026_11
+  name: spelled-out names, semantic markup, no style words in HTML
+  description: Operator directives 2026-11-03 for every RAILS view and stylesheet
+  type: feedback
+  body: >-
+    Johann, 2026-11-03, during the mrdamascy and brgen design passes. Names are whole
+    words: button, not btn (button-small, quantity-value, category-chips); style the
+    real element where it is safe (mrdamascy styles :where(button, .button), and a
+    link that acts as a button takes .button). Views avoid divitis: wrapper divs
+    become the element that means the thing (ul/li, dl/dt/dd, nav, header, footer,
+    section, output, time) or go away. Markup carries meaning only: no utility or
+    presentational class names (margin-*, row, nowrap, ink-soft, *-small/-large/-block,
+    colour words); the SCSS styles the element or a role-named component. Why - style
+    words and abbreviations in markup hide intent and drift from the CSS. How to
+    apply - every RAILS view or SCSS change; MASTER/law/html.rb PRESENTATIONAL_CLASS_NAME
+    enforces part of it. The btn family is defined in RAILS/__shared and used by amber
+    and bsdports, so its rename is one fleet-wide change; shared design tokens
+    (--radius-sm, --text-xs) come from MASTER/data/tokens.yml and rename the same way.
+    Done 2026-11-03: the btn family is button everywhere (MASTER checks and layout
+    snapshots included) and the size tokens are spelled out (--text-small,
+    --radius-extra-small, yml radius_small); both renames compile every app to the
+    same CSS bytes. Size by place, not class: __shared/_buttons.scss takes
+    $compact-contexts, and an app's stack forwards the single-class places whose
+    buttons are compact (brgen's profile, post, front page and cart use it). Still
+    open: button-small, cluster, mt-8 and the layout wrappers in the remaining
+    views (marketplace listing, messenger thread, posts/new and most verticals).
+- key: operator_master_resembles_openbsd
+  name: MASTER resembles OpenBSD
+  description: Operator directive 2026-11-06 - MASTER's laws, logic, behaviour and style follow OpenBSD as closely as possible
+  type: feedback
+  body: |-
+    Correctness by default through restriction, continuous auditing, small
+    trusted cores, least privilege, one canonical implementation per operation,
+    and never reporting an unmeasured result as a pass (INCONCLUSIVE or
+    BLOCKED instead). Prefer fewer, stricter Laws with real fixtures over more
+    guidance; delete contradictory or dead machinery; terse dmesg-style output.
+    The operator's earlier decisions stand where they differ: renders stay
+    replaceable, work lands straight on main.
+- key: operator_every_pixel_earns_its_place
+  name: every pixel earns its place
+  description: Operator directive 2026-11-06 - bare-minimum UI; navigation and chrome hidden by default and slid in on movement
+  type: project
+  body: |-
+    No unnecessary elements. Header, tab rail, mobile bottom bar and secondary
+    controls hide while the reader reads and slide in on scroll-up or an edge
+    swipe on touch, and on pointer movement toward an edge on desktop. They are
+    always shown at the page top, while a control inside has keyboard focus,
+    when the page cannot scroll, and to assistive tech (hidden by transform,
+    never display:none on the reveal path); under prefers-reduced-motion they
+    appear without sliding. Each page keeps its one primary action visible.
+    Supersedes the always-visible bottom bar from the 2026-11-06 x.com review.
+- key: operator_design_decisions_2026_11_06
+  name: RAILS design decisions 2026-11-06
+  description: Operator answers to the screenshot review's open questions
+  type: project
+  body: |-
+    Contrast at least 4.5:1, 7:1 for body text. Page h1 uses the shared_chrome
+    scale in tokens.yml. Small labels or kickers above headings are banned
+    (NO_EYEBROW_LABEL). amber's pastels become amber's own colour scheme as
+    tokens. The header band is light everywhere except in dark mode. The TV
+    accent moves away from the danger red. brgen's AI entry shows "1" in the
+    nav counter pill, as if a message were waiting, instead of "new!".
+    Reference products for principles only, never their look: x.com and
+    reddit for the feed, bol.com for the marketplace, whyp.it for radio.
+    BPLANS/ may use classic serif typography such as Garamond.
+- key: operator_fix_mobile_first_and_simplify
+  name: /fix captures mobile first and simplifies by subtraction
+  description: Operator directives 2026-11-06 for /fix's visual lane
+  type: project
+  body: |-
+    When /fix takes screenshots it captures and judges 390, 360 and 320 wide
+    first; desktop widths come only after every mobile capture of the pass, and
+    a capped pass drops desktop captures first. /fix has a simplify stage
+    modelled on Claude Code's /simplify (reuse, simplification, efficiency,
+    altitude): it only removes or merges, a count must fall (selectors,
+    distinct values per property, DOM depth, variants, SCSS lines), and the
+    pixel diff plus the computed-value audit must show no visible change or a
+    change toward the Laws; each count becomes a ratchet. Visual work is held
+    to measured values, state matrices, boundary widths, per-component specs,
+    an independent reviewer and a guard for every fixed defect.
+- key: operator_agents_token_efficient
+  name: agents work token-efficiently
+  description: Operator directive 2026-11-05 - terse reports, batched checks, no narration of routine events
+  type: feedback
+  body: |-
+    Report results and blockers only; batch checks into one command; do not
+    narrate routine monitor heartbeats; filter watchers to commits, failures
+    and exits; do not re-read what is already in context. Judge another model's
+    work by what its commits change, not by its report: patches from GLM and
+    Fable on 2026-11-06 ran no tests and most did not hold against the code.
+- key: operator_typography_web_ascii_terminal
+  name: proper typography in copy and docs, ASCII in the terminal
+  description: Operator decision 2026-11-06 - ASCII_PUNCTUATION is withdrawn; ASCII only in terminal output
+  type: feedback
+  body: |-
+    ASCII marks (a hyphen, three dots, straight quotes, ->) belong to the CLI,
+    the shell and REPL prompt, the terminal face and dmesg or log lines; that
+    was the ban's only purpose. Web copy, locale files, views, Markdown and TeX
+    documents, root documents and BPLANS use proper typography: the ellipsis
+    (U+2026), an en dash (U+2013) in a numeric range (EN_DASH_RANGE), curly
+    quotes, and for an aside a spaced en dash, "word - aside - word" set with
+    U+2013. Norwegian copy quotes with guillemets (U+00AB, U+00BB) and single
+    curly quotes inside; English keeps curly double quotes. EN_DASH_RANGE and
+    TYPOGRAPHIC_EXCELLENCE skip Law::TERMINAL_OUTPUT_PATH (law/definition.rb)
+    and printing lines; PARENTHETICAL_DASH and QUOTES_BY_LOCALE
+    (law/typesetting.rb) hold the aside and the quotes. The face glyph ramp
+    stays as it is. Text written before 2026-11-05 keeps its original marks.
+- key: operator_read_the_manual_before_editing
+  name: read the governing manual before editing RAILS or OPENBSD
+  description: Operator directive 2026-11-06 - agents read the current Rails guides, and OpenBSD's man pages, before they edit
+  type: feedback
+  body: |-
+    Before editing anything under RAILS/ (or MASTER/web), an agent has read the
+    latest Rails style guide (rubocop's rails-style-guide) and the current Rails
+    edge guides (edgeguides.rubyonrails.org) for every API the change touches,
+    because the apps run on Rails edge. Before editing anything under OPENBSD/,
+    an agent has read man(1) for every tool, daemon or configuration file the
+    change touches (for example relayd.conf(5), rcctl(8), pf.conf(5), doas.conf(5),
+    newsyslog(8)), on the box or at man.openbsd.org for the running release. A
+    change whose commit cannot name the guide section or man page it followed
+    is not ready.

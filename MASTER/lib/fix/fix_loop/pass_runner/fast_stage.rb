@@ -1,0 +1,227 @@
+# frozen_string_literal: true
+
+require_relative "../../../operator/ruby_runner"
+require_relative "../../scan/mechanical_autofix"
+require_relative "../../autofix_guard"
+
+module Master
+  module Fix
+    class FixLoop
+      class PassRunner
+        # Deterministic, no-LLM-call fixes run before the LLM stage: rubocop
+        # autocorrect, AST-level autofixes, and the type/datalog findings that
+        # ride along with the same file read — separate concern from the
+        # LLM-driven fix pipeline.
+        module FastStage
+          private
+
+          FAST_STAGE_UNIT = "fix0"
+
+          def fast_pass(files)
+            fixed = 0
+            rb = files.select { |f| f.end_with?(".rb") }
+            # @root isn't always a bundle root -- RAILS has no top-level
+            # Gemfile, only amber/brgen/bsdports each have their own, so a
+            # single `bundle exec rubocop` chdir'd to @root fails outright
+            # for every file. Group by the nearest ancestor Gemfile instead.
+            rb.group_by { |f| gemfile_root(f) }.each do |root, group|
+              fixed += rubocop_pass(group, root) if root
+            end
+            rb.each do |path|
+              next unless File.exist?(path)
+              fixed += analyze_ruby_file(path)
+            rescue StandardError => e
+              @bus&.publish("fix_loop:fast_error", file: path, error: e.message)
+              Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "#{path.delete_prefix("#{@root}/")}: #{e.message}")
+            end
+            fixed
+          end
+
+          def gemfile_root(path)
+            @gemfile_root_cache ||= {}
+            dir = File.dirname(File.expand_path(path))
+            @gemfile_root_cache.fetch(dir) { @gemfile_root_cache[dir] = find_gemfile_root(dir) }
+          end
+
+          def find_gemfile_root(dir)
+            root_prefix = File.expand_path(@root)
+            while dir.start_with?(root_prefix)
+              return dir if File.exist?(File.join(dir, "Gemfile"))
+              break if dir == root_prefix
+              dir = File.dirname(dir)
+            end
+            owner_bundle_root(dir)
+          end
+
+          def owner_bundle_root(dir)
+            rails = File.join(@root, "RAILS")
+            return unless File.expand_path(dir).start_with?("#{rails}/")
+
+            relative = File.expand_path(dir).delete_prefix("#{rails}/")
+            case relative.split("/").first
+            # The brgen vertical engines ride inside brgen (brgen/engines/*), so the
+            # first path component already names the owning bundle.
+            when "brgen", "__shared"
+              File.join(rails, "brgen")
+            when "amber"
+              File.join(rails, "amber")
+            when "bsdports"
+              File.join(rails, "bsdports")
+            end
+          end
+
+          # One rubocop run corrects every file and says, per offense, whether it
+          # was corrected. Exit status alone cannot say which files still carry
+          # one, and asking by re-running rubocop on each file cost fifteen
+          # minutes over MASTER's 893 files while correcting nothing further.
+          def rubocop_pass(files, root)
+            files = rubocop_candidates(files)
+            return 0 if files.empty?
+
+            snapshot = files.to_h { |path| [path, File.binread(path)] }
+            corrected = rubocop_run(files, root)
+            settle_rubocop(snapshot, root)
+            corrected
+          end
+
+          # What RuboCop may open: not protected, not capped out, not already
+          # dirty (another session's edit), and only when autofix is on or dry.
+          def rubocop_candidates(files)
+            return [] if Master::Fix::AutofixGuard.mode == "off"
+
+            files.select do |path|
+              next false if Master::Fix::AutofixGuard.protected_reason(path, root: @root)
+              next false if @committer.respond_to?(:dirty_at_baseline?) && @committer.dirty_at_baseline?(path)
+
+              true
+            end
+          end
+
+          # RuboCop wrote in place; each changed file is judged like any other
+          # autofix candidate and the original bytes go back on a verdict
+          # against it. dry puts every file back and keeps the diff. Only a kept write is attested:
+          # attesting every file RuboCop opened claimed another writer's edit to one it left alone.
+          def settle_rubocop(snapshot, _root)
+            snapshot.each do |path, before|
+              after = File.binread(path)
+              next if after == before
+
+              reason = rubocop_verdict(path, before.dup.force_encoding("UTF-8"), after.dup.force_encoding("UTF-8"))
+              if reason || Master::Fix::AutofixGuard.mode == "dry"
+                Master::Fix::AutofixGuard.record_patch(path, before, after, root: @root) unless reason
+                File.binwrite(path, before)
+                next unless reason
+
+                Master::Fix::AutofixGuard.note_refused(path, "rubocop: #{reason}")
+                Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop fix reverted, #{path.delete_prefix("#{@root}/")}: #{reason[0, 140]}")
+              else
+                Master::Fix::AutofixGuard.note_written(path, before:)
+                @committer&.attest_written!(path)
+              end
+            end
+          end
+
+          def rubocop_verdict(path, before, after)
+            guard = Master::Fix::AutofixGuard
+            if guard.capped?(path)
+              guard.note_capped(path)
+              return "per-run cap of #{guard.max_files} files reached"
+            end
+
+            reason = guard.candidate_reason(path, before, after)
+            return reason if reason
+            return if guard.mode == "dry"
+
+            guard.test_reason(path)
+          end
+
+          def rubocop_run(files, root)
+            rel_root = root == @root ? "." : root.delete_prefix("#{@root}/")
+            Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop autocorrect, #{Master::Trace::Dmesg.counted(files.size, "file")} in #{rel_root}")
+            autocorrect = ENV["MASTER_AUTOFIX"] == "1" ? "-A" : "-a"
+            out, _err, status = Master::Io::Exec.capture3(::Operator::RubyRunner.bundle_cmd(root:), "exec", "rubocop", autocorrect, "--no-color",
+                                                          "--format", "json", *files, chdir: root)
+            report = JSON.parse(out.to_s)
+            rows = report.fetch("files", [])
+            stuck = uncorrected_files(rows, root)
+            corrected = rows.sum { |entry| entry.fetch("offenses", []).count { |offense| offense["corrected"] == true } }
+            stuck.each { |path| @bus&.publish("fix_loop:rubocop_file_failed", file: path) }
+            summary = if stuck.empty?
+                        corrected.zero? ? "clean" : "corrected #{corrected} offense(s)"
+                      else
+                        "partial, #{stuck.size} file(s) keep offenses; corrected #{corrected}"
+                      end
+            summary = "failed: no machine-readable report" if !status.success? && rows.empty?
+            Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop #{summary}, checked #{Master::Trace::Dmesg.counted(files.size, "file")}")
+            corrected
+          rescue JSON::ParserError
+            @bus&.publish("fix_loop:rubocop_report_unreadable", files: files.map { |path| path.delete_prefix("#{@root}/") })
+            Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop inconclusive: JSON report unreadable")
+            0
+          end
+
+          # The JSON report is the source of truth: a file with no remaining offenses
+          # is not evidence that RuboCop corrected anything during this invocation.
+          def uncorrected_files(rows, root)
+            rows.filter_map do |entry|
+              next if entry.fetch("offenses", []).all? { |offense| offense["corrected"] == true }
+
+              File.expand_path(entry["path"], root)
+            end
+          end
+
+          def analyze_ruby_file(path)
+            src = File.read(path, encoding: "UTF-8")
+            rel = path.delete_prefix("#{@root}/")
+
+            fixed, src = apply_ast_fixes(path, src, rel)
+            report_type_errors(path, src, rel)
+            report_datalog_findings(path, src, rel)
+            fixed
+          end
+
+          def apply_ast_fixes(path, src, rel)
+            outcome = ast_autofix.rewrite(path, src)
+            case outcome.status
+            when :refused
+              @bus&.publish("fix_loop:ast_refused", file: rel, reason: outcome.reason)
+              Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "ast fix refused, #{rel}: #{outcome.reason[0, 140]}")
+            when :dirty
+              @bus&.publish("fix_loop:ast_skipped_dirty", file: rel)
+              Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "ast fix skipped, #{rel} was dirty before the pass")
+            when :written
+              @committer&.attest_written!(path)
+              @bus&.publish("fix_loop:ast_fixed", file: rel, transforms: outcome.transforms)
+              Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "ast fix, #{rel}: #{outcome.transforms.join(", ")}")
+              return [outcome.transforms.size, outcome.content]
+            end
+            [0, src]
+          end
+
+          # A file dirty at the pass baseline holds uncommitted work the commit
+          # would otherwise carry; the shared writer refuses it.
+          def ast_autofix
+            @ast_autofix ||= Master::Fix::Scan::MechanicalAutofix.new(
+              scanner: nil, root: @root, event_bus: @bus,
+              dirty: ->(path) { @committer.dirty_at_baseline?(path) }
+            )
+          end
+
+          def report_type_errors(path, src, rel)
+            errors = Ground::TypeChecker.check(path, src)
+            errors.each { |te| @bus&.publish("fix_loop:type_error", file: rel, rule: te.rule, message: te.message) }
+            Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "type check, #{rel}: #{Master::Trace::Dmesg.counted(errors.size, "error")}") if errors.any?
+          end
+
+          def report_datalog_findings(path, src, rel)
+            dl = Review::Scan::DatalogEngine.from_ruby(path, src)
+            dl.rule(:BARE_RESCUE_DATALOG, :bare_rescue) { |f| "bare rescue at line #{f.args[1]} - use rescue StandardError" }
+            findings = dl.evaluate
+            findings.each { |finding| @bus&.publish("fix_loop:datalog_finding", file: rel, rule: finding.rule_id, message: finding.message) }
+            Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "datalog, #{rel}: #{Master::Trace::Dmesg.counted(findings.size, "finding")}") if findings.any?
+          end
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,1098 @@
+# frozen_string_literal: true
+
+# Keep the task registry here; reusable implementations live in lib/ and tools/.
+# Tests such as tools/repo/runs.rb read this file to discover the actual entrypoints.
+
+require "bundler"
+require "rake/testtask"
+require "timeout"
+
+def run_tool(path, *args)
+  sh RbConfig.ruby, File.join(__dir__, path), *args
+end
+
+namespace :postpro do
+  desc "Install postpro's runtime dependencies (ruby-vips, tty-prompt, libvips)"
+  task :bootstrap do
+    tools_root = File.expand_path("tools", __dir__)
+    Bundler.with_unbundled_env do
+      Dir.chdir(tools_root) { sh RbConfig.ruby, "-S", "rake", "postpro:bootstrap" }
+    end
+  end
+end
+
+# Test names follow both test_*.rb and *_test.rb. Keep discovery recursive
+# before moving tests by subsystem, and never run fixture Ruby as a test.
+# rack/test lives in the web bundle, which is not installable on a contributor Mac;
+# leaving test_web_ui.rb in the glob aborted `rake test` before any other file ran.
+MASTER_TEST_EXCLUDED = %w[test/fixtures/**/* test/test_browser.rb test/test_web_http.rb test/test_web_ui.rb].freeze
+
+MASTER_TEST_FILES = FileList["test/**/test_*.rb", "test/**/*_test.rb"].exclude(*MASTER_TEST_EXCLUDED)
+# Tools and parked check-campaign tests still exercise live readers/detectors;
+# keeping them in the same suite prevents a parked feature from hiding red tests.
+MASTER_TEST_FILES.include("tools/test/test_*.rb")
+MASTER_TEST_FILES.include("plugins/design_calibration/test/**/*_test.rb")
+MASTER_TEST_FILES.include("plugins/tts_dsp/test/**/test_*.rb")
+
+# One process, in turn: what each parallel worker runs on its share, and the
+# fallback with MASTER_TEST_JOBS=1.
+Rake::TestTask.new(:"test:serial") do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = MASTER_TEST_FILES
+  t.warning = false
+end
+
+desc "Run the MASTER suite through the supervised worker runner (3 jobs by default)"
+task :test do
+  require_relative "lib/operator/parallel_tests"
+
+  # The one-job diagnostic path must retain timeout, active-test, and completion
+  # checks too; calling the raw Rake::TestTask here can mistake exit(0) for a full run.
+  loader = File.join(Gem.loaded_specs.fetch("rake").full_gem_path, "lib", "rake", "rake_test_loader.rb")
+  options = ["-v", *ENV.fetch("TESTOPTS", "").split].uniq
+  command = ->(files) { [RbConfig.ruby, "-Ilib:test", loader, *files, *options] }
+  abort "test: a worker failed" unless Operator::ParallelTests.run(MASTER_TEST_FILES.to_a, command:)
+end
+
+desc "Check Phoenix regeneration boundaries and provenance contracts"
+task :architecture do
+  $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+  require "master"
+  report = Master::Phoenix.check
+  puts Master::Phoenix.line
+  report.failures.each { |failure| puts "phoenix0: #{failure}" }
+  abort "phoenix0: architecture contract failed" unless report.clean
+end
+
+desc "Scan for tracked secrets"
+task :security_sweep do
+  run_tool("tools/security_sweep.rb")
+end
+
+desc "Run the canonical MASTER/tools check and suite"
+task :tools do
+  tools_root = File.expand_path("tools", __dir__)
+  Bundler.with_unbundled_env { Dir.chdir(tools_root) { sh RbConfig.ruby, "-S", "rake" } }
+end
+
+desc "Deep scan lib/ - triage scanner self-findings separately from actionable violations"
+task :constitution do
+  $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+  require "master"
+  require "operator/constitution_contract"
+  contract = Operator::ConstitutionContract.new.check
+  abort "constitution: contract failed - #{contract.issues.join("; ")}" unless contract.clean?
+  puts "constitution: executable contract clean"
+  require "review/scan/constitution_triage"
+
+  root    = __dir__
+  scanner = Master::Fix::Scanner.build(root:)
+  scanner.laws.reject! { |law| law.id.to_s == "ast_omission" }
+  timeout = Integer(ENV.fetch("MASTER_CONSTITUTION_FILE_TIMEOUT", "4"))
+  # data/scan_coverage.yml, not File.join(root, "lib") — a path literal here is
+  # how core/ stayed outside its own law for three weeks. rake lint:scan_coverage
+  # audits the manifest; this reads it.
+  paths = Master.scan_roots(root:).flat_map { |dir| Dir.glob(File.join(root, dir, Master::Fix::Scanner::SCAN_GLOB)) }
+                .select { |path| Master::Fix::Scanner.scan_candidate?(path, root:) }
+  puts "constitution: #{paths.size} file(s) across #{Master.scan_roots(root:).join(', ')}"
+  # Which half of the law is running. Rules needing a model return [] without
+  # one, and no local check attaches one, so "clean" over 99 rules and "clean"
+  # over 225 are different claims that otherwise print the same.
+  audit = Master::Review::Scan::LawRegistryAudit.new(root:).call
+  # Rules that need a model and did not get one return [] and say nothing, so
+  # a report that omits them offers the mechanical half as the whole law.
+  idle = scanner.laws.select { |law| law.respond_to?(:agent?) && !law.agent? }
+  puts "constitution: #{audit.mechanical.size} of #{audit.yaml_laws} declared laws active" \
+       "#{idle.empty? ? '' : " (#{idle.map(&:id).join(', ')} idle without a model - rake lint:law_reach)"}"
+
+  violations = paths.each_with_index.flat_map do |path, index|
+    puts "constitution: scanned #{index}/#{paths.size}" if index.positive? && (index % 25).zero?
+    result = Timeout.timeout(timeout) { scanner.scan(path, depth: :deep) }
+    abort "constitution: scan failed for #{path}: #{result.message}" unless result.ok?
+
+    result.value!.map { |finding| finding.merge(file: path) }
+  rescue Timeout::Error
+    [{ law: "SCAN_TIMEOUT", law_id: "SCAN_TIMEOUT", severity: :error, line: 1,
+       message: "scan exceeded #{timeout}s per-file budget", file: path }]
+  end
+  triage = Master::Review::Scan::ConstitutionTriage.new(root:)
+  buckets = triage.buckets(violations)
+  actionable = triage.actionable_count(violations)
+  # The measured count of true violations, so a new one fails the task. It only
+  # falls, and only when findings are deleted; a budget far above the count
+  # gated nothing.
+  budget = Integer(ENV.fetch("MASTER_CONSTITUTION_MAX_ACTIONABLE", "85"))
+
+  if violations.empty?
+    puts "constitution: clean"
+  else
+    buckets.each do |bucket|
+      next if bucket.findings.empty?
+
+      puts "[#{bucket.name}] #{bucket.findings.size}"
+      bucket.findings.group_by { |v| v[:law] }.sort_by { |_, vs| -vs.size }.first(8).each do |rule, vs|
+        puts "  #{rule}: #{vs.size}"
+        vs.first(3).each { |v| puts "    #{v[:file]}:#{v[:line]}: #{v[:message]}" }
+      end
+    end
+    puts "constitution: #{violations.size} finding(s), #{actionable} actionable (budget #{budget})"
+    exit 1 if actionable > budget
+  end
+end
+
+desc "Run laws.yml self_test laws against MASTER itself"
+# A loud check: it fails while known debt remains, so the debt stays visible and
+# triageable. Read the count from this task's output, never from prose.
+task :selftest do
+  $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+  require "master"
+  result = Master::Review::Scan::SelfTest.new(root: __dir__).call
+  abort result.message unless result.ok?
+
+  summary = result.value!
+  # What this check did not measure, said before what it did. bin/check
+  # --profile=agent runs this task, and "0 findings" over 99 rules and over 225
+  # are different claims that printed identically.
+  puts "selftest: #{Master::Review::Scan::LawRegistryAudit.new(root: __dir__).call.coverage_line}"
+  puts summary.line
+  summary.checks.each do |check|
+    puts "  [#{check.law}] #{check.findings.size}"
+    check.findings.first(5).each { |finding| puts "    #{finding[:path]}:#{finding[:line]}: #{finding[:message]}" }
+  end
+  # abort, not exit(0) on success: this task is a prerequisite of `rake audit`,
+  # and exiting zero here ended the process before the five lints after it ran.
+  abort "selftest: #{summary.line}" unless summary.ok?
+end
+
+desc "Fast blocking-severity scan of lib/ (Fix::SelfCheck) -- a quick fail-fast check ahead of the heavier rake constitution triage scan"
+task :selfcheck do
+  $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+  require "master"
+  audit = Master::Review::Scan::LawRegistryAudit.new(root: __dir__).call
+  # The severities named from the constant, so the banner cannot claim a set the
+  # check does not use — it read "error/critical only" for as long as veto was
+  # missing from it, which is how nobody noticed veto was missing.
+  puts "selfcheck: #{audit.mechanical.size} of #{audit.yaml_laws} declared " \
+       "laws active (rake lint:law_reach for what the rest need), " \
+       "#{Master::Fix::SelfCheck::QUICK_SEVERITIES.join('/')} only, across #{Master.scan_roots.join(', ')}"
+  report = Master::Fix::SelfCheck.new(root: __dir__).quick
+  puts report.summary
+  abort report.line unless report.clean?
+end
+
+desc "Eager-load all Zeitwerk-managed constants"
+task :autoload do
+  $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+  require "master"
+  Master.eager_load!
+  puts "autoload: clean"
+end
+
+desc "Boot the container and build the FixLoop (no model call)"
+task :boot_smoke do
+  sh RbConfig.ruby, File.join(__dir__, "tools", "boot_smoke.rb")
+end
+
+desc "Boot the kernel chain under zeitwerk without the bundle; assert the alias contract where the fix graph's gems exist"
+task :kernel_autoload_smoke do
+  sh RbConfig.ruby, File.join(__dir__, "tools", "kernel_autoload_smoke.rb")
+end
+
+# The gemspec's own comment says no task builds or installs it, and Dir[] on a
+# missing path silently ships fewer files than the gem claims to. This task is
+# the proof that stopped being true: every path the file list resolves to must
+# exist, the load-bearing anchors must be in the list, and a package must come
+# out the other end. It runs in the ci profile.
+desc "Build master.gemspec into a package and prove the file list resolves"
+task "gem:build_proof" do
+  require "rubygems/package"
+  require "fileutils"
+
+  gem_path = nil
+  files = 0
+  begin
+    Dir.chdir(__dir__) do
+      spec = Gem::Specification.load("master.gemspec")
+      raise "master.gemspec did not load" unless spec
+
+      raise "gemspec resolved to zero files" if spec.files.empty?
+
+      missing = spec.files.reject { |file| File.exist?(file) }
+      unless missing.empty?
+        raise "gemspec lists #{missing.size} paths that do not exist: #{missing.first(8).join(', ')}"
+      end
+
+      %w[lib/master.rb bin/master data/mcp_servers.yml].each do |anchor|
+        raise "gemspec file list is missing #{anchor}" unless spec.files.include?(anchor)
+      end
+
+      files = spec.files.size
+      # Built inside the chdir, so the returned name is relative to __dir__; made absolute here, the size
+      # and the cleanup below find it whatever directory rake was started from.
+      gem_path = File.expand_path(Gem::Package.build(spec), __dir__)
+    end
+    size = File.size(gem_path)
+    puts "gem:build_proof: package built (#{size} bytes) from #{files} files; the list resolves, the anchors are in it"
+  ensure
+    FileUtils.rm_f(gem_path) if gem_path
+  end
+end
+
+desc "Run test/test_core_smoke.rb - Effect -> Constitution -> World loop"
+task :core_smoke do
+  sh RbConfig.ruby, "-I#{File.join(__dir__, "lib")}", File.join(__dir__, "test", "test_core_smoke.rb")
+end
+
+desc "Run every discovered tree's native tests plus source/config smoke checks"
+task "test:all_trees" do
+  root = File.expand_path("..", __dir__)
+  ignored = %w[.git .bundle node_modules vendor tmp log coverage storage cache dist build]
+  ignored_path = ->(path) { ignored.any? { |part| path.split(File::SEPARATOR).include?(part) } }
+  trees = Dir.children(root).select do |name|
+    path = File.join(root, name)
+    File.directory?(path) && !name.start_with?(".") && !ignored.include?(name)
+  end.sort
+  failures = []
+  inconclusive = []
+  inventory = {}
+  node_bin = %w[node nodejs].find do |candidate|
+    system(candidate, "--version", out: File::NULL, err: File::NULL)
+  end
+
+  trees.each do |tree|
+    path = File.join(root, tree)
+    ruby_files = Dir.glob(File.join(path, "**", "*.rb")).reject { |file| ignored_path.call(file) }
+    test_files = Dir.glob(File.join(path, "**", "*_test.rb")).reject { |file| ignored_path.call(file) }
+    test_files.concat(Dir.glob(File.join(path, "**", "test_*.rb")).reject { |file| ignored_path.call(file) })
+    test_files.uniq!
+    javascript_files = Dir.glob(File.join(path, "**", "*.{js,mjs}")).reject { |file| ignored_path.call(file) }
+    javascript_tests = Dir.glob(File.join(path, "**", "*.test.mjs")).reject { |file| ignored_path.call(file) }
+    inventory[tree] = {
+      ruby: ruby_files.size,
+      tests: test_files.size,
+      shell: Dir.glob(File.join(path, "**", "*.{sh,zsh,ksh}")).count { |file| !ignored_path.call(file) },
+      javascript: javascript_files.size,
+      javascript_tests: javascript_tests.size,
+    }
+
+    ruby_files.each do |file|
+      failures << "#{file}: Ruby syntax" unless system(RbConfig.ruby, "-c", file, out: File::NULL, err: File::NULL)
+    end
+
+    test_roots = Dir.glob(File.join(path, "**", "Rakefile")).select { |file| !ignored_path.call(file) }
+    test_roots.each do |rakefile|
+      suite = File.dirname(rakefile)
+      next unless File.read(rakefile).match?(/(?:task|Rake::TestTask).*test/)
+      failures << "#{suite}: rake test" unless system(RbConfig.ruby, "-S", "rake", "test", chdir: suite)
+    end
+
+    standalone_tests = test_files.reject do |file|
+      test_roots.any? { |rakefile| file.start_with?(File.dirname(rakefile) + File::SEPARATOR) }
+    end
+    standalone_tests.each do |test|
+      suite_root = File.dirname(test)
+      while suite_root != path && !File.file?(File.join(suite_root, "test_helper.rb"))
+        suite_root = File.dirname(suite_root)
+      end
+      lib = File.join(suite_root, "lib")
+      test_dir = File.join(suite_root, "test")
+      load_paths = [lib, test_dir].select { |dir| File.directory?(dir) }
+      args = load_paths.map { |dir| "-I#{dir}" } + [test]
+      failures << "#{test}: test process" unless system(RbConfig.ruby, *args)
+    end
+
+    if javascript_tests.any?
+      if node_bin
+        groups = javascript_tests.group_by do |file|
+          if file.start_with?(File.join(root, "MASTER", "web") + File::SEPARATOR)
+            File.join(root, "MASTER")
+          elsif file.start_with?(File.join(root, "RAILS") + File::SEPARATOR)
+            File.join(root, "RAILS")
+          else
+            path
+          end
+        end
+        groups.each do |working_dir, tests|
+          failures << "#{tree}: Node runtime tests" unless system(node_bin, "--test", *tests, chdir: working_dir)
+        end
+      else
+        inconclusive << "#{tree}: #{javascript_tests.size} JavaScript runtime test(s) not measured (Node.js unavailable)"
+      end
+    end
+
+    Dir.glob(File.join(path, "**", "*.{sh,zsh,ksh}")).reject { |file| ignored_path.call(file) }.each do |file|
+      first = File.foreach(file).first.to_s
+      shell = if first.include?("zsh")
+        ["zsh", "-n"]
+      elsif first.include?("ksh")
+        ["ksh", "-n"]
+      else
+        ["sh", "-n"]
+      end
+      unless system(*shell, file, out: File::NULL, err: File::NULL)
+        executable = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
+          File.executable?(File.join(dir, shell.first))
+        end
+        if executable
+          failures << "#{file}: shell syntax"
+        else
+          warn "test:all_trees: #{file}: #{shell.first} unavailable; syntax not measured"
+        end
+      end
+    end
+  end
+
+  %w[yml yaml json].each do |ext|
+    Dir.glob(File.join(root, "**", "*.#{ext}")).reject { |file| ignored_path.call(file) }.each do |file|
+      loader = ext == "json" ? "require 'json'; JSON.parse(File.read(ARGV.fetch(0)))" : "require 'yaml'; YAML.safe_load_file(ARGV.fetch(0), permitted_classes: [Symbol], aliases: true)"
+      failures << "#{file}: #{ext} parse" unless system(RbConfig.ruby, "-e", loader, file, out: File::NULL, err: File::NULL)
+    end
+  end
+
+  inventory.each do |tree, counts|
+    next if counts[:ruby].zero? || counts[:tests].positive?
+    warn "test:all_trees: #{tree}: #{counts[:ruby]} Ruby source file(s), no discovered *_test.rb/test_*.rb"
+  end
+
+  abort "test:all_trees: #{failures.size} failure(s)\n#{failures.join("\n")}" unless failures.empty?
+  inventory.each do |tree, counts|
+    puts "test:all_trees: #{tree}: ruby=#{counts[:ruby]} tests=#{counts[:tests]} shell=#{counts[:shell]} " \
+         "javascript=#{counts[:javascript]} javascript_tests=#{counts[:javascript_tests]}"
+  end
+  unless inconclusive.empty?
+    inconclusive.each { |finding| warn "test:all_trees: inconclusive: #{finding}" }
+    exit 3
+  end
+  puts "test:all_trees: #{trees.join(", ")} clean"
+end
+
+namespace :test do
+  desc "Fold spine tests (lib/core.rb + lib/core/)"
+  task :core do
+    # Each file runs in its own process: `ruby a.rb b.rb c.rb` runs only a.rb and
+    # passes the rest as ARGV, so the old single-invocation form silently skipped
+    # every file after the first.
+    # -Ilib: the spine has one loader, so these require "master" like everything else.
+    FileList["test/test_core_*.rb"].each { |f| ruby "-Ilib", "-Itest", f }
+  end
+
+  desc "The cli, io and fix subsystem tests on their own"
+  task :subsystems do
+    files = FileList["test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb"]
+    files.each { |f| ruby "-Itest", f }
+  end
+
+  desc "Live web HTTP/browser tests (requires Falcon on MASTER_WEB_PORT)"
+  task :integration_web do
+    %w[test/test_web_http.rb test/test_browser.rb].each { |file| ruby "-Itest", file }
+  end
+
+  # Outside MASTER's bundle, for the reason tools carries a paragraph
+  # about: `sh` inherits BUNDLE_GEMFILE, so `bundle exec rails test` inside web/
+  # resolved against MASTER's Gemfile, which has no railties. It failed with
+  # "can't find executable rails for gem railties ... perhaps you meant to add it
+  # to your Gemfile", which reads as a broken web app and is a broken invocation.
+  # web/ has its own Gemfile and its own suite; run it from there and it is green.
+  desc "Rails web integration tests (MASTER/web)"
+  task :web do
+    # Bundler.with_unbundled_env, not a hash of nils. `sh` sets a nil value to the
+    # empty string rather than unsetting it, and an empty BUNDLE_GEMFILE still
+    # searches upward — from web/ that finds MASTER/Gemfile, whose lock names seven
+    # gems web/ does not vendor. An empty BUNDLE_PATH separately overrides
+    # web/.bundle/config, which says vendor/bundle. Bundler 4 also sets
+    # BUNDLER_SETUP, which a child ruby loads bundler/setup from even with RUBYOPT
+    # cleared; with_unbundled_env clears that as well.
+    Bundler.with_unbundled_env do
+      # The running ruby, named: the binstubs say `env ruby`, which finds macOS's 2.6 when PATH has no rbenv.
+      rails_test = [RbConfig.ruby, "-S", "bundle", "exec", RbConfig.ruby, "bin/rails", "test"]
+      Dir.chdir(File.join(__dir__, "..", "MASTER", "web")) { sh(*rails_test) }
+    end
+  end
+
+  desc "Static web UI checks (asset manifest, boot contract)"
+  task :web_ui do
+    ruby "-Ilib:test", "test/test_web_ui.rb"
+  end
+
+  desc "Subprocess CLI boot tests (MASTER_CLI_E2E=1)"
+  task :cli_e2e do
+    ENV["MASTER_CLI_E2E"] = "1"
+    ruby "-Itest", "test/test_cli_boot_e2e.rb"
+  end
+end
+
+task default: :test
+
+# Which files moved the spine, so the number comes with a culprit.
+#
+# The ratchet said "+16" and nothing else, and on 2026-08-25 that cost an hour and
+# nearly a wrong ceiling raise: 15 of those 16 lines were another session's
+# untracked file in a shared checkout, and the session reading the number assumed
+# they were its own. A ratchet that reports only a total makes every concurrent
+# session responsible for every other session's work.
+#
+# Untracked files are listed first and explicitly, because they are the ones a
+# `git diff` does not show and the ones a stash-and-remeasure silently attributes
+# to you. Body lines, not raw, so the numbers match the ceiling's own unit.
+def spine_movers(root)
+  metrics = Master::Review::Scan::CodeMetrics
+  # --porcelain reports paths from the REPO root, not from -C, so they have to be
+  # joined against the toplevel. Joining them against MASTER/ instead finds no
+  # file, every row filters out, and the attributor reports "nothing uncommitted"
+  # while staring at the file that moved the number — which is the failure this
+  # whole helper exists to prevent, so it is worth the extra call.
+  top = IO.popen(["git", "-C", root, "rev-parse", "--show-toplevel"], &:read).strip
+  at = lambda do |rel|
+    out = IO.popen(["git", "-C", top, "show", "HEAD:#{rel}"], err: File::NULL, &:read)
+    $?.success? ? metrics.body_lines(out) : 0
+  end
+
+  changed = IO.popen(["git", "-C", root, "status", "--porcelain", "--", "lib"], &:read).lines
+  rows = changed.filter_map do |line|
+    status, rel = line.strip.split(" ", 2)
+    next unless rel && File.file?(File.join(top, rel))
+
+    now = metrics.body_lines(File.read(File.join(top, rel)))
+    was = status == "??" ? 0 : at.call(rel)
+    next if now == was
+
+    [rel, now - was, status == "??" ? " (untracked)" : ""]
+  end
+  return "  (nothing uncommitted under lib/ - the overage is already committed)\n" if rows.empty?
+
+  lines = rows.sort_by { |row| -row[1] }.map { |rel, delta, note| format("  %+5d  %s%s\n", delta, rel, note) }
+  "  moved by uncommitted work:\n#{lines.join}"
+rescue StandardError => e
+  "  (could not attribute: #{e.class})\n"
+end
+
+# One contract, four harnesses.
+#
+# Codex and Copilot read the root AGENTS.md. Gemini CLI reads GEMINI.md,
+# Cursor reads .cursorlaws, and GLM reads GLM.md. Claude Code reads the
+# hand-written CLAUDE.md pointer. Do not generate .github/: AGENTS.md is the
+# shared Copilot contract and the only repository-wide policy copy.
+#
+# The source is the marked block in MASTER/AGENTS.md. Generated pointers carry
+# a header naming the generator, so edits to them are visibly non-canonical.
+AGENT_CONTRACT_SOURCE = File.join(__dir__, "AGENTS.md")
+AGENT_CONTRACT_TARGETS = {
+  "AGENTS.md" => "Codex, Copilot CLI/IDE, Grok, and every agent that reads AGENTS.md",
+  "GEMINI.md" => "Gemini CLI",
+  "GLM.md" => "GLM (Z.ai) and every agent that reads GLM.md",
+  ".cursorlaws" => "Cursor",
+}.freeze
+
+def agent_contract_block
+  body = File.read(AGENT_CONTRACT_SOURCE)
+  block = body[/<!-- agent-contract:begin -->\n(.*?)<!-- agent-contract:end -->/m, 1]
+  abort "agent contract: no marked block in MASTER/AGENTS.md" unless block
+  block.strip
+end
+
+def agent_contract_document(relative, audience)
+  header = <<~HEADER
+    <!-- Generated by `cd MASTER && rake docs:agent_contracts`.
+         Edit MASTER/AGENTS.md, not this file.
+         Audience: #{audience}. -->
+  HEADER
+  body = if relative == "AGENTS.md"
+           agent_contract_block
+         else
+           target = "AGENTS.md"
+           <<~POINTER
+             # Agent entrypoint
+
+             Read [the canonical AGENTS.md](#{target}) before planning or editing.
+             It routes to `MASTER/AGENTS.md`, `MASTER/data/soul.yml` and
+             `MASTER/data/laws.yml#law_catalogue` for Law policy; `law_runtime.yml`
+             carries runtime configuration only. Follow that contract; this file
+             carries no separate policy.
+           POINTER
+         end
+  "#{header}\n#{body.strip}\n"
+end
+
+namespace :docs do
+  desc "Write every agent harness's entry file from MASTER/AGENTS.md"
+  task :agent_contracts do
+    root = File.expand_path("..", __dir__)
+    AGENT_CONTRACT_TARGETS.each do |relative, audience|
+      path = File.join(root, relative)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, agent_contract_document(relative, audience))
+      puts "docs:agent_contracts: wrote #{relative}"
+    end
+  end
+
+end
+
+namespace :lint do
+  desc "Constitutional laws.yml entries have executable enforcement (Fix::LawParity)"
+  task :law_parity do
+    ruby File.join(__dir__, "tools", "law_parity_check.rb")
+  end
+
+desc "Every agent harness file matches the contract in MASTER/AGENTS.md"
+task :agent_contracts do
+  root = File.expand_path("..", __dir__)
+  drifted = AGENT_CONTRACT_TARGETS.filter_map do |relative, audience|
+    path = File.join(root, relative)
+    next "#{relative} (missing)" unless File.file?(path)
+
+    File.read(path) == agent_contract_document(relative, audience) ? nil : relative
+  end
+  abort "lint:agent_contracts: #{drifted.join(", ")} drifted from MASTER/AGENTS.md - " \
+        "edit the marked block there and run `rake docs:agent_contracts`" if drifted.any?
+
+  # Claude Code reads CLAUDE.md, deliberately hand-written: a pure pointer
+  # into MASTER, not a fifth generated target. A hand-written door drifts
+  # quietly, so its pointer contract is asserted: the canonical reads stay
+  # named, the generated-block markers stay absent, and no law id from
+  # laws.yml is quoted — policy quoted here is policy forked here.
+  claude_path = File.join(root, "CLAUDE.md")
+  abort "lint:agent_contracts: CLAUDE.md missing" unless File.file?(claude_path)
+  claude = File.read(claude_path)
+  missing_refs = ["MASTER/data/soul.yml", "MASTER/data/laws.yml", "MASTER/AGENTS.md"]
+                   .reject { |ref| claude.include?(ref) }
+  abort "lint:agent_contracts: CLAUDE.md no longer points at #{missing_refs.join(", ")}" if missing_refs.any?
+  abort "lint:agent_contracts: CLAUDE.md carries the generated-block markers; " \
+        "it is the one hand-written door and must stay so" if claude.include?("agent-contract:begin")
+  require "yaml"
+  law_ids = []
+  walk = lambda do |node|
+    case node
+    when Hash
+      node.each do |key, value|
+        law_ids << value if key == "id" && value.is_a?(String) && value.include?("_")
+        walk.call(value)
+      end
+    when Array then node.each { |value| walk.call(value) }
+    end
+  end
+  walk.call(YAML.safe_load_file(File.join(__dir__, "data", "laws.yml"), aliases: true))
+  quoted = law_ids.select { |id| claude.include?(id) }
+  abort "lint:agent_contracts: CLAUDE.md quotes law ids #{quoted.join(", ")} - " \
+        "point at the catalogue, do not reproduce it" if quoted.any?
+
+  puts "lint:agent_contracts: #{AGENT_CONTRACT_TARGETS.size} harness files match their source; CLAUDE.md pointer contract holds"
+end
+
+  desc "Check all Ruby files have # frozen_string_literal: true"
+  task :frozen do
+    missing = Dir.glob(File.join(__dir__, "lib", "**", "*.rb")).reject do |f|
+      File.read(f, 100).include?("# frozen_string_literal: true")
+    end
+    if missing.empty?
+      puts "lint:frozen: all files frozen"
+    else
+      missing.each { |f| puts "  missing: #{f.sub("#{__dir__}/", "")}" }
+      abort "lint:frozen: #{missing.size} file(s) missing frozen_string_literal"
+    end
+  end
+
+  desc "Prove every data/autoload.yml ignore is still necessary"
+  task :autoload do
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+    groups = YAML.safe_load_file(File.join(__dir__, "data", "autoload.yml")).fetch("autoload")
+    problems = []
+
+    groups.values.flatten.each do |relative|
+      path = File.join(__dir__, "lib", relative)
+      problems << "#{relative}: listed but does not exist" unless File.exist?(path)
+    end
+
+    # A file that reopens a constant must not define its own path-implied one --
+    # otherwise it is autoloadable and the ignore is hiding a naming mistake.
+    #
+    # The whole nesting, not the basename: lib/review/scan/engines/path_filter.rb
+    # opens `module PathFilter` and the basename check called that autoloadable,
+    # while Zeitwerk wants Scan::Engines::PathFilter and the file declares
+    # Scan::PathFilter. `rake autoload` was red on a name this lint called clean.
+    inflector = Master::LOADER.inflector
+    groups.fetch("reopens_a_constant_defined_elsewhere").each do |relative|
+      next unless relative.end_with?(".rb")
+
+      path = File.join(__dir__, "lib", relative)
+      next unless File.file?(path)
+
+      expected = ["Master", *File.dirname(relative).split("/").reject { |part| part == "." },
+                  File.basename(relative, ".rb")]
+      expected = [expected.first, *expected.drop(1).map { |part| inflector.camelize(part, path) }]
+      opened = File.read(path).scan(/^\s*(?:class|module)\s+([A-Z][\w:]*)/).flatten
+      if opened.first(expected.size) == expected
+        problems << "#{relative}: defines #{expected.join("::")}, so Zeitwerk can load it - drop the ignore"
+      end
+    end
+
+    groups.fetch("defines_a_foreign_namespace").each do |relative|
+      path = File.join(__dir__, "lib", relative)
+      next unless File.file?(path)
+
+      problems << "#{relative}: declares Master::, not a foreign namespace" if File.read(path).match?(/^module Master\b/)
+    end
+
+    abort "lint:autoload:\n  #{problems.join("\n  ")}" if problems.any?
+    puts "lint:autoload: #{groups.values.flatten.size} ignores, all still necessary"
+  end
+
+  # Was: print proposals for one hardcoded directory and exit 0 regardless. That
+  # is a report, not a check, and it was absent from `rake audit` too — so for its
+  # whole life nothing read what it found. The census counts families across every
+  # declared root against a recorded low, in the shape dup_census and
+  # namespace_ceilings already use, and fails when a new one appears.
+  #
+  # COHESION_DIR still asks the one-directory question, which is the one worth
+  # asking when you are about to do the surgery.
+  desc "files that are one concept under several names - counts families against a recorded low"
+  task :cohesion do
+    tool = File.join(__dir__, "tools", "cohesion.rb")
+    if (target = ENV["COHESION_DIR"])
+      abort "lint:cohesion: #{target} absent" unless Dir.exist?(target)
+      system(RbConfig.ruby, tool, target)
+    else
+      abort "lint:cohesion: a new family appeared" unless system(RbConfig.ruby, tool, "--census")
+    end
+  end
+
+  desc "every law can fire somehow - none is law that no configuration enforces"
+  task :law_reach do
+    ok = system(RbConfig.ruby, File.join(__dir__, "tools", "law_reach.rb"))
+    abort "lint:law_reach: a rule reaches no detector" unless ok
+  end
+
+  desc "Ratchet: lib/ may shrink or hold, never grow past data/spine.yml's ceiling"
+  task :spine do
+    require "yaml"
+    config = YAML.safe_load_file(File.join(__dir__, "data", "spine.yml")).fetch("spine")
+
+    # Code lines: non-blank, non-comment. This counted every line until
+    # 2026-08-10, and spine.yml had already recorded the problem with that
+    # without resolving it -- lint:spine charged for comment lines and [DENSITY]
+    # deliberately did not, so a paragraph of rationale above a tricky line
+    # satisfied one rule and breached the other. In a tree whose convention is to
+    # write that paragraph, the two rules were pulling in opposite directions and
+    # three ratchet passes had been paid for out of dead code rather than
+    # deciding which one meant it. They now agree.
+    #
+    # The key names the unit, and the unit has changed twice. lib_ceiling counted
+    # raw lines; lib_code_ceiling counted non-blank non-comment; lib_body_ceiling
+    # subtracts the lines Zeitwerk forces — a `module` wrapping exactly one module
+    # or class, and its `end`.
+    #
+    # Renaming on each change is the mechanism: a stale number becomes a load
+    # error instead of a silent pass, this time at roughly 5% slack. Both older
+    # keys are refused by name so neither can be carried across quietly.
+    %w[lib_ceiling lib_code_ceiling].each do |stale|
+      next unless config.key?(stale) && !config.key?("lib_body_ceiling")
+
+      abort "lint:spine: data/spine.yml still carries #{stale}. This task counts body lines now - " \
+        "code minus the module wrappers Zeitwerk requires, which carry no implementation and " \
+        "made every regroup cost two lines per file. Rename the key to lib_body_ceiling and " \
+        "re-measure; the old number is ~5% slack in the new unit."
+    end
+    ceiling = config.fetch("lib_body_ceiling")
+    # Master::Review::Scan::CodeMetrics, not a copy of the counter. This task and
+    # tools/ratchets.rb each carried their own, for the same ratchet, in the same
+    # table — they agreed by luck rather than by construction.
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+    lines = Master::Review::Scan::CodeMetrics.body_lines_in(File.join(__dir__, "lib"))
+    # lib/core.rb and lib/core/*.rb both count: the entrypoint is a concept
+    # (Effect, VERBS, Secret), and globbing only the directory would have relaxed
+    # a 6-file invariant to 5 the moment the spine moved, without saying so.
+    core_files = Dir.glob(File.join(__dir__, "lib", "{core.rb,core/*.rb}")).size
+    core_recursive_files = Dir.glob(File.join(__dir__, "lib", "core", "**", "*.rb")).size
+
+    if core_files > config.fetch("core_files")
+      abort "lint:spine: the fold spine has #{core_files} files, ceiling is #{config['core_files']} - " \
+            "a new ability is a verb in world.rb and a new constraint is a rule in constitution.rb, " \
+            "not a new concept"
+    end
+
+    if core_recursive_files > config.fetch("core_recursive_files")
+      abort "lint:spine: the fold spine has #{core_recursive_files} recursive files, ceiling is #{config['core_recursive_files']} - " \
+            "nested core structure cannot grow behind the direct-file invariant"
+    end
+
+    if lines > ceiling
+      abort "lint:spine: lib/ is #{lines} lines, ceiling is #{ceiling} (+#{lines - ceiling}).\n" +
+            spine_movers(__dir__) +
+            "Absorb it, or raise the ceiling in data/spine.yml in a commit that says why."
+    end
+
+    # The file's own warning, enforced instead of described.
+    #
+    # spine.yml says a ceiling that rises whenever a day's work pushes against it
+    # measures nothing. It was raised on 2026-07-31 and again on 2026-08-01, both
+    # times with a good reason, and a good reason will always be available — that
+    # is the failure mode, not an accident. So the escalation is now a check:
+    # past the allowance, raising is refused until lib/ has actually come down
+    # and been ratcheted. The prose could be ignored; this cannot.
+    raises = Array(config["raised"]).length
+    allowed = config.fetch("consecutive_raises_allowed", 2)
+    if raises > allowed
+      abort "lint:spine: the ceiling has been raised #{raises} times without lib/ ever falling " \
+            "(allowance #{allowed}). Absorb something and run `rake lint:spine RATCHET=1`, or " \
+            "delete lib_body_ceiling and say in the commit that the spine is not an invariant anyone holds."
+    end
+
+    # The ratchet only tightens. Nothing here can raise the ceiling.
+    if lines < ceiling && ENV["RATCHET"] == "1"
+      body = File.read(File.join(__dir__, "data", "spine.yml"))
+      body = body.sub(/^  lib_body_ceiling: \d+$/, "  lib_body_ceiling: #{lines}")
+      # A real fall clears the raise log, which is what makes the allowance a
+      # budget rather than a countdown to a permanent failure. Earning back a
+      # raise requires lib/ to actually come down first.
+      #
+      # An entry is a dashed line plus the wrapped continuation lines indented
+      # past the dash, so the pattern has to take both. Matching only the dashed
+      # line strands the continuation as a bare scalar and leaves spine.yml
+      # unparseable; matching only the continuation, as this did, matches
+      # nothing at all and clears no entry while reporting that it had.
+      # `consecutive_raises_allowed:` sits at two spaces with no dash, so it is
+      # outside both alternatives.
+      body = body.sub(/^  raised:\n(?:  - .*\n(?:    +.*\n)*)+/, "  raised: []\n")
+      # And never write a file this task cannot read back, or claim an edit it
+      # did not make. A ratchet whose failure mode is corrupting its own ledger
+      # has no business writing unattended; one whose failure mode is a false
+      # report is worse, because nothing looks wrong.
+      begin
+        spine = YAML.safe_load(body).fetch("spine")
+        spine.fetch("lib_body_ceiling")
+        raise "raise log still holds #{spine["raised"].size} entries" unless Array(spine["raised"]).empty?
+      rescue StandardError => e
+        abort "lint:spine: refusing to write data/spine.yml - the rewrite does not parse " \
+              "(#{e.class}: #{e.message}). The file on disk is untouched; ratchet it by hand."
+      end
+      File.write(File.join(__dir__, "data", "spine.yml"), body)
+      puts "lint:spine: ratcheted #{ceiling} -> #{lines} (raise log cleared)"
+    elsif lines < ceiling
+      puts "lint:spine: #{lines}/#{ceiling} lines (#{ceiling - lines} under - " \
+           "run `rake lint:spine RATCHET=1` to record the new low)"
+    else
+      puts "lint:spine: #{lines}/#{ceiling} lines, fold spine #{core_files} files"
+    end
+  end
+
+  # laws.yml's LAW_MAP law names the rule -> law direction; SelfTest
+  # only ever checked law -> rule and so reported 0 against 101 untraced
+  # rules. A ceiling makes the real number visible and monotone without turning a
+  # standing backlog into a red check on unrelated work.
+  desc "Ratchet: registered laws that trace to no law_map entry may fall, never rise"
+  task :law_trace do
+    require "yaml"
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+    require "review/scan/law_tree"
+
+    map = Master::Ground::Map::LawMap.load(root: __dir__)
+    # The Laws whose detector is a `check` or a class: the population the scanner
+    # registry held before every Law became one ::Law.define.
+    registered = Master::Review::Scan::LawTree.definitions.select { |law| law.check || law.detector }
+                                                       .map { |law| law.id.to_s.downcase }
+    untraced = map.untraced_laws(registered_law_ids: registered)
+    ceiling = map.law_trace_ceiling
+
+    if ceiling.nil?
+      abort "lint:law_trace: data/laws.yml has no law_trace_ceiling - " \
+            "record one at the current #{untraced.size} before this check can hold"
+    end
+
+    if untraced.size > ceiling
+      puts untraced.first(20).map { |id| "  #{id}" }
+      abort "lint:law_trace: #{untraced.size} registered laws trace to no principle " \
+            "(ceiling #{ceiling}, +#{untraced.size - ceiling}). Map them, or lower the ceiling " \
+            "in a commit that says why it moved up."
+    end
+
+    if untraced.size < ceiling && ENV["RATCHET"] == "1"
+      path = File.join(__dir__, "data", "laws.yml")
+      File.write(path, File.read(path).sub(/^law_trace_ceiling: \d+$/, "law_trace_ceiling: #{untraced.size}"))
+      puts "lint:law_trace: ratcheted #{ceiling} -> #{untraced.size}"
+    elsif untraced.size < ceiling
+      puts "lint:law_trace: #{untraced.size}/#{ceiling} untraced (#{ceiling - untraced.size} under - " \
+           "run `rake lint:law_trace RATCHET=1` to record the new low)"
+    else
+      puts "lint:law_trace: #{untraced.size}/#{ceiling} of #{registered.size} registered laws untraced"
+    end
+  end
+
+  TOOL_LINT_TASKS = {
+    agent_map: ["Every agent-map file and patch-brief path resolves in the checkout", "tools/agent_map_integrity.rb"],
+    scan_coverage: ["Every Ruby-bearing tree in MASTER is scanned by its own law or exempt with a written reason", "tools/scan_coverage.rb"],
+    capability: ["Named capabilities must not disappear vs origin/main", "tools/audit/capability_inventory.rb"],
+    reader_singularity: ["One loader per data file - a second direct reader is a second implementation", "tools/reader_singularity.rb"],
+    doc_citations: ["Prose citing a number that data/ owns must cite the value data/ currently holds", "tools/doc_citations.rb"],
+    do_not_touch: ["Every Do Not Touch entry names the check that fails when its claim stops being true", "tools/do_not_touch.rb"],
+    instruments: ["The repo's own measuring code agrees with test/fixtures, whose answers are declared", "tools/instruments.rb"],
+    swallowed: ["Load-bearing errors that were swallowed and never looked at", "tools/swallowed_errors.rb"],
+    law_audit: ["Rules that cannot see their own subject, or fire on nearly everything", "tools/law_audit.rb"],
+    autofix_reach: ["Rules whose autofix names code that does not exist, or names nothing at all", "tools/autofix_reach.rb"],
+    rule_hygiene: ["Rule ids, aliases and metadata: collisions, unfinished folds, missing tier/severity", "tools/audit/law_hygiene.rb"],
+    word_boundary: ["Flag \\b adjacent to punctuation in rule regexes - a word boundary that can never fire", "tools/word_boundary_lint.rb"],
+    test_naming: ["MASTER test files are test_<subject>.rb, not <subject>_test.rb", "tools/test_naming.rb"],
+    constant_collisions: ["No two files loadable into one process define the same top-level constant", "tools/constant_collisions.rb"],
+    models: ["every model data/models.yml names is one the provider still serves (needs network)", "tools/model_catalog_check.rb"],
+  }.freeze
+
+  TOOL_LINT_TASKS.each do |name, (description, tool)|
+    desc description
+    task name do
+      run_tool(tool)
+    end
+  end
+
+  desc "Check top-level YAML registry keys are singular"
+  task :data_singularity do
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+    scan = Master::Review::Scan::SelfTest.new(root: __dir__)
+    findings = scan.data_singularity_findings
+    if findings.empty?
+      puts "lint:data_singularity: clean"
+    else
+      findings.each { |finding| puts "  #{finding[:path]}:#{finding[:line]}: #{finding[:message]}" }
+      abort "lint:data_singularity: #{findings.size} violation(s)"
+    end
+  end
+
+  desc "No fact declared identically in two data files without a named reason"
+  task :dedup do
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+    # ContentDedupScan sat in lib/ with zero callers since it was written —
+    # a duplicate-content scanner that was itself inert wiring. This task is
+    # its reader. Cross-file exact-line matches only; within-file repeats are
+    # structural YAML.
+    #
+    # Every entry below names a duplicate this task tolerates and why; an
+    # entry that stops matching is a hole in the check and fails the task
+    # (EXEMPTIONS_EXPIRE). "open:" entries are known debt with a collapse
+    # recorded in the old backlog — tolerated so the check can land, never permanent.
+    # The visual/ad migration exemptions that were here are gone rather than
+    # expired: the collapse they waited for has landed upstream (the law block
+    # now lives in laws.yml alone, and law_runtime.yml no longer repeats it).
+    known = {
+      "voice: en-US-ChristopherNeural" =>
+        "coincident strings for two different facts: the soul anchor voice and the trader persona voice are separate settings that name the same voice today",
+      # bard.yml and narration.yml each hold one register prompt as a single
+      # blob; Script.merge replaces the `system` and `prompt` keys wholesale,
+      # so deleting a coincident line from one register would change the text
+      # that register's model receives. A line-level collapse needs a
+      # composed-prompt loader, which is a rendered-speech change and stays
+      # with the operator.
+      "- Output only the sentences to speak, nothing else." =>
+        "coincident contract line inside two whole-blob register prompts: the loader replaces the system key wholesale, so removing one copy changes that register's rendered prompt",
+      "Write at most %{sentences} sentences, each under %{words} words." =>
+        "coincident shape line inside two whole-blob register prompts: the loader replaces the prompt key wholesale, so removing one copy changes that register's rendered prompt",
+      "authorization: operator request 2026-10-27 (chat e2c7ceca) - ideate over the planned rows; every pick stays law-gated" =>
+        "one operator request authorized the whole per-app ideation batch; each ideations record is standalone and names the authorization it ran under",
+      "# Split out of data/limits.yml on 2026-10-31." =>
+        "coincident provenance note for one split event: budgets and scan each carry the same date line under their own header prose",
+      "auxiliary: '(?:was|were|been)'" =>
+        "same detector row in both registries during the documented registry migration: the passive-voice pattern block is normative in laws.yml and consumed from law_runtime.yml",
+      "banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]" =>
+        "same detector row in both registries during the documented registry migration: the zsh ban list is normative in laws.yml and read from law_runtime.yml by Io::GnuTextTools",
+
+      # The nineteen visual/ad law-line exemptions were removed the same way:
+      # upstream collapsed the migration block, so no cross-file duplicate
+      # remains for them to name.
+      # The three "open:" entries that were here are gone rather than expired:
+      # each named a cross-file duplicate that has since been collapsed to one
+      # source. anti_simulation's forbidden list is soul.yml only now (the
+      # voice.yml shadow copy was deleted), and both replicate env vars and the
+      # default free model live in providers.yml alone. Verified one file each
+      # before removing — a stale exemption is a hole in this check, which is why
+      # the task fails on one rather than ignoring it.
+    }
+    files = Dir.chdir(__dir__) { Dir.glob("data/**/*.yml").reject { |f| f.include?("baseline") } }
+    dups = Master::Fix::ContentDedupScan.scan(root: __dir__, files:)
+    cross = dups.select { |d| d.locations.map { |l| l.split(":").first }.uniq.size > 1 }
+    new_dups = cross.reject { |d| known.key?(d.text.strip) }
+    stale = known.keys - cross.map { |d| d.text.strip }
+    new_dups.each { |d| warn "lint:dedup NEW duplicate: #{d.text.strip[0, 90]} @ #{d.locations.join(', ')}" }
+    stale.each { |text| warn "lint:dedup stale exemption (subject gone - remove it): #{text[0, 90]}" }
+    abort "lint:dedup: #{new_dups.size} new duplicate(s), #{stale.size} stale exemption(s)" if new_dups.any? || stale.any?
+    puts "lint:dedup: #{cross.size} known cross-file duplicate(s), 0 new"
+  end
+end
+
+# Every check this Rakefile defines runs here. The list used to name twelve of
+# nineteen, and the omissions were not a judgement — `loc_budget` was failing on
+# nine of twelve subsystems while `rake audit` reported passed, because nothing
+# called it. A check defined and uncalled is a check that has stopped measuring
+# without anyone deciding it should.
+desc "const_set/remove_const stay inside the recorded alias installation sites"
+task "lint:alias_sites" do
+  sh RbConfig.ruby, File.join(__dir__, "tools", "alias_site_guard.rb")
+end
+
+AUDIT_CHECKS = %w[
+  dogfood constitution selftest selfcheck tools core_smoke architecture boot_smoke kernel_autoload_smoke security_sweep
+  lint:frozen lint:data_singularity lint:spine lint:autoload
+  lint:law_trace lint:law_parity lint:agent_contracts lint:scan_coverage lint:agent_map lint:reader_singularity lint:doc_citations lint:alias_sites
+  lint:do_not_touch lint:instruments lint:swallowed lint:law_audit lint:autofix_reach
+  lint:rule_hygiene lint:constant_collisions lint:capability lint:cohesion lint:law_reach
+  lint:models lint:dedup lint:word_boundary lint:test_naming ad_organ:test_browserless
+].freeze
+
+# Four outcomes, because three of them used to print as one.
+#
+# `task audit: [...]` made every check a prerequisite, and a prerequisite that
+# calls `abort` ends the process: a failure in check three left twenty unrun and
+# the report said only what check three found. Nothing distinguished a check that
+# failed from one that crashed, and a crashing check blocks nothing while reading
+# like a fault in the tree.
+#
+# The vocabulary is MASTER/checks/runner.rb's, which has separated these since it
+# grew a third state, and for the same reason: a coverage number a run did not
+# earn is the number people quote.
+AUDIT_LABEL = {
+  passed: "PASSED",
+  failed: "FAILED",
+  errored: "ERRORED (check broke, measured nothing, blocked nothing)",
+  undefined: "UNDEFINED (named in AUDIT_CHECKS, defined nowhere)",
+}.freeze
+
+# `sh` raises rather than exiting, so its failure is a check verdict and not a
+# broken check. Everything else that escapes is the check itself breaking.
+def audit_outcome(name)
+  return :undefined unless Rake::Task.task_defined?(name)
+
+  Rake::Task[name].invoke
+  :passed
+rescue SystemExit => e
+  e.success? ? :passed : :failed
+rescue StandardError, ScriptError => e
+  # Only `sh`'s own failure is a verdict. Re-raising anything else from a
+  # sibling rescue would escape this method and end the audit unfinished.
+  return :failed if e.instance_of?(RuntimeError) && e.message.include?("Command failed with status")
+
+  warn "audit: #{name} errored - #{e.class}: #{e.message.lines.first.to_s.strip}"
+  :errored
+end
+
+desc "Full audit: constitution + selftest + every lint:* check + the ratchets"
+task :audit do
+  # Checks abort on stderr, which is unbuffered, and the summary goes to stdout,
+  # which is not once this is redirected to a file — so the verdict printed
+  # above the check it belongs to in the first run of the new shape.
+  $stdout.sync = true
+  outcomes = AUDIT_CHECKS.to_h do |name|
+    puts "\n==> audit: #{name}"
+    outcome = audit_outcome(name)
+    puts "audit: #{name} #{AUDIT_LABEL.fetch(outcome)}"
+    [name, outcome]
+  end
+
+  by_outcome = outcomes.group_by { |_, outcome| outcome }.transform_values { |rows| rows.map(&:first) }
+  passed = by_outcome.fetch(:passed, [])
+  failed = by_outcome.fetch(:failed, [])
+  errored = by_outcome.fetch(:errored, [])
+  undefined = by_outcome.fetch(:undefined, [])
+
+  puts "\n#{'=' * 50}"
+  puts "audit: #{passed.size}/#{outcomes.size} passed"
+  puts "audit: #{errored.size} errored and blocked nothing: #{errored.join(', ')}" if errored.any?
+  puts "audit: #{undefined.size} named but undefined: #{undefined.join(', ')}" if undefined.any?
+  puts "audit: #{failed.size} failed: #{failed.join(', ')}" if failed.any?
+  # An errored or undefined check is a hole in the coverage this run claims, so
+  # it ends the run non-zero too — otherwise the fail-open case is the quiet one.
+  abort "audit: incomplete" if failed.any? || errored.any? || undefined.any?
+
+  puts "audit: passed"
+end
+
+namespace :constitution do
+  desc "Autofix Group C hygiene: FINAL_NEWLINE, CONSECUTIVE_BLANK_LINES, PERCENT_LITERAL (safe cases)"
+  task :autofix_group_c do
+    $LOAD_PATH.unshift(File.join(__dir__, "lib"))
+    require "master"
+
+    root = __dir__
+    lib = File.join(root, "lib")
+    paths = Dir.glob(File.join(lib, "**", "*.rb"))
+               .select { |path| File.file?(path) && !Master::Fix::Scanner.skip_path?(path, root:) }
+
+    fixed = { final_newline: 0, consecutive_blank_lines: 0, percent_literal: 0 }
+    percent_re = /\[:([a-z_]+),\s*(:[a-z_]+(?:,\s*:[a-z_]+)+)\]/
+
+    paths.each do |path|
+      bytes = File.binread(path)
+      next if bytes.empty?
+
+      updated = bytes.dup
+      changed = false
+
+      unless updated.end_with?("\n")
+        updated << "\n"
+        changed = true
+        fixed[:final_newline] += 1
+      end
+
+      collapsed = updated.gsub(/\n{3,}/, "\n\n")
+      if collapsed != updated
+        updated = collapsed
+        changed = true
+        fixed[:consecutive_blank_lines] += 1
+      end
+
+      text = updated.force_encoding("UTF-8")
+      text = text.gsub(percent_re) do
+        symbols = Regexp.last_match(0).scan(/:[a-z_]+/).map { |sym| sym.delete_prefix(":") }.join(" ")
+        fixed[:percent_literal] += 1
+        "%i[#{symbols}]"
+      end
+
+      if text != updated
+        updated = text
+        changed = true
+      end
+
+      next unless changed
+
+      File.binwrite(path, updated)
+      abort "constitution:autofix_group_c: syntax error in #{path}" unless system(RbConfig.ruby, "-c", path)
+    end
+
+    puts "constitution:autofix_group_c: #{fixed.values.sum} fix(es) - #{fixed.map { |k, v| "#{k}=#{v}" }.join(", ")}"
+  end
+end
+
+desc "Every law/ rule flags its bad fixture and spares its good one, then every law judges law/ itself"
+task :dogfood do
+  ruby "-Ilib", "test/test_dogfood.rb"
+end
+
+desc "Mutate a source and watch its test fail. Usage: rake mutate[lib/foo.rb,test/test_foo.rb]"
+task :mutate, [:source, :test] do |_t, args|
+  abort "usage: rake mutate[lib/foo.rb,test/test_foo.rb]" if args.source.to_s.empty? || args.test.to_s.empty?
+
+  ruby File.join(__dir__, "tools", "mutate.rb"), args.source, args.test
+end
+
+namespace :ad_organ do
+  desc "Lint an ad visual manifest and fail unless all six visual laws have evidence"
+  task :lint_visual do
+    manifest = ENV["AD_VISUAL_MANIFEST"].to_s
+    abort "ad_organ: set AD_VISUAL_MANIFEST to a JSON creative manifest" if manifest.empty?
+    abort "ad_organ: manifest does not exist: #{manifest}" unless File.file?(manifest)
+
+    run_tool("tools/visual/audit_ad.rb", manifest)
+  end
+
+  desc "Test browserless visual measurements without starting a browser"
+  task :test_browserless do
+    ruby File.join(__dir__, "test", "test_browserless_visual_measurements.rb")
+  end
+end
+
+namespace :ux do
+  desc "Run the Baymard-informed UX audit over the RAILS source tree"
+  task :baymard do
+    sh RbConfig.ruby, File.join(__dir__, "checks", "runner.rb"), "baymard_ux"
+  end
+end

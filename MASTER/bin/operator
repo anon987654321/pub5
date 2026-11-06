@@ -1,0 +1,1078 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/boot/entrypoint"
+Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
+
+require "optparse"
+require_relative "../lib/io/exec"
+require "shellwords"
+
+# Two levels: this lives in MASTER/bin/, and every sibling tree is reached
+# from the repo root above it.
+ROOT = File.expand_path("../..", __dir__)
+OPENBSD_OPS = File.join(ROOT, "OPENBSD")
+$LOAD_PATH.unshift(File.join(ROOT, "MASTER", "lib")) unless $LOAD_PATH.include?(File.join(ROOT, "MASTER", "lib"))
+
+require "operator/environment"
+require "operator/ruby_runner"
+require "operator/status_report"
+require "operator/strict_mode"
+require "operator/law_inventory"
+require "operator/memory_review"
+require_relative "../lib/trace/dmesg"
+
+RUBY = Operator::RubyRunner.ruby_cmd
+BUNDLE = Operator::RubyRunner.bundle_cmd
+
+def die(command, message, code = 1)
+  Master::Trace::Dmesg.status("#{command}0", "failed, #{message}", io: $stderr)
+  exit code
+end
+
+def usage
+  <<~HELP
+    operator - repo-wide operator surface
+
+    Usage:
+      bin/operator check [--scan-only] [--only=a,b] [--tree=T] [--list] [--release]  every declared check in the repo, fixing as it goes
+      bin/operator check --fix-proof [--tree=T]  internal /fix final proof against a verified candidate baseline
+      bin/operator status [--json]
+      bin/operator fix status [--trees=A,B] [--json]  /fix runs, queue, pass, logs, commits and retained worktrees; read-only
+      bin/operator vps state [--json] [--remote]
+      bin/operator vps master <status|start|stop|restart> [--remote]
+      bin/operator vps deploy <app|all|master> [--remote] [--follow|--detach]  --remote: preflight, pin SHA, tmux on box; default waits + canary (./bin/redeploy)
+      bin/operator vps logs <app> [--lines N] [--remote]
+      bin/operator vps canary [--remote] [--app a,b] [--budget-ms N]  post-deploy probe: ports, rcctl, every public GET route (--remote runs on the box, otherwise the public domains)
+      bin/operator vps rollback <sha>     prints the manual rollback; vps-deploy takes no SHA, so nothing is run
+      bin/operator vps admin <status|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]
+      bin/operator post-pull
+      bin/operator measure [--deep] [--json]
+      bin/operator affiliate status
+      bin/operator affiliate grant <claims.read|claims.prepare|claims.submit> --confirm "GRANT tradedoubler.claims.<scope>"
+      bin/operator affiliate revoke <scope> --confirm "REVOKE tradedoubler.claims.<scope>"
+      bin/operator affiliate claims list [--source brgen|amber] [--program KEY] [--status-id N] [--since DATE] [--until DATE]
+      bin/operator affiliate claims prepare <claim.json>
+      bin/operator affiliate claims submit <sha256> --confirm-hash <same-sha256>
+      bin/operator measure --why <row>    the members behind one number
+      bin/operator measure --since <ref>  which recorded ceilings moved since <ref>
+      bin/operator lint [--staged] [--changed-lines] [<path>...]  judge files by MASTER's laws, no model
+      bin/operator test [<path>...]       smallest complete proof for the paths (default: dirty files)
+      bin/operator branches               every branch against main: merged, active, conflicts, deletes_heavily or ready
+      bin/operator design [--app A] [--surface S] [--rounds N]  screenshot, edit one layout rule, keep it if the score rises, commit each
+      bin/operator land -m <msg> <path>...  commit path-scoped, re-check, push current branch
+      bin/operator push                   replay unpublished main commits onto a moved origin/main and push, no stash
+      bin/operator triangle <up|status|down> [app...]  boot brgen, amber, bsdports and the master face on the ports the live checks probe
+      bin/operator visual sweep [APP] [--no-dialogs]  every page, width and dialog to .master (/fix screenshot_sweep)
+      bin/operator visual review [--app A,B] [--surface ID] [--no-critique] [--no-open] [--out DIR]  read-only rendered review, no fixing
+      bin/operator visual <seed [app...] [--yes]|unseed|status|approve <surface>>  believable local content for the visual pass, development database only
+      bin/operator premerge [--apps|--pwa|--contracts|--coverage|--checks|--list]  the Rails premerge proof
+      bin/operator ci | coverage          every app's bin/ci, the full Rails coverage run
+      bin/operator doctor [--remote]      the environment traps, checked in seconds: disk, rubies, boot, worktrees, model lanes, stray processes
+      bin/operator memory review <key> <verdict> --evidence <path> --sha256 <hex> --reviewer <name> --confirm
+      bin/operator laws <ID> [--card] [--health] [--deep] [--json] [--corpus MASTER|all] [path...]
+                                      the rule, its exemption, then what it finds
+      bin/operator hooks                  install the shared-tree commit guard
+      bin/operator readers <path>         who reaches this file, across all four governed trees
+      bin/operator fix tail [--tail=N] [--transcript] [--once]  follow the newest /fix log and transcript
+      bin/operator pushed? <path>...      is this content on origin/main, or only here
+      bin/operator snapshot [TREE...] [--part-bytes=N] [--code | --code-only] [--verify]  full source, one untruncated file per tree (exact; --part-bytes=N opts in to numbered parts; --code adds the comment-free variant), verified after writing; --verify checks the files at the root; --budget=BYTES [--since=REF] [--only=a,b] [--tests] writes a reading pack; --since keeps the full Map but inlines changed tracked paths and reports deletions/renames; requires --budget
+      bin/operator event-bus [--strict] [--json]  census Ruby publishers/subscribers and browser event references
+      bin/operator wishlist [--all]     show the current bounded next-work queue
+      bin/operator spark [TREE] [--seed N]  high-creativity constrained experiment (no model)
+      bin/operator cities               owned_domains from apps.yml
+      bin/operator domain-ghosts        inventory vs owned vs residual relayd Hosts
+      bin/operator deploy-story [log]   stage timeline from deploy log
+      bin/operator tree-weight          tracked file counts per tree
+      bin/operator law-weight           MASTER/law/*.rb line counts
+
+    Profiles (passed through to check scripts):
+      OPENBSD/bin/check --profile=contributor
+      cd MASTER && bin/check --profile=contributor
+  HELP
+end
+
+def ssh_host
+  ENV.fetch("PUB4_SSH_HOST", "dev@brgen.no")
+end
+
+def ssh_key
+  File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
+end
+
+def ssh_log_path
+  File.expand_path(ENV.fetch("PUB4_SSH_LOG", "~/.pub4/ssh-connections.log"))
+end
+
+def ssh_log(event, detail = nil)
+  path = ssh_log_path
+  FileUtils.mkdir_p(File.dirname(path))
+  line = "#{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")} host=#{ssh_host} event=#{event}"
+  line += " #{detail}" if detail && !detail.empty?
+  File.open(path, "a") { |f| f.puts(line) }
+rescue StandardError => e
+  warn "ssh-log: #{e.message}"
+end
+
+# A command for the box that runs a Ruby script with whatever Ruby the box has.
+# The resolution happens there, through OPENBSD/lib/ruby_select.sh, never here.
+def remote_ruby(*argv)
+  resolver = %q(. OPENBSD/lib/ruby_select.sh && exec "$RUBY" "$@")
+  "cd /home/dev/pub5 && #{Shellwords.join(["sh", "-c", resolver, "sh", *argv])}"
+end
+
+def ssh_base_argv
+  log = ssh_log_path
+  FileUtils.mkdir_p(File.dirname(log))
+  [
+    "ssh",
+    "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=#{ENV.fetch("PUB4_SSH_CONNECT_TIMEOUT", "15")}",
+    "-o", "ConnectionAttempts=#{ENV.fetch("PUB4_SSH_CONNECTION_ATTEMPTS", "3")}",
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=8",
+    "-o", "LogLevel=#{ENV.fetch("PUB4_SSH_LOG_LEVEL", "INFO")}",
+    "-E", log, # OpenSSH appends protocol diagnostics here
+    "-i", ssh_key,
+    ssh_host,
+  ]
+end
+
+# Replace the process with ssh (no local retry — ConnectionAttempts covers
+# handshake retries). Log intent before exec; the -E file records the session.
+def ssh_run(remote_cmd)
+  require "fileutils"
+  summary = remote_cmd.to_s.gsub(/\s+/, " ")[0, 120]
+  ssh_log("connect", "cmd=#{summary.inspect}")
+  cmd = ssh_base_argv + [remote_cmd]
+  exec(*cmd)
+end
+
+# Capture mode with explicit retries for read-only probes (state, canary).
+def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB4_SSH_RETRIES", "3")))
+  require "fileutils"
+  require "open3"
+  summary = remote_cmd.to_s.gsub(/\s+/, " ")[0, 120]
+  delay = 2
+  last_err = nil
+  attempts.times do |i|
+    ssh_log("attempt", "n=#{i + 1}/#{attempts} cmd=#{summary.inspect}")
+    out, status = Open3.capture2e(*ssh_base_argv, remote_cmd)
+    if status.success?
+      ssh_log("ok", "n=#{i + 1} bytes=#{out.bytesize}")
+      return [out, true]
+    end
+    last_err = out.to_s.lines.last(5).join.strip
+    ssh_log("fail", "n=#{i + 1} exit=#{status.exitstatus} err=#{last_err[0, 160].inspect}")
+    sleep delay
+    delay = [delay * 2, 30].min
+  end
+  [last_err.to_s, false]
+end
+
+command = ARGV.shift
+case command
+when "check"
+  # The whole ladder, autofixing, in one invocation — the default way to find
+  # out whether this repo is conformant. The stages and the reasoning behind
+  # their order live in lib/operator/check_chain.rb.
+  #
+  # It writes by default, because a scanner that finds a fixable defect and
+  # leaves it is a scanner whose findings someone has to walk back to later.
+  # --scan-only measures and writes nothing; every stage says which files it
+  # changed, under its own name, so a bad fix is attributable to the stage that
+  # made it rather than to the diff as a whole.
+  require "operator/check_chain"
+  release = !ARGV.delete("--release").nil?
+  ENV["MASTER_STRICT"] = "deploy" if release
+  fix_proof = !ARGV.delete("--fix-proof").nil?
+  scan_only = !ARGV.delete("--scan-only").nil? || ENV["MASTER_CHECK_SCAN_ONLY"] == "1"
+  # --explain is the same question people actually ask before starting an hour
+  # of checks: what is this going to run.
+  list = !ARGV.delete("--list").nil? || !ARGV.delete("--explain").nil?
+  only = ARGV.filter_map { |arg| arg[/\A--only=(.+)\z/, 1] }.flat_map { |value| value.split(",") }
+  # --tree is the common case made cheap: working inside one tree, the other
+  # four trees' suites and checks prove nothing about the change and cost most of
+  # the wall clock. It drops whole stages rather than shrinking them; the
+  # reasoning is in lib/operator/check_chain.rb.
+  trees = ARGV.filter_map { |arg| arg[/\A--tree=(.+)\z/, 1] }
+  trees << ARGV[ARGV.index("--tree") + 1].to_s if ARGV.include?("--tree")
+  if fix_proof
+    selected = Operator::CheckChain.normalise_trees(trees)
+    statuses = selected.map { |target| Operator::CheckChain.verify_cached_fix(target:).first }
+    exit(statuses.max || 0)
+  end
+  exit Operator::CheckChain.run(scan_only:, only:, list:, trees:)
+when "status", nil
+  json = ARGV.include?("--json")
+  output = Operator::StatusReport.new(root: ROOT).render(json:)
+  json ? puts(output) : Master::Trace::Dmesg::Report.print("/status", output)
+when "fix"
+  # Read-only: /fix itself is started with bin/master "/fix <tree...>" (trees run
+  # in the order typed) or bin/fix-here. This only reports on what it wrote.
+  # `fix tail` and `fix status --tail/--transcript` are one follower: the newest
+  # /fix log beside the newest run's transcript. The main checkout is searched
+  # too, because a /fix child writes its transcript there and not in its worktree.
+  sub = ARGV.shift
+  die("fix", "usage, bin/operator fix status [--trees=A,B] [--json] | fix tail [--tail[=N]] [--transcript] [--once]", 64) unless %w[tail status].include?(sub)
+  following = sub == "tail" || ARGV.any? { |arg| arg == "--transcript" || arg.start_with?("--tail") }
+  if following
+    require "operator/fix_tail"
+    common = Master::Io::Exec.capture2e("git", "-C", ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir").first.strip
+    roots = [File.join(ROOT, "MASTER"), File.join(File.dirname(common), "MASTER")].uniq
+    exit Operator::FixTail.run(ARGV, roots:)
+  end
+
+  require "operator/fix_status"
+  json = !ARGV.delete("--json").nil?
+  trees = ARGV.filter_map { |arg| arg[/\A--trees=(.+)\z/, 1] }.flat_map { |value| value.split(",") }
+  trees << ARGV[ARGV.index("--trees") + 1].to_s if ARGV.include?("--trees")
+  output = Operator::FixStatus.new(root: ROOT, trees: trees).render(json:)
+  json ? puts(output) : Master::Trace::Dmesg::Report.print("/fix status", output)
+when "affiliate"
+  require_relative "../lib/finance/tradedoubler"
+  affiliate = Master::Finance::Tradedoubler.new(root: ROOT, master_root: File.join(ROOT, "MASTER"))
+  begin
+    action = ARGV.shift.to_s
+    case action
+    when "status"
+      die("affiliate", "usage: bin/operator affiliate status") unless ARGV.empty?
+      puts JSON.pretty_generate(affiliate.status)
+    when "grant", "revoke"
+      scope = ARGV.shift
+      confirmation = nil
+      OptionParser.new do |options|
+        options.on("--confirm VALUE") { |value| confirmation = value }
+      end.parse!(ARGV)
+      die("affiliate", "usage: bin/operator affiliate #{action} <scope> --confirm <exact-phrase>") unless
+        scope && confirmation && ARGV.empty?
+      report = if action == "grant"
+                 affiliate.grant_scope(scope, confirmation:)
+               else
+                 affiliate.revoke_scope(scope, confirmation:)
+               end
+      puts JSON.pretty_generate(report)
+    when "claims"
+      operation = ARGV.shift.to_s
+      case operation
+      when "list"
+        options = {}
+        OptionParser.new do |parser|
+          parser.on("--source KEY") { |value| options[:source] = value }
+          parser.on("--program KEY") { |value| options[:program_key] = value }
+          parser.on("--status-id VALUE") { |value| options[:status_id] = value }
+          parser.on("--since DATE") { |value| options[:since] = value }
+          parser.on("--until DATE") { |value| options[:until_date] = value }
+        end.parse!(ARGV)
+        die("affiliate", "unknown arguments: #{ARGV.join(' ')}") unless ARGV.empty?
+        puts JSON.pretty_generate(affiliate.list_claims(**options))
+      when "prepare"
+        path = ARGV.shift
+        die("affiliate", "usage: bin/operator affiliate claims prepare <claim.json>") unless path && ARGV.empty?
+        puts JSON.pretty_generate(affiliate.prepare_claim(path:))
+      when "submit"
+        sha256 = ARGV.shift
+        confirmation_hash = nil
+        OptionParser.new do |parser|
+          parser.on("--confirm-hash HASH") { |value| confirmation_hash = value }
+        end.parse!(ARGV)
+        die("affiliate", "usage: bin/operator affiliate claims submit <sha256> --confirm-hash <same-sha256>") unless
+          sha256 && confirmation_hash && ARGV.empty?
+        puts JSON.pretty_generate(affiliate.submit_claim(sha256, confirmation_hash:))
+      else
+        die("affiliate", "usage: bin/operator affiliate claims <list|prepare|submit>")
+      end
+    else
+      die("affiliate", "usage: status | grant <scope> --confirm PHRASE | revoke <scope> --confirm PHRASE | claims <list|prepare|submit>", 64)
+    end
+    exit 0
+  rescue Master::Finance::Tradedoubler::Error, ArgumentError, JSON::ParserError => e
+    die("affiliate", e.message)
+  end
+when "measure"
+  # Every ratchet in the repo, current beside recorded. Non-zero when any is over
+  # its ceiling OR slack beneath it, because a ceiling above the real number is
+  # room the next change grows into without failing anything.
+  #
+  # --why names the files behind a number and --since names the ceilings that
+  # moved, because neither question can be answered from the table: "OVER +826"
+  # is not something a session can act on or disclaim.
+  require_relative "../lib/operator/ratchets"
+  deep = !ARGV.delete("--deep").nil?
+  why = ARGV.filter_map { |arg| arg[/\A--why(?:=(.*))?\z/, 1] }.first
+  why ||= ARGV[ARGV.index("--why") + 1].to_s if ARGV.include?("--why")
+  since = ARGV.filter_map { |arg| arg[/\A--since(?:=(.*))?\z/, 1] }.first
+  since ||= ARGV[ARGV.index("--since") + 1] if ARGV.include?("--since")
+  die("measure", "usage, bin/operator measure --since <ref>", 64) if ARGV.include?("--since") && since.to_s.empty?
+  if since
+    Master::Trace::Dmesg::Report.print("measure", Operator::Ratchets.since(since))
+    exit 0
+  end
+  trees = ARGV.filter_map { |arg| arg[/\A--trees=(.+)\z/, 1] }.flat_map { |value| value.split(",") }
+  rows = Operator::Ratchets.all(deep:, trees: trees.empty? ? nil : trees)
+  require_relative "../lib/review/council/inter_model_contract"
+  Master::Trace::Dmesg.status(
+    "intermodel0",
+    Master::Review::Council::InterModelContract.measure_line(root: ROOT),
+    io: $stderr
+  )
+  if why
+    Master::Trace::Dmesg::Report.print("measure", Operator::Ratchets.why(rows, why))
+    exit 0
+  end
+  if ARGV.include?("--json")
+    puts Operator::Ratchets.json(rows)
+  else
+    Master::Trace::Dmesg::Report.print("measure", Operator::Ratchets.render(rows))
+  end
+  exit(Operator::Ratchets.ok?(rows) ? 0 : 1)
+when "lint"
+  # Inheritance made mechanical. The same deterministic rules MASTER runs on
+  # itself — every lexical and AST rule plus law/, no model, no autofix — judge
+  # whatever files an agent touched, so claude, grok or codex can run it on a
+  # diff before committing and be held to the constitution regardless of which
+  # tool typed the change. Paths given are scanned as named; with none, the diff
+  # against HEAD is. Operator::Lint says what --staged and --changed-lines read.
+  require "master"
+  require "fix/scanner"
+  require "operator/lint"
+  changed_only = !ARGV.delete("--changed-lines").nil?
+  staged = !ARGV.delete("--staged").nil?
+  scanner = Master::Fix::Scanner.build(root: Master::ROOT, agent: nil)
+  lint = Operator::Lint.new(root: ROOT, scanner:, staged:, changed_only:)
+  files = lint.targets(ARGV)
+  findings = lint.findings(files)
+  if findings.empty?
+    Master::Trace::Dmesg.status("lint0", "clean, #{files.size} files, no law broken")
+    exit 0
+  end
+  Master::Trace::Dmesg.attach("lint0", "master0", "#{findings.size} finding(s) across #{findings.map(&:first).uniq.size} files")
+  findings.sort_by { |path, finding| [path, finding[:line].to_i] }.each do |path, finding|
+    Master::Trace::Dmesg.status("lint0", "#{path.sub("#{ROOT}/", "")}:#{finding[:line]}, #{finding[:message]}")
+  end
+  exit 1
+when "land"
+  # Commit, rebase onto origin/main, re-check, push — in that order, because the
+  # order is where it goes wrong.
+  #
+  # Every landing is the same five steps, and the two that get
+  # skipped are the two that matter. Rebasing onto a main that moved can
+  # invalidate a green run, so the checks run again AFTER the rebase and not
+  # only before it. And `git push` sends every commit beneath yours, so this
+  # prints what is going before it goes.
+  #
+  # Path-scoped by construction: with no paths it commits nothing, rather than
+  # sweeping up whatever else is in a shared checkout.
+  message = nil
+  message_file = nil
+  OptionParser.new do |o|
+    o.on("-m MSG") { |v| message = v }
+    o.on("-F FILE") { |v| message_file = v }
+  end.parse!(ARGV)
+  paths = ARGV
+  die("land", "usage, bin/operator land -m <message> <path>...", 64) if paths.empty?
+  die("land", "usage, bin/operator land needs -m <message> or -F <file>", 64) unless message || message_file
+
+  def run!(*cmd, chdir: ROOT)
+    out, status = Master::Io::Exec.capture2e(*cmd, chdir: chdir)
+    [out.strip, status.success?]
+  end
+
+  measure_out, measure_ok = run!(File.join(__dir__, "operator"), "measure")
+  unless measure_ok
+    Master::Trace::Dmesg::Report.print("measure", measure_out, io: $stderr)
+    die("land", "ratchet is off before you started")
+  end
+  Master::Trace::Dmesg.status("land0", "ratchets clean")
+
+  commit = ["git", "commit", "-q"]
+  commit += message_file ? ["-F", message_file] : ["-m", message]
+  _, ok = run!(*commit, "--", *paths)
+  die("land", "nothing committed, paths matched no changes?") unless ok
+
+  run!("git", "fetch", "-q", "origin")
+  current_branch, branch_ok = run!("git", "branch", "--show-current")
+  die("land", "detached HEAD has no destination branch; switch to main or a named topic branch") unless branch_ok && !current_branch.empty?
+
+  if current_branch == "main"
+    # main is the only branch pushed directly to origin/main.
+    _, current = run!("git", "merge-base", "--is-ancestor", "origin/main", "HEAD")
+    unless current
+      rebase_out, rebased = run!("git", "rebase", "-q", "origin/main")
+      abort("land: rebase onto origin/main failed; resolve and rerun land\n#{rebase_out}") unless rebased
+    end
+  else
+    remote_ref = "origin/#{current_branch}"
+    _, remote_exists = run!("git", "show-ref", "--verify", "--quiet", "refs/remotes/#{remote_ref}")
+    if remote_exists
+      # Never rewrite a published topic branch. Bring its remote commits in, then
+      # merge main if needed so the push remains fast-forward-only.
+      _, includes_remote = run!("git", "merge-base", "--is-ancestor", remote_ref, "HEAD")
+      unless includes_remote
+        merge_out, merged = run!("git", "merge", "--no-edit", remote_ref)
+        abort("land: merging #{remote_ref} failed; resolve and rerun land\n#{merge_out}") unless merged
+      end
+      _, includes_main = run!("git", "merge-base", "--is-ancestor", "origin/main", "HEAD")
+      unless includes_main
+        merge_out, merged = run!("git", "merge", "--no-edit", "origin/main")
+        abort("land: merging origin/main into #{current_branch} failed; resolve and rerun land\n#{merge_out}") unless merged
+      end
+    else
+      # An unpublished topic can be rebased onto current main before first push.
+      _, includes_main = run!("git", "merge-base", "--is-ancestor", "origin/main", "HEAD")
+      unless includes_main
+        rebase_out, rebased = run!("git", "rebase", "-q", "origin/main")
+        abort("land: rebase onto origin/main failed; resolve and rerun land\n#{rebase_out}") unless rebased
+      end
+    end
+  end
+
+  # The same measurement again. A rebase brings other people's commits under
+  # yours, and theirs can put a ceiling over the edge that yours did not.
+  after_out, after_ok = run!(File.join(__dir__, "operator"), "measure")
+  unless after_ok
+    Master::Trace::Dmesg::Report.print("measure", after_out, io: $stderr)
+    die("land", "green before rebase, off after it, origin/main moved under you")
+  end
+
+  # Booting reaches only the files the boot requires; a file that does not parse
+  # anywhere else waits for whoever loads it next. Prism answers for all of them.
+  require "operator/parse_sweep"
+  broken = Operator::ParseSweep.failures(ROOT)
+  unless broken.empty?
+    Master::Trace::Dmesg::Report.print("parse", Operator::ParseSweep.render(broken.first(10)), io: $stderr)
+    die("land", "#{broken.size} tracked Ruby file(s) do not parse; nothing pushed")
+  end
+  Master::Trace::Dmesg.status("land0", "every Ruby file parses")
+
+  # And the runtime itself. Green ratchets say nothing about a require that the
+  # rebase left dangling (core/capabilities, twice in one day): only booting does.
+  smoke_out, smoke_ok = run!(File.join(__dir__, "ruby"), File.join(ROOT, "MASTER", "tools", "boot_smoke.rb"))
+  unless smoke_ok
+    Master::Trace::Dmesg::Report.print("boot_smoke", smoke_out, io: $stderr)
+    die("land", "the runtime does not boot after the rebase; nothing pushed")
+  end
+  Master::Trace::Dmesg.status("land0", "runtime boots")
+
+  ahead, = run!("git", "log", "--oneline", "origin/main..HEAD")
+  Master::Trace::Dmesg.attach("land0", "master0", "publishing to origin/#{current_branch}")
+  ahead.each_line { |line| Master::Trace::Dmesg.status("land0", line.chomp) }
+  push_out, pushed = run!("git", "push", "origin", "HEAD:#{current_branch}")
+  abort("land: push refused to origin/#{current_branch}; no force push was attempted\n#{push_out}") unless pushed
+  Master::Trace::Dmesg.status("land0", "on origin/#{current_branch}")
+when "push"
+  # land's rebase refuses a dirty shared tree; this replays instead and touches
+  # the working tree only after origin confirms the push. Operator::ReplayPush.
+  require "operator/replay_push"
+  exit(Operator::ReplayPush.new(root: ROOT).run ? 0 : 1)
+when "design"
+  # The design loop: screenshot the weakest surfaces, ask the vision model for one
+  # layout edit at a time, keep each edit that scores higher as its own commit on
+  # main, undo the rest. Nothing is pushed.
+  #   bin/operator design [--app brgen,master] [--surface home,feed] [--rounds 12] [--candidates 2]
+  require "master"
+  require "operator/design_run"
+  exit Operator::DesignRun.main(ARGV, root: ROOT)
+when "visual"
+  # seed|unseed|status load local development content; approve blesses.
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "rails", "visual_seed.rb"), *ARGV) if %w[seed unseed status].include?(ARGV.first)
+  # Blesses a parked chrome-geometry baseline; the /fix loop never does this itself.
+  require File.join(ROOT, "MASTER", "lib", "fix", "visual_drift_budget")
+  if ARGV.first == "sweep"
+    # Every page, sweep width and dialog of the served apps, kept under .master/visual_artifacts.
+    require "json"
+    require File.join(ROOT, "MASTER", "lib", "fix", "screenshot_sweep")
+    apps = ARGV.drop(1).grep_v(/\A-/)
+    summary = Master::Fix::ScreenshotSweep.new(root: ROOT).run(apps:, dialogs: !ARGV.include?("--no-dialogs"))
+    puts JSON.pretty_generate(summary.except("rows"))
+    exit(summary["error"] ? 1 : 0)
+  end
+  if ARGV.first == "review"
+    require "master"
+    require "operator/visual_review"
+    exit Operator::VisualReview.main(ARGV.drop(1), root: ROOT)
+  end
+  sub, surface = ARGV
+  if sub == "taste"
+    # The operator's verdict on a rendered layout; the loop never writes one.
+    verdict, id = ARGV[1], ARGV[2]
+    note = ARGV[(ARGV.index("--note").to_i + 1)..].first if ARGV.include?("--note")
+    abort("usage: visual taste approve|reject <app/label/viewport> [--note TEXT]") unless %w[approve reject].include?(verdict) && id
+    entry = Master::Fix::TasteMemory.operator(root: ROOT, surface: id, verdict: verdict == "approve" ? "approved" : "rejected", note:)
+    puts "visual: #{id} #{entry["verdict"]} (#{entry["role"]}, #{entry["selectors"].size} selector(s))"
+    exit
+  end
+  pending = Master::Fix::VisualDriftBudget.pending(ROOT)
+  abort("usage: visual approve <surface>   (pending: #{pending.empty? ? "none" : pending.join(", ")})") unless sub == "approve" && surface
+  blessed = Master::Fix::VisualDriftBudget.approve(surface, root: ROOT)
+  abort("visual: nothing pending for #{surface}") unless blessed
+  puts "visual: #{surface} baseline now #{blessed} chrome box(es)"
+when "snapshot"
+  # Regenerates snapshot_<TREE>.md — the verbatim packs handed to another model
+  # when it needs the whole tree rather than a summary. The generator that made
+  # them was bin/snapshot, deleted with the DEPLOY tree, so the four files sat
+  # stale at a commit no checkout still has and nothing could refresh them.
+  # Lives in MASTER/tools so it is one implementation, reachable from here.
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "snapshot.rb"), *ARGV)
+when "cities"
+  exec(File.join(__dir__, "cities"), *ARGV)
+when "domain-ghosts"
+  exec(File.join(__dir__, "domain-ghosts"), *ARGV)
+when "deploy-story"
+  exec(File.join(__dir__, "deploy-story"), *ARGV)
+when "tree-weight"
+  exec(File.join(__dir__, "tree-weight"), *ARGV)
+when "law-weight"
+  exec(File.join(__dir__, "law-weight"), *ARGV)
+when "spark"
+  exec(File.join(__dir__, "spark"), *ARGV)
+when "wishlist"
+  # Wishlist state is machine-owned JSON under .master, never another markdown
+  # backlog. Display the same queue /fix reads, so the operator and fixer cannot
+  # diverge about what remains claimable.
+  require "fix/wishlist"
+  full = !ARGV.delete("--all").nil?
+  path = File.join(ROOT, Master::Fix::Wishlist::LEDGER_PATH)
+  unless File.file?(path)
+    Master::Trace::Dmesg.status("wishlist0", "empty, a successful /fix run will draft the next queue")
+    exit 0
+  end
+
+  if full
+    Master::Trace::Dmesg::Report.print("wishlist", File.read(path, encoding: "UTF-8"))
+  else
+    context = Master::Fix::Wishlist.pending_context(ROOT, target: ROOT, limit: Master::Fix::Wishlist::BATCH_SIZE)
+    Master::Trace::Dmesg::Report.print("wishlist", context || "no claimable next_fix proposals")
+  end
+when "event-bus"
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "event_bus_reach.rb"), *ARGV)
+when "post-pull"
+  script = File.join(OPENBSD_OPS, "bin", "post-pull-checklist")
+  exec(script, *ARGV)
+when "doctor"
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "doctor.rb"), *ARGV)
+when "triangle", "premerge", "ci", "coverage"
+  # RAILS' own tooling, once RAILS/bin: boot the apps the live checks probe, the
+  # premerge proof, every app's bin/ci, the coverage run. They sit with the other
+  # RAILS tools in MASTER/tools/rails and are reached only through here.
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "rails", "#{command}.rb"), *ARGV)
+when "law:silent"
+  output = Operator::LawInventory.render_collection(:silent, json: ARGV.include?("--json"))
+  if output
+    ARGV.include?("--json") ? puts(output) : Master::Trace::Dmesg::Report.print(command.to_s, output)
+  end
+  exit 0
+when "law:costly"
+  output = Operator::LawInventory.render_collection(:costly, json: ARGV.include?("--json"))
+  Master::Trace::Dmesg::Report.print(command.to_s, output) if output
+  exit 0
+when "law:twin"
+  output = Operator::LawInventory.render_collection(:twin, json: ARGV.include?("--json"))
+  Master::Trace::Dmesg::Report.print(command.to_s, output) if output
+  exit 0
+when "law:matrix"
+  output = Operator::LawInventory.render_collection(:matrix, json: ARGV.include?("--json"))
+  Master::Trace::Dmesg::Report.print(command.to_s, output) if output
+  exit 0
+when "branches"
+  require "operator/branches"
+  Master::Trace::Dmesg::Report.print("branches", Operator::Branches.render(Operator::Branches.rows(root: ROOT)))
+  exit 0
+when "memory"
+  exit Operator::MemoryReview.run(ARGV, root: ROOT)
+when "laws"
+  # One law: what it says, what it spares, and what it finds — in that order.
+  # The same word as the CLI's /laws, which lists them; this is one in full.
+  #
+  # It printed findings and nothing else, so the one thing a session actually
+  # needs before writing a line was the one thing it could not get cheaply.
+  # CLAUDE.md's instruction is to hold the rule AND its exemption before the
+  # first edit, and "the exemption is the half that gets skipped and the half
+  # that was earned against a measured false positive". A findings list carries
+  # neither.
+  #
+  # The exemption is not a field anywhere. In law/ it is a clause inside the
+  # detect block with the measurement that earned it in the comment above; in
+  # the registry it is an early return with the same comment. So the card prints
+  # the definition verbatim, comments included, rather than a summary of it —
+  # a summary is where an exemption goes missing.
+  require "master"
+  require "fix/scanner"
+  require "yaml"
+  require "json"
+  health = !ARGV.delete("--health").nil? || !ARGV.delete("--deep").nil?
+  json_health = ARGV.include?("--json")
+  id = ARGV.shift.to_s
+  die("laws", "usage, bin/operator laws <ID> [--card] [--json] [--corpus MASTER|all] [path...]", 64) if id.empty?
+
+  corpus = "MASTER"
+  ARGV.delete_if { |arg| (m = arg.match(/\A--corpus=(.+)\z/)) && (corpus = m[1]) }
+  card_only = !ARGV.delete("--card").nil?
+  as_json = !ARGV.delete("--json").nil?
+  ENV["MASTER_SCAN_DETERMINISTIC"] = "1"
+  master_root = File.join(ROOT, "MASTER")
+
+  if health
+    row = Operator::LawInventory.health(id)
+    die("laws", "nothing named #{id.inspect}") unless row
+    output = Operator::LawInventory.render(id:, deep: true, json: json_health)
+    json_health ? puts(output) : Master::Trace::Dmesg::Report.print("laws", output)
+    exit 0
+  end
+
+  # This command needs declarations from every catalogue section, not only
+  # priority-ranked entries. The shared inventory uses Master.load_laws and
+  # preserves the full laws/beauty/anti_patterns lookup behavior.
+  declared = Operator::LawInventory.catalogue_declaration(id, root: master_root)
+
+  require File.join(master_root, "law", "definition")
+  Law.load_all(File.join(master_root, "law")) if Law.definitions.empty?
+  executable_law = Law.definitions[id.to_sym]
+
+  # Where it is written. Every ruby file under law/ and the scan registry is
+  # searched for the id, and the enclosing block plus its leading comment is the
+  # answer — that comment is where the exemption's reason lives.
+  def definition_at(root, id, bare: true)
+    Dir.glob(File.join(root, "law", "**", "*.rb")).sort.each do |path|
+      lines = File.readlines(path)
+      index = rule_anchor(lines, id, bare:)
+      next unless index
+
+      span = enclosing_span(lines, index)
+      return { path: path.sub("#{root}/", "MASTER/"), line: span.first + 1, body: clipped(lines[span], path) }
+    end
+    nil
+  end
+
+  # The declaration first; a bare mention of the id only when nothing declares it.
+  def rule_anchor(lines, id, bare: true)
+    declaration = /(?:Law\.define\(:|declare\s+id:\s*["']|declare\s+:)#{Regexp.escape(id)}\b/i
+    lines.index { |line| line.match?(declaration) } || (lines.index { |line| line.include?(id) } if bare)
+  end
+
+  # The block is the enclosing definition, so back up past the comment that
+  # explains it — and take the indent from the code, not the comment, or a
+  # comment indented one step deeper runs the block on to the file's end.
+  def enclosing_span(lines, index)
+    first = index
+    first -= 1 while first.positive? && lines[first - 1].strip.start_with?("#")
+    opener = (first..index).find { |i| !lines[i].strip.start_with?("#") && !lines[i].strip.empty? } || index
+    opener = index.downto(0).find { |i| lines[i].match?(/\A\s*(class|module|Law\.define)\b/) } || opener
+    first..block_end(lines, opener)
+  end
+
+  def block_end(lines, opener)
+    closer = "#{' ' * lines[opener][/\A\s*/].length}end"
+    last = opener
+    last += 1 while last + 1 < lines.length && lines[last].rstrip != closer
+    last
+  end
+
+  def clipped(body, path)
+    return body.join if body.size <= 80
+
+    (body.first(80) + ["    ... #{body.size - 80} more line(s); open #{path} to read the rest\n"]).join
+  end
+
+  scanner = Master::Fix::Scanner.build(root: master_root, agent: nil)
+  rule = scanner.laws.find { |item| item.id.to_s.casecmp?(id) }
+  if rule.nil? && declared.nil? && executable_law.nil?
+    abort("rule: nothing named #{id.inspect} - neither a declaration in data/laws.yml " \
+          "nor one of the #{scanner.laws.size} rules the scanner loaded")
+  end
+
+  where = definition_at(master_root, rule&.id.to_s.empty? ? id : rule.id.to_s, bare: !rule.nil?)
+  card = {
+    id: (rule&.id || declared&.dig("id") || executable_law&.id).to_s,
+    declared: declared,
+    detector: rule ? rule.class.name || "anonymous scan rule" : nil,
+    severity: rule&.severity&.to_s || declared&.dig("severity"),
+    description: rule.respond_to?(:description) ? rule.description : nil,
+    defined_at: where && "#{where[:path]}:#{where[:line]}",
+    definition: where && where[:body],
+  }
+
+  unless as_json
+    lines = []
+    reach = if card[:detector]
+              nil
+            elsif card[:defined_at].to_s.start_with?("MASTER/law/")
+              "no scan-registry rule, enforced from law/"
+            else
+              "declared only, no detector; resolves through a fold or prompt"
+            end
+    lines << "law #{card[:id]}, #{reach}" if reach
+    lines << "law #{card[:id]}" unless reach
+    if declared
+      %w[name statement priority source tier severity autofix fix detect detect_semantic detect_structural].each do |key|
+        lines << "#{key}, #{declared[key]}" if declared[key]
+      end
+    end
+    lines << "constitution, #{Law::Contract.digest[0, 12]}"
+    if executable_law
+      surfaces = [("detector" if executable_law.detect), ("semantic" if executable_law.ask), ("practice" if executable_law.practice)].compact
+      lines << "enforcement, #{surfaces.join(", ")}" unless surfaces.empty?
+      lines << "mode, #{executable_law.mode}" if executable_law.mode
+      lines << "fix, #{executable_law.fix}" if !declared || declared["fix"].nil?
+    end
+    lines << "detector, #{card[:detector]}" if card[:detector]
+    if card[:definition]
+      lines << "defined at #{card[:defined_at]}, fixtures and exemption follow"
+      card[:definition].each_line { |line| lines << line.chomp.strip }
+    else
+      lines << "no definition found under law/"
+    end
+    Master::Trace::Dmesg::Report.print("laws", lines.join("\n"))
+  end
+
+  if card_only
+    puts JSON.pretty_generate(card) if as_json
+    exit 0
+  end
+
+  die("laws", "#{card[:id]} has no executable detector, nothing to run") unless rule
+
+  one = Master::Fix::Scanner.new(laws: [rule])
+  default = corpus.casecmp?("all") ? ROOT : master_root
+  targets = ARGV.empty? ? [default] : ARGV.map { |path| File.expand_path(path, ROOT) }
+  hits = one.findings(targets)
+  rows = hits.map do |item|
+    { path: item[:path].to_s.sub(%r{\A#{Regexp.escape(ROOT)}/}, ""), line: item[:line],
+      rule: item[:law].to_s, message: item[:message].to_s }
+  end
+  if as_json
+    puts JSON.pretty_generate(card.merge(corpus: corpus, findings: rows))
+  else
+    Master::Trace::Dmesg.attach("laws0", "operator0", "#{rule.id}, #{rows.size} finding(s) over #{corpus}")
+    rows.each { |row| Master::Trace::Dmesg.status("laws0", "#{row[:path]}:#{row[:line]}, #{row[:rule]}, #{row[:message]}") }
+  end
+  exit(rows.empty? ? 0 : 1)
+when "readers"
+  # Before you believe "its only reader is X". That sentence has been wrong four
+  # times in this repo and each time the grep behind it could not see the
+  # reference that mattered — most expensively hash_dig_compat.rb, whose second
+  # reader was in another tree, built its path with File.expand_path, left the
+  # extension off, and sat inside a `rescue LoadError` so the breakage warned
+  # instead of raising and dilla rendered without coltrane for days.
+  require "operator/readers"
+  target = ARGV.shift
+  die("readers", "usage, bin/operator readers <path>", 64) if target.to_s.empty?
+
+  hits = Operator::Readers.find(root: ROOT, target: target)
+  if hits.empty?
+    Master::Trace::Dmesg.status("readers0", "no reference to #{target} anywhere in #{Operator::Readers::TREES.join(", ")}")
+    Master::Trace::Dmesg.status("readers0", "deleting it is a reader-count question")
+    exit 0
+  end
+
+  by_kind = hits.group_by(&:kind)
+  # Ordered by how load-bearing the reference is, not alphabetically: a require
+  # breaks on delete, a mention is usually a comment.
+  %i[require path_build render test constant mention].each do |kind|
+    rows = by_kind[kind] or next
+    label = { require: "require", path_build: "path built at runtime", render: "rendered by name", test: "asserted by a test",
+              constant: "constant (Zeitwerk or direct)", mention: "mentioned" }.fetch(kind)
+    Master::Trace::Dmesg.attach("reader#{kind}", "readers0", "#{label}, #{rows.length}")
+    rows.first(40).each { |r| Master::Trace::Dmesg.status("reader#{kind}", "#{r.path}:#{r.line}, #{r.text[0, 120]}") }
+    Master::Trace::Dmesg.status("reader#{kind}", "#{rows.length - 40} more") if rows.length > 40
+  end
+  # A constant reference is a Zeitwerk load and breaks exactly like a require;
+  # prose mentions were reclassified before they got here.
+  hard = (by_kind[:require].to_a + by_kind[:path_build].to_a + by_kind[:render].to_a +
+          by_kind[:test].to_a + by_kind[:constant].to_a).length
+  Master::Trace::Dmesg.status("readers0", "#{hard} references would break on delete or move")
+  exit(hard.zero? ? 0 : 1)
+
+when "brief"
+  # What an agent is told before its first edit, from the same module Claude Code's SessionStart hook calls.
+
+  # A harness with no hook runs this first (the generated AGENTS.md says so).
+  require_relative "../lib/ground/agent_brief"
+
+  puts Master::Ground::AgentBrief.render(root: ROOT)
+
+when "hooks"
+  # core.hooksPath rather than copying into .git/hooks: a copy is a second
+  # implementation that drifts from the tracked one, silently, which is the
+  # defect this repo has the most of.
+  hooks = File.join(OPENBSD_OPS, "dev", "githooks")
+  system("git", "-C", ROOT, "config", "core.hooksPath", ".githooks") ||
+    die("hooks", "git config failed")
+  Master::Trace::Dmesg.attach("hooks0", "operator0", "core.hooksPath -> .githooks")
+  Dir.children(hooks).sort.each { |hook| Master::Trace::Dmesg.status("hooks0", "#{hook}#{File.executable?(File.join(hooks, hook)) ? "" : ", not executable"}") }
+  Master::Trace::Dmesg.status("hooks0", "cross-tree commits refused unless PUB4_CROSS_TREE=1")
+  Master::Trace::Dmesg.status("hooks0", "post-commit records this session SHAs")
+  Master::Trace::Dmesg.status("hooks0", "PUB4_SESSION keys that ledger explicitly; without it the shell is the key")
+when "test"
+  # The smallest COMPLETE proof for the paths given (dirty files when none
+  # are). Complete means whole suites — a green over hand-picked tests is
+  # unmeasured. The mapping that lived in CLAUDE.md prose and session
+  # memory, made executable:
+  #   MASTER/**        -> MASTER rake test (+ dogfood when law/ moved)
+  #   RAILS/__shared/**  -> all three app suites (shared lands in three apps)
+  #   RAILS/<app>/**   -> that app suite
+  #   RAILS/test       -> the standalone contract suite
+  #   OPENBSD/**       -> its local minitests (box-side proof stays on vm23)
+  #   MASTER/tools/**        -> MASTER tool suite
+  paths = ARGV.dup
+  if paths.empty?
+    listing, status = Master::Io::Exec.capture2("git", "status", "--porcelain", "-z", chdir: ROOT)
+    die("test", "git status failed", 1) unless status.success?
+    paths = listing.split("\0").filter_map { |l| l[3..] }
+  end
+  trees = paths.map { |p| p.split("/").first(2) }
+  # MASTER/tools is part of MASTER, but it has its own complete suite so tool
+  # regressions cannot hide behind the core MASTER tests.
+  tool_paths = paths.select { |path| path.start_with?("MASTER/tools/") }
+
+  jobs = []
+  rails_parts = trees.select { |t| t.first == "RAILS" }.map(&:last).uniq
+  if trees.any? { |t| t.first == "MASTER" }
+    jobs << ["MASTER suite", [BUNDLE, "exec", "rake", "test"], File.join(ROOT, "MASTER"), {}]
+    if tool_paths.any?
+      jobs << ["MASTER tools suite", [BUNDLE, "exec", RUBY, "-S", "rake"], File.join(ROOT, "MASTER", "tools"), {}]
+    end
+    if paths.any? { |p| p.start_with?("MASTER/law/") }
+      jobs << ["MASTER dogfood", [BUNDLE, "exec", "rake", "dogfood"], File.join(ROOT, "MASTER"), {}]
+    end
+  end
+  app_suites = rails_parts.include?("shared") ? %w[brgen amber bsdports] : (rails_parts & %w[brgen amber bsdports])
+  app_suites.each do |app|
+    jobs << ["#{app} suite", [BUNDLE, "exec", RUBY, "bin/rails", "test"],
+             File.join(ROOT, "RAILS", app), {}]
+  end
+  if rails_parts.any? { |part| %w[checks test].include?(part) } || !app_suites.empty?
+    jobs << ["RAILS contracts", [RUBY, "test/run_all.rb"], File.join(ROOT, "RAILS"), {}]
+  end
+  if trees.any? { |t| t.first == "OPENBSD" }
+    runner = 'Dir["test/test_*.rb"].sort.each { |f| system(RbConfig.ruby, f) || abort(f) }'
+    jobs << ["OPENBSD minitests", [RUBY, "-e", runner], File.join(ROOT, "OPENBSD"), {}]
+  end
+  if jobs.empty?
+    die("test", "no suite maps to #{paths.first(3).join(", ")}", 64)
+  end
+
+  # Say what was chosen before running it, so a surprising suite is visible
+  # up front rather than after a long run.
+  Master::Trace::Dmesg.attach("test0", "master0", "#{paths.size} paths, #{jobs.map(&:first).uniq.join(", ")}")
+  failed = jobs.each_with_index.reject do |(name, cmd, dir, env), index|
+    Master::Trace::Dmesg.attach("test#{index}", "test0", name)
+    system(env, *cmd, chdir: dir)
+  end.map(&:first)
+  failed.each { |name, *| Master::Trace::Dmesg.status("test0", "failed, #{name}") }
+  exit(failed.empty? ? 0 : 1)
+when "vps"
+  sub = ARGV.shift
+  case sub
+  when "master"
+    action = ARGV.shift.to_s
+    remote = !ARGV.delete("--remote").nil?
+    die("vps", "usage, bin/operator vps master <status|start|stop|restart> [--remote]", 64) unless %w[status start stop restart].include?(action) && ARGV.empty?
+    # Literal heredoc: the probe below carries Ruby interpolation meant for the box, not for this process.
+    script = <<~'ZSH'.sub("__ACTION__", Shellwords.escape(action))
+      set -e
+      cd /home/dev/pub5
+      case __ACTION__ in
+      status)
+        sessions="$(screen -ls 2>/dev/null || true)"
+        if [[ "$sessions" == *".master"* ]]; then
+          print "master0: screen master active"
+          screen -S master -Q select . 2>&1 || true
+        else
+          print "master0: screen master stopped"
+        fi
+        MASTER/bin/ruby -I MASTER/lib -e 'require "master"; p=Master::Ops::ProcessLock.owner; puts(p.empty? ? "master0: process lock free" : "master0: process #{p["pid"]} on #{p["host"]}, mode #{p["mode"]}")'
+        ;;
+      stop)
+        screen -S master -X quit 2>/dev/null || true
+        print "master0: screen master stopped"
+        ;;
+      start)
+        sessions="$(screen -ls 2>/dev/null || true)"
+        if [[ "$sessions" == *".master"* ]]; then
+          print "master0: screen master already active"
+        else
+          screen -dmS master zsh -lc 'cd /home/dev/pub5; exec MASTER/bin/master --daemon'
+          print "master0: screen master started"
+        fi
+        ;;
+      restart)
+        screen -S master -X quit 2>/dev/null || true
+        sleep 1
+        screen -dmS master zsh -lc 'cd /home/dev/pub5; exec MASTER/bin/master --daemon'
+        print "master0: screen master restarted"
+        ;;
+      esac
+    ZSH
+    if remote
+      ssh_run(Shellwords.join(["zsh", "-fc", script]))
+    else
+      exec("zsh", "-fc", script)
+    end
+  when "state"
+    if ARGV.delete("--remote")
+      ssh_run(remote_ruby("OPENBSD/bin/vps-state", *ARGV))
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-state"), *ARGV)
+    end
+  when "deploy"
+    app = ARGV.shift
+    remote = !ARGV.delete("--remote").nil?
+    follow = !ARGV.delete("--follow").nil?
+    detach = !ARGV.delete("--detach").nil?
+    die("vps", "usage, bin/operator vps deploy <app|all|master> [--remote] [--follow|--detach]", 64) if app.to_s.empty?
+    die("vps", "--follow and --detach require --remote", 64) if (follow || detach) && !remote
+    die("vps", "use only one of --follow or --detach", 64) if follow && detach
+    if remote
+      # Prove the commit boots here, then send the box that exact SHA; the box
+      # refuses a different one. See Operator::DeployPreflight.
+      #
+      # Default remote path is hands-off: tmux so disconnects cannot kill the
+      # deploy, wait until the session ends, then print the log tail and exit
+      # with the deploy's status. --follow attaches interactively; --detach
+      # starts and returns immediately. Canary runs inside vps-deploy unless
+      # PUB4_DEPLOY_CANARY=0.
+      require "operator/canary"
+      ok, command = Operator::DeployPreflight.remote_command(root: ROOT, app: Shellwords.escape(app))
+      die("vps", "deploy refused, #{command}", 1) unless ok
+      canary_env = ENV.fetch("PUB4_DEPLOY_CANARY", "1") == "0" ? "" : "PUB4_DEPLOY_CANARY=1 "
+      command = "#{canary_env}#{command}"
+      session = "pub4-deploy"
+      # Marker files the waiter uses so SSH drops do not lose the exit status.
+      marker = "$HOME/.pub4-deploy-last"
+      inner = Shellwords.escape(
+        "#{command}; ec=$?; print \"vps-deploy: finished exit=$ec\"; "         "print -r -- \"$ec $(date -u +%Y-%m-%dT%H:%M:%SZ)\" > #{marker}; "         "sleep 2; exit $ec"
+      )
+      mode = follow ? "follow" : (detach ? "detach" : "wait")
+      remote_script = <<~ZSH
+        set -euo pipefail
+        cd /home/dev/pub5
+        session=#{session}
+        marker=#{marker}
+        if ! command -v tmux >/dev/null 2>&1; then
+          #{command}
+          exit $?
+        fi
+        if tmux has-session -t "$session" 2>/dev/null; then
+          print -u2 "vps-deploy: session $session already running"
+          print -u2 "  attach: tmux attach -t $session"
+          print -u2 "  log:    ~/vps-deploy.log"
+          exit 75
+        fi
+        rm -f -- "$marker"
+        tmux new-session -d -s "$session" "zsh -lc #{inner}"
+        print "vps-deploy: started in tmux session $session (mode=#{mode})"
+        print "  attach:  tmux attach -t $session"
+        print "  log:     ~/vps-deploy.log"
+        case #{mode} in
+        follow)
+          exec tmux attach -t "$session"
+          ;;
+        detach)
+          sleep 2
+          [[ -f $HOME/vps-deploy.log ]] && { print "--- log ---"; tail -n 12 "$HOME/vps-deploy.log" || true; }
+          print "vps-deploy: detached; re-check with: tmux attach -t $session"
+          exit 0
+          ;;
+        wait)
+          # Poll until the session ends. Print new log lines as they appear so
+          # the operator sees progress without attaching.
+          log=$HOME/vps-deploy.log
+          : >>"$log"
+          exec 3<"$log"
+          # Seek to end so we only show new lines from this deploy.
+          while IFS= read -r -u 3; do :; done
+          while tmux has-session -t "$session" 2>/dev/null; do
+            while IFS= read -r -u 3 line; do print -r -- "$line"; done
+            sleep 3
+          done
+          while IFS= read -r -u 3 line; do print -r -- "$line"; done
+          exec 3<&-
+          if [[ -r $marker ]]; then
+            read -r ec _ < "$marker" || ec=1
+          else
+            print -u2 "vps-deploy: session ended with no exit marker; inspect ~/vps-deploy.log"
+            ec=1
+          fi
+          print "vps-deploy: finished exit=$ec"
+          # Hands-off closeout: state + public canary when the deploy itself succeeded.
+          if (( ec == 0 )); then
+            . OPENBSD/lib/ruby_select.sh
+            print "vps-deploy: post-check state"
+            "$RUBY" OPENBSD/bin/vps-state 2>/dev/null || true
+            print "vps-deploy: post-check public canary"
+            "$RUBY" OPENBSD/bin/canary --public 2>/dev/null || print -u2 "vps-deploy: public canary reported failures (deploy stamps still ok)"
+          fi
+          exit "$ec"
+          ;;
+        esac
+      ZSH
+      ssh_run(Shellwords.join(["zsh", "-fc", remote_script]))
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-deploy"), app, *ARGV)
+    end
+  when "admin"
+    remote = !ARGV.delete("--remote").nil?
+    args = ARGV.dup
+    die("vps", "usage, bin/operator vps admin <status|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]", 64) if args.empty?
+    if remote
+      ssh_run(remote_ruby("OPENBSD/bin/vps-admin", *args))
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-admin"), *args)
+    end
+  when "canary"
+    if ARGV.delete("--remote")
+      ssh_run(remote_ruby("OPENBSD/bin/canary", "--local", *ARGV))
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "canary"), "--public", *ARGV)
+    end
+  when "rollback"
+    # vps-deploy takes only an app name and starts with `git pull --ff-only
+    # origin main`, so it cannot deploy an older SHA. Until it can, this prints
+    # the revert procedure and runs nothing against the box.
+    sha = ARGV.shift.to_s
+    die("vps", "usage, bin/operator vps rollback <sha>", 64) unless sha.match?(/\A\h{7,40}\z/)
+    warn "vps rollback #{sha}: not automated. vps-deploy has no SHA argument; its pull returns the box to origin/main."
+    warn "  git revert --no-edit #{sha}..HEAD && git push origin main"
+    warn "  bin/operator vps deploy <app> --remote"
+    exit 2
+  when "logs"
+    app = ARGV.shift
+    die("vps", "usage, bin/operator vps logs <app> [--lines N] [--remote]", 64) if app.to_s.empty?
+    if ARGV.delete("--remote")
+      ssh_run(remote_ruby("OPENBSD/bin/vps-logs", app, *ARGV))
+    else
+      exec(File.join(OPENBSD_OPS, "bin", "vps-logs"), app, *ARGV)
+    end
+  else
+    Master::Trace::Dmesg::Report.print("/help", usage, io: $stderr)
+    exit 2
+  end
+when "pushed?"
+  # Cherry-picking onto a moving origin/main rewrites SHAs, so "is my work
+  # pushed?" cannot be answered by commit id. Content vs origin/main can.
+  paths = ARGV
+  die("pushed", "usage, bin/operator pushed? <path>...", 64) if paths.empty?
+
+  failed = false
+  paths.each do |path|
+    porcelain, = Master::Io::Exec.capture2e("git", "-C", ROOT, "status", "--porcelain", "--", path)
+    unless porcelain.strip.empty?
+      Master::Trace::Dmesg.status("pushed0", "dirty, #{path}")
+      failed = true
+      next
+    end
+    ahead, = Master::Io::Exec.capture2e("git", "-C", ROOT, "log", "--oneline", "origin/main..HEAD", "--", path)
+    if ahead.strip.empty?
+      Master::Trace::Dmesg.status("pushed0", "pushed, #{path}")
+    else
+      Master::Trace::Dmesg.attach("pushed0", "master0", "unpushed, #{path}")
+      ahead.each_line { |line| Master::Trace::Dmesg.status("pushed0", line.chomp) }
+      failed = true
+    end
+  end
+  exit(failed ? 1 : 0)
+else
+  Master::Trace::Dmesg::Report.print("/help", usage, io: $stderr)
+  exit 2
+end
