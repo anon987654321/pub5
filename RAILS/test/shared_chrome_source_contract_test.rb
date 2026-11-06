@@ -14,7 +14,7 @@ class SharedChromeSourceContractTest < Minitest::Test
   def tokens = read("__shared/app/assets/stylesheets/_tokens.scss")
 
   def app_sources(glob)
-    Dir.glob(File.join(ROOT, "{__shared,brgen,brgen_*,amber,bsdports}", "**", glob))
+    Dir.glob(File.join(ROOT, "{__shared,brgen,amber,bsdports}", "**", glob))
        .reject { _1.include?("/tmp/") || _1.include?("/builds/") || _1.include?("/node_modules/") }
   end
 

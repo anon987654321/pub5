@@ -46,7 +46,7 @@ class TurboBroadcastContractTest < Minitest::Test
   # multi-line call as implicit.
   def implicit_broadcasts(app)
     roots = { File.join(ROOT, app, "app/models") => nil, File.join(ROOT, "__shared/app/models") => "shared engine" }
-    # Verticals extracted to mountable engines (brgen_*/app/models) carry their
+    # Verticals extracted to mountable engines (brgen/engines/*/app/models) carry their
     # own models now — scan them too, or a broadcast that moves with tv/playlist
     # would slip the net. See brgen/README.md.
     EngineRoots.glob(ROOT, app, "app/models").each { |dir| roots[dir] = "engine" }
