@@ -1,20 +1,64 @@
 schema: 1
+source:
+  repository: anon987654321/pub4
+  ref: main
+  commit: 2c1247038cd2d445c0d5494eb01d1932b83c4c0b
+layout: R1
 ruby: 3.4.9
 rails: 8.1.4.1
 rails_source: rubygems
+status: INCOMPLETE
 shared_engine:
   gem: pub5-shared
   path: rails/shared
-  status: source_preserved_app_wiring_pending
-  shared_post_contract:
+  source_files_in_pub4: 612
+  source_import_from_pub4: NOT_RUN
+  app_wiring: NOT_RUN
+  post_contract:
     partial: rails/shared/app/views/shared/_post_card.html.erb
     vote_rail: rails/shared/app/views/shared/_post_vote_rail.html.erb
     structural_styles: [rails/shared/app/assets/stylesheets/_post_voting.scss, rails/shared/app/assets/stylesheets/_feed_list.scss]
 apps:
-  bsdports: { status: next_port, process: independent }
-  brgen: { status: pending, process: single_city_network, engines: [dating, maps, marketplace, messenger, radio, tv] }
-  amber: { status: pending, process: independent }
-  mrdamascy: { status: pending, process: independent, server: puma }
+  brgen:
+    path: rails/brgen
+    process: single_city_network
+    engines: [dating, maps, marketplace, messenger, radio]
+    source_files_in_pub4: 1757
+    key_entry_files_imported: 6
+    runtime: NOT_RUN
+    route_contracts: NOT_RUN
+    signed_in_contracts: NOT_RUN
+    golden_screenshots: NOT_RUN
+  amber:
+    path: rails/amber
+    process: independent
+    source_files_in_pub4: 457
+    key_entry_files_imported: 4
+    runtime: NOT_RUN
+    contracts: NOT_RUN
+  bsdports:
+    path: rails/bsdports
+    source_files_in_pub4: 222
+    existing_partial_import_path: rails/apps/bsdports
+    existing_partial_files: 27
+    source_reconciliation: BLOCKED
+    runtime: NOT_RUN
+    contracts: NOT_RUN
+  mrdamascy:
+    path: rails/mrdamascy
+    process: independent
+    source_files_in_pub4: 345
+    source_import_from_pub4: NOT_RUN
+    runtime: NOT_RUN
+    contracts: NOT_RUN
+cross_tree:
+  rails_wide_tests_in_pub4: 232
+  rails_wide_tests_imported: 0
+  docs_in_pub4: 9
+  docs_imported: 0
+  parked_plugins_in_pub4: 21
+  parked_plugins_imported: 0
+  app_inventory_reconciliation: BLOCKED
 cutover:
   status: BLOCKED
   gate: verified_second_host_restore_and_full_cutover_rehearsal

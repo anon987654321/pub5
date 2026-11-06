@@ -32,12 +32,17 @@ class OpenBSDConfigRendererTest < Minitest::Test
     assert @renderer.check!
   end
 
-  def test_relayd_serving_facts_match_app_registry
+  def test_relayd_serving_facts_match_deployed_apps_only
     @renderer.render
     apps = Core::Registry.load(:apps).fetch("apps")
     relay = Core::Registry.load(:openbsd).fetch("relayd")
-    expected = apps.to_h { |name, app| [name.to_s, Integer(app.fetch("port"))] }
-    actual = relay.fetch("relay").fetch("forwards").to_h { |row| [row.fetch("app").to_s, Integer(row.fetch("port"))] }
+    expected = apps.each_with_object({}) do |(name, app), result|
+      result[name.to_s] = Integer(app.fetch("port")) if app.key?("port")
+    end
+    actual = relay.fetch("relay").fetch("forwards").to_h do |row|
+      [row.fetch("app").to_s, Integer(row.fetch("port"))]
+    end
+
     assert_equal expected, actual
     assert_equal expected.keys.sort, relay.fetch("tables").map(&:to_s).sort
   end
