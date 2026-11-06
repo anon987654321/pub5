@@ -1,0 +1,255 @@
+# pub5 plan, draft 1 (2026-11-06)
+
+Measured against pub4 `origin/main` at `bcc6e038da` (27,356 commits). Nothing was changed.
+
+## 1. Measurements
+
+| What | Number | Command |
+|---|---|---|
+| Text files and lines per tree | MASTER 2,580 / 456,410; RAILS 3,472 / 283,649; OPENBSD 287 / 31,786; STUDIO 74 / 17,510; BPLANS 29 / 7,109 | `git grep -I -c '' origin/main -- <tree>` summed with awk |
+| MASTER by directory (files / lines) | lib 810 / 148,594; test 863 / 121,942; checks 254 / 55,864; web 266 / 49,893; data 93 / 26,742; tools 139 / 19,013; law 32 / 14,281; bin 30 | same, grouped by second path part |
+| MASTER/lib subdirectories (files / lines) | fix 223 / 43,493; cli 103 / 19,156; review 79 / 14,563; io 87 / 14,536; voice 58 / 11,770; operator 55 / 10,668; ground 55 / 8,610; root 28 / 5,381; trace 28 / 5,122; core 6 / 2,416; boot 7 / 1,932; cognition 11 / 1,816; others under 1,200 each | same, grouped by third path part |
+| RAILS by directory (lines) | brgen 91,627; __shared 53,588; test 33,606; amber 28,263; mrdamascy 17,139; brgen_marketplace 13,920; bsdports 10,449; brgen_radio 8,968; brgen_messenger 5,624; brgen_dating 2,713; brgen_maps 879 | same |
+| Environment knobs | 462 distinct `MASTER_*` names in the repo; MASTER reads 495 distinct env names (325 of them `MASTER_*`) at 1,711 call sites | `git grep -h -o -E 'MASTER_[A-Z0-9_]+'`, plus `ENV[`/`ENV.fetch(` patterns |
+| Laws | 520 catalogue entries; 514 `Law.define`; laws.yml is 4,208 lines with 282 top-level keys, 199 of them children. Lifecycle: 15 trusted, 8 advisory, 2 retired, the rest default | grep over `MASTER/data/laws.yml` and `MASTER/law/*.rb` |
+| Laws that can run | 205 `ask` lines (judged by a model); executable bodies are 126 `check do`, 106 `detect`, 41 `< Detector` classes and 18 `pattern`, about 291 in total (they overlap, so this is an upper bound). Only 50 `proved_by` lines; 465 `good` examples | `git grep -h -E '^[[:space:]]+(ask|detect|check do|proved_by|good)'` in MASTER/law |
+| Tests | MASTER 7,418 test methods in 851 files; RAILS 4,947; MASTER/web 180; OPENBSD 520; STUDIO 51 | `git grep -h -E 'def test_\|test "'` |
+| Failing tests | The last recorded run (commit 79a7d00) covered only 287 runs: 6 failures in `test_fix_loop_file_collector.rb`, already failing before that commit. **The full suite has not been measured, so its status is unknown.** | `git show 79a7d00` |
+| CI | None: no `.github/` in the tree. The only gate is an opt-in pre-commit hook (refuses cross-tree commits and Ruby that does not parse) | `git ls-tree -r origin/main \| grep .github` |
+| Gems (declared / locked) | MASTER 31 / 100; MASTER/web 27 / 184; brgen 55 / 255; amber 43 / 240; bsdports 42; mrdamascy 19 | `grep -c '^\s*gem '` and Gemfile.lock specs |
+| Largest files (lines) | RAILS/refinements.yml 6,346; interaction_campaign_400.json 5,703; laws.yml 4,208; three.face.module.js 4,114; runtime.yml 3,004; brgen vertical_surfaces.scss 2,954; amber application.scss 2,881; brgen shared_overrides.scss 2,825; design_tokens.yml 2,522; dilla.rb 2,475; law/universal.rb 2,396; tokens.yml 2,376; backlog.yml 2,372. Largest in lib: fix/kernel/lifecycle_journal.rb 1,403 | `git grep -I -c ''` sorted |
+| Commits in 30 days | 10,959: anon987654321 8,821; gktepsta 1,942; Claude 88; Z User 77; MASTER 11; GLM 5; Z.ai 1 | `git log --since='30 days ago' --format=%an` |
+| What breaks repeatedly (commit subjects, 30 days) | parse/syntax 177 (84 in the last 14 days); drift/contract 963; restore 275; writer/concurrent/race 229; rollback 36; revert 28 | `git log -i -E --grep=<pattern> --oneline \| wc -l` |
+| Most-changed files (14 days) | refinements.yml 340; TODO.md 264; laws.yml 68; MASTER/README.md 66; brgen locales 63 each | `git log --name-only` |
+
+**Duplicated abstractions found:**
+- Five `proof.rb` files: lib/, core/, convergence/, cli/pipeline/, fix/restructure/.
+- Four `session.rb` and four `benchmark.rb` files.
+- Two copies each of `lane_silence.rb` (io/ and review/llm_dispatcher/), `soul.rb`, `ledger.rb` and `laws.rb`.
+- 23 lib files use `Net::HTTP` directly.
+- 77 call sites load YAML.
+- 3 separate atomic-write implementations.
+- Five model, provider or lane registries: models.yml, providers.yml, lanes.yml, inter_model.yml, operator_model.yml.
+- Four enforcement engines: Laws (law/), checks (134 .rb files in checks/), ratchets (53 in operator/ratchets.rb) and house lint.
+- Design tokens kept by hand across tokens.yml, the generated design_tokens.yml, `_dialect_tokens.scss` and `face.css :root`.
+- Source and copy disagree: `vm_resource.yml` says it mirrors resource_guard.sh, yet notes "three recalibrations that never reached this file".
+
+**What tonight showed:**
+- `ASCII_PUNCTUATION` was applied to every tree, then withdrawn; undoing it took 6 restore commits.
+- MASTER/web moved from RAILS/master back to MASTER/web.
+- A per-run findings cap for /fix was added and reverted in the same second.
+- Two parse breaks: mission.rb and Proof.
+- /fix preflight was tripped by another writer's saves.
+- Lane deadlines were split into a handshake budget and a read-idle budget, with a 30s, 1m, 5m wait ladder.
+- The operator noted that GLM and Fable patches ran no tests and mostly did not hold against the code.
+- Backups: backup_priv.sh documents that "Nothing had ever been backed up" because of four separate faults. Litestream and a restore script now exist.
+
+## 2. Goals and non-goals
+
+**Goals.**
+- A small trusted core with explicit capabilities (in the spirit of OpenBSD's pledge and unveil).
+- One canonical implementation and one registry per concern.
+- Fewer, stricter Laws, each proven by fixtures.
+- /fix safe from its first day.
+- Zero loss of user data.
+- Fits on vm23 (1 vCPU, 1 GB).
+- Mobile-first, flat Swiss design driven by tokens, with chrome hidden until the reader moves.
+- Ruby throughout, with data in YAML or JSON.
+- Any result that was not measured is reported as INCONCLUSIVE or BLOCKED, never PASS.
+
+**Non-goals.**
+- Matching every pub4 feature on day one.
+- Porting the 520 Laws one for one.
+- Keeping pub4's internal APIs.
+- New product features during the migration.
+- Python in the spine.
+- Multiple production environments beyond a temporary rehearsal VM.
+
+## 3. Keep verbatim, redesign, drop
+
+**Keep verbatim:**
+- Production SQLite databases and uploads (Active Storage).
+- User accounts and password digests.
+- Locales (en, nb) and their copy.
+- soul.yml (reviewed once).
+- The operator_* entries in project_context.yml.
+- tokens.yml values.
+- Domain facts from apps.yml.
+- dilla's sound engine (dilla.rb and its data/*.json).
+- The TTS voice engines (kept deliberately by the operator).
+- The face mesh renderer, as a plugin.
+- BPLANS content.
+- pf, relayd and rc.d configurations that are proven in production.
+- Litestream and restore scripts.
+- The 15 trusted Laws and the 50 Laws with `proved_by`, as candidates that must re-qualify under §5.
+
+**Redesign:**
+- MASTER/lib, taking fix, review, cli and io from about 92,000 lines to a core plus plugins.
+- RAILS/__shared as one shared engine; per-app SCSS overrides, now around 2,800 lines each, become token-only.
+- Enforcement, as a single Law engine where checks and ratchets are kinds of Law.
+- OPENBSD inventory, generated from one registry.
+- The MASTER web face.
+
+**Drop:**
+- TODO.md (79 KB) and TREE_CONTRACTS.md (48 KB) as prose. They become backlog.yml and contracts that machines check.
+- refinements.yml (6,346 lines, 340 edits in 14 days). It becomes Laws or backlog rows.
+- The duplicate proof, session and ledger code; 23 direct HTTP callers become 1 client.
+- More than 420 knobs.
+- docs/history.
+- reference_analyzer.py.
+- Generated copies that nothing checks.
+
+## 4. Target architecture
+
+```
+pub5/
+  core/      ≤5k lines: World verbs (read, write, exec, net, llm, git, render), capability
+             manifest checker, registry loader with schemas, atomic write, ledger
+             (append-only JSONL), one HTTP/LLM client, config (knobs.yml), parse gate
+  master/    agent runtime as plugins: cli, fix, review, voice, face, cognition, each with manifest.yml
+  laws/      one file per Law: detector, fixtures/{bad,good}, proof test
+  rails/     shared engine + brgen (dating, maps, marketplace, messenger, radio, tv as engines),
+             amber, bsdports, mrdamascy
+  openbsd/   rc.d, relayd, pf, deploy, rehearse; all generated from registry/apps.yml
+  studio/    dilla, postpro, replicate
+  bplans/
+  registry/  apps, laws, models, knobs, tokens, commands, paths, writers, backlog (one each)
+```
+
+**Capability boundaries.** Each plugin's manifest declares which World verbs it may use and which paths it may touch. Core refuses anything undeclared. Laws forbid `Net::HTTP`, `File.write` and `ENV[` outside core, and reading an environment variable that knobs.yml does not declare. A test per verb proves the refusal.
+
+**Registries (one per concern).**
+- `apps.yml` generates relayd, rc.d, the deploy inventory and memory budgets.
+- `models.yml` merges the five model, provider and lane files.
+- `paths.yml` holds path ownership plus protected paths.
+- `writers.yml` holds each AI writer's identity, allowed trees and trust level.
+- Every registry has a schema, and a Law fails any hand edit to a generated file.
+
+## 5. Laws: fewer, stricter, proven
+
+A Law has: id, statement, kind (lexical, structural, rendered, runtime or ratchet), detector, at least one bad and one good fixture, a proof test, severity, autofix policy and an enactment date.
+
+**Lifecycle.**
+1. A Law enters as `advisory`.
+2. It becomes `enforced` only after a census over the real tree shows a false-positive rate of 5% or less, by sampled human or independent-model agreement, and the operator ratifies it.
+3. A Law may be judged by a model (`ask`) only if it has a rubric and a measured agreement rate of at least 80%. Otherwise it stays advisory forever.
+
+**Bulk changes.** Any Law whose autofix would touch more than 20 files must publish a dry-run census first. This is the ASCII_PUNCTUATION lesson. Laws never rewrite text written before their enactment date.
+
+**Starting set.** Target 60 to 100 Laws. Every finding names its Law and the measurement behind it. A census Law enforces one implementation per operation.
+
+## 6. /fix from day one
+
+1. **Protected paths.** registry/paths.yml lists the constitution, laws, registries, db/migrate, production config and credentials. Core's write verb enforces the list, not /fix, so /fix can propose a change there but never commit it.
+2. **Lane cool-off.** One LaneState registry holds a handshake budget, a read-idle budget, a 30s→1m→5m→15m ladder and a circuit breaker per lane. There is one copy of this code.
+3. **Commit messages.** Generated from the finding and the measured before/after delta, in commit_format. Trailers: `Law:`, `Measured:`, `Writer:`, `Proof:`. One repair per commit, scoped to paths.
+4. **Rollback of refused repairs.** Each repair runs in a transaction: snapshot the touched bytes, run the parse, test, Law and visual gates. Any refusal restores the exact bytes and appends to fix_refusals.jsonl. Partial commits never happen.
+5. **Token accounting.** Every model call goes through the core client, which writes tokens and cost to the ledger. Each run has a budget. The report shows tokens per landed fix and per refusal.
+6. **Ratchet speed.** Ratchets are cached by a hash of the tree's contents and run incrementally on changed files. Budget: a full MASTER pass under 60s on the laptop; measure and record it.
+7. **Visual lane.** Capture at 390, 360 and 320 px first; desktop only after all mobile captures, and desktop is what gets dropped when a pass is capped. Each pass renders a bounded share of surfaces. Checks are perceptual pixel diff, a computed-value audit against tokens, axe, and an independent reviewer that is a different model from the author. Every fixed defect gets a guard.
+8. **Simplify stage.** It may only remove or merge, and some count must fall (selectors, distinct values, DOM depth, SCSS lines). It shows no visible change, or a change toward the Laws, and each count becomes a ratchet.
+9. **Other writers.** Preflight considers only the paths /fix itself touches. There is one /fix lock per tree.
+
+## 7. Migrating data and users from vm23
+
+1. **Inventory.** List every `storage/production_*.sqlite3`, plus row counts per table, Active Storage blob counts and bytes, and a SHA-256 manifest.
+2. **Rehearse.** On the rehearsal VM, restore from Litestream or offsite backup, run the pub5 migrations, compare row counts and checksums table by table, and run a smoke test as real users (log in, post, message, upload).
+3. **Cutover per app.**
+   - relayd serves a maintenance page and pub4 writes freeze.
+   - Run `sqlite3 .backup` into a snapshot that is kept read-only.
+   - Run the migration, verify it and run the smoke test.
+   - Point relayd at pub5. Keep `secret_key_base` and password digests so sessions survive.
+   - Copy uploads with the hash manifest.
+4. **Rollback.**
+   - Point relayd back and restart pub4 against the snapshot.
+   - Writes made on pub5 come back through a reverse export script, kept for 7 days.
+   - Rehearse the rollback before every cutover.
+
+## 8. Deployment on the 1 GB VM
+
+**Memory budget** (to be measured; RSS ceilings enforced by the resource guard):
+- base OS and relayd about 150 MB
+- master about 150 MB
+- brgen family, one Falcon worker, about 250 MB
+- amber about 150 MB
+- bsdports about 120 MB
+- Solid Queue runs inside each process
+- Steady state stays under 85% of RAM (the current rule).
+
+**Strangling by replacement.** pub4 and pub5 never run the same app at the same time on vm23. At each cutover the pub4 process stops when the pub5 process starts. Deploys go out only from a SHA that is green in CI and has passed `rehearse`.
+
+## 9. Constraining multiple AI writers
+
+- **Parse gate.** Installed automatically by `bin/setup`, not opt-in. It runs `ruby -c`, YAML and JSON parsing, and ERB compiling.
+- **commit-msg hook.** Requires a `Writer:` trailer that matches writers.yml.
+- **CI.** GitHub Actions on every push runs parse, unit tests for the touched trees and Laws on the diff. A red main blocks deploys and /fix.
+- **Trust tiers.**
+  - The operator and gated Claude push to main.
+  - GLM, Fable, Grok, Z.ai and ChatGPT push to `inbox/<writer>`. The inbox merges only if CI is green, a reviewer model different from the author agrees, and the writer's allowed trees cover the change.
+- **Scorecard.** Each writer's record (red CI, reverts, tests run) decides its tier, and the tier changes from those numbers, not from what the writer reports about itself.
+
+## 10. Strangler versus big-bang
+
+**Strangler (recommended).** Each step is reversible by putting the old relayd route back. Risk stays limited to one app at a time, and every phase produces real measurements. The cost is running two codebases for a while, plus the inventory and relayd glue.
+
+**Big-bang.** One cutover, but the user data has a single copy, there is no CI and parse breaks are frequent. A failed cutover would take down every domain at once. Rejected.
+
+## 11. Milestones
+
+| Milestone | Exit criteria |
+|---|---|
+| M0 Freeze and measure | Every production DB restored on a second host, with integrity_check ok and counts and hashes equal; full pub4 suite measured; pub4 frozen for features |
+| M1 Kernel | Core ≤5k lines; CI green; 40 or fewer knobs; one implementation per operation proven by the census Law; capability refusal test for each verb |
+| M2 Laws and /fix | 60–100 enforced Laws with fixtures and false-positive rate ≤5%; /fix ran 7 days on pub5 with 0 red main and 0 unrolled-back refusals; tokens accounted |
+| M3 bsdports live | 7 days on pub5 within its RSS budget; 5xx at or below pub4's baseline; rollback rehearsed |
+| M4 brgen and engines live | Row and blob parity 100%; 7-day reverse export unused or exercised once; mobile visual lane green at 390, 360 and 320 px |
+| M5 amber, mrdamascy, MASTER face, STUDIO live | Same as M3, plus dilla output matches pub4 byte for byte on fixtures |
+| M6 pub4 archived | 30 days with no rollback; pub4 repo read-only |
+
+## 12. Risks and how each is measured
+
+| Risk | Measure |
+|---|---|
+| Data loss | Row counts and hash parity per table; restore drill every week |
+| Memory over budget | RSS per process from the resource guard; free memory below 8% triggers an alert |
+| Laws churning the repo | Files touched per Law autofix; the more-than-20-files rule |
+| Writers breaking main | Red-main minutes per week; parse breaks per week (today: 84 in 14 days) |
+| Rewrite stalls | Milestone dates against the exit criteria; pub4 production fixes counted separately |
+| Registry drift | Hand edits to generated files (a Law); differences between registry and box from `rehearse` |
+| Token cost | Ledger tokens per landed fix |
+| Design regressions | Perceptual diff boxes and computed-value audit failures per pass |
+
+## 13. Decisions for the operator
+
+The same ten questions as in the summary, with options and recommended defaults:
+1. Repo shape. Options: new repo, pub5/ inside pub4, or a branch. **Default: new repo.**
+2. Migration approach. Options: strangler or big-bang. **Default: strangler.**
+3. Writing to main. Options: everyone pushes to main behind the gate, or inbox branches for lower-trust writers. **Default: tiers as in §9.**
+4. Process layout. Options: one process per app, brgen family plus the rest, or one process for every host. **Default: brgen family together, others separate.**
+5. Rehearsal VM. Options: yes, temporarily, or no. **Default: yes, temporary.**
+6. Session continuity at cutover. Options: keep secrets so users stay logged in, or force re-login. **Default: keep.**
+7. Writes made on pub5 if we roll back. Options: reverse export or accept the loss. **Default: reverse export for 7 days.**
+8. Rails version. Options: the pinned 8.2.0.alpha edge SHA or the latest stable 8.x. **Default: stable.**
+9. MASTER web face. Options: Rails or Roda+Sequel. **Default: Roda+Sequel.**
+10. Python. Options: remove it from the spine or keep it as an optional tool. **Default: remove.**
+
+Also open, smaller: the knob budget (40) and the size of the starting Law set (60–100).
+
+### Critical files for implementation
+- /Users/mac/Documents/GitHub/pub4/MASTER/data/laws.yml
+- /Users/mac/Documents/GitHub/pub4/MASTER/data/project_context.yml
+- /Users/mac/Documents/GitHub/pub4/RAILS/apps.yml
+- /Users/mac/Documents/GitHub/pub4/OPENBSD/vm_resource.yml
+- /Users/mac/Documents/GitHub/pub4/MASTER/data/tokens.yml
+## 14. Decisions taken (2026-11-06)
+
+1. Repo: this repository, a fresh history reusing the name pub5 (the August 2026 attempt was overwritten); private.
+2. Migration: big-bang cutover, chosen by the operator. Because of that, these are mandatory, not optional:
+   verified restore of every production database and upload on a second host before any work that touches data;
+   a full cutover rehearsal on a temporary second VM (migrate, smoke-test as real users, roll back) repeated until clean;
+   pub4 kept installed and stopped beside pub5 for 30 days, rollback by restoring relayd routes and starting pub4 on the cutover snapshot;
+   a reverse export of writes made on pub5 during the first 7 days;
+   parity of every app's key journeys (sign-in, post, message, pay, upload) proven in rehearsal before the switch.
+3. Writers: the operator and gated Claude push to main; GLM, Fable, Grok, Z.ai and ChatGPT push to inbox/<writer> branches merged only on green CI plus review by a different model.
+4. MASTER's web face: Roda + Sequel.
+Remaining decisions (process layout, rehearsal VM, session continuity, reverse export, Rails version, Python) take the plan's defaults until the operator says otherwise.
