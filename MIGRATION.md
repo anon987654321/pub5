@@ -19,6 +19,10 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
 - The operator's instruction to build pub5 satisfies the plan's freeze
   condition ("the operator explicitly chooses to start a new tree"); pub4 is
   frozen for this port and stays archived afterwards.
+- pub4 landed five more commits on the same day (`3e70be3..d6fa34d`, still
+  2026-11-06). They are ported as the catch-up below, so the port's source
+  of truth is now `d6fa34d7580214b80b588a08880d0f4439b37f41`, "Let the nav
+  counter pill guard breathe between measure and assert".
 
 ## Structure of the port
 
@@ -98,6 +102,40 @@ stay in the pub4 archive. Target shape from the plan: about 2,700–3,300 files
 - The runtime, instruments, Law detectors, checks, tools and `MASTER/web`
   are carried, with the hook path and engine-layout references updated as
   recorded above.
+
+## Catch-up port — pub4 `3e70be3..d6fa34d` (2026-11-06)
+
+After the phases above, pub4 received five more commits on the same day.
+Each is a fix or a guard, not a new feature, so the "new features wait"
+rule does not hold them back. Ported one upstream commit per pub5 commit,
+with every ported file byte-identical to pub4@d6fa34d (verified by diff;
+no rename, path or engine-layout adaptation was needed — the touched
+paths carry over unchanged):
+
+- pub4 `b85207f` → "Rails: show a live index's filter select inside the
+  search pill" — `_search_yep.scss` keeps a live index's filter select
+  visible inside the search pill (maps' place kind, amber's outfit
+  filter), and the new MapPointListTest case proves it at `/places`.
+- pub4 `896032c` → "Master: find each app at its apps.yml deploy_root when
+  /fix checks the fleet" — `Reachability#verify_fleet!` resolves every
+  app through `RailsApp.app_dir` (apps.yml `deploy_root`: brgen,
+  MASTER/web, amber, bsdports, mrdamascy) instead of `RAILS/<name>`.
+- pub4 `af6ae3d` + `d6fa34d` → "Rails: guard the nav counter pill's
+  clearance from the top and its bar" — a system test at 1400 and 390 px
+  holds the pill one 8px step below the viewport top and inside
+  `.nav_swiper_bar`, with the `badgeBox()` probe; the lint blank line
+  pub4 fixed in `d6fa34d` lands with the test here.
+- pub4 `e4e08bd` → "Rails: space the dating header test from the test
+  before it" — the blank line before the discover-header test in
+  `dating_rewind_test.rb`. Whitespace only.
+
+The fifth upstream commit's `TODO.md` deletion (the "Nav nytt! badge
+clearance" row) has no counterpart here: pub5's TODO.md is the port
+backlog, which never carried that row.
+
+Same evidence limits as the main port: no Ruby toolchain, so the new
+tests are NOT_RUN here; they are carried as written upstream, where they
+passed.
 
 ## Functional renames in the port
 
