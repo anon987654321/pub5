@@ -8,6 +8,11 @@
 #
 # git_authors lists author names seen for the writer in pub4's history. The
 # pub4 name anon987654321 is shared by several writers, so it identifies none.
+# inbox_tier_authors: git author names (or noreply e-mail users) whose
+# commits on main are judged at inbox tier whatever their Writer: trailer
+# says - the shared GitHub account every writer pushes from (operator,
+# 2026-11-06). bin/master gate records each one as a violation.
+inbox_tier_authors: [anon987654321]
 writers:
   operator:
     trust: main

@@ -2,6 +2,7 @@ type: object
 required: [writers]
 additional: false
 properties:
+  inbox_tier_authors: { type: array, items: { type: string } }
   writers:
     type: object
     additional:
