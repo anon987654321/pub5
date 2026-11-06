@@ -11,6 +11,13 @@ unless ARGV.empty? && [nil, "--check", "--write"].include?(mode)
 end
 
 if mode == "--write"
+  # Prove the registry still reproduces the approved baseline before any write.
+  preflight = OpenBsdRender.check(generated: nil)
+  unless preflight.empty?
+    preflight.each { |diff| warn "openbsd: #{diff}" }
+    exit 1
+  end
+
   files = OpenBsdRender.generated_files
   manifest = Core::Manifest.new(name: "openbsd-render", verbs: { write: files.keys })
   ledger = Core::Ledger.new(Core::Knobs.fetch("PUB5_LEDGER"))

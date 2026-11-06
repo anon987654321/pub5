@@ -174,7 +174,9 @@ module OpenBsdRender
     diffs = []
     rendered = { "relayd.conf" => relayd, "pf.conf" => pf }
 
-    { proven: dir, generated: generated }.each do |label, base|
+    directories = { proven: dir }
+    directories[:generated] = generated unless generated.nil?
+    directories.each do |label, base|
       rendered.each do |name, text|
         path = File.join(base, name)
         if File.file?(path) && !File.symlink?(path)
