@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# The commit-format hook, live from pub5's first commit. The house subject is
+# imperative, plain ASCII, at least two words, one line, no trailing
+# punctuation - the same shape every pub4 commit carries. A subject that fails
+# here is a message a reader cannot scan, not a preference.
+#
+# Install once per clone: git config core.hooksPath .githooks
+
+subject = File.read(ARGV[0]).lines.first.to_s.chomp
+abort <<~WHY unless subject.sub(/^(fixup!|squash!|amend!)/, "").match?(/\A[A-Za-z]/)
+  commit-msg: the subject must open with an imperative verb, e.g. "Record signed-in contracts": #{subject.inspect}
+WHY
+
+if subject.match?(/[^ -~]/) # control and non-ASCII: punctuation is ASCII (the Law), accents are encoding surprises
+  abort "commit-msg: the subject is not plain ASCII: #{subject.inspect}"
+end
+
+words = subject.split.size
+abort "commit-msg: the subject is one word (#{subject.inspect}); say what the commit does" if words < 2
+
+if subject.end_with?(*%w[. ! , : ;])
+  abort "commit-msg: the subject carries trailing punctuation: #{subject.inspect}"
+end

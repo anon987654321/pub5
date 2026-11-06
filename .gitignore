@@ -1,5 +1,10 @@
 .DS_Store
 /tmp/
 /log/
+*.log
+*.pid
 *.sqlite3*
 /coverage/
+/out/
+/snapshots/
+.bundle/

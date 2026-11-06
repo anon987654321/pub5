@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# One lint command for pub5. It syntax-checks every non-vendored Ruby file the
+# tree carries and refuses to run blind: a lint that reads nothing must fail
+# loudly, because a passing tool that measured nothing is worse than a failing
+# one. As the port grows, this stays the one entrypoint; its internals may
+# grow Laws the way pub4's do, but there stays one command.
+#
+# Nothing it writes goes to git (AGENTS.md, rule 5).
+
+require "open3"
+
+root = File.expand_path("..", __dir__)
+# Ruby 3.4+: ** no longer matches zero directories, so each root carries its
+# top level itself alongside its own recursion. bin's executables are
+# extensionless (the house style), so bin is swept whole rather than by .rb.
+files = %w[lib test app engines].flat_map do |dir|
+  Dir.glob(File.join(root, dir, "**", "*.rb")) +
+    Dir.glob(File.join(root, dir, "*.rb"))
+end + Dir.glob(File.join(root, "bin", "*"))
+files = files.find_all { |path| File.file?(path) }.uniq.sort
+
+if files.empty?
+  abort "lint: no Ruby files to read - a lint that measures nothing must fail loudly, not pass"
+end
+
+broken = files.filter_map do |file|
+  _output, _stderr, status = Open3.capture3(RbConfig.ruby, "-c", file)
+  file unless status.success? # `ruby -c` prints `Syntax OK` and exits 0 both ways
+end
+
+if broken.any?
+  abort "lint: #{broken.size} of #{files.size} file(s) do not parse: #{broken.join(", ")}"
+end
+
+puts "lint: #{files.size} file(s) parse clean"
