@@ -1,0 +1,401 @@
+---
+schema: 1
+app: brgen
+user: admin@brgen.no
+routes:
+  "/activity_events":
+    status: 200
+    type: text/html
+    title: Aktivitet — Bergen
+    heading: Aktivitet
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"
+    host: brgen.no
+  "/admin/business_verifications":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+    host: brgen.no
+  "/admin/reports":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+    host: brgen.no
+  "/communities/new":
+    status: 200
+    type: text/html
+    title: Bergen
+    heading: Nytt fellesskap
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/communities"
+    - "/encounters"
+    - "/search"
+    host: brgen.no
+  "/conversations/new":
+    status: 200
+    type: text/html
+    title: Ny melding — Bergen
+    heading: Ny melding
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/conversations/new"
+    - "/encounters"
+    - "/search"
+    - "/users/N/conversations"
+    host: brgen.no
+  "/events/new":
+    status: 200
+    type: text/html
+    title: Nytt arrangement — Bergen
+    heading: Nytt arrangement
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/events"
+    - "/search"
+    host: brgen.no
+  "/groups/new":
+    status: 200
+    type: text/html
+    title: Ny gruppe — Bergen
+    heading: Ny gruppe
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/groups"
+    - "/search"
+    host: brgen.no
+  "/notifications":
+    status: 200
+    type: text/html
+    title: Varsler — Bergen
+    heading: Varsler
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"
+  "/partner/programs/new":
+    status: 404
+    type: text/html
+    title: Siden finnes ikke — brgen
+    heading: Siden finnes ikke
+    landmarks:
+    - header
+    - nav
+    - main
+    forms: []
+    host: brgen.no
+  "/posts/new":
+    status: 200
+    type: text/html
+    title: Nytt innlegg — Bergen
+    heading: Nytt innlegg
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/posts"
+    - "/search"
+    host: brgen.no
+  "/stories/new":
+    status: 200
+    type: text/html
+    title: Ny historie — Bergen
+    heading: Ny historie
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"
+    - "/stories"
+    host: brgen.no
+  "/users/new":
+    status: 302
+    type: text/html
+    location: "/"
+    landmarks: []
+    forms: []
+    host: brgen.no
+  "/matches":
+    status: 200
+    type: text/html
+    title: Matcher — Bergen
+    heading: Matcher
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/search"
+    host: dating.brgen.no
+  "/profile/edit":
+    status: 302
+    type: text/html
+    location: "/session/new"
+    landmarks: []
+    forms: []
+    host: dating.brgen.no
+  "/profile/new":
+    status: 302
+    type: text/html
+    location: "/session/new"
+    landmarks: []
+    forms: []
+    host: dating.brgen.no
+  "/verifications/new":
+    status: 302
+    type: text/html
+    location: "/profile/new"
+    landmarks: []
+    forms: []
+    host: dating.brgen.no
+  "/listings/new":
+    status: 200
+    type: text/html
+    title: Ny annonse — Bergen
+    heading: Ny annonse
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/listings"
+    - "/search"
+    host: markedsplass.brgen.no
+  "/orders":
+    status: 200
+    type: text/html
+    title: Mine ordrer — Bergen
+    heading: Mine ordrer
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/search"
+    host: takeaway.brgen.no
+  "/saved_searches":
+    status: 200
+    type: text/html
+    title: Lagrede søk — Bergen
+    heading: Lagrede søk
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/search"
+    host: markedsplass.brgen.no
+  "/shops/new":
+    status: 200
+    type: text/html
+    title: Åpne butikk — Bergen
+    heading: Åpne butikk
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/search"
+    - "/shops"
+    host: markedsplass.brgen.no
+  "/restaurants/new":
+    status: 200
+    type: text/html
+    title: Legg til restaurant — Bergen
+    heading: Legg til restaurant
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/restaurants"
+    - "/search"
+    host: takeaway.brgen.no
+  "/hosted_tracks/new":
+    status: 200
+    type: text/html
+    title: Last opp spor — Bergen
+    heading: Last opp spor
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/hosted_tracks"
+    - "/search"
+    host: radio.brgen.no
+  "/playlists/new":
+    status: 200
+    type: text/html
+    title: Ny spilleliste — Bergen
+    heading: Ny spilleliste
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/playlists"
+    - "/search"
+    host: radio.brgen.no
+  "/sets/new":
+    status: 200
+    type: text/html
+    title: Nytt sett — Bergen
+    heading: Nytt sett
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/search"
+    - "/sets"
+    host: radio.brgen.no
+  "/channels/new":
+    status: 200
+    type: text/html
+    title: Ny kanal — Bergen
+    heading: Ny kanal
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/channels"
+    - "/search"
+    host: tv.brgen.no
+  "/account":
+    status: 200
+    type: text/html
+    title: Bergen
+    heading: Konto
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/account"
+    - "/account/email"
+    - "/account/language"
+    - "/account/notifications"
+    - "/account/other_sessions"
+    - "/account/password"
+    - "/encounters"
+    - "/search"
+  "/two_factor_setup":
+    status: 200
+    type: text/html
+    title: Bergen
+    heading: Tofaktorautentisering
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"
+    - "/two_factor_setup"
+  "/billing":
+    status: 200
+    type: text/html
+    title: Abonnement — Bergen
+    heading: Abonnement
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"

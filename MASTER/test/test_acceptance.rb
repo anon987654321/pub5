@@ -94,7 +94,7 @@ class TestAcceptance < Minitest::Test
 
   def test_the_recorded_apps_name_themselves_from_the_data_dir
     assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".yml").sort
-    assert_empty Acceptance.recorded_apps(".signed.yml")
+    assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".signed.yml").sort
   end
 
   # One real anchor: against this checkout every runnable instrument holds,

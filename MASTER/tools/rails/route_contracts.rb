@@ -15,7 +15,10 @@
 # record-signed|check-signed run the same recording through a seeded demo
 # user's session (--user email:password): sign in once per host, carry the
 # session cookie, and lock what the auth-persona pages answer a signed-in
-# visitor. pub5 Phase 0, second row.
+# visitor. pub5 Phase 0, second row. A member whose record carries an
+# otp_secret is challenged at sign-in (Shared::TwoFactorGate); naming the
+# member's base-32 secret as a third field (email:password:otpsecret) lets the
+# session complete that challenge, so the walk sees the post-challenge pages.
 #
 # Paths come from MASTER/checks/data/route_manifest.yml; routes with dynamic
 # segments are skipped until a seeded-record lookup exists.
@@ -23,6 +26,7 @@
 require "net/http"
 require "uri"
 require "yaml"
+require "openssl"
 require_relative "../../checks/support/page_inventory"
 
 module RouteContracts
@@ -113,7 +117,7 @@ module RouteContracts
   # check against pub5 needs nothing from pub4's tree. A page whose GET path
   # names a record is excluded until a seeded-record lookup exists, as in row 1.
   def auth_paths(app)
-    pages = PageInventory.all.select do |page|
+    pages = Deploy::PageInventory.all.select do |page|
       page[:app] == app && page[:persona] == "auth" && !dynamic?(page[:path])
     end
     pages.map { |page| [page[:path], page[:host]] }.uniq
@@ -121,20 +125,86 @@ module RouteContracts
 
   def signed_in_contract_path(app) = File.join(DIR, "#{app}.signed.yml")
 
-  # One sign-in POST per host, cookie session-cached for the run. The POST is
-  # not redirected: Rails answers 302 to after_authentication_url with the
-  # session cookie, and a failure here is a mis-typed --user, not a contract
-  # finding, so it refuses aloud rather than recording a page of sign-in forms.
-  def sign_in(target, host)
+  # One sign-in per run, on the primary host; its cookie is replayed across
+  # every row's host. The apps are one monolith, so the session table is
+  # shared: a vertical's own host is what routes the request, not what
+  # authenticates it, and per-host sign-ins would ask each vertical for its
+  # own credentials.
+  def sign_in(target, _host = nil)
     @signin ||= {}
-    @signin[[target.base, host, target.user]] ||= begin
-      response = post(target, "/session", target.user, host)
-      unless response.code.to_i == 302
-        abort "route_contracts: sign-in failed for #{target.base} as #{target.user.first} (HTTP #{response.code})"
+    @signin[[target.base, target.user]] ||= begin
+      response = post(target, "/session", target.user, nil)
+      unless response.code.to_i == 302 && !response["Location"].to_s.end_with?("session/new")
+        abort "route_contracts: sign-in failed for #{target.base} as #{target.user.first} " \
+              "(HTTP #{response.code} to #{response["Location"]})"
       end
 
-      Array(response.get_fields("Set-Cookie")).join("; ")
+      cookie = Array(response.get_fields("Set-Cookie")).join("; ")
+      cookie = complete_two_factor_challenge(target, nil, cookie)
+      cookie
     end
+  end
+
+  # The cleared challenge rewrites the session-data cookie only; the database
+  # session cookie and any others from the sign-in must survive, so fields that
+  # the completing POST names are replaced and every other field is kept.
+  # Returns the cookie when there is no challenge to complete.
+  def complete_two_factor_challenge(target, host, cookie)
+    secret = target.user[2]
+    return cookie unless secret
+
+    challenge = fetch(target, "/two_factor_setup", host, cookie: cookie)
+    unless challenge.code.to_i == 200
+      abort "route_contracts: 2FA challenge page answered HTTP #{challenge.code} for #{target.user.first}"
+    end
+
+    step = Time.now.to_i / 30
+    codes = [step, step - 1, step + 1].map { |unix_step| totp_code(secret, unix_step) }.uniq
+    codes.each do |code|
+      answer = challenge_code(target, host, cookie, code)
+      if answer.code.to_i == 302 && !answer["Location"].to_s.include?("two_factor_setup")
+        return update_cookies(cookie, Array(answer.get_fields("Set-Cookie")))
+      end
+    end
+    abort "route_contracts: no current 2FA code for #{target.base} as #{target.user.first}"
+  end
+
+  def update_cookies(cookie, updates)
+    return cookie if updates.empty?
+
+    updates.map { |update| update.split(";").first }.each do |pair|
+      name = pair[/\A(\w+)=/, 1]
+      cookie = cookie.sub(/#{Regexp.escape(name)}=[^;]*/) { pair }
+    end
+    cookie
+  end
+
+  def challenge_code(target, host, cookie, code)
+    uri = URI.join(target.base, "/two_factor_setup")
+    request = Net::HTTP::Post.new(uri)
+    request["Host"] = host if host
+    request["Cookie"] = cookie if cookie
+    request["Accept"] = "text/html"
+    request.form_data = { "code" => code }
+    options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
+    Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+  end
+
+  # RFC 6238 over the RFC 4648 base-32 alphabet, stdlib only - the same six
+  # digits an authenticator app shows for this half-minute step.
+  BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".freeze
+
+  def base32_decode(text)
+    cleaned = text.to_s.upcase.gsub(/[^#{BASE32_ALPHABET}]/, "")
+    bits = cleaned.chars.map { |char| BASE32_ALPHABET.index(char).to_s(2).rjust(5, "0") }.join
+    bits[0, bits.length / 8 * 8].scan(/.{8}/).map { |byte| byte.to_i(2) }.pack("C*")
+  end
+
+  def totp_code(secret, unix_step)
+    digest = OpenSSL::HMAC.digest("SHA1", base32_decode(secret), [unix_step].pack("Q>"))
+    offset = digest.bytes.last & 0xf
+    binary = digest.bytes[offset, 4].each_with_index.sum { |byte, index| byte << (8 * (3 - index)) } & 0x7fffffff
+    format("%06d", binary % 1_000_000)
   end
 
   def post(target, path, user, host)
@@ -142,7 +212,7 @@ module RouteContracts
     request = Net::HTTP::Post.new(uri)
     request["Host"] = host if host
     request["Accept"] = "text/html"
-    request.form_data = { "email_address" => user.first, "password" => user.last }
+    request.form_data = { "email_address" => user.first, "password" => user[1] }
     options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
     Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
   end
@@ -153,7 +223,9 @@ module RouteContracts
     routes.to_h do |path, row|
       host = row["host"] || target.hosts.first
       cookie = sign_in(target, host)
-      [path, describe(fetch(target, path, host, cookie:))]
+      # The host pin carries into the row: verticals answer only on their own
+      # subdomains, so a check replaying the primary host misroutes instead.
+      [path, describe(fetch(target, path, host, cookie:)).merge(row)]
     rescue StandardError => e
       [path, { "error" => e.class.name }]
     end
@@ -231,8 +303,9 @@ if $PROGRAM_NAME == __FILE__
   usage = "usage: route_contracts.rb record|check|record-signed|check-signed APP BASE_URL [--host HOST] [--user email:password]"
   mode = { "record" => "record", "check" => "check",
            "record-signed" => "record_signed", "check-signed" => "check_signed" }[mode]
+  usage = "usage: route_contracts.rb record|check|record-signed|check-signed APP BASE_URL [--host HOST] [--user email:password[:otpsecret]]"
   abort usage unless mode && base
-  user = user_arg && user_arg.split(":", 2)
+  user = user_arg && user_arg.split(":", -1)
   target = RouteContracts::Target.new(app:, base:, host:, user:)
 
   if mode == "record"

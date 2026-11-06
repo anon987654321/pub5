@@ -82,36 +82,94 @@ class TestRouteContracts < Minitest::Test
     assert_empty RouteContracts.compare(same, same)
   end
 
-  # Signed-in half: the cookie captured by the sign-in POST is replayed on the
-  # recorded paths, one sign-in per host, and the cookie carries the host.
-  def test_a_signed_in_run_signs_in_per_host_and_carries_the_cookie
+  # Signed-in half: one sign-in per run on the primary host - the apps are one
+  # monolith, so the session row is shared - and its cookie is replayed on the
+  # recorded paths. A row's host pin survives the walk, so a check asks the
+  # vertical's host, not the primary's.
+  def test_a_signed_in_run_replays_one_cookie_across_every_host
     target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1",
                                         host: "brgen.no,markedsplass.brgen.no", user: %w[demo@brgen.no secret])
-    signed_uses_cookie = []
-    with_fetch(lambda do |_target, _path, _host, cookie: nil|
-      signed_uses_cookie << cookie
+    hosts_for_rows = []
+    with_fetch(->(_target, _path, host, cookie:) {
+      hosts_for_rows << [host, cookie]
       html_response("<title>Host</title>")
-    end) do
-      with_post(->(target, _path, _user, host) {
-        Response.new("302", { "Set-Cookie" => "_brgen_session=#{host}" }, "").tap do |response|
+    }) do
+      with_post(->(_target, _path, _user, _host) {
+        Response.new("302", { "Set-Cookie" => "_brgen_session=one" }, "").tap do |response|
           def response.get_fields(name) = [headers.fetch(name)]
         end
       }) do
+        RouteContracts.instance_variable_set(:@signin, nil)
         rows = RouteContracts.observe_signed(target, { "/a" => { "host" => "markedsplass.brgen.no" }, "/b" => {} })
-        assert_equal %w[Host Host], rows.values.map { |row| row["title"] }
+        assert_equal %w[markedsplass.brgen.no brgen.no], hosts_for_rows.map(&:first)
+        assert_equal ["_brgen_session=one"] * 2, hosts_for_rows.map(&:last), "one cookie serves every host"
+        assert_equal "markedsplass.brgen.no", rows.fetch("/a")["host"], "the host pin survives into the row"
+        refute rows.fetch("/b")["host"], "an unpinned row stays unpinned"
       end
     end
 
-    assert signed_uses_cookie.first.to_s.include?("_brgen_session=markedsplass.brgen.no"),
-           "the pinned host's cookie is replayed (#{signed_uses_cookie.first.inspect})"
-    assert signed_uses_cookie.last.to_s.include?("_brgen_session=brgen.no"),
-           "the primary host's cookie is replayed (#{signed_uses_cookie.last.inspect})"
+    assert_equal 1, RouteContracts.instance_variable_get(:@signin).size, "one sign-in, not one per host"
+  end
+
+  # A member carrying an otp_secret is challenged at sign-in; the third
+  # credential field names the base-32 secret, and the completing POST's
+  # cookies are merged over the sign-in's: the walk must carry the
+  # post-challenge session.
+  def test_sign_in_completes_the_two_factor_challenge_and_merges_its_cookies
+    cleared = Response.new("302", { "Location" => "/account", "Set-Cookie" => "_app_session=cleared; path=/" }, "")
+    def cleared.get_fields(name) = [headers.fetch(name)]
+
+    target = RouteContracts::Target.new(app: "amber", base: "http://127.0.0.1:1", host: nil,
+                                        user: %w[demo@amber.test secret JBSWY3DPEHPK3PXP])
+    with_fetch(->(*_args, **_opts) { html_response("<title>Challenge</title>") }) do
+      original = RouteContracts.method(:challenge_code)
+      RouteContracts.define_singleton_method(:challenge_code) { |*_args| cleared }
+      begin
+        with_post(->(_target, path, _user, _host) {
+          if path == "/two_factor_setup"
+            cleared
+          else
+            Response.new("302", { "Set-Cookie" => "session_id=one; path=/; _app_session=pending; path=/" }, "").tap do |response|
+              def response.get_fields(name) = [headers.fetch(name)]
+            end
+          end
+        }) do
+          RouteContracts.instance_variable_set(:@signin, nil)
+          cookie = RouteContracts.sign_in(target, nil)
+
+          assert_includes cookie, "session_id=one", "the database session survives the merge"
+          assert_includes cookie, "_app_session=cleared", "the challenge's cleared flag replaces the pending one"
+        end
+      ensure
+        RouteContracts.define_singleton_method(:challenge_code, original)
+      end
+    end
+  end
+
+  # RFC 6238's SHA-1 vector at T=59: the last six digits of 94287082.
+  def test_the_totp_helper_matches_the_reference_vector
+    secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+
+    assert_equal "287082", RouteContracts.totp_code(secret, 1)
   end
 
   def test_a_failed_sign_in_refuses_aloud_instead_of_recording_the_form
     target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1", host: nil, user: %w[demo@brgen.no wrong])
     with_post(->(*_args) { Response.new("200", {}, "<form>") }) do
       error = assert_raises(SystemExit) { RouteContracts.sign_in(target, "brgen.no") }
+
+      assert_match(/sign-in failed/, error.message)
+    end
+  end
+
+  # A rate-limited or wrong-password /session POST still answers 302 - to the
+  # sign-in form, not the app. The instrument must refuse aloud; a guest
+  # session walked as auth is exactly the contract a rewrite would then copy.
+  def test_a_302_to_the_sign_in_form_refuses_instead_of_recording
+    target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1", host: nil, user: %w[demo@brgen.no secret])
+    with_post(->(*_args) { Response.new("302", { "Location" => "/session/new" }, "") }) do
+      RouteContracts.instance_variable_set(:@signin, nil)
+      error = assert_raises(SystemExit) { RouteContracts.sign_in(target, nil) }
 
       assert_match(/sign-in failed/, error.message)
     end
