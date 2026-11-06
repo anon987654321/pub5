@@ -1,0 +1,9 @@
+#!/bin/sh
+# pub5 commit convention: path-scoped commits, "<tree>: summary".
+file="$1"
+msg="$(head -n1 "$file")"
+if ! printf '%s' "$msg" | grep -Eq '^(root|master|rails|openbsd|studio): .+'; then
+  echo "commit-msg: rejected: '$msg'" >&2
+  echo "commit-msg: expected '<tree>: summary' with tree in root|master|rails|openbsd|studio" >&2
+  exit 1
+fi

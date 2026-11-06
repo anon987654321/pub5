@@ -1,0 +1,22 @@
+# pub5: generated output is rebuilt on demand and never committed.
+# openbsd host trees render from openbsd/data/ at deploy time
+/openbsd/etc/
+/openbsd/usr/
+/openbsd/var/
+/openbsd/dev/
+/openbsd/home/
+# rails build and runtime output
+**/log/
+**/storage/
+**/tmp/
+**/coverage/
+**/public/packs/
+**/public/assets/
+**/app/assets/builds/
+**/node_modules/
+# master runtime state
+/master/.master/
+# studio render output
+/studio/**/output/
+.DS_Store
+*.log
