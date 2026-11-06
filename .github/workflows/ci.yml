@@ -1,0 +1,21 @@
+name: pub5-gates
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+      - name: Parse supported source
+        run: ruby core/bin/verify
+      - name: Core and Law tests
+        run: bin/test
+      - name: Syntax lint
+        run: bin/lint

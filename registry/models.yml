@@ -1,0 +1,13 @@
+schema: 1
+default: glm
+models:
+  glm: { provider: zai, role: primary, auth: existing_cli_session, trust: operator_selected }
+  claude_code: { provider: anthropic, role: alternate, auth: browser_oauth_cli, trust: gated }
+  codex: { provider: openai, role: alternate, auth: browser_oauth_cli, trust: gated }
+  grok: { provider: xai, role: alternate, auth: browser_oauth_cli, trust: inbox }
+  gemma: { provider: local, role: offline_fallback, auth: local_runtime, trust: operator_selected }
+policy:
+  secrets_are_host_local: true
+  no_credentials_in_registry: true
+  all_requests_through: core/lib/pub5/core/http_client.rb
+  ledger_required: true

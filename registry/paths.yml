@@ -1,0 +1,9 @@
+schema: 1
+protected:
+  - registry/**
+  - laws/**
+  - core/**
+  - db/migrate/**
+  - config/credentials.yml.enc
+operator_transaction_required: [registry/**, laws/**, core/**]
+generated_from: [registry/apps.yml, registry/knobs.yml, registry/models.yml, registry/tokens.yml, registry/paths.yml]

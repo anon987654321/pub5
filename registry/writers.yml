@@ -1,0 +1,9 @@
+schema: 1
+writers:
+  operator: { trust: owner, branches: [main], may_merge: true }
+  claude: { trust: gated, branches: [main], may_merge: true, requires: [ci_green, operator_gate] }
+  glm: { trust: inbox, branch: inbox/glm, may_merge: false }
+  fable: { trust: inbox, branch: inbox/fable, may_merge: false }
+  grok: { trust: inbox, branch: inbox/grok, may_merge: false }
+  zai: { trust: inbox, branch: inbox/zai, may_merge: false }
+  chatgpt: { trust: inbox, branch: inbox/chatgpt, may_merge: false, requires: [ci_green, independent_model_review, allowed_tree] }

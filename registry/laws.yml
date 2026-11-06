@@ -1,0 +1,43 @@
+schema: 1
+lifecycle:
+  entry: advisory
+  enforcement_requires: { false_positive_rate_max: 0.05, independent_agreement: true, operator_ratification: true }
+  model_judgement: { agreement_rate_min: 0.80, rubric_required: true }
+  bulk_autofix: { census_before_more_than_files: 20, never_rewrite_pre_enactment_text: true }
+laws:
+  - id: ONE_HTTP_CLIENT
+    statement: All outbound HTTP and model traffic passes through the single core client.
+    kind: structural
+    detector: laws/detectors/one_http_client.rb
+    proof: laws/test/one_http_client_test.rb
+    severity: high
+    status: advisory
+    autofix: never
+    enacted: 2026-11-06
+  - id: DECLARED_ENVIRONMENT
+    statement: Only core reads environment variables declared in registry/knobs.yml.
+    kind: structural
+    detector: laws/detectors/declared_environment.rb
+    proof: laws/test/declared_environment_test.rb
+    severity: high
+    status: advisory
+    autofix: never
+    enacted: 2026-11-06
+  - id: CAPABILITY_BEFORE_IO
+    statement: Plugins require an explicit World capability before external effects.
+    kind: runtime
+    detector: core/lib/pub5/core/capability_manifest.rb
+    proof: core/test/core_test.rb
+    severity: critical
+    status: advisory
+    autofix: never
+    enacted: 2026-11-06
+  - id: ATOMIC_WRITES
+    statement: Writes use one atomic writer and protected paths require an operator transaction.
+    kind: runtime
+    detector: core/lib/pub5/core/atomic_writer.rb
+    proof: core/test/core_test.rb
+    severity: critical
+    status: advisory
+    autofix: never
+    enacted: 2026-11-06

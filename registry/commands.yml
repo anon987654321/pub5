@@ -1,0 +1,7 @@
+schema: 1
+commands:
+  master: { verbs: [read, git], actions: [help, verify, inventory] }
+  fix: { plugin: master/plugins/fix/manifest.yml, verbs: [read, write, render] }
+  voice: { plugin: master/plugins/voice/manifest.yml, verbs: [read, render] }
+  face: { plugin: master/plugins/face/manifest.yml, verbs: [read, render] }
+  studio: { verbs: [read, write, render] }

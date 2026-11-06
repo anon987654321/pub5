@@ -1,0 +1,8 @@
+schema: 1
+name: fix
+status: foundation
+capabilities:
+  - verb: read
+    paths: ["**/*"]
+  - verb: write
+    paths: ["rails/**", "studio/**", "bplans/**"]

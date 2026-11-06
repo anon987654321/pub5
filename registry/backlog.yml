@@ -1,0 +1,18 @@
+schema: 1
+status_vocabulary: [PASS, FAIL, INCONCLUSIVE, BLOCKED, TIMEOUT, DELIVERY_FAILED, NOT_RUN]
+milestones:
+  M0:
+    name: freeze and measure
+    status: BLOCKED
+    gates:
+      - verified off-host restore of every production database and upload
+      - SQLite integrity and row-count parity
+      - Active Storage blob SHA-256 parity
+      - complete pub4 suite measurement
+      - pub4 feature freeze
+  M1: { name: kernel, status: INCONCLUSIVE, gates: [core under 5000 lines, CI green, refusal test per World verb, one implementation per operation] }
+  M2: { name: laws and fix, status: NOT_RUN, gates: [60-100 enforced Laws, false-positive rate <= 5 percent, seven days with no red main or unrolled refusal] }
+  M3: { name: bsdports live, status: BLOCKED }
+  M4: { name: brgen and engines live, status: BLOCKED }
+  M5: { name: amber, mrdamascy, face and studio live, status: BLOCKED }
+  M6: { name: pub4 archived, status: BLOCKED }
