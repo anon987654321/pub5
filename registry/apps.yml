@@ -300,7 +300,7 @@ apps:
           wired via OmniAuth callbacks + TrustScore
       - name: photo/multimodal upload (visitor allowed on public surface)
         status: done
-        notes: intentionally open for chat vision; see __shared/README.md
+        notes: intentionally open for chat vision; see shared/README.md
       - name: unified Activity graph emission
         status: done
         notes: ActivityTrackable + EventEmitter across playlist/marketplace/takeaway/tv/dating
@@ -308,8 +308,8 @@ apps:
       - name: shared model concerns (Notifiable, ActivityTrackable, GeoLocatable,
           Votable, Commentable, Taggable promoted)
         status: done
-        notes: reduced local duplication/sprawl; see __shared/app/models/concerns
-          + __shared/README.md
+        notes: reduced local duplication/sprawl; see shared/app/models/concerns
+          + shared/README.md
       - name: MASTER frontend/cosmetic scan rules (web_rules, cosmetic_rules, FrontendAuditor)
         status: done
         notes: scan_profiles.cosmetic + frontend_production_check + frontend_auditor_check
@@ -441,7 +441,7 @@ apps:
           a scroll-anchored prepend, IntersectionObserver auto-load plus a real button,
           no unread-pill inflation, day breaks and grouping re-derived after each
           page; messages#index routed on host and messenger subdomain; locales messages.older
-          en/nb; pinned by brgen_messenger/test/controllers/message_history_test.rb
+          en/nb; pinned by brgen/engines/messenger/test/controllers/message_history_test.rb
       - name: Crossposting, community wiki, story replies and streaks
         status: done
         notes: crossposts#create with already_crossposted and same_as_source refusals;
@@ -539,7 +539,7 @@ apps:
         notes: 'Native Marketplace::* is live. Solidus is optional for catalog, cart,
           checkout, fulfillment and merchant operations; enable with SOLIDUS_MARKETPLACE=1.
           Dintero owns marketplace payment authorization, capture and payout splits.
-          See brgen_marketplace/README.md.
+          See brgen/engines/marketplace/README.md.
 
           '
         items:

@@ -26,7 +26,7 @@ class FileLengthRatchetTest < Minitest::Test
   # kind => [glob roots, limit in code lines]
   LIMITS = { "rb" => 300, "scss" => 400, "erb" => 150 }.freeze
   BRGEN_AND_APPS = %w[
-    __shared brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio amber bsdports
+    shared brgen amber bsdports
   ].freeze
 
   # Rails writes these from the migrations; a split is undone by the next
@@ -198,12 +198,12 @@ class FileLengthRatchetTest < Minitest::Test
     # records twice for __dir__ paths.
     # 455 -> 449: the same inline-notice rule, in the sheet amber and
     # bsdports share.
-    "__shared/app/assets/stylesheets/_minimal.scss" => 449,
-    # First measured 2026-10-20, when the scan learned the sibling gems and __shared: debt that was invisible,
+    "shared/app/assets/stylesheets/_minimal.scss" => 449,
+    # First measured 2026-10-20, when the scan learned the sibling gems and shared: debt that was invisible,
     # recorded so it can only fall. Split a file and lower its row; do not raise one.
     # dintero_checkout.rb left on 2026-11-05 at 348: the payout split it
     # freezes per line is dintero_checkout/splits.rb.
-    "__shared/app/helpers/schema_helper.rb" => 343,
+    "shared/app/helpers/schema_helper.rb" => 343,
     "amber/app/views/layouts/application.html.erb" => 160,
     "brgen/app/assets/stylesheets/_brgen_dating.scss" => 415,
     "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 508,
@@ -211,7 +211,7 @@ class FileLengthRatchetTest < Minitest::Test
     "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 569,
     "brgen/app/views/conversations/show.html.erb" => 151,
     "brgen/test/helpers/application_helper_test.rb" => 322,
-    "brgen_marketplace/app/views/marketplace/listings/show.html.erb" => 187,
+    "brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb" => 187,
   }.freeze
 
 # Each app's one stylesheet, long by decision. The operator's standing rule
@@ -304,7 +304,7 @@ COMMENT_STARTS = ["#", "//", "/*", "*", "<%#"].freeze
       rb = apps.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.rb")) }
       styled = BRGEN_AND_APPS
       scss = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.scss")) }
-      erb = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "{app,*/app,engines/*/app}/views/**/*.erb")) }
+      erb = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "{app,engines/**/app}/views/**/*.erb")) }
       { "rb" => rb, "scss" => scss, "erb" => erb }.transform_values do |paths|
         paths.reject { |p| p.match?(%r{/(vendor|node_modules|public)/|/db/migrate/}) || p.match?(GENERATED) }
              .uniq.sort

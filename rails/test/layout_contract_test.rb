@@ -29,7 +29,7 @@ class LayoutContractTest < Minitest::Test
   end
 
   def test_no_view_skips_a_heading_level
-    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,__shared}", "app", "views", "**", "*.html.erb")) +
+    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,shared}", "app", "views", "**", "*.html.erb")) +
             Dir.glob(File.join(ROOT, EngineRoots::GLOB, "app", "views", "**", "*.html.erb"))
 
     refute_empty views, "no views found — the glob stopped matching, which is blindness not cleanliness"
@@ -56,7 +56,7 @@ class LayoutContractTest < Minitest::Test
   # profile, now .profile-meta with a flex gap, and one reserving a line box in
   # the marketplace nav, which the storefront flatten removed outright.
   def test_nbsp_is_typography_not_spacing
-    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,__shared}", "app", "views", "**", "*.erb")) +
+    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,shared}", "app", "views", "**", "*.erb")) +
             Dir.glob(File.join(ROOT, EngineRoots::GLOB, "app", "views", "**", "*.erb"))
 
     refute_empty views, "no views found — the glob stopped matching, which is blindness not cleanliness"
@@ -232,7 +232,7 @@ class LayoutContractTest < Minitest::Test
     typography = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_typography.scss"))
 
     assert_includes typography, "--measure: 66ch"
-    stylesheets = Dir.glob(File.join(File.dirname(SHARED), "{amber,brgen,bsdports,__shared}/app/assets/stylesheets/**/*.scss"))
+    stylesheets = Dir.glob(File.join(File.dirname(SHARED), "{amber,brgen,bsdports,shared}/app/assets/stylesheets/**/*.scss"))
     declarers = stylesheets.select { |path| File.read(path).match?(/^\s*--measure(?:-body)?\s*:/) }
 
     assert_equal [File.join(SHARED, "app", "assets", "stylesheets", "_typography.scss")], declarers

@@ -53,9 +53,9 @@ class RailsUpgradeContractTest < Minitest::Test
   end
 
   test "Active Storage limits and processing are record-side and post-commit" do
-    application_record = read("__shared/app/models/application_record.rb")
-    limits = read("__shared/app/models/concerns/shared/attachment_limits.rb")
-    processing = read("__shared/app/models/concerns/shared/media_processable.rb")
+    application_record = read("shared/app/models/application_record.rb")
+    limits = read("shared/app/models/concerns/shared/attachment_limits.rb")
+    processing = read("shared/app/models/concerns/shared/media_processable.rb")
 
     assert_includes application_record, "include Shared::AttachmentLimits"
     assert_includes limits, "validate :new_attachments_within_limits"
@@ -65,12 +65,12 @@ class RailsUpgradeContractTest < Minitest::Test
   test "transaction-sensitive job producers enqueue from commit callbacks" do
     {
       "brgen/app/models/post.rb" => "after_commit :federate_creation",
-      "__shared/app/models/concerns/shared/link_embeddable.rb" => "after_commit :resolve_link_embed_later",
+      "shared/app/models/concerns/shared/link_embeddable.rb" => "after_commit :resolve_link_embed_later",
       "amber/app/models/message.rb" => "after_create_commit :enqueue_master_reply",
       "brgen/app/models/notification.rb" => "after_create_commit",
       "brgen/app/models/repost.rb" => "after_create_commit :federate",
-      "brgen_messenger/app/models/message.rb" => "after_create_commit :maybe_summon_bot",
-      "brgen_marketplace/app/models/marketplace/listing.rb" => "after_create_commit :queue_ranking_recalculation",
+      "brgen/engines/messenger/app/models/message.rb" => "after_create_commit :maybe_summon_bot",
+      "brgen/engines/marketplace/app/models/marketplace/listing.rb" => "after_create_commit :queue_ranking_recalculation",
     }.each do |path, callback|
       source = read(path)
 

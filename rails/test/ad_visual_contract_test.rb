@@ -16,7 +16,7 @@ require "yaml"
 # t("shared.advertisement"); _affiliate_feed_unit (Tradedoubler/Amazon)
 # renders the affiliate_disclosure partial and a per-link paid-link mark.
 class AdVisualContractTest < Minitest::Test
-  SHARED = File.expand_path("../__shared/app/views/shared", __dir__)
+  SHARED = File.expand_path("../shared/app/views/shared", __dir__)
   TOKENS = YAML.safe_load(
     File.read(File.expand_path("../../MASTER/data/tokens.yml", __dir__), encoding: "UTF-8"),
     aliases: true
@@ -75,7 +75,7 @@ class AdVisualContractTest < Minitest::Test
 
   def test_tradedoubler_service_and_conversion_model_survive_the_contract
     %w[app/services/shared/tradedoubler.rb app/models/shared/affiliate_product.rb].each do |path|
-      full = File.expand_path("../__shared/#{path}", __dir__)
+      full = File.expand_path("../shared/#{path}", __dir__)
       assert File.file?(full), "the monetisation stack lost #{path}; the ad contract depends on it"
     end
   end

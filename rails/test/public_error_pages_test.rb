@@ -26,7 +26,7 @@ class PublicErrorPagesTest < Minitest::Test
   end
 
   def test_public_error_pages_do_not_depend_on_javascript_urls
-    paths = Dir.glob(File.join(ROOT, "{__shared,brgen,amber,bsdports,master}", "public", "{400,404,406-unsupported-browser,422,500,503}.html"))
+    paths = Dir.glob(File.join(ROOT, "{shared,brgen,amber,bsdports,master}", "public", "{400,404,406-unsupported-browser,422,500,503}.html"))
 
     refute_empty paths, "no public error pages found — the inventory stopped matching"
     paths.each do |path|
@@ -72,7 +72,7 @@ class PublicErrorPagesTest < Minitest::Test
   end
 
   def test_shared_error_stylesheet_keeps_type_rhythm_tokens_and_flat_surfaces
-    source = File.read(File.join(ROOT, "__shared", "public", "styles", "errors.css"))
+    source = File.read(File.join(ROOT, "shared", "public", "styles", "errors.css"))
 
     assert_includes source, "font-family: var(--font);"
     assert_includes source, "font-size: clamp(0.9375rem, 2.5vw, 1.25rem);"
@@ -84,7 +84,7 @@ class PublicErrorPagesTest < Minitest::Test
     assert_includes source, "min-height: var(--tap-min);"
     assert_includes source, "border-radius: var(--radius-extra-small);"
     refute_match(/min-height: 44px|border-radius: 4px/, source)
-    tokens = File.read(File.join(ROOT, "__shared", "public", "styles", "tokens.css"))
+    tokens = File.read(File.join(ROOT, "shared", "public", "styles", "tokens.css"))
     assert_includes tokens, "--tap-min: 44px;"
     assert_includes tokens, "--radius-extra-small: 4px;"
     assert_includes tokens, "--focus-ring: 2px solid var(--accent, currentColor);"
@@ -106,7 +106,7 @@ class PublicErrorPagesTest < Minitest::Test
   # safe-area padding and focus ring come from the stylesheet tested above.
   def test_shared_error_pages_link_the_shared_stylesheet_and_carry_no_palette_of_their_own
     %w[400 503].each do |status|
-      source = File.read(File.join(ROOT, "__shared", "public", "#{status}.html"))
+      source = File.read(File.join(ROOT, "shared", "public", "#{status}.html"))
 
       assert_includes source, %(<link rel="stylesheet" href="/styles/errors.css">), "#{status}: must read errors.css"
       refute_match(/<style\b/, source, "#{status}: an inline palette drifts from errors.css")

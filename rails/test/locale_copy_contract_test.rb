@@ -61,7 +61,7 @@ class LocaleCopyContractTest < Minitest::Test
   end
 
   def nb_files
-    Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,__shared,#{EngineRoots::GLOB}}/**/config/locales/**/*nb*.yml"))
+    Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,shared,#{EngineRoots::GLOB}}/**/config/locales/**/*nb*.yml"))
        .reject { |file| file.include?("/vendor/") }.sort.uniq
   end
 

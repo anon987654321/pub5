@@ -12,7 +12,7 @@ class CoveragePolicyTest < Minitest::Test
   def test_every_rails_app_starts_coverage_before_application_boot
     APPS.each do |app|
       source = File.read(File.join(ROOT, app, "test/test_helper.rb"))
-      coverage = source.index('require_relative "../../__shared/test/coverage"')
+      coverage = source.index('require_relative "../../shared/test/coverage"')
       boot = source.index('require_relative "../config/environment"')
       refute_nil coverage, "#{app}: test helper does not load the coverage policy"
       refute_nil boot, "#{app}: test helper no longer boots Rails"
@@ -21,7 +21,7 @@ class CoveragePolicyTest < Minitest::Test
   end
 
   def test_every_app_coverage_scope_points_at_the_real_app_tree
-    source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
+    source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
 
     APPS.each do |app|
       assert_includes source, 'cover "#{app_dir}/app/**/*.rb"',
@@ -30,17 +30,17 @@ class CoveragePolicyTest < Minitest::Test
   end
 
   def test_coverage_policy_includes_app_engines_and_shared_code
-    source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
+    source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
     assert_includes source, 'cover "#{app_dir}/engines/**/app/**/*.rb"'
-    assert_includes source, 'cover "__shared/app/**/*.rb"'
-    assert_includes source, 'cover "__shared/lib/**/*.rb"'
+    assert_includes source, 'cover "shared/app/**/*.rb"'
+    assert_includes source, 'cover "shared/lib/**/*.rb"'
     assert_includes source, 'cover_views "#{app_dir}/app/views/**/*.erb"'
     assert_includes source, 'cover_views "#{app_dir}/engines/**/app/views/**/*.erb"'
-    assert_includes source, 'cover_views "__shared/app/views/**/*.erb"'
+    assert_includes source, 'cover_views "shared/app/views/**/*.erb"'
   end
 
   def test_coverage_policy_has_explicit_application_groups
-    source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
+    source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
     %w[Application Libraries Engines Shared].each do |group|
       assert_includes source, %Q[group "#{group}"],
                       "missing SimpleCov group #{group.inspect}"
@@ -48,7 +48,7 @@ class CoveragePolicyTest < Minitest::Test
   end
 
   def test_ci_requests_full_coverage
-    ci = File.read(File.join(ROOT, "__shared/config/ci.rb"))
+    ci = File.read(File.join(ROOT, "shared/config/ci.rb"))
     assert_operator ci.scan("FULL_COVERAGE=1").size, :>=, 2
     assert_includes ci, "FULL_COVERAGE=1 DEFAULT_TEST="
     assert_includes ci, "FULL_COVERAGE=1 bin/rails test:system"
@@ -89,7 +89,7 @@ class CoveragePolicyTest < Minitest::Test
   end
 
   def test_coverage_policy_tracks_runtime_dimensions
-    source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
+    source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
     assert_includes source, "enable_coverage :branch"
     assert_includes source, "enable_coverage :method"
     assert_includes source, "enable_coverage :eval"
@@ -107,7 +107,7 @@ class CoveragePolicyTest < Minitest::Test
   # raise at load for that app, and a floor outside 1..100 would pass nothing or
   # everything.
   def test_every_app_has_a_recorded_coverage_floor_for_each_criterion
-    floors = YAML.safe_load_file(File.join(ROOT, "__shared/test/coverage_floors.yml"))
+    floors = YAML.safe_load_file(File.join(ROOT, "shared/test/coverage_floors.yml"))
 
     APPS.each do |app|
       %w[line branch method].each do |criterion|
@@ -122,7 +122,7 @@ class CoveragePolicyTest < Minitest::Test
   # One-file runs cannot reach a whole-app number, so the minimum applies to full
   # runs only; strict mode keeps the 100%-per-file target reachable on request.
   def test_the_minimum_applies_to_full_runs_and_strict_mode_keeps_the_old_target
-    source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
+    source = File.read(File.join(ROOT, "shared/test/coverage.rb"))
     assert_includes source, 'ENV["PUB4_COVERAGE_STRICT"] == "1"'
     assert_includes source, 'ENV["FULL_COVERAGE"] == "1" || ENV["PUB4_CI_GUARD"] == "1"'
     assert_includes source, "minimum 100, per: own_source"

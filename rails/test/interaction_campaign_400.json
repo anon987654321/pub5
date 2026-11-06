@@ -412,7 +412,7 @@
       "expected_cases": 20,
       "evidence_paths": [
         "RAILS/brgen/test/system/dating_swipe_test.rb",
-        "RAILS/brgen_dating/app/controllers/dating/home_controller.rb",
+        "RAILS/brgen/engines/dating/app/controllers/dating/home_controller.rb",
         "RAILS/apps.yml"
       ],
       "actions": [
@@ -1772,7 +1772,7 @@
       "evidence_paths": [
         "RAILS/package.json",
         "RAILS/test/coverage_policy_test.rb",
-        "RAILS/__shared/frontend/pwa_offline_store.js"
+        "RAILS/shared/frontend/pwa_offline_store.js"
       ],
       "actions": [
         {

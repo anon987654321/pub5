@@ -8,7 +8,7 @@ module LayoutContractSources
   # __dir__ is RAILS/test → ROOT is RAILS/ → REPO is pub4 checkout root.
   ROOT = File.expand_path("../..", __dir__)
   REPO = File.expand_path("..", ROOT)
-  SHARED = File.join(ROOT, "__shared")
+  SHARED = File.join(ROOT, "shared")
   FACE_CSS = File.join(ROOT, "..", "MASTER", "web", "public", "face.css")
   TOKENS = File.join(SHARED, "design_tokens.yml")
   LAYOUT_CHROME = File.join(SHARED, "app", "assets", "stylesheets", "_layout_chrome.scss")

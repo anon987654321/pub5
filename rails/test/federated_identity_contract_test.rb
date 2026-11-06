@@ -11,7 +11,7 @@ class FederatedIdentityContractTest < Minitest::Test
 
   def test_federated_identity_models_have_one_shared_owner
     %w[external_identity.rb identity_provider.rb].each do |name|
-      assert File.file?(File.join(ROOT, "RAILS/__shared/app/models", name)), "shared model missing: #{name}"
+      assert File.file?(File.join(ROOT, "RAILS/shared/app/models", name)), "shared model missing: #{name}"
       refute File.exist?(File.join(ROOT, "RAILS/brgen/app/models", name)),
              "Brgen must not shadow the shared #{name} implementation"
     end
@@ -30,13 +30,13 @@ class FederatedIdentityContractTest < Minitest::Test
   end
 
   def test_email_less_bankid_login_is_looked_up_by_persisted_subject
-    callback = read("RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb")
+    callback = read("RAILS/shared/app/controllers/omniauth_callbacks_controller.rb")
     assert_includes callback, "::ExternalIdentity.find_by(identity_provider_id: provider.id, subject: auth.uid.to_s)"
     assert_includes callback, "def ensure_identity_storage!"
     assert_includes callback, "raise IdentityStorageUnavailable unless available"
     assert_includes callback, 't("shared.flash.oauth_storage_unavailable")'
-    assert_includes read("RAILS/__shared/config/locales/social.en.yml"), "oauth_storage_unavailable:"
-    assert_includes read("RAILS/__shared/config/locales/social.nb.yml"), "oauth_storage_unavailable:"
+    assert_includes read("RAILS/shared/config/locales/social.en.yml"), "oauth_storage_unavailable:"
+    assert_includes read("RAILS/shared/config/locales/social.nb.yml"), "oauth_storage_unavailable:"
     assert_includes read("RAILS/amber/test/controllers/bankid_identity_persistence_test.rb"),
                     "test \"OAuth does not create a duplicate account while federated identity storage is unavailable\""
     assert_includes read("RAILS/amber/test/controllers/bankid_identity_persistence_test.rb"),
@@ -45,7 +45,7 @@ class FederatedIdentityContractTest < Minitest::Test
     assert_includes callback, "identity.save!"
     assert_includes callback, "provider = ::IdentityProvider.find_by(slug: slug)"
     assert_includes callback, "rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid"
-    assert_includes read("RAILS/__shared/app/models/account_merge.rb"),
+    assert_includes read("RAILS/shared/app/models/account_merge.rb"),
                     "validates :guest_user_id, uniqueness: { scope: :user_id }"
     assert_includes callback, 'legacy_email = "#{auth.uid}@bankid.oauth"'
     assert_includes callback, "legacy_user.email_verification_token.blank?"
@@ -53,8 +53,8 @@ class FederatedIdentityContractTest < Minitest::Test
   end
 
   def test_high_assurance_bankid_write_exception_does_not_mark_email_verified
-    auth = read("RAILS/__shared/app/controllers/concerns/shared/authentication.rb")
-    callback = read("RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb")
+    auth = read("RAILS/shared/app/controllers/concerns/shared/authentication.rb")
+    callback = read("RAILS/shared/app/controllers/omniauth_callbacks_controller.rb")
     assert_includes auth, "verified_bankid_identity?(user)"
     assert_includes auth, 'identity_providers: { slug: "bankid" }'
     assert_includes callback, 'when "bankid"'
@@ -67,7 +67,7 @@ class FederatedIdentityContractTest < Minitest::Test
     assert_includes callback, "record.update!("
     assert_includes read("RAILS/amber/test/controllers/bankid_identity_persistence_test.rb"),
                     "test \"persisted BankID assurance follows the current verified token\""
-    assert_includes read("RAILS/__shared/lib/omniauth/strategies/bankid.rb"), 'acr_values: "urn:bankid:bid"'
+    assert_includes read("RAILS/shared/lib/omniauth/strategies/bankid.rb"), 'acr_values: "urn:bankid:bid"'
     assert_includes callback, '::ExternalIdentity.find_by(identity_provider_id: provider.id, subject: auth.uid.to_s)'
     assert_includes callback, '::ExternalIdentity.find_or_initialize_by(identity_provider_id: provider.id, subject: auth.uid.to_s)'
     refute_includes callback, "provider&.external_identities"
@@ -75,8 +75,8 @@ class FederatedIdentityContractTest < Minitest::Test
   end
 
   def test_guest_history_merger_has_one_owner_and_preserves_amber_chat
-    merger = read("RAILS/__shared/app/services/account_merger.rb")
-    registration = read("RAILS/__shared/app/controllers/concerns/shared/email_registration.rb")
+    merger = read("RAILS/shared/app/services/account_merger.rb")
+    registration = read("RAILS/shared/app/controllers/concerns/shared/email_registration.rb")
     brgen_controller = read("RAILS/brgen/app/controllers/users_controller.rb")
     amber_controller = read("RAILS/amber/app/controllers/registrations_controller.rb")
     merge_migration = read("RAILS/amber/db/migrate/20261021230200_add_guest_account_merges_to_amber.rb")
@@ -122,9 +122,9 @@ class FederatedIdentityContractTest < Minitest::Test
   end
 
   def test_authentication_paths_refuse_session_rotation_when_history_transfer_fails
-    auth = read("RAILS/__shared/app/controllers/concerns/shared/authentication.rb")
-    sessions = read("RAILS/__shared/app/controllers/concerns/shared/sessions_actions.rb")
-    callback = read("RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb")
+    auth = read("RAILS/shared/app/controllers/concerns/shared/authentication.rb")
+    sessions = read("RAILS/shared/app/controllers/concerns/shared/sessions_actions.rb")
+    callback = read("RAILS/shared/app/controllers/omniauth_callbacks_controller.rb")
     brgen = read("RAILS/brgen/app/controllers/users_controller.rb")
     amber = read("RAILS/amber/app/controllers/registrations_controller.rb")
 
@@ -139,8 +139,8 @@ class FederatedIdentityContractTest < Minitest::Test
     assert_includes callback, 't("shared.flash.guest_history_transfer_failed")'
     assert_includes brgen, 't("shared.email_verification.signup_guest_merge_failed")'
     assert_includes amber, 't("shared.email_verification.signup_guest_merge_failed")'
-    assert_includes read("RAILS/__shared/config/locales/social.en.yml"), "guest_history_transfer_failed:"
-    assert_includes read("RAILS/__shared/config/locales/social.nb.yml"), "guest_history_transfer_failed:"
+    assert_includes read("RAILS/shared/config/locales/social.en.yml"), "guest_history_transfer_failed:"
+    assert_includes read("RAILS/shared/config/locales/social.nb.yml"), "guest_history_transfer_failed:"
     signup_failure = read("RAILS/amber/test/controllers/registrations_controller_test.rb")
     sign_in_failure = read("RAILS/amber/test/controllers/sessions_controller_guest_transfer_test.rb")
     assert_includes signup_failure, "test \"signup leaves guest history and session intact when transfer is blocked\""

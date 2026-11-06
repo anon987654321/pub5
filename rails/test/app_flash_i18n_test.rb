@@ -27,7 +27,7 @@ class AppFlashI18nTest < Minitest::Test
   # tree => [nb file, en file]. The shared engine ships its locales to all three
   # apps through Rails::Engine's own config/locales path.
   LOCALES = {
-    "shared" => ["__shared/config/locales/social.nb.yml", "__shared/config/locales/social.en.yml"],
+    "shared" => ["shared/config/locales/social.nb.yml", "shared/config/locales/social.en.yml"],
     "amber" => ["amber/config/locales/nb.yml", "amber/config/locales/en.yml"],
     "bsdports" => ["bsdports/config/locales/nb.yml", "bsdports/config/locales/en.yml"],
     "brgen" => ["brgen/config/locales/nb.yml", "brgen/config/locales/en.yml"],
@@ -36,7 +36,7 @@ class AppFlashI18nTest < Minitest::Test
   # Where each tree's controllers live. brgen's verticals are engines, and a
   # single-level glob goes blind to all five of them.
   CONTROLLERS = {
-    "shared" => ["__shared/app/controllers/**/*.rb"],
+    "shared" => ["shared/app/controllers/**/*.rb"],
     "amber" => ["amber/app/controllers/**/*.rb"],
     "bsdports" => ["bsdports/app/controllers/**/*.rb"],
     "brgen" => ["brgen/app/controllers/**/*.rb", "#{EngineRoots::GLOB}/app/controllers/**/*.rb"],
@@ -206,16 +206,16 @@ class AppFlashI18nTest < Minitest::Test
   # files to I18n.load_path a second time (after the app, so shared wins every
   # key both define), or a paths override that stops the engine loading them.
   def test_the_engine_loads_its_locale_files_once_and_ahead_of_the_app
-    engine = File.read(File.join(ROOT, "__shared/lib/shared/engine.rb"))
+    engine = File.read(File.join(ROOT, "shared/lib/shared/engine.rb"))
     code = engine.lines.reject { |line| line.strip.start_with?("#") }.join
 
     refute_match(/i18n\.load_path\s*(<<|\+=|\.concat|\.push|\.unshift)/, code,
-                 "__shared/lib/shared/engine.rb registers locale files by hand; Rails::Engine already " \
+                 "shared/lib/shared/engine.rb registers locale files by hand; Rails::Engine already " \
                  "loads config/locales, so this loads them twice and the second copy outranks the app")
     refute_match(/paths\[["']config\/locales["']\]/, code,
-                 "__shared/lib/shared/engine.rb overrides the engine's config/locales path")
+                 "shared/lib/shared/engine.rb overrides the engine's config/locales path")
 
-    shipped = Dir.glob(File.join(ROOT, "__shared/config/locales/**/*")).select { |path| File.file?(path) }
+    shipped = Dir.glob(File.join(ROOT, "shared/config/locales/**/*")).select { |path| File.file?(path) }
     refute_empty shipped
     assert shipped.all? { |path| path.end_with?(".yml", ".rb") },
            "Rails::Engine loads only .yml and .rb from config/locales"

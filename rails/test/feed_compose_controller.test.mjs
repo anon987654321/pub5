@@ -19,7 +19,7 @@ globalThis.window = {
   },
 }
 
-const controllerPath = "../__shared/frontend/feed_compose_controller.js"
+const controllerPath = "../shared/frontend/feed_compose_controller.js"
 const source = await readFile(new URL(controllerPath, import.meta.url), "utf8")
 const dir = await mkdtemp(join(tmpdir(), "feed-compose-"))
 const file = join(dir, "feed_compose_controller.mjs")

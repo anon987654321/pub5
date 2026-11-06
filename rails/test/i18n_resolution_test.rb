@@ -53,13 +53,13 @@ class I18nResolutionTest < Minitest::Test
   # there resolves in the mounting app exactly like a host key.
   def app_keys(app, locale)
     paths = ([app] + engine_dirs(app)).flat_map { |dir| Dir.glob(File.join(ROOT, dir, "config/locales/*#{locale}.yml")) } +
-            Dir.glob(File.join(ROOT, "__shared/config/locales/*.#{locale}.yml"))
+            Dir.glob(File.join(ROOT, "shared/config/locales/*.#{locale}.yml"))
     paths.each_with_object({}) { |path, out| out.merge!(flat_keys(path.sub("#{ROOT}/", ""))) }
   end
 
   # Views and helpers the app can render: its own, the engine's, and — the part
   # this missed — the mountable engines brgen's verticals live in. 102 view and
-  # helper files under {brgen_*,brgen_radio/*,brgen_marketplace/engines/*}/app were outside the glob, which is the
+  # helper files under {brgen_*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}/app were outside the glob, which is the
   # same blind spot that cost four other scanners 57 views when the verticals
   # moved and read as an improving finding count rather than as blindness.
   def keys_used_by(app)
@@ -68,31 +68,31 @@ class I18nResolutionTest < Minitest::Test
       own = ([app] + engine_dirs(app)).flat_map do |dir|
         Dir.glob(File.join(ROOT, dir, "app/{views,helpers}/**/*.{erb,rb}"))
       end
-      paths = own + shared_reached_by(own) + Dir.glob(File.join(ROOT, "__shared/app/helpers/**/*.rb"))
+      paths = own + shared_reached_by(own) + Dir.glob(File.join(ROOT, "shared/app/helpers/**/*.rb"))
       paths.each_with_object({}) do |path, found|
         defaultless_keys(File.read(path)).each { |key| found[key] ||= path.sub("#{ROOT}/", "") }
       end
     end
   end
 
-  # brgen's verticals are the engines that sit beside it as brgen_<name> (brgen_radio holds
-  # playlist and tv one level down); amber and bsdports mount none.
+  # brgen's verticals are engines under brgen/engines/ (radio holds playlist and
+  # tv one level down, marketplace holds takeaway); amber and bsdports mount none.
   def engine_dirs(app)
     return [] unless app == "brgen"
 
-    Dir.glob(File.join(ROOT, "brgen_*/{,*/,engines/*/}app")).map { |path| path.delete_prefix("#{ROOT}/").delete_suffix("/app") }.sort
+    Dir.glob(File.join(ROOT, "brgen/engines/{,*/,engines/*/}app")).map { |path| path.delete_prefix("#{ROOT}/").delete_suffix("/app") }.sort
   end
 
   # A shared view renders in an app only when the app's own source names it
   # (render "shared/<name>"), directly or through another shared view it reaches. A shared
   # partial no view of the app renders is not a missing translation in that app.
   def shared_reached_by(own)
-    shared = Dir.glob(File.join(ROOT, "__shared/app/views/**/*.erb"))
+    shared = Dir.glob(File.join(ROOT, "shared/app/views/**/*.erb"))
     reached, pending = shared.partition { |path| !File.basename(path).start_with?("_") }
     text = (own + reached).map { |path| File.read(path) }.join("\n")
     loop do
       found, pending = pending.partition do |path|
-        name = path.delete_prefix("#{ROOT}/__shared/app/views/").sub(/\.html\.erb\z/, "").sub(%r{(\A|/)_}, "\1")
+        name = path.delete_prefix("#{ROOT}/shared/app/views/").sub(/\.html\.erb\z/, "").sub(%r{(\A|/)_}, "\1")
         text.include?(name)
       end
       break if found.empty?

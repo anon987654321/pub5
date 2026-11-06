@@ -9,7 +9,7 @@ require "pathname"
 # literal require_relative statically, so no boot is needed to find the next one.
 #
 # Outside test/ a target must also stay inside RAILS/: the deploy copies each tree
-# to /home/<app>/ beside __shared and the brgen_* verticals, without MASTER, so a
+# to /home/<app>/ beside shared and the brgen_* verticals, without MASTER, so a
 # path that climbs out of RAILS resolves in the checkout only. master_web runs
 # from the checkout itself and is exempt.
 class RequireRelativeTargetsTest < Minitest::Test

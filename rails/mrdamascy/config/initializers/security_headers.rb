@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# mrdamascy does not load RAILS/__shared, so its headers live here. The
+# mrdamascy does not load RAILS/shared, so its headers live here. The
 # PSP hand-offs are full-page redirects, never popups, so same-origin COOP
 # breaks nothing. In production relayd sets Permissions-Policy for every
 # backend and overwrites this one; the value is kept equal to

@@ -210,7 +210,7 @@ class CssBudgetRulesTest < Minitest::Test
   def test_light_theme_scan_preserves_nested_scope_and_covers_engine_stylesheets
     Dir.mktmpdir("design-metrics") do |root|
       fixtures = {
-        "__shared/app/assets/stylesheets/nested.scss" => <<~SCSS,
+        "shared/app/assets/stylesheets/nested.scss" => <<~SCSS,
           :root[data-theme="light"] {
             .first {
               color: var(--text);
@@ -290,7 +290,7 @@ class CssBudgetRulesTest < Minitest::Test
 
   def test_shared_component_partials_preserve_order_and_file_line_budget
     root = File.expand_path("../..", __dir__)
-    styles = File.join(root, "RAILS", "__shared", "app", "assets", "stylesheets")
+    styles = File.join(root, "RAILS", "shared", "app", "assets", "stylesheets")
     wrapper = File.read(File.join(styles, "_components.scss"))
     names = %w[forms overlays feedback fields progress_and_uploads content_controls]
     uses = wrapper.scan(/@use "components\/([^"]+)"/).flatten

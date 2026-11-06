@@ -30,7 +30,7 @@ class DmesgTest < Minitest::Test
 
   # brgen's CI log of 2026-10-22: deprecation warnings carrying positions came first and filled every place.
   def test_a_failing_test_leads_ahead_of_positions_in_warnings
-    warnings = "  (called from block in <class:Engine> at /home/brgen/__shared/lib/shared/engine.rb:60)\n" * 9
+    warnings = "  (called from block in <class:Engine> at /home/brgen/shared/lib/shared/engine.rb:60)\n" * 9
     failure = "Failure:\nSessionBoundariesTest#test_RI_012 [test/controllers/session_boundaries_test.rb:42]:\n" \
               "Expected nil to be present?.\n\nbin/rails test test/controllers/session_boundaries_test.rb:39\n"
 

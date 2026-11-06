@@ -6,12 +6,12 @@ require "fileutils"
 require "open3"
 require "rbconfig"
 
-# __shared/test/coverage.rb ran on vm23 as "unknown Rails app brgen": it looked
+# shared/test/coverage.rb ran on vm23 as "unknown Rails app brgen": it looked
 # for <root>/brgen, and the deploy copy-tree keeps the app at <root>/app beside
-# __shared. This runs the real file against a temp tree in each layout, with a
+# shared. This runs the real file against a temp tree in each layout, with a
 # stand-in for simplecov, so no gem and no Rails boot is needed.
 class CoverageLayoutTest < Minitest::Test
-  SOURCE = File.expand_path("../__shared/test/coverage.rb", __dir__)
+  SOURCE = File.expand_path("../shared/test/coverage.rb", __dir__)
   FAKE_SIMPLECOV = <<~RUBY
     module SimpleCov
       def self.root(path) = puts("root=\#{path}")
@@ -25,14 +25,14 @@ class CoverageLayoutTest < Minitest::Test
     Dir.mktmpdir do |tmp|
       FileUtils.mkdir_p(File.join(tmp, "stub"))
       File.write(File.join(tmp, "stub", "simplecov.rb"), FAKE_SIMPLECOV)
-      FileUtils.mkdir_p(File.join(tmp, "root", "__shared", "test"))
-      FileUtils.cp(SOURCE, File.join(tmp, "root", "__shared", "test", "coverage.rb"))
+      FileUtils.mkdir_p(File.join(tmp, "root", "shared", "test"))
+      FileUtils.cp(SOURCE, File.join(tmp, "root", "shared", "test", "coverage.rb"))
       FileUtils.mkdir_p(File.join(tmp, "root", layout_dir, "config"))
       FileUtils.touch(File.join(tmp, "root", layout_dir, "config", "application.rb"))
 
       out, err, status = Open3.capture3(
         { "PUB4_CI_APP" => app, "PUB4_COVERAGE_PATH" => nil, "PUB4_COVERAGE_PART" => part },
-        RbConfig.ruby, "-I", File.join(tmp, "stub"), File.join(tmp, "root", "__shared", "test", "coverage.rb"),
+        RbConfig.ruby, "-I", File.join(tmp, "stub"), File.join(tmp, "root", "shared", "test", "coverage.rb"),
         chdir: File.join(tmp, "root", cwd)
       )
 

@@ -48,10 +48,10 @@ class CritiqueImplementationTest < Minitest::Test
 
   def test_brgen_post_sketch_is_a_compact_reading_unit
     post = read("brgen/app/views/posts/_post.html.erb")
-    card = read("__shared/app/views/shared/_post_card.html.erb")
-    css = read("__shared/app/assets/stylesheets/_minimal.scss")
+    card = read("shared/app/views/shared/_post_card.html.erb")
+    css = read("shared/app/assets/stylesheets/_minimal.scss")
     feed = read("brgen/lib/brgen/home_feed.rb")
-    affiliate = read("__shared/app/views/shared/_affiliate_feed_unit.html.erb")
+    affiliate = read("shared/app/views/shared/_affiliate_feed_unit.html.erb")
     home_feed = read("brgen/app/views/home/_live_search_results.html.erb")
 
     assert_includes post, 'render "shared/post_embed_action"'
@@ -87,7 +87,7 @@ class CritiqueImplementationTest < Minitest::Test
 
   def test_brgen_post_detail_uses_the_shared_vote_rail_beside_the_title
     show = read("brgen/app/views/posts/show.html.erb")
-    partial = read("__shared/app/views/shared/_post_vote_rail.html.erb")
+    partial = read("shared/app/views/shared/_post_vote_rail.html.erb")
     stream = read("brgen/app/views/votes/create.turbo_stream.erb")
 
     assert_includes show, 'class="post-reading-layout"'
@@ -108,7 +108,7 @@ class CritiqueImplementationTest < Minitest::Test
     window = read("brgen/app/views/conversations/show.html.erb")
     channel = read("brgen/app/views/channels/show.html.erb")
     css = brgen_css_source
-    artifact = read("__shared/app/views/shared/_messenger_artifacts.html.erb")
+    artifact = read("shared/app/views/shared/_messenger_artifacts.html.erb")
 
     assert_includes rooms, 'class="messenger-rail"'
     assert_includes rooms, 'class="messenger-inbox"'
@@ -124,7 +124,7 @@ class CritiqueImplementationTest < Minitest::Test
   end
 
   def test_shared_feed_text_uses_the_existing_leading_tokens
-    minimal = read("__shared/app/assets/stylesheets/_minimal.scss")
+    minimal = read("shared/app/assets/stylesheets/_minimal.scss")
 
     %w[feed-card-text feed-card-body feed-card-meta].each do |selector|
       assert_match(/\.#{selector}\s*\{[^}]*line-height:\s*var\(--leading-normal\);/m, minimal)
@@ -140,7 +140,7 @@ class CritiqueImplementationTest < Minitest::Test
     amber_css = amber_css_source
     brgen_polish = brgen_css
     amber_polish = stylesheet_module("amber", "commerce_polish")
-    seller = read("brgen_marketplace/app/views/marketplace/stores/show.html.erb")
+    seller = read("brgen/engines/marketplace/app/views/marketplace/stores/show.html.erb")
     item = read("amber/app/views/items/show.html.erb")
 
     assert_includes brgen_css, 'commerce_polish'
@@ -163,9 +163,9 @@ class CritiqueImplementationTest < Minitest::Test
 
   def test_brgen_new_post_is_progressive_and_photo_first
     form = read("brgen/app/views/posts/new.html.erb")
-    controller = read("__shared/frontend/post_progressive_controller.js")
-    boot = read("__shared/frontend/stimulus_boot_brgen.js")
-    importmap = read("__shared/config/importmap_baseline.rb")
+    controller = read("shared/frontend/post_progressive_controller.js")
+    boot = read("shared/frontend/stimulus_boot_brgen.js")
+    importmap = read("shared/config/importmap_baseline.rb")
     css = brgen_css_source
 
     assert_includes form, 'post-progressive'
@@ -198,7 +198,7 @@ class CritiqueImplementationTest < Minitest::Test
   end
 
   def test_shared_post_card_does_not_silently_rescue_post_routes
-    card = read("__shared/app/views/shared/_post_card.html.erb")
+    card = read("shared/app/views/shared/_post_card.html.erb")
 
     refute_includes card, "post_path(post) rescue nil"
     assert_includes card, "respond_to?(:post_path)"
@@ -263,7 +263,7 @@ class CritiqueImplementationTest < Minitest::Test
     amber_index = read("amber/app/views/posts/index.html.erb")
     amber_home = read("amber/app/views/home/_frontpage_posts.html.erb")
     amber_styles = read("amber/app/assets/stylesheets/application.scss")
-    feed_list_css = read("__shared/app/assets/stylesheets/_feed_list.scss")
+    feed_list_css = read("shared/app/assets/stylesheets/_feed_list.scss")
 
     assert_includes brgen_results, '<ul class="post-feed feed_list post-card-list" id="posts-feed" role="list">'
     assert_match(/<li>\s*<div data-controller="offline-feed"/m, brgen_results)
@@ -283,11 +283,11 @@ class CritiqueImplementationTest < Minitest::Test
       brgen/app/views/bookmarks/index.html.erb
       brgen/app/views/events/index.html.erb
       brgen/app/views/events/_live_search_results.html.erb
-      brgen_marketplace/app/views/marketplace/favorites/index.html.erb
-      brgen_marketplace/app/views/marketplace/deals/_live_search_results.html.erb
-      brgen_radio/tv/app/views/tv/sounds/show.html.erb
-      brgen_radio/tv/app/views/tv/shows/index.html.erb
-      brgen_radio/playlist/app/views/playlist/playlists/_library.html.erb
+      brgen/engines/marketplace/app/views/marketplace/favorites/index.html.erb
+      brgen/engines/marketplace/app/views/marketplace/deals/_live_search_results.html.erb
+      brgen/engines/radio/tv/app/views/tv/sounds/show.html.erb
+      brgen/engines/radio/tv/app/views/tv/shows/index.html.erb
+      brgen/engines/radio/playlist/app/views/playlist/playlists/_library.html.erb
       brgen/app/views/posts/_live_search_results.html.erb
       amber/app/views/posts/index.html.erb
       amber/app/views/home/_frontpage_posts.html.erb
@@ -312,10 +312,10 @@ class CritiqueImplementationTest < Minitest::Test
     post_lists.each do |path|
       assert_match(/<ul\b[^>]*\bpost-card-list\b[^>]*>/, read(path), "#{path} needs real list-item boxes")
     end
-    assert_includes read("__shared/app/assets/stylesheets/_feed_list.scss"),
+    assert_includes read("shared/app/assets/stylesheets/_feed_list.scss"),
                     ".feed_list.post-card-list > li {\n  display: block;"
 
-    library = read("brgen_radio/playlist/app/views/playlist/playlists/_library.html.erb")
+    library = read("brgen/engines/radio/playlist/app/views/playlist/playlists/_library.html.erb")
     assert_operator library.index('render "shared/empty_state"'), :>, library.index("</ul>"),
                     "the playlist empty state must not be a direct child of ul"
   end
@@ -332,8 +332,8 @@ class CritiqueImplementationTest < Minitest::Test
     assert_equal 1, premium.length, "dating premium/boost purchases should be one roadmap item"
     assert_includes premium.first.fetch("name"), "super-like"
 
-    conversation = read("brgen_messenger/app/models/conversation.rb")
-    controller = read("brgen_messenger/app/controllers/conversations_controller.rb")
+    conversation = read("brgen/engines/messenger/app/models/conversation.rb")
+    controller = read("brgen/engines/messenger/app/controllers/conversations_controller.rb")
     assert_includes conversation, "scope :in_archive"
     assert_includes controller, "@archive = params[:arkiv].present?"
   end

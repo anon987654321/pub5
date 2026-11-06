@@ -8,15 +8,16 @@ require "minitest/autorun"
 class ModelCoverageContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
-  # Vertical packages are siblings under RAILS, except Marketplace's food
-  # engine, which is intentionally nested inside the Marketplace package.
+  # Vertical engines live under brgen/engines/; radio holds playlist and tv one
+  # level down, and Marketplace's food engine is intentionally nested inside
+  # the Marketplace package.
   ENGINE_ROOTS = {
-    "dating" => "brgen_dating",
-    "marketplace" => "brgen_marketplace",
-    "playlist" => "brgen_radio/playlist",
-    "takeaway" => "brgen_marketplace/engines/takeaway",
-    "tv" => "brgen_radio/tv",
-    "maps" => "brgen_maps",
+    "dating" => "brgen/engines/dating",
+    "marketplace" => "brgen/engines/marketplace",
+    "playlist" => "brgen/engines/radio/playlist",
+    "takeaway" => "brgen/engines/marketplace/engines/takeaway",
+    "tv" => "brgen/engines/radio/tv",
+    "maps" => "brgen/engines/maps",
   }.freeze
 
   def app_path(app, relative)
@@ -109,7 +110,7 @@ class ModelCoverageContractTest < Minitest::Test
 
   def test_brgen_vote_model_and_votable_concern_are_wired
     vote = read_app("brgen", "app/models/vote.rb")
-    votable = File.read(File.join(ROOT, "__shared/app/models/concerns/shared/votable.rb"))
+    votable = File.read(File.join(ROOT, "shared/app/models/concerns/shared/votable.rb"))
     post = read_app("brgen", "app/models/post.rb")
     controller = read_app("brgen", "app/controllers/votes_controller.rb")
     routes = read_app("brgen", "config/routes.rb")

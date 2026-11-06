@@ -15,7 +15,7 @@ class PwaGeneratorContractTest < Minitest::Test
 
   test "all store apps generate from one shared worker source" do
     assert_includes source, 'const APPS = ["amber", "brgen", "bsdports"]'
-    assert_includes source, 'const source = join(root, "__shared", "pwa", "service_worker.js")'
+    assert_includes source, 'const source = join(root, "shared", "pwa", "service_worker.js")'
     assert_includes source, 'const destination = join(root, app, "app", "views", "pwa", "service-worker.js")'
   end
 

@@ -8,13 +8,13 @@ require "minitest/autorun"
 # test/system/shared_chrome_behaviour_test.rb and amber's theme_toggle_test.rb.
 class SharedChromeSourceContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  STYLES = File.join(ROOT, "__shared/app/assets/stylesheets")
+  STYLES = File.join(ROOT, "shared/app/assets/stylesheets")
 
   def read(path) = File.read(File.join(ROOT, path), encoding: "UTF-8")
-  def tokens = read("__shared/app/assets/stylesheets/_tokens.scss")
+  def tokens = read("shared/app/assets/stylesheets/_tokens.scss")
 
   def app_sources(glob)
-    Dir.glob(File.join(ROOT, "{__shared,brgen,brgen_*,amber,bsdports}", "**", glob))
+    Dir.glob(File.join(ROOT, "{shared,brgen,brgen_*,amber,bsdports}", "**", glob))
        .reject { _1.include?("/tmp/") || _1.include?("/builds/") || _1.include?("/node_modules/") }
   end
 
@@ -30,12 +30,12 @@ class SharedChromeSourceContractTest < Minitest::Test
       end
     end
     assert_empty offenders, "outline cleared outside :focus:not(:focus-visible)"
-    refute_match(/!important\s*;/, read("__shared/app/assets/stylesheets/_focus_ring.scss"))
+    refute_match(/!important\s*;/, read("shared/app/assets/stylesheets/_focus_ring.scss"))
   end
 
   # shared-011, shared-024
   def test_buttons_hover_only_under_a_hovering_pointer_and_use_the_main_motion_tokens
-    buttons = read("__shared/app/assets/stylesheets/_buttons.scss")
+    buttons = read("shared/app/assets/stylesheets/_buttons.scss")
     assert_match(/@media \(hover: hover\) \{\s*\.button:hover \{/, buttons)
     stylesheets = app_sources("*.scss").map { File.read(_1, encoding: "UTF-8") }.join
     refute_match(/--(?:ease-m3-spring|duration-m3-short)/, stylesheets)
@@ -47,14 +47,14 @@ class SharedChromeSourceContractTest < Minitest::Test
     sources = app_sources("*.{erb,rb,js,scss}").reject { _1.include?("/test/") }
     found = sources.select { File.read(_1, encoding: "UTF-8").match?(/\b(?:avatar|toast|cookie-purpose)--\w/) }
     assert_empty found.map { _1.delete_prefix("#{ROOT}/") }
-    avatar = read("__shared/app/views/shared/_avatar.html.erb")
+    avatar = read("shared/app/views/shared/_avatar.html.erb")
     assert_includes avatar, %(t("shared.avatar.alt"))
     refute_includes avatar, %("Avatar")
   end
 
   # shared-019
   def test_live_search_speaks_only_the_words_its_markup_gives_it
-    controller = read("__shared/frontend/live_search_controller.js")
+    controller = read("shared/frontend/live_search_controller.js")
     refute_match(/default: "[A-Z]/, controller, "an English status default is back")
     app_sources("*.erb").each do |path|
       body = File.read(path, encoding: "UTF-8")
@@ -98,16 +98,16 @@ class SharedChromeSourceContractTest < Minitest::Test
 
   # shared-050, shared-051, shared-052
   def test_one_bundled_mono_and_no_unread_faces
-    fonts = read("__shared/app/assets/stylesheets/_fonts.scss")
+    fonts = read("shared/app/assets/stylesheets/_fonts.scss")
     faces = fonts.scan(/font-family: "([^"]+)"/).flatten.uniq
     assert_equal [ "JetBrainsMono Nerd Font" ], faces
-    refute_includes read("__shared/public/fonts/source-fonts.css"), "Source Code Pro"
-    assert_match(/--font-mono: "JetBrainsMono Nerd Font"/, read("__shared/app/assets/stylesheets/_dialect_tokens.scss"))
-    Dir.glob(File.join(ROOT, "__shared/public/fonts/*.woff2")).each do |file|
+    refute_includes read("shared/public/fonts/source-fonts.css"), "Source Code Pro"
+    assert_match(/--font-mono: "JetBrainsMono Nerd Font"/, read("shared/app/assets/stylesheets/_dialect_tokens.scss"))
+    Dir.glob(File.join(ROOT, "shared/public/fonts/*.woff2")).each do |file|
       name = File.basename(file)
       next if name.start_with?("lg.")
 
-      css = fonts + read("__shared/public/fonts/source-fonts.css")
+      css = fonts + read("shared/public/fonts/source-fonts.css")
       assert_includes css, name, "#{name} is shipped and no @font-face loads it"
     end
   end

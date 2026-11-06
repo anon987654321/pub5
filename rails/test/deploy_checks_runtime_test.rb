@@ -129,7 +129,7 @@ class DeployChecksRuntimeTest < Minitest::Test
     assert_empty raw_json_ld,
                  "JSON-LD view tags must go through the shared safe serializer: #{raw_json_ld.join(', ')}"
 
-    helper_path = File.join(REPO_ROOT, "RAILS", "__shared", "app", "helpers", "shared", "seo_kit.rb")
+    helper_path = File.join(REPO_ROOT, "RAILS", "shared", "app", "helpers", "shared", "seo_kit.rb")
     helper = File.read(helper_path)
     assert_match(/def json_ld_script\b/, helper)
     assert_includes helper, "json_escape(data.to_json)"

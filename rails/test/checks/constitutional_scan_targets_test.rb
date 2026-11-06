@@ -43,7 +43,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
   def test_scans_every_target_by_default
     check = build(changed: [], changed_only: false)
 
-    assert_equal %w[brgen amber bsdports __shared OPENBSD MASTER], names(check.targets)
+    assert_equal %w[brgen amber bsdports shared OPENBSD MASTER], names(check.targets)
     assert_empty check.skipped
   end
 
@@ -72,15 +72,15 @@ class ConstitutionalScanTargetsTest < Minitest::Test
     check = build(changed: ["RAILS/brgen/app/models/post.rb", "MASTER/lib/master.rb"])
 
     assert_equal %w[brgen MASTER], names(check.targets)
-    assert_equal %w[amber bsdports __shared OPENBSD], names(check.skipped)
+    assert_equal %w[amber bsdports shared OPENBSD], names(check.skipped)
   end
 
   # Silent truncation reads as "covered everything". Whatever is dropped has to
   # be nameable, which is what #skipped is for.
   def test_skipped_targets_are_recorded_not_discarded
-    check = build(changed: ["RAILS/__shared/app/models/concerns/shared/votable.rb"])
+    check = build(changed: ["RAILS/shared/app/models/concerns/shared/votable.rb"])
 
-    assert_equal %w[__shared], names(check.targets)
+    assert_equal %w[shared], names(check.targets)
     refute_empty check.skipped
     assert_equal 6, check.targets.size + check.skipped.size
   end

@@ -5,7 +5,7 @@ require "rubygems"
 
 class SharedRubyLlmLockTest < Minitest::Test
   REPO_ROOT = File.expand_path("../..", __dir__)
-  SHARED_SPEC = "RAILS/__shared/pub4-shared.gemspec"
+  SHARED_SPEC = "RAILS/shared/pub4-shared.gemspec"
   MASTER_SPEC = "MASTER/master.gemspec"
   LOCKS = {
     "MASTER" => ["MASTER/Gemfile.lock", MASTER_SPEC],

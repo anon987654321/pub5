@@ -195,7 +195,7 @@ html.palette-open {
 
 /* The palette uses the same shared Yep search as every other Rails surface.
    Keep only its block layout here; geometry, focus and results belong to
-   __shared/app/assets/stylesheets/_search_yep.scss. */
+   shared/app/assets/stylesheets/_search_yep.scss. */
 .search_palette_panel .search,
 .search_palette_panel .search.focus,
 .search_palette_panel .search.active,

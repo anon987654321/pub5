@@ -7,7 +7,7 @@ require "minitest/autorun"
 require "active_support"
 require "active_support/core_ext/object/blank"
 require "active_support/core_ext/object/try"
-require_relative "../__shared/app/services/shared/link_converter"
+require_relative "../shared/app/services/shared/link_converter"
 
 # Why this exists: amber showed affiliate links and earned nothing from them, for
 # two independent reasons. The feed client it asked for lived in brgen's process,

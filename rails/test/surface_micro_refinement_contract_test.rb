@@ -4,11 +4,11 @@ require "minitest/autorun"
 
 class SurfaceMicroRefinementContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  SHEET = File.join(ROOT, "__shared/app/assets/stylesheets/_surface_micro_refinements.scss")
+  SHEET = File.join(ROOT, "shared/app/assets/stylesheets/_surface_micro_refinements.scss")
   MATRIX = File.join(ROOT, "docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX.md")
   STACKS = %w[
-    __shared/app/assets/stylesheets/_stack.scss
-    __shared/app/assets/stylesheets/_stack_brgen.scss
+    shared/app/assets/stylesheets/_stack.scss
+    shared/app/assets/stylesheets/_stack_brgen.scss
   ].freeze
 
   def test_experimental_stylesheet_is_absent_from_active_asset_tree

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Amber Premium (__shared/config/plans.yml, amber_premium): the AI styling,
+# Amber Premium (shared/config/plans.yml, amber_premium): the AI styling,
 # declutter guide and packing lists. The wardrobe, outfits and the declutter
 # queue stay free.
 #

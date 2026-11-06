@@ -26,7 +26,7 @@ class AttachmentPreloadTest < Minitest::Test
     @sources ||= Dir[
       File.join(RAILS_ROOT, "{brgen,amber,bsdports}/app/**/*.rb"),
       File.join(RAILS_ROOT, "#{EngineRoots::GLOB}/app/**/*.rb"),
-      File.join(RAILS_ROOT, "__shared/app/**/*.rb")
+      File.join(RAILS_ROOT, "shared/app/**/*.rb")
     ].reject { |path| path.include?("/vendor/") }
   end
 

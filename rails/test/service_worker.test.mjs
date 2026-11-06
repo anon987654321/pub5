@@ -61,7 +61,7 @@ globalThis.clients = {
   openWindow: async (url) => opened.push(url),
 }
 
-const source = new URL("../__shared/pwa/service_worker.js", import.meta.url)
+const source = new URL("../shared/pwa/service_worker.js", import.meta.url)
 await import(pathToFileURL(source.pathname).href)
 
 const extendable = (extra = {}) => {

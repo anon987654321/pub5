@@ -33,12 +33,12 @@ class SharedModelCanonicalizationTest < Minitest::Test
   # Where the model class itself is declared — the `class Reaction` line naturally
   # has no `defined?` and must not be flagged.
   DEFINITION_FILES = %w[
-    __shared/app/models/shared/reaction.rb
-    __shared/app/models/shared/notification.rb
+    shared/app/models/shared/reaction.rb
+    shared/app/models/shared/notification.rb
   ].freeze
 
   def sources
-    Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,__shared}/app/**/*.rb")).sort
+    Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,shared}/app/**/*.rb")).sort
   end
 
   def test_the_canonical_resolver_is_the_only_path_to_the_fallback_model
@@ -74,9 +74,9 @@ class SharedModelCanonicalizationTest < Minitest::Test
     # If a refactor moves the resolver, update this list — its point is that the
     # `defined?(::X)` decision lives in a known, small set of places, not scattered.
     {
-      "__shared/app/services/shared/reaction_toggle.rb" => "defined?(::Reaction)",
-      "__shared/app/controllers/shared/notifications_controller.rb" => "defined?(::Notification)",
-      "__shared/app/models/concerns/shared/notifiable.rb" => "defined?(::Notification)",
+      "shared/app/services/shared/reaction_toggle.rb" => "defined?(::Reaction)",
+      "shared/app/controllers/shared/notifications_controller.rb" => "defined?(::Notification)",
+      "shared/app/models/concerns/shared/notifiable.rb" => "defined?(::Notification)",
     }.each do |rel, needle|
       body = File.read(File.join(ROOT, rel))
       assert_includes body, needle, "#{rel} lost its canonical resolver (#{needle})"

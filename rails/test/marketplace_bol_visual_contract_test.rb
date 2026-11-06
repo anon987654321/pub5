@@ -9,8 +9,8 @@ class MarketplaceBolVisualContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   BRGEN = File.join(ROOT, "brgen")
   NAV = File.join(BRGEN, "app/views/shared/_storefront_nav_bar.html.erb")
-  INDEX = File.join(ROOT, "brgen_marketplace/app/views/marketplace/listings/index.html.erb")
-  SHOW = File.join(ROOT, "brgen_marketplace/app/views/marketplace/listings/show.html.erb")
+  INDEX = File.join(ROOT, "brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb")
+  SHOW = File.join(ROOT, "brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb")
   CSS = File.join(BRGEN, "app/assets/stylesheets/application.scss")
   # One stylesheet per app (operator, 2026-10-28): the former marketplace
   # header and city-campaigns partials folded into the brgen_shared_overrides
@@ -30,7 +30,7 @@ class MarketplaceBolVisualContractTest < Minitest::Test
   def catalog_css
     stylesheet_module(*CATALOG_MODULE)
   end
-  LOGO_CONTROLLER = File.join(ROOT, "brgen_marketplace", "app/javascript/controllers/marketplace_logo_controller.js")
+  LOGO_CONTROLLER = File.join(ROOT, "brgen/engines/marketplace", "app/javascript/controllers/marketplace_logo_controller.js")
 
   def test_marketplace_uses_the_dedicated_bol_header
     nav = File.read(NAV)

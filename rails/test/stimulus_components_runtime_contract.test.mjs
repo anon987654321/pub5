@@ -4,7 +4,7 @@ import { resolve } from "node:path"
 import test from "node:test"
 
 const ROOT = resolve(import.meta.dirname, "..")
-const VENDOR = resolve(ROOT, "__shared/vendor/javascript")
+const VENDOR = resolve(ROOT, "shared/vendor/javascript")
 
 const readVendor = (name) => readFile(resolve(VENDOR, name), "utf8")
 const readSource = (relative) => readFile(resolve(ROOT, relative), "utf8")

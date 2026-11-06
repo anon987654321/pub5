@@ -52,9 +52,9 @@ class OwnershipGuardReadsAColumnTest < Minitest::Test
       "@profile comes from Current.user, already materialised",
     "brgen/app/controllers/posts_controller.rb" =>
       "set_post includes :user",
-    "brgen_radio/playlist/app/controllers/playlist/playlists_controller.rb" =>
+    "brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb" =>
       "set_playlist includes :user",
-    "brgen_radio/tv/app/controllers/tv/videos_controller.rb" =>
+    "brgen/engines/radio/tv/app/controllers/tv/videos_controller.rb" =>
       "set_video includes :user",
   }.freeze
 
@@ -83,7 +83,7 @@ class OwnershipGuardReadsAColumnTest < Minitest::Test
   def controllers
     (Dir.glob(File.join(ROOT, "{amber,brgen,bsdports}/app/controllers/**/*.rb")) +
      Dir.glob(File.join(ROOT, "#{EngineRoots::GLOB}/app/controllers/**/*.rb")) +
-     Dir.glob(File.join(ROOT, "__shared/app/controllers/**/*.rb")))
+     Dir.glob(File.join(ROOT, "shared/app/controllers/**/*.rb")))
       .reject { |path| path.include?("/vendor/") }
       .map { |path| path.sub("#{ROOT}/", "") }
   end

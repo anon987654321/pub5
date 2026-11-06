@@ -5,12 +5,12 @@ require "date"
 require "yaml"
 
 ROOT = File.expand_path("..", __dir__) unless defined?(ROOT)
-require File.join(ROOT, "__shared/app/services/shared/stripe_billing")
-require File.join(ROOT, "__shared/app/models/shared/billing_plan")
-require File.join(ROOT, "__shared/app/models/shared/portfolio_bet")
-require File.join(ROOT, "__shared/app/services/shared/portfolio_report")
+require File.join(ROOT, "shared/app/services/shared/stripe_billing")
+require File.join(ROOT, "shared/app/models/shared/billing_plan")
+require File.join(ROOT, "shared/app/models/shared/portfolio_bet")
+require File.join(ROOT, "shared/app/services/shared/portfolio_report")
 
-# The bets in __shared/config/portfolio.yml: each names real plans of its app
+# The bets in shared/config/portfolio.yml: each names real plans of its app
 # and a metric the report can compute, and the keep-or-kill rule holds.
 # Bare ruby, no Rails: the report runs over an in-memory stand-in for the
 # subscription relation.

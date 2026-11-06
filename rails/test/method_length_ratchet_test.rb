@@ -29,10 +29,10 @@ class MethodLengthRatchetTest < Minitest::Test
 
   # The checks and tools left RAILS for MASTER, where SMALL_FUNCTIONS and its own ratchet govern them.
   BRGEN_TREES = %w[brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio].freeze
-  ROOTS = (%w[__shared amber bsdports test lib] + BRGEN_TREES).freeze
+  ROOTS = (%w[shared amber bsdports test lib] + BRGEN_TREES).freeze
 
   AREAS = {
-    "shared" => %w[__shared],
+    "shared" => %w[shared],
     "brgen" => BRGEN_TREES,
     "amber" => %w[amber],
     "bsdports" => %w[bsdports],

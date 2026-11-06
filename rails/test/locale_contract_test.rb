@@ -46,7 +46,7 @@ class LocaleContractTest < Minitest::Test
   # an en.yml under vendor/bundle in every app. brgen's verticals are engines,
   # and each carries its own config/locales that Rails loads beside the host's.
   def locale_files
-    pattern = "{brgen,amber,bsdports,__shared,#{EngineRoots::GLOB}}/config/locales/**/*.yml"
+    pattern = "{brgen,amber,bsdports,shared,#{EngineRoots::GLOB}}/config/locales/**/*.yml"
     @locale_files ||= Dir.glob(File.join(ROOT, pattern)).sort
   end
 
@@ -67,7 +67,7 @@ class LocaleContractTest < Minitest::Test
   end
 
   def test_the_glob_finds_the_shared_engine_locale_files
-    shared_root = File.join(ROOT, "__shared", "config", "locales")
+    shared_root = File.join(ROOT, "shared", "config", "locales")
     found = locale_files.select { |path| path.start_with?("#{shared_root}/") }
 
     assert_operator found.size, :>=, 6, "shared English/Norwegian locale files must be in the contract"
@@ -286,9 +286,9 @@ class LocaleContractTest < Minitest::Test
   # of their sources can read the others' keys; shared's keys are read by all three apps.
   def sources_for(unit)
     trees = case unit
-            when "shared" then %w[brgen amber bsdports __shared]
-            when %r{\Abrgen(?:[/_]|\z)} then %w[brgen __shared]
-            else [unit, "__shared"]
+            when "shared" then %w[brgen amber bsdports shared]
+            when %r{\Abrgen(?:[/_]|\z)} then %w[brgen shared]
+            else [unit, "shared"]
             end
 
     @sources ||= {}
@@ -315,7 +315,7 @@ class LocaleContractTest < Minitest::Test
   end
 
   def locale_paths(app, locale)
-    pattern = app == "shared" ? "__shared/config/locales/*.#{locale}.yml" : "#{app}/config/locales/*#{locale}.yml"
+    pattern = app == "shared" ? "shared/config/locales/*.#{locale}.yml" : "#{app}/config/locales/*#{locale}.yml"
     Dir.glob(File.join(ROOT, pattern)).sort
   end
 

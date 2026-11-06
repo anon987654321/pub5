@@ -49,12 +49,12 @@ class FormControlNamesTest < Minitest::Test
   #     "takeaway_order_items_#{item.id}", and the interpolation only resolves
   #     at render time.
   KNOWN_UNREADABLE = [
-    "brgen_radio/playlist/app/views/playlist/playlists/show.html.erb",
-    "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb",
+    "brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb",
+    "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb",
   ].freeze
 
   def views
-    own = %w[amber brgen bsdports __shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
+    own = %w[amber brgen bsdports shared].flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) }
     @views ||= (own + engine_views).reject { |f| f.include?("/vendor/") }.sort
   end
 

@@ -12,15 +12,15 @@ class MasterPathIdiomsTest < Minitest::Test
 
   # Dev tooling and CI run from the checkout, where the relative walk is correct.
   EXEMPT = %w[
-    __shared/lib/shared/contracts.rb
-    __shared/lib/shared/mobile_ios_project.rb
-    __shared/config/ci.rb
+    shared/lib/shared/contracts.rb
+    shared/lib/shared/mobile_ios_project.rb
+    shared/config/ci.rb
   ].freeze
 
   RUNTIME_DIRS = %w[app lib config db].freeze
 
   def runtime_files
-    apps = Dir[File.join(ROOT, "*")].select { |d| File.directory?(d) && File.basename(d) =~ /\A(__shared|amber|bsdports|brgen(_\w+)?)\z/ }
+    apps = Dir[File.join(ROOT, "*")].select { |d| File.directory?(d) && File.basename(d) =~ /\A(shared|amber|bsdports|brgen(_\w+)?)\z/ }
     apps.flat_map { |app| RUNTIME_DIRS.flat_map { |dir| Dir[File.join(app, dir, "**", "*.rb")] } }
         .reject { |f| EXEMPT.any? { |e| f.end_with?(e) } }
   end

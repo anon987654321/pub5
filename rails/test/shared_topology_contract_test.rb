@@ -42,20 +42,20 @@ class SharedTopologyContractTest < Minitest::Test
                    retired RAILS/shared topology still referenced:
                      #{hits.join("
   ")}
-                   Move filesystem references to RAILS/__shared; keep retired-path detectors in their explicit allowlist.
+                   Move filesystem references to RAILS/shared; keep retired-path detectors in their explicit allowlist.
                  MESSAGE
   end
 
   def test_the_canonical_shared_tree_exists
-    assert File.directory?(File.join(ROOT, "__shared"))
-    assert File.file?(File.join(ROOT, "__shared", "pub4-shared.gemspec"))
-    assert File.file?(File.join(ROOT, "__shared", "config", "ci.rb"))
+    assert File.directory?(File.join(ROOT, "shared"))
+    assert File.file?(File.join(ROOT, "shared", "pub4-shared.gemspec"))
+    assert File.file?(File.join(ROOT, "shared", "config", "ci.rb"))
   end
   def test_rails_lockfiles_use_the_canonical_shared_engine_path
     %w[amber brgen bsdports].each do |app|
       lockfile = File.read(File.join(ROOT, app, "Gemfile.lock"))
       refute_includes lockfile, "remote: ../shared"
-      assert_includes lockfile, "remote: ../__shared"
+      assert_includes lockfile, "remote: ../shared"
     end
   end
 
@@ -63,8 +63,8 @@ class SharedTopologyContractTest < Minitest::Test
     builder = File.join(REPO, "MASTER", "tools", "rails", "build_workbox.mjs")
     source = File.read(builder, encoding: "UTF-8")
 
-    assert_includes source, 'join(root, "__shared", "pwa", "service_worker.js")'
-    assert_includes source, 'join(root, "__shared", "public")'
+    assert_includes source, 'join(root, "shared", "pwa", "service_worker.js")'
+    assert_includes source, 'join(root, "shared", "public")'
     refute_match(/join\(root,\s*["']shared["']/, source)
   end
 end

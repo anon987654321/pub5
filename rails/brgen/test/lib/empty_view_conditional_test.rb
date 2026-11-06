@@ -10,7 +10,7 @@ class EmptyViewConditionalTest < ActiveSupport::TestCase
 
   test "no shared or app view holds an empty if or unless block" do
     rails = Rails.root.join("..")
-    views = Dir[rails.join("{__shared,brgen,amber,bsdports}/app/views/**/*.erb").to_s]
+    views = Dir[rails.join("{shared,brgen,amber,bsdports}/app/views/**/*.erb").to_s]
     empty = views.select { |path| File.read(path).match?(EMPTY) }
 
     refute_empty views

@@ -5,7 +5,7 @@
 module DesignContractSources
   include StylesheetModules
   ROOT = File.expand_path("../..", __dir__)
-  SHARED = File.join(ROOT, "__shared")
+  SHARED = File.join(ROOT, "shared")
   DIALECT_TOKENS_SCSS = File.join(SHARED, "app", "assets", "stylesheets", "_dialect_tokens.scss")
   TOKENS_YML = File.join(SHARED, "design_tokens.yml")
   TOKENS_CSS = File.join(SHARED, "public", "styles", "tokens.css")
@@ -82,8 +82,8 @@ module DesignContractSources
 
   def tap_floor_stylesheets
     rails = Dir.glob(File.join(ROOT, "{*,#{EngineRoots::GLOB}}/app/assets/stylesheets/**/*.{scss,css}")) +
-            Dir.glob(File.join(ROOT, "__shared/app/assets/stylesheets/**/*.{scss,css}")) +
-            Dir.glob(File.join(ROOT, "__shared/frontend/**/*.css"))
+            Dir.glob(File.join(ROOT, "shared/app/assets/stylesheets/**/*.{scss,css}")) +
+            Dir.glob(File.join(ROOT, "shared/frontend/**/*.css"))
     face = File.expand_path("../MASTER/web/public/face.css", ROOT)
     (rails + [face]).uniq.reject { |path| path.match?(TAP_FLOOR_SKIP) || !File.file?(path) }
   end

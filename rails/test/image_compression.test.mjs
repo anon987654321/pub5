@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { MAX_EDGE, compressible, compressImage, fitWithin, smaller } from "../__shared/frontend/image_compression.js"
+import { MAX_EDGE, compressible, compressImage, fitWithin, smaller } from "../shared/frontend/image_compression.js"
 
 test("a photo is fitted within the long edge and never upscaled", () => {
   assert.deepEqual(fitWithin(4032, 3024), { width: MAX_EDGE, height: 1200 })

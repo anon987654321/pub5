@@ -30,12 +30,12 @@ markedsplass.brgen.no    marketplace.lsangeles.com     markedsplass.oshlo.no
 | What | Engine / code | Bergen | Los Angeles |
 |---|---|---|---|
 | Main feed (posts, communities, events, stories, DMs) | host `app/` | `brgen.no` | `lsangeles.com` |
-| Marketplace + food | `../brgen_marketplace` + nested `../brgen_marketplace/engines/takeaway` | `markedsplass.brgen.no` + `/food` | `marketplace.lsangeles.com` + `/food` |
+| Marketplace + food | `../brgen_marketplace` + nested `../brgen/engines/marketplace/engines/takeaway` | `markedsplass.brgen.no` + `/food` | `marketplace.lsangeles.com` + `/food` |
 | Dating | `../brgen_dating` | `dating.brgen.no` | `dating.lsangeles.com` |
-| Legacy Takeaway host | compatibility mount of Marketplace food at `../brgen_marketplace/engines/takeaway` | `takeaway.brgen.no` | `takeaway.lsangeles.com` |
-| TV | `../brgen_radio/tv` | `tv.brgen.no` | `tv.lsangeles.com` |
+| Legacy Takeaway host | compatibility mount of Marketplace food at `../brgen/engines/marketplace/engines/takeaway` | `takeaway.brgen.no` | `takeaway.lsangeles.com` |
+| TV | `../brgen/engines/radio/tv` | `tv.brgen.no` | `tv.lsangeles.com` |
 | Maps | `../brgen_maps` | `maps.brgen.no` | `maps.lsangeles.com` |
-| Playlist | `../brgen_radio/playlist` | `radio.brgen.no` | `radio.lsangeles.com` |
+| Playlist | `../brgen/engines/radio/playlist` | `radio.brgen.no` | `radio.lsangeles.com` |
 | Messenger | host-drawn routes; Stimulus asset engine in `../brgen_messenger` | `messenger.brgen.no` | `messenger.lsangeles.com` |
 
 Marketplace is the only vertical whose **subdomain word** is localized
@@ -53,7 +53,7 @@ the registry keys off city apexes, not localhost.
 ## Deploy
 
 Full Rails 8 app in this directory. `brgen.sh` copy-tree deploys to
-`/home/brgen/app` on vm23. Port **38182**. Shared engine: `RAILS/__shared`.
+`/home/brgen/app` on vm23. Port **38182**. Shared engine: `RAILS/shared`.
 
 - Golden checks: `OPENBSD/bin/check-rails --profile=contributor`; scan via `cd
   MASTER && bundle exec ruby bin/master` → `/scan RAILS/brgen`.

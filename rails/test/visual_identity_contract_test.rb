@@ -10,7 +10,7 @@ class VisualIdentityContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   FACE_SOURCE = File.join(ROOT, "..", "MASTER", "web", "styles", "face", "10_foundation.css")
   FACE_COMPILED = File.join(ROOT, "..", "MASTER", "web", "public", "face.css")
-  SHARED_CHROME = File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_layout_chrome.scss")
+  SHARED_CHROME = File.join(ROOT, "shared", "app", "assets", "stylesheets", "_layout_chrome.scss")
   BRGEN_POSTS = File.join(ROOT, "brgen", "app", "views", "posts", "index.html.erb")
   AMBER_LAYOUT = File.join(ROOT, "amber", "app", "views", "layouts", "application.html.erb")
   AMBER_SIDEBAR = File.join(ROOT, "amber", "app", "views", "shared", "_sidebar_nav.html.erb")
@@ -20,7 +20,7 @@ class VisualIdentityContractTest < Minitest::Test
   BSDPORTS_LAYOUT = File.join(ROOT, "bsdports", "app", "views", "layouts", "application.html.erb")
   # The face's motion and accessibility rules, split by concern across 40-44.
   FACE_MOTION = Dir[File.join(ROOT, "..", "MASTER", "web", "styles", "face", "4[0-4]_*.css")].sort
-  SHARED_MOTION = File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_interaction_craft.scss")
+  SHARED_MOTION = File.join(ROOT, "shared", "app", "assets", "stylesheets", "_interaction_craft.scss")
   # laws.yml states each Law; law_runtime.yml carries the executable requirements.
   LAW_FILES = %w[laws.yml law_runtime.yml].map { |name| File.expand_path("../../MASTER/data/#{name}", __dir__) }
   LAWS_SOURCE = LAW_FILES.map { |path| File.read(path, encoding: "UTF-8") }.join("\n")

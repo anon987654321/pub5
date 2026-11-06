@@ -28,15 +28,15 @@ class ImportmapIntegrityContractTest < Minitest::Test
   # those hosts, so once CSP is enforced its import fails. web-vitals was the
   # last, on cdn.jsdelivr.net; it is vendored now, like every other module.
   test "no importmap pin points at another host" do
-    source = File.read(File.join(ROOT, "__shared", "config", "importmap_baseline.rb"))
+    source = File.read(File.join(ROOT, "shared", "config", "importmap_baseline.rb"))
     external = source.lines.grep(/^\s*pin\s+["'][^"']+["'].*["'](?:https?:)?\/\//)
 
-    assert_empty external.map(&:strip), "vendor these into __shared/vendor/javascript"
-    assert File.file?(File.join(ROOT, "__shared", "vendor", "javascript", "web-vitals.js"))
+    assert_empty external.map(&:strip), "vendor these into shared/vendor/javascript"
+    assert File.file?(File.join(ROOT, "shared", "vendor", "javascript", "web-vitals.js"))
   end
 
   test "the shared importmap stays the single pin source for framework modules" do
-    source = File.read(File.join(ROOT, "__shared", "config", "importmap_baseline.rb"))
+    source = File.read(File.join(ROOT, "shared", "config", "importmap_baseline.rb"))
 
     %w[
       @hotwired/turbo-rails

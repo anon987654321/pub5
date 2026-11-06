@@ -51,7 +51,7 @@ class PlaylistTimestampedCommentsReflexTest < ActiveSupport::TestCase
   end
 
   test "the player registers with StimulusReflex before it can stimulate" do
-    path = "brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js"
+    path = "brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js"
     source = File.read(File.join(SourceReader::ROOT, path))
     assert_match(/StimulusReflex\.register\(this\)/, source)
   end

@@ -71,9 +71,9 @@ class WalkthroughChecksTest < Minitest::Test
       brgen/app/assets/stylesheets/_brgen_marketplace.scss
       amber/app/assets/stylesheets/application.scss
       bsdports/app/assets/stylesheets/application.scss
-      __shared/app/assets/stylesheets/_search_yep.scss
+      shared/app/assets/stylesheets/_search_yep.scss
     ].to_h { |rel| [rel, FIRST_SCREEN_SHEET] }
-    sheets.merge("__shared/app/assets/stylesheets/_dialect_tokens.scss" => ":root { --tap-min: #{tap_min}; }\n")
+    sheets.merge("shared/app/assets/stylesheets/_dialect_tokens.scss" => ":root { --tap-min: #{tap_min}; }\n")
   end
 
   def check(klass, files)
@@ -167,7 +167,7 @@ class WalkthroughChecksTest < Minitest::Test
 
   def test_first_screen_fails_when_the_token_file_declares_no_tap_minimum
     tree = first_screen_tree
-    tree["__shared/app/assets/stylesheets/_dialect_tokens.scss"] = ":root { --font: 1rem; }\n"
+    tree["shared/app/assets/stylesheets/_dialect_tokens.scss"] = ":root { --font: 1rem; }\n"
 
     assert_names check(Deploy::FirstScreenCheck, tree), /declares no --tap-min/
   end

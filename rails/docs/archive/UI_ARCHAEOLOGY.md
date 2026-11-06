@@ -16,9 +16,9 @@ The old BRGEN marketplace and playlist generators establish a useful split betwe
 
 ## pub3 → pub4
 
-The shared Rails layout in rails/__shared/layouts/application.html.erb is a useful ancestor of pub4's landmark skeleton: skip link, navigation, main content, flash region and footer.
+The shared Rails layout in rails/shared/layouts/application.html.erb is a useful ancestor of pub4's landmark skeleton: skip link, navigation, main content, flash region and footer.
 
-rails/__shared/layouts/visualizer.css is especially valuable: fullscreen canvas, safe-area variables, small fixed chrome, focus styling and explicit shadow removal. Pub4's Radio surface keeps that low-chrome discipline while using the current playlist/tunnel implementation and token system.
+rails/shared/layouts/visualizer.css is especially valuable: fullscreen canvas, safe-area variables, small fixed chrome, focus styling and explicit shadow removal. Pub4's Radio surface keeps that low-chrome discipline while using the current playlist/tunnel implementation and token system.
 
 ## archive inventory
 

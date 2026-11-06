@@ -20,18 +20,18 @@ and each app keeps its own contract in an `AGENTS.md`.
 brgen is not a folder of apps. Every city apex in `Brgen::DomainRegistry` serves
 the feed, and the verticals are engines reached on subdomains of that apex, so
 `dating.brgen.no` and `dating.lsangeles.com` are the same code under two city
-names. The verticals sit beside the host as directories named `brgen_` and the
-vertical: dating, maps, marketplace, messenger and radio, which holds the playlist
-and tv engines. Food ordering is nested inside marketplace. Anything that counts
-brgen's code must read the host and every `brgen_*` directory, or it measures
+names. The verticals are engines under `brgen/engines/`: dating, maps,
+marketplace, messenger and radio, which holds the playlist and tv engines.
+Food ordering is nested inside marketplace. Anything that counts
+brgen's code must read the host and every engine under `brgen/engines/`, or it measures
 about half the app and calls the result health. Read `brgen/AGENTS.md` before you
 touch a vertical, and `brgen/README.md` before you add one.
 
-The shared engine is the `pub4-shared` gem and lives in `__shared`. Each app
+The shared engine is the `pub4-shared` gem and lives in `shared`. Each app
 loads it by local path. On the box, the copy-tree deploy puts each app at
 `/home/<app>/app` and gives it its own copy of the engine at `/home/<app>/shared`,
 a sibling and never a subdirectory. Syncing to the wrong one makes the asset
-precompile a silent no-op. `__shared/README.md` describes what the engine owns.
+precompile a silent no-op. `shared/README.md` describes what the engine owns.
 master does not mount the engine and is not copied: it runs in place under
 `/home/dev/pub4/MASTER/web`, deployed by `OPENBSD/bin/vps_deploy_master.sh`,
 and its own `CLAUDE.md` governs it.
@@ -110,7 +110,7 @@ ruby MASTER/checks/runner.rb --list
 ruby MASTER/checks/runner.rb --all
 MASTER/bin/operator triangle up
 MASTER/bin/operator premerge --list
-cd RAILS/brgen && bin/ci
+cd rails/brgen && bin/ci
 ```
 
 ## Public-page metadata contract

@@ -2,8 +2,8 @@
 
 require "json"
 require "minitest/autorun"
-require_relative "../__shared/lib/shared/mobile_app_registry"
-require_relative "../__shared/lib/shared/mobile_ios_project"
+require_relative "../shared/lib/shared/mobile_app_registry"
+require_relative "../shared/lib/shared/mobile_ios_project"
 
 class MobileAppRegistryTest < Minitest::Test
   REGISTRY = Shared::MobileAppRegistry

@@ -8,7 +8,7 @@ class FormAndOverlaySurfaceContractTest < Minitest::Test
     components/_forms.scss
     components/_overlays.scss
     components/_fields.scss
-  ].map { |path| File.read(File.join(ROOT, "__shared/app/assets/stylesheets", path)) }.join("\n")
+  ].map { |path| File.read(File.join(ROOT, "shared/app/assets/stylesheets", path)) }.join("\n")
   HOOK = File.read(File.expand_path("../../OPENBSD/dev/githooks/pre-push", __dir__))
 
   def test_text_controls_have_a_shared_surface_and_focus_state

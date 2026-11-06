@@ -273,7 +273,7 @@ def test_brgen_old_dialect_outranks_the_social_stack
   end
 
   def test_shared_base_locks_mobile_text_sizing
-    base = File.read(File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_base.scss"))
+    base = File.read(File.join(ROOT, "shared", "app", "assets", "stylesheets", "_base.scss"))
     assert_includes base, "-webkit-text-size-adjust: 100%;"
     assert_includes base, "text-size-adjust: 100%;"
   end

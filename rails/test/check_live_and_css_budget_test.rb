@@ -102,7 +102,7 @@ class CheckLiveAndCssBudgetTest < Minitest::Test
   end
 
   def test_css_constitution_and_brace_checks_include_the_canonical_shared_engine
-    shared = File.join(Deploy::CssConstitutionCheck::RAILS, "__shared", "app/assets/stylesheets/_tokens.scss")
+    shared = File.join(Deploy::CssConstitutionCheck::RAILS, "shared", "app/assets/stylesheets/_tokens.scss")
     assert File.file?(shared), "the fixture is the mounted shared engine's source stylesheet"
 
     constitution = Deploy::CssConstitutionCheck.new.send(:css_files)

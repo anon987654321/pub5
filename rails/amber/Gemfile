@@ -92,7 +92,7 @@ gem "falcon"
 gem "ferrum"
 
 # Engine-ize spike: shared as local path gem (relative from rails/amber)
-gem "pub4-shared", path: "../__shared"
+gem "pub4-shared", path: "../shared"
 
 gem "dartsass-rails", "~> 0.5.1"
 

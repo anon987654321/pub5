@@ -10,7 +10,7 @@ require "json"
 # listen counting.
 class PlaylistPlayerControllerTest < Minitest::Test
   CONTROLLER = File.expand_path(
-    "../brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js", __dir__
+    "../brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js", __dir__
   )
   STIMULUS = %(import { Controller } from "@hotwired/stimulus")
 

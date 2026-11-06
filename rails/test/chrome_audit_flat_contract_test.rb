@@ -13,7 +13,7 @@ class ChromeAuditFlatContractTest < Minitest::Test
 
   def test_shared_form_controls_are_borderless_but_keep_focus
     source = %w[components/_forms.scss components/_overlays.scss components/_fields.scss]
-             .map { |path| read("__shared/app/assets/stylesheets/#{path}") }.join("\n")
+             .map { |path| read("shared/app/assets/stylesheets/#{path}") }.join("\n")
     assert_includes source, "border: 0;"
     assert_includes source, "outline: var(--focus-ring);"
     assert_includes source, "outline: 2px solid var(--danger);"
@@ -21,7 +21,7 @@ class ChromeAuditFlatContractTest < Minitest::Test
   end
 
   def test_auth_and_promo_surfaces_do_not_reintroduce_container_borders
-    auth = read("__shared/app/assets/stylesheets/_auth_form.scss")
+    auth = read("shared/app/assets/stylesheets/_auth_form.scss")
     promo = stylesheet_module("brgen", "vertical_promo")
     assert_includes auth, ".oauth-button {"
     assert_includes auth, "border: 0;"
@@ -40,8 +40,8 @@ class ChromeAuditFlatContractTest < Minitest::Test
 
   def test_brgen_uses_the_shared_canonical_reduced_motion_reset
     source = stylesheet_source("brgen")
-    stack = read("__shared/app/assets/stylesheets/_stack_brgen.scss")
-    animations = read("__shared/app/assets/stylesheets/_animations.scss")
+    stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
+    animations = read("shared/app/assets/stylesheets/_animations.scss")
 
     assert_includes source, '@include meta.load-css("stack_brgen");'
     assert_includes stack, '@forward "animations";'
@@ -53,7 +53,7 @@ class ChromeAuditFlatContractTest < Minitest::Test
   end
 
   def test_consent_banner_is_mobile_first_and_restores_wide_layout
-    source = read("__shared/app/assets/stylesheets/_cookie_banner.scss")
+    source = read("shared/app/assets/stylesheets/_cookie_banner.scss")
     mobile = source.split("@media (min-width: 768px)", 2).first
     wide = source.split("@media (min-width: 768px)", 2).last
 
@@ -69,12 +69,12 @@ class ChromeAuditFlatContractTest < Minitest::Test
   end
 
   def test_dialog_sheet_consent_and_affiliate_chrome_is_flat
-    modal = read("__shared/app/assets/stylesheets/_modal.scss")
-    cookie = read("__shared/app/assets/stylesheets/_cookie_banner.scss")
-    affiliate = read("__shared/app/assets/stylesheets/_affiliate_feed_unit.scss")
+    modal = read("shared/app/assets/stylesheets/_modal.scss")
+    cookie = read("shared/app/assets/stylesheets/_cookie_banner.scss")
+    affiliate = read("shared/app/assets/stylesheets/_affiliate_feed_unit.scss")
     commerce = stylesheet_module("brgen", "brgen_core_shell")
-    offline = read("__shared/app/assets/stylesheets/_offline_page.scss")
-    widgets = read("__shared/app/assets/stylesheets/_shell_widgets.scss")
+    offline = read("shared/app/assets/stylesheets/_offline_page.scss")
+    widgets = read("shared/app/assets/stylesheets/_shell_widgets.scss")
 
     [modal, cookie, affiliate, commerce, offline, widgets].each do |source|
       refute_match(/box-shadow:(?!\s*none\b)/, source)

@@ -10,7 +10,7 @@ class ServiceWorkerPageCacheTest < Minitest::Test
   APPS = %w[amber brgen bsdports].freeze
 
   def test_source_worker_falls_back_after_four_seconds_and_caches_only_200
-    worker = File.read(File.join(RAILS, "__shared/pwa/service_worker.js"))
+    worker = File.read(File.join(RAILS, "shared/pwa/service_worker.js"))
 
     assert_includes worker, "networkTimeoutSeconds: 4,"
     refute_match(/statuses: \[[^\]]*\b0\b/, worker)
@@ -31,7 +31,7 @@ class ServiceWorkerPageCacheTest < Minitest::Test
   # comments and messages wait offline to be replayed. Checked in the source
   # and in every built copy, which is what a phone actually runs.
   def test_private_pages_stay_out_of_every_cache_and_only_new_content_replays
-    source = File.read(File.join(RAILS, "__shared/pwa/service_worker.js"))
+    source = File.read(File.join(RAILS, "shared/pwa/service_worker.js"))
     %w[/conversations /messages /notifications /session /checkout].each do |path|
       assert_includes source, %("#{path}"), "#{path} must be a private prefix"
     end

@@ -118,7 +118,7 @@ class KeyboardReachableControlsTest < Minitest::Test
   Surface = Struct.new(:path, :tag, :attrs, :controller, :match)
 
   def views
-    @views ||= (Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,__shared}/**/app/views/**/*.erb")) +
+    @views ||= (Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,shared}/**/app/views/**/*.erb")) +
                 EngineRoots.glob(ROOT, "brgen", "app/views/**/*.erb")).uniq
   end
 
@@ -159,7 +159,7 @@ class KeyboardReachableControlsTest < Minitest::Test
   end
 
   def controller_sources(root: ROOT)
-    paths = Dir.glob(File.join(root, "{brgen,amber,bsdports,__shared}/**/*_controller.js")) +
+    paths = Dir.glob(File.join(root, "{brgen,amber,bsdports,shared}/**/*_controller.js")) +
             EngineRoots.glob(root, "brgen", "**/*_controller.js")
     paths.uniq.reject { |path| path.match?(%r{/(vendor|node_modules|public|builds)/}) }
          .map { |path| [File.basename(path, "_controller.js").tr("_", "-"), File.read(path)] }
@@ -233,7 +233,7 @@ class KeyboardReachableControlsTest < Minitest::Test
   end
 
   def restricting_tokens
-    @restricting_tokens ||= Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,__shared}/**/app/assets/stylesheets/**/*.scss"))
+    @restricting_tokens ||= Dir.glob(File.join(ROOT, "{brgen,amber,bsdports,shared}/**/app/assets/stylesheets/**/*.scss"))
                                .flat_map { |path| touch_action_selectors(File.read(path)) }
                                .flat_map { |selector| selector.split(/[\s>+~]+/).last.to_s.scan(/[.#][\w-]+/) }
                                .uniq
@@ -279,7 +279,7 @@ class KeyboardReachableControlsTest < Minitest::Test
 
   def test_controller_inventory_keeps_duplicate_basenames_from_distinct_trees
     Dir.mktmpdir("controller-census") do |root|
-      %w[brgen __shared].each do |tree|
+      %w[brgen shared].each do |tree|
         path = File.join(root, tree, "app/javascript/controllers", "drag_controller.js")
         FileUtils.mkdir_p(File.dirname(path))
         source = tree == "brgen" ?
@@ -369,8 +369,8 @@ class KeyboardReachableControlsTest < Minitest::Test
   # has to be one the tag matcher read. A helper hash — data: { action: … } — is
   # the shape it cannot see, and that file would pass here by being invisible.
   def test_the_gesture_census_includes_extracted_verticals
-    assert views.any? { |path| path.include?("/brgen_dating/") }
-    assert views.any? { |path| path.include?("/brgen_radio/playlist/") }
+    assert views.any? { |path| path.include?("/brgen/engines/dating/") }
+    assert views.any? { |path| path.include?("/brgen/engines/radio/playlist/") }
     assert controller_sources.any? { |name, _| name == "dating-deck" || name == "playlist-player" }
   end
 

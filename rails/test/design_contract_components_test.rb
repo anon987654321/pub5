@@ -94,7 +94,7 @@ def test_brgen_marketplace_header_uses_mobile_first_breakpoints
 end
 
   def test_promotional_art_is_mobile_first_and_restores_desktop_geometry
-    source = File.read(File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_promotional_art.scss"))
+    source = File.read(File.join(ROOT, "shared", "app", "assets", "stylesheets", "_promotional_art.scss"))
     mobile, wide = source.split("@media (min-width: 768px)", 2)
 
     refute_match(/@media\s*\(\s*max-width\b/, source)
@@ -109,7 +109,7 @@ end
   end
 
   def test_surface_chrome_endgame_is_mobile_first_and_restores_wide_values
-    source = File.read(File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_surface_chrome_endgame.scss"))
+    source = File.read(File.join(ROOT, "shared", "app", "assets", "stylesheets", "_surface_chrome_endgame.scss"))
     refute_match(/@media\s*\(\s*max-width\b/, source,
                  "the shared endgame must use compact defaults and min-width enhancements")
 
@@ -138,7 +138,7 @@ end
   end
 
   def test_shared_affiliate_feed_is_mobile_first
-    source = File.read(File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_affiliate_feed_unit.scss"))
+    source = File.read(File.join(ROOT, "shared", "app", "assets", "stylesheets", "_affiliate_feed_unit.scss"))
     mobile = source.split("@media (min-width: 480px)", 2).first
 
     refute_match(/@media\s*\(\s*max-width\b/, source)
@@ -151,7 +151,7 @@ end
   end
 
   def test_post_voting_compact_gap_is_mobile_first
-    source = File.read(File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_post_voting.scss"))
+    source = File.read(File.join(ROOT, "shared", "app", "assets", "stylesheets", "_post_voting.scss"))
 
     # The base rule sits at column 0 (outside any query); the wider gap is the
     # 480px override. Splitting at the file's first 480px query missed the rule.

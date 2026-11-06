@@ -19,7 +19,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
   end
   def test_amber_flash_uses_shared_semantic_signal
     flash = read("amber/app/views/shared/_flash.html.erb")
-    signal = read("__shared/app/views/shared/_system_signal.html.erb")
+    signal = read("shared/app/views/shared/_system_signal.html.erb")
 
     assert_includes flash, 'render "shared/system_signal"'
     assert_includes flash, 'state:, classes: ["flash", "flash--#{type}"], content:'
@@ -29,7 +29,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
 
   def test_amber_post_like_uses_shared_feed_action_anatomy
     button = read("amber/app/views/posts/_like_button.html.erb")
-    icons = read("__shared/app/views/shared/_feed_icon.html.erb")
+    icons = read("shared/app/views/shared/_feed_icon.html.erb")
 
     assert_includes button, 'class: "feed-action"'
     assert_includes button, 'aria: { label: t("post.like_count", count: post.likes_count),'
@@ -48,7 +48,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
 
     # Brgen and Amber share the same feed-card anatomy and vote rail. Product
     # identity belongs to the surrounding shell, not a second post treatment.
-    card = read("__shared/app/views/shared/_post_card.html.erb")
+    card = read("shared/app/views/shared/_post_card.html.erb")
     assert_includes feed, 'render "shared/post_card"'
     assert_includes brgen_feed, 'render "shared/post_card"'
     refute_includes feed, 'variant:'
@@ -59,7 +59,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
     refute_includes card, "avatar_url"
     refute_includes brgen_feed, "avatar_url:"
     refute_includes brgen_feed, 'class: "feed-card"'
-    shared_post_css = read("__shared/app/assets/stylesheets/_post_voting.scss")
+    shared_post_css = read("shared/app/assets/stylesheets/_post_voting.scss")
     assert_includes shared_post_css, ".feed-card.post-reading-card {\n  margin: 0;\n  padding: var(--space-4) var(--space-3);"
     assert_match(/@media \(min-width: 480px\) \{\s*\.feed-card\.post-reading-card \{\s*padding: var\(--space-5\) var\(--space-4\);/m, shared_post_css)
     assert_includes shared_post_css, ".feed-card.post-reading-card .feed-card-actions {"
@@ -81,7 +81,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
     assert_includes feed, 'post_url: post_path(post)'
     # The read-more link lives in the shared card the feed renders.
     assert_includes feed, 'render "shared/post_card"'
-    assert_includes read("__shared/app/views/shared/_post_card.html.erb"), "link_to more_label, post_url"
+    assert_includes read("shared/app/views/shared/_post_card.html.erb"), "link_to more_label, post_url"
     assert_includes show, 'render "shared/post_vote_rail"'
     assert_includes show, 'class="post-show-actions feed-card-actions"'
     assert_includes css, ".post-show-comments"
@@ -176,7 +176,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
     # search_hotkey_controller.js — which bound / and Cmd-K on the ports index and
     # nowhere else — into the shared feed-hotkey controller registered on every
     # layout. The claim being pinned is "/ focuses search", not which file holds it.
-    hotkey = read("__shared/frontend/feed_hotkey_controller.js")
+    hotkey = read("shared/frontend/feed_hotkey_controller.js")
     layout = read("bsdports/app/views/layouts/application.html.erb")
 
     # Through the locale, not the literal. bsdports is fully translated now, so

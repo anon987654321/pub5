@@ -39,7 +39,7 @@ gives the reasons.
 
 A deploy runs through `OPENBSD/bin/vps-deploy bsdports`, which runs `bsdports.sh` on vm23 and
 copies the tree to `/home/bsdports/app`. The shared engine sits beside it at
-`/home/bsdports/__shared`. Every deploy sheds amber and bsdports together, and relayd keeps
+`/home/bsdports/shared`. Every deploy sheds amber and bsdports together, and relayd keeps
 answering TLS while their ports are closed, so a site that looks alive from outside can be
 down underneath. After any deploy, prove that `127.0.0.1:47312` answers `/up` and `/health`.
 Both matter, because `/up` says the process lives and `/health` says Solid Cache, Solid Queue

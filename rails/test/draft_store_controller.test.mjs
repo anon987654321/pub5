@@ -10,7 +10,7 @@ import { pathToFileURL } from "node:url"
 // its own CSRF token; carrying the saved one back would replace it with a
 // token from another page, so the snapshot leaves it out.
 
-const controllerPath = "../__shared/frontend/draft_store_controller.js"
+const controllerPath = "../shared/frontend/draft_store_controller.js"
 const source = await readFile(new URL(controllerPath, import.meta.url), "utf8")
 const loadable = source
   .replace(/^import \{ Controller \}.*$/m, "class Controller {}")

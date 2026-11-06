@@ -45,7 +45,7 @@ class TurboBroadcastContractTest < Minitest::Test
   # routinely span several lines, and looking at one line at a time reports every
   # multi-line call as implicit.
   def implicit_broadcasts(app)
-    roots = { File.join(ROOT, app, "app/models") => nil, File.join(ROOT, "__shared/app/models") => "shared engine" }
+    roots = { File.join(ROOT, app, "app/models") => nil, File.join(ROOT, "shared/app/models") => "shared engine" }
     # Verticals extracted to mountable engines (brgen_*/app/models) carry their
     # own models now — scan them too, or a broadcast that moves with tv/playlist
     # would slip the net. See brgen/README.md.
@@ -72,7 +72,7 @@ class TurboBroadcastContractTest < Minitest::Test
     APPS.each do |app|
       implicit_broadcasts(app).each do |row|
         wanted = partial_for(row[:file])
-        found = [File.join(ROOT, app, "app/views", wanted), File.join(ROOT, "__shared/app/views", wanted)]
+        found = [File.join(ROOT, app, "app/views", wanted), File.join(ROOT, "shared/app/views", wanted)]
         found += EngineRoots.glob(ROOT, app, File.join("app/views", wanted))
         next if found.any? { |candidate| File.file?(candidate) }
 
@@ -89,7 +89,7 @@ class TurboBroadcastContractTest < Minitest::Test
   # intent (explicit-or-nothing) is legible at the source, not just the view side.
   def test_the_shared_social_models_do_not_broadcast_implicitly
     %w[reaction notification review_case].each do |name|
-      body = File.read(File.join(ROOT, "__shared/app/models/shared/#{name}.rb"))
+      body = File.read(File.join(ROOT, "shared/app/models/shared/#{name}.rb"))
       broadcasts = body.lines.reject { |l| l.strip.start_with?("#") }.select { |l| l.match?(BROADCAST) }
 
       assert_empty broadcasts,
@@ -103,8 +103,8 @@ class TurboBroadcastContractTest < Minitest::Test
   # the page actually renders.
   def test_the_tv_broadcasts_name_both_partial_and_target
     {
-      "brgen_radio/tv/app/models/tv/stream_chat.rb" => %w[tv/stream_chats/stream_chat tv-live-stream-],
-      "brgen_radio/tv/app/models/tv/video_note.rb" => %w[tv/video_notes/video_note video_notes_],
+      "brgen/engines/radio/tv/app/models/tv/stream_chat.rb" => %w[tv/stream_chats/stream_chat tv-live-stream-],
+      "brgen/engines/radio/tv/app/models/tv/video_note.rb" => %w[tv/video_notes/video_note video_notes_],
     }.each do |file, (partial, target)|
       body = File.read(File.join(ROOT, file))
 
@@ -115,8 +115,8 @@ class TurboBroadcastContractTest < Minitest::Test
 
   def test_the_wired_partials_exist
     %w[
-      brgen_radio/tv/app/views/tv/stream_chats/_stream_chat.html.erb
-      brgen_radio/tv/app/views/tv/video_notes/_video_note.html.erb
+      brgen/engines/radio/tv/app/views/tv/stream_chats/_stream_chat.html.erb
+      brgen/engines/radio/tv/app/views/tv/video_notes/_video_note.html.erb
     ].each { |path| assert File.file?(File.join(ROOT, path)), "missing #{path}" }
   end
 
@@ -124,8 +124,8 @@ class TurboBroadcastContractTest < Minitest::Test
   # this pass wired end to end.
   def test_the_tv_streams_have_subscribers
     {
-      "brgen_radio/tv/app/views/tv/live_streams/show.html.erb" => "tv:live_stream:",
-      "brgen_radio/tv/app/views/tv/videos/show.html.erb" => "tv:video:",
+      "brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb" => "tv:live_stream:",
+      "brgen/engines/radio/tv/app/views/tv/videos/show.html.erb" => "tv:video:",
     }.each do |view, stream|
       body = File.read(File.join(ROOT, view))
 
@@ -138,7 +138,7 @@ class TurboBroadcastContractTest < Minitest::Test
   def test_the_removed_streams_still_have_no_subscribers
     views = APPS.flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) } +
             APPS.flat_map { |app| EngineRoots.glob(ROOT, app, "app/views/**/*.erb") } +
-            Dir.glob(File.join(ROOT, "__shared/app/views/**/*.erb"))
+            Dir.glob(File.join(ROOT, "shared/app/views/**/*.erb"))
     subscriptions = views.map { |path| File.read(path) }.join("\n")
 
     [
@@ -160,7 +160,7 @@ class TurboBroadcastContractTest < Minitest::Test
     hits = []
 
     roots = (APPS - %w[brgen]).map { |app| File.join(ROOT, app, "app/models") } +
-            [ File.join(ROOT, "__shared/app/models"), File.join(ROOT, "__shared/app/reflexes") ]
+            [ File.join(ROOT, "shared/app/models"), File.join(ROOT, "shared/app/reflexes") ]
 
     roots.each do |glob|
       Dir.glob(File.join(glob, "**", "*.rb")).each do |path|
@@ -220,13 +220,13 @@ class TurboBroadcastContractTest < Minitest::Test
   def ruby_sources
     @ruby_sources ||= APPS.flat_map { |app| Dir.glob(File.join(ROOT, app, "app/**/*.rb")) } +
                       APPS.flat_map { |app| EngineRoots.glob(ROOT, app, "app/**/*.rb") } +
-                      Dir.glob(File.join(ROOT, "__shared/app/**/*.rb"))
+                      Dir.glob(File.join(ROOT, "shared/app/**/*.rb"))
   end
 
   def view_sources
     @view_sources ||= APPS.flat_map { |app| Dir.glob(File.join(ROOT, app, "app/views/**/*.erb")) } +
                       APPS.flat_map { |app| EngineRoots.glob(ROOT, app, "app/views/**/*.erb") } +
-                      Dir.glob(File.join(ROOT, "__shared/app/views/**/*.erb"))
+                      Dir.glob(File.join(ROOT, "shared/app/views/**/*.erb"))
   end
 
   def named_broadcasts

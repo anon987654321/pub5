@@ -9,7 +9,7 @@ require "json"
 # and does it. Run in node against stand-in links; Stimulus is a bare base
 # class and pub4/onboarding never lets the coach prompt.
 class ScrollChromeCurrentTabTest < Minitest::Test
-  CONTROLLER = File.expand_path("../__shared/frontend/scroll_chrome_controller.js", __dir__)
+  CONTROLLER = File.expand_path("../shared/frontend/scroll_chrome_controller.js", __dir__)
   STIMULUS = %(import { Controller } from "@hotwired/stimulus")
   ONBOARDING = %(import { mayPrompt, YIELD_EVENT } from "pub4/onboarding")
 

@@ -86,7 +86,7 @@ globalThis.fetch = async (url, options = {}) => {
   return answer(url, options)
 }
 
-const frontend = (name) => pathToFileURL(new URL(`../__shared/frontend/${name}`, import.meta.url).pathname).href
+const frontend = (name) => pathToFileURL(new URL(`../shared/frontend/${name}`, import.meta.url).pathname).href
 registerHooks({
   resolve(specifier, context, next) {
     if (specifier === "pub4/pwa_runtime") return { url: frontend("pwa_runtime.js"), shortCircuit: true }

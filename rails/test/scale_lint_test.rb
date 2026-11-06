@@ -20,7 +20,7 @@ require_relative "../../MASTER/tools/master_design"
 # nothing here moves a pixel.
 class ScaleLintTest < Minitest::Test
   LINT = Operator::ScaleLint
-  TOKENS_SCSS = File.expand_path("../__shared/app/assets/stylesheets/_tokens.scss", __dir__)
+  TOKENS_SCSS = File.expand_path("../shared/app/assets/stylesheets/_tokens.scss", __dir__)
 
   def counts = @counts ||= LINT.counts
 
@@ -158,14 +158,14 @@ class ScaleLintTest < Minitest::Test
       assert sheets.any? { |p| p.end_with?("/#{app}/app/assets/stylesheets/application.scss") },
              "#{app}'s application.scss is not being read"
     end
-    assert sheets.any? { |p| p.include?("/__shared/") }, "__shared's stylesheets are not being read"
+    assert sheets.any? { |p| p.include?("/shared/") }, "shared's stylesheets are not being read"
     assert_empty sheets.select { |p| LINT.rel(p).match?(LINT::SKIP) }
   end
 
   def test_generated_and_vendored_output_is_not_source
     %w[
       /RAILS/brgen/app/assets/builds/application.css
-      /RAILS/__shared/node_modules/x/y.css
+      /RAILS/shared/node_modules/x/y.css
       /RAILS/brgen/public/assets/application-abc123.css
       /RAILS/amber/vendor/z.scss
     ].each { |path| assert_match LINT::SKIP, path }

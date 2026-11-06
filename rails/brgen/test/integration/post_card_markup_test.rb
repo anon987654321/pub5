@@ -86,7 +86,7 @@ class PostCardMarkupTest < ActionDispatch::IntegrationTest
   # set min-width auto there now restore the tap floor for .feed-action.
   test "feed actions keep the tap floor once the row packs left" do
     brgen = File.read(Rails.root.join("app/assets/stylesheets/_brgen_feed_posts.scss"))
-    shared = File.read(Rails.root.join("../__shared/app/assets/stylesheets/_post_voting.scss"))
+    shared = File.read(Rails.root.join("../shared/app/assets/stylesheets/_post_voting.scss"))
 
     assert_match(/\.feed-card-actions > \.feed-action \{\s*min-width: var\(--tap-min\);/, brgen)
     floor = /\.feed-card\.post-reading-card \.feed-card-actions > \.feed-action \{\s*min-inline-size: var\(--tap-min\);/

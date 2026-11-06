@@ -40,16 +40,16 @@ Rails.application.routes.draw do
     get  "magic", to: "sessions#magic", as: :magic
     post "magic", to: "sessions#request_magic", as: :request_magic
   end
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/legal.rb", __dir__)))
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/auth.rb", __dir__)))
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/billing.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/legal.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/auth.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/billing.rb", __dir__)))
   # Stripe sends subscription events here (Shared::StripeSignature, Shared::StripeBilling).
   post "webhooks/stripe" => "webhooks/stripe#create", as: :webhooks_stripe
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/email_verification.rb", __dir__)))
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/verification.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/email_verification.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/verification.rb", __dir__)))
   post "fingerprint" => "fingerprints#create"
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/social.rb", __dir__)))
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/fleet.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/social.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/fleet.rb", __dir__)))
   resources :passwords, param: :token, only: %i[new create edit update]
 
   resources :items do

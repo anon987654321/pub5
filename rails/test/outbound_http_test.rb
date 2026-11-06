@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../__shared/app/services/shared/outbound_http"
+require_relative "../shared/app/services/shared/outbound_http"
 require_relative "../brgen/app/lib/fediverse/client"
 
 class FediverseSsrfTest < Minitest::Test
@@ -234,7 +234,7 @@ class OutboundHttpTimeoutTest < Minitest::Test
     files = self.class.source_files
     assert_operator files.size, :>, 0, "the outbound HTTP inventory matched no Ruby files"
     required = %w[
-      __shared/app/services/shared/outbound_http.rb
+      shared/app/services/shared/outbound_http.rb
       bsdports/app/services/ports/openbsd/package_index_fetcher.rb
       bsdports/app/services/ports/openbsd/ports_tarball.rb
     ].map { |path| File.join(RAILS, path) }

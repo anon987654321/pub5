@@ -47,9 +47,9 @@ class SitemapCityScopeContractTest < Minitest::Test
   # unscoped, which is how every city's sitemap came to list every city's deals.
   def test_parent_tenanted_models_declare_how_they_reach_a_city
     {
-      "brgen_radio/tv/app/models/concerns/tv/channel_tenanted.rb" => "tenanted_through :channel",
-      "brgen_marketplace/app/models/marketplace/deal.rb" => "tenanted_through :listing",
-      "brgen_radio/playlist/app/models/playlist/set.rb" => "scope :in_current_city",
+      "brgen/engines/radio/tv/app/models/concerns/tv/channel_tenanted.rb" => "tenanted_through :channel",
+      "brgen/engines/marketplace/app/models/marketplace/deal.rb" => "tenanted_through :listing",
+      "brgen/engines/radio/playlist/app/models/playlist/set.rb" => "scope :in_current_city",
     }.each do |path, declaration|
       assert_includes File.read(File.join(ROOT, path)), declaration,
                       "#{path} lost its city derivation"
@@ -62,9 +62,9 @@ class SitemapCityScopeContractTest < Minitest::Test
   # the same threshold, so the sitemap and the page cannot disagree.
   def test_category_pages_are_offered_per_city_and_only_when_not_thin
     assert_includes source, "Marketplace::Category.indexable_in_current_city"
-    category = File.read(File.join(ROOT, "brgen_marketplace/app/models/marketplace/category.rb"))
+    category = File.read(File.join(ROOT, "brgen/engines/marketplace/app/models/marketplace/category.rb"))
     assert_includes category, "Marketplace::Listing.publicly_visible.in_current_city"
-    page = File.read(File.join(ROOT, "brgen_marketplace/app/views/marketplace/categories/show.html.erb"))
+    page = File.read(File.join(ROOT, "brgen/engines/marketplace/app/views/marketplace/categories/show.html.erb"))
     assert_includes page, "@category.indexable_with?(@pagy.count)"
     assert_includes page, 't("marketplace.category_description"'
   end

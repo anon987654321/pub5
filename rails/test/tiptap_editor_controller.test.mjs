@@ -33,7 +33,7 @@ globalThis.__tiptap = {
 }
 globalThis.window = {}
 
-const controllerPath = "../__shared/frontend/tiptap_editor_controller.js"
+const controllerPath = "../shared/frontend/tiptap_editor_controller.js"
 const source = await readFile(new URL(controllerPath, import.meta.url), "utf8")
 const loadable = source
   .replace(/^import .*$/gm, "class Controller {}")

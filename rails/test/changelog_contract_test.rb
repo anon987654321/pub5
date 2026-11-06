@@ -6,7 +6,7 @@ class ChangelogContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def test_changelog_is_single_source_and_publicly_routed
-    source = File.read(File.join(ROOT, "__shared/config/changelog.yml"))
+    source = File.read(File.join(ROOT, "shared/config/changelog.yml"))
     assert_includes source, 'title: "Convergence"'
 
     %w[brgen amber bsdports].each do |app|
@@ -22,15 +22,15 @@ class ChangelogContractTest < Minitest::Test
   def test_the_changelog_loads_with_the_classes_its_controller_permits
     require "yaml"
     require "date"
-    controller = File.read(File.join(ROOT, "__shared/app/controllers/shared/changelog_controller.rb"))
+    controller = File.read(File.join(ROOT, "shared/app/controllers/shared/changelog_controller.rb"))
     assert_includes controller, "permitted_classes: [Date]"
 
-    data = YAML.safe_load_file(File.join(ROOT, "__shared/config/changelog.yml"), permitted_classes: [Date], aliases: false)
+    data = YAML.safe_load_file(File.join(ROOT, "shared/config/changelog.yml"), permitted_classes: [Date], aliases: false)
     assert_kind_of Date, data.fetch("entries").first.fetch("date")
   end
 
   def test_footer_publishes_build_identity
-    footer = File.read(File.join(ROOT, "__shared/app/views/shared/_site_legal_footer.html.erb"))
+    footer = File.read(File.join(ROOT, "shared/app/views/shared/_site_legal_footer.html.erb"))
     assert_includes footer, "app_version"
     assert_includes footer, "app_revision"
     assert_includes footer, 'legal.changelog'

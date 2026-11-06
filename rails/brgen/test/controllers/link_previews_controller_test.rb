@@ -6,7 +6,7 @@ require "minitest/mock"
 # A link typed into the composer previews as the player it will become; anything
 # no provider recognises gets nothing back, and the pasted URL is never fetched.
 class LinkPreviewsControllerTest < ActionDispatch::IntegrationTest
-  YOUTUBE = JSON.parse(File.read(File.expand_path("../../../__shared/test/fixtures/link_embed/youtube.json", __dir__)))
+  YOUTUBE = JSON.parse(File.read(File.expand_path("../../../shared/test/fixtures/link_embed/youtube.json", __dir__)))
 
   setup do
     host! "brgen.no"

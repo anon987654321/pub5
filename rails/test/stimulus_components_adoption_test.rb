@@ -18,7 +18,7 @@ class StimulusComponentsAdoptionTest < Minitest::Test
   end
 
   def test_full_catalogue_is_pinned_and_vendored
-    baseline = File.read(File.join(ROOT, "__shared/config/importmap_baseline.rb"))
+    baseline = File.read(File.join(ROOT, "shared/config/importmap_baseline.rb"))
     pinned = check.pinned_components(baseline)
 
     check::COMPONENT_PACKAGES.each do |name, package|
@@ -26,14 +26,14 @@ class StimulusComponentsAdoptionTest < Minitest::Test
       assert pinned_ok, "missing importmap pin for #{package}"
 
       filename = check::VENDOR_FILES.fetch(name, "@stimulus-components--#{name}.js")
-      path = File.join(ROOT, "__shared/vendor/javascript", filename)
+      path = File.join(ROOT, "shared/vendor/javascript", filename)
       assert File.file?(path), "missing #{path}"
       assert_operator File.size(path), :>, 100
     end
   end
 
   def test_full_catalogue_is_registered_from_shared_boot
-    boot = File.read(File.join(ROOT, "__shared/frontend/stimulus_boot.js"))
+    boot = File.read(File.join(ROOT, "shared/frontend/stimulus_boot.js"))
     check::REQUIRED_CONTROLLERS.each do |name|
       assert_match(/\[\s*"#{Regexp.escape(name)}",/, boot, "shared boot does not register #{name}")
     end

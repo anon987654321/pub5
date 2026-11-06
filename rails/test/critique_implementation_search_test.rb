@@ -8,9 +8,9 @@ class CritiqueImplementationSearchTest < Minitest::Test
   include CritiqueSources
 
   def test_shared_yep_search_and_affiliate_pens_are_restored_from_universal_paths
-    search = read("__shared/app/assets/stylesheets/_search_yep.scss")
-    affiliate = read("__shared/app/views/shared/_affiliate_feed_unit.html.erb")
-    affiliate_css = read("__shared/app/assets/stylesheets/_affiliate_feed_unit.scss")
+    search = read("shared/app/assets/stylesheets/_search_yep.scss")
+    affiliate = read("shared/app/views/shared/_affiliate_feed_unit.html.erb")
+    affiliate_css = read("shared/app/assets/stylesheets/_affiliate_feed_unit.scss")
     brgen_css = brgen_css_source
 
     assert_includes search, "width: 480px;"
@@ -30,8 +30,8 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_yep_search_is_the_shared_rails_default
-    stack = read("__shared/app/assets/stylesheets/_stack.scss")
-    brgen_stack = read("__shared/app/assets/stylesheets/_stack_brgen.scss")
+    stack = read("shared/app/assets/stylesheets/_stack.scss")
+    brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
     %w[amber bsdports].each do |app|
       application = read("#{app}/app/assets/stylesheets/application.scss")
       assert_includes application, '@include meta.load-css("stack")'
@@ -42,9 +42,9 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_live_search_expansion_and_keyboard_focus_follow_real_state
-    search_form = read("__shared/app/views/shared/_live_search_form.html.erb")
-    controller = read("__shared/frontend/live_search_controller.js")
-    search_css = read("__shared/app/assets/stylesheets/_search_yep.scss")
+    search_form = read("shared/app/views/shared/_live_search_form.html.erb")
+    controller = read("shared/frontend/live_search_controller.js")
+    search_css = read("shared/app/assets/stylesheets/_search_yep.scss")
 
     assert_includes search_form, 'class="search<%= " active" if query.to_s.strip.present? %>"'
     assert_includes search_form, "expanded: query.to_s.strip.present?"
@@ -61,7 +61,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
 
   def test_brgen_search_palette_semantics_track_open_state
     palette = read("brgen/app/views/shared/_search_palette.html.erb")
-    controller = read("__shared/frontend/search_palette_controller.js")
+    controller = read("shared/frontend/search_palette_controller.js")
 
     assert_includes palette, 'data-search-palette-target="trigger"'
     assert_includes palette, 'aria-haspopup="dialog"'
@@ -83,8 +83,8 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_yep_search_is_the_shared_rails_search_default
-    shared_stack = read("__shared/app/assets/stylesheets/_stack.scss")
-    brgen_stack = read("__shared/app/assets/stylesheets/_stack_brgen.scss")
+    shared_stack = read("shared/app/assets/stylesheets/_stack.scss")
+    brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
     amber = amber_css_source
     bsdports = read("bsdports/app/assets/stylesheets/application.scss")
     brgen = stylesheet_source("brgen")
@@ -97,8 +97,8 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_yep_search_is_the_shared_rails_default
-    stack = read("__shared/app/assets/stylesheets/_stack.scss")
-    brgen_stack = read("__shared/app/assets/stylesheets/_stack_brgen.scss")
+    stack = read("shared/app/assets/stylesheets/_stack.scss")
+    brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
     %w[amber bsdports].each do |app|
       application = read("#{app}/app/assets/stylesheets/application.scss")
       assert_includes application, '@include meta.load-css("stack")'
@@ -109,9 +109,9 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_live_search_expansion_and_keyboard_focus_follow_real_state
-    search_form = read("__shared/app/views/shared/_live_search_form.html.erb")
-    controller = read("__shared/frontend/live_search_controller.js")
-    search_css = read("__shared/app/assets/stylesheets/_search_yep.scss")
+    search_form = read("shared/app/views/shared/_live_search_form.html.erb")
+    controller = read("shared/frontend/live_search_controller.js")
+    search_css = read("shared/app/assets/stylesheets/_search_yep.scss")
 
     assert_includes search_form, 'class="search<%= " active" if query.to_s.strip.present? %>"'
     assert_includes search_form, "expanded: query.to_s.strip.present?"
@@ -128,7 +128,7 @@ class CritiqueImplementationSearchTest < Minitest::Test
 
   def test_brgen_search_palette_semantics_track_open_state
     palette = read("brgen/app/views/shared/_search_palette.html.erb")
-    controller = read("__shared/frontend/search_palette_controller.js")
+    controller = read("shared/frontend/search_palette_controller.js")
 
     assert_includes palette, 'data-search-palette-target="trigger"'
     assert_includes palette, 'aria-haspopup="dialog"'
@@ -184,8 +184,8 @@ class CritiqueImplementationSearchTest < Minitest::Test
   end
 
   def test_yep_search_is_the_shared_rails_search_default
-    shared_stack = read("__shared/app/assets/stylesheets/_stack.scss")
-    brgen_stack = read("__shared/app/assets/stylesheets/_stack_brgen.scss")
+    shared_stack = read("shared/app/assets/stylesheets/_stack.scss")
+    brgen_stack = read("shared/app/assets/stylesheets/_stack_brgen.scss")
     amber = amber_css_source
     bsdports = read("bsdports/app/assets/stylesheets/application.scss")
     brgen = stylesheet_source("brgen")

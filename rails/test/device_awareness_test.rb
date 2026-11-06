@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class DeviceAwarenessTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  SHARED = File.join(ROOT, "__shared")
+  SHARED = File.join(ROOT, "shared")
 
   CONTROLLERS = {
     "network_aware" => %w[connect disconnect],

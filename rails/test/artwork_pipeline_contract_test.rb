@@ -17,8 +17,8 @@ class ArtworkPipelineContractTest < Minitest::Test
   end
 
   def test_onboarding_artwork_uses_shared_publication_boundary
-    source = File.read(File.join(ROOT, "__shared/app/services/shared/onboarding_artwork.rb"))
-    pipeline = File.read(File.join(ROOT, "__shared/app/services/shared/artwork_pipeline.rb"))
+    source = File.read(File.join(ROOT, "shared/app/services/shared/onboarding_artwork.rb"))
+    pipeline = File.read(File.join(ROOT, "shared/app/services/shared/artwork_pipeline.rb"))
     assert_includes source, 'VERSION = "v2"'
     assert_includes source, "ArtworkPipeline.publish_remote"
     assert_includes source, 'source.start_with?("https://")'
@@ -29,7 +29,7 @@ class ArtworkPipelineContractTest < Minitest::Test
   end
 
   def test_newsletter_replicate_requests_are_seeded_and_published_through_postpro
-    source = File.read(File.join(ROOT, "__shared/app/services/shared/newsletter_visuals.rb"))
+    source = File.read(File.join(ROOT, "shared/app/services/shared/newsletter_visuals.rb"))
     assert_includes source, "seed:"
     assert_includes source, 'output_format: "webp"'
     assert_includes source, "ArtworkPipeline.publish_remote"
@@ -42,7 +42,7 @@ class ArtworkPipelineContractTest < Minitest::Test
   end
 
   def test_seed_ledger_is_append_only_and_hashed
-    source = File.read(File.join(ROOT, "__shared/app/services/shared/artwork_pipeline.rb"))
+    source = File.read(File.join(ROOT, "shared/app/services/shared/artwork_pipeline.rb"))
     assert_includes source, "File::WRONLY | File::CREAT | File::APPEND"
     assert_includes source, 'Digest::SHA256.file(destination).hexdigest'
   end

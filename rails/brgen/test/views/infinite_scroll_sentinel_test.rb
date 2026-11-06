@@ -47,7 +47,7 @@ class InfiniteScrollSentinelTest < ActionView::TestCase
   end
 
   test "the reflex replaces the sentinel with the end line on the last page" do
-    source = File.read(Rails.root.join("../__shared/app/reflexes/shared/infinite_scroll_reflex.rb"))
+    source = File.read(Rails.root.join("../shared/app/reflexes/shared/infinite_scroll_reflex.rb"))
 
     assert_match(/cable_ready\.outer_html\(selector:, html: end_of_list_html\)/, source)
     refute_match(/cable_ready\.remove\(selector:\)/, source)

@@ -61,14 +61,14 @@ class HonestyChecksTest < Minitest::Test
   # The smallest tree that satisfies AffiliateHonestyCheck::REQUIRED, its
   # FORBIDDEN table and its three hand-written client assertions.
   AFFILIATE_TREE = {
-    "__shared/app/models/shared/affiliate_product.rb" => "scope :real, -> { where(placeholder: false) }\n",
-    "__shared/app/services/shared/tradedoubler.rb" =>
+    "shared/app/models/shared/affiliate_product.rb" => "scope :real, -> { where(placeholder: false) }\n",
+    "shared/app/services/shared/tradedoubler.rb" =>
       "def configured? = products_token.present?\nMATRIX = \"matrix_uri\"\nFID = \"fid\"\n",
-    "__shared/app/services/shared/affiliate.rb" => "def import_all!; end\n",
+    "shared/app/services/shared/affiliate.rb" => "def import_all!; end\n",
     "brgen/lib/brgen/affiliate_placeholders.rb" => "{ placeholder: true }\n",
-    "__shared/app/views/shared/_affiliate_feed_unit.html.erb" => FEED_UNIT_ERB,
-    "__shared/app/views/shared/_affiliate_disclosure.html.erb" => DISCLOSURE_ERB,
-    "__shared/app/models/shared/affiliate_conversion.rb" => "def self.record_from_postback!(params); end\n",
+    "shared/app/views/shared/_affiliate_feed_unit.html.erb" => FEED_UNIT_ERB,
+    "shared/app/views/shared/_affiliate_disclosure.html.erb" => DISCLOSURE_ERB,
+    "shared/app/models/shared/affiliate_conversion.rb" => "def self.record_from_postback!(params); end\n",
     "brgen/app/controllers/webhooks/tradedoubler_controller.rb" =>
       "def create\n  return head(:unauthorized) unless secure_compare(token, secret)\nend\n",
     "brgen/app/jobs/affiliate_import_job.rb" => "class AffiliateImportJob; end\n",
@@ -157,7 +157,7 @@ class HonestyChecksTest < Minitest::Test
   # inventing tracking it was never issued.
   def test_affiliate_honesty_fails_when_configured_stops_gating_on_the_token
     defect = AFFILIATE_TREE.merge(
-      "__shared/app/services/shared/tradedoubler.rb" =>
+      "shared/app/services/shared/tradedoubler.rb" =>
         "def configured? = true\nMATRIX = \"matrix_uri\"\nFID = \"fid\"\n"
     )
 
@@ -166,7 +166,7 @@ class HonestyChecksTest < Minitest::Test
 
   def test_affiliate_honesty_fails_when_the_products_api_drops_the_matrix_uri
     defect = AFFILIATE_TREE.merge(
-      "__shared/app/services/shared/tradedoubler.rb" => "def configured? = products_token.present?\nFID = \"fid\"\n",
+      "shared/app/services/shared/tradedoubler.rb" => "def configured? = products_token.present?\nFID = \"fid\"\n",
     )
 
     assert_names check(Deploy::AffiliateHonestyCheck, defect), /Products API must use matrix URI/

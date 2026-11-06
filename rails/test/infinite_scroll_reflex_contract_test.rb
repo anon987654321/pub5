@@ -55,7 +55,7 @@ class InfiniteScrollReflexContractTest < Minitest::Test
   # product question in the backlog — the messenger inbox is a rail capped at 30
   # with no sentinel anywhere, so there was no page for it to append to. Deleted.
   def test_every_reflex_is_mounted_by_a_view
-    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,__shared}", "app", "views", "**", "*.erb")) +
+    views = Dir.glob(File.join(ROOT, "{amber,brgen,bsdports,shared}", "app", "views", "**", "*.erb")) +
             ENGINE_VIEWS.flat_map { |root| Dir.glob(File.join(root, "**", "*.erb")) }
     mounted = views.flat_map { |v| File.read(v).scan(/reflex:\s*"([^"#]+)/).flatten }.to_set
 
@@ -87,7 +87,7 @@ class InfiniteScrollReflexContractTest < Minitest::Test
   def test_every_declared_partial_exists_on_disk
     missing = reflexes.flat_map do |path|
       app = path.delete_prefix("#{ROOT}/").split("/").first
-      roots = [File.join(ROOT, app, "app", "views"), File.join(ROOT, "__shared", "app", "views")] + ENGINE_VIEWS
+      roots = [File.join(ROOT, app, "app", "views"), File.join(ROOT, "shared", "app", "views")] + ENGINE_VIEWS
 
       code(path).scan(/partial:\s*"([^"]+)"|renders\s+"([^"]+)"/).flatten.compact.uniq.filter_map do |partial|
         dir, base = File.split(partial)
@@ -103,7 +103,7 @@ class InfiniteScrollReflexContractTest < Minitest::Test
   # The spine itself: if these move back into the subclasses the duplication is
   # back, and nothing else would say so.
   def test_the_shared_parent_owns_the_spine
-    parent = File.read(File.join(ROOT, "__shared", "app", "reflexes", "shared", "infinite_scroll_reflex.rb"))
+    parent = File.read(File.join(ROOT, "shared", "app", "reflexes", "shared", "infinite_scroll_reflex.rb"))
 
     # Either spelling — the parent declares it inside `class << self`.
     assert_match(/def (self\.)?renders\(/, parent, "the parent must provide the `renders` declaration")

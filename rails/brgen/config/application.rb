@@ -82,7 +82,7 @@ module App
     # DEFAULT_TEST on the command line still wins, and so ci.rb's own values
     # pass through unchanged.
     if Rails.env.test? || ENV["RAILS_ENV"] == "test"
-      require File.expand_path("../../__shared/config/test_scope", __dir__)
+      require File.expand_path("../../shared/config/test_scope", __dir__)
       ENV["DEFAULT_TEST"] ||= Pub4TestScope::GLOB
       ENV["DEFAULT_TEST_EXCLUDE"] ||= Pub4TestScope::EXCLUDE
     end

@@ -34,7 +34,7 @@
 
 require "digest"
 require "rbconfig"
-require_relative "../__shared/lib/shared/subprocess"
+require_relative "../shared/lib/shared/subprocess"
 
 module Operator
   class ContractSuite

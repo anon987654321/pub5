@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../__shared/config/test_scope"
+require_relative "../shared/config/test_scope"
 
 # `bin/rails test` and the CI step must agree about what brgen's suite is.
 #
@@ -16,8 +16,8 @@ class TestScopeParityTest < Minitest::Test
   def source(*path) = File.read(File.join(ROOT, *path))
 
   def test_ci_and_brgen_read_the_one_scope
-    assert_includes source("__shared", "config", "ci.rb"), "Pub4TestScope::GLOB"
-    assert_includes source("__shared", "config", "ci.rb"), "Pub4TestScope::EXCLUDE"
+    assert_includes source("shared", "config", "ci.rb"), "Pub4TestScope::GLOB"
+    assert_includes source("shared", "config", "ci.rb"), "Pub4TestScope::EXCLUDE"
     assert_includes source("brgen", "config", "application.rb"), "Pub4TestScope::GLOB"
     assert_includes source("brgen", "config", "application.rb"), "Pub4TestScope::EXCLUDE"
   end

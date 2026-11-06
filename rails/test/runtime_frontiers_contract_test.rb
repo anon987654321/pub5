@@ -40,7 +40,7 @@ class RuntimeFrontiersContractTest < Minitest::Test
   # can pass it. One shared setting, explained, is the contract until a Rails
   # ref passes its own check.
   def test_ractor_shareability_is_one_documented_shared_setting
-    shared = File.read(File.join(ROOT, "__shared/config/environments/test.rb"))
+    shared = File.read(File.join(ROOT, "shared/config/environments/test.rb"))
 
     assert_includes shared, "ActiveSupport::Ractors.unshareable_proc_action = nil",
                     "shared test environment no longer sets the Ractor shareability policy"
@@ -49,7 +49,7 @@ class RuntimeFrontiersContractTest < Minitest::Test
 
     APPS.each do |app|
       source = read(app, "config/environments/test.rb")
-      assert_includes source, "__shared/config/environments/test.rb",
+      assert_includes source, "shared/config/environments/test.rb",
                       "#{app}: test environment no longer loads the shared policy"
     end
   end

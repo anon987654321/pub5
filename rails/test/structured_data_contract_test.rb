@@ -14,7 +14,7 @@ class StructuredDataContractTest < Minitest::Test
   end
 
   def test_event_schema_declares_real_event_fields
-    helper = read_rel("__shared/app/helpers/schema_helper.rb")
+    helper = read_rel("shared/app/helpers/schema_helper.rb")
     show = read_rel("brgen/app/views/events/show.html.erb")
     assert_includes helper, "def event_schema"
     assert_includes helper, '"@type" => "Event"'
@@ -26,7 +26,7 @@ class StructuredDataContractTest < Minitest::Test
   end
 
   def test_schema_helper_grows_collection_and_rating
-    helper = read_rel("__shared/app/helpers/schema_helper.rb")
+    helper = read_rel("shared/app/helpers/schema_helper.rb")
     assert_includes helper, "def collection_page_schema"
     assert_includes helper, "CollectionPage"
     assert_includes helper, "def aggregate_rating_snippet"
@@ -36,17 +36,17 @@ class StructuredDataContractTest < Minitest::Test
 
   def test_sitemapped_profile_emits_person_json_ld
     show = read_rel("brgen/app/views/users/show.html.erb")
-    helper = read_rel("__shared/app/helpers/schema_helper.rb")
+    helper = read_rel("shared/app/helpers/schema_helper.rb")
     assert_includes show, "json_ld_for(@user, type: :person)"
     assert_includes helper, "display_name"
   end
 
   def test_remaining_public_shows_emit_json_ld
     {
-      "brgen_radio/tv/app/views/tv/channels/show.html.erb" => "broadcast_channel",
-      "brgen_radio/tv/app/views/tv/shows/show.html.erb" => "tv_series",
-      "brgen_radio/tv/app/views/tv/live_streams/show.html.erb" => "type: :video",
-      "brgen_radio/playlist/app/views/playlist/sets/show.html.erb" => "music_playlist",
+      "brgen/engines/radio/tv/app/views/tv/channels/show.html.erb" => "broadcast_channel",
+      "brgen/engines/radio/tv/app/views/tv/shows/show.html.erb" => "tv_series",
+      "brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb" => "type: :video",
+      "brgen/engines/radio/playlist/app/views/playlist/sets/show.html.erb" => "music_playlist",
     }.each do |path, marker|
       assert_includes read_rel(path), marker, "#{path} still has a title and no structured data"
     end
@@ -71,20 +71,20 @@ class StructuredDataContractTest < Minitest::Test
   end
 
   def test_owners_can_attach_a_place
-    restaurant = read_rel("brgen_marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb")
-    store = read_rel("brgen_marketplace/app/controllers/marketplace/stores_controller.rb")
+    restaurant = read_rel("brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb")
+    store = read_rel("brgen/engines/marketplace/app/controllers/marketplace/stores_controller.rb")
     assert_includes restaurant, ":place_id"
     assert_includes store, ":place_id"
     assert_includes restaurant, "load_city_places"
     assert_includes store, "load_city_places"
-    place_field = "brgen_marketplace/engines/takeaway/app/views/takeaway/restaurants/_place_field.html.erb"
+    place_field = "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/_place_field.html.erb"
     assert File.file?(File.join(ROOT, place_field))
   end
 
   def test_show_pages_ask_for_nearby_neighbours
-    listing = read_rel("brgen_marketplace/app/controllers/marketplace/listings_controller.rb")
-    restaurant = read_rel("brgen_marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb")
-    place = read_rel("brgen_maps/app/controllers/maps/places_controller.rb")
+    listing = read_rel("brgen/engines/marketplace/app/controllers/marketplace/listings_controller.rb")
+    restaurant = read_rel("brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb")
+    place = read_rel("brgen/engines/maps/app/controllers/maps/places_controller.rb")
     assert_includes listing, "nearby_listings_for"
     assert_includes restaurant, "nearby_restaurants_for"
     assert_includes place, "nearby_places_for"

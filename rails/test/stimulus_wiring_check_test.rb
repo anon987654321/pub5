@@ -40,7 +40,7 @@ class StimulusWiringCheckTest < Minitest::Test
   end
 
   def test_reports_an_unregistered_engine_helper_controller
-    failures = with_file("brgen_maps/app/helpers/stimulus_wiring_probe_helper.rb",
+    failures = with_file("brgen/engines/maps/app/helpers/stimulus_wiring_probe_helper.rb",
                          %(tag.div(data: { controller: "totally-absent-engine-helper" }))) do
       Deploy::StimulusWiringCheck.run.failures.select { |f| f.include?("stimulus_wiring_probe_helper") }
     end
@@ -63,7 +63,7 @@ class StimulusWiringCheckTest < Minitest::Test
   # cannot be named binds every app.
   def test_a_shared_helper_binds_the_apps_that_call_it
     check = Deploy::StimulusWiringCheck.new
-    path = File.join(ROOT, "__shared/app/helpers/shared/probe_helper.rb")
+    path = File.join(ROOT, "shared/app/helpers/shared/probe_helper.rb")
     called = %(def lazy_image_tag(source)\n  tag.img(data: { controller: "lazy-image" })\nend\n)
     unnamed = %(tag.img(data: { controller: "lazy-image" })\n)
 
@@ -74,11 +74,11 @@ class StimulusWiringCheckTest < Minitest::Test
   end
 
   def test_reports_a_missing_engine_action_method
-    with_file("brgen_radio/playlist/app/javascript/controllers/stimulus_mount_probe_controller.js",
+    with_file("brgen/engines/radio/playlist/app/javascript/controllers/stimulus_mount_probe_controller.js",
               %(import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {}
 )) do
-      failures = with_file("brgen_radio/playlist/app/views/stimulus_wiring_probe.html.erb",
+      failures = with_file("brgen/engines/radio/playlist/app/views/stimulus_wiring_probe.html.erb",
                            %(<button data-action="click->stimulus-mount-probe#noSuchMethod">x</button>)) do
         Deploy::StimulusWiringCheck.run.failures.select { |f| f.include?("stimulus_mount_probe") }
       end

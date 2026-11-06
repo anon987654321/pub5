@@ -4,7 +4,7 @@ require "minitest/autorun"
 
 class TestRailsInteractionCraft < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  SHARED = File.join(ROOT, "RAILS", "__shared")
+  SHARED = File.join(ROOT, "RAILS", "shared")
   STACK = File.join(SHARED, "app", "assets", "stylesheets", "_stack.scss")
   CRAFT = File.join(SHARED, "app", "assets", "stylesheets", "_interaction_craft.scss")
   BUTTONS = File.join(SHARED, "app", "assets", "stylesheets", "_buttons.scss")
