@@ -1,0 +1,159 @@
+# frozen_string_literal: true
+
+require "time"
+require_relative "../../trace/log"
+require_relative "../../operator/services"
+require_relative "../presentation_contract"
+
+module Master
+  module CLI
+    module CommandRegistry
+      module_function
+
+      # /status — one frame of health, as dmesg lines. What is fine or does not
+      # apply on this host says nothing: no "rcctl absent" on a Mac, no bundle row
+      # when the bundle is satisfied, no raw bus events.
+      #
+      # `/status mission` and `/status runtime` read the two durable records a
+      # frame does not show: the autonomous mission, and the known-good commit.
+      def dispatch_status(root:, fix_loop:, bus:, git: Io::GitOperations.new(File.expand_path("..", root)), trace: nil,
+                          learnings: nil, ctx: nil)
+        word, rest = subcommand(ctx)
+        return dispatch_mission(root, ctx: rest) if word == "mission"
+        return dispatch_runtime(root, ctx: rest) if word == "runtime"
+        return dispatch_services(ctx: rest) if word == "services"
+        return dispatch_security if word == "security"
+        return dispatch_lanes(root) if word == "lanes"
+
+        gather_status_data(root:, fix_loop:, git:)
+          .merge(rsi: rsi_opportunities(learnings))
+          .then { |data| render_status_lines(data) }.join("\n")
+      rescue StandardError => e
+        "status0: #{e.message}"
+      end
+
+      def dispatch_services(ctx: nil)
+        name, = subcommand(ctx)
+        Master::Operator.status(name).map { |service, state| "service0: #{service} #{state}" }.join("\n")
+      end
+
+      # Every model lane data/models.yml names, in the services' health vocabulary.
+      def dispatch_lanes(root)
+        health = Master::CLI::Routing::ProviderHealth.new
+        lanes = Master.model_tiers(root:).values.flatten
+        ids = lanes.filter_map { |lane| lane["id"] if lane.is_a?(Hash) }.uniq
+        ids.map do |id|
+          latest = health.latest_event(id)
+          "lane0: #{id} #{Master::Io::LaneState.health(id, succeeded: latest&.fetch("status", nil) == "success")}"
+        end.join("\n")
+      end
+
+      def dispatch_security
+        data = Master::Operator.security
+        # Prose, as the boot banner says the same facts; key=value is the
+        # event log's form, not the console's.
+        [
+          "security0: constitution #{data[:constitution]}",
+          "cap0: profile #{data[:capability_profile]}, #{data[:capabilities].join(" ")}",
+          "pledge0: #{data[:openbsd_pledge] ? "staged reduction" : "not configured"}",
+          "patch0: #{data[:transactional_fix] ? "transaction-backed self-change with rollback" : "not configured"}",
+          "model0: #{data[:model_authority]}",
+          ("security0: capabilities only narrow" if data[:monotonic_reduction]),
+          *data[:operator_modes].map { |name, spec| security_mode_line(name, spec) },
+        ].compact.join("\n")
+      end
+
+      def security_mode_line(name, spec)
+        council = spec[:council] ? "council" : "no council"
+        evidence = spec[:evidence].to_s.tr("_", " ")
+        "mode0: #{name}, #{spec[:risk]} risk, #{spec[:model_tier]} model, #{council}, #{evidence} evidence"
+      end
+
+      def gather_status_data(root:, fix_loop:, git:)
+        {
+          ahead_behind: git.ahead_behind, head: git.head || "?", dirty: git.dirty?("."), branch: git.branch || "?",
+          svc: service_status,
+          bg: fix_loop&.background_alive? ? "running" : "stopped",
+          af: ENV["MASTER_AUTOFIX"] == "1" ? "on" : "off",
+          bndl: bundle_status(File.expand_path("..", root)),
+          failures: failure_events(root, 3),
+          stage: last_event(root, "pipeline:stage_complete")&.dig("payload", "stage"),
+          verdict: format_verdict(last_event(root, "review:verdict")),
+          config: (Master::Ground::Config.new(root) rescue {})
+        }
+      end
+
+      def render_status_lines(d)
+        Master::CLI::PresentationContract.status_lines(
+          d,
+          verbose: ENV["MASTER_CLI_VERBOSE"] == "1" || ENV["MASTER_CLI_TRACE"] == "1",
+        )
+      end
+
+      # The feedback ledger's reading of the last week: a tool failing a fifth
+      # of its calls, a correction or a provider error that keeps recurring.
+      def rsi_opportunities(learnings)
+        learnings.respond_to?(:opportunities) ? learnings.opportunities : []
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CommandRegistry.rsi_opportunities")
+        []
+      end
+
+      def last_event(root, pattern)
+        Trace::Log::Event.new(root:).recent(40, pattern:).last
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CommandRegistry.last_event")
+        nil
+      end
+
+      def format_verdict(rec)
+        pay = rec && rec["payload"]
+        return "" unless pay.is_a?(Hash)
+
+        ", review #{pay["pass"] ? "pass" : "fail"}#{", score #{pay["score"]}" if pay["score"]}"
+      end
+
+      RCCTL = "/usr/sbin/rcctl"
+
+      # Only a host with rcctl has a master service to report.
+      def service_status
+        return {} unless File.executable?(RCCTL)
+
+        _, _, st = Master::Io::Exec.capture3(RCCTL, "check", "master")
+        { state: st.success? ? "ok" : "down" }
+      rescue StandardError => e
+        { state: "unknown, #{e.class}" }
+      end
+
+      # Silent when satisfied, and where no bundler exists.
+      def bundle_status(repo)
+        drift = %w[master master/web].reject do |dir|
+          out, = Master::Io::Exec.capture2e(Master::BUNDLE_BIN, "check", chdir: File.join(repo, dir))
+          out.match?(/dependencies.*satisfied/)
+        end
+        "#{drift.join(", ")} drift, run bundle install" unless drift.empty?
+      rescue Errno::ENOENT
+        nil
+      end
+
+      def format_ago(secs)
+        return "#{secs}s" if secs < 60
+
+        secs < 3600 ? "#{secs / 60}m" : "#{secs / 3600}h"
+      end
+
+      # "tool:failed 4m ago: timeout", the event and what it said.
+      def failure_events(root, n)
+        records = Trace::Log::Event.new(root:).recent(40)
+        records.select { |rec| rec["event"].to_s.match?(Trace::ReplayReader::FAILURE_PATTERN) }.last(n).map do |rec|
+          said = rec["payload"].is_a?(Hash) ? rec["payload"].values_at("error", "message").compact.first : nil
+          ago = format_ago((Time.now.utc - (Time.parse(rec["timestamp"]) rescue Time.now.utc)).to_i.abs)
+          "#{rec["event"]} #{ago} ago#{": #{said.to_s[0, 80]}" if said}"
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CommandRegistry.failure_events")
+        []
+      end
+    end
+  end
+end

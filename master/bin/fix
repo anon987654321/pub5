@@ -1,0 +1,73 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# master/bin/fix — the one governed writer (pub5 flattened surface).
+#
+#   bin/fix [tree]                 write + converge at normal intensity
+#   bin/fix [tree] --dry-run       assessment only, no writes (old /review)
+#   bin/fix [tree] --strict        higher-bar assessment: fail on blockers,
+#                                  run through checks (old /critique)
+#   bin/fix [tree] --json          machine receipt on stdout
+#
+# tree is master|rail|openbsd|studio|path (default: master). This entry
+# delegates to the ported fix-here machinery: same Kernel, same transaction,
+# same receipts — only the surface is flattened. There is no /review and no
+# /critique command anywhere in pub5.
+
+require "json"
+
+args = ARGV.dup
+flags = { dry_run: false, strict: false, json: false, passthrough: [] }
+tree = "master"
+
+until args.empty?
+  arg = args.shift
+  case arg
+  when "--dry-run"   then flags[:dry_run] = true
+  when "--strict"    then flags[:strict] = true
+  when "--json"      then flags[:json] = true
+  when "--help", "-h"
+    puts <<~HELP
+      usage: bin/fix [master|rails|openbsd|studio|path] [--dry-run] [--strict] [--json]
+                     [--autofix=off|dry|on] [--max-files=N] [--lane code|visual|all]
+                     [--no-critique] [--blockers] [--plan] [--until-checks] [--checks=...]
+      --dry-run and --strict are assessment modes; combine them for the highest bar.
+      Everything else passes through to the fix runtime unchanged.
+    HELP
+    exit 0
+  when /\A--/ then flags[:passthrough] << arg
+  else tree = arg
+  end
+end
+
+if flags[:dry_run] && flags[:strict]
+  warn "fix: --dry-run --strict: highest-bar assessment, still no writes"
+end
+
+root = File.expand_path("..", __dir__)
+fix_here = File.join(root, "bin/fix-here")
+abort "fix: missing #{fix_here}" unless File.file?(fix_here)
+
+passthrough = flags[:passthrough].dup
+passthrough << "--blockers" if flags[:strict]
+passthrough << "--until-checks" if flags[:strict]
+passthrough << "--dry" if flags[:dry_run]
+
+if flags[:json]
+  # Machine receipt: the run's exit code is the contract; the receipt names it.
+  require "open3"
+  out, err, status = Open3.capture3(RbConfig.ruby, fix_here, tree, *passthrough)
+  puts JSON.generate(
+    "command" => "/fix",
+    "tree" => tree,
+    "mode" => flags[:dry_run] ? (flags[:strict] ? "assess_strict" : "assess") : "write",
+    "strict" => flags[:strict],
+    "exit_code" => status.exitstatus,
+    "ok" => status.success?
+  )
+  warn out unless out.empty?
+  warn err unless err.empty?
+  exit status.exitstatus
+end
+
+exec(RbConfig.ruby, fix_here, tree, *passthrough)

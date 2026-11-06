@@ -1,0 +1,254 @@
+# frozen_string_literal: true
+
+# Shape census over every tracked file in all four governed trees. The tree's shape is
+# conduct: a directory bought for one file, a name that repeats its parent, a
+# name that says nothing, and a path deeper than its neighbours all cost a
+# reader something. FILE_SPRAWL in the scan registry measures the first two for
+# master's .rb files only, and skips law/, core/ and test/ besides. This
+# is the same law over the whole repo and every file type.
+#
+#   ruby master/tools/sprawl_census.rb            # counts against the ceilings
+#   ruby master/tools/sprawl_census.rb --list     # what was counted, per kind
+#   ruby master/tools/sprawl_census.rb --ratchet  # record a new low
+#
+# Mandated paths are excluded rather than priced, because they can never fall:
+# Zeitwerk resolves a constant FROM its path, so engines/dating/app/services/
+# dating/ is the depth Rails requires and lib/io/base.rb is named after the
+# constant it defines. Everything else is counted, the way dup_census counts the
+# per-app error pages it cannot collapse -- the ceiling prices what is here, and
+# the next one that arrives is a +1 nobody has to notice by hand.
+#
+# The uncalibrated version of this file called 130 rails paths too deep and 26
+# names vague. Both were the rule misreading correct markup, which is the same
+# way 596 of 981 design findings died. Check a class against a real file before
+# adding it.
+
+require "yaml"
+require_relative "../ground/parameterized_slug"
+
+module Operator
+  module SprawlCensus
+    ROOT = File.expand_path("../../..", __dir__)
+    CEILINGS = File.join(ROOT, "master", "data", "sprawl_census.yml")
+
+    MANDATED = [
+      # Zeitwerk reads the namespace off the path, so the nesting IS the name.
+      %r{/engines/[^/]+/(?:app|test)/[^/]+/[^/]+/},
+      %r{/engines/[^/]+/lib/[^/]+/(?:engine|version)\.rb\z},
+      # Rails loads these by location, not by reference.
+      %r{/db/(?:migrate|[a-z]+_migrate)/},
+      %r{/config/(?:environments|initializers|locales)/},
+      %r{/app/(?:channels|controllers|helpers|jobs|mailers|models|reflexes|views|javascript|assets|services|policies|serializers)/},
+      # rails test:system globs test/system; a hoist lands the file in the unit
+      # suite (DEFAULT_TEST_EXCLUDE misses it) and drops it from test:system.
+      %r{/test/system/},
+      %r{/(?:bin|lib/tasks|public|storage|log|vendor|node_modules|knowledge|output)/},
+      # The locale code and the daemon's config name are not ours to choose.
+      %r{/locales/[a-z]{2}(?:-[A-Z]{2})?\.yml\z},
+      %r{\.(?:conf|lock|sample|keep|gitkeep|woff2|png|ico|onnx)\z},
+      # Ground::Constitution globs data/principles/*.md, so the directory is the
+      # contract even while it holds one file.
+      %r{\A/master/data/principles/},
+      # A tool owns its own dotfolder. .claude/ holds one tracked file because
+      # settings.local.json is per-machine and ignored, which is Claude Code's
+      # shape, not ours to flatten.
+      %r{\A/\.[a-z]+/},
+    ].freeze
+
+    # A name that says nothing on its own, in a stack trace or a diff.
+    VAGUE = Master::Ground::ParameterizedSlug::VAGUE_WORDS
+    # Structural anchors only: each governed tree keeps its own base contract.
+    # These names do not replace any tree's authority; they catch accidental deletion
+    # of the front door while leaving Rails and OpenBSD free to keep their own shape.
+    BASE_TREE_ANCHORS = {
+      "master" => %w[AGENTS.md data/soul.yml data/laws.yml bin/operator bin/check],
+      "rails" => %w[CLAUDE.md __shared/README.md __shared/design_tokens.yml apps.yml],
+      "openbsd" => %w[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml bin/check],
+      "studio" => %w[README.md postpro/postpro.rb replicate/replicate.rb replicate/lora/lora.rb dilla/dilla.rb],
+    }.freeze
+
+    # Defined below module_function: a def above it is a private instance
+    # method, and the module object that counts/run call it through is not its
+    # own instance — run raised NameError on every measurement.
+    module_function
+
+    def base_tree_findings
+      BASE_TREE_ANCHORS.flat_map do |tree, paths|
+        paths.filter_map do |path|
+          "#{tree}/#{path}" unless File.file?(File.join(ROOT, tree, path))
+        end
+      end
+    end
+
+    def all_tracked
+      # argv, not a shell string: a checkout path holding a space or a quote split the command.
+      @all_tracked ||= IO.popen(["git", "-C", ROOT, "ls-files", "-z"], &:read).split("\0")
+                       .select { |f| File.file?(File.join(ROOT, f)) }
+    end
+
+    def tracked
+      @tracked ||= all_tracked.reject { |f| MANDATED.any? { |re| "/#{f}".match?(re) } }
+    end
+
+    # A directory holding one file and no subdirectories is a namespace bought
+    # for nothing — unless a `.rb` of the same name sits beside it, which is how
+    # Zeitwerk spells a nested constant. `RepoEcology::CoChangeGraph` can only
+    # live at `repo_ecology/co_change_graph.rb`, next to `repo_ecology.rb`, so the
+    # directory buys the nesting the constant already had when it was inline;
+    # flattening it to `RepoEcologyCoChangeGraph` is a worse name, not less
+    # sprawl. The shape comes from splitting a god class, and no lone directory
+    # that predates it is forgiven by the exemption.
+    def lone_dirs
+      # The population is git's tracked tree; consulting Dir.glob here let a
+      # foreign untracked directory hide a tracked singleton. That made the same
+      # checkout report different sprawl depending on somebody else's worktree.
+      dirs = all_tracked.map { |path| File.dirname(path) }.reject { |dir| dir == "." }.uniq
+      tracked.group_by { |f| File.dirname(f) }
+             .select do |dir, files|
+               files.size == 1 && dir != "." &&
+                 !dirs.any? { |child| child.start_with?("#{dir}/") }
+             end
+             .reject { |dir, _| File.file?(File.join(ROOT, "#{dir}.rb")) }
+             .values.flatten.sort
+    end
+
+    # A repeated word is not automatically a stutter. dilla/dilla.rb is the tool
+    # named after its folder and reads correctly at a command line, and
+    # law/definition.rb is how Ruby finds the Law namespace. entry_point? below is
+    # what separates those from a file that says the name twice over.
+    def stutter
+      tracked.select do |f|
+        parts = f.split("/")
+        next false unless parts.size >= 2
+        next false unless File.basename(f, File.extname(f)) == parts[-2]
+
+        !entry_point?(f)
+      end.sort
+    end
+
+    # The executable bit is read from git's recorded mode, not the working tree:
+    # a checkout, an unzip or a umask can drop or add +x locally, and that made
+    # the same commit count a different stutter on different machines.
+    def git_executables
+      @git_executables ||= begin
+        entries = IO.popen(["git", "-C", ROOT, "ls-files", "-s", "-z"], &:read).to_s.split("\0")
+        entries.filter_map { |entry| entry.split("\t", 2).last if entry.start_with?("100755 ") }.to_set
+      end
+    end
+
+    def entry_point?(path)
+      full = File.join(ROOT, path)
+      return true if git_executables.include?(path)
+      return true if path.end_with?(".sh", ".yml", ".toml")
+
+      # The repeated word is only a stutter when the file says it twice: once
+      # for the namespace and again for the thing inside it, which is how
+      # lib/cli/session.rb comes to hold Master::CLI::Session. Said once, it is a module
+      # root and how Ruby finds the namespace at all -- law/definition.rb declares Law.
+      # Said not at all, the file is a script and its folder is named after the
+      # tool, which is `ruby studio/dilla/dilla.rb` reading correctly.
+      name = File.basename(path, File.extname(path))
+      File.read(full).scan(/^\s*(?:module|class)\s+#{Regexp.escape(name)}\b/i).size < 2
+    rescue ArgumentError
+      true
+    end
+
+    def vague_names
+      tracked.select { |f| VAGUE.include?(File.basename(f, File.extname(f))) }.sort
+    end
+
+    # Every tracked path costs maintenance, whether it is source, test, asset,
+    # fixture, documentation or configuration. Directories derive from tracked
+    # paths, so Git-empty directories do not create false structure.
+    def tracked_files = all_tracked.sort
+
+    def tracked_directories
+      @tracked_directories ||= all_tracked.flat_map do |path|
+        segments = path.split("/")
+        (1...segments.length).map { |depth| segments.first(depth).join("/") }
+      end.uniq.sort
+    end
+
+    # A census that reads nothing reports nothing and passes. master/tools check did
+    # exactly that for the length of a worktree: VENDORED matched the absolute
+    # path, every file was excluded, and it announced inconclusive rather than
+    # failing. corpus is the floor -- the size the last ratchet saw -- so a
+    # collapsed corpus refuses instead of reporting a clean tree.
+    def corpus_floor = ceilings.fetch("corpus", 0)
+
+    def check_corpus!
+      n = tracked.size
+      return n if n.positive? && n >= corpus_floor / 2
+
+      abort("sprawl_census: read #{n} tracked files against a floor of #{corpus_floor} - " \
+            "the corpus collapsed, so nothing below this line measured the tree")
+    end
+
+    def counts
+      {
+        "lone_dirs" => lone_dirs.size,
+        "stutter" => stutter.size,
+        "vague_names" => vague_names.size,
+        "tracked_files" => tracked_files.size,
+        "tracked_directories" => tracked_directories.size,
+      }
+    end
+
+    def ceilings
+      File.exist?(CEILINGS) ? YAML.safe_load_file(CEILINGS) : {}
+    end
+
+    def run(ratchet: false, list: false, growth_only: false)
+      check_corpus!
+      now = counts
+      missing = base_tree_findings
+      missing.each { |path| warn "sprawl_census: base tree anchor missing #{path}" }
+      return 1 if missing.any?
+
+      recorded = ceilings
+      if growth_only
+        keys = %w[tracked_files tracked_directories]
+        keys.each { |key| puts "sprawl_census: #{key} #{now.fetch(key)} (ceiling #{recorded.fetch(key)})" }
+        over = keys.select { |key| now.fetch(key) > recorded.fetch(key) }
+        over.each do |key|
+          puts "sprawl_census: #{key} grew to #{now.fetch(key)} from #{recorded.fetch(key)} - reuse existing paths or remove an equal amount of structure"
+        end
+        return over.empty? ? 0 : 1
+      end
+
+      now.each { |k, v| puts "sprawl_census: #{k} #{v} (ceiling #{recorded.fetch(k, v)})" }
+      return list_members if list
+
+      over = now.select { |k, v| v > recorded.fetch(k, v) }
+      unless over.empty?
+        over.each do |k, v|
+          puts "sprawl_census: #{k} rose to #{v} from #{recorded.fetch(k)} - reuse existing structure or remove the excess"
+        end
+        return 1
+      end
+
+      if ratchet && now.any? { |k, v| v < recorded.fetch(k, v) }
+        merged = recorded.merge(now) { |_, old, new| [old, new].min }
+        File.write(CEILINGS, merged.merge("corpus" => tracked.size).to_yaml)
+        puts "sprawl_census: recorded a new low"
+      end
+      0
+    end
+
+    def list_members
+      { "lone_dirs" => lone_dirs, "stutter" => stutter, "vague_names" => vague_names }.each do |kind, files|
+        puts "\n#{kind} (#{files.size})"
+        files.each { |f| puts "  #{f}" }
+      end
+      0
+    end
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  exit Operator::SprawlCensus.run(
+    ratchet: ARGV.include?("--ratchet"),
+    list: ARGV.include?("--list"),
+    growth_only: ARGV.include?("--growth-only"),
+  )
+end

@@ -1,0 +1,85 @@
+# Vocabulary guidance only. This file is not loaded as runtime policy.
+schema: 1
+purpose: glossary_only
+runtime_effect: none
+
+authority:
+  constitution: master/data/soul.yml
+  law_catalogue: master/data/laws.yml
+  executable_laws:
+    - master/law/**/*.rb
+  check_execution_registry: master/checks/checks.yml
+
+terms:
+  law:
+    preferred: Law
+    meaning: A normative requirement whose authority comes from the constitutional Law system.
+    related_terms: [rule, standard, convention, guideline, design principle, preference, heuristic]
+    caution: Related terms are context-sensitive; a suggestion or preference does not become binding merely by being called a Law.
+  check:
+    preferred: check
+    meaning: An instrument that inspects source or runtime state and reports evidence.
+    legacy_aliases: [gate]
+    caution: The legacy word was renamed out of class names, file names, environment variables and commands on 2026-10-22; read it in older commits and notes as check.
+  detector:
+    preferred: detector
+    meaning: Executable mechanism that measures whether a Law is satisfied; it may be lexical, AST, structural, or semantic.
+    caution: A detector is implementation, not another source of normative policy. Its coverage must be reconciled against the canonical Law catalogue.
+  registry:
+    preferred: registry
+    meaning: Index of registered executable definitions or checks.
+    caution: Registration is not a second authority for normative requirements; use LawRegistryAudit for Law coverage and checks.yml for operational execution.
+  proof:
+    preferred: proof
+    meaning: Evidence that a check or test actually ran and supports a stated claim.
+    not_synonyms_of: [Law, check]
+  test:
+    preferred: test
+    meaning: A repeatable experiment with an expected result; it validates behavior rather than defining the policy it tests.
+    not_synonyms_of: [Law, check]
+  skip:
+    preferred: skip
+    meaning: A user-facing description for an instrument that did not measure its target.
+    not_synonyms_of: [inconclusive, gap]
+    caution: Preserve each machine outcome. Skipped means not run; inconclusive means evidence was insufficient to decide; gap means required coverage or evidence is absent.
+  inconclusive:
+    preferred: inconclusive
+    meaning: The instrument ran or was attempted but cannot support a definitive result.
+  gap:
+    preferred: gap
+    meaning: Required evidence, coverage, or a declared precondition is missing.
+  policy:
+    preferred: policy
+    meaning: A set of governing decisions; do not use as a casual synonym for one Law.
+  constraint:
+    preferred: constraint
+    meaning: A boundary on permissible states or operations; it may be expressed by a Law but is not another registry.
+  budget:
+    preferred: budget
+    meaning: A counted ceiling on residual findings for one rule (checks/data/css_budget.yml); "the number only ever ratchets down".
+    caution: A budget is not permission to add findings — it caps what remains after repair. Zero is not the goal; the ceiling is not a target to spend.
+  pen:
+    preferred: pen
+    meaning: A named, deliberate exception to the spacing/type grid whose rendered intent a mechanical snap would damage.
+    caution: Recorded with its sites and reason in the craft ledger; a raw off-grid value is not a pen until it is named and argued.
+  exemption:
+    preferred: exemption
+    meaning: A marker in an executable law file that excuses named paths from one Law, mapped to a reason and a review_by date in the craft ledger.
+    caution: The marker in law/ grants the excuse; the ledger row only explains it. Every exemption expires — reviews are tracked by checks/exemption_freshness.
+  ledger:
+    preferred: ledger
+    meaning: Provenance record for ceilings, pens and exemptions (checks/data/craft_ledger.yml); evidence, not policy.
+    caution: A row that disagrees with the budget file or the law file is a bug in the row; the sources it points at win.
+  baseline:
+    preferred: baseline
+    meaning: An approved reference capture (screenshot or layout snapshot) a rendered check compares against (checks/data/visual_baselines/).
+    caution: Baselines are approved through the capture-inspect-promote flow, never copied from the latest run; ordinary /fix must not approve its own visual changes.
+  drift:
+    preferred: drift
+    meaning: Measured divergence between a rendered surface and its approved baseline, or between a generated file and its source.
+    caution: Two different instruments share the word (pixel drift budget, agent-contract drift lint); name which one you mean.
+not_enforced_tiers: [hard, soft, ops]
+notes:
+  - This glossary creates no Law, ID, severity, tier, or runtime behavior.
+  - Add no runtime loader merely to make this file active; cite it from agent guidance where useful.
+  - Do not add a second registry of Laws or checks.

@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# master/bin/scan — observe only, never writes (pub5 flattened surface).
+#
+#   bin/scan [tree] [--json]   machine context + law surface for one tree
+#
+# Delegates to tools/agent_context.rb, the same machine contract the agent
+# workflow reads before acting. Deeper observation lanes remain available
+# through the interactive runtime (bin/master '/scan <tree>').
+
+root = File.expand_path("..", __dir__)
+tree = "master"
+json = true
+args = ARGV.dup
+until args.empty?
+  arg = args.shift
+  case arg
+  when "--json" then json = true
+  when "--help", "-h"
+    puts "usage: bin/scan [master|rails|openbsd|studio] [--json]"
+    exit 0
+  else tree = arg
+  end
+end
+
+ctx = File.join(root, "tools/agent_context.rb")
+abort "scan: missing #{ctx}" unless File.file?(ctx)
+exec(RbConfig.ruby, ctx, "--json", "--tree", tree)

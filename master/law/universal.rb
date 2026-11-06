@@ -1,0 +1,2396 @@
+# frozen_string_literal: true
+
+# law/universal.rb — every universal law, one Law.define per law.
+# DEAD_CODE lives once, in the scanner registry (master/law/ruby.rb): it anchors the
+# terminator to the line start, walks indentation to tell a dedent (block
+# over, next line reachable) from a continuation, and knows else/elsif/when/
+# rescue/ensure open new reachability. This file regex called `x = return_val`
+# a terminator and every method's last line unreachable.
+
+# Reviewed 2026-10 against MDN Baseline, WCAG 2.2 mobile guidance and web.dev
+# Core Web Vitals thresholds. Feature status changes; consult the current
+# Baseline record during review rather than treating this snapshot as evergreen.
+Law.define(:BASELINE_COMPATIBILITY) do
+  source "MDN Web Platform Baseline - compatibility is not accessibility"
+  ask <<~'ASK'.strip
+    Does a web change depend on a newly available HTML, CSS, JavaScript, or PWA API without checking the
+    supported browser/device matrix, fallback behavior, accessibility, and security contract?
+  ASK
+  fix <<~'FIX'.strip
+    Check current Baseline status and consult Google's Modern Web Guidance for feature-specific patterns when
+    available. Prefer Baseline Widely available semantics for core paths; progressively enhance newer APIs such as
+    field-sizing, container style queries, contrast-color(), CSS anchor positioning, Trusted Types, and the
+    Navigation API. Verify the target browser matrix, feature detection, keyboard and assistive-technology
+    behavior, and a usable fallback. Do not make network access or a new package a build/test prerequisite.
+    Baseline is compatibility evidence, not proof of accessibility or security.
+  FIX
+  bad "el.style.fieldSizing = %q(content)  // no feature detection, no fallback"
+  good "if (CSS.supports(%q(field-sizing), %q(content))) { el.style.fieldSizing = %q(content) }"
+end
+
+Law.define(:CORE_WEB_VITALS) do
+  source "web.dev Core Web Vitals thresholds - field data, not a lab-only claim"
+  ask <<~'ASK'.strip
+    Does a web performance or interaction-quality claim lack representative real-user evidence for 75th-percentile
+    LCP <= 2.5 s, INP <= 200 ms, and CLS <= 0.1, especially on mobile?
+  ASK
+  fix <<~'FIX'.strip
+    Use field data such as CrUX or first-party RUM at the 75th percentile; use lab traces and feature-detected
+    Long Animation Frames as diagnostics, not substitutes for field evidence.
+  FIX
+  bad "report(%q(LCP ok), lab_trace.lcp)"
+  good "report(%q(LCP p75), field_data.lcp_p75)"
+end
+
+Law.define(:WEB_PLATFORM_DEFAULTS) do
+  source "GoogleChrome Modern Web Guidance and MDN Web Platform Baseline"
+  ask <<~'ASK'.strip
+    Does new HTML, CSS, or browser JavaScript recreate native platform behavior, add a dependency before checking native capabilities, or
+    treat a Baseline Newly available feature as universal without a fallback?
+  ASK
+  practice "Prefer accessible browser primitives and interoperable CSS over bespoke JavaScript and avoidable dependencies."
+  fix <<~'FIX'.strip
+    Prefer semantic HTML, native form controls and browser APIs, CSS Grid/Flexbox, intrinsic sizing, and logical properties before
+    custom JavaScript or a new dependency. Default core paths to Baseline Widely available features. Use @supports or runtime feature
+    detection for newer capabilities, preserving a usable accessible fallback. At feature start, check current Baseline data and,
+    when available, consult GoogleChrome Modern Web Guidance for a focused implementation pattern. Do not make network access or
+    a guidance CLI a build/test prerequisite.
+  FIX
+  bad <<~'X'
+    A click handler on a generic div emulates a native disclosure, with no keyboard path or state exposed.
+  X
+  good <<~'X'
+    Use a semantic button or native details/summary, expose expanded state where needed, and preserve keyboard operation.
+  X
+end
+
+Law.define(:MOBILE_ACCESSIBILITY_DEFAULTS) do
+  source "WCAG 2.2 and W3C mobile guidance"
+  ask <<~'ASK'.strip
+    Does a mobile-first web change fail to reflow at 320 CSS pixels, hide keyboard focus, rely on pointer-only interaction, or ignore reduced motion?
+  ASK
+  practice "Mobile-first means content and interaction survive narrow viewports, zoom, keyboard navigation, assistive technology, and touch."
+  fix <<~'FIX'.strip
+    Require reflow without loss at 320 CSS pixels except for genuinely two-dimensional content. Meet WCAG 2.2's 24 by 24 CSS pixel
+    pointer-target criterion and its exceptions; prefer 44 CSS px for primary touch controls where the layout allows. Keep focus visible
+    and unobscured, labels and accessible names present, keyboard paths complete, and nonessential motion responsive to
+    prefers-reduced-motion. Use logical properties and intrinsic layouts; use safe-area insets and dynamic viewport units with sensible fallbacks.
+  FIX
+  bad <<~'X'
+    width: 100vw; height: 100vh; outline: none; animation: entrance 600ms;
+  X
+  good <<~'X'
+    max-inline-size: 100%; min-height: 100vh; min-height: 100dvh; :focus-visible has an outline; reduced motion has a fallback.
+  X
+end
+
+Law.define(:PWA_RESILIENCE_DEFAULTS) do
+  source "MDN Progressive Web Apps and service-worker caching guidance"
+  ask <<~'ASK'.strip
+    Does a PWA assume optional APIs exist, offer no honest offline state, or cache or replay data without explicit freshness and safety rules?
+  ASK
+  practice "An installable PWA is still a web application: navigation, online failure, user data, and updates need explicit semantics."
+  fix <<~'FIX'.strip
+    Feature-detect optional install, sharing, storage, background, and navigation APIs and leave the primary task usable without them.
+    Keep deep links and a useful offline fallback. Prefer cache-first for versioned immutable assets and network-first with a bounded timeout
+    for mutable navigation/data; cache GET requests only under an explicit scope and freshness policy, never blindly cache personalized responses
+    in a shared cache. Queue writes only when necessary, with visible pending state, bounded storage, same-origin validation, and idempotent replay.
+    Treat a manifest, service worker, and install prompt as separate capabilities; test each supported path.
+  FIX
+  bad <<~'X'
+    Cache every request and assume Background Sync, install prompts, and file sharing exist on all devices.
+  X
+  good <<~'X'
+    Detect optional capabilities, cache by request type and freshness, offer an offline route, and retry only safe queued writes.
+  X
+end
+
+Law.define(:FAIL_VISIBLY) do
+  source "Fail Fast (Jim Shore, IEEE Software 2004)"
+  ask "Does this code swallow exceptions or fail silently instead of surfacing the error with useful context?"
+  detect { |line| line.match?(/(?<![\w:.])rescue\s*$|(?<![\w:.])rescue\s+Exception\b/) }
+  fix "Catch specific errors, log context, re-raise or return Result."
+  bad "rescue Exception"
+  good "rescue IOError => e"
+end
+
+Law.define(:FULL_BY_DEFAULT) do
+  source "MASTER-native (no shallow/lite tiers by default)"
+  ask "Does this API expose a do-less tier such as shallow, standard, quick, lite, basic, or light alongside a full tier where users routinely need the full behavior? If the cost tradeoff is real, name the cost rather than the quality."
+  # Both words have to be list items, not two adjectives that happen to meet.
+  # "sculpted soft key light, deep muted tones" is a prompt describing a
+  # photograph and "blue-hour ambient light, deep shadow tones" is a colour
+  # grade; the first tier word has to open a list or follow a separator, the way
+  # `[shallow, deep]` does.
+  detect { |line| line.match?(/(?:\A\s*|[\[(|,=:]\s*)(shallow|standard|quick|lite|basic|light|simple)\b\s*[|,)\]]\s*\b(deep|full|advanced|complete|thorough)\b/) }
+  fix "Drop the degraded tier. If a real cost tradeoff exists, rename to surface the cost (lexical < structural < semantic), not the result quality."
+  bad "modes = [shallow, deep]"
+  good "modes = [deep]"
+end
+
+Law.define(:GUARD_EXPENSIVE_OPS) do
+  source "MASTER-native (guard expensive operations); Nielsen heuristic 5, error prevention"
+  ask "Does this execute an expensive or destructive operation without confirmation, bounds, or relevant preconditions?"
+  # `rm -rf` left for NEVER_BATCH_DELETE, which already owned file deletion and
+  # already knew a scoped path from an unbounded one. Both laws claiming it was
+  # one question with two instruments, and every one of the twelve hits here was
+  # a bounded removal in the deploy pipeline — `doas rm -rf "${app_dir}/public"`
+  # — or prose in a runbook. This law is the database sweep.
+  #
+  # A symbol list names the operations; it does not perform them.
+  # `%i[drop_table force_push]` is a list of what needs confirming, and reading
+  # it as a drop_table is reading a menu as a meal.
+  detect do |line|
+    next false if line.match?(/%[iw]\[/)
+
+    line.match?(/\b[A-Z]\w*(?:::\w+)*\.(?:delete_all|destroy_all)\b|\bdrop_table\b|\bTRUNCATE\b|\btruncate_tables?\b/)
+  end
+  fix "Cost estimate before execution. Require opt-in for danger; scope the delete to a parent."
+  bad "Session.delete_all"
+  good "user.sessions.delete_all"
+end
+
+# LAW_OF_DEMETER lives once, in the registry (universal_rules.rb), which
+# folds MESSAGE_CHAIN: it excludes numeric dot-chains (1.2.3.4 is an IP,
+# not a message chain), stdlib transformation chains (.to_s.strip.empty? is
+# idiomatic), and re-tests after blanking strings and parens. This bare
+# regex flagged every version number and gem constraint in the tree.
+
+Law.define(:MEANINGFUL_NAMES) do
+  source "Clean Code - meaningful names (Robert C. Martin)"
+  # The right-hand side has to already carry a better name, which is what the
+  # fixtures below describe: `tmp = load` wastes the name `load` that is right
+  # there. Any generic name on the left was 484 findings, and a sample of them
+  # was `data = YAML.safe_load(path)`, `result = ideation.ideate(goal)` and
+  # `result = img_f * (1.0 - intensity)` — expressions whose value genuinely is
+  # the parsed data or the result, with no domain word going spare. Renaming
+  # those makes the code worse, and 457 of the 484 were that shape.
+  #
+  # An expression with arguments, arithmetic or a literal is exempt for the same
+  # reason: there is no name in it to prefer, and three more shapes where the
+  # generic name is the right one and there is nothing
+  # better to take: `@data = data` is the constructor idiom and has no other name
+  # available; `result = blk.call` names a result after a call whose own last
+  # word is `call`; and `@data = load_data` is already named after the method
+  # that produced it, which is the rule satisfied rather than broken.
+  detect do |line|
+    next false unless line.match?(/\b(tmp|temp|data|result|val|ret|obj|str|arr|buf)\s*=\s*@?[a-z_]\w*(?:\.\w+)*\s*(?:#.*)?$/)
+
+    left, right = line.match(/@?(\w+)\s*=\s*@?([\w.]+)/)&.captures
+    next false if left.nil?
+    next false if left == right                                   # @data = data
+    next false if right.match?(/\.(?:call|run|value|result)\z/)   # a call's result
+    next false if right.split(".").last.to_s.include?(left)       # @data = load_data
+    next false if right == "nil"                                  # nothing to name it after
+
+    true
+  end
+  fix "Name it after what the right-hand side already calls it, or after the domain."
+  bad "tmp = load"
+  good "user_profile = load"
+end
+
+Law.define(:NO_COLUMN_ALIGN) do
+  source "Ruby Style Guide / RuboCop Layout - no token alignment"
+  # The character class before `=` is optional. Required, it could only match by
+  # backtracking into the run of spaces, so `name    = 1` was caught on three
+  # spaces and `result  = x` slipped through on exactly two — the commonest
+  # spacing of all. 121 findings under master/lib became 154, and none of the 33
+  # is in law/, so the rule was blind to a third of its own subject.
+  # A run of spaces inside a quoted string is the string. openbsd/dev/perms.sh
+  # writes `print "File perms  = $file_perms"`, lining up two labels in the
+  # OUTPUT — the one place column alignment is the point rather than the defect.
+  detect do |line|
+    s = line.strip
+    next false if s.start_with?("*") || s.match?(/\A[-=]+\z/)
+
+    line.gsub(/"[^"\n]*"|'[^'\n]*'/) { |m| "\0" * m.length }
+        .match?(/\S {2,}(?:=>|[^=!<>]?=[^=>]|:\s)/)
+  end
+  fix "Remove padding; one space before operators. Column alignment decays and hides diffs."
+  bad "name    = 1"
+  good "name = 1"
+end
+
+# NO_FLAG_ARGUMENTS lives once, in the registry (universal_rules.rb): only
+# a positional boolean default is a flag argument; a keyword default
+# (stream: false) is fine API design, and this bare regex flagged every one.
+
+Law.define(:NULL_BLINDNESS) do
+  source "SQL/Ruby - explicit NULL/nil handling"
+  # `= NULL` with no word boundary matched `<= NULL_FLOOR_DB` and
+  # `>= NULL_FLOOR_DB` — a float comparison against a dB floor, flagged at
+  # error severity, which then gated those files out of the semantic pass
+  # entirely. `!= NULL` was also a strict substring of `= NULL`, so that half
+  # of the alternation had never done anything.
+  # A SET clause assigns, and `SET col = NULL` is how SQL clears a column; the
+  # comparison this rule is about starts at WHERE, so the clause between is
+  # read out before matching.
+  detect do |line|
+    (s = line.strip) && !s.start_with?("#") &&
+      s.sub(/\bSET\b.*?(?=\bWHERE\b|\z)/i, "").match?(/(?:(?<![<>=!])=|!=)\s*NULL\b|== nil.*column|column.*== nil/)
+  end
+  fix "Use IS NULL / IS NOT NULL in SQL; .nil? in Ruby."
+  bad "UPDATE profiles SET bydel = NULL WHERE deleted_at = NULL"
+  good <<~'X'
+    WHERE deleted_at IS NULL
+    # `= NULL` -> `IS NULL`, in SQL and nowhere else.
+    UPDATE profiles SET neighborhood_id = NULL WHERE neighborhood_id IS NOT NULL
+  X
+end
+
+Law.define(:SECRET_PROXIMITY) do
+  source "OWASP - no hardcoded secrets/credentials"
+  # The value must be a CLOSED quoted literal, and the identifier must not
+  # itself sit inside a string. `[^'"]{8,}` had no reason to stay inside a
+  # quote, so it matched the source BETWEEN two literals — the "secret" it
+  # reported in auth_tier.rb was the code `token=") || p == `. At :error
+  # severity, which also gated that file out of the semantic pass.
+  #
+  # An interpolated value is assembled at run time and cannot BE a literal
+  # secret. `token = "#{vertical}_#{key}"` builds a design-token name, and the
+  # literal is the whole point of the rule.
+  detect do |line|
+    # Shell expansion counts too: `export HUGGINGFACE_HUB_TOKEN="${HF_TOKEN}"`
+    # forwards a value the environment already holds, which is the fix this rule
+    # asks for rather than the defect it names.
+    next false if line.match?(/=\s*"[^"\n]*(?:#\{|\$\{|\$\w)/)
+
+    line.match?(/(?<!['"])(password|secret|token|api_key|private_key)\s*=\s*(?:"[^"\n]{8,}"|'[^'\n]{8,}')/i)
+  end
+  fix "Move secret to environment variable or secrets manager."
+  bad "api_key = 'sk_live_abcdef123456'"
+  good "api_key = ENV.fetch('API_KEY')"
+end
+
+Law.define(:SQUINT_TEST) do
+  source "Squint Test readability heuristic (Sandi Metz)"
+  ask "Does this file have dense blocks with no visual breaks, or ragged indentation?"
+  scope :file
+  # Comment lines are content for this law, not noise. considered_text replaces
+  # each one with a bare newline, so any four consecutive comment lines became
+  # `\n\n\n\n` and read as a gap — which made every heavily-commented file in
+  # this tree, including every file under law/, a finding about blank lines it
+  # does not have.
+  reads_comments true
+  detect { |text| text.match?(/\n{4,}/m) }
+  fix "One blank line between sections, never more than two consecutive."
+  bad <<~'X'
+    a
+
+
+
+    b
+  X
+  good <<~'X'
+    a
+
+    b
+  X
+end
+
+# TYPOGRAPHIC_EXCELLENCE lives once, in the registry (universal_rules.rb):
+# it knows shell arg separators and Open3 calls are not prose; this bare
+# twin flagged doc-comment placeholders and double-counted every hit.
+
+# TYPOGRAPHY_DISCIPLINE lives once, in the registry (universal_rules.rb): it
+# skips comment-leading lines and yaml frontmatter and wants a 4+ run, where
+# this per-line twin flagged every section comment, diff header and
+# frontmatter delimiter in the tree.
+
+Law.define(:UNBOUNDED_RETRY) do
+  source "Release It! - retry budgets / bounded retries (Nygard)"
+  # Every finding this produced was a false positive, all five of them. Three
+  # narrowings, each against one of those shapes:
+  #
+  # A retry whose modifier bounds it IS the fix — `retry if attempts < RETRIES`
+  # is what "add a max_attempts cap" looks like once someone has added it, and
+  # flagging it asks for the change that is already there.
+  #
+  # `while true` left the rule. A supervisor loop that sleeps is not a retry: it
+  # is how every watcher in this tree is written, the bad fixture below is a
+  # bare `retry` rather than a loop, and the one hit was openbsd's file watcher
+  # doing its job. A rule about busy loops needs to see the body for a sleep,
+  # which is file scope and a different rule.
+  #
+  # The keyword has to be a statement. String blanking cannot survive a nested
+  # interpolation — `"CSS#{a ? " (retry)" : ""}"` left the word bare — and a
+  # `retry` that is not at the head of a statement is prose in every case.
+  #
+  # One line on purpose: Law.conduct neutralizes `detect` lines when a law
+  # judges law/, and it reads lines, not blocks.
+  detect { |line| (s = line.strip) && !s.start_with?("#") && !s.match?(/retry\\/) && !s.match?(/\bretry\s+(?:if|unless)\b[^\n]*[<>]/) && (b = s.gsub(/"(?:\\.|[^"\\])*"/, '""').gsub(/'[^']*'/, "''")) && b.match?(/\A(?:.*(?:;|\bthen\b|\bdo\b)\s*)?retry(?![?:\w|])/) || false }
+  fix "Add max_attempts cap and exponential backoff."
+  bad "retry"
+  good <<~'X'
+    next if action == :retry
+    def retry?(error, attempt:)
+    @bus&.publish("llm:failover_backoff", retry: retry_index + 1)
+    [+0.18, :name, /retry|loop|escalat/],
+    # a retry then spawned a duplicate on the same output file
+    attempts += 1 and redo if attempts < 3
+    message: "retry with no visible attempt counter",
+    lines << "refresh %s retry" % policy.dig("soa", "retry")
+  X
+end
+
+Law.define(:NO_CHANGELOG_COMMENT) do
+  source "MASTER-native - git holds history; comments hold reasons"
+  reads_comments true
+  detect do |line|
+    line.match?(/^\s*(?:#|\/\/|\*)\s*(?:RAISED|RATCHETED|LOWERED|BUMPED|TRIMMED|UPDATED?|RENAMED|MOVED|CHANGED|REVERTED|REMOVED|ADDED|DEPRECATED|NARROWED|REDUCED|FIXED)\b[^\n]{0,40}\d{4}-\d{2}-\d{2}/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,60}\b(?:used to be|was previously|were previously|formerly)\b/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,60}\bchanged from\b[^\n]{0,40}\bto\b/i)
+  end
+  fix "State the present reason. Put the history in the commit message."
+  bad "# RENAMED 2026-08-25 from Foo to Bar"
+  good "# Bar names what it returns, so a caller can tell it from Baz."
+end
+
+Law.define(:WHY_NOT_WHAT) do
+  source "Clean Code / Code Complete - comments explain why, not what"
+  reads_comments true
+  # Two guards, and the second is the one that matters. Anchoring to the start
+  # of the comment is not enough, because these words are nouns as often as
+  # verbs and a wrapped paragraph puts them at the head of a line: "# set is
+  # closed and small" is about the verb SET, "# create is not a failure to
+  # lock" is about the create call. All six hits read that way.
+  #
+  # A comment restating the line below it is terse — that is what makes it
+  # worthless, and the fixture is two words. Prose that explains why runs on.
+  # Four words is the cut, so `# increment counter` stays caught and a sentence
+  # that merely opens with one of these words does not.
+  detect do |line|
+    body = line[/\A\s*#\s*(.*)/, 1].to_s
+    # A restating comment names its object: "increment counter". A function word
+    # after the verb means the line is mid-sentence — "get for free" is the tail
+    # of "what changed is which one you / get for free", wrapped.
+    next false unless body.match?(/\A(increment|set|get|update|return|initialize|create|add)\s+\w+/)
+    next false if body.match?(/\A\w+\s+(?:a|an|the|for|of|to|in|on|at|with|from|by|is|are|was|were|it|this|that)\b/)
+
+    body.split.length <= 4
+  end
+  fix "Comments should explain intent, not restate the code."
+  bad "# increment counter"
+  good "# retries are capped so a flapping host cannot pin the worker"
+end
+
+# Constitutional migration batch 2: architecture, design, and verification laws.
+# Semantic laws live here once their executable question, remedy, and worked
+# examples are defined. The YAML catalogue remains temporarily for compatibility;
+# SemanticLaw#from_law gives these definitions precedence during the migration.
+
+Law.define(:FUNCTIONAL_CORE) do
+  source "Functional Core, Imperative Shell (Gary Bernhardt)"
+  ask "Are IO, database, network, filesystem, or process side effects scattered deep inside business logic instead of isolated at the edges?"
+  fix "Return values from the core and move IO to the shell."
+  bad <<~'X'
+    def calculate_total(items); DB.save(calculate_total(items)); end
+  X
+  good <<~'X'
+    total = calculate_total(items); DB.save(total)
+  X
+end
+
+Law.define(:CONVENTION_OVER_CONFIG) do
+  source "Convention over Configuration (Rails Doctrine, DHH)"
+  ask "Does this require explicit configuration where an established local convention already provides the correct behavior?"
+  fix "Use the existing convention; add configuration only when it changes a real requirement."
+  bad <<~'X'
+    config = { adapter: :default }
+  X
+  good <<~'X'
+    adapter = default_adapter
+  X
+end
+
+Law.define(:PROGRAMMER_HAPPINESS) do
+  source "Optimize for Programmer Happiness (Rails Doctrine, DHH)"
+  ask "Does this design impose ceremony or friction that does not buy meaningful safety or clarity?"
+  fix "Remove unnecessary ceremony and keep the common path expressive."
+  bad <<~'X'
+    builder = RequestBuilder.new; builder.configure { |x| x.timeout = 30 }; builder.build
+  X
+  good <<~'X'
+    request = Request.new(timeout: 30)
+  X
+end
+
+Law.define(:OMAKASE) do
+  source "The Menu Is Omakase (Rails Doctrine, DHH)"
+  ask "Does this introduce a competing tool when the application already has a suitable integrated default?"
+  fix "Use the existing integrated default unless a concrete requirement justifies deviation."
+  bad <<~'X'
+    require "external_queue"
+  X
+  good <<~'X'
+    Rails.application.config.active_job.queue_adapter = :solid_queue
+  X
+end
+
+Law.define(:NO_ONE_PARADIGM) do
+  source "No One Paradigm (Rails Doctrine, DHH)"
+  ask "Does this force one programming paradigm where a pragmatic combination would make the design clearer?"
+  fix "Mix paradigms where each fits the problem; do not enforce uniformity for ideology's sake."
+  bad <<~'X'
+    class Pipeline; def call; steps.inject { |state, step| step.call(state) }; end; end
+  X
+  good <<~'X'
+    steps.map(&:normalize).each { |step| persist(step) }
+  X
+end
+
+Law.define(:BEAUTIFUL_CODE) do
+  source "Exalt Beautiful Code (Rails Doctrine, DHH)"
+  ask "Would a reader find this merely correct rather than clear, coherent, and aesthetically deliberate?"
+  fix "Rewrite for structural and aesthetic clarity, not merely passing tests."
+  bad <<~'X'
+    if a; b; else; c; end
+  X
+  good <<~'X'
+    value = a ? b : c
+  X
+end
+
+Law.define(:SHARP_KNIVES) do
+  source "Provide Sharp Knives (Rails Doctrine, DHH)"
+  ask "Does this restrict a capable operator's legitimate power mainly to guard against a rare misuse?"
+  fix "Preserve useful capability; document dangerous edges and require deliberate use."
+  bad <<~'X'
+    raise "forbidden" if dangerous_operation?
+  X
+  good <<~'X'
+    dangerous_operation! # explicit operator choice
+  X
+end
+
+Law.define(:INTEGRATED_SYSTEMS) do
+  source "OpenBSD integrated base; Value Integrated Systems (Rails Doctrine, DHH)"
+  ask "Does this split a cohesive, locally auditable system into packages or services without a real ownership, privilege, failure or scaling boundary; or merge independent products and trust domains that should remain distinct?"
+  practice "Prefer a coherent integrated base with one accountable owner for each decision. Keep cohesive mechanisms together, but keep independent applications, identities, privilege domains and failure boundaries separate."
+  fix "Integrate code when it removes version skew and hidden coordination; extract only at a concrete operational or trust boundary; preserve each product's own public contract and deployment authority."
+  bad <<~'X'
+    HTTP.post(service_url, payload)
+  X
+  good <<~'X'
+    Orders::Checkout.call(order)
+  X
+end
+
+Law.define(:PROGRESS_OVER_STABILITY) do
+  source "Progress Over Stability (Rails Doctrine, DHH)"
+  ask "Is a beneficial breaking change being avoided solely to preserve compatibility when a clear upgrade path exists?"
+  fix "Take the justified breaking change and provide an explicit migration path."
+  bad <<~'X'
+    def old_name(x); new_name(x); end
+  X
+  good <<~'X'
+    def new_name(x); x; end
+  X
+end
+
+Law.define(:BIG_TENT) do
+  source "Push Up a Big Tent (Rails Doctrine, DHH)"
+  ask "Does this unnecessarily exclude contributors through needless cleverness, jargon, or unexplained conventions?"
+  fix "Prefer clear language and approachable structure without lowering technical rigor."
+  bad <<~'X'
+    raise Foo::Bar::Baz unless x && y && z
+  X
+  good <<~'X'
+    raise InvalidState, "x requires y and z" unless x && y && z
+  X
+end
+
+Law.define(:MONOLITH_FIRST) do
+  source "MonolithFirst (Martin Fowler)"
+  ask "Is this splitting a cohesive application into services before a concrete extraction boundary or operational need exists?"
+  fix "Keep the feature in the application until extraction is clearly justified."
+  bad <<~'X'
+    PaymentsServiceClient.call(order)
+  X
+  good <<~'X'
+    Payments::Charge.call(order)
+  X
+end
+
+Law.define(:CONSISTENT_ERROR_STRATEGY) do
+  source "MASTER-native (uniform error handling)"
+  ask "Does this module mix Result objects, exceptions, and nil returns for equivalent failure paths?"
+  fix "Choose one error strategy per module and use it consistently."
+  bad <<~'X'
+    def find(id); raise NotFound if missing; end
+  X
+  good <<~'X'
+    def find(id); Result.ok(record) or Result.err(:not_found); end
+  X
+end
+
+Law.define(:EVIDENCE_BY_INTENT) do
+  source "MASTER-native (intent-to-evidence routing)"
+  ask "Does an answer depend on current, niche, uncertain, repository, browser, device, or externally verifiable facts without first selecting the evidence surface that can actually observe them?"
+  fix "Route the turn by evidence need: read/search the repository for repository facts, use device capability for local hardware, use browser capability for page state, and use local knowledge or current web sources for unfamiliar or time-sensitive facts; never substitute memory for available evidence."
+  bad <<~'X'
+    answer = model_memory(topic)
+  X
+  good <<~'X'
+    evidence = web_search(topic)
+    answer = synthesize(evidence)
+  X
+end
+
+Law.define(:DUAL_DETECTION) do
+  source "MASTER-native (lexical + semantic detection)"
+  ask "Does verification rely only on regex or only on an LLM when the subject can be checked with both deterministic and semantic evidence?"
+  fix "Layer deterministic detection with semantic review where both add independent evidence."
+  bad <<~'X'
+    rule = /danger/
+  X
+  good <<~'X'
+    rule = lexical_check + semantic_check
+  X
+end
+
+Law.define(:MASS_GENERATE_CURATE) do
+  source "MASTER-native (generate then curate)"
+  ask "Is a high-stakes creative or design decision accepting the first plausible draft without exploring alternatives?"
+  fix "Generate several materially different candidates, then curate against explicit constraints."
+  bad <<~'X'
+    solution = first_candidate
+  X
+  good <<~'X'
+    solutions = generate(15); solution = curate(solutions)
+  X
+end
+
+Law.define(:NO_SHOTGUN_SURGERY) do
+  source "Refactoring code smell: Shotgun Surgery (Fowler)"
+  ask "Does one conceptual change require edits across many unrelated files because the missing abstraction has no single home?"
+  fix "Create the missing abstraction or single source so one conceptual change has one owner."
+  bad <<~'X'
+    users.each { |u| audit(u) }; admins.each { |u| audit(u) }
+  X
+  good <<~'X'
+    auditable_users.each { |u| audit(u) }
+  X
+end
+
+Law.define(:NO_HIDDEN_GLOBAL_STATE) do
+  source "Clean Code - avoid global mutable state (R.C. Martin)"
+  ask "Are global variables or mutable class-level values shared across modules without explicit ownership?"
+  fix "Inject configuration and state through explicit boundaries."
+  bad <<~'X'
+    $current_user = user
+  X
+  good <<~'X'
+    Context.new(current_user: user)
+  X
+end
+
+Law.define(:TRACER_BULLETS) do
+  source "The Pragmatic Programmer - tracer bullets"
+  ask "Is infrastructure being built without first proving the simplest end-to-end path through the real system?"
+  fix "Wire the smallest end-to-end path first, prove it works, then add depth."
+  bad <<~'X'
+    class Queue; end; class Worker; end; class Adapter; end
+  X
+  good <<~'X'
+    result = adapter.call(input)
+  X
+end
+
+Law.define(:ORTHOGONALITY) do
+  source "The Pragmatic Programmer - orthogonality"
+  ask "Does changing one dimension force unrelated changes in another, such as database details leaking into UI or style changing structure?"
+  fix "Decouple dimensions so changes remain local."
+  bad <<~'X'
+    view = User.where(active: true).to_a.map { |u| "<b>#{u.name}</b>" }
+  X
+  good <<~'X'
+    users = User.active; render_users(users)
+  X
+end
+
+Law.define(:TRANSFORMATIONS) do
+  source "Transformation Priority Premise (Robert C. Martin)"
+  ask "Is the design modeling work as scattered mutable state when it can be expressed as a clear sequence of transformations?"
+  practice "On a structural or prose cleanup, inventory and classify first; defragment, decouple, flatten, merge, split, relocate, rename, reorder, remove, reflow and simplify in that order, then prove preservation."
+  fix "Express the flow as input-to-output transformations with explicit stages."
+  bad <<~'X'
+    state[:x] = normalize(state[:x]); state[:x] = validate(state[:x])
+  X
+  good <<~'X'
+    validated = validate(normalize(input))
+  X
+end
+
+Law.define(:DEEP_MODULES) do
+  source "A Philosophy of Software Design (John Ousterhout)"
+  ask "Is this module shallow, exposing a complex interface while doing little work behind it?"
+  fix "Absorb complexity behind a small interface that provides substantial capability."
+  bad <<~'X'
+    service.call(a, b, c, d, e, f, g, h)
+  X
+  good <<~'X'
+    service.call(request)
+  X
+end
+
+# Constitutional migration batch 3: kernel and foundational principles.
+
+Law.define(:DECOUPLE) do
+  source "The Pragmatic Programmer - decoupling"
+  ask "Are there implicit couplings between modules that should be explicit dependencies?"
+  fix "Inject dependencies through explicit boundaries; avoid hidden global state."
+  bad <<~'X'
+    Mailer.send(UserStore.fetch(id))
+  X
+  good <<~'X'
+    def initialize(mailer:, user_store:)
+  X
+end
+
+Law.define(:DEGRADE_GRACEFULLY) do
+  source "Release It! - graceful degradation (Michael Nygard)"
+  ask "Does a partial dependency failure crash the whole operation when a bounded fallback is possible?"
+  fix "Use timeouts, circuit breakers, bounded retries, or a safe fallback."
+  bad <<~'X'
+    weather = WeatherAPI.fetch!; render(weather)
+  X
+  good <<~'X'
+    weather = WeatherAPI.fetch(timeout: 2) || cached_weather
+  X
+end
+
+Law.define(:GALLS_LAW) do
+  source "Gall's Law - Systemantics (John Gall, 1975)"
+  ask "Is a complex system being built from scratch without first proving a smaller working system?"
+  fix "Start with the simplest working system, prove it, then extend."
+  bad <<~'X'
+    class Platform; def initialize; @services = 27.times.map { Service.new }; end; end
+  X
+  good <<~'X'
+    class Platform; def call(input); MinimalPath.call(input); end; end
+  X
+end
+
+Law.define(:CHESTERTONS_FENCE) do
+  source "Chesterton's Fence (G.K. Chesterton, 1929)"
+  ask "Is existing code being removed or changed without first understanding why it exists?"
+  fix "Read history, tests, callers, and rationale before removing it."
+  bad <<~'X'
+    delete_legacy_authentication
+  X
+  good <<~'X'
+    git blame lib/authentication.rb
+  X
+end
+
+Law.define(:UNIX_PHILOSOPHY) do
+  source "Unix philosophy - do one thing well (Doug McIlroy)"
+  ask "Does one module perform several unrelated jobs that could compose through a clear boundary?"
+  fix "Split unrelated responsibilities into focused components and compose them."
+  bad <<~'X'
+    class Report; def query; end; def render; end; def email; end; end
+  X
+  good <<~'X'
+    report = Report.new(data); Email.deliver(report.render)
+  X
+end
+
+Law.define(:DRY) do
+  source "DRY - Don't Repeat Yourself"
+  ask "Are two units expressing the same knowledge independently rather than sharing one authoritative source?"
+  fix "Merge the duplicated knowledge or make one representation authoritative."
+  bad <<~'X'
+    timeout = 30; other_timeout = 30
+  X
+  good <<~'X'
+    timeout = DEFAULT_TIMEOUT
+  X
+end
+
+Law.define(:KISS) do
+  source "KISS - Keep It Simple"
+  ask "Does this introduce complexity the problem does not require?"
+  fix "Flatten the design to the simplest structure that solves the actual problem."
+  bad <<~'X'
+    result = strategies.fetch(mode).call(input).then { |x| wrap(x) }.then { |x| audit(x) }
+  X
+  good <<~'X'
+    result = process(input)
+  X
+end
+
+Law.define(:LEAST_ASTONISHMENT) do
+  source "Principle of Least Astonishment"
+  ask "Do names, APIs, or behavior contradict what a reasonable reader would expect?"
+  fix "Rename or reshape the interface so behavior matches its apparent meaning."
+  bad <<~'X'
+    users.empty? # returns true when users exist
+  X
+  good <<~'X'
+    users.present?
+  X
+end
+
+# Constitutional migration batch 4: architecture and security principles.
+
+Law.define(:INFORMATION_HIDING) do
+  source "Information hiding (David Parnas; Ousterhout)"
+  ask "Do implementation details leak across a module boundary so changing one decision forces unrelated callers to change?"
+  fix "Encapsulate the decision behind a stable interface."
+  bad <<~'X'
+    renderer.backend = :cairo; renderer.options[:cairo][:antialias] = true
+  X
+  good <<~'X'
+    renderer.render(document, quality: :high)
+  X
+end
+
+Law.define(:DIFFERENT_LAYER_DIFFERENT_ABSTRACTION) do
+  source "A Philosophy of Software Design - different layers, different abstractions"
+  ask "Do adjacent layers merely relay the same abstraction without transforming it?"
+  fix "Make each layer add a meaningful abstraction or remove the layer."
+  bad <<~'X'
+    Controller.call(Service.call(Model.find(id)))
+  X
+  good <<~'X'
+    controller = UsersController.new; controller.show(id)
+  X
+end
+
+Law.define(:STRUCTURAL_HONESTY) do
+  source "MASTER-native - structure mirrors intent"
+  ask "Does the artifact's structure contradict the conceptual shape of the problem?"
+  fix "Align modules, sections, layout, and boundaries with the actual domain."
+  bad <<~'X'
+    misc/helpers/user_and_audio_and_css.rb
+  X
+  good <<~'X'
+    users/user.rb; audio/track.rb; ui/theme.css
+  X
+end
+
+Law.define(:GRACEFUL_BOUNDARIES) do
+  source "Boundaries (Gary Bernhardt) - values at the edges"
+  ask "Does a boundary assume perfect fidelity or that the other side will never change?"
+  fix "Translate and validate at boundaries; define safe degradation."
+  bad <<~'X'
+    JSON.parse(remote_body).fetch("user")
+  X
+  good <<~'X'
+    payload = JSON.parse(remote_body); UserPayload.parse(payload)
+  X
+end
+
+Law.define(:PULL_COMPLEXITY_DOWN) do
+  source "A Philosophy of Software Design - complexity belongs behind the interface"
+  ask "Is complexity being pushed onto callers instead of absorbed by the implementation?"
+  fix "Move complexity behind a small, stable interface."
+  bad <<~'X'
+    client.retry && client.timeout && client.auth && client.parse(response)
+  X
+  good <<~'X'
+    client.fetch(request)
+  X
+end
+
+Law.define(:ETC) do
+  source "The Pragmatic Programmer - Easier To Change"
+  ask "Does this decision unnecessarily close future options or make change expensive?"
+  fix "Prefer decoupled, replaceable, reversible choices where costs are comparable."
+  bad <<~'X'
+    class Report < VendorSpecificReportBase; end
+  X
+  good <<~'X'
+    class Report; def render(formatter); formatter.render(self); end; end
+  X
+end
+
+Law.define(:BROKEN_WINDOWS) do
+  source "The Pragmatic Programmer - broken windows"
+  ask "Is visible decay being left in place: dead code, stale references, broken links, or contradictory documentation?"
+  fix "Fix visible decay when encountered instead of normalizing it."
+  bad <<~'X'
+    TODO: remove this dead branch
+  X
+  good <<~'X'
+    return value unless value.nil?
+  X
+end
+
+Law.define(:ENTROPY_RESISTANCE) do
+  source "The Pragmatic Programmer - software entropy"
+  ask "Is disorder accumulating through inconsistent names, exceptions, stale conventions, or abandoned paths?"
+  fix "Remove drift and consolidate exceptions before they become a second system."
+  bad <<~'X'
+    foo_name = user_name; usr = account.name
+  X
+  good <<~'X'
+    account_name = account.name
+  X
+end
+
+Law.define(:DONT_OUTRUN_HEADLIGHTS) do
+  source "The Pragmatic Programmer - don't outrun your headlights"
+  ask "Is the design specifying distant hypothetical scenarios more precisely than current evidence allows?"
+  fix "Take small deliberate steps and reassess after each measured result."
+  bad <<~'X'
+    design_for_1000000_users = FutureArchitecture.new
+  X
+  good <<~'X'
+    serve_current_users = SimpleApp.new
+  X
+end
+
+Law.define(:REVERSIBILITY) do
+  source "The Pragmatic Programmer - reversibility"
+  ask "Is a hard-to-reverse decision being made when a reversible option provides the same present value?"
+  fix "Prefer rollback paths, replaceable boundaries, and staged changes."
+  bad <<~'X'
+    DROP TABLE users
+  X
+  good <<~'X'
+    rename_table :users, :users_archive
+  X
+end
+
+Law.define(:DESIGN_IT_TWICE) do
+  source "A Philosophy of Software Design - Design it Twice"
+  ask "Was a consequential design committed without considering at least one materially different approach?"
+  fix "Sketch and compare alternatives before committing."
+  bad <<~'X'
+    solution = first_design
+  X
+  good <<~'X'
+    options = [design_a, design_b]; solution = choose(options)
+  X
+end
+
+Law.define(:PROPERTY_BASED_TESTING) do
+  source "Property-based testing - QuickCheck"
+  ask "Do tests check only a few examples when the important invariant can be stated as a property?"
+  fix "State the invariant and exercise many generated cases."
+  bad <<~'X'
+    assert_equal 3, normalize("abc").length
+  X
+  good <<~'X'
+    assert normalize(x).length <= x.length
+  X
+end
+
+Law.define(:EXPLICIT_TRADEOFF) do
+  source "Polished Ruby Programming - contextual trade-offs"
+  ask "Where several valid implementations exist, is the chosen one presented as universally correct instead of justified by context?"
+  fix "State the access pattern, failure mode, or constraint that makes the choice fit."
+  bad <<~'X'
+    ALWAYS_USE_ASYNC = true
+  X
+  good <<~'X'
+    # sync: bounded local workload; async would add coordination cost
+  X
+end
+
+Law.define(:PORTABILITY_IS_VERIFIED) do
+  source "OpenBSD portability discipline; explicit platform contracts"
+  ask "Is support claimed for an operating system, release, architecture or runtime that has not been exercised, or does a platform-specific assumption leak across its boundary?"
+  practice "Portability is a measured promise, not an inference from POSIX-like spelling. Keep platform-specific behavior at narrow edges and verify every named target."
+  fix "Name supported targets, isolate platform-specific interfaces behind small adapters, and run native checks on every claimed target. An unavailable target is INCONCLUSIVE, never PASS."
+  bad "It works on Linux, so the OpenBSD path is presumed correct."
+  good "OpenBSD and macOS behavior are explicit; each declared target runs its own relevant contract checks."
+end
+
+Law.define(:PRODUCTION_RELEASE_IS_PINNED) do
+  source "OpenBSD release engineering; immutable revision deployment"
+  ask "Can a moving branch reference change the code under deployment, or can a release be stamped without proof for the exact commit being deployed?"
+  practice "Resolve one immutable commit, require preflight and CI attestations to name that commit, deploy only that pin, and record the same revision in the receipt."
+  fix "Fetch once, pin the target SHA, verify ancestry and exact-SHA attestations, deploy only that SHA, and refuse a mismatch or missing required proof."
+  bad "Test one revision, then deploy the later moving branch tip."
+  good "CI, preflight, deployment and receipt all name the same immutable SHA."
+end
+
+Law.define(:LEAST_PRIVILEGE) do
+  source "Saltzer & Schroeder - least privilege; OpenBSD pledge(2) and unveil(2)"
+  ask "Does a process, service, job, deploy phase or agent retain ambient filesystem, network, syscall, credential or tool authority beyond the exact operation that needs it?"
+  practice "Grant the minimum capability for the minimum duration. OpenBSD's pledge/unveil model is the reference: narrow the syscall and filesystem surface at the boundary, then only remove authority as execution advances."
+  fix "Name the exact files, syscalls, network destinations, identities and actions required; deny everything else; enter the narrowest viable pledge/unveil stage after setup; never widen a sealed stage; and discard temporary credentials and handles when their phase ends."
+  bad <<~'X'
+    client = AdminClient.new; client.delete_all
+  X
+  good <<~'X'
+    client = UserReadClient.new
+  X
+end
+
+Law.define(:BOUNDED_OPERATION_LIFECYCLE) do
+  source "OpenBSD process discipline; bounded-deadline engineering"
+  ask "Does the deadline cover the entire operation it owns, including child processes, inherited pipes, output readers and cleanup, or only the first wait?"
+  practice "A timeout ends the whole owned operation, not merely its direct child."
+  fix "Use one monotonic deadline across every wait; terminate the owned process group and stop its readers on expiry; preserve TIMEOUT as the result."
+  bad <<~'X'
+    waiter.join(timeout)
+    reader.join
+  X
+  good <<~'X'
+    deadline = monotonic + timeout
+    waiter.join([deadline - monotonic, 0].max)
+    reader.join([deadline - monotonic, 0].max)
+  X
+end
+
+Law.define(:PROACTIVE_DEFECT_AUDIT) do
+  source "OpenBSD security-audit practice"
+  ask "Does an audit stop at recently changed lines or known vulnerabilities when the same defect class can exist elsewhere in the complete high-risk boundary?"
+  practice "Audit whole trust boundaries and recurring defect classes, not only the incident that exposed them."
+  fix "Trace every entrypoint, caller, state transition and failure path in scope; validate the audit instrument against known positive and negative cases; turn confirmed defect classes into regression tests."
+  bad "Patch the reported vulnerability line and stop."
+  good "Audit the component and sibling paths for the same defect class, record what actually ran, and add a regression case."
+end
+
+Law.define(:FAIL_SAFE_DEFAULTS) do
+  source "Saltzer & Schroeder - fail-safe defaults; OpenBSD default-deny policy"
+  ask "Can missing, unreadable, malformed, stale or unmeasured policy state grant access, skip a safety check, or turn an error into success?"
+  practice "Absence of proof is absence of permission. Unknown state fails closed for authority and fails visibly for correctness."
+  fix "Default to denial; validate policy before applying it; treat missing or ambiguous state as BLOCKED/INCONCLUSIVE rather than success; and make recovery an explicit, bounded operation."
+  bad <<~'X'
+    allowed = rules[user] != false
+  X
+  good <<~'X'
+    allowed = rules.fetch(user, false)
+  X
+end
+
+Law.define(:COMPLETE_MEDIATION) do
+  source "Saltzer & Schroeder - complete mediation; OpenBSD privilege boundaries"
+  ask "Does every privileged filesystem, network, process, service, data or deployment operation pass through the narrow authority check at the point of use?"
+  practice "A prior authorization is not a capability. Revalidate at every trust boundary and do not let callers bypass the fixed privileged broker."
+  fix "Mediate every access where identity, object, state or policy can change; bind authority to the exact resource and operation; and keep privileged helpers closed to arbitrary commands or caller-supplied paths."
+  bad <<~'X'
+    authorized = policy.allow?(user); 100.times { perform if authorized }
+  X
+  good <<~'X'
+    100.times { perform if policy.allow?(user) }
+  X
+end
+
+Law.define(:ECONOMY_OF_MECHANISM) do
+  source "Saltzer & Schroeder - economy of mechanism; OpenBSD integrated-base discipline"
+  ask "Is the trusted computing base too large, indirect, dependency-heavy or split across competing owners to inspect and verify as one small mechanism?"
+  practice "Prefer a small, coherent, auditable base with one owner for each policy and mechanism. Integration reduces version skew and hidden interfaces; it does not justify merging unrelated product identities or trust domains."
+  fix "Shrink and isolate the trusted path; reuse the platform's established base mechanisms; give each decision one owner; keep privilege transitions explicit; and remove machinery that does not improve measured correctness, security or operability."
+  bad <<~'X'
+    def authorize; 1200 lines of mixed parsing, IO and policy; end
+  X
+  good <<~'X'
+    def authorize(request); policy.allow?(request); end
+  X
+end
+
+Law.define(:PSYCHOLOGICAL_ACCEPTABILITY) do
+  source "Saltzer & Schroeder - psychological acceptability"
+  ask "Does the secure path impose enough friction that users are pushed toward an unsafe shortcut?"
+  fix "Make the safe path the easy path and remove unnecessary security ceremony."
+  bad <<~'X'
+    unsafe_url = params[:url] # easier than validating
+  X
+  good <<~'X'
+    url = Url.parse(params[:url]); fetch(url)
+  X
+end
+
+# Constitutional migration batch 5: foundational architecture, clarity, and runtime behavior.
+
+Law.define(:MAKE_ILLEGAL_STATES_UNREPRESENTABLE) do
+  source "Yaron Minsky - make illegal states unrepresentable"
+  ask "Can an invalid combination of fields or values be constructed at all, or must every caller remember a runtime check?"
+  fix "Encode the invariant in the data shape, constructor, type, or boundary."
+  bad <<~'X'
+    User.new(role: :admin, active: false)
+  X
+  good <<~'X'
+    ActiveAdmin.new
+  X
+end
+
+Law.define(:PARSE_DONT_VALIDATE) do
+  source "Alexis King - parse, don't validate"
+  ask "Is the same input re-checked at many call sites instead of being parsed once into a value carrying the guarantee?"
+  fix "Parse once at the boundary and pass the proven value inward."
+  bad <<~'X'
+    def send(url); raise unless url.start_with?("https:"); fetch(url); end
+  X
+  good <<~'X'
+    url = HttpsUrl.parse(raw); fetch(url)
+  X
+end
+
+Law.define(:POKA_YOKE) do
+  source "Toyota Production System - poka-yoke"
+  ask "Can this API be called in the wrong order, with swappable same-typed arguments, or in a meaningless state?"
+  fix "Make invalid sequences or arguments difficult or impossible to express."
+  bad <<~'X'
+    client.send(body, token)
+  X
+  good <<~'X'
+    client.send(token: token, body: body)
+  X
+end
+
+Law.define(:COMPLEX_SYSTEMS_FAIL) do
+  source "Richard Cook - How Complex Systems Fail; resilience engineering"
+  ask "Does this path assume the happy case or rely on a single safeguard with no defined degraded mode?"
+  fix "Define independent safeguards and a bounded degraded mode."
+  bad <<~'X'
+    result = primary.fetch!
+  X
+  good <<~'X'
+    result = primary.fetch(timeout: 2) || fallback.fetch
+  X
+end
+
+Law.define(:STRONG_CENTERS) do
+  source "Christopher Alexander - strong centers"
+  ask "Does this artifact have one identifiable center of meaning that its parts reinforce, or is it a flat bag of unrelated pieces?"
+  fix "Strengthen the central purpose and remove or relocate unrelated pieces."
+  bad <<~'X'
+    README with unrelated sections on finance, CSS, music, and legal notices
+  X
+  good <<~'X'
+    README whose sections all explain how to use and govern master
+  X
+end
+
+Law.define(:LEVELS_OF_SCALE) do
+  source "Christopher Alexander - levels of scale"
+  ask "Does the design jump abruptly between granularities without useful intermediate levels?"
+  fix "Introduce meaningful intermediate structure where it clarifies the whole."
+  bad <<~'X'
+    system with one 500-line method and 2-line helpers
+  X
+  good <<~'X'
+    system with workflow -> stage -> operation
+  X
+end
+
+Law.define(:GUARD_EXPENSIVE) do
+  source "MASTER-native - guard expensive operations"
+  ask "Does this file perform expensive operations without checking relevant preconditions or bounds?"
+  fix "Check prerequisites, estimate cost, and bound the operation before executing it."
+  bad <<~'X'
+    API.delete_all
+  X
+  good <<~'X'
+    records = API.list(limit: 100); records.each(&:delete)
+  X
+end
+
+Law.define(:ARTIFICIAL_COUPLING) do
+  source "The Pragmatic Programmer - avoid artificial coupling"
+  ask "Are unrelated concepts coupled merely because they share a container, proximity, or formatting convention?"
+  fix "Separate unrelated concerns and couple only through meaningful interfaces."
+  bad <<~'X'
+    settings = { audio: audio, billing: billing, css: css }
+  X
+  good <<~'X'
+    Audio::Settings.new(audio); Billing::Settings.new(billing)
+  X
+end
+
+Law.define(:SELF_EXPLAINING) do
+  source "Clean Code - self-documenting code"
+  ask "Does this name clearly reveal intent without requiring a comment to decode it?"
+  fix "Rename around the domain action, value, or invariant."
+  bad <<~'X'
+    def do_it(x)
+  X
+  good <<~'X'
+    def refresh_access_token(token)
+  X
+end
+
+Law.define(:SILENCE_ON_SUCCESS) do
+  source "Unix philosophy - Rule of Silence"
+  ask "Does a successful operation emit output that the operator does not need?"
+  fix "Report errors and meaningful state; stay quiet on ordinary success."
+  bad <<~'X'
+    puts "done"
+  X
+  good <<~'X'
+    return unless error
+  X
+end
+
+Law.define(:PRECOMPUTE_MATH) do
+  source "MASTER-native - precompute constant math"
+  ask "Are invariant trig, noise, or lookup calculations repeated per frame or per object?"
+  fix "Precompute invariant values once and reuse them."
+  bad <<~'X'
+    objects.each { |o| angle = Math.sin(Math::PI / 4) * o.scale }
+  X
+  good <<~'X'
+    sin_quarter = Math.sin(Math::PI / 4); objects.each { |o| angle = sin_quarter * o.scale }
+  X
+end
+
+Law.define(:AUDIO_SMOOTHING) do
+  source "MASTER-native - audio smoothing"
+  ask "Do visual elements jump erratically because raw audio samples drive motion directly?"
+  fix "Smooth or envelope audio-derived control values before applying visual motion."
+  bad <<~'X'
+    scale = fft[12]
+  X
+  good <<~'X'
+    scale = smoothing.update(fft[12])
+  X
+end
+
+Law.define(:GRACEFUL_LOAD) do
+  source "Web performance - progressive loading"
+  ask "Does this run at full quality until resource exhaustion instead of degrading in measured stages?"
+  fix "Start with a safe baseline and progressively add quality within resource bounds."
+  bad <<~'X'
+    renderer.render(quality: :ultra)
+  X
+  good <<~'X'
+    quality = budget.available? ? :full : :low; renderer.render(quality:)
+  X
+end
+
+Law.define(:ANALOG_WARMTH) do
+  source "MASTER-native - Dilla audio aesthetic"
+  ask "Is generated audio unnaturally perfect because noise floor, saturation, timing drift, or humanized variation has been eliminated entirely?"
+  fix "Introduce restrained, purposeful imperfection where the aesthetic calls for it."
+  bad <<~'X'
+    notes.each { |n| synth.play(n, velocity: 127, at: n.beat) }
+  X
+  good <<~'X'
+    notes.each { |n| synth.play(n, velocity: humanize(n), at: drift(n.beat)) }
+  X
+end
+
+Law.define(:DOMAIN_LANGUAGE) do
+  source "Domain-Driven Design - Ubiquitous Language (Eric Evans)"
+  ask "Does this code or document use generic terms where the domain has a clearer established term?"
+  fix "Use the vocabulary the domain actually uses."
+  bad <<~'X'
+    data = invoice.total
+  X
+  good <<~'X'
+    invoice_total = invoice.total
+  X
+end
+
+Law.define(:LOAD_BEARING_NAMES) do
+  source "Clean Code - names carry intent"
+  ask "Are names vague, generic, or misleading enough that a reader cannot tell what they hold or do?"
+  fix "Choose names that expose role, value, or domain meaning."
+  bad <<~'X'
+    data = process(input)
+  X
+  good <<~'X'
+    normalized_invoice = normalize(input)
+  X
+end
+
+Law.define(:ERROR_CONTEXT) do
+  source "Context-rich error handling"
+  ask "Does an error or rejection omit the context needed to locate the cause and decide the next action?"
+  fix "Include relevant operation, subject, and cause without leaking secrets."
+  bad <<~'X'
+    raise Error, "failed"
+  X
+  good <<~'X'
+    raise Error, "invoice #{invoice.id}: payment authorization failed"
+  X
+end
+
+Law.define(:POSTEL) do
+  source "Postel's Law / Robustness Principle"
+  ask "Does this boundary reject safely normalizable valid variation or emit unnecessarily strict structure that callers do not need?"
+  fix "Normalize harmless variation at the boundary and keep emitted contracts deliberate."
+  bad <<~'X'
+    raise unless input == input.strip
+  X
+  good <<~'X'
+    value = input.strip
+  X
+end
+
+Law.define(:HYRUM) do
+  source "Hyrum's Law"
+  ask "Is a change removing or altering behavior that callers may already depend on despite it never being formally documented?"
+  fix "Search actual consumers and observed behavior before changing the contract; preserve or version what is relied upon."
+  bad <<~'X'
+    Logger.write("ok") # side effect removed as "unused"
+  X
+  good <<~'X'
+    Logger.write("ok") # callers depend on audit output
+  X
+end
+
+Law.define(:TEMPORAL_COUPLING) do
+  source "The Pragmatic Programmer - temporal coupling"
+  ask "Must callers invoke methods in a specific order without the API enforcing that sequence?"
+  fix "Encode required state transitions or provide one operation representing the valid sequence."
+  bad <<~'X'
+    client.fetch; client.authenticate
+  X
+  good <<~'X'
+    client = Client.authenticated; client.fetch
+  X
+end
+
+Law.define(:HUMBLE_OBJECT) do
+  source "Humble Object pattern (Gerard Meszaros)"
+  ask "Is business or decision logic tangled with IO, rendering, or external APIs so isolated tests become difficult?"
+  fix "Move decisions into a testable core and keep the boundary object thin."
+  bad <<~'X'
+    response = DB.query(sql); HTML.render(response)
+  X
+  good <<~'X'
+    users = QueryUsers.call; HTML.render(users)
+  X
+end
+
+# Constitutional migration batch 6a: SOLID and abstraction laws.
+
+Law.define(:SRP) do
+  source "SOLID - Single Responsibility Principle (Robert C. Martin)"
+  ask "Does this class or module have more than one reason to change?"
+  fix "Give each responsibility a distinct owner and boundary."
+  bad <<~'X'
+    class Invoice; def calculate; end; def render; end; def email; end; end
+  X
+  good <<~'X'
+    class Invoice; def calculate; end; end; class InvoiceRenderer; end; class InvoiceMailer; end
+  X
+end
+
+Law.define(:ONE_JOB) do
+  source "SRP / Unix philosophy - do one thing"
+  ask "Does this module handle unrelated responsibilities instead of one coherent job?"
+  fix "Give the module one job and compose it with neighboring modules."
+  bad <<~'X'
+    class UserService; def find; end; def email; end; def export; end; end
+  X
+  good <<~'X'
+    class UserFinder; end; class UserMailer; end; class UserExporter; end
+  X
+end
+
+Law.define(:COMPOSABLE) do
+  source "Unix philosophy / functional composition"
+  ask "Is this operation monolithic when it could be cleanly composed from smaller independent parts?"
+  fix "Expose small units with explicit inputs and outputs so they can be composed."
+  bad <<~'X'
+    processor.run_all(input)
+  X
+  good <<~'X'
+    normalized = normalize(input); validated = validate(normalized)
+  X
+end
+
+Law.define(:COMPOSITION_OVER_INHERITANCE) do
+  source "Design Patterns (Gang of Four)"
+  ask "Is inheritance being used mainly for code reuse rather than a genuine substitutability relationship?"
+  fix "Prefer composition when behavior can vary independently of type identity."
+  bad <<~'X'
+    class JsonReport < Report; end
+  X
+  good <<~'X'
+    class Report; def initialize(formatter:); @formatter = formatter; end; end
+  X
+end
+
+Law.define(:ONE_ABSTRACTION_LEVEL) do
+  source "Clean Code - one level of abstraction per function"
+  ask "Does this function mix policy-level operations with low-level representation or IO details?"
+  fix "Keep each function at one conceptual level and delegate detail downward."
+  bad <<~'X'
+    def checkout; authorize_card; db.execute("INSERT INTO..."); render_html; end
+  X
+  good <<~'X'
+    def checkout; authorize_card; persist_order; render_receipt; end
+  X
+end
+
+# Constitutional migration batch 6b: design, functional, and refactoring laws.
+
+Law.define(:STEPDOWN) do
+  source "Clean Code - Stepdown Rule"
+  ask "Does the code fail to read top-down from high-level intent into progressively smaller details?"
+  fix "Arrange definitions so each step introduces the detail used by the next."
+  bad <<~'X'
+    def helper; end; def main; helper; end
+  X
+  good <<~'X'
+    def main; helper; end; def helper; end
+  X
+end
+
+Law.define(:BOUNDARY_ISOLATION) do
+  source "Boundaries (Gary Bernhardt) / Clean Architecture"
+  ask "Does third-party API or framework surface leak directly into core logic?"
+  fix "Translate external contracts at a boundary and keep the core independent."
+  bad <<~'X'
+    status = Stripe::Charge.create(amount: cents).status
+  X
+  good <<~'X'
+    status = Payments::Authorization.new(gateway: stripe).call(amount)
+  X
+end
+
+Law.define(:NO_MAGIC) do
+  source "Clean Code - no magic numbers"
+  ask "Are unexplained numeric literals or booleans carrying domain meaning instead of named concepts?"
+  fix "Name the domain meaning and keep the value in one source."
+  bad <<~'X'
+    sleep 37; if retries > 4; end
+  X
+  good <<~'X'
+    BACKOFF_SECONDS = 37; MAX_RETRIES = 4
+  X
+end
+
+Law.define(:FAIL_FAST) do
+  source "Fail Fast (Jim Shore)"
+  ask "Does the system defer reporting a known invalid state instead of stopping at the point it is detected?"
+  fix "Reject invalid state immediately with actionable context."
+  bad <<~'X'
+    result = parse(input); use(result) if result.valid?
+  X
+  good <<~'X'
+    raise InvalidInput, result.error unless parse(input).ok?
+  X
+end
+
+Law.define(:IDEMPOTENT) do
+  source "REST / distributed systems idempotency"
+  ask "Would repeating the same operation with the same intended input produce an unintended different result?"
+  fix "Make repeat calls converge to the same state or use an idempotency key."
+  bad <<~'X'
+    POST /payments creates another charge every retry
+  X
+  good <<~'X'
+    PUT /payments/123 with idempotency key
+  X
+end
+
+Law.define(:DEFENSIVE_INPUT) do
+  source "Defensive programming / safe boundaries"
+  ask "Is external or untrusted input used without checking its shape, range, encoding, or allowed values?"
+  fix "Validate or parse input at the boundary before it reaches trusted logic."
+  bad <<~'X'
+    File.read(params[:path])
+  X
+  good <<~'X'
+    path = SafePath.parse(params.fetch(:path)); File.read(path)
+  X
+end
+
+Law.define(:NO_SIDE_EFFECTS) do
+  source "Functional programming / Clean Code"
+  ask "Does this function silently modify external state in addition to returning its conceptual result?"
+  fix "Separate side effects from pure transformation where practical."
+  bad <<~'X'
+    def normalize(x); DB.write(x.strip); x.strip; end
+  X
+  good <<~'X'
+    def normalize(x); x.strip; end
+  X
+end
+
+Law.define(:PURE_FUNCTIONS) do
+  source "Functional programming - referential transparency"
+  ask "Does this function depend on hidden mutable state or ambient inputs that callers cannot see?"
+  fix "Pass dependencies explicitly and keep deterministic logic pure."
+  bad <<~'X'
+    def total(items); items.sum + Time.now.to_i; end
+  X
+  good <<~'X'
+    def total(items, tax_rate:); items.sum * tax_rate; end
+  X
+end
+
+Law.define(:DIVERGENT_CHANGE) do
+  source "Refactoring - Divergent Change (Fowler)"
+  ask "Is one class repeatedly changed for several unrelated causes?"
+  fix "Separate the responsibilities so each has a focused reason to change."
+  bad <<~'X'
+    class Report; def html; end; def csv; end; def tax; end; def mail; end; end
+  X
+  good <<~'X'
+    class Report; end; class ReportTax; end; class ReportMailer; end
+  X
+end
+
+Law.define(:SPECULATIVE_GENERALITY) do
+  source "Refactoring - Speculative Generality; YAGNI"
+  ask "Is code generalized for a future requirement that has no present evidence or consumer?"
+  fix "Remove speculative hooks and add abstraction when a real use case arrives."
+  bad <<~'X'
+    supports_five_future_formats = true
+  X
+  good <<~'X'
+    format = :json
+  X
+end
+
+Law.define(:INAPPROPRIATE_INTIMACY) do
+  source "Refactoring - Inappropriate Intimacy (Fowler)"
+  ask "Does one class access another class's internals instead of using its public contract?"
+  fix "Expose the needed behavior through the owner's interface."
+  bad <<~'X'
+    user.instance_variable_get(:@roles).include?(:admin)
+  X
+  good <<~'X'
+    user.admin?
+  X
+end
+
+# Constitutional migration batch 7a: user experience laws.
+
+Law.define(:SYSTEM_STATUS) do
+  source "Nielsen Heuristic #1 - Visibility of system status"
+  ask "Does a long-running operation provide enough timely feedback for the user to know what is happening?"
+  fix "Show meaningful progress, current state, or the last completed checkpoint."
+  bad <<~'X'
+    export_all_records # runs for minutes with no output
+  X
+  good <<~'X'
+    export_all_records { |n| progress.report(n) }
+  X
+end
+
+Law.define(:VISUAL_HIERARCHY) do
+  source "Visual hierarchy - information scent, typographic scale, Gestalt grouping"
+  ask "On the rendered surface, can a first-time reader distinguish the primary task/content, supporting information, and tertiary controls at a glance? Does visual emphasis follow the user's current goal rather than decoration or implementation convenience?"
+  fix "Name the primary, secondary and tertiary elements for the task; use the existing type, spacing and contrast tokens to establish their order; verify the result in rendered screenshots at mobile and desktop widths without hiding required actions."
+  bad "A product card gives its seller metadata, badge, price, title and purchase action equal size and contrast."
+  good "A product title and price lead; seller metadata supports the choice; the purchase action is unmistakable and secondary actions remain quieter."
+end
+
+Law.define(:CONTEXTUAL_STATUS_CUES) do
+  source "Visibility of system status - contextual, persistent, actionable feedback"
+  ask "At the point a user must decide or wait, does the interface explain the relevant state, what changed, and what action is available next? Is essential meaning retained after transient motion or color feedback ends?"
+  fix "Show truthful status beside the affected task; use persistent text or semantics for success and failure, announce important asynchronous updates accessibly, and provide a concrete recovery action when one exists."
+  bad "A save button spins briefly, returns to its idle appearance, and leaves the user unsure whether the save succeeded."
+  good "The save action reports progress, then a persistent saved state; a failure explains the problem and offers a relevant retry path."
+end
+
+Law.define(:USER_CONTROL) do
+  source "Nielsen Heuristic #3 - User control and freedom"
+  ask "Can the user cancel or undo a consequential operation when doing so is technically feasible?"
+  fix "Provide an explicit cancel, undo, or rollback path."
+  bad <<~'X'
+    publish! # irreversible and no cancel path
+  X
+  good <<~'X'
+    publish_with_undo_window
+  X
+end
+
+Law.define(:ERROR_RECOVERY) do
+  source "Nielsen Heuristic #9 - help users recover from errors"
+  ask "Does an error explain what happened and what the user can do next?"
+  fix "State the failed operation, relevant cause, and concrete recovery action."
+  bad <<~'X'
+    raise Error, "invalid"
+  X
+  good <<~'X'
+    raise Error, "invoice 42: payment declined; update card and retry"
+  X
+end
+
+Law.define(:MATCH_REAL_WORLD) do
+  source "Nielsen Heuristic #2 - match between system and real world"
+  ask "Does the interface expose implementation jargon where a familiar real-world term would be clearer?"
+  fix "Use the user's domain vocabulary for labels, actions, and concepts."
+  bad <<~'X'
+    button "invoke_job_executor"
+  X
+  good <<~'X'
+    button "Run job"
+  X
+end
+
+Law.define(:RECOGNITION_OVER_RECALL) do
+  source "Nielsen Heuristic #6 - recognition rather than recall"
+  ask "Does the user need to remember information across steps that could be shown at the point of use?"
+  fix "Keep relevant context, choices, and state visible where decisions happen."
+  bad <<~'X'
+    form.step(4) # requires remembering which file was selected
+  X
+  good <<~'X'
+    form.step(4, file: selected_file)
+  X
+end
+
+Law.define(:FLEXIBILITY_EFFICIENCY) do
+  source "Nielsen Heuristic #7 - flexibility and efficiency"
+  ask "Does the interface serve only novices or only experts when defaults and accelerators could coexist?"
+  fix "Provide a sensible default plus efficient shortcuts for experienced users."
+  bad <<~'X'
+    editor = Editor.new(mode: :advanced)
+  X
+  good <<~'X'
+    editor = Editor.new; editor.bind(:advanced, "A")
+  X
+end
+
+Law.define(:HELP_AND_DOCUMENTATION) do
+  source "Nielsen Heuristic #10 - help and documentation"
+  ask "When the user gets stuck, is concrete, searchable, task-focused help available near the action?"
+  fix "Provide focused guidance where the question arises, with an actionable next step."
+  bad <<~'X'
+    button "Deploy" # no explanation or error guidance
+  X
+  good <<~'X'
+    button "Deploy"; help "Build and release the current revision"
+  X
+end
+
+# Constitutional migration batch 7b: interface, LLM, and reliability laws.
+
+Law.define(:CONSISTENCY) do
+  source "Nielsen Heuristic #4 - consistency and standards"
+  ask "Are the same concepts, actions, or states named or presented differently in different places?"
+  fix "Choose one vocabulary and interaction pattern and reuse it."
+  bad <<~'X'
+    button "Remove"; link "Delete"
+  X
+  good <<~'X'
+    button "Delete"; link "Delete"
+  X
+end
+
+Law.define(:COST_TRANSPARENCY) do
+  source "MASTER-native - surface LLM token cost"
+  ask "Are LLM calls made without exposing enough token or cost information to the operator when that information is available?"
+  fix "Surface measured input, output, and cost data at the appropriate operator boundary."
+  bad <<~'X'
+    llm.complete(prompt)
+  X
+  good <<~'X'
+    llm.complete(prompt) # reports usage tokens=1240 cost=$0.0021
+  X
+end
+
+Law.define(:CACHE_LLM) do
+  source "MASTER-native - cache repeat LLM work"
+  ask "Is the same expensive LLM request repeated when the input and relevant context are unchanged?"
+  fix "Cache deterministic or safely repeatable requests with an explicit invalidation boundary."
+  bad <<~'X'
+    3.times { llm.complete(prompt) }
+  X
+  good <<~'X'
+    response = cache.fetch(prompt_key) { llm.complete(prompt) }
+  X
+end
+
+Law.define(:NO_OUTPUT_ARGUMENTS) do
+  source "Clean Code - no output arguments"
+  ask "Does this function mutate an input argument to return a result indirectly?"
+  fix "Return the result explicitly instead of using output parameters."
+  bad <<~'X'
+    def normalize!(input); input.replace(input.strip); end
+  X
+  good <<~'X'
+    def normalize(input); input.strip; end
+  X
+end
+
+Law.define(:NO_SELECTOR_ARGUMENTS) do
+  source "Flag arguments / selector arguments"
+  ask "Is an argument used mainly as a switch between distinct behaviors rather than as data?"
+  fix "Expose distinct operations or strategy objects instead of hiding a dispatch behind a flag."
+  bad <<~'X'
+    save(record, mode: :json)
+  X
+  good <<~'X'
+    JsonSaver.new.save(record)
+  X
+end
+
+Law.define(:DESIGN_BY_CONTRACT) do
+  source "Design by Contract (Bertrand Meyer)"
+  ask "Are important preconditions, postconditions, and invariants left implicit at an interface?"
+  fix "State and enforce the contract at the boundary."
+  bad <<~'X'
+    def divide(a, b); a / b; end
+  X
+  good <<~'X'
+    def divide(a, b); raise ArgumentError if b.zero?; a / b; end
+  X
+end
+
+Law.define(:DEFINE_ERRORS_OUT) do
+  source "A Philosophy of Software Design - define errors out of existence"
+  ask "Is the interface handling errors that could instead be prevented by making invalid states unrepresentable or normalizing inputs earlier?"
+  fix "Redesign the interface so the problematic state cannot arise on the normal path."
+  bad <<~'X'
+    if config[:timeout].nil?; config[:timeout] = 30; end
+  X
+  good <<~'X'
+    timeout = TimeoutValue.default(config[:timeout])
+  X
+end
+
+# Constitutional migration batch 7c: public surface, refactoring, and prose laws.
+
+Law.define(:SURFACE_AREA) do
+  source "API design - minimize public surface area"
+  ask "Is the public interface larger than necessary, exposing entry points or exceptions callers do not need?"
+  fix "Reduce the public contract to the smallest useful surface and keep internals private."
+  bad <<~'X'
+    class Client; def fetch; end; def retry; end; def parse; end; def raw_response; end; end
+  X
+  good <<~'X'
+    class Client; def fetch; end; end
+  X
+end
+
+Law.define(:FEEDBACK_LOOPS) do
+  source "Nielsen feedback / checkpoint principle"
+  ask "Does this perform substantial work without reporting progress, checkpoints, or a recoverable state?"
+  fix "Add meaningful progress or checkpoints proportional to operation duration and risk."
+  bad <<~'X'
+    backup.run # 20 minutes, no checkpoints
+  X
+  good <<~'X'
+    backup.run { |checkpoint| emit(checkpoint) }
+  X
+end
+
+Law.define(:PARALLEL_INHERITANCE) do
+  source "Refactoring - Parallel Inheritance Hierarchies (Fowler)"
+  ask "Does adding a type in one hierarchy require adding a corresponding type in another hierarchy?"
+  fix "Collapse the parallel hierarchies or compose the varying dimensions."
+  bad <<~'X'
+    JsonReport + JsonExporter; CsvReport + CsvExporter
+  X
+  good <<~'X'
+    Report.new(formatter: JsonExporter.new)
+  X
+end
+
+Law.define(:REFUSED_BEQUEST) do
+  source "Refactoring - Refused Bequest (Fowler)"
+  ask "Does a subtype or variant inherit capabilities it cannot honor and then reject or ignore most of them?"
+  fix "Choose an abstraction that matches the subtype's real contract or use composition."
+  bad <<~'X'
+    class ReadOnly < Writable; def write; raise NotImplementedError; end; end
+  X
+  good <<~'X'
+    class ReadOnly < Readable; end
+  X
+end
+
+Law.define(:PROSE_POSITIVE_FORM) do
+  source "Strunk, Elements of Style - put statements in positive form"
+  ask "Is a statement phrased as a negation when a direct positive verb or construction says the same thing more clearly?"
+  fix "Prefer the direct positive form when it preserves meaning."
+  bad <<~'X'
+    He did not remember the password.
+  X
+  good <<~'X'
+    He forgot the password.
+  X
+end
+
+Law.define(:PROSE_PARALLEL_FORM) do
+  source "Strunk, Elements of Style - coordinate ideas in similar form"
+  ask "Do items in a list or series mix grammatical forms where parallel structure would make the relationship clearer?"
+  fix "Use the same grammatical form for coordinated items."
+  bad <<~'X'
+    The system must read files, validation, and to report errors.
+  X
+  good <<~'X'
+    The system must read files, validate input, and report errors.
+  X
+end
+
+Law.define(:PROSE_RELATED_WORDS) do
+  source "Strunk, Elements of Style - keep related words together"
+  ask "Is a modifier or subject separated from its referent so the sentence misreads on the first pass?"
+  fix "Keep words that belong together close enough that the intended relation is immediate."
+  bad <<~'X'
+    The operator, after checking the logs carefully, restarted the service.
+  X
+  good <<~'X'
+    After checking the logs carefully, the operator restarted the service.
+  X
+end
+
+Law.define(:PROSE_ONE_TOPIC_PARAGRAPH) do
+  source "Strunk, Elements of Style - paragraph as the unit"
+  ask "Does a paragraph mix unrelated topics or bury its main point below secondary detail?"
+  fix "Give each paragraph one controlling topic and state its point early."
+  bad <<~'X'
+    The paragraph opens with deployment history, then discusses pricing, then explains the test failure.
+  X
+  good <<~'X'
+    The paragraph opens with the test failure and explains its cause and fix.
+  X
+end
+
+Law.define(:GRICE_COOPERATIVE) do
+  source "Grice - cooperative principle (quantity, quality, relation, manner)"
+  ask "Does this communication say too much or too little, assert what is unverified, drift off-topic, or obscure the point through needless complexity?"
+  fix "Provide the needed information, qualify uncertain claims, stay relevant, and make the path clear."
+  bad <<~'X'
+    The system is definitely perfect and, by the way, here are unrelated implementation details.
+  X
+  good <<~'X'
+    The test passed locally; CI has not run yet.
+  X
+end
+
+# Rule-system laws. These govern the instrument itself, so they are universal
+# practice/semantic laws rather than language-specific regexes.
+
+Law.define(:INSTRUMENT_MUST_PROVE_ITSELF) do
+  source "master constitutional self-test policy"
+  ask "Does every detector or check that can influence a decision have a known-positive and known-negative proof, or an explicit semantic evaluation path?"
+  practice "A measuring instrument must demonstrate what it catches and what it spares before its findings can drive automatic action."
+  fix "Add polarity fixtures or a semantic evaluation contract before trusting the instrument."
+  bad "A new veto regex is enabled with no false-positive fixture."
+  good "The detector has a failing fixture, a clean fixture, and its evaluation surface is covered by a check."
+end
+
+Law.define(:VERIFICATION_REQUIRED_FOR_COMPLETION) do
+  source "master constitutional completion policy"
+  ask "Does this claim of completion have direct evidence from the actual resulting artifact or executed check, rather than intention, absence of an error, or an unrun test?"
+  practice "Completion is an observed state, not a promise."
+  fix "Run the relevant proof and report the observed result; otherwise report the work as unresolved."
+  bad "Done because the patch was written."
+  good "Done after the changed code, relevant tests and final state were actually inspected."
+end
+
+Law.define(:INCONCLUSIVE_IS_NOT_PASS) do
+  source "master constitutional capability-status policy"
+  ask "Did an unavailable dependency, skipped probe, timeout, missing permission, or unmeasured check get treated as success?"
+  practice "Unknown, skipped and unavailable are distinct from pass."
+  fix "Return an explicit inconclusive/degraded result and preserve the unresolved evidence."
+  bad "Browser unavailable, therefore visual check passed."
+  good "Browser unavailable, visual check inconclusive, no completion claim."
+end
+
+Law.define(:RATCHET_INTEGRITY) do
+  source "master ratchet policy"
+  ask "Does a ratchet or threshold change preserve its meaning, or was the threshold moved merely to absorb new debt or make the current tree pass?"
+  practice "A ratchet may make progress harder to lose, never easier to redefine."
+  fix "Keep the existing threshold or justify a measured structural improvement before changing it."
+  bad "Increase the allowed violation count because the scan found more violations."
+  good "Remove violations first, then tighten or preserve the threshold against the improved baseline."
+end
+
+Law.define(:AUTOFIX_REQUIRES_CONFIDENCE) do
+  source "master autofix safety policy"
+  ask "Is this finding sufficiently deterministic that an automatic edit can be applied without guessing at user intent or hidden semantics?"
+  practice "LLM-generated text is not evidence that an automatic transformation is safe."
+  fix "Downgrade to review-only or add deterministic evidence and preservation tests before automatic repair."
+  bad "A semantic smell triggers an automatic rewrite because the model produced plausible code."
+  good "Only a deterministic, fixture-proven transformation is eligible for automatic repair."
+end
+
+Law.define(:SINGULARITY) do
+  source "laws.yml SINGULARITY - one source of truth; the DRY principle of The Pragmatic Programmer"
+  ask "Does this change define a fact, rule, threshold or type a second time when an existing definition already owns it, so the two copies can drift apart?"
+  practice "Every fact has one owner; everything else reads it."
+  fix "Find the existing owner and read from it. If none exists, create one and move every copy onto it in the same change."
+  bad "Add a second Law type whose members mirror the one in the kernel, each carrying its own copy of the same threshold."
+  good "Reuse the kernel's Law type and read the threshold from the single file that owns it."
+end
+
+Law.define(:LINEARITY) do
+  source "laws.yml LINEARITY - sequential flow with minimal branches; cyclomatic complexity, McCabe 1976"
+  ask "Does this change make the path through the code harder to follow in order, with deeper nesting, extra branches, or control flow that jumps back and forth instead of running top to bottom?"
+  practice "Read the code once, top to bottom, and arrive at the result."
+  fix "Flatten with guard clauses, extract the branch that breaks the sequence, and order steps as they run."
+  bad "Nest three conditionals inside a loop so the success path sits at the deepest indent."
+  good "Return early on each failure, then run the success path unindented to the end."
+end
+
+# The remaining constitutional principles have explicit semantic evaluators.
+# Their detector adapters are modality-specific, while each Law applies to every
+# artifact surface through the canonical assessment matrix.
+Law.define(:ROBUSTNESS) do
+  source "laws.yml ROBUSTNESS - safe failure, security and edge-case handling"
+  ask "Across this artifact and its real operating context, what can fail unsafely under invalid input, adversarial use, concurrency, resource pressure, missing dependencies, or partial failure? Name only evidenced failure paths; return CLEAN when the relevant boundary fails safely."
+  practice "Treat every boundary and degraded state as a first-class path, not as an exception to the design."
+  fix "Close the concrete unsafe path, preserve useful failure context, and prove both the bad and safe paths."
+  bad "The happy path succeeds, so malformed input and provider failure are assumed safe."
+  good "Input, authorization, resource bounds and failure recovery have explicit evidence-backed behavior."
+end
+
+Law.define(:PROXIMITY) do
+  source "laws.yml PROXIMITY - related concepts stay close and cohesive"
+  ask "Are related responsibilities, evidence, states, controls or visual elements separated so far that their relationship is hard to understand or keep consistent? Evaluate semantic, structural and visual proximity for this artifact; return CLEAN when the grouping communicates the real relationships."
+  practice "Keep pieces together when they change together; separate them when they have distinct ownership."
+  fix "Move or group the related elements at the boundary that best reflects their shared responsibility without adding another abstraction layer."
+  bad "A control is separated from its state, or related logic is duplicated across unrelated modules."
+  good "The structure groups each responsibility and the interface groups information by its actual relationship."
+end
+
+Law.define(:ABSTRACTION) do
+  source "laws.yml ABSTRACTION - appropriate boundaries and information hiding"
+  ask "Does this artifact expose implementation detail, hide a load-bearing contract, or introduce an abstraction whose indirection exceeds the problem it solves? Assess the boundary in code, prose, behavior and presentation; return CLEAN when the boundary makes the concept easier to use and verify."
+  practice "Hide volatile mechanics behind a small truthful contract; do not hide important behavior behind ceremony."
+  fix "Expose the needed contract, encapsulate the unstable detail, or delete the abstraction if direct expression is clearer."
+  bad "Callers depend on undocumented internals or traverse an abstraction that adds no useful policy."
+  good "The public surface is small, intent-revealing and sufficient to exercise the behavior."
+end
+
+Law.define(:DENSITY) do
+  source "laws.yml DENSITY - signal over noise and no needless information"
+  ask "Does any part of this artifact consume attention without adding relevant meaning, evidence, action or necessary context? Look across code, prose, UI, status output and visual ornament; return CLEAN when every element earns its place."
+  practice "Prefer the shortest complete expression, not the shortest expression that omits a necessary fact."
+  fix "Remove repetition and ornament, then restore any evidence or context needed to make the result complete."
+  bad "Repeated labels, redundant prose, decoration or duplicated logic competes with the actual task."
+  good "Each statement, control, visual emphasis and abstraction contributes distinct useful meaning."
+end
+
+Law.define(:RENDERED_VALUES) do
+  source "laws.yml RENDERED_VALUES - rendered values and presentation are operator-owned"
+  ask "Are colors, typography, sounds, motion, spacing, layout, content, or rendered behavior invented independently of their canonical owner or altered without evidence and approval? For nonvisual artifacts, assess other operator-owned values and contracts; return CLEAN when values remain sourced, truthful and intentional."
+  practice "Read canonical values and preserve real-world fidelity; never invent a competing design or configuration authority."
+  fix "Use the owning token, configuration, source asset or explicit operator decision and verify the actual rendered result."
+  bad "A second color/font/spacing table drifts from the canonical tokens, or a visual claim is made without inspecting the render."
+  good "Values flow from their owning source, original media stays truthful, and rendered evidence confirms the outcome."
+end
+
+module Master
+  module Review
+    module Scan
+      module Laws
+
+      # SQL strings embedded in Ruby DB adapter files are expected — only flag
+      # actual mixed-medium template files.
+        # Retired registry twins — each lives once, in law/:
+        #   MEANINGFUL_NAMES, WHY_NOT_WHAT
+        # (test_scan_rule_contracts proves each reaches findings through the bridge).
+
+        # NO_MULTIPLE_LANGUAGES lives once, in law/css.rb — fixtures attached, any narrowing
+        # this version had learned ported there (2026-08-21 twin retirement).
+
+        # SAFE_NAVIGATION lives once, in law/ruby.rb — fixtures attached, any narrowing
+        # this version had learned ported there (2026-08-21 twin retirement).
+
+        ::Law.define(:FEW_ARGUMENTS) do
+          tags %i[SMALL_PARTS]
+          fix "ideal is zero to two positional arguments"
+          bad "def place(north, east, depth)\nend\n"
+          good "def place(north:, east:, depth:)\nend\n"
+          check do |src, path|
+            lines = src.lines
+
+            lines.each_with_index.filter_map do |line, index|
+              next unless line.match?(/\bdef\s+\w+\(/)
+              args = line[/\(([^)]*)\)/, 1].to_s.split(",").map(&:strip)
+              positional = args.reject { |arg| arg.empty? || arg.start_with?("*", "&") || arg.include?(":") || arg.include?("=") }
+              next unless positional.size >= 3
+
+              finding(line: index + 1, message: "3+ positional args - use keyword arguments or a value object",
+                      blast_radius: signature_radius(lines, index))
+            end
+          end
+        end
+
+        ::Law.define(:N_PLUS_ONE) do
+          tags %i[PERFORMANCE]
+          fix "loading records one-by-one inside a loop"
+          example_path "/repo/rails/x/app/models/y.rb"
+          bad "posts.each { |post| post.author.name }\n"
+          good "posts.each { |post| post.title }\n"
+          check do |src, path|
+            # Only meaningful in Rails trees; non-AR enumerable chains are fine.
+            next [] unless path.match?(%r{(?:\A|/)rails/.*/(?:app|spec|test)/})
+
+            scan_lines(src, /\.(each|map|collect)\s*(do|\{).*\.\w+\.\w+/,
+              message: "N+1 query candidate - use includes/eager_load")
+          end
+        end
+
+      # Only positional boolean defaults are flag arguments. Keyword defaults
+      # (stream: false, enabled: true) are not — they're fine API design.
+        ::Law.define(:NO_FLAG_ARGUMENTS) do
+          source "Clean Code - no flag arguments"
+          ask "Does a boolean argument make one function perform two different jobs or select unrelated behavior?"
+          tags %i[SMALL_PARTS]
+          fix "Split the responsibilities into named operations or objects."
+          bad "def render(body, cache = true)\nend\n"
+          good "def render(body, cache: true)\nend\n"
+          check do |src, path|
+            src.each_line.with_index(1).filter_map do |line, n|
+              next unless line.match?(/def \w+\(/)
+
+              args_str = line[/\(([^)]*)\)/, 1].to_s
+              args = args_str.split(",").map(&:strip)
+              positional_bool = args.any? do |a|
+                a.match?(/\A\w+\s*=\s*(true|false)\z/) && !a.include?(":")
+              end
+              finding(line: n, message: "boolean flag arg - split into two methods") if positional_bool
+            end
+          end
+        end
+
+      # A chain reaches a stranger when it navigates: order.buyer.profile.address
+      # asks four objects in turn. A step that transforms what the last one
+      # returned is not a new friend, so `files.uniq.sort.reject` and
+      # `text.each_line.with_index.map` talk to one object throughout. Data and
+      # prose have no calls at all: in YAML and Markdown the old line match read
+      # hostnames and file names (pubmed.ncbi.nlm.nih.gov, three.face.module.js)
+      # as chains, and its `.any?` exclusion never matched, because `\b` after
+      # `?` needs a word character to follow. A chain is read from its head
+      # only; one rooted in a constant (Rails.application.config.x) starts at
+      # a global the caller already knows, and is not matched halfway along.
+        DEMETER_TRANSFORMS = %w[
+          map select reject filter filter_map flat_map each each_with_index each_with_object with_index
+          each_line each_char lines chars bytes split uniq sort sort_by min_by max_by group_by partition
+          tally sum count flatten compact reverse first last take drop zip keys values to_a to_h to_s
+          to_i to_f to_sym join strip chomp downcase upcase include? any? all? none? empty? size length
+          find detect slice match? freeze dup tap then gsub sub tr squeeze delete delete_prefix delete_suffix
+          casecmp round abs zero? positive? negative? push merge fetch dig value!
+          forEach filter reduce some every trim toString padStart padEnd toFixed toLowerCase toUpperCase
+          replace startsWith endsWith
+        ].to_set.freeze
+
+        DEMETER_CHAIN = /(?<![\w.@$])(?:@{1,2}|\$)?\b[a-z_]\w*[?!]?(?:\(\))?(?:\.[a-z_]\w*[?!]?(?:\(\))?){3,}/
+        # Platform globals every caller already knows, as a constant receiver is.
+        DEMETER_GLOBALS = %w[document window globalThis].freeze
+
+        DEMETER_NOISE = [
+          %r{\w+://\S+},
+          /%[wi]\[[^\]]*\]/,
+          /["'`][^"'`]*["'`]/,
+          /\b[\w-]+(?:\.[\w-]+)*\.(?:rb|js|mjs|ts|css|scss|erb|html|yml|yaml|json|md|txt|png|svg|jpg)\b/,
+          /\d+(?:\.\d+){2,}/,
+        ].freeze
+
+        ::Law.define(:LAW_OF_DEMETER) do
+          source "Law of Demeter (Ian Holland)"
+          ask "Does this code reach through several objects or expose knowledge of a collaborator's internals?"
+          tags %i[COUPLING]
+          fix "Talk only to immediate collaborators and encapsulate the traversal."
+          bad "city = order.buyer.profile.address\n"
+          good "names = files.uniq.sort.reject(&:empty?)\n"
+          check do |src, path|
+            next [] unless %w[ruby javascript html].include?(language(path))
+            src.each_line.with_index(1).filter_map do |line, n|
+              next if line.lstrip.start_with?("#", "//", "*")
+
+              code = DEMETER_NOISE.reduce(line) { |text, noise| text.gsub(noise, '""') }.gsub(/\([^()]*\)/, "()")
+              reach = code.scan(DEMETER_CHAIN).map do |chain|
+                head, *steps = chain.gsub("()", "").split(".")
+                next 0 if DEMETER_GLOBALS.include?(head)
+
+                [head, *steps.reject { |step| DEMETER_TRANSFORMS.include?(step) }].size
+              end
+              next unless reach.any? { |size| size >= 4 }
+
+              finding(line: n, message: "4-level chain - introduce a local variable or delegation")
+            end
+          end
+        end
+
+      # Generic names: only short or clearly placeholder names. `data` and
+      # `result` are contextually meaningful in most Ruby code.
+
+        # Copy a visitor reads carries the ellipsis, and an aside a spaced en
+        # dash (operator, 2026-11-06), so a literal "..." or "--" in copy is
+        # ASCII standing in for them. The dash and quotes in running copy are
+        # PARENTHETICAL_DASH's and QUOTES_BY_LOCALE's (law/typesetting.rb).
+        # Terminal output stays ASCII (Law::TERMINAL_OUTPUT_PATH, and a line
+        # that prints: puts, warn, a logger), so the CLI, the REPL prompt and
+        # dmesg lines are out of this Law's reach.
+        TERMINAL_PRINT =
+          /\b(?:puts|warn|print|printf|logger|abort|\$stderr|\$stdout|console\.(?:log|warn|error))\b/.freeze
+
+        ::Law.define(:TYPOGRAPHIC_EXCELLENCE) do
+          tags %i[TYPOGRAPHY]
+          fix "typographic excellence in user-facing text: the ellipsis, and a spaced en dash for an aside"
+          example_path "/repo/rails/brgen/app/helpers/search_helper.rb"
+          bad %(placeholder = "..."\n)
+          good %(placeholder = "…"\n)
+          check do |src, path|
+            next [] if Law.terminal_output?(path)
+
+            src.each_line.with_index(1).filter_map do |line, n|
+              next if line.match?(/Open3|capture2|capture3|gsub\(|Shellwords/)
+              next if line.match?(TERMINAL_PRINT)
+
+              next if line.match?(/,\s*"--"\s*,|,\s*"--"\s*\)|<<\s*["']--/)
+              # A leading-# line in an .erb file is a doc comment inside an ERB
+              # block — its "..." is an example placeholder, not UI copy.
+              next if path.to_s.end_with?(".erb") && line.lstrip.start_with?("#")
+              next unless line.match?(/["']\.\.\.[\"']|["']--["']/)
+              finding(line: n, message: "ASCII typography - the ellipsis (U+2026), or a spaced en dash for an aside")
+            end
+          end
+        end
+
+      # Box-drawing glyphs, and only those. A run of dashes or equals signs is
+      # NO_ASCII_LINE_ART's question, and reading it here reported one divider
+      # under two ids while also calling a Markdown table's delimiter row
+      # decoration, when that row is the syntax that makes the table.
+        BOX_DRAWING = /[─-╿]/
+
+        ::Law.define(:TYPOGRAPHY_DISCIPLINE) do
+          tags %i[TYPOGRAPHY]
+          fix "hierarchy via weight and brightness, not decoration"
+          bad "# ╭──── section ────╮\n"
+          good "| name | purpose |\n|------|---------|\n"
+          check do |src, path|
+            scan_lines(src, BOX_DRAWING, message: "box drawing - use whitespace and typographic weight instead")
+          end
+        end
+
+      # The front page is where a document speaks first, and 2.1.6's tracking
+      # is a repair for capitals, not a licence to open with them: a letterspaced
+      # caps headline shouts, and letterspacing the lowercase instead is 2.1.7's
+      # named offence. So the headline a reader meets first - a title page, a
+      # cover, a landing, a document H1 - is set in the text face, mixed case
+      # or true small caps. One bare token is a name (openbsd, LICENSE), not a
+      # headline. Section heads stay ALL_CAPS_NO_TRACKING's question. Non-cased
+      # scripts hold no \p{Lu} and so never fire.
+        FRONT_PAGE_HEADLINE = /\A\s{0,3}(?:#\s+(.+?)\s*#*\s*\z|\\(?:title|chapter)\s*\{([^}]*)\}|<h1\b[^>]*>([^<]*)<\/h1>\s*\z)/i
+        FRONT_PAGE_MARKUP = /\\[A-Za-z]+|[*_`\[\]]|&[A-Za-z]+;/
+
+        ::Law.define(:NO_SHOUTING_FRONT_PAGE) do
+          source "Operator directive 2026-11-06 - front-page headlines are never set in capitals; Bringhurst, Elements of Typographic Style 2.1.6-2.1.7 (capitals take tracking, lowercase never does)"
+          ask "Is the headline a reader meets first - title page, cover, landing or document H1 - set in full capitals?"
+          tags %i[TYPOGRAPHY]
+          fix "Set the front-page headline in the text face: mixed case, or true small caps where the face cuts them. Tracked capitals are 2.1.6's repair for labels, not the shape a front page opens with."
+          example_path "/repo/docs/example.md"
+          bad "# THE ELEMENTS OF TYPOGRAPHIC STYLE\n"
+          good "# The Elements of Typographic Style\n"
+          check do |src, path|
+            next [] unless path.to_s.match?(/\.(?:md|markdown|tex|html?|erb)\z/)
+
+            src.each_line.with_index(1).filter_map do |line, n|
+              headline = FRONT_PAGE_HEADLINE.match(line)
+              next unless headline
+
+              words = headline.captures.compact.first.to_s.gsub(FRONT_PAGE_MARKUP, " ").strip
+              next if words.empty? || words.match?(/\A\S+\z/)
+
+              upper = words.scan(/\p{Lu}/).size
+              next unless upper >= 2 && upper == words.scan(/\p{L}/).size
+
+              finding(line: n, message: "front-page headline in capitals - set it in the text face, mixed case or true small caps")
+            end
+          end
+        end
+
+      # NULL_BLINDNESS lives once, in law/ (domain files) — the second
+      # retired twin (see the old backlog). This block's regex matched IS NULL, the
+      # correct form its own message prescribed, and needed a path exemption
+      # to stop reporting the fixer that emits that string as a repair. The
+      # law version detects `= NULL`, proves itself on fixtures the inverted
+      # detector would have failed, and needs no exemption.
+
+      # SECRET_PROXIMITY lives once, in law/ — the third retired twin. The two
+      # regexes were byte-identical; the registry block was a pure duplicate.
+
+# MAGIC_COLOR lives once, in js_laws.rb (applies_to css/scss/html/js — where colors
+# live). A second copy here with no applies_to double-counted every css/scss color
+# under the same id (a SINGULARITY violation) and added no coverage worth keeping.
+
+      # UNBOUNDED_RETRY lives once, in law/ (domain files) — the first of the
+      # 72 law/registry twins retired (see the old backlog). The narrowing this block
+      # learned — keyword not symbol, not predicate, not identifier, not regex
+      # alternation, not a line continuation — moved into the law's detector
+      # with each shape pinned as a good fixture, which is what the registry
+      # version never had. Its law/ self-exemption dies with it:
+      # canonical law/ sources arrive conducted, and rule sources that
+      # spell the pattern in strings are counted and triaged rather than excused by path.
+
+        ::Law.define(:ONE_SOURCE) do
+          source "DRY - The Pragmatic Programmer (Hunt & Thomas, 1999)"
+          ask "Is the same logic or data defined in multiple authoritative places?"
+          tags %i[COUPLING]
+          fix "Extract one authoritative representation and make all consumers reference it."
+          bad %(COUNCIL_PATH = "data/council.yml"\n)
+          good "path = Master::COUNCIL_PATH\n"
+          check do |src, path|
+            next [] if path.to_s.include?("master.rb")
+            patterns = [
+              [/COUNCIL_PATH\s*=/, "define COUNCIL_PATH once in master.rb; reference Master::COUNCIL_PATH"],
+              [/LAWS_PATH\s*=/, "define LAWS_PATH once in master.rb; reference Master::LAWS_PATH"],
+              [/DATA_DIR\s*=\s*File\.join.*\bdata\b/, "use Master::DATA constant"],
+            ]
+
+            src.each_line.with_index(1).flat_map do |line, n|
+              patterns.filter_map { |re, msg| finding(line: n, message: msg) if re.match?(line) }
+            end
+          end
+        end
+
+      # Bias: SIMULATION. soul.yml's anti_simulation forbids will, would, could
+      # and might beside its demand for evidence — a diff for a change, output
+      # for a completion — so the words are forbidden where the program reports
+      # on work: a promise in any file ("I will", "let's"), and a future or
+      # conditional inside a message it prints. A conditional anywhere else
+      # names a hypothetical. "This test would pass having measured nothing"
+      # and "what evidence would falsify your criticism" are both correct, and
+      # every finding sampled over master before this narrowing was that shape.
+        SIMULATION_PROMISE = /\b(?:I|we)\s+(?:will|would)\s+\w+|\blet(?:'s|\s+us)\s+\w+/i
+        SIMULATION_REPORT = /
+          \b(?:puts|print|warn|say|status|info|notice)\b.*["'][^"']*
+          \b(?:will|would|could|might)\s+(?!not\b|have\b)\w+
+        /x
+
+        ::Law.define(:SIMULATION) do
+          tags %i[ANTI_SIMULATION DENSITY]
+          fix "future tense implies without evidence - use indicative past"
+          bad %(warn "the deploy will restart relayd"\n)
+          good %(assert ok, "this test would pass having measured nothing"\n)
+          check do |src, path|
+            next [] unless path.to_s.end_with?(".rb", ".md", ".txt", ".erb")
+
+            src.each_line.with_index(1).filter_map do |line, n|
+              next if line.strip.start_with?("#")
+              next unless line.match?(SIMULATION_PROMISE) || line.match?(SIMULATION_REPORT)
+
+              finding(line: n, message: "simulation language - rewrite in indicative past or present tense")
+            end
+          end
+        end
+
+      # Bias: COMPLETION_THEATER — ellipsis/etc as placeholder outputs.
+      #
+      # A placeholder "etc" is lowercase, bare, and not part of a path. Being loose
+      # about that (/\betc\.?\b/i) matched `require "etc"`, `Etc.nprocessors` and
+      # every /etc/… deploy path — 12 of selfcheck's 71 findings, none real. See
+      # the old backlog, Scanner noise.
+      #
+      # `|`, `:` and `[` join the path characters because a word that sits inside
+      # a regex alternation is a token in a pattern, not prose. Two lines in the
+      # tree were reported for years on that shape and both are lists of real
+      # names: ast_fixer's `%r{/openbsd/(?:etc|usr|var)/}` — the openbsd mirror
+      # guard, at error severity, so `rake selfcheck` was red on the rule that
+      # protects /etc — and a stdlib allowlist naming `etc` among a dozen others.
+      # Measured over all four trees: exactly those two go, 57 findings stay.
+      # `(` and `)` are deliberately NOT in the sets: "(etc.)" in prose is the
+      # placeholder this rule exists to find.
+        # `-` joins them for the same reason: `"etc-pre-sync"` is a label naming
+        # the directory, and no abbreviation is ever hyphenated onward.
+        PLACEHOLDER_ETC = %r{(?<![\w/|:\[-])etc\.?(?![\w/|\]-])}
+
+        STDLIB_ETC_REQUIRE = /\brequire\s+["']etc["']/
+
+        # /etc is a directory, and the exclusions above only knew it when a
+        # slash was adjacent. Every other way this tree spells that path counted
+        # as theater: File.join(ROOT, "etc", "rc.d"), `openbsd/{etc,usr,var}`,
+        # the %w list of directory names in tools/doc_paths.rb — 25 of this
+        # rule's 40 findings on 2026-09-06, none of them a placeholder.
+        # `require "etc"` is the same lesson, learned once for one line.
+        PATH_ETC = /["']etc["']|\{[\w,]*\betc\b[\w,]*\}|\betc(?=\s+(?:usr|var)\b)/
+
+        # A comment is a comment wherever it starts, and in whatever language.
+        # The rule skipped a line that opens with `#` and read the same words as
+        # theater when they followed code, so `|| continue   # skip CAM, TS,
+        # screener, etc.` was a finding and the same sentence on its own line was
+        # not. Ruby's `#{` and a shell `$#` are not comment openers.
+        #
+        # `//` and `/* … */` for the same reason, found when master/web joined
+        # the corpus: a CSS comment reading "(mood changes etc)" and a JS one
+        # listing "style bleed, mood arc, vertical timbre, etc." were the only
+        # two findings in 164 files, and both were prose.
+        #
+        # Per language, because a comment opener in one is data in another. The
+        # first version applied all three everywhere and `CONFIG_GLOBS =
+        # ["etc/crontab*", "etc/*.local", …]` in openbsd lost everything from
+        # its `/*` onward — leaving `"etc` at the end of the line, which then
+        # read as the abbreviation. The ratchet caught it at 0 -> 1.
+        HASH_COMMENT = /(?<![$\\])\#(?!\{).*\z/
+
+        SLASH_COMMENT = %r{//.*\z|/\*.*?(?:\*/|\z)}
+        SLASH_COMMENT_EXTENSIONS = %w[.js .mjs .ts .jsx .tsx .css .scss].freeze
+
+        ::Law.define(:COMPLETION_THEATER) do
+          tags %i[ROBUSTNESS COMPLETENESS]
+          fix "ellipsis or etcetera as placeholder violates completeness"
+          bad "handle(first, second, etc.)\n"
+          good %(require "etc"\n)
+          check do |src, path|
+            # In prose "etc." is a word; in code it stands where the work should
+            # be. Markdown is prose, and reading a documented list of examples as
+            # an unfinished implementation is how a rule teaches its readers to
+            # ignore it. An ellipsis still counts in both.
+            prose = path.to_s.end_with?(".md", ".markdown")
+            # A locale value is copy, and copy may close on three dots as well as
+            # on the ellipsis: "Loading..." is a sentence trailing off, not
+            # unfinished code.
+            copy = path.to_s.match?(%r{/config/locales/[^/]+\.ya?ml\z})
+            comment = SLASH_COMMENT_EXTENSIONS.include?(File.extname(path.to_s).downcase) ? SLASH_COMMENT : HASH_COMMENT
+            src.each_line.with_index(1).filter_map do |line, n|
+              stripped = line.strip
+
+              next if stripped.start_with?("#")
+              next if stripped.match?(STDLIB_ETC_REQUIRE)
+              # The marker the framework advertises. scan_lines honours it and
+              # this rule wrote its own loop, so the one line in the tree that
+              # needs it had no way to say so.
+              next if stripped.match?(/scan:\s*intentional\b/)
+
+              code = stripped.gsub(comment, "").rstrip
+              etcetera = !prose && (code.gsub(PATH_ETC, "").match?(PLACEHOLDER_ETC) || code.match?(/\betcetera\b/i))
+              next unless etcetera || (!copy && code.match?(/\.\.\.\s*$/))
+
+              finding(line: n, message: "completion theater - implement or delete, never placeholder")
+            end
+          end
+        end
+
+        # Interpolation is not injection when the adapter did the quoting. A
+        # bind parameter cannot be an identifier, so
+        # `conn.execute("DELETE FROM #{conn.quote_table_name(table)}")` is the
+        # documented way to name a table — and flagging it tells the reader the
+        # rule does not know the fix it demands. Only an interpolation that is
+        # nothing but one quoting call is spared; a second term inside the
+        # braces still fires.
+        QUOTED_INTERPOLATION = /
+          \A[\w.:@]*\b
+          (?:quote_table_name|quote_column_name|sanitize_sql_array|sanitize_sql|quote)
+          \([^()]*\)\z
+        /x
+        INTERPOLATION = /\#\{([^{}]*)\}/
+
+        ::Law.define(:SQL_INJECTION) do
+          tags %i[SECURITY]
+          fix "parameterize all SQL - never interpolate user input"
+          bad %q(conn.execute("DELETE FROM #{table}")) + "\n"
+          good %q(conn.execute("DELETE FROM #{conn.quote_table_name(table)}")) + "\n"
+          check do |src, path|
+            # The two fixtures above are SQL injection and its fix, spelled out in
+            # this file, so this rule reads its own source as two findings unless
+            # it skips the directory it lives in. COMPLETION_THEATER carries the
+            # same skip for the same reason.
+            src.each_line.with_index(1).filter_map do |line, n|
+              stripped = line.strip
+              next if stripped.start_with?("#")
+
+              # The concatenation branch wanted a closed string before the `+` and
+              # never asked for one, so it read `execute("SELECT a + b FROM t")` —
+              # SQL arithmetic — as concatenation, and missed
+              # `execute("SELECT * FROM " + name)`, which is the shape it is for.
+              match = stripped.match(/\.(?:execute|query)\s*\(.*#\{/) ||
+                      stripped.match(/\.(?:execute|query)\s*\(\s*["'][^"']*["']\s*\+/)
+              next unless match
+
+              interpolated = stripped.scan(INTERPOLATION).flatten
+              next if interpolated.any? && interpolated.all? { |expr| expr.strip.match?(QUOTED_INTERPOLATION) }
+              # A real `.execute(`/`.query(` call is never itself quoted string content —
+              # skip when it sits inside a string literal (e.g. a human-readable label
+              # like "Foo.execute(#{bar})" passed to a logger), which reads as an odd
+              # number of open quote characters before the match on this line.
+              prefix = stripped[0...match.begin(0)]
+              next if prefix.count('"').odd? || prefix.count("'").odd?
+
+              finding(line: n, message: "SQL injection risk - use parameterized queries or ActiveRecord helpers")
+            end
+          end
+        end
+
+        # NO_COLUMN_ALIGN lives once, in law/universal.rb — fixtures attached, any narrowing
+        # this version had learned ported there (2026-08-21 twin retirement).
+
+        # STRICT_MODE_ZSH lives once, in law/shell.rb — fixtures attached, any narrowing
+        # this version had learned ported there (2026-08-21 twin retirement).
+
+        ::Law.define(:CONTROL_CHARS) do
+          tags %i[ROBUSTNESS]
+          fix "no non-printable control characters in source"
+          bad "value = 1\u0001\n"
+          good "value = 1\t\n"
+          check do |src, path|
+            # Only tab (9), newline (10), and carriage return (13) are legal in
+            # source. A stray SOH/NUL reads fine in most viewers but breaks parsing
+            # or a byte-compare silently — corruption from a concurrent write or a
+            # tool that left a sentinel byte behind. Checked by ordinal so this rule
+            # carries no control character of its own.
+            src.each_line.with_index(1).filter_map do |line, number|
+              next unless line.each_char.any? { |char| ord = char.ord; ord < 9 || (ord > 13 && ord < 32) || ord == 127 }
+
+              finding(line: number, message: "control character in source - corruption, remove it")
+            end
+          end
+        end
+
+        # pledge(2) and unveil(2) restrict a process once, at boot, in a fixed
+        # order: promise the syscalls, deny the filesystem root, open the paths
+        # back, then lock. Ground::Pledge holds that order in stage1_boot! and
+        # stage2_lock!, and a caller that assembles its own
+        # promise string somewhere else restricts a different process than the one
+        # data/laws.yml#law_map pledge_unveil describes.
+        #
+        # Two shapes, and the second is why the wrapper is not simply exempt:
+        # unveiling "/" with anything but the empty permission leaves the whole
+        # filesystem reachable, and that line lives inside lib/ground/pledge.rb.
+        # The choke-point half is what the wrapper is allowed to break.
+        #
+        # A bare `pledge(` is deliberately unmatched. pledge(2) in prose and the
+        # Fiddle extern both read that way, so the namespace is what separates a
+        # call from a mention — and an `include Pledge` caller writing bare
+        # `pledge("stdio")` is outside this rule's reach.
+        ::Law.define(:PLEDGE_STAGED) do
+          tags %i[SECURITY]
+          fix "Use Ground::Pledge's staged promises: stage 2 may only remove stage 1 authority, then lock unveil after paths are declared. Never widen a sealed stage or issue raw promises."
+          bad %q(Master::Ground::Pledge.unveil("/", "r")) + "\n"
+          good "Master::Ground::Pledge.stage1_boot!(root)\n"
+          check do |src, path|
+            wrapper = path.to_s.end_with?("lib/ground/pledge.rb")
+            src.each_line.with_index(1).flat_map do |line, number|
+              next [] if line.strip.start_with?("#")
+
+              hits = []
+              permissions = line[%r{\bunveil\(\s*["']/["']\s*,\s*["']([^"']*)["']}, 1]
+              if permissions && !permissions.empty?
+                hits << finding(line: number, message: %(unveil("/", "#{permissions}") leaves the filesystem open - deny the root first))
+              end
+
+              if !wrapper && line.match?(/\bPledge\.(?:pledge|unveil)\s*\(/)
+                hits << finding(line: number, message: "raw pledge/unveil promise - call a Ground::Pledge stage helper")
+              end
+              hits
+            end
+          end
+        end
+
+        # The audit log is the only record of which tools ran, and it is worth
+        # exactly as much as its oldest surviving line. Trace::Log::Audit
+        # subscribes to tool:before and appends; opening that file for writing, or
+        # File.write-ing it without mode "a", discards every earlier entry and
+        # leaves a log that reads full and remembers one turn.
+        #
+        # Scoped to the sinks: a file that subscribes to tool:before is an audit
+        # sink, and this asks how it writes. It does not ask whether every action
+        # publishes tool:before — a subscription that never happens leaves no line
+        # to read — so a tool that mutates without publishing is outside its reach
+        # and stays the gap data/laws.yml#law_map audit_logging records.
+        ::Law.define(:AUDIT_APPEND_ONLY) do
+          tags %i[SECURITY]
+          fix "an audit sink appends to its log and never truncates it"
+          bad %Q(bus.subscribe("tool:before") { |e| record(e) }\nFile.open(@path, "w") { |f| f.puts(line) }\n)
+          good %Q(bus.subscribe("tool:before") { |e| record(e) }\nFile.open(@path, "a") { |f| f.puts(line) }\n)
+          check do |src, path|
+            next [] unless src.match?(/subscribe\(\s*["']tool:before["']/)
+
+            src.each_line.with_index(1).filter_map do |line, number|
+              next if line.strip.start_with?("#")
+              # Rotation renames; only an in-place truncation is the defect.
+              next unless line.match?(/File\.open\s*\([^)]*,\s*["']w\+?["']/) ||
+                          line.match?(/File\.write\s*\((?![^)]*mode:\s*["']a)/) ||
+                          line.match?(/\.truncate\s*\(/)
+
+              finding(line: number, message: %(audit log truncated - append with mode "a", or rotate by rename))
+            end
+          end
+        end
+
+      end
+    end
+  end
+end

@@ -1,0 +1,498 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "json"
+require "net/http"
+require "uri"
+require_relative "../../../io/exec"
+
+module Master
+  module CLI
+    module Routing
+      class ModelRouter
+        # The pool: every model this machine can ask right now. A lane joins it
+        # when it can answer — a key that is set, a CLI that is signed in, a
+        # daemon or server that lists the model — and a model outside it
+        # carries the one thing to do about that. OpenCrabs builds its list the
+        # same way, live from each provider, so /model never offers a model
+        # that answers "not found" and the chain never walks through one.
+        #
+        # The slow probes (a CLI's sign-in check, OpenRouter's balance) run on
+        # threads started with the router. Until one answers its lane stays out
+        # of the chain rather than stalling a turn, and /model list waits for it.
+        module Pool
+          PROBE_TIMEOUT_S = 15
+          SERVER_TIMEOUT_S = 1
+          CATALOG_MAX_AGE_S = 86_400
+          CATALOG_MODEL_LIMIT = 5_000
+          CREDITS_URL = "https://openrouter.ai/api/v1/credits"
+          KEY_FILES = "~/.config/master/env (or /etc/master.env on OpenBSD)"
+          LANE_SOURCES = %i[dead].freeze
+
+          def reachable?(model_id) = unreachable_reason(model_id).nil?
+
+          # nil when the model can be asked, otherwise what to do about it.
+          # A dead lane is out of /model, boot selection and turn failover alike.
+          # Only :dead: a parked model or a silent lane is still reachable, so the
+          # route keeps it as a candidate for the typed offline diagnosis, and a
+          # lane silent at boot still gets its sign-in probe.
+          def unreachable_reason(model_id, wait: false)
+            id = model_id.to_s
+            lane = Master::Io::LaneState.verdict(id, sources: LANE_SOURCES)
+            return lane.reason unless lane.usable?
+
+            case lane_of(id)
+            when :cli_lane then cli_lane_problem(id, wait:)
+            when :ollama then ollama_problem(id)
+            when :api then api_problem(id, wait:)
+            else binary_lane_problem(id)
+            end
+          end
+
+          # Every reachable model, strongest lanes first: what /model list shows.
+          def pool(wait: false)
+            start_pool_probes
+            lanes = [primary_models, cli_lane_models(wait:), agy_catalog_models, tier_ids, Master::Io::PaidTail.models, continuity_models,
+                     hosted_models, live_catalog_models, browser_chat_models, local_server_models, replicate_models, local_models]
+            lanes.flatten.uniq.select { |id| unreachable_reason(id, wait:).nil? }
+          end
+
+          # The distinct fixes that would grow the pool, keys gathered on one line.
+          def pool_growth(wait: false)
+            reasons = (tier_ids + cli_lane_ids + replicate_models).filter_map { |id| unreachable_reason(id, wait:) }
+            gather_keys(reasons.uniq.reject { |reason| reason.start_with?("checking") })
+          end
+
+          def gather_keys(reasons)
+            keys, rest = reasons.partition { |reason| reason.start_with?("set ") && reason.end_with?(KEY_FILES) }
+            envs = keys.map { |reason| reason.delete_prefix("set ").delete_suffix(" in #{KEY_FILES}") }
+            (envs.empty? ? [] : ["set #{envs.join(', ')} in #{KEY_FILES}"]) + rest
+          end
+
+          # What kind of lane a model is, for the column beside it.
+          def lane_label(model_id)
+            id = model_id.to_s
+            return "free" if id.end_with?(":free", ":cloud", "-cloud") || id.start_with?("web-chat:")
+            return "local" if lane_of(id) == :cli_lane && cli_lane(id)["kind"] == "local"
+
+            { claude_cli: "subscription", agy: "subscription", cli_lane: "subscription", ollama: "local",
+              local_server: "local", hosted: "free", replicate: "paid", api: "paid" }.fetch(lane_of(id))
+          end
+
+          def cli_lane_model?(model_id) = cli_lanes.key?(model_id.to_s.split(":", 2).first)
+
+          def cli_lane(model_id) = cli_lanes[model_id.to_s.split(":", 2).first]
+
+          # The base URL of the local server that listed this model.
+          def local_server_for(model_id) = local_server_index[model_id.to_s]
+
+          def start_pool_probes
+            return {} if ENV["MASTER_NO_POOL_PROBES"] == "1" || ENV["MASTER_LOCAL_ONLY"] == "1"
+
+            # A login probe cannot rehabilitate a lane the canonical quota record
+            # has excluded; don't spend boot work on it outside its explicit canary.
+            lanes = Master::Io::LaneState
+            candidates = cli_lanes.keys.select { |name| lanes.usable?("#{name}:", sources: LANE_SOURCES) }
+            @pool_probes ||= candidates.to_h { |name| [name, Thread.new { probe_cli_lane(name) }] }.merge(
+              "openrouter_credits" => Thread.new { probe_openrouter_credits },
+              "provider_catalogs" => Thread.new { refresh_provider_catalogs },
+            )
+          end
+
+          # Invalidate discovery caches without forgetting durable telemetry.
+          def refresh_pool!
+            @ollama_installed_models = nil
+            @local_server_index = nil
+            @hosted_index = nil
+            @api_providers = nil
+            @provider_rows = nil
+            @live_catalog_models = nil
+            @catalog_index = nil
+            @agy_catalog_models = nil
+            @pool_probes = nil
+            start_pool_probes
+            self
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.refresh")
+            self
+          end
+
+          private
+
+          # The lanes that need a binary, a browser profile or a running server
+          # rather than a key: each is present or it is not. A CLI lane without
+          # its binary fails with ENOENT, which the dispatcher files as a
+          # retriable provider_error, so the chain slept through its backoff
+          # before walking on — 90s of a web turn on ai.brgen.no, 2026-09-15.
+          def binary_lane_problem(id)
+            present, fix = case lane_of(id)
+                           when :claude_cli then [claude_cli_available?, "install Claude Code"]
+                           when :agy then [agy_cli_available?, "install the Antigravity CLI"]
+                           when :web_chat then [web_chat_enabled?, "browser chat is excluded by local-only mode or explicit browser opt-out"]
+                           when :local_server
+                             [local_server_for(id), "no local server lists #{id.delete_prefix('local:')}"]
+                           when :hosted then [hosted_endpoint_for(id), "no hosted endpoint lists #{id}"]
+                           else [replicate_key?, "set REPLICATE_API_TOKEN in #{KEY_FILES}"]
+                           end
+            fix unless present
+          end
+
+          def lane_of(id)
+            return :claude_cli if id.start_with?("claude-cli:")
+            return :agy if id.start_with?("agy:") || id == "agy"
+            return :web_chat if id.start_with?("web-chat:")
+            return :ollama if id.start_with?("ollama:", "ollama/")
+            return :local_server if id.start_with?("local:")
+            return :replicate if id.start_with?("replicate:")
+            return :hosted if hosted_model?(id)
+
+            cli_lane_model?(id) ? :cli_lane : :api
+          end
+
+          def tier_ids
+            Array(@rules["models"]&.values).flatten.filter_map do |row|
+              id = row["id"] if row.is_a?(Hash)
+              id unless id.to_s.start_with?("web-chat:")
+            end
+          end
+
+          def cli_lanes = @rules.fetch("cli_lanes", {})
+
+          def cli_lane_ids
+            cli_lanes.flat_map { |name, lane| Array(lane["models"]).map { |model| "#{name}:#{model}" } }
+          end
+
+          def cli_lane_models(wait: false) = cli_lane_ids.select { |id| cli_lane_problem(id, wait:).nil? }
+
+          # Antigravity publishes its currently selectable reasoning models through
+          # the `agy models` listing. master turns each returned slug into a real
+          # `agy:<model>` pool member; the dispatcher already sends that form through
+          # `agy --model <model>`. A provider catalogue therefore grows and shrinks
+          # the pool without a models.yml edit.
+          def agy_catalog_models
+            remember_agy_catalog unless defined?(@agy_catalog_models)
+            @agy_catalog_models
+          end
+
+          # Asking `agy models` took 1.5s of every boot, so the listing is kept for a day in
+          # .master/agy_models.json, keyed by the binary's path and mtime: an upgraded agy is asked again.
+          AGY_CATALOG_TTL_S = 86_400
+
+          def remember_agy_catalog
+            binary = agy_binary
+            @agy_catalog_models = agy_binary_available?(binary) ? agy_catalog_for(binary) : []
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog")
+            @agy_catalog_models = []
+          end
+
+          def agy_catalog_for(binary)
+            path = Master::Io::Exec.cli_binary(binary) || binary
+            key = [path, File.mtime(path).to_i]
+            cached = read_agy_catalog(key)
+            return cached if cached
+
+            listed = parse_agy_models(run_probe(binary, "models")).map { |id| "agy:#{id}" }.uniq
+            write_agy_catalog(key, listed) unless listed.empty?
+            listed
+          end
+
+          def agy_catalog_file = File.join(Master::ROOT, ".master", "agy_models.json")
+
+          def read_agy_catalog(key)
+            file = agy_catalog_file
+            return unless File.file?(file) && Time.now - File.mtime(file) < AGY_CATALOG_TTL_S
+
+            data = JSON.parse(File.read(file))
+            data["models"] if data["key"] == key && data["models"].is_a?(Array)
+          rescue JSON::ParserError, SystemCallError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog_cache")
+            nil
+          end
+
+          def write_agy_catalog(key, models)
+            FileUtils.mkdir_p(File.dirname(agy_catalog_file))
+            File.write(agy_catalog_file, JSON.generate(key:, models:))
+          rescue SystemCallError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.agy_catalog_cache")
+          end
+
+          def agy_binary
+            value = ENV["AGY_BIN"].to_s.strip
+            value = ENV["ANTIGRAVITY_BIN"].to_s.strip if value.empty?
+            value.empty? ? "agy" : value
+          end
+
+          def agy_binary_available?(binary)
+            return File.executable?(binary) if binary.include?(File::SEPARATOR)
+
+            executable_on_path?(binary)
+          end
+
+          # Accept stable slug-shaped first tokens emitted by `agy models`, while
+          # ignoring headings, quota rows, prose and command footers.
+          def parse_agy_models(output)
+            output.to_s.lines.filter_map do |line|
+              token = line.strip.split(/\s+/, 2).first.to_s
+              next unless token.match?(/\A[a-z0-9][a-z0-9._-]{2,}\z/i)
+              next unless token.include?("-")
+              next if %w[model models reasoning additional available usage remaining].include?(token.downcase)
+              token
+            end.uniq
+          end
+
+          # Models discovered from provider-owned catalogs are first-class pool
+          # members. This is the autonomous part: adding a model at a provider
+          # does not require a models.yml edit. Catalog metadata is consumed by
+          # ComputePool; the router only needs a provider credential.
+          def live_catalog_models
+            return @live_catalog_models if defined?(@live_catalog_models)
+            return @live_catalog_models = [] unless Master.api_key_present?("OPENROUTER_API_KEY")
+
+            @live_catalog_models = catalog_rows("openrouter").filter_map do |row|
+              id = row["id"].to_s
+              # The list lives as long as the router, so only the day-long refusal keeps a model out.
+              next if id.empty? || !Master::Io::LaneState.usable?(id, sources: %i[daily_quota])
+              next unless chat_catalog_model?(row)
+
+              id
+            end
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.live_catalog")
+            @live_catalog_models = []
+          end
+
+          def chat_catalog_model?(row)
+            inputs = row["input_modalities"].to_s.split(",").map(&:strip)
+            outputs = row["output_modalities"].to_s.split(",").map(&:strip)
+            return true if inputs.empty? && outputs.empty?
+
+            outputs.include?("text") && (inputs.empty? || inputs.include?("text"))
+          end
+
+          def catalog_rows(source)
+            require_relative "../../../io/catalog_index"
+            db = Master::Io::CatalogIndex::DEFAULT_DB
+            return [] unless File.file?(db)
+
+            @catalog_index ||= Master::Io::CatalogIndex.new(db_path: db)
+            @catalog_index.search(nil, source:, limit: CATALOG_MODEL_LIMIT)
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.catalog_rows", source:)
+            []
+          end
+
+          def cli_lane_problem(id, wait:)
+            name = id.split(":", 2).first
+            lane = cli_lanes.fetch(name)
+            return "install #{lane['binary']}" unless executable_on_path?(lane["binary"])
+
+            path_env = lane["model_path_env"].to_s
+            unless path_env.empty?
+              model_path = ENV[path_env].to_s
+              return "set #{path_env} to a readable local GGUF file" if model_path.empty? || !File.file?(model_path) || !File.readable?(model_path)
+              return if lane["kind"] == "local"
+            end
+
+            signed_in = probe_value(name, wait:)
+            return "checking whether #{lane['binary']} is available" if signed_in.nil?
+
+            ("run #{lane['login']}" unless signed_in)
+          end
+
+          # nil while the probe runs, and always with probes off.
+          def probe_value(name, wait:)
+            thread = start_pool_probes[name]
+            return if thread.nil?
+            return thread.value unless thread.alive?
+
+            wait ? thread.join(PROBE_TIMEOUT_S)&.value : nil
+          end
+
+          def probe_cli_lane(name)
+            lane = cli_lanes.fetch(name)
+            return false unless executable_on_path?(lane["binary"])
+
+            output = run_probe(lane["binary"], *Array(lane.dig("signed_in", "args")))
+            signed_in_output?(output, lane.fetch("signed_in", {}))
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.cli_lane")
+            false
+          end
+
+          def signed_in_output?(output, rule)
+            return false if output.nil?
+            return output.include?(rule["match"].to_s) if rule["match"]
+
+            !output.downcase.include?(rule["refuse"].to_s.downcase)
+          end
+
+          # Use the shared bounded runner: a CLI can exit while a child it spawned
+          # still owns stdout/stderr, so waiting only for the direct PID is not a
+          # timeout. Exec enforces the deadline across the process group and readers.
+          def run_probe(*command, timeout: PROBE_TIMEOUT_S)
+            output, status = Master::Io::Exec.capture2e(*command, timeout:, raise_on_timeout: true)
+            return unless status&.success?
+
+            output
+          rescue Master::Io::Exec::TimeoutError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.run_probe_timeout")
+            nil
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.run_probe")
+            nil
+          end
+
+          def executable_on_path?(binary) = !Master::Io::Exec.cli_binary(binary.to_s).nil?
+
+          # A key the provider takes, from providers.yml; an owner/name id and
+          # any id the registry does not know go to OpenRouter, as the sender
+          # sends them.
+          def api_problem(id, wait:)
+            provider = api_provider(id)
+            envs = Array((@provider_rows ||= Master.provider_config).dig(provider, "env"))
+            return "set #{envs.join(' or ')} in #{KEY_FILES}" unless envs.any? { |env| Master.api_key_present?(env) }
+            return unless provider == "openrouter" && !id.end_with?(":free")
+            return unless probe_value("openrouter_credits", wait:) == false
+
+            "OpenRouter credit is spent; top up at openrouter.ai/settings/credits"
+          end
+
+          def api_provider(id)
+            return "openrouter" if id.include?("/")
+
+            (@api_providers ||= {})[id] ||= registry_provider(id)
+          end
+
+          # The gem's registry is what the sender resolves an id against, so the
+          # pool asks the same one rather than keeping a prefix table beside it.
+          def api_provider_for(id) = api_provider(id)
+
+          def registry_provider(id)
+            require "ruby_llm"
+            RubyLLM.models.find(id).provider.to_s
+          rescue StandardError
+            "openrouter"
+          end
+
+          # false only when OpenRouter says the balance is gone; nil when it cannot say.
+          def probe_openrouter_credits
+            key = ENV["OPENROUTER_API_KEY"].to_s
+            return if key.empty?
+
+            data = JSON.parse(get_json(CREDITS_URL, headers: { "Authorization" => "Bearer #{key}" }).to_s)
+            data = data["data"] if data.is_a?(Hash)
+            # A reply in another shape says nothing about credit; it is not a TypeError.
+            return unless data.is_a?(Hash)
+
+            data["total_credits"].to_f > data["total_usage"].to_f
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.credits")
+            nil
+          end
+
+          # OpenRouter adds and withdraws :free models every week, and a catalog
+          # refreshed by hand once was a month stale, so the free lane offered
+          # models that had gone and missed the ones that had come. A day old,
+          # it refreshes; live_free_models reads it on the next chain.
+          def refresh_provider_catalogs
+            require_relative "../../../io/catalog_index"
+            index = Master::Io::CatalogIndex.new(db_path: Master::Io::CatalogIndex::DEFAULT_DB)
+
+            catalog_credentials.each do |source, token|
+              next unless index.stale?(source, max_age: CATALOG_MAX_AGE_S)
+
+              begin
+                index.refresh(source, token:)
+              rescue StandardError => e
+                Master::Ground::Swallow.log(e, context: "model_router.pool.catalog", source:)
+              end
+            end
+            refresh_model_registry
+            nil
+          end
+
+          # RubyLLM's registry answers context windows, modalities and prices, and
+          # a day old it refreshes from rubyllm.com/models.json (the copy the gem
+          # ships) and each configured provider's own list. Its models.dev builder
+          # is never called: AGENTS.md refuses a models.dev scrape.
+          def refresh_model_registry
+            return unless defined?(::RubyLLM)
+
+            file = ::RubyLLM.config.model_registry_file
+            return if File.file?(file) && Time.now - File.mtime(file) < CATALOG_MAX_AGE_S
+
+            ::RubyLLM.models.refresh
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.pool.registry")
+            nil
+          end
+
+          def catalog_credentials
+            {
+              "openrouter" => ENV["OPENROUTER_API_KEY"],
+              "openai" => ENV["OPENAI_API_KEY"],
+              "gemini" => ENV["GEMINI_API_KEY"].to_s.empty? ? ENV["GOOGLE_API_KEY"] : ENV["GEMINI_API_KEY"],
+              "deepseek" => ENV["DEEPSEEK_API_KEY"],
+              "xai" => ENV["XAI_API_KEY"],
+              "mistral" => ENV["MISTRAL_API_KEY"],
+            }.select { |_source, token| token && !token.empty? }
+          end
+
+          def get_json(url, headers: {}, timeout: PROBE_TIMEOUT_S)
+            uri = URI(url)
+            Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
+                            open_timeout: timeout, read_timeout: timeout) do |http|
+              response = http.get(uri.request_uri, headers)
+              response.body if response.is_a?(Net::HTTPSuccess)
+            end
+          end
+
+          def ollama_problem(id)
+            return "ollama disabled (set MASTER_OLLAMA_ENABLED=1 to opt in)" unless ollama_enabled?
+            return "ollama cloud models are unsupported" if ollama_cloud_model?(id)
+
+            name = id.sub(%r{\Aollama[:/]}, "")
+            installed = ollama_installed_models
+            if installed.nil?
+              configured = Array(@rules.dig("models", "local")).any? do |row|
+                row.is_a?(Hash) && row["id"].to_s == id
+              end
+              return "ollama unreachable at #{ollama_tags_base_url}" unless configured || @config.model.to_s == id
+
+              # Discovery is inconclusive, not proof that a configured model is
+              # missing. Keep the configured local fallback available; report the
+              # unreachable daemon only for arbitrary names not in the catalog.
+              return
+            end
+            return "ollama pull #{name}" unless ollama_pulled?(id)
+            return if name.end_with?(":cloud", "-cloud")
+
+            ("#{name} needs more memory than this machine has" unless runs_here?(id))
+          end
+
+          def local_server_models = local_server_index.keys
+
+          def local_server_index
+            return {} if ENV["MASTER_NO_POOL_PROBES"] == "1"
+
+            @local_server_index ||= Array(@rules["local_servers"]).each_with_object({}) do |base, index|
+              server_model_ids(base).each { |model| index["local:#{model}"] ||= base }
+            end
+          end
+
+          def server_model_ids(base)
+            body = get_json("#{base.chomp('/')}/models", timeout: SERVER_TIMEOUT_S)
+            Array(JSON.parse(body.to_s)["data"]).filter_map { |row| row["id"] }
+          rescue StandardError
+            []
+          end
+
+          def replicate_models = Array(@rules["replicate_chat"]).map { |slug| "replicate:#{slug}" }
+
+          def replicate_key? = %w[REPLICATE_API_TOKEN REPLICATE_API_KEY].any? { |env| Master.api_key_present?(env) }
+        end
+      end
+    end
+  end
+end

@@ -1,0 +1,176 @@
+# Canonical harmonic vocabulary shared by master and studio/dilla.
+# Intervals are semitones above the root; ordered extensions are intentional in
+# Dilla because later intervals are octave-raised by the voicer.
+schema: music_theory.chords.v1
+
+scales:
+  major: [0, 2, 4, 5, 7, 9, 11]
+  minor: [0, 2, 3, 5, 7, 8, 10]
+  dorian: [0, 2, 3, 5, 7, 9, 10]
+  phrygian: [0, 1, 3, 5, 7, 8, 10]
+  lydian: [0, 2, 4, 6, 7, 9, 11]
+  mixolydian: [0, 2, 4, 5, 7, 9, 10]
+  locrian: [0, 1, 3, 5, 6, 8, 10]
+  harmonic_minor: [0, 2, 3, 5, 7, 8, 11]
+  melodic_minor: [0, 2, 3, 5, 7, 9, 11]
+  whole_tone: [0, 2, 4, 6, 8, 10]
+  diminished_whole_half: [0, 2, 3, 5, 6, 8, 9, 11]
+  diminished_half_whole: [0, 1, 3, 4, 6, 7, 9, 10]
+
+# Common chord spellings. The parser consumes these suffixes directly.
+templates:
+  maj: [0, 4, 7]
+  min: [0, 3, 7]
+  m: [0, 3, 7]
+  dim: [0, 3, 6]
+  dim7: [0, 3, 6, 9]
+  aug: [0, 4, 8]
+  sus2: [0, 2, 7]
+  sus4: [0, 5, 7]
+  sus: [0, 5, 7]
+  5: [0, 7]
+  6: [0, 4, 7, 9]
+  maj6: [0, 4, 7, 9]
+  m6: [0, 3, 7, 9]
+  69: [0, 4, 7, 9, 2]
+  m69: [0, 3, 7, 9, 2]
+  add2: [0, 2, 4, 7]
+  add9: [0, 4, 7, 2]
+  madd9: [0, 3, 7, 2]
+  add4: [0, 4, 5, 7]
+  add11: [0, 4, 7, 5]
+  add13: [0, 4, 7, 9]
+  add#11: [0, 4, 7, 6]
+
+  7: [0, 4, 7, 10]
+  maj7: [0, 4, 7, 11]
+  m7: [0, 3, 7, 10]
+  mmaj7: [0, 3, 7, 11]
+  m7b5: [0, 3, 6, 10]
+  7b5: [0, 4, 6, 10]
+  7#5: [0, 4, 8, 10]
+  7b9: [0, 4, 7, 10, 1]
+  7#9: [0, 4, 7, 10, 3]
+  7#11: [0, 4, 7, 10, 6]
+  7b13: [0, 4, 7, 10, 8]
+  7sus2: [0, 2, 7, 10]
+  7sus4: [0, 5, 7, 10]
+  7sus: [0, 5, 7, 10]
+  7add11: [0, 4, 7, 10, 5]
+  7add13: [0, 4, 7, 10, 9]
+  7#5b9: [0, 4, 8, 10, 1]
+  7#5#9: [0, 4, 8, 10, 3]
+  7#9#11: [0, 4, 7, 10, 3, 6]
+  7#9b13: [0, 4, 7, 10, 3, 8]
+  7b9#11: [0, 4, 7, 10, 1, 6]
+  7b9b13: [0, 4, 7, 10, 1, 8]
+  7alt: [0, 4, 8, 10, 1]
+  aug7: [0, 4, 8, 10]
+  augMaj7: [0, 4, 8, 11]
+  maj7b5: [0, 4, 6, 11]
+  maj7#5: [0, 4, 8, 11]
+  maj7sus2: [0, 2, 7, 11]
+  maj7sus4: [0, 5, 7, 11]
+
+  9: [0, 4, 7, 10, 2]
+  maj9: [0, 4, 7, 11, 2]
+  m9: [0, 3, 7, 10, 2]
+  m9b5: [0, 3, 6, 10, 2]
+  m9#11: [0, 3, 7, 10, 2, 6]
+  mMaj9: [0, 3, 7, 11, 2]
+  mMaj9#11: [0, 3, 7, 11, 2, 6]
+  m11: [0, 3, 7, 10, 5]
+  m11b5: [0, 3, 6, 10, 5]
+  m11b9: [0, 3, 7, 10, 1, 5]
+  m13: [0, 3, 7, 10, 5, 9]
+  9sus2: [0, 2, 7, 10, 5]
+  9sus4: [0, 5, 7, 10, 2]
+  9sus: [0, 5, 7, 10, 2]
+  13: [0, 4, 7, 10, 9]
+  maj13: [0, 4, 7, 11, 9]
+  maj13#11: [0, 4, 7, 11, 9, 6]
+  13b9: [0, 4, 7, 10, 1, 9]
+  13#11: [0, 4, 7, 10, 6, 9]
+  13sus4: [0, 5, 7, 10, 2, 9]
+  13sus: [0, 5, 7, 10, 2, 9]
+  maj9#11: [0, 4, 7, 11, 2, 6]
+  maj9#5: [0, 4, 8, 11, 2]
+  maj9b5: [0, 4, 6, 11, 2]
+
+# Root-independent harmonic functions and common movement grammars.
+progressions:
+  dilla_love: [i7, iv7, bVII7, bVI7]
+  neo_soul_loop: [i7, iv7, bVII7, bVI7]
+  ii_v_i: [ii7, V7, Imaj7]
+  ii_v_i_minor: [ii7b5, V7b9, im7]
+  backdoor: [iv7, bVII7, Imaj7]
+  tritone_resolution: [II7, bII7, Imaj7]
+  chromatic_mediant: [Imaj7, bIIImaj7, vi7, bVImaj7]
+  minor_descent: [i9, bVIImaj7, bVImaj7, V7alt]
+  gospel_69: [I69, VI7, ii9, V13]
+  suspended_cycle: [isus4, IVsus4, bVII7, V7sus4]
+  modal_drift: [i7, III7, bVII7, iv7]
+  lydian_float: [Imaj7#11, IImaj7, vi7, V13]
+  altered_turnaround: [Imaj7, vi7, ii7, V7alt]
+  circle_soft: [vi9, ii9, V13, Imaj9]
+  chromatic_bass: [Imaj9, Imaj9/G#, vi9, V13/F#]
+  # Fantastic loops: minor sevenths as the ground colour, often moving by
+  # step inside one key rather than by cadence.
+  players_loop: [i7, iv7, ii7, v7]
+  minor_seventh_descent: [i7, v7, ii7, vi7]
+  look_of_love: [iii7, iii7, IVmaj7, vi7]
+  dilla_soul: [i7, iv7, bVIImaj7, bIIImaj7]
+  dual_tonal: [i9, ii7, "#vii7"]
+  # Pass-3 additions (2026-10-27 research pass; each row cites its source and
+  # uses only the roman vocabulary already in this file):
+  # The Time: Donut of the Heart loop — Jackson 5, All I Do Is Think of You
+  # (1975), also Sweet Charles, Yes It's You. A descending-diatonic family
+  # loop whose step-wise descent resists closure the way the Fantastic loops
+  # do.
+  j5_donut_loop: [IVmaj7, iii7, vi7, ii7]
+  # Get Dis Money's sampled phrase (Hein 2022): each major sonority answered
+  # by its relative minor — the answer chord re-colours rather than cadences.
+  relative_answer: [Imaj7, vi7, IVmaj7, ii7]
+  # Minor key with the Dorian major fourth as the second pole of the loop —
+  # Everytime (HookTheory), and Forget Me Nots' G#m7 borrowed from F-sharp
+  # Dorian inside F-sharp natural minor (Hein, Memory Songs).
+  dorian_four: [i9, IV9]
+  # Remind Me's loop (Hein, Memory Songs): Dm -> Am11 -> Amaj9 reads as both
+  # i of D minor with a flexible sixth and the pivot of A major with a
+  # flexible seventh — tonality held in suspension rather than resolved.
+  # (vm11 follows the file's im7 precedent: lowercase degree, m-suffix.)
+  flexible_sixth: [i9, vm11, Vmaj9]
+  # Climax (Fantastic Vol. 2): Emaj7 -> G#m7 -> G#maj7 — the mediant lifts by
+  # a chromatic half step to the major-on-the-same-root sonority, a shimmer
+  # inside one key rather than a modulation out of it.
+  mediant_lift: [Imaj7, iii7, IIImaj7]
+
+# How the vocabulary is actually played — voicing practice the transcriptions
+# and the analyses name. Deliberately descriptive like families: guidance for
+# humans and the generator's interpretive layer, executable by nothing.
+voicings:
+  so_what_quartal: "stack fourths on the 3rd/7th above a rootless m11 - the m11 and m13 rows read best this way"
+  rootless_ninth: >-
+    3-5-7-9 over the bass's root: Am11 is Em7-over-A thinking (Hein, Memory Songs, on Rushen's Remind
+    Me)
+  add2_cluster: >-
+    Fadd2/A-type spellings - the closest-spaced colour in the neo-soul family; the Glasper three-voicing
+    practice (m11/m9, maj7, add2-over-bass) covers most loops (PianoWorld 2022)
+  pedal_planing: >-
+    move the chord in parallel over a static bass - Get Dis Money's /E loop (Hein 2022; the
+    transcription's alternate row and pedal field carry the concrete case)
+  flexible_sixth: >-
+    natural-minor melody over a Dorian iv/IV - the sixth is a colour the melody chooses, not a key
+    change (Hein, Memory Songs)
+  voice_leading: >-
+    step the top voice and keep common tones; Dilla's loops move by step inside one key rather than by
+    cadence - see the Fantastic loops comment above
+
+# Metadata for humans/tools. This is deliberately descriptive rather than a
+# second executable rulebook.
+families:
+  suspended: [sus2, sus4, 7sus2, 7sus4, 9sus2, 9sus4, 13sus4]
+  dominant_altered: [7b5, 7#5, 7b9, 7#9, 7#11, 7b13, 7alt, 7#5b9, 7#5#9, 7#9#11, 7b9#11, 13b9, 13#11]
+  neo_soul: [m7, m9, m11, m13, maj7, maj9, maj13, 69, m69, 7#9, 7sus4]
+  rootless_friendly: [7, 9, 13, 7b9, 7#9, 7#11, 13b9, 13#11]
+  symmetrical: [dim, dim7, aug, aug7]

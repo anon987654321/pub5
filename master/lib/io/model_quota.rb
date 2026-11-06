@@ -1,0 +1,289 @@
+# frozen_string_literal: true
+
+require "date"
+require "etc"
+require "fileutils"
+require "json"
+require "time"
+require_relative "atomic_write"
+
+module Master
+  module Io
+    # Per-model daily request budget for OpenRouter :free slugs and for hosted
+    # free-tier endpoints; config is authoritative. One of three quota objects,
+    # each answering a different question: this one counts calls per free model
+    # per day; QuotaCheck says whether a paid provider still has credit
+    # (test/test_quota_check.rb); ModelSkipCache parks a model that just failed
+    # (test/test_model_skip_cache.rb).
+    module ModelQuota
+      extend self
+      include ::Master::Io::AtomicWrite
+      FREE_RE = /:free\z/.freeze
+      DEFAULT_DAILY = 50
+
+      @mutex = Mutex.new
+
+      module_function
+
+      def daily_limit
+        cfg = Master.models_config
+        value = cfg&.dig("openrouter", "daily_quota_per_model")
+        value.to_i.positive? ? value.to_i : DEFAULT_DAILY
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "model_quota.daily_limit", severity: :load_bearing)
+        raise "model quota policy unreadable: #{e.class}: #{e.message}"
+      end
+
+      # Hosted free-tier endpoints (models.yml openai_compatible) declare their
+      # own day cap beside the endpoint, as "<name>:<model>" lane ids: groq
+      # 14,400/day, cerebras 100/day, the figures the endpoint blocks already
+      # state. An endpoint without a positive daily_quota stays untracked rather
+      # than guessed (TRUTHFUL_STATUS); a :free slug always answers daily_limit.
+      def hosted_name(model)
+        id = model.to_s
+        name = id.split(":", 2).first
+        return unless id.include?(":") && !name.to_s.empty?
+
+        spec = Master.models_config&.dig("openai_compatible", name)
+        name if spec.is_a?(Hash) && spec["daily_quota"].to_i.positive?
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "model_quota.hosted_name", model: model.to_s)
+        nil
+      end
+
+      def daily_limit_for(model)
+        name = hosted_name(model)
+        return daily_limit unless name
+
+        Master.models_config.dig("openai_compatible", name, "daily_quota").to_i
+      end
+
+      def trackable?(model) = FREE_RE.match?(model.to_s) || !hosted_name(model).nil?
+
+      def record(model)
+        return unless trackable?(model)
+
+        @mutex.synchronize do
+          with_state_lock do
+            data = load_data
+            day = today_key
+            data[day] ||= {}
+            key = model.to_s
+            data[day][key] = data[day].fetch(key, 0) + 1
+            prune_old_days!(data, day)
+            save_data(data)
+          end
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "model_quota.record", model: model.to_s)
+        raise "model quota accounting failed: #{e.class}: #{e.message}"
+      end
+
+      def count(model, day: today_key)
+        load_data.dig(day, model.to_s).to_i
+      end
+
+      def over_quota?(model, day: today_key)
+        return false unless trackable?(model)
+
+        count(model, day:) >= daily_limit_for(model)
+      end
+
+      def remaining(model, day: today_key)
+        return unless trackable?(model)
+
+        [daily_limit_for(model) - count(model, day:), 0].max
+      end
+
+      def burn_rate_per_day(model, now: Time.now.utc, day: now.utc.strftime("%Y-%m-%d"))
+        used = count(model, day:)
+        date = Date.strptime(day, "%Y-%m-%d")
+        start = Time.utc(date.year, date.month, date.day)
+        elapsed = [now.to_f - start.to_f, 300.0].max
+        return 0.0 if used.zero?
+
+        used.to_f * 86_400 / elapsed
+      rescue ArgumentError
+        0.0
+      end
+
+      def forecast(model, now: Time.now.utc, day: now.utc.strftime("%Y-%m-%d"))
+        return unless trackable?(model)
+
+        used = count(model, day:)
+        limit = daily_limit_for(model)
+        remaining = [limit - used, 0].max
+        projected_daily = burn_rate_per_day(model, day:, now:)
+        exhaustion_hours =
+          if remaining.zero?
+            0.0
+          elsif projected_daily.positive?
+            remaining.to_f / (projected_daily / 24.0)
+          end
+
+        {
+          model: model.to_s,
+          day:,
+          used:,
+          limit:,
+          remaining:,
+          projected_daily: projected_daily.round(2),
+          exhaustion_hours: exhaustion_hours&.round(2),
+        }
+      end
+
+      def burn_risk?(model, threshold: 0.8, day: today_key, now: Time.now.utc)
+        forecasted = forecast(model, day:, now:)
+        return false unless forecasted
+
+        forecasted[:projected_daily] >= forecasted[:limit] * threshold
+      end
+
+      def exhausted_models(day: today_key)
+        data = load_data[day] || {}
+        data.select { |model, used| trackable?(model) && used.to_i >= daily_limit_for(model) }.keys
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.exhausted_models")
+        raise "model quota state unreadable: #{e.class}: #{e.message}"
+      end
+
+      def snapshot(day: today_key)
+        data = load_data[day] || {}
+        tracked = data.select { |model, _| trackable?(model) }
+        {
+          day:,
+          # The default (:free) limit; per-model limits ride in the forecasts.
+          limit: daily_limit,
+          models: tracked.transform_values(&:to_i),
+          exhausted: tracked.select { |model, used| used.to_i >= daily_limit_for(model) }.keys,
+          forecasts: tracked.keys.to_h { |model| [model, forecast(model, day:)] },
+        }
+      end
+
+      # Process-local Mutex protects threads; the sidecar flock protects the
+      # read-modify-write transaction across independent master processes.
+      def with_state_lock
+        expanded = File.expand_path(path)
+        directory = verified_atomic_directory(File.dirname(expanded))
+        destination = File.join(directory, File.basename(expanded))
+
+        FileUtils.mkdir_p(directory, mode: 0o700)
+        directory_stat = File.lstat(directory)
+        unless directory_stat.directory? && !directory_stat.symlink? &&
+               (directory_stat.mode & 0o022).zero? &&
+               verified_atomic_directory(directory) == directory
+          raise IOError, "model quota directory must be a stable, real, non-writable-by-group/world directory"
+        end
+
+        lock_path = "#{destination}.lock"
+        raise IOError, "refusing symlinked model quota lock" if File.symlink?(lock_path)
+        flags = File::RDWR | File::CREAT
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(lock_path, flags, 0o600) do |file|
+          opened = file.stat
+          unless opened.file? && opened.nlink == 1 && (opened.mode & 0o077).zero?
+            raise IOError, "model quota lock must be a private singly linked regular file"
+          end
+
+          current = File.lstat(lock_path)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == opened.dev && current.ino == opened.ino
+            raise IOError, "model quota lock path changed while opening"
+          end
+          raise IOError, "could not acquire model quota lock" unless file.flock(File::LOCK_EX)
+
+          begin
+            current = File.lstat(lock_path)
+            unless current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "model quota lock path changed while waiting for its lock"
+            end
+            yield
+          ensure
+            file.flock(File::LOCK_UN)
+          end
+        end
+      rescue SystemCallError => e
+        raise IOError, "cannot safely lock model quota state: #{e.class}: #{e.message}"
+      end
+
+      # One private directory per OS user inside .master. On vm23 .master is a
+      # group-shared 0770 directory (dev deploys, the master service runs),
+      # which the private-directory check rightly refuses; a quota-<user>
+      # directory created 0700 keeps each count private without loosening it.
+      def path
+        ENV["MASTER_MODEL_QUOTA_PATH"] || File.join(Master::ROOT, ".master", "quota-#{owner_name}", "model_quota.json")
+      end
+
+      def owner_name
+        Etc.getpwuid(Process.uid)&.name || Process.uid.to_s
+      rescue ArgumentError
+        Process.uid.to_s
+      end
+
+      def today_key = Time.now.utc.strftime("%Y-%m-%d")
+
+      def load_data
+        expanded = File.expand_path(path)
+        directory = verified_atomic_directory(File.dirname(expanded))
+        state_path = File.join(directory, File.basename(expanded))
+        return {} unless File.exist?(directory) || File.symlink?(directory)
+
+        directory_stat = File.lstat(directory)
+        unless directory_stat.directory? && !directory_stat.symlink? &&
+               (directory_stat.mode & 0o022).zero? &&
+               verified_atomic_directory(directory) == directory
+          raise IOError, "model quota directory must be a stable, real, non-writable-by-group/world directory"
+        end
+        return {} unless File.exist?(state_path) || File.symlink?(state_path)
+
+        before = File.lstat(state_path)
+        unless before.file? && !before.symlink? && before.nlink == 1
+          raise IOError, "model quota state must be a singly linked regular file"
+        end
+        if (before.mode & 0o077).positive?
+          raise IOError, "model quota state permissions must be private (0600 or stricter)"
+        end
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(state_path, flags) do |file|
+          opened = file.stat
+          current = File.lstat(state_path)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == opened.dev && current.ino == opened.ino
+            raise IOError, "model quota state path changed while opening"
+          end
+
+          raw = file.read
+          after = File.lstat(state_path)
+          unless after.file? && !after.symlink? && after.nlink == 1 &&
+                 after.dev == opened.dev && after.ino == opened.ino &&
+                 after.size == opened.size && after.mtime == opened.mtime && after.ctime == opened.ctime
+            raise IOError, "model quota state changed while reading"
+          end
+          JSON.parse(raw)
+        end
+      rescue Errno::EACCES => e
+        # The daemon writes this file owner-only, and a deploy boot check may run
+        # as another user. That diagnostic reader cannot enforce the daemon's
+        # quota, so preserve the documented empty-view behavior for EACCES only.
+        Master::Ground::Swallow.log(e, context: "ModelQuota.load_data")
+        {}
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.load_data")
+        raise "model quota state unreadable: #{e.class}: #{e.message}"
+      end
+
+      def save_data(data)
+        FileUtils.mkdir_p(File.dirname(path))
+        write_atomic(path, JSON.pretty_generate(data) + "\n", fsync: false, fsync_dir: false, mode: 0o600)
+      end
+
+      def prune_old_days!(data, keep_day)
+        cutoff = (Date.parse(keep_day) - 7).strftime("%Y-%m-%d")
+        data.delete_if { |day, _| day < cutoff }
+      end
+    end
+  end
+end

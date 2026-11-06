@@ -1,0 +1,29 @@
+---
+families: 27
+family_members:
+- master/lib/cli#context
+- master/lib/fix#loop
+- master/lib/io#git
+- master/lib/io#registry
+- master/lib/io#web
+- master/lib/rails#audit
+- master/lib/review/council#deliberation
+- master/lib/review/scan#rule
+- master/tools#rule
+- openbsd/lib#check
+- rails/amber/app/models#declutter
+- rails/amber/app/models#item
+- rails/amber/app/services#declutter
+- rails/amber/app/services#wardrobe
+- rails/brgen/app/models#community
+- rails/brgen/app/models#fedi
+- rails/brgen/app/models#story
+- rails/brgen/app/models/user#associations
+- rails/brgen/app/services/marketplace/payments#stripe
+- master/checks/lib/source#honesty
+- master/checks/support#geometry
+- rails/__shared/app/controllers/concerns/shared#actions
+- rails/__shared/app/controllers/concerns/shared#auth
+- rails/__shared/app/models/shared#affiliate
+- master/tools/rails/operator#lint
+- rails/__shared/lib/shared#examples

@@ -1,0 +1,224 @@
+# frozen_string_literal: true
+
+require "json"
+
+module Master::Core
+  # Model — the entire LLM surface of the agent, reduced to one method: given the
+  # conversation Memory and the closed verb set, emit exactly one Effect. Whatever
+  # the old lib/review dispatcher did — routing, tool schemas, ReAct loops, council
+  # — collapses to "ask for the next effect and parse it." The Constitution, not
+  # the model, decides whether the effect happens; the Core, not the model,
+  # sequences the turns. So the model stays thin and replaceable.
+  #
+  # parse is total and pure: any malformed reply becomes a note Effect, so a bad
+  # generation is data the loop observes, never a crash. That keeps the fold total.
+  class Model
+    # grok-4-fast is deprecated by xAI (confirmed 2026-07-11: 404 "xAI
+    # recommends switching to Grok 4.3"). Free model so this works without
+    # requiring a funded OpenRouter account.
+    DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+
+    # Built from Memory's evidence policy so the numbers the model is told match
+    # the numbers the Constitution enforces — one source, no prose drift.
+    EVIDENCE_KINDS = Proof::SCORING.keys.join("|").freeze
+    EVIDENCE_WEIGHTS = Proof::SCORING.map { |k, v| "#{k}=#{v}" }.join(", ").freeze
+
+    # The reply as a JSON schema, for a model that can be held to it while it
+    # decodes. A decoder writes required keys in the order listed, so `why`
+    # comes first: the model states what the last result showed before it
+    # commits to a verb, which is where format-constrained reasoning holds up
+    # (arXiv 2408.02442). It is bounded, because an unbounded string is where a
+    # constrained small model loops.
+    #
+    # Built per turn from what is legal on it. A verb the Constitution would
+    # refuse is left out of the enum, so a model held to the schema cannot
+    # generate an early `done` or a commit ahead of its evidence at all, and
+    # spends the turn on a move that can land. The Constitution still judges
+    # every effect: a lane that ignores the schema meets the same refusal it
+    # always did.
+    GIT_OPERATIONS = %w[diff commit].freeze
+
+    def self.schema(verbs: VERBS, operations: GIT_OPERATIONS)
+      {
+        type: "object",
+        properties: {
+          why: { type: "string", maxLength: 200 },
+          verb: { type: "string", enum: verbs.map(&:to_s) },
+          # additionalProperties is spelled out: llama.cpp's grammar reads an
+          # object that names properties and says nothing else as closed, and a
+          # read then has nowhere to put its path.
+          args: {
+            type: "object",
+            properties: {
+              argv: { type: "array", minItems: 1, maxItems: 5, items: { type: "string", maxLength: 240 } },
+              timeout: { type: "integer", minimum: 1, maximum: 30 },
+              operation: { type: "string", enum: operations },
+              compensation: {
+                type: "object",
+                properties: {
+                  argv: { type: "array", minItems: 1, items: { type: "string" } },
+                  reason: { type: "string", minLength: 1, maxLength: 200 },
+                },
+                required: %w[argv reason],
+                additionalProperties: false,
+              },
+            },
+            additionalProperties: true,
+          },
+        },
+        required: %w[why verb args],
+        additionalProperties: false,
+      }
+    end
+
+    SCHEMA = schema.freeze
+
+    # The verbs and git operations whose preconditions hold, read off
+    # Proof#scope. Without scope, never offer a durable commit.
+    def self.offer(verbs, scope)
+      return schema(verbs:, operations: GIT_OPERATIONS - ["commit"]) unless scope
+
+      answered = (scope[:proved] || scope[:answerable]) && scope[:cleared]
+      closed = [(:done unless answered), (:write unless scope[:writable])].compact
+      operations = Array(scope.fetch(:git_operations, GIT_OPERATIONS)).map(&:to_s)
+      operations -= ["commit"] unless scope[:proved] && scope[:repository_delivery] &&
+                                      Array(scope[:delivery_paths]).any?
+      schema(verbs: verbs - closed, operations:)
+    end
+
+    # What a malformed reply is shown, so the next turn can repair itself.
+    SHAPE = '{"why": "what the last result showed, and the next step", "verb": "read", ' \
+            '"args": {"path": "lib/x.rb"}}'
+
+    SYSTEM = <<~PROMPT.freeze
+      You are master, a constitutional coding agent working toward one GOAL. Each
+      turn, propose the single next action as ONE JSON object and nothing else:
+
+        {"why": "<one short clause>", "verb": "<verb>", "args": { ... }}
+
+      Write `why` first: what the last RESULT showed and what you do next.
+
+      Verbs and their args:
+        read   {"path"}                          inspect a file before changing it
+        probe  {"argv":[...],"timeout":20} run only an allowlisted read-only diagnostic: `git ls-files`, `git diff --check`, or `ruby -c <relative .rb>`
+        write  {"path","content"}                create or replace a file (full contents)
+        http   {"url"}                           fetch a public HTTP(S) URL through master's guarded network
+        exec   {"argv":["prog","arg"...],"evidence":"#{EVIDENCE_KINDS}",
+                "compensation":{"argv":["inverse","arg"...],"reason":"why this inverse is safe"}}
+                (optional; only when a real inverse is known)
+        git    {"operation":"diff|commit","paths":[...],"message":"..."}
+        ask      {"prompt","options":[...]}      ask the operator for approval or a decision;
+                                                     never answer your own question
+        note     {"kind","text"}                 record a thought when no action fits
+        critique {"scope":"diff"}                run council tribunal on git diff (high-risk)
+        done     {"summary"}                      finish; the summary is your answer to the operator
+
+      How to work:
+        - Orient first: read the files in scope. In read-only mode use probe `["git","ls-files"]`
+          to discover tracked paths; never ask for exec when the active profile denies it. Never write blind.
+        - Change the minimum that satisfies the goal. Every .rb you write must parse.
+        - Prove code changes only when `exec` is offered: run tests or checks with an evidence tag.
+          When only `probe` is offered, report its result as an observation; it is not test evidence.
+          Never claim an unrun test passed.
+        - On high-risk goals (risk: high/critical in memory), run `critique` before `done`.
+        - Then, and only then, `done`. A question that needs no change is answered
+          with `done` once you have read what answers it.
+        - Never repeat an action whose RESULT you already have; a failed RESULT
+          means fix its cause, not retry the same action.
+        - `write` takes the whole file. Never elide with "..." or "rest of code".
+        - The last line of every turn is STATE: the goal, what you have read, the
+          evidence so far, and whether `done` is allowed yet. Act on it.
+
+      Effect reversibility is derived by master, not declared by you:
+        - failed writes use a path-scoped checkpoint restore; a failed restore remains a failure
+        - exec has no generic rollback. Add compensation only when a concrete argv inverse is
+          known and its safety can be explained; after failure the Constitution re-checks it
+          and asks the operator for approval.
+        - staging is not a separate effect. A path-scoped commit stages only its exact
+          new files, refuses a target path already staged by another writer, and leaves
+          every unrelated shared-index entry untouched.
+        - a commit is admitted without another prompt only when every named path was
+          successfully written by this authorised repair task, its on-disk SHA-256 still
+          matches the write receipt, and the current evidence threshold is met.
+          Never include another session's or the operator's paths.
+        - unknown effect contracts are refused; policy_gated does not mean reversible
+      Constraints the runtime enforces (violate them and the effect is refused):
+        - never write a secret into a file or note
+        - never write the constitution (data/laws.yml, data/soul.yml) or the core/ spine
+        - exec argv must be an array of strings
+        - `git commit` must name its paths - this checkout is shared with other
+          sessions and a human, so an unscoped commit takes their staged work too.
+          Stage a new file first; a scoped commit can only name a tracked path.
+        - no `done` or `git commit` until exec evidence reaches the threshold
+          (#{EVIDENCE_WEIGHTS}; threshold #{Proof::PASS_THRESHOLD})
+        - medium+ goals carry approach/chosen notes - do not write before reading them
+        - high-risk goals require a passing `critique` before `done`
+
+      Output only the JSON object. `why` is the one clause the operator reads
+      beside the action, lowercase and terse.
+    PROMPT
+
+    def initialize(model_id: ENV.fetch("MASTER_CORE_MODEL", DEFAULT_MODEL), chat: nil)
+      @model_id = model_id
+      @chat = chat
+    end
+
+    # The one method the Core calls. Returns an Effect.
+    def propose(context, verbs:, scope: nil)
+      reply = ask(transcript(context), Model.offer(verbs, scope))
+      Model.parse(reply, verbs:)
+    end
+
+    # Pure: model text -> Effect. Unknown/absent verb or bad JSON -> a note the
+    # loop can react to, never an exception. Tolerant of ```json fences and a stray
+    # sentence around the object; the object itself is first-brace to last-brace.
+    def self.parse(text, verbs:)
+      cleaned = text.to_s.gsub(/```[a-z]*/i, "")
+      json = cleaned[/\{.*\}/m]
+      return Effect.note(:parse_error, "no JSON object in the reply; reply as #{SHAPE}") unless json
+
+      data = JSON.parse(json)
+      verb = data["verb"].to_s.to_sym
+      return Effect.note(:parse_error, "unknown verb: #{verb}; the verbs are #{verbs.join(", ")}") unless verbs.include?(verb)
+
+      Effect.new(verb:, args: symbolize(data["args"] || {}))
+    rescue StandardError => e
+      Effect.note(:parse_error, "#{e.message}; reply as #{SHAPE}")
+    end
+
+    def self.symbolize(hash)
+      return {} unless hash.is_a?(Hash)
+
+      hash.each_with_object({}) { |(k, v), out| out[k.to_s.to_sym] = v }
+    end
+
+    private
+
+    # Render Memory as a clean ReAct trace so the model can follow what it has
+    # already done and what each action produced.
+    def transcript(context)
+      Array(context).map do |entry|
+        case entry.role
+        when :act then "ACTION: #{entry.text}"
+        when :obs then "RESULT: #{entry.text}"
+        else entry.text # notes, including "goal: ..."
+        end
+      end.join("\n")
+    end
+
+    # with_format, not RubyLLM's with_schema: that one parses the reply into a
+    # Hash, and parse reads text. A chat without it decodes unconstrained.
+    def ask(prompt, schema)
+      held = chat.with_instructions(SYSTEM)
+      held = held.with_format(schema) if held.respond_to?(:with_format)
+      held.ask(prompt).content.to_s
+    end
+
+    def chat
+      @chat ||= begin
+        require "ruby_llm"
+        RubyLLM.chat(model: @model_id)
+      end
+    end
+  end
+end

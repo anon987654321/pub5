@@ -1,0 +1,479 @@
+# Cases for test/test_design_book_laws.rb, one list: per Law, the code a source detector (or a snapshot
+# adapter) must flag and the code it must pass, at the path the scanner would hand it. flags
+# says which; match, where given, is a pattern the first message must carry. source reads the
+# code from a repository file instead, with replace applied first. Typographic marks are YAML
+# escapes, so this file stays ASCII. ask, on a Law's first case, is a phrase its semantic question
+# must carry.
+- law: QUOTES_BY_LOCALE
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  match: U\+00AB
+  code: |
+    nb:
+      search:
+        empty: 'Ingen treff for "%{q}"'
+- law: QUOTES_BY_LOCALE
+  path: rails/brgen/config/locales/en.yml
+  flags: true
+  match: U\+201C
+  code: |
+    en:
+      search:
+        empty: 'No match for "%{q}"'
+- law: QUOTES_BY_LOCALE
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: "nb:\n  search:\n    empty: \"Ingen treff for \u00AB%{q}\u00BB\"\n"
+- law: QUOTES_BY_LOCALE
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <p>Don't wait</p>
+- law: QUOTES_BY_LOCALE
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <p class="lead">Ingen <%= link_to "her", root_path %></p>
+- law: QUOTES_BY_LOCALE
+  path: master/lib/cli/docs/help.md
+  flags: false
+  code: |
+    Run "master scan" now.
+- law: PARENTHETICAL_DASH
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  code: |
+    nb:
+      takeaway:
+        pickup: "Hent maten selv - eller bestill levering"
+- law: PARENTHETICAL_DASH
+  path: rails/brgen/docs/guide.md
+  flags: true
+  code: |
+    Hent selv -- eller bestill.
+- law: PARENTHETICAL_DASH
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: "nb:\n  takeaway:\n    pickup: \"Hent selv \u2013 eller bestill\"\n"
+- law: PARENTHETICAL_DASH
+  path: rails/brgen/docs/guide.md
+  flags: false
+  code: |
+    | a | b |
+    |---|---|
+- law: TRUE_SYMBOLS
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  match: U\+00D7
+  code: |
+    nb:
+      listing:
+        size: "120 x 60 cm"
+- law: TRUE_SYMBOLS
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  code: |
+    nb:
+      footer:
+        owner: "(c) Brgen"
+- law: TRUE_SYMBOLS
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: "nb:\n  listing:\n    size: \"120 \u00D7 60 cm\"\n"
+- law: SINGLE_SENTENCE_SPACE
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  code: |
+    nb:
+      flash:
+        saved: "Lagret.  Du kan lukke vinduet."
+- law: SINGLE_SENTENCE_SPACE
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: |
+    nb:
+      flash:
+        saved: "Lagret. Du kan lukke vinduet."
+- law: SINGLE_SENTENCE_SPACE
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <p>Lagret.  Lukk.</p>
+- law: CHROME_COPY_CALM
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  code: |
+    nb:
+      flash:
+        created: "Annonsen er publisert!"
+- law: CHROME_COPY_CALM
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: |
+    nb:
+      flash:
+        created: "Annonsen er publisert."
+- law: CHROME_COPY_CALM
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: |
+    nb:
+      posts:
+        example: "Hurra!"
+- law: NUMBER_UNIT_UNBROKEN
+  path: rails/brgen/config/locales/nb.yml
+  flags: true
+  code: |
+    nb:
+      listing:
+        distance: "%{km} km"
+- law: NUMBER_UNIT_UNBROKEN
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <p class="price"><%= listing.price %> kr</p>
+- law: NUMBER_UNIT_UNBROKEN
+  path: rails/brgen/config/locales/nb.yml
+  flags: false
+  code: "nb:\n  listing:\n    distance: \"%{km}\u00A0km\"\n"
+- law: NUMBER_UNIT_UNBROKEN
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: '{"probe":"design_laws","viewports":[{"width":390,"numbers":[{"text":"1 299 kr","tops":2,"key":"p"}]}]}'
+- law: NUMBER_UNIT_UNBROKEN
+  path: master/var/rendered/home.json
+  flags: false
+  code: '{"probe":"design_laws","viewports":[{"width":390,"numbers":[{"text":"1 299 kr","tops":2,"key":"p"}]}]}'
+- law: DIALECT_CONTRAST_PARITY
+  path: master/data/tokens.yml
+  flags: true
+  source: master/data/tokens.yml
+  replace: ['    dark_border: "#666666"', '    dark_border: "#222222"']
+- law: DIALECT_CONTRAST_PARITY
+  path: master/data/tokens.yml
+  flags: false
+  source: master/data/tokens.yml
+- law: PARAGRAPH_SEPARATION_ONE_DEVICE
+  path: rails/__shared/app/assets/stylesheets/_prose.scss
+  flags: true
+  code: |
+    p { margin-block: 1.5em; text-indent: 1em; }
+- law: PARAGRAPH_SEPARATION_ONE_DEVICE
+  path: rails/__shared/app/assets/stylesheets/_prose.scss
+  flags: false
+  code: |
+    p { margin: 0; }
+    p + p { margin-block-start: 1.5em; }
+- law: PARAGRAPH_SEPARATION_ONE_DEVICE
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: >-
+    {"probe":"design_laws","viewports":[{"width":390,"elements":[
+    {"key":"p.a","tag":"p","pid":1,"text_indent":16,"margin_block":[24,24],"font_size":16},
+    {"key":"p.b","tag":"p","pid":1,"text_indent":16,"margin_block":[24,24],"font_size":16}]}]}
+- law: PRINT_PAGE_CANON
+  path: BPLANS/index.html
+  flags: true
+  count: 2
+  code: |
+    <style>@page { margin: 20mm; } main { max-width: 90ch; }</style>
+- law: PRINT_PAGE_CANON
+  path: rails/brgen/app/views/pages/print.html.erb
+  flags: false
+  code: |
+    <style>@page { margin: 20mm; }</style>
+- law: PRINT_PAGE_CANON
+  path: BPLANS/print.css
+  flags: false
+  code: |
+    @page :right { margin: 33mm 44mm 66mm 22mm; }
+    @page :left { margin: 33mm 22mm 66mm 44mm; }
+    main { max-width: 66ch; }
+- law: GESTURE_HAS_TAP_EQUIVALENT
+  path: rails/brgen/app/javascript/controllers/nowhere_swipe_controller.js
+  flags: true
+  match: like
+  code: |
+    export default class extends Controller {
+      connect() { this.element.addEventListener("touchend", (e) => this.end(e)) }
+      end(e) { if (this.dx > 60) this.like() }
+      like() { this.element.remove() }
+    }
+- law: GESTURE_HAS_TAP_EQUIVALENT
+  path: rails/brgen/app/javascript/controllers/nowhere_swipe_controller.js
+  flags: false
+  code: |
+    export default class extends Controller {
+      connect() { this.element.addEventListener("touchend", (e) => this.end(e)) }
+      tap() { this.element.addEventListener("click", () => this.like()) }
+      end(e) { if (this.dx > 60) this.like() }
+      like() { this.element.remove() }
+    }
+- law: GESTURE_HAS_TAP_EQUIVALENT
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: >-
+    {"probe":"design_laws","viewports":[{"width":390,"elements":[
+    {"key":"div.stack","attrs":{"data-action":"touchend->stack#like"}}]}]}
+- law: AUTO_MOTION_PAUSABLE
+  path: rails/brgen/app/javascript/controllers/hero_controller.js
+  flags: true
+  code: |
+    connect() { this.timer = setInterval(() => this.track.style.transform = next(), 4000) }
+- law: AUTO_MOTION_PAUSABLE
+  path: rails/brgen/app/javascript/controllers/hero_controller.js
+  flags: false
+  code: |
+    connect() { this.timer = setInterval(() => this.track.style.transform = next(), 4000) }
+    pause() { clearInterval(this.timer) }
+- law: AUTO_MOTION_PAUSABLE
+  path: rails/brgen/app/assets/stylesheets/_hero.scss
+  flags: true
+  code: |
+    .hero-track { animation: drift 8s linear infinite; }
+- law: AUTO_MOTION_PAUSABLE
+  path: rails/brgen/app/assets/stylesheets/_hero.scss
+  flags: false
+  code: |
+    .spinner { animation: spin 1s linear infinite; }
+- law: AUTO_MOTION_PAUSABLE
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: '{"probe":"design_laws","motion":{"changes":40,"last_change":5900,"pause":false}}'
+- law: CHART_DATA_INK
+  path: rails/brgen/app/javascript/controllers/price_chart_controller.js
+  flags: true
+  code: |
+    new Chart(el, { options: { scales: { y: { beginAtZero: false } } } })
+- law: CHART_DATA_INK
+  path: rails/brgen/app/javascript/controllers/price_chart_controller.js
+  flags: false
+  code: |
+    new Chart(el, { options: { scales: { y: { beginAtZero: true } } } })
+- law: CHART_DATA_INK
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: >-
+    {"probe":"design_laws","viewports":[{"width":390,"elements":[
+    {"key":"svg.chart","tag":"svg","transform":"matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"}]}]}
+- law: ORIENTATION_UNLOCKED
+  path: rails/brgen/app/views/pwa/manifest.json.erb
+  flags: true
+  code: |
+    { "orientation": "portrait" }
+- law: ORIENTATION_UNLOCKED
+  path: rails/brgen/app/views/pwa/manifest.json.erb
+  flags: false
+  code: |
+    { "orientation": "any" }
+- law: ORIENTATION_UNLOCKED
+  path: rails/brgen/app/javascript/controllers/tv_controller.js
+  flags: true
+  code: |
+    screen.orientation.lock("landscape")
+- law: ORIENTATION_UNLOCKED
+  path: rails/brgen/app/javascript/controllers/tv_controller.js
+  flags: false
+  code: |
+    // orientation: essential - the camera guide
+    screen.orientation.lock("portrait")
+- law: FIELD_PURPOSE_DECLARED
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <%= f.text_field :postnummer %>
+- law: FIELD_PURPOSE_DECLARED
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  match: "off"
+  code: |
+    <%= f.email_field :email, autocomplete: "off" %>
+- law: FIELD_PURPOSE_DECLARED
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <%= f.text_field :postnummer,
+      autocomplete: "postal-code", inputmode: "numeric" %>
+- law: FIELD_PURPOSE_DECLARED
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <%= f.text_field :title %>
+- law: AUTH_ALLOWS_PASTE
+  path: rails/brgen/app/views/sessions/new.html.erb
+  flags: true
+  code: |
+    <input type="password" onpaste="return false">
+- law: AUTH_ALLOWS_PASTE
+  path: rails/brgen/app/views/sessions/new.html.erb
+  flags: false
+  code: |
+    <input type="password" autocomplete="current-password">
+- law: AUTH_ALLOWS_PASTE
+  path: rails/brgen/app/javascript/controllers/otp_controller.js
+  flags: true
+  code: |
+    el.addEventListener("paste", (e) => e.preventDefault())
+- law: ACTION_LABEL_BRIEF
+  ask: a person decides
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <%= button_to "Trykk her hvis du vil legge varen i kurven", cart_path %>
+- law: ACTION_LABEL_BRIEF
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <%= button_to "Legg i kurv", cart_path %>
+- law: SELF_EVIDENT_DATA_UNLABELLED
+  ask: a person decides
+  path: rails/brgen/app/views/profiles/show.html.erb
+  flags: true
+  code: |
+    <dt>E-post:</dt>
+    <dd><%= mail_to user.email %></dd>
+- law: SELF_EVIDENT_DATA_UNLABELLED
+  path: rails/brgen/app/views/profiles/show.html.erb
+  flags: false
+  code: |
+    <dt class="visually-hidden">E-post:</dt>
+    <dd><%= mail_to user.email %></dd>
+- law: SELF_EVIDENT_DATA_UNLABELLED
+  path: rails/brgen/app/views/profiles/_form.html.erb
+  flags: false
+  code: |
+    <dt>E-post:</dt>
+    <dd><%= mail_to user.email %></dd>
+- law: EMPHASIS_ONE_DEVICE
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <p><strong><em>Gratis levering</em></strong></p>
+- law: EMPHASIS_ONE_DEVICE
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <p><strong>Gratis levering</strong></p>
+- law: EMPHASIS_ONE_DEVICE
+  path: rails/brgen/app/assets/stylesheets/_deal.scss
+  flags: true
+  code: |
+    .deal { font-weight: 700; font-style: italic; }
+- law: EMPHASIS_ONE_DEVICE
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: >-
+    {"probe":"design_laws","viewports":[{"width":390,"elements":[
+    {"key":"span.deal","tag":"span","text":"Gratis","decoration":"underline"}]}]}
+- law: ONE_PRIMARY_ACTION
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  count: 1
+  code: |
+    <%= button_to "Publiser", posts_path, class: "button-primary" %>
+    <%= link_to "Del", share_path, class: "button-primary" %>
+- law: ONE_PRIMARY_ACTION
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <%= button_to "Publiser", posts_path, class: "button-primary" %>
+    <%= link_to "Del", share_path, class: "button-ghost" %>
+- law: ONE_PRIMARY_ACTION
+  path: master/var/rendered/home.rendered.json
+  flags: true
+  code: >-
+    {"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[
+    {"key":"button.a","tag":"button","interactive":true,"bg":[0,80,200,1],"ground":[255,255,255,1],"rect":{"y":16}},
+    {"key":"button.b","tag":"button","interactive":true,"bg":[0,80,200,1],"ground":[255,255,255,1],
+    "rect":{"y":64}}]}]}
+- law: LABEL_IN_NAME
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <button aria-label="Send inn">Lagre</button>
+- law: LABEL_IN_NAME
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <button aria-label="Lagre annonse">Lagre</button>
+- law: LABEL_IN_NAME
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <%= button_tag t("actions.save"), aria: { label: t("actions.submit") } %>
+- law: ICON_CARRIES_WORD
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: true
+  code: |
+    <button class="boost"><svg viewBox="0 0 9 9"></svg></button>
+- law: ICON_CARRIES_WORD
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <button class="boost"><svg viewBox="0 0 9 9"></svg> Fremhev</button>
+- law: ICON_CARRIES_WORD
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: |
+    <button aria-label="Lukk"><svg viewBox="0 0 9 9"></svg></button>
+- law: ICON_CARRIES_WORD
+  path: rails/brgen/app/views/listings/show.html.erb
+  flags: false
+  code: "<button aria-label=\"S\u00F8k\"><svg viewBox=\"0 0 9 9\"></svg></button>\n"
+- law: TYPEFACE_PER_ROLE
+  path: rails/brgen/app/assets/stylesheets/_type.scss
+  flags: true
+  match: Georgia
+  code: |
+    h1 { font-family: "Iowan Old Style", Georgia, serif; }
+- law: TYPEFACE_PER_ROLE
+  path: rails/amber/app/assets/stylesheets/_type.scss
+  flags: false
+  code: |
+    body { font-family: var(--font), sans-serif; }
+- law: TYPEFACE_PER_ROLE
+  path: BPLANS/print.css
+  flags: false
+  code: |
+    body { font-family: Garamond, serif; }
+- law: TYPEFACE_PER_ROLE
+  path: master/var/rendered/home.geometry.json
+  flags: true
+  code: >-
+    {"probe":"geometry","width":390,"height":844,"elements":[
+    {"key":"h1","tag":"h1","visible":true,"text":"Tittel","font_family":"Georgia, serif",
+    "frect":{"x":16,"y":16,"w":358,"h":40}}]}
+- law: TABULAR_NUMERALS
+  path: master/var/rendered/home.geometry.json
+  flags: true
+  code: '{"probe":"geometry","tabular":[{"sel":"td.price","numeric":"normal"}]}'
+- law: TABULAR_NUMERALS
+  path: master/var/rendered/home.geometry.json
+  flags: false
+  code: '{"probe":"geometry","tabular":[{"sel":"td.price","numeric":"tabular-nums"}]}'
+- law: HEADING_WRAP_BALANCE
+  path: master/var/rendered/home.geometry.json
+  flags: true
+  code: >-
+    {"probe":"geometry","width":390,"height":844,"elements":[{"key":"h1","tag":"h1","visible":true,
+    "text":"Tittel","text_lines":2,"text_wrap":"wrap","frect":{"x":16,"y":16,"w":358,"h":80}}]}
+- law: HEADING_WRAP_BALANCE
+  path: master/var/rendered/home.geometry.json
+  flags: false
+  code: >-
+    {"probe":"geometry","width":390,"height":844,"elements":[{"key":"h1","tag":"h1","visible":true,
+    "text":"Tittel","text_lines":2,"text_wrap":"balance","frect":{"x":16,"y":16,"w":358,"h":80}}]}
+- law: NEGATIVE_SPACE_GROUPING
+  path: master/var/rendered/home.geometry.json
+  flags: true
+  code: >-
+    {"probe":"geometry","width":390,"height":844,"elements":[
+    {"key":"p.far","tag":"p","visible":true,"text":"En","frect":{"x":16,"y":16,"w":358,"h":24}},
+    {"key":"p.end","tag":"p","visible":true,"text":"To","frect":{"x":16,"y":500,"w":358,"h":24}}]}
+- law: NEGATIVE_SPACE_GROUPING
+  path: master/var/rendered/home.geometry.json
+  flags: false
+  code: >-
+    {"probe":"geometry","width":390,"height":844,"elements":[
+    {"key":"p.near","tag":"p","visible":true,"text":"En","frect":{"x":16,"y":16,"w":358,"h":24}},
+    {"key":"p.next","tag":"p","visible":true,"text":"To","frect":{"x":16,"y":56,"w":358,"h":24}}]}

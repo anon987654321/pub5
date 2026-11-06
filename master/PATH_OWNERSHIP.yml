@@ -1,0 +1,214 @@
+---
+ownership:
+  ../studio/output_paths.rb:
+    purpose: canonical studio path policy - the root shim that used to shadow it is retired (2026-11-02)
+    risk: low
+    check: cd studio && rake check
+  ../studio/subprocess.rb:
+    purpose: canonical studio subprocess boundary - the root shim that used to shadow it is retired (2026-11-02)
+    risk: medium
+    check: cd studio && rake check
+  ../studio/docs/fetat/proposal.md:
+    purpose: the FETAT proposal working master - writing output, not policy
+    risk: low
+    check: none (prose)
+  ../rails/mrdamascy/:
+    purpose: the Mr. Damascy PWA - first-class rails app since 2026-11-02 (promoted out of the retired rails/__other/); deploy lane pending
+    risk: medium
+    check: cd rails/mrdamascy && bin/rails test
+  README.md:
+    purpose: project front door
+    risk: low
+    check: bin/check
+  data/operator_seams.yml:
+    purpose: the operator-only work no agent can finish, with the evidence that closes each;
+      feature truth lives in rails/apps.yml and rails/apps.horizon.yml, and
+      operational recipes live in ../openbsd/data/operator.yml
+    risk: medium
+    check: master/bin/operator status
+  ../openbsd/lib/zshrc.shared:
+    purpose: canonical host:path$ prompt shared by operator zsh sessions
+    risk: low
+    check: ruby openbsd/test/test_operator_prompt_contract.rb
+  law/:
+    purpose: the constitution as code - one domain file per body of law
+    risk: critical
+    check: bin/check --profile=agent
+  lib/:
+    purpose: runtime source; every subdirectory declares its own purpose below
+    risk: high
+    check: bin/check
+  lib/cognition/:
+    purpose: persistent perception, salience, affect and reflection
+    risk: high
+    check: bin/check --profile=agent
+  master/web/:
+    purpose: the Rails face - chat shell, TTS endpoints, WebGL face assets
+    risk: high
+    check: bin/check --profile=web
+  checks/:
+    purpose: checks that measure master itself - its face, its assets, its own scan
+      chain - declared in master/checks/checks.yml and run by that runner
+    risk: medium
+    check: ruby master/checks/runner.rb master_tts master_web_assets constitutional_scan
+  bin/:
+    purpose: executable entry points and validation wrappers
+    risk: high
+    check: bin/check
+  lib/master.rb:
+    purpose: runtime loader and namespace setup
+    risk: high
+    check: bin/check --profile=full
+  lib/cli/:
+    purpose: CLI, commands, pipeline, web adapters
+    risk: high
+    check: bin/check --profile=agent
+  lib/review/:
+    purpose: scanners, verdicts, routing, review and output checks
+    risk: high
+    check: bin/check --profile=agent
+  lib/fix/:
+    purpose: fix loop, watcher, rollback, self-check
+    risk: high
+    check: bin/check --profile=agent
+  lib/io/:
+    purpose: tools and external actions
+    risk: high
+    check: bin/check --profile=agent
+  lib/ground/:
+    purpose: constitution, config, policy, memory, schema - the schema clause
+      covers a typed reader whose table declares one of those four things, in
+      data/ or in a frozen constant, and stops where the table's subject is
+      another directory's declared purpose or where the file writes the table
+      rather than reading it
+    risk: high
+    check: bin/check --profile=agent
+  lib/trace/:
+    purpose: evidence, events, telemetry, replay, snapshots
+    risk: high
+    check: bin/check --profile=agent
+  lib/voice/:
+    purpose: personality, speech, TTS, rendering
+    risk: medium
+    check: bin/check
+  docs/:
+    purpose: >-
+      Design records and compact navigation a reader consults: the coordinator map, lifecycle
+      ownership, the free-compute record and law-navigation; handoffs/ keeps dated session notes
+    risk: low
+    check: rake test
+  test/:
+    purpose: Minitest suite for master's lib/, law/, bin/ and tools/, one test_<subject>.rb
+      per subject, booted through test/test_helper.rb with live state redirected to a
+      scratch directory; fixtures/ holds their inputs
+    risk: medium
+    check: rake test
+  test/voice/:
+    purpose: speech and TTS regression tests grouped by the runtime subsystem they protect
+    risk: medium
+    check: ruby -Ilib:test test/voice/test_speech_empty_worker.rb
+  lib/core.rb:
+    purpose: fold spine entrypoint - Effect, VERBS, Verdict, Secret
+    risk: critical
+    check: rake test:core
+  lib/core/:
+    purpose: constitutional fold spine - must not require the rest of lib/
+    risk: high
+    check: rake test:core
+  lib/boot/:
+    purpose: paths, data, runtime setup consumed before Zeitwerk is live - each
+      file declares a plain module, three of them mixed onto Master and MasterPaths
+      read before Master::ROOT exists, all hand-required in load order and
+      Zeitwerk-ignored, so this is not a namespace anything can live under
+    risk: high
+    check: bin/check --profile=agent
+  lib/builder/:
+    purpose: boot-phase assembly (ground, io, personality wiring)
+    risk: high
+    check: bin/check --profile=agent
+  lib/operator/:
+    purpose: pub4-level (multi-repo) check/status tooling, separate namespace from Master
+    risk: medium
+    check: master/bin/operator status
+  data/:
+    purpose: runtime-read configuration and generated censuses; the files below
+      carry their own, higher risk
+    risk: high
+    check: bin/check --profile=agent
+  data/recovery/:
+    purpose: recovery contracts and preserved archive provenance, separate from live runtime configuration
+    risk: medium
+    check: ruby -Ilib:test test/test_recovery_pub_manifest.rb
+  data/soul.yml:
+    purpose: constitutional identity
+    risk: critical
+    check: bin/check --profile=agent
+  data/laws.yml:
+    purpose: constitutional rule registry and all scanner law
+    risk: critical
+    check: bin/check --profile=agent
+  data/providers.yml:
+    purpose: provider registry
+    risk: high
+    check: ruby -Ilib:test test/test_provider_config.rb
+  data/models.yml:
+    purpose: model and routing registry
+    risk: high
+    check: ruby -Ilib:test test/test_provider_config.rb
+  master/web/app/views/chat/index.html.erb:
+    purpose: face boot shell and primer contract
+    risk: critical
+    check: bin/check --profile=web
+  master/web/public/face.js:
+    purpose: deferred face loader
+    risk: critical
+    check: bin/check --profile=web
+  master/web/public/face.part*.txt:
+    purpose: split face runtime payload
+    risk: critical
+    check: bin/check --profile=web
+  master/web/public/three.face.module.js:
+    purpose: heavy WebGL dependency, deferred until tap
+    risk: critical
+    check: bin/check --profile=web
+  knowledge/:
+    purpose: local-only search corpus for SearchKnowledge
+    risk: local
+    check: none
+  output/:
+    purpose: generated media and training artifacts
+    risk: local
+    check: none
+  .master/:
+    purpose: local runtime state, cache, memory, traces
+    risk: local
+    check: none
+  tools/:
+    purpose: repo-hygiene and verification one-offs (security sweep, inventory,
+      convergence evidence check) - distinct from bin/'s runtime entry points
+    risk: medium
+    check: ruby -Ilib:test test/test_lifecycle_tools.rb
+  tools/research/:
+    purpose: cognition benchmarks, challenge measurement and LLM trajectory datasets
+    risk: medium
+    check: ruby -Ilib:test test/test_cognition_outcome_model.rb
+  tools/repo/:
+    purpose: tracked-tree inventory, entrypoint reachability and structural migration planning
+    risk: medium
+    check: ruby -Ilib:test test/test_lifecycle_tools.rb
+  tools/audit/:
+    purpose: repository audits for capability inventory, data reachability, duplication, Law metadata and design baseline measurements
+    risk: medium
+    check: cd master && ruby -Ilib:test test/test_capability_inventory.rb
+  loop*.gif:
+    purpose: the README films' posters, made by bin/loops
+    risk: low
+    check: none
+  loop*.mp4:
+    purpose: the README films, made by bin/loops from the ignored loop.mp4 source
+    risk: low
+    check: none
+  completions/:
+    purpose: zsh completions for bin/master and bin/operator
+    risk: low
+    check: ruby -Ilib:test test/test_completions.rb

@@ -1,0 +1,293 @@
+# frozen_string_literal: true
+
+require "pathname"
+require "ripper"
+
+module Master
+  # Preflight Law.define against the one execution catalogue in laws.yml.
+  # Each entry maps to an actual Ruby declaration and source file.
+  module LawCataloguePreflight
+    module_function
+
+    def validate!(law_dir:, catalogue:, repo_root:, generated_declarations: [])
+      law_root = File.expand_path(law_dir)
+      repository_root = File.expand_path(repo_root)
+      entries = catalogue.fetch("entries")
+      raise ArgumentError, "laws.yml law_catalogue.entries must be a mapping" unless entries.is_a?(Hash)
+
+      declarations = source_declarations(law_root, repository_root)
+      declarations.concat(normalize_generated(generated_declarations))
+      errors = []
+      validate_manifest!(catalogue, entries, errors)
+
+      declarations.group_by { |row| row[:id] }.each do |id, rows|
+        next if rows.size < 2
+
+        locations = rows.map { |row| "#{row[:source]}:#{row[:line]}" }
+        errors << "duplicate definition: #{id} at #{locations.join(', ')}"
+      end
+
+      declarations.each do |declaration|
+        id = declaration.fetch(:id)
+        entry = entries[id]
+        if entry.nil?
+          folded = entries.keys.find { |key| key.to_s.casecmp?(id) }
+          if folded
+            errors << "catalogue key #{folded} has the wrong case for #{id} (#{declaration[:source]}:#{declaration[:line]})"
+          else
+            errors << "missing catalogue entry for #{id} (#{declaration[:source]}:#{declaration[:line]})"
+          end
+          next
+        end
+
+        unless entry.is_a?(Hash)
+          errors << "catalogue entry #{id} must be a mapping"
+          next
+        end
+
+        sources = Array(entry["definition_sources"]).map(&:to_s)
+        next if sources.include?(declaration.fetch(:source))
+
+        detail = sources.empty? ? "definition_sources is empty" : "definition_sources is #{sources.join(', ')}"
+        errors << "#{id} declares at #{declaration[:source]} but #{detail}"
+      end
+
+      by_source = declarations.group_by { |row| row.fetch(:source) }
+      entries.each do |id, entry|
+        next unless entry.is_a?(Hash)
+
+        Array(entry["definition_sources"]).map(&:to_s).each do |source|
+          unless source.start_with?("master/law/") && !source.split("/").include?("..")
+            errors << "#{id} has invalid definition source path: #{source}"
+            next
+          end
+
+          resolved = File.expand_path(source, repository_root)
+          unless resolved == law_root || resolved.start_with?(law_root + File::SEPARATOR)
+            errors << "#{id} definition source escapes the direct Law directory: #{source}"
+            next
+          end
+
+          unless File.file?(resolved)
+            errors << "#{id} definition source does not exist: #{source}"
+            next
+          end
+
+          unless LOAD_DIRS.map { |dir| File.join(law_root, dir).chomp("/") }.include?(File.dirname(resolved))
+            errors << "#{id} definition source is outside Law.load_all's direct-file scope: #{source}"
+            next
+          end
+
+          declared_ids = Array(by_source[source]).map { |row| row.fetch(:id) }
+          errors << "#{id} names #{source}, but that source does not define #{id}" unless declared_ids.include?(id.to_s)
+        end
+      end
+
+      raise ArgumentError, "Law catalogue preflight failed:\n- #{errors.uniq.join("\n- ")}" unless errors.empty?
+
+      true
+    end
+
+    def validate_manifest!(catalogue, entries, errors)
+      allowed_manifest_fields = %w[schema identity_source universal_by_default modalities surfaces missing_assessor defaults entries]
+      unknown_manifest_fields = catalogue.keys.map(&:to_s) - allowed_manifest_fields
+      errors << "law_catalogue has unknown field(s): #{unknown_manifest_fields.sort.join(', ')}" unless unknown_manifest_fields.empty?
+      errors << "law_catalogue.schema must be 1" unless catalogue["schema"] == 1
+      errors << "law_catalogue.identity_source must be master/data/laws.yml" unless catalogue["identity_source"] == "master/data/laws.yml"
+      errors << "law_catalogue.universal_by_default must be true" unless catalogue["universal_by_default"] == true
+      errors << "law_catalogue.missing_assessor must be inconclusive" unless catalogue["missing_assessor"] == "inconclusive"
+
+      # detector_sources is retired: every Law is one Law.define, and its
+      # definition source is the file that holds its detector. path and
+      # path_pattern are retired too: a Law's subject is its Law.define `path`,
+      # so a catalogue scope would be one no reader honours, and is refused.
+      allowed_entry_fields = %w[
+        universal definition_sources severity mode lifecycle autofix
+        languages surfaces path_exclude
+      ]
+      expected_modalities = Master::LawVocabulary::MODALITIES.map(&:to_s).sort
+      declared_modalities = Array(catalogue["modalities"]).map(&:to_s).uniq.sort
+      errors << "law_catalogue.modalities must be #{expected_modalities.join(', ')}" unless declared_modalities == expected_modalities
+
+      surfaces = catalogue["surfaces"]
+      unless surfaces.is_a?(Array) && !surfaces.empty? && surfaces.all? { |surface| !surface.to_s.strip.empty? } &&
+             surfaces.map(&:to_s).uniq.size == surfaces.size
+        errors << "law_catalogue.surfaces must be a non-empty, unique list of named surfaces"
+      end
+
+      defaults = catalogue.fetch("defaults", {})
+      defaults_valid = defaults.is_a?(Hash)
+      errors << "law_catalogue.defaults must be a mapping" unless defaults_valid
+      defaults = {} unless defaults_valid
+
+      allowed_severities = %w[info warn warning error critical veto]
+      allowed_modes = %w[violation opportunity]
+      allowed_lifecycles = %w[proposed proven active observed trusted advisory retired]
+      allowed_autofix = %w[never review automatic]
+      allowed_languages = Master::FILE_LANGUAGE_MAP.values.uniq
+      default_severity = defaults["severity"]
+      if !default_severity.nil? && !allowed_severities.include?(default_severity.to_s)
+        errors << "law_catalogue.defaults has invalid severity #{default_severity.inspect}"
+      end
+      default_mode = defaults["mode"]
+      if !default_mode.nil? && !allowed_modes.include?(default_mode.to_s)
+        errors << "law_catalogue.defaults has invalid mode #{default_mode.inspect}"
+      end
+      default_lifecycle = defaults["lifecycle"]
+      if !default_lifecycle.nil? && !allowed_lifecycles.include?(default_lifecycle.to_s)
+        errors << "law_catalogue.defaults has invalid lifecycle #{default_lifecycle.inspect}"
+      end
+      default_autofix = defaults["autofix"]
+      if !default_autofix.nil? && !allowed_autofix.include?(default_autofix.to_s)
+        errors << "law_catalogue.defaults has invalid autofix policy #{default_autofix.inspect}"
+      end
+      default_languages = defaults["languages"]
+      unless default_languages.nil? || (default_languages.is_a?(Array) &&
+        default_languages.all? { |language| allowed_languages.include?(language.to_s) })
+        errors << "law_catalogue.defaults has invalid languages"
+      end
+
+      normalized_ids = entries.keys.map(&:to_s)
+      invalid_ids = normalized_ids.reject { |id| id.match?(/\A[A-Za-z][A-Za-z0-9_]*\z/) }
+      errors << "invalid Law catalogue identity(ies): #{invalid_ids.uniq.join(', ')}" unless invalid_ids.empty?
+      duplicate_ids = normalized_ids.group_by(&:downcase).select { |_id, keys| keys.uniq.size > 1 }.keys
+      errors << "case-insensitive duplicate Law identities: #{duplicate_ids.join(', ')}" unless duplicate_ids.empty?
+
+      entries.each do |id, entry|
+        unless entry.is_a?(Hash)
+          errors << "catalogue entry #{id} must be a mapping"
+          next
+        end
+
+        unknown_entry_fields = entry.keys.map(&:to_s) - allowed_entry_fields
+        errors << "Law #{id} has unknown catalogue field(s): #{unknown_entry_fields.sort.join(', ')}" unless unknown_entry_fields.empty?
+        # universal_by_default holds unless an entry says false: a domain Law.
+        errors << "Law #{id} universal must be true or false" unless [nil, true, false].include?(entry["universal"])
+        policy = defaults.merge(entry)
+        severity = policy["severity"].to_s.strip
+        if severity.empty?
+          errors << "Law #{id} has no effective severity"
+        elsif !allowed_severities.include?(severity)
+          errors << "Law #{id} has invalid severity #{severity.inspect}"
+        end
+        mode = policy["mode"].to_s
+        errors << "Law #{id} has invalid mode #{mode.inspect}" unless allowed_modes.include?(mode)
+        lifecycle = policy["lifecycle"].to_s
+        errors << "Law #{id} has invalid lifecycle #{lifecycle.inspect}" unless allowed_lifecycles.include?(lifecycle)
+        autofix = policy["autofix"].to_s
+        errors << "Law #{id} has invalid autofix policy #{autofix.inspect}" unless allowed_autofix.include?(autofix)
+
+        if entry.key?("languages")
+          languages = entry["languages"]
+          unless languages.is_a?(Array) && languages.all? { |language| allowed_languages.include?(language.to_s) }
+            errors << "Law #{id} has invalid languages"
+          end
+        end
+        surfaces = catalogue["surfaces"]
+        if entry.key?("surfaces")
+          scoped_surfaces = entry["surfaces"]
+          unless scoped_surfaces.is_a?(Array) && (scoped_surfaces.map(&:to_s) - Array(surfaces).map(&:to_s)).empty?
+            errors << "Law #{id} has unknown assessment surfaces"
+          end
+        end
+
+        Array(entry["path_exclude"]).each do |excluded_pattern|
+          begin
+            Regexp.new(excluded_pattern.to_s)
+          rescue RegexpError => error
+            errors << "Law #{id} has invalid path_exclude: #{error.message}"
+          end
+        end
+
+        if entry.key?("definition_sources") &&
+           !(entry["definition_sources"].is_a?(Array) &&
+             entry["definition_sources"].all? { |source| source.is_a?(String) && !source.strip.empty? })
+          errors << "Law #{id} definition_sources must be a list of non-empty paths"
+        end
+
+        errors << "Law #{id} has no definition_sources" if Array(entry["definition_sources"]).empty?
+      end
+    end
+
+    # The two directories Law.load_all reads, and so the only homes a definition source may name.
+    LOAD_DIRS = [""].freeze
+
+    def source_declarations(law_root, repository_root)
+      LOAD_DIRS.flat_map { |dir| Dir.glob(File.join(law_root, dir, "*.rb")).sort }.flat_map do |path|
+        source = Pathname.new(path).relative_path_from(Pathname.new(repository_root)).to_s.tr("\\", "/")
+        body = File.read(path, encoding: "UTF-8")
+        syntax = Ripper.sexp(body)
+        raise ArgumentError, "Law catalogue preflight cannot parse #{source}" unless syntax
+
+        declarations = []
+        walk(syntax) do |node|
+          declaration = declaration_from(node, source)
+          declarations << declaration if declaration
+        end
+        declarations.concat(templated_declarations(body, source))
+      end
+    end
+
+    # One detector family derives five catalogue identities from the traits
+    # declared in its %w list. Expand that finite list; do not treat the shared
+    # template name as an identity or leave those IDs unmeasured.
+    def templated_declarations(body, source)
+      body.scan(/Law\.define\(:"([^"]*#\{([A-Za-z_]\w*)\}[^"]*)"\)/).flat_map do |template, variable|
+        enum = body.scan(/%w\[([^\]]+)\]\.each\s+do\s+\|#{Regexp.escape(variable)}\|/).flatten
+        enum.flat_map { |values| values.split.map { |value| template.gsub("\#{#{variable}}", value) } }
+            .map { |id| { id:, source:, line: 1 } }
+      end
+    end
+
+    def normalize_generated(rows)
+      Array(rows).map do |row|
+        { id: row.fetch(:id).to_s, source: row.fetch(:source).to_s, line: row[:line] || 1 }
+      end
+    end
+
+    def walk(node, &block)
+      return unless node.is_a?(Array)
+
+      yield node
+      node.each { |child| walk(child, &block) if child.is_a?(Array) }
+    end
+
+    def declaration_from(node, source)
+      return unless node[0] == :method_add_arg
+
+      call = node[1]
+      return unless call.is_a?(Array) && call[0] == :call
+
+      receiver = call[1]
+      method = call[3]
+      # `Law.define` in law/, `::Law.define` in a file whose Laws sit
+      # inside Master::Review::Scan::Laws where a bare Law names another constant.
+      return unless receiver.is_a?(Array) && %i[var_ref top_const_ref].include?(receiver[0]) &&
+                    receiver[1].is_a?(Array) && receiver[1][0] == :@const && receiver[1][1] == "Law"
+      return unless method.is_a?(Array) && method[0] == :@ident && method[1] == "define"
+
+      symbol = first_node(node[2]) { |candidate| candidate[0] == :symbol_literal }
+      token = symbol && symbol.dig(1, 1)
+      return unless token.is_a?(Array) && %i[@const @ident].include?(token[0])
+
+      # Catalogue identities are case-sensitive and a few detector Laws are lower case (rubocop, reek).
+      id = token[1]
+      return unless id.match?(/\A[A-Za-z][A-Za-z0-9_]*\z/)
+
+      { id:, source:, line: method.dig(2, 0) }
+    end
+
+    def first_node(node, &predicate)
+      return unless node.is_a?(Array)
+      return node if predicate.call(node)
+
+      node.each do |child|
+        next unless child.is_a?(Array)
+
+        found = first_node(child, &predicate)
+        return found if found
+      end
+      nil
+    end
+  end
+end

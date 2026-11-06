@@ -1,0 +1,119 @@
+# Reek configuration for master
+#
+# Who reads this: ReekLaw in law/linters.rb, which the
+# scanner always registers. It shells out to `reek --format json <path>`, which
+# picks this file up, whenever a reek binary is on PATH or in bin/, unless
+# MASTER_EXTERNAL_LINT=0. Where reek is installed these thresholds are live in
+# every /scan and /fix.
+#
+# TooManyMethods, TooManyStatements and LongParameterList are off: NO_GOD_CLASS,
+# SMALL_FUNCTIONS and LONG_PARAMETER_LIST measure them, and two sources of one
+# number reported every breach twice.
+detectors:
+  # Module/class comments not required — naming + structure is the doc.
+  IrresponsibleModule:
+    enabled: false
+
+  # Single-char block vars are idiomatic Ruby.
+  UncommunicativeVariableName:
+    accept:
+      - a
+      - b
+      - c
+      - d
+      - e
+      - f
+      - g
+      - h
+      - i
+      - j
+      - k
+      - l
+      - m
+      - n
+      - o
+      - p
+      - q
+      - r
+      - s
+      - t
+      - u
+      - v
+      - w
+      - x
+      - y
+      - z
+      - t0
+      - t1
+      - id
+
+  UncommunicativeParameterName:
+    accept:
+      - _
+      - _e
+      - _k
+      - _v
+
+  # Threshold: 3+ calls to same expr warrant extraction; 2 is normal Ruby.
+  DuplicateMethodCall:
+    max_calls: 3
+    allow_calls:
+      - puts
+      - print
+      - raise
+
+  # method(bool) is valid for simple flag params; use keyword args for complex.
+  BooleanParameter:
+    enabled: false
+
+  # Parameter-controlled flow is normal; caller decides behavior.
+  ControlParameter:
+    enabled: false
+
+  # Mixins accessing @ivars they don't own is expected in this codebase.
+  InstanceVariableAssumption:
+    enabled: false
+
+  # _prefix convention covers unused params.
+  UnusedParameters:
+    enabled: false
+
+  # Grouped params (bus:, root:, agent:) are intentional constructor patterns.
+  DataClump:
+    enabled: false
+
+  # nil? and &. are idiomatic.
+  NilCheck:
+    enabled: false
+
+  # Static utility helpers don't need to be moved.
+  UtilityFunction:
+    enabled: false
+
+  ManualDispatch:
+    enabled: true
+  MissingSafeMethod:
+    enabled: false
+  FeatureEnvy:
+    enabled: false
+
+  TooManyStatements: # one source: the SMALL_FUNCTIONS Law
+    enabled: false
+
+  TooManyMethods: # one source: the NO_GOD_CLASS (METHOD_LIMIT 10) Law
+    enabled: false
+
+  TooManyInstanceVariables:
+    max_instance_variables: 10
+
+  TooManyConstants:
+    max_constants: 12
+
+  LongParameterList: # one source: the LONG_PARAMETER_LIST (at most 4) Law
+    enabled: false
+
+  NestedIterators:
+    max_allowed_nesting: 2
+
+  RepeatedConditional:
+    max_ifs: 3

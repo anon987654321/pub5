@@ -1,0 +1,42 @@
+# TTS policy — faithful speech is the default; expressive synthesis is opt-in.
+#
+# `default_mode` selects completed-utterance synthesis for CLI Playback on macOS.
+# `fast_mode` is a separate latency policy: it keeps web speech progressive
+# and avoids cold-starting Edge when no socket is available. Classic CLI speech
+# allows one bounded one-shot recovery after an actual socket synthesis failure.
+# Set MASTER_TTS_MODE=transcendent on macOS to opt into multi-engine synthesis.
+# OpenBSD retains its explicit host-specific policy in Speech.synthesis_mode.
+#
+transcendent:
+  enabled: true
+  fast_mode: true
+  default_mode: classic
+  personality: warm_supportive
+  warmth: 0.82
+  depth: 0.68
+  # Prefer expressive local engines when they are actually installed. Engines.attempt?
+  # remains the availability check; missing MLX/Chatterbox falls through without delay.
+  engine_chain: mlx, chatterbox, edge_melodic, edge, say
+  emotion_enabled: true
+  # Deterministic, capped Chatterbox Turbo events. No random speech effects.
+  paralinguistic_tags: true
+  melodic_enabled: true
+  melodic_threshold: 0.40
+  # On macOS, expressive performance is opt-in for completed CLI utterances.
+  # Direct Edge speech is the default because it preserves the supplied words
+  # most faithfully. Select MASTER_TTS_MODE=transcendent for multi-engine
+  # performance, emotion and melodic phrasing.
+  phrase_rhythm_enabled: true
+  phrase_language_switching: true
+  mlx_model: mlx-community/chatterbox-fp16
+  mlx_voice: default
+  mlx_speed: 1.0
+  exaggeration: 0.45
+  cfg_weight: 0.42
+  chatterbox_device: mps
+  # A 8–15 second clean reference clip may be supplied by the operator for a
+  # consistent local Chatterbox identity. Empty means no clip is assumed.
+  reference_clip: ""
+  replicate_model: jaaari/kokoro-82m
+  replicate_voice: af_bella
+  replicate_speed: 1.05

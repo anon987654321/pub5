@@ -1,0 +1,240 @@
+# frozen_string_literal: true
+
+require "date"
+require "digest"
+
+module Master
+  # YAML loading, validation, and rule-shard composition for Master.*.
+  module DataLoading
+    DEFAULT_YAML_VALUE = Object.new.freeze
+
+    # The single parser for both path-based loading and snapshot validation.
+    # Callers validating a measured source pass the captured content here rather
+    # than reopening a live path after its fingerprint has been recorded.
+    def parse_yaml_content(content, symbolize_names: false, source: "content")
+      raise "yaml too large: #{source}" if content.bytesize > MAX_CONSTITUTION_BYTES
+
+      # The source names the file in a syntax error, which otherwise reads "(<unknown>)".
+      YAML.safe_load(content, aliases: true, symbolize_names:, permitted_classes: [Date, Time], filename: source)
+    end
+
+    # Read a bounded UTF-8 snapshot once so parser callers can validate exactly
+    # the bytes measured before this read, without allocating an unbounded file.
+    def read_yaml_content(path)
+      content = File.binread(path, MAX_CONSTITUTION_BYTES + 1)
+      raise "yaml too large: #{path}" if content.bytesize > MAX_CONSTITUTION_BYTES
+
+      content.force_encoding(Encoding::UTF_8)
+      raise EncodingError, "invalid UTF-8: #{path}" unless content.valid_encoding?
+
+      content
+    end
+
+    # This ENOENT warning is load-bearing — keep it. A doubled path segment in
+    # RuntimeCatalog#web_boot_payload_minimal ("openbsd/openbsd/vm_resource.yml")
+    # was found only because every load printed "No such file or directory"
+    # before quietly defaulting. Callers for whom absence is a legitimate answer
+    # should check existence themselves rather than ask this method to go quiet
+    # (see load_laws); the signature stays fixed because several tests stub
+    # this method, and a new keyword here raises ArgumentError inside the stub.
+    #
+    # Parses are remembered by path, size, inode and mtime, and every call gets
+    # its own copy. laws.yml is 205KB and fifteen constructors read it: one
+    # boot and a /scan of lib/io parsed it 40 times for 724ms. A deep copy of
+    # the parsed tree costs a fraction of a parse and cannot leak one caller's
+    # mutation into another's, and an edit changes the stat, so the next read
+    # parses again. The copy is walked by hand, because this tree forbids
+    # deserialising with Marshal anywhere in lib/.
+    def load_yaml(path, symbolize_names: false, default: DEFAULT_YAML_VALUE)
+      fallback = default.equal?(DEFAULT_YAML_VALUE) ? {} : default
+      stat = File.stat(path)
+      raise "yaml too large: #{path}" if stat.size > MAX_CONSTITUTION_BYTES
+
+      key = [File.expand_path(path), symbolize_names, stat.size, stat.ino, stat.mtime.to_r]
+      parsed = yaml_parse_cache[key] ||= Timeout.timeout(YAML_LOAD_TIMEOUT_S) do
+        yaml_deep_freeze(parse_yaml_content(read_yaml_content(path), symbolize_names:, source: path))
+      end
+      parsed.nil? ? fallback : yaml_copy(parsed)
+    rescue Errno::ENOENT, Errno::EACCES => e
+      warn_unreadable_once(path, e)
+      fallback
+    rescue Psych::Exception, Timeout::Error => e
+      warn("boot0: yaml #{path}: #{e.message}")
+      raise
+    end
+
+    # A data file read from a caller's own root, falling back to the one this
+    # runtime ships, and never raising at the caller. PrincipleMap and
+    # MaturityScorecard each wrote this seven-line shape out, differing only in
+    # the filename and the Swallow context — the DRY detector named the pair.
+    def load_data_yaml(root, name, fallback, context:)
+      path = File.join(root, "data", name)
+      path = fallback unless File.file?(path)
+      raise "data file missing: #{path}" unless File.file?(path)
+
+      data = load_yaml(path)
+      raise "data file #{name} is not a hash: #{path}" unless data.is_a?(Hash)
+
+      data
+    rescue StandardError => e
+      Master::Ground::Swallow.log(e, context:)
+      raise "data file unreadable: #{name}: #{e.class}: #{e.message}"
+    end
+
+    def validate_data!(root: ROOT, bus: nil)
+      paths = Dir.glob(File.join(root, "data", "**/*.yml")).sort
+      snapshots = {}
+      read_errors = {}
+
+      paths.each do |path|
+        snapshots[path] = read_yaml_content(path)
+      rescue StandardError => e
+        relative = path.delete_prefix(File.join(root, "data") + File::SEPARATOR)
+        read_errors[relative] = e.message.lines.first.to_s.strip
+      end
+
+      signature = snapshots.to_h do |path, content|
+        [path, Digest::SHA256.hexdigest(content.b)]
+      end
+      signature = [signature, read_errors]
+      cached = data_validation_cache[root]
+      return cached[:errors] if cached && cached[:signature] == signature
+
+      errors = yaml_errors(snapshots, root).merge(read_errors)
+      current_paths = Dir.glob(File.join(root, "data", "**/*.yml")).sort
+      inventory_changed = current_paths != paths
+      errors["data"] = "file inventory changed during validation" if inventory_changed
+
+      data_validation_cache[root] = { signature:, errors: } unless inventory_changed
+      publish_yaml_errors(errors, bus)
+      errors
+    end
+
+    # Scanners call this with whatever directory they are scanning
+    # (LawRegistryAudit, SelfTest, YamlBridgeRules, Fix::Priority all pass
+    # root: @root). For any root but our own, "this project has no laws.yml" is
+    # the answer, not a fault — so absence is quiet there and stays loud for
+    # ROOT, where a missing constitution is a real failure. Before this, every
+    # scanner test against a Dir.mktmpdir root printed
+    # "load_yaml: No such file or directory ... /T/d2026…/data/laws.yml", which
+    # trained readers to scroll past the one warning that has already caught a
+    # genuine path bug.
+    def load_laws(root: ROOT)
+      root = Master.master_root(root:)
+      # Existing scanner, veto, provider and /fix readers consume the runtime
+      # registry; the canonical laws.yml is normative law data whose own
+      # readers are Master.law_entries and Master.laws_document.
+      runtime_path = File.join(root, "data", "law_runtime.yml")
+      canonical_path = File.join(root, "data", "laws.yml")
+      selected = File.file?(runtime_path) ? runtime_path : canonical_path
+      # Skip the read entirely rather than let load_yaml warn — see above.
+      return {} unless root == ROOT || File.exist?(selected)
+
+      load_yaml(selected)
+    end
+
+    # The directories master's self-directed checks scan, from
+    # data/scan_coverage.yml instead of a path literal repeated in each check.
+    #
+    # `File.join(root, "lib")` was written into Fix::SelfCheck and rake
+    # constitution, and core/ therefore sat outside the law for three weeks
+    # without anyone choosing that. A literal cannot be audited; a manifest can,
+    # and rake lint:scan_coverage audits this one. Foreign roots (scanner tests
+    # against a mktmpdir) have no manifest and get the old default.
+    def scan_roots(root: ROOT)
+      data_dir = File.join(Master.master_root(root:), "data")
+      path = File.join(data_dir, "scan_coverage.yml")
+      return ["lib"] unless File.exist?(path)
+
+      roots = load_yaml(path).dig("scan_coverage", "roots")
+      roots.is_a?(Array) && !roots.empty? ? roots : ["lib"]
+    end
+
+    private
+
+    def data_validation_cache
+      @data_validation_cache ||= {}
+    end
+
+    # Once per path. A scan rule reads its optional file once per scanned file,
+    # and a missing one would print over the prompt on every read.
+    def warn_unreadable_once(path, error)
+      key = File.expand_path(path)
+      return if yaml_unreadable.key?(key)
+
+      yaml_unreadable[key] = true
+      warn("boot0: yaml #{error.message}")
+    end
+
+    def yaml_unreadable
+      @yaml_unreadable ||= {}
+    end
+
+    # Key to a frozen parse. Several threads load data files, and ||= on a plain
+    # Hash at worst parses one file twice; the cached tree itself is frozen.
+    def yaml_parse_cache
+      @yaml_parse_cache ||= {}
+    end
+
+    # YAML.safe_load yields only hashes, arrays, strings, symbols, numbers,
+    # booleans, nil, Date and Time; the containers and strings are what a caller
+    # can mutate, so those are what get copied.
+    # YAML aliases can be shared or recursive. Preserve container identity while
+    # copying and freezing, otherwise a valid recursive alias walks forever.
+    def yaml_copy(value, seen = {})
+      case value
+      when Hash
+        id = value.object_id
+        return seen[id] if seen.key?(id)
+
+        copy = {}
+        seen[id] = copy
+        value.each { |k, v| copy[yaml_copy(k, seen)] = yaml_copy(v, seen) }
+        copy
+      when Array
+        id = value.object_id
+        return seen[id] if seen.key?(id)
+
+        copy = []
+        seen[id] = copy
+        value.each { |item| copy << yaml_copy(item, seen) }
+        copy
+      when String then value.dup
+      else value
+      end
+    end
+
+    def yaml_deep_freeze(value, seen = {})
+      case value
+      when Hash, Array
+        id = value.object_id
+        return value if seen.key?(id)
+
+        seen[id] = true
+        if value.is_a?(Array)
+          value.each { |item| yaml_deep_freeze(item, seen) }
+        else
+          value.each { |k, v| yaml_deep_freeze(k, seen); yaml_deep_freeze(v, seen) }
+        end
+      end
+      value.freeze
+    end
+
+    def yaml_errors(snapshots, root)
+      data_root = File.join(root, "data")
+      snapshots.each_with_object({}) do |(path, content), errors|
+        parse_yaml_content(content, source: path)
+      rescue StandardError => e
+        relative = path.delete_prefix("#{data_root}#{File::SEPARATOR}")
+        errors[relative] = e.message.lines.first.to_s.strip
+      end
+    end
+
+    def publish_yaml_errors(errors, bus)
+      errors.each do |relative, message|
+        warn("boot0: yaml validation #{relative}: #{message}")
+        bus&.publish("data:yaml_parse_error", path: relative, error: message)
+      end
+    end
+  end
+end

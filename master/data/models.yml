@@ -1,0 +1,699 @@
+# Model routing profile — Claude Code CLI (opus) primary, with automatic API/local/free fallback.
+
+schema: 1
+routing:
+  enabled: true
+  strategy: weighted
+  escalation_enabled: true
+  escalation_tier: strong
+  provider: agy
+
+weights: &weights
+  quality: 0.50
+  speed: 0.25
+  cost: 0.25
+
+fallback_policy:
+  # Error categories that stop retrying a model and move to the next one, read by
+  # ModelRouter#failover_skip_categories.
+  #
+  # Three things were wrong with this block and all three are why it did nothing.
+  # The key was written bare as `on:`, which YAML 1.1 parses as the boolean true —
+  # `fallback_policy["on"]` was nil and `fallback_policy[true]` held the list. It
+  # had no reader at all. And its vocabulary was invented: `network_error`,
+  # `refusal`, `insufficient_balance` and `quota_exceeded` are not Result
+  # categories this codebase produces, so wiring it as written would have matched
+  # nothing. These are the categories `Result.err(category:)` actually carries.
+  #
+  # A rate-limited or out-of-budget model cannot succeed on an immediate retry,
+  # so both belong here, and so does a model the provider does not hold.
+  # `provider_error` deliberately does not: a transient 5xx is what in-place
+  # retry exists for. `retries_per_tier` was removed — the retry count has one
+  # source, `failover.max_retries` below.
+  "on":
+    - timeout
+    - no_api_key
+    - offline
+    - auth_error
+    - rate_limit
+    - budget
+    - model_missing
+    - invalid_request
+
+failover:
+  sequence: [fast, default, medium, strong]
+  cooldown_seconds: 300
+  # The wait before retrying the same model in place. Only a failure outside
+  # fallback_policy.on reaches it (a 429 walks on without waiting), so it waits
+  # on a provider 5xx inside a live turn: at 30 and 60 an overloaded free model
+  # cost a web reply 90s before the chain moved (ai.brgen.no, 2026-09-15).
+  cooldown_tiers: [2, 5, 30]
+  skip_ttl_ms: 600000
+  # A timeout or a provider 5xx parks a model this long instead (ModelSkipCache).
+  transient_skip_ttl_ms: 30000
+  max_retries: 2
+
+# context_window is written only where RubyLLM's registry does not hold the
+# model (CLI lanes, Ollama, web chats) or the lane serves a different window;
+# Master.context_window asks the registry for the rest.
+defaults: &model_defaults
+  score: { quality: 0.0, speed: 0.0, cost: 0.0 }
+
+model_defs:
+  agy_auto: &agy_auto
+    id: agy:auto
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.99, speed: 0.95, cost: 1.0 }
+  agy_gemini_pro: &agy_gemini_pro
+    id: agy:gemini-3.1-pro-high
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.98, speed: 0.85, cost: 1.0 }
+  agy_gemini_flash: &agy_gemini_flash
+    id: agy:gemini-3.8-flash-medium
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.92, speed: 0.98, cost: 1.0 }
+  agy_gemini_flash_thinking: &agy_gemini_flash_thinking
+    id: agy:gemini-3.8-flash-high
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.99, speed: 0.88, cost: 1.0 }
+  gemini_flash: &gemini_flash
+    id: gemini-2.5-flash
+    <<: *model_defaults
+    score: { quality: 0.88, speed: 0.90, cost: 0.95 }
+  mistral_large: &mistral_large
+    id: mistralai/mistral-large
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.75, cost: 0.70 }
+  mistral_small: &mistral_small
+    id: mistralai/mistral-small-3.1-24b-instruct
+    <<: *model_defaults
+    score: { quality: 0.78, speed: 0.85, cost: 0.90 }
+  deepseek_chat: &deepseek_chat
+    id: deepseek-chat
+    <<: *model_defaults
+    context_window: 64000
+    score: { quality: 0.96, speed: 0.85, cost: 0.95 }
+  deepseek_reasoner: &deepseek_reasoner
+    id: deepseek-reasoner
+    <<: *model_defaults
+    context_window: 64000
+    score: { quality: 0.97, speed: 0.55, cost: 0.85 }
+  deepseek_coder: &deepseek_coder
+    id: deepseek-coder
+    <<: *model_defaults
+    context_window: 64000
+    score: { quality: 0.85, speed: 0.70, cost: 0.95 }
+  claude_sonnet: &claude_sonnet
+    id: claude-sonnet-5-5
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.95, speed: 0.75, cost: 0.60 }
+  gemini_flash_openrouter: &gemini_flash_openrouter
+    id: google/gemini-2.5-flash
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.60, cost: 0.92 }
+  nemotron_super: &nemotron_super
+    id: nvidia/nemotron-3-super-120b-a12b:free
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.05, cost: 1.0 }
+  gpt_4o: &gpt_4o
+    id: openai/gpt-4o
+    <<: *model_defaults
+    score: { quality: 0.93, speed: 0.80, cost: 0.55 }
+  claude_cli_sonnet: &claude_cli_sonnet
+    id: claude-cli:claude-sonnet-5-5
+    <<: *model_defaults
+    context_window: 200000
+    # 2026-09-16's "hangs from inside a session" finding does not reproduce
+    # (verified 2026-09-23: direct arg, piped stdin, and a detached background
+    # process all returned correctly). speed and cost were still scored for
+    # that stale state — 0.70/0.60 assumed subprocess overhead and per-call
+    # billing neither applies to a browser-authenticated subscription lane.
+    # Re-measured: ~8s for a ~30KB prompt (comparable to gemini-2.5-flash's
+    # observed per-call latency), and cost is 1.0 like claude_cli_opus below,
+    # since there is no marginal charge per call.
+    #
+    # cost dropped 1.0 -> 0.3 on 2026-09-23 (operator: "my claude credits are
+    # about to run out"). "No marginal API charge" is still true, but cost:
+    # 1.0 conflated that with "unlimited," and a browser-subscription lane
+    # draws on a real, currently-scarce quota this repo has no other way to
+    # express in this scoring model. This is a statement about the account's
+    # remaining headroom right now, not a correction to speed/quality --
+    # raise it back to 1.0 once credits reset, or this quietly starves a
+    # lane that is otherwise the strongest lane available.
+    # cost back to 1.0 on 2026-10-09: the operator made claude-sonnet-5-5 the first lane
+    # for master's /fix runs and the council, and the credits that note waited for are back.
+    score: { quality: 0.95, speed: 0.85, cost: 1.0 }
+  claude_cli_opus: &claude_cli_opus
+    id: claude-cli:claude-opus-5-5
+    <<: *model_defaults
+    context_window: 200000
+    # cost dropped 1.0 -> 0.3 on 2026-09-23, same reason and same reversal
+    # cost back to 1.0 on 2026-10-11: the operator made claude-opus-5-5 through the Claude Code
+    # CLI the primary first lane for all of master, and the credits are back.
+    score: { quality: 0.99, speed: 0.55, cost: 1.0 }
+  claude_opus_api: &claude_opus_api
+    id: claude-opus-5-5
+    <<: *model_defaults
+    context_window: 1000000
+    score: { quality: 0.99, speed: 0.50, cost: 0.20 }
+  # codex-cli and grok-cli were already fully wired in cli_sender.rb (the
+  # generic cli_lanes dispatch every claude-cli call already goes through) but
+  # named in no tier, so the router could never select either -- 2026-09-24.
+  #
+  # grok-cli: verified directly, twice, with the exact `grok --single
+  # "%{prompt}"` invocation this file's cli_lanes.grok-cli.ask declares --
+  # ~27-29s for a trivial prompt, real replies both times. Scored like the
+  # claude-cli lanes above: a subscription, not a metered API, so cost draws
+  # on real but unmeasured headroom rather than 1.0's implied "free."
+  grok_cli_auto: &grok_cli_auto
+    id: grok-cli:auto
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.50, cost: 0.3 }
+  # codex-cli: deliberately absent from model tiers. The live router also
+  # discovers generic CLI declarations, so data/lanes.yml keeps this lane out of
+  # ordinary selection until a bounded `codex exec` probe proves it can answer.
+  # `codex login status` succeeds instantly, but `codex exec` -- the configured
+  # ask command below -- hung past 250s with no reply on five attempts, with and
+  # without --sandbox/--ephemeral, with an explicit model, and with this session's
+  # CLAUDECODE environment stripped. CLI login health is not execution health;
+  # the dispatcher timeout is 300s. Revisit the exclusion after a successful,
+  # bounded execution probe and an end-to-end fallback test.
+  gemma_2_27b: &gemma_2_27b
+    id: google/gemma-2-27b-it
+    <<: *model_defaults
+    score: { quality: 0.82, speed: 0.78, cost: 0.92 }
+  command_r_plus: &command_r_plus
+    id: cohere/command-r-plus-08-2024
+    <<: *model_defaults
+    score: { quality: 0.86, speed: 0.72, cost: 0.65 }
+  grok_4_3: &grok_4_3
+    id: x-ai/grok-4.3
+    <<: *model_defaults
+    score: { quality: 0.92, speed: 0.92, cost: 0.78 }
+  web_chat_grok: &web_chat_grok
+    id: web-chat:grok
+    <<: *model_defaults
+    score: { quality: 0.85, speed: 0.35, cost: 1.0 }
+  web_chat_chatgpt: &web_chat_chatgpt
+    id: web-chat:chatgpt
+    <<: *model_defaults
+    score: { quality: 0.82, speed: 0.35, cost: 1.0 }
+  web_chat_kimi: &web_chat_kimi
+    id: web-chat:kimi
+    <<: *model_defaults
+    score: { quality: 0.80, speed: 0.35, cost: 1.0 }
+  web_chat_gemini: &web_chat_gemini
+    id: web-chat:gemini
+    <<: *model_defaults
+    score: { quality: 0.83, speed: 0.35, cost: 1.0 }
+  ollama_gemma: &ollama_gemma
+    id: ollama:gemma3:4b
+    <<: *model_defaults
+    context_window: 128000
+    score: { quality: 0.90, speed: 0.76, cost: 1.0 }
+  llama_cli_gguf: &llama_cli_gguf
+    id: llama-cli:gguf
+    <<: *model_defaults
+    context_window: 4096
+    score: { quality: 0.62, speed: 0.25, cost: 1.0 }
+# Ollama's local tier is retained for an explicitly enabled future recovery
+# path, but is disabled by default while the operator's local account/quota
+# constraint is active. Do not enable it implicitly through discovery.
+models:
+  grok_primary:
+    - *grok_cli_auto
+    - *nemotron_super
+  keyless:
+    - *web_chat_grok
+    - *web_chat_chatgpt
+    - *web_chat_kimi
+    - *web_chat_gemini
+  default:
+    - *claude_cli_opus
+    - *claude_cli_sonnet
+    - *agy_auto
+    - *nemotron_super
+    - *gemini_flash_openrouter
+    # Local recovery stays behind remote lanes. Ollama requires its explicit opt-in;
+    # llama.cpp requires llama-cli plus a readable file in MASTER_LLAMA_MODEL.
+    - *ollama_gemma
+    - *llama_cli_gguf
+  primary:
+    - *claude_cli_opus
+    - *claude_cli_sonnet
+    - *agy_auto
+    - *claude_opus_api
+    - *nemotron_super
+    - *ollama_gemma
+    - *llama_cli_gguf
+  strong:
+    - *claude_cli_opus
+    - *claude_cli_sonnet
+    - *claude_opus_api
+    - *deepseek_reasoner
+    - *deepseek_chat
+    - *mistral_large
+    - *claude_sonnet
+    - *gpt_4o
+    - *gemini_flash
+    - *command_r_plus
+    - *grok_cli_auto
+    - *ollama_gemma
+    - *llama_cli_gguf
+  vision:
+    - *gemini_flash
+    - *claude_sonnet
+  medium:
+    - *deepseek_chat
+    - *gemini_flash_openrouter
+    - *mistral_large
+    - *grok_4_3
+    - *nemotron_super
+    - *command_r_plus
+  cheap:
+    - *gemini_flash_openrouter
+    - *gemini_flash
+    - *mistral_small
+  # Short advisory calls (council personas, review, name and comment checks):
+  # sonnet leads on speed (quality .95, speed .85), then the fast live lanes.
+  # Edit and file-write operations route to default/strong, which lead with opus.
+  fast:
+    - *claude_cli_sonnet
+    - *grok_cli_auto
+    - *grok_4_3
+    - *gemini_flash
+    - *gemini_flash_openrouter
+  free:
+    - *nemotron_super
+  claude_code:
+    - *claude_cli_opus
+    - *claude_cli_sonnet
+  local:
+    - *ollama_gemma
+    - *llama_cli_gguf
+
+routes:
+  detect_lexical: free
+  code_generation: default
+  code: default
+  refactoring: default
+  architecture: strong
+  review: fast
+  council: fast
+  name_review: fast
+  # The per-file semantic reads: one call per file per question across the whole tree, so the
+  # fast tier answers them, as it does comment drift; edits keep the strong lane.
+  scan_comment_drift: fast
+  scan_semantic_violations: fast
+  scan_semantic_opportunities: fast
+  scan_adversarial: fast
+  explanation: free
+  exploration: free
+  chitchat: free
+  help: free
+  # An operation no route names (name_review, restructure, scan_comment_drift,
+  # ...) goes to the live pool like code_generation does: availability decides,
+  # and a free model is last. The free routes above are the ones chosen on purpose.
+  fallback_default: default
+  vision: vision
+
+# Additional bounded task-aware nudges inside the eligible, reachable pool.
+# These do not override routes, operation quality floors, quota checks, health,
+# or the fallback order. ComputePool applies at most a 12% preference for up to
+# three matching capabilities; observed success, latency, tool support, cost,
+# and context window still participate in the score.
+task_strengths:
+  chitchat: [fast]
+  help: [fast]
+  detect_lexical: [fast]
+  scan_comment_drift: [fast]
+  scan_semantic_violations: [fast]
+  scan_semantic_opportunities: [fast]
+  scan_adversarial: [reasoning]
+  explanation: [fast, long_context]
+  exploration: [fast, long_context]
+  code: [coding]
+  code_generation: [coding]
+  refactoring: [coding, reasoning]
+  architecture: [reasoning, long_context, coding]
+  review: [reasoning, coding]
+  council: [reasoning, long_context]
+  name_review: [fast, reasoning]
+  file_write: [coding, reasoning]
+  autoloop: [reasoning, coding]
+  sweep: [reasoning, coding]
+  destructive: [reasoning, coding]
+
+# Which model families read images, by id pattern (case-insensitive), for an
+# id the OpenRouter catalog has no input_modalities row for. `blind` wins over
+# `reads_images`. Io::LaneSelection.vision? is the one reader; the dispatcher
+# asks it. `gemini-\d` covers every Gemini generation, 3.x included.
+vision_families:
+  reads_images: ['gemini-\d', claude, 'gpt-4o', 'gpt-4\.1', 'llama-4', 'qwen.*vl', pixtral, 'gemma-[34]', vision]
+  blind: [glm, nemotron, 'deepseek(?!.*vl)', 'qwen3-next', gpt-oss, 'phi-4']
+
+tool_capable_prefixes:
+  - "agy"
+  - "agy:"
+  - claude
+  - claude-cli
+  - codex-cli
+  - grok-cli
+  - gpt-4
+  - gpt-4o
+  - gemini
+  - mistral
+  - mistralai
+  - mixtral
+  - llama-3.1
+  - llama-3.3
+  - llama-4
+  - qwen
+  - command-r
+  - cohere/command
+  - deepseek
+  - stepfun
+  - nvidia
+  - nemotron
+  - meta/meta-llama
+  - anthropic/claude
+  - openai/gpt
+  - google/gemini
+  - google/gemma
+  - microsoft/phi
+  - z-ai/glm
+  - 01-ai/yi
+  - x-ai/grok
+  - rekaai/reka
+  - groq
+  - cerebras
+
+operation_constraints:
+  # Operations that write files, run autoloop/sweep, or execute destructive commands
+  # require a model with quality score >= 0.88 (default and cheap tiers excluded).
+  # Equivalent to: claude-sonnet-5-5, gemini-2.5-pro, mistral-large, gpt-4o.
+  file_write:       { min_quality: 0.88, preferred_tier: strong }
+  autoloop:         { min_quality: 0.88, preferred_tier: strong }
+  sweep:            { min_quality: 0.88, preferred_tier: strong }
+  council:          { min_quality: 0.88, preferred_tier: fast }
+  detect_lexical: { min_quality: 0.70, preferred_tier: fast }
+  code_generation: { min_quality: 0.80, preferred_tier: default }
+  architecture:    { min_quality: 0.88, preferred_tier: strong }
+  destructive:      { min_quality: 0.90, preferred_tier: strong }
+
+continuity:
+  enabled: true
+  updated_at: "2026-05-01T00:00:00Z"
+
+openrouter:
+  # When true, the router merges live :free slugs from the SQLite provider catalog,
+  # which the pool refreshes from OpenRouter when it is a day old (pool.rb).
+  use_live_catalog: true
+  # Per-model daily cap before the router skips the slug. Corrected 2026-10-27
+  # against the provider's own terms: OpenRouter free models default to 50
+  # requests/day per model; a one-time $10 credit raises the allowance to
+  # 1,000/day. The old 200 made the router hammer a limit four times past
+  # reality and read the 429s as flapping. See docs/free_compute.md for the
+  # full landscape and its dates.
+  daily_quota_per_model: 50
+  # Multiple operator-configured keys rotate on rate-limit outcomes. The local daily
+  # per-model guard remains conservative and is not multiplied by key count; shared
+  # account/organization limits still apply, and rotation must not defeat them.
+  keys_env:
+    - OPENROUTER_API_KEY
+    - OPENROUTER_API_KEY_2
+    - OPENROUTER_API_KEY_3
+  # GitHub Models is NOT a lane: retired 2026-07-30 (playground, catalog,
+  # inference API and BYOK all withdrawn; GitHub points at Azure AI Foundry).
+  # Recorded so no future pass adds a dead provider to a fallback chain —
+  # the failure mode model_catalog_check.rb exists to catch.
+  free_latest:
+    - nvidia/nemotron-3-super-120b-a12b:free
+
+# Keyless free fallback via headless Chrome (ferrum gem). Auto-activates when no API keys
+# are configured; opt-in anytime with MASTER_WEB_CHAT=1 or MASTER_KEYLESS=1.
+# Selectors are best-effort — sites change often. Login cookies persist in the profile dir.
+# Models use the web-chat: prefix. ToS-sensitive: never default when paid keys exist.
+ferrum_web_chat:
+  enabled_when_env: MASTER_WEB_CHAT
+  auto_when_keyless: true
+  profile_dir: "~/.config/master/web-chat-profile"
+  free_latest:
+    - web-chat:grok
+    - web-chat:chatgpt
+    - web-chat:kimi
+    - web-chat:gemini
+  providers:
+    grok:
+      url: https://grok.com/
+      input_selector: "textarea, div[contenteditable='true'], div[role='textbox']"
+      reply_selector: "div[class*='message'], article, div.markdown"
+      timeout: 120
+    chatgpt:
+      url: https://chatgpt.com/
+      input_selector: "div#prompt-textarea, textarea#prompt-textarea, div[contenteditable='true']"
+      reply_selector: "div[data-message-author-role='assistant']"
+      timeout: 120
+    kimi:
+      url: https://kimi.com/
+      input_selector: "textarea, div[contenteditable='true'], div[role='textbox']"
+      reply_selector: "div.markdown-body, div[class*='assistant'], div[class*='message']"
+      timeout: 120
+    gemini:
+      url: https://gemini.google.com/app
+      input_selector: "div.ql-editor[contenteditable='true'], div[contenteditable='true']"
+      reply_selector: "message-content, div[class*='response']"
+      timeout: 120
+
+three_mirror_redundancy:
+  # Three models vote on a candidate fix; it ships on `quorum` approvals.
+  # Review::Consensus reads both keys. Which fixes are put to the vote is
+  # Fix::RepairLoop#consensus_required? (error and critical findings, or
+  # MASTER_CONSENSUS_FIXES=1), and a fix short of quorum is refused with the
+  # dissent published on consensus:result.
+  pool:          ["claude-sonnet-5-5", "grok-cli:auto", "moonshotai/kimi-k2"]
+  quorum:        2
+
+# Subscription CLIs, signed in once through the browser. The pool offers a
+# lane when its binary is installed and `signed_in` says so: the args are run
+# once per process, and the lane counts as signed in when the output carries
+# `match`, or lacks `refuse`. `ask` puts one question to it; %{reply_file}
+# names a file the CLI writes its answer to, and a prompt with no %{prompt}
+# goes in on stdin. A model named auto passes no model flag, so the CLI uses
+# its own default. `login` is the command the pool names when signed out.
+# The signed-in subscription CLIs lead the remote class, in this order: a
+# flat-rate lane is spent before a metered API key is, and before any free or
+# local model is asked to edit code. Io::LaneSelection reads it.
+subscription_lanes: [claude-cli, grok-cli, codex-cli, agy]
+
+cli_lanes:
+  codex-cli:
+    binary: codex
+    signed_in: { args: [login, status], match: Logged in }
+    ask: [exec, --skip-git-repo-check, --sandbox, read-only, --ephemeral, --output-last-message, "%{reply_file}", "-"]
+    model_flag: --model
+    models: [auto]
+    login: codex login
+  grok-cli:
+    binary: grok
+    signed_in: { args: [models], refuse: not authenticated }
+    ask: [--single, "%{prompt}"]
+    model_flag: --model
+    models: [auto]
+    login: grok login
+  llama-cli:
+    binary: llama-cli
+    kind: local
+    signed_in: { args: [--version], match: version }
+    ask: [-m, "%{model_path}", -p, "%{prompt}", -n, "1024", -c, "4096", -t, "2", --simple-io, --no-display-prompt, --single-turn]
+    model_path_env: MASTER_LLAMA_MODEL
+    max_concurrency: 1
+    models: [gguf]
+    login: set MASTER_LLAMA_MODEL to a readable local GGUF file
+
+# OpenAI-compatible servers on this machine. A server that answers /models
+# puts each model it lists in the pool as local:<id>. mistral.rs
+# (`mistralrs serve`) and LM Studio listen on 1234, llama.cpp's llama-server
+# on 8080.
+local_servers:
+  - http://localhost:1234/v1
+  - http://localhost:8080/v1
+
+# Hosted OpenAI-compatible endpoints with a free tier (ModelRouter::
+# HostedEndpoints). Each lists its models at <base>/models, and they join the
+# free lane of every chain as <name>:<model>. key_env is where a key may be set;
+# with none set, only the models whose listing matches `keyless` are offered.
+# LLM7 serves its turbo tier without a key except the usage-based models.
+# Verified 2026-11-06 from this Mac: GET /models answered keyless (70 rows,
+# 7 keyless turbo: GLM-5.3-Flash, DeepSeek-V4-Flash-0731, codestral-latest,
+# gpt-oss:20b, minimax-m2.7, mistral-Nemo-Instruct-2407, nemotron-3-nano:30b);
+# chat burst-limited (429) during verification, so keyless chat completion is
+# not re-confirmed today — the tier names above are listing facts, not
+# measured completions.
+  # Groq, Cerebras and NVIDIA NIM carry larger free quotas behind a free signup
+  # key (limits as awesome-freellm-apis lists them, 2026-09; key-gated, so they
+  # cannot be probed keyless and have not been re-verified since); with no keyless
+  # rule they are not asked until their key is set in ~/.config/master/env.
+openai_compatible:
+  llm7:
+    base: https://api.llm7.io/v1
+    key_env: [LLM7_API_KEY]
+    # Conservative per-process burst control for the keyless/free lane only.
+    # Keyed traffic follows the provider account's configured limits.
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 20
+    quota_bucket: llm7
+    keyless:
+      tier: turbo
+      usage_based_only: false
+  # 30 requests/min, 14,400/day. A second key var is declared so Io::KeyRotator
+  # can spread the minute window across keys when the operator sets one.
+  groq:
+    base: https://api.groq.com/openai/v1
+    key_env: [GROQ_API_KEY, GROQ_API_KEY_2]
+    daily_quota: 14400
+  # 10 requests/min, 100/day, 1M tokens/day.
+  cerebras:
+    base: https://api.cerebras.ai/v1
+    key_env: [CEREBRAS_API_KEY, CEREBRAS_API_KEY_2]
+    daily_quota: 100
+  # Up to 40 requests/min, including GLM-5.3 Flash. No day cap is documented,
+  # so no daily_quota is declared and Io::ModelQuota leaves it untracked.
+  nvidia:
+    base: https://integrate.api.nvidia.com/v1
+    key_env: [NVIDIA_API_KEY, NVIDIA_API_KEY_2]
+  # Verified keyless 2026-11-06 from this Mac: GET /models (381 slugs,
+  # `isFree` marks 11 of them) and POST /chat/completions both answered 200
+  # with no key; kilo-auto/free routed dots-studio/dots-3-note-preview:free
+  # via AtlasCloud. An OpenRouter-style gateway, so no key opens the paid
+  # slugs and the isFree flag selects the keyless ones; ModelQuota tracks
+  # every :free slug under the same daily cap as OpenRouter's.
+  kilo:
+    base: https://api.kilo.ai/api/gateway/v1
+    key_env: [KILO_API_KEY]
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 20
+    quota_bucket: kilo
+    keyless:
+      isFree: true
+  # Verified keyless 2026-11-06 from this Mac: GET /models (21 models) and
+  # POST /chat/completions on gpt-oss-120b both answered 200 with no token.
+  # The keyless tier is rate-limited around 2 RPM, so one lane at a time.
+  # The listing marks nothing chat-only — whisper, TTS, embeddings and
+  # stable-diffusion rows sit beside the chat models — so `allow` names the
+  # chat ids; a new OVH chat model joins the lane by adding its id here.
+  ovh:
+    base: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+    key_env: [OVH_AI_ENDPOINTS_TOKEN]
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 30
+    quota_bucket: ovh
+    keyless:
+      allow:
+        - gpt-oss-120b
+        - gpt-oss-20b
+        - Meta-Llama-3_3-70B-Instruct
+        - Mistral-Small-3.2-24B-Instruct-2506
+        - Qwen2.5-VL-72B-Instruct
+        - Qwen3.5-9B
+        - Qwen3.5-397B-A17B
+        - Qwen3.6-27B
+        - Qwen3.8-27B
+
+# Language models Replicate hosts, asked as replicate:<owner>/<name> with
+# REPLICATE_API_TOKEN. Paid per call, so they sit behind the free lanes.
+replicate_chat:
+  - anthropic/claude-4.5-sonnet
+  - openai/gpt-5
+  - deepseek-ai/deepseek-v3.1
+  - google/gemini-2.5-flash
+  - moonshotai/kimi-k2.5
+
+# Tier-D is a dormant local Ollama fallback. It is disabled by default; when
+# explicitly enabled, the only eligible model is allowlisted Gemma 3 4B.
+# Remotely executed Ollama cloud models have no catalogue or route. Discovery
+# proves presence, not permission. keep_alive holds the model between turns;
+# max_num_ctx caps the request window (ollama_sender.rb).
+ollama:
+  enabled: false
+  default_base_url: "http://localhost:11434"
+  keep_alive: 30m
+  max_num_ctx: 16384
+  local_model_allowlist: ["ollama:gemma3:4b"]
+
+# media_providers was deleted here on 2026-08-21: nothing read it. The env
+# vars live in providers.yml replicate.env (ReplicateClient reads ENV
+# directly), the TTS slug in voice/engines.rb, and replicate carries its own
+# image models in master/tools/replicate — this block was a declaration with no reader,
+# claiming a routing that never existed.
+
+# Free models are the floor. Among them the fastest recently-answering one goes
+# first (Io::LaneSelection). A tiny probe cannot predict latency for a large repair
+# prompt, so every free-tier completion has a hard call_timeout_s ceiling; the
+# unmeasured_timeout_s remains the prior for ranking a lane with no latency data.
+free_tier:
+  neutral_latency_s: 45
+  unmeasured_timeout_s: 60
+  call_timeout_s: 60
+
+# The paid tail: cheap OpenRouter models from the live provider catalog, after
+# every live subscription and direct-API lane and before the free models. Io::PaidTail
+# lists them and counts what they cost; at run_cap_usd the tail turns itself off
+# for the rest of the run. MASTER_PAID_TAIL=0 turns it off outright.
+paid_tail:
+  enabled: true
+  max_prompt_usd_per_m: 1.0
+  max_completion_usd_per_m: 3.0
+  run_cap_usd: 5.0
+  max_models: 12
+
+# Image and video generation lanes (Io::MediaLanes). Each kind lists its lanes;
+# the selector keeps the live ones (key present, not parked by Io::LaneQuota, not
+# silent), drops those whose estimate exceeds the call cap or the run budget that
+# is left, and asks the free ones first, then the cheapest; ties keep this order,
+# so a direct provider precedes the same model through OpenRouter. A lane is
+# "media-<provider>" to LaneQuota. Price per call is the catalog's price_id row
+# (prompt tokens, plus image_tokens at image_output) when the catalog has it, else
+# usd_per_call, else usd_per_second x seconds. The flat figures are estimates
+# written from the operator's 2026-10-12 brief and the catalog's token prices;
+# check them against the provider's price page before trusting a cap to them.
+# MASTER_MEDIA_BUDGET_USD overrides both run budgets; MASTER_MEDIA_PAID=0 turns
+# every paid lane off. There is no direct xAI image or video endpoint in this
+# repo (the xai block of data/providers.yml is chat only), so none is listed.
+media_lanes:
+  budget_usd: { image: 2.0, video: 5.0 }
+  call_cap_usd: { image: 1.0, video: 4.0 }
+  image_tokens: 1290
+  video_seconds: 8
+  timeouts: { call_s: 120, video_total_s: 600, poll_s: 10, max_polls: 90 }
+  catalog_merge: { max_prompt_usd_per_m: 3.0, max_models: 4 }
+  providers:
+    gemini: { env: [GEMINI_API_KEY, GOOGLE_API_KEY], base: "https://generativelanguage.googleapis.com/v1beta" }
+    openrouter: { env: [OPENROUTER_API_KEY], base: "https://openrouter.ai/api/v1" }
+    replicate: { env: [REPLICATE_API_TOKEN, REPLICATE_API_KEY] }
+  image:
+    - { provider: gemini, model: gemini-2.5-flash-image, price_id: google/gemini-2.5-flash-image, usd_per_call: 0.039 }
+    - { provider: gemini, model: gemini-3.1-flash-lite-image, price_id: google/gemini-3.1-flash-lite-image, usd_per_call: 0.039 }
+    - { provider: gemini, model: gemini-nano-banana-2.1, price_id: google/gemini-nano-banana-2.1, usd_per_call: 0.039 }
+    - { provider: gemini, model: gemini-3.1-flash-image, price_id: google/gemini-3.1-flash-image, usd_per_call: 0.077 }
+    - { provider: gemini, model: nano-banana-pro-preview, price_id: google/gemini-3-pro-image-preview, usd_per_call: 0.155 }
+    - { provider: gemini, model: gemini-3-pro-image, price_id: google/gemini-3-pro-image, usd_per_call: 0.155 }
+    - { provider: openrouter, model: google/gemini-2.5-flash-image, usd_per_call: 0.039 }
+    - { provider: openrouter, model: google/gemini-3.1-flash-lite-image, usd_per_call: 0.039 }
+    - { provider: openrouter, model: google/gemini-nano-banana-2.1, usd_per_call: 0.039 }
+    - { provider: openrouter, model: google/gemini-3.1-flash-image, usd_per_call: 0.077 }
+    - { provider: openrouter, model: google/gemini-3-pro-image, usd_per_call: 0.155 }
+    - { provider: openrouter, model: openai/gpt-5-image-mini, image_tokens: 4160, usd_per_call: 0.05 }
+    - { provider: openrouter, model: openai/gpt-5.4-image-2, image_tokens: 4160, usd_per_call: 0.13 }
+    - { provider: openrouter, model: openai/gpt-5-image, image_tokens: 4160, usd_per_call: 0.17 }
+    - { provider: replicate, model: black-forest-labs/flux-2-pro, usd_per_call: 0.05 }
+  video:
+    - { provider: gemini, model: veo-3.1-lite-generate-preview, usd_per_second: 0.05 }
+    - { provider: gemini, model: veo-3.1-fast-generate-preview, usd_per_second: 0.15 }
+    - { provider: gemini, model: veo-3.1-generate-preview, usd_per_second: 0.40 }
+    - { provider: replicate, model: google/veo-3.1-fast, usd_per_second: 0.15 }

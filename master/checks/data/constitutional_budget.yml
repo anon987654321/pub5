@@ -1,0 +1,28 @@
+# Per-target ceilings for the constitutional scan, in the shape of
+# master/data/spine.yml: the number only ever ratchets down.
+#
+# A finding over a target's ceiling fails the check; lowering a number is a
+# commit someone signs. Chasing zero is not the goal: these are design-craft
+# rules over shipping Rails apps, and a ceiling buys what a warning cannot,
+# a change that adds findings fails.
+#
+# Lower one with CHECK_SCAN_RATCHET=1 after a run that beats it
+# (master/checks/runner.rb constitutional_scan). The ratchet rewrites one
+# `  name: N` line at a time, so these comments survive it.
+schema: 1
+targets:
+  # The Rails targets count every registered law over each app, ABC_SIZE
+  # included (ratchet threshold 40).
+  brgen: 27
+  amber: 28
+  bsdports: 3
+  __shared: 8
+
+  # master and openbsd are here too. master is not a duplicate of `rake
+  # selfcheck`: that runs error and critical over lib and law, this is the
+  # whole registry over the whole tree. Every number in this file is the
+  # AESTHETIC profile, the first `scan: done` line the check reads; re-basing
+  # against the full profile is a separate decision. openbsd at 0 fails on the
+  # first design finding anyone adds, which is the point.
+  OPENBSD: 0
+  MASTER: 15

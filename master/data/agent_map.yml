@@ -1,0 +1,239 @@
+# Machine-readable map for coding agents — "touching X → edit these files".
+# Human mirrors: CLAUDE.md + master/AGENTS.md. Read this file.
+schema: 1
+
+topics:
+  tts:
+    files:
+      - data/voice.yml
+      - data/tts.yml
+      - lib/voice/policy.rb
+      - lib/voice/speech.rb
+      - lib/voice/speech_worker.rb
+      - lib/voice/tts_supervisor.rb
+      - master/web/app/services/tts_job.rb
+      - master/web/app/controllers/tts_controller.rb
+      - master/web/app/controllers/health_controller.rb
+      - master/web/public/face_speech_runtime.js
+      - master/web/public/face.part5.txt
+      - openbsd/etc/rc.d/master
+    tests:
+      - test/test_speech.rb
+      - test/test_yaml_registries.rb
+      - master/web/test/controllers/health_controller_test.rb
+      - master/web/test/face_boot.test.mjs
+    deploy: zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh
+    playbook: master_web_single_voice_defaults
+    proof: curl -fsS http://127.0.0.1:53187/health | jq '{status, checks, deploy}'
+
+  face_boot:
+    files:
+      - master/web/app/views/chat/index.html.erb
+      - master/web/public/face.js
+      - master/web/public/face.part1.txt
+      - master/web/public/face.part2.txt
+      - master/web/public/face.part3.txt
+      - master/web/public/face.part5.txt
+      - master/web/public/face_speech_runtime.js
+      - master/web/public/face_speech_playback.js
+      - master/web/public/face.runtime.js
+      - master/web/public/container_check.js
+      - master/web/public/boot_fsm.js
+      - openbsd/etc/rc.d/master
+    tests:
+      - master/web/test/face_boot.test.mjs
+      - bin/check --profile=web
+      - master/web/script/probe_http
+    deploy: zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh
+    playbook: master_web_single_voice_defaults
+    note: No WebGL before primer tap. Rebuild face.runtime.js after editing face.part* or speech modules.
+
+  law:
+    files:
+      - data/soul.yml
+      - data/laws.yml
+      - data/budgets.yml
+      - lib/review/scan/
+      - lib/ground/laws.rb
+    tests:
+      - bin/check --profile=agent
+      - rake lint:data_singularity
+    note: All scanner law is data/laws.yml under one top-level rules key, scopes codebase/file/line/unit, folded 2026-08-12. selftest failures may be known debt (agent-ignore).
+
+  worn_type:
+    files:
+      - data/laws.yml
+      - lib/design.rb
+      - master/checks/support/geometry_type.rb
+      - master/checks/support/geometry_type_walk.js
+      - master/checks/support/geometry_probe.rb
+    tests:
+      - test/test_design_laws_worn_type.rb
+      - rails/test/checks/rendered_checks_test.rb
+    note: >
+      Judge rendered type, not stylesheet tokens. Feed is a short measure
+      (--feed-max 600px). Legal/prose keeps 66ch. Profiles in worn_type.
+
+  deploy:
+    files:
+      - openbsd/bin/vps_deploy_master.sh
+      - openbsd/etc/rc.d/master
+      - master/lib/operator/checks.rb
+      - openbsd/bin/vps-deploy
+    tests:
+      - master/web/script/probe_http
+    command: ssh dev@46.23.89.226 'zsh /home/dev/pub4/openbsd/bin/vps_deploy_master.sh'
+    playbook: post_sync_vps_proof
+
+  persona:
+    files:
+      - data/soul.yml
+      - data/personas.yml
+      - lib/voice/personality.rb
+      - master/web/app/views/chat/index.html.erb
+    note: TTS voice is whatever data/voice.yml tts.single_voice names (christopher since 2026-10-12); persona changes LLM style only.
+
+patch_briefs:
+  data/soul.yml:
+    check: bin/check --profile=agent
+    topic: law
+    debt_tag: agent-ignore
+    tests: [bin/check --profile=agent, rake lint:data_singularity]
+    note: constitutional identity - ABSOLUTE tier; override requires explicit approval
+  data/laws.yml:
+    check: bin/check --profile=agent
+    topic: law
+    debt_tag: agent-ignore
+    tests: [bin/check --profile=agent, rake lint:data_singularity]
+    note: rule registry and all scanner law in one file since the 2026-08-12 fold
+  data/providers.yml:
+    check: ruby -Ilib:test test/test_provider_config.rb
+    tests: [test/test_provider_config.rb]
+  data/models.yml:
+    check: ruby -Ilib:test test/test_provider_config.rb
+    tests: [test/test_provider_config.rb]
+  data/voice.yml:
+    check: bin/check
+    topic: tts
+    tests: [test/test_yaml_registries.rb, test/test_speech.rb]
+    deploy: vps-deploy master
+    playbook: master_web_single_voice_defaults
+  bin/:
+    check: bin/check
+    tests: [bin/check]
+    note: executable entry points - run bin/check after edits
+  lib/master.rb:
+    check: bin/check --profile=full
+    tests: [bin/check --profile=full, rake test:core]
+    note: runtime loader and Zeitwerk setup
+  lib/cli/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent, rake test:core]
+    note: CLI, TurnRouter, commands, web adapters
+  lib/review/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent]
+    note: scanners, agent, council, routing
+  lib/fix/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent]
+    note: fix/watch loops - env-gated by default
+  lib/io/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent]
+    note: tools and external actions; MediaIntent for creative routing
+  lib/ground/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent]
+    note: constitution aggregator, rules, memory, standing orders
+  lib/trace/:
+    check: bin/check --profile=agent
+    tests: [bin/check --profile=agent]
+    note: EventBus, session, undo, evidence
+  lib/voice/:
+    check: bin/check
+    topic: tts
+    tests: [test/test_speech.rb, bin/check]
+  lib/core/:
+    check: rake test:core
+    tests: [rake test:core, master/bin/master core --real "dogfood noop"]
+    note: constitutional fold spine - new ability = Effect verb in world.rb
+  lib/voice/speech.rb:
+    check: bin/check
+    topic: tts
+    tests: [test/test_speech.rb]
+    deploy: vps-deploy master
+    playbook: master_web_single_voice_defaults
+  web/app/views/chat/index.html.erb:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [bin/check --profile=web, master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    playbook: master_web_single_voice_defaults
+    note: primer/WebGL guard lives here - read web/CLAUDE.md first
+  web/public/face.js:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [bin/check --profile=web, master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+  web/public/face.part1.txt:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+  web/public/face.part2.txt:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+  web/public/face.part3.txt:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+  web/public/face.part5.txt:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+  web/public/face_speech_runtime.js:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+    note: concatenated into face.runtime.js - never hand-edit the generated file
+  web/public/face_speech_playback.js:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: cd master/web && bundle exec rails assets:build_face_runtime
+    note: concatenated into face.runtime.js - never hand-edit the generated file
+  web/public/face.runtime.js:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    note: generated - edit sources and run assets:build_face_runtime
+  web/public/three.face.module.js:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [bin/check --profile=web, master/web/test/face_boot.test.mjs]
+    note: heavy WebGL bundle - deferred until primer tap only
+  web/public/face.css:
+    check: bin/check --profile=web
+    topic: face_boot
+    tests: [master/web/test/face_boot.test.mjs]
+    deploy: vps-deploy master
+    post: ruby master/tools/rails/generate_face_root_css.rb
+  openbsd/etc/rc.d/master:
+    check: master/bin/operator status
+    topic: deploy
+    tests: []
+    deploy: doas cp openbsd/etc/rc.d/master /etc/rc.d/master
+    playbook: relayd_after_master_restart

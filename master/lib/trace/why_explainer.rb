@@ -1,0 +1,187 @@
+# frozen_string_literal: true
+
+require_relative "law_lineage"
+
+module Master
+  module Trace
+  # Local lookup for /why <id>; falls back to LLM when nothing matches.
+    class WhyExplainer
+      SCAN_LAWS_DIR = "law"
+
+      def initialize(root: Master::ROOT)
+        @root = root
+      end
+
+      def explain(id)
+        key = id.to_s.strip
+        return if key.empty?
+
+        rule_lineage(key) ||
+          design_law(key) ||
+          law(key) ||
+          # The canonical declaration first; executable law detail is a
+          # separate source and never supplies missing constitutional metadata.
+          registry_law(key) ||
+          soul_law(key) ||
+          executable_law(key) ||
+          scan_law(key) ||
+          anti_pattern(key)
+      end
+
+      private
+
+      def rule_lineage(key)
+        return unless key.include?("/") || File.exist?(File.join(@root, key))
+
+        LawLineage.new(root: @root).explain(key)
+      end
+
+      # The design law. It sits at laws.yml#beauty, line 92 of 4,215, and an
+      # agent finds it only if a human points -- which is how it was found on
+      # 2026-08-31. Ando, Rams and Zen govern every visual decision in this tree
+      # and nothing surfaced them.
+      def design_law(key)
+        return unless %w[beauty design design_law aesthetic].include?(key.downcase)
+
+        b = laws["beauty"] || {}
+        return if b.empty?
+
+        lines = ["design law (data/laws.yml#beauty) - governs every visual decision:"]
+        b.each do |group, values|
+          lines << "  #{group}:"
+          case values
+          when Hash then values.each { |k, v| lines << "    #{k}: #{v}" }
+          else Array(values).each { |v| lines << "    #{v}" }
+          end
+        end
+        lines.join("\n")
+      end
+
+      # Master.load_laws, not a private re-read. This method used to load
+      # laws.yml and then overwrite base["laws"] with its own copy of the
+      # shard-merge loop — a second implementation of Master.load_laws living
+      # two directories away. When the shards were folded into laws.yml on
+      # 2026-08-12 that copy started returning {} and assigning it over the real
+      # rules, so /why went silent for every registry and scan rule while
+      # reporting nothing wrong.
+      def laws
+        @laws ||= Master.load_laws(root: @root)
+      end
+
+      def soul
+        @soul ||= Master.soul_config(root: @root)
+      end
+
+      def executable_law(key)
+        slug = key.upcase.tr("-", "_")
+        law_root = executable_law_root
+        require File.join(law_root, "law", "definition")
+        ::Law.load_all(File.join(law_root, "law")) if ::Law.definitions.empty?
+        hit = ::Law.definitions[slug.to_sym]
+        return unless hit
+
+        [
+          "executable law: #{slug}",
+          ("  source: #{hit.source}" if hit.source),
+          "  severity: #{hit.severity}",
+          ("  mode: #{hit.mode}" if hit.mode),
+          ("  practice: #{hit.practice}" if hit.practice),
+          ("  ask: #{hit.ask}" if hit.ask),
+          "  fix: #{hit.fix}",
+          ("  bad example: #{hit.bad}" if hit.respond_to?(:bad) && hit.bad),
+          ("  good example: #{hit.good}" if hit.respond_to?(:good) && hit.good),
+        ].compact.join("\n")
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "WhyExplainer.executable_law", severity: :cosmetic)
+        nil
+      end
+
+      def executable_law_root
+        candidates = [
+          @root,
+          File.join(@root, "master"),
+          Master::ROOT,
+        ]
+        candidates.find { |root| File.file?(File.join(root, "law", "definition.rb")) } || Master::ROOT
+      end
+
+      def registry_law(key)
+        slug = key.upcase.tr("-", "_")
+        hit = Master.law_entries(root: @root).find { |entry| entry["id"].to_s.upcase == slug }
+        return unless hit
+
+        [
+          "law: #{hit.fetch("id")}",
+          "  statement: #{hit.fetch("statement")}",
+          ("  resolution: #{hit["resolution"]}" if hit["resolution"]),
+          ("  enforcement: #{hit["enforcement"]}" if hit["enforcement"]),
+        ].compact.join("\n").then do |base|
+          [base, executable_law(key)].compact.join("\n")
+        end
+      end
+
+      def soul_law(key)
+        slug = key.upcase.tr("-", "_")
+        # law/ holds every Law now, so /why answers for conduct Laws too —
+        # it dug soul and returned nothing for NO_COLUMN_ALIGN and FLAT_UI.
+        hit = Master::Ground::Laws.new.laws[slug] or return
+        base = ["constitutional law: #{slug}", "  #{hit}"].join("\n")
+        [base, executable_law(key)].compact.join("\n")
+      end
+
+      def law(key)
+        hit = Master.law_entries(root: @root).find { |entry| entry["id"].to_s.casecmp?(key.to_s) } or return
+        [
+          "law: #{hit.fetch("id")}",
+          ("  node: #{hit["node"]}" if hit["node"]),
+          ("  root: #{hit["root"]}" if hit["root"]),
+          ("  parent: #{hit["parent"]}" if hit["parent"]),
+          "  statement: #{hit.fetch("statement")}",
+          ("  severity: #{hit["severity"]}" if hit["severity"]),
+          ("  resolution: #{hit["resolution"]}" if hit["resolution"]),
+          ("  mechanical: #{hit["mechanical"]}" if hit["mechanical"]),
+          ("  semantic: #{hit["semantic"]}" if hit["semantic"]),
+          ("  lineage: #{hit["lineage"]}" if hit["lineage"]),
+          ("  rule_of_three: #{hit["rule_of_three"]}" if hit["rule_of_three"]),
+          ("  proof: #{hit["proof"]}" if hit["proof"]),
+        ].compact.join("\n").then do |base|
+          [base, executable_law(key)].compact.join("\n")
+        end
+      end
+
+      def scan_law(key)
+        slug = key.downcase.tr("-", "_")
+        basename = %W[#{slug}_law.rb #{slug}_laws.rb].find do |name|
+          File.file?(File.join(@root, SCAN_LAWS_DIR, name))
+        end
+        return registry_law(slug) unless basename
+
+        path = File.join(@root, SCAN_LAWS_DIR, basename)
+        src = File.read(path)
+        desc = src[/@description\s*=\s*["']([^"']+)["']/, 1] || "(no description)"
+        tags = src[/@rule_tags\s*=\s*%i\[([^\]]+)\]/, 1].to_s.split.first(6).join(" ")
+        [
+          "scan law: #{slug}",
+          "  description: #{desc}",
+          ("  axioms: #{tags}" unless tags.empty?),
+          "  source: #{SCAN_LAWS_DIR}/#{basename}",
+        ].compact.join("\n")
+      end
+
+      def anti_pattern(key)
+        ap = laws["anti_patterns"] || {}
+        %w[forbidden discouraged].each do |level|
+          Array(ap[level]).each do |entry|
+            reason = entry["reason"].to_s
+            next unless reason.include?(key) || entry["pattern"].to_s.include?(key)
+            return [
+              "  level: #{level}",
+              "  pattern: #{entry["pattern"]}",
+            ].join("\n")
+          end
+        end
+        nil
+      end
+    end
+  end
+end

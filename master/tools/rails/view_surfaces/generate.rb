@@ -1,0 +1,46 @@
+# frozen_string_literal: true
+
+# Regenerates the generated block of checks/data/geometry_surfaces.yml: every
+# HTML GET route of amber, bsdports and brgen that renders for a guest.
+#
+#   master/bin/operator triangle up
+#   ruby master/tools/rails/view_surfaces/generate.rb
+#
+# Per app it lists the GET routes (list_get_routes.rb, under rails runner),
+# fills each parameter from the first local record of the model it names
+# (resolve_route_params.rb), requests every URL as a guest against the local
+# fleet (probe_routes.rb), then rewrites the block from the pages that
+# answered 200 HTML (write_surfaces.rb). Work files go to a temporary
+# directory; the YAML is the only thing written in the tree.
+require_relative "../../../lib/io/exec"
+require "tmpdir"
+
+HERE = __dir__
+rails = File.expand_path("../../../../RAILS", HERE)
+APPS = %w[amber bsdports brgen].freeze
+
+def run!(*cmd, chdir:, out: nil)
+  stdout, stderr, status = Master::Io::Exec.capture3(*cmd, chdir:)
+  abort "#{cmd.join(" ")} failed in #{chdir}:\n#{stderr.lines.last(5).join}" unless status.success?
+  File.write(out, stdout) if out
+  stdout
+end
+
+REPO = File.expand_path("../../../..", HERE)
+master = File.join(REPO, "master")
+# The checks tree now lives under master, and the rendered checks read this
+# sheet from there — a RAILS-prefixed join here pointed at a tree without a
+# checks/data at all and the writer had nowhere to land (2026-10-03, the same
+# missed retarget the css_budget readers had).
+
+Dir.mktmpdir("view_surfaces") do |work|
+  APPS.each do |app|
+    app_dir = File.join(rails, app)
+    routes = File.join(work, "routes_#{app}.jsonl")
+    resolved = File.join(work, "resolved_#{app}.jsonl")
+    run!("bin/rails", "runner", File.join(HERE, "list_get_routes.rb"), chdir: app_dir, out: routes)
+    run!("bin/rails", "runner", File.join(HERE, "resolve_route_params.rb"), routes, chdir: app_dir, out: resolved)
+    print run!("ruby", File.join(HERE, "probe_routes.rb"), app, resolved, chdir: rails)
+  end
+  print run!("ruby", File.join(HERE, "write_surfaces.rb"), work, File.join(master, "checks/data/geometry_surfaces.yml"), chdir: rails)
+end

@@ -1,0 +1,23 @@
+---
+duplicate_sets: 20
+duplicate_members:
+- rails/__shared/config/storage.yml | rails/amber/config/storage.yml | rails/brgen/config/storage.yml | rails/bsdports/config/storage.yml
+- rails/__shared/db/migrate/20260625140000_create_anonymous_post_quotas.rb | rails/brgen/db/migrate/20260625140000_create_anonymous_post_quotas.rb
+- rails/__shared/public/icon.png | master/web/public/icon.png
+- rails/amber/Rakefile | rails/bsdports/Rakefile
+- rails/amber/config.ru | rails/bsdports/config.ru
+- rails/amber/config/boot.rb | rails/brgen/config/boot.rb | rails/bsdports/config/boot.rb
+- rails/amber/config/cable.yml | rails/brgen/config/cable.yml
+- rails/amber/config/cache.yml | rails/brgen/config/cache.yml
+- rails/amber/db/migrate/20260504180350_create_users.rb | rails/brgen/db/migrate/20260311162114_create_users.rb | rails/bsdports/db/migrate/20260501020807_create_users.rb
+- rails/amber/db/migrate/20260504180352_create_sessions.rb | rails/brgen/db/migrate/20260311162121_create_sessions.rb | rails/bsdports/db/migrate/20260501020818_create_sessions.rb
+- rails/amber/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | rails/brgen/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | rails/bsdports/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb
+- rails/amber/db/migrate/20260811120000_create_outbound_clicks.rb | rails/brgen/db/migrate/20260811120000_create_outbound_clicks.rb | rails/bsdports/db/migrate/20260811120000_create_outbound_clicks.rb
+- rails/amber/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | rails/brgen/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | rails/bsdports/db/migrate/20260825121000_index_outbound_clicks_on_user.rb
+- rails/amber/db/migrate/20260915120000_add_link_embed_to_posts.rb | rails/brgen/db/migrate/20260915120000_add_link_embed_to_posts.rb
+- rails/amber/test/importmap_external_hosts_test.rb | rails/brgen/test/importmap_external_hosts_test.rb | rails/bsdports/test/importmap_external_hosts_test.rb
+- rails/amber/test/models/destroy_cascade_test.rb | rails/bsdports/test/models/destroy_cascade_test.rb
+- rails/brgen/app/javascript/controllers/application.js | rails/bsdports/app/javascript/controllers/application.js
+- rails/brgen/db/cable_schema.rb | rails/bsdports/db/cable_schema.rb
+- rails/brgen/db/cache_schema.rb | rails/bsdports/db/cache_schema.rb
+- studio/replicate/lora/johann/lora | studio/replicate/lora/ragnhild/lora
