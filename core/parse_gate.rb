@@ -14,7 +14,13 @@ module Core
     RUBY = %w[.rb .rake .ru .gemspec].freeze
     # Rails writes `<%= form_with do |f| %>`; stdlib ERB would wrap the block in
     # a `.to_s` call and report a syntax error the real template does not have.
-    BLOCK_OUTPUT = /<%=(.*?\bdo\b\s*(?:\|[^|]*\|)?\s*)-?%>/m
+    # The body may not cross a closing `%>`, so the fixup rewrites the one tag
+    # it names and never a plain `<%= t(:x) %>` sitting before it.
+    BLOCK_OUTPUT = /<%=((?:(?!%>)[\s\S])*?\bdo\b\s*(?:\|[^|]*\|)?\s*)-?%>/m
+    # The erb source opens with two lines that are no template's own - the
+    # `def` line and ERB's unconditional `#coding:UTF-8` - so an error's line
+    # number is reported two lines early.
+    ERB_CONTEXT_LINES = -2
 
     module_function
 
@@ -38,15 +44,23 @@ module Core
       when :ruby then ruby_problem(text)
       when :yaml then Registry.parse(text) && nil
       when :json then JSON.parse(text) && nil
-      when :erb then ruby_problem(ERB.new(text.gsub(BLOCK_OUTPUT) { "<%#{Regexp.last_match(1)}%>" }, trim_mode: "-").src)
+      when :erb then ruby_problem(erb_src(text), line_offset: ERB_CONTEXT_LINES)
       end
     rescue Psych::Exception, JSON::ParserError, SyntaxError => e
       e.message.lines.first.to_s.strip
     end
 
-    def ruby_problem(text)
+    # Rails compiles a template into a method, where `yield` (a layout's
+    # content hook) is legal; stdlib ERB emits flat source where it is not.
+    # Parse inside that method body and shift the reported line back.
+    def erb_src(text)
+      "def __template;\n" +
+        ERB.new(text.gsub(BLOCK_OUTPUT) { "<%#{Regexp.last_match(1)}%>" }, trim_mode: "-").src + "\nend"
+    end
+
+    def ruby_problem(text, line_offset: 0)
       error = Prism.parse(text).errors.first
-      error && "line #{error.location.start_line}: #{error.message}"
+      error && "line #{error.location.start_line + line_offset}: #{error.message}"
     end
 
     # [[path, problem]] for every file that does not parse; paths are relative to root.
