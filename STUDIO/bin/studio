@@ -1,0 +1,53 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# studio — the one CLI in front of STUDIO's render tools (the pub5 port's
+# Phase 4 seam: "dilla and postpro behind one CLI").
+#
+#   bin/studio dilla [...]     # the beat engine: STUDIO/dilla/dilla.rb
+#   bin/studio postpro [...]   # the film grade: STUDIO/postpro/postpro.rb
+#   bin/studio --list          # the tools this CLI reaches
+#
+# It is a dispatcher, not a second interface: every argument after the tool
+# name goes to the owning tool unchanged, so the tools' own contracts (their
+# READMEs and flags) stay the one documentation. Exit status is the tool's.
+
+require "rbconfig"
+
+STUDIO_ROOT = File.expand_path("..", __dir__)
+RUBY = RbConfig.ruby
+
+TOOLS = {
+  "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
+  "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
+}.freeze
+
+def usage
+  warn "usage: bin/studio <dilla|postpro> [args...]  (or --list)"
+  warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
+  warn "  postpro   the film grade — see STUDIO/postpro/README.md"
+end
+
+if ARGV.empty? || ARGV.include?("-h") || ARGV.include?("--help")
+  usage
+  exit(ARGV.empty? ? 64 : 0)
+end
+
+if ARGV.include?("--list")
+  TOOLS.each { |name, path| puts format("%-8s %s", name, path) }
+  exit 0
+end
+
+tool = ARGV.shift
+path = TOOLS[tool]
+unless path
+  warn "studio: unknown tool: #{tool}"
+  usage
+  exit 64
+end
+unless File.file?(path)
+  warn "studio: #{tool} entrypoint is missing: #{path}"
+  exit 66
+end
+
+exec(RUBY, path, *ARGV)
