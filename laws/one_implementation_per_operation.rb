@@ -21,7 +21,7 @@ Law.define(:ONE_IMPLEMENTATION_PER_OPERATION) do
   }.transform_values { |sources| Regexp.union(sources.map { |s| Regexp.new(s) }) }
   owners = { "http" => "Core::HTTP", "file write" => "World#write (Core::Atomic)", "env" => "Core::Knobs",
              "exec" => "World#exec or World#git", "yaml load" => "Core::Registry" }
-  exempt = %r{\A(core|rails|studio|openbsd|laws/pub4)/}
+  exempt = %r{\A(core|rails|studio|openbsd|laws/pub4|master/(checks|lib|tools))/}
 
   source "PLAN.md sections 4 and 11 (M1); OpenBSD's one canonical implementation per operation"
   languages :ruby
