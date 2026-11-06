@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# Print mandatory follow-up after git pull on vm23.
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
+
+cat <<MSG
+post-pull: source updated at ${ROOT}
+post-pull: deployed /home/<app>/app trees are NOT updated by git pull alone.
+post-pull: never git stash to force a pull through; a stashed Gemfile.lock took master down.
+
+From your Mac (preferred - one command, waits, canary):
+  ./bin/redeploy
+
+Already on this box as dev:
+  zsh openbsd/bin/redeploy          # or: zsh openbsd/bin/vps-deploy all
+
+Then optional:
+  ruby openbsd/bin/vps-state
+  ruby openbsd/checks/health_check.rb --public --all-ready-apps
+
+Copy-paste recipes: openbsd/data/operator.yml.
+MSG

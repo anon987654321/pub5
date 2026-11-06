@@ -1,0 +1,6 @@
+# rendered host trees; rebuild from data/ with bin/deploy
+/etc/
+/usr/
+/var/
+/dev/
+/home/

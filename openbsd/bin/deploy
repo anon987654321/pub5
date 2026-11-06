@@ -1,0 +1,34 @@
+#!/bin/sh
+# openbsd/bin/deploy — the one deploy entry (data in, config out).
+# Build artifacts on the Mac, push, apply on the host, smoke, verify.
+# Subcommand dispatch only; the real tools are ported unchanged beside it.
+set -eu
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+usage() {
+  cat <<'EOF'
+usage: bin/deploy <build|diff|smoke|apply|rehearse|redeploy|check> [args]
+
+  build     render host config from data/ (dns, inventory)   -> render_dns.rb
+  diff      show pending config drift                        -> deploy-diff.sh
+  smoke     post-apply smoke checks                          -> deploy-smoke.sh
+  apply     push + apply the rendered artifact on the host   -> vps-deploy
+  rehearse  rehearse the deploy without touching the host    -> rehearse
+  redeploy  redeploy the current artifact                    -> redeploy
+  check     run the openbsd check suite                      -> check
+EOF
+}
+
+cmd=${1:-}; shift 2>/dev/null || true
+case "$cmd" in
+  build)    exec "$here/render_dns.rb" "$@" ;;
+  diff)     exec sh "$here/deploy-diff.sh" "$@" ;;
+  smoke)    exec sh "$here/deploy-smoke.sh" "$@" ;;
+  apply)    exec "$here/vps-deploy" "$@" ;;
+  rehearse) exec "$here/rehearse" "$@" ;;
+  redeploy) exec "$here/redeploy" "$@" ;;
+  check)    exec "$here/check" "$@" ;;
+  -h|--help|'') usage; [ -n "$cmd" ] && exit 0 || exit 64 ;;
+  *) usage; exit 64 ;;
+esac

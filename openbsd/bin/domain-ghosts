@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+#
+# Inventory vs owned_domains vs residual relayd Hosts.
+# Prefer: operator status (prints only when skewed). This CLI is for JSON dumps.
+
+require "json"
+
+root = File.expand_path("../..", __dir__)
+require File.join(root, "openbsd/lib/domain_signals.rb")
+
+json_out = ARGV.include?("--json")
+s = DomainSignals.scan(root)
+
+if json_out
+  puts JSON.pretty_generate(
+    available_count: s[:available].size,
+    available: s[:available],
+    registered_count: s[:registered].size,
+    owned_count: s[:owned].size,
+    owned_missing_from_inventory: s[:owned_missing_from_inventory],
+    registered_not_in_owned_domains: s[:registered_not_owned],
+    relay_hosts: s[:relay_hosts],
+    relay_residual: s[:relay_residual]
+  )
+  exit 0
+end
+
+puts "domain-ghosts0: inventory vs owned vs relayd"
+puts "  available (inventory):     #{s[:available].size}"
+s[:available].first(15).each { |d| puts "    - #{d}" }
+puts "    ... #{s[:available].size - 15} more" if s[:available].size > 15
+puts "  registered (inventory):    #{s[:registered].size}"
+puts "  owned_domains (apps.yml):  #{s[:owned].size}"
+puts "  owned missing inventory:   #{s[:owned_missing_from_inventory].size}"
+s[:owned_missing_from_inventory].each { |d| puts "    - #{d}" }
+puts "  registered not owned:      #{s[:registered_not_owned].size}"
+s[:registered_not_owned].each { |d| puts "    - #{d}" }
+puts "  relay Host matches:        #{s[:relay_hosts].size}"
+puts "  relay residual (odd):      #{s[:relay_residual].size}"
+s[:relay_residual].each { |d| puts "    - #{d}" }
