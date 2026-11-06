@@ -16,9 +16,22 @@ properties:
         lifecycle: { enum: [advisory, enforced, retired] }
         autofix: { enum: [never, review, automatic] }
         enacted: { type: string, pattern: '\A\d{4}-\d{2}-\d{2}\z' }
-        file: { type: string, pattern: '\Alaws/[a-z0-9_]+\.rb\z' }
+        file: { type: string, pattern: '\Alaws/(pub4/)?[a-z0-9_]+\.rb\z' }
         parent: { type: string }
-        pub4: { type: string, description: "The pub4 Law id this row was imported from" }
+        pub4:
+          type: object
+          description: Where bin/master port-laws imported the row from, and the policy pub4 gave it.
+          required: [id, source]
+          additional: { type: string }
+        scope:
+          type: object
+          description: pub4 catalogue reach, read by an imported Law (pub4 language names, path regexes).
+          additional: false
+          properties:
+            languages: { type: array, items: { type: string } }
+            path_exclude: { type: array, items: { type: string } }
+        broken: { type: string, description: "Why its fixtures do not prove here; measured by port-laws" }
+        unported: { type: string, description: "What its detector waits for: a hand port, not a mechanical one" }
         census:
           type: object
           required: [measured_on, files, findings, sampled, false_positives]

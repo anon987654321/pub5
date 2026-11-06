@@ -18,14 +18,28 @@ module Law
                       "javascript" => "example.js", "css" => "example.css", "shell" => "example.sh",
                       "markdown" => "example.md", "html" => "example.html" }.freeze
 
-    attr_reader :id, :options
+    attr_reader :id, :options, :broken, :errors
     attr_accessor :policy
 
-    def initialize(options)
+    # A Law whose file or fixtures failed, kept with the failure: it scans
+    # nothing and can never be enforced (Policy).
+    def self.broken(id, row, error)
+      law = new({ id:, scope: :line, tags: [], languages: [], surfaces: [], adapters: [], reads_comments: false }, row)
+      law.instance_variable_set(:@broken, "#{error.class}: #{error.message}"[0, 400])
+      law
+    end
+
+    # A Law under laws/pub4/ was imported unchanged and reads, scans and
+    # proves the way pub4 did (laws/pub4/lib/compat.rb).
+    def initialize(options, policy = {})
       @options = options.freeze
       @id = options.fetch(:id)
-      @policy = {}
+      @policy = policy
+      @errors = []
+      @pub4 = Pub4::Subject.new(@options, policy) if policy["file"].to_s.start_with?("laws/pub4/") && Law.const_defined?(:Pub4)
     end
+
+    def imported? = !@pub4.nil?
 
     def [](word) = @options[word]
 
@@ -36,6 +50,8 @@ module Law
     def semantic? = !self[:ask].nil?
 
     def applies?(file, text = nil)
+      return false if @broken
+      return @pub4.applies?(Pub4.name(file), Master.language_for(file, text)) if @pub4
       return false if self[:path].is_a?(String) && !file.include?(self[:path])
       return false if self[:path].is_a?(Regexp) && !file.match?(self[:path])
 
@@ -46,21 +62,31 @@ module Law
     # practice has no deterministic finding to give.
     def scan(text, file)
       return [] unless applies?(file, text)
+      return guarded { pub4_hits(text, file) } if @pub4
       return [] if self[:absent] && text.match?(self[:absent])
 
-      hits = main_hits(text, file)
-      self[:adapters].reject(&:tree?).each do |a|
-        next unless a.languages.empty? || a.languages.include?(Law.language(file, text))
+      guarded do
+        hits = main_hits(text, file)
+        self[:adapters].reject(&:tree?).each do |a|
+          next unless a.languages.empty? || a.languages.include?(Law.language(file, text))
 
-        hits += findings(Runner.new.instance_exec(text, file, &a.check), text, file)
+          hits += findings(Runner.new.instance_exec(text, file, &a.check), text, file)
+        end
+        hits
       end
-      hits
     end
 
-    def scan_tree(paths) = self[:adapters].select(&:tree?).flat_map { |a| findings(Runner.new.instance_exec(paths, &a.check), "", nil) }
+    def scan_tree(paths)
+      return [] if @broken
+      return guarded { @pub4.scan_tree(paths.map { |p| Pub4.name(p) }).map { |h| Finding.new(id, nil, h.line, h.text, h.message) } } if @pub4
+
+      self[:adapters].select(&:tree?).flat_map { |a| findings(Runner.new.instance_exec(paths, &a.check), "", nil) }
+    end
 
     # Every bad fixture must be found and every good one must not, at load.
     def prove!
+      return @pub4.prove! && self if @pub4
+
       if self[:proved_by]
         raise Invalid, "#{id}: proved_by #{self[:proved_by]} does not exist" unless File.file?(File.join(Core::ROOT, self[:proved_by]))
       end
@@ -70,6 +96,28 @@ module Law
     end
 
     private
+
+    # An advisory Law that raises on a real file is a finding about the
+    # Law, not a failed gate: the error is kept for the census. An enforced
+    # Law that raises stops the gate.
+    def guarded
+      yield
+    rescue StandardError => e
+      raise if enforced?
+
+      @errors << "#{e.class}: #{e.message}"[0, 300]
+      []
+    end
+
+    # pub4 judged a Law file with its own fixtures and detector lines
+    # blanked (Law.conduct), and every file under its pub4 name.
+    def pub4_hits(text, file)
+      read = file.start_with?("laws/") ? Pub4.conduct(text) : text
+      lines = text.lines
+      @pub4.scan(read, file: Pub4.name(file), language: Master.language_for(file, text)).map do |hit|
+        Finding.new(id, file, hit.line, lines[hit.line - 1].to_s.chomp, hit.message)
+      end
+    end
 
     def main_hits(text, file)
       if self[:check]

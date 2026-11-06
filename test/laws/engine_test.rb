@@ -88,6 +88,25 @@ class LawEngineTest < Minitest::Test
       assert_equal "advisory", laws.first.lifecycle
     end
   end
+  def test_a_broken_row_keeps_its_law_and_a_proving_one_must_clear_it
+    sandbox do |root|
+      put(root, "sample.rb", "Law.define(:SAMPLE) { detect { |l| l.include?(%q(x)) }; bad %q(y); good %q(z); fix %q(f) }\n")
+      assert_raises(Law::Invalid) { Law.load!(dir: root, index: { "laws" => { "SAMPLE" => row } }) }
+      law = Law.load!(dir: root, index: { "laws" => { "SAMPLE" => row(broken: "bad fixture") } }).first
+      assert_match(/bad fixture not found/, law.broken)
+      assert_empty law.scan("x\n", "a.rb")
+      put(root, "sample.rb", "Law.define(:SAMPLE) { detect { |l| l.include?(%q(x)) }; bad %q(x); good %q(z); fix %q(f) }\n")
+      error = assert_raises(Law::Invalid) { Law.load!(dir: root, index: { "laws" => { "SAMPLE" => row(broken: "old") } }) }
+      assert_match(/marked broken but its fixtures prove/, error.message)
+    end
+  end
+
+  def test_broken_and_unported_laws_cannot_be_enforced
+    census = { "measured_on" => "2026-11-06", "files" => 1, "findings" => 0, "sampled" => 0, "false_positives" => 0,
+               "ratified_by" => "operator" }
+    assert_match(/broken/, Law::Policy.problems("S", row(lifecycle: "enforced", census:, broken: "b"), nil).join)
+    assert_match(/unported/, Law::Policy.problems("S", row(lifecycle: "enforced", census:, unported: "u"), nil).join)
+  end
 end
 
 class LawsInForceTest < Minitest::Test
@@ -129,4 +148,5 @@ class LawLanguageTest < Minitest::Test
     assert_nil Law.language("bin/master")
     assert_equal "yaml", Law.language("a.yml")
   end
+
 end

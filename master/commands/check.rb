@@ -56,13 +56,17 @@ module Commands
       bad.empty?
     end
 
+    # Only enforced Laws judge here: an advisory Law cannot fail a push, and
+    # the ~800 imported from pub4 cost minutes over the tree. Their
+    # findings are measured by `bin/master laws census`.
     def laws(files)
       laws = Law.load!
-      findings = files.flat_map { |f| laws.flat_map { |law| law.scan(text(f).scrub, f) } }
-      enforced, advisory = findings.partition { |f| Law[f.law].enforced? }
-      enforced.each { |f| @out.puts "law: #{f}" }
-      @out.puts "laws: #{laws.size} loaded, fixtures proved; #{files.size} files, #{enforced.size} enforced findings, #{advisory.size} advisory"
-      enforced.empty?
+      enforced = laws.select(&:enforced?)
+      findings = files.flat_map { |f| enforced.flat_map { |law| law.scan(text(f).scrub, f) } }
+      findings.each { |f| @out.puts "law: #{f}" }
+      @out.puts "laws: #{laws.size} loaded (#{laws.count(&:broken)} broken), fixtures proved; #{files.size} files, " \
+                "#{findings.size} enforced findings; advisory not scanned here (bin/master laws census)"
+      findings.empty?
     rescue Law::Invalid => e
       e.message.each_line { |line| @out.puts "laws: #{line.chomp}" }
       @out.puts "laws: NOT_RUN (the Laws did not load)"

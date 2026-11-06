@@ -45,7 +45,7 @@ commands:
     verbs:
       write: [AGENTS.md, CLAUDE.md]
   laws:
-    summary: List the Laws, or run one Law's census over the tree (laws census ID).
+    summary: List the Laws, or run one Law's census over the tree (laws census ID, or laws census --all).
     plugin: master/commands/laws.rb
     class: Commands::Laws
     contexts: [tty, pipe, remote]

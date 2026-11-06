@@ -40,7 +40,9 @@ module Law
       define_method(word) { |*| refuse "#{word} is policy; it lives in registry/laws.yml" }
     end
 
-    def build
+    # The row is the Law's registry policy; a Law under laws/pub4/ reads it for
+    # pub4's severity, catalogue languages and path_exclude.
+    def build(row = {})
       detectors = %i[detect check detector].count { |k| @h[k] }
       refuse "detect, check and detector are three detectors; keep one" if detectors > 1
       if detectors.zero? && @h[:adapters].empty? && !@h[:ask] && !@h[:practice]
@@ -49,7 +51,7 @@ module Law
       if (detectors.positive? || @h[:ask]) && !@h[:proved_by] && !(@h.key?(:bad) && @h.key?(:good))
         refuse "needs bad and good fixtures, or proved_by"
       end
-      Definition.new(@h)
+      Definition.new(@h, row)
     end
 
     private

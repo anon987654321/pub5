@@ -44,13 +44,23 @@ module Law
   @laws = {}
 
   class << self
+    # Builds and proves one Law against its registry row (the row being
+    # loaded, or none outside load!). A Law whose row records it as broken is
+    # kept, marked with its failure, instead of refusing the load.
     def define(id, &block)
       id = id.to_sym
       raise Invalid, "#{id}: defined twice" if @laws.key?(id)
 
-      builder = Builder.new(id)
-      builder.instance_eval(&block)
-      @laws[id] = builder.build.prove!
+      row = @rows ? @rows.fetch(id.to_s, {}) : {}
+      @laws[id] = begin
+        builder = Builder.new(id)
+        builder.instance_eval(&block)
+        builder.build(row).prove!
+      rescue StandardError => e
+        raise unless row["broken"]
+
+        Definition.broken(id, row, e)
+      end
     end
 
     def all = @laws.values
@@ -73,15 +83,58 @@ module Law
     # qualified, each refuses the load.
     def load!(dir: File.join(Core::ROOT, "laws"), index: Core::Registry.load(:laws))
       @laws.clear
-      (Dir[File.join(dir, "*.rb")].sort - [__FILE__]).each { |file| Kernel.load(file) }
       rows = index.fetch("laws")
-      errors = (rows.keys - @laws.keys.map(&:to_s)).map { |id| "#{id}: indexed but never defined" }
+      errors = load_files(dir, rows)
+      errors += (rows.keys - @laws.keys.map(&:to_s)).map { |id| "#{id}: indexed but never defined" }
       errors += (@laws.keys.map(&:to_s) - rows.keys).map { |id| "#{id}: defined but not indexed in registry/laws.yml" }
       rows.each { |id, row| errors += Policy.problems(id, row, @laws[id.to_sym]) }
       raise Invalid, errors.join("\n") if errors.any?
 
       rows.each { |id, row| @laws[id.to_sym]&.policy = row }
       all
+    end
+
+    # Every Law file: laws/*.rb, written in pub5, and laws/pub4/*.rb,
+    # imported from pub4 by `bin/master port-laws`.
+    def files(dir) = (Dir[File.join(dir, "*.rb")] + Dir[File.join(dir, "pub4", "*.rb")]).sort - [__FILE__]
+
+    # Loads each file with its rows in reach of define. A file that fails
+    # before it defines its Law (a missing constant in shared code) is kept
+    # as broken when its row says so, and refuses the load otherwise.
+    def load_files(dir, rows)
+      @rows = rows
+      files(dir).filter_map do |file|
+        Kernel.load(file)
+        nil
+      rescue StandardError, ScriptError => e
+        relative = "laws/#{file.delete_prefix("#{dir}/")}"
+        id, row = rows.find { |_, r| r["file"] == relative }
+        next "#{relative}: #{e.class}: #{e.message}" unless row&.fetch("broken", nil)
+
+        @laws[id.to_sym] ||= Definition.broken(id.to_sym, row, e)
+        nil
+      end
+    ensure
+      @rows = nil
+    end
+
+    # What `bin/master port-laws` records: each file loaded as if its row
+    # said broken, so every failure is caught and named instead of raised.
+    # Answers id => failure, nil where the Law proved.
+    def measure(paths, rows)
+      @laws.clear
+      @rows = rows.transform_values { |row| row.merge("broken" => "measuring") }
+      paths.each_with_object({}) do |path, result|
+        before = @laws.keys
+        begin
+          Kernel.load(path)
+        rescue StandardError, ScriptError => e
+          result[File.basename(path, ".rb").upcase] = "#{e.class}: #{e.message}"
+        end
+        (@laws.keys - before).each { |id| result[id.to_s] = @laws[id].broken }
+      end
+    ensure
+      @rows = nil
     end
 
     def enforced = all.select(&:enforced?)
@@ -108,7 +161,9 @@ module Law
       errors << "#{id}: lifecycle #{row['lifecycle'].inspect}" unless LIFECYCLES.include?(row["lifecycle"])
       errors << "#{id}: severity #{row['severity'].inspect}" unless SEVERITIES.include?(row["severity"])
       errors << "#{id}: autofix #{row['autofix'].inspect}" unless AUTOFIX.include?(row["autofix"])
-      errors << "#{id}: file must be laws/#{id.downcase}.rb" if law && row["file"] != "laws/#{id.downcase}.rb"
+      files = ["laws/#{id.downcase}.rb", "laws/pub4/#{id.downcase}.rb"]
+      errors << "#{id}: file must be #{files.join(' or ')}" if law && !files.include?(row["file"])
+      errors << "#{id}: marked broken but its fixtures prove; clear broken" if law && row["broken"] && !law.broken
       errors + (row["lifecycle"] == "enforced" ? promotion_problems(id, row, law) : [])
     end
 
@@ -116,6 +171,9 @@ module Law
     # with measured agreement), a census over the real tree, a false-positive
     # rate of at most 5% on a sample, and the operator's ratification.
     def promotion_problems(id, row, law)
+      return ["#{id}: broken (#{row['broken']}); a broken Law cannot be enforced"] if row["broken"]
+      return ["#{id}: unported (#{row['unported']}); its detector awaits a hand port"] if row["unported"]
+
       census = row["census"] or return ["#{id}: enforced without a census"]
       errors = []
       errors << "#{id}: a conduct Law with no detector stays advisory" if law && !law.deterministic? && !law.semantic?
