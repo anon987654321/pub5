@@ -2,6 +2,7 @@
 
 require_relative "../test_helper"
 require_relative "../../laws/engine"
+require_relative "../../laws/pub4/master/lib/master"
 require_relative "../../master/port/pub4_laws"
 
 # bin/master port-laws: the mechanical split of a pub4 law file, the broken
@@ -59,6 +60,31 @@ class PortTest < Minitest::Test
     refute Port::Pub4Laws.edited?(text)
     assert Port::Pub4Laws.edited?(text.sub("body", "edited"))
     assert Port::Pub4Laws.edited?("# written by hand\n")
+  end
+
+  def row(**over)
+    { "statement" => "s", "kind" => "lexical", "severity" => "error", "lifecycle" => "advisory",
+      "autofix" => "never", "enacted" => "2026-11-06", "file" => "laws/sample.rb" }.merge(over.transform_keys(&:to_s))
+  end
+
+  def test_an_imported_law_judges_a_file_under_its_pub4_name
+    assert_equal "RAILS/brgen/app/x.rb", Law::Pub4.name("rails/brgen/app/x.rb")
+    assert_equal "MASTER/lib/world.rb", Law::Pub4.name("core/world.rb")
+    assert Law.terminal_output?(Law::Pub4.name("core/world.rb"))
+    refute Law.terminal_output?(Law::Pub4.name("rails/brgen/app/views/a.html.erb"))
+    Law.instance_variable_set(:@rows, { "RAILS_ONLY" => row(file: "laws/pub4/rails_only.rb", pub4: { "id" => "R", "source" => "s" }) })
+    law = Law.define(:RAILS_ONLY) do
+      path "RAILS/"
+      detect { |line| line.include?("puts") }
+      bad "puts 1\n"
+      good "log 1\n"
+      fix "f"
+    end
+    assert_predicate law, :imported?
+    assert_equal 1, law.scan("puts 1\n", "rails/brgen/app/a.rb").size
+    assert_empty law.scan("puts 1\n", "studio/a.rb")
+  ensure
+    Law.instance_variable_set(:@rows, nil)
   end
 
   def test_only_the_named_port_command_writes_its_ported_glob
