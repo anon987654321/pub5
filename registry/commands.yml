@@ -104,6 +104,7 @@ commands:
     verbs:
       read: ["**/*"]
       write: ["**/*"]
-      exec: [ruby, claude, grok, codex, agy, sysctl, kill, Google Chrome, chromium, chrome]
+      exec: [ruby, ruby34, claude, grok, codex, agy, sysctl, kill, Google Chrome, chromium, chrome]
       git: [rev-parse, ls-files, diff, show, add, commit, reset, blame]
+      net: [127.0.0.1]
       llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
