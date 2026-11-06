@@ -46,7 +46,7 @@ def disk
   end
 end
 
-# --- rubies: which one runs MASTER, and the stray json that breaks its boot ---------
+# --- rubies: which one runs master, and the stray json that breaks its boot ---------
 def rubies
   versions = Dir[File.join(Dir.home, ".rbenv", "versions", "*")].map { |d| File.basename(d) }.sort
   chosen, ok = run(File.join(MASTER, "bin", "ruby"), "-e", "print RUBY_VERSION")
@@ -54,7 +54,7 @@ def rubies
 
 end
 
-# The only honest answer to whether MASTER boots is to boot it. A stray newer json
+# The only honest answer to whether master boots is to boot it. A stray newer json
 # in the gem directory once raised "already activated json" here; the entrypoint
 # now pins the Gemfile's version, so this reports what actually happens.
 def boot
