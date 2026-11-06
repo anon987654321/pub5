@@ -146,6 +146,45 @@ Same evidence limits as the main port: no Ruby toolchain, so the new
 tests are NOT_RUN here; they are carried as written upstream, where they
 passed.
 
+## Engine-glob catch-up (2026-11-06)
+
+An independent audit of the port (searching every `brgen_*` wildcard and
+`brgen_<vertical>` literal, not just the enumerated reference sites)
+found a defect class the first sweep missed: discovery code that the
+sibling layout survived inside as `brgen_*` globs and mixed brace lists.
+Under pub5's layout no `RAILS/brgen_*` directory exists, so each glob
+matched nothing and its check silently narrowed — the exact blindness
+the verticals' first move taught this repo to fear (57 views, 71 pages).
+Three commits fix all 22 files:
+
+- "Master: point every engine discovery glob at brgen/engines" (14 files):
+  user_flow's VIEW_PATHS and its marketplace source markers (the latter
+  resolved `RAILS/brgen/engines/...` relative to `RAILS/brgen` and could
+  only miss), dialect_purity, content_for_yield, dead_css_sweep's engine
+  roots (takeaway sits one level deeper than radio's tv and playlist),
+  baymard's source inventory, the restructure proof and CLI proof test
+  discovery, runs.rb's brgen convention, page_inventory and
+  design_metrics (whose half-rewritten brace lists had already dropped
+  dating, messenger and maps from both simulations), coverage_map.yml,
+  the restructure contract text, self_findings' census comment and
+  AGENTS.md's Vertical definition.
+- "OpenBSD: retire the ci-sync sibling-vertical loop the engine move
+  emptied" (2 files): the copy loop over `RAILS/brgen_*/` matched
+  nothing — the engines ride the app-tree rel list — and the contract
+  test that asserted the sibling layout now asserts the engines in the
+  rel list and walks every `path:` ref in each app's Gemfile.
+- "Rails: point the family tests' engine walks at brgen/engines" (6
+  files): i18n_resolution's engine census (the empty glob had removed
+  every engine view from the keys-used scan), the path-idioms guard's
+  pub4-era failure message, shared_chrome_source_contract's dead brace
+  alternative, and three stale comments.
+
+Everything now discovers engines through `EngineRoots`
+(`MASTER/checks/support/brgen_vertical_surfaces.rb`) or its exact GLOB
+shape. The remaining `brgen_*` occurrences are the deliberate keeps:
+rails-sync's `verticals` mode (documented no-op), stylesheet module
+names (`_brgen_marketplace.scss` et al.), and history.
+
 ## Functional renames in the port
 
 These are functional wiring, renamed so pub5 is self-consistent:
@@ -188,14 +227,24 @@ sandbox has none), no Rails boot, no vm23 access, and no browser. Therefore:
   acceptance commands in the port plan (`rake test`, `run_all.rb` per tree,
   `rake audit`, `bin/check --profile=agent`, the route contracts, golden
   screenshots) remain open work in `TODO.md` — they are the same items the
-  pub4 backlog already listed as unresolved at the source commit.
-- soul.yml / laws.yml byte-identity: **PASS** (verified by SHA-256 at the
-  port commit).
-- Engine-layout reference sweep: **PASS** for the enumerated reference
-  sites (every `brgen_<vertical>` path reference found by repo-wide search
-  was rewritten or reviewed; the remaining occurrences are identifiers,
-  prose, history, or the deliberately-kept names above). Runtime behaviour:
+  pub4 backlog already listed as unresolved at the source commit. A Ruby
+  toolchain cannot be installed here either (no root, no Docker, no
+  prebuilt interpreter), so nothing converts the NOT_RUNs on this box.
+- soul.yml / laws.yml byte-identity: **PASS**, re-verified by SHA-256
+  against pub4@7caa03d (soul `44d9d6db…d067`, laws `821713cb…bec`).
+- Engine-layout reference sweep: the original **PASS** claim covered only
+  the enumerated sites and was too narrow — the follow-up audit (see
+  "Engine-glob catch-up") found 22 more files carrying the sibling
+  layout in `brgen_*` globs and mixed brace lists, now fixed. A full
+  wildcard sweep after the fixes finds only the deliberate keeps:
+  **PASS** for live discovery code, with runtime behaviour still
   **INCONCLUSIVE** until the suites run on the pinned toolchain.
-- The port did not delete behaviour to hit the plan's file budget; per-tree
-  counts at the port commit are recorded in the delivery summary and the
-  budget convergence work is listed in `TODO.md`.
+- Per-tree tracked file counts at the engine-glob catch-up commits,
+  against the plan's budget — all **OVER**, as the plan expected for a
+  behaviour-preserving port (budget convergence stays in `TODO.md`):
+  MASTER 2,597 (budget 700–900), RAILS 3,722 (1,800–2,200), OPENBSD 284
+  (100–150), STUDIO 75 (40–50); total 6,678 against 2,700–3,300.
+- Functional-rename sweep: **PASS** — 49 `PUB5_ROOT`/`PUB5_RAILS_ROOT`
+  sites, zero functional `PUB4_ROOT`/`PUB4_RAILS_ROOT` leftovers (the
+  only hit is this file's own rename record); the other `PUB4_*` names
+  are the installed-state and provenance keeps listed above.
