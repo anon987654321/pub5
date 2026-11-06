@@ -58,7 +58,14 @@ module Core
       target.to_s
     end
 
-    def protected?(relative) = @protected.any? { |glob| File.fnmatch?(glob, relative, GLOB) }
+    # A trailing /** protects the whole tree under it. File.fnmatch? with
+    # FNM_PATHNAME reads it as /*, one level, which left laws/pub4/ and
+    # registry/schemas/ writable under "laws/**" and "registry/**".
+    def protected?(relative) = @protected.any? { |glob| Manifest.match?(glob, relative) }
+
+    def self.match?(glob, relative)
+      File.fnmatch?(glob, relative, GLOB) || (glob.end_with?("/**") && File.fnmatch?("#{glob}/*", relative, GLOB))
+    end
 
     private
 

@@ -108,6 +108,15 @@ class CapabilityTest < Minitest::Test
     end
   end
 
+  # "registry/**" protects the whole tree, not one level of it.
+  def test_a_protected_tree_refuses_writes_at_every_depth
+    sandbox do |root|
+      w = world(root, { write: ["**/*"] })
+      assert_raises(Core::Refusal) { w.write("registry/schemas/apps.yml", "x") }
+      refute File.exist?(File.join(root, "registry/schemas/apps.yml"))
+    end
+  end
+
   def test_only_the_named_generator_writes_a_generated_file
     sandbox do |root|
       generated = { "registry/out.md" => { "by" => "generate" } }
