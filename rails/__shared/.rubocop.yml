@@ -1,0 +1,59 @@
+# Shared Rails code tightens the family baseline without defining another
+# copy of the Omakase inheritance or the disabled metrics policy.
+inherit_from: ../.rubocop.yml
+
+AllCops:
+  NewCops: disable
+  Exclude:
+    - "db/migrate/._*"
+    - "node_modules/**"
+    - "tmp/**"
+    - "vendor/**"
+
+# Keep shared code's stricter lexical/layout checks in one place. Product apps
+# inherit the common Rails baseline; MASTER Rails code opts into this layer.
+Layout/LineLength:
+  Enabled: true
+  Max: 120
+  AllowedPatterns:
+    - '\A#'
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+Style/HashSyntax:
+  Enabled: true
+  EnforcedStyle: ruby19
+  EnforcedShorthandSyntax: always
+
+Layout/TrailingWhitespace:
+  Enabled: true
+
+Layout/TrailingEmptyLines:
+  Enabled: true
+
+Style/TrailingCommaInArguments:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: comma
+
+Rails/HttpStatus:
+  Enabled: true
+
+Rails/Pluck:
+  Enabled: true
+
+Rails/WhereExists:
+  Enabled: true

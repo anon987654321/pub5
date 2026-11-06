@@ -1,0 +1,129 @@
+<% if authenticated? && (params[:q].present? || params[:category_id].present?) %>
+  <div class="form-wrap form-wrap--compact">
+    <%= form_with model: Marketplace::SavedSearch.new, url: saved_searches_path do |form| %>
+      <%= form.hidden_field :query, value: params[:q] %>
+      <%= form.hidden_field :category_id, value: params[:category_id] %>
+      <%= form.hidden_field :location, value: params[:location] %>
+      <%= form.hidden_field :name, value: t("marketplace.saved_search_default_name") %>
+      <%= form.submit t("marketplace.save_search"), class: "button button-ghost button-small" %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @categories.any? %>
+  <%# Kaufland.de's category shortcut rail: a 110px white well over each name.
+      Categories carry no picture, so the well holds the name's initial rather
+      than a stock photograph standing in for goods nobody listed.
+
+      Every link that rebuilds the index carries the kind, or a category tap on
+      the jobs list lands back on goods. %>
+  <nav class="deal-cats" aria-label="<%= t("aria.categories") %>">
+    <%= link_to listings_path(kind: @kind), class: "deal-cat#{" active" unless params[:category_id]}" do %>
+      <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span><%= t("marketplace.all_categories") %>
+    <% end %>
+    <% @categories.each do |cat| %>
+      <%= link_to listings_path(kind: @kind, category_id: cat.id, q: params[:q].presence), class: "deal-cat#{" active" if params[:category_id].to_s == cat.id.to_s}" do %>
+        <span class="store-shortcut-well" aria-hidden="true"><%= cat.name.to_s.first&.upcase %></span><%= cat.name %>
+      <% end %>
+    <% end %>
+  </nav>
+<% end %>
+
+<% if @top_offers.present? && live_search_query.blank? && params[:category_id].blank? %>
+  <%= render "marketplace/top_offers", offers: @top_offers %>
+<% end %>
+
+<% filter_params = request.query_parameters.except("page", "format") %>
+<% removable_filter_keys = %w[from category_id condition min_price max_price lat lng radius_km] %>
+<% active_filter_chips = [] %>
+<% if params[:from] == "person" %>
+  <% active_filter_chips << [t("marketplace.from_a_person"), filter_params.except("from")] %>
+<% elsif params[:from] == "shop" %>
+  <% active_filter_chips << [t("marketplace.from_a_shop"), filter_params.except("from")] %>
+<% end %>
+<% if params[:category_id].present? %>
+  <% selected_category = @categories.flat_map { |category| [category, *category.children] }.find { |category| category.id.to_s == params[:category_id].to_s } %>
+  <% active_filter_chips << [selected_category&.name || t("marketplace.filter_category"), filter_params.except("category_id")] %>
+<% end %>
+<% if params[:condition].present? %>
+  <% active_filter_chips << [t("marketplace.conditions.#{params[:condition]}", default: params[:condition].humanize), filter_params.except("condition")] %>
+<% end %>
+<% if params[:min_price].present? %>
+  <% active_filter_chips << [t("marketplace.over_price", price: Shared::MoneyDisplay.format(params[:min_price].to_i * 100)), filter_params.except("min_price")] %>
+<% end %>
+<% if params[:max_price].present? %>
+  <% active_filter_chips << [t("marketplace.under_price", price: Shared::MoneyDisplay.format(params[:max_price].to_i * 100)), filter_params.except("max_price")] %>
+<% end %>
+<% if params[:lat].present? && params[:lng].present? %>
+  <% active_filter_chips << [t("marketplace.filter_near_me_within", radius: @radius_km), filter_params.except("lat", "lng", "radius_km")] %>
+<% end %>
+<% if active_filter_chips.any? %>
+  <nav class="store-pills listing-active-filters" aria-label="<%= t("marketplace.active_filters") %>">
+    <% active_filter_chips.each do |label, remaining_params| %>
+      <%= link_to label, listings_path(remaining_params), class: "deal-cat active" %>
+    <% end %>
+    <%= link_to t("marketplace.clear_filters"), listings_path(filter_params.except(*removable_filter_keys)), class: "deal-cat listing-clear-filters" %>
+  </nav>
+<% end %>
+
+<% if @listings.any? %>
+  <%# bol and Kaufland open the results on how many there are and the order
+      they are in, as pills beside the count; the sort used to sit inside the
+      filter drawer, a closed <details> on a phone. Each pill keeps the query
+      and every filter of the page it is on. %>
+  <header class="store-results-head">
+    <%= tag.h2 t("marketplace.inspire_heading", city: Current.city_name), class: "store-heading" %>
+    <%= tag.p t("marketplace.listing_count", count: @pagy.count), class: "store-results-count" %>
+    <nav class="store-pills" aria-label="<%= t("marketplace.sort_label") %>">
+      <% Marketplace::Listing::SORTS.each do |sort| %>
+        <%= link_to t("marketplace.sort_#{sort}"), listings_path(request.query_parameters.merge("sort" => sort)),
+              class: "deal-cat#{" active" if @sort == sort}", aria: { current: (@sort == sort ? "page" : nil) } %>
+      <% end %>
+    </nav>
+  </header>
+  <%= turbo_frame_tag "marketplace-listings", target: "_top" do %>
+    <div class="deal-grid" id="marketplace-listings" aria-label="<%= t("aria.listings") %>">
+      <% @listings.each do |listing| %>
+        <%= render "marketplace/listings/card", listing: listing, distance_km: @listing_distances&.fetch(listing.id, nil) %>
+      <% end %>
+    </div>
+
+    <%= render "shared/infinite_scroll_sentinel",
+               pagy: @pagy,
+               reflex: "ListingsInfiniteScrollReflex#load_more",
+               sentinel_id: "marketplace-listings-sentinel",
+               q: params[:q],
+               category_id: params[:category_id],
+               lat: @search_lat,
+               lng: @search_lng,
+               radius_km: @radius_km,
+               kind: @kind,
+               from: params[:from],
+               sort: @sort,
+               data: { condition: params[:condition], min_price: params[:min_price],
+                       max_price: params[:max_price] }.compact_blank %>
+  <% end %>
+<% elsif @narrowed %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_listings"),
+        body: t("empty.no_listings_search"),
+        action: { label: t("actions.sell_something"), path: new_listing_path } %>
+<% else %>
+  <%# Name the kind the city lacks, and offer the form for that kind. %>
+  <%= render "shared/empty_state",
+        title: t("marketplace.kind_empty.#{@kind}", city: Current.city_name),
+        body: t("marketplace.kind_empty_body"),
+        action: { label: t("marketplace.kind_empty_action.#{@kind}"), path: new_listing_path(kind: @kind) } %>
+<% end %>
+
+<% if @categories.any? { |cat| cat.children.any? } %>
+  <%# Kaufland.de's popular search terms panel: #f5f5f5, 8px corners, underlined
+      14px links. brgen has no public search log, so the terms are the real
+      subcategories a reader can narrow to. %>
+  <nav class="store-terms" aria-labelledby="store-terms-title">
+    <%= tag.h2 t("marketplace.browse_categories"), id: "store-terms-title", class: "store-heading" %>
+    <% @categories.flat_map(&:children).each do |sub| %>
+      <%= link_to sub.name, listings_path(kind: @kind, category_id: sub.id) %>
+    <% end %>
+  </nav>
+<% end %>

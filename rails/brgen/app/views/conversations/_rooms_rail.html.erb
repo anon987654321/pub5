@@ -1,0 +1,84 @@
+<% rail_conversations = @rail_conversations || [] %>
+<% rail_unread = @rail_unread || {} %>
+<% rail_last_messages = @rail_last_messages || {} %>
+<% current_room = defined?(@conversation) ? @conversation : nil %>
+
+<nav class="messenger-rail" aria-label="<%= t("messages.rooms_label") %>">
+  <h2 class="visually-hidden"><%= t("messages.rooms_label") %></h2>
+  <ul class="messenger-rail-list" role="list">
+    <% Conversation::CHANNELS.each do |slug, spec| %>
+      <li role="listitem">
+        <%= link_to channel_path(slug), class: "messenger-rail-room",
+                    data: { turbo_frame: "messenger-pane" },
+                    aria: { current: current_room&.slug == slug ? "page" : nil, label: spec[:name] },
+                    title: spec[:name] do %>
+          <%# Channel names are IRC-style ("#brgen"), so first&.upcase made every
+              chip "#" and the rail read as seven identical empty rooms. The
+              letter behind the hash is the chip; the hash stays only as the
+              fallback for a nameless room. %>
+          <span class="messenger-rail-hash" aria-hidden="true"><%= spec[:name].to_s.delete_prefix("#").first&.upcase || "#" %></span>
+          <span class="visually-hidden"><%= spec[:name] %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</nav>
+
+<section class="messenger-inbox" aria-label="<%= t("messages.title") %>">
+  <% if Current.user&.persisted? %>
+    <div class="messenger-inbox-head">
+      <%= link_to new_conversation_path, class: "button button-primary messenger-inbox-new",
+                  data: { turbo_frame: "messenger-pane" } do %>
+        <%= icon :compose, size: 18 %>
+        <span><%= t("messages.new_message") %></span>
+      <% end %>
+      <%= link_to search_conversations_path, class: "messenger-inbox-search",
+                  data: { turbo_frame: "messenger-pane" } do %>
+        <%= icon :search, size: 17 %>
+        <span><%= t("messages.search") %></span>
+      <% end %>
+    </div>
+  <% end %>
+
+  <h2 class="messenger-inbox-heading"><%= t("messages.title") %></h2>
+  <%# The archive and message requests are lists behind a link of their own,
+      shown only when they hold something. %>
+  <% if @archive || @requests %>
+    <%= link_to t("messages.inbox_link"), conversations_path, class: "messenger-inbox-search", data: { turbo_frame: "_top" } %>
+  <% elsif (@archived_count || 0).positive? %>
+    <%= link_to t("messages.archive_link", count: @archived_count), conversations_path(arkiv: 1),
+                class: "messenger-inbox-search", data: { turbo_frame: "_top" } %>
+  <% end %>
+  <% if !@requests && (@request_count || 0).positive? %>
+    <%= link_to t("messages.requests_link", count: @request_count), conversations_path(requests: 1),
+                class: "messenger-inbox-search", data: { turbo_frame: "_top" } %>
+  <% end %>
+  <ul class="messenger-inbox-list" role="list" id="rail_conversations">
+    <% if Current.user %>
+      <%= render partial: "conversations/rail_row", collection: rail_conversations, as: :room,
+                 locals: { unread_counts: rail_unread, last_messages: rail_last_messages, current_room:,
+                           pinned_ids: @rail_pinned || Set.new, muted_ids: @rail_muted || Set.new } %>
+      <% if rail_conversations.empty? %>
+        <li role="listitem" class="messenger-inbox-empty"><%= t("messages.empty_title") %></li>
+      <% end %>
+    <% else %>
+      <li role="listitem" class="messenger-inbox-empty"><%= t("messages.empty_title") %></li>
+    <% end %>
+  </ul>
+
+  <% if Current.user&.persisted? %>
+    <div class="messenger-rail-invite"
+         data-controller="clipboard"
+         data-clipboard-success-content-value="<%= t("actions.copied") %>">
+      <input type="hidden" data-clipboard-target="source"
+             value="<%= invite_url(token: Current.user.message_invite_token) %>"
+             aria-hidden="true" tabindex="-1">
+      <button type="button" class="messenger-rail-invite-copy"
+              data-clipboard-target="button"
+              data-action="click->clipboard#copy">
+        <%= icon :user_plus, size: 16 %>
+        <span><%= t("invite.copy_link") %></span>
+      </button>
+    </div>
+  <% end %>
+</section>

@@ -1,0 +1,309 @@
+# Radio Bergen track manifest.
+#
+# Local broadcast files were retired from the source tree with brgen/public.
+# This file now carries the external/reference crate only; locally hosted audio
+# belongs in the application's persistent media/storage layer.
+#
+# Playback rights and attribution remain operator-owned metadata for the archived
+# references. Review before publishing any source that is not independently
+# cleared.
+#
+meta:
+  source_archive: anon987654321/pub2
+  restored_for: pub4
+  product: Radio Bergen
+  review_required:
+    - licensing
+    - attribution
+    - takedown_contact
+    - cache_policy
+
+external_reference:
+  policy: reference_only_until_rights_review
+  youtube:
+    - artist: J Dilla
+      title: Microphone Master
+      id: 9EGHwkDix78
+    - artist: J Dilla
+      title: In Space
+      id: vO2nWXCVt6o
+    - artist: J Dilla
+      title: Timeless
+      id: dbbfo9_7D8g
+    - artist: AFTA-1
+      title: Due Time
+      id: WC09qDzU9y4
+    - artist: Flying Lotus
+      title: Massage Situation
+      id: 6oUx6wGCekM
+    - artist: Madlib
+      title: Eye
+      id: ScVz2mntmCE
+    - artist: Slum Village
+      title: Players
+      id: KsULjOCYdnY
+    - artist: Jay Electronica
+      title: Exhibit A
+      id: H3UIHZshNQ0
+    - artist: Slum Village
+      title: La La (Instrumental)
+      id: EYJxxHQ7sX0
+    - artist: Slum Village
+      title: Get It Together
+      id: t6T-Q6HMbEo
+    - artist: Slum Village
+      title: Fantastic
+      id: a3ISYWWYgz8
+    - artist: Flying Lotus
+      title: me Yesterday//Corded
+      id: 8DgAhgmpXNA
+    - artist: Flying Lotus
+      title: Camel
+      id: fU9YRGLPDQ8
+    - artist: Flying Lotus
+      title: Golden Diva
+      id: iu4FVvR2QQs
+    - artist: Slum Village
+      title: Worlds Full of Sadness
+      id: MU3nfxsz2XA
+    - artist: A. Mochi & Takaaki Itoh
+      title: Sarria's Mind
+      id: gFKArkiz8vU
+    - artist: Samiyam
+      title: Rounded
+      id: oeaY2h_cKsg
+    - artist: Chase Swayze
+      title: Traffic
+      id: bH-30pDoQdo
+    - artist: Chase Swayze
+      title: Underrated
+      id: 1jjFk2Vp5ok
+    - artist: Flying Lotus
+      title: BTS Radio 2006
+      id: 6nWdggkulHk
+      start: 1364
+    # From the operator's radio.brgen.no visualiser pen (2026-10-31).
+    - artist: "Flying Lotus"
+      title: "Message Situation"
+      id: 9fzGGbiJags
+    - artist: "R\u00F6yksopp"
+      title: "Only This Moment (Forsiktige massage)"
+      id: vLE5XCc0XO8
+    - artist: "Jneiro Jarel"
+      title: "Chinubian"
+      id: 9OPypHXlJUQ
+    - artist: "Pete Rock"
+      title: "A Little Soul"
+      id: 4tY89H5TWPY
+    - artist: "Slum Village"
+      title: "Forth & Back (Rock Music) Instrumental"
+      id: 1XY8EHOzLbY
+    - artist: "Flying Lotus"
+      title: "Camel"
+      id: t6SXXx1Fu_4
+    - artist: "Black Loops"
+      title: "Under the Sea"
+      id: U81xh9gJeYM
+  # whyp.it, the operator's own uploads (user "how"), from the same pen. The
+  # embed needs the track id and its share token; titles carrying "Artist -
+  # Title" are split here, the rest keep the uploader as artist.
+  whyp:
+    - artist: "J Dilla"
+      title: "Players (Second Version) (Unreleased)"
+      id: "292777"
+      token: zaB8x
+    - artist: "how"
+      title: "amiga"
+      id: "292741"
+      token: 2Jh5p
+    - artist: "how"
+      title: "RADIO BERGEN #1"
+      id: "292718"
+      token: 1cr3I
+    - artist: "how"
+      title: "RAUINGAR"
+      id: "230366"
+      token: zPfQp
+    - artist: "Haisam & Johann"
+      title: "PB1"
+      id: "195489"
+      token: 3XYFb
+    - artist: "Mike T & Johann"
+      title: "Alt Kan Skje"
+      id: "183204"
+      token: 20RKB
+    - artist: "Jan Hakim & Johann"
+      title: "Stailings (a)"
+      id: "183195"
+      token: ALudQ
+    - artist: "Angelo Reira & Johann"
+      title: "Sandviken Hotell (b)"
+      id: "183193"
+      token: CTq5y
+    - artist: "Jan Hakim & Johann"
+      title: "Stailings (a)"
+      id: "183179"
+      token: LWVOl
+    - artist: "Jan Hakim & Johann"
+      title: "Stailings (b)"
+      id: "183178"
+      token: eiAIW
+    - artist: "how"
+      title: "Lofi"
+      id: "183173"
+      token: D9TSI
+    - artist: "Angelo Reira & Johann"
+      title: "Sandviken Hotell (a)"
+      id: "182727"
+      token: QAuRq
+
+curated_playlist:
+  name: "Radio Bergen — Selected Crate"
+  album: "Radio Bergen — Selected Crate"
+  source_archive: "anon987654321/pub2"
+  source_revision: "ad05242c97fff1b01450434974aad628d7de8628"
+  original_manifest: "mp3/playlist.json"
+  original_order_preserved: true
+  description: "A Radio Bergen listening crate built around James Yancey (Jay Dee / J Dilla), with music from local collaborators and the surrounding scene. Track order and original credits are preserved."
+  rights_policy: "Do not publish audio until the operator confirms distribution rights for every recording."
+  tracks:
+    - ordinal: 1
+      artist: "J Dilla"
+      title: "Players (Second Version)"
+      source_file: "j_dilla-players_second_version.mp3"
+    - ordinal: 2
+      artist: "Johann"
+      title: "Amiga"
+      source_file: "johann-amiga.mp3"
+    - ordinal: 3
+      artist: "Johann"
+      title: "Radio Bergen 1"
+      source_file: "johann-radio_bergen_1.mp3"
+    - ordinal: 4
+      artist: "Johann"
+      title: "Rauingar"
+      source_file: "johann-rauingar.mp3"
+    - ordinal: 5
+      artist: "Haisam & Johann"
+      title: "PB1"
+      source_file: "haisam_and_johann-pb1.mp3"
+    - ordinal: 6
+      artist: "Mike T & Johann"
+      title: "Alt Kan Skje"
+      source_file: "mike_t_and_johann-alt_kan_skje.mp3"
+    - ordinal: 7
+      artist: "Jan Hakim & Johann"
+      title: "Stailings A"
+      source_file: "jan_hakim_and_johann-stailings_a.mp3"
+    - ordinal: 8
+      artist: "Jan Hakim & Johann"
+      title: "Stailings B"
+      source_file: "jan_hakim_and_johann-stailings_b.mp3"
+    - ordinal: 9
+      artist: "Johann"
+      title: "Lofi"
+      source_file: "johann-lofi.mp3"
+    - ordinal: 10
+      artist: "Angelo Reira & Johann"
+      title: "Sandviken Hotell A"
+      source_file: "angelo_reira_and_johann-sandviken_hotell_a.mp3"
+    - ordinal: 11
+      artist: "Angelo Reira & Johann"
+      title: "Sandviken Hotell B"
+      source_file: "angelo_reira_and_johann-sandviken_hotell_b.mp3"
+    - ordinal: 12
+      artist: "Whyppedcream"
+      title: "Hemmelig 3"
+      source_file: "whyppedcream-hemmelig_3.mp3"
+    - ordinal: 13
+      artist: "Whyppedcream"
+      title: "Hemmelig 2"
+      source_file: "whyppedcream-hemmelig_2.mp3"
+    - ordinal: 14
+      artist: "Whyppedcream"
+      title: "Hemmelig 1"
+      source_file: "whyppedcream-hemmelig_1.mp3"
+    - ordinal: 15
+      artist: "Whyppedcream"
+      title: "Medium"
+      source_file: "whyppedcream-medium.mp3"
+    - ordinal: 16
+      artist: "Whyppedcream"
+      title: "Heavy"
+      source_file: "whyppedcream-heavy.mp3"
+    - ordinal: 17
+      artist: "Whyppedcream"
+      title: "Regular"
+      source_file: "whyppedcream-regular.mp3"
+    - ordinal: 18
+      artist: "Whyppedcream"
+      title: "Light"
+      source_file: "whyppedcream-light.mp3"
+    - ordinal: 19
+      artist: "Chase Swayze"
+      title: "Concrete Street"
+      source_file: "chase_swayze-concrete_street.mp3"
+    - ordinal: 20
+      artist: "Chase Swayze"
+      title: "Greenery"
+      source_file: "chase_swayze-greenery.mp3"
+    - ordinal: 21
+      artist: "Chase Swayze"
+      title: "Shit Is Real"
+      source_file: "chase_swayze-shit_is_real.mp3"
+    - ordinal: 22
+      artist: "Chase Swayze"
+      title: "Scott Free"
+      source_file: "chase_swayze-scott_free.mp3"
+    - ordinal: 23
+      artist: "Chase Swayze"
+      title: "Living Daylights"
+      source_file: "chase_swayze-living_daylights.mp3"
+    - ordinal: 24
+      artist: "Chase Swayze"
+      title: "Chilly"
+      source_file: "chase_swayze-chilly.mp3"
+    - ordinal: 25
+      artist: "Chase Swayze"
+      title: "Revenge"
+      source_file: "chase_swayze-revenge.mp3"
+    - ordinal: 26
+      artist: "Chase Swayze"
+      title: "Ants"
+      source_file: "chase_swayze-ants.mp3"
+    - ordinal: 27
+      artist: "Chase Swayze"
+      title: "Underated"
+      source_file: "chase_swayze-underated.mp3"
+    - ordinal: 28
+      artist: "Chase Swayze"
+      title: "Jimmy Johnson"
+      source_file: "chase_swayze-jimmy_johnson.mp3"
+    - ordinal: 29
+      artist: "Chase Swayze"
+      title: "Eleven"
+      source_file: "chase_swayze-eleven.mp3"
+    - ordinal: 30
+      artist: "Chase Swayze"
+      title: "Unobtanium"
+      source_file: "chase_swayze-unobtanium.mp3"
+    - ordinal: 31
+      artist: "Chase Swayze"
+      title: "Sardines"
+      source_file: "chase_swayze-sardines.mp3"
+    - ordinal: 32
+      artist: "Chase Swayze"
+      title: "Cinnamonsistagirl"
+      source_file: "chase_swayze-cinnamonsistagirl.mp3"
+    - ordinal: 33
+      artist: "Chase Swayze"
+      title: "Hannah"
+      source_file: "chase_swayze-hannah.mp3"
+    - ordinal: 34
+      artist: "Chase Swayze"
+      title: "I Just Wanna Fuck U"
+      source_file: "chase_swayze-ijustwannafucku.mp3"
+    - ordinal: 35
+      artist: "Chase Swayze"
+      title: "Strange"
+      source_file: "chase_swayze-strange.mp3"

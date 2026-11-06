@@ -1,0 +1,19 @@
+<% href = activity_event_href(event) %>
+<article class="activity-event">
+  <% if href.present? %>
+    <h2><%= link_to activity_event_title(event), href, class: "activity-event-link" %></h2>
+  <% else %>
+    <%= tag.h2 activity_event_title(event) %>
+  <% end %>
+  <%# Where it happened and when, as two facts spaced apart. The model class
+      name (Message, Post) used to sit between them: an English internal word
+      on every row. %>
+  <p class="activity-event-meta">
+    <%= tag.span activity_event_vertical(event) %>
+    <%= tag.time time_ago(event.created_at), datetime: event.created_at.iso8601 %>
+  </p>
+  <% if event.locality.present? %><p><%= event.locality %></p><% end %>
+  <% if href.present? %>
+    <p class="activity-event-cta"><%= link_to t("actions.open"), href, class: "button button-ghost button-small" %></p>
+  <% end %>
+</article>

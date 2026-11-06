@@ -1,0 +1,61 @@
+<% draft_key = "amber-item-#{item.to_param || 'new'}" %>
+<%= form_with(model: item, class: "form", data: { controller: "draft-store autosave", "draft-store-key-value": draft_key, **autosave_data(key: draft_key, url: draft_path(draft_key)) }) do |f| %>
+  <% commerce = item.metadata.is_a?(Hash) ? item.metadata["commerce"] : nil %>
+  <% if commerce.is_a?(Hash) && commerce["key"].present? %>
+    <%= hidden_field_tag "item[commerce_key]", commerce["key"] %>
+    <%= hidden_field_tag "item[source_url]", commerce["source_url"] %>
+    <p class="form-note commerce-handoff-note"><%= t("commerce_fit.handoff") %></p>
+  <% end %>
+  <%= render "shared/errors", object: item %>
+  <div class="field"><%= f.label :title %><%= f.text_field :title, autofocus: true %></div>
+  <div class="field">
+    <%= f.label :category %>
+    <%= f.select :category, amber_item_category_options, include_blank: t("outfits.select_blank") %>
+  </div>
+  <div class="field"><%= f.label :color %><%= f.text_field :color %></div>
+  <div class="field"><%= f.label :size %><%= f.text_field :size %></div>
+  <div class="field"><%= f.label :material %><%= f.text_field :material %></div>
+  <div class="field"><%= f.label :brand %><%= f.text_field :brand %></div>
+  <%# The label names the currency the number is in; the unit is the one
+      number_to_currency prints for this locale. %>
+  <div class="field">
+    <%= f.label :price, t("items.price_in", attribute: Item.human_attribute_name(:price),
+                                            unit: t("number.currency.format.unit")) %>
+    <%= f.number_field :price, step: "0.01", min: 0, inputmode: "decimal" %>
+  </div>
+  <div class="field"><%= f.label :purchase_date %><%= f.date_field :purchase_date %></div>
+  <div class="field">
+    <%= f.label :season %>
+    <%= f.select :season, amber_season_options, include_blank: t("outfits.select_blank") %>
+  </div>
+  <div class="field">
+    <%= f.label :occasion_tags, t("items.occasions_label") %>
+    <%= f.text_field :occasion_tags, placeholder: t("items.occasion_tags") %>
+  </div>
+  <div class="field">
+    <%= f.label :mood_effect, t("items.mood_effect") %>
+    <%= f.select :mood_effect, amber_mood_effect_options, include_blank: t("items.not_set") %>
+  </div>
+  <div class="field">
+    <%= f.label :life_phase, t("items.life_phase") %>
+    <%= f.select :life_phase, amber_life_phase_options, include_blank: t("items.not_set") %>
+  </div>
+  <div class="field media-picker" data-controller="media-picker direct-upload" data-action="dragover->media-picker#dragover dragleave->media-picker#dragleave drop->media-picker#drop">
+    <%= f.label :photos %>
+    <%= f.file_field :photos, multiple: true, accept: "image/*", direct_upload: true, data: { media_picker_target: "input", action: "change->media-picker#pick" } %>
+    <button type="button" class="button button-ghost" data-action="click->media-picker#trigger"><%= t("items.choose_or_drop") %></button>
+    <%# The gallery picker stays; this asks a phone for its rear camera instead.
+        No name: media-picker adds each photo to the gallery input, which uploads. %>
+    <input type="file" id="item_photo_camera" accept="image/*" capture="environment" hidden
+           data-media-picker-target="camera" data-action="change->media-picker#capture">
+    <%= tag.button t("items.take_photo"), type: "button", class: "button button-ghost",
+                                          data: { action: "click->media-picker#takePhoto" } %>
+    <div class="media-picker-preview" data-media-picker-target="preview"></div>
+    <p><%= t("items.photo_processing_html") %></p>
+  </div>
+  <div class="actions">
+    <%= f.submit t("items.save"), class: "button" %>
+    <%= link_to t("actions.cancel"), items_path %>
+    <span data-autosave-target="status" aria-live="polite"></span>
+  </div>
+<% end %>

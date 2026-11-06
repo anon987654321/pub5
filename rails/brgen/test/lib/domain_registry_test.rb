@@ -1,0 +1,175 @@
+# frozen_string_literal: true
+
+require "test_helper"
+require "brgen/domain_registry"
+require "brgen/locale_bridge"
+require "brgen/city_content"
+
+class DomainRegistryTest < ActiveSupport::TestCase
+  test "network readiness separates live, pending and not-yet-live domains" do
+    assert_equal %w[brgen.no cardff.uk edinbrgh.uk frankfrt.de oshlo.no stvanger.no trndheim.no],
+                 Brgen::DomainRegistry.live_network_domains.sort
+    assert_equal %w[denvr.us lndon.uk lsangeles.com wshingtondc.com],
+                 Brgen::DomainRegistry.pending_network_domains.sort
+    assert_equal Brgen::DomainRegistry.live_network_domains.sort,
+                 Brgen::DomainRegistry.live_network_entries.map(&:domain).sort
+    assert_equal Brgen::DomainRegistry.pending_network_domains.sort,
+                 Brgen::DomainRegistry.pending_network_entries.map(&:domain).sort
+    assert_equal (Brgen::DomainRegistry::ENTRIES.map(&:domain) - Brgen::DomainRegistry::LIVE_DOMAINS).sort,
+                 Brgen::DomainRegistry.not_yet_live_domains.sort
+  end
+
+  test "nordic readiness helper uses country identity rather than locale aliases" do
+    %w[brgen.no oshlo.no reykjavk.is kbenhvn.dk gtebrg.se hlsinki.fi].each do |domain|
+      assert Brgen::DomainRegistry.nordic?(domain), "#{domain} should be Nordic"
+    end
+    %w[cardff.uk frankfrt.de lsangeles.com].each do |domain|
+      refute Brgen::DomainRegistry.nordic?(domain), "#{domain} should not be Nordic"
+    end
+    refute Brgen::DomainRegistry.nordic?("missing.example")
+  end
+
+  test "resolves brgen.no to bergen with norwegian locale" do
+    result = Brgen::DomainRegistry.resolve("brgen.no")
+
+    assert_equal "Bergen", result.entry.city
+    assert_equal :nb, result.entry.locale
+    assert_nil result.subapp
+  end
+
+  test "resolves amstrdam.nl marketplace subdomain" do
+    result = Brgen::DomainRegistry.resolve("marktplaats.amstrdam.nl")
+
+    assert_equal "amstrdam.nl", result.entry.domain
+    assert_equal :marketplace, result.subapp
+  end
+
+  test "resolves kbenhvn.dk markedsplads marketplace subdomain" do
+    result = Brgen::DomainRegistry.resolve("markedsplads.kbenhvn.dk")
+
+    assert_equal "kbenhvn.dk", result.entry.domain
+    assert_equal :marketplace, result.subapp
+    assert_equal "markedsplads", result.entry.marketplace_subdomain
+  end
+
+  test "resolves lsangeles.com to los angeles" do
+    result = Brgen::DomainRegistry.resolve("www.lsangeles.com")
+
+    assert_equal "Los Angeles", result.entry.city
+    assert_equal :"en-US", result.entry.locale
+    assert_nil result.subapp
+  end
+
+  test "dating.lsangeles.com is the dating subapp on the LA apex" do
+    result = Brgen::DomainRegistry.resolve("dating.lsangeles.com")
+
+    assert_equal "lsangeles.com", result.entry.domain
+    assert_equal :dating, result.subapp
+  end
+
+  test "marketplace.lsangeles.com and markedsplass.brgen.no are the same vertical" do
+    la = Brgen::DomainRegistry.resolve("marketplace.lsangeles.com")
+    bergen = Brgen::DomainRegistry.resolve("markedsplass.brgen.no")
+
+    assert_equal :marketplace, la.subapp
+    assert_equal :marketplace, bergen.subapp
+    assert_equal "marketplace", la.entry.marketplace_subdomain
+    assert_equal "markedsplass", bergen.entry.marketplace_subdomain
+  end
+
+  test "every city apex carries the same subapps" do
+    Brgen::DomainRegistry::ENTRIES.each do |entry|
+      apex = Brgen::DomainRegistry.resolve(entry.domain)
+      assert_nil apex.subapp, "#{entry.domain} should be the feed, not a vertical"
+
+      dating = Brgen::DomainRegistry.resolve("dating.#{entry.domain}")
+      assert_equal :dating, dating.subapp
+      assert_equal entry.domain, dating.entry.domain
+
+      market = Brgen::DomainRegistry.resolve("#{entry.marketplace_subdomain}.#{entry.domain}")
+      assert_equal :marketplace, market.subapp
+      assert_equal entry.domain, market.entry.domain
+    end
+  end
+
+  test "subdomain constants match routes constraints" do
+    assert_equal %w[tv], Brgen::DomainRegistry::TV_SUBDOMAINS
+    assert_equal %w[dating], Brgen::DomainRegistry::DATING_SUBDOMAINS
+    assert_equal %w[radio], Brgen::DomainRegistry::RADIO_SUBDOMAINS
+    assert_includes Brgen::DomainRegistry::MARKETPLACE_SUBDOMAINS, "markedsplass"
+  end
+
+  test "subreddits for bergen include r/bergen" do
+    subs = Brgen::DomainRegistry.subreddits_for("brgen.no")
+
+    assert_includes subs, "bergen"
+  end
+
+  test "host normalization is idempotent across ports, www and trailing dots" do
+    Brgen::DomainRegistry::ENTRIES.each do |entry|
+      [
+        entry.domain,
+        "www.#{entry.domain}",
+        "#{entry.domain}:443",
+        "www.#{entry.domain}:8443",
+        "#{entry.domain}."
+      ].each do |host|
+        normalized = Brgen::DomainRegistry.normalize_host(host)
+        assert_equal normalized, Brgen::DomainRegistry.normalize_host(normalized),
+                     "#{host.inspect} normalization is not idempotent"
+        assert_equal entry.domain, Brgen::DomainRegistry.resolve(host).entry.domain
+      end
+    end
+  end
+
+  test "malformed host authorities fail closed" do
+    [
+      "brgen.no:evil",
+      "brgen.no:",
+      "brgen.no:0",
+      "brgen.no:65536",
+      "brgen.no:443:evil",
+      "brgen.no/path",
+      "brgen.no\nforged.invalid",
+      "brgen.no@forged.invalid",
+      "brgen.no..",
+      "bad_host.brgen.no",
+      "-bad.brgen.no",
+      "bad-.brgen.no"
+    ].each do |host|
+      assert_equal "", Brgen::DomainRegistry.normalize_host(host), "#{host.inspect} should not normalize to a registered hostname"
+      assert_raises(Brgen::DomainRegistry::UnknownHost) { Brgen::DomainRegistry.resolve(host) }
+    end
+  end
+
+  test "declared subapps round-trip through every city apex" do
+    aliases = Brgen::DomainRegistry::SUBAPP_ALIASES
+    Brgen::DomainRegistry::ENTRIES.each do |entry|
+      aliases.each do |subdomain, expected|
+        result = Brgen::DomainRegistry.resolve("#{subdomain}.#{entry.domain}")
+        assert_equal expected, result.subapp
+        assert_equal entry.domain, result.entry.domain
+      end
+    end
+  end
+
+  test "unknown subdomains fail closed instead of becoming arbitrary modules" do
+    Brgen::DomainRegistry::ENTRIES.first(8).each do |entry|
+      error = assert_raises(Brgen::DomainRegistry::UnknownSubdomain) do
+        Brgen::DomainRegistry.resolve("not-a-real-vertical.#{entry.domain}")
+      end
+      assert_equal "not-a-real-vertical", error.message
+    end
+  end
+
+  # Was :nl. nl.yml held five keys against en.yml's 1579 and was deleted on
+  # 2026-08-25, so amstrdam.nl, rottrdam.nl and utrcht.nl now get English rather
+  # than five Dutch words on an English page. See Brgen::LocaleBridge.
+  test "locale bridge maps dutch registry locale to en now that nl does not ship" do
+    assert_equal :en, Brgen::LocaleBridge.resolve(:nl)
+  end
+
+  test "locale bridge maps en-US to en" do
+    assert_equal :en, Brgen::LocaleBridge.resolve(:"en-US")
+  end
+end

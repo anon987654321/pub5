@@ -1,0 +1,162 @@
+<% content_for :title, t("post.new") %>
+
+<div class="page-header"><%= tag.h1 t("post.new") %></div>
+
+<div class="form-wrap">
+  <% draft_key = "brgen-post-#{@community&.to_param || 'global'}-new" %>
+  <%= form_with(model: [@community, @post].compact,
+                data: {
+                  controller: "draft-store autosave form-submit post-progressive",
+                  "draft-store-key-value": draft_key,
+                  **autosave_data(key: draft_key, url: draft_path(draft_key))
+                }) do |f| %>
+    <%= render "shared/errors", object: @post %>
+
+    <nav class="post-progressive-nav" aria-label="<%= t("post.new_steps") %>">
+      <span class="post-progressive-indicator is-active" data-post-progressive-target="indicator">
+        <%= t("post.new_step_media") %>
+      </span>
+      <span class="post-progressive-indicator" data-post-progressive-target="indicator">
+        <%= t("post.new_step_text") %>
+      </span>
+    </nav>
+
+    <p class="post-publishing" data-post-progressive-target="publishing"
+       role="status" aria-live="polite" hidden>
+      <%= t("post.new_publishing") %>
+    </p>
+
+    <section class="post-progressive-step" data-post-progressive-target="step"
+             aria-labelledby="post-media-heading">
+      <h2 id="post-media-heading" tabindex="-1" data-post-progressive-heading>
+        <%= t("post.new_media_heading") %>
+      </h2>
+      <p class="form-help">
+        <%= t("post.new_media_hint") %>
+      </p>
+
+      <div class="field post-photo-entry" data-controller="media-picker direct-upload">
+        <%= f.file_field :images,
+              multiple: true,
+              accept: "image/*",
+              capture: "environment",
+              direct_upload: true,
+              class: "media-input-hidden",
+              aria: { label: t("posts.add_photo") },
+              data: { media_picker_target: "input", post_progressive_target: "mediaInput",
+                      action: "change->media-picker#pick" } %>
+        <button type="button" class="post-photo-camera media-button"
+                data-action="click->media-picker#trigger">
+          <%= icon :camera, size: 28 %>
+          <strong><%= t("posts.add_photo") %></strong>
+          <small><%= t("post.new_media_camera_hint") %></small>
+        </button>
+        <div class="post-media-secondary">
+          <label class="post-media-choice">
+            <%= icon :video, size: 22 %>
+            <span>
+              <strong><%= t("compose.record_video") %></strong>
+              <small><%= t("post.new_video_hint") %></small>
+            </span>
+            <%= f.file_field :video,
+                  accept: "video/*",
+                  capture: "environment",
+                  direct_upload: true,
+                  class: "visually-hidden",
+                  aria: { label: t("compose.record_video") },
+                  data: { post_progressive_target: "mediaInput" } %>
+          </label>
+          <label class="post-media-choice">
+            <%= icon :mic, size: 22 %>
+            <span>
+              <strong><%= t("compose.record_audio") %></strong>
+              <small><%= t("post.new_audio_hint") %></small>
+            </span>
+            <%= f.file_field :audio,
+                  accept: "audio/*",
+                  direct_upload: true,
+                  class: "visually-hidden",
+                  aria: { label: t("compose.record_audio") },
+                  data: { post_progressive_target: "mediaInput" } %>
+          </label>
+        </div>
+        <div class="media-preview" data-media-picker-target="preview" aria-live="polite"></div>
+        <%= render "shared/preset_strip", f: f, hidden: true, picker_target: true %>
+      </div>
+
+      <div class="post-progressive-actions">
+        <button type="button" class="button button-primary"
+                data-action="click->post-progressive#next">
+          <%= t("post.new_continue") %>
+        </button>
+        <button type="button" class="button button-ghost"
+                data-action="click->post-progressive#skipMedia">
+          <%= t("post.new_text_only") %>
+        </button>
+      </div>
+    </section>
+
+    <section class="post-progressive-step" data-post-progressive-target="step"
+             aria-labelledby="post-content-heading">
+      <h2 id="post-content-heading" tabindex="-1" data-post-progressive-heading>
+        <%= t("post.new_write_heading") %>
+      </h2>
+
+      <div class="field">
+        <%= f.label :community_id, t("posts.community_label") %>
+        <%= f.collection_select :community_id, @postable_communities, :id, :name,
+              { include_blank: t("posts.anywhere_in", city: Current.city_name) } %>
+      </div>
+      <% if @neighborhoods.present? %>
+        <div class="field">
+          <%= f.label :neighborhood_id, t("home.neighborhood_filter") %>
+          <%= f.collection_select :neighborhood_id, @neighborhoods, :id, :name, { include_blank: t("home.citywide_option") } %>
+        </div>
+      <% end %>
+
+      <div class="field">
+        <%= f.label :title, t("posts.title_label") %>
+        <%= f.text_field :title, required: true %>
+      </div>
+
+      <div class="field" data-controller="tiptap-editor">
+        <%= f.label :content, t("posts.body_label") %>
+        <div class="compose-surface" data-controller="character-counter link-preview"
+             data-character-counter-countdown-value="true">
+          <%= f.text_area :content, rows: 5, class: "compose-input",
+                maxlength: @content_maxlength,
+                data: { character_counter_target: "input", tiptap_editor_target: "field",
+                        action: "input->link-preview#scan" } %>
+          <%= tag.output data: { link_preview_target: "preview" },
+                         aria: { live: "polite", label: t("link_preview.label") } %>
+          <div class="tiptap_mount tiptap_mount--post"
+               data-tiptap-editor-target="mount" hidden></div>
+          <%= render "shared/tiptap_toolbar" %>
+          <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <% if authenticated? %>
+        <div class="field field--check">
+          <%= f.check_box :anonymous %>
+          <%= f.label :anonymous, t("posts.post_anonymously") %>
+        </div>
+      <% else %>
+        <p class="mb-12"><%= t("post.posting_as_anon") %> <strong><%= t("post.anon_name") %></strong>.
+          <%= link_to t("nav.sign_in"), new_session_path %><%= t("post.guest_sign_in") %></p>
+      <% end %>
+
+      <div class="post-progressive-actions">
+        <button type="button" class="button button-ghost"
+                data-action="click->post-progressive#back">
+          <%= t("actions.back") %>
+        </button>
+        <%= f.submit t("post.submit"), class: "button button-primary" %>
+      </div>
+      <div class="field">
+        <%= link_to t("actions.cancel"), posts_path, class: "button button-ghost" %>
+        <span data-autosave-target="status" aria-live="polite"></span>
+      </div>
+    </section>
+  <% end %>
+</div>

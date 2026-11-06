@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>500 — Mr. Damascy</title>
+    <!-- Static, so it cannot load the app's stylesheet: the tokens it uses
+         are copied from _tokens.scss (test/controllers/error_pages_test.rb
+         keeps them equal). Flat: no shadow, radii from the token scale. -->
+    <style>
+      :root {
+        --bg-page: #e4f6ee;
+        --paper: #ffffff;
+        --ink: #2e3033;
+        --ink-soft: #6c7076;
+        --mint-700: #276b55;
+        --pom: #c94f4f;
+        --radius: 16px;
+        --radius-small: 12px;
+        --text-display: clamp(40px, 6vw, 88px);
+        --font: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;
+      }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--bg-page);
+             font-family: var(--font); color: var(--ink); }
+      main { background: var(--paper); border-radius: var(--radius); padding: 48px 32px; max-width: 420px;
+             margin: 24px; text-align: center; }
+      h1 { font-size: var(--text-display); margin: 0 0 8px; }
+      .star { color: var(--pom); }
+      p { color: var(--ink-soft); line-height: 1.5; }
+      a { display: inline-block; margin-top: 16px; background: var(--mint-700); color: var(--paper);
+          text-decoration: none; padding: 12px 24px; border-radius: var(--radius-small); font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="star" aria-hidden="true">✳</div>
+      <h1>500</h1>
+      <p>Noe brant i kjøkkenet. Kokerne jobber med saken — prøv igjen om et lite øyeblikk.</p>
+      <a href="/">Til menyen</a>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+/* Legal pages and footer typography.
+ *
+ * Reading copy uses the shared 66ch measure and canonical type/leading tokens.
+ * Chrome links keep the shared --tap-min interaction floor without changing
+ * their visible line box.
+ */
+
+/* The link's own box is the hit box: padding grows it to --tap-min and an
+   equal negative margin hands the space back, so the line box and the gap
+   between links stay where they were. An ::after overlay is not enough: the
+   box a finger is measured against is the element's own, not its pseudo's.
+   City links carry their own --tap-min box and stay out of it. */
+.site-legal nav a:not(.city-network-item),
+.site-legal .site-footer-col a:not(.city-network-item),
+.site-legal .site-footer-build a {
+  display: inline-block;
+  min-inline-size: var(--tap-min);
+  padding-block: max(0px, (var(--tap-min) - 1lh) / 2);
+  margin-block: min(0px, (1lh - var(--tap-min)) / 2);
+}
+
+.site-legal .site-verify {
+  flex-basis: 100%;
+  font-size: var(--text-extra-small);
+  color: var(--text);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.site-legal .site-verify strong {
+  font-weight: 700;
+}
+
+ .legal-prose {
+  max-inline-size: var(--measure);
+  margin-inline: auto;
+  padding-block: var(--space-8) var(--space-16);
+  padding-inline: var(--page-gutter);
+}
+
+ .legal-prose h1 {
+  margin: 0;
+  font-size: var(--text-extra-extra-large);
+  line-height: var(--leading-tight);
+  margin-block-end: var(--space-2);
+  text-wrap: balance;
+}
+
+.legal-prose .legal-updated {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-small);
+  line-height: var(--leading-snug);
+  margin: 0 0 var(--space-6);
+}
+
+ .legal-prose h2 {
+  font-size: var(--text-title);
+  line-height: var(--leading-tight);
+  margin-block: var(--space-6) var(--space-2);
+  text-wrap: balance;
+}
+
+ .legal-prose p,
+.legal-prose li {
+  max-inline-size: var(--measure);
+  line-height: var(--leading-loose);
+  text-wrap: pretty;
+  hyphens: auto;
+  hanging-punctuation: first allow-end last;
+}
+
+.legal-prose ul {
+  /* logical, not padding-left: the same 1.1rem in LTR and the correct side
+     under [dir="rtl"], which _minimal.scss supports. */
+  padding-inline-start: 1.1rem;
+}
+
+.legal-prose nav {
+  display: flex;
+  gap: var(--space-4);
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-small);
+}
+
+/* dating is a swipe surface with no room for a legal band. It kept this rule
+   when the block was inline; it keeps it here. */
+body.vertical-dating .site-legal {
+  display: none;
+}
