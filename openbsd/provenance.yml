@@ -1,0 +1,37 @@
+schema: 1
+repository: anon987654321/pub4
+source_commit: 94cc874ad6224bb81da6249059738c5734d168f9
+preserved_sources:
+  - path: openbsd/production/pf.conf
+    source_path: OPENBSD/etc/pf.conf
+    source_blob: 473e37aa4519e8ea2f5e0b852308e1fab79572dd
+  - path: openbsd/production/pf.stage1.conf
+    source_path: OPENBSD/etc/pf.stage1.conf
+    source_blob: 99a14fbd98552a9fe9228710316d5acb3b7fedd9
+  - path: openbsd/production/relayd.conf
+    source_path: OPENBSD/etc/relayd.conf
+    source_blob: a80d591b1a012d0a97cb8af4bbaf51fa24afabac
+  - path: openbsd/production/httpd.conf
+    source_path: OPENBSD/etc/httpd.conf
+    source_blob: 50b10d805e57e5ab645ea7a2924fef18903f2e90
+  - path: openbsd/production/rc.d/master
+    source_path: OPENBSD/etc/rc.d/master
+    source_blob: aef1b96c798ab963776bb15f151bdf9917870897
+  - path: openbsd/production/rc.d/brgen
+    source_path: OPENBSD/etc/rc.d/brgen
+    source_blob: b613a72dc1243748272661daf0532ff5bea3cdb9
+  - path: openbsd/production/rc.d/amber
+    source_path: OPENBSD/etc/rc.d/amber
+    source_blob: c434fcca21eee8ed20870283b95214d954a61c59
+  - path: openbsd/production/rc.d/bsdports
+    source_path: OPENBSD/etc/rc.d/bsdports
+    source_blob: ff325a980aa19d93ab27f8acbdb32514d5668917
+  - path: openbsd/production/rc.d/mrdamascy
+    source_path: OPENBSD/etc/rc.d/mrdamascy
+    source_blob: 89526997b540c0555c0dfa1247b945aa181900b7
+  - path: openbsd/production/rc.conf.local
+    source_path: OPENBSD/etc/rc.conf.local
+    source_blob: 03b8dc164520a516ddc86af96b91600743f759f5
+  - path: registry/commands.yml
+    source_path: OPENBSD/data/operator.yml
+    source_blob: 0c6e4013bab29fda4c8d94e880f4c195c32e949c

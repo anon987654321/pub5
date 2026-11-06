@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+require_relative "../lib/rehearsal"
+root = File.expand_path("../..", __dir__)
+rehearsal = OpenBSD::Rehearsal.new(root: root)
+results = rehearsal.verify_sources
+results.each { |row| puts "#{row.status} #{row.path}: #{row.detail}" }
+live, missing = rehearsal.live_status
+puts "host0: #{live} live vm23 evidence"
+puts "missing0: #{missing.join(", ")}" unless missing.empty?
+exit(results.any? { |row| row.status == "FAIL" } ? 1 : 0)
