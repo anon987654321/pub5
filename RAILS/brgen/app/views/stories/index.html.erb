@@ -1,0 +1,44 @@
+<% content_for :title, t("stories.title") %>
+<%# Out of the index: stories are gone in a day. %>
+<% content_for :head, robots_meta(index: false) %>
+
+<div class="page-header">
+  <%= tag.h1 t("stories.title") %>
+  <% if authenticated? %>
+    <%= link_to t("stories.new"), new_story_path, class: "button button-small" %>
+  <% end %>
+</div>
+
+<% if @rings.any? %>
+  <%# A story surface is a list of people, not a list of photos — one ring per
+      author, newest first, people you follow before everyone else. %>
+  <ul class="story-rings" role="list">
+    <% @rings.each do |stories| %>
+      <% newest = stories.first %>
+      <% seen = @seen_story_ids.include?(newest.id) %>
+      <% streak = @streak_days&.dig(newest.user_id).to_i %>
+      <li class="story-ring<%= " story-ring--seen" if seen %>">
+        <%= link_to story_path(newest), aria: { label: story_ring_label(stories, streak:, seen:) } do %>
+          <% if newest.media.attached? && newest.media.image? %>
+            <%= image_tag newest.media_variant(:media, :thumb), alt: "", width: 240, height: 320 %>
+          <% end %>
+          <span class="story-ring-name"><%= newest.user.display_name %></span>
+          <% if stories.size > 1 %>
+            <span class="story-ring-count"><%= stories.size %></span>
+          <% end %>
+          <%# Days running the two of you have answered each other's stories.
+              Mutual, so it appears only on a ring there is a back-and-forth
+              with. %>
+          <% if streak.positive? %>
+            <span class="story-ring-streak"><%= t("stories.streak", count: streak) %></span>
+          <% end %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <%= render "shared/empty_state",
+        title: t("stories.empty_title"),
+        body: t("stories.empty_body"),
+        action: (authenticated? ? { label: t("stories.new"), path: new_story_path } : nil) %>
+<% end %>

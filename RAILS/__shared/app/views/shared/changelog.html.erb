@@ -1,0 +1,21 @@
+<%
+  entries = @changelog.fetch("entries")
+%>
+<main class="page" id="main-content">
+  <header class="page-header">
+    <h1 class="page-title"><%= t("changelog.title") %></h1>
+    <p class="page-intro"><%= t("changelog.intro") %></p>
+  </header>
+
+  <% entries.each do |entry| %>
+    <article class="changelog-entry">
+      <p class="meta"><%= entry.fetch("date") %></p>
+      <h2><%= entry.fetch("title") %></h2>
+      <ul>
+        <% entry.fetch("items").each do |item| %>
+          <li><%= item %></li>
+        <% end %>
+      </ul>
+    </article>
+  <% end %>
+</main>

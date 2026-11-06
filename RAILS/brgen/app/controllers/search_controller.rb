@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+class SearchController < ApplicationController
+  include Shared::LiveSearchable
+
+  # The search palette opens over every brgen page, ahead of <main>, and every
+  # index page streams its own results into #live_search_results. The palette
+  # names its slots apart and says so in the query, so its stream finds them.
+  PALETTE = "palette"
+  PALETTE_RESULTS = "search_palette_results"
+  PALETTE_SUGGESTIONS = "search_palette_suggestions"
+
+  allow_unauthenticated_access only: :index
+
+  # Open to guests, and every request runs LIKE scans across eight tables; the
+  # palette sends one per keystroke, so a script could hold the database on it.
+  SEARCHES_PER_MINUTE = 120
+  rate_limit to: SEARCHES_PER_MINUTE, within: 1.minute, only: :index, name: "search"
+
+  def index
+    @query = live_search_query
+    # A committed search only: a full-page /search?q= visit is someone who
+    # pressed enter on a real query. The palette's keystroke streams arrive as
+    # turbo_stream and record nothing — those are suggestions being tried, not
+    # a search having happened. Guests are skipped inside record!; their rows
+    # would only give the prune job something to clean up.
+    SearchRecent.record!(Current.user, @query) if request.format.html?
+    @results = {}
+    return if @query.blank?
+
+    @results[:people] = people_results
+    @results[:posts] = apply_live_search(Post.kept.visible_to(Current.user), columns: %w[title content], vertical: "feed")
+    # The two core social verticals beside the feed. The same scopes their own
+    # index pages list: what has not finished yet, and no private community the
+    # reader is outside. Not .popular: its GROUP BY makes a count a hash.
+    @results[:events] = apply_live_search(Event.upcoming, columns: %w[title description venue_name], vertical: "events")
+    @results[:communities] = apply_live_search(Community.active.visible_to(Current.user), columns: %w[name description],
+                                               vertical: "communities")
+    @results[:listings] = apply_live_search(
+      Marketplace::Listing.publicly_visible.includes(:category),
+      columns: %w[title description location],
+      vertical: "marketplace"
+    )
+    @results[:channels] = apply_live_search(Tv::Channel.publicly_visible, columns: %w[name description], vertical: "tv")
+    @results[:videos] = apply_live_search(Tv::Video.publicly_visible, columns: %w[title description], vertical: "tv")
+    @results[:sets] = apply_live_search(Playlist::Set.publicly_listed, columns: %w[name description], vertical: "playlist")
+    @results[:restaurants] = apply_live_search(Takeaway::Restaurant.indexable, columns: %w[name city cuisine_type], vertical: "takeaway")
+    @results[:places] = apply_live_search(Place.all, columns: %w[name kind], vertical: "maps")
+
+    # html/turbo_stream declare themselves but render nothing here, so the
+    # fallthrough below handles them. Without them respond_to knows only json,
+    # and a plain browser navigation to /search?q=... raises UnknownFormat —
+    # every visitor who typed a query and pressed enter got a 406.
+    respond_to do |format|
+      format.json do
+        render json: {
+          query: @query,
+          suggestions: search_suggestions,
+          results: @results.transform_values { |scope| scope.limit(8).map { |record| { id: record.id, type: record.class.name, label: global_search_label(record) } } }
+        }
+      end
+      format.html { }
+      format.turbo_stream { }
+    end
+    return if performed?
+
+    if params[:surface] == PALETTE
+      finish_live_search(partial: "search/live_search_results", target: PALETTE_RESULTS, suggestions: PALETTE_SUGGESTIONS)
+    else
+      finish_live_search(partial: "search/live_search_results")
+    end
+  end
+
+  # Every committed search is stored for the palette, so the reader can also
+  # take them all back. Signed-in only: allow_unauthenticated_access covers
+  # index alone.
+  def clear_recent
+    SearchRecent.clear_for(Current.user)
+    redirect_back fallback_location: root_path, notice: t("flash.recent_searches_cleared")
+  end
+
+  private
+
+  # A block holds in search: neither side of one is offered to the other.
+  def people_results
+    people = User.public_profiles.where(bot: false)
+    people = people.unblocked_with(Current.user) if Current.user
+    apply_live_search(people, columns: %w[username display_name], vertical: "people")
+  end
+
+  def global_search_label(record)
+    case record
+    when Post then record.title
+    when Marketplace::Listing then record.title
+    when Tv::Channel then record.name
+    when Tv::Video then record.title
+    when Playlist::Set then record.name
+    when Takeaway::Restaurant then record.name
+    when Place then record.name
+    else record.try(:title) || record.try(:name) || record.id.to_s
+    end
+  end
+end

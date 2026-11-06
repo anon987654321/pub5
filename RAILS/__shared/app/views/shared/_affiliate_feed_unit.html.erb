@@ -1,0 +1,88 @@
+<% brgen_surface = local_assigns[:surface].to_s == "brgen" %>
+<%# brgen's frontpage band is the operator's collage (pen YzLNyNV): six deals
+    packed tight, three call-to-action lines over them, a drift on arrival and
+    the pointer parallax. Each band in the feed takes the next six of one
+    memoised read, so the bands down a page differ. Amber keeps the catalogue. %>
+<% band = local_assigns[:band].to_i %>
+<% deals = affiliate_deals_for(category: local_assigns[:category], limit: brgen_surface ? 24 : 8) %>
+<% visible_deals = deals.select { |deal| affiliate_product_content_allowed?(deal) || deal.respond_to?(:source) && deal.source.to_s == "amazon" } %>
+<% visible_deals = visible_deals.rotate(band * 6).first(6) if brgen_surface %>
+<% route = "#{params[:controller]}##{params[:action]}" %>
+<% click_epi = Shared::LinkConverter.request_epi(route: route) %>
+<% if visible_deals.any? %>
+  <% unit_classes = ["affiliate_feed_unit",
+                     ("affiliate_feed_unit--brgen affiliate_feed_unit--collage" if brgen_surface),
+                     ("affiliate_feed_unit--in_grid" if local_assigns[:in_grid])].compact.join(" ") %>
+  <%# A feed with several bands passes each one the post it follows, so every
+      landmark gets its own name; a lone band keeps the plain one. %>
+  <% unit_label = if local_assigns[:position]
+                    t("affiliate.feed_unit_label_after", position: local_assigns[:position])
+                  else
+                    t("affiliate.feed_unit_label")
+                  end %>
+  <aside class="<%= unit_classes %>"
+         aria-label="<%= unit_label %>"
+         data-controller="parallax-tilt"
+         data-parallax-tilt-drift-value="<%= brgen_surface %>"
+         data-action="pointermove->parallax-tilt#move pointerleave->parallax-tilt#leave">
+    <header class="affiliate_feed_header">
+      <hgroup>
+        <p class="affiliate_feed_label"><%= t("affiliate.sponsored") %></p>
+        <h2><%= t("affiliate.deals_title") %></h2>
+      </hgroup>
+    </header>
+
+    <div class="affiliate_feed_grid">
+      <% if brgen_surface %>
+        <%# The pen's three lines, laid over the collage; words, not links, so
+            each deal stays one plain paid link. %>
+        <% %w[buy_now be_happy feel_good].each_with_index do |line, slot| %>
+          <%= tag.span t("affiliate.cta.#{line}"), class: "affiliate_feed_cta affiliate_feed_cta--#{slot + 1}",
+                       aria: { hidden: true } %>
+        <% end %>
+      <% end %>
+      <% visible_deals.each_with_index do |deal, index| %>
+        <% affiliate_depths = [0.06, 0.10, 0.14, 0.04, 0.12, 0.08, 0.15, 0.05] %>
+        <% amazon = deal.respond_to?(:source) && deal.source.to_s == "amazon" %>
+        <% amazon_content = affiliate_product_content_allowed?(deal) %>
+        <a class="affiliate_feed_tile<%= " affiliate_feed_tile--amazon" if amazon && !amazon_content %>"
+           href="<%= deal.click_url %>"
+           target="_blank"
+           rel="noopener sponsored"
+           data-controller="outbound-click"
+           data-action="click->outbound-click#record"
+           data-outbound-click-url-value="<%= deal.click_url %>"
+           data-outbound-click-merchant-value="<%= affiliate_program_label(deal) %>"
+           data-outbound-click-surface-value="<%= local_assigns[:surface].presence || "affiliate_feed" %>"
+           data-outbound-click-epi-value="<%= click_epi %>"
+           data-parallax-tilt-target="tile"
+           data-parallax-tilt-depth="<%= affiliate_depths[index % affiliate_depths.length] %>">
+          <% if amazon && !amazon_content %>
+            <span class="affiliate_feed_amazon_mark"><%= t("affiliate.amazon_label") %></span>
+            <span class="affiliate_feed_title"><%= t("affiliate.amazon_shop") %></span>
+            <span class="affiliate_feed_link_disclosure"><%= t("affiliate.paid_link") %></span>
+          <% else %>
+            <% if deal.image_url.present? %>
+              <span class="affiliate_feed_media">
+                <img loading="lazy" decoding="async"
+                     alt="<%= deal.title.presence || t("affiliate.deal_alt") %>"
+                     src="<%= deal.image_url %>">
+              </span>
+            <% end %>
+            <span class="affiliate_feed_source"><%= affiliate_program_label(deal) %></span>
+            <span class="affiliate_feed_title"><%= deal.title %></span>
+            <% if deal.price.present? %>
+              <span class="affiliate_feed_price"><%= deal.currency %> <%= deal.price %></span>
+            <% end %>
+            <span class="affiliate_feed_link_disclosure"><%= t("affiliate.paid_link") %></span>
+            <% if deal.placeholder %>
+              <span class="affiliate_feed_placeholder"><%= t("affiliate.placeholder_notice") %></span>
+            <% end %>
+          <% end %>
+        </a>
+      <% end %>
+    </div>
+
+    <%= render "shared/affiliate_disclosure" %>
+  </aside>
+<% end %>

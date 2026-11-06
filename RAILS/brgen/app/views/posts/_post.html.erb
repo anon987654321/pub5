@@ -1,0 +1,185 @@
+<%# target: _top so a tap on the title leaves the page. Without it, Turbo
+    loads posts#show into this frame — the show template has no matching
+    id, and the card becomes "Content missing". Vote still replaces the
+    frame via turbo_stream; only <a> navigation is affected. %>
+<%# Press and hold the card to open its "more" menu (long_press_controller).
+    Literal markup rather than turbo_frame_tag's data hash, so the gesture
+    census in keyboard_reachable_controls_test can read the bound move. %>
+<%# The author, for a post that names one, so the front page can keep a
+    blocked person's live card out of its new-posts chip. %>
+<%# A staged card (staged: true, rendered into #feed-pending) also says its
+    neighbourhood and whether it has media, so feed_updates_controller counts
+    only what the reader's neighbourhood filter or media wall would show. %>
+<turbo-frame id="<%= dom_id(post) %>" target="_top" data-controller="long-press"
+             <% if post.attributed? %>data-author-id="<%= post.user_id %>"<% end %>
+             <% if local_assigns[:staged] %>data-neighborhood-id="<%= post.neighborhood_id %>"
+             data-media="<%= post.image.attached? || post.images.attached? || post.video.attached? %>"<% end %>
+             data-action="pointerdown->long-press#start pointermove->long-press#move pointerup->long-press#cancel
+                          pointercancel->long-press#cancel contextmenu->long-press#context
+                          click->long-press#swallow:capture">
+<%# The viewer's vote/repost state and image-loading priority affect
+    rendered attributes, so they all belong in the fragment cache key. Only the
+    first feed card gets eager/high-priority image loading; later cards stay lazy. %>
+  <%# reposted_by? is user-specific output inside a shared fragment, so it has to
+      be in the key or one viewer's repost state renders for everyone. Computed
+      once here and passed down rather than called three times per card. %>
+  <% reposted = post.reposted_by?(Current.user) %>
+  <% quote = post.quote_comment_by(Current.user) %>
+  <%# The labels inside are translated, so the locale is in the key: without it
+      the first visitor's language was served to every later one. %>
+  <% priority = local_assigns[:priority] == true %>
+  <%# Whether anyone is reading is in the key as well as their vote: voted_by?
+      is nil both for a reader who has not voted and for no reader, and those
+      two get different vote rails. The author and community are in it so a
+      rename reaches cached cards. %>
+  <%# The relative time is filled in after the cache, each render
+      (PostTimeHelper), so a cached card does not freeze "5 minutes". %>
+  <% card = capture do %>
+  <% cache [I18n.locale, post, post.user, post.community, Current.user.present?,
+            post.voted_by?(Current.user), reposted, quote, priority] do %>
+    <% post_actions = capture do %>
+      <%= link_to post_path(post, anchor: "comments-section"),
+            class: "feed-action",
+            aria: { label: t("post.comment_aria", count: post.comment_count, default: "Comment, %{count} comments") },
+            title: t("comments.submit") do %>
+        <%= render "shared/feed_icon", name: "comment" %>
+        <%= tag.span post.comment_count.positive? ? post.comment_count : "",
+              class: "feed-action-count", data: { post_comment_count: dom_id(post) } %>
+      <% end %>
+      <%# This button spent a long time with nothing behind it — first carrying
+          data-controller="action" with no URL, so a press added the active
+          class, sent nothing, and claimed the repost had landed until the next
+          render took it back; then with no controller at all, which was at
+          least honest. Repost exists now, so it is wired.
+
+          button_to, not the `action` controller the vote button uses: that
+          would be a third Stimulus instance on every card, and
+          FrontPageWeightTest caps a post at five. A form costs none, works
+          without JS, and Turbo swaps the card from the turbo_stream response —
+          so the count comes back from the server rather than from an optimistic
+          guess that has to be rolled back when the request fails. %>
+      <%= button_to post_repost_path(post),
+                    method: :post,
+                    class: "feed-action#{" active" if reposted}",
+                    form_class: "feed-action-form",
+                    form: { data: { viewer_state: "repost" } },
+                    aria: { label: t("post.repost"), pressed: reposted },
+                    title: t("post.repost") do %>
+        <%= render "shared/feed_icon", name: "repost" %>
+        <span class="feed-action-count"><%= post.reposts_count.positive? ? post.reposts_count : "" %></span>
+      <% end %>
+      <%# post-menu, not the vendored dropdown: Escape closes, the first item takes
+          focus on open and the trigger gets it back on close. %>
+      <div class="feed-action-menu" data-controller="post-menu"
+           data-action="click@window->post-menu#hide keydown->post-menu#keydown">
+        <button type="button" class="feed-action" aria-label="<%= t("post.more_actions") %>"
+                aria-expanded="false" aria-controls="<%= dom_id(post, :actions) %>"
+                data-post-menu-target="button" data-long-press-target="trigger" data-action="click->post-menu#toggle">
+          <%= render "shared/feed_icon", name: "more" %>
+        </button>
+        <div class="feed-action-menu-list hidden" id="<%= dom_id(post, :actions) %>" data-post-menu-target="menu">
+          <%# The vendored clipboard controller reads a `source` target, not a
+              value, so these buttons threw and copied nothing; share#copy
+              takes the URL as a value. %>
+          <%= tag.button type: "button", data: { controller: "share", share_url_value: post_url(post),
+                                                share_copied_value: t("posts.link_copied"),
+                                                action: "click->share#copy" } do %>
+            <%= tag.span t("post.copy_link"), data: { share_target: "label" } %>
+          <% end %>
+          <%= link_to t("post.view"), post_path(post) %>
+          <%= form_with url: post_repost_path(post), method: :post, class: "feed-quote-form",
+                        data: { viewer_state: "quote" } do %>
+            <%# The limit is printed rather than counted down: a counter is a
+                Stimulus instance per card, which FrontPageWeightTest budgets. %>
+            <%# Its own id: text_area_tag's default, "comment", repeated on every card. %>
+            <%= text_area_tag :comment, quote, id: "#{dom_id(post)}-quote", maxlength: Repost::COMMENT_MAX,
+                  required: true, rows: 2, placeholder: t("post.quote_placeholder"),
+                  aria: { label: t("post.quote"), describedby: "#{dom_id(post)}-quote-limit" } %>
+            <%= tag.small t("post.quote_limit", count: Repost::COMMENT_MAX), id: "#{dom_id(post)}-quote-limit" %>
+            <%= submit_tag t("post.quote") %>
+          <% end %>
+        </div>
+      </div>
+      <%= render "shared/post_embed_action", post: post, url: post_url(post) %>
+      <button type="button" class="feed-action"
+              data-controller="share"
+              data-share-title-value="<%= post.title %>"
+              data-share-url-value="<%= post_url(post) %>"
+              data-action="click->share#share"
+              title="<%= t("post.share_short") %>"
+              aria-label="<%= t("post.share") %>">
+        <%= render "shared/feed_icon", name: "share" %>
+      </button>
+    <% end %>
+
+    <%# The photo and the link embed share the media slot; either may be absent.
+        Each photo link carries the gallery action itself, so a keyboard Enter on
+        the focused link opens the gallery exactly as a click does. %>
+    <% post_media = capture do %>
+      <%# One gallery wrapper for either photo source, so a card pays for one
+          post-gallery instance and the source says so (FrontPageWeightTest
+          counts the partial's data-controller attributes). %>
+      <% if post.images.attached? || post.image.attached? %>
+        <div class="post-images" data-controller="post-gallery">
+          <% if post.images.attached? %>
+            <%# Each photo is told apart by its place in the set, and the first
+                says how many more follow, since the rest sit off to the side. %>
+            <% gallery = post.ordered_images %>
+            <% total = gallery.size %>
+            <% gallery.each_with_index do |image, image_index| %>
+              <% priority_image = priority && image_index.zero? %>
+              <% alt = post.title %>
+              <% alt = t("post.photo_of", number: image_index + 1, total:, title: post.title) if total > 1 %>
+              <%= link_to rails_blob_path(image, disposition: "inline"),
+                    data: { gallery_item: true, action: "click->post-gallery#open" },
+                    aria: { label: alt } do %>
+                <%= image_tag image.variant(resize_to_limit: [800, 800]), alt:,
+                      loading: (priority_image ? "eager" : "lazy"),
+                      fetchpriority: (priority_image ? "high" : "auto"),
+                      decoding: "async", class: "post-image" %>
+                <% if image_index.zero? && total > 1 %>
+                  <%= tag.span "+#{total - 1}", class: "post-image-more", aria: { hidden: true } %>
+                <% end %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <%= link_to rails_blob_path(post.image, disposition: "inline"),
+                  data: { gallery_item: true, action: "click->post-gallery#open" },
+                  aria: { label: post.title } do %>
+              <%= responsive_image_tag(post.image, alt: post.title,
+                    loading: (priority ? "eager" : "lazy"),
+                    fetchpriority: (priority ? "high" : "auto"),
+                    class: "post-image") %>
+            <% end %>
+          <% end %>
+        </div>
+        <%= render "shared/photo_credit", blob: (post.images.attached? ? post.images.first&.blob : post.image.blob) %>
+      <% end %>
+      <% if (embed = post.link_embed_record) %>
+        <%= render "shared/link_embed", embed: embed %>
+      <% end %>
+    <% end %>
+
+    <%= render "shared/post_card",
+          post: post,
+          name: post.author_name,
+          handle: (post.community ? "@#{post.community.slug}" : nil),
+          time: post_time_slot,
+          title: post.title,
+          content: post.content,
+          url: post.attributed? ? post_path(post) : nil,
+          author_url: (user_path(post.user) if post.attributed?),
+          article_id: nil,
+          media: post_media.presence,
+          show_votes: true,
+          vote_path: post_vote_path(post),
+          vote_score: post.score,
+          upvoted: Current.user.present? && post.upvoted_by?(Current.user),
+          downvoted: Current.user.present? && post.downvoted_by?(Current.user),
+          actions: post_actions,
+          meta: (render("posts/edited_mark", at: post.edited_at) if post.edited_at),
+          frame: false %>
+  <% end %>
+  <% end %>
+  <%= fill_post_time(card, post.created_at) %>
+</turbo-frame>

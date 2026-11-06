@@ -1,0 +1,48 @@
+<% content_for :title, t("post.new") %>
+
+<div class="page-header">
+  <%= tag.h1 t("post.new") %>
+  <p><%= t("post.share_draft_lead") %></p>
+</div>
+
+<div class="form-wrap">
+  <% if @post.present? %>
+    <%= render "shared/errors", object: @post %>
+  <% end %>
+
+  <div class="form-help">
+    <%= t("post.shared_media_staged") %>:
+    <%= pluralize(@share_draft.images.attachments.size, t("post.photo")) %>
+    <% if @share_draft.video.attached? %>
+      <%= t("post.and_video") %>
+    <% end %>
+  </div>
+
+  <%= form_with url: publish_share_draft_path(@share_draft), scope: :post, method: :post do |f| %>
+    <div class="field">
+      <%= f.label :community_id, t("posts.community_optional") %>
+      <%= f.collection_select :community_id, @communities, :id, :name,
+            { include_blank: t("posts.no_community"), selected: @post&.community_id } %>
+    </div>
+    <div class="field">
+      <%= f.label :title %>
+      <%= f.text_field :title, value: @post&.title || @share_draft.title, maxlength: 300, required: true %>
+    </div>
+    <div class="field">
+      <%= f.label :content, t("posts.body_optional") %>
+      <%= f.text_area :content, value: @post&.content || @share_draft.content, rows: 6, maxlength: 40000 %>
+    </div>
+    <div class="field field--check">
+      <%= f.check_box :anonymous, checked: @post&.anonymous? || false %>
+      <%= f.label :anonymous, t("posts.post_anonymously") %>
+    </div>
+    <div class="field">
+      <%= f.submit t("post.submit"), class: "button button-primary" %>
+      <%= link_to t("actions.cancel"), posts_path, class: "button button-ghost" %>
+    </div>
+  <% end %>
+
+  <%= button_to t("actions.delete"), share_draft_path(@share_draft),
+        method: :delete, class: "button button-ghost",
+        data: { turbo_confirm: t("actions.confirm_delete") } %>
+</div>

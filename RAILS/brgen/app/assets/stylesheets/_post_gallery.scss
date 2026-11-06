@@ -1,0 +1,51 @@
+@use "sass:meta";
+@use "dialect_tokens" as x;
+@use "sass:list";
+@use "surface_chrome_endgame" as endgame;
+
+// ============================================================ module: post_gallery
+.post-images {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding-block: 0.25rem;
+  scroll-snap-type: x proximity;
+}
+
+.post-images > a {
+  position: relative;
+  display: block;
+  flex: 0 0 min(82%, 32rem);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.post-images .post-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(34rem, 72svh);
+  object-fit: cover;
+  border-radius: var(--radius-medium, 0.5rem);
+}
+
+/* "+3" on the first photo: the rest of the set sits off to the side. */
+.post-image-more {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-small);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-images {
+    scroll-behavior: auto;
+  }
+}
+// ============================================================ /module: post_gallery

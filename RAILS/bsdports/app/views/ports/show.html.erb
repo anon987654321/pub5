@@ -1,0 +1,154 @@
+<% content_for :title, @port.name %>
+<%# Each port its own meta and social-card description, not the site blurb. %>
+<% content_for :description, t("ports.meta_description", name: @port.name, version: @port.version,
+                               comment: @port.comment.presence || t("ports.explore_assistant.no_comment"),
+                               pkgpath: @port.pkgpath) %>
+<% content_for :json_ld, json_ld_script(@port.software_application_schema(page_url: port_url(@port))) %>
+<article aria-label="<%= t("ports.details_label") %>">
+  <header aria-label="<%= t("ports.header_label") %>">
+    <h1><%= @port.name %> <%= tag.small @port.version %></h1>
+    <small><%= link_to @port.category.name, category_path(@port.category) %></small>
+  </header>
+  <%= tag.p @port.comment %>
+  <section class="install-panel" aria-labelledby="install-heading">
+    <h2 id="install-heading"><%= t("ports.install") %></h2>
+    <%= render "shared/copyable", value: "doas pkg_add #{@port.name}", label: t("ports.copy_pkg_add") %>
+    <%# Building from the ports tree is the other way in; both are one copy away. %>
+    <%= render "shared/copyable", value: "cd /usr/ports/#{@port.pkgpath} && make install",
+                                  label: t("ports.copy_make_install") %>
+    <%= render "shared/copyable", value: @port.pkgpath, label: t("ports.copy_pkgpath") %>
+    <p><%= t("ports.install_note_html", platform: @port.platform.name) %></p>
+  </section>
+  <% if @port.description.present? %>
+    <%= read_more(@port.description, lines: 4) %>
+  <% end %>
+  <dl>
+    <%= tag.dt t("ports.exact_identity") %><dd><code><%= @port.pkgpath %>@<%= @port.version %></code></dd>
+    <%= tag.dt t("ports.platform") %>
+    <%= tag.dd tag.code(@port.platform.name) %>
+    <%= tag.dd t("ports.platform_unknown"), class: "data-state" %>
+    <%= tag.dt t("ports.maintainer") %><dd><% if @maintainer %><%= link_to @maintainer.name, maintainer_path(@maintainer) %><% else %><span class="data-state"><%= @port[:maintainer].presence || t("ports.unknown") %></span><% end %></dd>
+    <%# nil means pkg_info could not be asked (CI, or a host that is not OpenBSD);
+        that is unknown, not "installed (pkg_info not available)". %>
+    <%= tag.dt t("ports.local_install") %>
+    <% if @pkg_info.nil? %>
+      <%= tag.dd t("ports.unknown"), class: "data-state" %>
+    <% else %>
+      <%= tag.dd @pkg_info.present? ? t("ports.installed", info: @pkg_info) : t("ports.not_installed") %>
+    <% end %>
+    <%= tag.dt t("ports.pkgpath") %><dd><code><%= @port.pkgpath %></code></dd>
+    <% if @port.homepage.present? %>
+      <%= tag.dt t("ports.homepage") %>
+      <%= tag.dd homepage_link(@port.homepage) %>
+    <% end %>
+    <% update_age = @port.last_updated && (Date.current - @port.last_updated).to_i %>
+    <% stale = update_age.present? && update_age > 365 %>
+    <%= tag.dt t("ports.updated") %><dd><%= tag.span "#{@port.last_updated&.strftime("%Y-%m-%d") || t("ports.unknown")}#{" #{t("ports.stale", count: update_age)}" if stale}",
+                                                  class: class_names("data-state", "data-state--stale": stale) %></dd>
+  </dl>
+
+  <% if @dependencies.any? %>
+    <%= tag.h2 t("ports.requires") %>
+    <ul aria-label="<%= t("ports.dependencies_label") %>">
+      <% @dependencies.each do |dep| %>
+        <li>
+          <%= link_to dep.depends_on.name, port_path(dep.depends_on) %>
+          <%= tag.small dep.dep_type %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= render "ports/dependency_tree", tree: @dependency_tree, heading: t("ports.tree_heading") %>
+
+  <% if @rdeps.any? %>
+    <%= tag.h2 t("ports.required_by_count", count: @rdeps_count), id: "required-by" %>
+    <ul aria-label="<%= t("ports.rdeps_label") %>">
+      <% @rdeps.each do |reverse| %>
+        <li><%= link_to reverse.name, port_path(reverse) %></li>
+      <% end %>
+    </ul>
+    <%# The list stops at a page's worth; the count above is the whole. %>
+    <% if @rdeps.size < @rdeps_count %>
+      <%= tag.p link_to(t("ports.rdeps_show_all", count: @rdeps_count),
+                        port_path(@port, rdeps: "all", anchor: "required-by")) %>
+    <% end %>
+  <% end %>
+
+  <section aria-label="<%= t("ports.explore_section") %>">
+    <%= tag.h2 t("ports.explore") %>
+    <p id="port-explore-summary"><%= @explore_summary %></p>
+    <p><%= link_to t("ports.json_summary"), explore_port_path(@port), data: { turbo: false } %></p>
+  </section>
+
+  <%= render "ports/dependency_graph", graph: @dependency_graph %>
+
+  <% if @updates.any? %>
+    <%= tag.h2 t("ports.version_history") %>
+    <ul>
+      <% @updates.each do |update| %>
+        <li>
+          <%# Two versions and a message, not a diff: the fake unified-diff block
+              made every update read as a patch. %>
+          <%= tag.p do %>
+            <%= tag.code t("ports.version_change", old: update.old_version, new: update.new_version) %>
+            <%= tag.small date_tag(update.committed_at) %>
+          <% end %>
+          <%= tag.p update.commit_message if update.commit_message.present? %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= tag.h2 t("ports.advisories") %>
+  <% if @advisories&.any? %>
+    <ul>
+      <% @advisories.each do |adv| %>
+        <li>
+          <% if adv.nvd_url %>
+            <%# rel is not optional on target=_blank: without noopener the opened
+                page gets a window.opener handle back to this one. %>
+            <%= link_to adv.identifier, adv.nvd_url, target: "_blank", rel: "noopener noreferrer" %>
+          <% else %>
+            <%= adv.identifier %>
+          <% end %>
+          <%= tag.small t("ports.severity.#{adv.severity}") %>
+          <%= tag.small date_tag(adv.published_at) %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="data-state"><%= t("ports.advisories_none") %></p>
+  <% end %>
+  <% if nvd_operator? %><%= button_to t("ports.crossref_nvd"), crossref_cves_port_path(@port), method: :post %><% end %>
+
+  <%= tag.h2 t("ports.master_review") %>
+  <%= tag.p t("ports.master_review_lead_html") %>
+  <%# review, watch and unwatch require a session; a guest's press bounced to
+      sign-in, so a guest gets the sign-in link instead of the button. %>
+  <% if authenticated? %>
+    <%= button_to t("ports.run_master_review"), review_port_path(@port), method: :post %>
+    <%= tag.p id: "port-review-result", role: "status", class: "data-state" %>
+  <% else %>
+    <%= tag.p link_to(t("ports.sign_in_to_review"), new_session_path) %>
+  <% end %>
+
+  <section id="comments" aria-labelledby="comments-heading">
+    <%= tag.h2 t("ports.comments_heading"), id: "comments-heading" %>
+    <%= tag.div render(partial: "comments/comment", collection: @comments, as: :comment), id: "port_comments" %>
+    <%= tag.p t("ports.comments_none"), id: "port_comments_empty", class: "data-state" if @comments.empty? %>
+    <% if authenticated? %>
+      <%= render "comments/form", port: @port %>
+    <% else %>
+      <%= tag.p link_to(t("ports.comments_sign_in"), new_session_path) %>
+    <% end %>
+  </section>
+
+  <nav aria-label="<%= t("ports.actions_label") %>">
+    <% if authenticated? %>
+      <%= render "ports/watch_toggle", port: @port, watching: @watching %>
+    <% else %>
+      <%= link_to t("ports.sign_in_to_watch"), new_session_path %>
+    <% end %>
+  </nav>
+</article>
