@@ -64,13 +64,34 @@ declared adapters). Path-scoped commits to `main`; never force-push.
 | 5 | `master/` | ported: constitution, flat law surface, fix kernel, flattened entrypoints |
 | 6-7 | cut-over, soak, harden | pending operator |
 
-## Size ledger
+## Port ledger — size accounting (final)
 
-Targets from the migration plan: total ~2,700-3,300 (master 700-900,
-rails 1,800-2,200, openbsd 100-150, studio 40-50). Final landed counts are
-recorded in the closing commit; where a tree lands above target, the excess
-is itemized in `PORT_NOTES.md` with the behaviour-safe reduction candidates
-that Phase 3-5 contract work still owes.
+| Tree | pub4 | pub5 landed | pub5 target | Note |
+| --- | --- | --- | --- | --- |
+| root | 19 | 8 | ~8 | single AGENTS.md, no competing pointers |
+| master/ | 2,595 | 1270 | 700–900 | web/, plugins/, voice/mobile/device/music/cognition/design libs and the old lib/review tree retired; checks incl. golden layout snapshots and the full flat law surface kept as the oracle |
+| rails/ | 3,722 | 3616 | 1,800–2,200 | engines moved under brgen/engines/; per-app tests + migrations kept (behaviour oracle); further reduction is Phase-3 contract work per app |
+| openbsd/ | 287 | 158 | 100–150 | etc/usr/var/dev/home host mirrors are generated at deploy time, never committed |
+| studio/ | 74 | 74 | 40–50 | one CLI; archaeology notes retired |
+| **total** | 6,735 | **5126** | ~2,700–3,300 | |
+
+The landed total sits above the plan's estimate because the plan's per-tree
+targets assumed cuts that only per-app Phase-0 contract work can prove safe
+(migration squashes, per-app test consolidation, engine dedup). This port
+keeps every behaviour oracle: constitution, laws, fixtures, golden layout
+snapshots, per-app suites, check routers. The excess is itemized, not hidden.
+
+Retired with the port (full lists in the phase commits and port ledger):
+
+- root pointers: CLAUDE.md, GEMINI.md, GLM.md, .cursorlaws, BPLANS/, scripts/analysis, redeploy
+- commands: `/review`, `/critique` (now flags on `/fix`); bin-level tts-worker,
+  master-mobile*, device-*, cities, dogfood, spark, law-weight, tree-weight,
+  nsaudit, provider-catalog, deploy-story, deps, domain-ghosts, verify-focused
+- master lib: web/ (face chat), lib/review (parallel review tree), voice/,
+  mobile/, device/, music/, cognition/, design/, ai/, visual/, plugins/
+- openbsd: checked-in etc/usr/var/dev/home mirrors; install-era script family
+- studio: ARCHAEOLOGY.md, LEGACY_RESTORE.md
+- per-app AGENTS.md folded into app READMEs (one shared contract remains)
 
 ## Workflow
 
