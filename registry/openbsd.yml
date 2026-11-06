@@ -349,3 +349,2607 @@ pf:
     raw:
     - pass in on $ext_if inet proto tcp to $brgen_ip port 25 keep state (max-src-conn-rate
       100/10, overload <bruteforce> flush global)
+rc:
+  note: 'rc.d scripts moved row for row (comments included). The renderer checks:
+    bytes against proven, serving facts against the app registry ports, and one shared
+    tokenized code skeleton per shape - the scripts are generated, not maintained,
+    in four copies.'
+  scripts:
+    amber:
+      shape: falcon
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# rc_pre and the post-start block run curl (a package, /usr/local/bin/curl)."
+      - kind: comment
+        line: "# rcctl inherits its caller PATH and root cron has no /usr/local/bin,
+          so from"
+      - kind: comment
+        line: "# a cron restart the /up wait always timed out and the relayd restart
+          behind"
+      - kind: comment
+        line: "# it was skipped — the app came up with an empty relayd backend table.
+          Same"
+      - kind: comment
+        line: "# gap that refused to start master outright (see rc.d/master)."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: PORT=61352
+      - kind: code
+        line: APP_DIR=/home/amber/app
+      - kind: comment
+        line: "# /etc/amber.env is the one env file: daemon_flags sources nothing
+          else, so a"
+      - kind: comment
+        line: "# key anywhere else never reaches the app."
+      - kind: code
+        line: "[[ -r /etc/amber.env ]] && . /etc/amber.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/amber.env}"'
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# --health-check-timeout: Falcon defaults to 30s, and on 1 vCPU with
+          master and"
+      - kind: comment
+        line: "# brgen already resident this app has never booted that fast — the
+          container"
+      - kind: comment
+        line: "# declared startup failed and SIGKILLed its own worker on every restart,
+          which"
+      - kind: comment
+        line: '# is a large part of why this service kept reading as "shed but never'
+      - kind: comment
+        line: '# restored". master and brgen have carried 300 since the same discovery.'
+      - kind: comment
+        line: "# SECRET_KEY_BASE is sourced from /etc/amber.env at runtime by the
+          app user and"
+      - kind: comment
+        line: "# re-exported (the file holds a bare KEY=value, which `.` sets un-exported)
+          —"
+      - kind: comment
+        line: "# NOT interpolated into daemon_flags, where it landed in falcon's ps(1)
+          argv for"
+      - kind: comment
+        line: "# any local account to read (secrets in process argv). The env file
+          is"
+      - kind: comment
+        line: "# root:amber 640, so only amber and root can read it (not dev-via-wheel,
+          not"
+      - kind: comment
+        line: "# another app user). Proven on bsdports first."
+      - kind: comment
+        line: "# SOLID_QUEUE_IN_PUMA=true was here and is gone. In-Puma mode is a
+          Puma plugin;"
+      - kind: comment
+        line: "# this app runs under Falcon and has no config/puma.rb, so no plugin
+          ever loaded"
+      - kind: comment
+        line: "# and the variable was read by nothing. It was the only thing that
+          looked like a"
+      - kind: comment
+        line: "# job worker and it had never started one — 1670 jobs enqueued on brgen
+          and 0"
+      - kind: comment
+        line: "# finished, measured 2026-08-12. rc.d/<app>_jobs is the real worker;
+          read its"
+      - kind: comment
+        line: "# header before enabling it, because vm23 has 1 GB."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/amber.env && set
+          +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/amber &&
+          export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1}
+          --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+      - kind: code
+        line: daemon_user="amber"
+      - kind: code
+        line: daemon_execdir="/home/amber/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: code
+        line: pexp="ruby[0-9.]*.*${PORT}"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# port holders: begin"
+      - kind: comment
+        line: "# The pkills match falcon by its argv, so a process bound to the port
+          under any"
+      - kind: comment
+        line: "# other name (a worker that retitled itself, a hand-started server,
+          a test run)"
+      - kind: comment
+        line: "# survives them, the next falcon dies on EADDRINUSE, and rc reports
+          a start that"
+      - kind: comment
+        line: "# never serves. fstat(1) names every process with a socket on the port
+          whatever"
+      - kind: comment
+        line: "# its argv. Its socket lines read USER CMD PID FD internet stream tcp
+          ADDR"
+      - kind: comment
+        line: "# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves
+          relayd's"
+      - kind: comment
+        line: "# connections to the port and the app's accepted ones alone."
+      - kind: code
+        line: port_holders() {
+      - kind: code
+        line: "  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto
+          _addr _local _rest; do"
+      - kind: code
+        line: "    [[ $_kind == internet || $_kind == internet6 ]] || continue"
+      - kind: code
+        line: "    [[ $_proto == tcp && -z $_rest ]] || continue"
+      - kind: code
+        line: '    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Sends signal $1 to every holder, one pid at a time."
+      - kind: code
+        line: signal_holders() {
+      - kind: code
+        line: "  for _p in $(port_holders); do"
+      - kind: code
+        line: '    kill "-$1" "$_p" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM whatever still holds the port, KILL it after the grace period,
+          and fail"
+      - kind: comment
+        line: "# when the port is still held, so the start is refused with the reason
+          logged."
+      - kind: code
+        line: free_port() {
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before
+          start, TERM"'
+      - kind: code
+        line: "  signal_holders TERM"
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do"
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived
+          TERM, KILL"'
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  [[ -z $(port_holders) ]] && return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM
+          and KILL, refusing to start"'
+      - kind: code
+        line: "  return 1"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# port holders: end"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_pre() {
+      - kind: code
+        line: "  touch /home/dev/pub4/.deploying-amber 2>/dev/null || true"
+      - kind: code
+        line: '  pkill -f "falcon.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: '  pkill -f "ruby[0-9.]*.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  PORT_OWNER=amber"
+      - kind: code
+        line: "  free_port || { rm -f /home/dev/pub4/.deploying-amber 2>/dev/null;
+          return 1; }"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+      - kind: code
+        line: rc=$?
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: '  if [[ "$rc" = "0" ]]; then'
+      - kind: code
+        line: "    # relayd can keep routing to the old (now-dead) backend connection
+          after a"
+      - kind: code
+        line: "    # restart until it's kicked — same fix already used by MASTER's
+          rc.d script."
+      - kind: code
+        line: "    _i=0"
+      - kind: code
+        line: "    _up_ok=0"
+      - kind: code
+        line: '    while [[ "$_i" -lt 300 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1
+          && { _up_ok=1; break; }'
+      - kind: code
+        line: "      sleep 1"
+      - kind: code
+        line: "      _i=$((_i + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: '    if [[ "$_up_ok" = "1" ]]; then'
+      - kind: code
+        line: "      rcctl restart relayd 2>/dev/null || true"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t amber "relayd skipped: /up not ready after restart"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: fi
+      - kind: comment
+        line: "# rc_pre touched the deploy flag; it comes off here, after the /up
+          wait, so the"
+      - kind: comment
+        line: "# cold boot is inside the window resource_guard reads it for."
+      - kind: code
+        line: if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
+      - kind: code
+        line: "  rm -f /home/dev/pub4/.deploying-amber 2>/dev/null || true"
+      - kind: code
+        line: fi
+      - kind: code
+        line: exit $rc
+    amber_jobs:
+      shape: jobs
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# Solid Queue worker for amber. NOT enabled by default: vm23 is 1 GB,
+          and a"
+      - kind: comment
+        line: "# worker is another resident Ruby process with the whole app loaded
+          in it."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Falcon runs no Solid Queue supervisor, so a worker is its own service,
+          one"
+      - kind: comment
+        line: "# rc.d file per app. Without one, drain-jobs.sh runs the queue for
+          a few"
+      - kind: comment
+        line: "# minutes each hour. To enable one:"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "#   doas rcctl enable APP_jobs && doas rcctl start APP_jobs"
+      - kind: comment
+        line: "#   sqlite3 -readonly /home/APP/app/storage/production_queue.sqlite3
+          'select count(*) from solid_queue_processes;'"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# A registered process is the only proof it took. Add the service to"
+      - kind: comment
+        line: "# pkg_scripts in etc/rc.conf.local in the same change, because boot
+          reads that"
+      - kind: comment
+        line: "# line. health_check.rb fails when a queue has due work and no registered
+          process."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: APP_DIR=/home/amber/app
+      - kind: comment
+        line: "# /etc/amber.env is the one env file: daemon_flags sources nothing
+          else."
+      - kind: code
+        line: "[[ -r /etc/amber.env ]] && . /etc/amber.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/amber.env}"'
+      - kind: blank
+        line: ''
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# Sourced inside the app user's shell rather than interpolated here,
+          where the"
+      - kind: comment
+        line: "# secret would sit in ps(1) argv; under set -a because `.` sets a bare"
+      - kind: comment
+        line: "# KEY=value unexported, and the job classes need every key in the file."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: comment
+        line: "# SOLID_QUEUE_SUPERVISOR_MODE=async runs the dispatcher and workers
+          as threads"
+      - kind: comment
+        line: "# in one process, not four forked ones. vm23 has 1 GB: with the five
+          web apps up,"
+      - kind: comment
+        line: "# the three forked supervisors took swap to zero on 2026-11-05. Solid
+          Queue"
+      - kind: comment
+        line: "# 1.4.0 reads the variable; 1.2.4 ignores it and forks as before."
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/amber.env && set
+          +a && export RAILS_ENV=production SOLID_QUEUE_SUPERVISOR_MODE=async HOME=/home/amber
+          PUB4_ROOT=/home/dev/pub4 PUB4_RAILS_ROOT=/home/dev/pub4/RAILS && export
+          BUNDLE_VERSION=system && exec ${_bundle} exec rake solid_queue:start'"
+      - kind: code
+        line: daemon_user="amber"
+      - kind: code
+        line: daemon_execdir="/home/amber/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: comment
+        line: '# The process renames itself to "ruby<version>: solid-queue-supervisor(1.2.4):
+          ...",'
+      - kind: comment
+        line: '# hence both - and _. rc.subr checks with `pgrep -q -xf "${pexp}"`,
+          and -x'
+      - kind: comment
+        line: "# anchors the whole argv, which continues past the name: the trailing
+          .* is"
+      - kind: comment
+        line: "# what lets rcctl check and stop see a running worker at all."
+      - kind: code
+        line: pexp="ruby[0-9.]*.*solid[-_]queue.*"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+    brgen:
+      shape: falcon
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# rc_pre and the post-start block run curl (a package, /usr/local/bin/curl)."
+      - kind: comment
+        line: "# rcctl inherits its caller PATH and root cron has no /usr/local/bin,
+          so from"
+      - kind: comment
+        line: "# a cron restart the /up wait always timed out and the relayd restart
+          behind"
+      - kind: comment
+        line: "# it was skipped — the app came up with an empty relayd backend table.
+          Same"
+      - kind: comment
+        line: "# gap that refused to start master outright (see rc.d/master)."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: PORT=38182
+      - kind: code
+        line: APP_DIR=/home/brgen/app
+      - kind: comment
+        line: "# /etc/brgen.env is the one env file: daemon_flags sources nothing
+          else, so a"
+      - kind: comment
+        line: "# key anywhere else never reaches the app."
+      - kind: code
+        line: "[[ -r /etc/brgen.env ]] && . /etc/brgen.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/brgen.env}"'
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# The env file is sourced under `set -a` so everything in it is exported,
+          NOT"
+      - kind: comment
+        line: "# named one variable at a time. Naming them was an allowlist nobody
+          could see:"
+      - kind: comment
+        line: "# the file holds bare KEY=value which `.` sets un-exported, so only
+          the keys"
+      - kind: comment
+        line: "# written into this line ever reached the process, and VAPID_PUBLIC_KEY
+          sat in"
+      - kind: comment
+        line: "# /etc/brgen.env for hours doing nothing while push failed silently.
+          Any key"
+      - kind: comment
+        line: "# added to the file now works without editing this script. Still NOT"
+      - kind: comment
+        line: "# interpolated into daemon_flags, where it landed in falcon's ps(1)
+          argv for any"
+      - kind: comment
+        line: "# local account to read (the old backlog secrets_in_process_argv).
+          /etc/brgen.env is"
+      - kind: comment
+        line: "# root:brgen 640. PUB4_ROOT/PUB4_RAILS_ROOT are not secrets and stay
+          inline."
+      - kind: comment
+        line: "# SOLID_QUEUE_IN_PUMA=true was here and is gone. In-Puma mode is a
+          Puma plugin;"
+      - kind: comment
+        line: "# this app runs under Falcon and has no config/puma.rb, so no plugin
+          ever loaded"
+      - kind: comment
+        line: "# and the variable was read by nothing. It was the only thing that
+          looked like a"
+      - kind: comment
+        line: "# job worker and it had never started one — 1670 jobs enqueued on brgen
+          and 0"
+      - kind: comment
+        line: "# finished, measured 2026-08-12. rc.d/<app>_jobs is the real worker;
+          read its"
+      - kind: comment
+        line: "# header before enabling it, because vm23 has 1 GB."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# RUBY_YJIT_ENABLE=0 is a decision, not a default."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Ruby 3.4 on vm23 has YJIT built in and switched off, so today this
+          changes"
+      - kind: comment
+        line: "# nothing — which is the point. YJIT reserves an executable code region
+          and costs"
+      - kind: comment
+        line: "# tens of megabytes per process to buy 15-30% more speed, and here
+          the scarce"
+      - kind: comment
+        line: "# resource is memory rather than CPU: measured 2026-08-17 at 918M real
+          with swap"
+      - kind: comment
+        line: "# 91% full and the single core 84% idle. Four Rails processes' worth
+          of code"
+      - kind: comment
+        line: "# cache is the wrong trade on this box."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Pinned because the default is drifting the other way: the Dockerfile
+          Rails"
+      - kind: comment
+        line: "# generates sets RUBY_YJIT_ENABLE=1, and a future Ruby may turn it
+          on at build"
+      - kind: comment
+        line: "# time. Without this line the box would quietly start paying for it,
+          and the"
+      - kind: comment
+        line: "# symptom would be swap rather than anything that names YJIT."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/brgen.env && set
+          +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/brgen PUB4_ROOT=/home/dev/pub4
+          PUB4_RAILS_ROOT=/home/dev/pub4/RAILS && export BUNDLE_VERSION=system &&
+          exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout
+          300 --bind http://127.0.0.1:${PORT}'"
+      - kind: code
+        line: daemon_user="brgen"
+      - kind: code
+        line: daemon_execdir="/home/brgen/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: code
+        line: pexp="ruby[0-9.]*.*${PORT}"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# port holders: begin"
+      - kind: comment
+        line: "# The pkills match falcon by its argv, so a process bound to the port
+          under any"
+      - kind: comment
+        line: "# other name (a worker that retitled itself, a hand-started server,
+          a test run)"
+      - kind: comment
+        line: "# survives them, the next falcon dies on EADDRINUSE, and rc reports
+          a start that"
+      - kind: comment
+        line: "# never serves. fstat(1) names every process with a socket on the port
+          whatever"
+      - kind: comment
+        line: "# its argv. Its socket lines read USER CMD PID FD internet stream tcp
+          ADDR"
+      - kind: comment
+        line: "# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves
+          relayd's"
+      - kind: comment
+        line: "# connections to the port and the app's accepted ones alone."
+      - kind: code
+        line: port_holders() {
+      - kind: code
+        line: "  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto
+          _addr _local _rest; do"
+      - kind: code
+        line: "    [[ $_kind == internet || $_kind == internet6 ]] || continue"
+      - kind: code
+        line: "    [[ $_proto == tcp && -z $_rest ]] || continue"
+      - kind: code
+        line: '    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Sends signal $1 to every holder, one pid at a time."
+      - kind: code
+        line: signal_holders() {
+      - kind: code
+        line: "  for _p in $(port_holders); do"
+      - kind: code
+        line: '    kill "-$1" "$_p" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM whatever still holds the port, KILL it after the grace period,
+          and fail"
+      - kind: comment
+        line: "# when the port is still held, so the start is refused with the reason
+          logged."
+      - kind: code
+        line: free_port() {
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before
+          start, TERM"'
+      - kind: code
+        line: "  signal_holders TERM"
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do"
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived
+          TERM, KILL"'
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  [[ -z $(port_holders) ]] && return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM
+          and KILL, refusing to start"'
+      - kind: code
+        line: "  return 1"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# port holders: end"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_pre() {
+      - kind: code
+        line: "  touch /home/dev/pub4/.deploying-brgen 2>/dev/null || true"
+      - kind: code
+        line: '  pkill -f "falcon.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: '  pkill -f "ruby[0-9.]*.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  PORT_OWNER=brgen"
+      - kind: code
+        line: "  free_port || { rm -f /home/dev/pub4/.deploying-brgen 2>/dev/null;
+          return 1; }"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+      - kind: code
+        line: rc=$?
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: '  if [[ "$rc" = "0" ]]; then'
+      - kind: code
+        line: "    # relayd can keep routing to the old (now-dead) backend connection
+          after a"
+      - kind: code
+        line: "    # restart until it's kicked — same fix already used by MASTER's
+          rc.d script."
+      - kind: code
+        line: "    _i=0"
+      - kind: code
+        line: "    _up_ok=0"
+      - kind: code
+        line: '    while [[ "$_i" -lt 300 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1
+          && { _up_ok=1; break; }'
+      - kind: code
+        line: "      sleep 1"
+      - kind: code
+        line: "      _i=$((_i + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: '    if [[ "$_up_ok" = "1" ]]; then'
+      - kind: code
+        line: "      rcctl restart relayd 2>/dev/null || true"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t brgen "relayd skipped: /up not ready after restart"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: fi
+      - kind: comment
+        line: "# rc_pre touched the deploy flag; it comes off here, after the /up
+          wait, so the"
+      - kind: comment
+        line: "# cold boot is inside the window resource_guard reads it for."
+      - kind: code
+        line: if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
+      - kind: code
+        line: "  rm -f /home/dev/pub4/.deploying-brgen 2>/dev/null || true"
+      - kind: code
+        line: fi
+      - kind: code
+        line: exit $rc
+    brgen_jobs:
+      shape: jobs
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# Solid Queue worker for brgen. Enabled on vm23 since 2026-08-25 (e511ccba1):
+          the one resident worker"
+      - kind: comment
+        line: "# this box can hold."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Falcon runs no Solid Queue supervisor, so a worker is its own service,
+          one"
+      - kind: comment
+        line: "# rc.d file per app. Without one, drain-jobs.sh runs the queue for
+          a few"
+      - kind: comment
+        line: "# minutes each hour. To enable one:"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "#   doas rcctl enable APP_jobs && doas rcctl start APP_jobs"
+      - kind: comment
+        line: "#   sqlite3 -readonly /home/APP/app/storage/production_queue.sqlite3
+          'select count(*) from solid_queue_processes;'"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# A registered process is the only proof it took. Add the service to"
+      - kind: comment
+        line: "# pkg_scripts in etc/rc.conf.local in the same change, because boot
+          reads that"
+      - kind: comment
+        line: "# line. health_check.rb fails when a queue has due work and no registered
+          process."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: APP_DIR=/home/brgen/app
+      - kind: comment
+        line: "# /etc/brgen.env is the one env file: daemon_flags sources nothing
+          else."
+      - kind: code
+        line: "[[ -r /etc/brgen.env ]] && . /etc/brgen.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/brgen.env}"'
+      - kind: blank
+        line: ''
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# Sourced inside the app user's shell rather than interpolated here,
+          where the"
+      - kind: comment
+        line: "# secret would sit in ps(1) argv; under set -a because `.` sets a bare"
+      - kind: comment
+        line: "# KEY=value unexported, and the job classes need every key in the file."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: comment
+        line: "# SOLID_QUEUE_SUPERVISOR_MODE=async runs the dispatcher and workers
+          as threads"
+      - kind: comment
+        line: "# in one process, not four forked ones. vm23 has 1 GB: with the five
+          web apps up,"
+      - kind: comment
+        line: "# the three forked supervisors took swap to zero on 2026-11-05. Solid
+          Queue"
+      - kind: comment
+        line: "# 1.4.0 reads the variable; 1.2.4 ignores it and forks as before."
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/brgen.env && set
+          +a && export RAILS_ENV=production SOLID_QUEUE_SUPERVISOR_MODE=async HOME=/home/brgen
+          PUB4_ROOT=/home/dev/pub4 PUB4_RAILS_ROOT=/home/dev/pub4/RAILS && export
+          BUNDLE_VERSION=system && exec ${_bundle} exec rake solid_queue:start'"
+      - kind: code
+        line: daemon_user="brgen"
+      - kind: code
+        line: daemon_execdir="/home/brgen/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: comment
+        line: '# The process renames itself to "ruby<version>: solid-queue-supervisor(1.2.4):
+          ...",'
+      - kind: comment
+        line: '# hence both - and _. rc.subr checks with `pgrep -q -xf "${pexp}"`,
+          and -x'
+      - kind: comment
+        line: "# anchors the whole argv, which continues past the name: the trailing
+          .* is"
+      - kind: comment
+        line: "# what lets rcctl check and stop see a running worker at all."
+      - kind: code
+        line: pexp="ruby[0-9.]*.*solid[-_]queue.*"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+    bsdports:
+      shape: falcon
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# rc_pre and the post-start block run curl (a package, /usr/local/bin/curl)."
+      - kind: comment
+        line: "# rcctl inherits its caller PATH and root cron has no /usr/local/bin,
+          so from"
+      - kind: comment
+        line: "# a cron restart the /up wait always timed out and the relayd restart
+          behind"
+      - kind: comment
+        line: "# it was skipped — the app came up with an empty relayd backend table.
+          Same"
+      - kind: comment
+        line: "# gap that refused to start master outright (see rc.d/master)."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: PORT=47312
+      - kind: code
+        line: APP_DIR=/home/bsdports/app
+      - kind: comment
+        line: "# /etc/bsdports.env is the one env file: daemon_flags sources nothing
+          else, so a"
+      - kind: comment
+        line: "# key anywhere else never reaches the app."
+      - kind: code
+        line: "[[ -r /etc/bsdports.env ]] && . /etc/bsdports.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/bsdports.env}"'
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# SOLID_QUEUE_IN_PUMA is Solid Queue's env name — supervisor runs inside
+          Falcon, not Puma."
+      - kind: comment
+        line: "# --health-check-timeout: Falcon defaults to 30s, and on 1 vCPU with
+          master and"
+      - kind: comment
+        line: "# brgen already resident this app has never booted that fast — the
+          container"
+      - kind: comment
+        line: "# declared startup failed and SIGKILLed its own worker on every restart,
+          which"
+      - kind: comment
+        line: '# is a large part of why this service kept reading as "shed but never'
+      - kind: comment
+        line: '# restored". master and brgen have carried 300 since the same discovery.'
+      - kind: comment
+        line: "# SECRET_KEY_BASE is sourced from /etc/bsdports.env at runtime, by
+          the app user,"
+      - kind: comment
+        line: "# inside the exec — NOT interpolated into daemon_flags. Interpolation
+          baked the"
+      - kind: comment
+        line: "# 128-hex secret into the falcon process's ksh argv, readable by any
+          local"
+      - kind: comment
+        line: "# account via `ps auxww` (the old backlog secrets_in_process_argv).
+          The"
+      - kind: comment
+        line: "# env file is root:bsdports 640, so only bsdports (and root) can read
+          it, which"
+      - kind: comment
+        line: "# also stops a foothold in another app user — or dev — reading this
+          secret at"
+      - kind: comment
+        line: "# rest. The `. /etc/bsdports.env` below is a literal path, not a secret."
+      - kind: comment
+        line: "# /etc/bsdports.env holds a bare `SECRET_KEY_BASE=...` (no `export`),
+          so sourcing"
+      - kind: comment
+        line: "# it sets a shell variable that `exec` does NOT inherit — the bare
+          `SECRET_KEY_BASE`"
+      - kind: comment
+        line: "# in the export list below re-exports the sourced value into falcon's
+          environment."
+      - kind: comment
+        line: "# SOLID_QUEUE_IN_PUMA=true was here and is gone. In-Puma mode is a
+          Puma plugin;"
+      - kind: comment
+        line: "# this app runs under Falcon and has no config/puma.rb, so no plugin
+          ever loaded"
+      - kind: comment
+        line: "# and the variable was read by nothing. It was the only thing that
+          looked like a"
+      - kind: comment
+        line: "# job worker and it had never started one — 1670 jobs enqueued on brgen
+          and 0"
+      - kind: comment
+        line: "# finished, measured 2026-08-12. rc.d/<app>_jobs is the real worker;
+          read its"
+      - kind: comment
+        line: "# header before enabling it, because vm23 has 1 GB."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/bsdports.env &&
+          set +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/bsdports
+          && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n
+          ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+      - kind: code
+        line: daemon_user="bsdports"
+      - kind: code
+        line: daemon_execdir="/home/bsdports/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: code
+        line: pexp="ruby[0-9.]*.*${PORT}"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# port holders: begin"
+      - kind: comment
+        line: "# The pkills match falcon by its argv, so a process bound to the port
+          under any"
+      - kind: comment
+        line: "# other name (a worker that retitled itself, a hand-started server,
+          a test run)"
+      - kind: comment
+        line: "# survives them, the next falcon dies on EADDRINUSE, and rc reports
+          a start that"
+      - kind: comment
+        line: "# never serves. fstat(1) names every process with a socket on the port
+          whatever"
+      - kind: comment
+        line: "# its argv. Its socket lines read USER CMD PID FD internet stream tcp
+          ADDR"
+      - kind: comment
+        line: "# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves
+          relayd's"
+      - kind: comment
+        line: "# connections to the port and the app's accepted ones alone."
+      - kind: code
+        line: port_holders() {
+      - kind: code
+        line: "  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto
+          _addr _local _rest; do"
+      - kind: code
+        line: "    [[ $_kind == internet || $_kind == internet6 ]] || continue"
+      - kind: code
+        line: "    [[ $_proto == tcp && -z $_rest ]] || continue"
+      - kind: code
+        line: '    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Sends signal $1 to every holder, one pid at a time."
+      - kind: code
+        line: signal_holders() {
+      - kind: code
+        line: "  for _p in $(port_holders); do"
+      - kind: code
+        line: '    kill "-$1" "$_p" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM whatever still holds the port, KILL it after the grace period,
+          and fail"
+      - kind: comment
+        line: "# when the port is still held, so the start is refused with the reason
+          logged."
+      - kind: code
+        line: free_port() {
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before
+          start, TERM"'
+      - kind: code
+        line: "  signal_holders TERM"
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do"
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived
+          TERM, KILL"'
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  [[ -z $(port_holders) ]] && return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM
+          and KILL, refusing to start"'
+      - kind: code
+        line: "  return 1"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# port holders: end"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_pre() {
+      - kind: code
+        line: "  touch /home/dev/pub4/.deploying-bsdports 2>/dev/null || true"
+      - kind: code
+        line: '  pkill -f "falcon.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: '  pkill -f "ruby[0-9.]*.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  PORT_OWNER=bsdports"
+      - kind: code
+        line: "  free_port || { rm -f /home/dev/pub4/.deploying-bsdports 2>/dev/null;
+          return 1; }"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+      - kind: code
+        line: rc=$?
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: '  if [[ "$rc" = "0" ]]; then'
+      - kind: code
+        line: "    # relayd can keep routing to the old (now-dead) backend connection
+          after a"
+      - kind: code
+        line: "    # restart until it's kicked — same fix already used by MASTER's
+          rc.d script."
+      - kind: code
+        line: "    _i=0"
+      - kind: code
+        line: "    _up_ok=0"
+      - kind: code
+        line: '    while [[ "$_i" -lt 300 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1
+          && { _up_ok=1; break; }'
+      - kind: code
+        line: "      sleep 1"
+      - kind: code
+        line: "      _i=$((_i + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: '    if [[ "$_up_ok" = "1" ]]; then'
+      - kind: code
+        line: "      rcctl restart relayd 2>/dev/null || true"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t bsdports "relayd skipped: /up not ready after restart"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: fi
+      - kind: comment
+        line: "# rc_pre touched the deploy flag; it comes off here, after the /up
+          wait, so the"
+      - kind: comment
+        line: "# cold boot is inside the window resource_guard reads it for."
+      - kind: code
+        line: if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
+      - kind: code
+        line: "  rm -f /home/dev/pub4/.deploying-bsdports 2>/dev/null || true"
+      - kind: code
+        line: fi
+      - kind: code
+        line: exit $rc
+    bsdports_jobs:
+      shape: jobs
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# Solid Queue worker for bsdports. NOT enabled by default: vm23 is
+          1 GB, and a"
+      - kind: comment
+        line: "# worker is another resident Ruby process with the whole app loaded
+          in it."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Falcon runs no Solid Queue supervisor, so a worker is its own service,
+          one"
+      - kind: comment
+        line: "# rc.d file per app. Without one, drain-jobs.sh runs the queue for
+          a few"
+      - kind: comment
+        line: "# minutes each hour. To enable one:"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "#   doas rcctl enable APP_jobs && doas rcctl start APP_jobs"
+      - kind: comment
+        line: "#   sqlite3 -readonly /home/APP/app/storage/production_queue.sqlite3
+          'select count(*) from solid_queue_processes;'"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# A registered process is the only proof it took. Add the service to"
+      - kind: comment
+        line: "# pkg_scripts in etc/rc.conf.local in the same change, because boot
+          reads that"
+      - kind: comment
+        line: "# line. health_check.rb fails when a queue has due work and no registered
+          process."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: APP_DIR=/home/bsdports/app
+      - kind: comment
+        line: "# /etc/bsdports.env is the one env file: daemon_flags sources nothing
+          else."
+      - kind: code
+        line: "[[ -r /etc/bsdports.env ]] && . /etc/bsdports.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/bsdports.env}"'
+      - kind: blank
+        line: ''
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# Sourced inside the app user's shell rather than interpolated here,
+          where the"
+      - kind: comment
+        line: "# secret would sit in ps(1) argv; under set -a because `.` sets a bare"
+      - kind: comment
+        line: "# KEY=value unexported, and the job classes need every key in the file."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever bundler the package
+          manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships Ruby by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: comment
+        line: "# SOLID_QUEUE_SUPERVISOR_MODE=async runs the dispatcher and workers
+          as threads"
+      - kind: comment
+        line: "# in one process, not four forked ones. vm23 has 1 GB: with the five
+          web apps up,"
+      - kind: comment
+        line: "# the three forked supervisors took swap to zero on 2026-11-05. Solid
+          Queue"
+      - kind: comment
+        line: "# 1.4.0 reads the variable; 1.2.4 ignores it and forks as before."
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/bsdports.env &&
+          set +a && export RAILS_ENV=production SOLID_QUEUE_SUPERVISOR_MODE=async
+          HOME=/home/bsdports PUB4_ROOT=/home/dev/pub4 PUB4_RAILS_ROOT=/home/dev/pub4/RAILS
+          && export BUNDLE_VERSION=system && exec ${_bundle} exec rake solid_queue:start'"
+      - kind: code
+        line: daemon_user="bsdports"
+      - kind: code
+        line: daemon_execdir="/home/bsdports/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: comment
+        line: '# The process renames itself to "ruby<version>: solid-queue-supervisor(1.2.4):
+          ...",'
+      - kind: comment
+        line: '# hence both - and _. rc.subr checks with `pgrep -q -xf "${pexp}"`,
+          and -x'
+      - kind: comment
+        line: "# anchors the whole argv, which continues past the name: the trailing
+          .* is"
+      - kind: comment
+        line: "# what lets rcctl check and stop see a running worker at all."
+      - kind: code
+        line: pexp="ruby[0-9.]*.*solid[-_]queue.*"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+    irc_gateway:
+      shape: irc
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# brgen IRC bridge gateway. NOT enabled by default — see RAILS/brgen/IRC_BRIDGE.md"
+      - kind: comment
+        line: "# for the go-live checklist (pf listener port, rc.conf.local pkg_scripts,
+          optional"
+      - kind: comment
+        line: "# TLS 6697 via relayd). Binds 127.0.0.1:6667 by default; expose it
+          deliberately"
+      - kind: comment
+        line: "# by putting IRC_HOST in /etc/brgen.env."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Same shape as rc.d/brgen, for the same reasons. rc.subr starts the
+          daemon"
+      - kind: comment
+        line: "# through a login shell as the daemon user, which resets the environment,
+          so"
+      - kind: comment
+        line: "# anything exported from rc_pre never reaches it: the env file is sourced
+          inside"
+      - kind: comment
+        line: "# daemon_flags under set -a instead. PATH is set here because rcctl
+          inherits its"
+      - kind: comment
+        line: "# caller's, and root cron's has no /usr/local/bin. pexp names the ruby
+          process"
+      - kind: comment
+        line: "# the gateway actually runs as, with .* at both ends because rc.subr
+          matches it"
+      - kind: comment
+        line: "# against the whole argv with pgrep -xf."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: blank
+        line: ''
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: code
+        line: daemon_flags="-c 'cd /home/brgen/app && export IRC_HOST=127.0.0.1 IRC_PORT=6667
+          && set -a && . /etc/brgen.env && set +a && export RAILS_ENV=production HOME=/home/brgen
+          && export BUNDLE_VERSION=system && exec ${_bundle} exec ruby bin/irc-gateway'"
+      - kind: code
+        line: daemon_user="brgen"
+      - kind: code
+        line: daemon_execdir="/home/brgen/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: pexp=".*ruby[0-9.]*.*bin/irc-gateway.*"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+    master:
+      shape: master
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# rc_pre and the post-start block below run bundle, ruby and curl —
+          all"
+      - kind: comment
+        line: "# packages in /usr/local/bin. rcctl inherits its caller's PATH, and
+          root's cron"
+      - kind: comment
+        line: "# PATH has no /usr/local/bin, so every one of them resolved when an
+          operator"
+      - kind: comment
+        line: "# restarted master from a login shell and none of them resolved when"
+      - kind: comment
+        line: "# resource_guard.sh's cron tick did. For master that was fatal rather
+          than"
+      - kind: comment
+        line: '# degraded: the asset check reported "bundle: not found", could not
+          tell that'
+      - kind: comment
+        line: "# apart from broken assets, and took the exit-1 branch that refuses
+          to start."
+      - kind: comment
+        line: "# ai.brgen.no was down from 08:20 to 14:50 on 2026-07-31 for exactly
+          this, and"
+      - kind: comment
+        line: "# again from 15:10 — twice, because the guard's restart is what triggers
+          it."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: PORT=53187
+      - kind: code
+        line: "[[ -r /etc/master.env ]] && . /etc/master.env"
+      - kind: code
+        line: CACHE_VERSION="${CACHE_VERSION:-$(cd /home/dev/pub4 2>/dev/null && git
+          rev-parse --short HEAD 2>/dev/null)}"
+      - kind: code
+        line: CACHE_VERSION="${CACHE_VERSION:-v2}"
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: comment
+        line: "# Falcon workers: keep at 1 on 1GB VPS so amber/bsdports can boot alongside
+          master+brgen."
+      - kind: comment
+        line: "# Secrets stay in /etc/master.env and are sourced inside the child
+          so they"
+      - kind: comment
+        line: "# do not appear in `ps` argv. CACHE_VERSION is not a secret."
+      - kind: comment
+        line: "# BUNDLE_FROZEN is load-bearing now that this runs as master rather
+          than dev."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Bundler.setup ends in Definition#write_lock, which touches Gemfile.lock
+          on every"
+      - kind: comment
+        line: "# boot even when the resolution has not changed. The lock is owned
+          by dev, so as"
+      - kind: comment
+        line: "# dev that write was silent and nobody knew it happened; as master
+          it is EACCES"
+      - kind: comment
+        line: "# and falcon never binds. ai.brgen.no went down for exactly this the
+          first time"
+      - kind: comment
+        line: '# daemon_user="master" reached the box, and the stack trace named File.utime'
+      - kind: comment
+        line: "# rather than anything about permissions or users."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Frozen makes the daemon a reader. It also turns the repo's structural
+          lock drift"
+      - kind: comment
+        line: "# (MASTER/Gemfile declares rb-kqueue on BSD only, and the lock is committed
+          from a"
+      - kind: comment
+        line: "# Mac) from a silent rewrite into a startup error that says which gem
+          disagrees —"
+      - kind: comment
+        line: "# which is the failure this box should have, because the rewrite was
+          papering over"
+      - kind: comment
+        line: "# a lock that does not describe what is installed here."
+      - kind: comment
+        line: "# rc.d cannot source the repo, so pick whichever Ruby the package manager"
+      - kind: comment
+        line: "# installed (OpenBSD ships it by version; none is named here)."
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do
+      - kind: code
+        line: '  if [ -x "$_bundle" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: for _ruby in /usr/local/bin/ruby4.0 /usr/local/bin/ruby40 /usr/local/bin/ruby3.4
+          /usr/local/bin/ruby34 /usr/local/bin/ruby3.3 /usr/local/bin/ruby33 /usr/local/bin/ruby;
+          do
+      - kind: code
+        line: '  if [ -x "$_ruby" ]; then break; fi'
+      - kind: code
+        line: done
+      - kind: code
+        line: daemon_flags="-c 'cd /home/dev/pub4/MASTER/web && set -a && . /etc/master.env
+          && set +a && export PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8
+          RAILS_ENV=production CACHE_VERSION=${CACHE_VERSION} SECRET_KEY_BASE_DUMMY=1
+          BUNDLE_FROZEN=true && export BUNDLE_VERSION=system && exec ${_bundle} exec
+          falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+      - kind: comment
+        line: "# Prod safety flags (MASTER_SAFE_MODE etc.) live in /etc/master.env
+          (see master.env.sample)."
+      - kind: comment
+        line: "# rc.d sets a minimal set; env can override for the face runtime. See
+          DeployPaths and"
+      - kind: comment
+        line: "# MASTER/data/budgets.yml for resource budgets on 1GB VPS."
+      - kind: comment
+        line: "# The public-facing process does not run as the user who can become
+          root."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: '# This was daemon_user="dev", and dev''s doas rule is nopass with no
+          command'
+      - kind: comment
+        line: "# scoping, so any code execution inside the process serving ai.brgen.no
+          was root"
+      - kind: comment
+        line: "# without a password — the one app on this box whose daemon_user was
+          not its own"
+      - kind: comment
+        line: "# user. the old backlog has called that operator-priority since it
+          was written, and the"
+      - kind: comment
+        line: "# fix it names is a dedicated user, not doas command rules, which cannot
+          narrow"
+      - kind: comment
+        line: "# dev's rule (etc/doas.conf says why, above that rule)."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# master:1005, in _pub4ci for read on /home/dev -- traverse alone is
+          not enough,"
+      - kind: comment
+        line: "# because this is the one service whose working directory sits under
+          it and"
+      - kind: comment
+        line: "# getcwd(3) names an ancestor by reading it. /bin/ksh like every other"
+      - kind: comment
+        line: "# app user because rc.subr starts a daemon through a login shell. It
+          reads the"
+      - kind: comment
+        line: "# code and gems from /home/dev/pub4 (0755, so read-only to it) and
+          writes only"
+      - kind: comment
+        line: "# MASTER/.master, web/tmp and web/log, which are dev:master 2775 —
+          setgid so new"
+      - kind: comment
+        line: "# files stay group-shared with the dev CLI. /etc/master.env is root:master
+          0640,"
+      - kind: comment
+        line: "# the same shape as brgen.env and amber.env."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Verified as master before the switch: cd, env, gems, and all three
+          writes"
+      - kind: comment
+        line: "# succeed; writing repo code is refused and `doas` is refused. That
+          second pair"
+      - kind: comment
+        line: "# is the whole point — a fold that cannot write code cannot hand dev
+          something"
+      - kind: comment
+        line: "# to execute, which is the path a shared checkout would otherwise leave
+          open."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Note what this does NOT cover: `bin/master` run from a terminal is
+          still dev,"
+      - kind: comment
+        line: "# and dev is still nopass root. This closes the REMOTE path, which
+          is the one an"
+      - kind: comment
+        line: "# attacker reaches."
+      - kind: code
+        line: daemon_user="master"
+      - kind: code
+        line: daemon_execdir="/home/dev/pub4/MASTER/web"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="300"
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: code
+        line: pexp="ruby[0-9.]*.*${PORT}"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# --- stop path: tolerate a process that is already gone, then prove
+          the port is free ---"
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# `rcctl restart master` once printed `kill: 87387: No such process`.
+          The pid was"
+      - kind: comment
+        line: "# not ours: rc.subr starts a wait-for-start timer, and its `kill -ALRM
+          ${_TIMERSUB}`"
+      - kind: comment
+        line: "# after rc_start is unguarded, so a timer that already exited (a fast
+          start) prints"
+      - kind: comment
+        line: "# that line on stderr. It never changed an exit status. This wrapper
+          silences only"
+      - kind: comment
+        line: "# that signal, so a real kill failure elsewhere in the file still speaks."
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# There is no pidfile on this service: rc.subr finds the daemon with
+          pgrep/pkill on"
+      - kind: comment
+        line: '# pexp. So "stale pid" cannot occur; the real hazards are a daemon
+          that survives'
+      - kind: comment
+        line: "# TERM and keeps :53187 held (the next falcon then dies on EADDRINUSE
+          and the"
+      - kind: comment
+        line: "# restart reports a start that never served), and a stop on an already-dead
+          service."
+      - kind: code
+        line: kill() {
+      - kind: code
+        line: '  case "$1" in'
+      - kind: code
+        line: '    -ALRM) command kill "$@" 2>/dev/null; return 0 ;;'
+      - kind: code
+        line: '    *) command kill "$@" ;;'
+      - kind: code
+        line: "  esac"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: master_port_held() { nc -z -w 1 127.0.0.1 "$PORT" >/dev/null 2>&1; }
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Waits up to $1 seconds for the port to free. Returns 1 when it never
+          does."
+      - kind: code
+        line: master_wait_port_free() {
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while master_port_held; do"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: '    [ "$_w" -ge "${1:-20}" ] && return 1'
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  return 0"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Signals the process group of every falcon bound to the port. A pid
+          that vanished"
+      - kind: comment
+        line: "# between pgrep and ps yields no group and is skipped, never an error;
+          rc's own"
+      - kind: comment
+        line: "# group is never signalled."
+      - kind: code
+        line: master_group_signal() {
+      - kind: code
+        line: '  _own=$(set -- $(ps -o pgid= -p $$ 2>/dev/null); echo "$1")'
+      - kind: code
+        line: '  for _p in $(pgrep -f "falcon.*${PORT}" 2>/dev/null); do'
+      - kind: code
+        line: '    _g=$(set -- $(ps -o pgid= -p "$_p" 2>/dev/null); echo "$1")'
+      - kind: code
+        line: '    [ -n "$_g" ] || continue'
+      - kind: code
+        line: '    [ "$_g" = "$_own" ] && continue'
+      - kind: code
+        line: '    pkill "-$1" -g "$_g" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  return 0"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM by pexp (rc.subr's own path, silent when nothing matches), then
+          the group."
+      - kind: comment
+        line: "# Always 0: a service that is not running is already stopped."
+      - kind: code
+        line: rc_stop() {
+      - kind: code
+        line: "  _rc_sendsig ${rc_stop_signal} 2>/dev/null"
+      - kind: code
+        line: "  master_group_signal TERM"
+      - kind: code
+        line: "  return 0"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Runs after every stop and after a failed start. A port still held
+          after the"
+      - kind: comment
+        line: "# grace period gets a group KILL; if it is held after that, the stop
+          failed."
+      - kind: comment
+        line: "# The group is found through falcon, which is gone by now when its
+          TERM worked,"
+      - kind: comment
+        line: "# so the fstat holders are KILLed too: on 2026-10-28 a node MCP child
+          the worker"
+      - kind: comment
+        line: "# spawned kept the inherited :53187 listener, rc_post failed, and rcctl
+          restart"
+      - kind: comment
+        line: "# never ran start."
+      - kind: code
+        line: rc_post() {
+      - kind: code
+        line: "  master_wait_port_free 10 && return 0"
+      - kind: code
+        line: "  master_group_signal KILL"
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  master_wait_port_free 10"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# --- end stop path ---"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# port holders: begin"
+      - kind: comment
+        line: "# The pkills match falcon by its argv, so a process bound to the port
+          under any"
+      - kind: comment
+        line: "# other name (a worker that retitled itself, a hand-started server,
+          a test run)"
+      - kind: comment
+        line: "# survives them, the next falcon dies on EADDRINUSE, and rc reports
+          a start that"
+      - kind: comment
+        line: "# never serves. fstat(1) names every process with a socket on the port
+          whatever"
+      - kind: comment
+        line: "# its argv. Its socket lines read USER CMD PID FD internet stream tcp
+          ADDR"
+      - kind: comment
+        line: "# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves
+          relayd's"
+      - kind: comment
+        line: "# connections to the port and the app's accepted ones alone."
+      - kind: code
+        line: port_holders() {
+      - kind: code
+        line: "  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto
+          _addr _local _rest; do"
+      - kind: code
+        line: "    [[ $_kind == internet || $_kind == internet6 ]] || continue"
+      - kind: code
+        line: "    [[ $_proto == tcp && -z $_rest ]] || continue"
+      - kind: code
+        line: '    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Sends signal $1 to every holder, one pid at a time."
+      - kind: code
+        line: signal_holders() {
+      - kind: code
+        line: "  for _p in $(port_holders); do"
+      - kind: code
+        line: '    kill "-$1" "$_p" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM whatever still holds the port, KILL it after the grace period,
+          and fail"
+      - kind: comment
+        line: "# when the port is still held, so the start is refused with the reason
+          logged."
+      - kind: code
+        line: free_port() {
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before
+          start, TERM"'
+      - kind: code
+        line: "  signal_holders TERM"
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do"
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived
+          TERM, KILL"'
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  [[ -z $(port_holders) ]] && return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM
+          and KILL, refusing to start"'
+      - kind: code
+        line: "  return 1"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# port holders: end"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_pre() {
+      - kind: code
+        line: "  # Deploy-in-progress lock, first: resource_guard reads this flag
+          to hold off"
+      - kind: code
+        line: "  # shedding during the bundle check and the cold boot that follow."
+      - kind: code
+        line: "  touch /home/dev/pub4/.deploying 2>/dev/null || true"
+      - kind: code
+        line: "  # Check, never install. rc_pre runs as root, and a root `bundle install`
+          in"
+      - kind: code
+        line: "  # dev's checkout leaves root-owned gems and .bundle/config that the
+          next dev"
+      - kind: code
+        line: "  # deploy cannot rewrite. vps_deploy_master.sh installs both bundles
+          as dev; a"
+      - kind: code
+        line: "  # failed check here is logged by name so the restart that follows
+          a drifted"
+      - kind: code
+        line: "  # lock says why, instead of healing it in a way nothing records."
+      - kind: code
+        line: "  for _gemfile in /home/dev/pub4/MASTER/web/Gemfile /home/dev/pub4/MASTER/Gemfile;
+          do"
+      - kind: code
+        line: '    (cd "${_gemfile%/Gemfile}" && BUNDLE_GEMFILE="$_gemfile" BUNDLE_WITHOUT=development:test
+          "$_bundle" check >/dev/null 2>&1) ||'
+      - kind: code
+        line: '      logger -t master "bundle check failed for $_gemfile - run vps-deploy
+          master as dev to install"'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: '  pkill -f "falcon.*${PORT}" 2>/dev/null'
+      - kind: code
+        line: '  pkill -f "ruby[0-9.]*.*${PORT}" 2>/dev/null'
+      - kind: code
+        line: '  pkill -f "/home/dev/pub4/MASTER/bin/tts-worker" 2>/dev/null'
+      - kind: code
+        line: "  rm -f /home/dev/pub4/MASTER/.master/tts.sock /home/dev/pub4/MASTER/.master/tts-0.sock
+          /home/dev/pub4/MASTER/.master/tts-1.sock 2>/dev/null || true"
+      - kind: code
+        line: "  PORT_OWNER=master"
+      - kind: code
+        line: "  free_port || { rm -f /home/dev/pub4/.deploying 2>/dev/null; return
+          1; }"
+      - kind: code
+        line: "  # A held port means the next falcon cannot bind; refuse here, with
+          the reason,"
+      - kind: code
+        line: "  # instead of reporting a start that never serves."
+      - kind: code
+        line: "  if ! master_wait_port_free 20; then"
+      - kind: code
+        line: "    master_group_signal KILL"
+      - kind: code
+        line: "    master_wait_port_free 10 || {"
+      - kind: code
+        line: '      logger -t master "CRITICAL: :${PORT} still held after TERM and
+          KILL, refusing to start"'
+      - kind: code
+        line: "      rm -f /home/dev/pub4/.deploying 2>/dev/null || true"
+      - kind: code
+        line: "      exit 1"
+      - kind: code
+        line: "    }"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: "  # Propshaft must not re-digest public/assets/ (nested assets/assets
+          wedges boot)."
+      - kind: code
+        line: "  rm -rf /home/dev/pub4/MASTER/web/public/assets/assets 2>/dev/null
+          || true"
+      - kind: code
+        line: "  _face_ok=1"
+      - kind: code
+        line: "  for _f in /home/dev/pub4/MASTER/web/public/face.js /home/dev/pub4/MASTER/web/public/face.modules.bundle.js
+          /home/dev/pub4/MASTER/web/public/face_vision.bundle.js; do"
+      - kind: code
+        line: '    [[ -f "$_f" ]] || _face_ok=0'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: '  if [[ "$_face_ok" = "0" ]]; then'
+      - kind: code
+        line: '    (cd /home/dev/pub4/MASTER/web && RAILS_ENV=production "$_bundle"
+          exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle)
+          2>/dev/null || true'
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: "  _manifest=/home/dev/pub4/MASTER/web/public/assets/.manifest.json"
+      - kind: code
+        line: "  _stamp=/home/dev/pub4/MASTER/web/tmp/.assets_precompile_stamp"
+      - kind: code
+        line: "  # Every asset the chat shell loads comes from web/config/face_assets.yml
+          via"
+      - kind: code
+        line: "  # face_asset_paths.rb, so a new face module is covered the moment
+          it is added"
+      - kind: code
+        line: "  # to the manifest. The hand-maintained list this replaces covered
+          23 of 38"
+      - kind: code
+        line: "  # files; the 15 it missed included particle_kernel.js, face.runtime.js
+          and"
+      - kind: code
+        line: "  # three.face.module.js — edit one of those, restart, and precompile
+          was"
+      - kind: code
+        line: "  # silently skipped with a stale fingerprint. The tail below is the
+          non-asset"
+      - kind: code
+        line: "  # inputs (stylesheet, service worker, the views themselves), which
+          the"
+      - kind: code
+        line: "  # manifest does not and should not describe."
+      - kind: code
+        line: '  _face_assets=$(cd /home/dev/pub4/MASTER/web && "$_ruby" script/face_asset_paths.rb
+          2>/dev/null)'
+      - kind: code
+        line: "  _face_assets_rc=$?"
+      - kind: code
+        line: "  _force_precompile=0"
+      - kind: code
+        line: '  if [[ "$_face_assets_rc" != "0" ]] || [[ -z "$_face_assets" ]]; then'
+      - kind: code
+        line: "    # The same rule the two stamp writes below keep, on the quieter
+          half. An"
+      - kind: code
+        line: "    # empty list narrows the digest to the hardcoded tail, which is
+          exactly the"
+      - kind: code
+        line: "    # stale fingerprint the paragraph above says this replaced: every"
+      - kind: code
+        line: "    # manifest-described asset drops out of the fingerprint, the stamp
+          still"
+      - kind: code
+        line: "    # matches, and precompile is skipped with the face wrong. Fail
+          toward the"
+      - kind: code
+        line: "    # expensive answer instead."
+      - kind: code
+        line: '    logger -t master "face_asset_paths.rb produced no asset list -
+          digest would be narrowed, precompiling instead of trusting the stamp"'
+      - kind: code
+        line: '    _face_assets=""'
+      - kind: code
+        line: "    _force_precompile=1"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: "  _digest=$(cksum $_face_assets \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/public/face.part*.txt \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/public/face.css \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/public/face.js \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/public/face.modules.bundle.js \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/public/sw.js \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/app/views/shared/_face_boot.html.erb
+          \\"
+      - kind: code
+        line: "    /home/dev/pub4/MASTER/web/app/views/chat/index.html.erb 2>/dev/null
+          | cksum)"
+      - kind: code
+        line: "  _skip=0"
+      - kind: code
+        line: '  if [[ "$_force_precompile" = "0" ]] && [[ -f "$_manifest" ]] && [[
+          -f "$_stamp" ]] && [[ "$(cat "$_stamp" 2>/dev/null)" = "$_digest" ]]; then'
+      - kind: code
+        line: "    _skip=1"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: '  if [[ "$_skip" = "0" ]]; then'
+      - kind: code
+        line: "    # Stamp only on success. `|| true` swallowed a failed precompile
+          and the"
+      - kind: code
+        line: "    # stamp went down regardless — and because the skip test above
+          is"
+      - kind: code
+        line: "    # stamp-equals-digest, one failure then made every later start
+          skip"
+      - kind: code
+        line: "    # precompile as well. Nothing retries until an input file changes."
+      - kind: code
+        line: "    #"
+      - kind: code
+        line: "    # Measured 2026-08-13 on vm23: MASTER/web had no public/assets
+          directory at"
+      - kind: code
+        line: "    # all, a stamp from that day's deploy, and /health reporting"
+      - kind: code
+        line: "    # face_runtime_digest: null — the field the deploy-confidence playbook
+          says"
+      - kind: code
+        line: "    # to check. It stayed invisible because public/ is served undigested,
+          so the"
+      - kind: code
+        line: "    # face kept working while every fingerprinted asset was missing."
+      - kind: code
+        line: '    if (cd /home/dev/pub4/MASTER/web && RAILS_ENV=production "$_bundle"
+          exec rails assets:precompile) 2>/dev/null; then'
+      - kind: code
+        line: '      if [[ "$_force_precompile" = "1" ]]; then'
+      - kind: code
+        line: '        logger -t master "precompiled but stamp not written: the digest
+          was computed without the manifest list and would license a skip"'
+      - kind: code
+        line: "      else"
+      - kind: code
+        line: "        mkdir -p /home/dev/pub4/MASTER/web/tmp"
+      - kind: code
+        line: '        echo "$_digest" > "$_stamp"'
+      - kind: code
+        line: "      fi"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t master "assets:precompile failed - stamp not written,
+          will retry next start"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: "  # Load-bearing asset check: refuse to start serving a broken face.js/manifest"
+      - kind: code
+        line: "  # mismatch (the exact class of bug that wedged the primer boot on
+          2026-07-10)."
+      - kind: code
+        line: "  # One self-heal precompile retry before actually blocking the start."
+      - kind: code
+        line: "  _check=/home/dev/pub4/MASTER/checks/runner.rb"
+      - kind: code
+        line: "  _check_name=master_web_assets"
+      - kind: code
+        line: '  if [[ -f "$_check" ]]; then'
+      - kind: code
+        line: '    _check_out=$(cd /home/dev/pub4/MASTER/web && RAILS_ENV=production
+          "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)'
+      - kind: code
+        line: "    _check_rc=$?"
+      - kind: code
+        line: '    if [[ "$_check_rc" != "0" ]]; then'
+      - kind: code
+        line: '      logger -t master "assets check failed, forcing fresh precompile
+          and retrying once: $_check_out"'
+      - kind: code
+        line: "      # Same rule as the stamp above, and this is the path where breaking
+          it"
+      - kind: code
+        line: "      # hurts most: the check has already said the assets are wrong,
+          so stamping"
+      - kind: code
+        line: "      # a precompile that failed makes every later start skip the retry."
+      - kind: code
+        line: '      if (cd /home/dev/pub4/MASTER/web && RAILS_ENV=production "$_bundle"
+          exec rails assets:precompile) 2>/dev/null; then'
+      - kind: code
+        line: '        if [[ "$_force_precompile" = "1" ]]; then'
+      - kind: code
+        line: '          logger -t master "retry precompiled but stamp not written:
+          narrowed digest"'
+      - kind: code
+        line: "        else"
+      - kind: code
+        line: "          mkdir -p /home/dev/pub4/MASTER/web/tmp"
+      - kind: code
+        line: '          echo "$_digest" > "$_stamp"'
+      - kind: code
+        line: "        fi"
+      - kind: code
+        line: "      else"
+      - kind: code
+        line: '        logger -t master "retry precompile failed - stamp not written,
+          the check below decides the start"'
+      - kind: code
+        line: "      fi"
+      - kind: code
+        line: '      _check_out=$(cd /home/dev/pub4/MASTER/web && RAILS_ENV=production
+          "$_bundle" exec ruby "$_check" "$_check_name" 2>&1)'
+      - kind: code
+        line: "      _check_rc=$?"
+      - kind: code
+        line: '      if [[ "$_check_rc" != "0" ]]; then'
+      - kind: code
+        line: '        logger -t master "CRITICAL: assets check still failing after
+          retry, refusing to start with broken assets: $_check_out"'
+      - kind: code
+        line: "        rm -f /home/dev/pub4/.deploying 2>/dev/null || true"
+      - kind: code
+        line: "        exit 1"
+      - kind: code
+        line: "      fi"
+      - kind: code
+        line: '      logger -t master "assets check passed after retry precompile"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+      - kind: code
+        line: rc=$?
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: '  if [[ "$rc" = "0" ]]; then'
+      - kind: code
+        line: "    # The URL, never the token: rcctl's output lands in ~/vps-deploy.log
+          and in"
+      - kind: code
+        line: "    # whatever terminal ran the restart, and a token there is operator
+          access for"
+      - kind: code
+        line: "    # anyone who reads either. The line points at /pair issue, which
+          hands out a"
+      - kind: code
+        line: "    # one-time code."
+      - kind: code
+        line: '    "$_ruby" -ryaml -e ''c=YAML.load_file("/home/dev/pub4/MASTER/.master/config.yml")
+          rescue {}; u=c["web_public_url"]||"http://127.0.0.1:#{c["web_port"]||53187}";
+          t=c["web_token"]; puts t ? "web: #{u}, token set, /pair issue for a code"
+          : "web: #{u}"'' 2>/dev/null'
+      - kind: code
+        line: "    # Wait for Falcon /up, then restart relayd so HTTPS does not stay
+          empty after rcctl restart master."
+      - kind: code
+        line: "    _i=0"
+      - kind: code
+        line: "    _up_ok=0"
+      - kind: code
+        line: '    while [[ "$_i" -lt 300 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1
+          && { _up_ok=1; break; }'
+      - kind: code
+        line: "      sleep 1"
+      - kind: code
+        line: "      _i=$((_i + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: "    # Wait for the MASTER container: the face page renders the warming
+          page"
+      - kind: code
+        line: "    # until it has booted, then the face canvas. The GET also pages
+          the face"
+      - kind: code
+        line: "    # in before the deploy's page checks measure it. A chat turn is
+          POST only,"
+      - kind: code
+        line: "    # so it cannot be the probe."
+      - kind: code
+        line: "    _ping_ok=0"
+      - kind: code
+        line: "    _j=0"
+      - kind: code
+        line: '    while [[ "$_j" -lt 120 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/" 2>/dev/null |'
+      - kind: code
+        line: '        grep -q ''id="face"'' && { _ping_ok=1; break; }'
+      - kind: code
+        line: "      sleep 2"
+      - kind: code
+        line: "      _j=$((_j + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: '    if [[ "$_up_ok" = "1" ]]; then'
+      - kind: code
+        line: "      rcctl restart relayd 2>/dev/null || true"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t master "relayd skipped: /up not ready after restart"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: '    if [[ "$_ping_ok" = "0" ]]; then'
+      - kind: code
+        line: '      logger -t master "container warmup: face page not ready after
+          120 tries"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "    # Warm TTS with MASTER Gemfile only — never inherit Falcon web/vendor/bundle
+          env."
+      - kind: code
+        line: "    _tts_warm_ok=0"
+      - kind: code
+        line: '    if su -m dev -c ''export HOME=/home/dev; unset BUNDLE_PATH GEM_HOME
+          GEM_PATH BUNDLE_BIN_PATH BUNDLE_WITHOUT BUNDLE_DEPLOYMENT RUBYOPT; cd /home/dev/pub4/MASTER
+          && BUNDLE_GEMFILE=/home/dev/pub4/MASTER/Gemfile MASTER_TTS_TIMEOUT=45 ''"$_bundle"''
+          exec ruby -Ilib -e "require \"master\"; exit(Master::Voice::TtsSupervisor.ensure_daemon!
+          ? 0 : 1)"'' 2>>/var/log/daemon; then'
+      - kind: code
+        line: "      _l=0"
+      - kind: code
+        line: '      while [[ "$_l" -lt 30 ]]; do'
+      - kind: code
+        line: "        [[ -S /home/dev/pub4/MASTER/.master/tts-0.sock ]] && { _tts_warm_ok=1;
+          break; }"
+      - kind: code
+        line: "        sleep 1"
+      - kind: code
+        line: "        _l=$((_l + 1))"
+      - kind: code
+        line: "      done"
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: '    if [[ "$_tts_warm_ok" = "0" ]]; then'
+      - kind: code
+        line: '      logger -t master "CRITICAL: TTS sockets missing after ensure_daemon
+          (check .master/tts-worker-*.log)"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: '    "$_ruby" /home/dev/pub4/MASTER/web/script/probe_http 2>/dev/null
+          || logger -t master "probe_http failed after restart"'
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: fi
+      - kind: comment
+        line: "# rc_pre touched the deploy flag; it comes off here, after the /up,
+          ping and TTS"
+      - kind: comment
+        line: "# warmup, so bundle, the Falcon bind and the cold boot are all inside
+          the window"
+      - kind: comment
+        line: "# resource_guard reads it for."
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: "  rm -f /home/dev/pub4/.deploying 2>/dev/null || true"
+      - kind: code
+        line: fi
+      - kind: code
+        line: exit "$rc"
+    mrdamascy:
+      shape: puma
+      rows:
+      - kind: comment
+        line: "#!/bin/ksh"
+      - kind: comment
+        line: "# mrdamascy — the Mr. Damascy ordering PWA, served as the mrd.brgen.no
+          demo."
+      - kind: comment
+        line: "# One Puma process (single mode, no cluster), three threads, nothing
+          else resident:"
+      - kind: comment
+        line: "# the app enqueues no jobs, so there is no mrdamascy_jobs and no Solid
+          Queue"
+      - kind: comment
+        line: "# supervisor in this process. Vipps, Stripe and Wolt run in their mock
+          modes"
+      - kind: comment
+        line: '# (each client is mock unless its *_MOCK variable is "0"), so no payment
+          key is'
+      - kind: comment
+        line: '# needed or read. To take the demo down see OPENBSD/RUNBOOK.md, "Mr.
+          Damascy demo".'
+      - kind: comment
+        line: "#"
+      - kind: comment
+        line: "# Same PATH reason as rc.d/bsdports: rc_pre and the post-start block
+          run curl"
+      - kind: comment
+        line: "# from /usr/local/bin, which root cron does not have."
+      - kind: code
+        line: export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+      - kind: code
+        line: PORT=47314
+      - kind: code
+        line: APP_DIR=/home/mrdamascy/app
+      - kind: comment
+        line: "# /etc/mrdamascy.env (root:mrdamascy 640) holds SECRET_KEY_BASE; pub4-admin"
+      - kind: comment
+        line: "# ensure-secret writes it on the first deploy. It is sourced inside
+          the exec by"
+      - kind: comment
+        line: "# the app user, never interpolated into daemon_flags, so the secret
+          stays out"
+      - kind: comment
+        line: "# of ps argv."
+      - kind: code
+        line: "[[ -r /etc/mrdamascy.env ]] && . /etc/mrdamascy.env"
+      - kind: code
+        line: ': "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}"'
+      - kind: code
+        line: daemon="/bin/ksh"
+      - kind: code
+        line: for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4
+          \
+      - kind: code
+        line: "    /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33
+          /usr/local/bin/bundle; do"
+      - kind: code
+        line: "  if [[ -x $_bundle ]]; then break; fi"
+      - kind: code
+        line: done
+      - kind: comment
+        line: "# The -b bind replaces the one config/puma.rb takes from PORT, so the
+          listener is"
+      - kind: comment
+        line: "# loopback only and relayd is the one public door. RAILS_MAX_THREADS
+          sizes both"
+      - kind: comment
+        line: "# Puma and the SQLite pool. WEB_CONCURRENCY=0, not 1: Puma 8 reads
+          it as its"
+      - kind: comment
+        line: "# worker count, and 1 starts a cluster parent plus one worker, two
+          processes."
+      - kind: code
+        line: _env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}
+          WEB_CONCURRENCY=0"
+      - kind: code
+        line: _env="${_env} RAILS_MAX_THREADS=3 RAILS_MIN_THREADS=1 MRDAMASCY_HOST=mrd.brgen.no
+          BUNDLE_VERSION=system"
+      - kind: code
+        line: _exec="exec ${_bundle} exec puma -b tcp://127.0.0.1:${PORT}"
+      - kind: code
+        line: daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env &&
+          set +a && export ${_env} && ${_exec}'"
+      - kind: code
+        line: daemon_user="mrdamascy"
+      - kind: code
+        line: daemon_execdir="/home/mrdamascy/app"
+      - kind: code
+        line: daemon_logger="daemon.notice"
+      - kind: code
+        line: daemon_timeout="120"
+      - kind: code
+        line: ". /etc/rc.d/rc.subr"
+      - kind: comment
+        line: "# rc.subr matches pexp with pgrep -xf, the whole argv, which reads"
+      - kind: comment
+        line: '# "ruby34 .../bundle34 exec puma -b ..." while booting and Puma''s
+          retitled'
+      - kind: comment
+        line: '# "ruby34: puma 8.x (tcp://127.0.0.1:47314) [app]" after; both end
+          past the port.'
+      - kind: code
+        line: pexp="ruby[0-9.]*.*puma.*${PORT}.*"
+      - kind: code
+        line: rc_bg=YES
+      - kind: code
+        line: rc_reload=NO
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# port holders: begin"
+      - kind: comment
+        line: "# The pkills match falcon by its argv, so a process bound to the port
+          under any"
+      - kind: comment
+        line: "# other name (a worker that retitled itself, a hand-started server,
+          a test run)"
+      - kind: comment
+        line: "# survives them, the next falcon dies on EADDRINUSE, and rc reports
+          a start that"
+      - kind: comment
+        line: "# never serves. fstat(1) names every process with a socket on the port
+          whatever"
+      - kind: comment
+        line: "# its argv. Its socket lines read USER CMD PID FD internet stream tcp
+          ADDR"
+      - kind: comment
+        line: "# LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves
+          relayd's"
+      - kind: comment
+        line: "# connections to the port and the app's accepted ones alone."
+      - kind: code
+        line: port_holders() {
+      - kind: code
+        line: "  fstat 2>/dev/null | while read -r _u _c _pid _fd _kind _type _proto
+          _addr _local _rest; do"
+      - kind: code
+        line: "    [[ $_kind == internet || $_kind == internet6 ]] || continue"
+      - kind: code
+        line: "    [[ $_proto == tcp && -z $_rest ]] || continue"
+      - kind: code
+        line: '    [[ $_local == *:"$PORT" ]] && print -n -- "$_pid "'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# Sends signal $1 to every holder, one pid at a time."
+      - kind: code
+        line: signal_holders() {
+      - kind: code
+        line: "  for _p in $(port_holders); do"
+      - kind: code
+        line: '    kill "-$1" "$_p" 2>/dev/null'
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: comment
+        line: "# TERM whatever still holds the port, KILL it after the grace period,
+          and fail"
+      - kind: comment
+        line: "# when the port is still held, so the start is refused with the reason
+          logged."
+      - kind: code
+        line: free_port() {
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } before
+          start, TERM"'
+      - kind: code
+        line: "  signal_holders TERM"
+      - kind: code
+        line: "  _w=0"
+      - kind: code
+        line: "  while [[ -n $(port_holders) ]] && (( _w < ${PORT_GRACE:-20} )); do"
+      - kind: code
+        line: "    sleep 1"
+      - kind: code
+        line: "    _w=$((_w + 1))"
+      - kind: code
+        line: "  done"
+      - kind: code
+        line: "  _holders=$(port_holders)"
+      - kind: code
+        line: "  [[ -n $_holders ]] || return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "stale :${PORT} holder(s) ${_holders% } survived
+          TERM, KILL"'
+      - kind: code
+        line: "  signal_holders KILL"
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  [[ -z $(port_holders) ]] && return 0"
+      - kind: code
+        line: '  logger -t "$PORT_OWNER" "CRITICAL: :${PORT} still held after TERM
+          and KILL, refusing to start"'
+      - kind: code
+        line: "  return 1"
+      - kind: code
+        line: "}"
+      - kind: comment
+        line: "# port holders: end"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_pre() {
+      - kind: code
+        line: "  touch /home/dev/pub4/.deploying-mrdamascy 2>/dev/null || true"
+      - kind: code
+        line: '  pkill -f "puma.*${PORT}" 2>/dev/null || true'
+      - kind: code
+        line: "  sleep 1"
+      - kind: code
+        line: "  PORT_OWNER=mrdamascy"
+      - kind: code
+        line: "  free_port || { rm -f /home/dev/pub4/.deploying-mrdamascy 2>/dev/null;
+          return 1; }"
+      - kind: code
+        line: "}"
+      - kind: blank
+        line: ''
+      - kind: code
+        line: rc_cmd $1
+      - kind: code
+        line: rc=$?
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: '  if [[ "$rc" = "0" ]]; then'
+      - kind: code
+        line: "    # relayd can keep routing to the old (now-dead) backend connection
+          after a"
+      - kind: code
+        line: "    # restart until it's kicked — same fix already used by MASTER's
+          rc.d script."
+      - kind: code
+        line: "    _i=0"
+      - kind: code
+        line: "    _up_ok=0"
+      - kind: code
+        line: '    while [[ "$_i" -lt 300 ]]; do'
+      - kind: code
+        line: '      curl -fsS -m 5 "http://127.0.0.1:${PORT}/up" >/dev/null 2>&1
+          && { _up_ok=1; break; }'
+      - kind: code
+        line: "      sleep 1"
+      - kind: code
+        line: "      _i=$((_i + 1))"
+      - kind: code
+        line: "    done"
+      - kind: code
+        line: '    if [[ "$_up_ok" = "1" ]]; then'
+      - kind: code
+        line: "      rcctl restart relayd 2>/dev/null || true"
+      - kind: code
+        line: "    else"
+      - kind: code
+        line: '      logger -t mrdamascy "relayd skipped: /up not ready after restart"'
+      - kind: code
+        line: "    fi"
+      - kind: code
+        line: "  fi"
+      - kind: code
+        line: fi
+      - kind: comment
+        line: "# rc_pre touched the deploy flag; it comes off here, after the /up
+          wait, so the"
+      - kind: comment
+        line: "# cold boot is inside the window resource_guard reads it for."
+      - kind: code
+        line: if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
+      - kind: code
+        line: "  rm -f /home/dev/pub4/.deploying-mrdamascy 2>/dev/null || true"
+      - kind: code
+        line: fi
+      - kind: code
+        line: exit $rc

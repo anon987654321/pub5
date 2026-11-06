@@ -54,6 +54,30 @@ properties:
                 port: { type: integer }
                 path: { type: string }
                 code: { type: integer }
+  rc:
+    type: object
+    required: [note, scripts]
+    additional: false
+    properties:
+      note: { type: string }
+      scripts:
+        type: object
+        additional:
+          type: object
+          required: [shape, rows]
+          additional: false
+          properties:
+            shape: { enum: [falcon, puma, jobs, master, irc] }
+            rows:
+              type: array
+              min_items: 10
+              items:
+                type: object
+                required: [kind, line]
+                additional: false
+                properties:
+                  kind: { enum: [blank, comment, code] }
+                  line: { type: string }
   pf:
     type: object
     required: [vars, rules]

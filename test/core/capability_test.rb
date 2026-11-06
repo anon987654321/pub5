@@ -141,4 +141,14 @@ class CapabilityTest < Minitest::Test
       refute run.ok?
     end
   end
+
+  # unset takes names away from the child and never sets one; the ledger says which.
+  def test_exec_can_withhold_environment_names_from_the_child
+    sandbox do |root|
+      w = world(root, { exec: ["env"] })
+      assert_match(/^HOME=/, w.exec("env").out)
+      refute_match(/^HOME=/, w.exec("env", unset: ["HOME"]).out)
+      assert_equal ["HOME"], w.ledger.entries.last["unset"]
+    end
+  end
 end

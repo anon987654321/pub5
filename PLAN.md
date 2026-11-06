@@ -330,3 +330,21 @@ that move byte for byte where proven; BPLANS never becomes a tree - text
 in the plan now, backlog.yml rows at Phase 5. registry/ sits at pub5's
 top level, not under master/. Where this section and phase rows above
 differ in build order, the decided order (brgen first, 2026-11-06) wins.
+
+## 16. Retiring pub4 by freeze, and curating history at milestones (operator, 2026-11-06)
+
+Freeze, then delete. A pub4 part is frozen once its pub5 replacement passes
+its tests and its Laws are enforced in pub5: frozen means no new work in pub4,
+a pointer to the pub5 location, and a pub4 Law that refuses edits there. pub4
+is deleted as a whole only after the cutover's 30 days without a rollback,
+because until then it runs production and is the rollback. Laws freeze first,
+once promoted in pub5.
+
+History is curated at milestones, not continuously. At each milestone (core,
+/fix and CLI, each app, cutover) writers pause, `bin/master history` rebuilds
+the milestone's commits as logical chunks in dependency order (scaffolding,
+registries, Law engine, Laws, plugins, apps), each chunk passes bin/check on
+its own, one force-push lands it, a tag marks it, and writers resume from the
+tag. A conduct Law triggers the curation at each milestone. Shared history is
+never rewritten between milestones, because several writers push concurrently.
+The first curation point is when /fix and the CLI have landed.
