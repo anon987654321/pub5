@@ -40,6 +40,14 @@ knobs:
     type: string
     default: null
     purpose: Set by sshd; bin/master reads it only to tell a remote session from a local one.
+  PUB5_FIX_REVIEWER:
+    type: string
+    default: null
+    purpose: The independent visual reviewer, a model id like PUB5_MODEL's; it must differ from the author, and without one a visible repair stays uncleared.
+  PUB5_CHROME:
+    type: path
+    default: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+    purpose: The headless browser /fix --visual captures with.
   MASTER_WEB_CHAT:
     type: boolean
     default: false

@@ -96,3 +96,14 @@ commands:
     contexts: [tty, pipe, remote]
     verbs:
       read: ["log/master/*"]
+  fix:
+    summary: Repair Law findings with a model, one verified commit a repair (fix [tree|path] [--dry-run] [--focus LAW] [--visual]).
+    plugin: master/fix/command.rb
+    class: Commands::Fix
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      write: ["**/*"]
+      exec: [ruby, claude, grok, codex, agy, sysctl, kill, Google Chrome, chromium, chrome]
+      git: [rev-parse, ls-files, diff, show, add, commit, reset, blame]
+      llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
