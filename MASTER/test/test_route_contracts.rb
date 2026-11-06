@@ -9,12 +9,22 @@ class TestRouteContracts < Minitest::Test
   end
 
   # minitest/mock is not installed here; swap the module function for the block.
+  # Keywords are forwarded on their own: the signed-in fetch carries a cookie.
   def with_fetch(fake)
     original = RouteContracts.method(:fetch)
-    RouteContracts.define_singleton_method(:fetch) { |*args| fake.call(*args) }
+    RouteContracts.define_singleton_method(:fetch) { |*args, **opts| fake.call(*args, **opts) }
     yield
   ensure
     RouteContracts.define_singleton_method(:fetch, original)
+  end
+
+  # Same swap for the sign-in POST.
+  def with_post(fake)
+    original = RouteContracts.method(:post)
+    RouteContracts.define_singleton_method(:post, fake)
+    yield
+  ensure
+    RouteContracts.define_singleton_method(:post, original)
   end
 
   def html_response(body) = Response.new("200", { "Content-Type" => "text/html; charset=utf-8" }, body)
@@ -56,7 +66,7 @@ class TestRouteContracts < Minitest::Test
 
   # brgen's verticals 404 on brgen.no and answer on their subdomain.
   def test_a_path_that_404s_on_the_primary_host_is_recorded_on_the_host_that_answers
-    target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1", host: "brgen.no,markedsplass.brgen.no")
+    target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1", host: "brgen.no,markedsplass.brgen.no", user: nil)
     answers = { "brgen.no" => "404", "markedsplass.brgen.no" => "200" }
     fake = ->(_target, _path, host) { html_response("<title>Marked</title>").tap { |r| r.code = answers.fetch(host) } }
     with_fetch(fake) do
@@ -70,6 +80,41 @@ class TestRouteContracts < Minitest::Test
   def test_matching_contracts_have_no_differences
     same = { "/" => { "status" => 200, "landmarks" => %w[main] } }
     assert_empty RouteContracts.compare(same, same)
+  end
+
+  # Signed-in half: the cookie captured by the sign-in POST is replayed on the
+  # recorded paths, one sign-in per host, and the cookie carries the host.
+  def test_a_signed_in_run_signs_in_per_host_and_carries_the_cookie
+    target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1",
+                                        host: "brgen.no,markedsplass.brgen.no", user: %w[demo@brgen.no secret])
+    signed_uses_cookie = []
+    with_fetch(lambda do |_target, _path, _host, cookie: nil|
+      signed_uses_cookie << cookie
+      html_response("<title>Host</title>")
+    end) do
+      with_post(->(target, _path, _user, host) {
+        Response.new("302", { "Set-Cookie" => "_brgen_session=#{host}" }, "").tap do |response|
+          def response.get_fields(name) = [headers.fetch(name)]
+        end
+      }) do
+        rows = RouteContracts.observe_signed(target, { "/a" => { "host" => "markedsplass.brgen.no" }, "/b" => {} })
+        assert_equal %w[Host Host], rows.values.map { |row| row["title"] }
+      end
+    end
+
+    assert signed_uses_cookie.first.to_s.include?("_brgen_session=markedsplass.brgen.no"),
+           "the pinned host's cookie is replayed (#{signed_uses_cookie.first.inspect})"
+    assert signed_uses_cookie.last.to_s.include?("_brgen_session=brgen.no"),
+           "the primary host's cookie is replayed (#{signed_uses_cookie.last.inspect})"
+  end
+
+  def test_a_failed_sign_in_refuses_aloud_instead_of_recording_the_form
+    target = RouteContracts::Target.new(app: "brgen", base: "http://127.0.0.1:1", host: nil, user: %w[demo@brgen.no wrong])
+    with_post(->(*_args) { Response.new("200", {}, "<form>") }) do
+      error = assert_raises(SystemExit) { RouteContracts.sign_in(target, "brgen.no") }
+
+      assert_match(/sign-in failed/, error.message)
+    end
   end
 
   def test_paths_skip_dynamic_segments_and_framework_routes

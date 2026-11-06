@@ -12,12 +12,18 @@
 #   ruby MASTER/tools/rails/route_contracts.rb record bsdports http://127.0.0.1:3311 [--host bsdports.org]
 #   ruby MASTER/tools/rails/route_contracts.rb check  bsdports http://127.0.0.1:3311 [--host bsdports.org]
 #
+# record-signed|check-signed run the same recording through a seeded demo
+# user's session (--user email:password): sign in once per host, carry the
+# session cookie, and lock what the auth-persona pages answer a signed-in
+# visitor. pub5 Phase 0, second row.
+#
 # Paths come from MASTER/checks/data/route_manifest.yml; routes with dynamic
 # segments are skipped until a seeded-record lookup exists.
 
 require "net/http"
 require "uri"
 require "yaml"
+require_relative "../../checks/support/page_inventory"
 
 module RouteContracts
   ROOT = File.expand_path("../../..", __dir__)
@@ -32,7 +38,7 @@ module RouteContracts
   # The app under test and where it answers. host is sent as the Host header; a
   # comma list names the app's other hosts too (brgen's verticals answer only on
   # their own subdomains, which the route manifest does not record).
-  Target = Data.define(:app, :base, :host) do
+  Target = Data.define(:app, :base, :host, :user) do
     def hosts = host.to_s.split(",").then { |list| list.empty? ? [nil] : list }
   end
 
@@ -50,10 +56,12 @@ module RouteContracts
   def contract_path(app) = File.join(DIR, "#{app}.yml")
 
   # One anonymous GET, no redirect following: the redirect is part of the contract.
-  def fetch(target, path, host = target.hosts.first)
+  # cookie, when passed, replays the seeded demo user's session.
+  def fetch(target, path, host = target.hosts.first, cookie: nil)
     uri = URI.join(target.base, path)
     request = Net::HTTP::Get.new(uri)
     request["Host"] = host if host
+    request["Cookie"] = cookie if cookie
     request["Accept"] = "text/html,application/json;q=0.9,*/*;q=0.8"
     options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
     Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
@@ -97,6 +105,73 @@ module RouteContracts
     rescue StandardError => e
       [path, { "error" => e.class.name }]
     end
+  end
+
+  # Signed-in: the same recording through a seeded demo user's session, for the
+  # pages the inventory marks auth. Paths are read from the inventory only here,
+  # at record time in pub4; a contract replayed later carries its own paths, so a
+  # check against pub5 needs nothing from pub4's tree. A page whose GET path
+  # names a record is excluded until a seeded-record lookup exists, as in row 1.
+  def auth_paths(app)
+    pages = PageInventory.all.select do |page|
+      page[:app] == app && page[:persona] == "auth" && !dynamic?(page[:path])
+    end
+    pages.map { |page| [page[:path], page[:host]] }.uniq
+  end
+
+  def signed_in_contract_path(app) = File.join(DIR, "#{app}.signed.yml")
+
+  # One sign-in POST per host, cookie session-cached for the run. The POST is
+  # not redirected: Rails answers 302 to after_authentication_url with the
+  # session cookie, and a failure here is a mis-typed --user, not a contract
+  # finding, so it refuses aloud rather than recording a page of sign-in forms.
+  def sign_in(target, host)
+    @signin ||= {}
+    @signin[[target.base, host, target.user]] ||= begin
+      response = post(target, "/session", target.user, host)
+      unless response.code.to_i == 302
+        abort "route_contracts: sign-in failed for #{target.base} as #{target.user.first} (HTTP #{response.code})"
+      end
+
+      Array(response.get_fields("Set-Cookie")).join("; ")
+    end
+  end
+
+  def post(target, path, user, host)
+    uri = URI.join(target.base, path)
+    request = Net::HTTP::Post.new(uri)
+    request["Host"] = host if host
+    request["Accept"] = "text/html"
+    request.form_data = { "email_address" => user.first, "password" => user.last }
+    options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
+    Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+  end
+
+  # cookie_for resolves a recorded row's host (pinned when present) to the
+  # session cookie captured for that host.
+  def observe_signed(target, routes)
+    routes.to_h do |path, row|
+      host = row["host"] || target.hosts.first
+      cookie = sign_in(target, host)
+      [path, describe(fetch(target, path, host, cookie:))]
+    rescue StandardError => e
+      [path, { "error" => e.class.name }]
+    end
+  end
+
+  def record_signed(target)
+    routes = auth_paths(target.app).map { |path, host|[path, host && host != target.hosts.first ? { "host" => host } : {}] }.to_h
+    abort "route_contracts: no auth-persona pages in the inventory for #{target.app}" if routes.empty?
+    observed = observe_signed(target, routes)
+    contract = { "schema" => 1, "app" => target.app, "user" => target.user.first, "routes" => observed }
+    File.write(signed_in_contract_path(target.app), YAML.dump(contract))
+    observed
+  end
+
+  def check_signed(target)
+    abort "route_contracts: check-signed needs --user email:password (the ported repo's own demo user)" unless target.user
+    recorded = YAML.load_file(signed_in_contract_path(target.app))
+    compare(recorded["routes"], observe_signed(target, recorded["routes"]))
   end
 
   # The first host that does not 404 answers for the path, and the row names it
@@ -150,17 +225,26 @@ end
 
 if $PROGRAM_NAME == __FILE__
   mode, app, base = ARGV.first(3)
-  host = ARGV.include?("--host") ? ARGV[ARGV.index("--host") + 1] : nil
-  usage = "usage: route_contracts.rb record|check APP BASE_URL [--host HOST]"
-  abort usage unless %w[record check].include?(mode) && base
-  target = RouteContracts::Target.new(app:, base:, host:)
+  flags = ->(name) { ARGV.include?(name) ? ARGV[ARGV.index(name) + 1] : nil }
+  host = flags.call("--host")
+  user_arg = flags.call("--user")
+  usage = "usage: route_contracts.rb record|check|record-signed|check-signed APP BASE_URL [--host HOST] [--user email:password]"
+  mode = { "record" => "record", "check" => "check",
+           "record-signed" => "record_signed", "check-signed" => "check_signed" }[mode]
+  abort usage unless mode && base
+  user = user_arg && user_arg.split(":", 2)
+  target = RouteContracts::Target.new(app:, base:, host:, user:)
 
   if mode == "record"
     observed = RouteContracts.record(target)
     puts "#{app}: #{observed.size} routes recorded (#{RouteContracts.summary(observed)})"
     puts "wrote #{RouteContracts.contract_path(app).delete_prefix("#{RouteContracts::ROOT}/")}"
+  elsif mode == "record_signed"
+    observed = RouteContracts.record_signed(target)
+    puts "#{app}: #{observed.size} signed-in routes recorded (#{RouteContracts.summary(observed)})"
+    puts "wrote #{RouteContracts.signed_in_contract_path(app).delete_prefix("#{RouteContracts::ROOT}/")}"
   else
-    differences = RouteContracts.check(target)
+    differences = RouteContracts.public_send(mode, target)
     differences.each { |path, detail| puts "#{path}  #{detail}" }
     puts "#{app}: #{differences.empty? ? 'every route matches its contract' : "#{differences.size} route(s) differ"}"
     exit(differences.empty? ? 0 : 1)
