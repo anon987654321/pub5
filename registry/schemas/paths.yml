@@ -24,3 +24,13 @@ properties:
       properties:
         from: { type: array, items: { type: string } }
         by: { type: string }
+  ported:
+    type: object
+    description: Protected globs a port command may write; it keeps files edited since.
+    additional:
+      type: object
+      required: [from, by]
+      additional: false
+      properties:
+        from: { type: array, items: { type: string } }
+        by: { type: string }

@@ -33,6 +33,11 @@ protected:
   - "**/config/environments/production.rb"
   - "**/.env*"
   - log/ledger.jsonl
+# Written by a port command and cleaned by hand afterwards: the command may
+# write these protected paths, and keeps any file edited since it wrote it.
+ported:
+  "laws/pub4/**/*": { from: [pub4 MASTER/law, MASTER/data/laws.yml, MASTER/checks, MASTER/lib/operator/ratchets.rb], by: port-laws }
+  registry/laws.yml: { from: [pub4 MASTER/data/laws.yml, MASTER/data/project_context.yml], by: port-laws }
 generated:
   AGENTS.md: { from: [registry/writers.yml, registry/laws.yml], by: generate }
   CLAUDE.md: { from: [], by: generate }

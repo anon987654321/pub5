@@ -16,9 +16,10 @@ module Core
   #     git:    [status, diff]      # git subcommands
   #
   # Writes are refused on registry/paths.yml's protected paths whatever the
-  # manifest says: /fix may propose a change there, never make one. The one
-  # exception is a generated file (paths.yml generated), which only the
-  # command named as its generator may write.
+  # manifest says: /fix may propose a change there, never make one. The
+  # exceptions are a generated file (paths.yml generated), which only the
+  # command named as its generator may write, and a ported glob (paths.yml
+  # ported), which only its port command may write.
   class Manifest
     VERBS = %i[read write exec net llm git render].freeze
     PATH_VERBS = %i[read write render].freeze
@@ -31,7 +32,7 @@ module Core
       new(name: data.fetch("name"), verbs: data.fetch("verbs", {}), root:, protected_paths:)
     end
 
-    def initialize(name:, verbs:, root: ROOT, protected_paths: nil, generated: nil)
+    def initialize(name:, verbs:, root: ROOT, protected_paths: nil, generated: nil, ported: nil)
       @name = name.to_s
       @root = File.realpath(root)
       @verbs = verbs.to_h.transform_keys(&:to_sym)
@@ -40,6 +41,7 @@ module Core
 
       @protected = protected_paths || Registry.load(:paths).fetch("protected")
       @generated = generated || (protected_paths ? {} : Registry.load(:paths).fetch("generated"))
+      @ported = ported || (protected_paths ? {} : Registry.load(:paths).fetch("ported", {}))
     end
 
     def declared?(verb) = @verbs.key?(verb.to_sym)
@@ -74,12 +76,14 @@ module Core
       unless Array(@verbs[verb]).any? { |glob| File.fnmatch?(glob, relative, GLOB) }
         raise Refusal.new(verb, relative, "#{@name} does not declare this path under #{verb}")
       end
-      if verb == :write && protected?(relative) && @generated.dig(relative, "by") != @name
+      if verb == :write && protected?(relative) && @generated.dig(relative, "by") != @name && !ported_by_me?(relative)
         raise Refusal.new(verb, relative, "protected by registry/paths.yml")
       end
 
       File.join(@root, relative)
     end
+
+    def ported_by_me?(relative) = @ported.any? { |glob, row| row["by"] == @name && File.fnmatch?(glob, relative, GLOB) }
 
     # The path relative to the root, after resolving every symlink that exists,
     # so neither ../ nor a link can reach outside it.

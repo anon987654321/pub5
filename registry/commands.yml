@@ -58,3 +58,12 @@ commands:
     class: Commands::Knobs
     contexts: [tty, pipe, remote]
     verbs: {}
+  port-laws:
+    summary: Import every pub4 Law into laws/pub4/ and registry/laws.yml (port-laws PUB4 [--ref REF] [--agent-rules FILE]).
+    plugin: master/commands/port_laws.rb
+    class: Commands::PortLaws
+    contexts: [tty, pipe, remote]
+    verbs:
+      read: ["**/*"]
+      write: ["laws/pub4/**/*", registry/laws.yml]
+      exec: [git, ruby]
