@@ -62,10 +62,12 @@ module Contracts
       ## The gate
       - Every push passes parse (Ruby, YAML, JSON, ERB), the tests for the touched trees,
         and the enforced Laws on the diff.
-      - Until the CI workflow is enabled (it needs the operator's workflow-scope token),
-        `bin/check` is the gate: every writer runs it and pushes only when it is green.
-        `bin/setup` points git at .githooks/: pre-commit runs `bin/master check --staged`,
-        commit-msg checks the subject. `bin/lint` and `bin/test` run its halves.
+      - pub5 gates itself: no GitHub Actions or other third-party CI (operator, 2026-11-06).
+        Every writer runs `bin/check` before every push and pushes only when it is green;
+        `bin/setup` installs the pre-commit hook (`bin/master check --staged`) and the
+        commit-msg check. `bin/lint` and `bin/test` run its halves.
+      - pub5's own gatekeeper judges every pushed commit, and merges an `inbox/<writer>`
+        branch only when `bin/check` is green on it.
       - Run the tests you claim to have run, and name them in the commit body. The GLM
         and Fable patches of 2026-11-06 claimed fixes and ran no tests.
       - A result you did not measure is INCONCLUSIVE or BLOCKED, never PASS. Mark
@@ -95,7 +97,22 @@ module Contracts
       - bin/master is the one entrypoint; registry/commands.yml lists its commands.
 
       ## Laws in force (#{laws.count { |_, l| l['lifecycle'] == 'enforced' }} enforced, #{laws.size} total)
-      #{laws.map { |id, l| "- #{id} (#{l['lifecycle']}, #{l['severity']}): #{l['statement']}" }.join("\n")}
+      #{listed(laws.select { |_, l| l['lifecycle'] == 'enforced' })}
+      
+      The other #{laws.count { |_, l| l['lifecycle'] != 'enforced' }} are advisory (#{advisory(laws)}): each is in
+      registry/laws.yml with its statement, and `bin/master laws` lists them.
+      
+      ## Conduct every writer keeps (#{conduct(laws).size} conduct Laws, advisory)
+      #{listed(conduct(laws))}
     MD
+  end
+
+  def listed(laws) = laws.map { |id, l| "- #{id} (#{l['lifecycle']}, #{l['severity']}): #{l['statement']}" }.join("\n")
+
+  def conduct(laws) = laws.select { |_, l| l["kind"] == "conduct" && l["lifecycle"] != "enforced" }
+
+  def advisory(laws)
+    laws.reject { |_, l| l["lifecycle"] == "enforced" }.group_by { |_, l| l["kind"] }
+        .sort_by { |kind, _| kind }.map { |kind, rows| "#{rows.size} #{kind}" }.join(", ")
   end
 end

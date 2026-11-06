@@ -38,10 +38,12 @@ Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 ## The gate
 - Every push passes parse (Ruby, YAML, JSON, ERB), the tests for the touched trees,
   and the enforced Laws on the diff.
-- Until the CI workflow is enabled (it needs the operator's workflow-scope token),
-  `bin/check` is the gate: every writer runs it and pushes only when it is green.
-  `bin/setup` points git at .githooks/: pre-commit runs `bin/master check --staged`,
-  commit-msg checks the subject. `bin/lint` and `bin/test` run its halves.
+- pub5 gates itself: no GitHub Actions or other third-party CI (operator, 2026-11-06).
+  Every writer runs `bin/check` before every push and pushes only when it is green;
+  `bin/setup` installs the pre-commit hook (`bin/master check --staged`) and the
+  commit-msg check. `bin/lint` and `bin/test` run its halves.
+- pub5's own gatekeeper judges every pushed commit, and merges an `inbox/<writer>`
+  branch only when `bin/check` is green on it.
 - Run the tests you claim to have run, and name them in the commit body. The GLM
   and Fable patches of 2026-11-06 claimed fixes and ran no tests.
 - A result you did not measure is INCONCLUSIVE or BLOCKED, never PASS. Mark
@@ -73,3 +75,9 @@ Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 ## Laws in force (2 enforced, 2 total)
 - ONE_IMPLEMENTATION_PER_OPERATION (enforced, error): HTTP, file writes, environment reads, subprocesses and YAML loading each have one implementation, in core/.
 - GENERATED_FILE_MATCHES_GENERATOR (enforced, error): A file listed as generated in registry/paths.yml equals what its generator writes; it is never edited by hand.
+
+The other 0 are advisory (): each is in
+registry/laws.yml with its statement, and `bin/master laws` lists them.
+
+## Conduct every writer keeps (0 conduct Laws, advisory)
+
