@@ -1,5 +1,6 @@
 schema: 1
 product: bsdports
+path: rails/bsdports
 status: source_imported_runtime_not_run
 runtime: NOT_RUN
 contracts: NOT_RUN

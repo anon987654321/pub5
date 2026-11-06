@@ -38,15 +38,16 @@ apps:
     contracts: NOT_RUN
   bsdports:
     path: rails/bsdports
+    process: independent
     source_files_in_pub4: 222
-    existing_partial_import_path: rails/apps/bsdports
-    existing_partial_files: 27
-    source_reconciliation: BLOCKED
+    source_files_imported: 27
+    source_import: PARTIAL
     runtime: NOT_RUN
     contracts: NOT_RUN
   mrdamascy:
     path: rails/mrdamascy
     process: independent
+    server: puma
     source_files_in_pub4: 345
     source_import_from_pub4: NOT_RUN
     runtime: NOT_RUN

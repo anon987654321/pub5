@@ -12,7 +12,7 @@ square corners and compact, exact port results. OpenBSD supplies the subject mat
 seriousness, not a dark terminal theme. The app follows the shared engine's layout and
 accessibility contracts, so it differs from brgen and amber in visual dialect, not in grammar.
 Its interface is Norwegian by default, like the other two
-apps. The promise, the stack and the status of every feature are in `apps.yml`, under
+apps. The promise, the stack and the status of every feature are in `registry/apps.yml`, under
 `bsdports`.
 
 The ports data arrives by import. The rake task `ports:import_now` reads a local tree at once.
@@ -45,7 +45,7 @@ The deployment adapter has not yet been ported to `bin/master`. No production de
 ## Try it
 
 ```zsh
-cd rails/apps/bsdports
+cd rails/bsdports
 PLATFORM=openbsd BSDPORTS_TREE_PATH=/usr/ports bin/rails ports:import_now
 bin/master check
 ```

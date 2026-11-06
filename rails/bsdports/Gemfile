@@ -80,8 +80,8 @@ group :development do
 end
 gem "pagy"
 gem "falcon"
-# Engine-ize spike: shared as local path gem (relative from rails/$app)
-gem "pub5-shared", path: "../../shared"
+# Engine-ize spike: shared as local path gem (relative from rails/bsdports)
+gem "pub5-shared", path: "../shared"
 
 gem "dartsass-rails", "~> 0.5.1"
 
