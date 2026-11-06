@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/checks/visual_contract"
+require_relative "../../master/checks/visual_contract"
 
 class VisualContractCheckTest < Minitest::Test
   def test_each_app_covers_failure_states_and_all_viewports
@@ -13,7 +13,7 @@ class VisualContractCheckTest < Minitest::Test
   end
 
   def test_manifest_schema_records_render_and_accessibility_evidence
-    source = File.read(File.expand_path("../../MASTER/checks/visual_contract.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/visual_contract.rb", __dir__))
     %w[status title screenshot_sha256 console_errors accessibility_violations pixel_diff_count pixel_diff_ratio pixel_diff_image].each do |field|
       assert_includes source, "#{field}:"
     end
@@ -121,8 +121,8 @@ class VisualContractCheckTest < Minitest::Test
   # The runner hands its environment to every check unchanged, so the capture switches reach visual_contract
   # as long as it does not scrub the environment and the explainer documents them.
   def test_runner_forwards_visual_capture_env_to_check
-    runner = File.read(File.expand_path("../../MASTER/checks/runner.rb", __dir__))
-    explain = File.read(File.expand_path("../../MASTER/checks/support/runner_explain.rb", __dir__))
+    runner = File.read(File.expand_path("../../master/checks/runner.rb", __dir__))
+    explain = File.read(File.expand_path("../../master/checks/support/runner_explain.rb", __dir__))
 
     refute_includes runner, "unsetenv_others"
     %w[VISUAL_CAPTURE VISUAL_CAPTURE_APP VISUAL_CAPTURE_BASE].each { |name| assert_includes explain, name }
@@ -131,7 +131,7 @@ end
 
 class VisualContractBrowserTest < Minitest::Test
   def test_visual_contract_uses_the_shared_cdp_browser
-    source = File.read(File.expand_path("../../MASTER/checks/visual_contract.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/visual_contract.rb", __dir__))
     assert_includes source, 'require_relative "support/geometry_probe"'
     assert_includes source, "GeometryProbe.with_browser"
     refute_includes source, "selenium-webdriver"

@@ -2,10 +2,10 @@
 
 require "minitest/autorun"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/checks/lib/rendered/occlusion"
-require_relative "../../../MASTER/checks/lib/rendered/reflow"
-require_relative "../../../MASTER/checks/lib/rendered/keyboard_flow"
-require_relative "../../../MASTER/checks/lib/rendered/mobile_flow"
+require_relative "../../../master/checks/lib/rendered/occlusion"
+require_relative "../../../master/checks/lib/rendered/reflow"
+require_relative "../../../master/checks/lib/rendered/keyboard_flow"
+require_relative "../../../master/checks/lib/rendered/mobile_flow"
 
 # The four browser-backed journey checks, proved on planted measurements.
 #

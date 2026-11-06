@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/scss"
 require_relative "support/critique_sources"
 
 class CritiqueImplementationAmberTest < Minitest::Test
@@ -213,7 +213,7 @@ class CritiqueImplementationAmberTest < Minitest::Test
   # a failed canvas. The microphone starts with the rest, so nothing promises
   # it waits.
   def test_master_primer_names_consent_and_text_fallback
-    master = File.expand_path("../../MASTER/web", __dir__)
+    master = File.expand_path("../../master/web", __dir__)
     primer = File.read(File.join(master, "app/views/chat/index.html.erb"))
     assert_includes primer, 't("face.primer_consent")'
 

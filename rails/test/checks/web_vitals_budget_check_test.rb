@@ -4,7 +4,7 @@ require "json"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/checks/lib/rendered/web_vitals_budget"
+require_relative "../../../master/checks/lib/rendered/web_vitals_budget"
 
 # PERF-100, and the clearest case in this batch of a check that reported ok while
 # measuring nothing.

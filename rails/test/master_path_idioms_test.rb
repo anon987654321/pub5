@@ -26,8 +26,8 @@ class MasterPathIdiomsTest < Minitest::Test
   end
 
   def test_detector_flags_the_walk_up_idiom
-    assert_match(offending, %(File.expand_path("../../../../MASTER/data/x.yml", __dir__)))
-    assert_match(offending, %(Shared::Engine.root.join("../../MASTER/data/seed_forge.yml")))
+    assert_match(offending, %(File.expand_path("../../../../master/data/x.yml", __dir__)))
+    assert_match(offending, %(Shared::Engine.root.join("../../master/data/seed_forge.yml")))
     refute_match(offending, %(File.join(Shared::Contracts.root, "MASTER", "data", "x.yml")))
   end
 

@@ -2,8 +2,8 @@
 
 require "minitest/autorun"
 require_relative "checks/method_swap"
-require_relative "../../MASTER/checks/lib/rendered/journey_invariant"
-require_relative "../../MASTER/checks/lib/rendered/cross_app"
+require_relative "../../master/checks/lib/rendered/journey_invariant"
+require_relative "../../master/checks/lib/rendered/cross_app"
 
 # Two browser-backed checks whose findings are decided in Ruby, not in Chrome.
 # journey_invariant compares two walks of the same surface; cross_app compares

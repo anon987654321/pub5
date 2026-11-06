@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../../MASTER/lib/operator/checks"
+require_relative "../../../master/lib/operator/checks"
 require_relative "method_swap"
 
 # The check scans six explicit constitutional targets, ~11 minutes end to end (brgen alone is
@@ -49,7 +49,7 @@ class ConstitutionalScanTargetsTest < Minitest::Test
 
   # Every tree, not the Rails half. MASTER judges every effect against its
   # constitution and the other trees are effects. The media tools live in
-  # MASTER/tools since 9baa6047e, so the MASTER target covers them.
+  # master/tools since 9baa6047e, so the MASTER target covers them.
   def test_every_tree_is_a_target
     check = build(changed: [], changed_only: false)
 
@@ -65,11 +65,11 @@ class ConstitutionalScanTargetsTest < Minitest::Test
     assert_equal %w[OPENBSD], names(check.targets)
   end
 
-  # Both, now that MASTER is a target of its own: a change under MASTER/lib used
+  # Both, now that MASTER is a target of its own: a change under master/lib used
   # to select nothing here, which is how the tree that owns the law went
   # unscanned by the check that applies it.
   def test_changed_only_scans_just_what_moved
-    check = build(changed: ["RAILS/brgen/app/models/post.rb", "MASTER/lib/master.rb"])
+    check = build(changed: ["RAILS/brgen/app/models/post.rb", "master/lib/master.rb"])
 
     assert_equal %w[brgen MASTER], names(check.targets)
     assert_equal %w[amber bsdports shared OPENBSD], names(check.skipped)
@@ -104,9 +104,9 @@ class ConstitutionalScanTargetsTest < Minitest::Test
     capture = lambda do |*command, **_options|
       calls << command
       if command.include?("diff")
-        [["MASTER/tracked.rb", ""].join(0.chr), success]
+        [["master/tracked.rb", ""].join(0.chr), success]
       elsif command.include?("ls-files")
-        [["MASTER/untracked.rb", "RAILS/brgen/new file.rb", ""].join(0.chr), success]
+        [["master/untracked.rb", "RAILS/brgen/new file.rb", ""].join(0.chr), success]
       else
         flunk "unexpected command: #{command.inspect}"
       end
@@ -114,8 +114,8 @@ class ConstitutionalScanTargetsTest < Minitest::Test
 
     swap(BoundedCommand, :capture2e, capture) do
       assert_equal [
-        "MASTER/tracked.rb",
-        "MASTER/untracked.rb",
+        "master/tracked.rb",
+        "master/untracked.rb",
         "RAILS/brgen/new file.rb"
       ], check.send(:changed_paths)
     end

@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "open3"
 require "rbconfig"
 require "tmpdir"
-require_relative "../../MASTER/checks/visual_contract"
+require_relative "../../master/checks/visual_contract"
 
 # visual_contract is the one check in this tree that cannot be wrong about the
 # pixels and can be wrong about everything else: it captures a screenshot per
@@ -21,8 +21,8 @@ require_relative "../../MASTER/checks/visual_contract"
 # nothing, and it said "ok" under a runner line announcing that Chrome was
 # present and the check could measure.
 class VisualContractBlindnessTest < Minitest::Test
-  CHECK = File.expand_path("../../MASTER/checks/visual_contract.rb", __dir__)
-  RUNNER = File.expand_path("../../MASTER/checks/runner.rb", __dir__)
+  CHECK = File.expand_path("../../master/checks/visual_contract.rb", __dir__)
+  RUNNER = File.expand_path("../../master/checks/runner.rb", __dir__)
 
   def cell(state:, route:, sha:, viewport: :mobile)
     { app: :bsdports, state: state, viewport: viewport, route: route, status: 200,

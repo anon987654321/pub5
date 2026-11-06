@@ -4,11 +4,11 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require "json"
-require_relative "../../../MASTER/checks/support/design_metrics"
-require_relative "../../../MASTER/checks/support/geometry_autofix"
-require_relative "../../../MASTER/checks/lib/check_mutation"
-require_relative "../../../MASTER/checks/support/geometry_probe"
-require_relative "../../../MASTER/checks/support/geometry_type"
+require_relative "../../../master/checks/support/design_metrics"
+require_relative "../../../master/checks/support/geometry_autofix"
+require_relative "../../../master/checks/lib/check_mutation"
+require_relative "../../../master/checks/support/geometry_probe"
+require_relative "../../../master/checks/support/geometry_type"
 require_relative "../../../OPENBSD/lib/check_result"
 
 # Unit coverage for the pure logic behind the browser-backed checks. Nothing
@@ -296,7 +296,7 @@ class RenderedChecksTest < Minitest::Test
   end
 
   def test_type_walk_script_is_present
-    path = File.join(__dir__, "../../../MASTER/checks/support/geometry_type_walk.js")
+    path = File.join(__dir__, "../../../master/checks/support/geometry_type_walk.js")
     src = File.read(path)
     assert_includes src, "firstLineChars"
     assert_includes src, "empty_ratio"

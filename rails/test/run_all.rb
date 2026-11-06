@@ -57,7 +57,7 @@ module Operator
     def files
       # Recursive: test/checks/ is part of the contract suite. This currently
       # selects all 131 files; a narrower glob would make a green result dishonest.
-      # Written from the repository root so MASTER/tools/repo/runs.rb reads the glob
+      # Written from the repository root so master/tools/repo/runs.rb reads the glob
       # and counts every file it selects as run. The plugins carry source
       # contracts of their own, so their test trees join the suite here.
       all = (

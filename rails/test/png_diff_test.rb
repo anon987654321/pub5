@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
-require_relative "../../MASTER/checks/support/png_diff"
+require_relative "../../master/checks/support/png_diff"
 
 class PngDiffTest < Minitest::Test
   def paeth_for_test(left, above, upper_left)

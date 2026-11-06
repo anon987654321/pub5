@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/frontend_production"
+require_relative "../../../master/checks/lib/source/frontend_production"
 
 # The application shell, read as text.
 #

@@ -7,9 +7,9 @@ class SharedTopologyContractTest < Minitest::Test
   REPO = File.expand_path("..", ROOT)
   EXTENSIONS = %w[.rb .rake .sh .zsh .yml .yaml .json .js .mjs .scss .css].freeze
   INTENTIONAL_RETIRED_PATHS = [
-    "MASTER/lib/fix/restructure_sweep/context.rb",
+    "master/lib/fix/restructure_sweep/context.rb",
     # Builds a fixture tree that deliberately contains the retired path.
-    "MASTER/test/test_reference_graph.rb",
+    "master/test/test_reference_graph.rb",
   ].freeze
 
   def active_files

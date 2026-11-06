@@ -4,13 +4,13 @@ require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
 require "yaml"
-require_relative "../../MASTER/checks/lib/source/stimulus_wiring"
+require_relative "../../master/checks/lib/source/stimulus_wiring"
 
 class StimulusWiringCheckTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def test_manifest_registers_the_check_under_layout_suite
-    row = YAML.safe_load_file(File.expand_path("../../MASTER/checks/checks.yml", __dir__)).fetch("stimulus_wiring")
+    row = YAML.safe_load_file(File.expand_path("../../master/checks/checks.yml", __dir__)).fetch("stimulus_wiring")
 
     assert_equal "lib/source/stimulus_wiring", row.fetch("require")
     assert_equal "Deploy::StimulusWiringCheck", row.fetch("class")
@@ -18,7 +18,7 @@ class StimulusWiringCheckTest < Minitest::Test
   end
 
   def test_layout_suite_runs_the_check
-    source = File.read(File.expand_path("../../MASTER/checks/lib/layout_suite.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/lib/layout_suite.rb", __dir__))
     assert_includes source, "stimulus_wiring"
     assert_includes source, "StimulusWiringCheck"
   end

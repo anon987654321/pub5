@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "pathname"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/css_minify_integrity"
+require_relative "../../../master/checks/lib/source/css_minify_integrity"
 
 # Compile each app's entrypoint twice and compare.
 #

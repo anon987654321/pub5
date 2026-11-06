@@ -2,8 +2,8 @@
 
 require "minitest/autorun"
 require "yaml"
-require_relative "../../MASTER/checks/support/page_inventory"
-require_relative "../../MASTER/tools/rails/generate_route_manifest"
+require_relative "../../master/checks/support/page_inventory"
+require_relative "../../master/tools/rails/generate_route_manifest"
 
 # PageInventory derived a page's URL from its view filename through a ladder of
 # hand-written special cases. Four routes that did not follow the convention --

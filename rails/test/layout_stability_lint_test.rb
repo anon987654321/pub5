@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
-require_relative "../../MASTER/tools/layout_stability_lint"
+require_relative "../../master/tools/layout_stability_lint"
 
 # Whether the layout holds still, asserted from source.
 #

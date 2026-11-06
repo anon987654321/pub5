@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/tools/css_coverage_lint"
+require_relative "../../master/tools/css_coverage_lint"
 
 # The register has tracked unused CSS selectors since 2026-08-10 and said in its own
 # entry that no committed tool reproduces the number. This is that tool, and it
@@ -18,7 +18,7 @@ class CssCoverageLintTest < Minitest::Test
   end
 
   # A baseline beaten and never lowered is a baseline nobody trusts. Both directions,
-  # which is the contract MASTER/test/test_ratchets.rb now holds for every ratchet.
+  # which is the contract master/test/test_ratchets.rb now holds for every ratchet.
   def test_baselines_are_not_stale
     counts = L.counts
 

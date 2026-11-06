@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
-require_relative "../../MASTER/tools/typography_lint"
+require_relative "../../master/tools/typography_lint"
 
 class TypographyLintTest < Minitest::Test
   def test_prose_requires_the_full_contract

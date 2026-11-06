@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/checks/lib/rendered/accessibility_tree"
+require_relative "../../master/checks/lib/rendered/accessibility_tree"
 
 class AccessibilityTreeCheckTest < Minitest::Test
   def test_flags_unnamed_interactive_controls_and_informative_images

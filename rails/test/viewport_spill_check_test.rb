@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "yaml"
 require "json"
-require_relative "../../MASTER/checks/lib/rendered/viewport_spill"
+require_relative "../../master/checks/lib/rendered/viewport_spill"
 
 # Six surfaces hung off the right edge of a 390px phone before this check
 # existed, and no source read would have found any of them: the causes were a
@@ -17,7 +17,7 @@ class ViewportSpillCheckTest < Minitest::Test
   REPO = File.expand_path("../..", __dir__)
 
   def test_the_manifest_registers_it_under_the_rendered_suite
-    row = YAML.safe_load_file(File.expand_path("../../MASTER/checks/checks.yml", __dir__)).fetch("viewport_spill")
+    row = YAML.safe_load_file(File.expand_path("../../master/checks/checks.yml", __dir__)).fetch("viewport_spill")
 
     assert_equal "lib/rendered/viewport_spill", row.fetch("require")
     assert_equal "Deploy::ViewportSpillCheck", row.fetch("class")
@@ -25,7 +25,7 @@ class ViewportSpillCheckTest < Minitest::Test
   end
 
   def test_the_suite_runs_it
-    source = File.read(File.expand_path("../../MASTER/checks/lib/rendered_suite.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/lib/rendered_suite.rb", __dir__))
 
     assert_includes source, "rendered/viewport_spill"
     assert_includes source, "ViewportSpillCheck"
@@ -37,7 +37,7 @@ class ViewportSpillCheckTest < Minitest::Test
   end
 
   def test_a_non_success_route_is_a_finding_not_an_unmeasured_pass
-    source = File.read(File.expand_path("../../MASTER/checks/lib/rendered/viewport_spill.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/lib/rendered/viewport_spill.rb", __dir__))
 
     assert_includes source, 'returned HTTP #{status} - viewport overflow was not measured'
     refute_match(/next unless cdp\.status\.to_i == 200/, source)

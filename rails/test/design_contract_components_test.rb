@@ -4,8 +4,8 @@ require "yaml"
 require "minitest/autorun"
 require_relative "engine_roots"
 require_relative "support/stylesheet_modules"
-require_relative "../../MASTER/tools/master_design"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/master_design"
+require_relative "../../master/tools/scss"
 require_relative "support/design_contract_sources"
 
 class DesignContractComponentsTest < Minitest::Test

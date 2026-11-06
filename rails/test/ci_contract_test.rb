@@ -90,7 +90,7 @@ class CiContractTest < Minitest::Test
 
     refute_includes shared, 'File.join(ENV["PUB4_RAILS_ROOT"], "tools"'
     refute_includes shared, 'require_relative "../../tools/operator'
-    assert_includes shared, 'MASTER/tools/rails'
+    assert_includes shared, 'master/tools/rails'
   end
 
   test "shared ci resolves every named Rails lint from canonical MASTER roots" do

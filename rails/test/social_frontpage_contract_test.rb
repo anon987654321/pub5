@@ -12,7 +12,7 @@ class SocialFrontpageContractTest < Minitest::Test
   MODAL = File.join(ROOT, "shared/app/assets/stylesheets/_modal.scss")
   BRGEN_SHOW = File.join(ROOT, "brgen/app/views/posts/show.html.erb")
   AMBER_SHOW = File.join(ROOT, "amber/app/views/posts/show.html.erb")
-  MASTER_RUNTIME = File.join(ROOT, "..", "MASTER/data/runtime.yml")
+  MASTER_RUNTIME = File.join(ROOT, "..", "master/data/runtime.yml")
 
   def test_cookie_preferences_name_necessary_storage_separately
     body = File.read(COOKIE)

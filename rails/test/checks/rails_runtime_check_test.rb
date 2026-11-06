@@ -22,7 +22,7 @@ require "yaml"
 # a planted route table, which is the only part of this check that can be proved
 # without booting three Rails apps.
 class RailsRuntimeCheckTest < Minitest::Test
-  CHECKS_DIR = File.expand_path("../../../MASTER/checks", __dir__)
+  CHECKS_DIR = File.expand_path("../../../master/checks", __dir__)
   SCRIPT = File.join(CHECKS_DIR, "rails_runtime.rb")
 
   def run_script(*args, env: {})

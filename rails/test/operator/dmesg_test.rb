@@ -5,10 +5,10 @@ require "open3"
 require "rbconfig"
 require "stringio"
 require "tmpdir"
-require_relative "../../../MASTER/tools/rails/operator/dmesg"
+require_relative "../../../master/tools/rails/operator/dmesg"
 
 class DmesgTest < Minitest::Test
-  DMESG = File.expand_path("../../../MASTER/tools/rails/operator/dmesg.rb", __dir__)
+  DMESG = File.expand_path("../../../master/tools/rails/operator/dmesg.rb", __dir__)
 
   def test_identical_consecutive_lines_print_once_with_a_count
     assert_equal [ "Writing a.js x3", "Writing b.js", "Writing a.js" ],

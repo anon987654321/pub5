@@ -5,7 +5,7 @@ require "yaml"
 
 class SharedWiringCheckTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  CHECKS = File.expand_path("../../MASTER/checks", __dir__)
+  CHECKS = File.expand_path("../../master/checks", __dir__)
 
   def test_shared_wiring_check_lib_exists
     path = File.join(CHECKS, "lib/source/shared_wiring.rb")

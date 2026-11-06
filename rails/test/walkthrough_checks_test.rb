@@ -4,8 +4,8 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require_relative "checks/method_swap"
-require_relative "../../MASTER/checks/lib/live/human_walkthrough"
-require_relative "../../MASTER/checks/lib/live/first_screen"
+require_relative "../../master/checks/lib/live/human_walkthrough"
+require_relative "../../master/checks/lib/live/first_screen"
 
 # human_walkthrough and first_screen each read a marker out of a view or a
 # stylesheet. Neither had a test, so neither had ever been shown to fail: a

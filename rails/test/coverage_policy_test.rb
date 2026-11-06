@@ -56,7 +56,7 @@ class CoveragePolicyTest < Minitest::Test
 
   def test_full_coverage_runner_exists_and_collates_the_apps_inventory
     runner = File.join(ROOT, "..", "MASTER", "tools", "rails", "coverage.rb")
-    assert File.file?(runner), "MASTER/tools/rails/coverage.rb is missing"
+    assert File.file?(runner), "master/tools/rails/coverage.rb is missing"
 
     source = File.read(runner)
     assert_includes source, 'APPS_FILE = File.join(ROOT, "apps.yml")'

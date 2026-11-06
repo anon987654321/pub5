@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/engine_boundaries"
+require_relative "../../../master/checks/lib/source/engine_boundaries"
 
 # One engine naming another engine's constant. These plant two engines in a
 # temporary tree and pass it as the check's root.

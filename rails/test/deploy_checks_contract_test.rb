@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "open3"
 require "yaml"
-require_relative "../../MASTER/checks/lib/layout_suite"
+require_relative "../../master/checks/lib/layout_suite"
 require_relative "support/deploy_checks_contract_sources"
 
 class DeployChecksContractTest < Minitest::Test
@@ -90,7 +90,7 @@ class DeployChecksContractTest < Minitest::Test
   # name differed only by a suffix.
   def test_checks_lib_holds_only_declared_checks
     declared = CHECKS.reject { |_, row| row.key?("script") }
-                    .reject { |_, row| row["require"].to_s.start_with?("MASTER/", "OPENBSD/", "STUDIO/") }
+                    .reject { |_, row| row["require"].to_s.start_with?("master/", "OPENBSD/", "STUDIO/") }
                     .map { |_, row| File.basename(row["require"]) }
     present = Dir.glob(File.join(MASTER_CHECKS, "lib", "**", "*.rb")).map { |path| File.basename(path, ".rb") }
 
@@ -109,7 +109,7 @@ class DeployChecksContractTest < Minitest::Test
 
   def test_check_rails_wires_checks_by_name
     source = File.read(File.join(OPENBSD_ROOT, "bin", "check-rails"))
-    assert_includes source, "MASTER/checks/runner.rb"
+    assert_includes source, "master/checks/runner.rb"
     %w[schema_migration generated_asset port_inventory production].each do |check|
       assert_match(/"#{check}"/, source, "check-rails should run the #{check} check")
     end
@@ -135,7 +135,7 @@ class DeployChecksContractTest < Minitest::Test
   # so it cannot outlive a file the way it did when the shims moved.
   def test_integrity_chain_names_checks_that_exist
     source = File.read(File.join(OPENBSD_ROOT, "lib", "check_environment.rb"))
-    assert_includes source, "MASTER/checks/runner.rb"
+    assert_includes source, "master/checks/runner.rb"
     source.scan(/RAILS_CHECKS, args: %w\[(\w+)\]/).flatten.each do |check|
       assert CHECKS.key?(check), "integrity chain runs #{check}, which is not in checks.yml"
     end

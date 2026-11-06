@@ -49,7 +49,7 @@ class PublicErrorPagesTest < Minitest::Test
   def test_master_web_error_pages_share_the_application_typographic_stack
     MASTER_WEB_PAGES.each do |status|
       path = File.join(ROOT, "..", "MASTER", "web", "public", "#{status}.html")
-      assert File.file?(path), "MASTER/web/public/#{status}.html is missing"
+      assert File.file?(path), "master/web/public/#{status}.html is missing"
       source = File.read(path)
 
       assert_includes source, 'lang="nb"', "#{status}: error language must remain Norwegian"

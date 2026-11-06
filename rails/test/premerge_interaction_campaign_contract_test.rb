@@ -3,7 +3,7 @@
 require "minitest/autorun"
 
 class PremergeInteractionCampaignContractTest < Minitest::Test
-  SOURCE = File.expand_path("../../MASTER/tools/rails/premerge.rb", __dir__)
+  SOURCE = File.expand_path("../../master/tools/rails/premerge.rb", __dir__)
 
   def setup
     @source = File.read(SOURCE, encoding: "UTF-8")

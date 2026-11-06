@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
-require_relative "../../MASTER/checks/lib/source/generated_asset"
+require_relative "../../master/checks/lib/source/generated_asset"
 
 # The mtime/dirtiness check is green when a committed build disagrees with
 # its sources: git checkout stamps both files together. This is the case

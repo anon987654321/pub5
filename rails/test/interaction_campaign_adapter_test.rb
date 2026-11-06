@@ -66,11 +66,11 @@ class InteractionCampaignAdapterTest < Minitest::Test
   def test_master_repair_case_resolves_to_exact_ruby_minitest
     exercise_runtime_adapter(
       case_id: "RI-341",
-      source_path: "MASTER/test/test_repair_loop_policy.rb",
+      source_path: "master/test/test_repair_loop_policy.rb",
       source: "class RepairLoopFixtureTest\n  def test_RI_341_fix_repairs_known_small_defect_and_verifies\n    assert true\n  end\nend\n",
       adapter: {
         "runner" => "ruby_minitest",
-        "path" => "MASTER/test/test_repair_loop_policy.rb",
+        "path" => "master/test/test_repair_loop_policy.rb",
         "name" => "test_RI_341_fix_repairs_known_small_defect_and_verifies"
       },
       output: "1 runs, 1 assertions, 0 failures, 0 errors, 0 skips\n",
@@ -83,17 +83,17 @@ class InteractionCampaignAdapterTest < Minitest::Test
   def test_master_browser_case_resolves_to_exact_node_test_and_parses_tap
     exercise_runtime_adapter(
       case_id: "RI-281",
-      source_path: "MASTER/web/test/campaign_case.test.mjs",
+      source_path: "master/web/test/campaign_case.test.mjs",
       source: "import test from \"node:test\"; import assert from \"node:assert/strict\";\ntest(\"test_RI_281_face_boot_ready_fallback\", () => { assert.equal(true, true); });\n",
       adapter: {
         "runner" => "node_test",
-        "path" => "MASTER/web/test/campaign_case.test.mjs",
+        "path" => "master/web/test/campaign_case.test.mjs",
         "name" => "test_RI_281_face_boot_ready_fallback"
       },
       output: "TAP version 13\n# Subtest: test_RI_281_face_boot_ready_fallback\n    ok 1 - boot fallback exists\n    1..1\nok 1 - test_RI_281_face_boot_ready_fallback\n1..1\n# tests 1\n# suites 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n",
       expected_command: ["node", "--test", "--test-reporter=tap", "--test-name-pattern",
                          "^test_RI_281_face_boot_ready_fallback$", "test/campaign_case.test.mjs"],
-      expected_chdir_suffix: "/MASTER/web"
+      expected_chdir_suffix: "/master/web"
     )
   end
 

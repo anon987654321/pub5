@@ -6,15 +6,15 @@ class StimulusComponentsAdoptionTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def check
-    require_relative "../../MASTER/checks/lib/source/stimulus_components"
+    require_relative "../../master/checks/lib/source/stimulus_components"
     Deploy::StimulusComponentsCheck
   end
 
   def test_check_is_registered
     require "yaml"
-    row = YAML.safe_load_file(File.expand_path("../../MASTER/checks/checks.yml", __dir__)).fetch("stimulus_components")
+    row = YAML.safe_load_file(File.expand_path("../../master/checks/checks.yml", __dir__)).fetch("stimulus_components")
     assert_equal "Deploy::StimulusComponentsCheck", row.fetch("class")
-    assert File.file?(File.expand_path("../../MASTER/checks/lib/source/stimulus_components.rb", __dir__))
+    assert File.file?(File.expand_path("../../master/checks/lib/source/stimulus_components.rb", __dir__))
   end
 
   def test_full_catalogue_is_pinned_and_vendored

@@ -14,7 +14,7 @@ DRIFT_STAMPS = Dir.mktmpdir("deploy-drift-stamps")
 Minitest.after_run { FileUtils.remove_entry(DRIFT_STAMPS) if File.directory?(DRIFT_STAMPS) }
 ENV["PUB4_STAMP_DIR"] = DRIFT_STAMPS
 
-require_relative "../../../MASTER/checks/lib/live/deploy_drift"
+require_relative "../../../master/checks/lib/live/deploy_drift"
 
 # deploy_drift is the check the third state was invented for.
 #

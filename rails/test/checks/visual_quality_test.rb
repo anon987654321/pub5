@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../../MASTER/checks/support/exemplar_structure"
-require_relative "../../../MASTER/checks/support/visual_quality"
-require_relative "../../../MASTER/checks/lib/research/visual_quality"
+require_relative "../../../master/checks/support/exemplar_structure"
+require_relative "../../../master/checks/support/visual_quality"
+require_relative "../../../master/checks/lib/research/visual_quality"
 require_relative "../../../OPENBSD/lib/check_result"
 
 class VisualQualityTest < Minitest::Test
-  FIX = File.expand_path("../../../MASTER/checks/fixtures/exemplars", __dir__)
+  FIX = File.expand_path("../../../master/checks/fixtures/exemplars", __dir__)
 
   def setup
     @exemplars = Deploy::ExemplarStructure.new

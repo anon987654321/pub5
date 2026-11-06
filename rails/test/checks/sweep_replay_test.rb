@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "json"
 require "tmpdir"
-require_relative "../../../MASTER/checks/lib/rendered/browser_diagnostics"
+require_relative "../../../master/checks/lib/rendered/browser_diagnostics"
 
 # One /fix RAILS run rendered the same 214 cells three times over an unchanged tree. A sweep
 # recorded under a key replays its verdicts for that key, and only for that key.

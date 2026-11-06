@@ -7,7 +7,7 @@ require_relative "check_probe_harness"
 require_relative "../../../OPENBSD/checks/port_inventory"
 
 # port_inventory moved to OPENBSD/checks on 2026-09-11 and kept its row in
-# MASTER/checks/checks.yml, so its ROOT is now two levels up rather than three. Three
+# master/checks/checks.yml, so its ROOT is now two levels up rather than three. Three
 # checks broke on exactly that arithmetic during the move — one went looking for
 # /Users/mac/Documents/GitHub/RAILS/apps.yml — and the fail-open runner called it
 # errored rather than failed, which is the quietest way for a check to stop

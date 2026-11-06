@@ -6,8 +6,8 @@ require "tmpdir"
 require "digest"
 require "set"
 require_relative "checks/method_swap"
-require_relative "../../MASTER/checks/lib/rendered/browser_diagnostics"
-require_relative "../../MASTER/checks/lib/rendered_suite"
+require_relative "../../master/checks/lib/rendered/browser_diagnostics"
+require_relative "../../master/checks/lib/rendered_suite"
 
 class BrowserDiagnosticsFakeCdp
   attr_reader :visited_url
@@ -205,7 +205,7 @@ class BrowserDiagnosticsCheckTest < Minitest::Test
     tracked.pixel_snapshot = true
     path = Deploy::BrowserDiagnosticsCheck.visual_baseline_path(tracked)
 
-    assert_match(%r{/MASTER/checks/data/visual_baselines/brgen-marketplace_listings-mobile\.png\z}, path)
+    assert_match(%r{/master/checks/data/visual_baselines/brgen-marketplace_listings-mobile\.png\z}, path)
     assert_nil Deploy::BrowserDiagnosticsCheck.visual_baseline_path(SURFACE)
     refute Deploy::BrowserDiagnosticsCheck.pixel_baseline_strict?({})
     assert Deploy::BrowserDiagnosticsCheck.pixel_baseline_strict?("CHECK_PIXEL_BASELINE_STRICT" => "true")

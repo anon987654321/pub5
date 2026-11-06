@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tmpdir"
-require_relative "../../MASTER/tools/rails/layout_drift_audit"
+require_relative "../../master/tools/rails/layout_drift_audit"
 
 class LayoutDriftAuditTest < Minitest::Test
   def audit

@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "stringio"
 require "tmpdir"
-require_relative "../../../MASTER/tools/rails/operator/ci_guard"
+require_relative "../../../master/tools/rails/operator/ci_guard"
 
 class CiGuardTest < Minitest::Test
   def test_enabled_when_env_guard_set

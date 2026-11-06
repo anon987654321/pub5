@@ -26,9 +26,9 @@ class CheckRequiresResolveTest < Minitest::Test
 
   def test_preconditions_are_declared_once_and_read_from_the_registry
     require "yaml"
-    rows = YAML.safe_load_file(File.expand_path("../../MASTER/checks/checks.yml", __dir__))
+    rows = YAML.safe_load_file(File.expand_path("../../master/checks/checks.yml", __dir__))
     strays = rows.flat_map { |name, row| (Array(row["needs"]) - KNOWN_PRECONDITIONS).map { |n| "#{name}: #{n}" } }
-    source = File.read(File.expand_path("../../MASTER/checks/runner.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/runner.rb", __dir__))
 
     assert_empty strays, "declared preconditions nothing checks"
     refute_empty rows.select { |_, row| Array(row["needs"]).include?("browser") }
@@ -36,12 +36,12 @@ class CheckRequiresResolveTest < Minitest::Test
     assert_includes source, 'needs.include?("browser")'
   end
 
-  CHECKS = File.expand_path("../../MASTER/checks", __dir__)
+  CHECKS = File.expand_path("../../master/checks", __dir__)
 
   REPO = File.expand_path("../..", CHECKS)
   TREES = {
-    "MASTER/checks" => CHECKS,
-    "MASTER/lib" => File.expand_path("../../MASTER/lib", __dir__),
+    "master/checks" => CHECKS,
+    "master/lib" => File.expand_path("../../master/lib", __dir__),
     "OPENBSD" => File.expand_path("../../OPENBSD", __dir__),
   }.freeze
 
@@ -106,7 +106,7 @@ class CheckRequiresResolveTest < Minitest::Test
       # runner resolves it. Six checks moved to the tree they measure on
       # 2026-09-11 — MASTER's face and scan chain, the box's DNS and ports — and
       # this read every one of them as a missing file.
-      base = required.to_s.start_with?("MASTER/", "OPENBSD/", "STUDIO/") ? REPO : CHECKS
+      base = required.to_s.start_with?("master/", "OPENBSD/", "STUDIO/") ? REPO : CHECKS
       path = File.expand_path(required.to_s, base)
       next if File.exist?(path) || File.exist?("#{path}.rb")
 

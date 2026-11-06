@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "tempfile"
-require_relative "../../MASTER/tools/breakpoint_lint"
+require_relative "../../master/tools/breakpoint_lint"
 
 # the old backlog, rails_no_breakpoint_token: colour, space, motion,
 # elevation and the dialect maps are single-sourced; the viewport scale was not, so
@@ -68,9 +68,9 @@ class BreakpointLintTest < Minitest::Test
   def test_the_canonical_viewport_scale_is_not_empty
     viewport = Operator::MasterDesign.design_system.fetch("viewport")
 
-    refute_empty viewport, "MASTER/data/tokens.yml#tokens.viewport lost its viewport scale"
+    refute_empty viewport, "master/data/tokens.yml#tokens.viewport lost its viewport scale"
     assert_equal viewport.values.map { |v| Integer(v) }.sort, L.edges,
-                 "the lint must read MASTER/data/tokens.yml through MasterDesign, not carry its own copy"
+                 "the lint must read master/data/tokens.yml through MasterDesign, not carry its own copy"
   end
 
   # Every media query in the tree resolves to a declared edge or an edge minus one,

@@ -13,7 +13,7 @@ require_relative "../../OPENBSD/lib/check_ledger"
 # record the failed instrument in its ledger, and exit non-zero after reporting
 # every check. This keeps diagnostics complete without turning a crash into green.
 class CheckFailOpenTest < Minitest::Test
-  CHECKS_DIR = File.expand_path("../../MASTER/checks", __dir__)
+  CHECKS_DIR = File.expand_path("../../master/checks", __dir__)
   RUNNER = File.join(CHECKS_DIR, "runner.rb")
   FIXTURE_REGISTRY = File.join(CHECKS_DIR, "fixtures", "failopen", "checks.yml")
 

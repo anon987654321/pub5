@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/locale_shadowing"
+require_relative "../../../master/checks/lib/source/locale_shadowing"
 
 # An app overriding a shared translation, held to a ceiling.
 #

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../../MASTER/checks/lib/rendered/layout_snapshot"
+require_relative "../../../master/checks/lib/rendered/layout_snapshot"
 
 # layout_snapshot's comparison, over hand-built snapshots. Nothing here launches
 # Chrome: the check distils a probe payload into this shape, and every judgement

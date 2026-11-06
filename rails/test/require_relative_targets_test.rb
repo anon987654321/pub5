@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "pathname"
 
 # A require_relative whose target is gone passes review and fails only at boot,
-# which in production is eager load: contracts/ left RAILS for MASTER/ and ten
+# which in production is eager load: contracts/ left RAILS for master/ and ten
 # callers kept the old path until a deploy could not start. This reads every
 # literal require_relative statically, so no boot is needed to find the next one.
 #

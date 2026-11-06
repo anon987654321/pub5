@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "socket"
-require_relative "../../../MASTER/checks/lib/live/flow_journey"
+require_relative "../../../master/checks/lib/live/flow_journey"
 
 # Every journey in flows.yml was a GET: 55 steps, 55 of them reads, and not one
 # flow declaring an actor. So the check proved 23 journeys do not 500 for a

@@ -4,7 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/checks/lib/source/content_for_yield"
+require_relative "../../../master/checks/lib/source/content_for_yield"
 
 class ContentForYieldCheckTest < Minitest::Test
   include CheckProbe

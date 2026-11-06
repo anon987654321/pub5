@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/content_honesty"
+require_relative "../../../master/checks/lib/source/content_honesty"
 
 # Faker filler on a public surface.
 #

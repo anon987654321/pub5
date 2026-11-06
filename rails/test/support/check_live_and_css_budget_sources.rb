@@ -27,7 +27,7 @@ module CheckLiveAndCssBudgetSources
   end
 
   def budget
-    YAML.safe_load_file(File.expand_path("../../../MASTER/checks/data/css_budget.yml", __dir__)).fetch("rules")
+    YAML.safe_load_file(File.expand_path("../../../master/checks/data/css_budget.yml", __dir__)).fetch("rules")
   end
 
   def rhythm_check

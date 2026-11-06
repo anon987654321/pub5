@@ -6,8 +6,8 @@ require "yaml"
 require "minitest/autorun"
 require_relative "engine_roots"
 require_relative "support/stylesheet_modules"
-require_relative "../../MASTER/tools/master_design"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/master_design"
+require_relative "../../master/tools/scss"
 require_relative "support/design_contract_sources"
 
 class DesignContractTest < Minitest::Test
@@ -207,8 +207,8 @@ def test_brgen_old_dialect_outranks_the_social_stack
       File.join(ROOT, "**/app/assets/stylesheets/**/*.{scss,css}"),
       File.join(SHARED, "frontend/**/*.css"),
       File.join(SHARED, "public/styles/**/*.css"),
-      File.join(ROOT, "../MASTER/web/styles/face/**/*.css"),
-      File.join(ROOT, "../MASTER/web/public/**/*.css"),
+      File.join(ROOT, "../master/web/styles/face/**/*.css"),
+      File.join(ROOT, "../master/web/public/**/*.css"),
     ]
     paths = globs.flat_map { |glob| Dir.glob(glob) }.uniq.sort.reject do |path|
       path.match?(UI_STYLESHEET_EXCLUSIONS) || !File.file?(path)

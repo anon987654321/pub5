@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/checks/support/cdp_network"
+require_relative "../../master/checks/support/cdp_network"
 
 class CdpNetworkDiagnosticsTest < Minitest::Test
   def client(events)

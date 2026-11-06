@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../../MASTER/checks/support/design_metrics"
-require_relative "../../../MASTER/checks/lib/research/design_metrics"
+require_relative "../../../master/checks/support/design_metrics"
+require_relative "../../../master/checks/lib/research/design_metrics"
 require_relative "../../../OPENBSD/lib/check_result"
 
 class DesignMetricsTest < Minitest::Test
@@ -75,7 +75,7 @@ class DesignMetricsTest < Minitest::Test
   def test_check_reports_principle_tags_on_failures
     # synthetic: force a contrast fail via monkeypatch is heavy; assert method exists
     assert Deploy::DesignMetricsCheck.instance_methods(false).empty? || true
-    source = File.read(File.expand_path("../../../MASTER/checks/lib/research/design_metrics.rb", __dir__))
+    source = File.read(File.expand_path("../../../master/checks/lib/research/design_metrics.rb", __dir__))
     assert_includes source, "principle=fitts_law"
     assert_includes source, "principle=accessibility"
     assert_includes source, "grid.columns"

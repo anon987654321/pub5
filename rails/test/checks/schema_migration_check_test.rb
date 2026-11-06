@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_fixture"
-require_relative "../../../MASTER/checks/lib/source/schema_migration"
+require_relative "../../../master/checks/lib/source/schema_migration"
 
 # Four defects that all read as "the app is fine" until something migrates.
 #

@@ -5,7 +5,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "yaml"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/checks/lib/live/page_simulation"
+require_relative "../../../master/checks/lib/live/page_simulation"
 
 # page_simulation walks every full-page view twice: once as source text, always,
 # and once over HTTP when the app's port is open.

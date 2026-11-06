@@ -15,14 +15,14 @@ class RailsStackContractTest < Minitest::Test
     RAILS/brgen
     RAILS/amber
     RAILS/bsdports
-    MASTER/web
+    master/web
   ].freeze
 
   LOCKED_ROOTS = %w[
     RAILS/brgen
     RAILS/amber
     RAILS/bsdports
-    MASTER/web
+    master/web
   ].freeze
 
   def test_every_rails_gemfile_tracks_the_current_stack
@@ -82,7 +82,7 @@ class RailsStackContractTest < Minitest::Test
     master_lock = File.read(File.join(REPO_ROOT, "MASTER", "Gemfile.lock"))
     master_locked_version = master_lock[/^  ruby (\S+)$/, 1]
     assert_equal master_version, master_locked_version,
-                 "MASTER/Gemfile.lock was resolved under another Ruby"
+                 "master/Gemfile.lock was resolved under another Ruby"
   end
 
 end

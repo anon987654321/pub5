@@ -4,10 +4,10 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/lib/operator/checks"
+require_relative "../../../master/lib/operator/checks"
 
-# master_tts lives in MASTER/lib/operator/checks.rb and keeps its row in
-# MASTER/checks/checks.yml, so it is reached through `require_check`, which resolves a
+# master_tts lives in master/lib/operator/checks.rb and keeps its row in
+# master/checks/checks.yml, so it is reached through `require_check`, which resolves a
 # path naming a tree from the repo root. That is the first thing worth pinning:
 # the check that broke on this move broke on path arithmetic, not on its checks.
 #
@@ -53,7 +53,7 @@ class MasterTtsCheckTest < Minitest::Test
       result = run_against(root)
 
       assert_equal :failed, result.outcome
-      assert_match(%r{MASTER/lib/voice/speech\.rb missing "def espeak_path"}, result.failures.join(" | "))
+      assert_match(%r{master/lib/voice/speech\.rb missing "def espeak_path"}, result.failures.join(" | "))
     end
   end
 
@@ -110,7 +110,7 @@ class MasterTtsCheckTest < Minitest::Test
   # a sample, so a green master_tts means the wiring is declared — not that TTS
   # speaks. Pinned so the claim cannot quietly widen.
   def test_every_check_reads_source_so_the_pass_line_cannot_mean_tts_works
-    # The class shares MASTER/lib/operator/checks.rb with checks that do shell
+    # The class shares master/lib/operator/checks.rb with checks that do shell
     # out, so read only its own body, found wherever Ruby says it is defined.
     path, line = Object.const_source_location(CHECK.name)
     source = File.readlines(path).drop(line - 1).join[/\A.*?^  end$/m]

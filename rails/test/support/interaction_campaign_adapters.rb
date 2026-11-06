@@ -27,7 +27,7 @@ module Operator
           return { error: "runtime test method #{name} is not defined in #{path}" }
         end
 
-        match = path.match(%r{\A(RAILS/[A-Za-z0-9_-]+|MASTER/web)/(.+)\z})
+        match = path.match(%r{\A(RAILS/[A-Za-z0-9_-]+|master/web)/(.+)\z})
         return { error: "Rails runtime adapter must target an app-owned test path" } unless match
 
         app_root = File.join(@root, match[1])
@@ -41,7 +41,7 @@ module Operator
         end
 
         match = path.match(/\AMASTER\/test\/(.+\.rb)\z/)
-        return { error: "Ruby Minitest adapter must target MASTER/test" } unless match
+        return { error: "Ruby Minitest adapter must target master/test" } unless match
 
         app_root = File.join(@root, "MASTER")
         relative_test = match[1]
@@ -51,8 +51,8 @@ module Operator
           app_root = File.join(@root, "RAILS")
           relative_test = path.delete_prefix("RAILS/")
         else
-          match = path.match(%r{\A(RAILS/[A-Za-z0-9_-]+|MASTER/web)/(.+\.mjs)\z})
-          return { error: "Node test adapter must target a RAILS app, MASTER/web or RAILS/test .mjs file" } unless match
+          match = path.match(%r{\A(RAILS/[A-Za-z0-9_-]+|master/web)/(.+\.mjs)\z})
+          return { error: "Node test adapter must target a RAILS app, master/web or RAILS/test .mjs file" } unless match
 
           app_root = File.join(@root, match[1])
           relative_test = match[2]

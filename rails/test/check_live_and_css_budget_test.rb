@@ -6,12 +6,12 @@ require "tmpdir"
 require "fileutils"
 require "stringio"
 require_relative "../../OPENBSD/lib/check_result"
-require_relative "../../MASTER/checks/lib/source/css_constitution"
-require_relative "../../MASTER/checks/lib/source/css_brace_balance"
-require_relative "../../MASTER/checks/support/design_metrics"
-require_relative "../../MASTER/checks/lib/research/design_metrics"
-require_relative "../../MASTER/checks/support/css_weight"
-require_relative "../../MASTER/lib/operator/checks"
+require_relative "../../master/checks/lib/source/css_constitution"
+require_relative "../../master/checks/lib/source/css_brace_balance"
+require_relative "../../master/checks/support/design_metrics"
+require_relative "../../master/checks/lib/research/design_metrics"
+require_relative "../../master/checks/support/css_weight"
+require_relative "../../master/lib/operator/checks"
 require_relative "support/check_live_and_css_budget_sources"
 
 # Two gaps, same shape: a rule that exists and measures nothing.
@@ -28,7 +28,7 @@ class CheckLiveAndCssBudgetTest < Minitest::Test
   include CheckLiveAndCssBudgetSources
 
   def test_css_budget_failure_is_inconclusive
-    source = File.read(File.expand_path("../../MASTER/checks/lib/source/css_constitution.rb", __dir__))
+    source = File.read(File.expand_path("../../master/checks/lib/source/css_constitution.rb", __dir__))
     assert_includes source, "CSS ceilings were not measured"
     assert_includes source, "@result.inconclusive!"
   end

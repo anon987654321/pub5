@@ -20,7 +20,7 @@ require "json"
 # page counted many times, and the check exited 0. This pins the check that says
 # so, including on the real manifests if they are ever recaptured that way.
 class VisualCaptureDistinctnessTest < Minitest::Test
-  CHECKS = File.expand_path("../../../MASTER/checks", __dir__)
+  CHECKS = File.expand_path("../../../master/checks", __dir__)
 
   # Loaded rather than required: visual_contract.rb runs a crawl at the bottom
   # of the file, so requiring it would launch one. Evaluated once at load, not

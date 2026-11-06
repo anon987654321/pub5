@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require_relative "support/stylesheet_modules"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/scss"
 
 class MarketplaceBolVisualContractTest < Minitest::Test
   include StylesheetModules

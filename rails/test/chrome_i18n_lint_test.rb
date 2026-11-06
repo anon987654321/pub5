@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/tools/chrome_i18n_lint"
+require_relative "../../master/tools/chrome_i18n_lint"
 
 class ChromeI18nLintTest < Minitest::Test
   # Was assert_equal 0, findings.size. The lint now measures three kinds with
@@ -84,7 +84,7 @@ class ChromeI18nLintTest < Minitest::Test
     refute_match(Operator::ChromeI18nLint::EMPTY_TITLE, sample)
   end
 
-  # MASTER/checks/CHECK_ADEQUACY.md gap 2: a screen-reader user on :nb hears
+  # master/checks/CHECK_ADEQUACY.md gap 2: a screen-reader user on :nb hears
   # English for every one of these, and nothing counted them.
   def test_detects_hardcoded_aria_labels_in_both_spellings
     [

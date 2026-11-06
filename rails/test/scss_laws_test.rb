@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/scss"
 
 # The rule reader every stylesheet check leans on once an app has one
 # stylesheet. A check scoped by selector is only as honest as the braces it

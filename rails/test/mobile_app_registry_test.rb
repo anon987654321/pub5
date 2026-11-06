@@ -47,7 +47,7 @@ class MobileAppRegistryTest < Minitest::Test
 
     assert_equal REGISTRY.all.map { |app| app.key.to_s.split("_").map(&:capitalize).join },
                  spec.fetch("configs").keys
-    native = File.expand_path("../../MASTER/tools/rails/native", __dir__)
+    native = File.expand_path("../../master/tools/rails/native", __dir__)
     assert_equal [{ "path" => File.join(native, "Pub4MobileApp.swift") }], spec.fetch("targets").fetch("Pub4Mobile").fetch("sources")
     settings = spec.fetch("targets").fetch("Pub4Mobile").fetch("settings").fetch("base")
     assert_equal File.join(native, "Info.plist"), settings.fetch("INFOPLIST_FILE")
@@ -68,7 +68,7 @@ class MobileAppRegistryTest < Minitest::Test
   # The entitlement and Info.plist both read the APNs gateway from one setting.
   def test_ios_push_environment_is_one_build_setting
     base = Shared::MobileIosProject.spec.dig("targets", "Pub4Mobile", "settings", "base")
-    native = File.expand_path("../../MASTER/tools/rails/native", __dir__)
+    native = File.expand_path("../../master/tools/rails/native", __dir__)
 
     assert_equal "production", base.fetch("APS_ENVIRONMENT")
     %w[Pub4Mobile.entitlements Info.plist].each do |file|

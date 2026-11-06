@@ -4,7 +4,7 @@ require "fileutils"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "check_probe_harness"
-require_relative "../../../MASTER/checks/lib/source/pwa_installable"
+require_relative "../../../master/checks/lib/source/pwa_installable"
 
 # pwa_installable is one of the two checks in this batch that needs nothing but the
 # checkout, so its third state is that it has none: no browser, no listening app,
@@ -132,7 +132,7 @@ class PwaInstallableCheckTest < Minitest::Test
   end
 
   def test_it_has_no_precondition_it_can_decline_to_measure
-    source = File.read(File.join(CHECK::ROOT, "MASTER/checks/lib/source/pwa_installable.rb"))
+    source = File.read(File.join(CHECK::ROOT, "master/checks/lib/source/pwa_installable.rb"))
 
     refute_match(/inconclusive!|skipped_live|CdpSession|port_open\?/, source,
                  "a live half added here needs a third state, or a skipped manifest check reads as a pass")

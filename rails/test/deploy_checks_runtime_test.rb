@@ -3,7 +3,7 @@
 require "minitest/autorun"
 require "open3"
 require "yaml"
-require_relative "../../MASTER/checks/lib/layout_suite"
+require_relative "../../master/checks/lib/layout_suite"
 require_relative "support/deploy_checks_contract_sources"
 
 class DeployChecksRuntimeTest < Minitest::Test
@@ -231,7 +231,7 @@ class DeployChecksRuntimeTest < Minitest::Test
     assert File.exist?(File.join(REPO_ROOT, "RAILS", "deploy.sh"))
     assert File.exist?(File.join(REPO_ROOT, "MASTER", "data", "operator_seams.yml"))
     assert File.exist?(File.join(OPENBSD_ROOT, "data", "operator.yml"))
-    # MASTER/bin/operator, not a root bin/. The repo root holds four documents and
+    # master/bin/operator, not a root bin/. The repo root holds four documents and
     # the four governed trees; the operator surface has lived under MASTER since the
     # sprawl census emptied the root, and this line was still looking for the
     # shim that removal deleted.

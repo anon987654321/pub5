@@ -5,7 +5,7 @@ require "erb"
 require "yaml"
 
 # The RAILS side of the ad visual contract: every shared ad partial must be
-# buildable only through the token contract MASTER/data/tokens.yml names, and
+# buildable only through the token contract master/data/tokens.yml names, and
 # every advertising surface must carry its disclosure. MASTER audits rendered
 # ads with tools/visual/audit_ad.rb; this test binds the source partials to
 # that same contract, so an ad that passes the audit cannot be assembled from
@@ -18,7 +18,7 @@ require "yaml"
 class AdVisualContractTest < Minitest::Test
   SHARED = File.expand_path("../shared/app/views/shared", __dir__)
   TOKENS = YAML.safe_load(
-    File.read(File.expand_path("../../MASTER/data/tokens.yml", __dir__), encoding: "UTF-8"),
+    File.read(File.expand_path("../../master/data/tokens.yml", __dir__), encoding: "UTF-8"),
     aliases: true
   )
   CONTRACT = TOKENS.fetch("tokens").fetch("ad_visual_contract")
@@ -65,7 +65,7 @@ class AdVisualContractTest < Minitest::Test
   end
 
   def test_master_audit_tool_covers_the_manifest_contract
-    tool = File.read(File.expand_path("../../MASTER/tools/visual/audit_ad.rb", __dir__), encoding: "UTF-8")
+    tool = File.read(File.expand_path("../../master/tools/visual/audit_ad.rb", __dir__), encoding: "UTF-8")
     %w[html css placement].each do |key|
       assert tool.include?(key), "tools/visual/audit_ad.rb must require #{key} evidence in every manifest"
     end

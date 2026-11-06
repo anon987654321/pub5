@@ -23,7 +23,7 @@ module DeployChecksContractSources
   # A count would have said 47 checks and meant 46. This asks the question the
   # count cannot.
   CALLER_GLOBS = %w[OPENBSD/bin/* OPENBSD/*.sh OPENBSD/*.rb OPENBSD/lib/*.rb
-                    RAILS/*.sh MASTER/bin/* MASTER/lib/operator/*.rb bin/*].freeze
+                    RAILS/*.sh master/bin/* master/lib/operator/*.rb bin/*].freeze
 
   # Comment lines are stripped first, and that is not tidiness. Written without
   # it, this test passed with the wiring deleted — because the commit that added
@@ -44,7 +44,7 @@ module DeployChecksContractSources
   # their subject, and only their row lives here.
   def check_file(row)
     required = row.fetch("require")
-    base = required.start_with?("MASTER/", "OPENBSD/", "STUDIO/") ? File.expand_path("..", ROOT) : File.join(MASTER_CHECKS)
+    base = required.start_with?("master/", "OPENBSD/", "STUDIO/") ? File.expand_path("..", ROOT) : File.join(MASTER_CHECKS)
     File.join(base, required)
   end
 end

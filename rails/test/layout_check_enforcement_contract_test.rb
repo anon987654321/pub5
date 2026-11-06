@@ -8,10 +8,10 @@ class LayoutCheckEnforcementContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   # The design-principle catalogue (law_map) lives in law_runtime.yml; laws.yml
   # holds the Law records the principles map to.
-  LAW_MAP = File.join(ROOT, "MASTER/data/law_runtime.yml")
-  SURFACE_LAWS = File.join(ROOT, "MASTER/law/surface.rb")
-  LAYOUT_SUITE = File.join(ROOT, "MASTER/checks/lib/layout_suite.rb")
-  CHECKS = File.join(ROOT, "MASTER/checks/checks.yml")
+  LAW_MAP = File.join(ROOT, "master/data/law_runtime.yml")
+  SURFACE_LAWS = File.join(ROOT, "master/law/surface.rb")
+  LAYOUT_SUITE = File.join(ROOT, "master/checks/lib/layout_suite.rb")
+  CHECKS = File.join(ROOT, "master/checks/checks.yml")
   MINIMAL_ENDGAME = File.join(ROOT, "RAILS/shared/app/assets/stylesheets/_surface_chrome_endgame.scss")
   MINIMAL_MIXIN = File.join(ROOT, "RAILS/shared/app/assets/stylesheets/_surface_chrome_minimal.scss")
   BRGEN_OVERRIDES =File.join(ROOT, "RAILS/brgen/app/assets/stylesheets/_brgen_shared_overrides.scss")

@@ -3,8 +3,8 @@
 require "minitest/autorun"
 require "tmpdir"
 require "yaml"
-require_relative "../../../MASTER/checks/lib/live/flow_journey"
-require_relative "../../../MASTER/checks/lib/live/user_flow"
+require_relative "../../../master/checks/lib/live/flow_journey"
+require_relative "../../../master/checks/lib/live/user_flow"
 require_relative "support/flow_coverage_sources"
 
 class FlowRuntimeTest < Minitest::Test

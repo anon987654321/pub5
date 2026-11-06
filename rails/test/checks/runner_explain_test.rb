@@ -11,8 +11,8 @@ require "yaml"
 # auditor's warning half is advisory unless CHECK_AUDITOR_STRICT is set, and
 # before --explain that was written only inside frontend_auditor.rb.
 class RunnerExplainTest < Minitest::Test
-  RUNNER = File.expand_path("../../../MASTER/checks/runner.rb", __dir__)
-  REGISTRY = YAML.safe_load_file(File.expand_path("../../../MASTER/checks/checks.yml", __dir__))
+  RUNNER = File.expand_path("../../../master/checks/runner.rb", __dir__)
+  REGISTRY = YAML.safe_load_file(File.expand_path("../../../master/checks/checks.yml", __dir__))
 
   def explain
     @explain ||= begin
@@ -43,7 +43,7 @@ class RunnerExplainTest < Minitest::Test
 
   # A switch named in --explain that no file reads is documentation of nothing.
   def test_every_documented_switch_has_a_reader
-    sources = Dir.glob(File.expand_path("../../../MASTER/checks/**/*.{rb,yml}", __dir__)) +
+    sources = Dir.glob(File.expand_path("../../../master/checks/**/*.{rb,yml}", __dir__)) +
               Dir.glob(File.expand_path("../../../OPENBSD/lib/**/*.rb", __dir__))
     body = sources.map { |path| File.read(path) }.join("\n")
     documented = explain.scan(/^  (CHECKS?_[A-Z_]+|VISUAL_[A-Z_]+)\s/).flatten

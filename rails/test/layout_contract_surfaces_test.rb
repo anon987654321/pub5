@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require_relative "engine_roots"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/scss"
 require_relative "support/stylesheet_modules"
 require_relative "support/layout_contract_sources"
 

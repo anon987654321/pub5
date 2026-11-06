@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../../MASTER/tools/scss"
+require_relative "../../master/tools/scss"
 require_relative "support/critique_sources"
 
 class CritiqueImplementationSearchTest < Minitest::Test

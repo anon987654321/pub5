@@ -7,7 +7,7 @@ require "json"
 require "optparse"
 require "time"
 
-$LOAD_PATH.unshift(File.expand_path("../../MASTER/lib", __dir__))
+$LOAD_PATH.unshift(File.expand_path("../../master/lib", __dir__))
 require "io/exec"
 require_relative "support/interaction_campaign_adapters"
 
