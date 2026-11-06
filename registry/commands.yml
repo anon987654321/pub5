@@ -3,7 +3,9 @@
 # commands, not as more binaries). Each command names the plugin that
 # implements it, the contexts it runs in and its capability manifest: the
 # World verbs it may use and what each may reach. bin/master boots core
-# plus that one plugin and nothing else.
+# plus that one plugin and nothing else. exec names argv[0]'s basename, and
+# RbConfig.ruby is ruby34 on the OpenBSD box, so a command that runs Ruby
+# declares both.
 commands:
   check:
     summary: The gate every push passes - parse, enforced Laws, tests.
@@ -12,7 +14,7 @@ commands:
     contexts: [tty, pipe, remote]
     verbs:
       read: ["**/*"]
-      exec: [ruby]
+      exec: [ruby, ruby34]
       git: [ls-files, diff, show]
   lint:
     summary: The parse gate and the enforced Laws, without tests (bin/lint).
@@ -28,7 +30,7 @@ commands:
     class: Commands::Test
     contexts: [tty, pipe, remote]
     verbs:
-      exec: [ruby]
+      exec: [ruby, ruby34]
       git: [ls-files, diff]
   setup:
     summary: Point git at .githooks so the gate and the commit format run on every commit.
@@ -66,7 +68,7 @@ commands:
     verbs:
       read: ["**/*"]
       write: ["laws/pub4/**/*", registry/laws.yml]
-      exec: [git, ruby]
+      exec: [git, ruby, ruby34]
   repl:
     summary: The conversation REPL; bin/master with no command on a terminal. In a pipe, one turn per line.
     plugin: master/cli/repl.rb
