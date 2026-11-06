@@ -1,0 +1,5703 @@
+{
+  "schema_version": 1,
+  "campaign": "pub4 real-world interaction campaign",
+  "target_branch": "main",
+  "case_count": 400,
+  "surface_count": 20,
+  "cases_per_surface": 20,
+  "contract": "A scenario is an action combined with one fault mode. Resolve its actor, surface contract, action text, fault setup, expected outcome and evidence paths from the canonical surface/fault records. Source-derived expectations are not observed runtime results.",
+  "limitations": [
+    "Static expectations are not browser or HTTP observations.",
+    "No scenario may be reported as passed solely because a source file or test fixture exists.",
+    "Production customer data and production payment endpoints are out of scope.",
+    "Concurrency and load require separate measured runs; 400 scripted cases do not mean 400 concurrent users."
+  ],
+  "surfaces": [
+    {
+      "id": "brgen_auth",
+      "name": "Brgen identity and session lifecycle",
+      "actor": "new member, returning member, anonymous visitor",
+      "contract": "Authentication and session state must agree with the server record; refused writes leave state unchanged.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/test/rails_upgrade_contract_test.rb",
+        "rails/brgen/test/controllers/session_boundaries_test.rb"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Create an account with valid email, password and unique handle"
+        },
+        {
+          "id": "02",
+          "action": "Create an account with a handle already owned by another user"
+        },
+        {
+          "id": "03",
+          "action": "Submit a malformed email address"
+        },
+        {
+          "id": "04",
+          "action": "Submit a password below the configured minimum"
+        },
+        {
+          "id": "05",
+          "action": "Sign in with correct credentials"
+        },
+        {
+          "id": "06",
+          "action": "Sign in with an incorrect password"
+        },
+        {
+          "id": "07",
+          "action": "Sign in with an unknown email address"
+        },
+        {
+          "id": "08",
+          "action": "Submit the sign-in form twice quickly"
+        },
+        {
+          "id": "09",
+          "action": "Sign out and revisit a protected URL"
+        },
+        {
+          "id": "10",
+          "action": "Open a protected URL without a session"
+        },
+        {
+          "id": "11",
+          "action": "Expire the session while a form is open"
+        },
+        {
+          "id": "12",
+          "action": "Rotate a session after authentication"
+        },
+        {
+          "id": "13",
+          "action": "Attempt a cross-site POST without CSRF metadata"
+        },
+        {
+          "id": "14",
+          "action": "Submit a write with an invalid CSRF token"
+        },
+        {
+          "id": "15",
+          "action": "Use the supported CSRF header for an authenticated write"
+        },
+        {
+          "id": "16",
+          "action": "Open the same account in two browser tabs"
+        },
+        {
+          "id": "17",
+          "action": "Navigate back after signing out"
+        },
+        {
+          "id": "18",
+          "action": "Request account data belonging to another user"
+        },
+        {
+          "id": "19",
+          "action": "Trigger sign-in while offline"
+        },
+        {
+          "id": "20",
+          "action": "Recover and retry after an authentication server error"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/session_boundaries_test.rb",
+        "rails/brgen/test/integration/authorization_matrix_test.rb",
+        "rails/brgen/test/controllers/users_controller_test.rb"
+      ]
+    },
+    {
+      "id": "brgen_social",
+      "name": "Brgen feed, posts, comments and community",
+      "actor": "reader, author, moderator",
+      "contract": "The UI reflects persisted post and interaction state; tenant and moderation boundaries remain enforced.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/brgen/test/system/public_navigation_test.rb",
+        "rails/brgen/test/system/tiptap_morph_test.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the city feed as a guest"
+        },
+        {
+          "id": "02",
+          "action": "Open the city feed while signed in"
+        },
+        {
+          "id": "03",
+          "action": "Create a post with valid title and body"
+        },
+        {
+          "id": "04",
+          "action": "Attempt to create a post with a blank required field"
+        },
+        {
+          "id": "05",
+          "action": "Edit an authored post"
+        },
+        {
+          "id": "06",
+          "action": "Attempt to edit another member's post"
+        },
+        {
+          "id": "07",
+          "action": "Add a comment to a post"
+        },
+        {
+          "id": "08",
+          "action": "Submit a comment twice during a slow response"
+        },
+        {
+          "id": "09",
+          "action": "Keep a half-written comment open while a live refresh arrives"
+        },
+        {
+          "id": "10",
+          "action": "Vote on a post and verify the persisted vote"
+        },
+        {
+          "id": "11",
+          "action": "Change a vote and verify counts remain consistent"
+        },
+        {
+          "id": "12",
+          "action": "Open a post with an unusually long body"
+        },
+        {
+          "id": "13",
+          "action": "Open a post whose linked media lookup is unavailable"
+        },
+        {
+          "id": "14",
+          "action": "Open a post with malformed external-link metadata"
+        },
+        {
+          "id": "15",
+          "action": "Follow a member and verify notification state"
+        },
+        {
+          "id": "16",
+          "action": "Attempt to follow oneself"
+        },
+        {
+          "id": "17",
+          "action": "Open a restricted community as a non-member"
+        },
+        {
+          "id": "18",
+          "action": "Attempt a post in a community that disallows it"
+        },
+        {
+          "id": "19",
+          "action": "Report a post and verify moderation queue state"
+        },
+        {
+          "id": "20",
+          "action": "Return to the feed using browser history"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/system/tiptap_morph_test.rb",
+        "rails/brgen/test/integration/moderation_and_erasure_test.rb"
+      ]
+    },
+    {
+      "id": "market_discovery",
+      "name": "Marketplace listing discovery and seller workflow",
+      "actor": "local buyer, individual seller, store owner",
+      "contract": "Listing availability, prices and ownership are authoritative on the server; search and filters never grant write access.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/brgen/test/system/marketplace_checkout_test.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Search listings by a common term"
+        },
+        {
+          "id": "02",
+          "action": "Search with no matching terms"
+        },
+        {
+          "id": "03",
+          "action": "Search with punctuation and Unicode"
+        },
+        {
+          "id": "04",
+          "action": "Filter listings by category"
+        },
+        {
+          "id": "05",
+          "action": "Filter by price range and sort results"
+        },
+        {
+          "id": "06",
+          "action": "Open a listing from search results"
+        },
+        {
+          "id": "07",
+          "action": "Open a listing that has expired"
+        },
+        {
+          "id": "08",
+          "action": "Create a listing with valid required attributes"
+        },
+        {
+          "id": "09",
+          "action": "Create a listing with a negative price"
+        },
+        {
+          "id": "10",
+          "action": "Edit a listing owned by the signed-in seller"
+        },
+        {
+          "id": "11",
+          "action": "Attempt to edit another seller's listing"
+        },
+        {
+          "id": "12",
+          "action": "Upload a supported listing image"
+        },
+        {
+          "id": "13",
+          "action": "Attempt an unsupported or oversized upload"
+        },
+        {
+          "id": "14",
+          "action": "Save a listing to a wishlist"
+        },
+        {
+          "id": "15",
+          "action": "Remove a listing from a wishlist"
+        },
+        {
+          "id": "16",
+          "action": "Create a saved search and revisit it"
+        },
+        {
+          "id": "17",
+          "action": "Open a listing whose seller is no longer active"
+        },
+        {
+          "id": "18",
+          "action": "Change stock or availability while a buyer views the page"
+        },
+        {
+          "id": "19",
+          "action": "Ask a question on a listing and read the seller answer"
+        },
+        {
+          "id": "20",
+          "action": "Report a suspicious listing and verify acknowledgement"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/storefront_search_test.rb",
+        "rails/brgen/test/controllers/marketplace_category_page_test.rb"
+      ]
+    },
+    {
+      "id": "market_checkout",
+      "name": "Marketplace cart, checkout, orders, returns and payouts",
+      "actor": "buyer, seller, payment provider",
+      "contract": "Order totals and payment handoffs are derived from persisted order state; payment is never reported successful without provider confirmation.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/brgen/test/system/marketplace_checkout_test.rb",
+        "rails/brgen/app/services/marketplace/payments/stripe_checkout.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Add one available listing to the cart"
+        },
+        {
+          "id": "02",
+          "action": "Add several shop listings to a basket"
+        },
+        {
+          "id": "03",
+          "action": "Open the cart and compare line totals to server totals"
+        },
+        {
+          "id": "04",
+          "action": "Change quantity while another tab edits stock"
+        },
+        {
+          "id": "05",
+          "action": "Attempt checkout with an unavailable listing"
+        },
+        {
+          "id": "06",
+          "action": "Attempt checkout without a delivery address"
+        },
+        {
+          "id": "07",
+          "action": "Start Stripe checkout with a test provider stub"
+        },
+        {
+          "id": "08",
+          "action": "Attempt payment while Stripe configuration is absent"
+        },
+        {
+          "id": "09",
+          "action": "Press pay twice before the redirect completes"
+        },
+        {
+          "id": "10",
+          "action": "Cancel the payment-provider handoff"
+        },
+        {
+          "id": "11",
+          "action": "Return from a provider with a cancelled result"
+        },
+        {
+          "id": "12",
+          "action": "Return from a provider with a successful result"
+        },
+        {
+          "id": "13",
+          "action": "Replay the same provider callback"
+        },
+        {
+          "id": "14",
+          "action": "Send a callback with an invalid signature"
+        },
+        {
+          "id": "15",
+          "action": "Open an order belonging to another buyer"
+        },
+        {
+          "id": "16",
+          "action": "Seller marks an order delivered"
+        },
+        {
+          "id": "17",
+          "action": "Buyer opens a return request"
+        },
+        {
+          "id": "18",
+          "action": "Seller rejects a return and verifies the order state"
+        },
+        {
+          "id": "19",
+          "action": "Attempt a refund without provider credentials"
+        },
+        {
+          "id": "20",
+          "action": "Attempt seller payout without an active payout destination"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/system/marketplace_checkout_test.rb",
+        "rails/brgen/test/controllers/marketplace_basket_test.rb"
+      ]
+    },
+    {
+      "id": "dating",
+      "name": "Dating profile, discovery, likes, matches and blocks",
+      "actor": "dating member, matched member, blocked member",
+      "contract": "A card moves only when the action outcome is confirmed; profile visibility, likes and matches obey eligibility and block rules.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/brgen/test/system/dating_swipe_test.rb",
+        "rails/brgen/engines/dating/app/controllers/dating/home_controller.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open dating discovery as a signed-in eligible member"
+        },
+        {
+          "id": "02",
+          "action": "Open dating discovery without a valid session"
+        },
+        {
+          "id": "03",
+          "action": "Like the top profile using the visible button"
+        },
+        {
+          "id": "04",
+          "action": "Pass on the top profile using the visible action"
+        },
+        {
+          "id": "05",
+          "action": "Drag a card horizontally to like"
+        },
+        {
+          "id": "06",
+          "action": "Drag vertically and confirm page scrolling still works"
+        },
+        {
+          "id": "07",
+          "action": "Attempt a like while the network rejects the POST"
+        },
+        {
+          "id": "08",
+          "action": "Repeat the like after a timeout"
+        },
+        {
+          "id": "09",
+          "action": "Like a profile that has already been liked"
+        },
+        {
+          "id": "10",
+          "action": "Verify a mutual like creates one match"
+        },
+        {
+          "id": "11",
+          "action": "Hide a profile and refresh discovery"
+        },
+        {
+          "id": "12",
+          "action": "Edit profile bio and verify persisted content"
+        },
+        {
+          "id": "13",
+          "action": "Submit a profile with invalid age data"
+        },
+        {
+          "id": "14",
+          "action": "Attach a supported profile photo"
+        },
+        {
+          "id": "15",
+          "action": "Attempt excessive or unsupported profile photos"
+        },
+        {
+          "id": "16",
+          "action": "Block a member and revisit discovery"
+        },
+        {
+          "id": "17",
+          "action": "Attempt message access after being blocked"
+        },
+        {
+          "id": "18",
+          "action": "Change discovery radius and repeat search"
+        },
+        {
+          "id": "19",
+          "action": "Open an empty discovery deck"
+        },
+        {
+          "id": "20",
+          "action": "Reduce motion and use the like/pass controls"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/system/dating_swipe_test.rb",
+        "rails/brgen/test/controllers/dating_likes_test.rb"
+      ]
+    },
+    {
+      "id": "messenger",
+      "name": "Brgen messenger and direct/group conversations",
+      "actor": "sender, recipient, group owner, blocked member",
+      "contract": "Messages and membership are authorized and persisted; retries do not duplicate delivery or bypass blocks.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml",
+        "rails/brgen/test/system/tiptap_morph_test.rb"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Start a direct conversation with another member"
+        },
+        {
+          "id": "02",
+          "action": "Start the same direct conversation from a second entrypoint"
+        },
+        {
+          "id": "03",
+          "action": "Send a plain-text message"
+        },
+        {
+          "id": "04",
+          "action": "Send a message containing Unicode and emoji"
+        },
+        {
+          "id": "05",
+          "action": "Send a message with an empty body"
+        },
+        {
+          "id": "06",
+          "action": "Send a long message and reopen the thread"
+        },
+        {
+          "id": "07",
+          "action": "Edit a message authored by the current user"
+        },
+        {
+          "id": "08",
+          "action": "Attempt to edit a message authored by another user"
+        },
+        {
+          "id": "09",
+          "action": "Unsend a message and inspect the recipient view"
+        },
+        {
+          "id": "10",
+          "action": "Mark a conversation as read"
+        },
+        {
+          "id": "11",
+          "action": "Search inbox by message text"
+        },
+        {
+          "id": "12",
+          "action": "Pin a conversation and verify ordering"
+        },
+        {
+          "id": "13",
+          "action": "Create a group conversation"
+        },
+        {
+          "id": "14",
+          "action": "Attempt to add a member without ownership permission"
+        },
+        {
+          "id": "15",
+          "action": "Remove a group member and verify access revocation"
+        },
+        {
+          "id": "16",
+          "action": "Forward a message to another conversation"
+        },
+        {
+          "id": "17",
+          "action": "Retry a send after a network timeout"
+        },
+        {
+          "id": "18",
+          "action": "Reconnect while a message broadcast is in flight"
+        },
+        {
+          "id": "19",
+          "action": "Send a message to a blocked recipient"
+        },
+        {
+          "id": "20",
+          "action": "Open a conversation URL with another user's identifier"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/integration/front_page_messenger_entry_test.rb",
+        "rails/brgen/test/models/messenger_query_budget_test.rb"
+      ]
+    },
+    {
+      "id": "takeaway",
+      "name": "Takeaway restaurants, menus, baskets and orders",
+      "actor": "diner, restaurant operator, group-order host",
+      "contract": "Only available menu items may be ordered; totals and order transitions remain consistent under retries and concurrent changes.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Browse restaurants in the current city"
+        },
+        {
+          "id": "02",
+          "action": "Open a restaurant with no menu items"
+        },
+        {
+          "id": "03",
+          "action": "Open a restaurant outside its opening hours"
+        },
+        {
+          "id": "04",
+          "action": "Open a menu item marked available"
+        },
+        {
+          "id": "05",
+          "action": "Add an available item to the basket"
+        },
+        {
+          "id": "06",
+          "action": "Attempt to add an unavailable item"
+        },
+        {
+          "id": "07",
+          "action": "Change item quantity and verify basket total"
+        },
+        {
+          "id": "08",
+          "action": "Attempt checkout with invalid quantity"
+        },
+        {
+          "id": "09",
+          "action": "Place an order with a valid basket"
+        },
+        {
+          "id": "10",
+          "action": "Submit the same order twice quickly"
+        },
+        {
+          "id": "11",
+          "action": "Restaurant changes availability before order placement"
+        },
+        {
+          "id": "12",
+          "action": "Restaurant accepts and advances the order"
+        },
+        {
+          "id": "13",
+          "action": "Attempt an illegal order status transition"
+        },
+        {
+          "id": "14",
+          "action": "Cancel an eligible order and inspect notifications"
+        },
+        {
+          "id": "15",
+          "action": "Create a group order as host"
+        },
+        {
+          "id": "16",
+          "action": "Invite another member to a group order"
+        },
+        {
+          "id": "17",
+          "action": "Add a line as a group-order participant"
+        },
+        {
+          "id": "18",
+          "action": "Verify participant shares and basket total"
+        },
+        {
+          "id": "19",
+          "action": "Attempt to place a group order as a non-host"
+        },
+        {
+          "id": "20",
+          "action": "Retry order placement after network recovery"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/takeaway_controllers_test.rb",
+        "rails/brgen/test/controllers/takeaway_group_orders_test.rb"
+      ]
+    },
+    {
+      "id": "maps_events",
+      "name": "Maps, nearby discovery, events and location privacy",
+      "actor": "local resident, event host, attendee",
+      "contract": "Location data is scoped and optional; event capacity, RSVP state and visibility remain consistent after concurrent changes.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the city map without granting geolocation"
+        },
+        {
+          "id": "02",
+          "action": "Grant geolocation and request nearby results"
+        },
+        {
+          "id": "03",
+          "action": "Deny geolocation and continue using the app"
+        },
+        {
+          "id": "04",
+          "action": "Submit malformed coordinates"
+        },
+        {
+          "id": "05",
+          "action": "Submit coordinates outside reasonable bounds"
+        },
+        {
+          "id": "06",
+          "action": "Search nearby places using a valid query"
+        },
+        {
+          "id": "07",
+          "action": "Open a place detail from a map marker"
+        },
+        {
+          "id": "08",
+          "action": "Create an event with a valid time and capacity"
+        },
+        {
+          "id": "09",
+          "action": "Attempt to create an event with invalid dates"
+        },
+        {
+          "id": "10",
+          "action": "RSVP as going to an event"
+        },
+        {
+          "id": "11",
+          "action": "Set RSVP to interested"
+        },
+        {
+          "id": "12",
+          "action": "Withdraw an RSVP and verify capacity recalculation"
+        },
+        {
+          "id": "13",
+          "action": "Attempt RSVP after event capacity is reached"
+        },
+        {
+          "id": "14",
+          "action": "Two users attempt the final available place concurrently"
+        },
+        {
+          "id": "15",
+          "action": "Cancel an event and verify attendees are notified"
+        },
+        {
+          "id": "16",
+          "action": "Open an already-ended event"
+        },
+        {
+          "id": "17",
+          "action": "Switch city and verify old tenant data is not mixed"
+        },
+        {
+          "id": "18",
+          "action": "Open a user's precise location as another user"
+        },
+        {
+          "id": "19",
+          "action": "Use keyboard controls to navigate map-associated actions"
+        },
+        {
+          "id": "20",
+          "action": "Recover after map tiles or geocoding become unavailable"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/maps_layers_test.rb",
+        "rails/brgen/test/controllers/events_controller_test.rb"
+      ]
+    },
+    {
+      "id": "radio_playlist",
+      "name": "Brgen Radio, playlists, imports and embedded audio",
+      "actor": "listener, playlist creator, external media provider",
+      "contract": "Playback and playlist edits reflect valid stored metadata; external providers fail safely without breaking the page.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the radio landing page"
+        },
+        {
+          "id": "02",
+          "action": "Open a playlist with tracks"
+        },
+        {
+          "id": "03",
+          "action": "Open an empty playlist"
+        },
+        {
+          "id": "04",
+          "action": "Create a playlist with a valid title"
+        },
+        {
+          "id": "05",
+          "action": "Attempt to create a playlist with blank required fields"
+        },
+        {
+          "id": "06",
+          "action": "Import a supported Spotify playlist URL"
+        },
+        {
+          "id": "07",
+          "action": "Import a supported YouTube URL"
+        },
+        {
+          "id": "08",
+          "action": "Import a supported SoundCloud URL"
+        },
+        {
+          "id": "09",
+          "action": "Submit an unrecognized provider URL"
+        },
+        {
+          "id": "10",
+          "action": "Submit a URL targeting a private or local host"
+        },
+        {
+          "id": "11",
+          "action": "Open a track whose metadata lookup fails"
+        },
+        {
+          "id": "12",
+          "action": "Start an embedded player only after user activation"
+        },
+        {
+          "id": "13",
+          "action": "Pause and resume playback"
+        },
+        {
+          "id": "14",
+          "action": "Record a listen event and verify it is not doubled"
+        },
+        {
+          "id": "15",
+          "action": "Remove a track from a playlist"
+        },
+        {
+          "id": "16",
+          "action": "Attempt to edit a playlist owned by another user"
+        },
+        {
+          "id": "17",
+          "action": "Open an expired hosted track"
+        },
+        {
+          "id": "18",
+          "action": "Use browser back after opening a player"
+        },
+        {
+          "id": "19",
+          "action": "Use radio controls at a narrow viewport"
+        },
+        {
+          "id": "20",
+          "action": "Reconnect after temporary media provider failure"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/playlist_writes_test.rb",
+        "rails/brgen/test/controllers/playlist_visibility_test.rb"
+      ]
+    },
+    {
+      "id": "tv",
+      "name": "Brgen TV, video feed, watch-time and broadcast states",
+      "actor": "viewer, channel owner, broadcaster",
+      "contract": "Published media state and watch-time metrics reflect actual player behavior; unsupported live-stream infrastructure is reported honestly.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the TV feed as a guest"
+        },
+        {
+          "id": "02",
+          "action": "Open a published video detail page"
+        },
+        {
+          "id": "03",
+          "action": "Open a video without a thumbnail variant"
+        },
+        {
+          "id": "04",
+          "action": "Verify only the visible feed video is eligible to autoplay"
+        },
+        {
+          "id": "05",
+          "action": "Scroll to the next video and pause the previous one"
+        },
+        {
+          "id": "06",
+          "action": "Leave a video early and verify incomplete watch state"
+        },
+        {
+          "id": "07",
+          "action": "Watch through completion and verify completion state"
+        },
+        {
+          "id": "08",
+          "action": "Send a watch-time beacon during navigation"
+        },
+        {
+          "id": "09",
+          "action": "Refresh the feed and ensure watch time is not inflated by page loads"
+        },
+        {
+          "id": "10",
+          "action": "Open an unpublished video as a guest"
+        },
+        {
+          "id": "11",
+          "action": "Attempt to publish a video without required media"
+        },
+        {
+          "id": "12",
+          "action": "Upload supported video media"
+        },
+        {
+          "id": "13",
+          "action": "Attempt an unsupported or oversized video upload"
+        },
+        {
+          "id": "14",
+          "action": "Create a channel and set its public metadata"
+        },
+        {
+          "id": "15",
+          "action": "Subscribe to a channel and verify subscription count"
+        },
+        {
+          "id": "16",
+          "action": "Start a broadcast from an eligible state"
+        },
+        {
+          "id": "17",
+          "action": "Attempt an invalid broadcast state transition"
+        },
+        {
+          "id": "18",
+          "action": "Open a live stream where delivery infrastructure is absent"
+        },
+        {
+          "id": "19",
+          "action": "Open a show's episode list"
+        },
+        {
+          "id": "20",
+          "action": "Use the feed on a narrow mobile viewport"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/controllers/tv_feed_test.rb",
+        "rails/brgen/test/controllers/tv_watch_time_test.rb"
+      ]
+    },
+    {
+      "id": "amber_wardrobe",
+      "name": "Amber wardrobe inventory, photos and item lifecycle",
+      "actor": "wardrobe owner, anonymous visitor, invited collaborator",
+      "contract": "Wardrobe data remains private to its owner; item and media changes are durable and validated before persistence.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/amber/test/system/public_navigation_test.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open Amber home as a guest"
+        },
+        {
+          "id": "02",
+          "action": "Sign in and open the private wardrobe"
+        },
+        {
+          "id": "03",
+          "action": "Create an item with valid garment attributes"
+        },
+        {
+          "id": "04",
+          "action": "Create an item with missing required data"
+        },
+        {
+          "id": "05",
+          "action": "Edit color, size and material"
+        },
+        {
+          "id": "06",
+          "action": "Set purchase price and verify cost-per-wear output"
+        },
+        {
+          "id": "07",
+          "action": "Mark an item worn and verify wear count increments once"
+        },
+        {
+          "id": "08",
+          "action": "Attach multiple supported item photos"
+        },
+        {
+          "id": "09",
+          "action": "Upload a file that exceeds attachment limits"
+        },
+        {
+          "id": "10",
+          "action": "Drop a file into the wardrobe upload target"
+        },
+        {
+          "id": "11",
+          "action": "Submit the form twice during a slow upload"
+        },
+        {
+          "id": "12",
+          "action": "Open an item owned by another account"
+        },
+        {
+          "id": "13",
+          "action": "Attempt update and delete for another owner's item"
+        },
+        {
+          "id": "14",
+          "action": "Archive or remove an item and verify analytics update"
+        },
+        {
+          "id": "15",
+          "action": "Open a wardrobe with zero items"
+        },
+        {
+          "id": "16",
+          "action": "Open an item whose photo variant is still processing"
+        },
+        {
+          "id": "17",
+          "action": "Retry media processing after a failed job"
+        },
+        {
+          "id": "18",
+          "action": "Switch locale and retain the selected item"
+        },
+        {
+          "id": "19",
+          "action": "Refresh after saving an item"
+        },
+        {
+          "id": "20",
+          "action": "Use wardrobe forms with keyboard only"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/amber/test/controllers/wardrobe_authorization_test.rb",
+        "rails/amber/test/integration/wardrobe_mutations_test.rb"
+      ]
+    },
+    {
+      "id": "amber_outfits",
+      "name": "Amber outfits, dressing room, analytics and decluttering",
+      "actor": "wardrobe owner, returning daily user",
+      "contract": "Recommendations are grounded in available wardrobe data; analytics and suggested outfits do not invent records or silently change the wardrobe.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Generate today's suggested look"
+        },
+        {
+          "id": "02",
+          "action": "Refresh the same day and check recommendation stability"
+        },
+        {
+          "id": "03",
+          "action": "Generate a look with no wardrobe items"
+        },
+        {
+          "id": "04",
+          "action": "Generate a look when weather input is unavailable"
+        },
+        {
+          "id": "05",
+          "action": "Save a suggested outfit"
+        },
+        {
+          "id": "06",
+          "action": "Attempt to save an invalid or empty outfit"
+        },
+        {
+          "id": "07",
+          "action": "Reorder outfit items and verify displayed order"
+        },
+        {
+          "id": "08",
+          "action": "Remove a garment from an outfit"
+        },
+        {
+          "id": "09",
+          "action": "Open wardrobe analytics with a complete history"
+        },
+        {
+          "id": "10",
+          "action": "Open analytics with no wear history"
+        },
+        {
+          "id": "11",
+          "action": "Verify cost-per-wear reflects price and wear count"
+        },
+        {
+          "id": "12",
+          "action": "Open underused-item recommendations"
+        },
+        {
+          "id": "13",
+          "action": "Mark an item as bringing joy"
+        },
+        {
+          "id": "14",
+          "action": "Clear the joy signal and verify state"
+        },
+        {
+          "id": "15",
+          "action": "Run declutter scoring for a sparse wardrobe"
+        },
+        {
+          "id": "16",
+          "action": "Open closet-organization tips and inspect stated evidence"
+        },
+        {
+          "id": "17",
+          "action": "Verify tips are labelled as rules rather than AI output"
+        },
+        {
+          "id": "18",
+          "action": "Change style preference and regenerate a look"
+        },
+        {
+          "id": "19",
+          "action": "Open the dressing room at a narrow viewport"
+        },
+        {
+          "id": "20",
+          "action": "Attempt a recommendation operation after a model/provider failure"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/amber/test/controllers/dressing_room_test.rb",
+        "rails/amber/test/services/style_assistant_test.rb"
+      ]
+    },
+    {
+      "id": "amber_social",
+      "name": "Amber feed, connections, messages and privacy",
+      "actor": "wardrobe owner, follower, recipient",
+      "contract": "Social visibility follows account relationship and ownership rules; message, follow and block transitions remain consistent.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the social feed as a guest"
+        },
+        {
+          "id": "02",
+          "action": "Create a social post as a signed-in member"
+        },
+        {
+          "id": "03",
+          "action": "Open a public post detail"
+        },
+        {
+          "id": "04",
+          "action": "Comment on a post"
+        },
+        {
+          "id": "05",
+          "action": "Attempt to comment on a post that is not accessible"
+        },
+        {
+          "id": "06",
+          "action": "Create a connection request"
+        },
+        {
+          "id": "07",
+          "action": "Accept an incoming connection request"
+        },
+        {
+          "id": "08",
+          "action": "Reject a connection request"
+        },
+        {
+          "id": "09",
+          "action": "Block an existing connection"
+        },
+        {
+          "id": "10",
+          "action": "Attempt to create a duplicate connection"
+        },
+        {
+          "id": "11",
+          "action": "Send a message to an accepted connection"
+        },
+        {
+          "id": "12",
+          "action": "Attempt to message a blocked account"
+        },
+        {
+          "id": "13",
+          "action": "Mark a message read and verify unread state"
+        },
+        {
+          "id": "14",
+          "action": "Open a conversation belonging to another account"
+        },
+        {
+          "id": "15",
+          "action": "Refresh while a new message arrives"
+        },
+        {
+          "id": "16",
+          "action": "Open the feed when no posts exist"
+        },
+        {
+          "id": "17",
+          "action": "Switch between English and Norwegian"
+        },
+        {
+          "id": "18",
+          "action": "Use connection controls by keyboard"
+        },
+        {
+          "id": "19",
+          "action": "Submit malformed content and verify validation"
+        },
+        {
+          "id": "20",
+          "action": "Recover from a failed request without duplicate posts"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/amber/test/integration/social_guards_test.rb",
+        "rails/amber/test/controllers/posts_controller_anonymous_test.rb",
+        "rails/amber/test/controllers/bankid_identity_persistence_test.rb"
+      ]
+    },
+    {
+      "id": "bsdports",
+      "name": "BSDPorts package search, dependencies, import and advisories",
+      "actor": "OpenBSD maintainer, package researcher, guest",
+      "contract": "Package identity, dependency graph and advisory state are based on source data; incomplete metadata must remain distinguishable from complete records.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/bsdports/test/system/public_navigation_test.rb",
+        "rails/test/rails_upgrade_contract_test.rb",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Open the ports search page"
+        },
+        {
+          "id": "02",
+          "action": "Search by exact package name"
+        },
+        {
+          "id": "03",
+          "action": "Search by summary substring"
+        },
+        {
+          "id": "04",
+          "action": "Search with no matches"
+        },
+        {
+          "id": "05",
+          "action": "Search with punctuation and Unicode"
+        },
+        {
+          "id": "06",
+          "action": "Filter results by platform"
+        },
+        {
+          "id": "07",
+          "action": "Open a package detail page"
+        },
+        {
+          "id": "08",
+          "action": "Expand the dependency tree"
+        },
+        {
+          "id": "09",
+          "action": "Open a reverse-dependency view"
+        },
+        {
+          "id": "10",
+          "action": "Traverse a cyclic dependency graph safely"
+        },
+        {
+          "id": "11",
+          "action": "Open a package with missing dependency metadata"
+        },
+        {
+          "id": "12",
+          "action": "Open a package with an unresolved dependency import warning"
+        },
+        {
+          "id": "13",
+          "action": "Open a security advisory detail"
+        },
+        {
+          "id": "14",
+          "action": "Filter advisories by severity"
+        },
+        {
+          "id": "15",
+          "action": "Attempt an import with malformed package metadata"
+        },
+        {
+          "id": "16",
+          "action": "Import with the local ports tree available"
+        },
+        {
+          "id": "17",
+          "action": "Exercise the HTTPS tarball fallback under its disk-space guard"
+        },
+        {
+          "id": "18",
+          "action": "Exercise the names-and-versions package-index fallback"
+        },
+        {
+          "id": "19",
+          "action": "Verify fallback metadata does not masquerade as full dependencies"
+        },
+        {
+          "id": "20",
+          "action": "Repeat live search rapidly and confirm stale results do not overwrite newer ones"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/bsdports/test/controllers/ports_controller_test.rb",
+        "rails/bsdports/test/models/dependency_tree_test.rb"
+      ]
+    },
+    {
+      "id": "master_face",
+      "name": "master web face boot, rendering and responsive shell",
+      "actor": "anonymous visitor, operator, mobile user",
+      "contract": "The prompt remains usable when renderer boot is delayed or unavailable; UI state and runtime state are not falsely conflated.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "master/bin/smoke-web",
+        "TREE_CONTRACTS.md",
+        "master/test/test_bin_scripts.rb"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Load the master landing page from a cold start"
+        },
+        {
+          "id": "02",
+          "action": "Load while the web process is still warming"
+        },
+        {
+          "id": "03",
+          "action": "Activate the primer with a tap"
+        },
+        {
+          "id": "04",
+          "action": "Activate the primer using Enter"
+        },
+        {
+          "id": "05",
+          "action": "Load with WebGL unavailable"
+        },
+        {
+          "id": "06",
+          "action": "Load while the heavy face module is slow"
+        },
+        {
+          "id": "07",
+          "action": "Verify prompt shell exists before renderer boot"
+        },
+        {
+          "id": "08",
+          "action": "Check face canvas uses the dynamic viewport"
+        },
+        {
+          "id": "09",
+          "action": "Open the Chat tab"
+        },
+        {
+          "id": "10",
+          "action": "Open Mission Control tab"
+        },
+        {
+          "id": "11",
+          "action": "Navigate between tabs and verify current-page semantics"
+        },
+        {
+          "id": "12",
+          "action": "Use a 390 by 844 viewport"
+        },
+        {
+          "id": "13",
+          "action": "Use an extra narrow viewport"
+        },
+        {
+          "id": "14",
+          "action": "Use a large desktop viewport"
+        },
+        {
+          "id": "15",
+          "action": "Run with reduced-motion preference"
+        },
+        {
+          "id": "16",
+          "action": "Run without pointer hover"
+        },
+        {
+          "id": "17",
+          "action": "Refresh after switching tabs"
+        },
+        {
+          "id": "18",
+          "action": "Open the page with one face asset missing"
+        },
+        {
+          "id": "19",
+          "action": "Observe boot retry overlay after module failure"
+        },
+        {
+          "id": "20",
+          "action": "Use the prompt after face rendering fails"
+        }
+      ],
+      "focused_test_paths": [
+        "master/web/test/face_boot.test.mjs",
+        "master/web/test/primer_single_fire.test.mjs"
+      ]
+    },
+    {
+      "id": "master_chat",
+      "name": "master web chat, auth tiers, streaming and metrics",
+      "actor": "anonymous visitor, authenticated operator, remote provider",
+      "contract": "Chat success is tied to server/provider outcomes; auth tiers are enforced and failed transports remain visible and recoverable.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "master/bin/smoke-web",
+        "TREE_CONTRACTS.md",
+        "master/web/public/master_interaction_state.js"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Send a valid short chat message"
+        },
+        {
+          "id": "02",
+          "action": "Send a message containing Unicode and Norwegian characters"
+        },
+        {
+          "id": "03",
+          "action": "Submit an empty message"
+        },
+        {
+          "id": "04",
+          "action": "Submit a very long message"
+        },
+        {
+          "id": "05",
+          "action": "Press send twice during streaming"
+        },
+        {
+          "id": "06",
+          "action": "Disconnect the network after sending"
+        },
+        {
+          "id": "07",
+          "action": "Reconnect while the event stream is open"
+        },
+        {
+          "id": "08",
+          "action": "Reconnect after event stream closure"
+        },
+        {
+          "id": "09",
+          "action": "Reach a provider timeout"
+        },
+        {
+          "id": "10",
+          "action": "Reach a provider quota limit"
+        },
+        {
+          "id": "11",
+          "action": "Run with no configured model provider"
+        },
+        {
+          "id": "12",
+          "action": "Use an invalid authentication token"
+        },
+        {
+          "id": "13",
+          "action": "Request metrics without authentication"
+        },
+        {
+          "id": "14",
+          "action": "Request metrics with a valid operator token"
+        },
+        {
+          "id": "15",
+          "action": "Request metrics with malformed server JSON"
+        },
+        {
+          "id": "16",
+          "action": "Open event stream without waiting for network idle"
+        },
+        {
+          "id": "17",
+          "action": "Cancel a reply while it is streaming"
+        },
+        {
+          "id": "18",
+          "action": "Retry after a visible transport failure"
+        },
+        {
+          "id": "19",
+          "action": "Attempt a tool-capable action as a visitor"
+        },
+        {
+          "id": "20",
+          "action": "Open a new conversation while the previous response completes"
+        }
+      ],
+      "focused_test_paths": [
+        "master/web/test/chat_degraded_send.test.mjs",
+        "master/web/test/sse_contract.test.mjs"
+      ]
+    },
+    {
+      "id": "master_cli",
+      "name": "master CLI commands, prompt, history and configuration",
+      "actor": "operator in Ghostty, first-run user, automation caller",
+      "contract": "CLI commands route to the canonical runtime, print truthful bounded output and preserve unrelated working-tree changes.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "master/bin/operator",
+        "master/AGENTS.md",
+        "master/test/test_bin_scripts.rb"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Start master from the repository root"
+        },
+        {
+          "id": "02",
+          "action": "Start master from a sibling-tree working directory"
+        },
+        {
+          "id": "03",
+          "action": "Run /help with no arguments"
+        },
+        {
+          "id": "04",
+          "action": "Run /status with JSON output"
+        },
+        {
+          "id": "05",
+          "action": "Run /doctor in a missing-dependency environment"
+        },
+        {
+          "id": "06",
+          "action": "Run /voice when the TTS provider is unavailable"
+        },
+        {
+          "id": "07",
+          "action": "Run /model with a valid configured model"
+        },
+        {
+          "id": "08",
+          "action": "Run /model with an unknown model name"
+        },
+        {
+          "id": "09",
+          "action": "Enter a command with extra positional arguments"
+        },
+        {
+          "id": "10",
+          "action": "Enter a command containing shell metacharacters"
+        },
+        {
+          "id": "11",
+          "action": "Use command history to repeat a read-only command"
+        },
+        {
+          "id": "12",
+          "action": "Use multiline input and submit it"
+        },
+        {
+          "id": "13",
+          "action": "Interrupt a long request with Ctrl-C"
+        },
+        {
+          "id": "14",
+          "action": "Exit and reopen the CLI session"
+        },
+        {
+          "id": "15",
+          "action": "Run operator status with a dirty working tree"
+        },
+        {
+          "id": "16",
+          "action": "Run operator test against one changed path"
+        },
+        {
+          "id": "17",
+          "action": "Run operator premerge --list"
+        },
+        {
+          "id": "18",
+          "action": "Run operator fix status with no recorded run"
+        },
+        {
+          "id": "19",
+          "action": "Run operator land with an invalid path"
+        },
+        {
+          "id": "20",
+          "action": "Launch CLI when configuration YAML is malformed"
+        }
+      ],
+      "focused_test_paths": [
+        "master/test/test_cli.rb",
+        "master/test/test_bin_scripts.rb"
+      ]
+    },
+    {
+      "id": "master_fix",
+      "name": "master /fix planning, repair, verification and delivery",
+      "actor": "operator, coding agent, interrupted repair",
+      "contract": "A repair reaches DONE only after required verification; unavailable checks and failed delivery remain explicit non-success states.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "master/AGENTS.md",
+        "master/data/soul.yml",
+        "master/data/laws.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Run /fix against one known small defect"
+        },
+        {
+          "id": "02",
+          "action": "Run /fix against a tree with no applicable findings"
+        },
+        {
+          "id": "03",
+          "action": "Run /fix when source cannot be read"
+        },
+        {
+          "id": "04",
+          "action": "Run /fix when relevant dependency context is missing"
+        },
+        {
+          "id": "05",
+          "action": "Run /fix with an existing dirty working tree"
+        },
+        {
+          "id": "06",
+          "action": "Find a violation with a known-bad fixture"
+        },
+        {
+          "id": "07",
+          "action": "Confirm a known-good fixture is not flagged"
+        },
+        {
+          "id": "08",
+          "action": "Apply a safe deterministic repair"
+        },
+        {
+          "id": "09",
+          "action": "Encounter a repair that requires a human decision"
+        },
+        {
+          "id": "10",
+          "action": "Run a verification suite that times out"
+        },
+        {
+          "id": "11",
+          "action": "Run a verification suite with a regression"
+        },
+        {
+          "id": "12",
+          "action": "Repeat the scan after a successful repair"
+        },
+        {
+          "id": "13",
+          "action": "Reach a plateau with one unresolved finding"
+        },
+        {
+          "id": "14",
+          "action": "Interrupt the process during repair"
+        },
+        {
+          "id": "15",
+          "action": "Resume after an interruption without corrupting state"
+        },
+        {
+          "id": "16",
+          "action": "Attempt commit after a validation failure"
+        },
+        {
+          "id": "17",
+          "action": "Attempt push when remote delivery is rejected"
+        },
+        {
+          "id": "18",
+          "action": "Verify no unrelated dirty paths were staged"
+        },
+        {
+          "id": "19",
+          "action": "Run across rails, master, openbsd and studio targets"
+        },
+        {
+          "id": "20",
+          "action": "Produce the final report with explicit terminal state"
+        }
+      ],
+      "focused_test_paths": [
+        "master/test/test_repair_loop_policy.rb",
+        "master/test/test_fix_protocol.rb"
+      ]
+    },
+    {
+      "id": "pwa",
+      "name": "PWA install, offline store, service worker and recovery",
+      "actor": "mobile visitor, installed-PWA user, offline user",
+      "contract": "Offline behavior follows the declared queue policy; cached shell and replayed writes never imply server success before confirmation.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/package.json",
+        "rails/test/coverage_policy_test.rb",
+        "rails/shared/frontend/pwa_offline_store.js"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Fetch each public app manifest"
+        },
+        {
+          "id": "02",
+          "action": "Validate application name, scope and display mode"
+        },
+        {
+          "id": "03",
+          "action": "Install the PWA from a supported browser"
+        },
+        {
+          "id": "04",
+          "action": "Open the installed PWA in standalone mode"
+        },
+        {
+          "id": "05",
+          "action": "Verify the theme colour matches canonical tokens"
+        },
+        {
+          "id": "06",
+          "action": "Launch the PWA with network available"
+        },
+        {
+          "id": "07",
+          "action": "Launch with network unavailable"
+        },
+        {
+          "id": "08",
+          "action": "Open the configured offline page"
+        },
+        {
+          "id": "09",
+          "action": "Load a stable cached shell asset offline"
+        },
+        {
+          "id": "10",
+          "action": "Request a private uncached page while offline"
+        },
+        {
+          "id": "11",
+          "action": "Queue a supported offline POST action"
+        },
+        {
+          "id": "12",
+          "action": "Attempt to queue a non-idempotent unsupported action"
+        },
+        {
+          "id": "13",
+          "action": "Reconnect and replay a queued action"
+        },
+        {
+          "id": "14",
+          "action": "Reconnect while two queued actions exist"
+        },
+        {
+          "id": "15",
+          "action": "Replay a queue entry twice and verify one effect"
+        },
+        {
+          "id": "16",
+          "action": "Clear local storage before reconnecting"
+        },
+        {
+          "id": "17",
+          "action": "Open with service worker update pending"
+        },
+        {
+          "id": "18",
+          "action": "Recover from a failed service-worker registration"
+        },
+        {
+          "id": "19",
+          "action": "Open PWA at a narrow viewport with safe areas"
+        },
+        {
+          "id": "20",
+          "action": "Verify install state does not rely on user-agent guessing"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/test/pwa_offline_store.test.mjs",
+        "rails/test/stimulus_components_runtime_contract.test.mjs"
+      ]
+    },
+    {
+      "id": "cross_cut",
+      "name": "Cross-application security, accessibility, localization and resilience",
+      "actor": "keyboard user, assistive-technology user, attacker, operator",
+      "contract": "Security and usability invariants hold across app boundaries; unavailable services and incomplete evidence are reported honestly.",
+      "expected_cases": 20,
+      "evidence_paths": [
+        "rails/test/coverage_policy_test.rb",
+        "rails/test/rails_upgrade_contract_test.rb",
+        "master/data/laws.yml",
+        "rails/apps.yml"
+      ],
+      "actions": [
+        {
+          "id": "01",
+          "action": "Navigate every primary flow using keyboard only"
+        },
+        {
+          "id": "02",
+          "action": "Check visible focus through links, buttons and forms"
+        },
+        {
+          "id": "03",
+          "action": "Open and close a dialog with Escape"
+        },
+        {
+          "id": "04",
+          "action": "Verify focus moves into a modal and returns to its trigger"
+        },
+        {
+          "id": "05",
+          "action": "Check touch targets in a 390 by 844 viewport"
+        },
+        {
+          "id": "06",
+          "action": "Verify no horizontal page overflow on narrow screens"
+        },
+        {
+          "id": "07",
+          "action": "Run accessibility checks with a dialog open"
+        },
+        {
+          "id": "08",
+          "action": "Switch locale while on a nested route"
+        },
+        {
+          "id": "09",
+          "action": "Verify validation messages follow the active locale"
+        },
+        {
+          "id": "10",
+          "action": "Verify empty states remain actionable"
+        },
+        {
+          "id": "11",
+          "action": "Send untrusted HTML through a text field"
+        },
+        {
+          "id": "12",
+          "action": "Submit a cross-site write without a valid CSRF token"
+        },
+        {
+          "id": "13",
+          "action": "Request a private record under another user identity"
+        },
+        {
+          "id": "14",
+          "action": "Probe outbound URL input with loopback and private-network targets"
+        },
+        {
+          "id": "15",
+          "action": "Trigger rate limiting with repeated requests"
+        },
+        {
+          "id": "16",
+          "action": "Use a malformed upload or metadata payload"
+        },
+        {
+          "id": "17",
+          "action": "Restart a process during an in-flight request"
+        },
+        {
+          "id": "18",
+          "action": "Exercise a database write racing another write"
+        },
+        {
+          "id": "19",
+          "action": "Verify logs omit tokens and private message content"
+        },
+        {
+          "id": "20",
+          "action": "Verify monitoring distinguishes blocked, failed, skipped and passed"
+        }
+      ],
+      "focused_test_paths": [
+        "rails/brgen/test/integration/authorization_matrix_test.rb",
+        "rails/amber/test/integration/authorization_matrix_test.rb",
+        "rails/bsdports/test/integration/authorization_matrix_test.rb",
+        "master/web/test/face_boot.test.mjs"
+      ]
+    }
+  ],
+  "fault_modes": [
+    {
+      "id": "baseline",
+      "setup": "No injected fault; normal valid action",
+      "expected": "The operation completes once, and the persisted state matches the visible result."
+    },
+    {
+      "id": "empty_state",
+      "setup": "Required collection or lookup returns no rows",
+      "expected": "An intentional empty state appears, with no invented data or unhandled exception."
+    },
+    {
+      "id": "invalid_input",
+      "setup": "Use a malformed or out-of-range value for this action",
+      "expected": "Validation rejects the invalid input and leaves authoritative state unchanged."
+    },
+    {
+      "id": "duplicate_action",
+      "setup": "Repeat the same action before the first response settles",
+      "expected": "The operation is idempotent or duplicate effects are prevented by a server-side invariant."
+    },
+    {
+      "id": "expired_session",
+      "setup": "Expire the actor session immediately before submission",
+      "expected": "The request is refused or redirected to authentication; no unauthorized mutation occurs."
+    },
+    {
+      "id": "network_disconnect",
+      "setup": "Disconnect after initiation but before confirmation",
+      "expected": "The UI communicates uncertainty/failure and does not claim success without server confirmation."
+    },
+    {
+      "id": "server_failure",
+      "setup": "Return a controlled 5xx or provider failure",
+      "expected": "The operation fails safely, preserves prior durable state and exposes a recoverable error."
+    },
+    {
+      "id": "slow_response",
+      "setup": "Delay the response beyond normal interaction latency",
+      "expected": "Pending state prevents duplicate action; timeout and recovery behavior are bounded."
+    },
+    {
+      "id": "concurrent_change",
+      "setup": "Mutate the same record from a second test actor",
+      "expected": "Server-side validation and database constraints preserve invariants and visible state refreshes."
+    },
+    {
+      "id": "unauthorized_actor",
+      "setup": "Replay the operation as an actor without the required permission",
+      "expected": "Access is denied without disclosing protected data or mutating another actor's records."
+    },
+    {
+      "id": "csrf_failure",
+      "setup": "Omit or corrupt CSRF metadata for a browser write",
+      "expected": "The write is rejected and no state transition occurs."
+    },
+    {
+      "id": "page_refresh",
+      "setup": "Refresh after submission but before visible confirmation",
+      "expected": "The resulting page reflects authoritative server state and does not repeat the mutation."
+    },
+    {
+      "id": "history_navigation",
+      "setup": "Use back and forward after the interaction",
+      "expected": "Restored UI does not present stale private state or duplicate a state-changing request."
+    },
+    {
+      "id": "mobile_viewport",
+      "setup": "Run with a 390 by 844 viewport and enlarged text",
+      "expected": "Primary controls remain reachable without clipped content or accidental horizontal page scrolling."
+    },
+    {
+      "id": "keyboard_only",
+      "setup": "Operate the flow without a pointer",
+      "expected": "Controls have usable names, focus is visible and keyboard activation reaches the same outcome."
+    },
+    {
+      "id": "reduced_motion",
+      "setup": "Enable reduced-motion preference",
+      "expected": "The action remains fully usable while nonessential animation is reduced."
+    },
+    {
+      "id": "offline_then_online",
+      "setup": "Disconnect, then restore connectivity during the flow",
+      "expected": "Only actions explicitly supported offline are queued; replay is bounded and produces no duplicate effects."
+    },
+    {
+      "id": "malformed_response",
+      "setup": "Return truncated JSON or unexpected response shape",
+      "expected": "The client fails safely, surfaces an error and does not treat malformed data as success."
+    },
+    {
+      "id": "rate_limit",
+      "setup": "Repeat the action beyond configured request limits",
+      "expected": "The system returns a bounded refusal and provides a recoverable state without bypassing the limit."
+    },
+    {
+      "id": "restart_recovery",
+      "setup": "Restart or terminate a worker at the action boundary",
+      "expected": "Persisted state remains coherent; the user sees an explicit incomplete result or a verified completed result."
+    }
+  ],
+  "cases": [
+    {
+      "id": "RI-001",
+      "surface_id": "brgen_auth",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/brgen/test/controllers/session_boundaries_test.rb",
+        "name": "test_RI_001_valid_signup_persists_unverified_account"
+      }
+    },
+    {
+      "id": "RI-002",
+      "surface_id": "brgen_auth",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-003",
+      "surface_id": "brgen_auth",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/brgen/test/controllers/users_controller_test.rb",
+        "name": "test_RI_003_malformed_email_is_rejected_without_account"
+      }
+    },
+    {
+      "id": "RI-004",
+      "surface_id": "brgen_auth",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-005",
+      "surface_id": "brgen_auth",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-006",
+      "surface_id": "brgen_auth",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-007",
+      "surface_id": "brgen_auth",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-008",
+      "surface_id": "brgen_auth",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-009",
+      "surface_id": "brgen_auth",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-010",
+      "surface_id": "brgen_auth",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/brgen/test/integration/authorization_matrix_test.rb",
+        "name": "test_RI_010_unauthorized_actor_cannot_open_protected_community"
+      }
+    },
+    {
+      "id": "RI-011",
+      "surface_id": "brgen_auth",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/brgen/test/controllers/session_boundaries_test.rb",
+        "name": "test_RI_011_expired_session_with_csrf_failure_refuses_mutation"
+      }
+    },
+    {
+      "id": "RI-012",
+      "surface_id": "brgen_auth",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/brgen/test/controllers/session_boundaries_test.rb",
+        "name": "test_RI_012_authentication_rotates_session_and_survives_refresh"
+      }
+    },
+    {
+      "id": "RI-013",
+      "surface_id": "brgen_auth",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-014",
+      "surface_id": "brgen_auth",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-015",
+      "surface_id": "brgen_auth",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-016",
+      "surface_id": "brgen_auth",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-017",
+      "surface_id": "brgen_auth",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-018",
+      "surface_id": "brgen_auth",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-019",
+      "surface_id": "brgen_auth",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-020",
+      "surface_id": "brgen_auth",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-021",
+      "surface_id": "brgen_social",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-022",
+      "surface_id": "brgen_social",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-023",
+      "surface_id": "brgen_social",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-024",
+      "surface_id": "brgen_social",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-025",
+      "surface_id": "brgen_social",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-026",
+      "surface_id": "brgen_social",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-027",
+      "surface_id": "brgen_social",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-028",
+      "surface_id": "brgen_social",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-029",
+      "surface_id": "brgen_social",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-030",
+      "surface_id": "brgen_social",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-031",
+      "surface_id": "brgen_social",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-032",
+      "surface_id": "brgen_social",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-033",
+      "surface_id": "brgen_social",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-034",
+      "surface_id": "brgen_social",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-035",
+      "surface_id": "brgen_social",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-036",
+      "surface_id": "brgen_social",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-037",
+      "surface_id": "brgen_social",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-038",
+      "surface_id": "brgen_social",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-039",
+      "surface_id": "brgen_social",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-040",
+      "surface_id": "brgen_social",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-041",
+      "surface_id": "market_discovery",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-042",
+      "surface_id": "market_discovery",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-043",
+      "surface_id": "market_discovery",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-044",
+      "surface_id": "market_discovery",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-045",
+      "surface_id": "market_discovery",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-046",
+      "surface_id": "market_discovery",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-047",
+      "surface_id": "market_discovery",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-048",
+      "surface_id": "market_discovery",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-049",
+      "surface_id": "market_discovery",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-050",
+      "surface_id": "market_discovery",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-051",
+      "surface_id": "market_discovery",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-052",
+      "surface_id": "market_discovery",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-053",
+      "surface_id": "market_discovery",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-054",
+      "surface_id": "market_discovery",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-055",
+      "surface_id": "market_discovery",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-056",
+      "surface_id": "market_discovery",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-057",
+      "surface_id": "market_discovery",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-058",
+      "surface_id": "market_discovery",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-059",
+      "surface_id": "market_discovery",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-060",
+      "surface_id": "market_discovery",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-061",
+      "surface_id": "market_checkout",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-062",
+      "surface_id": "market_checkout",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-063",
+      "surface_id": "market_checkout",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-064",
+      "surface_id": "market_checkout",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-065",
+      "surface_id": "market_checkout",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-066",
+      "surface_id": "market_checkout",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-067",
+      "surface_id": "market_checkout",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-068",
+      "surface_id": "market_checkout",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-069",
+      "surface_id": "market_checkout",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-070",
+      "surface_id": "market_checkout",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-071",
+      "surface_id": "market_checkout",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-072",
+      "surface_id": "market_checkout",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-073",
+      "surface_id": "market_checkout",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-074",
+      "surface_id": "market_checkout",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-075",
+      "surface_id": "market_checkout",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-076",
+      "surface_id": "market_checkout",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-077",
+      "surface_id": "market_checkout",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-078",
+      "surface_id": "market_checkout",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-079",
+      "surface_id": "market_checkout",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-080",
+      "surface_id": "market_checkout",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-081",
+      "surface_id": "dating",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-082",
+      "surface_id": "dating",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-083",
+      "surface_id": "dating",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-084",
+      "surface_id": "dating",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-085",
+      "surface_id": "dating",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-086",
+      "surface_id": "dating",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-087",
+      "surface_id": "dating",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-088",
+      "surface_id": "dating",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-089",
+      "surface_id": "dating",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-090",
+      "surface_id": "dating",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-091",
+      "surface_id": "dating",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-092",
+      "surface_id": "dating",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-093",
+      "surface_id": "dating",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-094",
+      "surface_id": "dating",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-095",
+      "surface_id": "dating",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-096",
+      "surface_id": "dating",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-097",
+      "surface_id": "dating",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-098",
+      "surface_id": "dating",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-099",
+      "surface_id": "dating",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-100",
+      "surface_id": "dating",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-101",
+      "surface_id": "messenger",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-102",
+      "surface_id": "messenger",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-103",
+      "surface_id": "messenger",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-104",
+      "surface_id": "messenger",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-105",
+      "surface_id": "messenger",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-106",
+      "surface_id": "messenger",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-107",
+      "surface_id": "messenger",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-108",
+      "surface_id": "messenger",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-109",
+      "surface_id": "messenger",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-110",
+      "surface_id": "messenger",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-111",
+      "surface_id": "messenger",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-112",
+      "surface_id": "messenger",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-113",
+      "surface_id": "messenger",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-114",
+      "surface_id": "messenger",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-115",
+      "surface_id": "messenger",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-116",
+      "surface_id": "messenger",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-117",
+      "surface_id": "messenger",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-118",
+      "surface_id": "messenger",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-119",
+      "surface_id": "messenger",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-120",
+      "surface_id": "messenger",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-121",
+      "surface_id": "takeaway",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-122",
+      "surface_id": "takeaway",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-123",
+      "surface_id": "takeaway",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-124",
+      "surface_id": "takeaway",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-125",
+      "surface_id": "takeaway",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-126",
+      "surface_id": "takeaway",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-127",
+      "surface_id": "takeaway",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-128",
+      "surface_id": "takeaway",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-129",
+      "surface_id": "takeaway",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-130",
+      "surface_id": "takeaway",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-131",
+      "surface_id": "takeaway",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-132",
+      "surface_id": "takeaway",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-133",
+      "surface_id": "takeaway",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-134",
+      "surface_id": "takeaway",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-135",
+      "surface_id": "takeaway",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-136",
+      "surface_id": "takeaway",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-137",
+      "surface_id": "takeaway",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-138",
+      "surface_id": "takeaway",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-139",
+      "surface_id": "takeaway",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-140",
+      "surface_id": "takeaway",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-141",
+      "surface_id": "maps_events",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-142",
+      "surface_id": "maps_events",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-143",
+      "surface_id": "maps_events",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-144",
+      "surface_id": "maps_events",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-145",
+      "surface_id": "maps_events",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-146",
+      "surface_id": "maps_events",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-147",
+      "surface_id": "maps_events",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-148",
+      "surface_id": "maps_events",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-149",
+      "surface_id": "maps_events",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-150",
+      "surface_id": "maps_events",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-151",
+      "surface_id": "maps_events",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-152",
+      "surface_id": "maps_events",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-153",
+      "surface_id": "maps_events",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-154",
+      "surface_id": "maps_events",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-155",
+      "surface_id": "maps_events",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-156",
+      "surface_id": "maps_events",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-157",
+      "surface_id": "maps_events",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-158",
+      "surface_id": "maps_events",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-159",
+      "surface_id": "maps_events",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-160",
+      "surface_id": "maps_events",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-161",
+      "surface_id": "radio_playlist",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-162",
+      "surface_id": "radio_playlist",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-163",
+      "surface_id": "radio_playlist",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-164",
+      "surface_id": "radio_playlist",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-165",
+      "surface_id": "radio_playlist",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-166",
+      "surface_id": "radio_playlist",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-167",
+      "surface_id": "radio_playlist",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-168",
+      "surface_id": "radio_playlist",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-169",
+      "surface_id": "radio_playlist",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-170",
+      "surface_id": "radio_playlist",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-171",
+      "surface_id": "radio_playlist",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-172",
+      "surface_id": "radio_playlist",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-173",
+      "surface_id": "radio_playlist",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-174",
+      "surface_id": "radio_playlist",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-175",
+      "surface_id": "radio_playlist",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-176",
+      "surface_id": "radio_playlist",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-177",
+      "surface_id": "radio_playlist",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-178",
+      "surface_id": "radio_playlist",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-179",
+      "surface_id": "radio_playlist",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-180",
+      "surface_id": "radio_playlist",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-181",
+      "surface_id": "tv",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-182",
+      "surface_id": "tv",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-183",
+      "surface_id": "tv",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-184",
+      "surface_id": "tv",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-185",
+      "surface_id": "tv",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-186",
+      "surface_id": "tv",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-187",
+      "surface_id": "tv",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-188",
+      "surface_id": "tv",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-189",
+      "surface_id": "tv",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-190",
+      "surface_id": "tv",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-191",
+      "surface_id": "tv",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-192",
+      "surface_id": "tv",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-193",
+      "surface_id": "tv",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-194",
+      "surface_id": "tv",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-195",
+      "surface_id": "tv",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-196",
+      "surface_id": "tv",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-197",
+      "surface_id": "tv",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-198",
+      "surface_id": "tv",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-199",
+      "surface_id": "tv",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-200",
+      "surface_id": "tv",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-201",
+      "surface_id": "amber_wardrobe",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-202",
+      "surface_id": "amber_wardrobe",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-203",
+      "surface_id": "amber_wardrobe",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-204",
+      "surface_id": "amber_wardrobe",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-205",
+      "surface_id": "amber_wardrobe",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-206",
+      "surface_id": "amber_wardrobe",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-207",
+      "surface_id": "amber_wardrobe",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-208",
+      "surface_id": "amber_wardrobe",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-209",
+      "surface_id": "amber_wardrobe",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-210",
+      "surface_id": "amber_wardrobe",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-211",
+      "surface_id": "amber_wardrobe",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-212",
+      "surface_id": "amber_wardrobe",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-213",
+      "surface_id": "amber_wardrobe",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-214",
+      "surface_id": "amber_wardrobe",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-215",
+      "surface_id": "amber_wardrobe",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-216",
+      "surface_id": "amber_wardrobe",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-217",
+      "surface_id": "amber_wardrobe",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-218",
+      "surface_id": "amber_wardrobe",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-219",
+      "surface_id": "amber_wardrobe",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-220",
+      "surface_id": "amber_wardrobe",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-221",
+      "surface_id": "amber_outfits",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-222",
+      "surface_id": "amber_outfits",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-223",
+      "surface_id": "amber_outfits",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-224",
+      "surface_id": "amber_outfits",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-225",
+      "surface_id": "amber_outfits",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-226",
+      "surface_id": "amber_outfits",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-227",
+      "surface_id": "amber_outfits",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-228",
+      "surface_id": "amber_outfits",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-229",
+      "surface_id": "amber_outfits",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-230",
+      "surface_id": "amber_outfits",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-231",
+      "surface_id": "amber_outfits",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-232",
+      "surface_id": "amber_outfits",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-233",
+      "surface_id": "amber_outfits",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-234",
+      "surface_id": "amber_outfits",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-235",
+      "surface_id": "amber_outfits",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-236",
+      "surface_id": "amber_outfits",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-237",
+      "surface_id": "amber_outfits",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-238",
+      "surface_id": "amber_outfits",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-239",
+      "surface_id": "amber_outfits",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-240",
+      "surface_id": "amber_outfits",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-241",
+      "surface_id": "amber_social",
+      "action_id": "01",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/amber/test/controllers/posts_controller_anonymous_test.rb",
+        "name": "test_guest_feed_shows_actionable_empty_state_when_no_posts_exist"
+      }
+    },
+    {
+      "id": "RI-242",
+      "surface_id": "amber_social",
+      "action_id": "02",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "path": "rails/amber/test/controllers/bankid_identity_persistence_test.rb",
+        "name": "test_bankid_identity_without_email_can_create_a_social_post"
+      }
+    },
+    {
+      "id": "RI-243",
+      "surface_id": "amber_social",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-244",
+      "surface_id": "amber_social",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-245",
+      "surface_id": "amber_social",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-246",
+      "surface_id": "amber_social",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-247",
+      "surface_id": "amber_social",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-248",
+      "surface_id": "amber_social",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-249",
+      "surface_id": "amber_social",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-250",
+      "surface_id": "amber_social",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-251",
+      "surface_id": "amber_social",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-252",
+      "surface_id": "amber_social",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-253",
+      "surface_id": "amber_social",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-254",
+      "surface_id": "amber_social",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-255",
+      "surface_id": "amber_social",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-256",
+      "surface_id": "amber_social",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-257",
+      "surface_id": "amber_social",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-258",
+      "surface_id": "amber_social",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-259",
+      "surface_id": "amber_social",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-260",
+      "surface_id": "amber_social",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-261",
+      "surface_id": "bsdports",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-262",
+      "surface_id": "bsdports",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-263",
+      "surface_id": "bsdports",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-264",
+      "surface_id": "bsdports",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-265",
+      "surface_id": "bsdports",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-266",
+      "surface_id": "bsdports",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-267",
+      "surface_id": "bsdports",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-268",
+      "surface_id": "bsdports",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-269",
+      "surface_id": "bsdports",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-270",
+      "surface_id": "bsdports",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-271",
+      "surface_id": "bsdports",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-272",
+      "surface_id": "bsdports",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-273",
+      "surface_id": "bsdports",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-274",
+      "surface_id": "bsdports",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-275",
+      "surface_id": "bsdports",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-276",
+      "surface_id": "bsdports",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-277",
+      "surface_id": "bsdports",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-278",
+      "surface_id": "bsdports",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-279",
+      "surface_id": "bsdports",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-280",
+      "surface_id": "bsdports",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-281",
+      "surface_id": "master_face",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-282",
+      "surface_id": "master_face",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-283",
+      "surface_id": "master_face",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-284",
+      "surface_id": "master_face",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-285",
+      "surface_id": "master_face",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-286",
+      "surface_id": "master_face",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-287",
+      "surface_id": "master_face",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-288",
+      "surface_id": "master_face",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-289",
+      "surface_id": "master_face",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-290",
+      "surface_id": "master_face",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-291",
+      "surface_id": "master_face",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-292",
+      "surface_id": "master_face",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-293",
+      "surface_id": "master_face",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-294",
+      "surface_id": "master_face",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-295",
+      "surface_id": "master_face",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-296",
+      "surface_id": "master_face",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-297",
+      "surface_id": "master_face",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-298",
+      "surface_id": "master_face",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-299",
+      "surface_id": "master_face",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-300",
+      "surface_id": "master_face",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-301",
+      "surface_id": "master_chat",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-302",
+      "surface_id": "master_chat",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-303",
+      "surface_id": "master_chat",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-304",
+      "surface_id": "master_chat",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-305",
+      "surface_id": "master_chat",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-306",
+      "surface_id": "master_chat",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-307",
+      "surface_id": "master_chat",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-308",
+      "surface_id": "master_chat",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-309",
+      "surface_id": "master_chat",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-310",
+      "surface_id": "master_chat",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-311",
+      "surface_id": "master_chat",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-312",
+      "surface_id": "master_chat",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-313",
+      "surface_id": "master_chat",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-314",
+      "surface_id": "master_chat",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-315",
+      "surface_id": "master_chat",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-316",
+      "surface_id": "master_chat",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-317",
+      "surface_id": "master_chat",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-318",
+      "surface_id": "master_chat",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-319",
+      "surface_id": "master_chat",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-320",
+      "surface_id": "master_chat",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-321",
+      "surface_id": "master_cli",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-322",
+      "surface_id": "master_cli",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-323",
+      "surface_id": "master_cli",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-324",
+      "surface_id": "master_cli",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-325",
+      "surface_id": "master_cli",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-326",
+      "surface_id": "master_cli",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-327",
+      "surface_id": "master_cli",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-328",
+      "surface_id": "master_cli",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-329",
+      "surface_id": "master_cli",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-330",
+      "surface_id": "master_cli",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-331",
+      "surface_id": "master_cli",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-332",
+      "surface_id": "master_cli",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-333",
+      "surface_id": "master_cli",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-334",
+      "surface_id": "master_cli",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-335",
+      "surface_id": "master_cli",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-336",
+      "surface_id": "master_cli",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-337",
+      "surface_id": "master_cli",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-338",
+      "surface_id": "master_cli",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-339",
+      "surface_id": "master_cli",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-340",
+      "surface_id": "master_cli",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-341",
+      "surface_id": "master_fix",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null,
+      "runtime_test": {
+        "runner": "ruby_minitest",
+        "path": "master/test/test_repair_loop_policy.rb",
+        "name": "test_RI_341_fix_repairs_known_small_defect_and_verifies"
+      }
+    },
+    {
+      "id": "RI-342",
+      "surface_id": "master_fix",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-343",
+      "surface_id": "master_fix",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-344",
+      "surface_id": "master_fix",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-345",
+      "surface_id": "master_fix",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-346",
+      "surface_id": "master_fix",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-347",
+      "surface_id": "master_fix",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-348",
+      "surface_id": "master_fix",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-349",
+      "surface_id": "master_fix",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-350",
+      "surface_id": "master_fix",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-351",
+      "surface_id": "master_fix",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-352",
+      "surface_id": "master_fix",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-353",
+      "surface_id": "master_fix",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-354",
+      "surface_id": "master_fix",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-355",
+      "surface_id": "master_fix",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-356",
+      "surface_id": "master_fix",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-357",
+      "surface_id": "master_fix",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-358",
+      "surface_id": "master_fix",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-359",
+      "surface_id": "master_fix",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-360",
+      "surface_id": "master_fix",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-361",
+      "surface_id": "pwa",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-362",
+      "surface_id": "pwa",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-363",
+      "surface_id": "pwa",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-364",
+      "surface_id": "pwa",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-365",
+      "surface_id": "pwa",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-366",
+      "surface_id": "pwa",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-367",
+      "surface_id": "pwa",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-368",
+      "surface_id": "pwa",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-369",
+      "surface_id": "pwa",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-370",
+      "surface_id": "pwa",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-371",
+      "surface_id": "pwa",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-372",
+      "surface_id": "pwa",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-373",
+      "surface_id": "pwa",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-374",
+      "surface_id": "pwa",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-375",
+      "surface_id": "pwa",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-376",
+      "surface_id": "pwa",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-377",
+      "surface_id": "pwa",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-378",
+      "surface_id": "pwa",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-379",
+      "surface_id": "pwa",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-380",
+      "surface_id": "pwa",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-381",
+      "surface_id": "cross_cut",
+      "action_id": "01",
+      "fault_mode": "baseline",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-382",
+      "surface_id": "cross_cut",
+      "action_id": "02",
+      "fault_mode": "empty_state",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-383",
+      "surface_id": "cross_cut",
+      "action_id": "03",
+      "fault_mode": "invalid_input",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-384",
+      "surface_id": "cross_cut",
+      "action_id": "04",
+      "fault_mode": "duplicate_action",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-385",
+      "surface_id": "cross_cut",
+      "action_id": "05",
+      "fault_mode": "expired_session",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-386",
+      "surface_id": "cross_cut",
+      "action_id": "06",
+      "fault_mode": "network_disconnect",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-387",
+      "surface_id": "cross_cut",
+      "action_id": "07",
+      "fault_mode": "server_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-388",
+      "surface_id": "cross_cut",
+      "action_id": "08",
+      "fault_mode": "slow_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-389",
+      "surface_id": "cross_cut",
+      "action_id": "09",
+      "fault_mode": "concurrent_change",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-390",
+      "surface_id": "cross_cut",
+      "action_id": "10",
+      "fault_mode": "unauthorized_actor",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-391",
+      "surface_id": "cross_cut",
+      "action_id": "11",
+      "fault_mode": "csrf_failure",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-392",
+      "surface_id": "cross_cut",
+      "action_id": "12",
+      "fault_mode": "page_refresh",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-393",
+      "surface_id": "cross_cut",
+      "action_id": "13",
+      "fault_mode": "history_navigation",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-394",
+      "surface_id": "cross_cut",
+      "action_id": "14",
+      "fault_mode": "mobile_viewport",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-395",
+      "surface_id": "cross_cut",
+      "action_id": "15",
+      "fault_mode": "keyboard_only",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-396",
+      "surface_id": "cross_cut",
+      "action_id": "16",
+      "fault_mode": "reduced_motion",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-397",
+      "surface_id": "cross_cut",
+      "action_id": "17",
+      "fault_mode": "offline_then_online",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-398",
+      "surface_id": "cross_cut",
+      "action_id": "18",
+      "fault_mode": "malformed_response",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-399",
+      "surface_id": "cross_cut",
+      "action_id": "19",
+      "fault_mode": "rate_limit",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    },
+    {
+      "id": "RI-400",
+      "surface_id": "cross_cut",
+      "action_id": "20",
+      "fault_mode": "restart_recovery",
+      "assessment": "SOURCE_EXPECTATION_ONLY",
+      "runtime_status": "NOT_RUN",
+      "runtime_evidence": null
+    }
+  ]
+}

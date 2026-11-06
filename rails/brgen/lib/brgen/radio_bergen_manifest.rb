@@ -1,0 +1,180 @@
+# frozen_string_literal: true
+
+require "shared/contracts"
+require "yaml"
+require "pathname"
+require "shared/contracts"
+Shared::Contracts.require_contract("studio")
+
+module Brgen
+  # Shared Radio Bergen manifest loader — pub2 index.html archaeology split into data + Rails.
+  class RadioBergenManifest
+    class << self
+      def manifest_path
+        manifest_candidates.find { |path| File.file?(path) }
+      end
+
+      def lessons_path
+        lessons_candidates.find { |path| File.file?(path) }
+      end
+
+      # One candidate now, not four. The three fallbacks pointed into
+      # master/tools/radio-bergen, which no longer exists — brgen serves this playlist,
+      # so the manifest lives in brgen's own config where the first candidate
+      # always looked. In development that path resolves directly; in production
+      # it is the same path, so there is nothing left to fall back to.
+      def manifest_candidates
+        [ rails_root.join("config/radio_bergen/tracks.yml") ]
+      end
+
+      def lessons_candidates
+        [
+          rails_root.join("config/radio_bergen/archive_lessons.yml"),
+          Pathname.new(File.join(Shared::Contracts.root, "master", "data", "recovery", "pub_archive_restore.yml"))
+        ]
+      end
+
+      # All four candidates named a subsystem that no longer exists: 41b20306d
+      # removed master/tools/radio-bergen ("brgen's playlist replaced what it served"),
+      # and the surviving three paths were lowercase `master/tools/` after 2d4551597
+      # renamed the directory to STUDIO. So sonic_learnings returned {} on every
+      # call, and radio_bergen_study_test.rb skipped itself rather than failing.
+      # The learnings lived in the dilla engine's own reference file, which left
+      # the tree with the engine (tag dilla-engine-final); this app's file is the one.
+      def sonic_learnings_candidates
+        [ rails_root.join("config/radio_bergen/sonic.yml") ]
+      end
+
+      def sonic_learnings_path
+        sonic_learnings_candidates.find { |path| File.file?(path) }
+      end
+
+      def sonic_learnings
+        path = sonic_learnings_path
+        return {} unless path
+
+        YAML.safe_load(File.read(path), permitted_classes: [], aliases: true) || {}
+      end
+
+      def stream_rotation_weights
+        weights = sonic_learnings["stream_rotation_weights"]
+        return {} unless weights.is_a?(Hash)
+
+        weights.transform_keys(&:to_s)
+      end
+
+      def rails_root
+        Pathname.new(Rails.root)
+      end
+
+      def load
+        path = manifest_path
+        return {} unless path
+
+        YAML.safe_load(File.read(path), permitted_classes: [], aliases: true) || {}
+      end
+
+      # Exact selection from pub2/mp3/playlist.json. These are metadata and
+      # archive filenames, not public media URLs; cleared files enter Active
+      # Storage only through Playlist::RadioBergenArchiveImport.
+      def curated_playlist
+        load.fetch("curated_playlist", {})
+      end
+
+      def curated_tracks
+        rows = curated_playlist["tracks"]
+        rows.is_a?(Array) ? rows.select { |row| row.is_a?(Hash) } : []
+      end
+
+      def curated_playlist_name
+        curated_playlist["name"].to_s
+      end
+
+      def curated_album
+        curated_playlist["album"].to_s
+      end
+
+      def curated_description
+        curated_playlist["description"].to_s
+      end
+
+      def youtube_tracks
+        Array(load.dig("external_reference", "youtube")).filter_map do |row|
+          id = row["id"].presence
+          next unless id
+
+          {
+            title: row["title"].to_s,
+            id: id,
+            artist: row["artist"].presence || "Brgen"
+          }
+        end
+      end
+
+      # whyp.it embeds need the track id and its share token; both are required.
+      def whyp_tracks
+        Array(load.dig("external_reference", "whyp")).filter_map do |row|
+          id = row["id"].to_s.presence
+          token = row["token"].to_s.presence
+          next unless id && token
+
+          { title: row["title"].to_s, id: "whyp-#{id}", artist: row["artist"].presence || "Brgen",
+            whyp_id: id, whyp_token: token }
+        end
+      end
+
+      # The radio's tracks as the same embed records a post's link resolves to, so
+      # the front page plays them through shared/_link_embed. Built from the
+      # manifest alone: titles are ours, YouTube's still has a fixed address, and
+      # no provider is asked. YouTube and whyp.it alternate, as the radio does.
+      def embed_records
+        youtube = youtube_tracks.map do |track|
+          radio_record("https://www.youtube.com/watch?v=#{track[:id]}", track,
+                       thumbnail: "https://i.ytimg.com/vi/#{track[:id]}/hqdefault.jpg")
+        end
+        whyp = whyp_tracks.map do |track|
+          radio_record("https://whyp.it/tracks/#{track[:whyp_id]}?token=#{track[:whyp_token]}", track)
+        end
+        youtube.zip(whyp).flatten.compact + youtube.drop(whyp.size).compact
+      end
+
+      def radio_record(url, track, thumbnail: nil)
+        match = Shared::LinkEmbed.match_url(url)
+        return unless match
+
+        Shared::LinkEmbed::Record.new(match:, status: "ok", title: "#{track[:artist]} – #{track[:title]}",
+                                      author_name: "Radio Brgen", thumbnail_url: thumbnail)
+      end
+
+      def archaeology_lines
+        manifest = load
+        meta = manifest["meta"] || {}
+        pub2_head = lessons_pub2_head
+        youtube_count = youtube_tracks.size + whyp_tracks.size
+
+        [
+          "$ git dig --follow pub4/index.html",
+          "object: pub2 monolithic index.html → radio.brgen.no warp tunnel",
+          "archive: #{meta['source_archive'] || 'anon987654321/pub2'} @ #{pub2_head}",
+          # These two are rendered to the visitor on the playlist surface, so
+          # they name paths that exist. master/tools/radio-bergen/ was removed in
+          # 41b20306d; the manifest moved into this app and the learnings into
+          # the dilla engine.
+          "manifest: rails/brgen/config/radio_bergen/tracks.yml",
+          "lesson: do_not_restore monolithic index.html — manifest + Rails vertical instead",
+          "catalogue: #{youtube_count} external references · no local source files",
+          "policy: #{manifest.dig('external_reference', 'policy') || 'reference_only_until_rights_review'}",
+          "surface: radio.brgen.no — tap to boot tunnel (pub4 matrix index.html lineage)"
+        ]
+      end
+
+      def lessons_pub2_head
+        path = lessons_path
+        return "ad05242c97ff" unless path
+
+        data = YAML.safe_load(File.read(path), permitted_classes: [], aliases: true) || {}
+        data.dig("pub2", "head") || "ad05242c97ff"
+      end
+    end
+  end
+end

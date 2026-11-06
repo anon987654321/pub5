@@ -1,0 +1,60 @@
+# Engine-local strings.
+#
+# Every engine string used to live in brgen/config/locales, which made a
+# literal in the markup the path of least resistance for engine work and left
+# the engine unmountable anywhere else. Rails::Engine appends
+# config/locales/*.yml to I18n.load_path on its own -- no wiring beyond this
+# file existing -- and I18n deep-merges across load paths, so keys under the
+# same namespace in the host file stay reachable.
+#
+# Keys the host already carries are NOT copied here. Use them.
+nb:
+  tv:
+    stream_chat_slow_mode: "Vent et par sekunder før neste melding."
+    feed:
+      sound_off: "Lyd av"
+    live_streams:
+      status:
+        scheduled: "Planlagt"
+        live: "Direkte"
+        ended: "Avsluttet"
+        cancelled: "Avlyst"
+      status_line:
+        scheduled: "Sendingen har ikke startet ennå. Siden oppdaterer seg når den går direkte."
+        live: "Sendes direkte nå."
+        ended: "Sendingen er over."
+        cancelled: "Sendingen er avlyst."
+      owner_heading: "Strømmen din"
+      go_live: "Gå direkte"
+      end_live: "Avslutt strømmen"
+      end_live_confirm: "Avslutte strømmen for alle som ser på?"
+      stream_key: "Strømmenøkkel"
+      stream_key_note: "Hold den for deg selv: alle med denne nøkkelen kan sende på strømmen din."
+    add_comment: "Skriv en kommentar"
+    add_note: "Legg til et notat"
+    channel_actions_aria: "Kanalhandlinger"
+    channel_results_aria: "Resultater for TV-kanaler"
+    channels_empty_body: "Kanaler dukker opp her når noen publiserer."
+    city_tv: "%{city} TV"
+    discussion: "Diskusjon"
+    live_stream_created: "Direktesending opprettet"
+    live_stream_deleted: "Direktesending fjernet"
+    live_stream_updated: "Direktesending oppdatert"
+    live_streams_list_aria: "Liste over direktesendinger"
+    live_streams_unavailable: "Direktesending er ikke i drift ennå. Skjemaet lagrer sendingen, men ingen strømmeserver kan ta imot bilde og lyd."
+    no_channels_match: "Ingen kanaler passer til søket."
+    note_timestamp: "Tidspunkt (sekunder)"
+    notes: "Notater"
+    recent: "Nylig"
+    share: "Del"
+    captions_track: "Undertekster"
+    captions_upload: "Undertekster (WebVTT, valgfritt)"
+    captions_hint: "En .vtt-fil. Spilleren viser den som undertekster."
+    use_current_time: "Bruk tidspunktet i videoen"
+    seek_to_note: "Spol til %{time}"
+    shows_aria: "TV-serier"
+    video_status:
+      processing: "Behandles"
+      ready: "Klar"
+      unlisted: "Ulistet"
+    videos: "Videoer"

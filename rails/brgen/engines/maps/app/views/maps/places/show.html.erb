@@ -1,0 +1,98 @@
+<% content_for :title, @place.name %>
+<% content_for :description, meta_description_for(@place) %>
+<% content_for :json_ld, json_ld_for(@place, type: :local_business) %>
+<% content_for :og_image, seo_image_url(@place.photo) %>
+<% content_for :json_ld, json_ld_script(breadcrumb_json_ld([
+      [t("maps.map"), root_url],
+      [@place.name, seo_canonical_url]
+    ])) %>
+
+<div class="page-header">
+  <%= tag.h1 @place.name %>
+  <nav aria-label="<%= t("aria.place_navigation") %>">
+    <%= link_to t("actions.back"), :back, class: "button" %>
+  </nav>
+</div>
+
+<article class="place" aria-label="<%= t("aria.place_information") %>">
+  <% if @place.photo.attached? %>
+    <figure class="place-hero">
+      <%= responsive_image_tag(@place.photo, alt: @place.name, class: "place-hero__image") %>
+    </figure>
+  <% end %>
+  <dl role="list">
+    <% if @place.address.present? %>
+      <dt><%= t("maps.address") %></dt>
+      <%= tag.dd @place.address %>
+    <% end %>
+    <dt><%= t("maps.kind") %></dt>
+    <%= tag.dd t("maps.kinds.#{@place.kind}", default: @place.kind.to_s.humanize) %>
+    <% if @place.city %>
+      <dt><%= t("maps.city") %></dt>
+      <%= tag.dd @place.city.name %>
+    <% end %>
+    <% if @place.neighborhood %>
+      <dt><%= t("maps.neighborhood") %></dt>
+      <%= tag.dd @place.neighborhood.name %>
+    <% end %>
+    <dt><%= t("maps.coordinates") %></dt>
+    <dd><%= @place.latitude %>, <%= @place.longitude %></dd>
+  </dl>
+
+  <p>
+    <%= link_to t("maps.open_in_map"),
+        "https://www.openstreetmap.org/?mlat=#{@place.latitude}&mlon=#{@place.longitude}#map=16/#{@place.latitude}/#{@place.longitude}",
+        class: "button", target: "_blank", rel: "noopener" %>
+    <%# PlacesController#check_in asks for require_user_session -- the check that
+        means "any identity, guests included". Gating the form on authenticated?
+        hid it from exactly the visitors that check exists to admit. %>
+    <% if authenticated? || guest? %>
+      <% unless @checked_in %>
+        <%= form_with url: check_in_place_path(@place), method: :post, local: true, class: "check-in-form" do |f| %>
+          <%= f.text_field :note, placeholder: t("maps.optional_note"), aria: { label: t("maps.optional_note") }, class: "field--grow" %>
+          <%= f.submit t("maps.check_in"), class: "button" %>
+        <% end %>
+      <% else %>
+        <p><%= t("maps.checked_in_recently") %></p>
+      <% end %>
+    <% end %>
+  </p>
+
+  <% # The section shows at most eight of each, so read exactly that and branch
+     # on the loaded rows - any? + limit(8).each asked the database twice. %>
+  <% restaurants = @place.restaurants.active.limit(8).to_a %>
+  <% stores = @place.stores.active.limit(8).to_a %>
+  <% if restaurants.any? || stores.any? %>
+    <section>
+      <%= tag.h2 t("maps.at_this_place") %>
+      <ul>
+        <% restaurants.each do |restaurant| %>
+          <li><%= link_to restaurant.name, record_public_href(restaurant) %> · <%= t("nav.takeaway") %></li>
+        <% end %>
+        <% stores.each do |store| %>
+          <li><%= link_to store.name, record_public_href(store) %> · <%= t("nav.marketplace") %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <%= render "shared/also_nearby", items: @nearby_places, title: t("maps.nearby_places") %>
+
+  <% if @recent_check_ins.any? || @unnamed_check_in_count.positive? %>
+    <section>
+      <%= tag.h2 t("maps.recent_check_ins") %>
+      <% if @unnamed_check_in_count.positive? %>
+        <%= tag.p t("maps.checked_in_last_hour", count: @unnamed_check_in_count) %>
+      <% end %>
+      <ul>
+        <% @recent_check_ins.each do |check_in| %>
+          <li>
+            <%= check_in.user.display_name %>
+            <% if check_in.note.present? %> — <%= check_in.note %><% end %>
+            · <time datetime="<%= check_in.checked_in_at.iso8601 %>"><%= time_ago(check_in.checked_in_at) %></time>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</article>

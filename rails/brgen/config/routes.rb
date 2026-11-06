@@ -1,0 +1,337 @@
+# frozen_string_literal: true
+
+require "brgen/domain_registry"
+require "brgen/demo_mode"
+
+Rails.application.routes.draw do
+  get "changelog" => "shared/changelog#show", as: :changelog
+  get "offline" => "rails/pwa#offline", as: :pwa_offline
+  get ".well-known/assetlinks.json" => "rails/pwa#assetlinks", as: :pwa_assetlinks
+  get ".well-known/apple-app-site-association" => "rails/pwa#apple_app_site_association", as: :pwa_apple_app_site_association
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "manifest.json" => "rails/pwa#manifest"
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  # Browsers often request the .js suffix; 422/HTML here breaks SW registration.
+  get "service-worker.js" => "rails/pwa#service_worker"
+  post "share" => "posts#share", as: :share_post
+  resources :share_drafts, only: %i[show destroy] do
+    member { post :publish }
+  end
+  # Loopback-only in practice (see InternalController's shared-secret check);
+  # not subdomain-constrained since master calls it directly by IP:port.
+  get "internal/status" => "internal#status", as: :internal_status
+  get "internal/version" => "internal#version", as: :internal_version
+  post "internal/dilla_publish" => "internal#dilla_publish", as: :internal_dilla_publish
+  get "sso/from_master" => "sso#from_master", as: :sso_from_master
+
+  post   "users/:user_id/block" => "blocks#create",  as: :block_user
+  delete "users/:user_id/block" => "blocks#destroy", as: :unblock_user
+
+  post   "communities/:community_id/join" => "community_memberships#create",  as: :join_community
+  delete "communities/:community_id/join" => "community_memberships#destroy", as: :leave_community
+
+  # Push and email per kind of notification, from the account page.
+  patch "account/notifications" => "account_notification_preferences#update", as: :account_notification_preferences
+
+  # The language an account chose on its account page.
+  patch "account/language" => "account_languages#update", as: :account_language
+
+  # The welcome dialog's first step: neighbourhood and communities.
+  get "welcome" => "welcome#show", as: :welcome_start
+
+  get "tags/:name" => "hashtags#show", as: :hashtag, constraints: { name: /[A-Za-z0-9_]+/ }
+
+  get    "saved" => "bookmarks#index", as: :saved
+  post   "posts/:post_id/bookmark" => "bookmarks#create",  as: :bookmark_post
+  delete "posts/:post_id/bookmark" => "bookmarks#destroy", as: :unbookmark_post
+
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/legal.rb", __dir__)))
+
+  jobs_constraint = lambda { |request|
+    session_id = request.cookie_jar.signed[:session_id]
+    session_id.present? && ::Session.exists?(id: session_id)
+  }
+
+  TV_SUBDOMAINS = Brgen::DomainRegistry::TV_SUBDOMAINS
+  DATING_SUBDOMAINS = Brgen::DomainRegistry::DATING_SUBDOMAINS
+  RADIO_SUBDOMAINS = Brgen::DomainRegistry::RADIO_SUBDOMAINS
+  TAKEAWAY_SUBDOMAINS = Brgen::DomainRegistry::TAKEAWAY_SUBDOMAINS
+  MARKETPLACE_SUBDOMAINS = Brgen::DomainRegistry::MARKETPLACE_SUBDOMAINS
+  MAPS_SUBDOMAINS = Brgen::DomainRegistry::MAPS_SUBDOMAINS
+  MESSENGER_SUBDOMAINS = Brgen::DomainRegistry::MESSENGER_SUBDOMAINS
+
+  resource :session, only: %i[new create destroy] do
+    # Passwordless sign-in. The mailer, the token generator and the columns
+    # have existed since 20260709120000; the route the link pointed at never
+    # did, so nothing could send one and nothing could consume one.
+    get  "magic", to: "sessions#magic", as: :magic
+    post "magic", to: "sessions#request_magic", as: :request_magic
+  end
+  resources :passwords, param: :token, only: %i[new create edit update]
+  %w[auth email_verification verification billing].each do |shared|
+    instance_eval(File.read(File.expand_path("../../shared/config/routes/#{shared}.rb", __dir__)))
+  end
+  post "fingerprint" => "fingerprints#create"
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/fleet.rb", __dir__)))
+  resources :activity_events, only: :index
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/social.rb", __dir__)))
+  # Following a notification marks it read on the way to what it is about.
+  resources :notifications, only: [] do
+    member { get :open }
+  end
+
+  namespace :admin do
+    resources :reports, only: %i[index update]
+    resources :business_verifications, only: %i[index update]
+  end
+
+  # A business owner asks for the verified badge; kind is store or restaurant.
+  get  "business_verifications/:kind/:business_id/new" => "business_verifications#new", as: :new_business_verification
+  post "business_verifications/:kind/:business_id" => "business_verifications#create", as: :business_verifications
+
+  # Declared before the shallow nesting below, which yields GET /posts/:id. That
+  # route matched /posts/new first and sent "new" through as an id, so the
+  # standalone new-post page answered 404 ("Couldn't find Post with id=new")
+  # while new_post_path happily generated the link to it.
+  # Catch-up for a live page whose cable was down (PostCatchUpsController).
+  # Above resources :posts, which would read "since" as a post slug.
+  get "posts/since" => "post_catch_ups#feed", as: :posts_since
+  get "posts/:post_id/comments/since" => "post_catch_ups#comments", as: :post_comments_since
+  resources :posts do
+    resources :comments, shallow: true, only: %i[create destroy]
+    resource :vote, only: [ :create ], controller: "votes"
+    # POST toggles: the action Stimulus controller only ever sends POST.
+    resource :repost, only: [ :create ], controller: "reposts"
+    # A crosspost is the same content in a second community, with its own
+    # comment thread — not a boost, which is what :repost above is.
+    resources :crossposts, only: [ :create ]
+  end
+
+  # ActivityPub. Each city is a separate origin with its own population, which
+  # is the same shape as two Mastodon instances — so an actor is resolved
+  # against the requested host, not globally.
+  get ".well-known/webfinger" => "well_known#webfinger", as: :webfinger
+  get ".well-known/nodeinfo" => "well_known#nodeinfo_index"
+  get "nodeinfo/2.1" => "well_known#nodeinfo", as: :nodeinfo
+  # The shared inbox: one POST per instance instead of one per follower.
+  post "inbox" => "fediverse/inboxes#create", as: :shared_inbox
+  get  "users/:username/outbox" => "fediverse/actors#outbox",    as: :actor_outbox
+  post "users/:username/inbox" => "fediverse/inboxes#create",   as: :actor_inbox
+  # The actor document shares its URL with the HTML profile, told apart by
+  # Accept. A path constraint would not do: /users/5 is the existing profile
+  # route and a username is not guaranteed to be non-numeric, so the header is
+  # the only thing that actually distinguishes the two requests.
+  activitypub_request = lambda do |request|
+    request.headers["Accept"].to_s.match?(%r{application/(activity|ld)\+json})
+  end
+  get "users/:username/followers" => "fediverse/actors#followers", as: :actor_followers,
+                                      constraints: activitypub_request
+  get "users/:username" => "fediverse/actors#show", as: :actor, constraints: activitypub_request
+  # A profile's follower list for a browser shares its path with the
+  # ActivityPub followers collection above, which comes first and now answers
+  # only an ActivityPub Accept; everything else reaches the HTML list.
+  get "users/:id/followers" => "follow_lists#followers", as: :user_followers
+  get "users/:id/following" => "follow_lists#following", as: :user_following
+
+# Following out. The inbound half — somebody on another instance following a
+# brgen account — arrives at the inbox above and needs no route of its own.
+resources :fediverse_follows, only: %i[index create destroy], controller: "fediverse/follows", param: :uri
+
+  # Stories delete themselves after 24h; `alive` hides an expired one from every
+  # surface whether or not the sweep has run yet.
+  resources :stories, only: %i[index show new create destroy] do
+    # A reply is a DM carrying the story it answers, so it outlives the story.
+    resources :replies, only: [ :create ], controller: "story_replies"
+  end
+
+  # Cancelling is a member-facing state change, not a delete: people have it in
+  # their calendar. RSVP is nested because it only exists against an event.
+  resources :events do
+    member do
+      post :rsvp, to: "event_rsvps#create"
+      patch :cancel
+    end
+    resources :comments, shallow: true, only: %i[create destroy]
+  end
+
+  resources :communities do
+    # A community's own moderators work this queue. Admin::Reports is every
+    # report in the app behind a single BRGEN_ADMIN_EMAIL check; this is the
+    # per-community one, derived from the posts that belong here.
+    resources :moderation, only: %i[index update], controller: "communities/moderation"
+    resources :moderators, only: %i[index create destroy], controller: "communities/moderators"
+    # Scoped to this community, never site-wide: one community's moderator
+    # silencing someone everywhere is not a lever that should exist.
+    resources :bans, only: %i[index create destroy], controller: "communities/bans"
+    # The community's own reference pages. Readable by whoever can read the
+    # community, written by its moderators.
+    resources :wiki, only: %i[index show new create edit update], controller: "communities/wiki" do
+      member { post :revert }
+    end
+    resources :posts, shallow: true do
+      resources :comments, shallow: true, only: %i[create destroy] do
+        resources :comments, shallow: true, only: %i[create destroy], as: :replies
+      end
+      resource :vote, only: [ :create ], controller: "votes"
+      resource :repost, only: [ :create ], controller: "reposts"
+    end
+  end
+  patch "drafts/:id", to: "drafts#update", as: :draft
+
+  # edit/update: the author rewrites a comment within Comment::EDIT_WINDOW.
+  resources :comments, only: %i[create edit update destroy] do
+    resource :vote, only: [ :create ], controller: "votes"
+    resources :comments, only: [ :create ], as: :replies
+    member do
+      post :generate_summary
+      # A moderator of the post's community takes the comment down.
+      patch :remove
+    end
+  end
+
+  resources :users, only: %i[show new create edit update] do
+    # The profile form's live hint; a collection route, so it is matched
+    # before /users/:id would read "username_availability" as an id.
+    get :username_availability, on: :collection
+    member do
+      post :follow, to: "follows#create"
+      delete :unfollow, to: "follows#destroy"
+      get :avatar, to: "avatars#show"
+    end
+    resources :conversations, only: [ :create ]
+  end
+
+# "Message me". Short on purpose: this is a link somebody types into a phone or
+# reads off a screen, and /i/ is as short as a path can be while still saying
+# what it is.
+get "i/:token" => "invites#show", as: :invite
+
+  resources :conversations, only: %i[index new show update] do
+    member { post :invite_master }
+    # Search over the reader's own threads; ?conversation_id= narrows it to one.
+    collection { get :search }
+    # index is the page of history above the cursor — the thread window renders
+    # the newest fifty and hands the log the URL for the fifty behind them.
+    # update is a bounded edit; destroy is an unsend, which keeps the row so a
+    # threaded reply is not orphaned. forward writes a copy; forward_to picks where.
+    resources :messages, only: %i[index create update destroy] do
+      member { post :forward; get :forward_to }
+    end
+    resources :typing_indicators, only: [ :create ]
+    resource :presence, only: %i[create destroy]
+    resource :pin, only: %i[create destroy], controller: "conversation_pins"
+    resource :mute, only: %i[create destroy], controller: "conversation_mutes"
+    resource :archive, only: %i[create destroy], controller: "conversation_archives"
+    resource :request, only: %i[create destroy], controller: "conversation_requests"
+  end
+
+  # A group DM is a Conversation with a name and no slug; a #channel is one with
+  # a slug. Rename lives here rather than on conversations#update, which owns
+  # the disappearing setting every conversation shares.
+  resources :groups, only: %i[new create update], controller: "group_conversations" do
+    resources :members, only: %i[new create destroy], controller: "group_members"
+  end
+
+  # TV vertical, extracted to a mountable engine (../brgen_radio/tv). Routes now live in
+  # the engine's config/routes.rb; the host mounts it under the same subdomain
+  # constraint. Host references to its helpers are tv.* (see application_helper,
+  # sitemaps_controller). The pilot for the vertical-as-engine split — see README.md.
+  # Mount at the top level with constraints: as a keyword — NOT inside a
+  # `constraints(subdomain:) do … end` block. A mount nested in a constraints
+  # block still routes, but Rails only registers the `as:` mounted-helper proxy
+  # (tv.channel_url, used by application_helper and sitemaps_controller) for a
+  # top-level mount. Nesting it silently drops the helper. See README.md.
+  mount Tv::Engine, at: "/", as: "tv", constraints: { subdomain: TV_SUBDOMAINS }
+
+  # dating vertical extracted to ../brgen_dating (mountable engine). Top-level mount with
+  # constraints: keyword — NOT a constraints(subdomain:) block, which would drop the
+  # dating.* mounted helper. See brgen/README.md.
+  mount Dating::Engine, at: "/", as: "dating", constraints: { subdomain: DATING_SUBDOMAINS }
+
+  # playlist vertical extracted to ../brgen_radio/playlist (mountable engine). Top-level mount with
+  # constraints: keyword — NOT a constraints(subdomain:) block, which would drop the
+  # playlist.* mounted helper. See brgen/README.md.
+  mount Playlist::Engine, at: "/", as: "playlist", constraints: { subdomain: RADIO_SUBDOMAINS }
+
+  # Food ordering is part of Marketplace. The engine remains internally named Takeaway
+  # to preserve its proven model and table contract, but its canonical public surface is
+  # /food on the localized marketplace host.
+  mount Takeaway::Engine, at: "/food", as: "marketplace_food", constraints: { subdomain: MARKETPLACE_SUBDOMAINS }
+
+  # Legacy compatibility: existing takeaway.<city> links continue to resolve through the
+  # same engine while clients and navigation move to markedsplass.<city>/food.
+  mount Takeaway::Engine, at: "/", as: "takeaway", constraints: { subdomain: TAKEAWAY_SUBDOMAINS }
+
+  # marketplace vertical extracted to ../brgen_marketplace (mountable engine). Top-level mount with
+  # constraints: keyword — NOT a constraints(subdomain:) block, which would drop the
+  # marketplace.* mounted helper. See brgen/README.md.
+  mount Marketplace::Engine, at: "/", as: "marketplace", constraints: { subdomain: MARKETPLACE_SUBDOMAINS }
+
+  # maps vertical extracted to ../brgen_maps. Place stays a host model.
+  # Top-level mount with constraints: keyword — NOT a constraints(subdomain:)
+  # block, which would drop the maps.* mounted helper. See brgen/README.md.
+  mount Maps::Engine, at: "/", as: "maps", constraints: { subdomain: MAPS_SUBDOMAINS }
+
+  constraints(subdomain: MESSENGER_SUBDOMAINS) do
+    root "conversations#index", as: :messenger_root
+    resources :conversations, only: %i[show update create] do
+      resources :messages, only: %i[index create]
+      resources :typing_indicators, only: %i[create]
+      resource :presence, only: %i[create destroy]
+      resource :pin, only: %i[create destroy], controller: "conversation_pins"
+      resource :mute, only: %i[create destroy], controller: "conversation_mutes"
+      resource :archive, only: %i[create destroy], controller: "conversation_archives"
+      resource :request, only: %i[create destroy], controller: "conversation_requests"
+    end
+  end
+
+  # TradeDoubler Conversions API postback (not marketplace-scoped).
+  post "webhooks/tradedoubler" => "webhooks/tradedoubler#create", as: :webhooks_tradedoubler
+  post "webhooks/stripe" => "webhooks/stripe#create", as: :webhooks_stripe
+  post "webhooks/vipps" => "webhooks/vipps#create", as: :webhooks_vipps
+
+  # Partner click redirect (last-click attribution for local programs).
+  get "p/:token" => "partner/clicks#show", as: :partner_click
+
+  # Partner program index also available on main city domain (not only markedsplass).
+  namespace :partner do
+    resources :programs, only: %i[index show new create edit update] do
+      resources :memberships, only: :create
+    end
+    resources :memberships, only: :show
+  end
+
+  resources(:email_subscriptions, only: %i[show create update destroy], param: :token) { post :one_click, on: :member }
+  get "confirm_email/:token" => "email_subscriptions#confirm", as: :confirm_email_subscription
+
+  constraints(jobs_constraint) { mount SolidQueue::Engine, at: "/admin/jobs" }
+
+  patch "location" => "locations#update", as: :location
+  resources :push_subscriptions, only: %i[create destroy]
+  resources :native_push_tokens, only: %i[create destroy], param: :token
+  get "nearby" => "nearby#index", as: :nearby
+  get "nearby/room" => "nearby#room", as: :nearby_room
+  get "nearby/widget" => "nearby#widget", as: :nearby_widget
+  post "nearby" => "nearby#create"
+  # Chatroulette-style random pairing: one ask, one stranger, one conversation.
+  # Guests play - the ask is the consent.
+  resources :encounters, only: %i[create destroy]
+  get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
+  # /live was a Jodel-shaped feed of short anonymous posts ranked by local
+  # votes. It is the ambient chat room now, per operator 2026-08-17: brgen had
+  # two hyperlocal surfaces that cross-linked to each other and competed for the
+  # same visitor, and the room is the one the operator means by "live".
+  #
+  # A redirect rather than a deletion because the path is public and was linked
+  # from /nearby and the city home. #room handles the unlocated case already —
+  # it sends you back to /nearby with a "turn on location" alert.
+  get "live" => redirect("/nearby/room"), as: :live
+  resources :channels, only: %i[index show], param: :slug
+  get "search" => "search#index", as: :global_search
+  delete "search/recent" => "search#clear_recent", as: :clear_recent_searches
+  get "sitemap.xml" => "sitemaps#index", as: :sitemap
+  get "robots.txt" => "robots#show", as: :robots
+
+  root "home#index"
+  get "up" => "rails/health#show", as: :rails_health_check
+end

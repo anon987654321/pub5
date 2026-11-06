@@ -1,0 +1,189 @@
+<% content_for :title, @post.title %>
+<% content_for :description, meta_description_for(@post) %>
+<% content_for :json_ld, json_ld_for(@post, type: :article) %>
+<% content_for :og_type, "article" %>
+<%# A gallery post has no single image; its first photo stands for it. %>
+<% if (og_image = seo_image_url(@post.image.attached? ? @post.image : @post.images.first)) %>
+  <% content_for :og_image, og_image %>
+<% end %>
+<%= turbo_stream_from @post %>
+
+<article id="<%= dom_id(@post) %>" class="feed-post-show post-reading-card post-show-reading">
+  <div class="post-reading-layout">
+    <%= turbo_frame_tag "post-vote-#{@post.id}", "aria-live": "polite" do %>
+      <%= render "shared/post_vote_rail", post: @post, vote_path: post_vote_path(@post) %>
+    <% end %>
+
+    <div class="post-reading-main">
+      <p class="feed-post-show-meta">
+        <% if @post.community %>
+          <%= link_to @post.community.name, community_path(@post.community) %> ·
+        <% end %>
+        <%= @post.attributed? ? link_to(@post.author_name, user_path(@post.user)) : @post.author_name %> ·
+        <%= tag.time time_ago(@post.created_at), datetime: @post.created_at.iso8601,
+                     title: l(@post.created_at, format: :long) %>
+        <% if @post.edited_at %>· <%= render "posts/edited_mark", at: @post.edited_at %><% end %>
+        <% if @post.reading_time_minutes.positive? %>
+          · <%= t("posts.min_read", n: @post.reading_time_minutes) %>
+        <% end %>
+      </p>
+
+      <%= tag.h1 @post.title %>
+
+      <% if @post.image.attached? %>
+        <div data-controller="lightbox">
+          <a href="<%= url_for(@post.image) %>" data-lg-size="1600-1200">
+            <%= responsive_image_tag @post.image, alt: @post.title, class: "post-image" %>
+          </a>
+          <%= render "shared/photo_credit", blob: @post.image.blob %>
+        </div>
+      <% elsif @post.images.attached? %>
+        <%# A gallery post keeps every photo on its own page, not only on the card. %>
+        <div class="post-images" data-controller="post-gallery">
+          <% gallery = @post.ordered_images %>
+          <%= render partial: "posts/gallery_image", collection: gallery,
+                locals: { post: @post, total: gallery.size } %>
+        </div>
+        <%= render "shared/photo_credit", blob: gallery.first.blob %>
+      <% elsif @post.video.attached? %>
+        <%= video_tag @post.video, controls: true, playsinline: true, preload: "metadata",
+              class: "post-image post-video", aria: { label: @post.title.presence || t("posts.video") } %>
+      <% end %>
+
+      <% if @post.audio.attached? %>
+        <%= audio_tag @post.audio, controls: true, preload: "metadata", class: "post-audio",
+              aria: { label: @post.title.presence || t("posts.audio") } %>
+      <% end %>
+
+      <% if @post.content.present? %>
+        <%= tag.div rich_text(@post.content), class: "post_body prose" %>
+      <% end %>
+
+      <% if (embed = @post.link_embed_record) %>
+        <%= render "shared/link_embed", embed: embed %>
+      <% end %>
+
+      <%= render "posts/crosspost", post: @post, targets: @crosspost_targets, crossposts: @crossposts %>
+
+      <section id="quotes" class="post-quotes">
+        <%= tag.h2 t("post.quotes") %>
+        <%= form_with url: post_repost_path(@post), method: :post, class: "feed-quote-form" do %>
+          <%= text_area_tag :comment, @quote_comment, maxlength: Repost::COMMENT_MAX, required: true,
+                rows: 3, placeholder: t("post.quote_placeholder"),
+                aria: { label: t("post.quote") } %>
+          <%= submit_tag t("post.quote"), class: "button" %>
+        <% end %>
+        <% if @quotes.any? %>
+          <ul>
+            <% @quotes.each do |repost| %>
+              <li>
+                <blockquote>
+                  <%= tag.p repost.comment %>
+                  <% quoter = repost.user %>
+                  <%= tag.cite quoter.guest? ? quoter.display_name : link_to(quoter.display_name, user_path(quoter)) %>
+                  <%= tag.time time_ago(repost.created_at), datetime: repost.created_at.iso8601,
+                               title: l(repost.created_at, format: :long) %>
+                </blockquote>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </section>
+
+      <div class="feed-post-actions">
+        <%= link_to post_path(@post, anchor: "comments-section"), class: "feed-action",
+              aria: { label: t("post.comment_aria", count: @post.comment_count) } do %>
+          <%= render "shared/feed_icon", name: "comment" %>
+          <%= tag.span @post.comment_count.positive? ? @post.comment_count : "",
+                class: "feed-action-count", data: { post_comment_count: dom_id(@post) } %>
+        <% end %>
+        <button type="button" class="feed-action" data-controller="share"
+                data-share-title-value="<%= @post.title %>"
+                data-share-url-value="<%= request.original_url %>"
+                data-share-copied-value="<%= t("posts.link_copied") %>"
+                data-action="click->share#share" aria-label="<%= t("posts.share_post") %>">
+          <%= render "shared/feed_icon", name: "share" %> <span data-share-target="label"><%= t("posts.share") %></span>
+        </button>
+        <% if authenticated? %>
+          <% if Current.user.bookmarked?(@post) %>
+            <%# destructive: no-confirm-ok — reversible — the post is saved again with one click %>
+            <%= button_to t("bookmark.unsave"), unbookmark_post_path(@post), method: :delete,
+                  class: "button button-ghost" %>
+          <% else %>
+            <%= button_to t("bookmark.save"), bookmark_post_path(@post), method: :post,
+                  class: "button button-ghost" %>
+          <% end %>
+          <%= render "shared/report_button", target: @post, reason: nil %>
+          <% if Current.user == @post.user %>
+            <%= link_to t("actions.edit"), edit_post_path(@post), class: "button button-ghost" %>
+            <%= button_to t("actions.delete"), post_path(@post), method: :delete,
+                  class: "button button-ghost", form: { data: { turbo_confirm: t("posts.confirm_delete") } } %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</article>
+
+<%# Comments arrive in place over [post, "comments"] (Comment#broadcast_to_thread);
+    live_comments_controller keeps the writer's own copy of theirs. %>
+<section id="comments-section" data-controller="live-comments"
+         data-live-comments-since-url-value="<%= post_comments_since_path(@post) %>"
+         data-live-comments-chip-one-value="<%= t("comments.new_comments.one") %>"
+         data-live-comments-chip-other-value="<%= t("comments.new_comments.other") %>">
+  <%= turbo_stream_from @post, :comments, data: { live_comments_target: "source" } %>
+  <%= tag.h2 t("comments.heading_count", count: @post.comment_count) %>
+  <% unless authenticated? %>
+    <%= render "shared/post_auth_prompt", post: @post, sign_up_path: (respond_to?(:new_user_path) ? new_user_path : new_registration_path) %>
+  <% end %>
+  <% if authenticated? || guest? %>
+    <%# Permanent, so a refresh of this page (an edit to the post) leaves a
+        half-written comment where it is. Keyed by the post, so navigating to
+        another post brings no composer along. %>
+    <div id="<%= dom_id(@post, :composer) %>" data-turbo-permanent>
+      <%= render "comments/form", comment: @new_comment, commentable: @post %>
+    </div>
+  <% end %>
+
+  <% if @comments.any? %>
+    <nav class="comment-sort feed-tabs" aria-label="<%= t("comments.sort_label") %>">
+      <% PostsController::COMMENT_SORTS.each do |sort| %>
+        <%= link_to t("comments.sort.#{sort}", default: sort.capitalize),
+              main_app.post_path(@post, sort: sort),
+              class: "feed-tab#{' active' if @comment_sort == sort}",
+              aria: { current: ("true" if @comment_sort == sort) } %>
+      <% end %>
+    </nav>
+  <% end %>
+
+  <div id="comments" data-live-comments-target="thread">
+    <% if @comments.any? %>
+      <% @comments.each do |comment| %>
+        <%= render "comments/comment", comment: comment %>
+      <% end %>
+    <% else %>
+      <div id="comments_empty"><%= render "shared/empty_state",
+            title: t("empty.no_comments"),
+            body: t("comments.empty_body"),
+            action: { label: t("comments.write_reply"), path: "#comments-section" },
+            live: false %></div>
+    <% end %>
+  </div>
+  <%# Comments that arrived while the reader was above the end of the thread
+      wait behind this (live_comments_controller). %>
+  <%= tag.button t("comments.new_comments.other", count: 0), type: "button", hidden: true,
+        class: "comments-new-chip button button-primary", aria: { live: "polite" },
+        data: { live_comments_target: "chip", action: "live-comments#showNew" } %>
+  <%# Thirty threads a page: a post with hundreds of root comments loaded them all. %>
+  <%= render "shared/pager", pagy: @comments_pagy, param: :comments_page %>
+</section>
+
+<aside class="post-show-aside">
+  <%= tag.h2 t("posts.about") %>
+  <% if @post.community %>
+    <%= tag.p @post.community.description.presence || @post.community.name %>
+    <%= link_to t("posts.view_community"), community_path(@post.community) %>
+  <% else %>
+    <%= tag.p t("posts.community_platform", city: city_name) %>
+  <% end %>
+</aside>

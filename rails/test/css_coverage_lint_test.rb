@@ -1,0 +1,108 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+require_relative "../../master/tools/css_coverage_lint"
+
+# The register has tracked unused CSS selectors since 2026-08-10 and said in its own
+# entry that no committed tool reproduces the number. This is that tool, and it
+# measures the direction nobody had: a class the markup asks for that no stylesheet
+# defines — a hook the author expected to do something.
+class CssCoverageLintTest < Minitest::Test
+  L = Operator::CssCoverageLint
+  ROOT = File.expand_path("..", __dir__)
+
+  def test_no_kind_exceeds_its_baseline
+    exceeded = L.over_baseline
+
+    assert_empty exceeded, exceeded.join("; ")
+  end
+
+  # A baseline beaten and never lowered is a baseline nobody trusts. Both directions,
+  # which is the contract master/test/test_ratchets.rb now holds for every ratchet.
+  def test_baselines_are_not_stale
+    counts = L.counts
+
+    L::BASELINES.each do |kind, baseline|
+      assert_equal baseline, counts.fetch(kind),
+                   "#{kind} is at #{counts.fetch(kind)} against #{baseline} — lower it in css_coverage_lint.rb"
+    end
+  end
+
+  # The correction that made this trustworthy. A first pass read only .scss/.css and
+  # reported every mail-* class as undefined; email defines its classes in the mailer
+  # layout's inline <style>, because email cannot load an asset bundle.
+  def test_inline_style_blocks_count_as_definitions
+    assert_includes L.defined_names, "mail-shell",
+                    "the mailer layout's inline <style> must count, or every email class reads as missing"
+    refute_includes L.undefined_classes, "mail-shell"
+  end
+
+  # Same correction, second instance: brgen's _site_legal_footer carries a <style>
+  # block that styles the three legal pages, which are linked from every page.
+  #
+  # legal-nav is not in the list. 240a4e746 dropped the class from all three
+  # navs because the rule that styles them is `.legal-prose nav` — a class named
+  # by a test and by nothing else is the thing this file exists to catch, not a
+  # thing for it to require.
+  def test_the_legal_pages_are_styled
+    %w[legal-prose legal-updated].each do |name|
+      assert_includes L.defined_names, name, "#{name} must remain styled"
+      refute_includes L.undefined_classes, name
+    end
+    refute_includes L.defined_names, "legal-eyebrow"
+  end
+
+  # A BEM child whose base is defined is not a missing style — SCSS builds those names
+  # with &__child, which no literal scan of the file can see.
+  def test_a_bem_child_of_a_defined_base_is_not_missing
+    assert L.base_defined?("#{L.defined_names.first}__anything")
+  end
+
+  # class_names takes a conditional class as a string key, so the modifier is
+  # written only there; read as a bare call, the rule styling it looked dead.
+  def test_class_names_arguments_are_class_lists
+    view = %(<%= tag.span "x", class: class_names("data-state", "data-state--stale": stale) %>)
+
+    assert_includes L.class_lists_in(view), %w[data-state data-state--stale]
+  end
+
+  # An interpolated class cannot be resolved statically and must never be reported.
+  def test_interpolated_classes_are_ignored
+    assert L.interpolated?('card card--#{kind}')
+    assert L.interpolated?("")
+  end
+
+  # Both lists must be non-empty for the counts to mean anything: an empty scan reads
+  # as a clean tree, which is the failure mode every check here exists to catch.
+  def test_the_corpus_includes_shared_and_extracted_engine_surfaces
+    assert L.views.any? { |path| path.include?("/shared/") },
+           "the shared engine's views must contribute class usage"
+    assert L.stylesheets.any? { |path| path.include?("/shared/") },
+           "the shared engine's stylesheets must contribute class definitions"
+    assert L.views.any? { |path| path.include?("/brgen_marketplace/") },
+           "extracted marketplace views must contribute class usage"
+    # The extracted engine ships no stylesheets; brgen's pipeline owns its styles.
+    owned = %r{/brgen/app/assets/stylesheets/_brgen_marketplace\.scss\z}
+    assert L.stylesheets.any? { |path| path.match?(owned) },
+           "the marketplace stylesheets brgen owns must contribute class definitions"
+  end
+
+  def test_it_reads_something
+    refute_empty L.defined_names
+    refute_empty L.used_names
+    assert_operator L.defined_names.size, :>, 500, "the stylesheet glob stopped matching"
+  end
+
+  def test_brgen_application_has_no_empty_section_wrappers
+    stylesheets = File.join(ROOT, "brgen", "app", "assets", "stylesheets")
+    application = File.read(File.join(stylesheets, "application.scss"))
+
+    %w[01 02 03 06].each do |section|
+      refute_includes application, %(@use "section_#{section}";),
+                      "section_#{section} has no stylesheet content to load"
+      refute File.file?(File.join(stylesheets, "_section_#{section}.scss")),
+             "an empty compatibility wrapper should not return"
+    end
+  end
+
+end

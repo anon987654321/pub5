@@ -1,0 +1,15 @@
+<% if @comment.parent_id.present? %>
+  <%# The reply takes focus where it lands, and the disclosure it was written in
+      goes back closed with an empty form: the reply is done. %>
+  <% parent = Comment.new(id: @comment.parent_id) %>
+  <%= turbo_stream.append dom_id(parent, :replies),
+        partial: "comments/comment", locals: { comment: @comment, focus: true } %>
+  <%= turbo_stream.replace dom_id(parent, :reply_disclosure),
+        partial: "comments/reply_disclosure", locals: { comment: parent, root_post: @commentable } %>
+<% else %>
+  <%= turbo_stream.remove "comments_empty" %>
+  <%= turbo_stream.append "comments", partial: "comments/comment", locals: { comment: @comment } %>
+  <%= turbo_stream.replace "comment_form" do %>
+    <%= render "comments/form", comment: Comment.new, commentable: @commentable %>
+  <% end %>
+<% end %>
