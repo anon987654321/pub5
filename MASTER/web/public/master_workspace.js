@@ -17,7 +17,7 @@
 
   function persist() {
     if (!enabled()) return;
-    try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (_) {}
+    try { localStorage.setItem(KEY, JSON.stringify(memory)); } catch (err) { window.MASTER_LOG?.warn?.("workspace:persist", err); }
   }
 
   function loadStored() {
@@ -26,7 +26,7 @@
       if (Array.isArray(value.nodes)) memory.nodes = value.nodes;
       if (Array.isArray(value.relationships)) memory.relationships = value.relationships;
       memory.version = Number(value.version || 0);
-    } catch (_) {}
+    } catch (err) { window.MASTER_LOG?.warn?.("workspace:restore", err); }
   }
 
   function ensureRoot() {
@@ -135,9 +135,9 @@
 
   function toggle(on = ensureRoot().hidden) {
     if (!on) {
-      try { localStorage.setItem("master:workspace", "0"); } catch (_) {}
+      try { localStorage.setItem("master:workspace", "0"); } catch (err) { window.MASTER_LOG?.warn?.("workspace:toggle_off", err); }
     } else {
-      try { localStorage.setItem("master:workspace", "1"); } catch (_) {}
+      try { localStorage.setItem("master:workspace", "1"); } catch (err) { window.MASTER_LOG?.warn?.("workspace:toggle_on", err); }
     }
     render();
     return !ensureRoot().hidden;

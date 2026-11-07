@@ -1559,7 +1559,7 @@ function ttsTick() {
       if (err?.name === 'NotAllowedError') { holdForGesture(audio, token); return; }
       if (!retried && ['AbortError', 'NotSupportedError', 'NetworkError'].includes(err?.name)) {
         window.MASTER_LOG?.warn?.('face_speech_runtime:audio_retry', err);
-        try { audio.load(); } catch (_) {}
+        try { audio.load(); } catch (err) { window.MASTER_LOG?.warn?.("face_speech_runtime:audio_load", err); }
         setTimeout(() => { if (token === tts.cancelToken && tts.audio === audio) play(true); }, 120);
         return;
       }

@@ -40,7 +40,7 @@
     const face = window.MASTER_FACE;
     if (!face?.State?.sttActive && !face?.State?.voiceMode) return;
     resumeVoiceAfterTyping = Boolean(face.State.voiceMode);
-    try { face.stopSTT?.(); } catch (_) {}
+    try { face.stopSTT?.(); } catch (err) { window.MASTER_LOG?.warn?.("voice_surface:stop_stt", err); }
     draftKind = "typed";
     setMicState("closed", { reason: "typing" });
   }
@@ -48,7 +48,7 @@
   function resumeAfterTyping() {
     if (!resumeVoiceAfterTyping) return;
     resumeVoiceAfterTyping = false;
-    try { window.MASTER_FACE?.startSTT?.(); } catch (_) {}
+    try { window.MASTER_FACE?.startSTT?.(); } catch (err) { window.MASTER_LOG?.warn?.("voice_surface:start_stt", err); }
   }
 
   function showTranscript(text, final = false) {

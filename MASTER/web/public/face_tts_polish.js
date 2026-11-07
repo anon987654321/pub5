@@ -9,10 +9,10 @@
     if (!audio) return;
     for (const key of PITCH_KEYS) {
       if (key in audio) {
-        try { audio[key] = true; } catch (_) {}
+        try { audio[key] = true; } catch (err) { window.MASTER_LOG?.warn?.("face_tts_polish:flag", err); }
       }
     }
-    try { audio.preload = "auto"; } catch (_) {}
+    try { audio.preload = "auto"; } catch (err) { window.MASTER_LOG?.warn?.("face_tts_polish:preload", err); }
   }
 
   function sync() {

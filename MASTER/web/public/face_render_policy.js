@@ -55,7 +55,7 @@
 
   function mark(name) {
     if (typeof performance?.mark !== "function") return;
-    try { performance.mark("master:" + String(name)); state.timestamps[name] = performance.now(); } catch (_) {}
+    try { performance.mark("master:" + String(name)); state.timestamps[name] = performance.now(); } catch (err) { window.MASTER_LOG?.warn?.("face_render_policy:mark", err); }
   }
 
   function recordFrame(now) {
@@ -120,7 +120,7 @@
       try {
         const longtask = new PerformanceObserver((list) => { state.longTasks += list.getEntries().length; });
         longtask.observe({ type: "longtask", buffered: true });
-      } catch (_) {}
+      } catch (err) { window.MASTER_LOG?.warn?.("face_render_policy:longtask_observer", err); }
       try {
         const resources = new PerformanceObserver((list) => {
           list.getEntries().forEach((entry) => {
@@ -128,7 +128,7 @@
           });
         });
         resources.observe({ type: "resource", buffered: true });
-      } catch (_) {}
+      } catch (err) { window.MASTER_LOG?.warn?.("face_render_policy:resource_observer", err); }
     }
   }
 

@@ -49,7 +49,7 @@
   function stableId(prefix = "m") {
     try {
       if (crypto.randomUUID) return crypto.randomUUID();
-    } catch (_) {}
+    } catch (err) { window.MASTER_LOG?.warn?.("interaction_state:uuid", err); }
     return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
   }
 
@@ -57,7 +57,7 @@
 
   function immutable(value) {
     if (typeof structuredClone === "function") {
-      try { return structuredClone(value); } catch (_) {}
+      try { return structuredClone(value); } catch (err) { window.MASTER_LOG?.warn?.("interaction_state:structured_clone", err); }
     }
     return JSON.parse(JSON.stringify(value));
   }
@@ -90,7 +90,7 @@
     window.dispatchEvent(new CustomEvent(detail.type, { detail }));
     window.dispatchEvent(new CustomEvent("master:interaction", { detail }));
     if (window.MASTEREvents?.normalize && window.MASTEREvents?.dispatch) {
-      try { window.MASTEREvents.dispatch(window.MASTEREvents.normalize(detail)); } catch (_) {}
+      try { window.MASTEREvents.dispatch(window.MASTEREvents.normalize(detail)); } catch (err) { window.MASTER_LOG?.warn?.("interaction_state:dispatch", err); }
     }
     return detail;
   }

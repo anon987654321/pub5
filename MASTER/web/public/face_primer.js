@@ -26,8 +26,14 @@
       if(!Ctx||window.__MASTER_AUDIO_PRIME__)return;
       let ctx=new Ctx();
       window.__MASTER_AUDIO_PRIME__=ctx;
-      ctx.resume().catch(function(){});
-    }catch(_e){}
+      ctx.resume().catch(function(e){report('audio resume',e);});
+    }catch(e){report('audio prime',e);}
+  }
+  // Failures here are non-fatal by design (audio is primed by the first
+  // gesture anyway), but they must not vanish: a silent catch is a defect
+  // that hides its own cause.
+  function report(where,e){
+    if(window.console&&console.warn)console.warn('face_primer: '+where+' failed',e);
   }
   function dismissPrimer(){
     document.body.classList.remove('face-loading');
@@ -41,7 +47,7 @@
     if(ui&&!ui.textContent)ui.textContent=i18n('starting','starting…');
     // Keyboard users: land focus in the prompt after primer dismiss.
     const zin=document.getElementById('prompt-input');
-    if(zin){try{zin.focus({preventScroll:true});}catch(_e){try{zin.focus();}catch(__e){}}}
+    if(zin){try{zin.focus({preventScroll:true});}catch(e){report('focus with preventScroll',e);try{zin.focus();}catch(e2){report('focus fallback',e2);}}}
   }
   function boot(){
     if(started)return true;
@@ -106,7 +112,8 @@
     resetFaceCanvasForWebGL();
     import(FACE_MODULE).then(function(){
       if(boot())clearWatch();
-    }).catch(function(){
+    }).catch(function(e){
+      report('face module import',e);
       window.__MASTER_FACE_IMPORT__=false;
       if(retried){bootFailed();return;}
       let ui=uiEl();
@@ -182,7 +189,7 @@
 
       const resumeAudio=function(){
         const ctx=window.__MASTER_AUDIO_PRIME__;
-        if(ctx?.state==='suspended'){try{ctx.resume();}catch(_e){}}
+        if(ctx?.state==='suspended'){try{ctx.resume();}catch(e){report('audio resume on gesture',e);}}
         if(!ctx){primeAudio();return;}
         if(ctx.state==='running'){
           ['pointerdown','keydown','touchend'].forEach(function(ev){
@@ -194,5 +201,5 @@
         addEventListener(ev,resumeAudio,{capture:true,passive:true});
       });
     }
-  }catch(_e){}
+  }catch(e){report('primer query-parameter handling',e);}
 })();
