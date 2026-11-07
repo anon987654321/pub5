@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "json"
 require_relative "catalog"
 require_relative "lanes"
@@ -99,7 +100,75 @@ module Models
       raise Exhausted, attempts
     end
 
+    # A browser observation is a multimodal turn, not an image-generation
+    # request. It uses only image-capable HTTP lanes on the registry's vision
+    # route; CLI fallbacks never receive a path or a base64 blob as plain text.
+    def ask_with_image(prompt, image:, system: nil, messages: [], max_tokens: 4096)
+      refuse_spent!
+      chain = @router.chain("vision").select { |model| image_lane?(model) }
+      raise Exhausted, [["vision", "no reachable image-capable HTTP lane"]] if chain.empty?
+
+      @gate.before_call(chain.select { |model| @lanes.cooling?(model) }.size == chain.size ? chain : [])
+      attempts = []
+      chain.each do |model|
+        if (why = @lanes.verdict(model))
+          attempts << [model, why]
+          next
+        end
+
+        begin
+          content = [*messages, { role: "user", content: image_content(model, prompt, image) }]
+          return answer(model, content, system, max_tokens)
+        rescue LaneError => e
+          attempts << [model, e.message]
+          @say.call(@lanes.failed(model, e.message, category: e.category)) unless e.category == :absent
+        end
+      end
+      raise Exhausted, attempts
+    end
+
     private
+
+    MAX_IMAGE_BYTES = 2 * 1024 * 1024
+    PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
+
+    def image_lane?(model)
+      return false unless @catalog.kind(model) == :http
+
+      protocol = @catalog.provider(model)["protocol"]
+      return false unless %w[openai anthropic].include?(protocol)
+
+      patterns = @catalog.models.dig("vision_families", "reads_images").to_a
+      patterns.any? { |pattern| @catalog.model_name(model).match?(Regexp.new(pattern)) }
+    end
+
+    def image_content(model, prompt, image)
+      image = image.to_h.transform_keys(&:to_sym)
+      media_type = image.fetch(:media_type).to_s
+      data = image.fetch(:data).to_s
+      raise ArgumentError, "only PNG screenshots are accepted" unless media_type == "image/png"
+
+      bytes = Base64.strict_decode64(data)
+      raise ArgumentError, "screenshot is not a PNG image" unless bytes.start_with?(PNG_SIGNATURE)
+      raise ArgumentError, "screenshot exceeds #{MAX_IMAGE_BYTES} bytes" if bytes.bytesize > MAX_IMAGE_BYTES
+
+      case @catalog.provider(model).fetch("protocol")
+      when "anthropic"
+        [
+          { type: "text", text: prompt.to_s },
+          { type: "image", source: { type: "base64", media_type:, data: } }
+        ]
+      when "openai"
+        [
+          { type: "text", text: prompt.to_s },
+          { type: "image_url", image_url: { url: "data:#{media_type};base64,#{data}" } }
+        ]
+      else
+        raise ArgumentError, "unsupported image protocol"
+      end
+    rescue KeyError, ArgumentError => e
+      raise ArgumentError, "invalid browser screenshot: #{e.message}"
+    end
 
     def answer(model, messages, system, max_tokens)
       started = now
