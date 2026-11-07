@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "cgi"
 require "date"
 require "json"
@@ -22,6 +23,8 @@ module Master
       MAX_QUERY_BYTES = 300
       MAX_RESPONSE_BYTES = 2 * 1024 * 1024
       MAX_OUTPUT_BYTES = 24 * 1024
+      MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024
+      PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
       MAX_RESULTS = 10
 
       HOSTS = {
@@ -181,6 +184,22 @@ module Master
         "Research tool could not complete: #{e.message}"
       rescue StandardError => e
         "Research tool failed: #{e.class}: #{e.message.to_s.lines.first.to_s.strip[0, 180]}"
+      end
+
+      # Only browser-owned screenshot paths are read back. The path is
+      # not accepted from page content, and the PNG stays local until the
+      # conversation sends it through an explicitly image-capable model lane.
+      def image_payload(result)
+        data = JSON.parse(result.to_s)
+        path = data.fetch("screenshot_file").to_s
+        return unless path.match?(%r{\Alog/master/browser-[A-Za-z0-9_-]+\.png\z})
+
+        bytes = @world.read(path)
+        return unless bytes.bytesize <= MAX_SCREENSHOT_BYTES && bytes.start_with?(PNG_SIGNATURE)
+
+        { media_type: "image/png", data: Base64.strict_encode64(bytes) }
+      rescue JSON::ParserError, KeyError, Core::Refusal, Errno::ENOENT
+        nil
       end
 
       def close = @browser.close_all
@@ -380,6 +399,9 @@ module Master
       end
 
       def bound_output(value)
+        if value.is_a?(Hash) && value.key?("screenshot_file")
+          value = { "screenshot_file" => value["screenshot_file"] }.merge(value)
+        end
         JSON.pretty_generate(value).byteslice(0, MAX_OUTPUT_BYTES).to_s.force_encoding(Encoding::UTF_8).scrub
       end
     end
