@@ -60,7 +60,10 @@ module Cli
       save
     end
 
-    def close = @mind&.tick!
+    def close
+      @research.close if @research.respond_to?(:close)
+      @mind&.tick!
+    end
 
     private
 
