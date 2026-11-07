@@ -245,11 +245,14 @@ class TestPipeline < Minitest::Test
     assert_includes contract.proof, "focused_tests"
   end
 
-  def test_whole_checkout_task_contract_names_only_the_four_governed_trees
+  def test_whole_checkout_task_contract_names_only_the_governed_trees
     pass = Master::CLI::Pipeline::Pass.new(scanner: nil, fix_loop: Object.new, root: Master::ROOT)
     contract = pass.send(:build_task_contract, Master::REPO_ROOT)
 
-    assert_equal %w[MASTER/** OPENBSD/** RAILS/** STUDIO/**], contract.scope
+    # BIZ joined the registry in 734dcaa4; the scope follows MasterPaths::TREES
+    # rather than a second copy of the list, so this reads it from there. The
+    # contract sorts its scope, so the order is not the registry's.
+    assert_equal MasterPaths::TREES.map { |tree| "#{tree}/**" }.sort, contract.scope
   end
 
   def test_intake_rejects_an_empty_message

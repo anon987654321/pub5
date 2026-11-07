@@ -57,12 +57,15 @@ module Master
             root: stewardship
             statement: preserve what works
         YML
+        # Single-quoted YAML: the heredoc hands `\\s` through as `\s`, and a
+        # double-quoted YAML scalar would read that backslash as an escape it
+        # does not define. These are the shapes the real file uses.
         "law_runtime.yml" => <<~YML,
           veto_pattern_config:
             secrets:
-              detect: "(?i)(?:api[_-]?key|secret|token)"
+              detect: '(?i)(?:api[_-]?key|secret|token)'
             unsafe_calls:
-              detect: "(?i)(?:curl.*\\|.*sh|rm\\s+-rf)"
+              detect: '(?i)(?:curl.*\|.*sh|rm\s+-rf)'
         YML
         "console.yml" => "{}\n",
         "scan.yml" => "{}\n",

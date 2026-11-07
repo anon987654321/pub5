@@ -1063,6 +1063,8 @@ class TestLLMDispatcher < Minitest::Test
     [dispatcher, session, bus]
   end
 
+  public
+
   # A hosted lane answers as a stream: deltas arrive as SSE events and the
   # reader assembles them into one answer, skipping role-only and framing
   # events on the way.
@@ -1090,6 +1092,40 @@ class TestLLMDispatcher < Minitest::Test
     result = dispatcher.send(:send_local_server, "local:Qwen/Qwen3-4B", [{ role: "user", content: "hi" }], sys: nil)
 
     assert_equal "hello world", result.value!
+  ensure
+    thread&.kill
+    server&.close
+  end
+
+  # A lane that answers with a stream, then a keepalive ping carrying a
+  # delta-shaped payload, must read its body exactly once. net/http rejects a
+  # second read with "read_body called twice", and every streaming provider
+  # answered that way, so the whole event-stream path failed as a provider
+  # error. The ping's payload is not an answer either: SSE names it `ping`.
+  def test_a_streamed_answer_is_read_once_and_a_ping_is_not_content
+    server = TCPServer.new("127.0.0.1", 0)
+    thread = Thread.new do
+      socket = server.accept
+      while (line = socket.gets.to_s.strip) != "" do end
+      events = [
+        'data: {"choices":[{"delta":{"content":"real "}}]}', "",
+        "event: ping", 'data: {"choices":[{"delta":{"content":"ignored"}}]}', "",
+        'data: {"choices":[{"delta":{"content":"answer"}}]}', "",
+        "data: [DONE]", "",
+      ]
+      socket.print("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n")
+      socket.print(events.join("\n") + "\n")
+      socket.close
+    end
+    dispatcher, = build_dispatcher
+    base = "http://127.0.0.1:#{server.addr[1]}/v1"
+    router = Object.new
+    router.define_singleton_method(:local_server_for) { |_id| base }
+    dispatcher.instance_variable_set(:@model_router, router)
+
+    result = dispatcher.send(:send_local_server, "local:Qwen/Qwen3-4B", [{ role: "user", content: "hi" }], sys: nil)
+
+    assert_equal "real answer", result.value!
   ensure
     thread&.kill
     server&.close

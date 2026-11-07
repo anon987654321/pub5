@@ -106,33 +106,54 @@ module Master
           uri = URI("#{base.chomp('/')}/chat/completions")
           Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https",
                           open_timeout: OPEN_TIMEOUT_S, read_timeout: read_idle_timeout_s) do |http|
-            response = http.request(request)
-            return http_lane_error(lane, response) unless response.is_a?(Net::HTTPSuccess)
+            # The block form is the only one that leaves the body unread. A
+            # block-less request returns a response whose body net/http has
+            # already consumed, and read_body on it raises "called twice" —
+            # which every streaming provider answered with, so the whole
+            # event-stream path failed as a provider error instead of parsing.
+            # http.request returns the response rather than the block's value,
+            # so the answer is carried out in a local.
+            answer = nil
+            http.request(request) do |response|
+              return http_lane_error(lane, response) unless response.is_a?(Net::HTTPSuccess)
 
-            if response["Content-Type"].to_s.include?("event-stream")
-              assemble_stream(response, lane)
-            else
-              JSON.parse(response.body).dig("choices", 0, "message", "content").to_s
+              answer = if response["Content-Type"].to_s.include?("event-stream")
+                         assemble_stream(response, lane)
+                       else
+                         JSON.parse(response.body).dig("choices", 0, "message", "content").to_s
+                       end
             end
+            answer
           end
         rescue Net::ReadTimeout => e
           Result.err("#{lane} went silent longer than #{READ_IDLE_TIMEOUT_S}s: #{e.message}", category: :timeout)
         end
 
-        # SSE deltas as they arrive; empty lines frame separate events.
+        # SSE deltas as they arrive. An event is the fields up to the next blank
+        # line, and the `event:` field names it; a `data:` line that follows
+        # `event: ping` is the ping's payload, not the next chat token, so the
+        # name has to be carried until the dispatch rather than ignored. Only
+        # the unnamed (default `message`) events are the answer.
         def assemble_stream(response, lane)
           content = +""
           tail = +""
+          event = nil
           response.read_body do |chunk|
             tail << chunk
             while (index = tail.index("\n"))
               (line, tail = tail[0...index], tail[(index + 1)..].to_s)
-              payload = line.strip.delete_prefix("data:").strip
-              next unless line.strip.start_with?("data:")
-              next if payload.empty? || payload == "[DONE]"
+              field, _, value = line.strip.partition(":")
+              case field
+              when "event" then event = value.strip
+              when "data"
+                payload = value.strip
+                next if payload.empty? || payload == "[DONE]"
+                next unless event.nil? || event == "message"
 
-              delta = JSON.parse(payload).dig("choices", 0, "delta", "content")
-              content << delta if delta.is_a?(String)
+                delta = JSON.parse(payload).dig("choices", 0, "delta", "content")
+                content << delta if delta.is_a?(String)
+              when "" then event = nil # the blank line ends the event
+              end
             end
           end
           content
