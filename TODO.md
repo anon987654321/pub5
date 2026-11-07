@@ -572,11 +572,11 @@ MASTER's `Fix::Wishlist` reads/writes the local runtime ledger `.master/fix_wish
 
 ### 8.10 `wenche` subject — gated on written consent
 
-BLOCKED (2026-11-07): the intended source is the ME2 face archive from pub4 commit `8e1955ae` plus photographs at `tommervik.com`. Neither may be downloaded, prepared or trained until the subject's written consent and the photographer's licence exist as local records. Nothing below runs before step 1; the repository rule is that a public URL is not a rights grant, and `STUDIO/lora/merethe/prepare.rb` refuses a dataset without a valid consent record for exactly this reason.
+BLOCKED (2026-11-07): the intended source is the ME2 face archive from pub4 commit `8e1955ae` plus photographs at `tommervik.com`. Neither may be downloaded, prepared or trained until the subject's written consent and the photographer's licence exist as local records. Nothing below runs before step 1; the repository rule is that a public URL is not a rights grant. No code enforces that yet: `.gitignore` keeps `STUDIO/lora/*/consent.yml` private, but the refusal itself is step 4 and does not exist today.
 
 Ordered, and each step is gated by the one before it:
 
-- [ ] **Consent record.** Create `STUDIO/lora/wenche/consent.yml` from `STUDIO/photograph/consent.example.yml` with `subject: wenche`, `likeness_generation: true`, `provider_processing: true`, and `source_rights` naming the evidence for each source set. Mode 0600, never tracked. Restore the template first: it exists in `cce5dbc129` but is absent from the current tree.
+- [ ] **Consent record.** Create `STUDIO/lora/wenche/consent.yml` from `STUDIO/photograph/consent.example.yml` with `subject: wenche`, `likeness_generation: true`, `provider_processing: true`, and `source_rights` naming the evidence for each source set. Mode 0600, never tracked. The template is in the tree; `STUDIO/lora/*/consent.yml` is gitignored.
 - [ ] **Source inventory and rights.** List every intended image with its provenance — ME2 frames and any website photographs separately — and record the photographer's permission or licence for training and provider processing. Exclude frames already judged unsuitable (overlays, obscured or cropped faces, intimate framing); the ME2 curation kept four of fifteen for identity use.
 - [ ] **Dataset adequacy.** Reach the 12–18 image band with rights-cleared, face-led adult photographs before preparing a training ZIP. Four archived portraits are a starting subset, not a dataset.
 - [ ] **Subject scaffold.** Add `wenche/subject.env` (trigger, descriptor, model) and a preparation script following the Merethe pattern: digest-verified recovery, caption set, refusal without a valid consent record, and no provider call.

@@ -298,6 +298,12 @@ STUDIO/lora/*/out/
 STUDIO/lora/out/
 STUDIO/lora/*/weights/
 STUDIO/lora/*/contact_sheet.jpg
+# The consent record is a private attestation about a real person: who granted
+# what, and where the evidence is kept. Tracked, it would publish that person's
+# arrangements and place a second, mutable copy of the rights evidence in a
+# public history. TODO.md 8.10 promised it is never tracked and nothing here
+# backed that promise.
+STUDIO/lora/*/consent.yml
 
 # Postpro's fetched model weights and the depth maps cached under them are
 # generated assets — the fetch command and sizes live in STUDIO/postpro/README.md.
