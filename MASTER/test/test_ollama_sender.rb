@@ -89,12 +89,14 @@ class TestOllamaSender < Minitest::Test
     end
   end
 
-  # A small model breaks the effect JSON at a high temperature in a 4k window
-  # that drops the transcript's head. A schema-bound call is held to the
-  # schema, decodes at 0, keeps the model loaded and sizes its window.
+  # The window is sized to the request, not fixed: 40 000 characters is ~10 000
+  # tokens, so the prompt must raise num_ctx above the MIN_NUM_CTX floor. The
+  # ceiling is the host's own tuning (models.yml ollama.max_num_ctx, 4096 on the
+  # 8 GB tier), so the test declares a ceiling that can hold the prompt instead
+  # of inheriting whatever the operator last set.
   def test_a_schema_bound_call_sends_format_options_and_keep_alive
     body = JSON.generate("message" => { "content" => "{}" }, "done" => true, "eval_count" => 1)
-    with_stub(body:) do |sender, _session, _bus, stub|
+    with_stub(body:, ollama: { "max_num_ctx" => 16_384 }) do |sender, _session, _bus, stub|
       long = "x" * 40_000
       sender.send(:send_ollama, "ollama:gemma3:4b", [{ role: "user", content: long }], sys: "", format: { type: "object" })
 
@@ -219,12 +221,17 @@ class TestOllamaSender < Minitest::Test
     sender.send(:send_ollama, model, [{ role: "user", content: text }], sys: "Be brief.", stream:, &blk)
   end
 
-  def with_stub(status: "200 OK", body: "", chunked: false)
+  # ollama: settings the call reads from models.yml, overriding the process memo so
+  # one test can state the ceiling its prompt needs without touching the host's.
+  def with_stub(status: "200 OK", body: "", chunked: false, ollama: nil)
     stub = Stub.new(status:, body:, chunked:)
     sender, session, bus = build_sender
+    previous = Master::Review::LLMDispatcher.instance_variable_get(:@ollama_settings)
+    Master::Review::LLMDispatcher.instance_variable_set(:@ollama_settings, ollama) if ollama
     ENV["OLLAMA_BASE_URL"] = "http://127.0.0.1:#{stub.port}"
     yield(sender, session, bus, stub)
   ensure
+    Master::Review::LLMDispatcher.instance_variable_set(:@ollama_settings, previous) if ollama
     ENV.delete("OLLAMA_BASE_URL")
     stub&.close
   end
