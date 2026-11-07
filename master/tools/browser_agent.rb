@@ -192,6 +192,20 @@ module Master
         { closed: true, session: key }
       end
 
+      def close_all
+        states = @mutex.synchronize do
+          open = @sessions.values
+          @sessions.clear
+          open
+        end
+        states.each do |state|
+          state.mutex.synchronize { state.browser.quit }
+        rescue StandardError
+          nil
+        end
+        { closed: states.size }
+      end
+
       def secure_page(page, host)
         page.network.intercept
         page.on(:request) do |request|
