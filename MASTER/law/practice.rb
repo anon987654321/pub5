@@ -18,7 +18,7 @@ Law.define(:COLLAPSE_BEFORE_ADDING) do
   source "MASTER constitution (soul.yml absolute.rules)"
   practice <<~TEXT
     before adding machinery, run the universal transformation plan in
-    data/laws.yml#transformation_policy. inventory and classify first, then
+    data/law_runtime.yml#transformation_policy. inventory and classify first, then
     follow its declared order and operation descriptions without maintaining
     a second sequence here. recommend rather than mutate when proof is
     insufficient. adding is the last resort and its reason belongs in git

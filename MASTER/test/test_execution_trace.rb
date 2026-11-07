@@ -31,7 +31,7 @@ class TestExecutionTrace < Minitest::Test
   end
 
   def test_scope_names_become_repository_relative_git_paths
-    trace = Master::Fix::ExecutionTrace.new(root: "/tmp/pub5", scope: %w[MASTER RAILS OPENBSD STUDIO], ruby_checker: ->(_path) {})
+    trace = Master::Fix::ExecutionTrace.new(root: "/tmp/pub5", scope: MasterPaths::TREES, ruby_checker: ->(_path) {})
 
     assert_equal [], trace.send(:scope_paths)
   end
@@ -136,7 +136,6 @@ class TestExecutionTrace < Minitest::Test
   def test_canonical_boot_configuration_does_not_depend_on_workflow_yml
     refute_includes Master::Fix::ExecutionTrace::BOOT_CONFIG.keys, "MASTER/data/workflow.yml"
     assert_includes Master::Fix::ExecutionTrace::BOOT_CONFIG.keys, "MASTER/data/budgets.yml"
-    assert_includes Master::Fix::ExecutionTrace::BOOT_CONFIG["MASTER/data/laws.yml"], "transformation_policy"
     assert_includes Master::Fix::ExecutionTrace::BOOT_CONFIG["MASTER/data/laws.yml"], "ROBUSTNESS"
     refute_includes Master::Fix::ExecutionTrace::BOOT_CONFIG["MASTER/data/laws.yml"], "zsh"
     refute_includes Master::Fix::ExecutionTrace::BOOT_CONFIG["MASTER/data/laws.yml"], "preserve_user_intent"
