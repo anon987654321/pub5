@@ -555,6 +555,9 @@ module Master
         else
           Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
         end
+        # Process-local free-floor counting: the pass-0 child's outcomes never
+        # reach the parent's RunPulse, so LaneSelection counts for itself.
+        Io::LaneSelection.note_provider_outcome(model, status)
         @model_router&.record_provider_outcome(model:, status:, latency_ms:, error:)
         @bus&.publish(
           "llm:provider_outcome",

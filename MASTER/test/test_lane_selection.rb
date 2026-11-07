@@ -519,4 +519,73 @@ class TestLaneSelection < Minitest::Test
     assert_equal GROK, chain.last
   end
 
+  # The pass-0 child's bus events never reach the parent's pulse, so the free
+  # floor counts its own dead outcomes with the dispatcher's funnel feeding it.
+  def test_three_dead_free_class_outcomes_suspend_the_floor_from_inside_the_process
+    notices = []
+    Selection.define_singleton_method(:announce_free_floor_suspension) do
+      notices << "free floor suspended"
+    ensure
+      @floor_notice = nil
+    end
+    Selection.watch_free_class!
+    refute_predicate Selection, :free_floor_suspended?
+
+    3.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
+
+    assert_predicate Selection, :free_floor_suspended?,
+                     "three dead free answers with no free success anywhere are a dead floor"
+    assert_equal ["free floor suspended"], notices, "the suspension prints exactly one line"
+    assert_nil Selection.instance_variable_get(:@floor_notice),
+                 "the notice is consumed by the announce that printed it"
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
+  def test_one_free_class_success_lifts_the_dead_count_but_non_free_deaths_never_count
+    notices = []
+    Selection.define_singleton_method(:announce_free_floor_suspension) do
+      notices << "free floor suspended"
+    ensure
+      @floor_notice = nil
+    end
+    Selection.watch_free_class!
+
+    # Paid deaths are the wrong room's grief; the free floor ignores them.
+    3.times { Selection.note_provider_outcome(OPUS, :failure, alive: ALL) }
+    refute_predicate Selection, :free_floor_suspended?,
+                     "a dead paid lane is not a dead floor"
+
+    # Two free deaths, then the floor genuinely answering, then one more.
+    2.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
+    Selection.note_provider_outcome(NEMOTRON, :success, alive: ALL)
+    Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL)
+    refute_predicate Selection, :free_floor_suspended?,
+                     "a working free lane stands the floor back up"
+    assert_empty notices
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
+  def test_a_suspended_floor_does_not_suspend_twice_and_the_turn_resets_it
+    Selection.define_singleton_method(:announce_free_floor_suspension) do
+      @announced = true
+    ensure
+      @floor_notice = nil
+    end
+    Selection.watch_free_class!
+
+    3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
+    assert_predicate Selection, :free_floor_suspended?
+    assert_nil Selection.suspend_free_floor!(OPUS),
+               "the guard refuses a second suspension; the first verdict holds"
+
+    # A new /fix turn re-arms the watch and clears the suspension with the count.
+    Selection.watch_free_class!
+    refute_predicate Selection, :free_floor_suspended?,
+                     "the next turn is allowed to try the floor again"
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
 end

@@ -362,6 +362,7 @@ module Master
         @watching = on
         @warned = {}
         @floor_suspended = false
+        @floor_dead_count = 0
       end
 
       # The free floor proved dead after consecutive zero-success outcomes
@@ -390,6 +391,39 @@ module Master
       end
 
       def free_floor_suspended? = @floor_suspended == true
+
+      FLOOR_DEAD_LIMIT = 3
+
+      # The dispatcher funnels every provider outcome in this process through
+      # note_provider_outcome — parent and pass-0 child alike. RunPulse listens
+      # on the bus, but a child's bus events never reach the parent's pulse, so
+      # the walk that spends hours on a dead free floor is exactly the walk no
+      # pulse can see. This counter is process-local, so the process that is
+      # suffering counts for itself: dead free-class answers raise the count,
+      # and at three with no free-class success anywhere in the run, a live
+      # non-free lane takes the floor — suspended in THIS process, which is the
+      # only suspension that matters to the calls this process still makes.
+      def note_provider_outcome(model, status, cfg: config, alive: method(:alive?))
+        id = model.to_s
+        free = FREE_CLASS_KINDS.include?(kind(id))
+        @floor_dead_count ||= 0
+        if status.to_sym == :success
+          # A free-class success is the floor actually working; only that lifts it.
+          @floor_dead_count = 0 if free
+          return
+        end
+        return unless free
+        return unless (@floor_dead_count += 1) >= FLOOR_DEAD_LIMIT
+        return if @floor_suspended
+
+        live = live_lanes(cfg:, alive:).find { |candidate| !FREE_CLASS_KINDS.include?(kind(candidate)) }
+        suspend_free_floor!(live)
+        announce_free_floor_suspension
+      rescue StandardError
+        # Suspension is an optimization over a lane walk; counting must never
+        # turn a healthy dispatch into an error.
+        nil
+      end
 
       def free_class_warning(model, operation, cfg: config, alive: method(:alive?))
         id = model.to_s
