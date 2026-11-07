@@ -2,6 +2,8 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
+require "open3"
 require "json"
 require "optparse"
 require "pathname"
@@ -28,13 +30,15 @@ module Studio
         source: File.expand_path("../../../../pub4", __dir__),
         subject: nil,
         apply: false,
-        include_sources: false
+        include_sources: false,
+        restore_johann_history: false
       }
       OptionParser.new do |parser|
         parser.banner = "Usage: ruby STUDIO/replicate/lora/migrate_local.rb [options]"
         parser.on("--from PATH", "read-only legacy pub4 checkout (default: ../pub4)") { |value| options[:source] = File.expand_path(value) }
         parser.on("--subject NAME", "migrate one subject only") { |value| options[:subject] = value }
-        parser.on("--include-sources", "include private source photographs; requires valid destination consent") { options[:include_sources] = true }
+        parser.on("--include-sources", "include existing local private source photographs; requires valid destination consent") { options[:include_sources] = true }
+        parser.on("--restore-johann-history", "recover three verified Johann source originals from pub4 Git history into private sources/archive/") { options[:restore_johann_history] = true }
         parser.on("--apply", "copy local private files (default is dry-run)") { options[:apply] = true }
         parser.on("-h", "--help", "show this help") { puts parser; return { "status" => "help" } }
       end.parse!(argv)
@@ -51,6 +55,7 @@ module Studio
         "mode" => options[:apply] ? "apply" : "dry_run",
         "source_checkout" => options[:source],
         "include_sources" => options[:include_sources],
+        "restore_johann_history" => options[:restore_johann_history],
         "subjects" => reports
       }
     end
@@ -59,7 +64,14 @@ module Studio
       destination = File.join(DESTINATION_ROOT, subject)
       candidates = SOURCE_ROOTS.map { |root| File.join(options[:source], root, subject) }
       candidates.select! { |path| File.directory?(path) && !File.symlink?(path) }
-      return { "subject" => subject, "status" => "no_local_source_directory", "copied" => [] } if candidates.empty?
+      history_entries = if subject == "johann" && options[:restore_johann_history]
+                          recoverable_johann_history(options[:source])
+                        else
+                          []
+                        end
+      if candidates.empty? && history_entries.empty?
+        return { "subject" => subject, "status" => "no_local_source_directory", "copied" => [] }
+      end
 
       begin
         validate_destination_consent!(destination, subject)
@@ -73,6 +85,7 @@ module Studio
       end
 
       entries = candidates.flat_map { |root| planned_entries(root, include_sources: options[:include_sources]) }
+      entries.concat(history_entries)
       entries = entries.uniq { |entry| entry[:relative] }
       conflicts = entries.select do |entry|
         target = File.join(destination, entry[:relative])
@@ -88,7 +101,14 @@ module Studio
 
       if options[:apply]
         ensure_private_directory!(destination)
-        entries.each { |entry| copy_private!(entry[:source], File.join(destination, entry[:relative])) }
+        entries.each do |entry|
+          target = File.join(destination, entry[:relative])
+          if entry[:history_bytes]
+            copy_bytes_private!(entry[:history_bytes], target)
+          else
+            copy_private!(entry[:source], target)
+          end
+        end
       end
 
       {
@@ -97,6 +117,30 @@ module Studio
         "legacy_directories" => candidates,
         "copied" => entries.map { |entry| { "path" => entry[:relative], "bytes" => entry[:bytes] } }
       }
+    end
+
+    JOHANN_HISTORY_COMMIT = "4c0211c821954003998593d147629e8716c09ded".freeze
+    JOHANN_HISTORY_FILES = {
+      "20240627_000251.jpg" => "08cf030b763a919a71bd4dc19aa1da48313faa89",
+      "20240705_161331.jpg" => "1db28036f6397d1a2f30da8d38385e1ab85e976b",
+      "20260725_015451.jpg" => "cac622e9a061181a99738074909f4ef639ee35d2"
+    }.freeze
+
+    # These three Johann originals were removed from the current pub4 tree,
+    # but remain in the recorded restoration commit. Recover them only when
+    # explicitly requested, and verify the Git blob SHA before copying.
+    def recoverable_johann_history(source_checkout)
+      JOHANN_HISTORY_FILES.map do |filename, expected_sha|
+        source_path = "STUDIO/lora/johann/sources/#{filename}"
+        revision = "#{JOHANN_HISTORY_COMMIT}:#{source_path}"
+        bytes, error, status = Open3.capture3("git", "-C", source_checkout, "show", revision, binmode: true)
+        raise Error, "could not recover #{source_path} from local pub4 history: #{error.strip}" unless status.success?
+
+        actual_sha = Digest::SHA1.hexdigest("blob #{bytes.bytesize}\\0".b + bytes)
+        raise Error, "historical image hash mismatch for #{filename}" unless actual_sha == expected_sha
+
+        { relative: File.join("sources", "archive", filename), bytes: bytes.bytesize, history_bytes: bytes }
+      end
     end
 
     # Only copy the runtime inputs needed by the current Replicate route.
@@ -178,6 +222,17 @@ module Studio
       raise Error, "destination path is a symlink: #{path}" if File.symlink?(path)
       FileUtils.mkdir_p(path, mode: 0o700)
       File.chmod(0o700, path)
+    end
+
+    def copy_bytes_private!(bytes, destination)
+      raise Error, "destination already exists: #{destination}" if File.exist?(destination) || File.symlink?(destination)
+      ensure_private_directory!(File.dirname(destination))
+      File.open(destination, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |output|
+        output.write(bytes)
+        output.flush
+        output.fsync
+      end
+      File.chmod(0o600, destination)
     end
 
     def copy_private!(source, destination)
