@@ -209,7 +209,7 @@ workstreams:
     implementation: MASTER/data/gaps.yml
     proof: MASTER/test/test_gap_discipline.rb
   - id: brgen_recent_searches
-    state: partial
+    state: landed
     title: Recent committed searches in the palette blank state (server-side, cross-device)
     implementation: RAILS/brgen/app/models/search_recent.rb
     proof: RAILS/brgen/test/models/search_recent_test.rb
