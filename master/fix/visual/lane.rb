@@ -36,10 +36,12 @@ module Fix
         notes = []
         notes << reviewer_note
         notes << capture_pass
-        notes << (@session ? "DOM checks via the session" : "state matrix, axe and computed audits NOT_RUN (no DOM session)")
+        notes << dom_note
         notes << simplify_pass
         notes.compact.join("; ")
       end
+
+      def dom_note = "state matrix, axe and computed audits NOT_RUN (DOM audit runner not wired)"
 
       # The reviewer must be a different model from the author.
       def reviewer_note
