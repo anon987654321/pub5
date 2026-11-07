@@ -28,3 +28,301 @@ lint:
     - generated_check: "Generate adapters from declarations and execute through the shared check runner."
   selected: generated_check_with_ast_adapters
   rule: "Keep one runner; use focused AST/source adapters where semantics require them, reuse existing source checks, and baseline only after a complete pub5 census."
+law_specific:
+  RATCHET_MASTER_YAML:
+    alternatives:
+      - "Validate the canonical YAML schema, unique IDs, required fields and source-file reach on every run."
+      - "Parse Law DSL files into an AST and compare declared IDs, detectors and paths with the registry."
+      - "Generate a canonical registry digest and reject a stale or mismatched digest at runtime."
+      - "Build a schema contract suite with invalid fixtures for duplicate IDs, missing fields and dangling sources."
+      - "Require signed operator approval for every registry revision, leaving runtime validation advisory."
+    selected: canonical_registry_schema_and_source_reach
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_LAW_REACH_AND_BLIND:
+    alternatives:
+      - "Require every policy row to resolve to its Law source, named instrument and proof target."
+      - "Build a source-to-policy dependency graph from Ruby ASTs and fail on unreachable nodes."
+      - "Mutation-test each Law scope by inserting a known synthetic violation."
+      - "Instrument file reads during a census and compare observed paths with declared scope."
+      - "Require subsystem owners to attest reach and blindness in a release ledger."
+    selected: named_instrument_and_proof_mapping
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_LAW_SATURATION_AND_SILENT:
+    alternatives:
+      - "Keep silent and saturated counts observational; report applicability and hit ratios without failing on silence."
+      - "Fail Laws whose hit rate exceeds a calibrated per-Law ceiling over a rolling sample."
+      - "Run seeded mutations to distinguish healthy silence from a detector that cannot fire."
+      - "Use statistical sampling of recent findings to identify Laws that flag nearly everything."
+      - "Have an independent reviewer assess applicability gaps and false-positive saturation per release."
+    selected: observational_population_report
+    rationale: "The source Law explicitly makes silence observational; the runner reports the population without converting silence into a false failure."
+  RATCHET_AUTOFIX:
+    alternatives:
+      - "Validate the closed autofix vocabulary and require automatic policies to name a real transform."
+      - "Build an AST graph from each autofix declaration to its concrete implementation method."
+      - "Execute every transform against a fixture and assert an idempotent postcondition."
+      - "Run proposed edits in a filesystem sandbox and reject writes outside declared targets."
+      - "Require explicit operator approval for every transform, treating all fixes as review-only."
+    selected: validate_autofix_policy_and_transform_reach
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_FIXTURE_AND_DEP:
+    alternatives:
+      - "Require every imported instrument to name an extant proof target and matching registry ID."
+      - "Construct a complete dependency graph between Laws, proof tests, fixtures and implementation files."
+      - "Mutation-test each named proof and verify both good and bad fixture sides."
+      - "Use property-based generators to create valid and invalid fixtures per Law."
+      - "Collect signed human attestations for each dependency edge and fixture contract."
+    selected: shared_proof_target_and_matching_instrument
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_SELF_FINDINGS:
+    alternatives:
+      - "Verify each imported source declares its own exact Law ID and is present in the registry."
+      - "Run the Law scanner over its own source tree and fail on findings above its baseline."
+      - "Mutation-test scanner source so each Law detects a seeded defect in its own implementation."
+      - "Snapshot scanner findings against a reviewed corpus and compare each release."
+      - "Have a second model review each Law source for self-contradiction and blind spots."
+    selected: exact_source_law_id_assertion
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_REACH:
+    alternatives:
+      - "Compare imported Law source files with registry references and reject unregistered orphans."
+      - "Build a Ruby AST symbol graph to find unreferenced Law definitions in nested directories."
+      - "Generate a Law file manifest during packaging and verify it against the installed tree."
+      - "Track Law file ownership and require a subsystem manifest entry."
+      - "Run an operator-led inventory of every Law source before release."
+    selected: one_to_one_registry_file_map
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_NAMESPACE:
+    alternatives:
+      - "Inspect core and check implementation trees for Ruby files without a declared module or class."
+      - "Use Ruby ASTs to distinguish intentional scripts from stray top-level constants and methods."
+      - "Enable RuboCop namespace cops with a repo-owned configuration."
+      - "Build a constant ownership graph and reject names declared at the wrong namespace depth."
+      - "Maintain a small exception list with owner and rationale for intentional unnamespaced sources."
+    selected: core_and_check_namespace_scan
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_SPRAWL:
+    alternatives:
+      - "Pin tracked source-file counts per root tree and require deliberate baseline changes for growth."
+      - "Track source lines, dependencies and public constants instead of file counts alone."
+      - "Use rolling percentile trends to identify gradual file and directory proliferation."
+      - "Measure cyclomatic complexity and coupling, allowing small files while constraining architectural sprawl."
+      - "Require human approval for every new source file and directory."
+    selected: commit_pinned_source_population_counts
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_SPINE:
+    alternatives:
+      - "Pin the recursive core Ruby population and make any expansion an architecture decision."
+      - "Use a dependency graph to measure how many subsystems depend on each kernel module."
+      - "Benchmark boot time, allocations and constant loading for core changes."
+      - "Count public methods, constants and dependencies as a multi-dimensional spine budget."
+      - "Require kernel-owner review for every new core concept."
+    selected: core_file_population_ceiling
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_NAME:
+    alternatives:
+      - "Scan tracked Ruby paths for a narrow set of vague basenames such as helper, common and misc."
+      - "Parse constants and compare their semantic names with containing file paths."
+      - "Use a language model to propose clearer names and rank namespace/file mismatches."
+      - "Use a repository vocabulary and reject names that repeat a parent namespace or category."
+      - "Require reviewers to record a rationale for every intentionally generic filename."
+    selected: vague_ruby_basename_scan
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_COMMAND:
+    alternatives:
+      - "Count master/commands Ruby entrypoints against a commit-pinned ceiling."
+      - "Parse command registry, router and REPL dispatch into one normalized command graph."
+      - "Exercise every declared command end to end and compare the exposed command surface."
+      - "Detect aliases and duplicate verbs, counting unique behaviours rather than files."
+      - "Maintain a human-approved inventory of public command names and aliases."
+    selected: master_commands_entrypoint_count
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_ENTRYPOINT:
+    alternatives:
+      - "Count tracked executable modes in Git and constrain growth against the pub5 baseline."
+      - "Derive entrypoints from shebangs, command manifests and package metadata."
+      - "Smoke-run every executable in a restricted subprocess and collect startup contracts."
+      - "Use a sandbox audit to distinguish real entrypoints from generated executable files."
+      - "Require a reviewed manifest entry and owner for every new executable bit."
+    selected: tracked_git_executable_modes
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_RAILS_LINT:
+    alternatives:
+      - "Require every named Rails lint Law to map to a source scanner or registered check."
+      - "Generate lint discovery from class introspection and verify all adapters at boot."
+      - "Consolidate Rails lint semantics into RuboCop and Stylelint configuration."
+      - "Run the full lint fleet against rendered app routes and compiled stylesheets."
+      - "Require each app owner to attest which lint instruments cover their surfaces."
+    selected: fifteen_law_to_scanner_registry
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_CSS_BUDGET:
+    alternatives:
+      - "Pin tracked stylesheet population and run existing design_metrics as the canonical budget reader."
+      - "Measure compiled CSS bytes and enforce per-app gzip and uncompressed ceilings."
+      - "Parse SCSS ASTs and count unique declarations, selector depth and token drift."
+      - "Capture computed styles across browser states and compare the true rendered budget."
+      - "Use screenshot review and design sign-off as the only budget authority."
+    selected: stylesheet_population_plus_design_metrics
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  RATCHET_FILE_LENGTH:
+    alternatives:
+      - "Port the legacy per-file ceilings with the original language-aware counter and generated-file exclusions."
+      - "Apply one maximum line count per source language without historical per-file exceptions."
+      - "Track AST node counts, method length and nesting instead of raw lines."
+      - "Set commit-pinned per-file line snapshots and fail whenever a file grows."
+      - "Require human review for long files, with a rationale when splitting would reduce clarity."
+    selected: legacy_per_file_language_aware_map
+    rationale: "The pub4 ceiling map is per-file and language-aware. This runner stays INCONCLUSIVE until that map is measured and ported; it does not invent a global threshold."
+  RATCHET_COVERAGE:
+    alternatives:
+      - "Read SimpleCov per-app resultsets and compare branch and line coverage with ratified pub5 floors."
+      - "Use mutation score as the primary floor so weak assertions do not look healthy."
+      - "Trace tests to source methods and require behavioural coverage for production methods."
+      - "Use branch coverage with explicit exclusions for generated code and migrations."
+      - "Require reviewer approval of per-app coverage reports at release time."
+    selected: simplecov_per_app_floor_table
+    rationale: "The runner reads SimpleCov reports but stays INCONCLUSIVE until per-app floors are ratified for pub5."
+  RATCHET_CSS_CONSTITUTION:
+    alternatives:
+      - "Run the existing css_constitution check through the canonical pub5 check runner."
+      - "Build a separate CSS AST linter for each constitutional property and maintain its own thresholds."
+      - "Measure browser-computed properties at every route and declared theme state."
+      - "Use Stylelint plugins for token, unit, selector and declaration constraints."
+      - "Compare screenshots and require human review for each visual design change."
+    selected: canonical_css_constitution_check
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_ADHOC_EMPTY:
+    alternatives:
+      - "Port the source scanner and retain its explicit zero baseline and nearby-action exceptions."
+      - "Parse ERB into a syntax tree and require an action in every empty-state branch."
+      - "Render each empty collection route and verify a useful recovery action in the browser."
+      - "Use a content classifier to detect vague empty-state copy and missing next steps."
+      - "Require a manual review checklist for each new collection and empty state."
+    selected: ported_source_scanner_and_action_baseline
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_ASSET_URL:
+    alternatives:
+      - "Port the asset resolver across app, shared, public and Brgen engine roots."
+      - "Parse ERB and CSS ASTs and resolve every asset helper to a concrete build artefact."
+      - "Rely on Rails asset precompilation as the sole detector for missing pipeline assets."
+      - "Capture browser network requests across routes and fail on missing assets."
+      - "Use a narrow regular-expression scan for stale absolute and relative asset paths."
+    selected: ported_asset_root_resolver
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_BREAKPOINT:
+    alternatives:
+      - "Port the viewport-token scanner and compare media-query edges with the declared viewport map."
+      - "Parse CSS media-query ASTs and normalize px, rem and em expressions."
+      - "Use browser width sweeps to find actual layout discontinuities and overflow."
+      - "Enforce breakpoints with a Stylelint plugin backed by a versioned token list."
+      - "Require visual review for every newly introduced media query."
+    selected: ported_viewport_token_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_CHROME_I18N:
+    alternatives:
+      - "Port the visible-chrome string scanner and keep its language-specific baselines."
+      - "Parse Ruby, ERB and JavaScript ASTs and compare visible literals with locale keys."
+      - "Use translation extraction and enforce locale completeness during build."
+      - "Render every locale and compare visible chrome across apps and engines."
+      - "Use dictionary and language detection to flag hard-coded interface strings."
+    selected: ported_locale_chrome_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_CSS_COVERAGE:
+    alternatives:
+      - "Port the ERB, helper, JavaScript and stylesheet usage scanner with per-kind baselines."
+      - "Build a selector-to-rendered-DOM graph from parsed CSS and browser-observed routes."
+      - "Join ERB and CSS ASTs while resolving dynamic helper expressions and conditional templates."
+      - "Run PurgeCSS as an advisory report with a reviewed safelist for dynamic Rails classes."
+      - "Compare selectors with runtime class telemetry collected from representative journeys."
+    selected: ported_source_class_selector_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_EMPTY_STATE:
+    alternatives:
+      - "Port the empty-state scanner with action, legacy and coverage baselines."
+      - "Parse collection iteration and conditional branches, requiring an explicit empty path."
+      - "Require all collections to use one reusable empty-state component with a named action."
+      - "Render every empty-state route and test that recovery actions lead to useful screens."
+      - "Add component contract tests for empty collections, errors and no-results states."
+    selected: ported_empty_branch_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_LAYOUT_STABILITY:
+    alternatives:
+      - "Port the source scanner for unreserved media, layout transitions and font-display declarations."
+      - "Measure CLS in Chromium on first load and after images, fonts and async content settle."
+      - "Parse CSS and ERB ASTs to require intrinsic image dimensions and compositor-only transitions."
+      - "Generate an asset-dimension manifest and verify each image reserves its rendered aspect ratio."
+      - "Compare initial and settled screenshots using geometry deltas rather than pixel-only diffs."
+    selected: ported_media_transition_font_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_DESTRUCTIVE_ACTION:
+    alternatives:
+      - "Port the ERB scanner for destructive HTTP actions and their confirmation contract."
+      - "Parse Rails routes, controllers and forms to trace each destructive endpoint to its confirmation UI."
+      - "Run browser interaction tests that assert confirmation before each destructive request."
+      - "Add integration tests for every destroy action and reject missing confirmation postconditions."
+      - "Require security-owner review of all new destructive routes and controls."
+    selected: ported_destructive_form_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_FALLBACK_DRIFT:
+    alternatives:
+      - "Port the scanner that compares fallback values across tokens, SCSS, views and JavaScript."
+      - "Parse Sass custom properties and inline style expressions into one normalized value graph."
+      - "Compile stylesheets and inspect final resolved custom-property fallbacks."
+      - "Capture browser computed values across themes and compare them with canonical tokens."
+      - "Search source text with focused regular expressions for duplicated fallback literals."
+    selected: ported_multi_source_fallback_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_MODEL_CONTRACT:
+    alternatives:
+      - "Port the association-inverse and validation scanner with per-kind baselines."
+      - "Boot each Rails app and introspect ActiveRecord reflections, inverse_of and validator metadata."
+      - "Parse Ruby ASTs to resolve association options, scopes and validation declarations."
+      - "Use RuboCop Rails and schema checks to enforce model and database consistency."
+      - "Generate model contract specs and exercise associations and validations against a database."
+    selected: ported_association_validation_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_RHYTHM:
+    alternatives:
+      - "Port the scanner and read allowed spacing values from MasterDesign tokens."
+      - "Parse SCSS declarations and normalize spacing to the canonical pixel rhythm."
+      - "Inspect computed browser spacing across representative components and viewports."
+      - "Use Stylelint custom rules for spacing properties and token-only values."
+      - "Review rhythm and optical spacing in screenshots with a typography audit."
+    selected: ported_token_rhythm_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
+  LINT_SCALE:
+    alternatives:
+      - "Use ScaleRatchetCheck and Master::Design::Scale as the single source of truth."
+      - "Parse SCSS ASTs and produce automatic nearest-token suggestions for off-scale values."
+      - "Use a Stylelint plugin backed by the canonical token manifest."
+      - "Compare computed spacing, radii, type and motion values in the browser."
+      - "Rely on visual review of the rendered design scale rather than static values."
+    selected: existing_pub5_scale_check
+    rationale: "Uses ScaleRatchetCheck so token definitions and thresholds have one owner."
+  LINT_TYPOGRAPHY:
+    alternatives:
+      - "Use TypographyContractCheck and TypographyLint as the canonical source scanner."
+      - "Parse CSS ASTs and font metadata to validate type roles, variable axes and reading measures."
+      - "Render typographic fixtures for editorial, legal, social and terminal profiles."
+      - "Use a Stylelint typography plugin that reads the declared type and font manifests."
+      - "Require typographic review of measure, leading, hyphenation and numeral treatment."
+    selected: existing_pub5_typography_check
+    rationale: "Uses TypographyContractCheck so the contextual typographic contract has one owner."
+  LINT_VISUAL_CONTRACT:
+    alternatives:
+      - "Use the registered visual_contract browser check and preserve its INCONCLUSIVE state without a browser."
+      - "Run Playwright assertions across routes, viewports and component states."
+      - "Use image-diff and perceptual similarity against approved screenshot baselines."
+      - "Inspect accessibility and computed-style trees for declared visual invariants."
+      - "Require human screenshot review and a signed visual approval receipt per release."
+    selected: existing_browser_visual_check
+    rationale: "Rendered evidence remains browser-backed. An unavailable browser is INCONCLUSIVE, never a source-only pass."
+  LINT_WORD_BOUNDARY:
+    alternatives:
+      - "Port the escaped-punctuation and word-boundary scanner over Law and Ruby source files."
+      - "Parse Ruby regex literals into AST nodes and reject invalid boundary placement beside punctuation."
+      - "Give every repository regex positive and negative examples and run them as property tests."
+      - "Use RuboCop regex cops as a broad first pass plus the focused repository-specific rule."
+      - "Require manual review of regex changes and a regression fixture for every boundary incident."
+    selected: ported_escape_boundary_scanner
+    rationale: "Selected for measured fidelity to the Law, one authoritative instrument, and explicit evidence boundaries."
