@@ -12383,8 +12383,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_master_yaml.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_MASTER_YAML
       id: master_yaml_rows
       source: MASTER/lib/operator/ratchets.rb:118
   RATCHET_LAW_REACH_AND_BLIND:
@@ -12395,8 +12397,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_law_reach_and_blind.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_LAW_REACH_AND_BLIND
       id: law_reach_and_blind_rows
       source: MASTER/lib/operator/ratchets.rb:141
   RATCHET_LAW_SATURATION_AND_SILENT:
@@ -12407,8 +12411,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_law_saturation_and_silent.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_LAW_SATURATION_AND_SILENT
       id: law_saturation_and_silent_rows
       source: MASTER/lib/operator/ratchets.rb:153
   RATCHET_AUTOFIX:
@@ -12419,8 +12425,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_autofix.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_AUTOFIX
       id: autofix_rows
       source: MASTER/lib/operator/ratchets.rb:164
   RATCHET_FIXTURE_AND_DEP:
@@ -12431,8 +12439,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_fixture_and_dep.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_FIXTURE_AND_DEP
       id: fixture_and_dep_rows
       source: MASTER/lib/operator/ratchets.rb:213
   RATCHET_SELF_FINDINGS:
@@ -12443,8 +12453,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_self_findings.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_SELF_FINDINGS
       id: self_findings_rows
       source: MASTER/lib/operator/ratchets.rb:237
   RATCHET_REACH:
@@ -12455,8 +12467,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_reach.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_REACH
       id: reach_rows
       source: MASTER/lib/operator/ratchets.rb:251
   RATCHET_NAMESPACE:
@@ -12467,8 +12481,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_namespace.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_NAMESPACE
       id: namespace_rows
       source: MASTER/lib/operator/ratchets.rb:264
   RATCHET_SPRAWL:
@@ -12479,8 +12495,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_sprawl.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_SPRAWL
       id: sprawl_rows
       source: MASTER/lib/operator/ratchets.rb:272
   RATCHET_SPINE:
@@ -12491,8 +12509,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_spine.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_SPINE
       id: spine_rows
       source: MASTER/lib/operator/ratchets.rb:307
   RATCHET_NAME:
@@ -12503,8 +12523,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_name.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_NAME
       id: name_rows
       source: MASTER/lib/operator/ratchets.rb:390
   RATCHET_COMMAND:
@@ -12515,8 +12537,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_command.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_COMMAND
       id: command_rows
       source: MASTER/lib/operator/ratchets.rb:411
   RATCHET_ENTRYPOINT:
@@ -12527,8 +12551,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_entrypoint.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_ENTRYPOINT
       id: entrypoint_rows
       source: MASTER/lib/operator/ratchets.rb:437
   RATCHET_RAILS_LINT:
@@ -12539,8 +12565,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_rails_lint.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_RAILS_LINT
       id: rails_lint_rows
       source: MASTER/lib/operator/ratchets.rb:508
   RATCHET_CSS_BUDGET:
@@ -12551,8 +12579,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_css_budget.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_CSS_BUDGET
       id: css_budget_rows
       source: MASTER/lib/operator/ratchets.rb:563
   RATCHET_FILE_LENGTH:
@@ -12563,8 +12593,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_file_length.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_FILE_LENGTH
       id: file_length_rows
       source: MASTER/lib/operator/ratchets.rb:592
   RATCHET_COVERAGE:
@@ -12575,8 +12607,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_coverage.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_COVERAGE
       id: coverage_rows
       source: MASTER/lib/operator/ratchets.rb:603
   RATCHET_CSS_CONSTITUTION:
@@ -12587,8 +12621,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/ratchet_css_constitution.rb
-    unported: counts a pub4 population against a ceiling recorded in pub4; pub5 measures its own baseline first
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: RATCHET_CSS_CONSTITUTION
       id: css_constitution_rows
       source: MASTER/lib/operator/ratchets.rb:634
   LINT_ADHOC_EMPTY:
@@ -12599,8 +12635,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_adhoc_empty.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_ADHOC_EMPTY
       id: adhoc_empty
       source: MASTER/tools/adhoc_empty_lint.rb
   LINT_ASSET_URL:
@@ -12611,8 +12649,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_asset_url.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_ASSET_URL
       id: asset_url
       source: MASTER/tools/asset_url_lint.rb
   LINT_BREAKPOINT:
@@ -12623,8 +12663,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_breakpoint.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_BREAKPOINT
       id: breakpoint
       source: MASTER/tools/breakpoint_lint.rb
   LINT_CHROME_I18N:
@@ -12635,8 +12677,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_chrome_i18n.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_CHROME_I18N
       id: chrome_i18n
       source: MASTER/tools/chrome_i18n_lint.rb
   LINT_CSS_COVERAGE:
@@ -12647,8 +12691,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_css_coverage.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_CSS_COVERAGE
       id: css_coverage
       source: MASTER/tools/css_coverage_lint.rb
   LINT_EMPTY_STATE:
@@ -12659,8 +12705,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_empty_state.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_EMPTY_STATE
       id: empty_state
       source: MASTER/tools/empty_state_lint.rb
   LINT_LAYOUT_STABILITY:
@@ -12671,8 +12719,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_layout_stability.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_LAYOUT_STABILITY
       id: layout_stability
       source: MASTER/tools/layout_stability_lint.rb
   LINT_DESTRUCTIVE_ACTION:
@@ -12683,8 +12733,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_destructive_action.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_DESTRUCTIVE_ACTION
       id: destructive_action
       source: MASTER/tools/rails/operator/destructive_action_lint.rb
   LINT_FALLBACK_DRIFT:
@@ -12695,8 +12747,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_fallback_drift.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_FALLBACK_DRIFT
       id: fallback_drift
       source: MASTER/tools/rails/operator/fallback_drift_lint.rb
   LINT_MODEL_CONTRACT:
@@ -12707,8 +12761,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_model_contract.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_MODEL_CONTRACT
       id: model_contract
       source: MASTER/tools/rails/operator/model_contract_lint.rb
   LINT_RHYTHM:
@@ -12719,8 +12775,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_rhythm.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_RHYTHM
       id: rhythm
       source: MASTER/tools/rhythm_lint.rb
   LINT_SCALE:
@@ -12731,8 +12789,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_scale.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_SCALE
       id: scale
       source: MASTER/tools/scale_lint.rb
   LINT_TYPOGRAPHY:
@@ -12743,8 +12803,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_typography.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_TYPOGRAPHY
       id: typography
       source: MASTER/tools/typography_lint.rb
   LINT_VISUAL_CONTRACT:
@@ -12755,8 +12817,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_visual_contract.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_VISUAL_CONTRACT
       id: visual_contract
       source: MASTER/tools/visual_contract_lint.rb
   LINT_WORD_BOUNDARY:
@@ -12767,8 +12831,10 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/lint_word_boundary.rb
-    unported: a RAILS lint module with its own BASELINES over the Rails apps; hand port when rails/ moves (P3)
+    proved_by: test/laws/law_instruments_test.rb
     pub4:
+      instrument: law_instruments
+      instrument_id: LINT_WORD_BOUNDARY
       id: word_boundary
       source: MASTER/tools/word_boundary_lint.rb
   REFINEMENT_INVENTORY_IS_CANONICAL:
