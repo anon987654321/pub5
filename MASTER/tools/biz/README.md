@@ -28,19 +28,28 @@ pub3/pub5 archives but is not in the keep-list for this restoration.)
 
 ## The typographic contract
 
-All fourteen files share one anlage, after Robert Bringhurst's *The Elements of
-Typographic Style*: EB Garamond embedded in the document (SIL Open Font
-License), a 66-character measure, 1.5 leading on one baseline grid, oldstyle
-figures in running text and tabular figures in tables, guillemets and true
-dashes, sentence-case titles, and a paper ground of #F7F2E9. No front page
-shouts in uppercase. The HTML makes zero external requests — stylesheet,
-figures and fonts are inline — so each file is its own archive copy, and the
-PDF is printed from that same file so the pair cannot drift apart.
+Johann, 2026-11-07: "all business plans must use bob2.html as starter
+template". bob2's token vocabulary is the starter of every plan: the
+--color-* tokens, body in **Source Serif 4** and headings in **EB Garamond**
+(both variable faces from the Google Fonts link, exactly as on fetat), the
+66-character measure on one 1.5 baseline grid, guillemets and true dashes,
+sentence-case titles, and a white ground. A plan's own brand mark stays
+artwork (syre's fractal, the SPEIS/NORWEGIAN HEDGE gradients, ragnhild's
+Nosifer wordmark - the one face still embedded - and govt_bergen's plain
+EB Garamond mark). The colophon of every plan names these facts; the old
+claim of an embedded EB Garamond, oldstyle prose figures and a #F7F2E9
+paper is gone with the archive skin.
 
 The plans are written in Norwegian for Innovasjon Norge applications:
 sammendrag, markedsanalyse, teknologi og innovasjon, forretningsmodell,
 utviklingsveikart, finansieringsbehov, team og kompetanse, bærekraft og
 samfunnsansvar.
+
+The hefte print contract is the one fetat already carries: 156 × 234 mm,
+folio in the 12 mm foot, 6 mm head, @page :first with a zero top margin so
+the cover is the page, and break hygiene. The PDF is printed from the built
+HTML by bp_print.mjs, whose pdfinfo check verifies page size every run, so
+the pair cannot drift.
 
 ## What the completion added (November 2026)
 
@@ -73,7 +82,7 @@ Per the restoration brief:
   (OpenBSD, Ruby, pub5 MASTER law-catalogue governance):
   *FETAT — ny barnevernsforvaltning* (the FETAT/Familieetaten proposal, the new
   Norwegian Barnevern, working master at
-  `BIZ/scripts/fetat_proposal.md`, published as its own plan folder
+  `MASTER/tools/biz/fetat_proposal.md`, published as its own plan folder
   `fetat/fetat.html + fetat.svg + fetat.pdf` in the hefte format
   156 × 234 mm: evidence-based decisions, 48-hour first
   response, multidisciplinary teams, regional units, child hotline 123,
@@ -180,9 +189,9 @@ setting `BIZ_LEGACY_SOURCE_DIR` to their directory.
 
 The standing build sequence regenerates every published folder from sources:
 
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_build.mjs   # build the seven from sources
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_cover.mjs   # front-matter revision (idempotent)
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_check.mjs   # independent verification of the outputs
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_build.mjs      # build the seven from sources
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_retemplate.mjs # re-skin onto the bob2 starter
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_check.mjs      # independent verification of the outputs
     BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_print.mjs   # print PDFs via Chromium
     BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_index.mjs   # regenerate index.html
     ruby fetat_build.rb && node bp_print.mjs           # fetat: build, then print its pdf

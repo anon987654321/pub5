@@ -1170,6 +1170,28 @@ BUSPLAN_NO_WORKING_TREES:
   severity: warning
   resolution: review
 
+BUSPLAN_TEMPLATE_BOB2:
+  parent: BUSPLAN_PAIR_FOLDER
+  statement: >
+    Every business plan is rendered from the bob2 starter template: its
+    token vocabulary, body in Source Serif 4 and headings in EB Garamond,
+    the plan's own mark kept as artwork, and the one hefte print contract
+    of 156 by 234 millimetres with the cover as the first page and the
+    folio in the foot. A plan pair in another skin is not a finished plan.
+  severity: warning
+  resolution: review
+
+BUSPLAN_PRINT_PAIR:
+  parent: BUSPLAN_SOURCE_OF_RECORD
+  statement: >
+    A business plan's pdf is printed from its built html by the anlage's
+    printer, and the print is verified - page size, folio, margins - on
+    every run; a pdf produced by any other path is the wrong edition and
+    reads as suspect until reprinted.
+  severity: warning
+  resolution: review
+
+
 EMPHASIS_ONE_DEVICE:
   parent: BRINGHURST
   statement: >

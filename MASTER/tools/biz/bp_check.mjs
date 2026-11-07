@@ -115,6 +115,9 @@ for (const plan of ORDER) {
   if (!/header\.cover/.test(src)) add('bob2: header.cover missing');
   if (!/@page\{?\s*\{?\s*size:\s*156mm 234mm|@page \{\s*size: 156mm 234mm/.test(src)) add('bob2: hefte page size missing');
   if (!/@bottom-center \{ content: counter\(page\)/.test(src)) add('bob2: folio missing');
+  // the folio draws in the document's own face: EB Garamond in the seven
+  // compact plans (Source Serif 4 stays fetat's), per the folio-face canon.
+  if (!/@bottom-center \{ content: counter\(page\); font: 0\.75rem\/1\.4 var\(--font-heading\)/.test(src)) add('bob2: folio face is not EB Garamond');
   if (!/@page :first \{ margin-top: 0; \}/.test(src)) add('bob2: first-page margin rule missing');
   if (!/header\.cover \{ min-height: 221mm; \}/.test(src)) add('bob2: cover-as-page rule missing');
   if (!/class="toc" aria-label="Innhold"/.test(src)) add('bob2: toc missing');

@@ -86,6 +86,13 @@ figure { margin: var(--space-xl) 0; }
 figure svg { display: block; width: 100%; height: auto; }
 figcaption { font-size: 0.8em; font-style: italic; color: var(--color-muted); margin-top: 0.5rem; }
 .mark-plain { font-weight: 400; font-size: 1.3em; letter-spacing: 0.05em; line-height: 1.2; }
+/* The brand wordmark carries its own display font (ragnhild's Nosifer);
+   the rule is the base's, ported so the plan's own mark reads as itself. */
+.mark-brand {
+  font-family: 'Nosifer', 'EB Garamond', Georgia, serif;
+  font-weight: 400; font-size: 2.1em; line-height: 1.45; margin: 0 auto; color: inherit;
+}
+.mark-brand:empty { display: none; }
 .toc {
   font-size: var(--font-size-small); line-height: 1.6;
   margin: 0 auto var(--space-xxl); padding: var(--space-m) 0;
@@ -111,7 +118,7 @@ footer a strong { color: var(--color-link-bold); }
   @page {
     size: 156mm 234mm;
     margin: 6mm 0 12mm;
-    @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-text); color: var(--color-print-muted); }
+    @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-heading); color: var(--color-print-muted); }
   }
   @page :first { margin-top: 0; }
   body { margin: 0; }
