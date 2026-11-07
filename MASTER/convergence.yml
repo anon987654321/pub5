@@ -214,7 +214,7 @@ workstreams:
     implementation: RAILS/brgen/app/models/search_recent.rb
     proof: RAILS/brgen/test/models/search_recent_test.rb
   - id: marketplace_duplicate_detection
-    state: partial
+    state: landed
     title: Duplicate-listing detection files a moderation report; a human decides
     implementation: RAILS/brgen_marketplace/app/models/marketplace/listing.rb
     proof: RAILS/brgen/test/models/marketplace_duplicate_detection_test.rb
