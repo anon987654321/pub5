@@ -5,6 +5,11 @@ require "tmpdir"
 require "digest"
 require "json"
 require_relative "../lib/operator/check_chain"
+# JournaledLoop subclasses FixLoop and opens run_journaled, which lives in
+# fix_loop/lifecycle.rb. Reaching it through the adapter alone does not load
+# that file, so the suite's own load order decided whether the method existed.
+require_relative "../lib/fix/kernel/convergence_adapter"
+require_relative "../lib/fix/fix_loop/lifecycle"
 
 # /fix is the whole improvement operation: it observes, lets the council argue,
 # repairs, and observes again, and it ends in a state that says what actually

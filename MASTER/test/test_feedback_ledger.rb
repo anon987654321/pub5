@@ -8,6 +8,10 @@ require "sqlite3"
 require "tmpdir"
 require_relative "../lib/ground/knowledge_store"
 require_relative "../lib/trace/ledger"
+# RecurrenceRunner subclasses PassRunner, so this test must load the real body
+# itself. assessment_matrix.rb alone installs an empty stub class, and a suite
+# that loaded it first left track_recurrence undefined here.
+require_relative "../lib/fix/fix_loop/pass_runner"
 
 class TestFeedbackLedger < Minitest::Test
   class FakeBus
