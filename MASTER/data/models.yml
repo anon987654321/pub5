@@ -512,7 +512,6 @@ cli_lanes:
     signed_in: { args: [--version], match: version }
     ask: [-m, "%{model_path}", -p, "%{prompt}", -n, "1024", -c, "4096", -t, "2", --simple-io, --no-display-prompt, --single-turn]
     model_path_env: MASTER_LLAMA_MODEL
-    max_concurrency: 1
     models: [gguf]
     login: set MASTER_LLAMA_MODEL to a readable local GGUF file
 

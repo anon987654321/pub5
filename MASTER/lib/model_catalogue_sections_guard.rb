@@ -68,11 +68,25 @@ module Master
       cli_lanes = data["cli_lanes"].is_a?(Hash) ? data["cli_lanes"] : {}
       cli_lanes.each do |name, row|
         label = "models.yml cli_lanes.#{name}"
-        strict_fields(row, %w[binary signed_in ask model_flag models login], label, errors)
+        strict_fields(row, %w[binary signed_in ask model_flag models login kind model_path_env], label, errors)
         next unless row.is_a?(Hash)
 
-        %w[binary model_flag login].each do |field|
+        %w[binary login].each do |field|
           errors << "#{label}.#{field} must be non-empty text" unless row[field].is_a?(String) && !row[field].strip.empty?
+        end
+        # A lane either takes --model (model_flag) or carries a local model file
+        # through model_path_env inside its ask arguments; ask is the one place
+        # a prompt can be handed over, so one of the two model carriers is owed.
+        if row.key?("model_flag")
+          errors << "#{label}.model_flag must be non-empty text" unless row["model_flag"].is_a?(String) && !row["model_flag"].strip.empty?
+        elsif !Array(row["ask"]).any? { |arg| arg.to_s.include?("%{model_path}") }
+          errors << "#{label}.model_flag must be non-empty text when ask carries no %{model_path}"
+        end
+        if row.key?("kind")
+          errors << "#{label}.kind must be 'local' or absent" unless row["kind"] == "local"
+        end
+        if row.key?("model_path_env")
+          errors << "#{label}.model_path_env must be non-empty text" unless row["model_path_env"].is_a?(String) && !row["model_path_env"].strip.empty?
         end
         validate_string_list(row["ask"], "#{label}.ask", errors, nonempty: true)
         validate_string_list(row["models"], "#{label}.models", errors, nonempty: true)
@@ -140,10 +154,11 @@ module Master
         end
       end
 
-      strict_fields(data["ollama"], %w[enabled default_base_url keep_alive max_num_ctx local_model_allowlist],
+      strict_fields(data["ollama"], %w[enabled default_base_url keep_alive max_num_ctx local_model_allowlist probe],
                     "models.yml ollama", errors)
       ollama = data["ollama"].is_a?(Hash) ? data["ollama"] : {}
       errors << "models.yml ollama.enabled must be boolean" unless [true, false].include?(ollama["enabled"])
+      errors << "models.yml ollama.probe must be boolean" if ollama.key?("probe") && ![true, false].include?(ollama["probe"])
       %w[default_base_url keep_alive].each do |field|
         errors << "models.yml ollama.#{field} must be non-empty text" unless ollama[field].is_a?(String) && !ollama[field].empty?
       end
