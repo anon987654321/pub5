@@ -48,7 +48,9 @@ class BillingPlansContractTest < Minitest::Test
 
     assert_includes en, "AI-assisted analysis is available when configured"
     assert_includes en, "rule-based"
-    assert_includes nb, "AI-støttet analyse er tilgjengelig når den er konfigurert"
+    # The nb summary names the feature ("funksjonen") and spells the fallback
+    # out in its own clause; pin the words as shipped (2026-11-07).
+    assert_includes nb, "AI-støttet analyse er tilgjengelig når funksjonen er konfigurert"
     assert_includes nb, "regelbaserte"
   end
 
@@ -76,13 +78,20 @@ class BillingPlansContractTest < Minitest::Test
   def test_every_api_plan_has_a_quota_and_its_app_sells_keys
     PLANS.each { |key, plan| assert_operator Integer(plan["quota"]), :>, 0, key if plan.key?("quota") }
     API_APPS.each do |app|
-      assert_includes read("#{app}/db/schema.rb"), %(create_table "api_keys"), app
-      assert_includes read("#{app}/app/models/api_key.rb"), "Shared::BillingPlan.for_app(\"#{app}\")", app
-      assert_includes read("#{app}/config/routes.rb"), %(post "lint" => "lint#create"), app
-      webhook = read("#{app}/app/controllers/api/stripe_webhooks_controller.rb")
+      assert_includes read(app_root(app, "db/schema.rb")), %(create_table "api_keys"), app
+      assert_includes read(app_root(app, "app/models/api_key.rb")), "Shared::BillingPlan.for_app(\"#{app}\")", app
+      assert_includes read(app_root(app, "config/routes.rb")), %(post "lint" => "lint#create"), app
+      webhook = read(app_root(app, "app/controllers/api/stripe_webhooks_controller.rb"))
       assert_includes webhook, "Shared::StripeSignature.verify!", app
       assert_includes webhook, "ApiKey.sync!", app
     end
+  end
+
+  # The master app is not a RAILS tree: since the pub4 migration its web app
+  # lives at MASTER/web, so its billing files read from there.
+  def app_root(app, relative)
+    base = app == "master" ? "../MASTER/web" : app.to_s
+    File.join(base, relative)
   end
 
   # Paid placement is labelled on the card, before the click.
