@@ -259,9 +259,13 @@ class TestDocPaths < Minitest::Test
     end
   end
 
-  # The repo root has four governed trees and CLAUDE.md. bin/ moved under MASTER and
-  # dotfiles/ under OPENBSD, so neither is a top-level tree any more.
-  TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+  # Read from the source that owns the list rather than restating it. This
+  # constant named four trees and was silently one behind: BIZ joined on
+  # 2026-11-07, and a BIZ citation that should have been checked fell through to
+  # the "head resolves nowhere, so it is prose" branch below and was dropped.
+  # bin/ moved under MASTER and dotfiles/ under OPENBSD, so neither is a
+  # top-level tree any more.
+  TREES = MasterPaths::TREES
   # Paths that name a thing on the VPS, not a thing in the repo.
   ABSOLUTE_OR_REMOTE = %r{\A(/|~|https?:|[a-z]+@)}
 

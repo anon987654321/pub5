@@ -408,3 +408,16 @@ proposals:
       Proof is named per task instead, and the number's retirement was
       deliberate, not an omission.
     refuted_by: data/task_contract.yml proof_types
+
+  - id: lora-video-replicate-flag
+    tree: STUDIO
+    state: refuted
+    claim: "the promo's moving image came from a `lora` tool reached with a `--video-replicate` flag"
+    reason: >
+      The tool name and the flag never existed in any commit, so there was
+      nothing to restore and nothing to deprecate. Video is the `:video` lane
+      of Io::MediaLanes (google/veo-3.1-fast), selected by asking for a video
+      in plain words; a lane without a provider answers with a plan instead of
+      guessing. Reintroducing the flag would rebuild a second, unreachable
+      route to the same provider.
+    refuted_by: STUDIO/lib/io/media_lanes.rb
