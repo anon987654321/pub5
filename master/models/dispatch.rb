@@ -130,6 +130,7 @@ module Models
     private
 
     MAX_IMAGE_BYTES = 2 * 1024 * 1024
+    MAX_IMAGE_BASE64_BYTES = 4 * ((MAX_IMAGE_BYTES + 2) / 3)
     PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
 
     def image_lane?(model)
@@ -147,6 +148,7 @@ module Models
       media_type = image.fetch(:media_type).to_s
       data = image.fetch(:data).to_s
       raise ArgumentError, "only PNG screenshots are accepted" unless media_type == "image/png"
+      raise ArgumentError, "screenshot exceeds #{MAX_IMAGE_BYTES} bytes" if data.bytesize > MAX_IMAGE_BASE64_BYTES
 
       bytes = Base64.strict_decode64(data)
       raise ArgumentError, "screenshot is not a PNG image" unless bytes.start_with?(PNG_SIGNATURE)
