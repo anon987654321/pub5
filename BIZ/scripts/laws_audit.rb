@@ -273,7 +273,7 @@ plans.each do |plan|
   pm = style[/@page\s*\{([^}]*)\}/, 1].to_s
   pm_margin = pm[/margin\s*:\s*([^;]+);/, 1].to_s
   mm = pm_margin.scan(/(-?[0-9.]+)mm/).flatten.map(&:to_f)
-  body_print = style[/@media\s+print\s*\{[^}]*body\{padding:([^;]+)\}/m, 1].to_s
+  body_print = style[/@media\s+print\s*\{.*?body\{padding:([^;}]+)/m, 1].to_s
   bp_mm = body_print.scan(/(-?[0-9.]+)mm/).map(&:to_f)
   top = (mm[0] || 0) + (bp_mm[0] || 0)
   sides = (mm[1] || (bp_mm[1] || 0)) + (bp_mm[1] || 0)

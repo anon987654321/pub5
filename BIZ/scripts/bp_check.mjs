@@ -108,7 +108,7 @@ for (const plan of ORDER) {
   if (/class="kicker"/.test(body)) add('cover: kicker still present');
   if (!body.includes('cover revision 2026-11')) add('cover: revision stylesheet missing');
   if (!body.includes('poise v2')) add('cover: poise v2 stylesheet missing');
-  if (!body.includes('header{min-height:184mm;page-break-after:always}')) add('cover: title-page print rules missing');
+  if (!body.includes('header{min-height:172mm;page-break-after:always}')) add('cover: title-page print rules missing');
   if (plan === 'govt_bergen') {
     if (!/class="mark mark-plain">Bergens Selvstyreparti</.test(body)) add('cover: plain party mark missing');
     if (/background-clip:text/.test(body)) add('cover: gradient wordmark still present');

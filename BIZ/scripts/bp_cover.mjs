@@ -55,7 +55,7 @@ footer{margin-top:6rem}
 @media print{
   body{padding:18mm 17mm}
   main{padding-bottom:0}
-  header{min-height:184mm;page-break-after:always}
+  header{min-height:172mm;page-break-after:always}
   nav{page-break-after:page}
   section{margin-top:7.5rem}
 }`;
