@@ -256,7 +256,7 @@ module Master
           link.merge("href" => redact_url(link["href"]))
         end
         data["screenshot_file"] = screenshot_path
-        data["vision_note"] = "Screenshot saved locally; the current text-only model path has not received image pixels."
+        data["vision_note"] = "Screenshot saved locally for a vision-capable model hand-off when one is available."
         data
       end
 
