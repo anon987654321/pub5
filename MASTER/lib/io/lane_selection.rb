@@ -448,10 +448,12 @@ module Master
         @floor_dead_count += 1
         if ENV["MASTER_FLOOR_DEBUG"] == "1"
           Master::Trace::Dmesg.status("fix0", "floor debug: dead #{id}, count #{@floor_dead_count}/#{FLOOR_DEAD_LIMIT}")
+          Master::Trace::Dmesg.status("fix0", "floor debug: branch state count=#{@floor_dead_count.inspect} limit=#{FLOOR_DEAD_LIMIT.inspect} suspended=#{@floor_suspended.inspect} watching=#{@watching.inspect}")
         end
         return unless @floor_dead_count >= FLOOR_DEAD_LIMIT
         return if @floor_suspended
 
+        Master::Trace::Dmesg.status("fix0", "floor debug: entering suspend branch, scanning live lanes") if ENV["MASTER_FLOOR_DEBUG"] == "1"
         live = live_lanes(cfg:, alive:).find { |candidate| !FREE_CLASS_KINDS.include?(kind(candidate)) }
         suspend_free_floor!(live)
         Master::Trace::Dmesg.status("fix0", "floor debug: suspending, live=#{live.inspect}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
@@ -461,6 +463,7 @@ module Master
         # names its own failure so a swallowed exception cannot hide it.
         if ENV["MASTER_FLOOR_DEBUG"] == "1"
           Master::Trace::Dmesg.status("fix0", "floor debug: counter crashed #{e.class}: #{e.message}")
+          raise if ENV["MASTER_FLOOR_DEBUG_STRICT"] == "1"
         end
         nil
       end
