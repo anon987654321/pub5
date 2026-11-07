@@ -219,12 +219,12 @@ workstreams:
     implementation: RAILS/brgen_marketplace/app/models/marketplace/listing.rb
     proof: RAILS/brgen/test/models/marketplace_duplicate_detection_test.rb
   - id: takeaway_delivery_area
-    state: partial
+    state: landed
     title: Stated delivery radius validated nil-safely against the reader's stored position
     implementation: RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/order.rb
     proof: RAILS/brgen_marketplace/engines/takeaway/test/models/takeaway/delivery_area_test.rb
   - id: takeaway_cart_expiry
-    state: partial
+    state: landed
     title: Pending carts expire on a clock through the same transition as a manual cancel
     implementation: RAILS/brgen/app/jobs/takeaway_cart_expiry_sweep_job.rb
     proof: RAILS/brgen_marketplace/engines/takeaway/test/models/takeaway/cart_expiry_test.rb
