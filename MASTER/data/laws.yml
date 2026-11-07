@@ -3491,6 +3491,10 @@ law_catalogue:
       definition_sources: [MASTER/law/css.rb]
       severity: warning
       languages: [css, scss, html]
+    PRINT_FOLIO_PRESENCE:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss, html]
     QUOTES_BY_LOCALE:
       definition_sources: [MASTER/law/typesetting.rb]
       severity: warning
