@@ -24,7 +24,7 @@ module Operator
 
     def self.enabled? = ENV.fetch("MASTER_RATCHET_CACHE", "1") != "0"
 
-    def self.fetch(group, trees:, row_class:, &) = new.fetch(group, trees:, row_class:, &)
+    def self.fetch(group, trees:, row_class:, stale_ok: false, &) = new.fetch(group, trees:, row_class:, stale_ok:, &)
 
     def initialize(root: ROOT, path: PATH)
       @root = root
