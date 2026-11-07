@@ -93,7 +93,7 @@ module Master
             ts INTEGER NOT NULL,
             rule TEXT NOT NULL,
             file_type TEXT NOT NULL,
-            outcome TEXT NOT NULL CHECK (outcome IN ('fixed', 'stuck', 'skipped'))
+            outcome TEXT NOT NULL CHECK (outcome IN ('fixed', 'stuck', 'skipped', 'human_decision'))
           );
           CREATE INDEX IF NOT EXISTS idx_fix_rule ON fix_outcomes(rule);
           CREATE INDEX IF NOT EXISTS idx_fix_ts ON fix_outcomes(ts);
@@ -277,21 +277,26 @@ module Master
       end
 
       def ensure_schema
-        migrate_fix_outcomes_skipped_value!
+        migrate_fix_outcomes_current_enum!
         SCHEMA_STATEMENTS.each { |statement| @db.execute_batch(statement) }
       end
 
-      # fix_outcomes' CHECK constraint originally only allowed ('fixed',
-      # 'stuck') -- SQLite can't ALTER a CHECK constraint in place, so an
-      # existing DB from before 'skipped' was added needs its table rebuilt.
-      # CREATE TABLE IF NOT EXISTS alone would silently leave old databases
-      # on the old constraint forever, rejecting every 'skipped' insert.
-      def migrate_fix_outcomes_skipped_value!
+      # fix_outcomes' CHECK constraint is closed, and SQLite can't ALTER a
+      # CHECK constraint in place, so an existing DB needs a table rebuild
+      # whenever the pass-level vocabulary grows past an older table's
+      # constraint. 'skipped' came first; 'human_decision' follows the
+      # 2026-11-07 mrdamascy run, where pass_outcome returned
+      # :human_decision for a needs_person stop and the insert hit the old
+      # CHECK. record_fix only warns, so a stale constraint silences the
+      # ledger for one whole vocabulary gap at a time. CREATE TABLE IF NOT
+      # EXISTS alone would leave every older database on its first-ever
+      # constraint forever.
+      def migrate_fix_outcomes_current_enum!
         row = @db.execute(
           "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'fix_outcomes'",
         ).first
         return unless row
-        return if row["sql"].to_s.include?("skipped")
+        return if row["sql"].to_s.include?("human_decision")
 
         @db.execute_batch(<<~SQL)
           ALTER TABLE fix_outcomes RENAME TO fix_outcomes_pre_skipped;

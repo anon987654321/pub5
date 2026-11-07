@@ -78,4 +78,42 @@ class TestKnowledgeStoreFixQuality < Minitest::Test
       store&.close
     end
   end
+
+  # The pass vocabulary grew once more (pass_outcome's :human_decision on a
+  # needs_person stop, Johann's 2026-11-07 mrdamascy log): a database already
+  # migrated for 'skipped' carries that CHECK and refuses the newer value,
+  # so the migration gate must key on the newest member.
+  def test_migrates_a_db_that_only_has_the_skipped_check_constraint
+    Dir.mktmpdir do |root|
+      db_path = File.join(root, ".master", "knowledge.sqlite3")
+      FileUtils.mkdir_p(File.dirname(db_path))
+      old_db = SQLite3::Database.new(db_path)
+      old_db.execute_batch(<<~SQL)
+        CREATE TABLE fix_outcomes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ts INTEGER NOT NULL,
+          rule TEXT NOT NULL,
+          file_type TEXT NOT NULL,
+          outcome TEXT NOT NULL CHECK (outcome IN ('fixed', 'stuck', 'skipped'))
+        );
+        INSERT INTO fix_outcomes (ts, rule, file_type, outcome) VALUES (#{Time.now.to_i}, 'OLD_RULE', 'rb', 'skipped');
+      SQL
+      old_db.close
+
+      store = Master::Ground::KnowledgeStore.new(root:)
+      _out, err = capture_io { store.record(law: "OLD_RULE", file_type: "rb", outcome: "human_decision") }
+
+      assert_empty err, "the human_decision insert hit a skipped-era CHECK constraint"
+      reader = SQLite3::Database.new(db_path)
+      outcomes = reader.execute("SELECT outcome FROM fix_outcomes WHERE rule = ? ORDER BY id", ["OLD_RULE"]).flatten
+      reader.close
+      assert_equal %w[skipped human_decision], outcomes
+
+      # A human_decision row is recorded but never measured: the quality
+      # denominator counts only genuine attempts (fixed/stuck).
+      assert_in_delta 0.5, store.fix_quality(law: "OLD_RULE"), 0.001
+    ensure
+      store&.close
+    end
+  end
 end
