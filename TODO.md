@@ -379,10 +379,10 @@ The tracked repository has one TODO file: this root `TODO.md`. The cross-tree co
 
 ### 8.1 RAILS refinement survey — three items still open
 
-`RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness.
+`RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness. Second pass the same day: the sandbox gained a Debian Ruby 3.3.8, and with `PUB5_RUBY` (the runner's own override in `OPENBSD/lib/ruby_runner.rb`) the source-reading contract suites run for real — design contract 15 runs / 149 assertions, the link-embed privacy contract 5 / 40, the SVG wordmark 2 / 5, all green; only what needs a Rails bundle (rendered pages, migrations) stays NOT_RUN here. Row evidence still waits on those rendered runs.
 
 - [ ] **shared-010 — Button sizing.** Source landed 2026-11-07: `_buttons.scss` carries `$compact-contexts` only and the class survives behind a default-off `$legacy-small` opt-in; the shared comment/notification/newsletter/artifact partials, four JS-created buttons, amber's flash undo and 32 tree-wide-verified brgen-family sites name no size (each context held only compact buttons at a full-ERB sweep). The mixed containers (rsvp-bar, push-prompt, messenger-details-section, order-actions, the form-wrap--flush forms, the generic `.cluster`/`.page-header`/`.field` primitives, the no-class rows, `_live_search_form` and `_master_invite`) keep the class pending per-site rendered checks; a ratchet in `design_contract_test.rb` pins the naming file count at 75 and only down. Row stays open for that rendered evidence.
-- [ ] **shared-029 — Privacy-preserving embeds.** Source landed 2026-11-07: the thumbnail is fetched once where the oEmbed answer arrives (the link-embed job, the compose preview), written to `storage/link_embeds/thumbnails` content-addressed by the SHA-256 of the provider URL, and served from the app's own `/link_embeds/thumbnails/:digest` endpoint; the partial renders no provider URL and a page view contacts no provider. `link_embed_privacy_contract_test.rb` pins the shape and the render test asserts no provider image host in the page; both runs are NOT_RUN here. Row stays open for rendered evidence.
+- [ ] **shared-029 — Privacy-preserving embeds.** Source landed 2026-11-07: the thumbnail is fetched once where the oEmbed answer arrives (the link-embed job, the compose preview), written to `storage/link_embeds/thumbnails` content-addressed by the SHA-256 of the provider URL, and served from the app's own `/link_embeds/thumbnails/:digest` endpoint; the partial renders no provider URL and a page view contacts no provider. `link_embed_privacy_contract_test.rb` pins the shape and the render test asserts no provider image host in the page; the contract suite now runs green on the forced sandbox Ruby, the rendered run still does not. Row stays open for rendered evidence.
 
 Close these rows in `RAILS/refinements.yml` only with the corresponding source and rendered evidence. Do not copy the 755 completed or 12 invalid rows back into the active list.
 
@@ -587,6 +587,64 @@ Ordered, and each step is gated by the one before it:
 
 **Consolidation rule:** Root `TODO.md` is the only cross-tree Markdown action list. `RAILS/refinements.yml`, `MASTER/data/ux_refinements.yml`, `MASTER/data/gaps.yml`, `MASTER/convergence.yml`, `MASTER/data/operator_seams.yml`, `MASTER/data/proposals.yml`, the ideation sheets and the RAILS feature inventories remain structured owners for IDs, proof receipts, provenance, accepted/rejected reasoning and state. Update the owner and this root index together when an item is implemented or its state changes. Do not create another backlog file.
 
+
+### 8.11 Sandbox contract run — forced Ruby, 2026-11-07 (second session)
+
+The full `RAILS/test` suite was run on the sandbox's Debian Ruby 3.3.8 against
+the repo's own force hatch (`PUB5_RUBY`, `OPENBSD/lib/ruby_runner.rb`), with
+`zeitwerk`/`activesupport` installed for the three deploy suites and zsh
+extracted for the deploy-identity sourcing. Ledger: 161 of 163 suites pass,
+0 NOT_RUN. What the runs found and what was fixed in the same pass:
+
+- [x] Route manifests went stale with the digest-constraint unanchor and the
+  encounters collection DELETE — refreshed all three apps' digests through the
+  generator's own digest algorithm (the `routes` tables are unchanged: no GET
+  route was added).
+- [x] `link_embed_privacy_contract_test.rb` still pinned the anchored
+  `\A...\z` constraint after 6b8e04c6 unanchored it; the pin now matches the
+  bare pattern the segment matcher anchors itself.
+- [x] `AppsYmlValidator` demanded `RAILS/master` for every declared app; the
+  master entry's own `deploy_root: MASTER/web` is now honoured, and
+  `integrity_check` runs `deploy_identity` and `production` green again.
+- [x] `billing_plans_contract_test.rb` read `RAILS/master/db/schema.rb` and
+  pinned nb copy that the shipped summary had outgrown; it reads MASTER/web
+  and pins the words as shipped.
+- [x] `generated_asset_check_test.rb`'s missing-build fixture wrote its
+  stylesheet outside the scanner's glob, so the inconclusive path never
+  fired; the fixture sits where `source_files` looks now.
+- [x] `triangle_runtime_contract_test.rb` pinned the pre-rbenv runner lines;
+  the pin matches the rbenv-preferring runner and its Homebrew rationale.
+- [x] `playlist_player_controller_test.rb` stubbed Stimulus but not the
+  controller's `stimulus_reflex` import or the `document` hand-off listener;
+  the harness stubs both, so the slider, labels and listen counting run.
+- [x] Two target-mark animations ran on the `ease-out` keyword and the
+  messenger one had no reduced-motion guard; both read `var(--ease-out)` and
+  the guard lives beside the animation it guards.
+- [x] Three deliberate child-margin sites banked at their measured ceiling in
+  `css_budget.yml`, each named (`child_margin: 3`).
+
+Open, itemized, and not to be waved through — the split debt the ratchets
+count. Both ratchets' law is "split it and lower the number; never raise":
+
+- [ ] `file_length_ratchet_test.rb`: fifteen files sit past their ceilings or
+  the per-kind limit with no row — brgen `_brgen_shared_overrides.scss`
+  (2,264 code lines) and `_brgen_vertical_surfaces.scss` (2,210) worst; then
+  `_brgen_messenger.scss` (+59), `_brgen_marketplace.scss` (+39),
+  `conversations/show.html.erb` (+41), `_brgen_dating.scss` (+82),
+  `_brgen_feed_posts.scss` (+18), `_minimal.scss` (+6), `seeds.rb` (+2),
+  `application_helper_test.rb` (+4), `user_purge_job_test.rb` (357, no row),
+  `_brgen_core_shell.scss` (480, no row), `posts/show.html.erb` (164, no row),
+  `listings/show.html.erb` (+1), playlist `_player.html.erb` (159, no row).
+  Splitting them is real work against files their authors are actively
+  editing; each split lowers its row.
+- [ ] `method_length_ratchet_test.rb`: brgen carries 11 methods over 30 code
+  lines against a ceiling of 8, and its longest is 71 lines against 51. Same
+  law: split at the responsibility bound, lower the numbers.
+- [ ] `weight_kb` in `css_budget.yml` was seeded 2026-08-31/09-25 and the
+  shared engine's stack has grown since; amber's compiled build measured
+  157KB against a 103KB ceiling in this sandbox. The build is gitignored, so
+  the honest re-measure belongs to a checkout that can precompile — raise
+  only with every added kilobyte named, per the file's own record.
 
 ## model pool — free compute and never-modelless (researched 2026-11-06)
 
