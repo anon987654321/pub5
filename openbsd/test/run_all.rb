@@ -62,13 +62,20 @@ module OpenBSDTestRunner
       "#{summary.fetch(:failures)} failures, #{summary.fetch(:errors)} errors, " \
       "#{summary.fetch(:skips)} skips"
   end
+  
+  # Anchor discovery to this runner's directory. It works before and after the
+  # root tree's case-only rename, without depending on a second spelling of
+  # OPENBSD in the path.
+  def test_files(directory: __dir__, filter: nil)
+    files = Dir.glob(File.join(directory, "**", "test_*.rb")).sort
+    filter ? files.select { |path| path.include?(filter) } : files
+  end
 end
 
 if $PROGRAM_NAME == __FILE__
   root = File.expand_path("../..", __dir__)
   filter = ARGV.first
-  files = Dir.glob(File.join(root, "OPENBSD/test/**/test_*.rb")).sort
-  files = files.select { |path| path.include?(filter) } if filter
+  files = OpenBSDTestRunner.test_files(filter:)
   abort "openbsd contracts: no test files#{filter ? " matching #{filter.inspect}" : ""}" if files.empty?
 
   results = files.map do |path|
