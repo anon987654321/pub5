@@ -4,6 +4,7 @@ require "digest"
 require "fileutils"
 require "json"
 require_relative "../io/exec"
+require_relative "../trace/dmesg"
 
 module Operator
   # The deep ratchet rows, remembered by the content of the trees each reads. /fix measures the
@@ -31,16 +32,36 @@ module Operator
     end
 
     # The rows the block measures, or the rows it measured last over the same trees.
-    def fetch(group, trees:, row_class:)
+    # stale_ok widens the answer to a receipt whose trees have since changed, every
+    # note tagged: /fix's pre-repair measure is a starting baseline, not the verdict —
+    # the closing measure after the last repair re-runs every group fresh, and the
+    # commit-time RatchetSponsor guard is its own independent check.
+    def fetch(group, trees:, row_class:, stale_ok: false)
       return yield unless self.class.enabled?
 
       key = key_for(trees)
       stored = read[group]
+      if stale_ok && stored && stored["key"] != key && Array(stored["rows"]).any?
+        Master::Trace::Dmesg.status(
+          "measure0",
+          "pre-repair #{group} answered from the previous receipt; its trees changed since, the closing measure re-runs it fresh",
+        )
+        return stored["rows"].map { |row| tagged(revive(row, row_class)) }
+      end
       return stored["rows"].map { |row| revive(row, row_class) } if stored && stored["key"] == key
 
       rows = Array(yield).compact
       write(group, { "key" => key, "rows" => rows.map { |row| dump(row) } }) if rows.all?(&:readable?)
       rows
+    end
+
+    # The receipt rides in the row's own note, so the rendered table, the --json
+    # dump and the fix log all carry the staleness where a reader already looks.
+    STALE_NOTE = "stale receipt: these trees changed since this measured; the closing measure re-runs it fresh"
+
+    def tagged(row)
+      row.note = row.note.to_s.empty? ? STALE_NOTE : "#{row.note}; #{STALE_NOTE}"
+      row
     end
 
     def key_for(trees)

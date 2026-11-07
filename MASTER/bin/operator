@@ -299,6 +299,12 @@ when "measure"
   # is not something a session can act on or disclaim.
   require_relative "../lib/operator/ratchets"
   deep = !ARGV.delete("--deep").nil?
+  # --stale-ok lets a cached group answer from a receipt whose trees have since
+  # changed, tagged stale in every row note. /fix's pre-repair measure asks for
+  # this: its answer is a starting baseline, and the closing measure after the
+  # last repair runs without the flag and pays the fresh census. (Johann 2026-11-07:
+  # a cold law audit burned ~20 minutes of scaffolding before any repair.)
+  stale_ok = !ARGV.delete("--stale-ok").nil?
   why = ARGV.filter_map { |arg| arg[/\A--why(?:=(.*))?\z/, 1] }.first
   why ||= ARGV[ARGV.index("--why") + 1].to_s if ARGV.include?("--why")
   since = ARGV.filter_map { |arg| arg[/\A--since(?:=(.*))?\z/, 1] }.first
@@ -309,7 +315,7 @@ when "measure"
     exit 0
   end
   trees = ARGV.filter_map { |arg| arg[/\A--trees=(.+)\z/, 1] }.flat_map { |value| value.split(",") }
-  rows = Operator::Ratchets.all(deep:, trees: trees.empty? ? nil : trees)
+  rows = Operator::Ratchets.all(deep:, trees: trees.empty? ? nil : trees, stale_ok:)
   require_relative "../lib/review/council/inter_model_contract"
   Master::Trace::Dmesg.status(
     "intermodel0",

@@ -94,20 +94,20 @@ module Operator
 
     # trees, when given, leaves out the RAILS-only rows unless RAILS is named: the
     # lint ceilings, the CSS checks and design_baseline, which scans every view.
-    def all(deep: false, trees: nil)
+    def all(deep: false, trees: nil, stale_ok: false)
       @law_audit = nil
       rails = trees.nil? || trees.include?("RAILS")
-      rows = fast_rows(rails:)
+      rows = fast_rows(rails:, stale_ok:)
 
       # The placeholders only when the real numbers are not being fetched, or
       # every css_budget rule would appear twice under --deep.
-      rows += deep && rails ? cached("css_constitution", %w[MASTER RAILS]) { css_constitution_rows } : css_budget_rows
-      rows += deep_rows(rails:) if deep
+      rows += deep && rails ? cached("css_constitution", %w[MASTER RAILS], stale_ok:) { css_constitution_rows } : css_budget_rows
+      rows += deep_rows(rails:, stale_ok:) if deep
       rows.compact
     end
 
-    def fast_rows(rails:)
-      spine_rows + master_yaml_rows + (rails ? rails_lint_rows : []) + pub5_growth_rows +
+    def fast_rows(rails:, stale_ok: false)
+      spine_rows + master_yaml_rows(stale_ok:) + (rails ? rails_lint_rows : []) + pub5_growth_rows +
         entrypoint_rows + command_rows + name_rows + file_length_rows + coverage_rows
     end
 
@@ -115,10 +115,10 @@ module Operator
     # recompute the current value rather than reading the recorded one twice —
     # a row whose current IS its ceiling is a row that can never fail, which is
     # the shape of defect the rest of this file exists to catch.
-    def master_yaml_rows
-      [*cached("law_audit", AUDIT_TREES) { law_reach_and_blind_rows + law_saturation_and_silent_rows }, *autofix_rows,
+    def master_yaml_rows(stale_ok: false)
+      [*cached("law_audit", AUDIT_TREES, stale_ok:) { law_reach_and_blind_rows + law_saturation_and_silent_rows }, *autofix_rows,
        *law_hygiene_rows_a, *law_hygiene_rows_b, *fixture_and_dep_rows,
-       *cached("self_findings", SELF_FINDINGS_TREES) { self_findings_rows }, *reach_rows, *namespace_rows,
+       *cached("self_findings", SELF_FINDINGS_TREES, stale_ok:) { self_findings_rows }, *reach_rows, *namespace_rows,
        *sprawl_rows].compact
     end
 
@@ -127,7 +127,9 @@ module Operator
     AUDIT_TREES = %w[MASTER RAILS/__shared].freeze
     SELF_FINDINGS_TREES = %w[MASTER RAILS OPENBSD].freeze
 
-    def cached(group, trees, &) = RatchetCache.fetch(group, trees:, row_class: Row, &)
+    def cached(group, trees, stale_ok: false, &)
+      RatchetCache.fetch(group, trees:, stale_ok:, row_class: Row, &)
+    end
 
     # One audit per measurement: law_audit.blind and law_audit.saturated each ran it whole, and a cold
     # audit costs about twenty minutes (1288 s and 980 s measured 2026-11-06 for the two groups).
@@ -687,7 +689,7 @@ end
       File.file?(path) ? YAML.safe_load_file(path).fetch("rules") : {}
     end
 
-def deep_rows(rails: true)
+def deep_rows(rails: true, stale_ok: false)
   # This ceiling belongs to the principle map, not this presentation layer.
   law_trace_ceiling = Master.law("law_map").fetch("law_trace_ceiling")
 
@@ -696,20 +698,20 @@ def deep_rows(rails: true)
     # Fast means "reads files" in this register and name_candidates reads 2,500
     # of them through a parser, which is the line the header draws.
     *name_rows,
-        *cached("selftest", %w[MASTER]) do
+        *cached("selftest", %w[MASTER], stale_ok:) do
           [shell_row("selftest", "MASTER", "bundle exec rake selftest", /self-test: (\d+) violation/, 0)]
         end,
         shell_row("selfcheck", "MASTER", "bundle exec rake selfcheck", /selfcheck: (\d+) violation/, nil),
         # Deep because the rule registry is global and a suite run has test-defined
         # rules in it: measured in-process it reads high and fails a green tree.
-        *cached("law_trace", %w[MASTER]) do
+        *cached("law_trace", %w[MASTER], stale_ok:) do
           [shell_row("law_trace", "MASTER", "bundle exec rake lint:law_trace",
                      /law_trace: (\d+)[\/ ]/, law_trace_ceiling)]
         end,
         # Deep because it scans every RAILS view and stylesheet with the full
         # design rule set — the layout campaign's ratchet (2026-08-21).
         *(if rails
-             cached("design_baseline", %w[MASTER RAILS]) do
+             cached("design_baseline", %w[MASTER RAILS], stale_ok:) do
                [shell_row("design_baseline", "MASTER", "bundle exec ruby tools/audit/design_baseline.rb",
                           /design_baseline: (\d+) violation/,
                           YAML.safe_load_file(File.join(MASTER, "data/design_baseline.yml")).fetch("total", nil))]

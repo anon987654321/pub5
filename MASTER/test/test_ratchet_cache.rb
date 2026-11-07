@@ -30,6 +30,7 @@ class TestRatchetCache < Minitest::Test
       system(*git, "init", "-q") && system(*git, "add", ".") &&
         system(*git, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "seed")
       @cache = Cache.new(root:, path: File.join(root, "cache.json"))
+      @cache_path = File.join(root, "cache.json")
       yield root
     end
   end
@@ -80,5 +81,32 @@ class TestRatchetCache < Minitest::Test
     end
 
     assert_equal 1, audits
+  end
+
+  # The pre-repair measure answers a changed-key group from the previous receipt, tagged
+  # stale in each row note (the ~20-minute cold law audit answered nothing before the
+  # first repair otherwise); the closing measure without stale_ok measures fresh and
+  # its rows carry no tag.
+  def test_stale_ok_serves_the_previous_receipt_tagged
+    with_repo do
+      calls = []
+      fresh = @cache.fetch("law_audit", trees: %w[MASTER], row_class: Row) { (calls << 1) && [SELFTEST] }
+      assert_equal 1, calls.size
+
+      # Rewrite the stored key: the trees have moved since the receipt measured.
+      stored = JSON.parse(File.read(@cache_path))
+      stored["law_audit"]["key"] = "nudge-#{stored['law_audit']['key']}"
+      File.write(@cache_path, JSON.generate(stored))
+
+      stale = @cache.fetch("law_audit", trees: %w[MASTER], row_class: Row, stale_ok: true) { (calls << 1) && [] }
+      assert_equal 1, calls.size, "stale_ok must not re-measure a changed-key group"
+      assert_equal 3, stale.first.current
+      assert_includes stale.first.note, "stale receipt"
+      refute_includes fresh.first.note.to_s, "stale receipt"
+
+      # The default stays exact: the closing proof always measures afresh.
+      @cache.fetch("law_audit", trees: %w[MASTER], row_class: Row) { (calls << 1) && [SELFTEST] }
+      assert_equal 2, calls.size
+    end
   end
 end

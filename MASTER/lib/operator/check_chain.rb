@@ -179,7 +179,7 @@ module Operator
     end
 
     def baseline(target:)
-      selected = verification_stages(target)
+      selected = verification_stages(target, stale_ok: true)
       return {} if selected.empty?
 
       trees = trees_for_target(target)
@@ -342,9 +342,9 @@ module Operator
 
     PASS_PROVEN_TREES = %w[MASTER OPENBSD RAILS].freeze
 
-    def verification_stages(target)
+    def verification_stages(target, stale_ok: false)
       trees = trees_for_target(target)
-      selected = stages(scan_only: true, trees:).reject { |stage| stage.name == "council" }
+      selected = stages(scan_only: true, trees:, stale_ok:).reject { |stage| stage.name == "council" }
       # The /fix pass proves these trees itself, before and after its repair: MASTER and OPENBSD
       # with their suites (Pass's proof), RAILS with the source stage, which owns the complete
       # Rails premerge proof. Running the suites here as well ran them four times per /fix.
@@ -506,7 +506,7 @@ module Operator
     # and brgen's suite is not a MASTER session's business. Two stages stay
     # whole under every --tree — the ratchets and the sprawl census are
     # repo-wide measurements by definition, and both are cheap.
-    def stages(scan_only:, trees: TREES)
+    def stages(scan_only:, trees: TREES, stale_ok: false)
       scope = trees == TREES ? "all four trees" : trees.join(", ")
       [
         lexical_stage(scan_only:, trees:, scope:),
@@ -514,7 +514,7 @@ module Operator
         openbsd_stage(trees:),
         rehearse_stage(trees:),
         suites_stage(trees:),
-        ratchets_stage(trees:),
+        ratchets_stage(trees:, stale_ok:),
         sprawl_stage(scan_only:),
         council_stage(scan_only:, trees:),
       ].compact
@@ -581,12 +581,17 @@ module Operator
 
     # A narrower check measures only its trees' ceilings: a MASTER proof spent fifteen
     # minutes scanning every RAILS view for design_baseline, which no MASTER edit moves.
-    def ratchets_stage(trees:)
+    # stale_ok lets the pre-repair measure answer deep cached groups from the
+    # previous run's receipt even though the trees have moved (tagged stale in
+    # every row note). The closing proof after the last repair keeps the default
+    # and measures fresh, so the ceiling verdict is never the stale receipt's.
+    def ratchets_stage(trees:, stale_ok: false)
       scope = trees == TREES ? [] : ["--trees=#{trees.join(",")}"]
+      scope << "--stale-ok" if stale_ok
 
       Stage.new(
         name: "ratchets",
-        purpose: "every recorded ceiling, current beside it",
+        purpose: "every recorded ceiling, current beside it#{stale_ok ? ", pre-repair receipts may answer from cache" : ""}",
         mutates: false,
         run: -> { capture(RUBY, File.join(MASTER, "bin", "operator"), "measure", "--deep", *scope) },
       )
