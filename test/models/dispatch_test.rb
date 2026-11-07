@@ -78,7 +78,7 @@ class DispatchTest < Minitest::Test
     sandbox do |root|
       transport = Transport.new
       d = dispatch(root, env: { "ANTHROPIC_API_KEY" => "key" }, transport:)
-      png = "\\x89PNG\\r\\n\\x1a\\n".b + "fixture"
+      png = "\x89PNG\r\n\x1a\n".b + "fixture"
       image = { media_type: "image/png", data: Base64.strict_encode64(png) }
 
       reply = d.ask_with_image("Inspect this browser page.", image:, system: "Use the screenshot.")
