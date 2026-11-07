@@ -3,7 +3,7 @@ nb:
     heading: Varsler
     lead: Velg hvordan du vil høre om hver type varsel. E-post er av til du slår det på.
     save: Lagre varsler
-    saved: Varselvalgene er lagret.
+    saved: Lagret.
     kinds:
       mention: Når noen nevner deg
       reply: Når noen svarer deg

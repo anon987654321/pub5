@@ -218,3 +218,8 @@ en:
     bold: "Bold"
     italic: "Italic"
     bullet_list: "Bullet list"
+  encounters:
+    title: Random
+    looking: Looking for a stranger to talk to …
+    looking_note: This page refreshes itself. The thread opens as soon as someone else asks.
+    leave: Leave

@@ -1861,6 +1861,10 @@ nb:
       cart_not_payable: Ingenting i handlekurven kan betales.
       unknown_provider: Ukjent betalingsleverandør.
       dintero_seller_not_ready: Dintero-betaling er ikke tilgjengelig for denne selgeren ennå.
+      fulfilment_unavailable: Denne ordren kan ikke sendes eller hentes slik den er nå.
+      order_shipped: Bestillingen er merket som sendt.
+      order_reported_delivered: Bestillingen er merket som levert. Kjøperen blir bedt om å bekrefte.
+      order_receipt_confirmed: Takk! Mottaket er bekreftet.
       capture_unavailable: Denne ordren kan ikke gjennomføres ennå.
       capture_started: Gjennomføring er sendt til Dintero.
       capture_failed: Dintero kunne ikke gjennomføre denne ordren.

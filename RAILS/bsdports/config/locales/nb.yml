@@ -216,3 +216,8 @@ nb:
     bold: "Fet"
     italic: "Kursiv"
     bullet_list: "Punktliste"
+  encounters:
+    title: Tilfeldig
+    looking: Leter etter en fremmed å prate med …
+    looking_note: Siden oppdaterer seg selv. Så snart noen andre spør, åpnes samtalen.
+    leave: Avbryt

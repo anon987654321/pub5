@@ -46,6 +46,26 @@ class AppFlashI18nTest < Minitest::Test
     YAML.safe_load_file(File.join(ROOT, relative)).fetch(locale)
   end
 
+  # Rails loads every config/locales/*.yml of the app and of each engine it
+  # mounts, and deep-merges them. The verticals gained their own locale files
+  # (fulfilment.nb.yml, allergens.nb.yml, ...) whose flash keys their
+  # controllers ask for, so resolving against only the tree's main nb.yml/en.yml
+  # drifted away from what a real page resolves. The contract now reads the same
+  # merged view Rails serves; nothing about the assertions changes.
+  def deep_merge(a, b)
+    b.each_with_object(a.dup) do |(k, v), out|
+      out[k] = a[k].is_a?(Hash) && v.is_a?(Hash) ? deep_merge(a[k], v) : v
+    end
+  end
+
+  def merged_locale(tree, locale)
+    dirs = LOCALES.fetch(tree).map { |f| File.dirname(File.join(ROOT, f)) }.uniq
+    globs = tree == "brgen" ? dirs + Dir.glob(File.join(ROOT, EngineRoots::GLOB)).map { |d| File.join(d, "config", "locales") } : dirs
+    globs.flat_map { |dir| Dir.glob(File.join(dir, "#{locale}.yml")) + Dir.glob(File.join(dir, "*.#{locale}.yml")) }
+         .sort
+         .reduce({}) { |acc, file| deep_merge(acc, YAML.safe_load_file(file).fetch(locale, {})) }
+  end
+
   # Every "…flash.…" key a tree's controllers actually ask for, comments removed.
   #
   # Any string literal, not only one directly after `t(`: reactions_controller picks
@@ -113,8 +133,8 @@ class AppFlashI18nTest < Minitest::Test
 
   def test_every_key_a_controller_asks_for_resolves_in_both_locales
     LOCALES.each do |tree, (nb_file, en_file)|
-      nb = load_locale(nb_file, "nb")
-      en = load_locale(en_file, "en")
+      nb = merged_locale(tree, "nb")
+      en = merged_locale(tree, "en")
 
       keys_used_by(tree).each do |key|
         owner_nb, owner_en = key.start_with?("shared.") ? shared_locales : [nb, en]
@@ -138,9 +158,9 @@ class AppFlashI18nTest < Minitest::Test
   end
 
   def test_both_locales_of_each_tree_carry_the_same_flash_keys
-    LOCALES.each do |tree, (nb_file, en_file)|
-      nb = flash_block(load_locale(nb_file, "nb"))
-      en = flash_block(load_locale(en_file, "en"))
+    LOCALES.each do |tree, _files|
+      nb = flash_block(merged_locale(tree, "nb"))
+      en = flash_block(merged_locale(tree, "en"))
       next if nb.empty? && en.empty?
 
       assert_equal nb.keys.sort, en.keys.sort,
@@ -154,9 +174,9 @@ class AppFlashI18nTest < Minitest::Test
   def test_interpolations_match_between_locales
     placeholders = ->(text) { text.to_s.scan(/%\{(\w+)\}/).flatten.sort }
 
-    LOCALES.each do |tree, (nb_file, en_file)|
-      nb = flash_block(load_locale(nb_file, "nb"))
-      en = flash_block(load_locale(en_file, "en"))
+    LOCALES.each do |tree, _files|
+      nb = flash_block(merged_locale(tree, "nb"))
+      en = flash_block(merged_locale(tree, "en"))
 
       nb.each_key do |key|
         assert_equal placeholders.call(nb[key]), placeholders.call(en[key]),
@@ -170,8 +190,8 @@ class AppFlashI18nTest < Minitest::Test
     used = LOCALES.keys.flat_map { |tree| keys_used_by(tree) }.uniq
     dynamic = LOCALES.keys.flat_map { |tree| dynamic_prefixes_used_by(tree) }.uniq
 
-    LOCALES.each do |tree, (nb_file, _)|
-      block = flash_block(load_locale(nb_file, "nb"))
+    LOCALES.each do |tree, _files|
+      block = flash_block(merged_locale(tree, "nb"))
       next if block.empty?
 
       prefix = tree == "shared" ? "shared.flash." : "flash."
