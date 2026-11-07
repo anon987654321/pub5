@@ -29,10 +29,9 @@ RANDOM_ANALOG_CORE = %w[
   dilla_vinyl_bandlimit dilla_phasy dilla_console_sum
 ].freeze
 
-# Grain is removed from every lane pool: `random_finish` appends the
-# always-grain once at the end, and a lane draw putting another grain earlier
-# in the chain made "grainx2" — two passes of what compositors forbid stacking
-# ("don't mix grain on top of grain in the plate"). One grain pass, last.
+# Grain is removed from every lane pool: random_finish appends one
+# recipe-level emulsion grain at the end of the creative chain. The shared
+# finishing grain is a separate, mandatory last layer applied after the recipe.
 
 RANDOM_LANES = {
   subtle_analog: {

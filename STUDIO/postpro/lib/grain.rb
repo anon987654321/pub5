@@ -167,7 +167,7 @@ def grain_crystals(width, height, cell, seed)
   end
 end
 
-def grain(image, iso = 400, stock = :kodak_portra, intensity = 0.4)
+def grain(image, iso = 400, stock = :kodak_portra, intensity = 0.4, seed_offset: 0)
   data = STOCKS[stock] || STOCKS[:kodak_portra]
   scales = GRAIN_CHAN_SCALE[stock] || [1.0, 1.0, 1.0]
   sublayers = data[:sublayers] || [{ sensitivity_shift: 0.0, grain_scale: 1.0, weight: 1.0 }]
@@ -180,17 +180,19 @@ def grain(image, iso = 400, stock = :kodak_portra, intensity = 0.4)
 
   linear = image.colourspace("scrgb")
   envelope = grain_envelope(image, data)
-  shared = grain_field(image.width, image.height, radius, sublayers, postpro_seed(11))
+  seed_offset = Integer(seed_offset)
+  raise ArgumentError, "grain seed offset must be non-negative" if seed_offset.negative?
+  shared = grain_field(image.width, image.height, radius, sublayers, postpro_seed(11 + seed_offset))
   mix = Math.sqrt(1.0 - GRAIN_CHROMA_CORRELATION**2)
 
   bands = scales.each_with_index.map do |chan_scale, ci|
     own = grain_field(image.width, image.height, radius * GRAIN_CHANNEL_SPATIAL[ci], sublayers,
-                      postpro_seed(100 + ci))
+                      postpro_seed(100 + ci + seed_offset))
     (own * mix + shared * GRAIN_CHROMA_CORRELATION).linear([peak * chan_scale], [0])
   end
 
   safe_cast((linear + Vips::Image.bandjoin(bands) * envelope).colourspace("srgb"))
 rescue StandardError => e
-  $logger.error "grain failed: #{e.message}"
-  image
+  $logger.error "grain failed: #{e.class}: #{e.message}"
+  raise
 end

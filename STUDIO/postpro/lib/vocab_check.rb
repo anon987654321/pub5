@@ -171,25 +171,23 @@ def vocab_check
     problems << "camera-profile correction is absent from rendering paths: #{camera_paths.join(', ')}"
   end
 
-  # apply_finishing_grain now stands down for a chain that grains itself, so the
-  # standing note about every output being grained twice became a thing to check
-  # rather than a thing to report.
-  own = valid_presets.select { |_, p| Array(p[:fx]).include?("grain") }
+  # Every preset receives a separate finishing grain pass. Probe both a preset
+  # whose body already grains and one whose body does not; the final layer must
+  # alter pixels in both cases and must not reuse the inner grain field.
   begin
-    probe = Vips::Image.black(8, 8).bandjoin([Vips::Image.black(8, 8)] * 2).copy(interpretation: :srgb) + 128
-    problems.concat(finishing_grain_probe_problems(own.keys, probe) do |image, name|
-      apply_finishing_grain(image, name)
+    probe = Vips::Image.black(64, 64).bandjoin([Vips::Image.black(64, 64)] * 2)
+                                .copy(interpretation: :srgb) + 128
+    problems.concat(finishing_grain_probe_problems(valid_presets.keys, probe) do |image, name|
+      apply_finishing_grain(image, name, grained: true)
     end)
   rescue StandardError => e
-    problems << "cannot build finishing-grain bypass probe: #{e.class}: #{e.message}"
+    problems << "cannot build mandatory finishing-grain probe: #{e.class}: #{e.message}"
   end
-  notes << "#{own.length} of #{valid_presets.length} valid presets grain in their own chain; " \
-           "the rest take the finishing pass"
+  notes << "Every preset receives an independent final analog-grain layer after its creative chain."
 
-  # One grain pass, at the end. A lane pool that also draws grain made
-  # "grainx2" chains whose passes compounded with the halation drawn before
-  # them — the destroyed rather than emulated complaint this tree had to grow
-  # out of — so the pools are checked the way every other table is.
+  # One grain effect belongs inside each random recipe. The separate finishing
+  # pass is deliberately applied after that recipe by finish_with_grain.
+  # Lane pools may not append a second recipe-level grain by accident.
   grained_lanes = RANDOM_LANES.select { |_, spec| spec.fetch(:effects).include?(RANDOM_ALWAYS) }
   unless grained_lanes.empty?
     problems << "random lanes draw grain from their pools while the always-grain is appended: " \

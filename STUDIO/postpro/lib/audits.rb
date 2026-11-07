@@ -45,18 +45,32 @@ def preset_smoke_problems(names, probe)
   end
 end
 
-# The finishing-grain bypass is a separate runtime proof. Its failure must be
-# recorded as a finding, not allowed to abort the table diagnostics that follow.
+# Prove that the mandatory final grain changes both a plain preset input
+# and a picture that already carries its own grain. Comparing materialised
+# pixels catches a silent bypass and a duplicate call that reuses the same
+# deterministic grain field instead of adding an independent layer.
 def finishing_grain_probe_problems(names, probe)
-  name = Array(names).first
-  return ["no preset grains in its own chain; finishing-grain bypass cannot be verified"] unless name
+  presets = Array(names).filter_map do |name|
+    data = PRESETS[name.to_sym]
+    [name, data] if data
+  end
+  own_name, own_data = presets.find { |_name, data| Array(data[:fx]).include?("grain") }
+  plain_name, = presets.find { |_name, data| !Array(data[:fx]).include?("grain") }
+  return ["no preset without an internal grain; finishing-layer probe cannot be verified"] unless plain_name
+  return ["no preset with an internal grain; additive-layer probe cannot be verified"] unless own_name
 
-  passed_through = yield(probe, name)
-  return [] if passed_through == probe
-
-  ["apply_finishing_grain still runs over a chain that grains itself"]
+  scenarios = [
+    [plain_name, probe],
+    [own_name, grain(probe, preset_effective_iso(own_data), own_data[:stock], 0.4)]
+  ]
+  scenarios.filter_map do |name, before|
+    after = yield(before, name)
+    if after.write_to_memory == before.write_to_memory
+      "finishing grain did not add an independent pixel layer for preset #{name}"
+    end
+  end
 rescue StandardError => e
-  ["finishing-grain bypass probe raises: #{e.class}: #{e.message}"]
+  ["mandatory finishing-grain probe raises: #{e.class}: #{e.message}"]
 end
 
 # A broken H&D table is a finding, not a reason the rest of --vocab-check dies.

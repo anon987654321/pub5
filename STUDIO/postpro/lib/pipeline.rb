@@ -99,9 +99,9 @@ def write_variation(request, index)
 end
 
 # The grade itself, then the finish every variation shares: the tone anchor,
-# the survival check a random take must pass, the last grain, and three bands.
-# Grain lands last, on the exposure the take will be seen at: lifting the shadows
-# after it amplified the grain there, threefold in a dark face.
+# the survival check a random take must pass, its recipe grain, the independent
+# mandatory finishing grain, and three bands. The final pass lands on the
+# exposure the take will be seen at, after all shadow/exposure changes.
 def graded_variation(request)
   return preset_variation(request) if request.preset_name
   return unless request.recipe
@@ -133,9 +133,15 @@ end
 RANDOM_GRAIN_CAP = 0.45
 
 def finish_with_grain(processed, grains)
-  return apply_finishing_grain(processed, nil, grained: false) if grains.empty?
-
-  recipe(processed, grains.map { |fx, params| [fx, capped_grain(params)] })
+  textured = if grains.empty?
+               processed
+             else
+               recipe(processed, grains.map { |fx, params| [fx, capped_grain(params)] })
+             end
+  selected_stock = grains.reverse.filter_map do |_effect, params|
+    params["stock"] if params.is_a?(Hash) && params["stock"]
+  end.first
+  apply_finishing_grain(textured, nil, grained: false, stock: selected_stock)
 end
 
 def capped_grain(params)

@@ -1,21 +1,32 @@
 # frozen_string_literal: true
 
-# Finishing grain uses the preset's own stock and box speed, not a second
-# Portra-400 emulsion on top of Tri-X. Random/unspecified presets fall back
-# to Portra so the four output paths still share one call.
-# The last pass of grain, for the chains that carry none of their own.
+# Every completed photograph receives an independent final emulsion/scan
+# grain layer, even when its creative preset already contains grain. The
+# preset/recipe grain remains inside the look; this separate last pass is the
+# common photographic finish across batch, one-shot, watch, uplift and video.
 #
-# It used to run on every output, which grained 57 of the 61 presets twice and
-# stood as a --vocab-check note for as long as the note has existed. Two passes
-# add in quadrature, so a stock quoted at 6.0 levels of granularity arrived at
-# 8.5 — which cost nothing while the grain was invisible and costs the whole
-# calibration now that it is not.
-def apply_finishing_grain(image, preset_name = nil, grained: nil)
-  data = PRESETS[preset_name.to_s.to_sym] || {}
-  already = grained.nil? ? Array(data[:fx]).include?("grain") : grained
-  return image if already
+# Use the preset's own stock and exposure when available, or the recipe's
+# selected stock when the grade came from a random chain.
+FINISHING_GRAIN_INTENSITY = 0.70
+FINISHING_GRAIN_SEED_OFFSET = 10_000
 
-  grain(image, preset_effective_iso(data), data[:stock] || :kodak_portra, 0.70)
+def apply_finishing_grain(image, preset_name = nil, grained: nil, stock: nil, intensity: FINISHING_GRAIN_INTENSITY)
+  data = PRESETS[preset_name.to_s.to_sym] || {}
+  preset_stock = data[:stock] || :kodak_portra
+  selected_stock = (stock || preset_stock).to_sym
+  raise ArgumentError, "unknown finishing-grain stock: #{selected_stock}" unless STOCKS.key?(selected_stock)
+
+  iso = if data[:iso] && selected_stock == preset_stock
+          data[:iso].to_f
+        elsif selected_stock == preset_stock
+          preset_effective_iso(data)
+        else
+          STOCKS.fetch(selected_stock).fetch(:speed).to_f
+        end
+
+  # The old grained: hint remains accepted for compatibility, but can no
+  # longer bypass the mandatory finishing layer.
+  grain(image, iso, selected_stock, intensity, seed_offset: FINISHING_GRAIN_SEED_OFFSET)
 end
 
 # Box speed, doubled per stop of push. A preset may override with iso:.
