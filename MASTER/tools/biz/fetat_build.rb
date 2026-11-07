@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Build BIZ/fetat/fetat.html from BIZ/fetat/proposal.md.
+# Build BIZ/fetat/fetat.html from MASTER/tools/biz/fetat_proposal.md.
 #
 # The BIZ business-plan setup (Johann, 2026-11-07: "all business plans follow
 # this setup"): a Norwegian proposal.md is the source of truth; this build

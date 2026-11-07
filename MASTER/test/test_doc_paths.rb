@@ -148,10 +148,14 @@ class TestDocPaths < Minitest::Test
     MASTER/docs/history/fix-review-log.md
     MASTER/docs/history/recovery/legacy-apps-handoff.md
     MASTER/docs/mobile.md
-    MASTER/lib/cli/face/contract.md
+    MASTER/docs/analysis/fix_slowness_audit.md
+    MASTER/tools/biz/RESTORATION_REPORT.md
+    MASTER/tools/biz/fetat_proposal.md
+    RAILS/docs/COMPETITOR_BENCHMARK.md
+    RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md
+    STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md
     RAILS/__shared/SOCIAL_FRONT_PAGE.md
     TREE_CONTRACTS.md
-    STUDIO/docs/fetat/proposal.md
     STUDIO/postpro/ARCHAEOLOGY.md
     STUDIO/postpro/LEGACY_RESTORE.md
     MASTER/docs/LOVDATA.md

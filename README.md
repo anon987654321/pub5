@@ -49,5 +49,5 @@ catalogue. A missing or unrun measurement is INCONCLUSIVE, never PASS.
 2026-11-02: it declared itself `not_a_live_config` and every one of its rows
 in `MASTER/data/law_runtime.yml` is marked covered — the constitution lives
 in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
-proposal (a document, not policy) lives at `BIZ/fetat/proposal.md`.
+proposal (a document, not policy) lives at `MASTER/tools/biz/fetat_proposal.md`.
 `redeploy` is the workstation deploy entrypoint.
