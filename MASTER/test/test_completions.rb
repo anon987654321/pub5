@@ -64,7 +64,10 @@ class TestCompletions < Minitest::Test
     source = File.read(File.join(COMPLETIONS, "_master"))
 
     Master::CLI::CommandRegistry::HELP_TOPICS.each do |name, topic|
-      summary = topic.fetch(:summary).gsub("'", "'\\''")
+      # The block form is required: in a gsub replacement string `\'` means the
+      # post-match, so a summary with an apostrophe was compared against itself
+      # doubled and every such line read as drift.
+      summary = topic.fetch(:summary).gsub("'") { "'\\''" }
       assert_includes source, "    '#{name}:#{summary}'", "/#{name} completion drifted from its help summary"
     end
 

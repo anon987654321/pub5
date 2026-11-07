@@ -287,7 +287,7 @@ module Master
                    "MASTER_BARD=0 turns it off for a run."],
         },
         "help" => {
-          summary: "this list",
+          summary: "MASTER commands and syntax",
           detail: ["/help", "/help <command>"],
         },
         "clear" => {
