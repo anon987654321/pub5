@@ -882,6 +882,24 @@ items:
     shared.view keys), which duplicate items with a separate design and are disallowed
     in robots.
   status: done
+- id: amber-109
+  app: amber
+  area: social
+  size: M
+  path: RAILS/__shared/app/views/encounters/waiting.html.erb
+  item: Move the waiting-room view into the shared engine so amber and brgen render
+    one surface, and leave the wait by a collection DELETE to /encounters — the
+    member destroy the resources line draws was never the URL the button posts.
+  status: done
+- id: amber-110
+  app: amber
+  area: privacy
+  size: S
+  path: RAILS/amber/app/controllers/messages_controller.rb
+  item: Resolve the messageable fallback through User.publicly_visible; the accepted
+    connection grants the write, but a user scheduled for deletion is out of
+    publicly_visible and the inbox must not reach them through this fallback.
+  status: done
 - id: brgen-001
   app: brgen
   area: admin
@@ -4204,6 +4222,23 @@ items:
     exists (new has_one_attached :captions on Tv::Video), since no tv video can carry
     subtitles today.
   status: done
+- id: brgen-398
+  app: brgen
+  area: messenger
+  size: S
+  path: RAILS/brgen/app/assets/stylesheets/_brgen_messenger.scss
+  item: 'Ease messenger-reply-target on var(--ease-out) like every other target
+    highlight, and give the reply-mark animation its prefers-reduced-motion
+    guard beside it (animation: none, background-color: var(--hover)).'
+  status: done
+- id: brgen-399
+  app: brgen
+  area: social
+  size: S
+  path: RAILS/brgen/config/routes.rb
+  item: Leave the encounter wait by a collection DELETE to /encounters, mirroring
+    the shared waiting view amber and brgen both render.
+  status: done
 - id: bsdports-001
   app: bsdports
   area: accessibility
@@ -6343,4 +6378,28 @@ items:
   path: RAILS/__shared/app/assets/stylesheets/_tokens.scss
   item: Add a --font-mono token and choose one bundled mono; JetBrains Mono Nerd Font
     and Source Code Pro are both shipped and master repeats its own stack.
+  status: done
+- id: shared-053
+  app: shared
+  area: embeds
+  size: S
+  path: RAILS/__shared/app/assets/stylesheets/_embeds.scss
+  item: State the stage's 16:9 on the cached thumbnail itself (.link-embed-thumbnail),
+    so the box is reserved wherever the reader looks, not only through the stage.
+  status: done
+- id: shared-054
+  app: shared
+  area: interaction
+  size: S
+  path: RAILS/__shared/app/assets/stylesheets/_comment_marks.scss
+  item: Ease comment-target on var(--ease-out); the keyword timing function is the
+    one CINEMA_PALETTE bans on the shared cinematic curve.
+  status: done
+- id: shared-055
+  app: shared
+  area: social
+  size: M
+  path: RAILS/__shared/app/views/encounters/waiting.html.erb
+  item: Carry the shared waiting-room view (moved from amber, brgen's copy
+    deleted) so the chatroulette pairing surface is written once.
   status: done
