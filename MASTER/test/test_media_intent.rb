@@ -188,6 +188,22 @@ class MediaIntentTest < Minitest::Test
     end
   end
 
+  # A moving image is the video lane, not a still and not a tool named `lora`.
+  # The paid request says what it would take on instead of silently writing
+  # nothing or quietly charging for a clip.
+  def test_video_request_routes_to_the_video_lane_and_plans_when_paid_is_off
+    Master::Io::MediaLanes.stub(:paid?, false) do
+      Master::Io::MediaLanes.stub(:generate, ->(*) { flunk "a parked lane must not be asked" }) do
+        result = Master::Io::MediaIntent.dispatch("make a video of a harbour at dusk")
+
+        assert result.ok?, -> { result.message.to_s }
+        assert_equal :planned, result.value![:media]
+        assert_nil result.value![:path]
+        assert_match(/planned, not rendered/, result.value![:rendered])
+      end
+    end
+  end
+
   def test_absolute_image_glob_dispatches_without_truncating_the_path
     Dir.mktmpdir("master-desktop") do |dir|
       2.times { |index| File.write(File.join(dir, "new#{index}.jpg"), "fixture") }

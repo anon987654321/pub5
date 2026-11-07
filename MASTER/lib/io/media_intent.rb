@@ -21,6 +21,10 @@ module Master
       MEDIA_OUTPUT_DIR = File.expand_path("~")
 
       IMAGE_RE = /\b(?:make|create|generate|render|photograph|photo|portrait|image|picture)\b/i.freeze
+      # A moving image is its own lane, with its own price. IMAGE_RE used to
+      # answer "make a video with the lora of me from x.jpg" by looking for a
+      # `lora` tool and a `--video-replicate` flag that no commit ever wrote.
+      VIDEO_RE = /\b(?:make|create|generate|render|produce|animate)\b.*\b(?:video|clip|animation|motion)\b/i.freeze
       AUDIO_RE = /\b(?:make|create|generate|compose|render)\b.*\b(?:beat|loop|instrumental|track|music)\b|\b(?:dilla|j dilla|fly(?:ing)?\s+lotus|madlib|bach|baroque)\b.*\b(?:beat|loop|instrumental|track|music)\b/i.freeze
       KICK_RE = /\b(?:generate|create|make|render)\b.*\b(?:hard\s+hitting\s+)?(?:techno\s+)?kick\b/i.freeze
       REFERENCE_AUDIO_RE = /\b(?:analy[sz]e|analy[sz]ing|study|learn from|break down|separate|split|extract|inspect|understand|teach|model|use as (?:a )?reference|reference(?: (?:track|song|audio))?|listen to|here(?:'s| is)|this is how|use this|inspired by|learn the sound of)\b/i.freeze
@@ -82,6 +86,7 @@ module Master
 
         reference_audio_request?(text) || reference_followup_request?(text) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
           text.match?(BACKGROUND_MUSIC_RE) || text.match?(LIVE_AUDIO_DIAGNOSTIC_RE) || text.match?(AUDIO_RE) || postpro_intent?(text) ||
+          text.match?(VIDEO_RE) ||
           text.match?(IMAGE_RE) && text.match?(/\b(?:photo|portrait|image|picture)\b/i)
       end
 
@@ -105,6 +110,7 @@ module Master
         return play_background_music(text, root:, bus:) if text.match?(BACKGROUND_MUSIC_RE)
         return postprocess(text, root:) if postpro_intent?(text)
         return generate_beat(text, root:) if text.match?(AUDIO_RE)
+        return generate_video(text, root:) if text.match?(VIDEO_RE)
 
         generate_cloud_image(text, root:)
       end
@@ -128,6 +134,30 @@ module Master
 
         path = made.value!.fetch("path")
         Result.ok({ output: path, rendered: path, media: made.value!.fetch("lane"), path: })
+      end
+
+      # A moving image costs far more than a still: models.yml prices these per
+      # second, and a five-second clip is tens of stills. The same policy as a
+      # still applies — MASTER_MEDIA_PAID=0 parks it and the per-kind
+      # budget_usd ceiling caps it — but the plan below is what a person sees
+      # when that ceiling says no, instead of a silent success.
+      def generate_video(prompt, root:)
+        return video_plan(prompt) unless MediaLanes.paid?
+
+        made = MediaLanes.generate(:video, prompt)
+        return made unless made.ok?
+
+        path = made.value!.fetch("path")
+        Result.ok({ output: path, rendered: path, media: made.value!.fetch("lane"), path: })
+      end
+
+      # Saying what a video would take on, and writing nothing, beats a silent
+      # success or a surprise charge.
+      def video_plan(prompt)
+        Result.ok({
+          output: nil, rendered: "video planned, not rendered: #{prompt[0, 120]}",
+          media: :planned, path: nil,
+        })
       end
 
       def postprocess(text, root:)
