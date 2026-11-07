@@ -14,7 +14,11 @@ get "link_previews", to: "link_previews#show", as: :link_preview
 # the SHA-256 of the provider URL the stored record names; a page view loads
 # the provider image from here, never from the provider.
 get "link_embeds/thumbnails/:digest", to: "link_previews#thumbnail",
-    as: :link_embed_thumbnail, constraints: { digest: /\A[0-9a-f]{32}\z/ }
+    as: :link_embed_thumbnail, constraints: { digest: /[0-9a-f]{32}/ }
+# Rails' segment matcher anchors every requirement itself (Rails 8 refuses
+# \A...\z in routing requirements: "Regexp anchor characters are not
+# allowed"), so the 32-hex rule is written unanchored and the matcher adds
+# both ends for us.
 
 # Outbound affiliate/partner clicks. A beacon, not a redirect: this endpoint never
 # receives a URL it will send anyone to, so it cannot become an open redirect, and
