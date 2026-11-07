@@ -529,7 +529,7 @@ These items require a real person, host console, device, registrar, provider cre
 - [ ] **MASTER (17):** `android_consent_ux` (device); `android_termux_install` (device); `selfie_route_live` (provider); `browser_vision_end_to_end` (browser); `face_in_a_real_browser` (browser); `voice_by_ear` (ears); `worktree_delivery_against_github` (credential); `release_acceptance_on_an_idle_host` (idle host); `external_assessment_on_authorised_targets` (credential); `nmap_licence_boundary` (rights); `assessment_business_hypothesis` (material); `remote_branch_aliases` (credential); `assistant_calendar_or_mail_live` (credential); `messaging_channel_choice` (rights); `session_browser_post_policy` (rights); `advice_quality_human_review` (ears); `deepseek_findings_export` (material).
 - [ ] **OPENBSD (15):** `shell_init_credential_rotation` (credential); `unregistered_domains` (registrar); `watched_all_target_deploy` (console); `deploy_failure_trap_window` (console); `second_offhost_backup_and_key_recovery` (console); `dnssec_ds_at_registrars` (registrar); `monitoring_and_crontab_on_vm23` (console); `two_consecutive_deploys` (console); `syspatch_in_a_console_window` (console); `full_check_after_deploy` (console); `privilege_migration_on_vm23` (console); `manual_pages_on_openbsd` (console); `prompt_parity_on_a_live_openbsd_shell` (console); `openbsd_native_suite` (console); `csp_enforced_on_vm23` (console).
 - [ ] **RAILS (16):** `brgen_first_screen_in_chrome` (browser); `tenant_isolation_live` (browser); `messenger_journey_in_a_browser` (browser); `payments_in_provider_staging` (provider); `pwa_on_real_devices` (device); `city_registry_matches_dns_and_tls` (registrar); `journeys_in_all_three_apps` (browser); `amber_dashboard_geometry` (browser); `visual_identity_acceptance` (browser); `radio_whyp_tracks_imported` (console); `paid_plans_live` (credential); `checkout_steps_design` (material); `search_focus_shadow` (rights); `oauth_callbacks_live` (credential); `amber_outfits_on_the_real_catalogue` (material); `bsdports_lifecycle_on_openbsd` (console).
-- [ ] **STUDIO (7):** `lora_source_refresh_and_paid_training` (provider); `private_media_and_history` (rights); `person_renders_and_duet_video` (material); `dilla_by_ear` (ears); `reference_workflow_with_a_real_link` (ears); `lora_route_end_to_end` (provider); `paid_media_cost_proof` (provider).
+- [ ] **STUDIO (7):** `lora_source_refresh_and_paid_training` (provider); `private_media_and_history` (rights); `person_renders_and_duet_video` (material); `dilla_by_ear` (ears); `reference_workflow_with_a_real_link` (ears); `lora_route_end_to_end` (provider); `paid_media_cost_proof` (provider). The named `wenche` subject plan is §8.10, gated on written consent.
 
 ### 8.6 Aspirational horizons — visible, but not active by default
 
@@ -564,6 +564,20 @@ MASTER's `Fix::Wishlist` reads/writes the local runtime ledger `.master/fix_wish
 ### 8.9 Separate proposals that are not repository-wide backlogs
 
 `STUDIO/docs/fetat/proposal.md` is a substantive policy/project proposal, not a software task queue. Keep its research, legal questions and implementation blueprint in that document; only promote a specific, authorised and scoped software task into this register. Do not explode the proposal into speculative checkboxes.
+
+### 8.10 `wenche` subject — gated on written consent
+
+BLOCKED (2026-11-07): the intended source is the ME2 face archive from pub4 commit `8e1955ae` plus photographs at `tommervik.com`. Neither may be downloaded, prepared or trained until the subject's written consent and the photographer's licence exist as local records. Nothing below runs before step 1; the repository rule is that a public URL is not a rights grant, and `STUDIO/replicate/lora/merethe/prepare.rb` refuses a dataset without a valid consent record for exactly this reason.
+
+Ordered, and each step is gated by the one before it:
+
+- [ ] **Consent record.** Create `STUDIO/replicate/lora/wenche/consent.yml` from `STUDIO/photograph/consent.example.yml` with `subject: wenche`, `likeness_generation: true`, `provider_processing: true`, and `source_rights` naming the evidence for each source set. Mode 0600, never tracked. Restore the template first: it exists in `cce5dbc129` but is absent from the current tree.
+- [ ] **Source inventory and rights.** List every intended image with its provenance — ME2 frames and any website photographs separately — and record the photographer's permission or licence for training and provider processing. Exclude frames already judged unsuitable (overlays, obscured or cropped faces, intimate framing); the ME2 curation kept four of fifteen for identity use.
+- [ ] **Dataset adequacy.** Reach the 12–18 image band with rights-cleared, face-led adult photographs before preparing a training ZIP. Four archived portraits are a starting subset, not a dataset.
+- [ ] **Subject scaffold.** Add `wenche/subject.env` (trigger, descriptor, model) and a preparation script following the Merethe pattern: digest-verified recovery, caption set, refusal without a valid consent record, and no provider call.
+- [ ] **Train.** Separate explicit paid-training decision on Replicate via `ostris/flux-dev-lora-trainer`; record job IDs, versions, costs and weights in the private subject directory. This is `lora_source_refresh_and_paid_training` (provider) in §8.5.
+- [ ] **Render, grade, review.** `ruby STUDIO/photograph.rb --selfie-series --subject wenche` for stills through postpro. The subject reviews and accepts the likeness; a completed series is not an approval.
+- [ ] **Promo.** Only after likeness acceptance: assemble the promo with `STUDIO/dilla/dilla.rb` as the music bed and postpro heavy passes for the grade, outside the checkout under the `output_paths.rb` contract. Publish only with a recorded publication decision.
 
 ---
 
