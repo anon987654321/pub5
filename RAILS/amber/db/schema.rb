@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_07_010001) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_07_200000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -565,6 +565,36 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_010001) do
     t.index ["user_id"], name: "index_recommendations_on_user_id"
   end
 
+  create_table "referral_credits", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "referral_splinter_id", null: false
+    t.string "vertical", null: false
+    t.string "entitlement", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["referral_splinter_id"], name: "index_referral_credits_on_referral_splinter_id"
+    t.index ["referral_splinter_id"], name: "index_referral_credits_one_use_per_splinter", unique: true
+    t.index ["user_id", "entitlement", "expires_at"], name: "index_referral_credits_entitlement"
+    t.index ["user_id"], name: "index_referral_credits_on_user_id"
+  end
+
+  create_table "referral_splinters", force: :cascade do |t|
+    t.integer "referrer_id", null: false
+    t.integer "redeemed_by_id"
+    t.string "vertical", null: false
+    t.string "reward_tier", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "redeemed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redeemed_by_id"], name: "index_referral_splinters_on_redeemed_by_id"
+    t.index ["redeemed_by_id"], name: "index_referral_splinters_one_claim_per_user", unique: true, where: "redeemed_by_id IS NOT NULL"
+    t.index ["referrer_id"], name: "index_referral_splinters_on_referrer_id"
+    t.index ["token_digest"], name: "index_referral_splinters_on_token_digest", unique: true
+  end
+
   create_table "review_cases", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "notes"
@@ -634,8 +664,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_010001) do
     t.datetime "updated_at", null: false
     t.index ["bot"], name: "index_users_on_bot"
     t.index ["deletion_scheduled_at"], name: "index_users_on_deletion_scheduled_at"
-    t.index ["email_verification_token"], name: "index_users_on_email_verification_token", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["email_verification_token"], name: "index_users_on_email_verification_token", unique: true
     t.index ["guest", "created_at"], name: "index_users_on_guest_and_created_at"
     t.index ["magic_link_token"], name: "index_users_on_magic_link_token", unique: true
     t.index ["remember_token"], name: "index_users_on_remember_token", unique: true
@@ -715,11 +745,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_010001) do
   add_foreign_key "declutter_reviews", "users"
   add_foreign_key "encounters", "users"
   add_foreign_key "encounters", "users", column: "partner_id"
+  add_foreign_key "external_identities", "identity_providers"
+  add_foreign_key "external_identities", "users"
   add_foreign_key "follows", "users", column: "followee_id"
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "garment_embeddings", "items"
-  add_foreign_key "external_identities", "identity_providers"
-  add_foreign_key "external_identities", "users"
   add_foreign_key "identity_verifications", "users"
   add_foreign_key "items", "users"
   add_foreign_key "live_streams", "users"
@@ -744,6 +774,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_010001) do
   add_foreign_key "recommendations", "items"
   add_foreign_key "recommendations", "outfits"
   add_foreign_key "recommendations", "users"
+  add_foreign_key "referral_credits", "referral_splinters"
+  add_foreign_key "referral_credits", "users"
+  add_foreign_key "referral_splinters", "users", column: "redeemed_by_id"
+  add_foreign_key "referral_splinters", "users", column: "referrer_id"
   add_foreign_key "review_cases", "users", column: "reporter_id"
   add_foreign_key "review_cases", "users", column: "reviewer_id"
   add_foreign_key "sessions", "users"
