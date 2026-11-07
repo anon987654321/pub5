@@ -15,8 +15,10 @@ module Master
     # Core::World#net, so the invoking command's manifest remains the
     # authority for the hosts this run may reach.
     #
-    # Returned pages and repository metadata are untrusted evidence. The
-    # adapters return bounded text/JSON only; they never execute fetched code.
+    # Returned pages and repository metadata are untrusted evidence. CodePen
+    # source panels are inspected, not executed by MASTER. A browser session
+    # runs the site's own JavaScript in Chromium; GET endpoints may still have
+    # side effects, so the browser tool is intentionally non-interactive.
     class Research
       Error = Class.new(StandardError)
 
@@ -70,7 +72,7 @@ module Master
       BROWSER_TOOLS = [
         {
           "name" => "browser.open",
-          "description" => "Open a public HTTPS website in a read-only Ferrum session. The hostname must be explicitly permitted by this command's capability manifest.",
+          "description" => "Open a public HTTPS website in a non-interactive Ferrum session. The page's own JavaScript runs and GET endpoints may have side effects; only same-host GET/HEAD requests are allowed. The hostname must be permitted by this command's capability manifest.",
           "arguments" => { "url" => "public HTTPS URL", "session" => "optional session id, default default" }
         },
         {
