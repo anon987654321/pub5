@@ -55,6 +55,7 @@ SKIP_PATH_RE = %r{
   .*/test/|
   .*/tests/|
   MASTER/data/eval_cases\.yml|
+  MASTER/checks/data/law_fixtures\.yml|
   MASTER/test/)
 }x.freeze
 
