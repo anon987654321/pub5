@@ -111,10 +111,16 @@ module Master
       def run_forever
         loop do
           poll_once
-          sleep(interval_s)
+          sleep(cadence_s)
         end
       rescue Interrupt
         :stopped
+      end
+
+      # A below-floor discharging phone polls five times slower: the gate that
+      # defers commands needs no re-asking every thirty seconds to say so.
+      def cadence_s
+        interval_s * (battery_defers? ? 5 : 1)
       end
 
       private

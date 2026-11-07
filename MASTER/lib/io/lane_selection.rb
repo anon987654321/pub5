@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "socket"
 require_relative "lane_quota"
 require_relative "lane_health"
 require_relative "lane_state"
@@ -85,7 +86,34 @@ module Master
         return false if ENV["MASTER_NO_OLLAMA"] == "1"
         return true if ENV["MASTER_OLLAMA_ENABLED"] == "1"
 
-        cfg.dig("ollama", "enabled") == true
+        cfg.dig("ollama", "enabled") == true || zero_key_probe?(cfg)
+      end
+
+      # Zero-key boot: with no remote key configured anywhere, a reachable
+      # local brain is the quiet default instead of a dead lane. The data file
+      # arms it with `probe: true`; MASTER_NO_OLLAMA=1 refuses it outright and
+      # an explicit `enabled: true` needs no probe. Ranking asks this often,
+      # so the socket verdict is held for a minute rather than per call.
+      def zero_key_probe?(cfg)
+        CONFIG_LOCK.synchronize do
+          held = @zero_key_probe
+          return held[1] if held && Time.now.to_i - held[0] < 60
+
+          verdict = cfg.dig("ollama", "probe") == true &&
+                    !Master.any_api_key_present? && api_listening?(cfg)
+          @zero_key_probe = [Time.now.to_i, verdict]
+          verdict
+        end
+      end
+
+      def api_listening?(cfg)
+        return false unless (base = cfg.dig("ollama", "default_base_url"))
+
+        addr = URI(base)
+        TCPSocket.new(addr.host || "localhost", addr.port || 11434).close
+        true
+      rescue SystemCallError, IOError, SocketError, URI::InvalidURIError
+        false
       end
 
       def order(models, free_last: true, latency: nil, vision: false, manual: LaneQuota.manual_dead, lead: [],

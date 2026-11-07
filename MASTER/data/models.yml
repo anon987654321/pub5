@@ -627,6 +627,9 @@ replicate_chat:
 # max_num_ctx caps the request window (ollama_sender.rb).
 ollama:
   enabled: false
+  # probe: with no remote key configured anywhere, a reachable local daemon
+  # becomes the fallback lane by default; MASTER_NO_OLLAMA=1 refuses it.
+  probe: true
   default_base_url: "http://localhost:11434"
   keep_alive: 30m
   max_num_ctx: 16384

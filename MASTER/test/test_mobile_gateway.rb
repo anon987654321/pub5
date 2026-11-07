@@ -295,6 +295,21 @@ class TestMobileGateway < Minitest::Test
     end
   end
 
+  def test_a_below_floor_battery_polls_five_times_slower
+    Dir.mktmpdir do |dir|
+      @messages = [sms(body: "MASTER: status")]
+      gateway = gateway(root: dir, executor: ->(argv) { "ok" }, sender: ->(*) {},
+                        battery: -> { { "percentage" => 10, "status" => "DISCHARGING", "plugged" => "UNPLUGGED" } })
+
+      assert_equal 150, ready! { gateway.cadence_s }, "30s interval, five-fold on a drained battery"
+
+      recharged = gateway(root: dir, executor: ->(argv) { "ok" }, sender: ->(*) {},
+                          battery: -> { { "percentage" => 80, "status" => "DISCHARGING", "plugged" => "UNPLUGGED" } })
+
+      assert_equal 30, ready! { recharged.cadence_s }, "a charged battery keeps the configured interval"
+    end
+  end
+
   def test_the_scout_is_off_by_default_and_then_warns_only
     Dir.mktmpdir do |dir|
       @messages = [sms(number: "+4798765432", body: "URGENT: your account is locked, click https://bank.no to fix now")]

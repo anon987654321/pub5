@@ -85,6 +85,44 @@ class TestLaneSelection < Minitest::Test
     assert_equal [LOCAL], Selection.order_or_all([LOCAL]), "explicit opt-in retains the configured recovery lane"
   end
 
+  def test_zero_key_probe_serves_a_reachable_local_brain_only_without_keys
+    ENV.delete("MASTER_OLLAMA_ENABLED")
+    cfg = { "ollama" => { "probe" => true, "default_base_url" => "http://localhost:11434" } }
+    probe = Selection.method(:zero_key_probe?)
+    Selection.stub(:api_listening?, true) do
+      Selection.instance_variable_set(:@zero_key_probe, nil)
+      Master.stub(:any_api_key_present?, false) do
+        assert probe.call(cfg), "no key anywhere: the local brain is the default"
+      end
+      Selection.instance_variable_set(:@zero_key_probe, nil)
+      Master.stub(:any_api_key_present?, true) do
+        refute probe.call(cfg), "a configured key leaves the remote lanes standing"
+      end
+    end
+  end
+
+  def test_zero_key_probe_is_refused_by_switch_and_arm_and_unreachable_daemon
+    ENV.delete("MASTER_OLLAMA_ENABLED")
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    refute Selection.ollama_enabled?
+    ENV.delete("MASTER_NO_OLLAMA")
+
+    probe = Selection.method(:zero_key_probe?)
+    Selection.stub(:api_listening?, false) do
+      Selection.instance_variable_set(:@zero_key_probe, nil)
+      Master.stub(:any_api_key_present?, false) do
+        refute probe.call({ "ollama" => { "probe" => true } }), "no daemon, no default"
+      end
+    end
+    Selection.stub(:api_listening?, false) do
+      Selection.instance_variable_set(:@zero_key_probe, nil)
+      Master.stub(:any_api_key_present?, false) do
+        refute probe.call({ "ollama" => { "probe" => true, "default_base_url" => "http://localhost:99999" } }),
+               "an explicit probe arm is still the only arm"
+        refute probe.call({ "ollama" => {} }), "nothing armed, nothing probed"
+      end
+    end
+  end
 
   def test_first_live_of_the_tier_skips_a_quota_dead_lane
     tier = [AGY, OPUS, GROK, NEMOTRON]

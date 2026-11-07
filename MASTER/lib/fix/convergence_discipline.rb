@@ -644,10 +644,6 @@ module Master
         score.is_a?(Numeric) && score.respond_to?(:finite?) && score.finite?
       end
 
-      def score_improved?(current, before)
-        score_value(current) < score_value(before)
-      end
-
       def score_value(score)
         return UNMEASURED_SCORE if score.nil?
         return UNMEASURED_SCORE if score.respond_to?(:finite?) && !score.finite?

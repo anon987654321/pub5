@@ -48,15 +48,6 @@ module Master
         Master::Gap::OPERATOR_DECISION
       end
 
-      # User-facing reason why the repair is blocked.
-      def blocking_reason(rule_id)
-        if fix_blocking_rule?(rule_id)
-          "rendered_value_decision_required - #{rule_id} modifies operator-owned visual or design values"
-        else
-          nil
-        end
-      end
-
       # Prepare a finding for operator review when it's blocked.
       def prepare_operator_review(finding)
         rule_id = finding.respond_to?(:law_id) ? finding.law_id : finding[:law]

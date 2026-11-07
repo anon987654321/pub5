@@ -80,12 +80,6 @@ module Master
 
       def profile(name) = PROFILES.fetch(name.to_sym)
 
-      def apply_profile!(name)
-        selected = profile(name)
-        pledge(selected.promises)
-        selected
-      end
-
       def stage1_boot!(root)
         pledge(STAGE1_PROMISES)
         unveil("/", "")
