@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "tmpdir"
 require_relative "../tools/cli_contracts"
 
 # The route-contract suite's rules, for the CLI: record from a running
@@ -93,6 +94,29 @@ class TestCliContracts < Minitest::Test
 
       assert_equal 2, diffs.size
       assert diffs.first(2).all? { |_path, detail| detail.match?(/LoadError/) }
+    end
+  end
+
+  # The same shape at the port's own layout: pub5 flattens MASTER/bin/* onto
+  # bin/*, so resolving finds the root entrypoint, the diff keeps the recorded
+  # contract as what was wanted, and the detail is labelled with the path the
+  # answer came from - so a tree that flattened its bin answers a diff about
+  # the surface, not a loader error about a path that never existed.
+  # (A spelling-only probe cannot run here: APFS tmpdirs are case-insensitive,
+  # so MASTER/x and master/x match the same file.)
+  def test_check_resolves_the_flattened_entrypoint_and_labels_the_found_path
+    Dir.mktmpdir do |root|
+      require "fileutils"
+      FileUtils.mkdir_p(File.join(root, "bin"))
+      File.write(File.join(root, "bin", "master"), "#!/usr/bin/env ruby\n")
+      with_run("bin/master" => [0, "master - the port's answer", ""]) do
+        diffs = CliContracts.check(root)
+
+        master = diffs.to_h.fetch("MASTER/bin/master")
+        assert master.start_with?("bin/master: "),
+               "detail must name the resolved path (got: #{master[0, 40]})"
+        diffs.to_h.fetch("MASTER/bin/operator")
+      end
     end
   end
 

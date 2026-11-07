@@ -76,12 +76,27 @@ module CliContracts
     fields.map { |key| "#{key}: #{want[key].inspect} -> #{got[key].inspect}" }.join("; ")
   end
 
+  # The entrypoint names are recorded at pub4's spelling; a port tree is the
+  # same shape at its own spelling, so check resolves each name on the target
+  # root - recorded path first, then the lowercase tree and then its root
+  # bin (pub5 flattens MASTER/bin/* onto bin/*) - and names the path the
+  # answer came from. A tree that carries none keeps the recorded name, so
+  # the run still surfaces the loader's refusal, never silence.
+  def resolve(root, path)
+    [path,
+     path.sub(/\AMASTER\//, "master/"),
+     path.sub(/\A(?:MASTER|master)\//, "")]
+      .find { |name| File.file?(File.join(root, name)) } || path
+  end
+
   def check(root)
     recorded = YAML.load_file(DATA).fetch("entrypoints")
     ENTRYPOINTS.filter_map do |path|
-      got = contract(root, path)
+      found = resolve(root, path)
+      got = contract(root, found)
       detail = compare(recorded.fetch(path, {}), got)
-      [path, detail] if detail && got
+      detail = "#{found}: #{detail}" if detail && found != path
+      [path, detail] if detail
     end
   end
 end
