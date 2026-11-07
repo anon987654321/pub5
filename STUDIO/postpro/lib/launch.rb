@@ -108,6 +108,10 @@ def validate_postpro_style_contract
   name = argv_flag("--style-contract")
   return unless name
 
+  unless defined?(Studio::StyleRegistry)
+    $cli_logger.error "style contract refused: the style registry did not survive the port"
+    exit 2
+  end
   entry = Studio::StyleRegistry.resolve(style_id: name, modality: "image")
   $postpro_style_contract = {
     id: entry["style_id"], version: entry["version"], modality: entry["modality"],
