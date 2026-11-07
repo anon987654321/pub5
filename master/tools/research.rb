@@ -247,7 +247,12 @@ module Master
 
           { title:, user:, url: "https://codepen.io/#{user}/pen/#{slug}" }
         end.uniq { |row| row[:url] }.first(limit)
-        { source: "https://codepen.io/trending", results: rows }
+        result = { source: "https://codepen.io/trending", results: rows, status: "ok" }
+        if rows.empty? && html.match?(/doesn't work very well without JavaScript/i)
+          result[:status] = "javascript_required"
+          result[:note] = "CodePen returned its JavaScript shell without the trending feed; no Pens are being reported as an empty feed."
+        end
+        result
       end
 
       def codepen_inspect(url:)
