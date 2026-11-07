@@ -124,7 +124,10 @@ class TestEvidenceTool < Minitest::Test
 
     status, output = run_tool("symlinked-evidence", "--", RbConfig.ruby, "-e", "exit 0")
 
-    assert_equal 70, status.exitstatus, output
+    # A symlinked evidence directory is a usage error, the same class as an
+    # attachment outside the repository — both refuse before any capture and
+    # exit 64, not the software-failure 70 a mid-capture crash earns.
+    assert_equal 64, status.exitstatus, output
     assert_match(/real directory|outside the repository/, output)
     assert_empty Dir.children(outside)
   ensure

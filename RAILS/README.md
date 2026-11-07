@@ -1,6 +1,7 @@
 # Rails apps
 
-**Nine Rails trees, one shared engine, and one process that answers to a hundred
+**Five Rails apps — nine Rails trees once the city's verticals are counted —
+one shared engine, and one process that answers to a hundred
 hostnames, each built so that a stranger on a phone sees a single, quiet product
 and never the machinery beneath it.** brgen is the city network with its five
 verticals as sibling directories, amber is the

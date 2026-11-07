@@ -62,6 +62,8 @@ module Deploy
       "MASTER/checks/PAGE_SIM.md" => "generated report",
       "MASTER/test/test_ai_orientation.rb" => "fixture: a two-app apps.yml and the deploy inventory it generates",
       "MASTER/test/test_relayd.rb" => "fixture: a relayd.conf excerpt for the parser under test",
+      "MASTER/test/test_golden_screenshots.rb" => "fixture: TARGET construction inputs for slug, host-map and contract tests; " \
+                                                  "no fleet agreement is asserted from these literals",
       "OPENBSD/usr/local/bin/emergency_cpu.sh" => "unchecked: root runs it from /usr/local/bin with no checkout " \
                                                   "to read, and it names only master and brgen, the two it restarts",
     }.freeze
