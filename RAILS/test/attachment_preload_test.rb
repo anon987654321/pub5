@@ -45,8 +45,18 @@ class AttachmentPreloadTest < Minitest::Test
   end
 
   def offenders(text)
-    code_only(text).scan(PRELOAD).flatten.flat_map do |args|
-      attachment_names.select { |name| args.match?(/:#{name}\b/) && !args.include?("#{name}_attachment") }
+    code = code_only(text)
+    # A name declared as a real association in this model is that association,
+    # not the attachment of the same name some other model has. includes(:video)
+    # on a belongs_to :video is a preload of a genuine association; only the
+    # bare-attachment spelling is the bug this contract exists for.
+    declared = code.scan(/\b(?:belongs_to|has_one|has_many)\s+:(\w+)/).flatten.uniq
+    code.scan(PRELOAD).flatten.flat_map do |args|
+      attachment_names.select do |name|
+        next false if declared.include?(name)
+
+        args.match?(/:#{name}\b/) && !args.include?("#{name}_attachment")
+      end
     end
   end
 

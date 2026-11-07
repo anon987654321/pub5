@@ -10,8 +10,7 @@ class ToastControllerTest < ActiveSupport::TestCase
   include StimulusNode
 
   # The shared engine sits beside the app as __shared here, shared on the box.
-  SHARED_TOAST = [ Rails.root.join("../__shared/app/views/shared/_toast.html.erb"),
-                   Rails.root.join("../shared/app/views/shared/_toast.html.erb") ].freeze
+  SHARED_TOAST = [ Rails.root.join("../__shared/app/views/shared/_toast.html.erb") ].freeze
 
   SCRIPT = <<~JS
     const delays = []

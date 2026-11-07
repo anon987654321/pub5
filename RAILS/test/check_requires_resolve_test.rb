@@ -138,7 +138,9 @@ class CheckRequiresResolveTest < Minitest::Test
   # is ever wanted — a regex matching a real backslash — it needs a comment here
   # saying so, which is the point: it has to be a decision rather than residue.
   def test_no_check_javascript_carries_heredoc_escaping
-    offenders = Dir.glob(File.join(CHECKS, "**", "*.js")).flat_map do |path|
+    offenders = Dir.glob(File.join(CHECKS, "**", "*.js"))
+                   .reject { |path| path.include?("/vendor/") }
+                   .flat_map do |path|
       File.readlines(path).each_with_index.filter_map do |line, index|
         next unless line.include?('\\\\')
 
