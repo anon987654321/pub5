@@ -18,6 +18,7 @@ routes:
     - dialog
     forms:
     - "/"
+    - "/encounters"
     - "/posts"
     - "/posts/beste-kanelbolle-i-sentrum/repost"
     - "/posts/beste-kanelbolle-i-sentrum/vote"
@@ -93,10 +94,16 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
     - "/account"
+    - "/account/email"
+    - "/account/language"
+    - "/account/notifications"
+    - "/account/password"
+    - "/encounters"
     - "/search"
   "/account/export":
     status: 200
@@ -104,25 +111,28 @@ routes:
   "/activity_events":
     status: 200
     type: text/html
-    title: Aktivitet - Bergen
+    title: Aktivitet — Bergen
     heading: Aktivitet
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/addresses":
     status: 200
     type: text/html
-    title: Leveringsadresser - Bergen
+    title: Leveringsadresser — Bergen
     heading: Leveringsadresser
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -151,12 +161,13 @@ routes:
   "/cart":
     status: 200
     type: text/html
-    title: Handlekurv - Bergen
+    title: Handlekurv — Bergen
     heading: Handlekurv
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -176,22 +187,26 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/channels":
     status: 200
     type: text/html
-    title: Kanaler - Bergen
-    heading: Kanaler - Bergen
+    title: Kanaler — Bergen
+    heading: Kanaler · Bergen
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/channels/new":
     status: 302
@@ -209,16 +224,18 @@ routes:
   "/communities":
     status: 200
     type: text/html
-    title: Fellesskap - Bergen
+    title: Fellesskap — Bergen
     heading: Fellesskap
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
     - "/communities"
+    - "/encounters"
     - "/search"
   "/communities/new":
     status: 302
@@ -229,67 +246,76 @@ routes:
   "/conversations":
     status: 200
     type: text/html
-    title: Meldinger - Bergen
+    title: Meldinger — Bergen
     heading: Meldinger
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/conversations/new":
     status: 200
     type: text/html
-    title: Ny melding - Bergen
+    title: Ny melding — Bergen
     heading: Ny melding
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
     - "/conversations/new"
+    - "/encounters"
     - "/search"
     - "/users/N/conversations"
   "/conversations/search":
     status: 200
     type: text/html
-    title: Søk i meldinger - Bergen
+    title: Søk i meldinger — Bergen
     heading: Søk i meldinger
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
     - "/conversations/search"
+    - "/encounters"
     - "/search"
   "/cookies":
     status: 200
     type: text/html
-    title: Informasjonskapsler - Bergen
+    title: Informasjonskapsler — Bergen
     heading: Informasjonskapsler på brgen.no
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/deals":
     status: 200
     type: text/html
-    title: Tilbud - Bergen
+    title: Tilbud — Bergen
     heading: Tilbud
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -299,12 +325,13 @@ routes:
   "/delivery_drivers":
     status: 200
     type: text/html
-    title: Budsjåfører - Bergen
+    title: Budsjåfører — Bergen
     heading: Budsjåfører
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -313,15 +340,17 @@ routes:
   "/events":
     status: 200
     type: text/html
-    title: Hva skjer - Bergen
+    title: Hva skjer — Bergen
     heading: Hva skjer
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/events"
     - "/search"
   "/events/new":
@@ -333,26 +362,29 @@ routes:
   "/fediverse_follows":
     status: 200
     type: text/html
-    title: Følger andre steder - Bergen
+    title: Følger andre steder — Bergen
     heading: Følger andre steder
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/fediverse_follows"
     - "/search"
   "/feed":
     status: 200
     type: text/html
-    title: Strøm - Bergen
+    title: Strøm — Bergen
     heading: Strøm
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -361,15 +393,17 @@ routes:
   "/groups/new":
     status: 200
     type: text/html
-    title: Ny gruppe - Bergen
+    title: Ny gruppe — Bergen
     heading: Ny gruppe
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/groups"
     - "/search"
   "/health":
@@ -378,12 +412,13 @@ routes:
   "/hosted_tracks":
     status: 200
     type: text/html
-    title: Hostede spor - Bergen
+    title: Hostede spor — Bergen
     heading: Hostede spor
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -401,15 +436,21 @@ routes:
     type: text/html
     landmarks: []
     forms: []
+  "/internal/version":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
   "/likes":
     status: 200
     type: text/html
-    title: Hvem har likt deg - Bergen
+    title: Hvem har likt deg — Bergen
     heading: Hvem har likt deg
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -421,8 +462,8 @@ routes:
   "/listings":
     status: 200
     type: text/html
-    title: Markedsplass - Bergen - Bergen
-    heading: Markedsplass - Bergen
+    title: Markedsplass · Bergen — Bergen
+    heading: Markedsplass · Bergen
     landmarks:
     - header
     - nav
@@ -432,36 +473,34 @@ routes:
     - form
     forms:
     - "/listings"
-    - "/listings/airpods-pro-N-gen-N/favorite"
     - "/listings/barnevogn-god-stand/favorite"
-    - "/listings/bergans-regnjakke-str-l-N/favorite"
-    - "/listings/bortkjoring-av-avfall-N/favorite"
+    - "/listings/batterilader-til-bil-N/favorite"
+    - "/listings/bilstoler-til-barn-N/favorite"
     - "/listings/brukt-sykkel-bergen-sentrum/favorite"
-    - "/listings/fjellstovler-str-N-N/favorite"
-    - "/listings/google-pixel-N-som-ny-N/favorite"
-    - "/listings/hjornesofa-beige-N/favorite"
+    - "/listings/flyttehjelp-med-bil-N/favorite"
+    - "/listings/fotograf-til-portrett-N/favorite"
+    - "/listings/garderobeskap-hvitt-N/favorite"
+    - "/listings/gitartimer-for-nybegynnere-N/favorite"
+    - "/listings/hundepassing-i-helgene-N/favorite"
+    - "/listings/ikea-billy-bokhylle-N/favorite"
     - "/listings/ikea-sofa-hentes-fana/favorite"
+    - "/listings/ipad-air-med-deksel-N/favorite"
     - "/listings/iphone-N-N-gb-N/favorite"
-    - "/listings/iphone-N-N-gb-pent-brukt-N/favorite"
-    - "/listings/kommode-med-fire-skuffer-N/favorite"
+    - "/listings/kontorstol-ergonomisk-N/favorite"
     - "/listings/macbook-air-mN-pent-brukt/favorite"
-    - "/listings/maler-tar-oppdrag-N/favorite"
-    - "/listings/matematikkundervisning-ungdomsskole-N/favorite"
-    - "/listings/moped-N-modell-N/favorite"
-    - "/listings/moped-N-modell/favorite"
-    - "/listings/norskundervisning-privat-N/favorite"
-    - "/listings/skrivebord-med-hev-senk-N/favorite"
+    - "/listings/snokjetting-ubrukt-N/favorite"
+    - "/listings/sofa-N-seter-gra-N/favorite"
     - "/listings/sofabord-i-glass-N/favorite"
-    - "/listings/sonos-one-hvit-N/favorite"
-    - "/listings/steam-deck-N-gb-N/favorite"
     - "/listings/telemarkski-stovler/favorite"
-    - "/listings/vaskehjelp-fast-avtale-N/favorite"
+    - "/listings/turbukse-dame-str-N-N/favorite"
+    - "/listings/ubrukte-joggesko-str-N-N/favorite"
+    - "/listings/vinterstovler-str-N-N/favorite"
     - "/search"
     host: markedsplass.brgen.no
   "/listings/new":
     status: 200
     type: text/html
-    title: Ny annonse - Bergen
+    title: Ny annonse — Bergen
     heading: Ny annonse
     landmarks:
     - header
@@ -477,12 +516,13 @@ routes:
   "/live_streams":
     status: 200
     type: text/html
-    title: Direktesendinger - Bergen
+    title: Direktesendinger — Bergen
     heading: Direktesendinger
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -497,12 +537,13 @@ routes:
   "/matches":
     status: 200
     type: text/html
-    title: Matcher - Bergen
+    title: Matcher — Bergen
     heading: Matcher
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -515,15 +556,17 @@ routes:
   "/nearby":
     status: 200
     type: text/html
-    title: I nærheten - Bergen
+    title: I nærheten — Bergen
     heading: I nærheten
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/nearby/room":
     status: 302
@@ -548,6 +591,7 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -580,19 +624,22 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/orders":
     status: 200
     type: text/html
-    title: Dine bestillinger - Bergen
+    title: Dine bestillinger — Bergen
     heading: Dine bestillinger
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -601,15 +648,17 @@ routes:
   "/partner/programs":
     status: 200
     type: text/html
-    title: Partnerprogrammer - Bergen
+    title: Partnerprogrammer — Bergen
     heading: Partnerprogrammer
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/partner/programs/new":
     status: 302
@@ -626,20 +675,23 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/passwords"
     - "/search"
   "/path_crossings":
     status: 200
     type: text/html
-    title: Krysset spor - Bergen
+    title: Krysset spor — Bergen
     heading: Krysset spor
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -655,12 +707,13 @@ routes:
   "/places":
     status: 200
     type: text/html
-    title: Steder - Bergen
+    title: Steder — Bergen
     heading: Steder
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -670,7 +723,7 @@ routes:
   "/playlists":
     status: 200
     type: text/html
-    title: Spilleliste - Bergen
+    title: Spilleliste — Bergen
     heading: Radio
     landmarks:
     - header
@@ -685,12 +738,13 @@ routes:
   "/playlists/new":
     status: 200
     type: text/html
-    title: Ny spilleliste - Bergen
+    title: Ny spilleliste — Bergen
     heading: Ny spilleliste
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -700,7 +754,7 @@ routes:
   "/posts":
     status: 200
     type: text/html
-    title: Alle innlegg - Bergen
+    title: Alle innlegg — Bergen
     heading: Alle innlegg
     landmarks:
     - header
@@ -710,6 +764,7 @@ routes:
     - footer
     - form
     forms:
+    - "/encounters"
     - "/posts"
     - "/posts/beste-kanelbolle-i-sentrum/repost"
     - "/posts/beste-kanelbolle-i-sentrum/vote"
@@ -721,28 +776,30 @@ routes:
     - "/posts/dag-N-med-regn-teller-noen-fortsatt/vote"
     - "/posts/dating-i-bergen-ghosting-eller-bare-regn/repost"
     - "/posts/dating-i-bergen-ghosting-eller-bare-regn/vote"
-    - "/posts/den-mest-bergen-aktige-lyden-jeg-vet-om/repost"
-    - "/posts/den-mest-bergen-aktige-lyden-jeg-vet-om/vote"
-    - "/posts/festspillene-N-hva-var-hoydepunktet-deres/repost"
-    - "/posts/festspillene-N-hva-var-hoydepunktet-deres/vote"
-    - "/posts/flyttet-til-bergen-forrige-uke-hva-bor-jeg-vite/repost"
-    - "/posts/flyttet-til-bergen-forrige-uke-hva-bor-jeg-vite/vote"
     - "/posts/forste-date-kaffe-fjell-eller-bare-ga/repost"
     - "/posts/forste-date-kaffe-fjell-eller-bare-ga/vote"
     - "/posts/gratis-helgeplan-velg-et-fjell-og-en-helt-tilfeldig-kafe/repost"
     - "/posts/gratis-helgeplan-velg-et-fjell-og-en-helt-tilfeldig-kafe/vote"
+    - "/posts/gratis-kaffe-pa-uteservering-ved-torget-ta-med-egen-kopp/repost"
+    - "/posts/gratis-kaffe-pa-uteservering-ved-torget-ta-med-egen-kopp/vote"
     - "/posts/harmonien-spiller-morgenstemning-perfekt-til-bybanen-i-dag/repost"
     - "/posts/harmonien-spiller-morgenstemning-perfekt-til-bybanen-i-dag/vote"
+    - "/posts/hunden-min-romte-ved-nordnesparken-brun-terrier-svarer-pa-pip/repost"
+    - "/posts/hunden-min-romte-ved-nordnesparken-brun-terrier-svarer-pa-pip/vote"
     - "/posts/hva-skjer-i-bergen-i-helgen/repost"
     - "/posts/hva-skjer-i-bergen-i-helgen/vote"
     - "/posts/hvorfor-oppdager-jeg-nye-smau-hver-gang-jeg-bruker-maps/repost"
     - "/posts/hvorfor-oppdager-jeg-nye-smau-hver-gang-jeg-bruker-maps/vote"
     - "/posts/jeg-fant-en-helt-absurd-sofa-pa-markedsplassen/repost"
     - "/posts/jeg-fant-en-helt-absurd-sofa-pa-markedsplassen/vote"
-    - "/posts/kygo-stars-will-align-rett-fra-soundcloud/repost"
-    - "/posts/kygo-stars-will-align-rett-fra-soundcloud/vote"
+    - "/posts/ledig-sitteplass-pa-bybanen-mot-fyllingsdalen-vogn-N/repost"
+    - "/posts/ledig-sitteplass-pa-bybanen-mot-fyllingsdalen-vogn-N/vote"
     - "/posts/leiepriser-i-bergen-har-de-flatet-ut/repost"
     - "/posts/leiepriser-i-bergen-har-de-flatet-ut/vote"
+    - "/posts/messenger-eller-send-meg-pa-messenger-og-sa-blir-det-borte/repost"
+    - "/posts/messenger-eller-send-meg-pa-messenger-og-sa-blir-det-borte/vote"
+    - "/posts/noen-som-har-sett-royk-over-damsgard-eller-bare-take/repost"
+    - "/posts/noen-som-har-sett-royk-over-damsgard-eller-bare-take/vote"
     - "/posts/pepperkakebyen-tips-for-forste-gang/repost"
     - "/posts/pepperkakebyen-tips-for-forste-gang/vote"
     - "/posts/radio-bergen-playlisten-er-oppe-hvem-lager-neste/repost"
@@ -751,8 +808,6 @@ routes:
     - "/posts/radio-bergen-trenger-en-lat-du-alltid-setter-pa-etter-midnatt/vote"
     - "/posts/regnvaersdag-pa-bryggen/repost"
     - "/posts/regnvaersdag-pa-bryggen/vote"
-    - "/posts/regnvaersmusikk-fra-bergen-kings-of-convenience-pa-repeat/repost"
-    - "/posts/regnvaersmusikk-fra-bergen-kings-of-convenience-pa-repeat/vote"
     - "/posts/rett-opp-og-ned-er-fortsatt-en-bergen-klassiker/repost"
     - "/posts/rett-opp-og-ned-er-fortsatt-en-bergen-klassiker/vote"
     - "/posts/sol-pa-floyen-verdt-hele-turen/repost"
@@ -765,15 +820,17 @@ routes:
   "/posts/new":
     status: 200
     type: text/html
-    title: Nytt innlegg - Bergen
+    title: Nytt innlegg — Bergen
     heading: Nytt innlegg
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/posts"
     - "/search"
   "/posts/since":
@@ -782,15 +839,17 @@ routes:
   "/privacy":
     status: 200
     type: text/html
-    title: Personvern - Bergen
+    title: Personvern — Bergen
     heading: Personvern hos brgen.no
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/profile":
     status: 302
@@ -826,11 +885,12 @@ routes:
   "/restaurants":
     status: 200
     type: text/html
-    title: Restauranter - Bergen
+    title: Restauranter — Bergen
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -855,51 +915,58 @@ routes:
   "/rules":
     status: 200
     type: text/html
-    title: Regler - Bergen
+    title: Regler — Bergen
     heading: Regler
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/safety":
     status: 200
     type: text/html
-    title: Sikkerhet - Bergen
+    title: Sikkerhet — Bergen
     heading: Din sikkerhet
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/saved":
     status: 200
     type: text/html
-    title: Lagret - Bergen
+    title: Lagret — Bergen
     heading: Lagret
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/saved_searches":
     status: 200
     type: text/html
-    title: Lagrede søk - Bergen
+    title: Lagrede søk — Bergen
     heading: Lagrede søk
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -908,15 +975,17 @@ routes:
   "/search":
     status: 200
     type: text/html
-    title: Søk - Bergen
+    title: Søk — Bergen
     heading: Søk i Brgen
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/service-worker":
     status: 200
@@ -933,26 +1002,29 @@ routes:
   "/session/new":
     status: 200
     type: text/html
-    title: Bergen
+    title: Logg inn — Bergen
     heading: Logg inn
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
     - "/session"
   "/sets":
     status: 200
     type: text/html
-    title: Sett - Bergen
+    title: Sett — Bergen
     heading: Sett
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -962,12 +1034,13 @@ routes:
   "/sets/new":
     status: 200
     type: text/html
-    title: Nytt sett - Bergen
+    title: Nytt sett — Bergen
     heading: Nytt sett
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -977,12 +1050,13 @@ routes:
   "/shops":
     status: 200
     type: text/html
-    title: Butikker - Bergen
+    title: Butikker — Bergen
     heading: Butikker
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -1002,12 +1076,13 @@ routes:
   "/sounds":
     status: 200
     type: text/html
-    title: Lyder - Bergen
+    title: Lyder — Bergen
     heading: Lyder
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
@@ -1022,42 +1097,48 @@ routes:
   "/stories":
     status: 200
     type: text/html
-    title: Historier - Bergen
+    title: Historier — Bergen
     heading: Historier
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/stories/new":
     status: 200
     type: text/html
-    title: Ny historie - Bergen
+    title: Ny historie — Bergen
     heading: Ny historie
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
     - "/stories"
   "/terms":
     status: 200
     type: text/html
-    title: Vilkår - Bergen
+    title: Vilkår — Bergen
     heading: Vilkår for brgen.no
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
   "/two_factor_setup":
     status: 200
@@ -1068,9 +1149,11 @@ routes:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
     - "/two_factor_setup"
   "/up":
@@ -1081,17 +1164,22 @@ routes:
   "/users/new":
     status: 200
     type: text/html
-    title: Opprett konto - Bergen
+    title: Opprett konto — Bergen
     heading: Opprett konto
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
+    - "/encounters"
     - "/search"
     - "/users"
+  "/users/username_availability":
+    status: 200
+    type: application/json
   "/verifications":
     status: 403
     type: text/html
@@ -1111,15 +1199,31 @@ routes:
     landmarks: []
     forms: []
     host: markedsplass.brgen.no
+  "/welcome":
+    status: 200
+    type: text/html
+    title: Kom i gang — Bergen
+    heading: Kom i gang
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/encounters"
+    - "/search"
   "/wishlist":
     status: 200
     type: text/html
-    title: Lagrede annonser - Bergen
+    title: Lagrede annonser — Bergen
     heading: Lagrede annonser
     landmarks:
     - header
     - nav
     - main
+    - aside
     - footer
     - form
     forms:
