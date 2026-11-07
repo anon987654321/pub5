@@ -154,16 +154,18 @@ module Master
         end
       end
 
-      strict_fields(data["ollama"], %w[enabled default_base_url keep_alive max_num_ctx local_model_allowlist probe],
+      strict_fields(data["ollama"], %w[enabled default_base_url keep_alive max_num_ctx local_model_allowlist probe
+                                      kv_cache_type warm_probe],
                     "models.yml ollama", errors)
       ollama = data["ollama"].is_a?(Hash) ? data["ollama"] : {}
       errors << "models.yml ollama.enabled must be boolean" unless [true, false].include?(ollama["enabled"])
       errors << "models.yml ollama.probe must be boolean" if ollama.key?("probe") && ![true, false].include?(ollama["probe"])
-      %w[default_base_url keep_alive].each do |field|
+      %w[default_base_url keep_alive kv_cache_type].each do |field|
         errors << "models.yml ollama.#{field} must be non-empty text" unless ollama[field].is_a?(String) && !ollama[field].empty?
       end
       errors << "models.yml ollama.max_num_ctx must be a positive integer" unless ollama["max_num_ctx"].is_a?(Integer) && ollama["max_num_ctx"].positive?
       validate_string_list(ollama["local_model_allowlist"], "models.yml ollama.local_model_allowlist", errors, nonempty: true)
+      validate_ollama_warm_probe(ollama["warm_probe"], errors)
 
       strict_fields(data["free_tier"], %w[neutral_latency_s unmeasured_timeout_s call_timeout_s],
                     "models.yml free_tier", errors)
@@ -269,6 +271,25 @@ module Master
               value.all? { |item| item.is_a?(String) && !item.strip.empty? }
       errors << "#{label} must be a list of non-empty strings" unless valid
       valid
+    end
+
+    # The warm probe is optional, but when declared its four fields are read
+    # straight by LaneHealth.warm_probe, so a wrong type there is a silent
+    # fallback rather than a startup error.
+    def validate_ollama_warm_probe(spec, errors)
+      return if spec.nil?
+
+      label = "models.yml ollama.warm_probe"
+      return unless validate_fields(spec, %w[enabled model interval_s num_predict num_ctx], label, errors)
+
+      errors << "#{label}.enabled must be boolean" unless [true, false].include?(spec["enabled"])
+      errors << "#{label}.model must be non-empty text" unless spec["model"].is_a?(String) && !spec["model"].strip.empty?
+      %w[interval_s num_predict num_ctx].each do |field|
+        next unless spec.key?(field)
+
+        value = spec[field]
+        errors << "#{label}.#{field} must be a positive integer" unless value.is_a?(Integer) && value.positive?
+      end
     end
 
   end
