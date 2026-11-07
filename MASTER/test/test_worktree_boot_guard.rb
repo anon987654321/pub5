@@ -12,7 +12,13 @@ class TestWorktreeBootGuard < Minitest::Test
   OPERATOR = File.expand_path("../bin/operator", __dir__)
 
   def git(dir, *args)
-    out, status = Open3.capture2e("git", "-C", dir, *args)
+    # A bare scratch origin is refused when the caller's environment pins
+    # safe.bareRepository to "explicit", which some harnesses do. The repository
+    # here is one this test just created, so that guard protects nothing and
+    # only makes the probe fail.
+    out, status = Open3.capture2e({ "GIT_CONFIG_COUNT" => nil, "GIT_CONFIG_KEY_0" => nil,
+                                    "GIT_CONFIG_VALUE_0" => nil, "GIT_CONFIG_KEY_1" => nil },
+                                  "git", "-C", dir, *args)
     raise "git #{args.join(" ")}: #{out}" unless status.success?
 
     out
@@ -69,9 +75,13 @@ class TestWorktreeBootGuard < Minitest::Test
     land = File.read(OPERATOR)[/^when "land"$.*?^when "visual"$/m]
     refute_nil land
 
+    # The branch is named by a variable, not the literal "main": land pushes the
+    # branch it is on, which is main in the shared checkout and the topic branch
+    # when working on one. Matching HEAD:main asserted a target the source never
+    # had, so this test could not pass.
     rebase = land.index('"rebase", "-q", "origin/main"')
     smoke = land.index("boot_smoke.rb")
-    push = land.index('"push", "origin", "HEAD:main"')
+    push = land.index('"push", "origin", "HEAD:#{current_branch}"')
     assert rebase && smoke && push && rebase < smoke && smoke < push
     assert_match(/does not boot after the rebase; nothing pushed/, land)
   end
