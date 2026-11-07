@@ -60,7 +60,9 @@ class ResearchTest < Minitest::Test
       w = world(root, { net: ["api.github.com"] })
       research = Master::Tools::Research.new(world: w)
 
-      assert_equal ["github.repositories"], research.available_tools.map { |tool| tool.fetch("name") }
+      expected = ["github.repositories"]
+      expected.concat(Master::Tools::Research::BROWSER_TOOLS.map { |tool| tool.fetch("name") }) if Master::Tools::BrowserAgent.available?
+      assert_equal expected, research.available_tools.map { |tool| tool.fetch("name") }
     end
   end
 
