@@ -120,6 +120,32 @@ class ResearchTest < Minitest::Test
     end
   end
 
+  def test_browser_screenshot_payload_reads_only_its_owned_png_path
+    sandbox do |root|
+      w = world(root, { read: ["log/master/*"], write: ["log/master/*"] })
+      research = Master::Tools::Research.new(world: w)
+      png = "\x89PNG\r\n\x1a\n".b + "fixture"
+      w.write("log/master/browser-default.png", png, mode: 0o600)
+
+      image = research.image_payload(JSON.generate("screenshot_file" => "log/master/browser-default.png"))
+
+      assert_equal "image/png", image.fetch(:media_type)
+      assert_equal png, Base64.strict_decode64(image.fetch(:data))
+      assert_nil research.image_payload(JSON.generate("screenshot_file" => "log/master/../../secrets.png"))
+    end
+  end
+
+  def test_bounded_browser_result_keeps_the_screenshot_path_before_page_source
+    sandbox do |root|
+      w = world(root, {})
+      research = Master::Tools::Research.new(world: w)
+      result = research.send(:bound_output, "screenshot_file" => "log/master/browser-default.png",
+                                           "source" => "x" * Master::Tools::Research::MAX_OUTPUT_BYTES)
+
+      assert_equal "log/master/browser-default.png", JSON.parse(result).fetch("screenshot_file")
+    end
+  end
+
   def test_unknown_tools_are_not_dispatched
     build do |research, _transport|
       result = research.call(name: "arbitrary.shell", arguments: {})
