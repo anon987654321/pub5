@@ -8,7 +8,9 @@ const DB_VERSION = 1
 const STORE = "mutations"
 const EVENT = "pub5:pwa-queue"
 const MAX_QUEUE_SIZE = 100
-const LEGACY_STORAGE_KEY = "pub5:offline-sync-queue"
+// Written by pub4-era pages; browsers that still hold it hold this exact
+// name, so it is history and never follows a repository rename.
+const LEGACY_STORAGE_KEY = "pub4:offline-sync-queue"
 
 const canUseIndexedDB = () => typeof indexedDB !== "undefined"
 

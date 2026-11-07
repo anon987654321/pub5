@@ -163,12 +163,12 @@ test("a server error stops the replay and keeps the write", async () => {
 test("install folds the retired localStorage queue in and words the status only from the form", async () => {
   reset()
   const legacy = [ { url: "/dating/passes", method: "POST", body: { user_id: "9" } } ]
-  storage.set("pub5:offline-sync-queue", JSON.stringify(legacy))
+  storage.set("pub4:offline-sync-queue", JSON.stringify(legacy))
 
   runtime.installOfflineQueue()
   await new Promise((resolve) => setTimeout(resolve, 20))
 
-  assert.equal(storage.has("pub5:offline-sync-queue"), false)
+  assert.equal(storage.has("pub4:offline-sync-queue"), false)
   assert.equal(requests.at(-1).url, "https://brgen.no/dating/passes")
 
   globalThis.navigator.onLine = false
