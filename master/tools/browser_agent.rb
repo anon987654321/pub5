@@ -247,10 +247,10 @@ module Master
         data["url"] = redact_url(data["url"])
         data["source_length"] = data["source_length"].to_i
         data["source_truncated"] = data["source_length"] > MAX_SOURCE_BYTES
-        data["source"] = data["source"].to_s.byteslice(0, MAX_SOURCE_BYTES).to_s
+        data["source"] = utf8_prefix(data["source"], MAX_SOURCE_BYTES)
         data["visible_text_length"] = data["visible_text_length"].to_i
         data["visible_text_truncated"] = data["visible_text_length"] > MAX_TEXT_BYTES
-        data["visible_text"] = data["visible_text"].to_s.byteslice(0, MAX_TEXT_BYTES).to_s
+        data["visible_text"] = utf8_prefix(data["visible_text"], MAX_TEXT_BYTES)
         data["links_truncated"] = Array(data["links"]).size > MAX_LINKS
         data["links"] = Array(data["links"]).first(MAX_LINKS).map do |link|
           link.merge("href" => redact_url(link["href"]))
@@ -258,6 +258,10 @@ module Master
         data["screenshot_file"] = screenshot_path
         data["vision_note"] = "Screenshot saved locally for a vision-capable model hand-off when one is available."
         data
+      end
+
+      def utf8_prefix(value, bytes)
+        value.to_s.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8).scrub
       end
 
       def redact_url(value)
