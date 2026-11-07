@@ -82,11 +82,15 @@ class TestStudioSelfieSeries < Minitest::Test
     result = @series.write
 
     assert_equal "complete", result.fetch("status")
+    assert_equal "pending_operator_review", result.fetch("curation_status")
     assert_equal 3, result.fetch("models").length
     assert_equal [10, 10, 10], result.fetch("models").map { |model| model.fetch("renders") }
     assert_equal 30, FakePicture.calls.length
     prompts = FakePicture.calls.map { |call| call[3] }
     assert_equal 10, prompts.uniq.length
+    manifest = JSON.parse(File.read(result.fetch("manifest")))
+    assert_equal "pending_operator_review", manifest.fetch("curation_status")
+    assert manifest.fetch("models").all? { |model| model.fetch("renders").all? { |render| render.fetch("review_status") == "pending" } }
     assert FakePicture.calls.all? { |call| call[4] == false }
     assert_equal 3, FakePicture.calls.map { |call| call[0] }.uniq.length
     assert_equal (0...10).map { |index| Studio::Visual::SelfieSeries::SEED_BASE + index },

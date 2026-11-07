@@ -3,6 +3,7 @@
 require "digest"
 require "fileutils"
 require "json"
+require "pathname"
 require "time"
 require "tempfile"
 require "yaml"
@@ -100,6 +101,7 @@ module Studio
           "created_at" => @clock.call.utc.iso8601,
           "status" => "running",
           "requested_per_model" => SHOTS_PER_MODEL,
+          "curation_status" => "pending_operator_review",
           "shot_ids" => SHOTS.map { |shot| shot.fetch(:id) },
           "models" => models.map do |model|
             {
@@ -108,6 +110,7 @@ module Studio
               "model_version" => model.fetch(:version),
               "directory" => File.join(model.fetch(:subject), model.fetch(:slug)),
               "status" => "pending",
+              "curation_status" => "pending_operator_review",
               "renders" => [],
               "failures" => []
             }
@@ -119,6 +122,7 @@ module Studio
         models.each_with_index do |model, model_index|
           model_record = series.fetch("models").fetch(model_index)
           model_directory = File.join(run_directory, model.fetch(:subject), model.fetch(:slug))
+          ensure_private_directory!(File.dirname(model_directory))
           ensure_private_directory!(model_directory)
           picture = @picture_class.new(
             client: client,
@@ -134,6 +138,7 @@ module Studio
               render = verify_render!(result, model_directory)
               model_record.fetch("renders") << {
                 "shot_id" => shot.fetch(:id),
+                "review_status" => "pending",
                 "seed" => seed,
                 "prompt" => shot.fetch(:prompt),
                 "source" => relative_to(run_directory, render.fetch(:source)),
@@ -183,6 +188,7 @@ module Studio
           "status" => series.fetch("status"),
           "run_id" => run_id,
           "manifest" => manifest_path,
+          "curation_status" => series.fetch("curation_status"),
           "models" => series.fetch("models").map do |row|
             {
               "subject" => row.fetch("subject"),
@@ -423,14 +429,54 @@ module Studio
         return false unless stat.directory? && !stat.symlink? && stat.uid == Process.uid
         return false unless (stat.mode & 0o077).zero?
 
-        marker = File.join(path, ".studio-selfie-series.json")
+        root = File.realpath(path)
+        marker = File.join(root, ".studio-selfie-series.json")
         marker_stat = File.lstat(marker)
         return false unless marker_stat.file? && !marker_stat.symlink? && marker_stat.uid == Process.uid
         return false unless (marker_stat.mode & 0o077).zero? && marker_stat.size <= 1_048_576
 
         record = JSON.parse(File.read(marker, encoding: "UTF-8"))
-        record["schema"] == SERIES_SCHEMA
-      rescue JSON::ParserError, SystemCallError
+        return false unless record["schema"] == SERIES_SCHEMA
+        return false unless record["models"].is_a?(Array) && record["requested_per_model"] == SHOTS_PER_MODEL
+
+        expected = [marker]
+        record.fetch("models").each do |model|
+          return false unless model.is_a?(Hash) && model["renders"].is_a?(Array)
+          model.fetch("renders").each do |render|
+            return false unless render.is_a?(Hash)
+            {
+              "source" => "source_sha256",
+              "image" => "image_sha256",
+              "sidecar" => "sidecar_sha256"
+            }.each do |relative_key, digest_key|
+              relative = render.fetch(relative_key).to_s
+              return false if relative.empty? || Pathname.new(relative).absolute?
+              candidate = File.expand_path(relative, root)
+              return false unless candidate.start_with?("#{root}#{File::SEPARATOR}")
+              return false unless valid_private_render_file?(candidate)
+              return false unless (File.stat(candidate).mode & 0o077).zero?
+              expected_digest = render.fetch(digest_key).to_s
+              return false unless expected_digest.match?(SHA256)
+              return false unless Digest::SHA256.file(candidate).hexdigest == expected_digest
+              expected << candidate
+            end
+          end
+        end
+
+        actual_files = Dir.glob(File.join(root, "**", "*"), File::FNM_DOTMATCH).reject do |candidate|
+          %w[. ..].include?(File.basename(candidate))
+        end
+        actual_files.each do |candidate|
+          child_stat = File.lstat(candidate)
+          return false if child_stat.symlink?
+          if child_stat.directory?
+            return false unless child_stat.uid == Process.uid && (child_stat.mode & 0o077).zero?
+          else
+            return false unless child_stat.file? && expected.include?(candidate)
+          end
+        end
+        (expected - actual_files).empty?
+      rescue JSON::ParserError, KeyError, SystemCallError, ArgumentError
         false
       end
 
@@ -453,10 +499,7 @@ module Studio
           next unless Digest::SHA256.file(input_path).hexdigest == sidecar["input_sha256"]
           next unless Digest::SHA256.file(output_path).hexdigest == sidecar["output_sha256"]
 
-          family = [input_path, output_path, sidecar_path]
-          video = File.join(@output_directory, "#{File.basename(input_path, ".jpg")}.mp4")
-          family << video if valid_private_render_file?(video)
-          family
+          [input_path, output_path, sidecar_path]
         rescue JSON::ParserError, SystemCallError
           nil
         end

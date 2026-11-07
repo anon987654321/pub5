@@ -33,7 +33,7 @@ but the implementation is owned here.
 `Rakefile` is the tree's check surface: `rake check` loads every entrypoint
 and proves the contracts answer, `rake test` runs `test/` (Dilla, IdeaPicture, reference portrait and selfie-series
 suites), and `rake` runs both. The suite runs without network access and
-without the Replicate API; reference tests use a stub client.
+without the Replicate API; reference and selfie-series tests use stub clients.
 
 ## LoRA selfie refresh
 
@@ -50,7 +50,9 @@ Outputs are grouped under `~/ideas/selfie-series-<run-id>/<subject>/<model>/`.
 Each final image keeps its Postpro sidecar and source hash; the private series
 manifest records all ten prompts, seeds, model versions and image digests.
 Every image passes through Postpro and its mandatory independent final analog
-grain layer.
+grain layer. Generation completion is not acceptance: every render is marked
+`pending` and the series `pending_operator_review` until a person curates the
+contact sheet and records the accepted candidates.
 
 Before generation, the command archives prior managed series and legacy
 timestamp-named render families only when the Postpro sidecar, source hash and
