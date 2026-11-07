@@ -2,7 +2,8 @@
 # frozen_string_literal: true
 
 # Golden screenshots: what each recorded route answers a real browser, locked
-# as an approved PNG per route, host and width. pub5 Phase 0, third row.
+# as an approved PNG per route, host and width. This is the rendered half of
+# the migration acceptance gate in the root TODO.
 #
 #   ruby MASTER/tools/rails/golden_screenshots.rb record brgen [--widths 390,768,1280]
 #   ruby MASTER/tools/rails/golden_screenshots.rb check  brgen

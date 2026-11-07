@@ -3,8 +3,8 @@
 # Route contracts: what each GET route answers an anonymous visitor, recorded
 # from a running app and checked against any other running copy of it.
 #
-# This is the first piece of the pub5 acceptance harness (TODO.md, "pub5 —
-# Phase 0"): a port is done for an app when its contracts pass against the
+# This is the first piece of the pub5 migration acceptance harness (TODO.md,
+# current-revision acceptance): a port is done for an app when its contracts pass against the
 # ported app. It records only what should survive a rewrite — status,
 # redirect target, media type, title, first heading, landmark elements and
 # form actions — and normalises numeric ids so seeded data does not churn it.
@@ -15,7 +15,8 @@
 # record-signed|check-signed run the same recording through a seeded demo
 # user's session (--user email:password): sign in once per host, carry the
 # session cookie, and lock what the auth-persona pages answer a signed-in
-# visitor. pub5 Phase 0, second row. A member whose record carries an
+# visitor. Authenticated route evidence is part of the same acceptance gate.
+# A member whose record carries an
 # otp_secret is challenged at sign-in (Shared::TwoFactorGate); naming the
 # member's base-32 secret as a third field (email:password:otpsecret) lets the
 # session complete that challenge, so the walk sees the post-challenge pages.

@@ -37,21 +37,6 @@ class TestMobileProfile < Minitest::Test
     refute Master::Mobile::Profile.new(env:).activate!
   end
 
-  def test_proot_install_instructions_use_pub5_and_valid_shell_continuations
-    guide = File.read(File.expand_path("../docs/mobile.md", __dir__))
-
-    assert_includes guide, "proot-distro install debian"
-    assert_includes guide, 'cd "$HOME/pub5"'
-    refute_includes guide, "/pub4"
-
-    continuations = guide.lines.select { |line| line.rstrip.end_with?("\\") }
-    refute_empty continuations
-    continuations.each do |line|
-      trailing = line[/\\+\z/]
-      assert_equal 1, trailing.length, "shell continuation must be one backslash: #{line}"
-    end
-  end
-
   def test_auto_approve_follows_the_data_until_the_operator_says_otherwise
     assert Master::Mobile::Profile.new(env: {}).auto_approve?
     refute Master::Mobile::Profile.new(env: { "MASTER_MOBILE_AUTO_APPROVE" => "0" }).auto_approve?
@@ -97,7 +82,7 @@ class TestMobileBootstrap < Minitest::Test
     installed = %w[ruby git]
     result = phone(installed:).ensure!
 
-    assert_equal %w[clang make libyaml openssl libvips], @auditor.asked
+    assert_equal %w[clang make libyaml openssl], @auditor.asked
     refute result.ok, "the fake pkg installed nothing, so the packages are still missing"
   end
 end

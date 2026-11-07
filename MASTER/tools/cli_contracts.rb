@@ -2,7 +2,7 @@
 
 # CLI contracts: what each MASTER entrypoint answers to --help, recorded so a
 # port can be checked against them. Third piece of the pub5 acceptance harness
-# (TODO.md, "pub5 - Phase 0"): pub5's core keeps the same command surface, and
+# (TODO.md, current-revision acceptance): pub5's core keeps the same command surface, and
 # its help must not silently rename a verb the operator learned.
 #
 #   ruby MASTER/tools/cli_contracts.rb record
@@ -18,6 +18,7 @@ require "yaml"
 
 module CliContracts
   ROOT = File.expand_path("../..", __dir__)
+  REPOSITORY_NAME = "pub5".freeze
   DATA = File.join(ROOT, "MASTER", "checks", "data", "cli_contracts.yml")
   ENTRYPOINTS = %w[MASTER/bin/master MASTER/bin/operator].freeze
   TIMEOUT = 30
@@ -65,7 +66,7 @@ module CliContracts
 
   def record
     contracts = ENTRYPOINTS.to_h { |path| [path, contract(ROOT, path)] }
-    File.write(DATA, YAML.dump({ "schema" => 1, "root" => "pub4", "entrypoints" => contracts }))
+    File.write(DATA, YAML.dump({ "schema" => 1, "root" => REPOSITORY_NAME, "entrypoints" => contracts }))
     contracts
   end
 
