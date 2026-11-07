@@ -210,7 +210,7 @@ module Studio
       # Authenticate with a read-only API request before touching old renders.
       # A token's presence proves neither validity nor access; a rejected token
       # must not leave the previous render set retired with no replacement.
-      def ensure_provider_credential!
+      def ensure_provider_access!
         if @client.nil? && Studio::ReplicateClient.load_token.to_s.strip.empty?
           raise ArgumentError,
                 "missing REPLICATE_API_TOKEN; set it or configure ~/.config/replicate/config.json before retiring old renders or generating selfies"
@@ -387,11 +387,16 @@ module Studio
             raise ArgumentError, "archive destination exists: #{destination}" if File.exist?(destination)
             File.rename(path, destination)
             moved << [path, destination]
+            Dir.glob(File.join(destination, "**", "*"), File::FNM_DOTMATCH).each do |child|
+              next if %w[. ..].include?(File.basename(child)) || File.directory?(child)
+              File.chmod(0o600, child)
+            end
           end
           legacy_files.each do |path|
             destination = File.join(archive_run, File.basename(path))
             raise ArgumentError, "archive destination exists: #{destination}" if File.exist?(destination)
             File.rename(path, destination)
+            File.chmod(0o600, destination)
             moved << [path, destination]
           end
           write_private_json(

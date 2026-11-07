@@ -73,9 +73,10 @@ declared field must have an effect-reader contract. For each declared reader, th
 proves that the corresponding `case fx` arm passes that value into the matching effect call.
 Merely mentioning `p[:temp]` in a comment, string, disconnected expression, or neighboring
 effect arm does not satisfy the contract. It also follows executable call paths from every
-rendering entry point to `apply_finishing_grain`, then runs a tiny in-memory 8×8 probe through
-representative colour, monochrome and print presets to catch failures that table inspection
-cannot see. A problem produces a non-zero result.
+rendering entry point to `apply_finishing_grain`, then runs a dedicated 64×64 final-grain
+probe with one preset that already has internal grain and one that does not. Both must gain a
+separately seeded finishing layer. The independent 8×8 preset smoke probes still test
+representative colour, monochrome and print chains. A problem produces a non-zero result.
 
 These guards exist because table-driven failures rarely raise by themselves: an effect with no
 implementation once returned the input unchanged while the log reported the step as done, and a

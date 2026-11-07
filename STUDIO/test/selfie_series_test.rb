@@ -82,16 +82,19 @@ class TestStudioSelfieSeries < Minitest::Test
     result = @series.write
 
     assert_equal "complete", result.fetch("status")
+    assert_equal "pending_operator_review", result.fetch("review_status")
     assert_equal "pending_operator_review", result.fetch("curation_status")
     assert_equal 3, result.fetch("models").length
     assert_equal [10, 10, 10], result.fetch("models").map { |model| model.fetch("renders") }
     assert_equal 30, FakePicture.calls.length
+
     manifest = JSON.parse(File.read(result.fetch("manifest")))
+    assert_equal "pending_operator_review", manifest.fetch("review_status")
     assert_equal "pending_operator_review", manifest.fetch("curation_status")
     assert manifest.fetch("models").all? do |model|
-      model.fetch("curation_status") == "pending_operator_review" &&
-        model.fetch("renders").all? { |render| render.fetch("review_status") == "pending_operator_review" }
+      model.fetch("renders").all? { |render| render.fetch("review_status") == "pending_operator_review" }
     end
+
     prompts = FakePicture.calls.map { |call| call[3] }
     assert_equal 10, prompts.uniq.length
     assert FakePicture.calls.all? { |call| call[4] == false }
