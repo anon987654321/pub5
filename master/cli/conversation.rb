@@ -98,7 +98,17 @@ module Cli
                    @research.call(name: call.fetch("name"), arguments: call.fetch("arguments"))
                  end
         prompt = @research.result_prompt(name: call.fetch("name"), result:)
-        reply = @dispatch.ask(prompt, system:, messages: history)
+        image = @research.image_payload(result) if @research.respond_to?(:image_payload)
+        reply = if image && @dispatch.respond_to?(:ask_with_image)
+                  begin
+                    @dispatch.ask_with_image(prompt, image:, system:, messages: history)
+                  rescue Models::Dispatch::Exhausted
+                    plain = "#{prompt}\n\nThe screenshot stayed local: no reachable image-capable HTTP model could receive it."
+                    @dispatch.ask(plain, system:, messages: history)
+                  end
+                else
+                  @dispatch.ask(prompt, system:, messages: history)
+                end
         history = [*history, { role: "user", content: prompt }, { role: "assistant", content: reply.text }]
         calls += 1
       end
