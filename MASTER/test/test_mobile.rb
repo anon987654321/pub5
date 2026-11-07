@@ -31,7 +31,7 @@ class TestMobileProfile < Minitest::Test
   end
 
   def test_every_profile_key_is_one_the_code_reads
-    assert_equal %w[ambient bridge env face packages profile schema], Master::Mobile.config.keys.sort
+    assert_equal %w[ambient bridge env face gateway packages profile schema], Master::Mobile.config.keys.sort
   end
 end
 

@@ -21,6 +21,9 @@ module Master
       torch: "termux-torch",
       tts: "termux-tts-speak",
       media_player: "termux-media-player",
+      toast: "termux-toast",
+      vibrate: "termux-vibrate",
+      notification: "termux-notification",
     }.freeze
 
     COMMAND_TIMEOUT = 3
@@ -88,6 +91,27 @@ module Master
         Ground::LawHandshake::Admission.require!
         require_android_command!("termux-torch")
         run!("termux-torch", enabled ? "on" : "off")
+      end
+
+      def toast(text, color: nil, background: nil)
+        Ground::LawHandshake::Admission.require!
+        require_android_command!(API_COMMANDS.fetch(:toast))
+        args = [API_COMMANDS.fetch(:toast)]
+        args.concat(["-c", color.to_s]) if color
+        args.concat(["-b", background.to_s]) if background
+        run!(*args, text.to_s)
+      end
+
+      def vibrate(duration_ms = 200)
+        Ground::LawHandshake::Admission.require!
+        require_android_command!(API_COMMANDS.fetch(:vibrate))
+        run!(API_COMMANDS.fetch(:vibrate), "-d", Integer(duration_ms).to_s)
+      end
+
+      def notification(title:, content:)
+        Ground::LawHandshake::Admission.require!
+        require_android_command!(API_COMMANDS.fetch(:notification))
+        run!(API_COMMANDS.fetch(:notification), "--title", title.to_s, "--content", content.to_s)
       end
 
       def location(provider: nil, request: "once")

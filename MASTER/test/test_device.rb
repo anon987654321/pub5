@@ -74,6 +74,12 @@ class TestDevice < Minitest::Test
     assert_equal "termux-media-player", Device::API_COMMANDS.fetch(:media_player)
   end
 
+  def test_phone_notifications_are_part_of_capability_discovery
+    assert_equal "termux-toast", Device::API_COMMANDS.fetch(:toast)
+    assert_equal "termux-vibrate", Device::API_COMMANDS.fetch(:vibrate)
+    assert_equal "termux-notification", Device::API_COMMANDS.fetch(:notification)
+  end
+
   def test_android_commands_use_the_bounded_exec_primitive
     stub_const = RbConfig::CONFIG["host_os"]
     RbConfig::CONFIG["host_os"] = "linux-android"

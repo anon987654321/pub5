@@ -7,6 +7,8 @@
 #   bin/master-mobile doctor    what the phone has and lacks, as JSON; exit 0 only when ready
 #   bin/master-mobile bridge    the face at http://127.0.0.1:8765/face, on Falcon
 #   bin/master-mobile host      the face socket alone, for a companion app
+#   bin/master-mobile sms       the SMS operator gateway; prints what it is missing when it may not run
+#   bin/master-mobile notify    one on-screen toast, then exit
 #   bin/master-mobile <args>    bin/master in the mobile profile
 
 root = File.expand_path("..", __dir__)
@@ -32,6 +34,29 @@ when "host"
   warn "mobile0: face socket #{host.face.socket_path}, session #{host.session.id}"
   %w[INT TERM].each { |signal| trap(signal) { host.stop!; exit } }
   host.serve_loop
+when "sms"
+  require "mobile/gateway"
+  gateway = Master::Mobile::Gateway.new(root: root)
+  if (reason = gateway.disabled_reason)
+    warn "mobile0: sms gateway not started - #{reason}"
+    exit 1
+  end
+  warn "mobile0: sms gateway polling every #{gateway.interval_s}s; only #{gateway.prefix} commands, only allowed numbers"
+  %w[INT TERM].each { |signal| trap(signal) { exit } }
+  gateway.run_forever
+when "notify"
+  require "device"
+  text = ARGV[1].to_s.strip
+  if text.empty?
+    warn "mobile0: notify needs text; bin/master-mobile notify \"scanning done\""
+    exit 1
+  end
+  begin
+    Master::Device.toast(text)
+  rescue Master::Device::Error => e
+    warn "mobile0: #{e.message}"
+    exit 1
+  end
 else
   exec(File.join(root, "bin", "master"), *ARGV)
 end

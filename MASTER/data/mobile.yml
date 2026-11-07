@@ -45,3 +45,17 @@ ambient:
   stt: termux-speech-to-text
   stt_timeout_s: 30
   tts: termux-tts-speak
+
+# The SMS operator gateway is a second command surface on the phone, so it is
+# off until the person starts it and grants it. bin/master-mobile sms polls
+# termux-sms-list, answers only MASTER: commands from a number in
+# allowed_numbers, and never runs anything outside the closed command map in
+# Master::Mobile::Gateway. Command text never reaches a shell.
+gateway:
+  enabled: false
+  prefix: "MASTER:"
+  interval_s: 30
+  poll_limit: 5
+  max_reply_chars: 320
+  battery_floor_percent: 15
+  allowed_numbers: []

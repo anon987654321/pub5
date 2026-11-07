@@ -280,7 +280,11 @@ spine:
   # CodeMetrics.body_lines_in("lib") measured that day, so the next line of growth fails again and
   # every fall ratchets it down. The overage is debt paid per namespace against
   # limits.yml#loc_body_budgets (re-baselined the same day), not absorbed here.
-  lib_body_ceiling: 98323
+  lib_body_ceiling: 98506
+  # 98323 -> 98506: the lib/mobile/gateway.rb raise (162 body lines) plus the
+  # toast/vibrate/notification adapter rows and methods in lib/device.rb (21).
+  # The ~10.3k overage the tree carried after the 2026-10-28 re-baseline is
+  # debt this raise does not absorb; it stays red against this ceiling.
   # Raw-line anchors from before the 2026-08-10 code-line unit change, kept only
   # so the old numbers stay legible. Not comparable to lib_body_ceiling.
   lib_raw_at_switch: 47753
@@ -290,7 +294,10 @@ spine:
   # Raises standing since the last fall. lint:spine refuses another once this
   # reaches consecutive_raises_allowed; a genuine fall clears it. The 2026-10-28
   # re-baseline cleared it too: it reset the instrument rather than raising past it.
-  raised: []
+  raised:
+    - sms operator gateway raise 2026-11-07 - lib/mobile/gateway.rb (162 body
+      lines) plus the toast/vibrate/notification adapter rows in lib/device.rb
+      (21); one new lib file, phone deltas folded where homes existed.
   consecutive_raises_allowed: 2
   # The direct-child invariant remains the seven-file concept budget. A second
   # recursive tripwire closes the loophole where complexity could hide below
@@ -659,7 +666,12 @@ pub5_source_ceilings:
   # the Bplans contract plus the Air Superiority and Social Browser plugin READMEs.
   # These are deliberate contract surfaces, not absorbed growth.
   # 718 -> 719: ratchet_sponsor.rb is the one new governed MASTER source file in this series.
-  MASTER: 719
+  # 719 -> 720: lib/mobile/gateway.rb, the SMS operator gateway behind the mobile
+  # profile's three doors (profile switch, permission ledger, exact-number
+  # allowlist). The mobile deltas that already had homes took them: the
+  # toast/vibrate/notification commands live in lib/device.rb, the profile keys
+  # in data/mobile.yml, the entrypoint in bin/master-mobile.
+  MASTER: 720
 
   # 2359 -> 2360 for MASTER/checks/face_capture_probe.rb, which gets the
   # MASTER face past its primer check so it can be recorded. A probe, not a check:
