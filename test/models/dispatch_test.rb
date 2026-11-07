@@ -74,6 +74,36 @@ class DispatchTest < Minitest::Test
     end
   end
 
+  def test_browser_pngs_are_sent_to_an_image_capable_http_lane
+    sandbox do |root|
+      transport = Transport.new
+      d = dispatch(root, env: { "ANTHROPIC_API_KEY" => "key" }, transport:)
+      png = "\\x89PNG\\r\\n\\x1a\\n".b + "fixture"
+      image = { media_type: "image/png", data: Base64.strict_encode64(png) }
+
+      reply = d.ask_with_image("Inspect this browser page.", image:, system: "Use the screenshot.")
+
+      request = transport.asked.first.last
+      blocks = request.fetch(:messages).last.fetch(:content)
+      assert_equal "hei fra api", reply.text
+      assert_equal "claude-sonnet-5-5", reply.model
+      assert_equal "Inspect this browser page.", blocks.first.fetch(:text)
+      assert_equal "image", blocks.last.fetch(:type)
+      assert_equal Base64.strict_encode64(png), blocks.last.dig(:source, :data)
+      assert_equal "image/png", blocks.last.dig(:source, :media_type)
+    end
+  end
+
+  def test_browser_images_reject_non_png_payloads
+    sandbox do |root|
+      d = dispatch(root, env: { "ANTHROPIC_API_KEY" => "key" })
+
+      assert_raises(ArgumentError) do
+        d.ask_with_image("Inspect this.", image: { media_type: "image/png", data: Base64.strict_encode64("not a PNG") })
+      end
+    end
+  end
+
   def test_the_subscription_limit_is_a_quota_not_a_reply
     sandbox do |root|
       limit = RESULT.merge("result" => "You've hit your session limit - resets 4:30pm")
