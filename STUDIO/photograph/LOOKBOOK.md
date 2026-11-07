@@ -18,7 +18,7 @@ For faces, protect natural skin texture and keep a real tonal reference somewher
 
 A color grade is not a stack of LUTs. Record or receive the source color space, transform it into a known working space, make the creative grade, then apply the correct display/output transform. ARRI's LogC documentation explains that log encodings are scene-based and must be transformed for Rec.709, Rec.2020 or P3 display. The Academy Color Encoding System is a device-independent interchange and color-management system spanning capture, editorial, VFX, mastering and archive.
 
-Use a managed ACES or OCIO pipeline when working with scene-linear or log material. Keep input transforms, creative looks and output transforms separate. Protect hue and saturation in skin; shape contrast with a controlled toe and shoulder; do not clip individual RGB channels just to make a look punchier. For generated JPEG/WebP outputs, treat the files as display-referred unless their metadata proves otherwise. Do not apply a LogC, S-Log or ACES camera-input transform to an ordinary finished JPEG.
+Use a managed ACES or OCIO pipeline when working with scene-linear or log material. Keep input transforms, creative looks and output transforms separate. Adobe's After Effects 26.5 documentation describes ACES 2.0 support through OCIO; verify the exact application and version rather than assuming every grading tool supports the same configuration. Protect hue and saturation in skin; shape contrast with a controlled toe and shoulder; do not clip individual RGB channels just to make a look punchier. For generated JPEG/WebP outputs, treat the files as display-referred unless their metadata proves otherwise. Do not apply a LogC, S-Log or ACES camera-input transform to an ordinary finished JPEG.
 
 ## Film is a photochemical response, not an overlay
 
@@ -38,13 +38,13 @@ Do not transfer motion-picture stock names onto every still-photo look. Still-ph
 - **Tri-X 400** is a classic panchromatic black-and-white reference with visible grain structure, sharpness and exposure latitude. Kodak lists pushability up to EI 1600. Pushing is a development decision that changes contrast and grain; it is not just a post-production noise slider.
 - **VISION3 50D / 250D / 500T** are motion-picture negative stocks, not C-41 still-photo films. Their emulsion response and ECN-2 workflow should not be confused with a Portra or Ektar scan.
 
-For a real analogue capture, record the film stock, format, camera/lens, exposure index, filter, developer/process, lab and scanner profile. A scan is part of the final look: inversion, orange-mask handling, white balance, contrast and scanner light source can materially change the rendering. When generating digitally, ask for the stock's broad tonal/color behaviour and scan character; do not add fake sprocket holes, dust, scratches or random light leaks unless they are a deliberate brief.
+For a real analogue capture, record the film stock, format, camera/lens, exposure index, filter, developer/process, lab and scanner profile. A scan is part of the final look: inversion, orange-mask handling, white balance, contrast and scanner light source can materially change the rendering. Color-negative still film is commonly processed as C-41; motion-picture negative stocks such as VISION3 use ECN-2. Do not treat those workflows as interchangeable. Kodak's account of cinematographer Matthew Libatique's work on *Maestro* is a useful practical reminder: he found Double-X needed more light than he expected from digital work, and adjusted by using larger tungsten fixtures through diffusion. When generating digitally, ask for the stock's broad tonal/color behaviour and scan character; do not add fake sprocket holes, dust, scratches or random light leaks unless they are a deliberate brief.
 
 ## Diffusion and lens character
 
 Tiffen's filter guide distinguishes black halation, white halation, resolution diffusion and contrast reduction. Black Pro-Mist introduces highlight halation while retaining more shadow contrast than conventional Pro-Mist; Black Diffusion/FX softens fine detail while controlling highlight spread. Treat filtration as a measured lens choice: a light touch can reduce brittle digital crispness while keeping eyes sharp. Heavy diffusion quickly becomes a style effect and can erase real skin detail.
 
-Flare needs a source and a lens angle. Anamorphic streaks, veiling flare, chromatic aberration, vignetting and edge softness are optical behaviours, not decorative stickers. Add them only when the camera, lens and light source justify them.
+ARRI Textures are a useful digital-cinema analogy for film-stock selection: ARRI describes them as controls over grain character and contrast at different detail scales, not simply a layer of noise. Judge subtle texture at final delivery size and on a calibrated display. Flare needs a source and a lens angle. Anamorphic streaks, veiling flare, chromatic aberration, vignetting and edge softness are optical behaviours, not decorative stickers. Add them only when the camera, lens and light source justify them.
 
 ## VFX and compositing
 
@@ -71,15 +71,16 @@ For still portrait generation, the safest VFX choice is often no visible VFX. Us
 
 ## Sources
 
-- American Society of Cinematographers, [Lighting a Set with Stephen H. Burum, ASC](https://theasc.com/articles/lighting-a-set/), 1 October 2019.
-- American Society of Cinematographers, [Understanding Lens Distortion](https://theasc.com/articles/understanding-lens-distortion/).
+- American Society of Cinematographers, [Lighting a Set with Stephen H. Burum, ASC](https://theasc.com/article/lighting-a-set/), 1 October 2019.
+- American Society of Cinematographers, [Understanding Lens Distortion](https://theasc.com/article/understanding-lens-distortion/).
 - SMPTE, [ACES Standards](https://www.smpte.org/standards/aces-standards).
-- ARRI, [Log C](https://www.arri.com/en/learn/camera-systems/image-science/log-c) and [REVEAL Color Science](https://www.arri.com/en/learn/camera-systems/image-science/reveal-color-science).
+- ARRI, [Log C](https://www.arri.com/en/learn/camera-systems/image-science/log-c), [REVEAL Color Science](https://www.arri.com/en/learn/camera-systems/image-science/reveal-color-science), and [ALEXA 35 / ARRI Textures](https://www.arri.com/en/camera-systems/cameras/alexa-35).
 - Adobe, [OpenColorIO and ACES color management](https://helpx.adobe.com/after-effects/desktop/adjust-colors/opencolorio-and-aces-color-management/opencolorio-aces-color-management.html), updated 18 September 2026.
 - Eastman Kodak, [VISION3 250D technical information, March 2026](https://www.kodak.com/content/products-brochures/motion-picture/KODAK-VISION3-250D-5207-7207-technical-information.pdf), [VISION3 50D](https://www.kodak.com/en/motion/product/camera-films/50d-5203-7203/features/), and [VISION3 500T](https://www.kodak.com/en/motion/product/camera-films/500t-5219-7219).
 - Kodak Alaris, [Portra 400](https://www.kodakprofessional.com/photographers/film/color/kodak-professional-portra-400-film/516), [Ektar 100](https://www.kodakprofessional.com/photographers/film/color/kodak-professional-ektar-100-film/530), and [Tri-X 400](https://www.kodakprofessional.com/photographers/film/black-white/kodak-professional-tri-x-films/515).
 - Kodak, [Eastman Double-X 5222/7222](https://www.kodak.com/en/motion/product/camera-films/eastman-double-x-black-white-5222-7222/).
 - The Tiffen Company, [Diffusion Guide](https://tiffen.com/pages/diffusion-guide).
 - Academy Software Foundation, [OpenEXR technical introduction](https://openexr.com/en/latest/TechnicalIntroduction.html).
+- Kodak, [Matthew Libatique, ASC, on Double-X and tungsten lighting for *Maestro*](https://www.kodak.com/en/motion/blog-post/maestro/).
 
 Research checked 7 November 2026. Manufacturer descriptions explain technical behaviour and intended applications; they are not universal aesthetic rules. The look profiles are creative starting points and require human review.
