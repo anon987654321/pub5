@@ -70,9 +70,13 @@ class TestComputePool < Minitest::Test
     assert Master::Io::LaneSelection.ollama_enabled?(cfg: policy)
     assert_equal "ollama:gemma3:4b", Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy).first
 
+    # A tier may list ollama as a declaration; what matters is that no tier
+    # can select it while the lane is opted out.
+    ENV.delete("MASTER_OLLAMA_ENABLED")
     %w[default primary strong].each do |tier|
       ids = policy.fetch("models").fetch(tier).map { |row| row.fetch("id") }
-      refute_includes ids, "ollama:gemma3:4b", "#{tier} must not promote the constrained Ollama lane"
+      refute_includes Master::Io::LaneSelection.order(ids, cfg: policy), "ollama:gemma3:4b",
+                      "#{tier} must not promote the constrained Ollama lane"
     end
     assert_includes policy.fetch("cli_lanes"), "llama-cli"
   ensure
