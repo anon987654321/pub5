@@ -90,8 +90,6 @@ module Studio
     def prepare!
       secure_directory(SOURCE_ROOT)
       validate_consent!
-      FileUtils.rm_f(ZIP_PATH)
-      FileUtils.rm_rf(DATASET_ROOT) if inside_subject?(DATASET_ROOT)
       secure_directory(CACHE_ROOT)
 
       missing = CURATED_CAPTIONS.keys.reject { |name| verified_original?(name) }
@@ -138,6 +136,10 @@ module Studio
         return report
       end
 
+      # Do not disturb an existing dataset or archive until the new set has
+      # passed every source, caption, count and consent check.
+      FileUtils.rm_f(ZIP_PATH)
+      FileUtils.rm_rf(DATASET_ROOT) if inside_subject?(DATASET_ROOT)
       build_dataset(additional)
       zip_dataset!
       report["dataset_zip"] = ZIP_PATH
@@ -309,7 +311,8 @@ if $PROGRAM_NAME == __FILE__
 
     if arguments.delete("--recover")
       result = Studio::MeretheLora.recover!
-      warn JSON.pretty_generate(result)
+      puts JSON.pretty_generate(result)
+      exit 0
     end
 
     report = Studio::MeretheLora.prepare!
