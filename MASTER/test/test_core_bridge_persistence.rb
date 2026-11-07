@@ -16,6 +16,10 @@ class CoreBridgePersistenceTest < Minitest::Test
       File.write(File.join(root, "source.rb"), "SOURCE = 0\n")
       first_memory = Master::Core::Memory.new
       first_memory.proof.mark_ideation_complete!(approaches: Master::Core::Proof::ALTERNATIVES_REQUIRED)
+      first_memory.record(
+        Master::Core::Effect.read("source.rb"),
+        Master::Core::Observation.new(ok: true, detail: "SOURCE = 0"),
+      )
       first = ScriptedModel.new(Master::Core::Effect.write("source.rb", "SOURCE = 1\n"))
       result = Master::CLI::CoreBridge.run("please fix all", root:, model: first, memory: first_memory, max_turns: 1)
 
