@@ -99,6 +99,27 @@ class ResearchTest < Minitest::Test
     end
   end
 
+  def test_arxiv_abstract_search_does_not_require_ar5iv_permission
+    sandbox do |root|
+      transport = Transport.new
+      w = world(root, { net: ["export.arxiv.org"] }, transport:)
+      research = Master::Tools::Research.new(world: w)
+
+      assert_includes research.available_tools.map { |tool| tool.fetch("name") }, "arxiv.papers"
+
+      abstract = JSON.parse(research.call(name: "arxiv.papers",
+                                          arguments: { "query" => "robotics exoskeleton", "limit" => 2 }))
+      assert_equal "Useful Research", abstract.dig("results", 0, "title")
+
+      full_text = JSON.parse(research.call(name: "arxiv.papers",
+                                           arguments: { "query" => "robotics exoskeleton",
+                                                        "full_text" => true, "limit" => 2 }))
+      assert_match(/Full text unavailable/, full_text.fetch("full_text"))
+      assert_equal 2, transport.requests.size
+      assert transport.requests.all? { |_method, url, _headers| url.include?("export.arxiv.org") }
+    end
+  end
+
   def test_unknown_tools_are_not_dispatched
     build do |research, _transport|
       result = research.call(name: "arbitrary.shell", arguments: {})
