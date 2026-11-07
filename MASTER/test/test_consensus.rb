@@ -30,8 +30,11 @@ class TestConsensus < Minitest::Test
 
     refute_empty models
     assert_operator models.size, :<=, 3
-    assert(models.all? { |id| id.start_with?("ollama:") || id.start_with?("local:") })
-    refute(models.any? { |id| id.end_with?(":cloud") || id.end_with?("-cloud") })
+    # `llama-cli:` is a local lane too (lib/io/lane_selection.rb:59). A prefix
+    # allow-list here drifted out of sync with the lane classifier and failed on
+    # a correctly local pool, so assert the property the mode actually promises.
+    assert(models.all? { |id| Master::Io::LaneSelection.kind(id) == :local })
+    refute(models.any? { |id| id.end_with?(":cloud", "-cloud") })
   ensure
     ENV["MASTER_LOCAL_ONLY"] = previous
   end

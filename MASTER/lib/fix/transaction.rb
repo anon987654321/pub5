@@ -553,6 +553,16 @@ module Master
                 "transaction paths outside task-contract scope: #{uncovered.first(5).join(", ")}"
         end
 
+        # "New tracked path" is a repository concept. `outer_root` is the
+        # transaction's own scope, which is a scratch directory whenever the root
+        # lies outside the repo; passing that as the repo root made every path in
+        # such a transaction look like an undeclared addition. Only judge paths
+        # that can actually be tracked.
+        repository = File.expand_path(
+          defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../", __dir__)
+        )
+        return unless inside?(File.expand_path(@root), repository)
+
         unapproved = Array(paths).filter_map do |path|
           full = File.expand_path(path, @root)
           TaskContract.new_path_refusal(full, contract:, repo_root:)
