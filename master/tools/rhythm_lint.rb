@@ -26,7 +26,7 @@ module Operator
       unless rules
         Master::Trace::Dmesg.status(
           "rhythm0",
-          "cannot load MASTER/data/tokens.yml - constitutional measurement unavailable",
+          "cannot load master/data/tokens.yml - constitutional measurement unavailable",
           io: $stderr,
         )
         return false
@@ -60,12 +60,16 @@ module Operator
 
     def load_design_rules = Operator::MasterDesign.blocks
 
-    # The directory holding shared: RAILS/ in a checkout, /home/<app>/ in the
+    # The directory holding shared: rails/ in a checkout, /home/<app>/ in the
     # copy-tree deploy, where the app and its copy of shared are siblings too.
     def stylesheet_root = File.expand_path("../../rails", __dir__)
 
     def scss_paths
-      Dir.glob(File.join(stylesheet_root, "*", "{app,engines/*/app}", "assets", "stylesheets", "**", "*.{scss,css}")).sort
+      (
+        Dir.glob(File.join(stylesheet_root, "*/app/assets/stylesheets/**/*.{scss,css}")) +
+        Dir.glob(File.join(stylesheet_root, "brgen_*/**/app/assets/stylesheets/**/*.{scss,css}")) +
+        Dir.glob(File.join(stylesheet_root, "shared/app/assets/stylesheets/**/*.{scss,css}"))
+      ).uniq.sort
     end
 
     def to_px(value, unit)

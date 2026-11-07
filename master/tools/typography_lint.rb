@@ -51,7 +51,7 @@ module Operator
     end
 
     def stylesheets
-      SOURCES.flat_map { |dir| Dir.glob(File.join(@root, "rails", dir, "**", "*.{css,scss}")) }.uniq.sort
+      SOURCES.flat_map { |dir| Dir.glob(File.join(@root, dir, "**", "*.{css,scss}")) }.uniq.sort
     end
 
     def findings

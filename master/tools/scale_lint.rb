@@ -141,7 +141,7 @@ module Operator
     def app_stylesheets
       @app_stylesheets ||= (
         Dir.glob(File.join(RAILS_ROOT, "*/app/assets/stylesheets/**/*.{scss,css}")) +
-        Dir.glob(File.join(RAILS_ROOT, "*/engines/*/app/assets/stylesheets/**/*.{scss,css}")) +
+        Dir.glob(File.join(RAILS_ROOT, "brgen_*/**/app/assets/stylesheets/**/*.{scss,css}")) +
         Dir.glob(File.join(RAILS_ROOT, "shared/app/assets/stylesheets/**/*.{scss,css}"))
       ).uniq.sort.reject { |path| rel(path).match?(SKIP) }
     end
