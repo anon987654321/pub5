@@ -521,6 +521,32 @@ class TestLaneSelection < Minitest::Test
 
   # The pass-0 child's bus events never reach the parent's pulse, so the free
   # floor counts its own dead outcomes with the dispatcher's funnel feeding it.
+  # The keyless gateways' slugs are the free floor the walk rides; the
+  # kilo:openrouter/free pool walked 66 dead attempts without ever counting
+  # as a free-class death because kind() called it remote.
+  def test_the_verified_keyless_gateway_slugs_are_free_class
+    config = Selection.config
+    %w[kilo:openrouter/free kilo:reflection/beam-free].each do |id|
+      assert_equal :free, Selection.kind(id, cfg: config),
+                   "#{id} answers without a key and is the floor"
+    end
+    assert_equal :free, Selection.kind("ovh:gpt-oss-120b", cfg: config),
+                 "the allow-listed keyless OVH slug is free-class keylessly"
+    refute_equal :free, Selection.kind("kilo:dots-studio/paid-slug", cfg: config),
+                 "a slug the gateway does not offer keylessly is not free-class"
+  end
+
+  # With the provider's own key set, the same gateway answers its paid slugs;
+  # the keyless classification holds only for keyless use.
+  def test_a_set_provider_key_moves_the_gateway_off_the_free_class
+    config = Selection.config
+    ENV["KILO_API_KEY"] = "operator-set-operator-key-with-at-least-20-chars"
+    assert_equal :remote, Selection.kind("kilo:openrouter/free", cfg: config),
+                 "with the gateway's key, the slug may be a paid route"
+  ensure
+    ENV.delete("KILO_API_KEY")
+  end
+
   def test_three_dead_free_class_outcomes_suspend_the_floor_from_inside_the_process
     notices = []
     Selection.define_singleton_method(:announce_free_floor_suspension) do

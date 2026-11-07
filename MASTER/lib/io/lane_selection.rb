@@ -51,14 +51,43 @@ module Master
         id.split(/[:-]/).first.to_s
       end
 
-      def kind(model)
+      def kind(model, cfg: config)
         id = model.to_s
         return :paid_tail if Io::PaidTail.member?(id)
         return :free if id.end_with?(":free", ":cloud", "-cloud") ||
                         id.start_with?("llm7:", "web-chat:")
         return :local if id.start_with?("ollama:", "ollama/", "local:", "llama-cli:")
+        return :free if keyless_slug?(id, cfg)
 
         :remote
+      end
+
+      # A keyless tier's slugs answer without a key, verified live against the
+      # gateways (kilo verified 2026-11-06). kilo:openrouter/free and
+      # kilo:reflection/beam-free are the free floor exactly the way a
+      # ":free" suffix slug is — and the walk that spent 66 dead attempts on
+      # them never counted their deaths because kind() called them remote.
+      # With the provider's key set the same gateway answers paid slugs, so
+      # the classification holds only for keyless use: the name of the key
+      # decides which lane class we are actually riding.
+      def keyless_slug?(id, cfg)
+        lane = cfg.dig("openai_compatible", provider(id))
+        return false unless lane.is_a?(Hash) && lane["keyless"].is_a?(Hash)
+
+        envs = Array(lane["key_env"])
+        envs.each { |env| return false if Master.api_key_present?(env) }
+        allow = lane["keyless"]["allow"]
+        slug = id.split(":", 2)[1].to_s
+        return true if allow && !allow.empty? && Array(allow).include?(slug)
+
+        # The gateway lists each slug with its own isFree flag; models.yml can
+        # only blanket-vouch that the family exists, so the slug itself must
+        # read as free-pool: the suffix the gateway prints on its no-cost
+        # routes. A paid partner slug on the same lane must stay :remote,
+        # else every paid death there counts as a floor death.
+        return false unless lane["keyless"]["isFree"] == true
+
+        slug.end_with?(":free", "/free", "-free")
       end
 
       # Live models, remote before local before free, each group in the order given.
