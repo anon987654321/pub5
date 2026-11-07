@@ -41,6 +41,17 @@ module Master
       MAX_COMMAND_CHARS = 200
       SEEN_KEEP = 200
 
+      # Warn-only scam triage. Heuristics stay local, on this phone, in one
+      # place: the person is warned, and the person decides. The scout never
+      # deletes, never answers, and never sends a body anywhere.
+      SCAM_PATTERNS = [
+        /\b(urgent|immediately|asap|final (warning|notice))\b/i,
+        /\b(otp|verification code|account (is )?(locked|suspended|blocked))\b/i,
+        /\b(click|tap)\b|\bhttps?:\/\/\S+/i,
+        /\b(fee|fine|customs|refund|prize|invoice|payment|vipps|gevinn)\b/i,
+        /\b(posten|toll|bank|police|dhl|bring|post office)\b/i,
+      ].freeze
+
       Battery = Data.define(:percent, :charging) do
         def blocks?(floor)
           charging == false && percent.is_a?(Integer) && percent < floor
@@ -48,7 +59,7 @@ module Master
       end
 
       def initialize(root: Master::ROOT, config: Mobile.config, permissions: nil,
-                     poll: nil, sender: nil, executor: nil, battery: nil)
+                     poll: nil, sender: nil, executor: nil, battery: nil, notifier: nil)
         @root = File.expand_path(root)
         @config = config.is_a?(Hash) ? config.fetch("gateway", {}) : {}
         @permissions = permissions || Master::Ground::PersonalPermissions.new(root: @root)
@@ -56,6 +67,7 @@ module Master
         @sender = sender
         @executor = executor
         @battery = battery
+        @notifier = notifier
       end
 
       def interval_s = Integer(@config["interval_s"] || 30)
@@ -86,6 +98,9 @@ module Master
           next nil if handled.include?(key)
 
           result = handle(message)
+          unless result
+            result = triage(message) if scout_enabled?
+          end
           handled << key if result
           result
         end
@@ -145,6 +160,34 @@ module Master
       def allowed?(number, text)
         Array(@config["allowed_numbers"]).map { |entry| entry.to_s.strip }.include?(number) &&
           text.start_with?(prefix)
+      end
+
+      def scout_enabled? = @config.dig("scout", "enabled") == true
+
+      # One verdict per message, warn only. A prefix-less body from outside the
+      # allowlist scores against the local scam heuristics; enough hits raise
+      # one notification naming the sender, and the message is never touched
+      # beyond that. The notification carries the number, never the body.
+      def triage(message)
+        number = message["number"].to_s.strip
+        text = message["body"].to_s.strip
+        return nil if text.empty?
+        return nil if text.start_with?(prefix)
+        return nil unless number.match?(/\A\+\d{5,20}\z/)
+
+        hits = SCAM_PATTERNS.count { |pattern| pattern.match?(text) }
+        return nil if hits < Integer(@config.dig("scout", "threshold") || 2)
+
+        notify!("possible scam SMS from #{number} (#{hits}/#{SCAM_PATTERNS.size} patterns)")
+        "scout: #{hits} scam patterns flagged for #{number}"
+      end
+
+      def notify!(message)
+        (@notifier || default_notifier).call(message)
+      end
+
+      def default_notifier
+        ->(message) { Master::Device.notification(title: "MASTER scout", content: message) }
       end
 
       def run(command)

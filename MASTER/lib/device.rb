@@ -114,6 +114,18 @@ module Master
         run!(API_COMMANDS.fetch(:notification), "--title", title.to_s, "--content", content.to_s)
       end
 
+      # The phone's speaker is the voice MASTER answers through on a phone; the
+      # desktop voice stack never runs there.
+      def speak(text, lang: nil, pitch: nil, rate: nil)
+        Ground::LawHandshake::Admission.require!
+        require_android_command!(API_COMMANDS.fetch(:tts))
+        args = [API_COMMANDS.fetch(:tts)]
+        args.concat(["-l", lang.to_s]) if lang
+        args.concat(["-p", pitch.to_s]) if pitch
+        args.concat(["-r", rate.to_s]) if rate
+        run!(*args, text.to_s)
+      end
+
       def location(provider: nil, request: "once")
         args = ["termux-location"]
         args.concat(["-p", provider.to_s]) if provider

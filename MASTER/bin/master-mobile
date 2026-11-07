@@ -9,6 +9,7 @@
 #   bin/master-mobile host      the face socket alone, for a companion app
 #   bin/master-mobile sms       the SMS operator gateway; prints what it is missing when it may not run
 #   bin/master-mobile notify    one on-screen toast, then exit
+#   bin/master-mobile say       one spoken line over the phone speaker, then exit
 #   bin/master-mobile <args>    bin/master in the mobile profile
 
 root = File.expand_path("..", __dir__)
@@ -53,6 +54,19 @@ when "notify"
   end
   begin
     Master::Device.toast(text)
+  rescue Master::Device::Error => e
+    warn "mobile0: #{e.message}"
+    exit 1
+  end
+when "say"
+  require "device"
+  text = ARGV[1].to_s.strip
+  if text.empty?
+    warn "mobile0: say needs text; bin/master-mobile say \"MASTER online, klar for ordre\""
+    exit 1
+  end
+  begin
+    Master::Device.speak(text)
   rescue Master::Device::Error => e
     warn "mobile0: #{e.message}"
     exit 1

@@ -80,6 +80,19 @@ class TestDevice < Minitest::Test
     assert_equal "termux-notification", Device::API_COMMANDS.fetch(:notification)
   end
 
+  def test_phone_speech_maps_to_the_tts_command_with_bounded_argv
+    Device.stub(:require_android_command!, nil) do
+      Device.stub(:android?, true) do
+        sent = []
+        Master::Device.stub(:run!, lambda { |*argv| sent << argv; "spoken" }) do
+          assert_equal "spoken", Device.speak("MASTER online, klar for ordre", lang: "nb")
+        end
+
+        assert_equal ["termux-tts-speak", "-l", "nb", "MASTER online, klar for ordre"], sent.first
+      end
+    end
+  end
+
   def test_android_commands_use_the_bounded_exec_primitive
     stub_const = RbConfig::CONFIG["host_os"]
     RbConfig::CONFIG["host_os"] = "linux-android"

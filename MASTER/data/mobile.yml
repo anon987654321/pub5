@@ -59,3 +59,9 @@ gateway:
   max_reply_chars: 320
   battery_floor_percent: 15
   allowed_numbers: []
+  # Warn-only inbound scam triage, behind the same consent as the gateway.
+  # Off by default. Enough local heuristic hits raise one notification naming
+  # the sender; nothing is deleted, answered or sent anywhere.
+  scout:
+    enabled: false
+    threshold: 2

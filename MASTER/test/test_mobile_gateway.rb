@@ -11,7 +11,7 @@ class TestMobileGateway < Minitest::Test
 
   ALLOWED = "+4791234567"
 
-  def gateway(config: {}, permissions: nil, poll: nil, executor: nil, sender: nil, battery: nil, root: nil)
+  def gateway(config: {}, permissions: nil, poll: nil, executor: nil, sender: nil, battery: nil, root: nil, notifier: nil)
     dir = root
     raise "blockless gateway needs a root" if dir.nil?
 
@@ -26,6 +26,7 @@ class TestMobileGateway < Minitest::Test
       executor:,
       sender:,
       battery:,
+      notifier:,
     )
   end
 
@@ -291,6 +292,92 @@ class TestMobileGateway < Minitest::Test
       results = ready! { second.poll_once }
 
       assert_empty results, "the second gateway process sees the same handled message"
+    end
+  end
+
+  def test_the_scout_is_off_by_default_and_then_warns_only
+    Dir.mktmpdir do |dir|
+      @messages = [sms(number: "+4798765432", body: "URGENT: your account is locked, click https://bank.no to fix now")]
+      warned = []
+      off = gateway(root: dir, notifier: ->(text) { warned << text })
+
+      assert_empty ready! { off.poll_once }
+      assert_empty warned, "no scout, no warning"
+    end
+
+    Dir.mktmpdir do |dir|
+      @messages = [sms(number: "+4798765432", body: "URGENT: your account is locked, click https://bank.no to fix now")]
+      warned = []
+      scout = gateway(root: dir, notifier: ->(text) { warned << text },
+                      config: { "gateway" => { "scout" => { "enabled" => true } } })
+
+      results = ready! { scout.poll_once }
+
+      assert_equal 1, results.size
+      assert_match(/scam patterns flagged for \+4798765432/, results.first)
+      assert_equal 1, warned.size
+      assert_includes warned.first, "+4798765432"
+      refute_includes warned.first, "https", "the warning names the sender, never the body"
+    end
+  end
+
+  def test_the_scout_says_nothing_about_quiet_mail_and_marks_its_flags_seen
+    Dir.mktmpdir do |dir|
+      @messages = [sms(number: "+4798765432", body: "hei, vi sees i morgen da"),
+                   sms(number: "not-a-number", body: "URGENT your account is locked click https://x.no now")]
+      warned = []
+      scout = gateway(root: dir, notifier: ->(text) { warned << text },
+                      config: { "gateway" => { "scout" => { "enabled" => true } } })
+
+      assert_empty ready! { scout.poll_once }, "quiet mail and malformed numbers stay untouched"
+      assert_empty warned
+    end
+
+    Dir.mktmpdir do |dir|
+      scam = sms(number: "+4798765432", body: "URGENT: click https://bank.no, verification code now, final notice")
+      @messages = [scam]
+      warned = []
+      scout = gateway(root: dir, notifier: ->(text) { warned << text },
+                      config: { "gateway" => { "scout" => { "enabled" => true } } })
+
+      ready! { scout.poll_once }
+      ready! { scout.poll_once }
+
+      assert_equal 1, warned.size, "one verdict, not one per poll"
+      flagged = File.read(File.join(dir, ".master", "mobile", "gateway_seen.yml"))
+      refute_includes flagged, "URGENT", "the seen ledger holds digests, not bodies"
+    end
+  end
+
+  def test_an_operator_command_is_never_scam_triaged
+    Dir.mktmpdir do |dir|
+      @messages = [sms(number: ALLOWED, body: "MASTER: status")]
+      warned = []
+      scout = gateway(root: dir, executor: ->(argv) { "ok" }, sender: ->(*) {},
+                      notifier: ->(text) { warned << text },
+                      config: { "gateway" => { "scout" => { "enabled" => true } } })
+
+      results = ready! { scout.poll_once }
+
+      assert_equal 1, results.size
+      assert_empty warned, "the operator's own command is answered, never flagged"
+    end
+  end
+
+  def test_the_scout_never_sends_anything_anywhere
+    Dir.mktmpdir do |dir|
+      @messages = [sms(number: "+4798765432", body: "URGENT: verification code now, click https://x.no")]
+      sent = []
+      ran = []
+      scout = gateway(root: dir, executor: ->(argv) { ran << argv; "ok" },
+                      sender: ->(number, reply) { sent << [number, reply] },
+                      notifier: ->(*) {},
+                      config: { "gateway" => { "scout" => { "enabled" => true } } })
+
+      ready! { scout.poll_once }
+
+      assert_empty sent, "a scout that answered would be a remote shell"
+      assert_empty ran
     end
   end
 
