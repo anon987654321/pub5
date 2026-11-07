@@ -27,7 +27,7 @@
         <div class="field field--row">
           <%= f.text_field :username, placeholder: t("playlist.username"), aria: { label: t("playlist.username") }, class: "field--grow" %>
           <%= f.select :role, %w[editor viewer].map { |role| [t("playlist.roles.#{role}"), role] }, {}, { aria: { label: t("playlist.role") } } %>
-          <%= f.submit t("playlist.add_collaborator"), class: "button button-primary button-small" %>
+          <%= f.submit t("playlist.add_collaborator"), class: "button button-primary" %>
         </div>
       <% end %>
     </div>

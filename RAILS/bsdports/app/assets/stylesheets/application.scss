@@ -180,10 +180,20 @@ main#main-content :is(button, input[type="submit"], .button) {
 // The sign-in link and the search submit sit outside main#main-content, so the
 // tap floor above misses them. The sign-in anchor carries button-ghost alone,
 // which is why `.nav-actions .button` would not match it.
+//
+// The search submit is the shared live-search partial's own input, which used
+// to take its compact padding and size from the retired .button-small rule in
+// _buttons.scss (shared-010). This dialect restates those two here — same
+// tokens, same values the shared rule had — so the submit reads exactly as it
+// did while the shared contract carries no size class. brgen's palette copy of
+// the same partial still rides brgen's $legacy-small opt-in until its own site
+// is measured rendered.
 div.nav-actions > a.button-ghost,
 div.search-form > input.button.button-small {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-small);
 }
 // ============================================================ /module: bsdports_layout
 
@@ -312,20 +322,46 @@ turbo-frame {
   margin-top: var(--space-8);
 }
 
-// Rows part with a 1px hairline, never a shadow.
+// Rows part with a 1px hairline, never a shadow. The sweep of 2026-11-07
+// measured the rows reading weakly separated: the hairline is the separation
+// the dialect already promised, and line-height below gives the wrapped text
+// the measure it lacked.
 .port-row {
   display: grid;
   align-items: start;
   gap: var(--space-3);
   padding: var(--space-3) 0;
   border: 0;
+  line-height: var(--leading-normal);
   transition: background var(--transition-fast) var(--ease-out);
+}
+
+// The one hairline the comment above promises: rows separate by a 1px rule
+// on --border, not by a shadow.
+.port-list .port-row + .port-row {
+  border-block-start: 1px solid var(--border);
 }
 
 .port-row > p { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); margin: 0; }
 .port-row > p code, .install-panel input, article dd code { font-family: var(--font-mono); }
+// The version and pkgpath are identifiers beside the name, not a second name:
+// they read in the secondary ink (7.99:1 on this white) while the name keeps
+// the bold primary ink, which is what separates them now that every row text
+// sits on the dialect's 12px floor.
+.port-row > p code {
+  color: var(--text-secondary);
+}
+// The category link and the one-line comment carried the browser's `small`
+// shrink against this dialect's 12px root — 10.4px measured — below the floor
+// the dialect sets for itself. They read at the floor in the secondary ink.
+.port-row small {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
 // No inline padding: the state has no box (border 0, no fill), so padding only
 // pushed "unknown" a few pixels right of every other definition and row line.
+// The extra-small token resolves against this dialect's 12px root — 9px
+// measured, under the floor the dialect keeps — so the age reads at the floor.
 .data-state {
   display: inline-flex;
   width: fit-content;
@@ -333,7 +369,7 @@ turbo-frame {
   border: 0;
   border-radius: 0;
   color: var(--text-secondary);
-  font-size: var(--text-extra-small);
+  font-size: var(--text-base);
 }
 // .data-state has border 0, so a border colour alone marked nothing: the
 // stale state gets its own rule on the inline-start edge and bolder text.

@@ -23,7 +23,7 @@
   border: 0;
   border-radius: var(--radius-pill);
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   font: inherit;
   color: var(--text-secondary);
   transition: background var(--transition-fast) var(--ease-out), border-color var(--transition-fast) var(--ease-out);
@@ -280,7 +280,7 @@
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
-  border: 0;
+
   border: 0;
 }
 
@@ -290,7 +290,7 @@
     max-width: none;
     height: auto;
     max-height: min(90vh, 760px);
-  border: 0;
+
   border: 0;
     inset-inline: 0;
     margin-inline: auto;

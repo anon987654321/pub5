@@ -12,9 +12,12 @@
 <% if embed.ok? %>
   <figure class="link-embed">
     <div class="link-embed-stage">
-      <% if embed.thumbnail_url %>
-        <%# reserved: container — .link-embed-stage is a 16:9 box the img fills %>
-        <img src="<%= embed.thumbnail_url %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+      <% if embed.thumbnail_url && Shared::LinkEmbed.thumbnail_cached?(embed.thumbnail_url) %>
+        <%# reserved: container — .link-embed-stage is a 16:9 box the img fills
+            shared-029: the image is this app's own cached copy, served from
+            /link_embeds/thumbnails/:digest. The provider's CDN is contacted
+            once, where the oEmbed answer arrives — never on a page view. %>
+        <img src="<%= link_embed_thumbnail_path(Shared::LinkEmbed.thumbnail_digest(embed.thumbnail_url)) %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
       <% end %>
       <button type="button" class="link-embed-play"
               data-action="click->media-exclusive#playEmbed"

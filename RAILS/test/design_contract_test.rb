@@ -277,4 +277,46 @@ def test_brgen_old_dialect_outranks_the_social_stack
     assert_includes base, "-webkit-text-size-adjust: 100%;"
     assert_includes base, "text-size-adjust: 100%;"
   end
+
+  # shared-010: markup names no size. The compact size comes from
+  # $compact-contexts ("where a button sits decides whether it is the compact
+  # one", Johann 2026-11-03); .button-small left the shared contract and
+  # survives only as the brgen family's opt-in for markup whose container is
+  # still awaiting its per-site rendered check.
+  def test_button_size_comes_from_contexts_not_a_size_class
+    buttons = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_buttons.scss"), encoding: "UTF-8")
+
+    assert_includes buttons, "$legacy-small: false !default;",
+                    "the legacy size class must stay off by default in the shared contract"
+    # The one .button-small selector left in the shared partial sits behind the
+    # opt-in guard; the compact builder lists contexts only.
+    guard = buttons[/@if \$legacy-small \{(.*?)\n\}/m, 1]
+    assert guard, "the legacy rule must sit behind the $legacy-small guard"
+    assert_includes guard, ".button.button-small"
+    code = buttons.split("\n").reject { |line| line.strip.start_with?("//", "/*", "*") }.join("\n")
+    refute_includes code.sub(guard, ""), ".button-small",
+                    "no size selector outside the $legacy-small guard"
+
+    %w[
+      comments/_comment.html.erb
+      comments/_form_fields.html.erb
+      notifications/_notification.html.erb
+      shared/_newsletter_cta.html.erb
+      shared/_messenger_artifacts.html.erb
+    ].each do |partial|
+      source = File.read(File.join(SHARED, "app", "views", partial), encoding: "UTF-8")
+      refute_includes source, "button-small",
+                      "#{partial} names a size; size it from where the button sits"
+    end
+
+    # Ratchet: the files still naming the size only shrink. Raise this ceiling
+    # never; retire a site by naming its container in the app's compact
+    # contexts and dropping the class. 75 files carried the name when the class
+    # left the shared contract (2026-11-07).
+    naming = Dir.glob(File.join(REPO_ROOT, "RAILS", "{__shared,amber,brgen,brgen_dating,brgen_maps,brgen_marketplace,brgen_radio}",
+                                           "**", "*.{erb,js,rb,scss}")).count do |path|
+      File.read(path, encoding: "UTF-8").include?("button-small")
+    end
+    assert naming <= 75, "button-small naming grew to #{naming} files; the ratchet only shrinks"
+  end
 end

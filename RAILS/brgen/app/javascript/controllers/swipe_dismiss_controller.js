@@ -119,7 +119,7 @@ export default class extends Controller {
 
     const undo = document.createElement("button")
     undo.type = "button"
-    undo.className = "button button-ghost button-small"
+    undo.className = "button button-ghost"
     undo.textContent = this.undoValue
     undo.addEventListener("click", () => this.undo())
     toast.append(text, undo)

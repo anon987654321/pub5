@@ -43,7 +43,7 @@
                       <%= form_with scope: :takeaway_menu_item, method: :patch,
                                     url: restaurant_menu_item_path(@restaurant, item) do |af| %>
                         <%= render "takeaway/menu_items/allergen_fields", f: af, item: item %>
-                        <%= af.submit t("takeaway.allergens_save"), class: "button button-small" %>
+                        <%= af.submit t("takeaway.allergens_save"), class: "button" %>
                       <% end %>
                     </details>
                   <% end %>

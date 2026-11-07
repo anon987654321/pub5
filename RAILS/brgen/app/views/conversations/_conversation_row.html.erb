@@ -47,13 +47,13 @@
     <% end %>
     <% if local_assigns.fetch(:archived, @archive) %>
       <%# destructive: no-confirm-ok — reversible — it moves the thread back to the inbox, nothing else %>
-      <%= button_to t("messages.unarchive"), conversation_archive_path(conversation), method: :delete, class: "button button-ghost button-small" %>
+      <%= button_to t("messages.unarchive"), conversation_archive_path(conversation), method: :delete, class: "button button-ghost" %>
     <% end %>
     <% if pinned %>
       <%# destructive: no-confirm-ok — reversible — unpinning changes the order of the list, nothing else %>
-      <%= button_to t("messages.unpin"), conversation_pin_path(conversation), method: :delete, class: "button button-ghost button-small" %>
+      <%= button_to t("messages.unpin"), conversation_pin_path(conversation), method: :delete, class: "button button-ghost" %>
     <% else %>
-      <%= button_to t("messages.pin"), conversation_pin_path(conversation), class: "button button-ghost button-small" %>
+      <%= button_to t("messages.pin"), conversation_pin_path(conversation), class: "button button-ghost" %>
     <% end %>
   </div>
 </li>

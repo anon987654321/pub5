@@ -31,7 +31,7 @@ export default class extends Controller {
 
     const cancel = document.createElement("button")
     cancel.type = "button"
-    cancel.className = "button button-ghost button-small"
+    cancel.className = "button button-ghost"
     cancel.textContent = this.cancelValue
     cancel.addEventListener("click", () => { this.#clear(form); this.#focus(form) })
     line.append(cancel)

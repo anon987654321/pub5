@@ -21,7 +21,7 @@
         <%= t("stories.expires_in", time: distance_of_time_in_words(Time.current, @story.expires_at)) %>
       </time>
     </p>
-    <%= link_to t("actions.close"), stories_path, class: "button button-ghost button-small" %>
+    <%= link_to t("actions.close"), stories_path, class: "button button-ghost" %>
   </header>
 
   <% if @story.media.attached? %>

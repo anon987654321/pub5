@@ -83,7 +83,7 @@
   <% if @video.allow_duets? && Current.user&.tv_channels&.any? %>
     <%= link_to t("tv.make_a_duet"),
           new_channel_video_path(Current.user.tv_channels.first, duet_of_id: @video.id),
-          class: "button button-ghost button-small" %>
+          class: "button button-ghost" %>
   <% end %>
 </p>
   <% if @video.description.present? %>

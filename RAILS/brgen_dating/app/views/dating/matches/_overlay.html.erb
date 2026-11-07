@@ -6,7 +6,7 @@
         the broadcast renders this from an after_commit, off an unloaded record. %>
     <p><%= other_user&.display_name || t("dating.someone") %> <%= t("dating.ready_to_chat") %></p>
     <%= link_to t("dating.open_messages"), main_app.conversation_path(conversation),
-                class: "button button-primary button-small",
+                class: "button button-primary",
                 data: { controller: "haptics", action: "click->haptics#match" } %>
   </div>
 </div>

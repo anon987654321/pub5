@@ -15,7 +15,7 @@
       <%= link_to t("takeaway.group_link"), group_order_url(@order.group_token) %>
     <% else %>
       <%= button_to t("takeaway.open_group"), order_group_path(@order), method: :post,
-            class: "button button-ghost button-small" %>
+            class: "button button-ghost" %>
     <% end %>
   </p>
 <% end %>

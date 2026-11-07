@@ -226,9 +226,6 @@
   --font-size-base: var(--font-size);
   --color-badge: var(--accent);
   --tint-success: color-mix(in srgb, var(--color-success) 20%, var(--surface-elevated));
-  /* The Caprasimo word's size in the logo's own viewBox units. Display type
-     reads no step of the body ladder; this is the mark's own scale. */
-  --brand-hero: 120px;
   /* Amber luxury refinements (UI_REFINEMENTS §D) */
   --line-height-relaxed: 1.6;
   --letter-display: 0.04em;
@@ -271,18 +268,10 @@
 
 /* Amber logo — the wordmark on a swoosh, an animated radial gradient and white
    retro lines. Geometry and motion match the canonical logo HTML (viewBox
-   1000×500).
-
-   Caprasimo is amber's brand mark, and the wordmark is the only thing set in
-   it: body, headings, UI and the error pages read the single sans stack in
-   var(--font). */
-@font-face {
-  font-family: "Caprasimo";
-  src: url("/fonts/caprasimo-latin-400-normal.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+   1000×500). The wordmark is outlined as SVG paths in the partial (amber-057),
+   so no @font-face is needed: body, headings, UI and the error pages read the
+   single sans stack in var(--font). The vendored woff2 stays in public/fonts
+   as the self-hosted source of the outlined glyphs. */
 
 @property --gradient-x {
   syntax: "<percentage>";
@@ -407,25 +396,11 @@ h2 {
 // ============================================================ module: amber_chrome
 // ============================================================ chrome: mark, hero, footer
 
-/* Type sizes in viewBox user units — NOT document type. _logo.html.erb draws
-   into the 1000x500 grid, so 120 means "120/500 of the logo's height", and the
-   whole mark scales with the <svg> box. The document's modular scale has no say
-   in it, which is why these are px and must stay px.
-
-   One size at every width: the nav crops its viewBox to the word's ink at this
-   size, so a word that changed size by breakpoint would outgrow its crop.
-
-   A rem token would not hold: rem in an SVG resolves against the root
-   font-size, which _minimal.scss raises from 16px to 21px at 1280px, so the (r)
-   would grow 31% against a word that stays put. */
-.amber-logo-svg .amber-logo-word {
-  font-family: "Caprasimo", Arial, sans-serif;
-  font-size: var(--brand-hero);
-}
-
-.amber-logo-svg .amber-logo-mark {
-  font-size: 24px;
-}
+/* The wordmark's glyph geometry lives in _logo.html.erb as SVG paths
+   (amber-057), sized in viewBox user units — 120/2048 em per glyph, baked into
+   the path transforms — so no stylesheet rule sets logo type any more and no
+   webfont is fetched for it. The document's modular scale has no say in the
+   mark, which is what the old px-in-viewBox rules guarded. */
 
 .animated-gradient {
   width: 100%;
@@ -1116,10 +1091,28 @@ main#main-content header > nav form {
 /* inline-flex so the label sits in the middle of the 44px it is given; as an
    inline link the height grows below the text and "Sign in" hugs the top. A
    wardrobe card sizes its actions here by where they sit, not by a class. */
+/* The size-class leads stay only for the markup that still names a size
+   pending its per-site rendered check (shared-010): the bare button-small
+   sites on the item page, declutter and the creator showcase, plus the two
+   shared partials whose containers also hold full-size buttons
+   (_live_search_form, _master_invite). Every other compact button sizes from
+   where it sits; each context here held only compact buttons at the
+   2026-11-07 tree-wide sweep. */
 .button-small,
 .button.button-small,
 .item-card-actions :is(a, button),
-.profile-creator-link .button {
+.profile-creator-link .button,
+.flash .button,
+.comment header .button,
+.thread-summary .button,
+.comment-form .button,
+.notification-item .button,
+.newsletter-cta .button,
+.messenger-artifact-body .button,
+.msg-reply-context .button,
+.notification-undo-toast .button,
+.messenger-composer-preview .button,
+.compose-media-item .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1665,7 +1658,7 @@ main#main-content header > nav form {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 0;
+
   border: 0;
 }
 
@@ -2149,7 +2142,7 @@ main#main-content .amber-look-title {
 .subscribe-box {
   margin: var(--space-6, 1.5rem) 0;
   padding: var(--space-4, 1rem);
-  border: 0;
+
   border: 0;
   background: var(--surface-elevated);
   max-width: var(--measure);

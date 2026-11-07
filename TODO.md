@@ -179,14 +179,19 @@ preserve those strengths.
   whether an empty/loading treatment is still missing.
   Laws: `TRUTHFUL_STATUS`, `WAITING_STATE_MEANING`,
   `DENSITY_aesthetic_integrity`.
-- [ ] **BSDPorts result readability, without redesign.** The desktop/mobile
-  captures preserve the intentionally spare Google-like search surface, but
-  result names, versions, repository identifiers and update metadata read
-  very small and weakly separated at capture scale. Measure their actual
-  CSS-pixel size, contrast and line-height in Chrome; improve only the
-  information hierarchy and readable measure where evidence warrants it.
-  Keep white paper, Arial, blue links, square geometry and compact density;
-  do not cardify or re-theme the product.
+- [x] **BSDPorts result readability, without redesign.** Measured from source
+  2026-11-07 and confirmed in the committed captures: the dialect roots at
+  12px, so the age's `--text-extra-small` resolved to 9px and the browser's
+  `small` shrink gave the category and comment 10.4px — both under the
+  dialect's own floor — and `--line-height: 1rem` gave the wrapped comment
+  line-height 1.0. The fix moved hierarchy only: age and row metadata read at
+  the floor in the secondary ink (#4d5156, 7.99:1), version and pkgpath read
+  secondary against the name's bold primary, rows gained the 1px hairline the
+  file's own comment promised (border was 0) and the text gained
+  `--leading-normal`. White paper, Arial, blue links, square geometry and the
+  compact single-column list untouched. Rendered before/after in headless
+  Chrome from both revisions' compiled bundles; the tree's own Chrome/CDP
+  suite run is NOT_RUN here.
   Laws: `BRINGHURST_measure`, `BRINGHURST_scale`,
   `PROPORTION_contrast`, `REACH`.
 
@@ -377,11 +382,11 @@ The tracked repository has one TODO file: this root `TODO.md`. The cross-tree co
 
 ### 8.1 RAILS refinement survey — three items still open
 
-`RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence.
+`RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness.
 
-- [ ] **amber-057 — Amber wordmark.** Outline the Caprasimo wordmark in `RAILS/amber/app/views/shared/_logo.html.erb` as SVG paths so it no longer needs the webfont preload on every page.
-- [ ] **shared-010 — Button sizing.** Retire `.button-small` in `RAILS/__shared/app/assets/stylesheets/_buttons.scss` in favour of the existing `$compact-contexts` contract; markup should not name a size.
-- [ ] **shared-029 — Privacy-preserving embeds.** Cache link-embed thumbnails first-party in `RAILS/__shared/app/views/shared/_link_embed.html.erb`; the provider should not be contacted on page view before the reader presses play.
+- [x] **amber-057 — Amber wordmark.** Outlined in `RAILS/amber/app/views/shared/_logo.html.erb` as six Caprasimo glyph `<path>` defs placed by `<use>` transforms — HarfBuzz-shaped, the same shaper Chrome uses — and the layout's Caprasimo preload plus the stylesheet's `@font-face`, dead word-size rules and `--brand-hero` token are gone. Rendered proof: headless Chrome drew the old text mark and the new path mark over the same gradient; the ink masks agree with no systematic offset, 1608 differing pixels of 33,945 (the text-versus-path anti-aliasing fringe). The vendored woff2 stays as the self-hosted glyph source. `logo_contract_test.rb` pins the new contract; its run is NOT_RUN here.
+- [ ] **shared-010 — Button sizing.** Source landed 2026-11-07: `_buttons.scss` carries `$compact-contexts` only and the class survives behind a default-off `$legacy-small` opt-in; the shared comment/notification/newsletter/artifact partials, four JS-created buttons, amber's flash undo and 32 tree-wide-verified brgen-family sites name no size (each context held only compact buttons at a full-ERB sweep). The mixed containers (rsvp-bar, push-prompt, messenger-details-section, order-actions, the form-wrap--flush forms, the generic `.cluster`/`.page-header`/`.field` primitives, the no-class rows, `_live_search_form` and `_master_invite`) keep the class pending per-site rendered checks; a ratchet in `design_contract_test.rb` pins the naming file count at 75 and only down. Row stays open for that rendered evidence.
+- [ ] **shared-029 — Privacy-preserving embeds.** Source landed 2026-11-07: the thumbnail is fetched once where the oEmbed answer arrives (the link-embed job, the compose preview), written to `storage/link_embeds/thumbnails` content-addressed by the SHA-256 of the provider URL, and served from the app's own `/link_embeds/thumbnails/:digest` endpoint; the partial renders no provider URL and a page view contacts no provider. `link_embed_privacy_contract_test.rb` pins the shape and the render test asserts no provider image host in the page; both runs are NOT_RUN here. Row stays open for rendered evidence.
 
 Close these rows in `RAILS/refinements.yml` only with the corresponding source and rendered evidence. Do not copy the 755 completed or 12 invalid rows back into the active list.
 

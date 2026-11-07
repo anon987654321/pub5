@@ -86,7 +86,7 @@
         <%= button_to t("actions.delete"), destroy_arg,
               method: :delete,
               data: { turbo_confirm: t("actions.confirm_delete") },
-              class: "button button-ghost button-small comment-delete" %>
+              class: "button button-ghost comment-delete" %>
       <% end %>
       <%# A community's moderators take a comment down from the comment itself
           (brgen's CommentModerationHelper; other apps have no communities). %>
@@ -94,7 +94,7 @@
         <%= button_to t("comments.moderator_remove"), main_app.remove_comment_path(comment),
               method: :patch,
               data: { turbo_confirm: t("comments.moderator_remove_confirm") },
-              class: "button button-ghost button-small comment-delete" %>
+              class: "button button-ghost comment-delete" %>
       <% end %>
       <% if can_report %>
         <%= render "shared/report_button", target: comment, reason: nil %>
@@ -125,7 +125,7 @@
       <% elsif can_interact && respond_to?(:generate_summary_comment_path) %>
         <%= button_to t("comments.ai_summary"), generate_summary_comment_path(comment),
               method: :post,
-              class: "button button-ghost button-small",
+              class: "button button-ghost",
               data: { turbo: true } %>
       <% end %>
     <% end %>
