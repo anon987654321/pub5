@@ -38,7 +38,7 @@ module Fix
   # symbol the run tallies; a refusal names its stage.
   class Repair
     CANDIDATES = 2
-    FILE_BUDGET_S = 240
+    FILE_BUDGET_S = 75
     RETRY_NOTE = :fix_retry_note
     Outcome = Data.define(:status, :path, :reason, :laws)
 
@@ -69,6 +69,7 @@ module Fix
 
     # One try and one retry that shows the model why the first was refused.
     def attempt(path, findings, note: nil)
+      @run.pulse
       Thread.current[RETRY_NOTE] = note
       old = @world.read(path).force_encoding("UTF-8")
       chosen, refusal = propose(path, old, findings)

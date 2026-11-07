@@ -14,11 +14,11 @@ module Fix
   # until the findings, the budget or the stall guard run out, rescan for the
   # ratchet, and report what landed, what was refused and what it cost.
   class Run
-    RUN_BUDGET_S = 3 * 3600
-    STALL_S = 600
+    RUN_BUDGET_S = 60 * 60
+    STALL_S = 180
     CENSUS_DIR = "tmp/fix/census"
     BULK_FILES = 20
-    MAX_PASSES = 3
+    MAX_PASSES = 2
 
     attr_reader :stopping, :tracked
 

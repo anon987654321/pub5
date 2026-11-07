@@ -17,6 +17,7 @@ module Shared
     MODEL = ENV.fetch("SCRAPE_MODEL", Shared::Llm::DEFAULT_MODEL)
     HTML_MAX = 60_000
     MAX_ITEMS = 500
+    MAX_PAGES = 10
     BLOCKED_HOST_SUFFIXES = %w[.localhost .local .internal .home.arpa .onion].freeze
     BLOCKED_NETWORKS = %w[
       0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
@@ -28,7 +29,12 @@ module Shared
     NAT64_WELL_KNOWN_PREFIX = IPAddr.new("64:ff9b::/96").freeze
     SIXTOFOUR_PREFIX = IPAddr.new("2002::/16").freeze
 
-    def self.call(url, schema:, hint: nil)
+    def self.call(url, schema:, hint: nil, max_pages: 1, next_selector: 'a[rel="next"]')
+      pages = Integer(max_pages)
+      raise ArgumentError, "max_pages must be between 1 and #{MAX_PAGES}" unless (1..MAX_PAGES).cover?(pages)
+      if next_selector && (!next_selector.is_a?(String) || next_selector.empty? || next_selector.bytesize > 512)
+        raise ArgumentError, "next_selector must be a non-empty CSS selector of at most 512 bytes"
+      end
       raise ArgumentError, "scrape requires a public HTTP(S) URL" unless public_http_url?(url)
       raise LoadError, "gem install ferrum — required for Scrape.call" unless defined?(Ferrum::Browser)
 
@@ -37,9 +43,8 @@ module Shared
       # convenience by passing Chromium's --no-sandbox switch.
       browser = Ferrum::Browser.new(headless: true, timeout: 30)
       begin
-        # A public page may redirect, load scripts, or embed images from another
-        # origin. Check each browser request, not just the first URL, so a redirect
-        # cannot turn a public seed URL into a request to localhost or cloud metadata.
+        # Check every browser request, not only the first URL: redirects, scripts
+        # and embedded resources must not reach loopback or cloud metadata.
         browser.network.intercept
         browser.on(:request) do |request|
           if safe_request_url?(request.url)
@@ -48,14 +53,50 @@ module Shared
             request.abort
           end
         end
-        browser.go_to(url)
-        browser.network.wait_for_idle(timeout: 10)
-        html = browser.body
-        png = browser.screenshot(encoding: :binary, full: true)
-        reason(url:, html:, png:, schema:, hint:)
+
+        collected = []
+        visited = {}
+        page_url = url
+        pages.times do
+          break if visited[page_url]
+
+          visited[page_url] = true
+          browser.go_to(page_url)
+          browser.network.wait_for_idle(timeout: 10)
+          current_url = browser.evaluate("window.location.href")
+          raise ArgumentError, "scrape redirected to a non-public URL" unless public_http_url?(current_url)
+
+          html = browser.body
+          png = browser.screenshot(encoding: :binary, full: true)
+          collected.concat(reason(url: current_url, html:, png:, schema:, hint:))
+          collected.uniq!
+          raise ArgumentError, "scrape returned more than #{MAX_ITEMS} items across pages" if collected.size > MAX_ITEMS
+
+          break unless next_selector
+
+          href = browser.evaluate("(selector => document.querySelector(selector)?.getAttribute('href'))(#{next_selector.to_json})")
+          page_url = next_page_url(current_url, href, origin: url)
+          break unless page_url
+        end
+        collected
       ensure
         browser.quit
       end
+    end
+
+    # Pagination is deliberately same-origin and sequential. A model may help
+    # extract records, but it does not invent navigation actions or widen the
+    # operator's target to another host.
+    def self.next_page_url(current_url, href, origin:, resolver: ->(host) { Shared::OutboundHttp.resolve_addresses(host) })
+      return if href.to_s.strip.empty?
+
+      candidate = URI.join(current_url, href.to_s).to_s
+      target = URI.parse(candidate)
+      base = URI.parse(origin.to_s)
+      same_origin = [target.scheme, target.hostname, target.port] == [base.scheme, base.hostname, base.port]
+      candidate if same_origin && public_http_url?(candidate, resolver:)
+    rescue URI::InvalidURIError, ArgumentError
+      nil
     end
 
     # Only public HTTP(S) targets are scrape entrypoints. Resolve names here and

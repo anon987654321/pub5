@@ -110,6 +110,17 @@ class SharedScrapeTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Shared::Scrape.parse_items("not json", schema:) }
   end
 
+  test "pagination follows bounded same-origin public links only" do
+    resolver = public_resolver
+    origin = "https://example.com/users"
+
+    assert_equal "https://example.com/users?page=2",
+                 Shared::Scrape.next_page_url(origin, "?page=2", origin:, resolver:)
+    assert_nil Shared::Scrape.next_page_url(origin, "https://other.example/users?page=2", origin:, resolver:)
+    assert_nil Shared::Scrape.next_page_url(origin, "http://127.0.0.1/admin", origin:, resolver:)
+    assert_nil Shared::Scrape.next_page_url(origin, "", origin:, resolver:)
+  end
+
   test "model response accepts fenced JSON but rejects missing items" do
     fence = "\x60\x60\x60json"
     fenced = [fence, %({"items":[{"name":"Ada"}]}), "\x60\x60\x60"].join("\n")

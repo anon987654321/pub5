@@ -24,6 +24,13 @@ class FixRunTest < Minitest::Test
     [code, out.string]
   end
 
+  def test_fix_run_has_finite_wall_clock_and_pass_budgets
+    assert_equal 3_600, Fix::Run::RUN_BUDGET_S
+    assert_equal 180, Fix::Run::STALL_S
+    assert_equal 2, Fix::Run::MAX_PASSES
+    assert_equal 75, Fix::Repair::FILE_BUDGET_S
+  end
+
   def test_text_older_than_the_laws_enactment_is_held
     repo do |root|
       put(root, "old.rb", "violation\n")
