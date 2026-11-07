@@ -161,10 +161,10 @@ module Marketplace
               end
               payable.sync_payment_status!
             end
-            paid_orders.each do |order|
-              Webhooks::PaymentPaid.enqueue_google_conversion(order)
-              Webhooks::PaymentPaid.enqueue_s2s_conversion(order, reference: payable.payment_reference)
-            end
+            paid_orders.each { |order| Webhooks::PaymentPaid.enqueue_google_conversion(order) }
+            # A basket is one conversion and one charge; attribute its aggregate
+            # total once, not the first line under a shared payment reference.
+            Webhooks::PaymentPaid.enqueue_s2s_conversion(payable, reference: payable.payment_reference)
           else
             payable.mark_paid!(reference: payable.payment_reference)
             Webhooks::PaymentPaid.enqueue_google_conversion(payable)
