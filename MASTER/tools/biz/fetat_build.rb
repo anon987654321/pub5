@@ -263,11 +263,15 @@ html = <<~HTML
             }
           }
           @page :first { margin-top: 0; }
-          body { margin: 0; }
           /* The cover is the page, exactly as on screen: with a zero top
              margin on the first page the 94vh cover resolves at its true
              hefte height and the mark lands where the html has it; the
-             text pages keep a 6 mm head breathing above the column. */
+             text pages keep a 6 mm head breathing above the column.
+             body keeps its auto margins in print: the cover's full bleed
+             is built from the centred column (margin-inline minus half
+             the page-over-column difference), so a flush-left body slides
+             the whole cover 31 px left of the html - hands cut at the
+             left edge, wordmark shifted. */
           .cover { min-height: 221mm; }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
