@@ -204,7 +204,9 @@ class FileLengthRatchetTest < Minitest::Test
     # dintero_checkout.rb left on 2026-11-05 at 348: the payout split it
     # freezes per line is dintero_checkout/splits.rb.
     "__shared/app/helpers/schema_helper.rb" => 343,
-    "amber/app/views/layouts/application.html.erb" => 160,
+    # 160 -> 159 on 2026-11-07: the layout shed a code line upstream; the
+    # slack check exists so this row follows it down.
+    "amber/app/views/layouts/application.html.erb" => 159,
     "brgen/app/assets/stylesheets/_brgen_dating.scss" => 415,
     "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 508,
     "brgen/app/assets/stylesheets/_brgen_marketplace.scss" => 925,
