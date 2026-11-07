@@ -31,13 +31,16 @@ fixtures = YAML.load_file(fixtures_path).fetch("laws").transform_keys(&:to_s)
 fixtures.each do |id, spec|
   status = spec.fetch("status")
   counted[status] += 1
-  next unless status == "fixture"
 
   law = laws[id.to_sym]
   unless law
     diffs << { "id" => id, "detail" => "law not defined in the target engine" }
     next
   end
+  # Presence is contracted for every status, not just runnable fixtures: a
+  # docs, test or retired record the engine does not name is a dropped law
+  # the probe below would never reach.
+  next unless status == "fixture"
 
   file = spec.fetch("file")
   bad = law.send(:scan_main, spec.fetch("bad"), file)
