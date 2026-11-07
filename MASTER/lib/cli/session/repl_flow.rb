@@ -415,6 +415,10 @@ module Master
           break if line.nil?
           next unless begin_interactive_line(line)
 
+          # One receipt names the turn now running: with several lines queued,
+          # the operator otherwise sees only a spinner and cannot tell which
+          # message started.
+          terminal_puts("queue0: run: #{line.to_s.strip[0, 72]}") if $stdin.tty? && $stdout.tty?
           begin
             handle_repl_line(line)
           ensure
