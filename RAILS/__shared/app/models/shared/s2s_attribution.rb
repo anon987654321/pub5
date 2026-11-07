@@ -27,7 +27,7 @@ module Shared
 
         conversion = S2sConversion.create_or_find_by!(user_id:, reference: reference.to_s.first(200)) do |row|
           row.amount_cents = amount_cents.to_i
-          row.currency = currency.to_s.first(8).presence || "NOK"
+          row.currency = currency.to_s.upcase.first(8).presence || "NOK"
           row.converted_at = Time.current
         end
         S2sPostbackJob.perform_later(conversion.id) if conversion.previously_new_record?

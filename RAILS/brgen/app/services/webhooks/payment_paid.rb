@@ -100,8 +100,16 @@ module Webhooks
       amount = payable.respond_to?(:total_cents) ? payable.total_cents : payable.try(:price_cents)
       return if user_id.blank? || amount.nil?
 
-      currency = payable.respond_to?(:currency) ? payable.currency : "NOK"
-      Shared::S2sAttribution.enqueue_conversion(user_id:, reference:, amount_cents: amount, currency:)
+      currency = if payable.respond_to?(:payment_currency)
+                   payable.payment_currency
+                 elsif payable.respond_to?(:currency)
+                   payable.currency
+                 else
+                   "NOK"
+                 end
+      Shared::S2sAttribution.enqueue_conversion(
+        user_id:, reference:, amount_cents: amount, currency: currency.to_s.upcase.presence || "NOK"
+      )
     end
 
     def attach_gclid!(order, gclid)

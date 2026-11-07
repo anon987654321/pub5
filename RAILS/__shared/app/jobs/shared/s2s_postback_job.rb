@@ -18,7 +18,12 @@ module Shared
       return unless attribution
 
       results = conversion.postback_results.to_h.stringify_keys
-      if attribution.mediago_tracking_id.present? && ENV["MEDIAGO_ACCOUNT_NAME"].present? && !results.key?("mediago")
+      mediago_currency = ENV["MEDIAGO_CURRENCY"].to_s.strip.upcase
+      if attribution.mediago_tracking_id.present? &&
+         ENV["MEDIAGO_ACCOUNT_NAME"].present? &&
+         mediago_currency.present? &&
+         mediago_currency == conversion.currency.to_s.upcase &&
+         !results.key?("mediago")
         results["mediago"] = dispatch(MEDIAGO_URL, {
           trackingid: attribution.mediago_tracking_id, conversiontype: 8,
           conversionprice: (conversion.amount_cents / 100.0).round(2),
@@ -26,9 +31,15 @@ module Shared
         })
         conversion.update!(postback_results: results)
       end
+      # Revcontent documents amount as a non-zero whole-dollar value. Do not
+      # turn NOK/EUR/etc. into an apparent USD amount; no FX rate is available
+      # here, and inventing one would corrupt the advertiser's ROAS.
       revcontent_amount = (conversion.amount_cents / 100.0).round
-      if attribution.revcontent_rc_uuid.present? && ENV["REVCONTENT_API_KEY"].present? &&
-         revcontent_amount.positive? && !results.key?("revcontent")
+      if attribution.revcontent_rc_uuid.present? &&
+         ENV["REVCONTENT_API_KEY"].present? &&
+         conversion.currency.to_s.upcase == "USD" &&
+         revcontent_amount.positive? &&
+         !results.key?("revcontent")
         results["revcontent"] = dispatch(REVCONTENT_URL, {
           api_key: ENV.fetch("REVCONTENT_API_KEY"), rc_uuid: attribution.revcontent_rc_uuid,
           amount: revcontent_amount
@@ -36,9 +47,13 @@ module Shared
         conversion.update!(postback_results: results)
       end
 
+      # No eligible/configured provider is not a failed delivery. Keep the row
+      # queued so missing account configuration or currency can be corrected
+      # without writing a false provider result.
+      return conversion if results.empty?
+
       statuses = results.values.map { |result| result.fetch("code", 500) }
-      state = if statuses.empty? then "failed"
-              elsif statuses.all? { |code| code.between?(200, 299) } then "sent"
+      state = if statuses.all? { |code| code.between?(200, 299) } then "sent"
               elsif statuses.any? { |code| code.between?(200, 299) } then "partial"
               else "failed"
               end
