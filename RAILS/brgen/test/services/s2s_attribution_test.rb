@@ -9,7 +9,7 @@ class S2sAttributionTest < ActiveSupport::TestCase
 
   test "captures supported click ids without storing raw session or IP data" do
     Shared::S2sAttribution.capture!(user: @user, params: {
-      "trackingid" => "mg_123", "rc_uuid" => "rc_456"
+      "tracking_id" => "mg_123", "rc_uuid" => "rc_456"
     })
     row = Shared::S2sAttribution.find_by!(user: @user)
     assert_equal "mg_123", row.mediago_tracking_id

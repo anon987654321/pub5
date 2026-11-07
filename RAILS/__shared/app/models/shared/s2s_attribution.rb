@@ -10,7 +10,7 @@ module Shared
     class << self
       def capture!(user:, params:)
         return if user.blank? || user.guest? || user.deleted_at.present?
-        mediago = safe_click_id(params["trackingid"].presence || params["mediago_trackingid"])
+        mediago = safe_click_id(params["tracking_id"].presence || params["trackingid"].presence || params["mediago_trackingid"])
         revcontent = safe_click_id(params["rc_uuid"])
         return if mediago.blank? && revcontent.blank?
 

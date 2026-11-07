@@ -20,16 +20,18 @@ module Shared
       results = conversion.postback_results.to_h.stringify_keys
       if attribution.mediago_tracking_id.present? && ENV["MEDIAGO_ACCOUNT_NAME"].present? && !results.key?("mediago")
         results["mediago"] = dispatch(MEDIAGO_URL, {
-          trackingid: attribution.mediago_tracking_id, conversiontype: 1,
+          trackingid: attribution.mediago_tracking_id, conversiontype: 8,
           conversionprice: (conversion.amount_cents / 100.0).round(2),
           includeintotalconversion: 1, accountname: ENV.fetch("MEDIAGO_ACCOUNT_NAME")
         })
         conversion.update!(postback_results: results)
       end
-      if attribution.revcontent_rc_uuid.present? && ENV["REVCONTENT_API_KEY"].present? && !results.key?("revcontent")
+      revcontent_amount = (conversion.amount_cents / 100.0).round
+      if attribution.revcontent_rc_uuid.present? && ENV["REVCONTENT_API_KEY"].present? &&
+         revcontent_amount.positive? && !results.key?("revcontent")
         results["revcontent"] = dispatch(REVCONTENT_URL, {
           api_key: ENV.fetch("REVCONTENT_API_KEY"), rc_uuid: attribution.revcontent_rc_uuid,
-          amount: (conversion.amount_cents / 100.0).round(2)
+          amount: revcontent_amount
         })
         conversion.update!(postback_results: results)
       end

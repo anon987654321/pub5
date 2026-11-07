@@ -19,7 +19,13 @@ class ApplicationController < ActionController::Base
   # Retain incoming click ids in Rails' encrypted session until a real account
   # exists; then bind them to that account. No raw session id or IP is stored.
   def capture_s2s_attribution
-    keys = %w[trackingid mediago_trackingid rc_uuid]
+    unless helpers.advertising_consent?
+      Shared::S2sAttribution.where(user: Current.user).delete_all if Current.user.present?
+      session.delete(:s2s_click_ids)
+      return
+    end
+
+    keys = %w[tracking_id trackingid mediago_trackingid rc_uuid]
     incoming = keys.filter_map do |key|
       value = params[key]
       [key, value] if value.is_a?(String) && value.bytesize <= 500 && !value.match?(/[[:cntrl:]]/)
