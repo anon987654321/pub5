@@ -92,7 +92,6 @@ module Studio
         run_directory = File.join(@output_directory, "selfie-series-#{run_id}")
         raise ArgumentError, "selfie series already exists: #{run_directory}" if File.exist?(run_directory) || File.symlink?(run_directory)
 
-        retire_previous_renders!
         FileUtils.mkdir_p(run_directory, mode: 0o700)
         File.chmod(0o700, run_directory)
         manifest_path = File.join(run_directory, ".studio-selfie-series.json")
@@ -191,6 +190,23 @@ module Studio
         series["finished_at"] = @clock.call.utc.iso8601
         write_private_json(manifest_path, series)
 
+        # Keep the previous deliverables in place until every requested model
+        # has produced all ten verified renders. A partial or blocked run must
+        # never displace the last complete set.
+        if series.fetch("status") == "complete"
+          retire_previous_renders!(excluding: run_directory)
+        else
+          @retirement_report = {
+            "status" => "skipped",
+            "reason" => "replacement_series_incomplete",
+            "archived_families" => 0,
+            "archived_files" => 0,
+            "unverified_legacy_files" => []
+          }
+        end
+        series["retirement"] = @retirement_report
+        write_private_json(manifest_path, series)
+
         {
           "status" => series.fetch("status"),
           "run_id" => run_id,
@@ -214,9 +230,9 @@ module Studio
 
       private
 
-      # Authenticate with a read-only API request before touching old renders.
+      # Authenticate with a read-only API request before paid inference.
       # A token's presence proves neither validity nor access; a rejected token
-      # must not leave the previous render set retired with no replacement.
+      # must not consume a render run or alter the previous deliverables.
       def ensure_provider_access!
         if @client.nil? && Studio::ReplicateClient.load_token.to_s.strip.empty?
           raise ArgumentError,
@@ -362,10 +378,13 @@ module Studio
         raise ArgumentError, "private output directory must have mode 0700: #{path}" unless (stat.mode & 0o077).zero?
       end
 
-      def retire_previous_renders!
+      def retire_previous_renders!(excluding: nil)
         @retirement_report = { "archived_families" => 0, "archived_files" => 0, "unverified_legacy_files" => [] }
         archive_directory = File.join(@output_directory, ".retired")
-        previous_series = Dir.glob(File.join(@output_directory, "selfie-series-*")).select do |path|
+        excluded_path = excluding && File.expand_path(excluding)
+        previous_series = Dir.glob(File.join(@output_directory, "selfie-series-*")).reject do |path|
+          excluded_path && File.expand_path(path) == excluded_path
+        end.select do |path|
           managed_series_directory?(path)
         end
         legacy_families = verified_legacy_families
