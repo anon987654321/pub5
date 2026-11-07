@@ -72,12 +72,17 @@ module Studio
       # itself in test_dilla_wear_test.rb. Fourth promotion the same day:
       # mpc_twelve_bit through DrumKit#crush! — the sample-flip path crushes at
       # a fixed 12 bits (dilla.rb sample-flip) and every kit voice rides its
-      # own "crush" bit depth. Refused promotions from the same review:
+      # own "crush" bit depth. Fifth promotion, the sidechain: the duck is
+      # deliberately imperfect — a real kick envelope on a 10 ms staircase, a
+      # 260 ms capped linear release, and max-overlap that can never stack two
+      # kicks into a deeper-than-amount dip. Refused promotions: as before, plus
       # cassette_wow_random_walk (the wow is a sinusoid, not a random
       # walk — naming it a random walk would be a lie with a passing test next
       # to it) and bandwidth_shaped_hiss (NOISE is a white stream; nothing
       # shapes its bandwidth except the preset's own lowpass pass, which is
-      # already covered by sp1200_bandwidth).
+      # already covered by sp1200_bandwidth), and Master#saturate! cited as
+      # dynamic_bass_saturation (the tanh saturator is not bass-specific;
+      # that mapping would be the random-walk mistake in mirror image).
       IMPLEMENTATION_STATUS = {
         %i[dilla vinyl_crackle_density].freeze => {
           status: :verified,
@@ -98,6 +103,11 @@ module Studio
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#crush!",
           regression_test: "STUDIO/test/test_dilla_crush_test.rb#test_mpc_twelve_bit_quantizes_to_a_step_grid"
+        }.freeze,
+        %i[dilla imperfect_sidechain].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#sidechain_curve!",
+          regression_test: "STUDIO/test/test_dilla_sidechain_test.rb#test_the_duck_is_a_ten_millisecond_staircase_on_the_kick_envelope"
         }.freeze,
       }.freeze
       STATUSES = %i[verified unavailable unverified].freeze
