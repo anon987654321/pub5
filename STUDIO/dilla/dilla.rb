@@ -1738,7 +1738,7 @@ module Dilla
         i += 1
       end
       crackle!(mix, cfg["crackle"].to_f, rng)
-      hiss!(mix, cfg["hiss"].to_f)
+      hiss!(mix, cfg["hiss"].to_f, rng)
       dropouts!(mix, cfg["dropout"].to_f, rng) if cfg["dropout"].to_f.positive?
     end
 
@@ -1759,12 +1759,15 @@ module Dilla
       end
     end
 
-    def hiss!(mix, amount)
+    def hiss!(mix, amount, rng)
       return if amount <= 0
 
       n = mix.l.length
       i = 0
-      off = rng_off
+      # The noise entry point comes from the render's seeded rng: an unseeded
+      # walk broke same-seed reproducibility once the noise buffer became a
+      # real stream (before, the constant buffer masked any offset).
+      off = rng.rand(NOISE.length)
       while i < n
         h = NOISE[(i + off) % NOISE.length] * amount * 0.06
         mix.l[i] += h
@@ -1793,10 +1796,6 @@ module Dilla
         end
         i += 1
       end
-    end
-
-    def rng_off
-      @off = (@off.to_i + Random.new.rand(NOISE.length)) % NOISE.length
     end
 
     def one_pole_lp!(ch, hz)
