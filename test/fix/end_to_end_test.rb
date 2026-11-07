@@ -29,7 +29,10 @@ class FixEndToEndTest < Minitest::Test
   end
 
   def fixture(root)
-    %w[lib/keep.rb lib/refuse.rb bin/locked.rb].each { |path| put(root, "repo/#{path}", format(SEED, File.basename(path, ".rb"))) }
+    # db/schema.rb is protected in every registry shape (it is the one
+    # protected path a scanner reads as Ruby), so the skip half of this
+    # contract does not move with writer grants.
+    %w[lib/keep.rb lib/refuse.rb db/schema.rb].each { |path| put(root, "repo/#{path}", format(SEED, File.basename(path, ".rb"))) }
     repo = File.join(root, "repo")
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.email", "fix@test")
@@ -67,7 +70,7 @@ class FixEndToEndTest < Minitest::Test
       assert_empty git(repo, "status", "--porcelain")
       refusal = JSON.parse(File.read(File.join(repo, "log/fix_refusals.jsonl")).lines.last)
       assert_equal %w[lib/refuse.rb commit restored], refusal.values_at("file", "stage", "outcome")
-      refute_includes File.read(File.join(root, "stubs/asked")), "bin/locked.rb", "the protected file never reached the model"
+      refute_includes File.read(File.join(root, "stubs/asked")), "db/schema.rb", "the protected file never reached the model"
       llm = File.readlines(File.join(root, "ledger.jsonl")).map { |l| JSON.parse(l) }.select { |e| e["kind"] == "llm" }
       assert_equal [60] * llm.size, llm.map { |e| e["tokens_in"] + e["tokens_out"] }
       assert_operator llm.size, :>=, 2
