@@ -6,112 +6,121 @@ widths:
 - 768
 - 1280
 rows:
-  "|/|390|page": 3167631a7706c6cad0ad511f74fb6263b131f800a56ba58a6e09efc61b6b66f7
+  "|/|390|page": c82df3737b0e9de4aeb262b1b241b130f24d5b18434686841e293c47df900f91
   "|/|390|dialog":
     present: false
-  "|/|768|page": 8e021d587c20c923b8877a3b7b920df40b790af91d4bf858456443596059f0b0
+  "|/|768|page": d3fc9a364fc778d7085e3f4056db2b999c82181d2b97b909abda306ca102f884
   "|/|768|dialog":
     present: false
-  "|/|1280|page": f0636670a2d695298bfbadb4d94916d15c2f234ca55980ad9ba112706d4f937d
+  "|/|1280|page": 7bbc9977e8ac9dfb90779419f7fe6d635c4dda96b71f81c0ff5d162c8908bf80
   "|/|1280|dialog":
     present: false
-  "|/account|390|page": 6784f2f8688ecf3b76b28b90226204aebccd89dfb65ae13801d8dfa168edd0ad
+  "|/account|390|page": 740af04f856c0b17a62f2906b1bb9baf9653382d9346db41ccc26965a07a469f
   "|/account|390|dialog":
     present: false
-  "|/account|768|page": cf9e694a3251dbf1349ab2c812befd04d1f926b4a5f13ec82dccc936732e074f
+  "|/account|768|page": 8f7f38baef7f64f388128110d73a5494d5cf83301074823ea85b18e0e54d7309
   "|/account|768|dialog":
     present: false
-  "|/account|1280|page": e8097a9b42ba2f2b9081edaa60d4680705d1e88f570d47c9ac98070473f77273
+  "|/account|1280|page": 1ac199e2b1b6a8f1b10ffa651971b081780526bb5dff95e8c61973b09dbfc735
   "|/account|1280|dialog":
     present: false
-  "|/changelog|390|page": cc8a9dde33c96ce1686a4bdc44f5d6ab151c63c19d04a577943e888bc4eafc90
+  "|/changelog|390|page": e37e246acfa63f76257cdde96c2de40e5bcbff409e7907d0531ccf594125b61f
   "|/changelog|390|dialog":
     present: false
-  "|/changelog|768|page": 393de0605d8551d08b4951e2c6d4a0ad809a8f06f7c8cd02e3141fabee6061e5
+  "|/changelog|768|page": 85fdcf7607ca1cb55b28a2b8fe101c4736264095f3438c1dbc51d96326d8f7bd
   "|/changelog|768|dialog":
     present: false
-  "|/changelog|1280|page": 43441deceba0055797d01573c184814cb1126fc12fff1740d65a5009973f12b2
+  "|/changelog|1280|page": 63d90239983e07453f0f0b535d19842a9d10ee6458cec395efb397b2ac65c58f
   "|/changelog|1280|dialog":
     present: false
-  "|/cookies|390|page": 401a92e51e19f34a1ff0e98e5a776c6895ab960fa6feabe6a1f2667ded51aa84
+  "|/cookies|390|page": 59e2d24100e627315f516f236db377a4c600257bb1d03050a1434c94a7a91e2a
   "|/cookies|390|dialog":
     present: false
-  "|/cookies|768|page": 35f0985049f522c08fa31f07f4069721578dc0f5dddd1fe5e927c154424cbf3d
+  "|/cookies|768|page": cf5b1b3b0ce16e703b51918fbc4b2d7b688f49678ea46db28691e26c745ea8df
   "|/cookies|768|dialog":
     present: false
-  "|/cookies|1280|page": 48137993ba6b7be5b4d532a905e5657ffe46eda4ec092ea918b556b59829c5ce
+  "|/cookies|1280|page": 2f93315913d1230de6be459e99c80c62363d7fb3b66e2487a4ebf0934f34c33e
   "|/cookies|1280|dialog":
     present: false
-  "|/demo|390|page": d07955af9d8faa296dc0481ff3150281beda8ab217645d2a7923859c95bdbdff
+  "|/demo|390|page": 841a20135dfbb4ed5173d75d30856e3941ce055045f148a81dbb52455be3d5ab
   "|/demo|390|dialog":
     present: false
-  "|/demo|768|page": ea5f807a8cc2663f35912a591930e600dbe5914c1ee78313af6e83b3f064e7b6
+  "|/demo|768|page": 7d2b1c49dcef5295df71e25a87aaf7acf566cb889d446676cdbbd9bc00f4f3c8
   "|/demo|768|dialog":
     present: false
-  "|/demo|1280|page": e56f6a7bce258913e279ab37264891c9222b2ab66e65b2d794ffdd1575f4ac54
+  "|/demo|1280|page": 3ad6934398d2618a715e8dea8cfb3fd0de8f6b2463a51b8e22da364ce7b7498e
   "|/demo|1280|dialog":
     present: false
-  "|/messages|390|page": 9aa961ada42801d0db05767fd76240963ce64b8902df1f376150d18ea66dab6b
+  "|/live_streams|390|page": 3404c767ae928cb829c51d14c53394192a2b68e2870d225bfc4b8ef2cba935ee
+  "|/live_streams|390|dialog":
+    present: false
+  "|/live_streams|768|page": 909f1c9ddcd82305368755a740d969efde6bea1229c8c73ccc3d016f41a90d1c
+  "|/live_streams|768|dialog":
+    present: false
+  "|/live_streams|1280|page": d72f48e0eb38394291c46c358c0def08b5234e14cdc667d630faa3f5ba0c017d
+  "|/live_streams|1280|dialog":
+    present: false
+  "|/messages|390|page": 37109b64985d47334ea7f340c050453578a752417810c9cf5ef9b22f8597faef
   "|/messages|390|dialog":
     present: false
-  "|/messages|768|page": bf9619fd28ab0ec513a5245029d2d751ee8da752c19b483531663cade0322da1
+  "|/messages|768|page": 73c93ff2acec97bf83f3e649d7382c085d711e7cec39c80d780a9a5e5c56cdf4
   "|/messages|768|dialog":
     present: false
-  "|/messages|1280|page": 7815380e8c33bc3bec5351aa6f950eb29072ce310cae631a936a1e920ca3d064
+  "|/messages|1280|page": 981088703b5c36cefddbc2d7899dccdbe222c606042652c3ca7daf2ab9fd0c05
   "|/messages|1280|dialog":
     present: false
-  "|/messages/widget|390|page": b357ea5e647bf6af1f67bcbfc0e29cfca0be2c2bd077acae308901344b8fac32
+  "|/messages/widget|390|page": 4cd8f05d06ceee4b59d59d054cbdd2cb4b928d87ec3686427c5b49fcf764e53b
   "|/messages/widget|390|dialog":
     present: false
-  "|/messages/widget|768|page": 2855ff9b81f0e51b9a5c07d3da71941b13f0411e0828c3e5529a12972c91c440
+  "|/messages/widget|768|page": 85bb82cf45c39b33fa7a59fce008b8f190f52e6f92b302a19a9f678df6e2ae0e
   "|/messages/widget|768|dialog":
     present: false
-  "|/messages/widget|1280|page": 8a86ad5be215344aa8cd042b6c5554b8bd91d966d09f99e7a043d1b3e6e56768
+  "|/messages/widget|1280|page": 211b267a7312bb771bd67450fccfe40338e649507ae60a27d72a57d5b182ec88
   "|/messages/widget|1280|dialog":
     present: false
-  "|/notifications|390|page": f599c8579f8abe640b9e9a351985099008cf3c3298e5db5b6cb697056406d33f
+  "|/notifications|390|page": eb75ce8a80680183d91a4763cf64025e4f84d58a6142e205a94b10aac9d490d8
   "|/notifications|390|dialog":
     present: false
-  "|/notifications|768|page": d56db3579a077d2d1fc36b8c1c809d746f65798b26faf2cb9e1c7af2c68cef92
+  "|/notifications|768|page": 8a78d55adfb6e537012abb978f688a44845d16b5e7d1d95f38996a8f523fa386
   "|/notifications|768|dialog":
     present: false
-  "|/notifications|1280|page": 2d82561fa347e29936b7065a531bf432ec9577a8d4d9baea2c3230bbcacfa2be
+  "|/notifications|1280|page": feeb0183242b9c982ff132ec5ec862d1d3acef87f2b4384c5ce6e7d9103954e0
   "|/notifications|1280|dialog":
     present: false
-  "|/offline|390|page": 93a544a4a52184cd222518f816621df267d3a17cd4d39461a3d7f5620efe212d
+  "|/offline|390|page": 8604ea6166dc25126043d166e45ffc5deb35c513bb525e0a68c7237c25bdab67
   "|/offline|390|dialog":
     present: false
-  "|/offline|768|page": f2c6bfcd255c1ae1c442e5b3f9470140daf577d834165510b065f9ae573e7e51
+  "|/offline|768|page": 643a39f2c2d70abc83811ce73b56f7eced3229fbd01d4a64bcd8be5f666148e6
   "|/offline|768|dialog":
     present: false
-  "|/offline|1280|page": 6c9ec54f98e38c8bb53b6a41c73295096f5d515eb697bf9c4c9a172eee2e5943
+  "|/offline|1280|page": 684722f64198ed23cba53213d8313b7d540defc1c90382f0af18d3681ce9ed3b
   "|/offline|1280|dialog":
     present: false
-  "|/passwords/new|390|page": 145c918ac36fa37f8eb6952f064e2d2d6ecbd13d0c408798c4e342b244615574
+  "|/passwords/new|390|page": 7405d548863dac7a4bb0b3c04086053f91a5db047cd77f8a6bbfece22e2ee6ae
   "|/passwords/new|390|dialog":
     present: false
-  "|/passwords/new|768|page": aca6b57a6a25176b7c5d56ccaafcbfbb5d9e9fe75dcf3f0a68dded72a8732a6f
+  "|/passwords/new|768|page": 06b7f25ffbf9e0f247d9b7d5a4f4125b3491ee5f6f0a87faf4ae08c687a38fa5
   "|/passwords/new|768|dialog":
     present: false
-  "|/passwords/new|1280|page": d0c2f609e3541dac7cc2ab1ef924b16b84799122a3c6d6f5ce06a537ce155820
+  "|/passwords/new|1280|page": 8d6d4c0014631090973370fd4323482ca421fcc7f672b31e9c893e0b1420b1e6
   "|/passwords/new|1280|dialog":
     present: false
-  "|/posts|390|page": d6f631346bc2bdd0f2116a3e980521efbe8d445f0e62f44b48be799ff776c4ec
+  "|/posts|390|page": ed82ba189044e5bde8da22baa27e48aa7c3ef0a2ad05ced44eeef8dacc8ecbcc
   "|/posts|390|dialog":
     present: false
-  "|/posts|768|page": d9f509e7d97f6c1c74951a25b8cd9f3b21f0b0c17de0c991d5fff65bceec7c2d
+  "|/posts|768|page": 9d5af356476619032147dd2484214fd95cb6fdaa4c6b01e094d8316f6cbc70c0
   "|/posts|768|dialog":
     present: false
-  "|/posts|1280|page": 863cd930a6d19a790f1fc1c1f616f16ed97d4d2a9cc1ecf2b6438b425bf3943a
+  "|/posts|1280|page": 366fc3dc7d623cea4ce7fdadf132371907e292cfb2eb3fb3a5a3d8e59e4dbf65
   "|/posts|1280|dialog":
     present: false
-  "|/privacy|390|page": 6ff7ccf46679e8ea7e07b00d85ae4ddf4a96425eb7bf2614641554fe83b89ed3
+  "|/privacy|390|page": 06b0746dadc8602a3ce1542ec3b342e9fa67bacad023af41ed72e4ce1218eb71
   "|/privacy|390|dialog":
     present: false
-  "|/privacy|768|page": 3bc9a491b445309c6853ab83b073265fafd81166d4c627d06a649098984772c0
+  "|/privacy|768|page": 50041ebc97c3a7998d0179e2609ea48d4230cc4373a8c24f96cf35b573ed46ad
   "|/privacy|768|dialog":
     present: false
-  "|/privacy|1280|page": baf70c34dc1e0466a15cbbba75f346ee55f8dfec3a8a2568b707fd6e65302e91
+  "|/privacy|1280|page": 8b1784bda1b64000592f7bf2212820238ca9c45cbb7a995865c6248688f05ac6
   "|/privacy|1280|dialog":
     present: false
   "|/recede_historical_location|390|page": 5bb54ed008a13d5867bd9bd27d9de21ee56a8e5eda40cb27253acbd13ce8465a
@@ -132,13 +141,13 @@ rows:
   "|/refresh_historical_location|1280|page": 1e542a22c4609bf3cf23f821af4f56c056267db4f2aa98c8e13857a8866e0dec
   "|/refresh_historical_location|1280|dialog":
     present: false
-  "|/registration/new|390|page": 1389cce9157e935d54e3d5d3e86c88e7ad979fe881e8bdbcfb830d7aa88536e8
+  "|/registration/new|390|page": c96bed7483e9fca586293d2d4de62b9ed1d9417e812e8bca3502aac73519c8b3
   "|/registration/new|390|dialog":
     present: false
-  "|/registration/new|768|page": 3226dd8e57b49eab5fb73f8c585473cdcd1199e77995774c9cadf57af38e8358
+  "|/registration/new|768|page": 86f279e6d9277418d4b937a5dddbb1ed099211677c0f13322cddf05ef92a00bc
   "|/registration/new|768|dialog":
     present: false
-  "|/registration/new|1280|page": 223a2af3d6cb5164bafbdae6a6ed35c1371991498cc5c03b642c96fb92382da6
+  "|/registration/new|1280|page": f7ecc74fc4fad1786600ab4cf91c91ba02dad44e2cff3cf178feabfe809906a0
   "|/registration/new|1280|dialog":
     present: false
   "|/resume_historical_location|390|page": 2ffec6542dec3d54617d51992c0d158d7b9bb675cecb55f5ec98147aa6a0b5d0
@@ -150,40 +159,49 @@ rows:
   "|/resume_historical_location|1280|page": 56270f8074e42dbec3d4351318b9f02beea1dd45b49e06786e9031c43ee570a1
   "|/resume_historical_location|1280|dialog":
     present: false
-  "|/safety|390|page": 978380e587c6b7688a7f6105eb059f77c1df37b8f821da8b6b61953fe3adc107
+  "|/rules|390|page": a9cf2d85993d4ddb2f71dbefb58cffecb54388dc8e9b51406b8981b8ceeeaa06
+  "|/rules|390|dialog":
+    present: false
+  "|/rules|768|page": 5c8b0e93d65ecfbdec853440ae2ce1866b79c5a8c0cc628be31417f844464290
+  "|/rules|768|dialog":
+    present: false
+  "|/rules|1280|page": f5bd72cddc747116a9ac3e67009526bd345d276c42acb3a7e7352e2fb842b859
+  "|/rules|1280|dialog":
+    present: false
+  "|/safety|390|page": 7c23125c30aec188c0fe54496fe81b4d1929a37574c309978c7e90a8b2d2662a
   "|/safety|390|dialog":
     present: false
-  "|/safety|768|page": 8854bafacb233b2a9004d8b3db2084b1d832a937fdde353474ad982f8aee1370
+  "|/safety|768|page": 86cfda68e323546ef91252facb98e24d70bb93c862f55f55aeddbe284dc3c36f
   "|/safety|768|dialog":
     present: false
-  "|/safety|1280|page": 872ba512baefad364e106b6adc419d1271de0424f62ccda0e840266654b368fd
+  "|/safety|1280|page": 8f6bdd00f379a4c5d953dcd4908100729158e3a33e44fadf10f278bd9e1b35d3
   "|/safety|1280|dialog":
     present: false
-  "|/session/new|390|page": 13743dea7794e67111b1d2e62031d2c27e77168ada2ec1bd03491e3137a141b6
+  "|/session/new|390|page": 22b05a85ba9b7fc0a69deaac20d39fac90110b7c6b613d5c299dc4d7a7a87155
   "|/session/new|390|dialog":
     present: false
-  "|/session/new|768|page": 8a24ed3e1c90e4de2a184501419aebec31e11e686323aa759b0aa16a21643054
+  "|/session/new|768|page": 2ee6c727fc0f23357b7b4f9d8397de7ecbebd683d6d05224ef354b0bdabdc974
   "|/session/new|768|dialog":
     present: false
-  "|/session/new|1280|page": b90f471155e3bd39ffe9d46bfcd93f04d57edc766e84996a6212174c716dcab9
+  "|/session/new|1280|page": fed50ee19f59e16599695ed15cc5ae10e9a63d128f5a1f423f0caa50f6dc7390
   "|/session/new|1280|dialog":
     present: false
-  "|/terms|390|page": 894c353210f2d1bb128e2d1e0d2901089681c1eaea29d185f8ccdb18cb225098
+  "|/terms|390|page": 767c2b402dcc846ef5c8e83e94eae553e6e68f932974a8e136202429c1fe3549
   "|/terms|390|dialog":
     present: false
-  "|/terms|768|page": 951ddb2152b2d978e5c9bd5a0874fd706bd3e379c32051637739a916f7988537
+  "|/terms|768|page": 76b96d61de38ded3ba5c331a1ef39ce1f83d8fbf4ac0c32b2c33b3d455211607
   "|/terms|768|dialog":
     present: false
-  "|/terms|1280|page": 1543e85ccbad381afea6f06774e7b49c32bb5785735cfa1a49048f2c8b4e0582
+  "|/terms|1280|page": de17951ab7e4c382b033a1705e0503106ca46ddb1b7e14f1e8a6c758ee83d06a
   "|/terms|1280|dialog":
     present: false
-  "|/two_factor_setup|390|page": 95fe11d425e930399df546efdec61ae0f353a303801d5a9513a1959ab65e1189
+  "|/two_factor_setup|390|page": 353cff374aebb32a7e1db20b65e1ec8278f2afd211c5b0b9d92795e42667ad50
   "|/two_factor_setup|390|dialog":
     present: false
-  "|/two_factor_setup|768|page": 8a870c7e08e5cd520d3062cd373396bc2b2c1245ea1e72118926e475d844070f
+  "|/two_factor_setup|768|page": 8e4858c8b1a6aa73e8ef463446cd2384ef050df9d0974fe330e991f81f8492d0
   "|/two_factor_setup|768|dialog":
     present: false
-  "|/two_factor_setup|1280|page": c0acc4dec1520763e1267d42fc91c28c31e075311ba87cf96612f7e97a283bdb
+  "|/two_factor_setup|1280|page": cc2bda251ca9ef258a539a1926a2178046a94590de7a597106a54db36919b99f
   "|/two_factor_setup|1280|dialog":
     present: false
   "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
