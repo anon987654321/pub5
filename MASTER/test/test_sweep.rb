@@ -71,12 +71,24 @@ class TestSweep < Minitest::Test
     # OPENBSD's obsdreach probe runs bin/reach: the module moved to lib/reach.rb
     # when OPENBSD/tools/ was deleted (6e09c6919), because require cannot load an
     # extensionless file, and bin/reach stayed as the executable shim the probe
-    # names. STUDIO's probe runs its check.rb.
-    { "OPENBSD" => "bin/reach", "STUDIO" => "check.rb" }.each do |tree, script|
+    # names. STUDIO's check moved the other way, from a check.rb script into
+    # `rake check`, so its probe follows the Rakefile now. BIZ has no script at
+    # all — it carries only published plan folders — so its instrument lives
+    # beside the tools in MASTER/tools/biz.
+    {
+      "OPENBSD" => "bin/reach",
+      "STUDIO" => "Rakefile",
+      "BIZ" => nil
+    }.each do |tree, script|
+      next if script.nil?
+
       path = File.join(S::ROOT, tree, script)
 
       assert File.file?(path), "#{tree} probe runs #{script}, which is not there"
     end
+
+    assert File.file?(File.join(S::ROOT, "MASTER", "tools", "biz", "bp_check.mjs")),
+           "BIZ probe runs bp_check.mjs, which is not there"
   end
 
   def test_the_ledger_parses_and_every_row_is_shaped

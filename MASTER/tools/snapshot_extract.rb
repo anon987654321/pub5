@@ -4,6 +4,7 @@ require "fileutils"
 require "optparse"
 require "tmpdir"
 require_relative "../lib/trace/dmesg"
+require_relative "../lib/boot/paths"
 
 # Rehydrates the source files embedded in one or more snapshot packs into a
 # temporary repository-shaped tree. It never invents missing binaries or claim
@@ -11,7 +12,7 @@ require_relative "../lib/trace/dmesg"
 # the snapshot contains.
 module Operator
   module SnapshotExtract
-    VALID_TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+    VALID_TREES = MasterPaths::TREES
 
     module_function
 

@@ -19,6 +19,7 @@
 
 require "json"
 require_relative "../../lib/trace/dmesg"
+require_relative "../../lib/boot/paths"
 
 module Operator
   class Runs
@@ -140,7 +141,7 @@ module Operator
       # The prior .rb-only glob omitted 23 Node runtime tests and OpenBSD's
       # resource-guard shell test; those can be orphaned while the count stays green.
       patterns = %w[**/*.rb **/*.test.mjs **/test_*.sh **/*_test.sh]
-      @test_files ||= %w[MASTER RAILS OPENBSD STUDIO].flat_map do |tree|
+      @test_files ||= MasterPaths::TREES.flat_map do |tree|
         patterns.flat_map { |pattern| Dir[File.join(ROOT, tree, pattern)] }
       end.uniq
        .map { |path| path.sub("#{ROOT}/", "") }

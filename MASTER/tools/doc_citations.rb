@@ -29,12 +29,13 @@
 require "json"
 require "yaml"
 require_relative "../lib/trace/dmesg"
+require_relative "../lib/boot/paths"
 
 module Operator
   class DocCitations
     ROOT = File.expand_path("../..", __dir__)
     MASTER = File.join(ROOT, "MASTER")
-    TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+    TREES = MasterPaths::TREES
     SKIP = %r{/(node_modules|vendor|knowledge|output|tmp|\.master|\.git)/}
 
     CITE = /<!--\s*cite:\s*([^\s#]+)#([^\s]+)\s*-->/

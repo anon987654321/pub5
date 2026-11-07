@@ -30,6 +30,7 @@
 require "json"
 require "yaml"
 require_relative "../lib/io/exec"
+require_relative "../lib/boot/paths"
 require_relative "../lib/trace/dmesg"
 
 module Operator
@@ -38,7 +39,7 @@ module Operator
     MASTER = File.join(ROOT, "MASTER")
     LEDGER = File.join(MASTER, "data", "proposals.yml")
 
-    TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+    TREES = MasterPaths::TREES
 
     # unit name, the tree(s) it speaks for, and how to run it. Each returns
     # [ok, detail] — detail is the dmesg line body, ok is whether the instrument
@@ -64,10 +65,19 @@ module Operator
 # stopped agreeing.
 Probe.new(unit: "obsdreach", trees: %w[OPENBSD],
           run: -> { sibling("OPENBSD", "bin/reach") }),
-# STUDIO's check parses its Ruby, holds its require boundary and boots the
-# guarded entry points; without it STUDIO's heading reports cohesion alone.
+# STUDIO's `rake check` parses its Ruby, holds its require boundary and boots
+# the guarded entry points; without it STUDIO's heading reports cohesion
+# alone. It was `check.rb` until the Rakefile took the work over.
 Probe.new(unit: "studiocheck", trees: %w[STUDIO],
-          run: -> { sibling("STUDIO", "check.rb") }),
+          run: -> { sibling_task("STUDIO", "check") }),
+# BIZ carries only published plan folders, so it has no script to bootstrap.
+# bp_check re-reads the built HTML and runs the law checks the tree is held
+# to; it is the only instrument that speaks for BIZ, and reading its own tree
+# is the whole job. Its tools live in MASTER/tools/biz and write to a temp
+# directory unless BIZ_OUT_DIR names the tree, which is what makes the check
+# read what is committed instead of what was last built.
+Probe.new(unit: "bizcheck", trees: %w[BIZ],
+          run: -> { biz_check }),
 # MASTER/tools's coverage was never thin, only unreported here: check.rb parses
 # every first-party file, checks dilla's manifest against the disk, and
 # boots the guarded entry points. `rake tools` already runs it; this is
@@ -90,6 +100,23 @@ Probe.new(unit: "toolsgate", trees: %w[MASTER],
 def sibling(tree, script, *args)
   dir = File.join(ROOT, tree)
   capture(RbConfig.ruby, File.join(dir, script), *args, chdir: dir)
+end
+
+# A sibling that is checked by a task rather than a script: STUDIO deleted its
+# check.rb when `rake check` took over the work (it loads the tree's
+# entrypoints, holds its require boundary and boots the guarded paths). The
+# probe follows the tree's own surface instead of naming a file that no
+# longer exists.
+def sibling_task(tree, task)
+  dir = File.join(ROOT, tree)
+  capture(RbConfig.ruby, "-S", "rake", task, chdir: dir)
+end
+
+# BIZ's instrument is a node script that reads the tree's committed HTML.
+def biz_check
+  dir = File.join(ROOT, "BIZ")
+  capture({ "BIZ_OUT_DIR" => dir }, "node", File.join(MASTER, "tools", "biz", "bp_check.mjs"),
+          chdir: dir)
 end
 
     def rake(task)
