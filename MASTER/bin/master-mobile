@@ -10,6 +10,7 @@
 #   bin/master-mobile sms       the SMS operator gateway; prints what it is missing when it may not run
 #   bin/master-mobile notify    one on-screen toast, then exit
 #   bin/master-mobile say       one spoken line over the phone speaker, then exit
+#   bin/master-mobile pulse     the torch and vibration motor flashing on the beat, then exit
 #   bin/master-mobile snap      a burst of camera stills graded through the STUDIO postpro chain
 #   bin/master-mobile <args>    bin/master in the mobile profile
 
@@ -19,6 +20,9 @@ require "mobile/profile"
 
 ENV["MASTER_PROFILE"] = "mobile"
 Master::Mobile::Profile.new.activate!
+# The device arms (notify/say/snap/pulse) call through Ground admission checks;
+# only a full boot loads the namespace otherwise.
+require_relative File.join(root, "lib", "ground", "law_handshake")
 
 case ARGV.first
 when "doctor"
@@ -115,6 +119,34 @@ when "snap"
   end
   puts "mobile0: snap burst done - #{graded}/#{burst} graded in #{out_dir}"
   exit(graded > 0 ? 0 : 1)
+when "pulse"
+  # The phone as a hardware drum machine: torch and vibration motor flash on
+  # the beat. Interval timing only, no audio analysis; the operator picks the
+  # bpm. Never more than thirty seconds and never in the dark of a background
+  # daemon - it runs in the foreground, where the person holding the phone sees it.
+  require "device"
+  bpm = Integer(ARGV[1] || 85)
+  seconds = Integer(ARGV[2] || 5)
+  unless bpm.between?(30, 200) && seconds.between?(1, 30)
+    warn "mobile0: pulse needs bpm in 30..200 and seconds in 1..30"
+    exit 1
+  end
+  interval = 60.0 / bpm
+  deadline = Time.now + seconds
+  begin
+    while Time.now < deadline
+      Master::Device.torch(true)
+      Master::Device.vibrate(30)
+      spin = Time.now + interval - 0.08
+      sleep(0.08)
+      Master::Device.torch(false)
+      sleep([spin - Time.now, 0].max) while Time.now < spin
+    end
+  rescue Master::Device::Error => e
+    warn "mobile0: #{e.message}"
+    exit 1
+  end
+  puts "mobile0: pulse done, #{bpm} bpm for #{seconds}s"
 else
   exec(File.join(root, "bin", "master"), *ARGV)
 end
