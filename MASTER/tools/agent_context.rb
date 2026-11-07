@@ -8,7 +8,6 @@
 # two memories in one repo with no path between them.
 #
 #   ruby MASTER/tools/agent_context.rb                 # the standing context
-#   ruby MASTER/tools/agent_context.rb "<prompt>"      # plus what matches it
 #   ruby MASTER/tools/agent_context.rb --json          # the same, as data
 #   ruby MASTER/tools/agent_context.rb --json --tree   # plus the tree map
 #
@@ -64,20 +63,6 @@ module Operator
       Master::Review::Scan::LawRegistryAudit.new(root: MASTER_DIR).call.coverage_line
     rescue StandardError => e
       "Law coverage unavailable (#{e.class})"
-    end
-
-    # Memory is matched on the words of the prompt rather than searched
-    # semantically: a hook has milliseconds, and an exact-word hit on a lesson
-    # filename is a better signal than an embedding at this size.
-    def lessons(query)
-      return [] unless query
-
-      path = File.join(MASTER_DIR, "data", "recovery", "pub_archive_restore.yml")
-      return [] unless File.file?(path)
-
-      words = query.downcase.scan(/[a-z]{4,}/).uniq
-      name = File.basename(path, ".yml").tr("_", " ")
-      words.any? { |w| name.include?(w) } ? [path] : []
     end
 
     def shell_contract
@@ -200,7 +185,7 @@ module Operator
       Master::Soul.authority_order(root: REPO_ROOT)
     end
 
-    def render(query = nil)
+    def render
       authority = source_authority.map { |row| row.fetch("id") }.join(" > ")
       out = ["Source authority (highest first): #{authority}", "MASTER conduct in force (law/practice.rb):"]
       conduct.each { |name, text| out << "  #{name}: #{text.to_s.split(/(?<=\.)\s/).first}" }
@@ -211,8 +196,6 @@ module Operator
       out << "Execution capabilities: #{capability_rows.map { |name, row| "#{name}=#{row.fetch("status")}" }.join(", ")}"
       out << ""
       out.concat(shell_contract)
-      matched = lessons(query)
-      out << "Lessons matching this prompt: #{matched.map { |p| File.basename(p, '.yml') }.join(', ')}" if matched.any?
       out.join("\n")
     end
 
@@ -260,6 +243,6 @@ if $PROGRAM_NAME == __FILE__
     root, depth, max_entries = options
     puts Operator::AgentContext.render_tree(root:, max_depth: depth, max_entries:)
   else
-    puts Operator::AgentContext.render(ARGV.first)
+    puts Operator::AgentContext.render
   end
 end

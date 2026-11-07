@@ -3,19 +3,20 @@
 require "shared/contracts"
 require "yaml"
 require "pathname"
-require "shared/contracts"
 Shared::Contracts.require_contract("studio")
 
 module Brgen
   # Shared Radio Bergen manifest loader — pub2 index.html archaeology split into data + Rails.
   class RadioBergenManifest
+    # The pub2 archive head the lineage line cites. It was read from a lessons
+    # file at config/radio_bergen/archive_lessons.yml or
+    # MASTER/data/recovery/pub_archive_restore.yml; neither has existed on any
+    # host, so every call fell through to this value.
+    PUB2_HEAD = "ad05242c97ff"
+
     class << self
       def manifest_path
         manifest_candidates.find { |path| File.file?(path) }
-      end
-
-      def lessons_path
-        lessons_candidates.find { |path| File.file?(path) }
       end
 
       # One candidate now, not four. The three fallbacks pointed into
@@ -25,13 +26,6 @@ module Brgen
       # it is the same path, so there is nothing left to fall back to.
       def manifest_candidates
         [ rails_root.join("config/radio_bergen/tracks.yml") ]
-      end
-
-      def lessons_candidates
-        [
-          rails_root.join("config/radio_bergen/archive_lessons.yml"),
-          Pathname.new(File.join(Shared::Contracts.root, "MASTER", "data", "recovery", "pub_archive_restore.yml"))
-        ]
       end
 
       # All four candidates named a subsystem that no longer exists: 41b20306d
@@ -149,13 +143,12 @@ module Brgen
       def archaeology_lines
         manifest = load
         meta = manifest["meta"] || {}
-        pub2_head = lessons_pub2_head
         youtube_count = youtube_tracks.size + whyp_tracks.size
 
         [
           "$ git dig --follow pub4/index.html",
           "object: pub2 monolithic index.html → radio.brgen.no warp tunnel",
-          "archive: #{meta['source_archive'] || 'anon987654321/pub2'} @ #{pub2_head}",
+          "archive: #{meta['source_archive'] || 'anon987654321/pub2'} @ #{PUB2_HEAD}",
           # These two are rendered to the visitor on the playlist surface, so
           # they name paths that exist. MASTER/tools/radio-bergen/ was removed in
           # 41b20306d; the manifest moved into this app and the learnings into
@@ -166,14 +159,6 @@ module Brgen
           "policy: #{manifest.dig('external_reference', 'policy') || 'reference_only_until_rights_review'}",
           "surface: radio.brgen.no — tap to boot tunnel (pub4 matrix index.html lineage)"
         ]
-      end
-
-      def lessons_pub2_head
-        path = lessons_path
-        return "ad05242c97ff" unless path
-
-        data = YAML.safe_load(File.read(path), permitted_classes: [], aliases: true) || {}
-        data.dig("pub2", "head") || "ad05242c97ff"
       end
     end
   end
