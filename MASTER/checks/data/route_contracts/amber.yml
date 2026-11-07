@@ -6,7 +6,7 @@ routes:
   "/":
     status: 200
     type: text/html
-    title: Oversikt - Amber
+    title: Fire antrekk fra garderoben — Amber
     heading: Fire antrekk fra garderoben
     landmarks:
     - header
@@ -15,6 +15,7 @@ routes:
     - footer
     - form
     forms:
+    - "/encounters"
     - "/posts/N/vote"
   "/.well-known/apple-app-site-association":
     status: 200
@@ -36,7 +37,10 @@ routes:
     - form
     forms:
     - "/account"
+    - "/account/email"
+    - "/account/password"
     - "/ai/search"
+    - "/encounters"
   "/account/export":
     status: 200
     type: text/csv
@@ -114,6 +118,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/connections":
     status: 302
     type: text/html
@@ -123,7 +128,7 @@ routes:
   "/cookies":
     status: 200
     type: text/html
-    title: Informasjonskapsler - Amber
+    title: Informasjonskapsler — Amber
     heading: Informasjonskapsler på N.N.N.N
     landmarks:
     - header
@@ -134,6 +139,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/creator_profile/edit":
     status: 302
     type: text/html
@@ -155,7 +161,7 @@ routes:
   "/demo":
     status: 200
     type: text/html
-    title: Demogarderobe - Amber
+    title: Demogarderobe — Amber
     heading: Demogarderobe
     landmarks:
     - header
@@ -166,10 +172,16 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/health":
     status: 200
     type: application/json
   "/internal/status":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/internal/version":
     status: 401
     type: text/html
     landmarks: []
@@ -196,18 +208,27 @@ routes:
     status: 204
     type: ''
   "/live_streams":
-    status: 302
+    status: 200
     type: text/html
-    location: "/session/new"
-    landmarks: []
-    forms: []
+    title: Stiløkter — Amber
+    heading: Stiløkter
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
   "/manifest":
     status: 200
     type: application/manifest+json
   "/messages":
     status: 200
     type: text/html
-    title: Meldinger - Amber
+    title: Meldinger — Amber
     heading: Meldinger
     landmarks:
     - header
@@ -218,6 +239,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/messages"
     - "/messages/invite_master"
   "/messages/widget":
@@ -233,11 +255,12 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/messages"
   "/notifications":
     status: 200
     type: text/html
-    title: Varsler - Amber
+    title: Varsler — Amber
     heading: Varsler
     landmarks:
     - header
@@ -248,6 +271,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/notifications/badge":
     status: 200
     type: application/json
@@ -265,6 +289,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/outfits":
     status: 302
     type: text/html
@@ -297,6 +322,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/passwords"
   "/planned_outfits":
     status: 302
@@ -307,7 +333,7 @@ routes:
   "/posts":
     status: 200
     type: text/html
-    title: Amber
+    title: Fellesskap — Amber
     heading: Fellesskap
     landmarks:
     - header
@@ -318,6 +344,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/posts"
     - "/posts/N/vote"
   "/posts/feed":
@@ -335,7 +362,7 @@ routes:
   "/privacy":
     status: 200
     type: text/html
-    title: Personvern - Amber
+    title: Personvern — Amber
     heading: Personvern hos N.N.N.N
     landmarks:
     - header
@@ -346,6 +373,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/privacy_setting":
     status: 302
     type: text/html
@@ -376,16 +404,32 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/registration"
   "/resume_historical_location":
     status: 200
     type: text/html
     landmarks: []
     forms: []
+  "/rules":
+    status: 200
+    type: text/html
+    title: Regler — Amber
+    heading: Regler
+    landmarks:
+    - header
+    - nav
+    - main
+    - aside
+    - footer
+    - form
+    forms:
+    - "/ai/search"
+    - "/encounters"
   "/safety":
     status: 200
     type: text/html
-    title: Sikkerhet - Amber
+    title: Sikkerhet — Amber
     heading: Din sikkerhet
     landmarks:
     - header
@@ -396,6 +440,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/service-worker":
     status: 200
     type: application/javascript
@@ -419,6 +464,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/session"
   "/sitemap.xml":
     status: 200
@@ -432,7 +478,7 @@ routes:
   "/terms":
     status: 200
     type: text/html
-    title: Vilkår - Amber
+    title: Vilkår — Amber
     heading: Vilkår for N.N.N.N
     landmarks:
     - header
@@ -443,6 +489,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
   "/two_factor_setup":
     status: 200
     type: text/html
@@ -457,6 +504,7 @@ routes:
     - form
     forms:
     - "/ai/search"
+    - "/encounters"
     - "/two_factor_setup"
   "/up":
     status: 200
