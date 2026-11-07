@@ -63,9 +63,11 @@ module Acceptance
 
   # One rails boot per app that ships the round-trip suite; whatever its
   # test helper and bundler answer decides the verdict. A tree without app
-  # dirs answers pending, as pub5 today does.
+  # dirs answers pending. The instrument runs against pub4's checkout
+  # spellings (RAILS/brgen) and pub5's (rails/brgen); the app dir is found
+  # either way, so the half does not answer pending on the case of $cwd.
   def round_trips(root)
-    app_roots = %w[brgen amber bsdports].map { |app| File.join(root, "RAILS", app) }
+    app_roots = %w[brgen amber bsdports].filter_map { |app| app_root(root, app) }
     booted = app_roots.select { |dir| File.file?(File.join(dir, "bin", "rails")) }
     return Report.new("export/import round-trip", "pending", "no app trees under #{root}") if booted.empty?
 
@@ -78,6 +80,13 @@ module Acceptance
       "#{app}: #{detail}"
     end
     Report.new("export/import round-trip", fails.empty? ? "pass" : "fail", fails.empty? ? "" : fails.join("\n"))
+  end
+
+  # pub4 spells the app trees RAILS/<app>; pub5 spells them rails/<app>.
+  # Whatever the target names, the same app in the same tree answers.
+  def app_root(root, app)
+    ["RAILS", "rails"].map { |dir| File.join(root, dir, app) }
+                      .find { |candidate| File.directory?(candidate) }
   end
 
   # The documented operator invocation: this Mac's profile never puts rbenv

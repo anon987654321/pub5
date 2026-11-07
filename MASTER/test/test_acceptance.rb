@@ -47,6 +47,19 @@ class TestAcceptance < Minitest::Test
     end
   end
 
+  def test_the_round_trips_read_pub5_s_lowercase_app_trees
+    Dir.mktmpdir do |root|
+      bin = File.join(root, "rails", "amber", "bin")
+      FileUtils.mkdir_p(bin)
+      File.write(File.join(bin, "rails"), "#!/bin/sh\n")
+      with_spawn_swaps(app: ["", "1 runs, 0 failures", PASS.new(true)]) do
+        report = Acceptance.round_trips(root)
+
+        assert_equal "pass", report.state, "rails/amber is found without a RAILS/ spelling"
+      end
+    end
+  end
+
   def test_route_contracts_fail_with_the_instruments_last_words
     with_spawn_swaps(route: ["brgen: 101 routes differ", "", PASS.new(false)]) do
       report = Acceptance.route_contracts("http://target.test")
