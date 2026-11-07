@@ -11,11 +11,9 @@ gem "sqlite3", ">= 2.1"
 gem "falcon"
 gem "webrick"
 
-# No job queue: /events/stream is the face's one event pipe, and Rails.cache
-# is the default file store. solid_queue and solid_cache were listed and never
-# configured, which cost the 1 GB box their boot memory for nothing. The web
-# terminal's ActionCable mount (config/cable.yml) is the one cable, and it
-# runs on the in-process async adapter — no Redis, no extra boot memory.
+# No job queue and no cable: /events/stream is the face's one event pipe, and
+# Rails.cache is the default file store. solid_queue and solid_cache were listed
+# and never configured, which cost the 1 GB box their boot memory for nothing.
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]

@@ -60,9 +60,7 @@ Rails.application.routes.draw do
     end
   end
 
-  # Master web terminal: the OpenBSD-style prompt, served over HTTP and
-  # ActionCable (MASTER/web/app/controllers/master/web/terminal_controller.rb).
-  get  "master/terminal",         to: "master/web/terminal#index"
-  post "master/terminal/execute", to: "master/web/terminal#execute"
-  mount ActionCable.server => "/master/cable", as: :master_cable
+  # The operator's web terminal. It posts each line to chat/command, the one
+  # authenticated CLI channel; the terminal route itself runs nothing.
+  get "master/terminal", to: "master/web/terminal#index"
 end

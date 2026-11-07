@@ -6,13 +6,12 @@ html, body {
   height: 100vh;
   background-color: #000000;
   color: #d0d0d0;
-  font-family: 'Roboto Mono', monospace;
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
   line-height: 18px; /* Strict 18px line height matching VirtualTerminal js */
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  user-select: none;
 }
 
 /* Outer Window Frame */
@@ -32,6 +31,12 @@ html, body {
   margin-bottom: 12px;
   border-bottom: 1px solid #1a1a1a;
   padding-bottom: 8px;
+}
+
+.ghostty-banner {
+  margin: 6px 0 0;
+  color: #666666;
+  font-size: 12px;
 }
 
 .pixel-row {
@@ -56,6 +61,7 @@ html, body {
 
 /* Virtualized Output Buffer Scroll Area */
 #terminal-scroll-container {
+  position: relative;
   flex-grow: 1;
   width: 100%;
   overflow-y: auto;
@@ -66,7 +72,16 @@ html, body {
   display: none; /* Hide scrollbars in WebKit/Blink */
 }
 
+.terminal-spacer {
+  width: 100%;
+  pointer-events: none;
+}
+
 .terminal-output {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   white-space: pre;
   word-break: break-all;
   color: #cccccc;
@@ -94,7 +109,7 @@ html, body {
   background: transparent;
   border: none;
   color: #ffffff;
-  font-family: 'Roboto Mono', monospace;
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
   line-height: 18px;
   outline: none;

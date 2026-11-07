@@ -1,50 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= I18n.locale %>">
 <head>
-  <title>MASTER [pub5] - OpenBSD Web Shell</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      background-color: #000000;
-      color: #ffffff;
-      font-family: 'Roboto Mono', monospace;
-      margin: 0;
-      padding: 16px;
-      -webkit-font-smoothing: antialiased;
-    }
-    .master-pixel-face { margin-bottom: 12px; }
-    .pixel-row { display: flex; height: 3px; }
-    .pixel { width: 3px; height: 3px; margin: 0.5px; }
-    .pixel.lit { background-color: #ffffff; box-shadow: 0 0 2px #ffffff; }
-    .pixel.dim { background-color: #0a0a0a; }
-
-    .terminal-output { white-space: pre-wrap; word-break: break-all; line-height: 1.4; color: #cccccc; }
-    .input-line { display: flex; margin-top: 8px; }
-    .prompt { color: #888888; margin-right: 8px; font-weight: 700; }
-    .web-input {
-      background: transparent;
-      border: none;
-      color: #ffffff;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 1em;
-      outline: none;
-      flex-grow: 1;
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex">
+  <title>MASTER terminal</title>
+  <link rel="stylesheet" href="<%= asset_path("master/ghostty_console.css") %>">
+  <%= javascript_include_tag "master_terminal.js", defer: true, nonce: true %>
 </head>
 <body>
-  <div id="pixel-face-container" class="master-pixel-face"></div>
-  <div class="terminal-output" id="terminal-log">OpenBSD 7.6-current (GENERIC) master_web0 active</div>
-  <div class="input-line">
-    <span class="prompt" id="prompt-label">master: ~ $</span>
-    <input type="text" id="web-input" class="web-input" autofocus autocomplete="off" />
-  </div>
-
-  <script>
-    // Initialize Pixel Face and ActionCable socket connection...
-  </script>
+  <%= yield %>
 </body>
 </html>

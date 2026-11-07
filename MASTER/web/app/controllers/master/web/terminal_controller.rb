@@ -1,22 +1,19 @@
+# frozen_string_literal: true
+
 module Master
   module Web
+    # The operator's web terminal. This controller only renders the page:
+    # public/master_terminal.js sends each line to ChatController#command, the
+    # one authenticated CLI channel (gateway, rate limit, same-origin check),
+    # so nothing here runs a command.
     class TerminalController < ApplicationController
       layout "master_web"
 
+      skip_before_action :require_container!
+      before_action :require_authenticated!
+
       def index
-        @boot_timestamp = Time.now.strftime("%b %e %T")
-        @dmesg_header = "OpenBSD 7.6-current (GENERIC) master_web0 active"
-      end
-
-      def execute
-        command = params[:command]
-        output = Master::Shell.execute_command(command)
-
-        render json: {
-          command: command,
-          output: output,
-          prompt: Master::Shell.build_openbsd_prompt(0)
-        }
+        @dmesg_header = "master_web0 at ttyWeb0: #{Master::VERSION}"
       end
     end
   end

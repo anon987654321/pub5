@@ -26,9 +26,9 @@ module Master
       exit 0
     end
 
-    # The OpenBSD-style prompt reused by the MASTER web terminal. Branch and
-    # dirty state come from the asynchronous GitCache, never a blocking
-    # subprocess; the exit token is ':' for success and '!' for failure.
+    # The OpenBSD-style prompt. Branch and dirty state come from the
+    # asynchronous GitCache, never a blocking subprocess; the exit token is
+    # ':' for success and '!' for failure.
     def self.build_openbsd_prompt(last_status = 0)
       GitCache.start_background_sync unless @sync_started
       @sync_started = true
@@ -39,14 +39,6 @@ module Master
       exit_token = last_status == 0 ? ":" : "!"
 
       "master#{branch_info}#{status_marker} #{exit_token} "
-    end
-
-    # Runs one command in an isolated subshell and returns its output; the
-    # web terminal channels and the execute route call this.
-    def self.execute_command(cmd)
-      `#{cmd} 2>&1`
-    rescue StandardError => e
-      "master: execution error -> #{e.message}"
     end
 
     def self.print_kernel_banner

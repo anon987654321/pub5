@@ -136,4 +136,25 @@ class AuthTierControllerTest < ActionDispatch::IntegrationTest
     refute_empty allowed
     %w[Shell WriteFile StrReplace BatchReplace AstEdit Clean].each { |tool| refute_includes allowed, tool }
   end
+
+  test "a visitor cannot open the web terminal" do
+    get "/master/terminal"
+
+    assert_response :unauthorized
+  end
+
+  test "the web terminal renders for the operator and sends input to chat/command" do
+    get "/master/terminal", headers: auth_headers
+
+    assert_response :success
+    assert_select "#terminal-scroll-container[role=log]"
+    assert_select "script[src*='/assets/master_terminal-'][nonce]"
+    assert_includes File.read(Rails.root.join("public/master_terminal.js")), %("/chat/command")
+  end
+
+  test "the web terminal has no route that runs a command" do
+    post "/master/terminal/execute", params: { command: "id" }, headers: auth_headers, as: :json
+
+    assert_response :not_found
+  end
 end
