@@ -246,6 +246,8 @@ module Master
 
       def codepen_trending(limit:)
         limit = bounded_integer(limit, 1, 12)
+        return codepen_trending_in_browser(limit) if @world.respond_to?(:browser)
+
         html = request("https://codepen.io/trending", expected_host: "codepen.io")
         cleaned = html.gsub(/<script\b.*?<\/script\s*>/mi, " ")
                       .gsub(/<style\b.*?<\/style\s*>/mi, " ")
@@ -255,12 +257,40 @@ module Master
 
           { title:, user:, url: "https://codepen.io/#{user}/pen/#{slug}" }
         end.uniq { |row| row[:url] }.first(limit)
-        result = { source: "https://codepen.io/trending", results: rows, status: "ok" }
+        result = { source: "https://codepen.io/trending", results: rows, status: "ok", method: "static_html" }
         if rows.empty? && html.match?(/doesn't work very well without JavaScript/i)
           result[:status] = "javascript_required"
-          result[:note] = "CodePen returned its JavaScript shell without the trending feed; no Pens are being reported as an empty feed."
+          result[:note] = "CodePen returned its JavaScript shell without the trending feed. A brokered browser session is required to read the live feed; no Pens are being reported as an empty feed."
         end
         result
+      end
+
+      def codepen_trending_in_browser(limit)
+        session = "research-codepen-trending"
+        browser_call(action: "open", session:, url: "https://codepen.io/trending")
+        snapshot = browser_call(action: "scroll", session:, steps: 3)
+        data = snapshot.is_a?(String) ? JSON.parse(snapshot) : snapshot.to_h
+        links = Array(data["links"] || data[:links])
+        rows = links.filter_map do |link|
+          href = link["href"] || link[:href]
+          match = %r{\Ahttps://codepen\.io/([A-Za-z0-9_-]+)/pen/([A-Za-z0-9_-]+)/?\z}.match(href.to_s)
+          next unless match
+
+          title = plain_text(link["text"] || link[:text])
+          { title: title.empty? ? match[2] : title, user: match[1], url: href.to_s }
+        end.uniq { |row| row[:url] }.first(limit)
+
+        {
+          source: "https://codepen.io/trending",
+          method: "brokered_browser",
+          status: rows.empty? ? "no_public_pens_extracted" : "ok",
+          results: rows,
+          note: rows.empty? ? "The live DOM was reached, but no public Pen links matched the extractor." : nil
+        }.compact
+      rescue JSON::ParserError, NoMethodError => e
+        raise Error, "invalid live CodePen feed observation: #{e.message}"
+      ensure
+        browser_call(action: "close", session:) if session && @world.respond_to?(:browser)
       end
 
       def codepen_inspect(url:)
