@@ -2,7 +2,7 @@
 schema: 1
 apps:
   amber:
-    digest: 626ea2a3e6cde114
+    digest: 68761b650b222cbb
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -64,6 +64,8 @@ apps:
       - "/notifications"
       link_previews#show:
       - "/link_previews"
+      link_previews#thumbnail:
+      - "/link_embeds/thumbnails/:digest"
       fleet_health#show:
       - "/health"
       passwords#new:
@@ -116,6 +118,8 @@ apps:
       - "/messages"
       messages#widget:
       - "/messages/widget"
+      encounters#waiting:
+      - "/encounters/waiting"
       posts#feed:
       - "/posts/feed"
       posts#index:
@@ -199,7 +203,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   brgen:
-    digest: 1f8f272cb7e7d6d5
+    digest: f80cb8c106e30fb6
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -279,6 +283,8 @@ apps:
       - "/notifications"
       link_previews#show:
       - "/link_previews"
+      link_previews#thumbnail:
+      - "/link_embeds/thumbnails/:digest"
       notifications#open:
       - "/notifications/:id/open"
       admin/reports#index:
@@ -408,6 +414,8 @@ apps:
       - "/nearby/room"
       nearby#widget:
       - "/nearby/widget"
+      encounters#waiting:
+      - "/encounters/waiting"
       channels#index:
       - "/channels"
       channels#show:
@@ -598,7 +606,7 @@ apps:
       maps/places#show:
       - "/places/:id"
   bsdports:
-    digest: 02b353fee514b604
+    digest: 30e4ba5abbbd0c7e
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -691,6 +699,135 @@ apps:
       - "/rails/conductor/action_mailbox/inbound_emails/:id"
       rails/conductor/action_mailbox/inbound_emails/sources#new:
       - "/rails/conductor/action_mailbox/inbound_emails/sources/new"
+      active_storage/blobs/redirect#show:
+      - "/rails/active_storage/blobs/:signed_id/*filename"
+      - "/rails/active_storage/blobs/redirect/:signed_id/*filename"
+      active_storage/blobs/proxy#show:
+      - "/rails/active_storage/blobs/proxy/:signed_id/*filename"
+      active_storage/representations/redirect#show:
+      - "/rails/active_storage/representations/:signed_blob_id/:variation_key/*filename"
+      - "/rails/active_storage/representations/redirect/:signed_blob_id/:variation_key/*filename"
+      active_storage/representations/proxy#show:
+      - "/rails/active_storage/representations/proxy/:signed_blob_id/:variation_key/*filename"
+      active_storage/disk#show:
+      - "/rails/active_storage/disk/:encoded_key/*filename"
+  master:
+    digest: f541c08bc0a1f9d9
+    routes:
+      chat#index:
+      - "/"
+      dashboard#index:
+      - "/dashboard"
+      dashboard#live:
+      - "/dashboard/live"
+      tts#show:
+      - "/chat/tts"
+      tts#phrases:
+      - "/chat/tts/phrases"
+      tts#status:
+      - "/chat/tts/status"
+      tts#stream:
+      - "/chat/tts/stream"
+      chat#research:
+      - "/chat/research"
+      chat#enhance:
+      - "/chat/enhance"
+      chat#history:
+      - "/chat/history"
+      chat#metrics:
+      - "/chat/metrics"
+      chat#sensory:
+      - "/chat/sensory"
+      chat#skills:
+      - "/chat/skills"
+      runtime#boot_config:
+      - "/runtime/config"
+      runtime#status:
+      - "/runtime/status"
+      runtime#topologies:
+      - "/runtime/topologies"
+      events#stream:
+      - "/events/stream"
+      canvas#topology:
+      - "/canvas/topology"
+      pwa#manifest:
+      - "/manifest"
+      rails/health#show:
+      - "/up"
+      health#show:
+      - "/health"
+      ingress#health:
+      - "/ingress/health"
+      pair#show:
+      - "/pair"
+      pair#list:
+      - "/pair/list"
+      chat#metrics_prometheus:
+      - "/metrics"
+      pages#radio_bergen:
+      - "/radio_bergen"
+      api#show:
+      - "/api"
+      api#key:
+      - "/api/key"
+      api/v1/keys#show:
+      - "/api/v1/key"
+  mrdamascy:
+    digest: f5db406969bcde90
+    routes:
+      rails/health#show:
+      - "/up"
+      menu#show:
+      - "/"
+      - "/menu"
+      menu#item:
+      - "/menu/:id"
+      pages#about:
+      - "/about"
+      sessions#new:
+      - "/session/new"
+      sessions#vipps_auth:
+      - "/session/vipps"
+      sessions#vipps_callback:
+      - "/session/vipps/callback"
+      carts#show:
+      - "/cart"
+      checkout#show:
+      - "/checkout"
+      checkout#zone:
+      - "/checkout/zone"
+      orders#index:
+      - "/orders"
+      orders#show:
+      - "/orders/:id"
+      orders#track:
+      - "/track/:token"
+      orders#status:
+      - "/track/:token/status"
+      loyalty#show:
+      - "/loyalty"
+      staff/board#show:
+      - "/staff/board"
+      courier/runs#show:
+      - "/courier/runs"
+      vipps#mock:
+      - "/vipps/mock"
+      vipps#login_mock:
+      - "/vipps/login_mock"
+      stripe#mock:
+      - "/stripe/mock"
+      pwa#manifest:
+      - "/manifest.json"
+      pwa#service_worker:
+      - "/service-worker.js"
+      pwa#offline:
+      - "/offline"
+      turbo/native/navigation#recede:
+      - "/recede_historical_location"
+      turbo/native/navigation#resume:
+      - "/resume_historical_location"
+      turbo/native/navigation#refresh:
+      - "/refresh_historical_location"
       active_storage/blobs/redirect#show:
       - "/rails/active_storage/blobs/:signed_id/*filename"
       - "/rails/active_storage/blobs/redirect/:signed_id/*filename"

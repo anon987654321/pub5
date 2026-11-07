@@ -12,10 +12,10 @@
 #   ruby MASTER/tools/rails/generate_route_manifest.rb [app ...]
 #
 # NAME EVERY APP. This rewrites the whole file rather than merging into it, so
-# regenerating for one app deletes the other two and the next run of
+# regenerating for one app deletes the other apps and the next run of
 # route_manifest_inventory fails with "manifest covers every app the inventory
 # probes". If you are here because one app's digest went stale, still pass all
-# three: `amber brgen bsdports`.
+# five: `amber brgen bsdports master mrdamascy` (or no args, which is the same set).
 #
 # Each app records a digest of its route sources. PageInventory fails the
 # simulation when the digest no longer matches, so a stale manifest is loud
@@ -39,25 +39,30 @@ module Deploy
     ENDPOINT = /^(?<controller>[a-z0-9_\/]+)#(?<action>[a-z0-9_]+)(?:\s+\{(?<defaults>.*)\})?$/
 
     module_function
-    # The apps PageInventory probes (Fleet.engine_apps), not every apps.yml
-    # entry: master and mrdamascy are listed there but mount no pub5-shared
-    # engine and are never page-probed, and mrdamascy's bundle is not installed
-    # here, so a full run died on them and the manifest could not be refreshed.
+    # Every bootable apps.yml entry. The old exclusion — master and mrdamascy
+    # "mount no pub5-shared engine, are never page-probed, and mrdamascy's bundle
+    # is not installed here" — was written when that bundle could not run on this
+    # machine; both now boot through triangle, so they record contracts and
+    # screenshots like the rest of the fleet.
     def apps
-      Fleet.engine_apps.sort
+      Fleet.app_names.sort
     end
 
-    def app_root(app) = File.join(RAILS_ROOT, app)
+    def app_root(app) = Fleet.app_dir(app)
 
     # Every file that can add a route, so editing any of them invalidates the digest.
+    # The shared engine's routes belong only to the apps that mount it; master and
+    # mrdamascy run without the engine, so its files do not touch their digests.
     def route_sources(app)
       base = app_root(app)
-      Dir.glob(File.join(base, "config", "routes.rb")) +
-        Dir.glob(File.join(base, "config", "routes", "**", "*.rb")).sort +
-        Dir.glob(File.join(RAILS_ROOT, "__shared", "config", "routes.rb")) +
-        Dir.glob(File.join(RAILS_ROOT, "__shared", "config", "routes", "**", "*.rb")).sort +
-        Dir.glob(File.join(base, "engines", "*", "config", "routes.rb")).sort +
-        engine_routes(app)
+      own = Dir.glob(File.join(base, "config", "routes.rb")) +
+            Dir.glob(File.join(base, "config", "routes", "**", "*.rb")).sort +
+            Dir.glob(File.join(base, "engines", "*", "config", "routes.rb")).sort +
+            engine_routes(app)
+      return own unless Fleet.engine_apps.include?(app)
+
+      own + Dir.glob(File.join(RAILS_ROOT, "__shared", "config", "routes.rb")) +
+            Dir.glob(File.join(RAILS_ROOT, "__shared", "config", "routes", "**", "*.rb")).sort
     end
 
     # brgen's verticals are the RAILS/brgen_* engines (brgen_radio holds playlist and tv one level down).
@@ -71,10 +76,17 @@ module Deploy
       Digest::SHA256.hexdigest(route_sources(app).map { |f| File.read(f) }.join("\n"))[0, 16]
     end
 
+    # The apps' bundles are installed for the project-pinned rbenv Ruby; the
+    # general runner picks Homebrew's of the same version, whose gems are not
+    # the apps' — bin/rails routes then dies in bundler/setup. The same fix as
+    # tools/rails/triangle.rb, from which it comes.
+    RUBY = Operator::RubyRunner.rbenv_path("ruby") || Operator::RubyRunner.ruby_cmd
+    BUNDLE = Operator::RubyRunner.rbenv_path("bundle") || Operator::RubyRunner.bundle_cmd
+
     def capture_routes(app)
       out, status = Open3.capture2e(
         { "RAILS_ENV" => "development" },
-        Operator::RubyRunner.bundle_cmd, "exec", Operator::RubyRunner.ruby_cmd, "bin/rails", "routes",
+        BUNDLE, "exec", RUBY, "bin/rails", "routes",
         chdir: app_root(app)
       )
       raise "bin/rails routes failed in #{app}:\n#{out.lines.last(15).join}" unless status.success?
