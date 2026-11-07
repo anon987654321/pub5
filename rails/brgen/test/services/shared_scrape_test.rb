@@ -110,6 +110,12 @@ class SharedScrapeTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Shared::Scrape.parse_items("not json", schema:) }
   end
 
+  test "pagination limits and selectors are validated before browser startup" do
+    assert_raises(ArgumentError) { Shared::Scrape.call("https://example.com/", schema: [], max_pages: 0) }
+    assert_raises(ArgumentError) { Shared::Scrape.call("https://example.com/", schema: [], max_pages: 11) }
+    assert_raises(ArgumentError) { Shared::Scrape.call("https://example.com/", schema: [], next_selector: "a" * 513) }
+  end
+
   test "pagination follows bounded same-origin public links only" do
     resolver = public_resolver
     origin = "https://example.com/users"
