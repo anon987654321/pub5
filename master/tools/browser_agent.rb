@@ -6,10 +6,11 @@ require "uri"
 
 module Master
   module Tools
-    # Read-only Ferrum browser. A session is bound to one public HTTPS host
-    # and one resolved IPv4 address. Only same-host GET/HEAD requests continue;
-    # form submissions, redirects to other hosts and cross-host resources stop.
-    # The invoking World manifest must explicitly permit the hostname.
+    # Non-interactive Ferrum browser. A session is bound to one public HTTPS
+    # host and one resolved IPv4 address. Only same-host GET/HEAD requests are
+    # allowed; forms and cross-host requests stop. Page JavaScript still runs,
+    # and a site's GET endpoints can have side effects. The invoking World
+    # manifest must explicitly permit the hostname.
     class BrowserAgent
       Error = Class.new(StandardError)
       MAX_SESSIONS = 3
