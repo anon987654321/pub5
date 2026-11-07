@@ -64,6 +64,14 @@ class FixVisualReviewTest < Minitest::Test
     end
   end
 
+  def test_visual_lane_reports_dom_audits_not_run_even_when_a_session_is_injected
+    lane = V::Lane.new(world: nil, reviewer: nil, author: nil, chrome: nil,
+                       camera: Object.new, session: Object.new)
+
+    assert_match(/state matrix, axe and computed audits NOT_RUN/, lane.dom_note)
+    assert_match(/runner not wired/, lane.dom_note)
+  end
+
   def test_the_reviewer_may_not_be_the_author
     router = Object.new.tap { |r| r.define_singleton_method(:chain) { |_| ["claude-cli:opus"] } }
     model = Object.new.tap { |m| m.define_singleton_method(:router) { router } }
