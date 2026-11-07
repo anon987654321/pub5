@@ -280,7 +280,7 @@ spine:
   # CodeMetrics.body_lines_in("lib") measured that day, so the next line of growth fails again and
   # every fall ratchets it down. The overage is debt paid per namespace against
   # limits.yml#loc_body_budgets (re-baselined the same day), not absorbed here.
-  lib_body_ceiling: 98506
+  lib_body_ceiling: 98551
   # 98323 -> 98506: the lib/mobile/gateway.rb raise (162 body lines) plus the
   # toast/vibrate/notification adapter rows and methods in lib/device.rb (21).
   # The ~10.3k overage the tree carried after the 2026-10-28 re-baseline is
@@ -298,6 +298,10 @@ spine:
     - sms operator gateway raise 2026-11-07 - lib/mobile/gateway.rb (162 body
       lines) plus the toast/vibrate/notification adapter rows in lib/device.rb
       (21); one new lib file, phone deltas folded where homes existed.
+    - phone scout and voice raise 2026-11-07 - the warn-only SMS scout in
+      lib/mobile/gateway.rb (about 34 body lines, config row and notifier seam
+      included) plus Device.speak (9), the termux-tts-speak adapter the
+      bin/master-mobile say subcommand fronts. No new lib file.
   consecutive_raises_allowed: 2
   # The direct-child invariant remains the seven-file concept budget. A second
   # recursive tripwire closes the loophole where complexity could hide below
@@ -872,6 +876,16 @@ pub5_source_ceilings:
   # 1932 -> 1983: retired reference app adds 51 tracked source/docs files. The pre-existing
   # 47-file overage remains visible; only the named ERITEL addition is paid for.
   RAILS: 1981
+  # 2026-11-07: STUDIO joins the per-tree ratchet with its measured population
+  # first, the way a ceiling should: 64 tracked non-test source files, read
+  # through the growth row's own git walk, then +1 for the one authored file
+  # this raise pays for -- STUDIO/photograph/selfie_series.rb, the committed
+  # runner for the selfie chain (photograph.rb --selfie-series). Its scene list,
+  # 12-scene default and 24-scene cap are data in the file, not sprawl.
+  #
+  # 65 is the ceiling this file is measured against from here on; it moves when
+  # a named file buys a raise or a fold earns a fall, never silently.
+  STUDIO: 65
   # 106 -> 107 is test/test_githooks.rb. dev/githooks holds the three guards
   # that are the whole defence against a shared index, and nothing tested any of
   # them — a hook that stopped firing looks exactly like a week in which nobody

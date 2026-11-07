@@ -1,0 +1,128 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "json"
+require "tmpdir"
+require_relative "minitest_helper"
+require_relative "../photograph/selfie_series"
+
+class TestSelfieSeries < Minitest::Test
+  # A stand-in for the Replicate predict/download round trip, in the shape
+  # idea_picture_test.rb already established for graded stills.
+  class FakeClient
+    attr_reader :predictions
+
+    def initialize(fail_download_at: nil)
+      @predictions = []
+      @downloads = []
+      @attempts = 0
+      @fail_download_at = fail_download_at
+    end
+
+    def predict(model_id, input, timeout: nil)
+      @predictions << [model_id, input]
+      { "output" => "https://replicate.delivery/selfie.jpg" }
+    end
+
+    def download_url(url, path)
+      @attempts += 1
+      raise IOError, "network lost" if @fail_download_at && @attempts == @fail_download_at
+
+      @downloads << path
+      File.write(path, "render")
+      path
+    end
+  end
+
+  def setup
+    @dir = Dir.mktmpdir
+    @client = FakeClient.new
+    Studio::Visual::IdeaPicture.class_eval do
+      alias_method :grade_without_stub, :grade
+      define_method(:grade) { |path| path }
+      alias_method :still_model_without_stub, :still_model
+      define_method(:still_model) { "owner/model:version-123" }
+    end
+  end
+
+  def teardown
+    Studio::Visual::IdeaPicture.class_eval do
+      remove_method(:grade)
+      alias_method :grade, :grade_without_stub
+      remove_method(:grade_without_stub)
+      remove_method(:still_model)
+      alias_method :still_model, :still_model_without_stub
+      remove_method(:still_model_without_stub)
+    end
+    FileUtils.remove_entry(@dir) if File.directory?(@dir)
+  end
+
+  # The graded pass shells out to postpro and the manifest lookup needs a
+  # subject with an approved training — both are no-op'd in setup here the way
+  # idea_picture_test.rb stubs the same seams, and every write stays in tmpdir.
+  def series(fail_download_at: nil)
+    Studio::Visual::SelfieSeries.new(
+      subject: "probe",
+      client: fail_download_at ? FakeClient.new(fail_download_at:) : @client,
+      directory: File.join(@dir, "stills"),
+      ledger_path: File.join(@dir, "ledger.jsonl")
+    )
+  end
+
+  def test_a_series_renders_its_scenes_still_only
+    rendered = series.run(count: 3)
+
+    assert_equal 3, rendered.size
+    rendered.each { |path| assert File.file?(path) }
+    assert File.file?(rendered.first)
+  end
+
+  def test_no_render_carries_the_film_model
+    series.run(count: 2)
+
+    models = @client.predictions.map(&:first)
+    assert_equal 2, models.size
+    refute_includes models, "prunaai/p-video-2-pro", "a series never renders film"
+  end
+
+  def test_count_is_bounded
+    error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
+    assert_match(/between 1 and/, error.message)
+    refute @client.predictions.any?, "a refused budget makes no paid call"
+  end
+
+  def test_a_failed_render_is_recorded_and_the_series_continues
+    box = series(fail_download_at: 2)
+    rendered = box.run(count: 3)
+
+    assert_equal 2, rendered.size, "the network-lost scene is skipped, the series continues"
+    attempts = ledger_rows("render_attempt")
+
+    assert attempts.any?, "the failure lands in the ledger, not in silence"
+    assert_match(/network lost/, attempts.first["error"])
+  end
+
+  def test_renders_are_recorded_in_the_subject_ledger
+    series.run(count: 2)
+
+    assert_equal 2, ledger_rows("render").size
+    row = ledger_rows("render").first
+
+    assert_equal "probe", row["subject"]
+    assert row["scene"].to_s.length > 10
+  end
+
+  def test_the_scenes_carry_no_intimate_framing
+    banned = %w[lingerie nude nudes naked topless shower bathtub underwear intimate bikini]
+    text = Studio::Visual::SelfieSeries::SCENES.join("\n").downcase
+
+    assert_empty banned.select { |word| text.include?(word) }
+  end
+
+  private
+
+  def ledger_rows(kind)
+    path = File.join(@dir, "ledger.jsonl")
+    File.file?(path) ? File.readlines(path).map { |line| JSON.parse(line) }.select { |row| row["kind"] == kind } : []
+  end
+end
