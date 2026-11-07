@@ -325,8 +325,8 @@ COMMENT_STARTS = ["#", "//", "/*", "*", "<%#"].freeze
 
   def test_the_scan_reaches_the_tree_it_claims_to
     assert candidates.values.all? { |paths| paths.size.positive? }, "a glob returned nothing"
-    assert candidates["erb"].any? { |p| p.include?("/brgen_") },
-           "engine views are missing, the blind spot that hid 57 of them"
+    assert candidates["erb"].any? { |p| p.include?("/brgen/engines/") || p.include?("/brgen_") },
+           "Brgen engine views are missing from the file-length inventory"
   end
 
 # The exemption names real files, and only the one-stylesheet apps' entries.

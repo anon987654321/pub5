@@ -232,21 +232,21 @@ end
 # brgen/engines/* went blind to them without failing. Checks and RAILS tests that walk every
 # engine take the layout from here, not from a literal that goes stale the next time one moves.
 module EngineRoots
-  GLOB = "{brgen_*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}"
+  GLOB = "{brgen_*,brgen/engines/**}"
 
   # Each vertical's directory under rails/, by the name its tests use.
   PATHS = {
-    "marketplace" => "brgen_marketplace",
-    "dating" => "brgen_dating",
-    "maps" => "brgen_maps",
-
-    "tv" => "brgen/engines/radio/tv",
+    "dating" => "brgen/engines/dating",
+    "maps" => "brgen/engines/maps",
+    "marketplace" => "brgen/engines/marketplace",
+    "messenger" => "brgen/engines/messenger",
     "playlist" => "brgen/engines/radio/playlist",
+    "tv" => "brgen/engines/radio/tv",
     "takeaway" => "brgen/engines/marketplace/engines/takeaway",
   }.freeze
 
-  # Messenger routes stay in brgen, but its Stimulus controllers ship in an engine.
-  ASSET_PATHS = PATHS.merge("messenger" => "brgen_messenger").freeze
+  # The same current tree is authoritative for both page and asset inventories.
+  ASSET_PATHS = PATHS
 
   # rest, globbed under every engine app hosts. brgen hosts them all; amber and bsdports none.
   def self.glob(rails_root, app, rest)

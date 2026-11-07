@@ -169,8 +169,8 @@ module Operator
       when "RATCHET_ENTRYPOINT" then ratchet_entrypoints
       when "RATCHET_RAILS_LINT" then ratchet_rails_lint
       when "RATCHET_CSS_BUDGET" then ratchet_css_budget
-      when "RATCHET_FILE_LENGTH" then inconclusive(id, "the legacy per-file, language-aware ceiling map has not yet been measured and ported to pub5; no arbitrary limit is substituted")
-      when "RATCHET_COVERAGE" then ratchet_coverage
+      when "RATCHET_FILE_LENGTH" then run_test_file("rails/test/file_length_ratchet_test.rb")
+      when "RATCHET_COVERAGE" then run_test_file("rails/test/coverage_ratchet_test.rb")
       when "RATCHET_CSS_CONSTITUTION" then run_check("css_constitution")
       else 64
       end
@@ -343,6 +343,22 @@ module Operator
       end
       return fail("RATCHET_COVERAGE", "coverage resultsets exist but none parse") if parsed.empty?
       inconclusive("RATCHET_COVERAGE", "resultsets #{parsed.join(', ')} exist, but pub5 has no ratified per-app coverage floor table")
+    end
+
+    def run_test_file(path)
+      absolute = File.join(ROOT, path)
+      return fail(path, "ratchet test file is missing") unless File.file?(absolute)
+
+      output, process = Master::Io::Exec.capture2e(
+        RbConfig.ruby, absolute, chdir: ROOT,
+        timeout: PROCESS_TIMEOUT, raise_on_timeout: true
+      )
+      code = process.exitstatus || 70
+      puts output.to_s unless output.to_s.empty?
+      code
+    rescue Master::Io::Exec::TimeoutError => e
+      warn "law_instrument0: #{path} timed out: #{e.message}"
+      70
     end
 
     def run_check(name)
