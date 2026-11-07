@@ -2213,6 +2213,53 @@ VISUAL_LAYOUT_REFINEMENT_EVIDENCE:
   resolution: review
   detector: "Master::Visual::LayoutRefinement.evidence"
 
+# The virtual photographer (Johann 2026-11-07, from the harvested Grok
+# critique): a selfie run is a capture system, not a filter stack.
+SELFIE_DEPARTMENT_RECIPE:
+  parent: OPERATOR_RENDERED
+  statement: >
+    Every generated portrait carries one coherent recipe that the camera
+    department, cinematography, art direction, film laboratory, optics,
+    colourist, VFX and quality control agree on: framing, perspective,
+    focus, light setup, negative and print, halation and diffusion, grade
+    and finishing named per shot and never interchangeable sliders. A
+    collection is ten distinct photographic treatments, not ten backdrops
+    off one instruction.
+  severity: warning
+  resolution: review
+
+SELFIE_SHOT_PERSPECTIVE:
+  parent: SELFIE_DEPARTMENT_RECIPE
+  statement: >
+    The lens and the finish belong to the shot: no universal 35mm prime
+    rides in every photograph and no universal --heavy --count 1 postpro
+    call finishes them - the recipe names the perspective and the exact
+    preset, and a random take exists only as deliberate exploration.
+  severity: warning
+  resolution: review
+
+SELFIE_ONE_DEVELOPMENT:
+  parent: SELFIE_DEPARTMENT_RECIPE
+  statement: >
+    Generate the capture and develop and print it exactly once: the
+    generator's image stays clean of film artefacts, postpro applies one
+    authoritative deterministic pass (grain, halation, bloom, flare in the
+    right domain and only once), the pipeline keeps scene-referred data
+    from display encoding, and the intermediate stages are preserved so
+    the grade stays reversible.
+  severity: warning
+  resolution: review
+
+SELFIE_CONTACT_REVIEW:
+  parent: SELFIE_DEPARTMENT_RECIPE
+  statement: >
+    Quality control judges photographs, not pixels: composition, identity,
+    optics, realism, light and set coherence are measured, metrics rank and
+    reject, and the contact sheet ends with the operator - no portrait is
+    finished on a metric's word alone.
+  severity: warning
+  resolution: review
+
 # Per-Law execution policy. Individual Law identity and requirement statements
 # remain in the rows above; this reserved block supplies DSL defaults and reach.
 law_catalogue:
