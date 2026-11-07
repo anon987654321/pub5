@@ -4,13 +4,19 @@ require_relative "test_helper"
 require_relative "../lib/operator/check_chain"
 require_relative "../lib/operator/readers"
 
-# The four governed trees are one list, MasterPaths::TREES. A second literal in
-# lib/ is a list that drifts when a fifth tree arrives.
+# The governed trees are one list, MasterPaths::TREES. A second literal in lib/
+# is a list that drifts the moment a tree is added or renamed.
 class TestTreeListSingleSource < Minitest::Test
-  LITERAL = /%w\[\s*(MASTER|RAILS|OPENBSD|STUDIO)\s+(MASTER|RAILS|OPENBSD|STUDIO)\s+(MASTER|RAILS|OPENBSD|STUDIO)\s+(MASTER|RAILS|OPENBSD|STUDIO)\s*\]/
+  TREES = MasterPaths::TREES
 
-  def test_the_list_is_the_four_trees
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO], MasterPaths::TREES
+  # A %w[] literal whose words are exactly the governed trees is a second copy
+  # of the one list, whatever its length. Deliberate subsets (the trees that
+  # prove a pass, the trees an audit walks) are a different statement and are
+  # not this guard's business.
+  LITERAL = /%w\[([^\]]*)\]/
+
+  def test_the_list_is_the_governed_trees
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO BIZ], MasterPaths::TREES
     assert_predicate MasterPaths::TREES, :frozen?
   end
 
@@ -30,7 +36,11 @@ class TestTreeListSingleSource < Minitest::Test
     offenders = Dir.glob(File.join(lib, "**", "*.rb")).select do |path|
       next false if path.end_with?("boot/paths.rb")
 
-      File.foreach(path).any? { |line| line.match?(LITERAL) && !line.lstrip.start_with?("#") }
+      File.readlines(path).any? do |line|
+        next false if line.lstrip.start_with?("#")
+
+        line.scan(LITERAL).any? { |(words)| words.split == TREES }
+      end
     end
     assert_empty offenders.map { |path| path.delete_prefix("#{lib}/") }
   end
