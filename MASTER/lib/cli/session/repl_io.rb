@@ -195,6 +195,12 @@ module Master
 
       def exit_cli
         @running = false
+        if $stdin.tty? && $stdout.tty?
+          pending = interactive_queue_count
+          # A backlog the operator typed is work they meant done; the exit
+          # receipt names what closing drops instead of silently clearing it.
+          terminal_puts("queue0: /exit discards #{pending} queued message#{pending == 1 ? "" : "s"}") if pending.positive?
+        end
         shutdown_interactive_queue! if $stdin.tty? && $stdout.tty?
         line = @refs.renderer.closing
         terminal_puts(line) if line
