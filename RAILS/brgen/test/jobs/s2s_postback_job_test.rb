@@ -94,6 +94,36 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     assert_equal "sent", nok.reload.status
   end
 
+  test "retries a transient provider response without repeating an already successful provider" do
+    ENV["MEDIAGO_ACCOUNT_NAME"] = "brgen-test"
+    ENV["MEDIAGO_CURRENCY"] = "USD"
+    ENV["REVCONTENT_API_KEY"] = "test-api-key"
+    attribution!(mediago: "mg_789", revcontent: "rc_789")
+    conversion = conversion!(currency: "USD")
+
+    requests = []
+    responses = %w[200 503]
+    http = Object.new
+    http.define_singleton_method(:request) do |request|
+      requests << request
+      Struct.new(:code).new(responses.shift)
+    end
+
+    assert_enqueued_with(job: Shared::S2sPostbackJob) do
+      Net::HTTP.stub(:start, ->(*_args, **_options, &block) { block.call(http) }) do
+        Shared::S2sPostbackJob.perform_now(conversion.id)
+      end
+    end
+
+    assert_equal 2, requests.size
+    assert_equal "200", conversion.reload.postback_results.dig("mediago", "code").to_s
+
+    retry_requests = perform_with_http(conversion)
+    assert_equal 1, retry_requests.size
+    assert query_for(retry_requests.first).key?("api_key")
+    assert_equal "sent", conversion.reload.status
+  end
+
   test "payment currency uses the payable interface instead of assuming NOK" do
     Shared::S2sAttribution.capture!(user: @user, params: { "tracking_id" => "mg_456" })
     payable = Struct.new(:buyer_id, :total_cents, :payment_currency).new(@user.id, 2_500, "EUR")

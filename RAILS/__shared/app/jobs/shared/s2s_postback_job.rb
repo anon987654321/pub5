@@ -5,8 +5,10 @@ require "uri"
 
 module Shared
   class S2sPostbackJob < ApplicationJob
+    class RetryableResponse < StandardError; end
+
     queue_as :default
-    retry_on Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET,
+    retry_on Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNRESET, RetryableResponse,
              wait: :polynomially_longer, attempts: 5
 
     MEDIAGO_URL = "https://sync.mediago.io/api/bidder/postback"
@@ -70,7 +72,10 @@ module Shared
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 3, read_timeout: 5) do |http|
         http.request(request)
       end
-      { "code" => response.code.to_i }
+      code = response.code.to_i
+      raise RetryableResponse, "S2S provider returned HTTP #{code}" if code == 429 || code >= 500
+
+      { "code" => code }
     end
   end
 end
