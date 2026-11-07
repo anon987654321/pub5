@@ -5,6 +5,8 @@ require_relative "../snapshot"
 require_relative "../../tools/snapshot"
 require "shellwords"
 require_relative "../io/media_intent"
+require_relative "../io/document_archive"
+require_relative "command_registry/documents"
 require_relative "../voice/dialogue_rubric"
 
 require_relative "command_registry/command"
@@ -47,6 +49,7 @@ module Master
           "plugin" => command(:dispatch_plugin),
           "play" => command(:dispatch_play, droot),
           "mov" => command(:dispatch_mov, droot),
+          "documents" => command(:dispatch_documents, droot, d[:agent]),
           "support" => command(:dispatch_support, d[:agent], droot),
           "screen" => command(:dispatch_screen, root),
           "android" => command(:dispatch_android, root),

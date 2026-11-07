@@ -56,6 +56,19 @@ module Master
             "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
           ],
         },
+        "documents" => {
+          summary: "transcribe and sequence a local folder of photographed letters without altering the originals",
+          detail: [
+            "/documents analyze [directory] [--max-pages N] - inspect up to 12 pages by default (32 maximum).",
+            "Each page is a separate vision-model call, followed by one chronology call; provider usage charges may apply.",
+            "Images and transcription text are sent to the configured vision provider. Use a trusted/private model lane before processing confidential correspondence.",
+            "Handwritten uncertainty is marked, not guessed.",
+            "The final report groups letters and orders pages using written dates, postmarks and textual clues; file timestamps are only secondary evidence.",
+            "Original images are read-only. Markdown report and SHA-256 manifest are saved under ~/.local/share/master/document-archives with owner-only permissions.",
+            "Supported inputs: JPG, PNG, WebP and GIF. HEIC, TIFF and PDF are reported as skipped rather than silently altered.",
+            "Plain language also works: \"transcribe the handwritten letters in ~/Photos\".",
+          ],
+        },
         "play" => {
           summary: "play the curated Blue Hour Dilla showcase or a named progression through the canonical effects rig",
           detail: [
@@ -375,7 +388,7 @@ module Master
         "orders" => "change",
         "face" => "interface", "voice" => "interface", "narrate" => "interface", "bard" => "interface",
         "reload" => "session", "incident" => "session",
-        "play" => "media", "mov" => "media", "android" => "media", "ios" => "media",
+        "play" => "media", "mov" => "media", "documents" => "media", "android" => "media", "ios" => "media",
         "support" => "review",
         "soul" => "constitution", "help" => "help", "exit" => "session", "quit" => "session"
       }.freeze

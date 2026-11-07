@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "shellwords"
 require_relative "../io/media_intent"
 
 module Master
@@ -32,6 +33,9 @@ module Master
         # a beat" / a VHS look on a path then ran replicate/dilla/postpro as the
         # Falcon user and wrote under ~.
         return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if visitor?
+        if document_archive_request?(text)
+          return dispatch_slash("/documents analyze #{document_archive_args(text)}", container:, felt_sense:, on_turn:, cancellation:)
+        end
         if text.match?(FIX_COMMAND)
           return dispatch_slash(rewrite_slash("/#{text}"), container:, felt_sense:, on_turn:, cancellation:)
         end
@@ -64,6 +68,24 @@ module Master
       end
 
       def visitor? = Fiber[:master_visitor] == true
+
+      DOCUMENT_ARCHIVE_ACTION = /\A\s*(?:please\s+)?(?:analy[sz]e|transcribe|decipher|sequence|organize|sort|go through|go into|enter|open|read)\b|\b(?:tell|ask)\s+master\s+to\s+(?:analy[sz]e|transcribe|decipher|sequence|organize|sort|go through|go into|enter|open|read)\b/i.freeze
+      DOCUMENT_ARCHIVE_SUBJECT = /\b(?:handwrit\w*|letters?|correspondence|postcards?|old notes?)\b/i.freeze
+
+      def document_archive_request?(text)
+        value = text.to_s.strip
+        return false if value.empty? || question?(value)
+
+        value.match?(DOCUMENT_ARCHIVE_ACTION) && value.match?(DOCUMENT_ARCHIVE_SUBJECT)
+      end
+
+      def document_archive_args(text)
+        value = text.to_s
+        match = value.match(/\b(?:in|from|under|inside)\s+(?:(?:the|my|our)\s+)?(?:folder\s+)?(?:"([^"]+)"|'([^']+)'|(~?\/[^\s,;]+)|([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*))/i)
+        path = match&.captures&.compact&.first
+        path ||= value[/~?\/[A-Za-z0-9_.\/-]+/] if path.nil?
+        Shellwords.escape(path.to_s.empty? ? "photos" : path)
+      end
 
       # Bare words that are complete instructions, not conversation. "status?"
       # is /status asked as a question — question?() would otherwise read the

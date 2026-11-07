@@ -482,4 +482,32 @@ class TurnRouterTest < Minitest::Test
     end
   end
 
+
+  def test_document_archive_intent_is_narrow_and_extracts_a_folder
+    router = Master::CLI::TurnRouter
+
+    assert router.document_archive_request?("please transcribe the handwritten letters in photos folder")
+    assert router.document_archive_request?("enter the photos folder and analyze some letters")
+    assert router.document_archive_request?("tell MASTER to enter the photos folder and analyze some letters")
+    refute router.document_archive_request?("can you analyze these letters?")
+    refute router.document_archive_request?("analyze the Rails controller")
+    refute router.document_archive_request?("I wonder how to transcribe these old letters")
+    assert_equal "~/Photos/Letters", Shellwords.split(router.document_archive_args("transcribe the letters in ~/Photos/Letters")).first
+    assert_equal "photos", Shellwords.split(router.document_archive_args("transcribe the letters")).first
+  end
+
+  def test_plain_language_letter_request_routes_to_the_documents_command
+    routed = nil
+    message = "please decipher the handwritten letters in ~/Photos"
+    container = build_container
+    Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |slash, **|
+      routed = slash
+      Master::Result.ok({ rendered: "document archive started" })
+    }) do
+      result = Master::CLI::TurnRouter.call(message:, container:)
+      assert_predicate result, :ok?
+    end
+    assert_equal "/documents analyze \\~/Photos", routed
+  end
+
 end

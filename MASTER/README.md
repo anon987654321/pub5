@@ -20,6 +20,8 @@ Treat Laws as transferable engineering knowledge, not ceremony. Read the governi
 
 ## The runtime
 
+For local handwritten archives, `/documents analyze ~/Photos` reads a bounded set of page images one at a time through the configured vision lane, marks uncertain readings and asks the model to group and sequence letters from document evidence. It never modifies source images; the report and SHA-256 manifest are stored locally under `~/.local/share/master/document-archives` with owner-only permissions. JPG, PNG, WebP and GIF are supported; HEIC, TIFF and PDF files are reported as skipped. Each page and the final chronology are sent to the configured vision provider, so use a trusted/private lane for confidential letters.
+
 `bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals.
 
 The core execution path is `lib/core/`: an admitted effect passes through Constitution before World dispatches it. Keep capabilities, validation and compensations at that boundary. Extend an existing owner before adding another wrapper, registry or helper.
