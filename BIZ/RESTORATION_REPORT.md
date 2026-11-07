@@ -37,8 +37,10 @@ The whole of `pub4/MASTER/data/laws.yml` (3 736 lines: the axiom, nine
 constitutional invariants, support laws, named principles, universal laws,
 transformations, catalogue) and the relevant runtime sections of
 `law_runtime.yml` (tool discipline, typography, Norwegian prose, visual
-identity) were read before this build. See
-`research/master-laws-research.md (bundled at BIZ/research/)` for the per-law notes. The
+identity) were read before this build. The per-law notes live in the pub4
+BPLANS research trees; their operative consequences are codified here and
+in `MASTER/data/laws.yml`, and the working notes themselves are deleted
+from the published tree (BUSPLAN_NO_WORKING_TREES). The
 operative consequences:
 
 - **REACH_non_native_tool** bans python, bash, sed, awk, head, tail, wc,
@@ -79,8 +81,9 @@ operative consequences:
 
 After the restoration was verified, the front matter was revised on demand,
 following a second research pass over Bringhurst's *Elements of Typographic
-Style* and Strunk & White's *Elements of Style* (per-law notes and the full
-rule inventory: `research/bringhurst-strunk-research.md`). The revision is
+Style* and Strunk & White's *Elements of Style* (per-law notes kept only in
+the pub4 BPLANS research trees; the codified output is
+`MASTER/data/laws.yml` and this report). The revision is
 applied to the built documents by `scripts/bp_cover.mjs` (idempotent,
 expected transforms enforced) — the anlage itself is untouched.
 

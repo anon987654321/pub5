@@ -135,6 +135,12 @@ plans.each do |plan|
     else
       ["PASS", "the restored base and the injections live in BIZ/scripts; bp_build/bp_cover/bp_print regenerate the trio from them"]
     end
+  folder_verdicts["BUSPLAN_NO_WORKING_TREES"] =
+    if File.exist?("#{REPO}/research")
+      ["FAIL", "working research tree removed from the published tree (BUSPLAN_NO_WORKING_TREES)"]
+    else
+      ["PASS", "no research folder and no loose working scripts; the one sanctioned anlage is BIZ/scripts"]
+    end
   folder_verdicts["BUSPLAN_AUDIT_COVERAGE"] = ["PASS", "this audit: every laws.yml law receives an explicit verdict"]
 
   html_path = "#{OUT}/#{plan}/#{plan}.html"

@@ -1132,6 +1132,44 @@ PRINT_PAGE_CANON:
   severity: warning
   resolution: review
 
+BUSPLAN_PAIR_FOLDER:
+  parent: BRINGHURST
+  statement: >
+    A business plan folder carries only what the reader receives: the
+    html, its svg mark and the pdf, in one folder named after the pair.
+    Nothing else - not source, not tooling - sits in the published folder.
+  severity: warning
+  resolution: review
+
+BUSPLAN_SOURCE_OF_RECORD:
+  parent: BRINGHURST
+  statement: >
+    A business plan's editable source lives beside the plan folders, never
+    inside one, the published pair is regenerated from it, and the source
+    is never what the reader is handed.
+  severity: warning
+  resolution: review
+
+BUSPLAN_AUDIT_COVERAGE:
+  parent: BRINGHURST
+  statement: >
+    A published business plan records its laws audit; every law receives
+    an explicit verdict, and an out-of-scope law still names its scope.
+  severity: warning
+  resolution: review
+
+BUSPLAN_NO_WORKING_TREES:
+  parent: BUSPLAN_PAIR_FOLDER
+  statement: >
+    A business plan tree keeps no working directories: no research
+    folder, no loose scripts beside the plan folders. Conclusions land
+    in the plan, the build and the laws, and the notes and ad-hoc
+    scripts behind them are deleted once their work is done. What
+    remains is the published folders and the single sanctioned anlage
+    that regenerates them.
+  severity: warning
+  resolution: review
+
 EMPHASIS_ONE_DEVICE:
   parent: BRINGHURST
   statement: >
