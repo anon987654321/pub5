@@ -5,7 +5,7 @@
 # import-digest: 36b817b03549cbb3
 require_relative "master/lib/master"
 
-Law.define(:VETO_PATTERNS) do
+Law.define(:veto_patterns) do
   source "pub4 MASTER/law/veto.rb:57"
   practice "Unconditional merge blockers from laws.yml veto_patterns"
 end

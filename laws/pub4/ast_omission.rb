@@ -5,7 +5,7 @@
 # import-digest: abb84b4b06de89a8
 require_relative "master/lib/master"
 
-Law.define(:AST_OMISSION) do
+Law.define(:ast_omission) do
   source "pub4 MASTER/law/meta.rb:41"
   practice "symbol dropped vs recent commits"
 end

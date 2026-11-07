@@ -5,7 +5,7 @@
 # import-digest: 4fb9293e1bfcddb8
 require_relative "master/lib/master"
 
-Law.define(:LAW_COVERAGE) do
+Law.define(:law_coverage) do
   source "pub4 MASTER/law/meta.rb:121"
   practice "Law subclass has no corresponding test file"
 end

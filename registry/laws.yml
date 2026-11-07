@@ -1038,7 +1038,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  INTERCONNECT:
+  interconnect:
     statement: Phantom YAML key reads and orphan data keys
     kind: structural
     severity: warning
@@ -1052,7 +1052,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  CO_CHANGE_COUPLING:
+  co_change_coupling:
     statement: Files co-change with N+ peers across module boundaries - hidden coupling
     kind: structural
     severity: info
@@ -2439,7 +2439,7 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-  RUBOCOP:
+  rubocop:
     statement: RuboCop style/lint violation
     kind: lint
     severity: warning
@@ -2453,7 +2453,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  REEK:
+  reek:
     statement: Reek code smell detected
     kind: lint
     severity: warning
@@ -2467,7 +2467,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  AST_OMISSION:
+  ast_omission:
     statement: symbol dropped vs recent commits
     kind: structural
     severity: warning
@@ -2481,7 +2481,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  LAW_COVERAGE:
+  law_coverage:
     statement: Law subclass has no corresponding test file
     kind: structural
     severity: warning
@@ -4628,7 +4628,7 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-  ADVERSARIAL:
+  adversarial:
     statement: 'Red-team scan: steelman then challenge - suppresses false positives'
     kind: structural
     severity: error
@@ -4642,7 +4642,7 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-  SEMANTIC:
+  semantic:
     statement: LLM-based rule review (violations + opportunities)
     kind: structural
     severity: warning
@@ -4656,7 +4656,7 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-  COMMENT_DRIFT:
+  comment_drift:
     statement: Comment claim doesn't match method body - comment is lying
     kind: structural
     severity: warning
@@ -8032,7 +8032,7 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-  VETO_PATTERNS:
+  veto_patterns:
     statement: Unconditional merge blockers from laws.yml veto_patterns
     kind: structural
     severity: critical

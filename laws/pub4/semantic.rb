@@ -5,7 +5,7 @@
 # import-digest: 7f74385ef3c50d25
 require_relative "master/lib/master"
 
-Law.define(:SEMANTIC) do
+Law.define(:semantic) do
   source "pub4 MASTER/law/semantic.rb:451"
   practice "LLM-based rule review (violations + opportunities)"
 end

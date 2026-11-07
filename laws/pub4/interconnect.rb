@@ -5,7 +5,7 @@
 # import-digest: 393c946957e9d926
 require_relative "master/lib/master"
 
-Law.define(:INTERCONNECT) do
+Law.define(:interconnect) do
   source "pub4 MASTER/law/graph.rb:112"
   practice "Phantom YAML key reads and orphan data keys"
 end

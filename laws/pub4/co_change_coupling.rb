@@ -5,7 +5,7 @@
 # import-digest: ebd30d8f5a11bacc
 require_relative "master/lib/master"
 
-Law.define(:CO_CHANGE_COUPLING) do
+Law.define(:co_change_coupling) do
   source "pub4 MASTER/law/graph.rb:181"
   practice "Files co-change with N+ peers across module boundaries - hidden coupling"
 end

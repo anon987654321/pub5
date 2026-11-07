@@ -5,7 +5,7 @@
 # import-digest: 4171b839784b5318
 require_relative "master/lib/master"
 
-Law.define(:RUBOCOP) do
+Law.define(:rubocop) do
   source "pub4 MASTER/law/linters.rb:220"
   practice "RuboCop style/lint violation"
 end

@@ -5,7 +5,7 @@
 # import-digest: 36b62f82a6156fe7
 require_relative "master/lib/master"
 
-Law.define(:REEK) do
+Law.define(:reek) do
   source "pub4 MASTER/law/linters.rb:273"
   practice "Reek code smell detected"
 end
