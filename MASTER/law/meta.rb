@@ -155,6 +155,35 @@ module Master
           end
         end
 
+        # Documentation lives in the files that already hold it. RUNTIME_DOCS_YAML
+        # guards one directory (data/); this is the same boundary across every
+        # tree: a .md document whose basename is not in law_runtime.yml
+        # `documents.allowed_documents` is a stray authoring default, not a
+        # deliberate publication. The list is the closed set of documents that
+        # existed across the trees on 2026-11-07 (48 basenames, 172 files) —
+        # writing a new document forces a conscious edit to that list, which is
+        # exactly what "avoid creating new md files" means as executable text.
+        # Folder hygiene needs no separate detector: a folder for prose is a
+        # folder for a .md it holds, and that document is the finding.
+        ::Law.define(:NO_NEW_DOCUMENTS) do
+          tags %i[CONSTITUTION DOCS]
+          fix "Fold the content into the file that already holds it - root README.md, TODO.md or the subject's existing document; a genuinely new document is a deliberate, recorded entry in documents.allowed_documents, never an authoring default."
+          # A path rule: one example path cannot hold a flagged bad and a clean good.
+          proved_by "test/test_scan_law_contracts.rb"
+          check do |_src, path|
+            next [] unless path.to_s.downcase.end_with?(".md")
+            next [] if RuntimeDocsPaths.data_relative(path).nil? # outside this tree
+
+            allow = Master.law("documents").fetch("allowed_documents")
+            next [] if allow.include?(File.basename(path))
+
+            [finding(
+              line: 1,
+              message: "documents live in the files that already hold them - #{path} is not in documents.allowed_documents; fold it into an existing document or add the basename deliberately",
+            )]
+          end
+        end
+
         module RuntimeDocsPaths
           module_function
 

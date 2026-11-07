@@ -3452,6 +3452,9 @@ law_catalogue:
     NO_NEW_FILES:
       definition_sources: [MASTER/law/practice.rb]
       severity: warn
+    NO_NEW_DOCUMENTS:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: warn
     NO_ONE_PARADIGM:
       definition_sources: [MASTER/law/universal.rb]
       severity: info

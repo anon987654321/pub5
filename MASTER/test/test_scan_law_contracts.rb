@@ -402,6 +402,31 @@ class TestScanLawContracts < Minitest::Test
                    File.join(Master::ROOT, "data", "principles", "drafts", "later.md"),
                    "delete data/principles/drafts/later.md"
   end
+
+  # The repo-wide generalisation of RUNTIME_DOCS_YAML (2026-11-07, operator
+  # directive "avoid creating new md files or new folders"). Documents live in
+  # the files that already hold them; the allowlist in
+  # data/law_runtime.yml#documents.allowed_documents is the closed set that
+  # existed across the trees on 2026-11-07 (48 basenames), and writing a new
+  # .md means deliberately entering it there.
+  def test_no_new_documents_flags_stray_md_document
+    bad = File.join(Master::ROOT, "STUDIO", "postpro", "session_notes.md")
+    good = File.join(Master::ROOT, "STUDIO", "postpro", "README.md")
+
+    assert_finding rule("NO_NEW_DOCUMENTS"), "# stray\n", bad, "session_notes.md"
+    assert_finding rule("NO_NEW_DOCUMENTS"), "# stray\n", bad, "documents.allowed_documents"
+    assert_empty rule("NO_NEW_DOCUMENTS").check("# held\n", path: good)
+    assert_empty rule("NO_NEW_DOCUMENTS").check("# held\n", path: File.join(Master::ROOT, "TODO.md"))
+
+    # An allowlist that read from a missing section would arm-and-crash scans,
+    # which is worse than the stray it hunts. Every allowlisted basename
+    # answers empty at any depth, and the directory it sits in does not
+    # matter — that is the folder half of the directive.
+    Master.law("documents").fetch("allowed_documents").each do |basename|
+      assert_empty rule("NO_NEW_DOCUMENTS").check("# doc\n", path: File.join(Master::ROOT, "some-tree", "nested", basename.to_s))
+    end
+  end
+
   # The 2026-08-19 twin-drift debt closed at zero on 2026-08-21: an id that
   # lives in law/ and the registry at once is two detectors free to disagree
   # about one rule — the exact drift UNBOUNDED_RETRY proved. Zero is held.

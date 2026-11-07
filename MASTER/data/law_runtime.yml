@@ -175,6 +175,29 @@ zsh:
   token_economics:
     philosophy: 'Prefer one zsh expansion or one Ruby expression over a pipeline of external processes; each subprocess adds cost and policy surface.'
 
+documents:
+  # Documentation lives in the files that already hold it. The basename list is
+  # the closed set of .md documents that existed across the trees on
+  # 2026-11-07 (48 basenames, 172 files); a new document must be entered here
+  # deliberately or the NO_NEW_DOCUMENTS Law finds it. A new folder for prose
+  # is always a finding.
+  allowed_documents:
+    [AGENTS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md, COMPETITOR_BENCHMARK.md,
+     FACE_WORLD.md, GEMINI.md, GLM.md, INTERACTION_CAMPAIGN.md,
+     LAYOUT_MICRO_REFINEMENT_MATRIX.md, LEGACY_PROMISES.md, LEGACY_RESTORE.md,
+     LOOKBOOK.md, LOVDATA.md, PUB4_PERMISSION_MATRIX.md, PUB5_PERMISSION_MATRIX.md,
+     README.md, RESTORATION_REPORT.md, RUNBOOK.md, SCREENSHOT_LAW_ADHERENCE.md,
+     SOCIAL_FRONT_PAGE.md, SURFACE_MICRO_REFINEMENT_MATRIX.md,
+     SURFACE_MICRO_REFINEMENT_MATRIX_II.md, TODO.md, TREE_CONTRACTS.md,
+     UI_ARCHAEOLOGY.md, ad_creative_governance.md, bergen_brand_systems.md,
+     bringhurst-strunk-research.md, browserless_ad_audits.md,
+     business-plan-quality.md, contract.md, execution-contracts.md,
+     fix-review-log.md, fix-ledger.md, fix_coordinator_map.md,
+     fix_slowness_audit.md, free_compute.md, legacy-apps-handoff.md,
+     master-laws-research.md, mobile.md, openbsd_kernel_philosophy.md,
+     proposal.md, rails-layout-refiner.md, snapshot_OPENBSD.md,
+     snapshot_RAILS.md, snapshot_STUDIO.md, typographic-styles.md]
+
 detection_calibration:
   measurement_only:
     CQS:
