@@ -1,0 +1,13 @@
+# Capabilities for the Merethe dataset-preparation slice. The future STUDIO
+# command adapter must load this through Core::Manifest; no code in this
+# package performs network, filesystem or subprocess effects directly.
+name: studio
+verbs:
+  read:
+    - "studio/replicate/lora/merethe/**/*"
+  write:
+    - "studio/replicate/lora/merethe/**/*"
+  net:
+    - raw.githubusercontent.com
+  exec:
+    - zip
