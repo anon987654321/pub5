@@ -170,6 +170,7 @@ class ResearchTest < Minitest::Test
       w = world(root, { net: ["codepen.io"] })
       research = Master::Tools::Research.new(world: w)
 
+      assert_respond_to research, :close
       refute_includes research.available_tools.map { |tool| tool.fetch("name") }, "browser.open"
       result = research.call(name: "browser.open",
                              arguments: { "url" => "https://codepen.io/trending" })
