@@ -27,7 +27,7 @@ Single source of truth for the **Mr. Damascy** app. Every contributor/agent impl
 - Heat scale colors: 0 neutral, 1 mint-500 (Mild), 2 gold (Middels), 3 pom (Sterk!).
 - Damascus motif: 8-point star. CSS pattern via inline SVG data-URI background on `.star-pattern` (hero header, loyalty card, staff board header). Keep it subtle (mint-100/mint-200, ~6% visible).
 - Type: system stack `-apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif`. Base 16px, mobile-first, max content width 480px centered (desktop shows phone-width column on `--surface`).
-- Flat, generous white space, 20px radii, no heavy shadows.
+- Flat, generous white space, 20px radii (`--radius`), no heavy shadows.
 
 ## 2. Stack conventions (match amber/pub5)
 

@@ -16,18 +16,28 @@
 
 require "json"
 require "yaml"
+require_relative "../lib/boot/paths"
 require_relative "../lib/trace/dmesg"
 
 module Operator
   class DocNumbers
     ROOT = File.expand_path("../..", __dir__)
     RULES = File.join(ROOT, "MASTER/data/tokens.yml")
-    TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+    TREES = MasterPaths::TREES
     # An archived handoff quotes retired app code; it prescribes nothing.
     SKIP = %r{/(?:node_modules|vendor|knowledge|output|tmp|\.master)/|/handoffs/MEGA_ALL_APPS\.md\z}
 
-    # Naming any of these makes the number traceable.
-    SOURCES = %w[MASTER/data/tokens.yml _dialect_tokens.scss tokens.css design_system].freeze
+    # Naming any of these makes the number traceable. minimalism.yml is here
+    # because it owns touch_target_px: 44, the floor SCREENSHOT_LAW_ADHERENCE
+    # quotes by name; README.md names it a co-owner of shared visual tokens, and
+    # leaving it out made the document that cites the token fail for citing it.
+    # Bare names, because that is how a document cites a file in prose; the
+    # directory-qualified spelling is listed too for a document that uses it.
+    SOURCES = %w[
+      MASTER/data/tokens.yml MASTER/data/minimalism.yml
+      tokens.yml minimalism.yml
+      _dialect_tokens.scss tokens.css design_system
+    ].freeze
 
     # Values so generic that a match says nothing about design tokens. 8px and
     # 4px are the rhythm itself and appear in prose about the rhythm; 1rem is the
