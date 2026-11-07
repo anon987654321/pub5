@@ -22,7 +22,7 @@ module Master
     # an explicit Bundler operation, not a surprise hidden inside boot.
     class DependencyManager
       SYSTEM_PACKAGES = {
-        termux: %w[git clang make cmake pkg-config sqlite openssl libffi],
+        termux: %w[git clang make cmake pkg-config sqlite openssl libffi libyaml libvips],
         openbsd: %w[pkgconf gmake sqlite3 libffi],
         macos: %w[pkg-config openssl@3 libyaml libffi sqlite],
         debian: %w[build-essential pkg-config libssl-dev libyaml-dev libffi-dev libsqlite3-dev],

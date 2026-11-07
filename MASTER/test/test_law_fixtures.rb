@@ -15,8 +15,13 @@
 
 require_relative "test_helper"
 require_relative "../lib/review/scan/law_tree"
+require_relative "../tools/law_fixtures"
 
 class TestLawFixtures < Minitest::Test
+  def test_new_recordings_name_the_pub5_repository
+    assert_equal "pub5", LawFixtures::REPOSITORY_NAME
+  end
+
   def self.fixtured
     @fixtured ||= Master::Review::Scan::LawTree.definitions.select do |law|
       # A retired Law keeps its fixtures but is not scanned, so it has nothing to prove here.

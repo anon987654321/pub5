@@ -2,7 +2,7 @@
 
 # Law proof fixtures: what every Law's worked examples prove, recorded so a
 # port can be held to them. Fourth piece of the pub5 acceptance harness
-# (TODO.md, "pub5 - Phase 0"): laws.yml moves byte for byte, so the port's law
+# (TODO.md, current-revision acceptance): laws.yml moves byte for byte, so the port's law
 # engine must fire on the same bad example and stay quiet on the same good one.
 #
 #   ruby MASTER/tools/law_fixtures.rb record
@@ -28,6 +28,7 @@ require "yaml"
 
 module LawFixtures
   ROOT = File.expand_path("../..", __dir__)
+  REPOSITORY_NAME = "pub5".freeze
   DIR = File.join(ROOT, "MASTER", "law")
   DATA = File.join(ROOT, "MASTER", "checks", "data", "law_fixtures.yml")
   RUNNER = File.expand_path("law_fixture_runner.rb", __dir__)
@@ -46,7 +47,7 @@ module LawFixtures
     # String ids, so the contract file reads the same on load whatever shape
     # the registry keys take.
     laws = registry.to_h { |id, law| [id.to_s, row(law)] }
-    File.write(DATA, YAML.dump({ "schema" => 1, "root" => "pub4", "laws" => laws }))
+    File.write(DATA, YAML.dump({ "schema" => 1, "root" => REPOSITORY_NAME, "laws" => laws }))
     laws
   end
 

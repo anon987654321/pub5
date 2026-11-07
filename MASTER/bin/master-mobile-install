@@ -33,7 +33,7 @@ if [ "$demo" -eq 1 ]; then
   [ "$dir" != "$HOME" ] || { printf 'mobile0: would BLOCK: install directory cannot be HOME itself\n'; exit 2; }
   [ ! -L "$dir" ] || { printf 'mobile0: would BLOCK: install directory must not be a symbolic link\n'; exit 2; }
   printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and a private HOME path (not checked in demo)\n'
-  printf 'mobile0: plan 2/5 - update Termux packages; install ruby, git, clang, make, libyaml and openssl\n'
+  printf 'mobile0: plan 2/5 - update Termux packages; install Ruby, build tools, SQLite, libffi, libyaml, OpenSSL and libvips\n'
   if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
     printf 'mobile0: would BLOCK: %s exists but is not a Git checkout\n' "$dir"
     exit 2
@@ -69,7 +69,7 @@ fi
 
 printf 'mobile0: preflight PASS; updating Termux packages\n'
 pkg update -y
-pkg install -y ruby git clang make libyaml openssl cmake pkg-config sqlite libffi
+pkg install -y ruby git clang make libyaml openssl cmake pkg-config sqlite libffi libvips
 
 if [ -d "$dir/.git" ]; then
   git -C "$dir" pull --ff-only origin "$branch"

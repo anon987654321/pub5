@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# The one acceptance command. Runs every Phase 0 instrument a target can
+# The one acceptance command. Runs each migration-acceptance instrument a target can
 # answer, and names every instrument it cannot - with the thing it is missing,
 # not a skip that reads as a pass.
 #

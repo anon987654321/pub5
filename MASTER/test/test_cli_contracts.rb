@@ -40,6 +40,10 @@ class TestCliContracts < Minitest::Test
       "MASTER/bin/operator" => [2, "", OPERATOR_HELP] }
   end
 
+  def test_new_recordings_name_the_pub5_repository
+    assert_equal "pub5", CliContracts::REPOSITORY_NAME
+  end
+
   def test_a_contract_records_the_answered_stream_whichever_pipe_it_used
     with_run(answers) do
       row = CliContracts.contract("/tmp", "MASTER/bin/operator")

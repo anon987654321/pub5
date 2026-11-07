@@ -1,6 +1,6 @@
 # pub5
 
-**One checkout, four trees, and a written source hierarchy that outranks every
+**One checkout, four runtime trees, BIZ deliverables, and a written source hierarchy that outranks every
 agent working in any of them.** pub5 is a self-governing repository: the model
 only proposes; Soul defines global identity, preservation, source order and
 protected paths, while the Law catalogue defines the requirements each change
@@ -20,15 +20,23 @@ must satisfy.
 - `STUDIO/` — the media tools: Dilla, photograph and the Replicate client.
   `STUDIO/Rakefile` is the tree's check surface.
 
+## Business and writing deliverables
+
+`BIZ/` holds the published business plans and related documents. The canonical
+editorial/build guide and editable source material live in
+`MASTER/tools/biz/README.md`; generated plan pairs stay in their named `BIZ/`
+folders.
+
 ## How to enter
 
 `AGENTS.md` is the canonical agent entrypoint and carries the shared workflow
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
 generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
 the bootstrap pointer.
-`TREE_CONTRACTS.md` is the one per-tree contract file. There is no cross-tree
-backlog file: work is done when its evidence lands, and unresolved outcomes
-live in the gates and in the commits that carry them.
+`TREE_CONTRACTS.md` is the repository's shared tree contract. Root `TODO.md` is
+the one cross-tree action list; structured YAML ledgers remain the owners of
+IDs, evidence receipts, provenance and lifecycle state. Do not create another
+backlog file.
 
 ## Source authority and Laws
 

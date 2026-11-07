@@ -17,6 +17,11 @@ module Master
       module_function
 
       def termux?(env = ENV)
+        # PRoot-Distro's normal guest binds /data/data/com.termux into Linux.
+        # A directory-existence probe therefore misidentifies Debian/Ubuntu as
+        # the Termux host and attempts to run pkg from inside the guest.
+        return false if env["container"] == "proot-distro" || !env["PD_CONTAINER"].to_s.empty?
+
         return true if env["TERMUX_VERSION"]
         return true if env["PREFIX"].to_s.include?("com.termux")
 

@@ -644,58 +644,49 @@ sandbox and folds into section 1's Current-revision acceptance.
 - [ ] Apply REDUNDANT_CORE_REQUIRE's fix — the 108 dead requires — through /fix with MASTER_AUTOFIX=1, not by hand.
 - [ ] Tune design_thresholds against measured surfaces once the rendered suite runs: the 0.02 OKLab merge distance and the APCA levels are starting levels, not standards.
 
-## pub5 — a ported fresh start (planned 2026-11-04)
+## pub5 migration record
 
-pub5 is a new repository built by porting pub4, not rewriting it: every
-behaviour is locked as an executable contract in pub4 first, then rebuilt
-smaller against that contract. Target about 2,700–3,300 files from about
-6,000 (MASTER 700–900, RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
-Rule for the whole port: same behaviour, less code; new features wait.
+The phased rewrite proposal from 2026-11-04 was superseded by the operator's
+2026-11-07 instruction. pub5 was created as a direct carry from pub4
+`main@f827973a7631be5f73e227864223ab2b6e7aee9b`, with a fresh history;
+`BPLANS/` became `BIZ/`. The migration did not follow the proposed Phase 0–5
+sequence, so those phase checkboxes were not evidence of unfinished work and
+are retired here. The route, rendered, data-round-trip and CLI acceptance
+requirements remain open only where they are already represented in the
+active acceptance sections above.
 
-### Phase 0 — lock behaviour in pub4
+The migration note recorded several exclusions. These are the carry-over
+items still needing a disposition; none should be restored blindly or placed
+back at the repository root:
 
-- [ ] * Route contracts: per app and route, the anonymous GET status, redirect target, title, landmarks and form actions, recorded from a running app and checkable against any base URL.
-- [ ] Signed-in route contracts with a seeded demo user.
-- [ ] Golden screenshots for every manifest route and dialog state at 390, 768 and 1280 px.
-- [ ] One proof fixture per Law generated from `laws.yml`, runnable against either repo.
-- [ ] Data export/import round-trip test per app schema.
-- [ ] MASTER CLI command contract: command, exit code, output shape.
-- [ ] One acceptance command that runs all of the above against a target repo or URL.
+- [ ] **Seven pub4 root photographs.** These files were deliberately omitted
+  from the first pub5 carry: `Photo on 28-09-2026 at 07.18.jpg`,
+  `Photo on 28-09-2026 at 07.18 #2.jpg`, `Photo on 28-09-2026 at 07.18 #3.jpg`,
+  `Photo on 28-09-2026 at 07.19.jpg`, `Photo on 28-09-2026 at 07.19 #2.jpg`,
+  `Photo on 28-09-2026 at 07.19 #3.jpg` and
+  `Photo on 28-09-2026 at 07.19 #4.jpg`. Review them from pub4, identify their
+  subject and owning project, then restore only to that existing owner or
+  explicitly retire them with provenance.
+- [ ] **Ragnhild artist-grant application.** `pub4/BPLANS/ragnhild_legater.html`
+  has no counterpart in pub5. It is a separate grant/application document, not
+  automatically the same deliverable as the Ragnhild business-plan pair.
+  Restore and review the HTML; the pub4 tree did not contain its PDF, so render
+  and inspect a PDF only if the application is still in scope.
+- [ ] **Merethe/Wenche LoRA scaffold.** pub4 held
+  `STUDIO/replicate/lora/merethe/README.md`, `prepare.rb`,
+  `subject.env.example` and `STUDIO/test/merethe_lora_test.rb`; these are
+  absent from pub5. The old preparation script can recover and package source
+  photographs without a consent-record refusal. Port its useful structure
+  only after the consent and photographer-licence gate in §8.10 is executable;
+  do not run the old downloader or restore its consent-blind behavior.
+- [ ] **Root analysis scripts.** `scripts/analysis/` remains a lowercase root
+  directory containing three Python contact-sheet helpers. Move that work to
+  the existing visual-tool owner and either port it to the repository's Ruby
+  toolchain or prove it is unused before retiring it; preserve the screenshot
+  review capability and the uppercase-root contract.
 
-### Phase 1 — skeleton
-
-- [ ] Root README and `AGENTS.md` only; one Ruby version reconciled with vm23; one lint config; one test command; commit-format hook from the first commit; generated output outside git.
-
-### Phase 2 — OPENBSD
-
-- [ ] Port with configs generated from `data/` and one Ruby deploy tool that ships a Mac-built artifact.
-
-### Phase 3 — RAILS
-
-- [ ] Shared base (tokens, SCSS foundation, Stimulus, auth, embeds, PWA), then bsdports, mrdamascy, amber, brgen core, and each brgen engine under `brgen/engines/`. Each app goes live only when its contracts and screenshots pass.
-
-### Phase 4 — STUDIO
-
-- [ ] dilla and postpro behind one CLI.
-
-### Phase 5 — MASTER
-
-- [ ] Port last; pub4 MASTER governs until pub5 MASTER passes every Law fixture. `soul.yml` and `laws.yml` move byte for byte.
-
-### Conditions
-
-- [ ] Freeze pub4 for other writers, or route them to pub5, before Phase 1.
-- [ ] pub4 stays as a read-only archive; pub5's first commit names the pub4 commit it ported from.
-
-Operator revision 2026-11-07: for this cycle the phased port below is
-superseded by the operator's instruction — pub5 is created now as a
-full-tree carry of pub4 (fresh single-commit history; the seven root
-photographs and the one-shot legacy archive-extraction tool dropped;
-the provenance and archive documents stay because test_doc_paths, the
-recovery-manifest test and the soul prompt read them, and
-MASTER/docs/history carries the live fix-review log; BPLANS renamed
-BIZ; the brand replaced pub4 -> pub5 everywhere it names the current
-repo), with this register carried and re-audited. The Phase 0 behaviour
-contracts stay the right shape for any later rebuild. One condition is met
-on day one: the migration commit names the pub4 commit it ported from,
-f827973a7631be5f73e227864223ab2b6e7aee9b.
+The one-shot legacy archive-extraction helper was also intentionally excluded.
+The pub4 repository remains the read-only provenance source; do not revive
+its old tree wholesale. Historical MASTER face files and OpenBSD/RAILS files
+that were replaced by newer owners should be assessed through the active
+convergence and acceptance rows, not copied back by path similarity.
