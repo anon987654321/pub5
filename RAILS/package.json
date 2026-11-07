@@ -1,0 +1,27 @@
+{
+  "name": "pub5-rails-pwa",
+  "private": true,
+  "scripts": {
+    "build:pwa": "node ../MASTER/tools/rails/build_workbox.mjs",
+    "test:pwa": "ruby test/pwa_design_contract_test.rb",
+    "test:pwa:runtime": "node --test test/pwa_offline_store.test.mjs",
+    "test:pwa:worker": "node --test test/service_worker.test.mjs",
+    "test:stimulus": "node --test test/stimulus_components_runtime_contract.test.mjs",
+    "test:radio": "node --test test/radio_brgen_tunnel.test.mjs",
+    "test:image": "node --test test/image_compression.test.mjs",
+    "test:feed": "node --test test/feed_updates_controller.test.mjs",
+    "test:tiptap": "node --test test/tiptap_editor_controller.test.mjs",
+    "test:compose": "node --test test/feed_compose_controller.test.mjs test/draft_store_controller.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "workbox-background-sync": "7.4.1",
+    "workbox-build": "7.4.1",
+    "workbox-cacheable-response": "7.4.1",
+    "workbox-core": "7.4.1",
+    "workbox-expiration": "7.4.1",
+    "workbox-precaching": "7.4.1",
+    "workbox-routing": "7.4.1",
+    "workbox-strategies": "7.4.1"
+  }
+}

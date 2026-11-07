@@ -1,0 +1,11 @@
+// Base emits the reset and input floor before shared component rules.
+@use "base";
+
+// Preserve the previous cascade exactly: these partials are emitted in source
+// order, and the final partial retains the late .button media overrides.
+@use "components/forms";
+@use "components/overlays";
+@use "components/feedback";
+@use "components/fields";
+@use "components/progress_and_uploads";
+@use "components/content_controls";

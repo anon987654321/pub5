@@ -1,0 +1,2522 @@
+# GENERATED from MASTER/data/tokens.yml. Do not edit by hand.
+visual_identity:
+  name: signal_and_stillness
+  material: greyscale_particle_stipple
+  principle: 'Reality is assembled from many small carriers. The interface does not
+    pretend to be a solid skin; it shows the field. Density is belonging, luminosity
+    is attention, ripple is signal, negative space is as real as matter. Colour is
+    a sparse semantic accent, never the substance.
+
+    '
+  lineage:
+  - e pluribus unum - out of many, one readable form
+  - signal as propagating state, not ornament
+  - turned and unturned density as membership in the field
+  - residual - individuality survives inside the collective
+  - stillness by default - motion only when meaning moves
+  signal: "#C8F55F"
+  signal_ink: "#101010"
+  signal_on_light: "#50630A"
+  display_size: clamp(40px, 6vw, 88px)
+  contrast:
+    signal_on_ink_min: 7.0
+    signal_on_white_min: 4.5
+    signal_on_paper_min: 4.5
+  max_highlight_area_fraction: 0.08
+  usage:
+  - primary action or selected marker where the local dialect permits
+  - focus and attention on dark surfaces
+  - meaningful state transition, never perpetual decoration
+  avoid:
+  - large full-page signal-colour backgrounds
+  - signal colour as body text on white
+  - glow, lens flare, ornamental gradients or shadows
+  - copied wordmarks, campaign art, characters or protected brand expression
+  composition:
+    hierarchy: one unmistakable focal point per first screen
+    negative_space: intentional and measured, never filled by decoration
+    surfaces: flat and structured by alignment, type and rules
+    typography: expressive display scale paired with readable body text
+  motion:
+    default: still
+    change_requires_semantic_state: true
+    reduced_motion_must_preserve_meaning: true
+  art_direction:
+    subject_count: 1
+    background: flat paper or ink
+    typography_layer: separate and editable; never bake critical copy into generated
+      photography
+    signal_usage: original graphic overlays only; never colour-grade photographic
+      subjects with the signal
+    preserve_media_colour: true
+    preserve_likeness: true
+    grade_is_explicit: true
+    avoid:
+    - copied campaign art
+    - copied wordmarks
+    - false product colours
+    - decorative lens flare
+  typography_roles:
+    display: text-display
+    body: text-base
+    technical: font-mono
+    wordmark: original pub5 artwork only
+  adaptations:
+    master: 'brgen''s dark family: #000 ground, #111 surfaces, #efefef ink and one
+      Helvetica sans for chrome under brgen''s deep-blue band; mono only in the chat;
+      the particle face stays greyscale and the sole expressive centerpiece'
+    brgen: retain deep-blue city identity and local editorial photography; signal
+      is a sparse semantic accent only
+    amber: retain neutral fashion surfaces and truthful garment colour; signal never
+      recolours product photography
+    bsdports: 'retain ultraminimal white: a classic search front page, Arial, blue
+      links, square corners'
+    openbsd: plain operational text; signal never substitutes for a truthful written
+      state
+    studio: retain media fidelity, operator-owned grades and original subject identity
+viewport:
+  xs: 480
+  sm: 576
+  md: 640
+  lg: 768
+  desktop: 1024
+  wide: 1265
+  xl: 1280
+shared_chrome:
+  space_extra_extra_small: 0.25rem
+  space_extra_small: 0.5rem
+  space_small: 0.75rem
+  space_medium: 1.5rem
+  space_large: 2rem
+  space_extra_large: 3rem
+  space_extra_extra_large: 4rem
+  color_success: "#00ba7c"
+  color_warning: "#c9a227"
+  color_info: "#5b9fd4"
+  color_danger: "#d1594a"
+  focus_ring: 2px solid var(--accent, currentColor)
+  elev_1: 1px solid var(--border)
+  transition_fast: 180ms
+  transition_normal: 300ms
+  ease_out: cubic-bezier(0.16,1,0.3,1)
+  ease_spring: cubic-bezier(0.32,0.72,0,1)
+  font_size_meta: 0.8125rem
+  font_size_body: 1rem
+  font_size_title: 1.25rem
+  font_size_display: 1.75rem
+  measure_body: 66ch
+  font: '"Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif'
+  font_code: '"JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular",
+    Menlo, Monaco, Consolas, monospace'
+  chrome_inset: 12px
+  tap_min: 44px
+  bar_height: 44px
+  page_gutter: clamp(16px, 5vw, 48px)
+  feed_max: 600px
+system:
+  tile_min: 224px
+  tile_gap_row: 24px
+  tile_gap_col: 8px
+  control_pad_inline: 16px
+  control_gap: 8px
+  radius_card: 16px
+storefront_art:
+  name: matte_product_promotion
+  family: marketplace_takeaway
+  purpose: Generate clean promotional product artwork while Rails owns all readable
+    copy and offer data.
+  composition:
+    aspect: '14:5'
+    text_zone: left 48%
+    product_zone: right 44%
+    safe_gap: 24px
+    product_max_height: 82%
+    product_max_width: 42%
+  typography:
+    headline_lines: 2
+    headline_role: dominant
+    support_lines: 2
+    offer_role: secondary
+    cta_role: tertiary
+    embedded_text: false
+  surface:
+    material: matte paper
+    texture: barely perceptible
+    lighting: soft diffuse studio light
+    contrast: calm
+  imagery:
+    product_count: one hero product or one coherent small group
+    product_cutout: true
+    perspective: natural
+    background_scene: false
+    generic_stock_scene: false
+  palette:
+    marketplace:
+    - warm white
+    - stone
+    - charcoal
+    - single campaign accent
+    takeaway:
+    - warm white
+    - cream
+    - charcoal
+    - single cuisine accent
+  forbidden:
+  - glow
+  - drop_shadow
+  - busy_background
+  - embedded_typography
+  - fake_price
+  - fake_rating
+  - decorative_lifestyle_scene
+  prompt_template: 'Clean matte promotional artwork for {vertical}: {subject}; isolated
+    product, natural proportions, soft diffuse studio light, quiet paper-like background,
+    generous negative space on the left for real typography, no readable text, no
+    logos, no badges, no price, no interface elements.'
+radio:
+  name: radio
+  inspirations:
+  - soundcloud
+  - whyp
+  home: discovery_first
+  player: waveform_first
+  sharing: single_track_permalink
+  privacy: private_and_unlisted_first
+  chrome: dark_audio
+luxury:
+  light_bg: "#efefef"
+  light_surface: "#ffffff"
+  light_text: "#333333"
+  light_muted: "#4d4d4d"
+  light_border: "#888888"
+  light_accent: "#000000"
+  light_danger: "#82372d"
+  dark_bg: "#000000"
+  dark_surface: "#111111"
+  dark_text: "#efefef"
+  dark_muted: "#999999"
+  dark_border: "#666666"
+  dark_accent: "#efefef"
+  space_extra_extra_small: 0.25rem
+  space_extra_small: 0.5rem
+  space_small: 0.75rem
+  space_medium: 1.5rem
+  space_large: 2rem
+  space_extra_large: 3rem
+  space_extra_extra_large: 4rem
+  color_success: "#00ba7c"
+  color_warning: "#c9a227"
+  color_info: "#5b9fd4"
+  radius_small: 6px
+  radius_medium: 10px
+  radius_large: 14px
+  font_size_display: clamp(1.953rem, 1.5rem + 2vw, 2.441rem)
+  font_size_title: 1.563rem
+  font_size_body: 1rem
+  font_size_meta: 0.875rem
+  letter_spacing_tight: "-0.01em"
+  line_height_tight: '1.25'
+  line_height_relaxed: '1.6'
+promotional_art:
+  layouts:
+    hero:
+      aspect_ratio: '16:9'
+      copy_zone: 42%
+      product_zone: 58%
+      safe_inset: 32px
+    campaign:
+      aspect_ratio: '3:2'
+      copy_zone: 40%
+      product_zone: 60%
+      safe_inset: 28px
+    tile:
+      aspect_ratio: '1:1'
+      copy_zone: 100%
+      product_zone: 100%
+      safe_inset: 20px
+    portrait:
+      aspect_ratio: '4:5'
+      copy_zone: 44%
+      product_zone: 56%
+      safe_inset: 24px
+  matte_backgrounds:
+    chalk: "#f7f5ef"
+    paper: "#efede8"
+    stone: "#e2ded5"
+    sand: "#e9decb"
+    charcoal: "#292725"
+  matte_inks:
+    chalk: "#292725"
+    paper: "#292725"
+    stone: "#292725"
+    sand: "#292725"
+    charcoal: "#f7f5ef"
+  product:
+    max_items: 4
+    primary_share: '0.58'
+    secondary_share: '0.30'
+    edge_clearance: 8%
+    object_fit: contain
+    lighting: large soft studio source, neutral white balance
+    shadow: soft natural contact shadow only
+  typography:
+    eyebrow:
+      size: 0.8125rem
+      weight: 600
+      leading: '1.25'
+    headline:
+      size: clamp(2rem, 5vw, 4rem)
+      weight: 400
+      leading: '1'
+      max_lines: 2
+    body:
+      size: 1rem
+      weight: 400
+      leading: '1.5'
+      max_lines: 3
+    price:
+      size: clamp(2rem, 4vw, 3rem)
+      weight: 800
+      leading: '1'
+    cta:
+      max_words: 4
+  copy:
+    max_headline_characters: 54
+    max_body_characters: 120
+    max_badge_words: 4
+    max_cta_words: 4
+  generation:
+    image_only: true
+    preserve_product_identity: true
+    background: clean matte studio paper, nearly uniform tone
+    composition: product separated from copy zone with generous negative space
+    typography_in_image: false
+    fake_logo_in_image: false
+    fake_badge_in_image: false
+    watermark_in_image: false
+    gradients: false
+    glow: false
+    decorative_props: false
+    busy_background: false
+    hard_crop: false
+    product_reflection: false
+    prompt_negative:
+    - text
+    - typography
+    - headline
+    - price text
+    - sale badge
+    - watermark
+    - busy background
+    - decorative props
+    - dramatic glow
+    - lens flare
+    - hard crop
+    - cut-off product
+face_root:
+  palette:
+    signal: "#D4D4D4"
+    signal_ink: "#080808"
+    signal_on_light: "#3A3A3A"
+    c_text: var(--text)
+    c_accent: var(--pub5-signal)
+    c_danger: var(--danger)
+    c_code: oklch(81% 0 0)
+  anchors:
+    c_text: oklch(93% 0.025 250)
+    c_accent: var(--pub5-signal)
+    c_danger: oklch(60% 0.14 35)
+    c_code: oklch(81% 0.10 268)
+  font_mono: '"JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular",
+    Menlo, Monaco, Consolas, monospace'
+  font_label: '"JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira
+    Code", ui-monospace, monospace'
+  face_bg: "#000000"
+  derived:
+    face_fg: var(--c-text)
+    face_muted: var(--text-secondary)
+    face_dim: rgb(176 176 176 / 18%)
+    face_soft: rgb(176 176 176 / 7%)
+    face_alert: color-mix(in oklch, var(--c-danger) 75%, white)
+    mood_accent: var(--c-accent)
+    canvas_mood_accent: var(--c-accent)
+    border_faint: rgb(164 164 164 / 16%)
+    border_soft: rgb(164 164 164 / 23%)
+    border_strong: rgb(175 175 175 / 34%)
+    hover_tint: color-mix(in srgb, var(--face-fg) 8%, transparent)
+    chrome_bg: var(--surface)
+    chrome_surface: var(--surface)
+    chrome_surface_active: "#222222"
+    chrome_border: var(--border)
+    chrome_hover: var(--hover)
+    chrome_text: var(--text)
+    chrome_muted: var(--text-secondary)
+    chrome_focus: var(--accent)
+    chrome_band: "#000000"
+    chrome_band_ink: "#e7e9ea"
+    chrome_band_muted: "#8b98a5"
+  layout:
+    tap-min: 44px
+    text-meta: 0.8125rem
+    text-extra-small: 0.75rem
+    text-title: 1.25rem
+    baseline: 4px
+    measure: 60ch
+    leading-body: '1.5'
+    leading-title: '1.25'
+    radius-extra-small: '0'
+    radius-small: '0'
+    radius-medium: '0'
+    radius-large: '0'
+    radius-pill: '0'
+    face-bar-height: 44px
+    bar-height: 44px
+    hud-tier-status: calc(var(--face-bar-height) + var(--safe-bottom) + 8px)
+    hud-tier-caption: calc(var(--face-bar-height) + var(--safe-bottom) + var(--tap-min))
+    face-phosphor-decay: '0.80'
+    transition-fast: 180ms
+    transition-normal: 300ms
+    ease-out: cubic-bezier(0.16,1,0.3,1)
+    ease-linear: cubic-bezier(0,0,1,1)
+    ease-in-out: cubic-bezier(0.65,0,0.35,1)
+    ease-spring: cubic-bezier(0.32,0.72,0,1)
+    z-canvas: '1'
+    z-chrome: '10'
+    z-ui: '90'
+    z-overlay: '100'
+    z-modal: '1000'
+    z-toast: '1100'
+    z-skip: '2000'
+face_interface:
+  schema: 1
+  prompt:
+    font: font_code
+    measure_ch: 66
+    max_ch: 72
+    line_height: 1.5
+    user_token: user
+    master_token: master
+  state:
+    modes:
+    - idle
+    - listening
+    - thinking
+    - working
+    - speaking
+    - warning
+    - error
+    - sleeping
+    - ready
+    still_modes:
+    - idle
+    still_after_activity_ms: 700
+    default_mode: idle
+    default_topology: papua-mask
+    entropy: 0.18
+    confidence: 0.86
+    attention: 1.0
+    arousal: 0.22
+    valence: 0.18
+    focus: 0.86
+    activity: 0.14
+    risk: 0.0
+  stipple:
+    depth_response:
+      reference_distance: 5.0
+      scale_min: 0.75
+      scale_max: 1.25
+    dial_modulation:
+      activity:
+        density: 0.05
+        ripple: 0.08
+        turbulence: 0.12
+        luminosity: 0.03
+        attract: 0.04
+      arousal:
+        ripple: 0.1
+        turbulence: 0.06
+        luminosity: 0.04
+      focus:
+        density: 0.02
+        attract: 0.12
+      confidence:
+        density: 0.02
+        luminosity: 0.04
+      risk:
+        ripple: 0.08
+        turbulence: 0.16
+        attract: -0.08
+    profiles:
+      idle:
+        density: 0.44
+        ripple: 0.03
+        turbulence: 0.04
+        luminosity: 0.76
+        attract: 0.14
+      thinking:
+        density: 0.72
+        ripple: 0.16
+        turbulence: 0.28
+        luminosity: 0.91
+        attract: 0.74
+      listening:
+        density: 0.62
+        ripple: 0.17
+        turbulence: 0.09
+        luminosity: 0.85
+        attract: 0.86
+      working:
+        density: 0.75
+        ripple: 0.24
+        turbulence: 0.34
+        luminosity: 0.9
+        attract: 0.6
+      speaking:
+        density: 0.84
+        ripple: 0.6
+        turbulence: 0.19
+        luminosity: 0.98
+        attract: 0.4
+      warning:
+        density: 0.84
+        ripple: 0.52
+        turbulence: 0.48
+        luminosity: 0.96
+        attract: 0.22
+      error:
+        density: 0.56
+        ripple: 0.82
+        turbulence: 0.65
+        luminosity: 1.0
+        attract: 0.04
+      ready:
+        density: 0.6
+        ripple: 0.06
+        turbulence: 0.06
+        luminosity: 0.82
+        attract: 0.25
+      sleeping:
+        density: 0.3
+        ripple: 0.0
+        turbulence: 0.0
+        luminosity: 0.48
+        attract: 0.1
+  stipple_vocabulary:
+    pluribus: many discrete carriers
+    unum: one coherent readable form
+    signal: propagating change of membership or attention; the lime accent marks admission
+      and focus
+    turned: high density and luminosity, admitted into the field
+    unturned: low density, still individual, not yet joined
+    residual: the particular inside the collective, kept in idle
+    void: negative space as equal material
+    gather: parts pull toward one locus
+    ripple: a signal crosses the field
+    fragment: parts leave the form
+    settle: the field re-coheres
+  stipple_membership:
+    idle: transitional
+    listening: transitional
+    thinking: turned
+    working: turned
+    speaking: turned
+    warning: transitional
+    error: unturned
+    ready: locked
+    sleeping: unturned
+  stipple_force:
+    idle: residual
+    listening: ripple
+    thinking: gather
+    working: gather
+    speaking: ripple
+    warning: residual
+    error: fragment
+    ready: settle
+    sleeping: residual
+  stipple_note:
+    idle: many at rest; individual seeds still visible
+    listening: the field opens to incoming signal
+    thinking: parts concentrate toward one locus
+    working: the locus holds while work runs
+    speaking: signal leaves through the mouth region
+    warning: binding loosens; individuals reappear
+    error: admission fails; the field breaks, may rejoin
+    ready: out of many, one stable form
+    sleeping: carriers at rest; the field dims, not erased
+  stipple_forbidden:
+  - bright_multicolour_particle_fields
+  - decorative_particle_carpets_behind_content
+  - signal_as_body_text_on_white
+  - signal_as_large_background_fill
+  - glow_lens_flare_ornamental_gradients
+  - solid_mesh_as_primary_face_material
+  - motion_without_semantic_state
+  - erasing_all_residual_individuality_in_idle
+  swarm:
+    enabled: true
+    particle_budget: 240
+    damping: 0.86
+    cohesion_radius: 0.11
+    cohesion_strength: 0.045
+    separation_radius: 0.035
+    separation_strength: 0.08
+    noise_scale: 0.014
+    residual:
+      fraction: 0.18
+      strength: 0.12
+    size_from_depth: true
+    glyph_ramp:
+    - "."
+    - "˙"
+    - "∘"
+    - "*"
+    - "○"
+    - "●"
+    target_field:
+      head:
+        center:
+        - 0.0
+        - 0.05
+        - 0.0
+        scale:
+        - 1.18
+        - 1.02
+        - 0.82
+        weight: 1.0
+      eyes:
+        left:
+          pos:
+          - -0.29
+          - 0.21
+          - 0.58
+          radius: 0.17
+          weight: 1.4
+        right:
+          pos:
+          - 0.29
+          - 0.21
+          - 0.58
+          radius: 0.17
+          weight: 1.4
+      mouth:
+        pos:
+        - 0.0
+        - -0.31
+        - 0.5
+        radius: 0.34
+        weight: 1.12
+      softness: 0.72
+    mode_multipliers:
+      idle:
+        eyes: 1.0
+        core: 1.0
+        noise: 0.14
+      attentive:
+        eyes: 1.35
+        core: 1.05
+        noise: 0.07
+      thinking:
+        eyes: 1.15
+        core: 1.3
+        noise: 0.22
+  interaction:
+    states:
+    - idle
+    - waking
+    - listening
+    - holding
+    - yielded
+    - processing
+    - speaking
+    - sleeping
+    - error
+    turn_states:
+    - draft
+    - listening
+    - committed
+    - interrupted
+    - discarded
+    - failed
+    task_states:
+    - queued
+    - active
+    - waiting-human
+    - waiting-network
+    - waiting-model
+    - complete
+    - failed
+    - cancelled
+    tool_states:
+    - queued
+    - active
+    - retry
+    - complete
+    - failed
+    events:
+    - speech:start
+    - speech:partial
+    - speech:end
+    - speech:abort
+    - speech:attention
+    - tts:start
+    - tts:end
+    - tts:interrupt
+    - turn:started
+    - turn:committed
+    - turn:discarded
+    - turn:interrupted
+    - audio:update
+    - render:frame
+    - render:quality
+    - performance:receipt
+    - workspace:node:created
+    - workspace:node:updated
+    - workspace:node:removed
+    - workspace:relation:created
+    - workspace:focus
+    - memory:added
+    - task:queued
+    - task:active
+    - task:waiting-human
+    - task:waiting-network
+    - task:waiting-model
+    - task:complete
+    - task:failed
+    - task:cancelled
+    - tool:queued
+    - tool:active
+    - tool:retry
+    - tool:complete
+    - tool:failed
+  audio:
+    fields:
+    - rms
+    - peak
+    - bass
+    - mid
+    - high
+    - centroid
+    - onset
+    - speechActivity
+    - speaker
+    - playback
+    - sentencePosition
+    - sampleRate
+    - channels
+    - analyserWindow
+    - latencyMs
+    - playbackBufferMs
+    - underruns
+  performance:
+    target_fps: 60
+    target_frame_ms: 16.667
+    main_thread_budget_ms: 8
+    gpu_budget_mb: 128
+    memory_budget_mb: 192
+  workspace:
+    persistence: explicit_opt_in
+    stable_ids: true
+    provenance: required
+    relationships: true
+  mode_aliases:
+    phantom: error
+    escalation: warning
+    tool: thinking
+    memory: thinking
+    event: thinking
+    codebase: working
+    fixing: working
+    complete: ready
+    converged: ready
+    settled: idle
+  ascii:
+    prompt:
+      input: "|-"
+      continuation: "\\_"
+      output: "/"
+    chars: " .,:~;r+=civ*YnyeaXPq&#8W@"
+    ramps:
+      sculpt: " .,:~;r+=civ*YnyeaXPq&#8W@"
+      classic: " .:;=*#@"
+      high_contrast: " .;=#@"
+      fine_detail: " .:;=*#@"
+    ink:
+      " ": 0.0
+      ".": 0.0362
+      ",": 0.0492
+      ":": 0.0576
+      "~": 0.0646
+      ";": 0.0753
+      r: 0.0802
+      "+": 0.0834
+      "=": 0.091
+      c: 0.0967
+      i: 0.1003
+      v: 0.103
+      "*": 0.1103
+      "Y": 0.1161
+      "n": 0.1222
+      "y": 0.1288
+      e: 0.1379
+      a: 0.1442
+      X: 0.1499
+      P: 0.1574
+      q: 0.1633
+      "&": 0.1718
+      "#": 0.1797
+      '8': 0.1871
+      W: 0.201
+      "@": 0.2099
+    mode: dark
+    tone_far: "#555555"
+    tone_mid: "#A6A6A6"
+    tone_near: "#F0F0F0"
+    fit: 0.92
+    camera: 3.2
+    aspect: 2.0
+    samples: 2
+    samples_large:
+      cells: 6000
+      samples: 1
+    size:
+      mode: auto
+      margin:
+        cols: 2
+        rows: 0
+      floor:
+      - 28
+      - 64
+      cap:
+      - 120
+      - 300
+      span: 1.25
+    mesh:
+      rows:
+      - 40
+      - 96
+      per_row: 1.6
+      around:
+      - 48
+      - 150
+      per_col: 0.9
+      skull: 1.45
+      chin: 1.2
+      jaw: 0.6
+      blur: 0.02
+      back: 0.72
+    light:
+      start: -0.6
+      orbit: 0.6
+      elevation: 0.5
+      fill_dir:
+      - -0.4
+      - 0.25
+      - 0.9
+      ambient: 0.16
+      key: 0.62
+      fill: 0.16
+      rim: 0.3
+      spec: 0.22
+      shininess: 16
+    shade:
+      paint: 0.6
+      gain: 1.0
+      gamma: 1.2
+      ceiling: 0.97
+    cavity:
+      gain: 0.15
+    cover: 0.2
+    edge_fade: 0.4
+    edge_gradient: 0.5
+    crease: 0.6
+    vote: 0.35
+    depth_edge: 0.15
+    dither_gain: 0.55
+    dither:
+    - - 0
+      - 8
+      - 2
+      - 10
+    - - 12
+      - 4
+      - 14
+      - 6
+    - - 3
+      - 11
+      - 1
+      - 9
+    - - 15
+      - 7
+      - 13
+      - 5
+    depth:
+      near: 0.62
+      far: 0.3
+      tone: 0.08
+    web:
+      rows: 44
+      font:
+      - 9
+      - 20
+      tone:
+      - 0.45
+      - 0.75
+      - 1.0
+    motion:
+      spin: 0.35
+      breath: 0.015
+      breath_rate: 1.6
+      pitch_sway: 0.06
+      pitch_rate: 0.43
+      roll: 0.18
+      roll_rate: 0.7
+      bob: 0.02
+      bob_rate: 1.1
+      blink_period: 3.4
+      blink_length: 0.16
+      glance_initial: 0.72
+      glance_interval:
+      - 0.28
+      - 1.85
+      glance_horizontal: 0.065
+      glance_vertical: 0.028
+      dolly:
+        idle: 1.0
+        listening: 1.018
+        thinking: 1.045
+        speaking: 1.032
+      spin_states:
+      - idle
+      - thinking
+      - working
+      - sleeping
+      - ready
+    occlusion: 2.5
+    facing: 0.1
+    min_rows: 8
+    min_cols: 16
+    features:
+      eye_open: "("
+      eye_close: ")"
+      pupil: o
+      pupil_large: O
+      eye_floor: 9
+      eye_share: 0.1
+      eye_tall_at: 13
+      eye_lid_top:
+      - "."
+      - "-"
+      - "."
+      eye_lid_bottom:
+      - "'"
+      - "-"
+      - "'"
+      nostril_at: 7
+      nostril:
+      - "("
+      - ")"
+      lid: "-"
+      brow: "-"
+      nose: "|"
+      nose_tip: "."
+      mouth_line: "-"
+      mouth_listening:
+      - "\\"
+      - _
+      - "/"
+      mouth_corner_top: "."
+      mouth_corner_bottom: "'"
+    masks:
+      order:
+      - maprik_yam
+      - iatmul_mei
+      - baining
+      - sepik_woven
+      - highlands_gourd
+      default_session: master
+      trigger_states:
+      - thinking
+      ease:
+        in: 1.2
+        out: 0.8
+      takeover: 0.5
+      beak_min: 0.015
+      brow_min: 0.03
+      mouth_slack: 0.08
+      ring_min_px: 1.0
+      glyphs:
+        ring: OoO0
+        disc: Oo
+        halo:
+        - "-"
+        - "'"
+        beak_tip: "\\_/"
+        brow_heavy: "="
+      neutral:
+        width: 1.0
+        face_length: 1.0
+        depth_scale: 1.0
+        relief: 1.0
+        flatten: 0.0
+        flat_brightness: 0.72
+        socket_depth: 0.0
+        brow_ridge: 0.0
+        brow_y: 0.14
+        brow_width: 0.26
+        brow_height: 0.04
+        beak_projection: 0.0
+        beak_top: 0.02
+        beak_length: 0.28
+        beak_width: 0.06
+        beak_flare: 0.0
+        ring: 0.0
+        ring_radius: 0.1
+        ring_count: 2
+        halo: 0.0
+        halo_radius: 0.5
+        halo_rise: 0.14
+        halo_span: 70.0
+        halo_rows: 2
+        halo_gap: 0.035
+        disc: 0.0
+        disc_radius: 0.1
+        disc_offset: 0.04
+        disc_height: 0.04
+        brow_line: 1.0
+        nose_line: 1.0
+      targets:
+        maprik_yam:
+          face_length: 1.1
+          width: 0.95
+          socket_depth: 0.04
+          beak_projection: 0.12
+          beak_length: 0.26
+          beak_flare: 0.05
+          ring: 1.0
+          ring_radius: 0.105
+          ring_count: 2
+          halo: 1.0
+          halo_radius: 0.42
+          halo_rise: 0.12
+          halo_span: 58.0
+          brow_line: 0.0
+        iatmul_mei:
+          face_length: 1.3
+          width: 0.8
+          depth_scale: 0.92
+          relief: 1.2
+          brow_ridge: 0.07
+          beak_projection: 0.11
+          beak_length: 0.32
+          beak_flare: 0.035
+        baining:
+          face_length: 0.95
+          width: 1.35
+          depth_scale: 0.75
+          lower_face_scale: 0.96
+          socket_depth: 0.03
+          beak_projection: 0.06
+          beak_length: 0.28
+          beak_width: 0.09
+          beak_flare: 0.04
+          ring: 1.0
+          ring_radius: 0.12
+          ring_count: 1
+          brow_line: 0.0
+        sepik_woven:
+          face_length: 1.35
+          width: 0.78
+          lower_face_scale: 0.9
+          socket_depth: 0.03
+          beak_projection: 0.05
+          beak_length: 0.22
+          beak_flare: 0.03
+          ring: 1.0
+          ring_radius: 0.085
+          ring_count: 2
+          disc: 1.0
+          disc_radius: 0.09
+          disc_offset: 0.1
+          disc_height: -0.06
+          brow_line: 0.0
+        highlands_gourd:
+          face_length: 0.95
+          width: 1.2
+          depth_scale: 1.1
+          upper_face_scale: 0.82
+          lower_face_scale: 1.0
+          relief: 0.15
+          flatten: 0.85
+          brow_line: 0.0
+          nose_line: 0.0
+  spatial:
+    topology_profiles:
+      papua-mask:
+        tilt_x: 0.0
+        tilt_y: 0.0
+        density: 1.0
+        fracture: 0.0
+      face:
+        tilt_x: 0.0
+        tilt_y: 0.0
+        density: 1.0
+        fracture: 0.0
+      codebase:
+        tilt_x: -0.08
+        tilt_y: 0.1
+        density: 1.18
+        fracture: 0.08
+      ecology:
+        tilt_x: 0.12
+        tilt_y: -0.06
+        density: 1.32
+        fracture: 0.12
+    morphology:
+      model: speculative_distant_human_2026_r3
+      generation: 10
+      cranium_scale: 1.22
+      cranial_width: 1.07
+      cranial_height: 1.08
+      upper_face_scale: 0.95
+      lower_face_scale: 0.76
+      facial_verticalization: 1.07
+      masticatory_scale: 0.74
+      orbital_scale: 1.08
+      orbital_vertical_scale: 1.04
+      brow_scale: 0.6
+      nose_scale: 0.82
+      nasal_projection: 0.82
+      mouth_scale: 0.86
+      facial_projection: 0.78
+      jaw_projection: 0.76
+      jaw_softening: 0.95
+      malar_scale: 0.96
+      pupil_scale: 0.86
+      asymmetry: 0.012
+      asymmetry_seed: 73421
+      variation_band: 0.028
+      climate_variant: neutral
+    shell:
+      radius: 1.58
+      width_segments: 28
+      height_segments: 20
+    task_ring:
+      enabled: true
+      max_nodes: 12
+      radius_x: 2.02
+      radius_y: 1.72
+      depth: -0.12
+      dot_radius: 0.027
+      orbit_speed: 4.0e-06
+      terminal_lifetime_ms: 12000
+    nodes:
+      lib:
+      - -1.38
+      - 0.1
+      - -0.28
+      law:
+      - -0.7
+      - 1.18
+      - -0.1
+      tools:
+      - 1.4
+      - 0.05
+      - -0.2
+      web:
+      - 0.7
+      - -1.1
+      - -0.12
+      openbsd:
+      - -0.82
+      - -1.05
+      - -0.16
+    links:
+    - - lib
+      - law
+    - - law
+      - tools
+    - - tools
+      - web
+    - - web
+      - openbsd
+    - - openbsd
+      - lib
+    - - lib
+      - tools
+    - - law
+      - web
+    - - tools
+      - openbsd
+    - - web
+      - lib
+    - - openbsd
+      - law
+    layers:
+    - identity
+    - eyes
+    - mouth
+    - cognition
+    - repository
+    - event_field
+    - camera
+    - hud
+    camera:
+      distance: 5.2
+      parallax: 0.06
+      orbit_limit: 0.16
+      fov: 38
+    budget:
+      point_allocation:
+        stipple_fraction: 0.75
+        world_fraction: 0.25
+      desktop_points: 1200
+      mobile_points: 420
+      desktop_particles: 200
+      mobile_particles: 120
+      reduced_motion_particles: 64
+      max_device_pixel_ratio: 2.0
+      active_fps: 24
+      idle_fps: 12
+      hidden_fps: 0
+      reduced_motion_fps: 8
+      battery_fps: 12
+      terminal_active_fps: 12
+      terminal_settle_fps: 8
+      terminal_particles: 48
+      terminal_resize_poll_ms: 500
+      terminal_intro_frames: 6
+      terminal_intro_fps: 8
+      terminal_intro_particles: 24
+      pulse_limit: 24
+      hud_labels: 5
+    sparse_field:
+      max_particles: 260
+      mobile_max_particles: 140
+      void_ratio: 0.82
+      idle_particles: 48
+      listening_particles: 88
+      thinking_particles: 148
+      working_particles: 124
+      speaking_particles: 116
+      warning_particles: 78
+      error_particles: 58
+      sleeping_particles: 22
+      ready_particles: 60
+      super_void_particles: 18
+      profiles:
+        idle:
+          activity: 0.12
+          void: 0.94
+          drift: 0.1
+          orbit: 0.18
+        super_void:
+          activity: 0.05
+          void: 0.995
+          drift: 0.018
+          orbit: 0.04
+        listening:
+          activity: 0.42
+          void: 0.82
+          drift: 0.18
+          orbit: 0.28
+        thinking:
+          activity: 0.72
+          void: 0.66
+          drift: 0.28
+          orbit: 0.48
+        working:
+          activity: 0.66
+          void: 0.7
+          drift: 0.24
+          orbit: 0.42
+        speaking:
+          activity: 0.78
+          void: 0.7
+          drift: 0.22
+          orbit: 0.38
+        warning:
+          activity: 0.58
+          void: 0.78
+          drift: 0.34
+          orbit: 0.56
+        error:
+          activity: 0.86
+          void: 0.82
+          drift: 0.62
+          orbit: 0.88
+        sleeping:
+          activity: 0.05
+          void: 0.98
+          drift: 0.03
+          orbit: 0.08
+        ready:
+          activity: 0.24
+          void: 0.9
+          drift: 0.12
+          orbit: 0.2
+      eye_well_radius: 0.24
+      mouth_void_ratio: 0.86
+      depth_layers: 3
+      asymmetry: 0.028
+      memory_ghost_limit: 48
+      evidence_trail_limit: 12
+      law_resonance_limit: 56
+      density_scale: 1.0
+      motion_vocabulary:
+      - orbit
+      - drift
+      - attract
+      - repel
+      - bloom
+      - collapse
+      - fragment
+      - remember
+      - connect
+      - breathe
+      - resolve
+brgen_old_dark:
+  bg: "#000000"
+  surface: "#111111"
+  surface_elevated: "#111111"
+  search_bg: "#111111"
+  text: "#efefef"
+  text_secondary: "#a3a3a3"
+  border: "#666666"
+  accent: "#efefef"
+  accent_hover: "#d0d0d0"
+  danger: "#e46151"
+  chrome_bg: "#0d0d0d"
+  radius_extra_small: 4px
+  radius_small: 8px
+  radius_medium: 12px
+  radius_pill: 9999px
+  radius_card: 8px
+  radius_large: 8px
+brgen_old_light:
+  bg: "#efefef"
+  surface: "#ffffff"
+  surface_elevated: "#ffffff"
+  search_bg: "#ffffff"
+  text: "#333333"
+  text_secondary: "#4d4d4d"
+  border: "#666666"
+  accent: "#000000"
+  accent_hover: "#000000"
+  danger: "#b24c3f"
+  chrome_bg: "#333333"
+  radius_extra_small: 4px
+  radius_small: 8px
+  radius_medium: 12px
+  radius_pill: 9999px
+  radius_card: 8px
+  radius_large: 8px
+openbsd_wscons:
+  bg: "#000000"
+  surface: "#000000"
+  surface_elevated: "#0a140a"
+  search_bg: "#0f1a0f"
+  text: "#63c363"
+  text_secondary: "#499149"
+  border: "#1a3a1a"
+  hover: rgba(99, 195, 99, 0.1)
+  hover_subtle: rgba(99, 195, 99, 0.03)
+  accent: "#63c363"
+  accent_hover: "#4fa34f"
+  danger: "#ff6b6b"
+  font_size: 12px
+  line_height: 16px
+  radius_pill: '0'
+  radius_card: '0'
+social:
+  bg: "#000000"
+  surface: "#111111"
+  surface_elevated: "#1a1a1a"
+  search_bg: "#111111"
+  text: "#efefef"
+  text_secondary: "#a3a3a3"
+  border: "#666666"
+  hover: rgba(216, 214, 224, 0.1)
+  hover_subtle: rgba(216, 214, 224, 0.03)
+  accent: "#efefef"
+  accent_hover: "#9686e8"
+  danger: "#e46151"
+  font_size: 16px
+  line_height: 20px
+  radius_extra_small: 4px
+  radius_small: 8px
+  radius_medium: 12px
+  radius_pill: 9999px
+  radius_card: 16px
+  radius_large: 16px
+  space_extra_extra_small: 0.25rem
+  space_extra_small: 0.5rem
+  space_small: 0.75rem
+  space_medium: 1rem
+  space_large: 1.5rem
+  space_extra_large: 2rem
+  color_success: "#00ba7c"
+  color_warning: "#c9a227"
+  color_info: "#5b9fd4"
+  transition_fast: 180ms
+  transition_normal: 300ms
+  ease_out: cubic-bezier(0.16,1,0.3,1)
+  ease_spring: cubic-bezier(0.32,0.72,0,1)
+  sidebar: 275px
+  feed_max: 600px
+  widgets: 350px
+  layout_max: 1265px
+light:
+  bg: "#efefef"
+  surface: "#ffffff"
+  surface_elevated: "#f2f2f2"
+  search_bg: "#ffffff"
+  text: "#333333"
+  text_secondary: "#4d4d4d"
+  border: "#666666"
+  hover: rgba(26, 24, 36, 0.1)
+  hover_subtle: rgba(26, 24, 36, 0.03)
+  accent: "#000000"
+  accent_hover: "#4a3fb0"
+  danger: "#a9483c"
+vertical_accents:
+  marketplace:
+    accent: "#2563EB"
+    hover: "#1D4ED8"
+    light: "#1E40AF"
+    ink: "#f7f6fa"
+  tv:
+    accent: "#dc635c"
+    hover: "#b83a33"
+    light: "#dc635c"
+  dating:
+    accent: "#00d4aa"
+    hover: "#00b391"
+    light: "#009579"
+  takeaway:
+    accent: "#e07b39"
+    hover: "#c26a30"
+    light: "#c26a30"
+  playlist:
+    accent: "#12b6c4"
+    hover: "#0f9aa6"
+    light: "#0e8a94"
+  maps:
+    accent: "#5b8fd4"
+    hover: "#4a7ab8"
+    light: "#5585c5"
+  messenger:
+    accent: "#6b7fd7"
+    hover: "#5566c4"
+    light: "#6b7fd7"
+vertical_accent_ink: "#110f19"
+scale:
+  space_px: &1
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 8
+  - 12
+  - 16
+  - 20
+  - 24
+  - 28
+  - 32
+  - 36
+  - 40
+  - 44
+  - 48
+  - 56
+  - 64
+  - 72
+  - 80
+  - 96
+  - 128
+  letter_spacing_em:
+  - -0.03
+  - -0.02
+  - -0.01
+  - 0
+  - 0.05
+  - 0.08
+  - 0.14
+  line_height: &2
+  - 1
+  - 1.25
+  - 1.4
+  - 1.5
+  - 1.6
+  radius_px:
+  - 0
+  - 2
+  - 4
+  - 8
+  - 12
+  - 16
+  font_weight:
+  - 400
+  - 500
+  - 600
+  - 700
+  - 800
+  opacity:
+  - 0.03
+  - 0.05
+  - 0.08
+  - 0.1
+  - 0.12
+  - 0.2
+  - 0.4
+  - 0.6
+  - 0.8
+  duration_ms:
+  - 180
+  - 300
+  baselines:
+    apps:
+      off_scale_space: 35
+      off_scale_line_height: 21
+      absolute_line_height: 0
+      off_scale_radius: 19
+      off_scale_font_weight: 0
+      off_scale_tracking: 6
+      off_scale_opacity: 20
+      off_scale_duration: 16
+    face:
+      off_scale_space: 17
+      off_scale_radius: 0
+      off_scale_line_height: 3
+      absolute_line_height: 0
+      off_scale_font_weight: 0
+      off_scale_tracking: 12
+      off_scale_opacity: 27
+      off_scale_duration: 28
+layout_rules:
+  grid:
+    columns: 12
+    base_unit_px: 8
+    source: MASTER/data/tokens.yml#tokens.scale.space_px
+    allowed_spacing_px: *1
+    action: Prefer 8px rhythm and 12-column structure; allow 4px for hairline adjustments.
+      Full scale in design_tokens.
+  proportion:
+    golden_ratio: 1.618
+    split_main_ratio: 0.618
+    split_sidebar_ratio: 0.382
+    action: Use proportional splits for major panels instead of arbitrary widths.
+  whitespace:
+    internal_not_greater_than_external: true
+    gap_over_margin: true
+    paragraph_margin_em: 1.5
+    section_padding_min_rem: 4
+    section_padding_max_rem: 8
+    action: Padding should not exceed separation between unrelated groups; use gap
+      before margin hacks.
+  reading_patterns:
+    text_heavy: f_pattern
+    landing_page: z_pattern
+    primary_area: top_left
+    terminal_area: bottom_right
+    weak_area: bottom_left
+    action: Place critical information along the dominant scan path.
+  alignment:
+    avoid_default_center_alignment: true
+    center_text_max_lines: 3
+    body_text_alignment: left
+    rag: right
+    action: Use asymmetry and alignment before decoration.
+  touch:
+    target_min_px: 44
+    target_recommended_px: 48
+    thumb_zone_primary_actions: bottom_center
+    action: Flag critical mobile interactions in unreachable top corners.
+kinetic_depth:
+  technique: point_cloud
+  principle: Depth is implied by coherent motion, never by shaded surfaces. Flat 2D
+    points that move together read as one solid volume; this is the kinetic depth
+    effect and it is the house way of drawing dimension.
+  depth_cues:
+  - parallax_under_rotation
+  - brightness_and_alpha_falloff_with_distance
+  - density
+  forbidden:
+  - lit_meshes
+  - material_systems
+  - per_surface_shading
+  renderer: raw_webgl_points
+  action: Draw dimension as a field of projected points. Reach for gl.POINTS and two
+    short shaders before reaching for a 3D library, and never introduce a scene graph
+    to solve a problem a point cloud already solves.
+  exceptions: 'MASTER''s face still uses THREE for its wireframe mesh. That is history
+    rather than intent, and the migration path is already open -- web/public/particle_kernel.js
+    calls itself the Pixel Field kernel and says it exists to replace ad-hoc particle
+    loops in face, codebase and ecology one at a time. It is 2D today: its cells carry
+    x, y, vx, vy and no z, and it draws through getContext("2d"). Adding a depth axis
+    and a gl.POINTS renderer is the work; rewriting a mesh by hand is not.'
+  already_correct: brgen's radio tunnel (app/javascript/radio_brgen_tunnel.js) is
+    raw WebGL with a 2D fallback and no library at all. It is the reference implementation,
+    not the exception.
+  constraint_that_still_holds: Deferred WebGL boot is sacred (DECISIONS.md). A point
+    cloud is cheaper than a mesh, which makes the primer check easier to honour, not
+    optional.
+visual_design:
+  semantics:
+    reject_arbitrary_decoration: true
+    action: Every ornament must communicate state, hierarchy, affordance, or tone.
+  syntactics:
+    enforce_visual_grammar: true
+    action: Reuse spacing, color, radius, and type tokens consistently.
+  pragmatics:
+    must_be_understandable: true
+    action: Prefer self-explanatory affordances over clever ambiguity.
+  rams:
+    useful: true
+    understandable: true
+    unobtrusive: true
+    honest: true
+    thorough: true
+    action: Score design changes against Dieter Rams-style usefulness and honesty.
+  font_personality:
+    traditional_trustworthy: neo_grotesque_sans
+    modern_innovative: geometric_sans
+    accessible_interface: humanist_sans
+    impact: bold_display
+    action: Match typography mood to content rather than trend.
+  screen_legibility:
+    prefer_high_x_height: true
+    prefer_open_apertures: true
+    disambiguate_characters:
+    - 1/l/I
+    - 0/O
+    - B/8
+    action: Design for degraded conditions and small sizes first.
+motion_and_sound:
+  timing:
+    avoid_quantized_feel: true
+    preserve_silence: true
+    action: Treat pauses, decay, and negative space as first-class design elements.
+  audio_accessibility:
+    no_autoplay_without_intent: true
+    mute_path_required: true
+    must_not_mask_speech: true
+    must_not_conflict_with_screen_readers: true
+    graceful_failure_required: true
+    action: Sound is feedback, not surprise; silence must always be available.
+  sonic_hierarchy:
+    foreground: critical_state_change
+    midground: interaction_confirmation
+    background: ambience_or_texture
+    action: Layer sounds like UI depth; avoid frequency and attention masking.
+data_visualization:
+  data_ink_ratio_target: 1.0
+  lie_factor_target: 1.0
+  reject_chartjunk: true
+  small_multiples_require_identical_scales: true
+  sparklines_no_frames_or_ticks: true
+  action: Remove non-data ink unless it adds comprehension.
+automated_css_analysis:
+  checks:
+  - id: off_scale_line_height
+    enforce:
+    - LINE_HEIGHT_ON_SCALE
+    - Operator::ScaleLint
+  - id: absolute_line_height
+    enforce:
+    - LINE_HEIGHT_ON_SCALE
+    - Operator::ScaleLint
+  - id: measure_bounds
+    enforce:
+    - geometry_type worn_type.profiles
+  - id: hanging_list_markers
+    enforce:
+    - geometry_type check_hanging
+  - id: micro_typography
+    enforce:
+    - Design::Thresholds.micro_typography
+  - id: touch_target
+    enforce:
+    - TOUCH_TARGET_MIN
+  - id: eight_px_rhythm
+    enforce:
+    - surface_rules spacing scan
+    - Operator::ScaleLint
+  - id: chrome_i18n
+    enforce:
+    - Operator::ChromeI18nLint
+  flag:
+  - line length outside typography.line_length bounds
+  - line height below typography.line_height.body_min for prose
+  - off-scale unitless line-height not in typography.line_height.allowed
+  - absolute px line-height on prose (prefer unitless; ScaleLint absolute_line_height)
+  - continuous prose without max-width measure (66ch / var(--measure))
+  - body text below 16px
+  - contrast below WCAG AAA thresholds (7:1 body, 4.5:1 large)
+  - more than two font families
+  - more than three font weights
+  - spacing off the 4px or 8px grid
+  - touch targets below 44px
+  - centered prose longer than three lines
+  - justified text without hyphenation
+  - prose missing orphans/widows 3
+  - hyphenation without hyphenate-limit-chars 6 3 2
+  - prose missing default OpenType kern/liga/clig/onum/pnum
+  - body numerals not oldstyle-nums
+  - tables missing tabular/lining numerals
+  - heading hierarchy ratios below 1.2
+  - font weight differences below 200
+  - decorative chart ink that does not encode data
+  - decorative UI elements that do not encode state, hierarchy, affordance, or tone
+  - non-token spacing, radius, color, or typography values in generated UI
+ux_laws:
+  fitts:
+    target_min_px: 44
+    target_recommended_px: 48
+    primary_action_min_px: 48
+    action: Flag interactive controls smaller than 44px; prefer 48px for primary actions.
+  hick:
+    max_visible_choices: 7
+    nav_items_warn: 9
+    action: Flag navigation or action groups with more than 7 peer choices without
+      progressive disclosure.
+  chunking:
+    max_items_per_group: 7
+    action: Group long lists; flag flat menus over 7±2 items.
+  progressive_disclosure:
+    require_advanced_hidden: true
+    action: Advanced/secondary controls should start collapsed or on secondary surfaces.
+typography:
+  accessibility:
+    body_min_px: 16
+    mobile_input_min_px: 16
+    normal_text_contrast: 7.0
+    large_text_contrast: 4.5
+  line_length:
+    min_ch: 45
+    max_ch: 75
+    ideal_ch: 66
+  line_height:
+    allowed: *2
+    body_preferred: 1.5
+  hierarchy:
+    max_font_families: 2
+    max_font_weights: 3
+    max_font_sizes: 8
+    min_weight_delta: 200
+    min_size_ratio_between_levels: 1.2
+    h1_body_min_ratio: 1.75
+    h1_body_max_ratio: 5.5
+    h2_body_min_ratio: 1.5
+    h2_body_max_ratio: 3.5
+    h3_body_min_ratio: 1.25
+    h3_body_max_ratio: 2.5
+  letter_spacing:
+    all_caps_min_em: 0.05
+    all_caps_max_em: 0.15
+    lowercase_body_should_letterspace: false
+  micro:
+    default_features:
+    - kern
+    body_numerals: oldstyle-nums
+    table_numerals: tabular-nums
+    hyphenate_limit_chars:
+    - 6
+    - 3
+    - 2
+    orphans: 3
+    widows: 3
+    void_target: 0.7
+worn_type:
+  type_scale_ratio: 1.25
+  type_scale_tolerance_px: 1.5
+  baseline_module_px: 4
+  hanging_marker_max_inset_px: 0
+  golden_split:
+    min: 0.55
+    max: 0.7
+  profiles:
+    feed:
+      measure_min_ch: 35
+      measure_max_ch: 55
+      mobile_min_ch: 30
+      mobile_max_ch: 50
+      rhythm_off_max_pct: 25
+      empty_min_pct: 20
+      empty_max_pct: 75
+      accents_max: 2
+    catalog:
+      measure_min_ch: 20
+      measure_max_ch: 50
+      rhythm_off_max_pct: 15
+      empty_min_pct: 15
+      empty_max_pct: 70
+      accents_max: 2
+      require_tabular_nums: true
+    chat:
+      measure_min_ch: 0
+      measure_max_ch: 0
+      rhythm_off_max_pct: 45
+      empty_min_pct: 10
+      empty_max_pct: 85
+      accents_max: 2
+    immersive:
+      measure_min_ch: 0
+      measure_max_ch: 0
+      rhythm_off_max_pct: 40
+      empty_min_pct: 8
+      empty_max_pct: 90
+      accents_max: 2
+    map:
+      measure_min_ch: 0
+      measure_max_ch: 0
+      label_min_px: 12
+      rhythm_off_max_pct: 40
+      empty_min_pct: 0
+      empty_max_pct: 100
+      accents_max: 2
+    legal:
+      measure_min_ch: 55
+      measure_max_ch: 75
+      rhythm_off_max_pct: 20
+      empty_min_pct: 25
+      empty_max_pct: 70
+      accents_max: 1
+    auth:
+      measure_min_ch: 0
+      measure_max_ch: 0
+      rhythm_off_max_pct: 30
+      empty_min_pct: 20
+      empty_max_pct: 80
+      accents_max: 2
+  rag:
+    inspect_from_lines: 5
+    extreme_last_line_ratio: 0.12
+  action: 'Judge each surface under its profile. Count worn characters, computed sizes,
+    baselines, tabular figures, accent hues, empty ratio, and main/aside split. Do
+    not grep stylesheets for these.
+
+    '
+pixel_perfection:
+  forbidden_css:
+  - box-shadow
+  - text-shadow
+  - 'filter: blur'
+  - backdrop-filter
+  - glassmorphism
+  - soft glow
+  - additive second pass behind a point cloud
+  - gl_PointSize above 1.0
+  forbidden_patterns:
+  - 'box-shadow\s*:'
+  - 'text-shadow\s*:'
+  - filter\s*:\s*[^;]*blur\s*\(
+  - 'backdrop-filter\s*:'
+  forbid_arbitrary_radius_px_above: 16
+  eight_px_rhythm: *1
+  magic_color_hex_ban_inline: true
+  image_smoothing_enabled: false
+  exception_policy:
+    allowed: true
+    scope: single named component, not a blanket relaxation
+    must_document_at_point_of_use: true
+    must_state_reason: true
+    action: A forbidden pattern may be used for one specific, named element when flatness
+      would remove its only legible depth or affordance cue -- document the reason
+      in a comment where the exception lives, the same way a one-off structural exception
+      gets documented, rather than relaxing the rule generally or leaving it unexplained.
+  action: 'Pixel-perfect flat UI: no blur/glow/shadow ornament; spacing on 8px rhythm;
+    tokens over magic colors. Exceptions follow exception_policy -- scoped and documented,
+    not silent.'
+rams_checklist:
+  useful: Does this control or surface serve a concrete user goal?
+  understandable: Is hierarchy and affordance obvious without decoration?
+  unobtrusive: Does chrome recede so content leads?
+  honest: Does UI state match system state without fake progress?
+  thorough: Are empty, loading, error, and reduced-motion states designed?
+  action: Score UI diffs against Rams criteria in council and aesthetic scan tags.
+ui_polish:
+  default_locale: nb
+  available_locales:
+  - nb
+  - en
+  chrome_i18n:
+    action: 'Shell and empty/search chrome must use I18n t() keys (empty.*, search.*,
+      nav.*, auth.*). Hardcoded English "No ..." titles and "Search ..." placeholders
+      are debt. Ratchet: MASTER/tools/chrome_i18n_lint.rb (CI). Opt-out: <%# chrome_i18n:
+      ok %> above the line.
+
+      '
+    empty_partial: shared/empty_state
+    empty_requires_action: true
+    empty_cta_lint: MASTER/tools/empty_state_lint.rb
+    adhoc_empty_lint: MASTER/tools/adhoc_empty_lint.rb
+  space_not_lines:
+    action: 'List/grid cards separate with gap + surface elevation, not hairline box
+      borders. Forms and CRT dialect (bsdports) may keep 1px borders. Prefer border:
+      0; background: var(--surface-elevated).
+
+      '
+  type_tokens:
+    action: 'Page titles use var(--text-title, 1.25rem) and var(--font). Do not hardcode
+      font-size: 20px for headers. Dialect fonts (Caprasimo luxury, JetBrains mono
+      CRT) only on named brand surfaces.
+
+      '
+    tokens:
+      text_title: 1.25rem
+      text_display: 1.75rem
+      page_header_min_height: 48px
+  flat_ui:
+    action: 'No ornamental box-shadow/text-shadow/backdrop-filter/filter blur. Floating
+      chrome uses 1px border + elevated surface. CHECK_AUTOFIX strips shadows. Exception
+      policy under pixel_perfection.exception_policy.
+
+      '
+  button_family:
+    action: 'One family, spelled out: button with button-primary, button-ghost, button-danger,
+      button-small, button-link, button-block and button-share. The button--primary
+      BEM twins are retired; emit one class name per role.
+
+      '
+  playbook_order:
+  - strip_flat_ui_shadows
+  - wire_empty_search_to_t
+  - align_page_header_type_tokens
+  - space_not_lines_list_cards
+  - verify_empty_state_cta_lint
+  - verify_chrome_i18n_lint
+  action: 'When polishing RAILS or MASTER/web UI, run this playbook. Prefer mechanical
+    autofix + CI ratchets over one-off manual style. Never raise lint baselines to
+    silence new debt.
+
+    '
+pwa:
+  philosophy:
+    performance_is_the_design: true
+    offline_is_a_designed_state: true
+    radical_lightness: true
+    action: Treat speed, the offline state, and data cost as design surfaces, not
+      engineering afterthoughts. The apps already ship a manifest, a service worker
+      and offline controllers; the budget is what is missing.
+  weight:
+    ceiling_lives_in: MASTER/checks/data/, in the css_budget.yml ratchet shape - a
+      number measured from a real run that only ever ratchets down.
+    baseline_source: generated application.css is deliberately untracked and rebuilt
+      from the checked-in SCSS before asset checks or deployment. JS builds are also
+      ignored, so budgets are measured only after an explicit source-to-build pass.
+    action: Set a ceiling from a run of this tree, never from another product's published
+      figure - Pinterest's 150KB and Tinder's 20KB CSS describe their trees, not this
+      one, and a ceiling nothing measured is a wish. A budget nothing enforces is
+      a comment.
+  offline_first:
+    queue_writes_for_background_sync: true
+    cache_read_paths: true
+    design_the_disconnected_screen: true
+    action: The network-loss state earns the same care as the happy path. Starbucks
+      fills a cart offline and sends it on reconnect; Trivago answers a dropped connection
+      with a branded playable maze rather than an error.
+  user_agency_over_data:
+    honour_save_data_header: true
+    placeholder_before_full_asset: true
+    state_the_cost_before_the_download: true
+    action: Let the reader decide when to spend data, and say what it costs first.
+      Twitter Lite renders 1KB blurred thumbnails and fetches the full asset on tap.
+  native_grade_motion:
+    target_fps: 60
+    virtualize_long_feeds: true
+    optimistic_render_from_cache: true
+    action: Render only the visible slice of a feed, and paint a detail view from
+      cached data before the fetch returns, so navigation never shows a spinner.
+ultraminimalism:
+  philosophy:
+    typography_is_design: true
+    absence_is_material: true
+    remove_until_nothing_left_to_remove: true
+    less_but_better: true
+    action: Prefer absence, typography, alignment, and whitespace over ornamental
+      UI.
+  authoritative_design:
+    priority: 1
+    role: meta_doctrine
+    purpose: Make every visual decision feel deliberate, credible, legible, and specific
+      to its product and task.
+    order:
+    - purpose
+    - agency
+    - clarity
+    - hierarchy
+    - trust
+    - consistency
+    - craft
+    - delight
+    style_never_overrides:
+    - user_agency
+    - readable_information
+    - recognizable_platform_patterns
+    - accessibility
+    - truthful_content
+    - responsive_continuity
+    require:
+    - one_primary_focal_point
+    - explicit_action_hierarchy
+    - stable_alignment_system
+    - typographic_intent
+    - content_before_chrome
+    - coherent_spacing_rhythm
+    - rendered_evidence
+    - reversible_refinement
+    reject:
+    - decoration_without_a_job
+    - generic_ai_aesthetic
+    - competing_focal_points
+    - arbitrary_type_pairings
+    - novelty_that_hides_status_or_action
+    - style_borrowed_without_context
+    action: Establish authority through purpose, hierarchy, consistency, precision,
+      and craft before selecting an aesthetic school.
+    sources:
+    - https://designsystem.digital.gov/design-principles/
+    - https://www.w3.org/WAI/WCAG2/supplemental/patterns/o1p02-familiar-design/
+    - https://www.w3.org/WAI/WCAG2/supplemental/patterns/o1p03-consistent-design/
+    - https://design-system.w3.org/styles/typography.html
+    - https://techlab.bol.com/en/blog/shaping-the-future-of-bol-our-design-system-helps-speed-up-innovation/
+    - https://over.bol.com/en/news/why-do-i-see-these-specific-products-when-i-search-on-bol/
+    - https://www.kaufland.de/
+    - https://pangrampangram.com/blogs/journal/pairing-fonts
+  design_schools:
+    swiss:
+      inherits_authoritative_design: true
+      layout: modular_grid_asymmetric
+      typography: grotesk_flush_left_ragged_right
+      imagery: objective_photography
+      color: restrained_one_accent
+      shape: geometric
+      motion: quiet
+      signatures:
+      - mathematical_grid
+      - asymmetric_balance
+      - type_as_structure
+      - active_whitespace
+      avoid:
+      - centered_hero_as_default
+      - ornamental_effects
+      - arbitrary_font_pairing
+    social:
+      inherits_authoritative_design: true
+      layout: identity_content_action_stream
+      typography: humanist_or_neutral_sans
+      imagery: people_identity_and_media
+      color: restrained_identity_accents
+      shape: conversational_containers
+      motion: responsive_micro_feedback
+      signatures:
+      - avatar_or_identity_anchor
+      - content_first_post
+      - compact_action_row
+      - reaction_and_reply_affordance
+      - time_or_freshness_signal
+      avoid:
+      - campaign_like_banner_everywhere
+      - hidden_identity
+      - actionless_decoration
+    cute:
+      inherits_authoritative_design: true
+      layout: friendly_modular_play_space
+      typography: rounded_display_plus_sturdy_text
+      imagery: characters_objects_and_play
+      color: cheerful_bounded_palette
+      shape: soft_geometric_forms
+      motion: playful_but_optional
+      signatures:
+      - friendly_expression
+      - tactile_shape_language
+      - surprising_scale
+      - clear_emotional_cue
+      - joyful_microcopy
+      avoid:
+      - unreadable_display_type
+      - unlimited_colors
+      - mascot_competition
+      - motion_without_reduced_motion_path
+    editorial:
+      inherits_authoritative_design: true
+      layout: publication_grid
+      typography: high_contrast_reading_hierarchy
+      imagery: content_led
+      color: restrained
+      shape: quiet
+      motion: subtle
+      signatures:
+      - strong_headline
+      - readable_measure
+      - deliberate_captioning
+      - image_text_relationship
+      avoid:
+      - novelty_for_its_own_sake
+      - decorative_type_in_body_copy
+    commerce_editorial:
+      inherits_authoritative_design: true
+      references:
+      - kaufland
+      - bol
+      reference_mission: Kaufland catalogue breadth and campaign entry points; bol
+        cleanliness, service clarity, recommendation rails, product-first imagery,
+        and restrained product chrome.
+      sources:
+      - https://www.kaufland.de/
+      - https://retailmedia.bol.com/en/onsite-display/
+      - https://techlab.bol.com/en/blog/shaping-the-future-of-bol-our-design-system-helps-speed-up-innovation/
+      layout: product_image_plus_typographic_offer
+      typography: display_contrast_plus_neutral_utility
+      imagery: product_first
+      color: quiet_base_plus_campaign_accent
+      shape: restrained_storefront_geometry
+      motion: functional
+      signatures:
+      - immediate_price
+      - product_as_hero
+      - display_headline
+      - compact_proof
+      - direct_action
+      avoid:
+      - fake_urgency
+      - fake_reviews
+      - embedded_image_text
+    industrial:
+      inherits_authoritative_design: true
+      layout: explicit_system_grid
+      typography: mono_or_technical_sans
+      imagery: diagrams_and_state
+      color: high_contrast_restrained
+      shape: flat
+      motion: quiet_state_change
+      signatures:
+      - status_visibility
+      - stable_columns
+      - numerical_precision
+      - obvious_failure_state
+      avoid:
+      - ornamental_depth
+      - ambiguous_controls
+    luxury:
+      inherits_authoritative_design: true
+      layout: spacious_editorial_product
+      typography: restrained_high_contrast
+      imagery: material_and_detail
+      color: low_chroma
+      shape: quiet
+      motion: subtle
+      signatures:
+      - generous_measure
+      - deliberate_materiality
+      - sparse_chrome
+      avoid:
+      - discount_carnival
+      - excessive_badges
+  typeface_rules:
+    role_specific: true
+    prefer_one_family_first: true
+    max_families_per_surface: 2
+    max_display_faces: 1
+    require_role_definition: true
+    require_deployable_assets: true
+    avoid_same_voice_pairing: true
+    inspect:
+    - classification
+    - x_height
+    - width
+    - contrast
+    - weight_range
+    - optical_sizing
+    - glyph_coverage
+    - licence
+    action: Pair by function and measured characteristics, then verify in the rendered
+      surface; never pair by popularity alone.
+  typefaces:
+    house_sans:
+      family: house_sans
+      css: var(--font)
+      classification: neo_grotesk
+      x_height: high
+      width: normal
+      contrast: low
+      weight_range:
+      - 400
+      - 800
+      optical_sizing: inherited
+      glyph_coverage: site_default
+      roles:
+      - body
+      - ui
+      - price
+      - metadata
+      - swiss_display
+      availability: shipped
+    ibm_plex_sans:
+      family: IBM Plex Sans
+      css: '"IBM Plex Sans", sans-serif'
+      classification: grotesk
+      x_height: high
+      width: normal
+      contrast: low
+      weight_range:
+      - 100
+      - 700
+      optical_sizing: variable
+      roles:
+      - body
+      - ui
+      - technical_display
+      availability: optional_webfont
+    source_sans_3:
+      family: Source Sans 3
+      css: '"Source Sans 3", sans-serif'
+      classification: humanist_sans
+      x_height: high
+      width: normal
+      contrast: low
+      weight_range:
+      - 200
+      - 900
+      optical_sizing: variable
+      roles:
+      - body
+      - ui
+      availability: optional_webfont
+    mona_sans:
+      family: Mona Sans
+      css: '"Mona Sans", sans-serif'
+      classification: industrial_grotesk_variable
+      x_height: high
+      width: variable
+      contrast: low
+      weight_range:
+      - 100
+      - 900
+      optical_sizing: variable
+      roles:
+      - body
+      - display
+      - ui
+      availability: optional_webfont
+    hubot_sans:
+      family: Hubot Sans
+      css: '"Hubot Sans", sans-serif'
+      classification: geometric_variable
+      x_height: high
+      width: variable
+      contrast: low
+      weight_range:
+      - 100
+      - 900
+      optical_sizing: variable
+      roles:
+      - display
+      - playful_accent
+      availability: optional_webfont
+    pp_neue_montreal:
+      family: PP Neue Montreal
+      css: '"PP Neue Montreal", var(--font)'
+      classification: contemporary_neo_grotesk
+      x_height: high
+      width: variable
+      contrast: low
+      weight_range:
+      - 100
+      - 900
+      optical_sizing: variable
+      roles:
+      - display
+      - body
+      - ui
+      availability: licensed_external
+      licence: Pangram Pangram Foundry commercial licence required
+    jetbrains_mono:
+      family: JetBrains Mono
+      css: var(--font-mono)
+      classification: monospace
+      roles:
+      - terminal
+      - code
+      - technical
+      availability: shipped
+  font_pairings:
+    swiss_house:
+      school: swiss
+      strategy: single_family_contrast
+      display: house_sans
+      body: house_sans
+      price: house_sans
+      metadata: house_sans
+      rationale: Use scale, weight, width, alignment, and whitespace for contrast
+        before adding a second family.
+    marketplace_sale:
+      school: commerce_editorial
+      reference: pangram
+      typographic_intent: contemporary_grotesk_neutral_with_character
+      strategy: single_family_contrast
+      display: house_sans
+      body: house_sans
+      price: house_sans
+      metadata: house_sans
+      rationale: Marketplace authority comes from product, price, hierarchy, alignment
+        and trust; borrow the character of contemporary grotesk branding without importing
+        a decorative display face.
+    playful_mona_hubot:
+      school: cute
+      strategy: related_variable_family_pair
+      display: hubot_sans
+      body: mona_sans
+      price: mona_sans
+      metadata: mona_sans
+      rationale: Related variable sans families create play through shape and scale
+        without sacrificing utility.
+    terminal_mono:
+      school: industrial
+      strategy: single_family
+      display: jetbrains_mono
+      body: jetbrains_mono
+      price: jetbrains_mono
+      metadata: jetbrains_mono
+  compositions:
+    marketplace_sale:
+      school: commerce_editorial
+      pairing: marketplace_sale
+      grid: storefront_columns
+      focal_order:
+      - product
+      - price
+      - headline
+      - proof
+      - action
+      mobile: stack_image_then_offer_without_changing_priority
+      signatures:
+      - product_identity_preserved
+      - price_visible_without_interaction
+      - display_headline
+      - neutral_transaction_text
+      variants:
+        kaufland_catalogue:
+          reference: kaufland
+          structure: campaign_plus_category_panel
+          grid: wide_promo_and_catalogue_navigation
+          focal_order:
+          - campaign
+          - categories
+          - products
+          signature: broad_discovery
+        bol_clean:
+          reference: bol
+          structure: full_width_promo_then_category_and_product_rail
+          grid: single_clean_storefront_column
+          focal_order:
+          - search
+          - campaign
+          - product
+          - service_proof
+          signature: clean_product_first
+        brgen_hybrid:
+          references:
+          - kaufland
+          - bol
+          structure: asymmetric_campaign_plus_local_discovery
+          grid: seven_five_split
+          focal_order:
+          - local_context
+          - product
+          - price
+          - categories
+          - action
+          signature: local_marketplace_identity
+    swiss_poster:
+      school: swiss
+      pairing: swiss_house
+      grid: twelve_column_modular
+      focal_order:
+      - primary_message
+      - image_or_number
+      - supporting_information
+      mobile: collapse_columns_but_preserve_anchor_relationships
+    social_feed:
+      school: social
+      pairing: swiss_house
+      grid: feed_stream
+      focal_order:
+      - identity
+      - content
+      - action
+      - freshness
+      mobile: one_content_column
+    cute_retail:
+      school: cute
+      pairing: playful_mona_hubot
+      grid: friendly_modular
+      focal_order:
+      - product_or_character
+      - playful_headline
+      - benefit
+      - action
+      mobile: preserve_character_and_action_anchor
+    editorial_commerce:
+      school: commerce_editorial
+      pairing: marketplace_sale
+      grid: asymmetric_product_editorial
+      focal_order:
+      - image
+      - display_headline
+      - offer
+      - proof
+      mobile: image_then_copy
+    industrial_system:
+      school: industrial
+      pairing: terminal_mono
+      grid: explicit_system_columns
+      focal_order:
+      - state
+      - primary_value
+      - action
+      - detail
+      mobile: collapse_secondary_columns
+  swiss_style:
+    left_aligned_ragged_right: true
+    sans_serif_default: Helvetica Neue Pro
+    alternative_faces:
+    - Helvetica Neue
+    - Arial
+    visible_grid_optional: false
+    font_feature_settings:
+      Inter: '"ss03" 1'
+    action: Use an invisible mathematical grid with type-led hierarchy.
+  negative_space:
+    primary_design_material: true
+    chunk_forms_by_proximity: true
+    avoid_tunnel_vision_distance: true
+    card_padding_px: 24
+    section_gap_px: 48
+    hero_breathing_room_px: 96
+    content_width: min(66ch, 100% - 3rem)
+    action: Space communicates grouping; whitespace must clarify relationships.
+  color:
+    max_palette_roles: 4
+    roles:
+    - primary
+    - secondary
+    - accent
+    - highlight
+    prefer_monochrome_with_one_accent: true
+    action: Reject color variety when value, spacing, and type can do the work.
+  interaction:
+    minimal_js_default: Stimulus
+    no_build_options:
+    - Stimulus
+    - PetiteVue
+    - Alpine
+    - VanJS
+    - HTMX
+    progressive_enhancement_required: true
+    data_attributes_bridge_behavior: true
+    action: Keep behavior small, recoverable, and legible in HTML.
+  design_tokens:
+    required_for_generation: true
+    exact_token_use: true
+    token_categories:
+    - color
+    - spacing
+    - radius
+    - typography
+    - motion
+    action: Inject tokens before generation; flag new ad-hoc values.
+  prompting:
+    constitutional_rules: true
+    positive_constraints_over_negative: true
+    self_refine_loop: true
+    designer_personas:
+    - Dieter Rams
+    - Massimo Vignelli
+    - Josef Mueller-Brockmann
+    require_design_rationale_before_code: true
+    action: Force design decisions before code; iterate by critique then revision.
+  automated_iteration:
+    screenshot_first: true
+    ferrum_capture: true
+    visual_regression: BackstopJS
+    max_iterations: 5
+    target_score: 95
+    action: Capture, compare, critique, patch, and repeat until differences are intentional.
+  mcp:
+    enabled_targets:
+    - filesystem
+    - puppeteer
+    - git
+    - figma
+    - accessibility
+    primitives:
+    - tools
+    - resources
+    - prompts
+    action: Prefer standard tool bridges over bespoke glue when integrating design
+      automation.
+ad_visual_contract:
+  version: 1
+  token_prefix: ad-organ
+  colors:
+    surface:
+      light: "#FFFFFF"
+      dark: "#171717"
+    on_surface:
+      light: "#171717"
+      dark: "#F5F5F5"
+    accent:
+      light: "#50630A"
+      dark: "#C8F55F"
+    disclosure_background:
+      light: "#171717"
+      dark: "#F5F5F5"
+    disclosure_foreground:
+      light: "#FFFFFF"
+      dark: "#171717"
+  contrast_pairs:
+  - foreground: disclosure_foreground
+    background: disclosure_background
+    minimum: 4.5
+  - foreground: on_surface
+    background: surface
+    minimum: 4.5
+  typography:
+    headline:
+      size: 1.25rem
+      weight: 700
+      line_height: 1.2
+    body:
+      size: 1rem
+      weight: 400
+      line_height: 1.5
+    price:
+      size: 1.125rem
+      weight: 700
+      line_height: 1.2
+    disclosure:
+      size: 0.875rem
+      weight: 600
+      line_height: 1.4
+  spacing:
+    xs: 0.25rem
+    sm: 0.5rem
+    md: 1rem
+    lg: 1.5rem
+  radius:
+    none: '0'
+    small: 0.25rem
+    medium: 0.5rem
+  placement:
+    minimum_width: 280
+    safe_insets:
+      top: 8
+      right: 8
+      bottom: 8
+      left: 8
+    disclosure_max_distance: 24
+  render:
+    max_transfer_bytes: 200000
+    max_cumulative_layout_shift: 0.1

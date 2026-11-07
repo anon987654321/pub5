@@ -1,0 +1,1286 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const publicDir = join(root, "public");
+const viewsDir = join(root, "app", "views");
+const railsRoot = join(root, "..", "..", "RAILS");
+// Face assets are declared in config/face_assets.yml and rendered from it, so
+// the view no longer spells their names. Read the manifest as text — Node has
+// no YAML parser and these are presence checks, not structural ones.
+const faceManifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+// The boot path: the view, and public/face_primer.js which it loads right after
+// #primer. Assertions about the primer script read both.
+const primerScript = readFileSync(join(publicDir, "face_primer.js"), "utf8");
+const bootShell = () => `${readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8")}\n${primerScript}`;
+
+
+
+function sourceSetDigest(relativePaths) {
+  const hash = createHash("sha256");
+  const sorted = [...relativePaths].sort();
+  for (const [index, relativePath] of sorted.entries()) {
+    if (index > 0) hash.update("\0");
+    hash.update(readFileSync(join(root, relativePath)));
+  }
+  return hash.digest("hex");
+}
+
+function partSources() {
+  return [
+    readFileSync(join(publicDir, "face.part1.txt"), "utf8"),
+    readFileSync(join(publicDir, "face.part2.txt"), "utf8"),
+    readFileSync(join(publicDir, "face.part3.txt"), "utf8"),
+    readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8"),
+    readFileSync(join(publicDir, "face_speech_playback.js"), "utf8"),
+    readFileSync(join(publicDir, "face.part5.txt"), "utf8"),
+  ];
+}
+const faceSource = partSources().join("\n");
+
+
+test("web face queues follow-up turns and exposes stop/resume state", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  assert.match(faceSource, /const _pendingTurns = \[\]/);
+  assert.match(faceSource, /await runMessageTurn\(item\.text\)/);
+  assert.match(faceSource, /_turnQueuePaused/);
+  assert.match(view, /id="turn-queue-status"/);
+  assert.match(view, /id="turn-control"/);
+  assert.match(css, /body\[data-queue-active="1"\] \.turn-queue-status/);
+  assert.match(actions, /const FALLBACK_SEND_QUEUE_LIMIT = 32/);
+  assert.match(actions, /fallbackSendQueuePaused/);
+  assert.match(actions, /if \(pending === false\) return;/);
+  assert.match(actions, /closeChatStream\(\)/);
+  assert.match(faceSource, /const TURN_QUEUE_LIMIT = 32/);
+  assert.match(faceSource, /if \(_pendingTurns.length >= TURN_QUEUE_LIMIT\)/);
+  assert.ok(faceSource.indexOf("if (accepted === false) return;") > faceSource.indexOf("const accepted = window.MASTER_FACE?.sendMessage?.(v)"));
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const errorAt = runtime.indexOf("if (raw.startsWith('ERROR:'))");
+  const errorBlock = runtime.slice(errorAt, runtime.indexOf("const chunk = raw.replace", errorAt));
+  assert.match(errorBlock, /finishTurn\(false\);[\s\S]*closeChatStream/);
+  const onErrorAt = runtime.indexOf("const onError = () =>");
+  const onErrorBlock = runtime.slice(onErrorAt, runtime.indexOf("// chat_actions.js owns", onErrorAt));
+  assert.match(onErrorBlock, /finishTurn\(false\);[\s\S]*closeChatStream/);
+  // The stop control aborts the live stream, resets the face state, and latches
+  // a pause only for a queue that holds messages — a stop on an empty queue
+  // must leave the next send free to flow.
+  const stopAt = runtime.indexOf("document.getElementById('turn-control')?.addEventListener('click'");
+  assert.ok(stopAt > 0, "the face wires the stop control");
+  const stopBlock = runtime.slice(stopAt, runtime.indexOf("setInterval(", stopAt));
+  assert.match(stopBlock, /closeChatStream\?\.\(\)/);
+  assert.match(stopBlock, /ttsSkip\?\.\(\)/);
+  assert.match(stopBlock, /_activeTurnFinish\?\.\(false\)/);
+  assert.match(stopBlock, /State\.mode = 'idle'/);
+  assert.match(stopBlock, /if \(_pendingTurns\.length > 0\) _turnQueuePaused = true;/);
+});
+
+test("thinking star animates in calm mode but respects reduced motion and battery mode", () => {
+  const source = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  // faceReducedMotionActive() folds State.reducedMotion together with the
+  // canonical FaceState, the document-root projection and the media query.
+  // The star also stays up while a queued response is being spoken (syncThinkingStar).
+  assert.match(source, /const active = State\.mode === 'thinking' \|\| \(State\.mode === 'speaking' && queueActive\);/);
+  assert.match(source, /if \(active && !faceReducedMotionActive\(\) && runtimeProfile\(\) !== 'battery'\) startStar/);
+  const reducedMotion = /function faceReducedMotionActive\(\) \{[\s\S]*?Boolean\(State\.reducedMotion\)/;
+  assert.match(source, new RegExp(`${reducedMotion.source}[\\s\\S]*?prefers-reduced-motion: reduce`));
+});
+
+test("face surface owns the full viewport", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(css, /#face\s*\{[\s\S]*?inset:\s*0;/);
+  assert.match(css, /#face\s*\{[\s\S]*?width:\s*100dvw;/);
+  assert.match(css, /#face\s*\{[\s\S]*?height:\s*100dvh;/);
+  assert.doesNotMatch(css, /#face\s*\{[^}]*min-height:\s*44vh/);
+  assert.match(view, /<canvas id="face"/);
+});
+
+test("mobile chat viewport keeps browser zoom available", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(view, /<meta name="viewport" content="width=device-width, initial-scale=1\.0, viewport-fit=cover">/);
+  assert.doesNotMatch(view, /user-scalable\s*=\s*no/i);
+});
+
+test("face boot defaults to automatic activation and preserves an explicit primer", () => {
+  const view = bootShell();
+  assert.match(view, /data-primer="auto"/);
+  assert.match(view, /q\.get\('primer'\)!=='1'&&document\.body\.dataset\.primer!=='keep'/);
+  assert.match(view, /setTimeout\(go,0\)/);
+  assert.match(view, /window\._primerFired=true/);
+  assert.match(view, /if\s*\(\s*!window\._primerFired\s*&&\s*\/webgl\/i\.test\(String\(type\)\)\)\s*return null/);
+});
+
+test("the chat keeps the CLI's monospaced presentation; the chrome takes brgen's sans", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+
+  assert.match(css, /html, body \{[\s\S]*?font:\s*16px\/1\.5 var\(--font\)/);
+  assert.match(css, /#chat-log \{[^}]*font:\s*1rem\/1\.5 var\(--font-mono\)/);
+  assert.match(css, /#prompt-form input, #prompt-form textarea \{[^}]*font:\s*400 16px\/1\.5 var\(--font-mono\)/);
+  assert.match(css, /--font-label:\s*"JetBrainsMono Nerd Font"/);
+  assert.match(rules, /face_interface:/);
+  assert.match(rules, /prompt:\s*\n\s+font: font_code/);
+});
+
+test("face preserves the canonical CLI prompt on narrow and wide viewports", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const sessionCss = readFileSync(join(root, "styles", "face", "60_session_chrome.css"), "utf8");
+  assert.match(view, /Master::Face::Contract\.shell_prompt/);
+  assert.match(sessionCss, /#prompt-form \.prompt-sigil\s*\{[\s\S]*?display:\s*inline-flex/);
+  assert.match(sessionCss, /max-inline-size:\s*min\(42vw, 32ch\)/);
+  assert.doesNotMatch(sessionCss, /#prompt-form \.prompt-sigil \{ display: none;/);
+});
+
+test("web lip-sync samples visemes at a finer audio-clock cadence", () => {
+  const playback = readFileSync(join(publicDir, "face_speech_playback.js"), "utf8");
+  assert.match(playback, /const VISEME_STEP_MS = 45;/);
+  assert.match(playback, /audio\.currentTime \* 1000/);
+});
+
+test("FaceWorld keeps portrait rendering separate from repository overlays", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  assert.match(world, /const portrait = topology === "face" \|\| topology === "papua-mask";/);
+  assert.match(world, /node\.visible = !portrait/);
+  assert.match(world, /edges\.visible = !portrait/);
+  // The splat field stays off a portrait unless a semantic subject is morphing in.
+  assert.match(world, /splatProxy\.visible = [^;]*\(!portrait \|\| subjectActive\)/);
+  assert.match(world, /sprite\.visible = !portrait/);
+  assert.match(world, /jawTaper/);
+  assert.match(world, /cheekFull/);
+  assert.match(world, /const breath = Math\.sin/);
+});
+
+test("FaceWorld consumes the semantic layers and bounded render budget", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
+  assert.match(world, /LAYER_NAMES/);
+  assert.match(world, /master-face-layer-\$\{name\}/);
+  assert.match(world, /renderBudget/);
+  assert.match(world, /spawnPulse/);
+  assert.match(state, /mobile_points/);
+  assert.match(state, /max_device_pixel_ratio/);
+});
+
+test("FaceWorld morphs the primary face field into a topic with a bounded fallback", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const part2 = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
+  const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(world, /const SUBJECT_FORMS = new Set\(\[.*fugue.*wave.*orbit.*architecture.*leaf.*network.*constellation/);
+  assert.match(world, /function inferSubjectForm\(value\)/);
+  assert.match(world, /counterpoint/);
+  assert.match(world, /function buildFaceSubjectPositions\(form\)/);
+  assert.match(world, /MASTER_FACE\?\.setSubjectScatter\?\.\(facePositions\)/);
+  assert.match(world, /MASTER_FACE\?\.resetSubjectScatter\?\.\(\)/);
+  assert.match(world, /faceSubjectRenderer/);
+  assert.match(world, /function setSubjectForm\(value\)/);
+  assert.match(world, /function setSubjectFromText\(value\)/);
+  assert.match(world, /semanticMorphInProgress/);
+  assert.match(world, /reducedMotion \? 1 : 0\.065/);
+  assert.match(world, /splatProxy\.visible = activePoints > 0 && !primaryMorphActive/);
+  assert.doesNotMatch(world, /splatProxy\.visible = activePoints > 0;/);
+  assert.match(world, /faceCanvas\.style\.opacity/);
+  assert.match(world, /type === "speech:partial" \|\| type === "speech:end" \|\| type === "turn:committed"/);
+  assert.match(world, /turn:started/);
+  assert.match(world, /turn:discarded/);
+  assert.match(world, /turn:interrupted/);
+  assert.match(world, /SUBJECT_IDLE_RESTORE_MS = 45_000/);
+  assert.match(world, /SUBJECT_MORPH_SETTLE_TIMEOUT_MS = 2_400/);
+  assert.match(world, /advanceWhenFaceIsResting/);
+  assert.match(world, /function restoreFaceSubject\(\)/);
+  assert.match(world, /window\.addEventListener\("pagehide"/);
+  assert.match(part2, /FACE_SCATTER_HOME = faceScatter\.slice\(\)/);
+  assert.match(part2, /semanticMorphRestoreOnSettled/);
+  assert.match(part3, /semanticMorphTarget == null \? automaticMorphTarget/);
+  assert.match(part3, /faceMat\.uniforms\.uMorph\.value = morphCurrent/);
+  assert.match(runtime, /function setSubjectScatter\(positions\)/);
+  assert.match(runtime, /function resetSubjectScatter\(\)/);
+  assert.match(runtime, /MASTER_FACE_WORLD\?\.setSubjectFromText\?\.\(v\)/);
+});
+
+test("Face state derives modes and aliases from the shared contract", () => {
+  const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
+  const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  assert.match(state, /CONTRACT_STATE\.modes/);
+  assert.match(state, /Object\.entries\(CONTRACT\.mode_aliases/);
+  assert.match(state, /mobile_particles/);
+  assert.match(state, /reduced_motion_fps/);
+  assert.match(rules, /desktop_particles: 200/);
+  assert.match(rules, /active_fps: 24/);
+});
+
+test("FaceWorld owns camera impulses and actual point draw range", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  const part2 = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
+  const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  assert.match(world, /cameraZoomAt/);
+  assert.match(world, /camera\.fov/);
+  assert.match(world, /setDrawRange\(0, activePoints\)/);
+  assert.match(world, /CanvasTexture/);
+  assert.match(part1, /FACE_CAMERA_DISTANCE/);
+  assert.match(part1, /faceRenderDpr/);
+  assert.match(part1, /budgetScale/);
+  assert.match(part2, /particleBudget/);
+  assert.match(part2, /mouthCapacity/);
+  assert.match(part2, /State\.cameraZoomAt/);
+  assert.doesNotMatch(part2, /requestAnimationFrame\(forward\)/);
+  assert.doesNotMatch(part3, /camera\.position\.z \+=/);
+});
+
+test("installed MASTER PWA prefers fullscreen display", () => {
+  const manifest = readFileSync(join(viewsDir, "pwa", "manifest.json.erb"), "utf8");
+  assert.match(manifest, /"display":\s*"fullscreen"/);
+  assert.match(manifest, /"display_override":\s*\["fullscreen"/);
+});
+
+test("face.js loads modules and runtime parts through MASTER_ASSET_PATHS", () => {
+  const faceJs = readFileSync(join(publicDir, "face.js"), "utf8");
+  const tail = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(faceJs, /MASTER_ASSET_PATHS\?\.faceModules\?\.\[modulePath\]/);
+  assert.match(faceJs, /MASTER_ASSET_PATHS\?\.faceModulesList/);
+  assert.match(faceJs, /MASTER_ASSET_PATHS\?\.faceRuntime/);
+  assert.match(faceJs, /FACE_BLOB_URL/);
+  assert.match(tail, /function sendMessage/);
+  assert.match(tail, /window\.MASTER_FACE =/);
+  assert.match(tail, /_deferFaceMod/);
+  assert.doesNotMatch(tail, /await import\('\/face_semantics\.js'\)/);
+});
+
+test("face.js builds a blob runtime and rewrites module asset paths", () => {
+  const faceJs = readFileSync(join(publicDir, "face.js"), "utf8");
+  assert.match(faceJs, /Object\.entries\(MODULE_PATHS\)\.reduce/);
+  assert.match(faceJs, /replaceAll/);
+  assert.match(faceJs, /URL\.createObjectURL/);
+  assert.match(faceJs, /URL\.revokeObjectURL/);
+  assert.match(faceJs, /await import\(FACE_BLOB_URL\)/);
+});
+
+test("concatenated face parts form a syntactically valid module (guards tap-to-start)", () => {
+  // face.js fetches the generated face.runtime.js blob (rake concat of part1-3,
+  // speech modules, and part5). A
+  // duplicate top-level const (or any syntax error) spanning two parts throws at import
+  // time, so window.MASTER_FACE never loads and the primer tap silently does nothing.
+  // The per-file assertions above cannot see cross-part collisions — only the join can.
+  const blob = partSources().join("\n");
+  const tmp = join(tmpdir(), `master-face-blob-${process.pid}.mjs`);
+  writeFileSync(tmp, blob);
+  try {
+    execFileSync(process.execPath, ["--check", tmp], { stdio: "pipe" });
+  } catch (err) {
+    const detail = err.stderr ? err.stderr.toString() : err.message;
+    throw new Error(`concatenated face blob failed syntax check:\n${detail}`);
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+});
+
+test("face.modules.bundle.js is generated from face module entry", () => {
+  const bundlePath = join(publicDir, "face.modules.bundle.js");
+  const sparse = readFileSync(join(publicDir, "face_sparse_field.js"), "utf8");
+  assert.match(sparse, /void-first/);
+  assert.match(sparse, /super-void|void_ratio/);
+  assert.match(sparse, /orbit/);
+  assert.match(sparse, /remember/);
+  assert.match(sparse, /resonate/);
+  assert.match(sparse, /pointermove/);
+  assert.match(sparse, /master:evidence/);
+  assert.match(sparse, /master:law/);
+  assert.match(sparse, /super_void/);
+  // FACE_POINT_IS_ONE_PIXEL: depth attenuates brightness, never point size.
+  assert.match(sparse, /gl_PointSize = 1\.0;/);
+  assert.doesNotMatch(sparse, /gl_PointSize = clamp\(/);
+  assert.match(sparse, /vOpacity = aOpacity \* clamp\([^;]*-mv\.z\)/);
+  assert.match(sparse, /voice trace|Speaking grows a filament/i);
+  assert.match(sparse, /semantic particles|Semantic particles remember/i);
+  assert.match(sparse, /ghostSerial/);
+
+  const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+  assert.match(manifest, /- face_sparse_field\.js/);
+
+  assert.ok(existsSync(bundlePath), "run rails assets:build_face_modules_bundle");
+  const bundle = readFileSync(bundlePath, "utf8");
+  assert.match(bundle, /MASTER_FACE_PARTICLES|face_particles/);
+  assert.match(bundle, /MASTER_FACE_BLEND|face_blendshape/);
+});
+
+test("the motion-led face profile is the default and has a readable composer", () => {
+  const aesthetic = readFileSync(join(root, "..", "..", "MASTER", "lib", "voice", "aesthetic.rb"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
+  const gravity = readFileSync(join(publicDir, "gravity_field.js"), "utf8");
+
+  assert.match(aesthetic, /MODES\.include\?\(raw\) \? raw : "phosphor"/);
+  assert.match(css, /body\[data-aesthetic="phosphor"\]/);
+  assert.match(css, /width: min\(920px, calc\(100dvw - 32px/);
+  assert.match(fallback, /#050710/);
+  assert.match(gravity, /PARTICLE_PALETTE/);
+});
+
+test("face mic state is explicit and self-healing", () => {
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(part5, /function syncMicIndicator/);
+  assert.match(part5, /data-mic/);
+  assert.match(part5, /Microphone listening/);
+  assert.match(part5, /Microphone off/);
+  assert.match(part5, /syncMicIndicator\("listening"\)/);
+  assert.match(part5, /syncMicIndicator\(e\?\.error/);
+});
+
+test("face_speech_playback.js holds viseme mouth animation", () => {
+  const playback = readFileSync(join(publicDir, "face_speech_playback.js"), "utf8");
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(playback, /function startVisemeAnim/);
+  assert.match(playback, /MASTER_SPEECH_PLAYBACK/);
+  assert.doesNotMatch(part5, /function startVisemeAnim/);
+});
+
+test("live TTS does not delay short completed sentences", () => {
+  const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  assert.match(part1, /function pushLiveStreamTts/);
+  assert.match(part1, /const chunk = m\[0\]\.trim\(\);/);
+  assert.doesNotMatch(part1, /chunk\.length < TTS_MIN_CHUNK/);
+  assert.doesNotMatch(faceSource, /chunk\.length < TTS_MIN_CHUNK/);
+});
+
+test("face_speech_runtime.js holds the TTS implementation", () => {
+  const speech = readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8");
+  assert.match(speech, /function enqueueSpeech/);
+  assert.match(speech, /function ttsTick/);
+  // face.part4.txt was a 96-byte "moved to face_speech_runtime.js" stub that
+  // the build task never read. This test used to assert the stub did not
+  // contain enqueueSpeech, which was true of any file that did not exist.
+  assert.ok(!existsSync(join(publicDir, "face.part4.txt")), "the part4 stub is gone");
+});
+
+// The generated runtime is built from exactly the sources the rake task lists,
+// so a part file that stops being read should stop existing.
+test("every face part is named by the runtime loader", () => {
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  for (const name of readdirSync(publicDir).filter((f) => /^face\.part\d+\.txt$/.test(f))) {
+    assert.match(runtime, new RegExp(name.replaceAll(".", "\\.") + "\\b"), name + " is not named by face.runtime.js");
+  }
+  assert.match(runtime, /face_speech_runtime\.js/);
+  assert.match(runtime, /face_speech_playback\.js/);
+});
+
+
+test("calm profile is default and checks rich idle motion", () => {
+  const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  assert.match(part1, /\['calm', 'full', 'crt', 'battery'\]/);
+  assert.match(part1, /function isRichMotionProfile/);
+  assert.match(part1, /function faceReducedMotionActive\(\)/);
+  assert.match(part1, /document\.documentElement\?\.dataset\?\.reducedMotion === '1'/);
+  assert.match(part1, /if \(faceReducedMotionActive\(\)\) return false/);
+  assert.match(part1, /faceReducedMotionActive\(\) \? 'battery'/);
+  assert.match(part1, /rootBody\.dataset\.runtimeProfile = faceReducedMotionActive\(\) \? 'battery' : \(State\.profileOverride/);
+  assert.match(part1, /if \(active && !faceReducedMotionActive\(\)/);
+  const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  assert.match(part3, /effectiveNext = faceReducedMotionActive\(\) \? 'battery' : next/);
+  assert.match(part3, /!faceReducedMotionActive\(\) && window\.ParticleKernel/);
+  assert.match(part3, /function syncSemanticPools\(dtSec, reducedMotion = false\)/);
+  assert.match(part3, /const reducedMotion = faceReducedMotionActive\(\)/);
+  // The clock also stops while the face is idle-still (cf5b198127); motionFrozen
+  // folds reduced motion in, so reduced motion still stops every clock write.
+  assert.match(part3, /const motionFrozen = reducedMotion \|\| idleStill;/);
+  assert.match(part3, /faceMat\.uniforms\.uTime\.value = motionFrozen \? 0 : sec/);
+  const clockAssignments = part3.match(/^\s*faceMat\.uniforms\.uTime\.value\s*=.*$/gm) ?? [];
+  assert.ok(clockAssignments.length >= 1);
+  assert.ok(clockAssignments.every(line => /motionFrozen \? 0 :/.test(line)),
+    "every primary shader clock write must stop under reduced motion");
+  assert.match(part3, /State\.idleAlphaDrift = motionFrozen \? 0\.5/);
+  assert.match(part3, /State\.pulse = 0; State\.flash = 0/);
+  assert.match(part3, /if \(faceReducedMotionActive\(\)\) return;/);
+});
+
+test("face.runtime.js is the compact generated loader", () => {
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  assert.match(runtime, /Generated by rails assets:build_face_runtime/);
+  assert.match(runtime, /FACE_RUNTIME_SOURCES/);
+  assert.match(runtime, /Promise\.all/);
+  assert.match(runtime, /URL\.createObjectURL/);
+});
+
+
+// Face source parts are served separately and stitched into an imported
+// blob by this generated loader. Keep its URL list and the Rake generator's
+// source set in parity so neither artifact drifts to a stale parts list.
+test("face.runtime.js matches the rake loader contract", () => {
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  const task = readFileSync(join(root, "lib", "tasks", "face_runtime.rake"), "utf8");
+  const sources = ["face.part1.txt", "face.part2.txt", "face.part3.txt", "face_speech_runtime.js", "face_speech_playback.js", "face.part5.txt"];
+
+  // The generator deliberately builds part 1–3 names from a range. Do not
+  // require those three strings to be duplicated literally in the task.
+  for (const name of sources) {
+    assert.match(runtime, new RegExp(name.replaceAll(".", "\\.") + "\\b"), name + " missing from runtime");
+    const digest = createHash("sha256")
+      .update(readFileSync(join(publicDir, name)))
+      .digest("hex")
+      .slice(0, 10);
+    assert.ok(runtime.includes(name + "?v=" + digest), name + " URL digest is stale");
+  }
+  assert.match(task, /segments = \(1\.\.3\)\.map \{ \|part\| "face\.part#\{part\}\.txt" \}/, "build task must generate face parts 1–3");
+  for (const name of ["face_speech_runtime.js", "face_speech_playback.js", "face.part5.txt"]) {
+    assert.match(task, new RegExp(name.replace(".", "\\.") + "\\b"), name + " missing from build task");
+  }
+  assert.match(task, /segments\.map/);
+});
+
+
+test("TTS playback gain is one published number, and fits under 0 dBFS", () => {
+  const speech = readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8");
+  const bridge = readFileSync(join(publicDir, "face_audio_bridge.js"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  // One constant feeding both assignments, rather than the literal written
+  // twice — this test is named for that and was pinning the duplication. The
+  // level itself moved into data/voice.yml's chain, so what is pinned here is
+  // that the graph and the duck read the same published value: unity while the
+  // chain carries the level, 1.9 on the bare fallback path, never a second copy.
+  assert.match(speech, /const masterGainValue = chain \? 1\.0 : 1\.9/);
+  assert.match(speech, /masterGain\.gain\.value = masterGainValue/);
+  assert.match(speech, /tts\.playbackGain = masterGainValue/);
+  assert.match(bridge, /tts\.playbackGain \|\| TTS_PLAYBACK_GAIN/);
+  assert.match(speech, /setValueAtTime\(tts\.playbackGain/);
+  assert.doesNotMatch(speech, /setValueAtTime\(1\.9/);
+  assert.doesNotMatch(speech, /masterGain\.gain\.value = 1\.9/);
+  assert.doesNotMatch(speech, /setValueAtTime\(1\.9/);
+});
+
+test("master_namespace exposes canonical MASTER facade getters", () => {
+  const ns = readFileSync(join(publicDir, "master_namespace.js"), "utf8");
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(ns, /Object\.defineProperty\(root,\s*name/);
+  assert.match(ns, /\["speech"/);
+  assert.match(faceManifest, /master_namespace/);
+});
+
+test("attention_model loads before face modules", () => {
+  const attn = readFileSync(join(publicDir, "attention_model.js"), "utf8");
+  assert.ok(faceManifest.indexOf("- attention_model.js") >= 0);
+  assert.ok(faceManifest.indexOf("- attention_model.js") < faceManifest.indexOf("- particle_kernel.js"));
+  assert.match(attn, /window\.MASTER\.attention/);
+});
+
+test("boot_fsm defines deterministic boot phases before primer tap", () => {
+  const fsm = readFileSync(join(publicDir, "boot_fsm.js"), "utf8");
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(fsm, /INIT.*PRIMER.*ASSETS.*FACE.*VOICE.*READY/s);
+  assert.match(fsm, /master:boot-state/);
+  assert.match(index, /asset_path\("boot_fsm\.js"\)/);
+  assert.ok(index.indexOf('asset_path("boot_fsm.js")') < index.indexOf('asset_path("face_primer.js")'));
+});
+
+test("chat index boot lazy-imports face with status hint, auto-retry, 35s watchdog", () => {
+  const index = bootShell();
+  assert.match(index, /MASTER_ASSET_PATHS/);
+  assert.match(index, /function loadFace/);
+  assert.match(index, /data-face-module="<%= FaceAssets\.versioned\(asset_path\("face\.js"\), "face\.js"\) %>"/);
+  assert.match(primerScript, /import\(FACE_MODULE\)/);
+  // A classic synchronous script: no defer, no async, no module.
+  const primerTag = /<script src="<%= asset_path\("face_primer\.js"\) %>" nonce="<%= content_security_policy_nonce %>"/;
+  assert.match(index, new RegExp(`${primerTag.source}\\n\\s+data-face-module=`));
+  assert.doesNotMatch(index, /face_primer\.js"\) %>"[^>]*\b(defer|async|type="module")/);
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.doesNotMatch(view, /function go\(\)|function loadFace/, "the boot script is not inline any more");
+  assert.match(faceManifest, /shell_boot:\n  - boot_fsm\.js\n  - face_primer\.js/);
+  assert.match(index, /dismissPrimer\(\);\n\s+revealPrompt\(\);/);
+  assert.match(index, /window\.__MASTER_PRIMER_TAP__=go/);
+  assert.doesNotMatch(index, /DOMContentLoaded.*armPrimer/);
+  assert.match(index, /error-live/);
+  // NN/g recovery + visibility-of-status UX
+  assert.match(index, /still loading the face/);
+  assert.match(index, /retrying/);
+  assert.match(index, /loadFace\(true\)/);
+  assert.match(index, /35000/);
+  assert.doesNotMatch(index, /60000/);
+  assert.doesNotMatch(index, /15000/);
+  assert.doesNotMatch(index, /render "shared\/face_boot"/);
+});
+
+test("probe_chat_e2e script covers primer chat and felt state", () => {
+  const probe = readFileSync(join(root, "script", "probe_chat_e2e.rb"), "utf8");
+  const gemfile = readFileSync(join(root, "Gemfile"), "utf8");
+  assert.match(probe, /probe_chat_e2e/);
+  assert.match(probe, /run_ping_chat/);
+  assert.match(probe, /MASTERFeltState/);
+  assert.match(probe, /hasPong/);
+  assert.match(probe, /MASTER_FACE\?\.State/);
+  assert.match(gemfile, /gem "ferrum"/);
+  assert.match(probe, /MAX_PROBE_SECONDS/);
+  assert.match(probe, /browser\.go_to\(URL\)/);
+});
+
+test("probe_webgl_guard covers before-tap canvas lock and after-tap unlock", () => {
+  const probe = readFileSync(join(root, "script", "probe_webgl_guard.mjs"), "utf8");
+  const ciProbe = readFileSync(join(root, "script", "ci_web_probe"), "utf8");
+// Not /HTMLCanvasElement/. The probe used to name the class because it
+// patched the prototype; it now asks a canvas it did not have before the
+// tap — document.createElement("canvas") inside the after block — which is
+// the stronger proof, since a guard that only covers the one element on the
+// page is not a guard. The assertion was measuring the old spelling of a
+// check that had got better.
+assert.match(probe, /createElement\("canvas"\)/);
+assert.match(probe, /getContext/);
+  assert.match(probe, /WebGL escaped guard before tap/);
+  assert.match(probe, /WebGL unavailable after tap/);
+  assert.match(probe, /PROBE_REQUIRE_BROWSER/);
+  assert.match(ciProbe, /probe_webgl_guard\.mjs/);
+});
+
+test("chat index wires viseme and experimental asset paths", () => {
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(faceManifest, /faceRuntime/);
+  assert.match(index, /faceModules/);
+  assert.doesNotMatch(index, /faceParts/);
+  assert.match(faceManifest, /visemePacks/);
+  assert.match(faceManifest, /clusterMiner/);
+});
+
+test("visual_bridge emits master:emotion and uses asset paths", () => {
+  const bridge = readFileSync(join(publicDir, "visual_bridge.js"), "utf8");
+  assert.match(bridge, /master:emotion/);
+  assert.match(bridge, /MASTER_ASSET_PATHS\?\.clusterMiner/);
+});
+
+test("chat index includes photo attach", () => {
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(index, /id="photo-button"/);
+  assert.match(index, /id="photo"/);
+  assert.match(index, /chat_upload\.css/);
+  assert.doesNotMatch(index, /face_agent_hud/);
+});
+
+test("face_research catalog documents ar5iv and github references", () => {
+  const research = readFileSync(join(root, "..", "..", "MASTER", "data", "runtime.yml"), "utf8");
+  assert.match(research, /2405\.13050/);
+  assert.match(research, /2410\.22370/);
+  assert.match(research, /open-webui/);
+  assert.match(research, /modalities:/);
+});
+
+test("chat index wires digested assets around lazy face boot", () => {
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(index, /asset_path\("face\.css"\)/);
+  assert.match(index, /asset_path\("face\.js"\)/);
+  assert.match(faceManifest, /faceRuntime/);
+  assert.match(index, /asset_path\("face_2d_fallback\.js"\).*defer/);
+  assert.match(primerScript, /function promptFormEl/);
+  assert.doesNotMatch(primerScript, /getElementById\('prompt-form'\),ui=document\.getElementById\('ui-status'\)/);
+  assert.match(index, /asset_path\("particle_kernel\.js"\)/);
+  // Deferred modules come from config/face_assets.yml#shell_manifest, rendered
+  // by the view — not a literal list in the ERB.
+  assert.match(index, /javascript_include_tag\(\*FaceAssets\.group\("shell_manifest"\)/);
+  assert.match(faceManifest, /- chat_actions/);
+  assert.match(faceManifest, /- visual_bridge/);
+  assert.match(index, /defer: true/);
+  assert.doesNotMatch(index, /rel="modulepreload"[^>]+asset_path\("face\.js"\)/);
+  assert.doesNotMatch(index, /<link rel="prefetch"[^>]+asset_path\("three\.face\.module\.js"\)/);
+  assert.doesNotMatch(index, /<link rel="prefetch"[^>]+asset_path\("face\.js"\)/);
+  const particleIdx = index.indexOf('asset_path("particle_kernel.js")');
+  const fallbackIdx = index.indexOf('asset_path("face_2d_fallback.js")');
+  const primerIdx = index.indexOf('id="primer"');
+  const bootIdx = index.indexOf('asset_path("face_primer.js")');
+  assert.ok(primerIdx > 0 && bootIdx > primerIdx, "the boot script should follow primer markup");
+  assert.ok(fallbackIdx > bootIdx, "face_2d_fallback must not block inline boot before tap wiring");
+  assert.ok(particleIdx > 0 && bootIdx > 0, "particle_kernel and inline boot must be present");
+});
+
+test("default application layout removed — chat/index owns boot shell", () => {
+  const layoutPath = join(viewsDir, "layouts", "application.html.erb");
+  assert.equal(existsSync(layoutPath), false, "dead application layout should stay deleted");
+});
+
+// The face3d overlay — a second, competing face painter — was removed on
+// 2026-07-24 (commit 6f1867972). It took a 2D context on the shared #face
+// canvas, and a canvas can only ever hold one context type, so booting it
+// permanently blocked the real WebGL face from initializing. These two tests
+// used to assert its five source files still behaved; they now assert it stays
+// gone, which is the invariant that actually matters.
+test("there is exactly one face renderer", () => {
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const bridge = readFileSync(join(publicDir, "visual_bridge.js"), "utf8");
+
+  for (const gone of ["face3d_preview.js", "face3d_renderer.js", "face3d_geometry.js",
+                      "face3d_engine.js", "face3d_support.js"]) {
+    assert.ok(!existsSync(join(publicDir, gone)), `${gone} is back`);
+  }
+  assert.doesNotMatch(index, /face3d/, "no overlay canvas, toggle or asset path");
+  assert.doesNotMatch(css, /face3d/, "no styling for a canvas that does not exist");
+  assert.doesNotMatch(bridge, /face3d/, "no dynamic import of the removed overlay");
+});
+
+// The reason the overlay was a footgun in the first place: #face is bound to
+// WebGL by the primary renderer, and a second getContext("2d") on it returns
+// null forever after. The 2D placeholder shown while THREE loads is careful to
+// use its own canvas — keep it that way.
+test("nothing takes a 2D context on the shared #face canvas", () => {
+  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
+
+  assert.match(fallback, /getElementById\("face-2d-fallback"\)/);
+  assert.doesNotMatch(fallback, /getElementById\(["']face["']\)\s*\.getContext/);
+});
+
+test("face runtime consumes the constitutional state contract", () => {
+  const contract = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
+  const index = readFileSync(join(root, "app", "views", "chat", "index.html.erb"), "utf8");
+  assert.match(contract, /face_interface:[\s\S]*schema: 1/);
+  assert.match(contract, /still_modes: \[idle\]/);
+  assert.match(contract, /still_after_activity_ms: 700/);
+  assert.match(contract, /mode_aliases:[\s\S]*phantom: error/);
+  assert.match(state, /MASTER_FACE_CONTRACT/);
+  assert.match(state, /CONTRACT_STATE\.modes/);
+  assert.match(state, /registry\.classifyEvent/);
+  assert.match(index, /MASTER_FACE_CONTRACT = <%= raw/);
+});
+
+test("face.js has no second fallback module list", () => {
+  const source = readFileSync(join(publicDir, "face.js"), "utf8");
+  assert.match(source, /MASTER_ASSET_PATHS\?\.faceModulesList/);
+  assert.doesNotMatch(source, /\|\| \[\s*"attention_model\.js"/);
+});
+
+test("obsolete point renderer stays absent", () => {
+  const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+  const loader = readFileSync(join(publicDir, "face_deferred_loader.js"), "utf8");
+  assert.doesNotMatch(manifest, /face_points_gl\.js/);
+  assert.doesNotMatch(loader, /face_points_gl\.js/);
+  assert.doesNotMatch(readFileSync(join(publicDir, "face_world.js"), "utf8"), /new THREE\.WebGLRenderer/);
+  assert.doesNotMatch(readFileSync(join(publicDir, "face_world.js"), "utf8"), /requestAnimationFrame/);
+});
+
+test("face.css carries no knob for a glow that no longer exists", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.doesNotMatch(css, /body::after/);
+  // This used to assert --face-glow-scale: 1.22, pinning the additive halo pass
+  // in place. The pass is gone and particle size is fixed at one pixel by
+  // FACE_POINT_IS_ONE_PIXEL, so both vars are asserted absent instead — a knob
+  // whose only legal value is its default is not a knob.
+  assert.doesNotMatch(css, /--face-glow-scale/);
+  assert.doesNotMatch(css, /--face-particle-size/);
+  assert.match(css, /--mood-accent:\s*var\(--c-accent\)/);
+  assert.doesNotMatch(css, /speaking.*#prompt-form \.prompt-sigil.*--mood-accent/);
+});
+
+test("face.css keeps primer and prompt layering stable", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.match(css, /#primer/);
+  assert.match(css, /z-index:\s*var\(--z-modal\)/);
+  assert.match(css, /body:not\(\.face-ready\) #prompt-form:not\(\.live\)/);
+  // face_root.palette reads brgen's family tokens; the ground is brgen's --bg.
+  assert.match(css, /--face-fg:\s*var\(--c-text\)/);
+  assert.match(css, /--face-bg:\s*#000000/);
+  assert.match(css, /body\[data-runtime-profile="calm"\]/);
+});
+
+// The x_ prefix and the --font-brand alias are retired, the mono stack is the
+// family's shared code token, and the smallest text is a step of the type scale.
+test("face stylesheet uses the family tokens without aliases or a private stack", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const sharedCode = tokens.match(/font_code: &shared_font_code '([^']+)'/)?.[1];
+
+  assert.ok(sharedCode, "shared_chrome.font_code carries the anchor face_root.font_mono reads");
+  assert.match(tokens, /font_mono: \*shared_font_code/);
+  assert.ok(css.includes(`--font-mono: ${sharedCode};`), "--font-mono is the shared code stack");
+  assert.doesNotMatch(css, /--x-text|x_text/);
+  assert.doesNotMatch(css, /--font-brand/);
+  assert.doesNotMatch(css, /font-size:\s*10px/);
+  assert.match(css, /--text-extra-small: 0\.75rem;/);
+  assert.match(css, /\.master-stipple-diagnostics \{[^}]*font-size: var\(--text-extra-small\);/);
+});
+
+// 40_accessibility_motion.css holds accessibility and motion rules; print, the
+// wscons skin, the face chrome and the stipple playground are their own sources,
+// concatenated in the order that keeps face.css's cascade unchanged.
+test("face stylesheet sources are split by concern", () => {
+  const builder = readFileSync(join(root, "..", "..", "MASTER", "tools", "rails", "build_face_css.rb"), "utf8");
+  const styles = join(root, "styles", "face");
+  const order = ["40_accessibility_motion.css", "41_print.css", "42_wscons_skin.css",
+    "43_face_chrome.css", "44_stipple_playground.css", "50_ascii_face.css"];
+  const positions = order.map((name) => builder.indexOf(name));
+  assert.ok(positions.every((at, index) => at > 0 && (index === 0 || at > positions[index - 1])), positions.join(","));
+
+  const motion = readFileSync(join(styles, "40_accessibility_motion.css"), "utf8");
+  assert.doesNotMatch(motion, /@media print|wscons|master-face-stipple-playground/);
+  assert.match(readFileSync(join(styles, "41_print.css"), "utf8"), /^@media print/);
+  assert.match(readFileSync(join(styles, "42_wscons_skin.css"), "utf8"), /html\[data-aesthetic="wscons"\]/);
+  assert.match(readFileSync(join(styles, "44_stipple_playground.css"), "utf8"), /\.master-face-stipple-playground \{/);
+});
+
+// The finished reply is announced once; the log itself is not a live region,
+// which re-announced every streamed token.
+test("chat log is not a live region and an unspoken reply is announced once", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const log = view.match(/<div id="chat-log"[^>]*>/)?.[0] ?? "";
+
+  assert.ok(log, "chat log is in the view");
+  assert.doesNotMatch(log, /aria-live|aria-relevant/);
+  assert.match(view, /<div id="tts-live" class="sr-only" aria-live="polite" aria-atomic="true">/);
+  const done = part5.slice(part5.indexOf("if (raw === '[DONE]')"), part5.indexOf("if (raw.startsWith('ERROR:'))"));
+  assert.match(done, /if \(\(tts\.muted \|\| ttsSuppressed\) && pending\.trim\(\)\) announceTTS\(pending\.trim\(\)\);\n\s+pending = '';/);
+});
+
+test("primer is a native button and the chat shell carries no presentational hooks", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const minimalUi = readFileSync(join(publicDir, "face_minimal_ui.js"), "utf8");
+  const body = view.match(/<body[^>]*>/)?.[0] ?? "";
+
+  assert.match(view, /<button id="primer" type="button"/);
+  assert.doesNotMatch(view, /role="button"/);
+  assert.doesNotMatch(primerScript, /p\.addEventListener\('keydown'/);
+  assert.match(view, /<\/button>\n\s+<noscript><p id="primer-noscript"/, "noscript sits outside the button");
+  assert.doesNotMatch(body, /\bzen\b|data-visual-runtime/);
+  assert.match(body, /data-layout="face"/);
+  assert.doesNotMatch(minimalUi, /'zen'/);
+  assert.match(minimalUi, /body\.dataset\.layout === 'face'/);
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.doesNotMatch(css, /body\.zen|zen-hidden/);
+  assert.match(css, /body\[data-layout="face"\]\.controls-hidden \.face-controls/);
+});
+
+test("boot shows an indeterminate loading state, not a counter on a timer", () => {
+  const view = bootShell();
+  const locales = ["en", "nb"].map((locale) => readFileSync(join(root, "config", "locales", `${locale}.yml`), "utf8"));
+
+  assert.doesNotMatch(view, /Math\.random|progPct|showProgress/);
+  assert.match(view, /function showLoadState\(\)\{/);
+  for (const locale of locales) assert.doesNotMatch(locale, /loading_(title|status): "[^"]*%\{n\}/);
+});
+
+test("prompt ids and classes are spelled out across view, CSS and JS", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const runtime = partSources().join("\n");
+
+  for (const [id, element] of [["prompt-form", "form"], ["prompt-input", "textarea"],
+    ["music-loop-button", "button"], ["pause-speech-button", "button"]]) {
+    assert.match(view, new RegExp(`<${element} id="${id}"`));
+  }
+  assert.match(view, /<span class="prompt-sigil" aria-hidden="true">/);
+  assert.match(view, /href="#prompt-input" class="skip-link"/);
+  const retired = /#zsh(?![\w-])|#zin\b|id="zsh"|id="zin"|class="pp"|\.pp\b|spin-btn|music-btn|getElementById\('(zsh|zin)'\)/;
+  for (const [name, source] of [["view", view], ["face.css", css], ["runtime", runtime]]) {
+    assert.doesNotMatch(source, retired, `${name} still names a retired id`);
+  }
+});
+
+test("MASTER web and CLI share one monospaced chat contract", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+
+  assert.match(rules, /face_root:[\s\S]*font_label:.*JetBrainsMono/);
+  assert.match(css, /--font-label:\s*"JetBrainsMono/);
+  assert.match(css, /html, body[\s\S]*font:\s*16px\/1\.5 var\(--font\)/);
+  assert.match(css, /--font: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;/);
+  assert.doesNotMatch(css, /var\(--font-label\)/, "MASTER face may not fall back to a second typography contract");
+  assert.match(css, /\.message\.user,\s*\n\.message\.assistant[\s\S]*border:\s*0;[\s\S]*background:\s*transparent/);
+  assert.match(css, /#chat-log[\s\S]*max-inline-size:\s*66ch/);
+});
+
+test("FaceWorld is one renderer projection, not a second renderer", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
+  const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(manifest, /- face_world\.js/);
+  assert.match(world, /window\.MASTER_FACE_WORLD/);
+  assert.match(world, /master-sdf-shell/);
+  assert.match(world, /master-splat-field/);
+  assert.match(world, /master-node-\$\{name\}/);
+  assert.doesNotMatch(world, /new THREE\.WebGLRenderer/);
+  assert.doesNotMatch(world, /new THREE\.Scene/);
+  assert.doesNotMatch(world, /requestAnimationFrame/);
+  assert.match(part3, /MASTER_FACE_WORLD\?\.update\?\.\(performance\.now\(\)\)/);
+  assert.match(part5, /get scene\(\) \{ return scene; \}/);
+  assert.match(part5, /get camera\(\) \{ return camera; \}/);
+});
+
+test("face.css meets MASTER design_rules typography and touch baselines", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.match(css, /font:\s*16px\/1\.5/);
+  assert.match(css, /"ss03"/);
+  assert.match(css, /--face-bar-height:\s*44px/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /#chat-log[\s\S]*font:\s*1rem\/1\.5 var\(--font-mono\)/);
+  assert.match(css, /body\.face-loading #prompt-form:not\(\.live\)/);
+  assert.match(css, /body\[data-boot-state="ERROR"\] #zsh-status/);
+});
+
+// .tool already uses --tap-min (44px). The skipped assertion demanded a
+// literal 44px, which would have punished the token the rest of this file
+// treats as the source of truth.
+test("face.css gives .tool a tap-min touch target", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.match(css, /^\.tool \{[^}]*min-height:\s*var\(--tap-min\)/m);
+});
+
+// .mood-sparkline is gone from face.css and from every face HTML/JS file.
+// The accent token remaining on a class nothing renders would be a ghost.
+test("face.css does not keep a retired mood sparkline", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.doesNotMatch(css, /\.mood-sparkline/);
+});
+
+test("face prompt docks above the visual-viewport keyboard inset", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  assert.match(css, /#prompt-form \{[^}]*inset-block-end:\s*var\(--keyboard-inset/s);
+});
+
+test("visual_bridge connects SSE and normalizes visual events", () => {
+  const bridge = readFileSync(join(publicDir, "visual_bridge.js"), "utf8");
+  assert.match(bridge, /new EventSource\("\/events\/stream"\)/);
+  assert.match(bridge, /MASTERTopology\.classifyEvent/);
+  assert.match(bridge, /master:visual/);
+  assert.match(bridge, /disconnectSse/);
+  assert.doesNotMatch(bridge, /MASTERFace/);
+  assert.match(bridge, /MASTER_FACE/);
+});
+
+test("visual layers consume the canonical face frame", () => {
+  const ecology = readFileSync(join(publicDir, "cognition_ecology_render.js"), "utf8");
+  const gravity = readFileSync(join(publicDir, "gravity_field.js"), "utf8");
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  assert.match(ecology, /MASTEREcologyRender = Object\.freeze\(\{ update \}\)/);
+  assert.match(gravity, /MASTER_GRAVITY_FIELD = Object\.freeze\(\{ update, resize, signal \}\)/);
+  assert.doesNotMatch(ecology, /requestAnimationFrame/);
+  assert.doesNotMatch(gravity, /requestAnimationFrame/);
+  assert.match(world, /MASTEREcologyRender\?\.update/);
+  assert.match(world, /MASTER_GRAVITY_FIELD\?\.update/);
+});
+
+test("topology registry exposes canonical classifier", () => {
+  const registry = readFileSync(join(publicDir, "topology_registry.js"), "utf8");
+  const patterns = readFileSync(join(root, "..", "..", "MASTER", "data", "topologies.yml"), "utf8");
+  assert.match(patterns, /phantom:\(detected\|occurrence\|recovery\|halt\)/);
+  assert.match(registry, /EVENT_CLASSIFIER/);
+  assert.match(registry, /classifyEvent/);
+  assert.match(registry, /bootRemoteTopologies\(\)/);
+});
+
+test("chat_actions retains interrupted transport failures without duplicating partial replies", () => {
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  assert.match(actions, /function transportFailure\(err\)/);
+  assert.match(actions, /async function queueTransportFailure\(message, err, assistantText\)/);
+  assert.match(actions, /if \(assistantText\?\.trim\(\)\) return false;/);
+  assert.match(actions, /if \(!transportFailure\(err\)\) return false;/);
+  assert.match(actions, /queueTransportFailure\(message, err, assistantBuffer\)/);
+});
+
+test("chat_actions posts chat stream instead of EventSource GET", () => {
+  const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");
+  const runtime = faceSource;
+  assert.match(actions, /method:\s*"POST"/);
+  assert.match(actions, /\/chat\/message/);
+  assert.doesNotMatch(actions, /new EventSource\(/);
+  assert.match(actions, /window\.MASTERChat/);
+  assert.match(actions, /async function sendMessage/);
+  assert.match(actions, /sendMessage,/);
+  assert.match(actions, /if \(!window\.sendMessage\) window\.sendMessage = sendMessage/);
+  assert.match(runtime, /MASTERChat\.startChatStream/);
+  assert.match(runtime, /handleFaceNamedEvent\(event, data\)/);
+});
+
+test("face runtime dispatches ready event for deferred vision hooks", () => {
+  const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  const runtime = faceSource;
+  const vision = readFileSync(join(publicDir, "face_vision_core.js"), "utf8");
+  assert.match(part1, /master:face-ready/);
+  assert.match(runtime, /master:face-ready/);
+  assert.match(vision, /addEventListener\("master:face-ready"/);
+});
+
+test("face runtime keeps named SSE reactions on the POST stream path", () => {
+  const runtime = faceSource;
+  assert.match(runtime, /function handleFaceNamedEvent/);
+  ["mood", "model", "verdict", "council:speech", "confidence", "felt"].forEach((event) => {
+    assert.ok(runtime.includes(`event === '${event}'`), `missing named handler for ${event}`);
+  });
+  assert.match(runtime, /applyPersonaVisual/);
+  assert.match(runtime, /MASTER_SSE\?\.dispatchNamed/);
+});
+
+test("web face is an evolved rendering of the CLI face", () => {
+  const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const cliFace = readFileSync(join(root, "..", "..", "MASTER", "lib", "cli", "face.rb"), "utf8");
+  assert.match(cliFace, /Glyphs::DEFAULT_CHARS/);
+  assert.match(cliFace, /MASTER_FACE_RAMP/);
+  assert.match(part3, /CLI_FACE_WEB_DENSITY = \d+;/);
+  assert.match(part3, /orbitalField = new THREE\.Points/);
+  assert.match(part3, /size: 1/);
+});
+
+test("face runtime keeps chat stream and particle worker boot paths", () => {
+  const runtime = faceSource;
+  assert.match(runtime, /function sendMessage/);
+  assert.match(runtime, /MASTERChat\.startChatStream/);
+  assert.doesNotMatch(runtime, /new EventSource\(/, "the face sends through chat_actions' POST stream only");
+  assert.match(runtime, /new Worker\('\/particle_worker\.js'\)|new Worker\("\/particle_worker\.js"\)/);
+  assert.match(runtime, /window\.MASTER_FACE/);
+});
+
+test("tts defaults to server style inference and recovers after fallback cooldown", () => {
+  const runtime = faceSource;
+  const controller = readFileSync(join(root, "app", "controllers", "tts_controller.rb"), "utf8");
+  const chatJs = readFileSync(join(publicDir, "chat.js"), "utf8");
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.match(runtime, /TTS_STYLE_DEFAULT = 'auto'/);
+  assert.match(runtime, /MASTER_VOICE_POLICY/);
+  assert.match(runtime, /setTtsHealthStatus/);
+  assert.match(runtime, /ttsStreamLiveEnabled/);
+  assert.match(runtime, /content_kind/);
+  assert.match(runtime, /style_locked/);
+  assert.match(runtime, /serverUnavailableUntil/);
+  assert.match(runtime, /serverFailureCount/);
+  assert.match(runtime, /res\.status === 429/);
+  assert.match(runtime, /pullStreamingTtsChunk/);
+  assert.match(runtime, /flushStreamTts/);
+  assert.match(runtime, /looksLikeListingStream/);
+  assert.match(runtime, /shouldSpeakStreamReply/);
+  assert.match(runtime, /synthInFlight/);
+  assert.doesNotMatch(runtime, /while \(\(m = pending\.match\(SENT_BREAK\)\)/);
+  assert.doesNotMatch(chatJs, /osman/);
+  assert.match(index, /MASTER_VOICE_POLICY/);
+  assert.doesNotMatch(controller, /params\[:style\]\.present\?/);
+  assert.doesNotMatch(controller, /params\[:voice\]\.present\?/);
+  assert.match(controller, /Master::Voice::Speech\.voice_for_text\(text\)/);
+});
+
+// There is no welcome greeting: MASTER speaks when spoken to. It was removed
+// deliberately, and face.part5.txt records why — it fired on every page load
+// rather than after a human tap, the web session is process-global so the
+// instruction landed in whatever conversation was already running, and because
+// it was a real chat turn the model kept seeing "introduce yourself" in recent
+// history and doing it unprompted.
+//
+// This test asserted the greeting existed and had been failing ever since,
+// unnoticed, because nothing ran this file. It asserts the absence now, so
+// re-adding a greeting has to be a decision rather than a regression.
+test("no welcome greeting: MASTER speaks when spoken to", () => {
+  const runtime = readFileSync(join(publicDir, "face.runtime.js"), "utf8");
+  // Matching the bare identifier finds the comment that explains the removal,
+  // so these look for the code shapes instead.
+  assert.doesNotMatch(runtime, /^\s*function sendWelcomeGreeting/m);
+  assert.doesNotMatch(runtime, /^\s*const WELCOME_GREETING_PROMPT/m);
+  assert.doesNotMatch(runtime, /setTimeout\(sendWelcomeGreeting,/);
+});
+
+test("voice mode arms from a real gesture and reports microphone startup truthfully", () => {
+  const runtime = faceSource;
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.match(part5, /function listenOnFirstGesture/);
+  assert.match(part5, /enterVoiceMode\(\{ fromAuto: true, fromGesture: true \}\)/);
+  assert.match(part5, /listenOnFirstGesture\(\);/);
+  assert.match(runtime, /recognition\.onstart = \(\) => \{/);
+  assert.match(runtime, /stt_start_timeout/);
+  assert.match(runtime, /waiting for microphone — check browser permission/);
+});
+
+test("TTS does not dequeue speech while the server cooldown is active", () => {
+  const speech = readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8");
+  const runtime = faceSource;
+  assert.match(speech, /const unavailableUntil = Number\(tts\.serverUnavailableUntil \|\| 0\)/);
+  assert.match(speech, /scheduleTtsTick\(Math\.max\(250, unavailableUntil - Date\.now\(\)\)\)/);
+  assert.match(runtime, /const unavailableUntil = Number\(tts\.serverUnavailableUntil \|\| 0\)/);
+  assert.match(runtime, /if \(tts\.serverUnavailable && Date\.now\(\) < unavailableUntil\)/);
+});
+
+test("voice mode: re-arm loop, exit phrase, wake word, and single-speaker TTS routing", () => {
+  const runtime = [
+    "face.part1.txt", "face.part2.txt", "face.part3.txt",
+    "face_speech_runtime.js", "face_speech_playback.js", "face.part5.txt",
+  ].map((file) => readFileSync(join(publicDir, file), "utf8")).join("\n");
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const index = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  // Continuous re-arm loop keyed off recognition.onend, not a fixed interval —
+  // must re-check State.voiceMode each cycle rather than assuming it stays on.
+  assert.match(runtime, /if \(State\.voiceMode\) \{[\s\S]{0,400}startSTT\(\);/);
+  // Exit phrase is checked client-side before sendMessage, no server round-trip.
+  assert.match(runtime, /EXIT_PHRASE_RE/);
+  assert.match(runtime, /stop listening/);
+  // Wake word is opt-in (URL param or localStorage), not on by default.
+  assert.match(runtime, /WAKE_PHRASE_RE/);
+  assert.match(runtime, /function wakeWordEnabled/);
+  assert.match(runtime, /master:wake-word/);
+  // iOS Safari degradation guard: bail out of the loop rather than spinning
+  // forever if recognition keeps ending near-instantly with no speech.
+  assert.match(runtime, /_voiceModeRearmFails/);
+  // Server TTS is the sole speech backend. A reply waits on the same queue for
+  // synthesis and playback instead of racing a second OS/browser narrator.
+  assert.match(runtime, /function ttsTick/);
+  assert.match(runtime, /loadTTSBlob\(text, voice, style\)/);
+  assert.match(runtime, /tts\.serverUnavailable/);
+  assert.doesNotMatch(runtime, /function highQualityVoiceEnabled/);
+  assert.doesNotMatch(runtime, /master:voice-mode-hq/);
+  assert.doesNotMatch(runtime, /browserTtsEmergencyAllowed/);
+  assert.doesNotMatch(runtime, /speakWithBrowserTTS/);
+  assert.doesNotMatch(runtime, /speechSynthesis\.speak\(/);
+  assert.doesNotMatch(runtime, /new SpeechSynthesisUtterance/);
+  // The always-visible microphone indicator is also the touch-accessible
+  // toggle; its accessible pressed state mirrors actual recognition state.
+  assert.match(index, /<button id="mic-dot"[^>]*aria-pressed="false"/);
+  assert.match(part5, /document\.getElementById\('mic-dot'\)\?\.addEventListener\('click'/);
+  assert.match(part5, /dot\.setAttribute\("aria-pressed", open \? "true" : "false"\)/);
+  // STT/TTS echo regression: continuous SpeechRecognition has no echo
+  // cancellation against this page's own TTS audio, so an open mic during
+  // playback transcribed the assistant's own reply and resubmitted it as a
+  // new user message -- reported as the assistant "randomly saying facts."
+  // ttsTick() must duck the mic while speaking and only resume it via
+  // resumeSttAfterSpeech() once the queue empties -- and that function must
+  // actually be defined (it previously wasn't, only called, which would
+  // throw ReferenceError the first time a reply finished playing).
+  assert.match(runtime, /function resumeSttAfterSpeech/);
+  assert.match(runtime, /if \(!text\) \{ resumeSttAfterSpeech\(\); return; \}/);
+  assert.match(runtime, /tts_tick_stt_duck/);
+  assert.match(runtime, /State\.voiceMode && !tts\.playing/);
+  assert.match(runtime, /State\.wakeArmed && !State\.voiceMode && !tts\.playing/);
+});
+
+test("web face keeps filesystem access at the user-upload boundary only", () => {
+  const sources = [
+    readFileSync(join(publicDir, "face.js"), "utf8"),
+    readFileSync(join(publicDir, "face.runtime.js"), "utf8"),
+    readFileSync(join(publicDir, "face_world.js"), "utf8"),
+    readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8"),
+  ].join("\n");
+  for (const api of [
+    "showOpenFilePicker",
+    "showSaveFilePicker",
+    "showDirectoryPicker",
+    "FileSystemHandle",
+    "FileSystemFileHandle",
+    "FileSystemDirectoryHandle",
+  ]) {
+    assert.doesNotMatch(sources, new RegExp(api), api + " must not become a MASTER web capability");
+  }
+  assert.match(sources, /id="photo"/, "explicit user-selected photo upload remains the only file boundary");
+});
+
+test("service worker avoids stale undigested precache", () => {
+  const sw = readFileSync(join(publicDir, "sw.js"), "utf8");
+  assert.doesNotMatch(sw, /\/face\.js'/);
+  assert.doesNotMatch(sw, /\/chat\.js'/);
+  assert.match(sw, /OFFLINE_URL/);
+  assert.match(sw, /Never cache digested/);
+  assert.match(sw, /pathname\.startsWith\('\/assets\/'\)/);
+});
+
+test("Android wake reaches the existing face event pipe", () => {
+  const bridge = readFileSync(join(publicDir, "visual_bridge.js"), "utf8");
+  const events = readFileSync(join(root, "app", "controllers", "events_controller.rb"), "utf8");
+  const wake = readFileSync(join(root, "..", "..", "MASTER", "lib", "device", "wake_signal.rb"), "utf8");
+  assert.match(bridge, /type === "device:wake"/);
+  assert.match(bridge, /master:wake/);
+  assert.match(bridge, /mode: "wake"/);
+  assert.match(events, /WakeSignal/);
+  assert.match(events, /stream_started_at/);
+  assert.match(wake, /File\.rename/);
+});
+
+
+test("generated face bundles publish the source-set digest they were built from", () => {
+  const visionSources = [
+    "public/face_vision_core.js",
+    "public/face_vision_a.js",
+    "public/face_vision_b.js",
+    "public/face_vision_c.js",
+    "public/face_vision_d.js",
+  ];
+  const moduleSources = [
+    "script/face_modules_entry.js",
+    "public/face_blendshape_bridge.js",
+    "public/face_particles.js",
+    "public/face_audio_bridge.js",
+    "public/face_tts_bridge.js",
+    "public/face_expression_bridge.js",
+    "public/face_council_multi.js",
+    "public/face_phosphor_trail.js",
+    "public/face_micro_interactions.js",
+    "public/face_perf_guards.js",
+    "public/face_brutalist.js",
+  ];
+  const visionDigest = sourceSetDigest(visionSources);
+  const moduleDigest = sourceSetDigest(moduleSources);
+  const vision = readFileSync(join(publicDir, "face_vision.bundle.js"), "utf8");
+  const modules = readFileSync(join(publicDir, "face.modules.bundle.js"), "utf8");
+
+  assert.match(vision, new RegExp("SOURCE-SET-SHA256:\\s*" + visionDigest));
+  assert.match(modules, new RegExp("SOURCE-SET-SHA256:\\s*" + moduleDigest));
+});
+
+test("MASTER face markup hooks have owned styling", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  for (const hook of [".brand-mark", ".brand-text", ".mic-indicator"]) {
+    assert.match(view, new RegExp("class=\"[^\"]*\\b" + hook.slice(1) + "\\b"));
+    assert.match(css, new RegExp(hook.replace(".", "\\.") + "\\s*\\{"));
+  }
+  assert.match(css, /body\[data-mode="listening"\] \.mic-indicator/);
+});
+
+
+test("constitutional ASCII face is wired as an overlay and a fallback", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
+  const renderer = readFileSync(join(publicDir, "face_ascii.js"), "utf8");
+  const frame = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
+  // The face_ascii runtime contract is runtime configuration, so it lives in
+  // law_runtime.yml beside the scanner settings, not in the Law catalogue.
+  const laws = readFileSync(join(root, "..", "..", "MASTER", "data", "law_runtime.yml"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+
+  assert.match(faceManifest, /shell_manifest:[\s\S]*?- face_ascii\s/);
+  assert.match(controller, /LawField.browser_payload/);
+  assert.match(view, /MASTER_FACE_LAW_FIELD/);
+  assert.match(renderer, /function paintLawField/);
+  assert.match(renderer, /MASTER_FACE_LAW_FIELD/);
+  assert.match(renderer, /function update\(now\)/);
+  assert.match(renderer, /function createView\(canvas, options\)/);
+  assert.doesNotMatch(renderer, /requestAnimationFrame/);
+  assert.match(frame, /MASTER_FACE_ASCII\?\.update/);
+  assert.match(fallback, /ascii\.createView\(canvas\)/);
+  assert.match(css, /\.master-face-ascii-layer/);
+  assert.match(css, /body\[data-face-ascii="1"\]/);
+  assert.match(laws, /face_ascii:[\s\S]*?source: ordered_constitutional_nodes/);
+  assert.match(laws, /web_file_access: forbidden/);
+});
+
+
+test("session chrome reads brgen's family tokens and band without weakening mobile targets", () => {
+  const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const generated = readFileSync(join(railsRoot, "__shared", "design_tokens.yml"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  // brgen declares its band in one of the partials application.scss @uses, so
+  // read every brgen stylesheet rather than naming the partial that holds it today.
+  const brgenStyles = join(railsRoot, "brgen", "app", "assets", "stylesheets");
+  const brgen = readdirSync(brgenStyles).filter((name) => name.endsWith(".scss")).sort()
+    .map((name) => readFileSync(join(brgenStyles, name), "utf8")).join("\n");
+  const cssVar = (name) => `--${name.replaceAll("_", "-")}`;
+
+  // The family block comes first so the face root's var() references resolve to it.
+  const family = css.indexOf("/* BEGIN:generated-family-tokens");
+  const face = css.indexOf("/* BEGIN:generated-face-root");
+  assert.ok(family >= 0 && face > family, "family tokens must precede the face root");
+  assert.doesNotMatch(css, /--text-secondary:\s*var\(--text-secondary\)/, "a self-alias leaves the property invalid");
+
+  for (const [name, value] of [
+    ["chrome_bg", "var(--surface)"],
+    ["chrome_surface", "var(--surface)"],
+    ["chrome_surface_active", "#222222"],
+    ["chrome_border", "var(--border)"],
+    ["chrome_text", "var(--text)"],
+    ["chrome_muted", "var(--text-secondary)"],
+    ["chrome_focus", "var(--accent)"]
+  ]) {
+    assert.ok(tokens.includes(`${name}: "${value}"`), `canonical token missing ${name}`);
+    const quoted = generated.includes(`${name}: "${value}"`);
+    assert.ok(quoted || generated.includes(`${name}: ${value}`), `generated token missing ${name}`);
+    assert.ok(css.includes(`${cssVar(name)}: ${value}`), `CSS projection missing ${name}`);
+  }
+
+  // master's titlebar is brgen's header band, so the two values may not drift apart.
+  const hex = (source, pattern) => Object.fromEntries([...source.matchAll(pattern)].map((m) => [m[1], m[2]]));
+  const band = hex(brgen, /--brgen-header-(bg|ink|muted):\s*(#[0-9a-fA-F]{6});/g);
+  const faceBand = hex(css, /--chrome-band(|-ink|-muted):\s*(#[0-9a-fA-F]{6});/g);
+
+  assert.equal(Object.keys(band).length, 3, "brgen no longer declares its header band");
+  assert.deepEqual(faceBand, { "": band.bg, "-ink": band.ink, "-muted": band.muted }, "the band drifted from brgen's");
+
+  assert.match(css, /\.master-titlebar \{[^}]*background: var\(--chrome-band\); color: var\(--chrome-band-ink\);/);
+  // The dashboard panes are sections of #mission-grid (cc17cc6d7f), not div.panel.
+  assert.match(css, /body\.mission-control #mission-grid > section \{[^}]*border-inline-start: 0;/s);
+  assert.match(css, /body\.mission-control #mission-grid > section \{[^}]*padding-inline-start: 0;/s);
+
+  // The session chrome is mobile-first: the base rules carry the tap target and
+  // the wider breakpoint only relaxes spacing, never the target size.
+  assert.match(css, /\.master-session-tab \{[^}]*min-inline-size: var\(--tap-min\); min-block-size: var\(--tap-min\);/);
+  const tapTargets = /#photo-button, #music-loop-button, #pause-speech-button \{[^}]*/;
+  assert.match(css, new RegExp(`${tapTargets.source}min-inline-size: var\\(--tap-min\\); min-block-size: var\\(--tap-min\\);`));
+
+  const wide =css.match(/@media \(min-width: 480px\) \{[\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(wide, /\.master-session-tab \{ padding-inline:/);
+  assert.doesNotMatch(wide, /min-(inline|block)-size/);
+});
+
+test("shell chrome uses plain CLI prompt words and downloads no font", () => {
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+
+  assert.doesNotMatch(view, /id="wordmark"|Contract\.wordmark|Contract\.glyph/);
+  assert.match(view, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt %><\/span>/);
+  assert.doesNotMatch(view, /class="sep2"|\$ <\/span>/);
+  // face_root.font_mono in MASTER/data/tokens.yml leads with JetBrainsMono.
+  assert.match(css, /--font-mono:\s*"JetBrainsMono Nerd Font"/);
+  // brgen's one family and the mono stack are installed faces; master serves no
+  // /fonts/, so an @font-face here would only be a 404 waiting for a rule to name it.
+  assert.doesNotMatch(css, /@font-face/);
+  assert.doesNotMatch(css, /\.wordmark\s*\{/);
+});
+
+
+test("face preserves browser zoom and gives each shortcut one owner", () => {
+  const css = readFileSync(join(publicDir, "face.css"), "utf8");
+  const minimalUi = readFileSync(join(publicDir, "face_minimal_ui.js"), "utf8");
+  const shortcuts = readFileSync(join(publicDir, "shortcut_sheet.js"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+
+  assert.match(css, /touch-action:\s*pinch-zoom/);
+  assert.doesNotMatch(css, /touch-action:\s*none/);
+  assert.doesNotMatch(minimalUi, /e\.key === '\?'[\s\S]{0,80}safeStart\(\)/);
+  assert.match(shortcuts, /ev\.key === "\?"[\s\S]{0,100}openSheet\(\)/);
+  assert.match(runtime, /active\?\.closest\?\.\('\[role="dialog"\]'\)/);
+  assert.match(runtime, /const editing = tag === 'INPUT'[\s\S]{0,200}active\?\.closest\?\.\('\[role="dialog"\]'\)/);
+});
+
+
+test("thinking face keeps the single composer ready beneath an ASCII spinner", () => {
+  const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const css = readFileSync(join(root, "styles", "face", "30_conversation.css"), "utf8");
+  const cliSpinner = readFileSync(join(root, "..", "..", "MASTER", "lib", "cli", "session", "thinking_indicator.rb"), "utf8");
+
+  assert.ok(part1.includes("const STAR_FRAMES = ['|', '/', '-', '\\\\'];"));
+  assert.ok(part1.includes("const STAR_INTERVAL_MS = 100;"));
+  assert.ok(part1.includes("function syncThinkingStar()"));
+  assert.ok(part1.includes("syncThinkingStar();"));
+  assert.ok(!part1.includes("STAR_COLORS"));
+  assert.ok(css.includes('body[data-mode="thinking"] #ascii-star:not(:empty)'));
+  assert.ok(css.includes('body[data-mode="speaking"][data-queue-active="1"] #ascii-star:not(:empty)'));
+  assert.ok(css.includes("bottom: calc(84px + var(--safe-bottom) + var(--keyboard-inset, 0px));"));
+  assert.ok(css.includes('body[data-mode="thinking"] #prompt-input,'));
+  assert.ok(css.includes('body[data-queue-active="1"] #prompt-input { opacity: 1; }'));
+  assert.ok(part5.includes("queued / paused"));
+  assert.ok(part5.includes("_turnQueueRunning ? 'thinking' : ''"));
+  assert.ok(part5.includes("rootBody.dataset.queuePaused = _turnQueuePaused ? '1' : '0';"));
+  assert.ok(part5.includes("syncThinkingStar();"));
+  assert.ok(cliSpinner.includes("TICK_SECONDS = 0.10"));
+  assert.ok(cliSpinner.includes('SPINNER_FRAMES = ["|", "/", "-", "\\\\"].freeze'));
+});
+
+test("web chat records monotonic first-token, first-audio and reply-completion latency", () => {
+  const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const speech = readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8");
+  assert.ok(part5.includes("startedAt: performance.now()"));
+  assert.ok(part5.includes("chatTiming.firstTokenMs = Math.round(performance.now() - chatTiming.startedAt)"));
+  assert.ok(part5.includes("chatTiming.completedMs = Math.round(performance.now() - chatTiming.startedAt)"));
+  assert.ok(speech.includes("chatTiming.firstAudioMs = Math.round(performance.now() - chatTiming.startedAt)"));
+  assert.ok(speech.includes("const chatTiming = lane === 'response' ? window.MASTER_CHAT_TIMING || null : null"));
+  assert.ok(speech.includes("const chatTiming = meta.chatTiming"));
+  assert.ok(speech.includes("status: 'audio_started'"));
+  assert.ok(speech.includes("meta.lane === 'response'"));
+  assert.ok(speech.includes("audio.preload = 'auto';"));
+  assert.ok(!speech.includes("const dur = await new Promise(resolve =>"));
+});

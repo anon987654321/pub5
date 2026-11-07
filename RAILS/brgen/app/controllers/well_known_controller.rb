@@ -1,0 +1,87 @@
+# frozen_string_literal: true
+
+# WebFinger and NodeInfo — how the rest of the fediverse discovers that
+# @kari@brgen.no is a thing and what speaks for it.
+#
+# The account is resolved against the *requested host*, because each city is a
+# separate origin with its own population: @kari@brgen.no and @kari@oshlo.no are
+# different accounts, and answering for the wrong one would hand a stranger's
+# posts to anyone who asked the wrong city.
+class WellKnownController < ApplicationController
+  allow_unauthenticated_access
+  skip_forgery_protection
+
+  # Peers poll these on every follow and every few minutes; none of it changes
+  # faster than an hour, so they may keep their copy that long.
+  DISCOVERY_TTL = 1.hour
+
+  def webfinger
+    resource = params[:resource].to_s
+    username = resource[/\Aacct:([^@]+)@(.+)\z/, 1]
+    domain = resource[/\Aacct:([^@]+)@(.+)\z/, 2]
+
+    if username.blank? || domain.blank? || domain != request.host
+      head :not_found
+      return
+    end
+
+    user = federated_user(username, domain)
+    return head :not_found unless user
+
+    expires_in DISCOVERY_TTL, public: true
+    render json: {
+      subject: "acct:#{username}@#{domain}",
+      aliases: [ user.actor_uri ],
+      links: [
+        { rel: "self", type: "application/activity+json", href: user.actor_uri },
+        { rel: "http://webfinger.net/rel/profile-page", type: "text/html", href: user.actor_uri }
+      ]
+    }, content_type: "application/jrd+json"
+  end
+
+  def nodeinfo_index
+    expires_in DISCOVERY_TTL, public: true
+    render json: {
+      links: [
+        { rel: "http://nodeinfo.diaspora.software/ns/schema/2.1",
+          href: "https://#{request.host}/nodeinfo/2.1" }
+      ]
+    }
+  end
+
+  def nodeinfo
+    city = City.find_by(domain: request.host)
+    expires_in DISCOVERY_TTL, public: true
+    render json: {
+      version: "2.1",
+      software: { name: "brgen", version: Rails.application.config.x.brgen_version.presence || "0", repository: "https://github.com/anon987654321/pub5" },
+      protocols: [ "activitypub" ],
+      services: { inbound: [], outbound: [] },
+      openRegistrations: true,
+      usage: { users: { total: federated_user_count(city) } },
+      # A city is an instance. Saying so is the honest description of what this
+      # server is, and it is what makes the city partitioning legible to peers.
+      metadata: { nodeName: city&.name || "brgen", nodeDescription: "A city." }
+    }
+  end
+
+  private
+
+  def federated_user(username, domain)
+    city = City.find_by(domain: domain)
+    return nil if city.blank?
+
+    user = User.find_by(username: username, city_id: city.id)
+    user&.federated? ? user : nil
+  end
+
+  # The COUNT once an hour per city rather than on every peer's poll.
+  def federated_user_count(city)
+    Rails.cache.fetch([ "nodeinfo:users", city&.id ], expires_in: DISCOVERY_TTL) { federated_scope(city).count }
+  end
+
+  def federated_scope(city)
+    scope = User.where(guest: false, deleted_at: nil, deletion_scheduled_at: nil).where.not(username: [ nil, "" ])
+    city ? scope.where(city_id: city.id) : scope
+  end
+end

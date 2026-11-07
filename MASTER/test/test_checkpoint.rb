@@ -1,0 +1,231 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "json"
+
+class TestCheckpoint < Minitest::Test
+  def test_create_and_restore_round_trip
+    Dir.mktmpdir do |root|
+      path = File.join(root, "lib", "sample.rb")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, "before\n")
+      checkpoint = Master::Fix::Checkpoint.new(
+        root:,
+        dir: File.join(root, ".master", "checkpoints"),
+      )
+      manifest = checkpoint.create(label: "test", files: ["lib/sample.rb"])
+      assert_equal 2, manifest[:format_version]
+      assert_equal Digest::SHA256.hexdigest("before\n"), manifest.dig(:sha256, "lib/sample.rb")
+      File.write(path, "after\n")
+
+      checkpoint.restore(manifest[:id])
+      assert_equal "before\n", File.read(path)
+    end
+  end
+
+  def test_create_rejects_paths_outside_root
+    Dir.mktmpdir do |root|
+      checkpoint = Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints"))
+
+      assert_raises(ArgumentError) { checkpoint.create(label: "bad", files: ["../outside"]) }
+    end
+  end
+
+  def test_create_refuses_missing_source_files_without_publishing_a_checkpoint
+    Dir.mktmpdir do |root|
+      checkpoint_dir = File.join(root, ".master", "checkpoints")
+      checkpoint = Master::Fix::Checkpoint.new(root:, dir: checkpoint_dir)
+
+      error = assert_raises(ArgumentError) do
+        checkpoint.create(label: "incomplete", files: ["lib/missing.rb"])
+      end
+
+      assert_match(/source file missing: lib\/missing\.rb/, error.message)
+      assert_empty Dir.children(checkpoint_dir)
+      assert_empty checkpoint.list
+    end
+  end
+
+  def test_create_removes_staged_files_after_a_copy_failure
+    Dir.mktmpdir do |root|
+      checkpoint_dir = File.join(root, ".master", "checkpoints")
+      checkpoint = Master::Fix::Checkpoint.new(root:, dir: checkpoint_dir)
+      checkpoint.define_singleton_method(:copy_files) do |_files, from:, to:|
+        FileUtils.mkdir_p(File.join(to, "lib"))
+        File.write(File.join(to, "lib", "partial.rb"), "partial\n")
+        raise IOError, "simulated copy failure"
+      end
+
+      error = assert_raises(IOError) do
+        checkpoint.create(label: "interrupted", files: ["lib/sample.rb"])
+      end
+
+      assert_equal "simulated copy failure", error.message
+      assert_empty Dir.children(checkpoint_dir)
+      assert_empty checkpoint.list
+    end
+  end
+
+  def test_restore_refuses_tampered_checkpoint_before_overwriting_source
+    Dir.mktmpdir do |root|
+      path = File.join(root, "lib", "sample.rb")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, "before\n")
+      checkpoint = Master::Fix::Checkpoint.new(
+        root:,
+        dir: File.join(root, ".master", "checkpoints"),
+      )
+      manifest = checkpoint.create(label: "integrity", files: ["lib/sample.rb"])
+      checkpoint_path = File.join(checkpoint.dir, manifest.fetch(:id), "lib", "sample.rb")
+      File.write(checkpoint_path, "tampered\n")
+      File.write(path, "current\n")
+
+      assert_raises(Master::Fix::Checkpoint::IntegrityError) do
+        checkpoint.restore(manifest.fetch(:id))
+      end
+      assert_equal "current\n", File.read(path)
+    end
+  end
+
+  def test_legacy_checkpoint_without_checksums_remains_restorable
+    Dir.mktmpdir do |root|
+      path = File.join(root, "lib", "sample.rb")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, "before\n")
+      checkpoint = Master::Fix::Checkpoint.new(
+        root:,
+        dir: File.join(root, ".master", "checkpoints"),
+      )
+      manifest = checkpoint.create(label: "legacy", files: ["lib/sample.rb"])
+      manifest_path = File.join(checkpoint.dir, manifest.fetch(:id), "manifest.json")
+      legacy = JSON.parse(File.read(manifest_path))
+      legacy.delete("format_version")
+      legacy.delete("sha256")
+      File.write(manifest_path, JSON.generate(legacy))
+      File.write(path, "current\n")
+
+      checkpoint.restore(manifest.fetch(:id))
+      assert_equal "before\n", File.read(path)
+    end
+  end
+
+  def test_create_rejects_paths_that_traverse_a_symlink
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        File.write(File.join(outside, "secret.rb"), "outside\n")
+        File.symlink(outside, File.join(root, "linked"))
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints"))
+
+        assert_raises(ArgumentError) do
+          checkpoint.create(label: "bad", files: ["linked/secret.rb"])
+        end
+      end
+    end
+  end
+
+  def test_restore_refuses_when_a_destination_parent_becomes_a_symlink
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        path = File.join(root, "lib", "sample.rb")
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, "inside before\n")
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints"))
+        manifest = checkpoint.create(label: "test", files: ["lib/sample.rb"])
+
+        FileUtils.rm_rf(File.join(root, "lib"))
+        File.symlink(outside, File.join(root, "lib"))
+        outside_path = File.join(outside, "sample.rb")
+        File.write(outside_path, "do not overwrite\n")
+
+        assert_raises(ArgumentError) { checkpoint.restore(manifest[:id]) }
+        assert_equal "do not overwrite\n", File.read(outside_path)
+      end
+    end
+  end
+
+  def test_checkpoint_store_follows_a_symlink_alias_to_the_repo_root_safely
+    Dir.mktmpdir do |parent|
+      root = File.join(parent, "repo")
+      alias_root = File.join(parent, "repo-link")
+      FileUtils.mkdir_p(root)
+      File.write(File.join(root, "sample.rb"), "before\n")
+      File.symlink(root, alias_root)
+      store = File.join(alias_root, ".master", "checkpoints")
+      checkpoint = Master::Fix::Checkpoint.new(root: alias_root, dir: store)
+
+      manifest = checkpoint.create(label: "alias", files: ["sample.rb"])
+
+      assert File.file?(File.join(root, ".master", "checkpoints", manifest[:id], "manifest.json"))
+      File.write(File.join(root, "sample.rb"), "after\n")
+      checkpoint.restore(manifest[:id])
+      assert_equal "before\n", File.read(File.join(root, "sample.rb"))
+    end
+  end
+
+  def test_create_refuses_a_symlinked_store_directory
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        FileUtils.mkdir_p(File.join(root, ".master"))
+        File.write(File.join(root, "sample.rb"), "safe\n")
+        store = File.join(root, ".master", "checkpoints")
+        File.symlink(outside, store)
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: store)
+
+        assert_raises(ArgumentError) do
+          checkpoint.create(label: "escape", files: ["sample.rb"])
+        end
+        assert_empty Dir.children(outside)
+      end
+    end
+  end
+
+  def test_restore_refuses_a_symlinked_store_directory
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        store = File.join(root, ".master", "checkpoints")
+        FileUtils.mkdir_p(File.join(root, ".master"))
+        File.write(File.join(root, "sample.rb"), "before\n")
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: store)
+        manifest = checkpoint.create(label: "stored", files: ["sample.rb"])
+        FileUtils.mv(store, File.join(outside, "checkpoints"))
+        File.symlink(File.join(outside, "checkpoints"), store)
+        File.write(File.join(root, "sample.rb"), "current\n")
+
+        assert_raises(ArgumentError) { checkpoint.restore(manifest[:id]) }
+        assert_equal "current\n", File.read(File.join(root, "sample.rb"))
+      end
+    end
+  end
+
+  def test_list_refuses_a_symlinked_manifest
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        File.write(File.join(root, "sample.rb"), "before\n")
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints"))
+        manifest = checkpoint.create(label: "manifest", files: ["sample.rb"])
+        directory = File.join(checkpoint.dir, manifest[:id])
+        external_manifest = File.join(outside, "manifest.json")
+        File.write(external_manifest, JSON.generate("id" => "external", "created_at" => "9999"))
+        FileUtils.rm(File.join(directory, "manifest.json"))
+        File.symlink(external_manifest, File.join(directory, "manifest.json"))
+
+        assert_raises(Master::Fix::Checkpoint::IntegrityError) { checkpoint.list }
+      end
+    end
+  end
+
+  def test_restore_rejects_a_symlinked_checkpoint_directory
+    Dir.mktmpdir do |root|
+      Dir.mktmpdir do |outside|
+        checkpoint = Master::Fix::Checkpoint.new(root:, dir: File.join(root, ".master", "checkpoints"))
+        manifest = checkpoint.create(label: "test", files: [])
+        stored = File.join(checkpoint.dir, manifest[:id])
+        external = File.join(outside, manifest[:id])
+        FileUtils.mv(stored, external)
+        File.symlink(external, stored)
+
+        assert_raises(ArgumentError) { checkpoint.restore(manifest[:id]) }
+      end
+    end
+  end
+end

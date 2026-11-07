@@ -1,0 +1,4301 @@
+# laws.yml - operative law, flat, ordered by importance.
+#
+# Every top-level key is a Law or its child, except the reserved
+# law_catalogue execution-policy block at the end of this file.
+#
+# Order runs from most important to least:
+#   1. The axiom that makes the pipeline exist.
+#   2. The nine constitutional invariants, in soul.rb's precedence order.
+#   3. Constitutional support: authorship, modality, finding hygiene,
+#      attestation.
+#   4. The named principles the reader already knows.
+#   5. The remaining universal laws.
+#   6. The transformation operations.
+#   7. Kinds, ratchets, lints, and the file's own metadata.
+#
+# A law names no domain, no path, no exclude. The detector finds the
+# pattern; if the pattern is not there, there is no finding. A file's
+# kind is data the review reads; it is not a scope that exempts the file.
+#
+# Famous names are not renamed. DRY is DRY, KISS is KISS, SOLID is SOLID,
+# POLA is POLA. A law whose famous name is a child of another carries
+# parent as data and keeps its own name as its id.
+#
+# Soul's source-authority hierarchy is declared in soul.yml. The nine
+# invariant Law nodes keep their own internal order in these node rows;
+# Master::Soul exposes a derived graph view but never restates source authority.
+
+# ==========================================================================
+# 1. THE AXIOM
+# ==========================================================================
+
+APPLICATION_IS_UNIFORM:
+  statement: >
+    Every file passes through every law in both modalities. There is no
+    path that skips a law. There is no file exempt by location. A file's
+    kind is a fact, recorded; a finding is made against the fact, not
+    against a bypass.
+  root: visible_state
+  severity: error
+  resolution: never
+  mechanical: Master::Pipeline#apply_all
+  semantic: human
+
+APPLICATION_IS_UNIFORM_skipped_law:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "A file passed through without one of the laws."
+  resolution: never
+
+APPLICATION_IS_UNIFORM_unrecorded_finding:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "A finding made and not emitted."
+  resolution: never
+
+APPLICATION_IS_UNIFORM_legacy_reach_is_not_global:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "Per-Law language, surface and path reach is sourced only from law_catalogue; an unscoped Law inherits the catalogue's universal-by-default policy."
+  resolution: never
+
+
+APPLICATION_IS_UNIFORM_constitution_self_governed:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "The law catalogue or its validator is treated as exempt from the laws it declares."
+  resolution: never
+
+# ==========================================================================
+# 2. THE NINE CONSTITUTIONAL INVARIANTS
+# ==========================================================================
+
+TRUTHFUL_STATUS:
+  node: truthful_status
+  statement: >
+    Report observed state, not intended. A claim about state carries
+    evidence of its class.
+  severity: error
+  resolution: never
+  mechanical: Master::Law::Interface#capability_status
+  semantic: Master::Law::Interface#claims_match_evidence
+  enforcement: declared
+  coverage_mode: deterministic
+  detector_ids: [CAPABILITY_STATUS_MUST_BE_TRUTHFUL]
+
+TRUTHFUL_STATUS_false_ready:
+  parent: TRUTHFUL_STATUS
+  statement: "A capability reported ready when unavailable."
+  resolution: never
+
+TRUTHFUL_STATUS_unverified_claim:
+  parent: TRUTHFUL_STATUS
+  statement: "A claim about state with no evidence of its class."
+  resolution: review
+  evidence: { read: sha256, modify: diff, complete: output }
+
+TRUTHFUL_STATUS_no_simulated_completion:
+  parent: TRUTHFUL_STATUS
+  statement: "A statement that repository work, a file read, or a command completed without the corresponding evidence."
+  resolution: never
+  anti_simulation:
+    scope: repository_work_claims
+    require_evidence:
+      file_read: "show content with SHA-256"
+      modification: "show unified diff"
+      completion: "show command output"
+
+TRUTHFUL_STATUS_dishonest_kind:
+  parent: TRUTHFUL_STATUS
+  statement: "A file's declared kind does not match its content."
+  resolution: review
+
+TRUTHFUL_STATUS_silent_test_skip:
+  parent: TRUTHFUL_STATUS
+  statement: "A skipped test with no reason."
+  resolution: review
+
+TRUTHFUL_STATUS_unfinished:
+  parent: TRUTHFUL_STATUS
+  statement: "A TODO or FIXME in a comment, or an ellipsis body standing alone."
+  resolution: review
+  reads_comments: true
+
+TRUTHFUL_STATUS_transient_feedback:
+  parent: TRUTHFUL_STATUS
+  statement: "A loading, success, or failure state that flashes away."
+  resolution: review
+
+TRUTHFUL_STATUS_hidden_system_status:
+  parent: TRUTHFUL_STATUS
+  statement: "The system does not tell the reader what it is doing in time to be useful."
+  resolution: review
+
+EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
+  parent: TRUTHFUL_STATUS
+  statement: "Third-party research is evidence bounded by its source, method, population and date; it does not override constitutional Law, operator intent or operator-owned product identity."
+  severity: error
+  resolution: never
+  mechanical: Master::Review::BaymardLaw.validate_profile!
+  semantic: human
+
+# ---
+
+ROBUSTNESS:
+  node: robustness
+  statement: "Fail safe; security first; least authority; edge cases handled."
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Robustness#all
+  semantic: Master::Law::Robustness#failure_is_survivable
+  enforcement: declared
+  coverage_mode: semantic
+
+ROBUSTNESS_secret_proximity:
+  parent: ROBUSTNESS
+  statement: "A credential-shaped literal in source."
+  resolution: review
+
+ROBUSTNESS_sql_injection:
+  parent: ROBUSTNESS
+  statement: "A SQL call that interpolates a string."
+  resolution: review
+
+ROBUSTNESS_silent_rescue:
+  parent: ROBUSTNESS
+  statement: "A rescue with no body."
+  resolution: review
+
+ROBUSTNESS_unsafe_calls:
+  parent: ROBUSTNESS
+  statement: "Interpolation reaching shell command text."
+  resolution: review
+
+ROBUSTNESS_never_batch_delete:
+  parent: ROBUSTNESS
+  statement: "A glob that removes more than one file."
+  resolution: review
+  note: >
+    The 2026-01-05 incident deleted sixteen files with one glob.
+    The law is the memory of that.
+
+ROBUSTNESS_strict_mode_zsh:
+  parent: ROBUSTNESS
+  statement: "A zsh script with no -euo pipefail."
+  resolution: review
+
+ROBUSTNESS_unbounded_retry:
+  parent: ROBUSTNESS
+  statement: "A retry with no bound."
+  resolution: review
+
+ROBUSTNESS_fail_safe_defaults:
+  parent: ROBUSTNESS
+  statement: "A default that fails open."
+  resolution: review
+
+ROBUSTNESS_portability_is_verified:
+  parent: ROBUSTNESS
+  statement: "A platform, release, architecture or runtime is declared supported without native proof for that target, or platform-specific assumptions leak across a boundary."
+  resolution: review
+
+ROBUSTNESS_production_release_is_pinned:
+  parent: ROBUSTNESS
+  statement: "A production release moves between revisions, or the deployed revision differs from the one proved by its required attestations."
+  resolution: never
+
+ROBUSTNESS_bounded_operation_lifecycle:
+  parent: ROBUSTNESS
+  statement: "A timeout bounds the direct child but leaves owned descendants, inherited pipes, readers or cleanup unbounded."
+  resolution: never
+
+ROBUSTNESS_proactive_defect_audit:
+  parent: ROBUSTNESS
+  statement: "An audit stops at the reported incident or changed lines without examining the complete high-risk boundary for the same defect class."
+  resolution: review
+
+ROBUSTNESS_exemption_without_expiry:
+  parent: ROBUSTNESS
+  statement: "A review resolution accepted with no expiry."
+  resolution: never
+
+ROBUSTNESS_expired_exemption:
+  parent: ROBUSTNESS
+  statement: "A review resolution past its expiry still in force."
+  resolution: never
+
+# ---
+
+SINGULARITY:
+  node: singularity
+  statement: "Every fact has one definition. Copies drift silently."
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Universal#singularity
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+
+DRY:
+  parent: SINGULARITY
+  statement: >
+    Don't Repeat Yourself. Every piece of knowledge has one
+    authoritative representation in the system. Repetition of a
+    decision is duplication; repetition of a shape with three different
+    reasons to change is not.
+  resolution: review
+  rule_of_three: >
+    Three or more sites encoding one decision, co-changing for the same
+    reason, consolidate at the owner. Fewer than three, keep the
+    duplication; a wrong abstraction costs more than a repeated line.
+    Three or more lookalike sites serving divergent clients, keep them
+    distinct.
+  lineage: "Hunt & Thomas, The Pragmatic Programmer"
+
+SINGULARITY_one_true_mark:
+  parent: SINGULARITY
+  statement: "Two marks for one meaning."
+  resolution: automatic
+  proof: MASTER/test/test_cosmetic_laws.rb#test_en_dash_range_flags_hyphen_range_in_prose
+
+SINGULARITY_configuration_shape:
+  parent: SINGULARITY
+  statement: "A config that reads as a program."
+  resolution: review
+
+SINGULARITY_LAW_POLICY_HAS_ONE_OWNER:
+  parent: SINGULARITY
+  statement: "Per-Law severity, mode, lifecycle, autofix and reach metadata has one owner in laws.yml#law_catalogue; runtime configuration must not duplicate that policy."
+  resolution: never
+
+
+SINGULARITY_magic_color:
+  parent: SINGULARITY
+  statement: "A raw colour literal outside the token source."
+  resolution: review
+  calibration: measurement_only
+
+# ---
+
+LINEARITY:
+  node: linearity
+  statement: "Sequential flow; minimal branches; one clear path."
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Structural#nesting
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+
+LINEARITY_branch_tangle:
+  parent: LINEARITY
+  statement: "A path that branches more than the problem requires."
+  resolution: review
+
+LINEARITY_navigation_dead_end:
+  parent: LINEARITY
+  statement: "A flow that returns the reader to no clear next state."
+  resolution: review
+
+CURRENT_LOCATION_MARKED:
+  parent: LINEARITY
+  statement: "Navigation marks where the reader is, in markup and in more than colour."
+  severity: error
+  resolution: review
+
+# ---
+
+PROXIMITY:
+  node: proximity
+  statement: "Related things live together; a module is cohesive, not a shelf."
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Meta#file_sprawl
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+
+PROXIMITY_path_purpose:
+  parent: PROXIMITY
+  statement: "A directory nobody owns."
+  resolution: never
+
+PROXIMITY_file_sprawl:
+  parent: PROXIMITY
+  statement: "One concept scattered across files that change together."
+  resolution: review
+
+PROXIMITY_anti_divitis:
+  parent: PROXIMITY
+  statement: "A div that only wraps a div."
+  resolution: automatic
+  proof: MASTER/test/test_web_laws.rb#test_anti_divitis
+
+NEGATIVE_SPACE_GROUPING:
+  parent: PROXIMITY
+  statement: "Space between groups exceeds space within them, and no accidental void opens between content."
+  severity: warning
+  resolution: review
+
+# ---
+
+ABSTRACTION:
+  node: abstraction
+  statement: >
+    Right level; no leaky boundary; appropriate hiding. A boundary
+    that requires the caller to know the implementation has no
+    boundary.
+  severity: error
+  resolution: review
+  mechanical: Master::Law::StructuralQuestions#lazy_class
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+
+ABSTRACTION_lazy_class:
+  parent: ABSTRACTION
+  statement: "A class that only stores attributes is a Hash with a costume."
+  resolution: review
+
+ABSTRACTION_leaky_boundary:
+  parent: ABSTRACTION
+  statement: "A boundary that requires the caller to know the implementation."
+  resolution: review
+
+# ---
+
+DENSITY:
+  node: density
+  statement: "Information-dense; no noise. What is absent cannot be wrong."
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Universal#density
+  semantic: human
+  enforcement: declared
+  coverage_mode: semantic
+
+DENSITY_comments_as_deodorant:
+  parent: DENSITY
+  statement: "A comment that restates the code."
+  resolution: automatic
+  proof: MASTER/test/test_cosmetic_laws.rb#test_comments_as_deodorant
+
+DENSITY_dead_code:
+  parent: DENSITY
+  statement: "Unreachable code."
+  resolution: review
+
+DENSITY_identical_branches:
+  parent: DENSITY
+  statement: "Two identical conditional branches."
+  resolution: automatic
+  proof: MASTER/test/test_lexical_laws.rb#test_identical_branches
+
+DENSITY_no_puts:
+  parent: DENSITY
+  statement: "Library code writing to stdout; a CLI's own output is not a finding."
+  resolution: automatic
+  proof: MASTER/test/test_lexical_laws.rb#test_no_puts
+
+DENSITY_no_debug:
+  parent: DENSITY
+  statement: "Debug output left in."
+  resolution: automatic
+  proof: MASTER/test/test_lexical_laws.rb#test_no_debug
+
+DENSITY_no_ascii_line_art:
+  parent: DENSITY
+  statement: "A line of asterisks is not a separator."
+  resolution: automatic
+  proof: MASTER/test/test_lexical_laws.rb#test_no_ascii_line_art
+
+DENSITY_aesthetic_minimalism:
+  parent: DENSITY
+  statement: "Something remains that can be removed without loss."
+  resolution: review
+  lineage: "Dieter Rams; Mies van der Rohe"
+
+DENSITY_form_follows_function:
+  parent: DENSITY
+  statement: "Decoration that does not serve a purpose."
+  resolution: review
+
+DENSITY_aesthetic_integrity:
+  parent: DENSITY
+  statement: "Appearance does not match function."
+  resolution: review
+
+DENSITY_kanso:
+  parent: DENSITY
+  statement: "Simplicity not achieved; clutter remains."
+  resolution: review
+  lineage: "Japanese aesthetic of kanso"
+
+DENSITY_ma:
+  parent: DENSITY
+  statement: "Negative space treated as a gap rather than a measure."
+  resolution: review
+  lineage: "Japanese aesthetic of ma"
+
+DENSITY_shibui:
+  parent: DENSITY
+  statement: "Something added to be noticed."
+  resolution: review
+  lineage: "Japanese aesthetic of shibui"
+
+DENSITY_wabi_sabi:
+  parent: DENSITY
+  statement: "Imperfection treated as failure."
+  resolution: review
+  lineage: "Japanese aesthetic of wabi-sabi"
+
+DENSITY_yugen:
+  parent: DENSITY
+  statement: "The work states everything and implies nothing."
+  resolution: review
+  lineage: "Japanese aesthetic of yugen"
+
+DENSITY_tadao_ando:
+  parent: DENSITY
+  statement: >
+    Concrete, light, emptiness in tension. Irregular composition;
+    fewer sections than feel necessary; negative space is the
+    composition; delete anything decorative.
+  resolution: review
+
+DENSITY_no_eyebrow_label:
+  parent: DENSITY
+  statement: "A tracked all-caps line above a heading that restates it."
+  resolution: review
+
+DENSITY_no_trailing_arrow:
+  parent: DENSITY
+  statement: "An arrow glyph inside a link's text."
+  resolution: review
+
+DENSITY_no_todo_in_views:
+  parent: DENSITY
+  statement: "A TODO left in a view."
+  resolution: review
+
+CHART_DATA_INK:
+  parent: DENSITY
+  statement: >
+    A chart spends its ink on data: no non-data ornament, no distorted scale,
+    and shared scales across small multiples.
+  severity: warning
+  resolution: review
+
+SELF_EVIDENT_DATA_UNLABELLED:
+  parent: DENSITY
+  statement: >
+    Data whose form says what it is (an email, a phone number, a price, a
+    date) appears without a visible label.
+  severity: info
+  resolution: review
+
+CHROME_AREA_BUDGET:
+  parent: DENSITY
+  statement: >
+    At the top of a page, chrome covers at most a sixth of a phone screen;
+    while the reader reads, it covers nothing but the primary action.
+  severity: warning
+  resolution: review
+
+CHROME_YIELDS_ON_READ:
+  parent: DENSITY
+  statement: >
+    Navigation chrome slides away while the reader reads and returns on
+    scroll-up, edge swipe, focus, page top or a page that cannot scroll, and
+    stays in the accessibility tree throughout.
+  severity: warning
+  resolution: review
+
+SMALLEST_EFFECTIVE_DIFFERENCE:
+  parent: DENSITY
+  statement: "Structure is drawn with the quietest mark that still reads, quieter than the content it frames."
+  severity: warning
+  resolution: review
+
+PAGE_WEIGHT_RATCHET:
+  parent: DENSITY
+  statement: "Each core route's first load stays within a measured byte budget that only ratchets down."
+  severity: error
+  resolution: review
+
+# ---
+
+OPERATOR_RENDERED:
+  node: operator_rendered
+  statement: >
+    Rendered values are operator-owned. The system names the operator's
+    choice; it never substitutes.
+  severity: error
+  resolution: never
+  mechanical: Master::Visual::Identity#substitution
+  semantic: Master::Visual::Identity#operator_declared
+  enforcement: declared
+  coverage_mode: semantic
+
+OPERATOR_RENDERED_aesthetic_substitution:
+  parent: OPERATOR_RENDERED
+  statement: "The system substituted its own aesthetic choice."
+  resolution: never
+
+OPERATOR_RENDERED_paper_not_pure_white:
+  parent: OPERATOR_RENDERED
+  statement: "A brand-export ground is not the declared ground."
+  resolution: never
+
+OPERATOR_RENDERED_contract:
+  parent: OPERATOR_RENDERED
+  statement: "The visual identity contract: signal and stillness."
+  resolution: never
+  source: MASTER/data/tokens.yml#tokens.visual_identity
+  rules:
+    - A first screen has one dominant focal point and one clearly primary next action.
+    - The signal colour marks meaning; it does not replace local product identity.
+    - Motion represents a real state change and has a reduced-motion equivalent.
+    - Surface treatments remain flat; no decorative glow, ornamental shadow, or generic AI gradient.
+    - Real product, garment, person, and media colours remain truthful.
+    - Selected navigation items have an explicit state marker and remain understandable without colour.
+    - Brand marks are original artwork; wordmark typography does not replace semantic page headings.
+    - Generated artwork keeps critical copy editable and out of generative photographic pixels.
+    - Never copy another work's wordmark, key art, characters, or protected expression.
+
+# ---
+
+INTER_MODEL_CONTRACT:
+  node: inter_model_contract
+  statement: >
+    Every council turn uses a validated structured request and returns
+    evidence-backed findings.
+  severity: error
+  resolution: never
+  mechanical: Master::Law::InterModel#contract
+  semantic: Master::Law::InterModel#sourced
+  enforcement: declared
+  coverage_mode: deterministic
+  detector_ids: [INTER_MODEL_CONTRACT]
+
+INTER_MODEL_CONTRACT_invalid_envelope:
+  parent: INTER_MODEL_CONTRACT
+  statement: "A council turn without a validated structured request."
+  resolution: never
+
+INTER_MODEL_CONTRACT_unsourced_finding:
+  parent: INTER_MODEL_CONTRACT
+  statement: "A finding that names no evidence."
+  resolution: never
+
+INTER_MODEL_CONTRACT_simulated_concurrence:
+  parent: INTER_MODEL_CONTRACT
+  statement: "A peer turn repeated after invalidity reported as agreement."
+  resolution: never
+
+# ==========================================================================
+# 3. CONSTITUTIONAL SUPPORT
+# ==========================================================================
+
+SACRED_AUTHORSHIP:
+  root: least_authority
+  statement: "No autonomous write to a path declared sacred by the governing Soul manifest."
+  severity: error
+  resolution: never
+  mechanical: Soul.refuse_write!
+  semantic: Soul.load!
+
+SACRED_AUTHORSHIP_autonomous_sacred_write:
+  parent: SACRED_AUTHORSHIP
+  statement: "An automated writer touching a path declared sacred by soul.yml."
+  resolution: never
+
+SACRED_AUTHORSHIP_soul_hash_mismatch:
+  parent: SACRED_AUTHORSHIP
+  statement: "A soul.yml whose body_sha256 does not match the loaded soul.rb."
+  resolution: never
+
+SACRED_AUTHORSHIP_soul_paths_are_soul_owned:
+  parent: SACRED_AUTHORSHIP
+  statement: "Protected paths are declared only by soul.yml#absolute.sacred_paths and cannot be shadowed by laws.yml, runtime metadata or a Ruby constant."
+  resolution: never
+
+# ---
+
+SOUL_SUBORDINATE_TO_LAW:
+  root: least_authority
+  statement: "Soul owns system identity, preservation principles and source authority; laws.yml alone owns individual Law identities and requirement statements. The Soul manifest must not create or redefine those Law records."
+  severity: error
+  resolution: never
+  mechanical: Master::ConfigurationGuard.validate_soul
+  semantic: human
+
+SOUL_SUBORDINATE_TO_LAW_no_parallel_precedence:
+  parent: SOUL_SUBORDINATE_TO_LAW
+  statement: "The Law catalogue, Ruby identity code or execution metadata declares a competing source-authority order instead of reading soul.yml#authority_order."
+  resolution: never
+
+SOUL_SUBORDINATE_TO_LAW_temperament_is_not_authority:
+  parent: SOUL_SUBORDINATE_TO_LAW
+  statement: "A persona, voice or delivery preference overrides Soul identity, preservation principles, source authority or an individual Law requirement."
+  resolution: never
+
+SOUL_SUBORDINATE_TO_LAW_no_shadow_vocabulary:
+  parent: SOUL_SUBORDINATE_TO_LAW
+  statement: "Soul duplicates a per-Law severity, priority, root or enforcement vocabulary owned by laws.yml."
+  resolution: review
+
+# ---
+
+DUAL_MODALITY:
+  root: visible_state
+  statement: >
+    Every law is enforced in both modalities. A law only mechanically
+    enforced has a semantic gap; only semantically enforced has a
+    mechanical gap. Both are measured; neither is zero; neither grows.
+  severity: warning
+  resolution: review
+  mechanical: Master::Lint#both_modalities
+  semantic: human
+
+DUAL_MODALITY_mechanical_gap:
+  parent: DUAL_MODALITY
+  statement: "A law whose mechanical detector is human."
+  resolution: never
+
+DUAL_MODALITY_semantic_gap:
+  parent: DUAL_MODALITY
+  statement: "A law whose semantic test is human."
+  resolution: never
+
+# ---
+
+FINDING_HYGIENE:
+  root: visible_state
+  statement: >
+    A finding is a hypothesis until evidence confirms it. A finding that
+    could not measure its subject has not passed; it is inconclusive. An
+    inconclusive finding never clears a ratchet.
+  severity: error
+  resolution: never
+  mechanical: Master::Lint#finding_shape
+  semantic: Master::Review#finding_evidence
+
+FINDING_HYGIENE_unsourced_finding:
+  parent: FINDING_HYGIENE
+  statement: "A finding with no evidence of its class."
+  resolution: never
+
+FINDING_HYGIENE_inconclusive_as_pass:
+  parent: FINDING_HYGIENE
+  statement: "A finding recorded as pass on inconclusive evidence."
+  resolution: never
+
+BAYMARD_RESEARCH_BOUNDARY:
+  parent: FINDING_HYGIENE
+  statement: >
+    Public usability research, including Baymard's ecommerce research, informs
+    independently worded and context-specific assessments. It is evidence, not
+    constitutional authority: it does not override operator-owned product
+    identity, the needs of the actual audience, or observed behaviour. It never
+    implies affiliation or certification and does not reproduce proprietary
+    guideline text, screenshots or benchmark material.
+  severity: error
+  resolution: never
+  mechanical: Master::Review::BaymardLaw.validate_profile!
+  semantic: operator_context_and_observed_user_needs
+  source: https://baymard.com/research/methodology
+
+BAYMARD_CART_ABANDONMENT_CONTEXT:
+  parent: BAYMARD_RESEARCH_BOUNDARY
+  statement: >
+    Cart abandonment is an outcome, not a diagnosis. Distinguish browsing and
+    unready intent from avoidable friction; never treat an aggregate abandonment
+    rate alone as proof of a design defect or as permission to coerce a purchase.
+  severity: warning
+  resolution: review
+  source: https://baymard.com/lists/cart-abandonment-rate
+
+BAYMARD_CHECKOUT_COST_TRANSPARENCY:
+  parent: BAYMARD_RESEARCH_BOUNDARY
+  statement: >
+    Show the current order total and explain delivery charges, fees and taxes
+    before commitment wherever the service can calculate them. Label estimates
+    as estimates; do not reveal avoidable charges only at the final step.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark
+
+BAYMARD_INLINE_VALIDATION_RECOVERY:
+  parent: BAYMARD_RESEARCH_BOUNDARY
+  statement: >
+    Form validation supports recovery: do not report an error before a user has
+    had a reasonable chance to enter a value, identify the specific problem,
+    clear or update feedback when corrected, and preserve unrelated valid input.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/inline-form-validation
+
+BAYMARD_USER_AGENCY_OVER_CONVERSION:
+  parent: BAYMARD_RESEARCH_BOUNDARY
+  statement: >
+    A conversion gain is not acceptable when achieved through concealed costs,
+    deceptive urgency, unnecessary forced account creation, preselected extras,
+    obstructed refusal or cancellation, or misleading consent. Preserve a clear
+    and usable path to decline, revise or leave.
+  severity: error
+  resolution: review
+  source: https://baymard.com/research-articles/current-state-of-checkout-ux
+
+# ---
+
+ATTESTATION_IS_NOT_FINDING:
+  root: visible_state
+  statement: >
+    An attestation is a first-person declaration whose evidence is the
+    operator's signature, not runtime measurement. The loader records
+    it, the trace cites it, the review does not overturn it. Presenting
+    an attestation as a finding is a false claim about state; it is a
+    violation of truthful_status. Presenting a finding as an
+    attestation is the same violation from the other side.
+  severity: error
+  resolution: never
+  mechanical: Master::Law::Attestation#class
+  semantic: Master::Law::Attestation#evidence_class
+
+ATTESTATION_IS_NOT_FINDING_as_finding:
+  parent: ATTESTATION_IS_NOT_FINDING
+  statement: "An attestation presented as a finding."
+  resolution: never
+
+ATTESTATION_IS_NOT_FINDING_as_attestation:
+  parent: ATTESTATION_IS_NOT_FINDING
+  statement: "A finding presented as an attestation."
+  resolution: never
+
+# ==========================================================================
+# 4. THE NAMED PRINCIPLES
+# ==========================================================================
+
+KISS:
+  root: no_surplus
+  statement: >
+    Keep It Simple, Stupid. The simplest solution that works. Every
+    layer of indirection, every abstraction, every configuration option
+    must earn its existence by removing more than it adds.
+  severity: warning
+  resolution: review
+  mechanical: composite (BOUNDED_LOAD, DENSITY, YAGNI)
+  semantic: human
+  lineage: "Kelly Johnson, Lockheed Skunk Works"
+
+YAGNI:
+  root: no_surplus
+  statement: >
+    You Aren't Gonna Need It. Build only what the current requirement
+    demands. An unused feature is not an investment; it is code that
+    will drift, mislead a reader, and cost more to remove than it saved
+    to write.
+  severity: warning
+  resolution: review
+  mechanical: composite (DENSITY_dead_code, SPECULATIVE_GENERALITY)
+  semantic: human
+  lineage: "Ron Jeffries, Extreme Programming"
+
+POLA:
+  root: least_surprise
+  statement: >
+    Principle of Least Astonishment. A system behaves the way a person
+    who has not read the source will expect. If a necessary feature
+    astonishes, redesign the feature rather than document the surprise.
+  severity: warning
+  resolution: review
+  mechanical: composite (POLA_mental_models, POLA_intuitive_navigation, POLA_bem_in_views, POLA_meaningless_name)
+  semantic: human
+  lineage: "IEEE Standard 610.12; colloquially 'Principle of Least Surprise'"
+
+POLA_mental_models:
+  parent: POLA
+  statement: "The system behaves in a way the operator did not expect, and does not name which will change."
+  resolution: review
+
+POLA_intuitive_navigation:
+  parent: POLA
+  statement: "A reader cannot predict where the next thing lives."
+  resolution: review
+
+POLA_bem_in_views:
+  parent: POLA
+  statement: "A view class that does not follow block-element-modifier."
+  resolution: review
+
+POLA_meaningless_name:
+  parent: POLA
+  statement: "A name that does not state the present meaning of the thing."
+  resolution: review
+
+# ---
+
+SOLID:
+  root: one_responsibility
+  statement: >
+    Five object-oriented design principles. Each exists because a
+    class designed without it becomes brittle under the next change.
+  severity: error
+  resolution: review
+  mechanical: composite (SRP, OCP, LSP, ISP, DIP)
+  semantic: human
+  lineage: "Robert C. Martin"
+
+SRP:
+  parent: SOLID
+  statement: >
+    Single Responsibility Principle. A class has one reason to change.
+    A class with two reasons to change is changed for one and broken
+    for the other.
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Structural#responsibility
+  semantic: human
+
+SRP_no_god_class:
+  parent: SRP
+  statement: "A class with one name and ten responsibilities."
+  resolution: review
+
+SRP_feature_envy:
+  parent: SRP
+  statement: "A method that reaches into another object's data more than its own."
+  resolution: review
+
+OCP:
+  parent: SOLID
+  statement: >
+    Open/Closed Principle. A unit is open for extension and closed for
+    modification. A new requirement changes behaviour by adding a
+    variant, not by editing a decision the unit already made.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#open_closed
+  semantic: human
+
+LSP:
+  parent: SOLID
+  statement: >
+    Liskov Substitution Principle. A subtype is substitutable for its
+    base type without altering correctness. A subclass that narrows
+    preconditions or widens postconditions is not a subtype; it is an
+    impostor.
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Structural#liskov
+  semantic: human
+
+ISP:
+  parent: SOLID
+  statement: >
+    Interface Segregation Principle. A client depends only on the
+    methods it uses. An interface that forces a client to depend on
+    methods it never calls has bound the client to changes it does not
+    care about.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#interface_segregation
+  semantic: human
+
+DIP:
+  parent: SOLID
+  statement: >
+    Dependency Inversion Principle. Depend on abstractions, not on
+    concretions. The high-level policy of the system does not know the
+    low-level mechanism that carries it out.
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Structural#dependency_inversion
+  semantic: human
+
+# ---
+
+CQS:
+  root: one_responsibility
+  statement: >
+    Command-Query Separation. A method either answers a question or
+    changes a thing, not both. A method that does both cannot be called
+    without a side effect, which means it cannot be called safely from
+    anywhere that needs only the answer.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#cqs
+  calibration: measurement_only
+  semantic: human
+  lineage: "Bertrand Meyer"
+
+# ---
+
+LAW_OF_DEMETER:
+  root: stable_contract
+  statement: >
+    Only talk to your immediate friends. A method calls methods on
+    itself, its parameters, objects it creates, and its own components.
+    A method that reaches through a chain of strangers has bound itself
+    to the shape of an object it does not own.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#law_of_demeter
+  semantic: human
+  lineage: "Lieberherr & Holland, 1987"
+
+LAW_OF_DEMETER_train_wreck:
+  parent: LAW_OF_DEMETER
+  statement: "A chain of accessors that traverses more than one intermediary."
+  resolution: review
+
+# ---
+
+STRUNK_WHITE:
+  parent: DENSITY
+  statement: >
+    The Elements of Style. Prose is a machine for transmitting thought
+    from one mind to another; every word the reader must read and does
+    not need is a cost the writer imposed on the reader.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Prose#all
+  semantic: human
+  lineage: "Strunk & White, The Elements of Style"
+
+STRUNK_WHITE_omit_needless_words:
+  parent: STRUNK_WHITE
+  statement: "A qualifier that does not change the meaning."
+  resolution: review
+  english_leeches: [very, rather, really, quite, pretty, somewhat, just, basically, simply]
+  english_keep:
+    - 'rather than'
+    - 'just (?:as|because|before|after|when)'
+    - '(?:not|never)\\s+(?:just|simply|only)'
+    - 'just\\s+(?:\\w+ed|found|said|ran|saw|built)'
+    - '(?:the|this|that|its) very'
+  english_absent_on_purpose:
+    actually: "Contrastive use is this repo's recurring subject; 85 hits, all that use."
+    literally: "Same reason. 4 hits, all that use."
+  norwegian_leeches: [veldig, svært, ganske, nokså, temmelig, virkelig, simpelthen]
+  norwegian_keep: ['heller enn', 'ikke bare']
+  norwegian_absent_on_purpose:
+    bare: >
+      Reads as English just but the restrictive sense is the only one
+      present: all eleven hits were "du kan bare slette", "bare
+      medlemmer poster", "Dating er bare for voksne". Bokmål has no
+      other word for that "only"; deleting it inverts the sentence.
+
+STRUNK_WHITE_active_voice:
+  parent: STRUNK_WHITE
+  statement: "The actor is not the subject of the sentence."
+  resolution: review
+  passive:
+    auxiliary: '(?:was|were|been)'
+    participle: '(?:\\w+ly\\s+)?\\w+ed'
+    agent: 'by'
+
+STRUNK_WHITE_positive_form:
+  parent: STRUNK_WHITE
+  statement: "A negation where an affirmation states the same thing more directly."
+  resolution: review
+
+STRUNK_WHITE_definite_specific_concrete:
+  parent: STRUNK_WHITE
+  statement: "An abstraction where a definite, specific, concrete word is available."
+  resolution: review
+
+STRUNK_WHITE_parallel_structure:
+  parent: STRUNK_WHITE
+  statement: "Coordinated elements that do not share grammatical form."
+  resolution: review
+
+STRUNK_WHITE_one_topic_paragraph:
+  parent: STRUNK_WHITE
+  statement: "A paragraph with more than one idea."
+  resolution: review
+
+STRUNK_WHITE_keep_related_together:
+  parent: STRUNK_WHITE
+  statement: "Words that modify each other separated by intervening matter."
+  resolution: review
+
+CHROME_COPY_CALM:
+  parent: STRUNK_WHITE
+  statement: "Interface copy states facts without exclamation marks."
+  severity: warning
+  resolution: review
+
+ACTION_LABEL_BRIEF:
+  parent: STRUNK_WHITE
+  statement: "A button or action label is at most three words and leads with the verb."
+  severity: info
+  resolution: review
+
+# ---
+
+BRINGHURST:
+  parent: PROPORTION
+  statement: >
+    The Elements of Typographic Style. Typography exists to honour
+    content. The page is a machine for reading, and its measure,
+    rhythm, scale, and alignment are the mechanism.
+  severity: info
+  resolution: review
+  mechanical: Master::Law::Typography#all
+  semantic: human
+  lineage: "Robert Bringhurst, The Elements of Typographic Style"
+
+BRINGHURST_measure:
+  parent: BRINGHURST
+  statement: "Prose measured outside 45-75 characters; 66 where one number must serve. Terminal prose wraps at 72."
+  resolution: review
+
+BRINGHURST_rhythm:
+  parent: BRINGHURST
+  statement: "Rhythm not held; blank lines padding rather than separating."
+  resolution: review
+
+BRINGHURST_line_breaks:
+  parent: BRINGHURST
+  statement: "Line break at a non-word boundary; a ragged edge treated as a saw."
+  resolution: review
+
+BRINGHURST_scale:
+  parent: BRINGHURST
+  statement: "More than two weights on a terminal; emphasis louder than structure."
+  resolution: review
+
+BRINGHURST_alignment:
+  parent: BRINGHURST
+  statement: "Prose justified or space-padded into a fake table."
+  resolution: review
+
+QUOTES_BY_LOCALE:
+  parent: BRINGHURST
+  statement: "Quotation marks and apostrophes in web copy are the locale's typographic marks, never straight quotes."
+  severity: warning
+  resolution: review
+
+PARENTHETICAL_DASH:
+  parent: BRINGHURST
+  statement: >
+    A dash that sets off a phrase in web copy is a spaced en dash; a hyphen
+    or a double hyphen is never a dash.
+  severity: warning
+  resolution: review
+
+TRUE_SYMBOLS:
+  parent: BRINGHURST
+  statement: "A dimension, a negative number, a copyright or a trademark in web copy uses its true symbol."
+  severity: info
+  resolution: review
+
+SINGLE_SENTENCE_SPACE:
+  parent: BRINGHURST
+  statement: "Sentences in copy are separated by one word space."
+  severity: info
+  resolution: review
+
+NUMBER_UNIT_UNBROKEN:
+  parent: BRINGHURST
+  statement: "A number and its unit, or the groups of one number, are one unbreakable word."
+  severity: warning
+  resolution: review
+NUMBER_GROUPED_IN_THOUSANDS:
+  parent: BRINGHURST
+  statement: "A number of five or more digits groups its digits three by three from the right with an unbreakable space."
+  severity: info
+  resolution: review
+
+NO_SPACED_EM_DASH:
+  parent: BRINGHURST
+  statement: "Norwegian copy never sets an em dash; an aside is a spaced en dash."
+  severity: warning
+  resolution: review
+
+ELLIPSIS_SPACE_BEFORE:
+  parent: BRINGHURST
+  statement: "An ellipsis in copy breathes: a space before the three dots."
+  severity: info
+  resolution: review
+
+
+PARAGRAPH_SEPARATION_ONE_DEVICE:
+  parent: BRINGHURST
+  statement: >
+    Paragraphs are separated by an indent or by space, never both, and the
+    first paragraph is never indented.
+  severity: warning
+  resolution: review
+
+PRINT_PAGE_CANON:
+  parent: BRINGHURST
+  statement: "A printed BIZ page sets its margins in classical proportion, inner smallest and foot largest."
+  severity: warning
+  resolution: review
+
+EMPHASIS_ONE_DEVICE:
+  parent: BRINGHURST
+  statement: >
+    Emphasis uses one device at a time; bold and italic are never combined,
+    and underline is reserved for links.
+  severity: warning
+  resolution: review
+
+TYPE_SIZE_ECONOMY:
+  parent: BRINGHURST
+  statement: >
+    A rendered screen sets its text in at most four sizes and two weights,
+    all taken from the shared type tokens.
+  severity: warning
+  resolution: review
+
+SIZE_COMPENSATED_SPACING:
+  parent: BRINGHURST
+  statement: "Leading and tracking tighten as type grows and open as it shrinks."
+  severity: warning
+  resolution: review
+
+NO_FAUX_TYPE:
+  parent: BRINGHURST
+  statement: >
+    Every weight, style and caps variant a page asks for exists in the face
+    that paints it; the browser never synthesizes or stretches letters.
+  severity: warning
+  resolution: review
+
+CAPS_RUN_SHORT:
+  parent: BRINGHURST
+  statement: "All-caps text is shorter than one line and, at display size, is tracked."
+  severity: warning
+  resolution: review
+
+TYPEFACE_PER_ROLE:
+  parent: BRINGHURST
+  statement: "One sans family sets UI and text; monospace is only for chat, terminal and code; BIZ may use serifs."
+  severity: warning
+  resolution: review
+
+TABULAR_NUMERALS:
+  parent: BRINGHURST
+  statement: "Counts, prices, times and table columns use tabular figures."
+  severity: warning
+  resolution: review
+
+HEADING_WRAP_BALANCE:
+  parent: BRINGHURST
+  statement: "A heading never ends on one stray word; it wraps balanced."
+  severity: warning
+  resolution: review
+
+# ---
+
+RAILS_DOCTRINE:
+  root: stewardship
+  statement: >
+    The Rails Doctrine. A framework's posture toward its programmer is
+    a design decision, and Rails chose: optimize for programmer
+    happiness, trust convention over configuration, and treat the
+    whole stack as one integrated system rather than a bag of parts.
+  severity: info
+  resolution: review
+  mechanical: Master::Law::Rails#doctrine
+  semantic: human
+  lineage: "David Heinemeier Hansson, The Rails Doctrine"
+
+RAILS_DOCTRINE_optimize_for_programmer_happiness:
+  parent: RAILS_DOCTRINE
+  statement: "A design choice that makes the programmer less happy for the machine's benefit, without measured justification."
+  resolution: review
+
+RAILS_DOCTRINE_convention_over_configuration:
+  parent: RAILS_DOCTRINE
+  statement: "A configuration where a convention the reader already knows would serve."
+  resolution: review
+
+RAILS_DOCTRINE_omakase:
+  parent: RAILS_DOCTRINE
+  statement: "A choice assembled from parts when the chef's menu is one decision the operator can change wholesale."
+  resolution: review
+
+RAILS_DOCTRINE_no_one_paradigm:
+  parent: RAILS_DOCTRINE
+  statement: "A paradigm enforced where the problem does not demand it."
+  resolution: review
+
+RAILS_DOCTRINE_beautiful_code:
+  parent: RAILS_DOCTRINE
+  statement: "Code that works but cannot be read."
+  resolution: review
+
+RAILS_DOCTRINE_sharp_knives:
+  parent: RAILS_DOCTRINE
+  statement: "A blunt tool where a sharp one with a clear edge would serve the expert better."
+  resolution: review
+
+RAILS_DOCTRINE_integrated_systems:
+  parent: RAILS_DOCTRINE
+  statement: "A system split into parts that must be developed, deployed, and reasoned about separately without a measured reason."
+  resolution: review
+
+RAILS_DOCTRINE_progress_over_stability:
+  parent: RAILS_DOCTRINE
+  statement: "A stability held at the cost of a progress the operator has not chosen."
+  resolution: review
+
+RAILS_DOCTRINE_whole_parachute:
+  parent: RAILS_DOCTRINE
+  statement: "A layer adopted partially, so the reader must hold both the framework's shape and the shape it was meant to replace."
+  resolution: review
+
+# ==========================================================================
+# 5. THE REMAINING UNIVERSAL LAWS
+# ==========================================================================
+
+BOUNDED_LOAD:
+  root: bounded_load
+  statement: >
+    Never exceed what the reader can hold at once. Capacity is a
+    property of people, not of the design.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#bounds
+  semantic: human
+
+BOUNDED_LOAD_small_functions:
+  parent: BOUNDED_LOAD
+  statement: "A method requiring a notebook."
+  resolution: review
+
+BOUNDED_LOAD_small_files:
+  parent: BOUNDED_LOAD
+  statement: "A file with more than one concept."
+  resolution: review
+
+BOUNDED_LOAD_nesting_depth:
+  parent: BOUNDED_LOAD
+  statement: "Nesting deeper than the reader can follow."
+  resolution: review
+
+BOUNDED_LOAD_few_arguments:
+  parent: BOUNDED_LOAD
+  statement: "A method with more than three arguments."
+  resolution: review
+
+BOUNDED_LOAD_choice_overload:
+  parent: BOUNDED_LOAD
+  statement: "More choices than the reader can decide between."
+  resolution: review
+  lineage: "Hick's law; Miller's law"
+
+BOUNDED_LOAD_abc_size:
+  parent: BOUNDED_LOAD
+  statement: "A class whose burden exceeds the reader's reach."
+  resolution: review
+
+# ---
+
+PROPORTION:
+  root: proportion
+  statement: >
+    Relationships follow a declared scale, never an arbitrary value.
+    A number with no derivation cannot be checked or changed as a set.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Surface#proportion
+  semantic: human
+
+PROPORTION_eight_px_rhythm:
+  parent: PROPORTION
+  statement: "Vertical spacing not on the 8px base."
+  resolution: review
+
+PROPORTION_contrast:
+  parent: PROPORTION
+  statement: "Hierarchy that requires squinting."
+  resolution: review
+
+DIALECT_CONTRAST_PARITY:
+  parent: PROPORTION_contrast
+  statement: "Each colour role keeps the same contrast in a dialect's light and dark modes."
+  severity: warning
+  resolution: review
+
+MUTED_INK_FROM_GROUND:
+  parent: PROPORTION_contrast
+  statement: "Secondary text on a coloured ground is a tint of that ground or of the ink, never a neutral grey."
+  severity: warning
+  resolution: review
+
+PROPORTION_hardcoded_absolute_path:
+  parent: PROPORTION
+  statement: "A machine-specific path in code."
+  resolution: review
+
+ONE_PRIMARY_ACTION:
+  parent: PROPORTION
+  statement: "A view has exactly one primary action, and the eye finds it first."
+  severity: warning
+  resolution: review
+
+ALIGNMENT_NEAR_MISS:
+  parent: PROPORTION
+  statement: "Elements that look aligned are aligned to the pixel, and a narrow screen uses at most three left edges."
+  severity: error
+  resolution: review
+
+# ---
+
+REACH:
+  root: reach
+  statement: >
+    Whoever arrives can operate it - by keyboard, by screen reader, by
+    voice, with a colour deficiency, on a phone at arm's length, in the
+    environment the code runs in.
+  severity: error
+  resolution: review
+  mechanical: Master::Law::Reach#all
+  semantic: human
+
+REACH_aria_labels:
+  parent: REACH
+  statement: "An interactive element with no accessible name."
+  resolution: review
+
+REACH_img_alt:
+  parent: REACH
+  statement: "An image with no alt text, not marked decorative."
+  resolution: review
+
+REACH_form_label:
+  parent: REACH
+  statement: "A form input with no label."
+  resolution: review
+
+REACH_focus_visible:
+  parent: REACH
+  statement: "A focusable element with no visible focus state."
+  resolution: review
+
+REACH_skip_to_main:
+  parent: REACH
+  statement: "A layout that traps the keyboard before the main content."
+  resolution: review
+
+REACH_html_lang:
+  parent: REACH
+  statement: "An HTML document with no language declared."
+  resolution: review
+
+REACH_touch_target_min:
+  parent: REACH
+  statement: "A target too small to hit."
+  resolution: review
+
+REACH_reduced_motion:
+  parent: REACH
+  statement: "An animation with no reduced-motion equivalent."
+  resolution: review
+
+REACH_direct_manipulation:
+  parent: REACH
+  statement: "A gesture that moves a proxy instead of the thing under the input."
+  resolution: review
+
+REACH_gesture_ownership:
+  parent: REACH
+  statement: "A direct gesture that does not declare its relationship to scrolling."
+  resolution: review
+
+REACH_non_native_tool:
+  parent: REACH
+  statement: "A zsh script reaching for a GNU text tool not on the host."
+  resolution: review
+  banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]
+  replacements:
+    sed: "Use the Edit tool, zsh parameter expansion or Ruby in-place editing."
+    awk: "Use zsh split/join expansions or Ruby field parsing."
+    tr: "Use zsh case conversion or Ruby String#tr."
+    cut: "Use zsh split expansion or Ruby field parsing."
+    find: "Use zsh globs or git ls-files."
+    head: "Use the Read tool with a line limit or zsh array slicing."
+    tail: "Use the Read tool with an offset or zsh array slicing."
+    wc: "Use Ruby File.foreach counts or zsh array lengths."
+    perl: "Use Ruby."
+    python: "Use Ruby."
+    bash: "Use zsh."
+
+GESTURE_HAS_TAP_EQUIVALENT:
+  parent: REACH
+  statement: "Every swipe, drag or path gesture has a single-tap control that does the same thing."
+  severity: warning
+  resolution: review
+
+AUTO_MOTION_PAUSABLE:
+  parent: REACH
+  statement: "Content that moves, advances or updates by itself for more than five seconds has a pause control."
+  severity: warning
+  resolution: review
+
+ORIENTATION_UNLOCKED:
+  parent: REACH
+  statement: "No app locks the screen's orientation unless the task needs it."
+  severity: warning
+  resolution: review
+
+FIELD_PURPOSE_DECLARED:
+  parent: REACH
+  statement: "A field that asks for personal data declares its purpose, so the device can fill it."
+  severity: warning
+  resolution: review
+
+AUTH_ALLOWS_PASTE:
+  parent: REACH
+  statement: "Signing in never blocks paste, password managers or one-time-code autofill, and never asks for a puzzle."
+  severity: error
+  resolution: review
+
+LABEL_IN_NAME:
+  parent: REACH
+  statement: "A control's accessible name contains its visible text."
+  severity: warning
+  resolution: review
+
+ICON_CARRIES_WORD:
+  parent: REACH
+  statement: "An icon-only control is limited to the few icons everyone reads; every other icon carries a word."
+  severity: warning
+  resolution: review
+
+FOCUS_NOT_OBSCURED:
+  parent: REACH
+  statement: "A focused control is never hidden behind sticky or fixed chrome."
+  severity: error
+  resolution: review
+
+PRIMARY_ACTION_IN_THUMB_REACH:
+  parent: REACH
+  statement: "On a phone, a page's primary action sits where one thumb reaches it."
+  severity: warning
+  resolution: review
+
+COLOR_NOT_SOLE_SIGNAL:
+  parent: REACH
+  statement: "State is never carried by colour alone."
+  severity: error
+  resolution: review
+
+LINK_DISTINGUISHABLE:
+  parent: REACH
+  statement: >
+    A link inside running text is underlined, or differs from the text around
+    it by 3:1 and gains a non-colour cue on hover and focus.
+  severity: error
+  resolution: review
+
+NON_TEXT_CONTRAST:
+  parent: REACH
+  statement: >
+    The boundary of a control, an icon that acts, and a focus indicator each
+    reach 3:1 against what is around them.
+  severity: error
+  resolution: review
+
+TEXT_SPACING_RESILIENCE:
+  parent: REACH
+  statement: >
+    Text survives the reader's own spacing: nothing clips or overlaps when
+    line, paragraph, letter and word spacing are raised.
+  severity: error
+  resolution: review
+
+FLASH_THRESHOLD:
+  parent: REACH
+  statement: "Nothing on screen flashes more than three times in any second."
+  severity: error
+  resolution: review
+
+PERSUASION_truth_bearing:
+  parent: REACH
+  statement: >-
+    Any scarcity, urgency, social proof, reference price or default shown to a
+    user is computed from a source of truth in the database and remains true at
+    render time. A persuasive element that requires a fact to be false, hidden,
+    or louder than the fact it decorates fails this Law.
+  resolution: review
+
+# ---
+
+STEWARDSHIP:
+  root: stewardship
+  statement: >
+    A change leaves what it touched better, and answers to what was
+    already there. Nobody arrives at an empty site.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Stewardship#all
+  semantic: human
+
+STEWARDSHIP_chestertons_fence:
+  parent: STEWARDSHIP
+  statement: "A fence removed without naming what it kept out."
+  resolution: review
+
+STEWARDSHIP_mono_no_aware:
+  parent: STEWARDSHIP
+  statement: "A system that pretends nothing is temporary."
+  resolution: review
+
+PRESERVE_FIRST:
+  parent: STEWARDSHIP
+  statement: "Preserve working code and behaviour before improving it; never break what exists to build what does not yet exist."
+  resolution: review
+
+STEWARDSHIP_utilitas:
+  parent: STEWARDSHIP
+  statement: "A thing with no purpose a person can name."
+  resolution: review
+
+STEWARDSHIP_firmitas:
+  parent: STEWARDSHIP
+  statement: "A structure that does not visibly stand."
+  resolution: review
+
+STEWARDSHIP_venustas:
+  parent: STEWARDSHIP
+  statement: "Beauty added rather than what remains when the thing is fully itself."
+  resolution: review
+
+# ==========================================================================
+# 6. THE TRANSFORMATIONS
+# ==========================================================================
+
+DECOUPLE:
+  root: abstraction
+  statement: "Remove unnecessary dependencies after flattening exposes them."
+  severity: error
+  resolution: review
+  after: [FLATTEN, LINEARITY]
+
+DEFRAG:
+  root: proximity
+  statement: "Bring one concept back together when it is scattered without cause."
+  severity: error
+  resolution: review
+  after: [DENSITY_dead_code]
+
+FLATTEN:
+  root: no_surplus
+  statement: "Remove needless wrappers, delegation layers, and empty directories."
+  severity: warning
+  resolution: review
+
+HOIST:
+  root: one_source
+  statement: "Lift a shared value to its owner before merging its consumers."
+  severity: warning
+  resolution: review
+
+MERGE:
+  root: one_source
+  statement: "Join equivalent units only after checking their reason to change."
+  severity: warning
+  resolution: review
+  after: [HOIST]
+
+RELOCATE:
+  root: proximity
+  statement: "Put a thing beside the concept that owns it."
+  severity: warning
+  resolution: review
+
+REMOVE:
+  root: no_surplus
+  statement: "Delete only proven dead, redundant, historical, or transitional material."
+  severity: warning
+  resolution: review
+
+RENAME:
+  root: least_surprise
+  statement: "Name present meaning. Rename when the existing name misleads."
+  severity: warning
+  resolution: review
+
+REORDER:
+  root: one_responsibility
+  statement: "Put primary facts before secondary detail and exceptions."
+  severity: info
+  resolution: review
+
+REFLOW:
+  root: proportion
+  statement: "Change line boundaries to follow structure, after structural edits."
+  severity: info
+  resolution: review
+
+SIMPLIFY:
+  root: no_surplus
+  statement: "Pull out incidental complexity after structural changes."
+  severity: warning
+  resolution: review
+
+SPLIT:
+  root: one_responsibility
+  statement: "Separate unlike concerns before consolidating equivalent units."
+  severity: warning
+  resolution: review
+
+RECOMMEND:
+  root: visible_state
+  statement: "When evidence is insufficient for a safe automatic change, recommend the smallest useful change instead of guessing."
+  severity: info
+  resolution: never
+
+# ==========================================================================
+# 7. DATA: KINDS, RATCHETS, LINTS, AND THE FILE'S OWN METADATA
+# ==========================================================================
+
+KIND_PRODUCTION:
+  root: visible_state
+  statement: "A production file. A review on a finding is permanent until the operator re-reviews."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: never
+
+KIND_FIXTURE:
+  root: visible_state
+  statement: "A fixture. A review on a finding expires in 90 days and returns if not re-accepted."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 90d
+
+KIND_ERROR_PAGE:
+  root: visible_state
+  statement: "A static error page. A review on a finding expires in one year."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 1y
+
+KIND_MAILER:
+  root: visible_state
+  statement: "A mailer template. A review on a finding expires in one year."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 1y
+
+KIND_GENERATOR:
+  root: visible_state
+  statement: "A code generator. A review on a finding expires in one year."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 1y
+
+KIND_MIGRATION:
+  root: visible_state
+  statement: "A database migration. A review on a finding expires in one year."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 1y
+
+KIND_BASE_MAINTENANCE:
+  root: visible_state
+  statement: "A script sourced into the base system's maintenance. A review expires in one year."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 1y
+
+KIND_EXEMPLAR:
+  root: visible_state
+  statement: "An exemplar file written to be caught by a detector. A review expires in 90 days."
+  severity: info
+  resolution: never
+  default_resolution: review
+  expiry: 90d
+
+KIND_UNREGISTERED:
+  root: visible_state
+  statement: "A file whose kind is not in this registry. A finding under TRUTHFUL_STATUS_dishonest_kind."
+  severity: error
+  resolution: review
+
+# ---
+
+RATCHET_REACH_UNREACHABLE:
+  root: visible_state
+  statement: "Laws with no enforcement surface."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_AUDIT_BLIND:
+  root: visible_state
+  statement: "Laws audited blind."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_AUDIT_SATURATED:
+  root: visible_state
+  statement: "Laws audited saturated."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_HYGIENE_ID_CASE_COLLISIONS:
+  root: visible_state
+  statement: "Two law ids differing only in case."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_HYGIENE_ALIAS_SHADOWS_LIVE_LAW:
+  root: visible_state
+  statement: "An alias that shadows a live law."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_HYGIENE_MISSING_METADATA:
+  root: visible_state
+  statement: "A law missing statement, severity, resolution, or a node-or-root."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_HYGIENE_CROSS_POPULATION_DUPLICATES:
+  root: visible_state
+  statement: "The same law stated in two places."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_HYGIENE_STATEMENT_CONFLICTS:
+  root: visible_state
+  statement: "Two laws with conflicting statements."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_FIXTURE_DEBT_WITHOUT_FIXTURES:
+  root: visible_state
+  statement: "Laws with no fixture."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_DEPS_UNGRAPHED:
+  root: visible_state
+  statement: "after: ids that do not resolve to a registered law."
+  severity: warning
+  resolution: review
+  value: 132
+  may_only: fall
+
+RATCHET_DUALITY_MECHANICAL_GAP:
+  root: visible_state
+  statement: "Laws whose mechanical detector is human."
+  severity: warning
+  resolution: review
+  value: 12
+  may_only: fall
+
+RATCHET_DUALITY_SEMANTIC_GAP:
+  root: visible_state
+  statement: "Laws whose semantic test is human."
+  severity: warning
+  resolution: review
+  value: 9
+  may_only: fall
+
+RATCHET_EXEMPTIONS_WITHOUT_EXPIRY:
+  root: visible_state
+  statement: "Review resolutions accepted with no expiry."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+RATCHET_EXEMPTIONS_EXPIRED:
+  root: visible_state
+  statement: "Review resolutions past expiry still in force."
+  severity: error
+  resolution: never
+  value: 0
+  may_only: fall
+
+# ---
+
+LINT_SEVERITY_IN_VOCABULARY:
+  root: visible_state
+  statement: "Every severity is one of info, warning, error, critical, veto."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#severity_in_vocabulary
+
+LINT_AUTOFIX_HAS_PROOF:
+  root: visible_state
+  statement: "resolution automatic names a proof fixture that fails before and passes after."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#autofix_has_proof
+
+LINT_MEASUREMENT_DOES_NOT_MUTATE:
+  root: visible_state
+  statement: "calibration measurement_only forbids resolution automatic on the same law."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#measurement_does_not_mutate
+
+LINT_NO_EXCLUDE:
+  root: visible_state
+  statement: >
+    A law does not carry exclude, path, or path_pattern. A file's kind
+    is a fact; the finding is made; the review resolution carries the
+    reason and the expiry.
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#no_exclude
+
+LINT_NO_SCOPE:
+  root: visible_state
+  statement: >
+    A law does not carry applies_to or domain. A universal law does not
+    say where it applies; if a file contains the pattern, the law
+    catches it. If it does not, there is no finding.
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#no_scope
+
+LINT_BOTH_MODALITIES:
+  root: visible_state
+  statement: >
+    Every law names a mechanical and a semantic detector. A detector
+    declared human is a gap, counted by the duality ratchet.
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#both_modalities
+
+LINT_EVERY_LAW_HAS_ROOT_OR_NODE:
+  root: visible_state
+  statement: "Every top-level law names either a soul node or a root; every child inherits from its parent."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#every_law_has_root_or_node
+
+LINT_IDS_UNIQUE:
+  root: visible_state
+  statement: "Every law id is unique across the file."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#ids_unique
+
+LINT_EVERY_FINDING_EMITTED:
+  root: visible_state
+  statement: >
+    Soul.emit is called for every finding; a finding not emitted is a
+    finding under APPLICATION_IS_UNIFORM_unrecorded_finding.
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#every_finding_emitted
+
+LINT_SOUL_PRINT_MATCHES_SOURCE:
+  root: visible_state
+  statement: "data/soul.yml body_sha256 equals Soul.print body_sha256 for the loaded soul.rb."
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#soul_print_matches_source
+
+LINT_FAMOUS_NAMES_PRESERVED:
+  root: visible_state
+  statement: >
+    A law whose canonical name is well established (DRY, KISS, SOLID,
+    POLA, YAGNI, Law of Demeter, Strunk & White, Bringhurst, Rails
+    Doctrine, CQS, SRP, OCP, LSP, ISP, DIP) keeps that name as its id.
+    A rename of a famous law is a rename, not a clarification.
+  severity: error
+  resolution: never
+  enforcement: bin/master lint:laws#famous_names_preserved
+
+# ---
+
+META_SCHEMA:
+  root: visible_state
+  statement: "The schema version of this file."
+  severity: info
+  resolution: never
+  value: 8
+
+META_VERSION:
+  root: visible_state
+  statement: "The version of this file."
+  severity: info
+  resolution: never
+  value: "8.0.0-first"
+
+META_AUTHOR:
+  root: visible_state
+  statement: "The author of record, in whom authority vests."
+  severity: info
+  resolution: never
+  value: operator
+
+META_LANGUAGE:
+  root: visible_state
+  statement: "The language of record."
+  severity: info
+  resolution: never
+  value: english
+
+META_DIALECT:
+  root: visible_state
+  statement: "The dialect of the operator's secondary language."
+  severity: info
+  resolution: never
+  value: american
+
+SEVERITY_VOCABULARY:
+  root: visible_state
+  statement: "Every severity is one of these five. warn is a typo, not a synonym."
+  severity: error
+  resolution: never
+  values: [info, warning, error, critical, veto]
+
+ROOTS_VOCABULARY:
+  root: visible_state
+  statement: "The thirteen roots a universal law names."
+  severity: info
+  resolution: never
+  values: [one_source, no_surplus, one_responsibility, least_surprise,
+           visible_state, bounded_load, stable_contract, proportion,
+           least_authority, stewardship, reach, abstraction, proximity]
+
+EVIDENCE_SCORING:
+  root: visible_state
+  statement: >
+    Test pass, scan clean, and code review each contribute; the
+    threshold is all three. No margin, no partial credit.
+  severity: error
+  resolution: never
+  weights: { test_pass: 35, scan_clean: 25, code_review: 20 }
+  pass_threshold: 80
+  require_all_kinds: true
+
+STYLE_REGISTRY:
+  parent: OPERATOR_RENDERED
+  statement: "Each named style resolves to one immutable versioned entry per modality; tools consume the registry instead of maintaining parallel house looks."
+  severity: error
+  resolution: review
+
+STYLE_SCOPE:
+  parent: OPERATOR_RENDERED
+  statement: "Reference-derived styles transfer only explicitly declared attribute classes, each with its own source fingerprint and strength."
+  severity: error
+  resolution: review
+
+STYLE_LINEAGE:
+  parent: OPERATOR_RENDERED
+  statement: "Style manifests separate inputs used from measured output influence; lineage alone never proves influence, and null influence requires a reason."
+  severity: error
+  resolution: review
+
+STYLE_VERSIONING:
+  parent: OPERATOR_RENDERED
+  statement: "Released style versions are write-once; changes mint a higher version with owner, rationale and predecessor while prior versions remain resolvable."
+  severity: error
+  resolution: review
+
+STYLE_TEMPORAL_CONSTANCY:
+  parent: OPERATOR_RENDERED
+  statement: "A render uses one style instance throughout unless a schedule hash is declared in both the registry and render manifest."
+  severity: error
+  resolution: review
+
+STYLE_REFUSAL:
+  parent: OPERATOR_RENDERED
+  statement: "Negative-list constraints are evaluated before rendering; refusal reports the matched constraint and never masquerades as a generation failure."
+  severity: error
+  resolution: review
+
+STYLE_ARBITRATION:
+  parent: OPERATOR_RENDERED
+  statement: "Reviewers adjudicate declared contracts and evidence, not taste; aesthetic decisions remain with the operator under RENDERED_VALUES."
+  severity: error
+  resolution: review
+
+VISUAL_IDENTITY_TOKENS_ONLY:
+  parent: OPERATOR_RENDERED
+  statement: "Ad-organ CSS resolves colour, typography and spacing through the canonical visual token contract; hardcoded presentation values fail the audit."
+  severity: error
+  resolution: review
+  contract: "MASTER/data/tokens.yml#tokens.ad_visual_contract"
+  detector: "Master::Visual::AdAudit.identity_tokens"
+
+VISUAL_CONTRAST_WCAG_AA:
+  parent: OPERATOR_RENDERED
+  statement: "Every audited ad text/background pair meets WCAG AA contrast thresholds in the token contract and in rendered evidence."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::AdAudit.contrast"
+
+VISUAL_DISCLOSURE_PROMINENCE:
+  parent: OPERATOR_RENDERED
+  statement: "Native and affiliate creatives identify their commercial nature near the content with readable, contrasting disclosure."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::AdAudit.disclosure"
+
+VISUAL_ALT_TEXT_PRESENT:
+  parent: OPERATOR_RENDERED
+  statement: "Every image in an ad creative has non-empty alternative text unless it is explicitly decorative."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::AdAudit.alt_text"
+
+VISUAL_SAFE_ZONE_RESPECTED:
+  parent: OPERATOR_RENDERED
+  statement: "Rendered headline, logo and call-to-action bounds remain inside the placement safe zone."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::AdAudit.safe_zone"
+
+VISUAL_RENDER_INTEGRITY:
+  parent: OPERATOR_RENDERED
+  statement: "A creative passes only with rendered evidence proving assets loaded, transfer size within budget and layout shift within budget."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::AdAudit.render_integrity"
+
+# Law identity is sampled from the ranked constitution. Geometry and shading
+# remain in tokens.yml#face_interface.ascii; this config owns only law semantics.
+face_ascii:
+  source: priority_ranked_constitutional_laws
+  max_laws: 8
+  law_glyphs: ["@", "#", "%", "&", "*", "+", "=", ":"]
+  terminal_law_ring: true
+  web_overlay: true
+  web_toggle_key: v
+  browser_point_budget: 1100
+  reduced_motion_respected: true
+  browser_uses_existing_frame_clock: true
+  geometry_source: MASTER/lib/cli/face/head.rb
+  shading_source: MASTER/data/tokens.yml#face_interface.ascii
+  invariants:
+    law_names_from_source: true
+    colour_values_operator_owned: true
+    web_file_access: forbidden
+    no_random_geometry: true
+
+VISUAL_LAYOUT_REFINEMENT_EVIDENCE:
+  parent: OPERATOR_RENDERED
+  statement: "A rendered-layout refinement proceeds from a before/after screenshot pair compared against the owning Laws, cites the Law each edit repairs, edits shared tokens before page CSS, and ships only with that measured pair."
+  severity: error
+  resolution: review
+  detector: "Master::Visual::LayoutRefinement.evidence"
+
+# Per-Law execution policy. Individual Law identity and requirement statements
+# remain in the rows above; this reserved block supplies DSL defaults and reach.
+law_catalogue:
+  schema: 1
+  identity_source: MASTER/data/laws.yml
+  universal_by_default: true
+  modalities: [lexical, semantic, visual]
+  surfaces: [repository_tree, directories, file_names, paths, whole_file, sections, lines, syntax_tree, cross_file, structured_data, documentation, media_assets, compiled_assets, rendered_ui, interactive_behavior, tests, runtime, deployment]
+  missing_assessor: inconclusive
+  # Policy an entry takes unless it names its own. Every entry names its severity.
+  defaults:
+    mode: violation
+    lifecycle: active
+    autofix: review
+    languages: []
+  entries:
+    A_FINDING_IS_A_HYPOTHESIS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    ABC_SIZE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warning
+      languages: [ruby]
+    ABSTRACTION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    ACTION_LABEL_BRIEF:
+      definition_sources: [MASTER/law/html.rb]
+      severity: info
+      languages: [html]
+    adversarial:
+      definition_sources: [MASTER/law/semantic.rb]
+      severity: error
+    AESTHETIC_DISCIPLINE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: info
+      lifecycle: advisory
+      autofix: never
+    AESTHETIC_FLAT_SEMANTIC:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: info
+      mode: opportunity
+      languages: [css, scss, html, javascript]
+    AESTHETIC_MINIMALISM:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+    AESTHETIC_RAMS_SEMANTIC:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: info
+      mode: opportunity
+      languages: [html, css, scss]
+    AFFORDANCE_CLARITY:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [html]
+    # Retired 2026-10-31 by the operator: tracking is for logos and big display
+    # type, not for every uppercase rule in a stylesheet. It also fought
+    # NO_EYEBROW_LABEL, which flags the small tracked caps this one demanded.
+    ALIGNMENT_NEAR_MISS:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    ALL_CAPS_NO_TRACKING:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      lifecycle: retired
+      languages: [css, scss]
+    ANALOG_WARMTH:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    ANCHOR_RELATIONSHIPS:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    ANTI_DIVITIS:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    ARIA_INTERACTIVE:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    ARIA_LABELS:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    ARTIFICIAL_COUPLING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ast_omission:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: warning
+    ASYNC_AWAIT:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warn
+      languages: [javascript]
+    ASYNC_STATUS:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [html]
+    AUDIO_SMOOTHING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    AUDIT_APPEND_ONLY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      languages: [ruby]
+    AUTH_ALLOWS_PASTE:
+      definition_sources: [MASTER/law/html.rb]
+      severity: error
+      languages: [html]
+    AUTO_MOTION_PAUSABLE:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      languages: [javascript]
+    AUTOCOMPLETE_TOKENS:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      autofix: review
+      languages: [html]
+    AUTOFIX_REQUIRES_CONFIDENCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    BARE_DIV_WRAPPER:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+      # Same reason as META_CHARSET: bad_brgen_home.html is a bare-div document
+      # written to be caught, and grading it grades the test data.
+      path_exclude: '/checks/fixtures/'
+    BASELINE_COMPATIBILITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    BE_CONCISE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    BEAUTIFUL_CODE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    BEM_IN_VIEWS:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    BIG_TENT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    BLANK_LINE_RUN:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    BOOLEAN_TRAP:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: info
+    BOUNDARY_ISOLATION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    BOUNDED_OPERATION_LIFECYCLE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    BROKEN_WINDOWS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    BUTTON_LINK_ROLE:
+      definition_sources: [MASTER/law/html.rb]
+      severity: info
+      autofix: never
+      languages: [html]
+    BUTTON_OVER_ANCHOR:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    CACHE_LLM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    CAPABILITY_REDUCTION_IS_MONOTONIC:
+      definition_sources: [MASTER/law/capability.rb]
+      severity: error
+      languages: [ruby]
+    CAPABILITY_STATUS_MUST_BE_TRUTHFUL:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: error
+      # Every surface that reports state, not only services.rb: a chat message shown as sent
+      # before the server answered, or a progress bar at 100% before the work ended, is the
+      # same false ready. The detector still reads only the services.rb shape it was built on.
+      languages: [ruby, javascript, html]
+    CAPS_RUN_SHORT:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    CHART_DATA_INK:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      languages: [javascript]
+    CHESTERTONS_FENCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    CHOICE_OVERLOAD:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    CHROME_AREA_BUDGET:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    CHROME_COPY_CALM:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      languages: [yaml]
+    CHROME_YIELDS_ON_READ:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    CINEMA_PALETTE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    CLAMP_TYPOGRAPHY:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    CLASS_RESTATES_TAG:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    CLI_ANALYZE_TARGET_ROUTING:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: error
+      languages: [yaml]
+    CLI_FACE_DEDICATED_TTY:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: error
+      languages: [ruby]
+    CLI_PROMPT_COMPOSITION:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: warning
+      mode: opportunity
+      languages: [ruby]
+    CLI_TREE_TARGET_RESOLUTION:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: error
+      languages: [ruby]
+    co_change_coupling:
+      definition_sources: [MASTER/law/graph.rb]
+      severity: info
+      autofix: automatic
+    CODE_HIERARCHY:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: warning
+    CODE_SYMMETRY:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby, javascript]
+    COLLAPSE_BEFORE_ADDING:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    COLOR_NEAR_DUPLICATE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    COLOR_NOT_SOLE_SIGNAL:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    comment_drift:
+      definition_sources: [MASTER/law/semantic.rb]
+      severity: warning
+    COMMENTS_AS_DEODORANT:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: warning
+      autofix: automatic
+    COMMERCE_AMBER_DOES_NOT_OWN_BRGEN:
+      definition_sources: [MASTER/law/commerce.rb]
+      severity: error
+    COMMERCE_BRGEN_DOES_NOT_OWN_AMBER:
+      definition_sources: [MASTER/law/commerce.rb]
+      severity: error
+    COMMERCE_EXTERNAL_SOURCES_STAY_EXPLAINABLE:
+      definition_sources: [MASTER/law/commerce.rb]
+      severity: error
+    COMPLETE_MEDIATION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    COMPLETION_THEATER:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: automatic
+    COMPLEX_SYSTEMS_FAIL:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    COMPOSABLE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    COMPOSITION_OVER_INHERITANCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    CONFIG_HIERARCHY:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: warning
+    CONFIGURATION_AS_CODE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    CONFIGURATION_SHAPE:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: warn
+      mode: opportunity
+      languages: [json, yaml]
+    CONSECUTIVE_BLANK_LINES:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+      autofix: automatic
+    CONSISTENCY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    CONSISTENT_ERROR_STRATEGY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    CONST_BY_DEFAULT:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      autofix: automatic
+      languages: [javascript]
+    CONTAINER_RESPONSIVENESS:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    CONTEXTUAL_STATUS_CUES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    CONTRAST_TOKENS:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [css, scss]
+    CONTROL_CHARS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: automatic
+    CONVENTION_OVER_CONFIG:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+    CORE_WEB_VITALS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    COST_TRANSPARENCY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    COUNCIL_WHEN_RISKY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    COUPLER_SMELLS:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: warning
+    CQS:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    CSS_DUPLICATE_DECLARATION:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    CSS_SHORTHAND_COLLAPSE:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    CURRENT_LOCATION_MARKED:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    CURSOR_NONE_REQUIRES_CURSOR:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+    CYCLOMATIC_COMPLEXITY:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    DATA_CLASS:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: info
+    DATA_CLUMPS:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: info
+    DATA_REMOTE:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    DEAD_CODE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    DEBUG_OUTPUT:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: error
+      autofix: automatic
+      languages: [ruby]
+    DECOUPLE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    DEEP_MODULES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DEEP_SCAN_ONLY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    DEFENSIVE_INPUT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DEFINE_ERRORS_OUT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    DEGRADE_GRACEFULLY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    DENSITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    DEPENDENCY_INVERSION:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    DESIGN_BY_CONTRACT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    DESIGN_IT_TWICE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    DEVICE_LIMITS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    DIALECT_CONTRAST_PARITY:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warning
+      languages: [yaml]
+    DIFFERENT_LAYER_DIFFERENT_ABSTRACTION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DIRECT_MANIPULATION_FEEDBACK:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: warning
+      mode: opportunity
+      languages: [html, javascript, css, scss]
+    DIRNAME_FILE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    DIVERGED_BRANCH_SYNC:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    DIVERGENT_CHANGE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DOCUMENTATION_FOLLOWS_CODE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    DOLLAR_PAREN:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: warn
+      languages: [zsh]
+    DOMAIN_LANGUAGE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DONT_OUTRUN_HEADLIGHTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    DO_THE_WORK_NOW:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    DOUBLE_BRACKET:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      autofix: automatic
+      languages: [zsh]
+    DOUBLE_QUOTES_RUBY:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby]
+    DRY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    DUAL_DETECTION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    EACH_WITH_OBJECT:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    ECONOMY_OF_MECHANISM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    EIGHT_PX_RHYTHM:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      autofix: automatic
+      languages: [css, scss]
+    ELLIPSIS_SPACE_BEFORE:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: info
+      autofix: automatic
+      languages: [yaml, html, markdown]
+    EMPHASIS_ONE_DEVICE:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    EN_DASH_RANGE:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [markdown, yaml, html]
+    ENGINEERING_FIT:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    ENTROPY_RESISTANCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ERB_HARDCODED_CHROME:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [html]
+    ERB_HTML_SAFE:
+      definition_sources: [MASTER/law/web.rb]
+      severity: error
+      autofix: automatic
+      languages: [html]
+    ERROR_CONTEXT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ERROR_RECOVERY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ETC:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    EVIDENCE_BY_INTENT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    EXECUTE_NOT_INSTRUCT:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    EXEMPTIONS_EXPIRE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    EXPLICIT:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    EXPLICIT_HTTP_TIMEOUT:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+      # The shared boundary already enforces this for everything routed through
+      # it; a finding here names a call that bypassed it.
+      path_exclude: '(?:outbound_http|ssrf_guard)\.rb\z'
+    EXPLICIT_TRADEOFF:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    FACE_POINT_IS_ONE_PIXEL:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: error
+      languages: [javascript]
+    FAIL_FAST:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    FAIL_SAFE_DEFAULTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    FAIL_VISIBLY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      # Ruby only: `rescue` at a line end in Markdown is the English word, as in
+      # "search-and-rescue" closing a sentence in AEGIS.md.
+      languages: [ruby]
+    FAT_MODEL_CALLBACK_SOUP:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [ruby]
+    FEATURE_ENVY:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: warning
+    FEEDBACK_LOOPS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    FEW_ARGUMENTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: automatic
+    FIELD_PURPOSE_DECLARED:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    FILE_LAYOUT:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: info
+    FILE_SEQUENCE_NAME:
+      definition_sources: [MASTER/law/naming.rb]
+      severity: warning
+      languages: [ruby]
+    FILE_SPRAWL:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: warning
+    FILE_VAGUE_NAME:
+      definition_sources: [MASTER/law/naming.rb]
+      severity: info
+      languages: [ruby]
+    FILTER_MAP:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    FINAL_NEWLINE:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+    FIND_EACH:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    FIXED_HEIGHT:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    FLASH_THRESHOLD:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    FLAT_HIERARCHY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    FLAT_PIXELS:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warn
+      autofix: automatic
+    FLAT_UI:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    FLEXIBILITY_EFFICIENCY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    FOCUS_NOT_OBSCURED:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    FOCUS_VISIBLE:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [css, scss]
+    FOR_OF:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: error
+      languages: [javascript]
+      path_exclude: '/public/three\.module\.js\z'
+    FORM_FOLLOWS_FUNCTION:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    FORM_LABEL:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    FROZEN_LITERAL:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    FROZEN_STRING_LITERAL:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    FULL_BY_DEFAULT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warn
+    FUNCTIONAL_CORE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    GALLS_LAW:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    GESTURE_HAS_TAP_EQUIVALENT:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      languages: [javascript]
+    GESTURE_OWNERSHIP:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      mode: opportunity
+      languages: [html, css, scss, javascript]
+    GIT_COMMITS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    GRACEFUL_BOUNDARIES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    GRACEFUL_LOAD:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    GRICE_COOPERATIVE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    GRID_STRUCTURE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [css, scss]
+    GUARD_CLAUSE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    GUARD_EXPENSIVE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    GUARD_EXPENSIVE_OPS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      languages: [ruby, zsh]
+      path_exclude: '/test/|/spec/|/db/seeds|/db/migrate/|seeder|demo_seed|_seed\b'
+    HARDCODED_ABSOLUTE_PATH:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      languages: [ruby, javascript, zsh, yaml]
+    HAPTIC_SINGLE_SOURCE:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: info
+      mode: opportunity
+      languages: [javascript]
+    HASH_FETCH:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby]
+    HEADING_WRAP_BALANCE:
+      definition_sources: [MASTER/law/geometry.rb]
+      severity: warning
+      languages: [json]
+    HELP_AND_DOCUMENTATION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    HELPER_VIEW_ONLY:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [ruby]
+    HOST_CAPACITY:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [ruby]
+    HOSTILE_AUDIT:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    HTML_CSS_STYLE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    HTML_HEADING_HIERARCHY:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: warning
+      mode: opportunity
+      languages: [html]
+    HTML_LANG:
+      definition_sources: [MASTER/law/web.rb]
+      severity: error
+      autofix: automatic
+      languages: [html]
+    HUMBLE_OBJECT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    HYRUM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    I18N_COVERAGE:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    ICON_CARRIES_WORD:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    IDEMPOTENT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    IDENTICAL_BRANCHES:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      languages: [ruby]
+    IMG_ALT:
+      definition_sources: [MASTER/law/web.rb]
+      severity: error
+      autofix: automatic
+      languages: [html]
+    IMMUTABLE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    IMPORTANCE_ORDER:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    INAPPROPRIATE_INTIMACY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    INCONCLUSIVE_IS_NOT_PASS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    INFORMATION_HIDING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    INPUT_TYPE_SPECIFIC:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [html]
+    INSTRUMENT_MUST_PROVE_ITSELF:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    INTEGRATED_SYSTEMS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+    INTER_MODEL_CONTRACT:
+      definition_sources: [MASTER/law/inter_model.rb]
+      severity: error
+      languages: [ruby]
+    INTERACTION_PERFORMANCE:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      mode: opportunity
+      languages: [css, scss]
+    INTERACTION_SEMANTICS:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: warning
+      mode: opportunity
+      languages: [html]
+    interconnect:
+      definition_sources: [MASTER/law/graph.rb]
+      severity: warning
+    INTERFACE_SEGREGATION:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    INTRINSIC_LAYOUT:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss]
+    INVERTED_PYRAMID:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    JS_MODULE_SIZE:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      autofix: automatic
+      languages: [javascript]
+    KERNEL_COERCION:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    KISS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    LABEL_IN_NAME:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    law_coverage:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: warning
+    LAW_OF_DEMETER:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: automatic
+    LAZY_CLASS:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: info
+    LAZY_IMAGES:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [html]
+    LEARNED_SMELLS:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: warning
+    LEAST_ASTONISHMENT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    LEAST_PRIVILEGE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    LEVELS_OF_SCALE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    LIB_ROOT_DISCIPLINE:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    LINE_HEIGHT_ON_SCALE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    LINEARITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    LINK_DISTINGUISHABLE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    LINT_BEAUTIFY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    LISKOV:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    LOAD_BEARING_NAMES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    LOGICAL_PROPERTIES:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      # scss too: the fleet's styles are authored in .scss, and a css-only scope
+      # made this law inert everywhere it mattered - the registry twin was the
+      # live one until its retirement carried the language here.
+      languages: [css, scss]
+    LONG_LINE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+      languages: [ruby, javascript, zsh, css, scss, html, yaml]
+    LONG_PARAMETER_LIST:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: warning
+    MAGIC_COLOR:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss, javascript, html]
+    MAKE_ILLEGAL_STATES_UNREPRESENTABLE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    MASS_GENERATE_CURATE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    MASTER_PROMPT_AESTHETIC:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    MATCH_REAL_WORLD:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    MAEDA_THE_ONE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    MEANINGFUL_NAMES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    MEASURE_OPTIMUM:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    MERGE_BEFORE_MULTIPLY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    META_CHARSET:
+      definition_sources: [MASTER/law/html.rb]
+      severity: error
+      languages: [html]
+      # A check fixture is a specimen, not a page. MASTER/checks/fixtures holds
+      # hand-written good_ and bad_ documents that exist to be graded BY the checks,
+      # and the bad ones are wrong on purpose - nine of this law's findings were its
+      # own test data, including four files whose names say so.
+      path_exclude: '/checks/fixtures/'
+    META_FRAMING:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    MICRO_REFINEMENTS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    MIDDLE_MAN:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: info
+    MIGRATION_ADD_REFERENCE_NO_FK:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+    MIGRATION_FIND_OR_CREATE_BY:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    MIGRATION_NOT_NULL_NO_DEFAULT:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+    MIGRATION_REMOVE_COLUMN:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+    MINIMAL_FOOTPRINT:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    MIRROR_EXPERTISE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    MOBILE_ACCESSIBILITY_DEFAULTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    MOBILE_FIRST:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warn
+      languages: [css, scss]
+    MOBILE_VIEWPORT:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss]
+    MODERN_FORMS:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    MODIFIER_SILENT_RESCUE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    MONKEY_PATCH_CORE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+      path_exclude: '/test/'
+    MONOLITH_FIRST:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    MOTION_ACCESSIBILITY:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss]
+    MOTION_COLOR_GRADING:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    MUTED_INK_FROM_GROUND:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    N_PLUS_ONE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: automatic
+    NARROW_SILENT_RESCUE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    NATIVE_DISCLOSURE:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    NAVIGATION_CONTINUITY:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+    NEGATIVE_SPACE_GROUPING:
+      definition_sources: [MASTER/law/geometry.rb]
+      severity: warning
+      languages: [json]
+    NESTING_DEPTH:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    NEVER_BATCH_DELETE:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: error
+      # zsh, not shell: FILE_LANGUAGE_MAP emits "zsh" for .sh/.zsh/.bash and no file
+      # can ever carry the language "shell", so applies? returned false for every
+      # shell script in the repo - 73 of them, including both glob-rm sites. This
+      # law exists because of the 2026-01-05 incident where 16 files were deleted by
+      # one glob, and it has only ever been able to see the Ruby half.
+      languages: [ruby, zsh]
+    NO_ABBREVIATED_IDENTIFIERS:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby, javascript]
+    NO_ASCII_ART_OUTSIDE_FACE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: error
+      languages: [ruby, javascript, html, yaml, markdown, zsh, css]
+      path_exclude:
+        - 'MASTER/lib/cli/face'
+        - 'MASTER/web/public/(?:face_ascii|face_2d_fallback)\.js'
+        - 'MASTER/web/test/face_ascii\.test\.mjs'
+        - 'MASTER/test/test_cli_ascii_face\.rb'
+        - 'MASTER/test/fixtures/face_ascii_frames\.json'
+        - 'MASTER/tools/face_ascii_fixtures\.rb'
+      autofix: automatic
+    NO_ASCII_DECORATION:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    NO_ASCII_LINE_ART:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+    NO_CHANGELOG_COMMENT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warn
+    NO_COLUMN_ALIGN:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    NO_CONSECUTIVE_BLANK_LINES:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    NO_DEAD_ENDS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    NO_DEBUG:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: error
+      autofix: automatic
+      languages: [ruby]
+    NO_DECORATIVE_FX:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    NO_DECORATIVE_GRADIENT:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    NO_DOT_SEPARATED_META:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [html]
+    NO_EYEBROW_LABEL:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss, html]
+    NO_FAUX_TYPE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    NO_FILLER:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    NO_FLAG_ARGUMENTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: automatic
+    NO_GOD_CLASS:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: error
+    NO_HIDDEN_GLOBAL_STATE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    NO_IMPORT_SCSS:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warn
+      languages: [scss]
+    NO_IMPORTANT:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    NO_INFINITY_TO_I:
+      definition_sources: [MASTER/law/fix_hygiene.rb]
+      severity: error
+      languages: [ruby]
+      path_exclude: '/law/fix_hygiene\.rb\z'
+    NO_INLINE_ASSETS_IN_SHELL:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: warn
+      languages: [zsh]
+    NO_INLINE_SCRIPT_BLOCK:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+      # Two pages that cannot reach an asset pipeline, which is the only reason this
+      # rule yields.
+      #
+      # A static error page renders when Rails is not answering: no
+      # stylesheet_link_tag, no digested URL, nothing served by the app that
+      # failed. Inline is the only thing that works there, which is why every app's
+      # 404/422/500 carries its own style block.
+      #
+      # A probe fixture beside its script is loaded as a data: URL with no server at
+      # all, so an external src has nothing to resolve against. probe_webgl_guard's
+      # inline block is also the subject under test - it proves the pre-boot WebGL
+      # guard from chat/index.html.erb, which is inline by design because a blocking
+      # <script src> above it delays handler wiring and early taps look dead.
+      #
+      # This clause was written twice, identically, with its reason above each copy.
+      # The second silently replaced the first, so half of it had never been read by
+      # anything.
+      # Two owned surfaces have a different transport contract:
+      # mailer styles must be embedded because mail clients do not load the web asset
+      # pipeline, and theme_bootstrap is a nonce-bearing first-paint script whose
+      # blocking position is intentional so the chosen theme is present before paint.
+      #
+      # The face and its two static companions are the same class as the 4xx pages:
+      # chat/index.html.erb carries the pre-boot WebGL guard and the FOUC theme
+      # blocks, which are inline by design because a blocking <script src> above
+      # them delays handler wiring and early taps look dead (frontend_production
+      # asserts those inline boot markers exist), and the two public pages below are
+      # served by the service worker or by relayd precisely when no app, and so no
+      # asset pipeline, is answering.
+      path_exclude:
+        - '/public/\d{3}\.html\z'
+        - '/public/(?:offline|406-unsupported-browser)\.html\z'
+        - '/script/probe_\w+\.html\z'
+        - '/_mailer_styles\.html\.erb\z'
+        - '/_theme_bootstrap\.html\.erb\z'
+        - '/app/views/chat/index\.html\.erb\z'
+    NO_INLINE_STYLES:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+      # A static error page renders when Rails is not answering, so it cannot
+      # reach the asset pipeline: no stylesheet_link_tag, no digested URL, nothing
+      # served by the app that just failed. Inline is the only thing that works
+      # there, which is why 404/422/500 carry their own style block.
+      path_exclude: '/public/\d{3}\.html\z'
+    NO_JQUERY:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [javascript, html]
+    NON_TEXT_CONTRAST:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    NORMALIZES_OVER_CALLBACK:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: info
+      autofix: never
+      languages: [ruby]
+    NUMBER_UNIT_UNBROKEN:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      languages: [yaml, html, markdown]
+    NUMBER_GROUPED_IN_THOUSANDS:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: info
+      autofix: automatic
+      languages: [yaml, html, markdown]
+    ONE_PRIMARY_ACTION:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    ORIENTATION_UNLOCKED:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      languages: [json, html, javascript]
+    PAGE_WEIGHT_RATCHET:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    PARAGRAPH_SEPARATION_ONE_DEVICE:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss]
+    PARENTHETICAL_DASH:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      languages: [yaml, html, markdown]
+    PRIMARY_ACTION_IN_THUMB_REACH:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    PRINT_PAGE_CANON:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss, html]
+    QUOTES_BY_LOCALE:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      languages: [yaml, html, markdown]
+    SELF_EVIDENT_DATA_UNLABELLED:
+      definition_sources: [MASTER/law/html.rb]
+      severity: info
+      languages: [html]
+    SINGLE_SENTENCE_SPACE:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: info
+      languages: [yaml, markdown]
+    SIZE_COMPENSATED_SPACING:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    SMALLEST_EFFECTIVE_DIFFERENCE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    SPACING_ENTROPY:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    SPONSORED_LINK_REL:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warning
+      languages: [html]
+    NO_JS_ERB:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    NO_LOGIC_IN_VIEW:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [html]
+    NO_LONG_TRANSITION:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warn
+      languages: [css, scss]
+    NO_MAGIC:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    NO_MULTIPLE_LANGUAGES:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warn
+      languages: [ruby, javascript, css, scss, zsh]
+      # Three places where speaking a second language is the job rather than the
+      # defect, and the rule is about a document mixing them - the shape
+      # RAILS/CLAUDE.md names when it says split large mixed HTML/CSS/JS files.
+      #
+      # A database adapter speaks SQL; flagging it asks the layer to stop doing the
+      # one thing it exists for. A migration is the same: amber's
+      # convert_money_to_ore backfills through `execute <<~SQL.squish`, which is how
+      # a column move is done safely.
+      #
+      # And a file whose job is to detect another language has to quote it - the
+      # distinction Law.conduct already draws for law/. web_laws.rb carries an ERB
+      # regex, an operator message reading "<tag><%= ... %></tag>" and advice about
+      # auto-escaped <%= %>; none is a template, all three are about one.
+      path_exclude: '/(?:knowledge_store|catalog_index)\.rb\z|/memory/search\.rb\z|/db/migrate/'
+    NO_NEW_FILES:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    NO_ONE_PARADIGM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+    NO_ORDINAL_ORNAMENT:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss, html]
+    NO_OUTPUT_ARGUMENTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    NO_OVERESCAPED_NONCAPTURING:
+      definition_sources: [MASTER/law/fix_hygiene.rb]
+      severity: error
+      languages: [ruby]
+      path_exclude: '/law/fix_hygiene\.rb\z'
+    NO_PUTS:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    NO_SELECTOR_ARGUMENTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    NO_SHOTGUN_SURGERY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    NO_SHOUTING_FRONT_PAGE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    NO_SIDE_EFFECTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    NO_SILENT_TEST_SKIP:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      languages: [ruby, javascript]
+    NO_SPACED_EM_DASH:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: warning
+      autofix: automatic
+      languages: [yaml, html, markdown]
+    NO_TODO_IN_VIEWS:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    NO_TRAILING_ARROW:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [html]
+    NO_TRANSPORT_WRAPPER_IN_SOURCE:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: error
+      languages: [ruby]
+      path_exclude: '/law/'
+    NO_UPDATE_ATTRIBUTE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      autofix: automatic
+      languages: [ruby]
+    NO_VAR:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: error
+      languages: [javascript]
+      path_exclude: '/public/three\.module\.js\z'
+    NO_WEBGL_GLOW_PASS:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: error
+      languages: [javascript]
+    NOISE_NAME:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+      path_exclude: '/test/|/fixtures/'
+    NORWEGIAN_COPY_BOKMAL:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+    NULL_BLINDNESS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+    NULLISH_COALESCING:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: info
+      languages: [javascript]
+      path_exclude: '/public/three\.module\.js\z'
+    NUMBERED_NAME:
+      definition_sources: [MASTER/law/naming.rb]
+      severity: info
+    OMAKASE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    OMIT_NEEDLESS_WORDS:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+      autofix: automatic
+    ONE_ABSTRACTION_LEVEL:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    ONE_JOB:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    ONE_SOURCE:
+      definition_sources: [MASTER/law/universal.rb]
+      # error: ONE_SOURCE is a kernel Law. Measured when it was raised, its detector
+      # found nothing in any of the four trees, so the severity is a promise about the
+      # next collision rather than a new check failure.
+      severity: error
+      autofix: automatic
+    OPEN_CLOSED:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    OPENBSD_DMESG_CONSOLE_STYLE:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: warning
+      mode: opportunity
+      languages: [ruby]
+    OPERATOR_AUTONOMY:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    OPTIONAL_CHAINING:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warn
+      languages: [javascript]
+      path_exclude: '/public/three\.module\.js\z'
+    OPTIONAL_CHAINING_JS:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warning
+      autofix: automatic
+      languages: [javascript]
+    ORTHOGONALITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    PAPER_NOT_PURE_WHITE:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+      # Brand-export trees only. The four RAILS apps paint #ffffff as their
+      # measured light-mode ground (RAILS/__shared dialect tokens) and mailer
+      # HTML needs literals; both are deliberate, not drift.
+    PARALLEL_INHERITANCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    PARAMETERIZED_SLUG:
+      definition_sources: [MASTER/law/naming.rb]
+      severity: warning
+      languages: [ruby]
+    PARAMETRIC_MARK_ONLY:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+      # Brand-export trees only: app icon partials and the marketplace animated
+      # logo carry long hand-tuned paths that are artwork, not brand marks.
+    PARAMS_EXPECT_STRENGTHENED:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: info
+      autofix: never
+      languages: [ruby]
+    PARSE_DONT_VALIDATE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    PATH_PURPOSE:
+      definition_sources: [MASTER/law/meta.rb]
+      # error, not warning: WriteGuard blocks on veto/critical/error, and a
+      # directory nobody has taken responsibility for is exactly what
+      # should be refused at write time rather than reported afterwards.
+      severity: error
+    PATTERN_EXTRACTION:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: info
+    PERCENT_LITERAL:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    PIXEL_EXACT:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [css, scss]
+    PLEDGE_STAGED:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      languages: [ruby]
+    PORTABILITY_IS_VERIFIED:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: never
+    PRODUCTION_RELEASE_IS_PINNED:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: never
+    PLUCK_OVER_MAP:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby]
+    POINTER_FEEDBACK_EARLY:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: info
+      mode: opportunity
+      languages: [javascript]
+    POKA_YOKE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    POSTEL:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      lifecycle: advisory
+    PRECOMPUTE_MATH:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PREEMPT_FOLLOWUP:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    PREFER_TAG_HELPERS:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [html]
+    PRESENTATIONAL_CLASS_NAME:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    PRESERVE_FIRST:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    PRIMITIVE_OBSESSION:
+      definition_sources: [MASTER/law/structural_questions.rb]
+      severity: info
+    PROACTIVE_DEFECT_AUDIT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    PROBE_BEFORE_SHIP:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    PROGRAMMER_HAPPINESS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    PROGRESS_OVER_STABILITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    PROGRESSIVE_DISCLOSURE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+    PROPERTY_BASED_TESTING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PROSE_ACTIVE_VOICE:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: info
+      languages: [markdown, ruby]
+    PROSE_ACTIVE_VOICE_NB:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: info
+      languages: [yaml, html]
+    PROSE_OMIT_QUALIFIERS:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: warn
+      languages: [markdown, ruby]
+    PROSE_OMIT_QUALIFIERS_NB:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: warn
+      languages: [yaml, html]
+      # Bokmål reaches translation values and BIZ HTML only. Scoped there, `bare` is Norwegian.
+    PROSE_ONE_TOPIC_PARAGRAPH:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PROSE_PARALLEL_FORM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PROSE_POSITIVE_FORM:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PROSE_RELATED_WORDS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PROXIMITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    PSYCHOLOGICAL_ACCEPTABILITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    PULL_COMPLEXITY_DOWN:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PURE_FUNCTIONS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    PWA_MANIFEST_HINT:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [json, html]
+    PWA_RESILIENCE_DEFAULTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    QUOTE_VARIABLES:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: error
+      autofix: automatic
+      languages: [zsh]
+    RAILS_THIN_CONTROLLER_SEMANTIC:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: warning
+      languages: [ruby]
+    RAILS_VIEW_PURITY:
+      definition_sources: [MASTER/law/rails.rb]
+      severity: warning
+      languages: [html]
+    RAMS_HONEST:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    RAMS_THOROUGH:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    RAMS_UNDERSTANDABLE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    RAMS_UNOBTRUSIVE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    RAMS_USEFUL:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    RATCHET_INTEGRITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    RATE_LIMITING_MISSING:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+    README_PROSE:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [markdown]
+    README_VISION:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: info
+      mode: opportunity
+      languages: [markdown]
+    RECOGNITION_OVER_RECALL:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    REDUCED_MOTION:
+      definition_sources: [MASTER/law/web.rb]
+      severity: info
+      autofix: automatic
+      languages: [css, scss]
+    REDUNDANT_CORE_REQUIRE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby]
+    reek:
+      definition_sources: [MASTER/law/linters.rb]
+      severity: warning
+    REFLOW_AT_320:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    REFUSED_BEQUEST:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    REGISTER_STABLE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    RENDERED_VALUES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    RESCUE_EXCEPTION:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    RESCUE_ON_DEF:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    RESTART_RAILS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    REVERSIBILITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    ROBUSTNESS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    RTFM_FIRST:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    rubocop:
+      definition_sources: [MASTER/law/linters.rb]
+      severity: warning
+    RUBY_BLOCK_DELIMITER:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    RUBY_CAMEL_CLASS:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    RUBY_NUMERIC_UNDERSCORE:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    RUBY_SCREAMING_CONST:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    RUBY_SNAKE_METHODS:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    RUBY_SYMBOL_TO_PROC:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    RUBY_TERNARY_NOT_NESTED:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    RUNTIME_DOCS_YAML:
+      definition_sources: [MASTER/law/meta.rb]
+      severity: error
+      languages: [markdown]
+    SAFE_NAVIGATION:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: warn
+      languages: [ruby]
+    SCAN_SWEEP_CONVERGENCE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    SCOPED_CSS:
+      definition_sources: [MASTER/law/css.rb]
+      severity: info
+      languages: [css, scss]
+    SCROLL_INTEGRITY:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      languages: [css, scss]
+    SCSS_NESTING_DEPTH:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [scss]
+    SECRET_PROXIMITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      # A literal "password" in a test or seed IS the fixture - both fleet hits
+      # were user.password = "password" in exactly those files (2026-08-22).
+      path_exclude: '/test/|/spec/|/db/seeds'
+    SELF_EXPLAINING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    semantic:
+      definition_sources: [MASTER/law/semantic.rb]
+      severity: warning
+    SEMANTIC_ELEMENTS:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    SHARP_KNIVES:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      languages: [ruby]
+      lifecycle: advisory
+    SHELL_DISCIPLINE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    SIGNAL_COLOR_IS_SEMANTIC:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warn
+      languages: [css, scss]
+    SIGNAL_COLOR_NAMING:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+      # Brand-export trees only. --accent is the canonical token of the RAILS
+      # one-scheme (RAILS/__shared/app/assets/stylesheets/_dialect_tokens.scss);
+      # this law governs ad-hoc brand palettes, not that scheme.
+    SIGNAL_NOISE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    SIGNATURE_MOMENT:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: info
+      mode: opportunity
+      languages: [html, javascript, css, scss]
+    SILENCE_ON_SUCCESS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    SILENT_RESCUE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: error
+      autofix: automatic
+      languages: [ruby]
+    SIMPLEST_WORKS:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    SIMULATION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      autofix: automatic
+    SINGLE_H1:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    SINGLE_PRIVATE_SECTION:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    SINGULARITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    SKIP_TO_MAIN:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+      path_exclude: 'mailer'
+    SMALL_FILES:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    SMALL_FUNCTIONS:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: warning
+    SPECULATIVE_GENERALITY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    SQL_INJECTION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      autofix: automatic
+    SQUINT_TEST:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    SRP:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    STATE_CHOREOGRAPHY:
+      definition_sources: [MASTER/law/css.rb]
+      severity: warning
+      mode: opportunity
+      languages: [html, css, scss, javascript]
+    STEPDOWN:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    STIMULUS_CONTROLLER_SIZE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [javascript]
+    STIMULUS_PROGRESSIVE:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [html]
+    STRICT_LOADING_MISSING:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    STRICT_MODE_ZSH:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: error
+      languages: [zsh]
+      # daily.local, weekly.local and monthly.local are sourced into /etc/daily,
+      # /etc/weekly and /etc/monthly, so `set -e` in one would abort the base
+      # system's own maintenance run at its first non-zero command.
+      path_exclude: '/etc/(?:daily|weekly|monthly)\.local\z'
+    STRONG_CENTERS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    STRONG_PARAMETERS:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      autofix: automatic
+      languages: [ruby]
+    STRUCT_NEW_TO_DATA:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      autofix: never
+      languages: [ruby]
+    STRUCTURAL_HONESTY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    STRUNK_WHITE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    STYLE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    STYLE_FOLLOWS_STRUCTURE:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: info
+      mode: opportunity
+      languages: [html, css, scss]
+    SURFACE_AREA:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    SURFACE_ERRORS_FIRST:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    SYSTEM_STATUS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    TAB_CHARACTER:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: warning
+      autofix: automatic
+    TABINDEX_ABOVE_ZERO:
+      definition_sources: [MASTER/law/web.rb]
+      severity: warning
+      autofix: automatic
+      languages: [html]
+    TABULAR_NUMERALS:
+      definition_sources: [MASTER/law/geometry.rb]
+      severity: warning
+      languages: [json]
+    TACTILE_FEEDBACK:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: info
+      mode: opportunity
+      languages: [javascript]
+    TARGET_SIZE_24:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    TEMPLATE_LITERALS:
+      definition_sources: [MASTER/law/javascript.rb]
+      severity: warn
+      languages: [javascript]
+      path_exclude: '/public/three\.module\.js\z'
+    TEMPORAL_COUPLING:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+    TEXT_SPACING_RESILIENCE:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: error
+      languages: [json]
+    THIN_CONTROLLER:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      languages: [ruby]
+    TIME_ZONE_UNSAFE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: warning
+      autofix: automatic
+      languages: [ruby]
+    TODO_FIXME:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+    TOUCH_TARGET_MIN:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: warning
+      autofix: automatic
+      languages: [css, scss]
+    TRACER_BULLETS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    TRAILING_COMMAS:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby, javascript]
+      autofix: automatic
+    TRAILING_COMMENT:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+      autofix: automatic
+    TRAILING_WHITESPACE:
+      definition_sources: [MASTER/law/lexical.rb]
+      severity: info
+      autofix: automatic
+    TRANSFORM_KEYS:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    TRANSFORMATIONS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      lifecycle: trusted
+    TRUE_SYMBOLS:
+      definition_sources: [MASTER/law/typesetting.rb]
+      severity: info
+      languages: [yaml, html, markdown]
+    TYPE_HIERARCHY:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [css, scss]
+    TYPE_IN_NAME:
+      definition_sources: [MASTER/law/naming.rb]
+      severity: info
+    TYPE_SIZE_ECONOMY:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    TYPE_TITLE_TOKEN:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      languages: [css, scss]
+    TYPOGRAPHIC_EXCELLENCE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      autofix: automatic
+    # Retired 2026-10-30: it measured source lines (100 chars) in Markdown and HTML,
+    # where a paragraph is one line by convention and source width is not what a
+    # reader sees; measure lives in CSS, which MEASURE_OPTIMUM judges. 2,600+
+    # findings, and its automatic fix would have hard-wrapped prose.
+    TYPEFACE_PER_ROLE:
+      definition_sources: [MASTER/law/geometry.rb]
+      severity: warning
+      languages: [json]
+    TYPOGRAPHIC_GRID:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      lifecycle: retired
+      languages: [markdown, html]
+    TYPOGRAPHY_DISCIPLINE:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+      autofix: automatic
+    UNBOUNDED_RETRY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      # `retry` is a Ruby keyword and nothing else. Undeclared, this read every
+      # language in the tree, and its one standing finding was the word in a
+      # sentence on 406-unsupported-browser.html - "then retry", English prose in
+      # HTML, at :error. Every narrowing in its detector tells the keyword from
+      # the word; declaring the language is the same job done at the file.
+      languages: [ruby]
+    UNIVERSAL_CROSS_DISCIPLINARY_RULES:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    UNIX_PHILOSOPHY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    UNTRUSTED_CONTENT_IS_DATA:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    USE_THEN:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: info
+      languages: [ruby]
+    USER_CONTROL:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    UTILITY_CLASS_SOUP:
+      definition_sources: [MASTER/law/html.rb]
+      severity: warn
+      languages: [html]
+    VERIFICATION_REQUIRED_FOR_COMPLETION:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: error
+      lifecycle: trusted
+      autofix: never
+    VERIFY_THE_INSTRUMENT:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    VERTICAL_BREATH:
+      definition_sources: [MASTER/law/cosmetic.rb]
+      severity: info
+      autofix: automatic
+      languages: [ruby, javascript]
+    VERTICAL_RHYTHM:
+      definition_sources: [MASTER/law/rendered.rb]
+      severity: warning
+      languages: [json]
+    veto_patterns:
+      definition_sources: [MASTER/law/veto.rb]
+      severity: veto
+    VISUAL_HIERARCHY:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    VISUAL_LAYOUT_REFINEMENT_EVIDENCE:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: error
+    VISUAL_IDENTITY_SOURCE_OF_TRUTH:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: warning
+      languages: [yaml]
+    VISUAL_PARTICLE_STIPPLE_PRIMARY:
+      definition_sources: [MASTER/law/recovered_design_semantics.rb]
+      severity: warning
+      languages: [yaml]
+    VOICE_FAILURES_ARE_ACTIONABLE:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: info
+      mode: opportunity
+      languages: [ruby]
+    VOICE_TERSE_UNIX:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    VPS_SERIAL_TRUTH:
+      definition_sources: [MASTER/law/practice.rb]
+      severity: warn
+    WAITING_STATE_MEANING:
+      definition_sources: [MASTER/law/interface.rb]
+      severity: info
+      mode: opportunity
+      languages: [html, css, scss, javascript]
+    WEB_PLATFORM_DEFAULTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
+      mode: opportunity
+    WHITESPACE_RHYTHM:
+      definition_sources: [MASTER/law/surface.rb]
+      severity: info
+      autofix: automatic
+      languages: [css, scss]
+    WHY_NOT_WHAT:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: info
+    WORDMASK_OBSERVES_UNCLIPPED:
+      definition_sources: [MASTER/law/brand.rb]
+      severity: warn
+    ZSH_NATIVE_PATTERNS:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: warning
+      languages: [zsh]
+    ZSH_SHEBANG:
+      definition_sources: [MASTER/law/shell.rb]
+      severity: warn
+      languages: [zsh]
+
+# Style contracts shared by postpro, replicate and dilla. These domain policies
+# are enforced by STUDIO's registry and modality adapters. They enter MASTER's
+# priority constitutional parity gate only if matching MASTER detector coverage
+# is added; aesthetic choices remain operator-owned.

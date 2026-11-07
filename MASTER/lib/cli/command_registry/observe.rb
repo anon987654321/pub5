@@ -1,0 +1,215 @@
+# frozen_string_literal: true
+
+require_relative "../scan/report"
+require_relative "../scan/request"
+require_relative "../scan/live"
+require_relative "../../fix/scan/mechanical_autofix"
+
+module Master
+  module CLI
+    module CommandRegistry
+      module_function
+
+      VIOLATION_TRUNCATE = Master::VIOLATION_TRUNCATE
+      SCAN_RULE_GROUP_LIMIT = 10
+
+      # The observation /fix starts from: read the tree, repair what a rule can
+      # repair mechanically, and report what is left. Pipeline::Pass calls it
+      # inside the fix lifecycle. It is not a command — a reading nobody acts on
+      # is what /scan was, and what this architecture removed.
+      #
+      # on_total hears the final count, for a caller that reports it; the text
+      # stays the report.
+      def observe(scanner:, root:, ctx: nil, on_total: nil)
+        Scan::Live.ensure_sync!
+        _arg, dry_run, no_autofix, clean_arg, do_autofix = parse_scan_args(ctx)
+
+        Scan::Live.with_interrupt_dump(root:, snapshot: !dry_run) do |holder|
+          text = mechanically(scanner) do
+            scan_pass(scanner:, root:, clean_arg:, dry_run:, no_autofix:, do_autofix:, holder:, on_total:)
+          end
+          report_file_counts(holder, ctx&.dig(:on_counts), dry_run:)
+          text
+        end
+      end
+
+      # The same reading of only the files named in context[:files], for a second look at what a repair
+      # changed. context[:on_counts] hears the count per file, as it does after a whole-tree reading.
+      def observe_files(scanner:, root:, context:, on_total: nil)
+        Scan::Live.ensure_sync!
+        _arg, dry_run, _no_autofix, _clean_arg, do_autofix = parse_scan_args(context)
+
+        # Mechanical, as the first reading is: the model tier belongs to the fix passes, and twenty
+        # changed files read with it hold the lane for twenty minutes.
+        requests = mechanically(scanner) do
+          context.fetch(:files).map { |file| Scan::Request.new(scanner:, root:, arg: file, autofix: do_autofix).call }
+        end
+        report_files(requests, dry_run:, on_total:, on_counts: context[:on_counts])
+      end
+
+      def report_files(requests, dry_run:, on_total:, on_counts:)
+        pairs = requests.map(&:pairs).reject { |found| found.is_a?(String) }.flatten(1)
+        first = requests.first
+        filters = first ? [first.profile, first.law_filter, first.severity_filter] : []
+        profile, rule_filter, severity_filter = filters
+        report = Scan::Report.new(pairs:, profile:, rule_filter:, severity_filter:, dry_run:, phase: "final")
+
+        on_total&.call(report.total_count)
+        report_file_counts({ pairs:, filters: }, on_counts, dry_run:)
+        pairs.empty? ? clean_scan_line(dry_run:) : report.render
+      end
+
+      # Findings per file, the files with none left out, from the pairs scan_pass left in the holder.
+      def report_file_counts(holder, on_counts, dry_run:)
+        return unless on_counts && holder[:pairs]
+
+        profile, rule_filter, severity_filter = holder[:filters]
+        conflicts = Master::Fix::ConflictResolver.new(root: Master::ROOT)
+        counts = holder[:pairs].to_h do |pair|
+          report = Scan::Report.new(pairs: [pair], profile:, rule_filter:, severity_filter:, dry_run:, conflicts:)
+          [pair.first.to_s, report.total_count]
+        end
+        on_counts.call(counts.reject { |_path, count| count.zero? })
+      end
+
+      # The reading is mechanical; the model tier belongs to the fix passes that
+      # follow, on the files they work.
+      def mechanically(scanner, &)
+        return yield unless scanner.respond_to?(:mechanical_only)
+
+        scanner.mechanical_only(&)
+      end
+
+      def parse_scan_args(ctx)
+        arg = arg_for(ctx)
+        dry_run = dry_run_arg?(arg)
+        mode = arg.to_s[/(?:\A|\s)--autofix=(off|dry|on)\b/i, 1]
+        Master::Fix::AutofixGuard.mode = mode if mode
+        no_autofix = no_autofix_arg?(arg) || mode&.downcase == "off"
+        clean_arg = strip_scan_flags(arg)
+        do_autofix = !dry_run && !no_autofix && Master::Fix::Scan::MechanicalAutofix.enabled?
+        [arg, dry_run, no_autofix, clean_arg, do_autofix]
+      end
+
+      def scan_pass(scanner:, root:, clean_arg:, dry_run:, no_autofix:, do_autofix:, holder:, on_total: nil)
+        Scan::Live.banner(target: clean_arg.empty? ? root : clean_arg, profile: nil, dry_run:, autofix: do_autofix)
+        scanner.skip_semantic! if dry_run && scanner.respond_to?(:skip_semantic!)
+
+        request = Scan::Request.new(scanner:, root:, arg: clean_arg, autofix: do_autofix).call
+        return request.pairs if request.pairs.is_a?(String)
+
+        pairs, profile, rule_filter, severity_filter = request.pairs, request.profile, request.law_filter, request.severity_filter
+        pass1_total = run_scan_pass1(pairs:, profile:, rule_filter:, severity_filter:, dry_run:, root:, holder:,
+                                     do_autofix:)
+
+        pairs, autofixes = run_scan_autofix_phase(
+          scanner:, root:, clean_arg:, pairs:, do_autofix:, dry_run:, no_autofix:,
+        )
+
+        text = render_final_scan_report(
+          pairs:, profile:, rule_filter:, severity_filter:, dry_run:, autofixes:, do_autofix:, pass1_total:, on_total:,
+        )
+        holder[:pairs] = pairs
+        holder[:filters] = [profile, rule_filter, severity_filter]
+        holder[:text] = text
+        Scan::Live.snapshot!(text, root:, note: "final") unless dry_run
+        text
+      end
+
+      # "pass 1" is only a first pass when a second one follows. With no fix
+      # phase — a dry run, or --no-autofix — it reported the same counts the
+      # "done" line reports four lines later, and the snapshot line under it
+      # named the same two files twice. The snapshot is still written either
+      # way: an interrupted scan leaving nothing behind is what it is for.
+      def run_scan_pass1(pairs:, profile:, rule_filter:, severity_filter:, dry_run:, root:, holder:, do_autofix: true)
+        pass1 = Scan::Report.new(
+          pairs:, profile:, rule_filter:, severity_filter:,
+          dry_run:, phase: "pass1"
+        )
+        Scan::Live.emit("pass 1, #{pass1.brief}") if do_autofix
+        holder[:text] = pass1.render
+        Scan::Live.snapshot!(holder[:text], root:, note: "pass1 before autofix", announce: false) unless dry_run
+        pass1.total_count
+      end
+
+      def run_scan_autofix_phase(scanner:, root:, clean_arg:, pairs:, do_autofix:, dry_run:, no_autofix:)
+        streamed = scanner.respond_to?(:stream_autofixes) ? Array(scanner.stream_autofixes) : []
+        if streamed.any?
+          autofixes = streamed.map { |applied| { path: applied.path, transforms: applied.transforms } }
+          Scan::Live.emit("autofix applied during scan, #{Master::Trace::Dmesg.counted(autofixes.size, "file")}")
+          return [pairs, autofixes]
+        end
+
+        return apply_and_rescan(scanner:, root:, clean_arg:, pairs:) if pairs.any? && do_autofix
+
+        Scan::Live.emit(dry_run ? "autofix skipped, dry run" : "autofix skipped, --no-autofix") if dry_run || no_autofix
+        [pairs, []]
+      end
+
+      # Pass 2: the findings the fixer wrote are the reason to look again, so a
+      # rescan only happens when something was actually applied.
+      def apply_and_rescan(scanner:, root:, clean_arg:, pairs:)
+        Scan::Live.emit("autofix applying")
+        autofixes = apply_scan_autofixes(scanner:, root:, pairs:)
+        if autofixes.empty?
+          Scan::Live.emit("autofix applied nothing, no finding had a transform")
+          return [pairs, autofixes]
+        end
+
+        transforms = autofixes.flat_map { |a| Array(a[:transforms]) }.uniq.first(8).join(", ")
+        Scan::Live.emit("autofixed #{Master::Trace::Dmesg.counted(autofixes.size, "file")}: #{transforms}")
+        Scan::Live.emit("pass 2, rescanning after autofix")
+        rescanned = Scan::Request.new(scanner:, root:, arg: clean_arg).call
+        pairs = rescanned.pairs unless rescanned.pairs.is_a?(String)
+        [pairs, autofixes]
+      end
+
+      def render_final_scan_report(pairs:, profile:, rule_filter:, severity_filter:, dry_run:, autofixes:, do_autofix:,
+                                   pass1_total:, on_total: nil)
+        final = Scan::Report.new(
+          pairs:,
+          profile:,
+          rule_filter:,
+          severity_filter:,
+          dry_run:,
+          autofixes:,
+          phase: do_autofix && autofixes.any? ? "pass2" : "final",
+          prior_total: do_autofix ? pass1_total : nil,
+        )
+        text = pairs.empty? && autofixes.empty? ? clean_scan_line(dry_run:, autofixes:) : final.render
+        Scan::Live.emit("done, #{final.brief}")
+        on_total&.call(final.total_count)
+        text
+      end
+
+      def apply_scan_autofixes(scanner:, root:, pairs:)
+        Master::Fix::Scan::MechanicalAutofix.new(scanner:, root:).apply(pairs).map do |applied|
+          { path: applied.path, transforms: applied.transforms }
+        end
+      end
+
+      def clean_scan_line(dry_run:, autofixes: [])
+        Scan::Report.new(
+          pairs: [],
+          profile: nil,
+          rule_filter: nil,
+          dry_run:,
+          autofixes:,
+          phase: "final",
+        ).render
+      end
+
+      def dry_run_arg?(arg)
+        arg.to_s.split(/\s+/).include?("--dry-run")
+      end
+
+      def no_autofix_arg?(arg)
+        arg.to_s.split(/\s+/).include?("--no-autofix")
+      end
+
+      def strip_scan_flags(arg)
+        arg.to_s.split(/\s+/).reject { |part| part == "--dry-run" || part == "--no-autofix" || part.match?(/\A--autofix=/) }.join(" ")
+      end
+    end
+  end
+end

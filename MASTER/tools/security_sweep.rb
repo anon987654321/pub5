@@ -1,0 +1,152 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require_relative "../lib/trace/dmesg"
+
+# SWEEP_ROOT, not ROOT. This file is required by test/test_security_sweep.rb.
+# The former MASTER/tools/dilla/dilla.rb also declared a top-level ROOT, so load
+# order could silently change the scope of a secret scan. That old path is gone;
+# keep this purpose-specific name rather than reintroducing a generic global.
+SWEEP_ROOT = File.expand_path("../..", __dir__)
+
+SECRET_PATTERNS = [
+  # A key starts at a word boundary: vosk-model-small-en-us is not one.
+  /\bsk-[A-Za-z0-9_\-]{16,}/,
+  /\bsk-ant-[A-Za-z0-9_\-]{16,}/,
+  /AKIA[0-9A-Z]{16}/,
+  /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/,
+  /(?<![a-z_])api_key\s*[:=]\s*["'][^"']{8,}["']/i,
+].freeze
+
+# The password rule needs the value, not just a match. As a bare pattern —
+# /password\s*[:=]\s*["'][^"'\[\]]{8,}["']/i — it flagged sixteen i18n strings
+# across three apps ("Glemt passord?", "Confirm password", "Update your
+# password"), so `bin/check --profile=contributor` and the operator profile were
+# both failing on translated UI copy. A check whose failure is always noise is a
+# check people learn to skip.
+PASSWORD_ASSIGNMENT = /(?<![a-z_])password\s*[:=]\s*["']([^"'\[\]]{8,})["']/i
+PLACEHOLDERS = /\A(?:password123|changeme|example|secret|\[your password\])\z/i
+# Prose, not a credential: one word or hyphenated words with no digit or symbol.
+PROSE_VALUE = /\A[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\u2019\-]*[?.!]?\z/
+# A value that is nothing but an indirection names where the credential comes
+# from; the credential itself lives in the environment or a locale file.
+# MASTER/checks/data/flows.yml posts "$FLOW_AMBER_PASSWORD" to a login form, and a
+# sweep that reads a variable name as the secret it stands for is the same
+# always-noise failure the i18n strings above already caused once.
+INDIRECTION = /\A(?:\$\{?[A-Za-z_]\w*\}?|%\{[^}]+\}|<%=[^%]*%>|\#\{[^}]+\})\z/
+
+def secretish_password?(value)
+  return false if value.match?(/\s/)          # "Forgot password?" — copy, not a credential
+  return false if value.match?(PLACEHOLDERS)
+  return false if value.match?(INDIRECTION)
+  return false if value.match?(PROSE_VALUE) && value.length < 16
+
+  true
+end
+
+def password_hits(body)
+  body.scan(PASSWORD_ASSIGNMENT).flatten.select { |value| secretish_password?(value) }
+end
+
+SKIP_PATH_RE = %r{
+  \A(?:OPENBSD/quarantine/|
+  OPENBSD/archive/recovery/references/|
+  .*/test/|
+  .*/tests/|
+  MASTER/data/eval_cases\.yml|
+  MASTER/test/)
+}x.freeze
+
+TRACKED_DENY_GLOBS = [
+  "RAILS/*/config/master.key",
+  "RAILS/*/storage/**/*.sqlite3",
+  "RAILS/*/db/**/*.sqlite3",
+  "**/.env",
+  "**/credentials/*.key",
+  # CLAUDE.md's never-commit list, as a check rather than a sentence. These are
+  # gitignored, and .gitignore is exactly what failed for the seven master.key
+  # blobs still readable in this repo's history: a pattern stops a mistake only
+  # until someone adds a path explicitly. MASTER/AGENTS.md "Do Not Touch" names
+  # this sweep as its check, so the claim has a reader.
+  "MASTER/knowledge/**",
+  "MASTER/output/**",
+  "**/.master/**",
+].freeze
+
+# MASTER/law/*.rb is the instrument, not the subject. Every Law.define carries a
+# `bad` and `good` fixture, stripped below. Do not suppress a detector across a
+# whole file because it contains a provider-registry marker; that would let an
+# unrelated credential elsewhere in the same file go unseen.
+#
+# The tree is not skipped wholesale, because a real credential committed beside
+# a fixture would then be the one thing here nobody is looking at. Only the two
+# declared fixture lines are dropped; everything else in the file is scanned.
+LAW_FIXTURE_RE = /^[ \t]*(?:bad|good)[ \t]+["'].*$/.freeze
+
+def strip_law_fixtures(path, body)
+  return body unless path.start_with?("MASTER/law/")
+
+  body.gsub(LAW_FIXTURE_RE, "")
+end
+
+def secret_pattern_hits(body)
+  SECRET_PATTERNS.select { |pattern| body.match?(pattern) }
+end
+
+def git_ls_files(pattern)
+  out, status = Open3.capture2("git", "-C", SWEEP_ROOT, "ls-files", pattern)
+  status.success? ? out.lines.map(&:chomp).reject(&:empty?) : []
+end
+
+def scan_tracked_secrets
+  hits = []
+  git_ls_files(".").each do |path|
+    next if path.match?(SKIP_PATH_RE)
+    next if path.end_with?("/db/seeds.rb")
+    next unless File.file?(File.join(SWEEP_ROOT, path))
+    next if File.size(File.join(SWEEP_ROOT, path)) > 512_000
+
+    body = File.read(File.join(SWEEP_ROOT, path), mode: "rb").force_encoding(Encoding::UTF_8)
+    next unless body.valid_encoding?
+
+    body = strip_law_fixtures(path, body)
+
+    secret_pattern_hits(body).each do |pattern|
+      hits << "#{path}: #{pattern}"
+    end
+
+    found = password_hits(body)
+    hits << "#{path}: password assignment (#{found.size}): #{found.first(3).join(", ")}" if found.any?
+  end
+  hits
+end
+
+def sweep
+  failures = []
+
+  TRACKED_DENY_GLOBS.each do |pattern|
+    tracked = git_ls_files(pattern)
+    failures.concat(tracked.map { |path| "tracked secret artifact: #{path}" })
+  end
+
+  failures.concat(scan_tracked_secrets)
+
+  [failures, 0]
+end
+
+# Guarded so test/test_security_sweep.rb can require this file and exercise the
+# password predicate directly. Without it, the only way to test the rule was to
+# run the whole sweep and read its output — which is how the rule shipped with a
+# sixteen-hit false-positive rate on translated UI copy.
+if $PROGRAM_NAME == __FILE__
+  failures, = sweep
+
+  if failures.any?
+    Master::Trace::Dmesg.attach("security0", "master0", "#{failures.size} tracked-secret finding(s)", io: $stderr)
+    failures.each { |failure| Master::Trace::Dmesg.status("security0", failure, io: $stderr) }
+    exit 1
+  end
+
+  Master::Trace::Dmesg.status("security0", "passed, 0 tracked secrets")
+end

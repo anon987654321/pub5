@@ -1,0 +1,28 @@
+nb:
+  messages:
+    preview_photo: "Bilde"
+    preview_voice: "Talemelding"
+    requests_link: "Meldingsforespørsler (%{count})"
+    requests_title: "Meldingsforespørsler"
+    requests_empty_title: "Ingen meldingsforespørsler"
+    requests_empty_body: >-
+      Meldinger fra folk du ikke har snakket med og ikke følger, venter her til du godtar dem.
+    request_title: "%{name} vil sende deg en melding"
+    request_body: >-
+      Dere har ikke snakket sammen før. Avsenderen ser ikke at du har lest dette før du godtar,
+      og du kan avslå uten at hen får beskjed.
+    request_accept: "Godta"
+    request_decline: "Avslå"
+    confirm_request_decline: >-
+      Avslå forespørselen? Samtalen fjernes fra meldingene dine, og avsenderen får ikke beskjed.
+    request_report_block: "Rapporter og blokker"
+    confirm_request_report_block: >-
+      Rapportere og blokkere avsenderen? Meldingen sendes til moderatorene, hen kan ikke skrive til deg igjen,
+      og samtalen fjernes fra meldingene dine. Avsenderen får ikke beskjed.
+    request_report_details: "Rapportert fra en meldingsforespørsel."
+    group_add_person: "Legg til %{name}"
+    back_to_group: "Tilbake til gruppen"
+    chosen_photo: "Bildet du har valgt"
+    remove_photo: "Fjern bildet"
+  flash:
+    message_request_reported: "Forespørselen er rapportert, og avsenderen er blokkert."

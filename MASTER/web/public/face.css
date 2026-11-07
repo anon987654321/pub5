@@ -1,0 +1,2078 @@
+/* scan: intentional-colors — the face is one-theme black by design
+   (SURFACES.md): its #000 grounds and print inversion follow no palette. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* No font is downloaded: the face sets brgen's one sans family (--font,
+   Helvetica Neue Pro to Arial) for chrome and the mono stack for the chat,
+   both installed faces. */
+
+/* BEGIN:generated-family-tokens - the :root of RAILS/__shared/public/styles/tokens.css */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #111111;
+  --surface-elevated: #1a1a1a;
+  --search-bg: #111111;
+  --text: #efefef;
+  --text-secondary: #a3a3a3;
+  --border: #666666;
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #efefef;
+  --danger: #e46151;
+  --pub5-signal: #C8F55F;
+  --pub5-signal-ink: #101010;
+  --pub5-signal-on-light: #50630A;
+  --text-display: clamp(40px, 6vw, 88px);
+  --font: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --radius-extra-small: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-card: 16px;
+  --radius-large: 16px;
+  --radius-pill: 9999px;
+  --transition-fast: 180ms;
+  --transition-normal: 300ms;
+  --z-chrome: 10;
+  --z-ui: 90;
+  --z-overlay: 100;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-skip: 2000;
+  --color-background: var(--bg);
+  --color-midtone: var(--text-secondary);
+  --color-highlight: var(--surface);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --text-primary: var(--text);
+}
+/* END:generated-family-tokens */
+/* BEGIN:generated-face-root - ruby MASTER/tools/design_tokens.rb generate_face_root_css */
+:root {
+  --pub5-signal: #D4D4D4;
+  --pub5-signal-ink: #080808;
+  --pub5-signal-on-light: #3A3A3A;
+  --c-text: var(--text);
+  --c-accent: var(--pub5-signal);
+  --c-danger: var(--danger);
+  --c-code: oklch(81% 0 0);
+  --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  --font-label: "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  color-scheme: dark;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --chrome-inset: 12px;
+  --inset-t: calc(var(--chrome-inset) + var(--safe-top));
+  --inset-r: calc(var(--chrome-inset) + var(--safe-right));
+  --inset-b: calc(var(--chrome-inset) + var(--safe-bottom));
+  --inset-l: calc(var(--chrome-inset) + var(--safe-left));
+  --face-bg: #000000;
+  --face-fg: var(--c-text);
+  --face-muted: var(--text-secondary);
+  --face-dim: rgb(176 176 176 / 18%);
+  --face-soft: rgb(176 176 176 / 7%);
+  --face-alert: color-mix(in oklch, var(--c-danger) 75%, white);
+  --mood-accent: var(--c-accent);
+  --canvas-mood-accent: var(--c-accent);
+  --border-faint: rgb(164 164 164 / 16%);
+  --border-soft: rgb(164 164 164 / 23%);
+  --border-strong: rgb(175 175 175 / 34%);
+  --hover-tint: color-mix(in srgb, var(--face-fg) 8%, transparent);
+  --chrome-bg: var(--surface);
+  --chrome-surface: var(--surface);
+  --chrome-surface-active: #222222;
+  --chrome-border: var(--border);
+  --chrome-hover: var(--hover);
+  --chrome-text: var(--text);
+  --chrome-muted: var(--text-secondary);
+  --chrome-focus: var(--accent);
+  --chrome-band: #000000;
+  --chrome-band-ink: #e7e9ea;
+  --chrome-band-muted: #8b98a5;
+  --tap-min: 44px;
+  --text-meta: 0.8125rem;
+  --text-extra-small: 0.75rem;
+  --text-title: 1.25rem;
+  --baseline: 4px;
+  --measure: 60ch;
+  --leading-body: 1.5;
+  --leading-title: 1.25;
+  --radius-extra-small: 0;
+  --radius-small: 0;
+  --radius-medium: 0;
+  --radius-large: 0;
+  --radius-pill: 0;
+  --face-bar-height: 44px;
+  --bar-height: 44px;
+  --hud-tier-status: calc(var(--face-bar-height) + var(--safe-bottom) + 8px);
+  --hud-tier-caption: calc(var(--face-bar-height) + var(--safe-bottom) + var(--tap-min));
+  --face-phosphor-decay: 0.80;
+  --transition-fast: 180ms;
+  --transition-normal: 300ms;
+  --ease-out: cubic-bezier(0.16,1,0.3,1);
+  --ease-linear: cubic-bezier(0,0,1,1);
+  --ease-in-out: cubic-bezier(0.65,0,0.35,1);
+  --ease-spring: cubic-bezier(0.32,0.72,0,1);
+  /* z-scale: canvas(base) < chrome(persistent HUD) < ui < overlay(panels) < modal(blocking) < toast(errors) < skip(a11y skip-link) */
+  --z-canvas: 1;
+  --z-chrome: 10;
+  --z-ui: 90;
+  --z-overlay: 100;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-skip: 2000;
+}
+/* END:generated-face-root */
+
+/* Not generated tokens. generate_face_root_css.rb owns the block above, so a
+   hand-added line inside it is drift the deploy check stops. The brand face is
+   the one sans family the owner set for every surface, so rules read the
+   family block's --font directly rather than an alias of it. Helvetica Neue
+   Pro is licensed per seat and cannot ship as a webfont; the stack names it
+   where it is installed and falls to Helvetica Neue, then Arial, and
+   downloads nothing. */
+:root {
+  /* Optical display weights sit outside the body 400/600/800 ladder. */
+  --face-weight-brand: 640;
+  --face-weight-display: 560;
+  /* The wordmark face brgen.no sets its logo in ($brgen-logo-font in
+     brgen/app/assets/stylesheets/application.scss), so ai.brgen.no reads as the
+     same logo: same stack, heavy weight, tightest tracking. Operator, 2026-10-12. */
+  --font-logo: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--face-bg);
+  color: var(--face-fg);
+  font: 16px/1.5 var(--font);
+  font-feature-settings: "ss01","ss03","cv05","kern" 1;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: auto;
+  user-select: none;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='7' y='0' width='2' height='6' fill='%23d8d6e0'/%3E%3Crect x='7' y='10' width='2' height='6' fill='%23d8d6e0'/%3E%3Crect x='0' y='7' width='6' height='2' fill='%23d8d6e0'/%3E%3Crect x='10' y='7' width='6' height='2' fill='%23d8d6e0'/%3E%3C/svg%3E") 8 8, crosshair;
+}
+
+body.face-loading {
+  touch-action: manipulation;
+}
+
+body.font-mono {
+  font-family: var(--font-mono);
+}
+
+body[data-high-contrast="1"] {
+  --face-fg: white;
+  --face-muted: white;
+  --face-dim: white;
+  --face-soft: white;
+}
+body[data-high-contrast="1"] .msg-body { color: white; }
+
+@media (prefers-contrast: more) {
+  :root {
+    --face-muted: var(--face-fg);
+    --face-dim: color-mix(in srgb, var(--c-text) 34%, transparent);
+    --border-faint: color-mix(in srgb, var(--face-fg) 22%, transparent);
+    --border-soft: color-mix(in srgb, var(--face-fg) 30%, transparent);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #cmd-palette { background: var(--face-bg);  }
+  #cmd-palette-panel { background: var(--face-bg); }
+  #chat-history-panel { background: var(--face-bg); }
+}
+
+/* Canvas filter tweaks encode runtime state (pixel_field systemic_emotion_mapping), not decorative glow. */
+body[data-runtime-profile="battery"] canvas { filter: none; }
+html[data-topology-flash="1"] canvas { filter: contrast(1.05); transition: filter .09s steps(2,end); }
+body[data-runtime-profile="full"] canvas { filter: none; }
+body[data-runtime-profile="calm"] canvas { filter: none; }
+body[data-runtime-profile="calm"] #cognition-ecology { opacity: 0.72; mix-blend-mode: normal; }
+body[data-runtime-profile="calm"] #ascii-star { display: none; }
+body[data-long-silence="1"] canvas { filter: none; }
+body[data-laughter="1"] canvas { filter: contrast(1.08) saturate(1.06); }
+body[data-face-flash="1"] canvas {
+  filter: saturate(1.08) contrast(1.04);
+}
+/* Calm damps the flash-class canvas responses (operator request 2026-10-27: a
+   soothing face). The state still lands in the field — the stipples carry it —
+   but calm drops the whole-canvas contrast kicks. The profile may sit on html
+   or body depending on which setter wrote it, so both are matched, each
+   outranking the flash rule above it. */
+html[data-runtime-profile="calm"][data-topology-flash="1"] canvas,
+body[data-runtime-profile="calm"][data-topology-flash="1"] canvas,
+html[data-runtime-profile="calm"] body[data-laughter="1"] canvas,
+body[data-runtime-profile="calm"][data-laughter="1"] canvas,
+html[data-runtime-profile="calm"] body[data-face-flash="1"] canvas,
+body[data-runtime-profile="calm"][data-face-flash="1"] canvas { filter: none; }
+
+body[data-focus-mode="1"] .top-left-logo,
+body[data-focus-mode="1"] .ui-status,
+body[data-focus-mode="1"] .face-controls,
+body[data-focus-mode="1"] #chat-log,
+body[data-focus-mode="1"] #ascii-star,
+body[data-focus-mode="1"] #pause-speech-button {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Here as well as in chat_upload.css, which loads late and can miss: the
+   tap floor (LAYOUT_RULES.touch) must not wait on a deferred stylesheet. */
+#photo-button {
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+#photo-button:focus-visible,
+#pause-speech-button:focus-visible,
+#prompt-input:focus-visible,
+.skip-link:focus-visible {
+  outline: 2px solid var(--c-accent, var(--accent, #bdbdbd));
+  outline-offset: 2px;
+}
+
+body[data-focus-mode="1"] #prompt-form {
+  background: transparent;
+
+}
+
+/* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
+canvas#face {
+  background: #000;
+  z-index: 1;
+  transform: translateZ(0);
+}
+
+#cognition-ecology {
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.88;
+  transition: opacity 300ms var(--ease-out);
+}
+
+html[data-agent-engagement="thinking"] #cognition-ecology { opacity: 0.94; }
+html[data-agent-engagement="speaking"] #cognition-ecology { opacity: 0.82; }
+
+canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100dvw;
+  height: 100dvh;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: pinch-zoom;
+  contain: strict;
+  will-change: transform;
+  transition: filter var(--transition-fast) var(--ease-out);
+}
+
+body[data-focus-mode="1"] #cognition-ecology {
+  opacity: 0.12;
+  transition: opacity 280ms var(--ease-out);
+}
+
+body[data-runtime-visible="false"] canvas,
+body[data-hidden-tab="1"] canvas {
+  visibility: hidden;
+}
+
+body[data-runtime-visible="false"] #cognition-ecology,
+body[data-hidden-tab="1"] #cognition-ecology {
+  opacity: 0;
+  transition: opacity 280ms var(--ease-out);
+}
+
+#cmd-palette {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: none;
+  place-items: start center;
+  padding: calc(12vh + var(--safe-top)) 16px 16px;
+  background: color-mix(in srgb, var(--face-bg) 72%, transparent);
+}
+
+#cmd-palette[data-open="1"] { display: grid; }
+
+#cmd-palette-panel {
+  width: min(520px, 100%);
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--face-bg) 94%, transparent);
+  contain: layout style paint;
+}
+
+#cmd-palette-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border-faint);
+  background: transparent;
+  color: var(--face-fg);
+  font: 16px/1.5 var(--font-mono);
+  padding: 12px 12px;
+  outline: none;
+}
+
+#cmd-palette-input:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: -2px;
+}
+
+#cmd-palette-list {
+  list-style: none;
+  max-height: 42vh;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 0;
+}
+
+#cmd-palette-list li {
+  padding: 8px 12px;
+  min-height: var(--tap-min);
+  font: 16px/1.5 var(--font-mono);
+  color: color-mix(in srgb, var(--face-fg) 78%, transparent);
+  cursor: pointer;
+}
+
+#cmd-palette-list li[data-active="1"] {
+  background: var(--pub5-signal);
+  color: var(--pub5-signal-ink);
+}
+
+#cmd-palette-list li[data-active="1"] .cmd-hint {
+  color: var(--pub5-signal-ink);
+  opacity: 0.8;
+}
+
+#cmd-palette-list li:hover:not([data-active="1"]) {
+  background: var(--hover-tint);
+  color: var(--face-fg);
+}
+
+#cmd-palette-list .cmd-hint {
+  display: block;
+  font-size: var(--text-meta);
+  line-height: var(--leading-body);
+  color: var(--face-muted);
+  margin-top: 0px;
+}
+
+body[data-face-pip="1"] canvas {
+  width: min(34vw, 320px);
+  height: min(34vw, 320px);
+  inset: auto var(--chrome-inset) calc(56px + var(--safe-bottom)) auto;
+  border-radius: 0;
+  transition: inset 180ms var(--ease-out), width 180ms var(--ease-out), height 180ms var(--ease-out), border-radius 180ms var(--ease-out), transform 180ms var(--ease-out), filter var(--transition-fast) var(--ease-out);
+}
+
+body[data-face-pip="1"][data-face-pip-corner="top-left"] canvas {
+  inset: var(--inset-t) auto auto var(--inset-l);
+}
+
+body[data-face-pip="1"][data-face-pip-corner="top-right"] canvas {
+  inset: var(--inset-t) var(--inset-r) auto auto;
+}
+
+body[data-face-pip="1"][data-face-pip-corner="bottom-left"] canvas {
+  inset: auto auto calc(56px + var(--safe-bottom)) var(--inset-l);
+}
+
+body[data-face-pip="1"][data-face-pip-corner="bottom-right"] canvas {
+  inset: auto var(--inset-r) calc(56px + var(--safe-bottom)) auto;
+}
+
+#zsh-wave {
+  display: inline-flex;
+  align-items: end;
+  gap: 4px;
+  height: 44px;
+  margin-inline-start: 8px;
+  opacity: .4;
+}
+
+#zsh-wave span {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px; /* clamps to 1.5px on this 3x4px span — the pill idiom, on scale */
+  background: var(--c-accent);
+  transform-origin: center bottom;
+  transition: height 90ms var(--ease-linear), opacity 90ms var(--ease-linear), transform 90ms var(--ease-linear);
+}
+
+@keyframes faceBootPulse {
+  0%, 100% { opacity: .42; }
+  50% { opacity: .78; }
+}
+
+@keyframes ttsPulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+/* Pristine chrome: only the logo, face, and shell prompt stay visible --
+   drop every top-right and bottom-right badge/status element. #mic-dot is
+   exempt: it is the only feedback about whether the microphone is open.
+   It used to be free when idle because it was invisible then — and that was
+   the bug, since "off" and "no indicator" looked the same. It is now always
+   drawn, grey when idle. One 18px glyph is the price of not having to guess. */
+.model-badge,
+.sound-on-chip,
+.provider-chip,
+body[data-council-persona]::after {
+  display: none !important;
+}
+
+/* .ui-status is sr-only as of 2026-08-14, at the operator's request: no visible
+   status text in the bottom-right corner.
+
+   It is sr-only rather than display: none, and that distinction is the whole of
+   what the 2026-08-13 exemption was defending. showStage writes "routing…",
+   "scanning…" and "speaking…" here through an aria-live region, and display:
+   none takes an element out of the accessibility tree entirely, so the
+   announcements reached nobody — not the screen, not a screen reader. .sr-only
+   clips instead, so the element still exists to assistive tech while rendering
+   nothing. Sighted users lost a label they had for one day; screen reader users
+   keep what that commit restored. Do not "simplify" this to display: none. */
+
+/* Top-left logo — brgen wordmark (shared x tokens) */
+.top-left-logo {
+  position: fixed;
+  top: calc(14px + var(--safe-top));
+  inset-inline-start: calc(14px + var(--safe-left));
+  z-index: var(--z-ui);
+  font: 800 clamp(15px,3.8vw,24px)/1 var(--font-logo);
+  letter-spacing: -.03em;
+  text-transform: none; /* brgen wordmark is lowercase */
+  color: var(--c-text);
+  opacity: 1;
+  pointer-events: none;
+  user-select: none;
+  text-rendering: optimizeLegibility;
+  transition: opacity 1.2s var(--ease-out);
+}
+/* Mic indicator — top-right, always present, two states.
+ *
+ * Was a 10px dot at opacity 0 that appeared only while listening. That made
+ * "microphone off" and "no indicator exists" the same picture, so the only way
+ * to find out was to speak and wait for nothing to happen. Operator report
+ * 2026-08-10: "no mic icon to indicate when its on and when its off (dark
+ * grey), so user has to guess".
+ *
+ * Idle is dark grey and legible rather than hidden — a control you can see is
+ * off is not clutter, it is the answer to the question. Listening keeps the
+ * live colour and the pulse it always had. */
+#mic-dot {
+  position: fixed;
+  top: var(--safe-top);
+  inset-inline-end: var(--safe-right);
+  width: var(--tap-min);
+  height: var(--tap-min);
+  color: var(--c-mic-off, #6b6b6b);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: var(--z-ui);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+
+#mic-dot:focus-visible {
+  outline: 2px solid var(--chrome-focus);
+  outline-offset: 2px;
+}
+
+#mic-dot svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
+#mic-dot[data-mic="open"] {
+  color: var(--c-danger);
+}
+
+#mic-dot[data-mic="closed"] {
+  color: var(--c-mic-off, #6b6b6b);
+}
+
+body[data-mic-open="1"] #mic-dot[data-mic="open"] {
+  animation: micPulse 1.4s var(--ease-in-out) infinite;
+}
+
+body[data-mic-open="0"] #mic-dot[data-mic="closed"] {
+  animation: none;
+}
+
+/* Listening: live colour and the pulse. */
+body[data-mode="listening"] #mic-dot {
+  color: var(--c-danger);
+  will-change: transform;
+  animation: micPulse 1.4s var(--ease-in-out) infinite;
+}
+
+/* While MASTER is speaking the mic is deliberately not listening, and saying so
+ * is worth more than going blank -- this is the moment a user is most likely to
+ * talk over it and wonder why nothing was heard. */
+body[data-mode="speaking"] #mic-dot {
+  opacity: 0.45;
+}
+
+@keyframes micPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* Bottom-right status label */
+.face-controls {
+  position: fixed;
+  inset-inline-start: var(--inset-l);
+  bottom: var(--hud-tier-status);
+  z-index: var(--z-ui);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: min(calc(100vw - 24px - var(--safe-left) - var(--safe-right)), 520px);
+  padding: 8px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-large);
+  background: #000;
+  contain: layout style paint;
+}
+
+.model-badge {
+  position: fixed;
+  top: calc(var(--inset-t) + 18px);
+  inset-inline-end: var(--inset-r);
+  z-index: var(--z-ui);
+  padding: 8px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-pill);
+  background: #000;
+  color: var(--face-muted);
+  font: var(--text-meta)/1 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  pointer-events: none;
+}
+
+.model-badge[data-visible="1"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.soul-drift {
+  position: fixed;
+  top: var(--inset-t);
+  z-index: var(--z-ui);
+  pointer-events: none;
+}
+
+.soul-drift {
+  inset-inline-start: var(--inset-l);
+  padding: 8px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-pill);
+  background: #000;
+  color: var(--face-muted);
+  font: var(--text-meta)/1 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.face-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--face-muted);
+  font: var(--text-meta)/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .15em;
+}
+
+.face-scale input[type="range"] {
+  width: 88px;
+  accent-color: var(--face-fg);
+}
+
+/* SR-only for a11y live announcements (mood changes etc) — screen readers only, no visual */
+.sr-only {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: -0px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Primer overlay — Radio Bergen dialog style */
+#primer {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: var(--z-modal);
+  background: color-mix(in srgb, var(--face-bg) 86%, transparent);
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  padding: 16px;
+  transition: opacity var(--transition-fast) var(--ease-out), background var(--transition-fast) var(--ease-out);
+  touch-action: manipulation;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#primer:focus-visible { outline: 1px solid var(--face-fg); outline-offset: -8px; }
+
+[id="face"]:focus-visible { outline: 2px solid var(--face-fg); outline-offset: 2px; }
+
+#primer .primer-title {
+  margin: 0;
+  font: 400 clamp(1.05rem,3.2vw,1.5rem)/1.5 var(--font-mono);
+  letter-spacing: .01em;
+  color: var(--face-fg);
+  transition: transform var(--transition-fast) var(--ease-out);
+}
+
+#primer:active .primer-title { transform: scale(1.03); }
+#primer .primer-consent { max-width: 42ch; margin: 16px auto 0; color: var(--face-muted); font: 400 .8125rem/1.5 var(--font-mono); }
+
+/* Tap ripple */
+@keyframes ripple { to { transform: translate(var(--x),var(--y)) translate(-50%,-50%) scale(22); opacity: 0; } }
+.tap-ripple {
+  position: fixed;
+  inset-inline-start: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(var(--x),var(--y)) translate(-50%,-50%) scale(.4);
+  opacity: .7;
+  background: var(--border-strong);
+  animation: ripple 680ms var(--ease-out) forwards;
+  z-index: calc(var(--z-modal) - 1);
+}
+
+#chat-shell {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: calc(var(--face-bar-height) + var(--safe-bottom));
+  z-index: var(--z-chrome);
+  pointer-events: none;
+}
+
+/* #41 Scroll momentum */
+#chat-log {
+  max-height: 40dvh;
+  overflow-y: auto;
+  padding: 8px 16px;
+  font: 1rem/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  scroll-behavior: smooth;
+  color: var(--face-fg);
+  pointer-events: none;
+  touch-action: pan-y;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--face-fg) 28%, transparent) transparent;
+}
+
+#chat-log::-webkit-scrollbar { width: 8px; height: 8px; }
+#chat-log::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--face-fg) 22%, transparent); border-radius: 4px; }
+
+#chat-log:not(:empty) { pointer-events: auto; }
+/* TYPOGRAPHY.line_length: a reply is prose, 45–75ch, whatever the viewport. */
+.message { position:relative; max-inline-size: 66ch; margin-bottom: 8px; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; scroll-snap-align: start; animation: msgIn 220ms var(--ease-spring) both; font: 1rem/1.5 var(--font-mono); }
+.message.user,
+.message.assistant { border: 0; border-radius: 0; background: transparent; }
+.message:focus-visible { outline: 1px solid var(--face-fg); outline-offset: 1px; }
+.msg-prompt { color: var(--face-fg); font-weight: 400; margin-inline-end: 0.35em; }
+.message.user .msg-prompt,
+.message.assistant .msg-prompt { color: var(--face-fg); }
+.msg-body { color: color-mix(in srgb, var(--c-text) 88%, transparent); font-feature-settings:'liga' 1,'kern' 1; text-wrap: pretty; }
+.cursor { display:inline-block; width:2px; height:1em; background:currentColor; vertical-align:text-bottom; animation:cursorBlink 900ms steps(2,end) infinite; margin-inline-start:1px; }
+.message.msg-error-flash .msg-body { outline: 1px solid color-mix(in srgb, var(--c-danger) 55%, transparent); outline-offset: 2px; }
+.message.msg-pass-flash { border-bottom: 1px solid var(--face-fg); }
+@keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+/* Action menu for keyboard nav on messages (FA138) */
+.action-menu {
+  position: absolute;
+  background: var(--face-bg);
+  border: 1px solid var(--face-muted);
+  font: var(--text-meta)/1.25 var(--font-mono);
+  color: var(--face-fg);
+  padding: 0px;
+  z-index: var(--z-overlay);
+  white-space: nowrap;
+}
+.action-menu button {
+  display: block;
+  width: 100%;
+  min-block-size: var(--tap-min);
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: 0 8px;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+}
+.action-menu button:hover, .action-menu button:focus { background: var(--border-faint); }
+.action-menu button:focus-visible { outline: 1px solid var(--face-fg); outline-offset: -2px; }
+
+.provider-chip {
+  position: fixed;
+  inset-inline-end: var(--inset-r);
+  bottom: var(--hud-tier-caption);
+  z-index: var(--z-ui);
+  font: var(--text-meta)/1.25 var(--font-mono);
+  color: color-mix(in srgb, var(--master-accent, var(--c-accent)) 72%, var(--face-fg));
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  opacity: .72;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--transition-fast) var(--ease-out);
+}
+.provider-chip:empty { display: none; }
+html[data-model-provider] .provider-chip { opacity: .92; }
+
+body.brutalist-mode * { border-radius: 0 !important; }
+body.brutalist-mode .message { animation-timing-function: steps(3,end) !important; } /* scan: intentional — the mode must beat every message's own easing */
+body[data-primer-flash="1"] canvas#face { filter: contrast(1.12) brightness(1.08); transition: filter 0ms steps(2,end); }
+
+/* Mission control uses document layout chrome (not immersive face overflow). */
+body.mission-control {
+  overflow: auto;
+  min-height: 100dvh;
+  padding: calc(var(--chrome-inset, 0.75rem) + var(--safe-top, 0px) + var(--face-bar-height, 44px) + 16px)
+           calc(var(--chrome-inset, 0.75rem) + var(--safe-right, 0px))
+           calc(var(--chrome-inset, 0.75rem) + var(--safe-bottom, 0px))
+           calc(var(--chrome-inset, 0.75rem) + var(--safe-left, 0px));
+  font-family: var(--font);
+  font-size: var(--text-meta);
+  touch-action: manipulation;
+  user-select: text;
+  cursor: auto;
+  -webkit-font-smoothing: antialiased;
+}
+body.mission-control .page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  max-width: 66ch;
+}
+body.mission-control h1 {
+  font-size: var(--text-title, 1.25rem);
+  font-weight: 600;
+  margin: 0;
+}
+/* Mission control reads as one scrollback, the way dmesg does: sections one
+   under another in an 80-column measure, space between them rather than boxes
+   around them (UI_POLISH.space_not_lines), and each section named in lowercase
+   by brightness rather than tracked capitals (TYPOGRAPHY_DISCIPLINE). */
+body.mission-control #mission-grid {
+  display: block;
+  max-inline-size: 80ch;
+}
+body.mission-control #mission-grid > section {
+  margin-block-end: 20px;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+body.mission-control #mission-grid h2 {
+  font-size: var(--text-meta);
+  font-weight: 400;
+  color: var(--chrome-muted);
+  margin-block-end: 6px;
+}
+body.mission-control pre {
+  color: var(--chrome-text);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.6;
+}
+body.mission-control .meta { opacity: 0.65; margin-bottom: 8px; }
+body.mission-control a { color: var(--c-text); }
+body.mission-control a:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+.tool-progress-chip {
+  font: var(--text-meta)/1.25 var(--font-mono);
+  color: var(--c-code);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-inline-start: 8px;
+  opacity: .85;
+}
+.tool-progress-chip:empty { display: none; }
+
+.fps-badge {
+  position: fixed;
+  top: var(--inset-t);
+  inset-inline-start: var(--inset-l);
+  z-index: var(--z-ui);
+  font: var(--text-meta)/1.25 var(--font-mono);
+  color: var(--face-fg);
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  pointer-events: none;
+  user-select: none;
+  opacity: .75;
+}
+
+#prompt-form {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: var(--keyboard-inset, 0px);
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--face-bar-height) + var(--safe-bottom));
+  height: calc(var(--face-bar-height) + var(--safe-bottom));
+  padding: 0 16px var(--safe-bottom);
+  font: 16px/1.5 var(--font-mono);
+  color: var(--face-fg);
+  border: 0;
+  background: black;
+  z-index: calc(var(--z-chrome) + 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s steps(5,end), transform .2s var(--ease-out);
+  transform: translateY(30%);
+}
+
+/* The ghost is for the prompt before it goes live. The log is what MASTER
+   said, and TYPOGRAPHY.accessibility asks 7:1 of it, which no opacity under
+   one can give. */
+body[data-layout="face"] #prompt-form { opacity: .08; }
+body[data-layout="face"].controls-hidden .face-controls,
+body[data-layout="face"].controls-hidden #ui-status,
+body[data-layout="face"][data-edge-hover="1"] .face-controls,
+body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
+
+#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+#shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
+#shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
+.tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+
+body[data-layout="face"] #prompt-form.revealed { opacity: .96; pointer-events: auto; transform: none; }
+
+body #prompt-form.live,
+body:not(.face-ready) #prompt-form.live {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  background: transparent;
+}
+body #prompt-form.live:focus-within {
+  opacity: 1;
+  background: black;
+}
+#prompt-form .prompt-sigil { color: var(--face-alert); font-weight: 700; margin-inline-end: 0.6ch; }
+#prompt-form .sep { color: var(--face-muted); margin-inline-end: 0.4ch; }
+#prompt-form input, #prompt-form textarea { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--face-fg); font: inherit; caret-color: var(--face-fg); padding: 0px 0; resize: none; line-height: var(--leading-body); max-height: 120px; }
+#prompt-form input::placeholder, #prompt-form textarea::placeholder { color: var(--face-muted); }
+html[data-input-dense="1"] #prompt-form { border-top: 1.5px solid color-mix(in srgb, var(--face-fg) 28%, transparent); transition: border-top-width .2s var(--ease-out); }
+
+/* Closed-caption strip (FA141) */
+#tts-live {
+  position: fixed;
+  inset-inline-start: 50%;
+  inset-inline-end: auto;
+  transform: translateX(-50%);
+  width: min(72vw, 520px);
+  bottom: var(--hud-tier-caption);
+  z-index: calc(var(--z-chrome) + 2);
+  background: transparent;
+  color: var(--face-fg);
+  font: var(--text-meta)/1.5 var(--font-mono);
+  padding: 0 8px;
+  text-align: center;
+  white-space: pre-wrap;
+  pointer-events: none;
+  max-height: 2.5em;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-out);
+}
+body[data-mode="speaking"] #tts-live,
+body[data-tts-loading="true"] #tts-live {
+  opacity: 1;
+}
+
+/* Inline status text — shows thinking/speaking inside the prompt bar */
+#zsh-status {
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  color: var(--face-muted);
+  opacity: 0;
+  transition: opacity .2s, letter-spacing .4s var(--ease-out);
+  white-space: nowrap;
+  pointer-events: none;
+  margin-inline-start: 4px;
+}
+body[data-mode="thinking"] #zsh-status { opacity: .7; }
+body[data-mode="speaking"] #zsh-status { opacity: 1; }
+body[data-tts-error="true"] #zsh-status { opacity: 1; color: var(--c-danger); }
+/* The reply is synthesized and waiting on the gesture the browser needs before
+   it will play sound. The element's textContent is cleared on every mode
+   change, so the line is printed from the attribute instead. */
+body[data-tts-blocked="1"] #zsh-status::after { content: attr(data-blocked-label); opacity: 1; }
+
+/* Cancel button — appears during thinking/speaking */
+#pause-speech-button {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--c-accent);
+  font: inherit;
+  cursor: pointer;
+  padding: 0 0 0 8px;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  opacity: .45;
+  transition: opacity .1s;
+}
+#pause-speech-button:hover { opacity: 1; color: var(--face-fg); }
+body[data-mode="thinking"] #pause-speech-button,
+body[data-mode="speaking"] #pause-speech-button { display: block; }
+
+/* Music toggle — always present, drawn square like #photo-button. The
+   square is ::before (inset 13px in the tap floor), so the optics do not
+   move; a playing state paints the square solid. */
+#music-loop-button {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--face-muted);
+  flex: none;
+  position: relative;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  padding: 0;
+  cursor: pointer;
+}
+#music-loop-button::before {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border: 1px solid currentColor;
+}
+#music-loop-button[aria-pressed="true"] {
+  color: var(--face-fg);
+}
+#music-loop-button[aria-pressed="true"]::before {
+  /* The playing state is the one signal moment on this surface: the drawn
+     square turns signal as its state marker. The marker is the border, with
+     the fill left open — the signal marks meaning here, it does not paint
+     the control. */
+  background: transparent;
+  border-color: var(--pub5-signal);
+}
+#music-loop-button:hover { color: var(--face-fg); }
+
+:focus-visible { outline: 2px solid var(--face-fg); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    scroll-behavior: auto;
+    transition: none !important;
+  }
+  canvas#face, canvas#cognition-ecology { filter: none; }
+  .message { animation: none; }
+}
+
+@media (min-width: 48rem) {
+  #chat-log { padding-inline: 24px; }
+  #prompt-form { padding-inline: 24px; }
+}
+
+@keyframes msgIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+/* One column, ragged right (LAYOUT_RULES.alignment). The you$ and master$
+   prefixes already say who speaks, so the side of the screen does not have to. */
+.message.user { border:0; padding-inline-start:0; }
+
+/* #36 Streaming cursor blink */
+@keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* #37 Code block */
+.msg-body pre, .msg-body code { background:transparent; border-bottom:1px dotted color-mix(in srgb, var(--c-code) 18%, transparent); font-family:var(--font-mono); padding:0 4px; font-size:.88em; }
+.msg-body pre { display:block; padding:8px 8px; margin:4px 0; white-space:pre-wrap; }
+.typing-indicator { display:inline-flex; gap:4px; margin-inline-start:6px; vertical-align:middle; align-items:center; }
+.typing-indicator span { width:5px; height:5px; border-radius:50%; background:var(--face-muted); animation:typingPulse 1s infinite var(--ease-in-out); }
+.typing-indicator span:nth-child(2) { animation-delay: .16s; }
+.typing-indicator span:nth-child(3) { animation-delay: .32s; }
+@keyframes typingPulse { 0%, 80%, 100% { transform: translateY(0); opacity:.25; } 40% { transform: translateY(-2px); opacity:1; } }
+
+/* #39 Message timestamp on hover */
+.message[data-ts]::after {
+  content: attr(data-ts);
+  font-size: var(--text-meta);
+  line-height: var(--leading-body);
+  color: var(--face-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast) var(--ease-out);
+  margin-inline-start: 8px;
+  display: inline-block;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.message[data-ts]:hover::after,
+.message[data-ts]:focus-visible::after { opacity: 1; }
+
+/* #42 Edge hover reveal */
+body[data-edge-hover="1"] #prompt-form,
+body[data-edge-swipe="1"] #prompt-form { opacity: .96; pointer-events: auto; transform: none; }
+
+/* The composer remains the one input surface while a turn runs; the face queue accepts follow-up messages. */
+body[data-mode="thinking"] #prompt-input,
+body[data-mode="speaking"] #prompt-input,
+body[data-queue-active="1"] #prompt-input { opacity: 1; }
+
+/* #45 Char count warn threshold */
+#char-count:not(:empty) { opacity: .5; }
+
+/* #46 Char count */
+#char-count { font: inherit; color:var(--face-muted); opacity:0; transition:opacity .15s; white-space:nowrap; margin-inline-start:4px; }
+
+/* #47 Listening eye boost */
+body[data-mode="listening"] canvas { filter: saturate(1.08) brightness(1.06) contrast(1.02); }
+
+/* #48 Cancel button pulse during thinking */
+body[data-mode="thinking"] #pause-speech-button {
+  will-change: opacity; animation:cancelPulse 1.1s var(--ease-in-out) infinite;
+}
+@keyframes cancelPulse { 0%,100%{opacity:.45} 50%{opacity:.85} }
+
+/* A long silence dims the ecology; the face goes quiet rather than asking. */
+body[data-long-silence="1"] #cognition-ecology { opacity: .38; }
+
+/* #51 Disabled state during boot — hide ghost prompt until primer tap */
+body.face-loading #prompt-form:not(.live):not(.revealed) { opacity: 0; visibility: hidden; pointer-events: none; }
+body:not(.face-ready) #prompt-form:not(.live):not(.revealed) { opacity: .22; pointer-events: none; }
+
+body[data-boot-state="ERROR"] #zsh-status {
+  color: color-mix(in srgb, var(--c-danger) 78%, var(--face-fg));
+  font-size: var(--text-meta);
+  letter-spacing: .04em;
+  text-transform: none;
+}
+
+/* #52 Violation flash */
+body[data-violation-flash="1"] canvas { filter: contrast(1.12) saturate(0.55); }
+
+/* #54 Uncertain shimmer */
+body[data-uncertain="1"] #zsh-status { opacity: 1; animation: uncertainBlink 900ms steps(3,end) infinite; }
+@keyframes uncertainBlink { 0%,100%{opacity:.55} 50%{opacity:1} }
+
+/* #55 Primer .gone fade */
+#primer.gone { opacity: 0; transform: scale(0.96); pointer-events: none; transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out); }
+/* Embeds / front-page autostart: no "launch AI" click overlay (boot still runs go()). */
+body.primer-autostart #primer {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.chip { font: var(--text-meta)/1.5 var(--font-mono); letter-spacing: .08em; padding: 8px 14px; min-height: var(--tap-min); border: 1px solid color-mix(in srgb, var(--face-fg) 8%, transparent); border-radius: var(--radius-extra-small); color: color-mix(in srgb, var(--c-text) 62%, transparent); transition: background 120ms var(--ease-out); }
+#primer .tagline { opacity: .72; font-size: .9em; margin-top: 16px; letter-spacing: .1em; }
+
+/* #56 Sleeping dim */
+body[data-sleeping="1"] canvas { filter: brightness(0.85); }
+body[data-sleeping="1"] #prompt-form { opacity: .18; }
+
+/* #57 Mood cold */
+body[data-mood-cold="1"] canvas { filter: none; }
+
+/* #58 TTS loading shimmer */
+body[data-tts-loading="true"] #zsh-status { animation:ttsShimmer 700ms steps(4,end) infinite; }
+@keyframes ttsShimmer { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+/* #60 Network stall */
+body[data-network-stall="1"] #zsh-status { opacity: .85; color: var(--c-accent); }
+body[data-network-stall="1"] canvas { filter: none; }
+
+/* #61 Council persona badge */
+body[data-council-persona]::after { content:attr(data-council-persona); position:fixed; top:calc(10px + var(--safe-top)); right:calc(10px + var(--safe-right)); font: var(--text-meta)/1.4 var(--font-mono); text-transform:uppercase; letter-spacing:.14em; color:var(--face-muted); opacity:.6; z-index:var(--z-ui); pointer-events:none; }
+
+/* Prompt typography */
+#prompt-form input,#prompt-form .prompt-sigil,#prompt-form .sep { font-feature-settings:'liga' 0; }
+
+/* #65 Line-height breathe during speaking */
+body[data-mode="speaking"] .msg-body { line-height:1.6; transition:line-height .6s var(--ease-out); }
+
+/* #66 Letter-spacing expand during thinking */
+body[data-mode="thinking"] #zsh-status { letter-spacing:.32em; }
+
+body[data-tts-loading="true"] canvas { filter: none; }
+
+.face-error-banner {
+  position: fixed;
+  inset-inline: var(--chrome-inset);
+  top: var(--inset-t);
+  z-index: var(--z-toast);
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
+  color: var(--face-fg);
+  font: var(--text-meta)/1.5 var(--font-mono);
+  overflow-wrap: anywhere;
+  border-radius: var(--radius-medium);
+  pointer-events: none;
+}
+
+::selection { background: color-mix(in srgb, var(--c-danger) 22%, transparent); color: inherit; }
+
+.tool { background:none; border:0; color:var(--face-muted); font:inherit; padding:8px 8px; margin-inline-end:6px; cursor:pointer; letter-spacing:.02em; opacity:.6; transition:opacity .15s,color .15s; min-width: var(--tap-min); min-height: var(--tap-min); }
+.tool:hover, .tool:focus { opacity:1; color:var(--face-fg); }
+.tool.active { color:var(--c-accent); opacity:1; }
+
+#ascii-star { position: fixed; top: calc(48px + var(--safe-top)); left: 16px; font: 600 var(--text-title)/1 var(--font-mono); color: var(--face-fg); mix-blend-mode: difference; pointer-events: none; z-index: calc(var(--z-chrome) - 1); }
+#ascii-star:empty { display: none; }
+body[data-mode="thinking"] #ascii-star:not(:empty),
+body[data-mode="speaking"][data-queue-active="1"] #ascii-star:not(:empty) {
+  display: block;
+  top: auto;
+  left: 50%;
+  bottom: calc(84px + var(--safe-bottom) + var(--keyboard-inset, 0px));
+  width: 1ch;
+  transform: translateX(-50%);
+  text-align: center;
+  color: var(--face-fg);
+  mix-blend-mode: normal;
+}
+
+.compaction-note,
+.message.system {
+  font: var(--text-meta)/1.5 var(--font-mono);
+  color: var(--face-muted);
+  padding: 8px 0 2px 2px;
+  border-inline-start: 2px solid var(--border-strong);
+  margin: 4px 0;
+}
+
+.compaction-title { font-size: var(--text-meta); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.6; margin-bottom: 4px; }
+.compaction-body { white-space: pre-wrap; font-size: var(--text-meta); line-height: var(--leading-body); max-height: 160px; overflow: auto; }
+
+.message.msg-phantom .msg-body {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--c-danger) 40%, transparent);
+}
+
+body[data-phantom-glitch="1"] canvas {
+  filter: contrast(1.2) hue-rotate(8deg);
+  transition: filter 120ms steps(3, end);
+}
+
+.tool-stack {
+  font: var(--text-meta)/1.4 var(--font-mono);
+  color: var(--face-muted);
+  margin-bottom: 4px;
+}
+
+.tool-stack summary { cursor: pointer; list-style: none; }
+.tool-stack summary::before { content: "> "; }
+.tool-stack[open] summary::before { content: "v "; }
+
+.pipeline-stage {
+  display: none;
+}
+
+#chat-history-panel {
+  position: fixed;
+  top: var(--inset-t);
+  inset-inline-start: var(--inset-l);
+  bottom: calc(76px + var(--safe-bottom) + var(--keyboard-inset, 0px));
+  width: min(320px, calc(100vw - 24px - var(--safe-left) - var(--safe-right)));
+  z-index: calc(var(--z-toast) + 100);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--face-bg) 92%, transparent);
+  color: var(--face-fg);
+  transform: translateX(calc(-100% - 18px));
+  opacity: 0;
+  pointer-events: none;
+  contain: layout style paint;
+  transition: transform 220ms var(--ease-out), opacity 180ms var(--ease-out);
+}
+
+#chat-history-panel[data-open="1"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-title {
+  font: var(--text-meta)/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--face-muted);
+}
+
+#history-close {
+  background: none;
+  border: 0;
+  color: var(--face-muted);
+  font: 16px/1 var(--font-mono);
+  cursor: pointer;
+  padding: 0px 6px;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#history-search {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-small);
+  color: inherit;
+  font: 1rem/1.5 var(--font-mono);
+  padding: 8px 8px;
+}
+
+#history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#history-list li {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+  padding: 8px 4px;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+  transition: background 120ms var(--ease-out);
+}
+
+#history-list li:hover {
+  background: var(--hover-tint);
+}
+
+.history-role {
+  font: var(--text-meta)/1.25 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--face-muted);
+}
+
+.history-body {
+  font: var(--text-meta)/1.4 var(--font-mono);
+  color: color-mix(in srgb, var(--c-text) 78%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+body[data-history-open="1"] #chat-log {
+  margin-inline-start: min(332px, calc(100vw - 24px));
+  transition: margin-left 220ms var(--ease-out);
+}
+
+
+
+/* Family skip-link: hard-hide until focus (same contract as RAILS _shell.scss). */
+.skip-link {
+  position: fixed;
+  inset-block-start: calc(var(--chrome-inset, 0.75rem) + var(--safe-top, 0px));
+  inset-inline-start: calc(var(--chrome-inset, 0.75rem) + var(--safe-left, 0px));
+  z-index: var(--z-skip);
+  padding: 0.5rem 0.75rem;
+  min-height: var(--tap-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  background: #000;
+  color: var(--face-fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  font: var(--text-meta)/1 var(--font);
+  text-decoration: none;
+  width: 44px;
+  height: 44px;
+  margin: -0px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+.debug-panel {
+  position: fixed;
+  inset-inline-start: var(--inset-l);
+  bottom: calc(56px + var(--safe-bottom));
+  z-index: var(--z-ui);
+  padding: 8px 8px;
+  background: color-mix(in srgb, #000 88%, transparent);
+  border: 1px solid var(--border-soft);
+  font: var(--text-meta)/1.4 var(--font-mono);
+  color: var(--face-muted);
+  pointer-events: none;
+}
+
+.stream-retry {
+  margin-inline-start: 8px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--face-fg);
+  font: inherit;
+  padding: 0px 8px;
+  cursor: pointer;
+}
+
+.log-search {
+  width: 100%;
+  margin-bottom: 8px;
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--face-fg);
+  font: 1rem/1.5 var(--font-mono);
+  padding: 8px 8px;
+}
+
+.msg-collapse summary {
+  cursor: pointer;
+  font: var(--text-meta) var(--font-mono);
+  color: var(--face-muted);
+  margin-bottom: 4px;
+}
+
+body.face-loading::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 2;
+}
+
+body[data-runtime-profile="crt"] canvas {
+  filter: contrast(1.08) brightness(1.04) saturate(0.96);
+  image-rendering: pixelated;
+}
+body[data-runtime-profile="crt"] #cognition-ecology {
+  opacity: 0.88;
+}
+
+/* canvas-fx overlay tier: sits above raw canvas(0/1/2), below persistent chrome(--z-chrome/10) — loading-dither(2) < council-multi-face(3) < council-persona-badge(4) */
+.council-persona-badge {
+  position: fixed;
+  top: 12%;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  font: var(--text-meta)/1.25 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--face-fg) 82%, transparent);
+  background: color-mix(in srgb, var(--face-bg) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--face-fg) 18%, transparent);
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-out);
+}
+.council-persona-badge[data-visible="1"] { opacity: 1; }
+.council-persona-badge[data-lane="left"] { left: 28%; transform: none; }
+.council-persona-badge[data-lane="right"] { left: auto; right: 28%; transform: none; }
+
+.sound-on-chip {
+  position: fixed;
+  top: calc(var(--inset-t) + 36px);
+  inset-inline-end: var(--inset-r);
+  z-index: var(--z-ui);
+  padding: 4px 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-pill);
+  background: #000;
+  color: var(--face-muted);
+  font: var(--text-meta)/1 var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: .72;
+}
+.sound-on-chip:hover,
+.sound-on-chip:focus-visible {
+  opacity: 1;
+  color: var(--face-fg);
+}
+
+.council-multi-face {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-out);
+}
+.council-multi-face[data-visible="1"] { opacity: 1; }
+.council-multi-face .council-lane {
+  position: absolute;
+  top: 22%;
+  width: 44px;
+  height: 44px;
+  margin-inline-start: -7px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--face-fg) 35%, transparent);
+  background: color-mix(in srgb, var(--face-fg) 8%, transparent);
+  transform: scale(0.85);
+  transition: transform 220ms var(--ease-out), opacity 220ms var(--ease-out);
+}
+.council-multi-face .council-lane[data-active="1"] {
+  transform: scale(1.15);
+  background: color-mix(in srgb, var(--face-fg) 22%, transparent);
+}
+.council-multi-face .council-lane.pulse { animation: council-lane-pulse 0.9s var(--ease-out); }
+@keyframes council-lane-pulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  45% { transform: scale(1.35); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.85; }
+}
+
+.virtual-spacer { position: relative; width: 100%; pointer-events: none; flex-shrink: 0; }
+.virtual-spacer-load {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  width: 100%;
+  min-block-size: var(--tap-min);
+  pointer-events: auto;
+  border: 0;
+  background: var(--face-bg);
+  color: var(--face-muted);
+  font: inherit;
+  text-align: center;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.virtual-spacer-load:focus-visible { outline: 1px solid var(--face-fg); outline-offset: -2px; }
+
+#face {
+  position: fixed;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  min-width: 100dvw;
+  min-height: 100dvh;
+  max-width: 100dvw;
+  max-height: 100dvh;
+  display: block;
+  margin: 0;
+  touch-action: manipulation;
+}
+
+.emotional-timeline {
+  position: fixed;
+  inset-inline-start: 8px;
+  inset-inline-end: 8px;
+  bottom: 92px;
+  height: 44px;
+  display: flex;
+  gap: 0px;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.55;
+}
+.emotional-timeline span {
+  flex: 1;
+  min-width: var(--tap-min);
+  background: color-mix(in srgb, var(--face-fg) 35%, transparent);
+}
+
+@media print {
+  canvas, #cognition-ecology, #primer, #prompt-form, .face-controls, .ui-status, #chat-history-panel, .skip-link { display: none !important; }
+  body { background: #fff; color: #000; }
+  #chat-log { position: static; max-height: none; overflow: visible; opacity: 1; }
+  .message { break-inside: avoid; color: #000; }
+}
+
+/* wscons aesthetic — flat 80-column scrollback log (MASTER_AESTHETIC=wscons) */
+html[data-aesthetic="wscons"],
+body.wscons-mode {
+  --c-text: #63c363;
+  --face-phosphor-decay: 0;
+  --radius-extra-small: 0;
+  --radius-small: 0;
+  --radius-medium: 0;
+  --radius-large: 0;
+  --radius-pill: 0;
+}
+
+html[data-aesthetic="wscons"] body,
+body.wscons-mode {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: auto;
+}
+
+html[data-aesthetic="wscons"] #prompt-form,
+html[data-aesthetic="wscons"] #chat-log,
+body.wscons-mode #prompt-form,
+body.wscons-mode #chat-log {
+  max-width: 80ch;
+  border-radius: 0;
+}
+
+html[data-aesthetic="wscons"] #face-phosphor-trail,
+body.wscons-mode #face-phosphor-trail {
+  display: none !important;
+}
+
+/* UI_REFINEMENTS pass — face chrome only; does not touch WebGL boot path.
+   The pass's #primer stub is not reproduced here: it carried only
+   display: grid, which #primer already declares at its main rule above,
+   and it shipped unbalanced — its unclosed #primer nested every rule
+   below it until #chat-log's 66ch centering went dead (2026-10-03). */
+
+/* MASTER presentation contract: browser chat is terminal scrollback, not a bubble UI.
+   The face remains spatial; readable interaction remains one monospaced stream. */
+#chat-log {
+  max-inline-size: 66ch;
+  margin-inline: auto;
+  font-family: var(--font-mono);
+}
+#prompt-form,
+#prompt-form #prompt-input,
+#prompt-form .prompt-sigil,
+#prompt-form #zsh-status {
+  font-family: var(--font-mono);
+}
+.message .msg-body,
+.message .msg-prompt {
+  font-family: var(--font-mono);
+}
+
+/* Canonical interface projections. Hidden until semantic state requires them. */
+.master-task-rail {
+  position: fixed;
+  inset-inline-end: var(--inset-r);
+  inset-block-start: calc(var(--inset-t) + 52px);
+  z-index: var(--z-overlay);
+  inline-size: min(320px, calc(100dvw - 2 * var(--inset-r)));
+  max-block-size: min(44dvh, 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--border-strong) transparent;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--face-bg);
+  font: 0.78rem/1.4 var(--font-mono);
+}
+.master-task {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  padding: 8px 4px;
+  border-block-end: 1px solid var(--border-faint);
+}
+.master-task:last-child { border-block-end: 0; }
+.master-task small {
+  grid-column: 1 / -1;
+  color: var(--face-muted);
+  min-height: 1em;
+}
+.master-task-status { color: var(--face-muted); }
+.master-tool {
+  padding: 4px;
+  color: var(--face-muted);
+}
+.master-task button,
+.voice-recovery button {
+  min-inline-size: var(--tap-min);
+  min-block-size: var(--tap-min);
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--face-fg);
+  font: inherit;
+}
+.voice-recovery {
+  position: fixed;
+  inset-inline: var(--inset-l) var(--inset-r);
+  inset-block-end: var(--inset-b);
+  z-index: var(--z-overlay);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.voice-recovery button {
+  pointer-events: auto;
+  padding-inline: 12px;
+}
+.master-workspace {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-canvas);
+  pointer-events: auto;
+  overflow: hidden;
+  isolation: isolate;
+}
+.master-workspace-node {
+  position: absolute;
+  min-inline-size: 96px;
+  min-block-size: var(--tap-min);
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--face-bg) 92%, transparent);
+  color: var(--face-fg);
+  font: 0.75rem/1.25 var(--font-mono);
+  text-align: start;
+}
+.master-workspace-node:hover {
+  border-color: var(--border-strong);
+}
+.master-workspace-node:focus-visible {
+  border-color: var(--border-strong);
+  outline: 2px solid var(--face-fg);
+  outline-offset: 2px;
+}
+.master-workspace[data-selected] .master-workspace-node[data-node-id] {
+  transition: transform var(--transition-fast) var(--ease-out);
+}
+.master-audio-lab {
+  position: fixed;
+  inset-inline: var(--inset-l) var(--inset-r);
+  inset-block-start: var(--inset-t);
+  z-index: var(--z-toast);
+  padding: 4px 8px;
+  border: 1px solid var(--border-faint);
+  background: var(--face-bg);
+  color: var(--face-muted);
+  font: 0.7rem/1.2 var(--font-mono);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .master-workspace-node { transition: none; }
+  .master-task-rail { backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .master-task-rail,
+  .master-workspace-node,
+  .voice-recovery button {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+@media (max-width: 767px) {
+  .master-task-rail {
+    inset-inline: var(--inset-l) var(--inset-r);
+    inline-size: auto;
+    max-block-size: 32dvh;
+  }
+}
+
+/* Semantic face chrome hooks. These selectors are structural only: the shared
+   wordmark and microphone markup stay readable without inventing a second
+   visual dialect. */
+.brand-mark {
+  position: fixed;
+  inset-block-start: var(--inset-t);
+  inset-inline-start: var(--inset-l);
+  z-index: var(--z-ui);
+  min-inline-size: var(--tap-min);
+  min-block-size: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--face-fg);
+  font: 800 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 var(--font-logo);
+  letter-spacing: -0.03em;
+}
+.brand-text {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.brand-mark:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: 2px;
+}
+.mic-indicator {
+  position: fixed;
+  inset-block-start: calc(var(--inset-t) + var(--tap-min));
+  inset-inline-end: var(--inset-r);
+  z-index: var(--z-ui);
+  min-inline-size: var(--tap-min);
+  min-block-size: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--face-muted);
+}
+.mic-indicator svg {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: currentColor;
+}
+body[data-mode="listening"] .mic-indicator {
+  color: var(--c-accent);
+}
+@media (forced-colors: active) {
+  .brand-mark,
+  .mic-indicator { color: CanvasText; }
+  .brand-mark:focus-visible { outline-color: CanvasText; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark,
+  .mic-indicator { transition: none; }
+}
+
+/* Runtime rendering mechanics only. Palette, typography and geometry are token-owned. */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  cursor: auto;
+  touch-action: auto;
+}
+
+body[data-aesthetic="phosphor"] { background: var(--face-bg); }
+
+canvas#face { background: var(--face-bg); }
+#cognition-ecology { opacity: 0.38; }
+
+.brand-mark {
+  min-block-size: 40px;
+  padding: 8px 0;
+  color: rgb(226 226 226 / 88%);
+  font-family: var(--font);
+  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
+  font-weight: var(--face-weight-brand);
+  letter-spacing: -0.045em;
+  text-transform: none;
+  opacity: 0.92;
+}
+.brand-mark:hover { opacity: 1; }
+
+.mic-indicator {
+  inset-block-start: var(--inset-t);
+  min-inline-size: 40px;
+  min-block-size: 40px;
+  color: rgb(170 170 170 / 78%);
+}
+body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
+
+#primer {
+  padding: clamp(24px, 5vw, 64px);
+  background: var(--chrome-bg);
+}
+#primer .primer-title {
+  max-inline-size: 14ch;
+  font-family: var(--font);
+  font-size: clamp(2.2rem, 6.8vw, 5.6rem);
+  font-weight: var(--face-weight-display);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+#primer .tagline {
+  max-inline-size: 46ch;
+  margin: 22px auto 0;
+  color: rgb(189 189 189 / 78%);
+  font: 400 clamp(0.95rem, 1.6vw, 1.08rem)/1.7 var(--font);
+  text-wrap: pretty;
+}
+#primer .primer-consent {
+  max-inline-size: 44ch;
+  margin: 22px auto 0;
+  /* --chrome-muted on the primer's --chrome-bg is 7.49:1; the alpha grey it
+     replaces measured 4.10, under the 4.5 body-text floor. */
+  color: var(--chrome-muted);
+  font: 400 0.75rem/1.6 var(--font);
+}
+
+#chat-shell {
+  inset-block-end: calc(82px + var(--safe-bottom));
+  pointer-events: none;
+}
+#chat-log {
+  max-height: min(37dvh, 440px);
+  padding: 10px 22px 18px;
+  font-family: var(--font-mono);
+  line-height: 1.72;
+  scroll-snap-type: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(142 142 142 / 26%) transparent;
+}
+.message {
+  max-inline-size: 68ch;
+  margin-block-end: 20px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.98rem, 1.12vw, 1.08rem);
+  line-height: 1.72;
+  animation: msgIn 240ms cubic-bezier(.2,.75,.25,1) both;
+}
+.message.user .msg-prompt,
+.message.assistant .msg-prompt {
+  color: var(--face-fg);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.msg-body {
+  color: rgb(226 226 226 / 92%);
+  font-family: var(--font-mono);
+  text-wrap: pretty;
+}
+.compaction-note, .message.system {
+  color: rgb(153 153 153 / 70%);
+  border-color: rgb(121 121 121 / 34%);
+}
+
+/* Developer controls for the additive face stipple layer; hidden unless explicitly enabled. */
+.master-face-stipple-playground {
+  position: fixed; z-index: 40; inset: auto 16px 64px auto;
+  width: min(320px, calc(100vw - 32px)); max-height: min(72vh, 560px);
+  overflow: auto; display: grid; gap: 10px; padding: 14px;
+  color: var(--c-text); background: var(--face-bg); border: 1px solid var(--chrome-border);
+  font: 12px/1.4 var(--font-mono, ui-monospace, monospace);
+}
+.master-face-stipple-playground strong { font-size: 13px; font-weight: 700; }
+.master-face-stipple-playground label { display: grid; gap: 5px; }
+.master-face-stipple-playground select, .master-face-stipple-playground button {
+  min-height: var(--tap-min); padding: 6px 8px; color: inherit;
+  background: var(--chrome-surface); border: 0; font: inherit;
+}
+.master-face-stipple-playground input { width: 100%; accent-color: currentColor; }
+.master-face-stipple-playground .master-stipple-field { grid-template-columns: 78px minmax(0,1fr) 36px; align-items: center; gap: 8px; }
+.master-face-stipple-playground output { text-align: right; font-variant-numeric: tabular-nums; }
+.master-face-stipple-playground .master-stipple-status { margin: 0; color: var(--face-muted); }
+.master-face-stipple-playground .master-stipple-diagnostics {
+  max-height: 180px; overflow: auto; padding: 8px; color: var(--face-muted);
+  font: inherit; font-size: var(--text-extra-small); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .master-face-stipple-playground, .master-face-stipple-playground * {
+    scroll-behavior: auto; transition: none; animation: none;
+  }
+}
+/* A glyph-shaded view of the canonical head points shared with the CLI. */
+.master-face-ascii-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 4;
+  opacity: .28;
+  mix-blend-mode: screen;
+  transition: opacity 180ms var(--ease-linear);
+}
+body[data-face-ascii="1"] .master-face-ascii-layer { opacity: .96; }
+body[data-face-ascii="1"] #face { opacity: .055; }
+@media (prefers-reduced-motion: reduce) {
+  .master-face-ascii-layer { transition: none; }
+}
+/* Ghostty-inspired session chrome: neutral graphite, grayscale focus and semantic contrast. */
+#chat-shell { inset-block-end: calc(76px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }
+#chat-log { max-height: 36dvh; padding: 8px 18px; }
+#prompt-form {
+  inset-inline: auto; inset-inline-start: 50%;
+  inset-block-end: calc(8px + var(--safe-bottom) + var(--keyboard-inset, 0px));
+  width: calc(100dvw - 16px - var(--safe-left) - var(--safe-right));
+  height: auto; min-height: 60px; padding: 7px; gap: 4px;
+  transform: translate(-50%, 0); border: 0; border-radius: 0;
+  background: var(--chrome-surface); color: var(--chrome-text);
+  font: 400 1rem/1.5 var(--font-mono); touch-action: manipulation;
+  transition: background-color var(--transition-fast) var(--ease-out);
+}
+body #prompt-form.live, body:not(.face-ready) #prompt-form.live {
+  transform: translate(-50%,0); background: var(--chrome-surface);
+}
+body #prompt-form.live:focus-within, #prompt-form:focus-within { background: var(--chrome-surface-active); outline: 2px solid var(--chrome-focus); outline-offset: 2px; }
+body[data-layout="face"] #prompt-form { opacity: .96; pointer-events: auto; transform: translate(-50%,0); }
+body[data-layout="face"].controls-hidden #prompt-form,
+body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: .96; pointer-events: auto; }
+body[data-layout="face"] #prompt-form.revealed { transform: translate(-50%,0); }
+#prompt-form .prompt-sigil {
+  display: inline-flex; align-items: center; flex: 0 1 auto; min-inline-size: 0;
+  max-inline-size: min(42vw, 32ch); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--chrome-muted); font-weight: 400;
+}
+#prompt-form input, #prompt-form textarea {
+  min-height: var(--tap-min); min-width: 0; padding: 8px 0;
+  font: 400 16px/1.5 var(--font-mono); color: var(--chrome-text);
+  caret-color: var(--chrome-focus); user-select: text; -webkit-user-select: text; touch-action: auto;
+}
+#prompt-form input::placeholder, #prompt-form textarea::placeholder { color: var(--chrome-muted); }
+#photo-button, #music-loop-button, #pause-speech-button {
+  min-inline-size: var(--tap-min); min-block-size: var(--tap-min);
+  border: 0; border-radius: 0; background: transparent; color: var(--chrome-muted);
+}
+#photo-button { font-family: var(--font); font-size: 1.35rem; }
+#photo-button:hover, #music-loop-button:hover, #pause-speech-button:hover {
+  background: var(--chrome-hover); color: var(--chrome-text);
+}
+#photo-button:focus-visible, #music-loop-button:focus-visible, #pause-speech-button:focus-visible { outline: 2px solid var(--chrome-focus); outline-offset: -2px; }
+#music-loop-button::before { inset: 15px; border-radius: 0; border-color: currentColor; }
+#pause-speech-button { padding-inline: 8px; font-family: var(--font); }
+#zsh-status { color: var(--chrome-muted); font-size: var(--text-meta); }
+.turn-queue-status { color: var(--chrome-muted); font: 400 .72rem/1.2 var(--font-mono); white-space: nowrap; pointer-events: none; margin-inline-start: 4px; }
+body[data-queue-active="1"] .turn-queue-status { opacity: .9; }
+#turn-control {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: 8px;
+  border: 0; border-radius: 0; background: var(--chrome-surface); color: var(--chrome-muted);
+  font: 400 .72rem/1 var(--font-mono); text-transform: lowercase; cursor: pointer;
+}
+#turn-control:hover { color: var(--chrome-text); background: var(--chrome-hover); }
+#turn-control[hidden] { display: none; }
+#turn-control:focus-visible { outline: 2px solid var(--chrome-focus); outline-offset: 2px; }
+.master-titlebar {
+  position: fixed; inset-block-start: 0; inset-inline: 0; z-index: var(--z-ui); box-sizing: border-box;
+  display: flex; align-items: center; gap: .25rem; inline-size: 100%; width: 100%; max-inline-size: none; max-width: none;
+  block-size: calc(var(--face-bar-height) + var(--safe-top)); margin: 0;
+  padding-block-start: var(--safe-top); padding-inline-start: var(--inset-l); padding-inline-end: calc(var(--inset-r) + var(--tap-min));
+  background: var(--chrome-band); color: var(--chrome-band-ink);
+}
+/* brgen's deep-blue header band, the one surface the face shares with brgen's
+   chrome: links in the band's muted ink, the current one in its full ink with
+   the signal rule under it, as brgen's .nav_link.active is. The mic toggle sits
+   on the band's right end, where #6b6b6b measured 1.9:1; its off state takes the
+   band's muted ink (7.25:1) and open stays --c-danger (3.32:1, an icon's 3:1). */
+#mic-dot { --c-mic-off: var(--chrome-band-muted); }
+.master-titlebar .brand-mark {
+  display: none; position: static; inset: auto; z-index: auto; flex: 0 0 auto; align-items: center;
+  min-inline-size: 0; min-block-size: var(--tap-min); padding-inline-end: .75rem;
+  color: var(--chrome-band-muted); pointer-events: auto; cursor: pointer;
+  transition: color var(--transition-fast) var(--ease-out);
+}
+.master-titlebar .brand-mark:hover { color: var(--chrome-band-ink); }
+.master-titlebar .brand-mark:focus-visible { outline: 2px solid var(--chrome-focus); outline-offset: -2px; }
+.master-session-tabs {
+  display: flex; flex: 1 1 auto; align-self: stretch; align-items: stretch; gap: .25rem; min-inline-size: 0;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: inline proximity;
+}
+.master-session-tabs::-webkit-scrollbar { display: none; }
+.master-session-tab {
+  position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
+  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: .625rem;
+  color: var(--chrome-band-muted); font: var(--text-meta)/1 var(--font);
+  text-decoration: none; white-space: nowrap; scroll-snap-align: start;
+  transition: background-color var(--transition-fast) var(--ease-out), color var(--transition-fast) var(--ease-out);
+}
+.master-session-tab:hover { background: var(--chrome-hover); color: var(--chrome-band-ink); }
+.master-session-tab[aria-current="page"] { background: transparent; color: var(--chrome-band-ink); font-weight: 600; }
+.master-session-tab[aria-current="page"]::after {
+  position: absolute; inset-inline: .65rem; inset-block-end: 0; block-size: 0;
+  border-block-end: 2px solid var(--pub5-signal); content: "";
+}
+.master-session-tab:focus-visible { z-index: 1; outline: 2px solid var(--chrome-focus); outline-offset: -3px; }
+body.mission-control .master-titlebar { max-width: none; max-inline-size: none; margin: 0; padding-inline-end: var(--inset-r); }
+body.mission-control .mission-heading { max-inline-size: 80ch; margin: 0 0 1rem; }
+@media (min-width: 480px) {
+  #chat-log { max-height: 40dvh; padding-inline: 24px; }
+  #prompt-form { width: min(920px, calc(100dvw - 32px - var(--safe-left) - var(--safe-right))); min-height: 64px; padding: 9px 12px; gap: 8px; }
+  .master-titlebar { gap: .5rem; }
+  .master-titlebar .brand-mark { display: inline-flex; }
+  .master-session-tab { padding-inline: .875rem; }
+  /* The prompt is 64px high + 8px from the viewport edge; preserve an 8px
+     gap and follow the same keyboard/safe-area offsets as the prompt. */
+  #chat-history-panel { bottom: calc(80px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }
+}
+@media (min-width: 768px) { body.mission-control #mission-grid > section { margin-block-end: 24px; } }
+@media (prefers-reduced-motion: reduce) { #prompt-form, .master-titlebar *, .master-session-tab, #turn-control { transition: none; scroll-behavior: auto; } }
+@media (prefers-reduced-transparency: reduce) { #prompt-form { background: var(--chrome-surface); } }
+@media (forced-colors: active) {
+  #prompt-form { background: Canvas; color: CanvasText; outline-color: CanvasText; }
+  #prompt-form input, #prompt-form textarea { color: CanvasText; }
+  .master-titlebar, .master-session-tab, #turn-control { color: CanvasText; }
+  .master-session-tab:focus-visible, #turn-control:focus-visible { outline-color: CanvasText; }
+}

@@ -1,0 +1,97 @@
+---
+schema: 1
+app: meta
+pass: 2
+date: "2026-10-28"
+authorization: >
+  High-creativity /fix simulation. Sacred paths stay human-only. Experiments
+  must be reversible, tree-local, and prove with a command when claimed done.
+method: >
+  Observe four trees. Propose hyperlocal experiments. Prefer data and small CLIs
+  over new frameworks. Adversarial note kept on each candidate.
+candidates:
+  - id: spark_cli
+    tree: MASTER
+    status: implemented
+    spec: >
+      bin/spark and operator spark - no model. Reads creativity_lab.yml, prints one
+      random safe experiment plus tree README pointer.
+    cost: S
+    reversibility: high
+  - id: deploy_story
+    tree: OPENBSD
+    status: implemented
+    spec: >
+      bin/deploy-story - structured vps-deploy log lines (stage=) as a timeline.
+    cost: S
+    reversibility: high
+  - id: cities
+    tree: RAILS
+    status: implemented
+    spec: >
+      RAILS/bin/cities (and MASTER/bin/cities) - owned_domains from apps.yml without Rails boot.
+    cost: S
+    reversibility: high
+  - id: domain_ghosts
+    tree: OPENBSD
+    status: implemented
+    spec: >
+      domain-ghosts - available inventory names, owned/inventory skew, residual relayd Hosts.
+    cost: S
+    reversibility: high
+  - id: tree_weight
+    tree: MASTER
+    status: implemented
+    spec: >
+      MASTER/bin/tree-weight - tracked file counts per tree via git ls-files.
+    cost: S
+    reversibility: high
+  - id: law_weight
+    tree: MASTER
+    status: implemented
+    spec: >
+      MASTER/bin/law-weight - line counts of MASTER/law/*.rb to see where law gravity sits.
+    cost: S
+    reversibility: high
+  - id: city_pack_api
+    tree: RAILS
+    status: deferred
+    spec: >
+      Read-only JSON city pack for face/agent - needs apps.yml consumer + auth design.
+    cost: M
+    reversibility: high
+  - id: semantic_canary
+    tree: OPENBSD
+    status: deferred
+    spec: >
+      Soft brand-score canary after deploy; log-only. Needs rubric + model budget.
+    cost: L
+    reversibility: medium
+  - id: dilla_fixture_wav
+    tree: STUDIO
+    status: deferred
+    spec: >
+      Deterministic short WAV for voice tests without network; golden hash in STUDIO tests.
+    cost: M
+    reversibility: high
+# spark samples only from picks (implemented or ready-to-run experiments).
+picks:
+  - id: spark_cli
+    rationale: Constrained creativity entrypoint.
+  - id: deploy_story
+    rationale: Debug the next failed deploy.
+  - id: cities
+    rationale: Domain list without booting Rails.
+  - id: domain_ghosts
+    rationale: Surface inventory and relay residue.
+  - id: tree_weight
+    rationale: Where the repo mass lives.
+  - id: law_weight
+    rationale: Where law text mass lives.
+rejects:
+  - id: semantic_canary
+    attack: Flaky without offline rubric.
+  - id: city_pack_api
+    attack: No consumer yet; stubs rot.
+  - id: dilla_fixture_wav
+    attack: Needs STUDIO golden-hash pass, not a drive-by.

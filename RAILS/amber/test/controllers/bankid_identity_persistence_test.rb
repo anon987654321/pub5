@@ -1,0 +1,207 @@
+# frozen_string_literal: true
+
+require "test_helper"
+require "minitest/mock"
+
+class BankidIdentityPersistenceTest < ActionDispatch::IntegrationTest
+  Info = Struct.new(:email, :phone)
+  Auth = Struct.new(:provider, :uid, :info, :extra)
+
+  # The callback's account lookup, made public for this test rather than reached by send.
+  class Callback < OmniauthCallbacksController
+    public :find_or_create_user
+  end
+
+  test "a BankID subject without email reuses the persisted account on later callbacks" do
+    uid = "bankid-subject-#{SecureRandom.hex(8)}"
+    auth = Auth.new(
+      "bankid",
+      uid,
+      Info.new(nil, nil),
+      { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:bid;LOA=4" } }
+    )
+    callback = OmniauthCallbacksController.new
+    first = nil
+
+    assert_difference -> { User.count }, 1 do
+      first = callback.send(:find_or_create_user, auth)
+    end
+
+    provider = IdentityProvider.find_by!(slug: "bankid")
+    identity = ExternalIdentity.find_by!(identity_provider: provider, subject: uid)
+    assert_equal first.id, identity.user_id
+    assert_equal "verified", identity.assurance_level
+    assert_nil identity.email_address
+    refute first.reload.email_verified?, "a synthetic placeholder must not become email proof"
+
+    second = nil
+    assert_no_difference -> { User.count } do
+      second = callback.send(:find_or_create_user, auth)
+    end
+    assert_equal first.id, second.id
+  end
+
+  test "a returning BankID subject reclaims its unverified legacy placeholder" do
+    uid = "legacy-bankid-#{SecureRandom.hex(8)}"
+    legacy = User.new(email_address: "#{uid}@bankid.oauth", password: SecureRandom.hex(24))
+    legacy.require_email_verification = true
+    legacy.save!
+    auth = Auth.new("bankid", uid, Info.new(nil, nil),
+                    { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:bid;LOA=4" } })
+    callback = OmniauthCallbacksController.new
+
+    assert_no_difference -> { User.count } do
+      returned = callback.send(:find_or_create_user, auth)
+      assert_equal legacy.id, returned.id
+    end
+
+    provider = IdentityProvider.find_by!(slug: "bankid")
+    identity = ExternalIdentity.find_by!(identity_provider: provider, subject: uid)
+    assert_equal legacy.id, identity.user_id
+    refute legacy.reload.email_verified?
+  end
+
+  test "persisted BankID assurance permits claimed-identity writes without email proof" do
+    uid = "bankid-subject-#{SecureRandom.hex(8)}"
+    auth = Auth.new(
+      "bankid",
+      uid,
+      Info.new(nil, nil),
+      { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:bid;LOA=4" } }
+    )
+    user = OmniauthCallbacksController.new.send(:find_or_create_user, auth)
+    controller = ApplicationController.new
+
+    Current.set(user:) do
+      assert_nil controller.send(:require_verified_email)
+    end
+  end
+
+  def test_bankid_identity_without_email_can_create_a_social_post
+    uid = "bankid-subject-#{SecureRandom.hex(8)}"
+    auth = Auth.new(
+      "bankid",
+      uid,
+      Info.new(nil, nil),
+      { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:bid;LOA=4" } }
+    )
+    user = OmniauthCallbacksController.new.send(:find_or_create_user, auth)
+    session_record = user.sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+    # An integration test's jar cannot sign; a request jar signs and hands over the raw value.
+    jar = ActionDispatch::TestRequest.create.cookie_jar
+    jar.signed[:session_id] = session_record.id
+    cookies[:session_id] = jar[:session_id]
+
+    refute user.reload.email_verified?, "BankID must not fabricate mailbox verification"
+    # The path, not posts_url: the URL names localhost, and the jar sends its cookie to the test host only.
+    assert_difference -> { Post.count }, 1 do
+      post posts_path, params: { post: { body: "A signed-in BankID member can post without an email claim" } }
+    end
+    assert_equal user.id, Post.last.user_id, "the post belongs to the BankID member, not a fresh guest"
+    assert_redirected_to posts_path
+  end
+
+  test "BankID ACR without returned LOA=4 cannot bypass email verification" do
+    uid = "bankid-low-#{SecureRandom.hex(8)}"
+    auth = Auth.new(
+      "bankid",
+      uid,
+      Info.new(nil, nil),
+      { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:bid" } }
+    )
+    user = OmniauthCallbacksController.new.send(:find_or_create_user, auth)
+    provider = IdentityProvider.find_by!(slug: "bankid")
+    identity = ExternalIdentity.find_by!(identity_provider_id: provider.id, subject: uid)
+    controller = ApplicationController.new
+
+    assert_equal "account", identity.assurance_level
+    refute controller.send(:verified_bankid_identity?, user)
+    refute user.reload.email_verified?
+  end
+
+  test "persisted BankID assurance follows the current verified token" do
+    uid = "bankid-refresh-#{SecureRandom.hex(8)}"
+    make_auth = lambda do |acr|
+      Auth.new(
+        "bankid",
+        uid,
+        Info.new(nil, nil),
+        { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: acr } }
+      )
+    end
+    callback = OmniauthCallbacksController.new
+
+    first = callback.send(:find_or_create_user, make_auth.call("urn:bankid:low"))
+    provider = IdentityProvider.find_by!(slug: "bankid")
+    identity = ExternalIdentity.find_by!(identity_provider_id: provider.id, subject: uid)
+    assert_equal "account", identity.assurance_level
+
+    high_user = nil
+    # Only a returned LOA=4 is verified, as the "ACR without returned LOA=4" test above holds.
+    assert_no_difference -> { User.count } do
+      high_user = Callback.new.find_or_create_user(make_auth.call("urn:bankid:bid;LOA=4"))
+    end
+    assert_equal first.id, high_user.id
+    assert_equal "verified", identity.reload.assurance_level
+
+    assert_no_difference -> { User.count } do
+      callback.send(:find_or_create_user, make_auth.call("urn:bankid:low"))
+    end
+    assert_equal "account", identity.reload.assurance_level
+  end
+
+  test "OAuth does not create a duplicate account while federated identity storage is unavailable" do
+    auth = Auth.new(
+      "google_oauth2",
+      "missing-storage-#{SecureRandom.hex(8)}",
+      Info.new("person@example.test", nil),
+      { raw_info: { email_verified: true } }
+    )
+    callback = OmniauthCallbacksController.new
+
+    assert_no_difference -> { User.count } do
+      ExternalIdentity.stub(:table_exists?, false) do
+        assert_raises(OmniauthCallbacksController::IdentityStorageUnavailable) do
+          callback.send(:find_or_create_user, auth)
+        end
+      end
+    end
+  end
+
+  test "lower-assurance BankID cannot reclaim a legacy synthetic account" do
+    uid = "legacy-bankid-low-#{SecureRandom.hex(8)}"
+    legacy = User.new(email_address: "#{uid}@bankid.oauth", password: SecureRandom.hex(24))
+    legacy.require_email_verification = true
+    legacy.save!
+    auth = Auth.new(
+      "bankid",
+      uid,
+      Info.new(nil, nil),
+      { id_info: { iss: "https://auth.bankid.no/auth/realms/prod", acr: "urn:bankid:low" } }
+    )
+    callback = OmniauthCallbacksController.new
+
+    assert_no_difference -> { User.count } do
+      assert_raises(OmniauthCallbacksController::IdentityEmailConflict) do
+        callback.send(:find_or_create_user, auth)
+      end
+    end
+
+    refute legacy.reload.email_verified?
+    refute ExternalIdentity.where(user_id: legacy.id).exists?
+  end
+
+  test "a non-BankID identity does not inherit the email-verification exception" do
+    user = User.new(email_address: "unverified-#{SecureRandom.hex(6)}@example.test",
+                    password: SecureRandom.hex(24))
+    user.require_email_verification = true
+    user.save!
+
+    provider = IdentityProvider.create!(name: "Facebook", slug: "facebook")
+    ExternalIdentity.create!(user:, identity_provider: provider, subject: "subject-#{SecureRandom.hex(8)}",
+                             assurance_level: "verified")
+    controller = ApplicationController.new
+
+    refute controller.send(:verified_bankid_identity?, user)
+  end
+end

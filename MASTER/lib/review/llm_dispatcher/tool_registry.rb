@@ -1,0 +1,119 @@
+# frozen_string_literal: true
+
+require_relative "../../execution/contract"
+require_relative "../../trace/tool_observer"
+
+module Master
+  module Review
+    class LLMDispatcher
+      module ToolRegistry
+        private
+
+        def llm_tools(selected_model)
+          return [] if Fiber[:master_no_tools]
+          return [] unless tool_capable?(selected_model)
+
+          profile = Ground::Tool::Profile.current
+          tier = @model_router&.tier_for_model(selected_model).to_s
+          file_types = active_file_types.sort.freeze
+          @llm_tools_by_context ||= {}
+          key = [profile, tier, file_types]
+          @llm_tools_by_context[key] ||= build_llm_tools(profile:, tier:, file_types:)
+        end
+
+        def build_llm_tools(visitor: false, profile: nil, tier: nil, file_types: nil)
+          profile ||= visitor ? :public : Ground::Tool::Profile.current
+          allowed = Ground::Tool::Profile.allowlist(profile)
+          tier ||= @model_router&.tier_for_model(@config.model).to_s
+          file_types ||= active_file_types
+          @tools.filter_map do |tool|
+            next mcp_tool(tool, allowed:, tier:) if tool.is_a?(::RubyLLM::Tool)
+
+            wrapper = LLM_TOOL_MAP[tool.class]
+            next unless wrapper
+            name = tool_registry_name(tool)
+            meta = @tool_registry.fetch(name, {})
+            # A tool data/tools.yml never classified is withheld until elevation:
+            # what nobody has judged is not safe by omission.
+            elevated = meta.fetch("elevated", true) != false
+            next unless tool_available_for_context?(meta, active_file_types: file_types)
+            next if allowed && !allowed.include?(name)
+            next if allowed.nil? && !Fiber[:master_elevated] && elevated
+            next if tier == "cheap" && elevated
+            wrapper.new(tool, bus: @bus, tool_observer:)
+          end
+        rescue StandardError => err
+          @bus&.publish("agent:llm_tools_error", error_class: err.class.name, **Master::Execution::Contract.diagnostic_fields(err.message))
+          []
+        end
+
+        # MCP wrappers now carry their own Governor boundary. They still require
+        # an elevated session here, because the server's capabilities are
+        # operator-defined and are not represented in data/tools.yml.
+        def tool_observer
+          return unless @bus&.respond_to?(:publish_required)
+
+          @tool_observer ||= Master::Trace::ToolObserver.new(bus: @bus)
+        end
+
+        def mcp_tool(tool, allowed:, tier:)
+          return if allowed || !Fiber[:master_elevated] || tier == "cheap"
+
+          tool
+        end
+
+        # Internal adapter classes may expose a shorter operator-facing tool
+        # name through NAME (BrowserAgent -> Browser). Use that registered name
+        # for policy lookup instead of accidentally treating the tool as elevated.
+        def tool_registry_name(tool)
+          short = tool.class.name.to_s.split("::").last
+          return short if @tool_registry.key?(short)
+
+          runtime = tool.class.const_defined?(:NAME) ? tool.class::NAME.to_s : ""
+          candidate = runtime.split("_").map { |part| part[0].to_s.upcase + part[1..].to_s }.join
+          @tool_registry.key?(candidate) ? candidate : short
+        end
+
+        def load_tool_registry
+          rows = Master.tools_config
+          base = rows.is_a?(Array) ? rows.select { |row| row.is_a?(Hash) } : []
+          base.to_h { |row| [row["name"].to_s, row] }
+        end
+
+        # The file types are read once per tool set by the callers that loop; the
+        # ReAct prompt builder asks without them, so the default reads the session.
+        def tool_available_for_context?(meta, active_file_types: self.active_file_types)
+          required = Array(meta["file_types"]).filter_map { |ext| normalize_file_type(ext) }
+          return true if required.empty?
+          return true if active_file_types.empty?
+
+          (required & active_file_types).any?
+        end
+
+        def active_file_types
+          sources = []
+          sources << @session.topic if @session.respond_to?(:topic)
+          sources.concat(Array(@session.respond_to?(:messages) ? @session.messages : nil).map { |msg| msg[:content] || msg["content"] })
+          sources.compact.flat_map do |text|
+            text.to_s.split(/\s+/).filter_map do |token|
+              cleaned = token.to_s.strip.delete_prefix("(").delete_suffix(")").delete_suffix(",").delete_suffix(".")
+              next unless cleaned.include?(".")
+
+              ext = File.extname(cleaned).downcase
+              next unless ext.match?(/\A\.[a-z][a-z0-9]*\z/i)
+
+              ext
+            end
+          end.uniq
+        end
+
+        def normalize_file_type(ext)
+          ext = ext.to_s.strip.downcase
+          return if ext.empty?
+
+          ext.start_with?(".") ? ext : ".#{ext}"
+        end
+      end
+    end
+  end
+end

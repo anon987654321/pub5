@@ -1,0 +1,166 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "open3"
+
+class MasterBootTest < Minitest::Test
+  def test_boot_loader_requires_all_modules
+    assert defined?(MasterPaths)
+    assert defined?(Master::DataLoading)
+    assert defined?(Master::MasterRuntime)
+    assert defined?(Master::MasterBoot)
+  end
+
+  def test_master_paths_shim_matches_boot_paths
+    assert_equal MasterPaths::ROOT, File.expand_path("..", File.expand_path("../lib", __dir__))
+    assert MasterPaths.data("laws.yml").end_with?("/data/laws.yml")
+  end
+
+  def test_master_data_load_yaml_reads_canonical_laws
+    path = Master.data_path("laws.yml")
+
+    body = Master.load_yaml(path)
+    assert body.is_a?(Hash)
+    # Laws are flat records; executable ones also have a law_catalogue entry.
+    # transformation_policy is law_runtime.yml's (Master.law), not laws.yml's.
+    assert body.key?("SINGULARITY")
+    assert body.fetch("law_catalogue").fetch("entries").key?("CAPABILITY_STATUS_MUST_BE_TRUTHFUL")
+  end
+
+  def test_master_runtime_process_defaults_constant
+    assert_includes Master::MasterRuntime::PROCESS_DEFAULTS, "MASTER_SAFE_MODE"
+    assert_equal "1", Master::MasterRuntime::PROCESS_DEFAULTS["MASTER_SAFE_MODE"]
+  end
+
+  def test_master_boot_module_exposes_boot_entrypoints
+    assert Master.respond_to?(:boot)
+    assert Master.respond_to?(:prepare_runtime!)
+    assert Master.respond_to?(:validate_data!)
+  end
+
+  def test_data_validation_detects_rapid_file_edits
+    Dir.mktmpdir do |dir|
+      data = File.join(dir, "data")
+      FileUtils.mkdir_p(data)
+      path = File.join(data, "sample.yml")
+      File.write(path, "ok: true\n")
+      Master.validate_data!(root: dir)
+
+      File.write(path, "broken: [\n")
+      errors = Master.validate_data!(root: dir)
+
+      assert errors.key?("sample.yml"), errors.inspect
+    end
+  end
+
+  def test_data_validation_reports_invalid_utf8_without_aborting_the_sweep
+    Dir.mktmpdir do |dir|
+      data = File.join(dir, "data")
+      FileUtils.mkdir_p(data)
+      path = File.join(data, "invalid.yml")
+      File.binwrite(path, [0xFF].pack("C"))
+
+      errors = Master.validate_data!(root: dir)
+
+      assert errors.key?("invalid.yml"), errors.inspect
+      assert_match(/invalid UTF-8/, errors.fetch("invalid.yml"))
+    end
+  end
+
+  def test_data_validation_detects_same_size_edits_with_restored_mtime
+    Dir.mktmpdir do |dir|
+      data = File.join(dir, "data")
+      FileUtils.mkdir_p(data)
+      path = File.join(data, "sample.yml")
+      File.write(path, "ok: true\n")
+      assert_empty Master.validate_data!(root: dir)
+      original = File.stat(path)
+
+      malformed = "x: [a,  \n"
+      assert_equal original.size, malformed.bytesize
+      File.write(path, malformed)
+      File.utime(original.atime, original.mtime, path)
+      errors = Master.validate_data!(root: dir)
+
+      assert errors.key?("sample.yml"), errors.inspect
+    end
+  end
+
+  def test_a_missing_yaml_file_warns_once
+    Dir.mktmpdir do |dir|
+      missing = File.join(dir, "PATH_OWNERSHIP.yml")
+      _, err = capture_io { 3.times { assert_equal({}, Master.load_yaml(missing)) } }
+
+      assert_equal 1, err.lines.grep(/\Aboot0: yaml .*PATH_OWNERSHIP\.yml/).size, err
+    end
+  end
+
+  def test_missing_yaml_defaults_are_not_shared_between_calls
+    Dir.mktmpdir do |dir|
+      first = Master.load_yaml(File.join(dir, "first.yml"))
+      first["polluted"] = true
+
+      second = Master.load_yaml(File.join(dir, "second.yml"))
+
+      assert_equal({}, second)
+    end
+  end
+
+  # laws.yml needs aliases, which is why load_yaml allows them. Aliases are
+  # references inside the document; a Ruby object tag is still refused.
+  def test_load_yaml_follows_aliases_and_refuses_ruby_objects
+    Dir.mktmpdir do |dir|
+      aliased = File.join(dir, "aliased.yml")
+      File.write(aliased, "base: &base\n  size: 3\ncopy: *base\n")
+      assert_equal({ "size" => 3 }, Master.load_yaml(aliased)["copy"])
+
+      recursive = File.join(dir, "recursive.yml")
+      File.write(recursive, "root: &root\n  name: root\n  self: *root\n")
+      first = Master.load_yaml(recursive)
+      second = Master.load_yaml(recursive)
+      assert_equal "root", first.dig("root", "name")
+      assert_same first["root"], first["root"]["self"]
+      refute_same first["root"], second["root"]
+      assert_same second["root"], second["root"]["self"]
+      first["root"]["name"] = "changed"
+      assert_equal "root", second["root"]["name"]
+
+      tagged = File.join(dir, "tagged.yml")
+      File.write(tagged, "--- !ruby/object:OpenStruct\ntable: {}\n")
+      assert_raises(Psych::DisallowedClass) { Master.load_yaml(tagged) }
+    end
+  end
+
+  def test_load_yaml_preserves_false_root_values
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "false.yml")
+      File.write(path, "false\n")
+
+      assert_equal false, Master.load_yaml(path)
+      assert_equal false, Master.load_yaml(path, default: "fallback")
+    end
+  end
+  def test_termux_native_tts_is_ready_without_the_edge_worker
+    keys = %w[MASTER_SKIP_TTS MASTER_TTS_DEGRADED MASTER_TTS_REASON]
+    saved = keys.to_h { |key| [key, ENV[key]] }
+    keys.each { |key| ENV.delete(key) }
+    ENV["MASTER_TTS_DEGRADED"] = "1"
+    ENV["MASTER_TTS_REASON"] = "edge worker unavailable"
+
+    Master::Device.stub(:android?, true) do
+      Master::Device::Audio.stub(:tts_available?, true) do
+        Master::Voice::Speech.stub(:available?, false) do
+          Master.stub(:supervise_tts, ->(**) { flunk("native Termux TTS must not start Edge") }) do
+            assert Master.ensure_services!(root: Master::ROOT)
+          end
+        end
+      end
+    end
+
+    refute ENV.key?("MASTER_TTS_DEGRADED")
+    refute ENV.key?("MASTER_TTS_REASON")
+  ensure
+    saved&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+end

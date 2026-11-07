@@ -1,0 +1,35 @@
+<% content_for :title, t("pages.feed") %>
+<% content_for :description, t("post.feed_description") %>
+<div class="page-header">
+  <%= tag.h1 t("pages.feed") %>
+  <%= link_to t("actions.new_post"), new_post_path, class: "button" %>
+</div>
+<%= turbo_frame_tag "amber-feed" do %>
+<%# One affiliate band after every FEED_EVERY posts, never before the first and
+    never trailing the last — a band in the last slot reads as the end of the
+    feed. Category-filtered to fashion rather than showing brgen's whole
+    inventory: an electronics deal between two outfits reads as a banner, and a
+    garment reads as the app working. %>
+<% if @posts.any? %>
+  <%# A list like posts#index, so screen readers announce how many posts. %>
+  <ul class="feed_list post-card-list" role="list">
+    <% @posts.each_with_index do |post, index| %>
+      <%= tag.li render(post) %>
+      <% if ((index + 1) % Shared::AffiliateHelper::FEED_EVERY).zero? && index + 1 < @posts.size %>
+        <% band = render("shared/affiliate_feed_unit", category: "fashion") %>
+        <%= tag.li band if band.present? %>
+      <% end %>
+    <% end %>
+  </ul>
+<% else %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_feed_posts"),
+        body: t("empty.no_feed_posts_body"),
+        action: { label: t("empty.find_people"), path: posts_path } %>
+<% end %>
+<%= render "shared/newsletter_cta",
+      heading: t("newsletter.style_notes"),
+      blurb: t("newsletter.style_blurb"),
+      button_label: t("newsletter.get_letter") %>
+<%= render "shared/pager", pagy: @pagy %>
+<% end %>

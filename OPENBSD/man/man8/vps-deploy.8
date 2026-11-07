@@ -1,0 +1,127 @@
+.Dd October 18, 2026
+.Dt VPS-DEPLOY 8
+.Os
+.Sh NAME
+.Nm vps-deploy
+.Nd deploy approved pub5 services to the production VPS
+.Sh SYNOPSIS
+.Nm
+.Cm all | master | brgen | amber | bsdports | mrdamascy
+.Sh DESCRIPTION
+.Nm
+is the serialized production deploy entry point at
+.Pa OPENBSD/bin/vps-deploy .
+Run it as
+.Cm root
+(or as
+.Cm dev
+with passwordless
+.Xr doas 1 ,
+which re-executes the script as root).
+Git fetch and checkout always run as
+.Cm dev
+so the production tree and GitHub credentials stay correctly owned.
+Service control calls
+.Nm pub5-admin
+directly.
+When started as
+.Cm dev ,
+passwordless
+.Xr doas 1
+re-executes the script as root through
+.Pa /usr/bin/env
+with a prefix allowlist of
+.Ev VPS_DEPLOY_*
+and
+.Ev PUB5_DEPLOY_*
+so the pinned SHA, preflight proof, canary and logging knobs survive.
+.Pp
+The command validates its target, checks required local broker availability,
+validates bounded timing and capacity settings, obtains the deploy lock, and
+runs the configured preflight, synchronization, CI, restart, health and deploy
+stamp steps.
+The exact order and restore behavior are implemented in the script
+and the production runbook.
+.Pp
+The accepted targets are
+.Cm all ,
+.Cm master ,
+.Cm brgen ,
+.Cm amber ,
+.Cm bsdports ,
+and
+.Cm mrdamascy .
+Unknown targets are refused before deployment.
+.Sh ENVIRONMENT
+.Bl -tag -width "VPS_DEPLOY_PREFLIGHT_SHA"
+.It Ev VPS_DEPLOY_SHA
+Commit to deploy.
+The default is fetched from
+.Cm origin/main
+.It Ev VPS_DEPLOY_LOG
+Aggregate deploy log path.
+Default
+.Pa /var/log/pub5/vps-deploy.log .
+Rotated when larger than 10 MB.
+.It Ev VPS_DEPLOY_LOG_DIR
+Directory for aggregate and per-run logs.
+Default
+.Pa /var/log/pub5 .
+.It Ev VPS_DEPLOY_RUN_LOG
+Per-run log path.
+Default is a timestamped file under
+.Pa /var/log/pub5/runs/ .
+Symlinked from
+.Pa /home/dev/vps-deploy-latest.log .
+once.
+.It Ev VPS_DEPLOY_PREFLIGHT_SHA
+Commit whose boot was already proved by the operator's machine.
+.It Ev VPS_DEPLOY_CI_SHA
+Commit whose
+.Pa bin/ci
+passed on the operator's machine.
+The box installs the bundle and skips its own test suite for that commit
+only, and refuses a run that would deploy any other.
+.It Ev VPS_DEPLOY_SKIP_PREFLIGHT
+Break-glass preflight bypass.
+Setting this to
+.Cm 1
+also requires
+.Ev I_UNDERSTAND_FAST_DEPLOY=1 .
+.It Ev SKIP_CI
+When set to
+.Cm 1 ,
+skips
+.Pa vps_ci.sh ;
+the per-application deploy script and runtime check still run.
+.It Ev VPS_DEPLOY_DRIFT
+Setting this to
+.Cm fail
+refuses deployment when machine configuration differs from the repository.
+.It Ev PUB5_DEPLOY_BROWSER_CHECKS
+Setting this to
+.Cm 1
+adds the browser checks after restart.
+.El
+.Sh SECURITY
+Do not run as root.
+Do not bypass preflight during ordinary deployments.
+A
+successful synchronization or TLS response alone does not establish that every
+application is healthy.
+Inspect the actual health and deploy receipt.
+.Pp
+Before live work, read
+.Pa OPENBSD/RUNBOOK.md
+and the owning tree README.
+.Sh EXAMPLES
+.Bd -literal -offset indent
+zsh OPENBSD/bin/vps-deploy --help
+zsh OPENBSD/bin/vps-deploy master
+zsh OPENBSD/bin/vps-deploy all
+.Ed
+.Sh SEE ALSO
+.Xr operator 1 ,
+.Xr pub5-admin 8 ,
+.Xr rcctl 8 ,
+.Xr relayd 8

@@ -1,0 +1,171 @@
+// Live tracking — 8-point star milestones on a mint line.
+.track-head h1 {
+  font-size: var(--text-title);
+}
+
+.track-eta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  background: var(--mint-100);
+  color: var(--mint-700);
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  padding: var(--space-8) var(--space-16);
+}
+
+.timeline {
+  list-style: none;
+  margin: var(--space-16) 0 var(--space-8);
+  position: relative;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: var(--space-16);
+  margin-inline-start: calc(-1 * var(--hairline));
+  top: var(--space-16);
+  bottom: var(--space-16);
+  width: 2px;
+  background: var(--mint-200);
+}
+
+.step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-8) 0;
+  color: var(--ink-soft);
+}
+
+.step-star {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  background: var(--mint-200);
+  transition: background-color var(--transition-fast) var(--ease-out);
+}
+
+.step-done {
+  color: var(--mint-700);
+}
+
+.step-done .step-star {
+  background: var(--mint-500);
+}
+
+.step[aria-current="step"] {
+  color: var(--ink);
+}
+
+.step[aria-current="step"] .step-star {
+  background: var(--gold);
+}
+
+.step-label {
+  font-weight: 600;
+}
+
+.step[aria-current="step"] .step-label {
+  font-weight: 700;
+}
+
+.courier-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-small);
+  padding: var(--space-12);
+  font-size: var(--text-meta);
+  font-weight: 600;
+}
+
+.track-cancelled {
+  background: var(--pom-100);
+  color: var(--danger);
+  border-radius: var(--radius-small);
+  padding: var(--space-12);
+  font-weight: 700;
+}
+
+// Tip chips (after delivery only).
+.tip-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 var(--space-4);
+}
+
+.thanks-line {
+  text-align: center;
+  font-weight: 700;
+  color: var(--mint-700);
+  margin-top: var(--space-16);
+}
+
+// Orders index / show cards.
+.order-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.order-lines {
+  font-size: var(--text-meta);
+  margin: 0 0 var(--space-12);
+}
+
+.order-card-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.order-actions {
+  margin-inline-start: auto;
+  display: flex;
+  gap: var(--space-8);
+}
+
+.order-head .state-chip,
+.order-head .badge {
+  margin-inline-end: var(--space-8);
+}
+
+.order-head p {
+  margin: 0;
+}
+
+.order-lines-list {
+  list-style: none;
+}
+
+// Emoji | name and options | price.
+.order-line {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-meta);
+}
+
+.order-line .line-options {
+  display: block;
+}
+
+.order-delivery {
+  margin-top: var(--space-16);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-8);
+  font-size: var(--text-meta);
+}

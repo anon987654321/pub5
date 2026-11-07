@@ -1,0 +1,287 @@
+# frozen_string_literal: true
+
+class Marketplace::ListingsController < Marketplace::BaseController
+  include Shared::FindableBySlug
+  include StorefrontSearch
+  include Shared::TwoFactorAuth
+
+  rate_limit to: 20, within: 3.minutes, only: %i[create],
+    with: -> { redirect_to listings_path, alert: t("flash.listings_rate_limited") }
+
+  allow_unauthenticated_access only: %i[index show]
+  before_action :require_user_session, only: %i[new create]
+  before_action :set_listing, only: %i[show edit update destroy renew]
+  # 2FA only for real accounts; guests list without identity ceremony.
+  before_action -> { require_two_factor!(Current.user) }, only: %i[new create], if: :authenticated?
+
+  def index
+    scope = policy_scope(Marketplace::Listing).with_attached_photos.includes(:user, :category)
+    scope = apply_live_search(scope, columns: %w[title description location], vertical: "marketplace", filters: { category_id: params[:category_id] }.compact) if live_search_query.present?
+    @kind = Marketplace::Listing.kind_from(params[:kind])
+    scope = scope.where(kind: @kind)
+    scope = scope.casual if params[:from] == "person"
+    scope = scope.from_shops if params[:from] == "shop"
+    # Counted after kind and source, which the grid always applies, and before
+    # the facet filters narrow it: a facet's own number has to be "how many if
+    # you pick this", not "how many of what you already picked".
+    @facets = Marketplace::ListingFacets.new(scope, params)
+    scope = scope.where(category_id: params[:category_id]) if params[:category_id].present?
+    scope = scope.where(condition: params[:condition]) if params[:condition].present?
+    # The place a saved search watches, matched the way its alerts match it.
+    scope = scope.where(location: params[:location]) if params[:location].present?
+    @search_lat = params[:lat].presence
+    @search_lng = params[:lng].presence
+    @radius_km = Marketplace::Listing.radius_from(params[:radius_km].presence || Marketplace::Listing::DEFAULT_RADIUS_KM)
+    if @search_lat.present? && @search_lng.present?
+      scope = scope.near(@search_lat, @search_lng, @radius_km)
+    end
+    # Price + sort facets (Amazon/Craigslist-style browsing, was recency only).
+    scope = scope.where("price_cents >= ?", (params[:min_price].to_f * 100).to_i) if params[:min_price].present?
+    scope = scope.where("price_cents <= ?", (params[:max_price].to_f * 100).to_i) if params[:max_price].present?
+    @sort = Marketplace::Listing::SORTS.include?(params[:sort]) ? params[:sort] : "rank"
+    if @sort == "rank"
+      @search_ranker = Marketplace::SearchRanker.new(scope, query: live_search_query, viewer: Current.user)
+      scope = @search_ranker.relation
+    else
+      scope = scope.sorted_by(@sort)
+    end
+    @pagy, @listings = pagy(scope)
+    @listing_distances = listing_distances(@listings, lat: @search_lat, lng: @search_lng)
+    @categories = Marketplace::Category.roots.includes(:children)
+    @top_offers = top_offers_for_index(@kind)
+    @sponsored_listing_ids = sponsored_listing_ids_in(@top_offers)
+    @favorited_listing_ids = favorited_listing_ids_for(@listings, @top_offers)
+    # An empty list with nothing narrowing it means the city has none of this
+    # kind yet, which the results say differently from a search that found none.
+    narrowing = params.values_at(:from, :category_id, :condition, :min_price, :max_price, :lat)
+    @narrowed = live_search_query.present? || narrowing.any?(&:present?)
+
+    finish_storefront_search(partial: "marketplace/listings/live_search_results")
+  end
+
+  def show
+    authorize @listing
+    return if redirect_id_to_slug(@listing)
+
+    @buy_box_result = Marketplace::BuyBoxSelector.for(@listing)
+    @buy_box_reasons = @buy_box_result&.reasons_for(@listing) if Current.user.present? && Current.user.id == @listing.user_id
+    @listing.increment!(:views_count)
+    @listing.record_event!("click", user: Current.user, metadata: { path: request.path })
+    if Current.user.present? && Current.user == @listing.user
+      owner = @listing.store_id ? Marketplace::Store.strict_loading(false).find_by(id: @listing.store_id) : @listing.user
+      @seller_performance = Marketplace::SellerPerformance.new(owner || @listing.user).summary
+    end
+    @order = Marketplace::Order.new if Current.user.present?
+    @reviews = @listing.reviews.includes(:user).order(created_at: :desc)
+    @review = Marketplace::Review.new if Current.user.present? && @listing.reviewable_by?(Current.user)
+    @nearby_listings = nearby_listings_for(@listing)
+    @questions = @listing.questions.includes(:user, :answered_by).for_display
+    @variants = @listing.variants.ordered.includes(:options).in_stock
+    @categories = Marketplace::Category.roots.includes(:children)
+    @question = Marketplace::Question.new if Current.user.present?
+  end
+
+  def new
+    authorize Marketplace::Listing
+    @kind = Marketplace::Listing.kind_from(params[:kind])
+    @listing = Marketplace::Listing.new(kind: @kind, condition: (@kind == "goods" ? "very_good" : nil))
+    @listing.build_job_detail if @kind == "job"
+    @listing.build_housing_detail if @kind == "housing"
+    @listing.build_gig_detail if @kind == "gig"
+    @categories, @stores = listing_form_options
+  end
+
+  def create
+    authorize Marketplace::Listing
+    permitted = listing_params_for_kind(listing_params[:kind].presence || "goods")
+    source = permitted.delete(:source).to_s
+    store_id = permitted.delete(:store_id)
+    @listing = Current.user.marketplace_listings.build(permitted)
+    assign_listing_source(@listing, source, store_id)
+    if @listing.errors.empty? && @listing.save
+      preset = params[:listing][:preset].presence
+      if preset && @listing.photos.attached?
+        @listing.mark_photo_status!("pending")
+        PostproJob.perform_later(@listing.to_gid.to_s, preset, "photos")
+      end
+      Shared::DomainEvent.record!(
+        actor: Current.user, action: "listing.created", subject: @listing,
+        source_vertical: "marketplace", locality: @listing.location
+      )
+      redirect_to listing_path(@listing, listed: "1"), notice: t("flash.marketplace.listing_published")
+    else
+      # The form reads both of these and create set neither, so a refused
+      # listing answered 500 rather than showing the reader what was wrong with
+      # it. Only the kinds work made that reachable — until now every refusal
+      # here was a validation the form itself prevented.
+      @kind = @listing.kind.presence || "goods"
+      @categories, @stores = listing_form_options
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    authorize @listing
+    @categories, @stores = listing_form_options
+  end
+
+  def update
+    authorize @listing
+    permitted = listing_update_params
+    source = permitted.delete(:source).to_s
+    store_id = permitted.delete(:store_id)
+    assign_listing_source(@listing, source, store_id)
+    if @listing.errors.empty? && @listing.update(permitted)
+      Shared::DomainEvent.record!(
+        actor: Current.user, action: "listing.updated", subject: @listing,
+        source_vertical: "marketplace", locality: @listing.location
+      )
+      redirect_to listing_path(@listing)
+    else
+      @categories, @stores = listing_form_options
+      render(:edit, status: :unprocessable_entity)
+    end
+  end
+
+  def destroy
+    authorize @listing
+    @listing.update!(status: "removed")
+    redirect_to listings_path
+  end
+
+  def renew
+    authorize @listing
+    @listing.renew!
+    redirect_to listing_path(@listing), notice: t("flash.marketplace.listing_renewed")
+  end
+
+  private
+
+  def set_listing = (@listing = find_by_slug_or_id(Marketplace::Listing.includes(:user, :store, :category, photos_attachments: :blob, video_attachment: :blob), params[:id]))
+
+  # The forms send kroner (price_kroner and the detail *_kroner fields). The øre
+  # fields stay permitted for callers that already post them.
+  def listing_params
+    params.require(:listing).permit(
+      :title, :description, :price_kroner, :price_cents, :condition, :status, :location,
+      :latitude, :longitude, :category_id, :preset, :kind, :delivery_promise, :fulfilment_method, :source, :store_id, :buy_box_key, :video, photos: [],
+      job_detail_attributes: %i[employer employment_type salary_min_kroner salary_max_kroner
+                                salary_min_cents salary_max_cents remote],
+      housing_detail_attributes: %i[rent_kroner deposit_kroner rent_cents deposit_cents
+                                    rooms size_sqm available_from housing_type],
+      gig_detail_attributes: %i[pay_kroner pay_cents starts_at hours]
+    )
+  end
+
+  # Only the detail block for the kind being listed. Permitting all three would
+  # let a job advert arrive carrying rent, and the row would sit there with
+  # nothing rendering it.
+  def listing_form_options
+    [Marketplace::Category.all, Marketplace::Store.active.where(owner: Current.user).order(:name)]
+  end
+
+  def assign_listing_source(listing, source, store_id)
+    if source == "shop"
+      store = Marketplace::Store.active.find_by(id: store_id, owner_id: Current.user.id)
+      if store
+        listing.store = store
+      else
+        listing.errors.add(:store_id, :invalid)
+      end
+    else
+      listing.store = nil
+    end
+  end
+
+  def listing_params_for_kind(kind)
+    permitted = listing_params
+    %w[job housing gig].each do |other_kind|
+      permitted.delete("#{other_kind}_detail_attributes") unless kind == other_kind
+    end
+    permitted
+  end
+
+  # kind is fixed at create. Switching a goods listing to a job afterwards would
+  # drop the price requirement from a listing buyers already hold offers on.
+  def listing_update_params = listing_params_for_kind(@listing.kind).except(:kind)
+
+  def nearby_listings_for(listing)
+    return Marketplace::Listing.none unless listing.geo?
+
+    # Nearby means nearby of the same kind: a flat for rent has nothing to say
+    # about the bicycles around it.
+    policy_scope(Marketplace::Listing).active
+      .where(kind: listing.kind)
+      .where.not(id: listing.id)
+      .nearby(listing.latitude, listing.longitude, 5)
+      .limit(6)
+  end
+
+  def listing_distances(listings, lat:, lng:)
+    return {} if lat.blank? || lng.blank?
+
+    listings.each_with_object({}) do |listing, distances|
+      distance = listing.distance_to(lat, lng)
+      distances[listing.id] = distance if distance
+    end
+  end
+
+  # Featured deals first; fill with popular active listings. Hidden while
+  # searching or category-filtering so the grid stays the primary answer.
+  #
+  # Same kind as the grid below it. The strip used to draw from every listing
+  # there is, so the moment a kind other than goods existed, a bicycle search
+  # carried a job advert above it — the filter the grid applies has to apply
+  # here or the page contradicts itself.
+  def top_offers_for_index(kind)
+    return [] if live_search_query.present? || params[:category_id].present?
+
+    limit = 6
+    offers = Marketplace::Deal.live.featured
+      .merge(Marketplace::Listing.where(kind: kind))
+      .includes(listing: { photos_attachments: :blob })
+      .limit(limit)
+      .to_a
+    offers += top_offer_listings(kind, excluding: offers, limit: limit - offers.size, sellers: presence_seller_ids)
+    offers + top_offer_listings(kind, excluding: offers, limit: limit - offers.size)
+  end
+
+  # Local business presence (__shared/config/plans.yml, featured_listings): a
+  # paying business's active listings come after the featured deals and before
+  # the popular fill. Paid placement, so the card carries the sponsored label.
+  def presence_seller_ids
+    @presence_seller_ids ||= Shared::BillingSubscription.granting(:featured_listings).distinct.pluck(:user_id)
+  end
+
+  # The strip's listings that are there because their seller pays. Every
+  # presence listing the strip has room for comes before the popular fill, so a
+  # paying seller's listing in the strip is always a paid one.
+  def sponsored_listing_ids_in(offers)
+    sellers = presence_seller_ids
+    offers.filter_map { |row| row.id if row.is_a?(Marketplace::Listing) && sellers.include?(row.user_id) }
+  end
+
+  # Popular active listings of +kind+ not already in +excluding+ (deals or
+  # listings), from +sellers+ when given.
+  def top_offer_listings(kind, excluding:, limit:, sellers: nil)
+    return [] unless limit.positive?
+
+    seen = excluding.map { |row| row.is_a?(Marketplace::Deal) ? row.listing_id : row.id }
+    listings = policy_scope(Marketplace::Listing).active.where(kind:)
+    scope = listings.where.not(id: seen)
+    scope = scope.where(user_id: sellers) if sellers
+    scope = scope.with_attached_photos.includes(:category)
+    scope.popular.limit(limit).to_a
+  end
+
+  def favorited_listing_ids_for(*collections)
+    return Set.new unless Current.user.present?
+
+    ids = collections.flatten.compact.filter_map do |row|
+      row.is_a?(Marketplace::Deal) ? row.listing_id : row.id
+    end
+    return Set.new if ids.empty?
+
+    Current.user.marketplace_favorites.where(listing_id: ids).pluck(:listing_id).to_set
+  end
+end

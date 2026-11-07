@@ -1,0 +1,293 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require_relative "../lib/operator/check_chain"
+
+class WorkflowInferenceTest < Minitest::Test
+  # The execution-trace preflight needs live collaborators; these tests assert what /fix renders.
+  # The real check baseline and closing verification run every stage of the ladder; these tests
+  # assert what the pass renders.
+  def setup
+    @deep_trace = ENV["MASTER_FIX_DEEP_TRACE"]
+    ENV["MASTER_FIX_DEEP_TRACE"] = "0"
+    @real_baseline = Operator::CheckChain.method(:baseline)
+    @real_verify = Operator::CheckChain.method(:verify_fix)
+    Operator::CheckChain.define_singleton_method(:baseline) { |**| {} }
+    Operator::CheckChain.define_singleton_method(:verify_fix) { |**| [0, []] }
+  end
+
+  def teardown
+    @deep_trace ? ENV["MASTER_FIX_DEEP_TRACE"] = @deep_trace : ENV.delete("MASTER_FIX_DEEP_TRACE")
+    baseline = @real_baseline
+    verify = @real_verify
+    Operator::CheckChain.define_singleton_method(:baseline) { |**kwargs| baseline.call(**kwargs) }
+    Operator::CheckChain.define_singleton_method(:verify_fix) { |**kwargs| verify.call(**kwargs) }
+  end
+
+  # A repair that says it repaired and shows nothing sends the operator to go
+  # and look for it.
+  def test_the_repair_shows_its_commits_and_its_patch
+    pass = Master::CLI::Pipeline::Pass.allocate
+    pass.instance_variable_set(:@root, Master::ROOT)
+    fake = Object.new
+    def fake.head = "abc1234"
+    def fake.log_between(*) = ["abc1234 Master: a repair", "def5678 Master: another"]
+    def fake.patch_between(*) = "diff --git a/x b/x\n@@ -1 +1 @@\n-old\n+new\n"
+    def fake.working_patch(*) = ""
+    pass.instance_variable_set(:@git, fake)
+
+    section = pass.send(:changes_section, "abc1234")
+
+    assert_includes section, "abc1234 Master: a repair"
+    assert_includes section, "+new"
+    assert_includes section, "-old"
+  end
+
+  def test_a_repair_that_changed_nothing_says_so
+    pass = Master::CLI::Pipeline::Pass.allocate
+    pass.instance_variable_set(:@root, Master::ROOT)
+    quiet = Object.new
+    def quiet.log_between(*) = []
+    def quiet.patch_between(*) = ""
+    def quiet.working_patch(*) = ""
+    pass.instance_variable_set(:@git, quiet)
+
+    assert_equal "nothing changed", pass.send(:changes_section, "abc1234")
+  end
+
+  def test_intent_router_classifies_through_master
+    router = Master::CLI::IntentRouter.new
+    assert_equal :run_full_workflow, router.classify("run this through master")
+  end
+
+  def test_intent_router_classifies_a_file_read
+    router = Master::CLI::IntentRouter.new
+    assert_equal :inspect_repo, router.classify("read CLAUDE.md")
+    refute_equal :inspect_repo, router.classify("I read that the constitution is long")
+    refute_equal :unknown, router.classify("read CLAUDE.md")
+  end
+
+  # /fix renders its lifecycle: what the tree says, what the repair did, and
+  # what the tree says after. This test used to assert a "workflow:
+  # deliberation" / "verdict:" shape from a design that no longer exists, and
+  # its doubles had drifted from the real interfaces — FakeFixLoop had no #run
+  # and FakeDeliberation had no #agent. Both crashes were swallowed into the
+  # report as prose, so the only visible symptom was this assertion.
+  def test_fix_renders_observe_repair_and_observe_again
+    out = dispatch(critique: false, apply: true)
+
+    assert_match(/^mode0 at review0: /, out)
+    assert_match(/^obs0 at review0: observe/, out)
+    assert_match(/^fix0 at review0: repair/, out)
+    assert_match(/^obs1 at review0: re-observe/, out)
+    assert_match(/review0: complete/, out)
+  end
+
+  # The dmesg progress and the report print to one terminal, so the posture
+  # line appears in exactly one of them.
+  def test_the_posture_prints_once
+    previous = ENV["MASTER_DMESG"]
+    ENV["MASTER_DMESG"] = "1"
+    posture = Master::Ground::ModePosture.new(root: File.expand_path("..", __dir__)).line
+    rendered = dispatch(critique: false)
+
+    assert_equal 1, rendered.scan(posture).size, rendered
+  ensure
+    ENV["MASTER_DMESG"] = previous
+  end
+
+  def test_mode_line_distinguishes_mechanical_full_from_sampled_semantic_scan
+    posture = Master::Ground::ModePosture.new(root: File.expand_path("..", __dir__))
+
+    with_env("MASTER_SCAN_SEMANTIC_SAMPLE", nil) do
+      line = posture.line
+
+      assert_includes line, "full mechanical scan"
+      # Strict reads a rotating tenth of clean files semantically (data/scan.yml).
+      assert_includes line, "semantic sampled"
+    end
+
+    with_env("MASTER_SCAN_SEMANTIC_SAMPLE", "0") do
+      assert_includes posture.line, "semantic sampled"
+    end
+
+    with_env("MASTER_SCAN_SEMANTIC_SAMPLE", "1") do
+      assert_includes posture.line, "semantic full"
+    end
+  end
+
+  # --dry-run reads and says what it would take on, then stops.
+  def test_dry_run_says_what_it_would_repair_instead_of_repairing
+    out = dispatch(critique: false)
+
+    assert_match(/^obs0 at review0: observe/, out)
+    assert_match(/^fix0 at review0: would repair/, out)
+    refute_match(/^obs1 at review0: re-observe/, out)
+  end
+
+  # A check tier's read-only pass reads and stops: no preview, which bin/check --ladder switches off.
+  def test_a_check_tier_dry_run_reads_without_a_preview
+    out = with_env("MASTER_FIX_PREVIEW", "0") { dispatch(critique: false) }
+
+    assert_match(/^obs0 at review0: observe/, out)
+    refute_match(/would repair/, out)
+  end
+
+  # The reading (/fix --dry-run --critique --only critique,map)
+  # is where the council is a stage of its own. Inside a writing /fix it argues
+  # per repair instead, which test_fix_council covers.
+  def test_the_reading_reaches_deliberation_when_critique_is_on
+    asked = []
+    deliberation = FakeDeliberation.new(asked)
+    out = Master::CLI::CommandRegistry.stub(:observe, ->(*, **) { "clean -- no violations" }) do
+      read_only_fix(deliberation:, args: ". --dry-run --critique --only critique,map")
+    end
+
+    assert_match(/^crit0 at review0: critique$/, out)
+    refute_empty asked, "critique stage never reached the deliberation"
+    refute_match(/NoMethodError/, out)
+  end
+
+  # The reading writes nothing, whatever else it is asked.
+  def test_the_reading_never_repairs
+    out = Master::CLI::CommandRegistry.stub(:observe, ->(*, **) { "clean -- no violations" }) do
+      args = ". --dry-run --apply --no-critique --only critique,map"
+      read_only_fix(deliberation: FakeDeliberation.new([]), args:)
+    end
+
+    refute_includes out.lines.map(&:chomp), "repair"
+    refute_includes out.lines.map(&:chomp), "re-observe"
+  end
+
+  # The pipeline used to format a stage crash into the report and still print
+  # "complete". A defect must escape; only operational failures degrade.
+  def test_a_stage_defect_is_raised_not_formatted_into_the_report
+    broken = Object.new
+    def broken.run(_, **) = raise(NoMethodError, "undefined method 'run'")
+    def broken.preview(_) = Master::Result.ok({ total: 0, rules: {}, files: {} })
+
+    error = assert_raises(NoMethodError) { dispatch(critique: false, fix_loop: broken, apply: true) }
+    assert_match(/undefined method/, error.message)
+  end
+
+  def test_an_operational_stage_failure_marks_the_run_incomplete
+    flaky = Object.new
+    def flaky.run(_, **) = raise(Errno::ENOENT, "scan target")
+    def flaky.preview(_) = Master::Result.ok({ total: 0, rules: {}, files: {} })
+
+    result = dispatch(critique: false, fix_loop: flaky, apply: true)
+
+    assert result.err?, "an incomplete pipeline is an error result"
+    assert_includes result.message, "Errno::ENOENT"
+    assert_match(/review\d+: incomplete, failed fix/, result.message)
+  end
+
+  def test_unconfigured_critique_marks_the_review_incomplete
+    pass = Master::CLI::Pipeline::Pass.allocate
+    pass.instance_variable_set(:@failed_stages, [])
+    pass.instance_variable_set(:@deliberation, nil)
+
+    output = pass.send(:run_critique, Master::ROOT)
+
+    assert_equal "critique failed: deliberation not configured", output
+    assert_includes pass.instance_variable_get(:@failed_stages), "critique"
+  end
+
+  def test_a_council_error_marks_the_review_incomplete
+    pass = Master::CLI::Pipeline::Pass.allocate
+    pass.instance_variable_set(:@failed_stages, [])
+
+    failure = Master::Result.err("council: provider unavailable", category: :infrastructure)
+    output = Master::CLI::CouncilCrit.stub(:run, failure) do
+      pass.send(:deliberation_critique, Master::ROOT)
+    end
+
+    assert_equal "critique failed: council: provider unavailable", output
+    assert_includes pass.instance_variable_get(:@failed_stages), "critique"
+    refute pass.send(:pass_ok?, [["critique", output]])
+  end
+
+  def with_env(key, value)
+    previous = ENV[key]
+    value.nil? ? ENV.delete(key) : ENV[key] = value
+    yield
+  ensure
+    previous.nil? ? ENV.delete(key) : ENV[key] = previous
+  end
+
+  def read_only_fix(deliberation:, args:)
+    Master::CLI::CommandRegistry.stub(:steady_trace, CLEAN_TRACE) do
+      Master::CLI::CommandRegistry.dispatch_fix(
+        scanner: FakeScanner.new, fix_loop: FakeFixLoop.new, deliberation:,
+        root: File.expand_path("..", __dir__), bus: nil, ctx: { args: }
+      )
+    end
+  end
+
+  def dispatch(critique:, deliberation: FakeDeliberation.new([]), fix_loop: FakeFixLoop.new, apply: false)
+    args = ["."]
+    args << (apply ? "--apply" : "--dry-run")
+    args << (critique ? "--critique" : "--no-critique")
+
+    Master::CLI::CommandRegistry.stub(:observe, ->(*, **) { "clean -- no violations" }) do
+      # The execution trace reads the whole shared checkout and refuses on any
+      # concurrent edit or uncommitted deletion; these tests are about the
+      # lifecycle a clean trace leads into, and test_execution_trace* own the trace.
+      Master::CLI::CommandRegistry.stub(:steady_trace, CLEAN_TRACE) do
+        Master::CLI::CommandRegistry.dispatch_fix(
+          scanner: FakeScanner.new,
+          fix_loop:,
+          deliberation:,
+          root: File.expand_path("..", __dir__),
+          bus: nil,
+          ctx: { args: args.join(" ") },
+        )
+      end
+    end
+  end
+
+  CLEAN_TRACE = Master::Fix::ExecutionTrace::Result.new(
+    ok: true, files: 0, bytes: 0, ruby_files: 0, phases: {}, failures: [],
+  )
+
+  class FakeDeliberation
+    def initialize(asked) = @asked = asked
+
+    def agent = nil # lean boot: no agent, so critique takes the tribunal path
+
+    def review_convergent(payload, context:)
+      @asked << context
+      Master::Result.ok([{ role: "Synthesis", feedback: "ok for #{payload.to_s[0, 20]}" }])
+    end
+
+    # The council check asks through review; the tribunal path through review_convergent.
+    def review(payload, context:) = review_convergent(payload, context:)
+
+    # The pre-ship critique (CouncilCrit) passes only with a Security juror in a
+    # veto role, so the fake answers as a real panel would.
+    def review_pre_ship(payload, context:)
+      @asked << context
+      juror = { persona: "Security", role: "Security", veto_role: true, feedback: "ok for #{payload.to_s[0, 20]}" }
+      Master::Result.ok([juror])
+    end
+  end
+
+  class FakeScanner
+    def scan(_path) = Master::Result.ok([])
+
+    def scan_dir(_dir, depth: :deep, glob: nil, stream: false, rules: nil)
+      Master::Result.ok([])
+    end
+  end
+
+  class FakeFixLoop
+    # Only a recognised DONE ending counts as a finished repair (Fix::OutcomePolicy).
+    def run(_target, **) = Master::Result.ok("DONE: nothing to do")
+    def last_terminal_state = :done
+    def publish_pending! = :nothing_to_publish
+
+    def preview(_target)
+      Master::Result.ok({ total: 0, rules: {}, files: {} })
+    end
+  end
+end
