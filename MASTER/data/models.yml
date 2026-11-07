@@ -289,6 +289,10 @@ models:
     - *gemini_flash
     - *gemini_flash_openrouter
   free:
+    # The local bed leads the free tier for the chitchat head (chitchat_head
+    # hoists this list over the live free lanes): a turn that needs no
+    # provider's opinion answers in zero milliseconds of network roulette.
+    - *ollama_gemma
     - *nemotron_super
   claude_code:
     - *claude_cli_opus
@@ -625,7 +629,12 @@ replicate_chat:
 # proves presence, not permission. keep_alive holds the model between turns;
 # max_num_ctx caps the request window (ollama_sender.rb).
 ollama:
-  enabled: false
+  # Enabled by operator decision 2026-11-08 ("yes wire ollama after deploy"):
+  # chat went to the free tier's online lanes first and a dead-lane roulette
+  # cost a two-word turn 25 minutes. The local bed leads the free tier now;
+  # with no model present the presence probe says unreachable and the chain
+  # degrades exactly as before, so the enable is safe on every host.
+  enabled: true
   # probe: with no remote key configured anywhere, a reachable local daemon
   # becomes the fallback lane by default; MASTER_NO_OLLAMA=1 refuses it.
   probe: true

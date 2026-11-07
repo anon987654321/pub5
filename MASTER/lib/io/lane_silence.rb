@@ -8,7 +8,12 @@ module Master
     # saying so once; one answer clears it. Per lane so a spent lane cannot shut
     # one that answers; process-wide because every session shares the lanes.
     module LaneSilence
-      SILENT_AFTER = 12
+      # Measured 2026-11-08 on the operator's chat: twelve dead calls per dead
+    # lane turned a two-word turn into 25 minutes of providers answering
+    # nothing, google alone burning its dozen on a key that says "User not
+    # found.". Three failures with the deadline still parked say all a dead
+    # lane honestly can; the free-call timeout keeps the burn bounded.
+    SILENT_AFTER = 3
       SILENCE_COOLOFF_S = 300
       ANY = "any"
 
