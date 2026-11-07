@@ -195,6 +195,18 @@
   code: |
     <style>@page{size:156mm 234mm;margin:18mm 0 24mm;@bottom-center{content:counter(page)}}
     body{width:90%;max-width:33rem;margin:auto} main{padding-inline:0.75rem}</style>
+# A page box that states one side and leaves the rest unstated: `@page :first`
+# carrying only `margin-top`. The detector must read it rather than adding nil
+# to a Float for the three sides it never names; the symmetric sides here keep
+# the fixture about that crash and not about the canon.
+- law: PRINT_PAGE_CANON
+  path: BIZ/fetat/fetat.html
+  flags: false
+  code: |
+    <style>@media print{
+    @page{size:156mm 234mm;margin:14mm 14mm 18mm 14mm;@bottom-center{content:counter(page)}}
+    @page :first { margin-top: 0; }
+    body{margin:0;width:90%;max-width:33rem;margin:auto}}</style>
 - law: PRINT_FOLIO_PRESENCE
   path: BIZ/index.html
   flags: true

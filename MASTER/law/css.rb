@@ -589,6 +589,7 @@ module Law
     # it further. Reading only the @page shorthand misses most of a real business plan.
     def composed_sides(src, page_body)
       sides = margins(page_body)
+      return sides if sides.values.any?(&:nil?)
       return sides if page_body[/(?:\A|[;\s])margin\s*:\s*([^;}]+)/, 1].to_s.split.size >= 4 ||
                        page_body.match?(/margin-(?:left|right)\s*:/)
 
