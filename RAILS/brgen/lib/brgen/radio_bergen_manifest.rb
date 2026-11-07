@@ -8,10 +8,8 @@ Shared::Contracts.require_contract("studio")
 module Brgen
   # Shared Radio Bergen manifest loader — pub2 index.html archaeology split into data + Rails.
   class RadioBergenManifest
-    # The pub2 archive head the lineage line cites. It was read from a lessons
-    # file at config/radio_bergen/archive_lessons.yml or
-    # MASTER/data/recovery/pub_archive_restore.yml; neither has existed on any
-    # host, so every call fell through to this value.
+    # The pub2 archive head the lineage line cites. The archive is history, so
+    # the value is a constant rather than a file to read.
     PUB2_HEAD = "ad05242c97ff"
 
     class << self
