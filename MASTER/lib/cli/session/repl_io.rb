@@ -11,9 +11,9 @@ module Master
         arg = command.to_s.strip
         text = arg.empty? ? Master::CLI::CommandRegistry.help_summary : Master::CLI::CommandRegistry.help_text(arg)
         text = [text, "<< for multiline, !command runs zsh. anything else is a prompt.", "while busy: lines queue; /stop cancels and pauses, /resume continues, /approve [N] or /deny answers approval."].join("\n") if arg.empty?
-        return Master::Result.ok(text) if @face_open
 
         print_terminal_output(text, mode: :dim)
+        Master::Result.ok(text)
       end
 
       # Long command results are easier to inspect in a pager, but piping MASTER

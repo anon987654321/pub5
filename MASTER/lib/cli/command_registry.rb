@@ -71,7 +71,7 @@ module Master
           "laws" => command(:dispatch_laws, root),
           "snapshot" => command(:dispatch_snapshot, droot),
           "why" => command(:dispatch_why, d[:agent], droot, d[:memory]),
-          "face" => Command.new { |ctx| dispatch_face(ctx) },
+
           "help" => command(:help_text, nil),
         ).merge(control_commands(ai[:standing], ai[:soul]))
       end
@@ -298,78 +298,9 @@ module Master
         "snapshot0: failed - #{e.class}: #{e.message}"
       end
 
-      # Legacy isolated-window adapter for explicit non-Session consumers.
-      # Normal CLI /face is intercepted by Session and draws Face.frame above
-      # Reline; this method retains its dedicated /dev/tty boundary for callers
-      # that deliberately request the old full-screen viewport.
-      # `size auto|small|large|WxH` chooses its viewport (WxH is columns by rows).
-      def dispatch_face(ctx = nil, prompt: nil, turn: nil, cancel: nil)
-        chosen = face_size(arg_for(ctx))
-        return chosen if chosen.is_a?(String) && chosen.start_with?("face0:")
-
-        return "face0: needs a terminal" unless $stdin.tty? && $stdout.tty?
-
-        container = Fiber[:master_cli_container]
-        return "face0: no session" unless container
-
-        turn ||= lambda do |text|
-          streamed = +""
-          result = TurnRouter.call(message: text, container:, on_turn: ->(line) { streamed << line << "\n" })
-          return result if streamed.strip.empty? || result.err?
-
-          streamed
-        end
-        handler = turn
-        turn = ->(text) { face_shell_only?(text) ? face_shell_only_notice : handler.call(text) }
-        prompt ||= Fiber[:master_cli_prompt]
-        prompt ||= lambda do
-          renderer = container[:renderer]
-          session = container[:session]
-          agent = container[:agent]
-          if renderer.respond_to?(:prompt_line) && session
-            _state, value = renderer.prompt_line(
-              agent&.model, session.phase,
-              tokens: session.token_est, cost: session.cost
-            )
-            value
-          else
-            Master::Face::Contract.shell_prompt(path: Dir.pwd, root: Master::ROOT)
-          end
-        end
-        terminal = File.open("/dev/tty", "r+")
-        Face::Window.new(
-          turn:,
-          event_bus: container[:bus],
-          input: terminal,
-          output: terminal,
-          prompt:,
-          cancel:,
-        ).run
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.face")
-        "face0: failed - #{e.class}: #{e.message}"
-      ensure
-        terminal&.close
-      end
-
-      # A command that runs for minutes would leave the face looking stuck, so it is run from the shell.
-      def face_shell_only?(text)
-        word = text.to_s.strip.split.first.to_s.downcase
-        Array(Master.patterns_config.fetch("cli", {})["face_shell_only"]).include?(word)
-      end
-
-      def face_shell_only_notice = "That runs for minutes. Ctrl-D leaves the face; run it in the shell."
-
-      def face_size(arg)
-        words = arg.to_s.split
-        return unless words.first == "size"
-
-        mode = Face::Sizing.parse(words[1..].join)
-        return "face0: size is auto, small, large or WxH (columns by rows); now #{Face::Sizing.mode}" unless mode
-
-        Face::Sizing.mode = mode
-        nil
-      end
+      # The terminal ASCII face is retired (Johann 2026-11-07): the face is the
+      # web particle face only. The voice surface it hosted (Ear, Transcriber)
+      # stays in lib/cli/face/ for /listen, the device and bin/doctor.
 
       def dispatch_device(_root, ctx: nil)
         device_command(arg_for(ctx))

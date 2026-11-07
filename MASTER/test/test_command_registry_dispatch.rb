@@ -558,11 +558,9 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal 8, captured.fetch(:max_cases)
   end
 
-  def test_face_is_a_documented_command_surface
-    assert built.key?("face")
-    assert_includes Registry::HELP_TOPICS.keys, "face"
-    assert_includes Registry.slash_commands, "/face"
-    assert_match(%r{/face}, Registry.help_text("face"))
+  def test_the_terminal_face_verb_is_retired
+    refute_includes Registry.slash_commands, "/face"
+    assert_match(%r{unknown command /face}, Registry.help_text("face"))
   end
 
   def test_deploy_is_documented_and_review_gated

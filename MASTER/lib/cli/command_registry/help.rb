@@ -333,19 +333,6 @@ module Master
           detail: ["/why <law|path|scan_rule|anti_pattern|style.key> - Trace::WhyExplainer looks it",
                    "up in the constitution, architecture and path ownership, then asks the model only when nothing matches."],
         },
-        "face" => {
-          summary: "a compact visual layer above the canonical working prompt",
-          detail: [
-            "/face - confirm the already visible terminal face; it never stacks another image.",
-            "Bare bin/master enters the normal working prompt directly with a short ready-state motion reveal above it; on Android, bin/master-mobile bridge serves the animated phone face.",
-            "/listen - explicitly capture one Termux:API utterance after granting microphone and speech_recognition.",
-            "The face is visual output only; Reline owns keyboard input, history, slash commands and exit.",
-            "No alternate screen, raw-key reader, second prompt or /exit handoff is involved.",
-            "Ctrl-C interrupts active work or clears the current draft; Ctrl-D exits the one interactive session.",
-            "The web chat and terminal continue to share the Operator prompt, TurnRouter and command registry.",
-            "/fix and other long commands run through the ordinary Session pipeline.",
-          ],
-        },
       }.freeze
 
       def help_text(command = nil)
@@ -386,7 +373,7 @@ module Master
         "why" => "review",
         "commit" => "change", "deploy" => "change", "snapshot" => "change",
         "orders" => "change",
-        "face" => "interface", "voice" => "interface", "narrate" => "interface", "bard" => "interface",
+        "voice" => "interface", "narrate" => "interface", "bard" => "interface",
         "reload" => "session", "incident" => "session",
         "play" => "media", "mov" => "media", "documents" => "media", "android" => "media", "ios" => "media",
         "support" => "review",

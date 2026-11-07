@@ -203,7 +203,6 @@ module Master
         when "/exit", "/quit" then exit_cli
         when "/undo", "/clear" then dispatch_registered_slash_command(stripped)
         when "/listen" then run_listen
-        when %r{\A/face(?:\s+.*)?\z} then run_face
         else dispatch_registered_slash_command(stripped)
         end
       end
@@ -234,23 +233,15 @@ module Master
                  @exit_code = 0
                  result.to_s
                end
-        # The face renders command replies in its own transcript. Printing
-        # them here would write through the alternate screen and duplicate the
-        # reply; the same Result is returned to the face renderer instead.
-        print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty? || @face_open
+        # The commands' replies print here; the face transcript is gone with
+        # the terminal face.
+        print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
         result
       rescue StandardError => e
         @last_ok = false
         @exit_code = 2
         text = "cmd0: /#{name} failed - #{e.class}: #{e.message}"
-        return Master::Result.err(text, category: :infrastructure) if @face_open
-
         print_terminal_output(text, mode: :error)
-        nil
-      end
-
-      def run_face(_arguments = nil)
-        print_face_overlay
         nil
       end
 
@@ -288,7 +279,6 @@ module Master
           content: "$ #{command}\n#{text}",
           layer: :execution,
         )
-        return result if @face_open
 
         terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
       end
@@ -308,7 +298,6 @@ module Master
         text = result.ok? ? result.value!.to_s : result.message.to_s
         @last_ok = result.ok?
         @exit_code = result.ok? ? 0 : 2
-        return result if @face_open
 
         puts @refs.renderer.render(text, mode: result.ok? ? :dim : :error)
       end
@@ -317,7 +306,7 @@ module Master
         input = @last_repeatable_input.to_s
         return Master::Trace::Dmesg.status("cli0", "nothing to repeat") if input.empty?
 
-        run_input(input, presentation: @face_open ? :face : :terminal)
+        run_input(input)
       end
 
       def run_agent_turn(line)
@@ -325,10 +314,6 @@ module Master
           Master::Trace::Dmesg.status("host0", refusal)
           return
         end
-
-        # A face utterance has already crossed the Session command boundary.
-        # Keep it on the same pipeline, but preserve the face presentation.
-        return run_input(line.strip, presentation: :face) if @face_open
 
         if $stdin.tty? && $stdout.tty? && Thread.current != @turn_worker
           enqueue_interactive_line(line)

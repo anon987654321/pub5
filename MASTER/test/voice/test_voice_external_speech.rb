@@ -34,20 +34,6 @@ class TestVoiceExternalSpeech < Minitest::Test
   end
 end
 
-class TestFaceMouthHoldsTheSpeaker < Minitest::Test
-  def test_the_mouth_holds_the_speaker_while_it_says_a_reply
-    mouth = Master::CLI::Face::Mouth.new(synthesize: ->(_text) { nil })
-    held = nil
-    mouth.stub(:available?, false) do
-      Master::Voice::Playback.stub(:external_speech, ->(&block) { held = true; block.call }) do
-        mouth.say("hello", on_level: ->(_level) {})
-      end
-    end
-
-    assert held
-  end
-end
-
 class TestVoiceSynthesisError < Minitest::Test
   Playback = Master::Voice::Playback
 

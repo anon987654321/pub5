@@ -8,7 +8,6 @@ class TestVoiceBedRemoved < Minitest::Test
     lib/cli/session.rb
     lib/cli/session/repl_flow.rb
     lib/cli/command_registry.rb
-    lib/cli/face/window.rb
   ].freeze
 
   def test_bard_has_no_background_bed_configuration

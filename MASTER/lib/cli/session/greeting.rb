@@ -21,8 +21,6 @@ module Master
       # the first reply ("...or mainly you?Late for hard conversations, Johann."), so it stands down.
       def deliver_greeting
         text = @refs.agent.ask_once(greeting_prompt, law: false).to_s.strip
-        # A full-screen face owns the terminal until it closes.
-        sleep 0.2 while @face_open
         return if text.empty? || @user_active || !@last_input.to_s.empty? || @pipeline_thread
 
         terminal_puts(@refs.renderer.render(text.lines.first.to_s.strip, mode: :dim))

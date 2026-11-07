@@ -49,7 +49,7 @@ module Master
         load_cli_history
         setup_completion
         init_session_state!
-        # The face is a visual layer above the one live Reline prompt.
+        # One live Reline prompt; the face is the web particle face only.
         Fiber[:master_cli_prompt] = -> { @focus_mode ? focus_prompt : normal_prompt }
         set_visitor_mode_if_unauthenticated
       end
@@ -67,19 +67,12 @@ module Master
         # yet typed.
         terminal_puts(@refs.renderer.session_line(@refs.session.name, @refs.session.messages.size)) if @refs.session.name
         print_repo_tree unless booted_before?
-        terminal_puts
-        face_request = initial_message.to_s.strip.match?(/\A\/face(?:\s|\z)/i)
-        if face_request
-          run_face
-        else
-          run_input(initial_message) if initial_message
-        end
+        run_input(initial_message) if initial_message
         greet_from_model unless initial_message
         @running = true
         play_boot_sound
         # The face is the web particle face only (Johann 2026-11-07): the
-        # terminal boot no longer paints the overlay. /face keeps the explicit
-        # opt-in so a deliberate request still gets it.
+        # terminal paints no ASCII face, and the /face verb is retired with it.
         start_boot_scan if background_scan_enabled?
         start_reminder_watch
         repl_loop
@@ -92,11 +85,11 @@ module Master
         handle_repl_line(stripped)
       end
 
-      def run_input(input, presentation: :terminal)
+      def run_input(input)
         return empty_input(:run_input) if input.strip.empty?
         @turn_queue_mutex.synchronize { @turn_cancel_requested = false unless @turn_queue_paused }
         return Master::Result.err("turn cancelled before start", category: :abort) if turn_cancel_requested?
-        blocked = check_budget_blocks(input, presentation:)
+        blocked = check_budget_blocks(input)
         return blocked if blocked
 
         @refs.ground_truth&.begin_turn! if @refs.respond_to?(:ground_truth)
@@ -104,149 +97,21 @@ module Master
         @last_input = input
         Master::Trace::WriteTracker.current&.reset!
         paste, state, accumulated = init_turn_state(input)
-        state[:presentation] = presentation
-        state[:face_output] = +"" if presentation == :face
 
-        print_thinking_indicator unless paste || presentation == :face
-        result = presentation == :face ? dispatch_face_turn(input, accumulated:, state:) :
-                                          dispatch_turn(input, accumulated:, state:)
+        print_thinking_indicator unless paste
+        result = dispatch_turn(input, accumulated:, state:)
         stop_thinking_indicator
-        if presentation == :face
-          unless result.err? && result.category == :abort
-            @last_ok = result.ok?
-            @exit_code = result.ok? ? 0 : exit_code_for(result)
-          end
-        else
-          print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
-          display_result(result:, accumulated:, streamed: state[:streamed])
-        end
+        print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
+        display_result(result:, accumulated:, streamed: state[:streamed])
         @last_repeatable_input = input if result.ok? && Master::Io::MediaIntent.repeatable?(input)
-        return face_reply_text(result, state[:face_output]) if presentation == :face && result.ok? && state[:streamed]
 
         result
       ensure
         @pipeline_thread = nil
         @turn_cancellation = nil
-        @turn_children = nil if presentation == :face
         stop_thinking_indicator
         close_unit_console
         @user_active = false
-      end
-
-      # The face is a compact visual projection above the canonical prompt.
-      # Reline remains the only keyboard/input owner; no alternate screen,
-      # raw-key reader or second prompt is started for ordinary CLI use.
-      FACE_INTRO_FRAMES = 6
-      # Keep the marker inside portrait Termux widths; the intro's cursor
-      # restore depends on it occupying one terminal row.
-      FACE_OVERLAY_MARKER = "face0: Reline owns input"
-      FACE_OVERLAY_PRESENT = "face0: already visible"
-
-      def face_overlay_text(cols: 32, swarm_budget: nil)
-        rows, fitted_cols = Master::CLI::Face::Sizing.fit(12, cols + 4, mode: "#{cols}x12")
-        @face_started_at ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        @face_motion ||= Master::CLI::Face::Motion.new(seed: Random.new_seed % 1_000_003)
-        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        Master::CLI::Face.frame(
-          state: face_state,
-          rows:,
-          cols: fitted_cols,
-          t: now - @face_started_at,
-          motion: @face_motion,
-          color: false,
-          show_laws: nil,
-          swarm_budget: swarm_budget || Master::Face::Contract.budget.fetch("terminal_intro_particles", 24),
-        )
-      end
-
-      def face_state
-        return :error if @last_ok == false
-        return :thinking if @user_active || @pipeline_thread&.alive?
-
-        :ready
-      end
-
-      def print_face_overlay
-        return false unless $stdin.tty? && $stdout.tty?
-
-        if @face_overlay_rendered
-          terminal_puts(FACE_OVERLAY_PRESENT)
-          return true
-        end
-
-        terminal_cols = Master::CLI::Face::Sizing.winsize.last.to_i
-        face_cols = [terminal_cols - 4, 32].min
-        return false if face_cols < 16
-
-        frame = face_overlay_text(cols: face_cols)
-        terminal_puts(frame.lines.map { |line| line.chomp.center(terminal_cols) }.join("\n"))
-        terminal_puts(FACE_OVERLAY_MARKER)
-        @face_overlay_rendered = true
-        animate_face_intro(cols: face_cols, terminal_cols:, face_rows: frame.lines.count)
-        true
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.face.overlay", event_bus: @refs.bus)
-        false
-      end
-
-      # The short ready-state reveal advances the existing facial springs before
-      # Reline starts reading. It never opens a second input loop or screen.
-      def animate_face_intro(cols:, terminal_cols:, face_rows:)
-        return if ENV["MASTER_REDUCED_MOTION"] == "1"
-        return if terminal_cols < FACE_OVERLAY_MARKER.length
-        return if TTY::Screen.height.to_i < face_rows + 7
-
-        block_rows = face_rows + 1
-        FACE_INTRO_FRAMES.times do
-          frame = face_overlay_text(cols:, swarm_budget: Master::Face::Contract.budget.fetch("terminal_intro_particles", 24))
-          rendered = frame.lines.map { |line| line.chomp.center(terminal_cols) }.join("\n")
-          Master::Trace::Dmesg.terminal_write do |target|
-            target.write("\e7\e[?25l\e[#{block_rows}A\r#{rendered}\n#{FACE_OVERLAY_MARKER}\e[?25h\e8")
-            target.flush
-          end
-          sleep(1.0 / Float(Master::Face::Contract.budget.fetch("terminal_intro_fps", 8)).clamp(1.0, 12.0))
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.face.animation", event_bus: @refs.bus)
-      end
-
-      # The face renderer can still be used by explicit visual clients, but
-      # normal terminal turns never hand keyboard ownership to it.
-      def run_face_turn(input)
-        text = input.to_s
-        return empty_input(:face) if text.strip.empty?
-
-        Reline::HISTORY << text
-        return :face_toggle if text.strip.casecmp("/face").zero?
-
-        handle_repl_line(text)
-      end
-
-      def face_reply_text(result, streamed)
-        final = success_text(result).to_s.strip
-        stream = streamed.to_s.strip
-        return stream if final.empty? || stream.include?(final[0, 120])
-        return final if stream.empty?
-
-        "#{stream}\n#{final}"
-      end
-
-      # A cooperative Fold cancellation must finish its bounded transaction
-      # and receipt; killing this worker here would break the shared Session
-      # cancellation contract. Non-Fold work retains the immediate stop path.
-      def cancel_face_turn(worker, children)
-        token = @turn_cancellation
-        cooperative = token&.active?
-        token&.cancel!(reason: "face interrupted")
-        @refs.bus&.publish("user:interrupt", reason: "face", source: "cli", children:)
-        unless cooperative
-          worker.kill if worker&.alive?
-          children&.kill_all
-        end
-        !!cooperative
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.face.cancel", event_bus: @refs.bus)
-        false
       end
 
       private
@@ -343,34 +208,14 @@ module Master
         [paste, state, accumulated]
       end
 
-      def check_budget_blocks(input, presentation: :terminal)
+      def check_budget_blocks(input)
         if (host_err = host_budget_block(input))
-          return presentation == :face ? host_err : display_result(result: host_err, accumulated: "", streamed: false)
+          return display_result(result: host_err, accumulated: "", streamed: false)
         end
         budget_err = budget_block_if_exceeded
-        if budget_err
-          return budget_err if presentation == :face
-
-          return display_result(result: budget_err, accumulated: "", streamed: false)
-        end
+        return display_result(result: budget_err, accumulated: "", streamed: false) if budget_err
 
         nil
-      end
-
-      def dispatch_face_turn(input, accumulated:, state:)
-        return Master::Result.err("turn cancelled before dispatch", category: :abort) if turn_cancel_requested?
-
-        on_turn = build_on_turn_handler(accumulated, state)
-        @turn_cancellation = Master::Core::CancellationToken.new
-        @turn_children = Fiber[:master_children] || Master::Io::Exec::Children.new
-        TurnRouter.call(
-          message: input,
-          container: @container,
-          felt_sense: cli_felt_sense,
-          on_turn:,
-          on_chunk: build_on_chunk_handler(accumulated, state),
-          cancellation: @turn_cancellation,
-        )
       end
 
       def dispatch_turn(input, accumulated:, state:)
@@ -464,11 +309,6 @@ module Master
       end
 
       def handle_stream_text(text, state)
-        if state[:presentation] == :face
-          state[:face_output] << text.to_s
-          state[:streamed] = true
-          return
-        end
         if state[:thinking_shown] && $stdout.isatty
           stop_thinking_indicator
           terminal_print("\r\e[K")

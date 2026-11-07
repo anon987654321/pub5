@@ -553,19 +553,6 @@ end
     ENV["MASTER_GREETING"] = previous if previous
   end
 
-  def test_face_does_not_stack_a_second_overlay
-    session = Master::CLI::Session.allocate
-    session.instance_variable_set(:@face_overlay_rendered, true)
-    output = nil
-    session.define_singleton_method(:terminal_puts) { |text = "", **| output = text }
-    $stdin.stub(:tty?, true) do
-      $stdout.stub(:tty?, true) do
-        assert session.send(:print_face_overlay)
-      end
-    end
-    assert_equal "face0 at master0: already visible; Reline owns input", output
-  end
-
   def test_prompt_refreshes_skills_before_rendering
     skills = Minitest::Mock.new
     skills.expect(:discover!, [])

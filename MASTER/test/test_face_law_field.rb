@@ -47,12 +47,4 @@ class TestFaceLawField < Minitest::Test
     refute payload.key?(:points), "the browser renderer owns the shared contract-driven geometry"
   end
 
-  def test_terminal_law_ring_is_plain_ascii
-    laws = Master::Face::LawField.laws
-    renderer = Master::CLI::Face::Ascii.new(Master::CLI::Face::Head.for(20, 40), 20, 40)
-    frame = renderer.render(Master::CLI::Face::Motion.rest, laws:).to_s
-
-    assert laws.any? { |law| frame.include?(law.fetch("glyph")) }
-    assert_match(/\A[\x20-\x7e\n]+\z/, frame)
-  end
 end

@@ -280,29 +280,6 @@ class TestFaceSwarm < Minitest::Test
     assert_equal before, simulation.particles.map(&:to_h)
   end
 
-  def test_current_cli_face_renderer_uses_the_swarm_and_can_disable_it
-    original = ENV["MASTER_FACE_SWARM"]
-    original_budget = ENV["MASTER_FACE_SWARM_BUDGET"]
-    ENV["MASTER_FACE_SWARM"] = "1"
-    ENV["MASTER_FACE_SWARM_BUDGET"] = "20"
-    face = Master::CLI::Face
-    options = { state: :idle, rows: 12, cols: 24, t: 0.0, motion: Master::CLI::Face::Motion.new, show_laws: false }
-    particle_frame = face.frame(**options)
-
-    assert_match(/[.˙∘*○●]/, particle_frame)
-    swarm_key = [12, 24, 20]
-    assert_equal 20, Master::CLI::Face::SWARMS.fetch(swarm_key).particles.length
-
-    ENV["MASTER_FACE_SWARM"] = "0"
-    plain_frame = face.frame(**options)
-    # "." and "*" are ASCII the plain face also draws; the rest are the swarm's own.
-    refute_match(/[˙∘○●]/, plain_frame)
-    refute_equal plain_frame, particle_frame
-  ensure
-    ENV["MASTER_FACE_SWARM"] = original
-    ENV["MASTER_FACE_SWARM_BUDGET"] = original_budget
-  end
-
   def test_depth_rank_toggle_flattens_glyph_density_but_keeps_depth_tones
     settings = deep_config
     settings["size_from_depth"] = false
