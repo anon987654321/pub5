@@ -897,6 +897,26 @@ end
       "banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]" =>
         "same detector row in both registries during the documented registry migration: the zsh ban list is normative in laws.yml and read from law_runtime.yml by Io::GnuTextTools",
 
+      # The four lines below are one Law id appearing in two groupings that ask
+      # different questions. law_map.laws.design_books is routing for the
+      # design_book_violation detector (meaning, severity, operation, 44 ids);
+      # scan.yml law_groups.aesthetic is membership of a scan profile (72 ids).
+      # Neither declares the Law -- laws.yml owns every identity -- and the sets
+      # are not equal, so collapsing one into the other would change what runs.
+      # Only these four are flagged because ContentDedupScan ignores lines under
+      # MIN_LINE_LEN; the other ~39 shared ids are shorter, not different.
+      "- PARAGRAPH_SEPARATION_ONE_DEVICE" =>
+        "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
+      "- SELF_EVIDENT_DATA_UNLABELLED" =>
+        "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
+      "- PRIMARY_ACTION_IN_THUMB_REACH" =>
+        "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
+      "- SMALLEST_EFFECTIVE_DIFFERENCE" =>
+        "one Law id in two groupings with different jobs: law_map routing for the design-book detector versus membership of the scan.yml aesthetic scan profile",
+
+      "- MASTER/web/public/face.runtime.js" =>
+        "one source path named by two ledgers with different jobs: agent_map lists the files an agent owns, backlog names the one file the current acceptance item edits",
+
       # The nineteen visual/ad law-line exemptions were removed the same way:
       # upstream collapsed the migration block, so no cross-file duplicate
       # remains for them to name.
