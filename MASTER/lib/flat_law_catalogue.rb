@@ -138,13 +138,13 @@ module Master
           next if resolution.nil?
 
           raise Invalid, "#{id} has unknown resolution #{resolution.inspect}" unless RESOLUTIONS.include?(resolution.to_s)
-          if resolution.to_s == "automatic" && row["proof"].to_s.strip.empty?
-            raise Invalid, "#{id} is automatic but names no proof fixture"
-          end
+          next unless resolution.to_s == "automatic"
+
+          raise Invalid, "#{id} is automatic but names no proof fixture" if row["proof"].to_s.strip.empty?
           # A measured only law is a finding that never blocks convergence, so
           # it must not also claim an automatic repair; the two resolutions
           # contradict each other and the weaker one wins silently at runtime.
-          if resolution.to_s == "automatic" && row["calibration"].to_s == "measurement_only"
+          if row["calibration"].to_s == "measurement_only"
             raise Invalid, "#{id} is measurement_only and cannot also resolve automatic"
           end
         end
