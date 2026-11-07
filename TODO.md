@@ -179,21 +179,6 @@ preserve those strengths.
   whether an empty/loading treatment is still missing.
   Laws: `TRUTHFUL_STATUS`, `WAITING_STATE_MEANING`,
   `DENSITY_aesthetic_integrity`.
-- [x] **BSDPorts result readability, without redesign.** Measured from source
-  2026-11-07 and confirmed in the committed captures: the dialect roots at
-  12px, so the age's `--text-extra-small` resolved to 9px and the browser's
-  `small` shrink gave the category and comment 10.4px — both under the
-  dialect's own floor — and `--line-height: 1rem` gave the wrapped comment
-  line-height 1.0. The fix moved hierarchy only: age and row metadata read at
-  the floor in the secondary ink (#4d5156, 7.99:1), version and pkgpath read
-  secondary against the name's bold primary, rows gained the 1px hairline the
-  file's own comment promised (border was 0) and the text gained
-  `--leading-normal`. White paper, Arial, blue links, square geometry and the
-  compact single-column list untouched. Rendered before/after in headless
-  Chrome from both revisions' compiled bundles; the tree's own Chrome/CDP
-  suite run is NOT_RUN here.
-  Laws: `BRINGHURST_measure`, `BRINGHURST_scale`,
-  `PROPORTION_contrast`, `REACH`.
 
 ### Screenshot-led micro-refinements — second pass (2026-11-06, clone@69a0fcb)
 
@@ -384,7 +369,6 @@ The tracked repository has one TODO file: this root `TODO.md`. The cross-tree co
 
 `RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness.
 
-- [x] **amber-057 — Amber wordmark.** Outlined in `RAILS/amber/app/views/shared/_logo.html.erb` as six Caprasimo glyph `<path>` defs placed by `<use>` transforms — HarfBuzz-shaped, the same shaper Chrome uses — and the layout's Caprasimo preload plus the stylesheet's `@font-face`, dead word-size rules and `--brand-hero` token are gone. Rendered proof: headless Chrome drew the old text mark and the new path mark over the same gradient; the ink masks agree with no systematic offset, 1608 differing pixels of 33,945 (the text-versus-path anti-aliasing fringe). The vendored woff2 stays as the self-hosted glyph source. `logo_contract_test.rb` pins the new contract; its run is NOT_RUN here.
 - [ ] **shared-010 — Button sizing.** Source landed 2026-11-07: `_buttons.scss` carries `$compact-contexts` only and the class survives behind a default-off `$legacy-small` opt-in; the shared comment/notification/newsletter/artifact partials, four JS-created buttons, amber's flash undo and 32 tree-wide-verified brgen-family sites name no size (each context held only compact buttons at a full-ERB sweep). The mixed containers (rsvp-bar, push-prompt, messenger-details-section, order-actions, the form-wrap--flush forms, the generic `.cluster`/`.page-header`/`.field` primitives, the no-class rows, `_live_search_form` and `_master_invite`) keep the class pending per-site rendered checks; a ratchet in `design_contract_test.rb` pins the naming file count at 75 and only down. Row stays open for that rendered evidence.
 - [ ] **shared-029 — Privacy-preserving embeds.** Source landed 2026-11-07: the thumbnail is fetched once where the oEmbed answer arrives (the link-embed job, the compose preview), written to `storage/link_embeds/thumbnails` content-addressed by the SHA-256 of the provider URL, and served from the app's own `/link_embeds/thumbnails/:digest` endpoint; the partial renders no provider URL and a page view contacts no provider. `link_embed_privacy_contract_test.rb` pins the shape and the render test asserts no provider image host in the page; both runs are NOT_RUN here. Row stays open for rendered evidence.
 
@@ -598,13 +582,11 @@ OVHcloud AI Endpoints (https://oai.endpoints.kepler.ai.cloud.ovh.net/v1,
 keyless, 2 RPM per IP per model, 20+ models). GitHub Models retired 2026-07-30;
 Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
 
-- [x] Register Kilo and OVHcloud as keyless lanes beside llm7 in `data/models.yml`, with llm7's keyless_max_concurrency pattern and a per-row verified-on date. (bb188de11c)
 - [ ] Read OpenRouter's remaining free quota from `GET /api/v1/key` (`free_model_daily_requests`) into `Io::ModelQuota` instead of forecasting the burn rate.
-- [x] Adopt openclaw's cooldown contract in `Io::LaneQuota`: parse `Retry-After` headers as exact cooldown, ladder everything else 30s-1m-5m with reset, disable auth-failed profiles about ten minutes, and cap stated waits at 60s before falling through. (verified built 2026-11-06, minus the last clause by law: `Retry-After: N` is already exact (3f1ee28a61 extends it); unknown waits ladder 30s-1m-5m through a `probe:<lane>` row that each stateful re-mark advances and any evidence of life — an answering probe or a next death with a stated wait — resets, so auth-failed profiles re-probe from 30s; deliberate divergence from the 60s stated-wait cap: the free-pool spread (openrouter's shared 429s) depends on trusting stated quota resets up to the 8-day ceiling, capping them would break it)
-- [x] Spread free-load selection across every live `:free` model slug from `/api/v1/models`, ranked by `free_latency`, with per-model quota buckets, instead of the single default slug. (verified built 2026-11-06: use_live_catalog merges up to 40 live slugs — 12 free rows in the snapshot, plus kilo's own slugs since bb188de11c — with per-model daily buckets in Io::ModelQuota; residual: no latency field exists in the catalog, so ranking stays pool order)
-- [x] Split lane deadlines into a connect/handshake budget (dead handshake trips the circuit breaker) and a read-idle budget (a stream that keeps delivering is never cut). (verified 2026-11-06: hosted and local-server lanes send `stream: true` and assemble SSE deltas; the 5s open timeout bounds the handshake and its failure propagates as an exception so the circuit breaker's accounting penalizes the lane; the read timeout is a 60s per-read idle budget that resets on every delivered chunk — three dispatcher tests cover assembly, silence and a dead handshake; residual: the run's own call deadline (PassClock, the /fix stall-window cap) still bounds the whole call, by law)
+- [ ] Rank free-load selection by latency: the live-`:free` spread with
+  per-model quota buckets landed 2026-11-06, but the catalog carries no
+  `free_latency` field, so ranking stays pool order until one exists.
 - [ ] Flip Ollama Tier-D to probe-on warm: periodic one-token probe on `gemma3:4b` recorded into quota state, 2-4K context cap and `OLLAMA_KV_CACHE_TYPE=q8_0` for this 8 GB Mac, rehearsed as the final fallback-chain link.
-- [x] Keep a verified free-provider ledger row per provider (limit, models, keyless?, verified-on) so every free-tier fact carries its own staleness signal. (bb188de11c + models.yml annotations: llm7 re-verified 2026-11-06, key-gated providers marked recorded-2026-09 not re-verified)
 
 ## simplicity-book laws (candidate batch, researched 2026-11-06)
 
@@ -612,7 +594,6 @@ laws.yml already cites Rams, Strunk & White and NN/g. The uncited,
 machine-checkable simplicity canon yields a deterministic first batch; the
 rendered or task-evidence canon waits for the screenshot workflow.
 
-- [x] MAEDA_THE_ONE: one primary action per surface — the check counts primary CTAs on a card or form and fails a second. (verified built 2026-11-06, f4d325bae6: the design-laws walker names each element's nearest card-or-form ancestor and the evaluator fails a second `primary`/`submit` on the same surface, proved in headless Chrome — one card two primaries flags, two cards one each stay quiet; hostless primaries stay with the view-level ONE_PRIMARY_ACTION law, whose page-wide filled-action warning also stays)
 - [ ] TUFTE_DATA_INK_RATIO: erase non-data ink — decoration-to-content ink measured in CSS decoration rules and chart ink versus data ink.
 - [ ] GESTALT_PROXIMITY: grouping distance must be smaller than separation distance on a rendered surface (screenshot geometry pairs with the layout-refinement workflow).
 
@@ -631,13 +612,6 @@ sixteen ids to their entries. Runtime proof — rake dogfood, test_law_fixtures,
 test_law_parity, the rendered suite in headless Chrome — is NOT_RUN from this
 sandbox and folds into section 1's Current-revision acceptance.
 
-- [x] NUMBER_GROUPED_IN_THOUSANDS, NO_SPACED_EM_DASH, ELLIPSIS_SPACE_BEFORE, and the NUMBER_UNIT_UNBROKEN extension to U+00A7 and degrees Celsius — Sprakradet typesetting on nb copy, autofix: automatic.
-- [x] CSS_DUPLICATE_DECLARATION and CSS_SHORTHAND_COLLAPSE — the two stylelint declaration-block cleanups, var() fallback pairs exempt, autofix: automatic.
-- [x] REDUNDANT_CORE_REQUIRE — `require "set"` / `require "pathname"` deleted on sight; the 108 findings across the tree are /fix's cleanup backlog and law/ itself was cleaned for dogfood; autofix: automatic.
-- [x] AUTOCOMPLETE_TOKENS — the HTML autofill vocabulary with section-*/shipping/billing/webauthn modifiers read from both the HTML attribute and the ERB helper key; "email" carried as a house token (the Standard omits it, WCAG 1.3.5's examples and this tree use it); one live catch so far, brgen_marketplace's `address-level2`.
-- [x] TARGET_SIZE_24, REFLOW_AT_320, VERTICAL_RHYTHM, SPACING_ENTROPY, COLOR_NEAR_DUPLICATE — rendered Laws off the design_laws snapshot; the 24px-circle spacing exception is measured circle-to-rect, not assumed.
-- [x] PARAMS_EXPECT_STRENGTHENED, NORMALIZES_OVER_CALLBACK, STRUCT_NEW_TO_DATA, BUTTON_LINK_ROLE — the behaviour-changing rewrites as ask Laws carried to the model council, autofix: never.
-- [x] design_thresholds (oklch_merge_distance 0.02, spacing_entropy_max 6, rhythm_tolerance 0.25, APCA levels) in law_runtime.yml, read at runtime by the rendered Laws and DesignMetrics::Contrast — house policy, tunable by file, never by code change; and the rendered_cdp policy: the CDP checks stay off the 1 GB OpenBSD box (Chromium would compete with Rails, Solid Queue and Postgres) — dev machine and CI only, no Chrome reports INCONCLUSIVE.
 - [ ] Verify on a Ruby 4.0.5 host: rake dogfood green over law/, test_law_fixtures, test_law_ids_unique, test_law_parity and the test_law_catalogue* family green, and one rendered-suite pass per new snapshot Law in headless Chrome.
 - [ ] Apply REDUNDANT_CORE_REQUIRE's fix — the 108 dead requires — through /fix with MASTER_AUTOFIX=1, not by hand.
 - [ ] Tune design_thresholds against measured surfaces once the rendered suite runs: the 0.02 OKLab merge distance and the APCA levels are starting levels, not standards.
