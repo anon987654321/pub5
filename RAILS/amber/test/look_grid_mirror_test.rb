@@ -24,7 +24,7 @@ class LookGridMirrorTest < Minitest::Test
 
   def test_luxury_look_titles_keep_words_intact_at_desktop_measures
     rule = SCSS.scan(
-      /body\\[data-surface="luxury"\\] main#main-content \.amber-look-title\\s*\\{([^}]+)\\}/m
+      /body\[data-surface="luxury"\] main#main-content \.amber-look-title\s*\{([^}]+)\}/m
     ).flatten.last
 
     refute_nil rule, "the rendered look title needs its own measurable rule"

@@ -91,7 +91,11 @@ Rails.application.routes.draw do
   get "messages/widget" => "messages#widget", as: :messages_widget
 
   # Chatroulette-style random pairing: one ask, one stranger, one thread.
-  resources :encounters, only: %i[create destroy]
+  # Leaving the wait clears every waiting encounter the guest holds, so the
+  # delete is a collection verb - a member delete needs an :id that #destroy
+  # never reads, and the button_to that sends it has no record to pass.
+  resources :encounters, only: :create
+  delete "encounters" => "encounters#destroy"
   get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
 
   resources :posts, only: %i[index show new create destroy] do

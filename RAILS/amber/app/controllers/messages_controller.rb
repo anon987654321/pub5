@@ -84,12 +84,17 @@ class MessagesController < ApplicationController
   # A random pairing (EncountersController) accepts a connection between two
   # strangers, guests included. The public directory stays messageable_users -
   # the inbox list never grows by accident - but an accepted connection is
-  # itself the permission to write, whoever the two people are.
+  # itself the permission to write, whoever the two people are. The accepted
+  # link is not the whole answer: a connection outlives the person leaving, so
+  # the row it points at has to still be willing to receive.
   def connected_recipient(id)
     id = id.to_i
     linked = Connection.accepted.where(requester_id: Current.user.id, addressee_id: id)
                        .or(Connection.accepted.where(addressee_id: Current.user.id, requester_id: id))
-    User.find_by(id: id) if linked.exists?
+    return unless linked.exists?
+
+    recipient = User.find_by(id: id)
+    recipient unless recipient&.departing?
   end
 
   # Someone the viewer has a message with; nobody else opens as a conversation.

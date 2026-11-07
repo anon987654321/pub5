@@ -43,7 +43,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     # A garment name reaches the page whether or not a demo wardrobe is seeded.
     assert_includes response.body, "Gold hoop earrings"
     # The landing page stays quiet when the public post index has no entries.
-    assert_select ".sidebar, .widgets, .amber-compose-box, .button", 0
+    # The one action it offers is the stranger ask, so the furniture stays
+    # gone and any button present must be that ask, not dashboard chrome.
+    assert_select ".sidebar, .widgets, .amber-compose-box", 0
+    css_select(".button").each do |button|
+      assert_equal "encounter-cta", button.ancestors("section").first&.[]("class"),
+                   "a guest page button outside the stranger ask is dashboard chrome"
+    end
     assert_not_includes response.body, 'class="master-embed-frame"'
   end
 

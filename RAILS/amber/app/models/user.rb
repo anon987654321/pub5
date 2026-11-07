@@ -66,6 +66,12 @@ class User < ApplicationRecord
   def bot? = has_attribute?(:bot) && self[:bot]
   def master_bot? = bot? && email_address.to_s == "master@amber.local"
 
+  # Scheduled for deletion or already gone. The person still has a row, so a
+  # lookup by id finds them; what they no longer have is a mailbox, which is
+  # why #messageable_users filters them out of the directory. Anything that
+  # reaches a user by id instead has to ask this the same way.
+  def departing? = deleted_at.present? || deletion_scheduled_at.present?
+
   def self.master_bot
     bot = find_or_initialize_by(email_address: "master@amber.local")
     bot.username = "master" if bot.respond_to?(:username=)
@@ -78,7 +84,7 @@ class User < ApplicationRecord
 
   def display_name
     return "MASTER" if master_bot?
-    return "anon" if guest? || deleted_at.present? || deletion_scheduled_at.present?
+    return "anon" if guest? || departing?
 
     profile&.display_name.presence || email_address.to_s.split("@").first
   end
