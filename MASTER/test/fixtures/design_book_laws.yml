@@ -189,6 +189,22 @@
     @page :right { margin: 33mm 44mm 66mm 22mm; }
     @page :left { margin: 33mm 22mm 66mm 44mm; }
     main { max-width: 66ch; }
+- law: PRINT_PAGE_CANON
+  path: BIZ/fetat/fetat.html
+  flags: false
+  code: |
+    <style>@page{size:156mm 234mm;margin:18mm 0 24mm;@bottom-center{content:counter(page)}}
+    body{width:90%;max-width:33rem;margin:auto} main{padding-inline:0.75rem}</style>
+- law: PRINT_FOLIO_PRESENCE
+  path: BIZ/index.html
+  flags: true
+  code: |
+    <style>@page{size:156mm 234mm;margin:0}</style>
+- law: PRINT_FOLIO_PRESENCE
+  path: BIZ/print.css
+  flags: false
+  code: |
+    @page{size:156mm 234mm;margin:18mm 0 24mm;@bottom-center{content:counter(page)}}
 - law: GESTURE_HAS_TAP_EQUIVALENT
   path: RAILS/brgen/app/javascript/controllers/nowhere_swipe_controller.js
   flags: true
