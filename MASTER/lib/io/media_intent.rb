@@ -701,8 +701,14 @@ module Master
         line = "playing #{info[:progression]}#{" with #{info[:drums]}" if info[:drums]} (pid #{@player_pid}): #{info[:path]}"
         Result.ok(output: line, rendered: line, media: :dilla_live, style: info[:progression], path: info[:path],
                   drums: info[:drums], kit: info[:kit])
-      rescue RuntimeError, ArgumentError => e
+      rescue Master::Music::AudioSink::NoPlayerError => e
         Result.err("#{e.message}: install sox (brew install sox) or ffmpeg, whose ffplay also plays", category: :infrastructure)
+      rescue RuntimeError, ArgumentError => e
+        # Only a missing player earns the install hint. Contract failures like
+        # "STUDIO output-path failed: ..." name their own cause; appending an
+        # install hint to them sent the operator to brew while sox was present.
+        hint = e.message.include?("afplay or ffplay required") ? ": install sox (brew install sox) or ffmpeg, whose ffplay also plays" : ""
+        Result.err("#{e.message}#{hint}", category: :infrastructure)
       end
 
       def stop_player
