@@ -491,7 +491,7 @@ apps:
 
 archived_subsystems:
   hjerterom:
-    recovery_source: git history — deleted 2026-08-12; databases at /var/backups/pub5/hjerterom-20260812 on vm23.
+    recovery_source: git history — deleted 2026-08-12; databases at /var/backups/pub4/hjerterom-20260812 on vm23.
     notes: >-
       Retired with baibl and blognet. All three were recorded as removed in
       the repo two months before vm23 actually lost them: the users,

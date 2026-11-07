@@ -89,9 +89,9 @@ The relevant path was in the initial pub commit dated 18 July 2025: https://gith
 
 Default-branch searches in pub2 and pub3 did not locate the same-named Barnevern proposal. Files called AI³ in those trees concern unrelated technical/aerospace material and are not treated as evidence for FETAT. The current pub5 tree did not contain this FETAT.md before this work.
 
-Two pub5 commits concern a software regression test for a superseded 1992-law identifier, not the FETAT website proposal:
-- https://github.com/anon987654321/pub5/commit/5119dd514f9b8868cad0013a2c3691a957b19890
-- https://github.com/anon987654321/pub5/commit/58501f5a386aad61da5dabc0643ed42625e51a0f
+Two pub4 commits concern a software regression test for a superseded 1992-law identifier, not the FETAT website proposal:
+- https://github.com/anon987654321/pub4/commit/5119dd514f9b8868cad0013a2c3691a957b19890
+- https://github.com/anon987654321/pub4/commit/58501f5a386aad61da5dabc0643ed42625e51a0f
 
 ### 2.3 Identity of FETAT
 ### 2.4 Reproducible verification ledger
@@ -657,8 +657,8 @@ The historical proposal recommends collecting new records, seeking independent r
 - https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.html
 - https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.md
 - https://github.com/anon987654321/pub/commit/ebed360f0969f5d203e2c16cc24323d782fa49f7
-- https://github.com/anon987654321/pub5/commit/5119dd514f9b8868cad0013a2c3691a957b19890
-- https://github.com/anon987654321/pub5/commit/58501f5a386aad61da5dabc0643ed42625e51a0f
+- https://github.com/anon987654321/pub4/commit/5119dd514f9b8868cad0013a2c3691a957b19890
+- https://github.com/anon987654321/pub4/commit/58501f5a386aad61da5dabc0643ed42625e51a0f
 
 **Law and official statistics**
 - Current Barnevernsloven: https://lovdata.no/nav/lov/2021-06-18-97

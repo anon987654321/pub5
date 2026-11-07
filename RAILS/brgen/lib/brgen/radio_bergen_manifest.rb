@@ -153,7 +153,7 @@ module Brgen
         youtube_count = youtube_tracks.size + whyp_tracks.size
 
         [
-          "$ git dig --follow pub5/index.html",
+          "$ git dig --follow pub4/index.html",
           "object: pub2 monolithic index.html → radio.brgen.no warp tunnel",
           "archive: #{meta['source_archive'] || 'anon987654321/pub2'} @ #{pub2_head}",
           # These two are rendered to the visitor on the playlist surface, so
@@ -164,7 +164,7 @@ module Brgen
           "lesson: do_not_restore monolithic index.html — manifest + Rails vertical instead",
           "catalogue: #{youtube_count} external references · no local source files",
           "policy: #{manifest.dig('external_reference', 'policy') || 'reference_only_until_rights_review'}",
-          "surface: radio.brgen.no — tap to boot tunnel (pub5 matrix index.html lineage)"
+          "surface: radio.brgen.no — tap to boot tunnel (pub4 matrix index.html lineage)"
         ]
       end
 
