@@ -575,9 +575,11 @@ module Dilla
     def eighth_s = bar_s / 8.0
 
     # MPC swing: the off-16th slides from the middle (50%) toward the triplet
-    # (66%). 53-56% is the documented pocket.
+    # (66%). Swing percent *is* the off-16th's position within the eighth, so
+    # the slide spans the clamp (50..66) across that range: 54 lands in the
+    # documented pocket, 66 lands exactly on the triplet.
     def swing_delay_s
-      position = 0.5 + ((@swing - 50.0) / 50.0) * (2.0 / 3.0 - 0.5)
+      position = 0.5 + ((@swing - 50.0) / 16.0) * (2.0 / 3.0 - 0.5)
       (position - 0.5) * eighth_s
     end
 
