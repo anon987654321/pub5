@@ -367,14 +367,26 @@ module Master
       # The free floor proved dead after consecutive zero-success outcomes
       # (RunPulse promotes after three). A suspended floor stops winning the
       # per-call chain rankings: the free class is a floor to stand on, and a
-      # floor that answers nothing is not a floor to stand on. One line, once.
+      # floor that answers nothing is not a floor to stand on. The state lands
+      # immediately; the one-word line waits for announce_free_floor_suspension,
+      # so nobody ever has to emit a trace line from inside an event handler
+      # or another lock's footprint.
       def suspend_free_floor!(live = nil)
         return if @floor_suspended
 
         @floor_suspended = true
-        text = "free floor suspended for this run: " \
-               "#{live || "the live non-free lane"} takes the work while it answers"
-        Master::Trace::Dmesg.status("fix0", text)
+        @floor_notice = "free floor suspended for this run: " \
+                        "#{live || "the live non-free lane"} takes the work while it answers"
+        true
+      end
+
+      # Exactly one status line, printed by whichever ticker thread asks first.
+      def announce_free_floor_suspension
+        return unless @floor_notice
+
+        Master::Trace::Dmesg.status("fix0", @floor_notice)
+      ensure
+        @floor_notice = nil
       end
 
       def free_floor_suspended? = @floor_suspended == true

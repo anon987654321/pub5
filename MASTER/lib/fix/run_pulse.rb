@@ -76,6 +76,7 @@ module Master
         @model_ok = 0
         @first_attempt_at = nil
         @dead_streak = 0
+        @promote_pending = false
         @promoted_live = nil
         reset_pass
       end
@@ -95,13 +96,20 @@ module Master
 
       # The line itself. `eta` and `tokens` come from RunBudget, which owns the ledger.
       def line(elapsed:, tokens:, eta:)
+        text = nil
+        promote_pending = false
         @lock.synchronize do
+          promote_pending = @promote_pending
           parts = ["fix0: pass #{@pass}/#{@max_passes}", run_part, @unit, phase_part, files_part, fixes_part,
                    lane_part(elapsed), "tokens = #{tokens} (#{self.class.human_count(tokens)})",
                    "elapsed = #{elapsed.round}s (#{self.class.human_time(elapsed)})", pass_eta(eta),
                    "load #{format("%.1f", @load.call)}"]
-          parts.compact.join(" ")
+          text = parts.compact.join(" ")
         end
+        # Promoted on the ticker thread, outside every event handler's lock
+        # footprint (see promote_live_lane).
+        promote_live_lane if promote_pending
+        text
       end
 
       # Set when the run is stalled: { line:, skippable:, abort: } to print every
@@ -157,18 +165,24 @@ module Master
         @finished.shift while @finished.size > 500
       end
 
-      # Three dead provider outcomes in a row with no success between them: the
-      # run stops preferring a floor that answers nothing and names the live
-      # lane that takes the work (2026-11-07, the MASTER crawl the aborts never
+      # Called from the heartbeat, never from an event handler: finishing a
+      # call happens inside the dispatcher that already holds runtime locks
+      # (the fresh run of 2026-11-07 raised deadlock; recursive locking while
+      # this ran inside llm:provider_outcome), so the handler only sets state
+      # and the heartbeat does the lane scan and the one status line. Three
+      # dead provider outcomes in a row with no success between them: the run
+      # stops preferring a floor that answers nothing and names the live lane
+      # that takes the work (2026-11-07, the MASTER crawl the aborts never
       # saw). Once per run; a success does not lift it — the floor died once
       # today, and one working call after an hour is not a floor.
       def promote_live_lane
-        return if @promoted_live
+        return unless @promote_pending && @promoted_live.nil?
 
         live = Master::Io::LaneSelection.live_lanes.reject do |id|
           Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(id))
         end.first
         @promoted_live = live
+        @promote_pending = false
         Master::Io::LaneSelection.suspend_free_floor!(live)
       end
 
@@ -284,12 +298,12 @@ module Master
         # 0 failed 0: no event ever landed here as an attempt, so the no-yield
         # abort — the guard written for exactly this — never armed. Count the
         # dead outcome. Three dead calls in a row without one success is also
-        # the evidence the free floor is not answering today: publish the
-        # promotion and let the live lane take the work instead of crawling.
+        # the evidence the free floor is not answering today; the heartbeat
+        # promotes the live lane off that evidence.
         return if payload[:status] == :success
 
         @dead_streak += 1
-        promote_live_lane if @dead_streak >= DEAD_STREAK_LIMIT
+        @promote_pending = true if @dead_streak >= DEAD_STREAK_LIMIT && @promoted_live.nil?
         attempted do
           @errored += 1
           @pass_errored += 1
