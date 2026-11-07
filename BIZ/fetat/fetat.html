@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FETAT — the Familieetaten proposal</title>
+<style>
+:root{
+  --paper:#F7F2E9;
+  --ink:#211C15;
+  --ink-2:#5C5344;
+  --hair:#D9CFBC;
+  --accent:#7A3B2E;
+}
+@media print{
+  :root{ --paper:#fff; }
+  nav, .no-print{ display:none; }
+  body{ padding:0; }
+  a{ color:inherit; text-decoration:none; }
+  .page{ box-shadow:none; margin:0; max-width:none; }
+  h2{ break-after:avoid; }
+  table, blockquote, figure{ break-inside:avoid; }
+}
+*{ box-sizing:border-box; }
+html{ background:var(--ink); }
+body{
+  margin:0;
+  padding:24px 0;
+  font-family:"EB Garamond", Georgia, "Times New Roman", serif;
+  color:var(--ink);
+  background:var(--ink);
+  font-size:17px;
+  line-height:1.55;
+}
+.page{
+  background:var(--paper);
+  max-width:860px;
+  margin:0 auto;
+  padding:72px 64px 96px;
+  box-shadow:0 0 0 1px var(--hair);
+}
+h1{ font-size:34px; line-height:1.15; margin:0 0 8px; font-weight:700; }
+h1 + h2{ margin-top:0; }
+h1, h2, h3{ letter-spacing:-0.01em; }
+h2{ font-size:24px; margin:40px 0 10px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+h3{ font-size:19px; margin:28px 0 8px; }
+h4{ font-size:17px; margin:22px 0 6px; color:var(--ink-2); }
+p{ margin:0 0 12px; }
+ul, ol{ margin:0 0 14px; padding-left:26px; }
+li{ margin-bottom:6px; }
+a{ color:var(--accent); }
+code{ font-family:ui-monospace, Menlo, monospace; font-size:0.86em; background:rgba(122,59,46,0.08); padding:1px 5px; border-radius:3px; }
+hr{ border:0; border-top:1px solid var(--hair); margin:32px 0; }
+table{ width:100%; border-collapse:collapse; margin:0 0 18px; font-size:14.5px; }
+th, td{ text-align:left; vertical-align:top; padding:7px 9px; border-bottom:1px solid var(--hair); word-break:break-word; }
+th{ font-weight:700; border-bottom:2px solid var(--ink-2); }
+blockquote{ margin:0 0 14px; padding:2px 0 2px 16px; border-left:3px solid var(--hair); color:var(--ink-2); }
+.kicker{ text-transform:uppercase; letter-spacing:0.14em; font-size:12px; color:var(--accent); font-weight:700; margin:0 0 4px; font-family:Helvetica, Arial, sans-serif; }
+.subtitle{ font-size:19px; color:var(--ink-2); margin:0 0 28px; }
+.meta{ font-size:14px; color:var(--ink-2); border-top:1px solid var(--hair); margin-top:40px; padding-top:14px; }
+nav{ background:var(--ink); color:var(--paper); padding:28px 20px 22px; margin-bottom:20px; }
+nav .lv1{ font-weight:700; margin:0 0 2px; font-size:14px; }
+nav .lv2{ margin:0 0 2px 12px; font-size:13px; color:#cfc5b4; }
+nav .lv3{ margin:0 0 1px 26px; font-size:12px; color:#a99e8c; }
+nav p{ margin:0; }
+nav p:not(.lv1):not(.lv2):not(.lv3){ margin-left:12px; font-size:13px; color:#cfc5b4; }
+@media (max-width:720px){
+  .page{ padding:40px 22px 64px; }
+  h1{ font-size:27px; }
+  h2{ font-size:21px; }
+}
+</style>
+</head>
+<body>
+<nav aria-label="Contents" class="no-print">
+  <p class="lv1">FETAT.md</p>
+    <p class="lv2">Consolidated FETAT / Familieetaten proposal, source history, evidence audit, and implementation blueprint</p>
+    <p class="lv2">0. Purpose and rules</p>
+    <p class="lv2">1. Executive summary</p>
+    <p class="lv2">2. Source register and provenance</p>
+      <p class="lv3">2.1 Public FETAT website</p>
+      <p class="lv3">2.2 Historical GitHub material</p>
+      <p class="lv3">2.3 Identity of FETAT</p>
+      <p class="lv3">2.4 Reproducible verification ledger</p>
+    <p class="lv2">3. Consolidated institutional model</p>
+      <p class="lv3">3.1 A state/regional family-protection agency</p>
+      <p class="lv3">3.2 Proposed regional footprint</p>
+      <p class="lv3">3.3 Multidisciplinary teams</p>
+    <p class="lv2">4. Intake and investigation time limits</p>
+      <p class="lv3">4.1 Proposed national hotline “123”</p>
+      <p class="lv3">4.2 Proposed 48-hour review and seven-day maximum</p>
+    <p class="lv2">5. Independent control body and retrospective review</p>
+      <p class="lv3">5.1 Independent control / “havarikommisjon”</p>
+      <p class="lv3">5.2 Retrospective review of care decisions</p>
+    <p class="lv2">6. Temporary children’s homes, family contact and kinship options</p>
+      <p class="lv3">6.1 Temporary children’s homes</p>
+      <p class="lv3">6.2 Family and trusted-network placement</p>
+      <p class="lv3">6.3 Contact during review</p>
+    <p class="lv2">7. Specialist units proposed by FETAT</p>
+      <p class="lv3">7.1 Suspected sexual abuse and serious violence</p>
+      <p class="lv3">7.2 Parent conflict and contact disputes</p>
+      <p class="lv3">7.3 School and education settings</p>
+      <p class="lv3">7.4 Youth substance use, crime and health needs</p>
+    <p class="lv2">8. Adjudication and review: civil/child-welfare versus criminal proceedings</p>
+    <p class="lv2">9. Workforce and funding</p>
+      <p class="lv3">9.1 Workforce proposal</p>
+      <p class="lv3">9.2 Financial proposal</p>
+    <p class="lv2">10. Statistical audit: figures that need exact definitions</p>
+      <p class="lv3">10.1 Concern reports</p>
+      <p class="lv3">10.2 The 7,772 and 6,764 figures</p>
+      <p class="lv3">10.3 The 334 figure</p>
+      <p class="lv3">10.4 The “96%” tribunal claim</p>
+      <p class="lv3">10.5 Case-capacity arithmetic</p>
+      <p class="lv3">10.6 Foster-home moves</p>
+      <p class="lv3">10.7 Budget and workforce values</p>
+    <p class="lv2">11. Current legal baseline</p>
+    <p class="lv2">12. Individual case-review protocol</p>
+    <p class="lv2">13. MASTER evidence-visualization specification</p>
+      <p class="lv3">13.1 Capabilities</p>
+      <p class="lv3">13.2 Prohibited uses</p>
+      <p class="lv3">13.3 Core views</p>
+      <p class="lv3">13.4 Minimum data model</p>
+      <p class="lv3">13.5 Evaluation</p>
+    <p class="lv2">14. Public communication, safety and governance</p>
+    <p class="lv2">15. Implementation roadmap</p>
+      <p class="lv3">Phase 0 — Source and legal scoping</p>
+      <p class="lv3">Phase 1 — Service and safeguards</p>
+      <p class="lv3">Phase 2 — Evidence infrastructure</p>
+      <p class="lv3">Phase 3 — Cost and capacity</p>
+      <p class="lv3">Phase 4 — Controlled pilot</p>
+      <p class="lv3">Phase 5 — Legislative and public process</p>
+      <p class="lv3">Phase 6 — Continuous evaluation</p>
+    <p class="lv2">16. Metrics</p>
+    <p class="lv2">17. Critical risk register</p>
+    <p class="lv2">18. Open decisions</p>
+    <p class="lv2">Appendix A — Historical proposal claims, preserved as questions</p>
+    <p class="lv2">Appendix B — Official and primary sources</p>
+    <p class="lv2">19. Latest official statistics: update the proposal beyond 2023</p>
+    <p class="lv2">20. Compare institutional options before replacing the whole system</p>
+    <p class="lv2">21. Legal powers matrix required before implementation</p>
+    <p class="lv2">22. Child participation and privacy requirements</p>
+    <p class="lv2">23. MASTER release tests</p>
+    <p class="lv2">24. Public brief — recommended framing</p>
+    <p class="lv2">Appendix C — Change log</p>
+</nav>
+<div class="page">
+<p class="kicker">Bergen Selvstyreparti · governance proposal</p>
+<h1>FETAT.md</h1>
+<h2>Consolidated FETAT / Familieetaten proposal, source history, evidence audit, and implementation blueprint</h2>
+<p><strong>Status:</strong> Working master document; not government policy, legal advice, or proof of individual allegations.</p>
+<p><strong>Prepared:</strong> 29 October 2026</p>
+<p><strong>Canonical destination:</strong> <code>anon987654321/pub5/BIZ/fetat/proposal.md</code></p>
+<p><strong>Project source:</strong> https://fetat.no/</p>
+<p><strong>Related source repository:</strong> https://github.com/anon987654321/pub</p>
+<p><strong>Historical source period:</strong> principally October 2024–January 2025.</p>
+<h2>0. Purpose and rules</h2>
+<p>This file collapses the FETAT website proposal, related GitHub material, MASTER evidence-visualization concept, operational sketches, workforce and finance proposals, and relevant evidence/statistical/legal questions into one maintainable record. Repeated copies are deduplicated; distinct ideas remain represented. Original sources remain the provenance trail.</p>
+<p>The website frames FETAT (“FETAT – FAMILIEETATEN”; also written “F-ETAT”) as a citizen proposal to replace Norway&#39;s current child-welfare service with a differently organized service for protecting children and families. It is not an existing public agency or enacted policy.</p>
+<p>Throughout this document:</p>
+<ul>
+<li><strong>Source fact</strong> means only that a source says or displays something.</li>
+<li><strong>Source claim</strong> means a statement from the proposal that has not been independently proved here.</li>
+<li><strong>Verified external fact</strong> means a statement checked against an identified official source.</li>
+<li><strong>Proposal</strong> means a possible design choice, not current law.</li>
+<li><strong>Open question</strong> means that a source, definition, legal authority, or method still needs verification.</li>
+<p>Children’s safety, rights, dignity, privacy, participation, development, education and meaningful family relationships must remain central. Preserving a family is not an absolute rule when a child is unsafe; an allegation or official concern is not automatically proof that separation is necessary. A child&#39;s views are important and must be heard appropriately, but must not be extracted through leading questions or inferred from facial expression, tone or AI sentiment.</p>
+<p>No identifiable case details, names, addresses, case numbers, health information, school information, confidential decisions or recordings belong in this public repository. Individual case reviews require a separate protected workspace, original unmodified records, access controls, a lawful purpose and retention rules.</p>
+<h2>1. Executive summary</h2>
+<p>The proposal argues that intrusive child-welfare decisions should have clearer evidence, reasons, safeguards, independent review and opportunities to correct error. It proposes a centralized or regional agency with multidisciplinary expertise; accessible reporting and support; rapid initial triage; child-friendly temporary care options; independent review of serious failures; retrospective review of prior care decisions when justified; specialist pathways; and changes to funding and workforce organization.</p>
+<p>The consolidated model has three outcomes:</p>
+<ol>
+<li><strong>Safety:</strong> protect children from real danger through competent and timely action.</li>
+<li><strong>Fairness:</strong> test claims against primary records, consider counterevidence, explain decisions, and allow effective review.</li>
+<li><strong>Accountability:</strong> identify and correct mistakes while protecting children, parents, professionals and witnesses from unsupported accusations.</li>
+<p>FETAT’s aims should be developed into a costed legal and operational blueprint, rather than implemented verbatim from the source posts. The strongest parts are the call for traceable evidence, meaningful participation, independent scrutiny, early help and placement stability. The most consequential proposals—transferring all welfare cases to criminal courts, mandatory broad family examination, seven-day investigative ceilings, children’s homes as temporary holding arrangements, continuous video surveillance, mass retrospective reviews, ending an entire profession, and large cuts to foster-carer payments—need serious legal, clinical, child-rights, safety and financial analysis before they could responsibly be adopted.</p>
+<p>MASTER can help organize documents and show evidence relationships. It must not decide whether a child should be removed or returned, diagnose a person, determine credibility, or convert an allegation into a fact.</p>
+<h2>2. Source register and provenance</h2>
+<h3>2.1 Public FETAT website</h3>
+<p>The core project pages and what they contribute:</p>
+<table><thead><tr><th>Source</th><th>Substantive contribution</th></tr></thead>
+<tbody>
+<tr><td>https://fetat.no/</td><td>Overall citizen proposal to change how Norway protects children and families</td></tr>
+<tr><td>https://fetat.no/om-fetat/</td><td>FETAT / Familieetaten concept; regional units, interdisciplinary teams and independent review</td></tr>
+<tr><td>https://fetat.no/fetat/</td><td>Main outline: proposed child hotline 123, regional teams, 48-hour initial review, temporary children’s homes, tribunal/court changes and specialist subunits</td></tr>
+<tr><td>https://fetat.no/fetat-enkelt-forklart/</td><td>Plain-language summary, family-network assessment and temporary-care concept</td></tr>
+<tr><td>https://fetat.no/hvordan-skal-fetat-jobbe/</td><td>Operating sketch, team roles, 48-hour periods and a proposed maximum seven-day intensive assessment period</td></tr>
+<tr><td>https://fetat.no/fylkesenheter-hvorfor-er-det-nodvendig/</td><td>Argument for regional/state organization rather than municipality-only responsibility</td></tr>
+<tr><td>https://fetat.no/forslag-til-fetat-fylkesenheter/</td><td>Proposed regional geography, using population data dated 1 January 2022</td></tr>
+<tr><td>https://fetat.no/tverrfaglige-team/</td><td>Multidisciplinary roles, group decisions and workforce proposal</td></tr>
+<tr><td>https://fetat.no/hvor-stort-kapasitet-bor-fetat-ha/</td><td>Capacity arithmetic based on selected 2021 and 2023 counts</td></tr>
+<tr><td>https://fetat.no/hvordan-skal-man-finansiere-fetat/</td><td>Budget-transfer concept, legal support and foster-carer payment proposals</td></tr>
+<tr><td>https://fetat.no/barnas-nodnummer-123/</td><td>Proposed child/family reporting number, call logging and anonymous reporting</td></tr>
+<tr><td>https://fetat.no/kontrollorgan-havarikommisjon-for-barn/</td><td>Independent complaints and oversight body</td></tr>
+<tr><td>https://fetat.no/full-gjennomgang-av-omsorgsovertakelser-underenhet-i-fetat/</td><td>Retrospective review proposal for care decisions</td></tr>
+<tr><td>https://fetat.no/barneverns-og-helsenemda-ma-fjernes/</td><td>Proposal to abolish the Barneverns- og helsenemnda and alter adjudication</td></tr>
+<tr><td>https://fetat.no/ssb-arsaker-til-begjaering-om-omsorgsovertakelse-i-norge/</td><td>A historical table attributed to Statistics Norway (SSB)</td></tr>
+<tr><td>https://fetat.no/fetat-underenhet-skole/</td><td>Specialist route for harm occurring in school and related settings</td></tr>
+<tr><td>https://fetat.no/fetat-overgrepsenhet-underenhet/</td><td>Specialist route for suspected abuse</td></tr>
+<tr><td>https://fetat.no/fetat-barneforelingssaker-underenhet/</td><td>Proposal for complex family/contact disputes</td></tr>
+<tr><td>https://fetat.no/barnehjem-ja-takk/</td><td>Temporary children’s homes, family contact, siblings and placement stability</td></tr>
+<tr><td>https://fetat.no/hvorfor-er-barnevernspedagoger-uegnet/</td><td>Author’s critique of the current professional model</td></tr>
+<tr><td>https://fetat.no/hva-skal-barnevernspedagogene-gjore-da/</td><td>Proposed workforce transition</td></tr>
+<tr><td>https://fetat.no/meldinger-om-bekymring-til-barnevern/</td><td>Concern-report, investigation and workforce numbers as reported in 2024</td></tr>
+<tr><td>https://fetat.no/fattig-darlig-forelder/</td><td>Hypothesis about poverty and system exposure</td></tr>
+<tr><td>https://fetat.no/meldt-til-barnevernet/</td><td>Historical advice for parents; some avoidance/recording advice is not endorsed here</td></tr>
+<tr><td>https://fetat.no/blogg/</td><td>Article archive and publication trail</td></tr>
+<p>The archive presents most structural posts in October 2024, with later posts including “Barnehjem – ja takk” (November 2024) and “Fattig = dårlig forelder?” (January 2025). Dates establish a source timeline, not the truth of its allegations.</p>
+<h3>2.2 Historical GitHub material</h3>
+<ul>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/barnevernet.html</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/legal-strategy-barnevernet.md</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/consolidated/political_initiatives/policy_analysis.md</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.html</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.md</li>
+<p>The first three files are byte-identical in the inspected default-branch snapshot (blob SHA <code>558115039cfbba8cfd01bbc8f370da810c711489</code>). They should be counted as three paths to one text, not three corroborating sources. The HTML political platform has an additional, distinct section “Sideprosjekt: Barnevernet Reform,” which proposes AI³ visualization to expose gaps and conflicts in records, explain complex material, create a visual evidence map, support fair decisions and prioritize preventive family help with independent review.</p>
+<p>The relevant path was in the initial pub commit dated 18 July 2025: https://github.com/anon987654321/pub/commit/ebed360f0969f5d203e2c16cc24323d782fa49f7. The accessible history for the path returned the initial commit; that does not establish that every old branch, unreachable commit, local backup, external archive or prior chat has been examined.</p>
+<p>Default-branch searches in pub2 and pub3 did not locate the same-named Barnevern proposal. Files called AI³ in those trees concern unrelated technical/aerospace material and are not treated as evidence for FETAT. The current pub5 tree did not contain this FETAT.md before this work.</p>
+<p>Two pub5 commits concern a software regression test for a superseded 1992-law identifier, not the FETAT website proposal:</p>
+<ul>
+<li>https://github.com/anon987654321/pub5/commit/5119dd514f9b8868cad0013a2c3691a957b19890</li>
+<li>https://github.com/anon987654321/pub5/commit/58501f5a386aad61da5dabc0643ed42625e51a0f</li>
+<h3>2.3 Identity of FETAT</h3>
+<h3>2.4 Reproducible verification ledger</h3>
+<p>For every material external factual, statistical or legal claim, maintain a verification record with: stable claim ID; exact wording used in this document; claim class (source fact, source claim, external fact, proposal or open question); primary source and canonical URL; source title/version and publication or effective date; retrieval date; exact table, section, paragraph or page locator; method and any calculation; result; limitations and contrary evidence; reviewer; and the date of the next review where the source is time-sensitive.</p>
+<p>A URL in the source register establishes a lead, not that the linked material was inspected or that it supports the surrounding sentence. Record “not checked” when the source has not been opened and the relevant passage confirmed. Preserve previous verification results when a source changes; append a new record rather than silently overwriting the old result. Treat identical files as one textual source unless independent provenance is established. Search results, summaries and AI-generated citations are discovery aids, not substitutes for the primary record.</p>
+<p>For this document, the checks recorded during the 29 October 2026 maintenance pass are limited to the official SSB statistics page and the current consolidated Barnevernsloven page, plus the separately published 2026 amendment law linked in Sections 11 and 19. This is not a full independent verification of every number, legal proposition, historical post or GitHub-history claim. Those remain open unless a claim-level record says otherwise.</p>
+<p>The website uses “FETAT,” “F-ETAT” and “FAMILIEETATEN.” This document preserves these source forms without inventing another acronym expansion. The connection between the project and the exact hostname fetat.no is directly evidenced by the live site itself. The broader GitHub proposal is related material but is narrower than the website’s full restructuring plan.</p>
+<hr>
+<h2>3. Consolidated institutional model</h2>
+<h3>3.1 A state/regional family-protection agency</h3>
+<p>The proposal seeks to replace the current child-welfare organization with a new regional or national service. It argues that municipalities may face conflicts where the same local ecosystem includes the child-welfare service, school, kindergarten, health provider or other institution implicated in the concern.</p>
+<p>A national agency is not automatically independent just because it sits above municipalities. To reduce conflicts, the design needs statutory independence where appropriate, transparent assignment rules, conflict declarations, separation between operational decision-making and appeals, cross-regional review, secure reporting channels, published standards and an external mechanism for investigating the new agency itself.</p>
+<p>Questions to resolve:</p>
+<ul>
+<li>Is FETAT one national authority with regional branches or a network of statutory regional units?</li>
+<li>Which duties remain with municipalities, health services, schools, police, prosecutors and courts?</li>
+<li>How is local knowledge preserved while avoiding local conflicts?</li>
+<li>What body can compel corrective action when FETAT itself is at fault?</li>
+<li>How are Sami, minority-language, disability and remote-area needs addressed?</li>
+<h3>3.2 Proposed regional footprint</h3>
+<p>The website discusses roughly 11–12 regional bases in some places and up to 15 in other variants; its regional map uses 2022 population data and combines some counties/regions. These counts are not a current operational analysis.</p>
+<p>Before selecting a footprint, model population, case demand, travel time, after-hours coverage, specialist availability, placement capacity, geography, language needs and workload distribution using current data. Separate physical office location from jurisdiction and from the location of independent reviewers.</p>
+<h3>3.3 Multidisciplinary teams</h3>
+<p>The proposal names combinations of pediatricians and other physicians, child/adult psychiatrists, psychologists, nurses, specialist child nurses, physiotherapists, dentists, radiology/forensic expertise, police investigators, jurists/lawyers, educators and social-care/disability professionals.</p>
+<p>The useful principle is matching expertise to the issue. The unsafe alternative is assuming every family needs every specialist, or that a profession can never be trusted. A professional opinion should be attributable, evidence-based and within scope; it is not automatically a legal finding.</p>
+<p>Minimum team design:</p>
+<ul>
+<li>one accountable case lead and a recorded decision-maker;</li>
+<li>written remit for each participating professional;</li>
+<li>conflict declarations;</li>
+<li>recorded disagreement and an escalation route;</li>
+<li>separate clinical, investigative and legal functions;</li>
+<li>evidence-linked reasons for any proposed intrusive action;</li>
+<li>proper participation by the child;</li>
+<li>no default medical or psychiatric examination merely because a report exists.</li>
+<p>A unanimity rule may delay urgent protection or encourage superficial consensus. An alternative is an accountable decision by an authorized lead, with dissent and uncertainty recorded and independent review available.</p>
+<hr>
+<h2>4. Intake and investigation time limits</h2>
+<h3>4.1 Proposed national hotline “123”</h3>
+<p>The proposal suggests a national child/family intake number, logging calls, potential recording, digital reporting and possible anonymity. The principle of accessible child-friendly reporting is worth evaluating. The number itself must not be advertised as an operating emergency line unless allocation, routing and responsibility have been confirmed with the competent Norwegian authorities.</p>
+<p>Requirements:</p>
+<ul>
+<li>integrate with existing child helplines, police, ambulance, health services and child-welfare intake;</li>
+<li>define emergency versus advice/non-urgent use;</li>
+<li>support children who cannot safely speak or receive callbacks;</li>
+<li>have language and accessibility support;</li>
+<li>protect good-faith reports;</li>
+<li>record a traceable intake ID and triage outcome;</li>
+<li>define lawful recording, notice, access, retention and deletion before recording any call;</li>
+<li>distinguish a maliciously fabricated report from a concern that is simply unsubstantiated;</li>
+<li>test the design with children and safeguarding professionals.</li>
+<p>The reporting channel must not discourage genuine concerns by threatening punishment for reports that do not result in a finding.</p>
+<h3>4.2 Proposed 48-hour review and seven-day maximum</h3>
+<p>The website proposes intensive review for up to 48 hours, extensions in 48-hour increments and a maximum seven-day assessment window in one version, with court involvement if intervention continues.</p>
+<p>A deadline can improve promptness, initial safety triage, evidence preservation and communication. It cannot guarantee that every complex matter is resolved accurately in two or seven days. A deadline must not pressure staff to rush interviews, carry out unnecessary examinations or choose a conclusion simply because time is expiring.</p>
+<p>Revised workflow:</p>
+<ol>
+<li>Immediate safety triage and a least-intrusive initial plan.</li>
+<li>Preserve relevant evidence lawfully and identify what is missing.</li>
+<li>Conduct an initial assessment of the child&#39;s needs, views, risks, protective factors and available support.</li>
+<li>Record a written first decision with known facts, uncertainty, legal basis and next review date.</li>
+<li>Before extension, identify unresolved questions, the evidence needed, why delay matters and what safeguards apply.</li>
+<li>Obtain judicial or other independent authorization wherever the specific legal regime requires it for continued intrusive action.</li>
+<li>End, refer, support or continue through the correct lawful route, with an exit/review plan.</li>
+<p>An investigation deadline is not itself legal authority to restrict a child’s or parent’s liberty.</p>
+<hr>
+<h2>5. Independent control body and retrospective review</h2>
+<h3>5.1 Independent control / “havarikommisjon”</h3>
+<p>The proposal calls for an independent body to review complaints, inspect serious errors, carry out cross-regional checks, examine systemic patterns and refer suspected offences to competent authorities.</p>
+<p>A workable design would:</p>
+<ul>
+<li>be separate from the original decision-making chain;</li>
+<li>receive complaints from children, parents and authorized representatives;</li>
+<li>review record completeness, legal procedure, evidence handling and reasons;</li>
+<li>sample closed files and audit recurring problems;</li>
+<li>make recommendations or legally authorized corrective decisions;</li>
+<li>refer potential crimes to police/prosecutors rather than declare criminal guilt itself;</li>
+<li>track implementation and publish anonymized systemic findings;</li>
+<li>preserve the right of affected parties to correct factual errors;</li>
+<li>disclose conflicts and explain the review method.</li>
+<p>A body that is independent in name only will not solve institutional conflicts. Conversely, a control body without a clear remit can become a second unaccountable decision-maker. Its powers, procedures, appeal routes, deadlines, access rights and budget must be set in law.</p>
+<h3>5.2 Retrospective review of care decisions</h3>
+<p>A retrospective review should not presume that all historic decisions were right, nor that they were wrong. It needs a legal mandate, safe access to files, objective selection criteria, reviewers without conflicts, fair notice and responses, and a current assessment of the child&#39;s welfare separate from the question of whether the historical decision was justified at the time.</p>
+<p>Suggested triage priorities:</p>
+<ul>
+<li>credible new evidence of serious factual error;</li>
+<li>a significant procedural defect;</li>
+<li>newly discovered evidence that could materially affect the outcome;</li>
+<li>ongoing safety risks or serious present harm;</li>
+<li>a pattern suggesting a systemic failure;</li>
+<li>cases selected through a representative audit sample.</li>
+<p>Do not order automatic return, prosecution or public condemnation based on an incomplete file or headline. A change in current placement must use the lawful, child-specific process and consider present safety, relationships, wishes and needs.</p>
+<hr>
+<h2>6. Temporary children’s homes, family contact and kinship options</h2>
+<h3>6.1 Temporary children’s homes</h3>
+<p>“Barnehjem – ja takk” proposes regional children&#39;s homes as a temporary option in some unresolved cases, with stable adult caregivers, schooling, individualized care, sibling contact and family visits where safe.</p>
+<p>A temporary residential unit might be an option for a specific child where justified, but it must not become an automatic holding facility or detention substitute. Institutional care itself can cause harm, so safety cannot be assumed from the name “children’s home.”</p>
+<p>Minimum safeguards:</p>
+<ul>
+<li>clear individual legal basis for admission;</li>
+<li>prompt independent review and a defined maximum review interval;</li>
+<li>named caregiver and written care plan;</li>
+<li>education and health continuity;</li>
+<li>safe sibling and parent contact based on the child&#39;s needs;</li>
+<li>private and accessible complaint route;</li>
+<li>independent visits, safeguarding inspections and whistleblowing protection;</li>
+<li>a clear exit plan and reasoned extensions;</li>
+<li>lawful, necessary and proportionate handling of any monitoring;</li>
+<li>no presumption that a centre is safer than every foster or family arrangement.</li>
+<p>Indiscriminate 24-hour camera surveillance creates serious privacy and dignity risks and cannot replace good staffing, stable relationships, independent visits and a confidential way for children to report harm.</p>
+<h3>6.2 Family and trusted-network placement</h3>
+<p>The proposal prefers evaluating family/network placement before placement with unknown carers. Continuity, identity and familiar relationships can matter, but kinship alone does not prove suitability.</p>
+<p>Assessment should consider the child&#39;s own views, safety concerns, caregiver willingness and capacity, stability, family violence or coercion, siblings, support needs and potential loyalty pressure. Record why a family option is chosen or rejected. The principle is “actively assess safe and suitable network options,” not “always place with relatives.”</p>
+<h3>6.3 Contact during review</h3>
+<p>Family contact should be individualized, safe and reasoned. A blanket rule for unrestricted contact can overlook real risks; a blanket ban can inflict unnecessary harm. Decisions should state the basis, the child&#39;s views, relevant safety concerns, review date and what would permit arrangements to change.</p>
+<hr>
+<h2>7. Specialist units proposed by FETAT</h2>
+<h3>7.1 Suspected sexual abuse and serious violence</h3>
+<p>A specialized, coordinated pathway can reduce repeated questioning and delay. It should use trained child-friendly interviewers, trauma-informed procedures, appropriate health care, legally authorized evidence preservation, confidentiality and clear division of responsibility between child protection, medical services, police and prosecutors. It must not prejudge whether an allegation is true or false and must avoid unnecessary repeat interviews.</p>
+<h3>7.2 Parent conflict and contact disputes</h3>
+<p>The source proposes a specialist path for high-conflict separations and complex contact disputes, with a suggested six-month window for agreement in one version. A fixed deadline must never force unsafe contact or prevent urgent action where there is violence, coercion or abuse. A child&#39;s refusal of contact must not automatically be attributed to manipulation, psychiatric illness or proof of an unsafe parent. Distinguish family-law proceedings, child protection and criminal allegations.</p>
+<h3>7.3 School and education settings</h3>
+<p>The school unit proposal seeks a child-friendly route for bullying, violence, abuse and other harm in school, transport, after-school care and similar settings. The design must map its relationship to existing school duties, education authorities, police, the County Governor (Statsforvalteren) and ombuds services. Allegations against staff require independence from the institution involved, fair process for the accused, proportionate interim safeguards and a clear referral path.</p>
+<h3>7.4 Youth substance use, crime and health needs</h3>
+<p>Specialist help for young people can be useful, but a young person’s harmful behaviour does not remove their rights. Child protection, criminal responsibility, health treatment and education have different legal bases and should not be collapsed into one undefined investigative power.</p>
+<hr>
+<h2>8. Adjudication and review: civil/child-welfare versus criminal proceedings</h2>
+<p>The website proposes abolishing the Barneverns- og helsenemnda and transferring child-welfare cases into criminal courts, arguing that criminal proceedings provide a stronger evidence standard. This is a proposal, not current law.</p>
+<p>Criminal courts decide criminal responsibility under criminal procedure; child-protection decisions address different legal questions about protection, care and the child&#39;s best interests. Transferring all care cases into criminal proceedings could confuse the issues, delay essential protection and put the child in the wrong procedural role.</p>
+<p>A more precise reform brief should identify the particular defect to solve: access to the record, disclosure, the ability to challenge evidence, hearing records, reasoned decisions, delay, legal assistance, reviewer independence or an appeal route. Proposals may include stronger evidence disclosure, better records, clear reasons, qualified decision-makers, better legal assistance and effective judicial safeguards without presuming that every welfare case should become a criminal trial.</p>
+<p>The website&#39;s broad assertions that the existing system has “no evidence requirements” or that a conditional percentage shows the tribunal awards nearly every case to the public party must not be repeated as established legal facts. Check the statute, procedural rules, official report tables and the denominator for each statistic.</p>
+<hr>
+<h2>9. Workforce and funding</h2>
+<h3>9.1 Workforce proposal</h3>
+<p>Some FETAT posts call for phasing out the barnevernspedagog profession and estimate roughly 6,900 staff using historical categories. They propose transitioning some staff into schools, kindergartens, NAV, PPT or other services.</p>
+<p>These are a policy position and a historic estimate, not a verified current workforce count or proof that an entire profession is unsuitable. A defensible reform must map roles, qualifications, regional distribution, workload, capabilities and service gaps; define required competencies; plan retraining and recruitment; preserve continuity for children; consult staff and affected families; and evaluate outcomes without making a group-wide presumption of incompetence.</p>
+<h3>9.2 Financial proposal</h3>
+<p>The finance post quotes 2023 budget figures of NOK 1.9 billion for police and NOK 8.41 billion for child welfare, describes them as Google-derived and assumes they are correct. These are unverified and potentially non-comparable fiscal categories. They should not be used for an official cost case without reconstructing appropriations and expenditure from audited official sources.</p>
+<p>A full cost model must include national governance, regional sites, 24/7 intake, case teams, clinical and forensic specialists, family support, temporary residential units, education/health continuity, legal aid, courts, independent oversight, transport, interpreters, training, data security, transition costs, evaluation and contingency.</p>
+<p>Reducing foster-carer payments is not a guaranteed saving. Payments can cover costs and responsibilities; reductions can affect placement supply, quality and stability. Separate cost reimbursement from any payment that could create a conflict of interest, then evaluate actual outcomes and availability.</p>
+<p>No agency or individual should have a financial incentive to remove a child, retain a child away from family, or avoid a necessary intervention.</p>
+<hr>
+<h2>10. Statistical audit: figures that need exact definitions</h2>
+<p><strong>Verification protocol:</strong> For each number, record the official table identifier and title, indicator label, unit, population and age range, geography, reference period, annual-flow versus point-in-time basis, extraction date, footnotes, any denominator, and the arithmetic used. Retain the source&#39;s original value alongside any corrected or recalculated value; never silently replace a transcription. Where the historical FETAT post has not been reconciled to the official table, label the value “transcribed from FETAT; independent match pending.”</p>
+<h3>10.1 Concern reports</h3>
+<p>FETAT&#39;s 11 October 2024 post lists:</p>
+<table><thead><tr><th>Indicator as transcribed by the post</th><th>2021</th><th>2022</th><th>2023</th></tr></thead>
+<tbody>
+<tr><td>Concern reports</td><td>53,468</td><td>49,778</td><td>52,413</td></tr>
+<tr><td>Investigations</td><td>41,933</td><td>37,936</td><td>39,094</td></tr>
+<tr><td>Employees (as stated in post)</td><td>6,430.5</td><td>6,647.3</td><td>6,814.6</td></tr>
+<tr><td>Arithmetic: reports per employee</td><td>8.31</td><td>7.48</td><td>7.69</td></tr>
+<p>Use these only as historical figures attributed to that post until checked against SSB definitions and the current table. A report is not necessarily about a unique child; the same child may be the subject of several reports. Comparing annual report counts with annual births does not prove that every family will eventually receive a report. The ratio is not evidence that the service regards all parents as bad parents.</p>
+<p>SSB&#39;s national page, updated 3 June 2026, is the authoritative starting point:</p>
+<p>https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern</p>
+<p>It distinguishes, among other things, children receiving any child-welfare measures during the year, children receiving care measures during the year, and children with measures at year end. These populations and time bases must not be mixed.</p>
+<h3>10.2 The 7,772 and 6,764 figures</h3>
+<p>SSB lists 7,772 children with care measures during 2023 and 6,764 children with care measures on 31 December 2023. The first is an annual population; the second is a point-in-time count. They are not interchangeable. FETAT&#39;s phrasing should specify which one it means.</p>
+<p>Source: https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern</p>
+<h3>10.3 The 334 figure</h3>
+<p>The website reproduces a table attributed to SSB about reasons for requests for care orders, with 334 as the 2023 total and several potentially overlapping grounds. Do not state that this necessarily means 334 unique children or 334 final care orders until the official table&#39;s indicator, unit and notes are checked.</p>
+<ul>
+<li>FETAT transcription: https://fetat.no/ssb-arsaker-til-begjaering-om-omsorgsovertakelse-i-norge/</li>
+<li>SSB portal: https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern</li>
+<h3>10.4 The “96%” tribunal claim</h3>
+<p>FETAT quotes the tribunal&#39;s 2023 report as saying 182 children were returned in 2023 and that in 96% of return cases the public party had proposed or supported return. That conditional statistic describes a subset of return outcomes; it is not the public party’s win rate across all cases. To evaluate neutrality, one would need all relevant case types, who initiated them, party positions, settled/withdrawn cases, outcome definitions and reasons.</p>
+<p>Report provided by the website: https://fetat.no/wp-content/uploads/2024/10/ArsrapportBVHN2023-Endelig.pdf</p>
+<h3>10.5 Case-capacity arithmetic</h3>
+<p>The capacity post divides 3,367 former tribunal matters from 2021 by 11 units to produce approximately 306 per unit per year; it divides 52,413 reports from 2023 by 11 to produce approximately 4,765 per unit per year, or about 13 a day. The division is arithmetically reasonable for those inputs. It is not a valid staffing model unless the categories, time periods, report duplicates, case complexity, triage rate, response times and FETAT&#39;s different remit are modeled.</p>
+<p>The post&#39;s estimate of about 30 temporary residential places per region is likewise not a validated capacity plan. Annual flow, length of stay, staffing ratios, siblings, geography, specialist care and safe alternatives all matter.</p>
+<h3>10.6 Foster-home moves</h3>
+<p>SSB published an article based on 2020 data showing movement differences between placement categories:</p>
+<p>https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern/artikler/barn-som-bor-i-fosterheim-utanom-familie-flyttar-meir</p>
+<p>The article concerns defined cohorts and observation periods; it does not prove that all family-network placements are suitable or that all children should be in a residential home. Every claim should state the year, placement definition, cohort, time window and denominator.</p>
+<h3>10.7 Budget and workforce values</h3>
+<p>The NOK 1.9 billion / NOK 8.41 billion budget comparison and the approximately 6,900 staffing estimate are historical values from the proposal and must be rebuilt from current authoritative, comparable accounts and workforce tables before they support a cost or staffing decision.</p>
+<hr>
+<h2>11. Current legal baseline</h2>
+<p><strong>Legal verification rule:</strong> A general statute link does not establish that a particular power, duty or procedure is current or applicable. Before treating a proposition as law, cite the exact section and paragraph in the consolidated text, check amendments and commencement provisions, and identify the date and circumstances to which the rule applies. Distinguish enacted law, provisions not yet commenced, bills/propositions, administrative guidance, case-law interpretation and this document&#39;s policy preferences. If the point is unresolved, mark it as an open legal question. A proposed new agency does not automatically acquire existing statutory powers or remove the jurisdiction of an existing body; those changes require explicit legal analysis and, where necessary, legislation.</p>
+<p>Norway&#39;s principal child-welfare statute is the Barnevernsloven, Act of 18 June 2021 No. 97, in force from 1 January 2023; it replaced the 1992 Act. Historical legal identifiers must not be reused as current law.</p>
+<ul>
+<li>Current consolidated law: https://lovdata.no/nav/lov/2021-06-18-97</li>
+<li>Government overview: https://www.regjeringen.no/no/dokumenter/barnvernsloven/id2971550/</li>
+<li>Bufdir&#39;s current Barnevernsrundskrivet: https://www.bufdir.no/fagstotte/produkter/saksbehandlingsrundskrivet/</li>
+<li>Government summary of changes effective 1 January 2026: https://www.regjeringen.no/no/aktuelt/endringer-i-lover-og-forskrifter-fra-1.-januar-2026-fra-barne-og-familiedepartementet/id3143208/</li>
+<li>Prop. 83 L (2024–2025), quality reform: https://www.regjeringen.no/no/dokumenter/prop.-83-l-20242025/id3094694/</li>
+<li>Prop. 86 L (2025–2026), better protection of children in institutions: https://www.regjeringen.no/no/dokumenter/prop.-86-l-20252026/id3153702/</li>
+<p>Bufdir&#39;s guidance was professionally updated on 16 April 2026 and now covers both municipal child-welfare work and relevant state services/institutions. Changes taking effect in 2026 include competence requirements, institutional-care powers and safeguards, serious-incident reporting and statistical provisions; exact commencement and application must be verified for each rule. Use current consolidated text, not a frozen 2024–2025 web post.</p>
+<p>The Norwegian Constitution, UN Convention on the Rights of the Child and European Convention on Human Rights are also relevant. For each human-rights argument, identify the exact act or omission, right, factual record, law in force at the time, necessity/proportionality analysis, relevant case law, counterarguments and available remedy. Do not call an adverse decision a proven rights violation without that analysis.</p>
+<p>The 2026 legislative context confirms the subject continues to evolve; it does not mean FETAT itself has been adopted. Current and historical matters must be analysed against the law applicable to their dates.</p>
+<hr>
+<h2>12. Individual case-review protocol</h2>
+<p>The original GitHub draft alleges possible problems in a specific family matter: telephone notice, inadequate opportunity to respond, uncertain evidence, insufficient consideration of a child&#39;s wishes, inadequate assessment of alleged violence/protective steps, incorrect or incomplete information, missed alternatives and possible family-life rights issues. These are allegations in a draft, not verified facts about a case.</p>
+<p>A fair review should proceed as follows:</p>
+<ol>
+<li><strong>Define scope:</strong> identify the exact decision, date, authority, jurisdiction, procedural stage, safety question and deadline.</li>
+<li><strong>Preserve records:</strong> list original decisions, letters, communications, case notes, meeting minutes, evidence, reports and responses; preserve originals unchanged.</li>
+<li><strong>Build a timeline:</strong> separate event date, record creation date, receipt date and decision date. Label estimates and disputed dates.</li>
+<li><strong>Classify statements:</strong> distinguish direct observation, a party&#39;s account, hearsay, professional opinion, inference, allegation, legal question and established finding.</li>
+<li><strong>Create an issue matrix:</strong> precise question, legal rule/time period, supporting evidence, contrary evidence, missing material, reviewer, next action and status.</li>
+<li><strong>Check law in force at the time:</strong> use official consolidated text, transitional rules, judgments and competent legal advice.</li>
+<li><strong>Test alternatives:</strong> record the strongest supporting evidence, strongest counterevidence, plausible explanations and what would change the preliminary view.</li>
+<li><strong>Independent review:</strong> assign appropriately qualified reviewers with conflicts declared and limitations documented.</li>
+<li><strong>Choose a lawful route:</strong> depending on the actual decision and dates, this may be access to records, factual correction, complaint, appeal, review or court filing. Confirm the specific route and deadline; this file does not promise a reopening or calculate deadlines.</li>
+<li><strong>Close responsibly:</strong> record evidence relied on, dissent, unresolved questions, accountable human decision and retention plan. Any current change of placement must be based on the child&#39;s current circumstances and the lawful process.</li>
+<p>Do not advise people to evade a lawful process, move simply to avoid a case, or publicize a child&#39;s details. Safer general steps are to obtain qualified legal advice promptly, preserve originals, request written reasons and records through the correct channel, correct factual errors in writing, document important interactions lawfully, and challenge decisions through the applicable route.</p>
+<hr>
+<h2>13. MASTER evidence-visualization specification</h2>
+<p>The GitHub political-platform section proposes a visual evidence map to expose gaps and contradictions and make complex records easier to review. The following constrained system preserves that goal.</p>
+<h3>13.1 Capabilities</h3>
+<ul>
+<li>index authorized records and preserve their source identifiers;</li>
+<li>build a date-aware chronology;</li>
+<li>link each claim to a specific source locator;</li>
+<li>map a decision to its stated reasons and evidence;</li>
+<li>flag unreferenced assertions, potential inconsistencies and missing documents;</li>
+<li>distinguish original records, copies, transcripts, summaries, translations and AI-generated transformations;</li>
+<li>show evidence for and against each material claim;</li>
+<li>create an exportable human-review packet;</li>
+<li>preserve corrections, previous versions and reviewer dissent;</li>
+<li>explain what was and was not inspected.</li>
+<h3>13.2 Prohibited uses</h3>
+<ul>
+<li>no automated decision on a child&#39;s placement or return;</li>
+<li>no determination of a person&#39;s credibility from facial, voice or sentiment analysis;</li>
+<li>no mental-health or parental-fitness diagnosis;</li>
+<li>no autonomous interview of a child;</li>
+<li>no claim that repeated copied text is independent corroboration;</li>
+<li>no invented legal citations or facts;</li>
+<li>no suppressed counterevidence;</li>
+<li>no disclosure of confidential data to an unapproved model provider;</li>
+<li>no external communication or public accusation without authorized human review;</li>
+<li>no public child-level evidence maps.</li>
+<h3>13.3 Core views</h3>
+<ul>
+<li><strong>Chronology:</strong> events, communications, assessments, decisions and reviews, with source locators and date uncertainty.</li>
+<li><strong>Decision/reason map:</strong> each decision, legal basis, stated reasons, evidence, response and review route.</li>
+<li><strong>Claim/evidence graph:</strong> supporting, contradicting, contextual and inconclusive sources.</li>
+<li><strong>Issue tracker:</strong> neutral questions, missing material, owner, status and next step.</li>
+<li><strong>Provenance panel:</strong> original record, custodian, dates, integrity hash, extraction method, transformations and access class.</li>
+<li><strong>Alternative-explanation panel:</strong> strongest competing interpretations and the evidence that would distinguish them.</li>
+<li><strong>Child-participation view:</strong> how and when the child was informed and heard, and how the views were considered—not an AI score of sincerity.</li>
+<h3>13.4 Minimum data model</h3>
+<table><thead><tr><th>Entity</th><th>Minimum fields</th></tr></thead>
+<tbody>
+<tr><td>Case</td><td>Pseudonymous ID, jurisdiction, scope, period, privacy class, accountable owner</td></tr>
+<tr><td>Evidence item</td><td>ID, source/custodian, original location, dates, type, language, integrity hash, access class</td></tr>
+<tr><td>Source locator</td><td>Evidence ID, page/paragraph/timecode/record ID, extraction method</td></tr>
+<tr><td>Event</td><td>Event ID, event/record dates, roles, neutral description, source IDs, time certainty</td></tr>
+<tr><td>Claim</td><td>Neutral wording, claimant/source, date asserted, evidence, status and limits</td></tr>
+<tr><td>Evidence link</td><td>Related IDs, relation type, rationale and reviewer</td></tr>
+<tr><td>Decision</td><td>ID, authority, date, legal basis, outcome, reasons, notice and review route</td></tr>
+<tr><td>Legal authority</td><td>Citation, jurisdiction, version/effective dates, official URL, retrieval date, reviewer</td></tr>
+<tr><td>Issue</td><td>Question, materiality, needed evidence, owner, status and next action</td></tr>
+<tr><td>Review</td><td>Reviewer role/conflicts, scope, findings, limitations, dissent, follow-up</td></tr>
+<tr><td>Audit/access event</td><td>Actor, purpose, time, object, action, reason and export/share event</td></tr>
+<p>Originals remain immutable. Hash records when ingested; record extraction/transcription/translation versions; preserve timestamps and time zones; label unreadable passages; deduplicate copies; and require a source locator for every material factual statement or display “source not located.” The correct result for insufficient evidence is “insufficient evidence,” not a forced answer.</p>
+<h3>13.5 Evaluation</h3>
+<p>Test with synthetic or lawfully de-identified data. Measure source-citation accuracy, chronology accuracy, unsupported-claim rate, retrieval recall, preservation of counterevidence, hallucinated legal references, transcription/translation errors, reviewer correction rate, accessibility and privacy incidents. Humans own all final conclusions.</p>
+<hr>
+<h2>14. Public communication, safety and governance</h2>
+<p>FETAT&#39;s public advocacy can focus on accountability, timeliness, access to support, meaningful participation, evidence quality, independent review and measurable reform. It should not turn unverified case claims into accusations against identifiable people.</p>
+<p>Before publication:</p>
+<ul>
+<li>separate personal account, documented fact, allegation, legal interpretation and policy proposal;</li>
+<li>verify quotes and statistics against primary sources;</li>
+<li>state the time period, unit and denominator;</li>
+<li>remove details that could indirectly identify a child;</li>
+<li>disclose uncertainty and counterevidence;</li>
+<li>provide a fair correction path where appropriate;</li>
+<li>publish methods for aggregate analysis;</li>
+<li>avoid harassment, doxxing, intimidation and retaliation.</li>
+<p>Governance requirements:</p>
+<ol>
+<li>Purpose limitation and data minimization.</li>
+<li>Least-privilege access and a separate identity vault.</li>
+<li>Secure storage and approved transfer routes.</li>
+<li>A lawful basis and retention policy before using personal data.</li>
+<li>Access, export, correction and model-output audit logs.</li>
+<li>No sensitive records in public GitHub.</li>
+<li>Controlled model use, with a privacy assessment and approved provider configuration.</li>
+<li>No public demos with identifiable case documents.</li>
+<li>A transparent correction log for FETAT itself.</li>
+<li>Independent oversight for any real-world pilot.</li>
+<hr>
+<h2>15. Implementation roadmap</h2>
+<h3>Phase 0 — Source and legal scoping</h3>
+<ul>
+<li>verify source inventory and current legislation;</li>
+<li>obtain the original SSB tables underlying historical claims;</li>
+<li>define agency remit and map existing institutional decision types;</li>
+<li>record all claims needing independent validation.</li>
+<p><strong>Exit:</strong> source register, current legal map and open-issues list.</p>
+<h3>Phase 1 — Service and safeguards</h3>
+<ul>
+<li>specify intake, triage, investigation, protective measures, review and appeal;</li>
+<li>define when legal authority or consent is required;</li>
+<li>establish child-participation and family-contact standards;</li>
+<li>separate criminal investigation, clinical care, child protection and family-law duties;</li>
+<li>complete privacy and human-rights impact review.</li>
+<p><strong>Exit:</strong> complete service blueprint reviewed by qualified legal and safeguarding specialists.</p>
+<h3>Phase 2 — Evidence infrastructure</h3>
+<ul>
+<li>build an immutable document registry, timeline, issue matrix and access log;</li>
+<li>pilot MASTER evidence visualization on synthetic or approved de-identified material;</li>
+<li>test citations, counterevidence, uncertainty and security.</li>
+<p><strong>Exit:</strong> reviewers can reproduce the analysis from source records.</p>
+<h3>Phase 3 — Cost and capacity</h3>
+<ul>
+<li>use official current data and clear definitions;</li>
+<li>model workload by case complexity, region and required response time;</li>
+<li>cost staff, court/legal aid, clinical services, temporary homes, education, transport and oversight;</li>
+<li>model low/base/high scenarios and transitions.</li>
+<p><strong>Exit:</strong> transparent cost model and sensitivity analysis.</p>
+<h3>Phase 4 — Controlled pilot</h3>
+<ul>
+<li>pilot one defined component at a time;</li>
+<li>define stop criteria, safeguarding oversight and incident response;</li>
+<li>monitor safety, delay, errors, privacy, child/family experience and costs.</li>
+<p><strong>Exit:</strong> independent evaluation and approval for any expansion.</p>
+<h3>Phase 5 — Legislative and public process</h3>
+<ul>
+<li>publish a legally coherent proposal and impact assessment;</li>
+<li>consult children through safe methods, families, professionals and relevant institutions;</li>
+<li>specify transition arrangements for ongoing cases;</li>
+<li>define who is liable and how remedies work when the new service errs.</li>
+<p><strong>Exit:</strong> complete legislative blueprint, not just an organizational chart.</p>
+<h3>Phase 6 — Continuous evaluation</h3>
+<ul>
+<li>publish privacy-protected aggregate results;</li>
+<li>audit representative samples;</li>
+<li>track corrective actions and repeat failures;</li>
+<li>update legal references on a documented schedule.</li>
+<p><strong>Exit:</strong> evidence that safety, fairness and accountability improve.</p>
+<hr>
+<h2>16. Metrics</h2>
+<p>Measure outcomes with context. Do not optimize for fewer removals, more removals, fewer complaints or more appeals in isolation.</p>
+<p><strong>Safety and welfare:</strong> urgent-response timeliness; harm while a report is assessed or after intervention; placement stability; access to health and education; child-reported safety where safe to obtain; family-network suitability.</p>
+<p><strong>Procedural fairness:</strong> reasons/notice where required; child&#39;s participation; access to records; correction opportunities; review timeliness; reasoned outcomes; conflict declarations.</p>
+<p><strong>Evidence quality:</strong> proportion of factual statements with source locators; unsupported-claim rate; missing records; transcription/translation errors; presence of contrary evidence; AI summary correction rate.</p>
+<p><strong>Efficiency:</strong> case-hours by complexity; specialist wait time; time to first safety plan; travel times; length of placement; cost with defined outcome measures.</p>
+<p><strong>Accountability:</strong> complaint categories and resolution times; substantiated procedural defects; implementation of recommendations; repeat problems; independent audit results.</p>
+<p>A lower intervention count does not automatically mean a better system, and a higher count does not automatically mean a worse one. A sound system may intervene decisively in some dangerous cases while preventing avoidable separations in others.</p>
+<hr>
+<h2>17. Critical risk register</h2>
+<table><thead><tr><th>Risk</th><th>Required control</th></tr></thead>
+<tbody>
+<tr><td>Allegations presented as facts</td><td>Label claim status, cite primary evidence, include response and counterevidence</td></tr>
+<tr><td>New agency develops new conflicts</td><td>Statutory independence, cross-regional review, external control body</td></tr>
+<tr><td>Short deadlines create rushed conclusions</td><td>Distinguish triage from full assessment; review extensions</td></tr>
+<tr><td>All matters converted to criminal cases</td><td>Separate criminal liability from protective decision process</td></tr>
+<tr><td>Temporary centres become detention</td><td>Individual lawful basis, prompt review, child-specific care and exit plan</td></tr>
+<tr><td>Blanket medical/psychiatric examination</td><td>Need-based, lawful, proportionate and trauma-informed process</td></tr>
+<tr><td>Continuous video surveillance violates privacy</td><td>Prioritize staffing/safeguarding; tightly limit any monitoring</td></tr>
+<tr><td>Good-faith reporters are chilled</td><td>Separate malicious fabrication from unsubstantiated reports</td></tr>
+<tr><td>Whole profession stigmatized</td><td>Competency-based standards and fair individual accountability</td></tr>
+<tr><td>Foster-carer payment cuts destabilize placements</td><td>Model availability, safety and quality, not only budget</td></tr>
+<tr><td>Family preservation overrides safety</td><td>Child-specific risk and best-interests assessment</td></tr>
+<tr><td>Removal becomes routine by default</td><td>Evidence, proportionality, realistic support alternatives and review</td></tr>
+<tr><td>Historic review overwhelms current services</td><td>Published triage rules and representative sampling</td></tr>
+<tr><td>AI misstates source evidence</td><td>Traceable locators, uncertainty display, human approval</td></tr>
+<tr><td>Statistics mislead policy</td><td>Official data, clear denominator, unit, period and methodology</td></tr>
+<tr><td>Sensitive data leak</td><td>Privacy assessment, minimization, least privilege and audit controls</td></tr>
+<tr><td>Advocacy re-identifies a child</td><td>Anonymization and independent privacy review</td></tr>
+<hr>
+<h2>18. Open decisions</h2>
+<ol>
+<li>What statutory form and remit should FETAT have, and which existing functions should remain elsewhere?</li>
+<li>What current population, demand, geography and travel-time analysis justifies the regional count?</li>
+<li>Is 123 allocated and appropriate, and how would it interoperate with existing helplines?</li>
+<li>Which initial time limits are realistic and how is extension lawfully reviewed?</li>
+<li>What procedure should govern disclosure, evidence challenges, decisions and appeals?</li>
+<li>Which decisions, if any, should change tribunal/court venue, and with what transition rules?</li>
+<li>In which individualized circumstances could a temporary child centre be necessary and lawful?</li>
+<li>What oversight and safeguards govern family contact, recording and monitoring?</li>
+<li>What competencies and workforce arrangements deliver better outcomes?</li>
+<li>What are the actual current budgets and complete transition costs?</li>
+<li>Which historical statistics have been checked against original metadata?</li>
+<li>Who controls sensitive data and which model/storage services are approved?</li>
+<li>What evidence would demonstrate improved safety, fairness, stability and accountability?</li>
+<li>Which additional branches, backups, archived pages and older conversations should be included in a future full forensic lineage audit?</li>
+<p>No unresolved issue should be filled with a guess.</p>
+<hr>
+<h2>Appendix A — Historical proposal claims, preserved as questions</h2>
+<p>The GitHub draft contains these lines of argument, not verified findings: notice may have been inadequate; material evidence may be incomplete; the child&#39;s wishes may have been insufficiently considered; violence and protective action may not have been adequately assessed; records may contain inaccuracies; bias or systemic issues may exist; less intrusive alternatives may not have been considered; family-life rights may be engaged.</p>
+<p>For an individual matter, each should be converted into a precise question with primary source locators, contrary evidence, the legal rule applicable at the time, missing records, an accountable reviewer and a lawful next step. Repetition in a legal-strategy mirror and a policy-analysis mirror is not independent corroboration.</p>
+<p>The historical proposal recommends collecting new records, seeking independent review, using the correct formal appeal/review route and considering public advocacy. This consolidation preserves the first three; public communication must be factual and privacy-safe and must never replace a legal remedy.</p>
+<h2>Appendix B — Official and primary sources</h2>
+<p><strong>FETAT project</strong></p>
+<ul>
+<li>https://fetat.no/</li>
+<li>https://fetat.no/om-fetat/</li>
+<li>https://fetat.no/fetat/</li>
+<li>https://fetat.no/fetat-enkelt-forklart/</li>
+<li>https://fetat.no/hvordan-skal-fetat-jobbe/</li>
+<li>https://fetat.no/tverrfaglige-team/</li>
+<li>https://fetat.no/hvor-stort-kapasitet-bor-fetat-ha/</li>
+<li>https://fetat.no/hvordan-skal-man-finansiere-fetat/</li>
+<li>https://fetat.no/barnas-nodnummer-123/</li>
+<li>https://fetat.no/kontrollorgan-havarikommisjon-for-barn/</li>
+<li>https://fetat.no/full-gjennomgang-av-omsorgsovertakelser-underenhet-i-fetat/</li>
+<li>https://fetat.no/barneverns-og-helsenemda-ma-fjernes/</li>
+<li>https://fetat.no/ssb-arsaker-til-begjaering-om-omsorgsovertakelse-i-norge/</li>
+<li>https://fetat.no/barnehjem-ja-takk/</li>
+<li>https://fetat.no/meldinger-om-bekymring-til-barnevern/</li>
+<li>https://fetat.no/fattig-darlig-forelder/</li>
+<li>https://fetat.no/meldt-til-barnevernet/</li>
+<p><strong>Historical GitHub</strong></p>
+<ul>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/barnevernet.html</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/legal-strategy-barnevernet.md</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/consolidated/political_initiatives/policy_analysis.md</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.html</li>
+<li>https://github.com/anon987654321/pub/blob/main/bplans/political/politisk_parti.md</li>
+<li>https://github.com/anon987654321/pub/commit/ebed360f0969f5d203e2c16cc24323d782fa49f7</li>
+<li>https://github.com/anon987654321/pub5/commit/5119dd514f9b8868cad0013a2c3691a957b19890</li>
+<li>https://github.com/anon987654321/pub5/commit/58501f5a386aad61da5dabc0643ed42625e51a0f</li>
+<p><strong>Law and official statistics</strong></p>
+<ul>
+<li>Current Barnevernsloven: https://lovdata.no/nav/lov/2021-06-18-97</li>
+<li>Government overview: https://www.regjeringen.no/no/dokumenter/barnvernsloven/id2971550/</li>
+<li>Bufdir current Barnevernsrundskrivet: https://www.bufdir.no/fagstotte/produkter/saksbehandlingsrundskrivet/</li>
+<li>January 2026 legislative changes: https://www.regjeringen.no/no/aktuelt/endringer-i-lover-og-forskrifter-fra-1.-januar-2026-fra-barne-og-familiedepartementet/id3143208/</li>
+<li>Prop. 83 L (2024–2025): https://www.regjeringen.no/no/dokumenter/prop.-83-l-20242025/id3094694/</li>
+<li>Prop. 86 L (2025–2026): https://www.regjeringen.no/no/dokumenter/prop.-86-l-20252026/id3153702/</li>
+<li>SSB child-welfare statistics, updated 3 June 2026: https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern</li>
+<li>SSB foster-home movement analysis: https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern/artikler/barn-som-bor-i-fosterheim-utanom-familie-flyttar-meir</li>
+<li>2023 tribunal annual report supplied by FETAT: https://fetat.no/wp-content/uploads/2024/10/ArsrapportBVHN2023-Endelig.pdf</li>
+<li>Helsetilsynet report on shortcomings in eight of nine inspected services: https://www.helsetilsynet.no/publikasjoner/tilsynsmeldingen/2022/svikt-i-8-av-9-barneverntjenester/</li>
+<h2>19. Latest official statistics: update the proposal beyond 2023</h2>
+<p><strong>Primary-source spot-check recorded 29 October 2026:</strong> The SSB “Barnevern” statistics page states that it was updated 3 June 2026 and displays the 2023–2025 totals shown below. The five displayed series and their 2023, 2024 and 2025 values were matched to that page during this pass. This verifies the displayed transcription against the page snapshot inspected, not the underlying data collection, every related figure elsewhere in this document, or any causal interpretation. The 334 figure is separately shown on the same page under table 3, “Undersøkingar avslutta etter konklusjon, alder og kjønn” (source table 10665), for 2023; it must not be described as the total number of all care orders without preserving that indicator&#39;s definition.</p>
+<p>The official consolidated statute page identifies Barnevernsloven as last amended by Act LOV-2025-12-22-115 effective 23 January 2026, and a separate amendment law dated 19 June 2026 (LOV-2026-06-19-35) states that its commencement is to be determined by the King. Therefore, do not assume every provision in the June 2026 amendment was in force on the retrieval date; check commencement orders and the applicable consolidated wording for each relevant provision.</p>
+<p>SSB&#39;s national child-welfare table was updated on 3 June 2026 and provides data through 2025:</p>
+<p>https://www.ssb.no/sosiale-forhold-og-kriminalitet/barne-og-familievern/statistikk/barnevern</p>
+<table><thead><tr><th>SSB indicator</th><th>2023</th><th>2024</th><th>2025</th><th>Change 2023–2025</th></tr></thead>
+<tbody>
+<tr><td>Children with child-welfare measures during the year</td><td>43,954</td><td>42,421</td><td>42,551</td><td>−3.2%</td></tr>
+<tr><td>Children with care measures during the year</td><td>7,772</td><td>7,339</td><td>7,242</td><td>−6.8%</td></tr>
+<tr><td>Children with measures at 31 December</td><td>30,824</td><td>29,157</td><td>29,298</td><td>−5.0%</td></tr>
+<tr><td>Children with care measures at 31 December</td><td>6,764</td><td>6,402</td><td>6,324</td><td>−6.5%</td></tr>
+<tr><td>Children and young people with placement measures at 31 December</td><td>12,407</td><td>11,869</td><td>11,364</td><td>−8.4%</td></tr>
+<p>The counts of children with measures during a year and on 31 December measure different populations. Do not merge an annual count with a point-in-time count. The 2025 totals show a small rise in the annual count receiving any measures from 2024 (42,421 to 42,551, about 0.3%) and a fall in the annual count with care measures (7,339 to 7,242, about 1.3%). Year-end care measures fell from 6,402 to 6,324 (about 1.2%).</p>
+<p>These changes describe totals, not the quality or fairness of decisions. They do not by themselves establish whether the system is better or worse, whether a report is true, or how many staff FETAT would need. Any interpretation must account for definitions, reporting behaviour, policy changes, population, duration, case complexity, outcomes and the data&#39;s limitations.</p>
+<p>Every statistic used in a policy document should identify the unit, age range, time period, source table, denominator and whether multiple records may relate to one child. A concern report is not necessarily a unique child, grounds in one request may overlap, and a percentage about one subset of outcomes must not be described as the success rate for all cases.</p>
+<h2>20. Compare institutional options before replacing the whole system</h2>
+<p>The goals of better evidence, independence and accountability are separable from the question of whether every existing institution must be replaced at once.</p>
+<table><thead><tr><th>Option</th><th>Description</th><th>Advantage to test</th><th>Main risk to resolve</th></tr></thead>
+<tbody>
+<tr><td>Improve current arrangements</td><td>Strengthen records, review, support and audits within current legal structures</td><td>Lower transition disruption</td><td>May leave structural conflicts unresolved</td></tr>
+<tr><td>Independent regional investigation</td><td>Separate complex investigations from municipal operational interests</td><td>More independent fact-finding</td><td>Requires precise authority and handoff rules</td></tr>
+<tr><td>National standards with regional operations</td><td>National policy and data standards, regional teams, separate adjudication</td><td>Consistency plus local execution</td><td>Centralization can itself become opaque</td></tr>
+<tr><td>Full FETAT replacement</td><td>Replace the operational model and redesign oversight, intake and placement</td><td>Coherent redesign</td><td>Highest legal, staffing, transition and cost risk</td></tr>
+<tr><td>Targeted pilots</td><td>Pilot hotline/triage, evidence audits or independent review first</td><td>Tests claims before full-scale change</td><td>A pilot may not predict whole-system effects</td></tr>
+<p>Evaluate each against child safety and participation, risk of wrongful separation, speed, legal rights, independent review, privacy, rural access, language accessibility, staffing, cost and reversibility. A credible FETAT blueprint should explain why a full replacement outperforms targeted changes, not assume this simply from the proposal&#39;s diagnosis.</p>
+<h2>21. Legal powers matrix required before implementation</h2>
+<p>For every proposed action, document: purpose; who may request it; who may authorize it; exact legal basis; threshold; consent requirement; urgency exception; maximum duration; notice and disclosure; access to counsel; independent reviewer or court; appeal route and deadline; required record; data access and retention; and remedy for error.</p>
+<p>Create separate rows for interviewing a child, obtaining records, clinical examination, home entry, temporary placement, restriction of contact, call recording, room monitoring, extending an intervention, disclosing records to police and sharing data with an AI provider. A general power to “investigate” is not enough to authorize every intrusive action.</p>
+<p>Also map the responsible and reviewing institution at each stage. Police, health services, schools, child protection, prosecutors, courts and independent review bodies have different functions. No professional gains legal authority merely by participating in a multidisciplinary team.</p>
+<h2>22. Child participation and privacy requirements</h2>
+<p>Bufdir&#39;s current Barnevernsrundskrivet was professionally updated on 16 April 2026 and expanded from 1 January 2026 to cover state child welfare and children&#39;s institutions:</p>
+<p>https://www.bufdir.no/fagstotte/produkter/saksbehandlingsrundskrivet/</p>
+<p>Its guidance says children who can form their own views have a right to participate throughout the process. Participation is a right, not a duty; the child must not be pressured or manipulated. The service should record what information was given, what the child expressed, whether the child agreed with the record of their views and how much weight those views received. The child&#39;s language, cultural background and relevant rights must be respected.</p>
+<p>Before any real-case pilot, document the data controller, legal basis, purpose, minimum necessary information, storage location, access permissions, transfer routes, model-provider policy, retention period, deletion process, audit logging, breach response and risk of re-identification. A summary is a derived record, not a replacement for the source document. No identifiable case material should be used in a public demo.</p>
+<h2>23. MASTER release tests</h2>
+<p>For each test fixture, retain the dataset/fixture version, test ID, expected result, actual result, pass/fail status, defect or incident ID, reviewer, execution date, and evidence artifact. A test suite without recorded expected outcomes and actual results is a test plan, not evidence of a passing implementation. Run tests on synthetic or appropriately de-identified material before any live-case pilot.</p>
+<p>Add explicit fixtures for: duplicate records and near-duplicates; contradictory dates; missing pages and OCR corruption; unsupported factual assertions; a citation that exists but does not support the claim; invented or broken citations; translation errors; an allegation paired with contrary evidence; a record with no source locator; correction and version history; unauthorized access; unauthorized export; and accidental transmission to an unapproved model provider. Fail the release gate if a material unsupported claim is presented as established, material counterevidence is suppressed, unauthorized disclosure occurs, or source originals cannot be recovered. Passing these tests is evidence about system behaviour under tested conditions, not proof that a legal conclusion or case decision is correct.</p>
+<p>A prototype must pass these gates before use with real case material:</p>
+<ol>
+<li><strong>Source fidelity:</strong> every material factual claim has a source locator or a visible “source not located” label; duplicate documents are not counted as independent corroboration.</li>
+<li><strong>Fair representation:</strong> supporting and contradicting material can both be shown; contested claims remain contested; the system makes no credibility or parental-fitness score.</li>
+<li><strong>Safety and privacy:</strong> authorized access is logged; exports are controlled; no public demonstration uses identifiable case records; unapproved external providers cannot receive confidential material.</li>
+<li><strong>Human ownership:</strong> reviewers can open original sources, correct and reject summaries, preserve previous versions and approve any final report.</li>
+<li><strong>Adversarial evaluation:</strong> test duplicated documents, conflicting dates, missing pages, poor scans, contradictory statements and legal references not present in the source. Measure missed issues as well as false alerts.</li>
+<p>The correct outcome when records are insufficient is “insufficient evidence,” not a forced yes/no result. A visually clear map is not proof that its interpretation is correct.</p>
+<h2>24. Public brief — recommended framing</h2>
+<p>A defensible public brief can say that complex child-welfare decisions require reliable evidence, meaningful child participation, timely support, clear reasons and effective independent scrutiny. It can present FETAT as a proposal to evaluate, with accessible intake, multidisciplinary expertise, source-linked decisions, independent review, family support and published aggregate audits.</p>
+<p>The brief should distinguish a personal account, a documented fact, an allegation, a legal interpretation and a proposed reform. Verify numbers against original sources; state units and time periods; remove details that could identify a child; disclose uncertainty; publish corrections; and avoid unsupported claims about all workers or all decisions. The strongest argument is based on evidence and safeguards, not on proving that every person or institution is at fault.</p>
+<h2>Appendix C — Change log</h2>
+<p><strong>1.0.2 — 29 October 2026 — naming alignment</strong></p>
+<ul>
+<li>Renamed the proposed evidence-visualization system and its release-test sections from AI³ to MASTER to align with the current project name.</li>
+<li>Preserved AI³ in historical source descriptions where it is the original name used by the source material.</li>
+<p><strong>1.0.1 — 29 October 2026 — evidence-hardening pass</strong></p>
+<ul>
+<li>Added a claim-level verification-ledger schema and clarified that linked sources are not automatically verified evidence.</li>
+<li>Added a statistical metadata protocol and retained a narrow SSB spot-check record for the current published totals.</li>
+<li>Added exact-section, amendment and commencement checks for legal claims, including the June 2026 amendment law&#39;s commencement caveat.</li>
+<li>Expanded AI³ release evidence requirements with expected/actual outcomes, failure conditions and adversarial fixtures.</li>
+<li>Scope: targeted documentation edits to this file on GitHub main; no local MASTER /fix process was run, and no Ruby scanners, application tests, or real-case MASTER tests were executed. Historical FETAT claims, legal interpretations and the broader source-history inventory remain only partially verified.</li>
+<p><strong>1.0.0 — 29 October 2026</strong></p>
+<ul>
+<li>Consolidated the public FETAT project and the narrower historical GitHub Barnevern drafts.</li>
+<li>Deduplicated byte-identical GitHub copies.</li>
+<li>Added an inventory of specialist units, governance, hotline, investigation windows, temporary homes, workforce, finance and oversight concepts.</li>
+<li>Added statistical denominator checks and current law references.</li>
+<li>Added the AI³ source-linked visualization design and individual case-review protocol.</li>
+<li>Added privacy, child-rights, due-process, operational and implementation safeguards.</li>
+<li>Added 2025 official statistics, institutional design alternatives, a legal-powers matrix, privacy requirements and AI³ release tests.</li>
+<li>Recorded unresolved questions and limits of the repository-history search.</li>
+<p><strong>Maintenance rule:</strong> record date, source, change and rationale for material updates. Keep corrections auditable; do not erase a prior material correction.</p>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ul>
+</ol>
+</ol>
+</ol>
+</ol>
+</ol>
+</ol>
+</table>
+</table>
+</table>
+</table>
+</table>
+</table>
+
+<p class="meta">From <code>BIZ/fetat/proposal.md</code>, the working master. A document about a citizen proposal — not government policy, not legal advice, not proof of individual allegations.</p>
+</div>
+</body>
+</html>

@@ -54,11 +54,10 @@ class TestDillaCliContract < Minitest::Test
 
   def test_output_path_answers_the_master_contract
     Dir.mktmpdir do |dir|
-      out, err, status = run_dilla("output-path", "dilla-render-directory", "2026-11-01T09:00:00Z",
+      out, err, status = run_dilla("output-path", "dilla-render-directory",
                                    env: { "DILLA_OUTPUT_DIR" => File.join(dir, "renders") })
       assert status.success?, err
-      assert_equal File.join(dir, "renders"), out.strip
-      assert File.expand_path(out.strip), out.strip
+      assert_equal File.join(File.realpath(dir), "renders"), out.strip
 
       out, _e, status = run_dilla("output-path", "reference-root", env: { "XDG_DATA_HOME" => dir })
       assert status.success?
@@ -92,8 +91,9 @@ class TestDillaCliContract < Minitest::Test
       }.each do |name, resolve|
         previous = ENV[name]
         begin
-          target = File.join(directory, name)
+          target = File.join(File.realpath(directory), name)
           ENV[name] = target
+          # The override comes back resolved through the same canonical path.
           assert_equal target, resolve.call
         ensure
           previous ? ENV[name] = previous : ENV.delete(name)

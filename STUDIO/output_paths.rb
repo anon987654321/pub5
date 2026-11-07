@@ -47,7 +47,12 @@ module Studio
       expanded
     end
 
-    def directory(name, at: nil, override: nil)
+    # Operator directive, 2026-11-07: every render — photo, video or audio —
+    # goes straight into the data home with no kind or date subfolders.
+    # Filenames keep their millisecond stamps, so same-second collisions are
+    # the only naming concern, and the kind-level environment override stays
+    # the one knob that can move a render lane elsewhere.
+    def flat_directory(override:)
       configured = override ? ENV.fetch(override, "").to_s : ""
       unless configured.empty?
         candidate = canonical_path(configured)
@@ -57,20 +62,21 @@ module Studio
         return candidate
       end
 
-      path = File.join(data_home, name)
-      at ? File.join(path, at.utc.strftime("%Y-%m-%d")) : path
+      data_home
     end
 
-    def render_directory(at: Time.now.utc)
-      directory("dilla-renders", at:, override: "POSTPRO_OUTPUT_DIR")
+    def render_directory
+      flat_directory(override: "POSTPRO_OUTPUT_DIR")
     end
 
-    def dilla_render_directory(at: Time.now.utc)
-      directory("dilla-renders", at:, override: "DILLA_OUTPUT_DIR")
+    def dilla_render_directory
+      flat_directory(override: "DILLA_OUTPUT_DIR")
     end
 
+    # The reference crate is input material, not a render, so it keeps its
+    # one subfolder under the data home.
     def reference_root
-      directory("dilla-references")
+      File.join(data_home, "dilla-references")
     end
 
     def inside_repository?(path)

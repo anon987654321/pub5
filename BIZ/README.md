@@ -64,7 +64,7 @@ Per the restoration brief:
   (OpenBSD, Ruby, pub5 MASTER law-catalogue governance):
   *FETAT — ny barnevernsforvaltning* (the FETAT/Familieetaten proposal, the new
   Norwegian Barnevern, working master at
-  `STUDIO/docs/fetat/proposal.md`: evidence-based decisions, 48-hour first
+  `BIZ/fetat/proposal.md`: evidence-based decisions, 48-hour first
   response, multidisciplinary teams, regional units, child hotline 123,
   independent review — now with the hefte's own facts: 24 EMD judgments under
   ECHR art. 8, NOK 26 bn annual cost across 356 kommuner, the 3 % vs 35 %

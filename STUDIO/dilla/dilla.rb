@@ -21,7 +21,7 @@
 #   ruby dilla.rb --list
 #   ruby dilla.rb reference <url|file> [--style j_dilla] [--no-stems] [--max-duration S]
 #   ruby dilla.rb industrial-techno --out X [--bpm X] [--bars N]
-#   ruby dilla.rb output-path dilla-render-directory [ISO8601]
+#   ruby dilla.rb output-path dilla-render-directory
 #   ruby dilla.rb output-path reference-root
 #   ruby dilla.rb demo-each
 #
@@ -151,7 +151,6 @@ module Dilla
       opts.mode = :output_path
       args.shift
       opts.source = args.shift or abort "output-path: name dilla-render-directory or reference-root"
-      opts.extra[:at] = args.shift
     when "demo-each"
       opts.mode = :demo_each
       args.shift
@@ -224,7 +223,7 @@ module Dilla
             measures tempo, pocket, harmony, melody and drum patterns, and the
             profile lands in the reference root for the next generation.
         ruby dilla.rb industrial-techno --out PATH [--bpm X] [--bars N]
-        ruby dilla.rb output-path dilla-render-directory [ISO8601]
+        ruby dilla.rb output-path dilla-render-directory
         ruby dilla.rb output-path reference-root
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
       sample flip:
@@ -248,11 +247,10 @@ module Dilla
   end
 
   def output_path(opts)
-    at = opts.extra[:at] ? Time.iso8601(opts.extra[:at]) : Time.now.utc
     require_relative File.join("..", "output_paths")
     case opts.source
     when "dilla-render-directory"
-      puts Studio::OutputPaths.dilla_render_directory(at: at)
+      puts Studio::OutputPaths.dilla_render_directory
     when "reference-root"
       puts Studio::OutputPaths.reference_root
     else

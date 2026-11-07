@@ -13,9 +13,8 @@ class TestStudioOutputPaths < Minitest::Test
       with_environment("XDG_DATA_HOME", "relative/data") do
         Dir.mktmpdir do |working_directory|
           Dir.chdir(working_directory) do
-            path = Studio::OutputPaths.render_directory(at: Time.utc(2026, 1, 2))
-            expected = File.join(File.expand_path("~/Downloads"),
-                                 "dilla-renders", "2026-01-02")
+            path = Studio::OutputPaths.render_directory
+            expected = File.expand_path("~/Downloads")
             assert_equal expected, path
             assert path.start_with?(File::SEPARATOR)
           end
@@ -27,8 +26,7 @@ class TestStudioOutputPaths < Minitest::Test
   def test_explicit_output_directory_is_respected
     Dir.mktmpdir do |dir|
       with_environment("POSTPRO_OUTPUT_DIR", File.join(dir, "media")) do
-        assert_equal File.join(dir, "media"),
-                     Studio::OutputPaths.render_directory(at: Time.utc(2026, 1, 2))
+        assert_equal File.join(File.realpath(dir), "media"), Studio::OutputPaths.render_directory
       end
     end
   end
@@ -37,8 +35,8 @@ class TestStudioOutputPaths < Minitest::Test
     with_environment("POSTPRO_OUTPUT_DIR", nil) do
       repo_root = File.expand_path("..", Studio::Visual::IdeaPicture::ROOT)
       with_environment("XDG_DATA_HOME", File.join(repo_root, "temporary-output")) do
-        path = Studio::OutputPaths.render_directory(at: Time.utc(2026, 1, 2))
-        expected = File.join(File.expand_path("~/Downloads"), "dilla-renders", "2026-01-02")
+        path = Studio::OutputPaths.render_directory
+        expected = File.expand_path("~/Downloads")
 
         assert_equal expected, path
         refute path.start_with?("#{repo_root}#{File::SEPARATOR}")
@@ -54,8 +52,8 @@ class TestStudioOutputPaths < Minitest::Test
         File.symlink(repo_root, link)
 
         with_environment("XDG_DATA_HOME", File.join(link, "temporary-output")) do
-          path = Studio::OutputPaths.render_directory(at: Time.utc(2026, 1, 2))
-          expected = File.join(File.expand_path("~/Downloads"), "dilla-renders", "2026-01-02")
+          path = Studio::OutputPaths.render_directory
+          expected = File.expand_path("~/Downloads")
 
           assert_equal expected, path
           assert Studio::OutputPaths.inside_repository?(File.join(link, "temporary-output"))
@@ -84,12 +82,8 @@ class TestStudioOutputPaths < Minitest::Test
           # realpath: on macOS the tmpdir is a /var symlink to /private/var, and the paths resolve it.
           xdg_home = File.join(File.realpath(dir), "xdg")
           with_environment("XDG_DATA_HOME", xdg_home) do
-            at = Time.utc(2026, 1, 2)
-
-            assert_equal File.join(xdg_home, "dilla-renders", "2026-01-02"),
-                         Studio::OutputPaths.render_directory(at:)
-            assert_equal File.join(xdg_home, "dilla-renders", "2026-01-02"),
-                         Studio::OutputPaths.dilla_render_directory(at:)
+            assert_equal xdg_home, Studio::OutputPaths.render_directory
+            assert_equal xdg_home, Studio::OutputPaths.dilla_render_directory
             assert_equal File.join(xdg_home, "dilla-references"),
                          Studio::OutputPaths.reference_root
           end
@@ -100,8 +94,9 @@ class TestStudioOutputPaths < Minitest::Test
 
   def test_render_overrides_do_not_change_the_reference_profile_root
     Dir.mktmpdir do |dir|
-      dilla = File.join(dir, "dilla")
-      postpro = File.join(dir, "postpro")
+      base = File.realpath(dir) # macOS's /var is /private/var
+      dilla = File.join(base, "dilla")
+      postpro = File.join(base, "postpro")
 
       with_environment("DILLA_OUTPUT_DIR", dilla) do
         with_environment("POSTPRO_OUTPUT_DIR", postpro) do
