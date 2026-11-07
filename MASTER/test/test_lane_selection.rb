@@ -279,7 +279,11 @@ class TestLaneSelection < Minitest::Test
     Quota.note(OPUS, CLAUDE_REPLY)
     assert_empty Selection.order(lanes)
     assert_nil Selection.first_live(lanes)
-    assert_equal lanes, Selection.order_or_all(lanes)
+    # The refusal list is ranked, not the given order: a walk that must try
+    # something anyway, or name why it cannot, walks the class ranks and not
+    # the file order that let dead :free slugs burn a queue (2026-11-07).
+    assert_equal Selection.ranked_order(lanes), Selection.order_or_all(lanes)
+    assert_equal [OPUS, AGY], Selection.order_or_all(lanes), "subscription claude-cli ranks ahead of agy"
   end
 
   def test_the_always_online_tail_answers_when_every_remote_lane_is_dead
@@ -635,6 +639,46 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!
     refute_predicate Selection, :free_floor_suspended?,
                      "the next turn is allowed to try the floor again"
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
+  # The pass-0 walk of 2026-11-07 burned its queue on dead :free slugs while a
+  # live non-free lane answered and the floor was already suspended: the order
+  # the walk tried came from the file, not from the class ranks. Suspension
+  # must demote the floor in the same sort that ranks free lanes last.
+  def test_a_suspended_floor_rides_behind_every_answering_class
+    mixed = [NEMOTRON, LOCAL, DEEPSEEK, GROK]
+    assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed), "free stays last while the floor stands"
+
+    Selection.watch_free_class!
+    Selection.suspend_free_floor!(DEEPSEEK)
+    assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order(mixed),
+                 "free and local stay in the list, never-modelless keeps them, but every remote goes first"
+    assert_equal [LOCAL, NEMOTRON], Selection.order([NEMOTRON, LOCAL]),
+                 "with no remote left, the floor keeps its own order"
+    assert_equal [NEMOTRON, LOCAL, DEEPSEEK, GROK], Selection.order(mixed, free_last: false),
+                 "a free-on-purpose route keeps its given order, never demoted"
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
+  def test_the_all_dead_fallback_returns_the_ranked_order_not_the_given_order
+    mixed = [NEMOTRON, LOCAL, DEEPSEEK, GROK]
+    Selection.stub(:order, ->(_models, **_kw) { [] }) do
+      assert_equal [GROK, DEEPSEEK, LOCAL, NEMOTRON], Selection.order_or_all(mixed),
+                   "the refusal order goes through the ranking, so a walk that tries anyway is ranked"
+    end
+  end
+
+  def test_a_suspended_floor_is_ranked_last_even_in_the_all_dead_fallback
+    mixed = [NEMOTRON, DEEPSEEK, GROK]
+    Selection.watch_free_class!
+    Selection.suspend_free_floor!(DEEPSEEK)
+    Selection.stub(:order, ->(_models, **_kw) { [] }) do
+      assert_equal [GROK, DEEPSEEK, NEMOTRON], Selection.order_or_all(mixed),
+                   "the suspended free slug cannot jump a dead remote just because it was listed first"
+    end
   ensure
     Selection.watch_free_class!(false)
   end

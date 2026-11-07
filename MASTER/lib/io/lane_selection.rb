@@ -31,6 +31,10 @@ module Master
       CLI_BINARIES = { "claude-cli" => "claude", "grok-cli" => "grok", "llama-cli" => "llama-cli" }.freeze
       KIND_RANK = { remote: 0, paid_tail: 1, local: 2, free: 3 }.freeze
       FREE_CLASS_KINDS = %i[free local].freeze
+      # Where a suspended floor rides in the selection sort: the same rank
+      # ModelRouter#fallback_rank hands it, so the per-call chain and the
+      # selection order agree that every answering class goes first.
+      FLOOR_SUSPENDED_RANK = 9
       NOT_SUBSCRIPTION = 10_000
       NEUTRAL_LATENCY_S = 45
       UNMEASURED_TIMEOUT_S = 60
@@ -153,12 +157,46 @@ module Master
         live = live.reject { |id| kind(id) == :paid_tail && !Io::PaidTail.enabled? }
         return live unless free_last
 
-        listed = (Array(lead) + catalogue).uniq
-        ranked = live.each_with_index.sort_by { |id, index| [KIND_RANK.fetch(kind(id)), subscription_rank(id, listed), free_latency(id, latency), index] }.map(&:first)
+        ranked = rank_pool(live, latency:, lead:, cfg:)
         return ranked unless vision
 
         sighted, blind = ranked.partition { |id| vision?(id) }
         sighted + blind
+      end
+
+      # The selection sort without the liveness filter. `order` answers [] when
+      # every candidate reads dead, and the all-dead fallback then returns the
+      # list as given - which is how a walk burned its queue on dead :free
+      # slugs in file order while a ranked live lane sat further back
+      # (2026-11-07). The refusal order goes through the same sort, so a walk
+      # that must try something, or name why it cannot, does it in the order
+      # the class ranks and the suspended floor decide.
+      def ranked_order(models, free_last: true, latency: nil, vision: false, lead: [], cfg: config)
+        candidates = Array(models).map(&:to_s).reject(&:empty?).uniq
+        return candidates unless free_last
+
+        ranked = rank_pool(candidates, latency:, lead:, cfg:)
+        return ranked unless vision
+
+        sighted, blind = ranked.partition { |id| vision?(id) }
+        sighted + blind
+      end
+
+      # The class a lane rides at in the selection sort. A floor the run
+      # suspended drops to FLOOR_SUSPENDED_RANK: free and local stay in the
+      # list - never-modelless keeps them as the last resort - but every class
+      # that answers goes first. A route that asks for free on purpose passes
+      # free_last: false and never reaches this sort.
+      def class_rank(id)
+        rank = KIND_RANK.fetch(kind(id))
+        return rank unless @floor_suspended == true && FREE_CLASS_KINDS.include?(kind(id))
+
+        FLOOR_SUSPENDED_RANK
+      end
+
+      def rank_pool(ids, latency:, lead:, cfg:)
+        listed = (Array(lead) + catalogue(cfg:)).uniq
+        ids.each_with_index.sort_by { |id, index| [class_rank(id), subscription_rank(id, listed), free_latency(id, latency), index] }.map(&:first)
       end
 
       def subscription_lanes = Array(config.fetch("subscription_lanes"))
@@ -190,10 +228,28 @@ module Master
         Array(rules.dig("models", tier)).filter_map { |row| row["id"] if row.is_a?(Hash) }
       end
 
+      # A free lane's rank latency: the measured catalog reading first, then
+      # the caller's latency probe, then the neutral constant. The catalog
+      # carries the field as free_latency_s, recorded by the runtime that made
+      # the call, so ranking survives a new process.
       def free_latency(id, latency)
         return 0.0 unless kind(id) == :free
 
+        measured = catalog_free_latency(id)
+        return measured if measured
+
         (latency&.call(id) || free_tier.fetch("neutral_latency_s", NEUTRAL_LATENCY_S)).to_f
+      end
+
+      def catalog_free_latency(id)
+        @catalog_latencies ||= {}
+        return @catalog_latencies[id] if @catalog_latencies.key?(id)
+
+        require_relative "catalog_index"
+        db = Master::Io::CatalogIndex::DEFAULT_DB
+        @catalog_latencies[id] = File.file?(db) ? Master::Io::CatalogIndex.new(db_path: db).free_latency_s(id) : nil
+      rescue StandardError
+        @catalog_latencies[id] = nil
       end
 
       def free_tier = config.fetch("free_tier", {})
@@ -238,13 +294,14 @@ module Master
       # The first live model of the list, or nil when every lane is dead.
       def first_live(models) = order(models).first
 
-      # `order`, except that when every model is dead the list comes back as it
-      # was, so the dispatcher can refuse it with the typed Offline that says why.
+      # `order`, except that when every model is dead the list comes back in
+      # ranked_order, so the dispatcher can refuse it with the typed Offline
+      # that says why - and a walk that tries anyway does it in ranked order.
       def order_or_all(models, free_last: true, cfg: config, **rest)
         candidates = Array(models).map(&:to_s).reject(&:empty?).uniq
         candidates.reject! { |id| ollama_model?(id) && !ollama_enabled?(cfg:) }
         live = order(candidates, free_last:, cfg:, **rest)
-        live.empty? ? candidates : live
+        live.empty? ? ranked_order(candidates, free_last:, **rest) : live
       end
 
       # The live models of the best class that has any: a pool may rank them by
