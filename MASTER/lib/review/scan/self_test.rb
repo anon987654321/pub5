@@ -250,7 +250,14 @@ module Master
             # and kill the process) -- same guarantee as Timeout.timeout,
             # spelled differently. Matched narrowly so plain Array#join(", ")
             # elsewhere in the file can't produce a false "it's bounded".
+            # A caller can also delegate the bound instead of restating it:
+            # SsrfGuard.http_for(uri, address, timeout:) sets open/read/write
+            # timeout on the client it returns, so a file whose only Net::HTTP
+            # use goes through it is bounded even though no *_timeout name
+            # appears here. Matched narrowly (`.http_for(`, a `timeout:`
+            # keyword inside the same call) so a bare mention cannot pass.
             next [] if code.match?(/Timeout\.|read_timeout|open_timeout|block_until_ms|\b\w*thr\w*\.join\(/i)
+            next [] if code.match?(/\.http_for\([^)]*\btimeout:/)
             [finding(path:, line: 1, message: "HTTP/Open3 without bounded timeout (ROBUSTNESS)")]
           rescue StandardError => e
             Master::Ground::Swallow.log(e, context: "SelfTest.timeout_scan", severity: :load_bearing)
