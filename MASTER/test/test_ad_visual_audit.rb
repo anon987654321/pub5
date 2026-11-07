@@ -110,6 +110,25 @@ class TestAdVisualAudit < Minitest::Test
     assert_match(/hardcoded colour/, check[:reasons].join)
   end
 
+  # Zero is the absence of a value, not a hardcoded one: a reset has to stay
+  # expressible without inventing a token that resolves to nothing.
+  def test_a_zero_reset_is_not_a_hardcoded_spacing_value
+    check = Audit.identity_tokens(html: @html, css: ".ad-organ-headline { margin: 0; padding: 0; }",
+                                 token_contract: @contract)
+    assert check[:pass], check[:reasons].inspect
+  end
+
+  # ...and the exemption stops at zero, or the Law stops being enforced.
+  def test_a_literal_spacing_value_is_still_rejected
+    declarations = ["margin: 16px", "padding: 1rem", "gap: 0.5rem", "border-radius: 4px", "margin: 0 16px"]
+    declarations.each do |declaration|
+      check = Audit.identity_tokens(html: @html, css: ".ad-organ-headline { #{declaration}; }",
+                                    token_contract: @contract)
+      refute check[:pass], "#{declaration} should not resolve through a token"
+      assert_match(%r{spacing/radius}, check[:reasons].join)
+    end
+  end
+
   def test_missing_alt_text_is_rejected
     check = Audit.alt_text(html: '<div class="ad-organ"><img src="x.png" alt=""></div>')
     refute check[:pass]

@@ -16,6 +16,14 @@ module Master
         VISUAL_SAFE_ZONE_RESPECTED VISUAL_RENDER_INTEGRITY
       ].freeze
       REQUIRED_BOUNDS = %w[headline logo cta].freeze
+      # Zero is exempt: it is the absence of a value, not a hardcoded one. The
+      # contract carries radius.none: "0" and a reset has to stay expressible
+      # without inventing a token that resolves to nothing. The [;}] anchor means
+      # `margin: 0 16px` is still a finding.
+      HARDCODED_SPACING = Regexp.new(
+        '(?:^|[;{])\s*(?:margin|padding|gap|border-radius)(?:-[\w-]+)?\s*:(?!\s*var\s*\()' \
+        '(?!\s*0(?:\.0+)?(?:px|em|rem|%|vh|vw|pt|ch)?\s*[;}])', Regexp::IGNORECASE
+      )
       REPORT_SCHEMA_VERSION = 1
       POLICY_SOURCE_PATH = File.expand_path("../../data/laws.yml", __dir__).freeze
       DETECTOR_SOURCE_PATH = File.expand_path(__FILE__).freeze
@@ -129,7 +137,11 @@ module Master
         bad_colors = scoped.scan(/(?:^|[;{])\s*(?:color|background(?:-color)?|border(?:-[\w-]+)?-color|outline-color)\s*:(?!\s*var\s*\()\s*\S[^;}]*/i).flatten
         bad_colors.reject! { |value| value.match?(/\A\s*(?:transparent|currentColor|inherit|initial|unset)\s*\z/i) }
         bad_font = scoped.match?(/font-family\s*:(?!\s*var\s*\()\s*\S[^;}]*/i)
-        bad_spacing = scoped.scan(/(?:^|[;{])\s*(?:margin|padding|gap|border-radius)(?:-[\w-]+)?\s*:(?!\s*var\s*\()\s*\S[^;}]*/i)
+        # The trailing lookahead exempts zero: it is the absence of a value, not
+        # a hardcoded one. The contract carries radius.none: "0" and a reset has
+        # to stay expressible without inventing a token that resolves to nothing.
+        # The `[;}]` anchor means `margin: 0 16px` is still a finding.
+        bad_spacing = scoped.scan(HARDCODED_SPACING)
         reasons = []
         reasons << "hardcoded colour declaration in ad-organ CSS" if bad_colors.any?
         reasons << "font-family must resolve through a token" if bad_font
