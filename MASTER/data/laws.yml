@@ -1186,6 +1186,72 @@ HEADING_WRAP_BALANCE:
   severity: warning
   resolution: review
 
+HANGING_PUNCTUATION:
+  parent: BRINGHURST
+  statement: >
+    The punctuation of full quotes, bullets and marginal marks hangs into
+    the margin, so the visible text edge stays true. (Bringhurst: hanging
+    punctuation preserves the optical margin.)
+  severity: info
+  resolution: review
+  lineage: "Robert Bringhurst, The Elements of Typographic Style, ch. 18"
+
+WIDOW_ORPHAN_BLOCKED:
+  parent: BRINGHURST
+  statement: >
+    A column never ends with the last line of a paragraph alone or begins
+    with the first line of a paragraph stranded; the break is fixed at the
+    block, not left to the fragment.
+  severity: warning
+  resolution: review
+  lineage: "Robert Bringhurst, The Elements of Typographic Style, ch. 6"
+
+BASELINE_SPACE_MULTIPLES:
+  parent: BRINGHURST
+  statement: >
+    The vertical space a page grants its headings, blocks and margins steps
+    in whole multiples of the body's base leading; spacing that ignores the
+    leading shatters the text block's rhythm.
+  severity: warning
+  resolution: review
+  lineage: "Robert Bringhurst, The Elements of Typographic Style, ch. 7"
+
+MEASURE_STANDING_COLUMN:
+  parent: BRINGHURST
+  statement: >
+    A column built for continuous reading stands taller than it is wide;
+    a squat wide block is a display panel, not a text column.
+  severity: info
+  resolution: review
+  lineage: "Robert Bringhurst, The Elements of Typographic Style, ch. 8"
+
+PRINT_FOLIO_PRESENCE:
+  parent: BRINGHURST
+  statement: >
+    A printed document of more than one page numbers every page in the
+    same place and voice; an unnumbered folio is a lost page.
+  severity: warning
+  resolution: review
+  lineage: "Robert Bringhurst, The Elements of Typographic Style, ch. 2"
+
+LETTERSPACE_CAPS_ONLY:
+  parent: BRINGHURST
+  statement: >
+    Tracking out is a treatment of capitals at display size; lowercase
+    prose is never letterspaced, and small text is never tracked open.
+  severity: warning
+  resolution: review
+  lineage: "Hoefler & Co. typographic guidance (typography.com)"
+
+TYPEFACE_PAIR_CONTRAST:
+  parent: BRINGHURST
+  statement: >
+    Two typefaces that meet on one page differ in weight, width, x-height
+    or voice; near-identical pairs read as mistakes, not as pairing.
+  severity: warning
+  resolution: review
+  lineage: "Hoefler & Co. typographic guidance (typography.com)"
+
 # ---
 
 RAILS_DOCTRINE:
