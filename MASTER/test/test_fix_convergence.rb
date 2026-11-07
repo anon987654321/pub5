@@ -678,14 +678,16 @@ end
     assert_equal openbsd, resolver.resolve_target("OPENBSD/**/*")
   end
 
-  def test_all_four_tree_names_resolve_to_the_pub5_root
+  # BIZ joined the governed trees (2026-11-07): the whole-checkout list is five
+  # names, and every subset short of it is a queue the registry splits.
+  def test_all_five_tree_names_resolve_to_the_pub5_root
     resolver = Class.new do
       include Master::CLI::Pipeline::TargetResolver
       def initialize(root) = @root = root
     end.new(Master::ROOT)
 
-    assert_equal Master::REPO_ROOT, resolver.resolve_target("MASTER RAILS OPENBSD STUDIO")
-    assert_equal Master::REPO_ROOT, resolver.resolve_target("openbsd, rails, master, studio")
+    assert_equal Master::REPO_ROOT, resolver.resolve_target("MASTER RAILS OPENBSD STUDIO BIZ")
+    assert_equal Master::REPO_ROOT, resolver.resolve_target("openbsd, rails, master, studio, biz")
   end
 
   def test_a_partial_tree_list_is_a_queue_the_registry_splits
@@ -708,10 +710,10 @@ end
       def initialize(root) = @root = root
     end.new(Master::ROOT)
 
-    error = assert_raises(ArgumentError) { resolver.resolve_target("OPENBSD STUDIO BIZ") }
-    assert_match(/BIZ is not a governed tree/, error.message)
-    refute_match(/OPENBSD STUDIO BIZ/, error.message)
-    assert_match(/MASTER, RAILS, OPENBSD, STUDIO/, error.message)
+    error = assert_raises(ArgumentError) { resolver.resolve_target("OPENBSD STUDIO PUB4") }
+    assert_match(/PUB4 is not a governed tree/, error.message)
+    refute_match(/OPENBSD STUDIO PUB4/, error.message)
+    assert_match(/MASTER, RAILS, OPENBSD, STUDIO, BIZ/, error.message)
   end
 
   def test_a_nonexistent_path_under_a_governed_prefix_is_not_a_target
@@ -729,7 +731,7 @@ end
       "OPENBSD STUDIO" => %w[OPENBSD STUDIO],
       "MASTER RAILS" => %w[MASTER RAILS],
       "openbsd, studio" => %w[OPENBSD STUDIO],
-      "MASTER RAILS OPENBSD STUDIO" => %w[MASTER RAILS OPENBSD STUDIO],
+      "MASTER RAILS OPENBSD STUDIO BIZ" => %w[MASTER RAILS OPENBSD STUDIO BIZ],
     }.each do |raw, expected|
       targets = Master::CLI::CommandRegistry.send(:fix_targets, raw, root: Master::REPO_ROOT)
       assert_equal expected.map { |tree| File.join(Master::REPO_ROOT, tree) }, targets, raw
@@ -739,23 +741,23 @@ end
   def test_fix_targets_keeps_an_ungoverned_list_as_one_path
     # Not a queue and not a valid path: fix_targets does not silently invent a
     # directory, it hands the single path on for resolve_target to refuse.
-    targets = Master::CLI::CommandRegistry.send(:fix_targets, "OPENBSD STUDIO BIZ", root: Master::REPO_ROOT)
-    assert_equal ["OPENBSD STUDIO BIZ"], targets
+    targets = Master::CLI::CommandRegistry.send(:fix_targets, "OPENBSD PUB4", root: Master::REPO_ROOT)
+    assert_equal ["OPENBSD PUB4"], targets
   end
 
-  def test_check_chain_recognizes_all_four_tree_names
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO],
-                 Operator::CheckChain.trees_for_target("MASTER RAILS OPENBSD STUDIO")
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO],
-                 Operator::CheckChain.trees_for_target("openbsd,rails,master,studio")
+  def test_check_chain_recognizes_all_five_tree_names
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO BIZ],
+                 Operator::CheckChain.trees_for_target("MASTER RAILS OPENBSD STUDIO BIZ")
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO BIZ],
+                 Operator::CheckChain.trees_for_target("openbsd,rails,master,studio,biz")
   end
 
   def test_check_chain_resolves_default_and_dot_to_master_only
     assert_equal ["MASTER"], Operator::CheckChain.trees_for_target("")
     assert_equal ["MASTER"], Operator::CheckChain.trees_for_target(".")
     assert_equal ["MASTER"], Operator::CheckChain.trees_for_target("master")
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO], Operator::CheckChain.trees_for_target("all")
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO], Operator::CheckChain.trees_for_target("everything")
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO BIZ], Operator::CheckChain.trees_for_target("all")
+    assert_equal %w[MASTER RAILS OPENBSD STUDIO BIZ], Operator::CheckChain.trees_for_target("everything")
   end
 
   def test_check_chain_resolves_master_relative_internal_paths
@@ -1972,7 +1974,7 @@ end
   end
 
   def test_a_canonical_repo_leaves_a_hashed_outcome_receipt_the_terminal_event_names
-    %w[MASTER RAILS OPENBSD STUDIO].each { |tree| FileUtils.mkdir_p(File.join(@root, tree)) }
+    %w[MASTER RAILS OPENBSD STUDIO BIZ].each { |tree| FileUtils.mkdir_p(File.join(@root, tree)) }
     loop = build_loop([])
     journal = Object.new
     journal.define_singleton_method(:history) { |**| [] }
