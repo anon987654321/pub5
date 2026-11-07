@@ -47,7 +47,11 @@ class TestMobileProfile < Minitest::Test
     continuations = guide.lines.select { |line| line.rstrip.end_with?("\\") }
     refute_empty continuations
     continuations.each do |line|
-      trailing = line[/\\+\z/]
+      # each_line keeps the newline, and \z is the absolute end of the string,
+      # so the backslash run has to be sought on the stripped line itself --
+      # against line as delivered the match is always nil and the assertion
+      # dies on nil#length before it can say anything.
+      trailing = line.rstrip[/\\+\z/]
       assert_equal 1, trailing.length, "shell continuation must be one backslash: #{line}"
     end
   end
