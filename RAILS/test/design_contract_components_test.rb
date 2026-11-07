@@ -35,7 +35,9 @@ def test_brgen_feature_styles_are_loaded_at_their_original_boundaries
     brgen_navigation
     brgen_messenger
     brgen_composer
+    brgen_compose_media
     brgen_feed_posts
+    brgen_comment_thread
     brgen_marketplace
     brgen_nearby_channels
     brgen_share_media

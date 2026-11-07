@@ -46,7 +46,9 @@ class MetaFactsContractTest < Minitest::Test
     buybox = read("brgen_marketplace/app/views/marketplace/listings/_buybox.html.erb")
     assert_includes buybox, "condition_facts.each do |fact|"
     crossings = read("brgen_dating/app/views/dating/path_crossings/index.html.erb")
-    assert_includes crossings, 'class="meta-facts"'
+    # The facts render as one paragraph of separate span/time elements; this
+    # view writes the class through tag.p's kwarg, the others as the attribute.
+    assert_match(/class\s*[:=]\s*"?meta-facts/, crossings)
     refute_includes crossings, " · <%= time_ago_in_words(crossing.crossed_at) %>"
   end
 

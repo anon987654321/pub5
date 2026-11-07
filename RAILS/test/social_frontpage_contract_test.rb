@@ -27,7 +27,11 @@ class SocialFrontpageContractTest < Minitest::Test
     assert_includes prompt, 'popover'
     assert_includes prompt, 'nav.sign_in'
     assert_includes prompt, 'auth.create_account'
-    assert_includes File.read(MODAL), ".post-auth-prompt"
+    # The prompt styles live once, in _post_auth_prompt.scss, pulled by the
+    # modal sheet with @use and by brgen's feed sheet with meta.load-css. The
+    # modal sheet must still be the shared module's reader — that reference is
+    # what keeps the nudge styled on the front page it belongs to.
+    assert_includes File.read(MODAL), 'post_auth_prompt'
   end
 
   def test_both_post_detail_surfaces_keep_public_reading_open

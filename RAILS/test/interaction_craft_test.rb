@@ -109,9 +109,14 @@ class TestRailsInteractionCraft < Minitest::Test
   def test_turbo_navigation_uses_shared_view_transition_boundary
     js = File.read(HOTWIRE)
     css = File.read(CRAFT)
-    assert_includes js, "turbo:before-render"
+    # The boundary is Turbo's own swap, run inside the view transition the
+    # layout's meta declares. Wrapping that swap in a second
+    # startViewTransition from turbo:before-render made the swap asynchronous
+    # to Turbo, which lost every data-turbo-permanent element on each visit —
+    # so the baseline pins the decision, not the wrapper: the swap is not
+    # wrapped, and the pseudo-elements the transition styles stay declared.
+    assert_includes js, "Do not wrap its render in a second"
     assert_includes js, "startViewTransition"
-    assert_includes js, 'document.documentElement.dataset.viewTransitions === "off"'
     assert_includes css, "::view-transition-old(root)"
     assert_includes css, "::view-transition-new(root)"
   end

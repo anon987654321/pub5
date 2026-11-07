@@ -35,7 +35,11 @@ class MapsEngineWiringContractTest < Minitest::Test
 
   def test_places_browse_paginates_and_serves_html
     controller = read("app/controllers/maps/places_controller.rb")
-    assert_includes controller, "format.html"
+    # The browse block answers both page formats: finish_live_search responds
+    # to the same turbo_stream request with its own respond_to, and an outer
+    # block that matched html alone raised RespondToMismatchError. html is
+    # still served — through the any() form.
+    assert_match(/format\.any\(:html, :turbo_stream\)|format\.html/, controller)
     assert_includes controller, "@pagy, @places = pagy"
   end
 

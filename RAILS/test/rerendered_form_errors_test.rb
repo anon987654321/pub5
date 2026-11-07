@@ -15,7 +15,7 @@ require_relative "engine_roots"
 # renders an errors partial.
 class RerenderedFormErrorsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  APPS = %w[amber brgen bsdports shared].freeze
+  APPS = %w[amber brgen bsdports __shared].freeze # the engine dir is __shared since the verticals moved out of brgen
   SHOWS_ERRORS = /render[^%]*errors|\.errors\b|error_messages/
   RERENDER = /render\s+:(\w+),\s*status:\s*:unprocessable_(?:entity|content)/
 
