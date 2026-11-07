@@ -631,8 +631,21 @@ ollama:
   probe: true
   default_base_url: "http://localhost:11434"
   keep_alive: 30m
-  max_num_ctx: 16384
+  # Tier-D recovery tier on the 8 GB host: a 4K request window and a q8_0 KV
+  # cache leave room for the voice stack; the daemon spawn reads kv_cache_type.
+  max_num_ctx: 4096
+  kv_cache_type: q8_0
   local_model_allowlist: ["ollama:gemma3:4b"]
+  # Probe-on warm: while the daemon answers, a one-token generation on the
+  # probe model proves the final fallback-chain link and lands in the lane
+  # quota state (lane_health.rb warm_probe). The live rehearsal on the 8 GB
+  # Mac is the operator's remaining step.
+  warm_probe:
+    enabled: true
+    model: "gemma3:4b"
+    interval_s: 900
+    num_predict: 1
+    num_ctx: 4096
 
 # media_providers was deleted here on 2026-08-21: nothing read it. The env
 # vars live in providers.yml replicate.env (ReplicateClient reads ENV

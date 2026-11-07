@@ -40,11 +40,14 @@ module Master
 
       START_WAIT_S = 10
       PROBE_TIMEOUT_S = 2
+      WARM_PROBE_INTERVAL_S = 900
+      WARM_PROBE_TIMEOUT_S = 10
       RETRY_AFTER_FAILED_START_S = 60
       DEFAULT_BASE = "http://localhost:11434"
 
       @mutex = Mutex.new
       @failed_at = nil
+      @warm_probed_at = nil
       @clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
 
       attr_writer :clock
@@ -69,10 +72,73 @@ module Master
         unless LaneSelection.ollama_enabled?
           return Ollama.new(:off, "ollama disabled (set MASTER_OLLAMA_ENABLED=1 to opt in)")
         end
-        return Ollama.new(:up, "ollama is up at #{base}") if up.call(base)
-        return Ollama.new(:failed, "ollama is down at #{base} and is not local, start it there") unless local?(base)
+        if up.call(base)
+          warm_probe(base:)
+          return Ollama.new(:up, "ollama is up at "+base)
+        end
+        return Ollama.new(:failed, "ollama is down at "+base+" and is not local, start it there") unless local?(base)
 
         @mutex.synchronize { attempt_start(base, up:, spawn:, binary:) }
+      end
+
+      # Tier-D, probe-on warm: the final fallback-chain link proves itself
+      # while it is warm, with a one-token generation on the configured probe
+      # model, and the answer lands in the lane quota state like any other
+      # lane's outcome. Gated by interval so a selection storm cannot turn
+      # into a probe storm; a cold or slow model records honestly and never
+      # blocks the caller for long.
+      def warm_probe(base: ollama_base, config: LaneSelection.config, now: Time.now.utc,
+                     post: method(:warm_probe_post))
+        spec = config.dig("ollama", "warm_probe")
+        return :unconfigured unless spec.is_a?(Hash) && spec["enabled"] == true
+
+        model = spec["model"].to_s
+        return :unconfigured if model.empty?
+
+        interval = spec["interval_s"].to_i.positive? ? spec["interval_s"].to_i : WARM_PROBE_INTERVAL_S
+        @mutex.synchronize do
+          return :fresh if @warm_probed_at && now.to_f - @warm_probed_at < interval
+
+          @warm_probed_at = now.to_f
+        end
+        seconds = post.call(base, model, Integer(spec.fetch("num_predict", 1)), num_ctx(spec))
+        if seconds.nil?
+          # A silent warm model is dropped for this run only: a persistent
+          # death claim needs a verdict-carrying provider reply, which a
+          # timeout to a local daemon is not.
+          LaneQuota.drop_for_run!(LaneQuota.lane_of(model), "warm probe: no answer within #{WARM_PROBE_TIMEOUT_S}s")
+          return :silent
+        end
+
+        lane = LaneQuota.lane_of(model)
+        LaneQuota.revive(lane)
+        LaneQuota.clear_probe!(lane)
+        :answered
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "LaneHealth.warm_probe")
+        :failed
+      end
+
+      # One-token generation; answers the elapsed seconds, nil on any failure.
+      def warm_probe_post(base, model, num_predict, num_ctx)
+        uri = URI.join("#{base}/", "api/generate")
+        body = { model:, prompt: "Reply with the single word OK.", stream: false,
+                 num_predict:, options: { num_ctx: } }
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.open_timeout = PROBE_TIMEOUT_S
+        http.read_timeout = WARM_PROBE_TIMEOUT_S
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        http.start do |session|
+          session.post(uri.path, JSON.generate(body), { "Content-Type" => "application/json" }).is_a?(Net::HTTPSuccess)
+        end
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      rescue StandardError
+        nil
+      end
+
+      def num_ctx(spec)
+        cap = spec["num_ctx"]
+        cap.to_i.positive? ? cap.to_i : LaneSelection.config.dig("ollama", "max_num_ctx").to_i
       end
 
       # The first catalogue model on a lane, for a probe of that lane.
@@ -176,7 +242,12 @@ module Master
       def recently_failed? = @failed_at && @clock.call - @failed_at < RETRY_AFTER_FAILED_START_S
 
       def spawn_ollama(binary)
-        pid = Process.spawn(ProcessSpawn.environment, binary, "serve", **ProcessSpawn.options(out: File::NULL, err: File::NULL, pgroup: true))
+        # The 8 GB host runs the recovery tier on a q8_0 KV cache; the policy
+        # file owns the value, the spawn is where the daemon reads it.
+        cache = LaneSelection.config.dig("ollama", "kv_cache_type").to_s
+        env = ProcessSpawn.environment
+        env["OLLAMA_KV_CACHE_TYPE"] = cache unless cache.empty?
+        pid = Process.spawn(env, binary, "serve", **ProcessSpawn.options(out: File::NULL, err: File::NULL, pgroup: true))
         Process.detach(pid)
       end
 

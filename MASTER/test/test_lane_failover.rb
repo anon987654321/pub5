@@ -292,6 +292,45 @@ class TestLaneFailover < Minitest::Test
     Health.clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
   end
 
+  # Tier-D probe-on warm: the up daemon gets a one-token generation on the
+  # configured probe model, interval-gated, and the outcome lands in the lane
+  # quota state.
+  def test_warm_probe_answers_once_per_interval_and_records_the_lane
+    posts = []
+    Health.stub(:warm_probe_post, ->(base, model, num_predict, num_ctx) { posts << [base, model, num_predict, num_ctx]; 1.2 }) do
+      assert_equal :answered, Health.warm_probe(now: Time.utc(2026, 10, 11, 12, 0, 0))
+      assert_equal :fresh, Health.warm_probe(now: Time.utc(2026, 10, 11, 12, 5, 0)), "inside the interval the reading stands"
+      assert_equal :answered, Health.warm_probe(now: Time.utc(2026, 10, 11, 12, 20, 0)), "past the interval it probes again"
+    end
+
+    assert_equal 2, posts.size
+    model = posts.first[1]
+    assert_equal "gemma3:4b", model
+    assert_equal 1, posts.first[2], "one token"
+    assert_equal 4096, posts.first[3], "the 8 GB host's request window"
+    refute Quota.dead?("ollama:#{model}"), "a live probe revives the lane"
+  ensure
+    Health.remove_instance_variable(:@warm_probed_at) if Health.instance_variable_defined?(:@warm_probed_at)
+  end
+
+  def test_a_silent_warm_model_is_dropped_for_the_run_only
+    Health.instance_variable_set(:@warm_probed_at, nil)
+    Health.stub(:warm_probe_post, ->(_base, _model, _num, _ctx) { nil }) do
+      assert_equal :silent, Health.warm_probe(now: Time.utc(2026, 10, 11, 12, 0, 0))
+    end
+
+    assert Quota.run_drops.values.any? { |reason| reason.include?("warm probe") },
+           "the drop names its reason: #{Quota.run_drops.inspect}"
+  ensure
+    Health.remove_instance_variable(:@warm_probed_at) if Health.instance_variable_defined?(:@warm_probed_at)
+    Quota.clear_run_drops!
+  end
+
+  def test_warm_probe_is_unconfigured_without_the_policy_block
+    cfg = { "ollama" => { "enabled" => true } }
+    assert_equal :unconfigured, Health.warm_probe(config: cfg)
+  end
+
   def test_local_model_runner_crash_quarantines_the_whole_ollama_lane
     door = Master::Review::LLMDispatcher.allocate
     door.instance_variable_set(:@bus, nil)
