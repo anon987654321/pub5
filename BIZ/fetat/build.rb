@@ -178,13 +178,16 @@ html = <<~HTML
           margin-inline: calc((100% - min(100vw, 200%)) / 2);
           display: flex; flex-direction: column;
           break-after: page; page-break-after: always;
-          padding: 0;
+          padding: 0; overflow: hidden;
         }
-        .cover svg { width: min(100%, 120vh); height: auto; margin: auto; }
+        .cover svg {
+          width: min(112%, 126vh); height: auto;
+          margin: auto -6%;
+        }
         .cover .mark {
-          font: 600 2rem/1.1 "Source Sans 3", sans-serif;
+          font: 600 1rem/1.1 "Source Sans 3", sans-serif;
           letter-spacing: 0.42em; text-indent: 0.42em;
-          text-align: center; margin: var(--space-l) 0;
+          text-align: center; margin: var(--space-m) 0;
         }
         header { margin: 0 auto; }
         /* The cover mark already says FETAT; the semantic h1 stays for the
@@ -255,7 +258,6 @@ html = <<~HTML
           .cover { min-height: 88vh; }
           body { margin: 0; max-width: 396pt; width: 90%; }
           p { widows: 2; orphans: 2; }
-          .metahead { break-after: page; page-break-after: always; }
           h2, h3, h4 { break-after: avoid; }
           h1, .metahead, .signature { page-break-inside: avoid; }
           a[target="_blank"]::after, a[href^="mailto:"]::after { content: none; }

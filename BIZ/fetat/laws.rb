@@ -269,7 +269,7 @@ CODE_DOMAINS = {
   "RAILS_DOCTRINE" => "Rails codebase law", "ROBUSTNESS" => "code runtime law",
   "SOLID" => "class design", "SRP" => "class design", "OCP" => "class design",
   "LSP" => "class design", "ISP" => "class design", "DIP" => "class design",
-  "CQS" => "method design", "LAW_OF_DEMETER" => "method design",
+  "CQS" => "method design",
   "BOUNDED_LOAD" => "code size law", "ABSTRACTION" => "code design",
   "DENSITY_dead_code" => "code hygiene", "DENSITY_comments_as_deodorant" => "code hygiene",
   "DENSITY_identical_branches" => "code hygiene", "DENSITY_no_puts" => "code hygiene",
