@@ -60,9 +60,7 @@ class ResearchTest < Minitest::Test
       w = world(root, { net: ["api.github.com"] })
       research = Master::Tools::Research.new(world: w)
 
-      expected = ["github.repositories"]
-      expected.concat(Master::Tools::Research::BROWSER_TOOLS.map { |tool| tool.fetch("name") }) if Master::Tools::BrowserAgent.available?
-      assert_equal expected, research.available_tools.map { |tool| tool.fetch("name") }
+      assert_equal ["github.repositories"], research.available_tools.map { |tool| tool.fetch("name") }
     end
   end
 
@@ -164,6 +162,19 @@ class ResearchTest < Minitest::Test
       assert_equal "log/master/browser-default.png", parsed.fetch("screenshot_file")
       assert_match(/\.\.\.\[truncated\]/, parsed.fetch("source"))
       assert_operator result.bytesize, :<=, Master::Tools::Research::MAX_OUTPUT_BYTES
+    end
+  end
+
+  def test_browser_tools_fail_closed_without_a_core_owned_session_broker
+    sandbox do |root|
+      w = world(root, { net: ["codepen.io"] })
+      research = Master::Tools::Research.new(world: w)
+
+      refute_includes research.available_tools.map { |tool| tool.fetch("name") }, "browser.open"
+      result = research.call(name: "browser.open",
+                             arguments: { "url" => "https://codepen.io/trending" })
+
+      assert_match(/Core::World must provide a brokered browser session/, result)
     end
   end
 
