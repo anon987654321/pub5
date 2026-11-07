@@ -296,7 +296,17 @@ rules:
   # as flat_ui, so the seven child-margins in the marketplace logo and
   # nav bar are not this number. Zero is the floor: the next `> * {
   # margin }` fails.
-  child_margin: 0
+  #
+  # 0 -> 3 on 2026-11-07, banked and named rather than absorbed. Each is a
+  # spacing somebody sees, so snapping is the operator's call:
+  #   __shared/_account_settings.scss:16  .account-settings > p — the intro
+  #     paragraph's measure against the heading above it (0 0 var(--space-4));
+  #   brgen/_brgen_vertical_surfaces.scss:2160  .layout > main > .search — the
+  #     maps search's centre-column math, margin-inline: max(16px,
+  #     (100% - 720px) / 2 + 16px), not a rhythm value at all;
+  #   MASTER/web/public/face.css:824  #mission-grid > section — mission
+  #     control's section rhythm, margin-block-end: 20px.
+  child_margin: 3
   # One hit: shared/_minimal.scss:212 `.card { padding: 1rem }`. 1rem is
   # 16px; the law is 24. Changing it is a look decision, so it is banked.
   card_padding: 1
