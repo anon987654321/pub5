@@ -73,6 +73,7 @@ module Master
           prior_findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
           InterModelContract.exchange(
             prompt: request_prompt, role: "judge", bus: @bus, prior_findings:,
+            spent: -> { Master::Review::LLMDispatcher::PassClock.expired? },
           ) do |outbound, _retrying|
             image ? @agent.ask(outbound, image:) : @agent.ask(outbound)
           end

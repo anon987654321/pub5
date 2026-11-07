@@ -182,8 +182,14 @@ module Master
           raise "inter-model validation failed: #{e.class}: #{e.message}"
         end
 
+        # `spent` is the caller's own wall-clock budget as a predicate. A repair
+        # is another model call, and a model call is exactly what that budget
+        # governs; once it has elapsed the retry would spend past the deadline
+        # the run is being cut on, so the rejection stands unretried. Every
+        # council turn runs under the dispatcher's PassClock, so that is the
+        # default and a caller with its own budget passes its own predicate.
         def exchange(prompt:, role:, bus: nil, root: REPO_ROOT, master_root: MASTER_ROOT,
-                     prior_findings: nil, model: nil)
+                     prior_findings: nil, model: nil, spent: -> { spent_by_pass_budget? })
           started = false
           repaired = false
           first_valid = false
@@ -202,6 +208,8 @@ module Master
                 :inter_model_rejected, role: role.to_s, model: model.to_s,
                 violated_rule: rejection["violated_rule"], violations: result["errors"], retry_allowed: true
               )
+              raise InvalidResponse.new(result["errors"]) if spent&.call
+
               retry_prompt = repair_prompt(prompt, rejection:, master_root:)
               response = yield(retry_prompt, true)
               response_hashes << Digest::SHA256.hexdigest(response.to_s)
@@ -224,6 +232,12 @@ module Master
               )
             end
           end
+        end
+
+        def spent_by_pass_budget?
+          Master::Review::LLMDispatcher::PassClock.expired?
+        rescue StandardError
+          false
         end
 
         def rejection_payload(observed:, errors:, master_root: MASTER_ROOT)
