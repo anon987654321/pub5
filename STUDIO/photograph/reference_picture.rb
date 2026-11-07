@@ -4,6 +4,8 @@ require "digest"
 require "fileutils"
 require "json"
 require "tempfile"
+require "time"
+require "tmpdir"
 require "yaml"
 
 require_relative "../output_paths"
@@ -20,7 +22,6 @@ module Studio
       MAX_REFERENCES = 3
       MAX_IMAGE_BYTES = 10 * 1024 * 1024
       MAX_PROMPT_BYTES = 2_000
-      MAX_REFERENCE_PIXELS = 16_000_000
       ALLOWED_EXTENSIONS = %w[.jpg .jpeg .png .webp .gif].freeze
       DEFAULT_ROLES = {
         1 => %w[front],
@@ -59,6 +60,7 @@ module Studio
         raise ArgumentError, "seed must be between 0 and 2147483647" unless seed.between?(0, 2_147_483_647)
 
         cost_limit = Float(cost_limit_usd)
+        raise ArgumentError, "cost limit must be a finite number" unless cost_limit.finite?
         raise ArgumentError, "cost limit must cover the current one-image estimate (USD #{format('%.2f', MODEL_COST_ESTIMATE_USD)})" if cost_limit < MODEL_COST_ESTIMATE_USD
 
         profile = load_look(look)
@@ -82,8 +84,6 @@ module Studio
           references: files,
           consent_schema: consent.fetch("schema")
         }
-      rescue TypeError, ArgumentError => error
-        raise error
       end
 
       # Calling write is the explicit provider action. It uploads only after
@@ -96,7 +96,9 @@ module Studio
         )
         ensure_private_output_directory!
 
-        uploaded = plan.fetch(:references).map { |item| client.upload_file(item.fetch(:path)) }
+        uploaded = with_staged_references(plan) do |paths|
+          paths.map { |path| client.upload_file(path) }
+        end
         prediction = client.run(
           MODEL,
           {
@@ -185,6 +187,8 @@ module Studio
 
         root_stat = File.lstat(@source_directory)
         raise ArgumentError, "source directory must be a real directory, not a symlink" unless root_stat.directory? && !root_stat.symlink?
+        raise ArgumentError, "source directory must be owned by the current user" unless root_stat.uid == Process.uid
+        raise ArgumentError, "source directory must be private (owner-only permissions)" unless (root_stat.mode & 0o077).zero?
         root = File.realpath(@source_directory)
         raise ArgumentError, "source directory resolves unexpectedly" unless root == File.expand_path(@source_directory)
 
@@ -270,6 +274,32 @@ module Studio
         raise ArgumentError, "photograph output must be a directory" unless stat.directory?
         raise ArgumentError, "photograph output must be owned by the current user" unless stat.uid == Process.uid
         raise ArgumentError, "photograph output must be private (mode 0700)" unless (stat.mode & 0o077).zero?
+      end
+
+      # Upload a private snapshot of the reviewed bytes. This closes the
+      # preflight-to-upload race: source files changing after the digest check
+      # cannot silently replace the references that were reviewed.
+      def with_staged_references(plan)
+        directory = Dir.mktmpdir("portrait-reference-", output_directory)
+        File.chmod(0o700, directory)
+        paths = plan.fetch(:references).map do |item|
+          destination = File.join(directory, "#{item.fetch(:sha256)}#{File.extname(item.fetch(:path)).downcase}")
+          File.open(item.fetch(:path), "rb") do |source|
+            File.open(destination, "wb", 0o600) do |target|
+              IO.copy_stream(source, target)
+              target.flush
+              target.fsync
+            end
+          end
+          File.chmod(0o600, destination)
+          unless Digest::SHA256.file(destination).hexdigest == item.fetch(:sha256)
+            raise "reference changed after preflight; refusing provider upload"
+          end
+          destination
+        end
+        yield paths
+      ensure
+        FileUtils.remove_entry(directory) if directory && File.directory?(directory)
       end
 
       def first_url(output)

@@ -72,7 +72,7 @@ class TestStudioReferencePicture < Minitest::Test
     assert_equal "ready", plan.fetch(:state)
     assert_equal "qwen/qwen-image-edit-2511", plan.fetch(:model)
     assert_equal %w[front three_quarter expression], plan.fetch(:reference_roles)
-    assert_includes plan.fetch(:rendered_prompt), "natural selfie"
+    assert_includes plan.fetch(:rendered_prompt), "soft open-sky or window key"
     assert_empty @client.uploads
     assert_empty @client.runs
   end
@@ -132,6 +132,14 @@ class TestStudioReferencePicture < Minitest::Test
 
     assert_match(/cost limit/, error.message)
     assert_empty @client.uploads
+  end
+
+  def test_non_finite_cost_limit_is_rejected
+    error = assert_raises(ArgumentError) do
+      @picture.preflight(prompt: "A portrait", references: [@front], cost_limit_usd: Float::NAN)
+    end
+
+    assert_match(/finite number/, error.message)
   end
 
   def test_duplicate_images_are_rejected
@@ -199,7 +207,7 @@ class TestStudioReferencePicture < Minitest::Test
       client: @client,
       source_directory: @sources,
       consent_path: @consent,
-      output_directory: File.expand_path("../../..", __dir__)
+      output_directory: File.expand_path("../..", __dir__)
     )
 
     assert_raises(ArgumentError) do

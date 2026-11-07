@@ -50,9 +50,11 @@ ruby STUDIO/photograph.rb --reference \\
   "A relaxed phone selfie outdoors in soft daylight"
 ```
 
-Place source files in `STUDIO/replicate/lora/<subject>/sources/`. Before any
-upload, the route verifies image format, size, distinct content, subject scope,
-a private `consent.yml` and evidence that both likeness generation and the
+Place source files in `STUDIO/replicate/lora/<subject>/sources/`. Keep the
+subject directory and `sources/` owner-only (mode 0700), and the consent file
+owner-only (mode 0600). The route accepts JPEG, PNG, WebP or GIF files up to
+10 MiB each. Before any upload, it verifies image format, size, distinct
+content, subject scope, a private `consent.yml` and evidence that both likeness generation and the
 source-image rights/provider-processing permissions are confirmed. Copy
 `photograph/consent.example.yml` to the subject's private folder, complete it,
 and set mode 0600. The completed consent file, sources and outputs must never
