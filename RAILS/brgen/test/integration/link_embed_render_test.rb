@@ -15,7 +15,12 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
     host! "brgen.no"
   end
 
-  teardown { ActsAsTenant.current_tenant = nil }
+  teardown do
+    ActsAsTenant.current_tenant = nil
+    # The thumbnail cache is runtime state under storage/; a test leaves no
+    # seeded digests behind for the next run.
+    Shared::LinkEmbed.thumbnail_cache_dir.rmtree if Shared::LinkEmbed.thumbnail_cache_dir.exist?
+  end
 
   def embedded_post(link, answer)
     ActsAsTenant.with_tenant(@city) do
@@ -23,8 +28,15 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
         email_address: "render-#{SecureRandom.hex(4)}@brgen.no", password: "password123", city: @city
       )
       resolved = Shared::LinkEmbed.resolve(Shared::LinkEmbed.find(link), fetch: ->(_uri) { answer })
-      Post.create!(user: author, title: "Kveldens låt #{SecureRandom.hex(2)}", content: "Hør: #{link}",
-                   link_embed: resolved.to_h)
+      post = Post.create!(user: author, title: "Kveldens låt #{SecureRandom.hex(2)}", content: "Hør: #{link}",
+                          link_embed: resolved.to_h)
+      # The facade's image is served first-party (shared-029): seed the cache
+      # the way the job would have, without contacting the provider.
+      if resolved.ok? && resolved.thumbnail_url
+        Shared::LinkEmbed.cache_thumbnail!(resolved.thumbnail_url,
+                                           fetch: ->(_uri) { ["\xFF\xD8\xFF\xE0 seeded", "image/jpeg"] })
+      end
+      post
     end
   end
 
@@ -37,8 +49,11 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "body[data-controller~='media-exclusive']"
+    # shared-029: the image is this app's own cached copy — the digest-named
+    # endpoint — and no provider image host is contacted on a page view.
     assert_select "figure.link-embed" do
-      assert_select "img[src='https://i.ytimg.com/vi/d_HlPboLRL8/hqdefault.jpg'][loading='lazy'][referrerpolicy='no-referrer']"
+      assert_select "img[src^='/link_embeds/thumbnails/'][loading='lazy'][referrerpolicy='no-referrer']"
+      assert_select "img[src*='i.ytimg.com']", count: 0
       assert_select "button.link-embed-play[data-action='click->media-exclusive#playEmbed']" do |buttons|
         button = buttons.first
         assert_equal "https://www.youtube-nocookie.com/embed/d_HlPboLRL8?autoplay=1", button["data-media-exclusive-src-param"]

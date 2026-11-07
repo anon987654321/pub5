@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "cgi"
+require "digest"
+require "fileutils"
 require "json"
 require "net/http"
 require "time"
@@ -160,6 +162,14 @@ module Shared
     URL = %r{https?://[^\s<>"']+}
     TRAILING_PUNCTUATION = /[.,;:!?)\]]+\z/
     OEMBED_MAX_BODY = 100_000
+    THUMBNAIL_MAX_BODY = OutboundHttp::MAX_MEDIA_BODY
+    # Only these image types enter the cache, and the extension the cache file
+    # carries is what the serving controller declares as its content type.
+    THUMBNAIL_TYPES = {
+      "image/jpeg" => ".jpg", "image/png" => ".png",
+      "image/webp" => ".webp", "image/gif" => ".gif",
+    }.freeze
+    THUMBNAIL_USER_AGENT = "pub5 link embed thumbnail"
     DEMO = File.expand_path("../../../config/demo_link_embeds.yml", __dir__)
     USER_AGENT = "pub5 link embed"
 
@@ -206,6 +216,90 @@ module Shared
 
     def resolve(match, fetch: method(:fetch_oembed), at: Time.now)
       Record.from_oembed(match, fetch.call(match.provider.oembed_uri(match.media_id)), at:)
+    end
+
+    # --- First-party thumbnail cache (shared-029) ---------------------------
+    #
+    # A facade's image used to load straight from the provider's CDN on every
+    # page view — a contact the play-button facade promises never to make. The
+    # image is now fetched once, where the oEmbed answer already arrives (the
+    # job, the compose preview), written to this cache, and served from the
+    # app's own /link_embeds/thumbnails/:digest endpoint afterwards. A page
+    # view contacts no provider, and the stored record needs no new field: the
+    # cache file is content-addressed by the digest of the provider URL.
+
+    # The cache lives under storage/, beside the app's other runtime media.
+    def thumbnail_cache_dir
+      Rails.root.join("storage/link_embeds/thumbnails")
+    end
+
+    # 128 bits of the SHA-256 of the provider URL: the route fragment and the
+    # cache filename, with no user input in the served path.
+    def thumbnail_digest(url)
+      Digest::SHA256.hexdigest(url.to_s)[0, 32]
+    end
+
+    # The provider's image bytes, or nil. Only the four web image types enter
+    # the cache; anything else degrades to no image rather than to a file this
+    # app would serve with a content type it has not decided on.
+    def fetch_thumbnail(uri)
+      response = Shared::OutboundHttp.request(
+        uri,
+        headers: { "Accept" => "image/*", "User-Agent" => THUMBNAIL_USER_AGENT },
+        max_body: THUMBNAIL_MAX_BODY,
+      )
+      return unless response.is_a?(Net::HTTPSuccess)
+
+      type = response.content_type.to_s.split(";").first.to_s.strip.downcase
+      return unless THUMBNAIL_TYPES.key?(type)
+
+      [response.body.to_s, type]
+    end
+
+    # Fetches and stores the thumbnail once. Returns truthy when the cache
+    # holds the image after the call. A failed fetch is silent: the facade
+    # degrades to no image, never to a provider contact on page view, and the
+    # next refresh (the job, or the compose preview) tries again.
+    def cache_thumbnail!(url, fetch: method(:fetch_thumbnail))
+      return false unless url
+      return true if thumbnail_cached?(url)
+
+      fetched = fetch.call(URI(url))
+      return false unless fetched
+
+      body, type = fetched
+      dir = thumbnail_cache_dir
+      FileUtils.mkdir_p(dir)
+      # Write beside the target and rename, so a concurrent reader never sees a
+      # half-written image and two jobs racing land on one file.
+      tmp = dir.join("#{thumbnail_digest(url)}.#{Process.pid}.tmp")
+      tmp.write(body)
+      File.rename(tmp, dir.join("#{thumbnail_digest(url)}#{THUMBNAIL_TYPES.fetch(type)}"))
+      true
+    rescue *OutboundHttp::NETWORK_ERRORS, IOError, SystemCallError => e
+      Rails.logger.warn("link_embed: thumbnail fetch failed: #{e.class}") if defined?(Rails.logger)
+      false
+    end
+
+    # The cache file for a digest, tmp particles excluded, or nil.
+    def thumbnail_file(digest)
+      return unless digest.to_s.match?(/\A[0-9a-f]{32}\z/)
+
+      children = Dir.glob(thumbnail_cache_dir.join("#{digest}.*"))
+      children.reject { |path| path.end_with?(".tmp") }.first
+    end
+
+    def thumbnail_cached?(url)
+      !thumbnail_file(thumbnail_digest(url)).nil?
+    end
+
+    # For the serving controller: [path, content_type] or nil.
+    def cached_thumbnail(digest)
+      file = thumbnail_file(digest)
+      return unless file
+
+      type = THUMBNAIL_TYPES.key(file.extname)
+      [file, type]
     end
 
     # The provider's description of the media, or nil when it would not give one.

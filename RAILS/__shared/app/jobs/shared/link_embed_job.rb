@@ -20,6 +20,10 @@ module Shared
       # write that leaves updated_at alone leaves every cached card without its
       # player.
       record.update_columns(link_embed: answer(stored, current).to_h, updated_at: Time.current)
+      # The facade's image comes from the app's own cache (shared-029): fetch it
+      # where the provider is already being contacted. Also heals a cache that
+      # a wiped storage lost, without waiting a month for staleness.
+      Shared::LinkEmbed.cache_thumbnail!(stored.thumbnail_url) if stored.ok?
       # update_columns runs no callback, so a record that shows the player live
       # (brgen Post) is told here.
       record.try(:link_embed_resolved)

@@ -20,6 +20,9 @@ coverage/
 
 # Runtime and temp files
 tmp/
+# The link-embed thumbnail cache (shared-029) is runtime state: the job and the
+# compose preview fill it from the provider's answer, the digest endpoint serves it.
+storage/link_embeds/
 .session_recovery
 
 # OS files
