@@ -24,7 +24,7 @@ module Master
       ].freeze
       SAFE_NUMBERS = %w[
         ts pid schema_version bytes count elapsed_ms duration_ms result_bytes attempt attempts turn turns checks_ran
-        failure_count warning_count unchecked_count n_handlers paths_count tracked_paths
+        failure_count warning_count unchecked_count n_handlers paths_count tracked_paths worker job
       ].freeze
       SAFE_BOOLEANS = %w[blocked success ok cancelled complete enabled retry_requires_reconciliation replay_requires_reconciliation].freeze
       FIELD_NAME = /\A[a-zA-Z][a-zA-Z0-9_]{0,63}\z/
