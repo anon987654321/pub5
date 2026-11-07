@@ -8,6 +8,20 @@ class TestOpenBSDRunAll < Minitest::Test
     def success? = ok
   end
 
+  def test_discovers_tests_from_its_own_directory
+    files = OpenBSDTestRunner.test_files
+
+    assert_includes files, File.expand_path(__FILE__)
+    assert files.all? { |path| File.file?(path) }
+  end
+
+  def test_applies_the_optional_filter
+    files = OpenBSDTestRunner.test_files(filter: "test_run_all")
+
+    assert_includes files, File.expand_path(__FILE__)
+    assert files.all? { |path| path.include?("test_run_all") }
+  end
+
   def test_parses_a_minitest_summary
     assert_equal(
       { runs: 3, assertions: 7, failures: 0, errors: 0, skips: 1 },
