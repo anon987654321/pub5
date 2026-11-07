@@ -13,7 +13,7 @@ module Master
           tags %i[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]
           fix "a filename names its subject, not a category"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
-          proved_by "test/test_vague_words.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
           check do |_src, path|
               stem = File.basename(path.to_s, ".*")
               # Rails resolves *_helper.rb, *_helpers and application_* by name, and

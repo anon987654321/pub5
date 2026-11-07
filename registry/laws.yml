@@ -1057,7 +1057,7 @@ laws:
     kind: structural
     severity: info
     lifecycle: advisory
-    autofix: automatic
+    autofix: review
     enacted: '2026-11-06'
     file: laws/pub4/co_change_coupling.rb
     pub4:
@@ -1066,7 +1066,7 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: CO_CHANGE_COUPLING: automatic autofix requires a deterministic detector'
+
   ARIA_INTERACTIVE:
     statement: Add role= and tabindex= for accessibility.
     kind: lexical

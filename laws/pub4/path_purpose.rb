@@ -13,7 +13,7 @@ module Master
           detector PathPurposeLaw
           tags %i[ONE_SOURCE COLLAPSE_BEFORE_ADDING]
           fix "every directory declares its purpose in PATH_OWNERSHIP.yml"
-          proved_by "test/test_path_purpose_law.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

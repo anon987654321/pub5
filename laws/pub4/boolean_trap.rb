@@ -13,7 +13,7 @@ module Master
           detector BooleanTrapLaw
           tags %i[API DOMAIN_LANGUAGE]
           fix "a positional boolean parameter makes every call site a riddle"
-          proved_by "test/test_smell_detectors.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

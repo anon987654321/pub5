@@ -13,7 +13,7 @@ module Master
           detector LibRootDisciplineLaw
           tags %i[ABSTRACTION ARCHITECTURE]
           fix "new files shouldn't land directly in lib/ root"
-          proved_by "test/test_lib_root_discipline_law.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

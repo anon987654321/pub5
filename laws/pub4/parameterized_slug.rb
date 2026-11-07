@@ -13,7 +13,7 @@ module Master
           tags %i[FLAT_HIERARCHY DRY]
           fix "path is dense Rails-parameterize slug - Strunk-clean snake_case"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
-          proved_by "test/test_parameterized_slug.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
           check do |_src, path|
             rel = path.to_s
             # A migration's filename is its schema_migrations key, and Rails finds

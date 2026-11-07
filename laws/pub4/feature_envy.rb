@@ -21,7 +21,7 @@ module Master
           good <<~'X'
           class Order; def total; items.sum { |i| i.price * i.qty }; end; end
           X
-          proved_by "test/test_feature_envy_law.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

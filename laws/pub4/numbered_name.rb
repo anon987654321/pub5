@@ -13,7 +13,7 @@ module Master
           detector NumberedNameLaw
           tags %i[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
           fix "numbered siblings name no difference between themselves"
-          proved_by "test/test_smell_detectors.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

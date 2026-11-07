@@ -13,7 +13,7 @@ module Master
           tags %i[CONSTITUTION DOCS]
           fix "runtime-read docs must be YAML - forbid stray .md under data/"
           # A path rule: one example path cannot hold a flagged bad and a clean good.
-          proved_by "test/test_scan_law_contracts.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
           check do |_src, path|
             rel = RuntimeDocsPaths.data_relative(path)
 

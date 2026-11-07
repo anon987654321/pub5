@@ -21,7 +21,7 @@ module Master
           good <<~'X'
           attr_reader :user
           X
-          proved_by "test/test_structural_shape_laws.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

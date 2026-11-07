@@ -21,7 +21,7 @@ module Master
           good <<~'X'
           result = Cache.fetch(key) { fetch }
           X
-          proved_by "test/test_pattern_extraction_law.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

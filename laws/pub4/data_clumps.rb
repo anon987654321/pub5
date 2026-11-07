@@ -13,7 +13,7 @@ module Master
           detector DataClumpsLaw
           tags %i[BLOATERS DOMAIN_MODELING]
           fix "the same parameters travelling together are a record struggling to be born"
-          proved_by "test/test_smell_detectors.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

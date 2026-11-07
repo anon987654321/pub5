@@ -14,7 +14,7 @@ module Master
           fix "a filename records what a thing is, never where it sat in a sequence"
           reads_beyond_file true
           # A path rule that reads its siblings on disk; its test builds them.
-          proved_by "test/test_file_sequence_name.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
           check do |_src, path|
               stem = File.basename(path.to_s, ".*")
               # db/migrate is timestamp-keyed by Rails and versioned API dirs are

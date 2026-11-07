@@ -13,7 +13,7 @@ module Master
           detector CodeHierarchyLaw
           tags %i[ARCHITECTURE HIERARCHY]
           fix "related classes are grouped under clear namespaces"
-          proved_by "test/test_scan_law_contracts.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

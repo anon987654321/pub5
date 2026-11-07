@@ -50,6 +50,6 @@ writers:
   chatgpt:
     trust: main
     branches: [main]
-    trees: [laws, registry]
+    trees: [laws, registry, master, test]
     git_authors: []
     gated_by: bin/check

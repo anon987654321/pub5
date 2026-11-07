@@ -13,7 +13,7 @@ module Master
           detector CyclomaticComplexityLaw
           tags %i[LINEARITY SMALL_PARTS]
           fix "cyclomatic complexity under 10 per method"
-          proved_by "test/test_operator_lint.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

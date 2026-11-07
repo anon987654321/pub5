@@ -13,7 +13,7 @@ module Master
           detector FileLayoutLaw
           tags %i[PROXIMITY CONVENTION]
           fix "frozen header -> requires -> module/class -> public -> private"
-          proved_by "test/test_structural_shape_laws.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

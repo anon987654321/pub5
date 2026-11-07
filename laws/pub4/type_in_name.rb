@@ -13,7 +13,7 @@ module Master
           detector TypeInNameLaw
           tags %i[DOMAIN_LANGUAGE LOAD_BEARING_NAMES]
           fix "a name that encodes its own type says nothing the code did not"
-          proved_by "test/test_smell_detectors.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

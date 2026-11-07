@@ -13,7 +13,7 @@ module Master
           detector LearnedSmellsLaw
           tags %i[LEARNED_SMELLS SESSION]
           fix "session-learned smell patterns from laws.yml"
-          proved_by "test/test_learned_smells_law.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

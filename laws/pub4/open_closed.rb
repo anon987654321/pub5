@@ -21,7 +21,7 @@ module Master
           good <<~'X'
           renderers.fetch(format).call(document)
           X
-          proved_by "test/test_solid_laws.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end

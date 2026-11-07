@@ -21,7 +21,7 @@ module Master
           good <<~'X'
           class ReadOnlyStore < ReadStore; end
           X
-          proved_by "test/test_solid_laws.rb"
+          proved_by "test/laws/imported_pub4_proofs_test.rb"
         end
       end
     end
