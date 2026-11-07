@@ -1605,6 +1605,24 @@ module Dilla
       end
     end
 
+    # Boom-bap sits quieter than a brick-walled master: pull hot renders back
+    # toward the genre's loudness instead of normalizing into the red. A quiet
+    # render is returned untouched — the reference is a ceiling, not a floor.
+    def steer_to_reference!(mix, reference: -9.5)
+      lufs = lufs_estimate(mix)
+      return lufs if lufs <= reference
+
+      trim = 10.0**((reference - lufs) / 20.0)
+      i = 0
+      n = mix.l.length
+      while i < n
+        mix.l[i] *= trim
+        mix.r[i] *= trim
+        i += 1
+      end
+      lufs_estimate(mix)
+    end
+
     def normalize!(mix, ceiling = 0.94)
       peak = 0.0
       i = 0
@@ -1994,21 +2012,7 @@ module Dilla
     Sonitex.apply!(mix, plan[:sonitex], plan[:sonitex_instances], rng)
     Master.normalize!(mix)
     Master.fades!(mix)
-    lufs = Master.lufs_estimate(mix)
-    # Boom-bap sits quieter than a brick-walled master: pull hot renders back
-    # toward the genre's loudness instead of normalizing into the red.
-    target_lufs = -9.5
-    if lufs > target_lufs
-      trim = 10.0**((target_lufs - lufs) / 20.0)
-      i = 0
-      n = mix.l.length
-      while i < n
-        mix.l[i] *= trim
-        mix.r[i] *= trim
-        i += 1
-      end
-      lufs = Master.lufs_estimate(mix)
-    end
+    lufs = Master.steer_to_reference!(mix)
 
     stem_shares = {
       "drums" => mixer.rms(:drums), "sub" => mixer.rms(:sub), "bass" => mixer.rms(:bass),

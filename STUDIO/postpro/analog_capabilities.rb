@@ -75,7 +75,11 @@ module Studio
       # own "crush" bit depth. Fifth promotion, the sidechain: the duck is
       # deliberately imperfect — a real kick envelope on a 10 ms staircase, a
       # 260 ms capped linear release, and max-overlap that can never stack two
-      # kicks into a deeper-than-amount dip. Refused promotions: as before, plus
+      # kicks into a deeper-than-amount dip. Sixth promotion, the delivery
+      # loudness: the steer is a ceiling not a floor — the K-weighted gated
+      # estimate trims a hot render back to the genre's reference and leaves a
+      # quiet render untouched, promoted after the trim left the render body
+      # to become a nameable method. Refused promotions: as before, plus
       # cassette_wow_random_walk (the wow is a sinusoid, not a random
       # walk — naming it a random walk would be a lie with a passing test next
       # to it) and bandwidth_shaped_hiss (NOISE is a white stream; nothing
@@ -108,6 +112,11 @@ module Studio
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#sidechain_curve!",
           regression_test: "STUDIO/test/test_dilla_sidechain_test.rb#test_the_duck_is_a_ten_millisecond_staircase_on_the_kick_envelope"
+        }.freeze,
+        %i[dilla delivery_lufs].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#steer_to_reference!",
+          regression_test: "STUDIO/test/test_dilla_loudness_test.rb#test_steer_to_reference_pulls_a_hot_render_and_leaves_a_quiet_one"
         }.freeze,
       }.freeze
       STATUSES = %i[verified unavailable unverified].freeze
