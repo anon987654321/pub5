@@ -97,7 +97,7 @@ class TestMobileBootstrap < Minitest::Test
     installed = %w[ruby git]
     result = phone(installed:).ensure!
 
-    assert_equal %w[clang make libyaml openssl], @auditor.asked
+    assert_equal %w[clang make libyaml openssl libvips], @auditor.asked
     refute result.ok, "the fake pkg installed nothing, so the packages are still missing"
   end
 end
