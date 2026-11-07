@@ -15,7 +15,7 @@ The real install command follows only after reviewing that plan:
 
 The installer runs a fail-closed preflight before package operations: it requires Termux's expected PREFIX, refuses root, permits only the canonical HTTPS pub5 repository, keeps the install directory below Termux HOME, refuses symlink/non-Git collisions, and verifies the checkout origin and clean working tree before running project code.
 
-The installer no longer ignores doctor failures. Installation is considered successful only when `bin/master-mobile doctor` exits successfully. The doctor checks Ruby and dependencies, Termux detection, Falcon, canonical Git origin, clean tracked/index state, and private mobile state-directory permissions. It changes only the mobile state directory's mode to 0700.
+The installer installs and checks the pinned Ruby bundle through `bin/deps install` and `bin/deps check`, proves the normal CLI entry point with `bin/deps boot`, then installs Falcon and runs `bin/master-mobile doctor`. The doctor checks Termux, required packages, Falcon, the canonical Git origin, a clean checkout, private mobile state-directory permissions and the bridge port; it changes only the mobile state directory's mode to 0700. A successful install therefore proves more than the presence of the bridge server: the regular MASTER CLI has also completed its boot path.
 
 Termux from F-Droid is the build that still receives updates. Install Termux:API from the same place if you want speech features; optional speech backends do not block installation.
 

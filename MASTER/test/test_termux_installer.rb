@@ -100,6 +100,36 @@ class TermuxInstallerTest < Minitest::Test
     end
   end
 
+  def test_mobile_installer_demo_matches_real_non_git_collision_guard
+    Dir.mktmpdir("mobile-install-demo-collision") do |home|
+      target = File.join(home, "pub5")
+      Dir.mkdir(target)
+
+      output, status = Open3.capture2e(
+        { "HOME" => home, "MASTER_INSTALL_DIR" => target },
+        "sh", MOBILE_INSTALLER, "--demo"
+      )
+
+      refute status.success?
+      assert_includes output, "would BLOCK: #{target} exists but is not a Git checkout"
+      assert_empty Dir.children(target), "demo must leave the existing directory untouched"
+    end
+  end
+
+  def test_mobile_installer_installs_and_proves_the_normal_master_bundle
+    commands = %w[
+      ruby bin/deps install
+      ruby bin/deps check
+      ruby bin/deps boot
+      ruby bin/master-mobile doctor
+    ]
+    positions = commands.map { |command| mobile_source.index(command) }
+
+    refute positions.any?(&:nil?), "installer must install, check and boot MASTER before declaring readiness"
+    assert_equal positions.sort, positions
+    assert_includes mobile_source, "cmake pkg-config sqlite libffi"
+  end
+
   def test_script_has_valid_bash_syntax
     skip "bash unavailable" unless system("command -v bash >/dev/null 2>&1")
 
