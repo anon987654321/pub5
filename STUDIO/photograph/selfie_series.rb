@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "cgi"
 require "digest"
 require "fileutils"
 require "json"
@@ -161,6 +162,12 @@ module Studio
             ensure
               write_private_json(manifest_path, series)
             end
+          end
+
+          unless model_record.fetch("renders").empty?
+            contact_sheet = write_contact_sheet!(model_directory, model_record)
+            model_record["contact_sheet"] = relative_to(run_directory, contact_sheet)
+            model_record["contact_sheet_sha256"] = Digest::SHA256.file(contact_sheet).hexdigest
           end
 
           model_record["status"] = if model_record.fetch("renders").length == SHOTS_PER_MODEL
@@ -447,6 +454,16 @@ module Studio
         expected = [marker]
         record.fetch("models").each do |model|
           return false unless model.is_a?(Hash) && model["renders"].is_a?(Array)
+          if model["contact_sheet"]
+            sheet = File.expand_path(model["contact_sheet"].to_s, root)
+            return false unless sheet.start_with?("#{root}#{File::SEPARATOR}")
+            return false unless valid_private_render_file?(sheet)
+            return false unless (File.stat(sheet).mode & 0o077).zero?
+            sheet_digest = model.fetch("contact_sheet_sha256").to_s
+            return false unless sheet_digest.match?(SHA256)
+            return false unless Digest::SHA256.file(sheet).hexdigest == sheet_digest
+            expected << sheet
+          end
           model.fetch("renders").each do |render|
             return false unless render.is_a?(Hash)
             {
@@ -516,6 +533,58 @@ module Studio
           File.realpath(path).start_with?("#{@output_directory}#{File::SEPARATOR}")
       rescue SystemCallError
         false
+      end
+
+      def write_contact_sheet!(directory, model_record)
+        path = File.join(directory, "contact-sheet.html")
+        cells = model_record.fetch("renders").map do |render|
+          image_name = File.basename(render.fetch("image"))
+          [
+            "<article class=\"shot\">",
+            "<a href=\"#{CGI.escapeHTML(image_name)}\"><img loading=\"lazy\" src=\"#{CGI.escapeHTML(image_name)}\" alt=\"#{CGI.escapeHTML(render.fetch("shot_id"))}\"></a>",
+            "<h2>#{CGI.escapeHTML(render.fetch("shot_id").tr("_", " "))}</h2>",
+            "<p>Seed #{Integer(render.fetch("seed"))}</p>",
+            "<p>#{CGI.escapeHTML(render.fetch("prompt"))}</p>",
+            "<p class=\"review\">PENDING OPERATOR REVIEW</p>",
+            "</article>"
+          ].join("\n")
+        end
+        html = [
+          "<!doctype html>",
+          "<html lang=\"en\">",
+          "<head>",
+          "<meta charset=\"utf-8\">",
+          "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+          "<title>#{CGI.escapeHTML(model_record.fetch("subject"))} / #{CGI.escapeHTML(model_record.fetch("model_slug"))} — selfie series</title>",
+          "<style>",
+          "body{margin:0;padding:24px;background:#161616;color:#eee;font:16px/1.5 system-ui,sans-serif}",
+          "header{max-width:1600px;margin:0 auto 24px}",
+          ".grid{max-width:1600px;margin:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}",
+          ".shot{min-width:0;background:#242424;padding:12px;border:1px solid #444}",
+          "img{display:block;width:100%;height:auto;aspect-ratio:2/3;object-fit:cover;background:#111}",
+          "h2{font-size:16px;text-transform:capitalize;margin:12px 0 4px}",
+          "p{font-size:13px;color:#ccc;overflow-wrap:anywhere}",
+          ".review{color:#e7c98d;font-weight:700;letter-spacing:.04em}",
+          "</style>",
+          "</head>",
+          "<body>",
+          "<header>",
+          "<h1>#{CGI.escapeHTML(model_record.fetch("subject"))} · #{CGI.escapeHTML(model_record.fetch("model_slug"))}</h1>",
+          "<p>Model #{CGI.escapeHTML(model_record.fetch("model_version"))} · #{model_record.fetch("renders").length} renders · pending operator review</p>",
+          "</header>",
+          "<main class=\"grid\">",
+          cells.join("\n"),
+          "</main>",
+          "</body>",
+          "</html>"
+        ].join("\n")
+        File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+          file.write(html)
+          file.flush
+          file.fsync
+        end
+        File.chmod(0o600, path)
+        path
       end
 
       def verify_render!(result, model_directory)

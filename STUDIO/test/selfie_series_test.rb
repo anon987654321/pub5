@@ -91,6 +91,14 @@ class TestStudioSelfieSeries < Minitest::Test
     manifest = JSON.parse(File.read(result.fetch("manifest")))
     assert_equal "pending_operator_review", manifest.fetch("review_status")
     assert_equal "pending_operator_review", manifest.fetch("curation_status")
+    manifest.fetch("models").each do |model|
+      sheet = File.join(File.dirname(result.fetch("manifest")), model.fetch("contact_sheet"))
+      assert File.file?(sheet)
+      assert_equal 0o600, File.stat(sheet).mode & 0o777
+      html = File.read(sheet)
+      assert_includes html, "PENDING OPERATOR REVIEW"
+      assert_equal 10, html.scan("<article class=\\"shot\\">").length
+    end
     assert manifest.fetch("models").all? do |model|
       model.fetch("renders").all? { |render| render.fetch("review_status") == "pending_operator_review" }
     end
