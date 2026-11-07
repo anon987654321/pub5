@@ -459,8 +459,43 @@ census over the real tree read files 3 / findings 0 and files 1 /
 findings 0 at f76ee93, the fixtures prove at load, and the operator
 ratified both for the grievance that opened this section: the Laws that
 make the style and cosmetic UI/UX refinements impossible to skip are
-exactly these, so they carry the registry's enforced teeth now. Next in
-the queue: the three conduct Laws and the semantic ask.
+exactly these, so they carry the registry's enforced teeth now. The
+operator then asked for the queued four's enforcement path, and this is
+it, per Law:
+
+- ADVISORY_MUST_BE_RECONCILED enforces now (2026-11-07). Its duty has a
+  tree artifact - an answered advisory finding is recorded, and the
+  recorded answer is the craft ledger's exemptions section, where an
+  excused finding carries the reason it was granted and the review_by
+  date it must be re-argued by. The Law gained a deterministic adapter
+  over `master/checks/data/craft_ledger.yml`: every exemption row
+  records which Law it excuses, when it was recorded, and a review_by
+  expiry, and an exemption without an expiry is exactly the unanswered
+  finding the Law names. Freshness - an expired review_by - stays the
+  `ln` check's one assertion; the Law owns the shape, the check owns the
+  date. Census: files 1, findings 0 at 4f5b9ac. Enforced.
+- NO_RESTYLE_WITHOUT_RECORD enforces through the semantic review. The
+  census grades evidence pairs - a recorded change with a captured render
+  passes the rubric, a restyle with no record fails it - and records
+  measured agreement, and the admission contract enforces a model-judged
+  Law at agreement >= 0.80 with the operator's ratification. The judge
+  lanes are down in the porting sandbox, so the agreement measurement is
+  owed, not forged: the Law stays advisory until a lane grades the pairs.
+- REGRESSION_FIRST stays conduct, and its detectable half is already
+  carried: the tuned surfaces still rendering their pinned bytes is the
+  enforced PINNED_SURFACE_BYTES_CARRY's census, and the rendered
+  instruments live in checks/checks.yml. What remains - triage order,
+  restore from the reference tree - governs writers through the writer
+  list. Its owed instrument, recorded here: a pty boot-render check
+  (boot paints the pinned lines on a truecolor pty, plain under
+  NO_COLOR; INCONCLUSIVE where no lane runs), which becomes its
+  deterministic half and its promotion.
+- CORRECTIONS_BECOME_LAWS stays conduct and self-applies: this section's
+  amendments are the correction becoming law in the same session, and a
+  second instance of the same miss sends the catching Law here. Its
+  enforcement is the writer list plus this record - chat is not in the
+  tree, so no detector can see the miss; the tree sees only the landing.
+
 The first pty census of the pinned Law is already in hand: on a truecolor
 pty the boot paints `master0 at mainbus0`, `host0 at mainbus0`, `root on
 master0` in 24-bit white on blue one line at a time, plain under NO_COLOR,

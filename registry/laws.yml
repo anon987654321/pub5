@@ -12831,7 +12831,15 @@ laws:
     statement: Advisory is not ignorable - a Law in advisory lifecycle still governs the files it reaches, so before a task lands run the gate over the touched scope and answer every finding, fixing it or recording an exemption with an expiry.
     kind: conduct
     severity: warning
-    lifecycle: advisory
+    lifecycle: enforced
     autofix: never
     enacted: '2026-11-07'
     file: laws/advisory_must_be_reconciled.rb
+    census:
+      measured_on: '2026-11-07'
+      files: 1
+      findings: 0
+      sampled: 0
+      false_positives: 0
+      ratified_by: operator
+      ratification: The operator asked what Laws MASTER needs so its laws and behaviours are better adhered to, then approved the queued Laws' enforcement path; the reconciliation duty's tree artifact is the craft ledger's exemptions, the Law's deterministic adapter keeps every exemption row answerable with its law, recorded date and review_by expiry (freshness stays the ln check's), the census at 4f5b9ac read files 1 findings 0, the fixtures prove at load, and the operator ratifies enforcement (PLAN.md section 19).
