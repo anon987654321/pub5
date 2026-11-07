@@ -412,16 +412,27 @@ module Master
           @floor_dead_count = 0 if free
           return
         end
-        return unless free
-        return unless (@floor_dead_count += 1) >= FLOOR_DEAD_LIMIT
+        unless free
+          Master::Trace::Dmesg.status("fix0", "floor debug: paid death not counted #{id}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
+          return
+        end
+        @floor_dead_count += 1
+        if ENV["MASTER_FLOOR_DEBUG"] == "1"
+          Master::Trace::Dmesg.status("fix0", "floor debug: dead #{id}, count #{@floor_dead_count}/#{FLOOR_DEAD_LIMIT}")
+        end
+        return unless @floor_dead_count >= FLOOR_DEAD_LIMIT
         return if @floor_suspended
 
         live = live_lanes(cfg:, alive:).find { |candidate| !FREE_CLASS_KINDS.include?(kind(candidate)) }
         suspend_free_floor!(live)
+        Master::Trace::Dmesg.status("fix0", "floor debug: suspending, live=#{live.inspect}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
         announce_free_floor_suspension
-      rescue StandardError
-        # Suspension is an optimization over a lane walk; counting must never
-        # turn a healthy dispatch into an error.
+      rescue StandardError => e
+        # A count that dies in silence is not a count; the debug instrument
+        # names its own failure so a swallowed exception cannot hide it.
+        if ENV["MASTER_FLOOR_DEBUG"] == "1"
+          Master::Trace::Dmesg.status("fix0", "floor debug: counter crashed #{e.class}: #{e.message}")
+        end
         nil
       end
 
