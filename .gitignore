@@ -344,3 +344,7 @@ STUDIO/**/dilla-renders*/
 /DEPLOY/dilla/*.wav
 /DEPLOY/dilla/*.mp3
 /DEPLOY/rails/*/vendor/bundle/
+
+# A per-subject likeness and source-rights attestation is private operator data.
+# Never publish it as part of a public repository.
+STUDIO/replicate/lora/*/consent.yml

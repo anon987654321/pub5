@@ -15,6 +15,9 @@ but the implementation is owned here.
   one person's judgement.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation.
+- `photograph/reference_picture.rb` — an additive, consent- and source-rights-gated reference route using Qwen-Image-Edit-2511. It is separate from the trained-LoRA route and does not create embeddings or train weights.
+- `photograph/lookbook.yml` and `photograph/LOOKBOOK.md` — the shared shot/lighting/color/film/VFX prompt profiles and their research notes.
+- `photograph/consent.example.yml` — a local-only consent and source-rights template. Completed per-subject `consent.yml` files are ignored by Git.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with its own upload and download helpers.
   MASTER has its own client and runtime policies; this one is STUDIO's.
@@ -31,6 +34,41 @@ but the implementation is owned here.
 and proves the contracts answer, `rake test` runs `test/` (the Dilla and
 IdeaPicture suites), and `rake` runs both. The suite runs without network
 access and without the Replicate API.
+
+## Reference-guided portraits
+
+The existing `ruby STUDIO/photograph.rb PROMPT` path remains the trained-LoRA
+route. The new route is explicit:
+
+```sh
+ruby STUDIO/photograph.rb --reference \\
+  --subject merethe \\
+  --reference-image front.jpg \\
+  --reference-image three-quarter.jpg \\
+  --reference-image expression.jpg \\
+  --look natural_selfie --seed 42 --cost-limit-usd 0.03 \\
+  "A relaxed phone selfie outdoors in soft daylight"
+```
+
+Place source files in `STUDIO/replicate/lora/<subject>/sources/`. Before any
+upload, the route verifies image format, size, distinct content, subject scope,
+a private `consent.yml` and evidence that both likeness generation and the
+source-image rights/provider-processing permissions are confirmed. Copy
+`photograph/consent.example.yml` to the subject's private folder, complete it,
+and set mode 0600. The completed consent file, sources and outputs must never
+be committed. The output and its JSON receipt are written outside the checkout
+with owner-only permissions.
+
+The one-image cost estimate is USD 0.03 as reviewed 2026-11-07. The CLI
+requires an explicit estimate limit. This is a preflight estimate, not a
+provider-enforced billing cap; confirm the current model price and terms before
+each paid run. No reference image is uploaded and no charge is made by
+preflight. The route does not train a LoRA, create face embeddings, publish
+images, or change the existing trained-model route.
+
+The lookbook is a creative starting point, not a substitute for visual
+approval. Read `photograph/LOOKBOOK.md` for cinematography, film response,
+color management, diffusion and VFX guidance.
 
 ## Writing projects
 

@@ -1,0 +1,14 @@
+# Copy to STUDIO/replicate/lora/<subject>/consent.yml locally.
+# Keep the completed file private. It is ignored by Git.
+# This record is an operator attestation, not proof that source rights exist.
+schema: 1
+subject: REPLACE_WITH_SUBJECT_SLUG
+
+subject_consent:
+  likeness_generation: false
+  provider_processing: false
+
+source_rights:
+  generation_use: false
+  provider_processing: false
+  evidence: ""
