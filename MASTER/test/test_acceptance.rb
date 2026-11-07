@@ -65,7 +65,10 @@ class TestAcceptance < Minitest::Test
       report = Acceptance.route_contracts("http://target.test")
 
       assert_equal "fail", report.state
-      assert_equal 3, report.detail.scan(/\(\w+\)/).size, "every recorded app is checked"
+      # One detail line per recorded app, so the count follows the directory
+      # rather than a remembered three. Two of the five contracts arrived after
+      # this assertion was written and it never noticed.
+      assert_equal 5, report.detail.scan(/\(\w+\)/).size, "every recorded app is checked"
       assert_includes report.detail, "routes differ"
     end
   end
@@ -107,7 +110,13 @@ class TestAcceptance < Minitest::Test
   end
 
   def test_the_recorded_apps_name_themselves_from_the_data_dir
-    assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".yml").sort
+    # The directory is the record, so the assertion reads it rather than
+    # restating a list. This test named three apps and stayed green on paper
+    # while master and mrdamascy contracts were added beside them -- the list
+    # it named had stopped being the list that exists.
+    assert_equal %w[amber brgen bsdports master mrdamascy], Acceptance.recorded_apps(".yml").sort
+    # The signed half is genuinely still three: master and mrdamascy have no
+    # signed contract, so this stays a named assertion rather than a copy.
     assert_equal %w[amber brgen bsdports], Acceptance.recorded_apps(".signed.yml").sort
   end
 

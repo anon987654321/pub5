@@ -201,6 +201,26 @@ volatile_selectors:
   # 2026-11-06, two same-session captures of /playlists differed across the
   # whole page (0.17 of the pixels) on the nearly invisible spinning texture.
   - "#radio-canvas"
+  # Master's face is a stack of particle canvases fed by rAF's own timestamps,
+  # which no stylesheet freeze and no honest clock pin can stop: measured
+  # 2026-11-07, two runs drifted 1-8 percent of pixels. Pinning the clock DID
+  # go green, but falsely - frame zero of the cloud is a black field, and black
+  # agrees with black (the head had never painted). The face's own checks own
+  # its motion; the golden corpus photographs the page around it. Hidden here
+  # with the same box-keeping visibility rule as the clocks above, per canvas
+  # actually observed in the served page (probed 2026-11-07, guest, 390px):
+  # #cognition-ecology (agent spirits, recreated by cognition_ecology.js),
+  # #face (the head; the 2D runtime repurposes it and leaves it zero-sized),
+  # #master-gravity-field (gravity_field.js particles), the 2D ASCII-at-rest
+  # and phosphor-trail layers of face_2d_fallback.js and face_phosphor_trail.js,
+  # and canvas:not([id]) for the one canvas the face's boot stack creates that
+  # never takes an id - direct child of body, persistent, painting.
+  - "#face"
+  - "#cognition-ecology"
+  - "#master-gravity-field"
+  - "#face-2d-fallback"
+  - "#face-phosphor-trail"
+  - "body > canvas:not([id])"
 
 # Images the golden-screenshot settle step waits for as part of loading: an img
 # matching the selector is settled when it is complete and its src equals the

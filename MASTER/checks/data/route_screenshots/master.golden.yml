@@ -1,0 +1,44 @@
+---
+schema: 1
+app: master
+widths:
+- 390
+- 768
+- 1280
+rows:
+  "|/|390|page": 616cf1539462853880df2edc6d768b51ab352c476f46481afd7f5f2c74606efb
+  "|/|390|dialog":
+    present: false
+  "|/|768|page": 941fcb280be43d1b72b325e4518409bfe72fba210023fd3ac9d5e842baa415cd
+  "|/|768|dialog":
+    present: false
+  "|/|1280|page": 7faf1bda2914f04c95ff4a91c9b694f64a49920f036b979d47dece0a811f0ff9
+  "|/|1280|dialog":
+    present: false
+  "|/api|390|page": f588979879b3932757ed09b3dff2adf807e70a5e7a41bdee288f2b4de6ff9c9b
+  "|/api|390|dialog":
+    present: false
+  "|/api|768|page": 20202b393a8c96327365421ab027cee128e19a830945d57bd709ecbb1430ef31
+  "|/api|768|dialog":
+    present: false
+  "|/api|1280|page": dd268a2772f0a8d003467a061d684346a91ee1283cec16348d0dfd4e3f7b2a1a
+  "|/api|1280|dialog":
+    present: false
+  "|/dashboard|390|page": b56557f49aa5f4384752ddf6cd9fa2a476c5d6fe89b18e6509810353128ef205
+  "|/dashboard|390|dialog":
+    present: false
+  "|/dashboard|768|page": 8ad9e3368ee1f826cb34908d45d4bf6459f6423bddb9d1e4f9c06ee3a9392507
+  "|/dashboard|768|dialog":
+    present: false
+  "|/dashboard|1280|page": 15f40a3ecaecc1e36c856effe7aa4424df8ae908e05f07080b79114d716458e4
+  "|/dashboard|1280|dialog":
+    present: false
+  "|/up|390|page": c8937e384e18d911585d52c9c5124035b1c66a0228204c0e1ee22787a8b9438d
+  "|/up|390|dialog":
+    present: false
+  "|/up|768|page": 4ba6db461a2ee6c888c85028f84997a7ad71bfd397e4f634228d182f8f2858de
+  "|/up|768|dialog":
+    present: false
+  "|/up|1280|page": 62c2410ac72927753a7dd9a0530364a9e02f52826cafdb66a512eafbe3985c70
+  "|/up|1280|dialog":
+    present: false
