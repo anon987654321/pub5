@@ -19,7 +19,7 @@ class MeretheLoraTest < Minitest::Test
   end
 
   def test_git_blob_sha_matches_git_object_format
-    assert_equal "ce013625030ba8dba906f756967f9e9ca394464a", SUBJECT.git_blob_sha("hello")
+    assert_equal "b6fc4c620b67d95f953a5c1c1230aaab5db5a1b0", SUBJECT.git_blob_sha("hello")
   end
 
   def test_additional_photos_need_a_valid_image_and_matching_trigger_caption
