@@ -121,7 +121,10 @@ footer a strong { color: var(--color-link-bold); }
     @bottom-center { content: counter(page); font: 0.75rem/1.4 var(--font-heading); color: var(--color-print-muted); }
   }
   @page :first { margin-top: 0; }
-  body { margin: 0; }
+  /* body keeps its auto margins in print: the browser centres the 33rem
+     column on the page box, and the pdf must be laid out by the same
+     algorithm - pinning body margin to 0 shifted every printed page to
+     the left edge and broke the html/pdf twin. */
   header.cover { min-height: 221mm; }
   h2, h3, h4 { break-after: avoid; }
   table, li, figure { break-inside: avoid; }

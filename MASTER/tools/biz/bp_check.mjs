@@ -119,6 +119,9 @@ for (const plan of ORDER) {
   // compact plans (Source Serif 4 stays fetat's), per the folio-face canon.
   if (!/@bottom-center \{ content: counter\(page\); font: 0\.75rem\/1\.4 var\(--font-heading\)/.test(src)) add('bob2: folio face is not EB Garamond');
   if (!/@page :first \{ margin-top: 0; \}/.test(src)) add('bob2: first-page margin rule missing');
+  // the printed column must be the centred column, not the flush one:
+  // pinning body margin to 0 in print shifts every page left of the html.
+  if (/body \{ margin: 0; \}/.test(src)) add('bob2: print body margin pinned to 0');
   if (!/header\.cover \{ min-height: 221mm; \}/.test(src)) add('bob2: cover-as-page rule missing');
   if (!/class="toc" aria-label="Innhold"/.test(src)) add('bob2: toc missing');
   if (/--paper:|--ink:|--accent:|poise v2|cover revision 2026-11/.test(src)) add('bob2: archive-skin token or poise stylesheet still present');
