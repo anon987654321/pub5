@@ -111,7 +111,8 @@ module Master
 
       # Two open palms rising from opposite lower corners, cupped toward the
       # centre with fingers fanning inward. A capsule stroke draws every digit:
-      # round line caps at a bold width are the graffiti weight; each finger is
+      # round line caps at one bold width — the mark carries a single line
+      # width throughout, no shadow layer, no second weight. Each finger is
       # a straight segment with a slight lean, so the whole mark stays
       # symmetric under the x mirror. Strokes are stored as coordinate data and
       # mirrored numerically — never by regex over emitted path text.
@@ -143,17 +144,16 @@ module Master
         right = path_d(HAND_STROKES, offset)
         left = path_d(HAND_STROKES.map { mirror_stroke(_1, offset) }, 0)
         <<~BODY
-          <g fill="none" stroke="#{INK}" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+          <g fill="none" stroke="#{INK}" stroke-width="#{STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">
             #{right}
-          </g>
-          <g fill="none" stroke="#{ACCENT}" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.28" transform="translate(6 6)">
-            #{left}
-          </g>
-          <g fill="none" stroke="#{INK}" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
             #{left}
           </g>
         BODY
       end
+
+      # Every stroke the motif draws, in one breadth. Variants may narrow the
+      # whole mark, but nothing inside it may differ from the rest.
+      STROKE_WIDTH = 26
 
       def path_d(strokes, offset)
         strokes.map do |(kind, anchor, tail)|
