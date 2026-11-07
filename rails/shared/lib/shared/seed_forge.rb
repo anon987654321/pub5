@@ -21,9 +21,9 @@ module Shared
         configured = ENV["SEED_FORGE_CONFIG"].to_s
         return Pathname(configured).expand_path if configured != ""
 
-        # MASTER is not beside the engine on the box (/home/<app>/shared), so the
-        # engine-relative walk landed on /home/MASTER and the seeds step died.
-        Pathname(Shared::Contracts.root).join("MASTER", "data", "seed_forge.yml")
+        # master is not beside the engine on the box (/home/<app>/shared), so the
+        # engine-relative walk landed on /home/master and the seeds step died.
+        Pathname(Shared::Contracts.root).join("master", "data", "seed_forge.yml")
       end
     end
   end

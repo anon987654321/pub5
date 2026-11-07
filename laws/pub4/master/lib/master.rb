@@ -301,7 +301,11 @@ module Law
       def fail!(reason) = raise(Invalid, "#{id}: #{reason}")
 
       def prove_named_test!
-        fail!("proved_by #{proved_by} is a pub4 test that has not moved to pub5")
+        # pub4's semantics (MASTER/law/definition.rb): a law proved by a named
+        # test holds when that test file exists in the tree it ships with. The
+        # named suite is pub5's own here (test/laws/), so the path resolves
+        # against this checkout's root, not the imported lib's own directory.
+        fail!("proved_by #{proved_by} does not exist") unless File.file?(File.join(Core::ROOT, proved_by.to_s))
       end
 
       def prove_fixtures!
