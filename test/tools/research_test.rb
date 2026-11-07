@@ -142,7 +142,10 @@ class ResearchTest < Minitest::Test
       result = research.send(:bound_output, "screenshot_file" => "log/master/browser-default.png",
                                            "source" => "x" * Master::Tools::Research::MAX_OUTPUT_BYTES)
 
-      assert_equal "log/master/browser-default.png", JSON.parse(result).fetch("screenshot_file")
+      parsed = JSON.parse(result)
+      assert_equal "log/master/browser-default.png", parsed.fetch("screenshot_file")
+      assert_match(/\.\.\.\[truncated\]/, parsed.fetch("source"))
+      assert_operator result.bytesize, :<=, Master::Tools::Research::MAX_OUTPUT_BYTES
     end
   end
 
