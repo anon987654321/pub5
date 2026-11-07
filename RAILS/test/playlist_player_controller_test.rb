@@ -13,6 +13,10 @@ class PlaylistPlayerControllerTest < Minitest::Test
     "../brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js", __dir__
   )
   STIMULUS = %(import { Controller } from "@hotwired/stimulus")
+  # The controller also imports the reflex runtime the bundle provides at
+  # runtime. In node it is a registration no-op: what is measured is the
+  # controller's own behaviour, not the reflex wiring.
+  REFLEX = %(import StimulusReflex from "stimulus_reflex")
 
   PAGE = <<~JS
     const element = (extra = {}) => ({
@@ -26,7 +30,7 @@ class PlaylistPlayerControllerTest < Minitest::Test
     globalThis.window = { addEventListener() {}, MediaMetadata: class {} }
     const mediaSession = { setActionHandler: (action, fn) => { handlers[action] = fn } }
     Object.defineProperty(globalThis, "navigator", { value: { mediaSession } })
-    globalThis.document = { querySelector: () => null }
+    globalThis.document = { querySelector: () => null, addEventListener() {}, removeEventListener() {} }
     globalThis.fetch = async (url, options) => { posts.push(JSON.parse(options.body).track_id); return { ok: true } }
 
     const player = (values = {}) => {
@@ -80,6 +84,7 @@ class PlaylistPlayerControllerTest < Minitest::Test
     source = File.read(CONTROLLER)
     assert source.include?(STIMULUS), "#{CONTROLLER} no longer imports Stimulus through #{STIMULUS.inspect}"
     program = source.sub(STIMULUS, "class Controller {}")
+                    .sub(REFLEX, "const StimulusReflex = { register() {} }")
                     .sub("export default class extends Controller", "class PlaylistPlayer extends Controller") +
               PAGE + script
     out, status = Open3.capture2e("node", "--input-type=module", stdin_data: program)
