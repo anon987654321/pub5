@@ -54,7 +54,10 @@ class TestDillaCliContract < Minitest::Test
 
   def test_output_path_answers_the_master_contract
     Dir.mktmpdir do |dir|
+      # MASTER sends its clock as the optional third argument; the flat render
+      # layout carries it without steering the path.
       out, err, status = run_dilla("output-path", "dilla-render-directory",
+                                   "2026-11-01T09:00:00Z",
                                    env: { "DILLA_OUTPUT_DIR" => File.join(dir, "renders") })
       assert status.success?, err
       assert_equal File.join(File.realpath(dir), "renders"), out.strip

@@ -21,7 +21,7 @@
 #   ruby dilla.rb --list
 #   ruby dilla.rb reference <url|file> [--style j_dilla] [--no-stems] [--max-duration S]
 #   ruby dilla.rb industrial-techno --out X [--bpm X] [--bars N]
-#   ruby dilla.rb output-path dilla-render-directory
+#   ruby dilla.rb output-path dilla-render-directory [ISO8601]
 #   ruby dilla.rb output-path reference-root
 #   ruby dilla.rb demo-each
 #
@@ -151,6 +151,12 @@ module Dilla
       opts.mode = :output_path
       args.shift
       opts.source = args.shift or abort "output-path: name dilla-render-directory or reference-root"
+      # The MASTER contract sends its clock as an optional ISO8601 (pub4's
+      # dated layout consumed it for the day folder). The flat layout keeps
+      # every render directly in the data home (operator directive
+      # 2026-11-07), so the timestamp stays part of the accepted surface
+      # and is carried without steering the path.
+      opts.extra[:at] = args.shift
     when "demo-each"
       opts.mode = :demo_each
       args.shift
@@ -223,7 +229,7 @@ module Dilla
             measures tempo, pocket, harmony, melody and drum patterns, and the
             profile lands in the reference root for the next generation.
         ruby dilla.rb industrial-techno --out PATH [--bpm X] [--bars N]
-        ruby dilla.rb output-path dilla-render-directory
+        ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
       sample flip:
@@ -846,8 +852,11 @@ module Dilla
 
   # Shared noise stream buffer: one deterministic stream, random entry points.
   # Fixed-seed noise stream: every process sees the same noise, so a seeded
-  # render reproduces exactly across runs.
-  NOISE = Array.new(262_144) { Random.new(0xD11A).rand * 2.0 - 1.0 }.freeze
+  # render reproduces exactly across runs. One Random, sequential draws —
+  # Random.new(seed).rand *per sample* answered the same first float 262,144
+  # times, a constant array that read as silence and cost 8s of boot.
+  noise_stream = Random.new(0xD11A)
+  NOISE = Array.new(262_144) { noise_stream.rand * 2.0 - 1.0 }.freeze
 
   class Stereo
     attr_accessor :l, :r
