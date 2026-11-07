@@ -68,7 +68,30 @@ module Studio
       # This is an inventory of directions, not proof that each direction is
       # implemented. Promotion out of :unverified requires a concrete code path
       # and a regression test; otherwise readiness would be a guess.
-      IMPLEMENTATION_STATUS = {}.freeze
+      # First three promotions (2026-11-07): the Dilla Sonitex wear pass proved
+      # itself in test_dilla_wear_test.rb. Refused promotions from the same
+      # review: cassette_wow_random_walk (the wow is a sinusoid, not a random
+      # walk — naming it a random walk would be a lie with a passing test next
+      # to it) and bandwidth_shaped_hiss (NOISE is a white stream; nothing
+      # shapes its bandwidth except the preset's own lowpass pass, which is
+      # already covered by sp1200_bandwidth).
+      IMPLEMENTATION_STATUS = {
+        %i[dilla vinyl_crackle_density].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#crackle!",
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_vinyl_crackle_density_is_seeded_and_amount_scales"
+        }.freeze,
+        %i[dilla tape_transient_softening].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#one_pass!",
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_tape_transient_softening_rounds_the_peaks_instead_of_pinning"
+        }.freeze,
+        %i[dilla sp1200_bandwidth].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#one_pass!",
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_the_wear_pass_band_limits_before_it_colours"
+        }.freeze,
+      }.freeze
       STATUSES = %i[verified unavailable unverified].freeze
 
       module_function

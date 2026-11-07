@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+# The Sonitex wear-pass battery: the analog chain that mutates a mix is the
+# part of dilla whose arithmetic is invisible until you feed it a rig, so the
+# proof here feeds it directly and counts what changed. Every method a
+# capability promotion cites under Studio::AnalogCapabilities must live here.
+require_relative "minitest_helper"
+require_relative "../dilla/dilla"
+
+class TestDillaWear < Minitest::Test
+  def stereo(samples)
+    s = Dilla::Stereo.new(samples.length)
+    s.l = samples.dup
+    s.r = samples.dup
+    s
+  end
+
+  def flat(n, value)
+    stereo(Array.new(n, value))
+  end
+
+  def cfg
+    {
+      "highpass" => 40.0, "lowpass" => 9000.0, "drive" => 1.4,
+      "bits" => 12, "wow" => 0.0, "crackle" => 0.3, "hiss" => 0.4,
+      "dropout" => 0.0,
+    }
+  end
+
+  # DILLA rig key vinyl_crackle_density: spike density comes from the rig
+  # amount, the spikes come from the run's seeded rng, and the same seed must
+  # reproduce the same surface — a render the listener could re-run exactly.
+  def test_vinyl_crackle_density_is_seeded_and_amount_scales
+    base = flat(60_000, 0.0)
+    loud = flat(60_000, 0.0)
+    Dilla::Sonitex.crackle!(base, 0.1, Random.new(7))
+    Dilla::Sonitex.crackle!(loud, 0.6, Random.new(7))
+
+    assert_equal base.l.length, loud.l.length
+    same_seed = flat(60_000, 0.0)
+    Dilla::Sonitex.crackle!(same_seed, 0.1, Random.new(7))
+    assert_equal base.l.map { |v| (v * 1e9).round }, same_seed.l.map { |v| (v * 1e9).round },
+                 "the same seed must reproduce the same crackle surface"
+    # Spike amplitude is amount * 0.5; a silent bed leaves the rig's own scale.
+    assert_operator loud.l.map(&:abs).max, :>, base.l.map(&:abs).max * 5,
+                   "the denser rig's spikes must land harder than the quiet rig's"
+    assert_operator loud.l.map(&:abs).max, :<=, 0.5, "spikes clamp to the codec range"
+  end
+
+  # DILLA rig key tape_transient_softening: one_pass drives each sample
+  # through tanh, so a peak that meets the drive is *rounded*, never pinned
+  # at the rail the way a hard clipper pins it.
+  def test_tape_transient_softening_rounds_the_peaks_instead_of_pinning
+    # The drive stage is measured alone: crackle and hiss land after the rail
+    # and could push the mix past 1.0 as their own last-stage arithmetic.
+    silent = cfg.merge("crackle" => 0.0, "hiss" => 0.0)
+    mix = flat(5_000, 2.0)
+    Dilla::Sonitex.one_pass!(mix, silent, Random.new(11))
+
+    assert_operator mix.l.max.abs, :<, 1.0,
+                   "tanh rounds the driven peak; a hard limiter would pin at exactly 1.0"
+    assert_operator mix.l.max.abs, :>, 0.9,
+                   "the softened peak still carries the transient's weight"
+  end
+
+  # DILLA rig key sp1200_bandwidth: the wear pass band-limits through one-pole
+  # filters before it colours anything — highpass strips the DC, lowpass
+  # decays the tail.
+  def test_the_wear_pass_band_limits_before_it_colours
+    dc = flat(4_000, 1.0)
+    Dilla::Sonitex.one_pass!(dc, cfg, Random.new(3))
+    assert_operator dc.l[-1].abs, :<, 0.05,
+                   "the highpass must bleed the held note toward zero"
+
+    impulse = stereo(Array.new(4_000, 0.0))
+    impulse.l[0] = impulse.r[0] = 1.0
+    Dilla::Sonitex.one_pass!(impulse, cfg, Random.new(3))
+    assert_operator impulse.l[1], :>, 0.0
+    assert_operator impulse.l[1], :<, impulse.l[0]
+    assert_operator impulse.l[200], :<, impulse.l[1] * 0.9,
+                   "the lowpass must decay the tail"
+  end
+end
