@@ -49,11 +49,16 @@ class TestAdVisualAudit < Minitest::Test
     assert Audit.verify_evidence!(JSON.parse(JSON.generate(report)))
   end
 
+  # A receipt arrives from disk as ordinary JSON, where no array is frozen, so
+  # that is the shape an attacker actually mutates. Mutating the in-memory
+  # report raises FrozenError instead, which proves nothing about whether the
+  # seal is checked.
   def test_receipt_rejects_post_audit_mutation
     report = Audit.audit(html: @html, css: @css, placement: "display-320x250", rendered: @rendered, token_contract: @contract)
-    report.fetch(:checks).first.fetch(:reasons) << "changed after assessment"
+    tampered = JSON.parse(JSON.generate(report))
+    tampered.fetch("checks").first.fetch("reasons") << "changed after assessment"
 
-    assert_raises(Audit::VisualAuditRejected) { Audit.verify_evidence!(report) }
+    assert_raises(Audit::VisualAuditRejected) { Audit::verify_evidence!(tampered) }
   end
 
   def test_missing_receipt_cannot_pass_the_renderer_gate

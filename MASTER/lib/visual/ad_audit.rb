@@ -119,13 +119,17 @@ module Master
         true
       end
 
+      # `\s*` before the lookahead can match zero characters, so `(?!var\s*\()`
+      # was free to sit on the space after the colon and report `var(...)`
+      # itself as a literal. Consume the optional whitespace *inside* the
+      # lookahead so a token-resolved declaration is never a finding.
       def identity_tokens(html:, css:, token_contract:)
         prefix = Regexp.escape(token_contract.fetch("token_prefix", "ad-organ"))
         scoped = css.to_s.scan(/\.[\w-]*#{prefix}[\w-]*\s*\{[^}]*\}/m).join("\n")
-        bad_colors = scoped.scan(/(?:^|[;{])\s*(?:color|background(?:-color)?|border(?:-[\w-]+)?-color|outline-color)\s*:\s*(?!var\s*\()[^;}]+/i).flatten
+        bad_colors = scoped.scan(/(?:^|[;{])\s*(?:color|background(?:-color)?|border(?:-[\w-]+)?-color|outline-color)\s*:(?!\s*var\s*\()\s*\S[^;}]*/i).flatten
         bad_colors.reject! { |value| value.match?(/\A\s*(?:transparent|currentColor|inherit|initial|unset)\s*\z/i) }
-        bad_font = scoped.match?(/font-family\s*:\s*(?!var\s*\()[^;}]+/i)
-        bad_spacing = scoped.scan(/(?:^|[;{])\s*(?:margin|padding|gap|border-radius)(?:-[\w-]+)?\s*:\s*(?!var\s*\()[^;}]+/i)
+        bad_font = scoped.match?(/font-family\s*:(?!\s*var\s*\()\s*\S[^;}]*/i)
+        bad_spacing = scoped.scan(/(?:^|[;{])\s*(?:margin|padding|gap|border-radius)(?:-[\w-]+)?\s*:(?!\s*var\s*\()\s*\S[^;}]*/i)
         reasons = []
         reasons << "hardcoded colour declaration in ad-organ CSS" if bad_colors.any?
         reasons << "font-family must resolve through a token" if bad_font
