@@ -395,8 +395,9 @@ module Master
       end
 
       def clean_query(value)
-        value.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
-             .gsub(/[[:cntrl:]]/, " ").strip.byteslice(0, MAX_QUERY_BYTES).to_s
+        normalized = value.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+                          .gsub(/[[:cntrl:]]/, " ").strip
+        utf8_prefix(normalized, MAX_QUERY_BYTES)
       end
 
       def utf8_prefix(value, bytes)
