@@ -99,7 +99,8 @@ module Master
 
       def initialize(world:)
         @world = world
-        @browser = BrowserAgent.new(world:)
+        @browser = world.browser if world.respond_to?(:browser)
+        @browser ||= BrowserAgent.new(world:)
       end
 
       def available_tools
@@ -186,6 +187,12 @@ module Master
         "Research tool failed: #{e.class}: #{e.message.to_s.lines.first.to_s.strip[0, 180]}"
       end
 
+      def browser_call(**arguments)
+        raise Error, "browser runtime unavailable: Core::World must provide a brokered browser session" unless @world.respond_to?(:browser)
+
+        @browser.call(**arguments)
+      end
+
       # Only browser-owned screenshot paths are read back. The path is
       # not accepted from page content, and the PNG stays local until the
       # conversation sends it through an explicitly image-capable model lane.
@@ -202,7 +209,7 @@ module Master
         nil
       end
 
-      def close = @browser.close_all
+      def close = @browser.close_all if @world.respond_to?(:browser) && @browser.respond_to?(:close_all)
 
       def result_prompt(name:, result:)
         <<~RESULT
