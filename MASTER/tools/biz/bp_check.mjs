@@ -88,27 +88,39 @@ for (const plan of ORDER) {
   }
   for (const [c, n] of bad) add(`char: U+${c.charCodeAt(0).toString(16).toUpperCase()} ×${n}`);
 
-  // structure: 8 sections, inline font discipline
+  // structure: 8 sections; fonts come from the bob2 starter's Google link,
+  // so nothing is embedded except a plan's own brand mark (Nosifer on
+  // ragnhild). The starter requirement itself is the template check below.
   const sections = [...src.matchAll(/<section id="([^"]+)"/g)].length;
   if (sections !== 8) add(`sections: ${sections} (expected 8)`);
   const fonts = [...src.matchAll(/@font-face\{/g)].length;
   if (plan === 'ragnhild') {
-    if (fonts !== 3) add(`font-face: ${fonts} (expected 3: EB Garamond ×2 + Nosifer)`);
+    if (fonts !== 1) add(`font-face: ${fonts} (expected 1: the Nosifer wordmark)`);
     if (!/class="mark-brand">Ragnhilds</.test(body)) add('mark-brand: wordmark missing');
     // wordmark must not be reused as a heading font (checked on body so the
     // base64 payload cannot create phantom matches)
     if (/(?:^|\})\s*h[1-4][^{]*\{[^}]*Nosifer/.test(body)) add('wordmark: Nosifer used on a semantic heading');
-  } else if (fonts !== 2) {
-    add(`font-face: ${fonts} (expected 2)`);
+  } else if (fonts !== 0) {
+    add(`font-face: ${fonts} (expected 0: the google link carries the faces)`);
   }
 
-  // cover revision (November 2026): Bringhurst title page, mechanical side —
-  // kicker omitted, poise v2 stylesheet and title-page print rules present,
-  // govt_bergen's wordmark plain in the anlage's own EB Garamond
+  // BUSPLAN_TEMPLATE_BOB2: the plan renders the bob2 starter - its token
+  // vocabulary, both faces on the fonts link, the toc and the one hefte
+  // print contract (cover is the page, folio in the foot, break hygiene).
+  if (!/--color-link: #005f73/.test(src)) add('bob2: link token missing');
+  if (!/--font-text: "Source Serif 4"/.test(src)) add('bob2: --font-text token missing');
+  if (!/--font-heading: "EB Garamond"/.test(src)) add('bob2: --font-heading token missing');
+  if (!/family=Source\+Serif\+4/.test(src)) add('bob2: Source Serif 4 not on the fonts link');
+  if (!/family=EB\+Garamond/.test(src)) add('bob2: EB Garamond not on the fonts link');
+  if (!/header\.cover/.test(src)) add('bob2: header.cover missing');
+  if (!/@page\{?\s*\{?\s*size:\s*156mm 234mm|@page \{\s*size: 156mm 234mm/.test(src)) add('bob2: hefte page size missing');
+  if (!/@bottom-center \{ content: counter\(page\)/.test(src)) add('bob2: folio missing');
+  if (!/@page :first \{ margin-top: 0; \}/.test(src)) add('bob2: first-page margin rule missing');
+  if (!/header\.cover \{ min-height: 221mm; \}/.test(src)) add('bob2: cover-as-page rule missing');
+  if (!/class="toc" aria-label="Innhold"/.test(src)) add('bob2: toc missing');
+  if (/--paper:|--ink:|--accent:|poise v2|cover revision 2026-11/.test(src)) add('bob2: archive-skin token or poise stylesheet still present');
   if (/class="kicker"/.test(body)) add('cover: kicker still present');
-  if (!body.includes('cover revision 2026-11')) add('cover: revision stylesheet missing');
-  if (!body.includes('poise v2')) add('cover: poise v2 stylesheet missing');
-  if (!body.includes('header{min-height:172mm;page-break-after:always}')) add('cover: title-page print rules missing');
+  if (!/Satt i Source Serif 4/.test(body)) add('bob2: colophon does not name the skin');
   if (plan === 'govt_bergen') {
     if (!/class="mark mark-plain">Bergens Selvstyreparti</.test(body)) add('cover: plain party mark missing');
     if (/background-clip:text/.test(body)) add('cover: gradient wordmark still present');

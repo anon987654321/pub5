@@ -252,7 +252,15 @@ html = <<~HTML
           @page {
             size: 156mm 234mm;
             margin: 6mm 0 12mm;
-            @bottom-center { content: counter(page); }
+            /* A margin box inherits nothing from the body, so an unstated
+               folio paints in the UA default (Times), not in the document's
+               face. Name the face and the size the folio carries. */
+            @bottom-center {
+              content: counter(page);
+              font-family: "Source Serif 4", serif;
+              font-size: var(--font-size-xsmall);
+              color: var(--color-footer-text);
+            }
           }
           @page :first { margin-top: 0; }
           body { margin: 0; }
