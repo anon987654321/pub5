@@ -1041,7 +1041,6 @@ body.vertical-marketplace .store-buybox .price {
   }
 }
 
-
 /* Bol search-result rows: image, descriptive content, then price/purchase context.
    The promotional cards above keep the catalogue's campaign rail; the main result
    set switches to the denser comparison anatomy visible on bol category pages. */
@@ -1404,9 +1403,6 @@ body.vertical-marketplace .storefront-bol-mega h3 a:hover {
   color: var(--bol-blue);
   text-decoration: underline;
 }
-
-
-
 
 /* The listing row's two actions at every width; the md block below sets
    their type and the offer's taller target. */
@@ -2034,7 +2030,6 @@ body.vertical-marketplace .listing-review-cover-image {
   }
 }
 
-
 /* BRGEN sketch: progressive posting is one writing flow with a clear media-first entry. */
 .post-progressive-nav {
   display: flex;
@@ -2233,7 +2228,6 @@ form[data-publishing="true"] .post-progressive-nav {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-
 /* marketplace commerce finish
    Keep the existing bol-derived anatomy, but make the storefront feel lighter,
    friendlier and more product-led: white paper, clear blue actions, soft wells,
@@ -2419,7 +2413,6 @@ body.vertical-marketplace .store-buybox .button-primary {
   border-radius: 999px;
   background: var(--bol-blue);
 }
-
 
 @media (max-width: 767px) {
   body.vertical-marketplace #bottomHalf {
@@ -2676,7 +2669,6 @@ body.auth-surface:not([class*="vertical-"]) .brgen-top-chrome {
   }
 }
 
-
 /* Interaction polish: feed controls use the live home-template classes, and
    the composer remains usable as the visual viewport changes on a phone. */
 .home-feed-view:focus-visible,
@@ -2804,7 +2796,6 @@ html[data-theme="light"] .home-feed-view.is-active {
   }
 }
 
-
 .demo-mode-notice {
   position: sticky;
   inset-block-start: 0;
@@ -2827,7 +2818,6 @@ html[data-theme="light"] .home-feed-view.is-active {
   overflow-wrap: anywhere;
 }
 // ---- /brgen_shared_feed_responsive_finish ----
-
 
 @include endgame.brgen_precision;
 @include endgame.brgen;
