@@ -805,7 +805,7 @@ font-size: clamp(12px, 3vw, var(--text-small));
 }
 
 .radio-featured > .playlist-app .playlist-now-playing {
-  text-align: left;
+  text-align: start;
 }
 
 .radio-featured > .playlist-app .playlist-waveform-canvas {
@@ -1136,7 +1136,7 @@ body.vertical-playlist .playlist-details {
   border: 0;
   background: transparent;
   color: inherit;
-  text-align: left;
+  text-align: start;
 }
 
 .playlist-queue-item.is-active {
