@@ -78,6 +78,24 @@ class ResearchTest < Minitest::Test
     end
   end
 
+  def test_codepen_does_not_claim_the_javascript_shell_is_an_empty_trending_feed
+    sandbox do |root|
+      transport = Object.new
+      transport.define_singleton_method(:request) do |_method, _url, timeout:, headers: {}, **_options|
+        Core::HTTP::Reply.new(status: 200, headers: {},
+                              body: "CodePen doesn't work very well without JavaScript.")
+      end
+      w = world(root, { net: ["codepen.io"] }, transport:)
+      research = Master::Tools::Research.new(world: w)
+
+      result = JSON.parse(research.call(name: "codepen.trending", arguments: { "limit" => 4 }))
+
+      assert_equal "javascript_required", result.fetch("status")
+      assert_empty result.fetch("results")
+      assert_match(/JavaScript shell/, result.fetch("note"))
+    end
+  end
+
   def test_github_search_can_filter_to_new_repositories
     build do |research, transport|
       result = JSON.parse(research.call(name: "github.repositories",
