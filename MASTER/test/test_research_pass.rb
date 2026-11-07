@@ -136,7 +136,7 @@ class TestResearchPass < Minitest::Test
       agent: WideResearchAgent.new, bus: nil, plan: @plan, root: Master::REPO_ROOT,
     )
 
-    result = pass.run(target: ".", files: %w[MASTER RAILS OPENBSD STUDIO])
+    result = pass.run(target: ".", files: MasterPaths::TREES)
 
     assert_equal "PASS", result.fetch(:status)
     %w[engineering rails openbsd studio music visual bplans].each do |domain|
@@ -153,7 +153,7 @@ class TestResearchPass < Minitest::Test
     assert_equal %w[engineering rails openbsd studio music visual bplans].sort,
       pass.send(:domains_for, ".", @plan.research_protocol).sort
     assert_equal %w[engineering rails openbsd studio music visual bplans].sort,
-      pass.send(:domains_for, "MASTER RAILS OPENBSD STUDIO", @plan.research_protocol).sort
+      pass.send(:domains_for, MasterPaths::TREES.join(" "), @plan.research_protocol).sort
     assert_equal ["music"], pass.send(:domains_for, "STUDIO/dilla", @plan.research_protocol)
     assert_equal ["bplans"], pass.send(:domains_for, "BIZ", @plan.research_protocol)
   end

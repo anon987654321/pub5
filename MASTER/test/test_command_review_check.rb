@@ -81,8 +81,10 @@ class TestCommandReviewCheck < Minitest::Test
     assert_equal ["MASTER"], registry.trees_for_target(".")
     assert_equal ["MASTER"], registry.trees_for_target("master")
     assert_equal ["MASTER"], registry.trees_for_target("lib/io")
-    assert_equal %w[MASTER RAILS OPENBSD STUDIO],
+    assert_equal Operator::CheckChain::TREES,
                  registry.trees_for_target("all")
+    assert_equal ["BIZ"], registry.trees_for_target("BIZ")
+    assert_equal ["BIZ"], registry.trees_for_target("BIZ/fetat")
   end
 
   def test_gated_command_handles_nil_ctx

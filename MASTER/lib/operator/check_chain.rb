@@ -413,16 +413,18 @@ module Operator
             when "RAILS" then File.join(ROOT, "RAILS")
             when "OPENBSD" then File.join(ROOT, "OPENBSD")
             when "STUDIO" then File.join(ROOT, "STUDIO")
+            when "BIZ" then File.join(ROOT, "BIZ")
             else File.expand_path(text, ROOT)
             end
       return TREES if abs == ROOT
       return ["RAILS"] if abs == File.join(ROOT, "RAILS") || abs.start_with?("#{File.join(ROOT, "RAILS")}/")
       return ["OPENBSD"] if abs == File.join(ROOT, "OPENBSD") || abs.start_with?("#{File.join(ROOT, "OPENBSD")}/")
       return ["STUDIO"] if abs == File.join(ROOT, "STUDIO") || abs.start_with?("#{File.join(ROOT, "STUDIO")}/")
+      return ["BIZ"] if abs == File.join(ROOT, "BIZ") || abs.start_with?("#{File.join(ROOT, "BIZ")}/")
       return ["MASTER"] if abs == MASTER || abs.start_with?("#{MASTER}/")
 
       # Check targets like `lib/io` are MASTER-relative shorthand when the
-      # operator is invoked from the repository root. Keep the four-tree
+      # operator is invoked from the repository root. Keep the governed-tree
       # boundary strict while resolving that intentional CLI form first.
       master_relative = File.expand_path(target.to_s, MASTER)
       return ["MASTER"] if File.file?(master_relative) || File.directory?(master_relative)
