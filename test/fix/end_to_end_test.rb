@@ -29,7 +29,7 @@ class FixEndToEndTest < Minitest::Test
   end
 
   def fixture(root)
-    %w[lib/keep.rb lib/refuse.rb registry/locked.rb].each { |path| put(root, "repo/#{path}", format(SEED, File.basename(path, ".rb"))) }
+    %w[lib/keep.rb lib/refuse.rb bin/locked.rb].each { |path| put(root, "repo/#{path}", format(SEED, File.basename(path, ".rb"))) }
     repo = File.join(root, "repo")
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.email", "fix@test")
@@ -56,7 +56,7 @@ class FixEndToEndTest < Minitest::Test
       run = fix(root, repo)
 
       assert run.ok?, "#{run.out}\n#{run.err}"
-      assert_match(/landed 1, refused 2: commit_refused 1, skip_protected 1/, run.out)
+      assert_match(/landed 1, refused 2: skip_protected 1, commit_refused 1/, run.out)
       log = git(repo, "log", "--format=%s")
       assert_equal ["Repair RESCUE_EXCEPTION in keep.rb", "Seed the fixture"], log.lines.map(&:chomp)
       message = git(repo, "log", "-1", "--format=%B")
@@ -67,7 +67,7 @@ class FixEndToEndTest < Minitest::Test
       assert_empty git(repo, "status", "--porcelain")
       refusal = JSON.parse(File.read(File.join(repo, "log/fix_refusals.jsonl")).lines.last)
       assert_equal %w[lib/refuse.rb commit restored], refusal.values_at("file", "stage", "outcome")
-      refute_includes File.read(File.join(root, "stubs/asked")), "registry/locked.rb", "the protected file never reached the model"
+      refute_includes File.read(File.join(root, "stubs/asked")), "bin/locked.rb", "the protected file never reached the model"
       llm = File.readlines(File.join(root, "ledger.jsonl")).map { |l| JSON.parse(l) }.select { |e| e["kind"] == "llm" }
       assert_equal [60] * llm.size, llm.map { |e| e["tokens_in"] + e["tokens_out"] }
       assert_operator llm.size, :>=, 2

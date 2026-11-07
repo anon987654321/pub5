@@ -1,10 +1,23 @@
 .DS_Store
-/tmp/
 /log/
 *.log
 *.pid
 *.sqlite3*
-/coverage/
 /out/
 /snapshots/
 .bundle/
+
+# Session runtime state; .master/ at the root and under master/ alike.
+.master/
+master/.constitutional_locks/
+master/runtime/
+master/output/
+
+# Run output: rails app tmp/ and coverage, and the generated asset and
+# upload trees that a deploy or a test boot recreates everywhere.
+tmp/
+coverage/
+rails/*/app/assets/builds/
+rails/*/public/assets/
+rails/*/storage/*
+!rails/*/storage/.keep

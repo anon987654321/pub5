@@ -7,7 +7,7 @@ commit says why. This file is the rule for anyone who changes the tree:
 Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 
 ## Who writes where
-- operator, claude and chatgpt push straight to `main`, and only behind the gate below.
+- operator and claude and chatgpt push straight to `main`, and only behind the gate below.
 - glm, fable, grok, zai push only to `inbox/<writer>`, one task per branch.
   An inbox branch merges when the gate is green, a different model reviewed it,
   and every changed path sits under that writer's trees:
