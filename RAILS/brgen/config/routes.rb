@@ -324,6 +324,11 @@ get "i/:token" => "invites#show", as: :invite
   # Chatroulette-style random pairing: one ask, one stranger, one conversation.
   # Guests play - the ask is the consent.
   resources :encounters, only: %i[create destroy]
+  # The wait is left by collection: the controller closes every waiting
+  # row the visitor owns, and the shared waiting view posts DELETE to
+  # /encounters. The member destroy the resources line draws was never
+  # the URL the button uses.
+  delete "encounters" => "encounters#destroy"
   get "encounters/waiting" => "encounters#waiting", as: :waiting_encounters
   # /live was a Jodel-shaped feed of short anonymous posts ranked by local
   # votes. It is the ambient chat room now, per operator 2026-08-17: brgen had

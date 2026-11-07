@@ -155,9 +155,23 @@ identity, authentication, tenancy, media processing and social integration.
 - **Commerce and travel:** `AffiliateLink` stores owner-selected links;
   `PackingList` records trip wardrobes. Marketplace lookups use the bounded
   BRGEN integration, not an Amber-owned product catalogue.
-- **Social and declutter:** posts, comments, reactions, follows, connections,
-  messages and creator publishing use the shared social graph. Challenges,
-  outcomes, reviews and the hygiene job implement the KonMari decision loop.
+- **Social graph:** `Post`, `Comment`, `Reaction` (one like per person and
+  target, not a counter), `Follow` (follower to followee), `Connection`
+  (requester to addressee) and `LiveStream` carry the social surface through
+  the shared engine's delivery.
+- **Stranger pairing:** `Encounter` is one random-pairing ask; a posted row
+  becomes a wait or a match, and a match opens a message thread.
+- **Declutter loop:** `DeclutterChallenge`, `DeclutterOutcome` and
+  `DeclutterReview` record the KonMari decision, its destination and its
+  review; `DeclutterHygieneJob` enforces hygiene on top.
+- **Sessions and travel:** `Session` is a signed-in browser for a user;
+  `PackingListItem` joins one garment to one trip on a `PackingList`.
+- **Creator remix:** `CreatorWardrobeItem` marks a garment a creator has
+  remixed into their public wardrobe, under the consent layer above.
+- **Sustainability:** `SustainabilityMetric` holds an item's computed
+  wear-and-care figures; `CalculateSustainabilityJob` computes them once per
+  item and `RecommendOutfitsJob` runs the bounded LLM suggestion pass with
+  concurrency limits.
 
 The app's routes and source define the complete model inventory. `RAILS/apps.yml`
 remains the authority for shipped feature status; this summary explains ownership.
