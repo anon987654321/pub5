@@ -21,7 +21,10 @@ class VpsDeployFlowTest < Minitest::Test
   # so they come from the same source rather than being stubbed. Without its own
   # `log`, zsh falls through to its `log` builtin and every call errors.
   DEPLOY_USER_LINES = SOURCE[/^DEPLOY_USER=.*\n^DEPLOY_HOME=.*$/]
-  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry].freeze
+  # restore_preflight_checkout joined them with the 2026-10-12 pin work: the
+  # preflight's failure paths (and only a full run's EXIT trap) restore the
+  # detached checkout, so the pin block must carry its own definition.
+  HELPER_NAMES = %w[run_as_deploy_user git_as_deploy_user log_ts log set_stage retry admin_service_retry restore_preflight_checkout].freeze
   HELPERS = HELPER_NAMES.to_h { |name| [name, SOURCE[/^#{name}\(\) \{.*?^\}$/m]] }
   HELPER_SOURCE = HELPERS.values.join("\n")
   # su stands in for root changing to the deploy user: it refuses any other user
