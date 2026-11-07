@@ -111,23 +111,21 @@ module Master
       # Reline owns the working prompt and line editor; the face is an
       # append-only visual layer above it, never a terminal-input handoff.
       def normal_prompt
-        state, prompt = @refs.renderer.prompt_line(
-          @refs.agent.model, @refs.session.phase,
-          last_ok: @last_ok, violations: violations_count,
-          tokens: @refs.session.token_est, cost: @refs.session.cost
-        )
-        announce_state(state)
-        prompt
+        prompt_with(focused: false)
       end
 
       # Focus mode reduces context noise, never hides the working location or
       # the destination that receives the next line of text.
       def focus_prompt
+        prompt_with(focused: true)
+      end
+
+      def prompt_with(focused:)
         state, prompt = @refs.renderer.prompt_line(
           @refs.agent.model, @refs.session.phase,
           last_ok: @last_ok, violations: violations_count,
           tokens: @refs.session.token_est, cost: @refs.session.cost,
-          focused: true
+          focused:
         )
         announce_state(state)
         prompt
