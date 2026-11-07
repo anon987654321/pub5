@@ -402,7 +402,31 @@ module Master
         if value.is_a?(Hash) && value.key?("screenshot_file")
           value = { "screenshot_file" => value["screenshot_file"] }.merge(value)
         end
-        JSON.pretty_generate(value).byteslice(0, MAX_OUTPUT_BYTES).to_s.force_encoding(Encoding::UTF_8).scrub
+
+        per_string = MAX_OUTPUT_BYTES
+        loop do
+          bounded = truncate_strings(value, per_string)
+          output = JSON.pretty_generate(bounded)
+          return output if output.bytesize <= MAX_OUTPUT_BYTES
+
+          per_string = (per_string * 0.75).floor
+          return JSON.generate(truncated: true) if per_string < 64
+        end
+      end
+
+      def truncate_strings(value, byte_limit)
+        case value
+        when Hash
+          value.to_h { |key, nested| [key, truncate_strings(nested, byte_limit)] }
+        when Array
+          value.map { |nested| truncate_strings(nested, byte_limit) }
+        when String
+          return value if value.bytesize <= byte_limit
+
+          value.byteslice(0, [byte_limit - 14, 0].max).to_s.force_encoding(Encoding::UTF_8).scrub + "...[truncated]"
+        else
+          value
+        end
       end
     end
   end
