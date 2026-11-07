@@ -68,6 +68,7 @@ class ResearchTest < Minitest::Test
     build do |research, transport|
       trending = JSON.parse(research.call(name: "codepen.trending", arguments: { "limit" => 4 }))
       assert_equal "Bright Sky", trending.dig("results", 0, "title")
+      assert_equal "static_html", trending.fetch("method")
 
       inspect = JSON.parse(research.call(name: "codepen.inspect",
                                           arguments: { "url" => "https://codepen.io/alice/pen/bright-sky" }))
@@ -105,6 +106,25 @@ class ResearchTest < Minitest::Test
       assert_equal "log/master/browser-research-codepen-trending.png", result.fetch("screenshot_file")
       assert_equal %w[open scroll close], calls.map(&:first)
       assert_equal ["research-codepen-trending"] * 3, calls.map { |call| call[1] }
+    end
+  end
+
+  def test_codepen_broker_failure_is_not_reported_as_an_empty_feed
+    sandbox do |root|
+      w = world(root, { net: ["codepen.io"] })
+      calls = []
+      browser = Object.new
+      browser.define_singleton_method(:call) do |action:, session:, **_rest|
+        calls << action
+        action == "open" ? { "error" => "Chromium could not start" } : { "closed" => true }
+      end
+      w.define_singleton_method(:browser) { browser }
+      research = Master::Tools::Research.new(world: w)
+
+      result = research.call(name: "codepen.trending", arguments: { "limit" => 3 })
+
+      assert_match(/Chromium could not start/, result)
+      assert_equal %w[open close], calls
     end
   end
 
