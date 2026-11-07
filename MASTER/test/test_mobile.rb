@@ -25,6 +25,18 @@ class TestMobileProfile < Minitest::Test
     refute Master::Mobile::Profile.new(env: {}).activate!
   end
 
+  def test_a_proot_distro_guest_is_not_misdetected_as_the_termux_host
+    env = {
+      "container" => "proot-distro",
+      "PD_CONTAINER" => "debian",
+      "TERMUX_VERSION" => "0.119",
+      "PREFIX" => "/data/data/com.termux/files/usr",
+    }
+
+    refute Master::Mobile::Env.termux?(env)
+    refute Master::Mobile::Profile.new(env:).activate!
+  end
+
   def test_auto_approve_follows_the_data_until_the_operator_says_otherwise
     assert Master::Mobile::Profile.new(env: {}).auto_approve?
     refute Master::Mobile::Profile.new(env: { "MASTER_MOBILE_AUTO_APPROVE" => "0" }).auto_approve?

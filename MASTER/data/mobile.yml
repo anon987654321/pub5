@@ -22,7 +22,7 @@ env:
 # is why clang, make, libyaml and openssl are here. Only these names are ever
 # passed to pkg; optional ones install when MASTER_MOBILE_INSTALL_OPTIONAL=1.
 packages:
-  required: [ruby, git, clang, make, libyaml, openssl]
+  required: [ruby, git, clang, make, libyaml, openssl, libvips]
   optional: [tmux, termux-api]
   # A public install approves the pinned list on first run; MASTER_MOBILE_AUTO_APPROVE=0 asks instead.
   auto_approve: true

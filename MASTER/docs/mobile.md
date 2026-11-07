@@ -19,6 +19,71 @@ The installer installs and checks the pinned Ruby bundle through `bin/deps insta
 
 Termux from F-Droid is the build that still receives updates. Install Termux:API from the same place if you want speech features; optional speech backends do not block installation.
 
+## Debian/Ubuntu build path with PRoot-Distro
+
+Use this route when the native Termux Ruby or a native gem build does not
+complete on the device. It gives MASTER a regular glibc Linux userland and
+builds the exact Ruby version recorded in the checkout. It is a build/runtime
+fallback for the normal CLI; it is not a claim that every Termux camera, speech
+or Android integration works inside the guest.
+
+On the Termux host, install PRoot-Distro and create the Debian guest once:
+
+    pkg update -y
+    pkg install -y git curl proot-distro
+    proot-distro install debian
+
+From the pub5 checkout in Termux, bind the checkout into the guest and build
+Ruby from the repository's version pin. The bind keeps the Git worktree in
+Termux home; the Ruby installation and system libraries persist inside Debian.
+
+    cd "$HOME/pub5"
+    proot-distro login debian --bind "$PWD:/pub5" -- bash -lc '
+      set -eu
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\
+        ca-certificates git curl build-essential autoconf bison pkg-config zsh \\
+        libssl-dev libreadline-dev zlib1g-dev libffi-dev libyaml-dev \\
+        libsqlite3-dev libvips-dev libxml2-dev libxslt1-dev
+
+      if ! command -v ruby-build >/dev/null 2>&1; then
+        git clone --depth 1 https://github.com/rbenv/ruby-build.git /tmp/ruby-build
+        PREFIX=/usr/local /tmp/ruby-build/install.sh
+      fi
+
+      ruby_version="$(cat /pub5/.ruby-version)"
+      mkdir -p /opt/rubies
+      ruby_home="/opt/rubies/$ruby_version"
+      if [ ! -x "$ruby_home/bin/ruby" ]; then
+        ruby-build "$ruby_version" "$ruby_home"
+      fi
+      export PATH="$ruby_home/bin:/usr/local/bin:$PATH"
+      ruby --version
+      cd /pub5/MASTER
+      ruby bin/deps install
+      ruby bin/deps check
+      ruby bin/deps boot
+    '
+
+To start the normal MASTER CLI later, enter the existing guest again:
+
+    proot-distro login debian --bind "$HOME/pub5:/pub5" -- bash -lc '
+      ruby_version="$(cat /pub5/.ruby-version)"
+      export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"
+      cd /pub5/MASTER
+      bin/master
+    '
+
+The guest's container marker is deliberately treated as Linux, not as the
+native Termux host. This prevents MASTER from trying to run Termux's package
+bootstrap from inside Debian. Use bin/master-mobile doctor from the real
+Termux app environment, not as a readiness verdict for the Debian guest.
+PRoot-Distro supplies a fake root for the guest package manager; it is not
+Android root and cannot provide kernel-level root, systemd or container
+isolation. The normal Termux:API speech/camera path remains a separate native
+Termux capability and must be tested there.
+
+
 ## Provider sign-in
 
 MASTER delegates sign-in to each provider's own CLI; it never copies OAuth tokens or session files into its own store. From the normal interactive prompt:
@@ -54,7 +119,7 @@ The normal Reline prompt also supports one deliberate microphone capture with `/
     /privacy grant microphone --confirm "GRANT microphone"
     /privacy grant speech_recognition --confirm "GRANT speech_recognition"
 
-The same grants protect microphone capture in both the terminal and browser face, and expire after one hour. Grant them from the normal `bin/master` session before using the browser's listen button. Android still requires microphone permission for the Termux app, the Termux:API companion app, and `pkg install termux-api`. `/voice on` enables spoken replies in the terminal; the mobile browser bridge speaks each reply through Termux:API. Use the normal Termux app user, not a root/proot shell, so its API commands remain connected to the Android app.
+The same grants protect microphone capture in both the terminal and browser face, and expire after one hour. Grant them from the normal `bin/master` session before using the browser's listen button. Android still requires microphone permission for the Termux app, the Termux:API companion app, and `pkg install termux-api`. `/voice on` enables spoken replies in the terminal; the mobile browser bridge speaks each reply through Termux:API. Use the normal Termux app user for the Termux:API commands; the Debian PRoot route above is for the Linux CLI/build and is not the mobile API readiness path.
 
 ## Security boundaries
 
