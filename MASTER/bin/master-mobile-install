@@ -40,7 +40,7 @@ if [ "$demo" -eq 1 ]; then
     printf 'mobile0: plan 3/5 - shallow-clone canonical pub5 branch %s\n' "$branch"
   fi
   printf 'mobile0: plan 4/5 - install Falcon, then run MASTER/bin/master-mobile doctor\n'
-  printf 'mobile0: plan 5/5 - open the loopback-only face bridge at http://127.0.0.1:8765/face\n'
+  printf 'mobile0: plan 5/5 - after doctor passes, print the command to start the loopback-only face bridge at http://127.0.0.1:8765/face\n'
   printf 'mobile0: DEMO complete; all device and repository checks remain unmeasured\n'
   exit 0
 fi
