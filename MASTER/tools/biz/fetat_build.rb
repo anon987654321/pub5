@@ -299,6 +299,10 @@ html = <<~HTML
             </div>
             #{out}
             <footer>
+              <p>Satt i Source Serif 4 (brødtekst) og EB Garamond (titler) · mål 66 tegn · linjeavstand 1,5 · titler i setningscase uten versaler – etter Robert Bringhurst, The Elements of Typographic Style.</p>
+              <p>Kilde: fetat_proposal.md · november 2026.</p>
+              <p>Forfattet etter Innovasjon Norges vurderingskriterier · november 2026.</p>
+              <p>Merke: sporene av to hender, sporet på fotografiets sentrallinje i én jevn strek; F E T A T i små, spredte versaler i Source Sans 3.</p>
               <p><a href="https://fetat.no" target="_blank" aria-label="Besøk Fetat"><strong>www.fetat.no</strong></a> – Rettferdighet for Ola &amp; Kari, med Norges beste AI.</p>
               <p>Opphavsrett © 2026 Fetat, Kanalveien 10, NO-5068 Bergen.</p>
             </footer>

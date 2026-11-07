@@ -3,10 +3,18 @@
 // document (156mm 234mm) determines the page size, as in the pub5 anlage.
 // Usage: node scripts/bp_print.mjs
 import { spawnSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
-import { OUTPUT_DIR as OUT } from './paths.mjs';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { OUTPUT_DIR as OUT, SOURCE_DIR, BIZ_ROOT } from './paths.mjs';
 
-const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
+const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen', 'fetat'];
+// fetat.html is built by fetat_build.rb straight into the published BIZ
+// folder (it owns the svg mark and the traced cover), so its printed
+// source is the published copy unless the output dir carries it too.
+const FETAT_SOURCE = () => {
+  if (existsSync(`${OUT}/fetat/fetat.html`)) return `${OUT}/fetat/fetat.html`;
+  if (existsSync(`${BIZ_ROOT}/BIZ/fetat/fetat.html`)) return `${BIZ_ROOT}/BIZ/fetat/fetat.html`;
+  return null;
+};
 const CHROME_CANDIDATES = [
   process.env.BIZ_CHROME_BIN,
   process.env.CHROME_BIN,
@@ -30,8 +38,14 @@ if (!CHROME) {
 }
 
 for (const name of ORDER) {
-  const src = `file://${OUT}/${name}/${name}.html`;
+  let src = `file://${OUT}/${name}/${name}.html`;
   const pdf = `${OUT}/${name}/${name}.pdf`;
+  if (name === 'fetat') {
+    const s = FETAT_SOURCE();
+    if (!s) throw new Error('fetat: no fetat.html on either path; run ruby fetat_build.rb first.');
+    src = `file://${s}`;
+    mkdirSync(`${OUT}/fetat`, { recursive: true });
+  }
   const r = spawnSync(CHROME, [
     '--headless', '--disable-gpu', '--no-sandbox',
     '--no-pdf-header-footer', '--virtual-time-budget=20000',
