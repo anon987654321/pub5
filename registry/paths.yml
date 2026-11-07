@@ -19,8 +19,15 @@ protected:
   - AGENTS.md
   - CLAUDE.md
   - core/**
-  - laws/**
-  - registry/**
+  - registry/apps.yml
+  - registry/commands.yml
+  - registry/knobs.yml
+  - registry/models.yml
+  - registry/openbsd.yml
+  - registry/paths.yml
+  - registry/schemas/**
+  - registry/tokens.yml
+  - registry/writers.yml
   - bin/**
   - .githooks/**
   - .ruby-version

@@ -142,20 +142,23 @@ class GatekeeperTest < Minitest::Test
 
   def git_ok?(*args) = tool.exec("git", "-C", @origin, *args, unset: Gatekeeper::Repo::INHERITED).ok?
 
-  def test_an_inbox_tier_push_to_main_is_a_violation
+  def test_operator_authorized_writer_can_use_the_shared_account_on_main
     fixture do
       gate
-      direct = push_main("Push past the inbox", writer: "chatgpt", files: { "rails/c.rb" => "z = 3\n" })
-      shared = push_main("Push from the shared account", writer: "claude", author: "anon987654321",
-                                                         files: { "rails/d.rb" => "w = 4\n" })
+      direct = push_main("Push an authorized Law repair", writer: "chatgpt", author: "anon987654321",
+                        files: { "laws/example.rb" => "Law = true\n" })
+      shared = push_main("Push from an inbox-tier writer", writer: "claude", author: "anon987654321",
+                        files: { "rails/d.rb" => "w = 4\n" })
       code, out = gate
       assert_equal 1, code
+      verdict = ledger("verdict").find { |v| v["sha"] == direct }
+      assert_equal ["PASS", "chatgpt"], verdict.values_at("result", "writer")
       violations = ledger("violation")
-      assert_equal [direct, shared], violations.map { |v| v["sha"] }
-      assert_equal "chatgpt", violations.first["writer"]
-      assert_match(/as anon987654321 \(inbox tier\)/, violations.last["reason"])
-      assert_match(/violation #{direct[0, 10]} chatgpt/, out)
-      assert_match(/2 violations/, out)
+      assert_equal [shared], violations.map { |v| v["sha"] }
+      assert_equal "claude", violations.first["writer"]
+      assert_match(/as anon987654321 \(inbox tier\)/, violations.first["reason"])
+      refute_match(/violation #{direct[0, 10]} chatgpt/, out)
+      assert_match(/1 violations/, out)
     end
   end
 

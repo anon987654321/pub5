@@ -13,6 +13,7 @@ module Gatekeeper
     def initialize(registry = Core::Registry.load(:writers))
       @writers = registry.fetch("writers")
       @inbox_authors = Array(registry["inbox_tier_authors"])
+      @main_tier_exceptions = Array(registry["main_tier_exceptions"])
     end
 
     def writer(commit)
@@ -26,9 +27,10 @@ module Gatekeeper
 
     # inbox, main, or nil for the gate itself and an unnamed writer.
     def tier(commit)
-      return "inbox" if inbox_author?(commit)
+      name = writer(commit)
+      return "inbox" if inbox_author?(commit) && !@main_tier_exceptions.include?(name)
 
-      @writers.dig(writer(commit), "trust")
+      @writers.dig(name, "trust")
     end
 
     def inbox_author?(commit) = @inbox_authors.include?(commit["author"]) || @inbox_authors.any? { |a| commit["email"].to_s.start_with?("#{a}@") }

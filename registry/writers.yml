@@ -13,6 +13,8 @@
 # says - the shared GitHub account every writer pushes from (operator,
 # 2026-11-06). bin/master gate records each one as a violation.
 inbox_tier_authors: [anon987654321]
+# Named exceptions are trusted at main tier despite the shared Git author.
+main_tier_exceptions: [chatgpt]
 writers:
   operator:
     trust: main
@@ -46,7 +48,8 @@ writers:
     trees: [master, rails, openbsd, studio, bplans, test]
     git_authors: [Z User, Z.ai]
   chatgpt:
-    trust: inbox
-    branches: [inbox/chatgpt]
-    trees: [master, rails, openbsd, studio, bplans, test]
+    trust: main
+    branches: [main]
+    trees: [laws, registry]
     git_authors: []
+    gated_by: bin/check

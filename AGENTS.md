@@ -7,15 +7,14 @@ commit says why. This file is the rule for anyone who changes the tree:
 Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 
 ## Who writes where
-- operator and claude push straight to `main`, and only behind the gate below.
-- glm, fable, grok, zai, chatgpt push only to `inbox/<writer>`, one task per branch.
+- operator, claude and chatgpt push straight to `main`, and only behind the gate below.
+- glm, fable, grok, zai push only to `inbox/<writer>`, one task per branch.
   An inbox branch merges when the gate is green, a different model reviewed it,
   and every changed path sits under that writer's trees:
   - glm: master, rails, openbsd, studio, bplans, test
   - fable: master, rails, openbsd, studio, bplans, test
   - grok: master, rails, openbsd, studio, bplans, test
   - zai: master, rails, openbsd, studio, bplans, test
-  - chatgpt: master, rails, openbsd, studio, bplans, test
 - Never force-push. Fetch and rebase before every push; if another writer's commit
   touches your files, keep their change and adapt yours. A commit that breaks the
   gate is fixed in a separate commit naming the one it repairs.

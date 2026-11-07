@@ -3,6 +3,7 @@ required: [writers]
 additional: false
 properties:
   inbox_tier_authors: { type: array, items: { type: string } }
+  main_tier_exceptions: { type: array, items: { type: string } }
   writers:
     type: object
     additional:
