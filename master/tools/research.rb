@@ -143,7 +143,7 @@ module Master
         call = data.fetch("tool_call")
         return unless call.is_a?(Hash) && call.keys.sort == %w[arguments name]
         return unless call["name"].is_a?(String) && call["arguments"].is_a?(Hash)
-        return unless ALL_TOOLS.any? { |tool| tool["name"] == call["name"] }
+        return unless available_tools.any? { |tool| tool["name"] == call["name"] }
 
         call
       rescue JSON::ParserError
