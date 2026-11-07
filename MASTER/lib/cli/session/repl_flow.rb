@@ -299,7 +299,9 @@ module Master
         @last_ok = result.ok?
         @exit_code = result.ok? ? 0 : 2
 
-        puts @refs.renderer.render(text, mode: result.ok? ? :dim : :error)
+        # Like run_bang: the write shares Dmesg's mutex and rebuilds Reline's
+        # draft, instead of appending at the cursor after the prompt glyphs.
+        terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
       end
 
       def repeat_last
