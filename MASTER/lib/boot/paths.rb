@@ -10,8 +10,13 @@ module MasterPaths
   DATA = File.join(ROOT, "data")
   REPORTS = File.join(ROOT, "reports")
   STATE = File.expand_path("~/.master")
-  # The four governed trees, the one list every caller reads.
-  TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+  # The governed trees, the one list every caller reads. BIZ joins them
+  # (Johann 2026-11-07: "make those chained fix commands work") — /fix
+  # BIZ refused it before, and the business-plan folders were ungoverned:
+  # no tree attribution, no chain membership, no snapshot. They are a
+  # documents plane (html, svg, pdf), not an app fleet, so the lanes that
+  # render RAILS apps stay RAILS-scoped.
+  TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
 
   module_function
 

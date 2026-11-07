@@ -47,7 +47,9 @@ module Master
       # declares the deploy roots, master lives at MASTER/web) gets the standard lane —
       # rendered findings were invisible to a plain /fix until Johann asked (2026-11-07)
       # why a run produced no screenshots. Every other tree has nothing to render and
-      # keeps code.
+      # keeps code — BIZ (Johann 2026-11-07) is a documents plane whose html/pdf files
+      # the code laws read directly; its pages are not the RAILS fleet, so the
+      # browser checks stay out.
       def default_lane(target)
         # Same cut WorkLane.refusal uses: a path from anywhere in the checkout,
         # "/pub5/RAILS/mrdamascy" included, names its tree after the RAILS word.

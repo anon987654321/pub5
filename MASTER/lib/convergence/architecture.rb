@@ -19,7 +19,7 @@ module Master
 
         lines = [
           "architecture: #{target.to_s.empty? ? "PUB5" : target.to_s.upcase}",
-          "architecture: four-tree boundary MASTER / RAILS / OPENBSD / STUDIO",
+          "architecture: governed trees MASTER / RAILS / OPENBSD / STUDIO / BIZ",
         ]
         rows.each do |name, row|
           largest = row[:largest].first(3).map { |entry| "#{entry[:path]}(#{entry[:bytes]})" }.join(", ")

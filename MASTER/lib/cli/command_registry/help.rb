@@ -29,7 +29,7 @@ module Master
             "/run is its spelling.",
             "--prove — the convergence proof with its durable receipts (/fix --prove",
             "history [N] reads the ledger); /prove is its spelling.",
-            "--explain [MASTER|RAILS|OPENBSD|STUDIO] — the measured tree topology; /explain is its spelling.",
+            "--explain [MASTER|RAILS|OPENBSD|STUDIO|BIZ] — the measured tree topology; /explain is its spelling.",
             "--simplify — pin the council to quality-only critique: reuse, simplification, efficiency and",
             "altitude, behavior preserved, no bug hunting; the deterministic instruments keep their findings.",
             "/simplify is its spelling.",
@@ -319,7 +319,7 @@ module Master
         },
         "snapshot" => {
           summary: "write one source snapshot per governed tree at the pub5 root, sized for another model's context",
-          detail: ["/snapshot - write snapshot_MASTER.md, snapshot_RAILS.md, snapshot_OPENBSD.md and snapshot_STUDIO.md at the pub5 root, deleting the old ones first.",
+          detail: ["/snapshot - write snapshot_MASTER.md, snapshot_RAILS.md, snapshot_OPENBSD.md, snapshot_STUDIO.md and snapshot_BIZ.md at the pub5 root, deleting the old ones first.",
                    "Each is one file of about 95K tokens: a map of every file, then the most important source whole. For more of one area: bin/operator snapshot TREE --only=<dir>; for exact bytes: --mirror.",
                    "Snapshots are source packs, not runtime state; they are deliberately visible beside the trees they describe."],
         },
