@@ -194,3 +194,4 @@ end
 require_relative "engine/definition"
 require_relative "engine/builder"
 require_relative "engine/check_runner"
+require_relative "engine/semantic_review"

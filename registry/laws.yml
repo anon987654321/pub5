@@ -8330,7 +8330,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/application_is_uniform.rb
-    unported: its pub4 evaluators (mechanical Master::Pipeline#apply_all; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: APPLICATION_IS_UNIFORM
       source: MASTER/data/laws.yml APPLICATION_IS_UNIFORM
@@ -8396,7 +8395,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/truthful_status.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Interface#capability_status; semantic Master::Law::Interface#claims_match_evidence) live in MASTER/lib, outside law/
     pub4:
       id: TRUTHFUL_STATUS
       source: MASTER/data/laws.yml TRUTHFUL_STATUS
@@ -8515,7 +8513,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/external_research_is_evidence_not_authority.rb
     parent: TRUTHFUL_STATUS
-    unported: its pub4 evaluators (mechanical Master::Review::BaymardLaw.validate_profile!; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY
       source: MASTER/data/laws.yml EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY
@@ -9088,7 +9085,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/operator_rendered.rb
-    unported: its pub4 evaluators (mechanical Master::Visual::Identity#substitution; semantic Master::Visual::Identity#operator_declared) live in MASTER/lib, outside law/
     pub4:
       id: OPERATOR_RENDERED
       source: MASTER/data/laws.yml OPERATOR_RENDERED
@@ -9180,7 +9176,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/sacred_authorship.rb
-    unported: its pub4 evaluators (mechanical Soul.refuse_write!; semantic Soul.load!) live in MASTER/lib, outside law/
     pub4:
       id: SACRED_AUTHORSHIP
       source: MASTER/data/laws.yml SACRED_AUTHORSHIP
@@ -9233,7 +9228,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/soul_subordinate_to_law.rb
-    unported: its pub4 evaluators (mechanical Master::ConfigurationGuard.validate_soul; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: SOUL_SUBORDINATE_TO_LAW
       source: MASTER/data/laws.yml SOUL_SUBORDINATE_TO_LAW
@@ -9286,7 +9280,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/dual_modality.rb
-    unported: its pub4 evaluators (mechanical Master::Lint#both_modalities; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: DUAL_MODALITY
       source: MASTER/data/laws.yml DUAL_MODALITY
@@ -9326,7 +9319,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/finding_hygiene.rb
-    unported: its pub4 evaluators (mechanical Master::Lint#finding_shape; semantic Master::Review#finding_evidence) live in MASTER/lib, outside law/
     pub4:
       id: FINDING_HYGIENE
       source: MASTER/data/laws.yml FINDING_HYGIENE
@@ -9367,7 +9359,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/baymard_research_boundary.rb
     parent: FINDING_HYGIENE
-    unported: its pub4 evaluators (mechanical Master::Review::BaymardLaw.validate_profile!; semantic operator_context_and_observed_user_needs) live in MASTER/lib, outside law/
     pub4:
       id: BAYMARD_RESEARCH_BOUNDARY
       source: MASTER/data/laws.yml BAYMARD_RESEARCH_BOUNDARY
@@ -9437,7 +9428,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/attestation_is_not_finding.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Attestation#class; semantic Master::Law::Attestation#evidence_class) live in MASTER/lib, outside law/
     pub4:
       id: ATTESTATION_IS_NOT_FINDING
       source: MASTER/data/laws.yml ATTESTATION_IS_NOT_FINDING
@@ -9477,7 +9467,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/yagni.rb
-    unported: its pub4 evaluators (mechanical composite (DENSITY_dead_code, SPECULATIVE_GENERALITY); semantic human) live in MASTER/lib, outside law/
     pub4:
       id: YAGNI
       source: MASTER/data/laws.yml YAGNI
@@ -9491,7 +9480,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/pola.rb
-    unported: its pub4 evaluators (mechanical composite (POLA_mental_models, POLA_intuitive_navigation, POLA_bem_in_views, POLA_meaningless_name); semantic human) live in MASTER/lib, outside law/
     pub4:
       id: POLA
       source: MASTER/data/laws.yml POLA
@@ -9557,7 +9545,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/solid.rb
-    unported: its pub4 evaluators (mechanical composite (SRP, OCP, LSP, ISP, DIP); semantic human) live in MASTER/lib, outside law/
     pub4:
       id: SOLID
       source: MASTER/data/laws.yml SOLID
@@ -9598,7 +9585,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/ocp.rb
     parent: SOLID
-    unported: its pub4 evaluators (mechanical Master::Law::Structural#open_closed; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: OCP
       source: MASTER/data/laws.yml OCP
@@ -9613,7 +9599,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/lsp.rb
     parent: SOLID
-    unported: its pub4 evaluators (mechanical Master::Law::Structural#liskov; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: LSP
       source: MASTER/data/laws.yml LSP
@@ -9628,7 +9613,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/isp.rb
     parent: SOLID
-    unported: its pub4 evaluators (mechanical Master::Law::Structural#interface_segregation; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: ISP
       source: MASTER/data/laws.yml ISP
@@ -9643,7 +9627,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/dip.rb
     parent: SOLID
-    unported: its pub4 evaluators (mechanical Master::Law::Structural#dependency_inversion; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: DIP
       source: MASTER/data/laws.yml DIP
@@ -9762,7 +9745,6 @@ laws:
     enacted: '2026-11-06'
     file: laws/pub4/bringhurst.rb
     parent: PROPORTION
-    unported: its pub4 evaluators (mechanical Master::Law::Typography#all; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: BRINGHURST
       source: MASTER/data/laws.yml BRINGHURST
@@ -9841,7 +9823,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/rails_doctrine.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Rails#doctrine; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: RAILS_DOCTRINE
       source: MASTER/data/laws.yml RAILS_DOCTRINE
@@ -9972,7 +9953,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/bounded_load.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Structural#bounds; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: BOUNDED_LOAD
       source: MASTER/data/laws.yml BOUNDED_LOAD
@@ -10064,7 +10044,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/proportion.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Surface#proportion; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: PROPORTION
       source: MASTER/data/laws.yml PROPORTION
@@ -10117,7 +10096,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/reach.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Reach#all; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: REACH
       source: MASTER/data/laws.yml REACH
@@ -10287,7 +10265,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/stewardship.rb
-    unported: its pub4 evaluators (mechanical Master::Law::Stewardship#all; semantic human) live in MASTER/lib, outside law/
     pub4:
       id: STEWARDSHIP
       source: MASTER/data/laws.yml STEWARDSHIP

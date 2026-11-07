@@ -53,6 +53,7 @@ commands:
     contexts: [tty, pipe, remote]
     verbs:
       read: ["**/*"]
+      write: ["log/master/*"]
       exec: [claude, grok, codex, agy]
       llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
       git: [ls-files, rev-parse]

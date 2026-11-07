@@ -8,4 +8,5 @@ require_relative "master/lib/master"
 Law.define(:DUAL_MODALITY) do
   source "pub4 MASTER/data/laws.yml DUAL_MODALITY"
   practice "Every law is enforced in both modalities. A law only mechanically enforced has a semantic gap; only semantically enforced has a mechanical gap. Both are measured; neither is zero; neither grows."
+  ask "For each applicable Law, identify its deterministic measurement and its semantic review surface. A detector-only Law has an unreviewed meaning gap; a prose-only Law has an unmeasured execution gap. Compare inventories, not anecdotes. Pass only when both modalities are specified or a reasoned non-applicability is recorded for that Law."
 end

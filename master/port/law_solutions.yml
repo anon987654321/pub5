@@ -1,0 +1,30 @@
+# The candidate space and selected implementation for every imported
+# semantic, ratchet and lint Law. Alternatives are materially different;
+# selected is the chosen path, not a history of discarded code.
+semantic:
+  alternatives:
+    - regex: "Lexical token/pattern scan; fast but cannot judge context."
+    - ast: "Bespoke syntax-tree rules; precise for structure, unsuitable for human intent or rendered quality."
+    - behavioural: "Property, contract and integration tests; objective where executable behaviour exists."
+    - model_evidence: "Independent model rubric over explicit, hashed evidence; handles context and can abstain."
+    - human_attestation: "Operator review with signed receipt; strongest for reserved human choices, expensive to scale."
+  selected: model_evidence
+  rule: "Use deterministic/property tests for observable facts; evidence-backed semantic review for judgement; operator attestation for reserved authorship. Missing evidence abstains."
+ratchet:
+  alternatives:
+    - pub4_absolute: "Carry old numeric ceilings verbatim; measures a different tree and can hide drift."
+    - pub5_snapshot: "Measure current pub5 population and pin an explicit initial baseline."
+    - rolling_percentile: "Use rolling p95/p99; adapts to drift but can normalize gradual regression."
+    - capacity_model: "Derive thresholds from memory, CPU, time and user-load budgets."
+    - structural_invariant: "Compute canonical inventories and assert monotonic non-growth or one-implementation relationships."
+  selected: pub5_snapshot_plus_structural_invariant
+  rule: "Record the pub5 count with scope digest; only enforce downward-only ceilings where monotonic meaning is sound. Capacity thresholds derive from measured host constraints."
+lint:
+  alternatives:
+    - verbatim_port: "Move each legacy lint module and its baselines; high fidelity but duplicates the old framework."
+    - ast_adapters: "Translate each lint into a small pub5 AST/source adapter with fixtures."
+    - external_linter: "Delegate to RuboCop/Stylelint/HTML validators; broad ecosystem but dependency and config drift."
+    - registry_rules: "Express each lint as a declarative rule; concise for simple checks, weak for complex baselines."
+    - generated_check: "Generate adapters from declarations and execute through the shared check runner."
+  selected: generated_check_with_ast_adapters
+  rule: "Keep one runner; use focused AST/source adapters where semantics require them, reuse existing source checks, and baseline only after a complete pub5 census."
