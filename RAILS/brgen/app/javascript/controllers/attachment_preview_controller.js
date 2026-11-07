@@ -29,7 +29,7 @@ export default class extends Controller {
 
     const remove = document.createElement("button")
     remove.type = "button"
-    remove.className = "button button-ghost button-small"
+    remove.className = "button button-ghost"
     remove.textContent = this.removeValue
     remove.addEventListener("click", () => this.clear())
     this.previewTarget.append(image, remove)

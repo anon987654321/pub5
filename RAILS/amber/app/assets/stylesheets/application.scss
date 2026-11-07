@@ -1116,10 +1116,28 @@ main#main-content header > nav form {
 /* inline-flex so the label sits in the middle of the 44px it is given; as an
    inline link the height grows below the text and "Sign in" hugs the top. A
    wardrobe card sizes its actions here by where they sit, not by a class. */
+/* The size-class leads stay only for the markup that still names a size
+   pending its per-site rendered check (shared-010): the bare button-small
+   sites on the item page, declutter and the creator showcase, plus the two
+   shared partials whose containers also hold full-size buttons
+   (_live_search_form, _master_invite). Every other compact button sizes from
+   where it sits; each context here held only compact buttons at the
+   2026-11-07 tree-wide sweep. */
 .button-small,
 .button.button-small,
 .item-card-actions :is(a, button),
-.profile-creator-link .button {
+.profile-creator-link .button,
+.flash .button,
+.comment header .button,
+.thread-summary .button,
+.comment-form .button,
+.notification-item .button,
+.newsletter-cta .button,
+.messenger-artifact-body .button,
+.msg-reply-context .button,
+.notification-undo-toast .button,
+.messenger-composer-preview .button,
+.compose-media-item .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;

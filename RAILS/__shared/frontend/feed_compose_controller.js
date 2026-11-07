@@ -126,6 +126,9 @@ export default class extends Controller {
   mediaItem(input) {
     const [file] = input.files
     const item = document.createElement("li")
+    // The compose-media-item hook is the compact-button context (shared-010):
+    // the remove action is compact because of where it sits.
+    item.className = "compose-media-item"
 
     if (file.type.startsWith("image/")) {
       const image = document.createElement("img")
@@ -140,7 +143,7 @@ export default class extends Controller {
 
     const remove = document.createElement("button")
     remove.type = "button"
-    remove.className = "button button-ghost button-small"
+    remove.className = "button button-ghost"
     remove.textContent = this.removeMediaValue.replace("%{name}", file.name)
     remove.addEventListener("click", () => this.removeMedia(input))
     item.append(remove)

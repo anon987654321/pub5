@@ -19,7 +19,7 @@
       <%= label_tag "#{field_id}_details", t("report_picker.details") %>
       <%= text_area_tag :details, nil, id: "#{field_id}_details", rows: 2,
             maxlength: ModerationReport::DETAILS_LIMIT %>
-      <%= form.submit t("report_picker.submit"), name: nil, class: "button button-small" %>
+      <%= form.submit t("report_picker.submit"), name: nil, class: "button" %>
     <% end %>
   </details>
 <% end %>

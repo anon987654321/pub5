@@ -12,7 +12,7 @@
   <aside class="listing-published-notice" role="status">
     <strong><%= t("marketplace.listing_published_heading") %></strong>
     <%= link_to t("marketplace.list_another"), new_listing_path(kind: @listing.kind),
-          class: "button button-primary button-small" %>
+          class: "button button-primary" %>
   </aside>
 <% end %>
 
@@ -53,7 +53,7 @@
       <%= tag.h1 @listing.title %>
       <nav aria-label="<%= t("aria.listing_actions") %>" class="marketplace-actions">
         <% if Current.user.present? && Current.user == @listing.user %>
-          <%= link_to t("actions.edit"), edit_listing_path(@listing), class: "button button-ghost button-small" %>
+          <%= link_to t("actions.edit"), edit_listing_path(@listing), class: "button button-ghost" %>
         <% elsif Current.user.present? %>
           <%= render "marketplace/listings/favorite_button",
                 listing: @listing,
@@ -79,7 +79,7 @@
           data-action="click->share#share"><%= t("marketplace.share") %></button>
   <%= link_to t("marketplace.share_to_feed"),
         main_app.new_post_path(title: @listing.title, url: request.original_url),
-        class: "button button-ghost button-small" %>
+        class: "button button-ghost" %>
   <%= render "shared/affiliate_disclosure" %>
 </section>
 

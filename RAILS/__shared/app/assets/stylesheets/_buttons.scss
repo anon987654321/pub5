@@ -23,9 +23,17 @@ $base: true !default;
 
 // Where a button sits decides whether it is the compact one; markup names no
 // size (Johann, 2026-11-03). An app forwards the single-class contexts whose
-// buttons are all compact, and each `<context> .button` joins .button-small
+// buttons are all compact, and each `<context> .button` joins the compact rule
 // below at the same 0-2-0 and the same cascade position.
 $compact-contexts: () !default;
+
+// shared-010 retired .button-small from the default contract: the compact size
+// comes from where a button sits, not from a class naming a size. The engines
+// that still carry `.button-small` markup pending a per-site rendered check
+// (brgen family, 2026-11-07) forward this file with ($legacy-small: true); the
+// opt-in rule sits at the same 0-2-0 and the same cascade position the retired
+// selector held, so their rendering is unchanged. No new markup may use it.
+$legacy-small: false !default;
 
 @if $base {
 .button {
@@ -105,15 +113,25 @@ $compact-contexts: () !default;
   border: 0;
 }
 
-$compact: ".button.button-small";
-@each $context in $compact-contexts {
-  $compact: "#{$compact}, #{$context} .button";
-}
-
-#{$compact} {
+@if $legacy-small {
+.button.button-small {
   min-height: var(--tap-min);
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-small);
+}
+}
+
+$compact-list: null;
+@each $context in $compact-contexts {
+  $compact-list: if($compact-list == null, "#{$context} .button", "#{$compact-list}, #{$context} .button");
+}
+
+@if $compact-list != null {
+#{$compact-list} {
+  min-height: var(--tap-min);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-small);
+}
 }
 
 .sortable-keyboard-controls {

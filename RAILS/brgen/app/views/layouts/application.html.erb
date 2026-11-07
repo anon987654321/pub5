@@ -77,7 +77,7 @@
   <% if verify_email_banner? %>
     <aside class="verify-email-notice" role="note">
       <%= tag.p t("verify.needed") %>
-      <%= button_to t("verify.resend"), main_app.resend_verification_path, class: "button button-ghost button-small" %>
+      <%= button_to t("verify.resend"), main_app.resend_verification_path, class: "button button-ghost" %>
     </aside>
   <% end %>
   <div class="brgen-top-chrome" aria-hidden="true"></div>
