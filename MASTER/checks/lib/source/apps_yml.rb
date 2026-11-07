@@ -50,12 +50,24 @@ module Deploy
     private
 
     def validate_app(name, meta, ports:, domains:)
-      app_dir = File.join(ROOT, name)
+      app_dir = app_directory(name, meta)
       @result.fail("#{name}: declared in apps.yml but no directory #{app_dir}") unless File.directory?(app_dir)
 
       validate_deploy_script(name, meta)
       validate_endpoint(name, meta, ports:, domains:)
       validate_features(name, meta)
+    end
+
+    # master is not a RAILS sibling: since the pub4 migration its web app runs
+    # from MASTER/web, and apps.yml says so with deploy_root (its deploy script
+    # pulls and restarts it in place rather than copying to /home/<app>/app).
+    # An entry that names a real deploy_root wins over the RAILS/<name> default.
+    def app_directory(name, meta)
+      declared = meta["deploy_root"].to_s
+      rooted = File.join(REPO_ROOT, declared)
+      return rooted if declared.include?("/") && File.directory?(rooted)
+
+      File.join(ROOT, name)
     end
 
     def validate_deploy_script(name, meta)
