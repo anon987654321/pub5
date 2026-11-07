@@ -36,7 +36,7 @@ module Operator
       unless allowed
         Master::Trace::Dmesg.status(
           "rhythm0",
-          "MASTER/data/tokens.yml has no tokens.scale.space_px - constitutional measurement unavailable",
+          "master/data/tokens.yml has no tokens.scale.space_px - constitutional measurement unavailable",
           io: $stderr,
         )
         return false
@@ -62,7 +62,7 @@ module Operator
 
     # The directory holding shared: RAILS/ in a checkout, /home/<app>/ in the
     # copy-tree deploy, where the app and its copy of shared are siblings too.
-    def stylesheet_root = File.expand_path("../../RAILS", __dir__)
+    def stylesheet_root = File.expand_path("../../rails", __dir__)
 
     def scss_paths
       Dir.glob(File.join(stylesheet_root, "*", "{app,engines/*/app}", "assets", "stylesheets", "**", "*.{scss,css}")).sort
@@ -83,7 +83,7 @@ module Operator
           next unless value.is_a?(String) && value =~ /\A([\d.]+)(rem|px)\z/
 
           px = to_px(Regexp.last_match(1), Regexp.last_match(2))
-          violations << Violation.new("MASTER/data/tokens.yml:tokens.#{dialect}", key, px) unless allowed.include?(px)
+          violations << Violation.new("master/data/tokens.yml:tokens.#{dialect}", key, px) unless allowed.include?(px)
         end
       end
       violations

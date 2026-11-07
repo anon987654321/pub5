@@ -43,7 +43,7 @@ module Operator
   # never raised to silence a new finding. Opt out one line with `// scale: ok`
   # on it or the line above.
   module ScaleLint
-    RAILS_ROOT = File.expand_path("../../RAILS", __dir__)
+    RAILS_ROOT = File.expand_path("../../rails", __dir__)
     OPT_OUT = "scale: ok"
 
     SKIP = %r{(?:\A|/)(node_modules|vendor|builds|public/assets|tmp)/} # on rel(path), so a /tmp/ export is read
@@ -134,9 +134,9 @@ module Operator
     # found by where face.css actually is rather than named once, because each
     # time the sources moved the corpus emptied silently and every face/*
     # baseline read as fixed while nothing was measured.
-    FACE = %w[public src].map { |dir| File.join(REPO_ROOT, "MASTER", "web", dir) }
+    FACE = %w[public src].map { |dir| File.join(REPO_ROOT, "master", "web", dir) }
                          .find { |dir| File.file?(File.join(dir, "face.css")) } ||
-           File.join(REPO_ROOT, "MASTER", "web", "public")
+           File.join(REPO_ROOT, "master", "web", "public")
 
     def app_stylesheets
       @app_stylesheets ||= (
@@ -195,7 +195,7 @@ module Operator
     # a check that only reads literals.
     def weight_tokens
       @weight_tokens ||= begin
-        file = File.join(REPO_ROOT, "RAILS", "shared", "app/assets/stylesheets/_dialect_tokens.scss")
+        file = File.join(REPO_ROOT, "rails", "shared", "app/assets/stylesheets/_dialect_tokens.scss")
         body = File.file?(file) ? File.read(file) : ""
         body.scan(/(--weight-[\w-]+)\s*:\s*(\d+)\s*;/).to_h { |n, v| [ n, v.to_i ] }
       end

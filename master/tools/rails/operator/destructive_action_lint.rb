@@ -27,11 +27,11 @@ module Operator
   # but a form that submits DELETE without asking is the same event for the
   # person clicking it.
   module DestructiveActionLint
-    RAILS_ROOT = File.expand_path("../../../../RAILS", __dir__)
+    RAILS_ROOT = File.expand_path("../../../../rails", __dir__)
 
     VIEW_GLOBS = [
       "{amber,brgen,bsdports,shared}/app/views/**/*.erb",
-      "brgen/engines/*/app/views/**/*.erb",
+      "brgen_*/**/app/views/**/*.erb",
     ].freeze
 
     DESTRUCTIVE = /method:\s*:delete|turbo_method:\s*:delete|data-turbo-method=["']delete["']/

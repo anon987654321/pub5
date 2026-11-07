@@ -36,11 +36,11 @@ module Operator
     }.freeze
 
     SOURCES = [
-      File.join("brgen", "app", "assets", "stylesheets"),
-      File.join("amber", "app", "assets", "stylesheets"),
-      File.join("bsdports", "app", "assets", "stylesheets"),
-      File.join("shared", "app", "assets", "stylesheets"),
-      File.join("..", "MASTER", "web", "public"),
+      File.join("rails", "brgen", "app", "assets", "stylesheets"),
+      File.join("rails", "amber", "app", "assets", "stylesheets"),
+      File.join("rails", "bsdports", "app", "assets", "stylesheets"),
+      File.join("rails", "shared", "app", "assets", "stylesheets"),
+      File.join("master", "web", "public"),
     ].freeze
 
     # The serif rule (operator directive 2026-10-11) is the TYPEFACE_PER_ROLE Law now, in
@@ -51,7 +51,7 @@ module Operator
     end
 
     def stylesheets
-      SOURCES.flat_map { |dir| Dir.glob(File.join(@root, "RAILS", dir, "**", "*.{css,scss}")) }.uniq.sort
+      SOURCES.flat_map { |dir| Dir.glob(File.join(@root, "rails", dir, "**", "*.{css,scss}")) }.uniq.sort
     end
 
     def findings
