@@ -1,6 +1,6 @@
-# Pub5-owned initial snapshots, measured from source tree 133f720.
-# Source counts include these ported instrument files, not tests or generated output.
-baseline_commit: 133f720f54c2d6e503a23de61bb63e309f822fca
+# Pub5-owned initial snapshots, measured from the recorded baseline commit.
+# Counts include the ported instruments and exclude tests and generated output.
+baseline_commit: 34a14487e3891d19f208d5c050751326b952b5b8
 source_counts:
   master: 347
   rails: 2380

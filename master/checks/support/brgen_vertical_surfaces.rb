@@ -227,10 +227,9 @@ module Deploy
   end
 end
 
-# Where brgen's vertical engines live under rails/. They moved out of brgen/engines/ into sibling
-# brgen_* directories, some nested inside another, and every check and test still globbing
-# brgen/engines/* went blind to them without failing. Checks and RAILS tests that walk every
-# engine take the layout from here, not from a literal that goes stale the next time one moves.
+# Canonical locations for Brgen's currently nested vertical engines, plus support for
+# sibling brgen_* roots if an extraction is made later. Every source and test inventory
+# uses this same glob so a move cannot silently make an engine disappear from coverage.
 module EngineRoots
   GLOB = "{brgen_*,brgen/engines/**}"
 
