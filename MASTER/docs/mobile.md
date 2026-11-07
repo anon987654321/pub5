@@ -4,7 +4,16 @@ MASTER runs on Android under Termux with the same soul.yml and laws.yml as deskt
 
 ## Install
 
-Use a maintained Termux build. The installer runs a fail-closed preflight before package operations: it requires Termux's expected PREFIX, refuses root, permits only the canonical HTTPS pub5 repository, keeps the install directory below Termux HOME, refuses symlink/non-Git collisions, and verifies the checkout origin and clean working tree before running project code.
+Use a maintained Termux build. Preview the installer from any POSIX shell without changing the
+device, installing packages, touching files or contacting GitHub:
+
+    curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh -s -- --demo
+
+The real install command follows only after reviewing that plan:
+
+    curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh
+
+The installer runs a fail-closed preflight before package operations: it requires Termux's expected PREFIX, refuses root, permits only the canonical HTTPS pub5 repository, keeps the install directory below Termux HOME, refuses symlink/non-Git collisions, and verifies the checkout origin and clean working tree before running project code.
 
     curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh
 
