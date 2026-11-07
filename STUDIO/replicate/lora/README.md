@@ -16,9 +16,12 @@ ruby STUDIO/replicate/lora/migrate_local.rb --from ../pub4
 
 It copies only `subject.env` and exact
 `weights/<model>/replicate_training.json` manifests by default. Add
-`--include-sources` only after reviewing the source set. It never copies
-historical training datasets, retouched portraits, training worktrees or
-standalone safetensors. It never overwrites a destination file.
+`--include-sources` only after reviewing the source set. For Johann, the
+explicit `--restore-johann-history` option recovers three verified source
+originals from a known pub4 commit into private `sources/archive/`; it does
+not restore the old training dataset or captions. It never copies historical
+training datasets, retouched portraits, training worktrees or standalone
+safetensors. It never overwrites a destination file.
 
 Before applying, create a private consent record for each subject from
 `STUDIO/photograph/consent.example.yml`, set the subject slug, verify the
