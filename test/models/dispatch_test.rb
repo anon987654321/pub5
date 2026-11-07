@@ -119,6 +119,13 @@ class DispatchTest < Minitest::Test
       assert_raises(ArgumentError) do
         d.ask_with_image("Inspect this.", image: { media_type: "image/png", data: Base64.strict_encode64("not a PNG") })
       end
+
+      oversized = assert_raises(ArgumentError) do
+        d.ask_with_image("Inspect this.",
+                         image: { media_type: "image/png",
+                                  data: "A" * (Models::Dispatch::MAX_IMAGE_BASE64_BYTES + 1) })
+      end
+      assert_match(/exceeds/, oversized.message)
     end
   end
 
