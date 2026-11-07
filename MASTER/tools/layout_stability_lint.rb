@@ -107,7 +107,11 @@ module Operator
     end
 
     # <img ...> written by hand, and image_tag/video_tag through the helper.
-    MEDIA = /<(?:img|video|iframe)\b[^>]*>|(?:(?<!responsive_)(?<!lazy_)image_tag|video_tag)\s*\(?[^%]*/
+    # The tag body may carry ERB interpolation (src="<%= record.attachment %>"),
+    # and a naive [^>]* stops at the %> of the interpolation — reporting a
+    # correctly sized tag as unreserved. (%>|[^>]) reads through the
+    # interpolation and still ends at the tag's own closing >.
+    MEDIA = /<(?:img|video|iframe)\b(?:%>|[^>])*>|(?:(?<!responsive_)(?<!lazy_)image_tag|video_tag)\s*\(?[^%]*/
 
     # Classes that reserve the box of an image BELOW them, via a descendant
     # selector — `.playlist-queue-art img { width: 48px; height: 48px }`.
