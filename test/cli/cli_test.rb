@@ -72,6 +72,17 @@ class CliTest < Minitest::Test
     [out.string, err.string, code]
   end
 
+  # Drives the tty boot alone: boot_dmesg, not call, so Reline never starts.
+  def tty_boot
+    out = StringIO.new
+    err = StringIO.new
+    w = world_for(PIN)
+    r = Cli::Repl.new(world: w, context: "tty", input: StringIO.new(""), out:, err:,
+                      conversation: conversation(PIN, w), clock: -> { @now += 0.5 })
+    r.send(:boot_dmesg)
+    err.string
+  end
+
   # UX001 + UX018: a submitted turn is acknowledged once, as asking, never as done.
   def test_ux001_one_truthful_acknowledgement
     _, err, = repl(["hei"], context: "tty")
@@ -151,7 +162,8 @@ class CliTest < Minitest::Test
     refute_match(/\e/, out + err)
   end
 
-  # UX027 + UX055: one boot line, no banner, no decorative separators.
+  # UX027 + UX055: in a pipe the boot is one plain line, no banner, no
+  # decorative separators; a terminal gets the dmesg boot (boot_splash test).
   def test_ux027_one_boot_line_and_no_banner
     _, err, = repl([])
     assert_equal 1, err.lines.size
@@ -159,10 +171,55 @@ class CliTest < Minitest::Test
     refute_match(/[=#*]{3,}|[-]{4,}/, err)
   end
 
-  # UX028: the prompt names the repository it acts on.
+  # The boot is the kernel's: OpenBSD dmesg units closing on "root on
+  # master0", then a blank line and the session status a pipe reads as
+  # boot_line. A StringIO is no terminal, so the splash prints plain.
+  def test_the_tty_boot_prints_the_openbsd_console_splash
+    err = tty_boot
+    lines = err.lines(chomp: true)
+    assert_equal "master0 at mainbus0: pub5, model claude-cli:claude-opus-5-5", lines[0]
+    assert_match(/\Ahost0 at mainbus0: \S+@\S+:\//, lines[1])
+    assert_equal "root on master0", lines[2]
+    assert_equal "", lines[3]
+    assert_match(/\Arepl0: new session; \d+ lanes down; \/help\z/, lines[4])
+    assert_equal 5, lines.size
+    refute_match(/\e/, err, "a StringIO is no terminal: the splash prints plain")
+  end
+
+  # The console paints the kernel colours while it boots: 24-bit blue where
+  # the terminal says truecolor, the palette pair elsewhere, plain under
+  # NO_COLOR and off a terminal (pub4 trace/dmesg.rb console_paint).
+  def test_the_boot_splash_paints_the_openbsd_console
+    tty = StringIO.new
+    def tty.tty? = true
+    painted = "\e[37;48;2;0;0;255mroot on master0\e[0m"
+    basic = "\e[37;44mroot on master0\e[0m"
+    assert_equal painted, Cli::Terminal.boot_splash(["root on master0"], io: tty, colorterm: "truecolor")
+    assert_equal painted, Cli::Terminal.boot_splash(["root on master0"], io: tty, colorterm: "24bit")
+    assert_equal basic, Cli::Terminal.boot_splash(["root on master0"], io: tty)
+    assert_equal "root on master0", Cli::Terminal.boot_splash(["root on master0"], io: tty, no_color: "1", colorterm: "truecolor")
+    assert_equal "root on master0", Cli::Terminal.boot_splash(["root on master0"], io: StringIO.new, colorterm: "truecolor")
+  end
+
+  # UX028: the prompt names the repository it acts on, the OpenBSD operator
+  # way: host:path$ (pub4 lib/face.rb shell_prompt).
   def test_ux028_the_prompt_names_the_repository
-    r = Cli::Repl.new(world: world_for(PIN), context: "tty", conversation: conversation)
-    assert_equal "#{File.basename(@root)}> ", r.send(:prompt_text)
+    w = world_for(PIN)
+    r = Cli::Repl.new(world: w, context: "tty", conversation: conversation)
+    prompt = r.send(:prompt_text)
+    assert_equal "#{Cli::Prompt.shell_prompt(path: w.manifest.root, host: Socket.gethostname)} ", prompt
+    assert_match(/#{Regexp.escape(File.basename(@root))}\$ \z/, prompt)
+  end
+
+  # The operator prompt's shape: host first name, home-relative path, the
+  # deep path narrowed to where you are standing, the fallback host name.
+  def test_the_operator_prompt_is_host_path
+    home = Dir.home
+    assert_equal "vm23:~/pub5$", Cli::Prompt.shell_prompt(path: File.join(home, "pub5"), host: "vm23.example.org")
+    assert_equal "vm23:~$", Cli::Prompt.shell_prompt(path: home, host: "vm23")
+    deep = File.join(home, "verylongdirname", "anotherlongdirname", "third")
+    assert_match(/\Avm23:~\/\.\.\.\/anotherlongdirname\/third\$\z/, Cli::Prompt.shell_prompt(path: deep, host: "vm23"))
+    assert_equal "openbsd:~$", Cli::Prompt.shell_prompt(path: home, host: "")
   end
 
   # UX030: help says there is no shell escape and what a plain line is.

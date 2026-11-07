@@ -89,3 +89,11 @@ knobs:
   NVIDIA_API_KEY_2: { type: string, default: null, purpose: Second NVIDIA NIM key. }
   KILO_API_KEY: { type: string, default: null, purpose: Kilo gateway key. }
   OVH_AI_ENDPOINTS_TOKEN: { type: string, default: null, purpose: OVH AI Endpoints token. }
+  COLORTERM:
+    type: string
+    default: null
+    purpose: Terminal colour depth hint; truecolor or 24bit lets the boot splash paint the 24-bit blue (master/data/console.yml).
+  NO_COLOR:
+    type: string
+    default: null
+    purpose: Presence (any value) turns the boot splash's colour off; the no-colour standard (no-color.org).

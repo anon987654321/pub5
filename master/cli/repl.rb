@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "did_you_mean"
+require "etc"
 require_relative "conversation"
+require_relative "prompt"
 
 module Cli
   # The REPL: `bin/master` on a terminal, or `bin/master repl`. Reads a line,
@@ -61,7 +63,7 @@ module Cli
       return usage("repl takes no arguments; to ask once, bin/master ask \"...\"") unless argv.empty?
 
       setup_line_editor if @tty
-      boot_line
+      @tty ? boot_dmesg : boot_line
       loop do
         line = read_line
         break if line.nil?
@@ -95,14 +97,43 @@ module Cli
       end
     end
 
-    # One line, no banner: where this is, how the next turn routes, what is down.
+    # One line, no banner: where this is, how the next turn routes, what is
+    # down. A pipe gets exactly this; a terminal gets the dmesg boot (boot_dmesg).
     def boot_line
       c = conversation
-      route = c.dispatch.router.pin || c.dispatch.router.chain("exploration").first || "no lane"
-      down = c.dispatch.lanes.report.size
-      session = c.resumed? ? "resumed #{c.turns.size} turns (/new starts fresh)" : "new session"
-      status("repl", "#{File.basename(@world.manifest.root)} #{session}; next turn #{route}; #{down} lanes down; /help")
+      status("repl", "#{File.basename(@world.manifest.root)} #{session_word(c)}; next turn #{route_of(c)}; #{down_lanes(c)} lanes down; /help")
     end
+
+    # The boot is the kernel's (operator directive 2026-11-06: MASTER
+    # resembles OpenBSD): the console prints its dmesg white on blue, the
+    # splash is the last of the boot and keeps the colours, and the prompt
+    # and the session's first status print plain. Ported from pub4
+    # cli/session.rb#print_splash and Renderer#compact_splash, with this
+    # tree's real units: the boot, the host, the root device, then the
+    # session status a pipe reads as boot_line.
+    def boot_dmesg
+      c = conversation
+      splash = [
+        "master0 at mainbus0: pub5, model #{route_of(c)}",
+        "host0 at mainbus0: #{Etc.getlogin || "master"}@#{Socket.gethostname}:#{@world.manifest.root}",
+        "root on master0",
+      ]
+      @err.puts(Terminal.boot_splash(splash, io: @err,
+                                     colorterm: @world.knobs.fetch("COLORTERM"),
+                                     no_color: @world.knobs.fetch("NO_COLOR")))
+      @err.puts
+      status("repl", "#{session_word(c)}; #{down_lanes(c)} lanes down; /help")
+    end
+
+    def route_of(c)
+      c.dispatch.router.pin || c.dispatch.router.chain("exploration").first || "no lane"
+    end
+
+    def session_word(c)
+      c.resumed? ? "resumed #{c.turns.size} turns (/new starts fresh)" : "new session"
+    end
+
+    def down_lanes(c) = c.dispatch.lanes.report.size
 
     def ask(text)
       model = conversation.dispatch.router.pin || conversation.dispatch.router.chain(conversation.dispatch.router.classify(text)).first
@@ -251,7 +282,9 @@ module Cli
       recent
     end
 
-    def prompt_text = "#{File.basename(@world.manifest.root)}> "
+    # The OpenBSD operator prompt, vm23:~/pub5$, the repository it acts on
+    # (pub4 lib/face.rb shell_prompt). Plain: the splash owns the colour.
+    def prompt_text = "#{Prompt.shell_prompt(path: @world.manifest.root, host: Socket.gethostname)} "
 
     def setup_line_editor
       require "reline"

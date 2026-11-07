@@ -1,0 +1,26 @@
+# What master's console prints: the dmesg grammar and boot colours that
+# master/lib/trace/dmesg.rb reads through Master.config_section("dmesg"),
+# and that the REPL's boot splash paints through Cli::Terminal. Ported from
+# pub4 MASTER/data/console.yml, where the operator tuned it.
+# pub4's orientation section waits for a reader here; CONFIG_FILES in
+# master/lib/master.rb already names console.yml as its home.
+
+dmesg:
+  enabled: true
+  verbosity: normal
+  style: openbsd
+  format: "unitN at parent: detail | unitN: detail"
+  env: MASTER_DMESG
+  through: true
+  scan_progress: true
+  milestones: true
+  flush: true
+  # SGR for lines printed while master boots: the OpenBSD console's kernel
+  # colours, white on blue. Terminals only; the prompt and session stay plain.
+  # Empty turns it off, as does NO_COLOR. The blue is 24-bit #0000FF, because
+  # palette blue (44) is whatever the terminal theme says, and most themes make
+  # it a light, washed-out blue. A terminal that does not set COLORTERM to
+  # truecolor or 24bit reads the 24-bit form as faint and a reset, so it gets
+  # boot_sgr_basic: palette white on palette blue, as the OpenBSD console has.
+  boot_sgr: "37;48;2;0;0;255"
+  boot_sgr_basic: "37;44"

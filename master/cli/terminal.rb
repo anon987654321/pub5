@@ -67,5 +67,26 @@ module Cli
       cost = reply.cost_usd ? format(", $%.4f", reply.cost_usd) : ""
       "#{reply.tokens_in.to_i} in #{reply.tokens_out.to_i} out#{cost}"
     end
+
+    # The boot splash paints the OpenBSD console's kernel colours, white on
+    # blue, one line at a time so a reset never spans a newline (pub4
+    # trace/dmesg.rb console_paint, master/data/console.yml#dmesg). Only on a
+    # terminal: NO_COLOR, a pipe and a dumb terminal read the plain bytes.
+    # colorterm and no_color arrive resolved through Core::Knobs, the one
+    # environment reader, so this stays a pure function of its arguments.
+    def boot_splash(lines, io:, colorterm: nil, no_color: nil)
+      return lines.join("\n") if !defined?(io.tty?) || !io.tty? || !no_color.to_s.empty?
+
+      sgr = console.fetch(colorterm.to_s.match?(/\A(?:truecolor|24bit)\z/i) ? "boot_sgr" : "boot_sgr_basic", "").to_s
+      return lines.join("\n") if sgr.empty?
+
+      lines.map { |line| line.empty? ? line : "\e[#{sgr}m#{line}\e[0m" }.join("\n")
+    end
+
+    def console
+      @console ||= Core::Registry.yaml(File.join(Core::ROOT, "master/data/console.yml")).fetch("dmesg", {})
+    rescue Errno::ENOENT
+      {}
+    end
   end
 end

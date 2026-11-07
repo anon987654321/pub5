@@ -16,7 +16,7 @@ module Core
 
     TERM_GRACE = 2
 
-    attr_reader :manifest, :ledger
+    attr_reader :manifest, :ledger, :knobs
 
     def initialize(manifest:, ledger:, knobs: Knobs.default, transport: HTTP, models: nil)
       @manifest = manifest

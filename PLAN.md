@@ -398,3 +398,18 @@ the one-implementation census. MASTER/data's remaining runtime files wait
 for the Phase 5 plugins that read them; the concern files the architecture
 names (apps, models, tokens, laws, paths, writers, commands, knobs) already
 live in `registry/`.
+
+## 18. The boot's console style, restored (2026-11-07)
+
+The REPL had dropped pub4's fine-tuned boot on the floor: one `repl0:` line
+where the operator had tuned the OpenBSD console, and a `pub5> ` prompt where
+pub4 had the operator prompt `host:path$`. This pass restores both, rebuilt
+to this tree: `master/data/console.yml` carries pub4's `dmesg` section
+verbatim (`boot_sgr` white on blue, 24-bit with the palette fallback), the
+REPL on a terminal boots in dmesg (`master0 at mainbus0`, `host0 at
+mainbus0`, `root on master0`) painted through `Cli::Terminal.boot_splash`
+and plain under NO_COLOR, off a terminal or in a pipe, and
+`master/cli/prompt.rb` ports pub4's `Face::Contract.shell_prompt`
+(`vm23:~/pub5$`). UX027 stands: no decorative banners - the boot lines are
+the kernel's own grammar, not chrome. COLORTERM and NO_COLOR joined
+registry/knobs.yml, which stays under its 40-name cap at 39.
