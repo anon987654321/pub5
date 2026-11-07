@@ -9,6 +9,7 @@ class S2sPostbackJobTest < ActiveJob::TestCase
 
   setup do
     @saved_env = ENV.to_h.slice(*ENV_KEYS)
+    ENV_KEYS.each { |key| ENV.delete(key) }
     @user = User.create!(
       email_address: "s2s-job-#{SecureRandom.hex(4)}@example.test",
       password: "password123"
