@@ -797,7 +797,7 @@ end
     ceiling = map.law_trace_ceiling
 
     if ceiling.nil?
-      abort "lint:law_trace: data/laws.yml has no law_trace_ceiling - " \
+      abort "lint:law_trace: data/law_runtime.yml has no law_trace_ceiling - " \
             "record one at the current #{untraced.size} before this check can hold"
     end
 
@@ -809,8 +809,22 @@ end
     end
 
     if untraced.size < ceiling && ENV["RATCHET"] == "1"
-      path = File.join(__dir__, "data", "laws.yml")
-      File.write(path, File.read(path).sub(/^law_trace_ceiling: \d+$/, "law_trace_ceiling: #{untraced.size}"))
+      # The ceiling lives in law_runtime.yml: LawMap reads it through Master.law,
+      # which prefers that file. The writer used to target data/laws.yml, which
+      # has no such key, so #sub returned the file unchanged and the task still
+      # printed "ratcheted" -- a silent no-op that reported success.
+      path = File.join(__dir__, "data", "law_runtime.yml")
+      source = File.read(path)
+      # The key is nested under law_map:, so the line is indented. Anchoring at
+      # column 0 matched nothing and made #sub a no-op even once the path was
+      # right.
+      moved = source.sub(/^(\s*law_trace_ceiling: )\d+$/, "\\1#{untraced.size}")
+      if moved == source
+        abort "lint:law_trace: could not ratchet #{ceiling} -> #{untraced.size} - " \
+              "no `law_trace_ceiling: <n>` line in data/law_runtime.yml to rewrite"
+      end
+
+      File.write(path, moved)
       puts "lint:law_trace: ratcheted #{ceiling} -> #{untraced.size}"
     elsif untraced.size < ceiling
       puts "lint:law_trace: #{untraced.size}/#{ceiling} untraced (#{ceiling - untraced.size} under - " \
