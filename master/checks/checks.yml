@@ -52,6 +52,9 @@
 #
 # Order is run order.
 
+law_instruments:
+  script: law_instruments.rb
+
 architecture:
   script: architecture.rb
 

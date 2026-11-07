@@ -46,7 +46,11 @@ module Law
     def lifecycle = @policy.fetch("lifecycle", "advisory")
     def severity = @policy.fetch("severity", "warning")
     def enforced? = lifecycle == "enforced"
-    def deterministic? = !!(self[:detect] || self[:check] || self[:detector] || self[:adapters].any?)
+    def instrumented?
+      @policy.dig("pub4", "instrument") == "law_instruments" &&
+        /\A[A-Z][A-Z0-9_]+\z/.match?(@policy.dig("pub4", "instrument_id").to_s)
+    end
+    def deterministic? = !!(self[:detect] || self[:check] || self[:detector] || self[:adapters].any? || instrumented?)
     def semantic? = !self[:ask].nil?
 
     def applies?(file, text = nil)
@@ -78,7 +82,7 @@ module Law
 
     def scan_tree(paths)
       return [] if @broken
-      return check_law_findings if @policy["kind"] == "check"
+      return check_law_findings if @policy["kind"] == "check" || instrumented?
       return guarded { @pub4.scan_tree(paths.map { |p| Pub4.name(p) }).map { |h| Finding.new(id, nil, h.line, h.text, h.message) } } if @pub4
 
       self[:adapters].select(&:tree?).flat_map { |a| findings(Runner.new.instance_exec(paths, &a.check), "", nil) }
@@ -88,31 +92,37 @@ module Law
     # fourth outcome is preserved: unavailable browser/live preconditions are
     # INCONCLUSIVE, not a synthetic clean result.
     def check_law_findings
-      check_id = @policy.dig("pub4", "id")
-      result = Law::CheckRunner.run(check_id)
+      if instrumented?
+        label = @policy.dig("pub4", "instrument_id")
+        result = Law::CheckRunner.run("law_instruments", env: { "PUB5_LAW_INSTRUMENT_ID" => label })
+      else
+        label = @policy.dig("pub4", "id")
+        result = Law::CheckRunner.run(label)
+      end
       case result.status
       when :passed then []
       when :failed
-        [Finding.new(id, nil, 1, result.output.to_s.lines.first.to_s.chomp, "registered check #{check_id} failed (exit #{result.exit_code})")]
+        [Finding.new(id, nil, 1, result.output.to_s.lines.first.to_s.chomp, "registered instrument #{label} failed (exit #{result.exit_code})")]
       when :inconclusive
-        @errors << "INCONCLUSIVE: #{check_id}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
+        @errors << "INCONCLUSIVE: #{label}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
         []
       else
-        @errors << "ERROR: #{check_id}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
+        @errors << "ERROR: #{label}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
         []
       end
     rescue StandardError => e
-      @errors << "ERROR: check adapter #{id}: #{e.class}: #{e.message}"[0, 300]
+      @errors << "ERROR: Law instrument adapter #{id}: #{e.class}: #{e.message}"[0, 300]
       []
     end
 
     # Every bad fixture must be found and every good one must not, at load.
     def prove!
+      proof = self[:proved_by] || @policy["proved_by"]
+      if proof
+        raise Invalid, "#{id}: proved_by #{proof} does not exist" unless File.file?(File.join(Core::ROOT, proof))
+      end
       return @pub4.prove! && self if @pub4
 
-      if self[:proved_by]
-        raise Invalid, "#{id}: proved_by #{self[:proved_by]} does not exist" unless File.file?(File.join(Core::ROOT, self[:proved_by]))
-      end
       prove_main! if self[:detect] || self[:check] || self[:detector]
       self[:adapters].each { |a| prove_adapter!(a) }
       self

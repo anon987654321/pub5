@@ -15,12 +15,17 @@ module Law
 
     module_function
 
-    def run(name, timeout: TIMEOUT)
+    def run(name, env: {}, timeout: TIMEOUT)
       raise ArgumentError, "unknown check id" unless name.is_a?(String) && /\A[a-z][a-z0-9_]*\z/.match?(name)
       raise LoadError, "pub5 check runner is missing" unless File.file?(RUNNER)
 
+      overrides = env.each_with_object({}) do |(key, value), memo|
+        key = key.to_s
+        raise ArgumentError, "invalid check environment key" unless /\A[A-Z][A-Z0-9_]*\z/.match?(key)
+        memo[key] = value.to_s
+      end
       output, process = Master::Io::Exec.capture2e(
-        RbConfig.ruby, RUNNER, name, chdir: ROOT, timeout:, raise_on_timeout: true
+        overrides, RbConfig.ruby, RUNNER, name, chdir: ROOT, timeout:, raise_on_timeout: true
       )
       exit_code = process.exitstatus
       Result.new(status: classify_exit(exit_code), output: output.to_s, exit_code:)
