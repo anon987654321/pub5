@@ -251,10 +251,16 @@ html = <<~HTML
              held by the body's own centered column. */
           @page {
             size: 156mm 234mm;
-            margin: 18mm 0 24mm;
+            margin: 6mm 0 12mm;
             @bottom-center { content: counter(page); }
           }
+          @page :first { margin-top: 0; }
           body { margin: 0; }
+          /* The cover is the page, exactly as on screen: with a zero top
+             margin on the first page the 94vh cover resolves at its true
+             hefte height and the mark lands where the html has it; the
+             text pages keep a 6 mm head breathing above the column. */
+          .cover { min-height: 221mm; }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
           table, li { break-inside: avoid; }
