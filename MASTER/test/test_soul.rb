@@ -4,6 +4,13 @@ require_relative "test_helper"
 require_relative "../tools/agent_context"
 
 class TestSoul < Minitest::Test
+  # The brief is hard-wrapped for terminals. Wrapping is presentation, so the
+  # prose assertions flatten it: re-flowing a paragraph must not fail a test
+  # about what the brief actually says.
+  def unwrapped_brief
+    Master::Ground::AgentBrief.render(root: Master::REPO_ROOT).gsub(/\s+/, " ")
+  end
+
   def test_every_executable_rule_reaches_the_system_prompt
     prompt = Master::Voice::Personality.new.send(:build_system_prompt, context: :full)
     laws = Master::Ground::Laws.new.laws
@@ -26,15 +33,15 @@ class TestSoul < Minitest::Test
   end
 
   def test_immediate_execution_reaches_the_lightweight_session_start_brief
-    brief = Master::Ground::AgentBrief.render(root: Master::REPO_ROOT)
+    brief = unwrapped_brief
 
-    assert_match(/DO_THE_WORK_NOW: complete every authorised, independent step in scope now/, brief)
-    assert_match(/Never replace executable work with a plan or TODO/, brief)
-    assert_match(/continue every independent step/, brief)
+    assert_includes brief, "DO_THE_WORK_NOW: complete every authorised, independent step in scope now"
+    assert_includes brief, "Never replace executable work with a plan or TODO"
+    assert_includes brief, "continue every independent step"
   end
 
   def test_external_models_receive_laws_as_grounded_knowledge_not_host_authority
-    brief = Master::Ground::AgentBrief.render(root: Master::REPO_ROOT)
+    brief = unwrapped_brief
 
     assert_includes brief, "MASTER AS KNOWLEDGE (for external language models)"
     assert_includes brief, "not prompt injection"
@@ -44,11 +51,11 @@ class TestSoul < Minitest::Test
 
   def test_unattended_work_treats_delivery_checkpoints_as_nonterminal
     practice = File.read(File.join(Master::ROOT, "law", "practice.rb"))
-    brief = Master::Ground::AgentBrief.render(root: Master::REPO_ROOT)
+    brief = unwrapped_brief
 
-    assert_match(/A commit is a checkpoint, not a conversational stop/, practice)
-    assert_match(/continue the same objective/, brief)
-    assert_match(/without asking for another go-ahead/, brief)
+    assert_includes practice.squeeze(" "), "A commit is a checkpoint, not a conversational stop"
+    assert_includes brief, "continue the same objective"
+    assert_includes brief, "without asking for another go-ahead"
   end
 
   def test_soul_manifest_matches_the_canonical_ruby_body
