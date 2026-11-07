@@ -161,4 +161,24 @@ class TestEventPrivacy < Minitest::Test
     assert_equal 64, persisted.fetch(:query_digest).length
     refute_includes JSON.generate(persisted), "token=secret"
   end
+
+  # The bus, the append, the read-back, the recorder and telemetry each apply
+  # this transform, so one record passes through it repeatedly. A second pass
+  # that digests the first pass's own output destroys size metadata: 16 bytes
+  # of tool arguments came back as `arguments_bytes_bytes: 2`, which left
+  # ToolObserver unable to rebuild its crash quarantine after a restart.
+  def test_persisted_is_idempotent_so_repeated_layers_keep_size_metadata
+    once = Master::Trace::EventPrivacy.persisted(
+      "tool:execution:before",
+      invocation_id: "inv-1", tool: "write_file", tier: "guarded",
+      arguments_digest: "a" * 64, arguments_bytes: 4_096, pid: 42,
+    )
+
+    3.times { once = Master::Trace::EventPrivacy.persisted("tool:execution:before", once) }
+
+    assert_equal 4_096, once.fetch(:arguments_bytes)
+    assert_equal "a" * 64, once.fetch(:arguments_digest)
+    assert_equal 42, once.fetch(:pid)
+    refute once.key?(:arguments_bytes_bytes)
+  end
 end

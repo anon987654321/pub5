@@ -72,8 +72,15 @@ module Master
         false
       end
 
+      # `persisted` is applied at every layer that touches a record: the bus, the
+      # append, the read-back, the recorder and telemetry. It must therefore be
+      # idempotent. Size and fingerprint metadata are already canonical, so
+      # stringifying them here would let the next pass digest the string and
+      # destroy the number: `arguments_bytes: 16` became `arguments_bytes_bytes: 2`,
+      # which made ToolObserver unable to rebuild its quarantine after a restart.
       def normalize_metadata(field, value)
         return value if SAFE_NUMBERS.include?(field) || SAFE_BOOLEANS.include?(field)
+        return value if field.end_with?("_digest", "_bytes")
 
         value.to_s
       end
