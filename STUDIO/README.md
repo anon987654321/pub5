@@ -31,7 +31,7 @@ but the implementation is owned here.
 ## Checks
 
 `Rakefile` is the tree's check surface: `rake check` loads every entrypoint
-and proves the contracts answer, `rake test` runs `test/` (Dilla, IdeaPicture and reference portrait
+and proves the contracts answer, `rake test` runs `test/` (Dilla, IdeaPicture, reference portrait and selfie-series
 suites), and `rake` runs both. The suite runs without network access and
 without the Replicate API; reference tests use a stub client.
 
@@ -60,9 +60,10 @@ verifiable Postpro provenance are left untouched and listed in the retirement
 report; they are never deleted based on name or size alone. No training occurs.
 The command uses the local Replicate token and incurs inference charges for
 successful predictions. Confirm the account's available balance and model
-pricing before running. All subject consent, provider-processing and source
-rights records must be complete and private before any files are moved or
-requests are sent.
+pricing before running. Each subject directory and its weights/ directory must be owner-only (0700);
+subject.env, consent.yml and each replicate_training.json must be owner-only
+(0600). All subject consent, provider-processing and source-rights records
+must be complete and private before any files are moved or requests are sent.
 
 ## Reference-guided portraits
 

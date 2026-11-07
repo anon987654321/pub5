@@ -219,6 +219,13 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_seed_is_forwarded_to_the_trained_model_input_only_when_supplied
+    picture = Studio::Visual::IdeaPicture.new(subject: "seed_probe")
+
+    assert_equal 26_110_700, picture.send(:still_input, "A portrait", seed: 26_110_700).fetch(:seed)
+    refute picture.send(:still_input, "A portrait").key?(:seed)
+  end
+
   def test_subject_name_cannot_escape_the_lora_directory
     error = assert_raises(ArgumentError) do
       Studio::Visual::IdeaPicture.new(subject: "../elsewhere")

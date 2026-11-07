@@ -37,6 +37,7 @@ if $PROGRAM_NAME == __FILE__
 
   if options[:selfie_series]
     abort "--selfie-series does not accept an additional prompt" unless ARGV.empty?
+    abort "--selfie-series cannot be combined with --film or --reference" if options[:film] || options[:reference] || options[:reference_images].any?
     result = Studio::Visual::SelfieSeries.new(output_directory: options[:output_directory]).write
     puts JSON.generate(result)
     exit(result.fetch("status") == "complete" ? 0 : 1)

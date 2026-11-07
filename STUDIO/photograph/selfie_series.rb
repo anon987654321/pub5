@@ -223,6 +223,9 @@ module Studio
         raise ArgumentError, "invalid LoRA subject directory name: #{subject}" unless subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         raise ArgumentError, "invalid LoRA model directory name: #{slug}" unless slug.match?(/\A[a-zA-Z0-9_.-]+\z/)
 
+        validate_private_directory!(subject_directory)
+        weights_directory = File.dirname(File.dirname(path))
+        validate_private_directory!(weights_directory)
         validate_private_file!(File.join(subject_directory, "subject.env"), "subject.env")
         environment = parse_subject_env(File.join(subject_directory, "subject.env"))
         raise ArgumentError, "#{subject}/subject.env must set TRIGGER" if environment.fetch("TRIGGER", "").strip.empty?
@@ -303,7 +306,7 @@ module Studio
         raise ArgumentError, "output directory must not be a symlink" if stat.symlink?
         raise ArgumentError, "output path must be a directory" unless stat.directory?
         raise ArgumentError, "output directory must be owned by the current user" unless stat.uid == Process.uid
-        raise ArgumentError, "output directory resolves unexpectedly" unless File.realpath(@output_directory) == @output_directory
+        @output_directory = File.realpath(@output_directory)
       end
 
       def ensure_private_directory!(path)
@@ -322,9 +325,15 @@ module Studio
         end
         legacy_families = verified_legacy_families
         legacy_files = legacy_families.flatten.uniq
-        orphans = Dir.glob(File.join(@output_directory, "*")).select do |path|
-          File.file?(path) && File.basename(path).match?(/\A\d{8}T\d{12}\.(?:jpg|mp4)\z/) &&
-            !legacy_files.include?(path)
+        orphan_candidates = [
+          *Dir.glob(File.join(@output_directory, "*")),
+          *Dir.glob(File.join(@output_directory, "postpro_*.jpg")),
+          *Dir.glob(File.join(@output_directory, "postpro_*.jpg.json"))
+        ].uniq
+        orphans = orphan_candidates.select do |path|
+          File.file?(path) && !legacy_files.include?(path) &&
+            (File.basename(path).match?(/\A\d{8}T\d{12}\.(?:jpg|mp4)\z/) ||
+             File.basename(path).start_with?("postpro_"))
         end
         @retirement_report["unverified_legacy_files"] = orphans.map { |path| File.basename(path) }
 
@@ -380,10 +389,12 @@ module Studio
       def managed_series_directory?(path)
         stat = File.lstat(path)
         return false unless stat.directory? && !stat.symlink? && stat.uid == Process.uid
+        return false unless (stat.mode & 0o077).zero?
 
         marker = File.join(path, ".studio-selfie-series.json")
         marker_stat = File.lstat(marker)
         return false unless marker_stat.file? && !marker_stat.symlink? && marker_stat.uid == Process.uid
+        return false unless (marker_stat.mode & 0o077).zero? && marker_stat.size <= 1_048_576
 
         record = JSON.parse(File.read(marker, encoding: "UTF-8"))
         record["schema"] == SERIES_SCHEMA
@@ -474,7 +485,8 @@ module Studio
 
       def fatal_provider_error?(error)
         error.is_a?(Studio::ReplicateClient::ExhaustedError) ||
-          error.message.match?(/\b(?:401|402|403)\b|insufficient credits|billing|quota exhausted|budget exhausted|missing REPLICATE_API_TOKEN/i)
+          error.is_a?(Studio::ReplicateClient::TransientError) ||
+          error.message.match?(/\b(?:400|401|402|403|404|422)\b|unprocessable|invalid input|unknown field|schema|insufficient credits|billing|quota exhausted|budget exhausted|missing REPLICATE_API_TOKEN/i)
       end
     end
   end

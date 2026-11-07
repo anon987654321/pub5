@@ -76,6 +76,7 @@ class TestStudioSelfieSeries < Minitest::Test
     prompts = FakePicture.calls.map { |call| call[3] }
     assert_equal 10, prompts.uniq.length
     assert FakePicture.calls.all? { |call| call[4] == false }
+    assert_equal 3, FakePicture.calls.map { |call| call[0] }.uniq.length
     assert_equal (0...10).map { |index| Studio::Visual::SelfieSeries::SEED_BASE + index },
                  FakePicture.calls.first(10).map { |call| call[5] }
   end
