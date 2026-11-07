@@ -285,12 +285,17 @@ module Master
           method: "brokered_browser",
           status: rows.empty? ? "no_public_pens_extracted" : "ok",
           results: rows,
+          screenshot_file: data["screenshot_file"] || data[:screenshot_file],
           note: rows.empty? ? "The live DOM was reached, but no public Pen links matched the extractor." : nil
         }.compact
       rescue JSON::ParserError, NoMethodError => e
         raise Error, "invalid live CodePen feed observation: #{e.message}"
       ensure
-        browser_call(action: "close", session:) if session && @world.respond_to?(:browser)
+        begin
+          browser_call(action: "close", session:) if session && @world.respond_to?(:browser)
+        rescue StandardError
+          nil
+        end
       end
 
       def codepen_inspect(url:)
