@@ -120,10 +120,14 @@ eight-bit levels at mid-grey, a quantity an instrument can check, and `--fit-gra
 instrument: point it at a flat scan and it reports the deviation per tone and the crystal size
 that implies. Treat its figures as a floor, since its residual is a high-pass and the coarsest
 octave goes out with the picture. Rated film keeps its own box speed, each stop of push costs
-more, cell size scales with image width, and the finishing grain pass stands down for any
-chain that already grains itself.
+more, cell size scales with image width. Every completed photo receives a
+separate final analog-grain layer after its preset or recipe, even if the
+creative chain already contains grain. The finishing layer uses an independent
+deterministic seed offset, creating a distinct crystal field rather than
+reusing the inner grain pattern. Grain-generation failure fails the render;
+it never silently returns an ungrained image.
 
-Every graded picture passes through a tone anchor before its finishing grain. Stacked lifts leave
+Every graded picture passes through a tone anchor before the mandatory finishing grain. Stacked lifts leave
 the darkest pixel at fifteen percent grey and the frame reads as milk, so the anchor stretches
 the picture's own 0.5th and 99.5th luma percentiles to a printed black and white with one gain on
 all three bands, which holds hue, and bends the midtones with a gentle S-curve.

@@ -24,7 +24,10 @@ def finishing_grain_spec(preset_name = nil, stock: nil, intensity: FINISHING_GRA
           STOCKS.fetch(selected_stock).fetch(:speed).to_f
         end
 
-  { stock: selected_stock, iso:, intensity: Float(intensity), seed_offset: FINISHING_GRAIN_SEED_OFFSET }
+  level = Float(intensity)
+  raise ArgumentError, "finishing-grain intensity must be finite and positive" unless level.finite? && level.positive?
+
+  { stock: selected_stock, iso:, intensity: level, seed_offset: FINISHING_GRAIN_SEED_OFFSET }
 end
 
 def apply_finishing_grain(image, preset_name = nil, grained: nil, stock: nil, intensity: FINISHING_GRAIN_INTENSITY)

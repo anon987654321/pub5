@@ -121,7 +121,7 @@ def write_grade_sidecar(input_path, output_path, presets, original, processed)
     output: File.expand_path(output_path),
     preset: names.join("+"),
     recipe: names.map { |name| PRESETS.fetch(name) },
-    finishing_grain: finishing_grain_spec(names.last),
+    finishing_grain: finishing_grain_spec(names.first),
     grade_version: GRADE_VERSION,
     seed: $postpro_seed,
     input_sha256: (Digest::SHA256.file(input_path).hexdigest if File.file?(input_path)),
