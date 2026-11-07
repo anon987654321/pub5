@@ -8,7 +8,7 @@ require "open3"
 STUDIO_ROOT = __dir__
 RUBY = RbConfig.ruby
 
-desc "Load every STUDIO entrypoint and prove the contracts answer"
+desc "Parse every STUDIO entrypoint and prove the contracts answer"
 task :check do
   require_relative "output_paths"
   raise "output_paths: render_directory is not absolute" unless Studio::OutputPaths.render_directory.start_with?(File::SEPARATOR)

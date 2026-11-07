@@ -31,10 +31,9 @@ but the implementation is owned here.
 ## Checks
 
 `Rakefile` is the tree's check surface: `rake check` loads every entrypoint
-and proves the contracts answer, `rake test` runs `test/` (the Dilla and
-IdeaPicture suites), and `rake` runs both. The suite runs without network
-access and without the Replicate API; the reference route is covered by stub
-client tests.
+and proves the contracts answer, `rake test` runs `test/` (Dilla, IdeaPicture and reference portrait
+suites), and `rake` runs both. The suite runs without network access and
+without the Replicate API; reference tests use a stub client.
 
 ## Reference-guided portraits
 
@@ -42,12 +41,12 @@ The existing `ruby STUDIO/photograph.rb PROMPT` path remains the trained-LoRA
 route. The new route is explicit:
 
 ```sh
-ruby STUDIO/photograph.rb --reference \\
-  --subject merethe \\
-  --reference-image front.jpg \\
-  --reference-image three-quarter.jpg \\
-  --reference-image expression.jpg \\
-  --look natural_selfie --seed 42 --cost-limit-usd 0.03 \\
+ruby STUDIO/photograph.rb --reference \
+  --subject merethe \
+  --reference-image front.jpg \
+  --reference-image three-quarter.jpg \
+  --reference-image expression.jpg \
+  --look natural_selfie --seed 42 --cost-limit-usd 0.03 \
   "A relaxed phone selfie outdoors in soft daylight"
 ```
 
@@ -55,8 +54,9 @@ Place source files in `STUDIO/replicate/lora/<subject>/sources/`. Keep the
 subject directory and `sources/` owner-only (mode 0700), and the consent file
 owner-only (mode 0600). The route accepts JPEG, PNG, WebP or GIF files up to
 10 MiB each. Before any upload, it verifies image format, size, distinct
-content, subject scope, a private `consent.yml` and evidence that both likeness generation and the
-source-image rights/provider-processing permissions are confirmed. Copy
+content, subject scope, a private `consent.yml`, and evidence that both
+likeness generation and source-image rights/provider-processing permissions
+are confirmed. Copy
 `photograph/consent.example.yml` to the subject's private folder, complete it,
 and set mode 0600. The completed consent file, sources and outputs must never
 be committed. The output and its JSON receipt are written outside the checkout
