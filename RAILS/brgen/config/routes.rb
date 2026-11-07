@@ -14,6 +14,14 @@ Rails.application.routes.draw do
   # Browsers often request the .js suffix; 422/HTML here breaks SW registration.
   get "service-worker.js" => "rails/pwa#service_worker"
   post "share" => "posts#share", as: :share_post
+
+  # Referral tokens contain dot-separated base64url fields; disable the
+  # optional format suffix so the entire opaque token reaches the controller.
+  post "referral_splinters" => "referral_splinters#create", as: :referral_splinters
+  get "referral_splinters/:token" => "referral_splinters#show",
+      as: :referral_splinter, format: false
+  post "referral_splinters/:token/redeem" => "referral_splinters#redeem",
+      as: :redeem_referral_splinter, format: false
   resources :share_drafts, only: %i[show destroy] do
     member { post :publish }
   end
