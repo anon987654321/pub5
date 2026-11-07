@@ -243,21 +243,17 @@ html = <<~HTML
           :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; }
         }
         @media print {
+          /* The printed document is the Chrome render, paged: the screen
+             tokens, measure, cover and contents all stand as rendered; the
+             @page box adds the hefte size, the folio and break hygiene
+             only. Margin boxes sit 18mm/24mm top and foot; the sides are
+             held by the body's own centered column. */
           @page {
             size: 156mm 234mm;
-            margin: 0 0 12mm;
+            margin: 18mm 0 24mm;
             @bottom-center { content: counter(page); }
           }
-          :root {
-            --font-size-base: 12.6pt; --font-size-small: 10.8pt; --font-size-xsmall: 9.6pt;
-            --font-size-h1: 33.6pt; --font-size-h2: 16.8pt;
-            --space-xs: 9.5pt; --space-s: 9.5pt; --space-m: 9.5pt; --space-l: 19pt;
-            --space-xl: 38pt; --space-xxl: 57pt; --color-link-bold: black;
-          }
-          .toc { display: none; }
-          .cover { min-height: 88vh; }
-          body { margin: 0; max-width: none; width: auto; }
-          body { padding: 18mm 17mm 12mm; }
+          body { margin: 0; }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
           h1, .metahead, .signature { page-break-inside: avoid; }
