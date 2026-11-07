@@ -2512,7 +2512,6 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-    broken: 'Law::Invalid: RUNTIME_DOCS_YAML: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   LEARNED_SMELLS:
     statement: session-learned smell patterns from laws.yml
     kind: structural
@@ -2527,7 +2526,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: LEARNED_SMELLS: proved_by test/test_learned_smells_law.rb is a pub4 test that has not moved to pub5'
   FILE_SPRAWL:
     statement: Are tiny files or one-file directories adding structure without carrying meaningful independent responsibility?
     kind: structural
@@ -2542,7 +2540,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: FILE_SPRAWL: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   PATH_PURPOSE:
     statement: every directory declares its purpose in PATH_OWNERSHIP.yml
     kind: structural
@@ -2557,7 +2554,6 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-    broken: 'Law::Invalid: PATH_PURPOSE: proved_by test/test_path_purpose_law.rb is a pub4 test that has not moved to pub5'
   PARAMETERIZED_SLUG:
     statement: path is dense Rails-parameterize slug - Strunk-clean snake_case
     kind: structural
@@ -2575,7 +2571,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: PARAMETERIZED_SLUG: proved_by test/test_parameterized_slug.rb is a pub4 test that has not moved to pub5'
   TYPE_IN_NAME:
     statement: a name that encodes its own type says nothing the code did not
     kind: structural
@@ -2590,7 +2585,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: TYPE_IN_NAME: proved_by test/test_smell_detectors.rb is a pub4 test that has not moved to pub5'
   NUMBERED_NAME:
     statement: numbered siblings name no difference between themselves
     kind: structural
@@ -2605,7 +2599,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: NUMBERED_NAME: proved_by test/test_smell_detectors.rb is a pub4 test that has not moved to pub5'
   FILE_SEQUENCE_NAME:
     statement: a filename records what a thing is, never where it sat in a sequence
     kind: structural
@@ -2623,7 +2616,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: FILE_SEQUENCE_NAME: proved_by test/test_file_sequence_name.rb is a pub4 test that has not moved to pub5'
   FILE_VAGUE_NAME:
     statement: a filename names its subject, not a category
     kind: structural
@@ -2641,7 +2633,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: FILE_VAGUE_NAME: proved_by test/test_vague_words.rb is a pub4 test that has not moved to pub5'
   COLLAPSE_BEFORE_ADDING:
     statement: before adding machinery, run the universal transformation plan in data/laws.yml#transformation_policy.
     kind: conduct
@@ -4789,7 +4780,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: FILE_LAYOUT: proved_by test/test_structural_shape_laws.rb is a pub4 test that has not moved to pub5'
   EXPLICIT:
     statement: no implicit requires or magic coupling
     kind: structural
@@ -4818,7 +4808,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: CYCLOMATIC_COMPLEXITY: proved_by test/test_operator_lint.rb is a pub4 test that has not moved to pub5'
   PATTERN_EXTRACTION:
     statement: Is the code close to a known reusable pattern whose extraction would genuinely reduce complexity rather than add ceremony?
     kind: structural
@@ -4833,7 +4822,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: PATTERN_EXTRACTION: proved_by test/test_pattern_extraction_law.rb is a pub4 test that has not moved to pub5'
   DATA_CLASS:
     statement: Does this class mainly hold data while behavior that belongs with that data is scattered across other modules?
     kind: structural
@@ -4848,7 +4836,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: DATA_CLASS: proved_by test/test_structural_shape_laws.rb is a pub4 test that has not moved to pub5'
   LIB_ROOT_DISCIPLINE:
     statement: new files shouldn't land directly in lib/ root
     kind: structural
@@ -4863,7 +4850,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: LIB_ROOT_DISCIPLINE: proved_by test/test_lib_root_discipline_law.rb is a pub4 test that has not moved to pub5'
   SMALL_FILES:
     statement: files under 300 lines
     kind: structural
@@ -4878,7 +4864,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: SMALL_FILES: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   SMALL_FUNCTIONS:
     statement: methods under 10 lines ideal, max 20
     kind: structural
@@ -4893,7 +4878,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: SMALL_FUNCTIONS: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   NO_GOD_CLASS:
     statement: Does one class accumulate unrelated responsibilities that should have separate owners?
     kind: structural
@@ -4908,7 +4892,6 @@ laws:
       lifecycle: active
       severity: error
       mode: violation
-    broken: 'Law::Invalid: NO_GOD_CLASS: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   NESTING_DEPTH:
     statement: nesting depth under 4
     kind: structural
@@ -4923,7 +4906,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: NESTING_DEPTH: proved_by test/test_structural_shape_laws.rb is a pub4 test that has not moved to pub5'
   CQS:
     statement: Command-Query Separation. A method either answers a question or changes a thing, not both. A method that does both cannot be called without a side effect, which means it cannot be called safely from anywhere that needs only the answer.
     kind: structural
@@ -4938,7 +4920,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: CQS: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   OPEN_CLOSED:
     statement: Must existing core code be modified whenever a new supported variant is added?
     kind: structural
@@ -4953,7 +4934,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: OPEN_CLOSED: proved_by test/test_solid_laws.rb is a pub4 test that has not moved to pub5'
   LISKOV:
     statement: Does a subtype violate assumptions or guarantees established by the type it replaces?
     kind: structural
@@ -4968,7 +4948,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: LISKOV: proved_by test/test_solid_laws.rb is a pub4 test that has not moved to pub5'
   DEPENDENCY_INVERSION:
     statement: Does high-level policy directly instantiate concrete dependencies that should be replaceable?
     kind: structural
@@ -4983,7 +4962,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: DEPENDENCY_INVERSION: proved_by test/test_solid_laws.rb is a pub4 test that has not moved to pub5'
   INTERFACE_SEGREGATION:
     statement: Does an interface force implementations to stub or ignore methods they do not need?
     kind: structural
@@ -4998,7 +4976,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: INTERFACE_SEGREGATION: proved_by test/test_solid_laws.rb is a pub4 test that has not moved to pub5'
   MIDDLE_MAN:
     statement: Does this class mostly delegate methods to another object without adding meaningful policy?
     kind: structural
@@ -5013,7 +4990,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: MIDDLE_MAN: proved_by test/test_structural_shape_laws.rb is a pub4 test that has not moved to pub5'
   CONFIG_HIERARCHY:
     statement: config keys are grouped, non-duplicated, and shallow
     kind: structural
@@ -5028,7 +5004,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: CONFIG_HIERARCHY: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   CODE_HIERARCHY:
     statement: related classes are grouped under clear namespaces
     kind: structural
@@ -5043,7 +5018,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: CODE_HIERARCHY: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   LONG_PARAMETER_LIST:
     statement: methods accept at most four parameters
     kind: structural
@@ -5058,7 +5032,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: LONG_PARAMETER_LIST: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   PRIMITIVE_OBSESSION:
     statement: Are primitives carrying domain rules that would be clearer and safer as a value object?
     kind: structural
@@ -5073,7 +5046,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: PRIMITIVE_OBSESSION: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   BOOLEAN_TRAP:
     statement: a positional boolean parameter makes every call site a riddle
     kind: structural
@@ -5088,7 +5060,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: BOOLEAN_TRAP: proved_by test/test_smell_detectors.rb is a pub4 test that has not moved to pub5'
   DATA_CLUMPS:
     statement: the same parameters travelling together are a record struggling to be born
     kind: structural
@@ -5103,7 +5074,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: DATA_CLUMPS: proved_by test/test_smell_detectors.rb is a pub4 test that has not moved to pub5'
   COUPLER_SMELLS:
     statement: inappropriate intimacy through reflective access
     kind: structural
@@ -5118,7 +5088,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: COUPLER_SMELLS: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   FEATURE_ENVY:
     statement: Is this method more interested in another object's data than its own?
     kind: structural
@@ -5133,7 +5102,6 @@ laws:
       lifecycle: active
       severity: warning
       mode: violation
-    broken: 'Law::Invalid: FEATURE_ENVY: proved_by test/test_feature_envy_law.rb is a pub4 test that has not moved to pub5'
   LAZY_CLASS:
     statement: Is this class too small or trivial to justify a separate abstraction boundary?
     kind: structural
@@ -5148,7 +5116,6 @@ laws:
       lifecycle: active
       severity: info
       mode: violation
-    broken: 'Law::Invalid: LAZY_CLASS: proved_by test/test_scan_law_contracts.rb is a pub4 test that has not moved to pub5'
   NO_DECORATIVE_FX:
     statement: Does the element use shadows or glows that serve no functional purpose?
     kind: structural
