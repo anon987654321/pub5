@@ -164,7 +164,7 @@ module Master
         raise Error, "HTTP #{reply.status} from #{expected_host}" unless reply.ok?
         raise Error, "response exceeds #{MAX_RESPONSE_BYTES} bytes" if reply.body.to_s.bytesize > MAX_RESPONSE_BYTES
 
-        reply.body.to_s.force_encoding(Encoding::UTF_8).scrub
+        reply.body.to_s.dup.force_encoding(Encoding::UTF_8).scrub
       end
 
       def codepen_trending(limit:)
