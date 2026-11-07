@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../MASTER/checks/support/check_result"
+require_relative "../../master/checks/support/check_result"
 
 module Deploy
   # Checks the tracked PF ruleset's narrow, documented safety invariants.

@@ -70,12 +70,12 @@ rendered_invariants:
   covered_by: rendered_suite
 
 dns_zones:
-  require: OPENBSD/checks/dns_zones
+  require: openbsd/checks/dns_zones
   class: Deploy::DnsZonesCheck
   pass: "dns_zones: repo and nsd agree (zones, nsd.conf, acme-client.conf)."
 
 domain_alignment:
-  require: OPENBSD/checks/domain_alignment
+  require: openbsd/checks/domain_alignment
   class: Deploy::DomainAlignmentCheck
   pass: "Domain alignment check passed (city domains + deploy_inventory.json/relayd checks)."
   covered_by: release
@@ -114,13 +114,13 @@ human_walkthrough:
   pass: "Human walkthrough check passed for %{apps} Rails apps."
 
 master_tts:
-  require: MASTER/lib/operator/checks
+  require: master/lib/operator/checks
   class: Deploy::MasterTtsCheck
   pass: "MASTER TTS check passed."
   covered_by: production
 
 master_web_assets:
-  require: MASTER/lib/operator/checks
+  require: master/lib/operator/checks
   class: Deploy::MasterWebAssetsCheck
   pass: "MASTER/web assets check passed (%{assets} required assets present)."
   covered_by: production
@@ -138,7 +138,7 @@ engine_boundaries:
   pass: "engine_boundaries: no engine names another's constants beyond its declared reads"
 
 port_inventory:
-  require: OPENBSD/checks/port_inventory
+  require: openbsd/checks/port_inventory
   class: Deploy::PortInventoryCheck
   pass: "Port inventory check passed for %{apps} Rails apps."
 
@@ -305,7 +305,7 @@ locale_shadowing:
 # minutes, which is right for the check that fronts a release and wrong for every
 # CI run on a 1 vCPU box.
 constitutional_scan:
-  require: MASTER/lib/operator/checks
+  require: master/lib/operator/checks
   class: Deploy::ConstitutionalScanCheck
   pass: "Constitutional scan preflight completed."
   covered_by: release
@@ -483,7 +483,7 @@ browser_policy:
 
 # Narrow source-level guard for the tracked firewall policy; pfctl remains the syntax authority.
 openbsd_pf_policy:
-  require: OPENBSD/checks/pf_policy_check
+  require: openbsd/checks/pf_policy_check
   class: Deploy::PfPolicyCheck
   pass: "PF policy: default-deny, scoped ingress and SSH/bruteforce ordering intact"
 

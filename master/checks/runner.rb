@@ -25,16 +25,16 @@ SUBPROCESS_INCONCLUSIVE = 3
 SCRIPT_TIMEOUT_S = 1_800
 
 $LOAD_PATH.unshift(ROOT, CHECKS_DIR)
-require File.join(ROOT, "MASTER", "checks", "support", "check_autofix")
-require File.join(ROOT, "MASTER", "checks", "support", "check_result")
-require File.join(ROOT, "MASTER", "lib", "execution", "contract")
-require File.join(ROOT, "MASTER", "checks", "support", "check_ledger")
+require File.join(ROOT, "master", "checks", "support", "check_autofix")
+require File.join(ROOT, "master", "checks", "support", "check_result")
+require File.join(ROOT, "master", "lib", "execution", "contract")
+require File.join(ROOT, "master", "checks", "support", "check_ledger")
 
-require File.join(ROOT, "MASTER", "checks", "support", "flow_coverage")
-require File.join(ROOT, "MASTER", "checks", "support", "token_reads")
-require File.join(ROOT, "MASTER", "lib", "trace", "dmesg")
-require File.join(ROOT, "MASTER", "lib", "gap")
-require File.join(ROOT, "MASTER", "lib", "io", "exec")
+require File.join(ROOT, "master", "checks", "support", "flow_coverage")
+require File.join(ROOT, "master", "checks", "support", "token_reads")
+require File.join(ROOT, "master", "lib", "trace", "dmesg")
+require File.join(ROOT, "master", "lib", "gap")
+require File.join(ROOT, "master", "lib", "io", "exec")
 
 CHECKS_FILE = ENV.fetch("CHECKS_FILE", REGISTRY_DEFAULT)
 CHECKS = YAML.safe_load_file(CHECKS_FILE).freeze

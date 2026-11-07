@@ -2,8 +2,8 @@
 
 require "English"
 require "yaml"
-require_relative "../../OPENBSD/lib/deploy_inventory"
-require_relative "../../OPENBSD/lib/check_result"
+require_relative "../lib/deploy_inventory"
+require_relative "../lib/check_result"
 
 module Deploy
   class PortInventoryCheck

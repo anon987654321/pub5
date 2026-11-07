@@ -20,7 +20,7 @@ module Deploy
   class ConstitutionalScanCheck
     # The repository root: this file is master/lib/operator/checks.rb.
     ROOT = File.expand_path("../../..", __dir__)
-    MASTER = File.join(ROOT, "MASTER")
+    MASTER = File.join(ROOT, "master")
     RUBY = Operator::RubyRunner.ruby_cmd
     BUNDLE = Operator::RubyRunner.bundle_cmd
     SAFE_ENV = {
@@ -338,7 +338,7 @@ module Deploy
   class MasterTtsCheck
     # The repository root: this file is master/lib/operator/checks.rb.
     ROOT = File.expand_path("../../..", __dir__)
-    MASTER = File.join(ROOT, "MASTER")
+    MASTER = File.join(ROOT, "master")
 
     CHECKS = {
       "master/lib/voice/speech.rb" => [

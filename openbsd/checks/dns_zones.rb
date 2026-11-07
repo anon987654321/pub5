@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "resolv"
-require_relative "../../OPENBSD/lib/check_result"
-require_relative "../../OPENBSD/bin/render_dns"
+require_relative "../lib/check_result"
+require_relative "../bin/render_dns"
 
 module Deploy
   # The DNS the repo describes has to be the DNS the box serves.
