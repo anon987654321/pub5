@@ -7,7 +7,7 @@ require_relative "../lib/convergence/receipt"
 class TestConvergenceReceipt < Minitest::Test
   def test_receipt_contains_identity_and_inventory
     Dir.mktmpdir do |dir|
-      %w[MASTER RAILS OPENBSD STUDIO].each { |tree| FileUtils.mkdir_p(File.join(dir, tree)) }
+      MasterPaths::TREES.each { |tree| FileUtils.mkdir_p(File.join(dir, tree)) }
       FileUtils.mkdir_p(File.join(dir, "MASTER", "data"))
       File.write(File.join(dir, "MASTER", "data", "soul.yml"), "schema: 1\n")
       File.write(File.join(dir, "MASTER", "data", "laws.yml"), "ROBUSTNESS: {priority: 1, principle: safe}\n")
@@ -16,7 +16,7 @@ class TestConvergenceReceipt < Minitest::Test
       assert_equal "test", body["command"]
       assert_equal "pass", body["state"]
       assert_equal "world", body.dig("details", "hello")
-      assert_equal 4, body.dig("inventory", "trees").size
+      assert_equal MasterPaths::TREES.sort, body.dig("inventory", "trees").keys.sort
       assert_equal 64, result[:sha256].length
     end
   end

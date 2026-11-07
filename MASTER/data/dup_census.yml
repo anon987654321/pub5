@@ -1,23 +1,42 @@
 ---
-duplicate_sets: 20
+duplicate_sets: 39
 duplicate_members:
+- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__1280.png
+- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__390.png
+- MASTER/checks/data/route_screenshots/amber/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/recede_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/recede_historical_location__loopback__768.png
+- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__1280.png
+- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__390.png
+- MASTER/checks/data/route_screenshots/amber/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/refresh_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/refresh_historical_location__loopback__768.png
+- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__1280.png
+- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__390.png
+- MASTER/checks/data/route_screenshots/amber/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/resume_historical_location__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/resume_historical_location__loopback__768.png
+- MASTER/checks/data/route_screenshots/amber/up__loopback__1280.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__1280.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__1280.png
+- MASTER/checks/data/route_screenshots/amber/up__loopback__390.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__390.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__390.png
+- MASTER/checks/data/route_screenshots/amber/up__loopback__768.png | MASTER/checks/data/route_screenshots/brgen/up__loopback__768.png | MASTER/checks/data/route_screenshots/bsdports/up__loopback__768.png
+- MASTER/lib/operator/domain_signals.rb | OPENBSD/lib/domain_signals.rb
+- MASTER/web/Rakefile | RAILS/amber/Rakefile | RAILS/bsdports/Rakefile | RAILS/mrdamascy/Rakefile
+- RAILS/__shared/app/assets/images/vipps/vipps-wordmark.svg | RAILS/mrdamascy/app/assets/images/vipps/vipps-wordmark.svg
 - RAILS/__shared/config/storage.yml | RAILS/amber/config/storage.yml | RAILS/brgen/config/storage.yml | RAILS/bsdports/config/storage.yml
 - RAILS/__shared/db/migrate/20260625140000_create_anonymous_post_quotas.rb | RAILS/brgen/db/migrate/20260625140000_create_anonymous_post_quotas.rb
-- RAILS/__shared/public/icon.png | MASTER/web/public/icon.png
-- RAILS/amber/Rakefile | RAILS/bsdports/Rakefile
-- RAILS/amber/config.ru | RAILS/bsdports/config.ru
-- RAILS/amber/config/boot.rb | RAILS/brgen/config/boot.rb | RAILS/bsdports/config/boot.rb
-- RAILS/amber/config/cable.yml | RAILS/brgen/config/cable.yml
-- RAILS/amber/config/cache.yml | RAILS/brgen/config/cache.yml
+- RAILS/amber/app/views/encounters/waiting.html.erb | RAILS/brgen/app/views/encounters/waiting.html.erb
+- RAILS/amber/config.ru | RAILS/bsdports/config.ru | RAILS/mrdamascy/config.ru
+- RAILS/amber/config/boot.rb | RAILS/brgen/config/boot.rb | RAILS/bsdports/config/boot.rb | RAILS/mrdamascy/config/boot.rb
+- RAILS/amber/config/cable.yml | RAILS/brgen/config/cable.yml | RAILS/mrdamascy/config/cable.yml
+- RAILS/amber/config/cache.yml | RAILS/brgen/config/cache.yml | RAILS/bsdports/config/cache.yml | RAILS/mrdamascy/config/cache.yml
+- RAILS/amber/config/queue.yml | RAILS/bsdports/config/queue.yml
 - RAILS/amber/db/migrate/20260504180350_create_users.rb | RAILS/brgen/db/migrate/20260311162114_create_users.rb | RAILS/bsdports/db/migrate/20260501020807_create_users.rb
 - RAILS/amber/db/migrate/20260504180352_create_sessions.rb | RAILS/brgen/db/migrate/20260311162121_create_sessions.rb | RAILS/bsdports/db/migrate/20260501020818_create_sessions.rb
 - RAILS/amber/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/brgen/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb | RAILS/bsdports/db/migrate/20260709120000_add_shared_auth_fields_to_users.rb
 - RAILS/amber/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/brgen/db/migrate/20260811120000_create_outbound_clicks.rb | RAILS/bsdports/db/migrate/20260811120000_create_outbound_clicks.rb
 - RAILS/amber/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/brgen/db/migrate/20260825121000_index_outbound_clicks_on_user.rb | RAILS/bsdports/db/migrate/20260825121000_index_outbound_clicks_on_user.rb
 - RAILS/amber/db/migrate/20260915120000_add_link_embed_to_posts.rb | RAILS/brgen/db/migrate/20260915120000_add_link_embed_to_posts.rb
+- RAILS/amber/db/migrate/20261031120000_create_billing_subscriptions.rb | RAILS/brgen/db/migrate/20261031120000_create_billing_subscriptions.rb
+- RAILS/amber/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb | RAILS/brgen/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb
 - RAILS/amber/test/importmap_external_hosts_test.rb | RAILS/brgen/test/importmap_external_hosts_test.rb | RAILS/bsdports/test/importmap_external_hosts_test.rb
 - RAILS/amber/test/models/destroy_cascade_test.rb | RAILS/bsdports/test/models/destroy_cascade_test.rb
 - RAILS/brgen/app/javascript/controllers/application.js | RAILS/bsdports/app/javascript/controllers/application.js
+- RAILS/brgen/config/queue.yml | RAILS/mrdamascy/config/queue.yml
 - RAILS/brgen/db/cable_schema.rb | RAILS/bsdports/db/cable_schema.rb
 - RAILS/brgen/db/cache_schema.rb | RAILS/bsdports/db/cache_schema.rb
-- STUDIO/lora/johann/lora | STUDIO/lora/ragnhild/lora
+- RAILS/brgen/test/lib/asset_resolver_test.rb | RAILS/mrdamascy/test/asset_resolver_test.rb
+- RAILS/brgen_radio/playlist/public/tunnel.html | RAILS/brgen_radio/public/tunnel.html

@@ -14,6 +14,14 @@
 # 422/500.html (ShowExceptions reads each app's public path). Equivalent route
 # snapshots are declared in geometry_surfaces.yml#snapshot_aliases and share one
 # canonical baseline, so they are contracts without duplicate tracked content.
+#
+# Golden screenshots under checks/data/route_screenshots/ are the other class.
+# Each is what one recorded route answered a real browser for one host at one
+# width (tools/rails/golden_screenshots.rb), so two apps that share a layout
+# answer byte-identical pixels by design. Those PNGs are distinct evidence per
+# host — collapsing them to one file would destroy the per-app baseline the
+# tool checks against — so they are priced here, not deduplicated. They account
+# for 13 of the 39 sets.
 
 require "digest"
 require "yaml"
@@ -96,10 +104,12 @@ module Operator
       (recorded_members - current).each { |set| Master::Trace::Dmesg.status("dup0", "gone, #{set}") }
     end
 
-    # The prose above `duplicate_sets:` records what each past collapse cost
-    # somebody — thirty lines of it, including the warning that this tool reads
-    # content from disk in a shared checkout. A bare to_yaml dump ate all of it
-    # the first time this wrote members. Preserved, not regenerated.
+    # Anything above `duplicate_sets:` is written by a person and is kept: a
+    # bare to_yaml dump eats comment prose, and a ceiling that silently drops
+    # the paragraph explaining why it is where it is teaches the next reader
+    # nothing. The current file carries no such prose — both revisions since
+    # the pub4 migration were `---` plus the two keys — so this preserves what
+    # is there rather than assuming a paragraph exists.
     def rewritten_ceiling(count, member_list)
       existing = File.exist?(CEILING) ? File.read(CEILING) : "---\n"
       prose = existing.sub(/^duplicate_sets: .*\n(?:duplicate_members:\n(?:- .*\n)*)?\z/, "")
