@@ -66,3 +66,19 @@ scan_coverage:
       governs them. Scanning the instruments with the runtime constitution would
       mix the measuring apparatus into the subject and make every fixture-shaped
       assertion part of the measured corpus.
+    web: >-
+      A separate application with its own dependency tree, not more of MASTER's
+      source. web/ carries its own Gemfile and lockfile, and config/ci.rb runs the
+      lane that actually governs it: bundler-audit, RuboCop under web/.rubocop.yml
+      with --ignore-parent-exclusion (MASTER/.rubocop.yml excludes web/**), Brakeman
+      with --exit-on-warn, the node --test suite, a CI probe and bin/rails test.
+      That exclusion is a decision already written down, so listing web in roots
+      would assert a coverage the rest of the toolchain deliberately does not
+      claim. Measured 2026-11-07 rather than assumed: `bin/operator lint
+      MASTER/web` reports 413 findings in .rb files outside tmp/, led by
+      62 path-shaped, 52 suffocated-block, 18 reek ManualDispatch, 17
+      NO_MULTIPLE_LANGUAGES and 10 Time.now-ignores-Time.zone -- Rails-idiomatic
+      code judged by a style built for MASTER's runtime. The same sweep also
+      reads web/tmp/ (5,960 total with it), which is gitignored runtime state by
+      web/.gitignore:3 and is not source at all. Closing this properly means a
+      Rails-aware profile, not one more list entry.

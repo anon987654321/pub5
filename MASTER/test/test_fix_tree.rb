@@ -71,6 +71,22 @@ class TestFixTree < Minitest::Test
     refute_includes scatter.map(&:first), "engine"
   end
 
+  def test_concept_scatter_counts_each_rails_application_as_its_own_owner
+    %w[brgen amber bsdports].each do |app|
+      write("RAILS/#{app}/app/models/dispatch_policy.rb", BODY)
+    end
+    # Two apps disagreeing is not yet a scatter; three is the threshold.
+    %w[brgen amber].each do |app|
+      write("RAILS/#{app}/app/models/shared_cache.rb", BODY)
+    end
+    git("add", ".")
+
+    scatter = Master::Fix::Tree.new(root: @root).sprawl[:concept_scatter]
+
+    assert_includes scatter.map(&:first), "dispatch_policy"
+    refute_includes scatter.map(&:first), "shared_cache"
+  end
+
   def test_rails_helper_conventions_do_not_count_as_ugly_names
     write("RAILS/brgen/app/helpers/application_helper.rb", BODY)
     write("RAILS/brgen/test/test_helper.rb", BODY)
@@ -139,7 +155,11 @@ class TestFixTree < Minitest::Test
     lib_tree = Master::Fix::Tree.new(root: @root, target: "lib")
     repository_tree = Master::Fix::Tree.new(root: @root)
 
-    assert_equal 19, lib_tree.sprawl[:root_clutter].size
+    # 22, not 19: setup() already puts lib/a.rb, lib/a_helper.rb and lib/tiny.rb
+    # at the target's root, and clutter is measured at the selected boundary, so
+    # those three belong in the count. The 19 was the number of files this test
+    # writes rather than the number at the root.
+    assert_equal 22, lib_tree.sprawl[:root_clutter].size
     assert_empty repository_tree.sprawl[:root_clutter]
   end
 
