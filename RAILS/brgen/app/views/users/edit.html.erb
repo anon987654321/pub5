@@ -39,7 +39,7 @@
 
   <fieldset class="field">
     <%= tag.legend t("profile.avatar") %>
-    <%= image_tag @user.avatar_url, alt: "", width: 64, height: 64, class: "avatar avatar--64" %>
+    <%= image_tag @user.avatar_url, alt: "", width: 64, height: 64, class: "avatar" %>
     <%= f.label :avatar, t("profile.avatar_choose") %>
     <%= f.file_field :avatar, accept: Shared::AttachmentLimits::IMAGE_TYPES.join(","),
           aria: { describedby: "user_avatar_hint" } %>

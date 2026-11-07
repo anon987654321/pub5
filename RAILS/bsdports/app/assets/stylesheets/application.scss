@@ -189,7 +189,7 @@ main#main-content :is(button, input[type="submit"], .button) {
 // the same partial still rides brgen's $legacy-small opt-in until its own site
 // is measured rendered.
 div.nav-actions > a.button-ghost,
-div.search-form > input.button.button-small {
+div.search-form > input[type="submit"].button.button-small {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
   padding: var(--space-1) var(--space-3);
