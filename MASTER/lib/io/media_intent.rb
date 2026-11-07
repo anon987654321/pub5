@@ -116,22 +116,18 @@ module Master
         text.match?(POSTPRO_COMMAND_RE) || text.match?(POSTPRO_RE) || text.match?(POSTPRO_IMAGE_GLOB_RE)
       end
 
-      # Io::MediaLanes picks the lane. Replicate first, or no key for any lane,
-      # keeps the replicate tool path below exactly as it was (its prompt craft,
-      # sidecars and postpro handoff); another live lane answers through the
-      # selector; keys present with every lane parked is the selector's typed offline.
+      # Io::MediaLanes is the one selector: it orders the live lanes, spends the
+      # budget and writes the artifact, and its typed offline answer is the
+      # honest one when nothing is configured. There used to be a second path
+      # that shelled out to a `replicate` tool entrypoint; no such entrypoint
+      # exists in any commit, so running it exited 0 with empty output and this
+      # method returned ok? with a path to a file nobody wrote.
       def generate_cloud_image(prompt, root:)
-        lane = MediaLanes.first_live(:image)
-        return generate_replicate_image(prompt, root:) if lane.nil? ? !MediaLanes.configured?(:image) : lane.provider == "replicate"
         made = MediaLanes.generate(:image, prompt)
-        made.ok? ? Result.ok({ output: made.value!.fetch("path"), rendered: made.value!.fetch("path"), media: made.value!.fetch("lane"), path: made.value!.fetch("path") }) : made
-      end
+        return made unless made.ok?
 
-      def generate_replicate_image(prompt, root:)
-        output = File.join(MEDIA_OUTPUT_DIR, "replicate-#{Time.now.utc.strftime('%Y%m%dT%H%M%SZ')}.webp")
-        args = ["generate", "--prompt", prompt, "--output", output]
-        result = ScriptDispatch.run(root:, tool: "replicate", arg: args.map { |v| Shellwords.escape(v) }.join(" "))
-        result.ok? ? Result.ok({ output: result.value!, rendered: result.value!, media: :replicate, path: output }) : result
+        path = made.value!.fetch("path")
+        Result.ok({ output: path, rendered: path, media: made.value!.fetch("lane"), path: })
       end
 
       def postprocess(text, root:)

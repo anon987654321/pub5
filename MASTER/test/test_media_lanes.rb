@@ -282,18 +282,18 @@ class TestMediaLanes < Minitest::Test
     Wire.replicate = ->(token) { Master::Io::ReplicateClient.new(token:) }
   end
 
-  def test_the_image_intent_keeps_the_replicate_tool_when_replicate_leads_or_nothing_is_configured
+  # No lane configured is an offline answer, not a render. The intent used to
+  # answer ok? with a path to a file nobody wrote because it shelled out to a
+  # `replicate` entrypoint that no commit has ever contained.
+  def test_the_image_intent_without_a_live_lane_reports_offline_and_writes_nothing
     intent = Master::Io::MediaIntent
-    asked = []
-    intent.stub(:generate_replicate_image, ->(prompt, root:) { asked << prompt; Master::Result.ok({ media: :replicate }) }) do
-      Lanes.stub(:key_for, ->(provider, env: ENV) { provider == "replicate" ? "r" : nil }) do
-        assert intent.generate_cloud_image("a harbour", root: "/x").ok?
-      end
-      Lanes.stub(:key_for, ->(_provider, env: ENV) { nil }) do
-        assert intent.generate_cloud_image("a harbour", root: "/x").ok?
-      end
+    Lanes.stub(:key_for, ->(_provider, env: ENV) { nil }) do
+      result = intent.generate_cloud_image("a harbour", root: "/x")
+
+      refute result.ok?, "an unconfigured selector must not report a render"
+      assert_equal :offline, result.category
+      assert_match(/offline/, result.message)
     end
-    assert_equal 2, asked.size
   end
 
   def test_the_image_intent_uses_another_live_lane_and_keeps_its_result_shape
