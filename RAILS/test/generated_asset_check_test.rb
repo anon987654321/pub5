@@ -62,7 +62,11 @@ class GeneratedAssetCheckTest < Minitest::Test
 
   def test_missing_generated_build_is_inconclusive
     Dir.mktmpdir do |dir|
-      source = File.join(dir, "tokens.scss")
+      # source_files globs app/assets/stylesheets/**, so the fixture sits
+      # where the scanner looks — a stylesheet anywhere else is a tree with
+      # nothing to measure, which legitimately reports nothing.
+      source = File.join(dir, "app", "assets", "stylesheets", "tokens.scss")
+      FileUtils.mkdir_p(File.dirname(source))
       File.write(source, "--radius-card: 12px;\n")
       result = Deploy::CheckResult.new
       subject.send(:stale?, dir, result, "amber")
