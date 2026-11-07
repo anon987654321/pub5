@@ -82,9 +82,40 @@ module Master
           Result.err("#{name}: #{said}", category: :provider_error)
         end
 
+        # Why a lane failed, in words. stderr carries the program's own complaint; stdout
+        # carries events when the lane speaks json, and a json line is not a reason. A dead
+        # claude-cli once reported "{"type":"assistant","message":{"diagnostics":null," —
+        # a fragment of an event, cut at 90 chars further out, that named nothing.
+        # nil means neither stream said anything in words; the caller words that itself.
         def cli_lane_complaint(out, err)
-          said = [err, out].map { |text| text.to_s.strip }.reject(&:empty?).last
-          said&.lines&.last(2)&.join&.strip
+          out = out.to_s.strip
+          said = err.to_s.strip
+          return if said.empty? && out.empty?
+
+          return said.lines.last(2).join.strip unless said.empty?
+          return cli_event_complaint(out) if json_stream?(out)
+
+          out.lines.last(2).join.strip
+        end
+
+        def json_stream?(text) = text.lines.any? { |line| line.lstrip.start_with?("{") }
+
+        # The text a json stdout event gives as the reason: an error's own message, or the
+        # result event of a run that ended badly. nil when stdout offers no such field.
+        def cli_event_complaint(out)
+          out.lines.reverse_each do |line|
+            next unless line.lstrip.start_with?("{")
+
+            event = JSON.parse(line)
+            next unless event.is_a?(Hash)
+
+            fields = [event["error"], (event["result"] if event["is_error"]), event["message"]]
+            said = fields.grep(String).map(&:strip).find { |text| !text.empty? }
+            return said if said
+          rescue JSON::ParserError
+            next
+          end
+          nil
         end
 
         def with_cli_slot(name = nil)
@@ -284,7 +315,9 @@ module Master
         # seventy-eight times. `claude --print` from inside a session hangs and is
         # killed, which is exit 124 and two empty streams.
         def claude_cli_failure(out, err, status:)
-          said = cli_lane_complaint(out, err) || "exited #{status.exitstatus} with nothing on either stream"
+          said = cli_lane_complaint(out, err) ||
+                 (json_stream?(out.to_s) ? "exited #{status.exitstatus} and named no error in its stream" \
+                                         : "exited #{status.exitstatus} with nothing on either stream")
           Result.err("claude-cli: #{said}", category: :provider_error)
         end
 

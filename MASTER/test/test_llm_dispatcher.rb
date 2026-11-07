@@ -1176,3 +1176,56 @@ class TestLLMDispatcher < Minitest::Test
     Net::HTTP.define_singleton_method(:start, original) if original
   end
 end
+
+class TestCliLaneComplaint < Minitest::Test
+  # A dead claude-cli reported this as its reason, cut to 90 chars on the way
+  # out: a fragment of a stream-json event, naming nothing. stdout speaks json
+  # on that lane, and a json line is not a complaint.
+  def self.dispatcher
+    Master::Review::LLMDispatcher.allocate
+  end
+
+  def test_a_json_stdout_event_yields_its_error_text_not_a_fragment
+    out = <<~JSON
+      {"type":"system","subtype":"init"}
+      {"type":"assistant","message":{"diagnostics":null,"content":[]}}
+    JSON
+    event = '{"type":"result","is_error":true,"result":"Invalid API key · Please run /login"}'
+
+    said = self.class.dispatcher.send(:cli_lane_complaint, "#{out}#{event}", "")
+    assert_equal "Invalid API key · Please run /login", said
+    refute_match(/\A\{/, said)
+  end
+
+  # stderr is the program's own complaint and outranks anything stdout holds.
+  def test_stderr_outranks_stdout
+    out = '{"type":"result","is_error":true,"result":"from stdout"}'
+
+    assert_equal "boom: no such model", self.class.dispatcher.send(:cli_lane_complaint, out, "boom: no such model\n")
+  end
+
+  # stdout that is not json is prose, and stays the answer it already was.
+  def test_plain_prose_stdout_is_still_the_complaint
+    assert_equal "unknown option --nope", self.class.dispatcher.send(:cli_lane_complaint, "unknown option --nope\n", "")
+  end
+
+  # A json stream that names no error is not quoted back as if it were one: the
+  # lane says it exited and named nothing, which is the truth the operator can act on.
+  def test_a_json_stream_that_names_nothing_is_not_quoted_as_the_reason
+    out = %({"type":"assistant","message":{"diagnostics":null,"content":[]}}\n)
+
+    assert_nil self.class.dispatcher.send(:cli_lane_complaint, out, "")
+
+    status = Struct.new(:exitstatus).new(1)
+    result = self.class.dispatcher.send(:claude_cli_failure, out, "", status:)
+    assert_equal "claude-cli: exited 1 and named no error in its stream", result.message
+  end
+
+  # Two empty streams keep the older, plainer wording.
+  def test_two_empty_streams_say_nothing_was_on_either
+    status = Struct.new(:exitstatus).new(124)
+
+    assert_equal "claude-cli: exited 124 with nothing on either stream",
+                 self.class.dispatcher.send(:claude_cli_failure, "", "", status:).message
+  end
+end
