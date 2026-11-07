@@ -77,7 +77,9 @@ module Master
         greet_from_model unless initial_message
         @running = true
         play_boot_sound
-        print_face_overlay unless @face_overlay_rendered
+        # The face is the web particle face only (Johann 2026-11-07): the
+        # terminal boot no longer paints the overlay. /face keeps the explicit
+        # opt-in so a deliberate request still gets it.
         start_boot_scan if background_scan_enabled?
         start_reminder_watch
         repl_loop
