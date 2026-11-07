@@ -313,7 +313,7 @@ def test_brgen_old_dialect_outranks_the_social_stack
     # never; retire a site by naming its container in the app's compact
     # contexts and dropping the class. 75 files carried the name when the class
     # left the shared contract (2026-11-07).
-    naming = Dir.glob(File.join(REPO_ROOT, "RAILS", "{__shared,amber,brgen,brgen_dating,brgen_maps,brgen_marketplace,brgen_radio}",
+    naming = Dir.glob(File.join(ROOT, "{__shared,amber,brgen,brgen_dating,brgen_maps,brgen_marketplace,brgen_radio}",
                                            "**", "*.{erb,js,rb,scss}")).count do |path|
       File.read(path, encoding: "UTF-8").include?("button-small")
     end

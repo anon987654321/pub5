@@ -60,7 +60,11 @@ class ChromeAuditFlatContractTest < Minitest::Test
     refute_match(/@media\s*\(\s*max-width\b/, source,
                  "the shared consent banner must not use a max-width override")
     assert_match(/\.cookie-banner\s*\{[^}]*grid-template-columns:\s*1fr;[^}]*max-height:\s*min\(90dvh,\s*42rem\);[^}]*overflow-y:\s*auto;/m, mobile)
-    assert_match(/\.cookie-banner-actions\s*\{[^}]*justify-content:\s*stretch;/m, mobile)
+    # The actions row is a grid of equal columns now: on a phone the third
+    # choice wraps into a cell as wide as the other two instead of a full row
+    # that outweighed reject. Equal width is the mobile-first intent the old
+    # flex + justify-content: stretch pairing approximated.
+    assert_match(/\.cookie-banner-actions\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%,\s*9rem\),\s*1fr\)\);/m, mobile)
     assert_match(/\.cookie-banner-button\s*\{[^}]*flex:\s*1 1 9rem;/m, mobile)
     assert_match(/\.cookie-consent-preferences\s*\{[^}]*grid-template-columns:\s*1fr;/m, mobile)
     assert_match(/\.cookie-banner\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;[^}]*max-height:\s*none;[^}]*overflow-y:\s*visible;/m, wide)
