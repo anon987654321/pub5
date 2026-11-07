@@ -76,6 +76,38 @@ class ResearchTest < Minitest::Test
     end
   end
 
+  def test_codepen_trending_uses_the_core_browser_for_the_live_feed_and_closes_it
+    sandbox do |root|
+      w = world(root, { net: ["codepen.io"] })
+      calls = []
+      browser = Object.new
+      browser.define_singleton_method(:call) do |action:, session:, url: nil, steps: nil, **_rest|
+        calls << [action, session, url, steps]
+        case action
+        when "open"
+          { "status" => "ok" }
+        when "scroll"
+          {
+            "links" => [{ "text" => "Bright Sky", "href" => "https://codepen.io/alice/pen/bright-sky" }],
+            "screenshot_file" => "log/master/browser-research-codepen-trending.png"
+          }
+        when "close"
+          { "closed" => true }
+        end
+      end
+      w.define_singleton_method(:browser) { browser }
+      research = Master::Tools::Research.new(world: w)
+
+      result = JSON.parse(research.call(name: "codepen.trending", arguments: { "limit" => 4 }))
+
+      assert_equal "brokered_browser", result.fetch("method")
+      assert_equal "Bright Sky", result.dig("results", 0, "title")
+      assert_equal "log/master/browser-research-codepen-trending.png", result.fetch("screenshot_file")
+      assert_equal %w[open scroll close], calls.map(&:first)
+      assert_equal ["research-codepen-trending"] * 3, calls.map { |call| call[1] }
+    end
+  end
+
   def test_codepen_does_not_claim_the_javascript_shell_is_an_empty_trending_feed
     sandbox do |root|
       transport = Object.new
