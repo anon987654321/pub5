@@ -1,9 +1,10 @@
 # Rails apps
 
-**Five Rails apps, one shared engine, and one process that answers to a hundred
+**Nine Rails trees, one shared engine, and one process that answers to a hundred
 hostnames, each built so that a stranger on a phone sees a single, quiet product
-and never the machinery beneath it.** brgen is the city network, amber is the
-wardrobe, bsdports is a search of the ports tree, master is MASTER's face
+and never the machinery beneath it.** brgen is the city network with its five
+verticals as sibling directories, amber is the
+wardrobe, bsdports is a search of the ports tree, MASTER's web face
 on `ai.brgen.no`, and mrdamascy is one Bergen kitchen's ordering app. They run
 on SQLite behind Falcon (mrdamascy behind Puma), on one box called vm23, and
 everything the first four share lives in one engine so that a fix made once is
@@ -115,7 +116,9 @@ cd RAILS/brgen && bin/ci
 
 ## Public-page metadata contract
 
-The central rendered `surface_schema` check measures the existing Brgen home, marketplace, cart, dating and messenger surfaces for unique title, description, absolute canonical URL, and Open Graph title/description/URL. The corresponding positive fixtures carry complete metadata, and focused MASTER tests prove missing/duplicate/relative metadata is rejected. These contracts do not yet replace the outstanding live audit of every owned hostname, alias redirect, robots.txt, sitemap and JSON-LD document in the repository TODO.
+The central rendered `surface_schema` check measures the existing Brgen home, marketplace, cart, dating and messenger surfaces for unique title, description, absolute canonical URL, and Open Graph title/description/URL. The corresponding positive fixtures carry complete metadata, and focused MASTER tests prove missing/duplicate/relative metadata is rejected. These contracts do not yet replace the outstanding live audit of every owned
+hostname, alias redirect, robots.txt, sitemap and JSON-LD document; that audit
+stays open until its evidence lands.
 
 ## Response security headers
 

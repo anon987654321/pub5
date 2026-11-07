@@ -26,9 +26,9 @@ must satisfy.
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
 generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
 the bootstrap pointer.
-`TREE_CONTRACTS.md` is the one per-tree contract file. `TODO.md` is the one
-cross-tree backlog; an item closes by being deleted in the commit that carries
-its evidence.
+`TREE_CONTRACTS.md` is the one per-tree contract file. There is no cross-tree
+backlog file: work is done when its evidence lands, and unresolved outcomes
+live in the gates and in the commits that carry them.
 
 ## Source authority and Laws
 
