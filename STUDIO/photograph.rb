@@ -31,7 +31,8 @@ if $PROGRAM_NAME == __FILE__
   end.parse!
 
   prompt = ARGV.join(" ").strip
-  abort "usage: ruby STUDIO/photograph.rb [--film] PROMPT" if prompt.empty?
+  abort "usage: ruby STUDIO/photograph.rb [--film | --reference --reference-image PATH] PROMPT" if prompt.empty?
+  abort "--film cannot be combined with --reference" if options[:film] && options[:reference]
 
   if options[:reference]
     abort "--reference-image is required (repeat 1-3 times)" if options[:reference_images].empty?

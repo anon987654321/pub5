@@ -185,6 +185,12 @@ module Studio
         values = Array(references)
         raise ArgumentError, "provide 1..#{MAX_REFERENCES} reference images" unless values.length.between?(1, MAX_REFERENCES)
 
+        subject_directory = File.dirname(@source_directory)
+        subject_stat = File.lstat(subject_directory)
+        raise ArgumentError, "subject directory must be a real directory, not a symlink" unless subject_stat.directory? && !subject_stat.symlink?
+        raise ArgumentError, "subject directory must be owned by the current user" unless subject_stat.uid == Process.uid
+        raise ArgumentError, "subject directory must be private (owner-only permissions)" unless (subject_stat.mode & 0o077).zero?
+
         root_stat = File.lstat(@source_directory)
         raise ArgumentError, "source directory must be a real directory, not a symlink" unless root_stat.directory? && !root_stat.symlink?
         raise ArgumentError, "source directory must be owned by the current user" unless root_stat.uid == Process.uid

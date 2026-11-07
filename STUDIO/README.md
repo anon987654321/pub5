@@ -33,7 +33,8 @@ but the implementation is owned here.
 `Rakefile` is the tree's check surface: `rake check` loads every entrypoint
 and proves the contracts answer, `rake test` runs `test/` (the Dilla and
 IdeaPicture suites), and `rake` runs both. The suite runs without network
-access and without the Replicate API.
+access and without the Replicate API; the reference route is covered by stub
+client tests.
 
 ## Reference-guided portraits
 

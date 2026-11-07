@@ -161,6 +161,16 @@ class TestStudioReferencePicture < Minitest::Test
     assert_match(/escapes the subject sources/, error.message)
   end
 
+  def test_non_private_sources_directory_is_rejected
+    File.chmod(0o755, @sources)
+
+    error = assert_raises(ArgumentError) do
+      @picture.preflight(prompt: "A portrait", references: [@front], cost_limit_usd: 0.03)
+    end
+
+    assert_match(/source directory must be private/, error.message)
+  end
+
   def test_symlink_reference_is_rejected
     link = File.join(@sources, "linked.png")
     File.symlink(@front, link)
