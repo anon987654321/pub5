@@ -18,6 +18,14 @@
       "feel": { "bass": "walk", "melody": "sweet_soul", "swing": 54.0, "grit": 0.6 }
     },
     {
+      "id": "los_angeles_wake", "title": "Los Angeles Wake - dark modal techno",
+      "key": "Ebm", "bpm": 124, "loop_bars": 4, "bars": 16,
+      "chords": ["Ebm9", "G#7#9", "C#maj9", "F7alt"],
+      "roman": ["i9", "III7#9", "bVImaj9", "II7alt"],
+      "sample_provenance": "Named for the 2008 beat-scene record: shaking swing under an aggressive techno pulse, tape wear turned up, the modal glide dark and unresolved",
+      "feel": { "bass": "walk", "melody": "dorian_moan", "swing": 53.0, "grit": 0.8 }
+    },
+    {
       "id": "velvet_satie",
       "title": "Velvet Satie",
       "key": "Gm", "bpm": 84, "loop_bars": 4, "bars": 12,
@@ -132,6 +140,16 @@
       "bust_bars": 4,
       "open_hat": [[6, 0.36], [11, 0.3]]
     },
+    "los_angeles": {
+      "kick": [[0, 1.0], [4, 0.92], [8, 1.0], [12, 0.92]],
+      "snare": [[4, 0.9], [12, 0.95]],
+      "ghost": [[11, 0.22]],
+      "hats": [[0, 0.55], [2, 0.5], [6, 0.5], [10, 0.55], [14, 0.5]],
+      "ride": [],
+      "perc": [[3, 0.24], [7, 0.2], [11, 0.24], [15, 0.2]],
+      "bust_bars": 8,
+      "open_hat": [[14, 0.55]]
+    },
     "dusty_laid_back": {
       "kick": [[0, 0.9], [10, 0.8]],
       "snare": [[4, 0.9], [12, 0.92]],
@@ -148,6 +166,7 @@
     "dilla_shadow": { "spread_ms": 9.0, "nudge": { "kick": 16.0, "snare": -11.0, "hat": -5.0, "ghost": 8.0 }, "drag_ms": 6.0, "anticipation": 95.0 },
     "behind_the_beat": { "spread_ms": 12.0, "nudge": { "kick": 22.0, "snare": 4.0, "hat": 10.0, "ghost": 12.0 }, "drag_ms": 14.0, "anticipation": 60.0 },
     "late_snare": { "spread_ms": 8.0, "nudge": { "kick": 14.0, "snare": 9.0, "hat": -6.0, "ghost": 10.0 }, "drag_ms": 8.0, "anticipation": 80.0 },
+    "los_angeles": { "spread_ms": 10.0, "nudge": { "kick": 0.0, "snare": 34.0, "hat": -4.0, "ghost": 6.0 }, "drag_ms": 10.0, "anticipation": 50.0 },
     "on_grid": { "spread_ms": 2.0, "nudge": { "kick": 0.0, "snare": 0.0, "hat": 0.0, "ghost": 0.0 }, "drag_ms": 0.0, "anticipation": 0.0 }
   },
   "kits": {
