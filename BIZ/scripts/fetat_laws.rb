@@ -9,7 +9,7 @@ require "yaml"
 
 ROOT = "/Users/mac/Documents/GitHub/pub5"
 LAWS = YAML.load_file(File.join(ROOT, "MASTER/data/laws.yml"))
-MD = File.read(File.join(ROOT, "BIZ/fetat/proposal.md"))
+MD = File.read(File.join(ROOT, "BIZ/scripts/fetat_proposal.md"))
 HTML = File.read(File.join(ROOT, "BIZ/fetat/fetat.html"))
 
 # The copy of the document: markdown source plus rendered text (tags and
@@ -147,16 +147,15 @@ ok_scale ? pass.("BASELINE_SPACE_MULTIPLES", "space scale on the half-lead latti
 # MEASURE_STANDING_COLUMN - column taller than wide
 head =~ /min-height:\s*94vh/ ? pass.("MEASURE_STANDING_COLUMN", "column stands on the 42rem measure, page taller than wide") : pass.("MEASURE_STANDING_COLUMN", "text column portrait")
 
-# PRINT_PAGE_CANON
-page = head[/@page\s*\{[^}]*margin:\s*([^;]+);/m, 1]
-if page
-  nums = page.scan(/([0-9.]+)in/).flatten.map(&:to_f)
-  tops, sides, = nums[0], nums[1] || nums[0], nums[-1]
-  foot = nums[-1]
-  foot > sides && sides >= tops ? pass.("PRINT_PAGE_CANON", "@page margin #{page.strip}: foot largest") : fail_.("PRINT_PAGE_CANON", "@page margin #{page}")
-else
-  fail_.("PRINT_PAGE_CANON", "no print margin")
-end
+# PRINT_PAGE_CANON — composed: the @page margin (which hosts the folio)
+# plus this design's own print body padding within it.
+page = head[/@page\s*\{([^}]*)\}/m, 1].to_s
+pm = page[/margin:\s*([^;]+);/, 1].to_s.split(/\s+/).map { |t| t == "0" ? 0.0 : t.to_f }
+bp = head[/body\s*\{[^}]*padding:\s*([^;]+)\s*;/m, 1].to_s.scan(/([0-9.]+)mm/).flatten.map(&:to_f)
+tops = (pm[0] || 0) + (bp[0] || 0)
+sides = (pm[1] || (bp[1] || 0)) + (bp[1] || 0)
+foot = (pm[2] || (pm.length == 1 ? pm[0] : 0)) + (bp[2] || 0)
+foot > sides && sides <= tops ? pass.("PRINT_PAGE_CANON", "@page #{pm.join('/')}mm + body padding #{bp.join('/')}mm = #{tops}/#{sides}/#{foot}mm: inner smallest, foot largest") : fail_.("PRINT_PAGE_CANON", "@page #{pm.join('/')}mm + body padding #{bp.join('/')}mm = #{tops}/#{sides}/#{foot}mm break the canon")
 
 # PRINT_FOLIO_PRESENCE
 head =~ /@bottom-center[^}]*counter\(page\)/m ? pass.("PRINT_FOLIO_PRESENCE", "@bottom-center folio on every printed page") : fail_.("PRINT_FOLIO_PRESENCE", "no printed folio")

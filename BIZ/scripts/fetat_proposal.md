@@ -1,5 +1,5 @@
 # FETAT
-## Familieetaten – forretningsplan for ett nytt statlig organ for barn og familier
+## Forretningsplan for Familieetaten – det statlige organet for barn og familier
 
 ### Sammendrag
 Barnevernet gjør jobben dårlig. Tjenesten henter feil familiers barn, mister de familiene som ber om hjelp, og begrunner sine inngrep skjevt. FETAT – Familieetaten – er forretningsplanen for en ny statlig etat bygget fra bunnen, med økt samlet kapasitet til hjelp og strengere krav til bevis for tvang. Etaten etableres i tre faser og overtar dagens statlige og kommunale oppgaver og budsjettrammer for barnevern.

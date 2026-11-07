@@ -9,7 +9,7 @@
 
 # The pipeline is self-contained: the source art is image.jpg beside this
 # script; binarize with ImageMagick into the machine's tmp and trace it.
-SRC_IMAGE = File.expand_path("image.jpg", __dir__)
+SRC_IMAGE = File.expand_path("fetat_image.jpg", __dir__)
 require "open3"
 require "tmpdir"
 LOGO_TMP = File.join(Dir.tmpdir, "fetat-logo")

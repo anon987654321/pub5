@@ -31,12 +31,12 @@
 
 require "cgi"
 
-SRC = File.expand_path("proposal.md", __dir__)
-OUT = File.expand_path("fetat.html", __dir__)
+SRC = File.expand_path("fetat_proposal.md", __dir__)
+OUT = File.expand_path("../fetat/fetat.html", __dir__)
 
 # Page one is the hands: the retraced mark, filling the whole first page
 # with FETAT centered in the footer area of that page.
-inline_svg = File.read(File.expand_path("fetat.svg", __dir__)).sub(/\A<\?xml.*?\?>\n/, "")
+inline_svg = File.read(File.expand_path("../fetat/fetat.svg", __dir__)).sub(/\A<\?xml.*?\?>\n/, "")
 
 lines = File.readlines(SRC)
 
@@ -142,8 +142,8 @@ html = <<~HTML
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="description" content="FETAT / Familieetaten — arbeidsmesterdokument">
-      <title>FETAT — forslaget til Familieetaten</title>
+      <meta name="description" content="FETAT / Familieetaten – arbeidsmesterdokument">
+      <title>FETAT – forretningsplanen for Familieetaten</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap">
@@ -214,7 +214,6 @@ html = <<~HTML
         .metahead { margin: 0 auto var(--space-l); text-align: center; }
         .metahead p { margin: 0 0 var(--space-s); color: var(--color-muted); }
         .metahead .status { font-style: italic; }
-        .metahead .byline { color: var(--color-text); }
         .metahead .date { font-style: italic; font-feature-settings: "onum" 1; }
         a {
           color: var(--color-link); text-decoration: underline;
@@ -245,7 +244,8 @@ html = <<~HTML
         }
         @media print {
           @page {
-            margin: 0.9in 1.1in 1.4in;
+            size: 156mm 234mm;
+            margin: 0 0 12mm;
             @bottom-center { content: counter(page); }
           }
           :root {
@@ -256,7 +256,8 @@ html = <<~HTML
           }
           .toc { display: none; }
           .cover { min-height: 88vh; }
-          body { margin: 0; max-width: 396pt; width: 90%; }
+          body { margin: 0; max-width: none; width: auto; }
+          body { padding: 18mm 17mm 12mm; }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
           h1, .metahead, .signature { page-break-inside: avoid; }
@@ -276,8 +277,7 @@ html = <<~HTML
             <header>
               <h1 class="vh">FETAT</h1>
               <div class="metahead">
-                <p class="byline">av Hannah Jdottir &amp; Johann Tepstad</p>
-                <p class="status">Arbeidsmesterdokument; ikke offentlig politikk, juridisk rådgivning eller bevis for individuelle påstander.</p>
+                <p class="status">Arbeidsmesterdokument; grunnlag for regjeringsbehandling og etablering av det statlige organet.</p>
                 <p class="date"><time datetime="2026-10-29">29. oktober 2026</time></p>
               </div>
             </header>
