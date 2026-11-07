@@ -31,14 +31,15 @@
 
 require "cgi"
 
-SRC = File.expand_path("fetat_proposal.md", __dir__)
-OUT = File.expand_path("../fetat/fetat.html", __dir__)
+ROOT = "/Users/mac/Documents/GitHub/pub5"
+SRC = File.join(ROOT, "MASTER/tools/biz")
+OUT = File.join(ROOT, "BIZ/fetat/fetat.html")
 
 # Page one is the hands: the retraced mark, filling the whole first page
 # with FETAT centered in the footer area of that page.
-inline_svg = File.read(File.expand_path("../fetat/fetat.svg", __dir__)).sub(/\A<\?xml.*?\?>\n/, "")
+inline_svg = File.read(File.join(ROOT, "BIZ/fetat/fetat.svg")).sub(/\A<\?xml.*?\?>\n/, "")
 
-lines = File.readlines(SRC)
+lines = File.readlines(File.join(SRC, "fetat_proposal.md"))
 
 def inline(text)
   t = CGI.escapeHTML(text)
@@ -254,12 +255,6 @@ html = <<~HTML
             @bottom-center { content: counter(page); }
           }
           body { margin: 0; }
-          /* The hands bleed to the page edges as they do on screen; the
-             print viewport is the page box, so 100vw is the full width. */
-          .cover svg {
-            width: 100vw; max-width: none; min-width: 100vw;
-            margin: auto 0;
-          }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
           table, li { break-inside: avoid; }

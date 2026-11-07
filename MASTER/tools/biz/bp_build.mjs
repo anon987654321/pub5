@@ -15,7 +15,7 @@ import { ADDITIONS } from './content_add.mjs';
 
 const PLANS = { ...PLANS_A, ...PLANS_B };
 
-const PUB_SYRE = `${SRC}/scripts/syre.html`;
+const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
 const TITLES = {
@@ -249,7 +249,7 @@ function hasLogo(src, lgd) {
 }
 
 for (const plan of ORDER) {
-  let src = readFileSync(`${SRC}/scripts/${plan}.html`, 'utf8');
+  let src = readFileSync(`${SRC}/${plan}.html`, 'utf8');
   const origTitle = (src.match(/<title>([^<]+)<\/title>/) || [])[1];
   if (origTitle !== TITLES[plan]) report.push(`${plan}: title mismatch ${JSON.stringify(origTitle)}`);
 

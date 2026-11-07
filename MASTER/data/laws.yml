@@ -1144,9 +1144,9 @@ BUSPLAN_PAIR_FOLDER:
 BUSPLAN_SOURCE_OF_RECORD:
   parent: BRINGHURST
   statement: >
-    A business plan's editable source lives beside the plan folders, never
-    inside one, the published pair is regenerated from it, and the source
-    is never what the reader is handed.
+    A business plan's editable source lives outside the published plan
+    tree entirely; the published pair is regenerated from it and the
+    source is never what the reader is handed.
   severity: warning
   resolution: review
 
@@ -1161,12 +1161,12 @@ BUSPLAN_AUDIT_COVERAGE:
 BUSPLAN_NO_WORKING_TREES:
   parent: BUSPLAN_PAIR_FOLDER
   statement: >
-    A business plan tree keeps no working directories: no research
-    folder, no loose scripts beside the plan folders. Conclusions land
-    in the plan, the build and the laws, and the notes and ad-hoc
-    scripts behind them are deleted once their work is done. What
-    remains is the published folders and the single sanctioned anlage
-    that regenerates them.
+    A business plan tree carries only the plan folders: no scripts
+    folder, no research folder, no index or report documents beside
+    them. Conclusions land in the plan, the build and the laws, and the
+    notes and ad-hoc scripts behind them are deleted from the published
+    tree once their work is done; the anlage that regenerates the pair
+    lives in the tools tree, outside the published one.
   severity: warning
   resolution: review
 

@@ -15,6 +15,8 @@
 # Usage: ruby laws_audit.rb [plan ...]   (default: all bp_build plans)
 # It audits the READER artifact - the generated pair under
 # BIZ_OUT_DIR (the dir bp_build writes) - not the committed source.
+# The anlage itself lives in MASTER/tools/biz, outside the published
+# plan tree (BUSPLAN_NO_WORKING_TREES: BIZ carries only the plan folders).
 
 require "yaml"
 
@@ -131,15 +133,17 @@ plans.each do |plan|
   end
   folder_verdicts["BUSPLAN_SOURCE_OF_RECORD"] =
     if plan == "fetat"
-      ["PASS", "proposal, build, trace and laws live in BIZ/scripts with the fetat_ prefix; the folder keeps only the trio"]
+      ["PASS", "proposal, build, trace and laws live in MASTER/tools/biz with the fetat_ prefix; the folder keeps only the trio"]
     else
-      ["PASS", "the restored base and the injections live in BIZ/scripts; bp_build/bp_cover/bp_print regenerate the trio from them"]
+      ["PASS", "the restored bases and the injections live in MASTER/tools/biz; bp_build/bp_cover/bp_print regenerate the trio from them"]
     end
+  bplan_dirs = %w[syre speis ragnhild nato norwegianhedge pubhealthcare govt_bergen fetat]
+  stray_biz = Dir.glob("#{REPO}/*").reject { |f| bplan_dirs.include?(File.basename(f)) }
   folder_verdicts["BUSPLAN_NO_WORKING_TREES"] =
-    if File.exist?("#{REPO}/research")
-      ["FAIL", "working research tree removed from the published tree (BUSPLAN_NO_WORKING_TREES)"]
+    if !stray_biz.empty?
+      ["FAIL", "the plan tree carries only the plan folders: strays #{stray_biz.inspect}"]
     else
-      ["PASS", "no research folder and no loose working scripts; the one sanctioned anlage is BIZ/scripts"]
+      ["PASS", "the tree carries only the eight plan folders; the anlage lives in MASTER/tools/biz, outside it"]
     end
   folder_verdicts["BUSPLAN_AUDIT_COVERAGE"] = ["PASS", "this audit: every laws.yml law receives an explicit verdict"]
 

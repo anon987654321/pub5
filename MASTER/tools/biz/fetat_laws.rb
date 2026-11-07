@@ -9,7 +9,7 @@ require "yaml"
 
 ROOT = "/Users/mac/Documents/GitHub/pub5"
 LAWS = YAML.load_file(File.join(ROOT, "MASTER/data/laws.yml"))
-MD = File.read(File.join(ROOT, "BIZ/scripts/fetat_proposal.md"))
+MD = File.read(File.join(ROOT, "MASTER/tools/biz/fetat_proposal.md"))
 HTML = File.read(File.join(ROOT, "BIZ/fetat/fetat.html"))
 
 # The copy of the document: markdown source plus rendered text (tags and
