@@ -33,7 +33,7 @@ MIN_FREE_GIB = begin
 rescue StandardError
   2.0
 end
-TREES = %w[MASTER RAILS OPENBSD STUDIO].freeze
+TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
 
 args = ARGV.dup
 dry = args.delete("--dry")

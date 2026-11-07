@@ -113,11 +113,12 @@ def lines_for(path)
   end
 end
 
-# The four top-level trees, by the name a person types. `.` is MASTER because this script
-# runs from inside it.
-TREE_PATHS = { "MASTER" => ".", "RAILS" => "../RAILS", "OPENBSD" => "../OPENBSD", "STUDIO" => "../STUDIO" }.freeze
+# The governed trees, by the name a person types. `.` is MASTER because this script
+# runs from inside it. BIZ is the documents plane (html, svg, pdf), checked with the
+# same ladder rather than skipped.
+TREE_PATHS = { "MASTER" => ".", "RAILS" => "../RAILS", "OPENBSD" => "../OPENBSD", "STUDIO" => "../STUDIO", "BIZ" => "../BIZ" }.freeze
 
-# Named trees when --tree is given, all four otherwise. An unknown name is
+# Named trees when --tree is given, the whole registry otherwise. An unknown name is
 # refused rather than silently narrowing the check to nothing — a check that
 # measures no tree and exits 0 is the failure this whole file is written against.
 named_trees = ARGV.filter_map { |arg| arg[/\A--tree=(.+)\z/, 1] }.flat_map { |value| value.split(",") }.map(&:upcase)
