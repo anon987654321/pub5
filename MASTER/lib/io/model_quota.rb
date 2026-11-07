@@ -20,6 +20,11 @@ module Master
       include ::Master::Io::AtomicWrite
       FREE_RE = /:free\z/.freeze
       DEFAULT_DAILY = 50
+      OPENROUTER_LANE = "openrouter".freeze
+      # One GET per key per half hour: the endpoint answers the key's own
+      # remaining allowance, and the burn forecast stays the fallback, not a
+      # second source polled on every call.
+      PROVIDER_REFRESH_TTL_S = 1800
 
       @mutex = Mutex.new
 
@@ -60,8 +65,89 @@ module Master
 
       def trackable?(model) = FREE_RE.match?(model.to_s) || !hosted_name(model).nil?
 
+      # The provider's own answer about this key's remaining free daily
+      # requests, recorded under "provider" in the state file for today. A
+      # missing or stale reading answers nil and the burn forecast stands
+      # (TRUTHFUL_STATUS: a forecast is a forecast, a reading is a reading).
+      def provider_remaining(model, day: today_key)
+        return unless FREE_RE.match?(model.to_s)
+
+        row = load_data.dig("provider", OPENROUTER_LANE)
+        return unless row.is_a?(Hash) && row["day"] == day && row["free_model_daily_requests"].is_a?(Numeric)
+
+        row["free_model_daily_requests"].to_i
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.provider_remaining", model: model.to_s)
+        nil
+      end
+
+      # Read GET /api/v1/key with this checkout's active OpenRouter key and
+      # store the answer's free_model_daily_requests as today's authoritative
+      # remaining. Called from record() - the one funnel every successful free
+      # call passes - and so never from a read path; the TTL keeps it one GET
+      # per half hour. Every failure is a word, never a raised error: quota
+      # bookkeeping must not break the call that fed it.
+      def refresh_from_provider!(now: Time.now.utc, day: today_key)
+        key = active_openrouter_key
+        return :no_key unless key
+
+        @mutex.synchronize do
+          row = load_data.dig("provider", OPENROUTER_LANE)
+          return :fresh if row.is_a?(Hash) && row["day"] == day &&
+                           row["fetched_at"].to_f > now.to_f - PROVIDER_REFRESH_TTL_S
+
+          remaining = fetch_free_model_daily_requests(key)
+          return :unreadable unless remaining.is_a?(Numeric)
+
+          with_state_lock do
+            data = load_data
+            data["provider"] ||= {}
+            data["provider"][OPENROUTER_LANE] =
+              { "day" => day, "free_model_daily_requests" => remaining.to_i, "fetched_at" => now.to_f }
+            save_data(data)
+          end
+          :refreshed
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.refresh_from_provider!")
+        :failed
+      end
+
+      # The key this checkout rides: the rotator's active key first, then the
+      # first named environment key with a value. The value never leaves this
+      # module.
+      def active_openrouter_key
+        Io::KeyRotator.active_key_for(OPENROUTER_LANE) ||
+          Array(Master.models_config&.dig("openrouter", "keys_env"))
+            .filter_map { |name| ENV[name] unless name.to_s.empty? }
+            .find { |value| !value.to_s.strip.empty? }
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.active_openrouter_key")
+        nil
+      end
+
+      # The key never lands in an error message or a log; only the status
+      # leaves this method.
+      def fetch_free_model_daily_requests(key)
+        require "net/http"
+        uri = URI("https://openrouter.ai/api/v1/key")
+        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 3, read_timeout: 8) do |http|
+          http.get(uri.request_uri, { "Authorization" => "Bearer "+key })
+        end
+        return unless response.is_a?(Net::HTTPSuccess)
+
+        parsed = JSON.parse(response.body.to_s)
+        data = parsed.is_a?(Hash) ? parsed["data"] : nil
+        data["free_model_daily_requests"] if data.is_a?(Hash)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.fetch_free_model_daily_requests")
+        nil
+      end
+
       def record(model)
         return unless trackable?(model)
+
+        refresh_from_provider! if FREE_RE.match?(model.to_s) && ENV["MASTER_NO_QUOTA_REFRESH"] != "1"
 
         @mutex.synchronize do
           with_state_lock do
@@ -86,11 +172,20 @@ module Master
       def over_quota?(model, day: today_key)
         return false unless trackable?(model)
 
+        authoritative = provider_remaining(model, day:)
+        return authoritative.zero? unless authoritative.nil?
+
         count(model, day:) >= daily_limit_for(model)
       end
 
+      # The provider's own remaining answer when one is fresh for today; the
+      # computed limit-minus-count otherwise. A reading and a forecast never
+      # mix in one number.
       def remaining(model, day: today_key)
         return unless trackable?(model)
+
+        authoritative = provider_remaining(model, day:)
+        return authoritative unless authoritative.nil?
 
         [daily_limit_for(model) - count(model, day:), 0].max
       end
@@ -112,7 +207,8 @@ module Master
 
         used = count(model, day:)
         limit = daily_limit_for(model)
-        remaining = [limit - used, 0].max
+        authoritative = provider_remaining(model, day:)
+        remaining = authoritative.nil? ? [limit - used, 0].max : authoritative
         projected_daily = burn_rate_per_day(model, day:, now:)
         exhaustion_hours =
           if remaining.zero?
@@ -127,6 +223,7 @@ module Master
           used:,
           limit:,
           remaining:,
+          remaining_source: authoritative.nil? ? "burn_forecast" : "provider",
           projected_daily: projected_daily.round(2),
           exhaustion_hours: exhaustion_hours&.round(2),
         }
