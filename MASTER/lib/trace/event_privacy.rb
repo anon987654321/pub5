@@ -10,11 +10,17 @@ module Master
     # unknown structured values are digest-only; named sensitive fields are redacted.
     module EventPrivacy
       TOOL_ARGUMENT_EVENTS = %w[tool:before tool:after tool:execution:before tool:execution:after tool:execution:reconciled].freeze
+      # `worker` and `job` name what a receipt is a receipt for. A worker:before
+      # with no after is how a crash in unwatched background work is found, and
+      # a digest cannot say which worker or job was cut short. Both are
+      # operator-authored identifiers, not personal data, so they are here
+      # rather than behind SENSITIVE_FIELD.
       SAFE_CATEGORIES = %w[
         event tool op operation tier profile mode risk status outcome capability verb
         stage state kind method reason_code model provider lane route channel backend engine adapter
         component service subsystem severity phase invocation_id run_id mission_id attempt_id
         effect_id parent_effect_id checkpoint_id idempotency_key reversibility reconciliation evidence_ref
+        worker job
       ].freeze
       SAFE_NUMBERS = %w[
         ts pid schema_version bytes count elapsed_ms duration_ms result_bytes attempt attempts turn turns checks_ran
@@ -66,10 +72,21 @@ module Master
         return true if SAFE_CATEGORIES.include?(field) && category_value?(value)
         return true if SAFE_NUMBERS.include?(field) && numeric_value?(value)
         return true if SAFE_BOOLEANS.include?(field) && [true, false].include?(value)
+        return true if job_name?(field, value)
         return true if field.end_with?("_digest") && value.is_a?(String) && SHA256.match?(value)
         return true if field.end_with?("_bytes") && numeric_value?(value) && value >= 0
 
         false
+      end
+
+      # A job name is prose the operator writes ("mission 7", "nightly sweep"),
+      # so the identifier shape CATEGORY_VALUE demands would digest it. It is
+      # bounded, single-line and carries no control character, which is all a
+      # name needs.
+      JOB_NAME = /\A[^\u0000-\u001f]{1,200}\z/
+
+      def job_name?(field, value)
+        field == "job" && (value.is_a?(String) || value.is_a?(Symbol)) && JOB_NAME.match?(value.to_s)
       end
 
       # `persisted` is applied at every layer that touches a record: the bus, the

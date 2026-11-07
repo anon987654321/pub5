@@ -152,6 +152,33 @@ class TestEventPrivacy < Minitest::Test
     end
   end
 
+  # A receipt names what it is a receipt for. Digesting `worker` and `job`
+  # would leave a worker:before with no after unable to say which worker or
+  # which job was cut short, which is the whole reason the receipt exists.
+  # The exception is narrow: a job name is one line of prose, and every field
+  # that can carry personal data stays digest-only.
+  def test_a_receipt_names_its_worker_and_job_without_keeping_prose_payloads
+    kept = Master::Trace::EventPrivacy.persisted(
+      "worker:before", worker: "task_steward", job: "mission 7", pid: 4_242,
+    )
+
+    assert_equal "task_steward", kept.fetch(:worker)
+    assert_equal "mission 7", kept.fetch(:job)
+    assert_equal 4_242, kept.fetch(:pid)
+
+    newline = Master::Trace::EventPrivacy.persisted("worker:before", job: "sweep\nprivate line")
+    assert_equal 64, newline.fetch(:job_digest).length, "a name is one line, never a payload"
+    refute_includes JSON.generate(newline), "private line"
+
+    prose = Master::Trace::EventPrivacy.persisted(
+      "worker:before", worker: "heartbeat", job: "canary",
+      goal: "person@example.invalid wants their records", reason: "private reason",
+    )
+    refute_includes JSON.generate(prose), "person@example.invalid"
+    assert_equal 64, prose.fetch(:goal_digest).length
+    assert_equal 64, prose.fetch(:reason_digest).length
+  end
+
   def test_sensitive_scalars_remain_digest_only
     persisted = Master::Trace::EventPrivacy.persisted(
       "route:chosen", query: "https://internal.invalid/?token=secret", outcome: "ok"

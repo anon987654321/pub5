@@ -28,6 +28,8 @@ module Master
           the laws are yours to apply.
 
           Source authority (highest first): #{authority}.
+          The first two tiers are files: read MASTER/data/soul.yml for identity, preservation,
+            source order and protected paths; read MASTER/data/laws.yml for the Law records.
           Soul owns global identity, preservation, source order and protected paths;
             laws.yml owns individual Law identities, statements and invariant-node order.
           laws.yml#law_catalogue owns per-Law execution policy; law_runtime.yml keeps scanner, veto,

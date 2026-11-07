@@ -20,10 +20,17 @@ class TestSessionLawContext < Minitest::Test
     code, out = run_hook({ "cwd" => File.join(REPO, "MASTER") })
 
     assert_equal 0, code
-    assert_includes out, "soul.yml > MASTER/data/laws.yml"
+    # The authority order is stated by tier id, and the two file tiers it names
+    # are also given as paths: an agent that reads only ids still finds the
+    # constitution, and the order is read from soul.yml rather than typed twice.
+    authority = Master::Soul.authority_order(root: REPO).map { |row| row.fetch("id") }
+    assert_includes out, "Source authority (highest first): #{authority.join(' > ')}."
+    assert_includes out, "read MASTER/data/soul.yml for identity"
+    assert_includes out, "read MASTER/data/laws.yml for the Law records"
     assert_includes out, "No hook refuses a tool call or a finish"
     assert_includes out, "lint --changed-lines"
-    assert_match(/^  [A-Z_]+ \(\d+\): /, out, "the top-ranked laws are listed from laws.yml")
+    assert_includes out, "Governing invariant Laws (laws.yml document order):"
+    assert_match(/^  \d+\. [A-Z_]+: \S/, out, "the top-ranked laws are listed from laws.yml")
   end
 
   def test_it_is_silent_outside_a_checkout

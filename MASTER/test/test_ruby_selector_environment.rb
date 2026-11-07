@@ -12,6 +12,13 @@ class TestRubySelectorEnvironment < Minitest::Test
     refute_nil first_probe, "the launcher must retain its candidate version probe"
     assert_operator cleanup, :<, first_probe,
                     "cleanup must run before the first Ruby process starts"
-    assert_match(/unset "\$name"/, source)
+
+    # The loop's own variable name is its business; that the matched branch
+    # unsets that same variable is the invariant. Read it from the source
+    # instead of pinning the literal `$name` the script no longer uses.
+    loop_variable = source[/for (\w+) in \$\{\(k\)parameters\}/, 1]
+    refute_nil loop_variable, "the launcher must walk the inherited shell parameters"
+    assert_match(/MallocStackLogging\*\)\s*unset "\$#{loop_variable}"/, source,
+                 "the MallocStackLogging branch must unset the parameter it matched")
   end
 end

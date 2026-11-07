@@ -108,17 +108,35 @@ class TestReliabilityKernel < Minitest::Test
     end
   end
 
+  # The journal guards its own permissions before it reads a byte, so a test
+  # that wants to reach the JSON parser has to write the file the way the
+  # writer does. Writing it world-readable proved the permission guard instead,
+  # and reported it as an IOError where a corrupt journal was expected.
   def test_corrupt_journal_fails_loudly
     Dir.mktmpdir("master-reliability") do |root|
       path = File.join(root, Master::Fix::RunJournal::PATH)
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, "{not-json")
+      File.chmod(0o600, path)
 
       error = assert_raises(RuntimeError) do
         Master::Fix::RunJournal.new(root:).history
       end
 
       assert_match(/fix journal is corrupt/, error.message)
+    end
+  end
+
+  def test_a_journal_other_users_can_read_is_refused_before_it_is_parsed
+    Dir.mktmpdir("master-reliability") do |root|
+      path = File.join(root, Master::Fix::RunJournal::PATH)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, JSON.generate("version" => 1, "runs" => []))
+      File.chmod(0o644, path)
+
+      error = assert_raises(IOError) { Master::Fix::RunJournal.new(root:).history }
+
+      assert_match(/permissions must be private/, error.message)
     end
   end
 end
