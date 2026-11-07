@@ -558,7 +558,8 @@ a.brgen-logo-mark:active,
 .brgen-logo-mark:active {
   background: transparent !important;
   border: none !important;
-  outline: none !important;
+  /* outline stays: the keyboard ring is cleared only by the
+     :focus:not(:focus-visible) selectors above (shared chrome contract). */
   /* autofix: removed box-shadow (flat UI) */
   text-decoration: none;
   color: var(--text);
