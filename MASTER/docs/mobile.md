@@ -44,7 +44,7 @@ Termux home; the Ruby installation and system libraries persist inside Debian.
       DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates git curl build-essential autoconf bison pkg-config zsh \
         libssl-dev libreadline-dev zlib1g-dev libffi-dev libyaml-dev \
-        libsqlite3-dev libvips-dev libxml2-dev libxslt1-dev \\
+        libsqlite3-dev libvips-dev libxml2-dev libxslt1-dev \
         libgdbm-dev libdb-dev libncurses-dev
 
       if ! command -v ruby-build >/dev/null 2>&1; then
