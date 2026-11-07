@@ -208,7 +208,9 @@ module Master
         nil
       end
 
-      def close = @browser.close_all if @world.respond_to?(:browser) && @browser.respond_to?(:close_all)
+      def close
+        @browser.close_all if @world.respond_to?(:browser) && @browser.respond_to?(:close_all)
+      end
 
       def result_prompt(name:, result:)
         <<~RESULT
