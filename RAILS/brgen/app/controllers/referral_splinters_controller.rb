@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require "openssl"
+
 class ReferralSplintersController < ApplicationController
   before_action :require_user_session, only: %i[create redeem]
+  rate_limit to: 5, within: 1.hour, only: :create, name: "referral_splinter_create",
+    with: -> { head :too_many_requests }
   before_action :set_token, only: %i[show redeem]
 
   def create
