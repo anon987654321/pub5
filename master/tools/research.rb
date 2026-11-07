@@ -166,15 +166,15 @@ module Master
                    arxiv_papers(query: args.fetch("query"), sort_by: args.fetch("sort_by", "relevance"),
                                 limit: args.fetch("limit", 5), full_text: args.fetch("full_text", false))
                  when "browser.open"
-                   @browser.call(action: "open", url: args.fetch("url"), session: args.fetch("session", "default"))
+                   browser_call(action: "open", url: args.fetch("url"), session: args.fetch("session", "default"))
                  when "browser.inspect"
-                   @browser.call(action: "inspect", session: args.fetch("session", "default"))
+                   browser_call(action: "inspect", session: args.fetch("session", "default"))
                  when "browser.scroll"
-                   @browser.call(action: "scroll", session: args.fetch("session", "default"), steps: args.fetch("steps", 1))
+                   browser_call(action: "scroll", session: args.fetch("session", "default"), steps: args.fetch("steps", 1))
                  when "browser.follow"
-                   @browser.call(action: "follow", session: args.fetch("session", "default"), href: args.fetch("href"))
+                   browser_call(action: "follow", session: args.fetch("session", "default"), href: args.fetch("href"))
                  when "browser.close"
-                   @browser.call(action: "close", session: args.fetch("session", "default"))
+                   browser_call(action: "close", session: args.fetch("session", "default"))
                  else
                    raise Error, "unknown research tool: #{name}"
                  end
