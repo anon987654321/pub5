@@ -108,6 +108,10 @@ module Master
       STYLES = {
         neutral: { rate: "+0%", pitch: "+0Hz" },
         normal: { rate: "+0%", pitch: "+0Hz" },
+        # The house register (Johann 2026-11-07: "super deep and super clear and
+        # super cheerful and laughing"): Christopher, slowed and dropped, with
+        # the laughs carried by the script. Now the default style too.
+        cheerful: { rate: "-14%", pitch: "-28Hz" },
         deep: { rate: "-8%", pitch: "-24Hz" },
         clear: { rate: "+4%", pitch: "+0Hz" },
         calm: { rate: "-5%", pitch: "-14Hz" },
@@ -133,7 +137,9 @@ module Master
       # a second English narrator.
       RETIRED_VOICE_NAMES = %w[jenny en-us-jennyneural].freeze
       DEFAULT_VOICE = Policy.single_voice_key
-      DEFAULT_STYLE = :warm
+      # The everyday voice (Johann 2026-11-07) is the cheerful house register:
+      # deep, clear, with room to laugh. MASTER_TTS_STYLE still wins over it.
+      DEFAULT_STYLE = :cheerful
       CHUNK_CHARS = 220
 
       extend SpeechWorker
