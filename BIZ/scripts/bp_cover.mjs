@@ -22,6 +22,12 @@
 //   5. v2.1: main's 3 rem print padding-bottom is dropped — on plans whose
 //      last page ends flush (syre) it spilled an entirely blank page before
 //      the colophon, the "wad of blank leaves" Bringhurst p. 72–73 condemns
+//   6. v2.2: print adds h4{break-after:avoid} and li{break-inside:avoid} —
+//      an orphaned h4 at a page foot or a list row split across the break
+//      is the same void hygiene, invisible on screen; and the body padding
+//      line is withdrawn from the cover stylesheet — the base owns the
+//      print padding (16/15/6 mm against the folio's 12 mm page foot), and
+//      a later-cover re-assertion of 18/17 was overriding it after migration
 // Transforms, all idempotent (re-running is a no-op):
 //   - kicker omitted (fresh files only; v1 files already had it)
 //   - wordmark setting per logo kind (fresh files only)
@@ -37,7 +43,7 @@ const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealth
 const GRADIENT = ['speis', 'norwegianhedge'];
 
 const MARKER = 'cover revision 2026-11';
-const V2TAG = 'poise v2.1';
+const V2TAG = 'poise v2.2';
 
 const COVER_CSS = `/* ${MARKER} — ${V2TAG} (Bringhurst p. 61; Strunk & White 17) */
 header{border-bottom:0;display:flex;flex-direction:column;text-align:center;padding:7.5rem 0 0;min-height:62vh}
@@ -53,11 +59,12 @@ section{margin-top:6rem}
 h3{margin-top:2.25rem}
 footer{margin-top:6rem}
 @media print{
-  body{padding:18mm 17mm}
   main{padding-bottom:0}
   header{min-height:172mm;page-break-after:always}
   nav{page-break-after:page}
   section{margin-top:7.5rem}
+  h4{break-after:avoid}
+  li{break-inside:avoid}
 }`;
 
 const PLAIN_MARK = '<p class="mark mark-plain">Bergens Selvstyreparti</p>';

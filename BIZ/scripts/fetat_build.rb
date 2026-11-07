@@ -254,8 +254,15 @@ html = <<~HTML
             @bottom-center { content: counter(page); }
           }
           body { margin: 0; }
+          /* The hands bleed to the page edges as they do on screen; the
+             print viewport is the page box, so 100vw is the full width. */
+          .cover svg {
+            width: 100vw; max-width: none; min-width: 100vw;
+            margin: auto 0;
+          }
           p { widows: 2; orphans: 2; }
           h2, h3, h4 { break-after: avoid; }
+          table, li { break-inside: avoid; }
           h1, .metahead, .signature { page-break-inside: avoid; }
           a[target="_blank"]::after, a[href^="mailto:"]::after { content: none; }
           a:focus { outline: none; }
