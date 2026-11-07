@@ -70,9 +70,9 @@
   display: flex;
   flex-direction: column;
   background: var(--surface-elevated);
-  border: 0;
-  border: 0;
-  border: 0;
+
+
+
   /* Square, like the tab. The widget is one surface and it now has one
      treatment: nothing in it is rounded. */
   border: 0;
@@ -133,7 +133,7 @@
     /* Full bleed: side borders on a sheet that spans the screen are two lines
        against the screen edge, which is the "separation is space, not lines"
        rule in design_rules. The top border stays — it is a real edge. */
-  border: 0;
+
   border: 0;
     padding-block-end: var(--safe-bottom);
     animation-name: nearby-widget-sheet-in;
@@ -390,7 +390,7 @@
   justify-content: center;
   min-height: var(--tap-min);
   padding: var(--space-2) var(--space-3);
-  border: 0;
+
   border: 0;
   background: var(--bg);
   text-decoration: none;

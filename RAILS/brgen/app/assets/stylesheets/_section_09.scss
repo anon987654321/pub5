@@ -9,7 +9,7 @@
 .sort-tabs { display: flex; padding-bottom: var(--space-2); }
 
 .sort-tab {
-  padding: 16px 16px; /* mobile tighter */
+  padding: 16px; /* mobile tighter */
   border-block-end: 2px solid transparent;
   text-align: center;
   font: var(--text-small)/var(--leading-none) var(--font);

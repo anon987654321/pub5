@@ -380,7 +380,7 @@ footer {
 .feed-card {
   display: flex;
   gap: 12px;
-  padding: 12px 12px;
+  padding: 12px;
   margin-bottom: 4px;
   transition: background var(--transition-fast) var(--ease-out);
   /* Mobile base: slightly tighter on very small screens */
@@ -513,7 +513,7 @@ footer {
   background: var(--surface-elevated);
   border-radius: 8px;
   margin-bottom: 0;
-  padding: 12px 12px;
+  padding: 12px;
   flex-direction: column;
   gap: 8px;
 }
@@ -532,7 +532,7 @@ footer {
     gap: 12px;
   }
   .feed-action {
-    padding: 8px 8px;
+    padding: 8px;
     min-height: var(--tap-min);
     min-width: var(--tap-min);
   }
