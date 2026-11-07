@@ -101,6 +101,9 @@ class DispatchTest < Minitest::Test
       image = { media_type: "image/png", data: Base64.strict_encode64(png) }
 
       assert d.send(:image_lane?, "google/gemini-2.5-flash")
+      refute d.send(:image_lane?, "grok-cli:auto")
+      refute d.send(:image_lane?, "deepseek-chat")
+      refute d.send(:image_lane?, "nvidia/nemotron-3-super-120b-a12b:free")
       content = d.send(:image_content, "google/gemini-2.5-flash", "Inspect this.", image)
 
       assert_equal "text", content.first.fetch(:type)
