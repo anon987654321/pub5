@@ -142,7 +142,7 @@ class TestGoldenScreenshots < Minitest::Test
     fake = Class.new do
       def initialize(log) = (@log = log; @navs = Hash.new(0))
 
-      %i[on_new_document viewport headers clear_cookies clear_events evaluate].each do |m|
+      %i[on_new_document emulate_reduced_motion viewport headers clear_cookies clear_events evaluate].each do |m|
         define_method(m) { |*| nil }
       end
 
@@ -179,6 +179,34 @@ class TestGoldenScreenshots < Minitest::Test
     assert_equal 1, log.count { |row| row =~ /\A\d http:\/\/127\.0\.0\.1:61352\/changelog\z/ }, "a CDP error is taken as recorded, not retried"
     assert_equal Digest::SHA256.hexdigest(WHITE.dup), captured[page]
     assert_equal({ "error" => "Deploy::CdpSession::Error" }, captured[other])
+  end
+
+  # Autoplayed state is not a settled state: the session runs under emulated
+  # reduced motion from the first cell on, so pages that honour it keep their
+  # rotating state at the initial render instead of whichever step their
+  # interval reached before the settle ended.
+  def test_the_capture_emulates_reduced_motion_over_the_whole_session
+    calls = []
+    fake = Object.new
+    %i[on_new_document viewport headers clear_cookies clear_events evaluate].each do |m|
+      fake.define_singleton_method(m) { |*| nil }
+    end
+    fake.define_singleton_method(:emulate_reduced_motion) { calls << "reduce" }
+    fake.define_singleton_method(:navigate) { |_url| nil }
+    fake.define_singleton_method(:screenshot) { |path| File.binwrite(path, WHITE.dup) }
+
+    page = TARGET.new(app: "amber", host: nil, path: "/account", width: 390, port: 61352, dialog: false)
+    Dir.mktmpdir("golden-reduce") do |dir|
+      original_open = Deploy::CdpSession.method(:open)
+      Deploy::CdpSession.define_singleton_method(:open) { |*_args, &blk| blk&.call(fake) || fake }
+      begin
+        GoldenScreenshots.capture([page], dir: dir)
+      ensure
+        Deploy::CdpSession.define_singleton_method(:open, original_open)
+      end
+    end
+
+    assert_equal 1, calls.count { |row| row == "reduce" }, "one emulation at session open covers every cell"
   end
 
   def record_test(targets, captures)

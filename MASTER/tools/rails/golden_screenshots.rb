@@ -126,6 +126,13 @@ module GoldenScreenshots
     # capture failure that no recorder retry can redeem.
     Deploy::CdpSession.open(host_map: map, timeout: TIMEOUT) do |cdp|
       cdp.on_new_document(Deploy::GeometryProbe::DETERMINISM)
+      # Autoplayed state is not a settled state: a page honouring
+      # prefers-reduced-motion keeps its rotating state at rest, so the corpus
+      # samples the initial render and not whichever step a carousel's
+      # interval had reached when the settle ended (amber's wardrobe carousel
+      # at 4.2s raced the settle and wrapped its zone cell past its first
+      # item, which the pub4 baseline caught at rest).
+      cdp.emulate_reduced_motion
       targets.each do |target|
         state = capture_cell(cdp, target, dir)
         # A CDP timeout is retryable by cdp_session's own contract, and one

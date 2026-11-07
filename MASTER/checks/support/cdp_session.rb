@@ -129,6 +129,16 @@ module Deploy
       send_cmd("Network.setExtraHTTPHeaders", headers: hash)
     end
 
+    # Reduced motion for the whole session: pages that honour the query keep
+    # their autoplayed state at rest (amber's wardrobe carousel stops its
+    # 4.2s rotation, brgen's swiper holds), so a capture answers the state the
+    # first frames render and not whichever step the interval had reached
+    # when the settle wait ended. Persists across navigations until closed.
+    def emulate_reduced_motion
+      send_cmd("Emulation.setEmulatedMedia",
+               features: [{ "name" => "prefers-reduced-motion", "value" => "reduce" }])
+    end
+
     # Raw protocol call for probes that need a domain this class has no verb for.
     def command(method, **params) = send_cmd(method, **params)
 
