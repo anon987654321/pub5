@@ -72,7 +72,7 @@ Law.define(:CSS_DUPLICATE_DECLARATION) do
     src.scan(/([^{}]*)\{([^{}]*)\}/).flat_map do |selector, body|
       base = src.index(body)
       decls = []
-      body.to_enum(:scan, /([-\w]+)\s*:\s*([^;]+);/).each { |match| decls << [match[1], match[2], match.begin(0)] }
+      body.to_enum(:scan, /([-\w]+)\s*:\s*([^;]+);/).each { |name, value| decls << [name, value, Regexp.last_match.begin(0)] }
       decls.group_by(&:first).flat_map do |property, rows|
         next [] unless rows.size > 1
         next [] if rows.any? { |_property, value, _at| value.include?("var(") }
@@ -106,7 +106,7 @@ Law.define(:CSS_SHORTHAND_COLLAPSE) do
     src.scan(/([^{}]*)\{([^{}]*)\}/).flat_map do |selector, body|
       base = src.index(body)
       decls = []
-      body.to_enum(:scan, /([-\w]+)\s*:\s*([^;]+);/).each { |match| decls << [match[1], match[2], match.begin(0)] }
+      body.to_enum(:scan, /([-\w]+)\s*:\s*([^;]+);/).each { |name, value| decls << [name, value, Regexp.last_match.begin(0)] }
       at_line = ->(at) { src[0, base + at].count("\n") + 1 }
       redundant = decls.filter_map do |property, value, at|
         next unless property.match?(/\A(?:margin|padding|inset|gap|row-gap|column-gap)\z/)
