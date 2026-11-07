@@ -98,4 +98,23 @@ class SharedScrapeTest < ActiveSupport::TestCase
       refute Shared::Scrape.public_http_url?("http://#{host}/", resolver: public_resolver), host
     end
   end
+
+  test "model response must be a bounded array of objects with declared fields" do
+    schema = ["name: string", "url: string"]
+    assert_equal([{ "name" => "Ada", "url" => "https://example.com/ada" }],
+                 Shared::Scrape.parse_items(%({"items":[{"name":"Ada","url":"https://example.com/ada"}]}), schema:))
+
+    assert_raises(ArgumentError) { Shared::Scrape.parse_items(%({"items":{}}), schema:) }
+    assert_raises(ArgumentError) { Shared::Scrape.parse_items(%({"items":[{"name":"Ada","admin":true}]}), schema:) }
+    assert_raises(ArgumentError) { Shared::Scrape.parse_items(%({"items":[null]}), schema:) }
+    assert_raises(ArgumentError) { Shared::Scrape.parse_items("not json", schema:) }
+  end
+
+  test "model response accepts fenced JSON but rejects missing items" do
+    fence = "\x60\x60\x60json"
+    fenced = [fence, %({"items":[{"name":"Ada"}]}), "\x60\x60\x60"].join("\n")
+    assert_equal([{ "name" => "Ada" }], Shared::Scrape.parse_items(fenced, schema: ["name: string"]))
+    assert_raises(ArgumentError) { Shared::Scrape.parse_items(%({"other":[]}), schema: ["name: string"]) }
+  end
+
 end
