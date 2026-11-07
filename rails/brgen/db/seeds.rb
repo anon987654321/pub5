@@ -6,6 +6,13 @@
 
 require 'faker'
 require 'brgen/demo_mode'
+require 'shared/seed_forge'
+
+# amber and bsdports seed through Shared::SeedForge (srand + a pinned Faker
+# random), so a recorded route contract reproduces against the next fresh
+# seed. brgen was the one app drawing unseeded, which made its recorded form
+# actions (listing favourites, post votes) move with every reseed.
+Shared::SeedForge.boot!
 
 # Ensure Cities exist for automatic TLD/domain-based resolution.
 # City network links do not change the tenant isolation of each apex.
