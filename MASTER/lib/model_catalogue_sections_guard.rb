@@ -283,14 +283,17 @@ module Master
       return unless validate_fields(spec, %w[enabled model interval_s num_predict num_ctx], label, errors)
 
       errors << "#{label}.enabled must be boolean" unless [true, false].include?(spec["enabled"])
-      errors << "#{label}.model must be non-empty text" unless spec["model"].is_a?(String) && !spec["model"].strip.empty?
+      errors << "#{label}.model must be non-empty text" unless nonempty_text?(spec["model"])
       %w[interval_s num_predict num_ctx].each do |field|
         next unless spec.key?(field)
 
-        value = spec[field]
-        errors << "#{label}.#{field} must be a positive integer" unless value.is_a?(Integer) && value.positive?
+        errors << "#{label}.#{field} must be a positive integer" unless positive_integer?(spec[field])
       end
     end
+
+    def nonempty_text?(value) = value.is_a?(String) && !value.strip.empty?
+
+    def positive_integer?(value) = value.is_a?(Integer) && value.positive?
 
   end
 end
