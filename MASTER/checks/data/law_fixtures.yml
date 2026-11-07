@@ -242,6 +242,26 @@ laws:
     file: "-"
     bad: ".card { transition: opacity 500ms var(--ease-out); }"
     good: ".card { transition: opacity var(--transition-fast) var(--ease-out); }"
+  CSS_DUPLICATE_DECLARATION:
+    status: fixture
+    file: "/repo/app/assets/stylesheets/example.css"
+    bad: |
+      .card {
+        margin: 0;
+        margin: 8px;
+      }
+    good: |
+      .card {
+        color: var(--ink);
+        color: #111;
+        margin: 0;
+      }
+  CSS_SHORTHAND_COLLAPSE:
+    status: fixture
+    file: "/repo/app/assets/stylesheets/example.css"
+    bad: ".card { margin: 0 8px 0 8px; padding-top: 0; padding-right: 0; padding-bottom:
+      0; padding-left: 0; }\n"
+    good: ".card { margin: 0 8px; padding: 0; }\n"
   NO_MULTIPLE_LANGUAGES:
     status: fixture
     file: "-"
@@ -309,17 +329,17 @@ laws:
     file: "-"
     bad: |
       .hero {
-        background: var(--pub4-signal);
-        color: var(--pub4-signal);
+        background: var(--pub5-signal);
+        color: var(--pub5-signal);
       }
     good: |
       #cmd-palette-list li[data-active="1"] {
-        background: var(--pub4-signal);
-        color: var(--pub4-signal-ink);
+        background: var(--pub5-signal);
+        color: var(--pub5-signal-ink);
       }
 
       .home-feed-view.is-active {
-        border-block-end-color: var(--pub4-signal);
+        border-block-end-color: var(--pub5-signal);
       }
 
       .page {
@@ -337,11 +357,17 @@ laws:
       '
   PRINT_PAGE_CANON:
     status: fixture
-    file: "/repo/BPLANS/print.css"
+    file: "/repo/BIZ/print.css"
     bad: "@page { margin: 20mm; }\n"
     good: |
       @page :right { margin: 33mm 44mm 66mm 22mm; }
       @page :left { margin: 33mm 22mm 66mm 44mm; }
+  PRINT_FOLIO_PRESENCE:
+    status: fixture
+    file: "/repo/BIZ/print.css"
+    bad: "@page { size: 156mm 234mm; margin: 18mm 0 24mm; }\n"
+    good: "@page { size: 156mm 234mm; margin: 18mm 0 24mm; @bottom-center { content:
+      counter(page); } }\n"
   NO_INFINITY_TO_I:
     status: fixture
     file: "-"
@@ -351,7 +377,7 @@ laws:
     status: fixture
     file: "-"
     bad: body.scan(/phantom:\\(?:detected|halt|recovery)/)
-    good: body.scan(/phantom:(detected|halt|recovery)/)
+    good: body.scan(/phantom:\(?:detected|halt|recovery)/)
   TYPEFACE_PER_ROLE:
     status: fixture
     file: "/repo/MASTER/var/rendered/home.geometry.json"
@@ -421,6 +447,15 @@ laws:
     file: "-"
     bad: <a href="#">Open</a>
     good: <button type="button">Open</button>
+  BUTTON_LINK_ROLE:
+    status: docs
+  AUTOCOMPLETE_TOKENS:
+    status: fixture
+    file: "/repo/app/views/example.html.erb"
+    bad: <input type="text" name="full-name" autocomplete="fullname">
+    good: |-
+      <input type="text" name="given-name" autocomplete="given-name">
+      <input type="text" name="postcode" autocomplete="section-shipping postal-code">
   CLASS_RESTATES_TAG:
     status: fixture
     file: "-"
@@ -1423,7 +1458,7 @@ laws:
   HARDCODED_ABSOLUTE_PATH:
     status: fixture
     file: "/repo/app/models/example.rb"
-    bad: 'ROOT = "/Users/mac/Documents/GitHub/pub4"
+    bad: 'ROOT = "/Users/mac/Documents/GitHub/pub5"
 
       '
     good: 'ROOT = File.expand_path("..", __dir__)
@@ -1561,6 +1596,9 @@ laws:
     status: test
     proof: test/test_law_coverage_law.rb
   RUNTIME_DOCS_YAML:
+    status: test
+    proof: test/test_scan_law_contracts.rb
+  NO_NEW_DOCUMENTS:
     status: test
     proof: test/test_scan_law_contracts.rb
   LEARNED_SMELLS:
@@ -1729,18 +1767,22 @@ laws:
     status: docs
   AESTHETIC_RAMS_SEMANTIC:
     status: docs
+  PARAMS_EXPECT_STRENGTHENED:
+    status: docs
+  NORMALIZES_OVER_CALLBACK:
+    status: docs
   README_VISION:
     status: fixture
     file: "-"
     bad: |
-      # pub4
+      # pub5
 
       Setup details first.
       Run the command below.
       Then read the architecture.
       Finally you will discover what the project is for.
     good: |
-      # pub4
+      # pub5
 
       MASTER governs the repository as an OpenBSD-like, self-cleaning system. It
       preserves working behavior while continuously reducing unnecessary
@@ -1788,7 +1830,7 @@ laws:
             display: text-display
             body: text-base
             technical: font-mono
-            wordmark: original pub4 artwork only
+            wordmark: original pub5 artwork only
           adaptations:
             master: "signal on ink"
             brgen: "retain deep-blue identity"
@@ -1798,7 +1840,7 @@ laws:
             studio: "operator-owned media grades"
         face_root:
           anchors:
-            c_accent: "var(--pub4-signal)"
+            c_accent: "var(--pub5-signal)"
   VISUAL_PARTICLE_STIPPLE_PRIMARY:
     status: fixture
     file: "-"
@@ -1969,6 +2011,31 @@ laws:
     file: "/repo/MASTER/var/rendered/home.rendered.json"
     bad: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"div.card","tag":"div","index":0},{"text":"Tekst","rect":{"x":16,"y":40,"w":358,"h":44},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.buy","tag":"button","primary":true,"host":0},{"text":"Tekst","rect":{"x":16,"y":84,"w":358,"h":44},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.sell","tag":"button","primary":true,"host":0}]}]}'
     good: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"div.card","tag":"div","index":0},{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"div.card","tag":"div","index":1},{"text":"Tekst","rect":{"x":16,"y":40,"w":358,"h":44},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.buy","tag":"button","primary":true,"host":0},{"text":"Tekst","rect":{"x":16,"y":84,"w":358,"h":44},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.sell","tag":"button","primary":true,"host":1}]}]}'
+  REFLOW_AT_320:
+    status: fixture
+    file: "/repo/MASTER/var/rendered/home.rendered.json"
+    bad: '{"probe":"design_laws","viewports":[{"width":320,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":320,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.wide","tag":"p"}]}]}'
+    good: '{"probe":"design_laws","viewports":[{"width":320,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":288,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.wide","tag":"p"}]}]}'
+  TARGET_SIZE_24:
+    status: fixture
+    file: "/repo/MASTER/var/rendered/home.rendered.json"
+    bad: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":20,"h":20},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.one","tag":"button"},{"text":"Tekst","rect":{"x":36,"y":16,"w":20,"h":20},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.two","tag":"button"}]}]}'
+    good: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":40,"w":358,"h":44},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.buy","tag":"button"},{"text":"Tekst","rect":{"x":16,"y":400,"w":20,"h":20},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"button.icon","tag":"button"}]}]}'
+  VERTICAL_RHYTHM:
+    status: fixture
+    file: "/repo/MASTER/var/rendered/home.rendered.json"
+    bad: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.one","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":50,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.two","tag":"p","in_main":true,"display":"block","content_x":16}]}]}'
+    good: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.one","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":64,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.two","tag":"p","in_main":true,"display":"block","content_x":16}]}]}'
+  SPACING_ENTROPY:
+    status: fixture
+    file: "/repo/MASTER/var/rendered/home.rendered.json"
+    bad: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s0","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":48,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s1","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":84,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s2","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":124,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s3","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":168,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s4","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":216,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s5","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":268,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s6","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":324,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s7","tag":"p","in_main":true,"display":"block","content_x":16}]}]}'
+    good: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s0","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":64,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s1","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":112,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s2","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":160,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s3","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":208,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s4","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":256,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s5","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":304,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s6","tag":"p","in_main":true,"display":"block","content_x":16},{"text":"Tekst","rect":{"x":16,"y":352,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.s7","tag":"p","in_main":true,"display":"block","content_x":16}]}]}'
+  COLOR_NEAR_DUPLICATE:
+    status: fixture
+    file: "/repo/MASTER/var/rendered/home.rendered.json"
+    bad: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[51,51,51,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.meta","tag":"p"},{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[55,55,55,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.note","tag":"p"}]}]}'
+    good: '{"probe":"design_laws","viewports":[{"width":390,"height":844,"elements":[{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[17,17,17,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.meta","tag":"p"},{"text":"Tekst","rect":{"x":16,"y":16,"w":358,"h":24},"font_size":16,"font_weight":400,"line_height":24,"letter_spacing":0,"lines":1,"color":[68,68,68,1],"bg":[0,0,0,0],"ground":[255,255,255,1],"own_ground":[255,255,255,1],"attrs":{},"decoration":"none","key":"p.note","tag":"p"}]}]}'
   EACH_WITH_OBJECT:
     status: fixture
     file: "-"
@@ -1981,6 +2048,13 @@ laws:
 
       '
     good: "# frozen_string_literal: true\n"
+  REDUNDANT_CORE_REQUIRE:
+    status: fixture
+    file: "-"
+    bad: require "set"
+    good: points = Set.new
+  STRUCT_NEW_TO_DATA:
+    status: docs
   GUARD_CLAUSE:
     status: fixture
     file: "-"
@@ -3041,6 +3115,39 @@ laws:
       nb:
         listing:
           distance: "%{km} km"
+  NUMBER_GROUPED_IN_THOUSANDS:
+    status: fixture
+    file: "/repo/RAILS/brgen/config/locales/nb.yml"
+    bad: |
+      nb:
+        listing:
+          price: "12500 kr"
+    good: |
+      nb:
+        listing:
+          price: "12 500 kr"
+  NO_SPACED_EM_DASH:
+    status: fixture
+    file: "/repo/RAILS/brgen/config/locales/nb.yml"
+    bad: |
+      nb:
+        takeaway:
+          hours: "Levering hver dag — hele uken"
+    good: |
+      nb:
+        takeaway:
+          hours: "Levering hver dag – hele uken"
+  ELLIPSIS_SPACE_BEFORE:
+    status: fixture
+    file: "/repo/RAILS/brgen/config/locales/nb.yml"
+    bad: |
+      nb:
+        flash:
+          waiting: "Vennligst vent…sidene laster"
+    good: |
+      nb:
+        flash:
+          waiting: "Vennligst vent …sidene laster"
   BASELINE_COMPATIBILITY:
     status: docs
   CORE_WEB_VITALS:

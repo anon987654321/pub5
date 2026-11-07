@@ -99,7 +99,7 @@ class TestLawProofFixtures < Minitest::Test
   def test_the_recorded_contract_covers_what_the_registry_defines
     recorded = YAML.load_file(LawFixtures::DATA).fetch("laws")
 
-    assert_equal 520, recorded.size, "re-record after any Law lands, the file must name every id"
+    assert_equal 538, recorded.size, "re-record after any Law lands, the file must name every id"
     assert_operator recorded.count { |_id, spec| spec.fetch("status") == "fixture" }, :>=, 250,
                    "the runnable half stopped being recorded"
     recorded.each do |id, spec|
