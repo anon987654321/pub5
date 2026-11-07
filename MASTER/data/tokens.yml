@@ -1320,7 +1320,8 @@ tokens:
         off_scale_duration: 16
         # Literal colours in colour properties that tokens.yml does not declare
         # (ScaleLint off_token_color), first counted 2026-11-06 on origin.
-        off_token_color: 24
+        # 24 -> 23 (2026-11-07): one literal left the token set.
+        off_token_color: 23
       face:
         off_scale_space: 17
         off_scale_radius: 0
