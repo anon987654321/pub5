@@ -14,9 +14,16 @@ class BrowserAgentTest < Minitest::Test
     refute Master::Tools::BrowserAgent.public_ipv4?("::1")
   end
 
-  def test_url_policy_rejects_http_and_embedded_credentials
+  def test_url_policy_rejects_http_embedded_credentials_and_nonstandard_ports
     agent = Master::Tools::BrowserAgent.allocate
     assert_raises(Master::Tools::BrowserAgent::Error) { agent.send(:public_uri!, "http://example.com") }
     assert_raises(Master::Tools::BrowserAgent::Error) { agent.send(:public_uri!, "https://user:secret@example.com") }
+    assert_raises(Master::Tools::BrowserAgent::Error) { agent.send(:public_uri!, "https://example.com:8443") }
+  end
+
+  def test_sensitive_url_query_values_are_redacted_before_model_observation
+    agent = Master::Tools::BrowserAgent.allocate
+    safe = agent.send(:redact_url, "https://example.com/path?tab=two&code=123&session=abc#fragment")
+    assert_equal "https://example.com/path?tab=two&code=%5Bredacted%5D&session=%5Bredacted%5D", safe
   end
 end
