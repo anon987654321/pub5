@@ -190,9 +190,9 @@ preserve those strengths.
 ### Screenshot-led micro-refinements — second pass (2026-11-06, clone@69a0fcb)
 
 A second review of the same committed RAILS captures, using the tree's own
-vips stack for contact sheets and 1:1 crops (`scripts/analysis/make_sheets.py`,
-`make_crops.py`, `make_crops2.py`; pyvips/libvips, matching the `Vips::Image`
-usage in STUDIO/postpro and the `image_processing` Gemfiles). The first pass's
+vips stack for contact sheets and 1:1 crops (`scripts/analysis/review_sheets.rb`;
+ruby-vips/libvips, matching the `Vips::Image` usage in STUDIO/postpro and the
+`image_processing` Gemfiles). The first pass's
 constraints still hold: reproduce each finding in the Chrome/CDP suite before
 changing source; keep the product dialects, operator-owned palette/typefaces,
 canonical tokens and original marks intact.
