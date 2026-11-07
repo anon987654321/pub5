@@ -204,7 +204,7 @@ module Postpro
           tool: "postpro",
           source: { basename: File.basename(input), sha256: Digest::SHA256.file(input).hexdigest },
           output: { basename: File.basename(target), sha256: Digest::SHA256.file(temporary_output).hexdigest },
-          grade: { preset: preset.to_s, seed:, grain: grain.to_s },
+          grade: { preset: preset.to_s, seed:, grain: grain.to_s, finishing_grain: finishing_grain_spec(preset) },
           grade_version: GRADE_VERSION,
           video: {
             width: probe.width, height: probe.height, frame_rate: probe.rate,

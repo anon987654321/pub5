@@ -82,7 +82,7 @@ def stock_sheet(image, preset_name, cell: STOCK_SHEET_CELL)
   small = rgb_bands(image.thumbnail_image(cell, height: cell, size: :down))
   stocks = STOCKS.keys
   tiles = stocks.map do |stock|
-    graded = rgb_bands(apply_finishing_grain(preset(small, preset_name, stock:), preset_name))
+    graded = rgb_bands(apply_finishing_grain(preset(small, preset_name, stock:), preset_name, stock: stock))
     tag = stock_sheet_label(stock, cell:)
     tile = (Vips::Image.black(cell, cell + STOCK_SHEET_LABEL) + 18).cast(:uchar).bandjoin([18, 18])
     label_x = (cell - tag.width) / 2

@@ -123,7 +123,7 @@ octave goes out with the picture. Rated film keeps its own box speed, each stop 
 more, cell size scales with image width, and the finishing grain pass stands down for any
 chain that already grains itself.
 
-Every graded picture then passes through a tone anchor before its last grain. Stacked lifts leave
+Every graded picture passes through a tone anchor before its finishing grain. Stacked lifts leave
 the darkest pixel at fifteen percent grey and the frame reads as milk, so the anchor stretches
 the picture's own 0.5th and 99.5th luma percentiles to a printed black and white with one gain on
 all three bands, which holds hue, and bends the midtones with a gentle S-curve.

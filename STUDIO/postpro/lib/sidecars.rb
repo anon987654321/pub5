@@ -121,6 +121,7 @@ def write_grade_sidecar(input_path, output_path, presets, original, processed)
     output: File.expand_path(output_path),
     preset: names.join("+"),
     recipe: names.map { |name| PRESETS.fetch(name) },
+    finishing_grain: finishing_grain_spec(names.last),
     grade_version: GRADE_VERSION,
     seed: $postpro_seed,
     input_sha256: (Digest::SHA256.file(input_path).hexdigest if File.file?(input_path)),
@@ -153,6 +154,12 @@ def write_chain_sidecar(input_path, output_path, chain, take: nil, original: nil
     look: take&.look&.to_s,
     lane: (take&.lane || random_chain_lane(chain)).to_s,
     chain: chain.map { |fx, params| { fx => params } },
+    finishing_grain: finishing_grain_spec(
+      nil,
+      stock: Array(chain).reverse.filter_map do |_effect, params|
+        params["stock"] if params.is_a?(Hash) && params["stock"]
+      end.first
+    ),
   }
   if original && processed
     data[:quality] = postpro_quality_report(original, processed, argv_flag("--reference"))

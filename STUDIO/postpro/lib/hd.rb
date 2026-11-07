@@ -10,7 +10,7 @@
 FINISHING_GRAIN_INTENSITY = 0.70
 FINISHING_GRAIN_SEED_OFFSET = 10_000
 
-def apply_finishing_grain(image, preset_name = nil, grained: nil, stock: nil, intensity: FINISHING_GRAIN_INTENSITY)
+def finishing_grain_spec(preset_name = nil, stock: nil, intensity: FINISHING_GRAIN_INTENSITY)
   data = PRESETS[preset_name.to_s.to_sym] || {}
   preset_stock = data[:stock] || :kodak_portra
   selected_stock = (stock || preset_stock).to_sym
@@ -24,9 +24,14 @@ def apply_finishing_grain(image, preset_name = nil, grained: nil, stock: nil, in
           STOCKS.fetch(selected_stock).fetch(:speed).to_f
         end
 
-  # The old grained: hint remains accepted for compatibility, but can no
-  # longer bypass the mandatory finishing layer.
-  grain(image, iso, selected_stock, intensity, seed_offset: FINISHING_GRAIN_SEED_OFFSET)
+  { stock: selected_stock, iso:, intensity: Float(intensity), seed_offset: FINISHING_GRAIN_SEED_OFFSET }
+end
+
+def apply_finishing_grain(image, preset_name = nil, grained: nil, stock: nil, intensity: FINISHING_GRAIN_INTENSITY)
+  # Validate the compatibility hint but never let it bypass the finish pass.
+  raise ArgumentError, "grained must be true, false or nil" unless [nil, true, false].include?(grained)
+  spec = finishing_grain_spec(preset_name, stock:, intensity:)
+  grain(image, spec.fetch(:iso), spec.fetch(:stock), spec.fetch(:intensity), seed_offset: spec.fetch(:seed_offset))
 end
 
 # Box speed, doubled per stop of push. A preset may override with iso:.
