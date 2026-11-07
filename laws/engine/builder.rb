@@ -48,7 +48,12 @@ module Law
       if detectors.zero? && @h[:adapters].empty? && !@h[:ask] && !@h[:practice]
         refuse "needs detect, check, detector, adapter, ask or practice"
       end
-      if (detectors.positive? || @h[:ask]) && !@h[:proved_by] && !(@h.key?(:bad) && @h.key?(:good))
+      # A deterministic Law proves its fixtures or its named test at load; a
+      # semantic Law's ask is its review rubric and proves through the census
+      # (its evidence review runs live, not at load), so only the detector
+      # half owes a worked pair. What prove! never checks, build does not
+      # refuse.
+      if detectors.positive? && !@h[:proved_by] && !(@h.key?(:bad) && @h.key?(:good))
         refuse "needs bad and good fixtures, or proved_by"
       end
       Definition.new(@h, row)
