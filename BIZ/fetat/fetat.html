@@ -16,9 +16,9 @@
         --color-footer-text: #888; --font-size-base: 1rem; --font-size-small: 0.9rem;
         --font-size-xsmall: 0.75rem; --font-size-h1: 3.6rem; --font-size-h2: 1.8rem;
         --line-height-normal: 1.5; --line-height-heading: 1.2;
-        --line-height-subheading: 1.4; --space-xs: 0.5rem; --space-s: 0.75rem; --space-m: 1rem;
-        --space-l: 1.5rem; --space-xl: 2rem; --space-xxl: 3rem; --space-list-item: 0.25rem;
-        --width-content: 48rem; --width-indent: 16.2px; --layout-margin: auto;
+        --line-height-subheading: 1.4; --space-xs: 0.75rem; --space-s: 0.75rem; --space-m: 0.75rem;
+        --space-l: 1.5rem; --space-xl: 3rem; --space-xxl: 4.5rem; --space-list-item: 0;
+        --width-content: 33rem; --width-indent: 16.2px; --layout-margin: auto;
         --font-text: "Source Serif 4", serif; --font-heading: "EB Garamond", serif;
         --underline-thickness: 1.5px; --underline-offset: 2px;
       }
@@ -30,37 +30,49 @@
         text-rendering: optimizeLegibility; letter-spacing: -0.01em;
       }
       main { padding-inline: var(--space-m); }
-      article { margin-bottom: var(--space-xxl); }
+      article { margin-bottom: var(--space-xxl); hanging-punctuation: first last; }
       .cover {
-        min-height: 92vh;
+        /* The cover is the page, not a column: full-bleed, pulled out of
+           the 33rem measure by negative margins so the hands fill page one. */
+        min-height: 94vh;
+        width: min(100vw, 200%);
+        margin-inline: calc((100% - min(100vw, 200%)) / 2);
         display: flex; flex-direction: column;
         break-after: page; page-break-after: always;
-        padding: var(--space-m) 0 0;
+        padding: 0;
       }
-      .cover svg { width: min(82vw, 26rem); height: auto; margin: auto; }
+      .cover svg { width: min(100%, 120vh); height: auto; margin: auto; }
       .cover .mark {
         font: 600 2rem/1.1 "Source Sans 3", sans-serif;
         letter-spacing: 0.42em; text-indent: 0.42em;
-        text-align: center; margin: var(--space-xl) 0;
+        text-align: center; margin: var(--space-l) 0;
       }
       header { margin: 0 auto; }
+      /* The cover mark already says FETAT; the semantic h1 stays for the
+         document's structure but visually the wordmark stands alone. */
+      .vh {
+        position: absolute; width: 1px; height: 1px; overflow: hidden;
+        clip-path: inset(50%); white-space: nowrap;
+      }
       header h1 {
         font: 600 var(--font-size-h1)/var(--line-height-heading) var(--font-heading);
         color: var(--color-text); margin: var(--space-l) auto; text-align: center;
-        letter-spacing: -0.015em;
+        letter-spacing: -0.015em; text-wrap: balance;
       }
       h2 {
-        font: 500 var(--font-size-h2)/var(--line-height-subheading) var(--font-heading);
+        font: 600 var(--font-size-h2)/var(--line-height-subheading) var(--font-heading);
         margin: var(--space-xl) 0; letter-spacing: -0.01em; text-wrap: balance;
       }
       h1.mark-sub, .toc h2 { font: 600 1.4rem/1.3 var(--font-heading); }
       h3 { font: 600 1.3rem/1.3 var(--font-heading); margin: var(--space-l) 0 var(--space-s); text-wrap: balance; }
       h4 { font: 400 1.05rem/1.3 var(--font-heading); margin: var(--space-m) 0 var(--space-xs); color: var(--color-text); }
-      p { margin-bottom: var(--space-l); }
-      strong { font-weight: 700; }
+      p { margin-bottom: var(--space-l); orphans: 2; widows: 2; }
+      strong { font-weight: 600; }
+      .count { font-variant-numeric: tabular-nums; }
       .metahead { margin: 0 auto var(--space-l); text-align: center; }
       .metahead p { margin: 0 0 var(--space-s); color: var(--color-muted); }
       .metahead .status { font-style: italic; }
+      .metahead .byline { color: var(--color-text); }
       .metahead .date { font-style: italic; font-feature-settings: "onum" 1; }
       a {
         color: var(--color-link); text-decoration: underline;
@@ -85,22 +97,24 @@
         margin-top: var(--space-xl); padding: var(--space-m) 0;
       }
       footer p { margin: 0; }
-      footer a strong { color: var(--color-link-bold); font-weight: 700; }
-      .external-icon { width: 10px; height: 10px; vertical-align: super; margin-left: 0.2rem; }
+      footer a strong { color: var(--color-link-bold); }
       @media (max-width: 768px) {
-        :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; --space-m: 0.5rem; }
+        :root { --font-size-h1: 2.1rem; --font-size-h2: 1.35rem; }
       }
       @media print {
-        @page { margin: 1in; }
+        @page {
+          margin: 0.9in 1.1in 1.4in;
+          @bottom-center { content: counter(page); }
+        }
         :root {
           --font-size-base: 12.6pt; --font-size-small: 10.8pt; --font-size-xsmall: 9.6pt;
           --font-size-h1: 33.6pt; --font-size-h2: 16.8pt;
-          --space-xs: 6pt; --space-s: 9pt; --space-m: 12pt; --space-l: 18pt;
-          --space-xl: 24pt; --space-xxl: 36pt; --color-link-bold: black;
+          --space-xs: 9.5pt; --space-s: 9.5pt; --space-m: 9.5pt; --space-l: 19pt;
+          --space-xl: 38pt; --space-xxl: 57pt; --color-link-bold: black;
         }
         .toc { display: none; }
         .cover { min-height: 88vh; }
-        body { margin: 0; max-width: 500pt; width: 90%; }
+        body { margin: 0; max-width: 396pt; width: 90%; }
         p { widows: 2; orphans: 2; }
         .metahead { break-after: page; page-break-after: always; }
         h2, h3, h4 { break-after: avoid; }
@@ -115,38 +129,24 @@
       <section>
         <article>
           <section class="cover">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="pure_symbol">
-  <g fill="none" stroke="#211C15" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M 452 462 C 486 402 484 330 442 294"/>
-<path d="M 406.0 248 L 378.0 168"/>
-<path d="M 434.0 240 L 416.0 148"/>
-<path d="M 462.0 254 L 460.0 166"/>
-<path d="M 484.0 288 L 494.0 214"/>
-<path d="M 444.0 294 L 376.0 286"/>
-<path d="M 444.0 294 L 476.0 338"/>
-  <path d="M 60 462 C 26 402 28 330 70 294"/>
-<path d="M 108 248 L 136 168"/>
-<path d="M 80 240 L 98 148"/>
-<path d="M 52 254 L 54 166"/>
-<path d="M 30 288 L 20 214"/>
-<path d="M 70 294 L 138 286"/>
-<path d="M 70 294 L 38 338"/>
-</g>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 624 416" role="img" aria-label="FETAT">
+  <title>FETAT</title>
+  <path fill="#000" fill-rule="evenodd" d="M68 124L68 109L70 103L77 96L87 91L95 89L113 89L153 74L209 76L232 83L263 102L272 110L279 122L291 133L301 138L320 159L321 163L323 163L323 160L339 143L339 141L353 127L365 120L375 105L393 87L406 78L427 70L444 66L460 66L467 64L487 64L516 72L546 70L554 73L558 78L564 81L572 94L572 112L570 118L555 131L537 135L529 134L516 129L509 129L506 131L501 141L498 154L498 182L496 188L497 192L494 225L495 234L492 244L486 252L474 262L454 294L446 302L431 308L429 312L408 331L403 343L400 346L400 349L391 359L375 366L369 366L358 362L348 353L347 349L330 351L321 348L312 336L312 327L302 317L301 304L291 304L290 308L283 316L270 321L258 321L251 319L245 315L243 310L241 310L240 315L235 321L227 325L213 325L196 318L190 311L190 308L183 295L173 284L169 274L168 262L172 240L162 250L153 253L146 253L125 247L114 236L112 236L108 230L106 223L107 210L110 202L117 194L129 167L133 148L132 140L124 139L111 144L93 146L77 140L71 133L68 124Z M324 343L340 345L346 342L347 329L359 300L364 295L366 290L384 272L388 270L390 259L389 239L378 231L369 229L362 231L362 229L375 228L385 231L393 236L393 232L398 224L402 220L412 217L404 221L399 226L395 234L395 250L392 266L395 264L397 266L369 293L361 305L361 308L359 309L353 323L351 330L352 348L360 356L369 360L382 358L392 350L403 326L405 325L405 322L407 321L412 310L415 308L415 305L405 295L402 280L405 267L411 254L420 244L429 227L429 215L427 212L422 210L430 210L430 197L437 182L439 183L437 185L433 200L435 224L426 239L439 233L444 232L444 234L439 235L427 242L413 258L406 279L409 293L416 298L429 298L446 290L433 299L423 301L416 300L418 302L426 303L444 296L452 287L454 280L464 268L468 259L486 239L488 232L488 200L491 180L491 144L494 135L491 133L464 131L465 129L481 127L481 125L460 119L449 118L452 116L470 117L467 114L464 104L464 97L467 88L469 87L468 104L473 115L488 121L492 121L487 117L488 115L522 126L540 128L550 126L557 122L564 116L566 111L566 93L561 87L551 84L551 82L557 84L555 81L544 75L511 77L482 69L463 71L458 70L433 74L416 80L415 82L406 85L396 92L378 110L372 121L366 127L357 132L338 151L326 167L322 178L322 199L318 218L318 238L322 267L316 287L310 295L307 303L307 315L312 320L314 319L317 306L323 293L331 281L345 266L349 255L350 244L344 239L333 234L331 235L330 233L338 233L348 238L346 231L347 228L349 233L355 239L350 265L359 260L368 260L356 264L343 273L325 297L319 311L316 325L317 334L324 343Z M277 313L278 310L284 306L287 299L287 294L282 278L273 264L264 260L252 260L253 258L270 259L267 255L265 233L257 225L264 227L269 231L278 225L288 215L285 224L273 237L272 242L274 247L274 260L279 264L284 275L286 276L291 290L292 299L302 298L308 292L311 285L311 276L306 265L305 256L308 247L313 241L314 235L313 222L316 207L316 184L318 176L317 168L313 162L305 157L290 140L278 133L268 119L255 106L251 105L229 89L209 82L160 79L146 82L140 86L119 93L109 95L97 94L82 99L73 110L73 122L76 132L80 136L86 137L90 140L103 140L110 138L119 132L124 123L125 114L127 114L128 117L128 124L125 133L148 126L157 116L163 98L165 97L163 108L169 104L171 105L163 113L160 123L172 122L172 124L155 131L139 147L137 160L130 179L128 180L121 197L118 199L112 211L113 226L117 230L124 232L146 244L158 245L165 240L170 232L169 222L165 213L158 206L149 202L127 202L140 198L154 200L162 204L167 209L169 214L171 214L175 203L175 195L173 189L168 183L169 181L179 191L185 213L184 225L175 255L174 268L179 281L183 286L186 284L188 294L195 308L204 316L214 319L226 319L232 316L238 307L238 303L234 297L232 289L234 280L226 267L213 259L202 258L205 256L211 256L220 259L220 233L218 224L211 216L199 212L203 211L212 215L217 221L219 221L217 213L219 212L225 227L233 223L226 237L223 256L235 274L237 271L240 272L237 281L237 291L247 309L253 314L263 316L277 313Z M510 115L507 105L507 97L510 90L516 83L510 98L510 110L512 113L512 115L510 115Z M421 153L409 151L394 145L385 136L380 124L388 137L394 142L420 151L421 153Z M232 148L213 155L202 157L199 156L196 159L164 149L163 147L193 155L229 147L232 148Z M391 179L403 167L426 154L443 148L456 148L452 150L444 150L431 155L418 163L415 163L411 167L408 167L406 170L391 179Z M208 166L206 165L208 166Z M210 167L208 166L210 167Z M262 186L230 181L225 179L210 167L218 170L232 180L252 184L254 183L262 186Z M366 192L366 190L372 185L384 181L384 183L379 184L366 192Z M440 215L445 208L457 203L462 203L450 208L440 215Z M148 248L147 246L141 245L122 235L130 244L148 248Z M210 248L194 243L201 242L207 244L210 248Z M260 250L255 247L243 247L247 245L254 245L259 247L260 250Z M316 273L317 260L314 252L311 257L311 263L314 273L316 273Z M280 256L282 254L292 253L301 259L289 255L280 256Z M249 261L250 260L249 261Z"/>
 </svg>
 
             <p class="mark">FETAT</p>
           </section>
           <header>
-            <h1>FETAT</h1>
+            <h1 class="vh">FETAT</h1>
             <div class="metahead">
-              <p class="mark-sub">Familieetaten</p>
+              <p class="byline">av Hannah Jdottir &amp; Johann Tepstad</p>
               <p class="status">Arbeidsmesterdokument; ikke offentlig politikk, juridisk rådgivning eller bevis for individuelle påstander.</p>
               <p class="date"><time datetime="2026-10-29">29. oktober 2026</time></p>
             </div>
           </header>
           <div class="toc" aria-label="Innhold">
             <h2>Innhold</h2>
-                <p class="lv2">Familieetaten — forretningsplan for ett nytt statlig organ for barn og familier</p>
+                <p class="lv2">Familieetaten – forretningsplan for ett nytt statlig organ for barn og familier</p>
       <p class="lv3">Sammendrag</p>
       <p class="lv3">Samfunnsproblemet</p>
       <p class="lv3">Formålet</p>
@@ -159,9 +159,9 @@
       <p class="lv3">Risikoforvaltningen</p>
       <p class="lv3">Konklusjonen</p>
           </div>
-          <h2>Familieetaten — forretningsplan for ett nytt statlig organ for barn og familier</h2>
+          <h2>Familieetaten – forretningsplan for ett nytt statlig organ for barn og familier</h2>
 <h3>Sammendrag</h3>
-<p>Barnevernet gjør jobben dårlig. Tjenesten henter feil familiers barn, mister de familiene som ber om hjelp, og begrunner sine inngrep skjevt. FETAT — Familieetaten — er forretningsplanen for en ny statlig etat bygget fra bunnen, med økt samlet kapasitet til hjelp og strengere krav til bevis for tvang. Etaten etableres i tre faser og overtar dagens statlige og kommunale oppgaver og budsjettrammer for barnevern.</p>
+<p>Barnevernet gjør jobben dårlig. Tjenesten henter feil familiers barn, mister de familiene som ber om hjelp, og begrunner sine inngrep skjevt. FETAT – Familieetaten – er forretningsplanen for en ny statlig etat bygget fra bunnen, med økt samlet kapasitet til hjelp og strengere krav til bevis for tvang. Etaten etableres i tre faser og overtar dagens statlige og kommunale oppgaver og budsjettrammer for barnevern.</p>
 <h3>Samfunnsproblemet</h3>
 <p>Dagens tjeneste er delt mellom kommunale barnevernstjenester, fylkesnemnda som vedtar omsorgsovertakelser, og statsforvaltning og Barne-, ungdoms- og familiedirektoratet som tilsyn og bistand. Ansvaret er splittet, saksbehandlingen er lang, og ingen av leddene eier hele barnets sak.</p>
 <p>Konsekvensene er de samme år etter år:</p>
@@ -176,8 +176,8 @@
 <p>Én etat med ett samfunnsoppdrag: beskytte barn mot omsorgssvikt og vold, og hjelpe familier til å klare å ta vare på sine barn. Tverrfaglig hjelp er normalveien. Fjernelse fra familien er det siste virkemiddelet, og den skal hvile på dokumentert bevis.</p>
 <h3>Tjenestene</h3>
 <ul>
-<li><strong>Linjen 123.</strong> Én inngang for barn, unge og foresatte — bekymringsmelding eller råd, dag og natt.</li>
-<li><strong>Vurderingsenheten.</strong> Fristen fra melding til skriftlig tiltaksplan er 48 timer. Planen følger barnet gjennom saken.</li>
+<li><strong>Linjen 123.</strong> Én inngang for barn, unge og foresatte – bekymringsmelding eller råd, dag og natt.</li>
+<li><strong>Vurderingsenheten.</strong> Fristen fra melding til skriftlig tiltaksplan er <span class="count">48</span>&nbsp;timer. Planen følger barnet gjennom saken.</li>
 <li><strong>Familiehjelp.</strong> Hjelp i hjemmet, rådgivning, dagsenter og sommerprogram; frivillig hjelp er gratis og uten sak.</li>
 <li><strong>Boenhetene.</strong> Midlertidige plasseringer i små, stabile enheter med jevn kontaktperson; maks to flyttinger per barn.</li>
 <li><strong>Rettsled.</strong> Barnevernsnemnd vedtar tvangstiltak i én instans, med advokat for barnet og foreldrene i samme møte.</li>
@@ -192,8 +192,8 @@
 <h3>Organisering og styring</h3>
 <p>FETAT er en statlig etat under ett departement. Toppledelsen er en direktør med et styre. Etaten får to ledd:</p>
 <ul>
-<li><strong>Direktoratet</strong> — lovutvikling, metode, tilsyn og statistikk.</li>
-<li><strong>Regionkontorene</strong> — tjenesteyting, vurderingsenhet, boenheter og familiehjelp, ett per fylke med regional saksbehandling.</li>
+<li><strong>Direktoratet</strong> – lovutvikling, metode, tilsyn og statistikk.</li>
+<li><strong>Regionkontorene</strong> – tjenesteyting, vurderingsenhet, boenheter og familiehjelp, ett per fylke med regional saksbehandling.</li>
 </ul>
 <p>Fylkesnemnda og kommunale barnevernstjenester avvikles når regionkontorene er driftsklare. Barnevernets tilgang til politi og helsevesen reguleres i eget samhandelsavtale.</p>
 <h3>Etableringsplanen</h3>
@@ -206,7 +206,7 @@
 <p>Etableringen finansieres innenfor dagens statsbudsjett for barnevern: den kommunale og statlige bevilgningen overføres til den statlige tilskuddsordningen som FETAT forvalter, ledd for ledd. Nye midler bevilges bare til etableringsarbeidet i fase I. Etaten rapporterer kostnad per hjelpetiltak og per plassering i åpne årsrapporter.</p>
 <h3>Måltallene</h3>
 <ul>
-<li>andel saker med skriftlig tiltaksplan innen 48 timer;</li>
+<li>andel saker med skriftlig tiltaksplan innen <span class="count">48</span>&nbsp;timer;</li>
 <li>antall flyttinger per barn per år, målt mot maks to;</li>
 <li>andel inngripende beslutninger der dokumentasjonsmappen er komplett;</li>
 <li>medarbeider- og brukertilbakemeldinger, målt årlig og publisert.</li>
@@ -221,7 +221,7 @@
 <p>Barnevernet har hatt tiår på seg til å rette opp. Det har ikke lyktes, og barna må slutte å betale for det. Norge trenger en Familieetaten som beskytter barn uten å fjerne dem fra familier uten bevis. FETAT er planen for den etaten.</p>
 
           <footer>
-            <p><a href="https://fetat.no" target="_blank" aria-label="Besøk Fetat"><strong>www.fetat.no</strong><svg class="external-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a> — Rettferdighet for Ola &amp; Kari, med Norges beste AI.</p>
+            <p><a href="https://fetat.no" target="_blank" aria-label="Besøk Fetat"><strong>www.fetat.no</strong></a> – Rettferdighet for Ola &amp; Kari, med Norges beste AI.</p>
             <p>Opphavsrett © 2026 Fetat, Kanalveien 10, NO-5068 Bergen.</p>
           </footer>
         </article>

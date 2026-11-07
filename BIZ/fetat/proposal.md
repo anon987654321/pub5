@@ -1,8 +1,8 @@
 # FETAT
-## Familieetaten — forretningsplan for ett nytt statlig organ for barn og familier
+## Familieetaten – forretningsplan for ett nytt statlig organ for barn og familier
 
 ### Sammendrag
-Barnevernet gjør jobben dårlig. Tjenesten henter feil familiers barn, mister de familiene som ber om hjelp, og begrunner sine inngrep skjevt. FETAT — Familieetaten — er forretningsplanen for en ny statlig etat bygget fra bunnen, med økt samlet kapasitet til hjelp og strengere krav til bevis for tvang. Etaten etableres i tre faser og overtar dagens statlige og kommunale oppgaver og budsjettrammer for barnevern.
+Barnevernet gjør jobben dårlig. Tjenesten henter feil familiers barn, mister de familiene som ber om hjelp, og begrunner sine inngrep skjevt. FETAT – Familieetaten – er forretningsplanen for en ny statlig etat bygget fra bunnen, med økt samlet kapasitet til hjelp og strengere krav til bevis for tvang. Etaten etableres i tre faser og overtar dagens statlige og kommunale oppgaver og budsjettrammer for barnevern.
 
 ### Samfunnsproblemet
 Dagens tjeneste er delt mellom kommunale barnevernstjenester, fylkesnemnda som vedtar omsorgsovertakelser, og statsforvaltning og Barne-, ungdoms- og familiedirektoratet som tilsyn og bistand. Ansvaret er splittet, saksbehandlingen er lang, og ingen av leddene eier hele barnets sak.
@@ -19,7 +19,7 @@ Budsjettene er i milliardklassen og vokser, men resultatene følger ikke. Et sys
 Én etat med ett samfunnsoppdrag: beskytte barn mot omsorgssvikt og vold, og hjelpe familier til å klare å ta vare på sine barn. Tverrfaglig hjelp er normalveien. Fjernelse fra familien er det siste virkemiddelet, og den skal hvile på dokumentert bevis.
 
 ### Tjenestene
-- **Linjen 123.** Én inngang for barn, unge og foresatte — bekymringsmelding eller råd, dag og natt.
+- **Linjen 123.** Én inngang for barn, unge og foresatte – bekymringsmelding eller råd, dag og natt.
 - **Vurderingsenheten.** Fristen fra melding til skriftlig tiltaksplan er 48 timer. Planen følger barnet gjennom saken.
 - **Familiehjelp.** Hjelp i hjemmet, rådgivning, dagsenter og sommerprogram; frivillig hjelp er gratis og uten sak.
 - **Boenhetene.** Midlertidige plasseringer i små, stabile enheter med jevn kontaktperson; maks to flyttinger per barn.
@@ -33,8 +33,8 @@ Budsjettene er i milliardklassen og vokser, men resultatene følger ikke. Et sys
 
 ### Organisering og styring
 FETAT er en statlig etat under ett departement. Toppledelsen er en direktør med et styre. Etaten får to ledd:
-- **Direktoratet** — lovutvikling, metode, tilsyn og statistikk.
-- **Regionkontorene** — tjenesteyting, vurderingsenhet, boenheter og familiehjelp, ett per fylke med regional saksbehandling.
+- **Direktoratet** – lovutvikling, metode, tilsyn og statistikk.
+- **Regionkontorene** – tjenesteyting, vurderingsenhet, boenheter og familiehjelp, ett per fylke med regional saksbehandling.
 
 Fylkesnemnda og kommunale barnevernstjenester avvikles når regionkontorene er driftsklare. Barnevernets tilgang til politi og helsevesen reguleres i eget samhandelsavtale.
 
