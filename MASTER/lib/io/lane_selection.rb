@@ -56,7 +56,7 @@ module Master
         return :paid_tail if Io::PaidTail.member?(id)
         return :free if id.end_with?(":free", ":cloud", "-cloud") ||
                         id.start_with?("llm7:", "web-chat:")
-        return :local if id.start_with?("ollama:", "ollama/", "local:", "llama-cli:")
+        return :local if LaneHealth.local_model?(id)
         return :free if keyless_slug?(id, cfg)
 
         :remote

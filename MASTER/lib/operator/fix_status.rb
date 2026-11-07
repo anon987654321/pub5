@@ -129,7 +129,7 @@ module Operator
       daemon = nil
       down = lambda do |model|
         !::Master::Io::LaneState.usable?(model, sources: ::Master::Io::LaneState::DOWN) ||
-          (health.local_model?(model) && !(daemon = daemon.nil? ? health.ollama_up? : daemon))
+          (health.ollama_model?(model) && !(daemon = daemon.nil? ? health.ollama_up? : daemon))
       end
       health.line(::Master::Io::LaneSelection.catalogue, refuses: down)
     end

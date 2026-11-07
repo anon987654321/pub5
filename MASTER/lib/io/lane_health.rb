@@ -136,11 +136,25 @@ module Master
 
       def local?(base) = URI(base).host.to_s.match?(/\A(?:localhost|127\.\d+\.\d+\.\d+|\[?::1\]?)\z/)
 
-      # An Ollama model that runs on this machine: no network, no quota.
+      # A model that runs on this machine: no network, no quota. Both the
+      # Ollama daemon and the local llama.cpp CLI answer here, and
+      # LaneSelection#kind now reads this one list so the two cannot drift:
+      # this predicate knew only `ollama:` while kind() also counted `local:`
+      # and `llama-cli:`, so the tier that ends in a llama.cpp file read as
+      # ending in no local lane with no daemon to start.
+      LOCAL_PREFIXES = %w[ollama: ollama/ local: llama-cli:].freeze
+      CLOUD_SUFFIXES = %w[:cloud -cloud].freeze
+      # Only these need the Ollama daemon up; a llama.cpp file is its own model.
+      OLLAMA_PREFIXES = %w[ollama: ollama/].freeze
+
       def local_model?(model)
         id = model.to_s
-        id.start_with?("ollama:") && !id.end_with?(":cloud", "-cloud")
+        return false if CLOUD_SUFFIXES.any? { |suffix| id.end_with?(suffix) }
+
+        LOCAL_PREFIXES.any? { |prefix| id.start_with?(prefix) }
       end
+
+      def ollama_model?(model) = OLLAMA_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
 
       private
 

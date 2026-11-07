@@ -133,7 +133,8 @@ class TestLaneFailover < Minitest::Test
           later = calls.drop(died.fetch(lane)).select { |m| Quota.lane_of(m) == lane }
           assert_empty later, "#{tier}: #{lane} is never asked after it died"
         end
-        assert_equal "ollama", Quota.lane_of(tier_models.last), "#{tier} ends in a local lane"
+        assert Health.local_model?(tier_models.last),
+               "#{tier} ends in a local lane (#{Quota.lane_of(tier_models.last)}, not a named one: the tail's lane is data)"
       end
     end
   end
@@ -248,6 +249,25 @@ class TestLaneFailover < Minitest::Test
 
   def test_every_tier_ends_in_a_local_model
     @lists.each { |tier, models| assert Health.local_model?(models.last), "#{tier} ends local" }
+  end
+
+  # The two questions were answered from two lists. A llama.cpp file needs no
+  # daemon, so it is local without being Ollama; an Ollama cloud model is a
+  # remote call wearing a local prefix. Both answers must come from one place.
+  def test_local_and_ollama_are_two_facts_and_kind_agrees_with_local
+    %w[ollama:llama3 ollama/llama3 local:gguf llama-cli:gguf].each do |model|
+      assert Health.local_model?(model), "#{model} runs here"
+      assert_equal :local, Selection.kind(model), "#{model} is kind local"
+    end
+
+    %w[ollama:gpt-oss:cloud ollama:llama3-cloud gemini:2.5].each do |model|
+      refute Health.local_model?(model), "#{model} is a network call"
+      refute_equal :local, Selection.kind(model), "#{model} is not kind local"
+    end
+
+    assert Health.ollama_model?("ollama:llama3")
+    refute Health.ollama_model?("llama-cli:gguf"), "a GGUF needs no daemon"
+    refute Health.ollama_model?("local:gguf")
   end
 
   def test_the_daemon_is_started_once_and_a_failed_start_is_not_repeated
