@@ -1,7 +1,45 @@
 ---
-lone_dirs: 20
+# Every tracked path costs maintenance: source, test, asset, fixture,
+# documentation and configuration alike. The ceiling exists so a commit that
+# buys structure has to say what it bought. Read `tracked_files` and
+# `tracked_directories` as one priced fact — they answer "how much structure
+# does this checkout carry?", not two independent quality signals.
+#
+# Set deliberately on 2026-11-07, never inferred from whatever the tree
+# happened to hold. The pub4 -> pub5 migration arrived at 6,738 tracked files
+# against a ceiling of 6,664, so this ratchet was born red and stayed red
+# through 365 further additions. The additions since the migration, read one
+# class at a time:
+#
+# 306  MASTER/checks/data/route_screenshots/<app>/<route>__<width>__<state>.png
+#      plus the three <app>.golden.yml manifests. One approved baseline per
+#      route, width and state, compared by pixel. Three apps share the layout,
+#      so a route renders at three widths, and the manifests already name 600
+#      rows; approval is human-gated, so the PNGs arrive slower than the rows.
+#      This is the per-app baseline the screenshot check exists to hold, not a
+#      shadow copy: the pixel comparison is the whole point.
+#  18  BIZ/<plan>/{html,pdf,png}. Each published plan carries the three faces
+#      the tree promises; the html is the source, the pdf and png its rendered
+#      counterparts.
+#  41  code and tests: 11 MASTER lib and tool entry points, 7 MASTER tests,
+#      9 RAILS, 5 STUDIO, and 6 BIZ build/check instruments under
+#      MASTER/tools/biz.
+#
+# lone_dirs is the ceiling that still does real work. It counts a directory
+# holding one file and no subdirectories, so it says "this namespace was
+# bought for one occupant". 37 are recorded; the overwhelming majority are
+# Rails-convention single-file test directories (test/services/x_test.rb,
+# test/i18n/, test/stylesheets/), fixture trees mirroring a real repository
+# layout (bsdports/.../gettext/Makefile), and deployment paths OpenBSD fixes
+# (etc/ssh/sshd_config). That is the framework's shape, not our sprawl.
+#
+# stutter is a genuine quality flag and stays at 0. It found
+# STUDIO/dilla/dilla.rb: a `#!/usr/bin/env ruby` entry point recorded without
+# the executable bit, so the census could not tell it from a module file that
+# says its own name twice. The fix was the mode, not the ceiling.
+lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 6664
-tracked_directories: 844
-corpus: 3253
+tracked_files: 7064
+tracked_directories: 869
+corpus: 4127
