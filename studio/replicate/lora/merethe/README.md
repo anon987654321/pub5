@@ -1,73 +1,82 @@
 # Merethe identity LoRA preparation
 
-This is the first isolated STUDIO migration slice in pub5. The planned owner is
-\`studio/\` (lowercase, as declared in PLAN.md); the existing Replicate client
-and photograph renderer have not yet been ported here. This package therefore
-prepares and verifies a private dataset. It does not start training or generate
-images.
+This is a limited STUDIO migration slice in pub5's planned lowercase \`studio/\`
+tree. The STUDIO runtime, Replicate client and photograph renderer have not yet
+been ported; the subject-preparation library is therefore not exposed through
+\`bin/master\` yet. It is ready to be wired into that phase without introducing
+a second filesystem or HTTP implementation.
 
 ## Privacy boundary
 
-Source photos, captions, curated datasets, weights, output and ZIP files are
-excluded by the root \`.gitignore\`. They are local working material, not
-repository assets. Do not use \`git add -f\` for any of them. Consent to train
-does not by itself mean consent to publish photographs, captions, model weights
-or generated images. Keep the resulting model private unless Merethe separately
-agrees to sharing it.
+Source photos, captions, curated datasets, weights, outputs and ZIP bundles are
+excluded by the root \`.gitignore\`. They remain local operator material. Do not
+use \`git add -f\` for them. Consent to train does not itself mean consent to
+publish photographs, captions, model weights or generated images. Keep the
+resulting model private unless Merethe separately agrees to sharing it.
 
-## Recover the original archive
+All external effects go through the injected \`Core::World\`: archive downloads
+use \`world.net\`, local reads and writes use \`world.read\` / \`world.write\`, and
+ZIP creation uses \`world.exec\`. The capability declaration is
+\`studio/manifest.yml\`. This library makes no Replicate upload, training or
+image-generation call.
 
-From the repository root:
+## Historical source set
 
-\`\`\`sh
-ruby studio/replicate/lora/merethe/prepare.rb --recover
-\`\`\`
+The immutable, read-only source is pub4 archival commit
+\`8e1955ae130592ab7c20ee266c024f061431c67e\`, at
+\`media/__lora/me2/01.jpg\` through \`15.jpg\`. Recovery verifies each file
+against its original Git blob SHA-1 before writing it to the ignored local
+\`studio/replicate/lora/merethe/sources/\` directory. pub4 remains read-only;
+the recovery endpoint is the only reference to it.
 
-The source is pinned to the immutable pub4 archival commit
-\`8e1955ae130592ab7c20ee266c024f061431c67e\`. pub4 is read-only; no workflow in
-this package writes to it. The script retrieves all 15 originals into the
-ignored local \`sources/\` folder and verifies each against its historical Git
-blob SHA-1 before keeping it.
+The initial face-led selection is \`10.jpg\` through \`13.jpg\`. The other
+originals are retained locally for review but excluded from the initial
+identity dataset because some lack a clear face, contain overlays, or use
+intimate/cropped framing. Do not include intimate images in a general identity
+model.
 
-## Curate the training set
-
-The initial face-led selection is \`10.jpg\` through \`13.jpg\`. The other archived
-photos remain in private \`sources/\` for operator review; they are excluded from
-the initial identity dataset because some lack a clear face, contain overlays,
-or use intimate/cropped framing. Do not include intimate images in a general
-identity model.
+## Additional photos
 
 Four portraits are not enough for a robust first training. Add at least six
-more ordinary, non-intimate photographs to:
+more ordinary, non-intimate photographs to the ignored local directory:
 
 \`\`\`text
 studio/replicate/lora/merethe/sources/additional/
 \`\`\`
 
-For each image, add a same-basename \`.txt\` caption. Use varied angles, light,
-expressions, clothing and everyday settings. Avoid filters, stickers, text,
-heavy retouching and near-duplicates. Each caption must include the trigger
-word \`MERETHE\`.
+Create the ignored local manifest
+\`studio/replicate/lora/merethe/sources/additional.json\` as a JSON array:
 
-Example:
-
-\`\`\`text
-sources/additional/photo-01.jpg
-sources/additional/photo-01.txt
+\`\`\`json
+[
+  {
+    "file": "photo-01.jpg",
+    "caption": "MERETHE, an everyday portrait in soft window light."
+  }
+]
 \`\`\`
 
-Then run:
+Use varied angles, expressions, clothing, light and ordinary settings. Avoid
+filters, stickers, text overlays, heavy retouching and near-duplicates. Each
+image must have a same-name record in the manifest, a supported image
+signature, and a caption containing the trigger word \`MERETHE\`. The initial
+preflight range is 10–18 images; 12–18 is the intended target for this first
+pass.
 
-\`\`\`sh
-ruby studio/replicate/lora/merethe/prepare.rb
-\`\`\`
+## Preparation contract
 
-The preflight accepts 10–18 images, requires readable image signatures and a
-caption for each added image, and writes a ZIP only when the selected archive
-photos are present and all checks pass. The range is this package's initial
-curation limit, not a claim about a provider's universal limits. The report is
-written to ignored \`.cache/prepare_report.json\`. The ZIP and intermediate
-dataset are private, mode-restricted local files.
+The future STUDIO command adapter calls:
+
+- \`Studio::MeretheLora.recover!(world:)\` to retrieve and verify the historical
+  originals.
+- \`Studio::MeretheLora.prepare!(world:)\` to validate the four selected archive
+  photos and the additional manifest, then create a private fingerprinted
+  dataset and ZIP.
+
+The report is written to ignored
+\`studio/replicate/lora/merethe/.cache/prepare_report.json\`. A non-ready state
+is reported as \`BLOCKED\`; a ZIP is produced only after all preflight checks
+pass. The dataset fingerprint keeps separate inputs in separate output paths.
 
 ## Training plan — not executed
 
@@ -79,6 +88,6 @@ dataset are private, mode-restricted local files.
 - Destination: an operator-selected private Replicate model
 
 The trainer pin and starting settings were carried from the pub4 Replicate
-client. The training package still needs to be integrated with pub5's STUDIO
-provider client when that runtime is ported. No Replicate API call is made by
-\`prepare.rb\`; uploading and paid training require a separate explicit action.
+client. The training adapter must be integrated with pub5's provider client
+when the STUDIO runtime is ported. Uploading and paid training require a
+separate explicit action; neither is part of this preparation package.
