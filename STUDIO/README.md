@@ -50,10 +50,11 @@ Outputs are grouped under `~/ideas/selfie-series-<run-id>/<subject>/<model>/`.
 Each final image keeps its Postpro sidecar and source hash; the private series
 manifest records all ten prompts, seeds, model versions and image digests.
 Every image passes through Postpro and its mandatory independent final analog
-grain layer. Generation completion is not acceptance: the series manifest and each render
-carry `review_status: pending_operator_review` until a person curates the
-contact sheet and records the accepted candidates. `status: complete` means
-all requested files were rendered, not that likeness has been approved.
+grain layer. Generation completion is not acceptance: the series and each model record
+carry `curation_status: pending_operator_review`, and each render carries
+`review_status: pending_operator_review`, until a person curates the contact
+sheet and records the accepted candidates. `status: complete` means all
+requested files were rendered, not that likeness has been approved.
 
 Before generation, the command archives prior managed series and legacy
 timestamp-named render families only when the Postpro sidecar, source hash and

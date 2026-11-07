@@ -100,7 +100,6 @@ module Studio
           "run_id" => run_id,
           "created_at" => @clock.call.utc.iso8601,
           "status" => "running",
-          "review_status" => "pending_operator_review",
           "requested_per_model" => SHOTS_PER_MODEL,
           "curation_status" => "pending_operator_review",
           "shot_ids" => SHOTS.map { |shot| shot.fetch(:id) },
@@ -138,9 +137,8 @@ module Studio
               result = picture.write(shot.fetch(:prompt), film: false, seed:)
               render = verify_render!(result, model_directory)
               model_record.fetch("renders") << {
-                "review_status" => "pending_operator_review",
                 "shot_id" => shot.fetch(:id),
-                "review_status" => "pending",
+                "review_status" => "pending_operator_review",
                 "seed" => seed,
                 "prompt" => shot.fetch(:prompt),
                 "source" => relative_to(run_directory, render.fetch(:source)),
@@ -188,7 +186,6 @@ module Studio
 
         {
           "status" => series.fetch("status"),
-          "review_status" => series.fetch("review_status"),
           "run_id" => run_id,
           "manifest" => manifest_path,
           "curation_status" => series.fetch("curation_status"),
