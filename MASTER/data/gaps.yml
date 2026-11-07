@@ -40,7 +40,7 @@ gaps:
   - { id: brgen_activitypub_inbound, app: brgen, kind: logic, name: "inbound ActivityPub storage", source: horizon, status: open, note: "blocked on remote media proxying, remote moderation and a blocklist per apps.yml notes" }
   - { id: brgen_recurring_events, app: brgen, kind: logic, name: "recurring events / ticketing beyond an external link", source: horizon, status: open }
   - { id: brgen_city_population_seeds, app: brgen, kind: content, name: "city population in seeds", source: horizon, status: open, note: "no column or reader in any schema; CitySeed covers all 43 registry cities" }
-  - { id: brgen_recent_searches, app: brgen, kind: ux, name: "recent searches in the search palette", source: horizon, status: picked, workstream: brgen_recent_searches }
+  - { id: brgen_recent_searches, app: brgen, kind: ux, name: "recent searches in the search palette", source: horizon, status: satisfied, evidence: "SearchRecent#recent_for in the palette (brgen/app/models/search_recent.rb, brgen/app/views/shared/_search_palette.html.erb)" }
   # --- messenger ---
   - { id: messenger_webrtc_calls, app: messenger, kind: logic, name: "messenger voice and video calls (WebRTC)", source: horizon, status: blocked, note: "needs STUN/TURN infra on the host" }
   - { id: messenger_notify_suppression, app: messenger, kind: ux, name: "notification suppressed while its conversation is open", source: horizon, status: open }
@@ -49,7 +49,7 @@ gaps:
   - { id: marketplace_ai_recs, app: marketplace, kind: logic, name: "AI recommendations", source: apps_yml, status: open }
   - { id: marketplace_coupons, app: marketplace, kind: logic, name: "coupons / referral credit / bundle pricing", source: horizon, status: open, note: "consumes commerce_shared_domain" }
   - { id: marketplace_contact_relay, app: marketplace, kind: logic, name: "anonymised buyer-seller contact relay", source: horizon, status: blocked, note: "needs inbound mail routing and per-listing addresses on vm23" }
-  - { id: marketplace_duplicates, app: marketplace, kind: logic, name: "duplicate-listing detection", source: horizon, status: picked, workstream: marketplace_duplicate_detection }
+  - { id: marketplace_duplicates, app: marketplace, kind: logic, name: "duplicate-listing detection", source: horizon, status: satisfied, evidence: "Marketplace::Listing#duplicate_of files an open duplicate ModerationReport on creation (brgen_marketplace/app/models/marketplace/listing.rb)" }
   - { id: marketplace_liquidity, app: marketplace, kind: knowledge, name: "liquidity signals (empty categories, unmet demand)", source: horizon, status: open, note: "liquidity before ads, per the horizon fence" }
   - { id: marketplace_paid_boosts, app: marketplace, kind: logic, name: "paid listing boosts and category/homepage placement", source: horizon, status: open, note: "organic discovery stays quality-weighted; payment never buys a trust outcome" }
   - { id: marketplace_seller_analytics, app: marketplace, kind: knowledge, name: "seller, listing and promotion analytics", source: horizon, status: open }
@@ -59,8 +59,8 @@ gaps:
   # --- playlist ---
   - { id: playlist_creator_donations, app: playlist, kind: logic, name: "creator donations / ad-free tier", source: apps_yml, status: open, note: "consumes commerce_shared_domain" }
   # --- takeaway ---
-  - { id: takeaway_delivery_area, app: takeaway, kind: logic, name: "delivery-area validation", source: horizon, status: picked, workstream: takeaway_delivery_area }
-  - { id: takeaway_cart_expiry, app: takeaway, kind: logic, name: "cart expiry", source: horizon, status: picked, workstream: takeaway_cart_expiry }
+  - { id: takeaway_delivery_area, app: takeaway, kind: logic, name: "delivery-area validation", source: horizon, status: satisfied, evidence: "Takeaway::Restaurant#within_delivery (haversine against delivery_radius_km, engines/takeaway/app/models/takeaway/restaurant.rb)" }
+  - { id: takeaway_cart_expiry, app: takeaway, kind: logic, name: "cart expiry", source: horizon, status: satisfied, evidence: "Takeaway::Order stamps CART_TTL_MINUTES on every cart and expire_stale_pending! sweeps it (engines/takeaway/app/models/takeaway/order.rb)" }
   - { id: takeaway_pro_surface, app: takeaway, kind: logic, name: "takeaway Pro (restaurant promotion, coupons, loyalty)", source: horizon, status: open, note: "consumes commerce_shared_domain" }
   # --- tv ---
   - { id: tv_live_stream_infra, app: tv, kind: logic, name: "live stream infrastructure", source: apps_yml, status: blocked, note: "needs a media server (MediaMTX / SRS / nginx-rtmp) plus a delivery tier on the host; Tv::Broadcast already models the state machine" }
