@@ -69,8 +69,15 @@ module Studio
       flat_directory(override: "POSTPRO_OUTPUT_DIR")
     end
 
-    def dilla_render_directory
-      flat_directory(override: "DILLA_OUTPUT_DIR")
+    def dilla_render_directory(at: nil)
+      base = flat_directory(override: "DILLA_OUTPUT_DIR")
+      # An operator-pinned DILLA_OUTPUT_DIR is the exact directory, not a root
+      # to scope further. The default data home keeps one folder per UTC day,
+      # which is the granularity MASTER's output-path contract queries with
+      # (RAILS/test/studio_contract_test.rb pins the date conversion).
+      return base if at.nil? || !ENV.fetch("DILLA_OUTPUT_DIR", "").to_s.empty?
+
+      File.join(base, "dilla-renders", at.utc.strftime("%Y-%m-%d"))
     end
 
     # The reference crate is input material, not a render, so it keeps its

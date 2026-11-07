@@ -121,7 +121,8 @@ module Dilla
     attr_accessor :mode, :source, :out, :progression, :drums, :profile, :groove, :bpm,
                   :kit, :voice, :rig, :sonitex, :sonitex_instances, :vcs, :drum_balance,
                   :chord_balance, :bars, :seed, :performer, :style, :no_stems, :max_duration,
-                  :video, :mp3, :sample_vol, :sample_weight, :sample_slices, :sample_loop, :extra
+                  :video, :mp3, :sample_vol, :sample_weight, :sample_slices, :sample_loop, :extra,
+                  :output_at
 
     def initialize
       @mode = :render
@@ -151,12 +152,14 @@ module Dilla
       opts.mode = :output_path
       args.shift
       opts.source = args.shift or abort "output-path: name dilla-render-directory or reference-root"
-      # The MASTER contract sends its clock as an optional ISO8601 (pub4's
-      # dated layout consumed it for the day folder). The flat layout keeps
-      # every render directly in the data home (operator directive
-      # 2026-11-07), so the timestamp stays part of the accepted surface
-      # and is carried without steering the path.
-      opts.extra[:at] = args.shift
+      # MASTER's contract appends the query time after the kind
+      # (Contracts::Studio#query_output_path). Thread it into the path
+      # authority, which scopes the default render root one folder per UTC
+      # day -- the date the output-path contract test pins. The timestamp
+      # stays optional: a bare query keeps the flat default directory.
+      if args.first.to_s.match?(/\A\d{4}-\d{2}-\d{2}T/)
+        opts.output_at = Time.iso8601(args.shift)
+      end
     when "demo-each"
       opts.mode = :demo_each
       args.shift
@@ -256,7 +259,7 @@ module Dilla
     require_relative File.join("..", "output_paths")
     case opts.source
     when "dilla-render-directory"
-      puts Studio::OutputPaths.dilla_render_directory
+      puts Studio::OutputPaths.dilla_render_directory(at: opts.output_at)
     when "reference-root"
       puts Studio::OutputPaths.reference_root
     else
