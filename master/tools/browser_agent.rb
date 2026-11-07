@@ -261,7 +261,10 @@ module Master
       end
 
       def utf8_prefix(value, bytes)
-        value.to_s.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8).scrub
+        text = value.to_s.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "")
+        prefix = text.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8)
+        prefix = prefix.byteslice(0, prefix.bytesize - 1).to_s.force_encoding(Encoding::UTF_8) until prefix.valid_encoding?
+        prefix
       end
 
       def redact_url(value)
