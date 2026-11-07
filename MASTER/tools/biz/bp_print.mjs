@@ -1,9 +1,12 @@
 // Print the completed BIZ HTMLs to PDF with the Playwright Chromium
 // headless shell (invoked as a binary; no Python). The @page rule in each
 // document (156mm 234mm) determines the page size, as in the pub5 anlage.
+// Every front page is also rendered as a png at one CSS-pixel scale
+// (96 dpi = 4/3 x 72 pt), Johann, 2026-11-07: "include a png of every
+// front page ... in BIZ"; the folder law carries it beside the pair.
 // Usage: node scripts/bp_print.mjs
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { OUTPUT_DIR as OUT, SOURCE_DIR, BIZ_ROOT } from './paths.mjs';
 
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen', 'fetat'];
@@ -63,5 +66,13 @@ for (const name of ORDER) {
   const bytes = statSync(pdf).size;
   console.log(`${name}: ${bytes} bytes, ${pages} pages, ${size} pts`);
   if (size !== '442.08 x 663.12') throw new Error(`${name}: unexpected page size ${size}`);
+  const ppm = spawnSync('pdftoppm', ['-r', '96', '-png', '-f', '1', '-l', '1', pdf, `${OUT}/${name}/${name}`], { encoding: 'utf8' });
+  if (ppm.status !== 0) throw new Error(`${name}: pdftoppm exited ${ppm.status}\n${ppm.stderr}`);
+  // poppler zero-pads the page number to the document's page count
+  // (syre-01.png on a 17-page plan, fetat-1.png on a 6-page one)
+  const raster = readdirSync(`${OUT}/${name}`).find(f => new RegExp(`^${name}-\\d+\\.png$`).test(f));
+  if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
+  renameSync(`${OUT}/${name}/${raster}`, `${OUT}/${name}/${name}.png`);
+  console.log(`${name}: front page png ${name}.png`);
 }
 console.log('done');

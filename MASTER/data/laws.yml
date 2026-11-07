@@ -1136,8 +1136,9 @@ BUSPLAN_PAIR_FOLDER:
   parent: BRINGHURST
   statement: >
     A business plan folder carries only what the reader receives: the
-    html, its svg mark and the pdf, in one folder named after the pair.
-    Nothing else - not source, not tooling - sits in the published folder.
+    html, its svg mark, the pdf and the png of the front page, in one
+    folder named after the pair. Nothing else - not source, not tooling -
+    sits in the published folder.
   severity: warning
   resolution: review
 
