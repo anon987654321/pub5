@@ -5,32 +5,34 @@ require_relative "terminal"
 require_relative "../models/dispatch"
 require_relative "../memory/memory"
 require_relative "../cognition/mind"
+require_relative "../tools/research"
 
 module Cli
   # One conversation: its turns, what memory adds to each prompt, and what
   # the mind learns from each turn's ledger entries. The REPL owns the
-  # terminal; this owns the turn, so a face or web adapter would call the same
-  # turn rather than a second router (UX025).
+  # terminal; this owns the turn, so a face or web adapter would call the
+  # same turn rather than a second router.
   #
-  # The turns are saved after every answer (log/master/session.json), so a
-  # REPL that is closed and opened again resumes where it was; /new starts
-  # fresh. Moved from pub4 lib/cli/session.rb (its save!/resume) and the
-  # turn half of session/repl_flow.rb.
+  # Tool calls use a bounded, model-neutral JSON envelope. The same loop works
+  # for text-only subscription CLIs and HTTP models; actual effects still pass
+  # through Core::World and the invoking command's capability manifest.
   class Conversation
     PATH = "log/master/session.json"
     SCHEMA = 1
     MAX_TURNS = 20
+    MAX_TOOL_CALLS = 6
     SYSTEM = "You are MASTER, the operator's terminal assistant for the pub5 repository. " \
              "Lead with the answer or the result, tersely, in plain text. No greetings, no filler, " \
              "no claims of having run or changed anything you did not."
 
     attr_reader :turns, :dispatch, :memory, :mind
 
-    def initialize(world:, dispatch:, memory: nil, mind: nil)
+    def initialize(world:, dispatch:, memory: nil, mind: nil, research: nil)
       @world = world
       @dispatch = dispatch
       @memory = memory
       @mind = mind
+      @research = research || Master::Tools::Research.new(world:)
       @turns = load
     end
 
@@ -41,7 +43,7 @@ module Cli
     def turn(text)
       task_id = "t#{@turns.size + 1}"
       mark = @world.ledger.entries.size
-      reply = @dispatch.ask(text, system: system_for(text), messages: messages)
+      reply = turn_with_tools(text)
       @turns << { "user" => text, "assistant" => reply.text, "model" => reply.model }
       @turns = @turns.last(MAX_TURNS)
       save
@@ -61,6 +63,44 @@ module Cli
     def close = @mind&.tick!
 
     private
+
+    def turn_with_tools(text)
+      base_system = system_for(text)
+      tools = @research.available_tools
+      protocol = tools.empty? ? @research.permission_note : @research.tool_prompt
+      system = [base_system, protocol].compact.reject(&:empty?).join("\n\n")
+      history = messages
+      prompt = text
+      reply = @dispatch.ask(prompt, system:, messages: history)
+      history = [*history, { role: "user", content: prompt }, { role: "assistant", content: reply.text }]
+
+      seen = {}
+      calls = 0
+      loop do
+        call = @research.parse_tool_call(reply.text)
+        break unless call
+
+        if calls >= MAX_TOOL_CALLS
+          final_prompt = "The research tool-call budget is exhausted. Do not call another tool. " \
+                         "Give the best answer supported by the evidence already gathered, and name any remaining uncertainty."
+          reply = @dispatch.ask(final_prompt, system:, messages: history)
+          break
+        end
+
+        fingerprint = JSON.generate(call)
+        result = if seen[fingerprint]
+                   "Refused a duplicate tool call. Use different arguments or answer from the evidence already gathered."
+                 else
+                   seen[fingerprint] = true
+                   @research.call(name: call.fetch("name"), arguments: call.fetch("arguments"))
+                 end
+        prompt = @research.result_prompt(name: call.fetch("name"), result:)
+        reply = @dispatch.ask(prompt, system:, messages: history)
+        history = [*history, { role: "user", content: prompt }, { role: "assistant", content: reply.text }]
+        calls += 1
+      end
+      reply
+    end
 
     def system_for(text)
       [SYSTEM, @memory&.context_summary, @memory&.turn_recall(text)].compact.join("\n\n")
