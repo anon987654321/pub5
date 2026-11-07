@@ -31,7 +31,14 @@ module Master
 
       MAX_FIX_CHECK_ROUNDS = Integer(ENV.fetch("MASTER_FIX_CHECK_ROUNDS", "5"))
       BACKLOG_REVIEW_INTERVAL = 7 * 24 * 60 * 60
-      BACKLOG_REVIEW_MAX_BYTES = 32_000
+      # The review reads its whole ledger, so the cap must hold the ledger as
+      # the repo actually keeps it. 32_000 rejected the file it watched once
+      # TODO.md's consolidated inventory (section 8, ~26 KB) and the product
+      # sections together passed it — every weekly review since came back
+      # INCONCLUSIVE: IOError, the one backlog the review exists to look at.
+      # 128 KiB holds TODO.md plus a season of growth; a ledger past that is
+      # a real capacity question and stays INCONCLUSIVE on purpose.
+      BACKLOG_REVIEW_MAX_BYTES = 131_072
       BACKLOG_REVIEW_HISTORY_BYTES = 8_000
       BACKLOG_REVIEW_MAX_CANDIDATES = 12
 
