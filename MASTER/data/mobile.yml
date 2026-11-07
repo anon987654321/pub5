@@ -18,8 +18,8 @@ env:
   MASTER_MEMORY_PATH: ".master/mobile/memory.yml"
   MASTER_MISSION_PATH: ".master/mobile/mission.json"
 
-# Termux packages the boot installs before Bundler builds native gems, which
-# is why clang, make, libyaml and openssl are here. Only these names are ever
+# Termux packages installed before Bundler builds native gems and MASTER loads
+# ruby-vips; this includes the native libvips library. Only these names are ever
 # passed to pkg; optional ones install when MASTER_MOBILE_INSTALL_OPTIONAL=1.
 packages:
   required: [ruby, git, clang, make, libyaml, openssl, libvips]
