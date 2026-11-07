@@ -1,0 +1,22 @@
+<section class="account-settings">
+  <%= tag.h1 t("pages.account") %>
+
+  <%= tag.p Current.user.email_address, title: Current.user.email_address %>
+
+  <% if Current.user.deletion_pending? %>
+    <%= tag.p t("account.deletion_scheduled", on: l(Current.user.deletion_scheduled_at, format: :long)) %>
+    <%= button_to t("account.cancel_deletion"), cancel_deletion_account_path, method: :post %>
+  <% else %>
+    <ul>
+      <%= tag.li link_to(t("account.export"), export_account_path) %>
+      <%= tag.li link_to(t("account.two_factor"), two_factor_setup_path) %>
+      <%# An app adds its own rows (brgen: email preferences) through this partial. %>
+      <%= render "account_settings/app_links" if lookup_context.exists?("account_settings/app_links", [], true) %>
+    </ul>
+    <%= render "account_settings/security", user: Current.user, sessions: @sessions %>
+    <%# An app adds its own sections (brgen: blocked people, language) here. %>
+    <%= render "account_settings/app_sections" if lookup_context.exists?("account_settings/app_sections", [], true) %>
+    <%= button_to t("account.delete"), account_path, method: :delete,
+                  data: { turbo_confirm: t("account.delete_confirm") } %>
+  <% end %>
+</section>

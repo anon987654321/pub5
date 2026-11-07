@@ -1,0 +1,183 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "tmpdir"
+require "fileutils"
+
+# The design law used to apply only when somebody typed /scan. WriteGuard puts it
+# on the write itself, on both paths — Io::Base#commit_write for the tools and an
+# injected Constitution rule for the Fold — so the question these answer is what
+# a write may introduce, not what a file contains.
+class WriteGuardTest < Minitest::Test
+  DIRTY = "# frozen_string_literal: true\n\ndef work\n  go\nrescue StandardError\n  nil\nend\n"
+
+  def setup
+    @tmp = Dir.mktmpdir("write_guard_test")
+    @guard = Master::Fix::WriteGuard.default
+  end
+
+  def teardown = FileUtils.remove_entry(@tmp)
+
+  def path(name = "example.rb") = File.join(@tmp, name)
+
+  def test_default_rebuilds_after_law_digest_changes
+    guard_class = Master::Fix::WriteGuard
+    built = 0
+
+    Master::Fix::Scanner.stub(:build, ->(**) {
+      built += 1
+      Struct.new(:laws).new([])
+    }) do
+      guard_class.reset_default!
+
+      # One stub after the other: Minitest keeps a single alias per method, so a
+      # stub nested inside another on the same method removes the alias the outer
+      # one restores from, and Law::Contract.digest stays undefined afterwards.
+      first = nil
+      second = nil
+      ::Law::Contract.stub(:digest, "digest-one") { first = guard_class.default }
+      ::Law::Contract.stub(:digest, "digest-two") { second = guard_class.default }
+      refute_same first, second
+    end
+
+    assert_equal 2, built
+  ensure
+    Master::Fix::WriteGuard.reset_default!
+  end
+
+  def test_a_write_that_introduces_an_error_is_blocked
+    verdict = @guard.verdict(path:, content: DIRTY)
+
+    assert_predicate verdict, :blocked?
+    assert_match(/SILENT_RESCUE/, verdict.reason)
+  end
+
+  # Without this the first repair of any file carrying debt is refused, and the
+  # check that was meant to stop new violations freezes the old ones in place.
+  def test_editing_a_file_that_already_carries_the_violation_is_allowed
+    File.write(path, DIRTY)
+
+    verdict = @guard.verdict(path:, content: DIRTY.sub("def work", "def renamed"))
+
+    refute_predicate verdict, :blocked?
+    assert_empty verdict.introduced
+  end
+
+  def test_a_second_copy_of_an_existing_violation_is_an_introduction
+    File.write(path, DIRTY)
+    doubled = DIRTY + "\ndef second\n  go\nrescue StandardError\n  nil\nend\n"
+
+    assert_predicate @guard.verdict(path:, content: doubled), :blocked?
+  end
+
+  def test_clean_content_passes
+    refute_predicate @guard.verdict(path:, content: "# frozen_string_literal: true\n\ndef work = 1\n"), :blocked?
+  end
+
+  def test_new_repository_files_need_an_exact_task_contract_declaration
+    target = File.join(Master::ROOT, "test", "write_guard_new_path_probe_#{Process.pid}.rb")
+    relative = target.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+    content = "# frozen_string_literal: true\n\ndef work = 1\n"
+    contract = Master::Fix::TaskContract
+
+    undeclared = contract.build(intent: "functional_change", scope: [relative], preserve: [], proof: [])
+    contract.with_current(undeclared) do
+      verdict = @guard.verdict(path: target, content:)
+      assert_predicate verdict, :blocked?
+      assert_match(/new tracked path/, verdict.reason)
+    end
+
+    declared = contract.build(
+      intent: "functional_change",
+      scope: [relative],
+      preserve: [],
+      proof: [],
+      new_paths: [{ path: relative, reason: "A distinct adapter with its own consumer." }],
+    )
+    contract.with_current(declared) do
+      refute_predicate @guard.verdict(path: target, content:), :blocked?
+    end
+  end
+
+  def test_new_repository_files_are_blocked_without_an_active_task_contract
+    target = File.join(Master::ROOT, "test", "write_guard_legacy_probe_#{Process.pid}.rb")
+    Master::Fix::TaskContract.with_current(nil) do
+      verdict = @guard.verdict(path: target, content: "# frozen_string_literal: true\\n")
+      assert_predicate verdict, :blocked?
+      assert_match(/new tracked path/, verdict.reason)
+    end
+  end
+
+  # Operator decision 2026-10-28: an automated write to the laws or the soul is refused with a reason,
+  # whatever its content.
+  def test_an_automated_write_to_the_laws_or_the_soul_is_refused
+    %w[laws.yml soul.yml].each do |name|
+      file = File.join(Master::ROOT, "data", name)
+      verdict = @guard.verdict(path: file, content: File.read(file, encoding: "UTF-8"))
+
+      assert_predicate verdict, :blocked?
+      assert_match(/\Asacred_path:0 data\/#{Regexp.escape(name)} is sacred: no automated writer/, verdict.reason)
+    end
+  end
+
+  # The operator's hand edit may change a sacred file; its content is still judged.
+  def test_malformed_law_catalogue_is_blocked_by_configuration_invariants
+    laws_path = File.join(Master::ROOT, "data", "laws.yml")
+    verdict = @guard.verdict(path: laws_path, content: "law_catalogue: {}\n", automated: false)
+
+    assert_predicate verdict, :blocked?
+    assert_match(/configuration_invariant/, verdict.reason)
+    # FlatLawCatalogue validates first now, so the refusal names the empty catalogue.
+    assert_match(/laws.yml declares no flat laws/, verdict.reason)
+    refute_match(/sacred_path/, verdict.reason)
+  end
+
+  def test_sidecar_markdown_is_blocked_even_when_clean
+    verdict = @guard.verdict(path: path("summary.md"), content: "# notes\n")
+
+    assert_predicate verdict, :blocked?
+    assert_match(/forbidden file/, verdict.reason)
+  end
+
+  # Semantic laws are 126 of the 225 and cost an LLM call per file. A per-write
+  # check would pay that twice for every write, so the guard holds the mechanical
+  # half and the per-turn pass holds the rest.
+  def test_semantic_laws_are_not_on_the_write_path
+    agent_backed = Master::Fix::Scanner.build(root: Master::ROOT)
+                                       .laws.select { |law| law.respond_to?(:set_agent) }
+    refute_empty agent_backed, "the scanner should carry semantic laws for the scan path"
+
+    guarded = Master::Fix::WriteGuard.new(laws: agent_backed)
+
+    assert_empty guarded.verdict(path:, content: DIRTY).introduced
+  end
+
+  # The Fold writes through World rather than through the Io tools, so the same
+  # judgement has to be a rule in the Constitution or that lane goes unguarded.
+  def test_the_constitution_blocks_a_fold_write_that_introduces_a_violation
+    constitution = Master::Core::Constitution.load(data_dir: Master.data_path, verify: verifier)
+    memory = Master::Core::Memory.new(risk: :low)
+    memory.proof.mark_ideation_complete!
+
+    verdict = constitution.admit(write_effect(DIRTY), memory)
+
+    assert_kind_of Master::Core::Verdict::Block, verdict
+    assert_equal :scan_clean, verdict.by
+  end
+
+  def test_the_constitution_allows_a_fold_write_with_no_new_violation
+    constitution = Master::Core::Constitution.load(data_dir: Master.data_path, verify: verifier)
+    memory = Master::Core::Memory.new(risk: :low)
+    memory.proof.mark_ideation_complete!
+
+    verdict = constitution.admit(write_effect("# frozen_string_literal: true\n\ndef work = 1\n"), memory)
+
+    assert_kind_of Master::Core::Verdict::Allow, verdict
+  end
+
+  def verifier = Master::CLI::CoreBridge.scan_verifier
+
+  def write_effect(content)
+    Master::Core::Effect.new(verb: :write, args: { path:, content: })
+  end
+end

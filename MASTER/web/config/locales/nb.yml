@@ -1,0 +1,198 @@
+# Norwegian for the MASTER web surface. ai.brgen.no is the only host relayd
+# forwards here, it is a .no domain, and every other surface in this repo
+# defaults to nb.
+#
+# Parity with en.yml is enforced by RAILS/test/locale_contract_test.rb, for the
+# reason that file gives: Rails falls back to :en for a key nb does not carry,
+# so a missing translation renders as English and raises nothing.
+#
+# The lowercase style matches en.yml. The dashboard is a mission-control panel
+# whose labels are lowercase by design; they are not sentence fragments missing
+# a capital.
+nb:
+  skip_to_content: "Hopp til hovedinnhold"
+  skip_to_prompt: "Hopp til skrivefeltet"
+  pwa:
+    name: "MASTER"
+    description: "Offentlig MASTER-samtale"
+    chat: "Samtale"
+    chat_description: "Åpne MASTER-samtalen"
+    focus: "Fokus på ansiktet"
+    focus_short: "Fokus"
+    focus_description: "Bare ansiktet, uten annet"
+    mission: "Kontrollrom"
+    mission_short: "Kontrollrom"
+    mission_description: "Innsyn i hva MASTER gjør"
+    screenshot_wide: "MASTER-ansiktet og skrivefeltet på en datamaskin"
+    screenshot_narrow: "MASTER-ansiktet og skrivefeltet på en telefon"
+  dashboard:
+    title: "MASTER — kontrollrom"
+    heading_chat: "samtale"
+    heading_sep: "·"
+    heading_mission: "kontrollrom"
+    session_navigation: "Arbeidsområder"
+    main_label: "Kontrollrom"
+    loading: "laster…"
+    refresh_failed: "live-data utilgjengelig; prøver igjen"
+    updated: "oppdatert"
+    unavailable: "status utilgjengelig"
+    auth_required: "kontrollrommet krever operatørnøkkelen"
+    empty_none: "(ingen)"
+    empty_empty: "(tom)"
+    empty_quiet: "(stille)"
+    panels:
+      status: "status"
+      rtk: "rtk-besparelse"
+      plan: "aktiv plan"
+      rsi: "rsi-innboks"
+      skills: "ferdigheter"
+      pressure: "kontekstpress"
+      providers: "leverandørhelse"
+      repair: "reparasjonskø"
+      bus: "siste busshendelser"
+    status:
+      model: "modell"
+      # ctx, tokens and rtk stay as they are: they are the names MASTER's own
+      # runtime prints, and a panel that says "ktx" where the log says "ctx" is
+      # a translation that costs the reader the match.
+      ctx: "ctx"
+      tokens: "tokens"
+      cost: "kostnad"
+      agent_pool: "agentpool"
+      breakers: "brytere"
+      breakers_none: "ingen"
+    rtk:
+      commands: "kommandoer"
+      saved: "spart"
+      bytes: "byte"
+    pressure:
+      band: "bånd"
+      tokens: "tokens"
+      pct: "pst"
+      headroom: "ledig kapasitet"
+    providers:
+      status: "status"
+      open_breakers: "åpne brytere"
+      agent_pool: "agentpool"
+      breakers_none: "ingen"
+  face:
+    title: "ai.brgen.no"
+    prompt_user: "bruker"
+    face_aria: "MASTER-ansiktet — visuelt speil av tilstanden"
+    chat_aria: "MASTER-samtale"
+    prompt_aria: "MASTER-skrivefelt"
+    message_aria: "Melding"
+    attach_photo: "Legg ved bilde"
+    music_loop: "Musikk på eller av"
+    stop_response: "Stopp svaret"
+    stop: "stopp"
+    pause_speech: "Pause eller fortsett tale"
+    placeholder: "spør om hva som helst"
+    mic_state: "Mikrofon"
+    primer_title: "start AI"
+    primer_capabilities: "stemme · bilde · musikk · kode"
+    primer_consent: "Starter bilde, lyd og mikrofon; tekst virker om grafikken feiler."
+    primer_noscript: "Siden trenger JavaScript. Slå det på og last siden på nytt for å chatte."
+    starting: "starter…"
+    loading_title: "laster…"
+    loading_status: "laster ansiktet…"
+    still_loading: "laster fortsatt ansiktet…"
+    retrying: "prøver igjen…"
+    failed: "ansiktet lastet ikke — last siden på nytt eller sjekk konsollen"
+    failed_live: "ansiktet lastet ikke (WebGL/primer-timing?). Last siden på nytt eller se konsollen for MASTER_FACE-feil."
+    # Strings the face scripts write into the page, served as window.MASTER_I18N.
+    js:
+      tap_to_hear: "trykk hvor som helst for å høre svaret"
+      warming_up: "master varmer opp"
+      warming_up_placeholder: "master varmer opp…"
+      warming_retry: "master varmer opp — prøv igjen snart"
+      still_starting: "master starter fortsatt…"
+      still_starting_reply: "master starter fortsatt — prøv igjen om litt."
+      container_booting: "master-containeren starter"
+      not_ready: "master ble ikke klar — last inn siden på nytt eller prøv igjen om et minutt"
+      retry_boot: "prøv oppstart igjen"
+      retrying_boot: "prøver oppstart igjen…"
+      context_compacted: "konteksten er komprimert"
+      command_palette: "Kommandopalett"
+      command_placeholder: "kommando eller handling"
+      filter_commands: "Filtrer kommandoer"
+      session_history: "Økthistorikk"
+      history: "historikk"
+      close_history: "Lukk historikken"
+      search_turns: "søk i meldinger"
+      search_history: "Søk i historikken"
+      exported: "eksportert"
+      stream_retry: "prøv igjen"
+      rate_limited: "senk farten — grensen er nådd"
+      stream_failed: "strømmen feilet — prøve igjen?"
+      long_response: "svar (%{n} tegn)"
+      filter_log: "filtrer synlig logg"
+      filter_log_aria: "Filtrer samtaleloggen"
+      load_older_messages: "Last inn %{count} eldre meldinger"
+      message_actions: "Meldingshandlinger"
+      message_copy: "Kopier"
+      message_quote: "Siter"
+      message_simpler: "Enklere forklaring"
+      message_deeper: "Mer detaljert"
+      message_simpler_prompt: "Forklar dette enklere:"
+      message_deeper_prompt: "Gå dypere i dette svaret:"
+      mic_unavailable: "mikrofonen er ikke tilgjengelig i denne nettleseren"
+      shortcuts_aria: "Tastatursnarveier"
+      shortcuts_title: "snarveier"
+      close: "lukk"
+      sc_palette: "Kommandopalett"
+      sc_history: "Vis eller skjul historikken"
+      sc_export: "Eksporter økten som markdown"
+      sc_slash: "Åpne paletten fra tomt felt"
+      sc_sheet: "Oversikt over snarveier"
+      sc_escape: "Lukk paletten / avbryt strømmen"
+      sc_talk: "Hold for å snakke"
+      sc_mute: "Slå tale av eller på"
+      sc_mic: "Slå mikrofonen av eller på"
+      sc_face: "Fokuser ansiktet"
+      sc_rate: "Talehastighet"
+      space_hold: "Mellomrom (hold)"
+      face_legend: "Partikkelansikt: øynene følger med, munnen snakker, terrenget speiler stemningen."
+      share_title: "MASTER-ansiktet"
+      retry_face_boot: "prøv å starte ansiktet igjen"
+      needs_js: "MASTER-partikkelansiktet krever JavaScript."
+      tighter_question: "prøv et strammere spørsmål"
+  api:
+    brand: "MASTER lov-API"
+    title: "MASTER lov-API: kodegjennomgang etter regler, over HTTPS"
+    heading: "MASTER lov-API"
+    lede: >-
+      Send kildefiler eller affiliate-annonsetekst og få deterministiske funn med dokumentasjon, linjehenvisninger
+      der det passer, og begrunnelse. Gjennomgangen bruker ikke en modell.
+    plans_heading: "Abonnement"
+    per_month: "i måneden"
+    subscribe: "Abonner"
+    not_yet: "Ikke tilgjengelig ennå."
+    unavailable: "Det abonnementet kan ikke startes akkurat nå. Ingenting ble trukket."
+    not_confirmed: "Stripe har ikke bekreftet den betalingen. Har du betalt, last siden på nytt om et minutt."
+    usage_heading: "Bruk"
+    usage_lede: "Send opptil 20 kildefiler til /api/v1/lint eller ett kreativt objekt med produktøyeblikksbilde til /api/v1/copy-review med bearer-nøkkelen din."
+    response_lede: "Hvert funn oppgir fil, linje, lov og alvorlighet, og svaret viser månedens forbruk."
+    copy_review_heading: "Gjennomgå annonsetekst"
+    copy_review_lede: "Send POST /api/v1/copy-review med et kreativt objekt og, når det finnes, et oppdatert produktøyeblikksbilde. Én gjennomgang bruker én API-sjekk."
+    copy_review_trust: "Produktopplysningene kommer fra applikasjonen din og verifiseres ikke uavhengig. Eksterne påstander forblir uavklarte uten gjennomgått dokumentasjon. En bestått rapport er ikke juridisk rådgivning, sertifisering eller publiseringsgodkjenning."
+    limits_heading: "Grenser"
+    limit_files: "Opptil %{files} filer per forespørsel, %{kilobytes} kB hver. Én fil er én sjekk."
+    limit_quota: >-
+      Kvoten nullstilles den første hver måned (UTC). En forespørsel som ikke får plass, avvises i sin helhet og
+      koster ingenting.
+    limit_errors: >-
+      401 ugyldig nøkkel, 402 abonnementet er ikke aktivt, 422 ugyldig forespørsel, 429 kvote eller
+      hastighetsgrense, 413 for stor forespørsel.
+    limit_account: >-
+      GET /api/v1/key viser forbruk; POST /api/v1/key/rotate bytter nøkkel; POST /api/v1/key/portal åpner betaling.
+    limit_privacy: "Kildekode og annonsetekst vurderes i minnet. Tekst og produktfelter lagres ikke; kvitteringer for copy review beholder bare hashverdier, sammendrag av resultatet og funnkoder."
+    key_title: "API-nøkkelen din"
+    key_once: "Kopier den nå: den vises én gang, og bare fingeravtrykket lagres."
+    copy_key: "Kopier nøkkelen"
+    copied_key: "Kopiert"
+    key_shown: >-
+      Denne nøkkelen (slutter på %{hint}) er allerede vist. Er den borte, bytt den med den gamle nøkkelen, eller
+      skriv til operatøren.
+    key_plan: "%{plan}: %{quota} sjekker i måneden."
+    key_docs: "Slik bruker du den"

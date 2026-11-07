@@ -1,0 +1,260 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+require "rbconfig"
+require "timeout"
+require_relative "../lib/io/exec"
+
+class TestReachExec < Minitest::Test
+  E = Master::Io::Exec
+
+  def test_process_spawn_closes_an_inherited_master_lock_fd
+    original = ENV["MASTER_PROCESS_LOCK_FD"]
+    File.open(__FILE__) do |lock|
+      ENV["MASTER_PROCESS_LOCK_FD"] = lock.fileno.to_s
+      options = Master::Io::ProcessSpawn.options(pgroup: true)
+      assert_equal :close, options.fetch(lock.fileno)
+      assert options[:close_others]
+    end
+  ensure
+    original.nil? ? ENV.delete("MASTER_PROCESS_LOCK_FD") : ENV["MASTER_PROCESS_LOCK_FD"] = original
+  end
+
+  # A variable naming a descriptor no longer held made every spawn fail with EBADF.
+  def test_a_stale_lock_fd_does_not_break_spawning
+    original = ENV["MASTER_PROCESS_LOCK_FD"]
+    ENV["MASTER_PROCESS_LOCK_FD"] = "91"
+
+    refute Master::Io::ProcessSpawn.options.key?(91)
+    assert E.capture2(RbConfig.ruby, "-e", "print 1").last.success?
+  ensure
+    original.nil? ? ENV.delete("MASTER_PROCESS_LOCK_FD") : ENV["MASTER_PROCESS_LOCK_FD"] = original
+  end
+
+  def test_capture2e_merges_streams_and_reports_success
+    out, status = E.capture2e("sh", "-c", "echo out; echo err 1>&2")
+    assert_includes out, "out"
+    assert_includes out, "err"
+    assert status.success?
+  end
+
+  def test_exec_removes_malloc_stack_logging_from_parent_and_explicit_child_env
+    keys = %w[MallocStackLogging MallocStackLoggingNoCompact]
+    previous = keys.to_h { |key| [key, ENV[key]] }
+    keys.each { |key| ENV[key] = "1" }
+
+    out, status = E.capture2(
+      keys.to_h { |key| [key, "1"] }.merge("PUB5_MALLOC_PROBE" => "kept"),
+      RbConfig.ruby,
+      "-e",
+      'print [ENV.key?("MallocStackLogging"), ENV.key?("MallocStackLoggingNoCompact"), ENV["PUB5_MALLOC_PROBE"]].join(":")',
+    )
+
+    assert status.success?
+    assert_equal "false:false:kept", out
+    refute keys.any? { |key| ENV.key?(key) }, "the spawn boundary must scrub the parent too"
+  ensure
+    keys&.each do |key|
+      previous[key].nil? ? ENV.delete(key) : ENV[key] = previous[key]
+    end
+  end
+
+  def test_capture3_splits_streams
+    out, err, status = E.capture3("sh", "-c", "printf O; printf E 1>&2")
+    assert_equal "O", out
+    assert_equal "E", err
+    assert status.success?
+  end
+
+  def test_capture2_returns_stdout
+    out, status = E.capture2("sh", "-c", "printf hi")
+    assert_equal "hi", out
+    assert status.success?
+  end
+
+  def test_binmode_preserves_binary_capture_output_and_stdin
+    payload = "\xFF\x00".b
+    out, status = E.capture2(
+      RbConfig.ruby, "-e", "STDOUT.write(STDIN.read)",
+      stdin_data: payload, binmode: true
+    )
+
+    assert status.success?
+    assert_equal payload.bytes, out.bytes
+    assert_equal Encoding::BINARY, out.encoding
+  end
+
+  def test_non_zero_exit_is_non_success
+    _out, status = E.capture2e("sh", "-c", "exit 7")
+    refute status.success?
+    assert_equal 7, status.exitstatus
+  end
+
+  def test_chdir_option_forwards
+    out, = E.capture2e("pwd", chdir: "/tmp")
+    assert_includes out, "tmp"
+  end
+
+  def test_leading_env_hash_forwards
+    out, = E.capture2e({ "FOO" => "bar" }, "sh", "-c", "printf %s \"$FOO\"")
+    assert_equal "bar", out
+  end
+
+  def test_stdin_data_forwards
+    out, = E.capture2e("cat", stdin_data: "piped")
+    assert_equal "piped", out
+  end
+
+  # Readers and stdin must run concurrently: a producer that emits a
+  # large input can otherwise fill the pipe before the child gets a chance
+  # to drain stdout, deadlocking the sanctioned subprocess primitive.
+  def test_large_stdin_does_not_deadlock_before_output_readers_start
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    out, status = E.capture2e(
+      "sh", "-c", "head -c 1",
+      stdin_data: "x" * 1_000_000,
+      timeout: 3
+    )
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+    assert_equal "x", out
+    assert status.success?
+    assert_operator elapsed, :<, 3
+  end
+
+  def test_timeout_can_raise_for_callers_that_classify_timeout
+    assert_raises(E::TimeoutError) do
+      E.capture3("sh", "-c", "sleep 30", timeout: 0.1, raise_on_timeout: true)
+    end
+  end
+
+  def test_timeout_preserves_output_captured_before_killing_the_process_group
+    out, status = E.capture2e("sh", "-c", "printf before_timeout; sleep 30", timeout: 0.1)
+
+    assert_includes out, "before_timeout"
+    refute status.success?
+  end
+
+  def test_timeout_exception_preserves_captured_output
+    error = assert_raises(E::TimeoutError) do
+      E.capture3(
+        "sh", "-c", "printf before; printf warning 1>&2; sleep 30",
+        timeout: 0.1, raise_on_timeout: true
+      )
+    end
+
+    stdout, stderr, status = error.result
+    assert_includes stdout, "before"
+    assert_includes stderr, "warning"
+    refute status.success?
+  end
+
+  def test_timeout_returns_fast_non_success_and_reaps_tree
+    marker = "master_exec_timeout_probe_#{Process.pid}"
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    _out, status = E.capture2e("sh", "-c", "sleep 30 # #{marker}", timeout: 1)
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+    assert_operator elapsed, :<, 5, "timeout did not fire promptly"
+    refute status.success?, "timed-out command should report non-success"
+
+    sleep 0.4
+    leftover = `pgrep -f #{marker} 2>/dev/null`.split.size
+    assert_equal 0, leftover, "process group not reaped on timeout"
+  end
+
+  # A cancelled turn's thread inherits the turn's Children and so does every
+  # child it spawns; kill_all has to end the wait, not just the thread.
+  def test_kill_all_ends_a_turns_child_without_waiting_for_it
+    children = E::Children.new
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    turn = Thread.new do
+      Fiber[:master_children] = children
+      Thread.new { E.capture2e("sh", "-c", "sleep 30") }.value
+    end
+    sleep 0.3 until children.kill_all.positive?
+    _out, status = turn.value
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+    assert_operator elapsed, :<, 5, "the child outlived the cancel"
+    refute status.success?
+  end
+
+  def test_a_child_outside_any_turn_is_not_tracked
+    children = E::Children.new
+    out, = E.capture2e("sh", "-c", "printf ok")
+
+    assert_equal "ok", out
+    assert_equal 0, children.kill_all
+  end
+  def test_which_finds_an_executable_file_in_the_given_path_and_skips_directories
+    Dir.mktmpdir do |dir|
+      tool = File.join(dir, "tool")
+      File.write(tool, "#!/bin/sh\n")
+      File.chmod(0o755, tool)
+      Dir.mkdir(File.join(dir, "folder"))
+      File.write(File.join(dir, "plain"), "x")
+
+      assert_equal tool, E.which("tool", path: dir)
+      assert E.on_path?("tool", path: dir)
+      assert_nil E.which("folder", path: dir)
+      assert_nil E.which("plain", path: dir)
+      assert_nil E.which("tool", path: "/nonexistent")
+      assert_nil E.which("", path: dir)
+      assert_nil E.which(nil, path: dir)
+    end
+  end
+
+  def test_which_accepts_an_explicit_executable_path
+    Dir.mktmpdir do |tmp|
+      # macOS's tmpdir is a symlink to /private/var, and the cwd "./tool" resolves against is the real path.
+      dir = File.realpath(tmp)
+      tool = File.join(dir, "tool")
+      File.write(tool, "#!/bin/sh\n")
+      File.chmod(0o755, tool)
+
+      assert_equal tool, E.which(tool, path: "/nonexistent")
+      refute E.on_path?(tool, path: "/nonexistent")
+
+      Dir.chdir(dir) do
+        assert_nil E.which("tool", path: "/nonexistent")
+        refute E.on_path?("tool", path: "/nonexistent")
+        assert_equal tool, E.which("./tool", path: "/nonexistent")
+      end
+    end
+  end
+
+  def test_which_honors_pathext_for_command_names_and_explicit_paths
+    Dir.mktmpdir do |dir|
+      tool = File.join(dir, "whisper-cli.EXE")
+      File.write(tool, "#!/bin/sh\\n")
+      File.chmod(0o755, tool)
+
+      assert_equal tool, E.which("whisper-cli", path: dir, extensions: ".EXE;.CMD")
+      assert_equal tool, E.which(File.join(dir, "whisper-cli"), extensions: ".EXE;.CMD")
+      assert E.on_path?("whisper-cli", path: dir, extensions: ".EXE")
+    end
+  end
+
+  def test_which_tries_the_preferred_directories_before_the_path
+    Dir.mktmpdir do |first|
+      Dir.mktmpdir do |second|
+        [first, second].each do |dir|
+          File.write(File.join(dir, "tool"), "x")
+          File.chmod(0o755, File.join(dir, "tool"))
+        end
+
+        assert_equal File.join(second, "tool"), E.which("tool", path: first, prefer: [second])
+      end
+    end
+  end
+  # A deadline outside the call (Timeout.timeout around a model call) interrupts the wait; the child
+  # must die with it, or popen joins it unbounded and the caller waits out the whole child.
+  def test_an_outer_deadline_kills_the_child_instead_of_waiting_for_it
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    assert_raises(Timeout::Error) { Timeout.timeout(0.5) { E.capture3("sleep", "8", timeout: 30) } }
+
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 4
+  end
+end

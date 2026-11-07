@@ -1,0 +1,25 @@
+<% content_for :title, t("staff.title") %>
+
+<%# Staff::BoardController#show provides @orders_by_state (grouped hash).
+    Columns per state (staff/board/_grid); each card's button advances the
+    order one step.
+    Cards carry order_card_<id> DOM ids (staff/board/_order_card) so the
+    advance turbo-stream can replace or remove them. %>
+<% orders_by_state = @orders_by_state.presence || {} %>
+
+<header class="board-head">
+  <%= tag.h1 t("staff.title") %>
+</header>
+
+<% if orders_by_state.values.all?(&:empty?) %>
+  <%= tag.p t("staff.empty"), class: "board-empty" %>
+<% end %>
+
+<%= render "staff/board/refunds", refunds: @refunds_due %>
+
+<%# Live: Order broadcasts replace #board_grid on staff_board; the board
+    controller chimes for a newly placed order and ticks each card's age. %>
+<%= turbo_stream_from "staff_board" %>
+<%= tag.div data: { controller: "board", board_age_template_value: t("staff.age", minutes: "%{minutes}") } do %>
+  <%= render "staff/board/grid", orders_by_state: %>
+<% end %>

@@ -1,0 +1,27 @@
+<% content_for :title, t("activity.title") %>
+
+<div class="page-header">
+  <hgroup>
+    <p><%= t("activity.local_graph") %></p>
+    <%= tag.h1 t("activity.title") %>
+  </hgroup>
+</div>
+
+<nav class="activity-filters" aria-label="<%= t("activity.filters_aria") %>">
+  <%= render partial: "activity_events/filter", collection: ActivityEvent::FILTER_VERTICALS, as: :vertical %>
+</nav>
+
+<%= turbo_frame_tag "activity-events" do %>
+<% if @events.any? %>
+  <ul class="activity-event-list">
+    <% @events.each do |event| %>
+      <%= tag.li render("activity_events/event", event: event) %>
+    <% end %>
+  </ul>
+<% else %>
+  <%= render "shared/empty_state",
+        title: t("empty.no_activity"),
+        body: t("empty.no_activity_body"),
+        action: { label: t("empty.city_feed"), path: root_path } %>
+<% end %>
+<% end %>

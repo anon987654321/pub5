@@ -1,0 +1,94 @@
+/* 1. Monochromatic CRT Scanline & Phosphor Decay Overlay */
+.ghostty-viewport {
+  position: relative;
+}
+
+.ghostty-viewport::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Subtle CRT Edge Glow */
+.ghostty-viewport::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  box-shadow: inset 0 0 80px rgba(255, 255, 255, 0.03);
+  z-index: 11;
+  pointer-events: none;
+}
+
+/* 2. Kinetic Block Cursor with Hardware Pulse */
+.ghostty-input-row {
+  position: relative;
+}
+
+.ghostty-input {
+  caret-color: #ffffff;
+}
+
+@keyframes cursor-pulse {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; }
+}
+
+.ghostty-input:focus {
+  animation: cursor-pulse 1.1s infinite step-start;
+}
+
+/* 3. Pixel Face Micro-Idle Pulse & Blink Effects */
+.pixel {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pixel.lit {
+  background-color: #ffffff;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Breathing illumination state during background activity */
+@keyframes face-breathe {
+  0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 0px #fff); }
+  50% { opacity: 1.0; filter: drop-shadow(0 0 1px #fff); }
+}
+
+.master-pixel-face.active {
+  animation: face-breathe 3s ease-in-out infinite;
+}
+
+/* 4. Command Submission Flash & Keystroke Tactile Bounce */
+@keyframes command-flash {
+  0% { background-color: rgba(255, 255, 255, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.terminal-line-flash {
+  animation: command-flash 0.25s cubic-bezier(0.1, 0.9, 0.2, 1.0);
+}
+
+/* Subtle prompt character shift on keydown */
+.ghostty-input:active + .prompt-token,
+.prompt-token.key-active {
+  transform: translateX(1px);
+  color: #ffffff;
+  transition: transform 0.05s ease, color 0.05s ease;
+}
+
+/* 5. Terminal Output Text Arrival Fade-In */
+@keyframes line-appear {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.terminal-output .new-line {
+  animation: line-appear 0.08s ease-out forwards;
+}

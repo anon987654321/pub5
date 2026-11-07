@@ -1,0 +1,28 @@
+<div class="auth-form">
+  <%= tag.h1 t("pages.two_factor") %>
+  <%# Login challenge and first-time setup share this page: a member arriving
+      through Shared::TwoFactorGate has a working secret on their device and
+      needs the code form, not the QR to scan again. %>
+  <% if @two_factor_pending %>
+    <p class="auth-form-lead"><%= t("auth.two_factor_challenge_lead") %></p>
+  <% else %>
+    <p class="auth-form-lead"><%= t("auth.two_factor_lead") %></p>
+  <% end %>
+  <%# scan: intentional — @qr is SVG this app generated with RQRCode from the
+      provisioning URI, so there is no untrusted markup in it, and sanitize
+      (which ERB_HTML_SAFE names as the fix) strips svg and path by default and
+      would render an empty box where the QR code goes. %>
+  <% if @qr.present? %>
+    <div class="auth-form-qr"><%= @qr.html_safe %></div>
+  <% end %>
+
+  <%= form_with url: two_factor_setup_path, method: :post do |f| %>
+    <div class="field">
+      <%= f.label :code, t("auth.verification_code") %>
+      <%= f.text_field :code, autocomplete: "one-time-code", required: true %>
+    </div>
+    <div class="actions">
+      <%= f.submit t(@two_factor_pending ? "auth.verify_2fa" : "auth.enable_2fa"), class: "button button-primary" %>
+    </div>
+  <% end %>
+</div>

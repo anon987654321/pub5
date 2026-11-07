@@ -1,0 +1,328 @@
+---
+schema: 1
+name: pub5_convergence
+purpose: Non-authoritative implementation map for the assistant wishlist. Laws remain in soul.yml and laws.yml.
+states: [landed, partial, evidence, operator, missing, rejected]
+principles:
+  - preserve_then_improve
+  - one_source
+  - evidence_over_narrative
+  - no_false_green
+workstreams:
+  - id: kernel_receipts
+    state: landed
+    title: One durable receipt for every meaningful convergence run
+    implementation: MASTER/lib/convergence/receipt.rb
+    proof: MASTER/test/test_convergence_receipt.rb
+  - id: tri_state_evidence
+    state: landed
+    title: PASS / FAIL / INCONCLUSIVE as the evidence vocabulary
+    implementation: MASTER/lib/result.rb
+    proof: MASTER/test/test_result.rb
+  - id: physical_mass
+    state: landed
+    title: Repository byte/file inventory with largest-artifact evidence
+    implementation: MASTER/lib/convergence/measure.rb
+    proof: MASTER/test/test_convergence_measure.rb
+  - id: architecture_explain
+    state: landed
+    title: Living architecture explanation from the real four-tree topology
+    implementation: MASTER/lib/convergence/architecture.rb
+    proof: MASTER/test/test_convergence_architecture.rb
+  - id: wishlist_registry
+    state: landed
+    title: One non-authoritative wishlist registry with honest states and proof owners
+    implementation: MASTER/lib/convergence/workstreams.rb
+    proof: MASTER/test/test_convergence_workstreams.rb
+  - id: command_discovery
+    state: landed
+    title: Discoverable /wishlist, /size, /explain and /prove surfaces
+    implementation: MASTER/lib/cli/command_registry/convergence.rb
+    proof: MASTER/test/test_convergence_commands.rb
+  - id: beautiful_day
+    state: landed
+    title: Deterministic local proof bundle spanning constitution, commands, topology and snapshots
+    implementation: MASTER/lib/convergence/proof.rb
+    proof: MASTER/test/test_convergence_proof.rb
+  - id: longitudinal
+    state: landed
+    title: Append-only convergence receipts suitable for longitudinal comparison
+    implementation: MASTER/lib/convergence/receipt.rb
+    proof: MASTER/test/test_convergence_receipt.rb
+  - id: voice_local_first
+    state: evidence
+    title: Local-first speech ladder and real microphone proof
+    implementation: MASTER/lib/device/audio.rb
+    proof: Operator hardware evidence
+  - id: face_semantic_motion
+    state: evidence
+    title: Large 3D face semantic motion and real-browser/device proof
+    implementation: MASTER/web/public
+    proof: Rendered browser and real-device evidence
+  - id: rails_product_completion
+    state: evidence
+    title: Production marketplace/auth/media flows
+    implementation: RAILS
+    proof: Staging credentials and watched application evidence
+  - id: openbsd_appliance
+    state: evidence
+    title: vm23 deploy, restore, DNS, TLS and resource proof
+    implementation: OPENBSD
+    proof: Watched vm23 session
+  - id: dilla_music
+    state: evidence
+    title: Musical quality, authenticity and listening decisions
+    implementation: STUDIO/dilla
+    proof: Operator listening evidence
+  - id: studio_provenance
+    state: partial
+    title: Media provenance through every generation stage
+    implementation: STUDIO
+    proof: Round-trip artifact inspection
+  - id: security_capability_graph
+    state: partial
+    title: Capability ownership and least-privilege graph
+    implementation: MASTER/lib/core.rb
+    proof: MASTER/tools/audit/capability_inventory.rb
+  - id: event_replay
+    state: partial
+    title: Canonical event vocabulary, provenance and replay
+    implementation: MASTER/lib/trace
+    proof: MASTER/tools/event_bus_reach.rb
+  - id: memory_governance
+    state: partial
+    title: Durable memory provenance, review history, contradiction and forgetting
+    implementation: MASTER/lib/ground/memory
+    proof: MASTER/test/test_memory_review.rb
+  - id: task_scoped_prediction
+    state: partial
+    title: Keep event prediction streams separate across correlated tasks
+    implementation: MASTER/lib/cognition/prediction.rb
+    proof: MASTER/test/test_cognition.rb
+  - id: prediction_evaluation
+    state: partial
+    title: Compare contextual event prediction with a shared-stream baseline using walk-forward scoring
+    implementation: MASTER/lib/cognition/prediction.rb
+    proof: MASTER/test/test_cognition.rb
+  - id: measured_repair_outcomes
+    state: partial
+    title: Feed terminal /fix outcomes into the evidence-based self-model
+    implementation: MASTER/lib/fix/kernel/convergence_adapter.rb
+    proof: MASTER/test/test_fix_convergence.rb
+  - id: self_model_calibration
+    state: partial
+    title: Measure capability outcomes and confidence calibration from explicit evidence
+    implementation: MASTER/lib/cognition/self_model.rb
+    proof: MASTER/test/test_cognition_affect.rb
+  - id: cognition_measurement
+    state: partial
+    title: Report workspace activity and saved-state restoration completeness without consciousness claims
+    implementation: MASTER/lib/cognition/mind.rb
+    proof: MASTER/test/test_cognition.rb
+  - id: task_outcome_learning
+    state: partial
+    title: Per-target /fix outcome prediction from hashed terminal receipts, scored before learning
+    implementation: MASTER/lib/cognition/outcome_model.rb
+    proof: MASTER/test/test_cognition_feedback.rb
+  - id: cognition_learning_benchmark
+    state: partial
+    title: Prequential outcome benchmark with a no-learning ablation and a constant baseline
+    implementation: MASTER/lib/cognition/benchmark.rb
+    proof: MASTER/test/test_cognition_outcome_model.rb
+  - id: model_laboratory
+    state: landed
+    title: Provider/model outcome history and routing evidence
+    implementation: MASTER/lib/ai/trajectory/laboratory.rb
+    proof: MASTER/test/test_ai_trajectory_laboratory.rb
+  - id: browser_proof
+    state: partial
+    title: Rendered geometry, accessibility and performance evidence
+    implementation: RAILS/checks
+    proof: RAILS/checks
+  - id: search_quality
+    state: partial
+    title: Search relevance, explanations and quality corpus
+    implementation: RAILS/brgen
+    proof: Application benchmark
+  - id: moderation_governance
+    state: partial
+    title: Moderation evidence, appeals and audit
+    implementation: RAILS/__shared
+    proof: Application workflow proof
+  - id: recovery
+    state: evidence
+    title: Off-host backup and clean-host restore
+    implementation: OPENBSD
+    proof: Restore drill
+  - id: installation
+    state: partial
+    title: One-command host-aware installation and truthful doctor output
+    implementation: MASTER/bin
+    proof: MASTER/bin/doctor
+  - id: snapshot_exchange
+    state: landed
+    title: Bounded share-safe provenance-carrying snapshots
+    implementation: MASTER/tools/snapshot.rb
+    proof: MASTER/test
+  - id: why_provenance
+    state: landed
+    title: Explain the source rule and reason behind a system decision
+    implementation: MASTER/lib/cli/command_registry/laws.rb
+    proof: MASTER/test
+  - id: structural_craft
+    state: partial
+    title: Architecture improves through measured collapse relocation and proof
+    implementation: MASTER/lib/fix
+    proof: MASTER/test
+  - id: personal_companion
+    state: evidence
+    title: Resident voice-first phone companion
+    implementation: MASTER/lib/device
+    proof: Termux hardware evidence
+  - id: unified_command_language
+    state: partial
+    title: One semantic command surface across CLI web voice and device
+    implementation: MASTER/lib/cli
+    proof: MASTER/test
+  - id: media_effects
+    state: partial
+    title: Ruby-native analog audio and image processing
+    implementation: STUDIO
+    proof: STUDIO/test
+  - id: data_minimization
+    state: landed
+    title: Heavy artifacts and source ownership remain measurable rather than invisible
+    implementation: MASTER/lib/convergence/measure.rb
+    proof: MASTER/test/test_convergence_measure.rb
+  - id: no_false_green
+    state: landed
+    title: Claims distinguish source proof from external evidence
+    implementation: MASTER/lib/convergence/proof.rb
+    proof: MASTER/test/test_convergence_proof.rb
+  # --- ideation pass 1 (2026-10-27, operator chat e2c7ceca) ---
+  # Every row below came out of data/ideations/*.yml via data/gaps.yml; the
+  # picks and the losers' reasons live there, not here. This file records the
+  # shape of the winner and where its proof will live.
+  - id: gap_ledger_ideation
+    state: landed
+    title: Gap ledger, adversarial ideation records and the discipline that keeps them honest
+    implementation: MASTER/data/gaps.yml
+    proof: MASTER/test/test_gap_discipline.rb
+  - id: brgen_recent_searches
+    state: partial
+    title: Recent committed searches in the palette blank state (server-side, cross-device)
+    implementation: RAILS/brgen/app/models/search_recent.rb
+    proof: RAILS/brgen/test/models/search_recent_test.rb
+  - id: marketplace_duplicate_detection
+    state: partial
+    title: Duplicate-listing detection files a moderation report; a human decides
+    implementation: RAILS/brgen_marketplace/app/models/marketplace/listing.rb
+    proof: RAILS/brgen/test/models/marketplace_duplicate_detection_test.rb
+  - id: takeaway_delivery_area
+    state: partial
+    title: Stated delivery radius validated nil-safely against the reader's stored position
+    implementation: RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/order.rb
+    proof: RAILS/brgen_marketplace/engines/takeaway/test/models/takeaway/delivery_area_test.rb
+  - id: takeaway_cart_expiry
+    state: partial
+    title: Pending carts expire on a clock through the same transition as a manual cancel
+    implementation: RAILS/brgen/app/jobs/takeaway_cart_expiry_sweep_job.rb
+    proof: RAILS/brgen_marketplace/engines/takeaway/test/models/takeaway/cart_expiry_test.rb
+  - id: brgen_feed_ranking_deterministic
+    state: missing
+    title: Deterministic recency-plus-engagement feed ranking in the dating ranked_for shape
+    implementation: RAILS/brgen
+    proof: Feed surface test on a Ruby host
+  - id: amber_similarity_right_sized
+    state: missing
+    title: Wears-well-with from typed attribute vectors by brute-force cosine at wardrobe scale
+    implementation: RAILS/amber
+    proof: RAILS/amber/test
+  - id: master_face_breath
+    state: partial
+    title: The stipple field breathes in brightness only, frozen by reduced motion twice over
+    implementation: MASTER/web/public/face_stipple_system.js
+    proof: >-
+      shaders static-checked; breath rides vAlpha with uMotionScale and uTime both zeroed by the
+      reduced-motion path
+  - id: master_voice_browser_dsp
+    state: partial
+    title: >-
+      The browser builds the declared character presets - ring-mod aeval shapes, WaveShaper acrusher bits,
+      the asetrate idiom as one modulated-delay shifter
+    implementation: MASTER/web/public/face_speech_runtime.js
+    proof: >-
+      both-lane buildability proven per preset by scripts/verify_face_voice_batch.py against the ported
+      builder grammar
+  - id: master_voice_cooler_default
+    state: partial
+    title: Doubler and the room ship on as the default voice; ionosphere, midnight and shortwave are one env var away
+    implementation: MASTER/data/voice.yml
+    proof: preset filter strings parse in both lanes; values marked author's judgement per file convention
+  - id: master_fleet_panel
+    state: missing
+    title: The dashboard renders the fleet - sibling health, load and the resource_guard order
+    implementation: MASTER/web/app/views/dashboard
+    proof: dashboard fleet panel on a Ruby host
+  - id: master_quota_facts
+    state: missing
+    title: model_quota and cache_efficiency stop being computed and dropped - the status strip renders them
+    implementation: MASTER/web/app/views/dashboard
+    proof: dashboard status strip on a Ruby host
+  - id: dilla_grammar_voicings
+    state: landed
+    title: >-
+      The shared harmonic vocabulary gains researched Dilla movement grammars (relative-minor answers, the
+      J5 IV-iii-vi-ii loop), additive only, every row sourced
+    implementation: MASTER/data/music_theory_chords.yml
+    proof: STUDIO/test/test_music_theory_catalog.rb (every row uses the file's roman vocabulary)
+  - id: dilla_corpus_measures
+    state: partial
+    title: >-
+      Producer timing carries measured J Dilla microtiming as sourced observations; nothing reads them
+      yet, so they inform without tuning
+    implementation: MASTER/lib/voice/production_dna.rb
+    proof: ruby -c and boot smoke; brief() reads only the configured keys
+  - id: free_compute_design_of_record
+    state: partial
+    title: >-
+      The free-compute landscape is on record with dated numbers and named gates, and the router's
+      free-model quota matches OpenRouter's 50/day per model
+    implementation: MASTER/docs/free_compute.md + MASTER/data/models.yml
+    proof: MASTER/test/test_model_quota_forecast.rb; no lane in the doc is wired until its gate is met
+
+  # --- architecture review of MASTER (2026-11-03, operator chat) ---
+  # Design of record only: nothing below is wired, each row names where its
+  # proof will live, per the free_compute_design_of_record convention. The
+  # review that surfaced them read the tree statically; the numbers each proof
+  # needs come from the first measured run, not from the review.
+  - id: inconclusive_aging
+    state: missing
+    title: >-
+      An INCONCLUSIVE that outlives its operation's review window reopens as
+      FAIL carrying the receipt that first dated it, so tri-state evidence
+      cannot settle into permanent amber
+    implementation: MASTER/lib/convergence/proof.rb
+    proof: escalation rows in the convergence receipt; test_convergence_proof fails on a dated INCONCLUSIVE whose window closed without a verdict
+  - id: constitution_self_budget
+    state: missing
+    title: >-
+      The constitution measures itself: laws.yml carries a line ceiling under
+      the same only-ratchets-down contract the scan budgets charge the code
+    implementation: MASTER/data/laws.yml
+    proof: a ceiling row beside checks/data/constitutional_budget.yml and a test that fails when the constitution grows without an equal removal
+  - id: documentation_completeness
+    state: missing
+    title: >-
+      A change that moves a public contract moves its document in the same
+      commit, declared on the task contract as documentation_review proof
+    implementation: MASTER/data/task_contract.yml
+    proof: test_task_contract builds a contract carrying documentation_review; contract-touching intents without it fail the fix review
+  - id: ops_alert_channel
+    state: missing
+    title: >-
+      Heartbeat FAILs leave the box through one operator-owned relay with an
+      allowlisted endpoint and a secret held outside the tree, instead of
+      relying on the operator looking
+    implementation: OPENBSD relayd + MASTER/data/state.yml availability_posture
+    proof: watched delivery drill on vm23, recorded like the restore drill

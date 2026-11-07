@@ -1,0 +1,300 @@
+# frozen_string_literal: true
+
+require_relative "test_helper"
+require "fileutils"
+
+class TestMasterLoop < Minitest::Test
+  def test_law_reader_keeps_roots_isolated_when_loads_overlap
+    Dir.mktmpdir do |workspace|
+      one = File.join(workspace, "one")
+      two = File.join(workspace, "two")
+      FileUtils.mkdir_p(File.join(one, "data"))
+      FileUtils.mkdir_p(File.join(two, "data"))
+      File.write(File.join(one, "data", "laws.yml"), "one: true\n")
+      File.write(File.join(two, "data", "laws.yml"), "two: true\n")
+
+      original = Master.method(:load_laws)
+      first_call = Queue.new
+      release_first = Queue.new
+      state_lock = Mutex.new
+      blocked = false
+
+      Master.define_singleton_method(:load_laws) do |root:|
+        should_block = state_lock.synchronize do
+          next false if blocked
+
+          blocked = true
+          true
+        end
+        first_call << root
+        release_first.pop if should_block
+        { File.basename(root) => true }
+      end
+
+      first = Thread.new { Master.law("one", root: one) }
+      assert_equal one, first_call.pop
+
+      second = Thread.new { Master.law("two", root: two) }
+      release_first << true
+
+      assert_equal true, first.value
+      assert_equal true, second.value
+    ensure
+      Master.define_singleton_method(:load_laws, original) if original
+    end
+  end
+
+  LOOP_ENVS = %w[MASTER_AUTOFIX MASTER_WATCH MASTER_WATCHER MASTER_HEARTBEAT MASTER_BACKGROUND MASTER_LOOP].freeze
+
+  def with_clean_env
+    saved = LOOP_ENVS.to_h { |key| [key, ENV[key]] }
+    LOOP_ENVS.each { |key| ENV.delete(key) }
+    yield
+  ensure
+    LOOP_ENVS.each { |key| saved[key].nil? ? ENV.delete(key) : ENV[key] = saved[key] }
+  end
+
+  def test_master_loop_fix_enables_autofix_only
+    with_clean_env do
+      ENV["MASTER_LOOP"] = "fix"
+      Master.apply_master_loop!
+      assert_equal "1", ENV["MASTER_AUTOFIX"]
+      assert_equal "0", ENV["MASTER_WATCH"]
+      assert_equal "0", ENV["MASTER_WATCHER"]
+    end
+  end
+
+  # Building the runtime must not start the fix loop, which sleeps STARTUP_DELAY
+  # and then rewrites lib/ in the background. MASTER_AUTOFIX=1 is the only key;
+  # process defaults set it to 0 and MASTER_LOOP=fix is how a person asks.
+  def test_build_starts_the_fix_loop_only_when_autofix_is_asked_for
+    started = []
+    fake_loop = Object.new
+    build = lambda do
+      Master::Fix::FixLoop.stub(:new, fake_loop) do
+        Master::Builder.stub(:start_fix_loop_background, ->(loop, **) { started << loop }) do
+          Master::Builder.build_fix_loop(root: Master::ROOT, infra: {}, agent: nil, scanner: nil, axioms: nil,
+                                         laws: nil, learnings: nil, bus: nil, git: nil)
+        end
+      end
+    end
+
+    with_clean_env do
+      assert_equal "0", Master::MasterRuntime::PROCESS_DEFAULTS["MASTER_AUTOFIX"]
+      build.call
+      assert_empty started, "an unset MASTER_AUTOFIX starts nothing"
+      ENV["MASTER_AUTOFIX"] = "0"
+      build.call
+      assert_empty started
+
+      ENV["MASTER_AUTOFIX"] = "1"
+      build.call
+      assert_equal [fake_loop], started
+    end
+  end
+
+  # MASTER_INCREMENTAL=1 is the only way the boot builds an incremental fix loop.
+  def test_incremental_reaches_the_fix_loop_only_when_set
+    seen = []
+    build = lambda do
+      Master::Fix::FixLoop.stub(:new, ->(**kwargs) { seen << kwargs[:incremental] }) do
+        Master::Builder.build_fix_loop(root: Master::ROOT, infra: {}, agent: nil, scanner: nil, axioms: nil,
+                                       laws: nil, learnings: nil, bus: nil, git: nil)
+      end
+    end
+
+    with_env("MASTER_INCREMENTAL" => nil, "MASTER_AUTOFIX" => nil) { build.call }
+    with_env("MASTER_INCREMENTAL" => "1", "MASTER_AUTOFIX" => nil) { build.call }
+
+    assert_equal [false, true], seen
+  end
+
+  # MASTER_WATCH=1 builds the watch loop and runs it on a watched thread.
+  def test_watch_starts_the_watch_loop_only_when_set
+    started = []
+    watch_loop = Object.new
+    build = lambda do
+      Master::Fix::WatchLoop.stub(:new, watch_loop) do
+        Master::Builder.stub(:watched_thread, ->(_bus, where) { started << where }) do
+          Master::Builder.build_watch_loop(root: Master::ROOT, bus: nil, fix_loop: nil)
+        end
+      end
+    end
+
+    assert_nil with_env("MASTER_WATCH" => nil) { build.call }
+    assert_same watch_loop, with_env("MASTER_WATCH" => "1") { build.call }
+    assert_equal ["watch_loop"], started
+  end
+
+  # Full constitutional self-test is an explicit boot diagnostic. The same test remains
+  # available through `rake selftest` and the heartbeat job without making the critical
+  # application startup path scan every repository law on every launch.
+  def test_strict_boot_is_explicitly_opt_in
+    with_env("MASTER_STRICT_BOOT" => nil) do
+      refute Master::Builder.strict_boot_requested?
+    end
+    with_env("MASTER_STRICT_BOOT" => "0") do
+      refute Master::Builder.strict_boot_requested?
+    end
+    with_env("MASTER_STRICT_BOOT" => "1") do
+      assert Master::Builder.strict_boot_requested?
+    end
+  end
+
+  def test_fix_loop_builder_contract_has_no_retired_rollback_dependency
+    parameters = Master::Fix::FixLoop.instance_method(:build_pass_runner).parameters
+    assert_empty parameters.select { |kind, name| kind == :keyreq && name == :rollback }
+  end
+
+  # On by default and beside the prompt; MASTER_BOOT_SELF_TEST=0 is the opt-out.
+  def test_boot_self_test_runs_unless_opted_out
+    ran = []
+    self_test = Object.new
+    self_test.define_singleton_method(:call) { ran << :self_test }
+    ledger = Object.new
+    ledger.define_singleton_method(:attach) { nil }
+    standing = Object.new
+    standing.define_singleton_method(:wire_container) { |**| nil }
+    finalize = lambda do
+      Master::Trace::Ledger::Feedback.stub(:new, ledger) do
+        Master::Trace::Ledger::Reflexion.stub(:new, ledger) do
+          Master::Review::Scan::SelfTest.stub(:new, ->(**) { self_test }) do
+            Master::Builder.stub(:publish_self_test, nil) do
+              Master::Builder.stub(:watched_thread, ->(_bus, _where, &block) { block.call }) do
+                Master::Builder.finalize_ai_boot(bus: nil, root: Master::ROOT, infra: {}, agent: nil,
+                                                 autonomous: { standing:, learnings: nil }, scanner: nil, lean_boot: true)
+              end
+            end
+          end
+        end
+      end
+    end
+
+    with_env("MASTER_BOOT_SELF_TEST" => "0") { finalize.call }
+    assert_empty ran
+    with_env("MASTER_BOOT_SELF_TEST" => nil) { finalize.call }
+    assert_equal [:self_test], ran
+  end
+
+  def with_env(pairs)
+    saved = pairs.keys.to_h { |key| [key, ENV[key]] }
+    pairs.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    yield
+  ensure
+    saved.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+  # The early-boot mode map and data/budgets.yml#process are the same fact in two
+  # places; this pins them so heartbeat->env and the "fix"/"autofix" alias cannot
+  # drift apart.
+  def test_loop_flags_agree_with_process_yaml
+    from_yaml = Master::Ops::ProcessBudget.env_by_loop
+                     .transform_keys { |name| name == "autofix" ? "fix" : name }
+    assert_equal from_yaml, Master::MasterRuntime::LOOP_FLAGS
+  end
+
+  def test_master_root_maps_repository_root_to_master_and_keeps_foreign_master_root
+    Dir.mktmpdir do |repo|
+      master = File.join(repo, "MASTER")
+      FileUtils.mkdir_p(File.join(master, "law"))
+      FileUtils.mkdir_p(File.join(master, "data"))
+      File.write(File.join(master, "data", "laws.yml"), "{}\n")
+
+      assert_equal master, Master.master_root(root: repo)
+      assert_equal master, Master.master_root(root: master)
+
+      standalone = File.join(repo, "standalone")
+      FileUtils.mkdir_p(File.join(standalone, "law"))
+      FileUtils.mkdir_p(File.join(standalone, "data"))
+      File.write(File.join(standalone, "data", "laws.yml"), "{}\n")
+
+      assert_equal standalone, Master.master_root(root: standalone)
+    end
+  end
+
+  def test_model_accessors_do_not_cache_across_roots
+    Dir.mktmpdir do |workspace|
+      one = File.join(workspace, "one", "data")
+      two = File.join(workspace, "two", "data")
+      FileUtils.mkdir_p(one)
+      FileUtils.mkdir_p(two)
+      File.write(File.join(one, "providers.yml"), "openrouter:\n  default_model: one-default\n")
+      File.write(File.join(one, "models.yml"), "models:\n  grok_primary:\n    - id: one-model\n")
+      File.write(File.join(two, "providers.yml"), "openrouter:\n  default_model: two-default\n")
+      File.write(File.join(two, "models.yml"), "models:\n  grok_primary:\n    - id: two-model\n")
+
+      assert_equal "one-default", Master.openrouter_default(root: workspace + "/one")
+      assert_equal "two-default", Master.openrouter_default(root: workspace + "/two")
+      assert_equal "one-model", Master.free_primary_model(root: workspace + "/one")
+      assert_equal "two-model", Master.free_primary_model(root: workspace + "/two")
+    end
+  end
+
+  def test_language_for_rechecks_an_extensionless_script_after_shebang_changes
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "run")
+      File.write(path, "#!/usr/bin/env ruby\nputs 1\n")
+
+      assert_equal "ruby", Master.language_for(path)
+
+      stat = File.stat(path)
+      File.write(path, "#!/bin/zsh\necho 1\n")
+      File.utime(stat.atime, stat.mtime, path)
+
+      assert_equal "zsh", Master.language_for(path)
+    end
+  end
+
+  def test_common_data_readers_resolve_the_declared_registries
+    assert_kind_of Hash, Master.models_config
+    assert_kind_of Hash, Master.patterns_config
+    assert_kind_of Hash, Master.soul_config
+    assert_kind_of Array, Master.soul_config.dig("absolute", "sacred_paths")
+  end
+
+  def test_models_config_is_the_single_models_registry_reader
+    config = Master.models_config(root: Master::ROOT)
+    assert config.key?("models")
+    assert_equal config, Master.models_config(root: Master::ROOT)
+  end
+
+  def test_config_sections_resolve_to_their_files
+    assert Master.config_path("dmesg").end_with?("console.yml")
+    assert Master.config_path("fix_time").end_with?("budgets.yml")
+    Master::CONFIG_FILES.each_key { |section| assert File.exist?(Master.config_path(section)), section }
+  end
+
+  def test_state_resolves_and_retired_files_stay_gone
+    assert File.exist?(Master.state_path)
+    refute File.exist?(Master.data_path("style.yml"))
+    refute File.exist?(Master.data_path("operator_principles.yml"))
+    assert File.exist?(Master.data_path("laws.yml"))
+    rendered = Master.law_catalogue.fetch("entries").fetch("RENDERED_VALUES")
+    assert rendered.fetch("definition_sources"), "retired style data stays owned by the RENDERED_VALUES law"
+    assert Master.tokens.key?("scale")
+  end
+
+  # The operator's conduct laws govern how to work rather than what source text
+  # may look like, so no detector can match one: they are not an
+  # operator_principles block in laws.yml, and soul.yml holds no second rules
+  # registry beside law/.
+  def test_operator_conduct_is_a_rule_like_any_other
+    rules = Master::Ground::Laws.new.laws
+
+    %w[OPERATOR_AUTONOMY EXECUTE_NOT_INSTRUCT DO_THE_WORK_NOW SHELL_DISCIPLINE VPS_SERIAL_TRUTH NO_NEW_FILES
+       STRUNK_WHITE FLAT_PIXELS VOICE_TERSE_UNIX MICRO_REFINEMENTS].each do |id|
+      assert rules.key?(id), "#{id} binds conduct and must still be a rule"
+    end
+
+    refute Master.load_laws.key?("operator_principles"),
+           "conduct in laws.yml is a rule no detector can ever match"
+    refute Master.load_yaml(Master.data_path("soul.yml")).fetch("absolute").key?("rules"),
+           "one registry: law/, not soul"
+  end
+
+  def test_council_prompts_load_from_council_yml
+    prompts = Master::Review::Council::Deliberation.prompts
+    assert prompts["judge"].to_s.include?("Council judge")
+    assert prompts["juror"].to_s.include?("persona_name")
+  end
+end

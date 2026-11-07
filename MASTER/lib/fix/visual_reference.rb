@@ -1,0 +1,134 @@
+# frozen_string_literal: true
+
+module Master
+  module Fix
+    module VisualReference
+      # Reference profiles are descriptive lenses, not scores, targets, or
+      # imitation instructions. MASTER laws remain authoritative.
+      PROFILES = {
+        "x" => {
+          name: "X-style product surface",
+          signals: %w[
+            strong_typographic_hierarchy
+            persistent_navigation
+            dense_content_stream
+            clear_interaction_states
+            responsive_reflow
+            high_information_continuity
+          ],
+        },
+        "joi" => {
+          name: "Joi-style conversational surface",
+          signals: %w[
+            focused_primary_action
+            low_navigation_friction
+            conversational_hierarchy
+            restrained_chrome
+            clear_input_feedback
+            responsive_composition
+          ],
+        },
+        "kaufland" => {
+          name: "Kaufland-style marketplace surface",
+          signals: %w[
+            strong_search_discovery
+            explicit_category_hierarchy
+            broad_catalogue_navigation
+            campaign_tiles
+            themed_category_entry_points
+            dense_product_information
+            persistent_purchase_context
+            clear_price_quantity_relationships
+            responsive_listing_reflow
+          ],
+        },
+        "bol" => {
+          name: "bol-style marketplace surface",
+          signals: %w[
+            clean_white_catalogue
+            prominent_search
+            clear_service_promises
+            restrained_product_card_chrome
+            recommendation_rails
+            product_first_imagery
+            consistent_filtering
+            clean_information_density
+          ],
+        },
+        "pangram" => {
+          name: "Pangram Pangram type-direction reference",
+          signals: %w[
+            contemporary_grotesk
+            neutral_with_character
+            disciplined_weight_range
+            strong_display_options
+            modernist_rigor
+            typographic_detail
+          ],
+        },
+      }.freeze
+
+      module_function
+
+      def profiles
+        PROFILES
+      end
+
+      # Design2Code's comparison, with the DOM instead of OCR: elements of a pub5 page and of a
+      # reference capture paired by role (or tag) and text, and the position, size, type size and
+      # colour deltas of each pair. A report input for tuning toward a reference, never a gate.
+      # Reference captures are walk payloads kept outside the repository (tools/visual_reference.rb).
+      Pair = Data.define(:key, :ours, :theirs) do
+        def deltas
+          boxes = [ours, theirs].map { |element| element["frect"] || {} }
+          moved = %w[x y w h].to_h { |axis| [axis, gap(*boxes.map { |box| box[axis] })] }
+          moved.merge("font_size" => gap(ours["font_size"], theirs["font_size"]), "color" => recoloured)
+        end
+
+        def recoloured
+          colours = [ours["color"], theirs["color"]]
+          colours.uniq.size > 1 ? colours : nil
+        end
+
+        def gap(one, two) = (one.to_f - two.to_f).round(1)
+
+        def distance = deltas.slice("x", "y", "w", "h", "font_size").values.sum(&:abs)
+      end
+
+      def pair_key(element)
+        text = element["text"].to_s.downcase.gsub(/\s+/, " ").strip[0, 40]
+        [element["role"] || element["tag"], text] unless text.empty?
+      end
+
+      def compare(ours, theirs)
+        pool = Array(theirs).group_by { |element| pair_key(element) }
+        Array(ours).filter_map do |element|
+          key = pair_key(element) or next
+          match = pool[key]&.shift or next
+          Pair.new(key:, ours: element, theirs: match)
+        end
+      end
+
+      def report(pairs, limit: 12)
+        rows = pairs.sort_by { |pair| -pair.distance }.first(limit).map do |pair|
+          moved = pair.deltas.reject { |_axis, delta| delta.nil? || delta == 0.0 }
+          "#{pair.key.join(" ")}: #{moved.map { |axis, delta| "#{axis} #{delta}" }.join(", ")}"
+        end
+        ["REFERENCE DELTAS (pub5 minus reference, CSS px; matched #{pairs.size})", *rows].join("\n")
+      end
+
+      def context
+        <<~TEXT
+          REFERENCE LENSES
+          These reference profiles describe qualities commonly useful when reviewing mature product surfaces. They are not a scorecard, ranking, pixel target, or instruction to copy another product. MASTER laws remain authoritative. Use a reference lens only when the rendered evidence makes the corresponding quality relevant.
+
+          #{PROFILES.map { |id, profile| "#{id}: #{profile[:name]} - #{profile[:signals].join(", ")}" }.join("\n")}
+
+          Report concrete rendered evidence and the applicable MASTER laws. Prefer
+          the smallest repair that improves the product's own identity, content,
+          accessibility, semantics, responsiveness, and interaction model.
+        TEXT
+      end
+    end
+  end
+end

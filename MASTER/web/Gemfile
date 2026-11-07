@@ -1,0 +1,59 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+ruby ">= 3.4", "< 4.1"
+
+gem "rails", github: "rails/rails", ref: "c9e85dbe297e248dd2f217d04f84a94881ac046a"
+# The modern asset pipeline for Rails [https://github.com/rails/propshaft]
+gem "propshaft"
+# Use sqlite3 as the database for Active Record
+gem "sqlite3", ">= 2.1"
+gem "falcon"
+gem "webrick"
+
+# No job queue: /events/stream is the face's one event pipe, and Rails.cache
+# is the default file store. solid_queue and solid_cache were listed and never
+# configured, which cost the 1 GB box their boot memory for nothing. The web
+# terminal's ActionCable mount (config/cable.yml) is the one cable, and it
+# runs on the in-process async adapter — no Redis, no extra boot memory.
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem "tzinfo-data", platforms: %i[ windows jruby ]
+
+group :development, :test do
+  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
+  gem "ferrum", "~> 0.15"
+  gem "brakeman", require: false
+  gem "bundler-audit", require: false
+  gem "rubocop-rails-omakase", require: false
+end
+
+gem "master", path: "../../MASTER"
+
+# MASTER lib deps (must mirror root Gemfile)
+gem "ruby_llm", "~> 2.1.0"
+gem "tty-prompt", "~> 0.23"
+gem "tty-reader", "~> 0.9"
+gem "tty-screen", "~> 0.8"
+gem "tty-command", "~> 0.10"
+gem "pastel", "~> 0.8"
+gem "diffy", "~> 3.4"
+gem "zeitwerk", "~> 2.7"
+
+group :tts do
+  gem "rb-edge-tts", "= 1.0.1"
+end
+
+# Must mirror MASTER/Gemfile — web controllers load lib/ code at runtime.
+gem "fiddle"
+gem "reline", "~> 0.6"
+gem "wisper", "~> 2.0"
+# lib/io/youtube_transcript.rb requires it; a bundled gem since Ruby 3.4, so
+# without a Gemfile line the container build raises LoadError and /health stays 503.
+gem "rexml"
+install_if -> { RUBY_PLATFORM =~ /bsd|dragonfly/i } do
+  gem "rb-kqueue", "~> 0.2", require: false
+end
+install_if -> { RUBY_PLATFORM =~ /linux/ && !RUBY_PLATFORM.include?("android") } do
+  gem "rb-inotify", "~> 0.10", require: false
+end

@@ -1,0 +1,117 @@
+# Story narration: the words and filters behind Voice::Narrator.
+# The knobs (pacing, caps, lane tier) live in voice.yml under `narration:`;
+# this file holds prose and patterns, so neither is written inline in Ruby.
+
+# The system prompt the cheapest lane receives. The operator's order, 2026-10-12:
+# "the TTS will narrate continuously, as if telling an engaging, captivating story".
+system: |
+  You are the narrator of a working machine. Tell what it is doing and finding
+  as one running story, aloud, to a listener who cannot see the screen.
+  Rules, without exception:
+  - Say only what the numbered events below state. Never invent an event, a
+    file, a number, a cause or an outcome. If the events are thin, say less.
+  - Anchor every sentence in a specific noun, action or status from the current
+    events. Prefer their own words over synonyms; if you cannot verify a claim,
+    do not say it. Never infer success from activity or from a partial result.
+  - Do not use metaphors, jokes, anthropomorphism, imagined scenes or dramatic
+    storytelling. Tell the sequence as calm, factual spoken prose with continuity.
+  - Continue the story so far; do not restart it. Open a task with a brief start,
+    carry forward only newly observed information, and close only when a current
+    event explicitly confirms completion.
+  - Plain prose: concrete nouns, active verbs, varied rhythm, no filler, no cliche,
+    no praise, no hedging, no exclamations.
+  - Speakable text only: no lists, markdown, code, paths, hashes, URLs or
+    punctuation that cannot be read aloud. Name a file by its plain name at most.
+  - Never repeat a sentence already told.
+  - Output only the sentences to speak, nothing else.
+
+# One instruction per kind of beat, appended to the user prompt.
+beats:
+  opening: "This begins a new task. Open it in one or two sentences, then say what the first events show."
+  middle: "Carry the story forward from where it stopped. Say what these events add."
+  finding: "Something went wrong or turned up. Say it plainly and what it means for the task."
+  closing: "The work is finished. Close the story in one or two sentences and say how it ended."
+  gap: "Nothing new has happened. In one short sentence say the work continues and what it is on, using only the story so far."
+  incomplete: "The run stopped without a complete result. State the blocker plainly; do not imply success."
+
+prompt: |
+  Story so far:
+  %{story}
+
+  Beat: %{beat}
+  Write at most %{sentences} sentences, each under %{words} words.
+
+  New events, oldest first:
+  %{events}
+
+# The fallback narrator, used when no model lane is live, the session budget is
+# spent, or the model's text fails the honesty check. %{gist} is the most
+# informative event with its unit prefix removed. One line is chosen per beat by
+# the beat's number, so a run of beats does not repeat itself.
+templates:
+  opening:
+    - "The task begins. %{gist}."
+    - "The first result is this: %{gist}."
+  middle:
+    - "Next, %{gist}."
+    - "Then %{gist}."
+    - "The next result is this: %{gist}."
+    - "The work now shows this: %{gist}."
+  finding:
+    - "The important finding is this: %{gist}."
+    - "A problem needs attention: %{gist}."
+  closing:
+    - "The task is complete. %{gist}."
+    - "The run finished. %{gist}."
+  incomplete:
+    - "The run stopped without verification. %{gist}."
+    - "The run did not finish cleanly. %{gist}."
+  gap:
+    - "The work is still underway. The latest confirmed result is %{gist}."
+    - "The task continues. The last confirmed result is %{gist}."
+
+# Events that end a task (only a unit report closing, never one unit finishing: spoken as the closing beat) and events that are
+# findings (the beat is told as a finding). Case-insensitive.
+closing_events:
+  - '\A[\w.\-]+\d+: complete\b'
+incomplete_events:
+  - '\A[\w.\-]+\d+: incomplete\b'
+finding_events:
+  - '\b(?:fail|failed|failure|error|errored|broken|missing|timeout|timed out|raised|refused|unreachable|forbidden|inconclusive)\b'
+
+# Lines never narrated: the voice's own status, spinner repaint noise, and
+# token tallies. Matched against the line with its unit prefix still on.
+ignore_events:
+  - '\A(?:voice|tts|narr|bard)\d+'
+  - '\Abed0:'
+  - '\A(?:net|bth)0 at mainbus0:'
+  - '\Amaster0: (?:internal child|MASTER_MODEL)'
+  - '\A(?:master0|host0|web0|session0|boot0)\b.* at (?:mainbus0|master0):'
+  - '\Allm\d+: (?:tokens|cost|usage)'
+  - '\Aobs\d+: \d+/\d+ files\b'
+  - '\Alaw\d+: lexical (?:scan pass|scanner idle)\b'
+  - '\A[+x] route \d+s\z'
+  - '\Acheck\d+: .*\brunning \d+s, elapsed \d+s\z'
+  - '\A[\W_]*\z'
+
+# Redaction, applied to every event before it reaches a model or a speaker.
+# Order matters: secrets first, then shapes that are merely unpleasant to hear.
+redact:
+  secret_assignment: '(?i)\b[\w-]*(?:key|token|secret|password|passwd|passphrase|credential|authorization|bearer|cookie)\w*\s*[=:]\s*\S+'
+  env_file: '(?:/[\w.\-]+)*/[\w.\-]*\.env\b'
+  url: 'https?://\S+'
+  email: '[\w.+\-]+@[\w\-]+\.[\w.\-]+'
+  long_token: '\b[A-Za-z0-9_\-+/=]{24,}\b'
+  commit: '\b(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}\b'
+  ip: '\b\d{1,3}(?:\.\d{1,3}){3}\b'
+  home_path: '(?:/(?:Users|home)/[\w.\-]+)'
+  path: '(?:[~.]?/[\w.\-@+]+)+/([\w.\-@+]+)'
+spoken_replacements:
+  secret_assignment: "something withheld"
+  env_file: "an environment file"
+  url: "a link"
+  email: "an address"
+  long_token: "something withheld"
+  commit: "a commit"
+  ip: "a host"
+  home_path: "home"

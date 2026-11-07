@@ -1,0 +1,546 @@
+# frozen_string_literal: true
+
+# Comprehensive fictive seed data for Brgen + all subapps using ruby-faker.
+# Seeds core + marketplace, dating, playlist, takeaway, tv, maps, messages.
+# Idempotent with find_or_create_by! where possible. Run: bin/rails db:seed
+
+require 'faker'
+require 'brgen/demo_mode'
+
+# Ensure Cities exist for automatic TLD/domain-based resolution.
+# City network links do not change the tenant isolation of each apex.
+Brgen::CitySeed.sync! if defined?(Brgen::CitySeed) && ActiveRecord::Base.connection.table_exists?(:cities)
+
+# Scale controls synthetic development/test fixture volume only; it is not a public audience metric.
+SEED_SCALE = [ 1, (ENV['SEED_SCALE'] || (Rails.env.production? ? 1 : 10)).to_i ].max
+
+unless Rails.env.development? || Rails.env.test?
+  if Rails.env.production?
+    raise "City table is missing; refusing to run bulk seed" unless City.table_exists?
+
+    puts "Production seed: creating/verifying operator account."
+    User.find_or_create_by!(email_address: "admin@brgen.no") do |u|
+      u.username = "admin"
+      u.password = u.password_confirmation =
+        ENV["ADMIN_SEED_PASSWORD"].to_s.tap do |password|
+          raise "set ADMIN_SEED_PASSWORD" if password.empty? || password == "password123"
+        end
+    end
+  end
+
+  if Brgen::DemoMode.seed_allowed? && City.table_exists? &&
+      (bergen = City.find_by(domain: "brgen.no"))
+    puts "Disclosed demo seed enabled."
+    Brgen::BergenDemoSeeder.new(bergen).seed!
+    puts "Bergen demo: #{Post.where(city: bergen).count} posts"
+  else
+    puts "Synthetic seed skipped; existing content was not changed."
+  end
+  exit 0
+end
+puts 'Seeding Brgen (core + subapps) with rich fictive data...'
+
+if Rails.env.development? || Rails.env.test?
+  # Cleanup for dev replant only — never wipe production data.
+  Faker::UniqueGenerator.clear
+  keep = %w[schema_migrations ar_internal_metadata cities]
+  conn = ActiveRecord::Base.connection
+  conn.disable_referential_integrity do
+    conn.tables.each do |table|
+      next if keep.include?(table)
+
+      conn.execute("DELETE FROM #{conn.quote_table_name(table)}")
+    end
+  end
+end
+
+# Core: Users, Communities, Posts
+admin = User.find_or_create_by!(email_address: 'admin@brgen.no') do |u|
+  u.username = 'admin'
+  u.password = u.password_confirmation = 'password123'
+end
+
+num_users = (50 * SEED_SCALE).clamp(10, 5000)
+# This file is the Bergen-anchored seed (it hardcodes 60.39/5.33 below), but it
+# never set a Faker locale, so the bulk users came out English-named
+# ("Jerrell Bernier") in a Norwegian city. PerCitySeeder handles the other
+# domains with their own locales.
+users = Brgen::CityContent.with_faker_locale('NO') do
+  num_users.times.map do |i|
+    # A real-sounding name (this app's display_name is username), not the
+    # old "seed0_xkq3f7" -- first_name+last_name directly (not Faker::Name.name)
+    # avoids odd baked-in prefixes/suffixes ("Prof.", "Esq.", "III") in a
+    # username. The numeric suffix stays for guaranteed uniqueness at up to
+    # 5000 draws, where real-name collisions become plausible.
+    name_slug = "#{Faker::Name.first_name} #{Faker::Name.last_name}".parameterize(separator: '_')
+    User.create!(
+      email_address: "seed#{i}@#{Faker::Internet.domain_name}",
+      password: 'password123',
+      password_confirmation: 'password123',
+      username: "#{name_slug}_#{i}",
+      latitude: 60.39 + rand(-0.1..0.1),
+      longitude: 5.33 + rand(-0.1..0.1)
+    )
+  end
+end
+
+seed_city = City.find_by!(domain: 'brgen.no')
+ActsAsTenant.current_tenant = seed_city if seed_city
+
+# Run after the dev/test table wipe, and cover the full registered host matrix.
+# Production exits above: only the separately disclosed Bergen demo is seeded there.
+if City.table_exists?
+  city_domains = Brgen::DomainRegistry::ENTRIES.map(&:domain)
+  seed_cities = City.where(domain: city_domains).order(:id).to_a
+  puts "Seeding #{seed_cities.size} registered city tenants..."
+  Brgen::PerCitySeeder.seed_all!(cities: seed_cities, posts_per_city: 8)
+  admin.reload
+end
+
+puts "Created #{users.size + 1} users (incl admin)"
+
+communities = %w[news tech bergen norge kultur food music film].map do |slug|
+  # Norwegian copy naming the seeded city. This wrote "#{slug} community for
+  # #{Faker::Address.city}", which put invented English towns on a Bergen page.
+  name, description = Brgen::PlausibleContent.community(slug, seed_city&.name.presence || 'Bergen')
+  Community.find_or_create_by!(slug: slug) do |c|
+    c.name = name
+    c.description = description
+    c.user = admin
+  end
+end
+
+# Core posts + activity. Bergen's feed is authored by BergenDemoSeeder, which
+# owns the hand-written stories, comments, engagement and vertical discovery.
+# Other city seeds retain the generated/localized pool below.
+city_display_name = seed_city.name
+posts = if seed_city&.domain == 'brgen.no'
+  []
+else
+  posts_per = (4 * SEED_SCALE).clamp(1, 20)
+  users.sample([ 30, users.size ].min).flat_map do |user|
+    posts_per.times.map do
+      Post.create!(
+        user: user,
+        community: communities.sample,
+        title: Brgen::PlausibleContent.post_title(city_display_name),
+        content: Brgen::PlausibleContent.post_body,
+        created_at: rand(1..90).days.ago
+      )
+    end
+  end
+end
+
+posts.each do |post|
+  voter = users.sample
+  post.reactions.find_or_create_by!(user: voter, kind: %w[like love].sample)
+  post.votes.find_or_create_by!(user: users.sample) { |v| v.value = [ 1, -1 ].sample }
+end
+
+puts seed_city&.domain == 'brgen.no' ? "Core generated posts: skipped; BergenDemoSeeder owns the feed." :
+  "Created #{posts.size} posts + reactions"
+
+# Marketplace subapp
+categories = {
+  'electronics' => %w[phones computers audio gaming],
+  'clothing' => %w[shirts trousers shoes outerwear],
+  'furniture' => %w[sofas tables chairs storage],
+  'vehicles' => %w[cars bikes motorcycles parts],
+  'services' => %w[repair moving cleaning tutoring]
+}
+
+categories.each do |root_name, children|
+  root = Marketplace::Category.find_or_create_by!(name: root_name.titleize, slug: root_name)
+  children.each do |child_name|
+    Marketplace::Category.find_or_create_by!(
+      name: child_name.titleize,
+      slug: "#{root_name}-#{child_name}",
+      parent: root
+    )
+  end
+end
+
+num_stores = (12 * SEED_SCALE).clamp(5, 200)
+stores = num_stores.times.map do |i|
+  # Faker::Company.name produces American agency names ("Stokes-Bernier") that
+  # read as obviously foreign on a Bergen shopfront.
+  Marketplace::Store.create!(
+    owner: users.sample,
+    name: Brgen::PlausibleContent.store_name,
+    slug: "seed-store-#{i}-#{Faker::Internet.slug}",
+    description: Faker::Company.catch_phrase,
+    vertical: Marketplace::Store::VERTICALS.sample
+  )
+end
+
+listings_per = (5 * SEED_SCALE).clamp(1, 10)
+bergen_lat = seed_city&.latitude.to_f
+bergen_lng = seed_city&.longitude.to_f
+bergen_lat = 60.3913 if bergen_lat.zero?
+bergen_lng = 5.3221 if bergen_lng.zero?
+# Leaf categories only (a listing filed under the "electronics" root rather
+# than "electronics-phones" can't have a title that matches it).
+categories_by_slug = Marketplace::Category.where.not(parent_id: nil).index_by(&:slug)
+leaf_slugs = categories_by_slug.keys
+listings = stores.flat_map do |store|
+  listings_per.times.map do
+    # Product first, then the category it actually belongs in — the reverse
+    # (category first, then any title from that root) shelved a 55" TV under
+    # electronics-audio and winter boots under clothing-outerwear.
+    title, leaf_slug = Brgen::PlausibleContent.listing_for(leaf_slugs)
+    category = categories_by_slug[leaf_slug]
+    bydel = Brgen::PlausibleContent::BERGEN_BYDELER.sample
+    Marketplace::Listing.create!(
+      user: store.owner,
+      store: store,
+      title: title,
+      description: Brgen::PlausibleContent.listing_body(bydel: bydel),
+      price_cents: rand(1000..50_000),
+      category: category,
+      # This was Faker::Address.city on a record carrying Bergen lat/lng, so
+      # listings advertised a random world city while mapping to Bergen.
+      location: bydel,
+      latitude: bergen_lat + rand(-0.05..0.05),
+      longitude: bergen_lng + rand(-0.06..0.06),
+      status: 'active',
+      created_at: rand(1..60).days.ago
+    ).tap do |listing|
+      # One generated photograph per leaf category, catalogue only.
+      Brgen::DemoMedia.attach_catalog!(listing, :photos, seed: "listing-#{leaf_slug}")
+    end
+  end
+end
+
+# Live hyperlocal notes. BergenDemoSeeder owns the hand-written Bergen set;
+# generated notes remain for the other city/dev seed path.
+unless seed_city&.domain == 'brgen.no'
+  live_count = (12 * SEED_SCALE).clamp(8, 80)
+  live_count.times do |_i|
+    user = users.sample
+    body = [
+      "Noen i nærheten av #{Faker::Address.community}?",
+      "Ledig plass på buss — #{Faker::Lorem.word}",
+      "Gratis #{Faker::Food.dish} utenfor #{Faker::Address.street_name}",
+      Faker::Lorem.sentence(word_count: 8)
+    ].sample
+    next if body.blank?
+
+    post = Post.new(
+      user: user,
+      city: seed_city,
+      content: body.truncate(Post::LIVE_CONTENT_MAX),
+      title: body.truncate(80),
+      created_at: rand(1..48).hours.ago
+    )
+    post.stamp_live_location!(
+      lat: bergen_lat + rand(-0.03..0.03),
+      lng: bergen_lng + rand(-0.04..0.04)
+    )
+    post.save!
+  end
+end
+puts "Live: #{Post.live.count} geo-stamped notes"
+
+# Some orders
+# Buyer notes the seller actually reads in the order thread — Latin was glaring
+# there for the same reason the DM openers went Norwegian.
+ORDER_MESSAGES = [
+  'Hei! Er denne fortsatt tilgjengelig?',
+  'Kan jeg hente i dag, eller passer det bedre i morgen?',
+  'Bor på Nordnes — kan jeg hente hos deg?',
+  'Betaler nå via Vipps. Takk for handelen!',
+  'Er prisen forhandlingsbar hvis jeg tar begge to?',
+  'Fine saker! Kan du legge inn i en pose før henting?',
+  'Beklager sent svar — er den fortsatt til salgs?',
+  'Passer det på lørdag formiddag?'
+].freeze
+
+listings.sample(20).each do |listing|
+  buyer = users.sample
+  order = Marketplace::Order.create!(
+    buyer: buyer,
+    listing: listing,
+    status: %w[pending accepted completed].sample,
+    message: ORDER_MESSAGES.sample,
+    created_at: rand(1..30).days.ago
+  )
+  order.record_activity!('MarketplaceOrder') if order.respond_to?(:record_activity!)
+end
+
+puts "Marketplace: #{stores.size} stores, #{listings.size} listings, some orders"
+
+# Dating subapp
+num_dating = (35 * SEED_SCALE).clamp(10, 1000)
+# Frames per gender in STUDIO/replicate/lora/seed_media.yml, under dating.pool.
+DATING_POOL = { "woman" => 8, "man" => 8, "nonbinary" => 2, "other" => 2 }.freeze
+# Visible is derived from the photo, not asserted alongside it, the same way
+# Brgen::BergenDemoSeeder derives it. A profile may not be visible without one
+# — a visible profile with no photo sits in the deck as a blank card — and
+# Shared::DemoMedia.skip_attach? is true in the test environment, which is the
+# environment CI seeds in. Asking for visible: true there produced a profile
+# the validation had to refuse, and one refusal aborts the whole seed run.
+# Deck bios are read aloud on a first date — Latin lorem read as a scam sign.
+# Short, specific, bokmål; the deck shows one paragraph per card.
+DATING_BIOS = [
+  'Bergenseren med kaffekopp i den ene hånden og sykkelhjelm i den andre. Fjellet på søndager, byliv på tirsdager.',
+  'Lager mitt eget havrebrød, misforstår fotball, og kjenner hver kafé fra Nordnes til Årstad. Vis meg din favoritt.',
+  'Ny i byen etter tre år i Trondheim. Samler på konsertbilletter og dårlige vitser om været.',
+  'Spiser middag klokken seks, går tur på Ulriken når oppgaven blir for vanskelig, og elsker en god bokhandel.',
+  'Billedkunstner med studio på Marken. Jeg maler saktere enn jeg snakker, så vær tålmodig.',
+  'Padler om sommeren, står på ski om vinteren, og forsøker å lære meg å bake skolebrød uten oppskrift.',
+  'Jobber med musikk, bor på Nygårdshøyden. Har sterke meninger om kaffe og svake om vin.',
+  'Forelsket i denne byen i regnvær. Tar med deg til favorittkafeen min hvis du gjetter hvilken den er.',
+  'Trener på Danmarksplass, leser på Litteraturhuset, og danser for dårlig til å gjøre det offentlig.',
+  'Jeg sa ja til en blind date en gang — det endte med en katt og en ny bydel. Åpen for kapittel to.'
+].freeze
+
+dating_profiles = users.sample(num_dating).map do |user|
+  profile = Dating::Profile.new(
+    user: user,
+    bio: DATING_BIOS.sample,
+    age: rand(22..45),
+    gender: Dating::Profile::GENDERS.sample,
+    looking_for: Dating::Profile::LOOKING_FOR.sample,
+    latitude: user.latitude,
+    longitude: user.longitude,
+    bydel: %w[Sentrum Nordnes Sandviken Kalfaret].sample
+  )
+  # A photograph from the generated pool for this gender, drawn by user id so a
+  # replant gives the same face to the same user. Catalogue only: a bulk seed
+  # of hundreds must not fetch hundreds of picsum landscapes for faces.
+  pool = DATING_POOL.fetch(profile.gender)
+  Brgen::DemoMedia.attach_catalog!(
+    profile, :photos, seed: format("dating-pool-%s-%02d", profile.gender, (user.id % pool) + 1)
+  )
+  profile.visible = profile.photos.attached?
+  profile.save!
+  profile
+end
+
+# Generate sample relationships for local demo/test fixtures only.
+dating_profiles.each_cons(3) do |a, b, c|
+  Dating::Like.find_or_create_by!(liker: a.user, likee: b.user)
+  Dating::Like.find_or_create_by!(liker: b.user, likee: c.user)
+end
+
+puts "Dating: #{dating_profiles.size} profiles, #{Dating::Like.count} likes, #{Dating::Match.count} matches"
+
+# Playlist subapp
+# The description renders beside the tracklist; a Latin sentence read as bot
+# filler. Bergen-list names, Norwegian one-liners.
+PLAYLIST_DESCRIPTIONS = [
+  'Sanger for turen ned fra Ulriken når byen lysner.',
+  'Lat-ettermiddag på kafé med regn mot vinduet.',
+  'Det som spilles fra kjøkkenet på Nordnes en tirsdag.',
+  'Til buss 12 gjennom Møllendal, tidlig og kald.',
+  'Byfjells-takeaways og en gitar som holder raden.',
+  'Nattbuss hjem fra Garage — høyt og uønsket for naboene.'
+].freeze
+
+num_play = (15 * SEED_SCALE).clamp(5, 200)
+playlists = users.sample(num_play).map do |user|
+  Playlist::Playlist.create!(
+    user: user,
+    name: "#{Faker::Music.genre} #{Faker::Music.album}",
+    description: PLAYLIST_DESCRIPTIONS.sample,
+    collaborative: [ true, false ].sample
+  )
+end
+
+tracks = 40.times.map do
+  Playlist::Track.create!(
+    title: "#{Faker::Music.genre} #{Faker::Lorem.words(number: 2).join(' ')}",
+    artist: Faker::Music::RockBand.name,
+    duration_seconds: rand(120..300),
+    source_type: 'upload'
+  )
+end
+
+playlists.each do |pl|
+  tracks.sample(rand(4..8)).each do |track|
+    pl.add_track!(track, user: users.sample)
+  end
+end
+
+users.sample(8).map do |user|
+  Playlist::Set.create!(
+    user: user,
+    name: "Set #{Faker::Number.number(digits: 2)}",
+    privacy: %w[public private unlisted].sample
+  )
+end
+
+puts "Playlist: #{playlists.size} playlists, tracks, sets"
+
+# Takeaway subapp: restaurants with menus in their own cuisine, orders built
+# the way the checkout builds them, reviews and drivers (lib/brgen/takeaway_seed.rb).
+ActsAsTenant.current_tenant = seed_city if seed_city
+restaurants = Brgen::TakeawaySeed.seed!(users: users, city: seed_city, scale: SEED_SCALE)
+
+puts "Takeaway: #{restaurants.size} restaurants, menu items, orders, reviews, drivers"
+
+# TV subapp
+num_ch = (8 * SEED_SCALE).clamp(3, 50)
+channel_names = Brgen::PlausibleContent::TV_CHANNEL_NAMES.shuffle
+channels = num_ch.times.map do |i|
+  Tv::Channel.create!(
+    user: users.sample,
+    # Was "#{Faker::Company.name} TV" — a US company name with TV bolted on.
+    name: channel_names[i % channel_names.size] + (i >= channel_names.size ? " #{i}" : ''),
+    slug: "seed-tv-#{i}-#{Faker::Internet.slug}",
+    description: Brgen::PlausibleContent.post_body
+  )
+end
+
+videos = channels.flat_map do |ch|
+  # Faker::Movie.title put Hollywood features on a local city channel.
+  Brgen::PlausibleContent::TV_VIDEO_TITLES.sample(3).map do |title|
+    Tv::Video.create!(
+      user: ch.user,
+      channel: ch,
+      title: title,
+      description: Brgen::PlausibleContent.post_body,
+      status: 'published',
+      duration_seconds: rand(60..300),
+      published_at: rand(1..30).days.ago
+    )
+  end
+end
+
+channels.each do |ch|
+  Tv::Broadcast.create!(
+    channel: ch,
+    user: ch.user,
+    title: "Live: #{Faker::Music.genre}",
+    status: 'scheduled'
+  )
+end
+
+puts "TV: #{channels.size} channels, #{videos.size} videos, broadcasts"
+
+# Maps subapp
+places = []
+if ActiveRecord::Base.connection.table_exists?(:places)
+  city = City.first
+  num_places = (25 * SEED_SCALE).clamp(10, 500)
+  places = num_places.times.map do
+    kind = %w[cafe bar shop park restaurant].sample
+    kind_label = { 'cafe' => 'Kafé', 'bar' => 'Bar', 'shop' => 'Butikk',
+                   'park' => 'Park', 'restaurant' => 'Restaurant' }.fetch(kind)
+    Place.create!(
+      city: city,
+      # Was "#{Faker::Company.name} Cafe". Anchoring to a real Bergen street or
+      # bydel gives a name that could plausibly be on a sign there.
+      name: "#{kind_label} #{[ Brgen::PlausibleContent::BERGEN_BYDELER,
+                               Brgen::PlausibleContent::BERGEN_STREETS ].sample.sample}",
+      kind: kind,
+      latitude: 60.39 + rand(-0.06..0.06),
+      longitude: 5.33 + rand(-0.06..0.06)
+    )
+  end
+  puts "Maps: #{places.size} places"
+else
+  puts 'Maps: skipped (places table not migrated)'
+end
+
+# Messages subapp
+users.sample(12).each do |u1|
+  u2 = users.sample
+  next if u1 == u2
+
+  conv = Conversation.find_or_create_direct(u1, u2)
+  # Short Norwegian DM openers instead of Faker::Lorem Latin — these are read
+  # in the inbox and the corner chat widget, where Latin is glaring.
+  openers = [
+    'Hei! Er den fortsatt til salgs?', 'Går det bra å hente i morgen?',
+    'Takk for sist!', 'Kan du sende et bilde av den?',
+    'Jeg er interessert — når passer det?', 'Er prisen forhandlingsbar?',
+    'Sees vi på lørdag?', 'Har du prøvd stedet i Marken?',
+    'Beklager sent svar, hektisk uke.', 'Det passer fint for meg.'
+  ]
+  openers.sample(3).each do |body|
+    Message.create!(
+      conversation: conv,
+      sender: [ u1, u2 ].sample,
+      content: body,
+      message_type: 'text'
+    )
+  end
+end
+
+puts 'Messages: conversations and messages seeded'
+
+# Affiliate inventory
+# Real TradeDoubler products need an approved publisher account (see
+# app/services/tradedoubler.rb). Until TRADEDOUBLER_TOKEN exists, seed flagged
+# placeholders so the deals sidebar and the weekly_deals newsletter have
+# something to render; `rake affiliate:import` replaces them with real rows and
+# `rake affiliate:drop_placeholders` clears these out.
+if defined?(Shared::AffiliateProduct) && Shared::AffiliateProduct.table_exists?
+  if Shared::Tradedoubler.configured?
+    imported = Shared::Tradedoubler.import!
+    puts "Affiliate: imported #{imported} real TradeDoubler product(s)"
+  else
+    placed = Brgen::AffiliatePlaceholders.seed!
+    puts "Shared::Affiliate: #{placed} placeholder product(s) (TRADEDOUBLER_TOKEN unset - flagged placeholder: true)"
+  end
+end
+
+# Final activity/notifications for feed
+if places.any?
+  users.sample(20).each do |u|
+    next unless u.respond_to?(:activity_events)
+
+    place = places.sample
+    ActivityEvent.create!(
+      actor: u,
+      event_name: 'visited',
+      subject_type: place.class.name,
+      subject_id: place.id,
+      source_vertical: 'maps',
+      locality: place.try(:locality),
+      created_at: rand(1..10).hours.ago
+    )
+  end
+end
+
+puts "\nBrgen + subapps fully seeded with fictive Faker data (scale=#{SEED_SCALE})."
+# User is tenant-scoped and a tenant is current by this point, so a bare
+# User.count reported 0 right after "Created 101 users" — the bulk users carry
+# no city_id. Count without the tenant scope so the summary matches reality.
+total_users = ActsAsTenant.without_tenant { User.count }
+puts "Users: #{total_users}, Posts: #{Post.count} (Live: #{Post.live.count}), Marketplace listings: #{Marketplace::Listing.count}"
+puts "Dating profiles: #{Dating::Profile.count}, Takeaway restaurants: #{Takeaway::Restaurant.count}"
+place_count = ActiveRecord::Base.connection.table_exists?(:places) ? Place.count : 0
+puts "TV channels: #{Tv::Channel.count}, Places: #{place_count}"
+puts "Ready for development/demo fixtures. Set SEED_SCALE=20 for a larger local dataset."
+
+if (bergen = City.find_by(domain: 'brgen.no')) && !ENV['SKIP_BERGEN_DEMO']
+  puts "\nSeeding Bergen demo content (Norwegian posts, users, media)..."
+  Brgen::BergenDemoSeeder.new(bergen).seed!
+  playlist = Playlist::Playlist.find_by(city: bergen, name: Brgen::BergenDemoSeeder::RADIO_BERGEN_PLAYLIST)
+  track_count = playlist&.tracks&.count.to_i
+  puts "Bergen demo: #{Post.where(city: bergen).count} posts, #{Dating::Profile.joins(:user).where(users: { city_id: bergen.id }).count} dating profiles, #{track_count} Radio Bergen tracks"
+end
+
+# Optional web-augmented fictive seeds using Ferrum + vision LLM (see lib/tasks/{reddit,x}.rake)
+# Requires OPENROUTER_API_KEY. Per-city: rake scrape:reddit_seed[brgen.no] or scrape:reddit_seed[lsangeles.com]
+# then fictivize/anonymize into Posts, Takeaway, Marketplace etc. for more "real" seed data.
+# Usage: SEED_FROM_WEB=1 OPENROUTER_API_KEY=... bin/rails db:seed
+# Or run standalone: rake scrape:reddit_seed scrape:x_seed
+if ENV['SEED_FROM_WEB'] && ENV['OPENROUTER_API_KEY']
+  puts "\nAugmenting with web-scraped fictive data via Ferrum (reddit + x)..."
+  begin
+    Rake::Task['scrape:reddit_seed'].invoke
+  rescue StandardError => e
+    puts "  reddit_seed skipped: #{e.message}"
+  end
+  begin
+    Rake::Task['scrape:x_seed'].invoke
+  rescue StandardError => e
+    puts "  x_seed skipped: #{e.message}"
+  end
+  # Optional additional for maps/messages if not covered in rakes
+  puts '  (Maps and messages can be augmented via local posts or additional rakes.)'
+  puts 'Web-augmented seeding complete.'
+end

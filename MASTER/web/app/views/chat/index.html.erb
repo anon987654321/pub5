@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <% theme_color = Master.tokens.fetch("face_root").fetch("face_bg") %>
+  <meta name="theme-color" content="<%= theme_color %>">
+  <meta name="color-scheme" content="dark">
+  <meta name="master-runtime" content="face">
+  <meta name="master-tier" content="<%= @tier.to_s %>">
+  <meta name="master-profile" content="<%= @profile.to_s %>">
+  <meta name="master-visual-profile" content="auto">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title><%= t("face.title") %></title>
+  <link rel="icon" type="image/svg+xml" href="<%= asset_path("icon.svg") %>">
+  <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>">
+  <link rel="apple-touch-icon" href="<%= asset_path("icon.png") %>">
+  <script nonce="<%= content_security_policy_nonce %>"><%# scan: intentional — the pre-primer WebGL guard and asset-path bootstrap must run before face code %>
+    // Deferred-boot contract, enforced at the platform level: no WebGL context may be
+    // created before the primer tap. THREE.js parse + WebGL init is heavy enough
+    // to wedge the main thread; if a stale or regressed asset boots it at page load, the
+    // "tap to start" handler never runs and the tap looks dead (recurring bug: 930a35ca5,
+    // a9aa0a6f6, f9b6aa57e). 2D canvases (cognition ecology) are untouched. After the tap
+    // (_primerFired), getContext behaves normally, so the real face still boots on tap.
+    (function () {
+      var proto = window.HTMLCanvasElement && HTMLCanvasElement.prototype;
+      if (!proto || proto.__masterWebglGuard) return;
+      proto.__masterWebglGuard = true;
+      var original = proto.getContext;
+      proto.getContext = function (type) {
+        if (!window._primerFired && /webgl/i.test(String(type))) return null;
+        return original.apply(this, arguments);
+      };
+    })();
+    <%# Rendered from config/face_assets.yml — the one manifest. The eager list
+        and the path map used to be two hand-maintained literals repeating the
+        same twelve names, free to drift apart; the map is now derived. %>
+    <% asset_paths = {
+      faceModulesList: FaceAssets.eager,
+      faceModules: FaceAssets.module_names.to_h { |name| [name, FaceAssets.versioned(asset_path(name), name)] }
+    }.merge(FaceAssets.singletons.to_h { |key, file| [key, FaceAssets.versioned(asset_path(file), file)] }) %>
+    window.MASTER_ASSET_PATHS = <%= raw json_escape(asset_paths.to_json) %>;
+  </script>
+  <script nonce="<%= content_security_policy_nonce %>"><%# scan: intentional — server-derived persona and face contract values must be published before dependent modules %>
+    <% persona = Rails.application.config.x.master_container&.[](:personality) %>
+    <% profile = persona.respond_to?(:browser_profile) ? persona.browser_profile : {} %>
+    window.MASTER_PERSONA = <%= raw json_escape(profile.to_json) %>;
+    window.MASTER_VOICE_POLICY = <%= raw json_escape(Master::Voice::Policy.browser_payload.to_json) %>;
+    window.MASTER_SOUL_SUMMARY = <%= raw json_escape("persona #{persona&.name || 'anchor'}; voice #{Master::Voice::Policy.neural_voice} (TTS fixed; persona affects text only); constitutional face".to_json) %>;
+    window.MASTER_RUNTIME = <%= raw json_escape(Master::Ground::RuntimeCatalog.web_boot_payload_minimal.to_json) %>;
+    window.MASTER_FACE_CONTRACT = <%= raw json_escape(Master.tokens.fetch("face_interface", {}).to_json) %>;
+    window.MASTER_FACE_LAW_FIELD = <%= raw json_escape(@face_law_field.to_json) %>;
+    window.MASTER_COMMANDS = <%= raw json_escape(Master::CLI::CommandRegistry.command_surface.to_json) %>;
+    window.MASTER_I18N = <%= raw json_escape(t("face.js").to_json) %>;
+    window.MASTER_CACHE_VERSION = <%= raw json_escape(Rails.application.config.x.cache_version.to_json) %>;
+    window.MASTER_T = function (key, fallback, vars) {
+      var text = window.MASTER_I18N && typeof window.MASTER_I18N[key] === "string" ? window.MASTER_I18N[key] : fallback;
+      return vars ? text.replace(/%\{(\w+)\}/g, function (_, name) { return vars[name]; }) : text;
+    };
+  </script>
+  <link rel="preload" href="<%= asset_path("face.css") %>" as="style">
+  <%# No prefetch of face.js or THREE — on a 1-CPU VPS it competes with primer tap on the main thread. %>
+  <link rel="stylesheet" href="<%= asset_path("face.css") %>">
+  <%# chat upload widget CSS isn't needed for the initial primer/face paint --
+      defer it off the render-blocking path (inline onload= is blocked by CSP here).
+      DOMContentLoaded applies it too: a preload that finished before the listener
+      was attached never fires load again, and a preload link has no sheet to test. %>
+  <link rel="preload" as="style" id="chat-upload-css" href="<%= asset_path("chat_upload.css") %>">
+  <noscript><link rel="stylesheet" href="<%= asset_path("chat_upload.css") %>"></noscript>
+  <script nonce="<%= content_security_policy_nonce %>"><%# scan: intentional — the preloaded upload stylesheet needs both load and DOMContentLoaded race handling %>
+    (function(){var f=document.getElementById('chat-upload-css');if(!f)return;
+      var on=function(){f.rel='stylesheet';};
+      f.addEventListener('load',on);document.addEventListener('DOMContentLoaded',on);})();
+  </script>
+  <style nonce="<%= content_security_policy_nonce %>"><%# scan: intentional — the first-paint theme and canvas ground must exist before the external face stylesheet arrives %>
+    html, body { background: #000000; color: #efefef; } /* scan: intentional-colors — FOUC guard */
+    canvas#face { display: block; position: fixed; inset: 0; width: 100%; height: 100%; background: #000; } /* scan: intentional-colors — same FOUC guard: the canvas ground exists before the stylesheet */
+    #primer { background: transparent; }
+    #prompt-form { background: #000; }
+  </style>
+</head>
+<body class="face-loading"
+      data-layout="face"
+      data-surface="face"
+      data-runtime-profile="boot"
+      data-runtime-visible="true"
+      data-theme="dark"
+      data-profile="<%= @profile.to_s %>"
+      data-aesthetic="<%= Master::Voice::Aesthetic.mode %>"
+      <%# "keep" holds the primer up rather than autostarting past it, for a
+          surface whose welcome screen is the point and which wants the tap as
+          the user gesture an AudioContext needs. No host asks for that today. %>
+      data-primer="auto">
+  <a href="#prompt-input" class="skip-link"><%= t("skip_to_prompt") %></a>
+  <%# The same wordmark the three RAILS apps carry, saying which host this is.
+      Type only, fixed top-left, no chip or border — the mark is shared/_brand_mark
+      there and cannot be rendered from here (MASTER/web does not mount the engine),
+      so it is the same markup and the same class names rather than a second design.
+      <header> because it is page content that would otherwise sit outside any
+      landmark, which is what axe flagged on the RAILS side. %>
+  <header class="master-titlebar">
+    <% mark = request.host %>
+    <a class="brand-mark" href="<%= root_path %>" aria-label="<%= mark %>">
+      <span class="brand-text"><%= mark %></span>
+    </a>
+    <nav class="master-session-tabs" aria-label="<%= t("dashboard.session_navigation") %>">
+      <a class="master-session-tab" href="<%= root_path %>" aria-current="page"><%= t("dashboard.heading_chat") %></a>
+      <a class="master-session-tab" href="<%= dashboard_path %>"><%= t("dashboard.heading_mission") %></a>
+    </nav>
+  </header>
+  <div id="error-live" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+  <div id="ascii-star" aria-hidden="true"></div>
+  <canvas id="cognition-ecology" aria-hidden="true"></canvas>
+  <canvas id="face" role="img" aria-label="<%= t("face.face_aria") %>" tabindex="-1"></canvas>
+  <%# Mic state, always on screen. It used to be a 10px dot at opacity 0 that
+      appeared only while listening, so "off" and "not rendered" looked
+      identical and the only way to learn the mic was off was to talk and get
+      nothing. Grey glyph when idle, live colour when listening.
+      role=status rather than aria-hidden: this is now the only indication of
+      whether the microphone is open, which is not something to hide from a
+      screen reader. %>
+  <button id="mic-dot" class="mic-indicator" type="button" aria-pressed="false"
+          aria-label="<%= t("face.mic_state") %>" title="<%= t("face.mic_state") %>">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/>
+      <path d="M5 11a7 7 0 0 0 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span class="sr-only" data-mic-state-text></span>
+  </button>
+  <div id="tts-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <%# Small synchronous prerequisite: every deferred ecology/worker module and
+      the post-primer face import may assume window.ParticleKernel exists. %>
+  <script src="<%= asset_path("particle_kernel.js") %>"></script>
+  <%# A real button: Enter and Space activate it natively, so the only key
+      handler left is the page-level one for when focus is elsewhere. Its
+      content is phrasing content, so the title and lines are spans. %>
+  <button id="primer" type="button" aria-labelledby="primer-title" aria-describedby="primer-capabilities primer-consent"
+       data-i18n-starting="<%= t("face.starting") %>"
+       data-i18n-loading-title="<%= t("face.loading_title") %>"
+       data-i18n-loading-status="<%= t("face.loading_status") %>"
+       data-i18n-still-loading="<%= t("face.still_loading") %>"
+       data-i18n-retrying="<%= t("face.retrying") %>"
+       data-i18n-failed="<%= t("face.failed") %>"
+       data-i18n-failed-live="<%= t("face.failed_live") %>">
+    <span class="primer-title" id="primer-title"><%= t("face.primer_title") %></span>
+    <span class="tagline" id="primer-capabilities"><%= t("face.primer_capabilities") %></span>
+    <span class="primer-consent" id="primer-consent"><%= t("face.primer_consent") %></span>
+  </button>
+  <noscript><p id="primer-noscript" role="alert"><%= t("face.primer_noscript") %></p></noscript>
+  <%# The mic opens at load: face.part5 says why, and how a denied permission
+      or a deliberate exit keeps it shut. %>
+  <%# Boot + primer tap must run synchronously right after #primer — before ANY other
+      script (including face_2d_fallback). public/face_primer.js holds it: a classic,
+      synchronous script (no defer, no async), digested and cached, so its handlers are
+      wired before parsing continues. A blocking <script src> above #primer delays
+      handler wiring; early taps look dead. #prompt-form and #ui-status are below this block —
+      face_primer.js resolves them lazily in go(), not at parse time.
+      See TREE_CONTRACTS.md and history of "tap to start does nothing" for this high-risk path.
+      Enhancements there should preserve the _primerFired guard and dbgFrames check. %>
+  <script src="<%= asset_path("boot_fsm.js") %>"></script>
+  <script src="<%= asset_path("face_primer.js") %>" nonce="<%= content_security_policy_nonce %>"
+          data-face-module="<%= FaceAssets.versioned(asset_path("face.js"), "face.js") %>"></script>
+  <script src="<%= asset_path("face_ascii.js") %>" defer></script>
+  <script src="<%= asset_path("face_2d_fallback.js") %>" defer></script>
+  <div class="ui-status sr-only" id="ui-status" aria-live="polite" aria-atomic="true"></div>
+  <div id="mood-live" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+  <%# The prompt lives in main with the log it writes to: LAYOUT.md names #prompt-input
+      the face's main landmark target, and a form outside every landmark is
+      content a screen reader's landmark list cannot reach. It is a form with
+      a name, not a search, so it carries no role of its own (SEMANTIC_ELEMENTS). %>
+  <main id="chat-shell" aria-label="<%= t("face.chat_aria") %>">
+    <%# Not a live region: streamed tokens re-announced every chunk. The
+        finished reply is announced once through #tts-live (face.part5). %>
+    <div id="chat-log" tabindex="-1"></div>
+    <form id="prompt-form" aria-label="<%= t("face.prompt_aria") %>" autocomplete="off">
+      <button id="photo-button" type="button" aria-label="<%= t("face.attach_photo") %>">+</button>
+      <input id="photo" type="file" accept="image/*" hidden>
+      <span class="prompt-sigil" aria-hidden="true"><%= Master::Face::Contract.shell_prompt %></span>
+      <textarea id="prompt-input" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="<%= t("face.placeholder") %>" aria-label="<%= t("face.message_aria") %>" required></textarea>
+      <span id="zsh-status" aria-live="polite" aria-atomic="true"></span>
+      <span id="turn-queue-status" class="turn-queue-status" aria-live="polite" aria-atomic="true"></span>
+      <button id="turn-control" class="turn-control" type="button" hidden aria-label="<%= t("face.stop_response") %>" aria-pressed="false"><%= t("face.stop") %></button>
+
+      <button id="music-loop-button" type="button" aria-label="<%= t("face.music_loop") %>"
+              aria-pressed="false"></button>
+      <button id="pause-speech-button" type="button" aria-label="<%= t("face.pause_speech") %>"></button>
+    </form>
+  </main>
+  <script src="<%= asset_path("container_check.js") %>" defer></script>
+  <script src="<%= asset_path("face_deferred_loader.js") %>" defer></script>
+  <%# Deferred boot modules, from config/face_assets.yml#shell_manifest — order is
+      the boot contract. face.js (the THREE.js WebGL face) is intentionally absent:
+      loadFace() imports it lazily on the primer tap (see the boot script above). %>
+  <%= javascript_include_tag(*FaceAssets.group("shell_manifest"), defer: true) %>
+  <script src="<%= asset_path("master_events.js") %>" defer></script>
+  <script src="<%= asset_path("shortcut_sheet.js") %>" defer></script>
+  <script src="<%= asset_path("viewport_inset.js") %>" defer></script>
+  <script nonce="<%= content_security_policy_nonce %>"><%# scan: intentional — runtime-config notification must be available to the face lifecycle before it settles %>
+    fetch('/runtime/config').then((r) => r.ok ? r.json() : null).then((cfg) => {
+      if (cfg && typeof cfg === 'object') {
+        window.MASTER_RUNTIME = { ...window.MASTER_RUNTIME, ...cfg };
+        window.dispatchEvent(new CustomEvent('master:runtime-config'));
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>

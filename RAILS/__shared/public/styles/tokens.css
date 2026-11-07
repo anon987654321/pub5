@@ -1,0 +1,81 @@
+/* Auto-synced by build_all_css.rb - social palette from design_tokens.yml */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #111111;
+  --surface-elevated: #1a1a1a;
+  --search-bg: #111111;
+  --text: #efefef;
+  --text-secondary: #a3a3a3;
+  --border: #666666;
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --hover-subtle: color-mix(in srgb, var(--text) 3%, transparent);
+  --accent: #efefef;
+  --danger: #e46151;
+  --pub5-signal: #C8F55F;
+  --pub5-signal-ink: #101010;
+  --pub5-signal-on-light: #50630A;
+  --text-display: clamp(40px, 6vw, 88px);
+  --font: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --radius-extra-small: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-card: 16px;
+  --radius-large: 16px;
+  --radius-pill: 9999px;
+  --transition-fast: 180ms;
+  --transition-normal: 300ms;
+  --z-chrome: 10;
+  --z-ui: 90;
+  --z-overlay: 100;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-skip: 2000;
+  --color-background: var(--bg);
+  --color-midtone: var(--text-secondary);
+  --color-highlight: var(--surface);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --text-primary: var(--text);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #efefef;
+    --surface: #ffffff;
+    --surface-elevated: #f2f2f2;
+    --search-bg: #ffffff;
+    --text: #333333;
+    --text-secondary: #4d4d4d;
+    --border: #666666;
+    --hover: rgba(26, 24, 36, 0.1);
+    --hover-subtle: rgba(26, 24, 36, 0.03);
+    --accent: #000000;
+    --danger: #a9483c;
+    --color-background: var(--bg);
+    --color-highlight: var(--surface-elevated);
+    --color-accent: var(--accent);
+    --color-border: var(--border);
+    --text-primary: var(--text);
+  }
+}
+/* Spacing, easing, the touch target and the focus ring, from shared_chrome,
+   for the pages that load no app stylesheet (errors.css). Its own block, so
+   the family slice master embeds (the first :root) stays the palette. */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --ease-out: cubic-bezier(0.16,1,0.3,1);
+  --ease-spring: cubic-bezier(0.32,0.72,0,1);
+  --tap-min: 44px;
+  --focus-ring: 2px solid var(--accent, currentColor);
+}
