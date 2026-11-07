@@ -31,7 +31,10 @@ class LinkEmbedPrivacyContractTest < Minitest::Test
   def test_the_route_names_a_digest_and_nothing_else
     routes = File.read(ROUTES)
     assert_match(/get "link_embeds\/thumbnails\/:digest".*link_previews#thumbnail/, routes)
-    assert_match(/constraints:\s*\{\s*digest:\s*\/\\A\[0-9a-f\]\{32\}\\z\/\s*\}/, routes)
+    # Rails anchors route requirements itself, and Rails 8 refuses explicit
+    # \A\z in a constraint, so the pattern is written bare (2026-11-07).
+    # Implicit anchoring still makes the segment exactly 32 hex chars.
+    assert_match(/constraints:\s*\{\s*digest:\s*\/\[0-9a-f\]\{32\}\/\s*\}/, routes)
   end
 
   def test_the_serving_action_looks_up_the_cache_and_never_proxies
