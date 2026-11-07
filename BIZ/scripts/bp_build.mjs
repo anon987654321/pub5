@@ -19,11 +19,11 @@ const PUB_SYRE = `${SRC}/scripts/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
 const TITLES = {
-  syre: 'SYRE™ — forretningsplan', speis: 'SPEIS — forretningsplan',
-  ragnhild: 'Ragnhild — forretningsplan', nato: 'NATO Aurora — forretningsplan',
-  norwegianhedge: 'Norwegian Hedge — forretningsplan',
-  pubhealthcare: 'pub.healthcare — forretningsplan',
-  govt_bergen: 'Bergen Selvstyreparti — forretningsplan',
+  syre: 'SYRE™ – forretningsplan', speis: 'SPEIS – forretningsplan',
+  ragnhild: 'Ragnhild – forretningsplan', nato: 'NATO Aurora – forretningsplan',
+  norwegianhedge: 'Norwegian Hedge – forretningsplan',
+  pubhealthcare: 'pub.healthcare – forretningsplan',
+  govt_bergen: 'Bergen Selvstyreparti – forretningsplan',
 };
 
 // ---- merge additions -------------------------------------------------------
@@ -227,6 +227,27 @@ function charCheck(txt, plan, where) {
 const report = [];
 const fails = [];
 
+// A base that already carries the completion (the sources of record are
+// completed documents) must not receive its blocks again: the injection is
+// detected block-by-block by the block's own first heading, and a base that
+// already carries its logo mark or colophon keeps its own. This is what
+// makes bp_build idempotent against restored bases.
+function firstHeading(content) {
+  const m = content.match(/<h[2-4][^>]*>([^<]{3,120})</);
+  return m ? m[1].trim() : null;
+}
+
+function hasLogo(src, lgd) {
+  if (!lgd) return true;
+  if (lgd.kind === 'font') return src.includes('class="mark-brand"');
+  if (lgd.kind === 'plain') return src.includes('mark-plain');
+  if (lgd.kind === 'gradient') {
+    return src.includes('-webkit-background-clip:text')
+      && src.includes('>' + escapeHtml(lgd.text) + '</p>');
+  }
+  return src.includes('id="syreMark"');
+}
+
 for (const plan of ORDER) {
   let src = readFileSync(`${SRC}/scripts/${plan}.html`, 'utf8');
   const origTitle = (src.match(/<title>([^<]+)<\/title>/) || [])[1];
@@ -251,6 +272,15 @@ for (const plan of ORDER) {
     }
     const content = blocksFor(plan, key);
     if (!content) continue;
+    const fh = firstHeading(content);
+    const sectionEnd = src.indexOf('</section>', pos);
+    if (fh && src.slice(pos, sectionEnd).includes(fh)) {
+      // the base already carries this block; injecting again would
+      // duplicate every completion section (the 22-page regression)
+      report.push(`${plan}: ${key} already carried by the base; not injected again`);
+      usedKeys.add(key);
+      continue;
+    }
     todo.push([pos, key, content]);
   }
   for (const [pos, key, content] of [...todo].reverse()) {
@@ -270,7 +300,7 @@ for (const plan of ORDER) {
   // (4 vs the expected 3) in the built plan. The injection is removed, not
   // migrated; the base is the owner (SINGULARITY).
   const lg = logoHtml(plan);
-  if (lg) {
+  if (lg && !hasLogo(src, PLANS[plan].logo)) {
     const h1pos = src.indexOf('<h1');
     src = src.slice(0, h1pos) + lg + '\n' + src.slice(h1pos);
   }
@@ -291,7 +321,10 @@ for (const plan of ORDER) {
     + 'salgsspor, enhetsøkonomi, milepæler, risikomatrise og tre-års budsjetter etter '
     + 'Innovasjon Norges vurderingskriterier · november 2026.</p>\n'
     + '<p>' + note + '</p>\n';
-  src = src.replace('</footer>', colo + '</footer>');
+  // idempotent: a base already carrying its colophon is not doubled
+  if (!src.includes('Gjenopprettet fra pub-, pub2- og pub3-arkivene')) {
+    src = src.replace('</footer>', colo + '</footer>');
+  }
   if (!src.endsWith('\n')) src += '\n';
 
   const body = src.replace(/base64,[^"']+/g, '');
