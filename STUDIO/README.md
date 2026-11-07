@@ -58,20 +58,23 @@ carry `curation_status: pending_operator_review`, and each render carries
 sheet and records the accepted candidates. `status: complete` means all
 requested files were rendered, not that likeness has been approved.
 
-Before generation, the command archives prior managed series and legacy
-timestamp-named render families only when the Postpro sidecar, source hash and
-output hash all agree. It moves them into `~/ideas/.retired/` so they can be
-restored. Ambiguous timestamp files, unrelated photographs and files without
-verifiable Postpro provenance are left untouched and listed in the retirement
-report; they are never deleted based on name or size alone. No training occurs.
 The command verifies the Replicate credential with an authenticated, read-only
-model-catalogue request before moving any old renders, then uses it for inference. Successful predictions incur account
-charges; the custom LoRA checkpoint endpoints may have different per-second
-costs, so confirm the current account pricing and available balance before
-running. Each subject directory and its weights/ directory must be owner-only (0700);
-subject.env, consent.yml and each replicate_training.json must be owner-only
-(0600). All subject consent, provider-processing and source-rights records
-must be complete and private before any files are moved or requests are sent.
+model-catalogue request before paid inference. It keeps the previous render set
+in place while the new series is being generated. Only after every registered
+model has all ten renders verified does it archive prior managed series and
+legacy timestamp-named render families whose Postpro sidecar, source hash and
+output hash all agree. The archive is under `~/ideas/.retired/` and can be
+restored. If the replacement is partial or blocked, retirement is skipped and
+the previous render set stays where it was. Ambiguous timestamp files,
+unrelated photographs and files without verifiable Postpro provenance are
+left untouched and listed when retirement runs; they are never deleted based
+on name or size alone. No training occurs. Successful predictions incur
+account charges; custom LoRA checkpoint endpoints may have different
+per-second costs, so confirm current account pricing and available balance
+before running. Each subject directory and its weights/ directory must be
+owner-only (0700); subject.env, consent.yml and each replicate_training.json
+must be owner-only (0600). All subject consent, provider-processing and
+source-rights records must be complete and private before generation starts.
 
 ## Reference-guided portraits
 
