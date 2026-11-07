@@ -65,4 +65,46 @@ class TestLawParity < Minitest::Test
   def test_enforcement_overlay_has_been_retired
     refute File.exist?(File.join(Master::ROOT, "data", "law_enforcement.yml"))
   end
+
+  def test_a_renamed_famous_law_is_rejected
+    catalogue = Master.load_yaml(Master::Fix::LawParity::LAWS_PATH)
+    catalogue["CLARITY_OVER_CLEVERNESS"] = catalogue.delete("KISS")
+
+    error = assert_raises(Master::FlatLawCatalogue::Invalid) do
+      Master::FlatLawCatalogue.validate!(catalogue)
+    end
+    assert_match(/famous law KISS must keep its name/, error.message)
+  end
+
+  def test_famous_name_families_survive_with_their_children
+    catalogue = Master.load_yaml(Master::Fix::LawParity::LAWS_PATH)
+    ids = catalogue.keys.map(&:to_s)
+
+    Master::FlatLawCatalogue::FAMOUS_NAMES.each do |name|
+      assert ids.any? { |id| id == name || id.start_with?("#{name}_") },
+             "#{name} is named as famous but no law keeps that id"
+    end
+  end
+
+  def test_a_measured_only_law_cannot_also_resolve_automatic
+    catalogue = Master.load_yaml(Master::Fix::LawParity::LAWS_PATH)
+    row = catalogue.fetch("CQS")
+    row["resolution"] = "automatic"
+    row["proof"] = "test/test_law_parity.rb"
+
+    error = assert_raises(Master::FlatLawCatalogue::Invalid) do
+      Master::FlatLawCatalogue.validate!(catalogue)
+    end
+    assert_match(/measurement_only and cannot also resolve automatic/, error.message)
+  end
+
+  def test_a_declared_enforcement_surface_names_no_phantom_command
+    catalogue = Master.load_yaml(Master::Fix::LawParity::LAWS_PATH)
+    phantom = Master::FlatLawCatalogue.entries(catalogue).select do |entry|
+      entry["enforcement"].to_s.include?("lint:laws#")
+    end
+
+    assert_empty phantom.map { |entry| entry.fetch("id") },
+                 "these laws name bin/master lint:laws, a command that does not exist"
+  end
 end

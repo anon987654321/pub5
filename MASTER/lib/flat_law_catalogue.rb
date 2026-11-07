@@ -17,6 +17,10 @@ module Master
     RESOLUTIONS = %w[automatic review never].freeze
     MODALITY_COVERAGE = %w[deterministic semantic].freeze
     METADATA_PREFIXES = %w[KIND_ RATCHET_ LINT_ META_].freeze
+    # A well-established name is the Law's id, so dropping the name is a rename
+    # rather than a clarification. Only the families the catalogue actually
+    # carries are listed; naming an absent one would assert a Law nobody wrote.
+    FAMOUS_NAMES = %w[DRY KISS SOLID POLA YAGNI STRUNK_WHITE BRINGHURST CQS SRP OCP LSP ISP DIP].freeze
 
     class << self
       def load(root: Master::ROOT)
@@ -42,6 +46,7 @@ module Master
         validate_relationships!(rows)
         validate_vocabulary!(document, rows)
         validate_resolutions!(rows)
+        validate_famous_names!(rows)
         validate_special_metadata!(rows)
         validate_protected_paths!(rows)
         validate_invariant_modalities!(rows)
@@ -136,6 +141,24 @@ module Master
           if resolution.to_s == "automatic" && row["proof"].to_s.strip.empty?
             raise Invalid, "#{id} is automatic but names no proof fixture"
           end
+          # A measured only law is a finding that never blocks convergence, so
+          # it must not also claim an automatic repair; the two resolutions
+          # contradict each other and the weaker one wins silently at runtime.
+          if resolution.to_s == "automatic" && row["calibration"].to_s == "measurement_only"
+            raise Invalid, "#{id} is measurement_only and cannot also resolve automatic"
+          end
+        end
+      end
+
+      # A famous name keeps its id. Renaming it is a rename, not a
+      # clarification, and the renamed Law loses the recognition that made the
+      # name worth using.
+      def validate_famous_names!(rows)
+        ids = rows.map { |row| row.fetch("id") }
+        FAMOUS_NAMES.each do |name|
+          next if ids.any? { |id| id == name || id.start_with?("#{name}_") }
+
+          raise Invalid, "famous law #{name} must keep its name as an id"
         end
       end
 

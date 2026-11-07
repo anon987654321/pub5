@@ -1971,21 +1971,21 @@ LINT_SEVERITY_IN_VOCABULARY:
   statement: "Every severity is one of info, warning, error, critical, veto."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#severity_in_vocabulary
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_vocabulary!)
 
 LINT_AUTOFIX_HAS_PROOF:
   root: visible_state
   statement: "resolution automatic names a proof fixture that fails before and passes after."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#autofix_has_proof
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_resolutions!)
 
 LINT_MEASUREMENT_DOES_NOT_MUTATE:
   root: visible_state
   statement: "calibration measurement_only forbids resolution automatic on the same law."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#measurement_does_not_mutate
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_resolutions!)
 
 LINT_NO_EXCLUDE:
   root: visible_state
@@ -1995,7 +1995,7 @@ LINT_NO_EXCLUDE:
     reason and the expiry.
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#no_exclude
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_relationships!)
 
 LINT_NO_SCOPE:
   root: visible_state
@@ -2005,7 +2005,7 @@ LINT_NO_SCOPE:
     catches it. If it does not, there is no finding.
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#no_scope
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_relationships!)
 
 LINT_BOTH_MODALITIES:
   root: visible_state
@@ -2014,21 +2014,21 @@ LINT_BOTH_MODALITIES:
     declared human is a gap, counted by the duality ratchet.
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#both_modalities
+  enforcement: Master::LawParity (lib/fix/law_parity.rb) + validate_invariant_modalities!
 
 LINT_EVERY_LAW_HAS_ROOT_OR_NODE:
   root: visible_state
   statement: "Every top-level law names either a soul node or a root; every child inherits from its parent."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#every_law_has_root_or_node
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_relationships!)
 
 LINT_IDS_UNIQUE:
   root: visible_state
   statement: "Every law id is unique across the file."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#ids_unique
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_ids!)
 
 LINT_EVERY_FINDING_EMITTED:
   root: visible_state
@@ -2037,14 +2037,14 @@ LINT_EVERY_FINDING_EMITTED:
     finding under APPLICATION_IS_UNIFORM_unrecorded_finding.
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#every_finding_emitted
+  enforcement: declared
 
 LINT_SOUL_PRINT_MATCHES_SOURCE:
   root: visible_state
   statement: "data/soul.yml body_sha256 equals Soul.print body_sha256 for the loaded soul.rb."
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#soul_print_matches_source
+  enforcement: Master::ConfigurationGuard#validate_soul (lib/configuration_guard.rb)
 
 LINT_FAMOUS_NAMES_PRESERVED:
   root: visible_state
@@ -2055,7 +2055,7 @@ LINT_FAMOUS_NAMES_PRESERVED:
     A rename of a famous law is a rename, not a clarification.
   severity: error
   resolution: never
-  enforcement: bin/master lint:laws#famous_names_preserved
+  enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_famous_names!)
 
 # ---
 
