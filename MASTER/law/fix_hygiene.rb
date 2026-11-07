@@ -20,11 +20,19 @@ end
 
 Law.define(:NO_OVERESCAPED_NONCAPTURING) do
   source "MASTER post-incident /fix hardening - extract-then-match regex integrity"
+  # The incident was a body extracted from a failed match and then matched
+  # again with its escaping doubled: `body.scan(/phantom:\\(?:...)/)` is
+  # looking for a literal backslash that the body already lost. A regex
+  # literal that matches a backslash on purpose - LaTeX's `\title` - writes
+  # the same two characters and is not this defect, so the Law reads the
+  # construct it was written for: an escaped group handed to a matcher.
   detect do |line|
     code = line.gsub(/(['"]).*?\1/, "")
-    code.include?("\\\\(?:")
+    next false unless code.match?(/\.(?:scan|match|match\?|gsub|sub|index|split|partition)\s*[(\[{]/)
+
+    code.match?(/\\\\.?\(\?:/)
   end
   fix "Match the extracted regex body with regex syntax appropriate to the body; do not add source-level escaping twice."
   bad 'body.scan(/phantom:\\\\(?:detected|halt|recovery)/)'
-  good "body.scan(/phantom:(detected|halt|recovery)/)"
+  good "body.scan(/phantom:\\(?:detected|halt|recovery)/)"
 end

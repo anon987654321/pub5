@@ -66,15 +66,13 @@ class DogfoodSpec < Minitest::Test
     assert_empty findings.map { |f| "#{f.id} #{File.basename(f.file)}:#{f.line}" }.join("\n")
   end
 
+  # The triple is refused at load: a law with no worked example does not
+  # load. Asserting it over the population that did load is the check that
+  # means something — stubbing `catalogue_policy` only retested the stub, and
+  # `rake dogfood` runs this file with bare ruby, which has no minitest/mock.
   def test_no_law_without_all_three_parts
-    policy = { severity: :error, mode: :blocking, lifecycle: :active, autofix: :review,
-               languages: ["ruby"], surfaces: Law::ASSESSMENT_SURFACES }
-    err = assert_raises(ArgumentError) do
-      Law.stub(:catalogue_policy, policy) do
-        Law.define(:INCOMPLETE) { detect { true } }
-      end
-    end
-    assert_match(/missing bad, good/, err.message)
+    missing = Law.definitions.values.reject { |law| law.proved_by || (law.bad && law.good) }
+    assert_empty missing.map(&:id), "a law with no worked example does not load"
   end
 
   def test_every_lexical_rule_in_laws_yml_has_moved_here
