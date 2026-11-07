@@ -261,7 +261,8 @@ Also open, smaller: the knob budget (40).
 4. MASTER's web face: Roda + Sequel.
 5. Laws: rules and Laws are one thing; every pub4 Law carries over, enters as advisory and is promoted by census (section 5). Operator directives and agent rules are `conduct` Laws.
 6. One entrypoint: `bin/master` for every surface, dispatching from registry/commands.yml (section 4).
-Remaining decisions (process layout, rehearsal VM, session continuity, reverse export, Rails version, Python) take the plan's defaults until the operator says otherwise.
+7. Python: banned outright - no Python scripts in the tree and no python3 in new code (operator, 2026-11-07). The three contact-sheet helpers carried that morning are removed the same day; dilla's reference pipeline, whose analyzer was already dropped, waits for the operator's engine call.
+Remaining decisions (process layout, rehearsal VM, session continuity, reverse export, Rails version) take the plan's defaults until the operator says otherwise.
 
 ## 15. Port phases, mapped from pub4's TODO (2026-11-06)
 
@@ -371,17 +372,24 @@ per-tree tooling) are deliberately rebuilt smaller, not copied.
 **Landed in this pass.** BPLANS content kept verbatim per section 3, now at
 `bplans/` (40 files plus its README; the build tools' temporary output
 default renamed to `pub5-good-BPLANS`); the 32 golden screenshots of every
-app and engine, now at each app's and engine's `screenshots/` directory;
+app and engine, now at each app's and engine's `screenshots/` directory; and
 `rails/visual_completion.yml`, the operator's bounded layout-campaign
-authorization; and `scripts/analysis/`, the three pyvips contact-sheet
-helpers, retargeted from pub4's `RAILS/` paths to the engines' new homes
-with environment-overridable roots (`REVIEW_ROOT`, `REVIEW_OUT`).
+authorization.
 
 **Not carried, by decision.** pub4's `redeploy` wrapper: it execs
 `MASTER/bin/operator vps deploy`, a command this repo has not ported yet;
 it returns with the Phase 5 CLI rather than as a wrapper that cannot run.
-`scripts/analysis` came instead of `dilla/reference_analyzer.py` because the
-sheets feed the golden-screenshot work; the analyzer stays dropped. pub4's
+Python is banned outright (operator, 2026-11-07; `SHELL_DISCIPLINE` in
+registry/laws.yml already names python on its banned-tool list): the three
+pyvips contact-sheet helpers that were carried that morning left the same
+day, their job returns to the Ruby visual lane in `master/checks/`, and
+`studio/test/dilla_test.rb`'s analyzer test - which invoked python3
+against the dropped `reference_analyzer.py` and could never pass - is gone.
+`dilla reference` itself still names python3: it probes yt-dlp and demucs
+through python3 when their CLIs are absent and aborts on the dropped
+analyzer, so the feature is inert; porting that analyzer to Ruby or dropping
+the feature is the operator's engine call, since section 3 keeps dilla's
+sound engine verbatim. pub4's
 MASTER `test/`, `lib/`, `web/`, `tools/` and `plugins/` trees stay out under
 the section 3 redesign list; `core/`, `master/` and `laws/` are their
 successors, and copying 2,000 files the architecture replaces would break

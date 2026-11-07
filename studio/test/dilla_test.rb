@@ -339,59 +339,6 @@ class TestDillaReferenceProfile < Minitest::Test
     assert_equal "dilla_shadow", profile.fetch("groove_profile")
   end
 
-  def test_analyzer_reports_tempo_and_valid_json_without_nan
-    Dir.mktmpdir do |dir|
-      # Two bars at 86 BPM: kick on 1 and 3, snare on 2 and 4, hats on 8ths.
-      bar = 60.0 / 86 * 4
-      sr = 44_100
-      n = (bar * 2 * sr).to_i
-      audio = Array.new(n, 0.0)
-      kick_at = [0.0, bar / 2, bar, bar * 1.5]
-      snare_at = [bar / 4, bar * 3 / 4, bar * 5 / 4, bar * 7 / 4]
-      kick_at.each do |t|
-        i0 = (t * sr).to_i
-        len = (0.3 * sr).to_i
-        len.times do |i|
-          idx = i0 + i
-          next if idx >= n
-
-          audio[idx] += Math.sin(2 * Math::PI * 48 * i / sr * 4) * Math.exp(-i.to_f / (0.06 * sr)) * 0.9
-        end
-      end
-      snare_at.each do |t|
-        i0 = (t * sr).to_i
-        len = (0.15 * sr).to_i
-        len.times do |i|
-          idx = i0 + i
-          next if idx >= n
-
-          audio[idx] += (Random.rand * 2 - 1) * Math.exp(-i.to_f / (0.04 * sr)) * 0.7
-        end
-      end
-      (n / 2).times do |i|
-        t = i * 2.0 / sr
-        next unless (t % (bar / 8)).zero?
-
-        audio[i * 2] += (Random.rand * 2 - 1) * Math.exp(-40.0 * (t % (bar / 8))) * 0.35
-      end
-      pcm = audio.map { |v| (v.clamp(-1, 1) * 32767).round }.pack("s<#{n}")
-      hdr = ["RIFF", 36 + pcm.bytesize, "WAVE", "fmt ", 16, 1, 1, sr, sr * 2, 2, 16, "data", pcm.bytesize].pack("A4VA4A4VvvVVvvA4V")
-      wav = File.join(dir, "two_bar.wav")
-      File.binwrite(wav, hdr + pcm)
-      features_path = File.join(dir, "features.json")
-      _o, err, status = Open3.capture3("python3",
-                                       File.expand_path("../dilla/reference_analyzer.py", __dir__),
-                                       wav, "--json", features_path)
-      assert status.success?, err
-      text = File.read(features_path)
-      refute_match(/NaN/, text, "the analyzer must not emit non-standard NaN tokens")
-      feats = JSON.parse(text)
-      assert_in_delta 86.0, feats.fetch("bpm"), 3.0, "a two-bar 86 BPM fixture must be measured near 86"
-      %w[onset_density_per_bar offbeat_onset_share timing_spread_ms swing_ratio].each do |key|
-        assert feats.key?(key)
-      end
-    end
-  end
 end
 
 class TestDillaIndustrialTechno < Minitest::Test
