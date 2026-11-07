@@ -17,6 +17,14 @@ module Studio
       # Lora subjects, the output-path safety rails — pointed outside the tree.
       ROOT = File.expand_path("..", __dir__)
       SUBJECTS = File.join(ROOT, "replicate", "lora").freeze
+      # The photography craft appended to every still prompt. The first selfie
+      # series rendered every scene dead-centre with the subject's head cropped
+      # at the frame edge and flat frontal light: the scene words carried light
+      # but nothing carried framing, camera position or a lens. These fix the
+      # framing and let the light read as a decision.
+      PHOTOGRAPHIC_CRAFT = "well-framed, the whole head in frame with headroom, " \
+                           "subject slightly off centre, directional light with real shadows, " \
+                           "shot on a 35mm prime, sharp eyes, no text in the frame"
 
       def initialize(
         client: nil,
@@ -91,8 +99,7 @@ module Studio
       def photographic(words)
         env = subject_env
         parts = [
-          env["TRIGGER"], env["DESCRIPTOR"], words,
-          "face readable, a real lens, no text in the frame"
+          env["TRIGGER"], env["DESCRIPTOR"], words, PHOTOGRAPHIC_CRAFT
         ]
         parts.compact.join(", ")
       end
@@ -149,8 +156,12 @@ module Studio
 
       def run_postpro(path)
         script = File.join(ROOT, "postpro", "postpro.rb")
+        # --rough alone let every still draw one whisper-quiet chain: the first
+        # selfie series came back looking ungraded. Heavy mode anchors each
+        # take in a named look and deals the lane subtle to bleeding edge, so
+        # the grade is a photographic decision, not a nudge.
         stdout, stderr, status = Studio::Subprocess.capture3(
-          {}, RbConfig.ruby, script, "--rough", "--count", "1", path, timeout: 600
+          {}, RbConfig.ruby, script, "--heavy", "--count", "1", path, timeout: 600
         )
         return if status.success?
 
