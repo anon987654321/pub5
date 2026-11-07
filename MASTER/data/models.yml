@@ -604,6 +604,12 @@ openai_compatible:
         - Qwen3.5-397B-A17B
         - Qwen3.6-27B
         - Qwen3.8-27B
+  # Z.ai (Zhipu GLM), OpenAI-compatible. Endpoint declared but unverified from
+  # this checkout: verify with a keyed probe on /models before the first paid
+  # call, the way the keyless rows above name their verification dates.
+  zai:
+    base: https://api.z.ai/api/paas/v4
+    key_env: [ZAI_API_KEY]
 
 # Language models Replicate hosts, asked as replicate:<owner>/<name> with
 # REPLICATE_API_TOKEN. Paid per call, so they sit behind the free lanes.

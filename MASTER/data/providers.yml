@@ -78,6 +78,16 @@ replicate:
   strengths: [image_generation, video_generation, tts, fast_inference, specialized_models, edge]
   default_model: black-forest-labs/flux-2-pro
 
+# Z.ai (Zhipu GLM). Reached the openai_compatible way (models.yml), not through
+# RubyLLM, which has no zhipu setter: no ruby_llm_key here on purpose, the trap
+# test_provider_key_wiring exists to catch. A bare glm- id reaches it when
+# ZAI_API_KEY is set; the key is never recorded in any repository file.
+zai:
+  env: [ZAI_API_KEY]
+  model_pattern: '\Aglm'
+  strengths: [cheap, coding, long_context, agentic]
+  default_model: glm-5.3-flash
+
 local:
   env: []
   strengths: [privacy, offline, cheap]
