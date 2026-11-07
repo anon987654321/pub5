@@ -6,6 +6,7 @@ require "json"
 require "rexml/document"
 require "rexml/xpath"
 require "uri"
+require_relative "browser_agent"
 
 module Master
   module Tools
@@ -63,14 +64,51 @@ module Master
         }
       ].freeze
 
+      BROWSER_TOOLS = [
+        {
+          "name" => "browser.open",
+          "description" => "Open a public HTTPS website in a read-only Ferrum session. The hostname must be explicitly permitted by this command's capability manifest.",
+          "arguments" => { "url" => "public HTTPS URL", "session" => "optional session id, default default" }
+        },
+        {
+          "name" => "browser.inspect",
+          "description" => "Inspect the current page DOM, visible text, links and screenshot path.",
+          "arguments" => { "session" => "optional session id, default default" }
+        },
+        {
+          "name" => "browser.scroll",
+          "description" => "Scroll to trigger lazy loading and JavaScript infinite-scroll content; bounded to five steps.",
+          "arguments" => { "session" => "optional session id", "steps" => "integer 1..5" }
+        },
+        {
+          "name" => "browser.follow",
+          "description" => "Navigate to a literal same-host anchor href without firing click handlers.",
+          "arguments" => { "session" => "optional session id", "href" => "same-host href" }
+        },
+        {
+          "name" => "browser.close",
+          "description" => "Close an open browser session.",
+          "arguments" => { "session" => "optional session id" }
+        }
+      ].freeze
+
+      ALL_TOOLS = (TOOLS + BROWSER_TOOLS).freeze
+
       def initialize(world:)
         @world = world
+        @browser = BrowserAgent.new(world:)
       end
 
       def available_tools
-        TOOLS.select do |tool|
+        research_tools = TOOLS.select do |tool|
           HOSTS.fetch(tool.fetch("name")).all? { |host| host_permitted?(host) }
         end
+        browser_tools = if @world.manifest.declared?(:net) && BrowserAgent.available?
+                          BROWSER_TOOLS
+                        else
+                          []
+                        end
+        research_tools + browser_tools
       end
 
       def tool_prompt
@@ -105,7 +143,7 @@ module Master
         call = data.fetch("tool_call")
         return unless call.is_a?(Hash) && call.keys.sort == %w[arguments name]
         return unless call["name"].is_a?(String) && call["arguments"].is_a?(Hash)
-        return unless TOOLS.any? { |tool| tool["name"] == call["name"] }
+        return unless ALL_TOOLS.any? { |tool| tool["name"] == call["name"] }
 
         call
       rescue JSON::ParserError
@@ -123,6 +161,16 @@ module Master
                  when "arxiv.papers"
                    arxiv_papers(query: args.fetch("query"), sort_by: args.fetch("sort_by", "relevance"),
                                 limit: args.fetch("limit", 5), full_text: args.fetch("full_text", false))
+                 when "browser.open"
+                   @browser.call(action: "open", url: args.fetch("url"), session: args.fetch("session", "default"))
+                 when "browser.inspect"
+                   @browser.call(action: "inspect", session: args.fetch("session", "default"))
+                 when "browser.scroll"
+                   @browser.call(action: "scroll", session: args.fetch("session", "default"), steps: args.fetch("steps", 1))
+                 when "browser.follow"
+                   @browser.call(action: "follow", session: args.fetch("session", "default"), href: args.fetch("href"))
+                 when "browser.close"
+                   @browser.call(action: "close", session: args.fetch("session", "default"))
                  else
                    raise Error, "unknown research tool: #{name}"
                  end
