@@ -335,7 +335,6 @@ nb:
     play: "Spill av «%{title}» fra %{provider}"
     open: "Åpne på %{provider} (åpnes i ny fane)"
 
-
   cookie_consent:
     kicker: "Personvernvalg"
     title: "Informasjonskapsler og lignende teknologier"

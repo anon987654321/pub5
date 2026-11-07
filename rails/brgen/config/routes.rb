@@ -45,7 +45,7 @@ Rails.application.routes.draw do
   post   "posts/:post_id/bookmark" => "bookmarks#create",  as: :bookmark_post
   delete "posts/:post_id/bookmark" => "bookmarks#destroy", as: :unbookmark_post
 
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/legal.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/legal.rb", __dir__)))
 
   jobs_constraint = lambda { |request|
     session_id = request.cookie_jar.signed[:session_id]
@@ -69,12 +69,12 @@ Rails.application.routes.draw do
   end
   resources :passwords, param: :token, only: %i[new create edit update]
   %w[auth email_verification verification billing].each do |shared|
-    instance_eval(File.read(File.expand_path("../../__shared/config/routes/#{shared}.rb", __dir__)))
+    instance_eval(File.read(File.expand_path("../../shared/config/routes/#{shared}.rb", __dir__)))
   end
   post "fingerprint" => "fingerprints#create"
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/fleet.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/fleet.rb", __dir__)))
   resources :activity_events, only: :index
-  instance_eval(File.read(File.expand_path("../../__shared/config/routes/social.rb", __dir__)))
+  instance_eval(File.read(File.expand_path("../../shared/config/routes/social.rb", __dir__)))
   # Following a notification marks it read on the way to what it is about.
   resources :notifications, only: [] do
     member { get :open }
@@ -232,7 +232,7 @@ get "i/:token" => "invites#show", as: :invite
     resources :members, only: %i[new create destroy], controller: "group_members"
   end
 
-  # TV vertical, extracted to a mountable engine (../brgen_radio/tv). Routes now live in
+  # TV vertical, extracted to a mountable engine (../brgen/engines/radio/tv). Routes now live in
   # the engine's config/routes.rb; the host mounts it under the same subdomain
   # constraint. Host references to its helpers are tv.* (see application_helper,
   # sitemaps_controller). The pilot for the vertical-as-engine split — see README.md.
@@ -248,7 +248,7 @@ get "i/:token" => "invites#show", as: :invite
   # dating.* mounted helper. See brgen/README.md.
   mount Dating::Engine, at: "/", as: "dating", constraints: { subdomain: DATING_SUBDOMAINS }
 
-  # playlist vertical extracted to ../brgen_radio/playlist (mountable engine). Top-level mount with
+  # playlist vertical extracted to ../brgen/engines/radio/playlist (mountable engine). Top-level mount with
   # constraints: keyword — NOT a constraints(subdomain:) block, which would drop the
   # playlist.* mounted helper. See brgen/README.md.
   mount Playlist::Engine, at: "/", as: "playlist", constraints: { subdomain: RADIO_SUBDOMAINS }

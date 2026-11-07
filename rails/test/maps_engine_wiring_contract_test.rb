@@ -1,0 +1,78 @@
+# frozen_string_literal: true
+
+# maps became a mountable engine on 2026-08-12, the last of brgen's verticals to
+# move. The move is the thing that breaks quietly: tooling that globs
+# <app>/app/** stops seeing engine code, and a check that stops looking still
+# passes, so a falling finding count reads as improvement rather than blindness.
+#
+# A per-engine contract rather than a shared backlog: the next vertical to
+# move gets a file to copy instead of a method to append.
+#
+# Source-text assertions, under bare ruby with no app bundle.
+
+require "minitest/autorun"
+
+class MapsEngineWiringContractTest < Minitest::Test
+  ROOT = File.expand_path("../brgen_maps", __dir__)
+
+  def read(relative)
+    path = File.join(ROOT, relative)
+    assert File.file?(path), "#{relative} is gone — the engine moved again"
+    File.read(path)
+  end
+
+  # The engine is mounted by the host app, which is where its routes and reflexes live.
+  def host_read(relative)
+    path = File.join(File.expand_path("../brgen", __dir__), relative)
+    assert File.file?(path), "brgen/#{relative} is gone"
+    File.read(path)
+  end
+
+  def test_the_engine_is_mounted
+    assert_includes host_read("config/routes.rb"), "mount Maps::Engine",
+                    "an unmounted engine routes nothing, and every path helper below still resolves"
+  end
+
+  def test_places_browse_paginates_and_serves_html
+    controller = read("app/controllers/maps/places_controller.rb")
+    assert_includes controller, "format.html"
+    assert_includes controller, "@pagy, @places = pagy"
+  end
+
+  def test_places_infinite_scroll_is_wired_end_to_end
+    assert_includes read("app/views/maps/places/_live_search_results.html.erb"),
+                    "PlacesInfiniteScrollReflex#load_more"
+    assert_includes host_read("app/reflexes/places_infinite_scroll_reflex.rb"), "maps/places/card",
+                    "the reflex renders a card partial that lives in the engine"
+  end
+
+  def test_places_are_reachable_from_index_and_home
+    %w[app/views/maps/places/index.html.erb
+       app/views/maps/home/index.html.erb].each do |view|
+      assert_includes read(view), "places_path", "#{view} lost its link into places"
+    end
+  end
+
+  def test_place_show_offers_a_check_in
+    assert_includes read("app/views/maps/places/show.html.erb"), "check_in_place_path"
+  end
+
+  def test_map_home_centers_on_the_current_city_not_bergen
+    home = read("app/views/maps/home/index.html.erb")
+    controller = read("app/controllers/maps/home_controller.rb")
+    refute_includes home, "60.39"
+    assert_includes home, "@map_center_lat"
+    assert_includes controller, "city&.latitude"
+    assert_includes home, 't("maps.aria_map")'
+  end
+
+  def test_missing_city_coordinates_fall_back_to_a_world_view_not_bergen
+    controller = host_read("app/javascript/controllers/map_controller.js")
+    home = read("app/views/maps/home/index.html.erb")
+
+    assert_includes controller, "Number.isFinite(this.centerLatValue)"
+    assert_includes controller, ": [0, 0]"
+    refute_includes controller, "60.39299"
+    assert_includes home, 'data-map-zoom-value="<%= @map_center_lat.present? && @map_center_lng.present? ? 12 : 1.5 %>"'
+  end
+end

@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+
+class SurfaceMicroRefinementContractTest < Minitest::Test
+  ROOT = File.expand_path("..", __dir__)
+  SHEET = File.join(ROOT, "shared/app/assets/stylesheets/_surface_micro_refinements.scss")
+  MATRIX = File.join(ROOT, "docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX.md")
+  STACKS = %w[
+    shared/app/assets/stylesheets/_stack.scss
+    shared/app/assets/stylesheets/_stack_brgen.scss
+  ].freeze
+
+  def test_experimental_stylesheet_is_absent_from_active_asset_tree
+    refute File.exist?(SHEET),
+           "the unvalidated 288-property experiment must not remain a scanned stylesheet"
+  end
+
+  def test_matrix_has_exactly_288_items
+    source = File.read(MATRIX, encoding: "UTF-8")
+    assert_equal 288, source.lines.count { |line| line.match?(/^\d{3}\. /) }
+    assert_includes source, "Archived surface micro-refinement matrix"
+  end
+
+  def test_shared_stacks_keep_the_experimental_surface_pass_out_of_production
+    STACKS.each do |relative|
+      source = File.read(File.join(ROOT, relative), encoding: "UTF-8")
+      refute_includes source, '@forward "surface_micro_refinements";'
+      refute_includes source, '@forward "surface_micro_refinements_two";'
+    end
+  end
+
+  def test_archived_matrix_records_the_historical_surface_groups
+    source = File.read(MATRIX, encoding: "UTF-8")
+    assert_includes source, "Archived surface micro-refinement matrix"
+    assert_includes source, "radio · track card"
+    assert_includes source, "market · hero"
+    assert_includes source, "market · hero copy"
+    assert_includes source, "market · storefront frame"
+    assert_equal 288, source.lines.count { |line| line.match?(/^\d{3}\. /) }
+  end
+end

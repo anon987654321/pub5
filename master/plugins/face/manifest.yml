@@ -1,8 +1,0 @@
-schema: 1
-name: face
-status: preserved-source-pending-adapter
-capabilities:
-  - verb: read
-    paths: ["master/plugins/face/**", "registry/tokens.yml"]
-  - verb: render
-    paths: ["master/plugins/face/output/**"]

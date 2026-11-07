@@ -393,7 +393,6 @@ class DeploySmokeFixtureTest < Minitest::Test
   end
 end
 
-
 class DeployPlaceholderFixtureTest < Minitest::Test
   def test_uppercase_template_tokens_are_detected
     assert_equal ["%APP_NAME%", "%APP_PORT%"],

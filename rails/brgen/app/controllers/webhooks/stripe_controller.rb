@@ -40,7 +40,7 @@ module Webhooks
 
     private
 
-    # Subscription events (plans in __shared/config/plans.yml) go to billing; the
+    # Subscription events (plans in shared/config/plans.yml) go to billing; the
     # rest are marketplace payments.
     def handle_event(event)
       return if Shared::StripeBilling.handle(event)

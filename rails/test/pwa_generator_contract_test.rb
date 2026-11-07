@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+require "minitest/autorun"
+
+class PwaGeneratorContractTest < Minitest::Test
+  # Minitest::Test has no `test "name" do`; without this Kernel#test swallowed the call
+  # and the file never ran.
+  def self.test(name, &block) = define_method("test_#{name.gsub(/\W+/, "_")}", &block)
+
+  ROOT = File.expand_path("..", __dir__)
+
+  def source
+    @source ||= File.read(File.join(ROOT, "..", "MASTER", "tools", "rails", "build_workbox.mjs"))
+  end
+
+  test "all store apps generate from one shared worker source" do
+    assert_includes source, 'const APPS = ["amber", "brgen", "bsdports"]'
+    assert_includes source, 'const source = join(root, "shared", "pwa", "service_worker.js")'
+    assert_includes source, 'const destination = join(root, app, "app", "views", "pwa", "service-worker.js")'
+  end
+
+  test "the generator excludes digest assets from precache" do
+    assert_includes source, 'globIgnores: ["service-worker.js", "assets/**"]'
+    # The home page is never precached: it is fetched with the installing
+    # visitor's cookies and served cache-first to whoever navigates home next.
+    refute_includes source, '{ url: "/", revision: "shell-v1" }'
+    assert_includes source, '{ url: "/offline", revision: "offline-v1" }'
+  end
+
+  test "workbox version and browser floor stay explicit" do
+    assert_includes source, "Workbox 7.4.1 generated"
+    assert_includes source, 'target: ["chrome96", "firefox102", "safari16"]'
+  end
+end

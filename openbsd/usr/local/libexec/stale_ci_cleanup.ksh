@@ -2,7 +2,6 @@
 # Kill orphaned CI/scan workers when vm23 is saturated. Sourced by resource_guard.sh.
 # Safe-ish: skips falcon/rc.d parents; targets test/seed/ci/cli patterns only.
 
-
 # No shell options here. resource_guard.sh dot-sources this file, so a top-level
 # `set -o pipefail` stayed on in the guard's own shell: `ps -U amber` exits 1 once
 # amber is shed, the guard's rss pipeline failed, its set -e ended every tick before

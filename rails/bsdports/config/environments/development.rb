@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require File.expand_path("../../../../shared/config/environments/development.rb", __dir__)
+require File.expand_path("../../../shared/config/environments/development.rb", __dir__)
 
 Rails.application.configure do
   # Keep development on the same dedicated SQLite queue database as production.

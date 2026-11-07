@@ -2,7 +2,7 @@
 
 module Shared
   # Locates MASTER/contracts for the repo checkout and for the deploy copy-tree,
-  # where __shared sits beside app/ under /home/<app> and MASTER is outside it.
+  # where shared sits beside app/ under /home/<app> and MASTER is outside it.
   # PUB4_ROOT (exported by rc.d and vps_ci.sh) names the checkout that holds
   # MASTER. A task started as the app user without it (db:prepare and the asset
   # precompile in vps-deploy) has no PUB4_ROOT, and the repo-relative walk lands

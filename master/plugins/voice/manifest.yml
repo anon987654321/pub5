@@ -1,8 +1,0 @@
-schema: 1
-name: voice
-status: preserved-source-pending-adapter
-capabilities:
-  - verb: read
-    paths: ["master/plugins/voice/**", "registry/voice.yml"]
-  - verb: render
-    paths: ["studio/output/**"]

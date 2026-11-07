@@ -332,7 +332,6 @@ en:
     play: "Play “%{title}” from %{provider}"
     open: "Open on %{provider} (opens in a new tab)"
 
-
   cookie_consent:
     kicker: "Privacy choice"
     title: "Cookies and similar technologies"

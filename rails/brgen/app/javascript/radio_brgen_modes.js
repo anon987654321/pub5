@@ -46,7 +46,6 @@ export function modeAfterStep(current, step, count = MODES.length) {
   return ((current + step) % count + count) % count
 }
 
-
 // ringShape for the vertex shader: the radial offset, in the pen's 75-unit
 // ring, for angle th on ring i (0 at the far end to 125 at the near) at time t.
 // GLSL ES 1.00 has no switch, so the modes are an if-ladder in MODES order.

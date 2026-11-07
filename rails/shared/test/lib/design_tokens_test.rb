@@ -4,7 +4,7 @@ require "minitest/autorun"
 require "tmpdir"
 require "fileutils"
 require_relative "../../lib/shared/contracts"
-# On vm23 __shared sits under /home/<app>, so a path four levels up lands on /home/MASTER and the
+# On vm23 shared sits under /home/<app>, so a path four levels up lands on /home/MASTER and the
 # test never loaded; Shared::Contracts finds the checkout that holds MASTER in either layout.
 require Shared::Contracts.tool_path("design_tokens")
 require Shared::Contracts.tool_path("rails/build_face_css")
@@ -133,7 +133,7 @@ DesignTokens.face_root_css.lines.grep(/--#{key.to_s.tr('_', '-')}/).first.to_s.s
   end
 
   def test_committed_static_tokens_css_matches_master_projection
-    path = File.join(DesignTokens::ROOT, "RAILS/__shared/public/styles/tokens.css")
+    path = File.join(DesignTokens::ROOT, "RAILS/shared/public/styles/tokens.css")
 
     assert_equal DesignTokens.static_tokens_css, File.read(path),
                  "public tokens.css drifted from MASTER tokens; run ruby MASTER/tools/rails/build_all_css.rb"
@@ -142,9 +142,9 @@ DesignTokens.face_root_css.lines.grep(/--#{key.to_s.tr('_', '-')}/).first.to_s.s
   def test_all_scss_files_includes_nested_engine_sources_and_excludes_artifacts
     Dir.mktmpdir do |root|
       host = File.join(root, "RAILS/amber/app/assets/stylesheets/application.scss")
-      engine = File.join(root, "RAILS/brgen_dating/app/assets/stylesheets/_vertical.scss")
-      vendor = File.join(root, "RAILS/brgen_dating/app/assets/stylesheets/vendor/_vendor.scss")
-      build = File.join(root, "RAILS/brgen_dating/app/assets/stylesheets/builds/_built.scss")
+      engine = File.join(root, "RAILS/brgen/engines/dating/app/assets/stylesheets/_vertical.scss")
+      vendor = File.join(root, "RAILS/brgen/engines/dating/app/assets/stylesheets/vendor/_vendor.scss")
+      build = File.join(root, "RAILS/brgen/engines/dating/app/assets/stylesheets/builds/_built.scss")
 
       [host, engine, vendor, build].each do |path|
         FileUtils.mkdir_p(File.dirname(path))

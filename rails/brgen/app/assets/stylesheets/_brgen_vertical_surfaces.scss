@@ -698,7 +698,6 @@ font-size: clamp(12px, 3vw, var(--text-small));
    all three apps and compiles into the same application.css; a second copy is
    a utility that can drift out from under a screen reader. */
 
-
 .radio-home {
   width: min(100% - 32px, 960px);
   margin-inline: auto;
@@ -1673,7 +1672,6 @@ body.vertical-tv main {
   max-width: var(--container-max);
   margin-inline: auto;
 }
-
 
 .episode-list {
   display: flex;
@@ -2655,7 +2653,6 @@ body.vertical-messenger #typing-indicator[data-active="true"]::before {
     animation: none;
     opacity: 0.7;
   }
-
 
   .tv-feed-scroller { scroll-behavior: auto; }
 }

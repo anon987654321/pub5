@@ -23,7 +23,7 @@ Bundler.require(*Rails.groups)
 module App
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 8.1
+    config.load_defaults 8.2
 
     config.assets.integrity_hash_algorithm = "sha256"
 

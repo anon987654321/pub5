@@ -13,7 +13,7 @@ dating, food, maps, media and messaging. The missing vowel is the brand mechanic
 city apex recognisable and leaves the place itself in charge. The verticals borrow brgen's
 identity and earn a visual dialect of their own only when the surface needs one. Design values
 come from MASTER/data/tokens.yml through Master.tokens, and the shared stylesheet is
-RAILS/__shared/README.md. The feature matrix is RAILS/apps.yml under brgen; work only the operator
+RAILS/shared/README.md. The feature matrix is RAILS/apps.yml under brgen; work only the operator
 can finish is listed in `MASTER/data/operator_seams.yml`.
 
 ## Cities
@@ -54,13 +54,13 @@ host. The old takeaway.<apex> host still resolves, as a compatibility mount of t
 Messenger is an engine whose routes are drawn in the host, under messenger.<apex>. ai.brgen.no
 is MASTER, a separate application with its own service, and is not a vertical.
 
-**Vertical product briefs:** [Dating](../brgen_dating/README.md) ·
-[Marketplace](../brgen_marketplace/README.md) ·
-[Takeaway / food](../brgen_marketplace/engines/takeaway/README.md) ·
-[Radio](../brgen_radio/playlist/README.md) ·
-[TV](../brgen_radio/tv/README.md) ·
-[Maps](../brgen_maps/README.md) ·
-[Messenger](../brgen_messenger/README.md).
+**Vertical product briefs:** [Dating](../brgen/engines/dating/README.md) ·
+[Marketplace](../brgen/engines/marketplace/README.md) ·
+[Takeaway / food](../brgen/engines/marketplace/engines/takeaway/README.md) ·
+[Radio](../brgen/engines/radio/playlist/README.md) ·
+[TV](../brgen/engines/radio/tv/README.md) ·
+[Maps](../brgen/engines/maps/README.md) ·
+[Messenger](../brgen/engines/messenger/README.md).
 
 These briefs preserve the distinct product promises while treating the active engine,
 routes and tests as the authority for what is actually available.
@@ -76,13 +76,12 @@ Applied migrations stay where they ran, and an engine owns its db/migrate only f
 shared models, authentication and design system live in the pub4-shared engine, and no vertical
 redefines them.
 
-
 ## Marketplace integration
 
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns
 city identity and the webhook entry points shared with the other verticals. The host has no
 listing model. The engine's product and feature status lives in
-[the Marketplace README](../brgen_marketplace/README.md) and `RAILS/apps.yml`.
+[the Marketplace README](../brgen/engines/marketplace/README.md) and `RAILS/apps.yml`.
 
 The host serves `/merchant-feed.xml` with up to 10,000 publicly visible, priced and photographed
 goods; affiliate inventory is excluded. Stripe and Vipps enter through host routes at

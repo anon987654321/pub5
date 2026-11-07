@@ -157,7 +157,6 @@ aside:not([class]) > h2 {
   margin-inline: var(--space-4);
 }
 
-
 /* A section's distance from the one before it, antigravity.google's wide
    rhythm (operator, 2026-09-25). :where() so any section that already states
    its own margin keeps it. */

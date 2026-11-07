@@ -246,7 +246,7 @@ class Marketplace::ListingsController < Marketplace::BaseController
     offers + top_offer_listings(kind, excluding: offers, limit: limit - offers.size)
   end
 
-  # Local business presence (__shared/config/plans.yml, featured_listings): a
+  # Local business presence (shared/config/plans.yml, featured_listings): a
   # paying business's active listings come after the featured deals and before
   # the popular fill. Paid placement, so the card carries the sponsored label.
   def presence_seller_ids

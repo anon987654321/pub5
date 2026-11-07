@@ -13,7 +13,7 @@ app = File.basename(Dir.pwd) if app.empty?
 app = File.basename(File.expand_path("..")) if app == "app"
 
 # The monorepo keeps the app at RAILS/<app>; the deploy copy-tree keeps it at
-# /home/<app>/app beside __shared, so the directory is "app" while the name
+# /home/<app>/app beside shared, so the directory is "app" while the name
 # stays the app. Without this the copy-tree run died "unknown Rails app".
 app_dir = [app, "app"].find do |dir|
   File.file?(File.join(rails_root, dir, "config", "application.rb"))
@@ -37,17 +37,17 @@ SimpleCov.start "rails" do
   cover "#{app_dir}/app/**/*.rb"
   cover "#{app_dir}/engines/**/app/**/*.rb"
   cover "#{app_dir}/lib/**/*.rb"
-  cover "__shared/app/**/*.rb"
-  cover "__shared/lib/**/*.rb"
+  cover "shared/app/**/*.rb"
+  cover "shared/lib/**/*.rb"
 
   cover_views "#{app_dir}/app/views/**/*.erb"
   cover_views "#{app_dir}/engines/**/app/views/**/*.erb"
-  cover_views "__shared/app/views/**/*.erb"
+  cover_views "shared/app/views/**/*.erb"
 
   group "Application", "#{app_dir}/app"
   group "Libraries", "#{app_dir}/lib"
   group "Engines", "#{app_dir}/engines"
-  group "Shared", ["__shared/app", "__shared/lib"]
+  group "Shared", ["shared/app", "shared/lib"]
 
   enable_coverage :branch
   enable_coverage :method

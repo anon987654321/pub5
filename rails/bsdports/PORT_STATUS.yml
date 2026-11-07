@@ -1,9 +1,0 @@
-schema: 1
-product: bsdports
-path: rails/bsdports
-status: source_imported_runtime_not_run
-runtime: NOT_RUN
-contracts: NOT_RUN
-source_counts: { bootstrap_files: 10, models: 6, controllers: 2, schema_and_seeds: 2, views: 1 }
-database_restore: BLOCKED
-production_cutover: BLOCKED

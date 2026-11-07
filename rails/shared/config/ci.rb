@@ -16,7 +16,7 @@ ENV["BUNDLER_AUDIT_UPDATE"] ||= "1"
 ENV["NPM_CONFIG_CACHE"] ||= File.expand_path("~/.npm")
 monorepo_rails = ENV["PUB4_RAILS_ROOT"].to_s.strip
 monorepo_rails = File.expand_path("../..", __dir__) if monorepo_rails.empty?
-ENV["PUB4_RAILS_ROOT"] ||= monorepo_rails if File.directory?(File.join(monorepo_rails, "__shared"))
+ENV["PUB4_RAILS_ROOT"] ||= monorepo_rails if File.directory?(File.join(monorepo_rails, "shared"))
 master_rails_tools = File.expand_path("../MASTER/tools/rails", monorepo_rails)
 master_rails_tools = "/home/dev/pub4/MASTER/tools/rails" unless File.directory?(master_rails_tools)
 require File.join(master_rails_tools, "operator", "ci_guard")
@@ -170,7 +170,7 @@ Operator::CiGuard.run! do
     # This is also where axe-core accessibility checks live (see
     # test/application_system_test_case.rb's assert_accessible).
     # PUB4_COVERAGE_PART: its own SimpleCov result, merged with rails_test's
-    # rather than replacing it (__shared/test/coverage.rb).
+    # rather than replacing it (shared/test/coverage.rb).
     step("system_test", "env PUB4_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system") unless vps_host
     seed_env = vps_host ? "env RAILS_ENV=test SKIP_BERGEN_DEMO=1" : "env RAILS_ENV=test"
     # bin/rake, not bin/rails.

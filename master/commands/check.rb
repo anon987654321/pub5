@@ -73,8 +73,17 @@ module Commands
       false
     end
 
+    # The suites build their own repositories; a commit's git context (the
+    # temp index a pathspec commit exports to its hook, GIT_DIR, the work
+    # tree) would reach them through the environment and turn every fixture
+    # `git status` into a read of the committing index. The staged bytes the
+    # parse and law stages judge come from the index on purpose; the tests
+    # are judged on the working tree and get none of it.
+    GIT_CONTEXT = %w[GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
+                     GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE].freeze
+
     def tests
-      run = @world.exec(RbConfig.ruby, "test/run.rb", timeout: 600)
+      run = @world.exec(RbConfig.ruby, "test/run.rb", timeout: 600, unset: GIT_CONTEXT)
       summary = run.out.lines.grep(/\d+ runs, \d+ assertions/).last.to_s.strip
       @out.print(run.out, run.err) unless run.ok?
       @out.puts "test: #{summary.empty? ? 'NOT_RUN (no test summary)' : summary}#{' (timed out)' if run.timed_out}"

@@ -1,12 +1,12 @@
 # Shared Rails engine
 
 **One engine carries the grammar every surface speaks, so that brgen, amber,
-bsdports and share one accessible presentation grammar, and so that a
-rule written once holds on every screen.** It is the `pub5-shared` gem: layout
+bsdports and the MASTER face feel like one family in four dialects, and so that a
+rule written once holds on every screen.** It is the `pub4-shared` gem: layout
 chrome, accessibility defaults, social primitives, a service worker and a
 vendored set of Stimulus components. The apps mount it by local path.
 
-The design values do not start here. They are declared in `registry/tokens.yml`,
+The design values do not start here. They are declared in `MASTER/data/tokens.yml`,
 and the `design_tokens.yml` beside this README is a file generated from it by
 `MASTER/tools/rails/sync_dialect_tokens.rb`. Edit the source and regenerate, and
 never hand-edit the projection. MASTER's browser face is assembled from ordered
@@ -133,8 +133,3 @@ ruby MASTER/tools/rails/build_face_css.rb --check
 ruby MASTER/checks/runner.rb stimulus_components
 ruby MASTER/checks/runner.rb frontend_auditor
 ```
-
-
-## pub5 migration status
-
-This is a source-preserving port of the shared engine. App wiring and Rails runtime proof are recorded separately in `rails/port.yml`; source presence is not a boot or route-parity claim. Brgen and Amber use the same `_post_card` and `_post_vote_rail` partials and the same structural voting styles. Product chrome and palettes remain app-owned.

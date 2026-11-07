@@ -81,7 +81,7 @@ module Fix
         end
 
         def run(sheets)
-          sheets.sort_by { |path| [path.include?("/__shared/") ? 0 : 1, path] }.first(SHEETS).to_h { |path| [path, sheet(path)] }
+          sheets.sort_by { |path| [path.include?("/shared/") ? 0 : 1, path] }.first(SHEETS).to_h { |path| [path, sheet(path)] }
         end
 
         def sheet(path)

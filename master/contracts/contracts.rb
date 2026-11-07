@@ -98,10 +98,10 @@ module Contracts
 
       ## Laws in force (#{laws.count { |_, l| l['lifecycle'] == 'enforced' }} enforced, #{laws.size} total)
       #{listed(laws.select { |_, l| l['lifecycle'] == 'enforced' })}
-      
+
       The other #{laws.count { |_, l| l['lifecycle'] != 'enforced' }} are advisory (#{advisory(laws)}): each is in
       registry/laws.yml with its statement, and `bin/master laws` lists them.
-      
+
       ## Conduct every writer keeps (#{conduct(laws).size} conduct Laws, advisory)
       #{listed(conduct(laws))}
     MD

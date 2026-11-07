@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 source "https://rubygems.org"
-ruby "3.4.9"
+ruby ">= 3.4", "< 4.1"
 
-gem "rails", "= 8.1.4.1"
+gem "rails", github: "rails/rails", ref: "c9e85dbe297e248dd2f217d04f84a94881ac046a"
 # Norwegian is the default locale in both apps, and without this the only
 # strings Rails itself produces — ActiveRecord validation messages, date and
 # number formats, distance_of_time_in_words — render in English inside a
@@ -80,8 +80,8 @@ group :development do
 end
 gem "pagy"
 gem "falcon"
-# Engine-ize spike: shared as local path gem (relative from rails/bsdports)
-gem "pub5-shared", path: "../shared"
+# Engine-ize spike: shared as local path gem (relative from rails/$app)
+gem "pub4-shared", path: "../shared"
 
 gem "dartsass-rails", "~> 0.5.1"
 

@@ -209,6 +209,24 @@ class ParseGateTest < Minitest::Test
     end
   end
 
+  def test_block_output_fixup_leaves_sibling_tags_alone
+    template = <<~ERB
+      <%= t(:title) %>
+      <%= form_with url: "/p", method: :post,
+            html: { class: "f" } do %>
+        <%= hidden_field_tag :t %>
+      <% end %>
+    ERB
+    assert_nil Core::ParseGate.problem(:erb, template)
+  end
+
+  def test_layout_yield_parses_the_way_rails_compiles_it
+    assert_nil Core::ParseGate.problem(:erb, "<html><body><%= yield %></body></html>\n")
+
+    broken = "<%= yield(:x) %>\n<%= t(:a) %>\n<% ) %>\n"
+    assert_match(/\Aline 3:/, Core::ParseGate.problem(:erb, broken))
+  end
+
   def test_ruby_scripts_without_an_extension_are_ruby
     sandbox do |root|
       put(root, "bin/tool", "#!/usr/bin/env ruby\nputs(\n")
