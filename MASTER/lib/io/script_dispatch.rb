@@ -16,11 +16,16 @@ module Master
 
       # Public tool names resolve to one canonical entrypoint. STUDIO owns the
       # whole provider boundary, and STUDIO/replicate/client.rb is replicate's
-      # one entrypoint. lora and postpro retired with their STUDIO trees; an
-      # unknown name keeps the default <tool>/<tool>.rb probe and reports a
-      # missing entrypoint instead of silently widening the search.
+      # one entrypoint. An unknown name keeps the default <tool>/<tool>.rb probe
+      # and reports a missing entrypoint instead of silently widening the search.
+      #
+      # postpro is NOT retired: STUDIO/postpro/postpro.rb is present, tracked and
+      # runs. Listing it here made every /fix media postprocess intent answer
+      # "retired; no executable entrypoint is registered" while the tool sat one
+      # directory away — a live capability reported as gone. lora is: the tree
+      # moved to STUDIO/lora/ with weights and a subject.env but no entrypoint.
       TOOL_ENTRYPOINTS = { "replicate" => File.join("replicate", "client.rb") }.freeze
-      RETIRED_TOOLS = %w[lora postpro].freeze
+      RETIRED_TOOLS = %w[lora].freeze
 
       def run(root:, tool:, arg: "", env: {})
         name = tool.to_s

@@ -196,13 +196,15 @@ module Master
       # the silently-failing properties — injection, authority, custody,
       # bypasses, delivery. Either way the instruments keep their findings.
       FIX_PIN_SLASH = { "simplify" => "--simplify", "security" => "--security" }.freeze
-      # fix, review and critique are the advertised verbs; the rest of the surface
-      # is wider than the three words on purpose — /scan, /sweep and /council were
-      # spellings people had learned, and a retired word that falls silently to
-      # chat is a worse answer than one that still works. They rewrite to /fix,
-      # the one command advertised.
+      # The slash spellings of /fix: the writing words, the two convergence
+      # reads, and the two critique pins. `/review`, `/critique` and `/council`
+      # are deliberately NOT here — reading is /fix --dry-run --critique, a flag
+      # of the one advertised command, not three verbs of its own. A model may
+      # still answer "review" (MODEL_ALIASES) and normalize_inferred_command
+      # rewrites that to /fix; a person typing "/review" gets the word back
+      # unchanged rather than a fourth spelling to learn.
       PIPELINE_SLASH = (
-        %w[fix review critique council scan self workflow triad sweep through] +
+        %w[fix scan self workflow triad sweep through] +
         CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys
       ).uniq.freeze
 
@@ -441,9 +443,8 @@ module Master
 
       def rewritten_pipeline(name, rest)
         return ["/fix", rest].reject(&:empty?).join(" ") if WRITING_SLASH.include?(name)
-        return ["/fix", pinned_flag(name), rest].reject(&:empty?).join(" ") if pinned_flag(name)
 
-        ["/fix --dry-run --critique --only #{READING_SLASH.fetch(name)}", rest].reject(&:empty?).join(" ")
+        ["/fix", pinned_flag(name), rest].reject(&:empty?).join(" ")
       end
 
       def pinned_flag(name)

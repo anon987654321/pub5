@@ -90,8 +90,8 @@ module Master
       # observes, critiques, generates and picks between repairs, applies one,
       # validates it and observes again, until the tree converges, stops
       # improving, or hands back a state only a person can settle. `--dry-run`
-      # stops after the reading; review, critique and council are spellings of
-      # that reading with the council on (TurnRouter::READING_SLASH). The run
+      # stops after the reading; `--critique` is how the council argues over it
+      # (TurnRouter::READING_FLAGS). The run
       # ends with its wishlist: the governed workstreams and their state.
       #
       # Command-line overrides are temporary: a setting on one turn must

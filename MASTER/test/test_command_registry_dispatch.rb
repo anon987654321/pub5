@@ -27,8 +27,12 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     def verify_log! = @events
 
+    # The real Kernel writes JSON and reads rows back, so a payload's symbol
+    # keys become strings. Storing the raw hash made every string-keyed
+    # assertion here read nil while production was correct.
     def append_event(kind, payload, run_id: nil)
-      row = { "kind" => kind, "payload" => payload, "run_id" => run_id, "at" => Time.now.utc.iso8601(6) }
+      row = { "kind" => kind, "payload" => JSON.parse(JSON.generate(payload)),
+              "run_id" => run_id, "at" => Time.now.utc.iso8601(6) }
       @events << row
       row
     end
