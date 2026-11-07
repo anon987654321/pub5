@@ -10,6 +10,7 @@
 #   bin/master-mobile sms       the SMS operator gateway; prints what it is missing when it may not run
 #   bin/master-mobile notify    one on-screen toast, then exit
 #   bin/master-mobile say       one spoken line over the phone speaker, then exit
+#   bin/master-mobile snap      a burst of camera stills graded through the STUDIO postpro chain
 #   bin/master-mobile <args>    bin/master in the mobile profile
 
 root = File.expand_path("..", __dir__)
@@ -71,6 +72,49 @@ when "say"
     warn "mobile0: #{e.message}"
     exit 1
   end
+when "snap"
+  # Burst by default: five frames through the phone's own camera port, each
+  # graded immediately through the STUDIO postpro chain, raw kept beside the
+  # grade. Media deliverables stay outside the checkout under STUDIO's
+  # output contract; MASTER coordinates, STUDIO grades.
+  require "device"
+  require "shellwords"
+  studio = File.expand_path("../STUDIO", root)
+  script = File.join(studio, "postpro", "postpro.rb")
+  unless File.file?(script)
+    warn "mobile0: no postpro at #{script}; clone the STUDIO tree beside MASTER"
+    exit 1
+  end
+  require File.join(studio, "output_paths.rb")
+  burst = Integer(ARGV.values_at(ARGV.index("--count").to_i + 1).first || ENV["MASTER_SNAP_BURST"] || 5)
+  burst = 10 if burst > 10
+  camera = Integer(ARGV.last.to_s.match?(/\A\d\z/) ? ARGV.last : 0)
+  unless Master::Device.android?
+    warn "mobile0: snap needs an Android/Termux host - camera absent here"
+    exit 1
+  end
+  out_dir = Studio::OutputPaths.directory("photograph")
+  require "fileutils"
+  FileUtils.mkdir_p(out_dir)
+  graded = 0
+  burst.times do |shot|
+    stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
+    raw = File.join(out_dir, "snap_#{stamp}.jpg")
+    begin
+      Master::Device.camera_photo(raw, camera: camera)
+    rescue Master::Device::Error => e
+      warn "mobile0: snap #{shot + 1} failed - #{e.message}"
+      next
+    end
+    stdout, stderr, status = Master::Io::Exec.capture3(RbConfig.ruby, script, "--rough", "--count", "1", raw, timeout: 600)
+    if status.success? && !Dir[File.join(out_dir, "postpro_snap_#{stamp}*.jpg")].empty?
+      graded += 1
+    else
+      warn "mobile0: grade #{shot + 1} failed - #{[stderr, stdout].compact.reject(&:empty?).first.to_s.strip}"
+    end
+  end
+  puts "mobile0: snap burst done - #{graded}/#{burst} graded in #{out_dir}"
+  exit(graded > 0 ? 0 : 1)
 else
   exec(File.join(root, "bin", "master"), *ARGV)
 end
