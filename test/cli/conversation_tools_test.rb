@@ -72,6 +72,49 @@ class ConversationToolsTest < Minitest::Test
     end
   end
 
+  class ImageResearch < FakeResearch
+    def call(name:, arguments:)
+      super
+      JSON.generate("screenshot_file" => "log/master/browser-default.png", "title" => "Captured page")
+    end
+
+    def image_payload(_result) = { media_type: "image/png", data: "iVBORw0KGgo=" }
+  end
+
+  class VisionDispatch < FakeDispatch
+    attr_reader :images
+
+    def initialize(replies)
+      super
+      @images = []
+    end
+
+    def ask_with_image(prompt, image:, system:, messages:)
+      @images << { prompt:, image:, system:, messages: }
+      ask(prompt, system:, messages:)
+    end
+  end
+
+  def test_browser_screenshot_is_handed_to_the_vision_dispatch_path
+    sandbox do |root|
+      w = world(root, { read: ["log/master/*"], write: ["log/master/*"] })
+      research = ImageResearch.new
+      dispatch = VisionDispatch.new([
+        '{"tool_call":{"name":"browser.open","arguments":{"url":"https://example.com"}}}',
+        "The screenshot shows a simple example page."
+      ])
+      conversation = Cli::Conversation.new(world: w, dispatch:, research:)
+
+      reply = conversation.turn("Open and inspect the example page.")
+
+      assert_equal "The screenshot shows a simple example page.", reply.text
+      assert_equal 1, dispatch.images.size
+      assert_equal({ media_type: "image/png", data: "iVBORw0KGgo=" }, dispatch.images.first.fetch(:image))
+      assert_match(/screenshot_file/, dispatch.images.first.fetch(:prompt))
+      assert_equal 2, dispatch.calls.size
+    end
+  end
+
   def test_a_model_that_answers_normally_does_not_call_a_tool
     sandbox do |root|
       w = world(root, { read: ["log/master/*"], write: ["log/master/*"] })
