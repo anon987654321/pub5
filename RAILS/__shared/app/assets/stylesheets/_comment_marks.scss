@@ -19,7 +19,7 @@ a.comment-author:hover {
   text-decoration: none;
 }
 turbo-frame:target > .comment {
-  animation: comment-target 1.6s ease-out;
+  animation: comment-target 1.6s var(--ease-out);
 }
 @keyframes comment-target {
   from { background-color: var(--hover); }

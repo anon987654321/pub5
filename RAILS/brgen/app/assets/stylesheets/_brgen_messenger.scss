@@ -675,11 +675,18 @@ body.vertical-messenger .layout > main#main-content > section.messenger-window {
 // A reply's context line links to the line it answers. Arriving there marks
 // that line for a moment, then lets it go, so the log does not stay lit.
 .conversation-log > li:target > article {
-  animation: messenger-reply-target 1.6s ease-out;
+  animation: messenger-reply-target 1.6s var(--ease-out);
 }
 
 @keyframes messenger-reply-target {
   from { background-color: var(--hover); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversation-log > li:target > article {
+    animation: none;
+    background-color: var(--hover);
+  }
 }
 
 // A line's actions, folded away. The thread rules in _brgen_vertical_surfaces
