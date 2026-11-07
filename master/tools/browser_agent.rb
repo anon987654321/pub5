@@ -19,6 +19,7 @@ module Master
       MAX_SOURCE_BYTES = 24_000
       MAX_TEXT_BYTES = 12_000
       MAX_LINKS = 60
+      SENSITIVE_QUERY_KEY = /(?:token|secret|password|passwd|credential|auth|session|otp|one.?time|signature|jwt|api.?key|access.?key|code)/i.freeze
 
       RESTRICTED = %w[
         0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8
@@ -225,12 +226,26 @@ module Master
         screenshot = state.page.screenshot(encoding: :binary)
         screenshot_path = "log/master/browser-#{state_id(state)}.png"
         @world.write(screenshot_path, screenshot, mode: 0o600)
+        data["url"] = redact_url(data["url"])
         data["source"] = data["source"].to_s.byteslice(0, MAX_SOURCE_BYTES).to_s
         data["visible_text"] = data["visible_text"].to_s.byteslice(0, MAX_TEXT_BYTES).to_s
-        data["links"] = Array(data["links"]).first(MAX_LINKS)
+        data["links"] = Array(data["links"]).first(MAX_LINKS).map do |link|
+          link.merge("href" => redact_url(link["href"]))
+        end
         data["screenshot_file"] = screenshot_path
         data["vision_note"] = "Screenshot saved locally; the current text-only model path has not received image pixels."
         data
+      end
+
+      def redact_url(value)
+        uri = URI.parse(value.to_s)
+        uri.query = URI.encode_www_form(URI.decode_www_form(uri.query.to_s).map do |key, item|
+          [key, key.match?(SENSITIVE_QUERY_KEY) ? "[redacted]" : item]
+        end) unless uri.query.to_s.empty?
+        uri.fragment = nil
+        uri.to_s
+      rescue URI::InvalidURIError
+        "[invalid URL]"
       end
 
       def public_uri!(raw)
