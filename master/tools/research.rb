@@ -28,7 +28,7 @@ module Master
         "codepen.trending" => %w[codepen.io],
         "codepen.inspect" => %w[codepen.io],
         "github.repositories" => %w[api.github.com],
-        "arxiv.papers" => %w[export.arxiv.org ar5iv.labs.arxiv.org]
+        "arxiv.papers" => %w[export.arxiv.org]
       }.freeze
 
       TOOLS = [
@@ -358,7 +358,7 @@ module Master
 
         html = request("https://ar5iv.labs.arxiv.org/html/#{id}", expected_host: "ar5iv.labs.arxiv.org")
         plain_text(html)[0, 12_000]
-      rescue Error => e
+      rescue Error, Core::Refusal => e
         "Full text unavailable: #{e.message}"
       end
 
