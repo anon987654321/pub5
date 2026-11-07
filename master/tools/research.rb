@@ -107,7 +107,7 @@ module Master
         research_tools = TOOLS.select do |tool|
           HOSTS.fetch(tool.fetch("name")).all? { |host| host_permitted?(host) }
         end
-        browser_tools = if @world.manifest.declared?(:net) && BrowserAgent.available?
+        browser_tools = if @world.respond_to?(:browser) && @world.manifest.declared?(:net)
                           BROWSER_TOOLS
                         else
                           []
