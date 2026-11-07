@@ -61,6 +61,10 @@ screenshot count or previous revision.
   coverage, not a passing run. Run `cd STUDIO && rake check test` on pinned
   Ruby 4.0.5. Review an actual Dilla render by ear with rights-cleared local
   source and confirm the sample level leaves voice room.
+  2026-11-07: `rake test` ran green — 7 files including the new
+  `test_dilla_wear_test.rb` (Sonitex wear-pass battery; three Dilla rig
+  capabilities promoted in the analog capability contract). The by-ear render
+  review remains.
 - [ ] **Generated-output freshness.** Check design-token projection and CSS;
   compare `MASTER/web/public/face.runtime.js` and `face.css` with their
   sources; run `cd MASTER && rake docs:agent_contracts` and
@@ -613,6 +617,7 @@ test_law_parity, the rendered suite in headless Chrome — is NOT_RUN from this
 sandbox and folds into section 1's Current-revision acceptance.
 
 - [ ] Verify on a Ruby 4.0.5 host: rake dogfood green over law/, test_law_fixtures, test_law_ids_unique, test_law_parity and the test_law_catalogue* family green, and one rendered-suite pass per new snapshot Law in headless Chrome.
+  PARTIAL 2026-11-07: test_law_fixtures (8 runs) and the catalogue family (test_law_ids_unique, test_law_parity, test_law_catalogue + bootstrap + policy, 6 runs) are green on the pinned 4.0.5 host. rake dogfood (writes) and the headless-Chrome rendered pass remain NOT_RUN.
 - [ ] Apply REDUNDANT_CORE_REQUIRE's fix — the 108 dead requires — through /fix with MASTER_AUTOFIX=1, not by hand.
 - [ ] Tune design_thresholds against measured surfaces once the rendered suite runs: the 0.02 OKLab merge distance and the APCA levels are starting levels, not standards.
 
