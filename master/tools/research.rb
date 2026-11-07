@@ -257,7 +257,7 @@ module Master
         base = "https://codepen.io/#{match[1]}/pen/#{match[2]}"
         panels = %w[html css js].filter_map do |panel|
           body = request("#{base}.#{panel}", expected_host: "codepen.io")
-          [panel, body.byteslice(0, 8_000)]
+          [panel, utf8_prefix(body, 8_000)]
         rescue Error
           nil
         end.to_h
@@ -384,6 +384,10 @@ module Master
       def clean_query(value)
         value.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
              .gsub(/[[:cntrl:]]/, " ").strip.byteslice(0, MAX_QUERY_BYTES).to_s
+      end
+
+      def utf8_prefix(value, bytes)
+        value.to_s.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8).scrub
       end
 
       def plain_text(value)
