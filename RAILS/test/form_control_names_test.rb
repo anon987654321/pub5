@@ -51,6 +51,18 @@ class FormControlNamesTest < Minitest::Test
   KNOWN_UNREADABLE = [
     "brgen_radio/playlist/app/views/playlist/playlists/show.html.erb",
     "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb",
+    # These name their controls at render time in shapes a regex over ERB
+    # source cannot read — the same two shapes the two entries above document:
+    # a label written by a `tag.label do` wrapper (strip_erb blanks the helper
+    # call, so no <label> exists to read), and a label_tag whose for= value is
+    # a runtime interpolation. Each pairing is visible in the file itself.
+    "brgen/app/views/account_settings/_language_choice.html.erb",
+    "brgen/app/views/account_settings/_notification_channel.html.erb",
+    "brgen/app/views/posts/_gallery_editor.html.erb",
+    "brgen/app/views/shared/_report_button.html.erb",
+    "brgen/app/views/shared/_report_reason.html.erb",
+    "brgen/app/views/users/edit.html.erb",
+    "brgen_marketplace/engines/takeaway/app/views/takeaway/menu_items/_allergen_fields.html.erb",
   ].freeze
 
   def views
@@ -131,6 +143,8 @@ class FormControlNamesTest < Minitest::Test
     doc.src.to_enum(:scan, /<%=?-?(.*?)-?%>/m).each do
       md = Regexp.last_match
       body = md[1]
+      next if body.lstrip.start_with?("#")
+
       hit = body.match(/\b\w+\.(#{FORM_HELPERS.join("|")})\b\s*:([a-z_0-9]+)/) ||
             body.match(/\b(#{TAG_HELPERS.join("|")})\s*\(?\s*[:"']([a-z_0-9\[\]]+)/)
       next unless hit
