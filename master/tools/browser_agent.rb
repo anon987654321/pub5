@@ -196,7 +196,7 @@ module Master
         page.on(:request) do |request|
           begin
             uri = URI(request.url.to_s)
-            safe = uri.is_a?(URI::HTTPS) &&
+            safe = uri.is_a?(URI::HTTPS) && uri.port == 443 &&
                    uri.host.to_s.downcase == host &&
                    %w[GET HEAD].include?(request.method.to_s.upcase)
             @world.manifest.check!(:net, host) if safe
@@ -239,7 +239,7 @@ module Master
         raise Error, "url exceeds #{MAX_URL_BYTES} bytes" if value.bytesize > MAX_URL_BYTES
 
         uri = URI(value)
-        unless uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty? && uri.userinfo.nil?
+        unless uri.is_a?(URI::HTTPS) && uri.port == 443 && !uri.host.to_s.empty? && uri.userinfo.nil?
           raise Error, "only public HTTPS URLs without embedded credentials are allowed"
         end
         begin
@@ -252,7 +252,7 @@ module Master
       end
 
       def ensure_bound_host!(state, uri)
-        unless uri.is_a?(URI::HTTPS) && uri.host.to_s.downcase == state.host
+        unless uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.host.to_s.downcase == state.host
           raise Error, "session is bound to #{state.host}; cross-host navigation was refused"
         end
         raise Error, "URL credentials are not allowed" if uri.userinfo
