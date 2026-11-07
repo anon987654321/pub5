@@ -201,12 +201,24 @@ module Studio
 
       private
 
+      # Authenticate with a read-only API request before touching old renders.
+      # A token's presence proves neither validity nor access; a rejected token
+      # must not leave the previous render set retired with no replacement.
       def ensure_provider_credential!
-        return if @client
-        return unless Studio::ReplicateClient.load_token.to_s.strip.empty?
+        if @client.nil? && Studio::ReplicateClient.load_token.to_s.strip.empty?
+          raise ArgumentError,
+                "missing REPLICATE_API_TOKEN; set it or configure ~/.config/replicate/config.json before retiring old renders or generating selfies"
+        end
+
+        response = client.models(limit: 1)
+        raise TypeError, "Replicate model preflight did not return a list" unless response.is_a?(Array)
+
+        true
+      rescue StandardError => error
+        raise if error.is_a?(ArgumentError) && error.message.start_with?("missing REPLICATE_API_TOKEN")
 
         raise ArgumentError,
-              "missing REPLICATE_API_TOKEN; set it or configure ~/.config/replicate/config.json before retiring old renders or generating selfies"
+              "Replicate access preflight failed before retiring old renders: #{error.class}: #{error.message}"
       end
 
       def client
@@ -307,6 +319,10 @@ module Studio
       end
 
       def ensure_output_root!
+        if Studio::OutputPaths.inside_repository?(@output_directory)
+          raise ArgumentError, "selfie-series output must remain outside the repository checkout"
+        end
+
         unless File.exist?(@output_directory)
           FileUtils.mkdir_p(@output_directory, mode: 0o700)
           File.chmod(0o700, @output_directory)
@@ -315,6 +331,13 @@ module Studio
         raise ArgumentError, "output directory must not be a symlink" if stat.symlink?
         raise ArgumentError, "output path must be a directory" unless stat.directory?
         raise ArgumentError, "output directory must be owned by the current user" unless stat.uid == Process.uid
+
+        # This directory contains faces, generated images and their source
+        # renders. Tighten an existing owner-owned directory rather than
+        # inheriting group/world readability from an old ~/ideas folder.
+        File.chmod(0o700, @output_directory) unless (stat.mode & 0o077).zero?
+        stat = File.lstat(@output_directory)
+        raise ArgumentError, "output directory must be private (mode 0700)" unless (stat.mode & 0o077).zero?
         @output_directory = File.realpath(@output_directory)
       end
 

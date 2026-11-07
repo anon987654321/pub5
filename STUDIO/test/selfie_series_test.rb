@@ -8,6 +8,22 @@ require "tmpdir"
 require_relative "../photograph/selfie_series"
 
 class TestStudioSelfieSeries < Minitest::Test
+  class StubProvider
+    attr_reader :calls
+
+    def initialize(error: nil)
+      @error = error
+      @calls = []
+    end
+
+    def models(limit:)
+      @calls << limit
+      raise @error if @error
+
+      []
+    end
+  end
+
   class FakePicture
     @@calls = []
 
@@ -54,13 +70,8 @@ class TestStudioSelfieSeries < Minitest::Test
     FileUtils.mkdir_p(@output, mode: 0o700)
     make_subject("johann", %w[daylight night])
     make_subject("merethe", %w[portra])
-    @series = Studio::Visual::SelfieSeries.new(
-      subjects_directory: @subjects,
-      output_directory: @output,
-      client: Object.new,
-      picture_class: FakePicture,
-      clock: -> { Time.utc(2026, 11, 7, 12, 0, 0) }
-    )
+    @provider = StubProvider.new
+    @series = build_series(@provider)
   end
 
   def teardown
@@ -126,7 +137,41 @@ class TestStudioSelfieSeries < Minitest::Test
     assert_empty FakePicture.calls
   end
 
+  def test_replicate_authentication_is_verified_before_old_renders_are_retired
+    old_file = File.join(@output, "20261107T110000123456.jpg")
+    File.binwrite(old_file, "unverified old render")
+    @provider = StubProvider.new(error: "Replicate API 401: unauthorised")
+    @series = build_series(@provider)
+
+    error = assert_raises(ArgumentError) { @series.write }
+
+    assert_match(/Replicate access preflight failed/, error.message)
+    assert File.file?(old_file)
+    refute File.exist?(File.join(@output, ".retired"))
+    assert_equal [1], @provider.calls
+    assert_empty FakePicture.calls
+  end
+
+  def test_output_root_is_tightened_to_owner_only
+    File.chmod(0o755, @output)
+
+    result = @series.write
+
+    assert_equal "complete", result.fetch("status")
+    assert_equal 0o700, File.stat(@output).mode & 0o777
+  end
+
   private
+
+  def build_series(provider)
+    Studio::Visual::SelfieSeries.new(
+      subjects_directory: @subjects,
+      output_directory: @output,
+      client: provider,
+      picture_class: FakePicture,
+      clock: -> { Time.utc(2026, 11, 7, 12, 0, 0) }
+    )
+  end
 
   def make_subject(subject, models)
     base = File.join(@subjects, subject)
