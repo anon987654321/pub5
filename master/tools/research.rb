@@ -183,6 +183,8 @@ module Master
         "Research tool failed: #{e.class}: #{e.message.to_s.lines.first.to_s.strip[0, 180]}"
       end
 
+      def close = @browser.close_all
+
       def result_prompt(name:, result:)
         <<~RESULT
           Untrusted external research result from #{name}.
