@@ -7,6 +7,7 @@ require_relative "../../fix/fix_loop/council_round"
 require_relative "../../fix/work_lane"
 require_relative "../../fix/lane_preflight"
 require_relative "../pipeline/residual"
+require_relative "../pipeline/target_resolver"
 require_relative "../../operator/check_chain"
 require_relative "../../boot/paths"
 require "digest"
@@ -98,6 +99,12 @@ module Master
 
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)
+
+        # A target naming no governed tree cannot be served by any lane, so it
+        # is refused before the run picks one: the operator learns the tree list
+        # instead of watching a model get chosen for work that cannot start.
+        refusal = Master::CLI::Pipeline::TreeTarget.refusal(target)
+        return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
 
         with_fix_overrides(overrides, previous:) do
           dispatch_fix_parsed(
@@ -606,24 +613,24 @@ module Master
       def execution_trace_scopes(target)
         raw = target.to_s.strip
         return if raw.empty?
+        return Master::CLI::Pipeline::TreeTarget.names(raw) if Master::CLI::Pipeline::TreeTarget.list?(raw)
 
-        trees = MasterPaths::TREES.dup
-        tokens = raw.split(/\s+/)
-        return tokens if tokens.size > 1 && tokens.all? { |token| trees.include?(token) }
-
-        tokens.map { |token| token.sub(%r{\A\.\./(?=[A-Z]+(?:/|\z))}, "") }
+        raw.split(/\s+/).map { |token| token.sub(%r{\A\.\./(?=[A-Z]+(?:/|\z))}, "") }
       end
 
       def fix_targets(target, root:)
-        tokens = target.to_s.split(/\s+/)
-        trees = MasterPaths::TREES.dup
-        return [target] unless tokens.size > 1 && tokens.all? { |token| trees.include?(token) }
+        raw = target.to_s.strip
+        # A list of governed trees is a queue of real directories; anything else
+        # is one path, spaces and all. A list naming an ungoverned word is not a
+        # queue and not a path either, so it is refused by name rather than
+        # handed on as a directory called "OPENBSD STUDIO BIZ".
+        return [target] unless Master::CLI::Pipeline::TreeTarget.list?(raw)
 
         # The session root is the directory bin/master started in; a start inside any tree
-        # (RAILS/brgen, MASTER/lib) still names the four trees of this checkout.
+        # (RAILS/brgen, MASTER/lib) still names the trees of this checkout.
         repo_root = File.expand_path(root)
         repo_root = Master::REPO_ROOT if repo_root.start_with?("#{Master::REPO_ROOT}/")
-        tokens.uniq.map { |tree| File.join(repo_root, tree) }
+        Master::CLI::Pipeline::TreeTarget.names(raw).uniq.map { |tree| File.join(repo_root, tree) }
       end
 
       # `bin/master /fix MASTER RAILS OPENBSD STUDIO` names every tree of the
@@ -631,9 +638,7 @@ module Master
       # elevate lane unless an explicit --lane= was given. Single-tree runs keep
       # the default lane; convergence first, elevation alongside.
       def multi_tree_run?(raw)
-        tokens = raw.to_s.split(/\s+/).reject { |token| token.match?(/\A--lane=/i) }
-        trees = tokens.uniq.select { |token| MasterPaths::TREES.include?(token) }
-        trees.size > 1
+        Master::CLI::Pipeline::TreeTarget.list?(raw)
       end
 
       def run_pass(deps, task_intent: "functional_change", **call_args)

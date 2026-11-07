@@ -686,7 +686,61 @@ end
 
     assert_equal Master::REPO_ROOT, resolver.resolve_target("MASTER RAILS OPENBSD STUDIO")
     assert_equal Master::REPO_ROOT, resolver.resolve_target("openbsd, rails, master, studio")
-    refute_equal Master::REPO_ROOT, resolver.resolve_target("MASTER RAILS")
+  end
+
+  def test_a_partial_tree_list_is_a_queue_the_registry_splits
+    resolver = Class.new do
+      include Master::CLI::Pipeline::TargetResolver
+      def initialize(root) = @root = root
+    end.new(Master::ROOT)
+
+    # resolve_target answers one path; a list of trees is a queue, and saying so
+    # is honest. CommandRegistry#fix_targets is what splits it.
+    ["MASTER RAILS", "OPENBSD STUDIO", "MASTER,RAILS"].each do |list|
+      error = assert_raises(ArgumentError) { resolver.resolve_target(list) }
+      assert_match(/list of trees/, error.message, list)
+    end
+  end
+
+  def test_an_ungoverned_word_is_refused_by_name
+    resolver = Class.new do
+      include Master::CLI::Pipeline::TargetResolver
+      def initialize(root) = @root = root
+    end.new(Master::ROOT)
+
+    error = assert_raises(ArgumentError) { resolver.resolve_target("OPENBSD STUDIO BIZ") }
+    assert_match(/BIZ is not a governed tree/, error.message)
+    refute_match(/OPENBSD STUDIO BIZ/, error.message)
+    assert_match(/MASTER, RAILS, OPENBSD, STUDIO/, error.message)
+  end
+
+  def test_a_nonexistent_path_under_a_governed_prefix_is_not_a_target
+    resolver = Class.new do
+      include Master::CLI::Pipeline::TargetResolver
+      def initialize(root) = @root = root
+    end.new(Master::ROOT)
+
+    # A governed prefix matched by text alone is not a directory anyone meant.
+    assert_raises(ArgumentError) { resolver.resolve_target("MASTER/MASTER RAILS") }
+  end
+
+  def test_fix_targets_splits_every_governed_subset
+    {
+      "OPENBSD STUDIO" => %w[OPENBSD STUDIO],
+      "MASTER RAILS" => %w[MASTER RAILS],
+      "openbsd, studio" => %w[OPENBSD STUDIO],
+      "MASTER RAILS OPENBSD STUDIO" => %w[MASTER RAILS OPENBSD STUDIO],
+    }.each do |raw, expected|
+      targets = Master::CLI::CommandRegistry.send(:fix_targets, raw, root: Master::REPO_ROOT)
+      assert_equal expected.map { |tree| File.join(Master::REPO_ROOT, tree) }, targets, raw
+    end
+  end
+
+  def test_fix_targets_keeps_an_ungoverned_list_as_one_path
+    # Not a queue and not a valid path: fix_targets does not silently invent a
+    # directory, it hands the single path on for resolve_target to refuse.
+    targets = Master::CLI::CommandRegistry.send(:fix_targets, "OPENBSD STUDIO BIZ", root: Master::REPO_ROOT)
+    assert_equal ["OPENBSD STUDIO BIZ"], targets
   end
 
   def test_check_chain_recognizes_all_four_tree_names
@@ -2422,6 +2476,17 @@ end
   def test_single_target_and_mixed_arguments_are_not_reinterpreted
     root = "/tmp/pub5"
     assert_equal ["MASTER"], Master::CLI::CommandRegistry.send(:fix_targets, "MASTER", root:)
-    assert_equal ["MASTER RAILS --apply"], Master::CLI::CommandRegistry.send(:fix_targets, "MASTER RAILS --apply", root:)
+    # Flags never reach fix_targets: parse_pass_flags consumes them, so a list
+    # of trees here is a queue and a stray word is not a directory name.
+    assert_equal(
+      %w[MASTER RAILS].map { |tree| File.join(root, tree) },
+      Master::CLI::CommandRegistry.send(:fix_targets, "MASTER RAILS", root:),
+    )
+    # A flag is not a word of the target, so this is still a two-tree queue and
+    # not one directory literally named "MASTER RAILS --apply".
+    assert_equal(
+      %w[MASTER RAILS].map { |tree| File.join(root, tree) },
+      Master::CLI::CommandRegistry.send(:fix_targets, "MASTER RAILS --apply", root:),
+    )
   end
 end
