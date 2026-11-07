@@ -13,7 +13,12 @@ require "digest"
 # MASTER/lib/io. Keep this anchored path rather than depending on the operator's
 # working directory.
 require_relative "analog_capabilities"
-require_relative "../style_registry"
+# The style-contract validator was deleted upstream (the "Flatten the
+# photograph implementation tree" commit dropped it while keeping this file),
+# so a plain require killed every grade at boot. Refuse --style-contract
+# below by name instead of failing the mainline; the pair lives in pub4
+# history if the feature is restored.
+require_relative "../style_registry" if File.file?(File.expand_path("../style_registry.rb", __dir__))
 
 require "open3"
 require "rbconfig"
@@ -22,7 +27,9 @@ require "rbconfig"
 require_relative "legacy_effects"
 require_relative "dilla_analog"
 require_relative "constitution"
-require_relative "../source_map"
+# Same as the style registry: source_map was deleted upstream with this
+# consumer kept. Refuse the --map mode below instead of dying at boot.
+require_relative "../source_map" if File.file?(File.expand_path("../source_map.rb", __dir__))
 require_relative "depth"
 include Postpro::LegacyEffects
 include Postpro::DillaAnalog
