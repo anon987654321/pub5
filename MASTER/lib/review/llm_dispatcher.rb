@@ -550,6 +550,7 @@ module Master
         # backoff and this is what closes the loop when the probe succeeds.
         if status == :success
           Io::ModelQuota.record(model)
+          record_free_catalog_latency(model, latency_ms)
           Io::QuotaCheck.clear!
           Io::ModelSkipCache.succeeded!(model)
         else
@@ -571,6 +572,25 @@ module Master
           model:,
           **Master::Execution::Contract.diagnostic_fields(e.message),
         )
+      end
+
+      # A successful free call is the measured answer time the free-lane
+      # ranking wants; the catalog keeps it for the next process. A paid call
+      # carries no free_latency row, and a missing catalog file is not an
+      # error - the measurement simply has nowhere to land.
+      def record_free_catalog_latency(model, latency_ms)
+        return unless latency_ms.is_a?(Numeric) && latency_ms.positive?
+        return unless Io::LaneSelection.kind(model) == :free
+
+        require_relative "../io/catalog_index"
+        db = Io::CatalogIndex::DEFAULT_DB
+        return unless File.file?(db)
+
+        Io::CatalogIndex.new(db_path: db).record_free_latency(
+          source: "openrouter", id: model.to_s, seconds: latency_ms / 1000.0
+        )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "LLMDispatcher.record_free_catalog_latency", model: model.to_s)
       end
 
     end

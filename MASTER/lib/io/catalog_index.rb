@@ -126,13 +126,36 @@ module Master::Io
       end
       sql = <<~SQL.chomp
         SELECT source, id, name, description, context_length, input_modalities,
-               output_modalities, price_prompt, price_completion, tags, updated_at
+               output_modalities, price_prompt, price_completion, tags, free_latency_s, updated_at
         FROM provider_models
       SQL
       sql += " WHERE #{clauses.join(" AND ")}" unless clauses.empty?
       sql += " ORDER BY source, id LIMIT ?"
       params << limit
       db.execute(sql, params)
+    end
+
+    # A measured answer time for a free slug, recorded by the runtime that
+    # made the call. The provider catalog never carries this field; it is
+    # this checkout's own fact about the row, which is why it writes as an
+    # UPDATE and never rides the snapshot replace.
+    def record_free_latency(source:, id:, seconds:, observed_at: Time.now.utc)
+      raise ArgumentError, "seconds must be a non-negative number" unless seconds.is_a?(Numeric) && seconds >= 0
+
+      db.execute(
+        "UPDATE provider_models SET free_latency_s = ?, free_latency_observed_at = ? WHERE source = ? AND id = ?",
+        [seconds.to_f, observed_at.utc.iso8601, source, id],
+      )
+    end
+
+    def free_latency_s(id, source: "openrouter")
+      row = db.execute(
+        "SELECT free_latency_s FROM provider_models WHERE source = ? AND id = ? LIMIT 1", [source, id]
+      ).first
+      value = row.is_a?(Hash) ? row["free_latency_s"] : nil
+      value && Float(value)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     private
@@ -178,11 +201,21 @@ module Master::Io
           price_prompt REAL,
           price_completion REAL,
           tags TEXT,
+          free_latency_s REAL,
+          free_latency_observed_at TEXT,
           raw_json TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           PRIMARY KEY (source, id)
         );
       SQL
+      # Catalogues written before free ranking carried no latency column; the
+      # ALTER runs only when the column is absent, so an existing database
+      # keeps its rows.
+      columns = db.execute("PRAGMA table_info(provider_models)").map { |row| row["name"] }
+      unless columns.include?("free_latency_s")
+        db.execute("ALTER TABLE provider_models ADD COLUMN free_latency_s REAL")
+        db.execute("ALTER TABLE provider_models ADD COLUMN free_latency_observed_at TEXT")
+      end
     end
 
     def create_provider_indexes
@@ -222,6 +255,12 @@ module Master::Io
 
     def replace_models(source, rows)
       db.transaction do
+        # The snapshot replace reflects the provider's catalog; the measured
+        # free latency is this checkout's own fact about a row, so a refresh
+        # carries it across for every id that survives.
+        preserved = db.execute(
+          "SELECT id, free_latency_s, free_latency_observed_at FROM provider_models WHERE source = ?", [source]
+        ).to_h { |row| [row["id"], row] }
         db.execute("DELETE FROM provider_models WHERE source = ?", [source])
         rows.each do |row|
           db.execute(<<~SQL, [
@@ -236,6 +275,13 @@ module Master::Io
             row[:price_prompt], row[:price_completion], row[:tags],
             JSON.generate(row[:raw]), Time.now.utc.iso8601
           ])
+          kept = preserved[row.fetch(:id).to_s]
+          next unless kept
+
+          db.execute(
+            "UPDATE provider_models SET free_latency_s = ?, free_latency_observed_at = ? WHERE source = ? AND id = ?",
+            [kept["free_latency_s"], kept["free_latency_observed_at"], source, row.fetch(:id).to_s],
+          )
         end
       end
     end

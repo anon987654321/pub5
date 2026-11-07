@@ -58,4 +58,41 @@ class ProviderCatalogIndexSpec < Minitest::Test
       assert_raises(JSON::ParserError) { index.import_file("replicate", path, normalizer: "replicate") }
     end
   end
+
+  # The free-lane ranking wants a measured answer time that outlives the
+  # process. The catalog carries it as free_latency_s on the model row, and a
+  # provider snapshot refresh must not erase the measurement.
+  def test_records_and_answers_a_free_latency_measurement
+    with_index do |index, dir|
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
+      assert_nil index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+
+      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-super-120b-a12b:free", seconds: 12.5)
+
+      assert_in_delta 12.5, index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+      assert_in_delta 12.5, index.search("nemotron").first["free_latency_s"]
+      assert_raises(ArgumentError) do
+        index.record_free_latency(source: "openrouter", id: "x:free", seconds: -1)
+      end
+    end
+  end
+
+  def test_a_snapshot_refresh_carries_the_measured_latency_across
+    with_index do |index, dir|
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
+      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-super-120b-a12b:free", seconds: 9.0)
+
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
+
+      actual = index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+      # The refresh replaces the row; this checkout's measurement survives it.
+      assert_in_delta 9.0, actual
+    end
+  end
+
+  def import_openrouter_row(index, dir, id)
+    path = File.join(dir, "openrouter.json")
+    File.write(path, JSON.generate({ "data" => [{ "id" => id, "name" => id }] }))
+    index.import_file("openrouter", path, normalizer: "openrouter")
+  end
 end
