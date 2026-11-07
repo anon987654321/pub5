@@ -1,0 +1,14 @@
+# Pub5-owned initial snapshots, measured from source tree 133f720.
+# Source counts include these ported instrument files, not tests or generated output.
+baseline_commit: 133f720f54c2d6e503a23de61bb63e309f822fca
+source_counts:
+  master: 347
+  rails: 2380
+  openbsd: 105
+  studio: 64
+  bplans: 29
+spine_ruby_files: 11
+command_ruby_files: 8
+executable_files: 152
+rails_stylesheets: 107
+vague_ruby_names: 0
