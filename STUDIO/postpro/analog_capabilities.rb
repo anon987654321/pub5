@@ -69,8 +69,11 @@ module Studio
       # implemented. Promotion out of :unverified requires a concrete code path
       # and a regression test; otherwise readiness would be a guess.
       # First three promotions (2026-11-07): the Dilla Sonitex wear pass proved
-      # itself in test_dilla_wear_test.rb. Refused promotions from the same
-      # review: cassette_wow_random_walk (the wow is a sinusoid, not a random
+      # itself in test_dilla_wear_test.rb. Fourth promotion the same day:
+      # mpc_twelve_bit through DrumKit#crush! — the sample-flip path crushes at
+      # a fixed 12 bits (dilla.rb sample-flip) and every kit voice rides its
+      # own "crush" bit depth. Refused promotions from the same review:
+      # cassette_wow_random_walk (the wow is a sinusoid, not a random
       # walk — naming it a random walk would be a lie with a passing test next
       # to it) and bandwidth_shaped_hiss (NOISE is a white stream; nothing
       # shapes its bandwidth except the preset's own lowpass pass, which is
@@ -90,6 +93,11 @@ module Studio
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#one_pass!",
           regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_the_wear_pass_band_limits_before_it_colours"
+        }.freeze,
+        %i[dilla mpc_twelve_bit].freeze => {
+          status: :verified,
+          implementation: "STUDIO/dilla/dilla.rb#crush!",
+          regression_test: "STUDIO/test/test_dilla_crush_test.rb#test_mpc_twelve_bit_quantizes_to_a_step_grid"
         }.freeze,
       }.freeze
       STATUSES = %i[verified unavailable unverified].freeze
