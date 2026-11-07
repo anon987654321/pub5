@@ -78,9 +78,32 @@ module Law
 
     def scan_tree(paths)
       return [] if @broken
+      return check_law_findings if @policy["kind"] == "check"
       return guarded { @pub4.scan_tree(paths.map { |p| Pub4.name(p) }).map { |h| Finding.new(id, nil, h.line, h.text, h.message) } } if @pub4
 
       self[:adapters].select(&:tree?).flat_map { |a| findings(Runner.new.instance_exec(paths, &a.check), "", nil) }
+    end
+
+    # A check Law delegates to its one registered instrument. The instrument's
+    # fourth outcome is preserved: unavailable browser/live preconditions are
+    # INCONCLUSIVE, not a synthetic clean result.
+    def check_law_findings
+      check_id = @policy.dig("pub4", "id")
+      result = Law::CheckRunner.run(check_id)
+      case result.status
+      when :passed then []
+      when :failed
+        [Finding.new(id, nil, 1, result.output.to_s.lines.first.to_s.chomp, "registered check #{check_id} failed (exit #{result.exit_code})")]
+      when :inconclusive
+        @errors << "INCONCLUSIVE: #{check_id}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
+        []
+      else
+        @errors << "ERROR: #{check_id}: #{result.output.to_s.lines.last.to_s.strip[0, 240]}"
+        []
+      end
+    rescue StandardError => e
+      @errors << "ERROR: check adapter #{id}: #{e.class}: #{e.message}"[0, 300]
+      []
     end
 
     # Every bad fixture must be found and every good one must not, at load.

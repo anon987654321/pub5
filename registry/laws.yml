@@ -11613,7 +11613,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_architecture.rb
-    unported: a script check, MASTER/checks/architecture.rb; hand port as a check Law once its subject is in pub5
     pub4:
       id: architecture
       source: MASTER/checks/checks.yml architecture
@@ -11625,7 +11624,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_production.rb
-    unported: a Deploy::ProductionCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/production.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: production
       source: MASTER/checks/checks.yml production
@@ -11637,7 +11635,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_rendered_invariants.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: rendered_invariants
       source: MASTER/checks/checks.yml rendered_invariants
@@ -11650,7 +11647,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_dns_zones.rb
-    unported: a Deploy::DnsZonesCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/OPENBSD/checks/dns_zones.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: dns_zones
       source: MASTER/checks/checks.yml dns_zones
@@ -11662,7 +11658,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_domain_alignment.rb
-    unported: a Deploy::DomainAlignmentCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/OPENBSD/checks/domain_alignment.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: domain_alignment
       source: MASTER/checks/checks.yml domain_alignment
@@ -11675,7 +11670,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_exemption_freshness.rb
-    unported: a Deploy::ExemptionFreshnessCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/exemption_freshness.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: exemption_freshness
       source: MASTER/checks/checks.yml exemption_freshness
@@ -11687,7 +11681,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_frontend_auditor.rb
-    unported: a Deploy::FrontendAuditorCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/frontend_auditor.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: frontend_auditor
       source: MASTER/checks/checks.yml frontend_auditor
@@ -11700,7 +11693,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_baymard_ux.rb
-    unported: a Deploy::BaymardUXCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/research/baymard_law.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: baymard_ux
       source: MASTER/checks/checks.yml baymard_ux
@@ -11713,7 +11705,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_frontend_production.rb
-    unported: a Deploy::FrontendProductionCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/frontend_production.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: frontend_production
       source: MASTER/checks/checks.yml frontend_production
@@ -11726,7 +11717,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_generated_asset.rb
-    unported: a Deploy::GeneratedAssetCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/generated_asset.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: generated_asset
       source: MASTER/checks/checks.yml generated_asset
@@ -11738,7 +11728,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_human_walkthrough.rb
-    unported: a Deploy::HumanWalkthroughCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/human_walkthrough.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: human_walkthrough
       source: MASTER/checks/checks.yml human_walkthrough
@@ -11750,7 +11739,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_master_tts.rb
-    unported: a Deploy::MasterTtsCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/MASTER/lib/operator/checks.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: master_tts
       source: MASTER/checks/checks.yml master_tts
@@ -11763,7 +11751,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_master_web_assets.rb
-    unported: a Deploy::MasterWebAssetsCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/MASTER/lib/operator/checks.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: master_web_assets
       source: MASTER/checks/checks.yml master_web_assets
@@ -11776,7 +11763,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_phantom_foreign_keys.rb
-    unported: a Deploy::PhantomForeignKeysCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/phantom_foreign_keys.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: phantom_foreign_keys
       source: MASTER/checks/checks.yml phantom_foreign_keys
@@ -11788,7 +11774,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_engine_boundaries.rb
-    unported: a Deploy::EngineBoundariesCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/engine_boundaries.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: engine_boundaries
       source: MASTER/checks/checks.yml engine_boundaries
@@ -11800,7 +11785,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_port_inventory.rb
-    unported: a Deploy::PortInventoryCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/OPENBSD/checks/port_inventory.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: port_inventory
       source: MASTER/checks/checks.yml port_inventory
@@ -11812,7 +11796,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_rails_runtime.rb
-    unported: a script check, MASTER/checks/rails_runtime.rb; hand port as a check Law once its subject is in pub5
     pub4:
       id: rails_runtime
       source: MASTER/checks/checks.yml rails_runtime
@@ -11824,7 +11807,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_release.rb
-    unported: a script check, MASTER/checks/release.rb; hand port as a check Law once its subject is in pub5
     pub4:
       id: release
       source: MASTER/checks/checks.yml release
@@ -11836,7 +11818,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_schema_migration.rb
-    unported: a Deploy::SchemaMigrationCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/schema_migration.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: schema_migration
       source: MASTER/checks/checks.yml schema_migration
@@ -11848,7 +11829,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_stimulus_components.rb
-    unported: a Deploy::StimulusComponentsCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/stimulus_components.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: stimulus_components
       source: MASTER/checks/checks.yml stimulus_components
@@ -11861,7 +11841,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_visual_contract.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: visual_contract
       source: MASTER/checks/checks.yml visual_contract
@@ -11873,7 +11852,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_user_flow.rb
-    unported: a Deploy::UserFlowCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/user_flow.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: user_flow
       source: MASTER/checks/checks.yml user_flow
@@ -11886,7 +11864,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_css_constitution.rb
-    unported: a Deploy::CssConstitutionCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/css_constitution.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: css_constitution
       source: MASTER/checks/checks.yml css_constitution
@@ -11899,7 +11876,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_css_brace_balance.rb
-    unported: a Deploy::CssBraceBalanceCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/css_brace_balance.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: css_brace_balance
       source: MASTER/checks/checks.yml css_brace_balance
@@ -11912,7 +11888,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_scale_ratchet.rb
-    unported: a Deploy::ScaleRatchetCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/scale_ratchet.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: scale_ratchet
       source: MASTER/checks/checks.yml scale_ratchet
@@ -11925,7 +11900,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_typography_contract.rb
-    unported: a Deploy::TypographyContractCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/typography_contract.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: typography_contract
       source: MASTER/checks/checks.yml typography_contract
@@ -11938,7 +11912,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_css_minify_integrity.rb
-    unported: a Deploy::CssMinifyIntegrityCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/css_minify_integrity.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: css_minify_integrity
       source: MASTER/checks/checks.yml css_minify_integrity
@@ -11951,7 +11924,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_first_screen.rb
-    unported: a Deploy::FirstScreenCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/first_screen.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: first_screen
       source: MASTER/checks/checks.yml first_screen
@@ -11964,7 +11936,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_dialect_purity.rb
-    unported: a Deploy::DialectPurityCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/dialect_purity.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: dialect_purity
       source: MASTER/checks/checks.yml dialect_purity
@@ -11977,7 +11948,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_payment_honesty.rb
-    unported: a Deploy::PaymentHonestyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/payment_honesty.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: payment_honesty
       source: MASTER/checks/checks.yml payment_honesty
@@ -11990,7 +11960,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_affiliate_honesty.rb
-    unported: a Deploy::AffiliateHonestyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/affiliate_honesty.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: affiliate_honesty
       source: MASTER/checks/checks.yml affiliate_honesty
@@ -12003,7 +11972,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_persuasion_honesty.rb
-    unported: a Deploy::PersuasionHonestyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/persuasion_honesty.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: persuasion_honesty
       source: MASTER/checks/checks.yml persuasion_honesty
@@ -12016,7 +11984,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_content_honesty.rb
-    unported: a Deploy::ContentHonestyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/content_honesty.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: content_honesty
       source: MASTER/checks/checks.yml content_honesty
@@ -12029,7 +11996,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_content_for_yield.rb
-    unported: a Deploy::ContentForYieldCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/content_for_yield.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: content_for_yield
       source: MASTER/checks/checks.yml content_for_yield
@@ -12042,7 +12008,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_stimulus_wiring.rb
-    unported: a Deploy::StimulusWiringCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/stimulus_wiring.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: stimulus_wiring
       source: MASTER/checks/checks.yml stimulus_wiring
@@ -12055,7 +12020,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_layout_suite.rb
-    unported: a Deploy::LayoutSuiteCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/layout_suite.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: layout_suite
       source: MASTER/checks/checks.yml layout_suite
@@ -12067,7 +12031,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_surface_schema.rb
-    unported: a Deploy::SurfaceSchemaCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/surface_schema.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: surface_schema
       source: MASTER/checks/checks.yml surface_schema
@@ -12080,7 +12043,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_design_metrics.rb
-    unported: a Deploy::DesignMetricsCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/research/design_metrics.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: design_metrics
       source: MASTER/checks/checks.yml design_metrics
@@ -12093,7 +12055,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_visual_quality.rb
-    unported: a Deploy::VisualQualityCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/research/visual_quality.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: visual_quality
       source: MASTER/checks/checks.yml visual_quality
@@ -12106,7 +12067,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_apps_yml.rb
-    unported: a Deploy::AppsYmlValidator instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/apps_yml.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: apps_yml
       source: MASTER/checks/checks.yml apps_yml
@@ -12119,7 +12079,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_shared_wiring.rb
-    unported: a Deploy::SharedWiringCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/shared_wiring.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: shared_wiring
       source: MASTER/checks/checks.yml shared_wiring
@@ -12131,7 +12090,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_locale_shadowing.rb
-    unported: a Deploy::LocaleShadowingCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/locale_shadowing.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: locale_shadowing
       source: MASTER/checks/checks.yml locale_shadowing
@@ -12144,7 +12102,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_constitutional_scan.rb
-    unported: a Deploy::ConstitutionalScanCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/MASTER/lib/operator/checks.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: constitutional_scan
       source: MASTER/checks/checks.yml constitutional_scan
@@ -12157,7 +12114,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_browser_diagnostics.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: browser_diagnostics
       source: MASTER/checks/checks.yml browser_diagnostics
@@ -12170,7 +12126,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_rendered_suite.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: rendered_suite
       source: MASTER/checks/checks.yml rendered_suite
@@ -12183,7 +12138,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_rendered_geometry.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: rendered_geometry
       source: MASTER/checks/checks.yml rendered_geometry
@@ -12196,7 +12150,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_webgl_surfaces.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: webgl_surfaces
       source: MASTER/checks/checks.yml webgl_surfaces
@@ -12209,7 +12162,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_viewport_spill.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: viewport_spill
       source: MASTER/checks/checks.yml viewport_spill
@@ -12222,7 +12174,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_layout_snapshot.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: layout_snapshot
       source: MASTER/checks/checks.yml layout_snapshot
@@ -12235,7 +12186,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_journey_invariant.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: journey_invariant
       source: MASTER/checks/checks.yml journey_invariant
@@ -12248,7 +12198,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_reflow.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: reflow
       source: MASTER/checks/checks.yml reflow
@@ -12261,7 +12210,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_keyboard_flow.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: keyboard_flow
       source: MASTER/checks/checks.yml keyboard_flow
@@ -12274,7 +12222,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_accessibility_tree.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: accessibility_tree
       source: MASTER/checks/checks.yml accessibility_tree
@@ -12287,7 +12234,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_accessibility_axe.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: accessibility_axe
       source: MASTER/checks/checks.yml accessibility_axe
@@ -12300,7 +12246,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_state_matrix.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: state_matrix
       source: MASTER/checks/checks.yml state_matrix
@@ -12313,7 +12258,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_design_laws.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: design_laws
       source: MASTER/checks/checks.yml design_laws
@@ -12326,7 +12270,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_mobile_flow.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: mobile_flow
       source: MASTER/checks/checks.yml mobile_flow
@@ -12339,7 +12282,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_cross_app.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: cross_app
       source: MASTER/checks/checks.yml cross_app
@@ -12352,7 +12294,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_deploy_drift.rb
-    unported: a Deploy::DeployDriftCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/deploy_drift.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: deploy_drift
       source: MASTER/checks/checks.yml deploy_drift
@@ -12364,7 +12305,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_flow_journey.rb
-    unported: a Deploy::FlowJourneyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/flow_journey.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: flow_journey
       source: MASTER/checks/checks.yml flow_journey
@@ -12376,7 +12316,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_page_simulation.rb
-    unported: a Deploy::PageSimulationCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/live/page_simulation.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: page_simulation
       source: MASTER/checks/checks.yml page_simulation
@@ -12388,7 +12327,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_check_mutation.rb
-    unported: a Deploy::CheckMutationCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/check_mutation.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: check_mutation
       source: MASTER/checks/checks.yml check_mutation
@@ -12400,7 +12338,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_occlusion.rb
-    unported: needs a browser over a running app; hand port as a check Law once its subject is in pub5
     pub4:
       id: occlusion
       source: MASTER/checks/checks.yml occlusion
@@ -12413,7 +12350,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_web_vitals_budget.rb
-    unported: a Deploy::WebVitalsBudget instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/rendered/web_vitals_budget.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: web_vitals_budget
       source: MASTER/checks/checks.yml web_vitals_budget
@@ -12425,7 +12361,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_pwa_installable.rb
-    unported: a Deploy::PwaInstallable instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/pwa_installable.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: pwa_installable
       source: MASTER/checks/checks.yml pwa_installable
@@ -12437,7 +12372,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_browser_policy.rb
-    unported: a Deploy::BrowserPolicyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/browser_policy.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: browser_policy
       source: MASTER/checks/checks.yml browser_policy
@@ -12449,7 +12383,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_openbsd_pf_policy.rb
-    unported: a Deploy::PfPolicyCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/OPENBSD/checks/pf_policy_check.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: openbsd_pf_policy
       source: MASTER/checks/checks.yml openbsd_pf_policy
@@ -12461,7 +12394,6 @@ laws:
     autofix: never
     enacted: '2026-11-06'
     file: laws/pub4/check_security_headers_source.rb
-    unported: a Deploy::SecurityHeadersSourceCheck instrument over pub4's tree returning a CheckResult (MASTER/checks/lib/source/security_headers.rb); hand port as a check Law once its subject is in pub5
     pub4:
       id: security_headers_source
       source: MASTER/checks/checks.yml security_headers_source
