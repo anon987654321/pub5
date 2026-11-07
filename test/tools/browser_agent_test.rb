@@ -21,6 +21,16 @@ class BrowserAgentTest < Minitest::Test
     assert_raises(Master::Tools::BrowserAgent::Error) { agent.send(:public_uri!, "https://example.com:8443") }
   end
 
+  def test_browser_text_limits_never_split_a_utf8_character
+    agent = Master::Tools::BrowserAgent.allocate
+    raw = ("x" * (Master::Tools::BrowserAgent::MAX_SOURCE_BYTES - 1)) + "☃"
+
+    prefix = agent.send(:utf8_prefix, raw, Master::Tools::BrowserAgent::MAX_SOURCE_BYTES)
+
+    assert prefix.valid_encoding?
+    assert_equal Master::Tools::BrowserAgent::MAX_SOURCE_BYTES - 1, prefix.bytesize
+  end
+
   def test_sensitive_url_query_values_are_redacted_before_model_observation
     agent = Master::Tools::BrowserAgent.allocate
     safe = agent.send(:redact_url, "https://example.com/path?tab=two&code=123&session=abc#fragment")
