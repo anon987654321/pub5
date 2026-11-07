@@ -65,6 +65,14 @@ screenshot count or previous revision.
   `test_dilla_wear_test.rb` (Sonitex wear-pass battery; three Dilla rig
   capabilities promoted in the analog capability contract). The by-ear render
   review remains.
+  2026-11-07, later: `rake check` answers and `rake test` ran green across
+  11 files, adding the crush, sidechain, loudness and groove batteries —
+  seven Dilla rig capabilities are now promoted with counted proofs (mpc
+  twelve-bit grid, the 10 ms staircase sidechain, the delivery loudness
+  ceiling, the pocket micro-timing), `steer_to_reference!` left the render
+  body as a nameable method, and the MPC swing map now lands 66 percent
+  exactly on the triplet as its own comment documents. The by-ear render
+  review remains.
 - [ ] **Generated-output freshness.** Check design-token projection and CSS;
   compare `MASTER/web/public/face.runtime.js` and `face.css` with their
   sources; run `cd MASTER && rake docs:agent_contracts` and
