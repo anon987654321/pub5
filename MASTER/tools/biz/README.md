@@ -170,24 +170,28 @@ MASTER/data/laws.yml governs this tree. The committed build and check
 pipeline is plain Node.js and Ruby: it reads and writes files directly and
 does not invoke Python, Bash, sed, awk or shell text processing.
 
-The sources of record all live in `scripts/`: the seven restored base
-documents (`scripts/<plan>.html`), the completion content
-(`scripts/plans_a.mjs`, `scripts/plans_b.mjs`, `scripts/content_add.mjs`),
-and the FETAT working material (`scripts/fetat_proposal.md`,
-`scripts/fetat_build.rb`, `scripts/fetat_laws.rb`, `scripts/fetat_trace.rb`).
+The sources of record all live beside this file, in `MASTER/tools/biz/`: the
+seven restored base documents (`<plan>.html`), the completion content
+(`plans_a.mjs`, `plans_b.mjs`, `content_add.mjs`), and the FETAT working
+material (`fetat_proposal.md`, `fetat_build.rb`, `fetat_trace.rb`).
 `convert_content.mjs` is an optional one-time re-importer for the archived
 text sources; run it only when those two original files are available,
 setting `BIZ_LEGACY_SOURCE_DIR` to their directory.
 
 The standing build sequence regenerates every published folder from sources:
 
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_build.mjs   # build the seven from sources
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_cover.mjs   # front-matter revision (idempotent)
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_check.mjs   # independent verification of the outputs
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_print.mjs   # print PDFs via Chromium
-    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_index.mjs   # regenerate index.html
-    ruby scripts/fetat_build.rb && ruby scripts/fetat_laws.rb  # fetat: build + audit, then print its pdf
-    ruby scripts/laws_audit.rb                                 # every laws.yml law, per plan, explicit verdict
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_build.mjs   # build the seven from sources
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_cover.mjs   # front-matter revision (idempotent)
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_check.mjs   # independent verification of the outputs
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_print.mjs   # print PDFs via Chromium
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node bp_index.mjs   # regenerate index.html
+    ruby fetat_build.rb && node bp_print.mjs           # fetat: build, then print its pdf
+
+The plan folders are judged by the one Law system, not by a BIZ-local
+assessor: `MASTER/data/laws.yml` owns every Law identity and `MASTER/law/`
+implements the detectors, including `BUSPLAN_*`, `PRINT_PAGE_CANON` and
+`PRINT_FOLIO_PRESENCE`. Run `bin/check --profile=agent` for the whole
+repository, which is also the only supported way to audit these plans.
 
 and the published trio is copied from the output directory into the plan
 folders (the folders carry only the trio: html, svg mark where one exists,

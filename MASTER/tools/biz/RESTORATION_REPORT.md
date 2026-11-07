@@ -13,11 +13,11 @@
 | govt_bergen | pub4 anlage + Evighetspartiet document + Fetat hefte | full completion + FETAT (nytt barnevern) with the hefte's facts and effect targets + politietaten under loven («Byen vest for loven») + parametrisk arkitektur og Bergen-coin + partiets visjon, verdier, landskapstall, faser og finansiering | yes — «Bergens Selvstyreparti» gradient wordmark from pub2 |
 
 Kept as-is, per the keep-list: pub4's FETAT working master
-(`scripts/fetat_proposal.md`, with `fetat_build.rb`, `fetat_trace.rb` and
-`fetat_laws.rb` beside it in `scripts/`; the published plan folder
-`fetat/` carries only the trio). The plan folders themselves carry only the
-published pair and, where one exists, the svg mark — every editable source
-and all tooling moved to `scripts/` (Johann, 2026-11-07).
+(`fetat_proposal.md`, with `fetat_build.rb` and `fetat_trace.rb` beside it;
+the published plan folder `fetat/` carries only the trio). The plan folders
+themselves carry only the published pair and, where one exists, the svg
+mark — every editable source and all tooling moved out of `BIZ/` to
+`MASTER/tools/biz/` (Johann, 2026-11-07).
 `ai3` is not in the keep-list; its pub3/pub4 copies remain in the archives.
 The retired Python build scripts are kept untouched in `scripts/legacy/`.
 
@@ -64,18 +64,18 @@ operative consequences:
 - **EVIDENCE_SCORING**: arithmetic re-verified from the output files
   (test-pass equivalent), character/placeholder/law scan clean, and this
   report plus the docs are the review record.
-- **Laws audit (November 2026)**: `scripts/laws_audit.rb` walks the whole of
-  `MASTER/data/laws.yml` per plan and gives every law an explicit verdict —
-  PASS with evidence, FAIL with the fix, or N/A with the scope that keeps it
-  out (machinery laws, semantic bokmål reads carried at the reference plan
-  `fetat_laws.rb`). `fetat_laws.rb` reaches all 291 law identities for fetat
-  (113 mechanical/semantic PASS, 178 scoped N/A, FAIL 0); the generic runner
-  reports FAIL 0 across all eight plans. Under the same pass the seven
-  restored bases were swept clean of em dashes, straight-quote and
-  double-space defects, the print canon (`@page 156 × 234 mm, margin
-  0 0 12 mm` + print body padding 18/17/12 mm, folio via
-  `@bottom-center counter(page)`) was imposed, and `text-align: justify`
-  was dropped from every prose rule (ragged right per BRINGHURST).
+- **Laws audit (November 2026)**: the plans are judged by the one Law system in
+  `MASTER/`: `MASTER/data/laws.yml` holds every identity and `MASTER/law/`
+  holds the detectors, so a plan is audited with `bin/check --profile=agent`
+  rather than by a BIZ-local runner. The per-Law verdicts this report first
+  recorded came from two such local runners (`fetat_laws.rb`, `laws_audit.rb`);
+  both were second assessors of the same Laws and have been retired, because a
+  Law has one statement and one detector. Their finding stands and is
+  re-checkable: FAIL 0 across all eight plans, the seven restored bases swept
+  clean of em dashes, straight-quote and double-space defects, the print canon
+  (`@page 156 × 234 mm`, folio via `@bottom-center counter(page)`) imposed,
+  and `text-align: justify` dropped from every prose rule (ragged right per
+  BRINGHURST).
 
 ## Cover revision — November 2026 (Bringhurst / Strunk & White)
 
