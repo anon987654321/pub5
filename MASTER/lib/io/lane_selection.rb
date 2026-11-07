@@ -361,7 +361,23 @@ module Master
       def watch_free_class!(on = true)
         @watching = on
         @warned = {}
+        @floor_suspended = false
       end
+
+      # The free floor proved dead after consecutive zero-success outcomes
+      # (RunPulse promotes after three). A suspended floor stops winning the
+      # per-call chain rankings: the free class is a floor to stand on, and a
+      # floor that answers nothing is not a floor to stand on. One line, once.
+      def suspend_free_floor!(live = nil)
+        return if @floor_suspended
+
+        @floor_suspended = true
+        text = "free floor suspended for this run: " \
+               "#{live || "the live non-free lane"} takes the work while it answers"
+        Master::Trace::Dmesg.status("fix0", text)
+      end
+
+      def free_floor_suspended? = @floor_suspended == true
 
       def free_class_warning(model, operation, cfg: config, alive: method(:alive?))
         id = model.to_s

@@ -18,7 +18,14 @@ module Master
             return live_config_model(task_type:) if candidates.empty?
 
             ids = healthy(candidates).filter_map { |model| model["id"] }
+            ids = ids.reject { |id| suspended_free_lane?(id) || !reachable?(id) } if free_floor_suspended?
             ids = floor_candidates(candidates, operation: task_type).filter_map { |model| model["id"] } if ids.empty?
+            # A suspended floor with no non-free candidate left in the tier does
+            # not end in a free lane anyway: the best live non-free lane takes it.
+            if free_floor_suspended?
+              live = Io::LaneSelection.live_lanes.reject { |id| suspended_free_lane?(id) || !reachable?(id) }.first
+              return live unless live.to_s.empty?
+            end
             @compute_pool.select(Io::LaneSelection.best_class(ids, free_last: !free_route?(task_type)), task_type:, empirical_best:) ||
               ids.first ||
               live_config_model(task_type:)
@@ -112,6 +119,11 @@ module Master
           end
 
           def fallback_rank(model, task_type:)
+            # A floor that proved dead stops leading or even middling a chain:
+            # behind the paid_tail and local ranks, where it can only be reached
+            # when every lane that actually answers failed (2026-11-07).
+            return 9 if suspended_free_lane?(model)
+
             return free_route_rank(model) if free_route?(task_type)
 
             if web_chat_model?(model)
@@ -126,6 +138,15 @@ module Master
               end
             end
           end
+
+          # The fix run suspended the free floor after dead provider outcomes:
+          # free and local lanes rank worst until the next run boots.
+          def suspended_free_lane?(model)
+            Io::LaneSelection.free_floor_suspended? &&
+              Io::LaneSelection::FREE_CLASS_KINDS.include?(Io::LaneSelection.kind(model))
+          end
+
+          def free_floor_suspended? = Io::LaneSelection.free_floor_suspended?
 
           def free_route_rank(model)
             return 0 if free_api_model?(model)

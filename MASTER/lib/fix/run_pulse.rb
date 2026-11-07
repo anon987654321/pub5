@@ -33,6 +33,9 @@ module Master
       # Advisory stages: a stall here is cut short (PassClock.cancel!), never waited out.
       SKIPPABLE = %w[council council_improve opportunities wishlist].freeze
       NOT_SKIPS = %w[pass fixed clean applied ok].freeze
+      # Consecutive provider outcomes that named no success before the run stops
+      # crawling the free floor and hands the work to the live lane.
+      DEAD_STREAK_LIMIT = 3
 
       def self.human_count(count)
         return count.to_s if count < 1000
@@ -72,6 +75,8 @@ module Master
         @errored = 0
         @model_ok = 0
         @first_attempt_at = nil
+        @dead_streak = 0
+        @promoted_live = nil
         reset_pass
       end
 
@@ -152,6 +157,21 @@ module Master
         @finished.shift while @finished.size > 500
       end
 
+      # Three dead provider outcomes in a row with no success between them: the
+      # run stops preferring a floor that answers nothing and names the live
+      # lane that takes the work (2026-11-07, the MASTER crawl the aborts never
+      # saw). Once per run; a success does not lift it — the floor died once
+      # today, and one working call after an hour is not a floor.
+      def promote_live_lane
+        return if @promoted_live
+
+        live = Master::Io::LaneSelection.live_lanes.reject do |id|
+          Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(id))
+        end.first
+        @promoted_live = live
+        Master::Io::LaneSelection.suspend_free_floor!(live)
+      end
+
       def no_yield(now)
         attempts = @model_ok + @rejected + @errored
         minimum = Integer(ENV.fetch("MASTER_FIX_NOYIELD_ATTEMPTS", NOYIELD_ATTEMPTS.to_s), exception: false) || NOYIELD_ATTEMPTS
@@ -162,6 +182,12 @@ module Master
           skippable: false, abort: true }
       end
 
+      # Pass zero keeps hiding from this guard on purpose: the pre-repair
+      # baseline (obs/laws/checks, minutes to a quarter hour in a child process
+      # whose bus events do not reach the pulse) runs at pass zero, and arming
+      # here would abort legitimate evidence. The pass-zero crawl is covered
+      # instead by finish_call: dead provider outcomes count as attempts, three
+      # in a row promote the live lane, and the no-yield abort is behind that.
       def pass_stall(now)
         seconds = FixTime.stall_s
         waited = now - @pass_started_at
@@ -252,6 +278,22 @@ module Master
         @calls.delete(Thread.current.object_id)
         @model = payload[:model].to_s
         @last_call_end = @clock.call
+        # A provider outcome that did not name success is a call the free-floor
+        # walk paid and the run never received work from. The 2026-11-07 MASTER
+        # run sat 16 minutes walking seventeen dead free-class lanes with fixes
+        # 0 failed 0: no event ever landed here as an attempt, so the no-yield
+        # abort — the guard written for exactly this — never armed. Count the
+        # dead outcome. Three dead calls in a row without one success is also
+        # the evidence the free floor is not answering today: publish the
+        # promotion and let the live lane take the work instead of crawling.
+        return if payload[:status] == :success
+
+        @dead_streak += 1
+        promote_live_lane if @dead_streak >= DEAD_STREAK_LIMIT
+        attempted do
+          @errored += 1
+          @pass_errored += 1
+        end
       end
 
       def start_pass(payload)
@@ -270,6 +312,7 @@ module Master
         @pass = 0
         @stage = nil
         @calls.clear
+        @dead_streak = 0
         reset_pass
         @pass_started_at = @clock.call
       end
