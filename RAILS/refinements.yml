@@ -471,7 +471,7 @@ items:
   item: Outline the Caprasimo wordmark to SVG paths so the logo needs no webfont;
     that removes the font preload from every page and keeps the no-serif rule out
     of the network.
-  status: open
+  status: done
 - id: amber-058
   app: amber
   area: seo
