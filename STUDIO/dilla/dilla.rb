@@ -415,12 +415,22 @@ module Dilla
 
   # ------------------------------------------------------------- voicing
 
-  # Turns chord pitch classes into playable MIDI voicings with voice-leading:
-  # each inner voice moves the shortest distance it can, tendency tones
-  # resolve, the top voice keeps the register where a melody can breathe.
+  # Turns chord pitch classes into playable MIDI voicings. The bass owns
+  # the root; the keys own the colour — the Rhodes practice behind the
+  # recovered Slum Village transcriptions. Each chord sets three or four
+  # tones: the shell defines the function, the extension defines the
+  # colour, the 5th fills only what remains. Candidate stacks are scored
+  # on total voice-leading motion from the previous chord, compact spread
+  # and a top voice left in singing range.
   class Voicer
     TOP_RANGE = (67..84).freeze
     INNER_RANGE = (48..72).freeze
+    LOWEST_VOICE = 48
+    HIGHEST_VOICE = 92
+    # A voice may not travel further than a perfect fifth between chords.
+    # This is a constraint, not a preference: no amount of top-register
+    # brightness or compactness buys back a leap that size.
+    MAX_LEAD = 7
 
     def initialize(theory)
       @theory = theory
@@ -431,68 +441,99 @@ module Dilla
       out = []
       previous = nil
       chords.each do |chord|
-        voiced = voice_one(chord, previous, rng, opts)
+        voiced = voice_one(chord, previous)
         out << voiced
         previous = voiced
       end
       out
     end
 
-    def voice_one(chord, previous, rng, opts = {})
-      pcs = chord[:intervals]
-      full = opts.fetch(:full, true)
-      # Build candidate pitch sets across the voicing range.
-      tones = pcs.reject { |pc| pc == chord[:root] && full == false }
-      notes = []
-      # 3rd/7th shell first (nearest to previous), then extensions, then 5th.
-      ordered = order_by_function(tones, chord)
-      ordered.each_with_index do |pc, idx|
-        target = nearest_voice(pc, previous, idx)
-        target = fold_into_range(target, idx.zero? ? INNER_RANGE : INNER_RANGE)
-        notes << target
-      end
-      # Keep the top voice up: lift the highest tone into the singing range.
-      top_idx = notes.index(notes.max)
-      top = notes[top_idx]
-      top += 12 while top < TOP_RANGE.begin && top + 12 <= TOP_RANGE.end
-      notes[top_idx] = top
-      notes.uniq.sort
+    def voice_one(chord, previous)
+      tone_sets = [chord_tones(chord), chord_tones(chord)[0...-1]].reject { |set| set.length < 3 }
+      candidates = tone_sets.flat_map { |tone_set| candidate_stacks(tone_set) }
+      # Two constraints are structural rather than preferential: the top voice
+      # stays in singing register and no voice leaps more than a fifth. They
+      # filter the pool before scoring, and relax one at a time only when a
+      # tone set admits nothing — a leap is the worse of the two failures.
+      pool = candidates.select { |stack| singing_top?(stack) && within_lead?(stack, previous) }
+      pool = candidates.select { |stack| within_lead?(stack, previous) } if pool.empty?
+      pool = candidates.select { |stack| singing_top?(stack) } if pool.empty?
+      pool = candidates if pool.empty?
+      pool.min_by { |stack| [score(stack, previous), stack.last - stack.first] } ||
+        [chord[:root] + 60]
     end
 
     private
 
-    # 3rds and 7ths define the function; extensions colour; the 5th may fall.
-    def order_by_function(pcs, chord)
-      function_first = pcs.partition { |iv| [3, 4, 10, 11, 15, 14].include?(iv % 12) || [3, 4, 10, 11].include?(iv % 12) }
-      extension = pcs.select { |iv| [14, 15, 17, 18, 20, 21].include?(iv) }
-      fifth = pcs.select { |iv| iv % 12 == 7 }
-      sixth = pcs.select { |iv| iv % 12 == 9 }
-      root = pcs.select { |iv| iv % 12 == 0 }
-      function_first[0].uniq + extension.uniq + sixth + fifth + root
+    # 3rd and 7th define the function; one extension defines the colour
+    # (9th, #11th, 6th or the altered tension); the 5th fills only what
+    # remains. The root is never stacked while a bass lane carries it.
+    # Intervals are root-relative; each tone returns as an absolute pitch
+    # class.
+    def chord_tones(chord)
+      root_pc = chord[:root] % 12
+      rel = chord[:intervals].reject { |iv| iv % 12 == 0 }
+      shell = [rel.find { |s| [3, 4].include?(s % 12) },
+               rel.find { |s| [10, 11].include?(s % 12) }].compact
+      colours = [1, 2, 5, 6, 9].map { |c| rel.find { |s| s % 12 == c } }
+                                .compact.first(2)
+      picks = shell + colours
+      fifth = rel.find { |s| s % 12 == 7 }
+      picks << fifth if picks.length < 4 && fifth
+      picks << 0 if picks.length < 3
+      picks.first(4).uniq.map { |iv| (root_pc + iv) % 12 }
     end
 
-    def nearest_voice(pc, previous, idx)
-      pc += 12 while pc < INNER_RANGE.begin
-      pc -= 12 while pc > INNER_RANGE.end
-      return pc unless previous.is_a?(Array) && !previous.empty?
+    # Every ascending arrangement of the pitch classes that fits the register
+    # window, lowest voice first. The old generator produced a single shape
+    # per tone set — root position pushed up into the top octave — which left
+    # the compactor with nothing to choose from and forced leaps it then had
+    # to accept.
+    def candidate_stacks(tone_set, lowest = LOWEST_VOICE, highest = HIGHEST_VOICE)
+      build = lambda do |stack, remaining|
+        if remaining.empty?
+          [stack]
+        else
+          remaining.flat_map.with_index do |pitch_class, index|
+            note = pitch_class % 12
+            note += 12 while note < (stack.empty? ? lowest : stack.last + 1)
+            next [] if note > highest
 
-      anchor = previous[[idx, previous.length - 1].min]
-      best = nil
-      best_dist = 1.0 / 0
-      [pc - 12, pc, pc + 12].each do |cand|
-        dist = (cand - anchor).abs
-        if dist < best_dist
-          best_dist = dist
-          best = cand
+            build.call(stack + [note], remaining[0...index] + remaining[index + 1..])
+          end
         end
       end
-      best
+      build.call([], tone_set)
     end
 
-    def fold_into_range(note, range)
-      note += 12 while note < range.begin
-      note -= 12 while note > range.end
-      note
+    def within_lead?(stack, previous)
+      return true unless previous
+
+      stack.all? { |note| previous.map { |p| (p - note).abs }.min <= MAX_LEAD }
+    end
+
+    def singing_top?(stack)
+      stack.last.between?(TOP_RANGE.begin, TOP_RANGE.end)
+    end
+
+    def score(stack, previous)
+      s = 0.0
+      if previous
+        common = [stack.length, previous.length].min
+        s += (0...common).sum { |i| (stack[i] - previous[i]).abs * 10.0 }
+        # Set-level smoothness too, however the stack reorders itself between
+        # indices. Leadable candidates already satisfy this; it only shapes
+        # the fallback used when a tone set admits no leadable stack.
+        stack.each do |note|
+          gap = previous.map { |p| (p - note).abs }.min
+          s += (gap - MAX_LEAD) * 12.0 if gap > MAX_LEAD
+        end
+      end
+      spread = stack.last - stack.first
+      s += spread > 13 ? 6.0 : 0.0
+      s += 8 unless singing_top?(stack)
+      s += 6 if stack.first < 52
+      s
     end
   end
 
