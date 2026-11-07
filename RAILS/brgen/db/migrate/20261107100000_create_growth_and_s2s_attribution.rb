@@ -24,7 +24,11 @@ class CreateGrowthAndS2sAttribution < ActiveRecord::Migration[8.2]
       t.datetime :expires_at, null: false
       t.timestamps
     end
-    add_index :referral_credits, :referral_splinter_id, unique: true
+    # The foreign_key: true references above already create the plain FK index
+    # name; SQLite refuses a second index under the same name, so the unique
+    # guard carries its own.
+    add_index :referral_credits, :referral_splinter_id, unique: true,
+              name: "index_referral_credits_one_use_per_splinter"
     add_index :referral_credits, %i[user_id entitlement expires_at], name: "index_referral_credits_entitlement"
 
     create_table :s2s_attributions do |t|
@@ -34,7 +38,8 @@ class CreateGrowthAndS2sAttribution < ActiveRecord::Migration[8.2]
       t.datetime :captured_at, null: false
       t.timestamps
     end
-    add_index :s2s_attributions, :user_id, unique: true
+    add_index :s2s_attributions, :user_id, unique: true,
+              name: "index_s2s_attributions_one_attribution_per_user"
 
     create_table :s2s_conversions do |t|
       t.references :user, null: false, foreign_key: true

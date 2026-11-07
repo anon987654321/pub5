@@ -469,11 +469,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.integer "user_id", null: false
     t.datetime "verified_at"
     t.boolean "visible", default: false, null: false
+    t.index ["city_id", "latitude", "longitude"], name: "index_dating_profiles_on_city_id_and_latitude_and_longitude"
     t.index ["city_id"], name: "index_dating_profiles_on_city_id"
     t.index ["neighborhood_id"], name: "index_dating_profiles_on_neighborhood_id"
     t.index ["user_id"], name: "index_dating_profiles_on_user_id"
     t.index ["visible", "last_active_at"], name: "index_dating_profiles_on_visible_and_last_active_at"
-    t.index ["city_id", "latitude", "longitude"], name: "index_dating_profiles_on_city_id_and_latitude_and_longitude"
   end
 
   create_table "dating_prompts", force: :cascade do |t|
@@ -1088,6 +1088,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.integer "story_id"
     t.datetime "updated_at", null: false
     t.string "client_token"
+    t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
     t.index ["conversation_id", "deleted_at"], name: "index_messages_on_conversation_id_and_deleted_at"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["expires_at"], name: "index_messages_on_expires_at", where: "expires_at IS NOT NULL"
@@ -1097,7 +1098,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.index ["sender_id", "client_token"], name: "index_messages_on_sender_id_and_client_token", unique: true
     t.index ["sender_id"], name: "index_messages_on_sender_id"
     t.index ["story_id"], name: "index_messages_on_story_id"
-    t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
   end
 
   create_table "moderation_flags", force: :cascade do |t|
@@ -1548,6 +1548,36 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.index ["user_id"], name: "index_reactions_on_user_id"
   end
 
+  create_table "referral_credits", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "referral_splinter_id", null: false
+    t.string "vertical", null: false
+    t.string "entitlement", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["referral_splinter_id"], name: "index_referral_credits_on_referral_splinter_id"
+    t.index ["referral_splinter_id"], name: "index_referral_credits_one_use_per_splinter", unique: true
+    t.index ["user_id", "entitlement", "expires_at"], name: "index_referral_credits_entitlement"
+    t.index ["user_id"], name: "index_referral_credits_on_user_id"
+  end
+
+  create_table "referral_splinters", force: :cascade do |t|
+    t.integer "referrer_id", null: false
+    t.integer "redeemed_by_id"
+    t.string "vertical", null: false
+    t.string "reward_tier", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "redeemed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redeemed_by_id"], name: "index_referral_splinters_on_redeemed_by_id"
+    t.index ["redeemed_by_id"], name: "index_referral_splinters_one_claim_per_user", unique: true, where: "redeemed_by_id IS NOT NULL"
+    t.index ["referrer_id"], name: "index_referral_splinters_on_referrer_id"
+    t.index ["token_digest"], name: "index_referral_splinters_on_token_digest", unique: true
+  end
+
   create_table "reposts", force: :cascade do |t|
     t.text "comment"
     t.datetime "created_at", null: false
@@ -1568,6 +1598,31 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
     t.integer "user_id", null: false
     t.index ["user_id", "scope"], name: "index_reputation_scores_on_user_id_and_scope", unique: true
     t.index ["user_id"], name: "index_reputation_scores_on_user_id"
+  end
+
+  create_table "s2s_attributions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "mediago_tracking_id", limit: 500
+    t.string "revcontent_rc_uuid", limit: 500
+    t.datetime "captured_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_s2s_attributions_on_user_id"
+    t.index ["user_id"], name: "index_s2s_attributions_one_attribution_per_user", unique: true
+  end
+
+  create_table "s2s_conversions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "reference", limit: 200, null: false
+    t.integer "amount_cents", null: false
+    t.string "currency", limit: 8, default: "NOK", null: false
+    t.string "status", default: "queued", null: false
+    t.json "postback_results", default: {}, null: false
+    t.datetime "converted_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "reference"], name: "index_s2s_conversions_on_user_and_reference", unique: true
+    t.index ["user_id"], name: "index_s2s_conversions_on_user_id"
   end
 
   create_table "search_recents", force: :cascade do |t|
@@ -2214,9 +2269,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
   add_foreign_key "posts", "users"
   add_foreign_key "reactions", "posts"
   add_foreign_key "reactions", "users"
+  add_foreign_key "referral_credits", "referral_splinters"
+  add_foreign_key "referral_credits", "users"
+  add_foreign_key "referral_splinters", "users", column: "redeemed_by_id"
+  add_foreign_key "referral_splinters", "users", column: "referrer_id"
   add_foreign_key "reposts", "posts"
   add_foreign_key "reposts", "users"
   add_foreign_key "reputation_scores", "users"
+  add_foreign_key "s2s_attributions", "users"
+  add_foreign_key "s2s_conversions", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "share_drafts", "cities"
   add_foreign_key "share_drafts", "users"
@@ -2274,64 +2335,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
   add_foreign_key "tv_view_events", "users"
   add_foreign_key "typing_indicators", "conversations"
   add_foreign_key "typing_indicators", "users"
-  create_table "referral_splinters", force: :cascade do |t|
-    t.integer "referrer_id", null: false
-    t.integer "redeemed_by_id"
-    t.string "vertical", null: false
-    t.string "reward_tier", null: false
-    t.string "token_digest", null: false
-    t.datetime "expires_at", null: false
-    t.datetime "redeemed_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["redeemed_by_id"], name: "index_referral_splinters_one_claim_per_user", unique: true, where: "redeemed_by_id IS NOT NULL"
-    t.index ["referrer_id"], name: "index_referral_splinters_on_referrer_id"
-    t.index ["token_digest"], name: "index_referral_splinters_on_token_digest", unique: true
-  end
-
-  create_table "referral_credits", force: :cascade do |t|
-    t.integer "user_id", null: false
-    t.integer "referral_splinter_id", null: false
-    t.string "vertical", null: false
-    t.string "entitlement", null: false
-    t.datetime "expires_at", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["referral_splinter_id"], name: "index_referral_credits_on_referral_splinter_id", unique: true
-    t.index ["user_id", "entitlement", "expires_at"], name: "index_referral_credits_entitlement"
-    t.index ["user_id"], name: "index_referral_credits_on_user_id"
-  end
-
-  create_table "s2s_attributions", force: :cascade do |t|
-    t.integer "user_id", null: false
-    t.string "mediago_tracking_id", limit: 500
-    t.string "revcontent_rc_uuid", limit: 500
-    t.datetime "captured_at", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["user_id"], name: "index_s2s_attributions_on_user_id", unique: true
-  end
-
-  create_table "s2s_conversions", force: :cascade do |t|
-    t.integer "user_id", null: false
-    t.string "reference", limit: 200, null: false
-    t.integer "amount_cents", null: false
-    t.string "currency", limit: 8, default: "NOK", null: false
-    t.string "status", default: "queued", null: false
-    t.json "postback_results", default: {}, null: false
-    t.datetime "converted_at", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["user_id", "reference"], name: "index_s2s_conversions_on_user_and_reference", unique: true
-    t.index ["user_id"], name: "index_s2s_conversions_on_user_id"
-  end
-
-  add_foreign_key "referral_splinters", "users", column: "referrer_id"
-  add_foreign_key "referral_splinters", "users", column: "redeemed_by_id"
-  add_foreign_key "referral_credits", "referral_splinters"
-  add_foreign_key "referral_credits", "users"
-  add_foreign_key "s2s_attributions", "users"
-  add_foreign_key "s2s_conversions", "users"
   add_foreign_key "users", "cities"
   add_foreign_key "votes", "users"
 end
