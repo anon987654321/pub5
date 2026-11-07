@@ -24,6 +24,14 @@ class TestStudioSelfieSeries < Minitest::Test
     end
   end
 
+  class FailingPicture
+    def initialize(**); end
+
+    def write(_prompt, film:, seed:)
+      raise "simulated render failure for film=#{film} seed=#{seed}"
+    end
+  end
+
   class FakePicture
     @@calls = []
 
@@ -82,14 +90,12 @@ class TestStudioSelfieSeries < Minitest::Test
     result = @series.write
 
     assert_equal "complete", result.fetch("status")
-    assert_equal "pending_operator_review", result.fetch("review_status")
     assert_equal "pending_operator_review", result.fetch("curation_status")
     assert_equal 3, result.fetch("models").length
     assert_equal [10, 10, 10], result.fetch("models").map { |model| model.fetch("renders") }
     assert_equal 30, FakePicture.calls.length
 
     manifest = JSON.parse(File.read(result.fetch("manifest")))
-    assert_equal "pending_operator_review", manifest.fetch("review_status")
     assert_equal "pending_operator_review", manifest.fetch("curation_status")
     manifest.fetch("models").each do |model|
       sheet = File.join(File.dirname(result.fetch("manifest")), model.fetch("contact_sheet"))
@@ -168,6 +174,41 @@ class TestStudioSelfieSeries < Minitest::Test
     refute File.exist?(File.join(@output, ".retired"))
     assert_equal [1], @provider.calls
     assert_empty FakePicture.calls
+  end
+
+  def test_incomplete_replacement_keeps_verified_old_render_in_place
+    stamp = "20261107T110000123456"
+    source = File.join(@output, "#{stamp}.jpg")
+    image = File.join(@output, "postpro_#{stamp}_legacy_v1.jpg")
+    sidecar = image + ".json"
+    File.binwrite(source, "old-source")
+    File.binwrite(image, "old-render")
+    File.write(sidecar, JSON.generate(
+      schema: "postpro.grade.v2",
+      input: source,
+      output: image,
+      input_sha256: Digest::SHA256.file(source).hexdigest,
+      output_sha256: Digest::SHA256.file(image).hexdigest
+    ))
+    [source, image, sidecar].each { |file| File.chmod(0o600, file) }
+    failing_series = Studio::Visual::SelfieSeries.new(
+      subjects_directory: @subjects,
+      output_directory: @output,
+      client: @provider,
+      picture_class: FailingPicture,
+      clock: -> { Time.utc(2026, 11, 7, 12, 0, 0) }
+    )
+
+    result = failing_series.write
+
+    assert_equal "partial", result.fetch("status")
+    assert_equal "skipped", result.dig("retired", "status")
+    assert_equal "replacement_series_incomplete", result.dig("retired", "reason")
+    assert_equal 0, result.dig("retired", "archived_files")
+    assert File.file?(source)
+    assert File.file?(image)
+    assert File.file?(sidecar)
+    refute File.exist?(File.join(@output, ".retired"))
   end
 
   def test_output_root_is_tightened_to_owner_only
