@@ -386,9 +386,23 @@ module Master
           false
         else
           terminal_puts("queue0: #{count} queued, paused") if paused && count&.positive?
-          terminal_puts("queue0: #{count} queued") if busy && count&.positive?
+          if busy && count&.positive? && !busy_turn_spinner_shows_queue?
+            # The busy-turn spinner suffix already carries the count while it
+            # paints its own row; appending a queue0 line here churned the
+            # display (Johann 2026-11-07). Non-tty pipes keep the receipt.
+            terminal_puts("queue0: #{count} queued")
+          end
           true
         end
+      end
+
+      # True when the reserved activity row is being painted, so the count is
+      # visible in the spinner suffix and its own receipt line would duplicate
+      # nothing that is already on the screen.
+      def busy_turn_spinner_shows_queue?
+        $stdout.tty? && @activity_row_reserved && activity_row_safe_to_draw?
+      rescue StandardError
+        false
       end
 
       # Called with @turn_queue_mutex held. A startup latch replaces a busy

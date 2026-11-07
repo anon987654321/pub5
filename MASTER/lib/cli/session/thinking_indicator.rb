@@ -69,7 +69,12 @@ module Master
               paused, stage = @think_mutex.synchronize { [@think_paused, @think_stage.to_s] }
               unless paused
                 stage = "working" if stage.empty?
-                line = one_row("#{SPINNER_FRAMES.fetch(frame % SPINNER_FRAMES.length)} #{stage} #{elapsed_seconds}s")
+                # Busy-turn queue receipts ride the spinner row (Johann
+                # 2026-11-07: separate queue0 lines churned the display
+                # under the spinner) instead of appending their own.
+                queued = @turn_queue_mutex.synchronize { @turn_queue.size } if @turn_worker&.alive?
+                suffix = queued.to_i.positive? ? " - #{queued} queued" : ""
+                line = one_row("#{SPINNER_FRAMES.fetch(frame % SPINNER_FRAMES.length)} #{stage} #{elapsed_seconds}s#{suffix}")
                 if @reading_input
                   # A reserved row above Reline's prompt keeps the animation
                   # visible without painting over the user's editable draft.
