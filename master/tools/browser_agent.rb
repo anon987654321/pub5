@@ -16,9 +16,9 @@ module Master
       MAX_SESSION_BYTES = 40
       MAX_URL_BYTES = 2_000
       MAX_SCROLL_STEPS = 5
-      MAX_SOURCE_BYTES = 24_000
-      MAX_TEXT_BYTES = 12_000
-      MAX_LINKS = 60
+      MAX_SOURCE_BYTES = 8_000
+      MAX_TEXT_BYTES = 4_000
+      MAX_LINKS = 20
       SENSITIVE_QUERY_KEY = /(?:token|secret|password|passwd|credential|auth|session|otp|one.?time|signature|jwt|api.?key|access.?key|code)/i.freeze
 
       RESTRICTED = %w[
@@ -37,14 +37,18 @@ module Master
             .filter(a => a.href && a.innerText.trim())
             .slice(0, 60)
             .map(a => ({ text: a.innerText.trim().slice(0, 160), href: a.href }));
+          const visibleText = body ? body.innerText : "";
+          const source = document.documentElement.outerHTML;
           return {
             url: location.href,
             title: document.title || "",
             ready_state: document.readyState,
             scroll_y: window.scrollY,
             scroll_height: document.documentElement.scrollHeight,
-            visible_text: (body ? body.innerText : "").slice(0, 12000),
-            source: document.documentElement.outerHTML.slice(0, 24000),
+            visible_text: visibleText.slice(0, 12000),
+            visible_text_length: visibleText.length,
+            source: source.slice(0, 24000),
+            source_length: source.length,
             links
           };
         })()
@@ -241,8 +245,13 @@ module Master
         screenshot_path = "log/master/browser-#{state_id(state)}.png"
         @world.write(screenshot_path, screenshot, mode: 0o600)
         data["url"] = redact_url(data["url"])
+        data["source_length"] = data["source_length"].to_i
+        data["source_truncated"] = data["source_length"] > MAX_SOURCE_BYTES
         data["source"] = data["source"].to_s.byteslice(0, MAX_SOURCE_BYTES).to_s
+        data["visible_text_length"] = data["visible_text_length"].to_i
+        data["visible_text_truncated"] = data["visible_text_length"] > MAX_TEXT_BYTES
         data["visible_text"] = data["visible_text"].to_s.byteslice(0, MAX_TEXT_BYTES).to_s
+        data["links_truncated"] = Array(data["links"]).size > MAX_LINKS
         data["links"] = Array(data["links"]).first(MAX_LINKS).map do |link|
           link.merge("href" => redact_url(link["href"]))
         end
