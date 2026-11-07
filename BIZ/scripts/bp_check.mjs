@@ -39,7 +39,7 @@ function footVals(tableHtml) {
 }
 
 for (const plan of ORDER) {
-  const file = `${OUT}/${plan}.html`;
+  const file = `${OUT}/${plan}/${plan}.html`;
   const src = readFileSync(file, 'utf8');
   const body = src.replace(/base64,[^"']+/g, '');
   const add = (m) => fails.push(`${plan}: ${m}`);

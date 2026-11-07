@@ -30,8 +30,8 @@ if (!CHROME) {
 }
 
 for (const name of ORDER) {
-  const src = `file://${OUT}/${name}.html`;
-  const pdf = `${OUT}/${name}.pdf`;
+  const src = `file://${OUT}/${name}/${name}.html`;
+  const pdf = `${OUT}/${name}/${name}.pdf`;
   const r = spawnSync(CHROME, [
     '--headless', '--disable-gpu', '--no-sandbox',
     '--no-pdf-header-footer', '--virtual-time-budget=20000',

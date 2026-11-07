@@ -6,13 +6,15 @@ HTML document and one PDF printed from it. The separate `__templates/` directory
 preserves the original `bob` and `bob2` correspondence in HTML and PDF form; those
 files are historical source material, not part of the seven plan deliverables:
 
-    syre.html + syre.pdf             3D-printede sko, NOK 250 000
-    ragnhild.html + ragnhild.pdf     begravelsesbyrå (karaokekiste), NOK 150 000
-    speis.html + speis.pdf           maritime og forsvar, NOK 500 000
-    nato.html + nato.pdf             arktiske dominanseskip, NOK 500 000
-    norwegianhedge.html + .pdf       Ruby-handelsroboter, NOK 300 000
-    pubhealthcare.html + .pdf        autonome parametriske sykehus, NOK 500 000
-    govt_bergen.html + .pdf          bergensk selvstyre-teknologi, NOK 200 000
+    syre/syre.html + syre.pdf                     3D-printede sko, NOK 250 000
+    ragnhild/ragnhild.html + ragnhild.pdf         begravelsesbyrå (karaokekiste), NOK 150 000
+    speis/speis.html + speis.pdf                  maritime og forsvar, NOK 500 000
+    nato/nato.html + nato.pdf                     arktiske dominanseskip, NOK 500 000
+    norwegianhedge/norwegianhedge.html + .pdf     Ruby-handelsroboter, NOK 300 000
+    pubhealthcare/pubhealthcare.html + .pdf       autonome parametriske sykehus, NOK 500 000
+    govt_bergen/govt_bergen.html + .pdf           bergensk selvstyre-teknologi, NOK 200 000
+
+Every plan lives in its own folder named after its html and pdf pair (Johann, 2026-11-07), one pair per folder.
 
 Seven concepts, sought funding in total: **NOK 2 400 000**. (ai3 remains in the
 pub3/pub5 archives but is not in the keep-list for this restoration.)

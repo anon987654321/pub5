@@ -15,7 +15,7 @@ import { ADDITIONS } from './content_add.mjs';
 
 const PLANS = { ...PLANS_A, ...PLANS_B };
 
-const PUB_SYRE = `${SRC}/syre.html`;
+const PUB_SYRE = `${SRC}/syre/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
 const TITLES = {
@@ -101,7 +101,7 @@ function logoHtml(plan) {
 }
 
 function fontCss() {
-  const ragnhild = readFileSync(`${SRC}/ragnhild.html`, 'utf8');
+  const ragnhild = readFileSync(`${SRC}/ragnhild/ragnhild.html`, 'utf8');
   const match = ragnhild.match(/@font-face\{[^}]*font-family:'Nosifer'[^}]*src:url\(data:font\/woff2;base64,([A-Za-z0-9+/=]+)\)/s);
   if (!match) throw new Error('Nosifer font is not embedded in BIZ/ragnhild.html');
   const b64 = match[1];
@@ -240,7 +240,7 @@ const report = [];
 const fails = [];
 
 for (const plan of ORDER) {
-  let src = readFileSync(`${SRC}/${plan}.html`, 'utf8');
+  let src = readFileSync(`${SRC}/${plan}/${plan}.html`, 'utf8');
   const origTitle = (src.match(/<title>([^<]+)<\/title>/) || [])[1];
   if (origTitle !== TITLES[plan]) report.push(`${plan}: title mismatch ${JSON.stringify(origTitle)}`);
 
@@ -308,7 +308,8 @@ for (const plan of ORDER) {
   const body = src.replace(/base64,[^"']+/g, '');
   for (const e of charCheck(body, plan, 'full')) fails.push(e);
 
-  writeFileSync(`${OUT}/${plan}.html`, src);
+  mkdirSync(`${OUT}/${plan}`, { recursive: true });
+  writeFileSync(`${OUT}/${plan}/${plan}.html`, src);
   report.push(`${plan}: ok (${src.length} chars, logo=${lgd ? lgd.kind : 'none'})`);
 }
 

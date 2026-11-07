@@ -31,6 +31,7 @@
 // fails the run (FINDING_HYGIENE: inconclusive is never silent pass).
 // Usage: node scripts/bp_cover.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { OUTPUT_DIR as OUT } from './paths.mjs';
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
 const GRADIENT = ['speis', 'norwegianhedge'];
@@ -67,7 +68,7 @@ const PLAIN_NOTE = '<p>Logo: «Bergens Selvstyreparti» satt som tekstmerke i an
 const fails = [];
 
 for (const plan of ORDER) {
-  const file = `${OUT}/${plan}.html`;
+  const file = `${OUT}/${plan}/${plan}.html`;
   const before = readFileSync(file, 'utf8');
   let src = before;
   const acts = [];
@@ -136,6 +137,7 @@ for (const plan of ORDER) {
   }
 
   if (src === before) acts.push('no change');
+  mkdirSync(`${OUT}/${plan}`, { recursive: true });
   writeFileSync(file, src);
   console.log(`${plan}: ${acts.join('; ')}`);
 }

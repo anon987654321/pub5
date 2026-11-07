@@ -4,7 +4,7 @@
 // Usage: node scripts/bp_index.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { OUTPUT_DIR as OUT } from './paths.mjs';
-const syre = readFileSync(`${OUT}/syre.html`, 'utf8');
+const syre = readFileSync(`${OUT}/syre/syre.html`, 'utf8');
 const fonts = [...syre.matchAll(/@font-face\{[\s\S]*?\}/g)].map(m => m[0]);
 if (fonts.length !== 2) throw new Error(`expected 2 font-face in syre.html, got ${fonts.length}`);
 const fontcss = fonts.join('\n');
