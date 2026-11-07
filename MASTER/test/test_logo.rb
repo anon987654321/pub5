@@ -5,19 +5,10 @@ require "open3"
 require "tmpdir"
 require_relative "../tools/logo"
 
-# The vector logo generator is the one source of the shipped BIZ/fetat marks:
-# the suite renders them from the same seed and compares against the tree, so
-# a hand-edited SVG drifts and so does a broken generator.
+# The vector logo generator renders on demand. Its marks were once shipped in
+# BIZ/fetat; Johann rejected that set as ugly and the files were removed, so
+# nothing here asserts tree state — only that the generator itself behaves.
 class TestLogo < Minitest::Test
-  ROOT = File.expand_path("..", __dir__).sub(%r{/MASTER\z}, "")
-  SHIPPED = [
-    ["pure_symbol", "01-pure-symbol.svg"],
-    ["text_lockup", "02-fetat-text.svg"],
-    ["dash_text", "03-fetat-dash-text.svg"],
-    ["circular_badge", "04-circular-badge.svg"],
-    ["minimal_refined", "05-minimal-refined.svg"],
-  ].freeze
-
   def test_render_is_an_svg_with_a_stroke_group_and_viewbox
     body = Master::Tools::Logo.render(motif: "fetat_hands", variant: "pure_symbol", seed: "probe")
 
@@ -37,16 +28,6 @@ class TestLogo < Minitest::Test
     assert_equal default, Master::Tools::Logo.render(motif: "fetat_hands", variant: "pure_symbol"),
                  "default seed also derives deterministically"
     refute_equal first, other
-  end
-
-  def test_the_shipped_business_logos_reproduce_from_this_generator
-    shippable = SHIPPED.all? do |variant, name|
-      body = Master::Tools::Logo.render(motif: "fetat_hands", variant:, subject: "FETAT")
-      path = File.join(ROOT, "BIZ", "fetat", name)
-      File.file?(path) && body == File.read(path)
-    end
-
-    assert shippable, "a shipped logo no longer matches its generator"
   end
 
   def test_unknown_variant_is_refused_not_rendered_quietly
