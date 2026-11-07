@@ -5,6 +5,7 @@ require "json"
 require "optparse"
 require_relative "photograph/idea_picture"
 require_relative "photograph/reference_picture"
+require_relative "photograph/selfie_series"
 
 if $PROGRAM_NAME == __FILE__
   options = {
@@ -16,7 +17,9 @@ if $PROGRAM_NAME == __FILE__
     reference_roles: [],
     look: "natural_selfie",
     seed: 42,
-    cost_limit_usd: nil
+    cost_limit_usd: nil,
+    selfie_series: false,
+    output_directory: File.expand_path("~/ideas")
   }
   OptionParser.new do |parser|
     parser.on("--film", "also render the short film (trained-LoRA route only)") { options[:film] = true }
@@ -27,8 +30,17 @@ if $PROGRAM_NAME == __FILE__
     parser.on("--seed N", Integer, "reproducible image seed") { |value| options[:seed] = value }
     parser.on("--cost-limit-usd AMOUNT", Float, "maximum estimated cost accepted for this one-image request") { |value| options[:cost_limit_usd] = value }
     parser.on("--duration N", Integer, "film duration in seconds") { |value| options[:duration] = value }
+    parser.on("--selfie-series", "refresh old verified renders and create ten varied selfies per local LoRA model") { options[:selfie_series] = true }
+    parser.on("--output-dir DIR", "private local output root for --selfie-series") { |value| options[:output_directory] = File.expand_path(value) }
     parser.on("--subject NAME", "subject directory under STUDIO/replicate/lora") { |value| options[:subject] = value }
   end.parse!
+
+  if options[:selfie_series]
+    abort "--selfie-series does not accept an additional prompt" unless ARGV.empty?
+    result = Studio::Visual::SelfieSeries.new(output_directory: options[:output_directory]).write
+    puts JSON.generate(result)
+    exit(result.fetch("status") == "complete" ? 0 : 1)
+  end
 
   prompt = ARGV.join(" ").strip
   abort "usage: ruby STUDIO/photograph.rb [--film | --reference --reference-image PATH] PROMPT" if prompt.empty?

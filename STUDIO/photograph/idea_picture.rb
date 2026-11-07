@@ -33,10 +33,10 @@ module Studio
         @model_manifest = model_manifest || default_model_manifest
       end
 
-      def write(words, film: true, duration: 5)
+      def write(words, film: true, duration: 5, seed: nil)
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
-        still = render_still(words, stamp)
+        still = render_still(words, stamp, seed:)
         return { "still" => still } unless film
 
         { "still" => still, "clip" => render_film(words, still, stamp, duration) }
@@ -48,9 +48,9 @@ module Studio
         @client ||= Studio::ReplicateClient.new
       end
 
-      def render_still(words, stamp)
+      def render_still(words, stamp, seed: nil)
         path = File.join(@directory, "#{stamp}.jpg")
-        output = client.predict(still_model, still_input(words), timeout: 600)
+        output = client.predict(still_model, still_input(words, seed:), timeout: 600)
         client.download_url(first_url(output), path)
         grade(path)
       end
@@ -62,7 +62,7 @@ module Studio
         path
       end
 
-      def still_input(words)
+      def still_input(words, seed: nil)
         {
           prompt: photographic(words),
           model: "dev",
@@ -74,7 +74,7 @@ module Studio
           output_quality: 95,
           go_fast: false,
           lora_scale: 1.0
-        }
+        }.tap { |input| input[:seed] = Integer(seed) unless seed.nil? }
       end
 
       def film_input(words, still, duration)

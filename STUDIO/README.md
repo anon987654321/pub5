@@ -35,6 +35,35 @@ and proves the contracts answer, `rake test` runs `test/` (Dilla, IdeaPicture an
 suites), and `rake` runs both. The suite runs without network access and
 without the Replicate API; reference tests use a stub client.
 
+## LoRA selfie refresh
+
+Discover every local `<subject>/weights/<model>/replicate_training.json`
+manifest, validate the subject's private `subject.env`, consent record, source
+rights and exact pinned model version, then generate ten distinct front-camera
+selfies per checkpoint:
+
+```sh
+ruby STUDIO/photograph.rb --selfie-series
+```
+
+Outputs are grouped under `~/ideas/selfie-series-<run-id>/<subject>/<model>/`.
+Each final image keeps its Postpro sidecar and source hash; the private series
+manifest records all ten prompts, seeds, model versions and image digests.
+Every image passes through Postpro and its mandatory independent final analog
+grain layer.
+
+Before generation, the command archives prior managed series and legacy
+timestamp-named render families only when the Postpro sidecar, source hash and
+output hash all agree. It moves them into `~/ideas/.retired/` so they can be
+restored. Ambiguous timestamp files, unrelated photographs and files without
+verifiable Postpro provenance are left untouched and listed in the retirement
+report; they are never deleted based on name or size alone. No training occurs.
+The command uses the local Replicate token and incurs inference charges for
+successful predictions. Confirm the account's available balance and model
+pricing before running. All subject consent, provider-processing and source
+rights records must be complete and private before any files are moved or
+requests are sent.
+
 ## Reference-guided portraits
 
 The existing `ruby STUDIO/photograph.rb PROMPT` path remains the trained-LoRA
