@@ -239,6 +239,31 @@ class TestLaneSelection < Minitest::Test
     Selection.watch_free_class!(false)
   end
 
+  def test_the_savior_is_a_lane_the_stores_cannot_refuse
+    # gemini-2.5-flash is dead by hand in data/lanes.yml, yet alive? reads only
+    # binaries and provider keys - so 2026-11-07's walk named it "live" in every
+    # free-class warning and the suspension while the wheel kept paying each
+    # dead free slug its call. The savior must survive LaneState's verdict.
+    Selection.watch_free_class!
+    warning = Selection.free_class_warning(NEMOTRON, :file_write, alive: ALL).to_s
+    refute_match(/gemini/, warning, "a hand-dead lane is never named as the lane that takes the work")
+    assert_match(/while claude-cli:claude-opus-5-5 is live/, warning, "the savior is a lane no store refuses")
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
+  def test_the_suspension_names_a_usable_savior
+    Selection.watch_free_class!
+
+    3.times { Selection.note_provider_outcome(NEMOTRON, :failure, alive: ALL) }
+
+    assert_predicate Selection, :free_floor_suspended?, "three dead free answers are a dead floor"
+    chosen = Selection.live_savior(alive: ALL)
+    assert_equal OPUS, chosen, "the suspension names a lane no store refuses"
+  ensure
+    Selection.watch_free_class!(false)
+  end
+
   def test_a_lane_probe_on_a_free_lane_is_not_a_warning
     Selection.watch_free_class!
 

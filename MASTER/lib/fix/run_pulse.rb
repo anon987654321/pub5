@@ -178,9 +178,14 @@ module Master
       def promote_live_lane
         return unless @promote_pending && @promoted_live.nil?
 
-        live = Master::Io::LaneSelection.live_lanes.reject do |id|
-          Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(id))
-        end.first
+        # The savior has to be able to answer, not merely be alive: live_lanes
+        # walks past the hand-kept dead list, and 2026-11-07's run promoted
+        # gemini-2.5-flash - dead by hand in data/lanes.yml - as the lane that
+        # "takes the work". LaneState.usable? reads every refusing store.
+        live = Master::Io::LaneSelection.live_lanes.find do |id|
+          !Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(id)) &&
+            Master::Io::LaneState.usable?(id)
+        end
         @promoted_live = live
         @promote_pending = false
         Master::Io::LaneSelection.suspend_free_floor!(live)

@@ -454,7 +454,7 @@ module Master
         return if @floor_suspended
 
         Master::Trace::Dmesg.status("fix0", "floor debug: entering suspend branch, scanning live lanes") if ENV["MASTER_FLOOR_DEBUG"] == "1"
-        live = live_lanes(cfg:, alive:).find { |candidate| !FREE_CLASS_KINDS.include?(kind(candidate)) }
+        live = live_savior(cfg:, alive:)
         suspend_free_floor!(live)
         Master::Trace::Dmesg.status("fix0", "floor debug: suspending, live=#{live.inspect}") if ENV["MASTER_FLOOR_DEBUG"] == "1"
         announce_free_floor_suspension
@@ -468,13 +468,26 @@ module Master
         nil
       end
 
+      # The free floor's replacement: the first live non-free lane that can
+      # actually answer. live_lanes walks past the hand-kept dead list (alive?
+      # never reads it), so 2026-11-07's walk announced "gemini-2.5-flash is
+      # live" thirty times over while data/lanes.yml held it dead by hand and
+      # every dead free slug still cost the wheel its call anyway. LaneState
+      # is the one question that reads every store that may refuse - dead by
+      # hand or quota, silent in its cool-off, parked, spent.
+      def live_savior(cfg: config, alive: method(:alive?))
+        live_lanes(cfg:, alive:).find do |candidate|
+          !FREE_CLASS_KINDS.include?(kind(candidate)) && LaneState.usable?(candidate)
+        end
+      end
+
       def free_class_warning(model, operation, cfg: config, alive: method(:alive?))
         id = model.to_s
         # A lane probe asks every lane on purpose; that is not work on a free lane.
         return unless @watching && FREE_CLASS_KINDS.include?(kind(id)) && operation != :lane_probe
         return if (@warned ||= {})[id]
 
-        better = live_lanes(cfg:, alive:).find { |candidate| !FREE_CLASS_KINDS.include?(kind(candidate)) }
+        better = live_savior(cfg:, alive:)
         return unless better
 
         @warned[id] = true
