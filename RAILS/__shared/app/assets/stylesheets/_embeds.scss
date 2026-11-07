@@ -109,10 +109,14 @@
    whole thumbnail, and the player takes the same box. Each rounds its own
    corners rather than the stage clipping them, so the button's focus ring is
    drawn outside it and stays visible. */
-.link-embed-stage > * {
+.link-embed-stage > *,
+.link-embed-stage img.link-embed-thumbnail {
   grid-area: 1 / 1;
   inline-size: 100%;
   block-size: 100%;
+  /* The stage's 16:9, stated on the thumbnail too: the box is reserved
+     wherever the reader looks, not only through the stage. */
+  aspect-ratio: 16 / 9;
   border: 0;
   border-radius: var(--radius-small);
   background: var(--surface-elevated);
