@@ -75,7 +75,7 @@ module Master
         },
         {
           "name" => "browser.inspect",
-          "description" => "Inspect the current page DOM, visible text, links and screenshot path.",
+          "description" => "Inspect the current page DOM, visible text, links and screenshot; send its PNG to a vision-capable model when available.",
           "arguments" => { "session" => "optional session id, default default" }
         },
         {
