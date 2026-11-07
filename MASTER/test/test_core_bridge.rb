@@ -84,13 +84,26 @@ class CoreBridgeTest < Minitest::Test
     end
   end
 
+  # A write goal is high risk. High risk needs seeded ideation before the first
+  # write, a prior read of the path before it is written, and a cleared council
+  # before done. These tests are about the summary and the effect lifecycle
+  # events, so seed all three rather than be stopped at the write.
+  def seeded_memory(root, path)
+    memory = Master::Core::Memory.new
+    memory.proof.mark_ideation_complete!(approaches: Master::Core::Proof::ALTERNATIVES_REQUIRED)
+    memory.proof.mark_council_pass!(detail: "seeded for the bridge test")
+    File.write(File.join(root, path), "hello\n")
+    memory.record(Master::Core::Effect.read(path), Master::Core::Observation.new(ok: true, detail: "read"))
+    memory
+  end
+
   def test_run_returns_summary_and_streams_turns
     Dir.mktmpdir do |root|
       bus = FakeBus.new
       model = ScriptedModel.new(
         *evidence_then_done(Master::Core::Effect.write("note.txt", "hello\n"), summary: "wrote the note"),
       )
-      result = Master::CLI::CoreBridge.run("write a note", root:, bus:, model:)
+      result = Master::CLI::CoreBridge.run("write a note", root:, bus:, model:, memory: seeded_memory(root, "note.txt"))
 
       assert_equal :complete, result[:reason]
       assert_equal "wrote the note", result[:summary]
@@ -221,7 +234,7 @@ class CoreBridgeTest < Minitest::Test
       effect = Master::Core::Effect.write("private.txt", "secret payload")
       model = ScriptedModel.new(*evidence_then_done(effect, summary: "ok"))
 
-      result = Master::CLI::CoreBridge.run("write a private note", root:, bus:, model:)
+      result = Master::CLI::CoreBridge.run("write a private note", root:, bus:, model:, memory: seeded_memory(root, "private.txt"))
 
       assert_equal :complete, result[:reason]
       events = bus.events.select { |name, payload| name.start_with?("core:effect:") && payload[:verb] == :write }
