@@ -50,9 +50,10 @@ Outputs are grouped under `~/ideas/selfie-series-<run-id>/<subject>/<model>/`.
 Each final image keeps its Postpro sidecar and source hash; the private series
 manifest records all ten prompts, seeds, model versions and image digests.
 Every image passes through Postpro and its mandatory independent final analog
-grain layer. Generation completion is not acceptance: every render is marked
-`pending` and the series `pending_operator_review` until a person curates the
-contact sheet and records the accepted candidates.
+grain layer. Generation completion is not acceptance: the series manifest and each render
+carry `review_status: pending_operator_review` until a person curates the
+contact sheet and records the accepted candidates. `status: complete` means
+all requested files were rendered, not that likeness has been approved.
 
 Before generation, the command archives prior managed series and legacy
 timestamp-named render families only when the Postpro sidecar, source hash and
@@ -60,8 +61,8 @@ output hash all agree. It moves them into `~/ideas/.retired/` so they can be
 restored. Ambiguous timestamp files, unrelated photographs and files without
 verifiable Postpro provenance are left untouched and listed in the retirement
 report; they are never deleted based on name or size alone. No training occurs.
-The command verifies a local Replicate credential before moving any old
-renders, then uses it for inference. Successful predictions incur account
+The command verifies the Replicate credential with an authenticated, read-only
+model-catalogue request before moving any old renders, then uses it for inference. Successful predictions incur account
 charges; the custom LoRA checkpoint endpoints may have different per-second
 costs, so confirm the current account pricing and available balance before
 running. Each subject directory and its weights/ directory must be owner-only (0700);

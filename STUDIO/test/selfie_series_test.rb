@@ -86,6 +86,9 @@ class TestStudioSelfieSeries < Minitest::Test
     assert_equal 3, result.fetch("models").length
     assert_equal [10, 10, 10], result.fetch("models").map { |model| model.fetch("renders") }
     assert_equal 30, FakePicture.calls.length
+    assert manifest.fetch("models").all? do |model|
+      model.fetch("renders").all? { |render| render.fetch("review_status") == "pending_operator_review" }
+    end
     prompts = FakePicture.calls.map { |call| call[3] }
     assert_equal 10, prompts.uniq.length
     manifest = JSON.parse(File.read(result.fetch("manifest")))
