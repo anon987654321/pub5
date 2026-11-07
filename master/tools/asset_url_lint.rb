@@ -31,9 +31,9 @@ module Operator
   #     PP Neue Montreal weights the SCSS already answers it (licensed font,
   #     files deliberately absent, `local()` + fallback carries the surface).
   module AssetUrlLint
-    RAILS_ROOT = File.expand_path("../../RAILS", __dir__)
+    RAILS_ROOT = File.expand_path("../../rails", __dir__)
     APPS = %w[amber brgen bsdports].freeze
-    TREES = (APPS + %w[__shared]).freeze
+    TREES = (APPS + %w[shared]).freeze
 
     # The baseline is what is left after the one live bug this lint found was
     # fixed. amber's layout links `/lightgallery.css`, amber has no

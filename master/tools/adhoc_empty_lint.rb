@@ -36,7 +36,7 @@ module Operator
     end
 
     def rails_root
-      File.expand_path("../../RAILS", __dir__)
+      File.expand_path("../../rails", __dir__)
     end
 
     def scan

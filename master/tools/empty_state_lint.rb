@@ -57,7 +57,7 @@ module Operator
     end
 
     def rails_root
-      File.expand_path("../../RAILS", __dir__) # RAILS/
+      File.expand_path("../../rails", __dir__) # RAILS/
     end
 
     def relative(path)
@@ -66,7 +66,7 @@ module Operator
 
     def view_files
       Dir.glob(File.join(rails_root, "*/app/views/**/*.erb")) +
-        Dir.glob(File.join(rails_root, "brgen/engines/*/app/views/**/*.erb"))
+        Dir.glob(File.join(rails_root, "brgen_*/**/app/views/**/*.erb"))
     end
 
     def scan
