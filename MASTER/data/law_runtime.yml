@@ -873,6 +873,14 @@ law_map:
   # it. Their law_ids stay empty. Filling them by matching names against
   # Law.define points a row at a neighbour that shares a word, which is false
   # coverage; a gap closes when a real detector for that law exists.
+  #
+  # Two rows were repointed from a target whose requirement they did not state:
+  # `complexity_budget` says "cyclomatic complexity under 10 per function" but
+  # named SMALL_FUNCTIONS, which counts method lines; `no_god_files` says "split
+  # monolithic files into focused modules" but named NO_GOD_CLASS, which counts a
+  # class's public methods and code lines. CYCLOMATIC_COMPLEXITY and SMALL_FILES
+  # are the Laws whose own `fix` carries those exact requirements, and NO_GOD_CLASS
+  # keeps its three other rows. Trace debt fell 90 -> 87.
   law_trace_ceiling: 77
   version: v110.0-restored
   source: merged master.yml fossil -> MASTER runtime law_map
@@ -1252,7 +1260,7 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "separate", "law_ids": ["CQS"], "status": "covered",
       "root": "one_responsibility", "tags": ["code"]}
     complexity_budget: {"meaning": "cyclomatic complexity under 10 per function", "detects": "high_complexity",
-      "severity": "high", "confidence": 0.9, "operation": "simplify", "law_ids": ["SMALL_FUNCTIONS"],
+      "severity": "high", "confidence": 0.9, "operation": "simplify", "law_ids": ["CYCLOMATIC_COMPLEXITY"],
       "status": "covered", "root": "bounded_load", "tags": ["code"]}
     composition_over_inheritance: {"meaning": "prefer object composition to class inheritance",
       "detects": "inheritance_abuse", "severity": "medium", "confidence": 0.75, "operation": "compose",
@@ -1696,7 +1704,7 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "tags": ["architecture"], "source": "master.yml@30dad7ead"}
     no_god_files: {"meaning": "split monolithic files into focused modules", "detects": "god_file",
-      "severity": "critical", "confidence": 0.95, "operation": "split", "law_ids": ["NO_GOD_CLASS"],
+      "severity": "critical", "confidence": 0.95, "operation": "split", "law_ids": ["SMALL_FILES"],
       "status": "covered", "root": "one_responsibility", "tags": ["code"]}
     no_privilege_escalation: {"meaning": "prevent unauthorized elevation of access", "detects": "privilege_escalation",
       "severity": "critical", "confidence": 0.95, "operation": "add_guards", "law_ids": [], "status": "unmapped",
