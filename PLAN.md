@@ -454,8 +454,13 @@ ratification to enforce):
   answerable before a task lands: fixed, or exempted with an expiry.
 
 The promotion queue, oldest grievance first: PINNED_SURFACE_BYTES_CARRY
-and REFINEMENT_INVENTORY_IS_CANONICAL (both deterministic; a census and
-ratification pending), then the three conduct Laws and the semantic ask.
+and REFINEMENT_INVENTORY_IS_CANONICAL are enforced (2026-11-07) - the
+census over the real tree read files 3 / findings 0 and files 1 /
+findings 0 at f76ee93, the fixtures prove at load, and the operator
+ratified both for the grievance that opened this section: the Laws that
+make the style and cosmetic UI/UX refinements impossible to skip are
+exactly these, so they carry the registry's enforced teeth now. Next in
+the queue: the three conduct Laws and the semantic ask.
 The first pty census of the pinned Law is already in hand: on a truecolor
 pty the boot paints `master0 at mainbus0`, `host0 at mainbus0`, `root on
 master0` in 24-bit white on blue one line at a time, plain under NO_COLOR,

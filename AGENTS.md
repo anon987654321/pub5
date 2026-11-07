@@ -71,11 +71,13 @@ Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 - registry/paths.yml protects production credentials, environment secrets, database migration/schema files and the append-only ledger; trusted main writers can change source and policy.
 - bin/master is the one entrypoint; registry/commands.yml lists its commands.
 
-## Laws in force (2 enforced, 883 total)
+## Laws in force (4 enforced, 883 total)
 - ONE_IMPLEMENTATION_PER_OPERATION (enforced, error): HTTP, file writes, environment reads, subprocesses and YAML loading each have one implementation, in core/.
 - GENERATED_FILE_MATCHES_GENERATOR (enforced, error): A file listed as generated in registry/paths.yml equals what its generator writes; it is never edited by hand.
+- REFINEMENT_INVENTORY_IS_CANONICAL (enforced, error): The operator's cosmetic refinements are acceptance targets, not lore - one canonical inventory (registry/ux_refinements.yml) carries one row per refinement with its id, area, title, owner trees, proof surfaces, contract and acceptance state, the promised count matches the rows, and a row completes only with recorded rendered or runtime evidence.
+- PINNED_SURFACE_BYTES_CARRY (enforced, error): The tuned console bytes stay where PLAN.md section 18 declares their homes - boot_sgr 37;48;2;0;0;255 with its 37;44 fallback and the dmesg grammar in master/data/console.yml, the splash painter in master/cli/terminal.rb, the host:path$ prompt in master/cli/prompt.rb - and a home moves only by editing this Law's path list, never by silent deletion.
 
-The other 881 are advisory (68 check, 85 conduct, 107 lexical, 17 lint, 18 ratchet, 23 rendered, 387 semantic, 176 structural): each is in
+The other 879 are advisory (68 check, 85 conduct, 106 lexical, 17 lint, 18 ratchet, 23 rendered, 387 semantic, 175 structural): each is in
 registry/laws.yml with its statement, and `bin/master laws` lists them.
 
 ## Conduct every writer keeps (85 conduct Laws, advisory)
