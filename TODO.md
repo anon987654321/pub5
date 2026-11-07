@@ -429,6 +429,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 **Dating, Playlist and Takeaway**
 - [ ] `dating_premium_boost` — open; any premium, boost or super-like design must preserve consent, avoid dark patterns and never sell moderation or safety outcomes.
 - [ ] `playlist_creator_donations` — open; creator tips may use the shared commerce domain; do not sell an ad-free tier while there are no ads.
+- [ ] `referral_reward_consumption` — open; define the real, member-visible benefits behind `playlist_pro` and `dating_pro`, then wire their gates. Referral credits currently record entitlement only; do not market them as usable Pro access until those features exist.
 - [ ] `takeaway_delivery_area` — picked; complete `takeaway_delivery_area`: validate the reader's stored position against the restaurant's stated radius, nil-safely and with an honest explanation.
 - [ ] `takeaway_cart_expiry` — picked; complete `takeaway_cart_expiry`: expire pending carts through the same state transition as manual cancellation, with notifications and a visible deadline.
 - [ ] `takeaway_pro_surface` — open; promotion, loyalty and coupons depend on shared commerce and liquidity foundations.
