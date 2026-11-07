@@ -31,6 +31,25 @@ class FixRunTest < Minitest::Test
     assert_equal 75, Fix::Repair::FILE_BUDGET_S
   end
 
+  def test_report_is_nonzero_when_a_run_stops_or_a_repair_is_refused
+    report_row = Struct.new(:status)
+    scan = Struct.new(:findings, :seconds)
+    spend = { "tokens_in" => 0, "tokens_out" => 0, "cost_usd" => 0.0, "unpriced_calls" => 0 }
+
+    repo do |root|
+      stopped = Fix::Run.new(world: fix_world(root), scope: ".", laws: [], model: nil, writer: "operator",
+                             out: StringIO.new, clock: -> { 1.0 })
+      stopped.instance_variable_set(:@stopping, "stalled")
+      assert_equal 1, stopped.send(:report, 0.0, scan.new([], 0), scan.new([], 0),
+                                   [[report_row.new(:stopped), spend]], nil)
+
+      refused = Fix::Run.new(world: fix_world(root), scope: ".", laws: [], model: nil, writer: "operator",
+                             out: StringIO.new, clock: -> { 1.0 })
+      assert_equal 1, refused.send(:report, 0.0, scan.new([], 0), scan.new([], 0),
+                                   [[report_row.new(:refused), spend]], nil)
+    end
+  end
+
   def test_text_older_than_the_laws_enactment_is_held
     repo do |root|
       put(root, "old.rb", "violation\n")

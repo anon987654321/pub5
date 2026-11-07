@@ -259,7 +259,7 @@ module Fix
       say("visual: #{visual}") if visual
       say("closing scan #{closing.seconds}s; stopped: #{@stopping}") if @stopping
       say("done in #{(@clock.call - started).round}s")
-      risen.empty? ? 0 : 1
+      @stopping || refused.any? || risen.any? ? 1 : 0
     end
 
     # A Law's count over the scope may not rise between the opening and the closing scan.
