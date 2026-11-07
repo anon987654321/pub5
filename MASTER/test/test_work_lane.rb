@@ -22,6 +22,27 @@ class TestWorkLane < Minitest::Test
     end
   end
 
+  # The bare default on a rendered target (Johann 2026-11-07): a plain /fix over a RAILS
+  # path reads the rendered surface — layout, browser checks, screenshots, visual review —
+  # alongside the code passes, but asks for no research/architecture and no grouped repair.
+  def test_standard_is_the_rendered_target_default_and_sees_the_pages
+    assert Lane.runs?(:code_passes, :standard)
+    %i[layout_sweep browser_checks screenshot_sweep visual_pass].each do |stage|
+      assert Lane.runs?(stage, :standard), "standard lane must run #{stage}"
+    end
+    %i[research architecture visual_groups].each do |stage|
+      refute Lane.runs?(stage, :standard), "standard lane must skip #{stage}"
+    end
+  end
+
+  def test_the_default_lane_follows_the_target
+    assert_equal :standard, Lane.default_lane("RAILS")
+    assert_equal :standard, Lane.default_lane("RAILS/brgen")
+    assert_equal :standard, Lane.default_lane("/pub5/RAILS/mrdamascy")
+    assert_equal :code, Lane.default_lane("MASTER")
+    assert_equal :code, Lane.default_lane(".")
+  end
+
   def test_visual_sweeps_once_and_groups_without_the_code_passes
     %i[layout_sweep browser_checks visual_groups].each { |stage| assert Lane.runs?(stage, :visual), stage }
     %i[research architecture visual_pass code_passes].each do |stage|
@@ -43,6 +64,7 @@ class TestWorkLane < Minitest::Test
     assert_includes summary, "research0 web research"
     assert_includes summary, "rendered findings are not measured or proven"
     refute_includes Lane.summary(:visual), "not measured"
+    refute_includes Lane.summary(:standard), "not measured"
   end
 
   def test_visual_lane_is_rails_only
@@ -71,7 +93,11 @@ class TestWorkLaneWiring < Minitest::Test
     registry = Master::CLI::CommandRegistry
 
     assert_equal "visual", registry.execution_overrides("RAILS --lane=visual")[:lane]
-    assert_equal "code", registry.execution_overrides("RAILS")[:lane]
+    # A bare rendered target earns the standard lane; a bare MASTER stays code.
+    assert_equal "standard", registry.execution_overrides("RAILS")[:lane]
+    assert_equal "standard", registry.execution_overrides("RAILS/mrdamascy")[:lane]
+    assert_equal "code", registry.execution_overrides("MASTER")[:lane]
+    assert_equal "code", registry.execution_overrides("RAILS --lane=code")[:lane]
     assert_equal "RAILS", registry.parse_pass_flags("RAILS --lane=code").last
   end
 
@@ -104,6 +130,8 @@ class TestWorkLaneWiring < Minitest::Test
 
     ENV["CHECK_LANE"] = "code"
     refute_includes Deploy::LayoutSuiteCheck.new.leaves, Deploy::RenderedSuiteCheck
+    ENV["CHECK_LANE"] = "standard"
+    assert_includes Deploy::LayoutSuiteCheck.new.leaves, Deploy::RenderedSuiteCheck
     ENV["CHECK_LANE"] = "visual"
     assert_includes Deploy::LayoutSuiteCheck.new.leaves, Deploy::RenderedSuiteCheck
   ensure
@@ -115,7 +143,7 @@ class TestWorkLaneWiring < Minitest::Test
     rails = File.join(Master::REPO_ROOT, "RAILS")
     files = Master::Fix::FixLoop::FileCollector.new(root: Master::ROOT).collect(rails)
 
-    { code: [], visual: [:sweep], all: [:sweep] }.each do |lane, expected|
+    { code: [], standard: [:sweep], visual: [:sweep], all: [:sweep] }.each do |lane, expected|
       Lane.set!(lane)
       sweeps = []
       reach = Master::Fix::Reachability.new(root: Master::ROOT)

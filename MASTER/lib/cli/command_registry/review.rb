@@ -641,6 +641,15 @@ module Master
         Master::CLI::Pipeline::TreeTarget.list?(raw)
       end
 
+      # The target word as the lane question reads it: the first non-flag token,
+      # before the resolver expands aliases and paths. A rendering tree spelled
+      # bare ("RAILS", "RAILS/brgen") earns the standard lane; a path this text
+      # cannot name the tree of stays on the code default, because a rendered
+      # check run against apps nobody booted only lies INCONCLUSIVE.
+      def first_target_word(raw)
+        raw.to_s.split(/\s+/).reject { |token| token.start_with?("--") }.first.to_s
+      end
+
       def run_pass(deps, task_intent: "functional_change", **call_args)
         Master::CLI::Pipeline::Pass.new(**deps, task_intent:).call(**call_args).render
       end
@@ -726,7 +735,7 @@ module Master
         raw = lane_flag_joined(raw)
         tokens = raw.to_s.split(/\s+/).map(&:downcase)
         lane = tokens.filter_map { |token| token[LANE_FLAG, 1] }.last ||
-               (multi_tree_run?(raw) ? "elevate" : Master::Fix::WorkLane::DEFAULT.to_s)
+               (multi_tree_run?(raw) ? "elevate" : Master::Fix::WorkLane.default_lane(first_target_word(raw)).to_s)
         {
           autofix_mode: nil, max_files: nil, blockers: false, lane:,
           plan: tokens.include?("--plan"), until_checks: tokens.include?("--until-checks"),
