@@ -43,7 +43,9 @@ class CoverageRatchetTest < Minitest::Test
     # controllers 1 -> 2 on 2026-08-23: declutter_controller_test covers the
     # strict-loading preloads on the declutter box.
     # controllers 2 -> 4: the ratchet found two tested controllers above the floor.
-    "amber" => { "controllers" => 5, "models" => 10 },
+    # controllers 5 -> 6 and models 10 -> 11 on 2026-11-07: the ratchet found
+    # a sixth tested controller and an eleventh tested model above the floors.
+    "amber" => { "controllers" => 6, "models" => 11 },
     # models raised 10 -> 11 on 2026-08-03; the ratchet asked for it.
     # 11 -> 13 on 2026-08-12: engines/playlist got its first tests, covering
     # Playlist::Playlist and Playlist::ListeningParty. It was the only one of the
@@ -76,7 +78,9 @@ class CoverageRatchetTest < Minitest::Test
 # controllers 26 -> 32 on 2026-10-30: native push tokens arrived with their
 # test, and the ratchet found the rest already tested above the floor.
 # models 58 -> 60 on 2026-11-03: the ratchet found two more tested models.
-    "brgen" => { "controllers" => 32, "models" => 60 },
+    # controllers 32 -> 36, models 60 -> 62 on 2026-11-07: the ratchet found
+    # four more tested controllers and two more tested models above the floors.
+    "brgen" => { "controllers" => 36, "models" => 62 },
     # models 1 -> 8 on 2026-08-16. bsdports had one model test (user) against
     # thirteen models, and it was the smallest tree in the repo — Port, the record
     # everything else hangs off, had nothing naming it. Writing them found two
