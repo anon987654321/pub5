@@ -401,7 +401,10 @@ module Master
       end
 
       def utf8_prefix(value, bytes)
-        value.to_s.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8).scrub
+        text = value.to_s.encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: "")
+        prefix = text.byteslice(0, bytes).to_s.force_encoding(Encoding::UTF_8)
+        prefix = prefix.byteslice(0, prefix.bytesize - 1).to_s.force_encoding(Encoding::UTF_8) until prefix.valid_encoding?
+        prefix
       end
 
       def plain_text(value)
@@ -441,7 +444,7 @@ module Master
         when String
           return value if value.bytesize <= byte_limit
 
-          value.byteslice(0, [byte_limit - 14, 0].max).to_s.force_encoding(Encoding::UTF_8).scrub + "...[truncated]"
+          utf8_prefix(value, [byte_limit - 14, 0].max) + "...[truncated]"
         else
           value
         end
