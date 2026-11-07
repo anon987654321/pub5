@@ -176,7 +176,6 @@ collapse guard and the Committer's path validation. WatchLoop builds none: a
 changed file wakes the background runner or starts an incremental FixLoop run,
 so its repairs get a transaction and a run ledger like any other.
 
-
 ### Reactive, improvement and restructure lanes
 
 - **`Fix::WatchLoop`** observes supported source changes, debounces and

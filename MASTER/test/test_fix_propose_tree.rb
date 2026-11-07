@@ -63,11 +63,11 @@ class TestFixProposeTree < Minitest::Test
     subject = Master::Fix::ProposeTree.new(root: @root, agent:)
     compact_but_ugly = {
       "name" => "compact",
-      "sketch" => "lib/\n        __old/\n          deep/\n            core.rb"
+      "sketch" => "lib/\n        __old/\n          deep/\n            core.rb",
     }
     clear_and_shallow = {
       "name" => "clear",
-      "sketch" => "lib/\n  runtime/\n  mind/\n  design/\n  operator/"
+      "sketch" => "lib/\n  runtime/\n  mind/\n  design/\n  operator/",
     }
 
     ranked = subject.send(:rank, [compact_but_ugly, clear_and_shallow])

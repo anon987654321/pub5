@@ -74,7 +74,6 @@ word). Norwegian copy quotes «slik», with ‘enkle’ inside; English uses “
 curly quotes. EN_DASH_RANGE, TYPOGRAPHIC_EXCELLENCE, PARENTHETICAL_DASH and
 QUOTES_BY_LOCALE hold this.
 
-
 ## Local test execution and /fix cleanup
 
 Tests are run by the local Ruby toolchain in the checked-out repository, not by Vercel or another hosted CI service. Use `MASTER/bin/operator test <paths...>` for the smallest complete proof, then `cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test` for the full MASTER suite. Resolve local runtime and dependency blockers where possible; if a command cannot actually run, record the exact blocker as NOT_RUN or INCONCLUSIVE rather than treating a hosted status, authored test, or static inspection as a pass.
@@ -192,7 +191,6 @@ contracts with `Master::Fix::TaskContract`; the schema lives in
 `MASTER/data/task_contract.yml`. `not_probed` marks an operation that no
 run has exercised; permission observations do not prove a successful write.
 
-
 **Existing-first structure is the default.** Extend the nearest existing owner
 and its existing tests before adding a tracked path. A new file is justified
 only by a distinct responsibility, public boundary, framework/deployment
@@ -205,8 +203,6 @@ method/class, add a helper, create a separate test/fixture, documentation or
 configuration file, or make a utility directory merely for convenience. Use
 existing README, test, config, asset, tool and namespace locations first.
 Report added/removed files and directories in the delivery summary.
-
-
 
 Task routing and minimum proof:
 

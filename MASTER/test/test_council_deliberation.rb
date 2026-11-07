@@ -244,7 +244,6 @@ class TestCouncilDeliberation < Minitest::Test
     assert_match(/Security/, result.message)
   end
 
-
   # The defect this fixes: four personas each bought the same refusal, and the
   # run then reported on everything else as though nothing were missing.
   # Sequential mode makes the count deterministic — the parallel case cannot

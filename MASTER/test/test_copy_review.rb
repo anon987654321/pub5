@@ -23,7 +23,7 @@ class TestCopyReview < Minitest::Test
         { kind: "product_title", text: "Kjole" },
         { kind: "merchant", text: "Fjord Studio" },
         { kind: "price", text: "NOK 149.90" },
-        { kind: "availability", text: "På lager" }
+        { kind: "availability", text: "På lager" },
       ]
     }
   end

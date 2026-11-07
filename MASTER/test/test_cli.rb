@@ -181,7 +181,6 @@ class TestCLI < Minitest::Test
     end
   end
 
-
   def test_council_crit_publishes_a_real_veto_and_preserves_error
     events = []
     bus = Object.new

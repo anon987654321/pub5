@@ -692,7 +692,7 @@ module Master::Core
             # Constitution.immutable_hit? reads that slash to guard everything below.
             path.end_with?("/") ? "#{entry}/" : entry
           end.uniq.freeze
-        end 
+        end
       end
 
       def manifest_root

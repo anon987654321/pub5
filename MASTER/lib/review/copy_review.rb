@@ -100,7 +100,7 @@ class Master::Review::CopyReview
     [
       "Natural-language meaning and claim-ledger completeness are not independently proven.",
       "External references are not fetched; unsupported claim kinds remain INCONCLUSIVE.",
-      "Disclosure wording is checked here; rendered prominence and consent use separate controls."
+      "Disclosure wording is checked here; rendered prominence and consent use separate controls.",
     ]
   end
 

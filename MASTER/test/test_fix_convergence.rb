@@ -1606,7 +1606,6 @@ end
     assert_equal :council_disabled, event[:payload][:reason]
   end
 
-
   def test_council_result_is_passed_into_the_repair_stage
     findings = { feedback: [], cherry_picks: ["dummy.yml line 1: tighten the boundary"] }
     council = Object.new

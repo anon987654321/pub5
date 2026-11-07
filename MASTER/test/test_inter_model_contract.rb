@@ -271,8 +271,8 @@ class TestInterModelContract < Minitest::Test
       "position_evidence" => [
         {
           "location" => "requested task",
-          "evidence" => "The task and supplied candidate material are present in the bounded prompt."
-        }
+          "evidence" => "The task and supplied candidate material are present in the bounded prompt.",
+        },
       ],
       "findings" => findings
     }.to_json
