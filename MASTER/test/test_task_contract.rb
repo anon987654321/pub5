@@ -143,6 +143,19 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  def test_a_reviewed_plan_declares_the_paths_it_names
+    Dir.mktmpdir("task-contract-declared", Master::REPO_ROOT) do |root|
+      relative = File.join(root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR), "planned.rb")
+      path = File.join(root, "planned.rb")
+
+      CONTRACT.with_current(nil) do
+        assert_match(/new tracked path/, CONTRACT.new_path_refusal(path))
+        assert_nil CONTRACT.new_path_refusal(path, declared: [relative])
+        assert_match(/new tracked path/, CONTRACT.new_path_refusal(path, declared: ["some/other.rb"]))
+      end
+    end
+  end
+
   def test_agent_prompt_explains_default_deny_new_path_policy
     prompt = CONTRACT.prompt
 

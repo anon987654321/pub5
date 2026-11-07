@@ -155,7 +155,7 @@ module Master
       def apply(plan)
         plan.writes.each do |path, content|
           absolute = full(path)
-          refusal = TaskContract.new_path_refusal(absolute, repo_root: @root)
+          refusal = TaskContract.new_path_refusal(absolute, repo_root: @root, declared: plan.writes.keys)
           raise TaskContract::Invalid, refusal if refusal
 
           FileUtils.mkdir_p(File.dirname(absolute))

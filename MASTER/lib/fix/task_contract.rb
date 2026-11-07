@@ -132,7 +132,9 @@ module Master
       # Refuse unplanned file creation inside the repository, including legacy
       # callers that have no active task contract. Existing files remain editable;
       # a missing contract is an empty declaration, never an implicit allowance.
-      def new_path_refusal(path, contract: current, repo_root: nil)
+      # `declared` lets a caller whose own reviewed plan names the exact paths (a
+      # restructure plan) stand as the declaration instead of a task contract.
+      def new_path_refusal(path, contract: current, repo_root: nil, declared: [])
 
         root = File.expand_path(
           repo_root || (defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__))
@@ -142,10 +144,14 @@ module Master
         return if File.exist?(absolute) || File.symlink?(absolute)
 
         relative = absolute.delete_prefix(root + File::SEPARATOR)
-        declared = contract ? contract.new_paths : []
-        return if declared.any? { |entry| entry.fetch("path") == relative }
+        return if declared_paths(contract, declared).include?(relative)
 
         "new tracked path #{relative} is undeclared; extend an existing owner or declare the exact path and reason in task_contract.new_paths"
+      end
+
+      def declared_paths(contract, extra)
+        from_contract = contract ? contract.new_paths.map { |entry| entry.fetch("path") } : []
+        from_contract + Array(extra).map(&:to_s)
       end
 
       def with_current(value)
