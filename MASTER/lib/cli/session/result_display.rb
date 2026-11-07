@@ -8,12 +8,12 @@ module Master
     class Session
       private
 
-      def display_result(result:, accumulated:, streamed:)
+      def display_result(result:, accumulated:, streamed:, units_console: false)
         case result
         in Master::Result::Ok => ok
           @last_ok = true
           @exit_code = 0
-          display_ok(ok:, accumulated:, streamed:)
+          display_ok(ok:, accumulated:, streamed:, units_console:)
         in Master::Result::Err => err
           # A turn the operator cancelled did what was asked; ^C already
           # echoed, so there is nothing to add.
@@ -42,9 +42,17 @@ module Master
         Master::Voice::Typography.ellipsis(text.gsub(/\s+/, " ").strip, ERROR_TEXT_MAX_CHARS)
       end
 
-      def display_ok(ok:, accumulated:, streamed:)
+      def display_ok(ok:, accumulated:, streamed:, units_console: false)
         text = streamed ? accumulated : success_text(ok)
-        return display_empty_success(ok) if text.to_s.strip.empty?
+        if text.to_s.strip.empty?
+          # Detailed dmesg replays a line-turn through the units console, so
+          # the empty buffer is empty by construction, not an empty answer.
+          # The err0 report lied: a long reply followed "turn completed
+          # without output" (Johann's log 2026-11-07).
+          return display_units_console_turn if units_console
+
+          return display_empty_success(ok)
+        end
         routine = !streamed && routine_success?(text)
         command = diagnostic_command(@last_input)
         markdown_rendered = false
@@ -95,6 +103,15 @@ module Master
         Master::Trace::Dmesg.status("err0", "turn completed without output")
         value = ok.value
         Master::Trace::Dmesg.status("err0", "result=#{value.class}") if value
+      end
+
+      # The turn's text already reached the operator through the units
+      # console; keep the ok bookkeeping and the footers, print no reply.
+      def display_units_console_turn
+        print_fix_activity_footer
+        print_previous_question_footer
+        print_parallel_errors_footer(@last_ok)
+        print_capability_stamp(@last_ok)
       end
 
       def diagnostic_command(input)

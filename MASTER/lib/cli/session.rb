@@ -102,7 +102,7 @@ module Master
         result = dispatch_turn(input, accumulated:, state:)
         stop_thinking_indicator
         print_bridge_footer(result.value[:core], state:) if result.ok? && state[:streamed] && result.value[:core]
-        display_result(result:, accumulated:, streamed: state[:streamed])
+        display_result(result:, accumulated:, streamed: state[:streamed], units_console: state[:units_console])
         @last_repeatable_input = input if result.ok? && Master::Io::MediaIntent.repeatable?(input)
 
         result
@@ -242,7 +242,7 @@ module Master
         lambda do |line|
           # The units console printed this turn as it ran; the transcript line
           # would say it twice.
-          next state[:streamed] = true if @unit_sub
+          next state[:streamed] = state[:units_console] = true if @unit_sub
 
           accumulated << line << "\n"
           handle_stream_text(line + "\n", state) if $stdout.isatty
