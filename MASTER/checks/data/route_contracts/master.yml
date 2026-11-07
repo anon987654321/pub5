@@ -1,0 +1,122 @@
+---
+schema: 1
+app: master
+host: ai.brgen.no
+routes:
+  "/":
+    status: 200
+    type: text/html
+    title: ai.brgen.no
+    landmarks:
+    - header
+    - nav
+    - main
+    - form
+    forms: []
+  "/api":
+    status: 200
+    type: text/html
+    title: 'MASTER lov-API: kodegjennomgang etter regler, over HTTPS'
+    heading: MASTER lov-API
+    landmarks:
+    - header
+    - main
+    forms: []
+  "/api/key":
+    status: 302
+    type: text/html
+    location: "/api"
+    landmarks: []
+    forms: []
+  "/api/v1/key":
+    status: 401
+    type: application/json
+  "/canvas/topology":
+    status: 200
+    type: application/json
+  "/chat/enhance":
+    status: 200
+    type: application/json
+  "/chat/history":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/chat/metrics":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/chat/research":
+    status: 200
+    type: application/json
+  "/chat/sensory":
+    status: 200
+    type: application/json
+  "/chat/skills":
+    status: 200
+    type: application/json
+  "/chat/tts":
+    status: 400
+    type: text/html
+    landmarks: []
+    forms: []
+  "/chat/tts/phrases":
+    status: 200
+    type: application/json
+  "/chat/tts/status":
+    status: 404
+    type: text/html
+    landmarks: []
+    forms: []
+  "/dashboard":
+    status: 200
+    type: text/html
+    title: MASTER — kontrollrom
+    heading: kontrollrom
+    landmarks:
+    - header
+    - nav
+    - main
+    forms: []
+  "/dashboard/live":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/health":
+    status: 200
+    type: application/json
+  "/ingress/health":
+    status: 200
+    type: application/json
+  "/manifest":
+    status: 200
+    type: application/json
+  "/metrics":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/pair":
+    status: 200
+    type: application/json
+  "/pair/list":
+    status: 401
+    type: text/html
+    landmarks: []
+    forms: []
+  "/runtime/config":
+    status: 200
+    type: application/json
+  "/runtime/status":
+    status: 200
+    type: application/json
+  "/runtime/topologies":
+    status: 200
+    type: application/json
+  "/up":
+    status: 200
+    type: text/html
+    landmarks: []
+    forms: []

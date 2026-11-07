@@ -24,6 +24,7 @@
 # segments are skipped until a seeded-record lookup exists.
 
 require "net/http"
+require "timeout"
 require "uri"
 require "yaml"
 require "openssl"
@@ -52,10 +53,18 @@ module RouteContracts
     routes = YAML.load_file(MANIFEST).dig("apps", app, "routes")
     abort "route_contracts: #{app} is not in the manifest" unless routes
 
-    routes.values.flatten.uniq.reject { |path| dynamic?(path) || path.start_with?(FRAMEWORK) }.sort
+    routes.values.flatten.uniq.reject { |path| dynamic?(path) || path.start_with?(FRAMEWORK) || pipe?(path) }.sort
   end
 
   def dynamic?(path) = path.include?(":") || path.include?("*")
+
+  # A pipe — a server-sent-event walk, the TTS audio walk, the radio relay —
+  # is content truth only about existence: it never ends, so the fetch below
+  # never returns and the whole app's recording hangs. The manifest keeps
+  # naming them; they just are not pages a recorder walks.
+  def pipe?(path)
+    path.end_with?("/stream") || path == "/radio_bergen"
+  end
 
   def contract_path(app) = File.join(DIR, "#{app}.yml")
 
@@ -68,13 +77,19 @@ module RouteContracts
     request["Cookie"] = cookie if cookie
     request["Accept"] = "text/html,application/json;q=0.9,*/*;q=0.8"
     options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
-    Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    # A request without a ceiling cannot hang the walk: read_timeout only
+    # fires between reads, so a stream trickling one byte per few seconds —
+    # or a wedged server — never trips it. The ceiling turns any of those
+    # into an exception, which observe() records as an error row.
+    Timeout.timeout(TIMEOUT + 5) do
+      Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    end
   end
 
   def describe(response)
     type = response["Content-Type"].to_s.split(";").first.to_s
     row = { "status" => response.code.to_i, "type" => type }
-    row["location"] = normalise(URI(response["Location"]).request_uri) if response["Location"]
+    row["location"] = normalise_location(response["Location"]) if response["Location"]
     return row unless type == "text/html"
 
     row.merge(page(decoded(response.body)))
@@ -101,6 +116,24 @@ module RouteContracts
 
   # Seeded ids and counts move between databases; the shape must not.
   def normalise(value) = value.gsub(/\d+/, "N")
+
+  # Random per-request query tokens are not content truth: the vipps mock
+  # answers /session/vipps with a fresh base32 state on every load, and a
+  # redirect whose only difference is that token is not a rewrite regression.
+  # Digits remain the seeded-churn rule the plain normalise has always been.
+  VOLATILE_QUERY = %w[state nonce token].freeze
+
+  def normalise_location(value)
+    uri = URI(value)
+    query = uri.query
+    return normalise(uri.request_uri) unless query
+
+    kept = URI.decode_www_form(query).reject { |key, _| VOLATILE_QUERY.include?(key) }
+    kept_query = kept.empty? ? nil : URI.encode_www_form(kept)
+    normalise(URI::HTTP.build(path: uri.path, query: kept_query).request_uri)
+  rescue StandardError
+    normalise(value)
+  end
 
   # pinned maps a path to the host its contract was recorded on.
   def observe(target, pinned = {})
@@ -187,7 +220,13 @@ module RouteContracts
     request["Accept"] = "text/html"
     request.form_data = { "code" => code }
     options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
-    Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    # A request without a ceiling cannot hang the walk: read_timeout only
+    # fires between reads, so a stream trickling one byte per few seconds —
+    # or a wedged server — never trips it. The ceiling turns any of those
+    # into an exception, which observe() records as an error row.
+    Timeout.timeout(TIMEOUT + 5) do
+      Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    end
   end
 
   # RFC 6238 over the RFC 4648 base-32 alphabet, stdlib only - the same six
@@ -214,7 +253,13 @@ module RouteContracts
     request["Accept"] = "text/html"
     request.form_data = { "email_address" => user.first, "password" => user[1] }
     options = { use_ssl: uri.scheme == "https", read_timeout: TIMEOUT, open_timeout: TIMEOUT }
-    Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    # A request without a ceiling cannot hang the walk: read_timeout only
+    # fires between reads, so a stream trickling one byte per few seconds —
+    # or a wedged server — never trips it. The ceiling turns any of those
+    # into an exception, which observe() records as an error row.
+    Timeout.timeout(TIMEOUT + 5) do
+      Net::HTTP.start(uri.host, uri.port, **options) { |http| http.request(request) }
+    end
   end
 
   # cookie_for resolves a recorded row's host (pinned when present) to the
