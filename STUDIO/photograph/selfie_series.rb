@@ -84,6 +84,7 @@ module Studio
 
       def write
         models = discover_models!
+        ensure_provider_credential!
         ensure_output_root!
         run_id = @clock.call.utc.strftime("%Y%m%dT%H%M%S%6N")
         run_directory = File.join(@output_directory, "selfie-series-#{run_id}")
@@ -199,6 +200,14 @@ module Studio
       end
 
       private
+
+      def ensure_provider_credential!
+        return if @client
+        return unless Studio::ReplicateClient.load_token.to_s.strip.empty?
+
+        raise ArgumentError,
+              "missing REPLICATE_API_TOKEN; set it or configure ~/.config/replicate/config.json before retiring old renders or generating selfies"
+      end
 
       def client
         @client ||= Studio::ReplicateClient.new

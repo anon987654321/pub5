@@ -57,6 +57,7 @@ class TestStudioSelfieSeries < Minitest::Test
     @series = Studio::Visual::SelfieSeries.new(
       subjects_directory: @subjects,
       output_directory: @output,
+      client: Object.new,
       picture_class: FakePicture,
       clock: -> { Time.utc(2026, 11, 7, 12, 0, 0) }
     )

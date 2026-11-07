@@ -38,7 +38,11 @@ if $PROGRAM_NAME == __FILE__
   if options[:selfie_series]
     abort "--selfie-series does not accept an additional prompt" unless ARGV.empty?
     abort "--selfie-series cannot be combined with --film or --reference" if options[:film] || options[:reference] || options[:reference_images].any?
-    result = Studio::Visual::SelfieSeries.new(output_directory: options[:output_directory]).write
+    begin
+      result = Studio::Visual::SelfieSeries.new(output_directory: options[:output_directory]).write
+    rescue StandardError => error
+      abort "selfie-series blocked: #{error.class}: #{error.message}"
+    end
     puts JSON.generate(result)
     exit(result.fetch("status") == "complete" ? 0 : 1)
   end

@@ -58,9 +58,11 @@ output hash all agree. It moves them into `~/ideas/.retired/` so they can be
 restored. Ambiguous timestamp files, unrelated photographs and files without
 verifiable Postpro provenance are left untouched and listed in the retirement
 report; they are never deleted based on name or size alone. No training occurs.
-The command uses the local Replicate token and incurs inference charges for
-successful predictions. Confirm the account's available balance and model
-pricing before running. Each subject directory and its weights/ directory must be owner-only (0700);
+The command verifies a local Replicate credential before moving any old
+renders, then uses it for inference. Successful predictions incur account
+charges; the custom LoRA checkpoint endpoints may have different per-second
+costs, so confirm the current account pricing and available balance before
+running. Each subject directory and its weights/ directory must be owner-only (0700);
 subject.env, consent.yml and each replicate_training.json must be owner-only
 (0600). All subject consent, provider-processing and source-rights records
 must be complete and private before any files are moved or requests are sent.
