@@ -147,7 +147,7 @@ A Law has: id, statement, kind (lexical, structural, rendered, runtime, ratchet,
 
 ## 6. /fix from day one
 
-1. **Protected paths.** registry/paths.yml protects the constitution, core, executable entrypoints, production data, credentials and security-sensitive registries. The operator-authorized ChatGPT main lane may change laws/** and registry/laws.yml for Law remediation; each commit still passes bin/check. Core enforces every remaining protected path.
+1. **Protected paths.** Trusted main-tier writers may change source, tests, registries and entrypoints. Core protects production credentials, environment secrets, production runtime config, database migrations/schemas and the append-only ledger. Every main push passes bin/check and is judged by the gatekeeper.
 2. **Lane cool-off.** One LaneState registry holds a handshake budget, a read-idle budget, a 30s→1m→5m→15m ladder and a circuit breaker per lane. There is one copy of this code.
 3. **Commit messages.** Generated from the finding and the measured before/after delta, in commit_format. Trailers: `Law:`, `Measured:`, `Writer:`, `Proof:`. One repair per commit, scoped to paths.
 4. **Rollback of refused repairs.** Each repair runs in a transaction: snapshot the touched bytes, run the parse, test, Law and visual gates. Any refusal restores the exact bytes and appends to fix_refusals.jsonl. Partial commits never happen.
@@ -258,7 +258,7 @@ Also open, smaller: the knob budget (40).
    pub4 kept installed and stopped beside pub5 for 30 days, rollback by restoring relayd routes and starting pub4 on the cutover snapshot;
    a reverse export of writes made on pub5 during the first 7 days;
    parity of every app's key journeys (sign-in, post, message, pay, upload) proven in rehearsal before the switch.
-3. Writers: the operator and gated Claude push to main; ChatGPT is authorized on main for laws/** and registry/laws.yml remediation, gated by bin/check; GLM, Fable, Grok and Z.ai push to inbox/<writer> branches merged only on green bin/check plus review by a different model.
+3. Writers: the operator, gated Claude and ChatGPT push to main behind bin/check; GLM, Fable, Grok and Z.ai push to inbox/<writer> branches merged only on green bin/check plus review by a different model. ChatGPT's main-lane scope covers the full repository; credentials, environment secrets and live production data remain protected.
 4. MASTER's web face: Roda + Sequel.
 5. Laws: rules and Laws are one thing; every pub4 Law carries over, enters as advisory and is promoted by census (section 5). Operator directives and agent rules are `conduct` Laws.
 6. One entrypoint: `bin/master` for every surface, dispatching from registry/commands.yml (section 4).

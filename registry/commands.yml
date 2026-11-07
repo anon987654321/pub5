@@ -47,12 +47,14 @@ commands:
     verbs:
       write: [AGENTS.md, CLAUDE.md]
   laws:
-    summary: List the Laws, or run one Law's census over the tree (laws census ID, or laws census --all).
+    summary: List Laws, census the tree, or review a semantic Law against supplied evidence.
     plugin: master/commands/laws.rb
     class: Commands::Laws
     contexts: [tty, pipe, remote]
     verbs:
       read: ["**/*"]
+      exec: [claude, grok, codex, agy]
+      llm: [anthropic, openai, openrouter, deepseek, xai, mistral]
       git: [ls-files, rev-parse]
   scan:
     summary: Scan the tree with every deterministic Law and report it as a boot (scan [tree|path] [--dry-run]).

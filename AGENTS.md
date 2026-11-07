@@ -68,7 +68,7 @@ Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
   Environment variables must be declared in registry/knobs.yml.
 - laws/: one file per Law (detector and bad/good fixtures, proved at load);
   registry/laws.yml holds each Law's statement, kind, severity, lifecycle and census.
-- registry/paths.yml lists protected paths; no automated writer changes them.
+- registry/paths.yml protects production credentials, environment secrets, database migration/schema files and the append-only ledger; trusted main writers can change source and policy.
 - bin/master is the one entrypoint; registry/commands.yml lists its commands.
 
 ## Laws in force (2 enforced, 877 total)
