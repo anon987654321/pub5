@@ -105,7 +105,7 @@ workstreams:
     implementation: MASTER/lib/cognition/prediction.rb
     proof: MASTER/test/test_cognition.rb
   - id: measured_repair_outcomes
-    state: partial
+    state: landed
     title: Feed terminal /fix outcomes into the evidence-based self-model
     implementation: MASTER/lib/fix/kernel/convergence_adapter.rb
     proof: MASTER/test/test_fix_convergence.rb
