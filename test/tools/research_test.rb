@@ -165,6 +165,18 @@ class ResearchTest < Minitest::Test
     end
   end
 
+  def test_query_limit_never_splits_a_utf8_character
+    sandbox do |root|
+      research = Master::Tools::Research.new(world: world(root, {}))
+      raw = ("a" * (Master::Tools::Research::MAX_QUERY_BYTES - 1)) + "☃"
+
+      cleaned = research.send(:clean_query, raw)
+
+      assert cleaned.valid_encoding?
+      assert_equal Master::Tools::Research::MAX_QUERY_BYTES - 1, cleaned.bytesize
+    end
+  end
+
   def test_browser_tools_fail_closed_without_a_core_owned_session_broker
     sandbox do |root|
       w = world(root, { net: ["codepen.io"] })
