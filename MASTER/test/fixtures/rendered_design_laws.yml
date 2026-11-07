@@ -269,3 +269,56 @@ pages:
       <div class="card" style="border:1px solid #ddd;padding:12px">
         <button class="button-primary" style="background:#0050c8;color:#fff;border:0">Selg</button>
       </div>
+  REFLOW_AT_320:
+    widths: [320]
+    phases: []
+    bad: |
+      <p style="margin:0;width:400px">En linje som er bredere enn telefonens 320 piksler.</p>
+    good: |
+      <p style="margin:0;width:288px">En linje som folder seg innenfor telefonens 320 piksler.</p>
+  TARGET_SIZE_24:
+    phases: []
+    bad: |
+      <main><button style="position:absolute;left:16px;top:16px;width:20px;height:20px;padding:0;border:0">A</button>
+      <button style="position:absolute;left:36px;top:16px;width:20px;height:20px;padding:0;border:0">B</button></main>
+    good: |
+      <main><button style="display:block;width:358px;height:44px">Kjøp</button>
+      <button style="display:block;margin-top:340px;width:20px;height:20px;padding:0;border:0">I</button></main>
+  VERTICAL_RHYTHM:
+    phases: []
+    bad: |
+      <main><p style="margin:0;height:24px">Første avsnitt</p>
+      <p style="margin:0;height:24px;position:absolute;top:36px;left:16px;width:358px">Andre avsnitt</p></main>
+    good: |
+      <main><p style="margin:0;height:24px">Første avsnitt</p>
+      <p style="margin:0;height:24px;margin-top:24px">Andre avsnitt</p></main>
+  SPACING_ENTROPY:
+    phases: []
+    bad: |
+      <main>
+      <p style="margin:0;height:24px">En</p>
+      <p style="margin:0;height:24px;margin-top:8px">To</p>
+      <p style="margin:0;height:24px;margin-top:12px">Tre</p>
+      <p style="margin:0;height:24px;margin-top:16px">Fire</p>
+      <p style="margin:0;height:24px;margin-top:20px">Fem</p>
+      <p style="margin:0;height:24px;margin-top:24px">Seks</p>
+      <p style="margin:0;height:24px;margin-top:28px">Sju</p>
+      <p style="margin:0;height:24px;margin-top:32px">Åtte</p>
+      </main>
+    good: |
+      <main>
+      <p style="margin:0;height:24px">En</p>
+      <p style="margin:0;height:24px;margin-top:24px">To</p>
+      <p style="margin:0;height:24px;margin-top:24px">Tre</p>
+      <p style="margin:0;height:24px;margin-top:24px">Fire</p>
+      <p style="margin:0;height:24px;margin-top:24px">Fem</p>
+      <p style="margin:0;height:24px;margin-top:24px">Seks</p>
+      <p style="margin:0;height:24px;margin-top:24px">Sju</p>
+      <p style="margin:0;height:24px;margin-top:24px">Åtte</p>
+      </main>
+  COLOR_NEAR_DUPLICATE:
+    phases: []
+    bad: |
+      <p style="color:#333333">Meta</p><p style="color:#373737">Note</p>
+    good: |
+      <p style="color:#111111">Meta</p><p style="color:#444444">Note</p>

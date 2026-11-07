@@ -29,7 +29,8 @@ class TestRenderedDesignLaws < Minitest::Test
     row = PAGES.fetch(id)
     name = "#{id}.#{variant}.html"
     File.write(File.join(dir, name), document(row.fetch(variant), name))
-    plan = Deploy::RenderedDesign::Capture::Plan.new(widths: [390], motion_ms: row.fetch("motion_ms", 0),
+    # width: defaults to the phone the other pages share; REFLOW_AT_320 asks for the floor it judges.
+    plan = Deploy::RenderedDesign::Capture::Plan.new(widths: row.fetch("widths", [390]), motion_ms: row.fetch("motion_ms", 0),
                                                      phases: row.fetch("phases").map(&:to_sym), budget: row["budget"])
     Deploy::RenderedDesign::Capture.snapshot(self.class.browser, "file://#{File.join(dir, name)}", plan)
   end
