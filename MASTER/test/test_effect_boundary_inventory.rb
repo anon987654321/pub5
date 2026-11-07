@@ -22,7 +22,7 @@ class TestEffectBoundaryInventory < Minitest::Test
     "lib/cli/pipeline/pass.rb" => "GitOperations",
     "lib/cli/pipeline/proof.rb" => "GitOperations",
     "lib/fix/file_rename.rb" => "GitOperations",
-    "lib/fix/fix_loop.rb" => "GitOperations",
+    "lib/fix/kernel/convergence_adapter.rb" => "GitOperations",
     "lib/fix/fix_loop/repo_scope.rb" => "GitOperations",
     "lib/fix/restructure.rb" => "GitOperations",
     "lib/fix/wishlist.rb" => "GitOperations",
