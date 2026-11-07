@@ -6,8 +6,10 @@ require "open3"
 class TermuxInstallerTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   SCRIPT = File.join(ROOT, "tools", "device", "termux", "install.sh")
+  MOBILE_INSTALLER = File.join(ROOT, "bin", "master-mobile-install")
 
   def source = File.read(SCRIPT)
+  def mobile_source = File.read(MOBILE_INSTALLER)
 
   def test_installer_rejects_non_termux_shells
     assert_match(%r{#!/data/data/com\.termux/files/usr/bin/bash}, source)
@@ -62,6 +64,70 @@ class TermuxInstallerTest < Minitest::Test
 
   def test_launcher_forwards_arguments_without_shell_interpolation
     assert_includes source, 'exec ruby bin/master "$@"'
+  end
+
+  def test_canonical_mobile_installer_has_a_portable_read_only_demo
+    assert_operator mobile_source.index('--demo'), :<, mobile_source.index('command -v pkg')
+    assert_includes mobile_source, "no commands run, packages installed, files written, or Git state changed"
+    assert_includes mobile_source, "all device and repository checks remain unmeasured"
+  end
+
+  def test_mobile_installer_demo_runs_outside_termux_without_creating_files
+    Dir.mktmpdir("mobile-install-demo") do |home|
+      output, status = Open3.capture2e(
+        { "HOME" => home, "MASTER_INSTALL_DIR" => File.join(home, "pub5"), "PREFIX" => "" },
+        "sh", MOBILE_INSTALLER, "--demo"
+      )
+
+      assert status.success?, output
+      assert_includes output, "DEMO only"
+      assert_includes output, "plan 5/5"
+      assert_includes output, "checks remain unmeasured"
+      assert_empty Dir.children(home), "demo mode must not create or modify the target directory"
+    end
+  end
+
+  def test_mobile_installer_demo_reports_noncanonical_repository_without_mutating
+    Dir.mktmpdir("mobile-install-demo-block") do |home|
+      output, status = Open3.capture2e(
+        { "HOME" => home, "MASTER_REPO_URL" => "https://example.invalid/pub5.git" },
+        "sh", MOBILE_INSTALLER, "--demo"
+      )
+
+      refute status.success?
+      assert_includes output, "would BLOCK: only the canonical HTTPS repository is allowed"
+      assert_empty Dir.children(home)
+    end
+  end
+
+  def test_mobile_installer_demo_matches_real_non_git_collision_guard
+    Dir.mktmpdir("mobile-install-demo-collision") do |home|
+      target = File.join(home, "pub5")
+      Dir.mkdir(target)
+
+      output, status = Open3.capture2e(
+        { "HOME" => home, "MASTER_INSTALL_DIR" => target },
+        "sh", MOBILE_INSTALLER, "--demo"
+      )
+
+      refute status.success?
+      assert_includes output, "would BLOCK: #{target} exists but is not a Git checkout"
+      assert_empty Dir.children(target), "demo must leave the existing directory untouched"
+    end
+  end
+
+  def test_mobile_installer_installs_and_proves_the_normal_master_bundle
+    commands = %w[
+      ruby bin/deps install
+      ruby bin/deps check
+      ruby bin/deps boot
+      ruby bin/master-mobile doctor
+    ]
+    positions = commands.map { |command| mobile_source.index(command) }
+
+    refute positions.any?(&:nil?), "installer must install, check and boot MASTER before declaring readiness"
+    assert_equal positions.sort, positions
+    assert_includes mobile_source, "cmake pkg-config sqlite libffi"
   end
 
   def test_script_has_valid_bash_syntax

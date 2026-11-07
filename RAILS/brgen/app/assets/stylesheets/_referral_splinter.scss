@@ -1,0 +1,31 @@
+/* A restrained share card: opt-in, editorial, and consistent with Brgen's
+   existing flat-surface language. No tracking pixel or automatic sharing. */
+.brgen-splinter-card {
+  max-width: 34rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.brgen-splinter-card .splinter-artwork {
+  min-height: 11rem;
+  display: flex;
+  align-items: flex-end;
+  padding: 1.25rem;
+  background: #101010;
+  color: #f4f0e8;
+}
+.brgen-splinter-card .art-badge {
+  border: 1px solid currentColor;
+  padding: .3rem .55rem;
+  font: 600 .7rem/1.2 var(--font-mono);
+  letter-spacing: .08em;
+}
+.brgen-splinter-card .splinter-content { padding: 1.5rem; }
+.brgen-splinter-card .splinter-headline {
+  color: var(--text-main);
+  font-family: "Didot", "Bodoni MT", "Times New Roman", serif;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.08;
+}

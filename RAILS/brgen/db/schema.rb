@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_07_030000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_07_100000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -2274,6 +2274,64 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_07_030000) do
   add_foreign_key "tv_view_events", "users"
   add_foreign_key "typing_indicators", "conversations"
   add_foreign_key "typing_indicators", "users"
+  create_table "referral_splinters", force: :cascade do |t|
+    t.integer "referrer_id", null: false
+    t.integer "redeemed_by_id"
+    t.string "vertical", null: false
+    t.string "reward_tier", null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "redeemed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redeemed_by_id"], name: "index_referral_splinters_one_claim_per_user", unique: true, where: "redeemed_by_id IS NOT NULL"
+    t.index ["referrer_id"], name: "index_referral_splinters_on_referrer_id"
+    t.index ["token_digest"], name: "index_referral_splinters_on_token_digest", unique: true
+  end
+
+  create_table "referral_credits", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "referral_splinter_id", null: false
+    t.string "vertical", null: false
+    t.string "entitlement", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["referral_splinter_id"], name: "index_referral_credits_on_referral_splinter_id", unique: true
+    t.index ["user_id", "entitlement", "expires_at"], name: "index_referral_credits_entitlement"
+    t.index ["user_id"], name: "index_referral_credits_on_user_id"
+  end
+
+  create_table "s2s_attributions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "mediago_tracking_id", limit: 500
+    t.string "revcontent_rc_uuid", limit: 500
+    t.datetime "captured_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_s2s_attributions_on_user_id", unique: true
+  end
+
+  create_table "s2s_conversions", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.string "reference", limit: 200, null: false
+    t.integer "amount_cents", null: false
+    t.string "currency", limit: 8, default: "NOK", null: false
+    t.string "status", default: "queued", null: false
+    t.json "postback_results", default: {}, null: false
+    t.datetime "converted_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "reference"], name: "index_s2s_conversions_on_user_and_reference", unique: true
+    t.index ["user_id"], name: "index_s2s_conversions_on_user_id"
+  end
+
+  add_foreign_key "referral_splinters", "users", column: "referrer_id"
+  add_foreign_key "referral_splinters", "users", column: "redeemed_by_id"
+  add_foreign_key "referral_credits", "referral_splinters"
+  add_foreign_key "referral_credits", "users"
+  add_foreign_key "s2s_attributions", "users"
+  add_foreign_key "s2s_conversions", "users"
   add_foreign_key "users", "cities"
   add_foreign_key "votes", "users"
 end

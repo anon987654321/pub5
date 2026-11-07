@@ -82,12 +82,34 @@ module Webhooks
       return payable unless payable.payable?
 
       payable.mark_paid!(reference: reference)
+      enqueue_s2s_conversion(payable, reference:)
       payable
     rescue RuntimeError => e
       raise unless e.message.include?("not in stock")
 
       Rails.logger.warn("[webhooks] #{payable.class.name}##{payable.id} paid while out of stock")
       payable
+    end
+
+    # Runs only after the payable's guarded paid transition. The unique
+    # (user, reference) key makes duplicate provider webhooks harmless.
+    def enqueue_s2s_conversion(payable, reference:)
+      return unless defined?(Shared::S2sAttribution)
+
+      user_id = payable.respond_to?(:buyer_id) ? payable.buyer_id : payable.try(:user_id)
+      amount = payable.respond_to?(:total_cents) ? payable.total_cents : payable.try(:price_cents)
+      return if user_id.blank? || amount.nil?
+
+      currency = if payable.respond_to?(:payment_currency)
+                   payable.payment_currency
+                 elsif payable.respond_to?(:currency)
+                   payable.currency
+                 else
+                   "NOK"
+                 end
+      Shared::S2sAttribution.enqueue_conversion(
+        user_id:, reference:, amount_cents: amount, currency: currency.to_s.upcase.presence || "NOK"
+      )
     end
 
     def attach_gclid!(order, gclid)

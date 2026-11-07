@@ -9,10 +9,12 @@ module Shared
     included do
       has_many :billing_subscriptions, class_name: "Shared::BillingSubscription", dependent: :destroy,
                                        inverse_of: :user
+      has_many :referral_credits, class_name: "Shared::ReferralCredit", dependent: :destroy
     end
 
     def entitled?(entitlement)
-      billing_subscriptions.entitling.any? { |subscription| subscription.plan&.grants?(entitlement) }
+      billing_subscriptions.entitling.any? { |subscription| subscription.plan&.grants?(entitlement) } ||
+        referral_credits.active.exists?(entitlement: entitlement.to_s)
     end
 
     # The Stripe customer this user pays as, once a checkout has made one.

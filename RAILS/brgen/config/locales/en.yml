@@ -2175,3 +2175,14 @@ en:
       illegal: Illegal content
       copyright: Copyright infringement
       other: Something else
+
+growth:
+  referral_share: "Share a 30-day Pro invitation"
+  referral_title: "A remarkable curation"
+  referral_badge: "REMARKABLE CURATOR // VERIFIED"
+  referral_headline: "The rhythm is autonomous. Own the stream."
+  referral_description: "Pass this invitation to unlock 30 days of Brgen %{vertical} Pro for the curator who invited you."
+  referral_copy: "Copy invitation"
+  referral_claim: "Accept invitation"
+  referral_redeemed: "Invitation accepted. The curator's 30-day Pro credit is now active."
+  referral_invalid: "This invitation is invalid, expired or already used."

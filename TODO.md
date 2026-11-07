@@ -429,6 +429,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 **Dating, Playlist and Takeaway**
 - [ ] `dating_premium_boost` — open; any premium, boost or super-like design must preserve consent, avoid dark patterns and never sell moderation or safety outcomes.
 - [ ] `playlist_creator_donations` — open; creator tips may use the shared commerce domain; do not sell an ad-free tier while there are no ads.
+- [ ] `referral_reward_consumption` — open; define the real, member-visible benefits behind `playlist_pro` and `dating_pro`, then wire their gates. Referral credits currently record entitlement only; do not market them as usable Pro access until those features exist.
 - [ ] `takeaway_delivery_area` — picked; complete `takeaway_delivery_area`: validate the reader's stored position against the restaurant's stated radius, nil-safely and with an honest explanation.
 - [ ] `takeaway_cart_expiry` — picked; complete `takeaway_cart_expiry`: expire pending carts through the same state transition as manual cancellation, with notifications and a visible deadline.
 - [ ] `takeaway_pro_surface` — open; promotion, loyalty and coupons depend on shared commerce and liquidity foundations.
@@ -439,6 +440,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `commerce_shared_domain` — open; design one shared Commerce/Ledger/Campaign/Entitlements domain for all verticals, not separate billing stacks.
 - [ ] `commerce_private_seller_verification` — open; determine a defensible, explainable proof for a private seller without an organisation number.
 - [ ] `commerce_local_ads` — open; only after liquidity is measured and the shared campaign/ledger domain exists.
+- [ ] `brgen_art_ad_banner` — open; build the named minimal art-directed banner only with approved sponsored copy, image rights and destination. Keep ads labelled, and keep AdSense gated until a certified consent platform is in place.
 
 **Amber**
 - [ ] `amber_fashion_embeddings` — open; start with owner-tagged typed attributes, not a Postgres/pgvector migration for a personal wardrobe.
@@ -457,6 +459,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `bsdports_semantic_search` — open; evaluate SQLite FTS synonyms first; a local corpus/similarity pass must justify its cost.
 - [ ] `bsdports_knowledge_graph` — open; expose useful dependency and reverse-dependency questions from existing parsed data, not a new infrastructure graph.
 - [ ] `bsdports_package_intel` — open; consider factual freshness/maintainer signals and a vulnerability source with reliable provenance.
+- [ ] `bsdports_cli_sponsorship` — open; add optional pay-what-you-want support handoff only after a verified recipient and sponsor/payment URL exist; package search and CLI use remain free and unblocked.
 
 **MASTER and STUDIO**
 - [ ] `master_fleet_health` — picked; complete `master_fleet_panel`: sibling-app health, load and resource-guard order on the dashboard.

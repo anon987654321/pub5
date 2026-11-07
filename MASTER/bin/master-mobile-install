@@ -10,6 +10,44 @@ expected_repo="https://github.com/anon987654321/pub5.git"
 
 fail() { printf 'mobile0: BLOCKED: %s\n' "$*" >&2; exit 1; }
 
+# --demo is deliberately handled before Termux checks: it is a portable,
+# read-only preview and never calls pkg, git, gem, or Ruby.
+case "${1:-}" in
+  --demo) demo=1 ;;
+  "") demo=0 ;;
+  *) fail "Usage: master-mobile-install [--demo]" ;;
+esac
+[ "$#" -le 1 ] || fail "Usage: master-mobile-install [--demo]"
+
+if [ "$demo" -eq 1 ]; then
+  printf 'mobile0: DEMO only; no commands run, packages installed, files written, or Git state changed\n'
+  printf 'mobile0: repository %s\n' "$repo"
+  printf 'mobile0: install directory %s\n' "$dir"
+  printf 'mobile0: branch %s\n' "$branch"
+  if [ "$repo" != "$expected_repo" ]; then
+    printf 'mobile0: would BLOCK: only the canonical HTTPS repository is allowed\n'
+    exit 2
+  fi
+  [ -n "$branch" ] || { printf 'mobile0: would BLOCK: MASTER_BRANCH must not be empty\n'; exit 2; }
+  case "$dir" in "$HOME"/*) ;; *) printf 'mobile0: would BLOCK: install directory must be below Termux HOME\n'; exit 2 ;; esac
+  [ "$dir" != "$HOME" ] || { printf 'mobile0: would BLOCK: install directory cannot be HOME itself\n'; exit 2; }
+  [ ! -L "$dir" ] || { printf 'mobile0: would BLOCK: install directory must not be a symbolic link\n'; exit 2; }
+  printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and a private HOME path (not checked in demo)\n'
+  printf 'mobile0: plan 2/5 - update Termux packages; install ruby, git, clang, make, libyaml and openssl\n'
+  if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
+    printf 'mobile0: would BLOCK: %s exists but is not a Git checkout\n' "$dir"
+    exit 2
+  elif [ -d "$dir/.git" ]; then
+    printf 'mobile0: plan 3/5 - verify canonical origin and clean checkout, then fast-forward %s\n' "$branch"
+  else
+    printf 'mobile0: plan 3/5 - shallow-clone canonical pub5 branch %s\n' "$branch"
+  fi
+  printf 'mobile0: plan 4/5 - install locked MASTER gem bundle and Falcon\n'
+  printf 'mobile0: plan 5/5 - prove bin/deps boot, run mobile doctor, then print the loopback-only face bridge command\n'
+  printf 'mobile0: DEMO complete; all device and repository checks remain unmeasured\n'
+  exit 0
+fi
+
 command -v pkg >/dev/null 2>&1 || fail "Run this inside Termux, installed from a maintained source."
 [ "${PREFIX:-}" = "/data/data/com.termux/files/usr" ] || [ "${PREFIX:-}" = "/data/user/0/com.termux/files/usr" ] ||
   fail "Unexpected Termux PREFIX; refusing to install into an unverified environment."
@@ -31,7 +69,7 @@ fi
 
 printf 'mobile0: preflight PASS; updating Termux packages\n'
 pkg update -y
-pkg install -y ruby git clang make libyaml openssl
+pkg install -y ruby git clang make libyaml openssl cmake pkg-config sqlite libffi
 
 if [ -d "$dir/.git" ]; then
   git -C "$dir" pull --ff-only origin "$branch"
@@ -45,7 +83,14 @@ actual_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
 git -C "$dir" rev-parse --verify HEAD >/dev/null 2>&1 || fail "Checkout has no verifiable commit."
 git -C "$dir" diff --quiet && git -C "$dir" diff --cached --quiet || fail "Checkout has local modifications; refusing to execute it."
 
-gem install --no-document falcon
 cd "$dir/MASTER"
+printf 'mobile0: installing the locked MASTER Ruby bundle\n'
+ruby bin/deps install
+printf 'mobile0: checking the locked MASTER Ruby bundle\n'
+ruby bin/deps check
+gem install --no-document falcon
+printf 'mobile0: proving the normal MASTER CLI boot path\n'
+ruby bin/deps boot
+printf 'mobile0: checking Termux device readiness\n'
 ruby bin/master-mobile doctor
-printf 'mobile0: security and readiness checks PASS. Run %s/MASTER/bin/master-mobile bridge, then open http://127.0.0.1:8765/face\n' "$dir"
+printf 'mobile0: install and readiness checks PASS. Run %s/MASTER/bin/master-mobile bridge, then open http://127.0.0.1:8765/face\n' "$dir"
