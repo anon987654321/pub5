@@ -267,8 +267,12 @@ module Master
 
       def codepen_trending_in_browser(limit)
         session = "research-codepen-trending"
-        browser_call(action: "open", session:, url: "https://codepen.io/trending")
+        opened = browser_call(action: "open", session:, url: "https://codepen.io/trending")
+        raise Error, opened["error"] if opened.is_a?(Hash) && opened["error"]
+
         snapshot = browser_call(action: "scroll", session:, steps: 3)
+        raise Error, snapshot["error"] if snapshot.is_a?(Hash) && snapshot["error"]
+
         data = snapshot.is_a?(String) ? JSON.parse(snapshot) : snapshot.to_h
         links = Array(data["links"] || data[:links])
         rows = links.filter_map do |link|
