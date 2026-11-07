@@ -203,12 +203,16 @@ module Master
             first_valid = result["ok"]
             unless first_valid
               repaired = true
+              # The receipt says whether a repair will actually be tried. A
+              # rejection reported as retryable after the budget was spent
+              # would make a cut-short council look like a stalled one.
+              retry_allowed = !spent&.call
               rejection = rejection_payload(observed: response, errors: result["errors"], master_root:)
               bus&.publish(
                 :inter_model_rejected, role: role.to_s, model: model.to_s,
-                violated_rule: rejection["violated_rule"], violations: result["errors"], retry_allowed: true
+                violated_rule: rejection["violated_rule"], violations: result["errors"], retry_allowed:
               )
-              raise InvalidResponse.new(result["errors"]) if spent&.call
+              raise InvalidResponse.new(result["errors"]) unless retry_allowed
 
               retry_prompt = repair_prompt(prompt, rejection:, master_root:)
               response = yield(retry_prompt, true)

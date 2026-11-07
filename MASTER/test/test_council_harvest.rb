@@ -63,12 +63,19 @@ class TestCouncilHarvest < Minitest::Test
     assert_includes prompt, "Do not invent defects"
   end
 
+  # The prompt was reworded from "Attack each idea ... VERDICT: keep/reject"
+  # to an exact-coverage demand. The invariant is unchanged: every supplied
+  # candidate gets its own verdict, and both directions are named, because a
+  # critique that silently drops a candidate hides a real defect.
   def test_adversarial_challenge_demands_a_verdict_per_idea
     source = File.read(File.join(Master::ROOT, "lib", "review", "council", "ideation.rb"))
     challenge = source[/def critique\(ideas\).*?end\n/m]
 
-    assert_includes challenge, "Attack each idea"
-    assert_includes challenge, "VERDICT: keep"
-    assert_includes challenge, "VERDICT: reject"
+    refute_nil challenge, "the adversarial challenge must exist"
+    assert_includes challenge, "Attack every candidate separately"
+    assert_includes challenge, "exactly one finding for each supplied candidate"
+    assert_includes challenge, "Do not omit or invent candidates"
+    assert_includes challenge, "KEEP"
+    assert_includes challenge, "REJECT:"
   end
 end

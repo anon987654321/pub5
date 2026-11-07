@@ -156,6 +156,56 @@ class TestInterModelContract < Minitest::Test
     assert_equal "measured", Contract.measure(root: @root).fetch("status")
   end
 
+  # A repair attempt is another model call. The council's pass budget governs
+  # model calls, so a rejected first response that arrives after the budget has
+  # elapsed must not be retried: the retry would spend past the deadline the run
+  # is being cut on. The receipt must also say the repair will not be tried,
+  # because a rejection reported retryable after the budget expired makes a
+  # cut-short council look like a stalled one.
+  def test_a_rejected_response_is_not_repaired_once_the_pass_budget_is_spent
+    calls = []
+    spent = false
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |name, payload| events << [name, payload] }
+
+    assert_raises(Contract::InvalidResponse) do
+      Contract.exchange(
+        prompt: "Review the source.", role: "judge", bus:, root: @root,
+        spent: -> { spent },
+      ) do |_outbound, retrying|
+        calls << retrying
+        spent = true
+        "not a structured response at all"
+      end
+    end
+
+    assert_equal [false], calls, "one call, no repair attempt after the budget is gone"
+    rejection = events.find { |name, _payload| name == :inter_model_rejected }
+    refute_nil rejection
+    refute rejection.last[:retry_allowed], "a rejection that will not be retried says so"
+  end
+
+  def test_a_rejected_response_inside_the_budget_is_repaired_once
+    calls = []
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |name, payload| events << [name, payload] }
+
+    result = Contract.exchange(
+      prompt: "Review the source.", role: "judge", bus:, root: @root, spent: -> { false },
+    ) do |_outbound, retrying|
+      calls << retrying
+      retrying ? valid_response : "not a structured response at all"
+    end
+
+    assert_equal [false, true], calls
+    assert result.fetch("ok")
+    assert result.fetch("repair_attempted")
+    rejection = events.find { |name, _payload| name == :inter_model_rejected }
+    assert rejection.last[:retry_allowed], "a repair that is about to be tried says so"
+  end
+
   def test_wrap_prompt_includes_a_structured_request_and_response_contract
     prompt = Contract.wrap_prompt(
       "Review the source.",
