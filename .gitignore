@@ -26,7 +26,6 @@ rails/*/storage/*
 # Private real-person LoRA material. Keep source photos, captions, datasets,
 # generated outputs, weights and temporary bundles out of this public repo.
 /studio/replicate/lora/*/sources/
-studio/replicate/lora/*/sources/
 studio/replicate/lora/*/dataset/
 studio/replicate/lora/*/weights/
 studio/replicate/lora/*/out/
@@ -36,3 +35,5 @@ studio/replicate/lora/**/*.zip
 studio/replicate/lora/**/*.pid
 studio/replicate/lora/*.mp4
 studio/replicate/lora/*.mov
+
+studio/replicate/lora/*/contact_sheet.jpg
