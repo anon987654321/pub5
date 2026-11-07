@@ -100,7 +100,6 @@ module Master
       def initialize(world:)
         @world = world
         @browser = world.browser if world.respond_to?(:browser)
-        @browser ||= BrowserAgent.new(world:)
       end
 
       def available_tools
