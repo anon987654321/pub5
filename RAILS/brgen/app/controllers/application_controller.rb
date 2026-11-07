@@ -12,8 +12,25 @@ class ApplicationController < ActionController::Base
   include Shared::ApplicationSetup
 
   before_action :set_domain_context
+  before_action :capture_s2s_attribution
 
   private
+
+  # Retain incoming click ids in Rails' encrypted session until a real account
+  # exists; then bind them to that account. No raw session id or IP is stored.
+  def capture_s2s_attribution
+    keys = %w[trackingid mediago_trackingid rc_uuid]
+    incoming = keys.filter_map do |key|
+      value = params[key]
+      [key, value] if value.is_a?(String) && value.bytesize <= 500 && !value.match?(/[[:cntrl:]]/)
+    end.to_h
+    session[:s2s_click_ids] = session[:s2s_click_ids].to_h.merge(incoming) if incoming.any?
+    click_ids = session[:s2s_click_ids]
+    return if click_ids.blank? || Current.user.blank? || Current.user.guest?
+
+    Shared::S2sAttribution.capture!(user: Current.user, params: click_ids)
+    session.delete(:s2s_click_ids)
+  end
 
   # Someone who arrived on a "message me" link and had to sign in first lands in
   # the conversation they were invited to, not on the city feed. Without this the

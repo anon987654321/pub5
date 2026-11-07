@@ -3,6 +3,9 @@
 <div class="page-header">
   <%= tag.h1 t("dating.your_profile") %>
   <%= link_to t("dating.edit_profile"), edit_profile_path, class: "button button-ghost button-small" %>
+<% if Current.user == @profile.user && @profile.verified_at.present? %>
+  <%= button_to t("growth.referral_share"), referral_splinters_path, params: { vertical: "dating" }, method: :post, class: "button button-ghost button-small" %>
+<% end %>
 </div>
 
 <%# A tab widget, not navigation: role="tablist" on <nav> replaced the
