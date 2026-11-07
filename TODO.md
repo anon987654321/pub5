@@ -599,15 +599,17 @@ Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
 
 - [ ] Read OpenRouter's remaining free quota from `GET /api/v1/key` (`free_model_daily_requests`) into `Io::ModelQuota` instead of forecasting the burn rate.
 - [ ] Wire the pass-0 walk's lane wheel onto the free-floor verdict. The
-  floor now suspends honestly twice over (RunPulse `promote_live_lane` and
-  the process-local counter in `Io::LaneSelection.note_provider_outcome`,
-  sharing one `@floor_suspended` flag), and `order()` ranks free lanes
-  last (KIND_RANK free:3), but a 2026-11-07 instrumented walk still burned
-  its queue on dead `:free` slugs while `google/gemini-2.5-flash` was live
-  and the floor was suspended — the walk's wheel reads neither `order()`
-  ranking nor the suspension. Route the wheel through the ranked pool and
-  the suspension, keeping `lane probe` on free rows on purpose (its job is
-  to detect the death, so probing must never be filtered).
+  floor suspends honestly twice over (RunPulse `promote_live_lane` and the
+  process-local counter in `Io::LaneSelection.note_provider_outcome`,
+  sharing one `@floor_suspended` flag), and 2026-11-07's proven defect is
+  fixed: the savior naming used `alive?`, which reads only binaries and
+  keys, so it kept naming `google/gemini-2.5-flash` "live" while
+  `data/lanes.yml` held it dead by hand — `live_savior` now demands
+  `LaneState.usable?`. Still open: whether the walk's own wheel reads
+  `order()` ranking and the suspension, or still pays every dead `:free`
+  slug its call. Verify by rerunning an instrumented walk before routing
+  anything. `lane probe` stays on free rows on purpose (its job is to
+  detect the death, so probing must never be filtered).
 - [ ] Rank free-load selection by latency: the live-`:free` spread with
   per-model quota buckets landed 2026-11-06, but the catalog carries no
   `free_latency` field, so ranking stays pool order until one exists.
