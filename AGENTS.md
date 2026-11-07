@@ -71,14 +71,14 @@ Codex, Copilot, Grok, GLM, Gemini, Cursor and Claude alike.
 - registry/paths.yml protects production credentials, environment secrets, database migration/schema files and the append-only ledger; trusted main writers can change source and policy.
 - bin/master is the one entrypoint; registry/commands.yml lists its commands.
 
-## Laws in force (2 enforced, 877 total)
+## Laws in force (2 enforced, 883 total)
 - ONE_IMPLEMENTATION_PER_OPERATION (enforced, error): HTTP, file writes, environment reads, subprocesses and YAML loading each have one implementation, in core/.
 - GENERATED_FILE_MATCHES_GENERATOR (enforced, error): A file listed as generated in registry/paths.yml equals what its generator writes; it is never edited by hand.
 
-The other 875 are advisory (68 check, 82 conduct, 106 lexical, 17 lint, 18 ratchet, 23 rendered, 386 semantic, 175 structural): each is in
+The other 881 are advisory (68 check, 85 conduct, 107 lexical, 17 lint, 18 ratchet, 23 rendered, 387 semantic, 176 structural): each is in
 registry/laws.yml with its statement, and `bin/master laws` lists them.
 
-## Conduct every writer keeps (82 conduct Laws, advisory)
+## Conduct every writer keeps (85 conduct Laws, advisory)
 - COLLAPSE_BEFORE_ADDING (advisory, warning): before adding machinery, run the universal transformation plan in data/laws.yml#transformation_policy.
 - REGISTER_STABLE (advisory, warning): hold register, density, and length consistent across a session;
 - MIRROR_EXPERTISE (advisory, warning): teach the transferable mental model, not just its command or conclusion.
@@ -161,3 +161,6 @@ registry/laws.yml with its statement, and `bin/master laws` lists them.
 - AGENT_BEFORE_EDITING_RAILS_OR_MASTER (advisory, warning): Before editing RAILS/ or MASTER/web: read the latest Rails style guide (github.com/rubocop/rails-style-guide) and the Rails edge guides (edgeguides.rubyonrails.org) for every API you touch.
 - AGENT_BEFORE_EDITING_OPENBSD_READ_MAN (advisory, warning): Before editing OPENBSD/: read man for every tool, daemon or config file you touch (on vm23 or man.openbsd.org).
 - AGENT_NAME_THE_GUIDE_SECTION_OR (advisory, warning): Name the guide section or man page in the commit body.
+- REGRESSION_FIRST (advisory, warning): An operator-caught regression outranks all new work - triage it in the same session, restore the tuned behaviour from the reference tree (pub4's bytes are the spec, memory is not), re-render the surface as evidence, then resume new work.
+- CORRECTIONS_BECOME_LAWS (advisory, warning): An operator correction lands in the same session as a Law amendment or a ux_refinements row, not as chat - a second instance of the same miss means the Law system failed, and the catching Law enters the promotion queue.
+- ADVISORY_MUST_BE_RECONCILED (advisory, warning): Advisory is not ignorable - a Law in advisory lifecycle still governs the files it reaches, so before a task lands run the gate over the touched scope and answer every finding, fixing it or recording an exemption with an expiry.

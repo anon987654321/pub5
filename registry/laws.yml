@@ -12771,3 +12771,51 @@ laws:
     pub4:
       id: word_boundary
       source: MASTER/tools/word_boundary_lint.rb
+  REFINEMENT_INVENTORY_IS_CANONICAL:
+    statement: The operator's cosmetic refinements are acceptance targets, not lore - one canonical inventory (registry/ux_refinements.yml) carries one row per refinement with its id, area, title, owner trees, proof surfaces, contract and acceptance state, the promised count matches the rows, and a row completes only with recorded rendered or runtime evidence.
+    kind: structural
+    severity: error
+    lifecycle: advisory
+    autofix: never
+    enacted: '2026-11-07'
+    file: laws/refinement_inventory_is_canonical.rb
+  PINNED_SURFACE_BYTES_CARRY:
+    statement: The tuned console bytes stay where PLAN.md section 18 declares their homes - boot_sgr 37;48;2;0;0;255 with its 37;44 fallback and the dmesg grammar in master/data/console.yml, the splash painter in master/cli/terminal.rb, the host:path$ prompt in master/cli/prompt.rb - and a home moves only by editing this Law's path list, never by silent deletion.
+    kind: lexical
+    severity: error
+    lifecycle: advisory
+    autofix: never
+    enacted: '2026-11-07'
+    file: laws/pinned_surface_bytes_carry.rb
+  NO_RESTYLE_WITHOUT_RECORD:
+    statement: Does a change alter how a surface is seen without a recorded operator decision owning it - a ux_refinements row, a console or prompt byte, an operator directive in PLAN.md - and, where the surface renders, does a captured render carry the evidence rather than a source read?
+    kind: semantic
+    severity: warning
+    lifecycle: advisory
+    autofix: review
+    enacted: '2026-11-07'
+    file: laws/no_restyle_without_record.rb
+  REGRESSION_FIRST:
+    statement: An operator-caught regression outranks all new work - triage it in the same session, restore the tuned behaviour from the reference tree (pub4's bytes are the spec, memory is not), re-render the surface as evidence, then resume new work.
+    kind: conduct
+    severity: warning
+    lifecycle: advisory
+    autofix: never
+    enacted: '2026-11-07'
+    file: laws/regression_first.rb
+  CORRECTIONS_BECOME_LAWS:
+    statement: An operator correction lands in the same session as a Law amendment or a ux_refinements row, not as chat - a second instance of the same miss means the Law system failed, and the catching Law enters the promotion queue.
+    kind: conduct
+    severity: warning
+    lifecycle: advisory
+    autofix: never
+    enacted: '2026-11-07'
+    file: laws/corrections_become_laws.rb
+  ADVISORY_MUST_BE_RECONCILED:
+    statement: Advisory is not ignorable - a Law in advisory lifecycle still governs the files it reaches, so before a task lands run the gate over the touched scope and answer every finding, fixing it or recording an exemption with an expiry.
+    kind: conduct
+    severity: warning
+    lifecycle: advisory
+    autofix: never
+    enacted: '2026-11-07'
+    file: laws/advisory_must_be_reconciled.rb

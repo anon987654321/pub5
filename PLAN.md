@@ -413,3 +413,51 @@ and plain under NO_COLOR, off a terminal or in a pipe, and
 (`vm23:~/pub5$`). UX027 stands: no decorative banners - the boot lines are
 the kernel's own grammar, not chrome. COLORTERM and NO_COLOR joined
 registry/knobs.yml, which stays under its 40-name cap at 39.
+
+## 19. The Laws that stop a style skip (2026-11-07)
+
+Section 18's restoration reached the operator's question - "where is the
+dmesg boot? where is the prompt?" - before it reached any gate, and the
+gates were right about what they measured: OPENBSD_DMESG_CONSOLE_STYLE is
+semantic and advisory, a question graded live by the census, so it can fail
+nothing at commit time; the operator's ninety-row acceptance inventory
+(pub4 `MASTER/data/ux_refinements.yml`) never crossed from pub4, so UX027
+and UX028 were answered from memory; and no detector pinned the tuned
+bytes, so a drop was invisible to parse, lint and the suite at once. Six
+Laws close that shape, entering advisory under the admission contract
+(census over the real tree, fixtures proved at load, the operator's
+ratification to enforce):
+
+- REFINEMENT_INVENTORY_IS_CANONICAL ports the inventory itself to
+  `registry/ux_refinements.yml` - ids UX001 through UX090 stable, owner
+  trees renamed to this tree's - and keeps it whole: present in the tree,
+  the promised count matching the rows, every row carrying its contract,
+  proof surfaces and acceptance state, completion only by recorded
+  rendered or runtime evidence (the ported no-simulation policy).
+- PINNED_SURFACE_BYTES_CARRY pins the bytes where section 18 declares
+  their homes: the boot colours and dmesg grammar in
+  `master/data/console.yml`, the splash painter in `Cli::Terminal`, the
+  `host:path$` prompt in `Cli::Prompt`. A drop is now a failing gate; a
+  home moves only by editing the Law's path list, which is a recorded move
+  in a reviewable diff.
+- NO_RESTYLE_WITHOUT_RECORD asks the review question with the acceptance
+  record as arbiter: a visible change with no recorded decision owning it
+  fails the review, and the evidence must be a captured render, not a
+  source read.
+- REGRESSION_FIRST orders the triage the boot's catch needed: an
+  operator-caught regression outranks new work, the reference tree's bytes
+  are the spec, and the surface is re-rendered before new work resumes.
+- CORRECTIONS_BECOME_LAWS makes every operator correction land as a Law
+  amendment or an inventory row in the same session, and sends a repeated
+  miss to the promotion queue instead of to another apology.
+- ADVISORY_MUST_BE_RECONCILED makes advisory findings in touched scope
+  answerable before a task lands: fixed, or exempted with an expiry.
+
+The promotion queue, oldest grievance first: PINNED_SURFACE_BYTES_CARRY
+and REFINEMENT_INVENTORY_IS_CANONICAL (both deterministic; a census and
+ratification pending), then the three conduct Laws and the semantic ask.
+The first pty census of the pinned Law is already in hand: on a truecolor
+pty the boot paints `master0 at mainbus0`, `host0 at mainbus0`, `root on
+master0` in 24-bit white on blue one line at a time, plain under NO_COLOR,
+and closes on the operator prompt - the Law's good fixture, read live.
+
