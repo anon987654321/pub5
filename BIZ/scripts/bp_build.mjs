@@ -15,7 +15,7 @@ import { ADDITIONS } from './content_add.mjs';
 
 const PLANS = { ...PLANS_A, ...PLANS_B };
 
-const PUB_SYRE = `${SRC}/syre/syre.html`;
+const PUB_SYRE = `${SRC}/scripts/syre.html`;
 mkdirSync(OUT, { recursive: true });
 const ORDER = ['syre', 'speis', 'ragnhild', 'nato', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
 const TITLES = {
@@ -100,18 +100,6 @@ function logoHtml(plan) {
     + staticFractal() + '</div>';
 }
 
-function fontCss() {
-  const ragnhild = readFileSync(`${SRC}/ragnhild/ragnhild.html`, 'utf8');
-  const match = ragnhild.match(/@font-face\{[^}]*font-family:'Nosifer'[^}]*src:url\(data:font\/woff2;base64,([A-Za-z0-9+/=]+)\)/s);
-  if (!match) throw new Error('Nosifer font is not embedded in BIZ/ragnhild.html');
-  const b64 = match[1];
-  return ("@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;"
-    + "src:url(data:font/woff2;base64," + b64 + ") format('woff2');}"
-    + "\n.mark-brand{font-family:'Nosifer','EB Garamond',Georgia,serif;font-weight:400;"
-    + 'font-size:2.35em;line-height:1.45;margin:0 0 1.1rem;color:inherit;}');
-}
-
-// ---- insertion -------------------------------------------------------------
 const SECTION_KEYS = [
   ['sammen', 'why_now'],
   ['marked', 'kundeinnsikt_gomarket'],
@@ -240,7 +228,7 @@ const report = [];
 const fails = [];
 
 for (const plan of ORDER) {
-  let src = readFileSync(`${SRC}/${plan}/${plan}.html`, 'utf8');
+  let src = readFileSync(`${SRC}/scripts/${plan}.html`, 'utf8');
   const origTitle = (src.match(/<title>([^<]+)<\/title>/) || [])[1];
   if (origTitle !== TITLES[plan]) report.push(`${plan}: title mismatch ${JSON.stringify(origTitle)}`);
 
@@ -277,9 +265,10 @@ for (const plan of ORDER) {
     .filter(k => !usedKeys.has(k));
   if (missing.length) fails.push(`${plan}: missing insertions ${missing.join(', ')}`);
 
-  if (plan === 'ragnhild') {
-    src = src.replace('</style>', fontCss() + '\n</style>');
-  }
+  // The ragnhild base carries its own Nosifer @font-face and .mark-brand
+  // rule; injecting them again here is what doubled the font-face
+  // (4 vs the expected 3) in the built plan. The injection is removed, not
+  // migrated; the base is the owner (SINGULARITY).
   const lg = logoHtml(plan);
   if (lg) {
     const h1pos = src.indexOf('<h1');
@@ -310,6 +299,10 @@ for (const plan of ORDER) {
 
   mkdirSync(`${OUT}/${plan}`, { recursive: true });
   writeFileSync(`${OUT}/${plan}/${plan}.html`, src);
+  // The plan folder carries only the published trio (html, svg mark, pdf):
+  // a plan whose mark is real artwork also ships the artwork as the one
+  // .svg beside the pair (Johann, 2026-11-07).
+  if (lgd && lgd.kind === 'fractal') writeFileSync(`${OUT}/${plan}/${plan}.svg`, staticFractal());
   report.push(`${plan}: ok (${src.length} chars, logo=${lgd ? lgd.kind : 'none'})`);
 }
 

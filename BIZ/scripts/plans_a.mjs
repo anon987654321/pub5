@@ -108,7 +108,7 @@ export const PLANS_A = {
 <h3>Materialvitenskap: compoundsøket</h3>
 <p>Konkurransefortrinnet står og faller med compoundet. Programmet tester systematisk tre materialfamilier mot samme målprofil – slitestyrke, energiretur, vekt, CO₂-avtrykk og pris per par: grafen-forsterket TPU i konsentrasjonsrekke 0,5–5 vektprosent (målet er de dokumenterte 300 % i slitestyrke og 40 % bedre energiretur), mycelium-basert lær for øvre deler og innersko med 45-dagers nedbrytbarhet, og selvhelende polymerer i høybelastningssoner for å forlenge levetiden med 60 %. Aerogel-isolasjonen for Arktis-kolleksjonen prøves i sandwichoppbygging mot TPU-skallet. Hver kombinasjon går gjennom samme testprotokoll hos SINTEF med doble prøver, og vinnercompoundet per komponent fastlås i MASTERs lovkatalog som produksjonslov – slik at compoundsøket blir en vedlikeholdt kunnskapsbase i stedet for en engangsstudie.</p>
 `,
-    logo: {kind: "fractal", note: "Logo: «SYRE»-fraktalmerket (Blomsten av livet) fra pub-generasjonen,  her i statisk gjengivelse."},
+    logo: {kind: "fractal", note: "Logo: «SYRE»-fraktalmerket (Blomsten av livet) fra pub-generasjonen, her i statisk gjengivelse."},
   },
   ragnhild: {
     why_now: `
@@ -319,7 +319,7 @@ export const PLANS_A = {
 <h3>3D-printede komponenter og MASTER-adaptasjon</h3>
 <p>Teknologidelingen med SYRE™ omfatter den parametriske printstakken og MASTER-adaptasjonen: pub5s Ruby-baserte styringskjerne der hver produksjonsjobb er et forslag som først når maskinen når lovkatalogen har verifisert toleranser, materialsertifikater og sikkerhetsgrenser. For flykomponenter betyr det at hver 3D-printet del følger en sporbar kjede fra materialbatch til montering, med skannerlogg som bevismateriale i luftdyktighetsdokumentasjonen. MASTER-oppsettet gjør det også mulig å gjenbruke SYRE™s compoundsøk – metodikk for systematisk screening av materialkombinasjoner mot målte egenskaper – på aerospace-legeringer og kompositter: samme testprotokoll, samme låsing av vinnercompound som produksjonslov. Dermed får kampflyprogrammet en materialplattform som vedlikeholdes som kunnskapsbase, ikke et engangsvalg som aldri revideres.</p>
 `,
-    logo: {kind: "gradient", text: "SPEIS", gradient: "linear-gradient(45deg,  #ff007f,  #00c9ff,  #ffcc00,  #ff007f)", note: "Logo: «SPEIS»-ordmerket i pub2-gradienten (#ff007f – #00c9ff – #ffcc00),  her i statisk gjengivelse."},
+    logo: {kind: "gradient", text: "SPEIS", gradient: "linear-gradient(45deg, #ff007f, #00c9ff, #ffcc00, #ff007f)", note: "Logo: «SPEIS»-ordmerket i pub2-gradienten (#ff007f – #00c9ff – #ffcc00), her i statisk gjengivelse."},
   },
   nato: {
     why_now: `

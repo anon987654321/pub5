@@ -14,7 +14,14 @@ files are historical source material, not part of the seven plan deliverables:
     pubhealthcare/pubhealthcare.html + .pdf       autonome parametriske sykehus, NOK 500 000
     govt_bergen/govt_bergen.html + .pdf           bergensk selvstyre-teknologi, NOK 200 000
 
-Every plan lives in its own folder named after its html and pdf pair (Johann, 2026-11-07), one pair per folder.
+Every plan lives in its own folder named after its html and pdf pair (Johann,
+2026-11-07), one pair per folder, and the folder carries **only what the reader
+receives**: the html, its svg mark (where one exists) and the pdf. Editable
+sources sit beside the folders, never inside one — the seven restored base
+documents and all tooling live in `scripts/` — and the published pair is
+regenerated from them. The **fetat** plan (Familieetaten) has the same layout:
+`fetat/fetat.html + fetat.pdf + fetat.svg` published, its proposal, build,
+trace and laws scripts in `scripts/` under the `fetat_` prefix.
 
 Seven concepts, sought funding in total: **NOK 2 400 000**. (ai3 remains in the
 pub3/pub5 archives but is not in the keep-list for this restoration.)
@@ -66,7 +73,9 @@ Per the restoration brief:
   (OpenBSD, Ruby, pub5 MASTER law-catalogue governance):
   *FETAT — ny barnevernsforvaltning* (the FETAT/Familieetaten proposal, the new
   Norwegian Barnevern, working master at
-  `BIZ/fetat/proposal.md`: evidence-based decisions, 48-hour first
+  `BIZ/scripts/fetat_proposal.md`, published as its own plan folder
+  `fetat/fetat.html + fetat.svg + fetat.pdf` in the hefte format
+  156 × 234 mm: evidence-based decisions, 48-hour first
   response, multidisciplinary teams, regional units, child hotline 123,
   independent review — now with the hefte's own facts: 24 EMD judgments under
   ECHR art. 8, NOK 26 bn annual cost across 356 kommuner, the 3 % vs 35 %
@@ -158,24 +167,32 @@ the pub2 archive.
 ## Build pipeline (law-compliant)
 
 MASTER/data/laws.yml governs this tree. The committed build and check
-pipeline is plain Node.js: it reads and writes files directly and does not
-invoke Python, Bash, sed, awk or shell text processing.
+pipeline is plain Node.js and Ruby: it reads and writes files directly and
+does not invoke Python, Bash, sed, awk or shell text processing.
 
-The content port is already committed in `scripts/plans_a.mjs` and
-`scripts/plans_b.mjs`. `convert_content.mjs` is an optional one-time
-re-importer for the archived text sources; run it only when those two original
-files are available, setting `BIZ_LEGACY_SOURCE_DIR` to their directory.
-Ordinary rebuilds start here:
+The sources of record all live in `scripts/`: the seven restored base
+documents (`scripts/<plan>.html`), the completion content
+(`scripts/plans_a.mjs`, `scripts/plans_b.mjs`, `scripts/content_add.mjs`),
+and the FETAT working material (`scripts/fetat_proposal.md`,
+`scripts/fetat_build.rb`, `scripts/fetat_laws.rb`, `scripts/fetat_trace.rb`).
+`convert_content.mjs` is an optional one-time re-importer for the archived
+text sources; run it only when those two original files are available,
+setting `BIZ_LEGACY_SOURCE_DIR` to their directory.
 
-    node scripts/bp_cover.mjs          # front-matter revision (idempotent)
-    node scripts/bp_check.mjs          # independent verification of the outputs
-    node scripts/bp_index.mjs          # regenerate index.html
-    node scripts/bp_print.mjs          # print PDFs via Chromium
+The standing build sequence regenerates every published folder from sources:
 
-`bp_build.mjs` inserts the completion content unconditionally; the committed
-HTML files already carry it, so design-level regeneration runs the four steps
-above (with `BIZ_OUT_DIR` set to the output directory) and leaves
-`bp_build.mjs` for a clean anlage tree.
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_build.mjs   # build the seven from sources
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_cover.mjs   # front-matter revision (idempotent)
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_check.mjs   # independent verification of the outputs
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_print.mjs   # print PDFs via Chromium
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_index.mjs   # regenerate index.html
+    ruby scripts/fetat_build.rb && ruby scripts/fetat_laws.rb  # fetat: build + audit, then print its pdf
+    ruby scripts/laws_audit.rb                                 # every laws.yml law, per plan, explicit verdict
+
+and the published trio is copied from the output directory into the plan
+folders (the folders carry only the trio: html, svg mark where one exists,
+pdf). `bp_check.mjs` output must be read with the same `BIZ_OUT_DIR` as the
+build, or it verifies stale files.
 
 Source defaults to this BIZ directory. Set `BIZ_SOURCE_DIR` when using a
 separate clean source tree. Generated files go to the system temporary directory

@@ -99,7 +99,7 @@ export const PLANS_B = {
 <h3>Behov for ekstern kompetanse</h3>
 <p>Fondet kjøper inn revisjon med verdipapirkompetanse, advokatdekning innen verdipapirrett og MiFID-relaterte spørsmål, custodian-tjenester hos en nordisk storbank, og et uavhengig cybersikkerhets-audit av tradinginfrastrukturen før live kapital settes inn. Finanstilsynet-dialogen støttes av en ekstern compliance-rådgiver med forvaltningsbakgrunn.</p>
 `,
-    logo: {kind: "gradient", text: "NORWEGIAN HEDGE", gradient: "linear-gradient(45deg,  #ff007f,  #00c9ff,  #ffcc00,  #ff007f)", note: "Logo: «NORWEGIAN HEDGE»-ordmerket i pub2-gradienten (#ff007f – #00c9ff – #ffcc00),  her i statisk gjengivelse."},
+    logo: {kind: "gradient", text: "NORWEGIAN HEDGE", gradient: "linear-gradient(45deg, #ff007f, #00c9ff, #ffcc00, #ff007f)", note: "Logo: «NORWEGIAN HEDGE»-ordmerket i pub2-gradienten (#ff007f – #00c9ff – #ffcc00), her i statisk gjengivelse."},
     tech_extra: `
 `,
   },

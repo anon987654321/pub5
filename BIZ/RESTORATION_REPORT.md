@@ -13,7 +13,11 @@
 | govt_bergen | pub4 anlage + Evighetspartiet document + Fetat hefte | full completion + FETAT (nytt barnevern) with the hefte's facts and effect targets + politietaten under loven («Byen vest for loven») + parametrisk arkitektur og Bergen-coin + partiets visjon, verdier, landskapstall, faser og finansiering | yes — «Bergens Selvstyreparti» gradient wordmark from pub2 |
 
 Kept as-is, per the keep-list: pub4's FETAT working master
-(`STUDIO/docs/fetat/proposal.md`, copied unchanged into this bundle).
+(`scripts/fetat_proposal.md`, with `fetat_build.rb`, `fetat_trace.rb` and
+`fetat_laws.rb` beside it in `scripts/`; the published plan folder
+`fetat/` carries only the trio). The plan folders themselves carry only the
+published pair and, where one exists, the svg mark — every editable source
+and all tooling moved to `scripts/` (Johann, 2026-11-07).
 `ai3` is not in the keep-list; its pub3/pub4 copies remain in the archives.
 The retired Python build scripts are kept untouched in `scripts/legacy/`.
 
@@ -58,6 +62,18 @@ operative consequences:
 - **EVIDENCE_SCORING**: arithmetic re-verified from the output files
   (test-pass equivalent), character/placeholder/law scan clean, and this
   report plus the docs are the review record.
+- **Laws audit (November 2026)**: `scripts/laws_audit.rb` walks the whole of
+  `MASTER/data/laws.yml` per plan and gives every law an explicit verdict —
+  PASS with evidence, FAIL with the fix, or N/A with the scope that keeps it
+  out (machinery laws, semantic bokmål reads carried at the reference plan
+  `fetat_laws.rb`). `fetat_laws.rb` reaches all 291 law identities for fetat
+  (113 mechanical/semantic PASS, 178 scoped N/A, FAIL 0); the generic runner
+  reports FAIL 0 across all eight plans. Under the same pass the seven
+  restored bases were swept clean of em dashes, straight-quote and
+  double-space defects, the print canon (`@page 156 × 234 mm, margin
+  0 0 12 mm` + print body padding 18/17/12 mm, folio via
+  `@bottom-center counter(page)`) was imposed, and `text-align: justify`
+  was dropped from every prose rule (ragged right per BRINGHURST).
 
 ## Cover revision — November 2026 (Bringhurst / Strunk & White)
 
@@ -127,8 +143,8 @@ one developer's home directory. The source tree defaults to this BIZ
 folder (`BIZ_SOURCE_DIR` can point at a separate clean source tree); build
 artifacts default to the operating system's temporary directory and can be
 moved with `BIZ_OUT_DIR`. The SYRE mark and Nosifer WOFF2 font are read
-from the existing `syre.html` and `ragnhild.html` files. Chromium and
-Poppler's `pdfinfo` are discovered on the host or selected with
+from the base sources `scripts/syre.html` and `scripts/ragnhild.html`.
+Chromium and Poppler's `pdfinfo` are discovered on the host or selected with
 `BIZ_CHROME_BIN` and `PDFINFO_BIN`.
 
 The original Python content files are not in this repository. The converted
@@ -137,13 +153,16 @@ build does not need the optional one-time converter. When the original data
 files are available elsewhere, `BIZ_LEGACY_SOURCE_DIR` selects their
 directory for `convert_content.mjs`.
 
-    node scripts/bp_cover.mjs          # front-matter revision (idempotent, Bringhurst/S&W)
-    node scripts/bp_check.mjs          # independent verification
-    node scripts/bp_index.mjs          # index.html
-    node scripts/bp_print.mjs          # PDFs via Chromium
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_build.mjs   # build the seven from sources
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_cover.mjs   # front-matter revision (idempotent, Bringhurst/S&W)
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_check.mjs   # independent verification
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_print.mjs   # PDFs via Chromium
+    BIZ_OUT_DIR=/tmp/pub5-good-BIZ node scripts/bp_index.mjs   # index.html
 
-`bp_build.mjs` inserts the completion content unconditionally and is safe only
-against a clean source tree (`BIZ_SOURCE_DIR` pointed at pristine anlage
-files); the committed HTML files already carry the completion content, so the
-standing design-level sequence is `bp_cover.mjs` → `bp_check.mjs` →
-`bp_print.mjs` → `bp_index.mjs` against the built files.
+The base documents and the completion content both live in `scripts/`, so
+the full sequence from sources is ordinary: `bp_build.mjs` merges the
+completion content into the bases and writes the seven documents, the rest
+poise, verify, print and index them — with the same `BIZ_OUT_DIR` on every
+step — and the published trio is copied into the plan folders from there.
+Read `bp_check.mjs` output with the same `BIZ_OUT_DIR` as the build; with no
+`BIZ_OUT_DIR` it verifies the stale default-tmpdir output.
