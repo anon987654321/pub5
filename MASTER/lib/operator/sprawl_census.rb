@@ -64,7 +64,13 @@ module Operator
       "MASTER" => %w[AGENTS.md data/soul.yml data/laws.yml bin/operator bin/check],
       "RAILS" => %w[CLAUDE.md __shared/README.md __shared/design_tokens.yml apps.yml],
       "OPENBSD" => %w[CLAUDE.md PATH_OWNERSHIP.yml data/operator.yml bin/check],
-      "STUDIO" => %w[README.md postpro/postpro.rb replicate/replicate.rb replicate/lora/lora.rb dilla/dilla.rb],
+      # A tree's anchors are files a reader can open today, not the ones an
+      # earlier layout once held. STUDIO's two replicate entries named
+      # replicate/replicate.rb, which never existed on any branch, and
+      # replicate/lora/lora.rb, which the GLM port deleted. Both made
+      # test_base_tree_contracts_are_present fail for a shape the tree had
+      # already left, so the front door is named as it actually stands.
+      "STUDIO" => %w[README.md postpro/postpro.rb replicate/client.rb photograph.rb dilla/dilla.rb],
     }.freeze
 
     # Defined below module_function: a def above it is a private instance

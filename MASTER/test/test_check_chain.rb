@@ -658,7 +658,7 @@ class TestCheckChain < Minitest::Test
   end
 
   def test_generated_paths_are_recognised_in_every_tree_that_has_them
-    %w[STUDIO/replicate/lora/.cache/x.json RAILS/brgen/app/assets/builds/application.css
+    %w[STUDIO/lora/.cache/x.json RAILS/brgen/app/assets/builds/application.css
        RAILS/amber/public/assets/x.js MASTER/Gemfile.lock].each do |path|
       assert_match G::GENERATED, path
     end

@@ -20,4 +20,4 @@ duplicate_members:
 - RAILS/brgen/app/javascript/controllers/application.js | RAILS/bsdports/app/javascript/controllers/application.js
 - RAILS/brgen/db/cable_schema.rb | RAILS/bsdports/db/cable_schema.rb
 - RAILS/brgen/db/cache_schema.rb | RAILS/bsdports/db/cache_schema.rb
-- STUDIO/replicate/lora/johann/lora | STUDIO/replicate/lora/ragnhild/lora
+- STUDIO/lora/johann/lora | STUDIO/lora/ragnhild/lora

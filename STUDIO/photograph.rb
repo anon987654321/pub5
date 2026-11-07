@@ -11,7 +11,7 @@ if $PROGRAM_NAME == __FILE__
   OptionParser.new do |parser|
     parser.on("--film", "also render the short film") { options[:film] = true }
     parser.on("--duration N", Integer, "film duration in seconds") { |value| options[:duration] = value }
-    parser.on("--subject NAME", "subject directory under STUDIO/replicate/lora") { |value| options[:subject] = value }
+    parser.on("--subject NAME", "subject directory under STUDIO/lora") { |value| options[:subject] = value }
     parser.on("--selfie-series", "render a bounded selfie series for --subject") { options[:series] = true }
     parser.on("--count N", Integer, "series length, 1..24") { |value| options[:count] = value }
   end.parse!

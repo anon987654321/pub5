@@ -16,7 +16,7 @@ module Studio
       # ROOT answered the repository root and every path built from it — the
       # Lora subjects, the output-path safety rails — pointed outside the tree.
       ROOT = File.expand_path("..", __dir__)
-      SUBJECTS = File.join(ROOT, "replicate", "lora").freeze
+      SUBJECTS = File.join(ROOT, "lora").freeze
       # The photography craft appended to every still prompt. The first selfie
       # series rendered every scene dead-centre with the subject's head cropped
       # at the frame edge and flat frontal light: the scene words carried light
