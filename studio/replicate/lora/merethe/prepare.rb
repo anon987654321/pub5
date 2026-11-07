@@ -124,6 +124,7 @@ module Studio
       }
 
       if status == "READY_FOR_OPERATOR_REVIEW"
+        world.write(REPORT_PATH, JSON.pretty_generate(report) + "\n", mode: 0o600)
         entries = curated_entries(world:) + additional
         fingerprint = dataset_fingerprint(entries)
         dataset_path = "#{DATASET_ROOT}/#{fingerprint[0, 16]}"
