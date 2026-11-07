@@ -11,8 +11,16 @@ class TestBinMaster < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   MASTER = File.join(ROOT, "bin", "master")
 
+  # bin/master is run as an operator runs it: by its own interpreter with its own
+  # gems. Under `bundle exec` the child inherits GEM_HOME and RUBYOPT from an
+  # ancestor bundle, and its native extensions were built against a different
+  # libruby than the interpreter it is asked to load into: json 2.21.2 died
+  # "linked to incompatible libruby" while the lock pins 2.18.0. That is the
+  # caller's environment leaking into the product under test, not the product.
+  BUNDLER_ENV = { "GEM_HOME" => nil, "GEM_PATH" => nil, "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil }.freeze
+
   def run_master(*args, env: {})
-    Open3.capture2e(env, RbConfig.ruby, MASTER, *args, chdir: ROOT, stdin_data: "")
+    Open3.capture2e(BUNDLER_ENV.merge(env), RbConfig.ruby, MASTER, *args, chdir: ROOT, stdin_data: "")
   end
 
   # `bin/master core` is the fold and nothing else, and bin/dogfood reads its exit
@@ -28,7 +36,12 @@ class TestBinMaster < Minitest::Test
       # Ruby unless the spawn already looks bundler-managed. A real `bundle exec`
       # run has BUNDLE_BIN_PATH set, so the in-process prelude survives; name the
       # same context here or the override below is exec'd out of existence.
-      Open3.capture2e({ "BUNDLE_BIN_PATH" => "1" }, RbConfig.ruby, "-I#{File.join(ROOT, 'lib')}", "-e", script, "--",
+      # `-rbundler/setup` completes that resemblance. Without it this child is
+      # bundler-shaped but not bundler-set-up, so the prelude's `require "master"`
+      # activates the interpreter's default date 3.6.0 and Bundler later refuses
+      # the lockfile pinning 3.5.1 — a harness artefact, not the product's.
+      Open3.capture2e({ "BUNDLE_BIN_PATH" => "1" }, RbConfig.ruby, "-rbundler/setup",
+                      "-I#{File.join(ROOT, 'lib')}", "-e", script, "--",
                       "core", "--root", workspace, "--max-turns", "6", "smoke", chdir: ROOT)
     end
   end

@@ -8,8 +8,15 @@ require "tmpdir"
 class TestMasterStatus < Minitest::Test
   BIN = File.expand_path("../bin/master", __dir__)
 
+  # `bin/master` is a product entrypoint, so it is run the way an operator runs
+  # it: by its own interpreter with its own gems. Under `bundle exec` a child
+  # inherits GEM_HOME and RUBYOPT pointing at a bundle built for another
+  # interpreter, and bin/master died in stdlib `time` before printing anything:
+  # "linked to incompatible libruby", reported here as an empty status line.
+  BUNDLER_ENV = { "GEM_HOME" => nil, "GEM_PATH" => nil, "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil }.freeze
+
   def status_line(lock)
-    out, = Open3.capture2e({ "MASTER_PROCESS_LOCK_PATH" => lock }, RbConfig.ruby, BIN, "--status")
+    out, = Open3.capture2e(BUNDLER_ENV.merge("MASTER_PROCESS_LOCK_PATH" => lock), RbConfig.ruby, BIN, "--status")
     out.lines.grep(/master0:/).last.to_s
   end
 
