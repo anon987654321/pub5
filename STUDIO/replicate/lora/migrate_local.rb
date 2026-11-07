@@ -136,7 +136,7 @@ module Studio
         bytes, error, status = Open3.capture3("git", "-C", source_checkout, "show", revision, binmode: true)
         raise Error, "could not recover #{source_path} from local pub4 history: #{error.strip}" unless status.success?
 
-        actual_sha = Digest::SHA1.hexdigest("blob #{bytes.bytesize}\\0".b + bytes)
+        actual_sha = Digest::SHA1.hexdigest("blob #{bytes.bytesize}\0".b + bytes)
         raise Error, "historical image hash mismatch for #{filename}" unless actual_sha == expected_sha
 
         { relative: File.join("sources", "archive", filename), bytes: bytes.bytesize, history_bytes: bytes }
