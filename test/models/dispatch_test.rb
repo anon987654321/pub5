@@ -94,6 +94,21 @@ class DispatchTest < Minitest::Test
     end
   end
 
+  def test_openai_compatible_vision_models_use_data_url_content
+    sandbox do |root|
+      d = dispatch(root)
+      png = "\x89PNG\r\n\x1a\n".b + "fixture"
+      image = { media_type: "image/png", data: Base64.strict_encode64(png) }
+
+      assert d.send(:image_lane?, "google/gemini-2.5-flash")
+      content = d.send(:image_content, "google/gemini-2.5-flash", "Inspect this.", image)
+
+      assert_equal "text", content.first.fetch(:type)
+      assert_equal "image_url", content.last.fetch(:type)
+      assert_equal "data:image/png;base64,#{image.fetch(:data)}", content.last.dig(:image_url, :url)
+    end
+  end
+
   def test_browser_images_reject_non_png_payloads
     sandbox do |root|
       d = dispatch(root, env: { "ANTHROPIC_API_KEY" => "key" })
