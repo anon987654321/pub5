@@ -439,6 +439,25 @@ class TestDependencyManager < Minitest::Test
     end
   end
 
+  # The law-file preflight runs one minitest file in deploy-bundle mode: with
+  # the default exclusion it died on Kernel#gem("minitest") on vm23 2026-11-08
+  # and vps-deploy refused at preflight-boot. A test boot names its needs, and
+  # only :test is kept; development tooling stays out either way.
+  def test_a_test_boot_keeps_the_test_group_in_deploy_bundle_mode
+    with_deploy_bundle do |dir|
+      manager = fake_manager([[true, "The Gemfile's dependencies are satisfied", ""]])
+      manager.ensure!
+
+      assert_equal "development:test", manager.send(:bundle_env)["BUNDLE_WITHOUT"],
+                   "a runtime boot keeps the default deploy exclusion"
+
+      test_env = manager.send(:bundle_env, without: "development")
+      assert_equal "development", test_env["BUNDLE_WITHOUT"],
+                   "the test boot keeps :test so minitest is part of the bundle"
+      assert_equal dir, test_env["BUNDLE_PATH"], "the deploy bundle is still the read-only source"
+    end
+  end
+
   def test_an_unsatisfied_deploy_bundle_the_user_cannot_write_fails_loudly_without_installing
     with_deploy_bundle do |dir|
       manager = fake_manager([[false, "", "Could not find ferrum-0.17.1 in locally installed gems"]])

@@ -61,7 +61,12 @@ test_result = test_boot.ensure!
 unless test_result.ok
   abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
 end
-test_boot.activate_environment!
+# A test boot keeps the :test group even in deploy-bundle mode: this run IS
+# the test, the law-file preflight needs minitest, and without the group the
+# Kernel#gem activation below dies with "minitest is not part of the bundle"
+# on the deploy host exactly once a deploy bundle exists (measured on vm23
+# 2026-11-08, deploy refused at preflight-boot).
+test_boot.activate_environment!(without: "development")
 require "bundler/setup"
 
 if ENV["COVERAGE"] == "1"

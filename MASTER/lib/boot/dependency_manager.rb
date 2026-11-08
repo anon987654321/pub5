@@ -227,8 +227,12 @@ module Master
       # current process before requiring bundler/setup. Without this, a standalone
       # bin/master can validate one bundle context and activate another, producing the
       # misleading "git source is not yet checked out" error after a successful install.
-      def activate_environment!
-        bundle_env.each do |key, value|
+      # A test boot keeps the :test group: running the test suite is the boot's
+      # purpose, and the law-file preflight on the deploy host requires minitest
+      # from it. A deploy bundle still excludes tooling groups by default, but
+      # the exclusion is a parameter now, not an unconditional truth.
+      def activate_environment!(without: nil)
+        bundle_env(without:).each do |key, value|
           if value.nil?
             @env.delete(key)
           else
@@ -579,7 +583,7 @@ module Master
         @command_path.call("gem")
       end
 
-      def bundle_env
+      def bundle_env(without: nil)
         bundle_gem_home = File.join(bundle_config_root, "gems")
         default_gem_path = Gem.default_dir
         ruby_bin = File.dirname(RbConfig.ruby)
@@ -616,15 +620,19 @@ module Master
           "BUNDLE_DISABLE_SHARED_GEMS" => "1",
           "BUNDLE_FROZEN" => "true",
         )
-        without = @env["BUNDLE_WITHOUT"].to_s
+        without = without.to_s unless without.nil?
+        without = @env["BUNDLE_WITHOUT"].to_s if without.nil? || without.empty?
         without = "tts" if without.empty? && @env["MASTER_SKIP_TTS"] == "1"
         env["BUNDLE_WITHOUT"] = without unless without.empty?
-        deploy_bundle_env(env)
+        deploy_bundle_env(env, without:)
       end
 
       # The deploy bundle is installed without the development and test groups
-      # and is only ever read.
-      def deploy_bundle_env(env)
+      # and is only ever read. A caller may keep a group it deliberately needs
+      # (the test boot keeps :test for minitest); its gems must exist in the
+      # bundle or the law-file preflight fails naming them, which is the honest
+      # error an absent harness deserves.
+      def deploy_bundle_env(env, without: nil)
         return env unless @deploy_bundle
 
         env.merge!(
@@ -635,6 +643,7 @@ module Master
           "GEM_PATH" => nil,
         )
         env["BUNDLE_WITHOUT"] ||= "development:test"
+        env["BUNDLE_WITHOUT"] = without if without && !without.empty?
         env
       end
 
