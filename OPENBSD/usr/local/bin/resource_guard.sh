@@ -114,13 +114,129 @@ LOAD_RESTORE=2.0
 MEM_WARN=8
 MEM_RESTORE=10
 
+# All decimal comparisons and field reads below are pure ksh: the same
+# hundredths-scaling arithmetic pub5-alert uses for its own load compare.
+# No awk, no sed, no head, no tail (SHELL_DISCIPLINE), and one fewer fork per
+# comparison on a box that runs this from cron every five minutes.
+hundredths() {
+  typeset v=$1 ip fp
+  ip=${v%%.*}
+  case $v in
+  *.*) fp=${v#*.} ;;
+  *) fp=0 ;;
+  esac
+  case $ip in
+  '' | *[!0-9]*) print -r -- "" ; return 0 ;;
+  esac
+  case $fp in
+  *[!0-9]*) print -r -- "" ; return 0 ;;
+  esac
+  while (( ${#fp} > 2 )); do fp=${fp%?}; done
+  case $fp in
+  '') fp=0 ;;
+  ?) fp=${fp}0 ;;
+  esac
+  print -r -- $(( ip * 100 + 10#$fp ))
+}
+
+# at_least a b: zero when decimal a >= decimal b. Unreadable input is a
+# non-zero status, so every caller keeps the fail-safe direction it had.
+at_least() {
+  typeset a b
+  a=$(hundredths "$1")
+  b=$(hundredths "$2")
+  [[ -n $a && -n $b ]] || return 1
+  (( a >= b ))
+}
+
+# mb_of "383M" -> 383; reads the K/M/G shapes top(1) prints and floors, the
+# way the awk printf "%d" it replaced did.
+mb_of() {
+  typeset v=$1 num h
+  num=${v%%[KMG]*}
+  h=$(hundredths "$num")
+  case $h in
+  '' | *[!0-9]*) print -r -- 0 ; return 0 ;;
+  esac
+  case $v in
+  *G*) print -r -- $(( h * 1024 / 100 )) ;;
+  *K*) print -r -- $(( h / 102400 )) ;;
+  *) print -r -- $(( h / 100 )) ;;
+  esac
+}
+
+# The vmstat floor, one counter each: the first line ending in the phrase,
+# first field, exactly what the anchored awk matches read.
+vmstat_pages() {
+  vmstat -s | while IFS= read -r l; do
+    case $l in
+    *" pages managed") set -- $l ; print -r -- "${1:-}" ; break ;;
+    esac
+  done
+}
+
+vmstat_free() {
+  vmstat -s | while IFS= read -r l; do
+    case $l in
+    *" pages free") set -- $l ; print -r -- "${1:-}" ; break ;;
+    esac
+  done
+}
+
+# Kilobytes of resident memory one daemon user owns; 0 when ps finds none.
+sum_rss() {
+  ps -o rss= -U "$1" 2>/dev/null | {
+    typeset s=0 tok
+    while read -r tok; do
+      case $tok in
+      '' | *[!0-9]*) continue ;;
+      esac
+      s=$(( s + tok ))
+    done
+    print -r -- "$s"
+  }
+}
+
+# Read top(1)'s Memory line the way the awk block did: Free + Cache in MB.
+# No Memory line at all prints empty, which sends the caller to the vmstat
+# floor; a Memory line that changed shape prints 0, which sheds, as before.
+#
+# OpenBSD ksh will not parse a case/esac inside a $( ) group, so every case
+# below lives in a named function body and the substitutions only call them.
+memory_line() {
+  top -b -n 1 2>/dev/null | while IFS= read -r l; do
+    case $l in
+    Memory:*) print -r -- "$l" ; break ;;
+    esac
+  done
+}
+
+top_avail_mb() {
+  typeset mem_line tok prev f="" c=""
+  mem_line=$(memory_line)
+  [[ -n $mem_line ]] || { print -r -- "" ; return 0; }
+  set -f
+  set -- $mem_line
+  set +f
+  prev=""
+  for tok in "$@"; do
+    case $prev in
+    Free:) f=$tok ;;
+    Cache:) c=$tok ;;
+    esac
+    prev=$tok
+  done
+  print -r -- $(( $(mb_of "${f:-0M}") + $(mb_of "${c:-0M}") ))
+}
+
 # Field 2 is the 5-minute average. Shedding a site is expensive and reversible
 # only on the next tick, so this guard reads the smoothed figure and not the
 # 1-minute one core-reclaim.sh reads for its own, opposite question. The two
 # have to disagree, so the scripts that read the load share no library; a shared
 # file also means one more root-owned install target, since root sources only
 # root-owned absolute paths.
-load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')
+set -- $(sysctl -n vm.loadavg 2>/dev/null)
+load=${2:-}
 # Failing toward 9.9 sheds. A guard that cannot read the load must assume the
 # worst; assuming the best would disarm it exactly when sysctl is the thing
 # struggling.
@@ -130,28 +246,14 @@ load=${load:-9.9}
 # top's Memory line: "Memory: Real: 273M/578M act/tot Free: 383M Cache: 192M Swap: 562M/1264M"
 mem_avail_pct=100
 total_mb=$(( $(sysctl -n hw.physmem 2>/dev/null || echo 0) / 1048576 ))
-avail_mb=$(top -b -n 1 2>/dev/null | awk '
-  function mb(v) {
-    n = v + 0
-    if (v ~ /G/) { return n * 1024 }
-    if (v ~ /K/) { return n / 1024 }
-    return n
-  }
-  /^Memory:/ {
-    for (i = 1; i <= NF; i++) {
-      if ($i == "Free:")  { f = mb($(i+1)) }
-      if ($i == "Cache:") { c = mb($(i+1)) }
-    }
-    printf "%d", f + c
-    exit
-  }')
+avail_mb=$(top_avail_mb)
 if [[ -n $avail_mb && $total_mb -gt 0 ]]; then
   mem_avail_pct=$(( avail_mb * 100 / total_mb ))
 else
   # Fallback if top output changes shape: vmstat free pages (undercounts by
   # the buffer cache, so only trust it as a floor, never for restore).
-  pages=$(vmstat -s | awk '/pages managed/{print $1}')
-  free=$(vmstat -s | awk '/pages free$/{print $1}')
+  pages=$(vmstat_pages)
+  free=$(vmstat_free)
   if [[ -n $pages && -n $free && $pages -gt 0 ]]; then
     mem_avail_pct=$(( free * 100 / pages ))
   else
@@ -190,7 +292,7 @@ else
 fi
 
 shed=0
-if awk -v l="$load" -v w="$LOAD_WARN" 'BEGIN{exit !(l>=w)}'; then shed=1; fi
+if at_least "$load" "$LOAD_WARN"; then shed=1; fi
 if [[ $mem_avail_pct -lt $MEM_WARN ]]; then shed=1; fi
 
 # A deploy is load this box was told to make. rc.d/{master,amber,brgen,bsdports}
@@ -236,7 +338,7 @@ done
 # work, not an orphan; a flag past DEPLOY_FLAG_MAX_AGE means it may be one.
 if [[ $helper_loaded -eq 1 ]]; then
   if [[ $deploying -eq 1 ]]; then
-    awk -v l="$load" 'BEGIN{exit !(l>=4.0)}' \
+    at_least "$load" "4.0" \
       && logger -t resource-guard "stale-ci cleanup skipped: deploy in progress (load=$load)"
   else
     stale_ci_cleanup "$load" "$mem_avail_pct"
@@ -265,7 +367,7 @@ fi
 rss=""
 for app in $CORE $OPTIONAL; do
   # A shed app has no processes and ps exits 1; that is 0M, not a reason to end the tick.
-  kb=$(ps -o rss= -U "$app" 2>/dev/null | awk '{ s += $1 } END { printf "%d", s }') || kb=0
+  kb=$(sum_rss "$app") || kb=0
   rss="$rss rss_$app=$(( ${kb:-0} / 1024 ))M"
 done
 # The tick's line is written once the tick has decided, not before. It used to
@@ -349,7 +451,7 @@ log_tick
 # still enabled in rc.d are restored, so deliberately disabled services
 # (e.g. decommissioned services) stay down.
 if [[ $shed -eq 0 && -s $SHED_STATE && $mem_avail_pct -ge $MEM_RESTORE ]]; then
-  if awk -v l="$load" -v r="$LOAD_RESTORE" 'BEGIN{exit !(l<r)}'; then
+  if ! at_least "$load" "$LOAD_RESTORE"; then
     restored=""
     for svc in $(cat "$SHED_STATE"); do
       if ! rcctl get "$svc" status >/dev/null 2>&1; then
@@ -375,7 +477,7 @@ fi
 
 crit=$LOAD_CRIT
 [[ $deploying -eq 1 ]] && crit=$DEPLOY_LOAD_CRIT
-if awk -v l="$load" -v c="$crit" 'BEGIN{exit !(l>=c)}'; then
+if at_least "$load" "$crit"; then
   logger -t resource-guard "crit load=$load - running emergency_cpu"
   if [[ -x $EMERGENCY ]]; then
     ksh $EMERGENCY 2>&1 | logger -t resource-guard

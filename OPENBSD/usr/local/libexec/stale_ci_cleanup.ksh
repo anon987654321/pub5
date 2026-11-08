@@ -1,6 +1,10 @@
 #!/bin/ksh
 # Kill orphaned CI/scan workers when vm23 is saturated. Sourced by resource_guard.sh.
 # Safe-ish: skips falcon/rc.d parents; targets test/seed/ci/cli patterns only.
+#
+# The load compare uses the sourcing guard's at_least: this file is a sourced
+# fragment of the guard, not a standalone tool, and the two deliberately share
+# no separate library file (one fewer root-owned install target).
 
 
 # No shell options here. resource_guard.sh dot-sources this file, so a top-level
@@ -12,7 +16,7 @@ stale_ci_cleanup() {
   typeset mem_avail=${2:-100}
   typeset STALE_LOAD=4.0
 
-  awk -v l="$load" -v t="$STALE_LOAD" 'BEGIN{exit !(l>=t)}' || return 0
+  at_least "$load" "$STALE_LOAD" || return 0
 
   logger -t resource-guard "stale-ci cleanup load=$load mem_avail=${mem_avail}%"
 
