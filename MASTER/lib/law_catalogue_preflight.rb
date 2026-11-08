@@ -120,7 +120,9 @@ module Master
       errors << "law_catalogue.defaults must be a mapping" unless defaults_valid
       defaults = {} unless defaults_valid
 
-      allowed_severities = %w[info warn warning error critical veto]
+      # One severity vocabulary owns membership: laws.yml#SEVERITY_VOCABULARY.
+      # warn is its declared typo, not an accepted seventh value.
+      allowed_severities = %w[info warning error critical veto]
       allowed_modes = %w[violation opportunity]
       allowed_lifecycles = %w[proposed proven active observed trusted advisory retired]
       allowed_autofix = %w[never review automatic]
@@ -129,14 +131,17 @@ module Master
       if !default_severity.nil? && !allowed_severities.include?(default_severity.to_s)
         errors << "law_catalogue.defaults has invalid severity #{default_severity.inspect}"
       end
+
       default_mode = defaults["mode"]
       if !default_mode.nil? && !allowed_modes.include?(default_mode.to_s)
         errors << "law_catalogue.defaults has invalid mode #{default_mode.inspect}"
       end
+
       default_lifecycle = defaults["lifecycle"]
       if !default_lifecycle.nil? && !allowed_lifecycles.include?(default_lifecycle.to_s)
         errors << "law_catalogue.defaults has invalid lifecycle #{default_lifecycle.inspect}"
       end
+
       default_autofix = defaults["autofix"]
       if !default_autofix.nil? && !allowed_autofix.include?(default_autofix.to_s)
         errors << "law_catalogue.defaults has invalid autofix policy #{default_autofix.inspect}"

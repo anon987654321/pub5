@@ -1,7 +1,9 @@
 # laws.yml - operative law, flat, ordered by importance.
 #
-# Every top-level key is a Law or its child, except the reserved
-# law_catalogue execution-policy block at the end of this file.
+# Top-level statement rows own Law identities and requirement texts. The
+# reserved law_catalogue block at the end owns per-Law execution policy
+# for every entry; an entry with no statement row above carries its
+# requirement in the Ruby its definition_sources name.
 #
 # Order runs from most important to least:
 #   1. The axiom that makes the pipeline exist.
@@ -2278,7 +2280,7 @@ law_catalogue:
   entries:
     A_FINDING_IS_A_HYPOTHESIS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     ABC_SIZE:
       definition_sources: [MASTER/law/ruby.rb]
       severity: warning
@@ -2317,13 +2319,13 @@ law_catalogue:
       definition_sources: [MASTER/law/surface.rb]
       severity: warning
       languages: [html]
-    # Retired 2026-10-31 by the operator: tracking is for logos and big display
-    # type, not for every uppercase rule in a stylesheet. It also fought
-    # NO_EYEBROW_LABEL, which flags the small tracked caps this one demanded.
     ALIGNMENT_NEAR_MISS:
       definition_sources: [MASTER/law/rendered.rb]
       severity: error
       languages: [json]
+    # Retired 2026-10-31 by the operator: tracking is for logos and big display
+    # type, not for every uppercase rule in a stylesheet. It also fought
+    # NO_EYEBROW_LABEL, which flags the small tracked caps this one demanded.
     ALL_CAPS_NO_TRACKING:
       definition_sources: [MASTER/law/cosmetic.rb]
       severity: info
@@ -2343,7 +2345,7 @@ law_catalogue:
       languages: [html]
     ARIA_INTERACTIVE:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     ARIA_LABELS:
       definition_sources: [MASTER/law/web.rb]
@@ -2358,7 +2360,7 @@ law_catalogue:
       severity: warning
     ASYNC_AWAIT:
       definition_sources: [MASTER/law/javascript.rb]
-      severity: warn
+      severity: warning
       languages: [javascript]
     ASYNC_STATUS:
       definition_sources: [MASTER/law/web.rb]
@@ -2392,7 +2394,7 @@ law_catalogue:
       autofix: never
     BARE_DIV_WRAPPER:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
       # Same reason as META_CHARSET: bad_brgen_home.html is a bare-div document
       # written to be caught, and grading it grades the test data.
@@ -2403,7 +2405,7 @@ law_catalogue:
       mode: opportunity
     BE_CONCISE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     BEAUTIFUL_CODE:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -2411,7 +2413,7 @@ law_catalogue:
       lifecycle: advisory
     BEM_IN_VIEWS:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     BIG_TENT:
       definition_sources: [MASTER/law/universal.rb]
@@ -2420,7 +2422,7 @@ law_catalogue:
       lifecycle: advisory
     BLANK_LINE_RUN:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     BOOLEAN_TRAP:
       definition_sources: [MASTER/law/structural_questions.rb]
@@ -2443,7 +2445,7 @@ law_catalogue:
       languages: [html]
     BUTTON_OVER_ANCHOR:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     CACHE_LLM:
       definition_sources: [MASTER/law/universal.rb]
@@ -2488,14 +2490,14 @@ law_catalogue:
       languages: [json]
     CINEMA_PALETTE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     CLAMP_TYPOGRAPHY:
       definition_sources: [MASTER/law/css.rb]
       severity: info
       languages: [css, scss]
     CLASS_RESTATES_TAG:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     CLI_ANALYZE_TARGET_ROUTING:
       definition_sources: [MASTER/law/interface.rb]
@@ -2528,7 +2530,7 @@ law_catalogue:
       languages: [ruby, javascript]
     COLLAPSE_BEFORE_ADDING:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     COLOR_NEAR_DUPLICATE:
       definition_sources: [MASTER/law/rendered.rb]
       severity: warning
@@ -2574,10 +2576,10 @@ law_catalogue:
       severity: warning
     CONFIGURATION_AS_CODE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     CONFIGURATION_SHAPE:
       definition_sources: [MASTER/law/recovered_design_semantics.rb]
-      severity: warn
+      severity: warning
       mode: opportunity
       languages: [json, yaml]
     CONSECUTIVE_BLANK_LINES:
@@ -2624,7 +2626,7 @@ law_catalogue:
       severity: warning
     COUNCIL_WHEN_RISKY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     COUPLER_SMELLS:
       definition_sources: [MASTER/law/structural_questions.rb]
       severity: warning
@@ -2647,7 +2649,7 @@ law_catalogue:
       languages: [json]
     CURSOR_NONE_REQUIRES_CURSOR:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
     CYCLOMATIC_COMPLEXITY:
       definition_sources: [MASTER/law/structural.rb]
       severity: warning
@@ -2680,7 +2682,7 @@ law_catalogue:
       severity: warning
     DEEP_SCAN_ONLY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     DEFENSIVE_INPUT:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -2706,7 +2708,7 @@ law_catalogue:
       severity: info
     DEVICE_LIMITS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     DIALECT_CONTRAST_PARITY:
       definition_sources: [MASTER/law/brand.rb]
       severity: warning
@@ -2725,7 +2727,7 @@ law_catalogue:
       languages: [ruby]
     DIVERGED_BRANCH_SYNC:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     DIVERGENT_CHANGE:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -2734,7 +2736,7 @@ law_catalogue:
       severity: error
     DOLLAR_PAREN:
       definition_sources: [MASTER/law/shell.rb]
-      severity: warn
+      severity: warning
       languages: [zsh]
     DOMAIN_LANGUAGE:
       definition_sources: [MASTER/law/universal.rb]
@@ -2763,7 +2765,7 @@ law_catalogue:
       severity: info
     EACH_WITH_OBJECT:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     ECONOMY_OF_MECHANISM:
       definition_sources: [MASTER/law/universal.rb]
@@ -2789,7 +2791,7 @@ law_catalogue:
       languages: [markdown, yaml, html]
     ENGINEERING_FIT:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     ENTROPY_RESISTANCE:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -2816,16 +2818,16 @@ law_catalogue:
       severity: warning
     EXECUTE_NOT_INSTRUCT:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     EXEMPTIONS_EXPIRE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     EXPLICIT:
       definition_sources: [MASTER/law/structural.rb]
       severity: warning
     EXPLICIT_HTTP_TIMEOUT:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
       # The shared boundary already enforces this for everything routed through
       # it; a finding here names a call that bypassed it.
@@ -2883,7 +2885,7 @@ law_catalogue:
       languages: [ruby]
     FILTER_MAP:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     FINAL_NEWLINE:
       definition_sources: [MASTER/law/cosmetic.rb]
@@ -2904,14 +2906,14 @@ law_catalogue:
       languages: [json]
     FLAT_HIERARCHY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     FLAT_PIXELS:
       definition_sources: [MASTER/law/surface.rb]
-      severity: warn
+      severity: warning
       autofix: automatic
     FLAT_UI:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     FLEXIBILITY_EFFICIENCY:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -2945,11 +2947,11 @@ law_catalogue:
       languages: [ruby]
     FROZEN_STRING_LITERAL:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     FULL_BY_DEFAULT:
       definition_sources: [MASTER/law/universal.rb]
-      severity: warn
+      severity: warning
     FUNCTIONAL_CORE:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -2967,7 +2969,7 @@ law_catalogue:
       languages: [html, css, scss, javascript]
     GIT_COMMITS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     GRACEFUL_BOUNDARIES:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -3024,10 +3026,10 @@ law_catalogue:
       languages: [ruby]
     HOSTILE_AUDIT:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     HTML_CSS_STYLE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     HTML_HEADING_HIERARCHY:
       definition_sources: [MASTER/law/recovered_design_semantics.rb]
       severity: warning
@@ -3046,7 +3048,7 @@ law_catalogue:
       severity: warning
     I18N_COVERAGE:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     ICON_CARRIES_WORD:
       definition_sources: [MASTER/law/html.rb]
@@ -3070,7 +3072,7 @@ law_catalogue:
       languages: [ruby]
     IMPORTANCE_ORDER:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     INAPPROPRIATE_INTIMACY:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -3122,7 +3124,7 @@ law_catalogue:
       languages: [css, scss]
     INVERTED_PYRAMID:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     JS_MODULE_SIZE:
       definition_sources: [MASTER/law/javascript.rb]
       severity: warning
@@ -3185,7 +3187,7 @@ law_catalogue:
       languages: [json]
     LINT_BEAUTIFY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     LISKOV:
       definition_sources: [MASTER/law/structural.rb]
       severity: warning
@@ -3219,7 +3221,7 @@ law_catalogue:
       severity: info
     MASTER_PROMPT_AESTHETIC:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     MATCH_REAL_WORLD:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -3236,7 +3238,7 @@ law_catalogue:
       languages: [css, scss]
     MERGE_BEFORE_MULTIPLY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     META_CHARSET:
       definition_sources: [MASTER/law/html.rb]
       severity: error
@@ -3248,10 +3250,10 @@ law_catalogue:
       path_exclude: '/checks/fixtures/'
     META_FRAMING:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     MICRO_REFINEMENTS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     MIDDLE_MAN:
       definition_sources: [MASTER/law/structural.rb]
       severity: info
@@ -3261,7 +3263,7 @@ law_catalogue:
       languages: [ruby]
     MIGRATION_FIND_OR_CREATE_BY:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     MIGRATION_NOT_NULL_NO_DEFAULT:
       definition_sources: [MASTER/law/ruby.rb]
@@ -3276,14 +3278,14 @@ law_catalogue:
       severity: error
     MIRROR_EXPERTISE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     MOBILE_ACCESSIBILITY_DEFAULTS:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
       mode: opportunity
     MOBILE_FIRST:
       definition_sources: [MASTER/law/css.rb]
-      severity: warn
+      severity: warning
       languages: [css, scss]
     MOBILE_VIEWPORT:
       definition_sources: [MASTER/law/css.rb]
@@ -3300,7 +3302,7 @@ law_catalogue:
       languages: [ruby]
     MONKEY_PATCH_CORE:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
       path_exclude: '/test/'
     MONOLITH_FIRST:
@@ -3312,7 +3314,7 @@ law_catalogue:
       languages: [css, scss]
     MOTION_COLOR_GRADING:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     MUTED_INK_FROM_GROUND:
       definition_sources: [MASTER/law/rendered.rb]
       severity: warning
@@ -3368,23 +3370,23 @@ law_catalogue:
       autofix: automatic
     NO_ASCII_DECORATION:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     NO_ASCII_LINE_ART:
       definition_sources: [MASTER/law/lexical.rb]
       severity: warning
       autofix: automatic
     NO_CHANGELOG_COMMENT:
       definition_sources: [MASTER/law/universal.rb]
-      severity: warn
+      severity: warning
     NO_COLUMN_ALIGN:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
     NO_CONSECUTIVE_BLANK_LINES:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     NO_DEAD_ENDS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     NO_DEBUG:
       definition_sources: [MASTER/law/lexical.rb]
       severity: error
@@ -3413,7 +3415,7 @@ law_catalogue:
       languages: [json]
     NO_FILLER:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     NO_FLAG_ARGUMENTS:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
@@ -3426,7 +3428,7 @@ law_catalogue:
       severity: error
     NO_IMPORT_SCSS:
       definition_sources: [MASTER/law/css.rb]
-      severity: warn
+      severity: warning
       languages: [scss]
     NO_IMPORTANT:
       definition_sources: [MASTER/law/web.rb]
@@ -3440,11 +3442,11 @@ law_catalogue:
       path_exclude: '/law/fix_hygiene\.rb\z'
     NO_INLINE_ASSETS_IN_SHELL:
       definition_sources: [MASTER/law/shell.rb]
-      severity: warn
+      severity: warning
       languages: [zsh]
     NO_INLINE_SCRIPT_BLOCK:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
       # Two pages that cannot reach an asset pipeline, which is the only reason this
       # rule yields.
@@ -3484,7 +3486,7 @@ law_catalogue:
         - '/app/views/chat/index\.html\.erb\z'
     NO_INLINE_STYLES:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
       # A static error page renders when Rails is not answering, so it cannot
       # reach the asset pipeline: no stylesheet_link_tag, no digested URL, nothing
@@ -3493,7 +3495,7 @@ law_catalogue:
       path_exclude: '/public/\d{3}\.html\z'
     NO_JQUERY:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [javascript, html]
     NON_TEXT_CONTRAST:
       definition_sources: [MASTER/law/rendered.rb]
@@ -3584,14 +3586,14 @@ law_catalogue:
       languages: [html]
     NO_LONG_TRANSITION:
       definition_sources: [MASTER/law/css.rb]
-      severity: warn
+      severity: warning
       languages: [css, scss]
     NO_MAGIC:
       definition_sources: [MASTER/law/universal.rb]
       severity: warning
     NO_MULTIPLE_LANGUAGES:
       definition_sources: [MASTER/law/css.rb]
-      severity: warn
+      severity: warning
       languages: [ruby, javascript, css, scss, zsh]
       # Three places where speaking a second language is the job rather than the
       # defect, and the rule is about a document mixing them - the shape
@@ -3609,10 +3611,10 @@ law_catalogue:
       path_exclude: '/(?:knowledge_store|catalog_index)\.rb\z|/memory/search\.rb\z|/db/migrate/'
     NO_NEW_FILES:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     NO_NEW_DOCUMENTS:
       definition_sources: [MASTER/law/meta.rb]
-      severity: warn
+      severity: warning
     NO_ONE_PARADIGM:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -3690,7 +3692,7 @@ law_catalogue:
       path_exclude: '/test/|/fixtures/'
     NORWEGIAN_COPY_BOKMAL:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
     NULL_BLINDNESS:
       definition_sources: [MASTER/law/universal.rb]
       severity: error
@@ -3734,10 +3736,10 @@ law_catalogue:
       languages: [ruby]
     OPERATOR_AUTONOMY:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     OPTIONAL_CHAINING:
       definition_sources: [MASTER/law/javascript.rb]
-      severity: warn
+      severity: warning
       languages: [javascript]
       path_exclude: '/public/three\.module\.js\z'
     OPTIONAL_CHAINING_JS:
@@ -3750,7 +3752,7 @@ law_catalogue:
       severity: warning
     PAPER_NOT_PURE_WHITE:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
       # Brand-export trees only. The four RAILS apps paint #ffffff as their
       # measured light-mode ground (RAILS/__shared dialect tokens) and mailer
       # HTML needs literals; both are deliberate, not drift.
@@ -3763,7 +3765,7 @@ law_catalogue:
       languages: [ruby]
     PARAMETRIC_MARK_ONLY:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
       # Brand-export trees only: app icon partials and the marketplace animated
       # logo carry long hand-tuned paths that are artwork, not brand marks.
     PARAMS_EXPECT_STRENGTHENED:
@@ -3825,7 +3827,7 @@ law_catalogue:
       severity: info
     PREEMPT_FOLLOWUP:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     PREFER_TAG_HELPERS:
       definition_sources: [MASTER/law/web.rb]
       severity: info
@@ -3833,7 +3835,7 @@ law_catalogue:
       languages: [html]
     PRESENTATIONAL_CLASS_NAME:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     PRESERVE_FIRST:
       definition_sources: [MASTER/law/practice.rb]
@@ -3848,7 +3850,7 @@ law_catalogue:
       autofix: never
     PROBE_BEFORE_SHIP:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     PROGRAMMER_HAPPINESS:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -3875,11 +3877,11 @@ law_catalogue:
       languages: [yaml, html]
     PROSE_OMIT_QUALIFIERS:
       definition_sources: [MASTER/law/prose.rb]
-      severity: warn
+      severity: warning
       languages: [markdown, ruby]
     PROSE_OMIT_QUALIFIERS_NB:
       definition_sources: [MASTER/law/prose.rb]
-      severity: warn
+      severity: warning
       languages: [yaml, html]
       # Bokmål reaches translation values and BIZ HTML only. Scoped there, `bare` is Norwegian.
     PROSE_ONE_TOPIC_PARAGRAPH:
@@ -3993,7 +3995,7 @@ law_catalogue:
       severity: info
     REGISTER_STABLE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     RENDERED_VALUES:
       definition_sources: [MASTER/law/universal.rb]
       severity: error
@@ -4010,7 +4012,7 @@ law_catalogue:
       languages: [ruby]
     RESTART_RAILS:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     REVERSIBILITY:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -4021,7 +4023,7 @@ law_catalogue:
       autofix: never
     RTFM_FIRST:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     rubocop:
       definition_sources: [MASTER/law/linters.rb]
       severity: warning
@@ -4031,7 +4033,7 @@ law_catalogue:
       languages: [ruby]
     RUBY_CAMEL_CLASS:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     RUBY_NUMERIC_UNDERSCORE:
       definition_sources: [MASTER/law/ruby.rb]
@@ -4043,7 +4045,7 @@ law_catalogue:
       languages: [ruby]
     RUBY_SNAKE_METHODS:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     RUBY_SYMBOL_TO_PROC:
       definition_sources: [MASTER/law/ruby.rb]
@@ -4060,11 +4062,11 @@ law_catalogue:
       languages: [markdown]
     SAFE_NAVIGATION:
       definition_sources: [MASTER/law/ruby.rb]
-      severity: warn
+      severity: warning
       languages: [ruby]
     SCAN_SWEEP_CONVERGENCE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     SCOPED_CSS:
       definition_sources: [MASTER/law/css.rb]
       severity: info
@@ -4091,7 +4093,7 @@ law_catalogue:
       severity: warning
     SEMANTIC_ELEMENTS:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     SHARP_KNIVES:
       definition_sources: [MASTER/law/universal.rb]
@@ -4100,14 +4102,14 @@ law_catalogue:
       lifecycle: advisory
     SHELL_DISCIPLINE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     SIGNAL_COLOR_IS_SEMANTIC:
       definition_sources: [MASTER/law/css.rb]
-      severity: warn
+      severity: warning
       languages: [css, scss]
     SIGNAL_COLOR_NAMING:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
       # Brand-export trees only. --accent is the canonical token of the RAILS
       # one-scheme (RAILS/__shared/app/assets/stylesheets/_dialect_tokens.scss);
       # this law governs ad-hoc brand palettes, not that scheme.
@@ -4151,7 +4153,7 @@ law_catalogue:
       autofix: never
     SKIP_TO_MAIN:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
       path_exclude: 'mailer'
     SMALL_FILES:
@@ -4219,10 +4221,10 @@ law_catalogue:
       severity: warning
     STRUNK_WHITE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     STYLE:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     STYLE_FOLLOWS_STRUCTURE:
       definition_sources: [MASTER/law/recovered_design_semantics.rb]
       severity: info
@@ -4233,7 +4235,7 @@ law_catalogue:
       severity: warning
     SURFACE_ERRORS_FIRST:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     SYSTEM_STATUS:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -4261,7 +4263,7 @@ law_catalogue:
       languages: [json]
     TEMPLATE_LITERALS:
       definition_sources: [MASTER/law/javascript.rb]
-      severity: warn
+      severity: warning
       languages: [javascript]
       path_exclude: '/public/three\.module\.js\z'
     TEMPORAL_COUPLING:
@@ -4335,14 +4337,14 @@ law_catalogue:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
       autofix: automatic
-    # Retired 2026-10-30: it measured source lines (100 chars) in Markdown and HTML,
-    # where a paragraph is one line by convention and source width is not what a
-    # reader sees; measure lives in CSS, which MEASURE_OPTIMUM judges. 2,600+
-    # findings, and its automatic fix would have hard-wrapped prose.
     TYPEFACE_PER_ROLE:
       definition_sources: [MASTER/law/geometry.rb]
       severity: warning
       languages: [json]
+    # Retired 2026-10-30: it measured source lines (100 chars) in Markdown and HTML,
+    # where a paragraph is one line by convention and source width is not what a
+    # reader sees; measure lives in CSS, which MEASURE_OPTIMUM judges. 2,600+
+    # findings, and its automatic fix would have hard-wrapped prose.
     TYPOGRAPHIC_GRID:
       definition_sources: [MASTER/law/cosmetic.rb]
       severity: info
@@ -4363,7 +4365,7 @@ law_catalogue:
       languages: [ruby]
     UNIVERSAL_CROSS_DISCIPLINARY_RULES:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     UNIX_PHILOSOPHY:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -4379,7 +4381,7 @@ law_catalogue:
       severity: info
     UTILITY_CLASS_SOUP:
       definition_sources: [MASTER/law/html.rb]
-      severity: warn
+      severity: warning
       languages: [html]
     VERIFICATION_REQUIRED_FOR_COMPLETION:
       definition_sources: [MASTER/law/universal.rb]
@@ -4388,7 +4390,7 @@ law_catalogue:
       autofix: never
     VERIFY_THE_INSTRUMENT:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     VERTICAL_BREATH:
       definition_sources: [MASTER/law/cosmetic.rb]
       severity: info
@@ -4423,10 +4425,10 @@ law_catalogue:
       languages: [ruby]
     VOICE_TERSE_UNIX:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     VPS_SERIAL_TRUTH:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warn
+      severity: warning
     WAITING_STATE_MEANING:
       definition_sources: [MASTER/law/interface.rb]
       severity: info
@@ -4446,14 +4448,14 @@ law_catalogue:
       severity: info
     WORDMASK_OBSERVES_UNCLIPPED:
       definition_sources: [MASTER/law/brand.rb]
-      severity: warn
+      severity: warning
     ZSH_NATIVE_PATTERNS:
       definition_sources: [MASTER/law/shell.rb]
       severity: warning
       languages: [zsh]
     ZSH_SHEBANG:
       definition_sources: [MASTER/law/shell.rb]
-      severity: warn
+      severity: warning
       languages: [zsh]
 
 # Style contracts shared by postpro, replicate and dilla. These domain policies
