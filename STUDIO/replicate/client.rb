@@ -118,6 +118,7 @@ module Studio
           extra_input: {},
           version: nil
         )
+          timeout = operation_timeout!(timeout, "training timeout")
           owner, name, pinned = model_reference!(destination)
           raise ArgumentError, "training destination must be owner/name without a version" if pinned
           destination = "#{owner}/#{name}"
@@ -142,6 +143,7 @@ module Studio
 
         # Pick a training up by id after an --async start or an interrupted poll.
         def resume_training(id, timeout: 3600)
+          timeout = operation_timeout!(timeout, "training timeout")
           training = get_training(id)
           training["status"] == "succeeded" ? training : wait_for_training(id, timeout:)
         end
@@ -195,6 +197,7 @@ module Studio
         # server-side deadline, so a stuck run stops billing even if this process
         # dies.
         def run(model_id, input, timeout: 600)
+          timeout = operation_timeout!(timeout, "prediction timeout")
           owner, name, pinned = model_reference!(model_id)
           version = pinned || latest_version("#{owner}/#{name}")
           headers = {
@@ -505,18 +508,33 @@ module Studio
 
       def attempt_request(req, uri)
         uri = api_uri(uri)
-        res = Net::HTTP.start(
+        response = nil
+        body = +"".b
+        Net::HTTP.start(
           uri.host, uri.port, use_ssl: true,
           open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS,
           write_timeout: WRITE_TIMEOUT_SECONDS
         ) do |http|
-          http.request(req)
-        end
-        code = res.code.to_i
-        return JSON.parse(res.body) if code.between?(200, 299)
+          http.request(req) do |res|
+            response = res
+            declared = res["content-length"].to_s
+            if !declared.empty? && declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
+              raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+            end
+            res.read_body do |chunk|
+              raise ArgumentError, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes" if body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
 
-        message = "Replicate API #{code}: #{res.body}"
-        raise ExhaustedError, message if exhausted?(code, res.body)
+              body << chunk
+            end
+          end
+        end
+        raise IOError, "Replicate returned no HTTP response" unless response
+
+        code = response.code.to_i
+        return JSON.parse(body) if code.between?(200, 299)
+
+        message = "Replicate API #{code}: #{body}"
+        raise ExhaustedError, message if exhausted?(code, body)
         raise TransientError, message if TRANSIENT_STATUS.include?(code)
 
         raise message
@@ -573,8 +591,9 @@ module Studio
       # A create answered under Prefer: wait may already be finished; otherwise
       # poll the same prediction, easing off from 1s to 5s.
       def settle(pred, timeout:)
+        timeout = operation_timeout!(timeout, "prediction timeout")
         prediction_id = resource_id!(pred["id"], "prediction id")
-        start = Time.now
+        deadline = monotonic_now + timeout
         delay = 1
 
         loop do
@@ -584,19 +603,21 @@ module Studio
           when "canceled" then raise "prediction canceled"
           end
 
-          if Time.now - start > timeout
+          remaining = deadline - monotonic_now
+          if remaining <= 0
             cancel_prediction(pred["id"])
             raise "prediction timeout after #{timeout}s (canceled)"
           end
-          sleep delay
+          sleep [delay, remaining].min
           delay = [delay + 1, 5].min
           pred = get(URI("#{BASE}/predictions/#{prediction_id}"))
         end
       end
 
       def wait_for_training(id, timeout: 3600)
+        timeout = operation_timeout!(timeout, "training timeout")
         training_id = resource_id!(id, "training id")
-        start = Time.now
+        deadline = monotonic_now + timeout
         delay = 5
         loop do
           training = get_training(training_id)
@@ -607,14 +628,31 @@ module Studio
           when "canceled" then raise "training canceled"
           end
 
-          if Time.now - start > timeout
+          remaining = deadline - monotonic_now
+          if remaining <= 0
             cancel_training(id)
             raise "training timeout after #{timeout}s (canceled)"
           end
-          sleep delay
-
+          sleep [delay, remaining].min
           delay = [delay + 2, 15].min
         end
+      end
+
+      def operation_timeout!(value, label)
+        seconds = Float(value)
+        unless seconds.finite? && seconds.positive? && seconds <= 86_400
+          raise ArgumentError, "#{label} must be finite and between 0 and 86400 seconds"
+        end
+
+        seconds
+      rescue ArgumentError, TypeError => error
+        raise error if error.is_a?(ArgumentError) && error.message.include?(label)
+
+        raise ArgumentError, "#{label} must be a finite number"
+      end
+
+      def monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
     end
   end
