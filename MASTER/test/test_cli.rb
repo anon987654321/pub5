@@ -728,7 +728,7 @@ end
     config = { "model" => "grok-cli:auto" }
 
     Master::Io::LaneSelection.stub(:primary_report, "first live lane") do
-      %w[status current].each do |arg|
+      %w[status current STATUS CURRENT].each do |arg|
         output = Master::CLI::CommandRegistry.dispatch_model(
           agent:, config:, metrics: nil, root: Master::ROOT, arg:
         )
