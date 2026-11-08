@@ -16,16 +16,14 @@ judge files by the laws with no model, and `bin/operator doctor` to check the
 environment's known traps. `sweep.rb` runs the census instruments in one pass
 and reports them in dmesg form. It measures and proposes, and it never edits.
 
-Substantive registry, reachability and hygiene audits live in `audit/`; stable one-command endpoints whose implementations already live in `lib/` stay at the top level. The former root paths for moved audit tools remain compatibility entrypoints.
+Substantive registry, reachability and hygiene audits live in `audit/`; stable one-command endpoints whose implementations already live in `lib/` stay at the top level. The audit family's former root paths were removed with its move - there are no compatibility entrypoints.
 
-Repository maintenance tools live in `repo/`: tracked-tree inventory, entrypoint reachability and structural migration planning. Their former `tools/` root paths remain compatibility entrypoints. `snapshot.rb` stays a top-level operator command until its reader/writer contracts are verified independently.
+Repository maintenance tools live in `repo/`: tracked-tree inventory, entrypoint reachability and structural migration planning. `snapshot.rb` stays a top-level operator command until its reader/writer contracts are verified independently.
 
-Research and benchmarking tools live in `research/`: cognition outcome benchmarking, mutation-oriented challenge checks, and LLM trajectory reporting. Their former `tools/` root paths remain compatibility entrypoints for existing invocations.
+Research and benchmarking tools live in `research/`: cognition outcome benchmarking, mutation-oriented challenge checks, and LLM trajectory reporting.
 
 Design baseline measurement lives in `audit/` alongside the other repository-wide checks:
 `tools/audit/design_baseline.rb`.
-
-Voice tooling is grouped in `voice/`: `voice_benchmark.rb`, `voice_measure.rb` and `voice_quality.rb` are canonical there. Their former `tools/` root paths remain thin command-compatible entrypoints for existing invocations. Runtime speech and TTS implementations remain in `lib/voice/`.
 
 The Rails tooling lives in `rails/`. The operator reaches it as `triangle` to
 boot brgen, amber, bsdports and the MASTER face, as `premerge`, as `ci` and as
@@ -53,12 +51,6 @@ picked with the losers' reasons kept) -> `convergence.yml` workstreams. It
 fails on a pick whose critique did not keep it, a gap with fewer candidates
 than a real choice needs, a "picked" ledger row with no workstream, and any
 workstream name that exists nowhere.
-`backlog.rb` turns the root `TODO.md` into `data/backlog.yml`, one row per
-unchecked checkbox item with an id, tree, kind, scope paths and a done-when
-command where the item's prose names one. The artifact is a gitignored
-cache rendered on demand with `--refresh`; `--check` compares a local copy
-against the source (absence is clean) and a row whose checkbox is checked
-off leaves the backlog in the same regenerate.
 
 Media implementations belong to `STUDIO/`. The two compatibility links
 that remain here are `dilla` and `replicate`; their targets and contracts are
@@ -94,11 +86,9 @@ work, and do not report done without its output.
 ## Checks
 
 The Rakefile in this directory defines the checks. The test task runs the check
-and event-bus suites, the check task parses and loads every tool, and the voice
-quality task runs the speech regression harness without synthesizing anything.
+and event-bus suites, and the check task parses and loads every tool.
 
 ```zsh
 cd MASTER/tools && rake test
 cd MASTER/tools && rake check
-cd MASTER/tools && rake voice_quality
 ```
