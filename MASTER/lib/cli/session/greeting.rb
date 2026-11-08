@@ -28,9 +28,15 @@ module Master
         Master::Ground::Swallow.log(e, context: "cli.greeting", event_bus: @refs.bus)
       end
 
+      GREETING_LANGUAGES = { nb: "Norwegian Bokmål", ms: "Malay", en: "English" }.freeze
+
       def greeting_prompt
         context = Master::CLI::Welcome.context(Master::ROOT)
-        language = "English"
+        # Read only the language signal locally. The previous words and topic
+        # never enter the model greeting prompt or public boot scrollback.
+        session = Master::CLI::Welcome.read_session(Master::ROOT)
+        last_user = Array(session["messages"]).reverse.find { |message| message["role"] == "user" }
+        language = GREETING_LANGUAGES.fetch(Master::Voice::Language.detect(last_user&.fetch("content", nil)), "English")
 
         <<~PROMPT
           You are MASTER, greeting the operator as a terminal session opens. One natural line of at most
