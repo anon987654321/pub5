@@ -880,7 +880,12 @@ fi
 
 if [[ ${SKIP_CI:-} == 1 ]]; then
   print "vps-deploy: $app (sync via ${app}.sh, SKIP_CI=1)"
-  zsh "$repo/RAILS/${app}/${app}.sh"
+  # The app entrypoints refuse root (line 5 of every one of them: checkout
+  # code is operator-owned, privileged actions go through dev's doas and the
+  # pub5_rcctl broker), so the sync runs as the deploy user, not as this
+  # script's root. First exercised on vm23 2026-11-08: as root, brgen.sh
+  # refused and the app stage died before stop, leaving the release serving.
+  run_as_deploy_user "cd $(printf '%q' "$repo") && zsh $(printf '%q' "$repo/RAILS/${app}/${app}.sh")"
 else
   # The app's resident Solid Queue worker stands down for the CI run.
   #
