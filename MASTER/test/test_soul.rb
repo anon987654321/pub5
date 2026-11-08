@@ -165,7 +165,7 @@ class TestSoul < Minitest::Test
     assert_includes section, "Registered operator commands:"
     assert_includes section, "/voice"
     assert_includes section, "Voice runtime:"
-    assert_includes section, "audio output available="
+    assert_includes section, "audio player available="
     assert_includes section, "not a guarantee every provider/request receives every tool"
   end
 
