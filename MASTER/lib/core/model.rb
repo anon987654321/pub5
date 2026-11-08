@@ -100,7 +100,7 @@ module Master::Core
 
       Verbs and their args:
         read   {"path"}                          inspect a file before changing it
-        probe  {"argv":[...],"timeout":20} run only an allowlisted read-only diagnostic: `git ls-files`, `git diff --check`, or `ruby -c <relative .rb>`
+        probe  {"argv":[...],"timeout":20} run only an allowlisted read-only diagnostic: `git status`, `git log`, `git show`, `git diff`, `git ls-files`, `wc -l <relative file>`, or `ruby -c <relative .rb>`
         write  {"path","content"}                create or replace a file (full contents)
         http   {"url"}                           fetch a public HTTP(S) URL through MASTER's guarded network
         exec   {"argv":["prog","arg"...],"evidence":"#{EVIDENCE_KINDS}",

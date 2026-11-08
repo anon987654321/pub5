@@ -587,6 +587,22 @@ class CoreBridgeSandboxTest < Minitest::Test
       assert_nil policy.call(%w[git diff --check])
       assert_nil policy.call(%w[git --no-pager diff --check])
       assert_nil policy.call(%w[git diff --check --no-ext-diff])
+      # Git's other reading verbs answer the questions the fold kept asking
+      # when the three-command table refused it into a blind loop (Johann's
+      # log 2026-11-08): state, history, one commit, one range.
+      assert_nil policy.call(%w[git status])
+      assert_nil policy.call(%w[git --no-pager status --porcelain])
+      assert_nil policy.call(%w[git log --oneline -5])
+      assert_nil policy.call(%w[git show HEAD:check.rb])
+      assert_nil policy.call(%w[git diff HEAD])
+      # wc -l counts one in-tree file, any extension.
+      assert_nil policy.call(%w[wc -l check.rb])
+      # The two write vectors exec leaves in a reading verb: --output writes
+      # its argument to a file, --ext-diff runs a configured external tool.
+      assert_match(/probe refused/, policy.call(%w[git diff --output=out.txt]))
+      assert_match(/probe refused/, policy.call(%w[git log -p --ext-diff]))
+      assert_match(/probe refused/, policy.call(%w[wc -c check.rb]))
+      assert_match(/probe refused/, policy.call(["wc", "-l", "../outside.rb"]))
       assert_match(/relative \.rb path|escapes/, policy.call(["ruby", "-c", "../outside.rb"]))
       assert_match(/only ruby -c/, policy.call(["ruby", "-e", "puts :unsafe"]))
       # The refusal echoes what arrived, so the caller stops replaying

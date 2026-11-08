@@ -17,6 +17,15 @@ module Master
       # a blocked fold printed all of AGENTS.md as forty err0 lines.
       REPORT_TURN_CHARS = 200
 
+      # Git's reading verbs answer the fold's questions about history and
+      # state. They run through exec without a shell, so the write vectors
+      # left in them — --output (writes its argument to a file) and
+      # --ext-diff (runs a configured external tool) — are the only shapes
+      # refused. The old three-command table kept the fold replaying blind
+      # variations of one refused command until it died (Johann's log
+      # 2026-11-08): eleven turns, risk low, nothing to show.
+      GIT_READING_VERBS = %w[diff log show status].freeze
+
       module_function
 
       def report_turn(entry)
@@ -174,6 +183,11 @@ module Master
           values = Array(argv)
           if values == %w[git ls-files] || values == %w[git ls-files -z] || whitespace_check?(values)
             nil
+          elsif git_reading_verb?(values)
+            nil
+          elsif values.length == 3 && values[0] == "wc" && values[1] == "-l" &&
+                in_tree_relative_path?(values[2], workspace)
+            nil
           elsif values.length == 3 && values[0] == "ruby" && values[1] == "-c"
             path = values[2]
             if path.empty? || path.start_with?(File::SEPARATOR) ||
@@ -197,7 +211,8 @@ module Master
             # as the fully-flagged form.
             tried = values.first(4).join(" ")[0, 80]
             "probe refused: #{tried.inspect} - only ruby -c on one in-tree .rb file, " \
-              "git ls-files, or git diff --check is allowed"
+              "wc -l on one in-tree file, git ls-files, or git's reading verbs " \
+              "(status, log, show, diff) are allowed"
           end
         rescue StandardError => e
           "probe policy could not establish scope: #{e.class}"
@@ -213,6 +228,30 @@ module Master
       def whitespace_check?(values)
         rest = values.reject { |value| value == "--no-pager" || value == "--no-ext-diff" }
         rest[0, 2] == %w[git diff] && rest[2..] == %w[--check]
+      end
+
+      # One reading verb of git, in the strict shapes git itself takes:
+      # --no-pager rides before the verb, --output and --ext-diff stay out.
+      def git_reading_verb?(values)
+        git, verb, *rest = values.reject { |value| value == "--no-pager" }
+        return false unless git == "git" && GIT_READING_VERBS.include?(verb)
+        return false if rest.any? { |flag| flag.start_with?("--output", "--ext-diff") }
+
+        true
+      end
+
+      # One relative path that resolves inside the workspace: the shape the
+      # ruby -c and wc -l probes share, with the extension check left to the
+      # caller that needs it.
+      def in_tree_relative_path?(path, workspace)
+        return false if path.nil? || path.empty? || path.start_with?(File::SEPARATOR) ||
+                        path.split(/[\\\/]/).include?("..")
+
+        expanded = File.expand_path(path, workspace)
+        real = File.realpath(expanded) if File.file?(expanded)
+        !real.nil? && (real == workspace || real.start_with?("#{workspace}#{File::SEPARATOR}"))
+      rescue StandardError
+        false
       end
 
       def network_client(container)
