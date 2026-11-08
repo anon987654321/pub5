@@ -152,6 +152,26 @@ class TestSoul < Minitest::Test
   end
 
 
+  def test_agent_prompt_names_the_live_lane_without_inventing_a_vendor_version
+    builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
+    builder.define_singleton_method(:model) { "grok-cli:auto" }
+
+    section = builder.send(:runtime_capability_section)
+
+    assert_includes section, "Current model routing lane: grok-cli:auto"
+    assert_includes section, "not proof of the downstream model's exact product name or version"
+    assert_includes section, "report it as unknown"
+  end
+
+  def test_conversational_register_is_natural_without_guessing_runtime_state
+    builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
+    line = builder.send(:conversational_register_line)
+
+    assert_includes line, "Speak naturally, warmly and specifically"
+    assert_includes line, "Never guess whether a previous turn is still running"
+    assert_includes line, "adjust immediately"
+  end
+
   def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
     tool_class = Class.new
     tool_class.const_set(:NAME, "test_probe")
