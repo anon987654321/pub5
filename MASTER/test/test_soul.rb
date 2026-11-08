@@ -139,4 +139,15 @@ class TestSoul < Minitest::Test
     refute File.exist?(Master.data_path("SOUL.md"))
     refute File.exist?(Master.data_path("IDENTITY.md"))
   end
+
+  def test_runtime_identity_is_independent_of_the_selected_model_lane
+    prompt = Master::Voice::Personality.new.send(:build_system_prompt, context: :full)
+
+    assert_includes prompt, "Runtime identity is MASTER"
+    assert_includes prompt, "replaceable reasoning engine"
+    assert_includes prompt, "Never guess the active model's name or version"
+    assert_includes prompt, "Capabilities are determined by tools and commands actually supplied"
+    assert_includes prompt, "never deny access to a capability that is present"
+  end
+
 end
