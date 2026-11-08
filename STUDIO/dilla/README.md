@@ -42,22 +42,25 @@ ruby dilla.rb reference https://www.youtube.com/watch?v=… [--style j_dilla]
 ruby dilla.rb reference ~/crate/rights-cleared-loop.wav --no-stems
 ```
 
-The pipeline: **yt-dlp** pulls the source (URL) or the operator hands over a
-local file, **demucs** separates drums / bass / other / vocals, and the
-spectral analyzer (`reference_analyzer.py`, numpy + scipy) measures
-tempo and confidence, onset density per bar, offbeat share, micro-timing
-spread, swing ratio, per-stem energy shares, brightness, key and chord
-changes, a melody summary and 16-step kick/snare/hat grids. The profile
-lands in the reference root as `profiles/<style>/latest_profile.json`, and
-the next render reads it through MASTER's media intent: pattern ranking,
-pocket scaling and mix balance all come from the measurement.
+The reference analyzer is now **Ruby + standard library only**. It decodes
+PCM/float WAV, downmixes and resamples to 22.05 kHz, runs a windowed FFT, and
+measures tempo/confidence, onset density, offbeat share, timing spread, swing,
+mix-band energy shares, brightness, key/chord changes, melody range/density,
+16-step kick/snare/hat grids and section energy. Its output is finite,
+sorted JSON; the profile lands at
+`profiles/<style>/latest_profile.json` for MASTER's media intent.
 
-YouTube bot-checks datacenter IPs. When it does, authenticate with your own
-session: `DILLA_YT_COOKIES=/path/cookies.txt` (exported cookie file) or
-`DILLA_YT_BROWSER=firefox` (browser profile). Without cookies the local-file
-path still works end to end, and `--no-stems` skips separation for a
-band-split analysis. Source audio must remain operator-supplied and
-rights-cleared; this tool analyzes, it does not redistribute.
+For a URL, the optional acquisition step uses the **yt-dlp executable** and
+local FFmpeg. A local audio file is decoded by FFmpeg. Browser cookies remain
+operator-supplied through `DILLA_YT_COOKIES` or
+`DILLA_YT_BROWSER`; the tool never searches for credentials. The reference
+analyzer itself needs no Python, NumPy, SciPy, Demucs, native gem or hosted
+service. The migration deliberately removed automatic Demucs separation:
+pocket and energy estimates are mix-derived, not claimed as isolated stems.
+`--no-stems` remains accepted as a compatibility flag. Analysis is capped
+at 600 seconds; `--max-duration S` can request a shorter initial segment.
+Source audio must remain operator-supplied and rights-cleared; the tool
+analyzes, it does not redistribute.
 
 ## Sample flip
 
@@ -92,7 +95,7 @@ not a test.
 
 The curated showcase is a section-aware 24-bar form, not one progression looped across the entire render. Each section can select a progression, drum grammar, active lanes, source patch and target patch; patch changes are crossfaded sample-by-sample over the section.
 
-Use `--style` to select a local production profile: `j_dilla`, `flying_lotus`, `jazz_soul`, `funk`, `ambient`, `drum_and_bass`, or `noise_sound_design`. The FlyLo profile is an original jazz-fusion/electronic study based on the existing Coltrane Soup harmonic study and the FlyLo broken-beat pattern; it is not represented as a track transcription.
+Use `--style` to select a local production profile: `j_dilla`, `flying_lotus`, `jazz_soul`, `funk`, `ambient`, `drum_and_bass`, `noise_sound_design`, or `royksopp`. The FlyLo profile is an original jazz-fusion/electronic study based on the existing Coltrane Soup harmonic study and the FlyLo broken-beat pattern; it is not represented as a track transcription.
 
 The optional scale-locked FM accent lane is mixed under the main harmony. Use `--foley` to request it on a normal render. `--midi` writes the sequenced score as a multi-track Standard MIDI file; `--midi-out PATH` selects its destination. The core score, instruments and export are Ruby-only and require no Replicate, OpenRouter, Python packages, or paid API.
 
@@ -117,10 +120,10 @@ rclone copy "gdrive:Ableton Projects" "$HOME/Ableton-Archive" --progress
 Inspect and export a set (the parser also accepts extracted, plain XML):
 
 ```sh
-ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive" --inventory "$HOME/Ableton-Archive/Ableton-Inventory.json" --export-all
-ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive/My Set/My Set.als"
-ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
-ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" \\
+ruby STUDIO/bin/studio ableton inventory "$HOME/Ableton-Archive" --export-all
+ruby STUDIO/bin/studio ableton export "$HOME/Ableton-Archive/My Set/My Set.als"
+ruby STUDIO/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
+ruby STUDIO/bin/studio ableton midi "$HOME/Ableton-Archive/My Set/My Set.als" \
   --out recovered.mid --wav recovered.wav --soundfont "$HOME/SoundFonts/bank.sf2" --analog
 ```
 
@@ -157,3 +160,50 @@ then optionally processed with local FFmpeg filters. Those are optional render s
 export and MIDI generation need no network, API key, Python package or gem.
 Check a local FFmpeg build with `ffmpeg -filters` before relying on a
 particular analog filter.
+
+
+## Ableton recovery — DeepSeek handoff
+
+Treat the original `.als` and complete project folder as immutable source
+material. Inventory first; do not begin by opening and saving projects in a
+different Live version. The recovery tools are offline and source-preserving:
+
+1. `bin/studio ableton inventory PROJECTS --export-all` recursively indexes
+   every set, reports parser failures without stopping the batch, and writes
+   per-set JSON and Ruby archives beside valid source sets.
+2. `bin/studio ableton export SET.als` extracts the composition model:
+   project tempo/time signature, track identities, MIDI/audio clips, beat
+   positions, loop windows, note pitch/duration/velocity/enabled/release
+   velocity, sample references, selected automation points and warp markers.
+3. `bin/studio ableton midi SET.als` converts MIDI clips into a multitrack
+   Standard MIDI file at 960 PPQN. It retains tempo and meter, expands enabled
+   clip loops, plays pre-loop pickups once, skips disabled notes, pairs note-on
+   and note-off, preserves release velocity, and routes drum-named tracks to
+   channel 10.
+4. Optional local rendering uses FluidSynth plus an operator-supplied
+   SoundFont. FFmpeg's analog pass writes a second file; the neutral render is
+   retained. Both external stages have a wall-clock timeout and write through
+   temporary files so a failed render does not replace a previous result.
+
+The archive is not a reconstructed Ableton project. It does not contain
+referenced sample bytes, run warp processing, restore Groove Pool behaviour,
+instantiate Ableton or third-party devices, recreate plug-in state, or
+faithfully restore every automation/device envelope. Relative and absolute
+sample paths are references only. Preserve the full project folder and
+compare the archive's sample-path references against its `Samples/` tree.
+
+When the Live Sets are supplied, the recovery pass should:
+- inventory every set and group related versions without overwriting them;
+- resolve sample references against the accompanying project assets and
+  record missing, duplicate and ambiguous matches;
+- compare clip/loop/warp metadata and MIDI note counts across versions;
+- export separate MIDI tracks and available reference audio for inspection;
+- identify unsupported device, plug-in, Groove Pool and automation state;
+- use Ableton Live itself only for the remaining native-state export/freeze/
+  flatten work, retaining untouched originals and writing recovered output to
+  a separate destination.
+
+Never report an ALS set as fully restored from JSON or MIDI alone. The final
+recovery report must distinguish composition recovered, samples resolved,
+native device state recovered, rendered audio checked, and still-unavailable
+state.
