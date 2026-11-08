@@ -32,11 +32,18 @@ module Master
       # fold reports as header, turn evidence and summary — flattened into a
       # ribbon and cut mid-word, that evidence was unreadable, which is a
       # second error on top of the first.
+      # Structured reports already carry the unit that produced them. Reuse
+      # that unit instead of prefixing the whole report with a second err0.
+      REPORT_UNIT = /\\A([a-z][a-z0-9_]*\\d+):\\s/
+
       def print_error(err)
         text = err.message.to_s
         return Master::Trace::Dmesg.status("err0", bounded_line(text)) if text.lines.one?
 
-        Master::Trace::Dmesg.block("err0", text)
+        unit = text[REPORT_UNIT, 1]
+        return Master::Trace::Dmesg.block("err0", text) if unit.nil? || unit == "err0"
+
+        Master::Trace::Dmesg.block(unit, text.sub(/\\A#{Regexp.escape(unit)}:\\s*/, ""))
       end
 
       def bounded_line(text)
@@ -50,7 +57,7 @@ module Master
           # the empty buffer is empty by construction, not an empty answer.
           # The err0 report lied: a long reply followed "turn completed
           # without output" (Johann's log 2026-11-07).
-          return display_units_console_turn if units_console
+          return display_units_console_turn(ok) if units_console
 
           return display_empty_success(ok)
         end
@@ -116,11 +123,14 @@ module Master
 
       # The turn's text already reached the operator through the units
       # console; keep the ok bookkeeping and the footers, print no reply.
-      def display_units_console_turn
+      # The units console already printed the turn's text. Keep its
+      # result object for footers that inspect model and parallel-error data;
+      # @last_ok is only a boolean used for session bookkeeping.
+      def display_units_console_turn(ok)
         print_fix_activity_footer
         print_previous_question_footer
-        print_parallel_errors_footer(@last_ok)
-        print_capability_stamp(@last_ok)
+        print_parallel_errors_footer(ok)
+        print_capability_stamp(ok)
       end
 
       def diagnostic_command(input)
@@ -184,6 +194,7 @@ module Master
 
       def print_capability_stamp(ok)
         return unless verbose_output?
+        return unless ok.respond_to?(:model)
 
         model = ok.model
         return if model.to_s.empty?
@@ -197,6 +208,8 @@ module Master
       end
 
       def print_parallel_errors_footer(ok)
+        return unless ok.respond_to?(:value)
+
         value = ok.value
         return unless value.respond_to?(:[])
 
