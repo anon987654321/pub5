@@ -34,7 +34,7 @@ module Operator
     # Bare names, because that is how a document cites a file in prose; the
     # directory-qualified spelling is listed too for a document that uses it.
     SOURCES = %w[
-      MASTER/data/tokens.yml MASTER/data/minimalism.yml
+      MASTER/data/tokens.yml MASTER/data/law/minimalism.yml
       tokens.yml minimalism.yml
       _dialect_tokens.scss tokens.css design_system
     ].freeze

@@ -170,7 +170,7 @@ second push path or duplicate orchestration to make TODO.md machine-readable.
   tests. Distinguish semantic constants (black canvas/print and OpenBSD
   wscons green) from replaceable presentation literals; regenerate face CSS
   and compare rendered pages.
-- [ ] Close accepted `MASTER/data/ux_refinements.yml` rows only with their
+- [ ] Close accepted `MASTER/data/law/ux_refinements.yml` rows only with their
   declared test, browser, terminal, accessibility or rendered-runtime proof.
 
 ### Screenshot-led micro-refinements (reviewed 2026-11-06 at `main@3fb7dbc`)
@@ -388,7 +388,7 @@ Close these rows in `RAILS/refinements.yml` only with the corresponding source a
 
 ### 8.2 MASTER UX acceptance matrix — 90 unverified contracts
 
-`MASTER/data/ux_refinements.yml` contains 90 unique acceptance targets (`UX001`–`UX090`); all 90 remain `acceptance_required` and none is `verified`. Work through the existing proof contract and record receipts there. A source change or a screenshot alone does not satisfy a row whose contract also requires unit, terminal, browser, visual or accessibility proof.
+`MASTER/data/law/ux_refinements.yml` contains 90 unique acceptance targets (`UX001`–`UX090`); all 90 remain `acceptance_required` and none is `verified`. Work through the existing proof contract and record receipts there. A source change or a screenshot alone does not satisfy a row whose contract also requires unit, terminal, browser, visual or accessibility proof.
 
 - [ ] **Input UX001–UX015:** Immediate acknowledgement; preserve an unsent draft; intentional multiline entry; bracketed-paste safety; stable input while streaming; duplicate-submit prevention; command-history navigation; searchable history; filesystem path completion; command completion; visible interaction mode; empty-input guard; Unicode editing safety; explicit end-of-input behaviour; recovery after command exception.
 - [ ] **Terminal UX016–UX030:** Active target indicator; model/provider indicator; idle versus waiting distinction; truthful busy state; cancellation affordance; degraded-capability state; stable visual baseline; bounded status text; narrow-terminal layout; face never intercepts prompt authority; monochrome operability; no decorative banners; repository-context visibility; canonical prompt vocabulary; REPL versus system-shell distinction.
@@ -397,7 +397,7 @@ Close these rows in `RAILS/refinements.yml` only with the corresponding source a
 - [ ] **Browser recovery UX061–UX075:** Scroll follows only near bottom; draft survives disconnect; reconnect does not duplicate turns; explicit stream terminal state; mobile keyboard and safe area; honest stop semantics; visible keyboard focus; accessible icon labels; status without colour; reduced-motion behaviour; forced-colours behaviour; 320px reflow; preserve conversation text shape; usable touch targets; recoverable browser errors.
 - [ ] **Visual accessibility UX076–UX090:** Consistent prompt baseline; predictable heading wrapping; long-identifier handling; tabular numerals; muted-text contrast; unclipped focus ring; remove repeated metadata; clear primary-action hierarchy; useful empty states; aligned field labels; contextual validation errors; stable loading layout; bounded animation duration; screenshot-comparison evidence; text zoom and font scaling.
 
-The row-level owner trees, proof types and receipt requirements remain in `MASTER/data/ux_refinements.yml`; the contract is tested by `MASTER/test/test_ux_refinements_contract.rb`.
+The row-level owner trees, proof types and receipt requirements remain in `MASTER/data/law/ux_refinements.yml`; the contract is tested by `MASTER/test/test_ux_refinements_contract.rb`.
 
 ### 8.3 Product and platform gaps — preserve every unresolved ledger row
 
@@ -585,7 +585,7 @@ Ordered, and each step is gated by the one before it:
 
 ---
 
-**Consolidation rule:** Root `TODO.md` is the only cross-tree Markdown action list. `RAILS/refinements.yml`, `MASTER/data/ux_refinements.yml`, `MASTER/data/gaps.yml`, `MASTER/convergence.yml`, `MASTER/data/operator_seams.yml`, `MASTER/data/proposals.yml`, the ideation sheets and the RAILS feature inventories remain structured owners for IDs, proof receipts, provenance, accepted/rejected reasoning and state. Update the owner and this root index together when an item is implemented or its state changes. Do not create another backlog file.
+**Consolidation rule:** Root `TODO.md` is the only cross-tree Markdown action list. `RAILS/refinements.yml`, `MASTER/data/law/ux_refinements.yml`, `MASTER/data/gaps.yml`, `MASTER/convergence.yml`, `MASTER/data/operator_seams.yml`, `MASTER/data/proposals.yml`, the ideation sheets and the RAILS feature inventories remain structured owners for IDs, proof receipts, provenance, accepted/rejected reasoning and state. Update the owner and this root index together when an item is implemented or its state changes. Do not create another backlog file.
 
 
 ### 8.11 Sandbox contract run — forced Ruby, 2026-11-07 (second session)

@@ -5,7 +5,7 @@ require_relative "../lib/operator/sprawl_census"
 require_relative "../lib/fix/rename_sweep"
 require_relative "../lib/review/scan/law_tree"
 
-# data/vague_words.yml is the one vague-name list; four readers had a copy each
+# data/law/vague_words.yml is the one vague-name list; four readers had a copy each
 # and no two agreed. Every reader takes every word, and none keeps a word of its own.
 class TestVagueWords < Minitest::Test
   WORDS = Master::Ground::ParameterizedSlug::VAGUE_WORDS

@@ -61,7 +61,7 @@ doc_paths:
     why: Prescriptive, not stale. The line asks for a launch seed to be written that
       week; the file is meant not to exist yet. It comes out of this list the day
       someone writes it.
-  TREE_CONTRACTS.md:
+  MASTER/data/law/TREE_CONTRACTS.md:
   - path: RAILS/shared
     why: Names the path that must not be used; the engine directory is RAILS/__shared.
       The mention is the guard, not a citation.

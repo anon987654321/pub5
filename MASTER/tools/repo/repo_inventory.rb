@@ -34,7 +34,6 @@ ALLOWED_ROOT_FILES = %w[
   GLM.md
   README.md
   TODO.md
-  TREE_CONTRACTS.md
   VERSION
   redeploy
 ].freeze

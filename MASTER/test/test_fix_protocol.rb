@@ -40,7 +40,7 @@ class TestFixProtocol < Minitest::Test
     assert_includes text, "30-40 materially distinct architecture"
     assert_includes text, "at least three plans passing the deterministic quality"
     assert_includes text, "concrete benefits, trade-offs and risks"
-    assert_includes text, "MASTER/data/ux_refinements.yml"
+    assert_includes text, "MASTER/data/law/ux_refinements.yml"
     assert_includes text, "generated documentation"
     assert_includes text, "commit and push"
     assert_includes text, "Never promise that literally every defect was repaired"

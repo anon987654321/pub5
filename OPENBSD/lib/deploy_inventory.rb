@@ -28,11 +28,11 @@ module Deploy
       data.fetch("apps").map { |entry| app_from_json(entry) }
     end
 
-    # One tree's `## <tree>` section of the root TREE_CONTRACTS.md, or nil.
+    # One tree's `## <tree>` section of MASTER/data/law/TREE_CONTRACTS.md, or nil.
     # MASTER/web has no README: this section is its human entry, and replaced
     # MASTER/web/CLAUDE.md when the tree contracts were folded (2b168b77f2).
     def tree_contract(tree)
-      path = File.join(root, "TREE_CONTRACTS.md")
+      path = File.join(root, "MASTER", "data", "law", "TREE_CONTRACTS.md")
       return unless File.file?(path)
 
       File.read(path, encoding: "UTF-8")[/^## #{Regexp.escape(tree)}\n.*?(?=^## |\z)/m]

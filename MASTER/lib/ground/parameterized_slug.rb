@@ -7,10 +7,10 @@ module Master
     # Rails-parameterize slug density for paths — snake_case, Strunk-clean tokens.
     module ParameterizedSlug
       MAX_TOKENS = 4
-      # The one vague-name list (data/vague_words.yml), here because a slug's filler is
+      # The one vague-name list (data/law/vague_words.yml), here because a slug's filler is
       # its first reader; the sprawl census, FILE_VAGUE_NAME and the rename sweep read
       # it from this constant. yaml only, so the census needs no booted runtime.
-      VAGUE_WORDS_PATH = File.expand_path("../../data/vague_words.yml", __dir__)
+      VAGUE_WORDS_PATH = File.expand_path("../../data/law/vague_words.yml", __dir__)
       VAGUE_WORDS = YAML.safe_load_file(VAGUE_WORDS_PATH).fetch("words").map(&:to_s).freeze
       VAGUE_ALTERNATION = VAGUE_WORDS.map { |word| Regexp.escape(word) }.join("|").freeze
       FOLD_SUFFIXES = %w[_support _helper _util _helpers _utils].freeze

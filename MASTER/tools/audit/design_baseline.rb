@@ -4,7 +4,7 @@
 # per app, held by a ceiling that only descends.
 #
 # The 2026-08-21 campaign took the design findings from ~1,700 to the numbers
-# in data/design_baseline.yml — part real fixes, part instruments learning what
+# in data/law/design_baseline.yml — part real fixes, part instruments learning what
 # they judge (a tag is not a line; a media query bound is not a text measure).
 # Without a committed tool reproducing the number, the next drift is invisible;
 # this is the reader (see css_coverage_lint for the same argument about the
@@ -23,7 +23,7 @@ module Operator
     MASTER_ROOT = File.expand_path("../..", __dir__)
     RAILS_ROOT = File.expand_path("../../../RAILS", __dir__)
     WEB_ROOT = File.expand_path("../../web", __dir__)
-    CEILING = File.join(MASTER_ROOT, "data", "design_baseline.yml")
+    CEILING = File.join(MASTER_ROOT, "data", "law", "design_baseline.yml")
 
     # The Laws that judge layout, markup shape and typography: the baseline's
     # rule_ceilings, the one list of them. Info-tier markup-idiom Laws

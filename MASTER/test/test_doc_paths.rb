@@ -137,8 +137,9 @@ class TestDocPaths < Minitest::Test
   # These are artifacts, not substitutes for tree/project README entry points.
   # MASTER/docs holds the execution-contract references that TODO.md, the code
   # comments and the lifecycle work cite by path. TREE_CONTRACTS.md is the one
-  # tree-contract file at the repo root; the per-tree CLAUDE.md contracts folded
-  # into it by operator order, so the boundary rule below must admit it.
+  # tree-contract file, consolidated beside the rest of the normative corpus in
+  # MASTER/data/law/; the per-tree CLAUDE.md contracts folded into it by
+  # operator order, so the boundary rule below must admit it.
   MARKDOWN_REFERENCE_EXCEPTIONS = %w[
     MASTER/FACE_WORLD.md
     MASTER/data/principles/openbsd_kernel_philosophy.md
@@ -155,13 +156,13 @@ class TestDocPaths < Minitest::Test
     RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md
     STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md
     RAILS/__shared/SOCIAL_FRONT_PAGE.md
-    TREE_CONTRACTS.md
+    MASTER/data/law/TREE_CONTRACTS.md
     STUDIO/postpro/ARCHAEOLOGY.md
     STUDIO/postpro/LEGACY_RESTORE.md
     MASTER/docs/LOVDATA.md
-    MASTER/docs/PUB5_PERMISSION_MATRIX.md
-    MASTER/docs/ad_creative_governance.md
-    MASTER/docs/visual/bergen_brand_systems.md
+    MASTER/data/law/PUB5_PERMISSION_MATRIX.md
+    MASTER/data/law/ad_creative_governance.md
+    MASTER/data/law/bergen_brand_systems.md
     MASTER/docs/visual/browserless_ad_audits.md
     RAILS/mrdamascy/APP_SPEC.md
     RAILS/mrdamascy/docs/fix-ledger.md
