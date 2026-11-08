@@ -3,6 +3,7 @@
 require "fileutils"
 require "json"
 require "net/http"
+require "securerandom"
 require "tempfile"
 require "timeout"
 require "uri"
@@ -35,10 +36,14 @@ module Studio
         # fill the disk; the default is the largest thing a run fetches, a trainer
         # tar. A failed fetch leaves no partial file.
         def download_url(url, path, max_bytes: MAX_DOWNLOAD_BYTES)
-          uri = URI(url)
-          raise "refusing non-https download url: #{url}" unless uri.is_a?(URI::HTTPS) && uri.port == 443
-          raise "refusing download URL credentials" unless uri.userinfo.nil?
-          raise "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
+          uri = URI(url.to_s)
+          raise ArgumentError, "refusing non-https download url" unless uri.is_a?(URI::HTTPS) && uri.port == 443
+          raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
+          raise ArgumentError, "refusing download URL fragment" unless uri.fragment.nil?
+          raise ArgumentError, "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
+
+          max_bytes = Integer(max_bytes)
+          raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
 
           target = File.expand_path(path)
           directory = File.dirname(target)
@@ -51,7 +56,8 @@ module Studio
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
             Net::HTTP.start(
               uri.host, uri.port, use_ssl: true,
-              open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
+              open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS,
+              write_timeout: WRITE_TIMEOUT_SECONDS
             ) do |http|
               http.request_get(uri.request_uri) do |res|
                 raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
@@ -232,9 +238,12 @@ module Studio
       LORA_TRAINER_VERSION = "26dce37af90b9d997eeb970d92e47de3064d46c300504ae376c75bef6a9022d2"
       TRANSIENT_STATUS = ((500..599).to_a << 429).freeze
       MAX_DOWNLOAD_BYTES = 4 * 1024**3
+      MAX_UPLOAD_BYTES = 4 * 1024**3
+      MAX_RESPONSE_BYTES = 16 * 1024**2
       API_HOST = "api.replicate.com"
       OPEN_TIMEOUT_SECONDS = 10
       READ_TIMEOUT_SECONDS = 120
+      WRITE_TIMEOUT_SECONDS = 120
       MAX_MODEL_PAGES = 1_000
 
       # Replicate holds a sync request 60 seconds at most; Cancel-After takes
@@ -389,7 +398,11 @@ module Studio
       end
 
       def upload_binary(path, mime:)
-        boundary = "ReplicateBoundary#{rand(1_000_000_000)}"
+        raise ArgumentError, "upload source must be a readable regular file" unless File.file?(path) && File.readable?(path)
+        size = File.size(path)
+        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if size > MAX_UPLOAD_BYTES
+
+        boundary = "ReplicateBoundary#{SecureRandom.hex(18)}"
         uri = URI("#{BASE}/files")
         req = Net::HTTP::Post.new(uri)
         req["Authorization"] = "Token #{@token}"
@@ -415,7 +428,10 @@ module Studio
         body.write("--#{boundary}\r\n".b)
         body.write("Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b)
         body.write("Content-Type: #{mime}\r\n\r\n".b)
-        File.open(path, "rb") { |source| IO.copy_stream(source, body) }
+        File.open(path, "rb") do |source|
+          copied = IO.copy_stream(source, body, MAX_UPLOAD_BYTES + 1)
+          raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if copied > MAX_UPLOAD_BYTES
+        end
         body.write("\r\n--#{boundary}--\r\n".b)
       end
 
@@ -491,7 +507,8 @@ module Studio
         uri = api_uri(uri)
         res = Net::HTTP.start(
           uri.host, uri.port, use_ssl: true,
-          open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
+          open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS,
+          write_timeout: WRITE_TIMEOUT_SECONDS
         ) do |http|
           http.request(req)
         end
