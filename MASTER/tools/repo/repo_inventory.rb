@@ -45,6 +45,7 @@ GENERATED_ROOT_FILES = %w[
   snapshot_STUDIO.md
 ].freeze
 ALLOWED_ROOT_DIRS = %w[
+  BIZ
   MASTER
   OPENBSD
   RAILS

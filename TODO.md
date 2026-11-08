@@ -740,11 +740,13 @@ back at the repository root:
   photographs without a consent-record refusal. Port its useful structure
   only after the consent and photographer-licence gate in §8.10 is executable;
   do not run the old downloader or restore its consent-blind behavior.
-- [ ] **Root analysis scripts.** `scripts/analysis/` remains a lowercase root
-  directory containing three Python contact-sheet helpers. Move that work to
-  the existing visual-tool owner and either port it to the repository's Ruby
-  toolchain or prove it is unused before retiring it; preserve the screenshot
-  review capability and the uppercase-root contract.
+- [x] **Root analysis scripts.** Retired 2026-11-08: `scripts/analysis/` was
+  proven unused (its entries hardcode a `/home/z/my-project/pub5` path that has
+  never existed on this machine; python is a banned tool here; the only live
+  reference was this row) and removed whole. The screenshot review capability
+  stays with the committed RAILS captures, the vips stack in STUDIO/postpro and
+  STUDIO/photograph; BIZ joined ALLOWED_ROOT_DIRS so the uppercase-root
+  contract names the tree that exists.
 
 The one-shot legacy archive-extraction helper was also intentionally excluded.
 The pub4 repository remains the read-only provenance source; do not revive
