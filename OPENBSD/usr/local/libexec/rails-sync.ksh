@@ -40,6 +40,15 @@ app_dir=$app_home/app
 }
 
 archive_tracked_tree() {
+  # Every variable here must be typeset: in ksh a plain assignment inside a
+  # function is GLOBAL, and target/source_dir are also the caller's names in
+  # sync_tree_stage. Measured on vm23 2026-11-08 (deploy r5, trace on pid
+  # 55275): the raw assignment set target to the stage path, the caller's
+  # [ -e "$target" ] then answered true, and the sync moved its own stage
+  # into previous - so the preserve mv failed on a vanished staging path
+  # while /home/brgen/app was never renamed at all. Four deploys refused on
+  # this one line.
+  typeset source_dir target source_rel archive_root tree entry
   source_dir=$1
   target=$2
   source_rel=${source_dir#"$rails_root"/}
@@ -75,6 +84,11 @@ archive_tracked_tree() {
   rm -rf "$archive_root"
 }
 sync_tree_stage() {
+  # typeset for the same reason as archive_tracked_tree: the verticals mode
+  # calls this function repeatedly inside one process, so the arguments it
+  # re-assigns must not leak between iterations.
+  typeset source_dir target preserve_state parent base stage previous \
+    target_existed storage_carried log_carried assets_carried state state_path
   source_dir=$1
   target=$2
   preserve_state=$3
