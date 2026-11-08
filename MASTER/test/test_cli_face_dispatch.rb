@@ -192,6 +192,7 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal :execution, recorded.first.fetch(:layer)
     assert_includes recorded.first.fetch(:content), "$ pwd"
     assert_includes recorded.first.fetch(:content), "current directory output"
+    assert_includes recorded.first.fetch(:content), "status=success"
   end
 
   def test_execution_evidence_is_bounded_redacted_and_labelled_untrusted
@@ -206,12 +207,34 @@ class TestCliFaceDispatch < Minitest::Test
 
       message = store.messages.last
       assert_equal :execution, message[:layer]
-      assert_includes message[:content], "[untrusted execution evidence; output may be truncated]"
+      assert_includes message[:content], "[untrusted execution evidence; status=unknown; output may be truncated]"
       assert_includes message[:content], "[REDACTED]"
       assert_includes message[:content], "[execution output truncated]"
       refute_includes message[:content], token
       refute_match(/\e\[/, message[:content])
       assert_nil store.name, "execution output must not name the conversation"
+    end
+  end
+
+  def test_failed_shell_output_is_marked_as_failure_evidence
+    Dir.mktmpdir("execution-failure") do |dir|
+      store = Master::Trace::Session.new(root: dir)
+      session = Master::CLI::Session.allocate
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus).new(store, nil))
+      shell = Object.new
+      shell.define_singleton_method(:call) do |command:|
+        Master::Result.err("blocked command: #{command}", category: :validation)
+      end
+      session.define_singleton_method(:bang_shell) { shell }
+      session.define_singleton_method(:terminal_puts) { |_text, **| }
+      renderer = Object.new
+      renderer.define_singleton_method(:render) { |text, **| text }
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus, :renderer).new(store, nil, renderer))
+
+      session.send(:run_direct_shell, "rm -rf /")
+
+      assert_includes store.messages.last[:content], "status=failure"
+      assert_includes store.messages.last[:content], "blocked command"
     end
   end
 
@@ -233,6 +256,7 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal :execution, recorded.first.fetch(:layer)
     assert_includes recorded.first.fetch(:content), "/model list"
     assert_includes recorded.first.fetch(:content), "grok-cli:auto"
+    assert_includes recorded.first.fetch(:content), "status=success"
   end
 
   def test_units_console_footers_receive_the_result_not_the_success_boolean
