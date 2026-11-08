@@ -29,9 +29,9 @@ module Master
         @boot_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) * MS_PER_SEC).to_i
       end
 
-      # Session names can be personal topics. The boot line confirms resume
-      # without echoing the stored title into terminal scrollback.
-      def session_line(_name = nil, messages = 0)
+      # Session names can be personal topics, so the renderer receives only
+      # the retained message count and cannot echo the stored title.
+      def session_line(messages = 0)
         kept = messages.positive? ? ", #{messages} messages kept" : ""
         @p.dim("session0 at master0: resumed#{kept}")
       end
