@@ -226,6 +226,45 @@ class TestSpeech < Minitest::Test
     playback.instance_variable_set(:@playback_verified, old_verified)
   end
 
+  def test_playback_tries_the_next_player_when_the_first_cannot_start
+    playback = Master::Voice::Playback
+    old_error = playback.instance_variable_get(:@last_error)
+    old_verified = playback.instance_variable_get(:@playback_verified)
+    generation = playback.send(:current_generation)
+    calls = 0
+    status = Object.new
+    status.define_singleton_method(:success?) { true }
+
+    Dir.mktmpdir("master-playback-fallback") do |dir|
+      audio = File.join(dir, "sample.mp3")
+      File.binwrite(audio, "audio probe")
+      spawn = lambda do |*_, **_options|
+        calls += 1
+        raise Errno::ENOENT if calls == 1
+
+        12_346
+      end
+
+      playback.instance_variable_set(:@last_error, nil)
+      playback.instance_variable_set(:@playback_verified, false)
+      Master::Device::Audio.stub(:media_player_available?, false) do
+        playback.stub(:player_candidates, [["/usr/bin/afplay", []], ["/usr/bin/ffplay", []]]) do
+          Process.stub(:spawn, spawn) do
+            Process.stub(:wait2, [12_346, status]) do
+              assert playback.play(audio, generation:)
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal 2, calls
+    assert_equal "verified", playback.output_status
+  ensure
+    playback.instance_variable_set(:@last_error, old_error)
+    playback.instance_variable_set(:@playback_verified, old_verified)
+  end
+
   def test_successful_native_speech_fallback_clears_the_player_failure
     playback = Master::Voice::Playback
     old_error = playback.instance_variable_get(:@last_error)
