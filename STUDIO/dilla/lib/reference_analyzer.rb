@@ -95,13 +95,16 @@ module Studio
       private
 
       def normalize_duration(value)
-        return MAX_SECONDS if value.nil? || value.to_f <= 0
+        return MAX_SECONDS if value.nil? || value.to_s.empty?
 
         seconds = Float(value)
         raise AnalysisError, "max duration must be finite" unless seconds.finite?
+        return MAX_SECONDS unless seconds.positive?
         raise AnalysisError, "max duration must not exceed #{MAX_SECONDS} seconds" if seconds > MAX_SECONDS
 
         seconds
+      rescue ArgumentError, TypeError
+        raise AnalysisError, "max duration must be a finite number"
       end
 
       def read_wav(path, max_duration: nil)
