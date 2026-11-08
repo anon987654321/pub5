@@ -28,6 +28,13 @@ class TestSwallow < Minitest::Test
     assert_match(/error0: #{Regexp.escape(ctx)} swallowed NoMethodError: undefined method 'inner_html'/, lines.first)
   end
 
+  def test_place_budget_is_exceeded_only_after_the_declared_limit
+    budget = Master::Ground::Swallow::PLACE_BUDGET
+
+    refute Master::Ground::Swallow.over_budget?(budget)
+    assert Master::Ground::Swallow.over_budget?(budget + 1)
+  end
+
   def test_log_accepts_explicit_load_bearing_severity
     ctx = unique_context("tagged")
     Master::Ground::Swallow.log(RuntimeError.new("x"), context: ctx, severity: :load_bearing)
