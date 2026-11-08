@@ -1,0 +1,125 @@
+# expectations.yml — what the operator asks of MASTER, sorted by what proof can carry.
+#
+# Human intent, not policy: this file creates no Law identity, no proof class and
+# no runtime configuration, and nothing loads it at boot. It records how standing
+# ambitions classify so an agent answers with scope truth instead of inventing a
+# delivered. The normative sources stay soul.yml > laws.yml > executable Laws and
+# gates > tree contracts; where a row names an instrument, the row restates it
+# and never overrides it.
+#
+# Recorded 2026-11-08 from the operator's expectations session. Provenance is
+# that conversation; the classification restates doctrine already carried by
+# AGENTS.md, README.md and docs/mobile.md.
+
+schema: 1
+purpose: scope_classification
+runtime_effect: none
+
+authority:
+  constitution: MASTER/data/soul.yml
+  law_catalogue: MASTER/data/laws.yml
+  executable_laws:
+    - MASTER/law/**/*.rb
+  task_contract: MASTER/data/task_contract.yml
+  mobile_support: MASTER/docs/mobile.md
+  external_targets: MASTER/docs/openbsd-rust.md
+
+agent_rule: >-
+  Never emit delivered for a claim no check in this repository can falsify.
+  Reframe the ask as a repository claim: a source change, an authored test, a
+  passing check, a path-scoped diff, hashes. Land the artifact in its owning
+  tree. When the ask cannot be reframed that way, the answer is scope truth:
+  notes, simulation and code are the whole of the help, and the outer claim
+  stays with whoever holds the lab, the factory or the institution.
+
+delivered_requires:
+  statement: >-
+    delivered means the write was kept under the fix gate, the baseline and
+    after hashes and a path-scoped diff are recorded, and one check that can
+    fail was run and passed. All three, or the outcome is failed or stopped.
+  source: AGENTS.md, task routing and minimum proof
+
+buckets:
+  in_scope:
+    definition: >-
+      Claims the owned trees, the current CLI surface and a real check can
+      carry today. A run here may end delivered.
+    items:
+      - id: own_repos_repair
+        statement: >-
+          Scan, governed fix and proof on this checkout and on repos the
+          operator owns. This is the primary case, not a special one.
+      - id: mobile_cli
+        statement: >-
+          The same bin/master surface on Termux and small devices, per
+          docs/mobile.md. Smoke proof per device class; no second Kernel and
+          no feature split between phone and desktop.
+      - id: github_scale_repair
+        statement: >-
+          Large external trees addressed path-scoped and revision-pinned, in
+          chunks, each chunk with its own check. One unbounded "fix the
+          internet" pass is not a run shape this system supports.
+      - id: rails_apps_in_monorepo
+        statement: >-
+          A new app lands under RAILS/ with an apps.yml row and a real check
+          (bin/ci, the registry validation). MASTER governs the landing; it
+          does not replace rails new.
+
+  stretch_code_only:
+    definition: >-
+      Claims MASTER helps as repository work: code, notes, simulations,
+      harnesses. The outer claim (a shipped OS, a trained model, a merged
+      upstream) belongs to another institution's record, and delivered names
+      only the software claim.
+    items:
+      - id: openbsd_rust_port
+        statement: >-
+          The operator's openbsd-rust repository, governed as a sibling
+          checkout per docs/openbsd-rust.md. Honest delivered: paths changed
+          and the on-OpenBSD build smoke passed.
+      - id: openbsd_src_patches
+        statement: >-
+          Patch-quality work in a local OpenBSD src checkout, path-bounded and
+          small. Upstream goes through sendbug, tech@ and the committers,
+          never around them.
+      - id: os_project_trees
+        statement: >-
+          Kernel and userspace experiment trees, build scripts and design
+          notes. Proof is a compile smoke; shipped hardware is not a git
+          status.
+      - id: llm_training_code_and_evals
+        statement: >-
+          Training, eval and data-pipeline code with their configs under the
+          owning tree. Proof is the eval harness exit status and its recorded
+          measurement; "a foundation model exists" is not a claim a diff makes.
+      - id: evans_repos_test_backed
+        statement: >-
+          Per-clone work on Jeremy Evans' repos (sequel, roda, the list named
+          per run), gated on each project's own suite. Contribution goes
+          through normal GitHub channels; history on repos the operator does
+          not own is not rewritten.
+      - id: propulsion_simulation_or_notes
+        statement: >-
+          Literature notes, problem statements and open-literature simulation
+          code as software artifacts, with ordinary scan and fix hygiene.
+
+  out_of_scope:
+    definition: >-
+      Claims no check in any git tree can falsify. MASTER answers with scope
+      truth and refuses the delivery language, including for research notes
+      that merely neighbour the topic.
+    items:
+      - id: physical_propulsion
+        statement: >-
+          No proof adapter in a repository validates physics. A diff is not a
+          test stand.
+      - id: military_aerospace_systems
+        statement: >-
+          No design authority for weapons or air-superiority platforms, and no
+          how-to role. At most unclassified writing and software with no
+          weapons-design function.
+      - id: delivered_without_measurable_check
+        statement: >-
+          Any delivered whose evidence is a declaration, a count or a
+          screenshot instead of a check that can fail. A missing or unrun
+          measurement is INCONCLUSIVE, never PASS.
