@@ -1039,8 +1039,8 @@ module Dilla
       bright = @voice["brightness"].to_f
       len = (dur_s * SAMPLE_RATE).to_i + 1
       decay = @voice["decay"].to_f
-      tine_amp = 0.22 * bright * vel
-      body_amp = 0.9
+      tine_amp = 0.22 * bright
+      body_amp = 0.9 * vel
       trem = @voice["tremolo"].to_f
       trem_samples = (4.6 * SAMPLE_RATE).to_i
       out = Dilla.render_tone(
@@ -1066,14 +1066,14 @@ module Dilla
       len = (dur_s * SAMPLE_RATE).to_i + 1
       partials = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0].map.with_index { |h, idx| [h, (0.9**idx) * 0.5, 1.0] }
       out = Dilla.render_tone(
-        len, f, 0.5,
+        len, f, 0.5 * vel,
         env: { attack: @voice["attack"].to_f, decay: @voice["decay"].to_f, sustain: 0.55 },
         partials: partials,
         lp: 1400 + 2600 * @voice["brightness"].to_f
       )
       # Two-voice detune chorus inside the pad: cheap width without haas smear.
       out2 = Dilla.render_tone(
-        len, f * 1.003, 0.5,
+        len, f * 1.003, 0.5 * vel,
         env: { attack: @voice["attack"].to_f * 1.4, decay: @voice["decay"].to_f, sustain: 0.55 },
         partials: partials,
         lp: 1200 + 2400 * @voice["brightness"].to_f
@@ -1090,7 +1090,7 @@ module Dilla
       f = midi_hz(midi)
       len = (dur_s * SAMPLE_RATE).to_i + 1
       out = Dilla.render_tone(
-        len, f, 0.8,
+        len, f, 0.8 * vel,
         env: { attack: 0.002, decay: @voice["decay"].to_f, sustain: 0.0 },
         partials: [[1.0, 1.0, 1.0], [3.01, 0.4, 0.35], [5.4, 0.12, 0.15]],
         lp: 6500
@@ -1102,7 +1102,7 @@ module Dilla
       f = midi_hz(midi)
       len = (dur_s * SAMPLE_RATE).to_i + 1
       out = Dilla.render_tone(
-        len, f, 0.6,
+        len, f, 0.6 * vel,
         env: { attack: 0.01, decay: @voice["decay"].to_f, sustain: 0.8 },
         partials: [[0.5, 0.35, 1.0], [1.0, 1.0, 1.0], [2.0, 0.5, 1.0], [3.0, 0.25, 1.0], [4.0, 0.2, 1.0], [8.0, 0.1, 1.0]],
         lp: 4200
@@ -1113,16 +1113,16 @@ module Dilla
     def prophet(midi, vel, dur_s)
       f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
       partials=[[1.0,0.78,1.0],[2.0,0.31,0.9],[3.0,0.18,0.75],[4.0,0.10,0.62],[5.0,0.045,0.5]]
-      a=Dilla.render_tone(len,f,0.58,env:{attack:0.025,decay:@voice.fetch("decay",3.8).to_f,sustain:0.36},partials:partials,lp:1700+4400*@voice.fetch("brightness",0.5).to_f)
-      b=Dilla.render_tone(len,f*1.0032,0.42,env:{attack:0.035,decay:@voice.fetch("decay",3.8).to_f,sustain:0.32},partials:partials,lp:1500+4100*@voice.fetch("brightness",0.5).to_f)
+      a=Dilla.render_tone(len,f,0.58*vel,env:{attack:0.025,decay:@voice.fetch("decay",3.8).to_f,sustain:0.36},partials:partials,lp:1700+4400*@voice.fetch("brightness",0.5).to_f)
+      b=Dilla.render_tone(len,f*1.0032,0.42*vel,env:{attack:0.035,decay:@voice.fetch("decay",3.8).to_f,sustain:0.32},partials:partials,lp:1500+4100*@voice.fetch("brightness",0.5).to_f)
       len.times { |i| a[i]=a[i]*0.62+b[i]*0.38 }; soft_clip(a)
     end
 
     def juno(midi, vel, dur_s)
       f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
       partials=[[1.0,0.62,1.0],[2.0,0.28,0.85],[3.0,0.18,0.7],[4.0,0.10,0.55],[5.0,0.05,0.4]]
-      a=Dilla.render_tone(len,f,0.56,env:{attack:0.18,decay:@voice.fetch("decay",6.5).to_f,sustain:0.58},partials:partials,lp:1100+3300*@voice.fetch("brightness",0.4).to_f)
-      b=Dilla.render_tone(len,f*1.006,0.44,env:{attack:0.22,decay:@voice.fetch("decay",6.5).to_f,sustain:0.55},partials:partials,lp:1000+3000*@voice.fetch("brightness",0.4).to_f)
+      a=Dilla.render_tone(len,f,0.56*vel,env:{attack:0.18,decay:@voice.fetch("decay",6.5).to_f,sustain:0.58},partials:partials,lp:1100+3300*@voice.fetch("brightness",0.4).to_f)
+      b=Dilla.render_tone(len,f*1.006,0.44*vel,env:{attack:0.22,decay:@voice.fetch("decay",6.5).to_f,sustain:0.55},partials:partials,lp:1000+3000*@voice.fetch("brightness",0.4).to_f)
       depth=@voice.fetch("ensemble",0.08).to_f; rate=@voice.fetch("ensemble_rate",0.23).to_f
       len.times { |i| a[i]=(a[i]*0.56+b[i]*0.44)*(1.0-depth*(0.5-0.5*Math.sin(2.0*Math::PI*rate*i/SAMPLE_RATE))) }
       soft_clip(a)
@@ -1131,13 +1131,13 @@ module Dilla
     def minimoog(midi, vel, dur_s)
       f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
       partials=[[1.0,0.95,1.0],[2.0,0.38,0.82],[3.0,0.22,0.68],[4.0,0.13,0.5],[5.0,0.075,0.36],[6.0,0.035,0.25]]
-      out=Dilla.render_tone(len,f,0.78,env:{attack:0.004,decay:@voice.fetch("decay",1.1).to_f,sustain:0.18},partials:partials,lp:@voice.fetch("cutoff",2400).to_f)
+      out=Dilla.render_tone(len,f,0.78*vel,env:{attack:0.004,decay:@voice.fetch("decay",1.1).to_f,sustain:0.18},partials:partials,lp:@voice.fetch("cutoff",2400).to_f)
       soft_clip(out,1.2)
     end
 
     def wurlitzer(midi, vel, dur_s)
       f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
-      out=Dilla.render_tone(len,f,0.84,env:{attack:0.004,decay:@voice.fetch("decay",1.65).to_f,sustain:0.07},
+      out=Dilla.render_tone(len,f,0.84*vel,env:{attack:0.004,decay:@voice.fetch("decay",1.65).to_f,sustain:0.07},
         partials:[[1.0,1.0,1.0],[2.01,0.25,0.42],[3.96,0.12,0.24],[6.13,0.04,0.12]],lp:3300+1800*@voice.fetch("brightness",0.45).to_f)
       soft_clip(out)
     end
@@ -1183,7 +1183,7 @@ module Dilla
       f = midi_hz(midi)
       len = (dur_s * SAMPLE_RATE).to_i + 1
       out = Dilla.render_tone(
-        len, f, 0.9,
+        len, f, 0.9 * vel,
         env: { attack: 0.005, decay: [dur_s * 0.9, 0.5].max, sustain: 0.3 },
         partials: [[1.0, 1.0, 1.0], [2.0, 0.3, 0.7], [3.0, 0.1, 0.4]],
         lp: 950

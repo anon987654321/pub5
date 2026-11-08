@@ -480,3 +480,32 @@ class TestDillaStyleProfileRouting < Minitest::Test
     assert_equal "coltrane_soup", plan.fetch(:arrangement)[2].fetch("progression")
   end
 end
+
+
+class TestDillaInstrumentVelocity < Minitest::Test
+  def rms(samples)
+    Math.sqrt(samples.sum { |sample| sample * sample } / [samples.length, 1].max)
+  end
+
+  def test_velocity_changes_amplitude_across_the_instrument_bank
+    kit = Dilla.catalogue.fetch("kits").fetch("kit_dust")
+    voices = %w[
+      rhodes_mark1 glass_pad music_box church_organ prophet_5 juno_106
+      minimoog_solo wurlitzer_200a
+    ]
+    voices.each do |name|
+      engine = Dilla::Instruments.new(kit, Dilla.catalogue.fetch("voices").fetch(name), Dilla.theory)
+      quiet = engine.chord_note(60, 0.22, 0.12)
+      loud = engine.chord_note(60, 0.78, 0.12)
+      assert_operator rms(loud), :>, rms(quiet), "#{name} must respect MIDI velocity"
+    end
+  end
+
+  def test_bass_velocity_changes_amplitude
+    kit = Dilla.catalogue.fetch("kits").fetch("kit_dust")
+    engine = Dilla::Instruments.new(kit, Dilla.catalogue.fetch("voices").fetch("tape_strings"), Dilla.theory)
+    quiet = engine.bass(36, 0.2, 0.18)
+    loud = engine.bass(36, 0.8, 0.18)
+    assert_operator rms(loud), :>, rms(quiet)
+  end
+end
