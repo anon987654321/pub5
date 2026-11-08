@@ -41,8 +41,14 @@ module Master
       REASON_TEXT = {
         "quota" => "quota spent",
         "unreachable" => "unreachable",
-        "login" => "login expired",
+        "login" => "login or credential rejected",
         "guessed" => "quota spent, wait guessed",
+      }.freeze
+      REMEDIATION_TEXT = {
+        "quota" => "wait for the provider reset; retrying this lane early will not help",
+        "unreachable" => "check DNS/network or start the local provider, then probe again",
+        "login" => "refresh this provider's CLI login or configured API credential, then probe again",
+        "guessed" => "the provider stated no reset time; wait for the next bounded probe",
       }.freeze
       DATA = File.expand_path("../../data/lanes.yml", __dir__)
 
@@ -281,9 +287,10 @@ module Master
         dead_lanes.map do |lane, deadline|
           next "#{lane}: dead by hand (data/lanes.yml dead:)" if deadline == :manual
 
+          reason = why[lane]
           left = (deadline - @clock.call).to_i
           back = Time.at(deadline).strftime("%Y-%m-%d %H:%M")
-          "#{lane}: #{REASON_TEXT.fetch(why[lane], REASON_TEXT["quota"])}, back in #{left / 3600}h#{left % 3600 / 60}m (#{back})"
+          "#{lane}: #{REASON_TEXT.fetch(reason, REASON_TEXT["quota"])}, back in #{left / 3600}h#{left % 3600 / 60}m (#{back}); #{REMEDIATION_TEXT.fetch(reason, REMEDIATION_TEXT["quota"])}"
         end
       end
 
