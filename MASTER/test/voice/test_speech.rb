@@ -226,6 +226,27 @@ class TestSpeech < Minitest::Test
     playback.instance_variable_set(:@playback_verified, old_verified)
   end
 
+  def test_successful_native_speech_fallback_clears_the_player_failure
+    playback = Master::Voice::Playback
+    old_error = playback.instance_variable_get(:@last_error)
+    old_verified = playback.instance_variable_get(:@playback_verified)
+    playback.instance_variable_set(:@last_error, "afplay exit 1")
+    playback.instance_variable_set(:@playback_verified, false)
+
+    playback.stub(:generation_active?, true) do
+      playback.stub(:native_say, true) do
+        playback.stub(:spoken, nil) do
+          assert playback.send(:fallback_after_playback_failure, "hello", generation: 1)
+        end
+      end
+    end
+
+    assert_equal "verified", playback.output_status
+  ensure
+    playback.instance_variable_set(:@last_error, old_error)
+    playback.instance_variable_set(:@playback_verified, old_verified)
+  end
+
   def test_edge_tts_unavailable_without_worker
     Master::Voice::Speech.stub(:worker_executable?, false) do
       refute Master::Voice::Speech.edge_tts_available?
