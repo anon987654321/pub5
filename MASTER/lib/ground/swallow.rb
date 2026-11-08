@@ -45,9 +45,14 @@ module Master
       DEFECTS = [NoMethodError, NameError, TypeError, FrozenError, NoMatchingPatternError].freeze
       MAX_BYTES = 10_485_760
       KEEP_BACKUPS = 5
+      # A single rescue site can hide a defect repeatedly while the process
+      # continues. /fix escalates any place beyond this per-run budget.
+      PLACE_BUDGET = 3
 
       class << self
         def log_path = ENV.fetch(ENV_KEY, LOG_PATH)
+
+        def over_budget?(count) = count.to_i > PLACE_BUDGET
 
         def event_bus=(bus)
           @event_bus = bus
