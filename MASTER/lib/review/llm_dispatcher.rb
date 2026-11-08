@@ -160,15 +160,24 @@ module Master
 
         @bus&.publish("llm:send", model: selected_model)
         Io::LaneSelection.note_use(selected_model, Fiber[:master_operation])
+        streamed_bytes = 0
+        stream_handler = if stream && blk
+          lambda do |chunk|
+            streamed_bytes += chunk.to_s.bytesize
+            blk.call(chunk)
+          end
+        else
+          blk
+        end
         cache_key = cache_key_for(messages.last[:content], messages[0...-1], selected_model, system, temperature)
         result = breaker_for(selected_model).call(estimate_cost(messages.last[:content], selected_model)) do
           Timeout.timeout(call_deadline_for(selected_model)) do
             @cache.fetch(cache_key, selected_model) do
-              send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &blk)
+              send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &stream_handler)
             end
           end
         end
-        settle(result, selected_model, started)
+        settle(result, selected_model, started, streamed_bytes:)
       rescue Io::CircuitBreaker::CircuitError => err
         record_provider_outcome(selected_model, err.category, latency_ms: elapsed_ms(started), error: err.message)
         Result.err(redact_secrets(err.message), category: err.category)
@@ -351,14 +360,26 @@ module Master
       #
       # The model is stamped after MASTER_MODEL and the vision swap, so it names
       # the model that was actually asked rather than the one the caller passed.
-      def settle(result, selected_model, started)
+      def settle(result, selected_model, started, streamed_bytes: 0)
         # MASTER's own fault says nothing about the lane, so it is neither silenced nor scored.
         return result if result.is_a?(Master::Result::Err) && result.category == :crash
 
+        result = classify_empty_reply(result, streamed_bytes:)
         result = reclassify_provider_error(result, model: selected_model)
         note_lane_silence(result, selected_model)
         record_provider_result(model: selected_model, result:, started:)
         result.is_a?(Master::Result::Ok) ? result.with_model(selected_model) : result
+      end
+
+      # Empty successful replies used to pass the provider gate and become a
+      # blank conversational turn. A streamed reply is accepted only when bytes
+      # actually reached the stream callback.
+      def classify_empty_reply(result, streamed_bytes: 0)
+        return result unless result.is_a?(Master::Result::Ok)
+        return result unless result.value.is_a?(String) && result.value.strip.empty?
+        return result if streamed_bytes.to_i.positive?
+
+        Master::Result.err("provider returned an empty reply", category: :llm_failure)
       end
 
       # With no key at all, the setup message. With a key the provider refused,
@@ -406,6 +427,7 @@ module Master
         # offline so failover skips the lane instead of spending retry delays.
         return Master::Result.err(result.message, category: :offline) if model && local_runtime_failure?(model, result.message)
         return Master::Result.err(result.message, category: :offline) if offline_error?(result)
+        return Master::Result.err(result.message, category: :auth_error) if Io::LaneReply.read(result.message)&.kind == :auth
         return Master::Result.err(result.message, category: :budget) if billing_error?(result)
         return Master::Result.err(result.message, category: :rate_limit) if rate_limit_error?(result)
         return Master::Result.err(result.message, category: :invalid_request) if invalid_request_error?(result)
