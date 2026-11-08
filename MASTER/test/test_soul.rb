@@ -172,6 +172,23 @@ class TestSoul < Minitest::Test
     assert_includes line, "adjust immediately"
   end
 
+  def test_agent_prompt_exposes_capability_catalog_only_when_handed_to_this_agent
+    catalog = Class.new
+    catalog.const_set(:NAME, "capability_catalog")
+    catalog.const_set(:DESCRIPTION, "Read-only capability discovery.")
+    builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
+    builder.instance_variable_set(:@tools, [catalog.new])
+
+    section = builder.send(:runtime_capability_section)
+    assert_includes section, "capability_catalog(action: list|search|describe)"
+    assert_includes section, "not proof of provider or plugin availability"
+
+    builder.instance_variable_set(:@tools, [])
+    section = builder.send(:runtime_capability_section)
+    assert_includes section, "Capability discovery catalog is not callable in this turn"
+    refute_includes section, "capability_catalog(action: list|search|describe)"
+  end
+
   def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
     tool_class = Class.new
     tool_class.const_set(:NAME, "test_probe")
@@ -187,7 +204,7 @@ class TestSoul < Minitest::Test
     assert_includes section, "Voice runtime:"
     assert_includes section, "audio output="
     assert_includes section, "not a guarantee every provider/request receives every tool"
-    assert_includes section, "Read-only model-selector output and governed shell stdout recorded in execution history"
+    assert_includes section, "When captured model-selector output or governed shell stdout is present in the current turn context"
   end
 
 end
