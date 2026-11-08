@@ -47,7 +47,7 @@ class TestRenderer < Minitest::Test
     Master::Voice::Speech.stub(:last_error, nil) do
       Master::Voice::Playback.stub(:last_error, nil) do
         text = renderer.splash("model")
-        assert_includes strip_ansi(text), "voice0 at mainbus0: available"
+        assert_includes strip_ansi(text), "voice0 at mainbus0: detected, playback unverified"
         refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
       end
     end
@@ -92,7 +92,7 @@ class TestRenderer < Minitest::Test
     assert_operator lines.size, :>, 10
     assert_operator lines.count { |line| line.include?("boot line") }, :>=, 2
     assert_operator lines.count { |line| line.include?("boot line") }, :<=, 10
-    assert_includes strip_ansi(lines.join), "voice0 at mainbus0: available"
+    assert_includes strip_ansi(lines.join), "voice0 at mainbus0: detected, playback unverified"
     refute_includes strip_ansi(lines.join), "voice0 at mainbus0: ready"
   ensure
     ENV.delete("MASTER_BOOT_STATUS")
