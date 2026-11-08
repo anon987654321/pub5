@@ -489,7 +489,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `master_face_soothing` — picked; complete `master_face_breath` without adding colours or exceeding visual budgets.
 - [ ] `master_voice_dsp_lanes` — picked; complete `master_voice_browser_dsp` so browser and terminal build the same declared voice presets, with honest unsupported-node behaviour.
 - [ ] `master_voice_cooler` — picked; complete `master_voice_cooler_default` only after listening acceptance; operator taste remains the final gate.
-- [x] `dilla_grammar_beauty` — satisfied additively in `MASTER/data/music_theory_chords.yml`; five movement grammars and six descriptive voicing guides landed without changing existing progression rows.
+- [x] `dilla_grammar_beauty` — five additive movement grammars and six descriptive voicing guides in `MASTER/data/music_theory_chords.yml`; a direct catalogue regression now exists in `MASTER/test/voice/test_voice_support.rb` (added, NOT_RUN on pinned Ruby 4.0.5).
 - [ ] `dilla_corpus_depth` — sample credits, measured timing, 3/5/7-bar form and Bach/Satie lineage now surface in `Voice::Dilla.brief`; exact Donuts chord transcription remains listening-dependent (the empty arrays are deliberate, not guessed). Regression added; NOT_RUN on pinned Ruby 4.0.5.
 - [ ] `free_model_lanes` — picked; complete `free_compute_design_of_record` with dated quota/source checks and explicit gates; do not wire provider lanes merely because a free tier is listed.
 
