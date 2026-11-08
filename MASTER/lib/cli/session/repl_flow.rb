@@ -3,6 +3,8 @@
 require_relative "repl_io"
 require_relative "../face/transcriber"
 require_relative "../face/ear"
+require_relative "../stages/route"
+require_relative "../turn_router"
 
 module Master
   module CLI
@@ -11,6 +13,25 @@ module Master
       CLOSE_WINDOW_S = 3
       INTERACTIVE_QUEUE_LIMIT = 32
       BANG = /\A!(?<command>\S.*)\z/m
+
+      # Slash verbs that answer from local state and may run while a model turn
+      # streams (Johann's log 2026-11-08: /voice, /tts and /help typed during an
+      # 89-second turn queued four to six deep, so the operator toggled session
+      # sound for a conversation that had already moved on). Everything else
+      # keeps its place in the queue: a writing verb must not interleave with
+      # the turn that is running.
+      TURN_SAFE_COMMANDS = %w[capabilities doctor help laws model status voice].freeze
+
+      # Slash verbs the REPL itself answers before any registry lookup: the
+      # mic, the two exits, and the queue and ask controls. They are not
+      # registry names, so the unknown-command refusal must not reach them.
+      REPL_SLASH = %w[approve deny exit listen quit resume stop].freeze
+
+      # The verbs a busy turn still answers, spelled out because the door
+      # works before the registry has loaded: /help, the voice controls and
+      # the model's read-only questions run now, anything that can start
+      # another long job stays FIFO-queued behind the turn.
+      BUSY_TURN_CONTROLS = %w[capabilities doctor laws model status voice].freeze
 
       private
 
@@ -139,11 +160,14 @@ module Master
       # turn, and a line that moved for that alone repainted the same fact.
       # Lane, model, violations and error are the meaning; the count rides
       # along whenever the line prints at all.
-      # The count reads "260/128.0k" (Johann's log 2026-11-08): the first
-      # number is bare, only the window size carries the suffix, so the first
-      # [kM] is optional — a required one matched nothing and the state line
-      # repainted between prompts on every token-count drift anyway.
-      STATE_TOKEN_COUNT = /\s+\d+(?:\.\d+)?[kM]?\/\d+(?:\.\d+)?[kM](?=, |\z)/
+      #
+      # The renderer emits the count as one whole comma field — token_label
+      # prints "12.5k" or "1.0M" above the thresholds, a bare count below
+      # ("260/128.0k", Johann's log 2026-11-08) — so a strip regex demanding
+      # a suffix on the first number never matched and the line repainted
+      # between prompts on every turn. The meaning drops the whole field
+      # instead of cutting the tail off the string.
+      STATE_TOKEN_COUNT = /\A\d+(?:\.\d+)?[kM]?\/\d+(?:\.\d+)?[kM]?\z/.freeze
 
       def announce_state(state)
         return if state.nil? || same_state_meaning?(state, @announced_state)
@@ -166,7 +190,7 @@ module Master
       # state line already carries git and phase live, so the meaning
       # compares without them.
       def state_meaning(state)
-        fields = state.to_s.sub(STATE_TOKEN_COUNT, "").split(", ", -1)
+        fields = state.to_s.split(", ", -1)
         operator = fields.shift.to_s.split
         meaning = fields.reject { |field| field.match?(STATE_TOKEN_COUNT) }
         meaning.unshift("error") if operator.include?("error")
@@ -202,6 +226,7 @@ module Master
           # /help, voice controls and governed shell commands must run now.
           handled = dispatch_busy_operator_control(stripped)
           return handled unless handled == :unhandled
+          return refuse_unknown_slash_command(stripped) if unknown_slash_command?(stripped)
 
           enqueue_interactive_line(line)
           return
@@ -219,13 +244,17 @@ module Master
         bang = stripped.match(BANG)
         return run_bang(bang[:command]) if bang
         return run_input(read_multiline) if stripped == "<<"
+        return refuse_unknown_slash_command(stripped) if unknown_slash_command?(stripped)
 
         run_agent_turn(line)
       end
 
       # A busy model turn must not capture local controls as future prompts.
       # Keep this allowlist deliberately small: commands that can start another
-      # long-running job remain FIFO-queued behind the active turn.
+      # long-running job remain FIFO-queued behind the active turn. A /cd must
+      # not race the turn reading the old directory, so it queues too. A typo
+      # is refused, not queued: an unknown word is not prose waiting its turn
+      # (Johann's log 2026-11-08).
       def dispatch_busy_operator_control(stripped)
         case Master::CLI::OperatorGrammar.parse(stripped)&.kind
         when :repeat then return repeat_last
@@ -242,13 +271,62 @@ module Master
         match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)(?:\s+(?<args>.*))?\z}i)
         return :unhandled unless match
 
-        name = match[:name].downcase
+        original = match[:name].downcase
+        name = original == "tts" ? "voice" : original
         args = match[:args].to_s
-        return :unhandled unless %w[voice tts model status doctor].include?(name)
+        return :unhandled unless BUSY_TURN_CONTROLS.include?(name)
+        # Mid-turn, the model verbs answer read-only questions only: a model
+        # switch would move the ground under the turn still running.
         return :unhandled if name == "model" && !args.match?(/\A(?:|list|status|current)\z/i)
         return :unhandled if name == "voice" && !args.match?(/\A(?:|status|on|off|natural|normal|classic|fast|expressive|transcendent|dilla)\z/i)
 
-        dispatch_registered_slash_command(name == "tts" ? "/voice#{args.empty? ? "" : " #{args}"}" : stripped)
+        dispatch_registered_slash_command(original == "tts" ? "/voice#{args.empty? ? "" : " #{args}"}" : stripped)
+      end
+
+      # A line shaped like "/word" is a command request, not prose. The
+      # pipeline door already refuses an unknown one (Stages::Route); the REPL
+      # door used to hand it to the model instead, which cost a 60-90 second
+      # spin answered by the model's guess about a surface it does not own
+      # ("I can't run that command or access a model selector here", Johann's
+      # log 2026-11-08). The pipeline's spellings stay exempt: /sweep, /prove
+      # and /fold are not registry names - they are /fix and the fold wearing
+      # another word.
+      def unknown_slash_command?(stripped)
+        match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)}i)
+        return false unless match
+
+        name = match[:name].downcase
+        return false if REPL_SLASH.include?(name)
+        return false if TurnRouter::PIPELINE_SLASH.include?(name)
+        return false if TurnRouter::FOLD_SLASH.include?(name)
+
+        registered_command_name(name).nil?
+      end
+
+      def refuse_unknown_slash_command(stripped)
+        name = stripped.sub(%r{\A/}, "").split(/\s+/, 2).first.to_s.downcase
+        suggestion = Stages::Route.suggestion_for(name, @container.fetch(:commands, {}).keys)
+        message = "unknown command: /#{name}"
+        message += suggestion ? " - did you mean /#{suggestion}?" : " - /help lists the surface"
+        print_terminal_output(message, mode: :error)
+        nil
+      end
+
+      # One name table for both doors: the pipeline's spellings (/tts is
+      # /voice) resolve before the registry lookup, so the REPL and the
+      # pipeline answer a spelling with the same verb.
+      def registered_command_name(name)
+        name = Stages::Route::SPELLINGS.fetch(name, name)
+        commands = @container.fetch(:commands, {})
+        commands.key?(name) ? name : nil
+      end
+
+      def turn_safe_slash_command?(stripped)
+        match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)}i)
+        return false unless match
+
+        name = registered_command_name(match[:name].downcase)
+        !name.nil? && TURN_SAFE_COMMANDS.include?(name)
       end
 
       def dispatch_core_slash_command(stripped)
@@ -270,9 +348,8 @@ module Master
         match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)(?:\s+(?<args>.*))?\z}i)
         return :unhandled unless match
 
-        name = match[:name].downcase
-        name = "voice" if name == "tts"
-        command = @container.fetch(:commands, {})[name]
+        name = registered_command_name(match[:name].downcase)
+        command = name && @container.fetch(:commands, {})[name]
         return :unhandled unless command
 
         @refs.ground_truth&.begin_turn! if @refs&.respond_to?(:ground_truth)

@@ -1088,15 +1088,65 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal "hello world", seen
   end
 
-  # An unknown slash command is prose, not an error. Worth pinning because the
-  # old behaviour was the opposite ("unknown command: /foo" via the renderer),
-  # and because a typo'd command now costs a model turn.
-  def test_unknown_slash_command_is_sent_as_a_turn
+  # A line shaped like "/word" is a command request, not prose. The REPL
+  # refuses a word it does not know instead of spending a 60-90 second model
+  # turn on it (Johann's log 2026-11-08: a typo queued, spun, and came back
+  # as the model's apology for a surface it does not own).
+  def test_unknown_slash_command_is_refused_without_a_model_turn
     seen = :unset
-    @cli.stub(:run_input, ->(line) { seen = line }) do
-      @cli.send(:handle_repl_line, "/foo")
+    @renderer.expect(:render, "err0: unknown command: /foo\n", [String], mode: :error)
+    out, = capture_io do
+      @cli.stub(:run_input, ->(_line) { seen = _line }) do
+        @cli.send(:handle_repl_line, "/foo")
+      end
     end
-    assert_equal "/foo", seen
+    assert_equal :unset, seen, "a typo'd command must not cost a model turn"
+    assert_match(/unknown command: \/foo/, out)
+    @renderer.verify
+  end
+
+  def test_unknown_slash_command_suggests_the_closest_verb
+    @renderer.expect(:render, "err0: unknown command: /stauts - did you mean /status?\n", [String], mode: :error)
+    out, = capture_io { @cli.send(:handle_repl_line, "/stauts") }
+    assert_match(/did you mean \/status\?/, out)
+    @renderer.verify
+  end
+
+  # One name table for both doors: the pipeline's spelling resolves to the
+  # verb it names, so /tts answers with /voice's behaviour at the REPL too.
+  def test_tts_spelling_dispatches_the_voice_command
+    called = nil
+    @container[:commands] = { "voice" => ->(args:) { called = args; "" } }
+    capture_io { @cli.send(:handle_repl_line, "/tts off") }
+    assert_equal "off", called
+  end
+
+  # Johann's log 2026-11-08: /voice and /help typed during an 89-second turn
+  # queued four to six deep, so the operator toggled session sound for a
+  # conversation that had already moved on. Local-state verbs run at once;
+  # everything else keeps its place in the queue.
+  def test_turn_safe_slash_command_runs_while_a_turn_streams
+    worker = Thread.new { sleep 5 }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    called = nil
+    @container[:commands] = { "status" => ->(args:) { called = args; "" } }
+    capture_io { @cli.send(:handle_repl_line, "/status") }
+    assert_equal "", called, "a turn-safe verb answers now, not behind the running turn"
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  ensure
+    worker.kill
+  end
+
+  def test_writing_slash_command_still_queues_behind_a_running_turn
+    worker = Thread.new { sleep 5 }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    called = nil
+    @container[:commands] = { "play" => ->(args:) { called = args; "" } }
+    capture_io { @cli.send(:handle_repl_line, "/play one") }
+    assert_nil called, "a writing verb must not interleave with the running turn"
+    assert_equal ["/play one"], @cli.instance_variable_get(:@turn_queue)
+  ensure
+    worker.kill
   end
 
   def test_exit_still_closes_when_session_save_fails

@@ -84,4 +84,15 @@ class TestCliStagesRoute < Minitest::Test
 
     assert_equal :agent, result.value![:handler]
   end
+
+  # The REPL refuses an unknown slash word with the same suggestion the
+  # pipeline door gives: one vocabulary at both doors (Johann's log
+  # 2026-11-08, where the two doors answered one typo differently).
+  def test_suggestion_for_answers_the_repl_door_from_the_same_table
+    names = %w[status model voice fix laws]
+
+    assert_equal "status", Master::CLI::Stages::Route.suggestion_for("stauts", names)
+    assert_nil Master::CLI::Stages::Route.suggestion_for("zzzzzzzz", names)
+    assert_nil Master::CLI::Stages::Route.suggestion_for("", names)
+  end
 end

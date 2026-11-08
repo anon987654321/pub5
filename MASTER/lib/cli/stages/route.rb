@@ -25,6 +25,41 @@ module Master
           @bus = bus
         end
 
+        # The REPL refuses an unknown slash command with the same suggestion
+        # the pipeline door gives, so a typo answers with one vocabulary at
+        # both doors.
+        def self.suggestion_for(name, names)
+          table = Array(names).to_h { |key| [key.to_s, nil] }
+          new(commands: table, agent: nil).closest_command(name)
+        end
+
+        # Public because the two doors share it: the pipeline measures a typo
+        # inside route_command, the REPL asks for a suggestion through
+        # suggestion_for on a throwaway instance.
+        #
+        # A Levenshtein matrix rather than DidYouMean::SpellChecker. The two
+        # disagree on one-edit typos of the command list: SpellChecker catches
+        # transpositions this misses, and misses the first-letter slips and short
+        # commands this catches. That is a trade, not a fold.
+        #
+        # Before distance is measured at all, a shared stem wins: /movie and
+        # /movs are spellings of /mov, not neighbours of /fix and /ios. An
+        # old suggestion paired /mov with /ios — two edits apart — because the
+        # bar did not scale with the word's length, and distance alone cannot
+        # tell a stem from a slip.
+        def closest_command(name)
+          return if name.to_s.empty?
+
+          stem = @commands.keys.select { |k| k.start_with?(name) || name.start_with?(k) }
+                             .min_by(&:length)
+          return stem if stem
+
+          @commands.keys.map { |k| [levenshtein(k, name), k] }
+                   .select { |distance, _| distance <= allowed_distance(name) }
+                   .min_by { |distance, k| [distance, k.start_with?(name[0, 1]) ? 0 : 1, k] }
+                   &.last
+        end
+
         def call(ctx)
           case ctx.intent
           when :command then route_command(ctx)
@@ -48,29 +83,6 @@ module Master
           destructive = DestructiveRoutes.destructive_command?(ctx.command)
           @bus&.publish("route:resolved", command: ctx.command, handler: cmd.class.name, destructive:)
           Result.ok(ctx.merge(handler: cmd, destructive_route: destructive))
-        end
-
-        # A Levenshtein matrix rather than DidYouMean::SpellChecker. The two
-        # disagree on one-edit typos of the command list: SpellChecker catches
-        # transpositions this misses, and misses the first-letter slips and short
-        # commands this catches. That is a trade, not a fold.
-        #
-        # Before distance is measured at all, a shared stem wins: /movie and
-        # /movs are spellings of /mov, not neighbours of /fix and /ios. An
-        # old suggestion paired /mov with /ios — two edits apart — because the
-        # bar did not scale with the word's length, and distance alone cannot
-        # tell a stem from a slip.
-        def closest_command(name)
-          return if name.to_s.empty?
-
-          stem = @commands.keys.select { |k| k.start_with?(name) || name.start_with?(k) }
-                             .min_by(&:length)
-          return stem if stem
-
-          @commands.keys.map { |k| [levenshtein(k, name), k] }
-                   .select { |distance, _| distance <= allowed_distance(name) }
-                   .min_by { |distance, k| [distance, k.start_with?(name[0, 1]) ? 0 : 1, k] }
-                   &.last
         end
 
         # Short words forgive less: one edit is already a third of "mov", while
