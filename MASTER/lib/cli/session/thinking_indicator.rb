@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tty-screen"
+require_relative "resource_load"
 require_relative "../stream_accumulator"
 require_relative "../../voice/typography"
 
@@ -8,7 +9,11 @@ module Master
   module CLI
     class Session
       TICK_SECONDS = 0.10
+      FAST_TICK_SECONDS = 0.04
       SPINNER_FRAMES = ["|", "/", "-", "\\"].freeze
+      SPIN_PROBE_SECONDS = 0.5
+      # Below this the row stays plain; the ramp runs amber to red above it.
+      SPIN_COLOR_START = 0.35
       STAGE_EVENTS = {
         "infer:resolved" => "infer",
         "infer:confidence" => "infer",
@@ -61,38 +66,83 @@ module Master
         return unless $stdout.tty?
 
         @spin_thread = Thread.new do
-          frame = 0
-
           loop do
-            paused = false
-            Master::Trace::Dmesg.terminal_write do |target|
-              paused, stage = @think_mutex.synchronize { [@think_paused, @think_stage.to_s] }
-              unless paused
-                stage = "working" if stage.empty?
-                # Busy-turn queue receipts ride the spinner row (Johann
-                # 2026-11-07: separate queue0 lines churned the display
-                # under the spinner) instead of appending their own.
-                queued = @turn_queue_mutex.synchronize { @turn_queue.size } if @turn_worker&.alive?
-                suffix = queued.to_i.positive? ? " - #{queued} queued" : ""
-                line = one_row("#{SPINNER_FRAMES.fetch(frame % SPINNER_FRAMES.length)} #{stage} #{elapsed_seconds}s#{suffix}")
-                if @reading_input
-                  # A reserved row above Reline's prompt keeps the animation
-                  # visible without painting over the user's editable draft.
-                  target.print("\e7\e[1A\r\e[K#{line}\e8") if activity_row_safe_to_draw?
-                elsif !@turn_current_started
-                  target.print("\r\e[K#{line}")
-                end
-                target.flush
-              end
-            end
-            break if paused
+            Master::Trace::Dmesg.terminal_write { |target| paint_spin_row(target) }
+            break if @spin_paused
 
-            frame += 1
-            sleep TICK_SECONDS
+            sleep spin_pause(@spin_intensity)
           end
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "cli.spinner", event_bus: @refs.bus)
         end
+      end
+
+      # One repaint under the dmesg terminal mutex; @spin_paused stops the
+      # thread when the fold's ask held the row. All of the spinner's mutable
+      # state advances here; the helpers below stay pure.
+      def paint_spin_row(target)
+        paused, stage = @think_mutex.synchronize { [@think_paused, @think_stage.to_s] }
+        @spin_paused = paused
+        return if paused
+
+        @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
+        line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)))
+        @spin_frame += 1
+
+        draw_spin_row(target, spin_tinted(line, @spin_intensity))
+        target.flush
+      end
+
+      # The spinner's line: frame, stage word, elapsed time and any queue.
+      def spin_line(stage, name)
+        stage = "working" if stage.empty?
+        "#{name} #{stage} #{elapsed_seconds}s#{spin_suffix}"
+      end
+
+      def spin_tinted(line, intensity)
+        tint = spinner_tint(intensity)
+        tint ? "#{tint}#{line}\e[0m" : line
+      end
+
+      def draw_spin_row(target, line)
+        if @reading_input
+          # A reserved row above Reline's prompt keeps the animation
+          # visible without painting over the user's editable draft.
+          target.print("\e7\e[1A\r\e[K#{line}\e8") if activity_row_safe_to_draw?
+        elsif !@turn_current_started
+          target.print("\r\e[K#{line}")
+        end
+      end
+
+      # Busy-turn queue receipts ride the spinner row (Johann 2026-11-07:
+      # separate queue0 lines churned the display under the spinner).
+      def spin_suffix
+        queued = @turn_queue_mutex.synchronize { @turn_queue.size } if @turn_worker&.alive?
+        queued.to_i.positive? ? " - #{queued} queued" : ""
+      end
+
+      # One ps snapshot per SPIN_PROBE_SECONDS; between them the last score
+      # sets speed and color.
+      def probe_intensity(intensity, probe_at)
+        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        return intensity, probe_at if now < probe_at
+
+        [ResourceLoad.turn, now + SPIN_PROBE_SECONDS]
+      end
+
+      # More work spins the star faster and turns it redder: TICK_SECONDS and
+      # no tint at rest, FAST_TICK_SECONDS and full red at intensity 1.
+      def spin_pause(intensity)
+        span = TICK_SECONDS - FAST_TICK_SECONDS
+        FAST_TICK_SECONDS + span * (1.0 - intensity)
+      end
+
+      def spinner_tint(intensity)
+        return unless intensity > SPIN_COLOR_START
+
+        ramp = (intensity - SPIN_COLOR_START) / (1.0 - SPIN_COLOR_START)
+        green = (215 - 175 * ramp).round
+        "\e[38;2;255;#{green};30m"
       end
 
       def init_thinking_state!
@@ -100,6 +150,12 @@ module Master
         @think_t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         @think_paused = false
         @think_stage = "intake"
+
+        @spin_frame = 0
+        @spin_intensity = 0.0
+        @spin_probe_at = 0.0
+        @spin_paused = false
+
         @activity&.reset!
         # `**`: a single star is colon-free names only, and every stage event has one.
         @think_sub = @refs.bus&.subscribe("**") { |payload| update_think_stage(payload) }
