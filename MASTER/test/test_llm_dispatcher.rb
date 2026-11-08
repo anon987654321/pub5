@@ -262,6 +262,27 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal :offline, dispatcher.send(:classified_call_failure, SocketError.new("Network is unreachable")).category
   end
 
+  def test_a_provider_login_refusal_is_permanent_and_does_not_read_like_a_transient_5xx
+    dispatcher, = build_dispatcher
+    result = Master::Result.err("google: User not found.", category: :provider_error)
+
+    classified = dispatcher.send(:reclassify_provider_error, result)
+
+    assert_equal :auth_error, classified.category
+    assert classified.permanent?
+    refute classified.retriable?
+  end
+
+  def test_empty_successes_become_llm_failures_unless_stream_bytes_were_delivered
+    dispatcher, = build_dispatcher
+    empty = dispatcher.send(:classify_empty_reply, Master::Result.ok(" \n"), streamed_bytes: 0)
+    assert_equal :llm_failure, empty.category
+    assert_includes empty.message, "empty reply"
+
+    streamed = dispatcher.send(:classify_empty_reply, Master::Result.ok(""), streamed_bytes: 12)
+    assert streamed.ok?
+  end
+
   def test_ruby_llm_typed_errors_map_to_master_failover_categories
     dispatcher, = build_dispatcher
     cases = [
