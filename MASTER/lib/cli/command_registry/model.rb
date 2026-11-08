@@ -19,7 +19,9 @@ module Master
           benchmark_args = arg.delete_prefix("benchmark").strip
           return ModelBenchmark.new(agent:, router: model_router_of(agent), metrics:, root:).run(benchmark_args)
         end
-        return "model: #{agent.model}; #{Io::LaneSelection.primary_report(saved: config["model"])}; /model list names the others" if arg.empty?
+        if arg.empty? || %w[status current].include?(arg.downcase)
+          return "model: #{agent.model}; #{Io::LaneSelection.primary_report(saved: config["model"])}; /model list names the others"
+        end
 
         chosen, note = reachable_choice(agent, arg)
         agent.model = chosen
