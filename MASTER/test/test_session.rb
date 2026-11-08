@@ -38,6 +38,29 @@ class TestSession < Minitest::Test
     end
   end
 
+  def test_execution_messages_do_not_become_conversation_titles
+    Dir.mktmpdir("session_execution_title") do |dir|
+      session = Master::Trace::Session.new(root: dir)
+      session.add_message(role: :user, content: "$ git status\nworking tree clean", layer: :execution)
+
+      assert_nil session.name
+
+      session.add_message(role: :user, content: "How should we improve the repository?")
+      assert_equal "How should we improve the repository?", session.name
+    end
+  end
+
+  def test_last_user_question_skips_execution_evidence
+    Dir.mktmpdir("session_execution_question") do |dir|
+      session = Master::Trace::Session.new(root: dir)
+      session.add_message(role: :user, content: "What should we fix next?")
+      session.add_message(role: :user, content: "output contained a question? and more", layer: :execution)
+      session.add_message(role: :user, content: "/model status")
+
+      assert_equal "What should we fix next?", session.last_user_question(before: "/model status")
+    end
+  end
+
   def test_last_user_question_skips_commands_and_the_current_fix
     Dir.mktmpdir("session_question") do |dir|
       session = Master::Trace::Session.new(root: dir)
