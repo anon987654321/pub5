@@ -241,7 +241,7 @@ module Master
         name = match[:name].downcase
         args = match[:args].to_s
         return :unhandled unless %w[voice tts model status doctor].include?(name)
-        return :unhandled if name == "model" && !args.match?(/\A(?:list|status|current|show)\z/i)
+        return :unhandled if name == "model" && !args.match?(/\A(?:|list|status|current)\z/i)
         return :unhandled if name == "voice" && !args.match?(/\A(?:|status|on|off|natural|normal|classic|fast|expressive|transcendent|dilla)\z/i)
 
         dispatch_registered_slash_command(name == "tts" ? "/voice#{args.empty? ? "" : " #{args}"}" : stripped)
@@ -350,7 +350,7 @@ module Master
       end
 
       def record_model_selector_output(args:, text:)
-        return unless %w[list status current].include?(args.to_s.strip.downcase)
+        return unless %w[list status current].include?(args.to_s.strip.downcase) || args.to_s.strip.empty?
         return if text.to_s.empty?
 
         return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
@@ -401,6 +401,7 @@ module Master
         Dir.chdir(destination)
         ENV["OLDPWD"] = previous
         @bang_shell = nil
+        record_execution_output(command:, text: Dir.pwd)
         @last_ok = true
         @exit_code = 0
         terminal_puts(@refs.renderer.render(Dir.pwd, mode: :dim))
