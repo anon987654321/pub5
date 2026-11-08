@@ -133,6 +133,43 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal 0, session.instance_variable_get(:@exit_code)
   end
 
+  def test_cd_changes_the_persistent_repl_directory_inside_the_checkout
+    original = Dir.pwd
+    workspace = File.realpath(Master.repo_root)
+    Dir.chdir(File.join(workspace, "MASTER"))
+    session = Master::CLI::Session.allocate
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    result = session.send(:run_direct_shell, "cd ..")
+
+    assert_equal :changed, result
+    assert_equal workspace, Dir.pwd
+    assert_nil session.instance_variable_get(:@bang_shell)
+  ensure
+    Dir.chdir(original) if original
+  end
+
+  def test_cd_refuses_to_leave_the_checkout
+    original = Dir.pwd
+    workspace = File.realpath(Master.repo_root)
+    Dir.chdir(workspace)
+    session = Master::CLI::Session.allocate
+    renderer = Object.new
+    def renderer.render(text, **); text; end
+    session.instance_variable_set(:@refs, Struct.new(:renderer).new(renderer))
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    result = session.send(:run_direct_shell, "cd /tmp")
+
+    assert_equal :failed, result
+    assert_equal workspace, Dir.pwd
+  ensure
+    Dir.chdir(original) if original
+  end
+
   def test_help_returns_its_text_to_the_terminal
     session = Master::CLI::Session.allocate
     printed = []
