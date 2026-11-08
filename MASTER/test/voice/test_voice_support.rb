@@ -545,7 +545,7 @@ class TestVoiceSupport < Minitest::Test
       assert_includes text, "Mike Hankinson"
       assert_includes text, "musicismysanctuary.com"
       assert_includes text, "academia.edu 29812748"
-      assert_includes text, "the Jackson 5, All I Do Is Think of You"
+      assert_includes text, "The Jackson 5, All I Do Is Think of You"
       assert_includes text, "Dionne Warwick (exact side unconfirmed"
       assert_includes text, "note-by-note transcription"
       assert_includes text, "not synthesis defaults"
