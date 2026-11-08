@@ -12,9 +12,9 @@ module Master
         word, rest = subcommand({ args: arg })
         return dispatch_auth(ctx: rest) if word == "auth"
         return trajectory_lab(root:) if word == "lab"
-        return list_models(root:, metrics:, agent:) if arg == "list"
-        return model_health(agent:) if arg == "health"
-        return compute_models(agent:, root:) if arg == "compute"
+        return list_models(root:, metrics:, agent:) if arg.casecmp?("list")
+        return model_health(agent:) if arg.casecmp?("health")
+        return compute_models(agent:, root:) if arg.casecmp?("compute")
         if arg == "benchmark" || arg.start_with?("benchmark ")
           benchmark_args = arg.delete_prefix("benchmark").strip
           return ModelBenchmark.new(agent:, router: model_router_of(agent), metrics:, root:).run(benchmark_args)
