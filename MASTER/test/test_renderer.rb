@@ -46,9 +46,11 @@ class TestRenderer < Minitest::Test
 
     Master::Voice::Speech.stub(:last_error, nil) do
       Master::Voice::Playback.stub(:last_error, nil) do
-        text = renderer.splash("model")
-        assert_includes strip_ansi(text), "voice0 at mainbus0: detected, playback unverified"
-        refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
+        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+          text = renderer.splash("model")
+          assert_includes strip_ansi(text), "voice0 at mainbus0: detected, playback unverified"
+          refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
+        end
       end
     end
   ensure
@@ -85,7 +87,9 @@ class TestRenderer < Minitest::Test
     ENV.delete("MASTER_TTS_DEGRADED")
     lines = Master::Voice::Speech.stub(:last_error, nil) do
       Master::Voice::Playback.stub(:last_error, nil) do
-        FakeRenderer.new(config: {}).splash("model").lines
+        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+          FakeRenderer.new(config: {}).splash("model").lines
+        end
       end
     end
 
