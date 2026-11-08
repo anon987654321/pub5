@@ -386,7 +386,7 @@ module Master
         timing = timings.empty? ? "timing=not-recorded" : "timing=#{timings.map { |stage, values| "#{stage}:#{values.fetch(:elapsed_ms)}ms" }.join(",")}"
         [
           "voice0 at mainbus0: #{enabled ? "on" : "off"}",
-          "player=#{player ? player.first : "none"} engine=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
+          "player=#{player ? player.first : "none"} output=#{Voice::Playback.output_status} engine=#{engine} profile=#{profile} rate=#{policy.default_rate} pitch=#{policy.default_pitch}",
           detail,
           timing,
           ("error=#{error}" if error && !error.empty?),
