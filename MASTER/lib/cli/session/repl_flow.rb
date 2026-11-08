@@ -193,6 +193,12 @@ module Master
           return
         end
         if @turn_worker&.alive? && Thread.current != @turn_worker
+          # Keep the operator surface responsive while a model turn is busy.
+          # Deterministic controls do not become conversational queue entries:
+          # /help, voice controls and governed shell commands must run now.
+          handled = dispatch_busy_operator_control(stripped)
+          return handled unless handled == :unhandled
+
           enqueue_interactive_line(line)
           return
         end
@@ -211,6 +217,30 @@ module Master
         return run_input(read_multiline) if stripped == "<<"
 
         run_agent_turn(line)
+      end
+
+      # A busy model turn must not capture local controls as future prompts.
+      # Keep this allowlist deliberately small: commands that can start another
+      # long-running job remain FIFO-queued behind the active turn.
+      def dispatch_busy_operator_control(stripped)
+        case Master::CLI::OperatorGrammar.parse(stripped)&.kind
+        when :repeat then return repeat_last
+        when :toggle_focus then return toggle_focus
+        when :direct_shell then return run_direct_shell(stripped)
+        end
+
+        return run_help(Regexp.last_match(1)) if stripped.match(%r{\\A/(?:help|\\?)(?:\\s+(.+))?\\z}) && (Regexp.last_match(1) || true)
+
+        match = stripped.match(%r{\\A/(?<name>[a-z][a-z0-9_-]*)(?:\\s+(?<args>.*))?\\z}i)
+        return :unhandled unless match
+
+        name = match[:name].downcase
+        args = match[:args].to_s
+        return :unhandled unless %w[voice tts model status doctor].include?(name)
+        return :unhandled if name == "model" && !args.match?(/\\A(?:list|status|current|show)\\z/i)
+        return :unhandled if name == "voice" && !args.match?(/\\A(?:|status|on|off|natural|normal|classic|fast|expressive|transcendent|dilla)\\z/i)
+
+        dispatch_registered_slash_command(name == "tts" ? "/voice#{args.empty? ? "" : " #{args}"}" : stripped)
       end
 
       def dispatch_core_slash_command(stripped)
@@ -233,6 +263,7 @@ module Master
         return :unhandled unless match
 
         name = match[:name].downcase
+        name = "voice" if name == "tts"
         command = @container.fetch(:commands, {})[name]
         return :unhandled unless command
 
