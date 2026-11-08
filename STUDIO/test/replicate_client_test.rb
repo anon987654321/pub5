@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
+require "tmpdir"
 require_relative "../replicate/client"
 
 class TestStudioReplicateClientPaths < Minitest::Test
