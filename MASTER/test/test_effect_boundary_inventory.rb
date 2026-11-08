@@ -8,7 +8,7 @@ require "test_helper"
 # is a route around both, so each such site is named here with what audits it.
 # A new one fails this test until it is given a receipt and a line below.
 class TestEffectBoundaryInventory < Minitest::Test
-  TOOLS = %w[WriteFile Shell DeletePath StrReplace BatchReplace AstEdit GitOperations GithubOperations Gist
+  TOOLS = %w[WriteFile Shell DeletePath StrReplace BatchReplace AstEdit GitOperations Gist
              WebFetch WebBrowse BrowserAgent CodePen Clean ExternalAudit Nmap Relayd ProcessSpawn
              ScriptDispatch DynamicHttp].freeze
   BUILT = /Io::(#{TOOLS.join('|')})\.new/

@@ -58,8 +58,8 @@ autoload:
     # boot/paths, boot/data_loading, boot/runtime and boot/master_boot are required by
     # name after loader.setup in lib/master.rb, and the order is load-bearing.
     - boot
-    # time.rb and random.rb declare Master::Time and Master::Random and are
-    # required by path. Managed, the directory is the namespace Master::Master:
+    # time.rb declares Master::Time and is required by path. Managed, the
+    # directory is the namespace Master::Master:
     # a require of "lib/master" defines it, and from then on `Master.` inside
     # any module nested in Master resolves to that empty module.
     - master
