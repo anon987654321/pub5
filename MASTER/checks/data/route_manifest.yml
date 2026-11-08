@@ -2,7 +2,7 @@
 schema: 1
 apps:
   amber:
-    digest: 68761b650b222cbb
+    digest: 1d12024a57b8d404
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -203,7 +203,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   brgen:
-    digest: 402dd7ba05625798
+    digest: dacbdf0e5fe57d66
     routes:
       shared/changelog#show:
       - "/changelog"
