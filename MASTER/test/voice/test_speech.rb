@@ -178,6 +178,54 @@ class TestSpeech < Minitest::Test
     end
   end
 
+  def test_playback_output_status_does_not_confuse_player_discovery_with_success
+    playback = Master::Voice::Playback
+    old_error = playback.instance_variable_get(:@last_error)
+    old_verified = playback.instance_variable_get(:@playback_verified)
+    playback.instance_variable_set(:@last_error, nil)
+    playback.instance_variable_set(:@playback_verified, false)
+
+    playback.stub(:available?, true) do
+      assert_equal "detected, playback unverified", playback.output_status
+    end
+  ensure
+    playback.instance_variable_set(:@last_error, old_error)
+    playback.instance_variable_set(:@playback_verified, old_verified)
+  end
+
+  def test_playback_failure_keeps_the_player_exit_code_for_status
+    playback = Master::Voice::Playback
+    old_error = playback.instance_variable_get(:@last_error)
+    old_verified = playback.instance_variable_get(:@playback_verified)
+    Dir.mktmpdir("master-playback-probe") do |dir|
+      audio = File.join(dir, "sample.mp3")
+      File.binwrite(audio, "audio probe")
+      status = Object.new
+      status.define_singleton_method(:success?) { false }
+      status.define_singleton_method(:exitstatus) { 1 }
+      status.define_singleton_method(:termsig) { nil }
+
+      playback.instance_variable_set(:@last_error, nil)
+      playback.instance_variable_set(:@playback_verified, false)
+      Master::Device::Audio.stub(:media_player_available?, false) do
+        playback.stub(:generation_active?, true) do
+          playback.stub(:player_candidates, [["/usr/bin/afplay", []]]) do
+            Process.stub(:spawn, 12_345) do
+              Process.stub(:wait2, [12_345, status]) do
+                refute playback.play(audio, generation: 1)
+              end
+            end
+          end
+        end
+      end
+
+      assert_equal "failed, afplay exit 1", playback.output_status
+    end
+  ensure
+    playback.instance_variable_set(:@last_error, old_error)
+    playback.instance_variable_set(:@playback_verified, old_verified)
+  end
+
   def test_edge_tts_unavailable_without_worker
     Master::Voice::Speech.stub(:worker_executable?, false) do
       refute Master::Voice::Speech.edge_tts_available?
