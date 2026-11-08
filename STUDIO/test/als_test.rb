@@ -166,3 +166,27 @@ class TestAbletonLiveSetRecovery < Minitest::Test
     end
   end
 end
+
+
+class TestAbletonArchiveInventory < Minitest::Test
+  def test_directory_scan_indexes_good_sets_and_keeps_going_after_bad_files
+    Dir.mktmpdir do |directory|
+      nested = File.join(directory, "Band", "Album")
+      Dir.mkdir(File.join(directory, "Band"))
+      Dir.mkdir(nested)
+      source = File.join(directory, "one.als")
+      writer = Zlib::GzipWriter.new(File.open(source, "wb"))
+      writer.write(TestAbletonLiveSetRecovery.allocate.live_set_xml)
+      writer.close
+      File.binwrite(File.join(nested, "two.als"), File.binread(source))
+      File.write(File.join(directory, "broken.als"), "not xml")
+
+      inventory = Studio::ALS::Inventory.new.scan(directory)
+      assert_equal 2, inventory.fetch("set_count")
+      assert_equal 1, inventory.fetch("failure_count")
+      assert_equal ["Band/Album/two.als", "one.als"], inventory.fetch("sets").map { |set| set.fetch("path") }.sort
+      assert_equal 2, inventory.fetch("sets").first.fetch("midi_track_count")
+      assert_match(/broken\.als/, inventory.fetch("failures").first.fetch("path"))
+    end
+  end
+end

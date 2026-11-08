@@ -119,20 +119,83 @@ module Studio
   end
 end
 
+
+module Studio
+  module ALS
+    class Inventory
+      def initialize(parser: Parser.new)
+        @parser = parser
+      end
+
+      def scan(directory)
+        root = File.expand_path(directory)
+        raise ParseError, "inventory directory does not exist: #{root}" unless File.directory?(root)
+
+        paths = Dir.glob(File.join(root, "**", "*.als")).select { |path| File.file?(path) }.sort
+        sets = []
+        failures = []
+        paths.each do |path|
+          relative = path.delete_prefix("#{root}/")
+          begin
+            project = @parser.parse(path)
+            tracks = Array(project["tracks"])
+            clips = tracks.flat_map { |track| Array(track["clips"]) }
+            sets << {
+              "path" => relative,
+              "title" => project["title"],
+              "tempo_bpm" => project["tempo_bpm"],
+              "time_signature" => project["time_signature"],
+              "track_count" => tracks.length,
+              "midi_track_count" => tracks.count { |track| track["kind"] == "midi" },
+              "audio_track_count" => tracks.count { |track| track["kind"] == "audio" },
+              "clip_count" => clips.length,
+              "midi_note_count" => clips.sum { |clip| Array(clip["notes"]).length },
+              "audio_reference_count" => clips.sum { |clip| Array(clip["audio_references"]).length },
+              "automation_envelope_count" => tracks.sum { |track| Array(track["automation"]).length } +
+                                             clips.sum { |clip| Array(clip["automation"]).length },
+              "file_size_bytes" => File.size(path)
+            }
+          rescue ParseError, SystemCallError => error
+            failures << { "path" => relative, "error" => "#{error.class}: #{error.message}" }
+          end
+        end
+        {
+          "schema" => "studio.ableton-inventory.v1",
+          "root_name" => File.basename(root),
+          "set_count" => sets.length,
+          "failure_count" => failures.length,
+          "sets" => sets,
+          "failures" => failures
+        }
+      end
+    end
+  end
+end
+
 if $PROGRAM_NAME == __FILE__
   require "optparse"
   input = ARGV.shift
-  abort "usage: ruby als_export.rb SET.als [--json PATH] [--ruby PATH]" unless input
+  abort "usage: ruby als_export.rb SET.als|DIRECTORY [--json PATH] [--ruby PATH] [--inventory PATH]" unless input
 
   base = File.join(File.dirname(File.expand_path(input)), File.basename(input, File.extname(input)))
   json_path = "#{base}.json"
   ruby_path = "#{base}.rb"
+  inventory_path = nil
   OptionParser.new do |parser|
     parser.on("--json PATH", "JSON composition archive path") { |value| json_path = value }
     parser.on("--ruby PATH", "Standalone Ruby DSL archive path") { |value| ruby_path = value }
+    parser.on("--inventory PATH", "Batch inventory output (directory input)") { |value| inventory_path = value }
   end.parse!(ARGV)
 
-  project = Studio::ALS::Parser.new.parse(input)
-  outputs = Studio::ALS::Export.write_both(project, json_path:, ruby_path:)
-  puts "als-export: #{project.fetch("tracks").length} tracks, #{outputs.fetch(:json)}, #{outputs.fetch(:ruby)}"
+  if File.directory?(input)
+    inventory = Studio::ALS::Inventory.new.scan(input)
+    destination = inventory_path || File.join(File.expand_path(input), "Ableton-Inventory.json")
+    Studio::ALS::Export.write_json(inventory, destination)
+    puts "als-inventory: #{inventory.fetch("set_count")} sets indexed, #{inventory.fetch("failure_count")} failures, #{File.expand_path(destination)}"
+    inventory.fetch("failures").each { |failure| warn "als-inventory: #{failure.fetch("path")}: #{failure.fetch("error")}" }
+  else
+    project = Studio::ALS::Parser.new.parse(input)
+    outputs = Studio::ALS::Export.write_both(project, json_path:, ruby_path:)
+    puts "als-export: #{project.fetch("tracks").length} tracks, #{outputs.fetch(:json)}, #{outputs.fetch(:ruby)}"
+  end
 end

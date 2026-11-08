@@ -117,12 +117,16 @@ rclone copy "gdrive:Ableton Projects" "$HOME/Ableton-Archive" --progress
 Inspect and export a set (the parser also accepts extracted, plain XML):
 
 ```sh
+ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive" --inventory "$HOME/Ableton-Archive/Ableton-Inventory.json"
 ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive/My Set/My Set.als"
 ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
 ```
 
-The first command writes a versioned JSON composition archive and a
-standalone Ruby DSL archive beside the source by default. Override destinations
+The directory form scans every `.als` recursively and writes an inventory with
+tempo, time signature, track/clip/note counts, audio references and per-file
+errors; one damaged set does not stop the scan. The single-file form writes a
+versioned JSON composition archive and a standalone Ruby DSL archive beside
+the source by default. Override destinations
 with `--json PATH` and `--ruby PATH`. The MIDI command emits one track per
 MIDI track, preserves beat-domain clip positions and note lengths, expands
 enabled clip loops, pairs every note-on with its note-off, and routes tracks
@@ -139,8 +143,9 @@ the JSON/Ruby archives are durable composition records, while the MIDI file is
 the portable performance.
 
 For a software-instrument render, the exported MIDI can be played through a
-locally installed FluidSynth and a SoundFont, then optionally processed with
-local FFmpeg filters. Those are optional render stages: parsing, JSON/Ruby
+locally installed FluidSynth and a SoundFont (for example,
+`fluidsynth -ni -r 44100 -F recovered.wav -T wav bank.sf2 recovered.mid`),
+then optionally processed with local FFmpeg filters. Those are optional render stages: parsing, JSON/Ruby
 export and MIDI generation need no network, API key, Python package or gem.
 Check a local FFmpeg build with `ffmpeg -filters` before relying on a
 particular analog filter.

@@ -29,9 +29,11 @@ module Studio
 
       private
 
+      # Allocate every melodic channel except zero-based channel 9, which is
+      # reserved for General MIDI percussion. Reuse only after 15 instruments.
       def melodic_channel(index)
-        candidate = index % 9
-        candidate
+        candidate = index % 15
+        candidate >= 9 ? candidate + 1 : candidate
       end
 
       def instrument_track(track, channel)
