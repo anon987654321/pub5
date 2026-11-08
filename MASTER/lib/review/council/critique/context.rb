@@ -14,14 +14,12 @@ module Master
         class Context
           DOMAINS = {
             "ui_critique" => <<~CTX,
-              This is the MASTER constitutional AI agent web UI. Design intent:
-              - Full-screen canvas particle face (WebGL-free, 2D Canvas API)
-              - Particles form 3D face shape, morph between poses like a swarm
-              - Black background, white/grey/dark-red particles, 1px only
-              - Chat panel slides in from right, oh-my-zsh style prompt
-              - Edge-tts Christopher voice, server-side, AudioContext playback
-              - Visitor access (no token), authenticated (token) tiers
-              Critique CSS, JS, HTML semantics, animation, typography, layout, hierarchy, accessibility, and data-ink economy.
+              Review the exact rendered product surfaces attached to this critique.
+              The captures and caller-supplied product brief define the product:
+              do not assume the target is MASTER, Brgen, or any other particular app.
+              Respect the surface owner's current product contract and identity.
+              Critique CSS, JavaScript, HTML semantics, interaction, typography,
+              layout, hierarchy, accessibility, responsiveness and data-ink economy.
             CTX
             "sound_critique" => <<~CTX,
               Review MASTER as an interactive AI agent with visual motion, chat streaming, and voice/audio affordances.

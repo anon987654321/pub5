@@ -4,6 +4,8 @@ require "fileutils"
 require "json"
 require "optparse"
 require "time"
+require "rbconfig"
+require_relative "../io/exec"
 require_relative "visual_review_page"
 require_relative "visual_review_checks"
 require_relative "visual_review_triangle"
@@ -24,7 +26,58 @@ module Operator
                  "Taste memory" => %w[taste_memory TasteMemory] }.freeze
     DEFAULT_ENGINES = %w[chrome].freeze
 
+    # Compose existing executable authorities; this is orchestration, not a
+    # second stylesheet policy or token manifest.
+    STYLE_CHECKS = %w[
+      apps_yml shared_wiring engine_boundaries frontend_auditor dialect_purity design_laws
+      css_constitution css_brace_balance scale_ratchet typography_contract css_minify_integrity
+    ].freeze
+
     module_function
+
+    # Source laws first, then the existing rendered review and council. This
+    # command is read-only: the source runner is explicitly scan-only and the
+    # rendered review never edits a stylesheet or approves a pixel baseline.
+    # Exit codes: 0 clean, 1 findings, 2 blocked, 3 inconclusive.
+    def style_sweep(argv, root:, io: $stdout, source_runner: nil, visual_runner: nil)
+      args = Array(argv).dup
+      source_only = !args.delete("--source-only").nil?
+      command = [
+        RbConfig.ruby,
+        File.join(root, "MASTER", "checks", "runner.rb"),
+        "--scan-only",
+        *STYLE_CHECKS,
+      ]
+
+      source_output, source_status = if source_runner
+                                       source_runner.call(command)
+                                     else
+                                       Master::Io::Exec.capture2e(*command, chdir: root, timeout: 1800)
+                                     end
+      source_code = source_status.respond_to?(:exitstatus) ? source_status.exitstatus.to_i : 2
+      source_label = { 0 => "PASS", 1 => "FAIL", 2 => "BLOCKED", 3 => "INCONCLUSIVE" }.fetch(source_code, "BLOCKED")
+      io.puts("style-sweep source: #{source_label} (#{STYLE_CHECKS.join(", ")})")
+      io.write(source_output.to_s) unless source_output.to_s.empty?
+      return source_code if source_only
+
+      visual_args = args.dup
+      visual_args << "--no-open" unless visual_args.include?("--no-open")
+      visual_code = if visual_runner
+                      visual_runner.call(visual_args)
+                    else
+                      main(visual_args, root:, io:)
+                    end
+      visual_code = visual_code.to_i
+
+      return 2 if source_code == 2 || visual_code == 2
+      return 1 if source_code == 1 || visual_code == 1
+      return 3 if source_code == 3 || visual_code == 3
+
+      0
+    rescue StandardError => e
+      io.puts("style-sweep: BLOCKED (#{e.class}: #{e.message.to_s.lines.first.to_s.strip})")
+      2
+    end
 
     def parse(argv, root:, now: Time.now)
       opts = Options.new(tree: "RAILS", apps: [], surfaces: [], engines: DEFAULT_ENGINES, open: true, critique: true, out: nil)

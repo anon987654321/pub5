@@ -96,6 +96,30 @@ class VisualPassContractTest < Minitest::Test
     assert_includes result.message, "INCONCLUSIVE"
   end
 
+  def test_review_context_follows_the_captured_product
+    pass = Pass.new(agent: nil, root: Dir.pwd)
+    master = pass.send(:product_review_context, [{ surface: surface(app: "master") }])
+    rails = pass.send(:product_review_context, [{ surface: surface(app: "brgen") }])
+    mixed = pass.send(:product_review_context, [
+      { surface: surface(app: "brgen") },
+      { surface: surface(app: "amber") },
+    ])
+
+    assert_includes master, "MASTER WEB PRODUCT BRIEF"
+    assert_includes master, "particle face"
+    refute_includes master, "BRGEN PRODUCT AND BOUNDARY BRIEF"
+
+    assert_includes rails, "RAILS PRODUCT BRIEF"
+    assert_includes rails, "BRGEN PRODUCT AND BOUNDARY BRIEF"
+    assert_includes rails, "EIGHT COMPLEMENTARY REVIEW LENSES"
+    assert_includes rails, "Rhythmic pocket"
+    assert_includes rails, "Promise and permission"
+
+    assert_includes mixed, "Preserve those identities"
+    assert_includes mixed, "BRGEN PRODUCT AND BOUNDARY BRIEF"
+    assert_includes mixed, "do not homogenise"
+  end
+
   def test_visual_findings_enter_the_existing_ui_council_and_fix_protocol
     with_tmp do |dir|
       # The rubric is read from the pass root's own data/, as it is when /fix runs on a MASTER root.

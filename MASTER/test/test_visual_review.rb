@@ -77,6 +77,59 @@ class VisualReviewTest < Minitest::Test
     end
   end
 
+  def test_style_sweep_runs_existing_source_checks_without_autofixing
+    status = Struct.new(:exitstatus) { def success? = exitstatus.zero? }.new(0)
+    commands = []
+    visual_calls = []
+    code = Operator::VisualReview.style_sweep(
+      ["--source-only"], root: "/repo", io: StringIO.new,
+      source_runner: ->(command) { commands << command; ["source checks", status] },
+      visual_runner: ->(args) { visual_calls << args; 0 },
+    )
+
+    assert_equal 0, code
+    assert_equal 1, commands.size
+    assert_equal "--scan-only", commands.first[2]
+    assert_equal Operator::VisualReview::STYLE_CHECKS, commands.first.drop(3)
+    assert_empty visual_calls
+  end
+
+  def test_style_sweep_runs_rendered_review_and_defaults_to_no_open
+    status = Struct.new(:exitstatus) { def success? = exitstatus.zero? }.new(0)
+    commands = []
+    visual_calls = []
+    code = Operator::VisualReview.style_sweep(
+      ["--app", "brgen"], root: "/repo", io: StringIO.new,
+      source_runner: ->(command) { commands << command; ["", status] },
+      visual_runner: ->(args) { visual_calls << args; 0 },
+    )
+
+    assert_equal 0, code
+    assert_equal ["--app", "brgen", "--no-open"], visual_calls.first
+    assert_equal 1, commands.size
+  end
+
+  def test_style_sweep_preserves_failure_and_inconclusive_states
+    status_class = Struct.new(:exitstatus) { def success? = exitstatus.zero? }
+    failed = Operator::VisualReview.style_sweep(
+      ["--source-only"], root: "/repo", io: StringIO.new,
+      source_runner: ->(_) { ["", status_class.new(1)] },
+    )
+    inconclusive = Operator::VisualReview.style_sweep(
+      ["--source-only"], root: "/repo", io: StringIO.new,
+      source_runner: ->(_) { ["", status_class.new(3)] },
+    )
+    blocked = Operator::VisualReview.style_sweep(
+      [], root: "/repo", io: StringIO.new,
+      source_runner: ->(_) { ["", status_class.new(0)] },
+      visual_runner: ->(_) { 2 },
+    )
+
+    assert_equal 1, failed
+    assert_equal 3, inconclusive
+    assert_equal 2, blocked
+  end
+
   def test_parse_defaults_and_flags
     opts = Operator::VisualReview.parse(%w[--app brgen,amber --surface core --no-critique --no-open], root: "/r", now: Time.utc(2026, 1, 2, 3, 4, 5))
     assert_equal %w[brgen amber], opts.apps

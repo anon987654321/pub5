@@ -44,6 +44,84 @@ module Master
     class VisualPass
       include VisualEvidenceRows
 
+      # The rendered council is shared by MASTER and RAILS, but their products
+      # are not. Select the brief from what the browser actually captured.
+      MASTER_PRODUCT_CONTEXT = <<~TEXT.freeze
+        MASTER WEB PRODUCT BRIEF
+        This is MASTER's own constitutional agent interface:
+        - full-screen canvas particle face, drawn with the 2D Canvas API
+        - particles form a 3D face and morph between poses
+        - black canvas, white/grey/dark-red particles, one-pixel marks
+        - chat panel enters from the right with an oh-my-zsh-style prompt
+        - server-side Edge TTS with AudioContext playback
+        - visitor and authenticated access tiers
+        Judge this product against that identity; do not export it to other apps.
+      TEXT
+
+      RAILS_PRODUCT_CONTEXT = <<~TEXT.freeze
+        RAILS PRODUCT BRIEF
+        These captures belong to distinct Rails products. Each app's AGENTS.md,
+        README, current rendered product and operator-approved visual identity
+        define its local contract. Preserve those identities; do not homogenise
+        unrelated apps or apply Brgen's identity to Amber or bsdports.
+
+        MASTER/data/tokens.yml is the canonical design-token authority.
+        RAILS/__shared/design_tokens.yml is a generated projection, not a second
+        authoring surface. Use the scales and values already declared there;
+        do not invent parallel palettes, type ramps, spacing scales or token files.
+        Follow the actual stylesheet import graph: shared primitives belong in
+        __shared, app identity belongs to its app, and vertical feature rules live
+        beside that vertical. Do not reorder imports or create a new global sheet
+        merely to make source look more symmetrical.
+
+        Treat missing browser, missing surface coverage or incomplete captures as
+        INCONCLUSIVE. Source checks cannot prove rendered correctness.
+      TEXT
+
+      BRGEN_PRODUCT_CONTEXT = <<~TEXT.freeze
+        BRGEN PRODUCT AND BOUNDARY BRIEF
+        Brgen's promise is a city-first local network: the apex feed is the civic
+        square; verticals are useful rooms off that square. Preserve local
+        character, directness, recognisability and useful density without generic
+        SaaS decoration.
+
+        Respect the existing RAILS/brgen/AGENTS.md and engine tree: the core feed
+        stays in the host; Marketplace and Dating are substantial engines;
+        Takeaway remains nested under Marketplace; Maps and Radio (TV and Playlist)
+        retain their current engine packages; Messenger keeps its current split
+        between host-drawn routes and its packaged Stimulus engine. Shared identity,
+        billing, trust, activity, geo and media primitives have one shared owner.
+        Do not move or merge a vertical because a different folder arrangement
+        looks cleaner; require proven boundary and consumer evidence first.
+        Brgen remains one app/process in RAILS/apps.yml, not one Rails app per host.
+      TEXT
+
+      RAILS_REVIEW_LENSES = <<~TEXT.freeze
+        EIGHT COMPLEMENTARY REVIEW LENSES
+        Apply the criteria, not anyone's voice or a claim to represent these people:
+        1. Conventions-first (DHH): prefer Rails conventions, one obvious owner,
+           deletion over ceremony, and abstractions only when the boundary pays.
+        2. Humane readability (Matz): names should reveal intent; code and markup
+           should be kind to the next reader, without cleverness that hides flow.
+        3. Civic place (Snøhetta): make place, local context and wayfinding legible;
+           let real content and photography carry identity without visual noise.
+        4. Structural restraint (Tadao Ando): use proportion, geometry and deliberate
+           negative space; keep only load-bearing structure and meaningful material.
+        5. Rhythmic pocket (J Dilla): keep the shared grid; allow expressive density
+           through existing aliases, never arbitrary off-scale margins or type sizes.
+        6. Layered coherence (Flying Lotus): compose rich surfaces within one system;
+           use the existing z-index and motion vocabulary, not private effect kits.
+        7. First principles (Elon Musk): start with viewport, legibility, touch,
+           latency and bytes; delete cargo and measure the consequences.
+        8. Promise and permission (Seth Godin): every interaction should keep the
+           product's promise, earn trust, avoid dark patterns and remain distinct
+           with the smallest viable design system.
+
+        For every proposed change, state observed evidence, affected surfaces,
+        smallest reversible repair and falsifier. Separate measurable violations
+        from taste. Never alter operator-owned token values.
+      TEXT
+
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
       SOURCE_EXTENSIONS = %w[.css .scss .erb .html .htm .js .ts].freeze
       # Surfaces rendered per pass: mobile captures first, rotated by pass, wider viewports with the room left.
@@ -381,6 +459,16 @@ module Master
         end
       end
 
+      def product_review_context(captures)
+        apps = Array(captures).filter_map { |capture| capture[:surface]&.app&.to_s }.uniq.sort
+        return MASTER_PRODUCT_CONTEXT if apps == ["master"]
+
+        context = [RAILS_PRODUCT_CONTEXT]
+        context << BRGEN_PRODUCT_CONTEXT if apps.include?("brgen")
+        context << RAILS_REVIEW_LENSES
+        context.join("\n")
+      end
+
       def build_context(captures, anchors, graph:)
         rows = captures.map { |capture| context_row(capture) }
         drift_rows = captures.filter_map { |capture| drift_row(capture) }
@@ -391,6 +479,7 @@ module Master
           collected from the same browser session across the listed surfaces.
           Mobile is the primary composition: every mobile surface is exercised through safe, non-destructive focus, validation, disclosure, and same-origin navigation journeys when those states exist. Navigation journeys include return-path evidence; journey screenshots are evidence, not a score. Treat web-platform probe findings as evidence about layout primitives, not automatic prescriptions; choose the smallest modern primitive that fits the rendered behavior and browser support.
           Judge the render first. Source is supporting evidence.
+          #{product_review_context(captures)}
           Apply the executable MASTER design/usability constitution below. These are laws, not a scoring checklist. Identify only laws supported by rendered evidence.
           #{Master::Fix::VisualUsability.context}
           #{visual_rubric_context}
