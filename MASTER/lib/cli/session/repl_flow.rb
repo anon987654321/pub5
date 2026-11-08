@@ -226,7 +226,9 @@ module Master
         case Master::CLI::OperatorGrammar.parse(stripped)&.kind
         when :repeat then return repeat_last
         when :toggle_focus then return toggle_focus
-        when :direct_shell then return run_direct_shell(stripped)
+        when :direct_shell
+          return :unhandled if directory_change_command?(stripped)
+          return run_direct_shell(stripped)
         end
 
         if (help_match = stripped.match(%r{\A/(?:help|\?)(?:\s+(.+))?\z}))
@@ -336,10 +338,58 @@ module Master
         governor = @container[:governor]
         return unless governor
 
-        @bang_shell ||= Master::Io::Shell.new(root: @refs.root, governor:, event_bus: @refs.bus)
+        @bang_shell ||= Master::Io::Shell.new(root: Dir.pwd, governor:, event_bus: @refs.bus)
+      end
+
+      def directory_change_command?(command)
+        Shellwords.split(command.to_s).first == "cd"
+      rescue ArgumentError
+        false
+      end
+
+      # A directory change belongs to the REPL process, not a short-lived
+      # child shell. It is deliberately queued during a model turn because
+      # Dir.chdir is process-wide and would race tools using relative paths.
+      # Keep navigation inside the checkout; governed commands inherit the
+      # new working directory on their next invocation.
+      def change_directory(command)
+        args = Shellwords.split(command.to_s)
+        return :unhandled unless args.first == "cd"
+        return directory_change_failure("usage: cd [directory]") if args.length > 2
+
+        target = args.fetch(1, "")
+        target = ENV["OLDPWD"].to_s if target == "-"
+        target = Dir.home if target.empty?
+        target = File.expand_path(target, Dir.pwd)
+        destination = File.realpath(target)
+        workspace = File.realpath(Master.repo_root)
+        unless destination == workspace || destination.start_with?("#{workspace}#{File::SEPARATOR}")
+          return directory_change_failure("outside checkout: #{destination}")
+        end
+
+        previous = Dir.pwd
+        Dir.chdir(destination)
+        ENV["OLDPWD"] = previous
+        @bang_shell = nil
+        @last_ok = true
+        @exit_code = 0
+        terminal_puts(@refs.renderer.render(Dir.pwd, mode: :dim))
+        :changed
+      rescue SystemCallError, ArgumentError => e
+        directory_change_failure("#{e.class}: #{e.message}")
+      end
+
+      def directory_change_failure(message)
+        @last_ok = false
+        @exit_code = 1
+        terminal_puts(@refs.renderer.render("cd0: #{message}", mode: :error))
+        :failed
       end
 
       def run_direct_shell(command)
+        changed = change_directory(command)
+        return changed unless changed == :unhandled
+
         shell = bang_shell
         return Master::Trace::Dmesg.status("shell0", "unavailable") unless shell
 
