@@ -54,7 +54,6 @@ module Master
         VETO_PRECEDENCE = Array(council_params.to_h["veto_precedence"]).map(&:to_s).freeze
         CONVERGENCE_OVERLAP = Float(council_params.to_h["consensus_threshold"] || 0.7)
         CONVERGENCE_TEXT_SIM = 0.6
-        LEGACY_PROMPTS_PATH = Master.data_path("prompts", "council.yml").freeze
 
         def self.questions = @questions ||= QualityFramework.questions
 
@@ -65,11 +64,16 @@ module Master
 
         def self.quality_brief(domain = :general) = QualityFramework.brief(domain)
 
+        # council.yml is the sole owner of the prompts block. A retired fallback
+        # pointed at data/prompts/, a path the tree has never carried: a missing
+        # or empty block silently answered {} and the failure surfaced far away
+        # as a KeyError on fetch("judge"). Fail loud here, at the owner.
         def self.prompts
           @prompts ||= begin
-            council = Master.load_yaml(Master::COUNCIL_PATH) || {}
-            configured = council["prompts"]
-            configured.is_a?(Hash) && !configured.empty? ? configured : Master.load_yaml(LEGACY_PROMPTS_PATH)
+            configured = (Master.load_yaml(Master::COUNCIL_PATH) || {})["prompts"]
+            raise KeyError, "data/council.yml carries no prompts block; the judge and juror formats cannot be built" unless configured.is_a?(Hash) && !configured.empty?
+
+            configured
           end
         end
 
