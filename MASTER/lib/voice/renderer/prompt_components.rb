@@ -54,10 +54,13 @@ module Master
           speech_error = Master::Voice::Speech.last_error if defined?(Master::Voice::Speech)
           playback_error = Master::Voice::Playback.last_error if defined?(Master::Voice::Playback)
           voice_reason = [speech_error, playback_error].compact.map(&:to_s).reject(&:empty?).first
-          # Speech.available? is a capability preflight, not proof that the
-          # asynchronous Edge worker is connected or that a sentence has played.
-          # Say available; only a measured failure earns degraded.
-          voice = ENV["MASTER_TTS_DEGRADED"] == "1" || voice_reason ? "degraded" : "available"
+          # A command on PATH is only discovery, not a successful speaker test.
+          # The playback worker records verified output or a measured failure.
+          voice = if ENV["MASTER_TTS_DEGRADED"] == "1" || voice_reason
+                    "degraded"
+                  else
+                    Master::Voice::Playback.output_status
+                  end
           [
             d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, model #{model}"),
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}:#{@config['root'] || Dir.pwd}"),
@@ -341,7 +344,7 @@ module Master
             d("soul0: imports #{imports_loaded.join(' ')}"),
             d("soul0: #{active_orders_count} orders active"),
             *model_device_lines(context),
-            d("voice0 at mainbus0: #{ENV["MASTER_TTS_DEGRADED"] == "1" ? "degraded" : "available"}"),
+            d("voice0 at mainbus0: #{Master::Voice::Playback.output_status}"),
             d("mode0 at mainbus0: #{mode.first(3).join(', ')}"),
             d("mode0: #{mode.drop(3).join(', ')}"),
             d("aesthetic0 at mode0: #{Aesthetic.mode}"),
