@@ -25,6 +25,12 @@ task :check do
   raise "studio --list failed:\n#{cli_out}" unless cli_status.success?
   raise "studio --list does not expose Ableton recovery" unless cli_out.include?("ableton")
 
+  python_sources = Dir.glob(File.join(STUDIO_ROOT, "**", "*.py"))
+  raise "Python source files remain in STUDIO: #{python_sources.map { |path| path.delete_prefix("#{STUDIO_ROOT}/") }.join(", ")}" unless python_sources.empty?
+
+  reference_source = File.read(dilla)
+  raise "Dilla reference pipeline retains a Python/Demucs dependency" if reference_source.match?(/python3|demucs|numpy|scipy/i)
+
   %w[
     bin/studio photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
