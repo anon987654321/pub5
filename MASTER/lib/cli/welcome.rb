@@ -18,7 +18,7 @@ module Master
         session = read_session(root)
         parts = [now.strftime("%H:%M")]
         last = session["ts"] && Time.at(session["ts"].to_i)
-        parts << "last session #{ago(now - last)} ago#{topic(session)}" if last
+        parts << "last session #{ago(now - last)} ago" if last
         landed = last && commits_since(root, last)
         parts << "#{landed} #{landed == 1 ? "commit" : "commits"} since" if landed&.positive?
         parts.join(", ")
@@ -27,19 +27,16 @@ module Master
       # What the model is told to greet from: the same facts, as plain context.
       def context(root, now: Time.now)
         session = read_session(root)
-        last_user = Array(session["messages"]).reverse.find { |message| message["role"] == "user" }
-        { time: now.strftime("%A %H:%M"), line: line(root, now:), last_message: last_user&.fetch("content", nil) }
+        # Boot scrollback is public terminal output. A previous topic may be
+        # personal, so continuity is expressed as elapsed time, never quoted
+        # content or a subject label.
+        { time: now.strftime("%A %H:%M"), line: line(root, now:) }
       end
 
       def read_session(root)
         JSON.parse(File.read(File.join(root, ".master", "session.json")))
       rescue SystemCallError, JSON::ParserError # scan: intentional — no stored session is a first session
         {}
-      end
-
-      def topic(session)
-        name = session["topic"] || session["name"]
-        name ? " (#{name.to_s.strip[0, 48]})" : ""
       end
 
       def ago(seconds)
