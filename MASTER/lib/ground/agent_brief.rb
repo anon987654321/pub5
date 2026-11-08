@@ -21,7 +21,10 @@ module Master
       def briefing(root)
         limit = CommitFormat.max_chars(root: File.join(root, "MASTER"))
         soul = YAML.safe_load_file(File.join(root, "MASTER", "data", "soul.yml"), aliases: true)
-        authority = soul.fetch("authority_order").map { |row| row.fetch("id").to_s }.join(" > ")
+        authority = soul.fetch("authority_order").map do |row|
+          source = row.fetch("source")
+          source.is_a?(Array) ? source.join(", ") : source
+        end.join(" > ")
 
         <<~TEXT
           pub5 session context. You work under MASTER's constitution. No hook refuses a tool call or a finish;
