@@ -46,11 +46,14 @@ class TestRatchets < Minitest::Test
   end
 
   def self.with_scan_cache
-    previous = ENV.fetch("MASTER_SCAN_CACHE", nil)
+    previous = ENV.values_at("MASTER_SCAN_CACHE", "MASTER_RATCHET_CACHE")
     ENV["MASTER_SCAN_CACHE"] = "1"
+    # The measurement under test is the real one over the real tree; the receipt
+    # cache keys on the trees' content, so serving it changes nothing the rows say.
+    ENV["MASTER_RATCHET_CACHE"] = "1"
     yield
   ensure
-    ENV["MASTER_SCAN_CACHE"] = previous
+    ENV["MASTER_SCAN_CACHE"], ENV["MASTER_RATCHET_CACHE"] = previous
   end
 
   def rows = self.class.rows
