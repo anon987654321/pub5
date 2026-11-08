@@ -25,7 +25,9 @@ class TestLawVocabulary < Minitest::Test
 
   def test_runtime_uses_law_vocabulary
     offenders = files.filter_map do |path|
-      source = File.read(path, encoding: "UTF-8", invalid: :replace, undef: :replace)
+      # invalid: :replace is not honoured by File.read's kwargs; the scrub is
+      # what survives binary files in the scanned roots (woff2, jpg, pdf).
+      source = File.read(path, encoding: "UTF-8", invalid: :replace, undef: :replace).scrub
       matches = FORBIDDEN.filter_map { |pattern| pattern.source if source.match?(pattern) }
       matches.empty? ? nil : "#{path.delete_prefix("#{Master::ROOT}/")}: #{matches.join(", ")}"
     end
