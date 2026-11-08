@@ -39,6 +39,11 @@ module Master
       REFERENCE_GENERATION_RE = /\b(?:make|create|generate|compose|render|produce)\b.*\b(?:like (?:that|this|it)|in (?:that|this) style|same (?:sound|style)|from (?:that|this) reference)\b/i.freeze
       REFERENCE_FOLLOWUP_RE = REFERENCE_GENERATION_RE
       INDUSTRIAL_TECHNO_RE = /\b(?:make|create|generate|compose|render|produce)\b.*\bindustrial[ -]techno\b|\bindustrial[ -]techno\b.*\b(?:track|music|beat|loop|instrumental)\b/i.freeze
+      # "make a video with the lora of me from <still>". The source still is
+      # the only argument the reader names; the run stays a dry run until the
+      # operator confirms the spend.
+      LORA_VIDEO_RE = /\b(?:make|create|generate|render)\b.*\bvideo\b.*\blora\b/i.freeze
+      LORA_VIDEO_SOURCE_RE = /\bfrom\s+["']?([~\/][^\s"']+)/i.freeze
       TECHNO_TRACK_RE = /\b(?:make|create|generate|compose|render|produce)\b.*\btechno\b|\btechno\b.*\b(?:track|music|beat|loop|instrumental)\b/i.freeze
       SYNTH_RE = /\b(?:play|generate|create|make|render)\b.*\b(?:sine|square|triangle|saw|white|brown)\b.*\b(?:wave|noise|tone)\b/i.freeze
       # "Play" means the speakers and "make" means a file. A sentence that says
@@ -84,7 +89,7 @@ module Master
         return false if text.match?(ADVICE_RE) || text.match?(DISCUSSION_RE)
         return true if Mov.handles?(text)
 
-        reference_audio_request?(text) || reference_followup_request?(text) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
+        reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
           text.match?(BACKGROUND_MUSIC_RE) || text.match?(LIVE_AUDIO_DIAGNOSTIC_RE) || text.match?(AUDIO_RE) || postpro_intent?(text) ||
           text.match?(VIDEO_RE) ||
           text.match?(IMAGE_RE) && text.match?(/\b(?:photo|portrait|image|picture)\b/i)
@@ -99,6 +104,7 @@ module Master
         if reference_followup_request?(text) && !text.match?(INDUSTRIAL_TECHNO_RE) && !text.match?(TECHNO_TRACK_RE) && !text.match?(LIVE_STYLE_RE)
           return generate_from_reference(text, root:)
         end
+        return generate_lora_video(text, root:) if text.match?(LORA_VIDEO_RE)
         return generate_kick(text, root:) if text.match?(KICK_RE)
         return generate_industrial_techno(text, root:) if text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE)
         return postpro_capability if POSTPRO_CAPABILITY_RE.match?(text)
@@ -786,6 +792,18 @@ module Master
         destination = File.join(MEDIA_OUTPUT_DIR, "master-techno-kick-#{Time.now.utc.strftime('%Y%m%dT%H%M%SZ')}.wav")
         result = Master::Music::KickLoop.render(destination:)
         Result.ok({ output: result, rendered: result, media: :kick_loop, path: result })
+      end
+
+      # The lora video intent routes here even though the lora entrypoint is
+      # retired: ScriptDispatch answers with its own truthful refusal instead
+      # of the sentence falling into chat, and the paid run stays a dry run
+      # until the operator confirms it.
+      def generate_lora_video(text, root: MasterPaths.root)
+        source = text.match(LORA_VIDEO_SOURCE_RE)
+        return Result.err("lora video: name the source still, as in: from ~/out/07.jpg", category: :validation) unless source
+
+        arg = ["--video-replicate", Shellwords.escape(source[1]), "--dry-run"].join(" ")
+        ScriptDispatch.run(root:, tool: "lora", arg:)
       end
 
       def postpro_preset_for(text)
