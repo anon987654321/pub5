@@ -148,13 +148,15 @@ class TestBacklog < Minitest::Test
     assert_equal ranks, ranks.sort
   end
 
-  def test_check_passes_on_a_clean_checkout
-    state = Dir.chdir(Backlog::MASTER_ROOT) do
-      `git status --porcelain -- ../TODO.md data/backlog.yml`.strip
+  def test_check_passes_on_a_fresh_checkout_without_a_local_copy
+    # The artifact is a gitignored cache: a checkout that never rendered it has
+    # nothing to go stale, so absence is a CLEAN answer, not a fault.
+    Dir.mktmpdir("backlog-absent") do |dir|
+      io = StringIO.new
+      out = File.join(dir, "backlog.yml")
+      assert_equal 0, Backlog::Store.check(out:, io:)
+      assert_includes io.string, "ABSENT"
     end
-    skip "TODO.md or data/backlog.yml is dirty in this checkout" unless state.empty?
-
-    assert_equal 0, Backlog::Store.check(io: silent)
   end
 
   def test_check_flags_a_source_that_grew
