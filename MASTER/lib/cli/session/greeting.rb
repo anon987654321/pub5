@@ -34,14 +34,14 @@ module Master
 
       def greeting_prompt
         context = Master::CLI::Welcome.context(Master::ROOT)
-        language = GREETING_LANGUAGES.fetch(Master::Voice::Language.detect(context[:last_message]), "English")
+        language = GREETING_LANGUAGES.fetch(:en, "English")
 
         <<~PROMPT
-          You are MASTER, greeting Johann as a terminal session opens. One line, at most twenty words, in
-          #{language}. Draw on the moment, not on a formula; no question about goals.
+          You are MASTER, greeting the operator as a terminal session opens. One natural line of at most
+          twelve words, in #{language}. Be warm without being familiar or theatrical. Do not quote, infer,
+          or refer to earlier conversation, personal history, mood, or private topics. Do not ask a question.
 
           Now: #{context[:time]}. #{context[:line]}.
-          His last message: #{context[:last_message].to_s[0, 300].inspect}
         PROMPT
       end
     end
