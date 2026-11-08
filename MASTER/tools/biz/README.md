@@ -144,6 +144,22 @@ the operator's archive are now woven into the plan:
   «Vi tar vare på deg, selv når du ikke lenger tar vare på deg selv», and
   halloween as the annual campaign arena.
 
+## Ragnhild: separate artist-grant guide
+
+`BIZ/ragnhild/ragnhild_legater.html` is a separate five-page guide to exhibition
+project support and artist grants. It is not part of the funeral-services
+business plan in `ragnhild.html`. The guide was restored from
+`pub4/BPLANS/ragnhild_legater.html` and its funding routes were rechecked on
+8 November 2026. The archived BKV dates for 2027 were not retained: NBK's
+public schedule still showed 2026 project-support rounds, with no confirmed
+2027 dates. Bergen's professional-art funding deadlines and the Fegerstens
+foundation's eligibility and biennial cycle were checked against their
+current source pages.
+
+The pub4 archive had no matching PDF. Treat the restored HTML as recovered
+source material, not a completed print pair, until a PDF is rendered and its
+page breaks and text are visually inspected.
+
 ## Logos restored
 
 If the original HTML carried a custom logo, it is restored as a static mark on
