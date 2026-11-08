@@ -39,9 +39,20 @@ class TestCliGreeting < Minitest::Test
   end
 
   def test_a_greeting_that_arrives_after_the_first_turn_stands_down
-    session = GreetingSession.new("Late for hard conversations, Johann.", turn_started: true)
+    session = GreetingSession.new("Late for hard conversations.", turn_started: true)
     session.deliver_greeting
 
     assert_empty session.printed
+  end
+
+  def test_opt_in_greeting_prompt_does_not_quote_or_infer_private_history
+    session = Master::CLI::Session.allocate
+    Master::CLI::Welcome.stub(:context, { time: "Sunday 20:00", line: "last session 2h ago" }) do
+      prompt = session.send(:greeting_prompt)
+      refute_includes prompt, "last_message"
+      refute_includes prompt, "personal history"
+      refute_includes prompt, "depression"
+      assert_includes prompt, "Do not ask a question"
+    end
   end
 end
