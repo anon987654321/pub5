@@ -417,7 +417,18 @@ module Master
           "#{category}0 at master0: #{commands.join(' ')}"
         end
         lines << "input0 at master0: describe work in plain language; slash commands are optional."
+        lines << shell_cap_line
         lines.join("\n")
+      end
+
+      # The transcript read "err: zsh: timed out after 30s" as a failure and
+      # re-asked; the cap is behaviour, and /help now says so. The number is
+      # read from Master::Io::Shell::TIMEOUT rather than restated, so this line
+      # cannot drift from the cap it describes (docs/session-2026-11-08.md).
+      def shell_cap_line
+        cap = defined?(Master::Io::Shell::TIMEOUT) ? Master::Io::Shell::TIMEOUT : 30
+        "shell0 at master0: ! command and cd PATH run the governed shell; each command is capped at #{cap}s " \
+          "- \"timed out after #{cap}s\" is the cap, not a failure. Longer work belongs in a script, /orders or /fix."
       end
     end
   end

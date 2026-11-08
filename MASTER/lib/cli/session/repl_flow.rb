@@ -139,7 +139,11 @@ module Master
       # turn, and a line that moved for that alone repainted the same fact.
       # Lane, model, violations and error are the meaning; the count rides
       # along whenever the line prints at all.
-      STATE_TOKEN_COUNT = /\s+\d+(?:\.\d+)?[kM]\/\d+(?:\.\d+)?[kM](?=, |\z)/
+      # The count reads "260/128.0k" (Johann's log 2026-11-08): the first
+      # number is bare, only the window size carries the suffix, so the first
+      # [kM] is optional — a required one matched nothing and the state line
+      # repainted between prompts on every token-count drift anyway.
+      STATE_TOKEN_COUNT = /\s+\d+(?:\.\d+)?[kM]?\/\d+(?:\.\d+)?[kM](?=, |\z)/
 
       def announce_state(state)
         return if state.nil? || same_state_meaning?(state, @announced_state)

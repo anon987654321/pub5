@@ -93,6 +93,70 @@ class TestConversationProbe < Minitest::Test
     assert_equal :pass, report.live[:cases].first[:status]
   end
 
+  # Rows 1 and 2 of docs/session-2026-11-08.md grade a capability reply against
+  # the registry: a reply that names an unregistered command invented a
+  # capability, and a commands[] row must name one of its commands.
+  def test_a_reply_naming_an_unregistered_command_fails_against_the_registry
+    Dir.mktmpdir do |dir|
+      master_root = File.join(dir, "MASTER")
+      write_rubric_variant(master_root) do |payload|
+        payload["ux_probe"]["scenarios"].first["commands"] = ["voice"]
+        payload
+      end
+      report = Probe.run(root: master_root, target: "MASTER", live: true, max_live: 1,
+                         spawner: ->(_turn) { { status: :ok, output: "master0: ready\nI can run /frobnicate, or /voice if you like." } })
+
+      row = report.live[:cases].first
+      assert_equal :fail, row[:status]
+      assert_match(/unregistered command \/frobnicate/, row[:reason])
+    end
+  end
+
+  def test_a_registry_clean_capability_reply_passes
+    Dir.mktmpdir do |dir|
+      master_root = File.join(dir, "MASTER")
+      write_rubric_variant(master_root) do |payload|
+        payload["ux_probe"]["scenarios"].first["commands"] = ["voice"]
+        payload
+      end
+      report = Probe.run(root: master_root, target: "MASTER", live: true, max_live: 1,
+                         spawner: ->(_turn) { { status: :ok, output: "master0: ready\nReplies stay text this session; /voice on turns speech on." } })
+
+      assert_equal :pass, report.live[:cases].first[:status]
+    end
+  end
+
+  # Row 2: the transcript's model answered "Grok 4.7, from xAI." as its
+  # identity. A forbidden[] row grades that answer against the word list.
+  def test_an_identity_reply_naming_a_vendor_fails_the_forbidden_list
+    Dir.mktmpdir do |dir|
+      master_root = File.join(dir, "MASTER")
+      write_rubric_variant(master_root) do |payload|
+        payload["ux_probe"]["scenarios"].first["forbidden"] = ["grok"]
+        payload
+      end
+      report = Probe.run(root: master_root, target: "MASTER", live: true, max_live: 1,
+                         spawner: ->(_turn) { { status: :ok, output: "master0: ready\nGrok 4.7, from xAI." } })
+
+      row = report.live[:cases].first
+      assert_equal :fail, row[:status]
+      assert_match(/forbidden list/, row[:reason])
+    end
+  end
+
+  def test_the_identity_scenario_routes_as_chitchat_and_speech_as_day_to_day
+    scenarios = Rubric.ux_scenarios
+    identity = scenarios.find { |row| row["id"] == "identity_lane" }
+    speech = scenarios.find { |row| row["id"] == "capability_speech" }
+
+    refute_nil identity, "the identity probe item is in the corpus"
+    refute_nil speech, "the capability probe item is in the corpus"
+
+    classifier = Object.new.extend(Master::CLI::Routing::ModelRouter::IntentClassification)
+    assert_equal :chitchat, classifier.classify_intent(identity["user"])
+    refute_equal :chitchat, classifier.classify_intent(speech["user"])
+  end
+
   def test_zero_budget_skips_the_live_suite
     report = Probe.run(root: Master::ROOT, target: "MASTER", live: true, max_live: 0)
 
@@ -164,11 +228,14 @@ class TestConversationProbe < Minitest::Test
   end
 
   # The PTY leg is a real boot, so it runs only when the operator asks for it;
-  # the default suite stays deterministic and offline.
+  # the default suite stays deterministic and offline. /help is the wire
+  # scenario: it exits 0 with prose on any host, while a conversational turn
+  # without a live lane now honestly exits nonzero (the fast one-shot drains
+  # the queue before leaving, and the exit code is the turn's own).
   def test_pty_wire_check_against_the_real_cli
     skip "set MASTER_CONVERSATION_PTY_SMOKE=1 to boot the real CLI in a PTY" unless ENV["MASTER_CONVERSATION_PTY_SMOKE"] == "1"
 
-    result = Probe.pty_turn("hello, what can you do?", root: Master::ROOT)
+    result = Probe.pty_turn("/help", root: Master::ROOT)
     assert_equal :ok, result[:status], result[:message].to_s
     refute_empty Probe.extract_reply(result[:output]).to_s
   end

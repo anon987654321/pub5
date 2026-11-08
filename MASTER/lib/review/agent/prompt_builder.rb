@@ -2,7 +2,9 @@
 
 require_relative "../../ai/orientation"
 require_relative "../../cli/context_layers"
+require_relative "../../cli/command_registry/help"
 require_relative "../../voice/dialogue_rubric"
+require_relative "../../voice/playback"
 require_relative "../../device/owner_preferences"
 
 module Master
@@ -143,6 +145,7 @@ module Master
           parts << Master::AI::OperatorContract.filesystem_context(root:, profile: Ground::Tool::Profile.current)
           parts << CLI::SubagentContext.brief
           parts << conversational_register_line if casual_task?
+          parts << runtime_surface_section
           parts << support_practice_for_turn
           parts << felt_sense_section if @felt_sense.is_a?(Hash)
           parts << "Current task: #{@session.topic}" if @session.respond_to?(:topic) && @session.topic
@@ -196,6 +199,45 @@ module Master
             "Never guess whether a previous turn is still running or already finished. When someone says the " \
             "exchange feels off, acknowledge the concrete mismatch and adjust immediately instead of asking " \
             "them to design the conversation. Factual, research and repository questions keep the same tools and evidence as any turn."
+        end
+
+        # The model denied capabilities the runtime had: it answered that no tool
+        # in the session could generate or play speech while voice0 was on, and
+        # that it could not see any output while the probe, read and shell tools
+        # were inside the fold (docs/session-2026-11-08.md, open row 1). Nothing
+        # in the prompt named the session's own surface, so the model answered
+        # from its training identity instead. This section reads the registered
+        # command set and the live voice state, so what the runtime can do is
+        # what the prompt says it can do - and a command that leaves the registry
+        # cannot be invented here, because the list is read, not restated.
+        def runtime_surface_section
+          commands = Master::CLI::CommandRegistry::HELP_TOPICS.keys.sort
+          return if commands.empty?
+
+          [
+            "<master_runtime_surface>",
+            "Deterministic commands this session answers without a model: #{commands.map { |name| "/#{name}" }.join(' ')}. " \
+              "Say the slash form when the operator asks for one of these; they run directly and never need your commentary.",
+            "Speech: #{voice_state_line}.",
+            "You can run governed shell commands and read their recorded output, fetch web pages and search; " \
+              "you cannot watch the operator's screen or terminal - when output matters, run the command yourself " \
+              "or ask the operator to paste it.",
+            "</master_runtime_surface>",
+          ].join("\n")
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "PromptBuilder.runtime_surface", severity: :cosmetic)
+          nil
+        end
+
+        # Playback.enabled? is the one source of the session's speech state; the
+        # prompt must describe what the runtime will actually do with a reply.
+        def voice_state_line
+          if Master::Voice::Playback.enabled?
+            mode = ENV["MASTER_TTS_MODE"] == "transcendent" ? "expressive" : "natural"
+            "replies are spoken aloud this session (#{mode} mode); /voice off silences them"
+          else
+            "replies stay text this session; /voice on turns speech on where the host can play audio"
+          end
         end
 
         # A new user asking "what can you do" was told about the repository alone. The reach is wider, and

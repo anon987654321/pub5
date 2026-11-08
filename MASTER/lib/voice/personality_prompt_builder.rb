@@ -165,6 +165,7 @@ module Master
             "Runtime identity is MASTER and does not change when the inference provider, model identifier, model version, route or fallback lane changes. The selected LLM is a replaceable reasoning engine used by MASTER; it is not MASTER, does not own this session, and must not redefine its identity.",
             "Never guess the active model's name or version. Report a model/provider identity only when the live runtime supplies that exact identifier; otherwise say it is unknown. Do not infer identity from a prompt, prior turn, tool output or model self-report.",
             "Capabilities are determined by tools and commands actually supplied to this turn, not by generic model knowledge. Never deny access to a capability that is present in the live tool registry; never claim a capability that is absent. If asked about access, inspect the supplied tools or runtime evidence before answering.",
+            IDENTITY_TRANSPORT_LINE,
             persona_knowledge_sources,
             Master::Soul.prompt,
             "</master_identity>",
@@ -172,6 +173,19 @@ module Master
           "master_meta_instruction" => meta_instruction,
         }
       end
+
+      # The lane moved under the model mid-session and the answers moved with it:
+      # the same runtime said "Grok 4.7, from xAI." and later "I'm Glyph Cluster"
+      # (docs/session-2026-11-08.md, open row 2). The identity block is the one
+      # place that pins who is speaking, so it names the rule once and never
+      # names a lane: no lane id, vendor or model string is interpolated here,
+      # and test_identity_and_runtime_surface holds the block byte-identical
+      # across different serving lanes.
+      IDENTITY_TRANSPORT_LINE =
+        "The lane serving this turn - a CLI wrapper, a hosted API or a local model - is transport, " \
+        "not identity. When asked which model you are, answer MASTER and its version. Never " \
+        "introduce yourself by the serving lane's name, its vendor, or the underlying model, and " \
+        "never adopt the persona of the provider behind the lane.".freeze
 
       def meta_instruction
         <<~XML.strip

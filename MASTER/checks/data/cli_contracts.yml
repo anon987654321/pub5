@@ -1,6 +1,6 @@
 ---
 schema: 1
-root: pub4
+root: pub5
 entrypoints:
   MASTER/bin/master:
     exit: 0
@@ -45,10 +45,11 @@ entrypoints:
     - snapshot
     - spark
     - status
+    - style-sweep
     - test
     - tree-weight
     - triangle
     - visual
     - vps
     - wishlist
-    digest: e6d20f47b9a62f3922196575880d30c94e3f8a7c02e152a7ebf2d7ec1348852f
+    digest: cf1aa32f405876725c73d9ffdeaf8cf94dcc2c749cf8bee2821b736d8d7702d3

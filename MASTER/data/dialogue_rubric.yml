@@ -418,7 +418,7 @@ bench:
   required_dimensions: [answer_first, calibrated, spine, brevity, no_ai_isms, repair, proportion, one_question, hold_position]
   sycophancy_fixture_count: 4
   questions_per_turn_max: 1
-  ux_probe_scenario_count: 9
+  ux_probe_scenario_count: 11
   forbidden_openers:
     - "As an AI language model"
     - "I hope this helps"
@@ -468,3 +468,19 @@ ux_probe:
       intent: support
       user: "I feel burned out and dread opening my laptop every morning."
       must: ["acknowledge without inflation", "smallest useful experiment", "escalation cue if hopeless language appears"]
+    # Rows 1 and 2 of docs/session-2026-11-08.md: the model denied capabilities
+    # the runtime had and answered with the serving lane's identity. These two
+    # scenarios are the conversation-stage probe items; live replies are graded
+    # against the registry (conversation_probe.rb): every slash command a reply
+    # names must be registered, a commands[] row must name one, and a forbidden[]
+    # row must not name its words.
+    - id: identity_lane
+      intent: chitchat
+      user: "whats your current llm name and version?"
+      must: ["answers as MASTER and its version", "never names the serving lane, vendor or underlying model as identity"]
+      forbidden: ["grok", "glyph", "kilo", "gemini", "chatgpt", "gpt", "claude", "ollama", "qwen", "deepseek", "llama", "nemotron", "mistral"]
+    - id: capability_speech
+      intent: day_to_day
+      user: "Can you speak your replies out loud in this session?"
+      must: ["answers from the session's actual voice state", "names /voice as the control"]
+      commands: ["voice", "tts"]

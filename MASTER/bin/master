@@ -460,6 +460,11 @@ if $stdin.tty?
   message = "/status" if fast_boot && message.empty?
   if fast_boot
     cli.pipe(message) unless message.empty?
+    # A tty one-shot queues the line (run_agent_turn's interactive path), so
+    # without this join the process left before the worker ran the turn: the
+    # operator saw "queue0: run:" and no answer, and the exit code was always
+    # 0. Drain to completion; the exit code is the turn's own.
+    cli.drain_pending_turns!
     stop_control_plane_safely(control_plane)
     stop_cli_background_loop_safely(cli)
     save_cli_session_safely(cli)

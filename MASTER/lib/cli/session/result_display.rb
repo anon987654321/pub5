@@ -123,9 +123,11 @@ module Master
 
       # The turn's text already reached the operator through the units
       # console; keep the ok bookkeeping and the footers, print no reply.
-      # The units console already printed the turn's text. Keep its
-      # result object for footers that inspect model and parallel-error data;
-      # @last_ok is only a boolean used for session bookkeeping.
+      # The footers read the turn's Result, not the boolean bookkeeping:
+      # print_parallel_errors_footer calls .value on what it is handed, and
+      # @last_ok is a boolean - passing it raised "undefined method 'value'
+      # for true" out of a queued turn's display, and the queue worker
+      # reported the crash (Johann's log 2026-11-08).
       def display_units_console_turn(ok)
         print_fix_activity_footer
         print_previous_question_footer
@@ -239,9 +241,12 @@ module Master
 
       # The reply before presentation: the stream printed raw chunks, so the
       # duplicate check and the spoken form read the bytes the stream carried.
+      # The value is a Hash when a turn carried rendered/output text; anything
+      # else displays as itself - a String responding to [] with a Symbol is a
+      # TypeError that killed the queue worker, not a display.
       def raw_success_text(ok)
         value = ok.value
-        return value.to_s unless value.respond_to?(:[])
+        return value.to_s unless value.is_a?(Hash)
 
         output = value[:output].to_s
         output.empty? ? value[:rendered].to_s : output
@@ -271,7 +276,7 @@ module Master
 
       def success_text(ok)
         value = ok.value
-        return value.to_s unless value.respond_to?(:[])
+        return value.to_s unless value.is_a?(Hash)
 
         rendered = value[:rendered].to_s
         return rendered unless rendered.empty?

@@ -3,6 +3,7 @@
 require "open3"
 require "pty"
 require "timeout"
+require_relative "../cli/command_registry/help"
 require_relative "../cli/routing/model_router"
 require_relative "../ground/swallow"
 require_relative "../trace/dmesg"
@@ -192,6 +193,8 @@ module Master
           end
 
           violations = Master::Voice::DialogueRubric.evaluate(reply)
+          violations += registry_violations(reply, scenario)
+          violations += forbidden_violations(reply, scenario)
           return case_row(scenario, :fail, seconds, violations.join("; ")[0, 220], reply:) if violations.any?
 
           case_row(scenario, :pass, seconds, nil, reply:)
@@ -205,6 +208,34 @@ module Master
           must: Array(scenario["must"]), reply: reply.to_s[0, 400] }
       end
 
+      # Rows 1 and 2 of docs/session-2026-11-08.md grade the answer against the
+      # registry: the model denied capabilities the runtime had, so a capability
+      # reply is read against what is actually registered. A slash command the
+      # reply names must exist in the closed surface, a commands[] row must name
+      # one of its commands, and a forbidden[] row must not name its words.
+      def registry_violations(reply, scenario)
+        named = reply.to_s.scan(%r{/([a-z][a-z0-9_-]*)}i).flatten.map(&:downcase).uniq
+        invented = named - Master::CLI::CommandRegistry::HELP_TOPICS.keys
+        invented.map { |name| "names unregistered command /#{name}" }
+                .concat(missing_expected_command(named, expected_commands(scenario)))
+      end
+
+      def expected_commands(scenario)
+        Array(scenario["commands"]).map { |name| name.to_s.delete_prefix("/").downcase }
+      end
+
+      def missing_expected_command(named, expected)
+        return [] if expected.empty? || expected.any? { |name| named.include?(name) }
+
+        ["names none of the expected commands #{expected.map { |name| "/#{name}" }.join(' / ')}"]
+      end
+
+      def forbidden_violations(reply, scenario)
+        text = reply.to_s.downcase
+        Array(scenario["forbidden"]).select { |word| text.include?(word.to_s.downcase) }
+            .map { |word| "names \"#{word}\" against the scenario's forbidden list" }
+      end
+
       # A live reply that violates the bench is a finding against the conversational
       # constitution that owns response shape, with the corpus data beside it.
       def case_findings(cases)
@@ -213,29 +244,30 @@ module Master
         end
       end
 
+      # The cheap-boot environment, one copy: a bounded scripted turn grades
+      # conversation law, not the host's lane health, TTS, web tier or boot scan.
+      PTY_ENV = {
+        "MASTER_WEB" => "0", "MASTER_SKIP_TTS" => "1", "MASTER_SKIP_BOOT_SCAN" => "1",
+        "MASTER_BACKGROUND" => "0", "MASTER_AUTOFIX" => "0", "MASTER_WATCH" => "0",
+        "MASTER_WATCHER" => "0", "MASTER_HEARTBEAT" => "0", "MASTER_NO_POOL_PROBES" => "1",
+      }.freeze
+
       # One real boot in a pseudo-terminal, the way bin/smoke boots it: the cheap-boot
       # environment, --fast, the turn as -p. The reply is whatever the terminal shows.
+      # Pool probes stay off: the probe grades conversation law on a bounded turn,
+      # not lane health, which walks every lane and needs no measure here.
       def pty_turn(turn, root:)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         output = +""
-        env = {
-          "MASTER_WEB" => "0", "MASTER_SKIP_TTS" => "1", "MASTER_SKIP_BOOT_SCAN" => "1",
-          "MASTER_BACKGROUND" => "0", "MASTER_AUTOFIX" => "0", "MASTER_WATCH" => "0",
-          "MASTER_WATCHER" => "0", "MASTER_HEARTBEAT" => "0",
-        }
         master = File.join(File.expand_path(root), "bin", "master")
         exit_status = nil
-        PTY.spawn(env, master, "--fast", "-p", turn) do |reader, writer, pid|
+        PTY.spawn(PTY_ENV, master, "--fast", "-p", turn) do |reader, writer, pid|
           writer.close
           begin
-            Timeout.timeout(PTY_TIMEOUT_S) do
-              while (chunk = reader.readpartial(16_384))
-                output << chunk
-              end
-            end
+            Timeout.timeout(PTY_TIMEOUT_S) { read_until_eof(reader, output) }
           rescue EOFError, Errno::EIO
             nil
-          rescue Timeout::Error
+          rescue Timeout::ExitException, Timeout::Error
             Process.kill("TERM", pid) rescue nil
             return { status: :timeout, message: "no reply within #{PTY_TIMEOUT_S}s", output:, seconds: PTY_TIMEOUT_S }
           end
@@ -247,6 +279,12 @@ module Master
         { status: :ok, output:, seconds: }
       rescue StandardError => e
         { status: :unavailable, message: "PTY unavailable: #{e.class}: #{e.message.to_s[0, 120]}", output:, seconds: 0 }
+      end
+
+      def read_until_eof(reader, output)
+        while (chunk = reader.readpartial(16_384))
+          output << chunk
+        end
       end
 
       # Strip ANSI styling and the instrument status lines; what remains is the prose

@@ -88,6 +88,24 @@ module Master
         handle_repl_line(stripped)
       end
 
+      # bin/master's fast one-shot (-p with a tty) queues the line through the
+      # interactive queue and is about to exit; nothing else would join the
+      # worker, so the turn died mid-flight - the operator saw "queue0: run:"
+      # and no answer, and the process left 0 whatever the turn decided
+      # (reproduced with a raw PTY boot on this checkout, 2026-11-08). The
+      # process that queued a turn owes the operator its answer before it
+      # leaves: join the worker until the queue is drained, and the exit code
+      # is the turn's own.
+      def drain_pending_turns!
+        loop do
+          worker = @turn_queue_mutex.synchronize { @turn_worker }
+          break if worker.nil?
+
+          worker.join
+        end
+        @exit_code
+      end
+
       def run_input(input)
         return empty_input(:run_input) if input.strip.empty?
         @turn_queue_mutex.synchronize { @turn_cancel_requested = false unless @turn_queue_paused }

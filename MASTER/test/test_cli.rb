@@ -1297,4 +1297,84 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal "cd ..", queued
   end
 
+  # Johann's log 2026-11-08: "queue0: worker failed - NoMethodError: undefined
+  # method 'value' for true", twice in one session. A queued turn whose reply
+  # had already reached the operator through the units console displayed through
+  # display_units_console_turn, which handed the ok bookkeeping boolean where
+  # the turn's Result belongs; print_parallel_errors_footer then called .value
+  # on true. The reproduction runs the queue boundary for real: enqueue while a
+  # worker is busy, drain, and each turn completes through the units console.
+  def test_a_units_console_turn_off_the_queue_reports_no_worker_failure
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+
+    out, err = capture_io { run_units_console_turns_off_the_queue(%w[summarise what changed and what broke]) }
+
+    refute_match(/worker failed/, out + err)
+    refute_match(/undefined method 'value' for true/, out + err)
+    assert_empty @cli.instance_variable_get(:@turn_queue), "the queue drained despite the display"
+  end
+
+  def run_units_console_turns_off_the_queue(lines)
+    units_turn = lambda do |_input, accumulated:, state:|
+      state[:units_console] = true
+      Master::Result.ok(nil)
+    end
+
+    @cli.stub(:check_budget_blocks, nil) do
+      @cli.stub(:dispatch_turn, units_turn) do
+        @cli.stub(:handle_repl_line, ->(line) { @cli.send(:run_input, line) }) do
+          lines.each { |line| assert @cli.send(:enqueue_interactive_line, line) }
+          @cli.send(:drain_interactive_queue)
+        end
+      end
+    end
+  end
+
+  # The footers still work: with the Result in hand, a parallel error rides to
+  # the operator, which is what the footer exists for.
+  def test_the_units_console_footers_read_the_turn_result
+    ok = Master::Result.ok({_parallel_errors: ["lane x: timeout"], _stage_error: ""})
+
+    out, = capture_io do
+      @cli.instance_variable_set(:@last_ok, true)
+      @cli.send(:display_units_console_turn, ok)
+    end
+
+    assert_match(/parallel0: lane x: timeout/, out)
+  end
+
+  # The transcript read "err: zsh: timed out after 30s" as a failure and asked
+  # again; /help now names the cap, and the number is the Shell's own constant.
+  def test_help_names_the_governed_shell_cap
+    summary = Master::CLI::CommandRegistry.help_text
+
+    assert_includes summary, "capped at #{Integer(Master::Io::Shell::TIMEOUT)}s"
+    assert_includes summary, "is the cap, not a failure"
+  end
+
+  # bin/master's fast one-shot queued the turn and left before the worker ran
+  # it: no answer reached the operator and the exit code was always 0. The
+  # drain joins the worker for real, and the exit code is the turn's own.
+  def test_draining_pending_turns_runs_the_queue_and_reports_the_turn_outcome
+    @cli.stub(:check_budget_blocks, nil) do
+      @cli.stub(:dispatch_turn, ->(_input, accumulated:, state:) { Master::Result.ok("drained reply") }) do
+        out, = capture_io do
+          assert @cli.send(:enqueue_interactive_line, "first queued line")
+          assert @cli.send(:enqueue_interactive_line, "second queued line")
+          assert_equal 0, @cli.drain_pending_turns!
+        end
+
+        assert_match(/drained reply/, out, "the queued turn's reply reached the operator")
+      end
+    end
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+    assert_nil @cli.instance_variable_get(:@turn_worker)
+  end
+
+  def test_draining_with_no_pending_turns_answers_at_once
+    assert_equal 0, @cli.drain_pending_turns!
+  end
+
 end
