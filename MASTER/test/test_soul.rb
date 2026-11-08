@@ -150,4 +150,23 @@ class TestSoul < Minitest::Test
     assert_includes prompt, "never deny access to a capability that is present"
   end
 
+
+  def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
+    tool_class = Class.new do
+      NAME = "test_probe"
+      DESCRIPTION = "Read-only test capability."
+    end
+    builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
+    builder.instance_variable_set(:@tools, [tool_class.new])
+
+    section = builder.send(:runtime_capability_section)
+
+    assert_includes section, "test_probe: Read-only test capability."
+    assert_includes section, "Registered operator commands:"
+    assert_includes section, "/voice"
+    assert_includes section, "Voice runtime:"
+    assert_includes section, "audio output available="
+    assert_includes section, "not a guarantee every provider/request receives every tool"
+  end
+
 end
