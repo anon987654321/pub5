@@ -73,6 +73,21 @@ screenshot count or previous revision.
   body as a nameable method, and the MPC swing map now lands 66 percent
   exactly on the triplet as its own comment documents. The by-ear render
   review remains.
+  2026-11-08: Replaced the Python/NumPy/SciPy reference analyzer with
+  `STUDIO/dilla/lib/reference_analyzer.rb` (WAV decode/resample, FFT, tempo,
+  onset/pocket, mix-band energy, key/chord, melody and drum-grid analysis).
+  Removed the only tracked STUDIO `.py` source and Dilla's Python/Demucs
+  runtime fallbacks. Reference acquisition and local renderer subprocesses
+  now have explicit wall-clock bounds; output writes preserve prior files on
+  failure. Added the `bin/studio ableton inventory|export|midi` route and
+  regression coverage for CLI dispatch, analysis bounds and renderer timeout.
+  A separate local Ruby 3.3.8 synthetic 86 BPM WAV check measured 86.13 BPM;
+  it is not a run of the committed Studio suite. These new/changed tests are
+  NOT_RUN on the pinned Ruby 4.0.5 checkout. The by-ear render review and
+  golden audio fixture remain open; no claim of acoustic acceptance is made.
+  Set-specific Ableton recovery remains deliberately deferred until the
+  operator supplies the `.als` sets and their project assets.
+
 - [ ] **Generated-output freshness.** Check design-token projection and CSS;
   compare `MASTER/web/public/face.runtime.js` and `face.css` with their
   sources; run `cd MASTER && rake docs:agent_contracts` and
