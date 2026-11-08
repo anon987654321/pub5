@@ -511,7 +511,9 @@ require_eventmachine_ssl!
 begin
   ok = synth_forked(SynthRequest.new(voice:, rate:, pitch:, text:), out_path, retry_in_subprocess: false)
   unless ok
-    Master::Trace::Dmesg.status("tts0", "one-shot synthesis produced no audio", io: $stderr)
+    Master::Trace::Dmesg.status(
+      "tts0", "one-shot synthesis produced no audio (the Edge endpoint answered nothing)", io: $stderr
+    )
     exit 1
   end
   exit 0

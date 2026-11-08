@@ -266,7 +266,8 @@ class TestCliTerminalFace < Minitest::Test
     assert_includes transcript, "The actual answer remains visible."
     assert_includes transcript, "audio unavailable"
     assert_includes transcript, "reply remains visible as text"
-    assert_includes transcript, "synthesiser returned no audio"
+    # The face wraps at the row width, so the detail phrase may break a line.
+    assert_includes transcript.tr("\n", " ").squeeze(" "), "synthesiser returned no audio"
   end
 
   def test_voice_failure_diagnostic_is_bounded_on_the_face
@@ -301,12 +302,13 @@ class TestCliTerminalFace < Minitest::Test
     assert_operator thinking, :>, 0.95
   end
 
-  def test_motion_turns_constantly_at_rest_and_settles_to_the_front_when_attending
+  def test_motion_spins_constantly_while_attending_and_settles_to_the_front_at_rest
     motion = Master::CLI::Face::Motion.new(seed: 7)
-    turns = (1..40).map { |i| motion.step(state: :idle, t: i * 0.25).turn }
+    turns = (1..40).map { |i| motion.step(state: :thinking, t: i * 0.25).turn }
     assert_in_delta Master::CLI::Face::Motion::SPIN * 0.25, turns[10] - turns[9], 0.01
-    40.times { |i| motion.step(state: :listening, t: 10.0 + (i * 0.25)) }
-    turn = motion.step(state: :listening, t: 20.0).turn
+    # Idle is a still mode: the face snaps to the canonical front, exactly.
+    40.times { |i| motion.step(state: :idle, t: 10.0 + (i * 0.25)) }
+    turn = motion.step(state: :idle, t: 20.0).turn
     assert_in_delta 0.0, Math.sin(turn / 2), 0.02
   end
 
@@ -330,7 +332,7 @@ class TestCliTerminalFace < Minitest::Test
 
   def test_typed_input_fallback_remains_usable_without_a_session_prompt
     prompt = window.send(:operator_prompt)
-    assert_match(/\A[^:]+:.+\$\z/, prompt)
+    assert_match(/\A[^:]+ \$\z/, prompt)
     assert_equal "#{prompt} hello", window.send(:typed, "hello", 80)
   end
 
@@ -424,6 +426,7 @@ class TestCliTerminalFace < Minitest::Test
     order = []
     worker = Object.new
     worker.define_singleton_method(:kill) { order << :kill }
+    worker.define_singleton_method(:alive?) { true }
     worker.define_singleton_method(:join) { |*| order << :join; true }
     children = Object.new
     children.define_singleton_method(:kill_all) { order << :children }
@@ -605,7 +608,9 @@ class TestCliTerminalFace < Minitest::Test
     face.send(:answer, "hello")
     text = rows_of(face.screen(24, 80, 1.0)).values.join("\n")
 
-    assert_includes text, "voice0: audio did not play"
+    # The window composes the one dmesg line and strips the voice0 prefix the
+    # speech service had already stamped on its error, so it is printed once.
+    assert_includes text, "voice0: audio unavailable - reply remains visible as text (audio did not play)"
   end
 
   def test_blank_microphone_transcripts_are_ignored_instead_of_sent_as_empty_messages
@@ -712,9 +717,11 @@ class TestCliTerminalFace < Minitest::Test
     assert_equal [:thinking, :anticipate], face.instance_variable_get(:@events)
   end
 
-  def test_face_command_arguments_are_recognised
-    assert Master::CLI::Face::Window.asked?(["/face"])
-    assert Master::CLI::Face::Window.asked?(["face"])
+  # The legacy full-screen window is not an entry mode: bin/master always
+  # reaches Session/Reline first, and no argv asks for the face.
+  def test_face_window_never_takes_terminal_entry
+    refute Master::CLI::Face::Window.asked?(["/face"])
+    refute Master::CLI::Face::Window.asked?(["face"])
     refute Master::CLI::Face::Window.asked?(["hello"])
     refute Master::CLI::Face::Window.asked?(["/face", "extra"])
   end

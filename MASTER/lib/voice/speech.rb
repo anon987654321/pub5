@@ -766,11 +766,24 @@ module Master
         return if fast_tts_mode? && !fast_retry
 
         retry_timeout = [normal_worker_timeout(text.to_s.length), 30].min if fast_retry
-        path = synthesize_edge_oneshot(text:, voice_name:, style_config:, audio_path:, timeout: retry_timeout)
-        clear_last_error! if path && File.size?(path)
+        path = edge_oneshot_path(audio_path:, timeout: retry_timeout, text:, voice_name:, style_config:)
         shape ? shaped(path) : path
       ensure
         log_timing("edge_total", started_at, text_length: text.to_s.length) if started_at
+      end
+
+      # One-shot recovery: audio on file wins and clears the error; anything
+      # else records that neural voices are down and returns the miss. speech
+      # carries text, voice_name, style_config and timeout to the worker.
+      def edge_oneshot_path(audio_path:, **speech)
+        path = synthesize_edge_oneshot(audio_path:, **speech)
+        if path && File.size?(path)
+          clear_last_error!
+        else
+          summarize_tts_failure("neural voices unreachable - speech falls back to the OS voices or stays silent")
+          path = nil
+        end
+        path
       end
 
       # data/voice.yml tts.post_chain, applied.
@@ -813,7 +826,13 @@ module Master
       # Offline, every reply fails the same way, and one line per reply is
       # fourteen lines of the same news.
       def warn_tts(message)
+        warn_tts_once(message)
         @last_error = message
+      end
+
+      # The emit half of warn_tts, for a summary that names the ladder's
+      # outcome without clobbering the specific failure kept in last_error.
+      def warn_tts_once(message)
         @warned_tts ||= {}
         return if @warned_tts[message]
 
@@ -824,6 +843,10 @@ module Master
           ::Kernel.warn("voice0: #{message}")
         end
       end
+
+      # The summary alias must be a def: after module_function, alias copies
+      # the visibility machinery of nothing and the name stays unreachable.
+      def summarize_tts_failure(message) = warn_tts_once(message)
     end
   end
 end

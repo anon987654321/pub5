@@ -380,8 +380,10 @@ module Master
         "soul" => "constitution", "help" => "help", "exit" => "session", "quit" => "session"
       }.freeze
 
-      FIX_SUMMARY = "/fix [path] writes and ends with its wishlist;" \
-                    " /review and /critique are its reading; /help <command> shows syntax."
+      # /review and /critique are deliberately not routed (TurnRouter keeps
+      # /fix as the one advertised command) and the summary names only the
+      # surface: the flags are the fix page's detail, not the category list's.
+      FIX_SUMMARY = "/fix [path]"
 
       CATEGORY_ORDER =%w[fix health session model review change interface media constitution help].freeze
 

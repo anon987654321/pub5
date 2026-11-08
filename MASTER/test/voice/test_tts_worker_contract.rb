@@ -114,7 +114,7 @@ class TtsWorkerContractTest < Minitest::Test
     )
 
     assert_nil result
-    assert_equal ["edge socket unavailable after worker retry"], warnings
+    assert_equal ["edge socket unavailable after worker retry - falling back to a one-shot worker"], warnings
   end
 
   def test_terminal_socket_failure_is_returned_to_the_current_synthesis
@@ -130,7 +130,10 @@ class TtsWorkerContractTest < Minitest::Test
       failure:,
     )
 
-    assert_equal "edge socket unavailable after worker retry", failure.fetch(:message)
+    assert_equal(
+      "edge socket unavailable after worker retry - falling back to a one-shot worker",
+      failure.fetch(:message)
+    )
   end
 
   def test_initial_missing_socket_does_not_trigger_a_cold_start_failure

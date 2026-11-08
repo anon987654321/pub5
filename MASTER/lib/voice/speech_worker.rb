@@ -69,7 +69,9 @@ module Master
       def synthesize_edge_socket(text:, voice_name:, style_config:, audio_path:, on_chunk: nil, retried: false, failure: nil)
         sock_path = resolve_socket_path
         unless sock_path
-          record_socket_failure(failure, "edge socket unavailable after worker retry") if retried
+          record_socket_failure(
+            failure, "edge socket unavailable after worker retry - falling back to a one-shot worker"
+          ) if retried
           return
         end
 
