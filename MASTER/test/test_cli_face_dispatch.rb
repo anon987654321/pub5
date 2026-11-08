@@ -194,6 +194,27 @@ class TestCliFaceDispatch < Minitest::Test
     assert_includes recorded.first.fetch(:content), "current directory output"
   end
 
+  def test_execution_evidence_is_bounded_redacted_and_labelled_untrusted
+    Dir.mktmpdir("execution-evidence") do |dir|
+      store = Master::Trace::Session.new(root: dir)
+      session = Master::CLI::Session.allocate
+      session.instance_variable_set(:@refs, Struct.new(:session, :bus).new(store, nil))
+      token = "ghp_#{'A' * 36}"
+      raw = "\e[31mcredential #{token}\e[0m " + ("output " * 3_000)
+
+      session.send(:record_execution_output, command: "echo #{token}", text: raw)
+
+      message = store.messages.last
+      assert_equal :execution, message[:layer]
+      assert_includes message[:content], "[untrusted execution evidence; output may be truncated]"
+      assert_includes message[:content], "[REDACTED]"
+      assert_includes message[:content], "[execution output truncated]"
+      refute_includes message[:content], token
+      refute_match(/\e\[/, message[:content])
+      assert_nil store.name, "execution output must not name the conversation"
+    end
+  end
+
   def test_model_selector_stdout_is_saved_for_the_next_turn
     recorded = []
     session_store = Object.new
