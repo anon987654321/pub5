@@ -27,7 +27,7 @@ class TestAbletonLiveSetRecovery < Minitest::Test
                     <Loop><LoopStart Value="1.0"/><LoopEnd Value="5.0"/><LoopOn Value="true"/></Loop>
                     <Notes><KeyTracks>
                       <KeyTrack><MidiKey Value="36"/><Notes>
-                        <MidiNoteEvent NoteId="1" Time="0.5" Duration="0.25" Velocity="127" OffVelocity="0.4" IsEnabled="true"/>
+                        <MidiNoteEvent NoteId="1" Time="0.5" Duration="0.25" Velocity="127" OffVelocity="64" IsEnabled="true"/>
                         <MidiNoteEvent NoteId="2" Time="1.5" Duration="0.5" Velocity="89" IsEnabled="false"/>
                         <MidiNoteEvent NoteId="3" Time="2.5" Duration="0.5" Velocity="100" IsEnabled="true"/>
                       </Notes></KeyTrack>
@@ -109,6 +109,7 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes").last.fetch("velocity"), 1e-9
       assert_equal false, drum_clip.fetch("notes")[1].fetch("enabled")
       assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes")[1].fetch("velocity"), 1e-9
+      assert_equal 64.0, drum_clip.fetch("notes").first.fetch("release_velocity")
       assert_equal 0.5, drum_clip.fetch("notes").first.fetch("start_beats")
     end
   end
@@ -173,7 +174,7 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal 1, bytes.scan([0x99, 36, 127].pack("C*")).length # pickup before loop start plays once
       assert_equal 2, bytes.scan([0x99, 36, 100].pack("C*")).length # note inside loop is repeated
       assert_includes bytes, [0x81, 60, 104].pack("C*") # Rhodes on channel 2, original Ableton velocity preserved
-      assert_includes bytes, [0x81, 60, 0].pack("C*")
+      assert_includes bytes, [0x81, 60, 64].pack("C*")
       refute_includes bytes, [0x99, 36, 89].pack("C*") # disabled note is excluded
     end
   end
