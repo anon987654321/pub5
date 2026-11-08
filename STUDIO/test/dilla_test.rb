@@ -396,6 +396,18 @@ class TestDillaReferenceProfile < Minitest::Test
       assert features.fetch("bpm_confidence").between?(0.0, 1.0)
     end
   end
+
+  def test_analyzer_applies_a_finite_ten_minute_default_limit
+    analyzer = Studio::DillaReference::Analyzer.new
+    assert_equal 600, analyzer.send(:normalize_duration, nil)
+    assert_equal 12.5, analyzer.send(:normalize_duration, 12.5)
+    assert_raises(Studio::DillaReference::AnalysisError) do
+      analyzer.send(:normalize_duration, Studio::DillaReference::Analyzer::MAX_SECONDS + 1)
+    end
+    assert_raises(Studio::DillaReference::AnalysisError) do
+      analyzer.send(:normalize_duration, Float::INFINITY)
+    end
+  end
 end
 
 class TestDillaIndustrialTechno < Minitest::Test
