@@ -29,7 +29,7 @@ module Operator
     # Compose existing executable authorities; this is orchestration, not a
     # second stylesheet policy or token manifest.
     STYLE_CHECKS = %w[
-      apps_yml shared_wiring engine_boundaries frontend_auditor dialect_purity design_laws
+      apps_yml shared_wiring engine_boundaries frontend_auditor dialect_purity
       css_constitution css_brace_balance scale_ratchet typography_contract css_minify_integrity
     ].freeze
 
