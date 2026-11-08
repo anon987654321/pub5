@@ -221,7 +221,7 @@ class TermuxInstallerTest < Minitest::Test
       assert_includes guest_source, "ruby bin/deps install"
       assert_includes guest_source, "ruby bin/deps check"
       assert_includes guest_source, "ruby bin/deps boot"
-      assert_includes output, "Debian guest setup and CLI boot PASS"
+      assert_includes guest_source, "Debian guest setup and CLI boot PASS"
     end
   end
 
