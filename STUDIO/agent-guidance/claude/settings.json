@@ -10,7 +10,7 @@
     "deny": [],
     "ask": []
   },
-  "comment": "Per MASTER2 LLM.md - bash permitted for git/ruby/bundle invocations only. All other shell ops use zsh. rbenv is allowed so Rails/MASTER commands can honor the repository's .ruby-version. vm23 ssh/curl deliberately NOT here: settings.local.json already grants Bash(ssh *) personally, and this file is committed - production access belongs in a per-operator file, not one that ships to whoever clones. The PreToolUse Bash hook refuses banned non-native tools (awk, bash, cut, find, head, perl, python, sed, tail, tr, wc) on the whole command string, pipes included; the remaining hooks rebuild generated assets, load the constitution as context, and speak the reply.",
+  "comment": "Per MASTER2 LLM.md - bash permitted for git/ruby/bundle invocations only. All other shell ops use zsh. rbenv is allowed so Rails/MASTER commands can honor the repository's .ruby-version. vm23 ssh/curl deliberately NOT here: settings.local.json already grants Bash(ssh *) personally, and this file is committed - production access belongs in a per-operator file, not one that ships to whoever clones. The PreToolUse Bash hook is wiring only: it runs hook_ruby.rb shell_discipline, which judges the command through MASTER/data/law_runtime.yml#zsh - the one shell list - via MASTER/lib/io/gnu_text_tools.rb. The remaining hooks rebuild generated assets, load the constitution as context, and speak the reply.",
   "hooks": {
     "PreToolUse": [
       {
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command // empty' | grep -qE '\\b(awk|bash|cut|find|head|perl|python|sed|tail|tr|wc)\\b' && { echo 'Banned non-native tool (SHELL_DISCIPLINE/reach_non_native_tool): use the Read tool with offset/limit or a Ruby one-liner' >&2; exit 2; } || true",
+            "command": "ruby \"$CLAUDE_PROJECT_DIR/MASTER/tools/hook_ruby.rb\" shell_discipline",
             "statusMessage": "Checking shell discipline"
           }
         ]
