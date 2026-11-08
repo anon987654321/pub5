@@ -13,10 +13,9 @@ module Master
             swing_percent: 53..56,
             golden_ratio_swing: 62.5,
             nudge: { hihats: :forward, snares: :early, kicks: :late },
-            # Measured constants from the 2026-10-27 research pass. These are
-            # observations with sources, not configuration: brief() reads only
-            # the keys above, so nothing downstream can mistake measurement
-            # for tuning.
+            # Measured constants from the 2026-10-27 research pass. The
+            # narrative brief surfaces them as sourced observations; synthesis
+            # reads only the configured keys above, never these measurements.
             measured: {
               source: "21st Century Funk: A Microtiming Analysis of the Beats of J Dilla (academia.edu 29812748); " \
                       "Soundfly, Three Examples of Dilla Swing (2016); Hein, Dilla Time (2022)",
@@ -225,16 +224,37 @@ module Master
 
       module_function
 
-      def brief
+      def dilla_research_brief
+        producer = PRODUCERS.fetch(:j_dilla)
+        timing = producer.fetch(:timing)
+        measured = timing.fetch(:measured)
+        form = timing.fetch(:form)
+        lineage = producer.fetch(:lineage)
         <<~TEXT.strip
-        Production DNA:
-        - J Dilla: 96 PPQN MPC feel, 53-56% swing pocket, snares early, kicks late, hats nudged forward, 82-92 BPM, low-pass warmth.
-        - Flying Lotus: jazz harmony plus electronic haze, unquantized drums, fast heavy sidechain pump, vinyl layer, pitch-down texture.
-        - Madlib: SP-303 live triggering, Vinyl Sim grit, cassette/multitrack roughness, speed over polish, minor/jazz harmony.
-        - Code generation should expose timing, chord, and texture parameters instead of hard-coding one beat.
-      TEXT
+          Dilla research observations (sourced; not synthesis defaults):
+          - Measured pocket: #{measured.fetch(:melodic_anticipation)}.
+          - Kick/snare frame: #{measured.fetch(:kick_instability)}.
+          - Hat placement: #{measured.fetch(:hats_feel)}.
+          - Anchors: #{measured.fetch(:anchors)}.
+          - Repetition: #{measured.fetch(:repetition)}.
+          - Non-four form: #{form.fetch(:loop_lengths).join(", ")} bars; #{form.fetch(:note)}.
+          - Classical lineage: #{lineage.fetch(:note)}.
+          - Research references: #{lineage.fetch(:sources).join("; ")}.
+        TEXT
       end
 
+      def brief
+        dilla = PRODUCERS.fetch(:j_dilla)
+        timing = dilla.fetch(:timing)
+        <<~TEXT.strip
+          Production DNA:
+          - J Dilla: #{dilla.fetch(:philosophy)}; #{timing.fetch(:ppqn)} PPQN, #{timing.fetch(:swing_percent)}% swing, #{timing.fetch(:bpm)} BPM.
+          #{dilla_research_brief.lines.map { |line| "  #{line}" }.join}
+          - Flying Lotus: jazz harmony plus electronic haze, unquantized drums, fast heavy sidechain pump, vinyl layer, pitch-down texture.
+          - Madlib: SP-303 live triggering, Vinyl Sim grit, cassette/multitrack roughness, speed over polish, minor/jazz harmony.
+          - Code generation should expose timing, chord, and texture parameters instead of hard-coding one beat.
+        TEXT
+      end
       def producer(name)
         PRODUCERS.fetch(name.to_sym)
       end
