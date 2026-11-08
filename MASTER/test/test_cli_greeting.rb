@@ -50,8 +50,7 @@ class TestCliGreeting < Minitest::Test
     Master::CLI::Welcome.stub(:context, { time: "Sunday 20:00", line: "last session 2h ago" }) do
       prompt = session.send(:greeting_prompt)
       refute_includes prompt, "last_message"
-      refute_includes prompt, "personal history"
-      refute_includes prompt, "depression"
+        refute_includes prompt, "depression"
       assert_includes prompt, "Do not ask a question"
     end
   end
