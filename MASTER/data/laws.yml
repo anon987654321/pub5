@@ -799,6 +799,21 @@ YAGNI:
   mechanical: composite (DENSITY_dead_code, SPECULATIVE_GENERALITY)
   semantic: human
   lineage: "Ron Jeffries, Extreme Programming"
+
+SPARE_COMMENTS:
+  root: no_surplus
+  statement: >
+    Code a reader must decode is not finished: rename and reshape until the
+    code says what it does. A comment is the last resort - one present-tense
+    line stating a reason the reader cannot derive. Any comment narrating
+    what the code used to be, or where it came from, goes in the git commit
+    message instead, and a rationale that must outlive the code goes in
+    README.md prose.
+  severity: warning
+  resolution: review
+  mechanical: composite (NO_CHANGELOG_COMMENT, WHY_NOT_WHAT, DENSITY_comments_as_deodorant)
+  semantic: human
+
 POLA:
   root: least_surprise
   statement: >
@@ -3553,6 +3568,9 @@ law_catalogue:
       definition_sources: [MASTER/law/rendered.rb]
       severity: warning
       languages: [json]
+    SPARE_COMMENTS:
+      definition_sources: [MASTER/law/universal.rb]
+      severity: warning
     SPACING_ENTROPY:
       definition_sources: [MASTER/law/rendered.rb]
       severity: warning

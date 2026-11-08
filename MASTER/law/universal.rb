@@ -340,11 +340,26 @@ Law.define(:NO_CHANGELOG_COMMENT) do
   detect do |line|
     line.match?(/^\s*(?:#|\/\/|\*)\s*(?:RAISED|RATCHETED|LOWERED|BUMPED|TRIMMED|UPDATED?|RENAMED|MOVED|CHANGED|REVERTED|REMOVED|ADDED|DEPRECATED|NARROWED|REDUCED|FIXED)\b[^\n]{0,40}\d{4}-\d{2}-\d{2}/i) ||
       line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,60}\b(?:used to be|was previously|were previously|formerly)\b/i) ||
-      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,60}\bchanged from\b[^\n]{0,40}\bto\b/i)
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,60}\bchanged from\b[^\n]{0,40}\bto\b/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,80}\bwas\s+(?:retired|deleted|removed|untracked)\b/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,80}\b(?:after|since)\s+(?:commit\b|[0-9a-f]{8,}|the\s+(?:merge|refactor|rewrite|rename|split|retire|cleanup))\b/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)[^\n]{0,90}\b(?:split|moved|extracted|migrated|folded)\s+(?:out\s+of|from|into)\b/i) ||
+      line.match?(/^\s*(?:#|\/\/|\*)(?=[^\n]*\b(?=[0-9a-f]{10,40}\b)[0-9a-f]*[a-f][0-9a-f]*\b)/i)
   end
   fix "State the present reason. Put the history in the commit message."
   bad "# RENAMED 2026-08-25 from Foo to Bar"
   good "# Bar names what it returns, so a caller can tell it from Baz."
+end
+
+Law.define(:SPARE_COMMENTS) do
+  source "Operator ruling 2026-11-08 - a comment is an exception, not a habit"
+  reads_comments true
+  ask "Can this comment disappear when the code says it?"
+  fix "Rename and reshape the code until it explains itself, then keep at most one "\
+      "present-tense line for a reason a reader cannot derive. History goes in the "\
+      "commit message; a rationale that must outlive the code goes in README.md."
+  bad "# The cap was 10 before the concurrency fix; 25 now"
+  good "# 25 is the largest n that keeps one scan under the /fix budget"
 end
 
 Law.define(:WHY_NOT_WHAT) do

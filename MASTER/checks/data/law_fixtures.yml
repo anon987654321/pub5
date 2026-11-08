@@ -3350,6 +3350,8 @@ laws:
     status: docs
   ARTIFICIAL_COUPLING:
     status: docs
+  SPARE_COMMENTS:
+    status: docs
   SELF_EXPLAINING:
     status: docs
   SILENCE_ON_SUCCESS:
