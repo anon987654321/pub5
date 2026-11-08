@@ -411,3 +411,52 @@ class TestDillaIndustrialTechno < Minitest::Test
     end
   end
 end
+
+
+class TestDillaArrangementAndOfflineExport < Minitest::Test
+  def test_showcase_is_a_real_24_bar_multi_progression_arrangement
+    show = Dilla.showcase_data
+    plan = Dilla.resolve_render_plan(Dilla::Options.new, showcase: show)
+    assert_equal 24, plan.fetch(:bars)
+    sections = plan.fetch(:arrangement)
+    assert_equal %w[intro head lift outro], sections.map { |section| section.fetch("section") }
+    assert_equal %w[blue_hour blue_hour coltrane_soup rain_on_glass], sections.map { |section| section.fetch("progression") }
+    assert_equal 8, sections.fetch(2).fetch("bars")
+    assert_includes sections.fetch(2).fetch("layers"), "foley"
+  end
+
+  def test_offline_style_profiles_resolve_without_network_services
+    profiles = Dilla.catalogue.fetch("production_profiles")
+    %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design].each do |name|
+      assert profiles.key?(name), "missing local production profile #{name}"
+    end
+    plan = Dilla.resolve_render_plan(Dilla::Options.new.tap { |opts| opts.style = "flying_lotus" })
+    assert_equal "coltrane_soup", plan.fetch(:progression).fetch("id")
+    assert_equal "flylo_knock", plan.fetch(:drums)
+    assert_equal "prophet_5", plan.fetch(:voice)
+  end
+
+  def test_midi_writer_emits_a_standard_multitrack_file
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "score.mid")
+      events = {
+        chord: [Dilla::Event.new(0.0, 0.75, :chord, [60, 64, 67], 0.8, nil)],
+        drum: [Dilla::Event.new(0.5, 0.0, :kick, nil, 1.0, nil)]
+      }
+      Dilla::MidiWriter.write(path, events, bpm: 90)
+      bytes = File.binread(path)
+      assert_equal "MThd", bytes[0, 4]
+      assert_equal 1, bytes[8, 2].unpack1("n")
+      assert_equal 6, bytes[10, 2].unpack1("n")
+      assert_equal 960, bytes[12, 2].unpack1("n")
+      assert_operator bytes.bytesize, :>, 100
+    end
+  end
+
+  def test_midi_flags_are_parsed_without_optional_gems
+    opts = Dilla.parse_cli(["--midi", "--foley", "--midi-out", "score.mid"])
+    assert opts.midi
+    assert opts.foley
+    assert_equal "score.mid", opts.midi_out
+  end
+end

@@ -41,7 +41,7 @@ module Dilla
   ENGINE_ROOT = File.expand_path(__dir__)
   DATA_DIR = File.join(ENGINE_ROOT, "data")
   SCRIPT_PATH = File.expand_path(__FILE__)
-  VERSION = "4.1.0"
+  VERSION = "4.2.0"
   SAMPLE_RATE = 44_100
 
   module_function
@@ -121,14 +121,16 @@ module Dilla
     attr_accessor :mode, :source, :out, :progression, :drums, :profile, :groove, :bpm,
                   :kit, :voice, :rig, :sonitex, :sonitex_instances, :vcs, :drum_balance,
                   :chord_balance, :bars, :seed, :performer, :style, :no_stems, :max_duration,
-                  :video, :mp3, :sample_vol, :sample_weight, :sample_slices, :sample_loop, :extra,
-                  :output_at
+                  :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight,
+                  :sample_slices, :sample_loop, :extra, :output_at
 
     def initialize
       @mode = :render
       @sonitex_instances = 1
       @video = false
       @mp3 = false
+      @midi = false
+      @foley = false
       @no_stems = false
       @style = "j_dilla"
       @extra = {}
@@ -203,6 +205,9 @@ module Dilla
       when "--video" then opts.video = true
       when "--no-video" then opts.video = false
       when "--mp3" then opts.mp3 = true
+      when "--midi" then opts.midi = true
+      when "--midi-out" then value_flag.call(:midi_out)
+      when "--foley" then opts.foley = true
       when "--random" then opts.mode = :random
       when "--showcase" then opts.mode = :showcase
       when "--list" then opts.mode = :list
@@ -290,8 +295,17 @@ module Dilla
     opts.sonitex ||= show.fetch("sonitex")
     opts.sonitex_instances = show.fetch("sonitex_instances") unless opts.sonitex_instances && opts.sonitex_instances != 1
     opts.vcs ||= show.fetch("vcs").to_s
-    opts.bpm ||= show.fetch("bpm").to_s
-    render(opts, showcase: show)
+    profile = catalogue.fetch("production_profiles", {}).fetch(opts.style.to_s, {})
+    opts.progression ||= profile["progression"] || show.fetch("progression")
+    opts.kit ||= profile["kit"] || show.fetch("kit")
+    opts.voice ||= profile["voice"] || show.fetch("voice")
+    opts.rig ||= profile["rig"] || show.fetch("rig")
+    opts.sonitex ||= profile["sonitex"] || show.fetch("sonitex")
+    opts.drums ||= profile["drums"]
+    opts.bpm ||= (profile["bpm"] || show.fetch("bpm")).to_s
+    opts.foley = true if profile["foley"] && !opts.foley
+    opts.bars ||= Array(show["arrangement"]).sum { |section| section.fetch("bars", 0).to_i } if opts.style.to_s == "j_dilla"
+    render(opts, showcase: (opts.style.to_s == "j_dilla" ? show : show.merge("arrangement" => [])))
   end
 
   def render_random(opts)
@@ -581,9 +595,16 @@ module Dilla
     # (66%). Swing percent *is* the off-16th's position within the eighth, so
     # the slide spans the clamp (50..66) across that range: 54 lands in the
     # documented pocket, 66 lands exactly on the triplet.
-    def swing_delay_s
-      position = 0.5 + ((@swing - 50.0) / 16.0) * (2.0 / 3.0 - 0.5)
+    def swing_delay_s(lane = nil)
+      lane_swing = lane && @profile.fetch("swing_by_lane", {}).fetch(lane.to_s, @swing)
+      amount = (lane_swing || @swing).to_f.clamp(50.0, 66.0)
+      position = 0.5 + ((amount - 50.0) / 16.0) * (2.0 / 3.0 - 0.5)
       (position - 0.5) * eighth_s
+    end
+
+    def step_offset_ms(lane, step)
+      map = @profile.fetch("step_offsets_ms", {}).fetch(lane.to_s, {})
+      (map[step.to_s] || (step.odd? ? map["odd"] : nil) || 0.0).to_f
     end
 
     def nudge(lane)
@@ -614,28 +635,85 @@ module Dilla
       @opts = opts
     end
 
-    # Returns {drum: [...], chord: [...], bass: [...], melody: [...]}
+    # A section map can change harmony, drum grammar, active lanes and patch
+    # identity without restarting the shared musical clock.
     def events
-      bar_count = @opts.fetch(:bars)
-      loop_bars = [@progress["loop_bars"].to_i.clamp(1, 8), bar_count].min
-      chord_plan = build_chord_plan(loop_bars, bar_count)
-      drum_events = build_drums(bar_count, loop_bars)
-      melodic = build_melodic(chord_plan, loop_bars, bar_count)
-      { drum: drum_events }.merge(melodic)
+      arrangement = Array(@opts[:arrangement])
+      return arranged_events(arrangement) unless arrangement.empty?
+      flat_events(@opts.fetch(:bars))
     end
 
     private
 
-    def step_time(bar, step)
+    def flat_events(bar_count)
+      loop_bars = [@progress["loop_bars"].to_i.clamp(1, 8), bar_count].min
+      chord_plan = build_chord_plan(loop_bars, bar_count)
+      drum_events = build_drums(bar_count, loop_bars)
+      melodic = build_melodic(chord_plan, loop_bars, bar_count)
+      foley = @opts[:foley] ? build_foley(chord_plan) : []
+      { drum: drum_events }.merge(melodic).merge(foley: foley)
+    end
+
+    def arranged_events(sections)
+      output = { drum: [], chord: [], bass: [], melody: [], foley: [] }
+      cursor_bars = 0
+      sections.each do |section|
+        bars = section.fetch("bars", 0).to_i
+        next unless bars.positive?
+        progression = Dilla.progression_by_ref(section["progression"] || @progress.fetch("id"))
+        drum_id = section["drums"]
+        drums = drum_id ? Dilla.catalogue.fetch("drum_patterns").fetch(drum_id) : @drums
+        active = Array(section["layers"]).map(&:to_s)
+        active = %w[drums chords bass melody foley] if active.empty?
+        child = self.class.new(
+          progress: progression, groove: @groove, drums: drums, rig: @rig,
+          rng: @rng, performer: @performer,
+          opts: { bars: bars, foley: active.include?("foley") }
+        )
+        rendered = child.events
+        lane_names = { drum: "drums", chord: "chords", bass: "bass", melody: "melody", foley: "foley" }
+        rendered.each do |lane, lane_events|
+          next unless active.include?(lane_names.fetch(lane))
+          lane_events.each do |event|
+            local_time = event.time
+            event.time += cursor_bars * @groove.bar_s
+            if %i[chord melody].include?(lane)
+              meta = event.meta.is_a?(Hash) ? event.meta.dup : {}
+              meta["section"] = section["section"]
+              meta["voice"] = section["voice"] if section["voice"]
+              if section["morph_to"]
+                progress = (local_time / [bars * @groove.bar_s, 0.001].max).clamp(0.0, 1.0)
+                meta["morph_to"] = section["morph_to"]
+                meta["morph_mix"] = section.fetch("morph_start", 0.0).to_f +
+                                    (section.fetch("morph_end", 1.0).to_f - section.fetch("morph_start", 0.0).to_f) * progress
+              end
+              event.meta = meta
+            end
+            output.fetch(lane) << event
+          end
+        end
+        cursor_bars += bars
+      end
+      output
+    end
+
+    private
+
+    def step_time(bar, step, lane = nil)
       t = bar * @groove.bar_s + step * @groove.sixteenth_s
-      # Swing delays every odd 16th; nudges and jitter come from the groove.
-      t += @groove.swing_delay_s if step.odd?
+      t += @groove.swing_delay_s(lane) if step.odd?
       t
     end
 
     def drum_hit(bar, step, lane, vel)
-      jitter = @groove.spread(lane == "ghost" ? "ghost" : lane)
-      t = step_time(bar, step) + (@groove.nudge(lane) / 1000.0) + @rng.jitter_ms(jitter) / 1000.0
+      groove_lane = lane == "ghost" ? "ghost" : (lane == "hats" || lane == "open_hat" ? "hat" : lane)
+      jitter = @groove.spread(groove_lane)
+      @timing_offsets ||= {}
+      offset = @timing_offsets.fetch([groove_lane, step]) do
+        @timing_offsets[[groove_lane, step]] = @rng.jitter_ms(jitter) / 1000.0
+      end
+      t = step_time(bar, step, groove_lane) + (@groove.nudge(groove_lane) / 1000.0) +
+          (@groove.step_offset_ms(groove_lane, step) / 1000.0) + offset
       vel = (vel * (1.0 + @rng.jitter_ms(4.0) / 100.0)).clamp(0.05, 1.0)
       Event.new(t + @groove.drag_s, 0.0, lane.to_sym, nil, vel, nil)
     end
@@ -827,16 +905,41 @@ module Dilla
         pc = tones.fetch(@rng.rand(tones.length))
       else
         pc = (root_pc + scale.fetch(@rng.rand(scale.length))) % 12
-        pc = (pc + 6) % 12 if style == "dorian_moan" && @rng.chance(0.12) # blue note
+        pc = (pc + 6) % 12 if style == "dorian_moan" && @rng.chance(0.12)
       end
       midi = 60 + (pc - root_pc)
       midi += 12 while midi < 72
       midi -= 12 while midi > 84
       midi
     end
+
+    # Scale-locked upper-register FM droplets and broken arpeggio fragments.
+    def build_foley(chord_plan)
+      parsed = @progress["chords"].map { |symbol| Dilla::ChordParser.parse(symbol, Dilla.theory) }
+      positions = [[1, 0.24], [5, 0.18], [10, 0.30], [14, 0.16]]
+      events = []
+      chord_plan.each do |slot|
+        chord = parsed.fetch(slot[:index])
+        scale = Dilla.scale_for(chord, Dilla.theory)
+        chord_pcs = chord[:intervals].map { |iv| (chord[:root] + iv) % 12 }
+        slot[:bars].ceil.times do |bar_index|
+          positions.each_with_index do |(step, level), index|
+            next if index == 1 && @rng.chance(0.4)
+            next if index == 3 && @rng.chance(0.5)
+            pool = index.even? ? chord_pcs : scale.map { |degree| (chord[:root] + degree) % 12 }
+            midi = 84 + pool.fetch(@rng.rand(pool.length))
+            at = (slot[:start_bar] + bar_index) * @groove.bar_s + step * @groove.sixteenth_s
+            at += @groove.swing_delay_s("hat") if step.odd?
+            at -= @groove.anticipation_s * 0.35
+            events << Event.new(at, 0.06 + @rng.rand * 0.13, :foley, midi, level * (0.75 + @rng.rand * 0.45), { "synth" => "fm_glass" })
+          end
+        end
+      end
+      events
+    end
   end
 
-  DRUM_LANES = %w[kick snare ghost hats ride perc open_hat].freeze
+  DRUM_LANES = %w[kick snare ghost hats ride perc open_hat soulclap].freeze
 end
 
 module Dilla
@@ -1011,13 +1114,71 @@ module Dilla
       soft_clip(out)
     end
 
+    def prophet(midi, vel, dur_s)
+      f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
+      partials=[[1.0,0.78,1.0],[2.0,0.31,0.9],[3.0,0.18,0.75],[4.0,0.10,0.62],[5.0,0.045,0.5]]
+      a=Dilla.render_tone(len,f,0.58,env:{attack:0.025,decay:@voice.fetch("decay",3.8).to_f,sustain:0.36},partials:partials,lp:1700+4400*@voice.fetch("brightness",0.5).to_f)
+      b=Dilla.render_tone(len,f*1.0032,0.42,env:{attack:0.035,decay:@voice.fetch("decay",3.8).to_f,sustain:0.32},partials:partials,lp:1500+4100*@voice.fetch("brightness",0.5).to_f)
+      len.times { |i| a[i]=a[i]*0.62+b[i]*0.38 }; soft_clip(a)
+    end
+
+    def juno(midi, vel, dur_s)
+      f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
+      partials=[[1.0,0.62,1.0],[2.0,0.28,0.85],[3.0,0.18,0.7],[4.0,0.10,0.55],[5.0,0.05,0.4]]
+      a=Dilla.render_tone(len,f,0.56,env:{attack:0.18,decay:@voice.fetch("decay",6.5).to_f,sustain:0.58},partials:partials,lp:1100+3300*@voice.fetch("brightness",0.4).to_f)
+      b=Dilla.render_tone(len,f*1.006,0.44,env:{attack:0.22,decay:@voice.fetch("decay",6.5).to_f,sustain:0.55},partials:partials,lp:1000+3000*@voice.fetch("brightness",0.4).to_f)
+      depth=@voice.fetch("ensemble",0.08).to_f; rate=@voice.fetch("ensemble_rate",0.23).to_f
+      len.times { |i| a[i]=(a[i]*0.56+b[i]*0.44)*(1.0-depth*(0.5-0.5*Math.sin(2.0*Math::PI*rate*i/SAMPLE_RATE))) }
+      soft_clip(a)
+    end
+
+    def minimoog(midi, vel, dur_s)
+      f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
+      partials=[[1.0,0.95,1.0],[2.0,0.38,0.82],[3.0,0.22,0.68],[4.0,0.13,0.5],[5.0,0.075,0.36],[6.0,0.035,0.25]]
+      out=Dilla.render_tone(len,f,0.78,env:{attack:0.004,decay:@voice.fetch("decay",1.1).to_f,sustain:0.18},partials:partials,lp:@voice.fetch("cutoff",2400).to_f)
+      soft_clip(out,1.2)
+    end
+
+    def wurlitzer(midi, vel, dur_s)
+      f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
+      out=Dilla.render_tone(len,f,0.84,env:{attack:0.004,decay:@voice.fetch("decay",1.65).to_f,sustain:0.07},
+        partials:[[1.0,1.0,1.0],[2.01,0.25,0.42],[3.96,0.12,0.24],[6.13,0.04,0.12]],lp:3300+1800*@voice.fetch("brightness",0.45).to_f)
+      soft_clip(out)
+    end
+
+    def fm_glass(midi, vel, dur_s)
+      f=midi_hz(midi); len=(dur_s*SAMPLE_RATE).to_i+1
+      ratio=@voice.fetch("fm_ratio",2.71).to_f; index=@voice.fetch("fm_index",4.0).to_f
+      mod_phase=0.0; car_phase=0.0; mod_inc=f*ratio*65_536.0/SAMPLE_RATE; car_inc=f*65_536.0/SAMPLE_RATE
+      decay=Math.exp(-1.0/(@voice.fetch("decay",0.8).to_f.clamp(0.05,10.0)*SAMPLE_RATE))
+      out=Array.new(len,0.0)
+      len.times do |i|
+        phase=car_phase+Math.sin(mod_phase)*index*65_536.0/(2.0*Math::PI)
+        out[i]=Dilla.sine(phase.round)*(decay**i)*vel
+        mod_phase+=mod_inc; car_phase+=car_inc
+      end
+      soft_clip(out,1.02)
+    end
+
     def chord_note(midi, vel, dur_s)
       case @voice["type"]
       when "rhodes" then rhodes(midi, vel, dur_s)
       when "pad" then pad(midi, vel, dur_s)
       when "musicbox" then musicbox(midi, vel, dur_s)
+      when "prophet" then prophet(midi, vel, dur_s)
+      when "juno" then juno(midi, vel, dur_s)
+      when "minimoog" then minimoog(midi, vel, dur_s)
+      when "wurlitzer" then wurlitzer(midi, vel, dur_s)
+      when "fm" then fm_glass(midi, vel, dur_s)
       else organ(midi, vel, dur_s)
       end
+    end
+
+    def morph_note(midi, vel, dur_s, target_voice, amount)
+      source=chord_note(midi,vel,dur_s)
+      target=self.class.new(@kit,target_voice,@theory).chord_note(midi,vel,dur_s)
+      mix=amount.to_f.clamp(0.0,1.0); length=[source.length,target.length].max
+      Array.new(length) { |i| (source[i] || 0.0)*(1.0-mix)+(target[i] || 0.0)*mix }
     end
 
     # Fingered electric bass: fundamentals plus a bit of 2nd/3rd harmonic,
@@ -1157,6 +1318,25 @@ module Dilla
       highpass!(out, 3400.0)
       out.each_with_index { |v, idx| out[idx] = v * @kit["ride"]["level"].to_f * 2.0 }
       out
+    end
+
+    def soulclap(vel)
+      len = (0.18 * SAMPLE_RATE).to_i
+      out = Array.new(len, 0.0)
+      [0, 11, 27, 43].each_with_index do |offset, burst|
+        duration = ([0.014, 0.021, 0.028, 0.036][burst] * SAMPLE_RATE).to_i
+        pole = Math.exp(-2.0 * Math::PI * (1800.0 + burst * 520.0) / SAMPLE_RATE)
+        state = 0.0
+        duration.times do |j|
+          index = offset + j
+          break if index >= len
+          noise = NOISE[(index * 13 + burst * 997) % NOISE.length]
+          state += (noise - state) * (1.0 - pole)
+          out[index] += state * Math.exp(-j.to_f / (duration * 0.32)) * (1.0 - burst * 0.13)
+        end
+      end
+      crush!(out, @kit.dig("snare", "crush") || 12)
+      out.map! { |sample| sample * vel * 0.42 }
     end
 
     def perc(vel)
@@ -1363,17 +1543,19 @@ module Dilla
   class Mixer
     attr_reader :duration_s
 
-    def initialize(duration_s, rig, rng)
+    def initialize(duration_s, rig, rng, bpm: 86.0)
       @n = (duration_s * SAMPLE_RATE).to_i + 1
       @duration_s = duration_s
       @rig = rig
       @rng = rng
+      @bpm = bpm.to_f
       @buses = {
         drums: Stereo.new(@n), sub: Stereo.new(@n), bass: Stereo.new(@n),
-        chords: Stereo.new(@n), melody: Stereo.new(@n), sample: Stereo.new(@n),
-        vinyl: Stereo.new(@n)
+        chords: Stereo.new(@n), melody: Stereo.new(@n), foley: Stereo.new(@n),
+        sample: Stereo.new(@n), vinyl: Stereo.new(@n)
       }
-      @gain = { drums: 1.4, sub: 1.0, bass: 0.72, chords: 0.48, melody: 0.4, sample: 0.5, vinyl: 0.0 }
+      @gain = { drums: 1.4, sub: 1.0, bass: 0.72, chords: 0.48, melody: 0.4,
+                foley: 0.24, sample: 0.5, vinyl: 0.0 }
     end
 
     attr_reader :buses
@@ -1454,7 +1636,7 @@ module Dilla
     def apply_delay(send_bus, into, time_div, feedback, lowpass, throw_prob, rng)
       b = @buses.fetch(send_bus)
       d = @buses.fetch(into)
-      delay_n = [(time_div * 2.0 * 60.0 / 86.0 * SAMPLE_RATE).to_i, 1].max
+      delay_n = [(time_div * 2.0 * 60.0 / @bpm * SAMPLE_RATE).to_i, 1].max
       loop_lp = 0.0
       coef = Math.exp(-2.0 * Math::PI * lowpass / SAMPLE_RATE)
       buf = Array.new(delay_n, 0.0)
@@ -1731,6 +1913,8 @@ module Dilla
       instances.to_i.clamp(1, 6).times do
         one_pass!(mix, cfg, rng)
       end
+      wow_flutter!(mix, cfg, rng)
+      head_bump!(mix, cfg)
     end
 
     def one_pass!(mix, cfg, rng)
@@ -1741,8 +1925,6 @@ module Dilla
       drive = cfg["drive"].to_f
       bits = cfg["bits"].to_i
       levels = 2.0**([bits, 16].min - 1)
-      wow_depth = cfg["wow"].to_f
-      wow_period = (2.4 * SAMPLE_RATE).to_i
       n = mix.l.length
       i = 0
       while i < n
@@ -1752,10 +1934,6 @@ module Dilla
         r = Math.tanh(r)
         l = (l * levels).round / levels
         r = (r * levels).round / levels
-        if wow_depth.positive? && (i % 3).zero?
-          w = 1.0 + wow_depth * 0.01 * Math.sin(2.0 * Math::PI * i / wow_period)
-          r *= w
-        end
         mix.l[i] = l
         mix.r[i] = r
         i += 1
@@ -1763,6 +1941,46 @@ module Dilla
       crackle!(mix, cfg["crackle"].to_f, rng)
       hiss!(mix, cfg["hiss"].to_f, rng)
       dropouts!(mix, cfg["dropout"].to_f, rng) if cfg["dropout"].to_f.positive?
+    end
+
+    # Tape speed instability moves sample position (pitch/time), not channel
+    # amplitude. Bounded sinusoidal offsets avoid drift and preserve endpoints.
+    def wow_flutter!(mix, cfg, rng)
+      wow = cfg["wow"].to_f * 0.00035
+      flutter = cfg.fetch("flutter", 0.35).to_f * 0.00008
+      return if wow <= 0 && flutter <= 0
+      phases = [rng.rand * 2.0 * Math::PI, rng.rand * 2.0 * Math::PI]
+      [mix.l, mix.r].each_with_index do |channel, side|
+        source = channel.dup
+        w0 = Math.sin(phases[0] + side * 0.29)
+        f0 = Math.sin(phases[1] + side * 0.41)
+        wow_amp = wow * SAMPLE_RATE / (2.0 * Math::PI * 0.55)
+        flutter_amp = flutter * SAMPLE_RATE / (2.0 * Math::PI * 5.7)
+        channel.each_index do |i|
+          t = i.to_f / SAMPLE_RATE
+          offset = wow_amp * (Math.sin(2.0 * Math::PI * 0.55 * t + phases[0] + side * 0.29) - w0) +
+                   flutter_amp * (Math.sin(2.0 * Math::PI * 5.7 * t + phases[1] + side * 0.41) - f0)
+          position = (i + offset).clamp(0.0, source.length - 1.0)
+          left = position.floor
+          fraction = position - left
+          right = [left + 1, source.length - 1].min
+          channel[i] = source[left] * (1.0 - fraction) + source[right] * fraction
+        end
+      end
+    end
+
+    def head_bump!(mix, cfg)
+      db = cfg.fetch("head_bump_db", 0.0).to_f
+      return if db.abs < 0.001
+      gain = 10.0**(db / 20.0)
+      coefficient = Math.exp(-2.0 * Math::PI * cfg.fetch("head_bump_hz", 65.0).to_f / SAMPLE_RATE)
+      [mix.l, mix.r].each do |channel|
+        state = 0.0
+        channel.each_index do |i|
+          state += (channel[i] - state) * (1.0 - coefficient)
+          channel[i] += state * (gain - 1.0)
+        end
+      end
     end
 
     def crackle!(mix, amount, rng)
@@ -1842,6 +2060,82 @@ module Dilla
         ch[i] -= lp[i]
         i += 1
       end
+    end
+  end
+
+  # Dependency-free Standard MIDI writer: export the exact score events that
+  # the local Ruby renderer plays, with no gem or hosted API dependency.
+  module MidiWriter
+    PPQN = 960
+    DRUM_NOTES = { kick: 36, snare: 38, ghost: 38, hats: 42, open_hat: 46,
+                   ride: 51, perc: 75, soulclap: 39 }.freeze
+    LANES = [[:conductor, 0, "Tempo"], [:drum, 9, "Drums"], [:chord, 0, "Harmony"],
+             [:bass, 1, "Bass"], [:melody, 2, "Melody"], [:foley, 3, "Electronic Foley"]].freeze
+    module_function
+
+    def write(path, events, bpm:)
+      tempo = (60_000_000.0 / bpm.to_f).round
+      tracks = LANES.map do |lane, channel, name|
+        rows = lane == :conductor ? [] : Array(events[lane]).flat_map { |event| note_rows(lane, channel, event, bpm) }
+        track_chunk(name, rows, tempo: lane == :conductor ? tempo : nil)
+      end
+      Dilla.atomic_write(path, "MThd".b + [6, 1, tracks.length, PPQN].pack("Nnnn") + tracks.join, binary: true)
+      path
+    end
+
+    def note_rows(lane, channel, event, bpm)
+      notes = if lane == :drum
+                [[DRUM_NOTES.fetch(event.lane, 37), 0.06]]
+              elsif event.midi.is_a?(Array)
+                event.midi.map { |note| [note, event.dur] }
+              elsif event.midi
+                [[event.midi, event.dur]]
+              else
+                []
+              end
+      notes.flat_map do |note, duration|
+        start_tick = [(event.time.to_f * bpm.to_f * PPQN / 60.0).round, 0].max
+        end_tick = [((event.time.to_f + [duration.to_f, 0.055].max) * bpm.to_f * PPQN / 60.0).round, start_tick + 1].max
+        pitch = note.to_i.clamp(0, 127)
+        velocity = (event.vel.to_f * 127).round.clamp(1, 127)
+        [[start_tick, 1, [0x90 | channel, pitch, velocity].pack("C*")],
+         [end_tick, 0, [0x80 | channel, pitch, 0].pack("C*")]]
+      end
+    end
+
+    def track_chunk(name, rows, tempo: nil)
+      name = name.to_s.b
+      events = [[0, -2, [0xff, 0x03, name.bytesize].pack("C*") + name]]
+      if tempo
+        events << [0, -1, [0xff, 0x51, 0x03, (tempo >> 16) & 0xff, (tempo >> 8) & 0xff, tempo & 0xff].pack("C*")]
+        events << [0, -1, [0xff, 0x58, 0x04, 4, 2, 24, 8].pack("C*")]
+      end
+      events.concat(rows)
+      events.sort_by! { |tick, priority, _| [tick, priority] }
+      body = String.new(encoding: Encoding::BINARY)
+      previous = 0
+      events.each do |tick, _priority, bytes|
+        body << variable_length([tick - previous, 0].max)
+        body << bytes
+        previous = tick
+      end
+      body << "\x00\xff\x2f\x00".b
+      "MTrk".b + [body.bytesize].pack("N") + body
+    end
+
+    def variable_length(value)
+      buffer = value.to_i & 0x7f
+      while (value >>= 7).positive?
+        buffer = (buffer << 8) | ((value & 0x7f) | 0x80)
+      end
+      bytes = String.new(encoding: Encoding::BINARY)
+      loop do
+        byte = buffer & 0xff
+        bytes << byte
+        break if (byte & 0x80).zero?
+        buffer >>= 8
+      end
+      bytes
     end
   end
 
@@ -1936,11 +2230,13 @@ module Dilla
     bar_count = plan[:bars]
     tail_s = 2.6
     duration = bar_count * groove.bar_s + tail_s
-    mixer = Mixer.new(duration, rig, rng)
+    mixer = Mixer.new(duration, rig, rng, bpm: plan[:bpm])
     instruments = Instruments.new(kit, voice, theory)
     drum_kit = DrumKit.new(kit)
-
-    seq = Sequencer.new(progress: plan[:progression], groove:, drums: drums_cfg, rig:, rng:, performer:, opts: { bars: bar_count })
+    seq = Sequencer.new(
+      progress: plan[:progression], groove:, drums: drums_cfg, rig:, rng:, performer:,
+      opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley }
+    )
     events = seq.events
 
     # --- drums & sub
@@ -1953,6 +2249,7 @@ module Dilla
                 when :open_hat then drum_kit.hat(ev.vel, open: true)
                 when :ride then drum_kit.ride(ev.vel)
                 when :perc then drum_kit.perc(ev.vel)
+                when :soulclap then drum_kit.soulclap(ev.vel)
                 else next
                 end
       pan = pan_for_lane(ev.lane, kit)
@@ -1965,16 +2262,28 @@ module Dilla
       mixer.bus(:sub).add_mono!((ev.time * SAMPLE_RATE).round, samples, 0.9, 0.9)
     end
 
-    # --- chords, bass, melody
+    # --- chords, bass, melody and chord-aware electronic accents
+    render_note = lambda do |ev, midi, lane|
+      meta = ev.meta.is_a?(Hash) ? ev.meta : {}
+      voice_name = meta["voice"] || plan[:voice]
+      config = catalogue.fetch("voices").fetch(voice_name)
+      config = config.merge("brightness" => (config.fetch("brightness", 0.5).to_f + (lane == :melody ? 0.15 : 0.0)).clamp(0.0, 0.95))
+      engine = (voice_name == plan[:voice] && lane != :melody) ? instruments : Instruments.new(kit, config, theory)
+      target_name = meta["morph_to"]
+      if target_name && meta.fetch("morph_mix", 0.0).to_f.positive?
+        engine.morph_note(midi, ev.vel, ev.dur, catalogue.fetch("voices").fetch(target_name), meta["morph_mix"])
+      else
+        engine.chord_note(midi, ev.vel, ev.dur)
+      end
+    end
     events.fetch(:chord).each do |ev|
-      voicing = ev.midi
-      start = (ev.time * SAMPLE_RATE).round
-      len = (ev.dur * SAMPLE_RATE).to_i
+      voicing = ev.midi; start = (ev.time * SAMPLE_RATE).round
+      event_voice = (ev.meta.is_a?(Hash) && ev.meta["voice"]) || plan[:voice]
+      pan_base = catalogue.fetch("voices").fetch(event_voice).fetch("pan", 0.0).to_f
       voicing.each_with_index do |midi, idx|
         spread = voicing.length <= 1 ? 0.0 : (idx.to_f / (voicing.length - 1)) * 0.44 - 0.22
-        pan = (spread + voice["pan"].to_f).clamp(-0.7, 0.7)
-        samples = instruments.chord_note(midi, ev.vel, ev.dur)
-        mixer.bus(:chords).add_mono!(start, samples, 1.0 - [pan, 0.0].max, 1.0 + [pan, 0.0].min)
+        pan = (spread + pan_base).clamp(-0.7, 0.7)
+        mixer.bus(:chords).add_mono!(start, render_note.call(ev, midi, :chord), 1.0 - [pan, 0.0].max, 1.0 + [pan, 0.0].min)
       end
     end
     events.fetch(:bass).each do |ev|
@@ -1982,13 +2291,18 @@ module Dilla
       samples = instruments.bass(ev.midi, ev.vel, ev.dur)
       mixer.bus(:bass).add_mono!(start, samples, 0.95, 0.95)
     end
-    melody_voice = voice.merge("brightness" => [(voice["brightness"].to_f + 0.15), 0.85].min)
-    melody_instruments = Instruments.new(kit, melody_voice, theory)
     events.fetch(:melody).each do |ev|
       start = (ev.time * SAMPLE_RATE).round
-      samples = melody_instruments.chord_note(ev.midi, ev.vel, ev.dur)
+      samples = render_note.call(ev, ev.midi, :melody)
       pan = 0.18 + ((ev.midi % 5) - 2) * 0.06
       mixer.bus(:melody).add_mono!(start, samples, 1.0 - [pan, 0.0].max, 1.0 + [pan, 0.0].min)
+    end
+    foley_engine = Instruments.new(kit, catalogue.fetch("voices").fetch("fm_glass"), theory)
+    events.fetch(:foley, []).each do |ev|
+      start = (ev.time * SAMPLE_RATE).round
+      samples = foley_engine.chord_note(ev.midi, ev.vel, ev.dur)
+      pan = 0.22 + ((ev.midi % 7) - 3) * 0.045
+      mixer.bus(:foley).add_mono!(start, samples, 0.46 - [pan, 0.0].max * 0.12, 0.46 + [pan, 0.0].min * 0.12)
     end
 
     # --- sample flip (operator-supplied, rights-cleared audio only)
@@ -1998,16 +2312,18 @@ module Dilla
     mixer.gain!(:drums, opts.drum_balance.to_f) if opts.drum_balance
     mixer.gain!(:chords, opts.chord_balance.to_f) if opts.chord_balance
     curve = mixer.sidechain_curve!(events.fetch(:drum), rig.dig("sidechain", "amount"), rig.dig("sidechain", "release_ms") || 120)
-    %i[chords bass melody sample].each { |b| mixer.duck!(b, curve) }
+    %i[chords bass melody foley sample].each { |b| mixer.duck!(b, curve) }
 
     mixer.render_vinyl(plan[:vcs])
     delay = rig.fetch("delay")
     mixer.apply_delay(:melody, :melody, delay["time_div"], delay["feedback"], delay["lowpass"], delay["throw_melody"].to_f + 0.02, rng)
     mixer.apply_delay(:chords, :chords, delay["time_div"] * 2.0, delay["feedback"] * 0.5, delay["lowpass"] * 0.8, delay["throw_chords"].to_f, rng)
+    mixer.apply_delay(:foley, :foley, delay["time_div"] * 0.5, delay["feedback"] * 0.42, delay["lowpass"] * 1.25, 0.24, rng) if events.fetch(:foley, []).any?
     reverb = rig.fetch("reverb")
     mixer.bus(:drums).l.each_index { |i| mixer.bus(:drums).l[i] } # no-op keeps arrays materialized
     mixer.apply_reverb(:melody, :melody, reverb["size"], reverb["level_melody"])
     mixer.apply_reverb(:chords, :chords, reverb["size"], reverb["level_chords"])
+    mixer.apply_reverb(:foley, :foley, [reverb["size"].to_f + 0.12, 1.0].min, reverb["level_melody"].to_f * 1.25) if events.fetch(:foley, []).any?
     apply_snare_verb!(mixer, events, reverb)
 
     mix = mixer.mixdown
@@ -2021,7 +2337,8 @@ module Dilla
 
     stem_shares = {
       "drums" => mixer.rms(:drums), "sub" => mixer.rms(:sub), "bass" => mixer.rms(:bass),
-      "chords" => mixer.rms(:chords), "melody" => mixer.rms(:melody), "sample" => mixer.rms(:sample)
+      "chords" => mixer.rms(:chords), "melody" => mixer.rms(:melody),
+      "foley" => mixer.rms(:foley), "sample" => mixer.rms(:sample)
     }
 
     # --- write outputs + sidecars
@@ -2031,6 +2348,12 @@ module Dilla
     FileUtils.mkdir_p(dir)
     wav_path = "#{out_base}.wav"
     Wav.write_16bit(wav_path, mix)
+    midi_path = nil
+    if opts.midi || !opts.midi_out.to_s.empty?
+      midi_path = opts.midi_out.to_s.empty? ? "#{out_base}.mid" : File.expand_path(opts.midi_out)
+      FileUtils.mkdir_p(File.dirname(midi_path))
+      MidiWriter.write(midi_path, events, bpm: plan[:bpm])
+    end
     quality = write_quality(out_base, mix, lufs, stem_shares, duration, plan)
     session = write_session(out_base, plan, performer, events, sample_report)
     provenance = write_provenance(out_base, opts, plan, performer, wav_path, session, quality)
@@ -2048,7 +2371,7 @@ module Dilla
                  rng.seed, performer["id"], seconds, lufs)
     puts log unless quiet
     { seed: rng.seed, performer: performer["id"], bpm: plan[:bpm], path: mp3_path || wav_path,
-      wav: wav_path, mp3: mp3_path, provenance: provenance, log: log }
+      wav: wav_path, mp3: mp3_path, midi: midi_path, provenance: provenance, log: log }
   end
 
   def pan_for_lane(lane, kit)
@@ -2226,6 +2549,7 @@ module Dilla
     data = {
       "engine" => "dilla #{VERSION}",
       "progression" => plan[:progression].slice("id", "title", "key", "bpm", "loop_bars", "chords"),
+      "arrangement" => plan[:arrangement],
       "drums" => plan[:drums], "groove_profile" => plan[:profile], "groove_scale" => plan[:groove_scale],
       "kit" => plan[:kit], "voice" => plan[:voice], "rig" => plan[:rig], "bars" => plan[:bars],
       "performer" => performer.slice("id", "name"),
@@ -2245,6 +2569,7 @@ module Dilla
       "performer" => performer["id"],
       "flags" => {
         "out" => opts.out, "progression" => opts.progression, "drums" => opts.drums,
+        "midi" => opts.midi, "midi_out" => opts.midi_out, "foley" => opts.foley,
         "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars,
         "kit" => opts.kit, "voice" => opts.voice, "rig" => opts.rig, "sonitex" => opts.sonitex,
         "sonitex_instances" => opts.sonitex_instances, "vcs" => opts.vcs,

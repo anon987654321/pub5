@@ -1,20 +1,77 @@
 {
-  "comment": "The curated showcase. `ruby dilla.rb` and `/play` both render this; the id points into dilla.json progressions, everything else is the arrangement the name promises.",
+  "comment": "The curated showcase is a section-aware 24-bar form. Each section has its own harmonic and timbral decisions; intro and outro deliberately remove layers.",
   "id": "blue_hour_showcase",
   "progression": "blue_hour",
   "title": "Blue Hour - Dilla Minor Dub Cut",
   "arrangement": [
-    { "section": "intro", "bars": 4, "layers": ["drums", "vinyl"], "notes": "drums half-muted, hats only on the backbeats" },
-    { "section": "head", "bars": 8, "layers": ["drums", "chords", "bass", "vinyl"] },
-    { "section": "lift", "bars": 8, "layers": ["drums", "chords", "bass", "melody", "vinyl"], "notes": "melody enters on the and-of-one, dub throws open" },
-    { "section": "outro", "bars": 4, "layers": ["chords", "melody", "vinyl"], "notes": "drums drop out; delay tail carries" }
+    {
+      "section": "intro",
+      "bars": 4,
+      "progression": "blue_hour",
+      "drums": "dusty_laid_back",
+      "layers": [
+        "drums",
+        "vinyl"
+      ],
+      "notes": "Sparse pickup; no harmony or bass yet."
+    },
+    {
+      "section": "head",
+      "bars": 8,
+      "progression": "blue_hour",
+      "drums": "dilla_shadow_full",
+      "layers": [
+        "drums",
+        "chords",
+        "bass",
+        "vinyl"
+      ],
+      "voice": "rhodes_mark1",
+      "morph_to": "wurlitzer_200a",
+      "morph_start": 0.08,
+      "morph_end": 0.55,
+      "notes": "Rhodes-to-Wurlitzer timbre drift across the main head."
+    },
+    {
+      "section": "lift",
+      "bars": 8,
+      "progression": "coltrane_soup",
+      "drums": "flylo_knock",
+      "layers": [
+        "drums",
+        "chords",
+        "bass",
+        "melody",
+        "foley",
+        "vinyl"
+      ],
+      "voice": "prophet_5",
+      "morph_to": "juno_106",
+      "morph_start": 0,
+      "morph_end": 0.85,
+      "notes": "Harmonic expansion, broken-beat percussion, evolving poly-synth and chord-locked FM droplets."
+    },
+    {
+      "section": "outro",
+      "bars": 4,
+      "progression": "rain_on_glass",
+      "layers": [
+        "chords",
+        "melody",
+        "vinyl"
+      ],
+      "voice": "juno_106",
+      "morph_to": "tape_strings",
+      "morph_start": 0.35,
+      "morph_end": 0.8,
+      "notes": "Drums and bass disappear; harmony and pad carry the tail."
+    }
   ],
   "kit": "kit_dust",
   "voice": "rhodes_mark1",
   "rig": "dilla_night",
   "sonitex": "subtle",
-  "sonitex_instances": 2,
+  "sonitex_instances": 1,
   "vcs": 0.54,
-  "bpm": 86,
-  "swing": 55.0
+  "bpm": 86
 }
