@@ -1227,9 +1227,13 @@ module Dilla
       len = (decay * SAMPLE_RATE).to_i + 1
       out = Array.new(len, 0.0)
       phase = 0.0
+      mod_phase = 0.0
       attack = 24
       drop_coef = Math.exp(-1.0 / (0.045 * SAMPLE_RATE))
       decay_coef = Math.exp(-1.0 / (decay * 0.38 * SAMPLE_RATE))
+      fm_ratio = @kit["kick"].fetch("fm_ratio", 2.37).to_f
+      fm_index = @kit["kick"].fetch("fm_index", 3.7).to_f
+      fm_decay = Math.exp(-1.0 / (@kit["kick"].fetch("fm_decay", 0.018).to_f.clamp(0.002, 0.2) * SAMPLE_RATE))
       freq = base * 2.6
       click_len = (0.004 * SAMPLE_RATE).to_i
       i = 0
@@ -1237,9 +1241,12 @@ module Dilla
         env = i < attack ? i / attack.to_f : decay_coef**(i - attack)
         f = base + (freq - base) * drop_coef**i
         phase += f * 65_536 / SAMPLE_RATE
-        s = Dilla.sine(phase.round)
+        mod_phase += f * fm_ratio * 65_536 / SAMPLE_RATE
+        index = fm_index * (fm_decay**i) + 0.10
+        modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math::PI)
+        s = Dilla.sine(modulated_phase.round)
         s = Math.tanh(s * 1.6) * 0.85
-        s += (NOISE[(i * 7 + 11) % NOISE.length]) * (i < click_len ? 0.5 * (1.0 - i / click_len.to_f) : 0.0)
+        s += NOISE[(i * 7 + 11) % NOISE.length] * (i < click_len ? 0.5 * (1.0 - i / click_len.to_f) : 0.0)
         out[i] = s * env * vel * 0.95
         i += 1
       end
@@ -1258,6 +1265,10 @@ module Dilla
       noise_decay = Math.exp(-1.0 / (decay * 0.30 * SAMPLE_RATE))
       body_decay = Math.exp(-1.0 / (0.075 * SAMPLE_RATE))
       phase = 0.0
+      mod_phase = 0.0
+      fm_ratio = @kit["snare"].fetch("fm_ratio", 2.82).to_f
+      fm_index = @kit["snare"].fetch("fm_index", 2.4).to_f
+      fm_decay = Math.exp(-1.0 / (@kit["snare"].fetch("fm_decay", 0.023).to_f.clamp(0.002, 0.2) * SAMPLE_RATE))
       off = Random.rand(NOISE.length / 2)
       i = 0
       while i < len
@@ -1265,7 +1276,10 @@ module Dilla
         env_b = body_decay**i
         noise = NOISE[(i + off) % NOISE.length] * env_n
         phase += body_f * 65_536 / SAMPLE_RATE
-        body = Dilla.sine(phase.round) * env_b
+        mod_phase += body_f * fm_ratio * 65_536 / SAMPLE_RATE
+        index = fm_index * (fm_decay**i) + 0.08
+        modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math.PI)
+        body = Dilla.sine(modulated_phase.round) * env_b
         crack = i < 90 ? NOISE[(i * 3 + off) % NOISE.length] * (1.0 - i / 90.0) * 0.6 : 0.0
         out[i] = (noise * (0.42 + 0.3 * tone) + body * 0.55 + crack) * vel
         i += 1
@@ -1281,13 +1295,28 @@ module Dilla
       len = (decay * SAMPLE_RATE).to_i + 1
       out = Array.new(len, 0.0)
       decay_coef = Math.exp(-1.0 / (decay * 0.32 * SAMPLE_RATE))
+      fm_ratio = @kit["hat"].fetch("fm_ratio", 1.414).to_f
+      fm_index = @kit["hat"].fetch("fm_index", 1.2).to_f
+      fm_decay = Math.exp(-1.0 / (@kit["hat"].fetch("fm_decay", 0.0045).to_f.clamp(0.001, 0.1) * SAMPLE_RATE))
+      operator_hz = [5_700.0, 7_150.0, 8_660.0, 10_430.0]
+      operator_weights = [0.34, 0.28, 0.22, 0.16]
+      carrier_phases = Array.new(operator_hz.length, 0.0)
+      modulator_phases = Array.new(operator_hz.length, 0.0)
       off = Random.rand(NOISE.length / 2)
       speed = 0.97 + Random.rand * 0.06
       i = 0
       while i < len
-        s = NOISE[(i * speed).floor % NOISE.length]
-        ring = Dilla.sine((2.0 * Math::PI * 9200 * i / SAMPLE_RATE).round) * 0.08
-        out[i] = (s + ring) * (decay_coef**i) * vel
+        noise = NOISE[((i * speed).floor + off) % NOISE.length]
+        metallic = 0.0
+        operator_hz.each_with_index do |hz, operator|
+          carrier_phases[operator] += hz * 65_536 / SAMPLE_RATE
+          modulator_phases[operator] += hz * fm_ratio * 65_536 / SAMPLE_RATE
+          index = fm_index * (fm_decay**i) * (1.0 + operator * 0.12)
+          phase = carrier_phases[operator] +
+                  Math.sin(modulator_phases[operator]) * index * 65_536.0 / (2.0 * Math::PI)
+          metallic += Dilla.sine(phase.round) * operator_weights[operator]
+        end
+        out[i] = (noise * 0.68 + metallic * 0.24) * (decay_coef**i) * vel
         i += 1
       end
       highpass!(out, 6200.0)

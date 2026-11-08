@@ -509,3 +509,35 @@ class TestDillaInstrumentVelocity < Minitest::Test
     assert_operator rms(loud), :>, rms(quiet)
   end
 end
+
+
+class TestDillaFMDrumVoices < Minitest::Test
+  def rms(samples)
+    Math.sqrt(samples.sum { |sample| sample * sample } / [samples.length, 1].max)
+  end
+
+  def test_fm_kick_snare_hat_and_clap_render_distinct_velocity_sensitive_audio
+    kit = Dilla.catalogue.fetch("kits").fetch("kit_dust")
+    drums = Dilla::DrumKit.new(kit)
+    {
+      kick: [drums.kick(0.22), drums.kick(0.78)],
+      snare: [drums.snare(0.22), drums.snare(0.78)],
+      hat: [drums.hat(0.22), drums.hat(0.78)],
+      soulclap: [drums.soulclap(0.22), drums.soulclap(0.78)]
+    }.each do |name, (quiet, loud)|
+      assert_operator quiet.length, :>, 0, "#{name} must render samples"
+      assert_operator rms(loud), :>, rms(quiet), "#{name} must preserve velocity dynamics"
+      assert quiet.all?(&:finite?), "#{name} must not emit non-finite samples"
+    end
+  end
+
+  def test_drum_kits_have_distinct_fm_operator_profiles
+    kits = Dilla.catalogue.fetch("kits")
+    dust = kits.fetch("kit_dust")
+    break_kit = kits.fetch("kit_break")
+    basement = kits.fetch("kit_basement")
+    refute_equal dust.dig("kick", "fm_ratio"), break_kit.dig("kick", "fm_ratio")
+    refute_equal break_kit.dig("snare", "fm_index"), basement.dig("snare", "fm_index")
+    refute_equal dust.dig("hat", "fm_ratio"), basement.dig("hat", "fm_ratio")
+  end
+end
