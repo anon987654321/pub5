@@ -36,13 +36,16 @@ class TestBacklog < Minitest::Test
 
   def test_one_entry_per_unchecked_checkbox
     pub5 = false
-    nonpub5 = 0
+    rows = 0
     File.foreach(Backlog::SOURCE) do |line|
       pub5 = true if line.start_with?("## pub5")
-      nonpub5 += 1 if !pub5 && line.match?(/\A- \[ \]/)
+      rows += 1 if !pub5 && line.match?(/\A- \[ \]/)
     end
 
-    assert_equal nonpub5 + 1, entries.size
+    # A pub5 plan section folds its checkboxes into one gated entry; without
+    # one, every unchecked checkbox is its own row.
+    expected = pub5 ? rows + 1 : rows
+    assert_equal expected, entries.size
   end
 
   def test_ids_are_stable_across_reads_and_unique
@@ -125,12 +128,19 @@ class TestBacklog < Minitest::Test
   end
 
   def test_pub5_is_one_plan_entry_gated_on_the_freeze_condition
+    source_has_plan = File.foreach(Backlog::SOURCE).any? { |line| line.start_with?("## pub5") }
     plans = entries.select { |row| row[:kind] == "plan" }
 
-    assert_equal 1, plans.size
-    assert_equal "cross", plans.first[:tree]
-    assert_nil plans.first[:done_when]
-    assert(plans.first[:done_when_note].include?("freeze"))
+    if source_has_plan
+      assert_equal 1, plans.size
+      assert_equal "cross", plans.first[:tree]
+      assert_nil plans.first[:done_when]
+      assert(plans.first[:done_when_note].include?("freeze"))
+    else
+      # The completed migration plan left the register; no orphan plan row
+      # may outlive the section it was folded from.
+      assert_empty plans
+    end
   end
 
   def test_scope_paths_follow_the_paths_the_text_names
@@ -164,10 +174,10 @@ class TestBacklog < Minitest::Test
 
       drifted = File.join(dir, "todo.md")
       lines = File.readlines(Backlog::SOURCE)
-      # The item enters above the pub5 plan, which folds its own rows away:
-      # an item appended after it would change nothing and prove nothing.
-      pub5_at = lines.rindex { |line| line.start_with?("## pub5") }
-      lines.insert(pub5_at, "- [ ] An item the source never carried.\n")
+      # The item enters above the first section heading: an item appended
+      # after the last checkbox would change nothing and prove nothing.
+      first_section = lines.index { |line| line.start_with?("## ") }
+      lines.insert(first_section, "- [ ] An item the source never carried.\n")
       File.write(drifted, lines.join)
 
       assert_equal 1, Backlog::Store.check(source: drifted, out:, io: silent)

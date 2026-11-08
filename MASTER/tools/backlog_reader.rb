@@ -28,8 +28,9 @@ module Backlog
     end
 
     def finish
-      raise "the source carries no pub5 section" unless plan_seen?
-
+      # A planned phase (## pub5) folds into one gated entry when present.
+      # The port's plan is complete and left the register, so absence is the
+      # normal state; the folding stays for the next planned phase.
       @items << plan_item if plan_active?
       @items
     end
@@ -37,8 +38,6 @@ module Backlog
     private
 
     def plan_active? = @plan[:active]
-
-    def plan_seen? = @plan[:seen]
 
     def toggle_fence(_line)
       @fence = !@fence
