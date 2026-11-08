@@ -81,7 +81,13 @@ identity) were read before the build; the per-law notes live in
   `future_nato_weapons/`; `future_healthcare_os/` was added, modelled on
   OpenBSD, Rails/Rhoda and the MASTER trees. Both carry their
   source-of-truth proposal in `tools/`, are written directly on the bob2
-  canon, and pass `bp_check.mjs` with zero failures.
+  canon, and pass `bp_check.mjs` with zero failures. The same day the build
+  chain was closed over them: their finished documents moved into `tools/`
+  as completed bases, `bp_build.mjs` stages them verbatim (title, sections,
+  arithmetic and characters re-verified, nothing injected), and
+  `bp_retemplate.mjs` verifies their skin instead of re-applying it — the
+  chain then rebuilds every published pair byte-identically from a clean
+  checkout.
 
 ## Verification results (November 2026)
 

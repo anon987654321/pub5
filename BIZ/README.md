@@ -49,11 +49,12 @@ paper ground belongs to the retired archive generation.
 The folder carries only what the reader receives: the html, its svg mark
 (where one exists) and the pdf printed from that html, so the pair cannot
 drift. Editable sources and all tooling sit in `tools/`, never inside a
-plan folder: the six restored base documents (`tools/<plan>.html`), the
-build/check/print/index chain (`bp_build.mjs`, `bp_retemplate.mjs`,
-`bp_check.mjs`, `bp_print.mjs`, `bp_index.mjs`), the content modules
-(`plans_a.mjs`, `plans_b.mjs`, `content_add.mjs`) and the two new plans'
-proposals. The published pair is regenerated from them:
+plan folder: all eight base documents (`tools/<plan>.html` — six restored,
+two authored complete per their proposals), the build/check/print/index
+chain (`bp_build.mjs`, `bp_retemplate.mjs`, `bp_check.mjs`, `bp_print.mjs`,
+`bp_index.mjs`), the content modules (`plans_a.mjs`, `plans_b.mjs`,
+`content_add.mjs`) and the two new plans' proposals. The published pair is
+regenerated from them:
 
     node BIZ/tools/bp_build.mjs       # bases + additions -> OUTPUT_DIR
     node BIZ/tools/bp_retemplate.mjs  # bob2 skin onto the builds

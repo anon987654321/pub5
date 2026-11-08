@@ -6,6 +6,10 @@
 //  - ragnhild brand wordmark in Nosifer (SIL OFL), embedded as woff2 data URL
 //    and used ONLY for the wordmark, never for semantic headings
 //  - aria-hidden on the decorative SYRE fractal mark
+//  - COMPLETED bases (the two 8 November 2026 plans) are authored to the
+//    finished document per their tools/<plan>_proposal.md; the build stages
+//    them untouched and re-verifies title, sections, arithmetic and chars —
+//    no injection ever runs against them
 // Usage: node BIZ/tools/bp_build.mjs — build bases come from BIZ/tools
 // (SOURCE_DIR), completed builds land in OUTPUT_DIR for the operator to
 // review before anything is published into a plan folder.
@@ -19,13 +23,18 @@ const PLANS = { ...PLANS_A, ...PLANS_B };
 
 const PUB_SYRE = `${SRC}/syre.html`;
 mkdirSync(OUT, { recursive: true });
-const ORDER = ['syre', 'speis', 'ragnhild', 'norwegianhedge', 'pubhealthcare', 'govt_bergen'];
+const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge',
+  'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+// Authored complete per their proposals; staged and re-verified, not injected.
+const COMPLETED = new Set(['future_nato_weapons', 'future_healthcare_os']);
 const TITLES = {
   syre: 'SYRE™ – forretningsplan', speis: 'SPEIS – forretningsplan',
   ragnhild: 'Ragnhild – forretningsplan',
+  future_nato_weapons: 'Fremtidens NATO-våpen – forretningsplan',
   norwegianhedge: 'Norwegian Hedge – forretningsplan',
   pubhealthcare: 'pub.healthcare – forretningsplan',
   govt_bergen: 'Bergen Selvstyreparti – forretningsplan',
+  future_healthcare_os: 'Fremtidens helse-OS – forretningsplan',
 };
 
 // ---- merge additions -------------------------------------------------------
@@ -258,6 +267,18 @@ for (const plan of ORDER) {
   const starts = [...src.matchAll(/<section id="([^"]+)"/g)].map(m => [m.index, m[1]]);
   if (starts.length !== 8) {
     fails.push(`${plan}: expected 8 sections, found ${starts.length} (${starts.map(s => s[1])})`);
+    continue;
+  }
+  if (COMPLETED.has(plan)) {
+    // A completed base is the finished document: stage it verbatim and
+    // re-verify what the printed pair is held to (arithmetic, characters).
+    // The law checks themselves are bp_check.mjs's; nothing is injected.
+    const body = src.replace(/base64,[^"']+/g, '');
+    for (const e of checkTables(plan, src)) fails.push(`${plan}: ${e}`);
+    for (const e of charCheck(body, plan, 'full')) fails.push(e);
+    mkdirSync(`${OUT}/${plan}`, { recursive: true });
+    writeFileSync(`${OUT}/${plan}/${plan}.html`, src);
+    report.push(`${plan}: ok (completed base staged, ${src.length} chars)`);
     continue;
   }
   const usedKeys = new Set();

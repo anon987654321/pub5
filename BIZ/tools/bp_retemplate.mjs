@@ -1,4 +1,4 @@
-// Re-skin the seven completed BIZ plans onto the bob2 starter template.
+// Re-skin the eight completed BIZ plans onto the bob2 starter template.
 // Johann, 2026-11-07: "all business plans must use bob2.html as starter
 // template". bob2's token vocabulary (--color-*, --font-text/--font-heading
 // = Source Serif 4 body + EB Garamond headings, spaces, underline metrics)
@@ -14,7 +14,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { OUTPUT_DIR as OUT } from './paths.mjs';
 
-const ORDER = ['syre', 'speis', 'ragnhild', 'norwegianhedge', 'pubhealthcare', 'goert_bergen'.replace('goert', 'govt')];
+const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge',
+  'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
+
+// The two 8 November 2026 plans were authored straight into the final bob2
+// skin (no <nav> to re-extract): the skin is verified, never re-applied.
+const COMPLETED = new Set(['future_nato_weapons', 'future_healthcare_os']);
 
 // ---- the plan canon: bob2 tokens + the hefte print contract -----------------
 const CANON = `
@@ -149,6 +154,13 @@ function escapeHtml(s) {
 
 for (const plan of ORDER) {
   const src = readFileSync(`${OUT}/${plan}/${plan}.html`, 'utf8');
+  if (COMPLETED.has(plan)) {
+    if (!/class="toc" aria-label="Innhold"/.test(src)) throw new Error(`${plan}: completed base lacks the toc`);
+    if (!/Satt i Source Serif 4/.test(src)) throw new Error(`${plan}: completed base lacks the bob2 colophon`);
+    if (!/@bottom-center \{ content: counter\(page\)/.test(src)) throw new Error(`${plan}: completed base lacks the folio`);
+    console.log(`${plan}: completed base already in the bob2 skin; passed through`);
+    continue;
+  }
   const bodyStart = src.indexOf('<body>');
   if (bodyStart < 0) throw new Error(`${plan}: no <body>`);
 
