@@ -130,6 +130,106 @@ class TermuxInstallerTest < Minitest::Test
     assert_includes mobile_source, "cmake pkg-config sqlite libffi"
   end
 
+  def test_mobile_installer_proot_demo_is_opt_in_and_read_only
+    Dir.mktmpdir("mobile-proot-demo") do |home|
+      output, status = Open3.capture2e(
+        { "HOME" => home, "MASTER_INSTALL_DIR" => File.join(home, "pub5"), "PREFIX" => "" },
+        "sh", MOBILE_INSTALLER, "--proot", "--demo"
+      )
+
+      assert status.success?, output
+      assert_includes output, "plan 2/5 - update Termux packages; install git, curl and proot-distro"
+      assert_includes output, "install Debian only when no Debian guest exists"
+      assert_includes output, "build the exact .ruby-version under /opt/rubies"
+      assert_includes output, "all device and repository checks remain unmeasured"
+      assert_empty Dir.children(home), "PRoot demo must not create or modify the target directory"
+    end
+  end
+
+  def test_mobile_installer_provisions_a_pinned_ruby_in_the_debian_guest
+    Dir.mktmpdir("mobile-proot-install") do |home|
+      target = File.join(home, "pub5")
+      bin_dir = File.join(home, "bin")
+      Dir.mkdir(target)
+      Dir.mkdir(File.join(target, ".git"))
+      Dir.mkdir(bin_dir)
+      File.write(File.join(target, ".ruby-version"), "4.0.5\n")
+
+      write_stub = lambda do |name, body|
+        path = File.join(bin_dir, name)
+        File.write(path, "#!/bin/sh\nset -eu\n#{body}\n")
+        File.chmod(0o700, path)
+      end
+
+      write_stub.call("pkg", 'printf "pkg %s\n" "$*" >> "$CALLS"')
+      write_stub.call("id", 'printf "1000\n"')
+      write_stub.call("git", <<~'SH')
+        [ "$1" = "-C" ] || exit 90
+        shift
+        shift
+        case "$1" in
+          remote) printf "https://github.com/anon987654321/pub5.git\n" ;;
+          pull|diff) exit 0 ;;
+          rev-parse) printf "0123456789abcdef\n" ;;
+          *) exit 91 ;;
+        esac
+      SH
+      write_stub.call("proot-distro", <<~'SH')
+        case "$1" in
+          list)
+            if [ "$PROOT_DISTRO_PRESENT" = "1" ]; then
+              printf "debian\n"
+            fi
+            ;;
+          install)
+            printf "proot-distro %s\n" "$*" >> "$CALLS"
+            ;;
+          login)
+            printf "%s\n" "$@" > "$PROOT_ARGS"
+            cat > "$PROOT_GUEST_CAPTURE"
+            ;;
+          *) exit 92 ;;
+        esac
+      SH
+
+      calls = File.join(home, "calls.log")
+      guest = File.join(home, "guest-setup.sh")
+      args = File.join(home, "proot-args.txt")
+      env = {
+        "HOME" => home,
+        "PREFIX" => "/data/data/com.termux/files/usr",
+        "MASTER_INSTALL_DIR" => target,
+        "CALLS" => calls,
+        "PROOT_GUEST_CAPTURE" => guest,
+        "PROOT_ARGS" => args,
+        "PROOT_DISTRO_PRESENT" => "0",
+        "PATH" => [bin_dir, ENV.fetch("PATH", "")].join(File::PATH_SEPARATOR)
+      }
+
+      output, status = Open3.capture2e(env, "sh", MOBILE_INSTALLER, "--proot")
+
+      assert status.success?, output
+      assert_includes File.read(calls), "pkg install -y git curl proot-distro"
+      assert_includes File.read(calls), "proot-distro install debian"
+      assert_equal [
+        "login", "--bind", "#{target}:/pub5", "debian", "--", "bash", "-s"
+      ], File.readlines(args, chomp: true)
+      guest_source = File.read(guest)
+      assert_includes guest_source, "ruby_version=\"$(cat /pub5/.ruby-version)\""
+      assert_includes guest_source, "ruby-build \"$ruby_version\" \"$ruby_home\""
+      assert_includes guest_source, 'installed_version="$("$ruby_home/bin/ruby" -e'
+      assert_includes guest_source, "ruby bin/deps install"
+      assert_includes guest_source, "ruby bin/deps check"
+      assert_includes guest_source, "ruby bin/deps boot"
+      assert_includes output, "Debian guest setup and CLI boot PASS"
+    end
+  end
+
+  def test_mobile_installer_uses_posix_shell_syntax
+    output, status = Open3.capture2e("sh", "-n", MOBILE_INSTALLER)
+    assert status.success?, output
+  end
+
   def test_script_has_valid_bash_syntax
     skip "bash unavailable" unless system("command -v bash >/dev/null 2>&1")
 
