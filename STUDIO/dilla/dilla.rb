@@ -2691,7 +2691,7 @@ module Dilla
       cmd.concat(["--cookies", cookies]) unless cookies.empty?
       cmd.concat(["--cookies-from-browser", browser]) unless browser.empty?
       target_duration = opts.max_duration && opts.max_duration.to_f.positive? ? opts.max_duration.to_f : Studio::DillaReference::Analyzer::MAX_SECONDS
-      cmd.concat(["--download-sections", "*0-#{target_duration}", "--force-keyframes-at-cuts"])
+      cmd.concat(["--download-sections", "*0-#{target_duration.ceil}", "--force-keyframes-at-cuts"])
       cmd << source
       warn "dilla reference: pulling source through yt-dlp"
       out, err, status = Studio::Subprocess.capture3(*cmd, timeout: 900)
