@@ -2689,9 +2689,8 @@ module Dilla
       browser = ENV["DILLA_YT_BROWSER"].to_s.strip
       cmd.concat(["--cookies", cookies]) unless cookies.empty?
       cmd.concat(["--cookies-from-browser", browser]) unless browser.empty?
-      if opts.max_duration && opts.max_duration.to_f.positive?
-        cmd.concat(["--download-sections", "*0-#{opts.max_duration.to_i}", "--force-keyframes-at-cuts"])
-      end
+      target_duration = opts.max_duration && opts.max_duration.to_f.positive? ? opts.max_duration.to_f : Studio::DillaReference::Analyzer::MAX_SECONDS
+      cmd.concat(["--download-sections", "*0-#{target_duration}", "--force-keyframes-at-cuts"])
       cmd << source
       warn "dilla reference: pulling source through yt-dlp"
       out, err, status = Studio::Subprocess.capture3(*cmd, timeout: 900)
@@ -2705,9 +2704,9 @@ module Dilla
       ffmpeg = which("ffmpeg") or abort "dilla reference: ffmpeg is required to decode this source"
       wav = File.join(workspace, "source", "reference.wav")
       temporary = File.join(workspace, "source", ".reference-#{Process.pid}.tmp.wav")
-      command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", path]
-      command.concat(["-t", opts.max_duration.to_s]) if opts.max_duration && opts.max_duration.to_f.positive?
-      command.concat(["-ac", "1", "-ar", "22050", temporary])
+      target_duration = opts.max_duration && opts.max_duration.to_f.positive? ? opts.max_duration.to_f : Studio::DillaReference::Analyzer::MAX_SECONDS
+      command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", path,
+                 "-t", target_duration.to_s, "-ac", "1", "-ar", "22050", temporary]
       _out, err, status = Studio::Subprocess.capture3(*command, timeout: 300)
       abort "dilla reference: ffmpeg could not decode #{path}: #{err.lines.last(4).join.strip}" unless status.success?
       abort "dilla reference: ffmpeg produced no WAV" unless File.file?(temporary)
