@@ -3,11 +3,9 @@
 
 # dilla — the STUDIO beat engine.
 #
-# One Ruby file, no gems. Pure-Ruby synthesis at 44.1 kHz, a real MPC-style
-# groove stack (96 PPQN, 53-56% swing, snares early / kicks late / hats
-# forward), jazz voicings with voice-leading, and a reference path that
-# learns from audio: yt-dlp pulls the source, demucs separates the stems,
-# and a spectral analyzer measures tempo, pocket, harmony and drum patterns.
+# Pure-Ruby synthesis and dependency-free spectral reference analysis. The
+# optional reference downloader uses the yt-dlp executable; no Python modules,
+# NumPy, SciPy or Demucs runtime is required.
 #
 # Everything MASTER expects from `STUDIO/dilla/dilla.rb` is answered here:
 #   ruby dilla.rb                       curated showcase (Blue Hour)
@@ -36,6 +34,8 @@ require "digest"
 require "time"
 require "tmpdir"
 require "tempfile"
+require_relative "../subprocess"
+require_relative "lib/reference_analyzer"
 
 module Dilla
   ENGINE_ROOT = File.expand_path(__dir__)
@@ -2629,11 +2629,10 @@ module Dilla
 
   # ------------------------------------------------------------- reference
 
-  # Learns from a recording: yt-dlp pulls it (URL) or the operator hands over a
-  # rights-cleared file, demucs separates drums / bass / other / vocals, and
-  # the spectral analyzer measures tempo, pocket, harmony, melody and drum
-  # patterns. The profile lands in the reference root and the next render
-  # reads it through MASTER's media intent.
+  # Learns from a rights-cleared recording. Source acquisition is optional;
+  # the spectral measurement itself is Ruby + standard library and mix-only.
+  # Stem separation was removed from the runtime rather than keeping a hidden
+  # Python/Demucs dependency in a supposedly Ruby-only Studio.
   def reference(opts)
     source = opts.source
     style = %w[j_dilla industrial_techno general].include?(opts.style) ? opts.style : "j_dilla"
@@ -2646,20 +2645,15 @@ module Dilla
     wav, meta = acquire_audio(source, workspace, opts)
     return unless wav
 
-    stems_dir = nil
-    if opts.no_stems
-      warn "dilla reference: stem separation skipped (--no-stems); analyzing the full mix"
-    else
-      stems_dir = separate_stems(wav, workspace)
-      warn "dilla reference: demucs unavailable or failed; falling back to band-split analysis" if stems_dir.nil?
-    end
+    warn "dilla reference: using bounded, dependency-free Ruby mix analysis"
+    warn "dilla reference: --no-stems is retained for compatibility; stem separation is not run" if opts.no_stems
 
     features_path = File.join(workspace, "features.json")
-    ok = run_analyzer(wav, stems_dir, features_path, opts)
+    ok = run_analyzer(wav, nil, features_path, opts)
     abort "dilla reference: analyzer failed" unless ok
 
     features = JSON.parse(File.read(features_path))
-    profile = build_profile(features, meta, style, wav, stems_dir)
+    profile = build_profile(features, meta, style, wav, nil)
     profile_dir = File.join(root, "profiles", style)
     FileUtils.mkdir_p(profile_dir)
     profile_path = File.join(profile_dir, "latest_profile.json")
@@ -2676,153 +2670,68 @@ module Dilla
 
   def acquire_audio(source, workspace, opts)
     if source.match?(URL_RE)
-      ytdlp = find_ytdlp or abort "dilla reference: yt-dlp is not installed (pip install yt-dlp)"
+      ytdlp = find_ytdlp or abort "dilla reference: yt-dlp executable is not installed"
       title = nil
       begin
-        title_out, status = Open3.capture2e(ytdlp, "--no-playlist", "--print", "title", source)
-        title = title_out.lines.reject { |l| l.strip.empty? }.first.to_s.strip if status.success?
+        title_out, _title_err, status = Studio::Subprocess.capture3(
+          ytdlp, "--no-playlist", "--print", "title", source, timeout: 30
+        )
+        title = title_out.lines.reject { |line| line.strip.empty? }.first.to_s.strip if status.success?
       rescue StandardError
         nil
       end
+
       out_template = File.join(workspace, "source", "reference.%(ext)s")
       cmd = [ytdlp, "--no-playlist", "-f", "bestaudio", "-x", "--audio-format", "wav",
              "--ffmpeg-location", "ffmpeg", "-o", out_template]
-      # Datacenter IPs get bot-checked; the operator authenticates with their
-      # own browser session. DILLA_YT_COOKIES names a cookie file,
-      # DILLA_YT_BROWSER a browser profile for --cookies-from-browser.
+      # Authentication remains operator-supplied; cookies are never read from
+      # guessed browser profiles or included in logs.
       cookies = ENV["DILLA_YT_COOKIES"].to_s.strip
       browser = ENV["DILLA_YT_BROWSER"].to_s.strip
       cmd.concat(["--cookies", cookies]) unless cookies.empty?
       cmd.concat(["--cookies-from-browser", browser]) unless browser.empty?
-      if opts.max_duration && opts.max_duration.to_i.positive?
-        cmd.concat(["--match-filter", "duration<=#{opts.max_duration.to_i}"])
+      if opts.max_duration && opts.max_duration.to_f.positive?
+        cmd.concat(["--download-sections", "*0-#{opts.max_duration.to_i}", "--force-keyframes-at-cuts"])
       end
       cmd << source
-      warn "dilla reference: pulling #{source} through yt-dlp"
-      out, err, status = Open3.capture3(*cmd)
-      abort "dilla reference: yt-dlp failed:\n#{err.lines.last(4).join.strip}\n#{out.lines.last(2).join.strip}" unless status.success?
-      wav = Dir[File.join(workspace, "source", "reference.*")].find { |p| p.end_with?(".wav") }
-      abort "dilla reference: yt-dlp produced no wav" unless wav
+      warn "dilla reference: pulling source through yt-dlp"
+      out, err, status = Studio::Subprocess.capture3(*cmd, timeout: 900)
+      abort "dilla reference: yt-dlp failed:\n#{err.lines.last(6).join.strip}\n#{out.lines.last(2).join.strip}" unless status.success?
+      wav = Dir[File.join(workspace, "source", "reference.*")].find { |candidate| candidate.end_with?(".wav") }
+      abort "dilla reference: yt-dlp produced no WAV" unless wav
       [wav, { "title" => (title && !title.empty? ? title : File.basename(source)), "url" => source }]
     else
       path = File.expand_path(source)
       abort "dilla reference: no such audio file: #{source}" unless File.file?(path)
+      ffmpeg = which("ffmpeg") or abort "dilla reference: ffmpeg is required to decode this source"
       wav = File.join(workspace, "source", "reference.wav")
-      _o, err, status = Open3.capture3("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", path, "-ac", "1", "-ar", "22050", wav)
-      abort "dilla reference: ffmpeg could not decode #{path}: #{err.lines.last.to_s.strip}" unless status.success?
+      temporary = File.join(workspace, "source", ".reference-#{Process.pid}.tmp.wav")
+      command = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", path]
+      command.concat(["-t", opts.max_duration.to_s]) if opts.max_duration && opts.max_duration.to_f.positive?
+      command.concat(["-ac", "1", "-ar", "22050", temporary])
+      _out, err, status = Studio::Subprocess.capture3(*command, timeout: 300)
+      abort "dilla reference: ffmpeg could not decode #{path}: #{err.lines.last(4).join.strip}" unless status.success?
+      abort "dilla reference: ffmpeg produced no WAV" unless File.file?(temporary)
+      File.rename(temporary, wav)
       [wav, { "title" => File.basename(path), "path" => path }]
+    ensure
+      File.delete(temporary) if defined?(temporary) && temporary && File.file?(temporary)
     end
   end
 
   def find_ytdlp
-    cli = which("yt-dlp")
-    return cli if cli
-
-    py = which("python3")
-    if py
-      _o, err, status = Open3.capture3(py, "-m", "yt_dlp", "--version")
-      return [py, "-m", "yt_dlp"] if status.success?
-    end
-    nil
+    which("yt-dlp")
   end
 
-  def separate_stems(wav, workspace)
-    out_dir = File.join(workspace, "stems")
-    demucs_cmd = find_demucs
-    return nil unless demucs_cmd
-
-    warn "dilla reference: demucs separating #{File.basename(wav)} (htdemucs, 4 stems)"
-    cmd = demucs_cmd + ["-n", "htdemucs", "--out", out_dir, wav]
-    out, err, status = Open3.capture3(*cmd)
-    unless status.success?
-      warn "dilla reference: demucs failed: #{err.lines.last.to_s.strip}"
-      return nil
-    end
-    stem_root = Dir.glob(File.join(out_dir, "htdemucs", "*")).find { |p| File.directory?(p) }
-    return nil unless stem_root
-
-    expected = %w[drums.wav bass.wav other.wav vocals.wav]
-    stems = expected.map { |s| File.join(stem_root, s) }
-    return stems.all? { |p| File.file?(p) } ? stem_root : nil
-  end
-
-  def find_demucs
-    cli = which("demucs")
-    return [cli] if cli
-
-    py = which("python3")
-    if py
-      _o, err, status = Open3.capture3(py, "-c", "import demucs")
-      return [py, "-m", "demucs"] if status.success?
-    end
-    nil
-  end
-
-  def run_analyzer(wav, stems_dir, features_path, opts)
-    script = File.join(ENGINE_ROOT, "reference_analyzer.py")
-    abort "dilla reference: analyzer missing: #{script}" unless File.file?(script)
-    py = which("python3") or abort "dilla reference: python3 required for spectral analysis"
-    cmd = [py, script, wav, "--json", features_path]
-    cmd.concat(["--stems", stems_dir]) if stems_dir
-    cmd.concat(["--max-duration", opts.max_duration.to_s]) if opts.max_duration && opts.max_duration.to_i.positive?
-    out, err, status = Open3.capture3(*cmd)
-    unless status.success?
-      warn "dilla reference: analyzer stderr: #{err.lines.last(6).join.strip}"
-      return false
-    end
-    warn out unless out.empty?
+  def run_analyzer(wav, _stems_dir, features_path, opts)
+    Studio::DillaReference::Analyzer.new.write(
+      wav, features_path,
+      max_duration: (opts.max_duration if opts.max_duration && opts.max_duration.to_f.positive?)
+    )
     true
-  end
-
-  # Maps measured features into the profile schema MASTER's media intent reads:
-  # target_bpm, groove_profile and the feature dict drive pattern ranking,
-  # pocket scaling and mix balance on the next render.
-  def build_profile(features, meta, style, wav, stems_dir)
-    target_bpm = features.fetch("bpm", 90.0).to_f
-    spread = features.fetch("timing_spread_ms", 8.0).to_f
-    swing = features.fetch("swing_ratio", 0.5).to_f
-    offbeat = features.fetch("offbeat_onset_share", 0.5).to_f
-    groove_profile = if swing >= 0.565 && spread > 9.0
-                       "dilla_shadow"
-                     elsif swing >= 0.565
-                       "late_snare"
-                     elsif spread > 10.5
-                       "behind_the_beat"
-                     else
-                       "dilla_shadow"
-                     end
-    {
-      "style_key" => style,
-      "target_bpm" => target_bpm.round(1),
-      "groove_profile" => groove_profile,
-      "features" => {
-        "bpm" => target_bpm.round(2),
-        "bpm_confidence" => features.fetch("bpm_confidence", 0.0).to_f.round(3),
-        "onset_density_per_bar" => features.fetch("onset_density_per_bar", 8.0).to_f.round(2),
-        "offbeat_onset_share" => offbeat.round(3),
-        "timing_spread_ms" => spread.round(2),
-        "swing_ratio" => swing.round(3),
-        "drums_energy_share" => features.fetch("drums_energy_share", 0.25).to_f.round(3),
-        "bass_energy_share" => features.fetch("bass_energy_share", 0.2).to_f.round(3),
-        "other_energy_share" => features.fetch("other_energy_share", 0.3).to_f.round(3),
-        "vocal_energy_share" => features.fetch("vocal_energy_share", 0.0).to_f.round(3),
-        "brightness_hz" => features.fetch("brightness_hz", 1500.0).to_f.round(1)
-      },
-      "analysis" => {
-        "key" => features.dig("harmony", "key"),
-        "chord_changes" => features.dig("harmony", "chord_changes"),
-        "chords" => features.dig("harmony", "chords"),
-        "melody" => features.fetch("melody", {}),
-        "drum_grid" => features.fetch("drum_grid", {}),
-        "sections" => features.fetch("sections", [])
-      },
-      "source" => {
-        "title" => meta["title"], "url" => meta["url"], "path" => meta["path"],
-        "wav" => wav, "stems_dir" => stems_dir, "duration_s" => features.fetch("duration_s", nil)
-      },
-      "engine" => { "name" => "dilla", "version" => VERSION },
-      "created_at" => Time.now.utc.iso8601
-    }
+  rescue Studio::DillaReference::AnalysisError, SystemCallError, IOError => error
+    warn "dilla reference: Ruby analyzer failed: #{error.class}: #{error.message}"
+    false
   end
 
   # ------------------------------------------------------------- industrial techno
