@@ -290,7 +290,7 @@ module Master
                end
         # Read-only model selector output is runtime evidence for the next turn.
         # Other commands may expose private state, so they are not copied wholesale.
-        record_model_selector_output(args: match[:args].to_s, text:) if name == "model"
+        record_model_selector_output(args: match[:args].to_s, text:, success: @last_ok) if name == "model"
         # The commands' replies print here; the face transcript is gone with
         # the terminal face.
         print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
@@ -332,7 +332,7 @@ module Master
 
         result = shell.call(command:)
         text = result.ok? ? result.value!.to_s : result.message.to_s
-        record_execution_output(command:, text:)
+        record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
 
         terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
       end
@@ -345,25 +345,26 @@ module Master
       private_constant :EXECUTION_CONTEXT_MAX_BYTES, :EXECUTION_COMMAND_MAX_BYTES
       EXECUTION_ANSI = /\e(?:\[[0-?]*[ -\/]*[@-~]|\][^\a]*(?:\a|\e\\))/
 
-      def record_execution_output(command:, text:)
+      def record_execution_output(command:, text:, status: "unknown")
         output = bounded_execution_text(text, EXECUTION_CONTEXT_MAX_BYTES)
         return if output.empty?
         return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
 
         command_text = bounded_execution_text(command, EXECUTION_COMMAND_MAX_BYTES)
+        outcome = %w[success failure changed unknown].include?(status.to_s) ? status.to_s : "unknown"
         @refs.session.add_message(
           role: :user,
-          content: "[untrusted execution evidence; output may be truncated]\n$ #{command_text}\n#{output}",
+          content: "[untrusted execution evidence; status=#{outcome}; output may be truncated]\n$ #{command_text}\n#{output}",
           layer: :execution,
         )
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "cli.execution_output", event_bus: @refs.bus)
       end
 
-      def record_model_selector_output(args:, text:)
+      def record_model_selector_output(args:, text:, success: true)
         return unless %w[list status current].include?(args.to_s.strip.downcase) || args.to_s.strip.empty?
 
-        record_execution_output(command: "/model #{args}".strip, text:)
+        record_execution_output(command: "/model #{args}".strip, text:, status: success ? "success" : "failure")
       end
 
       def bounded_execution_text(value, max_bytes)
@@ -410,7 +411,7 @@ module Master
         Dir.chdir(destination)
         ENV["OLDPWD"] = previous
         @bang_shell = nil
-        record_execution_output(command:, text: Dir.pwd)
+        record_execution_output(command:, text: Dir.pwd, status: "changed")
         @last_ok = true
         @exit_code = 0
         terminal_puts(@refs.renderer.render(Dir.pwd, mode: :dim))
