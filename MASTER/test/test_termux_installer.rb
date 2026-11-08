@@ -222,6 +222,15 @@ class TermuxInstallerTest < Minitest::Test
       assert_includes guest_source, "ruby bin/deps check"
       assert_includes guest_source, "ruby bin/deps boot"
       assert_includes guest_source, "Debian guest setup and CLI boot PASS"
+
+      installs_before_reuse = File.readlines(calls).count { |line| line.include?("proot-distro install debian") }
+      env["PROOT_DISTRO_PRESENT"] = "1"
+      reused_output, reused_status = Open3.capture2e(env, "sh", MOBILE_INSTALLER, "--proot")
+
+      assert reused_status.success?, reused_output
+      assert_includes reused_output, "reusing existing Debian guest"
+      installs_after_reuse = File.readlines(calls).count { |line| line.include?("proot-distro install debian") }
+      assert_equal installs_before_reuse, installs_after_reuse, "an existing Debian guest must never be reinstalled or reset"
     end
   end
 
