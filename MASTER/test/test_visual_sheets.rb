@@ -47,7 +47,7 @@ class TestVisualSheets < Minitest::Test
   end
 
   def test_labels_derive_from_the_file_name_without_its_extension
-    assert_equal "brgen-desktop", Sheets.label_for("RAILS/brgen/screenshots/brgen-desktop.png")
+    assert_equal "brgen-desktop", Sheets.label_for("RAILS/docs/screenshots/brgen-desktop.png")
     assert_equal "01-menu", Sheets.label_for("01-menu.PNG")
   end
 end
