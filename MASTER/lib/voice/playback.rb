@@ -824,26 +824,31 @@ def decode_job(job)
         player_candidates(path).each do |name, args|
           break unless generation_active?(generation)
 
+          pid = nil
           @lock.synchronize { @last_player_attempted = true }
-          pid = Process.spawn(
-            Master::Io::ProcessSpawn.environment, name, *args, path,
-            **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL),
-          )
-          # Compare the generation while holding the lock, without calling
-          # generation_active? (which takes the same non-reentrant mutex).
-          @lock.synchronize { @playing_pid = pid if generation == @generation }
           begin
+            pid = Process.spawn(
+              Master::Io::ProcessSpawn.environment, name, *args, path,
+              **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL),
+            )
+            # Compare the generation while holding the lock, without calling
+            # generation_active? (which takes the same non-reentrant mutex).
+            @lock.synchronize { @playing_pid = pid if generation == @generation }
             _waited_pid, status = Process.wait2(pid)
             return record_playback_result(true) if status.success?
 
             outcome = status.termsig ? "signal #{status.termsig}" : "exit #{status.exitstatus}"
             failures << "#{File.basename(name)} #{outcome}"
-          rescue Errno::ESRCH, Errno::ECHILD
-            failures << "#{File.basename(name)} exited before wait"
+          rescue StandardError => e
+            # One broken executable must not prevent a second installed player
+            # from speaking. Preserve the first useful cause for /voice status.
+            failures << "#{File.basename(name)} #{e.class}"
           ensure
-            @lock.synchronize { @playing_pid = nil if @playing_pid == pid }
+            @lock.synchronize { @playing_pid = nil if pid && @playing_pid == pid }
           end
         end
+        return false unless generation_active?(generation)
+
         detail = failures.empty? ? "no player completed playback" : failures.uniq.join(", ")
         record_playback_result(false, detail)
       rescue StandardError => e
