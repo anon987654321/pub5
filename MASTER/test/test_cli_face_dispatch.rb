@@ -170,6 +170,50 @@ class TestCliFaceDispatch < Minitest::Test
     Dir.chdir(original) if original
   end
 
+  def test_direct_shell_stdout_is_saved_as_execution_context
+    recorded = []
+    session_store = Object.new
+    session_store.define_singleton_method(:add_message) { |**entry| recorded << entry }
+    refs = Struct.new(:renderer, :session, :bus).new(
+      Object.new.tap { |renderer| renderer.define_singleton_method(:render) { |text, **| text } },
+      session_store,
+      nil,
+    )
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, refs)
+    shell = Object.new
+    shell.define_singleton_method(:call) { |command:| Master::Result.ok("current directory output") }
+    session.define_singleton_method(:bang_shell) { shell }
+    session.define_singleton_method(:terminal_puts) { |_text, **| }
+
+    session.send(:run_direct_shell, "pwd")
+
+    assert_equal 1, recorded.size
+    assert_equal :execution, recorded.first.fetch(:layer)
+    assert_includes recorded.first.fetch(:content), "$ pwd"
+    assert_includes recorded.first.fetch(:content), "current directory output"
+  end
+
+  def test_model_selector_stdout_is_saved_for_the_next_turn
+    recorded = []
+    session_store = Object.new
+    session_store.define_singleton_method(:add_message) { |**entry| recorded << entry }
+    refs = Struct.new(:session, :ground_truth, :bus).new(session_store, nil, nil)
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@refs, refs)
+    session.instance_variable_set(:@container, {
+      commands: { "model" => ->(args:) { "model list: grok-cli:auto" } },
+    })
+    session.define_singleton_method(:print_terminal_output) { |_text, **| }
+
+    session.send(:dispatch_registered_slash_command, "/model list")
+
+    assert_equal 1, recorded.size
+    assert_equal :execution, recorded.first.fetch(:layer)
+    assert_includes recorded.first.fetch(:content), "/model list"
+    assert_includes recorded.first.fetch(:content), "grok-cli:auto"
+  end
+
   def test_help_returns_its_text_to_the_terminal
     session = Master::CLI::Session.allocate
     printed = []
