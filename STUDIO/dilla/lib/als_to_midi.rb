@@ -3,6 +3,7 @@
 require "fileutils"
 require "open3"
 require_relative "als"
+require_relative "../../subprocess"
 
 module Studio
   module ALS
@@ -12,13 +13,17 @@ module Studio
     # (never a shell string) and keeps the neutral FluidSynth render untouched.
     class AudioRenderer
       DEFAULT_SAMPLE_RATE = 44_100
+      DEFAULT_TIMEOUT_SECONDS = 1_800
       DEFAULT_ANALOG_FILTERS = "asoftclip=type=tanh:threshold=0.92:output=0.96,vibrato=f=4.7:d=0.035,lowpass=f=15000"
 
-      def initialize(fluidsynth: "fluidsynth", ffmpeg: "ffmpeg", sample_rate: DEFAULT_SAMPLE_RATE)
+      def initialize(fluidsynth: "fluidsynth", ffmpeg: "ffmpeg", sample_rate: DEFAULT_SAMPLE_RATE,
+                     timeout: DEFAULT_TIMEOUT_SECONDS)
         @fluidsynth = fluidsynth
         @ffmpeg = ffmpeg
         @sample_rate = Integer(sample_rate)
+        @timeout = Float(timeout)
         raise ArgumentError, "sample rate must be between 22050 and 192000" unless @sample_rate.between?(22_050, 192_000)
+        raise ArgumentError, "render timeout must be finite and positive" unless @timeout.finite? && @timeout.positive?
       end
 
       def render(midi_path:, soundfont:, wav_path:, analog: false, analog_path: nil)
@@ -27,32 +32,46 @@ module Studio
 
         destination = File.expand_path(wav_path)
         FileUtils.mkdir_p(File.dirname(destination))
+        neutral_temp = temporary_path(destination)
         command = [
-          @fluidsynth, "-ni", "-r", @sample_rate.to_s, "-F", destination,
+          @fluidsynth, "-ni", "-r", @sample_rate.to_s, "-F", neutral_temp,
           "-T", "wav", soundfont, midi_path
         ]
         run!(command, "FluidSynth")
-        raise AudioRenderError, "FluidSynth did not create #{destination}" unless File.file?(destination)
+        raise AudioRenderError, "FluidSynth did not create #{neutral_temp}" unless File.file?(neutral_temp)
+        File.rename(neutral_temp, destination)
 
         result = { wav: destination }
         if analog
           processed = File.expand_path(analog_path || destination.sub(/\.wav\z/i, "") + "-analog.wav")
           FileUtils.mkdir_p(File.dirname(processed))
+          analog_temp = temporary_path(processed)
           run!([@ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", destination,
-                "-af", DEFAULT_ANALOG_FILTERS, processed], "FFmpeg analog chain")
-          raise AudioRenderError, "FFmpeg did not create #{processed}" unless File.file?(processed)
+                "-af", DEFAULT_ANALOG_FILTERS, analog_temp], "FFmpeg analog chain")
+          raise AudioRenderError, "FFmpeg did not create #{analog_temp}" unless File.file?(analog_temp)
+          File.rename(analog_temp, processed)
           result[:analog_wav] = processed
         end
         result
+      ensure
+        [neutral_temp, analog_temp].compact.each { |temporary| File.delete(temporary) if File.file?(temporary) }
       end
 
       private
 
+      def temporary_path(destination)
+        directory = File.dirname(destination)
+        basename = File.basename(destination).sub(/\.wav\z/i, "")
+        File.join(directory, ".#{basename}.#{Process.pid}.tmp.wav")
+      end
+
       def run!(command, label)
-        _stdout, stderr, status = Open3.capture3(*command)
+        _stdout, stderr, status = Studio::Subprocess.capture3(*command, timeout: @timeout)
         return if status.success?
 
         raise AudioRenderError, "#{label} failed (#{status.exitstatus}): #{stderr.to_s.lines.last(8).join.strip}"
+      rescue Studio::Subprocess::TimeoutError => error
+        raise AudioRenderError, "#{label} timed out after #{@timeout.round(1)}s: #{error.message}"
       rescue Errno::ENOENT => error
         raise AudioRenderError, "#{label} executable not found (#{command.first.inspect}): #{error.message}"
       end
@@ -225,6 +244,7 @@ if $PROGRAM_NAME == __FILE__
   fluidsynth = "fluidsynth"
   ffmpeg = "ffmpeg"
   sample_rate = Studio::ALS::AudioRenderer::DEFAULT_SAMPLE_RATE
+  render_timeout = Studio::ALS::AudioRenderer::DEFAULT_TIMEOUT_SECONDS
   OptionParser.new do |parser|
     parser.on("--out PATH", "MIDI output path") { |value| output = value }
     parser.on("--ppqn N", Integer, "ticks per quarter note (24..32767)") { |value| ppqn = value }
@@ -235,6 +255,7 @@ if $PROGRAM_NAME == __FILE__
     parser.on("--fluidsynth BIN", "FluidSynth executable") { |value| fluidsynth = value }
     parser.on("--ffmpeg BIN", "FFmpeg executable") { |value| ffmpeg = value }
     parser.on("--sample-rate N", Integer, "FluidSynth output rate") { |value| sample_rate = value }
+    parser.on("--render-timeout SECONDS", Float, "Maximum seconds per local renderer process (default 1800)") { |value| render_timeout = value }
   end.parse!(ARGV)
 
   project = Studio::ALS::Parser.new.parse(input)
@@ -243,7 +264,7 @@ if $PROGRAM_NAME == __FILE__
   puts "als-midi: #{count} MIDI tracks written to #{result}"
   if wav_path
     abort "als-midi: --soundfont is required with --wav" unless soundfont
-    audio = Studio::ALS::AudioRenderer.new(fluidsynth:, ffmpeg:, sample_rate:).render(
+    audio = Studio::ALS::AudioRenderer.new(fluidsynth:, ffmpeg:, sample_rate:, timeout: render_timeout).render(
       midi_path: result, soundfont:, wav_path:, analog:, analog_path:
     )
     puts "als-audio: #{audio.fetch(:wav)}"
