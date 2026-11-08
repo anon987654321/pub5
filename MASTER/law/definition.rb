@@ -312,9 +312,16 @@ module Law
       law_findings(runner.instance_exec(text, file, &check), lines: text.lines, file:)
     end
 
-    # A detector class runs as the scanner runs it, built for this Law.
+    # A detector class runs as the scanner runs it, built for this Law — once per
+    # Law, not once per file. LawTree.build makes one scanner object per
+    # enforceable Law and hands it every path; this built a fresh one for every
+    # file it judged, so the work a detector does in its constructor was repeated
+    # for the whole corpus. SelfFindings measured 313 s of that: interconnect
+    # re-read and re-parsed the YAML its subjects name (102.7 s over 4125 calls)
+    # and ast_omission rebuilt its CommitGuard (87.1 s), both of which answer the
+    # same thing for every file in one walk.
     def scan_detector(text, file)
-      law_findings(detector.build(self).check(text, path: file), lines: text.lines, file:)
+      law_findings(::Law.detector_for(self).check(text, path: file), lines: text.lines, file:)
     end
 
     # The Law's own detector, without its adapters: what its bad and good prove.
@@ -898,6 +905,36 @@ module Law
 
   LOAD_MUTEX = Mutex.new
 
+  # One detector object per Definition, kept across the files it judges.
+  #
+  # Detectors answer about the file they are handed, but they build their
+  # repository-wide view in the constructor: InterconnectLaw parses the YAML its
+  # subjects name, AstOmissionLaw builds a CommitGuard, MetaLaw globs the test
+  # tree. Rebuilding that per file is pure waste, and it is what made
+  # SelfFindings#members take 313 s over 4125 files, most of it in two Laws.
+  #
+  # A plain Hash, not ObjectSpace::WeakMap: a WeakMap holds its VALUES weakly as
+  # well as its keys, so the detector was collected between files and this rebuilt
+  # it 300 times in 300 files — the cache measured slower than no cache. Pinning
+  # one detector per Law is bounded by the catalogue and released on reload, which
+  # is the whole population this may ever hold.
+  #
+  # `[definition, detector]` rather than definition => detector, because Definition
+  # is a Data and compares by value: a reloaded Law with unchanged content lands on
+  # the same key, and identity is what says whether the bound Definition is current.
+  DETECTOR_MUTEX = Mutex.new
+  @detectors = {}
+
+  def self.detector_for(definition)
+    DETECTOR_MUTEX.synchronize do
+      cached = @detectors[definition.id]
+      return cached[1] if cached && cached[0].equal?(definition)
+
+      @detectors[definition.id] = [definition, definition.detector.build(definition)]
+      @detectors[definition.id][1]
+    end
+  end
+
   @definitions = {}
   @law_sources = {}
   @law_stamps = {}
@@ -963,6 +1000,10 @@ module Law
       @definitions = staged
       @law_sources = sources
       @law_stamps = stamps
+      # A reloaded Law is a new Definition object, so detector_for rebuilds it on
+      # demand; this only drops the ids a reload removed, so a deleted Law does not
+      # keep its detector alive for the life of the process.
+      DETECTOR_MUTEX.synchronize { @detectors.select! { |id, _| staged.key?(id) } }
       staged
     ensure
       Thread.current[:law_staging] = nil

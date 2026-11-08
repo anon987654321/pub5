@@ -383,9 +383,13 @@ module Master
           check do |src, path|
             findings = []
             lines = src.lines
-            lines.each_with_index.each_slice(2) do |pair|
-              next unless pair.size == 2
+            # Consecutive lines, not each_slice(2): slicing pairs line 1 with 2 and
+            # 3 with 4, so it skips half the file and flips its verdict whenever an
+            # unrelated insertion changes a line's parity. A blank predecessor is
+            # not a jagged shift: the indent gap is the block boundary, not drift.
+            lines.each_with_index.each_cons(2) do |pair|
               l1, l2 = pair[0][0], pair[1][0]
+              next if l1.strip.empty?
 
               line2_number = pair[1][1]
               # a jagged shift is a sudden jump of 4+ spaces for a single line

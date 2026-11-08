@@ -99,4 +99,12 @@ class TestCosmeticRules < Minitest::Test
   def test_measure_optimum_flags_wide_px
     refute_empty law_findings("MEASURE_OPTIMUM", ".prose { max-width: 960px; }\n", path: "app.css")
   end
+
+  # The law pairs neighbouring lines, so a blank line between the block and its
+  # `return` is a block boundary, not a jagged shift. Pairing by each_slice(2)
+  # also read only half the file and flipped verdicts on unrelated insertions.
+  def test_code_symmetry_reads_consecutive_lines_and_spares_blank_predecessor
+    assert_empty rule("CODE_SYMMETRY").check("def foo\n  bar\n\n  return true\nend\n", path: "lib/foo.rb")
+    refute_empty rule("CODE_SYMMETRY").check("def foo\n  bar\n      return true\nend\n", path: "lib/foo.rb")
+  end
 end
