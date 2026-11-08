@@ -22,6 +22,7 @@ module Master
 
       LEVELS = %w[quiet normal verbose trace].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
+      @draft_guard = nil
 
       def enabled?
         return false if @verbosity_override == "quiet"
@@ -247,8 +248,28 @@ module Master
       # The one terminal write coordinator. Plain output, IRC notices, unit
       # events and transient status lines all take this lock; the lock is never
       # held while waiting for user input.
-      def terminal_write(io: $stdout)
-        emit_mutex.synchronize { yield io }
+      #
+      # An interactive session registers the draft guard — a pair of procs run
+      # under this lock around every operator-facing write, so a write from any
+      # lane lands below Reline's editable line and the editable line repaints
+      # afterwards. Writes that are part of the draft's own machinery pass
+      # guard: false and manage their rows alone. Pipe and log writers register
+      # nothing, so they take the lock without the guard.
+      def terminal_write(io: $stdout, guard: true)
+        emit_mutex.synchronize do
+          hooks = guard && @draft_guard ? @draft_guard : nil
+          hooks&.first&.call(io)
+          begin
+            yield io
+          ensure
+            hooks&.last&.call(io)
+          end
+        end
+      end
+
+      def draft_guard = @draft_guard
+      def draft_guard=(pair)
+        @draft_guard = pair
       end
 
       # A line built from tool output can arrive as bytes. Written to a text IO under

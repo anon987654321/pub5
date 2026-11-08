@@ -540,6 +540,90 @@ end
     assert_nil result
   end
 
+  # The foreign-write protocol: an operator-facing write from any lane clears
+  # the draft's row, steps below it, and the redisplay rebuilds the editable
+  # line at the payload's end. Without the repaint Reline's differential
+  # render paints nothing its cache still matches, and the prompt stays gone
+  # after the first message.
+  DraftIO = Class.new do
+    def initialize
+      @buffer = +""
+    end
+    attr_reader :buffer
+
+    def tty? = true
+    def isatty = true
+    def write(text) = @buffer << text
+    def print(text) = @buffer << text
+    def puts(text = "") = @buffer << text << "\n"
+    def flush = @buffer
+  end
+
+  def with_redisplay_counter
+    counter = []
+    original = Reline.method(:redisplay)
+    Reline.singleton_class.send(:define_method, :redisplay, -> { counter << 1 })
+    yield counter
+  ensure
+    Reline.singleton_class.send(:define_method, :redisplay, original)
+  end
+
+  def test_a_foreign_write_clears_the_draft_row_and_repaints_the_editable_line
+    io = DraftIO.new
+    @cli.instance_variable_set(:@reading_input, true)
+
+    with_redisplay_counter do |counter|
+      @cli.send(:terminal_write, io:) { |target| target.puts("turn0: reply row") }
+
+      assert_equal "\r\e[K\r\nturn0: reply row\n", io.buffer
+      assert_equal [1], counter
+    end
+  end
+
+  def test_a_non_tty_write_takes_no_draft_rows_or_redisplays
+    io = StringIO.new
+    @cli.instance_variable_set(:@reading_input, true)
+
+    with_redisplay_counter do |counter|
+      @cli.send(:terminal_write, io:) { |target| target.puts("plain") }
+
+      assert_equal "plain\n", io.string
+      assert_empty counter
+    end
+  end
+
+  def test_a_failing_redisplay_keeps_the_payload_visible
+    io = DraftIO.new
+    @cli.instance_variable_set(:@reading_input, true)
+    original = Reline.method(:redisplay)
+    Reline.singleton_class.send(:define_method, :redisplay, -> { raise IOError, "render raced" })
+
+    @cli.send(:terminal_write, io:) { |target| target.puts("kept") }
+
+    assert_includes io.buffer, "kept"
+  ensure
+    Reline.singleton_class.send(:define_method, :redisplay, original)
+  end
+
+  def test_stream_chunks_claim_one_row_and_grow_without_guard_round_trips
+    io = DraftIO.new
+    stream = $stdout
+    $stdout = io
+    state = {}
+
+    with_redisplay_counter do |counter|
+      @cli.instance_variable_set(:@reading_input, true)
+      @cli.send(:handle_stream_text, "hello", state)
+      @cli.send(:handle_stream_text, " there", state)
+
+      assert_equal "\r\nhello there", io.buffer
+      assert_empty counter
+      assert state[:stream_row_open]
+    end
+  ensure
+    $stdout = stream
+  end
+
   def test_model_greeting_is_opt_in_to_protect_the_first_operator_turn
     previous = ENV.delete("MASTER_GREETING")
     spawned = false

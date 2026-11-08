@@ -56,8 +56,11 @@ module Master
         Master::Trace::Dmesg.status("cli0", "^C again to exit")
         :interrupted
       ensure
-        Master::Trace::Dmesg.terminal_write do |_target|
-          @reading_input = false
+        # The read ends before the bookkeeping write, so the write's guard
+        # hooks see a closed read instead of pushing rows past the submitted
+        # line's own newline.
+        @reading_input = false
+        Master::Trace::Dmesg.terminal_write(guard: false) do |_target|
           @activity_row_reserved = false
           @active_prompt = nil
         end
@@ -73,7 +76,7 @@ module Master
         end
         return unless busy
 
-        Master::Trace::Dmesg.terminal_write do |target|
+        Master::Trace::Dmesg.terminal_write(guard: false) do |target|
           target.puts
           target.flush
           @activity_row_reserved = true

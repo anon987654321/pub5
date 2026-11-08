@@ -67,7 +67,9 @@ module Master
 
         @spin_thread = Thread.new do
           loop do
-            Master::Trace::Dmesg.terminal_write { |target| paint_spin_row(target) }
+            # The spinner owns its row: guarded off, or every tick would step
+            # below the draft first.
+            Master::Trace::Dmesg.terminal_write(guard: false) { |target| paint_spin_row(target) }
             break if @spin_paused
 
             sleep spin_pause(@spin_intensity)
@@ -313,7 +315,7 @@ module Master
         @think_sub&.call
         @think_sub = nil
         if @activity_row_reserved
-          Master::Trace::Dmesg.terminal_write { |target| clear_reserved_activity_row(target) }
+          Master::Trace::Dmesg.terminal_write(guard: false) { |target| clear_reserved_activity_row(target) }
         elsif $stdout.tty?
           terminal_print("\r\e[K")
         end
@@ -364,7 +366,10 @@ module Master
       # to say instead of the whole log.
       MILESTONE = /\A(?:obs\d+: done|scan\d+: (?:done|pass \d)|fix\d+: pass \d|crit\d+: |review\d+: (?:complete|incomplete))/
 
-      # A pipe keeps stdout for the reply, so the units go to stderr there.
+      # A line the units console prints. While the draft is being edited the
+      # guard moves the line to a row of its own below the cursor and the
+      # editable line repaints afterwards; while the turn runs inline the
+      # legacy rows stand — clear the row, print, as the line always did.
       def print_unit_line(line)
         return unless Master::Trace::Dmesg.enabled?
 
@@ -374,14 +379,22 @@ module Master
         io = $stdout.isatty ? $stdout : $stderr
         @think_mutex&.synchronize { @think_stage = line[/\A[^\s:]+/] }
         Master::Trace::Dmesg.terminal_write(io:) do |target|
-          clear_reserved_activity_row(target) if io.equal?($stdout)
-          target.print "\r\e[K" if target.tty?
+          unit_line_rows(io, target)
           target.puts @refs.renderer.render(line, mode: :dim)
           target.flush
-          redraw_active_input if io.equal?($stdout) && @reading_input
         end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "cli.print_unit_line", event_bus: @refs.bus)
+      end
+
+      # The unit row is the guard's job while a draft is edited (plain payload
+      # below the cursor, repaint afterwards). Only the inline turn keeps the
+      # legacy rows: give up the spinner's row, clear, then the line prints.
+      def unit_line_rows(io, target)
+        return if io.equal?($stdout) && @reading_input && tty_target?(target)
+
+        clear_reserved_activity_row(target) if io.equal?($stdout)
+        target.print "\r\e[K" if tty_target?(target)
       end
 
       # The spinner repaints with \r\e[K, which clears one row. A line wider

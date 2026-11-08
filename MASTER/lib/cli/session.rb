@@ -49,6 +49,9 @@ module Master
         load_cli_history
         setup_completion
         init_session_state!
+        # One registration of the draft guard, so every operator-facing write
+        # from every lane shares the same protocol with Reline's editable line.
+        Master::Trace::Dmesg.draft_guard = [method(:foreign_write_begin), method(:foreign_write_end)]
         # One live Reline prompt; the face is the web particle face only.
         Fiber[:master_cli_prompt] = -> { @focus_mode ? focus_prompt : normal_prompt }
         set_visitor_mode_if_unauthenticated
@@ -116,37 +119,72 @@ module Master
 
       private
 
-      # All operator-facing writes share Dmesg's mutex. If an async turn writes
-      # while Reline is editing the next prompt, the message lands on a row of
-      # its own and the editable line is rebuilt beneath it — zsh's own rule.
-      # A write that used to append at the cursor printed its text after the
-      # prompt glyphs, so "master$ Welcome back." read as a reply typed into
-      # the shell.
-      def terminal_write(io: $stdout, &block)
-        Master::Trace::Dmesg.terminal_write(io:) do |target|
-          clear_reserved_activity_row(target) if io.equal?($stdout)
-          clear_prompt_row(target) if io.equal?($stdout)
-          block.call(target)
-          redraw_active_input if io.equal?($stdout) && @reading_input
-        end
+      # All operator-facing writes share Dmesg's mutex and Dmesg runs the draft
+      # guard this session registers: a write from any lane clears the draft's
+      # row, claims a row of its own below the cursor, and the redisplay
+      # afterwards rebuilds the editable line — zsh's own rule. Before this
+      # guard, a write that shared the draft's row printed its text after the
+      # prompt glyphs ("master$ Welcome back."), and one that cleared it left
+      # the prompt gone, because Reline's differential render repaints nothing
+      # its cache still matches (the disappearing prompt after the first
+      # message). Writes that are part of the draft's own machinery — the
+      # spinner row, the reserved activity row, the read-end bookkeeping — pass
+      # guard: false and manage their rows alone.
+      def terminal_write(io: $stdout, guard: true, &block)
+        Master::Trace::Dmesg.terminal_write(io:, guard:, &block)
       end
 
-      # One clear, not a repaint: Reline owns the draft's pixels and rebuilds
-      # them through redisplay. Only a terminal row may be cleared; pipes and
-      # logs pass untouched.
-      def clear_prompt_row(target)
-        return unless @reading_input && target.respond_to?(:tty?) && target.tty?
+      # A write target may be any IO-like log; only a live terminal answers
+      # tty?. The rescue is the boundary check: a writer without tty? is not
+      # a terminal, not an error.
+      def tty_target?(target)
+        !!target.tty?
+      rescue NoMethodError
+        false
+      end
 
-        target.print("\r\e[K")
-        target.flush if target.respond_to?(:flush)
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.prompt_row.clear", event_bus: @refs.bus)
+      # Called under Dmesg's mutex, before the payload. The reserved activity
+      # row is given up, the draft's row is cleared and the cursor steps to a
+      # fresh row below it: the payload never mixes with the prompt glyphs and
+      # never lands on the row Reline is editing.
+      def foreign_write_begin(target)
+        return unless @reading_input && tty_target?(target)
+
+        clear_reserved_activity_row(target) if @activity_row_reserved
+        target.print("\r\e[K\r\n")
+      end
+
+      # Called under Dmesg's mutex, after the payload. Reline's differential
+      # render only repaints rows that differ from its cache, and a foreign
+      # write is invisible to it — so the cache must be reset for the next
+      # redisplay to be a full repaint, anchored at the cursor, the row where
+      # the payload just ended.
+      def foreign_write_end(target)
+        return unless @reading_input && tty_target?(target)
+
+        redraw_active_input
       end
 
       def redraw_active_input
-        Reline.redisplay if Reline.respond_to?(:redisplay)
+        refresh_reline_screen_cache!
+        Reline.redisplay
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "cli.reline.redisplay", event_bus: @refs.bus)
+      end
+
+      # :reek:ManualDispatch -- Reline 0.7 has no public full-repaint reset;
+      # the private cache clear is the one boundary, and a responds-guard keeps
+      # a foreign redraw a no-op if the gem's shape changes.
+      #
+      # Reline 0.7 keeps the rendered-line cache on its line editor as
+      # @rendered_screen, reset by the private clear_rendered_screen_cache
+      # (lines and cursor_y). Reaching it is deliberate: the cache is the one
+      # source of Reline's differential silence.
+      def refresh_reline_screen_cache!
+        editor = Reline.line_editor
+        editor.send(:clear_rendered_screen_cache) if editor.respond_to?(:clear_rendered_screen_cache, true)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.reline.cache", event_bus: @refs.bus)
       end
 
       # The splash is the last of the boot, so it keeps the boot's console colours.
@@ -154,12 +192,12 @@ module Master
         terminal_puts(Master::Trace::Dmesg.console_paint(@refs.renderer.splash(@refs.agent.model), $stdout))
       end
 
-      def terminal_puts(text = "", io: $stdout)
-        terminal_write(io:) { |target| target.puts(text); target.flush if target.respond_to?(:flush) }
+      def terminal_puts(text = "", io: $stdout, guard: true)
+        terminal_write(io:, guard:) { |target| target.puts(text); target.flush }
       end
 
-      def terminal_print(text, io: $stdout)
-        terminal_write(io:) { |target| target.print(text); target.flush if target.respond_to?(:flush) }
+      def terminal_print(text, io: $stdout, guard: true)
+        terminal_write(io:, guard:) { |target| target.print(text); target.flush }
       end
 
       def play_boot_sound
@@ -311,10 +349,22 @@ module Master
       def handle_stream_text(text, state)
         if state[:thinking_shown] && $stdout.isatty
           stop_thinking_indicator
-          terminal_print("\r\e[K")
+          # The inline thinking row is cleared only when nothing is being
+          # edited; while the draft is live the guard moved the stream to its
+          # own row and the spinner row was already the indicator's home.
+          terminal_print("\r\e[K") unless @reading_input
           state[:thinking_shown] = false
         end
-        terminal_print(wrap_stream(text, state))
+
+        # The stream claims one row below the draft, once per turn; chunks
+        # grow on that row at the cursor without their own guard round-trip,
+        # so a reply reads as it arrives without ever clobbering the edited
+        # line. The turn's final display repaints the draft below the stream.
+        if $stdout.isatty && @reading_input && !state[:stream_row_open]
+          terminal_print("\r\n", guard: false)
+          state[:stream_row_open] = true
+        end
+        terminal_print(wrap_stream(text, state), guard: false)
         state[:streamed] = true
       end
 

@@ -64,7 +64,7 @@ module Master
         end
 
         if streamed
-          puts unless text.end_with?("\n")
+          terminal_puts(text) unless text.end_with?("\n")
           text = print_unstreamed_reply(ok, streamed_text: text)
         elsif command
           # Pipeline commands already streamed their live dmesg units. Other
@@ -72,13 +72,15 @@ module Master
           # unit. Explicit JSON payloads remain payloads, not terminal prose.
           unless %w[fix review critique].include?(command)
             if structured_payload?(text)
-              puts text
+              terminal_puts(text)
             else
               Master::Trace::Dmesg::Report.print(command, text)
             end
           end
         else
-          print "\r\e[K" if $stdout.isatty
+          # The reply replaces its row through the guard: while a draft is
+          # edited, the row is cleared and the draft is repainted under it.
+          terminal_print("\r\e[K") if $stdout.isatty
           display_prepared_terminal_output(text) if routine
           unless routine
             output = markdown_rendered ? text.chomp : @refs.renderer.measure(text.chomp, width: reply_measure)
