@@ -952,6 +952,25 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal 2, cli.exit_code
   end
 
+  def test_units_console_footers_receive_the_result_not_the_success_boolean
+    result = Master::Result.ok(rendered: "", output: {})
+    seen = []
+
+    @cli.stub(:print_fix_activity_footer, nil) do
+      @cli.stub(:print_previous_question_footer, nil) do
+        @cli.stub(:print_parallel_errors_footer, ->(value) { seen << [:parallel, value] }) do
+          @cli.stub(:print_capability_stamp, ->(value) { seen << [:capability, value] }) do
+            capture_io do
+              @cli.send(:display_ok, ok: result, accumulated: +"", streamed: false, units_console: true)
+            end
+          end
+        end
+      end
+    end
+
+    assert_equal [[:parallel, result], [:capability, result]], seen
+  end
+
   def test_routine_success_emits_one_line
     result = Master::Result.ok(output: "saved")
 
