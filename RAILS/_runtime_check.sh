@@ -10,6 +10,16 @@ master_scan_dep() {
   local master=${MASTER_ROOT:-/home/dev/pub5/MASTER}
   local log_dir=/var/db/pub5
   local log=${log_dir}/master_${app_name}_scan.log
+  # The scan runs in the deploy role, while /var/db/pub5 belongs to the root
+  # broker (pub5-admin stamps). A deploy run under run_as_deploy_user found
+  # the directory unwritable on vm23 2026-11-08: keep the durable location
+  # when the runner owns it, else fall back to the runner's tmpdir so the
+  # scan still runs and its evidence still lands in the deploy run log.
+  if [[ ! -w $log_dir ]]; then
+    log_dir=${TMPDIR:-/tmp}
+    log=${log_dir}/master_${app_name}_scan.log
+    log_warn "MASTER scan log at ${log} (${log_dir#*/var} not writable for $(id -un))"
+  fi
   if [[ ${SKIP_MASTER_SCAN:-0} != 0 ]]; then
     if [[ ${SKIP_MASTER_SCAN} != 1 || ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]; then
       log_err "SKIP_MASTER_SCAN=1 requires I_UNDERSTAND_FAST_DEPLOY=1"
@@ -20,7 +30,7 @@ master_scan_dep() {
   fi
   [[ -x ${master}/bin/master ]] || { log_err "MASTER scan unavailable at ${master}"; return 1; }
   mkdir -p "$log_dir" || { log_err "cannot create ${log_dir} for MASTER scan log"; return 1; }
-  chmod 700 "$log_dir"
+  [[ -O $log_dir ]] && chmod 700 "$log_dir"
   log "MASTER rules scan (OPERATOR) pre-bundle"
   if ! (cd "$master" && MASTER_SCAN_DETERMINISTIC=1 MASTER_SAFE_MODE=1 bundle_exec exec ruby bin/check --scan-only --tree=RAILS) \
     </dev/null >"$log" 2>&1; then
