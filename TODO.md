@@ -667,11 +667,14 @@ back at the repository root:
   `Photo on 28-09-2026 at 07.19 #4.jpg`. Review them from pub4, identify their
   subject and owning project, then restore only to that existing owner or
   explicitly retire them with provenance.
-- [ ] **Ragnhild artist-grant application.** `pub4/BPLANS/ragnhild_legater.html`
-  has no counterpart in pub5. It is a separate grant/application document, not
-  automatically the same deliverable as the Ragnhild business-plan pair.
-  Restore and review the HTML; the pub4 tree did not contain its PDF, so render
-  and inspect a PDF only if the application is still in scope.
+- [ ] **Ragnhild artist-grant application PDF.** The separate five-page guide
+  is restored and date-reviewed in `BIZ/ragnhild/ragnhild_legater.html`.
+  Unverified BKV 2027 dates from the archive were removed; NBK had not published
+  confirmed 2027 project-support dates on 8 November 2026. Bergen's professional
+  art/culture deadlines and the Fegerstens eligibility/cycle were checked
+  against primary pages. No PDF existed in pub4; render the restored HTML and
+  visually inspect pagination, links and text before declaring the deliverable
+  complete.
 - [ ] **Merethe/Wenche LoRA scaffold.** pub4 held
   `STUDIO/replicate/lora/merethe/README.md`, `prepare.rb`,
   `subject.env.example` and `STUDIO/test/merethe_lora_test.rb`; these are
