@@ -25,7 +25,7 @@ module Master
         raise ArgumentError, "UX catalog must be a mapping" unless payload.is_a?(Hash)
         raise ArgumentError, "UX catalog schema must be #{SCHEMA_VERSION}" unless payload["schema"] == SCHEMA_VERSION
         raise ArgumentError, "UX catalog ID must be #{CATALOGUE_ID}" unless payload["catalogue_id"] == CATALOGUE_ID
-        raise ArgumentError, "UX catalog must reference the visual identity contract in MASTER/data/law_runtime.yml" unless
+        raise ArgumentError, "UX catalog must reference the visual identity contract in MASTER/data/laws.yml" unless
           canonical_authority?(payload["authority"])
         policy = payload["evidence_policy"]
         raise ArgumentError, "UX catalog must declare an evidence policy" unless policy.is_a?(Hash)
@@ -117,12 +117,10 @@ module Master
       # The authority in the inventory is a pointer to an existing canonical
       # Law, not a second copy of the Law's prose or rules.
       # The catalogue defers to the visual identity contract. The keycheck goes
-      # through Master.load_laws, which reads law_runtime.yml when present - the
-      # citation names that file now, because a citation that pointed at
-      # MASTER/data/laws.yml#visual_identity_contract was only ever true of the
-      # file this check actually opens.
+      # through Master.load_laws, which reads laws.yml - the one constitution
+      # file the citation names.
       def self.canonical_authority?(value)
-        match = value.to_s.match(%r{\AMASTER/data/law_runtime\.yml#([a-z][a-z0-9_]*)\z})
+        match = value.to_s.match(%r{\AMASTER/data/laws\.yml#([a-z][a-z0-9_]*)\z})
         return false unless match
 
         Master.load_laws.key?(match[1])

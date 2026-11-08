@@ -25,9 +25,8 @@ module Deploy
 
     def self.run
       root = ROOT
-      # The flat catalogue (3039b34b9) moved the runtime metadata — this policy
-      # among it — out of the normative laws.yml into law_runtime.yml.
-      policy = YAML.safe_load_file(File.join(root, "data", "law_runtime.yml"), aliases: true).fetch("browser_policy")
+      # browser_policy lives beside the Law identities in laws.yml.
+      policy = YAML.safe_load_file(File.join(root, "data", "laws.yml"), aliases: true).fetch("browser_policy")
       missing_hosts = REQUIRED_HOSTS - Array(policy["forbidden_hosts"]).map { |host| host.to_s.downcase }
       return failure("browser policy missing forbidden hosts: #{missing_hosts.join(", ")}") unless missing_hosts.empty?
       missing_actions = REQUIRED_ACTIONS - Array(policy["write_actions"]).map(&:to_s)

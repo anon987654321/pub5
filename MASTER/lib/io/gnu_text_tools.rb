@@ -5,7 +5,7 @@ require_relative "shell_lexer"
 
 module Master
   module Io
-    # Which banned commands a shell line would run: data/law_runtime.yml
+    # Which banned commands a shell line would run: data/laws.yml
     # `zsh.banned_commands`, judged one way for every reader. Io::Shell refuses a
     # line MASTER's own agents send, and the ZSH_NATIVE_PATTERNS Law reports one
     # written into a script.
@@ -73,7 +73,7 @@ module Master
       end
 
       def refusal(names)
-        lines = ["zsh law: #{names.join(', ')} refused (MASTER/data/law_runtime.yml zsh.banned_commands)."]
+        lines = ["zsh law: #{names.join(', ')} refused (MASTER/data/laws.yml zsh.banned_commands)."]
         names.each { |name| lines << "  #{name}: #{replacement(name)}" }
         lines << "  Search with git grep; read files with the Read tool; one meaningful operation per line."
         lines.join("\n")

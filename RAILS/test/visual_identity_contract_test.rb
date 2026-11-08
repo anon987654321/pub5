@@ -21,8 +21,8 @@ class VisualIdentityContractTest < Minitest::Test
   # The face's motion and accessibility rules, split by concern across 40-44.
   FACE_MOTION = Dir[File.join(ROOT, "..", "MASTER", "web", "styles", "face", "4[0-4]_*.css")].sort
   SHARED_MOTION = File.join(ROOT, "__shared", "app", "assets", "stylesheets", "_interaction_craft.scss")
-  # laws.yml states each Law; law_runtime.yml carries the executable requirements.
-  LAW_FILES = %w[laws.yml law_runtime.yml].map { |name| File.expand_path("../../MASTER/data/#{name}", __dir__) }
+  # laws.yml states each Law and carries the executable requirements beside them.
+  LAW_FILES = %w[laws.yml].map { |nm| File.expand_path("../../MASTER/data/#{nm}", __dir__) }
   LAWS_SOURCE = LAW_FILES.map { |path| File.read(path, encoding: "UTF-8") }.join("\n")
 
   def test_signal_is_canonical_original_and_semantically_named

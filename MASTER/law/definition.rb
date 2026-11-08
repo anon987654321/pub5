@@ -15,9 +15,9 @@ require_relative "../lib/law_vocabulary"
 # Contract: `rake dogfood` is the archaeological audit. A capability that goes
 # missing is a fixture that stops passing — nothing to compare by hand.
 module Law
-  # laws.yml owns normative Law records and the per-Law execution catalogue.
-  # Ruby files implement declared detectors and evaluators; law_runtime.yml
-  # retains scanner, veto, plugin and /fix runtime settings.
+  # laws.yml owns normative Law records, the per-Law execution catalogue and
+  # the runtime configuration; Ruby files implement declared detectors and
+  # evaluators.
   require_relative "../lib/master" unless defined?(Master::ROOT)
   require_relative "../lib/law_catalogue_preflight"
   LAW_CATALOGUE = Master.law_catalogue.freeze

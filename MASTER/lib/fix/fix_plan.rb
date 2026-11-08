@@ -15,7 +15,6 @@ module Master
       VERSION = 1
       AUTHORITY_FILES = %w[data/soul.yml data/laws.yml].freeze
       RUNTIME_FILES = %w[
-        data/law_runtime.yml
         law/definition.rb
         lib/review/scan/detector.rb
         lib/review/scan/canonical_law_adapter.rb

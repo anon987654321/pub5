@@ -21,8 +21,7 @@ class TestLawInventory < Minitest::Test
   end
 
   # laws.yml is one flat mapping of Law id to row, read through the canonical
-  # accessor. law_runtime.yml (Master.load_laws) declares no Laws, so the
-  # stub sits on Master.laws_document.
+  # accessor (Master.load_laws); the stub sits on Master.laws_document.
   def test_catalogue_declaration_reads_the_flat_canonical_catalogue
     catalogue = {
       "CANONICAL_LAW" => { "statement" => "Canonical entry" },

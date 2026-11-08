@@ -19,8 +19,8 @@ class TestRailsInteractionCraft < Minitest::Test
   SEARCH_LOADING = File.join(SHARED, "app", "views", "shared", "_search_loading.html.erb")
   EMPTY_STATE = File.join(SHARED, "app", "assets", "stylesheets", "_empty_state.scss")
   LAWS = File.join(ROOT, "MASTER", "data", "laws.yml")
-  # The principle catalogue (law_map) moved out of laws.yml into law_runtime.yml.
-  LAW_RUNTIME = File.join(ROOT, "MASTER", "data", "law_runtime.yml")
+  # The principle catalogue (law_map) lives beside the Law identities in laws.yml.
+  LAW_RUNTIME = File.join(ROOT, "MASTER", "data", "laws.yml")
   INTERFACE = File.join(ROOT, "MASTER", "law", "interface.rb")
 
   def test_shared_interaction_craft_is_forwarded

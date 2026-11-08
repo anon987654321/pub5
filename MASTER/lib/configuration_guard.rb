@@ -52,7 +52,6 @@ module Master
 
       case kind
       when :laws then validate_laws(data, path: absolute, text: content)
-      when :law_runtime then validate_runtime_config(data, path: absolute)
       when :soul then validate_soul(data, path: absolute)
       when :providers then ProviderCatalogueGuard.validate(data)
       when :models then ModelCatalogueGuard.validate(data, path: absolute)
@@ -70,7 +69,6 @@ module Master
     def kind_for(path)
       normalized = File.expand_path(path.to_s).tr("\\", "/")
       return :laws if normalized.match?(%r{/MASTER/data/laws\.yml\z})
-      return :law_runtime if normalized.match?(%r{/MASTER/data/law_runtime\.yml\z})
       return :soul if normalized.match?(%r{/MASTER/data/soul\.yml\z})
       return :baymard_ux if normalized.match?(%r{/MASTER/data/baymard_ux\.yml\z})
       return :providers if normalized.match?(%r{/MASTER/data/providers\.yml\z})
@@ -241,27 +239,13 @@ module Master
       entries = catalogue.fetch("entries")
       validate_catalogue_entries(entries, repository_root(path))
       validate_catalogue_key_duplicates(text, entries.keys)
+      validate_runtime_config(data)
     end
 
-    # law_runtime.yml contains runtime configuration, never Law identities.
-    # Compare with normative Law nodes and the execution catalogue so new
-    # duplicates are rejected without maintaining a second ID list.
-    def validate_runtime_config(data, path:)
-      validate_required_runtime_config_sections(data)
-      raise ArgumentError, "law_runtime.yml must not duplicate law_catalogue" if data.key?("law_catalogue")
-
-      data_root = File.dirname(File.dirname(path))
-      raise ArgumentError, "law_runtime.yml cannot find its canonical laws.yml" unless
-        File.file?(File.join(data_root, "data", "laws.yml"))
-
-      laws = Master.laws_document(root: data_root)
-      catalogue = laws.fetch("law_catalogue") { raise KeyError, "laws.yml has no law_catalogue" }
-      law_ids = (laws.keys.map(&:to_s) - ["law_catalogue"]) + catalogue.fetch("entries").keys.map(&:to_s)
-      duplicates = data.keys.map(&:to_s) & law_ids
-      raise ArgumentError, "law_runtime.yml duplicates Law identity/identities owned by laws.yml: #{duplicates.sort.join(', ')}" unless duplicates.empty?
-    end
-
-    def validate_required_runtime_config_sections(data)
+    # The runtime sections live beside the Law identities they implement. They
+    # carry execution configuration, never Law identities, and the required
+    # sections stay enforced wherever they live.
+    def validate_runtime_config(data)
       missing = REQUIRED_RUNTIME_CONFIG_SECTIONS - data.keys.map(&:to_s)
       raise ArgumentError, "required runtime configuration section(s) missing: #{missing.join(', ')}" unless missing.empty?
     end
@@ -311,7 +295,10 @@ module Master
       entries_start = text.index(/^  entries:\s*$/, catalogue_start || 0)
       raise ArgumentError, "law_catalogue.entries source section is missing" unless catalogue_start && entries_start
 
-      declared = text[entries_start..].lines.filter_map do |line|
+      # Runtime configuration now follows the catalogue in the same file, so the
+      # scan stops at the next law_catalogue-level key instead of reading it.
+      block_end = text.index(/^\S/, entries_start) || text.length
+      declared = text[entries_start...block_end].lines.filter_map do |line|
         match = line.match(/\A    ([A-Za-z0-9_]+):\s*\z/)
         match && match[1].downcase
       end

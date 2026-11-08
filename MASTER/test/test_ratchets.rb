@@ -86,9 +86,8 @@ class TestRatchets < Minitest::Test
       Operator::Ratchets.stub(:name_rows, []) { Operator::Ratchets.deep_rows(rails: false) }
     end
     row = deep.find { |candidate| candidate.name == "law_trace" }
-    # laws.yml holds the flat constitutional catalogue and no law_map; the
-    # catalogue's execution policy lives behind the transitional law_runtime.yml,
-    # which Master.law reads - the recorded ceiling is whatever that home says.
+    # law_map carries the recorded ceiling and lives beside the Law identities
+    # in laws.yml; Master.law reads it from the same file.
     recorded = Master.law("law_map").fetch("law_trace_ceiling")
 
     assert_equal recorded, row.ceiling,

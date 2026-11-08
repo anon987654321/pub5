@@ -39,7 +39,7 @@ module Master
     # this method, and a new keyword here raises ArgumentError inside the stub.
     #
     # Parses are remembered by path, size, inode and mtime, and every call gets
-    # its own copy. laws.yml is 205KB and fifteen constructors read it: one
+    # its own copy. laws.yml is 291KB and fifteen constructors read it: one
     # boot and a /scan of lib/io parsed it 40 times for 724ms. A deep copy of
     # the parsed tree costs a fraction of a parse and cannot leak one caller's
     # mutation into another's, and an edit changes the stat, so the next read
@@ -121,16 +121,16 @@ module Master
     # genuine path bug.
     def load_laws(root: ROOT)
       root = Master.master_root(root:)
-      # Existing scanner, veto, provider and /fix readers consume the runtime
-      # registry; the canonical laws.yml is normative law data whose own
-      # readers are Master.law_entries and Master.laws_document.
-      runtime_path = File.join(root, "data", "law_runtime.yml")
-      canonical_path = File.join(root, "data", "laws.yml")
-      selected = File.file?(runtime_path) ? runtime_path : canonical_path
+      # One constitution file carries both the Law identities (which
+      # Master.laws_document and Master.law_entries read normatively) and the
+      # runtime configuration the scanner, veto, provider and /fix readers
+      # consume here, so load_laws reads laws.yml and nothing else: a second
+      # file would let a reader silently prefer one and ignore the other.
+      path = File.join(root, "data", "laws.yml")
       # Skip the read entirely rather than let load_yaml warn — see above.
-      return {} unless root == ROOT || File.exist?(selected)
+      return {} unless root == ROOT || File.exist?(path)
 
-      load_yaml(selected)
+      load_yaml(path)
     end
 
     # The directories MASTER's self-directed checks scan, from

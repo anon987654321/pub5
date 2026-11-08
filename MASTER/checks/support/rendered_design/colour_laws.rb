@@ -4,7 +4,7 @@ module Deploy
   module RenderedDesign
     # Near-duplicate colour: two inks one small OKLab distance apart read as one
     # colour and should be one token. The distance is house policy, not a
-    # standard - law_runtime.yml design_thresholds.oklch_merge_distance carries
+    # standard - laws.yml design_thresholds.oklch_merge_distance carries
     # it so tuning the level is an operator decision, not a code change.
     module ColourLaws
       module_function

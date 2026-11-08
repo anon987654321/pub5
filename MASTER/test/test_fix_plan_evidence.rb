@@ -49,7 +49,7 @@ class TestFixPlanEvidence < Minitest::Test
     )
   end
 
-  def test_plan_pins_scope_provenance_authority_law_runtime_toolchain_and_deadline
+  def test_plan_pins_scope_provenance_authority_runtime_toolchain_and_deadline
     plan = capture(excluded_paths: { "large.rb" => "too_large" })
 
     assert plan.frozen?

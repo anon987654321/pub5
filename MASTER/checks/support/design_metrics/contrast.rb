@@ -111,7 +111,7 @@ module Deploy
       # number. The bronze-level table's conservative reading: body copy wants
       # Lc 75, larger or bolder text 60, and anything at 45 is a headline floor
       # rather than a reading target. The three levels are house policy, not a
-      # standard - law_runtime.yml design_thresholds.apca_levels carries them, so
+      # standard - laws.yml design_thresholds.apca_levels carries them, so
       # tuning the level a product ships is an operator decision recorded there,
       # never a code change here.
       def apca_threshold(size_px, bold: false)
@@ -125,7 +125,7 @@ module Deploy
 
       def apca_levels
         @apca_levels ||= begin
-          runtime = YAML.safe_load_file(File.join(File.expand_path("../../..", __dir__), "data/law_runtime.yml"), aliases: true)
+          runtime = YAML.safe_load_file(File.join(File.expand_path("../../..", __dir__), "data/laws.yml"), aliases: true)
           runtime.fetch("design_thresholds", {}).fetch("apca_levels", {})
         rescue Errno::ENOENT, Psych::SyntaxError # scan: intentional - no policy file: the bronze defaults stand
           {}

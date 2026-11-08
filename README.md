@@ -46,16 +46,16 @@ source precedence and `absolute.sacred_paths`. Its source hierarchy is:
 `soul.yml > laws.yml > executable laws and gates > tree contracts > Git history`.
 
 `MASTER/data/laws.yml` is the one catalogue of individual Law identities,
-statements, parentage and the nine invariant nodes' internal order. It does not
-restate the source hierarchy or protected-path list. `law_runtime.yml` remains
-live transitional execution metadata; it is not a second normative Law
-catalogue. A missing or unrun measurement is INCONCLUSIVE, never PASS.
+statements, parentage and the nine invariant nodes' internal order, together
+with the scanner, veto, plugin and `/fix` runtime configuration. It does not
+restate the source hierarchy or protected-path list. A missing or unrun
+measurement is INCONCLUSIVE, never PASS.
 
 ## Repository facts
 
 `VERSION` records the release line. The FULL.yml rule corpus was retired on
 2026-11-02: it declared itself `not_a_live_config` and every one of its rows
-in `MASTER/data/law_runtime.yml` is marked covered — the constitution lives
+in `MASTER/data/laws.yml` is marked covered — the constitution lives
 in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
 proposal (a document, not policy) lives at `MASTER/tools/biz/fetat_proposal.md`.
 `redeploy` is the workstation deploy entrypoint.

@@ -2,7 +2,7 @@
 
 # The PreToolUse Bash hook Claude's settings.json points at. The dotfile holds
 # no policy: the one list of commands a shell line may not run lives at
-# MASTER/data/law_runtime.yml#zsh, and this file judges the command through
+# MASTER/data/laws.yml#zsh, and this file judges the command through
 # Master::Io::GnuTextTools - the same lexer Io::Shell and the
 # ZSH_NATIVE_PATTERNS Law ask, so the three readers cannot disagree about what
 # a line runs. A quoted word, heredoc body or redirect target is data, so a
@@ -24,7 +24,7 @@ end
 require_relative "../lib/io/gnu_text_tools"
 
 begin
-  shell = Master::Io::GnuTextTools.load(File.expand_path("../data/law_runtime.yml", __dir__))
+  shell = Master::Io::GnuTextTools.load(File.expand_path("../data/laws.yml", __dir__))
   names = shell.banned_in(command)
 rescue StandardError
   exit 0

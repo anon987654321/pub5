@@ -288,7 +288,7 @@ adapter(:whole_file, languages: %i[css scss], bad: "h1 { transform: scaleX(1.2);
   Law.define(:VERTICAL_RHYTHM) do
     F.rendered(self, :VERTICAL_RHYTHM,
                source: "Bringhurst 2.2.7, vertical rhythm on one grid; the operator holds the line height " \
-                       "as the spacing unit (rhythm_tolerance is house policy, law_runtime.yml)",
+                       "as the spacing unit (rhythm_tolerance is house policy, laws.yml)",
                fix: "Set the vertical gaps between blocks as whole multiples of the body line height; " \
                     "the tolerance is a tuned level, not a standard.",
                bad: F.page(F.edge("p.one", 16), F.edge("p.two", 16).merge("rect" => F.at(50))),
@@ -301,7 +301,7 @@ adapter(:whole_file, languages: %i[css scss], bad: "h1 { transform: scaleX(1.2);
     build = ->(tops) { tops.each_with_index.map { |top, index| F.edge("p.s#{index}", 16).merge("rect" => F.at(top)) } }
     F.rendered(self, :SPACING_ENTROPY,
                source: "Tufte, data-ink at the layout's scale, read backwards: a spacing scale too large " \
-                       "to hold is noise (spacing_entropy_max is house policy, law_runtime.yml)",
+                       "to hold is noise (spacing_entropy_max is house policy, laws.yml)",
                fix: "Collapse the spacing scale onto the tokens' few steps; the count of distinct " \
                     "vertical gaps is a budget the operator sets, not a suggestion.",
                bad: F.page(*build.call(spread)),
@@ -311,7 +311,7 @@ adapter(:whole_file, languages: %i[css scss], bad: "h1 { transform: scaleX(1.2);
   Law.define(:COLOR_NEAR_DUPLICATE) do
     F.rendered(self, :COLOR_NEAR_DUPLICATE,
                source: "Tufte, the smallest effective difference, read backwards: two colours one small " \
-                       "distance apart are one colour (oklch_merge_distance is house policy, law_runtime.yml)",
+                       "distance apart are one colour (oklch_merge_distance is house policy, laws.yml)",
                fix: "Merge near-duplicate colours onto one token; measure the distance in OKLab, " \
                     "never in hex digits.",
                bad: F.page(F.el("p.meta", color: [51, 51, 51, 1]), F.el("p.note", color: [55, 55, 55, 1])),

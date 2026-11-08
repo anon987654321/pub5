@@ -30,7 +30,7 @@ class TestUXRefinementCatalog < Minitest::Test
     assert_raises(ArgumentError) { Master::Fix::UXRefinementCatalog.validate!(wrong_schema) }
 
     wrong_authority = Marshal.load(Marshal.dump(payload))
-    wrong_authority["authority"] = "MASTER/data/law_runtime.yml#does_not_exist"
+    wrong_authority["authority"] = "MASTER/data/laws.yml#does_not_exist"
     assert_raises(ArgumentError) { Master::Fix::UXRefinementCatalog.validate!(wrong_authority) }
 
     weakened_policy = Marshal.load(Marshal.dump(payload))

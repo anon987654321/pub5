@@ -301,7 +301,7 @@ class TestLawsYamlRegistry < Minitest::Test
   end
 
   def runtime_data
-    @runtime_data ||= Master.load_yaml(File.join(DATA, "law_runtime.yml"))
+    @runtime_data ||= Master.load_yaml(File.join(DATA, "laws.yml"))
   end
 
   def patterns

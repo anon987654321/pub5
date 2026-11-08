@@ -6,9 +6,9 @@ require "yaml"
 
 class LayoutCheckEnforcementContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  # The design-principle catalogue (law_map) lives in law_runtime.yml; laws.yml
-  # holds the Law records the principles map to.
-  LAW_MAP = File.join(ROOT, "MASTER/data/law_runtime.yml")
+  # The design-principle catalogue (law_map) lives beside the Law records it
+  # maps, in laws.yml.
+  LAW_MAP = File.join(ROOT, "MASTER/data/laws.yml")
   SURFACE_LAWS = File.join(ROOT, "MASTER/law/surface.rb")
   LAYOUT_SUITE = File.join(ROOT, "MASTER/checks/lib/layout_suite.rb")
   CHECKS = File.join(ROOT, "MASTER/checks/checks.yml")

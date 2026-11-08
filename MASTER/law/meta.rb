@@ -157,7 +157,7 @@ module Master
 
         # Documentation lives in the files that already hold it. RUNTIME_DOCS_YAML
         # guards one directory (data/); this is the same boundary across every
-        # tree: a .md document whose basename is not in law_runtime.yml
+        # tree: a .md document whose basename is not in laws.yml
         # `documents.allowed_documents` is a stray authoring default, not a
         # deliberate publication. The list is the closed set of documents that
         # existed across the trees on 2026-11-07 (48 basenames, 172 files) —

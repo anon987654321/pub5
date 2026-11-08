@@ -2,7 +2,7 @@
 # Inventory entries are acceptance targets, not implementation or test evidence.
 schema: 1
 catalogue_id: MASTER_UX_REFINEMENTS
-authority: "MASTER/data/law_runtime.yml#visual_identity_contract"
+authority: "MASTER/data/laws.yml#visual_identity_contract"
 expected_count: 90
 evidence_policy:
   implementation_state: "acceptance_required"

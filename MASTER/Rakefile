@@ -426,11 +426,10 @@ task default: :test
 
 # Which files moved the spine, so the number comes with a culprit.
 #
-# The ratchet said "+16" and nothing else, and on 2026-08-25 that cost an hour and
-# nearly a wrong ceiling raise: 15 of those 16 lines were another session's
-# untracked file in a shared checkout, and the session reading the number assumed
-# they were its own. A ratchet that reports only a total makes every concurrent
-# session responsible for every other session's work.
+# The ratchet said "+16" and nothing else, which costs an hour and invites a
+# wrong ceiling raise: the next session's untracked file in a shared checkout is
+# indistinguishable from these lines, so a ratchet that reports only a total
+# makes every concurrent session responsible for every other session's work.
 #
 # Untracked files are listed first and explicitly, because they are the ones a
 # `git diff` does not show and the ones a stash-and-remeasure silently attributes
@@ -506,9 +505,8 @@ def agent_contract_document(relative, audience)
 
              Read [the canonical AGENTS.md](#{target}) before planning or editing.
              It routes to `MASTER/AGENTS.md`, `MASTER/data/soul.yml` and
-             `MASTER/data/laws.yml#law_catalogue` for Law policy; `law_runtime.yml`
-             carries runtime configuration only. Follow that contract; this file
-             carries no separate policy.
+             `MASTER/data/laws.yml#law_catalogue` for Law policy and runtime
+             configuration. Follow that contract; this file carries no separate policy.
            POINTER
          end
   "#{header}\n#{body.strip}\n"
@@ -797,7 +795,7 @@ end
     ceiling = map.law_trace_ceiling
 
     if ceiling.nil?
-      abort "lint:law_trace: data/law_runtime.yml has no law_trace_ceiling - " \
+      abort "lint:law_trace: data/laws.yml has no law_trace_ceiling - " \
             "record one at the current #{untraced.size} before this check can hold"
     end
 
@@ -809,19 +807,17 @@ end
     end
 
     if untraced.size < ceiling && ENV["RATCHET"] == "1"
-      # The ceiling lives in law_runtime.yml: LawMap reads it through Master.law,
-      # which prefers that file. The writer used to target data/laws.yml, which
-      # has no such key, so #sub returned the file unchanged and the task still
-      # printed "ratcheted" -- a silent no-op that reported success.
-      path = File.join(__dir__, "data", "law_runtime.yml")
+      # The ceiling lives in law_map in laws.yml: LawMap reads it through
+      # Master.law, which reads laws.yml. Writing any other file leaves #sub a
+      # silent no-op that still prints "ratcheted".
+      path = File.join(__dir__, "data", "laws.yml")
       source = File.read(path)
       # The key is nested under law_map:, so the line is indented. Anchoring at
-      # column 0 matched nothing and made #sub a no-op even once the path was
-      # right.
+      # column 0 matches nothing and leaves #sub a no-op.
       moved = source.sub(/^(\s*law_trace_ceiling: )\d+$/, "\\1#{untraced.size}")
       if moved == source
         abort "lint:law_trace: could not ratchet #{ceiling} -> #{untraced.size} - " \
-              "no `law_trace_ceiling: <n>` line in data/law_runtime.yml to rewrite"
+              "no `law_trace_ceiling: <n>` line in data/laws.yml to rewrite"
       end
 
       File.write(path, moved)
@@ -888,7 +884,7 @@ end
     # recorded in the old backlog — tolerated so the check can land, never permanent.
     # The visual/ad migration exemptions that were here are gone rather than
     # expired: the collapse they waited for has landed upstream (the law block
-    # now lives in laws.yml alone, and law_runtime.yml no longer repeats it).
+    # now lives in laws.yml alone).
     known = {
       "voice: en-US-ChristopherNeural" =>
         "coincident strings for two different facts: the soul anchor voice and the trader persona voice are separate settings that name the same voice today",
@@ -907,9 +903,9 @@ end
       "# Split out of data/limits.yml on 2026-10-31." =>
         "coincident provenance note for one split event: budgets and scan each carry the same date line under their own header prose",
       "auxiliary: '(?:was|were|been)'" =>
-        "same detector row in both registries during the documented registry migration: the passive-voice pattern block is normative in laws.yml and consumed from law_runtime.yml",
+        "same detector row in both registries during the documented registry migration: the passive-voice pattern block is normative in laws.yml and consumed from the same file",
       "banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]" =>
-        "same detector row in both registries during the documented registry migration: the zsh ban list is normative in laws.yml and read from law_runtime.yml by Io::GnuTextTools",
+        "same detector row in both registries during the documented registry migration: the zsh ban list is normative in laws.yml and read from the same file by Io::GnuTextTools",
 
       # The four lines below are one Law id appearing in two groupings that ask
       # different questions. law_map.laws.design_books is routing for the

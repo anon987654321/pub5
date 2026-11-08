@@ -50,7 +50,7 @@ end
 # runtime and a negative line at review, which is the shape of fix this tree
 # hands the automatic pass first.
 Law.define(:REDUNDANT_CORE_REQUIRE) do
-  source "Ruby 4.0 core classes (Set, Pathname); law_runtime.yml languages.ruby pins 4.0.5"
+  source "Ruby 4.0 core classes (Set, Pathname); laws.yml languages.ruby pins 4.0.5"
   detect { |line| line.match?(/\A\s*require\s+["'](?:set|pathname)["']\s*(?:#[^\n]*)?\z/) }
   fix "Delete the require: Set and Pathname are built into Ruby 4.0, which .ruby-version pins."
   bad  "require \"set\""

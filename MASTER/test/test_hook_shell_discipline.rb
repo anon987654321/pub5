@@ -6,7 +6,7 @@ require "open3"
 
 # The Claude Code PreToolUse hook is wiring, not policy: the dotfile points at
 # MASTER/tools/shell_discipline.rb, and that file judges through the one list
-# at MASTER/data/law_runtime.yml#zsh. These tests run the hook the way the
+# at MASTER/data/laws.yml#zsh. These tests run the hook the way the
 # harness runs it - a JSON payload on stdin, an exit that decides - and hold
 # the command/data line the retired inline-list hook lost.
 class HookShellDisciplineTest < Minitest::Test
@@ -27,7 +27,7 @@ class HookShellDisciplineTest < Minitest::Test
     verdict, out = decision("git log --oneline | head -5")
     assert_equal "deny", verdict
     assert_match(/head: /, out)
-    assert_match(/law_runtime\.yml zsh\.banned_commands/, out)
+    assert_match(/laws.yml zsh\.banned_commands/, out)
   end
 
   def test_a_banned_command_in_quoted_data_passes

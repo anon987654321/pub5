@@ -27,9 +27,8 @@ module Deploy
     RAILS_ROOT = File.join(ROOT, "RAILS")
     MASTER = File.join(ROOT, "MASTER")
     DESIGN_RULES = File.join(MASTER, "data", "tokens.yml")
-    # The flat constitutional catalogue (3039b34b9) moved law_map out of the
-    # normative laws.yml; old runtime consumers read it through law_runtime.yml.
-    LAW_MAP = File.join(MASTER, "data", "law_runtime.yml")
+    # law_map lives beside the Law identities in laws.yml, the one constitution file.
+    LAW_MAP = File.join(MASTER, "data", "laws.yml")
     DESIGN_DOC = File.join(RAILS_ROOT, "__shared", "README.md")
 
     # Every directory that renders a view, the three apps plus brgen's engines.

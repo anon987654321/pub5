@@ -112,7 +112,7 @@ end
 # vm23's rc.d and maintenance work, which must run on OpenBSD base, where neither
 # zsh nor the replacements this law names are guaranteed.
 Law.define(:ZSH_NATIVE_PATTERNS) do
-  source "data/law_runtime.yml zsh.banned_commands - Ruby and zsh, not GNU text tools"
+  source "data/laws.yml zsh.banned_commands - Ruby and zsh, not GNU text tools"
   check do |text, file|
     zsh = text.match?(%r{\A#![^\n]*\bzsh\b}) || (file.end_with?(".zsh") && !text.start_with?("#!"))
     next [] unless zsh
@@ -125,7 +125,7 @@ Law.define(:ZSH_NATIVE_PATTERNS) do
       end
     end
   end
-  fix "Write the zsh expansion, glob or Ruby expression data/law_runtime.yml names for the banned command."
+  fix "Write the zsh expansion, glob or Ruby expression data/laws.yml names for the banned command."
   bad <<~X
     #!/usr/bin/env zsh
     count=$(wc -l < log)

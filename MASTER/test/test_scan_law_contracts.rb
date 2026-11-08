@@ -406,7 +406,7 @@ class TestScanLawContracts < Minitest::Test
   # The repo-wide generalisation of RUNTIME_DOCS_YAML (2026-11-07, operator
   # directive "avoid creating new md files or new folders"). Documents live in
   # the files that already hold them; the allowlist in
-  # data/law_runtime.yml#documents.allowed_documents is the closed set that
+  # data/laws.yml#documents.allowed_documents is the closed set that
   # existed across the trees on 2026-11-07 (48 basenames), and writing a new
   # .md means deliberately entering it there.
   def test_no_new_documents_flags_stray_md_document

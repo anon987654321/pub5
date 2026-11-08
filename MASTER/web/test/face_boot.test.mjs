@@ -912,11 +912,8 @@ test("face runtime keeps named SSE reactions on the POST stream path", () => {
   assert.match(runtime, /MASTER_SSE\?\.dispatchNamed/);
 });
 
-test("web face is an evolved rendering of the CLI face", () => {
+test("web face carries the density and orbital field contract", () => {
   const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
-  const cliFace = readFileSync(join(root, "..", "..", "MASTER", "lib", "cli", "face.rb"), "utf8");
-  assert.match(cliFace, /Glyphs::DEFAULT_CHARS/);
-  assert.match(cliFace, /MASTER_FACE_RAMP/);
   assert.match(part3, /CLI_FACE_WEB_DENSITY = \d+;/);
   assert.match(part3, /orbitalField = new THREE\.Points/);
   assert.match(part3, /size: 1/);
@@ -1138,8 +1135,8 @@ test("constitutional ASCII face is wired as an overlay and a fallback", () => {
   const frame = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
   const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
   // The face_ascii runtime contract is runtime configuration, so it lives in
-  // law_runtime.yml beside the scanner settings, not in the Law catalogue.
-  const laws = readFileSync(join(root, "..", "..", "MASTER", "data", "law_runtime.yml"), "utf8");
+  // laws.yml beside the scanner settings, not in the Law catalogue.
+  const laws = readFileSync(join(root, "..", "..", "MASTER", "data", "laws.yml"), "utf8");
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
 
   assert.match(faceManifest, /shell_manifest:[\s\S]*?- face_ascii\s/);

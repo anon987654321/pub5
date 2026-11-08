@@ -669,7 +669,7 @@ from narrow, low-risk normalisers, the rendered tier behind CDP, and the
 behaviour-changing rewrites routed to the model council, never the autofix
 pass — landed as sixteen Law.define declarations plus one detector extension,
 with catalogue rows in laws.yml and the house-policy thresholds in
-law_runtime.yml. Static proof on this host (no Ruby interpreter available):
+laws.yml. Static proof on this host (no Ruby interpreter available):
 every bad/good fixture pair verified against a 1:1 Python port of each
 detector and evaluator (14 of 14), structural parity of every touched Ruby
 file against git HEAD, and a LawCataloguePreflight simulation mapping all

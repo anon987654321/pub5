@@ -8,7 +8,7 @@ Read `MASTER/data/soul.yml` first. It owns global identity, preservation,
 source precedence and `absolute.sacred_paths`. Then read
 `MASTER/data/laws.yml`, the canonical catalogue of individual Law identities,
 statements, parentage and the nine invariant nodes' internal order.
-`MASTER/law/`, `MASTER/data/law_runtime.yml` and `MASTER/checks/` implement
+`MASTER/law/` and `MASTER/checks/` implement
 and verify those requirements; `MASTER/lib/review/scan/` is scanner machinery,
 not another Law source tree. `CLAUDE.md` is a short bootstrap pointer.
 
@@ -117,7 +117,7 @@ Before planning or acting, load MASTER's canonical context:
    behaviour or reach, also read that Law's `laws.yml#law_catalogue` entry
    (severity, mode, lifecycle, autofix, languages, surfaces and path_exclude),
    its `Law.define` implementation and `path` and bad/good fixtures (or `proved_by` test),
-   plus the focused tests. `law_runtime.yml` is not a source of per-Law policy.
+   plus the focused tests. Runtime configuration is not a source of per-Law policy.
    A declared adapter or fixture does not prove that the detector ran or that
    the product is excellent.
 5. Follow this contract and the relevant owning tree/product contract. Task
@@ -139,8 +139,8 @@ internally. Git history is provenance, never an override of a live source.
 `soul.yml`, and derives the nine-node Law order from `laws.yml`; it does not
 author a competing graph. The executable Law Ruby in `MASTER/law/*.rb` holds
 the definitions and adapters. `MASTER/data/laws.yml#law_catalogue` owns per-Law execution
-policy; `MASTER/data/law_runtime.yml` holds scanner, veto, plugin and `/fix`
-runtime configuration. `MASTER/checks/` routes operational checks. These are
+policy and also holds scanner, veto, plugin and `/fix` runtime configuration
+beside the catalogue. `MASTER/checks/` routes operational checks. These are
 enforcement instruments, not alternate sources of Law identity. Automatic
 resolutions require proof fixtures.
 
@@ -163,8 +163,8 @@ For every Law-affecting task, inspect its normative row in `laws.yml` and its
 then inspect the exact `Law.define`, bad/good fixtures or `proved_by` test.
 Verify identity, parent/root, severity, lifecycle, autofix, language, surface
 and path reach (`Law.define` `path`, catalogue `path_exclude`), plus actual
-execution evidence. Read `law_runtime.yml` only
-when the task changes scanner, veto, plugin or `/fix` runtime configuration.
+execution evidence. Read `laws.yml` only when the task changes scanner,
+veto, plugin or `/fix` runtime configuration.
 Never claim a Law is enforced because its name or detector is merely declared.
 
 `MASTER/docs/synonyms.yml` is glossary-only. `MASTER/checks/checks.yml`
@@ -180,10 +180,9 @@ positive path scopes (a40d93e579); each scoped Law declares the files it
 judges with `path` in its `Law.define`, and preflight refuses a catalogue
 `path` or `path_pattern` that nothing would read. `Law::Definition`,
 `LawCataloguePreflight`, `LawRegistryAudit` and `BootReceipt` all read that
-same block. `law_runtime.yml` no longer contains a Law catalogue; it retains
-scanner, veto, plugin and `/fix` runtime configuration. Its guard rejects any
-attempt to add a duplicate `law_catalogue` there. Do not move per-Law policy
-back into runtime configuration or infer it from a detector's other Ruby.
+same block. laws.yml also carries scanner, veto, plugin and `/fix` runtime
+configuration beside the catalogue. Do not move per-Law policy back into
+runtime configuration or infer it from a detector's other Ruby.
 
 Task entry: before a substantive edit, state intent, repository-relative
 scope, mandatory preservation dimensions, and proof. Validate programmatic
@@ -697,9 +696,8 @@ in `OPENBSD/CLAUDE.md`.
   `law_catalogue` block also owns executable severity, mode, lifecycle, autofix,
   languages, surfaces and path exclusion. `Law::Definition`, preflight, registry
   audit and boot receipts consume this same source; a Law's positive path
-  scope is its `Law.define` `path`. `data/law_runtime.yml` keeps
-  scanner, veto, plugin and `/fix` runtime configuration, and its guard refuses
-  a second `law_catalogue`. Read the Law row and its catalogue entry together;
+  scope is its `Law.define` `path`. laws.yml also keeps scanner, veto, plugin
+  and `/fix` runtime configuration beside the catalogue. Read the Law row and its catalogue entry together;
   do not infer reach from runtime configuration. Missing evidence
   stays INCONCLUSIVE.
 - **No second record beside memory.** A belief store of verified, inferred and

@@ -18,7 +18,7 @@ Law.define(:COLLAPSE_BEFORE_ADDING) do
   source "MASTER constitution (soul.yml absolute.rules)"
   practice <<~TEXT
     before adding machinery, run the universal transformation plan in
-    data/law_runtime.yml#transformation_policy. inventory and classify first, then
+    data/laws.yml#transformation_policy. inventory and classify first, then
     follow its declared order and operation descriptions without maintaining
     a second sequence here. recommend rather than mutate when proof is
     insufficient. adding is the last resort and its reason belongs in git
@@ -395,7 +395,7 @@ Law.define(:SHELL_DISCIPLINE) do
     find, head, tail, wc, perl, python or bash - in pipes, wrappers, remote
     calls or committed scripts. BSD variants break GNU idioms and this tree
     deploys to OpenBSD. One list owns membership and the prescribed
-    replacements: MASTER/data/law_runtime.yml#zsh, judged by the one lexer
+    replacements: MASTER/data/laws.yml#zsh, judged by the one lexer
     (MASTER/lib/io/shell_lexer.rb) by the harness hook, MASTER's own shell
     and the ZSH_NATIVE_PATTERNS script scan. Ruby, zsh builtins and the
     dedicated tools instead.

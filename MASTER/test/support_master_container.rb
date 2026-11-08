@@ -56,11 +56,22 @@ module Master
           STEWARDSHIP:
             root: stewardship
             statement: preserve what works
-        YML
         # Single-quoted YAML: the heredoc hands `\\s` through as `\s`, and a
         # double-quoted YAML scalar would read that backslash as an escape it
-        # does not define. These are the shapes the real file uses.
-        "law_runtime.yml" => <<~YML,
+        # does not define. These are the shapes the real file uses, including
+        # veto_pattern_config: the fixture laws.yml stands in for the one
+        # constitution file every reader loads.
+        "laws.yml" => <<~YML,
+          SACRED_AUTHORSHIP:
+            root: least_authority
+            statement: protect constitutional files
+            protected_paths: [data/laws.yml, data/soul.yml]
+          PRESERVE_FIRST:
+            parent: STEWARDSHIP
+            statement: preserve existing behaviour before improvement
+          STEWARDSHIP:
+            root: stewardship
+            statement: preserve what works
           veto_pattern_config:
             secrets:
               detect: '(?i)(?:api[_-]?key|secret|token)'

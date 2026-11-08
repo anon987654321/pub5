@@ -3,7 +3,7 @@
 require "test_helper"
 require_relative "../law/definition"
 
-# Master::Io::GnuTextTools is the one judge of data/law_runtime.yml zsh.banned_commands:
+# Master::Io::GnuTextTools is the one judge of data/laws.yml zsh.banned_commands:
 # the harness hook, MASTER's own shell and the ZSH_NATIVE_PATTERNS Law ask it,
 # so a line one of them refuses the others refuse too.
 class GnuTextToolsTest < Minitest::Test

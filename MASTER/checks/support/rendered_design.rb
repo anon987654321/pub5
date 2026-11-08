@@ -97,11 +97,11 @@ module Deploy
       {}
     end
 
-    # House-policy thresholds (law_runtime.yml design_thresholds): the levels
+    # House-policy thresholds (laws.yml design_thresholds): the levels
     # this product ships, not standards. Tuning one is an operator decision
     # recorded in that file, never a code change here.
     def self.thresholds
-      @thresholds ||= YAML.safe_load_file(File.join(ROOT, "data/law_runtime.yml"), aliases: true) || {}
+      @thresholds ||= YAML.safe_load_file(File.join(ROOT, "data/laws.yml"), aliases: true) || {}
     rescue Errno::ENOENT, Psych::SyntaxError # scan: intentional - no policy file: every default stands
       {}
     end

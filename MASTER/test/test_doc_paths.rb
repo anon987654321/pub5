@@ -234,7 +234,7 @@ class TestDocPaths < Minitest::Test
     assert_empty missing, "no entry file for an agent that reads it: #{missing.join(', ')}"
 
     canonical = File.read(File.join(REPO, "AGENTS.md"))
-    %w[MASTER/AGENTS.md MASTER/data/soul.yml MASTER/data/laws.yml MASTER/data/law_runtime.yml].each do |path|
+    %w[MASTER/AGENTS.md MASTER/data/soul.yml MASTER/data/laws.yml].each do |path|
       assert_includes canonical, path, "AGENTS.md does not route agents to #{path}"
     end
 

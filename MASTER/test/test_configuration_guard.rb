@@ -74,35 +74,24 @@ class TestConfigurationGuard < Minitest::Test
     assert_match(/laws.yml declares no flat laws/, reason)
   end
 
-  def test_runtime_rejects_a_duplicate_law_catalogue
-    path = File.join(Master::ROOT, "data", "law_runtime.yml")
-    data = YAML.safe_load_file(path, aliases: true)
-    data["law_catalogue"] = { "entries" => { "DUPLICATE" => {} } }
-    reason = Guard.validate(path:, content: YAML.dump(data))
-    assert_match(/law_runtime.yml must not duplicate law_catalogue/, reason)
-  end
-
-  def test_runtime_rejects_a_law_identity_duplicated_from_the_catalogue
-    path = File.join(Master::ROOT, "data", "law_runtime.yml")
-    data = YAML.safe_load_file(path, aliases: true)
-    data["ROBUSTNESS"] = { "statement" => "duplicate" }
-
-    reason = Guard.validate(path:, content: YAML.dump(data))
-
-    assert_match(/duplicates Law identity.*ROBUSTNESS/, reason)
+  def test_runtime_sections_are_required
+    laws = YAML.safe_load_file(laws_path, aliases: true)
+    # The Law rows and catalogue of the live file, minus its runtime sections.
+    law_rows = laws.select { |_key, value| value.is_a?(Hash) && value["statement"] }
+    reason = Guard.validate(
+      path: laws_path,
+      content: YAML.dump(law_rows.merge("law_catalogue" => laws.fetch("law_catalogue")))
+    )
+    assert_match(/required runtime configuration section/, reason)
   end
 
   def test_law_execution_policy_has_one_source
     laws = YAML.safe_load_file(laws_path, aliases: true)
-    runtime = YAML.safe_load_file(File.join(Master::ROOT, "data", "law_runtime.yml"), aliases: true)
     entries = laws.fetch("law_catalogue").fetch("entries")
-    law_ids = (laws.keys - ["law_catalogue"]) + entries.keys
 
     assert_operator entries.size, :>, 200
-    refute runtime.key?("law_catalogue")
-    assert_empty runtime.keys & law_ids
-    assert runtime.key?("veto_pattern_config")
-    refute runtime.key?("veto_patterns")
+    assert laws.key?("veto_pattern_config")
+    refute laws.key?("veto_patterns")
   end
 
   def test_catalogue_entry_cannot_drop_a_modality

@@ -19,7 +19,6 @@ authority_order:
     scope: Individual Law identities, statements, parentage, invariant-node order and Law vocabularies.
   - id: executable_laws_and_gates
     source:
-      - MASTER/data/law_runtime.yml
       - MASTER/law/
       - MASTER/checks/
     scope: Execution metadata, detectors, gates and tests; these implement but cannot override higher sources.
