@@ -24,7 +24,17 @@ module Master
       # "retired; no executable entrypoint is registered" while the tool sat one
       # directory away — a live capability reported as gone. lora is: the tree
       # moved to STUDIO/lora/ with weights and a subject.env but no entrypoint.
-      TOOL_ENTRYPOINTS = { "replicate" => File.join("replicate", "client.rb") }.freeze
+      # The repo/ and research/ rows name tools whose canonical entrypoint is
+      # nested below their family directory; the legacy root shims are gone.
+      TOOL_ENTRYPOINTS = {
+        "replicate" => File.join("replicate", "client.rb"),
+        "runs" => File.join("repo", "runs.rb"),
+        "repo_inventory" => File.join("repo", "repo_inventory.rb"),
+        "sprawl_plan" => File.join("repo", "sprawl_plan.rb"),
+        "cognition_benchmark" => File.join("research", "cognition_benchmark.rb"),
+        "llm_challenges" => File.join("research", "llm_challenges.rb"),
+        "llm_trajectory" => File.join("research", "llm_trajectory.rb"),
+      }.freeze
       RETIRED_TOOLS = %w[lora].freeze
 
       def run(root:, tool:, arg: "", env: {})
@@ -69,6 +79,7 @@ module Master
             File.join(candidate, "MASTER", "tools", "#{name}.rb"),
             File.join(candidate, "tools", "#{name}.rb"),
             File.join(candidate, "tools", name, "#{name}.rb"),
+            File.join(candidate, "MASTER", "tools", entrypoint),
           ]
         end
         master_candidates.find { |candidate| File.file?(candidate) } || studio_candidates.first

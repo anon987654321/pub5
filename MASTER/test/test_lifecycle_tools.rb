@@ -75,6 +75,6 @@ class LifecycleToolsSpec < Minitest::Test
   # The tool is a script with top-level constants and a `$PROGRAM_NAME` guard, so
   # loading it defines them here and runs nothing.
   def load_inventory
-    load File.join(ROOT, "tools", "repo_inventory.rb")
+    load File.join(ROOT, "tools", "repo", "repo_inventory.rb")
   end
 end

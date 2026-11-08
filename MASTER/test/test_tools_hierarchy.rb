@@ -9,26 +9,9 @@ class TestToolsHierarchy < Minitest::Test
   REPO_ROOT = File.expand_path("../..", __dir__)
   MASTER_ROOT = File.join(REPO_ROOT, "MASTER")
   TOOLS_ROOT = File.join(MASTER_ROOT, "tools")
-  VOICE_TOOLS = %w[].freeze
   RESEARCH_TOOLS = %w[llm_challenges.rb llm_trajectory.rb].freeze
   REPO_TOOLS = %w[repo_inventory.rb runs.rb sprawl_plan.rb].freeze
   AUDIT_TOOLS = %w[capability_inventory.rb data_reach.rb design_baseline.rb dup_census.rb law_hygiene.rb].freeze
-
-  def test_voice_implementations_live_in_their_canonical_family
-    VOICE_TOOLS.each do |name|
-      assert File.file?(File.join(TOOLS_ROOT, "voice", name)), "missing tools/voice/#{name}"
-      assert File.file?(File.join(TOOLS_ROOT, name)), "legacy entrypoint disappeared: tools/#{name}"
-    end
-  end
-
-  def test_legacy_entrypoints_delegate_without_owning_implementation
-    VOICE_TOOLS.each do |name|
-      source = File.read(File.join(TOOLS_ROOT, name))
-      assert_includes source, "File.expand_path(\"voice/#{name}\", __dir__)"
-      assert_includes source, "load target"
-      assert_includes source, "require_relative \"voice/#{name.delete_suffix('.rb')}\""
-    end
-  end
 
   def test_master_test_discovery_is_recursive_for_both_test_naming_forms
     rake = File.read(File.join(MASTER_ROOT, "Rakefile"))
@@ -56,16 +39,7 @@ class TestToolsHierarchy < Minitest::Test
   def test_research_implementations_live_in_their_canonical_family
     RESEARCH_TOOLS.each do |name|
       assert File.file?(File.join(TOOLS_ROOT, "research", name)), "missing tools/research/#{name}"
-      assert File.file?(File.join(TOOLS_ROOT, name)), "legacy entrypoint disappeared: tools/#{name}"
-    end
-  end
-
-  def test_legacy_research_entrypoints_delegate_to_canonical_sources
-    RESEARCH_TOOLS.each do |name|
-      source = File.read(File.join(TOOLS_ROOT, name))
-      assert_includes source, "File.expand_path(\"research/#{name}\", __dir__)"
-      assert_includes source, "load target"
-      assert_includes source, "require_relative \"research/#{name.delete_suffix('.rb')}\""
+      refute File.exist?(File.join(TOOLS_ROOT, name)), "no second entrypoint: tools/#{name}"
     end
   end
 
@@ -83,16 +57,7 @@ class TestToolsHierarchy < Minitest::Test
   def test_repository_maintenance_implementations_live_in_their_canonical_family
     REPO_TOOLS.each do |name|
       assert File.file?(File.join(TOOLS_ROOT, "repo", name)), "missing tools/repo/#{name}"
-      assert File.file?(File.join(TOOLS_ROOT, name)), "legacy entrypoint disappeared: tools/#{name}"
-    end
-  end
-
-  def test_legacy_repository_entrypoints_delegate_to_canonical_sources
-    REPO_TOOLS.each do |name|
-      source = File.read(File.join(TOOLS_ROOT, name))
-      assert_includes source, "File.expand_path(\"repo/#{name}\", __dir__)"
-      assert_includes source, "load target"
-      assert_includes source, "require_relative \"repo/#{name.delete_suffix('.rb')}\""
+      refute File.exist?(File.join(TOOLS_ROOT, name)), "no second entrypoint: tools/#{name}"
     end
   end
 
@@ -148,14 +113,6 @@ class TestToolsHierarchy < Minitest::Test
     assert_includes row.fetch("purpose"), "cognition benchmarks"
     assert_equal "medium", row.fetch("risk")
     assert_includes row.fetch("check"), "test_cognition_outcome_model.rb"
-  end
-  def test_path_ownership_declares_the_voice_tools_family
-    ownership = YAML.safe_load_file(File.join(MASTER_ROOT, "PATH_OWNERSHIP.yml")).fetch("ownership")
-    row = ownership.fetch("tools/voice/")
-
-    assert_includes row.fetch("purpose"), "voice measurement"
-    assert_equal "medium", row.fetch("risk")
-    assert_includes row.fetch("check"), "rake voice_quality"
   end
 
   def test_design_baseline_implementation_lives_in_its_canonical_family

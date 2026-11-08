@@ -772,7 +772,7 @@ module Operator
     # records a fall so the ground cannot be given back. Moving a file to drop one
     # of those is a namespace judgement and not a tool's to make.
     def sprawl(scan_only:)
-      planner = [RUBY, File.join(MASTER, "tools", "sprawl_plan.rb")]
+      planner = [RUBY, File.join(MASTER, "tools", "repo", "sprawl_plan.rb")]
       planner << "--write" unless scan_only
       plan_ok, plan_body = capture(*planner)
       census = [RUBY, File.join(MASTER, "lib", "operator", "sprawl_census.rb")]
