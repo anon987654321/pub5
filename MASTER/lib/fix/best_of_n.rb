@@ -207,19 +207,19 @@ module Master
         return [] unless relative
 
         case relative
-        when %r{\ARAILS/brgen_dating/}
+        when %r{\ARAILS/brgen/engines/dating/}
           %w[dating]
-        when %r{\ARAILS/brgen_marketplace/}
-          %w[market_discovery market_checkout]
-        when %r{\ARAILS/brgen_messenger/}
-          %w[messenger]
-        when %r{\ARAILS/brgen_maps/}
-          %w[maps_events]
-        when %r{\ARAILS/brgen_takeaway/}
+        when %r{\ARAILS/brgen/engines/marketplace/engines/takeaway/}
           %w[takeaway]
-        when %r{\ARAILS/brgen_radio/}
+        when %r{\ARAILS/brgen/engines/marketplace/}
+          %w[market_discovery market_checkout]
+        when %r{\ARAILS/brgen/engines/messenger/}
+          %w[messenger]
+        when %r{\ARAILS/brgen/engines/maps/}
+          %w[maps_events]
+        when %r{\ARAILS/brgen/engines/radio/playlist/}
           %w[radio_playlist]
-        when %r{\ARAILS/brgen_tv/}
+        when %r{\ARAILS/brgen/engines/radio/tv/}
           %w[tv]
         when %r{\ARAILS/brgen/}
           brgen_surfaces(relative)

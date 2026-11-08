@@ -96,10 +96,10 @@ class BillingPlansContractTest < Minitest::Test
 
   # Paid placement is labelled on the card, before the click.
   def test_paid_presence_listings_carry_the_sponsored_label
-    partial = read("brgen_marketplace/app/views/marketplace/_top_offers.html.erb")
+    partial = read("brgen/engines/marketplace/app/views/marketplace/_top_offers.html.erb")
     assert_includes partial, %(t("marketplace.sponsored"))
     %w[en nb].each do |locale|
-      label = YAML.safe_load_file(File.join(ROOT, "brgen_marketplace/config/locales/#{locale}.yml"))
+      label = YAML.safe_load_file(File.join(ROOT, "brgen/engines/marketplace/config/locales/#{locale}.yml"))
                   .dig(locale, "marketplace", "sponsored")
       assert label.to_s.strip != "", locale
     end

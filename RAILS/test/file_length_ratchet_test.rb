@@ -26,7 +26,7 @@ class FileLengthRatchetTest < Minitest::Test
   # kind => [glob roots, limit in code lines]
   LIMITS = { "rb" => 300, "scss" => 400, "erb" => 150 }.freeze
   BRGEN_AND_APPS = %w[
-    __shared brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio amber bsdports
+    __shared brgen amber bsdports
   ].freeze
 
   # Rails writes these from the migrations; a split is undone by the next
@@ -213,7 +213,7 @@ class FileLengthRatchetTest < Minitest::Test
     "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 569,
     "brgen/app/views/conversations/show.html.erb" => 151,
     "brgen/test/helpers/application_helper_test.rb" => 322,
-    "brgen_marketplace/app/views/marketplace/listings/show.html.erb" => 187,
+    "brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb" => 187,
   }.freeze
 
 # Each app's one stylesheet, long by decision. The operator's standing rule
