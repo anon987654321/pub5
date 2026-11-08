@@ -27,7 +27,7 @@ module Master
       SPENT_RE = /quota\s+(?:reached|exceeded|exhausted|spent)|RESOURCE_EXHAUSTED|usage\s+limit|insufficient\s+(?:quota|credits?)|out\s+of\s+(?:quota|credits?)|(?:session|rate|message|weekly|daily)\s+limit|limit\s+(?:reached|exceeded)|exceeded\s+your\s+current\s+quota|payment\s+required|(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})402\b/i
       LIMIT_429_RE = /(?:\bHTTP\W{0,3}|\bstatus\W{0,3}|\bcode\W{0,3}|\berror\W{0,3})429\b|\b429\s+(?:too\s+many|rate|error)/i
       UNREACHABLE_RE = /ECONNREFUSED|connection\s+refused|(?:ollama|server|host)\s+unreachable|unreachable\s+at|Failed\s+to\s+open\s+TCP|could\s+not\s+resolve|getaddrinfo|network\s+is\s+unreachable|name\s+or\s+service\s+not\s+known/i
-      AUTH_RE = /(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})40[13]\b|PERMISSION_DENIED|unauthori[sz]ed|invalid\s+api[\s_-]?key|not\s+logged\s+in|please\s+run\s+\/login|authentication\s+(?:failed|error|required)|token\s+(?:has\s+)?expired/i
+      AUTH_RE = /(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})40[13]\b|PERMISSION_DENIED|unauthori[sz]ed|invalid\s+api[\s_-]?key|not\s+logged\s+in|user\s+not\s+found|please\s+run\s+\/login|authentication\s+(?:failed|error|required)|token\s+(?:has\s+)?expired/i
       UNITS = { "d" => 86_400, "h" => 3600, "m" => 60, "s" => 1 }.freeze
       SPAN = /\d+\s*(?:days?|hours?|hrs?|minutes?|mins?|seconds?|secs?|[dhms])(?![a-z])/i
       AFTER_RE = /(?:resets?|try\s+again|retry)\s+(?:in|after)\s+((?:#{SPAN}[\s,]*(?:and\s+)?)+)/i
