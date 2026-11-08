@@ -327,7 +327,7 @@ measure is already owned by the Bymorgen item above.
   but NOT_RUN. The current transport also caps streamed API JSON responses
   at 16 MiB, caps uploads/downloads at 4 GiB, applies explicit connect/read/
   write timeouts, preserves existing downloads on partial failure, and uses
-  monotonic prediction/training deadlines. Six additional transfer/deadline
+  monotonic prediction/training deadlines. Seven additional transfer/deadline
   regressions now cover allowlisted downloads, byte-cap failure cleanup,
   response caps, invalid deadlines and upload source validation; these are
   source additions, not executed proof. Live provider/upload integration
