@@ -7,7 +7,6 @@ module Master
     module VisualUsability
       CATALOGUE_SECTION = "law_catalogue"
       REQUIRED_MODALITIES = Master::LawVocabulary::MODALITIES
-      SUMMARY_LIMIT = 112
 
       module_function
 
@@ -46,15 +45,12 @@ module Master
 
       def summary_for(id, entry)
         law = executable_definitions[id.to_s.upcase]
-        details = law ? [law.ask, law.practice, law.fix] : []
-        summary = details.find { |value| !value.to_s.strip.empty? }.to_s
-        if summary.empty?
-          sources = Array(entry["definition_sources"])
-          summary = sources.map { |source| File.basename(source.to_s, ".rb") }.join(" / ")
-        end
-        summary = "Universal requirement; use the canonical Law definition and evidence." if summary.empty?
-        normalized = summary.gsub(/\s+/, " ").strip
-        normalized.length > SUMMARY_LIMIT ? "#{normalized[0, SUMMARY_LIMIT - 1]}..." : normalized
+        ask = law ? law.ask.to_s.strip : ""
+        fix = law ? law.fix.to_s.gsub(/\s+/, " ").strip : ""
+        prompt = ask.empty? ? (fix.empty? ? "" : "Fix: #{fix}") : "#{ask} Fix: #{fix}"
+        summary = prompt.empty? ? Array(entry["definition_sources"])
+          .map { |source| File.basename(source.to_s, ".rb") }.join(" / ") : prompt
+        summary.empty? ? "Universal requirement; use the canonical Law definition and evidence." : summary
       end
 
       def catalogue
