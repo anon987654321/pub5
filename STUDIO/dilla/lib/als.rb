@@ -172,12 +172,14 @@ module Studio
           key_node = key_track && descendants(key_track, "MidiKey").first
           pitch = numeric_attribute(node, "Pitch", "Key")
           pitch ||= numeric_value(node_value(key_node)) if key_node
+          raw_velocity = numeric_attribute(node, "Velocity")
           {
             "id" => node.attributes["NoteId"] || node.attributes["Id"],
             "pitch" => pitch&.to_i,
             "start_beats" => numeric_attribute(node, "Time", "Start") || 0.0,
             "duration_beats" => numeric_attribute(node, "Duration", "Length") || 0.0,
-            "velocity" => numeric_attribute(node, "Velocity") || 0.0,
+            "velocity" => raw_velocity ? (raw_velocity / 127.0).clamp(0.0, 1.0) : 0.0,
+            "velocity_raw" => raw_velocity,
             "release_velocity" => numeric_attribute(node, "OffVelocity", "ReleaseVelocity"),
             "enabled" => boolean_value(node.attributes["IsEnabled"] || node.attributes["Enabled"]),
             "probability" => numeric_attribute(node, "Probability"),

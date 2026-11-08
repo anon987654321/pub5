@@ -135,7 +135,8 @@ module Studio
         start_tick = [(start_beat * @ppqn).round, 0].max
         end_tick = [( (start_beat + duration_beats) * @ppqn).round, start_tick + 1].max
         pitch = note["pitch"].to_i.clamp(0, 127)
-        velocity = (note["velocity"].to_f * 127).round.clamp(1, 127)
+        source_velocity = note.key?("velocity_raw") && !note["velocity_raw"].nil? ? note["velocity_raw"].to_f : note["velocity"].to_f * 127.0
+        velocity = source_velocity.round.clamp(1, 127)
         [
           [start_tick, 1, [0x90 | channel, pitch, velocity].pack("C*")],
           [end_tick, 0, [0x80 | channel, pitch, 0].pack("C*")]
