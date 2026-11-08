@@ -34,7 +34,7 @@ module Master
       # second error on top of the first.
       # Structured reports already carry the unit that produced them. Reuse
       # that unit instead of prefixing the whole report with a second err0.
-      REPORT_UNIT = /\\A([a-z][a-z0-9_]*\\d+):\\s/
+      REPORT_UNIT = /\A([a-z][a-z0-9_]*\d+):\s/
 
       def print_error(err)
         text = err.message.to_s
@@ -43,7 +43,7 @@ module Master
         unit = text[REPORT_UNIT, 1]
         return Master::Trace::Dmesg.block("err0", text) if unit.nil? || unit == "err0"
 
-        Master::Trace::Dmesg.block(unit, text.sub(/\\A#{Regexp.escape(unit)}:\\s*/, ""))
+        Master::Trace::Dmesg.block(unit, text.sub(/\A#{Regexp.escape(unit)}:\s*/, ""))
       end
 
       def bounded_line(text)
