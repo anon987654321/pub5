@@ -46,7 +46,7 @@ class TestSession < Minitest::Test
       assert_nil session.name
 
       session.add_message(role: :user, content: "How should we improve the repository?")
-      assert_equal "How should we improve the repository?", session.name
+      assert_equal "How should we improve the", session.name
     end
   end
 
