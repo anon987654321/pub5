@@ -143,12 +143,18 @@ def remote
   return unless REMOTE
 
   key = File.join(Dir.home, ".ssh", "id_ed25519_brgen")
-  out, ok = run("ssh", "-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "dev@brgen.no", "cd /home/dev/pub5 && echo $(git rev-parse --short HEAD) $(ls -d /home/dev/.pub5-vps-deploy.lock 2>/dev/null | wc -l) $(tmux ls 2>/dev/null | wc -l)")
+  # The remote command only prints; the counting happens here in Ruby, not in
+  # a piped wc on the box (SHELL_DISCIPLINE). The trailing true keeps the ssh
+  # status clean the way the echo-wrapped version did.
+  out, ok = run("ssh", "-i", key, "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "dev@brgen.no", "cd /home/dev/pub5 && git rev-parse --short HEAD && ls -d /home/dev/.pub5-vps-deploy.lock 2>/dev/null; tmux ls 2>/dev/null; true")
   return say(:FAIL, "vm23", "ssh failed: key #{key}") unless ok
 
-  sha, lock, tmux = out.lines.last.to_s.split
+  lines = out.lines.map(&:chomp).reject(&:empty?)
+  sha = lines.shift.to_s
+  lock = lines.count { |line| line.include?(".pub5-vps-deploy.lock") }
+  tmux = lines.size - lock
   head, = run("git", "-C", ROOT, "rev-parse", "--short", "origin/main")
-  say(sha == head.strip ? :ok : :warn, "vm23", "checkout #{sha} (origin/main #{head.strip}); deploy lock #{lock.to_i.zero? ? 'free' : 'HELD'}; tmux sessions #{tmux.to_i}")
+  say(sha == head.strip ? :ok : :warn, "vm23", "checkout #{sha} (origin/main #{head.strip}); deploy lock #{lock.zero? ? 'free' : 'HELD'}; tmux sessions #{tmux}")
 end
 
 disk
