@@ -260,10 +260,19 @@ module Operator
 
     # Built the way every other caller builds it, and the way tools/example_scan.rb
     # documents: InfraHelpers, then `findings`. There is no scan_file.
+    #
+    # Only the rules this census keeps are on the scanner, not all 318 the tree
+    # builds. A deep walk of the whole corpus with every law, then filtering the
+    # rows down to the 43 shipped rules that are not already a law row, spent
+    # 247 s to report 182 findings. Built from those 43 it is 77 s, and the rows
+    # are the same 182: a rule left off the scanner can only remove rows the
+    # filter below was about to drop.
     def scan_registry
-      scanner = Master::Fix::Scanner.build(root: MASTER_DIR)
-      own = scanner.laws.select { |rule| shipped?(rule) }.map { |rule| rule.id.to_s } - law_row_ids
+      tree = Master::Review::Scan::LawTree.build(root: MASTER_DIR)
+      own = tree.select { |rule| shipped?(rule) }.map { |rule| rule.id.to_s } - law_row_ids
       @registry_rule_count = own.size
+      scanner = Master::Fix::Scanner.new
+      tree.each { |rule| scanner.add_law(rule) if own.include?(rule.id.to_s) }
       corpus = files.reject { |path| Master::Fix::Scanner.skip_path?(path, root: ROOT) }
       scanner.findings(corpus, depth: :deep).filter_map do |hit|
         next unless hit[:severity].to_s == "error" && own.include?(hit[:law].to_s)
