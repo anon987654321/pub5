@@ -97,7 +97,7 @@ module Master
             speech = Master::Voice::Speech
             [
               "CLI speech enabled=#{playback.enabled?}",
-              "audio output available=#{playback.available?}",
+              "audio player available=#{playback.available?}",
               "neural speech ready=#{speech.edge_tts_ready?}",
             ]
           rescue StandardError => e
