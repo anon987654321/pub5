@@ -121,7 +121,7 @@ if [ "$runtime" = proot ]; then
   fi
 
   printf 'mobile0: provisioning the Debian guest and building the pinned Ruby\n'
-  proot-distro login debian --bind "$dir:/pub5" -- bash -s <<'PRootSetup'
+  proot-distro login --bind "$dir:/pub5" debian -- bash -s <<'PRootSetup'
 set -eu
 
 apt-get update
@@ -178,7 +178,7 @@ printf 'mobile0: Debian guest setup and CLI boot PASS; Android device capabiliti
 PRootSetup
 
   printf '%s\n' 'mobile0: Debian guest is ready. From Termux, enter it with:'
-  printf '%s\n' '  proot-distro login debian --bind "$HOME/pub5:/pub5" -- bash -lc '\''ruby_version="$(cat /pub5/.ruby-version)"; export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"; cd /pub5/MASTER; exec bin/master'\'''
+  printf '%s\n' '  proot-distro login --bind "$HOME/pub5:/pub5" debian -- bash -lc '\''ruby_version="$(cat /pub5/.ruby-version)"; export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"; cd /pub5/MASTER; exec bin/master'\'''
 else
   cd "$dir/MASTER"
   printf 'mobile0: installing the locked MASTER Ruby bundle\n'
