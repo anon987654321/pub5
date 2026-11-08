@@ -2,6 +2,7 @@
 
 require_relative "../test_helper"
 require "stringio"
+require "yaml"
 require "rbconfig"
 
 # Enrich adds paralinguistic tags, Playback speaks a reply at a terminal and
@@ -524,6 +525,28 @@ class TestVoiceSupport < Minitest::Test
     assert_equal Encoding::BINARY, observed_encoding
     assert outcome.ok
   end  
+  def test_canonical_music_vocabulary_contains_researched_dilla_grammars_and_voicings
+    path = File.expand_path("../../data/music_theory_chords.yml", __dir__)
+    catalogue = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+    progressions = catalogue.fetch("progressions")
+    voicings = catalogue.fetch("voicings")
+
+    expected = {
+      "j5_donut_loop" => %w[IVmaj7 iii7 vi7 ii7],
+      "relative_answer" => %w[Imaj7 vi7 IVmaj7 ii7],
+      "dorian_four" => %w[i9 IV9],
+      "flexible_sixth" => %w[i9 vm11 Vmaj9],
+      "mediant_lift" => %w[Imaj7 iii7 IIImaj7],
+    }
+    expected.each do |name, progression|
+      assert_equal progression, progressions.fetch(name), "wrong movement grammar: #{name}"
+    end
+
+    %w[so_what_quartal rootless_ninth add2_cluster pedal_planing flexible_sixth voice_leading].each do |name|
+      assert voicings.fetch(name).to_s.length >= 24, "missing useful voicing guidance: #{name}"
+    end
+  end
+
   def test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator
     producer = Master::Voice::ProductionDna.producer(:j_dilla)
     timing = producer.fetch(:timing)
