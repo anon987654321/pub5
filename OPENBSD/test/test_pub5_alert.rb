@@ -41,6 +41,7 @@ class TestPub5Alert < Minitest::Test
     fake(dir, "df", %(echo "Filesystem 512-blocks Used Available Capacity Mounted on"; echo "/dev/sd0k 100 76 24 76% /home"))
     fake(dir, "swapctl", %(echo "total: 2588672 512-blocks allocated, 1000000 used, 1588672 available"))
     fake(dir, "rcctl", "exit 0")
+    fake(dir, "sysctl", %(echo "0.50 0.40 0.30"))
     File.write(File.join(dir, "marker"), Time.now.to_i.to_s)
   end
 
@@ -120,6 +121,45 @@ class TestPub5Alert < Minitest::Test
       File.write(File.join(dir, "marker"), (Time.now.to_i - 4 * 86_400).to_s)
       run_alert(dir, "watch")
       assert_match(/backup-stale the newest dr-pull reported 96 hours ago/, log(dir))
+    end
+  end
+
+  def test_watch_flags_sustained_load_after_enough_consecutive_ticks
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake(dir, "sysctl", %(echo "2.50 2.70 3.10"))
+
+      7.times { run_alert(dir, "watch") }
+      assert_equal "", log(dir), "under the strike count nothing records"
+
+      run_alert(dir, "watch")
+      assert_includes log(dir), "load-sustained 1-minute load 2.50 for 8 recorded ticks (limit 2.0)"
+      assert_includes log(dir), "for hours with nothing shedding"
+
+      # The raise resets the strike count, so a continued breach re-fires after
+      # two more hours of ticks, and the quiet window folds those to one line.
+      run_alert(dir, "watch")
+      run_alert(dir, "watch")
+      assert_equal log(dir).lines.size, 1, log(dir)
+    end
+  end
+
+  def test_watch_load_counts_a_partial_minute_load_and_resets_when_it_falls
+    Dir.mktmpdir do |dir|
+      quiet_box(dir)
+      fake(dir, "sysctl", %(echo "1.2 3.4 5.6"))
+      run_alert(dir, "watch")
+      # 1.2 -> 120/100: the two-decimal floor of a one-decimal reading must not
+      # inflate past the limit, and a single tick over must not raise alone.
+      fake(dir, "sysctl", %(echo "2.05 0.0 0.0"))
+      run_alert(dir, "watch")
+      assert_equal "", log(dir)
+      # One quiet tick wipes the streak.
+      fake(dir, "sysctl", %(echo "0.30 0.40 0.50"))
+      run_alert(dir, "watch")
+      fake(dir, "sysctl", %(echo "2.99 0.0 0.0"))
+      7.times { run_alert(dir, "watch") }
+      assert_equal "", log(dir), log(dir)
     end
   end
 

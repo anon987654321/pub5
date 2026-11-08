@@ -2,7 +2,7 @@
 # pub5-alert - the one place a recurring symptom becomes a durable, actionable line.
 #
 #   pub5-alert raise KEY MESSAGE...   record an alert, once per quiet window per KEY
-#   pub5-alert watch                  disk, swap, failed services, stale backup
+#   pub5-alert watch                  disk, swap, sustained load, failed services, stale backup
 #   pub5-alert show [N]               the last N alerts (default 20)
 #
 # Why it exists. relayd-watchdog restarts relayd, resource_guard sheds apps and
@@ -17,9 +17,9 @@
 # each line still says what to do. The record is /var/log/pub5-alerts.log
 # (rotated by newsyslog) plus one daemon.crit syslog line.
 #
-# watch is bounded: it runs four reads (df, swapctl, rcctl, one marker file) and
-# changes nothing. Run it from root's crontab.
-# PUB5_ALERT_PATH_PREFIX lets the test put fake df, swapctl and rcctl first.
+# watch is bounded: it runs five reads (df, swapctl, sysctl, rcctl, one marker
+# file) and changes nothing. Run it from root's crontab.
+# PUB5_ALERT_PATH_PREFIX lets the test put fake df, swapctl, sysctl and rcctl first.
 PATH=${PUB5_ALERT_PATH_PREFIX:+$PUB5_ALERT_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 
 LOG=${PUB5_ALERT_LOG:-/var/log/pub5-alerts.log}
@@ -32,6 +32,16 @@ BACKUP_MAX_AGE=${PUB5_ALERT_BACKUP_MAX_AGE:-172800}
 # brgen_jobs is failed by design: no resident Solid Queue worker fits in 1 GB, and
 # drain-jobs.sh runs the queue from cron (etc/crontab.vm23 says so).
 ALLOW_FAILED=${PUB5_ALERT_ALLOW_FAILED:-brgen_jobs}
+# The one symptom nothing else owned, measured from Mischa's letter 2026-11-08:
+# vm23 sat above 80% CPU for six hours with healthy swap, disk and services, so
+# every other watch was silent and the host provider had to be the one to tell
+# us. resource_guard.sh sheds on memory and crit load but its own history log is
+# a log nobody reads, so sustained saturation gets the raise treatment here.
+# Load is stored x100 to stay in ksh integer arithmetic. Eight 15-minute
+# ticks is two hours of sustained breach; a deploy's minutes-long preflight
+# storm never reaches it, which is the point.
+LOAD_MAX=${PUB5_ALERT_LOAD_MAX:-200}
+LOAD_STRIKES=${PUB5_ALERT_LOAD_STRIKES:-8}
 
 now() { date +%s; }
 
@@ -107,6 +117,38 @@ watch_swap() {
   fi
 }
 
+watch_load() {
+  avg=$(sysctl -n vm.loadavg 2>/dev/null) || return 0
+  set -- $avg
+  a=$1
+  case $a in
+  *.*) ip=${a%%.*} fp=${a#*.} ;;
+  *[!0-9]*|'') return 0 ;;
+  *) ip=$a fp=0 ;;
+  esac
+  case $ip$fp in *[!0-9]*|'') return 0 ;; esac
+  while (( ${#fp} > 2 )); do fp=${fp%?}; done
+  case $fp in '') fp=0 ;; ?) fp=${fp}0 ;; esac
+  load1=$(( ip * 100 + fp ))
+  sf=$STATE/load.strikes
+  strikes=0
+  [[ -f $sf ]] && read strikes < "$sf"
+  case $strikes in *[!0-9]*|'') strikes=0 ;; esac
+  if (( load1 >= LOAD_MAX )); then
+    strikes=$(( strikes + 1 ))
+    mkdir -p "$STATE" 2>/dev/null
+    if (( strikes >= LOAD_STRIKES )); then
+      offender=$(ps -axr -o pcpu,time,args 2>/dev/null | head -2 | tail -1)
+      raise load-sustained "1-minute load ${ip}.${fp} for ${strikes} recorded ticks (limit $(( LOAD_MAX / 100 )).$(( LOAD_MAX % 100 ))) - the box has been saturated for hours with nothing shedding; top cpu: ${offender:-unknown}; history: /var/log/resource_guard_history.log; zombies: ps -axr -o pcpu,time,state,args"
+      strikes=0
+    fi
+    print -r -- "$strikes" > "$sf"
+  elif [[ -f $sf ]]; then
+    print -r -- 0 > "$sf"
+  fi
+  return 0
+}
+
 watch_services() {
   rcctl ls failed 2>/dev/null | while read -r svc; do
     [[ -n $svc ]] || continue
@@ -138,6 +180,7 @@ raise)
 watch)
   watch_disk
   watch_swap
+  watch_load
   watch_services
   watch_backup
   ;;
