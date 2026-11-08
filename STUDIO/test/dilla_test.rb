@@ -395,7 +395,8 @@ class TestDillaReferenceProfile < Minitest::Test
       assert_equal %w[hat kick snare], features.fetch("drum_grid").keys.sort
       assert features.fetch("bpm_confidence").between?(0.0, 1.0)
     end
-  endend
+  end
+end
 
 class TestDillaIndustrialTechno < Minitest::Test
   def test_renders_a_four_on_the_floor_take
