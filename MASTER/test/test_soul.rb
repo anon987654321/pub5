@@ -187,6 +187,7 @@ class TestSoul < Minitest::Test
     assert_includes section, "Voice runtime:"
     assert_includes section, "audio output="
     assert_includes section, "not a guarantee every provider/request receives every tool"
+    assert_includes section, "Read-only model-selector output and governed shell stdout recorded in execution history"
   end
 
 end
