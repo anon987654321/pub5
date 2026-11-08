@@ -45,13 +45,13 @@ content, affordance.
 | mrdamascy | 4.5 | 4 | 4.5 | 4.5 |
 | master | 4.5 | 4.5 | 4 | 4 |
 | brgen (feed) | 4 | 3.5 | 3.5 | 3.5 |
-| brgen_marketplace | 4 | 3.5 | 4 | 3.5 |
-| brgen_messenger | 4 | 3.5 | 3.5 | 3.5 |
-| brgen_radio (tv) | 3.5 | 3 | 3.5 | 3 |
-| brgen_radio (radio) | 3.5 | 2.5 | 3.5 | 2.5 |
+| marketplace | 4 | 3.5 | 4 | 3.5 |
+| messenger | 4 | 3.5 | 3.5 | 3.5 |
+| tv | 3.5 | 3 | 3.5 | 3 |
+| playlist | 3.5 | 2.5 | 3.5 | 2.5 |
 | amber | 3 | 2.5 | 3 | 2.5 |
-| brgen_dating | 3 | 2.5 | 3 | 2.5 |
-| brgen_maps | 3 | 2 | 3 | 2 |
+| dating | 3 | 2.5 | 3 | 2.5 |
+| maps | 3 | 2 | 3 | 2 |
 
 ### bsdports — 4.5/5, the dialect's best student
 
@@ -107,7 +107,7 @@ icon-only taps with no words, against "words before icons" and the 44px floor; a
 "Logg inn" nav pill carries a trailing arrow glyph, the exact shape `NO_TRAILING_ARROW`
 forbids on a control whose styling already says "followable".
 
-### brgen_marketplace — 3.5/5, strong hero, borrowed blues
+### marketplace — 3.5/5, strong hero, borrowed blues
 
 The promoted hero has the best pure hierarchy in the family: category label, two-line
 display heading, two-sentence promise in a held measure, price, one action. Deductions: the
@@ -117,7 +117,7 @@ set in red, which collides with the shared `color_danger` and has no state to ex
 and the utility strip on top ("Fri levering fra 20", "Rask levering…", "Fri retur") sits as
 three floating fragments whose separation is spacing alone.
 
-### brgen_messenger — 3.5/5, exemplary empty state
+### messenger — 3.5/5, exemplary empty state
 
 "Ingen samtaler ennå" plus "Send en melding for å starte." plus one action is the textbook
 empty state the law asks for, and the page stays quiet around it. Deductions: the left rail
@@ -125,7 +125,7 @@ renders a stack of bare "#" glyphs where channels should be — unfinished chrom
 otherwise finished surface; the page title sits inside a grey slab that reads as a selected
 row rather than a header; and the helper line repeats "Logg inn" twice in one sentence.
 
-### brgen_radio (TV) — 3/5, off-dialect accent
+### tv — 3/5, off-dialect accent
 
 Structure and copy are right (one heading, one promise, "Populære videoer" with duration
 badges), but the active "Strøm" toggle is painted in the danger red (sampled #DC635C against
@@ -133,7 +133,7 @@ the shared `color_danger` #d1594a) — the selected state of a benign toggle wea
 the house reserves for failure. The sibling "Kanaler" pill is white-on-hairline, so the
 pair also breaks the "same interaction vocabulary" affordance rule.
 
-### brgen_radio (radio) — 2.5/5, the capture hides the product
+### playlist — 2.5/5, the capture hides the product
 
 Typography and nav are family-correct ("Lyd fra Bergen" label, "Hør hva byen lager" display
 line, "Bla i spor" with no trailing arrow), but "Utvalgt spor" — the page's whole reason —
@@ -155,7 +155,7 @@ whole — an intrinsic-sizing failure on the card's text zone. Vertical gaps bet
 read as arbitrary against the 8px rhythm. The footer directory, by contrast, is disciplined
 and almost law-clean.
 
-### brgen_dating — 2.5/5, the lorem is the story
+### dating — 2.5/5, the lorem is the story
 
 The shell is right and the pills are honest about their verbs ("Angre", "Matcher",
 "Kryssede spor", "Opprett profil"), but the discovery cards under the fold render Latin
@@ -166,7 +166,7 @@ highest-priority content defect in the set. The pills also look vertically clipp
 the 44px touch floor at capture scale — INCONCLUSIVE without a measurement. The nav flips to
 a light chrome here while the brgen apex renders dark (see cross-cutting note below).
 
-### brgen_maps — 2/5, data leaking through the paint
+### maps — 2/5, data leaking through the paint
 
 Every row of the near-search list carries the raw label "place" above the venue name — the
 seed vocabulary rendered to Norwegian users, `DENSITY` and the content rubric's "real

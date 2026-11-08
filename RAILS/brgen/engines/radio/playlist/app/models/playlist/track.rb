@@ -4,7 +4,7 @@ require "cgi"
 require "uri"
 
 class Playlist::Track < ApplicationRecord
-  # Engine-ize Shared via pub4-shared
+  # Engine-ize Shared via pub5-shared
   include Shared::MediaProcessable
   tracks_activity created: "PlaylistTrackCreated", source_vertical: "playlist"
   include Shared::Reactable

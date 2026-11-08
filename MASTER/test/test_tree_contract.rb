@@ -41,7 +41,9 @@ class TreeContractTest < Minitest::Test
     STUDIO/replicate
   ].freeze
 
-  # Each vertical's engine root, relative to RAILS/.
+  # Each vertical's engine root, relative to RAILS/. The engines live inside
+  # the brgen host tree: radio holds tv and playlist one level down, and
+  # takeaway nests inside marketplace.
   BRGEN_ENGINES = {
     "marketplace" => "brgen/engines/marketplace",
     "playlist" => "brgen/engines/radio/playlist",

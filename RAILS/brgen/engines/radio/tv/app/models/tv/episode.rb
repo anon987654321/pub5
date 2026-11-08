@@ -2,7 +2,7 @@
 
 module Tv
   class Episode < ApplicationRecord
-    # Engine-ize Shared via pub4-shared
+    # Engine-ize Shared via pub5-shared
     tracks_activity created: "TvEpisodeCreated", updated: "TvEpisodeUpdated", source_vertical: "tv", actor: :channel_owner
     include Shared::Reactable
     include Shared::Notifiable

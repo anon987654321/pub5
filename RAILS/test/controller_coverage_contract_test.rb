@@ -199,7 +199,7 @@ class ControllerCoverageContractTest < Minitest::Test
     docs = {
       "brgen/README.md" => File.read(File.join(ROOT, "brgen", "README.md")),
       "brgen/engines/marketplace/README.md" =>
-        File.read(File.join(ROOT, "brgen_marketplace", "README.md")),
+        File.read(File.join(ROOT, "brgen", "engines", "marketplace", "README.md")),
     }
 
     return if host_has_listings # the claim would be true; nothing to police

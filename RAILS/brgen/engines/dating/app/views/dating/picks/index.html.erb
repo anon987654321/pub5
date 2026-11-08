@@ -24,7 +24,7 @@
         </p>
         <p class="pick-meta"><%= [ profile.age, profile.bydel.presence || profile.location ].compact.join(" · ") %></p>
         <%= button_to t("dating.like"), likes_path(user_id: profile.user_id), method: :post,
-              class: "button button-small" %>
+              class: "button" %>
       </li>
     <% end %>
   </ul>

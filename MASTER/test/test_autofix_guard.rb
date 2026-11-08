@@ -69,7 +69,7 @@ class TestAutofixGuard < Minitest::Test
       FileUtils.mkdir_p(File.join(master, "data"))
       File.write(File.join(master, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/\n")
 
-      assert_nil Guard.protected_reason(File.join(repo, "RAILS", "brgen_dating", "app", "controllers", "dating", "base_controller.rb"), root: master)
+      assert_nil Guard.protected_reason(File.join(repo, "RAILS", "brgen", "engines", "dating", "app", "controllers", "dating", "base_controller.rb"), root: master)
       refute_nil Guard.protected_reason(File.join(master, "data", "laws.yml"), root: master)
     end
   end

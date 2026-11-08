@@ -56,7 +56,7 @@ market-wide logistics exchange are separate work until implemented and tested.
 
 ## Architecture
 
-Takeaway is nested inside `brgen_marketplace` and mounted by the Brgen host. Its models use the
+Takeaway is nested inside the marketplace engine and mounted by the Brgen host. Its models use the
 `Takeaway::` namespace and `takeaway_` table prefix. Migrations are maintained in
 `RAILS/brgen/db/migrate`, not in a second independent database.
 

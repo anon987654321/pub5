@@ -1325,7 +1325,7 @@ end
 
 def test_a_named_stage_list_without_source_leaves_rails_with_no_proof_runner
   pass = Master::CLI::Pipeline::Pass.allocate
-  rails = File.join(Master::RAILS_ROOT, "brgen_dating")
+  rails = File.join(Master::RAILS_ROOT, "brgen", "engines", "dating")
   previous = ENV.delete("MASTER_FIX_CHECK_STAGES")
 
   assert_equal "rails checks", pass.proof_runner(rails).first

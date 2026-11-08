@@ -22,10 +22,10 @@ law-adherence audit does.
 | Surface | Competitor yardstick | Holds against it | Falls short of it | Verdict |
 |---|---|---|---|---|
 | brgen feed | reddit, X | Local identity neither has; calmer paint than both | Comment depth, mod tools (reddit), media density (X) | 3.5/5 |
-| brgen_marketplace | bol.com, kaufland.de | Local-only selling, honest utility copy | PDP depth, trust machinery, cart maturity | 3/5 |
-| brgen_dating | tinder, happn | "Krysset spor" is happn's concept, local; profile prompts | Re-seeded decks, photo polish, map view | 2.5/5 |
+| marketplace | bol.com, kaufland.de | Local-only selling, honest utility copy | PDP depth, trust machinery, cart maturity | 3/5 |
+| dating | tinder, happn | "Krysset spor" is happn's concept, local; profile prompts | Re-seeded decks, photo polish, map view | 2.5/5 |
 | mrdamascy (takeaway) | doordash, foodora | Best state coverage in the family; Vipps + bokmål fit | Tracking map, group ordering, menu breadth | 4/5 |
-| brgen_messenger | Messenger, irssi, discord | Ambient geo rooms neither has; honest empty state | Bare "#" rail, reactions, requests flow | 3/5 |
+| messenger | Messenger, irssi, discord | Ambient geo rooms neither has; honest empty state | Bare "#" rail, reactions, requests flow | 3/5 |
 | amber | (no named competitor) | - | Login wall vs brgen parity - fixed this pass | 2.5/5 |
 
 ## brgen feed vs reddit and X
@@ -53,7 +53,7 @@ ship, and the seven icon-only taps of the mobile bottom bar sit below
 tinder-class labelling discipline. The "Logg inn" pill's trailing arrow is the
 same defect the audit named.
 
-## brgen_marketplace vs bol.com and kaufland.de
+## marketplace vs bol.com and kaufland.de
 
 bol.com is the Dutch benchmark for system-driven retail: a design system
 carried across web and app, a product detail page the company calls its
@@ -78,7 +78,7 @@ decision with a system behind it, here it is an unexplained state. The cart
 exists ("Kurv 0") but the capture cannot show checkout maturity -
 INCONCLUSIVE, and the next capture pass should walk a full order.
 
-## brgen_dating vs tinder and happn
+## dating vs tinder and happn
 
 Happn's whole concept is the crossed path: profiles of people you actually
 passed within a few kilometres, a secret like, a mutual crush, a conversation
@@ -123,7 +123,7 @@ harder against professionals: dot-separated meta strings
 tokenised order lines, and "Drikkegis" is not bokmål ("drikkepenger") - a
 menu word a competitor's copyeditor would catch.
 
-## brgen_messenger vs Messenger, irssi and discord
+## messenger vs Messenger, irssi and discord
 
 Three yardsticks, three eras of the same idea: Messenger is the private
 thread list with receipts and reactions; discord is channels plus roles plus

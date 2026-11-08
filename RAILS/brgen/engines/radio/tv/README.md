@@ -35,6 +35,6 @@ A new city starts with no television, so the engine ships a content pipeline. Th
 `TV_TEST_CARDS=1` it draws honest test cards with ffmpeg instead. The task `tv:ingest` reads a
 manifest into a channel with published videos. It matches channels by slug, so it can run again.
 
-The engine depends on `pub4-shared` for `User`, authentication, tenancy and the design system.
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the design system.
 Its models include the shared concerns for media processing, notifications, reactions and
 slugs.

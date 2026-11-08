@@ -28,7 +28,8 @@ class MethodLengthRatchetTest < Minitest::Test
   LIMIT = 30
 
   # The checks and tools left RAILS for MASTER, where SMALL_FUNCTIONS and its own ratchet govern them.
-  BRGEN_TREES = %w[brgen brgen_dating brgen_maps brgen_marketplace brgen_messenger brgen_radio].freeze
+  # The engines ride inside brgen at brgen/engines, so one root walks them all.
+  BRGEN_TREES = %w[brgen].freeze
   ROOTS = (%w[__shared amber bsdports test lib] + BRGEN_TREES).freeze
 
   AREAS = {

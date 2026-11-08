@@ -5,6 +5,9 @@
 <%= render "playlist/playlists/player", playlist: @playlist, tracks: @tracks, color: params[:color], comments: @comments, track_comments: @track_comments %>
 
 <p><%= t("playlist.set_stats", plays: @playlist.plays_count.to_i, tracks: @tracks.size, comments: @comments.size) %></p>
+<% if authenticated? && Current.user == @playlist.user && @playlist.public_access? && @playlist.plays_count.to_i >= 100 %>
+  <%= button_to t("growth.referral_share"), referral_splinters_path, params: { vertical: "playlist" }, method: :post, class: "button button-ghost button-small" %>
+<% end %>
 
 <% if authenticated? && Current.user == @playlist.user && @playlist.public_access? && @playlist.plays_count.to_i >= 100 %>
   <%= button_to t("growth.referral_share"), referral_splinters_path, params: { vertical: "playlist" }, method: :post, class: "button button-ghost button-small" %>

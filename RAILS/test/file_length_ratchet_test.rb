@@ -25,6 +25,7 @@ class FileLengthRatchetTest < Minitest::Test
 
   # kind => [glob roots, limit in code lines]
   LIMITS = { "rb" => 300, "scss" => 400, "erb" => 150 }.freeze
+  # The engines ride inside brgen at brgen/engines, so one root walks them all.
   BRGEN_AND_APPS = %w[
     __shared brgen amber bsdports
   ].freeze
@@ -301,12 +302,13 @@ COMMENT_STARTS = ["#", "//", "/*", "*", "<%#"].freeze
 
   def candidates
     @candidates ||= begin
-      # The checks and tools moved to MASTER, whose own ratchet governs them; the verticals are sibling gems.
+      # The checks and tools moved to MASTER, whose own ratchet governs them; the
+      # vertical engines ride inside brgen at brgen/engines.
       apps = BRGEN_AND_APPS + %w[test lib]
       rb = apps.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.rb")) }
       styled = BRGEN_AND_APPS
       scss = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/*.scss")) }
-      erb = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "{app,*/app,engines/*/app}/views/**/*.erb")) }
+      erb = styled.flat_map { |a| Dir.glob(File.join(ROOT, a, "**/app/views/**/*.erb")) }
       { "rb" => rb, "scss" => scss, "erb" => erb }.transform_values do |paths|
         paths.reject { |p| p.match?(%r{/(vendor|node_modules|public)/|/db/migrate/}) || p.match?(GENERATED) }
              .uniq.sort
@@ -327,7 +329,7 @@ COMMENT_STARTS = ["#", "//", "/*", "*", "<%#"].freeze
 
   def test_the_scan_reaches_the_tree_it_claims_to
     assert candidates.values.all? { |paths| paths.size.positive? }, "a glob returned nothing"
-    assert candidates["erb"].any? { |p| p.include?("/brgen_") },
+    assert candidates["erb"].any? { |p| p.include?("brgen/engines/") },
            "engine views are missing, the blind spot that hid 57 of them"
   end
 

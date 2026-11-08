@@ -57,7 +57,7 @@ export default class extends Controller {
   // Successful chat send counts as install-value (channel, DM, dock).
   markValue(event) {
     if (event?.detail?.success === false) return
-    window.dispatchEvent(new CustomEvent("pub4:install-value"))
+    window.dispatchEvent(new CustomEvent("pub5:install-value"))
   }
 
   #syncSubmit() {

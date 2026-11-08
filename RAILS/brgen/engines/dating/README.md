@@ -53,6 +53,6 @@ indicators and automatic facial verification are not current implementation fact
 remain two-sided and respectful: location is a discovery filter, not a public exact-location
 disclosure, and a verification badge means a human-reviewed request was approved.
 
-The engine depends on `pub4-shared` for `User`, authentication, tenancy and the design system,
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the design system,
 and its boot shape comes from `Shared::VerticalEngine`. Its strings live in the engine's own
 Norwegian and English locale files, and Norwegian is the default.

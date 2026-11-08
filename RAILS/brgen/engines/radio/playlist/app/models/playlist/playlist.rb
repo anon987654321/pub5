@@ -5,7 +5,7 @@ class Playlist::Playlist < ApplicationRecord
   include Shared::Sluggable # /playlists/<name-slug>; from :name, unique per city
   sluggable_from :name
 
-  # Engine-ize Shared via pub4-shared
+  # Engine-ize Shared via pub5-shared
   tracks_activity created: "PlaylistCreated", source_vertical: "playlist", actor: :user
   include Shared::Reactable
   include Shared::Notifiable

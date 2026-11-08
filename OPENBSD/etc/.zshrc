@@ -26,7 +26,7 @@ export MASTER_AESTHETIC="${MASTER_AESTHETIC:-wscons}"
 export MASTER_BRUTALIST=1
 export MASTER_STARSHIP=0
 
-typeset -g PUB5_ROOT="${HOME}/pub4"
+typeset -g PUB5_ROOT="${HOME}/pub5"
 source "${PUB5_ROOT}/OPENBSD/lib/zshrc.shared"
 
 # Non-interactive shells (SSH `cmd`, scp): env only, no auto-launch.

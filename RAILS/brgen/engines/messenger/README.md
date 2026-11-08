@@ -70,7 +70,7 @@ engine.
 controllers on the asset path. The actual routes are host-drawn under the Messenger subdomain
 constraint. Use the host's route helpers and preserve the existing city/tenant scope.
 
-The engine depends on `pub4-shared` for identity, authentication, tenancy, media processing and
+The engine depends on `pub5-shared` for identity, authentication, tenancy, media processing and
 shared UI. Read the host's agent notes before changing routes, models or shared concerns.
 
 ## Development

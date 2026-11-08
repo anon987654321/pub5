@@ -21,7 +21,7 @@ esac
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
 app_dir=/home/${app}/app
-# The Gemfiles name path gems relative to the app dir (../__shared, ../engines/*),
+# The Gemfiles name path gems relative to the app dir (../__shared, engines/*),
 # so the copy-tree keeps them as siblings of app/, the layout RAILS/_deploy.sh builds.
 [[ -d $app_dir ]] || { print -u2 "missing $app_dir"; exit 1 }
 [[ -x /usr/local/sbin/pub4-admin ]] || { print -u2 "vps_ci: pub4-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }

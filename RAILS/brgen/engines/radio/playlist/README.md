@@ -36,7 +36,7 @@ set adds a like and a `listening_party` with its party messages, and `hosted_tra
 `listens` round out upload and playback. From the host, reach the helpers as
 `playlist.playlist_url(…, subdomain: "radio")`.
 
-The engine depends on `pub4-shared` for `User`, authentication, tenancy and the shared UI. On
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the shared UI. On
 screen it uses an immersive stage with a transport bar, and it publishes the bar's height so
 floating widgets clear it. Its stylesheet rules live in brgen's single `application.scss`,
 scoped under `body.vertical-playlist`.

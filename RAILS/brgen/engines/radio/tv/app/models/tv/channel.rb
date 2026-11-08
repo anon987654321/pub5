@@ -3,7 +3,7 @@
 class Tv::Channel < ApplicationRecord
   include CityTenantable
 
-  # Engine-ized Shared via pub4-shared
+  # Engine-ized Shared via pub5-shared
   include Shared::Notifiable
   tracks_activity created: "TvChannelCreated", updated: "TvChannelUpdated", source_vertical: "tv", actor: :user
   include Shared::MediaProcessable

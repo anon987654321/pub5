@@ -11,7 +11,7 @@ module Deploy
     ROOT = File.expand_path("../../../..", __dir__)
     RAILS = File.join(ROOT, "RAILS")
 
-    # Marketplace's controllers, views and routes live in the brgen_marketplace
+    # Marketplace's controllers, views and routes live in the marketplace engine
     # engine, a sibling of brgen, and the payment *services* stayed in the host.
     # This check kept the pre-split paths, so it failed on "missing" files that had
     # only moved — and would have gone on failing identically had the checkout

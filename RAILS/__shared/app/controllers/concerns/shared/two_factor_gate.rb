@@ -5,7 +5,7 @@ module Shared
   #
   # TwoFactorSetupsController has always let a member turn TOTP on, and
   # TwoFactorAuth#require_two_factor! has always guarded the one action that
-  # asked for it (brgen_marketplace listings) — but nothing challenged the
+  # asked for it (marketplace-engine listings) — but nothing challenged the
   # second factor when the session itself was created. A member who "enabled
   # 2FA" was protected by their password alone, which the setup page never
   # told them.
