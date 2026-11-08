@@ -22,15 +22,16 @@ module Master
       end
 
       def brief
+        producer = profile
         timing = swing
         <<~TEXT.strip
-        Dilla mode: #{profile.fetch(:philosophy)}.
-        Timing: #{timing.fetch(:ppqn)} PPQN, #{timing.fetch(:swing_percent)}% swing pocket, #{timing.fetch(:bpm)} BPM.
-        Nudge: hats #{timing.dig(:nudge, :hihats)}, snares #{timing.dig(:nudge, :snares)}, kicks #{timing.dig(:nudge, :kicks)}.
-        Lo-fi chain: use Sonitex preset #{sonitex_preset}; low-pass samples, keep drums human, add sub support near 40Hz.
-      TEXT
+          Dilla mode: #{producer.fetch(:philosophy)}.
+          Timing defaults: #{timing.fetch(:ppqn)} PPQN, #{timing.fetch(:swing_percent)}% swing pocket, #{timing.fetch(:bpm)} BPM.
+          Configured nudge: hats #{timing.dig(:nudge, :hihats)}, snares #{timing.dig(:nudge, :snares)}, kicks #{timing.dig(:nudge, :kicks)}.
+          #{ProductionDna.dilla_research_brief.lines.map { |line| "  #{line}" }.join}
+          Lo-fi chain: use Sonitex preset #{sonitex_preset}; low-pass samples, keep drums human, add sub support near 40Hz.
+        TEXT
       end
-
       def council_brief
         brief
       rescue StandardError => e
