@@ -7,7 +7,7 @@ require "time"
 module Master
   module CLI
     # The first line an interactive session prints, before the boot that takes most of twenty seconds: the time,
-    # how long since the last session and what it was about, and how many commits landed since. It reads the
+    # how long since the last session, and how many commits landed since. It reads the
     # stored session and git, so it is never the same sentence twice; the canned "hello — goal?" it replaces
     # said the same thing to everyone. Standard library only, because it runs before the bundle is activated.
     # Session#greet_from_model then has the model greet in its own words once the runtime is up.
