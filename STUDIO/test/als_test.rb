@@ -193,8 +193,12 @@ class TestAbletonArchiveInventory < Minitest::Test
       File.binwrite(File.join(nested, "two.als"), File.binread(source))
       File.write(File.join(directory, "broken.als"), "not xml")
 
-      inventory = Studio::ALS::Inventory.new.scan(directory)
+      inventory = Studio::ALS::Inventory.new.scan(directory, export_all: true)
       assert_equal 2, inventory.fetch("set_count")
+      assert File.file?(File.join(directory, "one.json"))
+      assert File.file?(File.join(directory, "one.rb"))
+      assert File.file?(File.join(nested, "two.json"))
+      assert File.file?(File.join(nested, "two.rb"))
       assert_equal 1, inventory.fetch("failure_count")
       assert_equal ["Band/Album/two.als", "one.als"], inventory.fetch("sets").map { |set| set.fetch("path") }.sort
       assert_equal 2, inventory.fetch("sets").first.fetch("midi_track_count")

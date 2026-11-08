@@ -117,7 +117,7 @@ rclone copy "gdrive:Ableton Projects" "$HOME/Ableton-Archive" --progress
 Inspect and export a set (the parser also accepts extracted, plain XML):
 
 ```sh
-ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive" --inventory "$HOME/Ableton-Archive/Ableton-Inventory.json"
+ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive" --inventory "$HOME/Ableton-Archive/Ableton-Inventory.json" --export-all
 ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive/My Set/My Set.als"
 ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
 ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" \\
@@ -126,7 +126,9 @@ ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" \\
 
 The directory form scans every `.als` recursively and writes an inventory with
 tempo, time signature, track/clip/note counts, audio references and per-file
-errors; one damaged set does not stop the scan. The single-file form writes a
+errors; one damaged set does not stop the scan. Add `--export-all` to also
+write a JSON composition archive and standalone Ruby archive beside every
+valid `.als`, preserving the source directory structure. The single-file form writes a
 versioned JSON composition archive and a standalone Ruby DSL archive beside
 the source by default. Override destinations
 with `--json PATH` and `--ruby PATH`. The MIDI command emits one track per MIDI track, preserves beat-domain clip

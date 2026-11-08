@@ -127,7 +127,7 @@ module Studio
         @parser = parser
       end
 
-      def scan(directory)
+      def scan(directory, export_all: false)
         root = File.expand_path(directory)
         raise ParseError, "inventory directory does not exist: #{root}" unless File.directory?(root)
 
@@ -138,6 +138,10 @@ module Studio
           relative = path.delete_prefix("#{root}/")
           begin
             project = @parser.parse(path)
+            if export_all
+              base = path.sub(/\.als\z/i, "")
+              Export.write_both(project, json_path: "#{base}.json", ruby_path: "#{base}.rb")
+            end
             tracks = Array(project["tracks"])
             clips = tracks.flat_map { |track| Array(track["clips"]) }
             sets << {
@@ -175,20 +179,22 @@ end
 if $PROGRAM_NAME == __FILE__
   require "optparse"
   input = ARGV.shift
-  abort "usage: ruby als_export.rb SET.als|DIRECTORY [--json PATH] [--ruby PATH] [--inventory PATH]" unless input
+  abort "usage: ruby als_export.rb SET.als|DIRECTORY [--json PATH] [--ruby PATH] [--inventory PATH] [--export-all]" unless input
 
   base = File.join(File.dirname(File.expand_path(input)), File.basename(input, File.extname(input)))
   json_path = "#{base}.json"
   ruby_path = "#{base}.rb"
   inventory_path = nil
+  export_all = false
   OptionParser.new do |parser|
     parser.on("--json PATH", "JSON composition archive path") { |value| json_path = value }
     parser.on("--ruby PATH", "Standalone Ruby DSL archive path") { |value| ruby_path = value }
     parser.on("--inventory PATH", "Batch inventory output (directory input)") { |value| inventory_path = value }
+    parser.on("--export-all", "Write JSON and Ruby archives beside every valid .als in a directory") { export_all = true }
   end.parse!(ARGV)
 
   if File.directory?(input)
-    inventory = Studio::ALS::Inventory.new.scan(input)
+    inventory = Studio::ALS::Inventory.new.scan(input, export_all:)
     destination = inventory_path || File.join(File.expand_path(input), "Ableton-Inventory.json")
     Studio::ALS::Export.write_json(inventory, destination)
     puts "als-inventory: #{inventory.fetch("set_count")} sets indexed, #{inventory.fetch("failure_count")} failures, #{File.expand_path(destination)}"
