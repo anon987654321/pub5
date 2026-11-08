@@ -2670,6 +2670,7 @@ module Dilla
   def acquire_audio(source, workspace, opts)
     if source.match?(URL_RE)
       ytdlp = find_ytdlp or abort "dilla reference: yt-dlp executable is not installed"
+      ffmpeg = which("ffmpeg") or abort "dilla reference: ffmpeg executable is required for URL acquisition"
       title = nil
       begin
         title_out, _title_err, status = Studio::Subprocess.capture3(
@@ -2682,7 +2683,7 @@ module Dilla
 
       out_template = File.join(workspace, "source", "reference.%(ext)s")
       cmd = [ytdlp, "--no-playlist", "-f", "bestaudio", "-x", "--audio-format", "wav",
-             "--ffmpeg-location", "ffmpeg", "-o", out_template]
+             "--ffmpeg-location", ffmpeg, "-o", out_template]
       # Authentication remains operator-supplied; cookies are never read from
       # guessed browser profiles or included in logs.
       cookies = ENV["DILLA_YT_COOKIES"].to_s.strip
