@@ -230,7 +230,7 @@ module Master
           "- #{entry.fetch(:track)}: #{entry.fetch(:sample)} (#{reference})"
         end
         (["Donuts sample-source map (not note-by-note transcription):"] + rows +
-          ["The empty chord arrays are deliberate: note transcription remains an audio/listening task, not an inference from sample credits."]).join("\\n")
+          ["The empty chord arrays are deliberate: note transcription remains an audio/listening task, not an inference from sample credits."]).join("\n")
       end
 
       def dilla_research_brief
