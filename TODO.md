@@ -697,14 +697,6 @@ The migration note recorded several exclusions. These are the carry-over
 items still needing a disposition; none should be restored blindly or placed
 back at the repository root:
 
-- [ ] **Seven pub4 root photographs.** These files were deliberately omitted
-  from the first pub5 carry: `Photo on 28-09-2026 at 07.18.jpg`,
-  `Photo on 28-09-2026 at 07.18 #2.jpg`, `Photo on 28-09-2026 at 07.18 #3.jpg`,
-  `Photo on 28-09-2026 at 07.19.jpg`, `Photo on 28-09-2026 at 07.19 #2.jpg`,
-  `Photo on 28-09-2026 at 07.19 #3.jpg` and
-  `Photo on 28-09-2026 at 07.19 #4.jpg`. Review them from pub4, identify their
-  subject and owning project, then restore only to that existing owner or
-  explicitly retire them with provenance.
 - [ ] **Ragnhild artist-grant application PDF.** The separate five-page guide
   is restored and date-reviewed in `BIZ/ragnhild/ragnhild_legater.html`.
   Unverified BKV 2027 dates from the archive were removed; NBK had not published
