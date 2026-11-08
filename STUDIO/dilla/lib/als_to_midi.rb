@@ -1,10 +1,63 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open3"
 require_relative "als"
 
 module Studio
   module ALS
+    class AudioRenderError < StandardError; end
+
+    # Optional offline audio bridge. It invokes local binaries with argv arrays
+    # (never a shell string) and keeps the neutral FluidSynth render untouched.
+    class AudioRenderer
+      DEFAULT_SAMPLE_RATE = 44_100
+      DEFAULT_ANALOG_FILTERS = "asoftclip=type=tanh:threshold=0.92:output=0.96,vibrato=f=4.7:d=0.035,lowpass=f=15000"
+
+      def initialize(fluidsynth: "fluidsynth", ffmpeg: "ffmpeg", sample_rate: DEFAULT_SAMPLE_RATE)
+        @fluidsynth = fluidsynth
+        @ffmpeg = ffmpeg
+        @sample_rate = Integer(sample_rate)
+        raise ArgumentError, "sample rate must be between 22050 and 192000" unless @sample_rate.between?(22_050, 192_000)
+      end
+
+      def render(midi_path:, soundfont:, wav_path:, analog: false, analog_path: nil)
+        raise AudioRenderError, "MIDI file does not exist: #{midi_path}" unless File.file?(midi_path)
+        raise AudioRenderError, "SoundFont file does not exist: #{soundfont}" unless File.file?(soundfont)
+
+        destination = File.expand_path(wav_path)
+        FileUtils.mkdir_p(File.dirname(destination))
+        command = [
+          @fluidsynth, "-ni", "-r", @sample_rate.to_s, "-F", destination,
+          "-T", "wav", soundfont, midi_path
+        ]
+        run!(command, "FluidSynth")
+        raise AudioRenderError, "FluidSynth did not create #{destination}" unless File.file?(destination)
+
+        result = { wav: destination }
+        if analog
+          processed = File.expand_path(analog_path || destination.sub(/\.wav\z/i, "") + "-analog.wav")
+          FileUtils.mkdir_p(File.dirname(processed))
+          run!([@ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", destination,
+                "-af", DEFAULT_ANALOG_FILTERS, processed], "FFmpeg analog chain")
+          raise AudioRenderError, "FFmpeg did not create #{processed}" unless File.file?(processed)
+          result[:analog_wav] = processed
+        end
+        result
+      end
+
+      private
+
+      def run!(command, label)
+        _stdout, stderr, status = Open3.capture3(*command)
+        return if status.success?
+
+        raise AudioRenderError, "#{label} failed (#{status.exitstatus}): #{stderr.to_s.lines.last(8).join.strip}"
+      rescue Errno::ENOENT => error
+        raise AudioRenderError, "#{label} executable not found (#{command.first.inspect}): #{error.message}"
+      end
+    end
+
     class MidiExporter
       DEFAULT_PPQN = 960
       DRUM_TRACK = /drum|kit|beat/i
@@ -154,18 +207,42 @@ end
 if $PROGRAM_NAME == __FILE__
   require "optparse"
   input = ARGV.shift
-  abort "usage: ruby als_to_midi.rb SET.als [--out PATH] [--ppqn 960]" unless input
+  abort "usage: ruby als_to_midi.rb SET.als [--out PATH] [--ppqn 960] [--wav PATH --soundfont FILE.sf2] [--analog]" unless input
 
   base = File.join(File.dirname(File.expand_path(input)), File.basename(input, File.extname(input)))
   output = "#{base}.mid"
+  wav_path = nil
+  soundfont = nil
+  analog = false
+  analog_path = nil
   ppqn = Studio::ALS::MidiExporter::DEFAULT_PPQN
+  fluidsynth = "fluidsynth"
+  ffmpeg = "ffmpeg"
+  sample_rate = Studio::ALS::AudioRenderer::DEFAULT_SAMPLE_RATE
   OptionParser.new do |parser|
     parser.on("--out PATH", "MIDI output path") { |value| output = value }
     parser.on("--ppqn N", Integer, "ticks per quarter note (24..32767)") { |value| ppqn = value }
+    parser.on("--wav PATH", "Render MIDI to WAV with FluidSynth") { |value| wav_path = value }
+    parser.on("--soundfont PATH", "SoundFont required for --wav") { |value| soundfont = value }
+    parser.on("--analog", "Apply optional FFmpeg soft-clip/vibrato/low-pass chain") { analog = true }
+    parser.on("--analog-out PATH", "Processed WAV destination (defaults to *-analog.wav)") { |value| analog_path = value }
+    parser.on("--fluidsynth BIN", "FluidSynth executable") { |value| fluidsynth = value }
+    parser.on("--ffmpeg BIN", "FFmpeg executable") { |value| ffmpeg = value }
+    parser.on("--sample-rate N", Integer, "FluidSynth output rate") { |value| sample_rate = value }
   end.parse!(ARGV)
 
   project = Studio::ALS::Parser.new.parse(input)
   result = Studio::ALS::MidiExporter.new(ppqn:).write(project, output)
   count = Array(project["tracks"]).count { |track| track["kind"] == "midi" }
   puts "als-midi: #{count} MIDI tracks written to #{result}"
+  if wav_path
+    abort "als-midi: --soundfont is required with --wav" unless soundfont
+    audio = Studio::ALS::AudioRenderer.new(fluidsynth:, ffmpeg:, sample_rate:).render(
+      midi_path: result, soundfont:, wav_path:, analog:, analog_path:
+    )
+    puts "als-audio: #{audio.fetch(:wav)}"
+    puts "als-audio: #{audio.fetch(:analog_wav)}" if audio[:analog_wav]
+  elsif soundfont || analog || analog_path
+    abort "als-midi: --soundfont/--analog options require --wav"
+  end
 end

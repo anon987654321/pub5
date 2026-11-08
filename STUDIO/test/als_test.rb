@@ -63,7 +63,8 @@ class TestAbletonLiveSetRecovery < Minitest::Test
                 <ClipSlot><ClipSlot>
                   <AudioClip Id="103" Time="8.0" Duration="4.0">
                     <Name><UserName Value="Soul sample"/></Name>
-                    <Sample><FileRef><Name Value="break.wav"/><Path Value="Samples/Imported/break.wav"/><Type Value="2"/></FileRef></Sample>
+                    <Sample><FileRef><Name Value="break.wav"/><Path Value="/Archive/Samples/Imported/break.wav"/><RelativePath Value="Samples/Imported/break.wav"/><Type Value="2"/></FileRef></Sample>
+                    <IsWarped Value="true"/><WarpMarkers><WarpMarker SecTime="0.0" BeatTime="0.0"/><WarpMarker SecTime="2.0" BeatTime="4.0"/></WarpMarkers>
                   </AudioClip>
                 </ClipSlot></ClipSlot>
               </ClipSlotList></MainSequencer></DeviceChain>
@@ -112,7 +113,11 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal 3, project.fetch("tracks").length
       assert_equal "audio", project.fetch("tracks").last.fetch("kind")
       reference = project.fetch("tracks").last.fetch("clips").first.fetch("audio_references").first
-      assert_equal "Samples/Imported/break.wav", reference.fetch("path")
+      assert_equal "/Archive/Samples/Imported/break.wav", reference.fetch("path")
+      assert_equal "Samples/Imported/break.wav", reference.fetch("relative_path")
+      audio_clip = project.fetch("tracks").last.fetch("clips").first
+      assert_equal true, audio_clip.fetch("is_warped")
+      assert_equal [{ "seconds" => 0.0, "beats" => 0.0 }, { "seconds" => 2.0, "beats" => 4.0 }], audio_clip.fetch("warp_markers")
     end
   end
 
@@ -187,6 +192,41 @@ class TestAbletonArchiveInventory < Minitest::Test
       assert_equal ["Band/Album/two.als", "one.als"], inventory.fetch("sets").map { |set| set.fetch("path") }.sort
       assert_equal 2, inventory.fetch("sets").first.fetch("midi_track_count")
       assert_match(/broken\.als/, inventory.fetch("failures").first.fetch("path"))
+    end
+  end
+end
+
+
+class TestAbletonAudioBridge < Minitest::Test
+  def executable(path, body)
+    File.write(path, "#!/usr/bin/env ruby\n#{body}")
+    File.chmod(0o755, path)
+    path
+  end
+
+  def test_optional_fluidsynth_and_analog_stages_are_local_and_non_destructive
+    Dir.mktmpdir do |directory|
+      midi = File.join(directory, "set.mid")
+      soundfont = File.join(directory, "bank.sf2")
+      File.binwrite(midi, "MThd")
+      File.binwrite(soundfont, "SF2")
+      fluidsynth = executable(
+        File.join(directory, "fluidsynth"),
+        'args = ARGV; File.binwrite(args.fetch(args.index("-F") + 1), "neutral wav")'
+      )
+      ffmpeg = executable(
+        File.join(directory, "ffmpeg"),
+        'File.binwrite(ARGV.last, "processed wav")'
+      )
+      neutral = File.join(directory, "recovered.wav")
+      processed = File.join(directory, "recovered-analog.wav")
+      result = Studio::ALS::AudioRenderer.new(fluidsynth:, ffmpeg:).render(
+        midi_path: midi, soundfont:, wav_path: neutral, analog: true, analog_path: processed
+      )
+      assert_equal neutral, result.fetch(:wav)
+      assert_equal processed, result.fetch(:analog_wav)
+      assert_equal "neutral wav", File.binread(neutral)
+      assert_equal "processed wav", File.binread(processed)
     end
   end
 end

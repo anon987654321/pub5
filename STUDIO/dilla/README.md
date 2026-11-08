@@ -120,6 +120,8 @@ Inspect and export a set (the parser also accepts extracted, plain XML):
 ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive" --inventory "$HOME/Ableton-Archive/Ableton-Inventory.json"
 ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive/My Set/My Set.als"
 ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
+ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" \\
+  --out recovered.mid --wav recovered.wav --soundfont "$HOME/SoundFonts/bank.sf2" --analog
 ```
 
 The directory form scans every `.als` recursively and writes an inventory with
@@ -127,17 +129,21 @@ tempo, time signature, track/clip/note counts, audio references and per-file
 errors; one damaged set does not stop the scan. The single-file form writes a
 versioned JSON composition archive and a standalone Ruby DSL archive beside
 the source by default. Override destinations
-with `--json PATH` and `--ruby PATH`. The MIDI command emits one track per
-MIDI track, preserves beat-domain clip positions and note lengths, expands
-enabled clip loops, pairs every note-on with its note-off, and routes tracks
-named for drums/kits/beats to MIDI channel 10. Change tick resolution with
+with `--json PATH` and `--ruby PATH`. The MIDI command emits one track per MIDI track, preserves beat-domain clip
+positions and note lengths, expands enabled clip loops, pairs every note-on
+with its note-off, and routes tracks named for drums/kits/beats to MIDI channel
+10. Its optional `--wav` mode invokes a local FluidSynth binary and SoundFont;
+`--analog` then creates a second, processed WAV using FFmpeg's soft-clip,
+vibrato and low-pass filters. The neutral FluidSynth WAV is never overwritten. Change tick resolution with
 `--ppqn N` (default 960).
 
 The parser extracts the project tempo and time signature, track identities and
 names, MIDI/audio clips, clip positions and loop points, note pitch/start/
 duration/velocity/enabled state, audio-file references and supported automation
-event points. It does not reconstruct audio bytes, warp markers, Groove Pool
-semantics, native instrument devices, effect racks, or plug-in state. Keep the
+event points. It does not reconstruct audio bytes, execute warp processing, interpret Groove
+Pool semantics, or re-instantiate native instrument devices, effect racks or
+plug-in state. Warp-marker positions and relative/absolute sample paths are
+preserved when present in the set. Keep the
 original `.als` file and complete project directory as the source of truth;
 the JSON/Ruby archives are durable composition records, while the MIDI file is
 the portable performance.

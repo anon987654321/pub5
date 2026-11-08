@@ -51,7 +51,8 @@ module Studio
           "tracks" => tracks,
           "limitations" => {
             "audio_content" => "Audio clips are represented by file references; sample bytes are not embedded in this archive.",
-            "device_state" => "Native Ableton device parameters and third-party plug-in state are not reconstructed by this parser.",
+            "device_state" => "Native Ableton device parameters and third-party plug-in state are not interpreted or re-instantiated by this parser.",
+            "warp_processing" => "Warp-marker coordinates and warp-enabled flags are exported; the actual warped audio rendering still requires an audio engine or DAW.",
             "automation" => "Supported automation event points are exported; complex device-specific automation semantics may require Live."
           }
         }
@@ -148,6 +149,8 @@ module Studio
           "loop_enabled" => boolean_value(value_for(clip, "LoopOn")),
           "notes" => clip.name == "MidiClip" ? midi_notes(clip) : [],
           "audio_references" => clip.name == "AudioClip" ? audio_references(clip) : [],
+          "is_warped" => clip.name == "AudioClip" ? boolean_value(value_for(clip, "IsWarped")) : nil,
+          "warp_markers" => clip.name == "AudioClip" ? warp_markers(clip) : [],
           "automation" => automation(clip)
         }
         result["loop_enabled"] = false if result["loop_enabled"].nil?
@@ -194,12 +197,21 @@ module Studio
           {
             "kind" => node.name,
             "name" => value_for(node, "Name") || node.attributes["Name"],
-            "path" => value_for(node, "Path") || value_for(node, "RelativePath") ||
-                     value_for(node, "RelativePathName") || node.attributes["Path"],
+            "path" => value_for(node, "Path") || node.attributes["Path"],
+            "relative_path" => value_for(node, "RelativePath") || value_for(node, "RelativePathName"),
             "type" => node.attributes["Type"],
             "id" => node.attributes["Id"]
           }.reject { |_key, value| value.nil? || value == "" }
         end.uniq
+      end
+
+      def warp_markers(clip)
+        descendants(clip, "WarpMarker").map do |marker|
+          {
+            "seconds" => numeric_attribute(marker, "SecTime", "Seconds"),
+            "beats" => numeric_attribute(marker, "BeatTime", "Beats")
+          }.reject { |_key, value| value.nil? }
+        end
       end
 
       def automation(node)
