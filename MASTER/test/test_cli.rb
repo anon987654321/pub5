@@ -343,6 +343,7 @@ class TestCLI < Minitest::Test
     assert_includes fix, "--only", "the stages are the detail, not the summary"
     assert_includes Master::CLI::CommandRegistry.help_text("review"), "unknown command /review"
     assert_includes fix, "--dry-run", "the flag that holds the repair back is the detail"
+    assert_includes Master::CLI::CommandRegistry.help_text("model"), "/model status and /model current"
   end
 
 # /commit is built with review_check: true, so the page has to name the flag
