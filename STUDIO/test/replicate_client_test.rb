@@ -189,6 +189,11 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_operation_deadlines_preserve_integer_seconds
+    assert_equal 600, @client.send(:operation_timeout!, 600, "prediction timeout")
+    assert_equal 1.5, @client.send(:operation_timeout!, 1.5, "prediction timeout")
+  end
+
   def test_prediction_and_training_deadlines_must_be_finite_and_positive_before_requests
     [0, -1, Float::INFINITY, Float::NAN, "not-a-number"].each do |timeout|
       assert_raises(ArgumentError) do
