@@ -2712,9 +2712,9 @@ module Dilla
       abort "dilla reference: ffmpeg produced no WAV" unless File.file?(temporary)
       File.rename(temporary, wav)
       [wav, { "title" => File.basename(path), "path" => path }]
-    ensure
-      File.delete(temporary) if defined?(temporary) && temporary && File.file?(temporary)
     end
+  ensure
+    File.delete(temporary) if defined?(temporary) && temporary && File.file?(temporary)
   end
 
   def find_ytdlp
