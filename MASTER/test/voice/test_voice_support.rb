@@ -523,5 +523,35 @@ class TestVoiceSupport < Minitest::Test
 
     assert_equal Encoding::BINARY, observed_encoding
     assert outcome.ok
+  end  
+  def test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator
+    producer = Master::Voice::ProductionDna.producer(:j_dilla)
+    timing = producer.fetch(:timing)
+    before = {
+      ppqn: timing.fetch(:ppqn),
+      bpm: timing.fetch(:bpm),
+      swing_percent: timing.fetch(:swing_percent),
+    }
+
+    brief = Master::Voice::Dilla.brief
+    catalogue_brief = Master::Voice::ProductionDna.brief
+
+    [brief, catalogue_brief].each do |text|
+      assert_includes text, "Dilla research observations"
+      assert_includes text, "100ms"
+      assert_includes text, "10 of 13 kick notes"
+      assert_includes text, "deviations repeat identically every bar"
+      assert_includes text, "3, 5, 7 bars"
+      assert_includes text, "Mike Hankinson"
+      assert_includes text, "musicismysanctuary.com"
+      assert_includes text, "not synthesis defaults"
+    end
+
+    assert_equal before, {
+      ppqn: timing.fetch(:ppqn),
+      bpm: timing.fetch(:bpm),
+      swing_percent: timing.fetch(:swing_percent),
+    }
+    assert_equal [53, 56], [timing.fetch(:swing_percent).begin, timing.fetch(:swing_percent).end]
   end
 end
