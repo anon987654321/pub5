@@ -436,7 +436,7 @@ module Master
 
         result = shell.call(command:)
         text = result.ok? ? result.value!.to_s : result.message.to_s
-        record_execution_output(command:, text:)
+        record_execution_output(command:, text:, status: result.ok? ? "success" : "failure")
         @last_ok = result.ok?
         @exit_code = result.ok? ? 0 : 2
 
