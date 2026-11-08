@@ -68,7 +68,7 @@ module Master
         # One line for a resumed session. Replaying its last turns printed an old
         # reply above the prompt, which read as a canned answer to a message not
         # yet typed.
-        terminal_puts(@refs.renderer.session_line(@refs.session.name, @refs.session.messages.size)) if @refs.session.name
+        terminal_puts(@refs.renderer.session_line(@refs.session.messages.size)) if @refs.session.name
         print_repo_tree unless booted_before?
         run_input(initial_message) if initial_message
         greet_from_model unless initial_message
