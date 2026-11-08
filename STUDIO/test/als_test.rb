@@ -241,4 +241,64 @@ class TestAbletonAudioBridge < Minitest::Test
       assert_equal "processed wav", File.binread(processed)
     end
   end
+
+  def test_timeout_keeps_previous_neutral_render_and_cleans_temporary_file
+    Dir.mktmpdir do |directory|
+      midi = File.join(directory, "set.mid")
+      soundfont = File.join(directory, "bank.sf2")
+      File.binwrite(midi, "MThd")
+      File.binwrite(soundfont, "SF2")
+      slow = executable(File.join(directory, "slow-fluidsynth"), "sleep 5")
+      destination = File.join(directory, "kept.wav")
+      File.binwrite(destination, "previous neutral render")
+
+      error = assert_raises(Studio::ALS::AudioRenderError) do
+        Studio::ALS::AudioRenderer.new(fluidsynth: slow, timeout: 0.05).render(
+          midi_path: midi, soundfont:, wav_path: destination
+        )
+      end
+      assert_match(/timed out/, error.message)
+      assert_equal "previous neutral render", File.binread(destination)
+      refute Dir.children(directory).any? { |name| name.end_with?(".tmp.wav") }
+    end
+  end
+end
+
+class TestStudioAbletonCLI < Minitest::Test
+  def test_unified_cli_exports_inventory_composition_and_midi
+    Dir.mktmpdir do |directory|
+      source = TestAbletonLiveSetRecovery.allocate.write_set(directory)
+      cli = File.expand_path("../bin/studio", __dir__)
+      inventory_path = File.join(directory, "inventory.json")
+      out, err, status = Open3.capture3(
+        RbConfig.ruby, cli, "ableton", "inventory", directory, "--inventory", inventory_path
+      )
+      assert status.success?, "Studio inventory CLI failed: #{err}\n#{out}"
+      inventory = JSON.parse(File.read(inventory_path))
+      assert_equal 1, inventory.fetch("set_count")
+
+      json_path = File.join(directory, "composition.json")
+      ruby_path = File.join(directory, "composition.rb")
+      out, err, status = Open3.capture3(
+        RbConfig.ruby, cli, "ableton", "export", source, "--json", json_path, "--ruby", ruby_path
+      )
+      assert status.success?, "Studio export CLI failed: #{err}\n#{out}"
+      assert_equal 3, JSON.parse(File.read(json_path)).fetch("tracks").length
+      assert File.file?(ruby_path)
+
+      midi_path = File.join(directory, "recovered.mid")
+      out, err, status = Open3.capture3(
+        RbConfig.ruby, cli, "ableton", "midi", source, "--out", midi_path
+      )
+      assert status.success?, "Studio MIDI CLI failed: #{err}\n#{out}"
+      assert_equal "MThd", File.binread(midi_path, 4)
+    end
+  end
+
+  def test_unknown_ableton_operation_fails_closed
+    cli = File.expand_path("../bin/studio", __dir__)
+    _out, err, status = Open3.capture3(RbConfig.ruby, cli, "ableton", "restore-everything")
+    refute status.success?
+    assert_match(/unknown Ableton operation/, err)
+  end
 end
