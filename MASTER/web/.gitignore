@@ -7,3 +7,8 @@
 .bundle
 # The startup sound, rendered from MASTER/data/voice.yml by assets:build_boot_sound.
 /public/boot_sound_*.ogg
+
+# Fetched, never tracked: MASTER/web/script/build_smart_turn.sh pins the
+# versions and verifies sha256 digests (TREE_CONTRACTS.md vendorables ruling).
+/public/vendor/onnxruntime/
+/public/models/smart-turn-v3.2-cpu.onnx

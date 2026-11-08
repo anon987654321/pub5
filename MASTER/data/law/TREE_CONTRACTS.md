@@ -869,7 +869,11 @@ landing is reverted with a commit, not rewritten away.
 2026-11-02) was the last generated corpus kept in git; snapshots under
 `snapshot_*.md` stay untracked by the same rule.
 
-**Vendorables trend out of git.** The ML binaries under
-`MASTER/web/public/` (~28 MB: onnxruntime WASM, smart-turn model,
-face mask, webfonts) are the remaining weight; prefer fetching at
-deploy time with checksums before ever considering LFS.
+**Vendorables trend out of git.** Since 8 November 2026 the ML binaries
+under `MASTER/web/public/` are no longer tracked: the onnxruntime WASM
+and the smart-turn model are fetched by `MASTER/web/script/build_smart_turn.sh`
+(pinned versions, sha256-verified digests) when a deploy finds them
+absent, and the face mask and the three `web/images` JPGs were cut the
+same day as assets with zero consumers in the tree. Fetch at deploy
+time with checksums before ever considering LFS; new vendorables follow
+the same route.

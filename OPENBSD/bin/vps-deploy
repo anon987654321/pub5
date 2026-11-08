@@ -554,6 +554,20 @@ restore_preflight_checkout() {
   log "preflight checkout restored ref=$preflight_back_to"
 }
 
+# Vendorables are not tracked in git (TREE_CONTRACTS.md, 8 November 2026):
+# master's smart-turn runtime bytes are fetched when absent, with pinned
+# versions and sha256-verified digests. Failure leaves ?smart_turn=1
+# unavailable — the feature is default-off — and the deploy continues.
+ensure_smart_turn_assets() {
+  local vendor="$repo/MASTER/web/public/vendor/onnxruntime"
+  local model="$repo/MASTER/web/public/models/smart-turn-v3.2-cpu.onnx"
+  [[ -f $vendor/ort-wasm-simd-threaded.wasm && -f $vendor/ort.wasm.min.mjs && -f $model ]] && return 0
+  print "vps-deploy: smart_turn assets absent; fetching pinned, checksummed copies"
+  if ! run_as_deploy_user "cd $(printf '%q' "$repo/MASTER/web") && sh script/build_smart_turn.sh"; then
+    print -u2 "vps-deploy: smart_turn fetch failed; ?smart_turn=1 stays unavailable (default-off) until MASTER/web/script/build_smart_turn.sh succeeds"
+  fi
+}
+
 finish() {
   local rc=$?
   trap - EXIT
@@ -675,6 +689,7 @@ if (( lock_owner )); then
     restore_preflight_checkout || deploy_refuse "cannot return to $preflight_back_to after preflight"
   fi
   git_as_deploy_user merge -q --ff-only "$pin" || deploy_refuse "cannot fast-forward $repo to $pin"
+  ensure_smart_turn_assets
   set_stage snapshot
   VPS_DEPLOY_STARTED="$(admin_service list-started 2>/dev/null)"
   VPS_DEPLOY_STARTED=${VPS_DEPLOY_STARTED//$'\n'/ }
