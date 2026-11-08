@@ -73,6 +73,51 @@ module Master
           parts.compact.join("\n\n").then { |s| s.empty? ? nil : filter_prompt(s) }
         end
 
+        # Runtime capabilities are evidence, not a personality claim. The tool
+        # objects passed to this Agent are the built runtime registry; command
+        # names come from the same closed registry that dispatches them.
+        def runtime_capability_section
+          tools = Array(@tools).filter_map do |tool|
+            klass = tool.class
+            name = klass.const_defined?(:NAME, false) ? klass.const_get(:NAME, false).to_s : klass.name.to_s.split("::").last
+            description = klass.const_defined?(:DESCRIPTION, false) ? klass.const_get(:DESCRIPTION, false).to_s : nil
+            next if name.to_s.empty?
+
+            description.to_s.empty? ? name : "#{name}: #{description}"
+          rescue StandardError
+            nil
+          end.uniq.sort
+          commands = if defined?(Master::CLI::CommandRegistry)
+                       Master::CLI::CommandRegistry.slash_commands
+                     else
+                       []
+                     end
+          voice = begin
+            playback = Master::Voice::Playback
+            speech = Master::Voice::Speech
+            [
+              "CLI speech enabled=#{playback.enabled?}",
+              "audio output available=#{playback.available?}",
+              "neural speech ready=#{speech.edge_tts_ready?}",
+            ]
+          rescue StandardError => e
+            ["voice status unavailable=#{e.class}"]
+          end
+
+          [
+            "<master_runtime_capabilities>",
+            "Registered runtime tools (not a guarantee every provider/request receives every tool):",
+            *(tools.empty? ? ["none reported"] : tools.map { |tool| "- #{tool}" }),
+            "Registered operator commands: #{commands.join(' ')}",
+            "Voice runtime: #{voice.join('; ')}",
+            "The command registry and tool registry are distinct. A command may be available to the operator even when it is not an LLM-callable tool. Do not deny a registered capability; explain its actual scope, consent gates and current availability.",
+            "</master_runtime_capabilities>",
+          ].join("\n")
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "AgentPrompt.runtime_capabilities")
+          nil
+        end
+
         def dynamic_prompt
           parts = []
           # Set by the web tier when a request arrives on a host that wears a
@@ -84,6 +129,7 @@ module Master
           parts << Master::AI::Orientation.render(root:, target: root)
           parts << Master::AI::OperatorContract.prompt
           parts << REACH_LINE
+          parts << runtime_capability_section
           parts << Master::AI::OperatorContract.filesystem_context(root:, profile: Ground::Tool::Profile.current)
           parts << CLI::SubagentContext.brief
           parts << conversational_register_line if casual_task?
