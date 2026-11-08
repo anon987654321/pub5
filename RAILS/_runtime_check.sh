@@ -16,9 +16,10 @@ master_scan_dep() {
   # when the runner owns it, else fall back to the runner's tmpdir so the
   # scan still runs and its evidence still lands in the deploy run log.
   if [[ ! -w $log_dir ]]; then
+    local refused=$log_dir
     log_dir=${TMPDIR:-/tmp}
     log=${log_dir}/master_${app_name}_scan.log
-    log_warn "MASTER scan log at ${log} (${log_dir#*/var} not writable for $(id -un))"
+    log_warn "MASTER scan log at ${log} (${refused} not writable for $(id -un))"
   fi
   if [[ ${SKIP_MASTER_SCAN:-0} != 0 ]]; then
     if [[ ${SKIP_MASTER_SCAN} != 1 || ${I_UNDERSTAND_FAST_DEPLOY:-0} != 1 ]]; then
