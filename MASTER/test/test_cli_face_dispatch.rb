@@ -214,6 +214,30 @@ class TestCliFaceDispatch < Minitest::Test
     assert_includes recorded.first.fetch(:content), "grok-cli:auto"
   end
 
+  def test_units_console_footers_receive_the_result_not_the_success_boolean
+    session = Master::CLI::Session.allocate
+    ok = Master::Result.ok(output: "", rendered: "")
+    received = []
+    session.instance_variable_set(:@last_ok, true)
+    session.define_singleton_method(:print_fix_activity_footer) {}
+    session.define_singleton_method(:print_previous_question_footer) {}
+    session.define_singleton_method(:print_parallel_errors_footer) do |result|
+      received << result
+      result.value
+    end
+    session.define_singleton_method(:print_capability_stamp) { |result| received << result }
+
+    session.send(
+      :display_ok,
+      ok:,
+      accumulated: +"",
+      streamed: false,
+      units_console: true,
+    )
+
+    assert_equal [ok, ok], received
+  end
+
   def test_help_returns_its_text_to_the_terminal
     session = Master::CLI::Session.allocate
     printed = []
