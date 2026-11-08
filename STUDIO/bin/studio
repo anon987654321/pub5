@@ -6,6 +6,9 @@
 #
 #   bin/studio dilla [...]     # the beat engine: STUDIO/dilla/dilla.rb
 #   bin/studio postpro [...]   # the film grade: STUDIO/postpro/postpro.rb
+#   bin/studio ableton inventory DIRECTORY [--export-all]
+#   bin/studio ableton export SET.als [--json PATH] [--ruby PATH]
+#   bin/studio ableton midi SET.als [--out PATH] [--wav PATH --soundfont FILE]
 #   bin/studio --list          # the tools this CLI reaches
 #
 # It is a dispatcher, not a second interface: every argument after the tool
@@ -22,10 +25,19 @@ TOOLS = {
   "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
 }.freeze
 
+ABLETON_TOOLS = {
+  "inventory" => File.join(STUDIO_ROOT, "dilla", "lib", "als_export.rb"),
+  "export" => File.join(STUDIO_ROOT, "dilla", "lib", "als_export.rb"),
+  "midi" => File.join(STUDIO_ROOT, "dilla", "lib", "als_to_midi.rb"),
+}.freeze
+
 def usage
-  warn "usage: bin/studio <dilla|postpro> [args...]  (or --list)"
+  warn "usage: bin/studio <dilla|postpro> [args...]"
+  warn "       bin/studio ableton <inventory|export|midi> [args...]"
+  warn "       bin/studio --list"
   warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
   warn "  postpro   the film grade — see STUDIO/postpro/README.md"
+  warn "  ableton   Live Set inventory, composition export and MIDI recovery"
 end
 
 if ARGV.empty? || ARGV.include?("-h") || ARGV.include?("--help")
@@ -35,10 +47,25 @@ end
 
 if ARGV.include?("--list")
   TOOLS.each { |name, path| puts format("%-8s %s", name, path) }
+  puts format("%-8s %s", "ableton", "dilla/lib/als*.rb")
   exit 0
 end
 
 tool = ARGV.shift
+if tool == "ableton"
+  operation = ARGV.shift
+  path = ABLETON_TOOLS[operation]
+  unless path
+    warn "studio: unknown Ableton operation: #{operation}"
+    usage
+    exit 64
+  end
+  unless File.file?(path)
+    warn "studio: Ableton recovery entrypoint is missing: #{path}"
+    exit 66
+  end
+  exec(RUBY, path, *ARGV)
+end
 path = TOOLS[tool]
 unless path
   warn "studio: unknown tool: #{tool}"
