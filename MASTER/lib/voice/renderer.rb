@@ -29,9 +29,11 @@ module Master
         @boot_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) * MS_PER_SEC).to_i
       end
 
-      def session_line(name, messages = 0)
+      # Session names can be personal topics. The boot line confirms resume
+      # without echoing the stored title into terminal scrollback.
+      def session_line(_name = nil, messages = 0)
         kept = messages.positive? ? ", #{messages} messages kept" : ""
-        @p.dim("session0 at master0: #{name.to_s.downcase}#{kept}")
+        @p.dim("session0 at master0: resumed#{kept}")
       end
 
       def uptime
