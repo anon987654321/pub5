@@ -305,11 +305,14 @@ module Master
       def messages(key = nil) = @mutex.synchronize { conversation(key || current_key)[:messages] }
 
       def add_message(role:, content:, layer: :conversation)
-        msg = { role:, content:, layer: Master::CLI::ContextLayers.normalize(layer), ts: Time.now.to_i }
+        normalized_layer = Master::CLI::ContextLayers.normalize(layer)
+        msg = { role:, content:, layer: normalized_layer, ts: Time.now.to_i }
         @mutex.synchronize do
           conversation(current_key)[:messages] << msg
           conversation(current_key)[:token_est] += Session.estimate_tokens(content)
-          conversation(current_key)[:name] ||= auto_name(content) if role == :user
+          # Execution output is a user-visible observation, not a conversation
+          # title. Only ordinary conversation messages establish the name.
+          conversation(current_key)[:name] ||= auto_name(content) if role == :user && normalized_layer == :conversation
         end
         msg
       end
@@ -322,6 +325,7 @@ module Master
         @mutex.synchronize do
           conversation(key || current_key)[:messages].reverse_each do |message|
             next unless message[:role].to_s == "user"
+            next if Master::CLI::ContextLayers.normalize(message[:layer]) != :conversation
 
             content = message[:content].to_s.strip
             next if content.empty? || (!cutoff.empty? && content == cutoff)
