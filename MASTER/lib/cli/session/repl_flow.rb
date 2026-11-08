@@ -229,16 +229,18 @@ module Master
         when :direct_shell then return run_direct_shell(stripped)
         end
 
-        return run_help(Regexp.last_match(1)) if stripped.match(%r{\\A/(?:help|\\?)(?:\\s+(.+))?\\z}) && (Regexp.last_match(1) || true)
+        if (help_match = stripped.match(%r{\A/(?:help|\?)(?:\s+(.+))?\z}))
+          return run_help(help_match[1])
+        end
 
-        match = stripped.match(%r{\\A/(?<name>[a-z][a-z0-9_-]*)(?:\\s+(?<args>.*))?\\z}i)
+        match = stripped.match(%r{\A/(?<name>[a-z][a-z0-9_-]*)(?:\s+(?<args>.*))?\z}i)
         return :unhandled unless match
 
         name = match[:name].downcase
         args = match[:args].to_s
         return :unhandled unless %w[voice tts model status doctor].include?(name)
-        return :unhandled if name == "model" && !args.match?(/\\A(?:list|status|current|show)\\z/i)
-        return :unhandled if name == "voice" && !args.match?(/\\A(?:|status|on|off|natural|normal|classic|fast|expressive|transcendent|dilla)\\z/i)
+        return :unhandled if name == "model" && !args.match?(/\A(?:list|status|current|show)\z/i)
+        return :unhandled if name == "voice" && !args.match?(/\A(?:|status|on|off|natural|normal|classic|fast|expressive|transcendent|dilla)\z/i)
 
         dispatch_registered_slash_command(name == "tts" ? "/voice#{args.empty? ? "" : " #{args}"}" : stripped)
       end
