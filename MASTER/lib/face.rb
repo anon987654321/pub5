@@ -52,25 +52,41 @@ module Master
         prompt(root:).fetch("max_ch", 72)
       end
 
-      # The OpenBSD Operator prompt, host:path$, e.g. vm23:~/pub5$. One shape
-      # for the terminal and the web face; the path is home-relative and keeps
-      # its last segments when it must be shortened. Comfort scales the same
-      # way a shell's does: the host is its first name, and a deep path
-      # narrows to where you are standing rather than reciting the road.
-      HOST_MAX = 8
+      # The Tree ksh prompt: a checkout-relative path, one wide space, and the
+      # dollar — "pub5/MASTER $". No host: a line that starts with the machine's
+      # name and ends in $ reads as a shell login, and the REPL is not one. A
+      # path inside the checkout keeps the checkout's name and its road below;
+      # a path outside falls back to the home-relative spelling. When the road
+      # must be shortened it keeps the checkout, the gap and the standing leaf.
       PATH_SOFT_MAX = 24
 
-      def shell_prompt(path: Master.repo_root, host: Socket.gethostname, root: Master::ROOT)
-        name = host.to_s.split(".").first.to_s.split("-").first.to_s[0, HOST_MAX]
-        name = "openbsd" if name.empty?
-        home = Dir.home
-        dir = path.to_s == home ? "~" : path.to_s.sub(%r{\A#{Regexp.escape(home)}/}, "~/")
-        budget = [prompt_max(root:) - name.length - 3, 1].max
-        if dir.length > PATH_SOFT_MAX && dir.count("/") > 2
-          dir = "~/.../#{dir.split('/').last(2).join('/')}"
-        end
+      def shell_prompt(path: Master.repo_root, llm: nil, root: Master::ROOT)
+        dir = checkout_path(path)
+        dir = road_shortened(dir)
+        budget = [prompt_max(root:) - 2, 1].max
         dir = dir[-budget, budget] if dir.length > budget
-        "#{name}:#{dir}$"
+        name = llm.to_s.strip
+        "#{dir} #{name.empty? ? "$" : "#{name}@master$"}"
+      end
+
+      # The road as the ksh prompt draws it: checkout-relative inside the
+      # checkout, home-relative outside it.
+      def checkout_path(path)
+        repo = File.expand_path(Master.repo_root)
+        dir = File.expand_path(path.to_s)
+        return File.basename(repo) if dir == repo
+        return "#{File.basename(repo)}/#{dir.delete_prefix("#{repo}/")}" if dir.start_with?("#{repo}/")
+
+        home = Dir.home
+        dir == home ? "~" : dir.sub(%r{\A#{Regexp.escape(home)}/}, "~/")
+      end
+
+      # Deep roads keep the checkout, the gap and the standing leaf.
+      def road_shortened(dir)
+        return dir unless dir.length > PATH_SOFT_MAX && dir.count("/") > 2
+
+        segments = dir.split("/")
+        "#{segments.first}/.../#{segments.last(2).join('/')}"
       end
 
       def user_token(root: Master::ROOT) = prompt(root:).fetch("user_token", "user")

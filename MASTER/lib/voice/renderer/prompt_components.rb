@@ -92,7 +92,7 @@ module Master
 
           [
             state_line(model, **options.merge(operator:)),
-            shell_prompt(phase, last_ok, destination:, focused:),
+            shell_prompt(phase, last_ok, model:, destination:, focused:),
           ]
         end
 
@@ -140,15 +140,24 @@ module Master
           text.to_s.gsub(ANSI_ESCAPE, "")
         end
 
-        # One stable OpenBSD-style input prompt; changing context is announced
-        # separately only when it changes, so the editable line stays familiar.
-        def shell_prompt(_phase, _last_ok, **)
+        # One stable ksh input prompt; changing context is announced separately
+        # only when it changes, so the editable line stays familiar. The model
+        # signs the line: the REPL is <tree> <model>@master$, and surfaces with
+        # no model to name fall back to the bare tree ksh shape.
+        def shell_prompt(_phase, _last_ok, model: nil, **)
           prompt = Master::Face::Contract.shell_prompt(
             path: Dir.pwd,
-            host: safe_hostname.to_s,
+            llm: llm_name(model),
             root: @config["root"] || Master::ROOT,
           )
           "#{prompt} "
+        end
+
+        def llm_name(model)
+          name = short_model(model).to_s.strip
+          return name unless name.empty?
+
+          "llm"
         end
 
         def operator_state(phase, last_ok, destination:, focused:)

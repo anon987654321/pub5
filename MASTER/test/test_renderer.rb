@@ -144,7 +144,7 @@ class TestRenderer < Minitest::Test
 
     assert_match(/\bno model, /, strip_ansi(state))
     refute_match(/\n|\r/, strip_ansi(prompt))
-    assert_match(/\A\S+:.+\$ \z/, strip_ansi(prompt))
+    assert_match(/\Apub5\/MASTER llm@master\$ \z/, strip_ansi(prompt))
   end
 
   def test_phase_prompt_uses_the_plain_openbsd_operator_words
@@ -179,7 +179,7 @@ class TestRenderer < Minitest::Test
     state, prompt = FakeRenderer.new(config: {}).prompt_line("model", "idle", tokens: 45_000)
 
     assert_includes strip_ansi(state), "model, 45.0k/128.0k"
-    assert_match(/\A\S+:.+\$ \z/, strip_ansi(prompt))
+    assert_match(/\A.+@master\$ \z/, strip_ansi(prompt))
   end
 
   def test_cli_prompt_uses_face_interface_geometry
@@ -242,15 +242,23 @@ class TestRenderer < Minitest::Test
     refute_empty truncated
   end
 
-  def test_openbsd_operator_prompt_matches_the_historical_shell_contract
+  def test_tree_ksh_prompt_matches_the_shell_contract
     renderer = FakeRenderer.new(config: {})
 
-    renderer.stub(:safe_hostname, "vm23.brgen.no") do
-      Dir.stub(:pwd, File.join(Dir.home, "pub5")) do
-        _state, prompt = renderer.prompt_line("model", "discover", tokens: 10)
+    Dir.stub(:pwd, File.join(Dir.home, "pub5")) do
+      _state, prompt = renderer.prompt_line("model", "discover", tokens: 10)
 
-        assert_equal "vm23:~/pub5$ ", strip_ansi(prompt)
-      end
+      assert_equal "~/pub5 model@master$ ", strip_ansi(prompt)
+    end
+  end
+
+  def test_tree_ksh_prompt_names_llm_when_no_model_is_known
+    renderer = FakeRenderer.new(config: {})
+
+    Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
+      _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
+
+      assert_equal "pub5/MASTER llm@master$ ", strip_ansi(prompt)
     end
   end
 
@@ -260,8 +268,9 @@ class TestRenderer < Minitest::Test
 
     clean = strip_ansi(prompt)
     assert_equal 1, clean.lines.size
-    assert_match(/\A\S+:.+\$ \z/, clean)
-    refute_match(/\e\[/, prompt, "the OpenBSD-console prompt does not need ANSI segment styling")
+    assert_match(/\A.+@master\$ \z/, clean)
+    refute_includes clean, ":", "no host segment: the prompt is not a shell login"
+    refute_match(/\e\[/, prompt, "the ksh-console prompt does not need ANSI segment styling")
     assert_operator clean.chomp.length, :<=, Master::Voice::Renderer::PromptComponents::PROMPT_MAX_CHARS
   end
 
@@ -290,7 +299,7 @@ class TestRenderer < Minitest::Test
       assert_includes state_text, "read only irc a very"
       assert_includes state_text, "feature dirty"
       assert_includes state_text, "a phase na"
-      assert_match(/\A\S+:.+\$ \z/, clean)
+      assert_match(/\A.+@master\$ \z/, clean)
     end
   end
 
