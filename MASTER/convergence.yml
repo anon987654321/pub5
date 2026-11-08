@@ -282,7 +282,7 @@ workstreams:
       Sourced J Dilla microtiming, non-four-bar form, Bach/Satie lineage and Donuts sample-source notes
       are surfaced in the Dilla voice brief without becoming generator settings; exact chord transcription remains a listening gate
     implementation: MASTER/lib/voice/production_dna.rb; MASTER/lib/voice/dilla.rb
-    proof: MASTER/test/voice/test_voice_support.rb (regression added; pinned Ruby 4.0.5 test NOT_RUN)
+    proof: MASTER/test/voice/test_voice_support.rb::test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator (added; pinned Ruby 4.0.5 test NOT_RUN)
   - id: free_compute_design_of_record
     state: partial
     title: >-
