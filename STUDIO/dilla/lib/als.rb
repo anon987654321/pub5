@@ -111,12 +111,9 @@ module Studio
       end
 
       def track_name(track, index)
-        name_node = descendants(track, "Name").first
-        value_node = name_node && (descendants(name_node, "UserName").first || descendants(name_node, "EffectiveName").first)
-        value = value_node && node_value(value_node)
-        value = node_value(name_node) if value.to_s.empty? && name_node
-        value = track.attributes["Name"] if value.to_s.empty?
-        value.to_s.empty? ? "#{track.name.downcase}-#{index + 1}" : value.to_s
+        name = preferred_name(descendants(track, "Name").first)
+        name ||= track.attributes["Name"]
+        name.to_s.empty? ? "#{track.name.downcase}-#{index + 1}" : name.to_s
       end
 
       def parse_clip(clip)
@@ -131,10 +128,7 @@ module Studio
         start_value = numeric_value(content_start)
         length_beats ||= end_value - start_value if end_value && start_value
         length_beats ||= numeric_value(loop_end) - numeric_value(loop_start) if loop_end && loop_start
-        name_node = descendants(clip, "Name").first
-        name_value = name_node && (descendants(name_node, "UserName").first || descendants(name_node, "EffectiveName").first)
-        name = name_value && node_value(name_value)
-        name = node_value(name_node) if name.to_s.empty? && name_node
+        name = preferred_name(descendants(clip, "Name").first)
 
         result = {
           "kind" => clip.name.sub(/Clip\z/, "").downcase,
@@ -193,7 +187,9 @@ module Studio
       end
 
       def audio_references(clip)
-        descendants(clip).select { |node| %w[FileRef SampleRef OriginalFileRef].include?(node.name) }.map do |node|
+        references = descendants(clip).select { |node| %w[FileRef OriginalFileRef].include?(node.name) }
+        references = descendants(clip, "SampleRef") if references.empty?
+        references.map do |node|
           {
             "kind" => node.name,
             "name" => value_for(node, "Name") || node.attributes["Name"],
@@ -234,13 +230,19 @@ module Studio
       end
 
       def project_title(live_set, source_name)
-        name_node = live_set.elements["Name"]
-        named = if name_node
-                  user_name = descendants(name_node, "UserName").first || descendants(name_node, "EffectiveName").first
-                  node_value(user_name) || node_value(name_node)
-                end
-        value = live_set.attributes["Name"] || named
+        value = live_set.attributes["Name"] || preferred_name(live_set.elements["Name"])
         value.to_s.empty? ? File.basename(source_name.to_s, File.extname(source_name.to_s)) : value
+      end
+
+      def preferred_name(name_node)
+        return nil unless name_node
+
+        %w[UserName EffectiveName].each do |field|
+          value = node_value(descendants(name_node, field).first)
+          return value unless value.to_s.empty?
+        end
+        value = node_value(name_node)
+        value unless value.to_s.empty?
       end
 
       def ableton_version(root)
@@ -250,8 +252,14 @@ module Studio
         end
       end
 
+      def master_track(live_set)
+        descendants(live_set, "MasterTrack").first
+      end
+
       def project_tempo(live_set)
-        tempo = descendants(live_set, "Tempo").first
+        master = master_track(live_set)
+        tempo = master && descendants(master, "Tempo").first
+        tempo ||= descendants(live_set, "Tempo").first
         return nil unless tempo
 
         manual = descendants(tempo, "Manual").first
@@ -260,7 +268,9 @@ module Studio
       end
 
       def time_signature(live_set)
-        node = descendants(live_set, "TimeSignature").first
+        master = master_track(live_set)
+        node = master && descendants(master, "TimeSignature").first
+        node ||= descendants(live_set, "TimeSignature").first
         return nil unless node
 
         numerator = numeric_value(value_for(node, "Numerator"))

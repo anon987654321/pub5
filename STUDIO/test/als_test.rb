@@ -16,8 +16,6 @@ class TestAbletonLiveSetRecovery < Minitest::Test
     <<~XML
       <Ableton MajorVersion="12" MinorVersion="0" Creator="Ableton Live">
         <LiveSet>
-          <Tempo><Manual Value="93.5"/></Tempo>
-          <TimeSignature><Numerator Value="4"/><Denominator Value="4"/></TimeSignature>
           <Tracks>
             <MidiTrack Id="10">
               <Name><EffectiveName Value="MIDI"/><UserName Value="Drums"/></Name>
@@ -70,6 +68,10 @@ class TestAbletonLiveSetRecovery < Minitest::Test
               </ClipSlotList></MainSequencer></DeviceChain>
             </AudioTrack>
           </Tracks>
+          <MasterTrack><DeviceChain><Mixer>
+            <Tempo><Manual Value="93.5"/></Tempo>
+            <TimeSignature><Numerator Value="4"/><Denominator Value="4"/></TimeSignature>
+          </Mixer></DeviceChain></MasterTrack>
         </LiveSet>
       </Ableton>
     XML
