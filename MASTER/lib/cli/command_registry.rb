@@ -381,7 +381,7 @@ module Master
         else
           "last=none"
         end
-        error = Voice::Speech.last_error
+        error = [Voice::Speech.last_error, Voice::Playback.last_error].compact.map(&:to_s).find { |item| !item.empty? }
         timings = Voice::Speech.last_timings
         timing = timings.empty? ? "timing=not-recorded" : "timing=#{timings.map { |stage, values| "#{stage}:#{values.fetch(:elapsed_ms)}ms" }.join(",")}"
         [
