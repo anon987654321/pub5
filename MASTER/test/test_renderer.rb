@@ -140,7 +140,7 @@ class TestRenderer < Minitest::Test
 
   def test_session_line_is_dmesg_shaped
     renderer = FakeRenderer.new(config: {})
-    assert_equal "session0 at master0: resumed, 3 messages kept", strip_ansi(renderer.session_line("how does one avoid depression?", 3))
+    assert_equal "session0 at master0: resumed, 3 messages kept", strip_ansi(renderer.session_line(3))
   end
 
   def test_cli_prompt_bounds_are_the_face_contract
