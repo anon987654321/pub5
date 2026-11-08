@@ -97,15 +97,22 @@ module Master
             speech = Master::Voice::Speech
             [
               "CLI speech enabled=#{playback.enabled?}",
-              "audio player available=#{playback.available?}",
+              "audio output=#{playback.output_status}",
               "neural speech ready=#{speech.edge_tts_ready?}",
             ]
           rescue StandardError => e
             ["voice status unavailable=#{e.class}"]
           end
+          lane = begin
+            current = model.to_s
+            current.empty? ? "not supplied" : current
+          rescue StandardError
+            "not supplied"
+          end
 
           [
             "<master_runtime_capabilities>",
+            "Current model routing lane: #{lane}. This is a route identifier, not proof of the downstream model's exact product name or version. Never infer or web-search your own version; report it as unknown unless the live provider metadata supplies it.",
             "Registered runtime tools (not a guarantee every provider/request receives every tool):",
             *(tools.empty? ? ["none reported"] : tools.map { |tool| "- #{tool}" }),
             "Registered operator commands: #{commands.join(' ')}",
@@ -179,9 +186,13 @@ module Master
         end
 
         def conversational_register_line
-          "This is a conversation. Answer what was asked in the fewest words that carry it: concrete nouns " \
-            "and verbs, active voice, no pleasantries and no news about yourself. A greeting gets a greeting " \
-            "and, at most, one specific question. Factual, research or repository questions get the same tools and evidence as any turn."
+          "This is a live conversation, not a status report or code review. Speak naturally, warmly and " \
+            "specifically; be concise without becoming clipped. Answer the actual question first. A simple " \
+            "greeting gets a simple greeting, not a formula or an unsolicited question. Do not narrate queue, " \
+            "terminal, session or model-generation state unless the runtime section supplies direct evidence. " \
+            "Never guess whether a previous turn is still running or already finished. When someone says the " \
+            "exchange feels off, acknowledge the concrete mismatch and adjust immediately instead of asking " \
+            "them to design the conversation. Factual, research and repository questions keep the same tools and evidence as any turn."
         end
 
         # A new user asking "what can you do" was told about the repository alone. The reach is wider, and
