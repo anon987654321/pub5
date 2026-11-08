@@ -104,7 +104,7 @@ module Master
             ["voice status unavailable=#{e.class}"]
           end
           lane = begin
-            current = model.to_s
+            current = respond_to?(:model) ? model.to_s : ""
             current.empty? ? "not supplied" : current
           rescue StandardError
             "not supplied"
