@@ -15,13 +15,19 @@ class TestGreetingLanguage < Minitest::Test
     assert_equal :nb, Language.detect("hei, hva er klokka?")
   end
 
-  def test_the_greeting_names_the_language_of_the_last_message
+  def test_the_greeting_names_only_the_language_of_the_last_message
     session = Master::CLI::Session.allocate
-    Master::CLI::Welcome.stub(:context, { time: "Monday 23:25", line: "x", last_message: "hi there" }) do
-      assert_includes session.send(:greeting_prompt), "in\nEnglish."
-    end
-    Master::CLI::Welcome.stub(:context, { time: "Monday 23:25", line: "x", last_message: "hei, hvordan går det?" }) do
-      assert_includes session.send(:greeting_prompt), "in\nNorwegian Bokmål."
+    Master::CLI::Welcome.stub(:context, { time: "Monday 23:25", line: "x" }) do
+      Master::CLI::Welcome.stub(:read_session, { "messages" => [{ "role" => "user", "content" => "hi there" }] }) do
+        prompt = session.send(:greeting_prompt)
+        assert_includes prompt, "in\nEnglish."
+        refute_includes prompt, "hi there"
+      end
+      Master::CLI::Welcome.stub(:read_session, { "messages" => [{ "role" => "user", "content" => "hei, hvordan går det?" }] }) do
+        prompt = session.send(:greeting_prompt)
+        assert_includes prompt, "in\nNorwegian Bokmål."
+        refute_includes prompt, "hvordan går det"
+      end
     end
   end
 end
