@@ -51,16 +51,9 @@ module Master
                 else
                   "not configured"
                 end
-          speech_error = Master::Voice::Speech.last_error if defined?(Master::Voice::Speech)
-          playback_error = Master::Voice::Playback.last_error if defined?(Master::Voice::Playback)
-          voice_reason = [speech_error, playback_error].compact.map(&:to_s).reject(&:empty?).first
           # A command on PATH is only discovery, not a successful speaker test.
-          # The playback worker records verified output or a measured failure.
-          voice = if ENV["MASTER_TTS_DEGRADED"] == "1" || voice_reason
-                    "degraded"
-                  else
-                    Master::Voice::Playback.output_status
-                  end
+          # Both compact and verbose boots use the same evidence-backed status.
+          voice = voice_output_status
           [
             d("master0 at mainbus0: MASTER #{release_version} ##{context[:build]}, model #{model}"),
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}:#{@config['root'] || Dir.pwd}"),
@@ -141,6 +134,17 @@ module Master
 
         def boot_surface(text)
           text.to_s.gsub(ANSI_ESCAPE, "")
+        end
+
+        def voice_output_status
+          return "degraded" if ENV["MASTER_TTS_DEGRADED"] == "1"
+
+          errors = [Master::Voice::Speech.last_error, Master::Voice::Playback.last_error]
+          return "degraded" if errors.compact.any? { |error| !error.to_s.empty? }
+
+          Master::Voice::Playback.output_status
+        rescue StandardError
+          "unknown"
         end
 
         # One stable ksh input prompt; changing context is announced separately
@@ -344,7 +348,7 @@ module Master
             d("soul0: imports #{imports_loaded.join(' ')}"),
             d("soul0: #{active_orders_count} orders active"),
             *model_device_lines(context),
-            d("voice0 at mainbus0: #{ENV["MASTER_TTS_DEGRADED"] == "1" ? "degraded" : Master::Voice::Playback.output_status}"),
+            d("voice0 at mainbus0: #{voice_output_status}"),
             d("mode0 at mainbus0: #{mode.first(3).join(', ')}"),
             d("mode0: #{mode.drop(3).join(', ')}"),
             d("aesthetic0 at mode0: #{Aesthetic.mode}"),
