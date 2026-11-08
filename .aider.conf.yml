@@ -1,0 +1,24 @@
+# MASTER from disk, in an agent runtime with filesystem and tool access, in
+# place of pasting the whole checkout into a consumer chat window (Johann
+# 2026-11-08, "also, please implement"). The normative corpus is read-only
+# chat context; the working trees stay editable.
+read:
+  - AGENTS.md
+  - MASTER/AGENTS.md
+  - MASTER/data/soul.yml
+  - MASTER/data/laws.yml
+  - MASTER/data/commit_format.yml
+  - MASTER/data/law/TREE_CONTRACTS.md
+
+# The operator commits; the runtime never does.
+auto-commits: false
+attribute-author: false
+attribute-committer: false
+attribute-co-authored-by: false
+
+# The corpus above is already large; keep the map bounded.
+map-tokens: 2048
+
+# Pick the endpoint per run: aider --model <prefix>/<name> (e.g.
+# ollama_chat/<name> for a local OpenAI-compatible server), sized for this
+# checkout by .aider.model.metadata.json. No model is chosen here.
