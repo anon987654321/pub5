@@ -152,10 +152,9 @@ class TestSoul < Minitest::Test
 
 
   def test_agent_prompt_reports_registered_runtime_tools_commands_and_voice_state
-    tool_class = Class.new do
-      NAME = "test_probe"
-      DESCRIPTION = "Read-only test capability."
-    end
+    tool_class = Class.new
+    tool_class.const_set(:NAME, "test_probe")
+    tool_class.const_set(:DESCRIPTION, "Read-only test capability.")
     builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
     builder.instance_variable_set(:@tools, [tool_class.new])
 
