@@ -81,6 +81,26 @@ class TestRenderer < Minitest::Test
     ENV["MASTER_BOOT_STATUS"] = old if old
   end
 
+  def test_verbose_splash_reports_synthesis_failure_as_degraded
+    old_mode = ENV["MASTER_BOOT_STATUS"]
+    old_degraded = ENV["MASTER_TTS_DEGRADED"]
+    ENV["MASTER_BOOT_STATUS"] = "1"
+    ENV.delete("MASTER_TTS_DEGRADED")
+
+    text = Master::Voice::Speech.stub(:last_error, "synthesis unavailable") do
+      Master::Voice::Playback.stub(:last_error, nil) do
+        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+          FakeRenderer.new(config: {}).splash("model")
+        end
+      end
+    end
+
+    assert_includes strip_ansi(text), "voice0 at mainbus0: degraded"
+  ensure
+    old_mode ? ENV["MASTER_BOOT_STATUS"] = old_mode : ENV.delete("MASTER_BOOT_STATUS")
+    old_degraded ? ENV["MASTER_TTS_DEGRADED"] = old_degraded : ENV.delete("MASTER_TTS_DEGRADED")
+  end
+
   def test_splash_keeps_multiline_boot_shape_when_verbose
     ENV["MASTER_BOOT_STATUS"] = "1"
     old_degraded = ENV["MASTER_TTS_DEGRADED"]
