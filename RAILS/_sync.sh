@@ -4,7 +4,7 @@ set -euo pipefail
 # Source this file; do not execute directly. Requires _core.sh sourced first.
 
 # Production tree replacement is performed only by the fixed-mode, app-owned
-# pub5-admin rails-sync helper below. No caller-supplied source/destination
+# pub4-admin rails-sync helper below. No caller-supplied source/destination
 # paths cross into a privileged copy, delete, or rename operation.
 # rails_sync_app_tree APP_NAME MODE — fixed app-user tree synchronization.
 # Source and destination paths are owned by the installed broker helper, not caller input.
@@ -21,11 +21,11 @@ rails_sync_app_tree() {
       ;;
     *) log_err "rails_sync_app_tree: refused mode: $mode"; return 2 ;;
   esac
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "rails_sync_app_tree: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "rails_sync_app_tree: pub4-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
-  "${_PRIV}" /usr/local/sbin/pub5-admin rails-sync "$app_name" "$mode"
+  "${_PRIV}" /usr/local/sbin/pub4-admin rails-sync "$app_name" "$mode"
 }
 # overlay_shared_initializers APP_DIR — shared config wins over stale per-app copies
 overlay_shared_initializers() {
@@ -33,8 +33,8 @@ overlay_shared_initializers() {
   local shared_init=${PUB5_RAILS_ROOT:-/home/dev/pub5/RAILS}/__shared/config/initializers
   [[ -d $shared_init ]] || return 0
   local app_name=${app_dir:h:t}
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "shared initializer overlay refused: pub5-admin is missing"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "shared initializer overlay refused: pub4-admin is missing"
     return 1
   }
   run_rails_as_app "$app_name" "$app_dir" "overlay-initializers" || return $?
@@ -48,8 +48,8 @@ overlay_shared_public() {
   local shared_public=${PUB5_RAILS_ROOT:-/home/dev/pub5/RAILS}/__shared/public
   [[ -d $shared_public ]] || return 0
   local app_name=${app_dir:h:t}
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "shared public overlay refused: pub5-admin is missing"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "shared public overlay refused: pub4-admin is missing"
     return 1
   }
   run_rails_as_app "$app_name" "$app_dir" "overlay-public" || return $?

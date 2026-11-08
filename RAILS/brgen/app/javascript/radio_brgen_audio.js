@@ -2,7 +2,7 @@
 // from WebGL so playback and spectrum analysis can evolve without owning the
 // visual renderer.
 
-import { publishVisual } from "pub5/visual_field"
+import { publishVisual } from "pub4/visual_field"
 
 export const DEFAULT_TRACKS = [
   { title: "Microphone Master [Extended]", id: "9EGHwkDix78", artist: "J Dilla" },

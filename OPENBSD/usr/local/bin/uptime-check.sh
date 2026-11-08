@@ -83,10 +83,10 @@ done
 #
 # One failed tick can be a deploy restarting an app. A failure that survives
 # UPTIME_ALERT_AFTER consecutive ticks (three, fifteen minutes) is not, and gets a
-# durable pub5-alert record that says which URLs and what to read. A passing tick
-# resets the count. The count lives in /var/db/pub5, root's.
-failstate=${UPTIME_FAIL_STATE:-/var/db/pub5/uptime_fail_count}
-alert=${PUB5_ALERT:-/usr/local/bin/pub5-alert}
+# durable pub4-alert record that says which URLs and what to read. A passing tick
+# resets the count. The count lives in /var/db/pub4, root's.
+failstate=${UPTIME_FAIL_STATE:-/var/db/pub4/uptime_fail_count}
+alert=${PUB4_ALERT:-/usr/local/bin/pub4-alert}
 n=0
 after=${UPTIME_ALERT_AFTER:-3}
 if [[ $fail != 0 ]]; then

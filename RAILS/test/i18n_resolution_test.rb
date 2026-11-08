@@ -2,6 +2,7 @@
 
 require "minitest/autorun"
 require "yaml"
+require_relative "engine_roots"
 
 # Every t("literal") without a default must resolve in the locales the app actually loads.
 #
@@ -59,7 +60,7 @@ class I18nResolutionTest < Minitest::Test
 
   # Views and helpers the app can render: its own, the engine's, and — the part
   # this missed — the mountable engines brgen's verticals live in. 102 view and
-  # helper files under {brgen_*,brgen_radio/*,brgen_marketplace/engines/*}/app were outside the glob, which is the
+  # helper files under {brgen/engines/*,brgen/engines/radio/*,brgen/engines/marketplace/engines/*}/app were outside the glob, which is the
   # same blind spot that cost four other scanners 57 views when the verticals
   # moved and read as an improving finding count rather than as blindness.
   def keys_used_by(app)
@@ -75,12 +76,13 @@ class I18nResolutionTest < Minitest::Test
     end
   end
 
-  # brgen's verticals are the engines that sit beside it as brgen_<name> (brgen_radio holds
-  # playlist and tv one level down); amber and bsdports mount none.
+  # brgen's verticals are the engines under brgen/engines/<name> (radio holds
+  # playlist and tv one level down; marketplace holds takeaway under engines/);
+  # amber and bsdports mount none.
   def engine_dirs(app)
     return [] unless app == "brgen"
 
-    Dir.glob(File.join(ROOT, "brgen_*/{,*/,engines/*/}app")).map { |path| path.delete_prefix("#{ROOT}/").delete_suffix("/app") }.sort
+    Dir.glob(File.join(ROOT, EngineRoots::GLOB, "app")).map { |path| path.delete_prefix("#{ROOT}/").delete_suffix("/app") }.sort
   end
 
   # A shared view renders in an app only when the app's own source names it

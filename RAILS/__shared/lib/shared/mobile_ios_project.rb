@@ -10,7 +10,7 @@ module Shared
     def spec
       apps = MobileAppRegistry.all
       {
-        "name" => "Pub5Mobile",
+        "name" => "Pub4Mobile",
         "options" => {
           "deploymentTarget" => { "iOS" => "16.0" },
           "developmentLanguage" => "en",
@@ -18,7 +18,7 @@ module Shared
           "minimumXcodeGenVersion" => "2.46.0",
         },
         "configs" => apps.to_h { |app| [ config_name(app), "release" ] },
-        "targets" => { "Pub5Mobile" => target(apps) },
+        "targets" => { "Pub4Mobile" => target(apps) },
         "schemes" => apps.to_h { |app| [ config_name(app), scheme(config_name(app)) ] },
       }
     end
@@ -28,13 +28,13 @@ module Shared
       {
         "type" => "application",
         "platform" => "iOS",
-        "sources" => [{ "path" => File.expand_path("../../../../MASTER/tools/rails/native/Pub5MobileApp.swift", __dir__) }],
+        "sources" => [{ "path" => File.expand_path("../../../../MASTER/tools/rails/native/Pub4MobileApp.swift", __dir__) }],
         "settings" => {
           "base" => {
             "SWIFT_VERSION" => "5.0",
             "GENERATE_INFOPLIST_FILE" => "NO",
             "INFOPLIST_FILE" => File.expand_path("../../../../MASTER/tools/rails/native/Info.plist", __dir__),
-            "CODE_SIGN_ENTITLEMENTS" => File.expand_path("../../../../MASTER/tools/rails/native/Pub5Mobile.entitlements", __dir__),
+            "CODE_SIGN_ENTITLEMENTS" => File.expand_path("../../../../MASTER/tools/rails/native/Pub4Mobile.entitlements", __dir__),
             "CODE_SIGN_STYLE" => "Automatic",
             # Run and archive share one configuration, so the APNs gateway is a
             # setting, not #if DEBUG; set it to development for a device build.
@@ -58,7 +58,7 @@ module Shared
 
     def scheme(name)
       {
-        "build" => { "targets" => { "Pub5Mobile" => "all" } },
+        "build" => { "targets" => { "Pub4Mobile" => "all" } },
         "run" => { "config" => name },
         "archive" => { "config" => name },
       }

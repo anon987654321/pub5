@@ -79,7 +79,7 @@ mail_domain: brgen.no
 # baibl.no, blognet.no and hjerterom.no were here until 2026-08-12, when all
 # three apps were deleted. Their users, homes, rc.d scripts, /etc/*.env files,
 # login classes and the baibl/blognet/hjerterom A records under brgen.no went
-# with them; databases are at /var/backups/pub5/{hjerterom,deleted-apps}-20260812.
+# with them; databases are at /var/backups/pub4/{hjerterom,deleted-apps}-20260812.
 extra_zones:
   antibettingblog.com: {}
   anticasinoblog.com: {}

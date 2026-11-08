@@ -13,7 +13,7 @@ module Shared
 
     def call
       if defined?(Rails.event) && Rails.event.respond_to?(:notify)
-        Rails.event.tagged("pub5") do
+        Rails.event.tagged("pub4") do
           Rails.event.notify(name, **payload)
         end
       else

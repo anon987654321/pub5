@@ -5,17 +5,17 @@ set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   print "usage: zsh OPENBSD/bin/vps_master_scan.sh [scan args...]"
-  print "  MASTER bin/master under the CI lock, refused while the 5-minute load is over PUB5_CI_MAX_LOAD"
+  print "  MASTER bin/master under the CI lock, refused while the 5-minute load is over PUB4_CI_MAX_LOAD"
   exit 0
 fi
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
-# Was `lock=${PUB5_CI_LOCK:-/var/tmp/pub5-ci.lock}`, then root chmod 666'ed exactly
+# Was `lock=${PUB4_CI_LOCK:-/var/tmp/pub4-ci.lock}`, then root chmod 666'ed exactly
 # that caller-chosen path in a world-writable directory. The helper keeps the lock
-# in root-owned /var/db/pub5 and ignores an override pointing anywhere else.
+# in root-owned /var/db/pub4 and ignores an override pointing anywhere else.
 . "${repo}/OPENBSD/lib/ci_lock.sh"
 . "${repo}/OPENBSD/lib/ruby_select.sh"
-max_load=${PUB5_CI_MAX_LOAD:-4}
+max_load=${PUB4_CI_MAX_LOAD:-4}
 
 # awk twice, in a repo that bans it in committed scripts. Ruby also spares the
 # second invocation: one process reads the load and decides.
@@ -25,7 +25,7 @@ if ! "$RUBY" -e 'n = ARGV[0].to_s.scan(/\d+(?:\.\d+)?/); exit 1 if n.size < 3; e
   exit 1
 fi
 
-lock=$(pub5_ensure_ci_lock)
+lock=$(pub4_ensure_ci_lock)
 
 cd "$repo/MASTER"
 print "vps_master_scan: lock $lock $*"

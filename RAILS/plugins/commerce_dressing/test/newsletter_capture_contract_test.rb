@@ -41,8 +41,8 @@ def test_popup_is_shared_and_time_capped
   end
 
   def test_popup_is_wired_once_through_shared_boot
-    assert_includes File.read(IMPORTMAP), %(pin "pub5/newsletter_capture")
-    assert_includes File.read(BOOT), %(import NewsletterCapture from "pub5/newsletter_capture")
+    assert_includes File.read(IMPORTMAP), %(pin "pub4/newsletter_capture")
+    assert_includes File.read(BOOT), %(import NewsletterCapture from "pub4/newsletter_capture")
     assert_includes File.read(BOOT), %(application.register("newsletter-capture", NewsletterCapture))
   end
 

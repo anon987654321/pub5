@@ -86,7 +86,7 @@ class DmesgTest < Minitest::Test
   end
 
   def test_a_command_that_cannot_start_is_a_failed_step
-    out, = run_ci { step "missing_tool", "/nonexistent/pub5-ci-tool" }
+    out, = run_ci { step "missing_tool", "/nonexistent/pub4-ci-tool" }
 
     assert_includes out, "ci0 at demo: missing_tool failed in"
     assert_includes out, "0 of 1 steps passed"

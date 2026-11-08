@@ -32,8 +32,8 @@ eval(File.read(Shared::Engine.root.join("config/importmap_baseline.rb")), bindin
 # stimulus_boot_brgen.js (brgen only). Pinned per app rather than in
 # importmap_baseline.rb, which bsdports also evals — bsdports imports
 # neither, so its importmap carries no pin for them.
-pin "pub5/stimulus_boot_social", to: "stimulus_boot_social.js"
-pin "pub5/stimulus_boot_brgen", to: "stimulus_boot_brgen.js"
+pin "pub4/stimulus_boot_social", to: "stimulus_boot_social.js"
+pin "pub4/stimulus_boot_brgen", to: "stimulus_boot_brgen.js"
 
 pin "radio_brgen_tunnel", to: "radio_brgen_tunnel.js"
 pin "radio_brgen_audio", to: "radio_brgen_audio.js"

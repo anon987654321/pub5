@@ -36,7 +36,7 @@ own renderer.
 
 Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
-Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
+Log: `/home/dev/vps-deploy.log`. Session: `pub4-deploy`.
 
 The commands live in one place. `data/operator.yml` is the source of the command
 recipes, so do not write another catalogue. From the repository root, the operator
@@ -54,14 +54,14 @@ different copy-tree layout.
 
 ## Privilege boundary
 
-`OPENBSD/usr/local/sbin/pub5-admin` is the fixed-path root broker. It exposes
+`OPENBSD/usr/local/sbin/pub4-admin` is the fixed-path root broker. It exposes
 allowlisted service actions, atomic deploy receipts/secrets, a fixed CI lock, and
 bounded Rails/CI task and sync verbs. CI and production Rails tree replacement run
 with the selected app account; the CI runner has a wall-clock process-group deadline.
 The deploy adapter verifies root-owned rc.d files rather than installing from the
 checkout, and relay route verification is read-only. The progress records in
-`/var/db/pub5/deploy_status` stay root-only; `vps-state` reads them through the
-allowlisted `doas -n pub5-admin deploy-status-read <app>` verb. Missing status is
+`/var/db/pub4/deploy_status` stay root-only; `vps-state` reads them through the
+allowlisted `doas -n pub4-admin deploy-status-read <app>` verb. Missing status is
 JSON `null`; unreadable or malformed status is reported as corrupt rather than
 silently shown as no deploy.
 
@@ -77,7 +77,7 @@ mirror of the NSD configuration templates and nothing more. The live signed zone
 sit on vm23 under `/var/nsd/` and are deliberately not in git, because a signed zone
 in a shared checkout is a key in a shared checkout. Service secrets live in `/etc/*.env` on
 the box and never in this tree. The interactive operator shell loads provider
-credentials, when configured, from the user's `~/.config/pub5/operator.env`; keep
+credentials, when configured, from the user's `~/.config/pub4/operator.env`; keep
 that file host-local with owner-only permissions, outside this checkout.
 
 ## Backups, alerts and what the public sees
@@ -86,8 +86,8 @@ Nothing on the box backs itself up off the box. `bin/dr-pull` runs nightly on th
 operator's Mac, brings back a checksummed snapshot of every production database and
 the uploaded files, and `bin/dr-pull --drill` restores the newest pull into a
 scratch directory and reads it back. A healed symptom must not stay quiet, so
-`usr/local/bin/pub5-alert` records a recurring fault once per six hours in
-`/var/log/pub5-alerts.log`, and `bin/vps-state` prints the last few next to each
+`usr/local/bin/pub4-alert` records a recurring fault once per six hours in
+`/var/log/pub4-alerts.log`, and `bin/vps-state` prints the last few next to each
 deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
 ours, and with `--tls` it asks every public host for its certificate and a
 health answer, the way a visitor would.
@@ -99,7 +99,7 @@ repository root, use:
 
 ```zsh
 MANPATH="$PWD/OPENBSD/man" man vps-deploy
-MANPATH="$PWD/OPENBSD/man" man pub5-admin
+MANPATH="$PWD/OPENBSD/man" man pub4-admin
 ```
 
 Read `RUNBOOK.md` before live production work. The manual pages do not replace

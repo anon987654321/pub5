@@ -42,7 +42,7 @@ class ImportmapIntegrityContractTest < Minitest::Test
       @hotwired/turbo-rails
       @hotwired/stimulus
       @rails/request.js
-      pub5/pwa_runtime
+      pub4/pwa_runtime
     ].each do |pin|
       assert_includes source, %(pin "#{pin}")
     end

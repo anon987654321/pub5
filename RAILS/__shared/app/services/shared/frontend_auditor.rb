@@ -236,11 +236,11 @@ body)
       Shared::FrontendLawSet::PRESERVATION[:protected_stylesheet_files].any? { |name| path.end_with?(name) }
     end
 
-    PUB5_STACK_PARTIAL_RE = %r{/_(?:minimal|tokens|animations|base|components|stack|shell)(?:_brgen)?\.scss\z}
+    PUB4_STACK_PARTIAL_RE = %r{/_(?:minimal|tokens|animations|base|components|stack|shell)(?:_brgen)?\.scss\z}
 
     def css_file_size_violation?(path, body)
       return false if protected_stylesheet?(path)
-      return false if path.match?(PUB5_STACK_PARTIAL_RE)
+      return false if path.match?(PUB4_STACK_PARTIAL_RE)
 
       body.lines.size > Shared::FrontendLawSet::TYPOGRAPHY[:max_css_file_lines]
     end

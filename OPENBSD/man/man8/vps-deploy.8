@@ -3,7 +3,7 @@
 .Os
 .Sh NAME
 .Nm vps-deploy
-.Nd deploy approved pub5 services to the production VPS
+.Nd deploy approved pub4 services to the production VPS
 .Sh SYNOPSIS
 .Nm
 .Cm all | master | brgen | amber | bsdports | mrdamascy
@@ -22,7 +22,7 @@ Git fetch and checkout always run as
 .Cm dev
 so the production tree and GitHub credentials stay correctly owned.
 Service control calls
-.Nm pub5-admin
+.Nm pub4-admin
 directly.
 When started as
 .Cm dev ,
@@ -33,7 +33,7 @@ re-executes the script as root through
 with a prefix allowlist of
 .Ev VPS_DEPLOY_*
 and
-.Ev PUB5_DEPLOY_*
+.Ev PUB4_DEPLOY_*
 so the pinned SHA, preflight proof, canary and logging knobs survive.
 .Pp
 The command validates its target, checks required local broker availability,
@@ -61,16 +61,16 @@ The default is fetched from
 .It Ev VPS_DEPLOY_LOG
 Aggregate deploy log path.
 Default
-.Pa /var/log/pub5/vps-deploy.log .
+.Pa /var/log/pub4/vps-deploy.log .
 Rotated when larger than 10 MB.
 .It Ev VPS_DEPLOY_LOG_DIR
 Directory for aggregate and per-run logs.
 Default
-.Pa /var/log/pub5 .
+.Pa /var/log/pub4 .
 .It Ev VPS_DEPLOY_RUN_LOG
 Per-run log path.
 Default is a timestamped file under
-.Pa /var/log/pub5/runs/ .
+.Pa /var/log/pub4/runs/ .
 Symlinked from
 .Pa /home/dev/vps-deploy-latest.log .
 once.
@@ -98,7 +98,7 @@ the per-application deploy script and runtime check still run.
 Setting this to
 .Cm fail
 refuses deployment when machine configuration differs from the repository.
-.It Ev PUB5_DEPLOY_BROWSER_CHECKS
+.It Ev PUB4_DEPLOY_BROWSER_CHECKS
 Setting this to
 .Cm 1
 adds the browser checks after restart.
@@ -122,6 +122,6 @@ zsh OPENBSD/bin/vps-deploy all
 .Ed
 .Sh SEE ALSO
 .Xr operator 1 ,
-.Xr pub5-admin 8 ,
+.Xr pub4-admin 8 ,
 .Xr rcctl 8 ,
 .Xr relayd 8

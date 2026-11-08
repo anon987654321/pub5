@@ -28,7 +28,7 @@ class AmberScriptTest < ActiveSupport::TestCase
   end
 
   # The bundle itself is installed by the root broker (OPENBSD/usr/local/libexec/rails-task.ksh), which
-  # owns the deployment and without settings and the self-copy guard; OPENBSD/test/test_pub5_admin.rb
+  # owns the deployment and without settings and the self-copy guard; OPENBSD/test/test_pub4_admin.rb
   # holds those. This file holds what amber's own scripts promise.
   test "deploy script names its shared bundle cache" do
     assert_includes SCRIPT.read, "SHARED_BUNDLE_CACHE"

@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import Haptics from "pub5/haptics"
+import Haptics from "pub4/haptics"
 
 // Press and hold a card to open its own "more" menu: the same menu, the same
 // actions, and the button stays the keyboard and screen-reader way in. Android

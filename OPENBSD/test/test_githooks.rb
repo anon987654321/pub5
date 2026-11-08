@@ -5,7 +5,7 @@ require "tmpdir"
 require "fileutils"
 require "open3"
 
-# The three guards in OPENBSD/dev/githooks are the only thing standing between a
+# The three guards in .githooks are the only thing standing between a
 # shared checkout and the accidents CLAUDE.md calls trap one, and until now
 # nothing proved they still refuse anything. They are prose about prose: a hook
 # that stopped firing would look exactly like a tree in which nobody made the
@@ -19,7 +19,7 @@ require "open3"
 # caught a missing chmod, a bad shebang, or a core.hooksPath that points at the
 # wrong directory.
 class TestGitHooks < Minitest::Test
-  HOOKS = File.expand_path("../dev/githooks", __dir__)
+  HOOKS = File.expand_path("../../.githooks", __dir__)
 
   def setup
     @dir = Dir.mktmpdir("githooks")
@@ -30,7 +30,7 @@ class TestGitHooks < Minitest::Test
     # A first commit, so every case below has a HEAD to diff against.
     write("README.md", "seed\n")
     git!("add", "README.md")
-    out, status = commit("seed", env: { "PUB5_UNTRACKED" => "1" })
+    out, status = commit("seed", env: { "PUB4_UNTRACKED" => "1" })
     assert status.success?, "seed commit failed; later hook assertions would be cascading noise: #{out}"
   end
 
@@ -43,7 +43,7 @@ class TestGitHooks < Minitest::Test
   # The boot smoke has its own test (MASTER/test/test_boot_smoke.rb); here it would
   # boot the real container on every push.
   def git(*args, env: {})
-    out, status = Open3.capture2e({ "PUB5_SKIP_BOOT_SMOKE" => "1" }.merge(env), "git", *args, chdir: @dir)
+    out, status = Open3.capture2e({ "PUB4_SKIP_BOOT_SMOKE" => "1" }.merge(env), "git", *args, chdir: @dir)
     [out, status]
   end
 
@@ -109,15 +109,15 @@ class TestGitHooks < Minitest::Test
     stage_two_trees
     out, _status = commit("spans two trees")
 
-    assert_match(/PUB5_CROSS_TREE=1/, out)
+    assert_match(/PUB4_CROSS_TREE=1/, out)
     assert_match(/git commit -- <paths>(?m:.*)bin\/operator worktree/, out, "name both ways out, not only the override")
   end
 
   def test_the_cross_tree_override_is_honoured
     stage_two_trees
-    out, status = commit("spans two trees, deliberately", env: { "PUB5_CROSS_TREE" => "1" })
+    out, status = commit("spans two trees, deliberately", env: { "PUB4_CROSS_TREE" => "1" })
 
-    assert status.success?, "PUB5_CROSS_TREE=1 did not let the commit through:\n#{out}"
+    assert status.success?, "PUB4_CROSS_TREE=1 did not let the commit through:\n#{out}"
   end
 
   def test_a_single_tree_commit_passes
@@ -138,7 +138,7 @@ class TestGitHooks < Minitest::Test
 
     refute_committed out, status, /REFUSED - untracked file\(s\)/
     assert_match(/MASTER\/forgotten\.rb/, out, "the refusal should name the file it is refusing over")
-    assert_match(/PUB5_UNTRACKED=1/, out)
+    assert_match(/PUB4_UNTRACKED=1/, out)
   end
 
   def test_an_untracked_file_in_another_tree_does_not_refuse
@@ -166,7 +166,7 @@ class TestGitHooks < Minitest::Test
   def test_a_staged_deletion_beside_an_untracked_twin_is_refused
     write("MASTER/store.rb", "# original\n")
     git!("add", "MASTER/store.rb")
-    commit("add store", env: { "PUB5_UNTRACKED" => "1" })
+    commit("add store", env: { "PUB4_UNTRACKED" => "1" })
 
     git!("rm", "--cached", "MASTER/store.rb")
     FileUtils.rm(File.join(@dir, "MASTER/store.rb"))
@@ -174,7 +174,7 @@ class TestGitHooks < Minitest::Test
     out, status = commit("move store")
 
     refute_committed out, status, /REFUSED - staged deletion \+ untracked twin/
-    assert_match(/PUB5_SPLIT_MOVE=1/, out)
+    assert_match(/PUB4_SPLIT_MOVE=1/, out)
   end
 
    # --- 4. MASTER/tools ownership -------------------------------------------------
@@ -192,7 +192,7 @@ class TestGitHooks < Minitest::Test
     write("MASTER/tools/.session", "mine\n")
     write("MASTER/tools/beat.rb", "# a take\n")
     git!("add", "MASTER/tools/.session", "MASTER/tools/beat.rb")
-    out, status = commit("touch MASTER/tools", env: { "PUB5_SESSION" => "mine" })
+    out, status = commit("touch MASTER/tools", env: { "PUB4_SESSION" => "mine" })
 
     assert status.success?, "the owning session was refused its own tree:\n#{out}"
   end
@@ -209,7 +209,7 @@ class TestGitHooks < Minitest::Test
     out, status = commit("break the engine")
 
     refute_committed out, status, /REFUSED - .*dilla\.rb does not parse/
-    assert_match(/PUB5_RUBY_PARSE_SKIP=1/, out)
+    assert_match(/PUB4_RUBY_PARSE_SKIP=1/, out)
   end
 
   def test_a_staged_engine_file_that_parses_commits
@@ -231,9 +231,9 @@ class TestGitHooks < Minitest::Test
   def test_the_parse_override_is_honoured
     write("STUDIO/dilla/dilla.rb", "end\n")
     git!("add", "STUDIO/dilla/dilla.rb")
-    out, status = commit("broken, deliberately", env: { "PUB5_RUBY_PARSE_SKIP" => "1", "PUB5_PARSE_SKIP" => "1" })
+    out, status = commit("broken, deliberately", env: { "PUB4_RUBY_PARSE_SKIP" => "1", "PUB4_PARSE_SKIP" => "1" })
 
-    assert status.success?, "PUB5_RUBY_PARSE_SKIP=1 with PUB5_PARSE_SKIP=1 did not let the commit through:\n#{out}"
+    assert status.success?, "PUB4_RUBY_PARSE_SKIP=1 with PUB4_PARSE_SKIP=1 did not let the commit through:\n#{out}"
   end
 
   # 4c. A commit must not clear an execute bit.
@@ -242,7 +242,7 @@ class TestGitHooks < Minitest::Test
     write("MASTER/bin/run", "#!/bin/sh\n")
     File.chmod(0o755, File.join(@dir, "MASTER/bin/run"))
     git!("add", "MASTER/bin/run")
-    commit("add a script", env: { "PUB5_UNTRACKED" => "1" })
+    commit("add a script", env: { "PUB4_UNTRACKED" => "1" })
     File.chmod(0o644, File.join(@dir, "MASTER/bin/run"))
     git!("add", "MASTER/bin/run")
   end
@@ -252,14 +252,14 @@ class TestGitHooks < Minitest::Test
     out, status = commit("drop the bit")
 
     refute_committed out, status, /REFUSED - this commit removes the execute bit from:\n\s+MASTER\/bin\/run/
-    assert_match(/PUB5_MODE_CHANGE=1/, out)
+    assert_match(/PUB4_MODE_CHANGE=1/, out)
   end
 
   def test_the_mode_override_is_honoured
     commit_executable
-    out, status = commit("drop the bit, deliberately", env: { "PUB5_MODE_CHANGE" => "1" })
+    out, status = commit("drop the bit, deliberately", env: { "PUB4_MODE_CHANGE" => "1" })
 
-    assert status.success?, "PUB5_MODE_CHANGE=1 did not let the commit through:\n#{out}"
+    assert status.success?, "PUB4_MODE_CHANGE=1 did not let the commit through:\n#{out}"
   end
 
   # --- 5. pre-push: a push carries everything beneath it -------------------
@@ -268,7 +268,7 @@ class TestGitHooks < Minitest::Test
     remote = File.join(@dir, "..", "remote-#{File.basename(@dir)}.git")
     Open3.capture2e("git", "init", "--bare", "--initial-branch=main", remote)
     git!("remote", "add", "origin", remote)
-    git!("push", "origin", "main", env: { "PUB5_PUSH_ALL" => "1" })
+    git!("push", "origin", "main", env: { "PUB4_PUSH_ALL" => "1" })
     remote
   end
 
@@ -276,7 +276,7 @@ class TestGitHooks < Minitest::Test
     count.times do |i|
       write("MASTER/c#{i}.rb", "# #{i}\n")
       git!("add", "MASTER/c#{i}.rb")
-      out, status = commit("commit #{i}", env: { "PUB5_UNTRACKED" => "1" })
+      out, status = commit("commit #{i}", env: { "PUB4_UNTRACKED" => "1" })
       raise "setup commit failed: #{out}" unless status.success?
     end
   end
@@ -299,7 +299,7 @@ class TestGitHooks < Minitest::Test
 
     refute status.success?, "a three-commit push was allowed:\n#{out}"
     assert_match(/REFUSED - 3 commits would be published, not 1/, out)
-    assert_match(/PUB5_PUSH_ALL=1/, out)
+    assert_match(/PUB4_PUSH_ALL=1/, out)
     assert_match(/git log -p origin\/main\.\.HEAD(?m:.*)bin\/operator worktree/, out, "read, or stop sharing")
   ensure
     FileUtils.remove_entry(remote) if remote && File.directory?(remote)
@@ -319,9 +319,9 @@ class TestGitHooks < Minitest::Test
   def test_the_push_override_is_honoured
     remote = push_setup
     add_commits(3)
-    out, status = git("push", "origin", "main", env: { "PUB5_PUSH_ALL" => "1" })
+    out, status = git("push", "origin", "main", env: { "PUB4_PUSH_ALL" => "1" })
 
-    assert status.success?, "PUB5_PUSH_ALL=1 did not let the push through:\n#{out}"
+    assert status.success?, "PUB4_PUSH_ALL=1 did not let the push through:\n#{out}"
   ensure
     FileUtils.remove_entry(remote) if remote && File.directory?(remote)
   end
@@ -331,7 +331,7 @@ class TestGitHooks < Minitest::Test
   def test_an_absent_session_ledger_does_not_accuse
     remote = push_setup
     add_commits(3)
-    FileUtils.rm_f(File.join(@dir, ".git", "pub5-session-commits"))
+    FileUtils.rm_f(File.join(@dir, ".git", "pub4-session-commits"))
     out, _status = git("push", "origin", "main")
 
     refute_match(/FOREIGN/, out, "with no ledger the hook accused commits of being foreign")
@@ -345,9 +345,9 @@ class TestGitHooks < Minitest::Test
   def test_post_commit_records_this_session_so_pre_push_can_mark_foreign_commits
     write("MASTER/a.rb", "# a\n")
     git!("add", "MASTER/a.rb")
-    commit("recorded", env: { "PUB5_SESSION" => "session-a" })
+    commit("recorded", env: { "PUB4_SESSION" => "session-a" })
 
-    ledger = File.join(@dir, ".git", "pub5-session-commits")
+    ledger = File.join(@dir, ".git", "pub4-session-commits")
 
     assert File.file?(ledger), "post-commit wrote no ledger, so pre-push can never mark anything"
     assert_match(/\Asession-a [0-9a-f]+/, File.read(ledger).lines.last.to_s)

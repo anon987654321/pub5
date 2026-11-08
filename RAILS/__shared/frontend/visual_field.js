@@ -49,7 +49,7 @@ export function normalizeVisual(detail = {}) {
 
 export function publishVisual(name, detail = {}) {
   const visual = normalizeVisual({ ...detail, name })
-  window.dispatchEvent(new CustomEvent("pub5:visual", { detail: visual }))
+  window.dispatchEvent(new CustomEvent("pub4:visual", { detail: visual }))
   return visual
 }
 

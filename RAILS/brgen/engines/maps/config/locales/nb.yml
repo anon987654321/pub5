@@ -1,0 +1,34 @@
+# Engine-local strings.
+#
+# Every engine string used to live in brgen/config/locales, which made a
+# literal in the markup the path of least resistance for engine work and left
+# the engine unmountable anywhere else. Rails::Engine appends
+# config/locales/*.yml to I18n.load_path on its own -- no wiring beyond this
+# file existing -- and I18n deep-merges across load paths, so keys under the
+# same namespace in the host file stay reachable.
+#
+# Keys the host already carries are NOT copied here. Use them.
+nb:
+  maps:
+    popup_open: "Åpne"
+    point_untitled: "Kartpunkt"
+    point_kind: "punkt"
+    no_points: "Ingen kartpunkter ennå."
+    point_list: "Punktene på kartet"
+    address: "Adresse"
+    city: "By"
+    coordinates: "Koordinater"
+    kind: "Type"
+    # A place's kind is stored as an English slug; these are what a reader sees.
+    kinds:
+      attraction: "Attraksjon"
+      bar: "Bar"
+      cafe: "Kafé"
+      market: "Marked"
+      museum: "Museum"
+      park: "Park"
+      restaurant: "Restaurant"
+      shop: "Butikk"
+      trail: "Tursti"
+      venue: "Scene"
+    neighborhood: "Nabolag"

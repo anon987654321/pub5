@@ -1,17 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
-import { allows } from "pub5/cookie_consent"
+import { allows } from "pub4/cookie_consent"
 
 export default class extends Controller {
   static values = { src: String, epi: String }
 
   connect() {
     this.onConsent = () => this.loadIfAllowed()
-    window.addEventListener("pub5:cookie-consent-resolved", this.onConsent)
+    window.addEventListener("pub4:cookie-consent-resolved", this.onConsent)
     this.loadIfAllowed()
   }
 
   disconnect() {
-    window.removeEventListener("pub5:cookie-consent-resolved", this.onConsent)
+    window.removeEventListener("pub4:cookie-consent-resolved", this.onConsent)
   }
 
   loadIfAllowed() {

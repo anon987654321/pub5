@@ -1,12 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
-import { VisualField } from "pub5/visual_field"
+import { VisualField } from "pub4/visual_field"
 
 export default class extends Controller {
   static values = { surface: String }
 
   connect() {
     this.canvas = document.createElement("canvas")
-    this.canvas.className = "pub5-visual-field"
+    this.canvas.className = "pub4-visual-field"
     this.canvas.setAttribute("aria-hidden", "true")
     this.canvas.style.cssText = [
       "position:fixed",
@@ -56,14 +56,14 @@ export default class extends Controller {
     window.addEventListener("pointerleave", this.pointerLeave, { passive: true })
     window.addEventListener("master:visual", this.visualSignal)
     window.addEventListener("master:emotion", this.visualSignal)
-    window.addEventListener("pub5:visual", this.visualSignal)
+    window.addEventListener("pub4:visual", this.visualSignal)
     window.addEventListener("amber:wardrobe-change", this.visualSignal)
     window.addEventListener("radio:audio", this.visualSignal)
     document.addEventListener("visibilitychange", this.visibility)
     window.addEventListener("resize", this.resize, { passive: true })
 
     this.ensureFrame()
-    document.documentElement.dataset.pub5VisualSurface = this.surface
+    document.documentElement.dataset.pub4VisualSurface = this.surface
   }
 
   detectSurface() {
@@ -94,7 +94,7 @@ export default class extends Controller {
     window.removeEventListener("pointerleave", this.pointerLeave)
     window.removeEventListener("master:visual", this.visualSignal)
     window.removeEventListener("master:emotion", this.visualSignal)
-    window.removeEventListener("pub5:visual", this.visualSignal)
+    window.removeEventListener("pub4:visual", this.visualSignal)
     window.removeEventListener("amber:wardrobe-change", this.visualSignal)
     window.removeEventListener("radio:audio", this.visualSignal)
     document.removeEventListener("visibilitychange", this.visibility)

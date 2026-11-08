@@ -2,7 +2,7 @@
 # agent_worktree.sh <agent-name> [base-branch]
 #
 # Give a coding agent (claude, grok, codex, …) its OWN git worktree + branch off
-# the shared pub5 repo, so concurrent agents never share one working tree.
+# the shared pub4 repo, so concurrent agents never share one working tree.
 #
 # Why: with a shared tree, `git commit -a` sweeps every agent's half-finished
 # work into one commit (and `/scan` autofix-by-default can rewrite files another
@@ -12,17 +12,17 @@
 #
 # Usage:
 #   sh OPENBSD/dev/agent_worktree.sh claude
-#   cd ../pub5-claude        # work here
+#   cd ../pub4-claude        # work here
 #   git push origin agent/claude   # then PR / fast-forward to main
 #   bin/operator worktree finish # rebase onto origin/main, push the branch, do not merge main
 #
-# Cleanup:  git worktree remove ../pub5-<agent>
+# Cleanup:  git worktree remove ../pub4-<agent>
 set -eu
 
 case "${1:-}" in
 -h | --help)
   echo "usage: sh OPENBSD/dev/agent_worktree.sh <agent-name> [base-branch]"
-  echo "         a worktree at ../pub5-<agent> on branch agent/<agent>"
+  echo "         a worktree at ../pub4-<agent> on branch agent/<agent>"
   echo "       sh OPENBSD/dev/agent_worktree.sh finish"
   echo "         rebase this branch onto origin/main and push it"
   exit 0
@@ -62,7 +62,7 @@ agent="${1:?usage: agent_worktree.sh <agent-name>|finish [base-branch]}"
 base="${2:-origin/main}"
 repo="$(git rev-parse --show-toplevel)"
 branch="agent/${agent}"
-dir="${repo%/*}/pub5-${agent}"
+dir="${repo%/*}/pub4-${agent}"
 
 git -C "$repo" fetch -q origin
 

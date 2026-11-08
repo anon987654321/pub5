@@ -4,7 +4,7 @@ require "uri"
 
 module Shared
   module Commerce
-    PROTOCOL = "pub5-commerce-v1".freeze
+    PROTOCOL = "pub4-commerce-v1".freeze
     SOURCES = %w[brgen amber].freeze
 
     Reference = Data.define(:id, :source, :type, :url)

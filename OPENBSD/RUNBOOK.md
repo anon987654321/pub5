@@ -1,6 +1,6 @@
 # Operator
 
-Production runbook for pub5. Read this file before live work. Read `MASTER/README.md` for the agent runtime; this file covers the
+Production runbook for pub4. Read this file before live work. Read `MASTER/README.md` for the agent runtime; this file covers the
 VPS and deploy surface, the agent contract, and live-operation safety in one
 place.
 
@@ -12,10 +12,10 @@ From a clean workstation checkout on `origin/main`:
 ./bin/redeploy
 ```
 
-Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
+Hands-off: local preflight → pin SHA → `tmux` session `pub4-deploy` on vm23 →
 `vps-deploy` as **root** (git still as `dev`) → streams the log until finished →
-`vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
-Attach: `tmux attach -t pub5-deploy`.
+`vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub4/vps-deploy.log` (aggregate), `/var/log/pub4/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
+Attach: `tmux attach -t pub4-deploy`.
 
 ## Log rotation
 
@@ -25,7 +25,7 @@ OpenBSD uses `newsyslog(8)`, not logrotate. The repository mirror is
 
 | Log | count | size (KB) | when | flags |
 |---|---:|---:|---|---|
-| `/var/log/pub5/vps-deploy.log` | 12 | 512 | weekly | Z (compress) |
+| `/var/log/pub4/vps-deploy.log` | 12 | 512 | weekly | Z (compress) |
 | `/home/dev/vps-deploy.log` | 12 | 512 | weekly | Z |
 | Base `/var/log/messages` and other system logs | see config | | | |
 
@@ -43,24 +43,24 @@ doas newsyslog -nv -f OPENBSD/etc/newsyslog.conf
 it exceeds `VPS_DEPLOY_LOG_MAX_BYTES` (default 10 MB) at deploy start. This is
 only a safety net if newsyslog has not run; it does not replace newsyslog.
 
-Per-run logs under `/var/log/pub5/runs/deploy-*.log` have unique names, so
+Per-run logs under `/var/log/pub4/runs/deploy-*.log` have unique names, so
 fixed-path newsyslog rules do not cover them. Prefer a weekly age-prune job
 that retains the last 30 days (roughly one deploy per day). A directory size
 cap that deletes oldest runs is an alternative; newsyslog filename patterns
 are not supported because it needs fixed paths.
 
-On the operator workstation, `~/.pub5/ssh-connections.log` is written by
+On the operator workstation, `~/.pub4/ssh-connections.log` is written by
 `MASTER/bin/operator` for each remote action. Rotate it locally with weekly
 launchd/cron or a manual size check:
 
 ```sh
 # Keep roughly 5 MB
-[[ $(stat -f%z ~/.pub5/ssh-connections.log 2>/dev/null || echo 0) -gt 5000000 ]] \
-  && mv ~/.pub5/ssh-connections.log{,.1}
+[[ $(stat -f%z ~/.pub4/ssh-connections.log 2>/dev/null || echo 0) -gt 5000000 ]] \
+  && mv ~/.pub4/ssh-connections.log{,.1}
 ```
 
 OpenSSH `-E` also appends protocol diagnostics to that file when
-`LogLevel` is INFO or higher (`PUB5_SSH_LOG_LEVEL`).
+`LogLevel` is INFO or higher (`PUB4_SSH_LOG_LEVEL`).
 
 Do not install a partial `newsyslog.conf`: a partial file previously wiped
 base rules and filled `/var`. Do not send deploy logs to remote syslog until
@@ -105,16 +105,16 @@ pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deplo
 
 ## Privileged deploy broker
 
-The staged root boundary is `/usr/local/sbin/pub5-admin`, mirrored at
-`OPENBSD/usr/local/sbin/pub5-admin`. A deliberate `OPERATOR.sh` sync installs
+The staged root boundary is `/usr/local/sbin/pub4-admin`, mirrored at
+`OPENBSD/usr/local/sbin/pub4-admin`. A deliberate `OPERATOR.sh` sync installs
 it as `root:wheel`, mode `0555`, and installs the fixed CI preparation/sync/runner
 plus Rails task and Rails tree-sync helpers under `/usr/local/libexec/`; the Solid Queue proof
-is installed under `/usr/local/libexec/pub5/`.
+is installed under `/usr/local/libexec/pub4/`.
 
 The broker exposes allowlisted service actions, validated deploy receipts, fixed
 CI lock/preparation operations, and trusted helper verbs. CI and production Rails
 tree mutations run with the selected app's UID, primary GID and only the required
-`_pub5ci` supplementary group. Production sync stages tracked `HEAD` paths from a
+`_pub4ci` supplementary group. Production sync stages tracked `HEAD` paths from a
 Git archive, not ignored files from the mutable working tree. The CI runner has a real wall-clock deadline and terminates
 its full process group, including `bundle install`. Rails tasks use a closed
 task vocabulary; `SECRET_KEY_BASE` crosses only in the child environment, never
@@ -142,8 +142,8 @@ The loopback health probe runs as the deploy user and needs no privilege.
 
 `vps-deploy`, CI receipt writes, CI lock setup, CI preparation/sync/execution,
 production Rails tree sync, Rails runtime tasks and relay route verification use the broker when
-the installed copy exists. It creates the canonical `/var/db/pub5/ci.lock`; keep
-`PUB5_CI_LOCK` unset on vm23 until the legacy override seam is removed.
+the installed copy exists. It creates the canonical `/var/db/pub4/ci.lock`; keep
+`PUB4_CI_LOCK` unset on vm23 until the legacy override seam is removed.
 Both `vps_ci.sh` and `vps-deploy` now refuse to run until the reviewed broker is installed. Those entrypoints no longer contain root-copy/root-shell fallback, direct `rcctl` fallback, direct receipt writes, checkout-sourced resource-guard execution, or direct Solid Queue proof execution. The Rails deploy adapter also refuses service control without the broker. The broader recovery and operator scripts still need a complete privilege audit before narrowing `doas.conf`.
 
 This is **not yet the complete privilege migration**: recovery, operator and a few ancillary install scripts still require a direct-`doas` audit. Keep the current `doas.conf` and wheel membership
@@ -258,7 +258,7 @@ The stack serves three Rails apps (brgen, amber, bsdports) plus MASTER. `baibl`,
 directories (1.6 GB between them), rc.d scripts, `/etc/*.env` files, login
 classes, certificate symlinks and DNS zones were removed from vm23, and their
 own domains (`baibl.no`, `blognet.no`, `hjerterom.no`) with them. Databases are
-kept at `/var/backups/pub5/{hjerterom,deleted-apps}-20260812`. `foodielicio.us`
+kept at `/var/backups/pub4/{hjerterom,deleted-apps}-20260812`. `foodielicio.us`
 and the `anti{casino,gambling,betting}blog.com` trio were not removed: they stay
 in `data/dns.yml`'s `extra_zones`, and nsd still serves them.
 
@@ -291,7 +291,7 @@ orders and users included. It ran once at first deploy; a deploy never seeds,
 so run it again only to reset the demo:
 
 ```zsh
-doas /usr/local/sbin/pub5-admin rails-task mrdamascy db-seed
+doas /usr/local/sbin/pub4-admin rails-task mrdamascy db-seed
 ```
 
 **Stop the demo** (reversible; the tree, database and certificate stay):
@@ -424,7 +424,7 @@ count, prints the seconds, and removes the scratch. Run on 2026-10-12 against
 pull `20261011-0330` it restored and read back all three databases in 1.3 s
 (amber 303 users, brgen 11316, bsdports 0; integrity ok; the pull predates
 `SHA256SUMS`, so that run checked integrity only). The 11 pulls from 1 to 11
-October sit on the operator Mac under launchd job `no.brgen.pub5-dr`, which
+October sit on the operator Mac under launchd job `no.brgen.pub4-dr`, which
 makes the Mac the only copy off vm23.
 
 **Restored separately.** `dr-pull` holds databases and uploads, nothing else, and
@@ -505,7 +505,7 @@ When `bin/vps-deploy` fails it says where. Whatever the stage (pull, ci+sync,
 migrate, precompile, restart, health, checks), an exit trap stamps
 `last_deploy_<app>.json` failed, prints `FAILED at stage "<stage>"`, says
 whether the app was stopped for the deploy and so is down (the next command is
-`doas /usr/local/sbin/pub5-admin service start <app>` or a rerun), lists amber or bsdports if they are down,
+`doas /usr/local/sbin/pub4-admin service start <app>` or a rerun), lists amber or bsdports if they are down,
 releases the lock and the deploy flag, and appends `finished ... exit=N
 stage=...` to `/home/dev/vps-deploy.log` directly, so a dropped ssh session still leaves
 the verdict. A kill or hangup counts as a failure with the stage it interrupted.
@@ -572,7 +572,7 @@ still held, so a start never races a survivor. The ports above are the ones in `
 
 To deploy an exact commit, not the tip: `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy all`
 on the box, or push it and use `bin/operator vps deploy all --remote` from a clean
-worktree at that commit. A stale `/home/dev/.pub5-vps-deploy.lock` is reaped by the next run
+worktree at that commit. A stale `/home/dev/.pub4-vps-deploy.lock` is reaped by the next run
 when its pid is gone; every exit, including a halted `all`, releases it.
 
 ## Deploy-all disambiguation
@@ -582,10 +582,11 @@ deliberately:
 
 | Script | CI | Scope | When |
 |--------|----|-------|------|
+| `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
 | `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | brgen, amber, bsdports | Normal code change; tests must pass |
 | `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | master + every app, in vps-deploy's order; `DEMO_SEED_ON_DEPLOY=1` adds brgen's demo seed | Fast hotfix; skips test check |
-| `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs pub5 to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
-| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub5-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
+| `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
+| `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub4-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
 `vps_production_push.sh` is the footgun under pressure: it restarts production
 without running CI. Use `vps_ci_all.sh` unless you explicitly need the fast path
@@ -619,7 +620,7 @@ Tracked mirror: `OPENBSD/etc/crontab.vm23` (installed idempotently by
 | `config-drift-check` | `*/15 * * * *` | `/var/log/config_drift.log` — relayd Host routes vs acme SANs vs NSD zones vs DNSSEC paths |
 | `resource_guard.sh` | `*/5 * * * *` | sheds bsdports then amber under sustained pressure; `/var/log/resource_guard_history.log` |
 | `uptime-check.sh` | `*/5 * * * *` | `/var/log/uptime-check.log`, with `ALLOW_BSDPORTS_DOWN=1` |
-| `pub5-alert watch` | `*/15 * * * *` | `/var/log/pub5-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, any `rcctl ls failed` service except `brgen_jobs`, no `dr-pull` report in 48 h. Each key alerts once per six hours |
+| `pub4-alert watch` | `*/15 * * * *` | `/var/log/pub4-alerts.log`, shown by `vps-state` — disk 90%, swap 92%, any `rcctl ls failed` service except `brgen_jobs`, no `dr-pull` report in 48 h. Each key alerts once per six hours |
 | `drain-jobs.sh` | `5 * * * *` | `/var/log/drain-jobs.log` |
 | `core-reclaim.sh` | `40 * * * *` | `/var/log/core-reclaim.log` — returns a core app's grown resident set |
 | `keep-warm.sh` | `*/10 * * * *` | `/var/log/keep-warm.log` — brgen and amber only |
@@ -632,10 +633,10 @@ for long enough that six self-healing jobs existed only in the file nobody
 reads next to the one they do.
 
 A healer that works hides the fault that makes it run. `relayd-watchdog` stamps
-each restart in `/var/db/pub5/relayd-watchdog.restarts` and raises a
+each restart in `/var/db/pub4/relayd-watchdog.restarts` and raises a
 `relayd-restarts` alert on the third inside an hour; `uptime-check.sh` raises
 `uptime-down` when an endpoint is down for three ticks running (fifteen minutes,
-longer than a deploy restart); `pub5-alert show` and `vps-state` print the
+longer than a deploy restart); `pub4-alert show` and `vps-state` print the
 record. The dr-pull job reports to the box by writing `~dev/.dr_pull_ok` after
 each pull, which is what the stale-backup alert reads.
 
@@ -660,12 +661,12 @@ and relayd checks are the same script without that flag.
 
 The Mac side carries the standing vantage: `MASTER/bin/mac-uptime-watch.sh`
 runs on the operator's Mac under launchd or cron (every five minutes, one
-shot, state in `~/.pub5/uptime_watch.state`), polls each public host's `/up`
+shot, state in `~/.pub4/uptime_watch.state`), polls each public host's `/up`
 from the operator's network, and raises a macOS notification on the third
 consecutive failure and on recovery — catching the inverse failure the box
 cannot see (the box reporting fine while relayd, DNS, TLS or a registrar
 answer is broken for a real visitor). Hosts and waivers mirror
-`uptime-check.sh` (`PUB5_UPTIME_HOSTS`, `PUB5_UPTIME_WAIVED`); drop the
+`uptime-check.sh` (`PUB4_UPTIME_HOSTS`, `PUB4_UPTIME_WAIVED`); drop the
 bsdports.org waiver in the same commit on both sides when delegation
 returns.
 
@@ -759,7 +760,7 @@ workstation environment.
 
 ## Recovery
 
-Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub5-admin service check master` (repeat for brgen/relayd)
+Load shedding: `ksh OPENBSD/bin/resource_guard.sh` as `dev`; the wrapper refuses root and delegates to the installed root-owned runner. Full stack: `ksh OPENBSD/bin/start_all_apps.sh` (as dev; only the fixed broker runs as root). Core health: `doas /usr/local/sbin/pub4-admin service check master` (repeat for brgen/relayd)
 pf`.
 
 SSH lockout only: `ssh server4`, then `vmctl console vm23` (manual — not
@@ -900,14 +901,14 @@ precisely so no bin/ file carries a fleet-wide delete. Run it BY HAND, per app,
 on launch day:
 
 1. `ruby OPENBSD/bin/dr-pull` from the Mac — a verified pre-wipe snapshot.
-2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub5-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub5-admin service stop <app>_jobs`.
+2. On vm23, stop the app and its optional job worker: `doas /usr/local/sbin/pub4-admin service stop <app>` and, if configured, `doas /usr/local/sbin/pub4-admin service stop <app>_jobs`.
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
 4. As the app user: `bundle exec bin/rails db:prepare` — schema, no seeds.
    brgen demo seeds are the DEMO; a launch database starts empty. If a curated
    skeleton is wanted (cities, categories, admin), seed ONLY
    `db/seeds/launch.rb` — write it that week, review it that week.
-5. Start the app with `doas /usr/local/sbin/pub5-admin service start <app>` and, if configured, start its job worker with `doas /usr/local/sbin/pub5-admin service start <app>_jobs`; then run the route-manifest probe.
+5. Start the app with `doas /usr/local/sbin/pub4-admin service start <app>` and, if configured, start its job worker with `doas /usr/local/sbin/pub4-admin service start <app>_jobs`; then run the route-manifest probe.
 6. The .pre-launch file stays until the first week survives; dr-pull keeps
    pulling nightly either way.
 

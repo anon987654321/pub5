@@ -11,11 +11,11 @@ app_secret_for() {
     *) log_err "app_secret_for: refused unknown app: $app_name"; return 2 ;;
   esac
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "app_secret_for: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "app_secret_for: pub4-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
-  secret=$("${_PRIV}" /usr/local/sbin/pub5-admin ensure-secret "$app_name") || return 1
+  secret=$("${_PRIV}" /usr/local/sbin/pub4-admin ensure-secret "$app_name") || return 1
   case "$secret" in
     ""|*[!0123456789abcdefABCDEF]*)
       log_err "app_secret_for: broker returned an invalid secret for $app_name"
@@ -94,8 +94,8 @@ migrate_sqlite_db_to_storage_if_needed() {
     log_err "storage migration: refused app path: $app_dir"
     return 2
   }
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "storage migration: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "storage migration: pub4-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
   run_rails_as_app "$app_name" "$app_dir" "db-storage-migrate"

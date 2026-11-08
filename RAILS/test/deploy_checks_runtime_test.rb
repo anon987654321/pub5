@@ -22,7 +22,7 @@ class DeployChecksRuntimeTest < Minitest::Test
 
     assert_match(/\[\[ -x \$\{master\}\/bin\/master \]\] \|\| \{.*return 1; \}/m, body)
     refute_match(/\[\[ -x \$\{master\}\/bin\/master \]\] \|\| return 0/, body)
-    assert_includes body, "var/db/pub5"
+    assert_includes body, "var/db/pub4"
   end
 
   def test_rails_runtime_check_fails_closed_when_app_directory_is_missing
@@ -72,7 +72,7 @@ class DeployChecksRuntimeTest < Minitest::Test
     body = source[start, source.index("\n}\n", start) - start + 3]
 
     refute_match(/\|\s*(?:head|cut)\b/, body)
-    assert_includes body, "pub5-admin ensure-secret", "the broker owns the secret file; nothing here parses it"
+    assert_includes body, "pub4-admin ensure-secret", "the broker owns the secret file; nothing here parses it"
     assert_match(/\*\[!0123456789abcdefABCDEF\]\*\)/, body, "a non-hex answer from the broker is refused")
   end
 

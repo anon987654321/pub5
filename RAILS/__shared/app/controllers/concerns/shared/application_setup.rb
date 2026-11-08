@@ -15,7 +15,7 @@ module Shared
       include Shared::VisitCounting
 
       # Rails' automatic helper inclusion (config.action_controller.include_all_helpers)
-      # scans the HOST app's app/helpers/, but pub5-shared is mounted as a separate
+      # scans the HOST app's app/helpers/, but pub4-shared is mounted as a separate
       # engine gem -- its helpers are not in that scan path and need an explicit
       # `helper` call. Other shared helpers (Shared::SearchHelper's
       # live_search_index, say) happen to be reachable through a different

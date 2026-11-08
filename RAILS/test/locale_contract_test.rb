@@ -281,7 +281,8 @@ class LocaleContractTest < Minitest::Test
   # view does.
   SOURCE_GLOB = "**/*.{rb,erb,js,rake,jbuilder,builder,yml,json}"
 
-  # The source that can load a unit's locale files. brgen's engines (brgen_*) mount
+  # The source that can load a unit's locale files. brgen's engines (under
+  # brgen/engines/) mount
   # only in brgen, so brgen, each engine and shared all load into one store and any
   # of their sources can read the others' keys; shared's keys are read by all three apps.
   def sources_for(unit)

@@ -34,7 +34,7 @@ class TestDrPullCheck < Minitest::Test
     home = File.join(@root, "no-backup-home")
     FileUtils.mkdir_p(home)
     output, status = Open3.capture2e(
-      { "PUB5_DR_DIR" => nil, "HOME" => home },
+      { "PUB4_DR_DIR" => nil, "HOME" => home },
       RbConfig.ruby, SCRIPT, "--check"
     )
 
@@ -44,7 +44,7 @@ class TestDrPullCheck < Minitest::Test
 
   def test_check_fails_when_an_explicitly_configured_destination_is_missing
     missing = File.join(@root, "removed-backup-dir")
-    output, status = run_check("PUB5_DR_DIR" => missing)
+    output, status = run_check("PUB4_DR_DIR" => missing)
 
     refute status.success?
     assert_includes output, "configured backup directory is missing"
@@ -120,7 +120,7 @@ class TestDrPullCheck < Minitest::Test
 
   def run_check(overrides = {})
     Open3.capture2e(
-      { "PUB5_DR_DIR" => @root, "PUB5_DR_STALE_DAYS" => "2" }.merge(overrides),
+      { "PUB4_DR_DIR" => @root, "PUB4_DR_STALE_DAYS" => "2" }.merge(overrides),
       RbConfig.ruby, SCRIPT, "--check"
     )
   end

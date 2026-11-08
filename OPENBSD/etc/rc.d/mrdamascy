@@ -11,7 +11,7 @@
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 PORT=47314
 APP_DIR=/home/mrdamascy/app
-# /etc/mrdamascy.env (root:mrdamascy 640) holds SECRET_KEY_BASE; pub5-admin
+# /etc/mrdamascy.env (root:mrdamascy 640) holds SECRET_KEY_BASE; pub4-admin
 # ensure-secret writes it on the first deploy. It is sourced inside the exec by
 # the app user, never interpolated into daemon_flags, so the secret stays out
 # of ps argv.

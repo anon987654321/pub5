@@ -3,13 +3,14 @@
 require "minitest/autorun"
 
 # Two path habits passed in the repo and failed in the box's copy-tree, where
-# the app is /home/brgen/app (not RAILS/brgen) and the vertical engines sit
-# beside it as brgen_*:
+# the app is /home/brgen/app (not RAILS/brgen) and the vertical engines ride
+# inside the app tree at engines/:
 #
 #   1. a path guessed with File.expand_path("../..", __dir__) that names a
 #      `brgen` directory, which is "app" on the box;
-#   2. a read of `engines/<vertical>/` under the app root, when the engines
-#      live in sibling brgen_* directories (Rails.root/../brgen_x works in both).
+#   2. a read of `engines/<vertical>/` relative to the working directory,
+#      which resolves differently in the checkout and on the box
+#      (Rails.root/engines/<name> works in both).
 #
 # This scan reads source only, so it needs no Rails boot.
 class TestPathIdiomsTest < Minitest::Test
@@ -37,6 +38,6 @@ class TestPathIdiomsTest < Minitest::Test
 
   def test_no_test_reads_engines_under_the_app_root
     found = offences(%r{["']engines/(?:tv|takeaway|dating|playlist|marketplace|maps|radio)\b})
-    assert_empty found, "engines are sibling brgen_* directories; use Rails.root.join(\"..\", \"brgen_x\", ...):\n#{found.join("\n")}"
+    assert_empty found, "an engines/<name> path is relative to the working directory; use Rails.root.join(\"engines\", ...):\n#{found.join("\n")}"
   end
 end

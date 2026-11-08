@@ -11,9 +11,9 @@ ROOT = File.expand_path("../..", __dir__)
 require_relative "../lib/environment"
 require_relative "../lib/pid_probe"
 
-STAMP_DIR = ENV.fetch("PUB5_STAMP_DIR", "/var/db/pub5")
-# pub5-alert's record: what a healed or noted symptom left behind when it recurred.
-ALERT_LOG = ENV.fetch("PUB5_ALERT_LOG", "/var/log/pub5-alerts.log")
+STAMP_DIR = ENV.fetch("PUB4_STAMP_DIR", "/var/db/pub4")
+# pub4-alert's record: what a healed or noted symptom left behind when it recurred.
+ALERT_LOG = ENV.fetch("PUB4_ALERT_LOG", "/var/log/pub4-alerts.log")
 
 def git_short(path)
   return "missing" unless File.directory?(path)
@@ -26,8 +26,8 @@ rescue StandardError
 end
 
 def service_state(service)
-  broker = "/usr/local/sbin/pub5-admin"
-  return "unknown (pub5-admin missing)" unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
+  broker = "/usr/local/sbin/pub4-admin"
+  return "unknown (pub4-admin missing)" unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
 
   out, status = Open3.capture2e("doas", "-n", broker, "service", "check", service)
   return "ok" if status.success? && out.include?("(ok)")
@@ -76,13 +76,13 @@ end
 def deploy_in_progress(app)
   path = File.join(STAMP_DIR, "deploy_status", "#{app}.json")
 
-  # /var/db/pub5/deploy_status is root-only by design. On vm23 read through the
+  # /var/db/pub4/deploy_status is root-only by design. On vm23 read through the
   # fixed broker instead of treating denied direct reads as "no deploy". A
   # custom stamp directory remains directly readable for tests and local drills.
-  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub5"
-    broker = "/usr/local/sbin/pub5-admin"
+  if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
+    broker = "/usr/local/sbin/pub4-admin"
     unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
-      return unavailable_deploy_status(path, "pub5-admin missing or untrusted")
+      return unavailable_deploy_status(path, "pub4-admin missing or untrusted")
     end
 
     output, result = Open3.capture2e("doas", "-n", broker, "deploy-status-read", app)
@@ -267,5 +267,5 @@ else
       )
     end
   end
-  payload[:alerts].each { |line| puts Deploy::Dmesg.line("alert0", "pub5", line) }
+  payload[:alerts].each { |line| puts Deploy::Dmesg.line("alert0", "pub4", line) }
 end

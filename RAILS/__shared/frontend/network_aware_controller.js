@@ -22,7 +22,7 @@ export default class extends Controller {
   connect() {
     this.#connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
 
-    window.addEventListener("pub5:battery-change", this.#onBatteryChange)
+    window.addEventListener("pub4:battery-change", this.#onBatteryChange)
     window.addEventListener("online", this.#apply)
     window.addEventListener("offline", this.#apply)
 
@@ -34,7 +34,7 @@ export default class extends Controller {
   }
 
   disconnect() {
-    window.removeEventListener("pub5:battery-change", this.#onBatteryChange)
+    window.removeEventListener("pub4:battery-change", this.#onBatteryChange)
     window.removeEventListener("online", this.#apply)
     window.removeEventListener("offline", this.#apply)
     this.#connection?.removeEventListener("change", this.#apply)
@@ -78,7 +78,7 @@ export default class extends Controller {
       }
     })
 
-    window.dispatchEvent(new CustomEvent("pub5:network-change", {
+    window.dispatchEvent(new CustomEvent("pub4:network-change", {
       detail: {
         offline,
         slow: !!slow,

@@ -15,7 +15,7 @@
 # - Data preserved: Rails SQLite under /home/<app>/app/storage, ~/priv, acme certs in /etc/ssl when
 #   stage_1 is skipped. Re-running stage_2 does not drop databases.
 # - Post-deploy verification: ruby /home/dev/pub5/OPENBSD/checks/health_check.rb
-# Engine-ize: bootstrap_rails now relies on bundle install for pub5-shared path gem (Gemfiles declare it); legacy sh shared/install_* deprecated in scripts + WIRING. No copy sprawl.
+# Engine-ize: bootstrap_rails now relies on bundle install for pub4-shared path gem (Gemfiles declare it); legacy sh shared/install_* deprecated in scripts + WIRING. No copy sprawl.
 
 set -euo pipefail
 setopt no_unset nullglob local_traps
@@ -118,13 +118,13 @@ install_tracked_crontab() {
   # that root wrote and then fed straight to crontab(1) — the same shape as the
   # doas.conf staging file in validate_doas.ksh, and with root's crontab as the
   # payload. A root-owned 0700 directory has no symlink for root to follow.
-  # Public deploy receipts live directly in /var/db/pub5; keep root-crontab
+  # Public deploy receipts live directly in /var/db/pub4; keep root-crontab
   # staging in a private child directory so making receipts readable cannot expose
   # the temporary root crontab during an operator sync.
-  typeset cron_dir=/var/db/pub5/private
-  mkdir -p /var/db/pub5 "$cron_dir" || return 1
-  chown root:wheel /var/db/pub5 "$cron_dir" || return 1
-  chmod 755 /var/db/pub5 || return 1
+  typeset cron_dir=/var/db/pub4/private
+  mkdir -p /var/db/pub4 "$cron_dir" || return 1
+  chown root:wheel /var/db/pub4 "$cron_dir" || return 1
+  chmod 755 /var/db/pub4 || return 1
   chmod 700 "$cron_dir" || return 1
   typeset root_cron
   root_cron=$(mktemp "${cron_dir}/root_crontab.XXXXXXXXXX") || return 1
@@ -188,7 +188,7 @@ install_root_configs() {
   # These files become root-executed entrypoints after installation.
   # Require regular, non-symlink sources before copying anything to /.
   typeset -a privileged_sources=(
-    usr/local/sbin/pub5-admin
+    usr/local/sbin/pub4-admin
     usr/local/bin/emergency_cpu.sh
     usr/local/libexec/ci-prepare.ksh
     usr/local/libexec/ci-run.ksh
@@ -213,19 +213,19 @@ install_root_configs() {
   done
 
   # Never copy privileged code through a symlinked system directory or file.
-  for rel in /usr /usr/local /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/local/libexec/pub5; do
+  for rel in /usr /usr/local /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/local/libexec/pub4; do
     if [[ -L $rel ]]; then
       log ERROR "refusing symlinked privileged destination directory: $rel"
       return 1
     fi
   done
-  for rel in /usr/local/sbin/pub5-admin \
+  for rel in /usr/local/sbin/pub4-admin \
              /usr/local/libexec/ci-prepare.ksh \
              /usr/local/libexec/ci-run.ksh \
              /usr/local/libexec/ci-sync.ksh \
              /usr/local/libexec/rails-task.ksh \
              /usr/local/libexec/rails-sync.ksh \
-             /usr/local/libexec/pub5/solid_queue_proof.rb \
+             /usr/local/libexec/pub4/solid_queue_proof.rb \
              /usr/local/bin/resource_guard.sh \
              /usr/local/bin/emergency_cpu.sh; do
     if [[ -L $rel ]]; then
@@ -281,7 +281,7 @@ install_root_configs() {
     [[ -f /etc/rc.d/$svc ]] && chmod 555 /etc/rc.d/$svc
   done
   for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
-  for f in /usr/local/sbin/pub5-admin \
+  for f in /usr/local/sbin/pub4-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -294,7 +294,7 @@ install_root_configs() {
   done
   # These fixed broker entrypoints must be regular files. A symlink would
   # make root chown/chmod operate on a target outside the install contract.
-  for f in /usr/local/sbin/pub5-admin \
+  for f in /usr/local/sbin/pub4-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -308,9 +308,9 @@ install_root_configs() {
 
   # The deploy account will use this fixed-path broker for root operations.
   # It is refreshed only by this deliberate operator sync.
-  if [[ -f /usr/local/sbin/pub5-admin ]]; then
-    chown root:wheel /usr/local/sbin/pub5-admin || return 1
-    chmod 555 /usr/local/sbin/pub5-admin || return 1
+  if [[ -f /usr/local/sbin/pub4-admin ]]; then
+    chown root:wheel /usr/local/sbin/pub4-admin || return 1
+    chmod 555 /usr/local/sbin/pub4-admin || return 1
   fi
   # libexec holds helpers root dot-sources (stale_ci_cleanup.ksh); they must be
   # root-owned and not group/world writable or the sourcing is a root RCE.
@@ -368,7 +368,7 @@ sync_openbsd_apply() {
     fi
     log WARN "MASTER scan skipped by explicit fast-deploy acknowledgement"
   elif [[ -x /home/dev/pub5/MASTER/bin/master ]]; then
-    typeset scan_log_dir=/var/db/pub5
+    typeset scan_log_dir=/var/db/pub4
     typeset scan_log=$scan_log_dir/master_deploy_scan.log
     mkdir -p "$scan_log_dir" || { log ERROR "cannot create $scan_log_dir"; return 1 }
     chmod 700 "$scan_log_dir"
@@ -395,16 +395,16 @@ sync_openbsd_apply() {
   # swallowing the install failure meant it could simply be absent, with no
   # error, while every log line still said the crontab was installed.
   # The privileged broker invokes this fixed, root-owned copy, never the live checkout.
-  if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub5; then
-    log ERROR "cannot prepare /usr/local/libexec/pub5"
+  if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub4; then
+    log ERROR "cannot prepare /usr/local/libexec/pub4"
     return 1
   fi
-  if ! install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub5/solid_queue_proof.rb; then
+  if ! install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub4/solid_queue_proof.rb; then
     log ERROR "solid_queue_proof install failed - deploy proof would run untrusted checkout code"
     return 1
   fi
 
-  [[ -f /usr/local/libexec/pub5/solid_queue_proof.rb && ! -L /usr/local/libexec/pub5/solid_queue_proof.rb ]] || {
+  [[ -f /usr/local/libexec/pub4/solid_queue_proof.rb && ! -L /usr/local/libexec/pub4/solid_queue_proof.rb ]] || {
     log ERROR "installed Solid Queue proof is missing or symlinked"
     return 1
   }

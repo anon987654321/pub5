@@ -6,13 +6,13 @@ Updated 2026-09-30 after a current review of Reddit, X and TikTok, with the goal
 
 The useful pattern is not a louder "accept" button. It is a short explanation, equal first-layer choices and an easy path to preferences. X documents a broad stack of cookies, pixels and local storage for authentication, preferences, personalization, analytics, advertising and related functions. It also documents extra controls for off-X activity and personalization. TikTok likewise exposes cookie and advertising measurement controls in its privacy tooling.
 
-Pub5 already had the right core behavior: optional analytics and advertising stay off until consent, with accept/reject/manage peers. The integration adds an explicit necessary-storage row so the reader can see what is essential and what is optional.
+Pub4 already had the right core behavior: optional analytics and advertising stay off until consent, with accept/reject/manage peers. The integration adds an explicit necessary-storage row so the reader can see what is essential and what is optional.
 
 ## Onboarding
 
 Reddit's own guidance stresses that a new visitor should understand a community through clear descriptions, rules, welcoming material and posting guidance. X's signup sequence asks for account setup, then interests/accounts, then posting. TikTok's main product loop is the For You feed: the user starts watching and recommendations learn from engagement.
 
-The pub5 implication is simple: do not put a long setup wizard between a visitor and the product. The existing welcome cover remains the deliberate first-run story, with three concrete steps, persistent dismissal and consent-aware ordering. MASTER now treats "show the product before asking for setup" as a durable constraint.
+The pub4 implication is simple: do not put a long setup wizard between a visitor and the product. The existing welcome cover remains the deliberate first-run story, with three concrete steps, persistent dismissal and consent-aware ordering. MASTER now treats "show the product before asking for setup" as a durable constraint.
 
 ## Content
 
@@ -26,7 +26,7 @@ Amber should keep its editorial reading posture rather than imitate a generic so
 
 The strongest small pattern from X is a focused auth interruption that preserves the current context. X documents that its follow widget shows a small pop-up when used by logged-out visitors, rather than requiring the widget host page to become the account page.
 
-Pub5 now uses the browser's native Popover API for the same class of interaction on brgen and amber post detail pages. It offers sign in and account creation in a compact surface while leaving the post readable. Native popover avoids another bespoke modal state and keeps focus, escape and top-layer behavior with the browser.
+Pub4 now uses the browser's native Popover API for the same class of interaction on brgen and amber post detail pages. It offers sign in and account creation in a compact surface while leaving the post readable. Native popover avoids another bespoke modal state and keeps focus, escape and top-layer behavior with the browser.
 
 Brgen also exposes the existing comment count as a direct jump from the detail action row. The page remains content-first, while social proof and discussion are only one small gesture away.
 
@@ -36,7 +36,7 @@ Use the browser's native overlay primitives where they fit. Keep 44px interactio
 (shared_chrome.tap_min in MASTER/data/tokens.yml), visible focus, one reading measure, no
 duplicated nav, staged live arrivals, and explicit sponsored labeling. Avoid copying colors,
 gradients, radius values or visual chrome merely because another service uses them; those values
-remain owned by the pub5 design system and its operator.
+remain owned by the pub4 design system and its operator.
 
 ## Primary sources
 

@@ -36,7 +36,7 @@ module Shared
         [Rails.application.class.module_parent_name, actor, request.request_method, request.path,
          request.headers[KEY_HEADER]].join("\0"),
       )
-      "pub5:idempotency:v1:#{digest}"
+      "pub4:idempotency:v1:#{digest}"
     end
 
     def check_idempotency

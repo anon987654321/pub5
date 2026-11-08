@@ -36,12 +36,12 @@ end
 
 # A restart that works is the symptom healed, and a symptom that keeps coming back
 # is a fault the heal is hiding. Every restart is stamped; when RESTART_ALERT_AT of
-# them fall inside RESTART_WINDOW seconds, pub5-alert records one durable line that
+# them fall inside RESTART_WINDOW seconds, pub4-alert records one durable line that
 # says what to read. Alert failures never stop the restart itself.
-RESTART_STATE = ENV.fetch("PUB5_WATCHDOG_STATE", "/var/db/pub5/relayd-watchdog.restarts")
-RESTART_WINDOW = Integer(ENV.fetch("PUB5_WATCHDOG_WINDOW", "3600"))
-RESTART_ALERT_AT = Integer(ENV.fetch("PUB5_WATCHDOG_ALERT_AT", "3"))
-ALERT = ENV.fetch("PUB5_ALERT", "/usr/local/bin/pub5-alert")
+RESTART_STATE = ENV.fetch("PUB4_WATCHDOG_STATE", "/var/db/pub4/relayd-watchdog.restarts")
+RESTART_WINDOW = Integer(ENV.fetch("PUB4_WATCHDOG_WINDOW", "3600"))
+RESTART_ALERT_AT = Integer(ENV.fetch("PUB4_WATCHDOG_ALERT_AT", "3"))
+ALERT = ENV.fetch("PUB4_ALERT", "/usr/local/bin/pub4-alert")
 
 def recent_restarts(now: Time.now.to_i)
   File.readlines(RESTART_STATE, chomp: true).filter_map { |l| Integer(l, exception: false) }.select { |t| now - t < RESTART_WINDOW }

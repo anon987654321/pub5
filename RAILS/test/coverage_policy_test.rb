@@ -63,7 +63,7 @@ class CoveragePolicyTest < Minitest::Test
     assert_includes source, 'YAML.safe_load_file(APPS_FILE).fetch("apps")'
     assert_includes source, "SimpleCov.collate"
     assert_includes source, "minimum 100"
-    assert_includes source, 'PUB5_COVERAGE_PATH'
+    assert_includes source, 'PUB4_COVERAGE_PATH'
   end
 
   def test_premerge_cannot_omit_the_full_coverage_group_by_default
@@ -98,8 +98,8 @@ class CoveragePolicyTest < Minitest::Test
   def test_fix_verification_coverage_uses_a_disposable_root
     source = File.read(File.join(ROOT, "..", "MASTER", "tools", "rails", "coverage.rb"))
     assert_includes source, 'VERIFYING = ENV["MASTER_FIX_VERIFY"] == "1"'
-    assert_includes source, 'Dir.mktmpdir("pub5-coverage-")'
-    assert_includes source, 'ENV.fetch("PUB5_COVERAGE_ROOT", File.join(rails_root, "coverage"))'
+    assert_includes source, 'Dir.mktmpdir("pub4-coverage-")'
+    assert_includes source, 'ENV.fetch("PUB4_COVERAGE_ROOT", File.join(rails_root, "coverage"))'
     assert_includes source, 'FileUtils.rm_rf(COVERAGE_ROOT) if VERIFYING'
   end
 
@@ -123,8 +123,8 @@ class CoveragePolicyTest < Minitest::Test
   # runs only; strict mode keeps the 100%-per-file target reachable on request.
   def test_the_minimum_applies_to_full_runs_and_strict_mode_keeps_the_old_target
     source = File.read(File.join(ROOT, "__shared/test/coverage.rb"))
-    assert_includes source, 'ENV["PUB5_COVERAGE_STRICT"] == "1"'
-    assert_includes source, 'ENV["FULL_COVERAGE"] == "1" || ENV["PUB5_CI_GUARD"] == "1"'
+    assert_includes source, 'ENV["PUB4_COVERAGE_STRICT"] == "1"'
+    assert_includes source, 'ENV["FULL_COVERAGE"] == "1" || ENV["PUB4_CI_GUARD"] == "1"'
     assert_includes source, "minimum 100, per: own_source"
   end
 

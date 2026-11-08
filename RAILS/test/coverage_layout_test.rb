@@ -31,7 +31,7 @@ class CoverageLayoutTest < Minitest::Test
       FileUtils.touch(File.join(tmp, "root", layout_dir, "config", "application.rb"))
 
       out, err, status = Open3.capture3(
-        { "PUB5_CI_APP" => app, "PUB5_COVERAGE_PATH" => nil, "PUB5_COVERAGE_PART" => part },
+        { "PUB4_CI_APP" => app, "PUB4_COVERAGE_PATH" => nil, "PUB4_COVERAGE_PART" => part },
         RbConfig.ruby, "-I", File.join(tmp, "stub"), File.join(tmp, "root", "__shared", "test", "coverage.rb"),
         chdir: File.join(tmp, "root", cwd)
       )

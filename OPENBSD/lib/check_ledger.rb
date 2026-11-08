@@ -15,7 +15,7 @@ module Deploy
   # fleet one check ran at 100% precision over 161 fires and another at 5%, and
   # nothing in the check's own output distinguished them.
   #
-  # pub5 had no such record. Every check's history was whatever was still in a
+  # pub4 had no such record. Every check's history was whatever was still in a
   # terminal scrollback, so the two failure modes this fleet has actually hit —
   # a check that fires on every single run until people learn to skip its line
   # (the tablist warning, 2026-08), and a check that quietly measures nothing for

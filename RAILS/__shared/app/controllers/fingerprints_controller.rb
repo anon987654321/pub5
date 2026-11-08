@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Records the browser fingerprint pub5/browser_fingerprint computes, as the
+# Records the browser fingerprint pub4/browser_fingerprint computes, as the
 # signed permanent cookie Shared::AnonymousPost reads back to bound anonymous
 # posting.
 #

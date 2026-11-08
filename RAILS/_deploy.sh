@@ -28,32 +28,35 @@ deploy_tracked_app() {
 
   need_cmd "$RUBY" "$BUNDLE" doas
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "pub4-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
   [[ -d $SRC_DIR ]] || { log_err "missing source tree: $SRC_DIR"; exit 1; }
 
   log "${app_name} - deploying tracked tree -> ${APP_DIR}"
   deploy_status "$app_name" "sync tree"
-  ${_PRIV} /usr/local/sbin/pub5-admin ensure-app "$app_name" || {
+  ${_PRIV} /usr/local/sbin/pub4-admin ensure-app "$app_name" || {
     log_err "app account/layout preparation failed for $app_name"
     return 1
   }
 
   # Group access to the checkout is needed even on SKIP_CI deployments.
-  # Ensure the app is in _pub5ci before the app-user sync traverses /home/dev/pub5.
-  ${_PRIV} /usr/local/sbin/pub5-admin ci-prepare "$app_name" || {
+  # Ensure the app is in _pub4ci before the app-user sync traverses /home/dev/pub5.
+  ${_PRIV} /usr/local/sbin/pub4-admin ci-prepare "$app_name" || {
     log_err "app checkout access preparation failed for $app_name"
     return 1
   }
 
   rails_sync_app_tree "$app_name" app
-  # mrdamascy is standalone: its Gemfile names no pub5-shared path gem, and the
+  # mrdamascy is standalone: its Gemfile names no pub4-shared path gem, and the
   # shared initializers would load Shared:: constants it never defines.
   if [[ $app_name != mrdamascy ]]; then
     rails_sync_app_tree "$app_name" shared
     if [[ $app_name == brgen ]]; then
+      # Compatibility no-op under the pub5 layout: the vertical engines ride
+      # inside the app tree (brgen/engines/), so there are no brgen_* siblings
+      # to sync. Kept so older operator runbooks stay truthful.
       rails_sync_app_tree "$app_name" verticals
     fi
     overlay_shared_initializers "$APP_DIR"
@@ -82,12 +85,12 @@ deploy_tracked_app() {
   # Both the one-time db/ → storage/ relocation and db:prepare mutate the live
   # SQLite files. A Falcon worker can keep the source inode open and hold WAL
   # locks, so prove the service is stopped before either operation begins.
-  if pub5_rcctl check "$app_name" >/dev/null 2>&1; then
-    pub5_rcctl stop "$app_name" || {
+  if pub4_rcctl check "$app_name" >/dev/null 2>&1; then
+    pub4_rcctl stop "$app_name" || {
       log_err "could not stop ${app_name}; refusing to move or migrate its SQLite database"
       return 1
     }
-    if pub5_rcctl check "$app_name" >/dev/null 2>&1; then
+    if pub4_rcctl check "$app_name" >/dev/null 2>&1; then
       log_err "${app_name} still reports running after stop; refusing database changes"
       return 1
     fi
@@ -114,7 +117,7 @@ deploy_tracked_app() {
     fi
   fi
   deploy_status "$app_name" "restart"
-  pub5_rcctl restart "$APP_NAME" || pub5_rcctl start "$APP_NAME"
+  pub4_rcctl restart "$APP_NAME" || pub4_rcctl start "$APP_NAME"
   if [[ $app_name == brgen ]]; then
     warm_brgen_after_restart "$APP_PORT"
   fi

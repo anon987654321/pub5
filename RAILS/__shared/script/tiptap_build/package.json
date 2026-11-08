@@ -1,5 +1,5 @@
 {
-  "name": "pub5-tiptap-build",
+  "name": "pub4-tiptap-build",
   "private": true,
   "description": "Pins the Tiptap version vendored into shared/vendor/javascript/tiptap.js. Bump here and re-run ../build_tiptap.sh; do not patch the output.",
   "dependencies": {

@@ -55,7 +55,7 @@ class BrgenCommerce
       uri.query = URI.encode_www_form(q: query, limit: limit)
       request = Net::HTTP::Get.new(uri)
       request["Accept"] = "application/json"
-      request["User-Agent"] = "pub5-amber-commerce-v1"
+      request["User-Agent"] = "pub4-amber-commerce-v1"
 
       response = Net::HTTP.start(
         uri.hostname,

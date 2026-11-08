@@ -91,11 +91,11 @@ check_rcctl() {
   fi
   case "$svc" in master|brgen|amber|bsdports|relayd) ;; *) fail "refused service target $svc"; return 1 ;; esac
   service_ok=0
-  if [ -L /usr/local/sbin/pub5-admin ]; then
-    fail "pub5-admin is a symlink; refusing service check"
+  if [ -L /usr/local/sbin/pub4-admin ]; then
+    fail "pub4-admin is a symlink; refusing service check"
     return 1
-  elif [ -x /usr/local/sbin/pub5-admin ]; then
-    if doas /usr/local/sbin/pub5-admin service check "$svc" >/dev/null 2>&1; then
+  elif [ -x /usr/local/sbin/pub4-admin ]; then
+    if doas /usr/local/sbin/pub4-admin service check "$svc" >/dev/null 2>&1; then
       service_ok=1
     fi
   else

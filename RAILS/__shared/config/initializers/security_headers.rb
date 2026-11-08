@@ -2,7 +2,7 @@
 
 require_relative "../../lib/shared/cross_origin_resource_policy"
 
-# GitHub/Shopify-style baseline security headers for all pub5 Rails apps.
+# GitHub/Shopify-style baseline security headers for all pub4 Rails apps.
 Rails.application.config.action_dispatch.default_headers.merge!(
   "X-Content-Type-Options" => "nosniff",
   "X-Frame-Options" => "SAMEORIGIN",

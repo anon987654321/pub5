@@ -24,7 +24,7 @@ repo=/home/dev/pub5
 src=$repo/RAILS/$app
 app_home=/home/$app
 app_dir=$app_home/app
-mirror=$app_home/pub5-rails
+mirror=$app_home/pub4-rails
 shared_src=$repo/RAILS/__shared
 shared_dir=$app_home/__shared
 uid=$(id -u)
@@ -144,25 +144,10 @@ if [[ -f "$repo/RAILS/.rubocop.yml" && ! -L "$repo/RAILS/.rubocop.yml" ]]; then
   tar cf - -C "$repo/RAILS" .rubocop.yml | tar xf - -C "$app_home"
 fi
 
-# Brgen's vertical Rails engines are sibling path gems in the copy-tree.
+# brgen's vertical engines are path gems inside its own tree now (engines/),
+# so the app-tree copy above carries them; only the engine_roots pin below is
+# brgen-specific.
 if [ "$app" = brgen ]; then
-  for vertical in "$repo"/RAILS/brgen_*/; do
-    [ -d "$vertical" ] || continue
-    [ ! -L "$vertical" ] || { echo "ci-sync: refusing vertical symlink" >&2; exit 1; }
-    name=$(basename "$vertical")
-    destination="$app_home/$name"
-    if [ -e "$destination" ] || [ -L "$destination" ]; then
-      [ -d "$destination" ] && [ ! -L "$destination" ] &&
-        [ "$(stat -f %u "$destination")" = "$uid" ] || {
-          echo "ci-sync: vertical destination is not app-owned: $destination" >&2
-          exit 1
-        }
-      rm -rf "$destination"
-    fi
-    mkdir -p "$destination"
-    tar cf - -C "$vertical" . | tar xf - -C "$destination"
-  done
-
   # test/importmap_engine_pins_test.rb requires ../../test/engine_roots: RAILS/test in the repo.
   if [[ -f "$repo/RAILS/test/engine_roots.rb" && ! -L "$repo/RAILS/test/engine_roots.rb" ]]; then
     mkdir -p "$app_home/test"

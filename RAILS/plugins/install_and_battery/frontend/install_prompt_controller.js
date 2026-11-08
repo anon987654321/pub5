@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
-import { installDismissedKey, standalone } from "pub5/pwa_standalone"
-import { announceInstallVisible, mayPrompt } from "pub5/onboarding"
+import { installDismissedKey, standalone } from "pub4/pwa_standalone"
+import { announceInstallVisible, mayPrompt } from "pub4/onboarding"
 
 // The unscoped key stays readable so a dismissal from before the key was
 // namespaced still counts; only new writes are scoped.
@@ -29,8 +29,8 @@ export default class extends Controller {
 
     this.onConsent = () => this.reveal()
     this.onWelcomeDismissed = () => this.reveal()
-    window.addEventListener("pub5:cookie-consent-resolved", this.onConsent)
-    window.addEventListener("pub5:welcome-dismissed", this.onWelcomeDismissed)
+    window.addEventListener("pub4:cookie-consent-resolved", this.onConsent)
+    window.addEventListener("pub4:welcome-dismissed", this.onWelcomeDismissed)
 
     this.prepareCopy()
 
@@ -55,8 +55,8 @@ export default class extends Controller {
 
   disconnect() {
     window.removeEventListener("beforeinstallprompt", this.onBeforeInstall)
-    window.removeEventListener("pub5:cookie-consent-resolved", this.onConsent)
-    window.removeEventListener("pub5:welcome-dismissed", this.onWelcomeDismissed)
+    window.removeEventListener("pub4:cookie-consent-resolved", this.onConsent)
+    window.removeEventListener("pub4:welcome-dismissed", this.onWelcomeDismissed)
     this.stopListening()
   }
 

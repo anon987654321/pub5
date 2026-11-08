@@ -48,7 +48,7 @@ class SharedTopologyContractTest < Minitest::Test
 
   def test_the_canonical_shared_tree_exists
     assert File.directory?(File.join(ROOT, "__shared"))
-    assert File.file?(File.join(ROOT, "__shared", "pub5-shared.gemspec"))
+    assert File.file?(File.join(ROOT, "__shared", "pub4-shared.gemspec"))
     assert File.file?(File.join(ROOT, "__shared", "config", "ci.rb"))
   end
   def test_rails_lockfiles_use_the_canonical_shared_engine_path

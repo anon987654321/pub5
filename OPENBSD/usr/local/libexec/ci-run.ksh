@@ -17,7 +17,7 @@ esac
   echo "ci-run: timeout must be an integer from 1 to 7200" >&2
   exit 64
 }
-[ "$(id -u)" -eq 0 ] || { echo "ci-run: must run as root through pub5-admin" >&2; exit 77; }
+[ "$(id -u)" -eq 0 ] || { echo "ci-run: must run as root through pub4-admin" >&2; exit 77; }
 
 bundle=/usr/local/bin/bundle
 found_ruby=0
@@ -43,10 +43,10 @@ script=$(cat <<EOF
 set -eu
 export HOME=/home/$app
 export PUB5_ROOT=/home/dev/pub5
-export PUB5_CI_GUARD=1
-export PUB5_CI_APP=$app
-export PUB5_CI_TIMEOUT=$timeout
-export PUB5_RAILS_ROOT=/home/$app/pub5-rails/RAILS
+export PUB4_CI_GUARD=1
+export PUB4_CI_APP=$app
+export PUB4_CI_TIMEOUT=$timeout
+export PUB5_RAILS_ROOT=/home/$app/pub4-rails/RAILS
 export NPM_CONFIG_CACHE=/home/$app/.npm
 export XDG_CACHE_HOME=/home/$app/.cache
 export BUNDLE_USER_HOME=/home/$app/.bundle

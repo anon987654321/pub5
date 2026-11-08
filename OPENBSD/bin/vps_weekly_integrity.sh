@@ -4,8 +4,8 @@
 set -eu
 
 ROOT="${PUB5_ROOT:-/home/dev/pub5}"
-RUNAS="${PUB5_WEEKLY_USER:-dev}"
-LOG=/var/log/pub5/weekly_integrity.log
+RUNAS="${PUB4_WEEKLY_USER:-dev}"
+LOG=/var/log/pub4/weekly_integrity.log
 
 # root owns the schedule; root reads not one line of the checkout. Everything
 # under $ROOT is dev-writable, so sourcing lib/ci_lock.sh or running
@@ -27,21 +27,21 @@ if [ "$(id -u)" -eq 0 ]; then
     echo "vps_weekly_integrity: as root, run $INSTALLED, not $0" >&2
     exit 2
   fi
-  mkdir -p /var/log/pub5
-  chmod 755 /var/log/pub5
+  mkdir -p /var/log/pub4
+  chmod 755 /var/log/pub4
   exec su "$RUNAS" -c "PUB5_ROOT='$ROOT' '$0'" >>"$LOG" 2>&1
 fi
 
 # One definition of the lock path; it moved out of world-writable /var/tmp.
 . "${ROOT}/OPENBSD/lib/ci_lock.sh"
 . "${ROOT}/OPENBSD/lib/ruby_select.sh"
-LOCK=$(pub5_ci_lock_path)
+LOCK=$(pub4_ci_lock_path)
 
 # Probe the flock with-ci-lock and CiGuard take, rather than asking fuser(1):
 # where fuser is missing the old test was simply false, and the run went ahead
 # racing CI. ruby exits 0 only when the lock is held by someone else.
 if [ -f "$LOCK" ] && "$RUBY" -e 'exit(File.open(ARGV[0]).flock(File::LOCK_EX | File::LOCK_NB) ? 1 : 0)' "$LOCK" 2>/dev/null; then
-  echo "$(date -u +%FT%TZ) skip: pub5 CI lock held"
+  echo "$(date -u +%FT%TZ) skip: pub4 CI lock held"
   exit 0
 fi
 

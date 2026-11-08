@@ -10,5 +10,5 @@ eval(File.read(Shared::Engine.root.join("config/importmap_baseline.rb")), bindin
 # stimulus_boot_amber.js (amber only). Pinned per app rather than in
 # importmap_baseline.rb, which bsdports also evals — bsdports imports
 # neither, so its importmap carries no pin for them.
-pin "pub5/stimulus_boot_social", to: "stimulus_boot_social.js"
-pin "pub5/stimulus_boot_amber", to: "stimulus_boot_amber.js"
+pin "pub4/stimulus_boot_social", to: "stimulus_boot_social.js"
+pin "pub4/stimulus_boot_amber", to: "stimulus_boot_amber.js"

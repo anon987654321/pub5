@@ -5,7 +5,7 @@
 module LayoutContractSources
   include StylesheetModules
 
-  # __dir__ is RAILS/test → ROOT is RAILS/ → REPO is pub5 checkout root.
+  # __dir__ is RAILS/test → ROOT is RAILS/ → REPO is pub4 checkout root.
   ROOT = File.expand_path("../..", __dir__)
   REPO = File.expand_path("..", ROOT)
   SHARED = File.join(ROOT, "__shared")

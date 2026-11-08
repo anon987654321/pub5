@@ -1,4 +1,4 @@
-export const COOKIE_NAME = "pub5_consent"
+export const COOKIE_NAME = "pub4_consent"
 export const COOKIE_VERSION = "v1"
 export const PURPOSES = [ "analytics", "advertising" ]
 
@@ -62,6 +62,6 @@ export function saveConsent(purposes) {
     `; Max-Age=31536000; Path=/${scope}; SameSite=Lax${secure}`
 
   const detail = { version: COOKIE_VERSION, recordedAt, purposes: selected }
-  window.dispatchEvent(new CustomEvent("pub5:cookie-consent-resolved", { detail }))
+  window.dispatchEvent(new CustomEvent("pub4:cookie-consent-resolved", { detail }))
   return detail
 }

@@ -2,7 +2,7 @@
 
 class Outfit < ApplicationRecord
   include Likeable
-  # Engine-ize Shared via pub5-shared
+  # Engine-ize Shared via pub4-shared
   include Shared::Reactable
   include Shared::Notifiable
   belongs_to :user

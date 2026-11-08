@@ -8,7 +8,7 @@ module Shared
   # amazon.de pays nothing on amazon.co.uk, and sending a German tag to a
   # British storefront is not a rounding error, it is an untracked click. So a
   # single global AMAZON_ASSOCIATE_TAG cannot serve a network of city sites
-  # spread across countries — which is what pub5 is.
+  # spread across countries — which is what pub4 is.
   #
   # It was worse than un-tracked before this existed: SeoKit#amazon_affiliate_url
   # built bare ASIN links against amazon.COM for every city, so a Bergen or
@@ -74,7 +74,7 @@ module Shared
 
     # The one marketplace used when a request carries no country at all — a
     # background job, a console, a city row missing its country_code. Germany
-    # rather than the US because the overwhelming majority of pub5's cities are
+    # rather than the US because the overwhelming majority of pub4's cities are
     # European, so it is the least-wrong default.
     FALLBACK_COUNTRY = "DE"
 

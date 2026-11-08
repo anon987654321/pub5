@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-const STORAGE_KEY = "pub5:newsletter-capture"
+const STORAGE_KEY = "pub4:newsletter-capture"
 const REOPEN_AFTER_MS = 7 * 24 * 60 * 60 * 1000
 
 export default class extends Controller {

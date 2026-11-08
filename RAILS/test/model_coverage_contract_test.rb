@@ -8,15 +8,15 @@ require "minitest/autorun"
 class ModelCoverageContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
-  # Vertical packages are siblings under RAILS, except Marketplace's food
+  # Vertical engines live under brgen/engines/, except Marketplace's food
   # engine, which is intentionally nested inside the Marketplace package.
   ENGINE_ROOTS = {
-    "dating" => "brgen_dating",
-    "marketplace" => "brgen_marketplace",
-    "playlist" => "brgen_radio/playlist",
-    "takeaway" => "brgen_marketplace/engines/takeaway",
-    "tv" => "brgen_radio/tv",
-    "maps" => "brgen_maps",
+    "dating" => "brgen/engines/dating",
+    "marketplace" => "brgen/engines/marketplace",
+    "playlist" => "brgen/engines/radio/playlist",
+    "takeaway" => "brgen/engines/marketplace/engines/takeaway",
+    "tv" => "brgen/engines/radio/tv",
+    "maps" => "brgen/engines/maps",
   }.freeze
 
   def app_path(app, relative)

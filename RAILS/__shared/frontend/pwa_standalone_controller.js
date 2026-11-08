@@ -55,6 +55,6 @@ export default class extends Controller {
       try { localStorage.setItem(installDismissedKey(), "1") } catch (_) { /* private mode */ }
     }
 
-    window.dispatchEvent(new CustomEvent("pub5:pwa-display", { detail: { key: pwaKey(), standalone: installed } }))
+    window.dispatchEvent(new CustomEvent("pub4:pwa-display", { detail: { key: pwaKey(), standalone: installed } }))
   }
 }

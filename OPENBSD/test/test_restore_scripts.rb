@@ -25,9 +25,9 @@ class RestoreScriptsTest < Minitest::Test
   # nothing is read as evidence the backups work.
   def test_restore_litestream_uses_brokered_service_control
     source = File.read(File.join(ROOT, "bin", "restore_litestream.sh"))
-    assert_includes source, 'doas /usr/local/sbin/pub5-admin service stop "$app"'
-    assert_includes source, 'doas /usr/local/sbin/pub5-admin service start "$app"'
-    assert_includes source, 'doas /usr/local/sbin/pub5-admin service check "$app"'
+    assert_includes source, 'doas /usr/local/sbin/pub4-admin service stop "$app"'
+    assert_includes source, 'doas /usr/local/sbin/pub4-admin service start "$app"'
+    assert_includes source, 'doas /usr/local/sbin/pub4-admin service check "$app"'
     refute_match(/doas rcctl (?:stop|start|check)/, source)
   end
   def test_restore_litestream_fails_rather_than_skipping
@@ -167,7 +167,7 @@ class RestoreScriptsTest < Minitest::Test
     File.write(File.join(bin, "ssh"), FAKE_SSH)
     File.chmod(0o755, File.join(bin, "ssh"))
     { "PATH" => "#{bin}:#{ENV['PATH']}", "FAKE_VM23" => File.join(dir, "vm23"), "FAKE_VM23_BLOBS" => File.join(dir, "vm23blobs"),
-      "PUB5_DR_DIR" => File.join(dir, "dr"), "PUB5_SSH_KEY" => File.join(dir, "key") }
+      "PUB4_DR_DIR" => File.join(dir, "dr"), "PUB4_SSH_KEY" => File.join(dir, "key") }
   end
 
   def dr_pull(env, *args)

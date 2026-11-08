@@ -7,7 +7,7 @@
 #   bsdports  line 49.82  branch 12.16  method 20.77
 #
 # Raise a number when coverage rises. Never lower one to absorb new untested code;
-# write the test. The aim is still every file at 100%: PUB5_COVERAGE_STRICT=1 runs
+# write the test. The aim is still every file at 100%: PUB4_COVERAGE_STRICT=1 runs
 # test/coverage.rb against that target and lists each file that falls short.
 brgen:
   line: 70

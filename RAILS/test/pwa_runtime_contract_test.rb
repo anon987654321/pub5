@@ -19,7 +19,7 @@ class PwaRuntimeContractTest < Minitest::Test
 
   def test_hotwire_activates_the_queue_once
     source = File.read(File.join(ROOT, "__shared/frontend/hotwire.js"))
-    assert_includes source, 'import { installOfflineQueue } from "pub5/pwa_runtime"'
+    assert_includes source, 'import { installOfflineQueue } from "pub4/pwa_runtime"'
     assert_includes source, "installOfflineQueue()"
   end
 end

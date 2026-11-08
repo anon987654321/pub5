@@ -6,7 +6,7 @@ module Shared
   # Server-side check for purposes that may load optional client technology.
   # The browser writes the same versioned, purpose-scoped signal.
   module ConsentHelper
-    CONSENT_COOKIE = "pub5_consent"
+    CONSENT_COOKIE = "pub4_consent"
     CONSENT_VERSION = "v1"
     PURPOSES = %w[analytics advertising].freeze
 

@@ -42,14 +42,14 @@ require "fileutils"
 require "shellwords"
 require "time"
 
-HOST = ENV.fetch("PUB5_SSH_HOST", "dev@brgen.no")
+HOST = ENV.fetch("PUB4_SSH_HOST", "dev@brgen.no")
 SSH_USER = HOST.include?("@") ? HOST.split("@").first : ENV.fetch("USER", "dev")
-KEY = File.expand_path(ENV.fetch("PUB5_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
-DEST = File.expand_path(ENV.fetch("PUB5_DR_DIR", "~/pub5-dr"))
-KEEP = Integer(ENV.fetch("PUB5_DR_KEEP", "14"))
+KEY = File.expand_path(ENV.fetch("PUB4_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
+DEST = File.expand_path(ENV.fetch("PUB4_DR_DIR", "~/pub5-dr"))
+KEEP = Integer(ENV.fetch("PUB4_DR_KEEP", "14"))
 APPS = %w[brgen amber bsdports].freeze
 
-STALE_AFTER_DAYS = Integer(ENV.fetch("PUB5_DR_STALE_DAYS", "2"))
+STALE_AFTER_DAYS = Integer(ENV.fetch("PUB4_DR_STALE_DAYS", "2"))
 
 # Asked before anything else, because a bare run is the pull itself.
 if ARGV.intersect?(%w[-h --help])
@@ -76,7 +76,7 @@ end
 # check, and every machine that is not the operator's Mac correctly has no pulls.
 if ARGV.include?("--check")
   unless Dir.exist?(DEST)
-    if ENV.key?("PUB5_DR_DIR") && !ENV.fetch("PUB5_DR_DIR").to_s.strip.empty?
+    if ENV.key?("PUB4_DR_DIR") && !ENV.fetch("PUB4_DR_DIR").to_s.strip.empty?
       warn "dr-pull: FAIL - configured backup directory is missing: #{DEST}"
       exit 1
     end
@@ -190,7 +190,7 @@ if ARGV.include?("--drill")
 
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   failures = []
-  Dir.mktmpdir("pub5-drill-") do |scratch|
+  Dir.mktmpdir("pub4-drill-") do |scratch|
     source = File.join(DEST, newest)
     FileUtils.cp(Dir.glob(File.join(source, "*")).select { |p| File.file?(p) }, scratch)
     sums = File.join(scratch, "SHA256SUMS")
@@ -235,12 +235,12 @@ if ARGV.include?("--drill")
 end
 
 if ARGV.include?("--install-launchd")
-  plist = File.expand_path("~/Library/LaunchAgents/no.brgen.pub5-dr.plist")
+  plist = File.expand_path("~/Library/LaunchAgents/no.brgen.pub4-dr.plist")
   File.write(plist, <<~XML)
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
     <plist version="1.0"><dict>
-      <key>Label</key><string>no.brgen.pub5-dr</string>
+      <key>Label</key><string>no.brgen.pub4-dr</string>
       <key>ProgramArguments</key><array>
         <string>#{RbConfig.ruby}</string>
         <string>#{File.expand_path(__FILE__)}</string>
@@ -349,7 +349,7 @@ end
 Dir[File.join(DEST, "*")].select { |d| File.directory?(d) && File.basename(d).match?(/\A\d{8}-\d{4}\z/) }.sort[0...-KEEP].each { |d| FileUtils.rm_rf(d) } # scan: intentional — retention: this script's own pulls past KEEP
 puts "dr-pull: #{pulled.size} database(s) -> #{target}, all integrity_check ok " \
      "(#{pulled.sum { |f| File.size(f) } / 1024 / 1024}MB; keeping last #{KEEP})"
-# Tell the box a pull landed. pub5-alert watch on vm23 cannot see the Mac, so the
+# Tell the box a pull landed. pub4-alert watch on vm23 cannot see the Mac, so the
 # Mac says so: epoch seconds in the ssh user's home, which needs no root. If this
 # line fails the box alerts about a stale backup in two days, which is the point.
 _, marker_status = ssh("date +%s > \"$HOME/.dr_pull_ok\"")

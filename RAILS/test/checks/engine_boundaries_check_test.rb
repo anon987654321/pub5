@@ -19,9 +19,9 @@ class EngineBoundariesCheckTest < Minitest::Test
   def over(files = {}, exempt: {}, **planted)
     files = files.merge(planted)
     Dir.mktmpdir do |dir|
-      plant(dir, "RAILS/brgen_dating/lib/dating/engine.rb", "module Dating\n  class Engine\n    isolate_namespace Dating\n  end\nend\n")
-      plant(dir, "RAILS/brgen_takeaway/lib/takeaway/engine.rb", "module Takeaway\n  class Engine\n    isolate_namespace Takeaway\n  end\nend\n")
-      files.each { |rel, body| plant(dir, "RAILS/brgen_#{rel}", body) }
+      plant(dir, "RAILS/brgen/engines/dating/lib/dating/engine.rb", "module Dating\n  class Engine\n    isolate_namespace Dating\n  end\nend\n")
+      plant(dir, "RAILS/brgen/engines/takeaway/lib/takeaway/engine.rb", "module Takeaway\n  class Engine\n    isolate_namespace Takeaway\n  end\nend\n")
+      files.each { |rel, body| plant(dir, "RAILS/brgen/engines/#{rel}", body) }
       CHECK.run(root: dir, exempt:)
     end
   end
@@ -53,7 +53,7 @@ class EngineBoundariesCheckTest < Minitest::Test
     result = over(
       { "dating/app/controllers/dating/home_controller.rb" => "Takeaway::Order.where(user_id: 1)\n",
         "dating/app/controllers/dating/other_controller.rb" => "Takeaway::Order.where(user_id: 1)\n" },
-      exempt: { "brgen_dating" => { "app/controllers/dating/home_controller.rb" => %w[Takeaway] } }
+      exempt: { "brgen/engines/dating" => { "app/controllers/dating/home_controller.rb" => %w[Takeaway] } }
     )
 
     assert_equal 1, result.failures.size, result.failures.join(", ")
@@ -79,25 +79,25 @@ class EngineBoundariesCheckTest < Minitest::Test
 
   def test_nested_engine_is_scanned
     Dir.mktmpdir do |dir|
-      plant(dir, "RAILS/brgen_dating/lib/dating/engine.rb", "module Dating
+      plant(dir, "RAILS/brgen/engines/dating/lib/dating/engine.rb", "module Dating
   class Engine
     isolate_namespace Dating
   end
 end
 ")
-      plant(dir, "RAILS/brgen_marketplace/lib/marketplace/engine.rb", "module Marketplace
+      plant(dir, "RAILS/brgen/engines/marketplace/lib/marketplace/engine.rb", "module Marketplace
   class Engine
     isolate_namespace Marketplace
   end
 end
 ")
-      plant(dir, "RAILS/brgen_marketplace/engines/takeaway/lib/takeaway/engine.rb", "module Takeaway
+      plant(dir, "RAILS/brgen/engines/marketplace/engines/takeaway/lib/takeaway/engine.rb", "module Takeaway
   class Engine
     isolate_namespace Takeaway
   end
 end
 ")
-      plant(dir, "RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/order.rb", "class Takeaway::Order
+      plant(dir, "RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb", "class Takeaway::Order
   Dating::Profile.first
 end
 ")
@@ -105,7 +105,7 @@ end
       result = CHECK.run(root: dir)
 
       refute result.ok?, "the nested engine was invisible to the boundary scan"
-      assert_match(%r{brgen_marketplace/engines/takeaway/app/models/takeaway/order.rb:2 names Dating::}, result.failures.first)
+      assert_match(%r{brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb:2 names Dating::}, result.failures.first)
     end
   end
 

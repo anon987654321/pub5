@@ -23,7 +23,7 @@ app_layout:
   bootstrap: Greenfield apps use rails new once; existing apps are maintained in-tree.
   deploy_entrypoint: RAILS/<app>/<app>.sh copies the tracked tree to /home/<app>/app
   deployed_tree: /home/<app>/app is what relayd serves - not the dev git checkout alone
-  shared_engine: RAILS/__shared (pub5-shared gem)
+  shared_engine: RAILS/__shared (pub4-shared gem)
 
 single_source_of_truth:
   features: RAILS/apps.yml
@@ -73,7 +73,7 @@ recipes:
     run: OPENBSD/bin/vps-state
     expect: per-app SHA, what a deploy would move
   - want: The repo shape, pruned
-    run: ruby OPENBSD/bin/tree . --pub5-overview
+    run: ruby OPENBSD/bin/tree . --pub4-overview
     expect: Rails apps collapsed, MASTER/lib subsystems, no vendor or node_modules
   - want: Refresh the domain expiry snapshot
     run: ruby OPENBSD/bin/domain_watch.rb --update

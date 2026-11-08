@@ -5,7 +5,7 @@ require "minitest/autorun"
 # No key material and no encrypted credentials in the tree, as a test rather than a
 # .gitignore line — because .gitignore is what already failed here.
 #
-# github.com/anon987654321/pub5 is public and its history holds seven real 32-hex
+# github.com/anon987654321/pub4 is public and its history holds seven real 32-hex
 # master.key blobs: DEPLOY/rails/{brgen,amber,bsdports,baibl,blognet,hjerterom}/
 # config/master.key, added 2026-05-06 (ffb39dc12, b1882a484), moved 2026-05-17
 # (28bad8208) and emptied 2026-05-29 (4f3780d89, 6f81a4d34) — plus MASTER/web's,

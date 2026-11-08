@@ -11,9 +11,9 @@ import { Controller } from "@hotwired/stimulus"
 //   .page-hidden       → document.hidden === true
 //
 // Events:
-//   pub5:battery-change    { detail: { level, charging, low, supported } }
+//   pub4:battery-change    { detail: { level, charging, low, supported } }
 //   battery-save-mode     { detail: { enabled, level, charging, supported } }
-//   pub5:visibility-change { detail: { hidden } }
+//   pub4:visibility-change { detail: { hidden } }
 //
 export default class extends Controller {
   static values = {
@@ -70,7 +70,7 @@ export default class extends Controller {
     const hidden = document.hidden
     document.documentElement.classList.toggle("page-hidden", hidden)
 
-    window.dispatchEvent(new CustomEvent("pub5:visibility-change", {
+    window.dispatchEvent(new CustomEvent("pub4:visibility-change", {
       detail: { hidden }
     }))
   }
@@ -85,7 +85,7 @@ export default class extends Controller {
     document.documentElement.classList.toggle("battery-low", low)
     document.documentElement.classList.toggle("battery-charging", charging)
 
-    window.dispatchEvent(new CustomEvent("pub5:battery-change", {
+    window.dispatchEvent(new CustomEvent("pub4:battery-change", {
       detail: {
         level,
         charging,

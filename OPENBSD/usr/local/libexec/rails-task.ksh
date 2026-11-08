@@ -24,7 +24,7 @@ case "$task" in
   *) echo "rails-task: refused task: $task" >&2; exit 64 ;;
 esac
 
-[ "$(id -u)" -eq 0 ] || { echo "rails-task: must run as root through pub5-admin" >&2; exit 77; }
+[ "$(id -u)" -eq 0 ] || { echo "rails-task: must run as root through pub4-admin" >&2; exit 77; }
 
 app_uid=$(/usr/bin/id -u "$app")
 [ -d /home ] && [ ! -L /home ] && [ "$(stat -f %u /home)" -eq 0 ] || {
@@ -102,13 +102,13 @@ case "$task" in
     command="mkdir -p /home/$app/.npm /home/$app/.cache" ;;
   bundle-cas-hydrate)
     command='set -eu
-cache_dir="/home/$PUB5_TASK_APP/.bundle/cache"
-cas_root="/var/cache/pub5/bundle/$PUB5_TASK_CACHE_KEY/cas/sha256"
-[ -d "$cache_dir" ] && [ ! -L "$cache_dir" ] && [ "$(stat -f %u "$cache_dir")" = "$PUB5_TASK_UID" ] || {
+cache_dir="/home/$PUB4_TASK_APP/.bundle/cache"
+cas_root="/var/cache/pub4/bundle/$PUB4_TASK_CACHE_KEY/cas/sha256"
+[ -d "$cache_dir" ] && [ ! -L "$cache_dir" ] && [ "$(stat -f %u "$cache_dir")" = "$PUB4_TASK_UID" ] || {
   echo "rails-task: refusing unsafe app cache directory" >&2
   exit 1
 }
-for dir in /var /var/cache /var/cache/pub5 /var/cache/pub5/bundle "/var/cache/pub5/bundle/$PUB5_TASK_CACHE_KEY" "$cas_root"; do
+for dir in /var /var/cache /var/cache/pub4 /var/cache/pub4/bundle "/var/cache/pub4/bundle/$PUB4_TASK_CACHE_KEY" "$cas_root"; do
   [ -d "$dir" ] && [ ! -L "$dir" ] && [ "$(stat -f %u "$dir")" -eq 0 ] || {
     echo "rails-task: refusing unsafe CAS directory: $dir" >&2
     exit 1
@@ -129,7 +129,7 @@ for source in "$cas_root"/*/*/*.gem; do
   }
   target="$cache_dir/$name"
   if [ -e "$target" ] || [ -L "$target" ]; then
-    [ -f "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB5_TASK_UID" ] || {
+    [ -f "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB4_TASK_UID" ] || {
       echo "rails-task: refusing unsafe cache target: $target" >&2
       exit 1
     }
@@ -144,11 +144,11 @@ done
 ' ;;
   bundle-cache-prepare)
     command='set -eu
-home="/home/$PUB5_TASK_APP"
+home="/home/$PUB4_TASK_APP"
 bundle_home="$home/.bundle"
 if [ -e "$bundle_home" ] || [ -L "$bundle_home" ]; then
   [ -d "$bundle_home" ] && [ ! -L "$bundle_home" ] &&
-    [ "$(stat -f %u "$bundle_home")" = "$PUB5_TASK_UID" ] || {
+    [ "$(stat -f %u "$bundle_home")" = "$PUB4_TASK_UID" ] || {
       echo "rails-task: .bundle must be a real app-owned directory" >&2
       exit 1
     }
@@ -159,7 +159,7 @@ for part in gems cache; do
   target="$bundle_home/$part"
   if [ -e "$target" ] || [ -L "$target" ]; then
     [ -d "$target" ] && [ ! -L "$target" ] &&
-      [ "$(stat -f %u "$target")" = "$PUB5_TASK_UID" ] || {
+      [ "$(stat -f %u "$target")" = "$PUB4_TASK_UID" ] || {
         echo "rails-task: bundle $part path must be a real app-owned directory" >&2
         exit 1
       }
@@ -167,8 +167,8 @@ for part in gems cache; do
     mkdir "$target"
   fi
 done
-ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
-shared="/var/cache/pub5/bundle/ruby$ruby_version"
+ruby_version=$("$PUB4_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
+shared="/var/cache/pub4/bundle/ruby$ruby_version"
 if [ -d "$shared" ] && [ ! -L "$shared" ] &&
    [ "$(stat -f %u "$shared")" -eq 0 ] && [ -d "$shared/gems" ] &&
    [ ! -L "$shared/gems" ] && [ -d "$shared/cache" ] && [ ! -L "$shared/cache" ]; then
@@ -218,14 +218,14 @@ done' ;;
     esac
     command="/usr/local/bin/sqlite3 $db_file \"select 1 from $table limit 1;\"" ;;
   ci)
-    command="PUB5_RAILS_ROOT=/home/$app/pub5-rails/RAILS RAILS_ENV=test CI=1 PUB5_CI_GUARD=1 $bundle exec bin/ci" ;;
+    command="PUB5_RAILS_ROOT=/home/$app/pub4-rails/RAILS RAILS_ENV=test CI=1 PUB4_CI_GUARD=1 $bundle exec bin/ci" ;;
   overlay-initializers)
     command='shared=/home/dev/pub5/RAILS/__shared/config/initializers
-target=/home/$PUB5_TASK_APP/app/config/initializers
+target=/home/$PUB4_TASK_APP/app/config/initializers
 [ -d "$shared" ] && [ ! -L "$shared" ] || exit 0
-[ -d "/home/$PUB5_TASK_APP/app/config" ] && [ ! -L "/home/$PUB5_TASK_APP/app/config" ] || exit 1
+[ -d "/home/$PUB4_TASK_APP/app/config" ] && [ ! -L "/home/$PUB4_TASK_APP/app/config" ] || exit 1
 if [ -e "$target" ] || [ -L "$target" ]; then
-  [ -d "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB5_TASK_UID" ] || exit 1
+  [ -d "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB4_TASK_UID" ] || exit 1
 else
   mkdir -p "$target"
 fi
@@ -235,10 +235,10 @@ for entry in "$shared"/* "$shared"/.[!.]*; do
 done' ;;
   overlay-public)
     command='shared=/home/dev/pub5/RAILS/__shared/public
-target=/home/$PUB5_TASK_APP/app/public
+target=/home/$PUB4_TASK_APP/app/public
 [ -d "$shared" ] && [ ! -L "$shared" ] || exit 0
 if [ -e "$target" ] || [ -L "$target" ]; then
-  [ -d "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB5_TASK_UID" ] || exit 1
+  [ -d "$target" ] && [ ! -L "$target" ] && [ "$(stat -f %u "$target")" = "$PUB4_TASK_UID" ] || exit 1
 else
   mkdir -p "$target"
 fi
@@ -253,10 +253,10 @@ for entry in "$shared"/* "$shared"/.[!.]*; do
   cp -R "$entry" "$target/"
 done
 shared_bin=/home/dev/pub5/RAILS/__shared/bin
-target_bin=/home/$PUB5_TASK_APP/app/bin
+target_bin=/home/$PUB4_TASK_APP/app/bin
 if [ -d "$shared_bin" ] && [ ! -L "$shared_bin" ]; then
   if [ -e "$target_bin" ] || [ -L "$target_bin" ]; then
-    [ -d "$target_bin" ] && [ ! -L "$target_bin" ] && [ "$(stat -f %u "$target_bin")" = "$PUB5_TASK_UID" ] || exit 1
+    [ -d "$target_bin" ] && [ ! -L "$target_bin" ] && [ "$(stat -f %u "$target_bin")" = "$PUB4_TASK_UID" ] || exit 1
   else
     mkdir -p "$target_bin"
   fi
@@ -268,7 +268,7 @@ if [ -d "$shared_bin" ] && [ ! -L "$shared_bin" ]; then
   done
 fi
 rubocop_config=/home/dev/pub5/RAILS/__shared/.rubocop.yml
-rubocop_target="/home/$PUB5_TASK_APP/app/.rubocop.yml"
+rubocop_target="/home/$PUB4_TASK_APP/app/.rubocop.yml"
 if [ -f "$rubocop_config" ] && [ ! -L "$rubocop_config" ]; then
   [ ! -L "$rubocop_target" ] || { echo "rails-task: refusing .rubocop.yml symlink" >&2; exit 1; }
   cp "$rubocop_config" "$rubocop_target"
@@ -282,10 +282,10 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 export NPM_CONFIG_CACHE=/home/$app/.npm
 export XDG_CACHE_HOME=/home/$app/.cache
 export BUNDLE_USER_HOME=/home/$app/.bundle
-export PUB5_TASK_APP=$app
-export PUB5_TASK_UID=$app_uid
-export PUB5_TASK_CACHE_KEY=$database
-export PUB5_TASK_RUBY=$ruby_path
+export PUB4_TASK_APP=$app
+export PUB4_TASK_UID=$app_uid
+export PUB4_TASK_CACHE_KEY=$database
+export PUB4_TASK_RUBY=$ruby_path
 export SECRET_KEY_BASE
 unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH
 unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT

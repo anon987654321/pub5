@@ -11,7 +11,7 @@ set -euo pipefail
 #   zsh OPENBSD/lib/ssh_vm23.sh 'cd /home/dev/pub5 && git pull'
 #   zsh OPENBSD/lib/ssh_vm23.sh tmux deploy 'doas zsh OPENBSD/OPERATOR.sh'
 #
-# Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB5
+# Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB4
 #
 # SSH_HOST here is the host ALONE — the login is SSH_USER, and they are joined as
 # ${SSH_USER}@${SSH_HOST} below. config_drift_check.rb and bin/deploy-diff.sh give
@@ -21,7 +21,7 @@ set -euo pipefail
 : "${SSH_USER:=dev}"
 : "${SSH_HOST:=brgen.no}"
 : "${SSH_KEY:=${HOME}/.ssh/id_ed25519_brgen}"
-: "${REMOTE_PUB5:=/home/dev/pub5}"
+: "${REMOTE_PUB4:=/home/dev/pub5}"
 
 # One copy of the usage, above the functions rather than in the dispatch at the
 # foot of the file, and reachable as -h so an operator does not have to run the
@@ -31,7 +31,7 @@ ssh_vm23_usage() {
        ssh_vm23.sh exec <remote-command>
        ssh_vm23.sh tmux <session> <remote-command>
 
-Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB5"
+Env: SSH_USER SSH_HOST SSH_KEY REMOTE_PUB4"
 }
 
 typeset -ga VM23_SSH_OPTS=(

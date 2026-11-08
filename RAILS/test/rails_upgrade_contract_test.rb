@@ -69,8 +69,8 @@ class RailsUpgradeContractTest < Minitest::Test
       "amber/app/models/message.rb" => "after_create_commit :enqueue_master_reply",
       "brgen/app/models/notification.rb" => "after_create_commit",
       "brgen/app/models/repost.rb" => "after_create_commit :federate",
-      "brgen_messenger/app/models/message.rb" => "after_create_commit :maybe_summon_bot",
-      "brgen_marketplace/app/models/marketplace/listing.rb" => "after_create_commit :queue_ranking_recalculation",
+      "brgen/engines/messenger/app/models/message.rb" => "after_create_commit :maybe_summon_bot",
+      "brgen/engines/marketplace/app/models/marketplace/listing.rb" => "after_create_commit :queue_ranking_recalculation",
     }.each do |path, callback|
       source = read(path)
 

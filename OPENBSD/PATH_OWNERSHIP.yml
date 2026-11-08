@@ -10,9 +10,9 @@ ownership:
     risk: high
     check: OPENBSD/bin/check
   man:
-    purpose: BSD manuals for the operator surface, pub5-admin(8) and vps-deploy(8)
+    purpose: BSD manuals for the operator surface, pub4-admin(8) and vps-deploy(8)
     risk: low
-    check: mandoc -Tlint OPENBSD/man/man8/pub5-admin.8 OPENBSD/man/man8/vps-deploy.8
+    check: mandoc -Tlint OPENBSD/man/man8/pub4-admin.8 OPENBSD/man/man8/vps-deploy.8
   PATH_OWNERSHIP.yml:
     purpose: this map
     risk: low
@@ -139,7 +139,7 @@ ownership:
     purpose: root-owned emergency CPU recovery runner; sources only the installed stale cleanup helper, never checkout code
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
-  usr/local/sbin/pub5-admin:
+  usr/local/sbin/pub4-admin:
     purpose: root-owned fixed-verb service/deploy/CI broker; no shell text or arbitrary paths
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb

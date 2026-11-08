@@ -6,8 +6,8 @@ require "tmpdir"
 # relayd-watchdog heals by restarting; the third restart inside the window must
 # also leave a durable alert, or the heal hides a recurring fault.
 SCRATCH = Dir.mktmpdir("watchdog-test")
-ENV["PUB5_WATCHDOG_STATE"] = File.join(SCRATCH, "restarts")
-ENV["PUB5_ALERT"] = "pub5-alert-under-test"
+ENV["PUB4_WATCHDOG_STATE"] = File.join(SCRATCH, "restarts")
+ENV["PUB4_ALERT"] = "pub4-alert-under-test"
 Minitest.after_run { FileUtils.rm_rf(SCRATCH) }
 require "fileutils"
 load File.expand_path("../usr/local/bin/relayd-watchdog", __dir__)
@@ -29,7 +29,7 @@ class TestRelaydWatchdog < Minitest::Test
   def recent_restarts(**kw) = top.send(:recent_restarts, **kw)
   def restart_relayd(reason) = top.send(:restart_relayd, reason)
 
-  def alerts = COMMANDS.select { |c| c.first == "pub5-alert-under-test" }
+  def alerts = COMMANDS.select { |c| c.first == "pub4-alert-under-test" }
 
   def test_two_restarts_in_the_window_are_healing_and_raise_nothing
     2.times { |i| record_restart("relayd check failed", now: 1_000 + i) }
@@ -41,7 +41,7 @@ class TestRelaydWatchdog < Minitest::Test
     3.times { |i| record_restart("relayd check failed", now: 1_000 + i * 60) }
 
     assert_equal 1, alerts.size
-    assert_equal %w[pub5-alert-under-test raise relayd-restarts], alerts.first.first(3)
+    assert_equal %w[pub4-alert-under-test raise relayd-restarts], alerts.first.first(3)
     assert_includes alerts.first.last, "restarted 3 times in 60 minutes"
     assert_includes alerts.first.last, "/var/log/daemon"
   end

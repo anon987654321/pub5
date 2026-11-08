@@ -9,7 +9,7 @@ require "json"
 # what is measured is the controller's paging, sound labels and autoplay
 # choice.
 class TvFeedControllerTest < Minitest::Test
-  CONTROLLER = File.expand_path("../brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js", __dir__)
+  CONTROLLER = File.expand_path("../brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js", __dir__)
   STIMULUS = %(import { Controller } from "@hotwired/stimulus")
 
   PAGE = <<~JS

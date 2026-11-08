@@ -126,9 +126,9 @@ class DeploySmokeContractTest < Minitest::Test
 
   def test_sqlite_file_relocation_and_migrations_follow_a_verified_service_stop
     deploy = read(File.join(ROOT, "_deploy.sh"))
-    stop_check = deploy.index('if pub5_rcctl check "$app_name"')
-    stop = deploy.index('pub5_rcctl stop "$app_name"')
-    stopped_check = deploy.index('if pub5_rcctl check "$app_name"', stop + 1)
+    stop_check = deploy.index('if pub4_rcctl check "$app_name"')
+    stop = deploy.index('pub4_rcctl stop "$app_name"')
+    stopped_check = deploy.index('if pub4_rcctl check "$app_name"', stop + 1)
     relocate = deploy.index('migrate_sqlite_db_to_storage_if_needed "$APP_NAME" "$APP_DIR"')
     prepare = deploy.index('db_create_migrate_as_app "$APP_NAME" "$APP_DIR"')
 

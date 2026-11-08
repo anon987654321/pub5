@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Workstation orchestrator: sync pub5 to VPS and run OPENBSD/OPERATOR.sh.
+# Workstation orchestrator: sync pub4 to VPS and run OPENBSD/OPERATOR.sh.
 #
 # A recovery path nothing runs. It reapplies box config after drift, which
 # bin/vps-deploy assumes is already right. Unexercised, so read it before running
@@ -51,26 +51,26 @@ else
   APPS=(brgen amber bsdports)
 fi
 
-log "pub5 deploy - ${#APPS[@]} apps from deploy_inventory.json"
+log "pub4 deploy - ${#APPS[@]} apps from deploy_inventory.json"
 
 log "Testing VPS connectivity..."
 vssh 'uname -a' || error "Cannot connect to ${SSH_USER}@${SSH_HOST}"
 
 if [[ $USE_GIT_PULL == 1 ]]; then
-  log "Git pull on VPS at ${REMOTE_PUB5}..."
-  vssh "test -d ${REMOTE_PUB5}/.git" || error "Clone pub5 on VPS first: git clone https://github.com/anon987654321/pub5.git ${REMOTE_PUB5}"
-  vssh "cd ${REMOTE_PUB5} && git pull origin main"
+  log "Git pull on VPS at ${REMOTE_PUB4}..."
+  vssh "test -d ${REMOTE_PUB4}/.git" || error "Clone pub4 on VPS first: git clone https://github.com/anon987654321/pub4.git ${REMOTE_PUB4}"
+  vssh "cd ${REMOTE_PUB4} && git pull origin main"
 else
   command -v rsync >/dev/null 2>&1 || error "rsync required when USE_GIT_PULL=0"
-  log "Rsync OPENBSD/ -> ${REMOTE_PUB5}/OPENBSD/ ..."
+  log "Rsync OPENBSD/ -> ${REMOTE_PUB4}/OPENBSD/ ..."
   rsync -az --delete \
     -e "ssh ${(j: :)VM23_SSH_OPTS}" \
-    "${DEPLOY_ROOT}/" "${SSH_USER}@${SSH_HOST}:${REMOTE_PUB5}/OPENBSD/" \
+    "${DEPLOY_ROOT}/" "${SSH_USER}@${SSH_HOST}:${REMOTE_PUB4}/OPENBSD/" \
     || error "rsync failed"
 fi
 
 log "Running OpenBSD deploy stage 2 (services + Rails bootstrap from RAILS trees)..."
-if ! vssh "cd ${REMOTE_PUB5} && doas zsh OPENBSD/OPERATOR.sh --stage-2"; then
+if ! vssh "cd ${REMOTE_PUB4} && doas zsh OPENBSD/OPERATOR.sh --stage-2"; then
   if [[ $ALLOW_PARTIAL_DEPLOY == 1 ]]; then
     log "WARN: OPERATOR.sh reported issues - ALLOW_PARTIAL_DEPLOY=1 set"
   else
@@ -81,10 +81,10 @@ fi
 if (( run_per_app )); then
   log "Optional canonical per-app vps-deploy runs..."
   for app in $APPS; do
-    typeset script="${REMOTE_PUB5}/OPENBSD/bin/vps-deploy"
+    typeset script="${REMOTE_PUB4}/OPENBSD/bin/vps-deploy"
     log "  ${app}..."
     vssh "test -f ${script}" || { log "WARN: missing ${script}"; continue; }
-    vssh "cd ${REMOTE_PUB5} && zsh OPENBSD/bin/vps-deploy ${app} 2>&1 | tee /tmp/${app}_deploy.log" \
+    vssh "cd ${REMOTE_PUB4} && zsh OPENBSD/bin/vps-deploy ${app} 2>&1 | tee /tmp/${app}_deploy.log" \
       || log "WARN: ${app} - see /tmp/${app}_deploy.log"
   done
 fi
@@ -100,7 +100,7 @@ fi
 
 if [[ $RUN_REMOTE_HEALTH == 1 ]]; then
   log "Authoritative remote health check..."
-  if ! vssh "cd ${REMOTE_PUB5} && $(remote_ruby OPENBSD/checks/health_check.rb --public --all-ready-apps)"; then
+  if ! vssh "cd ${REMOTE_PUB4} && $(remote_ruby OPENBSD/checks/health_check.rb --public --all-ready-apps)"; then
     [[ $ALLOW_PARTIAL_DEPLOY == 1 ]] \
       && log "WARN: remote health failed - ALLOW_PARTIAL_DEPLOY=1 set" \
       || error "remote health failed"
@@ -109,4 +109,4 @@ fi
 
 log "Deploy finished."
 log "VPS: ssh ${VM23_SSH_OPTS[*]} ${SSH_USER}@${SSH_HOST}"
-log "Health: ruby_select.sh, then ${REMOTE_PUB5}/OPENBSD/checks/health_check.rb --public --all-ready-apps (on VPS)"
+log "Health: ruby_select.sh, then ${REMOTE_PUB4}/OPENBSD/checks/health_check.rb --public --all-ready-apps (on VPS)"

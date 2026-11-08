@@ -39,13 +39,13 @@ translated words reads worse than an honest page in one language.
 ## Verticals
 
 The host app holds the feed, communities, events, stories, direct messages and moderation. Every
-other part of the network is a mountable Rails engine in a directory beside RAILS/brgen, mounted
-at the root of a subdomain of the city apex: dating.brgen.no, markedsplass.brgen.no,
+other part of the network is a mountable Rails engine under `brgen/engines/` inside the host app
+tree, mounted at the root of a subdomain of the city apex: dating.brgen.no, markedsplass.brgen.no,
 tv.brgen.no, maps.brgen.no, radio.brgen.no, messenger.brgen.no. The same word works on every
 apex, so dating.oshlo.no and dating.lsangeles.com exist on the same rule.
 
-The engines are brgen_dating, brgen_maps, brgen_marketplace, brgen_messenger, and brgen_radio,
-which holds two, tv and playlist. The playlist engine answers on radio.<apex>, and the public
+The engines are engines/dating, engines/maps, engines/marketplace, engines/messenger, and
+engines/radio, which holds two, tv and playlist. The playlist engine answers on radio.<apex>, and the public
 name changed to radio with no alias kept, so playlist.<apex> is gone. The marketplace is the one
 subdomain that is localised, because the word is part of the brand in each market: markedsplass
 in Norway, marketplace in the United States and Britain, marktplatz in Germany. Food ordering is
@@ -54,13 +54,13 @@ host. The old takeaway.<apex> host still resolves, as a compatibility mount of t
 Messenger is an engine whose routes are drawn in the host, under messenger.<apex>. ai.brgen.no
 is MASTER, a separate application with its own service, and is not a vertical.
 
-**Vertical product briefs:** [Dating](../brgen_dating/README.md) ·
-[Marketplace](../brgen_marketplace/README.md) ·
-[Takeaway / food](../brgen_marketplace/engines/takeaway/README.md) ·
-[Radio](../brgen_radio/playlist/README.md) ·
-[TV](../brgen_radio/tv/README.md) ·
-[Maps](../brgen_maps/README.md) ·
-[Messenger](../brgen_messenger/README.md).
+**Vertical product briefs:** [Dating](engines/dating/README.md) ·
+[Marketplace](engines/marketplace/README.md) ·
+[Takeaway / food](engines/marketplace/engines/takeaway/README.md) ·
+[Radio](engines/radio/playlist/README.md) ·
+[TV](engines/radio/tv/README.md) ·
+[Maps](engines/maps/README.md) ·
+[Messenger](engines/messenger/README.md).
 
 These briefs preserve the distinct product promises while treating the active engine,
 routes and tests as the authority for what is actually available.
@@ -73,7 +73,7 @@ undefined when routes are drawn. And the mount in config/routes.rb must sit at t
 with a constraints: keyword, never inside a constraints block, because a nested mount still
 routes but Rails then drops the mounted helper that host code calls, as in tv.channel_url.
 Applied migrations stay where they ran, and an engine owns its db/migrate only for new ones. The
-shared models, authentication and design system live in the pub5-shared engine, and no vertical
+shared models, authentication and design system live in the pub4-shared engine, and no vertical
 redefines them.
 
 
@@ -82,7 +82,7 @@ redefines them.
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns
 city identity and the webhook entry points shared with the other verticals. The host has no
 listing model. The engine's product and feature status lives in
-[the Marketplace README](../brgen_marketplace/README.md) and `RAILS/apps.yml`.
+[the Marketplace README](engines/marketplace/README.md) and `RAILS/apps.yml`.
 
 The host serves `/merchant-feed.xml` with up to 10,000 publicly visible, priced and photographed
 goods; affiliate inventory is excluded. Stripe and Vipps enter through host routes at

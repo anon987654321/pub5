@@ -21,10 +21,10 @@ esac
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
 app_dir=/home/${app}/app
-# The Gemfiles name path gems relative to the app dir (../__shared, ../brgen_*),
+# The Gemfiles name path gems relative to the app dir (../__shared, ../engines/*),
 # so the copy-tree keeps them as siblings of app/, the layout RAILS/_deploy.sh builds.
 [[ -d $app_dir ]] || { print -u2 "missing $app_dir"; exit 1 }
-[[ -x /usr/local/sbin/pub5-admin ]] || { print -u2 "vps_ci: pub5-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }
+[[ -x /usr/local/sbin/pub4-admin ]] || { print -u2 "vps_ci: pub4-admin missing; run reviewed OPENBSD/OPERATOR.sh first"; exit 1 }
 
 # deploy_status (from RAILS/_core.sh) -- same in-progress status file the
 # SKIP_CI=1 path (_deploy.sh/_runtime_check.sh) writes, so `bin/vps-state`
@@ -32,7 +32,7 @@ app_dir=/home/${app}/app
 [[ -f ${repo}/RAILS/_core.sh ]] && . "${repo}/RAILS/_core.sh"
 command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
 
-export PUB5_CI_GUARD=1
+export PUB4_CI_GUARD=1
 export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/RAILS}
 
 # Path and safe creation live in OPENBSD/lib/ci_lock.sh — the lock moved out of
@@ -81,21 +81,21 @@ unaccounted_tracked_files() {
 }
 
 # Once installed, the broker runs the fixed synchronizer with the app UID,
-# app primary group, and only the _pub5ci supplementary group. The root-copy
+# app primary group, and only the _pub4ci supplementary group. The root-copy
 # code above remains only for first rollout on boxes without the broker.
 sync_from_repo() {
   local -a paths=(test app lib config bin db engines public vendor/javascript
                   Gemfile Gemfile.lock config.ru Rakefile .rubocop.yml .ruby-version)
   local -a kept_local=(log storage docs script domains.yml Procfile.dev)
   unaccounted_tracked_files "$app" "$repo" paths kept_local
-  doas /usr/local/sbin/pub5-admin ci-sync "$app"
+  doas /usr/local/sbin/pub4-admin ci-sync "$app"
 }
 
 print "vps_ci: $app (sync + mutex + load check)"
 # Establish group access and the private-storage mode before the app-owned
 # synchronizer reads the checkout and updates the CI copy-tree.
-pub5_ensure_ci_lock >/dev/null
-doas /usr/local/sbin/pub5-admin ci-prepare "$app"
+pub4_ensure_ci_lock >/dev/null
+doas /usr/local/sbin/pub4-admin ci-prepare "$app"
 # The checkout is owned by dev, so this permission repair does not cross doas.
 chmod -R u+rX,g+rX "${repo}/MASTER/tools"
 deploy_status "$app" "sync tree"
@@ -130,8 +130,8 @@ else
   deploy_status "$app" "bundle install + bin/ci"
   # The brgen suite ran 59 minutes on this 1 vCPU box (coverage on) and was cut off at the
   # guard's default 3600s still running, so CI gets two hours; the guard itself stays on.
-  ci_timeout=${PUB5_CI_TIMEOUT:-7200}
-  doas /usr/local/sbin/pub5-admin ci-run "$app" "$ci_timeout" \
+  ci_timeout=${PUB4_CI_TIMEOUT:-7200}
+  doas /usr/local/sbin/pub4-admin ci-run "$app" "$ci_timeout" \
     || { deploy_status "$app" "bundle install + bin/ci" "failed"; exit 1; }
   ci_stamp=ci_ok
 fi
@@ -140,5 +140,5 @@ sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
 # The stamp says how this commit was tested: ci_ok (the suite ran here),
 # ci_attested (it passed on the operator's machine) or ci_skipped (break-glass,
 # no suite anywhere). It said ci_ok for all three.
-doas /usr/local/sbin/pub5-admin stamp "$app" "$sha" "$ci_stamp"
+doas /usr/local/sbin/pub4-admin stamp "$app" "$sha" "$ci_stamp"
 deploy_status "$app" "done" "done"

@@ -6,7 +6,7 @@ setopt nullglob extendedglob
 # Run from any directory; resolves MASTER bundle automatically.
 # Usage: ./lint.sh [path]
 
-MASTER_ROOT="${HOME}/pub5/MASTER"
+MASTER_ROOT="${HOME}/pub4/MASTER"
 TARGET="${1:-.}"
 
 bundle_exec() {

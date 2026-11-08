@@ -93,7 +93,7 @@ bootstrap_rails_app() {
   typeset secret
 
   [[ -d $app_dir ]] || { log ERROR "app tree missing: $app_dir"; return 1 }
-  log INFO "bootstrapping $app from pub5 tree on :$port"
+  log INFO "bootstrapping $app from pub4 tree on :$port"
 
   su -l dev -c "gem install --user-install rails bundler falcon" >/dev/null 2>&1 || :
   su -l dev -c "cd $app_dir && bundle config set --local deployment true && bundle config set --local without development:test && RAILS_ENV=production bundle install" \

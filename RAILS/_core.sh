@@ -26,23 +26,23 @@ need_cmd() {
   done
 }
 
-# pub5_rcctl ACTION SERVICE — fixed broker only. Deploy entrypoints refuse
+# pub4_rcctl ACTION SERVICE — fixed broker only. Deploy entrypoints refuse
 # to run before the reviewed root-owned broker has been installed.
-pub5_rcctl() {
+pub4_rcctl() {
   local action=${1:-} service=${2:-}
   case "$action" in
     check|get|start|stop|restart) ;;
-    *) log_err "pub5_rcctl: refused action: $action"; return 2 ;;
+    *) log_err "pub4_rcctl: refused action: $action"; return 2 ;;
   esac
   case "$service" in
     master|brgen|amber|bsdports|mrdamascy|master_jobs|brgen_jobs|amber_jobs|bsdports_jobs) ;;
-    *) log_err "pub5_rcctl: refused service: $service"; return 2 ;;
+    *) log_err "pub4_rcctl: refused service: $service"; return 2 ;;
   esac
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "pub5_rcctl: pub5-admin is missing; run reviewed OPENBSD/OPERATOR.sh first"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "pub4_rcctl: pub4-admin is missing; run reviewed OPENBSD/OPERATOR.sh first"
     return 1
   }
-  "${_PRIV}" /usr/local/sbin/pub5-admin service "$action" "$service"
+  "${_PRIV}" /usr/local/sbin/pub4-admin service "$action" "$service"
 }
 
 # deploy_status APP_NAME STEP [STATE] — single source of truth for "is a
@@ -52,19 +52,19 @@ pub5_rcctl() {
 # elapsed CPU time). STATE defaults to "running"; pass "done" or "failed" to
 # close out the run. One file per app (not one shared file) so concurrent
 # deploys of different apps don't clobber each other's state.
-# Read with: cat /var/db/pub5/deploy_status/<app>.json (or `bin/vps-state`).
-DEPLOY_STATUS_DIR=/var/db/pub5/deploy_status
+# Read with: cat /var/db/pub4/deploy_status/<app>.json (or `bin/vps-state`).
+DEPLOY_STATUS_DIR=/var/db/pub4/deploy_status
 deploy_status() {
   local app=$1 step=$2 state=${3:-running}
   local now
   now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   DEPLOY_STATUS_STARTED_AT=${DEPLOY_STATUS_STARTED_AT:-$now}
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_warn "deploy_status: pub5-admin missing; status not written"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_warn "deploy_status: pub4-admin missing; status not written"
     return 0
   }
-  ${_PRIV} /usr/local/sbin/pub5-admin deploy-status "$app" "$step" "$state" || {
+  ${_PRIV} /usr/local/sbin/pub4-admin deploy-status "$app" "$step" "$state" || {
     log_warn "deploy_status: broker write failed for ${app}/${step}"
     return 0
   }

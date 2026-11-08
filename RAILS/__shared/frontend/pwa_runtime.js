@@ -3,12 +3,12 @@
 // the dating swipe), is stored in IndexedDB and replayed in order when the
 // browser comes back online. The localStorage queue that pwa_offline_store.js
 // kept beside this one is folded in on install.
-const DB_NAME = "pub5-pwa"
+const DB_NAME = "pub4-pwa"
 const DB_VERSION = 1
 const STORE = "mutations"
-const EVENT = "pub5:pwa-queue"
+const EVENT = "pub4:pwa-queue"
 const MAX_QUEUE_SIZE = 100
-const LEGACY_STORAGE_KEY = "pub5:offline-sync-queue"
+const LEGACY_STORAGE_KEY = "pub4:offline-sync-queue"
 
 const canUseIndexedDB = () => typeof indexedDB !== "undefined"
 
@@ -125,7 +125,7 @@ const send = (record, url, token) => {
       Accept: "text/vnd.turbo-stream.html, text/html",
       "X-CSRF-Token": token,
       "X-Idempotency-Key": record.id,
-      "X-Pub5-Offline-Replay": "1",
+      "X-Pub4-Offline-Replay": "1",
     },
   })
 }
@@ -191,11 +191,11 @@ const adoptLegacyQueue = async () => {
 export const requestStoragePersistence = async () => (navigator.storage?.persist ? await navigator.storage.persist() : false)
 
 export const installOfflineQueue = () => {
-  if (window.__pub5OfflineQueueInstalled || !canUseIndexedDB()) return
-  window.__pub5OfflineQueueInstalled = true
+  if (window.__pub4OfflineQueueInstalled || !canUseIndexedDB()) return
+  window.__pub4OfflineQueueInstalled = true
   requestStoragePersistence().catch(() => {})
   window.addEventListener("online", replay)
-  window.addEventListener("pub5:pwa-replay", replay)
+  window.addEventListener("pub4:pwa-replay", replay)
   document.addEventListener("submit", async (event) => {
     const form = event.target
     if (!(form instanceof HTMLFormElement) || !form.matches("form[data-pwa-offline]")) return
@@ -208,12 +208,12 @@ export const installOfflineQueue = () => {
       const status = form.querySelector("[data-pwa-queue-status]")
       if (status && form.dataset.pwaQueuedText) status.textContent = form.dataset.pwaQueuedText
     } catch (error) {
-      console.error("pub5 offline queue:", error)
+      console.error("pub4 offline queue:", error)
     }
   })
   adoptLegacyQueue()
     .then(replay)
-    .catch((error) => console.warn("pub5 offline queue replay:", error))
+    .catch((error) => console.warn("pub4 offline queue replay:", error))
 }
 
 export const pwaCapabilities = () => ({

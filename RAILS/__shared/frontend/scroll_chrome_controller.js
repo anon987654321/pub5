@@ -4,14 +4,14 @@
 // peel grip. Hide again on scroll-down. First visit gets a one-shot coach
 // tip so the closed bar stays findable (NN/g progressive disclosure).
 import { Controller } from "@hotwired/stimulus"
-import { mayPrompt, YIELD_EVENT } from "pub5/onboarding"
+import { mayPrompt, YIELD_EVENT } from "pub4/onboarding"
 
-const COACH_KEY = "pub5:tab-bar:coach-dismissed"
+const COACH_KEY = "pub4:tab-bar:coach-dismissed"
 
 export default class extends Controller {
   static targets = ["bar", "peel", "coach"]
   static values = {
-    storageKey: { type: String, default: "pub5:tab-bar:open" }
+    storageKey: { type: String, default: "pub4:tab-bar:open" }
   }
 
   connect() {
@@ -136,7 +136,7 @@ export default class extends Controller {
     // Not on the first sitting, and never over the install prompt. "Menyen er
     // nederst" is worth nothing to someone still deciding whether they care
     // about the app; it used to fire 1.6s into the very first page view. See
-    // pub5/onboarding for the ordering.
+    // pub4/onboarding for the ordering.
     if (!mayPrompt("menu_coach")) return
 
     // Delay so first paint isn't noisy; feed content lands first.

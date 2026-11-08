@@ -105,9 +105,9 @@ Files changed: 5 controllers + 3 models + 1 service + 17 views + 9 stylesheets +
 
 ---
 
-# /fix ledger — pass 2 — 2026-11-01 (post-re-analysis of latest pub5 e32ad6e)
+# /fix ledger — pass 2 — 2026-11-01 (post-re-analysis of latest pub4 e32ad6e)
 
-Trigger: user re-analysis order ("reanalytze latest github pub5"). `git pull --ff-only`
+Trigger: user re-analysis order ("reanalytze latest github pub4"). `git pull --ff-only`
 13c3f05..e32ad6e (3553 mode-only diffs reset first, zero content drift). Latest
 MASTER/README + AGENTS.md re-read: /fix definition unchanged in substance —
 "One verb that writes", DONE/PLATEAU/BLOCKED/VALIDATION_FAILED, layout loop of

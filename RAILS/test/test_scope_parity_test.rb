@@ -27,7 +27,7 @@ class TestScopeParityTest < Minitest::Test
     Dir.chdir(File.join(ROOT, "brgen")) do
       reached = Dir.glob(Pub5TestScope::GLOB)
                    .reject { |file| File.fnmatch?(Pub5TestScope::EXCLUDE, file, File::FNM_EXTGLOB) }
-      verticals = Dir.glob("../brgen_*/**/test/**/*_test.rb").reject { |file| file.match?(%r{/test/(system|dummy|fixtures)/}) }
+      verticals = Dir.glob("engines/**/test/**/*_test.rb").reject { |file| file.match?(%r{/test/(system|dummy|fixtures)/}) }
 
       assert_empty verticals - reached, "vertical tests outside Pub5TestScope: no command runs them"
       refute_empty reached - Dir.glob("test/**/*_test.rb"), "the scope finds nothing beyond brgen/test; check the glob"

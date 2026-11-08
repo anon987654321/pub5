@@ -52,7 +52,7 @@ daemon_flags="-c 'cd /home/dev/pub5/MASTER/web && set -a && . /etc/master.env &&
 # fix it names is a dedicated user, not doas command rules, which cannot narrow
 # dev's rule (etc/doas.conf says why, above that rule).
 #
-# master:1005, in _pub5ci for read on /home/dev -- traverse alone is not enough,
+# master:1005, in _pub4ci for read on /home/dev -- traverse alone is not enough,
 # because this is the one service whose working directory sits under it and
 # getcwd(3) names an ancestor by reading it. /bin/ksh like every other
 # app user because rc.subr starts a daemon through a login shell. It reads the

@@ -72,13 +72,13 @@ group :test do
   gem "axe-core-capybara"
 end
 # Engine-ize spike: shared as local path gem (relative from rails/brgen)
-gem "pub5-shared", path: "../__shared"
+gem "pub4-shared", path: "../__shared"
 # TV vertical as a mountable engine (vertical-as-engine pilot; see README.md).
-gem "brgen-tv", path: "../brgen_radio/tv", require: "tv"
-gem "brgen-marketplace", path: "../brgen_marketplace", require: "marketplace"
-gem "brgen-playlist", path: "../brgen_radio/playlist", require: "playlist"
-gem "brgen-dating", path: "../brgen_dating", require: "dating"
-gem "brgen-maps", path: "../brgen_maps", require: "maps"
+gem "brgen-tv", path: "engines/radio/tv", require: "tv"
+gem "brgen-marketplace", path: "engines/marketplace", require: "marketplace"
+gem "brgen-playlist", path: "engines/radio/playlist", require: "playlist"
+gem "brgen-dating", path: "engines/dating", require: "dating"
+gem "brgen-maps", path: "engines/maps", require: "maps"
 
 gem "dartsass-rails", "~> 0.5.1"
 
@@ -94,4 +94,4 @@ if ENV["SOLIDUS_MARKETPLACE"] == "1"
   gem "solidus_multi_domain", "~> 1.5"
 end
 
-gem "brgen-messenger", path: "../brgen_messenger", require: "brgen_messenger"
+gem "brgen-messenger", path: "engines/messenger", require: "brgen_messenger"

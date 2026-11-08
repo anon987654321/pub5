@@ -15,7 +15,7 @@ class MinimalismContractTest < Minitest::Test
 
   def test_console_guard_is_loaded_once_and_emits_house_event
     source = File.read(File.join(ROOT, "RAILS/__shared/frontend/console_guard.js"))
-    assert_includes source, "pub5:console-error"
+    assert_includes source, "pub4:console-error"
     assert_includes source, "unhandledrejection"
   end
 

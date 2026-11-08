@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# with-ci-lock CMD [ARGS...] — run CMD while holding the pub5 CI mutex.
+# with-ci-lock CMD [ARGS...] — run CMD while holding the pub4 CI mutex.
 #
 # OpenBSD has neither lockf(1) nor flock(1). Both are FreeBSD/Linux utilities,
 # and `vps_master_scan.sh` called the first of them:
@@ -21,7 +21,7 @@
 # Operator::CiGuard, because the point of a serial check on a one-vCPU box is to
 # refuse rather than to queue up behind whatever is already busy.
 
-LOCK_DIR = "/var/db/pub5"
+LOCK_DIR = "/var/db/pub4"
 DEFAULT_LOCK = File.join(LOCK_DIR, "ci.lock")
 
 def die(message)
@@ -35,19 +35,19 @@ end
 # to happen: any local account plants one at the name and redirects the chmod.
 # Checking the directory checks that property rather than hardcoding one blessed
 # path, so tests can point this at a private tmpdir without reopening the hole.
-# lib/ci_lock.sh is stricter and honours an override only inside /var/db/pub5;
-# both default to /var/db/pub5/ci.lock, so production holds one mutex.
+# lib/ci_lock.sh is stricter and honours an override only inside /var/db/pub4;
+# both default to /var/db/pub4/ci.lock, so production holds one mutex.
 def lock_path
-  requested = ENV["PUB5_CI_LOCK"].to_s
+  requested = ENV["PUB4_CI_LOCK"].to_s
   return DEFAULT_LOCK if requested.empty?
 
   dir = File.dirname(requested)
   unless File.directory?(dir)
-    die "PUB5_CI_LOCK=#{requested}: #{dir} does not exist"
+    die "PUB4_CI_LOCK=#{requested}: #{dir} does not exist"
   end
 
   if (File.stat(dir).mode & 0o002) != 0
-    warn "with-ci-lock: ignoring PUB5_CI_LOCK=#{requested} - #{dir} is world-writable"
+    warn "with-ci-lock: ignoring PUB4_CI_LOCK=#{requested} - #{dir} is world-writable"
     return DEFAULT_LOCK
   end
 
@@ -74,7 +74,7 @@ path = lock_path
 file = begin
   File.open(path, File::RDONLY)
 rescue Errno::ENOENT
-  die "#{path} does not exist - run pub5_ensure_ci_lock first"
+  die "#{path} does not exist - run pub4_ensure_ci_lock first"
 rescue SystemCallError => e
   die "#{path}: #{e.message}"
 end

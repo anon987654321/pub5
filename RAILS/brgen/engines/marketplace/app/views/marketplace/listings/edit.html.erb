@@ -1,0 +1,49 @@
+<% content_for :title, t("marketplace.edit_listing") %>
+
+<div class="page-header"><%= tag.h1 t("marketplace.edit_listing") %></div>
+
+<div class="form-wrap">
+  <%= form_with model: @listing, url: listing_path(@listing), method: :patch do |f| %>
+    <%= render "shared/errors", object: @listing %>
+    <div class="field"><%= f.label :title %><%= f.text_field :title, required: true, maxlength: 200, autocomplete: "off" %></div>
+    <div class="field"><%= f.label :description %><div data-controller="character-counter" data-character-counter-countdown-value="true">
+  <%= f.text_area :description, rows: 4 , data: { character_counter_target: "input" } %>
+  <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
+</div></div>
+    <div class="field">
+      <%= f.label :price_kroner, t("marketplace.price_kroner") %>
+      <%= f.text_field :price_kroner, inputmode: "decimal", required: true, autocomplete: "off",
+            aria: { describedby: "listing_price_help" } %>
+      <%= tag.p t("marketplace.price_help"), class: "form-help", id: "listing_price_help" %>
+    </div>
+    <div class="field"><%= f.label :condition, t("marketplace.condition") %><%= f.select :condition, Marketplace::Listing::CONDITIONS.map { |value| [t("marketplace.conditions.#{value}"), value] }, include_blank: "—" %></div>
+    <div class="field"><%= f.label :category_id, t("marketplace.category") %><%= f.collection_select :category_id, @categories, :id, :name, { include_blank: "—" } %></div>
+    <div class="field"><span class="field-label"><%= t("marketplace.source") %></span>
+      <div class="listing-source-choice">
+        <label class="listing-source-option"><%= f.radio_button :source, "person", checked: @listing.store_id.blank? %><span><%= t("marketplace.from_a_person") %></span></label>
+        <% if @stores.any? %>
+          <label class="listing-source-option"><%= f.radio_button :source, "shop", checked: @listing.store_id.present? %><span><%= t("marketplace.from_a_shop") %></span></label>
+          <%= f.collection_select :store_id, @stores, :id, :name,
+                { include_blank: t("marketplace.choose_shop") },
+                { aria: { label: t("marketplace.choose_shop") } } %>
+        <% end %>
+      </div>
+      <% if @stores.any? %>
+        <div class="field">
+          <%= f.label :buy_box_key, t("marketplace.buy_box_key") %>
+          <%= f.text_field :buy_box_key, maxlength: 120, autocomplete: "off" %>
+          <p class="form-help"><%= t("marketplace.buy_box_key_hint") %></p>
+        </div>
+      <% end %>
+    </div>
+    <div class="field"><%= f.label :location %><%= f.text_field :location %></div>
+    <details class="advanced-fields">
+      <summary><%= t("marketplace.precise_coordinates") %></summary>
+      <div class="field"><%= f.label :latitude %><%= f.number_field :latitude, step: "0.000001", min: -90, max: 90, inputmode: "decimal" %></div>
+      <div class="field"><%= f.label :longitude %><%= f.number_field :longitude, step: "0.000001", min: -180, max: 180, inputmode: "decimal" %></div>
+    </details>
+    <div class="field"><%= f.label :status %><%= f.select :status, Marketplace::Listing::STATUSES %></div>
+    <div class="field"><%= f.label :photos %><%= f.file_field :photos, multiple: true, accept: "image/*", direct_upload: true, data: { controller: "direct-upload" } %></div>
+    <div class="field"><%= f.submit t("actions.save"), class: "button button-primary" %></div>
+  <% end %>
+</div>

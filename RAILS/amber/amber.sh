@@ -15,7 +15,7 @@ APP_DOMAIN=amberapp.art
 SCRIPT_DIR=${0:a:h}
 SRC_DIR=${SCRIPT_DIR}
 . "${SCRIPT_DIR:h:h}/OPENBSD/lib/ruby_select.sh"
-SHARED_BUNDLE_CACHE=${SHARED_BUNDLE_CACHE:-/var/cache/pub5/bundle/${RUBY_CACHE_KEY}}
+SHARED_BUNDLE_CACHE=${SHARED_BUNDLE_CACHE:-/var/cache/pub4/bundle/${RUBY_CACHE_KEY}}
 
 . "${SCRIPT_DIR:h}/_deploy.sh"
 

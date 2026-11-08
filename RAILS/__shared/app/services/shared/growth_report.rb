@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Shared
-  # One read-only growth report over the signals pub5 already records.
+  # One read-only growth report over the signals pub4 already records.
   #
   # It deliberately does not create a second analytics identity or pretend that
   # channels can be compared where the underlying systems use different units.

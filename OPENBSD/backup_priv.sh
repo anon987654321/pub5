@@ -40,7 +40,7 @@ set -euo pipefail
 typeset backup_host="wingman1"          # the ~/.ssh/config stanza, not the FQDN
 typeset remote_dir="backup"
 typeset stamp=$(date +%Y%m%d_%H%M%S)
-typeset passfile="${PRIV_BACKUP_PASSFILE:-$HOME/.config/pub5/priv-backup.pass}"
+typeset passfile="${PRIV_BACKUP_PASSFILE:-$HOME/.config/pub4/priv-backup.pass}"
 
 [[ -d ~/priv ]] || { print -ru2 -- "backup_priv: ~/priv does not exist"; exit 1 }
 
@@ -56,7 +56,7 @@ elif [[ -t 0 ]]; then
 else
   print -ru2 -- "backup_priv: no terminal and no passphrase file at $passfile - nothing backed up."
   print -ru2 -- "backup_priv: create it with a passphrase you also keep OFF this machine:"
-  print -ru2 -- "backup_priv:   mkdir -p ~/.config/pub5 && (umask 077; printf '%s' 'YOUR PASSPHRASE' > $passfile)"
+  print -ru2 -- "backup_priv:   mkdir -p ~/.config/pub4 && (umask 077; printf '%s' 'YOUR PASSPHRASE' > $passfile)"
   print -ru2 -- "backup_priv: a passphrase stored only here dies with the box, and the backup with it."
   exit 1
 fi
@@ -76,7 +76,7 @@ ssh -o BatchMode=yes "$backup_host" "mkdir -p $remote_dir"
 # attacker who pre-creates the path as a symlink decides where it lands, and one
 # who merely reads it gets the ciphertext to attack offline at leisure. The
 # private directory plus mktemp closes both.
-typeset stage_dir="${HOME}/.cache/pub5-backup"
+typeset stage_dir="${HOME}/.cache/pub4-backup"
 mkdir -p "$stage_dir"
 chmod 700 "$stage_dir"
 typeset enc_file

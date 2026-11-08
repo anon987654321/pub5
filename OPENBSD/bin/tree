@@ -3,7 +3,7 @@
 
 # OPENBSD/bin/tree
 #
-# Constitution-aware project tree for pub5.
+# Constitution-aware project tree for pub4.
 # Respects skip_dirs from MASTER/data/laws.yml + aggressive pruning for overview.
 # Usage: ruby tree.rb [root] [--max-depth=3] [--summary]
 
@@ -48,7 +48,7 @@ class ProjectTree
 
       if @overview
         case @pillar
-        when :pub5 then print_pub5_alignment
+        when :pub4 then print_pub4_alignment
         when :master then print_master_alignment
         when :deploy then print_deploy_alignment
         end
@@ -81,7 +81,7 @@ class ProjectTree
   # noise to clean up (there are none). A tool you are told to run *before*
   # restructuring is the last place a literal should stand in for a measurement.
   # Everything below is derived from the tree on disk.
-  def print_pub5_alignment
+  def print_pub4_alignment
     repo = repo_root
     puts
     puts "Alignment read (far-away, measured):"
@@ -186,7 +186,7 @@ class ProjectTree
     end.sort
   end
 
-  # Measured, like print_pub5_alignment: a verdict typed as a literal describes
+  # Measured, like print_pub4_alignment: a verdict typed as a literal describes
   # the tree on the day it was typed.
   def print_deploy_alignment
     repo = repo_root
@@ -302,7 +302,7 @@ class ProjectTree
       return 1 if %w[etc tools test].any? { |dir| rel == dir || rel.start_with?("#{dir}/") }
     end
 
-    # pub5-wide (root = repo) or fallback
+    # pub4-wide (root = repo) or fallback
     return 0 if rel.match?(%r{^RAILS/[^/]+/app/[^/]+})
     return 1 if rel.match?(%r{^RAILS/[^/]+/app$})
     return 1 if rel.match?(%r{^RAILS/[^/]+$}) && !rel.end_with?("/shared")
@@ -391,9 +391,9 @@ if __FILE__ == $PROGRAM_NAME
       options[:max_depth] = 2
       options[:summary] = true
     end
-    opts.on("--pub5-overview", "Far-away visual tree: all pillars, Rails apps collapsed, noise pruned") do
+    opts.on("--pub4-overview", "Far-away visual tree: all pillars, Rails apps collapsed, noise pruned") do
       options[:overview] = true
-      options[:pillar] = :pub5
+      options[:pillar] = :pub4
       options[:max_depth] = 3
       options[:summary] = true
     end
@@ -414,7 +414,7 @@ if __FILE__ == $PROGRAM_NAME
     opts.on("-h", "--help") do
       puts opts
       puts "\nExamples:"
-      puts "  tree.rb . --pub5-overview       # full repo shape (start here)"
+      puts "  tree.rb . --pub4-overview       # full repo shape (start here)"
       puts "  tree.rb --master-overview       # MASTER pillar only"
       puts "  tree.rb --deploy-overview       # OPENBSD pillar only"
       puts "  tree.rb MASTER --max-depth=5"
@@ -437,7 +437,7 @@ if __FILE__ == $PROGRAM_NAME
     banner = case options[:pillar]
              when :master then "MASTER pillar"
              when :deploy then "OPENBSD pillar"
-             else "pub5 overview"
+             else "pub4 overview"
              end
     puts "=== #{banner} (noise pruned: vendor, tmp, log, storage, node_modules, builds, assets, .master) ==="
     puts

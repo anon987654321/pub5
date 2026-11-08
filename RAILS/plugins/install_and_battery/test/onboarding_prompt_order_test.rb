@@ -39,8 +39,8 @@ class OnboardingPromptOrderTest < Minitest::Test
 
   def test_the_queue_is_pinned_or_no_caller_can_import_it
     assert_path_exists QUEUE
-    assert_includes File.read(BASELINE), %(pin "pub5/onboarding", to: "onboarding_queue.js"),
-                    "pub5/onboarding must be pinned in the shared baseline, or every import of it 404s"
+    assert_includes File.read(BASELINE), %(pin "pub4/onboarding", to: "onboarding_queue.js"),
+                    "pub4/onboarding must be pinned in the shared baseline, or every import of it 404s"
   end
 
   def test_welcome_is_first_and_later_prompts_wait
@@ -58,7 +58,7 @@ class OnboardingPromptOrderTest < Minitest::Test
   def test_every_deferred_prompt_asks_the_queue_first
     PROMPTS.each do |kind, relative|
       body = File.read(File.join(ROOT, relative))
-      assert_includes body, %(from "pub5/onboarding"), "#{relative} does not import the queue"
+      assert_includes body, %(from "pub4/onboarding"), "#{relative} does not import the queue"
       assert_includes body, %(mayPrompt("#{kind}")),
                       "#{relative} must check on mayPrompt(\"#{kind}\") before revealing"
     end
@@ -80,8 +80,8 @@ class OnboardingPromptOrderTest < Minitest::Test
     assert_includes welcome, %(mayPrompt("welcome"))
     assert_includes welcome, "setWelcomePending"
     assert_includes install, %(mayPrompt("install"))
-    assert_includes install, "pub5:cookie-consent-resolved"
-    assert_includes install, "pub5:welcome-dismissed"
+    assert_includes install, "pub4:cookie-consent-resolved"
+    assert_includes install, "pub4:welcome-dismissed"
   end
 
   def test_install_announces_and_the_others_step_back

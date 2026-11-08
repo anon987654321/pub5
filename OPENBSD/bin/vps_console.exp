@@ -85,7 +85,7 @@ switch -- $mode {
     set timeout 20
     console_open
     at_prompt_loose
-    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub5_install_latest.log; pgrep -lf bundle\r"
+    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub4_install_latest.log; pgrep -lf bundle\r"
     at_prompt_loose
     send "doas rcctl check master brgen amber bsdports 2>/dev/null\r"
     at_prompt_loose
@@ -128,9 +128,9 @@ switch -- $mode {
     at_prompt_loose
     send "doas pfctl -t bruteforce -T flush 2>/dev/null\r"
     at_prompt_loose
-    send "nohup /tmp/vps_on_vm_install.sh >/tmp/pub5_on_vm_install.log 2>&1 &\r"
+    send "nohup /tmp/vps_on_vm_install.sh >/tmp/pub4_on_vm_install.log 2>&1 &\r"
     at_prompt_loose
-    send "sleep 1; ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).first(3) if File.file?(p)' /tmp/pub5_on_vm_install.log\r"
+    send "sleep 1; ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).first(3) if File.file?(p)' /tmp/pub4_on_vm_install.log\r"
     at_prompt_loose
     console_close
   }
@@ -138,7 +138,7 @@ switch -- $mode {
     set timeout 25
     console_open
     at_prompt
-    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(25) if File.file?(p)' /tmp/pub5_on_vm_install.log; echo ---; pgrep -lf 'bundle|vps_on_vm|vps_install_all|brgen.sh|amber.sh|bsdports.sh'\r"
+    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(25) if File.file?(p)' /tmp/pub4_on_vm_install.log; echo ---; pgrep -lf 'bundle|vps_on_vm|vps_install_all|brgen.sh|amber.sh|bsdports.sh'\r"
     at_prompt
     send "doas rcctl check master brgen amber bsdports 2>&1\r"
     at_prompt
@@ -168,21 +168,21 @@ switch -- $mode {
   }
   sync_and_install {
     set timeout 30
-    set tgzfile /tmp/pub5_deploy_sync.tgz
+    set tgzfile /tmp/pub4_deploy_sync.tgz
     set b64 [exec base64 -i $tgzfile]
     console_open
     at_prompt
     send "doas pfctl -t bruteforce -T flush 2>/dev/null; echo PF_FLUSH_OK\r"
     at_prompt
-    send "echo $b64 | base64 -d > /tmp/pub5_deploy_sync.tgz && tar xzf /tmp/pub5_deploy_sync.tgz -C /home/dev/pub5 && echo SYNC_OK\r"
+    send "echo $b64 | base64 -d > /tmp/pub4_deploy_sync.tgz && tar xzf /tmp/pub4_deploy_sync.tgz -C /home/dev/pub5 && echo SYNC_OK\r"
     at_prompt
     send "chmod +x /home/dev/pub5/OPENBSD/bin/vps_on_vm_install.sh /home/dev/pub5/OPENBSD/bin/vps_install_all.sh\r"
     at_prompt
     send "pkill -f vps_on_vm_install.sh 2>/dev/null; pkill -f vps_install_all.sh 2>/dev/null; true\r"
     at_prompt
-    send "nohup zsh /home/dev/pub5/OPENBSD/bin/vps_on_vm_install.sh > /tmp/pub5_on_vm_install.log 2>&1 & echo INSTALL_PID:\$!\r"
+    send "nohup zsh /home/dev/pub5/OPENBSD/bin/vps_on_vm_install.sh > /tmp/pub4_on_vm_install.log 2>&1 & echo INSTALL_PID:\$!\r"
     at_prompt
-    send "sleep 2; ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).first(8) if File.file?(p)' /tmp/pub5_on_vm_install.log\r"
+    send "sleep 2; ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).first(8) if File.file?(p)' /tmp/pub4_on_vm_install.log\r"
     at_prompt
     console_close
   }

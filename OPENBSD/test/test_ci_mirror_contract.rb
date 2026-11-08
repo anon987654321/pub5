@@ -3,7 +3,7 @@
 require "minitest/autorun"
 
 # vps_ci.sh runs RAILS/__shared/config/ci.rb against a mirror at
-# /home/<app>/pub5-rails that holds only the MASTER pieces it names. A MASTER
+# /home/<app>/pub4-rails that holds only the MASTER pieces it names. A MASTER
 # tool that gains a require_relative outside that set fails on the box with a
 # LoadError (design_tokens -> lib/trace/dmesg, 2026-10-09) and nowhere else,
 # because the checkout has everything. This resolves the literal require_relative

@@ -4,18 +4,18 @@
 #
 # On the box the suite runs from /home/brgen/app, where the RAILS tree is not
 # the parent directory, so ROOT is found rather than assumed. A stale
-# /home/<app>/pub5-rails/RAILS once had every assertion silently checking
+# /home/<app>/pub4-rails/RAILS once had every assertion silently checking
 # month-old file contents instead of failing.
 module SourceReader
     ROOT = ENV.fetch("PUB5_RAILS_ROOT") do
-      app = ENV.fetch("PUB5_CI_APP", "brgen")
+      app = ENV.fetch("PUB4_CI_APP", "brgen")
       candidates = [
-        # Canonical checkout first: per-app "pub5-rails" copies are leftovers from
+        # Canonical checkout first: per-app "pub4-rails" copies are leftovers from
         # older deploy schemes and can go stale relative to the real monorepo
         # without anything noticing (confirmed 2026-07-10: a stale
-        # /home/<app>/pub5-rails/RAILS read month-old file contents).
+        # /home/<app>/pub4-rails/RAILS read month-old file contents).
         "/home/dev/pub5/RAILS",
-        "/home/#{app}/pub5-rails/RAILS",
+        "/home/#{app}/pub4-rails/RAILS",
         # This file is RAILS/brgen/test/source_reader.rb, so RAILS is two levels
         # up, not three. At three it resolved to the repo root, where no `shared`
         # exists, both `find` guards missed and the chain fell through to the

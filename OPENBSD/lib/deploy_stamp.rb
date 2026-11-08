@@ -13,7 +13,7 @@ module Deploy
   # deploy ever ran, and every other check still passes. The comparison is the
   # only place that state becomes a fact.
   module DeployStamp
-    DIR = "/var/db/pub5"
+    DIR = "/var/db/pub4"
 
     module_function
 

@@ -14,7 +14,7 @@ const ITEM_SEL = [
   ".card"
 ].join(", ")
 
-const COACH_KEY = "pub5:hotkey-coach:dismissed"
+const COACH_KEY = "pub4:hotkey-coach:dismissed"
 
 export default class extends Controller {
   static targets = ["item"]
@@ -192,7 +192,7 @@ export default class extends Controller {
     if (menuCoach) {
       let menuCoachDone = false
       try {
-        menuCoachDone = localStorage.getItem("pub5:tab-bar:coach-dismissed") === "1"
+        menuCoachDone = localStorage.getItem("pub4:tab-bar:coach-dismissed") === "1"
       } catch (_) {
         return
       }

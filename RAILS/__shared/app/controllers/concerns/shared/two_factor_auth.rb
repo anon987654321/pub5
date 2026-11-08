@@ -4,7 +4,7 @@ module Shared
   module TwoFactorAuth
     extend ActiveSupport::Concern
 
-    TOTP_ISSUER = "pub5"
+    TOTP_ISSUER = "pub4"
 
     private
 

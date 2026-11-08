@@ -8,7 +8,7 @@ require "simplecov"
 require "yaml"
 
 rails_root = File.expand_path("../..", __dir__)
-app = ENV["PUB5_CI_APP"].to_s.strip
+app = ENV["PUB4_CI_APP"].to_s.strip
 app = File.basename(Dir.pwd) if app.empty?
 app = File.basename(File.expand_path("..")) if app == "app"
 
@@ -22,15 +22,15 @@ raise "coverage: unknown Rails app #{app.inspect}" unless app_dir
 
 SimpleCov.root(rails_root)
 SimpleCov.coverage_path(
-  ENV["PUB5_COVERAGE_PATH"].to_s.strip.empty? ?
+  ENV["PUB4_COVERAGE_PATH"].to_s.strip.empty? ?
     File.join(rails_root, "coverage", app) :
-    File.expand_path(ENV.fetch("PUB5_COVERAGE_PATH"))
+    File.expand_path(ENV.fetch("PUB4_COVERAGE_PATH"))
 )
 # SimpleCov keeps one result per command name, so bin/ci's system_test run,
 # under the same name as rails_test, replaced the whole suite's result with its
 # own nine tests and judged that against the app's floor. A named part keeps
 # its own result, and the two are merged.
-part = ENV["PUB5_COVERAGE_PART"].to_s.strip
+part = ENV["PUB4_COVERAGE_PART"].to_s.strip
 SimpleCov.command_name part.empty? ? "#{app}:rails" : "#{app}:rails:#{part}"
 
 SimpleCov.start "rails" do
@@ -58,22 +58,22 @@ SimpleCov.start "rails" do
   track_tests
 
   # Coverage is reported on every run and enforced on a full one: the CI check sets
-  # PUB5_CI_GUARD, `FULL_COVERAGE=1` asks for it, and a one-file run enforces nothing
+  # PUB4_CI_GUARD, `FULL_COVERAGE=1` asks for it, and a one-file run enforces nothing
   # because it cannot reach a whole-app number. The enforced number is a recorded
   # floor per app (coverage_floors.yml) that only rises. It used to demand 100% of
   # every file, which no app met, so no deploy could pass its tests. That target is
-  # still available: PUB5_COVERAGE_STRICT=1 judges each app file against 100% and
+  # still available: PUB4_COVERAGE_STRICT=1 judges each app file against 100% and
   # names the ones that fall short. Shared code is included in every report but is
   # judged only after all application reports are collated, because a shared branch
   # can legitimately be exercised by a different consumer than the current app.
-  if ENV["PUB5_COVERAGE_STRICT"] == "1"
+  if ENV["PUB4_COVERAGE_STRICT"] == "1"
     own_source = %r{\A#{Regexp.escape(app_dir)}/(?:app|engines|lib)/}
     %i[line branch method].each do |criterion|
       coverage criterion do
         minimum 100, per: own_source
       end
     end
-  elsif ENV["FULL_COVERAGE"] == "1" || ENV["PUB5_CI_GUARD"] == "1"
+  elsif ENV["FULL_COVERAGE"] == "1" || ENV["PUB4_CI_GUARD"] == "1"
     floors = YAML.safe_load_file(File.join(__dir__, "coverage_floors.yml")).fetch(app)
     %i[line branch method].each do |criterion|
       coverage criterion do

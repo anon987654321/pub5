@@ -10,7 +10,7 @@ module Shared
   # irreplaceable user data with no extra binary or credentials.
   #
   # Same-disk by default (accidental-delete / corruption / bad-migration recovery,
-  # NOT disk-failure DR). Point PUB5_BACKUP_DIR at an off-host mount, or copy the
+  # NOT disk-failure DR). Point PUB4_BACKUP_DIR at an off-host mount, or copy the
   # snapshots off the box, for true disaster recovery.
   class DatabaseSnapshotJob < ApplicationJob
     queue_as :bulk
@@ -34,7 +34,7 @@ module Shared
     private
 
     def backup_dir
-      ENV["PUB5_BACKUP_DIR"].presence || Rails.root.join("..", "backups").to_s
+      ENV["PUB4_BACKUP_DIR"].presence || Rails.root.join("..", "backups").to_s
     end
 
     def rotate(dir)

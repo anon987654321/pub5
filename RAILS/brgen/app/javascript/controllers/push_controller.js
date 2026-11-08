@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
-import { mayPrompt, YIELD_EVENT } from "pub5/onboarding"
+import { mayPrompt, YIELD_EVENT } from "pub4/onboarding"
 
 // The browser's permission sheet is asked for once, in context: right after the
 // reader's first post, comment or message, when "tell me when someone answers"
 // is the obvious next thing, and never on arrival, before there is anything to
 // be told about.
-const ASKED_KEY = "pub5:push:context-asked"
+const ASKED_KEY = "pub4:push:context-asked"
 // A create that someone can answer: a post, a comment, a message.
 const ANSWERABLE = /\/(posts|comments|messages)$/
 
@@ -37,8 +37,8 @@ export default class extends Controller {
     this.#wirePrompt()
 
     // The iOS shell is a WKWebView with no Push API; it registers for APNs through
-    // its pub5Push bridge instead, and only when the server can send through APNs.
-    if (this.nativeValue && window.webkit?.messageHandlers?.pub5Push) return this.#native()
+    // its pub4Push bridge instead, and only when the server can send through APNs.
+    if (this.nativeValue && window.webkit?.messageHandlers?.pub4Push) return this.#native()
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return
     this.#syncBadge()
@@ -55,7 +55,7 @@ export default class extends Controller {
     document.removeEventListener("turbo:submit-start", this.onSubmitStart)
     window.removeEventListener(YIELD_EVENT, this.onYield)
     document.removeEventListener("click", this.onPromptClick)
-    if (this.onNativeToken) window.removeEventListener("pub5:native-push-token", this.onNativeToken)
+    if (this.onNativeToken) window.removeEventListener("pub4:native-push-token", this.onNativeToken)
   }
 
   clearBadge() {
@@ -68,18 +68,18 @@ export default class extends Controller {
     else navigator.clearAppBadge?.()
   }
 
-  // The shell answers pub5:native-push-status with the iOS permission state, and
-  // sends pub5:native-push-token whenever iOS hands it a token: at once on a
+  // The shell answers pub4:native-push-status with the iOS permission state, and
+  // sends pub4:native-push-token whenever iOS hands it a token: at once on a
   // launch where the reader already allowed it, after the sheet otherwise. The
   // same button and onboarding gate as the web path.
   #native() {
     this.onNativeToken = (event) => this.#saveNative(event.detail)
-    window.addEventListener("pub5:native-push-token", this.onNativeToken)
+    window.addEventListener("pub4:native-push-token", this.onNativeToken)
 
-    window.addEventListener("pub5:native-push-status", (event) => {
+    window.addEventListener("pub4:native-push-status", (event) => {
       this.nativeAskable = event.detail?.status === "notDetermined"
     }, { once: true })
-    window.webkit.messageHandlers.pub5Push.postMessage({ action: "status" })
+    window.webkit.messageHandlers.pub4Push.postMessage({ action: "status" })
   }
 
   async #saveNative({ token, environment } = {}) {
@@ -124,7 +124,7 @@ export default class extends Controller {
       if (!event.target.closest("#push-prompt #push-enable-button")) return
 
       this.#answered()
-      if (this.nativeAskable) return window.webkit.messageHandlers.pub5Push.postMessage({ action: "request" })
+      if (this.nativeAskable) return window.webkit.messageHandlers.pub4Push.postMessage({ action: "request" })
 
       const perm = await Notification.requestPermission()
       if (perm === "granted" && this.registration) await this.#subscribe(this.registration)

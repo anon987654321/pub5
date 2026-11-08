@@ -1,4 +1,4 @@
-# Omakase Ruby styling for Rails (pub5 family)
+# Omakase Ruby styling for Rails (pub4 family)
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
 # Large apps exceed omakase Metrics thresholds; check style without blocking deploy CI.

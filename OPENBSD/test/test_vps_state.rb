@@ -13,7 +13,7 @@ class TestVpsState < Minitest::Test
   SCRIPT = File.expand_path("../bin/vps-state", __dir__)
 
   def state(dir)
-    env = { "DEPLOY_ASSUME_VPS" => "1", "PUB5_STAMP_DIR" => dir, "PUB5_ALERT_LOG" => File.join(dir, "alerts.log") }
+    env = { "DEPLOY_ASSUME_VPS" => "1", "PUB4_STAMP_DIR" => dir, "PUB4_ALERT_LOG" => File.join(dir, "alerts.log") }
     out, err, status = Open3.capture3(env, RbConfig.ruby, SCRIPT)
     assert status.success?, err
     out
@@ -31,9 +31,9 @@ class TestVpsState < Minitest::Test
     source = File.read(SCRIPT)
 
     assert_includes source, 'Open3.capture2e("doas", "-n", broker, "deploy-status-read", app)'
-    assert_includes source, 'broker = "/usr/local/sbin/pub5-admin"'
+    assert_includes source, 'broker = "/usr/local/sbin/pub4-admin"'
     assert_includes source, 'status["unavailable"] ? "unavailable"'
-    assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub5"'
+    assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub4"'
   end
 
   def test_corrupt_in_progress_deploy_status_is_visible

@@ -10,18 +10,18 @@ class Shared::DatabaseSnapshotJobTest < ActiveSupport::TestCase
 
   test "writes a gzipped point-in-time snapshot of the primary database" do
     Dir.mktmpdir do |dir|
-      ENV["PUB5_BACKUP_DIR"] = dir
+      ENV["PUB4_BACKUP_DIR"] = dir
       result = Shared::DatabaseSnapshotJob.new.perform
       assert File.exist?(result), "the snapshot file should exist"
       assert_match(/production-\d{8}-\d{6}\.sqlite3\.gz\z/, result)
       assert_operator File.size(result), :>, 0, "the snapshot should not be empty"
     ensure
-      ENV.delete("PUB5_BACKUP_DIR")
+      ENV.delete("PUB4_BACKUP_DIR")
     end
   end
   test "fails when gzip cannot produce the snapshot" do
     Dir.mktmpdir do |dir|
-      ENV["PUB5_BACKUP_DIR"] = dir
+      ENV["PUB4_BACKUP_DIR"] = dir
       job = Shared::DatabaseSnapshotJob.new
       job.define_singleton_method(:system) { |*| false }
 
@@ -29,7 +29,7 @@ class Shared::DatabaseSnapshotJobTest < ActiveSupport::TestCase
 
       assert_match(/gzip failed/, error.message)
     ensure
-      ENV.delete("PUB5_BACKUP_DIR")
+      ENV.delete("PUB4_BACKUP_DIR")
     end
   end
 end

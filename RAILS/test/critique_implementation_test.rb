@@ -140,7 +140,7 @@ class CritiqueImplementationTest < Minitest::Test
     amber_css = amber_css_source
     brgen_polish = brgen_css
     amber_polish = stylesheet_module("amber", "commerce_polish")
-    seller = read("brgen_marketplace/app/views/marketplace/stores/show.html.erb")
+    seller = read("brgen/engines/marketplace/app/views/marketplace/stores/show.html.erb")
     item = read("amber/app/views/items/show.html.erb")
 
     assert_includes brgen_css, 'commerce_polish'
@@ -185,9 +185,9 @@ class CritiqueImplementationTest < Minitest::Test
     assert_includes form, 'post_progressive_target: "mediaInput"'
     assert_includes css, ".post-media-secondary"
     assert_includes form, "post-publishing"
-    assert_includes boot, 'import PostProgressive from "pub5/post_progressive"'
+    assert_includes boot, 'import PostProgressive from "pub4/post_progressive"'
     assert_includes boot, 'application.register("post-progressive", PostProgressive)'
-    assert_includes importmap, 'pin "pub5/post_progressive"'
+    assert_includes importmap, 'pin "pub4/post_progressive"'
   end
 
   def test_brgen_home_feed_frame_does_not_share_the_feed_list_id
@@ -283,11 +283,11 @@ class CritiqueImplementationTest < Minitest::Test
       brgen/app/views/bookmarks/index.html.erb
       brgen/app/views/events/index.html.erb
       brgen/app/views/events/_live_search_results.html.erb
-      brgen_marketplace/app/views/marketplace/favorites/index.html.erb
-      brgen_marketplace/app/views/marketplace/deals/_live_search_results.html.erb
-      brgen_radio/tv/app/views/tv/sounds/show.html.erb
-      brgen_radio/tv/app/views/tv/shows/index.html.erb
-      brgen_radio/playlist/app/views/playlist/playlists/_library.html.erb
+      brgen/engines/marketplace/app/views/marketplace/favorites/index.html.erb
+      brgen/engines/marketplace/app/views/marketplace/deals/_live_search_results.html.erb
+      brgen/engines/radio/tv/app/views/tv/sounds/show.html.erb
+      brgen/engines/radio/tv/app/views/tv/shows/index.html.erb
+      brgen/engines/radio/playlist/app/views/playlist/playlists/_library.html.erb
       brgen/app/views/posts/_live_search_results.html.erb
       amber/app/views/posts/index.html.erb
       amber/app/views/home/_frontpage_posts.html.erb
@@ -315,7 +315,7 @@ class CritiqueImplementationTest < Minitest::Test
     assert_includes read("__shared/app/assets/stylesheets/_feed_list.scss"),
                     ".feed_list.post-card-list > li {\n  display: block;"
 
-    library = read("brgen_radio/playlist/app/views/playlist/playlists/_library.html.erb")
+    library = read("brgen/engines/radio/playlist/app/views/playlist/playlists/_library.html.erb")
     assert_operator library.index('render "shared/empty_state"'), :>, library.index("</ul>"),
                     "the playlist empty state must not be a direct child of ul"
   end
@@ -332,8 +332,8 @@ class CritiqueImplementationTest < Minitest::Test
     assert_equal 1, premium.length, "dating premium/boost purchases should be one roadmap item"
     assert_includes premium.first.fetch("name"), "super-like"
 
-    conversation = read("brgen_messenger/app/models/conversation.rb")
-    controller = read("brgen_messenger/app/controllers/conversations_controller.rb")
+    conversation = read("brgen/engines/messenger/app/models/conversation.rb")
+    controller = read("brgen/engines/messenger/app/controllers/conversations_controller.rb")
     assert_includes conversation, "scope :in_archive"
     assert_includes controller, "@archive = params[:arkiv].present?"
   end

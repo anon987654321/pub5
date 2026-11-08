@@ -1,6 +1,6 @@
 # Postpro archaeological recovery record
 
-Scope: source and history in `anon987654321/pub`, `pub2`, `pub3`, and `pub5`, searched under `postpro`, `Postpro`, and nearby Repligen/Replicate integration names. This is a preservation map, not a claim that old code can be pasted into the current engine unchanged.
+Scope: source and history in `anon987654321/pub`, `pub2`, `pub3`, and `pub4`, searched under `postpro`, `Postpro`, and nearby Repligen/Replicate integration names. This is a preservation map, not a claim that old code can be pasted into the current engine unchanged.
 
 ## Decisions
 
@@ -48,7 +48,7 @@ Sources:
 
 The documented core had Portra, Vision3, Velvia and Tri-X; camera-profile corrections; portrait skin protection; film curves and highlight roll-off; micro-contrast; Portrait, Landscape, Street and Blockbuster presets; random exploration; and an explicit Repligen handoff. The pipeline wording was: generate, save, process, final output. The user-visible presets and concepts survive in the current preset/stock/effect system, even where the old implementation or numbers have been replaced.
 
-### `pub5`: measured house grade and restoration
+### `pub4`: measured house grade and restoration
 
 The present implementation lives under `STUDIO/postpro/`, with `lib/` holding the effect dispatch, presets, stocks, grain, random chains, recipe handling, pipeline, sidecars, audits and CLI. `motion.rb` owns the video grading contract and CLI, while `motion_process.rb` owns bounded frame IO, timestamp checks and subprocess lifecycles; `MASTER/tools/postpro` is a compatibility symlink.
 
@@ -66,9 +66,9 @@ The new engine preserves the original user intent but intentionally changes the 
 
 The two documents that were folded into implementation—not lost to an accidental delete—are
 still recoverable at their exact historical snapshot:
-- [`STUDIO/AMBITION.md` — all 168 proposals](https://github.com/anon987654321/pub5/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md)
-- [`STUDIO/PHOTOGRAPHY.md` — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub5/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/PHOTOGRAPHY.md)
-- [The later folding/deletion commit](https://github.com/anon987654321/pub5/commit/80709c0712559031fef10fe486f530ac35b185fc), whose message says those ideas now stand beside the code that uses them.
+- [`STUDIO/AMBITION.md` — all 168 proposals](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md)
+- [`STUDIO/PHOTOGRAPHY.md` — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/PHOTOGRAPHY.md)
+- [The later folding/deletion commit](https://github.com/anon987654321/pub4/commit/80709c0712559031fef10fe486f530ac35b185fc), whose message says those ideas now stand beside the code that uses them.
 
 This record preserves the trail without reintroducing two competing top-level specifications.
 The four independent failure layers remain the most important rule: **geometry** is decided
@@ -96,20 +96,20 @@ The 168 numbered ideas were a menu, not a mandate to ship every model name, pric
 as a runtime default. The maps above make the old intent findable while distinguishing measured
 behavior from proposals.
 
-## Later `pub5` change trail
+## Later `pub4` change trail
 
 These commits explain important implementation decisions that a code-only snapshot can
 obscure:
 
-- [Split `postpro.rb` into `lib/` under the 300-line cap](https://github.com/anon987654321/pub5/commit/66f2c9527f99165ae6bb35801b4e5d65275c796e): preserve small, readable effect and pipeline modules rather than grow another monolith.
-- [Make the vocabulary audit read entrypoint and libraries together](https://github.com/anon987654321/pub5/commit/6d3d06f57daf1d6b379d181dbcfaeffa071f31bd): a declared effect must resolve to the implementation the grade actually calls. This branch adds `motion.rb` to the source inventory too.
-- [Give Postpro CLI suites a render budget](https://github.com/anon987654321/pub5/commit/909e55b24765611d4b2be0211a727c3ee4f5549f): tests that can render must have bounded cost and not silently turn into hours-long work.
-- [Grade random takes like presets and protect photos](https://github.com/anon987654321/pub5/commit/650827110ed9bee560bdf980bbe03b778c016d18): use the calibrated shared grade dispatcher and measured source-preservation checks rather than raw effect strengths.
-- [Balance takes before the look and hold exposure through it](https://github.com/anon987654321/pub5/commit/dd721801be0505c838a2131fa042d2254e85ea46): keep source exposure as an explicit invariant, except where exposure itself is the selected look.
-- [Treat reciprocity failure as lost exposure, not a veil](https://github.com/anon987654321/pub5/commit/0c5e2d16d9f51a4f9162dfee193e7b234c3416ef): model analog effects according to the physical process, not a convenient overlay.
-- [Keep blur, relief and artefacts out of random takes; preserve monochrome stocks](https://github.com/anon987654321/pub5/commit/da763765392fed477fe303ba19987a6297a77c31): random variation must remain coherent and B&W stocks must render monochrome.
-- [Restore real depth maps without native exit aborts](https://github.com/anon987654321/pub5/commit/93b8a65b9eb9f4768762563b4f27333ad4a0f44c): optional model-based depth should degrade intentionally, and native teardown must not report a completed output as failure.
-- [Remove the original per-frame video path after measurement](https://github.com/anon987654321/pub5/commit/ec2cdf458f6f571692fea1ea97e8335881b56135): the reason for this branch's bounded in-process replacement, not an obsolete detail to lose.
+- [Split `postpro.rb` into `lib/` under the 300-line cap](https://github.com/anon987654321/pub4/commit/66f2c9527f99165ae6bb35801b4e5d65275c796e): preserve small, readable effect and pipeline modules rather than grow another monolith.
+- [Make the vocabulary audit read entrypoint and libraries together](https://github.com/anon987654321/pub4/commit/6d3d06f57daf1d6b379d181dbcfaeffa071f31bd): a declared effect must resolve to the implementation the grade actually calls. This branch adds `motion.rb` to the source inventory too.
+- [Give Postpro CLI suites a render budget](https://github.com/anon987654321/pub4/commit/909e55b24765611d4b2be0211a727c3ee4f5549f): tests that can render must have bounded cost and not silently turn into hours-long work.
+- [Grade random takes like presets and protect photos](https://github.com/anon987654321/pub4/commit/650827110ed9bee560bdf980bbe03b778c016d18): use the calibrated shared grade dispatcher and measured source-preservation checks rather than raw effect strengths.
+- [Balance takes before the look and hold exposure through it](https://github.com/anon987654321/pub4/commit/dd721801be0505c838a2131fa042d2254e85ea46): keep source exposure as an explicit invariant, except where exposure itself is the selected look.
+- [Treat reciprocity failure as lost exposure, not a veil](https://github.com/anon987654321/pub4/commit/0c5e2d16d9f51a4f9162dfee193e7b234c3416ef): model analog effects according to the physical process, not a convenient overlay.
+- [Keep blur, relief and artefacts out of random takes; preserve monochrome stocks](https://github.com/anon987654321/pub4/commit/da763765392fed477fe303ba19987a6297a77c31): random variation must remain coherent and B&W stocks must render monochrome.
+- [Restore real depth maps without native exit aborts](https://github.com/anon987654321/pub4/commit/93b8a65b9eb9f4768762563b4f27333ad4a0f44c): optional model-based depth should degrade intentionally, and native teardown must not report a completed output as failure.
+- [Remove the original per-frame video path after measurement](https://github.com/anon987654321/pub4/commit/ec2cdf458f6f571692fea1ea97e8335881b56135): the reason for this branch's bounded in-process replacement, not an obsolete detail to lose.
 
 ## Lost or changed behaviour: disposition
 
@@ -127,7 +127,7 @@ obscure:
 
 ## The video experiment, its removal, and the recovered in-process path
 
-The implementation commit [9ac4b113](https://github.com/anon987654321/pub5/commit/9ac4b11332762333da58f8ec4358eec7cbbcb1d4) introduced `Postpro::Motion`, CLI `--video`, and eight tests. It captured the right product rules:
+The implementation commit [9ac4b113](https://github.com/anon987654321/pub4/commit/9ac4b11332762333da58f8ec4358eec7cbbcb1d4) introduced `Postpro::Motion`, CLI `--video`, and eight tests. It captured the right product rules:
 
 - inspect actual streams with ffprobe; do not trust extensions;
 - preserve the original dimensions, the true rational frame rate (for example, 24000/1001), and audio without re-encoding;
@@ -135,7 +135,7 @@ The implementation commit [9ac4b113](https://github.com/anon987654321/pub5/commi
 - distinguish deterministic moving grain (base seed plus frame index) from deliberately held grain;
 - print frame count and a runtime estimate before expensive work; test the estimate, audio preservation, reproducibility, and the fact that the grain modes actually produce different output.
 
-The removal commit [ec2cdf45](https://github.com/anon987654321/pub5/commit/ec2cdf458f6f571692fea1ea97e8335881b56135) explains why that implementation is not to be restored verbatim: it launched a fresh Ruby process per frame; measured render time was about an hour per minute of 1080p rather than the promised six minutes, and two tests timed out. Its own estimate was therefore not trustworthy.
+The removal commit [ec2cdf45](https://github.com/anon987654321/pub4/commit/ec2cdf458f6f571692fea1ea97e8335881b56135) explains why that implementation is not to be restored verbatim: it launched a fresh Ruby process per frame; measured render time was about an hour per minute of 1080p rather than the promised six minutes, and two tests timed out. Its own estimate was therefore not trustworthy.
 
 The replacement on this branch implements the central correction: ffmpeg streams packed RGB frames through one process, each frame is graded by the live Postpro methods in memory, and only compressed graded frames are spooled under a cumulative byte cap. It estimates work before decoding, enforces maximum frames/pixels and a runtime budget checked around every frame operation and subprocess (native libvips processing within a single frame is not forcibly interruptible), refuses frame-rate ambiguity and metadata/decoded-frame count mismatches, copies audio without re-encoding, assembles to a temporary MP4 and publishes the video plus checksum sidecar with same-directory atomic links only after successful grading. Tests cover fractional rates, seed modes, dimensions, audio, repeatability, held-vs-moving output and preservation of a pre-existing output on failure. The GitHub-only edit environment did not execute those tests; `cd STUDIO && rake test:motion` and the full `cd STUDIO && rake check test` remain required evidence before describing this path as verified on a real host.
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Shared
-  # Test-suite defaults every pub5 app shares. `require "shared/test_defaults"`
+  # Test-suite defaults every pub4 app shares. `require "shared/test_defaults"`
   # from an app's test_helper after `rails/test_help`.
   module TestDefaults
     def self.install!(test_case)

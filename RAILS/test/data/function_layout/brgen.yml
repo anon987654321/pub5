@@ -113,50 +113,50 @@ checks:
   - {id: auth.passwords, in: __shared/app/views/passwords/new.html.erb, has: [email]}
   # --- dating ---
   - {id: dating.home_deck,
-     in: brgen_dating/app/views/dating/home/index.html.erb,
+     in: brgen/engines/dating/app/views/dating/home/index.html.erb,
      has: [dating-page-intro, dating-discover-panel, swipe, likes_path, dislikes_path]}
-  - {id: dating.keyboard, in: brgen_dating/app/views/dating/home/index.html.erb, has: [keydown.left, keydown.right]}
-  - {id: dating.profile_new, in: brgen_dating/app/views/dating/profiles/new.html.erb, has: [profile]}
-  - {id: dating.matches, in: brgen_dating/app/views/dating/matches/index.html.erb, has: [match]}
-  - {id: dating.likes, in: brgen_dating/app/controllers/dating/likes_controller.rb, has: ["def create"]}
-  - {id: dating.rewind, in: brgen_dating/app/controllers/dating/rewinds_controller.rb, has: ["def create"]}
+  - {id: dating.keyboard, in: brgen/engines/dating/app/views/dating/home/index.html.erb, has: [keydown.left, keydown.right]}
+  - {id: dating.profile_new, in: brgen/engines/dating/app/views/dating/profiles/new.html.erb, has: [profile]}
+  - {id: dating.matches, in: brgen/engines/dating/app/views/dating/matches/index.html.erb, has: [match]}
+  - {id: dating.likes, in: brgen/engines/dating/app/controllers/dating/likes_controller.rb, has: ["def create"]}
+  - {id: dating.rewind, in: brgen/engines/dating/app/controllers/dating/rewinds_controller.rb, has: ["def create"]}
   # --- marketplace ---
-  - {id: market.listings_h1, in: brgen_marketplace/app/views/marketplace/listings/index.html.erb, has: ["<h1", nav_bar]}
-  - {id: market.sell, in: brgen_marketplace/app/views/marketplace/listings/new.html.erb, has: [listing]}
-  - {id: market.cart, in: brgen_marketplace/app/views/marketplace/carts/show.html.erb, has: [cart]}
+  - {id: market.listings_h1, in: brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb, has: ["<h1", nav_bar]}
+  - {id: market.sell, in: brgen/engines/marketplace/app/views/marketplace/listings/new.html.erb, has: [listing]}
+  - {id: market.cart, in: brgen/engines/marketplace/app/views/marketplace/carts/show.html.erb, has: [cart]}
   - {id: market.checkout,
-     in: brgen_marketplace/app/controllers/marketplace/checkouts_controller.rb,
+     in: brgen/engines/marketplace/app/controllers/marketplace/checkouts_controller.rb,
      has: ["def create"]}
-  - {id: market.deals, in: brgen_marketplace/app/views/marketplace/deals/index.html.erb, has: [deal]}
-  - {id: market.stores, in: brgen_marketplace/app/views/marketplace/stores/index.html.erb, has: [store]}
+  - {id: market.deals, in: brgen/engines/marketplace/app/views/marketplace/deals/index.html.erb, has: [deal]}
+  - {id: market.stores, in: brgen/engines/marketplace/app/views/marketplace/stores/index.html.erb, has: [store]}
   # --- takeaway ---
   - {id: takeaway.restaurants,
-     in: brgen_marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb,
+     in: brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb,
      has: [restaurant]}
   - {id: takeaway.show_menu,
-     in: brgen_marketplace/engines/takeaway/app/views/takeaway/restaurants/show.html.erb,
+     in: brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/show.html.erb,
      has: [menu]}
   - {id: takeaway.orders,
-     in: brgen_marketplace/engines/takeaway/app/controllers/takeaway/orders_controller.rb,
+     in: brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/orders_controller.rb,
      has: ["def create"]}
   - {id: takeaway.drivers,
-     in: brgen_marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/index.html.erb,
+     in: brgen/engines/marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/index.html.erb,
      has: [driver]}
   # --- tv ---
-  - {id: tv.feed_snap, in: brgen_radio/tv/app/views/tv/feed/index.html.erb, has: [tv-feed, tv-feed, empty]}
-  - {id: tv.channels, in: brgen_radio/tv/app/views/tv/channels/index.html.erb, has: [channel]}
-  - {id: tv.video_show, in: brgen_radio/tv/app/views/tv/videos/show.html.erb, has: [video]}
-  - {id: tv.live, in: brgen_radio/tv/app/views/tv/live_streams/show.html.erb, has: [turbo_stream_from]}
+  - {id: tv.feed_snap, in: brgen/engines/radio/tv/app/views/tv/feed/index.html.erb, has: [tv-feed, tv-feed, empty]}
+  - {id: tv.channels, in: brgen/engines/radio/tv/app/views/tv/channels/index.html.erb, has: [channel]}
+  - {id: tv.video_show, in: brgen/engines/radio/tv/app/views/tv/videos/show.html.erb, has: [video]}
+  - {id: tv.live, in: brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb, has: [turbo_stream_from]}
   # --- playlist ---
-  - {id: playlist.player, in: brgen_radio/playlist/app/views/playlist/playlists/show.html.erb, has: [player]}
-  - {id: playlist.sets, in: brgen_radio/playlist/app/views/playlist/sets/index.html.erb, has: [set]}
-  - {id: playlist.hosted, in: brgen_radio/playlist/app/views/playlist/hosted_tracks/index.html.erb, has: [track]}
+  - {id: playlist.player, in: brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb, has: [player]}
+  - {id: playlist.sets, in: brgen/engines/radio/playlist/app/views/playlist/sets/index.html.erb, has: [set]}
+  - {id: playlist.hosted, in: brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/index.html.erb, has: [track]}
   # --- maps ---
   - {id: maps.canvas,
-     in: [brgen_maps/app/views/maps/home/index.html.erb, brgen/app/javascript/controllers/map_controller.js],
+     in: [brgen/engines/maps/app/views/maps/home/index.html.erb, brgen/app/javascript/controllers/map_controller.js],
      has: [map-canvas, maplibre, role="region"]}
-  - {id: maps.places, in: brgen_maps/app/views/maps/places/index.html.erb, has: [place]}
-  - {id: maps.search, in: brgen_maps/app/views/maps/home/index.html.erb, has: [map-search, browse_list]}
+  - {id: maps.places, in: brgen/engines/maps/app/views/maps/places/index.html.erb, has: [place]}
+  - {id: maps.search, in: brgen/engines/maps/app/views/maps/home/index.html.erb, has: [map-search, browse_list]}
   # --- messenger / pwa / seo ---
   - {id: messenger.routes, in: brgen/config/routes.rb, has: [MESSENGER_SUBDOMAINS, conversations]}
   - {id: pwa.manifest, in: brgen/app/views/pwa/manifest.json.erb, has: [name, icons]}

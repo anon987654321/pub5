@@ -12,13 +12,13 @@ require "tmpdir"
 # time the check reads it.
 DRIFT_STAMPS = Dir.mktmpdir("deploy-drift-stamps")
 Minitest.after_run { FileUtils.remove_entry(DRIFT_STAMPS) if File.directory?(DRIFT_STAMPS) }
-ENV["PUB5_STAMP_DIR"] = DRIFT_STAMPS
+ENV["PUB4_STAMP_DIR"] = DRIFT_STAMPS
 
 require_relative "../../../MASTER/checks/lib/live/deploy_drift"
 
 # deploy_drift is the check the third state was invented for.
 #
-# It compares the SHA in /var/db/pub5/last_deploy_<app>.json against HEAD. Off the
+# It compares the SHA in /var/db/pub4/last_deploy_<app>.json against HEAD. Off the
 # deploy host those stamps do not exist, and before CheckResult#inconclusive! the
 # shim printed "ok: no deploy drift detected" directly beneath its own warning
 # saying nothing had been checked. So the interesting assertion here is not that

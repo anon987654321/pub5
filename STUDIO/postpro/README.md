@@ -1,6 +1,6 @@
 # postpro
 
-Historical source and behavioral decisions from `pub`, `pub2`, `pub3` and the Git history of `pub5` are indexed in [ARCHAEOLOGY.md](./ARCHAEOLOGY.md). It distinguishes restored effects from intentionally retired mechanisms.
+Historical source and behavioral decisions from `pub`, `pub2`, `pub3` and the Git history of `pub4` are indexed in [ARCHAEOLOGY.md](./ARCHAEOLOGY.md). It distinguishes restored effects from intentionally retired mechanisms.
 
 Startup diagnostics, dependency probing and the explicit opt-in dependency-installation path live in `bootstrap.rb`; optional per-effect texture/contrast diagnostics live in `explain.rb`. Loading the entrypoint is observational; `rake postpro:bootstrap` is the intentional installation command.
 

@@ -122,7 +122,7 @@ module Deploy
       UNIT = "ci0"
       WARN = /\Awarn: /
 
-      def self.run(app, log: ENV.fetch("PUB5_CI_LOG", File.join("log", "ci.log")), out: $stdout, &steps)
+      def self.run(app, log: ENV.fetch("PUB4_CI_LOG", File.join("log", "ci.log")), out: $stdout, &steps)
         ENV["CI"] = "true"
         ci = new(app, log:, out:)
         ci.perform(&steps)

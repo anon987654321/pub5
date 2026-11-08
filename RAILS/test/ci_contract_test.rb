@@ -61,7 +61,7 @@ class CiContractTest < Minitest::Test
     source = read(File.join(ROOT, "mrdamascy", "config", "ci.rb"))
 
     assert_match(/step\("system_tests", .*bin\/rails test:system"\) unless vps_host/, source)
-    assert_includes source, 'ENV["PUB5_CI_GUARD"] == "1"'
+    assert_includes source, 'ENV["PUB4_CI_GUARD"] == "1"'
     assert File.file?(File.join(ROOT, "mrdamascy", "test", "application_system_test_case.rb"))
   end
 

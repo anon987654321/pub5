@@ -22,7 +22,7 @@ set -eo pipefail
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 ROOT="${ROOT:-/home/dev/pub5}"
 if [ "$ROOT" != "/home/dev/pub5" ]; then
-  echo "vps_deploy_master: ROOT override refused; pub5-admin mutates the fixed /home/dev/pub5/MASTER/web tree" >&2
+  echo "vps_deploy_master: ROOT override refused; pub4-admin mutates the fixed /home/dev/pub5/MASTER/web tree" >&2
   exit 2
 fi
 . "$ROOT/OPENBSD/lib/ruby_select.sh"
@@ -62,7 +62,7 @@ echo "==> bundle"
 # dev cannot write the system gem directory, and Bundler falls back to it
 # (mkdir /usr/local/lib/ruby/gems/3.4/cache/bundler) unless a path is set. The
 # path lives in each Gemfile's .bundle/config so rc.d's `bundle exec` as master
-# finds the same gems; /home/dev is group _pub5ci, which master belongs to.
+# finds the same gems; /home/dev is group _pub4ci, which master belongs to.
 BUNDLE_PATH_DEV=/home/dev/.bundle/master
 # `bundle config set --local` makes Bundler 4 re-resolve and rewrite Gemfile.lock,
 # and on the box that rewrite dropped the Rails git source, so the next
@@ -90,7 +90,7 @@ BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
 
 echo "==> assets precompile"
 # rc.d master precompiles as root; dev cannot rewrite root-owned public/assets/assets.
-doas /usr/local/sbin/pub5-admin master-web-assets-reset
+doas /usr/local/sbin/pub4-admin master-web-assets-reset
 BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:build_face_runtime assets:build_face_modules_bundle assets:build_face_vision_bundle 2>/dev/null || true
 BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:precompile
 # rc.d master runs the daemon as `master`, which writes web/tmp and web/log and
@@ -99,7 +99,7 @@ BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails assets:precompile
 # Rails.cache then dies mkdir-ing tmp/cache, so every rate-limited request 500s
 # (2026-10-12: chat and /health, while / and /up still answered).
 echo "==> runtime dirs"
-doas /usr/local/sbin/pub5-admin master-web-runtime-dirs
+doas /usr/local/sbin/pub4-admin master-web-runtime-dirs
 # The asset check, through whichever door exists. MASTER/checks/runner.rb was
 # deleted on 2026-09-16 and every deploy script still named it, so `vps-deploy
 # master` died here under set -e with the box half deployed: new assets on disk,
@@ -123,7 +123,7 @@ if [ -f "$ROOT/OPENBSD/etc/rc.d/master" ]; then
 fi
 
 echo "==> restart master"
-doas /usr/local/sbin/pub5-admin service restart master
+doas /usr/local/sbin/pub4-admin service restart master
 sleep 4
 rcctl check master
 

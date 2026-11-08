@@ -60,7 +60,7 @@ visual_identity:
     display: text-display
     body: text-base
     technical: font-mono
-    wordmark: original pub5 artwork only
+    wordmark: original pub4 artwork only
   adaptations:
     master: 'brgen''s dark family: #000 ground, #111 surfaces, #efefef ink and one
       Helvetica sans for chrome under brgen''s deep-blue band; mono only in the chat;
@@ -319,12 +319,12 @@ face_root:
     signal_ink: "#080808"
     signal_on_light: "#3A3A3A"
     c_text: var(--text)
-    c_accent: var(--pub5-signal)
+    c_accent: var(--pub4-signal)
     c_danger: var(--danger)
     c_code: oklch(81% 0 0)
   anchors:
     c_text: oklch(93% 0.025 250)
-    c_accent: var(--pub5-signal)
+    c_accent: var(--pub4-signal)
     c_danger: oklch(60% 0.14 35)
     c_code: oklch(81% 0.10 268)
   font_mono: '"JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular",

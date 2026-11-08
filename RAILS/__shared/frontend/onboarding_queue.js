@@ -1,7 +1,7 @@
-import { consentDecided } from "pub5/cookie_consent"
+import { consentDecided } from "pub4/cookie_consent"
 
-const SESSIONS_KEY = "pub5:onboarding:sessions"
-const LAST_SEEN_KEY = "pub5:onboarding:last-seen"
+const SESSIONS_KEY = "pub4:onboarding:sessions"
+const LAST_SEEN_KEY = "pub4:onboarding:last-seen"
 const SESSION_GAP_MS = 30 * 60 * 1000
 
 const MIN_SESSIONS = {
@@ -70,7 +70,7 @@ export function mayPrompt(kind) {
   return kind === "install" || !installVisible()
 }
 
-export const YIELD_EVENT = "pub5:onboarding-yield"
+export const YIELD_EVENT = "pub4:onboarding-yield"
 
 export function announceInstallVisible() {
   window.dispatchEvent(new CustomEvent(YIELD_EVENT, { detail: { to: "install" } }))

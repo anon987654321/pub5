@@ -9,7 +9,7 @@ class FormAndOverlaySurfaceContractTest < Minitest::Test
     components/_overlays.scss
     components/_fields.scss
   ].map { |path| File.read(File.join(ROOT, "__shared/app/assets/stylesheets", path)) }.join("\n")
-  HOOK = File.read(File.expand_path("../../OPENBSD/dev/githooks/pre-push", __dir__))
+  HOOK = File.read(File.expand_path("../../.githooks/pre-push", __dir__))
 
   def test_text_controls_have_a_shared_surface_and_focus_state
     assert_includes CSS, 'input[type="datetime-local"]'

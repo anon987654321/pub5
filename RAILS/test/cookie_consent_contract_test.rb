@@ -22,7 +22,7 @@ class CookieConsentContractTest < Minitest::Test
 
   def test_consent_is_purpose_scoped_and_long_lived
     body = File.read(COOKIE)
-    assert_includes body, %(COOKIE_NAME = "pub5_consent")
+    assert_includes body, %(COOKIE_NAME = "pub4_consent")
     assert_includes body, %(PURPOSES = [ "analytics", "advertising" ])
     assert_includes body, "Max-Age=31536000"
     assert_includes body, "SameSite=Lax"
@@ -44,7 +44,7 @@ class CookieConsentContractTest < Minitest::Test
 
   def test_server_helper_matches_browser_signal
     body = File.read(HELPER)
-    assert_includes body, %(CONSENT_COOKIE = "pub5_consent")
+    assert_includes body, %(CONSENT_COOKIE = "pub4_consent")
     assert_includes body, %(CONSENT_VERSION = "v1")
     assert_includes body, "analytics"
     assert_includes body, "advertising"

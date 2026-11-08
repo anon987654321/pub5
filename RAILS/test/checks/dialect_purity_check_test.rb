@@ -110,7 +110,7 @@ class DialectPurityCheckTest < Minitest::Test
   # files and called that the dialect.
   def test_a_vertical_sheet_under_an_engine_is_read_too
     result = check_over do |dir|
-      plant(dir, "RAILS/brgen_radio/tv/app/assets/stylesheets/_vertical_tv.scss",
+      plant(dir, "RAILS/brgen/engines/radio/tv/app/assets/stylesheets/_vertical_tv.scss",
             ".tv { --accent: #226; }\n")
     end
 

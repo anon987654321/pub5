@@ -2,7 +2,7 @@
 
 **One engine carries the grammar every surface speaks, so that brgen, amber,
 bsdports and the MASTER face feel like one family in four dialects, and so that a
-rule written once holds on every screen.** It is the `pub5-shared` gem: layout
+rule written once holds on every screen.** It is the `pub4-shared` gem: layout
 chrome, accessibility defaults, social primitives, a service worker and a
 vendored set of Stimulus components. The apps mount it by local path.
 

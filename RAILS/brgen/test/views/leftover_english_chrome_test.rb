@@ -6,20 +6,20 @@ require "yaml"
 class LeftoverEnglishChromeTest < ActiveSupport::TestCase
   ROOT = Rails.root.to_s
 
-  # Vertical engines sit beside the app (Rails.root/../brgen_x), in the repo and
+  # Vertical engines sit under brgen/engines/<name> (Rails.root/engines/<name>), in the repo and
   # in the box's copy-tree alike.
   def read(rel)
     File.read(File.expand_path(File.join("..", rel), ROOT))
   end
 
   test "tv channel owner action uses the tv.upload_video key" do
-    source = read("brgen_radio/tv/app/views/tv/channels/show.html.erb")
+    source = read("brgen/engines/radio/tv/app/views/tv/channels/show.html.erb")
     assert_includes source, 't("tv.upload_video")'
     refute_includes source, '"Upload video"'
   end
 
   test "takeaway order show does not humanize status" do
-    source = read("brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb")
+    source = read("brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb")
     refute_includes source, "status.humanize"
     assert_includes source, 't("takeaway.statuses.'
     assert_includes source, "again_order_path"
@@ -27,8 +27,8 @@ class LeftoverEnglishChromeTest < ActiveSupport::TestCase
   end
 
   test "dating matches chrome uses locale keys" do
-    index = read("brgen_dating/app/views/dating/matches/index.html.erb")
-    card = read("brgen_dating/app/views/dating/matches/_match.html.erb")
+    index = read("brgen/engines/dating/app/views/dating/matches/index.html.erb")
+    card = read("brgen/engines/dating/app/views/dating/matches/_match.html.erb")
     assert_includes index, 't("dating.matches")'
     assert_includes index, 't("dating.discover")'
     refute_includes index, ">Matcher<"
@@ -39,13 +39,13 @@ class LeftoverEnglishChromeTest < ActiveSupport::TestCase
   end
 
   test "dating discover rewind uses the locale key" do
-    source = read("brgen_dating/app/views/dating/home/index.html.erb")
+    source = read("brgen/engines/dating/app/views/dating/home/index.html.erb")
     assert_includes source, 't("dating.rewind")'
     assert_includes source, "rewind_path"
   end
 
   test "playlist set card uses privacy and tracks keys" do
-    source = read("brgen_radio/playlist/app/views/playlist/sets/_card.html.erb")
+    source = read("brgen/engines/radio/playlist/app/views/playlist/sets/_card.html.erb")
     refute_includes source, '"Public"'
     refute_includes source, "tracks ·"
     assert_includes source, 't("playlist.privacy.'

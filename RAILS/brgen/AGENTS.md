@@ -30,13 +30,13 @@ markedsplass.brgen.no    marketplace.lsangeles.com     markedsplass.oshlo.no
 | What | Engine / code | Bergen | Los Angeles |
 |---|---|---|---|
 | Main feed (posts, communities, events, stories, DMs) | host `app/` | `brgen.no` | `lsangeles.com` |
-| Marketplace + food | `../brgen_marketplace` + nested `../brgen_marketplace/engines/takeaway` | `markedsplass.brgen.no` + `/food` | `marketplace.lsangeles.com` + `/food` |
-| Dating | `../brgen_dating` | `dating.brgen.no` | `dating.lsangeles.com` |
-| Legacy Takeaway host | compatibility mount of Marketplace food at `../brgen_marketplace/engines/takeaway` | `takeaway.brgen.no` | `takeaway.lsangeles.com` |
-| TV | `../brgen_radio/tv` | `tv.brgen.no` | `tv.lsangeles.com` |
-| Maps | `../brgen_maps` | `maps.brgen.no` | `maps.lsangeles.com` |
-| Playlist | `../brgen_radio/playlist` | `radio.brgen.no` | `radio.lsangeles.com` |
-| Messenger | host-drawn routes; Stimulus asset engine in `../brgen_messenger` | `messenger.brgen.no` | `messenger.lsangeles.com` |
+| Marketplace + food | `engines/marketplace` + nested `engines/marketplace/engines/takeaway` | `markedsplass.brgen.no` + `/food` | `marketplace.lsangeles.com` + `/food` |
+| Dating | `engines/dating` | `dating.brgen.no` | `dating.lsangeles.com` |
+| Legacy Takeaway host | compatibility mount of Marketplace food at `engines/marketplace/engines/takeaway` | `takeaway.brgen.no` | `takeaway.lsangeles.com` |
+| TV | `engines/radio/tv` | `tv.brgen.no` | `tv.lsangeles.com` |
+| Maps | `engines/maps` | `maps.brgen.no` | `maps.lsangeles.com` |
+| Playlist | `engines/radio/playlist` | `radio.brgen.no` | `radio.lsangeles.com` |
+| Messenger | host-drawn routes; Stimulus asset engine in `engines/messenger` | `messenger.brgen.no` | `messenger.lsangeles.com` |
 
 Marketplace is the only vertical whose **subdomain word** is localized
 (`markedsplass` / `marketplace` / `marktplatz` / …). Food ordering is a Marketplace

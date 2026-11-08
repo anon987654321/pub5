@@ -366,12 +366,12 @@ class UserPurgeJobTest < ActiveJob::TestCase
   # whole Rails suite at 0 failures, 1 error and halted the pass.
   #
   # Same candidate order as test/source_reader.rb, whose comment records why the
-  # canonical checkout comes before the per-app pub5-rails copy: those copies go
+  # canonical checkout comes before the per-app pub4-rails copy: those copies go
   # stale without anything noticing.
   ERASURE_COVERAGE_ROOTS = [
     ENV["PUB5_RAILS_ROOT"],
     "/home/dev/pub5/RAILS",
-    "/home/#{ENV.fetch('PUB5_CI_APP', 'brgen')}/pub5-rails/RAILS",
+    "/home/#{ENV.fetch('PUB4_CI_APP', 'brgen')}/pub4-rails/RAILS",
     File.expand_path("../../..", __dir__)
   ].compact.freeze
 

@@ -80,7 +80,7 @@ VERBATIM = {
   "usr/local/bin/drain-jobs.sh" => "/usr/local/bin/drain-jobs.sh",
   "usr/local/bin/keep-warm.sh" => "/usr/local/bin/keep-warm.sh",
   "usr/local/bin/nsd-resign" => "/usr/local/bin/nsd-resign",
-  "usr/local/bin/pub5-alert" => "/usr/local/bin/pub5-alert",
+  "usr/local/bin/pub4-alert" => "/usr/local/bin/pub4-alert",
   "usr/local/bin/prune-guests.sh" => "/usr/local/bin/prune-guests.sh",
   "usr/local/bin/prune_guests.rb" => "/usr/local/bin/prune_guests.rb",
   "usr/local/bin/relayd-watchdog" => "/usr/local/bin/relayd-watchdog",
@@ -103,7 +103,7 @@ EXCLUDED = %w[etc/relayd.conf etc/mail/smtpd.conf etc/litestream.yml etc/acme-cl
 #
 # It is the gap this check was written for. `etc/crontab.vm23:97` has scheduled
 # `/usr/local/bin/vps_weekly_integrity.sh` for weeks; the box has no such line, no
-# such file and no /var/log/pub5 to write into, and the weekly integrity pass has
+# such file and no /var/log/pub4 to write into, and the weekly integrity pass has
 # therefore never run once. Every /etc file matched, so the check said clean.
 CRONTAB_MIRROR = "etc/crontab.vm23"
 
@@ -114,7 +114,7 @@ SSH_HOST = ENV.fetch("SSH_HOST", "dev@brgen.no")
 SSH_KEY = File.expand_path(ENV.fetch("SSH_KEY", "~/.ssh/id_ed25519_brgen"))
 # Two literals: this file is VERBATIM-read over ssh, and holding the joined
 # marker cut its own body short, so --remote always reported it as drift.
-MARKER = "@@PUB5_" "CONFIG_DRIFT@@"
+MARKER = "@@PUB4_" "CONFIG_DRIFT@@"
 
 def on_vps?
   File.file?("/etc/relayd.conf") || ENV["DEPLOY_ASSUME_VPS"] == "1"
@@ -264,7 +264,7 @@ def crontab_report(repo_text, live_text)
 
   # Extras are scoped to /usr/local, because the repo owns only half of this file.
   # OpenBSD ships root a crontab of its own — `/usr/bin/newsyslog` and the three
-  # `/bin/sh /etc/{daily,weekly,monthly}` lines — and OPERATOR.sh merges the pub5
+  # `/bin/sh /etc/{daily,weekly,monthly}` lines — and OPERATOR.sh merges the pub4
   # lines onto it rather than replacing it. Every command this repo installs lives
   # under /usr/local/bin, so anything outside it is the base system's and reporting
   # it would be four permanent false alarms.

@@ -7,7 +7,7 @@ const NEXT = { system: "light", light: "dark", dark: "system" }
 
 export default class extends Controller {
   static values = {
-    storageKey: { type: String, default: "pub5-theme" },
+    storageKey: { type: String, default: "pub4-theme" },
     labels: { type: Object, default: {} },
   }
 

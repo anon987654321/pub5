@@ -7,7 +7,7 @@ require_relative "../../app/services/shared/commerce"
 class SharedCommerceTest < Minitest::Test
   def test_canonical_id_is_stable_and_namespaced
     assert_equal(
-      "pub5-commerce-v1:brgen:listing:23:991",
+      "pub4-commerce-v1:brgen:listing:23:991",
       Shared::Commerce.canonical_id(source: "brgen", type: "listing", city_id: 23, record_id: 991)
     )
   end

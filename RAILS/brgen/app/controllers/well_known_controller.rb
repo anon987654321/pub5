@@ -54,7 +54,7 @@ class WellKnownController < ApplicationController
     expires_in DISCOVERY_TTL, public: true
     render json: {
       version: "2.1",
-      software: { name: "brgen", version: Rails.application.config.x.brgen_version.presence || "0", repository: "https://github.com/anon987654321/pub5" },
+      software: { name: "brgen", version: Rails.application.config.x.brgen_version.presence || "0", repository: "https://github.com/anon987654321/pub4" },
       protocols: [ "activitypub" ],
       services: { inbound: [], outbound: [] },
       openRegistrations: true,

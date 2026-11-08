@@ -21,7 +21,7 @@ class WelcomeFirstStepTest < ApplicationSystemTestCase
     end
 
     assert_selector "h1", text: I18n.t("welcome_start.title"), wait: 5
-    assert_equal "1", page.evaluate_script("localStorage.getItem('pub5:welcome-onboarding:brgen')")
+    assert_equal "1", page.evaluate_script("localStorage.getItem('pub4:welcome-onboarding:brgen')")
 
     visit_city(nil, "/")
     assert_selector "#welcome-onboarding-brgen", visible: :hidden

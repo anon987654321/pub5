@@ -92,7 +92,7 @@ class AssetUrlLintTest < Minitest::Test
   def test_it_reads_something
     assert_operator L.sheets.size, :>, 100, "the stylesheet glob stopped matching"
     assert_operator L.refs_in(File.join(L::RAILS_ROOT, "__shared/app/assets/stylesheets/_fonts.scss")).size, :>=, 2
-    assert L.sheets.any? { |path| path.include?("/brgen_marketplace/") },
+    assert L.sheets.any? { |path| path.include?("/brgen/engines/marketplace/") },
            "asset scan misses extracted marketplace engine surfaces"
     assert L.sheets.any? { |path| path.include?("/__shared/") },
            "asset scan misses shared-engine surfaces"

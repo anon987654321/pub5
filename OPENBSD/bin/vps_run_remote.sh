@@ -21,7 +21,7 @@ KEY=$SSH_KEY
 VM=${SSH_USER}@${SSH_HOST}
 HYP=${HYPERVISOR:-dev@server4.openbsd.amsterdam}
 HYP_PORT=${HYP_PORT:-31415}
-REMOTE_LOG=/tmp/pub5_install_latest.log
+REMOTE_LOG=/tmp/pub4_install_latest.log
 quoted_vm=${(q)VM}
 quoted_log=${(q)REMOTE_LOG}
 

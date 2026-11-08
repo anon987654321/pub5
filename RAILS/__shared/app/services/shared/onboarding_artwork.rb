@@ -33,7 +33,7 @@ module Shared
       end
 
       def cache_key(surface:, city:)
-        "pub5:onboarding-artwork:#{VERSION}:#{sanitize_surface(surface)}:#{slug(city)}"
+        "pub4:onboarding-artwork:#{VERSION}:#{sanitize_surface(surface)}:#{slug(city)}"
       end
 
       def generate(surface:, city:)

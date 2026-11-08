@@ -1,9 +1,9 @@
 // Shared Hotwire baseline — Turbo Drive config, PWA shell, web-vitals sample (Rails 8 + Hotwire).
 import "@hotwired/turbo-rails"
-import { bootThemeMeta } from "pub5/theme_meta"
-import { allows } from "pub5/cookie_consent"
-import { installOfflineQueue } from "pub5/pwa_runtime"
-import "pub5/console_guard"
+import { bootThemeMeta } from "pub4/theme_meta"
+import { allows } from "pub4/cookie_consent"
+import { installOfflineQueue } from "pub4/pwa_runtime"
+import "pub4/console_guard"
 
 bootThemeMeta()
 installOfflineQueue()
@@ -47,10 +47,10 @@ if ("serviceWorker" in navigator) {
 const WEB_VITALS_SAMPLE_RATE = 0.01
 
 const webVitalsSampled = () => {
-  if (window.__pub5WebVitalsSampled == null) {
-    window.__pub5WebVitalsSampled = Math.random() < WEB_VITALS_SAMPLE_RATE
+  if (window.__pub4WebVitalsSampled == null) {
+    window.__pub4WebVitalsSampled = Math.random() < WEB_VITALS_SAMPLE_RATE
   }
-  return window.__pub5WebVitalsSampled
+  return window.__pub4WebVitalsSampled
 }
 
 // The element behind the slowest interaction, so a slow INP in the log names
@@ -171,11 +171,11 @@ const observeWebVitals = (metrics, report) =>
     .catch(() => observeWebVitalsFallback(metrics, report))
 
 const bootWebVitalsSampling = () => {
-  if (window.__pub5WebVitalsBooted) return
+  if (window.__pub4WebVitalsBooted) return
   if (!allows("analytics")) return
   if (!webVitalsSampled()) return
 
-  window.__pub5WebVitalsBooted = true
+  window.__pub4WebVitalsBooted = true
 
   let teardown = () => {}
   let metrics = { lcp: null, inp: null, cls: null, inpTarget: null }
@@ -200,7 +200,7 @@ const bootWebVitalsSampling = () => {
   arm()
 }
 
-window.addEventListener("pub5:cookie-consent-resolved", () => {
+window.addEventListener("pub4:cookie-consent-resolved", () => {
   if (allows("analytics")) bootWebVitalsSampling()
 })
 

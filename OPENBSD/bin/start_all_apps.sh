@@ -4,7 +4,7 @@ set -eu
 
 case ${1:-} in
   -h|--help)
-    echo "usage: ksh OPENBSD/bin/start_all_apps.sh - start the fixed pub5 fleet and pin it against resource_guard shedding"
+    echo "usage: ksh OPENBSD/bin/start_all_apps.sh - start the fixed pub4 fleet and pin it against resource_guard shedding"
     exit 0
     ;;
   "") ;;
@@ -16,7 +16,7 @@ if [ "$(id -u)" -eq 0 ]; then
   exit 2
 fi
 
-broker=/usr/local/sbin/pub5-admin
+broker=/usr/local/sbin/pub4-admin
 [ -x "$broker" ] && [ ! -L "$broker" ] || {
   echo "start_all_apps: fixed root broker is missing or symlinked; run the reviewed OPERATOR.sh sync first" >&2
   exit 1
@@ -27,4 +27,4 @@ doas "$broker" start-all-apps
 ROOT=/home/dev/pub5
 . "$ROOT/OPENBSD/lib/ruby_select.sh"
 "$RUBY" "$ROOT/OPENBSD/checks/health_check.rb" --all-ready-apps
-echo "all apps up (resource_guard shedding disabled via /var/db/pub5_all_apps)"
+echo "all apps up (resource_guard shedding disabled via /var/db/pub4_all_apps)"

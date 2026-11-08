@@ -7,11 +7,11 @@ set -euo pipefail
 retire_legacy_rails_rcd() {
   local app_name=$1 legacy="${app_name}_rails"
   [[ -f /etc/rc.d/$legacy ]] || return 0
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
-    log_err "retire_legacy_rails_rcd: pub5-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
+    log_err "retire_legacy_rails_rcd: pub4-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
-  "${_PRIV}" /usr/local/sbin/pub5-admin retire-legacy "$app_name" \
+  "${_PRIV}" /usr/local/sbin/pub4-admin retire-legacy "$app_name" \
     || { log_err "could not disable legacy service ${legacy}"; return 1; }
   log_ok "disabled legacy rc.d ${legacy} (no stop - shared port with ${app_name})"
 }
@@ -123,11 +123,11 @@ relayd_add_relay() {
   [[ $domain == *.* ]] || { log_err "relayd: refused invalid domain"; return 2; }
   [[ $port == <-> ]] || { log_err "relayd: refused invalid port"; return 2; }
 
-  [[ -x /usr/local/sbin/pub5-admin ]] || {
+  [[ -x /usr/local/sbin/pub4-admin ]] || {
     log_err "relayd: fixed broker is missing; run OPERATOR.sh before deploying"
     return 1
   }
-  ${_PRIV} /usr/local/sbin/pub5-admin relayd-check "$app" "$domain" "$port" \
+  ${_PRIV} /usr/local/sbin/pub4-admin relayd-check "$app" "$domain" "$port" \
     || { log_err "relayd: root-approved route check failed for ${domain}"; return 1; }
   relayd_confirm_live "$port" || return 1
   log_ok "relayd: ${domain} verified for ${app}:${port}"

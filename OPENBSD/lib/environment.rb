@@ -84,7 +84,7 @@ module Deploy
       if on_openbsd?
         "Ruby #{RUBY_VERSION} detected; OpenBSD MASTER accepts Ruby 3.3.x or 3.4.x; local .ruby-version is #{required_ruby}"
       else
-        "Ruby #{RUBY_VERSION} detected; pub5 requires .ruby-version"
+        "Ruby #{RUBY_VERSION} detected; pub4 requires .ruby-version"
       end
     end
 

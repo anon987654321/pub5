@@ -16,7 +16,7 @@ class DeviceAwarenessTest < Minitest::Test
   def test_importmap_pins_the_four_controllers
     baseline = File.read(File.join(SHARED, "config/importmap_baseline.rb"))
     CONTROLLERS.each_key do |name|
-      assert_includes baseline, %(pin "pub5/#{name}"), "missing pin for pub5/#{name}"
+      assert_includes baseline, %(pin "pub4/#{name}"), "missing pin for pub4/#{name}"
       assert_includes baseline, "#{name}_controller.js"
     end
   end
@@ -45,7 +45,7 @@ class DeviceAwarenessTest < Minitest::Test
     source = File.read(File.join(SHARED, "frontend/geolocation_controller.js"))
     assert_includes source, "radiusKm"
     assert_includes source, 'credentials: "same-origin"'
-    assert_includes source, "pub5:located"
+    assert_includes source, "pub4:located"
     assert_includes source, "brgen:located"
   end
 

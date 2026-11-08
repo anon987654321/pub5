@@ -66,7 +66,7 @@ module App
     # `bin/rails test` must mean what CI means.
     #
     # Rails globs test/**/*_test.rb from the app root, which does not reach the
-    # mountable verticals under ../brgen_*/test. shared/config/ci.rb sets
+    # mountable verticals under engines/*/test. shared/config/ci.rb sets
     # DEFAULT_TEST/DEFAULT_TEST_EXCLUDE so the VPS runs them; nothing set it
     # locally, so the two commands disagreed about what "the suite" is and the
     # local one was the weaker.

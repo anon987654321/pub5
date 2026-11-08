@@ -9,8 +9,8 @@ export default class extends Controller {
   async share() {
     const payload = { title: this.titleValue, url: this.urlValue || location.href }
 
-    if (window.webkit?.messageHandlers?.pub5Share) {
-      window.webkit.messageHandlers.pub5Share.postMessage(payload)
+    if (window.webkit?.messageHandlers?.pub4Share) {
+      window.webkit.messageHandlers.pub4Share.postMessage(payload)
       return
     }
 

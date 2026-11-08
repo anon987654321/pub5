@@ -79,7 +79,7 @@ class CssCoverageLintTest < Minitest::Test
            "the shared engine's views must contribute class usage"
     assert L.stylesheets.any? { |path| path.include?("/__shared/") },
            "the shared engine's stylesheets must contribute class definitions"
-    assert L.views.any? { |path| path.include?("/brgen_marketplace/") },
+    assert L.views.any? { |path| path.include?("/brgen/engines/marketplace/") },
            "extracted marketplace views must contribute class usage"
     # The extracted engine ships no stylesheets; brgen's pipeline owns its styles.
     owned = %r{/brgen/app/assets/stylesheets/_brgen_marketplace\.scss\z}

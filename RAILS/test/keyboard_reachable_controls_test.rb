@@ -369,8 +369,8 @@ class KeyboardReachableControlsTest < Minitest::Test
   # has to be one the tag matcher read. A helper hash — data: { action: … } — is
   # the shape it cannot see, and that file would pass here by being invisible.
   def test_the_gesture_census_includes_extracted_verticals
-    assert views.any? { |path| path.include?("/brgen_dating/") }
-    assert views.any? { |path| path.include?("/brgen_radio/playlist/") }
+    assert views.any? { |path| path.include?("/brgen/engines/dating/") }
+    assert views.any? { |path| path.include?("/brgen/engines/radio/playlist/") }
     assert controller_sources.any? { |name, _| name == "dating-deck" || name == "playlist-player" }
   end
 

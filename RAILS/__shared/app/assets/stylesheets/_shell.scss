@@ -104,7 +104,7 @@ html .turbo-progress-bar {
 // nav (mirrors mobile at desktop widths too, since sidebar/widgets are no
 // longer static columns). Sidebar and widgets are off-canvas overlay panels,
 // swiped in from their edge or opened via their grip button
-// (pub5/edge_swiper) -- never permanently occupying feed width. amber +
+// (pub4/edge_swiper) -- never permanently occupying feed width. amber +
 // brgen emit this markup; bsdports uses its own layout and is unaffected.
 .layout {
   display: flex;

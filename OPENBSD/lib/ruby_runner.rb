@@ -8,7 +8,7 @@ module Deploy
     module_function
 
     def ruby_cmd(root: Environment.repo_root)
-      return ENV["PUB5_RUBY"] if ENV["PUB5_RUBY"].to_s != ""
+      return ENV["PUB4_RUBY"] if ENV["PUB4_RUBY"].to_s != ""
       path = rbenv_path("ruby", root:)
       return path if path
       path = openbsd_path("ruby", root:)
@@ -21,7 +21,7 @@ module Deploy
     end
 
     def bundle_cmd(root: Environment.repo_root)
-      return ENV["PUB5_BUNDLE"] if ENV["PUB5_BUNDLE"].to_s != ""
+      return ENV["PUB4_BUNDLE"] if ENV["PUB4_BUNDLE"].to_s != ""
       path = rbenv_path("bundle", root:)
       return path if path
       path = openbsd_path("bundle", root:)

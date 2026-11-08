@@ -11,7 +11,7 @@ case "$app" in
   *) echo "ci-prepare: refused unknown app: $app" >&2; exit 64 ;;
 esac
 
-[ "$(id -u)" -eq 0 ] || { echo "ci-prepare: must run as root through pub5-admin" >&2; exit 77; }
+[ "$(id -u)" -eq 0 ] || { echo "ci-prepare: must run as root through pub4-admin" >&2; exit 77; }
 
 # Do not let an allowlisted app name turn a symlinked home/app path into a
 # privileged chmod target. Verify each ancestor and its ownership before touching
@@ -43,12 +43,12 @@ if [ -e "$storage" ] || [ -L "$storage" ]; then
     }
 fi
 
-if ! grep -q '^_pub5ci:' /etc/group; then
-  /usr/sbin/groupadd _pub5ci
+if ! grep -q '^_pub4ci:' /etc/group; then
+  /usr/sbin/groupadd _pub4ci
 fi
-/usr/sbin/usermod -G _pub5ci "$app"
+/usr/sbin/usermod -G _pub4ci "$app"
 
-/bin/chgrp _pub5ci /home/dev
+/bin/chgrp _pub4ci /home/dev
 /bin/chmod 750 /home/dev
 if [ -d "$storage" ]; then
   /bin/chmod 750 "$storage"

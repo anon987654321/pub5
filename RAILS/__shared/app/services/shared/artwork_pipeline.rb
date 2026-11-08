@@ -31,7 +31,7 @@ module Shared
 
         FileUtils.mkdir_p(File.dirname(destination))
         seed_value = seed(surface:, city:, brief:)
-        Dir.mktmpdir("pub5-artwork") do |dir|
+        Dir.mktmpdir("pub4-artwork") do |dir|
           input = File.join(dir, "source.webp")
           graded = File.join(dir, "graded.jpg")
           uri = URI.parse(url.to_s)

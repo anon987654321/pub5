@@ -22,8 +22,8 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp_r(File.join(ROOT, "etc", "rc.d"), File.join(openbsd, "etc"))
       FileUtils.cp(File.join(ROOT, "etc", "doas.conf"), File.join(openbsd, "etc"))
       FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "sbin"))
-      FileUtils.cp(File.join(ROOT, "usr", "local", "sbin", "pub5-admin"),
-                   File.join(openbsd, "usr", "local", "sbin", "pub5-admin"))
+      FileUtils.cp(File.join(ROOT, "usr", "local", "sbin", "pub4-admin"),
+                   File.join(openbsd, "usr", "local", "sbin", "pub4-admin"))
       FileUtils.mkdir_p(File.join(openbsd, "usr", "local", "libexec"))
       FileUtils.cp(File.join(ROOT, "usr", "local", "libexec", "ci-prepare.ksh"),
                    File.join(openbsd, "usr", "local", "libexec", "ci-prepare.ksh"))
@@ -65,12 +65,12 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_packaged_ruby_shebang_requires_a_real_newline
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       File.write(path, File.read(path).sub("#!/usr/local/bin/ruby", "#!/usr/bin/env ruby"))
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "pub5-admin must use the fixed packaged Ruby interpreter"
+      assert_includes out, "pub4-admin must use the fixed packaged Ruby interpreter"
     end
   end
   def test_check_passes_on_the_tracked_tree
@@ -99,13 +99,13 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_broker_sources_must_not_be_symlinks
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       File.unlink(path)
-      File.symlink("/tmp/pub5-admin", path)
+      File.symlink("/tmp/pub4-admin", path)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "usr/local/sbin/pub5-admin must not be a symlink"
+      assert_includes out, "usr/local/sbin/pub4-admin must not be a symlink"
     end
   end
 
@@ -128,7 +128,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_master_web_broker_requires_exact_no_path_verbs
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub('args == ["master-web-assets-reset"]', 'args.first == "master-web-assets-reset"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -210,7 +210,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_start_all_apps_broker_verb_requires_exact_arguments
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub('args == ["start-all-apps"]', 'args.first == "start-all-apps"')
       File.write(path, text)
       out, status = run_check(dir)
@@ -234,7 +234,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_litestream_recovery_must_not_execute_rcctl_directly
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "restore_litestream.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service stop "$app"', 'doas rcctl stop "$app"')
+      text = File.read(path).sub('doas /usr/local/sbin/pub4-admin service stop "$app"', 'doas rcctl stop "$app"')
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -245,7 +245,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_manual_master_recovery_must_not_call_rcctl_directly
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "manual_master_deploy.ksh")
-      text = File.read(path).sub("pub5-admin service restart relayd", "rcctl restart relayd")
+      text = File.read(path).sub("pub4-admin service restart relayd", "rcctl restart relayd")
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -256,7 +256,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_deploy_smoke_service_checks_are_broker_first
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "deploy-smoke.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service check "$svc"', 'doas rcctl check "$svc"')
+      text = File.read(path).sub('doas /usr/local/sbin/pub4-admin service check "$svc"', 'doas rcctl check "$svc"')
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -267,7 +267,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_vps_install_all_service_control_is_broker_first
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps_install_all.sh")
-      text = File.read(path).sub('doas /usr/local/sbin/pub5-admin service "$action" "$service"', 'doas rcctl "$action" "$service"')
+      text = File.read(path).sub('doas /usr/local/sbin/pub4-admin service "$action" "$service"', 'doas rcctl "$action" "$service"')
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -278,7 +278,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_master_web_deploy_must_use_fixed_broker_verbs
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps_deploy_master.sh")
-      text = File.read(path).sub("pub5-admin master-web-assets-reset", "doas rm -rf public/assets")
+      text = File.read(path).sub("pub4-admin master-web-assets-reset", "doas rm -rf public/assets")
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -289,7 +289,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_vps_deploy_must_not_recommend_generic_privileged_du
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "bin", "vps-deploy")
-      text = File.read(path).sub("pub5-admin disk-usage $mount_point", "doas du -xk $mount_point")
+      text = File.read(path).sub("pub4-admin disk-usage $mount_point", "doas du -xk $mount_point")
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -358,7 +358,7 @@ class VpsSafetyCheckTest < Minitest::Test
 
   def test_relayd_broker_must_not_modify_root_routing_policy
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub(
         '    puts "relayd0: verified root-approved route #{domain} -> #{app}:#{requested_port}"',
         "    File.rename(temporary, RELAYD_CONFIG)"
@@ -373,7 +373,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_rails_runtime_runner_cannot_restore_root_shell_fallback
     with_fixture do |dir, _|
       path = File.join(dir, "RAILS", "_runtime_check.sh")
-      text = File.read(path).sub('[[ -x /usr/local/sbin/pub5-admin ]]' , '[[ -x /usr/local/sbin/other-admin ]]')
+      text = File.read(path).sub('[[ -x /usr/local/sbin/pub4-admin ]]' , '[[ -x /usr/local/sbin/other-admin ]]')
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -383,32 +383,32 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_broker_must_keep_legacy_retirement_fixed
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub('return nil unless RAILS_APPS.include?(app)', 'return nil unless APPS.include?(app)')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "pub5-admin must expose only fixed app-scoped CI helper verbs"
+      assert_includes out, "pub4-admin must expose only fixed app-scoped CI helper verbs"
     end
   end
 
   def test_broker_must_keep_ci_spawn_fixed_and_supervised
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub("Process.spawn(", 'Process.spawn("sh", "-c", "unsafe", ')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "pub5-admin must not evaluate shell command strings or widen its CI spawn"
+      assert_includes out, "pub4-admin must not evaluate shell command strings or widen its CI spawn"
     end
   end
 
   def test_bundle_cache_shell_must_not_restore_root_path_operations
     with_fixture do |dir, _|
       path = File.join(dir, "RAILS", "_bundle.sh")
-      text = File.read(path).sub('pub5-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"', '${_PRIV} cp "$source" "$target"')
+      text = File.read(path).sub('pub4-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"', '${_PRIV} cp "$source" "$target"')
       File.write(path, text)
       out, status = run_check(dir)
 
@@ -418,23 +418,23 @@ class VpsSafetyCheckTest < Minitest::Test
   end
   def test_bundle_cache_broker_requires_fixed_actions_and_ruby_keys
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       text = File.read(path).sub("valid_ruby_cache_key?(ruby_key)", "ruby_key.to_s")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "pub5-admin bundle cache must be immutable and fixed-path"
+      assert_includes out, "pub4-admin bundle cache must be immutable and fixed-path"
     end
   end
   def test_broker_must_keep_ci_lock_fixed_and_symlink_safe
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub5-admin")
+      path = File.join(dir, "OPENBSD", "usr", "local", "sbin", "pub4-admin")
       File.write(path, File.read(path).sub('return ensure_ci_lock if args == ["ci-lock"]', "return ensure_ci_lock if args.first == \"ci-lock\""))
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "pub5-admin CI lock must use one fixed path and refuse symlinks"
+      assert_includes out, "pub4-admin CI lock must use one fixed path and refuse symlinks"
     end
   end
 

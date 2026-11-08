@@ -9,7 +9,7 @@ class RecoveryContractTest < Minitest::Test
     source = File.read(File.join(ROOT, "OPENBSD/bin/dr-backup"))
     assert_includes source, 'ENV["RESTIC_REPOSITORY"]'
     assert_includes source, 'ENV["RESTIC_PASSWORD_FILE"]'
-    assert_includes source, 'ENV["PUB5_DB_PATHS"]'
+    assert_includes source, 'ENV["PUB4_DB_PATHS"]'
     assert_includes source, '"restic", "backup"'
   end
 

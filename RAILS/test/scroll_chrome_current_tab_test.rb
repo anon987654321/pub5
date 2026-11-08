@@ -7,11 +7,11 @@ require "json"
 # The tab bar survives Turbo visits (data-turbo-permanent), so its
 # aria-current has to be re-marked after each one. scroll-chrome owns the bar
 # and does it. Run in node against stand-in links; Stimulus is a bare base
-# class and pub5/onboarding never lets the coach prompt.
+# class and pub4/onboarding never lets the coach prompt.
 class ScrollChromeCurrentTabTest < Minitest::Test
   CONTROLLER = File.expand_path("../__shared/frontend/scroll_chrome_controller.js", __dir__)
   STIMULUS = %(import { Controller } from "@hotwired/stimulus")
-  ONBOARDING = %(import { mayPrompt, YIELD_EVENT } from "pub5/onboarding")
+  ONBOARDING = %(import { mayPrompt, YIELD_EVENT } from "pub4/onboarding")
 
   VISIT = <<~JS
     const link = (href) => ({
@@ -52,7 +52,7 @@ class ScrollChromeCurrentTabTest < Minitest::Test
     end
 
     program = source.sub(STIMULUS, "class Controller {}")
-                    .sub(ONBOARDING, %(const mayPrompt = () => false; const YIELD_EVENT = "pub5:yield"))
+                    .sub(ONBOARDING, %(const mayPrompt = () => false; const YIELD_EVENT = "pub4:yield"))
                     .sub("export default class extends Controller", "class ScrollChrome extends Controller") + script
     out, status = Open3.capture2e("node", "--input-type=module", stdin_data: program)
     assert status.success?, out

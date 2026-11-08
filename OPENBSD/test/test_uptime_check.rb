@@ -6,7 +6,7 @@ require "open3"
 require "tmpdir"
 
 # usr/local/bin/uptime-check.sh: a down endpoint is one syslog line at first and a
-# durable pub5-alert record once it persists. Fake curl, ruby34 and logger go first
+# durable pub4-alert record once it persists. Fake curl, ruby34 and logger go first
 # on PATH; the alert is a recording stub, so nothing leaves the scratch directory.
 class TestUptimeCheck < Minitest::Test
   SCRIPT = File.expand_path("../usr/local/bin/uptime-check.sh", __dir__)
@@ -31,7 +31,7 @@ class TestUptimeCheck < Minitest::Test
 
   def tick
     env = { "UPTIME_PATH_PREFIX" => File.join(@dir, "fake"), "UPTIME_FAIL_STATE" => File.join(@dir, "count"),
-            "PUB5_ALERT" => File.join(@dir, "alert"), "PUB5_ROOT" => @dir }
+            "PUB4_ALERT" => File.join(@dir, "alert"), "PUB5_ROOT" => @dir }
     _, err, status = Open3.capture3(env, "ksh", SCRIPT)
     [err, status.exitstatus]
   end

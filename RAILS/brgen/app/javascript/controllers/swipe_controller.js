@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { enqueueSync } from "pwa/offline_store"
-import Haptics from "pub5/haptics"
+import Haptics from "pub4/haptics"
 
 export default class extends Controller {
   static targets = ["announcement"]

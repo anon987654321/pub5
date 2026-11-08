@@ -13,7 +13,7 @@ class CommerceFitTest < ActiveSupport::TestCase
   test "category and wardrobe language produce explainable fit" do
     item = Item.new(title: "Wool coat", category: "Outerwear", brand: "Aster", color: "navy", material: "wool")
     product = Product.new(
-      "pub5-commerce-v1:brgen:listing:1:2",
+      "pub4-commerce-v1:brgen:listing:1:2",
       "Aster wool coat",
       "Navy wool outerwear",
       "Local shop",
@@ -39,7 +39,7 @@ class CommerceFitTest < ActiveSupport::TestCase
   test "same category with strong title overlap exposes duplicate risk" do
     item = Item.new(title: "Black cotton shirt", category: "Tops", color: "black", material: "cotton")
     product = Product.new(
-      "pub5-commerce-v1:brgen:listing:1:3",
+      "pub4-commerce-v1:brgen:listing:1:3",
       "Black cotton shirt",
       "",
       "Local shop",

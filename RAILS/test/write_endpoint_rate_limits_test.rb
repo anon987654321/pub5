@@ -9,12 +9,12 @@ require "minitest/autorun"
 class WriteEndpointRateLimitsTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   LIMITED = {
-    "brgen_dating/app/controllers/dating/likes_controller.rb" => :create,
-    "brgen_dating/app/controllers/dating/dislikes_controller.rb" => :create,
-    "brgen_dating/app/controllers/dating/verifications_controller.rb" => :create,
+    "brgen/engines/dating/app/controllers/dating/likes_controller.rb" => :create,
+    "brgen/engines/dating/app/controllers/dating/dislikes_controller.rb" => :create,
+    "brgen/engines/dating/app/controllers/dating/verifications_controller.rb" => :create,
     "brgen/app/controllers/event_rsvps_controller.rb" => :create,
     "brgen/app/controllers/fediverse/follows_controller.rb" => :create,
-    "brgen_maps/app/controllers/maps/places_controller.rb" => :check_in,
+    "brgen/engines/maps/app/controllers/maps/places_controller.rb" => :check_in,
     "brgen/app/controllers/stories_controller.rb" => :create,
     "brgen/app/controllers/story_replies_controller.rb" => :create,
   }.freeze

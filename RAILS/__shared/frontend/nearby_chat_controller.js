@@ -3,12 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 // Ambient corner chat dock (brgen: #brgen lobby or #nearby when located).
 // NN/g: status is always visible; location is progressive (explicit only);
 // Escape closes; Enter sends from the composer.
-const LOCATION_DENIED_KEY = "pub5:location-denied"
+const LOCATION_DENIED_KEY = "pub4:location-denied"
 
 export default class extends Controller {
   static targets = ["panel", "tab", "log", "status", "tabLabel", "headerLabel", "mode"]
   static values = {
-    storageKey: { type: String, default: "pub5:ambient-chat:open" },
+    storageKey: { type: String, default: "pub4:ambient-chat:open" },
     labelChat: { type: String, default: "chat" },
     labelNearby: { type: String, default: "nearby" },
     statusAsking: { type: String, default: "Asking for location…" },
@@ -102,7 +102,7 @@ export default class extends Controller {
   // Only count a real send toward install-value (not validation failures).
   markInstallValue(event) {
     if (event?.detail?.success === false) return
-    window.dispatchEvent(new CustomEvent("pub5:install-value"))
+    window.dispatchEvent(new CustomEvent("pub4:install-value"))
   }
 
   get open() {

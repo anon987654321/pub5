@@ -67,7 +67,7 @@ class SharedChromeBehaviourTest < ApplicationSystemTestCase
   test "a cookie choice made on brgen.no holds on its subdomains" do
     visit_city(nil, "/")
     decline_optional_cookies
-    assert wait_until { evaluate_script("document.cookie").include?("pub5_consent=") }
+    assert wait_until { evaluate_script("document.cookie").include?("pub4_consent=") }
 
     visit_city("markedsplass", "/")
     assert_no_selector "#cookie-consent-banner"

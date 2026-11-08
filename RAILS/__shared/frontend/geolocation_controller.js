@@ -4,8 +4,8 @@ import { Controller } from "@hotwired/stimulus"
 // Works for both brgen and amber.
 //
 // Events:
-//   pub5:located / brgen:located
-//   pub5:location-error / brgen:location-error
+//   pub4:located / brgen:located
+//   pub4:location-error / brgen:location-error
 //
 export default class extends Controller {
   static values = {
@@ -21,12 +21,12 @@ export default class extends Controller {
 
   connect() {
     this.onRequest = () => this.prompt()
-    window.addEventListener("pub5:request-location", this.onRequest)
+    window.addEventListener("pub4:request-location", this.onRequest)
     window.addEventListener("brgen:request-location", this.onRequest)
 
     document.addEventListener("visibilitychange", this.#onVisibility)
-    window.addEventListener("pub5:battery-change", this.#onBatteryChange)
-    window.addEventListener("pub5:visibility-change", this.#onVisibilityChange)
+    window.addEventListener("pub4:battery-change", this.#onBatteryChange)
+    window.addEventListener("pub4:visibility-change", this.#onVisibilityChange)
 
     if (!navigator.geolocation || !this.hasUrlValue) return
     // Skip when document Permissions-Policy denies geolocation (no console spam).
@@ -41,11 +41,11 @@ export default class extends Controller {
   }
 
   disconnect() {
-    window.removeEventListener("pub5:request-location", this.onRequest)
+    window.removeEventListener("pub4:request-location", this.onRequest)
     window.removeEventListener("brgen:request-location", this.onRequest)
     document.removeEventListener("visibilitychange", this.#onVisibility)
-    window.removeEventListener("pub5:battery-change", this.#onBatteryChange)
-    window.removeEventListener("pub5:visibility-change", this.#onVisibilityChange)
+    window.removeEventListener("pub4:battery-change", this.#onBatteryChange)
+    window.removeEventListener("pub4:visibility-change", this.#onVisibilityChange)
     this.#stopWatch()
   }
 
@@ -56,7 +56,7 @@ export default class extends Controller {
     }
 
     try {
-      if (localStorage.getItem("pub5:location-denied") === "1") {
+      if (localStorage.getItem("pub4:location-denied") === "1") {
         this.#announceError("denied")
         return
       }
@@ -172,7 +172,7 @@ export default class extends Controller {
 
   #onError(err) {
     if (err?.code === 1) {
-      try { localStorage.setItem("pub5:location-denied", "1") } catch (_) { /* private mode */ }
+      try { localStorage.setItem("pub4:location-denied", "1") } catch (_) { /* private mode */ }
       this.#announceError("denied")
     } else if (err?.code === 3) {
       this.#announceError("timeout")
@@ -184,12 +184,12 @@ export default class extends Controller {
   #announceLocated() {
     if (this.located) return
     this.located = true
-    window.dispatchEvent(new CustomEvent("pub5:located"))
+    window.dispatchEvent(new CustomEvent("pub4:located"))
     window.dispatchEvent(new CustomEvent("brgen:located"))
   }
 
   #announceError(reason) {
-    window.dispatchEvent(new CustomEvent("pub5:location-error", { detail: { reason } }))
+    window.dispatchEvent(new CustomEvent("pub4:location-error", { detail: { reason } }))
     window.dispatchEvent(new CustomEvent("brgen:location-error", { detail: { reason } }))
   }
 }

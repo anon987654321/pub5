@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { compressImage, MAX_EDGE, QUALITY } from "pub5/image_compression"
+import { compressImage, MAX_EDGE, QUALITY } from "pub4/image_compression"
 
 export default class extends Controller {
   static targets = ["input", "camera", "preview", "filters", "presets", "guidance"]
@@ -7,7 +7,7 @@ export default class extends Controller {
     coverLabel: { type: String, default: "Cover" },
     removeLabel: { type: String, default: "Remove" },
     moveLabel: { type: String, default: "Move photo" },
-    guidanceKey: { type: String, default: "pub5-photo-guidance" },
+    guidanceKey: { type: String, default: "pub4-photo-guidance" },
     maxEdge: { type: Number, default: MAX_EDGE },
     quality: { type: Number, default: QUALITY }
   }
