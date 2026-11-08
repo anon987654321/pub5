@@ -784,6 +784,7 @@ def decode_job(job)
         return false unless native_say(text, voice:)
         return false unless generation_active?(generation)
 
+        record_playback_result(true)
         spoken(text)
         true
       end
