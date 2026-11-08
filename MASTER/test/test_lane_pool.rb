@@ -234,6 +234,20 @@ class TestLanePool < Minitest::Test
     refute verdict.unknown
   end
 
+  def test_provider_login_replies_are_recognised_and_explain_the_recovery
+    now = Time.utc(2026, 11, 9, 12, 0, 0).to_f
+    verdict = Master::Io::LaneReply.read("User not found.", now:)
+    assert_equal :auth, verdict.kind
+
+    Quota.clock = -> { now }
+    assert Quota.note(FLASH, "User not found.")
+    report = Quota.report_for(FLASH)
+    assert_includes report, "login or credential rejected"
+    assert_includes report, "refresh this provider's CLI login or configured API credential"
+  ensure
+    Quota.clock = -> { Time.now.to_f }
+  end
+
   def test_openrouter_header_reset_and_402_are_quota_deaths
     now = Time.utc(2026, 10, 11, 12, 0, 0).to_f
     reset_ms = ((now + 900) * 1000).to_i
