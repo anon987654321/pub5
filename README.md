@@ -22,10 +22,10 @@ must satisfy.
 
 ## Business and writing deliverables
 
-`BIZ/` holds the published business plans and related documents. The canonical
-editorial/build guide and editable source material live in
-`MASTER/tools/biz/README.md`; generated plan pairs stay in their named `BIZ/`
-folders.
+`BIZ/` holds the business plans as one tree (merged from BPLANS and
+MASTER/tools/biz on 2026-11-08): one folder per plan with its published
+pair, and the bases, build/check/print chain, templates, research and
+proposals in `BIZ/tools/`. The canonical guide is `BIZ/README.md`.
 
 ## How to enter
 
@@ -57,5 +57,5 @@ measurement is INCONCLUSIVE, never PASS.
 2026-11-02: it declared itself `not_a_live_config` and every one of its rows
 in `MASTER/data/laws.yml` is marked covered — the constitution lives
 in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
-proposal (a document, not policy) lives at `MASTER/tools/biz/fetat_proposal.md`.
+proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
 `redeploy` is the workstation deploy entrypoint.

@@ -18,12 +18,12 @@
 #      rows; approval is human-gated, so the PNGs arrive slower than the rows.
 #      This is the per-app baseline the screenshot check exists to hold, not a
 #      shadow copy: the pixel comparison is the whole point.
-#  18  BIZ/<plan>/{html,pdf,png}. Each published plan carries the three faces
-#      the tree promises; the html is the source, the pdf and png its rendered
-#      counterparts.
+#  18  BIZ/<plan>/{html,pdf}. Each published plan carries the pair the tree
+#      promises (plus the svg mark where one exists); the html is the
+#      source, the pdf its printed counterpart.
 #  41  code and tests: 11 MASTER lib and tool entry points, 7 MASTER tests,
-#      9 RAILS, 5 STUDIO, and 6 BIZ build/check instruments under
-#      MASTER/tools/biz.
+#      9 RAILS, 5 STUDIO, and 6 BIZ build/check instruments under BIZ/tools
+#      (one tree with the plan folders since 2026-11-08).
 #
 # lone_dirs is the ceiling that still does real work. It counts a directory
 # holding one file and no subdirectories, so it says "this namespace was

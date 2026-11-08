@@ -72,9 +72,9 @@ class TestSweep < Minitest::Test
     # when OPENBSD/tools/ was deleted (6e09c6919), because require cannot load an
     # extensionless file, and bin/reach stayed as the executable shim the probe
     # names. STUDIO's check moved the other way, from a check.rb script into
-    # `rake check`, so its probe follows the Rakefile now. BIZ has no script at
-    # all — it carries only published plan folders — so its instrument lives
-    # beside the tools in MASTER/tools/biz.
+    # `rake check`, so its probe follows the Rakefile now. BIZ's instrument
+    # moved inside its own tree on 2026-11-08: BIZ/tools/bp_check.mjs, beside
+    # the plan folders it reads.
     {
       "OPENBSD" => "bin/reach",
       "STUDIO" => "Rakefile",
@@ -87,7 +87,7 @@ class TestSweep < Minitest::Test
       assert File.file?(path), "#{tree} probe runs #{script}, which is not there"
     end
 
-    assert File.file?(File.join(S::ROOT, "MASTER", "tools", "biz", "bp_check.mjs")),
+    assert File.file?(File.join(S::ROOT, "BIZ", "tools", "bp_check.mjs")),
            "BIZ probe runs bp_check.mjs, which is not there"
   end
 

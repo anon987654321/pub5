@@ -707,7 +707,7 @@ end
   ::Law.define(:PRINT_PAGE_CANON) do
     source "Tschichold, The Form of the Book (1991): the 2:3:4:6 canon from Van de Graaf and Villard; Bringhurst ch. 8"
     tags %i[TYPOGRAPHY]
-    path %r{(?:\A|/)(?:BIZ|MASTER/tools/biz)/}
+    path %r{(?:\A|/)BIZ/}
     example_path "/repo/BIZ/print.css"
     fix "Set @page margins inner < top < outer < bottom near 2:3:4:6 (22mm 33mm 44mm 66mm), mirrored on :left, " \
         "and the measure at 55-75ch."
@@ -719,7 +719,7 @@ end
   ::Law.define(:PRINT_FOLIO_PRESENCE) do
     source "Bringhurst, The Elements of Typographic Style, ch. 2: every page of a book is numbered"
     tags %i[TYPOGRAPHY]
-    path %r{(?:\A|/)(?:BIZ|MASTER/tools/biz)/}
+    path %r{(?:\A|/)BIZ/}
     example_path "/repo/BIZ/print.css"
     fix "Number every page of a multi-page print: @page { size: 156mm 234mm; @bottom-center { content: counter(page); } }."
     bad "@page { size: 156mm 234mm; margin: 18mm 0 24mm; }\n"

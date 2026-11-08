@@ -150,8 +150,8 @@ class TestDocPaths < Minitest::Test
     MASTER/docs/history/recovery/legacy-apps-handoff.md
     MASTER/docs/mobile.md
     MASTER/docs/analysis/fix_slowness_audit.md
-    MASTER/tools/biz/RESTORATION_REPORT.md
-    MASTER/tools/biz/fetat_proposal.md
+    BIZ/RESTORATION_REPORT.md
+    BIZ/tools/fetat_proposal.md
     RAILS/docs/COMPETITOR_BENCHMARK.md
     RAILS/docs/SCREENSHOT_LAW_ADHERENCE.md
     STUDIO/agent-guidance/claude/agents/rails-layout-refiner.md

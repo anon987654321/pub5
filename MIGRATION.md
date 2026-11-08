@@ -30,10 +30,10 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
 
 ## Structure of the port
 
-pub5 carries four governed code trees. `BPLANS/` is separately preserved
-as a document archive, not a fifth runtime owner. Its 41 files (HTML, PDFs,
-three historical `bob` templates, research, Node build scripts and font) are
-carried byte-for-byte from `pub4@0a5ac0`. The old Python `scripts/analysis/` review helpers were intentionally not
+pub5 carries four governed code trees. The business-plan corpus moved on
+2026-11-08 into the single `BIZ/` tree — published folders, the preserved
+archive and the build tooling together (see "BIZ: one tree" below) — not a
+fifth runtime owner. The old Python `scripts/analysis/` review helpers were intentionally not
 carried as files: their screenshot-sheet capability is now owned by the Ruby
 `MASTER/tools/visual/sheets.rb` implementation and its
 `MASTER/test/test_visual_sheets.rb` contract. It uses the repository's
@@ -307,19 +307,26 @@ The upstream `TODO.md` edits were not copied over the pub5 backlog; unresolved
 work was merged into the one root `TODO.md`, while the completed pub5 phase
 plan was removed.
 
-## BPLANS document archive
+## BIZ: one tree
 
-The operator-requested archive is now at `BPLANS/`, retaining all 41 source
-files and 7,314,428 bytes from `pub4@0a5ac0`. This includes the seven current
-plan pairs, `ai3` archive material, the `bob`, `bob2` and `bob3` historical
-HTML/PDF templates, research notes, the Node authoring/check/print pipeline
-and the Nosifer font. The import preserves the source paths, file modes and
-Git blob IDs; the HTML and PDFs were not regenerated in transit.
+The operator-requested archive landed at `BPLANS/` (41 source files and
+7,314,428 bytes from `pub4@0a5ac0`: the seven then-current plan pairs, `ai3`
+archive material, the `bob`, `bob2` and `bob3` historical HTML/PDF
+templates, research notes, the Node authoring/check/print pipeline and the
+Nosifer font; the import preserved source paths, file modes and Git blob
+IDs, and the HTML and PDFs were not regenerated in transit).
 
-`BPLANS/` is a preserved document/archive tree, not a new application runtime
-or a fifth member of the four-tree test dispatcher. Its local Node/Chromium
-pipeline is documented in `BPLANS/README.md`; the existing template defects
-remain blocked on the explicit preserve-first decision recorded in `TODO.md`.
+On 2026-11-08 the operator merged the three business trees — `BPLANS/`,
+the published `BIZ/` folders and `MASTER/tools/biz/` — into one `BIZ/`
+tree: one folder per plan with its published pair, and the bases, build
+chain, templates, research and proposals in `BIZ/tools/`. The same day's
+orders merged NATO Aurora with the space domain into `future_nato_weapons/`
+and added `future_healthcare_os/`, modelled on OpenBSD, Rails/Rhoda and the
+MASTER trees. Where the copies disagreed, the superset won: the fixed
+renders and the live toolchain stayed, the superseded renders and the stale
+script copies were deleted, and `BPLANS/` no longer exists. The tree's own
+verifier (`BIZ/tools/bp_check.mjs`) reports zero failures across all nine
+published plans.
 
 The three one-off Python scripts formerly in `scripts/analysis/` were not
 copied into pub5. The current port tree owns this capability in

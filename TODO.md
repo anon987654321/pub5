@@ -567,7 +567,7 @@ MASTER's `Fix::Wishlist` reads/writes the local runtime ledger `.master/fix_wish
 
 ### 8.9 Separate proposals that are not repository-wide backlogs
 
-`MASTER/tools/biz/fetat_proposal.md` is a substantive policy/project proposal, not a software task queue. Keep its research, legal questions and implementation blueprint in that document; only promote a specific, authorised and scoped software task into this register. Do not explode the proposal into speculative checkboxes.
+`BIZ/tools/fetat_proposal.md` is a substantive policy/project proposal, not a software task queue. Keep its research, legal questions and implementation blueprint in that document; only promote a specific, authorised and scoped software task into this register. Do not explode the proposal into speculative checkboxes.
 
 ### 8.10 `wenche` subject — gated on written consent
 

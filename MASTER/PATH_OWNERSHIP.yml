@@ -8,7 +8,7 @@ ownership:
     purpose: canonical STUDIO subprocess boundary - the root shim that used to shadow it is retired (2026-11-02)
     risk: medium
     check: cd STUDIO && rake check
-  ../MASTER/tools/biz/fetat_proposal.md:
+  ../BIZ/tools/fetat_proposal.md:
     purpose: the FETAT proposal working master - writing output, not policy
     risk: low
     check: none (prose)
