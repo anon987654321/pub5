@@ -46,7 +46,7 @@ class TestAbletonLiveSetRecovery < Minitest::Test
                     <Loop><LoopStart Value="0.0"/><LoopEnd Value="4.0"/><LoopOn Value="false"/></Loop>
                     <Notes><KeyTracks>
                       <KeyTrack><MidiKey Value="60"/><Notes>
-                        <MidiNoteEvent Time="0.0" Duration="1.0" Velocity="104" IsEnabled="true"/>
+                        <MidiNoteEvent Time="0.0" Duration="1.0" Velocity="104" OffVelocity="64" IsEnabled="true"/>
                       </Notes></KeyTrack>
                       <KeyTrack><MidiKey Value="64"/><Notes>
                         <MidiNoteEvent Time="0.0" Duration="1.0" Velocity="96" IsEnabled="true"/>

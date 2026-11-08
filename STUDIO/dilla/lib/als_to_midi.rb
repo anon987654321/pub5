@@ -141,7 +141,7 @@ module Studio
         pitch = note["pitch"].to_i.clamp(0, 127)
         source_velocity = note.key?("velocity_raw") && !note["velocity_raw"].nil? ? note["velocity_raw"].to_f : note["velocity"].to_f * 127.0
         velocity = source_velocity.round.clamp(1, 127)
-        release_velocity = note["release_velocity"].to_f.round.clamp(0, 127)
+        release_velocity = note["release_velocity"] ? note["release_velocity"].to_f.round.clamp(0, 127) : 0
         [
           [start_tick, 1, [0x90 | channel, pitch, velocity].pack("C*")],
           [end_tick, 0, [0x80 | channel, pitch, release_velocity].pack("C*")]
