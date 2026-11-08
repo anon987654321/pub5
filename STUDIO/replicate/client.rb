@@ -644,7 +644,7 @@ module Studio
           raise ArgumentError, "#{label} must be finite and between 0 and 86400 seconds"
         end
 
-        seconds
+        seconds == seconds.to_i ? seconds.to_i : seconds
       rescue ArgumentError, TypeError => error
         raise error if error.is_a?(ArgumentError) && error.message.include?(label)
 
