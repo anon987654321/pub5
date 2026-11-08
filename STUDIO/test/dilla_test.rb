@@ -349,53 +349,53 @@ class TestDillaReferenceProfile < Minitest::Test
       sr = 44_100
       n = (bar * 2 * sr).to_i
       audio = Array.new(n, 0.0)
+      rng = Random.new(7)
       kick_at = [0.0, bar / 2, bar, bar * 1.5]
       snare_at = [bar / 4, bar * 3 / 4, bar * 5 / 4, bar * 7 / 4]
-      kick_at.each do |t|
-        i0 = (t * sr).to_i
-        len = (0.3 * sr).to_i
-        len.times do |i|
-          idx = i0 + i
-          next if idx >= n
+      kick_at.each do |time|
+        start = (time * sr).to_i
+        (0.3 * sr).to_i.times do |index|
+          sample = start + index
+          next if sample >= n
 
-          audio[idx] += Math.sin(2 * Math::PI * 48 * i / sr * 4) * Math.exp(-i.to_f / (0.06 * sr)) * 0.9
+          audio[sample] += Math.sin(2 * Math::PI * 48 * index / sr * 4) *
+                           Math.exp(-index.to_f / (0.06 * sr)) * 0.9
         end
       end
-      snare_at.each do |t|
-        i0 = (t * sr).to_i
-        len = (0.15 * sr).to_i
-        len.times do |i|
-          idx = i0 + i
-          next if idx >= n
+      snare_at.each do |time|
+        start = (time * sr).to_i
+        (0.15 * sr).to_i.times do |index|
+          sample = start + index
+          next if sample >= n
 
-          audio[idx] += (Random.rand * 2 - 1) * Math.exp(-i.to_f / (0.04 * sr)) * 0.7
+          audio[sample] += (rng.rand * 2 - 1) * Math.exp(-index.to_f / (0.04 * sr)) * 0.7
         end
       end
-      (n / 2).times do |i|
-        t = i * 2.0 / sr
-        next unless (t % (bar / 8)).zero?
+      (n / 2).times do |index|
+        time = index * 2.0 / sr
+        next unless (time % (bar / 8)).zero?
 
-        audio[i * 2] += (Random.rand * 2 - 1) * Math.exp(-40.0 * (t % (bar / 8))) * 0.35
+        audio[index * 2] += (rng.rand * 2 - 1) * 0.35
       end
-      pcm = audio.map { |v| (v.clamp(-1, 1) * 32767).round }.pack("s<#{n}")
-      hdr = ["RIFF", 36 + pcm.bytesize, "WAVE", "fmt ", 16, 1, 1, sr, sr * 2, 2, 16, "data", pcm.bytesize].pack("A4VA4A4VvvVVvvA4V")
+      pcm = audio.map { |value| (value.clamp(-1, 1) * 32_767).round }.pack("s<#{n}")
+      header = ["RIFF", 36 + pcm.bytesize, "WAVE", "fmt ", 16, 1, 1, sr, sr * 2, 2, 16,
+                "data", pcm.bytesize].pack("A4VA4A4VvvVVvvA4V")
       wav = File.join(dir, "two_bar.wav")
-      File.binwrite(wav, hdr + pcm)
+      File.binwrite(wav, header + pcm)
       features_path = File.join(dir, "features.json")
-      _o, err, status = Open3.capture3("python3",
-                                       File.expand_path("../dilla/reference_analyzer.py", __dir__),
-                                       wav, "--json", features_path)
-      assert status.success?, err
+      features = Studio::DillaReference::Analyzer.new.write(wav, features_path)
       text = File.read(features_path)
-      refute_match(/NaN/, text, "the analyzer must not emit non-standard NaN tokens")
-      feats = JSON.parse(text)
-      assert_in_delta 86.0, feats.fetch("bpm"), 3.0, "a two-bar 86 BPM fixture must be measured near 86"
-      %w[onset_density_per_bar offbeat_onset_share timing_spread_ms swing_ratio].each do |key|
-        assert feats.key?(key)
+      refute_match(/NaN|Infinity/, text, "the analyzer must not emit non-standard numeric tokens")
+      archived = JSON.parse(text)
+      assert_equal features, archived
+      assert_in_delta 86.0, features.fetch("bpm"), 3.0, "a two-bar 86 BPM fixture must be measured near 86"
+      %w[onset_density_per_bar offbeat_onset_share timing_spread_ms swing_ratio brightness_hz].each do |key|
+        assert features.key?(key), "missing measured feature #{key}"
       end
+      assert_equal %w[hat kick snare], features.fetch("drum_grid").keys.sort
+      assert features.fetch("bpm_confidence").between?(0.0, 1.0)
     end
-  end
-end
+  endend
 
 class TestDillaIndustrialTechno < Minitest::Test
   def test_renders_a_four_on_the_floor_take
