@@ -221,16 +221,16 @@ module Dilla
     <<~TEXT
       dilla #{VERSION} - the STUDIO beat engine
       usage:
-        ruby dilla.rb                            render the curated showcase
-        ruby dilla.rb --list                     progressions, drum patterns, groove profiles
-        ruby dilla.rb --showcase [--no-video] --out PATH
-        ruby dilla.rb --random --out PATH        random progression, random drum pattern
+        ruby dilla.rb                            render the section-aware 24-bar showcase
+        ruby dilla.rb --list                     progressions, drums, grooves and profiles
+        ruby dilla.rb --style PROFILE             j_dilla/flying_lotus/jazz_soul/funk/
+                                                 ambient/drum_and_bass/noise_sound_design
+        ruby dilla.rb --random --out PATH         random progression and drum grammar
         ruby dilla.rb --progression N|--id --out PATH
             [--drums ID] [--profile P] [--groove 0.85-1.25] [--bpm X] [--bars N]
-            [--kit kit_dust|kit_break|kit_basement] [--voice V] [--rig R]
-            [--sonitex subtle|boom_bap|aggressive_lofi|phone_wear]
-            [--sonitex-instances N] [--vcs 0.0-1.0] [--drum-balance ±dB]
-            [--chord-balance ±dB] [--seed N] [--performer ID] [--mp3]
+            [--kit K] [--voice V] [--rig R] [--sonitex P] [--sonitex-instances N]
+            [--vcs 0.0-1.0] [--drum-balance ±dB] [--chord-balance ±dB]
+            [--seed N] [--performer ID] [--mp3] [--midi] [--midi-out PATH] [--foley]
         ruby dilla.rb reference URL|FILE [--style j_dilla|industrial_techno|general]
             [--no-stems] [--max-duration S]
             yt-dlp pulls the source, demucs separates stems, spectrum analysis

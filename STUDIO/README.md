@@ -7,10 +7,10 @@ but the implementation is owned here.
 
 ## The tools
 
-- `dilla/` — the Dilla engine. `dilla/dilla.rb` is the one Ruby source and
-  `dilla/data/` carries its canonical music data (`dilla.json`,
-  `music_theory.json`, `showcase.json`, `recovered_music.json`);
-  `dilla/reference_analyzer.py` is the separate spectral-analysis process. Rendered output is replaceable:
+- `dilla/` — the Ruby-only music engine, canonical music data, spectral reference
+  analyzer, and Ableton Live Set recovery tools. The renderer remains owned by
+  `dilla/dilla.rb`; the small stdlib-only `dilla/lib/als*.rb` tools recover
+  composition archives and MIDI from `.als` files. Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation

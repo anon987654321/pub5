@@ -1,6 +1,7 @@
 # dilla — the STUDIO beat engine
 
-One Ruby file, no gems. `dilla.rb` synthesizes boom-bap at 44.1 kHz the way
+The synthesizer and Ableton recovery tools are Ruby + standard library; no
+required gems or hosted services. `dilla.rb` synthesizes at 44.1 kHz the way
 the catalogue says it should be made: 96 PPQN MPC feel, 53–56% swing pocket,
 snares early / kicks late / hats forward, jazz voicings that voice-lead,
 12-bit drum grit, a 40 Hz sub gated by the kick, vinyl dust and dub throws
@@ -96,3 +97,50 @@ Use `--style` to select a local production profile: `j_dilla`, `flying_lotus`, `
 The optional scale-locked FM accent lane is mixed under the main harmony. Use `--foley` to request it on a normal render. `--midi` writes the sequenced score as a multi-track Standard MIDI file; `--midi-out PATH` selects its destination. The core score, instruments and export are Ruby-only and require no Replicate, OpenRouter, Python packages, or paid API.
 
 A new soul-clap lane is synthesized locally from staggered filtered-noise bursts. Swing, timing offsets and recurring step deviations are independent profile controls: repeated lane/step positions retain their calibrated timing relationship across the arrangement rather than receiving unrelated random offsets every bar. Tape wow/flutter now modulates sample position (transport speed) rather than only changing channel amplitude, with a speed-specific head-bump stage.
+
+
+## Ableton Live Set recovery
+
+A Live Set (`.als`) is normally gzip-compressed XML. The recovery tools read
+the composition stored in that document; they do not pretend that referenced
+audio samples or native Ableton/third-party plug-in devices are embedded in
+the XML.
+
+First copy the *whole project folders*, not only the `.als` files, so their
+`Samples/` assets remain alongside the sets. For a Google Drive remote
+configured in rclone:
+
+```sh
+rclone copy "gdrive:Ableton Projects" "$HOME/Ableton-Archive" --progress
+```
+
+Inspect and export a set (the parser also accepts extracted, plain XML):
+
+```sh
+ruby dilla/lib/als_export.rb "$HOME/Ableton-Archive/My Set/My Set.als"
+ruby dilla/lib/als_to_midi.rb "$HOME/Ableton-Archive/My Set/My Set.als" --out recovered.mid
+```
+
+The first command writes a versioned JSON composition archive and a
+standalone Ruby DSL archive beside the source by default. Override destinations
+with `--json PATH` and `--ruby PATH`. The MIDI command emits one track per
+MIDI track, preserves beat-domain clip positions and note lengths, expands
+enabled clip loops, pairs every note-on with its note-off, and routes tracks
+named for drums/kits/beats to MIDI channel 10. Change tick resolution with
+`--ppqn N` (default 960).
+
+The parser extracts the project tempo and time signature, track identities and
+names, MIDI/audio clips, clip positions and loop points, note pitch/start/
+duration/velocity/enabled state, audio-file references and supported automation
+event points. It does not reconstruct audio bytes, warp markers, Groove Pool
+semantics, native instrument devices, effect racks, or plug-in state. Keep the
+original `.als` file and complete project directory as the source of truth;
+the JSON/Ruby archives are durable composition records, while the MIDI file is
+the portable performance.
+
+For a software-instrument render, the exported MIDI can be played through a
+locally installed FluidSynth and a SoundFont, then optionally processed with
+local FFmpeg filters. Those are optional render stages: parsing, JSON/Ruby
+export and MIDI generation need no network, API key, Python package or gem.
+Check a local FFmpeg build with `ffmpeg -filters` before relying on a
+particular analog filter.
