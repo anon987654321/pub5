@@ -186,13 +186,19 @@ module Master
           return [] if rows.empty?
 
           by_place = rows.group_by { |row| row["context"] }.sort_by { |place| -place.last.size }
-          ["fix0: errors swallowed this run #{rows.size} at #{by_place.size} place(s)"] +
-            by_place.first(5).map { |place, group| swallowed_line(place, group) }
+          budget = Master::Ground::Swallow::PLACE_BUDGET
+          over_budget = by_place.select { |_place, group| Master::Ground::Swallow.over_budget?(group.size) }
+          lines = ["fix0: errors swallowed this run #{rows.size} at #{by_place.size} place(s)"]
+          if over_budget.any?
+            detail = over_budget.map { |place, group| "#{place} (#{group.size}x)" }.join(", ")
+            lines << "fix0: swallowed-error budget exceeded (#{budget}/place): #{detail}"
+          end
+          lines + by_place.first(5).map { |place, group| swallowed_line(place, group) }
         end
 
         def swallowed_line(place, group)
           last = group.last
-          "fix0: swallowed #{group.size}x at #{place}: #{last["error_class"]}: #{last["error_message"].to_s[0, 120]}"
+          "fix0: swallowed #{group.size}x at #{place}: #{last["error_class"]}: #{last["error_message"]}"
         end
       end
     end
