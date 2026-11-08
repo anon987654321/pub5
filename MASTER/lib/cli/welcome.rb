@@ -26,7 +26,6 @@ module Master
 
       # What the model is told to greet from: the same facts, as plain context.
       def context(root, now: Time.now)
-        session = read_session(root)
         # Boot scrollback is public terminal output. A previous topic may be
         # personal, so continuity is expressed as elapsed time, never quoted
         # content or a subject label.
