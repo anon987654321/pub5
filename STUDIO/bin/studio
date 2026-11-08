@@ -40,12 +40,12 @@ def usage
   warn "  ableton   Live Set inventory, composition export and MIDI recovery"
 end
 
-if ARGV.empty? || ARGV.include?("-h") || ARGV.include?("--help")
+if ARGV.empty? || ARGV == ["-h"] || ARGV == ["--help"]
   usage
   exit(ARGV.empty? ? 64 : 0)
 end
 
-if ARGV.include?("--list")
+if ARGV == ["--list"]
   TOOLS.each { |name, path| puts format("%-8s %s", name, path) }
   puts format("%-8s %s", "ableton", "dilla/lib/als*.rb")
   exit 0
