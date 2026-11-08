@@ -10,6 +10,13 @@ class GroundRedactorTest < Minitest::Test
     assert_equal "token [REDACTED] leaked", Master::Ground::Redactor.text(raw)
   end
 
+  def test_text_redacts_github_personal_access_token_prefixes
+    %w[ghp_ gho_ ghu_ ghs_ ghr_ github_pat_].each do |prefix|
+      raw = "credential #{prefix}#{'A' * 36} leaked"
+      assert_equal "credential [REDACTED] leaked", Master::Ground::Redactor.text(raw), prefix
+    end
+  end
+
   def test_text_does_not_reenter_through_a_string_subclass
     klass = Class.new(String) do
       define_method(:to_s) { Master::Ground::Redactor.text(self) }
