@@ -138,7 +138,18 @@ watch_load() {
     strikes=$(( strikes + 1 ))
     mkdir -p "$STATE" 2>/dev/null
     if (( strikes >= LOAD_STRIKES )); then
-      offender=$(ps -axr -o pcpu,time,args 2>/dev/null | head -2 | tail -1)
+      # Second line of ps output, by parameter surgery — no head, no tail.
+      # A ps that printed only its header still names the header, as the
+      # piped version did.
+      offender=""
+      ps_out=$(ps -axr -o pcpu,time,args 2>/dev/null) || ps_out=""
+      if [[ -n $ps_out ]]; then
+        nl='
+'
+        offender=${ps_out#*$nl}
+        offender=${offender%%$nl*}
+        [[ -n $offender ]] || offender=$ps_out
+      fi
       raise load-sustained "1-minute load ${ip}.${fp} for ${strikes} recorded ticks (limit $(( LOAD_MAX / 100 )).$(( LOAD_MAX % 100 ))) - the box has been saturated for hours with nothing shedding; top cpu: ${offender:-unknown}; history: /var/log/resource_guard_history.log; zombies: ps -axr -o pcpu,time,state,args"
       strikes=0
     fi
