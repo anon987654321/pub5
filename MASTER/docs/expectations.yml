@@ -10,6 +10,10 @@
 # Recorded 2026-11-08 from the operator's expectations session. Provenance is
 # that conversation; the classification restates doctrine already carried by
 # AGENTS.md, README.md and docs/mobile.md.
+#
+# Extended 2026-11-09 from the operator's 2026-11-08 session transcript
+# (docs/session-2026-11-08.md): three in-scope rows the transcript shows the
+# operator asking for.
 
 schema: 1
 purpose: scope_classification
@@ -64,6 +68,26 @@ buckets:
           A new app lands under RAILS/ with an apps.yml row and a real check
           (bin/ci, the registry validation). MASTER governs the landing; it
           does not replace rails new.
+      - id: session_answers_readable
+        statement: >-
+          Replies print once, bind to the turn that prompted them, and a
+          refusal names what it refused. Evidence and instruments:
+          docs/session-2026-11-08.md; the display dedupe, the queued-turn
+          receipt and the conversation stage carry the checks.
+      - id: capability_narration_truthful
+        statement: >-
+          The model is told what its runtime actually provides (tools, voice,
+          sight of the session) and answers inside that truth, denying no
+          capability the CLI has and adopting no lane name as identity.
+          Open as of docs/session-2026-11-08.md; the check is a
+          prompt-construction test plus a conversation-stage probe item.
+      - id: voice_audible_or_named_failure
+        statement: >-
+          On a host with audio hardware, voice0 on ends in audible speech,
+          and wherever the chain degrades the failure is named on the
+          console. Unmeasurable in a headless container, so INCONCLUSIVE
+          there, never pass. Owner: data/voice.yml and lib/voice; evidence
+          in docs/session-2026-11-08.md.
 
   stretch_code_only:
     definition: >-
