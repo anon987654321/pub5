@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require_relative "../tools/agent_context"
+require_relative "../lib/review/agent/prompt_builder"
 
 class TestSoul < Minitest::Test
   # The brief is hard-wrapped for terminals. Wrapping is presentation, so the
