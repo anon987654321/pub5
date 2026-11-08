@@ -105,7 +105,7 @@ module Studio
             local_start = note["start_beats"].to_f
             duration = [note["duration_beats"].to_f, 1.0 / @ppqn].max
             positions = if looping && clip_length.positive?
-                          repeated_positions(local_start, clip_length, loop_length)
+                          repeated_positions(local_start, clip_length, loop_start, loop_end)
                         else
                           [local_start]
                         end
@@ -118,14 +118,18 @@ module Studio
         track_chunk(track["name"].to_s, rows)
       end
 
-      def repeated_positions(note_start, clip_length, loop_length)
+      def repeated_positions(note_start, clip_length, loop_start, loop_end)
+        loop_length = loop_end - loop_start
+        # Notes before the loop start are pickups. Notes outside the loop
+        # window remain one-shots; only notes inside it repeat.
         return [note_start] unless loop_length.positive?
+        return [note_start] if note_start < loop_start || note_start >= loop_end
 
         positions = []
-        offset = 0.0
-        while note_start + offset < clip_length
-          positions << (note_start + offset)
-          offset += loop_length
+        position = note_start
+        while position < clip_length
+          positions << position
+          position += loop_length
           raise ParseError, "clip loop expansion exceeds 100000 note instances" if positions.length > 100_000
         end
         positions

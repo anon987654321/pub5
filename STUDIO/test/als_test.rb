@@ -24,11 +24,12 @@ class TestAbletonLiveSetRecovery < Minitest::Test
                   <MidiClip Id="101" Time="4.0" Duration="8.0">
                     <Name><UserName Value="Drum phrase"/></Name>
                     <CurrentStart Value="0.0"/><CurrentEnd Value="8.0"/>
-                    <Loop><LoopStart Value="0.0"/><LoopEnd Value="4.0"/><LoopOn Value="true"/></Loop>
+                    <Loop><LoopStart Value="1.0"/><LoopEnd Value="5.0"/><LoopOn Value="true"/></Loop>
                     <Notes><KeyTracks>
                       <KeyTrack><MidiKey Value="36"/><Notes>
                         <MidiNoteEvent NoteId="1" Time="0.5" Duration="0.25" Velocity="127" OffVelocity="0.4" IsEnabled="true"/>
-                        <MidiNoteEvent NoteId="2" Time="1.0" Duration="0.5" Velocity="89" IsEnabled="false"/>
+                        <MidiNoteEvent NoteId="2" Time="1.5" Duration="0.5" Velocity="89" IsEnabled="false"/>
+                        <MidiNoteEvent NoteId="3" Time="2.5" Duration="0.5" Velocity="100" IsEnabled="true"/>
                       </Notes></KeyTrack>
                     </KeyTracks></Notes>
                   </MidiClip>
@@ -103,10 +104,11 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal 4.0, drum_clip.fetch("start_beats")
       assert_equal 8.0, drum_clip.fetch("length_beats")
       assert_equal true, drum_clip.fetch("loop_enabled")
-      assert_equal [36, 36], drum_clip.fetch("notes").map { |note| note.fetch("pitch") }
-      assert_equal [127.0, 89.0], drum_clip.fetch("notes").map { |note| note.fetch("velocity_raw") }
+      assert_equal [36, 36, 36], drum_clip.fetch("notes").map { |note| note.fetch("pitch") }
+      assert_equal [127.0, 89.0, 100.0], drum_clip.fetch("notes").map { |note| note.fetch("velocity_raw") }
       assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes").last.fetch("velocity"), 1e-9
-      assert_equal false, drum_clip.fetch("notes").last.fetch("enabled")
+      assert_equal false, drum_clip.fetch("notes")[1].fetch("enabled")
+      assert_in_delta 89.0 / 127.0, drum_clip.fetch("notes")[1].fetch("velocity"), 1e-9
       assert_equal 0.5, drum_clip.fetch("notes").first.fetch("start_beats")
     end
   end
@@ -168,7 +170,8 @@ class TestAbletonLiveSetRecovery < Minitest::Test
       assert_equal 1, bytes[8, 2].unpack1("n")
       assert_equal 3, bytes[10, 2].unpack1("n") # tempo + two MIDI tracks
       assert_equal 960, bytes[12, 2].unpack1("n")
-      assert_includes bytes, [0x99, 36, 127].pack("C*") # channel 10 drum note-on
+      assert_equal 1, bytes.scan([0x99, 36, 127].pack("C*")).length # pickup before loop start plays once
+      assert_equal 2, bytes.scan([0x99, 36, 100].pack("C*")).length # note inside loop is repeated
       assert_includes bytes, [0x81, 60, 104].pack("C*") # Rhodes on channel 2, original Ableton velocity preserved
       assert_includes bytes, [0x81, 60, 0].pack("C*")
       refute_includes bytes, [0x99, 36, 89].pack("C*") # disabled note is excluded
