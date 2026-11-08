@@ -232,7 +232,7 @@ end
         ok = android_speak(str) unless ok
         ok = native_say(str) unless ok
         unless ok
-          warn_once("audio playback failed - #{player&.first || "no player or native speech"}")
+          warn_once(playback_failure_message)
         else
           spoken(str)
         end
@@ -660,11 +660,40 @@ def decode_job(job)
         sleep(0.1) while external_speaking? && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
       end
 
+      # "audio playback failed - /usr/bin/afplay" read like a broken player
+      # while the real news was upstream: synthesis wrote nothing, and the OS
+      # voice that could still be heard was policy-off (Johann's log
+      # 2026-11-08: afplay, the edge socket, a one-shot worker and the neural
+      # voices each failed, and every line named a different link). The
+      # refusal now names the link that actually refused: the player's own
+      # exit, an empty or missing file, or the synthesis error - plus the
+      # os_voice_fallback lever when say exists but stays mute.
       def playback_failed!
-        reason = last_error.to_s
-        reason = player&.first || "no player or native speech" if reason.empty?
-        warn_once("audio playback failed - #{reason}")
+        warn_once(playback_failure_message)
         false
+      end
+
+      # The ladder's refusal names the link that actually refused: the
+      # recorded playback detail (a player exit, a spawn failure, "no
+      # player completed playback"), else the speech synthesis error, else
+      # the discovered player. "audio playback failed - /usr/bin/afplay"
+      # read like a broken player while the real news was upstream (Johann's
+      # log 2026-11-08: afplay, the edge socket, a one-shot worker and the
+      # neural voices each failed, and every line named a different link).
+      def playback_failure_message
+        detail = last_error.to_s
+        detail = Speech.last_error.to_s if detail.empty?
+        reason = !detail.empty? ? detail : (player&.first || "no player or native speech")
+        "audio playback failed - #{reason}#{say_policy_note}"
+      end
+
+      # The ladder ends in silence most often because the OS voice is
+      # policy-off, not because no voice exists on the machine.
+      def say_policy_note
+        return "" if native_say_available? || android_audio_available?
+        return "" unless which("say")
+
+        " - say exists but data/voice.yml sets os_voice_fallback: false"
       end
 
       # A streamed utterance plays while it synthesises: the prepare thread
@@ -812,7 +841,12 @@ def decode_job(job)
       end
 
       def play(path, generation: current_generation)
-        return false unless File.exist?(path)
+        unless File.exist?(path)
+          return record_playback_result(false, "no audio file was written")
+        end
+        unless File.size?(path)
+          return record_playback_result(false, "the audio file is empty")
+        end
         return false unless generation_active?(generation)
 
         if Device::Audio.media_player_available?
