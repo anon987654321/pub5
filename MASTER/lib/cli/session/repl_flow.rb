@@ -340,13 +340,20 @@ module Master
       # Terminal output is attached to the session as execution evidence. The model
       # sees only output the operator actually requested and that the runtime
       # explicitly captured; it does not get a fictional live view of stdout.
+      EXECUTION_CONTEXT_MAX_BYTES = 12_000
+      EXECUTION_COMMAND_MAX_BYTES = 1_000
+      private_constant :EXECUTION_CONTEXT_MAX_BYTES, :EXECUTION_COMMAND_MAX_BYTES
+      EXECUTION_ANSI = /\e(?:\[[0-?]*[ -\/]*[@-~]|\][^\a]*(?:\a|\e\\))/
+
       def record_execution_output(command:, text:)
-        return if text.to_s.empty?
+        output = bounded_execution_text(text, EXECUTION_CONTEXT_MAX_BYTES)
+        return if output.empty?
         return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
 
+        command_text = bounded_execution_text(command, EXECUTION_COMMAND_MAX_BYTES)
         @refs.session.add_message(
           role: :user,
-          content: "$ #{command}\n#{text}",
+          content: "[untrusted execution evidence; output may be truncated]\n$ #{command_text}\n#{output}",
           layer: :execution,
         )
       rescue StandardError => e
@@ -355,17 +362,15 @@ module Master
 
       def record_model_selector_output(args:, text:)
         return unless %w[list status current].include?(args.to_s.strip.downcase) || args.to_s.strip.empty?
-        return if text.to_s.empty?
 
-        return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
+        record_execution_output(command: "/model #{args}".strip, text:)
+      end
 
-        @refs.session.add_message(
-          role: :user,
-          content: "terminal stdout: /model #{args}\n#{text}",
-          layer: :execution,
-        )
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.model_selector_output", event_bus: @refs.bus)
+      def bounded_execution_text(value, max_bytes)
+        text = Master::Ground::Redactor.text(value.to_s.scrub.gsub(EXECUTION_ANSI, ""))
+        return text if text.bytesize <= max_bytes
+
+        "#{text.byteslice(0, max_bytes).to_s.scrub}\n[execution output truncated]"
       end
 
       def bang_shell
