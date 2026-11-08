@@ -6,6 +6,17 @@ their sharp edges here; STUDIO reads its project READMEs. The harness doors
 at the repo root route here. The content moved out of the per-tree
 `CLAUDE.md` files; the pub4 archive's history holds the originals.
 
+## BPLANS preservation
+
+`BPLANS/` is a preserved document archive, not an application runtime or a
+fifth governed code tree. Its self-contained HTML and matching PDFs are
+archive deliverables; `__templates/bob*` is historical source material.
+Read `BPLANS/README.md` before authoring. The Node pipeline is the only
+supported build/check path. Do not overwrite archived HTML/PDF pairs or
+retrofit the Bob templates without a reviewed output comparison and the
+operator's explicit preserve-first decision. Generated output should remain
+separate until accepted.
+
 ## RAILS
 RAILS/README.md is the maintained long-form reference (check tables,
 rendered-check semantics, deploy blockers, subdomain map) and

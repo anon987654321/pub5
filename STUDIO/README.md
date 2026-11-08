@@ -16,10 +16,15 @@ behind the one `bin/studio` dispatcher: `bin/studio dilla …` and
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
-  entrypoint and its IdeaPicture implementation.
+  entrypoint and its IdeaPicture implementation. Screenshot contact sheets
+  are owned by `MASTER/tools/visual/sheets.rb`; do not duplicate that tool here.
 - `replicate/client.rb` — the Studio-owned Replicate provider client
   (`Studio::ReplicateClient`), with its own upload and download helpers.
   MASTER has its own client and runtime policies; this one is STUDIO's.
+- `replicate/lora/merethe/` — private subject-specific curation and dataset
+  preflight. Original photos, derived datasets, ZIPs and weights stay in
+  ignored local directories. The preflight does not upload data or start paid
+  training; read its README and require explicit operator approval.
 
 ## Shared surfaces
 

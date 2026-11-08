@@ -103,6 +103,10 @@ policy, and neither overrides the constitution. The four owners are MASTER/
 (runtime, `MASTER/bin/master`), RAILS/ (apps, `MASTER/bin/operator` triangle
 up), OPENBSD/ (deployment and vm23), and STUDIO/ (Dilla, photograph,
 Replicate). `MASTER/tools/` keeps compatibility entrypoints for STUDIO tools.
+`BPLANS/` is a preserved document archive outside the runtime-owner and
+`bin/test` trees; read its README and preserve historical HTML/PDF/template
+pairs. Do not retrofit the Bob templates without the operator's explicit
+preserve-first decision.
 
 `laws.yml#law_catalogue` is the single source for per-Law severity, mode,
 lifecycle, autofix, language, surface and path exclusion. The catalogue retired

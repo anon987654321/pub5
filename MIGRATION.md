@@ -14,11 +14,9 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
 - Repository: <https://github.com/anon987654321/pub4>
 - Commit ported from: `3e70be37c8847300a191d13fd6b6e28ab888d7c9` (2026-11-06,
   "Show one dating header action and put the rest behind Mer")
-- pub4 remains a read-only archive. pub5's first commit names this source
-  commit, per the port plan's conditions.
-- The operator's instruction to build pub5 satisfies the plan's freeze
-  condition ("the operator explicitly chooses to start a new tree"); pub4 is
-  frozen for this port and stays archived afterwards.
+- pub4 remains the source archive for the port. The first pub5 commit names
+  the original cut; subsequent upstream changes are adopted only through an
+  explicit, recorded catch-up, never by silently chasing `main`.
 - pub4 landed five more commits on the same day (`3e70be3..d6fa34d`, still
   2026-11-06). They are ported as the catch-up below, so the port's source
   of truth moved to `d6fa34d7580214b80b588a08880d0f4439b37f41` at first;
@@ -26,15 +24,22 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
   when it has no photo") and, after that, `fdfe31d`, `2e47738` and
   `2c12470` (the consent-banner geometry, the messenger-rail guard and the
   shared chat label) — all ported the same way, each file byte-identical
-  to its upstream state. The port's source of truth is now `2c12470`, and
-  a fresh fetch of pub4 found nothing further.
+  to its upstream state. The original port cutoff is `2c12470`. A later fetch found nine additional
+  commits through `pub4@0a5ac0ce6c3e11bb8d9a1c040adf15b00acb3c6b` (2026-11-07);
+  all nine are caught up below.
 
 ## Structure of the port
 
-pub5 carries the four governed trees. `BPLANS/` and `scripts/analysis/`
-(document drafts and their crop/sheet tooling) are not part of the port; they
-stay in the pub4 archive. Target shape from the plan: about 2,700–3,300 files
-(MASTER 700–900, RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
+pub5 carries four governed code trees. `BPLANS/` is separately preserved
+as a document archive, not a fifth runtime owner. Its 41 files (HTML, PDFs,
+three historical `bob` templates, research, Node build scripts and font) are
+carried byte-for-byte from `pub4@0a5ac0`. The old Python `scripts/analysis/` review helpers were intentionally not
+carried as files: their screenshot-sheet capability is now owned by the Ruby
+`MASTER/tools/visual/sheets.rb` implementation and its
+`MASTER/test/test_visual_sheets.rb` contract. It uses the repository's
+`ruby-vips` stack and avoids hard-coded checkout and crop paths. Target shape for the
+four governed code trees remains about 2,700–3,300 files (MASTER 700–900,
+RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
 
 ### Phase 1 — skeleton
 
@@ -95,6 +100,14 @@ stay in the pub4 archive. Target shape from the plan: about 2,700–3,300 files
 ### Phase 4 — STUDIO
 
 - dilla, photograph, postpro and the Replicate client are carried.
+- The Merethe subject-specific LoRA package (`replicate/lora/merethe/`)
+  carries its recovery/preflight code, private-use instructions, environment
+  example and tests. The 15 original subject photographs, derived dataset,
+  ZIP and weights remain ignored local data; no image recovery, provider upload
+  or paid training is performed by the migration.
+- Screenshot contact-sheet generation is owned by MASTER through
+  `MASTER/tools/visual/sheets.rb`; STUDIO does not keep a duplicate Python
+  implementation of the same review workflow.
 - `STUDIO/bin/studio` is the one CLI in front of dilla and postpro: a thin
   dispatcher to `dilla/dilla.rb` and the postpro entrypoints, so both tools
   are reachable through one command. `STUDIO/Rakefile` remains the tree's
@@ -237,16 +250,18 @@ operator's box cutover, not in a code port:
 
 ## Evidence status (truthful)
 
-The port environment had no Ruby toolchain (the trees pin Ruby 4.0.5; the
-sandbox has none), no Rails boot, no vm23 access, and no browser. Therefore:
+The working sandbox has Ruby 3.3.8 rather than the pinned Ruby 4.0.5, Node 22,
+and `pdfinfo`, but no checkout mounted for execution, Rails dependency set,
+Chromium browser, or vm23 access. Therefore:
 
 - Every suite in MASTER, RAILS, OPENBSD and STUDIO: **NOT_RUN** here. The
-  acceptance commands in the port plan (`rake test`, `run_all.rb` per tree,
-  `rake audit`, `bin/check --profile=agent`, the route contracts, golden
-  screenshots) remain open work in `TODO.md` — they are the same items the
-  pub4 backlog already listed as unresolved at the source commit. A Ruby
-  toolchain cannot be installed here either (no root, no Docker, no
-  prebuilt interpreter), so nothing converts the NOT_RUNs on this box.
+  acceptance commands (`rake test`, `run_all.rb` per tree, `rake audit`,
+  `bin/check --profile=agent`, route contracts and rendered screenshots)
+  remain open in `TODO.md`. Ruby 3.3.8 is not the pinned 4.0.5 runtime, and no
+  repository checkout or app dependencies are mounted for test execution.
+- BPLANS Node syntax checks, its independent `bp_check.mjs`, PDF metadata and
+  HTML/PDF render parity: **NOT_RUN**. Node and `pdfinfo` are present, but the
+  source tree is not mounted and Chromium is unavailable.
 - soul.yml / laws.yml byte-identity: **PASS**, re-verified by SHA-256
   against pub4@7caa03d (soul `44d9d6db…d067`, laws `821713cb…bec`).
 - Engine-layout reference sweep: the original **PASS** claim covered only
@@ -265,3 +280,60 @@ sandbox has none), no Rails boot, no vm23 access, and no browser. Therefore:
   sites, zero functional `PUB4_ROOT`/`PUB4_RAILS_ROOT` leftovers (the
   only hit is this file's own rename record); the other `PUB4_*` names
   are the installed-state and provenance keeps listed above.
+
+
+## Post-cutoff source catch-up — pub4 `2c12470..0a5ac0` (2026-11-07)
+
+The port was compared against the live `pub4/main`, not assumed current from
+the original migration note. Nine commits after `2c12470` were carried into
+this snapshot:
+
+- `958265b` — restore the traced Mr. Damascy mascot icon (SVG and raster/PWA
+  assets).
+- `db7e159` — keep Amber look titles within tile width and break only at words.
+- `210bc62` — give the shared search hint AA contrast and pin BSDPorts' quiet
+  update-age treatment.
+- `ec05e5d` — retain the three RAILS rows as BLOCKED on missing operator input.
+- `f827973` — restore seven historical root-level photographs, with their
+  original Git blob IDs.
+- `724c11b`, `f161d83`, `c5c34f6`, `0a5ac0c` — add Merethe LoRA curation
+  instructions, guarded local preparation, environment template and preflight
+  tests.
+
+The RAILS style/test/icon changes and four STUDIO LoRA files were copied from
+`pub4@0a5ac0`; the seven photographs and seven raster/icon assets were copied
+as binary blobs. Each imported blob was checked against the source Git SHA.
+The upstream `TODO.md` edits were not copied over the pub5 backlog; unresolved
+work was merged into the one root `TODO.md`, while the completed pub5 phase
+plan was removed.
+
+## BPLANS document archive
+
+The operator-requested archive is now at `BPLANS/`, retaining all 41 source
+files and 7,314,428 bytes from `pub4@0a5ac0`. This includes the seven current
+plan pairs, `ai3` archive material, the `bob`, `bob2` and `bob3` historical
+HTML/PDF templates, research notes, the Node authoring/check/print pipeline
+and the Nosifer font. The import preserves the source paths, file modes and
+Git blob IDs; the HTML and PDFs were not regenerated in transit.
+
+`BPLANS/` is a preserved document/archive tree, not a new application runtime
+or a fifth member of the four-tree test dispatcher. Its local Node/Chromium
+pipeline is documented in `BPLANS/README.md`; the existing template defects
+remain blocked on the explicit preserve-first decision recorded in `TODO.md`.
+
+The three one-off Python scripts formerly in `scripts/analysis/` were not
+copied into pub5. The current port tree owns this capability in
+`MASTER/tools/visual/sheets.rb`, a Ruby/ruby-vips implementation with no
+hard-coded capture paths or per-review crop lists, exercised by
+`MASTER/test/test_visual_sheets.rb`. This is a deliberate toolchain and
+ownership consolidation, not a silent loss of screenshot-review capability.
+
+## Migration integrity snapshot
+
+At staging time, every one of the 41 BPLANS source blobs matched its
+`pub4@0a5ac0` SHA, as did all seven historical photographs and all 18
+post-cutoff RAILS/STUDIO source files. The three old Python screenshot scripts are intentionally retired in favour
+of the Ruby visual-sheet tool above. The
+four governed code-tree acceptance suites, BPLANS check/build, rendered
+screenshots, native OpenBSD validation and vm23 deployment remain
+**NOT_RUN** or **BLOCKED** until executed in their required environments.

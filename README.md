@@ -1,6 +1,6 @@
 # pub5
 
-**One checkout, four trees, and a written source hierarchy that outranks every
+**One checkout, four governed code trees, a preserved BPLANS archive, and a written source hierarchy that outranks every
 agent working in any of them.** pub5 is a self-governing repository: the model
 only proposes; Soul defines global identity, preservation, source order and
 protected paths, while the Law catalogue defines the requirements each change
@@ -10,10 +10,10 @@ pub5 is a ported fresh start from
 [pub4](https://github.com/anon987654321/pub4), built by porting, not
 rewriting: behaviours are locked as executable contracts, then rebuilt
 smaller against them. The port record — what moved, what changed, what is
-still unproven — is `MIGRATION.md`. pub4 stays as a read-only archive; the
-first pub5 commit names the pub4 commit the port came from.
+still unproven — is `MIGRATION.md`. pub4 remains the source archive. The initial port cut and the later catch-up
+through `pub4@0a5ac0` are recorded in `MIGRATION.md`.
 
-## The four trees
+## The four governed code trees
 
 - `MASTER/` — the constitution, the runtime and the instruments: the Law
   catalogue, the scanner, `/fix`, `/review`, `/critique`, and the operator and
@@ -28,6 +28,14 @@ first pub5 commit names the pub4 commit the port came from.
 - `STUDIO/` — the media tools: dilla, photograph, postpro and the Replicate
   client, behind the one `STUDIO/bin/studio` CLI. `STUDIO/Rakefile` is the
   tree's check surface.
+
+## Preserved document archive
+
+`BPLANS/` carries the HTML/PDF business-plan archive, the restored `bob`,
+`bob2` and `bob3` templates, research and Node build/check scripts. It is
+preserved separately from the four runtime owners; read `BPLANS/README.md`
+before rebuilding or changing a historical template. Keep the HTML/PDF pairs
+intact unless a reviewed rebuild is explicitly requested.
 
 ## How to enter
 
