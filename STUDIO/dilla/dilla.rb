@@ -233,9 +233,8 @@ module Dilla
             [--seed N] [--performer ID] [--mp3] [--midi] [--midi-out PATH] [--foley]
         ruby dilla.rb reference URL|FILE [--style j_dilla|industrial_techno|general]
             [--no-stems] [--max-duration S]
-            yt-dlp pulls the source, demucs separates stems, spectrum analysis
-            measures tempo, pocket, harmony, melody and drum patterns, and the
-            profile lands in the reference root for the next generation.
+            optional yt-dlp download + bounded Ruby spectral analysis of the mix;
+            no Python, Demucs, NumPy, SciPy or native gem is required.
         ruby dilla.rb industrial-techno --out PATH [--bpm X] [--bars N]
         ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
