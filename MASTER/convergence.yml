@@ -279,10 +279,10 @@ workstreams:
   - id: dilla_corpus_measures
     state: partial
     title: >-
-      Producer timing carries measured J Dilla microtiming as sourced observations; nothing reads them
-      yet, so they inform without tuning
-    implementation: MASTER/lib/voice/production_dna.rb
-    proof: ruby -c and boot smoke; brief() reads only the configured keys
+      Sourced J Dilla microtiming, non-four-bar form, Bach/Satie lineage and Donuts sample-source notes
+      are surfaced in the Dilla voice brief without becoming generator settings; exact chord transcription remains a listening gate
+    implementation: MASTER/lib/voice/production_dna.rb; MASTER/lib/voice/dilla.rb
+    proof: MASTER/test/voice/test_voice_support.rb (regression added; pinned Ruby 4.0.5 test NOT_RUN)
   - id: free_compute_design_of_record
     state: partial
     title: >-
