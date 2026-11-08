@@ -86,7 +86,15 @@ screenshot count or previous revision.
   NOT_RUN on the pinned Ruby 4.0.5 checkout. The by-ear render review and
   golden audio fixture remain open; no claim of acoustic acceptance is made.
   Set-specific Ableton recovery remains deliberately deferred until the
-  operator supplies the `.als` sets and their project assets.
+  operator supplies the `.als` sets and their project assets. The Dilla voice
+  brief now surfaces the existing source-backed timing, form, classical
+  lineage and Donuts sample-reference records while stating that the empty
+  chord arrays still need real transcription; two direct MASTER regressions
+  cover the brief and the five canonical grammars/six voicing guides. The
+  Replicate client now has streamed JSON caps and monotonic bounded prediction
+  and training waits, with seven transfer/deadline tests added. All these new
+  and changed tests remain NOT_RUN on pinned Ruby 4.0.5; no golden WAV, actual
+  listening verdict, ALS-set check or live provider transaction is claimed.
 
 - [ ] **Generated-output freshness.** Check design-token projection and CSS;
   compare `MASTER/web/public/face.runtime.js` and `face.css` with their
