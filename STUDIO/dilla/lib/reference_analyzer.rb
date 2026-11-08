@@ -95,7 +95,7 @@ module Studio
       private
 
       def normalize_duration(value)
-        return nil if value.nil? || value.to_f <= 0
+        return MAX_SECONDS if value.nil? || value.to_f <= 0
 
         seconds = Float(value)
         raise AnalysisError, "max duration must be finite" unless seconds.finite?
