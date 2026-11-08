@@ -594,34 +594,14 @@ The full `RAILS/test` suite was run on the sandbox's Debian Ruby 3.3.8 against
 the repo's own force hatch (`PUB5_RUBY`, `OPENBSD/lib/ruby_runner.rb`), with
 `zeitwerk`/`activesupport` installed for the three deploy suites and zsh
 extracted for the deploy-identity sourcing. Ledger: 161 of 163 suites pass,
-0 NOT_RUN. What the runs found and what was fixed in the same pass:
-
-- [x] Route manifests went stale with the digest-constraint unanchor and the
-  encounters collection DELETE — refreshed all three apps' digests through the
-  generator's own digest algorithm (the `routes` tables are unchanged: no GET
-  route was added).
-- [x] `link_embed_privacy_contract_test.rb` still pinned the anchored
-  `\A...\z` constraint after 6b8e04c6 unanchored it; the pin now matches the
-  bare pattern the segment matcher anchors itself.
-- [x] `AppsYmlValidator` demanded `RAILS/master` for every declared app; the
-  master entry's own `deploy_root: MASTER/web` is now honoured, and
-  `integrity_check` runs `deploy_identity` and `production` green again.
-- [x] `billing_plans_contract_test.rb` read `RAILS/master/db/schema.rb` and
-  pinned nb copy that the shipped summary had outgrown; it reads MASTER/web
-  and pins the words as shipped.
-- [x] `generated_asset_check_test.rb`'s missing-build fixture wrote its
-  stylesheet outside the scanner's glob, so the inconclusive path never
-  fired; the fixture sits where `source_files` looks now.
-- [x] `triangle_runtime_contract_test.rb` pinned the pre-rbenv runner lines;
-  the pin matches the rbenv-preferring runner and its Homebrew rationale.
-- [x] `playlist_player_controller_test.rb` stubbed Stimulus but not the
-  controller's `stimulus_reflex` import or the `document` hand-off listener;
-  the harness stubs both, so the slider, labels and listen counting run.
-- [x] Two target-mark animations ran on the `ease-out` keyword and the
-  messenger one had no reduced-motion guard; both read `var(--ease-out)` and
-  the guard lives beside the animation it guards.
-- [x] Three deliberate child-margin sites banked at their measured ceiling in
-  `css_budget.yml`, each named (`child_margin: 3`).
+0 NOT_RUN. The runs found and the same pass fixed the stale route-manifest
+digests and an anchored-constraint pin, the AppsYmlValidator master
+deploy_root, the billing-plans schema read, a missing-build fixture outside
+the scanner's glob, a pre-rbenv runner pin, an under-stubbed Stimulus player,
+two animations on the ease-out literal (one without its reduced-motion
+guard) and three banked child-margin budgets; completed checklist rows are
+deleted from this index, with the findings ledger and its fixes living in
+git history.
 
 Open, itemized, and not to be waved through — the split debt the ratchets
 count. Both ratchets' law is "split it and lower the number; never raise":
@@ -740,13 +720,6 @@ back at the repository root:
   photographs without a consent-record refusal. Port its useful structure
   only after the consent and photographer-licence gate in §8.10 is executable;
   do not run the old downloader or restore its consent-blind behavior.
-- [x] **Root analysis scripts.** Retired 2026-11-08: `scripts/analysis/` was
-  proven unused (its entries hardcode a `/home/z/my-project/pub5` path that has
-  never existed on this machine; python is a banned tool here; the only live
-  reference was this row) and removed whole. The screenshot review capability
-  stays with the committed RAILS captures, the vips stack in STUDIO/postpro and
-  STUDIO/photograph; BIZ joined ALLOWED_ROOT_DIRS so the uppercase-root
-  contract names the tree that exists.
 
 The one-shot legacy archive-extraction helper was also intentionally excluded.
 The pub4 repository remains the read-only provenance source; do not revive

@@ -18,10 +18,12 @@ class TestDependencyContracts < Minitest::Test
   def test_prism_dependency_matches_ruby_language_support
     require "prism"
 
-    rules = Master.load_yaml(File.join(ROOT, "data", "laws.yml"))
-    ruby_version = rules.dig("languages", "ruby", "version")
+    # .ruby-version is the one owner of the Ruby pin; a former dig went to
+    # laws.yml for a languages.ruby.version key no file carried, so the pin
+    # assertion passed on nil.
+    pinned = File.read(File.join(ROOT, ".ruby-version")).strip
 
-    assert_includes ruby_version, "4.0.5", "laws.yml names the recommended Ruby"
+    assert_equal "4.0.5", pinned, ".ruby-version pins the recommended Ruby"
     assert_operator Gem::Version.new(Prism::VERSION), :>=, Gem::Version.new("1.7.0")
   end
 

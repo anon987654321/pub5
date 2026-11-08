@@ -6,12 +6,6 @@
 # Runtime sections are grouped by concern: scanner/reach, transformations,
 # adapters, topology, runtime and operator-owned configuration.
 
-languages:
-  ruby:
-    # Whatever Ruby the host has runs MASTER; 4.0.5 is what .ruby-version pins
-    # and what the RAILS apps need.
-    version: "any available; 4.0.5 recommended"
-
 markdown_style:
   aesthetic: tadao_ando
   applies_to: [MASTER, claude, grok, codex]
@@ -34,24 +28,6 @@ visual_identity_contract:
   acceptance:
     required: [canonical_tokens, generated_artifact_sync, executable_law_fixtures, contrast, semantic_states, reduced_motion, reduced_motion_runtime, aggregate_render_budget, renderer_lifecycle, render_state_regression, device_performance_evidence, typography_roles, product_dialect_contracts, media_fidelity, narrow_and_wide_screens, rendered_screenshots, original_brand_assets, ux_refinement_catalog, cli_prompt_contract, input_recovery, browser_reconnection, visible_status, keyboard_accessibility, terminal_modes]
     evidence: "Record commit, generator/test output, viewport dimensions and before/after screenshots; source inspection alone is not visual proof."
-
-# Typographic law, after Robert Bringhurst's The Elements of Typographic Style:
-# typography exists to honour content. The executable counterparts are
-# lib/voice/typography.rb (the cut), Renderer#beautify (the marks) and the
-# style stage of the /fix pass (the audit).
-
-typography:
-  source: "Robert Bringhurst, The Elements of Typographic Style"
-  applies_to: [terminal, prose, cli, docs]
-  rules:
-    - measure: 45-75 characters, 66 where one number must serve; a surface picks one measure and keeps it - terminal prose wraps at 72
-    - rhythm: word space is the smallest unit of rhythm; one space between sentences; blank lines separate blocks and never pad them
-    - line_breaks: break at word boundaries; a ragged edge is a shape, not a saw; a cut ends on one true ellipsis at the last boundary the budget allows
-    - punctuation: one true mark per meaning - "..." not "...", "-" for the aside, "-" for the range; straight quotes only where a machine reads the line
-    - figures: lining figures, as the machine counted them - 1.0M, 45.2s, 3 of 5; no decorative separators
-    - scale: two weights on a terminal, plain and dim; emphasis is structural, never louder
-    - alignment: columns align only where a column exists; prose is never justified and never space-padded into a fake table
-    - content_first: typography honours content; a surface that needs decoration to be read is a surface that needs editing instead
 
 prose:
   en:
@@ -622,27 +598,6 @@ architecture:
       owner: studio
       depends_on: []
       check: cd STUDIO && ruby -Itest test/idea_picture_test.rb
-
-runtime_policy:
-  concurrency:
-    io_backend: thread
-    cpu_backend: ractor_when_explicitly_safe
-    unknown_backend: serial
-    worker_limit: 8
-    timeout_seconds: 30
-  jit:
-    env: MASTER_JIT
-    modes: [auto, off, yjit]
-    constrained_host: off
-    android: off
-  native:
-    ractor_safety_unknown: deny
-  performance:
-    require_output_digest: true
-    benchmark_clock: monotonic
-  dependencies:
-    artifact_store: sha256
-    bundler_remains_authoritative: true
 
 # The deploy gate in lib/cli/pipeline.rb adds these for each kind of evidence a
 # deploy carries. It read this section before it existed, so every deploy
@@ -2219,27 +2174,6 @@ face_ascii:
     no_random_geometry: true
 
 
-# Personal-device privacy contract. Adapters must enforce this at execution time;
-# a declarative policy alone does not prove an adapter is wired to it.
-personal_privacy:
-  default: deny
-  local_permission_ledger: .master/permissions/personal.json
-  native_os_permission_required: true
-  explicit_owner_confirmation_required: true
-  purpose_bound_grants: true
-  expiry_supported: true
-  revocation_effect: immediate
-  inspectable_audit_trail: true
-  hidden_background_recording: forbidden
-  default_disabled_scopes: [microphone, speech_recognition, camera, location, contacts, messages, notifications, personal_memory, calendar_read, financial_data, financial_actions, tradedoubler.claims.read, tradedoubler.claims.prepare, tradedoubler.claims.submit, external_messages, purchases, deployment, destructive_actions]
-  consequential_financial_actions:
-    fresh_transaction_specific_approval: required
-    verified_amount_recipient_consequences: required
-  companion:
-    claim_personhood_or_romantic_reciprocity: forbidden
-    pressure_to_share_data_or_use_system: forbidden
-    refusal_must_not_affect_other_users: required
-
 # Canonical inventory of every executable Law identity. Law policy and its
 # cross-modal reach are declared here; Ruby sources implement detectors and
 # semantic evaluators. Missing evidence for any modality is INCONCLUSIVE.
@@ -2265,13 +2199,7 @@ design_thresholds:
     large: 60
     headline: 45
 
-# Where the CDP-rendered Laws may run. The 1 GB OpenBSD box hosts Rails, Solid
-# Queue and Postgres; headless Chromium would compete with all three for
-# memory. The rendered suite therefore stays on the dev machine and CI, and a
-# host with no Chrome reports INCONCLUSIVE rather than red - the suite already
-# degrades that way; this records the policy behind it.
-rendered_cdp:
-  forbidden_environments: [openbsd-vps]
-  allowed_environments: [dev-machine, ci]
-  no_chrome_is: inconclusive
-  reason: "Chromium competes with Rails, Solid Queue and Postgres on the 1 GB box"
+# Where the CDP-rendered Laws may run: the dev machine and CI. The 1 GB OpenBSD
+# box hosts Rails, Solid Queue and Postgres, and headless Chromium would
+# compete with all three for memory; a host with no Chrome reports
+# INCONCLUSIVE rather than red.
