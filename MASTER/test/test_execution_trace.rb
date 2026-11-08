@@ -36,6 +36,24 @@ class TestExecutionTrace < Minitest::Test
     assert_equal [], trace.send(:scope_paths)
   end
 
+  # The fold passes "/fix master" through as typed; lowercase once resolved to a
+  # path that exists nowhere, so the trace raised and the run ended with zero
+  # inventoried files (2026-11-08 session). A bare tree word is the tree.
+  def test_a_lowercase_bare_tree_word_resolves_to_the_canonical_tree
+    Dir.mktmpdir("execution-trace-lowercase-tree") do |root|
+      FileUtils.mkdir_p(File.join(root, "MASTER"))
+      trace = Master::Fix::ExecutionTrace.new(root:, scope: ["master"], ruby_checker: ->(_path) {})
+
+      assert_equal ["MASTER"], trace.send(:scope_paths)
+    end
+  end
+
+  def test_all_trees_named_in_any_case_mean_the_whole_checkout
+    trace = Master::Fix::ExecutionTrace.new(root: "/tmp/pub5", scope: %w[master rails openbsd studio biz], ruby_checker: ->(_path) {})
+
+    assert_equal [], trace.send(:scope_paths)
+  end
+
   def test_single_absolute_scope_becomes_a_repository_relative_git_path
     Dir.mktmpdir("execution-trace-scope") do |root|
       FileUtils.mkdir_p(File.join(root, "RAILS"))

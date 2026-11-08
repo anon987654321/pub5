@@ -58,6 +58,12 @@ module Master
         text = target.to_s.strip
         return @root if text.empty?
 
+        # A bare tree word names the tree, whatever case it arrives in: the fold
+        # passes "/fix master" through as typed, lowercase matched no tracked
+        # files, and the run inventoried nothing before it ended (2026-11-08).
+        tree = MasterPaths::TREES.find { |name| name.casecmp?(text) }
+        text = tree if tree
+
         if text.start_with?("../")
           candidate = text.delete_prefix("../")
           text = candidate if MasterPaths::TREES.any? { |tree| candidate == tree || candidate.start_with?("#{tree}/") }

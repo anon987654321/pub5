@@ -218,6 +218,18 @@ class TestFixTree < Minitest::Test
     assert_equal %w[lib/a.rb lib/a_helper.rb lib/tiny.rb], tree.files
   end
 
+  # A bare tree word is the tree, not a path under the repo root: "/fix master"
+  # typed in the fold once inventoried nothing and ended the run (2026-11-08).
+  def test_a_lowercase_bare_tree_word_names_that_tree
+    write("MASTER/master.rb", BODY)
+    git("add", ".")
+
+    tree = Master::Fix::Tree.new(root: @root, target: "master")
+
+    assert_equal tree.files, Master::Fix::Tree.new(root: @root, target: "MASTER").files
+    assert_equal ["MASTER/master.rb"], tree.files
+  end
+
   private
 
   def view(tree) = Master::Fix::TreeView.new(tree).render

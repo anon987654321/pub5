@@ -128,8 +128,14 @@ module Master
 
       # ExecutionTrace always inventories from the pub5 repository root. Scope
       # names are git pathspecs, while an empty scope means the whole checkout.
+      # A bare tree word is normalized to the canonical tree directory whatever
+      # case it arrives in: "/fix master" once resolved to a path that exists
+      # nowhere and inventoried nothing (2026-11-08).
       def scope_paths
         scopes = Array(@scope).compact.flat_map { |scope| scope.to_s.split(/[\s,]+/) }.reject(&:empty?)
+        scopes.map! do |scope|
+          MasterPaths::TREES.find { |tree| tree.casecmp?(scope) } || scope
+        end
         return [] if scopes.empty?
         return [] if scopes.uniq.sort == MasterPaths::TREES.sort
 
