@@ -224,7 +224,7 @@ module Dilla
         ruby dilla.rb                            render the section-aware 24-bar showcase
         ruby dilla.rb --list                     progressions, drums, grooves and profiles
         ruby dilla.rb --style PROFILE             j_dilla/flying_lotus/jazz_soul/funk/
-                                                 ambient/drum_and_bass/noise_sound_design
+                                                 ambient/drum_and_bass/noise_sound_design/royksopp
         ruby dilla.rb --random --out PATH         random progression and drum grammar
         ruby dilla.rb --progression N|--id --out PATH
             [--drums ID] [--profile P] [--groove 0.85-1.25] [--bpm X] [--bars N]

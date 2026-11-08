@@ -427,7 +427,7 @@ class TestDillaArrangementAndOfflineExport < Minitest::Test
 
   def test_offline_style_profiles_resolve_without_network_services
     profiles = Dilla.catalogue.fetch("production_profiles")
-    %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design].each do |name|
+    %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design royksopp].each do |name|
       assert profiles.key?(name), "missing local production profile #{name}"
     end
     plan = Dilla.resolve_render_plan(Dilla::Options.new.tap { |opts| opts.style = "flying_lotus" })
@@ -539,5 +539,19 @@ class TestDillaFMDrumVoices < Minitest::Test
     refute_equal dust.dig("kick", "fm_ratio"), break_kit.dig("kick", "fm_ratio")
     refute_equal break_kit.dig("snare", "fm_index"), basement.dig("snare", "fm_index")
     refute_equal dust.dig("hat", "fm_ratio"), basement.dig("hat", "fm_ratio")
+  end
+end
+
+
+class TestDillaRoyksoppProfile < Minitest::Test
+  def test_royksopp_is_a_distinct_six_chord_synth_pop_lane
+    opts = Dilla::Options.new
+    opts.style = "royksopp"
+    plan = Dilla.resolve_render_plan(opts)
+    assert_equal "dusty_paradise", plan.fetch(:progression).fetch("id")
+    assert_equal 6, plan.fetch(:progression).fetch("chords").length
+    assert_equal "royksopp_pulse", plan.fetch(:drums)
+    assert_equal "juno_106", plan.fetch(:voice)
+    assert_equal "on_grid", plan.fetch(:profile)
   end
 end
