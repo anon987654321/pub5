@@ -118,6 +118,7 @@ module Master
             "Registered operator commands: #{commands.join(' ')}",
             "Voice runtime: #{voice.join('; ')}",
             "The command registry and tool registry are distinct. A command may be available to the operator even when it is not an LLM-callable tool. Do not deny a registered capability; explain its actual scope, consent gates and current availability.",
+            "Read-only model-selector output and governed shell stdout recorded in execution history are visible evidence for this turn. Use it; do not claim it is inaccessible when present. Unrecorded terminal output is not visible.",
             "</master_runtime_capabilities>",
           ].join("\n")
         rescue StandardError => e
