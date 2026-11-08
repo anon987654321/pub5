@@ -137,11 +137,17 @@ module Master
         scopes.map do |scope|
           full = File.expand_path(scope, repo)
           next if full == repo
-          unless full.start_with?("#{repo}#{File::SEPARATOR}")
-            raise ArgumentError, "execution trace scope outside repository: #{scope.inspect}"
-          end
           unless File.exist?(full)
             raise ArgumentError, "execution trace scope does not exist: #{scope.inspect}"
+          end
+          # A scope spelled on a case-insensitive filesystem ("master" for
+          # "MASTER") passes exist? but git pathspecs are case-sensitive: the
+          # inventory came back empty and the run died on "contains no
+          # inventoried files" (Johann's log 2026-11-08). realpath answers
+          # the directory's own spelling.
+          full = File.realpath(full)
+          unless full.start_with?("#{repo}#{File::SEPARATOR}")
+            raise ArgumentError, "execution trace scope outside repository: #{scope.inspect}"
           end
           full.delete_prefix("#{repo}#{File::SEPARATOR}")
         end.compact.uniq

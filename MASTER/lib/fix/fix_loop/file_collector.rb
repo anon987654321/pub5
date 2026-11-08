@@ -65,8 +65,9 @@ module Master
           )
           raise "git ls-files failed while collecting #{target}" unless status.success?
 
+          scope = canonical_target(target)
           out.split("\0").map { |rel| File.join(root, rel) }
-             .select { |file| File.file?(file) && under_path?(file, target) }
+             .select { |file| File.file?(file) && under_path?(file, scope) }
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "FileCollector.repository_files")
           raise "git inventory unavailable: #{e.class}: #{e.message}"
@@ -87,8 +88,9 @@ module Master
           raise "git ls-files failed while determining incremental fix scope" unless untracked_status.success?
 
           paths = tracked.lines.map(&:strip).reject(&:empty?) + untracked.split("\0").reject(&:empty?)
+          scope = canonical_target(target)
           paths.uniq.map { |rel| File.join(root, rel) }
-               .select { |file| File.file?(file) && under_path?(file, target) }
+               .select { |file| File.file?(file) && under_path?(file, scope) }
         end
 
         def path_policy_root
@@ -232,6 +234,18 @@ module Master
           exp = File.expand_path(path)
           exp_root = File.expand_path(root)
           exp == exp_root || exp.start_with?("#{exp_root}#{File::SEPARATOR}")
+        end
+
+        # A target spelled on a case-insensitive filesystem ("master" for
+        # "MASTER") passes File.exist? while this prefix test is
+        # case-sensitive: the collection came back empty and the run reported
+        # "tree has no tracked files" (Johann's log 2026-11-08). realpath
+        # answers the directory's own spelling.
+        def canonical_target(target)
+          path = File.expand_path(target, @root)
+          File.exist?(path) ? File.realpath(path) : path
+        rescue StandardError
+          File.expand_path(target, @root)
         end
       end
     end

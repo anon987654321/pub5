@@ -151,7 +151,22 @@ module Master
       def same_state_meaning?(state, previous)
         return false if previous.nil?
 
-        state.to_s.sub(STATE_TOKEN_COUNT, "") == previous.to_s.sub(STATE_TOKEN_COUNT, "")
+        state_meaning(state) == state_meaning(previous)
+      end
+
+      # What a person decides on: model, violations, error. The git segment
+      # drifts with every save (ahead/dirty), the phase word with every
+      # stage, the token count with every turn — the log showed "main dirty
+      # llm discover, grok-cli:auto, 270/128.0k" repainting between prompts
+      # with nothing new to say (Johann 2026-11-08). The prompt below the
+      # state line already carries git and phase live, so the meaning
+      # compares without them.
+      def state_meaning(state)
+        fields = state.to_s.sub(STATE_TOKEN_COUNT, "").split(", ", -1)
+        operator = fields.shift.to_s.split
+        meaning = fields.reject { |field| field.match?(STATE_TOKEN_COUNT) }
+        meaning.unshift("error") if operator.include?("error")
+        meaning.join(", ")
       end
 
       # An empty line does nothing, as in a shell: Enter never runs an action
@@ -429,7 +444,11 @@ module Master
           end
         end
       rescue StandardError => e
-        terminal_puts("queue0: worker failed - #{e.class}: #{e.message}", io: $stderr)
+        # The message alone named nothing a person could act on: "undefined
+        # method 'value' for true" (Johann's log 2026-11-08) sent the reader
+        # hunting a call site with no address. The first frame is the address.
+        where = e.backtrace&.first.to_s.sub(%r{\A.*/lib/}, "")
+        terminal_puts("queue0: worker failed - #{e.class}: #{e.message} at #{where}", io: $stderr)
       ensure
         restart = false
         @turn_queue_mutex.synchronize do

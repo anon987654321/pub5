@@ -255,6 +255,7 @@ module Master
           summary: "CLI speech is off by default; enable it explicitly when wanted",
           detail: ["/voice - current voice, mode, profile, speaking rate and recent latency.",
                    "/voice on|off - enable or silence CLI speech for this session; default is off.",
+                   "/tts is a spelling of /voice, not a second command.",
                    "/voice natural - select clean, fast, everyday speech.",
                    "/voice expressive - use the expressive synthesis pipeline.",
                    "/voice dilla - enable Dilla's effects rack and room.",
@@ -383,7 +384,9 @@ module Master
       # /review and /critique are deliberately not routed (TurnRouter keeps
       # /fix as the one advertised command) and the summary names only the
       # surface: the flags are the fix page's detail, not the category list's.
-      FIX_SUMMARY = "/fix [path]"
+      # The fix category line is the only "/fix [path]" the overview prints;
+      # a second copy appended after input0 read as a repeated device probe
+      # (Johann's log 2026-11-08, /help twice naming fix0).
 
       CATEGORY_ORDER =%w[fix health session model review change interface media constitution help].freeze
 
@@ -414,7 +417,6 @@ module Master
           "#{category}0 at master0: #{commands.join(' ')}"
         end
         lines << "input0 at master0: describe work in plain language; slash commands are optional."
-        lines << "fix0 at master0: #{FIX_SUMMARY}"
         lines.join("\n")
       end
     end

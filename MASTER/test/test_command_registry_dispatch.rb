@@ -238,7 +238,10 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes Registry.help_summary, "help0 at master0: /help [command]"
     assert_includes Registry.help_summary, "/exit /quit"
     assert_includes Registry.help_summary, "input0 at master0: describe work in plain language; slash commands are optional."
-    assert_includes Registry.help_summary, "fix0 at master0: #{Registry::FIX_SUMMARY}"
+    # The overview names the fix unit once: the fix category line is the only
+    # "/fix [path]", and the second copy the old footer appended read as a
+    # repeated device probe (Johann's log 2026-11-08, /help twice naming fix0).
+    assert_equal 1, Registry.help_summary.lines.count { |line| line.include?("fix0 at master0") }
   end
 
   def test_task_and_capability_commands_are_registered_and_documented

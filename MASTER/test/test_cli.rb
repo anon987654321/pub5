@@ -960,6 +960,55 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_equal "saved\n", out
   end
 
+  # The state line's meaning is model, violations and error. Git drifts with
+  # every save, the phase with every stage, the token count with every turn —
+  # "main dirty llm discover, grok-cli:auto, 270/128.0k" repainted between
+  # prompts with nothing new to say (Johann's log 2026-11-08). The prompt
+  # below it already carries git and phase live.
+  def test_the_state_line_meaning_ignores_git_phase_and_token_drift
+    live = "main dirty llm discover, grok-cli:auto, 260/128.0k"
+    drifted = "main ahead 1 dirty llm model, grok-cli:auto, 270/128.0k"
+    errored = "main dirty llm error, grok-cli:auto, 270/128.0k"
+    other_lane = "main dirty llm discover, glyph-cluster, 260/128.0k"
+    violating = "main dirty llm discover, grok-cli:auto, 260/128.0k, 2 violations"
+
+    assert @cli.send(:same_state_meaning?, drifted, live)
+    refute @cli.send(:same_state_meaning?, errored, live), "the error word is news"
+    refute @cli.send(:same_state_meaning?, other_lane, live), "a lane change is news"
+    refute @cli.send(:same_state_meaning?, violating, live), "violations are news"
+  end
+
+  # The stream prints every chunk as it arrives; the display closes the row
+  # instead of printing the accumulated buffer again. The old re-print put a
+  # second copy on the same row: "Grok 4.7, from xAI.Grok 4.7, from xAI."
+  # (Johann's log 2026-11-08).
+  def test_a_streamed_reply_is_not_printed_twice
+    result = Master::Result.ok(output: "Grok 4.7, from xAI.")
+
+    out, = capture_io do
+      @cli.send(:display_ok, ok: result, accumulated: +"Grok 4.7, from xAI.", streamed: true)
+    end
+
+    assert_equal "\n", out
+  end
+
+  # A streamed turn whose final answer arrived after the stream stopped (the
+  # next lane, a tool loop's last reply) still prints the answer. The
+  # duplicate check reads the raw output: the rendered form wears ANSI
+  # escapes the stream never showed, and one escaped prefix read as "not yet
+  # printed" — the reply then appeared twice.
+  def test_an_unstreamed_final_answer_still_prints_once
+    result = Master::Result.ok(output: "the tool loop's final word")
+    @renderer.expect(:measure, "the tool loop's final word\n", [String], width: Integer)
+
+    out, = capture_io do
+      @cli.send(:display_ok, ok: result, accumulated: +"the streamed lead-up", streamed: true)
+    end
+
+    assert_includes out, "the tool loop's final word"
+    refute_includes out, "the streamed lead-upthe tool loop"
+  end
+
   def test_pipe_dispatches_slash_commands
     @cli.define_singleton_method(:handle_repl_line) { |line| @piped_command = line }
 

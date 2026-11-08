@@ -20,6 +20,16 @@ class TestCliStagesRoute < Minitest::Test
     assert_equal :status_handler, result.value![:handler]
   end
 
+  # A spelling is not a second verb: /tts resolves to the voice handler and
+  # stays out of /help's command count. The old table answered "unknown
+  # command: /tts" while /voice owned the behaviour (Johann's log 2026-11-08).
+  def test_a_spelling_resolves_to_the_verb_it_names
+    result = route("voice").call(command("tts"))
+
+    assert result.ok?
+    assert_equal :voice_handler, result.value![:handler]
+  end
+
   def test_a_typo_suggests_the_nearest_command
     result = route("status", "review", "rollback").call(command("stauts"))
 

@@ -172,7 +172,7 @@ module Master
         workspace = File.realpath(root)
         lambda do |argv|
           values = Array(argv)
-          if values == %w[git ls-files] || values == %w[git --no-pager diff --check --no-ext-diff]
+          if values == %w[git ls-files] || values == %w[git ls-files -z] || whitespace_check?(values)
             nil
           elsif values.length == 3 && values[0] == "ruby" && values[1] == "-c"
             path = values[2]
@@ -189,13 +189,30 @@ module Master
               end
             end
           else
-            "only ruby -c on one in-tree .rb file, git ls-files, or git diff --check is allowed"
+            # The refusal echoes what arrived: a bare "allowed: ..." sent the
+            # caller back to blind variations of the same command, and the
+            # fold died of repeated refusals (Johann's log 2026-11-08). The
+            # canonical whitespace check also answers under its natural
+            # spellings — "git diff --check" is the same read-only request
+            # as the fully-flagged form.
+            tried = values.first(4).join(" ")[0, 80]
+            "probe refused: #{tried.inspect} - only ruby -c on one in-tree .rb file, " \
+              "git ls-files, or git diff --check is allowed"
           end
         rescue StandardError => e
           "probe policy could not establish scope: #{e.class}"
         end
       rescue StandardError => e
         ->(_argv) { "probe workspace unavailable: #{e.class}" }
+      end
+
+      # git diff --check reads the working tree against the index and names
+      # whitespace-conflict lines; it writes nothing. --no-pager and
+      # --no-ext-diff are the flags that keep it that way, accepted in the
+      # positions git itself takes them.
+      def whitespace_check?(values)
+        rest = values.reject { |value| value == "--no-pager" || value == "--no-ext-diff" }
+        rest[0, 2] == %w[git diff] && rest[2..] == %w[--check]
       end
 
       def network_client(container)

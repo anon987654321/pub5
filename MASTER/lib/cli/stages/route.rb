@@ -12,6 +12,13 @@ module Master
         # of any verb that starts with q.
         EXIT_ALIASES = %w[exit quit].freeze
 
+        # Alternate names a person's muscle memory already carries. A spelling
+        # is not a second verb: it resolves to the verb it names and stays out
+        # of /help's command count, so the surface stays closed. /tts arrived
+        # as "unknown command" while /voice owned the behaviour (Johann's log
+        # 2026-11-08).
+        SPELLINGS = { "tts" => "voice" }.freeze
+
         def initialize(commands:, agent:, bus: nil)
           @commands = commands
           @agent = agent
@@ -31,7 +38,7 @@ module Master
         def route_command(ctx)
           return Result.err("bye", category: :shutdown) if EXIT_ALIASES.include?(ctx.command)
 
-          cmd = @commands[ctx.command]
+          cmd = @commands[SPELLINGS.fetch(ctx.command, ctx.command)]
           unless cmd
             suggestion = closest_command(ctx.command)
             error_message = "unknown command: /#{ctx.command}"

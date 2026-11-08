@@ -578,9 +578,20 @@ class CoreBridgeSandboxTest < Minitest::Test
 
       assert_nil policy.call(["ruby", "-c", "check.rb"])
       assert_nil policy.call(%w[git ls-files])
+      assert_nil policy.call(%w[git ls-files -z])
       assert_nil policy.call(%w[git --no-pager diff --check --no-ext-diff])
+      # The whitespace check answers under its natural spellings too: a model
+      # that writes "git diff --check" is making the same read-only request,
+      # and the old exact-match table refused it until the fold died of
+      # repeated refusals (Johann's log 2026-11-08).
+      assert_nil policy.call(%w[git diff --check])
+      assert_nil policy.call(%w[git --no-pager diff --check])
+      assert_nil policy.call(%w[git diff --check --no-ext-diff])
       assert_match(/relative \.rb path|escapes/, policy.call(["ruby", "-c", "../outside.rb"]))
       assert_match(/only ruby -c/, policy.call(["ruby", "-e", "puts :unsafe"]))
+      # The refusal echoes what arrived, so the caller stops replaying
+      # variations of the same command blind.
+      assert_match(/probe refused: "ruby -e puts/, policy.call(["ruby", "-e", "puts :unsafe"]))
     end
   end
 

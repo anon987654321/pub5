@@ -9,6 +9,7 @@ module Master
       private
 
       def display_result(result:, accumulated:, streamed:, units_console: false)
+        print_answer_attribution
         case result
         in Master::Result::Ok => ok
           @last_ok = true
@@ -64,7 +65,13 @@ module Master
         end
 
         if streamed
-          terminal_puts(text) unless text.end_with?("\n")
+          # The stream already carried every chunk to the operator as it
+          # arrived (handle_stream_text prints each one at the cursor). All
+          # the display owes the stream here is the row's terminating newline:
+          # printing the accumulated buffer again appended a second copy to
+          # the first ("Grok 4.7, from xAI.Grok 4.7, from xAI.", Johann's
+          # log 2026-11-08).
+          terminal_puts unless text.to_s.empty? || text.end_with?("\n")
           text = print_unstreamed_reply(ok, streamed_text: text)
         elsif command
           # Pipeline commands already streamed their live dmesg units. Other
@@ -205,13 +212,48 @@ module Master
       end
 
       # A streamed turn whose answer came from a later step (a tool loop's final reply, or the next lane after
-      # one failed mid-stream) printed only what led up to it; the answer itself is printed here.
+      # one failed mid-stream) printed only what led up to it; the answer itself is printed here. The stream
+      # carries the raw reply while the result carries its rendered form, so the duplicate check reads the raw
+      # output: rendered text wears ANSI escapes the stream never showed, and one escaped prefix read as "not
+      # yet printed" — the reply then appeared twice (Johann's log 2026-11-08).
       def print_unstreamed_reply(ok, streamed_text:)
-        final = success_text(ok).to_s.strip
-        return streamed_text if final.empty? || streamed_text.include?(final[0, 120])
+        raw = raw_success_text(ok).to_s.strip
+        return streamed_text if raw.empty? || streamed_text.include?(raw[0, 120])
 
-        display_prepared_terminal_output(@refs.renderer.measure(final, width: reply_measure))
-        final
+        display_prepared_terminal_output(measured_reply(raw))
+        raw
+      end
+
+      # The reply before presentation: the stream printed raw chunks, so the
+      # duplicate check and the spoken form read the bytes the stream carried.
+      def raw_success_text(ok)
+        value = ok.value
+        return value.to_s unless value.respond_to?(:[])
+
+        output = value[:output].to_s
+        output.empty? ? value[:rendered].to_s : output
+      end
+
+      def measured_reply(text)
+        rendered = text
+        rendered = @refs.renderer.terminal_markdown(text, width: reply_measure) if @refs.renderer.respond_to?(:terminal_markdown)
+        @refs.renderer.measure(rendered.to_s.chomp, width: reply_measure)
+      end
+
+      # A queued turn's reply prints long after its prompt scrolled past; with
+      # several lines waiting, the answer read as belonging to whichever
+      # message was typed last (Johann's log 2026-11-08: the depression answer
+      # read as a reply to "hey hey"). One dim line binds a turn running off
+      # the queue to the line that started it.
+      def print_answer_attribution
+        return unless Thread.current == @turn_worker && $stdout.tty?
+
+        question = @last_input.to_s.scrub.gsub(/\s+/, " ").strip
+        return if question.empty?
+
+        Master::Trace::Dmesg.status("queue0", "answered: #{question[0, 72]}")
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.answer_attribution", event_bus: @refs.bus)
       end
 
       def success_text(ok)

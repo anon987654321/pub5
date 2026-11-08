@@ -182,7 +182,14 @@ module Master
             end
           end
         rescue SystemCallError => e
-          Master::Ground::Swallow.log(e, context: "ProviderHealth.events_for", path: candidate)
+          # The telemetry writer rotates by rename, so a file can vanish
+          # between the existence check and this open. That race is the
+          # reader losing nothing: no events is the truthful answer, and
+          # twenty-three swallowed ENOENTs filled one run's error summary
+          # (Johann's log 2026-11-08). A denied or damaged path still
+          # reports.
+          raise unless e.is_a?(Errno::ENOENT)
+
           []
         end
       end
