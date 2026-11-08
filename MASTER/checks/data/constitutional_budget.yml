@@ -26,3 +26,17 @@ targets:
   # first design finding anyone adds, which is the point.
   OPENBSD: 0
   MASTER: 15
+
+# The constitution measures itself: laws.yml carries a line ceiling under the
+# same only-ratchets-down contract the targets above charge the trees
+# (convergence.yml workstream constitution_self_budget). The count is Ruby's
+# File.foreach over the file, the same count MASTER/test/test_constitutional_budget.rb
+# enforces: a line added without an equal removal fails the test, and the
+# ceiling here moves down only, in the commit that removed the lines.
+# laws.yml is a sacred path: the ceiling is read by everyone, written by the
+# operator alone. The ceiling is re-measured on the tree it lands on: 4462 on
+# the pre-port main, 4208 here, because the pub4→pub5 port slimmed the
+# constitution before this row arrived.
+constitution_lines:
+  target: MASTER/data/laws.yml
+  ceiling: 4208

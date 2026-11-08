@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "time"
+
 require_relative "receipt"
 require_relative "workstreams"
 
@@ -8,9 +10,20 @@ module Master
     module Proof
       ROOTS = Master::Convergence::ROOTS
 
+      # An INCONCLUSIVE that outlives this many seconds since the receipt that
+      # first dated it reopens as FAIL carrying that receipt: tri-state
+      # evidence must not settle into permanent amber (convergence.yml
+      # workstream inconclusive_aging).
+      WINDOW = 7 * 24 * 60 * 60
+
+      # Escalation looks this many receipts back for the one that first dated
+      # the inconclusive. Ten (Receipt.recent's default) would lose the
+      # receipt on a busy tree; unbounded would read the whole directory.
+      AGING_LOOKBACK = 200
+
       module_function
 
-      def run(root: Master::REPO_ROOT)
+      def run(root: Master::REPO_ROOT, now: -> { Time.now.utc }, window: WINDOW)
         checks = [
           check_constitution(root),
           check_trees(root),
@@ -18,6 +31,8 @@ module Master
           check_wishlist(root),
           check_snapshot_contract(root),
         ]
+        checks = age_inconclusives(checks, receipts: Receipt.recent(root:, limit: AGING_LOOKBACK),
+                                   now:, window:)
         failed = checks.select { |row| row[:state] == "fail" }
         inconclusive = checks.select { |row| row[:state] == "inconclusive" }
         state = if failed.any? then :fail
@@ -52,6 +67,39 @@ module Master
         lines.join("\n")
       rescue ArgumentError
         "usage: /fix --prove history [N]"
+      end
+
+      # Reopen stale INCONCLUSIVE check rows as FAIL, citing the receipt that
+      # first dated them. Receipts arrive newest first; a pass or a fail for
+      # the same check name ends the inconclusive streak and restarts the
+      # clock, so an operator's verdict is never aged out from under them.
+      def age_inconclusives(checks, receipts:, now:, window: WINDOW)
+        checks.map do |row|
+          next row unless row[:state] == "inconclusive"
+
+          first_dated = nil
+          receipts.each do |receipt|
+            prior = Array(receipt.dig("details", "checks")).find { |item| item["name"] == row[:name] }
+            state = prior&.dig("state")
+            break if %w[pass fail].include?(state)
+
+            first_dated = receipt if state == "inconclusive"
+          end
+          next row unless first_dated
+          next row unless first_dated["generated_at"]
+
+          dated_at = begin
+            Time.iso8601(first_dated["generated_at"])
+          rescue ArgumentError
+            nil
+          end
+          next row unless dated_at
+          next row unless now.call - dated_at >= window
+
+          { name: row[:name], state: "fail",
+            detail: "#{row[:detail]} - inconclusive since #{first_dated["id"]} " \
+                    "(#{first_dated["generated_at"]}); the review window closed without a verdict" }
+        end
       end
 
       def check_constitution(root)

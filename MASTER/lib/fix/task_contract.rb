@@ -73,6 +73,16 @@ module Master
         allowed_proof = Array(schema.fetch("proof_types")).map(&:to_s)
         unknown_proof = proof - allowed_proof
         raise Invalid, "unknown proof type(s): #{unknown_proof.join(', ')}" unless unknown_proof.empty?
+
+        # A scope that touches a published contract owes the document: the
+        # documentation_review proof type is declared before any edit happens
+        # (convergence.yml workstream documentation_completeness).
+        touched_contracts = Array(schema.fetch("documentation_required_paths", [])).select { |path| covers?(path, scope:) }
+        if touched_contracts.any? && !proof.include?("documentation_review")
+          raise Invalid, "scope touches a published contract (#{touched_contracts.join(', ')}) - " \
+                         "declare the documentation_review proof type and move the document in the same commit"
+        end
+
         new_paths = normalize_new_paths(input.fetch("new_paths", []), scope:, schema:)
 
         Contract.new(
@@ -278,6 +288,7 @@ module Master
           "A missing task contract is an empty new_paths declaration: automated writes may edit existing repository paths but must refuse every new tracked path unless its exact path and reason are declared in an active contract.",
           "A new tracked file needs an exact path and non-empty reason in optional new_paths, inside the task scope. A new directory needs a genuine ownership boundary; never create helpers, tests, docs, config or utility folders merely for convenience.",
           "Proof always includes baseline hashes, a path-scoped diff and a Law assessment. Add relevant tests, rendered/runtime evidence, accessibility review, citations or human review.",
+          "A scope that touches a published contract (README files, TODO.md, TREE_CONTRACTS.md, apps.yml, the task contract itself) also declares documentation_review and moves the document in the same commit.",
           "If a required measurement is absent or a format has no verifier, report INCONCLUSIVE or NOT_RUN; do not infer PASS.",
           "Schema: MASTER/data/task_contract.yml.",
         ].join("\n")

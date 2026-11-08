@@ -292,32 +292,32 @@ workstreams:
     proof: MASTER/test/test_model_quota_forecast.rb; no lane in the doc is wired until its gate is met
 
   # --- architecture review of MASTER (2026-11-03, operator chat) ---
-  # Design of record only: nothing below is wired, each row names where its
-  # proof will live, per the free_compute_design_of_record convention. The
-  # review that surfaced them read the tree statically; the numbers each proof
-  # needs come from the first measured run, not from the review.
+  # The first three rows landed 2026-11-08 from a source-proof sandbox with no
+  # Ruby interpreter: implementations and focused tests are authored and
+  # hand-verified, their pinned-Ruby suite run stays NOT_RUN and folds into
+  # TODO.md section 1's current-revision acceptance.
   - id: inconclusive_aging
-    state: missing
+    state: landed
     title: >-
       An INCONCLUSIVE that outlives its operation's review window reopens as
       FAIL carrying the receipt that first dated it, so tri-state evidence
       cannot settle into permanent amber
     implementation: MASTER/lib/convergence/proof.rb
-    proof: escalation rows in the convergence receipt; test_convergence_proof fails on a dated INCONCLUSIVE whose window closed without a verdict
+    proof: age_inconclusives in convergence/proof.rb reopens the row citing the first-dated receipt id, a verdict in between restarts the clock; test_convergence_proof covers escalation, the window and the restarts (suite run NOT_RUN 2026-11-08)
   - id: constitution_self_budget
-    state: missing
+    state: landed
     title: >-
       The constitution measures itself: laws.yml carries a line ceiling under
       the same only-ratchets-down contract the scan budgets charge the code
-    implementation: MASTER/data/laws.yml
-    proof: a ceiling row beside checks/data/constitutional_budget.yml and a test that fails when the constitution grows without an equal removal
+    implementation: MASTER/checks/data/constitutional_budget.yml
+    proof: constitution_lines ceiling 4208 beside the scan targets (re-measured on the port tree; 4462 on the pre-port main), test_constitutional_budget fails on growth without an equal removal and refuses a rising ceiling (suite run NOT_RUN 2026-11-08)
   - id: documentation_completeness
-    state: missing
+    state: landed
     title: >-
       A change that moves a public contract moves its document in the same
       commit, declared on the task contract as documentation_review proof
     implementation: MASTER/data/task_contract.yml
-    proof: test_task_contract builds a contract carrying documentation_review; contract-touching intents without it fail the fix review
+    proof: documentation_required_paths in task_contract.yml; TaskContract.build refuses a contract-touching scope without documentation_review, and the interactive fix surface declares the obligation its scope takes on (test_task_contract run NOT_RUN 2026-11-08)
   - id: ops_alert_channel
     state: missing
     title: >-

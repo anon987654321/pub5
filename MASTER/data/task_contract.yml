@@ -8,6 +8,23 @@ common_proof: [baseline_hashes, path_scoped_diff, law_assessment]
 # must show the document moved with the code, not that prose agrees with
 # intent.
 proof_types: [baseline_hashes, path_scoped_diff, law_assessment, focused_tests, full_suite, rendered_evidence, runtime_evidence, accessibility_review, source_citations, human_review, documentation_review]
+# A scope that touches one of these published contracts owes the
+# documentation_review proof type: the document moves in the same commit as
+# the change it describes. A contract without the proof fails validation, so
+# the refusal lands before any edit, not after.
+documentation_required_paths:
+  - README.md
+  - AGENTS.md
+  - TODO.md
+  - TREE_CONTRACTS.md
+  - MASTER/README.md
+  - MASTER/convergence.yml
+  - MASTER/data/task_contract.yml
+  - MASTER/checks/checks.yml
+  - RAILS/README.md
+  - RAILS/apps.yml
+  - OPENBSD/README.md
+  - STUDIO/README.md
 preservation_dimensions: [visual_identity, layout, structure, assets, behavior, accessibility, public_contracts, operator_owned_values, product_identity, content_semantics, data_semantics]
 intents:
   content_only:

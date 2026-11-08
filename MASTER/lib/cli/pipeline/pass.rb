@@ -534,11 +534,17 @@ def default_apply?(*) = false
                   else
                     [relative]
                   end
+          # A scope that reaches a published contract owes the document
+          # (task_contract.yml documentation_required_paths); the interactive
+          # surface declares the obligation it is about to take on.
+          proof = ["focused_tests"]
+          required = Array(Master::Fix::TaskContract.template.fetch("documentation_required_paths", []))
+          proof << "documentation_review" if required.any? { |path| Master::Fix::TaskContract.covers?(path, scope:) }
           Master::Fix::TaskContract.build(
             intent: @task_intent,
             scope:,
             preserve: [],
-            proof: ["focused_tests"],
+            proof:,
           )
         end
 

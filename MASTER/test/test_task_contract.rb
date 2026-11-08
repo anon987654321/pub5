@@ -66,7 +66,16 @@ class TestTaskContract < Minitest::Test
 
   def test_transaction_rejects_out_of_scope_paths_before_snapshotting
     Dir.mktmpdir("task-contract-transaction") do |root|
-      contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
+      contract = CONTRACT.build(
+        intent: "functional_change",
+        scope: ["allowed.txt"],
+        preserve: [],
+        proof: [],
+        # The fixture writes allowed.txt fresh in its scratch root, and the
+        # transaction's new-path rule demands a declaration for every file no
+        # git tree holds yet.
+        new_paths: [{ path: "allowed.txt", reason: "The fixture writes the file fresh in its scratch root." }],
+      )
 
       CONTRACT.with_current(contract) do
         transaction = Master::Fix::Transaction.new(root:, paths: ["allowed.txt"])
@@ -80,7 +89,13 @@ class TestTaskContract < Minitest::Test
 
   def test_transaction_rejects_out_of_scope_enlistment
     Dir.mktmpdir("task-contract-enlistment") do |root|
-      contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
+      contract = CONTRACT.build(
+        intent: "functional_change",
+        scope: ["allowed.txt"],
+        preserve: [],
+        proof: [],
+        new_paths: [{ path: "allowed.txt", reason: "The fixture writes the file fresh in its scratch root." }],
+      )
 
       CONTRACT.with_current(contract) do
         transaction = Master::Fix::Transaction.new(root:, paths: ["allowed.txt"]).begin!
@@ -250,5 +265,44 @@ class TestTaskContract < Minitest::Test
     )
 
     assert_includes contract.proof, "documentation_review"
+  end
+
+  def test_contract_touching_scope_demands_documentation_review
+    error = assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(intent: "content_only", scope: ["TODO.md"], preserve: [], proof: ["focused_tests"])
+    end
+
+    assert_includes error.message, "documentation_review"
+    assert_includes error.message, "TODO.md"
+  end
+
+  def test_tree_scoped_scope_demands_documentation_review_for_the_contracts_inside
+    error = assert_raises(CONTRACT::Invalid) do
+      CONTRACT.build(intent: "functional_change", scope: ["RAILS/**"], preserve: [], proof: [])
+    end
+
+    assert_includes error.message, "RAILS/apps.yml"
+  end
+
+  def test_documentation_review_satisfies_a_contract_touching_scope
+    contract = CONTRACT.build(
+      intent: "content_only",
+      scope: ["TODO.md", "MASTER/lib/fix/task_contract.rb"],
+      preserve: [],
+      proof: ["documentation_review"],
+    )
+
+    assert_includes contract.proof, "documentation_review"
+  end
+
+  def test_ordinary_code_scope_needs_no_documentation_review
+    contract = CONTRACT.build(
+      intent: "functional_change",
+      scope: ["MASTER/lib/fix/task_contract.rb"],
+      preserve: [],
+      proof: ["focused_tests"],
+    )
+
+    refute_includes contract.proof, "documentation_review"
   end
 end
