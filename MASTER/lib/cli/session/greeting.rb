@@ -28,13 +28,9 @@ module Master
         Master::Ground::Swallow.log(e, context: "cli.greeting", event_bus: @refs.bus)
       end
 
-      # Named outright: told only "the language of his last message", the model answered an English
-      # message in Norwegian about half the time, cued by the hour and the city.
-      GREETING_LANGUAGES = { nb: "Norwegian Bokmål", ms: "Malay", en: "English" }.freeze
-
       def greeting_prompt
         context = Master::CLI::Welcome.context(Master::ROOT)
-        language = GREETING_LANGUAGES.fetch(:en, "English")
+        language = "English"
 
         <<~PROMPT
           You are MASTER, greeting the operator as a terminal session opens. One natural line of at most
