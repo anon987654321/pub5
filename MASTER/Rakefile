@@ -181,6 +181,12 @@ task :selfcheck do
   abort report.line unless report.clean?
 end
 
+desc "Voice family proof: the focused voice measurement tests"
+task :voice_quality do
+  tests = FileList["test/voice/test_*.rb", "test/voice/*_test.rb"]
+  ruby "-Ilib:test", *tests
+end
+
 desc "Eager-load all Zeitwerk-managed constants"
 task :autoload do
   $LOAD_PATH.unshift(File.join(__dir__, "lib"))

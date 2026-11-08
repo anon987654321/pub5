@@ -206,6 +206,10 @@ ownership:
     purpose: repository audits for capability inventory, data reachability, duplication, Law metadata and design baseline measurements
     risk: medium
     check: cd MASTER && ruby -Ilib:test test/test_capability_inventory.rb
+  tools/voice/:
+    purpose: voice measurement instruments over the lib/voice speech family (rendered-take quality, clipping and loudness)
+    risk: medium
+    check: rake voice_quality
   loop*.gif:
     purpose: the README films' posters, made by bin/loops
     risk: low
