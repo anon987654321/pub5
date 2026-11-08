@@ -205,7 +205,8 @@ class TestSoul < Minitest::Test
     assert_includes section, "audio output="
     assert_includes section, "not a guarantee every provider/request receives every tool"
     assert_includes section, "When captured model-selector output or governed shell stdout is present in the current turn context"
-    assert_includes section, "Result::Err means the operation failed"
+    assert_includes section, "Result::Err is not successful completion"
+    assert_includes section, "skip is not a failure, inconclusive is not a clean result"
     assert_includes section, "Result::Ok confirms handler completion"
   end
 
