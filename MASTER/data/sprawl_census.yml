@@ -40,13 +40,13 @@
 #
 # The vendorables ruling executed on 2026-11-08: the onnxruntime WASM, the
 # smart-turn model, the face mask and the three web/images JPGs left git
-# (eight files, ~24.3 MB, three directories — one of them lone — per
-# TREE_CONTRACTS.md). tracked_files was re-set to the checkout the cut
-# produced; the other fields keep their set values until re-read by the
-# same instrument that set them.
+# (eight files, ~23.6 MiB, three directories — one of them lone — per
+# TREE_CONTRACTS.md). tracked_files was re-set to the checkout the cut and
+# the rebased upstream docs additions produced; the other fields keep their
+# set values until re-read by the same instrument that set them.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7192
+tracked_files: 7195
 tracked_directories: 869
 corpus: 4127
