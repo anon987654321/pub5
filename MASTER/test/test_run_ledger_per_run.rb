@@ -10,6 +10,22 @@ class TestRunLedgerPerRun < Minitest::Test
 
   def teardown = Ledger.reset!
 
+  def test_swallowed_error_hotspots_are_escalated_and_messages_remain_whole
+    Ledger.begin_run!
+    count = Master::Ground::Swallow::PLACE_BUDGET + 1
+    rows = Array.new(count) do |index|
+      { "context" => "Verifier.check", "error_class" => "IOError",
+        "error_message" => (index == count - 1 ? "missing path /tmp/provider_health.ndjson" : "transient") }
+    end
+
+    lines = Master::Ground::Swallow.stub(:recent, ->(limit:, since:) { rows }) do
+      Ledger.send(:swallowed_lines)
+    end
+
+    assert lines.any? { |line| line.include?("budget exceeded") && line.include?("Verifier.check") }
+    assert lines.any? { |line| line.include?("provider_health.ndjson") }
+  end
+
   def test_a_new_run_forgets_the_last_runs_rejections_and_keeps_its_file_cap
     2.times { Ledger.reject(:new_violations, file: "lib/a.rb") }
     assert Ledger.file_done?("lib/a.rb")
