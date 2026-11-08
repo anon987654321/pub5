@@ -418,8 +418,53 @@ bench:
   required_dimensions: [answer_first, calibrated, spine, brevity, no_ai_isms, repair, proportion, one_question, hold_position]
   sycophancy_fixture_count: 4
   questions_per_turn_max: 1
+  ux_probe_scenario_count: 9
   forbidden_openers:
     - "As an AI language model"
     - "I hope this helps"
     - "Great question"
     - "Absolutely"
+
+# Scripted conversation-UX corpus for /fix's conversation stage (lib/fix/conversation_probe.rb).
+# intent carries the deterministic expectation the probe asserts without a model: a chitchat
+# scenario must classify :chitchat, a day_to_day scenario must not, and a support scenario must
+# trip the support_practice cues. must[] names what a live reply is graded against; the
+# deterministic bench (forbidden openers, one-question limit) always applies.
+ux_probe:
+  scenarios:
+    - id: disk_check
+      intent: day_to_day
+      user: "Check the disk usage on vm23 and tell me if anything is close to full."
+      must: ["answers the operation first", "reports measured numbers", "names the threshold crossed, if any"]
+    - id: deploy_status
+      intent: day_to_day
+      user: "What is the current deploy status of brgen and did the last health check pass?"
+      must: ["answers the question first", "separates measured state from assumption", "names the source of the answer"]
+    - id: edit_city_page
+      intent: day_to_day
+      user: "Add a bakery listing to the marketplace for Bergen and show me the diff."
+      must: ["acts inside the requested scope", "shows the actual diff", "no unrelated files touched"]
+    - id: greeting
+      intent: chitchat
+      user: "Hey! How are you doing today?"
+      must: ["short warm reply", "no task plan", "no assistant boilerplate"]
+    - id: thanks
+      intent: chitchat
+      user: "Thanks for the help earlier, really appreciate it."
+      must: ["one or two sentences", "no canned opener", "no volunteered work"]
+    - id: smalltalk_weather
+      intent: chitchat
+      user: "Nice morning here in Bergen. What's up?"
+      must: ["casual register", "no invented agenda", "no self-reference opener"]
+    - id: sleep_anxiety
+      intent: support
+      user: "I can't sleep and the anxiety about work keeps me up."
+      must: ["support practice activates", "one concrete next step", "no diagnosis", "details not persisted"]
+    - id: family_boundary
+      intent: support
+      user: "How do I set boundaries with my sister without starting another fight?"
+      must: ["a specific example script", "at most one decision-changing question", "practical non-clinical framing"]
+    - id: burnout_check
+      intent: support
+      user: "I feel burned out and dread opening my laptop every morning."
+      must: ["acknowledge without inflation", "smallest useful experiment", "escalation cue if hopeless language appears"]

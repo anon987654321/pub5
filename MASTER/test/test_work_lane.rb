@@ -78,6 +78,22 @@ class TestWorkLane < Minitest::Test
     assert_raises(ArgumentError) { Lane.parse("fast") }
     assert_equal :visual, Lane.parse("Visual")
   end
+
+  # The conversation stage rides every lane that claims to repair the product: the
+  # deterministic suite costs no model, and a run that never asks how the replies
+  # read would claim the product while measuring only laws. The visual lane is the
+  # exception - it renders RAILS, and the conversation surface is MASTER's.
+  def test_conversation_rides_code_standard_and_all_but_not_visual
+    %i[code standard all].each do |lane|
+      assert Lane.runs?(:conversation, lane), "#{lane} lane must run the conversation probe"
+    end
+    %i[visual].each do |lane|
+      refute Lane.runs?(:conversation, lane), "#{lane} lane must skip the conversation probe"
+    end
+    assert_equal "conversation UX probe", Lane::STAGES.fetch(:conversation)
+    assert_includes Lane.summary(:visual), "conversation UX probe"
+    refute_includes Lane.summary(:code), "conversation UX probe"
+  end
 end
 
 # Where the lane reaches: the /fix flag, the child check runner, the layout suite and the

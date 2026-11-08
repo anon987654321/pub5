@@ -4965,6 +4965,11 @@ transformation_policy:
           - "site:github.com three.js Web Audio API audio reactive visualizer export MP4"
           - "site:ffmpeg.org/ffmpeg-filters.html showwaves showspectrum drawgrid video filters"
         sources: ["https://github.com/santosharron/audio-visualizer-three-js", "https://ffmpeg.org/ffmpeg-filters.html", "https://github.com/dcyoung/r3f-audio-visualizer"]
+      conversation:
+        queries:
+          - "site:ar5iv.labs.arxiv.org/html dialogue evaluation rubric response quality human judgment"
+          - "site:github.com dialogue system evaluation rubric safety guardrail benchmark"
+        sources: ["https://ar5iv.labs.arxiv.org/html/1603.08023", "https://github.com/microsoft/DialoGPT", "https://github.com/SonderMindOrg/sonder-guardrail-evals"]
 
 self_test:
   ROBUSTNESS: scan lib/ for bare_rescue + missing timeouts

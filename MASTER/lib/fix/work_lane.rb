@@ -24,14 +24,18 @@ module Master
         visual_pass: "rendered visual review", code_passes: "code-law repair passes",
         visual_groups: "grouped visual repair", improve_code: "code elevation",
         improve_prose: "prose elevation", improve_visual: "visual elevation",
-        improve_music: "music elevation", ideate: "ideation", restructure_drive: "restructure drive"
+        improve_music: "music elevation", ideate: "ideation", restructure_drive: "restructure drive",
+        conversation: "conversation UX probe"
       }.freeze
 
       RUNS = {
-        code: %i[code_passes],
-        standard: %i[layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
+        # conversation rides the code lane too (Johann 2026-11-08): the deterministic
+        # conversation suite costs no model and no boot, and a /fix MASTER that never
+        # asks how the replies read would claim the product while measuring only laws.
+        code: %i[conversation code_passes],
+        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
-        all: %i[research architecture layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
+        all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze
 

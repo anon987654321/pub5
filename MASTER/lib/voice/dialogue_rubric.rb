@@ -30,6 +30,14 @@ module Master
         Array(data(root:)["sycophancy_fixtures"])
       end
 
+      # The scripted conversation-UX corpus (lib/fix/conversation_probe.rb): day-to-day
+      # task turns, chitchat and support scenarios with their deterministic routing
+      # expectations. Blanket data, like the rest of this file - the probe asserts,
+      # the runtime renders, and neither invents its own corpus.
+      def ux_scenarios(root: Master::ROOT)
+        Array(data(root:).dig("ux_probe", "scenarios"))
+      end
+
       SUPPORT_CUES = %r{
         \b(?:
           overwhelmed|overwhelm|anxious|anxiety|panic|depress(?:ed|ion)|stress(?:ed)?|grief|lonely|loneliness
@@ -718,6 +726,21 @@ module Master
         scenarios.each do |scenario|
           raise ArgumentError, "support scenario missing user/must" if scenario["user"].to_s.empty? ||
                                                                          !scenario["must"].is_a?(Array) || scenario["must"].empty?
+        end
+
+        ux_scenarios = payload.dig("ux_probe", "scenarios")
+        raise ArgumentError, "ux probe block missing" unless payload["ux_probe"].is_a?(Hash)
+        raise ArgumentError, "ux probe scenarios missing" unless ux_scenarios.is_a?(Array) && ux_scenarios.size >= 6
+        raise ArgumentError, "ux probe scenario count drift" unless bench["ux_probe_scenario_count"] == ux_scenarios.length
+        ux_ids = ux_scenarios.map { |scenario| scenario["id"].to_s }
+        raise ArgumentError, "ux probe ids missing or duplicated" unless ux_ids.none?(&:empty?) && ux_ids.uniq == ux_ids
+        ux_intents = %w[day_to_day chitchat support]
+        ux_scenarios.each do |scenario|
+          raise ArgumentError, "ux probe scenario missing user/must" if scenario["user"].to_s.empty? ||
+                                                                        !scenario["must"].is_a?(Array) || scenario["must"].empty?
+          unless ux_intents.include?(scenario["intent"].to_s)
+            raise ArgumentError, "ux probe scenario #{scenario['id'].to_s.empty? ? "(unnamed)" : scenario["id"]} unknown intent #{scenario["intent"].inspect}"
+          end
         end
 
         dimensions.each do |name, item|

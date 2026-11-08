@@ -157,6 +157,19 @@ module Master
           @preamble = detail.empty? ? @base_preamble : [@base_preamble.to_s.strip, detail].join("\n\n")
         end
 
+        # The conversation stage's findings ride one repair pass, like the wishlist's:
+        # merged once into found, then consumed, so a stalled conversation repair is
+        # re-raised by the next probe (next pass or run) instead of repeating forever.
+        def conversation_findings=(findings)
+          @conversation_findings = Array(findings)
+        end
+
+        def take_conversation_findings
+          findings = @conversation_findings
+          @conversation_findings = nil
+          Array(findings)
+        end
+
         def pass_progress? = @pass_progress == true
         def publish_pending! = @committer.publish_pending!
 
@@ -311,6 +324,7 @@ module Master
           end
           finalize_assessment_pass(pass, visual:, opportunities:)
           found += Wishlist.findings(wishlist_proposals, root: @root)
+          found += take_conversation_findings
           return evidence_abort_result(visual, opportunities) if found.empty? && (visual&.err? || opportunities&.err?)
 
           found, shed = guarded(:improvements, pass, [found, nil]) do

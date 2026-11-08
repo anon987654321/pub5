@@ -48,6 +48,7 @@ require_relative "../architecture_exploration"
 require_relative "../transformation_plan"
 require_relative "../../review/reference_graph"
 require_relative "../research_pass"
+require_relative "../conversation_probe"
 require_relative "../convergence_discipline"
 require_relative "../reflection"
 require_relative "../run_budget"
@@ -344,10 +345,15 @@ module Master
           current_phase = :research
           research = run_research(target:, files:)
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
+          current_phase = :conversation_probe
+          conversation = run_conversation_probe(target:, files:)
+          return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
+          @pass_runner.conversation_findings = conversation.fetch(:findings, [])
           @pass_runner.research_brief = [
             architecture.fetch("brief"),
             ux_context,
             research.fetch(:brief),
+            conversation.fetch(:brief),
           ].reject { |part| part.to_s.strip.empty? }.join("\n\n")
         end
         current_phase = :pass
@@ -611,6 +617,19 @@ module Master
           "hosts=#{research.fetch(:independent_hosts, 0)} target=#{target}",
         )
         research
+      end
+
+      # The conversation surface, measured before the repair passes so the council
+      # argues about how the replies read, not only how the code looks. The
+      # deterministic suite runs without a model; the live turns cost one bounded
+      # PTY boot each (MASTER_FIX_CONVERSATION_MAX, default 2).
+      def run_conversation_probe(target:, files:)
+        unless WorkLane.runs?(:conversation)
+          Master::Trace::Dmesg.status("conv0", "skipped, lane=#{WorkLane.current}")
+          return { status: "SKIPPED", brief: "", findings: [] }
+        end
+
+        ConversationProbe.run(root: @root, target:, agent: @agent, bus: @bus).to_h
       end
 
       # The look back over the tree after the repair passes: structural consolidation,

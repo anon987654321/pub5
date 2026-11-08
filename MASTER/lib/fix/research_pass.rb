@@ -124,6 +124,9 @@ module Master
         return "studio" if value.match?(%r{(?:\A|/)STUDIO(?:/|\z)}i)
         return "rails" if value.match?(%r{(?:\A|/)RAILS(?:/|\z)}i)
         return "openbsd" if value.match?(%r{(?:\A|/)OPENBSD(?:/|\z)}i)
+        # The conversational constitution and its renderer: repairs here argue from
+        # dialogue-evaluation research (ar5iv/arXiv, GitHub) rather than from style guides.
+        return "conversation" if value.match?(%r{(?:\A|/)MASTER/(?:lib/voice|data/dialogue_rubric\.yml)(?:/|\z|\.)}i)
 
         "engineering"
       end
