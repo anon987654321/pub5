@@ -7,6 +7,9 @@
 # asserted litestream went first long after the guard stopped shedding it, which
 # nothing noticed because nothing ran this file. OPENBSD/bin/check-openbsd runs
 # it now.
+#
+# The sandbox copies are built by a case-per-line rewrite, not sed —
+# SHELL_DISCIPLINE names the tools this tree does not ship.
 set -e
 
 SANDBOX=$(mktemp -d)
@@ -79,15 +82,30 @@ run_tick() {
   FAKE_FREE=$free ksh "$SANDBOX/guard_under_test.sh" >/dev/null 2>&1 || true
 }
 
-sed -e "s#^export PATH=.*#export PATH=$BIN:/usr/bin:/bin#" \
-    -e "s#^SHED_STATE=.*#SHED_STATE=$DB/shed#" \
-    -e "s#^STRIKE_STATE=.*#STRIKE_STATE=$DB/strikes#" \
-    -e "s#^ALL_APPS_FLAG=.*#ALL_APPS_FLAG=$DB/all_apps#" \
-    -e "s#>> /var/log/resource_guard_history.log#>> $SANDBOX/log/history#" \
-    -e "s#GUARD_HELPER=.*#GUARD_HELPER=$DB/nonexistent#" \
-    -e "s#^EMERGENCY=.*#EMERGENCY=$DB/emergency#" \
-    -e "s#^DEPLOY_FLAGS=.*#DEPLOY_FLAGS=\"$DB/flag/.deploying*\"#" \
-    "$GUARD" > "$SANDBOX/guard_under_test.sh"
+# Rebuild a script with the sandbox paths, one case per line. The state-file
+# lines are replaced whole; the history-log path is replaced as a substring so
+# whatever surrounds it survives, exactly as the sed it replaced did.
+rewrite_paths() { # rewrite_paths <src> <dst> <helper>
+  while IFS= read -r line; do
+    case $line in
+    "export PATH="*) print -r -- "export PATH=$BIN:/usr/bin:/bin" ;;
+    SHED_STATE=*) print -r -- "SHED_STATE=$DB/shed" ;;
+    STRIKE_STATE=*) print -r -- "STRIKE_STATE=$DB/strikes" ;;
+    ALL_APPS_FLAG=*) print -r -- "ALL_APPS_FLAG=$DB/all_apps" ;;
+    GUARD_HELPER=*) print -r -- "GUARD_HELPER=$3" ;;
+    EMERGENCY=*) print -r -- "EMERGENCY=$DB/emergency" ;;
+    DEPLOY_FLAGS=*) print -r -- "DEPLOY_FLAGS=\"$DB/flag/.deploying*\"" ;;
+    *">> /var/log/resource_guard_history.log"*)
+      prefix=${line%%">> /var/log/resource_guard_history.log"*}
+      suffix=${line#*">> /var/log/resource_guard_history.log"}
+      print -r -- "$prefix>> $SANDBOX/log/history$suffix"
+      ;;
+    *) print -r -- "$line" ;;
+    esac
+  done < "$1" > "$2"
+}
+
+rewrite_paths "$GUARD" "$SANDBOX/guard_under_test.sh" "$DB/nonexistent"
 
 fail=0
 check() {
@@ -101,7 +119,10 @@ check() {
 }
 
 up() { for s in "$@"; do : > "$DB/$s"; done }
-running() { ls "$DB" 2>/dev/null | grep -Ex 'amber|bsdports' | sort | tr '\n' ' ' | sed 's/ $//'; }
+running() {
+  list=$(ls "$DB" 2>/dev/null | grep -Ex 'amber|bsdports' | sort | tr '\n' ' ')
+  print -r -- "${list% }"
+}
 reset() { rm -f "$DB"/* 2>/dev/null || true; up bsdports amber; } # scan: intentional — clears this test's own scratch $DB between cases
 
 # physmem is ~1007M, so Free=400M is ~39% (clear), Free=40M is ~3% (breach).
@@ -163,7 +184,7 @@ print "8. with the real cleanup helper sourced, a tick still logs while a shed a
 # The helper set pipefail in the guard's own shell; ps -U for a shed app then failed the rss
 # pipeline, set -e ended every tick before the log line, and vm23 had no guard from 15:45.
 HELPER=${GUARD%/bin/resource_guard.sh}/libexec/stale_ci_cleanup.ksh
-sed -e "s#^GUARD_HELPER=.*#GUARD_HELPER=$HELPER#" "$SANDBOX/guard_under_test.sh" > "$SANDBOX/guard_with_helper.sh"
+rewrite_paths "$SANDBOX/guard_under_test.sh" "$SANDBOX/guard_with_helper.sh" "$HELPER"
 reset
 before=$(grep -c . "$SANDBOX/log/history" 2>/dev/null || print 0)
 FAKE_PS_IDLE="bsdports amber" FAKE_FREE=$CLEAR ksh "$SANDBOX/guard_with_helper.sh" >/dev/null 2>&1 || true
