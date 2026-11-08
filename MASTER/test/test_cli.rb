@@ -1235,18 +1235,17 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_empty @cli.instance_variable_get(:@turn_queue)
   end
 
-  def test_governed_shell_navigation_runs_immediately_while_a_turn_is_busy
+  def test_directory_change_waits_until_the_active_turn_finishes
     worker = Object.new
     worker.define_singleton_method(:alive?) { true }
     @cli.instance_variable_set(:@turn_worker, worker)
-    seen = nil
+    queued = nil
 
-    @cli.stub(:run_direct_shell, ->(command) { seen = command; :shell }) do
-      assert_equal :shell, @cli.send(:handle_repl_line, "cd ..")
+    @cli.stub(:enqueue_interactive_line, ->(line) { queued = line; true }) do
+      @cli.send(:handle_repl_line, "cd ..")
     end
 
-    assert_equal "cd ..", seen
-    assert_empty @cli.instance_variable_get(:@turn_queue)
+    assert_equal "cd ..", queued
   end
 
 end
