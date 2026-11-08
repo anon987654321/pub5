@@ -460,3 +460,23 @@ class TestDillaArrangementAndOfflineExport < Minitest::Test
     assert_equal "score.mid", opts.midi_out
   end
 end
+
+
+class TestDillaStyleProfileRouting < Minitest::Test
+  def test_style_profile_selects_its_own_progression_voice_and_groove
+    opts = Dilla::Options.new
+    opts.style = "flying_lotus"
+    plan = Dilla.resolve_render_plan(opts)
+    assert_equal "coltrane_soup", plan.fetch(:progression).fetch("id")
+    assert_equal "flylo_knock", plan.fetch(:drums)
+    assert_equal "prophet_5", plan.fetch(:voice)
+    assert_equal "los_angeles", plan.fetch(:profile)
+  end
+
+  def test_showcase_plan_passes_all_four_sections_to_the_sequencer
+    plan = Dilla.resolve_render_plan(Dilla::Options.new, showcase: Dilla.showcase_data)
+    assert_equal 24, plan.fetch(:bars)
+    assert_equal 4, plan.fetch(:arrangement).length
+    assert_equal "coltrane_soup", plan.fetch(:arrangement)[2].fetch("progression")
+  end
+end

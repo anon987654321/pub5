@@ -288,13 +288,6 @@ module Dilla
 
   def render_showcase(opts)
     show = showcase_data
-    opts.progression ||= show.fetch("progression")
-    opts.kit ||= show.fetch("kit")
-    opts.voice ||= show.fetch("voice")
-    opts.rig ||= show.fetch("rig")
-    opts.sonitex ||= show.fetch("sonitex")
-    opts.sonitex_instances = show.fetch("sonitex_instances") unless opts.sonitex_instances && opts.sonitex_instances != 1
-    opts.vcs ||= show.fetch("vcs").to_s
     profile = catalogue.fetch("production_profiles", {}).fetch(opts.style.to_s, {})
     opts.progression ||= profile["progression"] || show.fetch("progression")
     opts.kit ||= profile["kit"] || show.fetch("kit")
@@ -302,6 +295,8 @@ module Dilla
     opts.rig ||= profile["rig"] || show.fetch("rig")
     opts.sonitex ||= profile["sonitex"] || show.fetch("sonitex")
     opts.drums ||= profile["drums"]
+    opts.sonitex_instances = show.fetch("sonitex_instances") unless opts.sonitex_instances && opts.sonitex_instances != 1
+    opts.vcs ||= show.fetch("vcs").to_s
     opts.bpm ||= (profile["bpm"] || show.fetch("bpm")).to_s
     opts.foley = true if profile["foley"] && !opts.foley
     opts.bars ||= Array(show["arrangement"]).sum { |section| section.fetch("bars", 0).to_i } if opts.style.to_s == "j_dilla"
@@ -931,6 +926,7 @@ module Dilla
             at = (slot[:start_bar] + bar_index) * @groove.bar_s + step * @groove.sixteenth_s
             at += @groove.swing_delay_s("hat") if step.odd?
             at -= @groove.anticipation_s * 0.35
+            next if at >= (slot[:start_bar] + slot[:bars]) * @groove.bar_s
             events << Event.new(at, 0.06 + @rng.rand * 0.13, :foley, midi, level * (0.75 + @rng.rand * 0.45), { "synth" => "fm_glass" })
           end
         end
@@ -2179,33 +2175,41 @@ module Dilla
   }.freeze
 
   def resolve_render_plan(opts, showcase: nil)
-    prog = if showcase
-             progression_by_ref(showcase.fetch("progression"))
-           elsif opts.progression
-             progression_by_ref(opts.progression)
-           else
-             progression_by_ref(showcase_data.fetch("progression"))
-           end
+    profiles = catalogue.fetch("production_profiles", {})
+    style = profiles.fetch(opts.style.to_s, {})
+    progression_ref = opts.progression || style["progression"] ||
+                      (showcase && showcase["progression"]) || showcase_data.fetch("progression")
+    prog = progression_by_ref(progression_ref)
     drum_patterns = catalogue.fetch("drum_patterns").keys.reject { |k| k == "comment" }
-    drums = opts.drums && drum_patterns.include?(opts.drums) ? opts.drums : DEFAULT_DRUMS_FOR_STYLE.fetch("j_dilla")
+    drum_candidate = opts.drums || style["drums"] || DEFAULT_DRUMS_FOR_STYLE.fetch("j_dilla")
+    drums = drum_patterns.include?(drum_candidate) ? drum_candidate : DEFAULT_DRUMS_FOR_STYLE.fetch("j_dilla")
     kits = catalogue.fetch("kits").keys.reject { |k| k == "comment" }
-    kit = opts.kit && kits.include?(opts.kit) ? opts.kit : "kit_dust"
-    voice = opts.voice && catalogue.fetch("voices").key?(opts.voice) ? opts.voice : "rhodes_mark1"
+    kit_candidate = opts.kit || style["kit"] || "kit_dust"
+    kit = kits.include?(kit_candidate) ? kit_candidate : "kit_dust"
+    voice_candidate = opts.voice || style["voice"] || "rhodes_mark1"
+    voice = catalogue.fetch("voices").key?(voice_candidate) ? voice_candidate : "rhodes_mark1"
     rigs = catalogue.fetch("rigs").keys.reject { |k| k == "comment" }
-    rig = opts.rig && rigs.include?(opts.rig) ? opts.rig : "dilla_night"
+    rig_candidate = opts.rig || style["rig"] || "dilla_night"
+    rig = rigs.include?(rig_candidate) ? rig_candidate : "dilla_night"
     sonitex_presets = catalogue.fetch("sonitex").keys.reject { |k| k == "comment" }
-    sonitex = opts.sonitex && sonitex_presets.include?(opts.sonitex) ? opts.sonitex : "subtle"
-    bpm = (opts.bpm || prog["bpm"]).to_f.clamp(50.0, 200.0)
-    bars = (opts.bars || prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
+    wear_candidate = opts.sonitex || style["sonitex"] || "subtle"
+    sonitex = sonitex_presets.include?(wear_candidate) ? wear_candidate : "subtle"
+    bpm = (opts.bpm || style["bpm"] || prog["bpm"]).to_f.clamp(50.0, 200.0)
+    arrangement = showcase && Array(showcase["arrangement"]).any? ? showcase["arrangement"] : nil
+    arrangement_bars = Array(arrangement).sum { |section| section.fetch("bars", 0).to_i }
+    bars = (opts.bars || (arrangement_bars.positive? ? arrangement_bars : nil) ||
+            prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
     feel = prog["feel"] || {}
     groove_profiles = catalogue.fetch("groove_profiles")
-    profile = opts.profile && groove_profiles.key?(opts.profile) ? opts.profile : "dilla_shadow"
-    swing = (feel["swing"] || 54.0).to_f
+    groove_candidate = opts.profile || style["groove_profile"] || "dilla_shadow"
+    groove_profile = groove_profiles.key?(groove_candidate) ? groove_candidate : "dilla_shadow"
+    swing = feel.fetch("swing", 54.0).to_f
     performers = catalogue.fetch("performers")
     performer = opts.performer && performers.any? { |p| p["id"] == opts.performer } ? opts.performer : nil
     {
       progression: prog, drums: drums, kit: kit, voice: voice, rig: rig, sonitex: sonitex,
-      bpm: bpm, bars: bars, profile: profile, swing: swing, performer_id: performer,
+      bpm: bpm, bars: bars, profile: groove_profile, swing: swing, performer_id: performer,
+      arrangement: arrangement,
       vcs: (opts.vcs || 0.54).to_f.clamp(0.0, 1.0),
       groove_scale: opts.groove ? opts.groove.to_f.clamp(0.85, 1.25) : 1.0,
       sonitex_instances: (opts.sonitex_instances || 1).to_i.clamp(1, 6)

@@ -1,7 +1,7 @@
 {
   "engine": {
     "name": "dilla",
-    "version": "4.1.0",
+    "version": "4.2.0",
     "ppqn": 96,
     "sample_rate": 44100
   },
