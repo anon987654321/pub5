@@ -1226,6 +1226,20 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_empty @cli.instance_variable_get(:@turn_queue)
   end
 
+  def test_model_selector_is_dispatched_immediately_while_a_turn_is_busy
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    seen = nil
+
+    @cli.stub(:dispatch_registered_slash_command, ->(command) { seen = command; :dispatched }) do
+      assert_equal :dispatched, @cli.send(:handle_repl_line, "/model")
+    end
+
+    assert_equal "/model", seen
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  end
+
   def test_voice_controls_are_dispatched_immediately_while_a_turn_is_busy
     worker = Object.new
     worker.define_singleton_method(:alive?) { true }
