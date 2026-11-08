@@ -20,9 +20,14 @@ task :check do
   out, status = Open3.capture2e(RUBY, dilla, "--list", chdir: STUDIO_ROOT)
   raise "dilla --list failed:\n#{out}" unless status.success?
 
+  studio_cli = File.join(STUDIO_ROOT, "bin", "studio")
+  cli_out, cli_status = Open3.capture2e(RUBY, studio_cli, "--list", chdir: STUDIO_ROOT)
+  raise "studio --list failed:\n#{cli_out}" unless cli_status.success?
+  raise "studio --list does not expose Ableton recovery" unless cli_out.include?("ableton")
+
   %w[
-    photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb
-    dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb
+    bin/studio photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb
+    dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
   ].each do |entry|
     path = File.join(STUDIO_ROOT, entry)
     raise "#{entry} is missing" unless File.file?(path)
