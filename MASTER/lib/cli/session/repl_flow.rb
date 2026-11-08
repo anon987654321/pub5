@@ -284,6 +284,9 @@ module Master
                  @exit_code = 0
                  result.to_s
                end
+        # Read-only model selector output is runtime evidence for the next turn.
+        # Other commands may expose private state, so they are not copied wholesale.
+        record_model_selector_output(args: match[:args].to_s, text:) if name == "model"
         # The commands' replies print here; the face transcript is gone with
         # the terminal face.
         print_terminal_output(text, mode: @last_ok ? :dim : :error) unless text.empty?
@@ -325,13 +328,40 @@ module Master
 
         result = shell.call(command:)
         text = result.ok? ? result.value!.to_s : result.message.to_s
+        record_execution_output(command:, text:)
+
+        terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
+      end
+
+      # Terminal output is attached to the session as execution evidence. The model
+      # sees only output the operator actually requested and that the runtime
+      # explicitly captured; it does not get a fictional live view of stdout.
+      def record_execution_output(command:, text:)
+        return if text.to_s.empty?
+        return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
+
         @refs.session.add_message(
           role: :user,
           content: "$ #{command}\n#{text}",
           layer: :execution,
         )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.execution_output", event_bus: @refs.bus)
+      end
 
-        terminal_puts(@refs.renderer.render(text, mode: result.ok? ? :dim : :error))
+      def record_model_selector_output(args:, text:)
+        return unless %w[list status current].include?(args.to_s.strip.downcase)
+        return if text.to_s.empty?
+
+        return unless @refs.respond_to?(:session) && @refs.session.respond_to?(:add_message)
+
+        @refs.session.add_message(
+          role: :user,
+          content: "terminal stdout: /model #{args}\n#{text}",
+          layer: :execution,
+        )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.model_selector_output", event_bus: @refs.bus)
       end
 
       def bang_shell
@@ -395,6 +425,7 @@ module Master
 
         result = shell.call(command:)
         text = result.ok? ? result.value!.to_s : result.message.to_s
+        record_execution_output(command:, text:)
         @last_ok = result.ok?
         @exit_code = result.ok? ? 0 : 2
 
