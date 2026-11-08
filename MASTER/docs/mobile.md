@@ -15,7 +15,14 @@ The real install command follows only after reviewing that plan:
 
 The installer runs a fail-closed preflight before package operations: it requires Termux's expected PREFIX, refuses root, permits only the canonical HTTPS pub5 repository, keeps the install directory below Termux HOME, refuses symlink/non-Git collisions, and verifies the checkout origin and clean working tree before running project code.
 
-The installer installs and checks the pinned Ruby bundle through `bin/deps install` and `bin/deps check`, proves the normal CLI entry point with `bin/deps boot`, then installs Falcon and runs `bin/master-mobile doctor`. The doctor checks Termux, required packages, Falcon, the canonical Git origin, a clean checkout, private mobile state-directory permissions and the bridge port; it changes only the mobile state directory's mode to 0700. A successful install therefore proves more than the presence of the bridge server: the regular MASTER CLI has also completed its boot path.
+The default installer keeps the native Termux route: it installs and checks the pinned Ruby bundle through `bin/deps install` and `bin/deps check`, proves the normal CLI entry point with `bin/deps boot`, then installs Falcon and runs `bin/master-mobile doctor`. The doctor checks Termux, required packages, Falcon, the canonical Git origin, a clean checkout, private mobile state-directory permissions and the bridge port; it changes only the mobile state directory's mode to 0700.
+
+When native Ruby or native gem compilation fails, select the Debian build/runtime route explicitly. Preview it first, then run it:
+
+    curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh -s -- --proot --demo
+    curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh -s -- --proot
+
+The PRoot installer installs `git`, `curl` and `proot-distro` on the Termux host, fast-forwards or clones the canonical checkout, and installs Debian only when a Debian guest is not already present. It never resets an existing guest. It binds the checkout at `/pub5`, reads the exact `.ruby-version`, builds that Ruby under `/opt/rubies/`, then installs/checks the locked bundle and proves `bin/deps boot` inside Debian. The guest's system libraries and Ruby installation persist between sessions. This path does not install Falcon or run the Termux-only mobile doctor.
 
 Termux from F-Droid is the build that still receives updates. Install Termux:API from the same place if you want speech features; optional speech backends do not block installation.
 
@@ -38,7 +45,7 @@ Ruby from the repository's version pin. The bind keeps the Git worktree in
 Termux home; the Ruby installation and system libraries persist inside Debian.
 
     cd "$HOME/pub5"
-    proot-distro login debian --bind "$PWD:/pub5" -- bash -lc '
+    proot-distro login --bind "$PWD:/pub5" debian -- bash -lc '
       set -eu
       apt-get update
       DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -68,7 +75,7 @@ Termux home; the Ruby installation and system libraries persist inside Debian.
 
 To start the normal MASTER CLI later, enter the existing guest again:
 
-    proot-distro login debian --bind "$HOME/pub5:/pub5" -- bash -lc '
+    proot-distro login --bind "$HOME/pub5:/pub5" debian -- bash -lc '
       ruby_version="$(cat /pub5/.ruby-version)"
       export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"
       cd /pub5/MASTER
