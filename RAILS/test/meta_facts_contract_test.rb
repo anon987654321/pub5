@@ -27,25 +27,25 @@ class MetaFactsContractTest < Minitest::Test
     assert_includes template, "local_assigns[:meta].is_a?(Array)"
     assert_includes template, "<span><%= fact %></span>"
     assert_match(/<% else %>\s*<%= local_assigns\[:meta\] %>/m, template)
-    assert_includes read("brgen_marketplace/engines/takeaway/app/views/takeaway/orders/_order.html.erb"), "meta: ["
+    assert_includes read("brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/_order.html.erb"), "meta: ["
   end
 
   def test_fact_views_keep_independent_metadata_elements
     paths = %w[
       brgen/app/views/users/show.html.erb
       brgen/app/views/partner/memberships/show.html.erb
-      brgen_maps/app/views/maps/places/_card.html.erb
-      brgen_marketplace/app/views/marketplace/listings/_buybox.html.erb
-      brgen_radio/playlist/app/views/playlist/sets/show.html.erb
-      brgen_dating/app/views/dating/profiles/show.html.erb
+      brgen/engines/maps/app/views/maps/places/_card.html.erb
+      brgen/engines/marketplace/app/views/marketplace/listings/_buybox.html.erb
+      brgen/engines/radio/playlist/app/views/playlist/sets/show.html.erb
+      brgen/engines/dating/app/views/dating/profiles/show.html.erb
     ]
     paths.each do |path|
       assert_includes read(path), 'class="meta-facts"', "#{path} must render facts as separate elements"
     end
 
-    buybox = read("brgen_marketplace/app/views/marketplace/listings/_buybox.html.erb")
+    buybox = read("brgen/engines/marketplace/app/views/marketplace/listings/_buybox.html.erb")
     assert_includes buybox, "condition_facts.each do |fact|"
-    crossings = read("brgen_dating/app/views/dating/path_crossings/index.html.erb")
+    crossings = read("brgen/engines/dating/app/views/dating/path_crossings/index.html.erb")
     # The facts render as one paragraph of separate span/time elements; this
     # view writes the class through tag.p's kwarg, the others as the attribute.
     assert_match(/class\s*[:=]\s*"?meta-facts/, crossings)

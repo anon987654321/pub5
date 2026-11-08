@@ -280,14 +280,12 @@ module Deploy
     # extracted on 2026-08-12 and checks_ran fell from over 400 to 391. The
     # floor assertion in stimulus_wiring_check_test is there to catch exactly
     # that, and it did.
-    # The verticals are engines that sit beside brgen as RAILS/brgen_<name> (brgen_radio holds
-    # playlist and tv one level down), pinned into brgen's importmap and mounted in its routes,
-    # so their views, helpers and controllers belong to brgen. amber and bsdports have none.
+    # Every Brgen engine lives inside the host app's deploy tree. Resolve the
+    # roots from EngineRoots so views, helpers and controllers share one inventory.
     def engine_dirs(app)
       return [] unless app == "brgen"
 
-      Dir.glob(File.join(@rails_root, "brgen_*/{,*/,engines/*/}app"))
-         .map { |path| path.delete_prefix("#{@rails_root}/").delete_suffix("/app") }.sort
+      EngineRoots::ASSET_PATHS.values.sort
     end
 
     def views(app)
@@ -329,8 +327,7 @@ module Deploy
       normalized = path.delete_prefix("#{@rails_root}/")
       normalized.start_with?("__shared/app/helpers/", "__shared/app/components/") ||
         normalized.start_with?("#{normalized.split("/").first}/app/helpers/") ||
-        normalized.match?(%r{\A(?:amber|brgen|bsdports)/engines/[^/]+/app/helpers/}) ||
-        normalized.match?(%r{\Abrgen_[^/]+/(?:[^/]+/)?(?:engines/[^/]+/)?app/helpers/})
+        normalized.match?(%r{\A(?:amber|brgen|bsdports)/engines/.+/app/helpers/})
     end
 
     # A shared helper is a method every app could call, but its markup reaches

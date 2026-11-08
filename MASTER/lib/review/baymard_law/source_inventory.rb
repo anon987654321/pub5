@@ -28,7 +28,7 @@ module Master
           end
 
           unless @requested_apps
-            paths.concat(Dir.glob(File.join(@rails_root, "brgen_*")).select { |path| valid_app_root?(path) })
+            paths.concat(Dir.glob(File.join(@rails_root, "brgen", "engines", "**")).select { |path| valid_app_root?(path) })
             shared = File.join(@rails_root, "__shared")
             paths << shared if valid_app_root?(shared)
           end

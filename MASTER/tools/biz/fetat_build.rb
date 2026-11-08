@@ -8,7 +8,7 @@
 # fetat.html, and the PDF is printed from that file so the pair cannot
 # drift. The masthead mark on page one is image.jpg → trace.rb → fetat.svg.
 #
-# Template: BIZ/__templates/bob2.html (Johann, 2026-11-07: "use the bob2.html
+# Template: BPLANS/__templates/bob2.html (Johann, 2026-11-07: "use the bob2.html
 # document as template"). bob2's structure, CSS tokens and footer are adopted
 # directly; Source Serif 4 for text, EB Garamond for headings, black on white.
 # The template keeps its letter form: no generated marks, no frame, Norwegian.

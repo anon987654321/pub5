@@ -17,22 +17,22 @@ module Deploy
     RAILS = File.join(ROOT, "RAILS")
 
     REQUIRED = {
-      "brgen_marketplace/app/models/marketplace/listing_price_observation.rb" =>
+      "brgen/engines/marketplace/app/models/marketplace/listing_price_observation.rb" =>
         /marketplace_listing_price_observations|trailing_30_days/,
       "brgen/db/migrate/20261104100000_create_marketplace_listing_price_observations.rb" =>
         /create_table :marketplace_listing_price_observations/,
       "brgen/db/schema.rb" => /marketplace_listing_price_observations/,
-      "brgen_marketplace/app/models/marketplace/listing.rb" =>
+      "brgen/engines/marketplace/app/models/marketplace/listing.rb" =>
         /SCARCITY_THRESHOLD|scarcity_quantity|omnibus_reference_price_cents|record_price_observation/,
-      "brgen_marketplace/app/views/marketplace/deals/_card.html.erb" =>
+      "brgen/engines/marketplace/app/views/marketplace/deals/_card.html.erb" =>
         /persuasion\.was_price|persuasion\.only_n_left/,
-      "brgen_marketplace/app/views/marketplace/listings/_card.html.erb" =>
+      "brgen/engines/marketplace/app/views/marketplace/listings/_card.html.erb" =>
         /persuasion\.only_n_left/,
-      "brgen_marketplace/config/locales/en.yml" => /only_n_left|was_price/,
-      "brgen_marketplace/config/locales/nb.yml" => /only_n_left|was_price/,
-      "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb" =>
+      "brgen/engines/marketplace/config/locales/en.yml" => /only_n_left|was_price/,
+      "brgen/engines/marketplace/config/locales/nb.yml" => /only_n_left|was_price/,
+      "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb" =>
         /takeaway\.subtotal|takeaway\.delivery|takeaway\.total/,
-      "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb" =>
+      "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb" =>
         /min_order_delivery/,
     }.freeze
 
@@ -44,13 +44,13 @@ module Deploy
     # restaurant row, so a late-chosen fee can never be quieter than the
     # price the guest believed.
     FORBIDDEN = {
-      "brgen_marketplace/app/views/marketplace/deals/_card.html.erb" =>
+      "brgen/engines/marketplace/app/views/marketplace/deals/_card.html.erb" =>
         /Før \d|Was \d|\d+ kr igjen|only \d+ left/i,
-      "brgen_marketplace/app/views/marketplace/listings/_card.html.erb" =>
+      "brgen/engines/marketplace/app/views/marketplace/listings/_card.html.erb" =>
         /Før \d|Was \d|\d+ kr igjen|only \d+ left/i,
-      "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb" =>
+      "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb" =>
         /\d+\s*(kr|NOK)|NOK\s*\d+/i,
-      "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb" =>
+      "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb" =>
         /\d+\s*(kr|NOK)|NOK\s*\d+/i,
     }.freeze
 
@@ -78,7 +78,7 @@ module Deploy
         @result.fail("persuasion_honesty: #{rel} must not hardcode a persuasive number") if body.match?(pat)
       end
 
-      listing = read("brgen_marketplace/app/models/marketplace/listing.rb")
+      listing = read("brgen/engines/marketplace/app/models/marketplace/listing.rb")
       # The anchor is Omnibus-true only when it is a minimum over a bounded
       # window of observed prices, and only a strictly-lower current price may
       # render it.

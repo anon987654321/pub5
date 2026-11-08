@@ -66,14 +66,14 @@ finding_members:
   - CONFIGURATION_SHAPE RAILS/brgen/config/locales/promo.nb.yml:1
   - CONFIGURATION_SHAPE RAILS/brgen/config/radio_bergen/tracks.yml:1
   - CONFIGURATION_SHAPE RAILS/brgen/config/recurring.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_dating/config/locales/en.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_dating/config/locales/nb.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_marketplace/config/locales/en.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_marketplace/config/locales/nb.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_marketplace/config/locales/seller_center.en.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_marketplace/config/locales/seller_center.nb.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_radio/playlist/config/locales/en.yml:1
-  - CONFIGURATION_SHAPE RAILS/brgen_radio/playlist/config/locales/nb.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/dating/config/locales/en.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/dating/config/locales/nb.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/marketplace/config/locales/en.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/marketplace/config/locales/nb.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/marketplace/config/locales/seller_center.en.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/marketplace/config/locales/seller_center.nb.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/radio/playlist/config/locales/en.yml:1
+  - CONFIGURATION_SHAPE RAILS/brgen/engines/radio/playlist/config/locales/nb.yml:1
   - CONFIGURATION_SHAPE RAILS/bsdports/config/cable.yml:1
   - CONFIGURATION_SHAPE RAILS/bsdports/config/locales/en.yml:1
   - CONFIGURATION_SHAPE RAILS/bsdports/config/locales/nb.yml:1
@@ -87,9 +87,9 @@ finding_members:
   - GUARD_CLAUSE RAILS/__shared/app/controllers/concerns/shared/passwords_actions.rb:1
   - GUARD_CLAUSE RAILS/__shared/app/controllers/two_factor_setups_controller.rb:1
   - GUARD_CLAUSE RAILS/amber/app/controllers/privacy_settings_controller.rb:1
-  - GUARD_CLAUSE RAILS/brgen_marketplace/app/controllers/marketplace/checkouts_controller.rb:1
-  - GUARD_CLAUSE RAILS/brgen_marketplace/app/controllers/marketplace/orders_controller.rb:1
-  - GUARD_CLAUSE RAILS/brgen_marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb:1
+  - GUARD_CLAUSE RAILS/brgen/engines/marketplace/app/controllers/marketplace/checkouts_controller.rb:1
+  - GUARD_CLAUSE RAILS/brgen/engines/marketplace/app/controllers/marketplace/orders_controller.rb:1
+  - GUARD_CLAUSE RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb:1
   - MEANINGFUL_NAMES MASTER/lib/execution/contract.rb:235
   - MEANINGFUL_NAMES MASTER/lib/fix/best_of_n.rb:166
   - MEANINGFUL_NAMES MASTER/lib/fix/best_of_n.rb:285
@@ -153,8 +153,8 @@ finding_members:
   - NEVER_BATCH_DELETE MASTER/lib/voice/human.rb:130
   - NEVER_BATCH_DELETE OPENBSD/usr/local/libexec/rails-sync.ksh:135
   - NEVER_BATCH_DELETE MASTER/web/test/controllers/tts_controller_test.rb:24
-  - NO_CHANGELOG_COMMENT RAILS/brgen_dating/app/models/dating/profile.rb:55
-  - NO_CHANGELOG_COMMENT RAILS/brgen_marketplace/test/models/marketplace/order_test.rb:20
+  - NO_CHANGELOG_COMMENT RAILS/brgen/engines/dating/app/models/dating/profile.rb:55
+  - NO_CHANGELOG_COMMENT RAILS/brgen/engines/marketplace/test/models/marketplace/order_test.rb:20
   - NO_COLUMN_ALIGN MASTER/web/app/controllers/events_controller.rb:67
   - NO_COLUMN_ALIGN MASTER/web/app/controllers/events_controller.rb:68
   - NO_COLUMN_ALIGN MASTER/web/app/controllers/events_controller.rb:74
@@ -178,11 +178,11 @@ finding_members:
   - NO_DOT_SEPARATED_META RAILS/amber/app/views/items/_item.html.erb:3
   - NO_DOT_SEPARATED_META RAILS/brgen/app/views/home/_local_activity.html.erb:24
   - NO_DOT_SEPARATED_META RAILS/brgen/app/views/posts/_live_search_results.html.erb:12
-  - NO_DOT_SEPARATED_META RAILS/brgen_dating/app/views/dating/home/_card.html.erb:25
-  - NO_DOT_SEPARATED_META RAILS/brgen_dating/app/views/dating/picks/index.html.erb:25
-  - NO_DOT_SEPARATED_META RAILS/brgen_marketplace/app/views/marketplace/_top_offers.html.erb:36
-  - NO_DOT_SEPARATED_META RAILS/brgen_marketplace/app/views/marketplace/listings/_card.html.erb:37
-  - NO_DOT_SEPARATED_META RAILS/brgen_marketplace/app/views/marketplace/saved_searches/index.html.erb:26
+  - NO_DOT_SEPARATED_META RAILS/brgen/engines/dating/app/views/dating/home/_card.html.erb:25
+  - NO_DOT_SEPARATED_META RAILS/brgen/engines/dating/app/views/dating/picks/index.html.erb:25
+  - NO_DOT_SEPARATED_META RAILS/brgen/engines/marketplace/app/views/marketplace/_top_offers.html.erb:36
+  - NO_DOT_SEPARATED_META RAILS/brgen/engines/marketplace/app/views/marketplace/listings/_card.html.erb:37
+  - NO_DOT_SEPARATED_META RAILS/brgen/engines/marketplace/app/views/marketplace/saved_searches/index.html.erb:26
   - NO_EYEBROW_LABEL RAILS/__shared/app/views/layouts/_mailer_styles.html.erb:1
   - NO_EYEBROW_LABEL RAILS/amber/public/404.html:1
   - NO_EYEBROW_LABEL RAILS/amber/public/406-unsupported-browser.html:1
@@ -193,7 +193,7 @@ finding_members:
   - NO_EYEBROW_LABEL RAILS/brgen/public/406-unsupported-browser.html:1
   - NO_EYEBROW_LABEL RAILS/brgen/public/422.html:1
   - NO_EYEBROW_LABEL RAILS/brgen/public/500.html:1
-  - NO_EYEBROW_LABEL RAILS/brgen_marketplace/app/views/marketplace/listings/index.html.erb:1
+  - NO_EYEBROW_LABEL RAILS/brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb:1
   - NO_EYEBROW_LABEL RAILS/bsdports/public/404.html:1
   - NO_EYEBROW_LABEL RAILS/bsdports/public/406-unsupported-browser.html:1
   - NO_EYEBROW_LABEL RAILS/bsdports/public/422.html:1
@@ -206,8 +206,8 @@ finding_members:
   - NULLISH_COALESCING RAILS/brgen/app/javascript/controllers/listing_form_controller.js:53
   - NULLISH_COALESCING RAILS/brgen/app/javascript/controllers/listing_form_controller.js:54
   - NULLISH_COALESCING RAILS/brgen/app/javascript/controllers/listing_form_controller.js:55
-  - NULLISH_COALESCING RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js:362
-  - NULLISH_COALESCING RAILS/brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js:77
+  - NULLISH_COALESCING RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js:362
+  - NULLISH_COALESCING RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js:77
   - NULLISH_COALESCING MASTER/web/public/chat.js:1032
   - NULLISH_COALESCING MASTER/web/public/chat.js:333
   - NULLISH_COALESCING MASTER/web/public/chat.js:350
@@ -261,7 +261,7 @@ finding_members:
   - OPTIONAL_CHAINING MASTER/web/test/face_ascii.test.mjs:117
   - PROSE_ACTIVE_VOICE MASTER/lib/cli/fold_risk.rb:12
   - PROSE_ACTIVE_VOICE MASTER/lib/operator/check_ladder.rb:207
-  - PROSE_ACTIVE_VOICE RAILS/brgen_messenger/app/models/conversation/unread.rb:33
+  - PROSE_ACTIVE_VOICE RAILS/brgen/engines/messenger/app/models/conversation/unread.rb:33
   - PROSE_OMIT_QUALIFIERS MASTER/lib/fix/fix_loop/committer.rb:237
   - PROSE_OMIT_QUALIFIERS MASTER/lib/fix/fix_loop/lifecycle.rb:235
   - PROSE_OMIT_QUALIFIERS MASTER/lib/voice/disfluency.rb:67
@@ -270,13 +270,13 @@ finding_members:
   - PROSE_OMIT_QUALIFIERS MASTER/tools/snapshot.rb:413
   - PROSE_OMIT_QUALIFIERS RAILS/__shared/lib/shared/subprocess.rb:13
   - PROSE_OMIT_QUALIFIERS RAILS/brgen/config/demo_media/README.md:39
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_dating/app/models/dating/profile.rb:63
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_marketplace/engines/takeaway/app/controllers/takeaway/group_orders_controller.rb:62
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/delivery_driver.rb:28
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/order.rb:62
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_messenger/app/controllers/conversations_controller.rb:52
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_messenger/app/controllers/invites_controller.rb:48
-  - PROSE_OMIT_QUALIFIERS RAILS/brgen_messenger/test/models/messageable_scope_test.rb:7
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/dating/app/models/dating/profile.rb:63
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/group_orders_controller.rb:62
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/delivery_driver.rb:28
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb:62
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb:52
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/messenger/app/controllers/invites_controller.rb:48
+  - PROSE_OMIT_QUALIFIERS RAILS/brgen/engines/messenger/test/models/messageable_scope_test.rb:7
   - RATE_LIMITING_MISSING RAILS/__shared/app/controllers/concerns/shared/email_registration.rb:1
   - RUBY_NUMERIC_UNDERSCORE MASTER/lib/cli/face/ear.rb:23
   - RUBY_NUMERIC_UNDERSCORE MASTER/lib/music/audio_sink.rb:29
@@ -308,7 +308,7 @@ finding_members:
   - SAFE_NAVIGATION MASTER/tools/snapshot.rb:426
   - SAFE_NAVIGATION MASTER/tools/snapshot.rb:427
   - SAFE_NAVIGATION RAILS/__shared/app/controllers/omniauth_callbacks_controller.rb:64
-  - SAFE_NAVIGATION RAILS/brgen_messenger/app/models/conversation.rb:91
+  - SAFE_NAVIGATION RAILS/brgen/engines/messenger/app/models/conversation.rb:91
   - SINGLE_PRIVATE_SECTION MASTER/lib/core.rb:162
   - STRICT_MODE_ZSH OPENBSD/usr/local/bin/declutter-hygiene.sh:1
   - STRICT_MODE_ZSH OPENBSD/usr/local/bin/ports-import.sh:1
@@ -329,7 +329,7 @@ finding_members:
   - USE_THEN RAILS/brgen/test/controllers/paginated_index_test.rb:1
   - USE_THEN RAILS/brgen/test/controllers/wiki_controller_test.rb:1
   - USE_THEN RAILS/brgen/test/system/dating_swipe_test.rb:1
-  - USE_THEN RAILS/brgen_messenger/test/controllers/conversation_handling_test.rb:1
+  - USE_THEN RAILS/brgen/engines/messenger/test/controllers/conversation_handling_test.rb:1
   - USE_THEN RAILS/bsdports/test/integration/port_mutations_test.rb:1
   - USE_THEN MASTER/web/script/browser_probe_support.rb:1
   - WHY_NOT_WHAT MASTER/lib/cli/command_registry/model.rb:50
@@ -352,7 +352,7 @@ registry_finding_members:
   - AUDIT_APPEND_ONLY MASTER/lib/trace/log.rb:138
   - DEBUG_OUTPUT MASTER/lib/voice/speech.rb:167
   - DEBUG_OUTPUT MASTER/lib/voice/speech.rb:172
-  - ERB_HTML_SAFE RAILS/brgen_dating/app/views/dating/matches/_match.html.erb:8
+  - ERB_HTML_SAFE RAILS/brgen/engines/dating/app/views/dating/matches/_match.html.erb:8
   - FAIL_VISIBLY MASTER/lib/fix/surface_evidence.rb:500
   - FAIL_VISIBLY MASTER/lib/fix/surface_evidence.rb:514
   - NO_ASCII_ART_OUTSIDE_FACE MASTER/law/definition.rb:368
@@ -471,12 +471,12 @@ registry_finding_members:
   - NO_GOD_CLASS RAILS/brgen/lib/brgen/domain_registry.rb:4
   - NO_GOD_CLASS RAILS/brgen/lib/brgen/irc/bridge.rb:10
   - NO_GOD_CLASS RAILS/brgen/lib/brgen/radio_bergen_manifest.rb:11
-  - NO_GOD_CLASS RAILS/brgen_dating/app/models/dating/profile.rb:3
-  - NO_GOD_CLASS RAILS/brgen_marketplace/app/models/marketplace/checkout.rb:9
-  - NO_GOD_CLASS RAILS/brgen_marketplace/app/models/marketplace/listing.rb:3
-  - NO_GOD_CLASS RAILS/brgen_marketplace/app/models/marketplace/order.rb:3
-  - NO_GOD_CLASS RAILS/brgen_messenger/app/models/conversation.rb:3
-  - NO_GOD_CLASS RAILS/brgen_messenger/app/models/message.rb:3
+  - NO_GOD_CLASS RAILS/brgen/engines/dating/app/models/dating/profile.rb:3
+  - NO_GOD_CLASS RAILS/brgen/engines/marketplace/app/models/marketplace/checkout.rb:9
+  - NO_GOD_CLASS RAILS/brgen/engines/marketplace/app/models/marketplace/listing.rb:3
+  - NO_GOD_CLASS RAILS/brgen/engines/marketplace/app/models/marketplace/order.rb:3
+  - NO_GOD_CLASS RAILS/brgen/engines/messenger/app/models/conversation.rb:3
+  - NO_GOD_CLASS RAILS/brgen/engines/messenger/app/models/message.rb:3
   - NO_GOD_CLASS MASTER/web/app/controllers/chat_controller.rb:8
   - NO_GOD_CLASS MASTER/web/app/services/chat_service.rb:7
   - NO_GOD_CLASS MASTER/web/app/services/tts_job.rb:7
@@ -606,6 +606,6 @@ registry_finding_members:
   - SILENT_RESCUE MASTER/tools/rails/view_surfaces/resolve_route_params.rb:26
   - SILENT_RESCUE RAILS/__shared/app/services/shared/commerce.rb:61
   - SILENT_RESCUE RAILS/__shared/app/services/shared/master_messenger.rb:30
-  - SILENT_RESCUE RAILS/brgen_marketplace/app/services/marketplace/search_ranker.rb:93
+  - SILENT_RESCUE RAILS/brgen/engines/marketplace/app/services/marketplace/search_ranker.rb:93
   - SILENT_RESCUE MASTER/web/app/controllers/events_controller.rb:126
   - SILENT_RESCUE MASTER/web/script/probe_primer_external.rb:75

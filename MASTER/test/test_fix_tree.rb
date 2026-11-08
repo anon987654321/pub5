@@ -116,7 +116,7 @@ class TestFixTree < Minitest::Test
       write("RAILS/#{app}/app/models/dispatch_policy.rb", BODY)
     end
     %w[dating maps marketplace].each do |engine|
-      write("RAILS/brgen_#{engine}/app/controllers/#{engine}/base_controller.rb", BODY)
+      write("RAILS/brgen/engines/#{engine}/app/controllers/#{engine}/base_controller.rb", BODY)
     end
     git("add", ".")
 

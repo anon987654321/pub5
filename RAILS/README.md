@@ -1,12 +1,10 @@
 # Rails apps
 
-**Five Rails apps — nine Rails trees once the city's verticals are counted —
-one shared engine, and one process that answers to a hundred
-hostnames, each built so that a stranger on a phone sees a single, quiet product
-and never the machinery beneath it.** brgen is the city network with its five
-verticals as sibling directories, amber is the
-wardrobe, bsdports is a search of the ports tree, MASTER's web face
-on `ai.brgen.no`, and mrdamascy is one Bergen kitchen's ordering app. They run
+**Five Rails apps, one shared engine, and one Brgen process that answers to a
+hundred hostnames.** Brgen is the city network; its verticals are mountable
+engines under `brgen/engines/`, not sibling app trees. Amber is the wardrobe,
+BSDPorts is a search of the ports tree, MASTER's web face lives on
+`ai.brgen.no`, and Mr Damascy is one Bergen kitchen's ordering app. They run
 on SQLite behind Falcon (mrdamascy behind Puma), on one box called vm23, and
 everything the first four share lives in one engine so that a fix made once is
 made everywhere; mrdamascy stands alone and mounts none of it.
@@ -22,12 +20,12 @@ and each app keeps its own contract in an `AGENTS.md`.
 brgen is not a folder of apps. Every city apex in `Brgen::DomainRegistry` serves
 the feed, and the verticals are engines reached on subdomains of that apex, so
 `dating.brgen.no` and `dating.lsangeles.com` are the same code under two city
-names. The verticals sit beside the host as directories named `brgen_` and the
-vertical: dating, maps, marketplace, messenger and radio, which holds the playlist
-and tv engines. Food ordering is nested inside marketplace. Anything that counts
-brgen's code must read the host and every `brgen_*` directory, or it measures
-about half the app and calls the result health. Read `brgen/AGENTS.md` before you
-touch a vertical, and `brgen/README.md` before you add one.
+names. The canonical engines live under `brgen/engines/`: dating, maps,
+marketplace, messenger, and radio (playlist and tv). Food ordering is nested
+inside marketplace at `brgen/engines/marketplace/engines/takeaway`. Anything
+that counts Brgen's code must recurse through the entire `brgen/engines/`
+subtree. Read `brgen/AGENTS.md` before touching a vertical, and
+`brgen/README.md` before adding one.
 
 The shared engine is the `pub5-shared` gem and lives in `__shared`. Each app
 loads it by local path. On the box, the copy-tree deploy puts each app at

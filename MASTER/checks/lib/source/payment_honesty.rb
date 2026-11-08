@@ -16,7 +16,7 @@ module Deploy
     # This check kept the pre-split paths, so it failed on "missing" files that had
     # only moved — and would have gone on failing identically had the checkout
     # actually been deleted. Engine paths below; host paths for what stayed.
-    ENGINE = "brgen_marketplace"
+    ENGINE = "brgen/engines/marketplace"
 
     REQUIRED = {
       "brgen/app/services/marketplace/payments/not_configured.rb" => /NotConfigured/,

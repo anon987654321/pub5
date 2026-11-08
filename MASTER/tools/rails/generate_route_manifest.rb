@@ -65,11 +65,11 @@ module Deploy
             Dir.glob(File.join(RAILS_ROOT, "__shared", "config", "routes", "**", "*.rb")).sort
     end
 
-    # brgen's verticals are the RAILS/brgen_* engines (brgen_radio holds playlist and tv one level down).
+    # All mounted route sets live under the Brgen app's engine tree.
     def engine_routes(app)
       return [] unless app == "brgen"
 
-      Dir.glob(File.join(RAILS_ROOT, "brgen_*", "{,*/,engines/*/}config", "routes.rb")).sort
+      Dir.glob(File.join(RAILS_ROOT, "brgen", "engines", "**", "config", "routes.rb")).sort
     end
 
     def digest(app)

@@ -46,7 +46,7 @@ module Master
             component = path[%r{\ARAILS/([^/]+)/}, 1]
             return [] unless component
             return engine if component == "__shared"
-            return ["brgen"] if component.start_with?("brgen_") && named.include?("brgen")
+            return ["brgen"] if component == "brgen" && named.include?("brgen")
 
             []
           end
@@ -164,7 +164,7 @@ module Master
             own = [File.join(Master::Fix::RailsApp.app_dir(app, repo_root:), "test")]
             return own unless app == "brgen"
 
-            own + Dir.glob(File.join(rails, "brgen_*", "**", "test")) + [File.join(rails, "__shared", "test")]
+            own + Dir.glob(File.join(rails, "brgen", "engines", "**", "test")) + [File.join(rails, "__shared", "test")]
           end
         end
       end

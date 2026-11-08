@@ -59,8 +59,7 @@ module Master
 
             relative = File.expand_path(dir).delete_prefix("#{rails}/")
             case relative.split("/").first
-            when "brgen", "brgen_dating", "brgen_maps", "brgen_marketplace",
-                 "brgen_messenger", "brgen_radio", "__shared"
+            when "brgen", "__shared"
               File.join(rails, "brgen")
             when "amber"
               File.join(rails, "amber")

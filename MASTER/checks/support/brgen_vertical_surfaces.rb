@@ -227,26 +227,23 @@ module Deploy
   end
 end
 
-# Where brgen's vertical engines live under RAILS/. They moved out of brgen/engines/ into sibling
-# brgen_* directories, some nested inside another, and every check and test still globbing
-# brgen/engines/* went blind to them without failing. Checks and RAILS tests that walk every
-# engine take the layout from here, not from a literal that goes stale the next time one moves.
+# One Brgen app owns every mounted engine. Keep the canonical paths here so
+# source checks, page inventories and test discovery share the deploy layout.
 module EngineRoots
-  GLOB = "{brgen_*,brgen_radio/*,brgen_marketplace/engines/*}"
+  GLOB = "brgen/engines/**"
 
-  # Each vertical's directory under RAILS/, by the name its tests use.
+  # Paths are relative to RAILS/ and identify mountable engine roots.
   PATHS = {
-    "marketplace" => "brgen_marketplace",
-    "dating" => "brgen_dating",
-    "maps" => "brgen_maps",
-
-    "tv" => "brgen_radio/tv",
-    "playlist" => "brgen_radio/playlist",
-    "takeaway" => "brgen_marketplace/engines/takeaway",
+    "marketplace" => "brgen/engines/marketplace",
+    "dating" => "brgen/engines/dating",
+    "maps" => "brgen/engines/maps",
+    "tv" => "brgen/engines/radio/tv",
+    "playlist" => "brgen/engines/radio/playlist",
+    "takeaway" => "brgen/engines/marketplace/engines/takeaway",
   }.freeze
 
-  # Messenger routes stay in brgen, but its Stimulus controllers ship in an engine.
-  ASSET_PATHS = PATHS.merge("messenger" => "brgen_messenger").freeze
+  # Messenger routes stay in brgen; its Stimulus controllers ship in an engine.
+  ASSET_PATHS = PATHS.merge("messenger" => "brgen/engines/messenger").freeze
 
   # rest, globbed under every engine app hosts. brgen hosts them all; amber and bsdports none.
   def self.glob(rails_root, app, rest)

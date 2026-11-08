@@ -218,12 +218,12 @@ measure is already owned by the Bymorgen item above.
   prints blue and underlined, while source styles it `var(--bol-price)`
   (#c91f2c, tabular numerals) on a plain `strong`
   (`brgen/app/assets/stylesheets/_brgen_shared_overrides.scss:438,554` over
-  `brgen_marketplace/app/views/marketplace/listings/index.html.erb`). The
+  `brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb`). The
   messenger desktop "Meldinger" heading sits on a partial-width grey box,
   while source paints `.messenger-conversation-header` as a full-pane
   elevated bar (`brgen/app/assets/stylesheets/_brgen_messenger.scss:363`).
   The maps captures still show the raw kind value "place" at the page top,
-  and the fix in `brgen_maps/app/views/maps/places/_card.html.erb` covers the
+  and the fix in `brgen/engines/maps/app/views/maps/places/_card.html.erb` covers the
   card partial only — verify the kind select and page header at recapture.
   Recapture every committed RAILS capture at one revision after the pending
   items close, and record the revision beside the image so capture age is

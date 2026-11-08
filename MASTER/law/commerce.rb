@@ -12,7 +12,7 @@ Law.define(:COMMERCE_AMBER_DOES_NOT_OWN_BRGEN) do
 end
 
 Law.define(:COMMERCE_BRGEN_DOES_NOT_OWN_AMBER) do
-  path "RAILS/brgen_marketplace/"
+  path "RAILS/brgen/engines/marketplace/"
   source "pub5 commerce boundary - Amber owns wardrobe intelligence; BRGEN owns transactions"
   detect { |line| line.match?(/\b(?:TasteRanker|WardrobeGap|ShopTheLook|WardrobeItem)\b/) }
   fix "Keep wardrobe ranking and wardrobe records in Amber; expose only commerce references and catalog facts across the boundary."

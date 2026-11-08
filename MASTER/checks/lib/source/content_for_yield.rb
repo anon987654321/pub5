@@ -61,7 +61,7 @@ module Deploy
     def view_files(app)
       roots = [ File.join(@rails, app, "app", "views") ]
       if app == "brgen"
-        roots.concat(Dir.glob(File.join(@rails, "brgen_*/{,*/}app/views")))
+        roots.concat(Dir.glob(File.join(@rails, "brgen", "engines", "**", "app", "views")))
       end
 
       roots.flat_map do |root|
@@ -74,7 +74,7 @@ module Deploy
     def layout_files(app)
       roots = [ File.join(@rails, app, "app", "views", "layouts") ]
       if app == "brgen"
-        roots.concat(Dir.glob(File.join(@rails, "brgen_*/{,*/}app/views/layouts")))
+        roots.concat(Dir.glob(File.join(@rails, "brgen", "engines", "**", "app", "views", "layouts")))
       end
 
       roots.flat_map { |root| Dir.glob(File.join(root, "**", "*.{erb,html}")) }

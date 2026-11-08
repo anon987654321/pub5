@@ -39,4 +39,4 @@ duplicate_members:
 - RAILS/brgen/db/cable_schema.rb | RAILS/bsdports/db/cable_schema.rb
 - RAILS/brgen/db/cache_schema.rb | RAILS/bsdports/db/cache_schema.rb
 - RAILS/brgen/test/lib/asset_resolver_test.rb | RAILS/mrdamascy/test/asset_resolver_test.rb
-- RAILS/brgen_radio/playlist/public/tunnel.html | RAILS/brgen_radio/public/tunnel.html
+- RAILS/brgen/engines/radio/playlist/public/tunnel.html | RAILS/brgen/engines/radio/public/tunnel.html

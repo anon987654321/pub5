@@ -30,7 +30,7 @@ class TestLawPathReach < Minitest::Test
   MIGRATION = "RAILS/brgen/db/migrate/20261105000000_add_things.rb"
   MODEL = "RAILS/brgen/app/models/thing.rb"
   AMBER_ORDER = "RAILS/amber/app/models/order.rb"
-  MARKETPLACE_ORDER = "RAILS/brgen_marketplace/app/models/order.rb"
+  MARKETPLACE_ORDER = "RAILS/brgen/engines/marketplace/app/models/order.rb"
   BIZ_HTML = "BIZ/ai3.html"
 
   # Law => [a file inside its scope, a file outside it].
@@ -143,7 +143,7 @@ class TestLawPathReach < Minitest::Test
   # brgen's own marketplace code is not amber reaching into brgen.
   def test_amber_ownership_law_is_silent_on_brgen_marketplace
     law = ::Law.definitions.fetch(:COMMERCE_AMBER_DOES_NOT_OWN_BRGEN)
-    file = File.join(Master::ROOT, "..", "RAILS/brgen_marketplace/app/models/marketplace/order.rb")
+    file = File.join(Master::ROOT, "..", "RAILS/brgen/engines/marketplace/app/models/marketplace/order.rb")
 
     refute law.applies?(File.expand_path(file), "ruby")
   end

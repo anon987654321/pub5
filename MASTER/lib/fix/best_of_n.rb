@@ -506,7 +506,7 @@ module Master
           [File.join(@root, "MASTER", "test")]
         when %r{\ARAILS/__shared/}
           %w[brgen amber bsdports].map { |app| File.join(@root, "RAILS", app, "test") }
-        when %r{\ARAILS/brgen_[^/]+/}
+        when %r{\ARAILS/brgen/engines/}
           [File.join(@root, "RAILS", "brgen", "test")]
         when %r{\ARAILS/(brgen|amber|bsdports)/}
           [File.join(@root, "RAILS", Regexp.last_match(1), "test")]

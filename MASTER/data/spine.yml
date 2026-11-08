@@ -886,7 +886,7 @@ pub5_source_ceilings:
   # 65 is the ceiling this file is measured against from here on; it moves when
   # a named file buys a raise or a fold earns a fall, never silently.
   STUDIO: 65
-  # 106 -> 107 is test/test_githooks.rb. dev/githooks holds the three guards
+  # 106 -> 107 is test/test_githooks.rb. .githooks holds the three guards
   # that are the whole defence against a shared index, and nothing tested any of
   # them — a hook that stopped firing looks exactly like a week in which nobody
   # made the mistake. It runs all three through real git in a throwaway

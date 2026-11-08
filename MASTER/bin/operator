@@ -801,10 +801,10 @@ when "hooks"
   # core.hooksPath rather than copying into .git/hooks: a copy is a second
   # implementation that drifts from the tracked one, silently, which is the
   # defect this repo has the most of.
-  hooks = File.join(OPENBSD_OPS, "dev", "githooks")
-  system("git", "-C", ROOT, "config", "core.hooksPath", "OPENBSD/dev/githooks") ||
+  hooks = File.join(ROOT, ".githooks")
+  system("git", "-C", ROOT, "config", "core.hooksPath", ".githooks") ||
     die("hooks", "git config failed")
-  Master::Trace::Dmesg.attach("hooks0", "operator0", "core.hooksPath -> OPENBSD/dev/githooks")
+  Master::Trace::Dmesg.attach("hooks0", "operator0", "core.hooksPath -> .githooks")
   Dir.children(hooks).sort.each { |hook| Master::Trace::Dmesg.status("hooks0", "#{hook}#{File.executable?(File.join(hooks, hook)) ? "" : ", not executable"}") }
   Master::Trace::Dmesg.status("hooks0", "cross-tree commits refused unless PUB5_CROSS_TREE=1")
   Master::Trace::Dmesg.status("hooks0", "post-commit records this session SHAs")

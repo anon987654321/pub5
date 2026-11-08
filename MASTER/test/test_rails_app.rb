@@ -45,11 +45,11 @@ class TestRailsApp < Minitest::Test
   # Rails project beside the checkout does not make MASTER Rails.
   def test_tree_target_reads_rails_from_the_files
     with_repository do |root|
-      FileUtils.mkdir_p(File.join(root, "RAILS", "brgen_maps", "lib", "maps"))
-      File.write(File.join(root, "RAILS", "brgen_maps", "lib", "maps", "engine.rb"), "module Maps; end\n")
+      FileUtils.mkdir_p(File.join(root, "RAILS", "brgen", "engines", "maps", "lib", "maps"))
+      File.write(File.join(root, "RAILS", "brgen", "engines", "maps", "lib", "maps", "engine.rb"), "module Maps; end\n")
       FileUtils.mkdir_p(File.join(root, "MASTER", "lib"))
 
-      assert RailsApp.tree_target?("RAILS/brgen_maps/app/models/place.rb", repo_root: root)
+      assert RailsApp.tree_target?("RAILS/brgen/engines/maps/app/models/place.rb", repo_root: root)
       assert RailsApp.tree_target?("RAILS/test/check_test.rb", repo_root: root)
       refute RailsApp.tree_target?("MASTER/lib", repo_root: root)
     end

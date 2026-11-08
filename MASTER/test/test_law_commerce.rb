@@ -6,7 +6,7 @@ require File.join(Master::ROOT, "law", "definition")
 # A path-scoped Law that names a directory nobody has can never fire, and
 # nothing reports it: applies? is false for every file, so the scan finds
 # nothing and reads as clean. The marketplace is the sibling
-# RAILS/brgen_marketplace/ app, so that is what the commerce scopes must name.
+# RAILS/brgen/engines/marketplace/ app, so that is what the commerce scopes must name.
 class TestLawCommerce < Minitest::Test
   REPO = File.expand_path("../..", __dir__)
 
@@ -27,7 +27,7 @@ class TestLawCommerce < Minitest::Test
 
   def test_brgen_marketplace_law_fires_on_a_marketplace_file_that_ranks_wardrobe
     law = definition(:COMMERCE_BRGEN_DOES_NOT_OWN_AMBER)
-    file = "RAILS/brgen_marketplace/app/services/marketplace/ranking_service.rb"
+    file = "RAILS/brgen/engines/marketplace/app/services/marketplace/ranking_service.rb"
 
     assert File.file?(File.join(REPO, file)), "the fixture path moved; point this at a real marketplace service"
     assert law.applies?(file, "ruby")
@@ -41,7 +41,7 @@ class TestLawCommerce < Minitest::Test
 
   def test_real_marketplace_sources_hold_the_boundary
     law = definition(:COMMERCE_BRGEN_DOES_NOT_OWN_AMBER)
-    offenders = Dir.glob(File.join(REPO, "RAILS", "brgen_marketplace", "app", "**", "*.rb")).flat_map do |path|
+    offenders = Dir.glob(File.join(REPO, "RAILS", "brgen", "engines", "marketplace", "app", "**", "*.rb")).flat_map do |path|
       relative = path.delete_prefix("#{REPO}/")
       law.scan(File.read(path), file: relative).map { |hit| "#{relative}: #{hit}" }
     end

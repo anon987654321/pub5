@@ -13,7 +13,7 @@
 require "minitest/autorun"
 
 class MapsEngineWiringContractTest < Minitest::Test
-  ROOT = File.expand_path("../brgen_maps", __dir__)
+  ROOT = File.expand_path("../brgen/engines/maps", __dir__)
 
   def read(relative)
     path = File.join(ROOT, relative)

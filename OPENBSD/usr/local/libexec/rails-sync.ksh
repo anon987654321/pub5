@@ -53,7 +53,7 @@ archive_tracked_tree() {
   target=$2
   source_rel=${source_dir#"$rails_root"/}
   case "$source_rel" in
-    "$app"|__shared|brgen_[A-Za-z0-9_]*) ;;
+    "$app"|__shared) ;;
     *) echo "rails-sync: refused source tree: $source_rel" >&2; return 1 ;;
   esac
   archive_root=$target/.archive.$
@@ -236,15 +236,8 @@ case "$mode" in
     sync_tree_stage "$rails_root/__shared" "$app_home/__shared" no
     ;;
   verticals)
-    for source_dir in "$rails_root"/brgen_*/; do
-      [ -d "$source_dir" ] || continue
-      [ ! -L "$source_dir" ] || { echo "rails-sync: refusing symlinked vertical" >&2; exit 1; }
-      name=$(basename "$source_dir")
-      case "$name" in
-        brgen_[A-Za-z0-9_]*) ;;
-        *) echo "rails-sync: refused vertical name: $name" >&2; exit 1 ;;
-      esac
-      sync_tree_stage "$source_dir" "$app_home/$name" no
-    done
-    ;;
+    # Compatibility mode for old deploy callers. The engines are already
+    # inside RAILS/brgen and travel with the ordinary app tree sync.
+    : ;;
+
 esac

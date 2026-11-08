@@ -34,8 +34,7 @@ class TreeContractTest < Minitest::Test
     MASTER/law
     MASTER/tools/test
     OPENBSD/var/nsd
-    RAILS/brgen_marketplace/engines
-    RAILS/brgen_radio
+    RAILS/brgen/engines
     STUDIO
     STUDIO/dilla
     STUDIO/postpro
@@ -44,12 +43,12 @@ class TreeContractTest < Minitest::Test
 
   # Each vertical's engine root, relative to RAILS/.
   BRGEN_ENGINES = {
-    "marketplace" => "brgen_marketplace",
-    "playlist" => "brgen_radio/playlist",
-    "tv" => "brgen_radio/tv",
-    "takeaway" => "brgen_marketplace/engines/takeaway",
-    "dating" => "brgen_dating",
-    "maps" => "brgen_maps",
+    "marketplace" => "brgen/engines/marketplace",
+    "playlist" => "brgen/engines/radio/playlist",
+    "tv" => "brgen/engines/radio/tv",
+    "takeaway" => "brgen/engines/marketplace/engines/takeaway",
+    "dating" => "brgen/engines/dating",
+    "maps" => "brgen/engines/maps",
   }.freeze
 
   def test_ruby_sources_never_contain_transport_markup

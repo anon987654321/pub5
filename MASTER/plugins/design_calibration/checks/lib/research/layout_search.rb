@@ -12,10 +12,9 @@ module Deploy
     ROOT = File.expand_path("../../../../../..", __dir__)
     RAILS = File.join(ROOT, "RAILS")
 
-    # Views live in the brgen_marketplace engine, a sibling of brgen. The
-    # marketplace component styles live in brgen's `_brgen_*.scss` partials,
-    # which the host entrypoint application.scss pulls in with `@use`.
-    ENGINE = File.join(RAILS, "brgen_marketplace")
+    # Views live in the mounted Marketplace engine. Component styles remain
+    # in Brgen's `_brgen_*.scss` partials, pulled in by the host application.scss.
+    ENGINE = File.join(RAILS, "brgen", "engines", "marketplace")
     CARD = File.join(ENGINE, "app/views/marketplace/listings/_card.html.erb")
     BRGEN_STYLESHEET = File.join(RAILS, "brgen/app/assets/stylesheets/application.scss")
     BRGEN_USE = /^@use "(brgen_[a-z0-9_]+)"/.freeze

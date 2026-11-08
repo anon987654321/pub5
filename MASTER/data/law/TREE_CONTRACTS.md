@@ -64,13 +64,14 @@ resolves the canonical STUDIO media entrypoints from the source or deployed
 tree; callers do not reach into sibling implementation directories.
 
 **brgen's verticals are mountable engines**, not namespaced controllers.
-Marketplace contains the food-ordering Takeaway engine as a nested package;
-it is exposed at `/food` on the marketplace host. Subdomain constraints in
-`brgen/config/routes.rb` via `Brgen::DomainRegistry` map `markedsplass`,
-`dating`, `tv` and the rest onto them. Messenger and the MASTER relay are
-not engines. Tooling that globs `<app>/app/**` misses engine code — four
-scanners stopped seeing 57 views when the verticals moved, and the falling
-finding count read as improvement rather than blindness.
+They live beneath `RAILS/brgen/engines/`; Marketplace contains the food-ordering
+Takeaway engine as a nested package at
+`RAILS/brgen/engines/marketplace/engines/takeaway`, exposed at `/food`.
+Subdomain constraints in `brgen/config/routes.rb` via `Brgen::DomainRegistry`
+map `markedsplass`, `dating`, `tv` and the rest onto them. Messenger and the
+MASTER relay are not engines. Tooling that globs only
+`<app>/app/**` misses engine code, so checks and deploy sync must walk the
+Brgen `engines/` subtree.
 
 **Checks are declared once.** Every check is a row in
 `MASTER/checks/checks.yml` carrying its `require`, `Deploy::*` class, pass
@@ -677,11 +678,12 @@ Code runs in two shapes of the same tree, and a path that is right in one is
 wrong in the other. Nearly every deploy failure of 2026-10-09 was this,
 found one at a time over a forty-minute CI loop.
 
-The repo checkout has `RAILS/<app>`, `RAILS/__shared`, `RAILS/brgen_*`,
-`MASTER`, `OPENBSD` and `STUDIO` side by side. On vm23 an app's user sees
-only `/home/<app>/app` (the contents of `RAILS/<app>`, so the directory is
-called `app`, never `brgen`), `/home/<app>/__shared`, and for brgen the
-`/home/brgen/brgen_*` siblings. MASTER is not in it. `PUB5_ROOT`, exported
+The repo checkout has `RAILS/<app>`, `RAILS/__shared`, `MASTER`,
+`OPENBSD` and `STUDIO`. On vm23 an app's user sees only
+`/home/<app>/app` (the contents of `RAILS/<app>`, so the directory is
+called `app`, never `brgen`) and `/home/<app>/__shared`. Brgen's engines
+are deployed as part of `/home/brgen/app/engines`, not as sibling app roots.
+MASTER is not in the app copy. `PUB5_ROOT`, exported
 by `rc.d` and by `vps_ci.sh`, names the full checkout at `/home/dev/pub5`,
 which holds MASTER and `RAILS/apps.yml`.
 
@@ -689,13 +691,14 @@ What to write, so both layouts work:
 
 - An app file: `Rails.root`, never `File.expand_path` with a fixed run of
   `..`, and never a literal `brgen/` path segment.
-- A sibling engine: `Rails.root.join("..", "brgen_marketplace")`. It
-  resolves in both, because the engines are siblings of the app in both.
+- A mounted engine: `Rails.root.join("engines", "marketplace")`. It
+  resolves in the repo and the deployed Brgen app because engines travel inside
+  the app copy-tree.
 - Anything in MASTER or the repo root: `Shared::Contracts.root`, `.dir` and
   `.tool_path` (`RAILS/__shared/lib/shared/contracts.rb`). They honour
   `PUB5_ROOT` and fall back to walking up from the checkout.
-- Never `engines/<x>` under the app root (the directory is gone), and never
-  `RAILS/shared` (it is `RAILS/__shared`).
+- Never reach into a retired `RAILS/brgen_*` sibling; never `RAILS/shared`
+  (it is `RAILS/__shared`).
 
 Three static guards enforce this without a Rails boot, and
 `ruby OPENBSD/bin/rehearse` runs them in seconds before any deploy:
@@ -781,12 +784,11 @@ Each of these went through a proposal and a measurement against the tree. A
 reason tied to one file sits in a comment on that file; these have no single
 file to sit on.
 
-- **No fourth public Rails app** beyond brgen, amber and bsdports until
-  brgen's high-churn verticals are engines with their own migrations and
-  tests, money and identity primitives live in `RAILS/__shared` with more than
-  one consumer, and CI runs the layout suite and `/up` smoke for all three
-  apps. Every restart before pub5 grew surface before its boundaries held;
-  horizon ideas wait in `RAILS/apps.horizon.yml`.
+- **No fourth public Rails app** beyond brgen, amber and bsdports. Brgen's
+  high-churn verticals are mountable engines inside the Brgen app; money and
+  identity primitives live in `RAILS/__shared`, and CI runs the layout suite
+  and `/up` smoke for all three public apps. Horizon ideas wait in
+  `RAILS/apps.horizon.yml`.
 - **No staging environment.** vm23 is one vCPU and 1 GB and already sheds
   apps under load. A staging copy arrives with a second box, not as a second
   set of services on this one.

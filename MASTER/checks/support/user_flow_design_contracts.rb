@@ -107,7 +107,7 @@ module Deploy
             id: :single_h1_marketplace_listings,
             principle: "hierarchy / clarity",
             meaning: "Marketplace listings index exposes exactly one document h1",
-            paths: %w[brgen_marketplace/app/views/marketplace/listings/index.html.erb],
+            paths: %w[brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb],
             required_all: [/<h1\b/i],
             max_h1: 1,
           },

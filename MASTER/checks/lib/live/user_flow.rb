@@ -31,17 +31,11 @@ module Deploy
     LAW_MAP = File.join(MASTER, "data", "laws.yml")
     DESIGN_DOC = File.join(RAILS_ROOT, "__shared", "README.md")
 
-    # Every directory that renders a view, the three apps plus brgen's engines.
-    #
-    # The engine views render inside brgen and live outside brgen/app, so a
-    # brgen/app/views scan never saw the 71 vertical pages — the blind spot that
-    # let the sub-apps drift. Read off disk rather than listed, because a list is
-    # only correct until the next engine, and the last one cost 71 pages of
-    # coverage before anybody noticed. Some engines nest inside another
-    # (brgen_radio/tv, brgen_marketplace/engines/takeaway), hence the **.
+    # EngineRoots follows the Brgen app's complete mounted-engine tree,
+    # including nested packages such as Marketplace's Takeaway surface.
     VIEW_PATHS = (%w[brgen/app/views amber/app/views bsdports/app/views] +
-                  Dir.glob(File.join(RAILS_ROOT, "brgen_*/**/app/views"))
-                     .map { |path| path.sub("#{RAILS_ROOT}/", "") }.uniq.sort).freeze
+                  EngineRoots.glob(RAILS_ROOT, "brgen", File.join("app", "views"))
+                             .map { |path| path.sub("#{RAILS_ROOT}/", "") }).uniq.sort.freeze
 
     def self.run
       return run_once unless CheckAutofix.enabled?
@@ -100,10 +94,9 @@ module Deploy
       }
     end.freeze
 
-    # Marketplace controllers/views live in the brgen_marketplace engine, a sibling
-    # of brgen; only the payment services stayed in the host app. These are
-    # relative to RAILS/<app>, so the engine prefix rides along here.
-    MP = "../brgen_marketplace/app"
+    # Marketplace controllers/views live in the Brgen app's mounted engine.
+    # Payment services remain host-owned.
+    MP = "engines/marketplace/app"
 
     SOURCE_FLOW_MARKERS = {
       "brgen" => {

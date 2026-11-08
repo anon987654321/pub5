@@ -59,8 +59,8 @@ instruments:
       - RAILS/amber/app/assets/stylesheets/**/*.scss
       - RAILS/bsdports/app/assets/stylesheets/**/*.scss
       - RAILS/brgen/app/assets/stylesheets/**/*.scss
-      - RAILS/brgen_*/app/assets/stylesheets/**/*.scss
-      - RAILS/brgen_*/**/app/assets/stylesheets/**/*.scss
+      - RAILS/brgen/engines/**/app/assets/stylesheets/**/*.scss
+      - RAILS/brgen/engines/**/app/assets/stylesheets/**/*.scss
       - MASTER/web/public/*.css
       - RAILS/__shared/app/assets/stylesheets/**/*.scss
 
@@ -73,7 +73,7 @@ instruments:
       - RAILS/amber/app/views/**/*.html.erb
       - RAILS/bsdports/app/views/**/*.html.erb
       - RAILS/brgen/app/views/**/*.html.erb
-      - RAILS/brgen_*/app/views/**/*.html.erb
+      - RAILS/brgen/engines/**/app/views/**/*.html.erb
       - RAILS/__shared/app/views/**/*.html.erb
       - RAILS/__shared/frontend/*.js
 
@@ -84,7 +84,7 @@ instruments:
     verify: RAILS/test/locale_contract_test.rb, RAILS/test/i18n_resolution_test.rb - their directory walks
     globs:
       - RAILS/*/config/locales/*.yml
-      - RAILS/brgen_*/config/locales/*.yml
+      - RAILS/brgen/engines/**/config/locales/*.yml
       - RAILS/__shared/config/locales/*.yml
 
   # A row for what no instrument should ever see, so the skip list stays

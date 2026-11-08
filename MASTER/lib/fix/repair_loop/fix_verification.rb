@@ -196,10 +196,10 @@ module Master
           [::Operator::RubyRunner.bundle_cmd(root: @root), "exec", *ruby]
         end
 
-        # A Rails file's test follows the Rails layout: app/models/user.rb is tested by
-        # test/models/user_test.rb beside the same app/. An engine (RAILS/brgen_dating,
-        # RAILS/brgen_radio/tv) and the shared engine have no bin/rails of their own; they
-        # run inside brgen, which mounts them and whose suite already holds their tests.
+        # A Rails file's test follows its Rails layout: app/models/user.rb is tested by
+        # test/models/user_test.rb beside that app. Brgen's engines live under
+        # RAILS/brgen/engines, have no bin/rails of their own, and run inside the
+        # host app whose suite already holds their tests.
         # Answers [app root, test path relative to it].
         RAILS_FILE = %r{\A(?<rails>.+/RAILS|.+/MASTER(?=/web/))/(?<component>.+?)/app/(?<kind>[^/]+)/(?<rest>.+)\.rb\z}
         MOUNTED_BY = "brgen"

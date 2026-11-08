@@ -2,9 +2,9 @@
 
 Restored from the pub, pub2 and pub3 archives into the pub5 anlage and completed
 for Innovasjon Norge applications. Each concept is delivered as one self-contained
-HTML document and one PDF printed from it. The separate `__templates/` directory
-preserves the original `bob` and `bob2` correspondence in HTML and PDF form; those
-files are historical source material, not part of the seven plan deliverables:
+HTML document and one PDF printed from it. The original `bob` and `bob2` correspondence templates are preserved in
+`BPLANS/__templates/`; those files are historical source material, not part of
+the seven plan deliverables:
 
     syre/syre.html + syre.pdf                     3D-printede sko, NOK 250 000
     ragnhild/ragnhild.html + ragnhild.pdf         begravelsesbyrå (karaokekiste), NOK 150 000

@@ -49,8 +49,8 @@ class FormControlNamesTest < Minitest::Test
   #     "takeaway_order_items_#{item.id}", and the interpolation only resolves
   #     at render time.
   KNOWN_UNREADABLE = [
-    "brgen_radio/playlist/app/views/playlist/playlists/show.html.erb",
-    "brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb",
+    "brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb",
+    "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb",
     # These name their controls at render time in shapes a regex over ERB
     # source cannot read — the same two shapes the two entries above document:
     # a label written by a `tag.label do` wrapper (strip_erb blanks the helper
@@ -62,7 +62,7 @@ class FormControlNamesTest < Minitest::Test
     "brgen/app/views/shared/_report_button.html.erb",
     "brgen/app/views/shared/_report_reason.html.erb",
     "brgen/app/views/users/edit.html.erb",
-    "brgen_marketplace/engines/takeaway/app/views/takeaway/menu_items/_allergen_fields.html.erb",
+    "brgen/engines/marketplace/engines/takeaway/app/views/takeaway/menu_items/_allergen_fields.html.erb",
   ].freeze
 
   def views

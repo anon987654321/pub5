@@ -27,12 +27,12 @@ class TestRepairLoopOwnTest < Minitest::Test
   # An engine has no bin/rails; its test runs inside brgen, which mounts it.
   def test_an_engine_file_maps_to_its_test_run_from_brgen
     rails = File.join(Master::REPO_ROOT, "RAILS")
-    model = File.join(rails, "brgen_dating", "app", "models", "dating", "daily_pick.rb")
+    model = File.join(rails, "brgen", "engines", "dating", "app", "models", "dating", "daily_pick.rb")
 
     suite, test = Master::Fix::RepairLoop::FixVerification.rails_test_for(model)
 
     assert_equal File.join(rails, "brgen"), suite
-    assert_equal "../brgen_dating/test/models/dating/daily_pick_test.rb", test
+    assert_equal "engines/dating/test/models/dating/daily_pick_test.rb", test
   end
 
   # Under the app's own bundle: from inside MASTER's it stopped on bootsnap/setup before any test ran.

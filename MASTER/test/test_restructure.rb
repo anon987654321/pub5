@@ -467,12 +467,12 @@ class TestRestructure < Minitest::Test
   end
 
   def test_rails_proof_includes_mounted_engine_tests
-    # A brgen vertical is an engine beside brgen at RAILS/brgen_<name>, reached from brgen.
+    # A nested Takeaway engine is proved through its Brgen host suite.
     FileUtils.mkdir_p(File.join(@repo, "RAILS/brgen/test"))
-    FileUtils.mkdir_p(File.join(@repo, "RAILS/brgen_takeaway/test/models/takeaway"))
-    engine_test = File.join(@repo, "RAILS/brgen_takeaway/test/models/takeaway/order_test.rb")
+    FileUtils.mkdir_p(File.join(@repo, "RAILS/brgen/engines/marketplace/engines/takeaway/test/models/takeaway"))
+    engine_test = File.join(@repo, "RAILS/brgen/engines/marketplace/engines/takeaway/test/models/takeaway/order_test.rb")
     File.write(engine_test, "class OrderTest < Minitest::Test; end\n")
-    order = "RAILS/brgen_takeaway/app/models/takeaway/order.rb"
+    order = "RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb"
     plan = Restructure::Plan.parse("OPERATIONS: split\n=== WRITE #{order}\nmodule Takeaway\nend\n=== END\n")
     proof = Restructure::RailsProof.new(repo_root: @repo, tree: "RAILS")
     assert_includes proof.send(:test_files, plan).map { |file| File.expand_path(file) }, engine_test

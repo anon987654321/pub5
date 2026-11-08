@@ -53,13 +53,12 @@ module Operator
     # FACE_POINT_IS_ONE_PIXEL and NO_JQUERY all have their subject there and
     # nowhere else, so five laws written for the face were enforced against no
     # file at all.
-    # The host and all five brgen_* verticals are separate source roots. The
-    # RAILS README explicitly forbids measuring brgen without them: doing so
-    # silently drops the vertical code from this census.
+    # Brgen owns its mounted engines inside one app root; the pathspec includes
+    # them recursively, so count that deploy tree once rather than double-read
+    # sibling copies.
     TREES = %w[
       MASTER/lib MASTER/law MASTER/tools MASTER/web RAILS/__shared/lib OPENBSD
-      RAILS/amber RAILS/brgen RAILS/brgen_dating RAILS/brgen_maps
-      RAILS/brgen_marketplace RAILS/brgen_messenger RAILS/brgen_radio RAILS/bsdports
+      RAILS/amber RAILS/brgen RAILS/bsdports
       RAILS/__shared/app RAILS/__shared/config
     ].freeze
 

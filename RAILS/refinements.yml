@@ -1420,7 +1420,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/controllers/dating/likes_controller.rb
+  path: RAILS/brgen/engines/dating/app/controllers/dating/likes_controller.rb
   item: Add named rate_limits to LikesController#create and DislikesController#create
     (e.g. 120 per hour); the swipe endpoints take any visible user_id with no throttle
     against scripted mass-liking.
@@ -1429,7 +1429,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/controllers/dating/matches_controller.rb
+  path: RAILS/brgen/engines/dating/app/controllers/dating/matches_controller.rb
   item: Order the matches list explicitly (newest first, created_at desc); Dating::Match.active
     is paginated with no order, so pages and infinite scroll come back in arbitrary
     order.
@@ -1438,7 +1438,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/controllers/dating/path_crossings_controller.rb
+  path: RAILS/brgen/engines/dating/app/controllers/dating/path_crossings_controller.rb
   item: Move the expired LocationPing delete_all out of the PathCrossingsController#index
     GET (and out of every recorder call) into a scheduled sweep job, so a page read
     is not a table-wide write.
@@ -1447,7 +1447,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/controllers/dating/profiles_controller.rb
+  path: RAILS/brgen/engines/dating/app/controllers/dating/profiles_controller.rb
   item: Clear verified_at (and the location ping) when the profile's photo set changes
     in ProfilesController#assign_photos, so a verification approved for one face does
     not carry over to new photos.
@@ -1456,7 +1456,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/services/dating/matchmaking.rb
+  path: RAILS/brgen/engines/dating/app/services/dating/matchmaking.rb
   item: 'Delete the unused Dating::Matchmaking service: nothing calls it, and its
     potential_matches skips oriented_for and block filtering, so wiring it up later
     would leak profiles the deck hides.'
@@ -1465,7 +1465,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/home/_card.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/home/_card.html.erb
   item: Show the verified badge (profile.verified_at) on the swipe card caption; it
     currently appears only on picks, so the deck gives no trust signal.
   status: done
@@ -1473,7 +1473,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/home/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/home/index.html.erb
   item: 'Hide the rewind button in the home nav from guests, as the card already does:
     it renders outside the Current.user check and posts to a require_user_session
     action.'
@@ -1482,7 +1482,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/home/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/home/index.html.erb
   item: 'Drop the duplicate touchstart/touchmove/touchend bindings on the deck (pointer
     events already fire on touch) and set touch-action: pan-y on the card, so a touch
     does not run pointerDown twice and vertical scrolling of a long bio still works.'
@@ -1491,7 +1491,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/home/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/home/index.html.erb
   item: Link 'Who liked you' (likes_path), 'Today's picks' (picks_path) and 'Verify
     your profile' (new_verification_path) from the dating home nav; none of these
     pages is linked from anywhere in the app.
@@ -1500,7 +1500,7 @@ items:
   app: brgen
   area: dating
   size: M
-  path: RAILS/brgen_dating/app/views/dating/likes/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/likes/index.html.erb
   item: Show a photo thumbnail (photos preloaded) and the age with a separator on
     'who liked you' cards, and add the same report/block overflow the deck card has;
     the page shows only a bare name.
@@ -1509,7 +1509,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/matches/_overlay.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/matches/_overlay.html.erb
   item: Point the match overlay's 'Open messages' link at the direct conversation
     announce_match already created (pass it as a local), not at the inbox index.
   status: done
@@ -1517,7 +1517,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/path_crossings/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/path_crossings/index.html.erb
   item: 'Render crossing times as t(''dating.crossed_ago'', time: time_ago_in_words(...))
     inside a <time datetime> element; the bare time_ago_in_words reads ''5 minutes''
     with no ''ago'' in either locale.'
@@ -1526,7 +1526,7 @@ items:
   app: brgen
   area: dating
   size: M
-  path: RAILS/brgen_dating/app/views/dating/profiles/edit.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/profiles/edit.html.erb
   item: 'Build the missing prompt editor: Dating::PromptsController has create/destroy
     routes, but no view links to profile_prompts_path, so nobody can answer the three
     prompts the ranking and the Hinge-style like depend on. Add a list plus a question
@@ -1536,7 +1536,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/app/views/dating/verifications/index.html.erb
+  path: RAILS/brgen/engines/dating/app/views/dating/verifications/index.html.erb
   item: Add a rate_limit to VerificationsController#create and a note field on the
     reviewer's reject button (the controller and reject! accept note:, but the queue
     has no way to enter one), so a rejected user learns why.
@@ -1545,7 +1545,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/config/locales/nb.yml
+  path: RAILS/brgen/engines/dating/config/locales/nb.yml
   item: Add a nb/en dating.location_invalid key; PathCrossingsController falls back
     to the English default 'Location was not valid.' on the Norwegian site.
   status: done
@@ -1553,7 +1553,7 @@ items:
   app: brgen
   area: dating
   size: S
-  path: RAILS/brgen_dating/test/models/dating/profile_test.rb
+  path: RAILS/brgen/engines/dating/test/models/dating/profile_test.rb
   item: 'Add a test for Dating::PromptsController: create beyond MAX_PER_PROFILE is
     refused with the error flash, and destroy cannot remove another user''s prompt.'
   status: done
@@ -1561,7 +1561,7 @@ items:
   app: brgen
   area: dating
   size: M
-  path: RAILS/brgen_dating/test/path_crossing_recorder_test.rb
+  path: RAILS/brgen/engines/dating/test/path_crossing_recorder_test.rb
   item: 'Add controller tests for path crossings: locate refuses an unverified or
     non-consenting profile with 403, rejects bad coordinates with 422, and index hides
     blocked people.'
@@ -1570,7 +1570,7 @@ items:
   app: brgen
   area: delivery
   size: M
-  path: RAILS/brgen_marketplace/engines/takeaway/app/controllers/takeaway/delivery_drivers_controller.rb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/delivery_drivers_controller.rb
   item: Add a courier view of their assigned out-for-delivery orders (address, kitchen,
     a Delivered button) on the driver page, since dispatch assigns couriers but they
     have nowhere to see the job.
@@ -1579,7 +1579,7 @@ items:
   app: brgen
   area: delivery
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/show.html.erb
   item: Give the driver's licence, latitude and longitude fields visible labels instead
     of placeholders, and add a 'Use current location' button like the listing form's
     useLocation.
@@ -1588,7 +1588,7 @@ items:
   app: brgen
   area: delivery
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/show.html.erb
   item: Translate the vehicle type options on the driver form through takeaway.vehicle_types.*
     instead of type.humanize, which shows English on nb.
   status: done
@@ -1976,7 +1976,7 @@ items:
   app: brgen
   area: maps
   size: S
-  path: RAILS/brgen_maps/app/controllers/maps/places_controller.rb
+  path: RAILS/brgen/engines/maps/app/controllers/maps/places_controller.rb
   item: Add a named rate_limit to PlacesController#check_in; soft guests may check
     in and nothing bounds how fast they write PlaceCheckIn rows.
   status: done
@@ -1984,7 +1984,7 @@ items:
   app: brgen
   area: maps
   size: S
-  path: RAILS/brgen_maps/app/controllers/maps/places_controller.rb
+  path: RAILS/brgen/engines/maps/app/controllers/maps/places_controller.rb
   item: Bound @checked_in to a time window (e.g. checked_in_at > 4.hours.ago) so the
     'checked in recently' copy is true and a returning visitor can check in again
     on a later day.
@@ -1993,7 +1993,7 @@ items:
   app: brgen
   area: maps
   size: M
-  path: RAILS/brgen_maps/app/views/maps/home/index.html.erb
+  path: RAILS/brgen/engines/maps/app/views/maps/home/index.html.erb
   item: 'Give keyboard and screen-reader users a way to reach map points: canvas circle
     layers have no focus target, so render the filtered points as a visually-hidden
     or collapsible link list in the HUD.'
@@ -2002,7 +2002,7 @@ items:
   app: brgen
   area: maps
   size: S
-  path: RAILS/brgen_maps/app/views/maps/places/index.html.erb
+  path: RAILS/brgen/engines/maps/app/views/maps/places/index.html.erb
   item: Scope the place-kind filter options to the current city (places_in_current_city.distinct.pluck(:kind))
     instead of Place.distinct across every city, which offers kinds with no results
     and runs a full-table distinct each render.
@@ -2011,7 +2011,7 @@ items:
   app: brgen
   area: maps
   size: M
-  path: RAILS/brgen_maps/app/views/maps/places/show.html.erb
+  path: RAILS/brgen/engines/maps/app/views/maps/places/show.html.erb
   item: Hide or delay recent check-ins on the public place page (show counts, or names
     only after an hour), since a named check-in with a relative timestamp publishes
     where a person is right now.
@@ -2020,7 +2020,7 @@ items:
   app: brgen
   area: maps
   size: S
-  path: RAILS/brgen_maps/app/views/maps/places/show.html.erb
+  path: RAILS/brgen/engines/maps/app/views/maps/places/show.html.erb
   item: Remove the inline style "display:inline" from the check-in form and style
     it through a semantic class in the maps stylesheet.
   status: done
@@ -2028,7 +2028,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/addresses_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/addresses_controller.rb
   item: Send a buyer who reached the address page from checkout back to the cart after
     saving an address (return_to param), instead of redirect_back to the address page.
   status: done
@@ -2036,7 +2036,7 @@ items:
   app: brgen
   area: marketplace
   size: M
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/orders_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/orders_controller.rb
   item: Add a seller-side sales list (orders where the current user is the seller,
     paginated, filterable by status) next to the buyer-only orders index.
   status: done
@@ -2044,7 +2044,7 @@ items:
   app: brgen
   area: marketplace
   size: M
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/orders_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/orders_controller.rb
   item: Add seller actions and routes to mark an order shipped (carrier plus tracking
     code) and delivered, calling Order#ship! and mark_delivered!, which nothing in
     the app calls today; returns and payout release both wait on delivered.
@@ -2053,7 +2053,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/saved_searches_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/saved_searches_controller.rb
   item: Add require_user_session to SavedSearchesController and use create with an
     error flash instead of create!, so a signed-out visitor or an invalid name gets
     a message rather than a 500.
@@ -2062,7 +2062,7 @@ items:
   app: brgen
   area: marketplace
   size: M
-  path: RAILS/brgen_marketplace/app/models/marketplace/order.rb
+  path: RAILS/brgen/engines/marketplace/app/models/marketplace/order.rb
   item: 'Let an accepted offer be paid: allow status accepted in Order#startable?
     and payable?, and show a Pay with Vipps/Stripe action on the buyer''s order page,
     because accept! moves the order out of pending and nothing can pay it afterwards.'
@@ -2071,7 +2071,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/models/marketplace/order.rb
+  path: RAILS/brgen/engines/marketplace/app/models/marketplace/order.rb
   item: 'Translate the ''Tracking'' fallback in Order#ship!''s notification body through
     I18n, so a Norwegian buyer is not told ''Tracking: ...''.'
   status: done
@@ -2079,7 +2079,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/services/marketplace/search_ranker.rb
+  path: RAILS/brgen/engines/marketplace/app/services/marketplace/search_ranker.rb
   item: 'Add nb and en keys for marketplace.ranking_reasons.* (title_match, title_partial,
     description_match, category_match, preferred_category, fast_delivery, trusted_seller,
     quality_signal); they only exist as English default: strings, so Norwegian readers
@@ -2089,7 +2089,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/addresses/index.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/addresses/index.html.erb
   item: 'Fix the address form scope: the view posts marketplace_address[...] but AddressesController#address_params
     requires :address, so every address saved from the page is rejected; align them
     and add a test that submits the rendered form.'
@@ -2098,7 +2098,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/deals/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/deals/show.html.erb
   item: Show the deal's discount on the deal page (percent_off and the before price),
     the listing photo and an add-to-cart button; today it shows only headline, price
     and description.
@@ -2107,7 +2107,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/_card.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/_card.html.erb
   item: 'Point the card''s Offer link at listing_path(listing, anchor: ''make-offer'');
     on the index and store grids the bare #make-offer anchor jumps nowhere.'
   status: done
@@ -2115,7 +2115,7 @@ items:
   app: brgen
   area: marketplace
   size: M
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/new.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/new.html.erb
   item: Take the listing price in kroner (accept 250 or 250,50) and convert to øre
     in the controller, replacing the price_ore field and its 'enter 25000 for NOK
     250' help; do the same for job salary, rent, deposit and gig pay fields.
@@ -2124,7 +2124,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb
   item: Replace the p.section-heading--md labels for Questions, Make an offer, Seller
     dashboard and Offers with h2 headings, so the listing page has a navigable outline.
   status: done
@@ -2132,7 +2132,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb
   item: Translate the raw order.status and @listing.status strings in the seller's
     offers list and dashboard chips through marketplace.order_statuses and a listing
     status key.
@@ -2141,7 +2141,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/orders/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/orders/show.html.erb
   item: Show the accept and decline buttons on the order page only when @order.open_offer?,
     and ask for confirmation on decline, instead of offering both on every order the
     policy lets the seller update.
@@ -2150,7 +2150,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/orders/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/orders/show.html.erb
   item: Show a 'Pay now' action on the buyer's order page when the order is startable
     (unpaid or failed), so a failed payment has a retry path instead of a dead status
     chip.
@@ -2159,7 +2159,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/saved_searches/index.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/saved_searches/index.html.erb
   item: Add an alerts on/off toggle (update action) per saved search on the saved
     searches page, and include the saved location in the Run search link.
   status: done
@@ -2167,7 +2167,7 @@ items:
   app: brgen
   area: marketplace
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/stores/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/stores/show.html.erb
   item: Paginate the store page's listings instead of limit(100) with no pager, and
     show an empty state when the shop has nothing live.
   status: done
@@ -2433,7 +2433,7 @@ items:
   app: brgen
   area: messenger
   size: M
-  path: RAILS/brgen_messenger/app/controllers/conversations_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb
   item: Rank the new-conversation picker by people the viewer follows or has talked
     to, not newest signups.
   status: done
@@ -2441,7 +2441,7 @@ items:
   app: brgen
   area: messenger
   size: M
-  path: RAILS/brgen_messenger/app/controllers/conversations_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb
   item: Load forward targets lazily (on opening the forward control) or cap them;
     show builds every DM thread with participants for each page.
   status: done
@@ -2449,7 +2449,7 @@ items:
   app: brgen
   area: messenger
   size: S
-  path: RAILS/brgen_messenger/app/controllers/messages_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/messages_controller.rb
   item: Add a named rate_limit to MessagesController#forward; the burst and sustained
     limits cover only :create, so forward is an unlimited fan-out path into every
     thread the sender holds.
@@ -2458,7 +2458,7 @@ items:
   app: brgen
   area: messenger
   size: S
-  path: RAILS/brgen_messenger/app/controllers/typing_indicators_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/typing_indicators_controller.rb
   item: Add a named rate_limit to TypingIndicatorsController#create (e.g. 40 per minute
     per user); the client throttle to 2 s is the only guard on the highest-frequency
     write in the app.
@@ -2467,7 +2467,7 @@ items:
   app: brgen
   area: messenger
   size: S
-  path: RAILS/brgen_messenger/app/controllers/typing_indicators_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/typing_indicators_controller.rb
   item: Refuse typing pings in a conversation where blocked_between? is true or the
     pinger is still a request participant, so a blocked or unaccepted person cannot
     signal presence.
@@ -2476,7 +2476,7 @@ items:
   app: brgen
   area: messenger
   size: S
-  path: RAILS/brgen_messenger/app/models/message.rb
+  path: RAILS/brgen/engines/messenger/app/models/message.rb
   item: Make Message#forwardable? return false for messages in an ephemeral or view-once
     conversation (or that should_expire?), so forwarding cannot copy a disappearing
     message into a permanent thread.
@@ -2485,7 +2485,7 @@ items:
   app: brgen
   area: messenger
   size: S
-  path: RAILS/brgen_messenger/test/models/typing_indicator_test.rb
+  path: RAILS/brgen/engines/messenger/test/models/typing_indicator_test.rb
   item: Add a model/controller test for TypingIndicator.set! that asserts the other
     participant receives a broadcast naming the typer and that an empty typer set
     renders no text.
@@ -2802,7 +2802,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/checkouts_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/checkouts_controller.rb
   item: Send a buyer returning from a paid basket to their order history (orders_path)
     with the confirmation notice instead of cart_path, which is empty after checkout
     and reads as if the purchase vanished.
@@ -2811,7 +2811,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/checkouts_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/checkouts_controller.rb
   item: 'Make the buy-now lane idempotent: reuse the buyer''s existing unpaid order
     for the same listing and variant created in the last few minutes instead of creating
     a new order on every click, so a double tap does not leave two orders and notify
@@ -2821,7 +2821,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/controllers/marketplace/checkouts_controller.rb
+  path: RAILS/brgen/engines/marketplace/app/controllers/marketplace/checkouts_controller.rb
   item: Give the Stripe cancel_url a distinct return (checkout_url with cancelled=1)
     and show a 'Payment cancelled, nothing was charged' notice in the cart, instead
     of returning silently to cart_url.
@@ -2830,7 +2830,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/models/marketplace/checkout.rb
+  path: RAILS/brgen/engines/marketplace/app/models/marketplace/checkout.rb
   item: 'Translate Checkout#payment_description''s ''%{first} + %{count} more'' through
     I18n (nb: ''og %{count} til''), since this string is shown to the buyer inside
     the Vipps app and on the Stripe page.'
@@ -2839,7 +2839,7 @@ items:
   app: brgen
   area: payments
   size: M
-  path: RAILS/brgen_marketplace/app/models/marketplace/return.rb
+  path: RAILS/brgen/engines/marketplace/app/models/marketplace/return.rb
   item: Add a Vipps refund branch to Marketplace::Return#refund_after_receive! (ePayment
     POST /payments/{reference}/refund with an idempotency key), since only Dintero
     and Stripe refund today and a Vipps buyer's received return stays 'refund not
@@ -2849,7 +2849,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/carts/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/carts/show.html.erb
   item: 'Disable the cart pay buttons on submit (form-submit#lock, as the takeaway
     order form does), since they run with turbo: false and a second click starts a
     second PSP session.'
@@ -2858,7 +2858,7 @@ items:
   app: brgen
   area: payments
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/_buy_bar.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/_buy_bar.html.erb
   item: 'Add form: { data: { turbo: false } } to the Vipps buy-now button_to in the
     buy bar, matching the Dintero button beside it, so the cross-origin redirect to
     landing.vipps.no is followed by the browser instead of failing inside a Turbo
@@ -2868,7 +2868,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb
   item: 'Report failed files in the bulk hosted-track upload: create drops a failed
     save without saying so, so the notice should name the files that did not save
     and why, not just the success count.'
@@ -2877,7 +2877,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb
   item: Run replace_audio! and the metadata update in one transaction in HostedTracksController#update,
     after validation passes, so a failed title validation stops replacing the audio
     file and leaving behind an orphan audio_version row.
@@ -2886,7 +2886,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/listens_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/listens_controller.rb
   item: De-duplicate Playlist::Listen per user and track within a time window (for
     example 30 minutes) before increment_plays runs; the JS comment says the server
     de-dupes, but ListensController creates a row and bumps plays_count on every POST;
@@ -2897,7 +2897,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/playlists_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb
   item: Preload audio_file and artwork attachments (with blobs) and timestamped_comments
     in PlaylistsController#playlist_tracks, the way SetsController#show already does;
     _player calls attached? and url_for per queue row and show runs one comments query
@@ -2907,7 +2907,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/playlists_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb
   item: Accept the embed color parameter only as a 3- or 6-digit hex and prefix '#',
     because the 'embed_red' example link passes color=ff0000, which canvas fillStyle
     rejects without a '#', so the waveform falls back to black.
@@ -2916,7 +2916,7 @@ items:
   app: brgen
   area: playlist
   size: M
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/playlists_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb
   item: Override X-Frame-Options and the frame-ancestors CSP for playlists#embed only;
     the global SAMEORIGIN header and frame_ancestors :self mean the copyable iframe
     snippet on the playlist page cannot load on any other site.
@@ -2925,7 +2925,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/controllers/playlist/sets_controller.rb
+  path: RAILS/brgen/engines/radio/playlist/app/controllers/playlist/sets_controller.rb
   item: Replace the per-track tr.timestamped_comments query in SetsController#show
     with one grouped Playlist::TimestampedComment.where(track_id:) load, which removes
     the N+1 on every set page.
@@ -2934,7 +2934,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: 'Set aria-valuenow (as seconds, with aria-valuemax = duration) and an aria-valuetext
     like ''1:23 av 4:05'' on the scrub slider inside #tick; the comment claims #tick
     keeps aria-valuenow honest but it never writes it, so screen readers always hear
@@ -2944,7 +2944,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: 'Register nexttrack and previoustrack Media Session handlers mapped to next()/previous(),
     so lock-screen and headphone skip buttons work; #setupMediaSession only wires
     play/pause/seek even though the controller now has a queue with previous/next.'
@@ -2953,7 +2953,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: Move the hard-coded player strings 'Play', 'Pause', 'Open', 'Comment at …',
     'Comment at this time...' and the 'brgen playlist' Media Session fallback into
     Stimulus values fed from t() keys, so the Norwegian page stops switching to English
@@ -2963,7 +2963,7 @@ items:
   app: brgen
   area: playlist
   size: M
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: Call StimulusReflex.register(this) in playlist_player connect() and pass body/timestamp
     as reflex arguments the reflex reads, because submitComment calls this.stimulate
     on a controller that never registered and PlaylistTimestampedCommentsReflex reads
@@ -2973,7 +2973,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: 'Record a listen on each track load rather than once per controller connect:
     the play listener uses { once: true } and reads trackIdValue, so tracks two to
     N reached via the queue, next() or auto-advance are never counted.'
@@ -2982,7 +2982,7 @@ items:
   app: brgen
   area: playlist
   size: M
-  path: RAILS/brgen_radio/playlist/app/javascript/controllers/playlist_player_controller.js
+  path: RAILS/brgen/engines/radio/playlist/app/javascript/controllers/playlist_player_controller.js
   item: Handle the audio element's waiting, stalled and error events with a visible,
     aria-live status line (buffering, could not load track) and catch the play() promise
     rejection in toggle()/load(), so a dead source_url or an autoplay refusal stops
@@ -2992,7 +2992,7 @@ items:
   app: brgen
   area: playlist
   size: M
-  path: RAILS/brgen_radio/playlist/app/models/playlist/track.rb
+  path: RAILS/brgen/engines/radio/playlist/app/models/playlist/track.rb
   item: Validate audio_file content type (audio/*) and a byte-size ceiling on Playlist::Track,
     and video_file on Tv::Video, since neither model has any attachment validation
     and the 1 GB VPS stores whatever it is given; add accept='audio/*' and accept='image/*'
@@ -3002,7 +3002,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/views/playlist/hosted_tracks/_form.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/_form.html.erb
   item: Translate source_type and privacy option labels through t('playlist.source_types.*')
     and the existing playlist.privacy.* keys instead of String#humanize, which shows
     English 'Youtube', 'Direct', 'Private' on the nb form.
@@ -3011,7 +3011,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/views/playlist/hosted_tracks/show.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/show.html.erb
   item: Show the Edit and Delete buttons on hosted_tracks/show only to the track owner
     (@track.user_id == Current.user.id); every signed-in visitor sees them now and
     gets a not-authorized redirect when they click.
@@ -3020,7 +3020,7 @@ items:
   app: brgen
   area: playlist
   size: L
-  path: RAILS/brgen_radio/playlist/app/views/playlist/listening_parties/_sync.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/listening_parties/_sync.html.erb
   item: Give the listening party page an audio element driven by the broadcast _sync
     partial (track and position_seconds), so guests hear the host's track in step
     instead of only reading 'Now playing … 42s'.
@@ -3029,7 +3029,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/views/playlist/listening_parties/show.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/listening_parties/show.html.erb
   item: Compare @party.host_id with Current.user&.id in listening_parties/show instead
     of @party.host == Current.user; host is not preloaded, so under strict_loading_by_default
     the read raises outside development.
@@ -3038,7 +3038,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/views/playlist/playlists/_comments.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/playlists/_comments.html.erb
   item: 'Render timestamped comments in #refreshCommentsList and _comments.html.erb
     as button elements, not clickable divs, so seeking to a comment is reachable by
     keyboard and announced as a control.'
@@ -3047,7 +3047,7 @@ items:
   app: brgen
   area: playlist
   size: S
-  path: RAILS/brgen_radio/playlist/app/views/playlist/playlists/_player.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/playlists/_player.html.erb
   item: Mark the now-playing title and artist region with aria-live='polite' so a
     track change from the queue, the transport bar or auto-advance is announced.
   status: done
@@ -3055,7 +3055,7 @@ items:
   app: brgen
   area: playlist
   size: L
-  path: RAILS/brgen_radio/playlist/app/views/playlist/shared/_transport_bar.html.erb
+  path: RAILS/brgen/engines/radio/playlist/app/views/playlist/shared/_transport_bar.html.erb
   item: Keep audio playing across Turbo navigation by moving the transport bar and
     its audio element into a data-turbo-permanent container in the layout, so leaving
     a playlist for a set or profile stops cutting the music.
@@ -3432,7 +3432,7 @@ items:
   app: brgen
   area: privacy
   size: S
-  path: RAILS/brgen_messenger/app/controllers/conversations_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb
   item: Exclude blocked users from the new-conversation people picker (User.messageable
     only filters guests, bots and deleted accounts).
   status: done
@@ -3627,7 +3627,7 @@ items:
   app: brgen
   area: security
   size: M
-  path: RAILS/brgen_messenger/app/controllers/conversations_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb
   item: Post a system line into the thread when the disappearing timer changes, so
     every participant sees who changed it and to what.
   status: done
@@ -3635,7 +3635,7 @@ items:
   app: brgen
   area: security
   size: S
-  path: RAILS/brgen_messenger/app/controllers/conversations_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/conversations_controller.rb
   item: Make the disappearing-messages PATCH admin-only in group DMs; today any member
     can switch the timer off for everyone.
   status: done
@@ -3643,7 +3643,7 @@ items:
   app: brgen
   area: security
   size: S
-  path: RAILS/brgen_messenger/app/controllers/messages_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/messages_controller.rb
   item: Rate-limit messages#forward; it writes a message into another thread with
     no limit, while create is limited twice.
   status: done
@@ -3651,7 +3651,7 @@ items:
   app: brgen
   area: security
   size: S
-  path: RAILS/brgen_messenger/app/controllers/messages_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/messages_controller.rb
   item: Answer a blank or invalid message edit with 422 instead of letting Message#edit!'s
     update! raise RecordInvalid into a 500.
   status: done
@@ -3659,7 +3659,7 @@ items:
   app: brgen
   area: security
   size: S
-  path: RAILS/brgen_messenger/app/controllers/messages_controller.rb
+  path: RAILS/brgen/engines/messenger/app/controllers/messages_controller.rb
   item: Return 422 with a message instead of a 500 when forward_copy(...).save! fails
     in messages#forward.
   status: done
@@ -3667,7 +3667,7 @@ items:
   app: brgen
   area: security
   size: S
-  path: RAILS/brgen_messenger/app/models/message.rb
+  path: RAILS/brgen/engines/messenger/app/models/message.rb
   item: Skip setting edited_at when the edited content equals the original, so a no-op
     save does not mark a line as edited.
   status: done
@@ -3792,7 +3792,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/controllers/takeaway/orders_controller.rb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/orders_controller.rb
   item: Let the diner cancel their own order while it is still pending (buyer branch
     in OrdersController#update, confirm dialog), since only the kitchen can move status
     today.
@@ -3801,7 +3801,7 @@ items:
   app: brgen
   area: takeaway
   size: L
-  path: RAILS/brgen_marketplace/engines/takeaway/app/models/takeaway/menu_item.rb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/menu_item.rb
   item: Add the 14 EU allergens as a field on menu items with a list on the menu and
     order form, which Norwegian food rules require for food sold online.
   status: done
@@ -3809,7 +3809,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
   item: Add the tip and scheduled delivery time fields to the takeaway order form;
     OrdersController permits tip_cents and scheduled_for and accepting_orders? checks
     scheduled_for, but the form sends neither.
@@ -3818,7 +3818,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
   item: 'Label each quantity field on the order form with t(''takeaway.qty_for'',
     name: item.name), as _menu does, instead of the same ''Qty'' label repeated for
     every dish.'
@@ -3827,7 +3827,7 @@ items:
   app: brgen
   area: takeaway
   size: L
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
   item: Replace payment_body's 'arrange payment with the restaurant' with Vipps checkout
     for takeaway orders, reusing Marketplace::Payments::VippsCheckout's payable interface
     (payment_currency, payment_description, total_cents).
@@ -3836,7 +3836,7 @@ items:
   app: brgen
   area: takeaway
   size: M
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
   item: Show a running subtotal and 'X kr more to reach the minimum' line on the order
     form as quantities change, so the below_minimum error is not the first time the
     diner learns the floor.
@@ -3845,7 +3845,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/new.html.erb
   item: Keep the chosen quantities when the order form re-renders with errors (read
     params[:takeaway_order][:items]), instead of resetting every field to 0.
   status: done
@@ -3853,7 +3853,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
   item: Show Reorder only to the diner and only once the order is delivered or cancelled;
     the kitchen sees it today and again looks the order up in Current.user.takeaway_orders,
     so the kitchen gets a 404.
@@ -3862,7 +3862,7 @@ items:
   app: brgen
   area: takeaway
   size: S
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
   item: Show the tip line (tip_display) between delivery and total on the order page;
     the tip is in total_cents but not listed, so the sum does not add up on screen.
   status: done
@@ -3870,7 +3870,7 @@ items:
   app: brgen
   area: takeaway
   size: M
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/orders/show.html.erb
   item: Broadcast status changes on the order (turbo_stream_from @order, replace the
     status block on transition) so the diner's tracking page updates without reloading,
     and narrow aria-live to the current status line instead of the whole chips block.
@@ -3879,7 +3879,7 @@ items:
   app: brgen
   area: takeaway
   size: M
-  path: RAILS/brgen_marketplace/engines/takeaway/app/views/takeaway/restaurants/show.html.erb
+  path: RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/show.html.erb
   item: Show the restaurant's weekly opening hours on the restaurant page (OpeningHour
     rows exist, but only the card shows open or closed now).
   status: done
@@ -3990,7 +3990,7 @@ items:
   app: brgen
   area: trust
   size: M
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/_buybox.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/_buybox.html.erb
   item: Show seller trust facts in the buy box for private sellers (member since,
     completed sales, verified identity where business_verifications or Vipps login
     exists), not only a display name.
@@ -3999,7 +3999,7 @@ items:
   app: brgen
   area: trust
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/_buybox.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/_buybox.html.erb
   item: Add a short safety notice to the buy box for private sellers (pay through
     brgen with Vipps or card, never send a deposit to a phone number, meet in public)
     with nb and en copy linking to the safety page.
@@ -4008,7 +4008,7 @@ items:
   app: brgen
   area: trust
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/new.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/new.html.erb
   item: Add a housing-specific warning to housing listings and the housing form (do
     not pay a deposit before viewing; a deposit belongs in a depositumskonto), since
     housing has a deposit field and is the classic rental scam.
@@ -4017,7 +4017,7 @@ items:
   app: brgen
   area: trust
   size: S
-  path: RAILS/brgen_marketplace/app/views/marketplace/listings/show.html.erb
+  path: RAILS/brgen/engines/marketplace/app/views/marketplace/listings/show.html.erb
   item: Render shared/report_button on listings, questions, reviews and shops (it
     is only used on posts and messages today), so a buyer can report a scam listing
     without leaving the page.
@@ -4026,7 +4026,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/controllers/tv/channels_controller.rb
+  path: RAILS/brgen/engines/radio/tv/app/controllers/tv/channels_controller.rb
   item: Answer subscribe/unsubscribe with a turbo_stream that swaps the button and
     the subscriber count in place, and add a request test for both; today they do
     a full redirect_back and no test covers them.
@@ -4035,7 +4035,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/controllers/tv/comments_controller.rb
+  path: RAILS/brgen/engines/radio/tv/app/controllers/tv/comments_controller.rb
   item: Scope CommentsController and VideoNotesController#set_video to Tv::Video.publicly_visible,
     so comments and notes cannot be posted onto unpublished videos or videos of departing
     accounts by slug.
@@ -4044,7 +4044,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/controllers/tv/shows_controller.rb
+  path: RAILS/brgen/engines/radio/tv/app/controllers/tv/shows_controller.rb
   item: Preload episodes' video in ShowsController#show (@show.episodes.includes(:video).order(:number));
     shows/show reads ep.video per row, which raises under strict loading once an episode
     has a video, and the existing test only covers a show with no episodes.
@@ -4053,7 +4053,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/controllers/tv/stream_chats_controller.rb
+  path: RAILS/brgen/engines/radio/tv/app/controllers/tv/stream_chats_controller.rb
   item: Add a per-user slow mode to stream chat (for example one line every 2 seconds
     per live stream) with a localized refusal, since only the global 120-write throttle
     stands between a flooder and every viewer's broadcast.
@@ -4062,7 +4062,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js
+  path: RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js
   item: Respect prefers-reduced-motion and navigator.connection.saveData in the vertical
     feed by not autoplaying on intersection and showing a play button per item instead.
   status: done
@@ -4070,7 +4070,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js
+  path: RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js
   item: Sync aria-pressed and the label (Lyd på / Lyd av) on every soundButton target
     in toggleSound; it updates only the clicked button and the text always reads sound_on,
     so the other items show the wrong state.
@@ -4079,7 +4079,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js
+  path: RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js
   item: 'Stop #loadMore once a page returns no new items (the server knows @has_more);
     right now the end watcher re-arms on the same last item, which is still visible,
     and fetches empty pages in a loop at the bottom of the feed.'
@@ -4088,7 +4088,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/javascript/controllers/tv_feed_controller.js
+  path: RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_feed_controller.js
   item: 'Fix #bumpOffset in tv_feed_controller: it adds the total itemTargets.length
     to the previous offset, so the second fetch skips a page (10, then 30 instead
     of 20); set the offset to the item count instead, or read the next URL from the
@@ -4098,7 +4098,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/javascript/controllers/tv_player_controller.js
+  path: RAILS/brgen/engines/radio/tv/app/javascript/controllers/tv_player_controller.js
   item: Add Media Session metadata (title, channel, poster) and play/pause/seek handlers
     to tv_player_controller so lock-screen and Bluetooth controls work for video,
     matching the playlist player.
@@ -4107,7 +4107,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/models/tv/channel.rb
+  path: RAILS/brgen/engines/radio/tv/app/models/tv/channel.rb
   item: Either write Tv::Channel#total_views (sum of its videos' views_count, updated
     on increment) or drop the fact; nothing in the tree writes total_views, so every
     channel and video page shows 0 total views.
@@ -4116,7 +4116,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/models/tv/live_stream.rb
+  path: RAILS/brgen/engines/radio/tv/app/models/tv/live_stream.rb
   item: 'Broadcast a status replace from Tv::LiveStream#go_live! and #end_live! to
     the show page, so viewers waiting on a scheduled stream see it switch to live
     or ended with a clear offline/ended state message instead of a stale badge until
@@ -4126,7 +4126,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/views/tv/channels/_row.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/channels/_row.html.erb
   item: Replace the per-row channel.live? EXISTS query in channels/_row with one grouped
     live-broadcast lookup in ChannelsController#index, which removes the N+1 on the
     channels list.
@@ -4135,7 +4135,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/views/tv/channels/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/channels/show.html.erb
   item: Show the channel's real video total on channels/show (@pagy.count) instead
     of @videos.count, which counts the paginated relation and caps the 'videos' fact
     at one page.
@@ -4144,7 +4144,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/views/tv/episodes/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/episodes/show.html.erb
   item: Render an actual video_tag player on episodes/show instead of the tv_video
     card inside a tv-player wrapper that has no video target, and move the hard-coded
     'Episode' in the title and h1 to t('tv.episode_line').
@@ -4153,7 +4153,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/views/tv/live_streams/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb
   item: 'Stop rendering ''viewers: 0'' on live_streams/show: viewer_count is never
     written, so either count presence from the stream''s Turbo/Action Cable subscribers
     or hide the line.'
@@ -4162,7 +4162,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/views/tv/live_streams/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb
   item: Translate the live-stream status badge and the index card meta through t('tv.live_streams.status.*');
     both print the raw English 'scheduled'/'ended' word on nb pages.
   status: done
@@ -4170,7 +4170,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/views/tv/live_streams/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb
   item: Give owners Go live and End stream buttons on live_streams/show for the existing
     PATCH go_live/end_live routes, and show the stream key only to the owner; no view
     links to either action today.
@@ -4179,7 +4179,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/views/tv/stream_chats/_stream_chat.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/stream_chats/_stream_chat.html.erb
   item: Show the author handle and a time element on each stream chat line, add role='log'
     with aria-live to the entries container, and reset the input after the turbo_stream
     create; _stream_chat renders only the message text.
@@ -4188,7 +4188,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/views/tv/video_notes/_video_note.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/video_notes/_video_note.html.erb
   item: 'Make video note timestamps seek the player: render them as m:ss buttons that
     set currentTime on the tv-player video, and add a ''use current time'' control
     that fills the timestamp field from the playing video.'
@@ -4197,7 +4197,7 @@ items:
   app: brgen
   area: tv
   size: S
-  path: RAILS/brgen_radio/tv/app/views/tv/videos/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/videos/show.html.erb
   item: 'Read comments off the preloaded @video.comments (sorted in Ruby or through
     an ordered association) in videos/show; @video.comments.order(created_at: :asc)
     issues a fresh query with no user preload, so comment.user raises a strict-loading
@@ -4207,7 +4207,7 @@ items:
   app: brgen
   area: tv
   size: L
-  path: RAILS/brgen_radio/tv/app/views/tv/videos/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/videos/show.html.erb
   item: Add a 'report video' flow (copyright takedown or abuse) on videos/show and
     hosted tracks that hides the item pending review; neither tv nor playlist has
     any report or takedown path for uploaded media.
@@ -4216,7 +4216,7 @@ items:
   app: brgen
   area: tv
   size: M
-  path: RAILS/brgen_radio/tv/app/views/tv/videos/show.html.erb
+  path: RAILS/brgen/engines/radio/tv/app/views/tv/videos/show.html.erb
   item: Add a poster from the thumbnail poster variant and preload='metadata' to the
     videos/show video_tag, and render a captions track element when a VTT attachment
     exists (new has_one_attached :captions on Tv::Video), since no tv video can carry

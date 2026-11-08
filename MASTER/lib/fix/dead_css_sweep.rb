@@ -130,9 +130,10 @@ module Master
       end
 
       def engine_roots
-        # brgen_radio holds two engines one level down (playlist, tv).
-        dirs = Dir.glob(File.join(rails, "brgen_*")) + Dir.glob(File.join(rails, "brgen_*", "*"))
-        dirs.select { |d| File.directory?(File.join(d, "app")) }.to_h { |d| [d.delete_prefix(rails + "/"), d] }
+        dirs = Dir.glob(File.join(rails, "brgen", "engines", "**"))
+        dirs.select { |d| File.directory?(File.join(d, "app")) }.to_h do |dir|
+          [dir.delete_prefix(rails + "/"), dir]
+        end
       end
 
       # The engine's CSS is judged against the apps that mount it; master does not,

@@ -8,7 +8,7 @@ require "tmpdir"
 # for the commit-msg hook that holds every other author to them.
 class TestCommitFormat < Minitest::Test
   Format = Master::Ground::CommitFormat
-  HOOK = File.expand_path("../../OPENBSD/dev/githooks/commit-msg", __dir__)
+  HOOK = File.expand_path("../../.githooks/commit-msg", __dir__)
 
   GOOD = "Check preflight measures free space\n\nIt loaded the runtime first.\n\nCo-authored-by: MASTER"
 
