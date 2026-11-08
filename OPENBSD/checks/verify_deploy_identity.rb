@@ -101,11 +101,11 @@ metadata.each do |app, expected|
 
   # master is not a copy-tree app, so none of the _deploy.sh contract below is
   # asked of it: vps_deploy_master.sh pulls and restarts MASTER/web in place,
-  # and its human entry is its TREE_CONTRACTS.md section, which must name that script.
+  # and its human entry is its section in MASTER/data/law/TREE_CONTRACTS.md, which must name that script.
   if app == "master"
     contract = Deploy::Inventory.new(root: ROOT).tree_contract(deploy_root).to_s
     script_name = expected.fetch("deploy_script")
-    failures << "TREE_CONTRACTS.md ## #{deploy_root} must name #{script_name}" unless contract.include?(script_name)
+    failures << "MASTER/data/law/TREE_CONTRACTS.md ## #{deploy_root} must name #{script_name}" unless contract.include?(script_name)
 
     failures << "missing strict mode for #{app}" unless File.read(script).include?("set -eo pipefail")
     healthy = !File.file?(routes) || File.read(routes).include?("rails/health#show")

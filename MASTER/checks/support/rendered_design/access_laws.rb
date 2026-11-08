@@ -15,7 +15,7 @@ module Deploy
       CONTROL_TYPES = /\A(?:text|email|tel|url|search|password|number|date|)\z/
       GESTURE = /\b(?:touch(?:start|move|end)|pointer(?:down|move|up)|swipe\w*)->([\w-]+)#(\w+)/
       TAP = /\b(?:click|submit|keydown[\w.]*)->([\w-]+#\w+)/
-      MINIMALISM = File.join(ROOT, "data/minimalism.yml")
+      MINIMALISM = File.join(ROOT, "data/law/minimalism.yml")
 
       module_function
 

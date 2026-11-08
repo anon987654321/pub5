@@ -20,7 +20,7 @@ module Master
       RENAMES = 2
       FIRST_REVIEWS = 1
       FIRST_RENAMES = 1
-      # Scratch prefixes, a vague word (data/vague_words.yml) anywhere, a version or a trailing number.
+      # Scratch prefixes, a vague word (data/law/vague_words.yml) anywhere, a version or a trailing number.
       VAGUE = Master::Ground::ParameterizedSlug::VAGUE_ALTERNATION
       SUSPECT = /(?:\A_?(?:zen|x|my)_|(?:_|\A_?)(?:#{VAGUE}|helper2|v\d+)(?:_|\z)|\d+\z)/
 

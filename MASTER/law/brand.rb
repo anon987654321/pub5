@@ -5,7 +5,7 @@
 # Source of every law here is a MEASURED failure or a MEASURED decision from
 # building the Sommerseth Eiendom and Alfa Bergen sites (RAILS/__other),
 # calibrated against bob.no's production design system. The doctrine lives in
-# docs/visual/bergen_brand_systems.md; these laws are the line-level teeth
+# data/law/bergen_brand_systems.md; these laws are the line-level teeth
 # /fix walks when it repairs that tree.
 #
 # 2026-10-28: both source sites were retired and RAILS/__other deleted. The

@@ -174,7 +174,7 @@ module Master
       module_function
 
       def reference_study
-        @reference_study ||= Master.load_yaml(File.join(Master::ROOT, "data", "design_reference_study.yml")) || {}
+        @reference_study ||= Master.load_yaml(File.join(Master::ROOT, "data", "law", "design_reference_study.yml")) || {}
       rescue StandardError
         {}
       end

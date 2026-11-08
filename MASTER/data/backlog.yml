@@ -339,7 +339,7 @@ entries:
   done_when_note:
 - id: close-accepted-master-data-ux-refinements-yml-rows
   text: >-
-    Close accepted `MASTER/data/ux_refinements.yml` rows only with their
+    Close accepted `MASTER/data/law/ux_refinements.yml` rows only with their
     declared test, browser, terminal, accessibility or rendered-runtime
     proof.
   section: 4. RAILS product quality
@@ -347,7 +347,7 @@ entries:
   kind: design
   size: s
   scope_paths:
-  - MASTER/data/ux_refinements.yml
+  - MASTER/data/law/ux_refinements.yml
   - ux_refinements.yml
   done_when:
   done_when_note: no runnable command named in the item text

@@ -33,7 +33,7 @@ folders.
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
 generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
 the bootstrap pointer.
-`TREE_CONTRACTS.md` is the repository's shared tree contract. Root `TODO.md` is
+`MASTER/data/law/TREE_CONTRACTS.md` is the repository's shared tree contract. Root `TODO.md` is
 the one cross-tree action list; structured YAML ledgers remain the owners of
 IDs, evidence receipts, provenance and lifecycle state. Do not create another
 backlog file.

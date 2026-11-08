@@ -204,7 +204,7 @@ module Master
 
         # A category is not a thing. util/manager/handler name the shape of a box
         # rather than what is in it, so the next reader must open it. The words are
-        # data/vague_words.yml, shared with the sprawl census, the rename sweep and
+        # data/law/vague_words.yml, shared with the sprawl census, the rename sweep and
         # the slug filler; why base, common and shared are not among them is there.
         ::Law.define(:FILE_VAGUE_NAME) do
           tags %i[LOAD_BEARING_NAMES DOMAIN_LANGUAGE]

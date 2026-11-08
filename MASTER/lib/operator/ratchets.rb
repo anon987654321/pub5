@@ -714,7 +714,7 @@ def deep_rows(rails: true, stale_ok: false)
              cached("design_baseline", %w[MASTER RAILS], stale_ok:) do
                [shell_row("design_baseline", "MASTER", "bundle exec ruby tools/audit/design_baseline.rb",
                           /design_baseline: (\d+) violation/,
-                          YAML.safe_load_file(File.join(MASTER, "data/design_baseline.yml")).fetch("total", nil))]
+                          YAML.safe_load_file(File.join(MASTER, "data/law/design_baseline.yml")).fetch("total", nil))]
              end
            end),
       ].compact

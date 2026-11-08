@@ -58,7 +58,7 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 
 - `data/providers.yml` and `data/models.yml` own provider and model configuration. See [free-compute and routing notes](docs/free_compute.md).
 - `data/voice.yml` owns speech and voice policy.
-- `data/tokens.yml` and `data/minimalism.yml` own shared visual tokens and the minimal interface contract.
+- `data/tokens.yml` and `data/law/minimalism.yml` own shared visual tokens and the minimal interface contract.
 - `data/dialogue_rubric.yml` owns the conversational-support rubric.
 - `data/affiliate_sources.yml` owns the affiliate source registry.
 

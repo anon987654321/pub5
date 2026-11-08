@@ -5,7 +5,7 @@ require "yaml"
 module Master
   module Fix
     # Deterministic rule conformance for rendered surfaces. A rule in
-    # data/visual_directives.yml names a project_context.yml directive, a probe
+    # data/law/visual_directives.yml names a project_context.yml directive, a probe
     # that reads one value off a measured element, and checks that value must
     # pass. The council still judges taste; this judges what a computed style
     # can settle, so a directive the operator wrote down is never left to a
@@ -58,7 +58,7 @@ module Master
       module_function
 
       def rules
-        path = File.expand_path("../../data/visual_directives.yml", __dir__)
+        path = File.expand_path("../../data/law/visual_directives.yml", __dir__)
         Array(YAML.safe_load_file(path)["rules"])
       end
 

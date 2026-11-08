@@ -24,7 +24,7 @@ authority_order:
     scope: Execution metadata, detectors, gates and tests; these implement but cannot override higher sources.
   - id: tree_contracts
     source:
-      - TREE_CONTRACTS.md
+      - MASTER/data/law/TREE_CONTRACTS.md
       - tree-local README.md and CLAUDE.md
     scope: Tree-specific constraints below repository-wide authority.
   - id: git_history

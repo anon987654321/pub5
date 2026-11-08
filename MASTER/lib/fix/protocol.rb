@@ -76,7 +76,7 @@ module Master
           INCONCLUSIVE when the requested candidate population is not fully proven. The tournament is planning-only: it does not run tests,
           edit files or authorize a wholesale rewrite. Ordinary Laws, transactions and
           verification continue to govern every repair. The canonical 90-entry interaction
-          acceptance catalogue is MASTER/data/ux_refinements.yml; catalogue membership is
+          acceptance catalogue is MASTER/data/law/ux_refinements.yml; catalogue membership is
           not completion evidence.
 
           1. LOAD

@@ -160,7 +160,7 @@
       wired before parsing continues. A blocking <script src> above #primer delays
       handler wiring; early taps look dead. #prompt-form and #ui-status are below this block —
       face_primer.js resolves them lazily in go(), not at parse time.
-      See TREE_CONTRACTS.md and history of "tap to start does nothing" for this high-risk path.
+      See MASTER/data/law/TREE_CONTRACTS.md and history of "tap to start does nothing" for this high-risk path.
       Enhancements there should preserve the _primerFired guard and dbgFrames check. %>
   <script src="<%= asset_path("boot_fsm.js") %>"></script>
   <script src="<%= asset_path("face_primer.js") %>" nonce="<%= content_security_policy_nonce %>"
