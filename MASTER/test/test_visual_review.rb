@@ -77,6 +77,15 @@ class VisualReviewTest < Minitest::Test
     end
   end
 
+  def test_style_sweep_source_checks_are_browser_independent
+    registry = YAML.safe_load_file(File.expand_path("../checks/checks.yml", __dir__))
+    browser_checks = Operator::VisualReview::STYLE_CHECKS.select do |name|
+      Array(registry.fetch(name).to_h["needs"]).map(&:to_s).include?("browser")
+    end
+
+    assert_empty browser_checks, "source-only sweep must not invoke rendered/browser checks"
+  end
+
   def test_style_sweep_runs_existing_source_checks_without_autofixing
     status = Struct.new(:exitstatus) { def success? = exitstatus.zero? }.new(0)
     commands = []
