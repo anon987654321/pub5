@@ -61,6 +61,19 @@ module Master
 
       def last_error = @last_error
 
+      # Discovery is not an audible test. The boot and /voice status distinguish
+      # a detected executable from a playback path that has actually succeeded.
+      def output_status
+        error = last_error.to_s
+        return "failed, #{error[0, 160]}" unless error.empty?
+        return "verified" if @lock.synchronize { @playback_verified == true }
+        return "detected, playback unverified" if available?
+
+        "unavailable"
+      rescue StandardError => e
+        "unknown, #{e.class}"
+      end
+
       def player
         return @player if defined?(@player) && !@player.nil?
 
@@ -648,7 +661,9 @@ def decode_job(job)
       end
 
       def playback_failed!
-        warn_once("audio playback failed - #{player&.first || "no player or native speech"}")
+        reason = last_error.to_s
+        reason = player&.first || "no player or native speech" if reason.empty?
+        warn_once("audio playback failed - #{reason}")
         false
       end
 
@@ -801,32 +816,52 @@ def decode_job(job)
 
         if Device::Audio.media_player_available?
           @lock.synchronize { @last_player_attempted = true }
-          return Device::Audio.play(path)
+          return record_playback_result(Device::Audio.play(path), "Termux:API audio player returned failure")
         end
 
+        failures = []
         player_candidates(path).each do |name, args|
           break unless generation_active?(generation)
 
           @lock.synchronize { @last_player_attempted = true }
-          pid = Process.spawn(Master::Io::ProcessSpawn.environment, name, *args, path, **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL))
+          pid = Process.spawn(
+            Master::Io::ProcessSpawn.environment, name, *args, path,
+            **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL),
+          )
           # Compare the generation while holding the lock, without calling
           # generation_active? (which takes the same non-reentrant mutex).
           @lock.synchronize { @playing_pid = pid if generation == @generation }
           begin
             _waited_pid, status = Process.wait2(pid)
-            return true if status.success?
+            return record_playback_result(true) if status.success?
+
+            outcome = status.termsig ? "signal #{status.termsig}" : "exit #{status.exitstatus}"
+            failures << "#{File.basename(name)} #{outcome}"
           rescue Errno::ESRCH, Errno::ECHILD
-            next
+            failures << "#{File.basename(name)} exited before wait"
           ensure
             @lock.synchronize { @playing_pid = nil if @playing_pid == pid }
           end
         end
-        false
+        detail = failures.empty? ? "no player completed playback" : failures.uniq.join(", ")
+        record_playback_result(false, detail)
       rescue StandardError => e
-        # The one-line warning names the error; the log keeps where it came from.
+        # Preserve the cause for /voice status; a discovered binary is not a
+        # successful audio route and must never mask a failed playback.
         Master::Ground::Swallow.log(e, context: "Voice::Playback.play")
-        warn_once("audio player error - #{e.class}: #{e.message}")
-        false
+        record_playback_result(false, "#{e.class}: #{e.message}")
+      end
+
+      def record_playback_result(ok, detail = nil)
+        @lock.synchronize do
+          if ok
+            @playback_verified = true
+            @last_error = nil
+          else
+            @last_error = detail.to_s[0, 200]
+          end
+        end
+        ok == true
       end
 
       def player_candidates(_path)
