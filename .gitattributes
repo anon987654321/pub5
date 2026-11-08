@@ -6,3 +6,12 @@
 bin/* text eol=lf
 # Source snapshots are verbatim mirrors; their payload may intentionally retain source trailing whitespace or CRLF.
 snapshot_*.md whitespace=-trailing-space
+# Fixtures and media are binary inventory: quiet diffs, no text mangling.
+*.png -diff
+*.jpg -diff
+*.jpeg -diff
+*.webp -diff
+*.gif -diff
+*.pdf -diff
+*.woff2 -diff
+*.ico -diff
