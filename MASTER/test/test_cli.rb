@@ -723,6 +723,22 @@ end
     assert_equal "google/gemini-2.5-flash", agent.model
   end
 
+  def test_dispatch_model_status_and_current_never_change_the_selected_model
+    agent = Struct.new(:model).new("grok-cli:auto")
+    config = { "model" => "grok-cli:auto" }
+
+    Master::Io::LaneSelection.stub(:primary_report, "first live lane") do
+      %w[status current].each do |arg|
+        output = Master::CLI::CommandRegistry.dispatch_model(
+          agent:, config:, metrics: nil, root: Master::ROOT, arg:
+        )
+
+        assert_equal "model: grok-cli:auto; first live lane; /model list names the others", output
+        assert_equal "grok-cli:auto", agent.model
+      end
+    end
+  end
+
   def test_dispatch_model_switches_active_model
     agent = Struct.new(:model).new("openrouter/auto")
     config = Minitest::Mock.new
