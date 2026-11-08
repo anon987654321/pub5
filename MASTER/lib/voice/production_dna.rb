@@ -224,6 +224,15 @@ module Master
 
       module_function
 
+      def dilla_corpus_brief
+        rows = CHORDS.fetch(:j_dilla).fetch(:donuts).map do |entry|
+          reference = entry[:sample_reference].to_s
+          "- #{entry.fetch(:track)}: #{entry.fetch(:sample)} (#{reference})"
+        end
+        (["Donuts sample-source map (not note-by-note transcription):"] + rows +
+          ["The empty chord arrays are deliberate: note transcription remains an audio/listening task, not an inference from sample credits."]).join("\\n")
+      end
+
       def dilla_research_brief
         producer = PRODUCERS.fetch(:j_dilla)
         timing = producer.fetch(:timing)
@@ -237,9 +246,11 @@ module Master
           - Hat placement: #{measured.fetch(:hats_feel)}.
           - Anchors: #{measured.fetch(:anchors)}.
           - Repetition: #{measured.fetch(:repetition)}.
+          - Timing references: #{measured.fetch(:source)}.
           - Non-four form: #{form.fetch(:loop_lengths).join(", ")} bars; #{form.fetch(:note)}.
           - Classical lineage: #{lineage.fetch(:note)}.
-          - Research references: #{lineage.fetch(:sources).join("; ")}.
+          - Lineage references: #{lineage.fetch(:sources).join("; ")}.
+          #{dilla_corpus_brief.lines.map { |line| "  #{line}" }.join}
         TEXT
       end
 
