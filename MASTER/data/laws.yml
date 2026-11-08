@@ -1538,19 +1538,6 @@ REACH_non_native_tool:
   parent: REACH
   statement: "A zsh script reaching for a GNU text tool not on the host."
   resolution: review
-  banned_commands: [sed, awk, tr, cut, find, head, tail, wc, perl, python, bash]
-  replacements:
-    sed: "Use the Edit tool, zsh parameter expansion or Ruby in-place editing."
-    awk: "Use zsh split/join expansions or Ruby field parsing."
-    tr: "Use zsh case conversion or Ruby String#tr."
-    cut: "Use zsh split expansion or Ruby field parsing."
-    find: "Use zsh globs or git ls-files."
-    head: "Use the Read tool with a line limit or zsh array slicing."
-    tail: "Use the Read tool with an offset or zsh array slicing."
-    wc: "Use Ruby File.foreach counts or zsh array lengths."
-    perl: "Use Ruby."
-    python: "Use Ruby."
-    bash: "Use zsh."
 
 GESTURE_HAS_TAP_EQUIVALENT:
   parent: REACH

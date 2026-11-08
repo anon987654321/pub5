@@ -391,9 +391,14 @@ end
 Law.define(:SHELL_DISCIPLINE) do
   source "MASTER constitution (soul.yml absolute.rules)"
   practice <<~TEXT
-    no sed, awk, head, tail, find, wc, perl or python in agent shell
-    calls or committed scripts; BSD variants break GNU idioms and this tree
-    deploys to OpenBSD. Ruby, zsh builtins and the dedicated tools instead.
+    a shell line never runs a banned non-native tool: sed, awk, tr, cut,
+    find, head, tail, wc, perl, python or bash - in pipes, wrappers, remote
+    calls or committed scripts. BSD variants break GNU idioms and this tree
+    deploys to OpenBSD. One list owns membership and the prescribed
+    replacements: MASTER/data/law_runtime.yml#zsh, judged by the one lexer
+    (MASTER/lib/io/shell_lexer.rb) by the harness hook, MASTER's own shell
+    and the ZSH_NATIVE_PATTERNS script scan. Ruby, zsh builtins and the
+    dedicated tools instead.
   TEXT
   fix "no sed, awk, head, tail, find, wc, perl or python in agent shell calls or committed scripts;"
   bad  "sed -i on OpenBSD"
