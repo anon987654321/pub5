@@ -89,6 +89,8 @@ module Master
           rescue StandardError
             nil
           end.uniq.sort
+          tool_names = tools.map { |tool| tool.split(":", 2).first }
+          catalog_available = tool_names.include?("capability_catalog")
           commands = if defined?(Master::CLI::CommandRegistry)
                        Master::CLI::CommandRegistry.slash_commands
                      else
@@ -118,6 +120,7 @@ module Master
             "Registered runtime tools (not a guarantee every provider/request receives every tool):",
             *(tools.empty? ? ["none reported"] : tools.map { |tool| "- #{tool}" }),
             "Registered operator commands: #{commands.join(' ')}",
+            (catalog_available ? "Capability discovery: capability_catalog(action: list|search|describe) inspects canonical tool and plugin registration, elevation, boot and current-profile policy. Catalog entries are metadata, not proof of provider or plugin availability." : "Capability discovery catalog is not callable in this turn; do not imply that an unregistered catalog action is available."),
             "Voice runtime: #{voice.join('; ')}",
             "The command registry and tool registry are distinct. A command may be available to the operator even when it is not an LLM-callable tool. Do not deny a registered capability; explain its actual scope, consent gates and current availability.",
             "When captured model-selector output or governed shell stdout is present in the current turn context, use it; do not claim it is inaccessible when present. Unrecorded or pruned terminal output is not visible.",
