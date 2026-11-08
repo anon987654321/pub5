@@ -59,6 +59,7 @@ module Master
         matches = [
           find_prefixed_secret(value, offset, "sk-ant-"),
           find_prefixed_secret(value, offset, "sk-"),
+          *%w[ghp_ gho_ ghu_ ghs_ ghr_ github_pat_].map { |prefix| find_prefixed_secret(value, offset, prefix) },
           find_bearer_secret(value, offset),
           find_plain_secret(value, offset),
         ].compact
