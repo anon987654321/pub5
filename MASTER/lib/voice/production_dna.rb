@@ -266,6 +266,7 @@ module Master
           - Code generation should expose timing, chord, and texture parameters instead of hard-coding one beat.
         TEXT
       end
+
       def producer(name)
         PRODUCERS.fetch(name.to_sym)
       end
