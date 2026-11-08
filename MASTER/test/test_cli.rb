@@ -1192,4 +1192,61 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_predicate @cli.instance_variable_get(:@turn_cancellation), :cancelled?
   end
 
+
+  def test_help_is_dispatched_immediately_while_a_turn_is_busy
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    seen = nil
+
+    @cli.stub(:run_help, ->(topic) { seen = topic; :shown }) do
+      assert_equal :shown, @cli.send(:handle_repl_line, "/help voice")
+    end
+
+    assert_equal "voice", seen
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  end
+
+  def test_voice_controls_are_dispatched_immediately_while_a_turn_is_busy
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    seen = nil
+
+    @cli.stub(:dispatch_registered_slash_command, ->(command) { seen = command; :dispatched }) do
+      assert_equal :dispatched, @cli.send(:handle_repl_line, "/voice off")
+    end
+
+    assert_equal "/voice off", seen
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  end
+
+  def test_tts_spelling_reaches_voice_command_while_a_turn_is_busy
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    seen = nil
+
+    @cli.stub(:dispatch_registered_slash_command, ->(command) { seen = command; :dispatched }) do
+      assert_equal :dispatched, @cli.send(:handle_repl_line, "/tts off")
+    end
+
+    assert_equal "/voice off", seen
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  end
+
+  def test_governed_shell_navigation_runs_immediately_while_a_turn_is_busy
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    seen = nil
+
+    @cli.stub(:run_direct_shell, ->(command) { seen = command; :shell }) do
+      assert_equal :shell, @cli.send(:handle_repl_line, "cd ..")
+    end
+
+    assert_equal "cd ..", seen
+    assert_empty @cli.instance_variable_get(:@turn_queue)
+  end
+
 end
