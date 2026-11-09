@@ -76,7 +76,8 @@ RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
 ### Phase 3 — RAILS
 
 - Shared base carried: `RAILS/__shared` (tokens, SCSS foundation, Stimulus,
-  auth, embeds, PWA) stays the `pub4-shared` path gem.
+  auth, embeds, PWA) is the `pub5-shared` path gem; its gem identity follows
+  the destination repository rather than retaining the retired pub4 name.
 - Apps carried: `bsdports`, `mrdamascy`, `amber`, and the brgen core.
 - **The structural change of the port:** each brgen vertical engine moved
   under `brgen/engines/` — `radio` (holding `tv` and `playlist` one level
