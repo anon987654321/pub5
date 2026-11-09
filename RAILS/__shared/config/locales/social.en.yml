@@ -1,4 +1,4 @@
-# Shared social chrome — loaded by the pub4-shared engine for every host app.
+# Shared social chrome — loaded by the pub5-shared engine for every host app.
 # Apps can override any key in their own config/locales.
 en:
   changelog:
