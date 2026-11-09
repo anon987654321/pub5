@@ -2,7 +2,7 @@
 
 # Run using bin/ci. mrdamascy is standalone, so these are its own steps rather
 # than RAILS/__shared/config/ci.rb, whose CSS builder, design lints and seed
-# replant are written for the pub4-shared apps. The three static checks are the
+# replant are written for the shared-engine apps. The three static checks are the
 # same ones those apps run, with the same flags. The test database is prepared on
 # its own so a run on a fresh checkout (or vm23's copy-tree, where no
 # development database exists) works.
