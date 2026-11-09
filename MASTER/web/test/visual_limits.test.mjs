@@ -148,7 +148,6 @@ test("a hidden tab holds animation frames until it is visible again", () => {
   assert.deepEqual(ran, ["a", "b"]);
 });
 
-
 test("a frame queued before tab hiding is cancelled and parked until visibility returns", () => {
   const listeners = {};
   const nativeFrames = [];

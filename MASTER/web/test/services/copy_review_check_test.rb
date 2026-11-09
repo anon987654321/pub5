@@ -13,8 +13,8 @@ class CopyReviewCheckTest < ActiveSupport::TestCase
         { kind: "product_title", text: "Wool coat" },
         { kind: "merchant", text: "Fjord Studio" },
         { kind: "price", text: "NOK 149.90" },
-        { kind: "availability", text: "In stock" }
-      ]
+        { kind: "availability", text: "In stock" },
+      ],
     }
   end
 
@@ -29,7 +29,7 @@ class CopyReviewCheckTest < ActiveSupport::TestCase
       market: "NO",
       in_stock: true,
       placeholder: false,
-      last_seen_at: Time.current.iso8601
+      last_seen_at: Time.current.iso8601,
     }
   end
 
