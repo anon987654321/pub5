@@ -3,7 +3,7 @@
 require "uri"
 
 class Port < ApplicationRecord
-  # Engine-ize Shared via pub4-shared
+  # Engine-ize Shared via pub5-shared
   include Shared::Reactable
   include Shared::Notifiable
   belongs_to :platform
