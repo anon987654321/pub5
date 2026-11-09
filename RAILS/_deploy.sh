@@ -49,7 +49,7 @@ deploy_tracked_app() {
   }
 
   rails_sync_app_tree "$app_name" app
-  # mrdamascy is standalone: its Gemfile names no pub4-shared path gem, and the
+  # mrdamascy is standalone: its Gemfile names no shared-engine path gem, and the
   # shared initializers would load Shared:: constants it never defines.
   if [[ $app_name != mrdamascy ]]; then
     rails_sync_app_tree "$app_name" shared
