@@ -124,7 +124,7 @@ def check_apps_production(failures)
 end
 
 # The fleet route draws controllers from the shared engine, so it is asked only
-# of apps whose Gemfile mounts pub4-shared. master's own HealthController answers
+# of apps whose Gemfile mounts pub5-shared. master's own HealthController answers
 # /health with TTS, git and container state, which check_master_web and
 # health_check.rb read; mrdamascy is standalone and answers /up alone.
 def check_fleet_route(failures, name)
