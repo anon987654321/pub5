@@ -87,4 +87,19 @@ class SharedTopologyContractTest < Minitest::Test
     assert_includes source, 'join(root, "__shared", "public")'
     refute_match(/join\(root,\s*["']shared["']/, source)
   end
+  def test_active_shared_engine_references_use_the_pub5_identity
+    operator = File.read(File.join(REPO, "OPENBSD", "data", "operator.yml"), encoding: "UTF-8")
+    legacy_ledger = File.read(File.join(ROOT, "docs", "LEGACY_PROMISES.md"), encoding: "UTF-8")
+    setup = File.read(File.join(ROOT, "__shared", "app", "controllers", "concerns", "shared", "application_setup.rb"), encoding: "UTF-8")
+    search = File.read(File.join(ROOT, "__shared", "app", "views", "shared", "_live_search_form.html.erb"), encoding: "UTF-8")
+    locale = File.read(File.join(ROOT, "__shared", "config", "locales", "social.en.yml"), encoding: "UTF-8")
+
+    [operator, legacy_ledger, setup, search, locale].each do |source|
+      assert_includes source, "pub5-shared"
+      refute_includes source, "pub4-shared"
+    end
+    assert_includes legacy_ledger, "`pub5/RAILS`"
+    refute_includes legacy_ledger, "`pub4/RAILS`"
+  end
+
 end
