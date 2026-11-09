@@ -70,6 +70,8 @@ module Master
       private
 
       def sacred?(rel_path)
+        return false if Master::Ground::Immutability.writes_allowed?
+
         master_relative = @root == Master::REPO_ROOT ? rel_path.delete_prefix("MASTER/") : rel_path
         Master::Ground::Immutability.blocked?(master_relative, root: Master::ROOT) ||
           SACRED_PATHS.any? do |path|

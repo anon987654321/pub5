@@ -11,7 +11,20 @@ module Master
       MANIFEST_REL = "data/soul.yml"
       Violation = Class.new(StandardError)
 
-      def self.blocked?(path, root: Master::ROOT) = new(root:).blocked?(path)
+      # Operator decree 2026-11-09: "full authority to touch any sacred file or
+      # folder — nothing sacred should get in the way of improvements." Every
+      # enforcement point (write_refusal, sacred?, blocked?, PathGuard) honours
+      # this one switch, set per run through the environment, so the decree is
+      # visible in the run env and the default posture is unchanged.
+      def self.writes_allowed?
+        ENV["MASTER_SACRED_WRITES"].to_s.strip.casecmp("allowed").zero?
+      end
+
+      def self.blocked?(path, root: Master::ROOT)
+        return false if writes_allowed?
+
+        new(root:).blocked?(path)
+      end
 
       def initialize(root:)
         @root = File.expand_path(root)

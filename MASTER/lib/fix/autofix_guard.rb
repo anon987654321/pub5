@@ -29,6 +29,9 @@ module Master
       # laws.yml declares the protected paths through SACRED_AUTHORSHIP.
       # soul.yml is separately protected by that same Law; tokens.yml is not
       # sacred, so it is named here.
+      #
+      # Operator decree 2026-11-09 (MASTER_SACRED_WRITES=allowed) lifts this
+      # boundary per run; see Master::Ground::Immutability.writes_allowed?.
       PROTECTED = [
         %r{/MASTER/data/tokens\.yml\z},
         %r{/MASTER/lib/cli/face/},
@@ -94,6 +97,8 @@ module Master
         # The reason a path may not be opened, or nil. Read-only: the sacred
         # paths come from soul.yml and are never written through here.
         def protected_reason(path, root: nil)
+          return nil if Master::Ground::Immutability.writes_allowed?
+
           absolute = File.expand_path(path.to_s)
           hit = PROTECTED.find { |pattern| absolute.match?(pattern) }
           return "protected path (#{pattern_name(hit)})" if hit

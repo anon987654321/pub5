@@ -622,6 +622,11 @@ module Master::Core
       # outside the MASTER that constitution governs is not its to guard: every
       # sacred path is MASTER-relative, so RAILS/ or a test's tmpdir stays writable.
       def self.write_refusal(path, root: nil)
+        # Operator decree 2026-11-09 (MASTER_SACRED_WRITES=allowed): the
+        # sacred-path boundary stops refusing automated writers and commits.
+        # Master::Ground::Immutability.writes_allowed? is the one switch.
+        return nil if Master::Ground::Immutability.writes_allowed?
+
         master = governing_root(root)
 
         full = File.expand_path(path.to_s, root ? File.expand_path(root.to_s) : master)
@@ -653,6 +658,8 @@ module Master::Core
       end
 
       def sacred?(path)
+        return false if Master::Ground::Immutability.writes_allowed?
+
         relative = normalize(path)
         sacred_paths.any? do |entry|
           relative == entry || relative.start_with?("#{entry.delete_suffix("/")}/")
