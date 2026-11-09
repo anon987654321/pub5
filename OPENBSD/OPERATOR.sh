@@ -228,6 +228,7 @@ install_root_configs() {
              /usr/local/libexec/rails-task.ksh \
              /usr/local/libexec/rails-sync.ksh \
              /usr/local/libexec/pub4/solid_queue_proof.rb \
+             /usr/local/libexec/pub5/solid_queue_proof.rb \
              /usr/local/bin/resource_guard.sh \
              /usr/local/bin/emergency_cpu.sh; do
     if [[ -L $rel ]]; then
