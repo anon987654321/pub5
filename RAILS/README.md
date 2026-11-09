@@ -6,8 +6,8 @@ engines under `brgen/engines/`, not sibling app trees. Amber is the wardrobe,
 BSDPorts is a search of the ports tree, MASTER's web face lives on
 `ai.brgen.no`, and Mr Damascy is one Bergen kitchen's ordering app. They run
 on SQLite behind Falcon (mrdamascy behind Puma), on one box called vm23, and
-everything the first four share lives in one engine so that a fix made once is
-made everywhere; mrdamascy stands alone and mounts none of it.
+Brgen, Amber and BSDPorts share one engine so that a fix made once is made
+everywhere; MASTER/web and mrdamascy stand alone and mount none of it.
 
 This README is the entry to the tree. Feature truth is `apps.yml`, which also
 holds the ports, the domains and the stack versions, so nothing here restates
