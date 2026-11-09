@@ -1,5 +1,5 @@
 {
-  "name": "pub4-rails-pwa",
+  "name": "pub5-rails-pwa",
   "private": true,
   "scripts": {
     "build:pwa": "node ../MASTER/tools/rails/build_workbox.mjs",
