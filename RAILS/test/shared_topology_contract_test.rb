@@ -69,10 +69,14 @@ class SharedTopologyContractTest < Minitest::Test
   def test_deployed_shared_engine_path_matches_the_local_gemfile_path
     helper = File.read(File.join(REPO, "OPENBSD", "usr", "local", "libexec", "rails-sync.ksh"), encoding: "UTF-8")
     readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
+    tree_contract = File.read(File.join(REPO, "MASTER", "data", "law", "TREE_CONTRACTS.md"), encoding: "UTF-8")
+    shared_ci = File.read(File.join(ROOT, "__shared", "config", "ci.rb"), encoding: "UTF-8")
 
     assert_includes helper, 'sync_tree_stage "$rails_root/__shared" "$app_home/__shared" no'
-    assert_includes readme, '/home/<app>/__shared'
-    refute_includes readme, '/home/<app>/shared'
+    [readme, tree_contract, shared_ci].each do |source|
+      assert_includes source, "/home/<app>/__shared"
+      refute_includes source, "/home/<app>/shared"
+    end
   end
 
   def test_pwa_builder_uses_the_canonical_shared_tree
