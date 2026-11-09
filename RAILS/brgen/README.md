@@ -73,7 +73,7 @@ undefined when routes are drawn. And the mount in config/routes.rb must sit at t
 with a constraints: keyword, never inside a constraints block, because a nested mount still
 routes but Rails then drops the mounted helper that host code calls, as in tv.channel_url.
 Applied migrations stay where they ran, and an engine owns its db/migrate only for new ones. The
-shared models, authentication and design system live in the pub4-shared engine, and no vertical
+shared models, authentication and design system live in the pub5-shared engine, and no vertical
 redefines them.
 
 
