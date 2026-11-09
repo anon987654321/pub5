@@ -37,7 +37,8 @@ master does not mount the engine and is not copied: it runs in place under
 and its own `CLAUDE.md` governs it.
 
 Everything that builds, tests or probes these apps now lives under MASTER. The
-old RAILS `bin` directory is gone, and its work moved into `MASTER/tools/rails`,
+legacy RAILS `bin` command suite is gone; `bin/cities` remains as a read-only
+inventory helper. Build, test and probe work lives in `MASTER/tools/rails`,
 reached through the operator: `triangle` boots brgen, amber, bsdports and the
 face on the ports the live checks probe, `premerge` runs the premerge proof, `ci`
 runs each app's own `bin/ci`, and `coverage` runs the full coverage pass. Each app
