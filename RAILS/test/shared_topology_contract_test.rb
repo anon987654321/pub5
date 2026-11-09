@@ -67,10 +67,10 @@ class SharedTopologyContractTest < Minitest::Test
   end
 
   def test_deployed_shared_engine_path_matches_the_local_gemfile_path
-    sync = File.read(File.join(ROOT, "_sync.sh"), encoding: "UTF-8")
+    helper = File.read(File.join(REPO, "OPENBSD", "usr", "local", "libexec", "rails-sync.ksh"), encoding: "UTF-8")
     readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
 
-    assert_includes sync, '"$app_home/__shared"'
+    assert_includes helper, 'sync_tree_stage "$rails_root/__shared" "$app_home/__shared" no'
     assert_includes readme, '/home/<app>/__shared'
     refute_includes readme, '/home/<app>/shared'
   end
