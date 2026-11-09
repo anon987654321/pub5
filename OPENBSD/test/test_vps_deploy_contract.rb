@@ -135,6 +135,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, "chown root:wheel /usr/local/sbin/pub5-admin"
     assert_includes operator, "chmod 555 /usr/local/sbin/pub5-admin"
     assert_includes operator, "/usr/local/libexec/pub5"
+    assert_match %r{/usr/local/libexec/pub5/solid_queue_proof\.rb\s+\\\n\s+/usr/local/bin/resource_guard\.sh}, operator
     assert_includes operator, "/usr/local/libexec/pub5/solid_queue_proof.rb"
     assert_includes operator, "chown root:wheel /usr/local/sbin/pub4-admin"
   end
