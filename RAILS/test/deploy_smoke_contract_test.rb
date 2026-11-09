@@ -89,6 +89,17 @@ class DeploySmokeContractTest < Minitest::Test
     assert_includes body, "assume_ssl"
   end
 
+  def test_fleet_health_route_gate_uses_the_current_shared_gem_identity
+    check = File.read(File.join(OPENBSD_ROOT, "checks", "deploy_smoke_check.rb"), encoding: "UTF-8")
+    assert_includes check, 'include?(\'gem "pub5-shared"\')'
+    refute_includes check, "pub4-shared"
+
+    APPS.each do |app|
+      gemfile = read(File.join(ROOT, app, "Gemfile"))
+      assert_includes gemfile, 'gem "pub5-shared", path: "../__shared"'
+    end
+  end
+
   def test_all_deployed_apps_expose_rails_health_up_route
     APPS.each do |app|
       routes = read(File.join(ROOT, app, "config/routes.rb"))
