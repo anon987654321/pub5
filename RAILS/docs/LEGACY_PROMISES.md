@@ -1,7 +1,7 @@
 # Legacy Rails promise recovery
 
 This file connects the archived Rails product briefs in `anon987654321/pub` to the active
-`pub4/RAILS` implementation. It is an implementation ledger, not a second feature authority:
+`pub5/RAILS` implementation. It is an implementation ledger, not a second feature authority:
 `RAILS/apps.yml`, source code, routes and tests determine what is shipped. A historical
 promise is not complete merely because it appears in an old README.
 
@@ -133,7 +133,7 @@ The old READMEs and shell installers mention Rails 8.0, Ruby 3.3, PostgreSQL, Re
 ActsAsTenant, Mapbox, StimulusReflex, ActionCable as the general real-time layer, Nginx and
 standalone app-per-vertical deployments. Those instructions do not describe the current
 repository. The active stack is pinned in `RAILS/apps.yml`: Rails 8.2.0.alpha, Ruby 4.0.5,
-SQLite, Falcon, Hotwire, Solid Queue/Cache, relayd and the shared `pub4-shared` engine.
+SQLite, Falcon, Hotwire, Solid Queue/Cache, relayd and the shared `pub5-shared` engine.
 
 Do not restore legacy `rails/*.sh` installers into production. Recover product requirements from
 them, not their obsolete infrastructure assumptions.
@@ -146,4 +146,4 @@ them, not their obsolete infrastructure assumptions.
   `pub/__OLD_BACKUPS/rails/amber/README.md`.
 - Legacy Dating: `pub/rails/brgen_dating_README.md`.
 - Legacy Radio: `pub/rails/brgen/playlist_README.md`.
-- Active status: `pub4/RAILS/apps.yml`, each vertical README, current routes, models and tests.
+- Active status: `pub5/RAILS/apps.yml`, each vertical README, current routes, models and tests.
