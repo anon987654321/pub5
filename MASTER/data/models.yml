@@ -124,6 +124,14 @@ model_defs:
     id: openai/gpt-4o
     <<: *model_defaults
     score: { quality: 0.93, speed: 0.80, cost: 0.55 }
+  # GLM-5.3 (Z.ai open platform) routed primary-first by operator request
+  # (2026-11-09): a bare glm- id reaches the openai_compatible zai provider
+  # when ZAI_API_KEY is set (providers.yml zai block, model_pattern ^glm).
+  # The key lives in the environment only, never in a repository file.
+  glm_5_3: &glm_5_3
+    id: glm-5.3
+    <<: *model_defaults
+    score: { quality: 0.95, speed: 0.80, cost: 0.85 }
   claude_cli_sonnet: &claude_cli_sonnet
     id: claude-cli:claude-sonnet-5-5
     <<: *model_defaults
@@ -234,6 +242,7 @@ models:
     - *web_chat_kimi
     - *web_chat_gemini
   default:
+    - *glm_5_3
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *agy_auto
@@ -244,6 +253,9 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
+    # GLM-5.3 leads every /fix run as the primary #1 lane (operator, 2026-11-09);
+    # without ZAI_API_KEY it falls through exactly like any dead lane.
+    - *glm_5_3
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *agy_auto
@@ -252,6 +264,7 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
+    - *glm_5_3
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *claude_opus_api
