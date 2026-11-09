@@ -126,7 +126,7 @@ module Master
       private
 
       def missing_grant(scope, purpose)
-        return nil if @permissions.allowed?(scope:, purpose:)
+        return if @permissions.allowed?(scope:, purpose:)
 
         "#{scope} consent required: /privacy grant #{scope} --confirm \"GRANT #{scope}\""
       end
@@ -150,7 +150,7 @@ module Master
       def handle(message)
         number = message["number"].to_s.strip
         text = message["body"].to_s.strip
-        return nil unless allowed?(number, text)
+        return unless allowed?(number, text)
 
         command = text.delete_prefix(prefix).strip[0, MAX_COMMAND_CHARS]
         reply, ok =
@@ -177,12 +177,12 @@ module Master
       def triage(message)
         number = message["number"].to_s.strip
         text = message["body"].to_s.strip
-        return nil if text.empty?
-        return nil if text.start_with?(prefix)
-        return nil unless number.match?(/\A\+\d{5,20}\z/)
+        return if text.empty?
+        return if text.start_with?(prefix)
+        return unless number.match?(/\A\+\d{5,20}\z/)
 
         hits = SCAM_PATTERNS.count { |pattern| pattern.match?(text) }
-        return nil if hits < Integer(@config.dig("scout", "threshold") || 2)
+        return if hits < Integer(@config.dig("scout", "threshold") || 2)
 
         notify!("possible scam SMS from #{number} (#{hits}/#{SCAM_PATTERNS.size} patterns)")
         "scout: #{hits} scam patterns flagged for #{number}"
@@ -217,7 +217,7 @@ module Master
       end
 
       def parse_battery(json)
-        return nil unless json.is_a?(Hash)
+        return unless json.is_a?(Hash)
 
         status = json["status"].to_s
         plugged = json["plugged"].to_s

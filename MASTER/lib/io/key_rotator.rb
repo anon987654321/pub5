@@ -52,7 +52,7 @@ module Master
       def hosted_name(model)
         id = model.to_s
         name = id.split(":", 2).first
-        return nil unless id.include?(":") && !name.to_s.empty?
+        return unless id.include?(":") && !name.to_s.empty?
 
         name if hosted_env_vars(name).any?
       end

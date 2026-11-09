@@ -244,13 +244,13 @@ module Master
       # feature film; stage:mov0 events move it and carry the live percentage.
       def dispatch(text, root: nil, bus: nil)
         request = parse_request(text)
-        return download_url(request[:url], title: request[:title], bus: bus) if request[:url]
+        return download_url(request[:url], title: request[:title], bus:) if request[:url]
 
         stage(bus, "checking the recent streaming shelf")
         entries = search(request)
         return entries if entries.is_a?(Result)
 
-        download_queue(entries, request, bus: bus)
+        download_queue(entries, request, bus:)
       rescue StandardError => e
         Result.err("mov0: #{e.class}: #{e.message}", category: :infrastructure)
       end
@@ -289,10 +289,10 @@ module Master
         title = value.match(TITLE_QUOTE_RE)&.captures&.first
         # Direct archive.org links carry the intent themselves — a pasted
         # details page is a download request even without a spoken verb.
-        return request.merge(url: url, title:) if url.match?(%r{\Ahttps?://(?:www\.)?archive\.org/}i)
+        return request.merge(url:, title:) if url.match?(%r{\Ahttps?://(?:www\.)?archive\.org/}i)
         return request unless value.match?(ACQUIRE_RE) && !value.match?(/\?\s*\z/)
 
-        request.merge(url: url, title:)
+        request.merge(url:, title:)
       end
 
       # Spoken counts: "download us two new movies please" says the number as
@@ -317,7 +317,7 @@ module Master
       # A stated recent year ("download us 2025 movies") re-ranks the shelf;
       # a quoted title is searched as named, so its year stays in the title.
       def year_from(value)
-        return nil if value.match?(TITLE_QUOTE_RE)
+        return if value.match?(TITLE_QUOTE_RE)
 
         value[RECENT_YEAR_RE, 1]&.to_i
       end
@@ -377,7 +377,7 @@ module Master
           break if saved_paths.size >= requested
 
           stage(bus, "#{saved_paths.size + 1}/#{requested} - #{entry[:title]} (#{entry[:year]})")
-          line = acquire_entry(entry, bus: bus)
+          line = acquire_entry(entry, bus:)
           if line.start_with?("mov0: saved ")
             saved_paths << line
             lines << line
@@ -410,7 +410,7 @@ module Master
         end
 
         label = pick[:kind] == :full ? title : "#{title} trailer"
-        line = ytdlp_download(pick[:url], label, bus: bus)
+        line = ytdlp_download(pick[:url], label, bus:)
         return line.delete_prefix("mov0: ") unless line.start_with?("mov0: saved ")
 
         pick[:kind] == :trailer ? "#{line} - official trailer; #{entry[:title]} streams on #{entry[:where]}" : line
@@ -511,7 +511,7 @@ module Master
         return Result.err("mov0: yt-dlp not installed; install it to pull video links", category: :validation) unless ytdlp_available?
 
         label = (title.to_s.empty? ? url : title).to_s[0, 80]
-        line = ytdlp_download(url, label, bus: bus)
+        line = ytdlp_download(url, label, bus:)
         return Result.ok({ output: line, rendered: line, media: :mov, path: downloads_dir }) if line.start_with?("mov0: saved ")
 
         Result.err(line, category: :infrastructure)

@@ -78,7 +78,7 @@ Law.define(:CSS_DUPLICATE_DECLARATION) do
         next [] if rows.any? { |_property, value, _at| value.include?("var(") }
 
         line = src[0, base + rows[1][2]].count("\n") + 1
-        [finding(line: line,
+        [finding(line:,
                   message: "#{selector.strip} declares #{property} #{rows.size} times; the cascade keeps only the last")]
       end
     end

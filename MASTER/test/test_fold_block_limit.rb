@@ -144,7 +144,7 @@ class FoldBlockLimitTest < Minitest::Test
   end
 
   def test_capability_refusal_says_what_was_unavailable_and_that_nothing_ran
-    effect = Master::Core::Effect.exec(["telegram-cli", "login"])
+    effect = Master::Core::Effect.exec(%w[telegram-cli login])
     memory = Memory.new
     fold = Master::Core::Fold.new(
       model: ScriptedModel.new(effect, effect, Master::Core::Effect.done("must not finish")),

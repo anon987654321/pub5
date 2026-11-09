@@ -44,7 +44,7 @@ class TestSubscriptionAuth < Minitest::Test
 
   def test_provider_without_device_flow_keeps_browser_login
     lane = Master::Ground::SubscriptionAuth.find("claude")
-    assert_equal ["auth", "login"],
+    assert_equal %w[auth login],
                  Master::Ground::SubscriptionAuth.login_arguments(lane, device_auth: nil)
     assert_match(/no device-code login/,
                  Master::Ground::SubscriptionAuth.login("claude", device_auth: true))
@@ -54,7 +54,7 @@ class TestSubscriptionAuth < Minitest::Test
     lane = { "command" => "codex", "status_match" => "Logged in" }
     Master::Ground::SubscriptionAuth.stub(:cli_binary, "codex") do
       Master::Io::Exec.stub(:capture2e, ["Not logged in", Status.new(true)]) do
-        refute Master::Ground::SubscriptionAuth.command_ok?(lane, ["login", "status"])
+        refute Master::Ground::SubscriptionAuth.command_ok?(lane, %w[login status])
       end
     end
   end

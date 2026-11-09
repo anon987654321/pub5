@@ -13,7 +13,7 @@ require_relative "../checks/lib/research/layout_search"
 # render expansion that fixed it.
 class LayoutSearchDetectorTest < Minitest::Test
   def detect(card)
-    Deploy::LayoutSearch.new.send(:detect_variant, "media_placement", { card: card })
+    Deploy::LayoutSearch.new.send(:detect_variant, "media_placement", { card: })
   end
 
   def test_an_inline_image_slot_before_the_body_reads_photo_first

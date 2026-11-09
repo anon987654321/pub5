@@ -57,7 +57,7 @@ module Master
       end
 
       def normalise(record)
-        return nil unless record.is_a?(Hash)
+        return unless record.is_a?(Hash)
 
         record.each_with_object({}) do |(key, value), out|
           out[key.to_s.downcase] = value

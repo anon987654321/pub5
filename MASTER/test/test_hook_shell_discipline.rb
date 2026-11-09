@@ -13,7 +13,7 @@ class HookShellDisciplineTest < Minitest::Test
   HOOK = File.join(Master::ROOT, "tools", "shell_discipline.rb").freeze
 
   def decision(command, stdin_data: nil)
-    payload = stdin_data || JSON.generate(tool_name: "Bash", tool_input: { command: command })
+    payload = stdin_data || JSON.generate(tool_name: "Bash", tool_input: { command: })
     out, _err, status = Open3.capture3(RbConfig.ruby, HOOK, stdin_data: payload)
     verdict = if status.success?
       out.empty? ? nil : JSON.parse(out).dig("hookSpecificOutput", "permissionDecision")

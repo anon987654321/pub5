@@ -20,7 +20,7 @@ class TestStatxEnosysFallback < Minitest::Test
                                        source, "-o", executable)
       assert status.success?, output
 
-      [ "ENOSYS", "EPERM" ].each do |denied_errno|
+      %w[ENOSYS EPERM].each do |denied_errno|
         output, status = Open3.capture2e(executable, denied_errno)
         skip output if status.exitstatus == 77
         assert status.success?, output
@@ -55,7 +55,7 @@ class TestStatxEnosysFallback < Minitest::Test
         puts "PASS: patched Ruby stat/lstat/fstat fallback"
       RUBY
 
-      [ "ENOSYS", "EPERM" ].each do |denied_errno|
+      %w[ENOSYS EPERM].each do |denied_errno|
         output, status = Open3.capture2e(executable, "--exec", denied_errno,
                                          RbConfig.ruby, "-e", ruby_probe, path, link)
         skip output if status.exitstatus == 77

@@ -333,7 +333,7 @@ module Master
         mode = read_value(rendered, :measurement_mode).to_s
         mode = "caller_supplied" if mode.empty?
         details = {
-          mode: mode,
+          mode:,
           version: read_value(rendered, :measurement_version),
           rendered_sha256: content_sha256(rendered),
           verification: "caller_supplied_unverified",

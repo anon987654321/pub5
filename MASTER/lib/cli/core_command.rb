@@ -67,7 +67,7 @@ module Master
         root = File.expand_path(options.fetch(:root))
         model = model_for(goal, options)
         refusals = []
-        probe_policy = Master::CLI::CoreBridge.read_only_probe(root: root)
+        probe_policy = Master::CLI::CoreBridge.read_only_probe(root:)
 
         result = Master::Core::Fold.new(
           model:, constitution: constitution(root, master_root, probe: probe_policy), world: Master::Core::World.new(root:, probe: probe_policy),

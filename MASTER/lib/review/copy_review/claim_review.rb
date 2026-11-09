@@ -258,7 +258,7 @@ class Master::Review::CopyReview::ClaimReview
     padded = " #{normalize(text).unicode_normalize(:nfkd).gsub(/\p{Mn}/, '')} "
     negative = NEGATIVE_AVAILABILITY.any? { |phrase| padded.include?(" #{phrase} ") }
     positive = !negative && POSITIVE_AVAILABILITY.any? { |phrase| padded.include?(" #{phrase} ") }
-    return nil if positive == negative
+    return if positive == negative
 
     positive
   end

@@ -149,10 +149,10 @@ class TestIoMov < Minitest::Test
   def test_dispatch_announces_the_shelf_before_resolving
     events = []
     bus = Object.new
-    bus.define_singleton_method(:publish) { |event, payload = {}| events << payload.merge(event: event) }
+    bus.define_singleton_method(:publish) { |event, payload = {}| events << payload.merge(event:) }
 
     Mov.stub(:search, ->(_request) { [] }) do
-      result = Mov.dispatch("download us two new movies please", bus: bus)
+      result = Mov.dispatch("download us two new movies please", bus:)
       assert_predicate(result, :err?)
     end
 
@@ -398,7 +398,7 @@ class TestIoMov < Minitest::Test
   def test_the_yt_dlp_handler_reads_percentage_from_a_chunked_stream
     events = []
     bus = Object.new
-    bus.define_singleton_method(:publish) { |event, payload = {}| events << payload.merge(event: event) }
+    bus.define_singleton_method(:publish) { |event, payload = {}| events << payload.merge(event:) }
     printed = []
 
     Mov.stub(:report_status, ->(unit, msg) { printed << msg }) do

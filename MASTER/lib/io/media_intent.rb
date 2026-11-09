@@ -96,7 +96,7 @@ module Master
       end
 
       def dispatch(text, root: MasterPaths.root, bus: nil)
-        return Mov.dispatch(text, bus: bus) if Mov.handles?(text)
+        return Mov.dispatch(text, bus:) if Mov.handles?(text)
         if reference_audio_request?(text)
           return analyze_and_generate_reference(text, root:) if reference_generation_request?(text)
           return analyze_reference(text, root:)
