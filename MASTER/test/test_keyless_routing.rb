@@ -39,7 +39,6 @@ class TestKeylessRouting < Minitest::Test
     @saved_env.each { |key, val| val.nil? ? ENV.delete(key) : ENV[key] = val }
   end
 
-
   def test_ollama_is_disabled_by_default_and_never_enters_the_pool
     router = Master::CLI::Routing::ModelRouter.new(
       config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
@@ -51,7 +50,6 @@ class TestKeylessRouting < Minitest::Test
     assert_empty router.pool.grep(/\Aollama[:\/]/)
     assert_empty router.fallback_chain(task_type: :exploration).grep(/\Aollama[:\/]/)
   end
-
 
   def test_default_model_is_web_chat_grok_without_keys
     assert_equal "web-chat:grok", Master.default_model

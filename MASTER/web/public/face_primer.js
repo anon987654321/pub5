@@ -16,7 +16,7 @@
   function uiEl(){return document.getElementById('ui-status');}
   function titleEl(){return document.getElementById('primer-title');}
   function i18n(key, fallback, vars){
-    const raw=p?.getAttribute('data-i18n-'+key)||fallback;
+    const raw=p?.getAttribute(`data-i18n-${key}`)||fallback;
     if(!vars)return raw;
     return raw.replace(/%\{(\w+)\}/g,function(_,name){return vars[name]});
   }
@@ -33,7 +33,7 @@
   // gesture anyway), but they must not vanish: a silent catch is a defect
   // that hides its own cause.
   function report(where,e){
-    if(window.console&&console.warn)console.warn('face_primer: '+where+' failed',e);
+    if(window.console&&console.warn)console.warn(`face_primer: ${where} failed`,e);
   }
   function dismissPrimer(){
     document.body.classList.remove('face-loading');
@@ -51,7 +51,7 @@
   }
   function boot(){
     if(started)return true;
-    if(window.MASTER_FACE&&window.MASTER_FACE.startEverything){
+    if(window.MASTER_FACE?.startEverything){
       started=true;
       window.MASTER_FACE.startEverything();
       return true;

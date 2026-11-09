@@ -8,7 +8,7 @@ class ApiCopyReviewsControllerTest < ActionDispatch::IntegrationTest
       "id" => "sub_copy_review_1",
       "status" => "active",
       "customer" => "cus_copy_review_1",
-      "metadata" => { "plan" => "master_api_team" }
+      "metadata" => { "plan" => "master_api_team" },
     }
     @key = ApiKey.sync!(subscription)
     @token = @key.reveal!
@@ -25,8 +25,8 @@ class ApiCopyReviewsControllerTest < ActionDispatch::IntegrationTest
         { kind: "product_title", text: "Wool coat" },
         { kind: "merchant", text: "Fjord Studio" },
         { kind: "price", text: "NOK 149.90" },
-        { kind: "availability", text: "In stock" }
-      ]
+        { kind: "availability", text: "In stock" },
+      ],
     }
   end
 
@@ -41,7 +41,7 @@ class ApiCopyReviewsControllerTest < ActionDispatch::IntegrationTest
       market: "NO",
       in_stock: true,
       placeholder: false,
-      last_seen_at: Time.current.iso8601
+      last_seen_at: Time.current.iso8601,
     }
   end
 
@@ -50,7 +50,7 @@ class ApiCopyReviewsControllerTest < ActionDispatch::IntegrationTest
          params: payload.to_json,
          headers: {
            "Authorization" => "Bearer #{token}",
-           "Content-Type" => "application/json"
+           "Content-Type" => "application/json",
          }
   end
 

@@ -58,7 +58,7 @@ module Api
             reviewer_sha256: receipt.reviewer_sha256,
             source_trust: receipt.source_trust,
             stored_copy: false,
-            certification: false
+            certification: false,
           },
           usage: usage.to_h
         }

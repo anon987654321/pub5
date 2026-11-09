@@ -1,11 +1,11 @@
 /* Ghostty-inspired session chrome: neutral graphite, grayscale focus and semantic contrast. */
 #chat-shell { inset-block-end: calc(76px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }
-#chat-log { max-height: 36dvh; padding: 8px 18px; }
+#chat-log { max-height: 36dvh; padding: 8px 16px; }
 #prompt-form {
   inset-inline: auto; inset-inline-start: 50%;
   inset-block-end: calc(8px + var(--safe-bottom) + var(--keyboard-inset, 0px));
   width: calc(100dvw - 16px - var(--safe-left) - var(--safe-right));
-  height: auto; min-height: 60px; padding: 7px; gap: 4px;
+  height: auto; min-height: 60px; padding: 8px; gap: 4px;
   transform: translate(-50%, 0); border: 0; border-radius: 0;
   background: var(--chrome-surface); color: var(--chrome-text);
   font: 400 1rem/1.5 var(--font-mono); touch-action: manipulation;
@@ -82,7 +82,7 @@ body[data-queue-active="1"] .turn-queue-status { opacity: .9; }
 .master-session-tabs::-webkit-scrollbar { display: none; }
 .master-session-tab {
   position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
-  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: .625rem;
+  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: 0.5rem;
   color: var(--chrome-band-muted); font: var(--text-meta)/1 var(--font);
   text-decoration: none; white-space: nowrap; scroll-snap-align: start;
   transition: background-color var(--transition-fast) var(--ease-out), color var(--transition-fast) var(--ease-out);
@@ -98,10 +98,10 @@ body.mission-control .master-titlebar { max-width: none; max-inline-size: none; 
 body.mission-control .mission-heading { max-inline-size: 80ch; margin: 0 0 1rem; }
 @media (min-width: 480px) {
   #chat-log { max-height: 40dvh; padding-inline: 24px; }
-  #prompt-form { width: min(920px, calc(100dvw - 32px - var(--safe-left) - var(--safe-right))); min-height: 64px; padding: 9px 12px; gap: 8px; }
+  #prompt-form { width: min(920px, calc(100dvw - 32px - var(--safe-left) - var(--safe-right))); min-height: 64px; padding: 8px 12px; gap: 8px; }
   .master-titlebar { gap: .5rem; }
   .master-titlebar .brand-mark { display: inline-flex; }
-  .master-session-tab { padding-inline: .875rem; }
+  .master-session-tab { padding-inline: 0.75rem; }
   /* The prompt is 64px high + 8px from the viewport edge; preserve an 8px
      gap and follow the same keyboard/safe-area offsets as the prompt. */
   #chat-history-panel { bottom: calc(80px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }

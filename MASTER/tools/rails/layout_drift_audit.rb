@@ -279,7 +279,7 @@ module Operator
     def audit_document_landmarks
       {
         "brgen" => "RAILS/brgen/app/views/layouts/application.html.erb",
-        "amber" => "RAILS/amber/app/views/layouts/application.html.erb"
+        "amber" => "RAILS/amber/app/views/layouts/application.html.erb",
       }.each do |app, path|
         source = read(path)
         %w[class="skip-link" id="main-content" data-layout="document"].each do |needle|

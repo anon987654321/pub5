@@ -151,7 +151,6 @@ class TestSoul < Minitest::Test
     assert_includes prompt, "never deny access to a capability that is present"
   end
 
-
   def test_agent_prompt_names_the_live_lane_without_inventing_a_vendor_version
     builder = Object.new.extend(Master::Review::Agent::PromptBuilder)
     builder.define_singleton_method(:model) { "grok-cli:auto" }

@@ -503,7 +503,6 @@ body[data-council-persona]::after {
   transition: color 160ms var(--ease-out), opacity 160ms var(--ease-out);
 }
 
-
 #mic-dot:focus-visible {
   outline: 2px solid var(--chrome-focus);
   outline-offset: 2px;
@@ -1127,7 +1126,7 @@ body.primer-autostart #primer {
 }
 
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
-.chip { font: var(--text-meta)/1.5 var(--font-mono); letter-spacing: .08em; padding: 8px 14px; min-height: var(--tap-min); border: 1px solid color-mix(in srgb, var(--face-fg) 8%, transparent); border-radius: var(--radius-extra-small); color: color-mix(in srgb, var(--c-text) 62%, transparent); transition: background 120ms var(--ease-out); }
+.chip { font: var(--text-meta)/1.5 var(--font-mono); letter-spacing: .08em; padding: 8px 12px; min-height: var(--tap-min); border: 1px solid color-mix(in srgb, var(--face-fg) 8%, transparent); border-radius: var(--radius-extra-small); color: color-mix(in srgb, var(--c-text) 62%, transparent); transition: background 120ms var(--ease-out); }
 #primer .tagline { opacity: .72; font-size: .9em; margin-top: 16px; letter-spacing: .1em; }
 
 /* #56 Sleeping dim */
@@ -1279,7 +1278,7 @@ body[data-phantom-glitch="1"] canvas {
   color: var(--face-muted);
   font: 16px/1 var(--font-mono);
   cursor: pointer;
-  padding: 0px 6px;
+  padding: 0px 4px;
   min-width: var(--tap-min);
   min-height: var(--tap-min);
   display: inline-flex;
@@ -1345,8 +1344,6 @@ body[data-history-open="1"] #chat-log {
   margin-inline-start: min(332px, calc(100vw - 24px));
   transition: margin-left 220ms var(--ease-out);
 }
-
-
 
 /* Family skip-link: hard-hide until focus (same contract as RAILS _shell.scss). */
 .skip-link {
@@ -1707,7 +1704,7 @@ body.wscons-mode #face-phosphor-trail {
   position: absolute;
   min-inline-size: 96px;
   min-block-size: var(--tap-min);
-  padding: 8px 10px;
+  padding: 8px 8px;
   border: 1px solid var(--border-soft);
   background: color-mix(in srgb, var(--face-bg) 92%, transparent);
   color: var(--face-fg);
@@ -1739,7 +1736,7 @@ body.wscons-mode #face-phosphor-trail {
 }
 @media (prefers-reduced-motion: reduce) {
   .master-workspace-node { transition: none; }
-  .master-task-rail { backdrop-filter: none; }
+  .master-task-rail {  }
 }
 @media (forced-colors: active) {
   .master-task-rail,
@@ -1856,20 +1853,20 @@ body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
   font-family: var(--font);
   font-size: clamp(2.2rem, 6.8vw, 5.6rem);
   font-weight: var(--face-weight-display);
-  line-height: 0.98;
+  line-height: 1;
   letter-spacing: -0.065em;
   text-wrap: balance;
 }
 #primer .tagline {
   max-inline-size: 46ch;
-  margin: 22px auto 0;
+  margin: 20px auto 0;
   color: rgb(189 189 189 / 78%);
   font: 400 clamp(0.95rem, 1.6vw, 1.08rem)/1.7 var(--font);
   text-wrap: pretty;
 }
 #primer .primer-consent {
   max-inline-size: 44ch;
-  margin: 22px auto 0;
+  margin: 20px auto 0;
   /* --chrome-muted on the primer's --chrome-bg is 7.49:1; the alpha grey it
      replaces measured 4.10, under the 4.5 body-text floor. */
   color: var(--chrome-muted);
@@ -1882,9 +1879,9 @@ body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
 }
 #chat-log {
   max-height: min(37dvh, 440px);
-  padding: 10px 22px 18px;
+  padding: 8px 20px 16px;
   font-family: var(--font-mono);
-  line-height: 1.72;
+  line-height: 1.6;
   scroll-snap-type: none;
   scrollbar-width: thin;
   scrollbar-color: rgb(142 142 142 / 26%) transparent;
@@ -1894,7 +1891,7 @@ body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
   margin-block-end: 20px;
   font-family: var(--font-mono);
   font-size: clamp(0.98rem, 1.12vw, 1.08rem);
-  line-height: 1.72;
+  line-height: 1.6;
   animation: msgIn 240ms cubic-bezier(.2,.75,.25,1) both;
 }
 .message.user .msg-prompt,
@@ -1918,14 +1915,14 @@ body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
 .master-face-stipple-playground {
   position: fixed; z-index: 40; inset: auto 16px 64px auto;
   width: min(320px, calc(100vw - 32px)); max-height: min(72vh, 560px);
-  overflow: auto; display: grid; gap: 10px; padding: 14px;
+  overflow: auto; display: grid; gap: 8px; padding: 12px;
   color: var(--c-text); background: var(--face-bg); border: 1px solid var(--chrome-border);
   font: 12px/1.4 var(--font-mono, ui-monospace, monospace);
 }
 .master-face-stipple-playground strong { font-size: 13px; font-weight: 700; }
-.master-face-stipple-playground label { display: grid; gap: 5px; }
+.master-face-stipple-playground label { display: grid; gap: 4px; }
 .master-face-stipple-playground select, .master-face-stipple-playground button {
-  min-height: var(--tap-min); padding: 6px 8px; color: inherit;
+  min-height: var(--tap-min); padding: 4px 8px; color: inherit;
   background: var(--chrome-surface); border: 0; font: inherit;
 }
 .master-face-stipple-playground input { width: 100%; accent-color: currentColor; }
@@ -1961,12 +1958,12 @@ body[data-face-ascii="1"] #face { opacity: .055; }
 }
 /* Ghostty-inspired session chrome: neutral graphite, grayscale focus and semantic contrast. */
 #chat-shell { inset-block-end: calc(76px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }
-#chat-log { max-height: 36dvh; padding: 8px 18px; }
+#chat-log { max-height: 36dvh; padding: 8px 16px; }
 #prompt-form {
   inset-inline: auto; inset-inline-start: 50%;
   inset-block-end: calc(8px + var(--safe-bottom) + var(--keyboard-inset, 0px));
   width: calc(100dvw - 16px - var(--safe-left) - var(--safe-right));
-  height: auto; min-height: 60px; padding: 7px; gap: 4px;
+  height: auto; min-height: 60px; padding: 8px; gap: 4px;
   transform: translate(-50%, 0); border: 0; border-radius: 0;
   background: var(--chrome-surface); color: var(--chrome-text);
   font: 400 1rem/1.5 var(--font-mono); touch-action: manipulation;
@@ -2043,7 +2040,7 @@ body[data-queue-active="1"] .turn-queue-status { opacity: .9; }
 .master-session-tabs::-webkit-scrollbar { display: none; }
 .master-session-tab {
   position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
-  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: .625rem;
+  min-inline-size: var(--tap-min); min-block-size: var(--tap-min); padding-inline: 0.5rem;
   color: var(--chrome-band-muted); font: var(--text-meta)/1 var(--font);
   text-decoration: none; white-space: nowrap; scroll-snap-align: start;
   transition: background-color var(--transition-fast) var(--ease-out), color var(--transition-fast) var(--ease-out);
@@ -2059,10 +2056,10 @@ body.mission-control .master-titlebar { max-width: none; max-inline-size: none; 
 body.mission-control .mission-heading { max-inline-size: 80ch; margin: 0 0 1rem; }
 @media (min-width: 480px) {
   #chat-log { max-height: 40dvh; padding-inline: 24px; }
-  #prompt-form { width: min(920px, calc(100dvw - 32px - var(--safe-left) - var(--safe-right))); min-height: 64px; padding: 9px 12px; gap: 8px; }
+  #prompt-form { width: min(920px, calc(100dvw - 32px - var(--safe-left) - var(--safe-right))); min-height: 64px; padding: 8px 12px; gap: 8px; }
   .master-titlebar { gap: .5rem; }
   .master-titlebar .brand-mark { display: inline-flex; }
-  .master-session-tab { padding-inline: .875rem; }
+  .master-session-tab { padding-inline: 0.75rem; }
   /* The prompt is 64px high + 8px from the viewport edge; preserve an 8px
      gap and follow the same keyboard/safe-area offsets as the prompt. */
   #chat-history-panel { bottom: calc(80px + var(--safe-bottom) + var(--keyboard-inset, 0px)); }

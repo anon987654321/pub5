@@ -1541,7 +1541,7 @@ function ttsTick() {
     if (spinBtn) { spinBtn.textContent = '||'; spinBtn.setAttribute('aria-label', 'Pause or resume'); }
     audio.onplay = () => {
       const chatTiming = meta.chatTiming;
-      if (meta.lane === 'response' && chatTiming && chatTiming.firstAudioMs === null) {
+      if (meta.lane === 'response' && chatTiming?.firstAudioMs === null) {
         chatTiming.firstAudioMs = Math.round(performance.now() - chatTiming.startedAt);
         window.dispatchEvent(new CustomEvent('master:chat:latency', {
           detail: { status: 'audio_started', firstTokenMs: chatTiming.firstTokenMs, firstAudioMs: chatTiming.firstAudioMs, completedMs: chatTiming.completedMs, failedMs: chatTiming.failedMs }

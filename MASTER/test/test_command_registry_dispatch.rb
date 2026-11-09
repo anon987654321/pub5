@@ -771,7 +771,6 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_same token, captured.fetch(:cancellation)
   end
 
-
   def test_documents_command_is_registered_and_local_only
     assert_equal :dispatch_documents, built.fetch("documents").method_name
     assert_includes Registry.help_text("documents"), "/documents analyze"

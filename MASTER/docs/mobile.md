@@ -91,7 +91,6 @@ Android root and cannot provide kernel-level root, systemd or container
 isolation. The normal Termux:API speech/camera path remains a separate native
 Termux capability and must be tested there.
 
-
 ## Provider sign-in
 
 MASTER delegates sign-in to each provider's own CLI; it never copies OAuth tokens or session files into its own store. From the normal interactive prompt:

@@ -20,8 +20,6 @@ const faceManifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8
 const primerScript = readFileSync(join(publicDir, "face_primer.js"), "utf8");
 const bootShell = () => `${readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8")}\n${primerScript}`;
 
-
-
 function sourceSetDigest(relativePaths) {
   const hash = createHash("sha256");
   const sorted = [...relativePaths].sort();
@@ -43,7 +41,6 @@ function partSources() {
   ];
 }
 const faceSource = partSources().join("\n");
-
 
 test("web face queues follow-up turns and exposes stop/resume state", () => {
   const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
@@ -373,7 +370,6 @@ test("every face part is named by the runtime loader", () => {
   assert.match(runtime, /face_speech_playback\.js/);
 });
 
-
 test("calm profile is default and checks rich idle motion", () => {
   const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
   assert.match(part1, /\['calm', 'full', 'crt', 'battery'\]/);
@@ -410,7 +406,6 @@ test("face.runtime.js is the compact generated loader", () => {
   assert.match(runtime, /URL\.createObjectURL/);
 });
 
-
 // Face source parts are served separately and stitched into an imported
 // blob by this generated loader. Keep its URL list and the Rake generator's
 // source set in parity so neither artifact drifts to a stale parts list.
@@ -435,7 +430,6 @@ test("face.runtime.js matches the rake loader contract", () => {
   }
   assert.match(task, /segments\.map/);
 });
-
 
 test("TTS playback gain is one published number, and fits under 0 dBFS", () => {
   const speech = readFileSync(join(publicDir, "face_speech_runtime.js"), "utf8");
@@ -1086,7 +1080,6 @@ test("Android wake reaches the existing face event pipe", () => {
   assert.match(wake, /File\.rename/);
 });
 
-
 test("generated face bundles publish the source-set digest they were built from", () => {
   const visionSources = [
     "public/face_vision_core.js",
@@ -1127,7 +1120,6 @@ test("MASTER face markup hooks have owned styling", () => {
   assert.match(css, /body\[data-mode="listening"\] \.mic-indicator/);
 });
 
-
 test("constitutional ASCII face is wired as an overlay and a fallback", () => {
   const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
   const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
@@ -1154,7 +1146,6 @@ test("constitutional ASCII face is wired as an overlay and a fallback", () => {
   assert.match(laws, /face_ascii:[\s\S]*?source: ordered_constitutional_nodes/);
   assert.match(laws, /web_file_access: forbidden/);
 });
-
 
 test("session chrome reads brgen's family tokens and band without weakening mobile targets", () => {
   const tokens = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
@@ -1227,7 +1218,6 @@ test("shell chrome uses plain CLI prompt words and downloads no font", () => {
   assert.doesNotMatch(css, /\.wordmark\s*\{/);
 });
 
-
 test("face preserves browser zoom and gives each shortcut one owner", () => {
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
   const minimalUi = readFileSync(join(publicDir, "face_minimal_ui.js"), "utf8");
@@ -1241,7 +1231,6 @@ test("face preserves browser zoom and gives each shortcut one owner", () => {
   assert.match(runtime, /active\?\.closest\?\.\('\[role="dialog"\]'\)/);
   assert.match(runtime, /const editing = tag === 'INPUT'[\s\S]{0,200}active\?\.closest\?\.\('\[role="dialog"\]'\)/);
 });
-
 
 test("thinking face keeps the single composer ready beneath an ASCII spinner", () => {
   const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");

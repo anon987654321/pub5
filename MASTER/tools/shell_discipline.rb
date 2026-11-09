@@ -35,6 +35,6 @@ print JSON.generate(
   hookSpecificOutput: {
     hookEventName: "PreToolUse",
     permissionDecision: "deny",
-    permissionDecisionReason: shell.refusal(names)
+    permissionDecisionReason: shell.refusal(names),
   }
 )

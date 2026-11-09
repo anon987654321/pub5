@@ -345,7 +345,7 @@
       opacity: 0.32,
       depthWrite: false
     }));
-    mesh.name = "master-activity-" + record.kind;
+    mesh.name = `master-activity-${record.kind}`;
     mesh.userData.activityKey = record.key;
     (layers.event_field || world).add(mesh);
     activityMeshes.set(record.key, mesh);
@@ -355,7 +355,7 @@
     if (!TASK_RING.enabled) return null;
     const id = String(record.id || "").trim();
     if (!id) return null;
-    const key = kind + ":" + id;
+    const key = `${kind}:${id}`;
     const previous = activityRecords.get(key);
     const state = String(record.state || (kind === "evidence" ? "evidence" : "queued"));
     const terminalAt = TERMINAL_ACTIVITY_STATES.has(state)
@@ -674,7 +674,7 @@
       context.font = "18px monospace";
       context.textBaseline = "middle";
       context.fillStyle = "#ffffff";
-      context.fillText(name + "0", 8, 24);
+      context.fillText(`${name}0`, 8, 24);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.generateMipmaps = false;
@@ -689,11 +689,11 @@
         depthWrite: false
       });
       const sprite = new THREE.Sprite(material);
-      sprite.name = "master-hud-" + name;
+      sprite.name = `master-hud-${name}`;
       sprite.scale.set(0.72, 0.108, 1);
       sprite.position.set(x, y, z + 0.12);
       host.add(sprite);
-      hudSprites.push({ name, nodeName: "master-node-" + name, sprite });
+      hudSprites.push({ name, nodeName: `master-node-${name}`, sprite });
     });
   }
 

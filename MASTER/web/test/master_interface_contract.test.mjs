@@ -174,7 +174,6 @@ test("FaceWorld reports one performance sample per canonical update", () => {
   assert.match(world, /MasterRenderPolicy\?\.recordFrame\?\.\(now\)/);
 });
 
-
 test("evidence events retain their event name and reach the shared FaceWorld clock", () => {
   assert.ok(tokens.includes("- memory:added"), "memory:added must be allowed by the canonical contract");
   assert.match(tokens, /task_ring:\n\s+enabled: true/);
@@ -263,7 +262,6 @@ test("session chrome is mobile-first, nuanced, flat and touch-ready", () => {
   assert.doesNotMatch(faceChrome, /border-radius:\s*(?:[1-9]\d*|\d*\.\d+)(?:px|rem|em|%)?/);
   assert.doesNotMatch(faceChrome, /border-(?:block|inline)-end:\s*1px/);
 });
-
 
 test("history drawer clears the session prompt and keyboard", () => {
   assert.match(faceConversation, /#chat-history-panel \{[^}]*bottom: calc\(76px \+ var\(--safe-bottom\) \+ var\(--keyboard-inset, 0px\)\);/);

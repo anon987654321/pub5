@@ -72,7 +72,6 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
-
   def test_ollama_is_absent_from_default_order_and_all_dead_fallback
     ENV.delete("MASTER_OLLAMA_ENABLED")
 

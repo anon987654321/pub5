@@ -1289,7 +1289,6 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_predicate @cli.instance_variable_get(:@turn_cancellation), :cancelled?
   end
 
-
   def test_help_is_dispatched_immediately_while_a_turn_is_busy
     worker = Object.new
     worker.define_singleton_method(:alive?) { true }

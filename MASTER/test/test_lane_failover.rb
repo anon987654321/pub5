@@ -87,7 +87,6 @@ class TestLaneFailover < Minitest::Test
     agent.send(:retry_on_broke_lane, first, models.first, [{ role: "user", content: "hi" }])
   end
 
-
   def test_default_policy_does_not_probe_or_start_ollama
     ENV.delete("MASTER_OLLAMA_ENABLED")
     probes = 0
@@ -104,7 +103,6 @@ class TestLaneFailover < Minitest::Test
     assert_equal 0, probes
     assert_equal 0, starts
   end
-
 
   def test_each_tier_survives_losing_its_lanes_one_at_a_time
     Master.stub(:llm_reachable?, true) do

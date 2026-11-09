@@ -477,7 +477,6 @@ class TurnRouterTest < Minitest::Test
     end
   end
 
-
   def test_document_archive_intent_is_narrow_and_extracts_a_folder
     router = Master::CLI::TurnRouter
 

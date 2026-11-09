@@ -199,7 +199,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review", "languages" => [] },
         "entries" => {
           "LIVE_ID" => { "definition_sources" => ["MASTER/law/live.rb"], "severity" => "warning" },
-          "ORPHAN_ROW" => "not-a-mapping"
+          "ORPHAN_ROW" => "not-a-mapping",
         }
       }
 
@@ -221,7 +221,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
         "surfaces" => %w[whole_file],
         "defaults" => { "mode" => "violation", "lifecycle" => "active", "autofix" => "review", "languages" => [] },
         "entries" => {
-          "LIVE_ID" => { "definition_sources" => ["MASTER/law/../outside.rb"] }
+          "LIVE_ID" => { "definition_sources" => ["MASTER/law/../outside.rb"] },
         }
       }
 
@@ -249,7 +249,7 @@ class TestLawCatalogueBootstrap < Minitest::Test
           "LIVE_ID" => {
             "definition_sources" => ["MASTER/law/live.rb"], "severity" => "warning",
             "path" => "RAILS/amber/", "path_pattern" => "/db/migrate/"
-          }
+          },
         }
       }
 

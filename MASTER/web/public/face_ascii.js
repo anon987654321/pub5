@@ -372,7 +372,6 @@
       return MASK_ORDER[h % MASK_ORDER.length];
     }
 
-
     // ---- Face::Mesh ---------------------------------------------------------
     // An indexed triangle mesh, outward wound: flat arrays of positions, vertex brightness
     // and triangle corners, with the landmarks and mask numbers a head carries.
@@ -1211,7 +1210,7 @@
           this.put(col + glance, row, tall ? FEATURE.pupil_large : FEATURE.pupil);
         }
         if (!this.mask || this.mask.brow_line >= 0.5) this.run(left, row - 1 - lift, FEATURE.brow.repeat(width));
-        if (this.mask && this.mask.brow_ridge >= BROW_MIN) this.run(left, row - 2 - lift, MASK_GLYPHS.brow_heavy.repeat(width));
+        if (this.mask?.brow_ridge >= BROW_MIN) this.run(left, row - 2 - lift, MASK_GLYPHS.brow_heavy.repeat(width));
       }
 
       // An eye wide enough to have lids: one a row above the line of the eye, one below.
@@ -1223,11 +1222,11 @@
       }
 
       nose() {
-        if (this.mask && this.mask.nose_line < 0.5) return;
+        if (this.mask?.nose_line < 0.5) return;
         const [bx, by, , bh] = this.cellOf(this.anchors.bridge);
         const [tx, ty, , th] = this.cellOf(this.anchors.tip);
         if (bh || th) return;
-        if (this.mask && this.mask.beak_projection >= BEAK_MIN) { this.beak(bx, by, tx, ty); return; }
+        if (this.mask?.beak_projection >= BEAK_MIN) { this.beak(bx, by, tx, ty); return; }
         const steps = Math.ceil(Math.max(Math.abs(tx - bx), Math.abs(ty - by) / 2));
         const glyph = line(tx - bx, by - ty);
         for (let i = 0; i < steps; i += 1) {
@@ -1535,8 +1534,8 @@
     const engine = build(contract);
     const laws = Array.isArray(opts.laws) ? opts.laws
       : (env.MASTER_FACE_LAW_FIELD && Array.isArray(env.MASTER_FACE_LAW_FIELD.laws) ? env.MASTER_FACE_LAW_FIELD.laws : []);
-    const web = (contract.ascii && contract.ascii.web) || {};
-    const budget = (contract.spatial && contract.spatial.budget) || {};
+    const web = (contract.ascii?.web) || {};
+    const budget = (contract.spatial?.budget) || {};
     const ROWS = num(web.rows, 44);
     const FONT = Array.isArray(web.font) ? web.font : [9, 20];
     const TONE = Array.isArray(web.tone) ? web.tone : [0.45, 0.75, 1.0];
@@ -1794,7 +1793,7 @@
     const body = root.document.body;
     const raw = String(body.dataset.mode || body.dataset.state || "idle").toLowerCase();
     const contract = root.MASTER_FACE_CONTRACT || {};
-    const aliases = (contract.state && contract.state.mode_aliases) || contract.mode_aliases || {};
+    const aliases = (contract.state?.mode_aliases) || contract.mode_aliases || {};
     return aliases[raw] || raw;
   }
 
@@ -1844,7 +1843,7 @@
 
   function setGlyphMode(enabled) {
     glyphMode = !!enabled;
-    if (root.document && root.document.body) {
+    if (root.document?.body) {
       if (glyphMode) root.document.body.dataset.faceAscii = "1";
       else delete root.document.body.dataset.faceAscii;
     }

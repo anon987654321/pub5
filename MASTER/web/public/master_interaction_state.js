@@ -156,7 +156,7 @@
     store.task.state = state;
     store.task.active = state === "complete" || state === "failed" || state === "cancelled" ? null : id;
     store.task.version += 1;
-    emit("task:" + state, next);
+    emit(`task:${state}`, next);
     return immutable(next);
   }
 
@@ -174,7 +174,7 @@
     store.tool.active = state === "complete" || state === "failed" ? null : id;
     store.tool.state = state;
     store.tool.version += 1;
-    emit("tool:" + state, next);
+    emit(`tool:${state}`, next);
     return immutable(next);
   }
 

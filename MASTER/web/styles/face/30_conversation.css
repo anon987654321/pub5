@@ -403,7 +403,7 @@ body.primer-autostart #primer {
 }
 
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
-.chip { font: var(--text-meta)/1.5 var(--font-mono); letter-spacing: .08em; padding: 8px 14px; min-height: var(--tap-min); border: 1px solid color-mix(in srgb, var(--face-fg) 8%, transparent); border-radius: var(--radius-extra-small); color: color-mix(in srgb, var(--c-text) 62%, transparent); transition: background 120ms var(--ease-out); }
+.chip { font: var(--text-meta)/1.5 var(--font-mono); letter-spacing: .08em; padding: 8px 12px; min-height: var(--tap-min); border: 1px solid color-mix(in srgb, var(--face-fg) 8%, transparent); border-radius: var(--radius-extra-small); color: color-mix(in srgb, var(--c-text) 62%, transparent); transition: background 120ms var(--ease-out); }
 #primer .tagline { opacity: .72; font-size: .9em; margin-top: 16px; letter-spacing: .1em; }
 
 /* #56 Sleeping dim */
@@ -555,7 +555,7 @@ body[data-phantom-glitch="1"] canvas {
   color: var(--face-muted);
   font: 16px/1 var(--font-mono);
   cursor: pointer;
-  padding: 0px 6px;
+  padding: 0px 4px;
   min-width: var(--tap-min);
   min-height: var(--tap-min);
   display: inline-flex;
@@ -621,6 +621,4 @@ body[data-history-open="1"] #chat-log {
   margin-inline-start: min(332px, calc(100vw - 24px));
   transition: margin-left 220ms var(--ease-out);
 }
-
-
 

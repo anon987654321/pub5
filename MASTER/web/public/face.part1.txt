@@ -90,7 +90,6 @@ function futureSideBias(side) {
   return side * FACE_ASYMMETRY * x;
 }
 
-
 function faceRenderBudget() {
   return window.MASTER_FACE_STATE?.renderBudget?.() || {};
 }

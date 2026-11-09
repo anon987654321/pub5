@@ -107,7 +107,6 @@ class ProviderHealthCacheTest < Minitest::Test
     end
   end
 
-
   def test_a_recent_failure_ranks_behind_a_recent_success_on_the_next_selection
     Dir.mktmpdir("provider-health-next-selection-") do |dir|
       now = Time.utc(2026, 11, 1, 10, 0, 0)

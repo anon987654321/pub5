@@ -59,7 +59,6 @@ class LifecycleToolsSpec < Minitest::Test
     assert File.file?(File.join(link, "settings.json"))
   end
 
-
   def test_master_deploy_inventory_adapter_uses_the_openbsd_implementation
     require File.join(ROOT, "checks", "support", "deploy_inventory")
 
@@ -68,7 +67,6 @@ class LifecycleToolsSpec < Minitest::Test
 
     assert_equal expected, actual
   end
-
 
   private
 

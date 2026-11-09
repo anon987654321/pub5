@@ -258,7 +258,6 @@ test("reduced motion holds the head still: the same text a second later is not r
   assert.equal(calls.length, painted);
 });
 
-
 test("ranked constitutional glyphs orbit the head without replacing face cells", () => {
   const laws = [
     { id: "CAPABILITY_STATUS_MUST_BE_TRUTHFUL", glyph: "@" },

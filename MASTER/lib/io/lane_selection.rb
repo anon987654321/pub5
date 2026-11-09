@@ -256,15 +256,13 @@ module Master
 
       def unmeasured_timeout_s = Integer(free_tier.fetch("unmeasured_timeout_s", UNMEASURED_TIMEOUT_S))
 
-      # Bound every completion, not only an unmeasured lane: a short health
-      # probe says nothing about the cost of a large repair prompt.
+      # Bound every completion, not only an unmeasured lane: a short health probe says little about a repair prompt.
       def free_call_timeout_s
         value = Integer(free_tier.fetch("call_timeout_s", UNMEASURED_TIMEOUT_S), exception: false)
         value&.positive? ? value : UNMEASURED_TIMEOUT_S
       end
 
-      # Whether a lane reads images: the catalog row's input modalities when it
-      # has one, else models.yml vision_families.
+      # Whether a lane reads images: the catalog row's input modalities when it has one, else the vision families.
       def vision?(model)
         id = model.to_s
         row = catalog_modalities(id)
@@ -392,6 +390,8 @@ module Master
                            .map { |row| [Regexp.new(row["model_pattern"]), Array(row["env"])] }
 
       def key_present_for?(id)
+        # The user-owned gateway is the key boundary itself: the URL is the opt-in and its key is optional.
+        return true if id.start_with?("gateway:") && !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty?
         _pattern, envs = api_keys.find { |pattern, _envs| pattern.match?(id) }
         envs ? envs.any? { |env| Master.api_key_present?(env) } : Master.any_api_key_present?
       end
