@@ -129,7 +129,7 @@ end
 # health_check.rb read; mrdamascy is standalone and answers /up alone.
 def check_fleet_route(failures, name)
   gemfile = File.join(RAILS_ROOT, name, "Gemfile")
-  return unless File.file?(gemfile) && File.read(gemfile).include?('gem "pub4-shared"')
+  return unless File.file?(gemfile) && File.read(gemfile).include?('gem "pub5-shared"')
 
   routes = File.join(RAILS_ROOT, name, "config", "routes.rb")
   return unless File.file?(routes) && !File.read(routes).include?("fleet.rb")
