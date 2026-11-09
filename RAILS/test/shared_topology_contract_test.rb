@@ -53,9 +53,15 @@ class SharedTopologyContractTest < Minitest::Test
   end
   def test_rails_lockfiles_use_the_canonical_shared_engine_path
     %w[amber brgen bsdports].each do |app|
+      gemfile = File.read(File.join(ROOT, app, "Gemfile"))
       lockfile = File.read(File.join(ROOT, app, "Gemfile.lock"))
+
+      assert_includes gemfile, 'gem "pub5-shared", path: "../__shared"'
+      refute_includes gemfile, "pub4-shared"
       refute_includes lockfile, "remote: ../shared"
       assert_includes lockfile, "remote: ../__shared"
+      assert_includes lockfile, "pub5-shared!"
+      refute_includes lockfile, "pub4-shared"
     end
   end
 
