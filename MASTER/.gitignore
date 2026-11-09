@@ -49,3 +49,6 @@ tts.wav
 # it. Twelve calibration files from one 2026-07-16 run were tracked; the same rule
 # already covers RAILS/visual_contract/*.png in the root ignore file.
 reports/screenshots/
+
+# dev-bootstrap build tree (libyaml + Ruby compiled in place, no root)
+.tools/

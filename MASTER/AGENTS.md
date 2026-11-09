@@ -253,7 +253,9 @@ An agent arrives with none of the session context that makes the tree
 navigable, so these are the facts that are not deducible from the code and
 that a fresh agent gets wrong on its first attempt.
 
-**Ruby is pinned by `MASTER/.ruby-version` for development.** It is currently 4.0.5. On OpenBSD, `MASTER/bin/ruby` accepts the packaged Ruby 3.3.x/3.4.x lane instead of requiring 4.0.5; bare `ruby` is not the project contract.
+**Ruby is pinned by `MASTER/.ruby-version` for development.** It is currently 4.0.5. On OpenBSD, `MASTER/bin/ruby` accepts the packaged Ruby 3.3.x/3.4.x lane instead of requiring 4.0.5; bare `ruby` is not the project contract. On a host with no suitable Ruby and no package manager (a container, an agent sandbox), `MASTER/bin/dev-bootstrap` builds one into `MASTER/.tools` without root and execs it — do not hand-compile Ruby again.
+
+**A sandbox can flip the executable bit on every file.** An agent checkout sometimes shows six thousand mode-only diffs (644→755, zero content). That is not work; it is the sandbox's umask. `git config core.fileMode false` silences it so path-scoped commits stay path-scoped.
 
 **The checkout is shared and usually dirty.** Never `git add -A` or
 `git commit -a`, and take no worktree or branch: every session writes to

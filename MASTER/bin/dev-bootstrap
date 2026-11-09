@@ -1,0 +1,164 @@
+#!/bin/sh
+# dev-bootstrap — a suitable Ruby for this checkout, on any host, without root.
+#
+# bin/ruby probes the Rubies a macOS workstation already has. A constrained
+# environment — a Linux container, a VPS without a dev package manager, an
+# agent sandbox with no sudo — has nothing to probe, and the operator's
+# answer ("compile one") arrived only as tribal knowledge: which libyaml,
+# which configure flags, where it may write. This script is that knowledge,
+# written down and executable. It is the same path the 2026-11-08 container
+# /fix run walked, by hand, twice.
+#
+# Usage:
+#   bin/dev-bootstrap                # build if needed, print the receipt
+#   bin/dev-bootstrap [args...]      # ensure a Ruby, then exec it with args
+#
+# Order of preference:
+#   1. $PUB5_RUBY                       (the operator's explicit pin)
+#   2. a Ruby on PATH within the Gemfile's range (>= 3.3, < 4.1)
+#   3. a Ruby this script built earlier (MASTER/.tools/ruby)
+#   4. build one: libyaml + Ruby into MASTER/.tools (idempotent, resumable)
+#
+# MASTER_DEV_BOOTSTRAP_BUILD=0 refuses step 4 (use it where the network is
+# unavailable and the honest answer is a named failure, not a hang).
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(dirname -- "$SCRIPT_DIR")
+TOOLS="$ROOT/.tools"
+PREFIX="$TOOLS/ruby"
+YAML_PREFIX="$TOOLS/yaml"
+MIN_MAJOR=3
+MIN_MINOR=3
+MAX_MAJOR=4
+MAX_MINOR=0
+RUBY_VER=3.3.6
+
+say() { printf 'dev-bootstrap: %s\n' "$*"; }
+
+version_key() {
+  # "3.3.6" -> 3*1000000+3*1000+6 ; unsuitable versions print nothing.
+  version=$1
+  case $version in
+    *.*.*) ;;
+    *) return 1 ;;
+  esac
+  major=${version%%.*}
+  rest=${version#*.}
+  minor=${rest%%.*}
+  patch=${rest#*.}
+  case $major in *[!0-9]*|'') return 1 ;; esac
+  case $minor in *[!0-9]*|'') return 1 ;; esac
+  case $patch in *[!0-9]*|'') return 1 ;; esac
+  [ "$major" -lt "$MIN_MAJOR" ] && return 1
+  [ "$major" -gt "$MAX_MAJOR" ] && return 1
+  [ "$major" -eq "$MIN_MAJOR" ] && [ "$minor" -lt "$MIN_MINOR" ] && return 1
+  [ "$major" -eq "$MAX_MAJOR" ] && [ "$minor" -gt "$MAX_MINOR" ] && return 1
+  printf '%d\n' $((major * 1000000 + minor * 1000 + patch))
+}
+
+best_on_path() {
+  best_key=-1
+  best_ruby=
+  # MASTER_RUBY_CANDIDATES overrides the probe list (colon-separated) — the
+  # seam the suite uses to keep its process tests hermetic on hosts that carry
+  # their own in-range Ruby at the fixed paths.
+  if [ -n "${MASTER_RUBY_CANDIDATES:+x}" ]; then
+    set -- $(printf '%s' "$MASTER_RUBY_CANDIDATES" | tr ':' ' ')
+  else
+    set -- \
+      $(command -v ruby 2>/dev/null || true) \
+      /usr/local/bin/ruby /usr/bin/ruby \
+      "$HOME"/.rubies/*/bin/ruby \
+      "$HOME"/.rbenv/versions/*/bin/ruby
+  fi
+  for candidate in "$@"; do
+    [ -n "$candidate" ] || continue
+    [ -x "$candidate" ] || continue
+    version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+    key=$(version_key "$version") || continue
+    [ "$key" -gt "$best_key" ] || continue
+    best_key=$key
+    best_ruby=$candidate
+  done
+  [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
+}
+
+fetch() {
+  url=$1
+  out=$2
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSLo "$out" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$out" "$url"
+  else
+    say "no curl or wget to fetch $url"
+    exit 1
+  fi
+}
+
+build() {
+  say "no suitable Ruby found; building $RUBY_VER into $PREFIX (no root needed)"
+  mkdir -p "$TOOLS"
+  cd "$TOOLS"
+
+  if [ ! -f yaml-0.2.5/.built ]; then
+    say "fetching libyaml 0.2.5"
+    fetch https://pyyaml.org/download/libyaml/yaml-0.2.5.tar.gz yaml.tar.gz
+    rm -rf yaml-0.2.5
+    tar xzf yaml.tar.gz
+    (cd yaml-0.2.5 && CC=${CC:-cc} ./configure --prefix="$YAML_PREFIX" \
+      --disable-shared --with-pic >/dev/null && make -j2 >/dev/null && make install >/dev/null)
+    touch yaml-0.2.5/.built
+  fi
+  say "libyaml ready at $YAML_PREFIX"
+
+  if [ ! -f ruby-$RUBY_VER/.built ]; then
+    say "fetching ruby $RUBY_VER (this is the long step; re-running resumes)"
+    if [ ! -d ruby-$RUBY_VER ]; then
+      fetch "https://cache.ruby-lang.org/pub/ruby/3.3/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
+      tar xzf ruby.tar.gz
+    fi
+    (cd ruby-$RUBY_VER \
+      && CPPFLAGS="-I$YAML_PREFIX/include" LDFLAGS="-L$YAML_PREFIX/lib" \
+         CC=${CC:-cc} ./configure --prefix="$PREFIX" --disable-install-doc \
+           --with-yaml-dir="$YAML_PREFIX" --without-gmp --enable-shared >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch ruby-$RUBY_VER/.built
+  fi
+  say "built: $PREFIX/bin/ruby"
+}
+
+# 1 and 2: an explicit pin, or the best host Ruby inside the Gemfile's range.
+if [ -n "${PUB5_RUBY:-}" ] && [ -x "${PUB5_RUBY}" ]; then
+  exec "$PUB5_RUBY" "$@"
+fi
+
+if chosen=$(best_on_path) && [ -n "$chosen" ]; then
+  exec "$chosen" "$@"
+fi
+
+# 3: a Ruby this script built before.
+if [ -x "$PREFIX/bin/ruby" ]; then
+  LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  export LD_LIBRARY_PATH
+  exec "$PREFIX/bin/ruby" "$@"
+fi
+
+# 4: build one, then answer through it.
+if [ "${MASTER_DEV_BOOTSTRAP_BUILD:-1}" = "0" ]; then
+  say "no Ruby >= $MIN_MAJOR.$MIN_MINOR and <= $MAX_MAJOR.$MAX_MINOR on this host, and building is disabled (MASTER_DEV_BOOTSTRAP_BUILD=0)"
+  say "install a Ruby in range, pin it with PUB5_RUBY, or allow the build"
+  exit 1
+fi
+
+build
+LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
+if [ "$#" -gt 0 ]; then
+  exec "$PREFIX/bin/ruby" "$@"
+fi
+
+say "receipt: $PREFIX/bin/ruby ($("$PREFIX/bin/ruby" -e 'print RUBY_VERSION'))"
+say "yaml: $YAML_PREFIX (static, private to this checkout)"
+say "use: bin/dev-bootstrap [args...] runs args on it; or export LD_LIBRARY_PATH=$PREFIX/lib and PATH=$PREFIX/bin:\$PATH"

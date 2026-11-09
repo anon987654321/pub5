@@ -70,6 +70,115 @@ class TestBinScripts < Minitest::Test
     refute_match(/Timeout\.timeout\(PIPE_TIMEOUT_SECONDS\).*Open3\.capture2e/m, source)
   end
 
+  # bin/dev-bootstrap is the constrained-environment answer bin/ruby cannot
+  # give: bin/ruby probes the Rubies a macOS workstation already has, while an
+  # agent container has nothing to probe and no root to install with. The
+  # contract is pinned here as a process: a pin wins, a host Ruby in the
+  # Gemfile's range wins, a previously built .tools Ruby wins, and a host with
+  # none names the refusal instead of reaching for the network.
+  def test_dev_bootstrap_execs_the_operators_pin_verbatim
+    Dir.mktmpdir do |dir|
+      fake = File.join(dir, "fake_ruby")
+      File.write(fake, "#!/bin/sh\necho \"FAKE $*\"\n")
+      File.chmod(0o755, fake)
+
+      out, status = Open3.capture2e({ "PUB5_RUBY" => fake }, File.join(ROOT, "bin", "dev-bootstrap"), "-Itest", "test/x.rb")
+
+      assert status.success?, out
+      assert_includes out, "FAKE -Itest test/x.rb"
+    end
+  end
+
+  def test_dev_bootstrap_selects_the_best_host_ruby_in_range
+    Dir.mktmpdir do |dir|
+      old = File.join(dir, "ruby329")
+      new = File.join(dir, "ruby336")
+      File.write(old, <<~SH)
+        #!/bin/sh
+        case " $* " in *" print RUBY_VERSION "*) printf "3.2.9" ;; *) echo OLD-PINNED ;; esac
+      SH
+      File.write(new, <<~SH)
+        #!/bin/sh
+        case " $* " in *" print RUBY_VERSION "*) printf "3.3.6" ;; *) echo NEW-PINNED ;; esac
+      SH
+      [old, new].each { |path| File.chmod(0o755, path) }
+
+      out, = Open3.capture2e({ "PATH" => "#{dir}:/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => "#{new}:#{old}" },
+                             File.join(ROOT, "bin", "dev-bootstrap"), "hello")
+
+      assert_includes out, "NEW-PINNED", "the newest in-range Ruby must win, got: #{out}"
+      refute_includes out, "OLD-PINNED"
+    end
+  end
+
+  def test_dev_bootstrap_rejects_a_ruby_outside_the_gemfile_range
+    Dir.mktmpdir do |dir|
+      stale = File.join(dir, "ruby278")
+      File.write(stale, <<~SH)
+        #!/bin/sh
+        case " $* " in *" print RUBY_VERSION "*) printf "2.7.8" ;; *) echo STALE-PINNED ;; esac
+      SH
+      File.chmod(0o755, stale)
+
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => stale,
+                                      "MASTER_DEV_BOOTSTRAP_BUILD" => "0" },
+                                    File.join(ROOT, "bin", "dev-bootstrap"))
+
+      refute status.success?, "a 2.7 interpreter is outside the Gemfile's range"
+      assert_includes out, "no Ruby >= 3.3"
+      refute_includes out, "STALE-PINNED", "an out-of-range Ruby was exec'd"
+    end
+  end
+
+  def test_dev_bootstrap_prefers_a_ruby_it_already_built
+    Dir.mktmpdir do |dir|
+      master = File.join(dir, "MASTER")
+      bin_dir = File.join(master, "bin")
+      tools_bin = File.join(master, ".tools", "ruby", "bin")
+      FileUtils.mkdir_p(bin_dir)
+      FileUtils.mkdir_p(tools_bin)
+      FileUtils.cp(File.join(ROOT, "bin", "dev-bootstrap"), File.join(bin_dir, "dev-bootstrap"))
+      File.write(File.join(tools_bin, "ruby"), <<~SH)
+        #!/bin/sh
+        echo "BUILT-RUBY ld=$LD_LIBRARY_PATH args=$*"
+      SH
+      File.chmod(0o755, File.join(tools_bin, "ruby"))
+
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => "" },
+                                    File.join(master, "bin", "dev-bootstrap"), "-v")
+
+      assert status.success?, out
+      assert_includes out, "BUILT-RUBY"
+      assert_includes out, "ld=#{File.join(master, '.tools', 'ruby', 'lib')}"
+    end
+  end
+
+  def test_dev_bootstrap_names_the_refusal_when_building_is_disabled
+    env = {
+      "PATH" => "/usr/bin:/bin",
+      "MASTER_DEV_BOOTSTRAP_BUILD" => "0",
+      "HOME" => Dir.mktmpdir,
+    }
+    out, status = Open3.capture2e(env, File.join(ROOT, "bin", "dev-bootstrap"))
+
+    refute status.success?, "a host with no Ruby must not report success"
+    assert_includes out, "no Ruby >= 3.3"
+    assert_includes out, "MASTER_DEV_BOOTSTRAP_BUILD=0"
+  ensure
+    env["HOME"] && Dir.rmdir(env["HOME"]) rescue nil
+  end
+
+  def test_dev_bootstrap_is_posix_sh_and_ignores_tools_checkouts
+    source = File.read(File.join(ROOT, "bin", "dev-bootstrap"))
+    syntax, status = Open3.capture2e("sh", "-n", File.join(ROOT, "bin", "dev-bootstrap"))
+
+    assert status.success?, "bin/dev-bootstrap is not valid POSIX sh: #{syntax}"
+    assert_includes source, "https://cache.ruby-lang.org/pub/ruby/3.3/"
+    assert_includes source, "--with-yaml-dir"
+    code = source.lines.reject { |line| line.strip.start_with?("#") }.join
+    refute_includes code, "sudo", "the bootstrap must never need root"
+  end
+
   def test_crawl_browser_probe_uses_the_bounded_executor
     source = File.read(File.join(ROOT, "tools", "rails", "crawl_probe.rb"))
 
