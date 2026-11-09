@@ -29,7 +29,7 @@ subtree. Read `brgen/AGENTS.md` before touching a vertical, and
 
 The shared engine is the `pub5-shared` gem and lives in `__shared`. Each app
 loads it by local path. On the box, the copy-tree deploy puts each app at
-`/home/<app>/app` and gives it its own copy of the engine at `/home/<app>/shared`,
+`/home/<app>/app` and gives it its own copy of the engine at `/home/<app>/__shared`,
 a sibling and never a subdirectory. Syncing to the wrong one makes the asset
 precompile a silent no-op. `__shared/README.md` describes what the engine owns.
 master does not mount the engine and is not copied: it runs in place under
