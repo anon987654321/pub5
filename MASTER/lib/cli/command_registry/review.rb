@@ -69,7 +69,7 @@ module Master
         end
         result
       rescue StandardError => e
-        "#{mode}0: failed — #{e.class}: #{e.message}"
+        "#{mode}0: failed - #{e.class}: #{e.message}"
       end
 
       def render_proof(root:, target:)
@@ -83,7 +83,7 @@ module Master
       def wishlist_report
         Master::Convergence::Workstreams.render(root: Master::ROOT)
       rescue StandardError => e
-        "wishlist0: failed — #{e.class}: #{e.message}"
+        "wishlist0: failed - #{e.class}: #{e.message}"
       end
 
       # /fix — the convergence lifecycle, and the only pipeline command. It
