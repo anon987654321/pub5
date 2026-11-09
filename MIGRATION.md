@@ -220,6 +220,9 @@ names (`_brgen_marketplace.scss` et al.), and history.
 
 These are functional wiring, renamed so pub5 is self-consistent:
 
+- `pub4-shared` → `pub5-shared` and `pub4-rails-pwa` → `pub5-rails-pwa`;
+  Gemfiles, lockfiles, deployment gates, operator metadata and active shared-engine
+  source references now use the destination identity.
 - `PUB4_ROOT` → `PUB5_ROOT`, `PUB4_RAILS_ROOT` → `PUB5_RAILS_ROOT`
   (48 + 25 sites; exported by `rc.d` and the deploy chain, consumed by
   `Shared::Contracts` and the operator tooling).
@@ -241,9 +244,9 @@ operator's box cutover, not in a code port:
   `newsyslog.conf`, `rc.d`, and the deploy stamps).
 - The tmux session name `pub4-deploy` and the `PUB4_*` runtime flags other
   than the two renamed above.
-- The `pub4-shared` gem name and `spec.authors = ["pub4"]` (provenance).
-  Renaming the gem would churn every Gemfile and resolved require path for
-  no behavioural gain; it is listed in `TODO.md` for the operator.
+- `spec.authors = ["pub4"]` in the shared gemspec (historical authorship provenance).
+  The gem identity itself was subsequently migrated to `pub5-shared` across
+  Gemfiles, lockfiles, deploy checks, and operator metadata.
 - Historical and finding ledgers that record where evidence was gathered
   (`MASTER/data/self_findings.yml` path rows were updated to the new layout
   because live drift tests read them against the current tree; narrative
