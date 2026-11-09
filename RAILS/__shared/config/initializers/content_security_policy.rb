@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Nonce-based CSP with a report-only escape hatch.
-# Set PUB4_CSP_ENFORCE=1 in production to enforce (default: report-only).
+# Set PUB5_CSP_ENFORCE=1 in production to enforce (default: report-only).
 Rails.application.configure do
   embed_frame_hosts = %w[
     https://www.youtube-nocookie.com
@@ -56,10 +56,10 @@ Rails.application.configure do
     # Trusted Types, reported and never enforced: it names the innerHTML sinks
     # (link_preview, offline_page, optimistic_send) a later enforcement would
     # break. Left out of an enforced policy, where it would break them now.
-    policy.require_trusted_types_for :script unless ENV["PUB4_CSP_ENFORCE"] == "1"
+    policy.require_trusted_types_for :script unless ENV["PUB5_CSP_ENFORCE"] == "1"
   end
 
   # Report-only stays the default: flipping enforcement on three live apps is an
-  # operator call, and PUB4_CSP_ENFORCE=1 is how it is made.
-  config.content_security_policy_report_only = ENV["PUB4_CSP_ENFORCE"] != "1"
+  # operator call, and PUB5_CSP_ENFORCE=1 is how it is made.
+  config.content_security_policy_report_only = ENV["PUB5_CSP_ENFORCE"] != "1"
 end

@@ -197,7 +197,10 @@ module Master
           raise ArgumentError, "checkpoint store traverses symlink: #{current}" if File.symlink?(current)
         end
 
-        FileUtils.mkdir_p(path) if create
+        # The journal's own gate refuses a group/world-writable .master, so the
+        # store must not create one whose permissions depend on the host umask:
+        # a 0002 umask leaves 0775 behind and the journal correctly refuses it.
+        FileUtils.mkdir_p(path, mode: 0o700) if create
         return path unless File.exist?(path) || File.symlink?(path)
 
         raise ArgumentError, "checkpoint store is not a directory: #{path}" unless File.directory?(path)

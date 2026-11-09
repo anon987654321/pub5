@@ -203,10 +203,20 @@ class TestEcosystemFeatures < Minitest::Test
     # /rules became /laws with the Law registry (0202b2a76), and /skill reviews and
     # approves skill revisions (3a6b3a980). /mov is the Io::Mov shelf adapter
     # (yt-dlp, official uploads only; 3c2fb182f), not the archived torrent bundle.
-    assert_equal %w[agenda android bard capabilities clear commit critique deploy doctor events explain face fix
-                    help incident ios laws model mov narrate orders pair play plugin preferences privacy prove reload
-                    review screen session size skill snapshot soul status support task undo voice wake why wishlist],
-                 registry.keys.sort
+    # The folding continued after this list was first written down: /critique,
+    # /review, /explain, /prove and /wishlist became reads of /fix
+    # (command_registry/review.rb CONVERGENCE_READ), and the surface's own
+    # table is the contract now — a hand-copied list here went stale the day a
+    # verb folded. So the assertions are: registration and the help table are
+    # the same surface, and the person-holdable verbs the folding promised are
+    # still registered.
+    assert_equal Master::CLI::CommandRegistry::HELP_TOPICS.keys.sort, registry.keys.sort,
+                 "the registered surface and its help table disagree"
+    %w[agenda android bard capabilities clear commit deploy doctor documents fix help incident ios
+       laws model mov narrate orders pair play plugin preferences privacy reload screen session
+       skill snapshot soul status support task undo voice wake why].each do |verb|
+      assert_includes registry.keys, verb, "the folded surface lost /#{verb}"
+    end
   end
 
   def test_folded_verbs_answer_under_their_host

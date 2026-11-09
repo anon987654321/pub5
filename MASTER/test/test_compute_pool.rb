@@ -54,7 +54,7 @@ class TestComputePool < Minitest::Test
     assert_equal 1.0, @pool.send(:task_factor, candidate, :unknown_task)
   end
 
-  def test_ollama_is_declared_but_disabled_until_explicit_opt_in
+  def test_ollama_is_operator_enabled_and_still_refusable
     old_enabled = ENV.delete("MASTER_OLLAMA_ENABLED")
     old_no_ollama = ENV.delete("MASTER_NO_OLLAMA")
     policy = Master.load_yaml(File.join(Master::ROOT, "data", "models.yml"))
@@ -62,21 +62,27 @@ class TestComputePool < Minitest::Test
 
     assert_includes local_ids, "ollama:gemma3:4b"
     assert_includes local_ids, "llama-cli:gguf"
-    assert_equal false, policy.fetch("ollama").fetch("enabled")
-    refute Master::Io::LaneSelection.ollama_enabled?(cfg: policy)
-    refute_includes Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy), "ollama:gemma3:4b"
-
-    ENV["MASTER_OLLAMA_ENABLED"] = "1"
+    # The operator wired the local bed on 2026-11-08 ("yes wire ollama after
+    # deploy", models.yml): the declaration is enabled in data, the presence
+    # probe degrades safely where no daemon listens, and the explicit
+    # environment refusals still win over the data file.
+    assert_equal true, policy.fetch("ollama").fetch("enabled")
     assert Master::Io::LaneSelection.ollama_enabled?(cfg: policy)
+
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    refute Master::Io::LaneSelection.ollama_enabled?(cfg: policy),
+           "MASTER_NO_OLLAMA=1 must refuse the lane the data file enables"
+    refute_includes Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy), "ollama:gemma3:4b"
+    ENV.delete("MASTER_NO_OLLAMA")
+
     assert_equal "ollama:gemma3:4b", Master::Io::LaneSelection.order_or_all(local_ids, cfg: policy).first
 
-    # A tier may list ollama as a declaration; what matters is that no tier
-    # can select it while the lane is opted out.
-    ENV.delete("MASTER_OLLAMA_ENABLED")
+    # A tier may list ollama as a declaration; the constrained local lane leads
+    # only where the routing puts it, never by tier promotion alone.
     %w[default primary strong].each do |tier|
       ids = policy.fetch("models").fetch(tier).map { |row| row.fetch("id") }
-      refute_includes Master::Io::LaneSelection.order(ids, cfg: policy), "ollama:gemma3:4b",
-                      "#{tier} must not promote the constrained Ollama lane"
+      order = Master::Io::LaneSelection.order(ids, cfg: policy)
+      assert_includes order, "ollama:gemma3:4b" if ids.include?("ollama:gemma3:4b")
     end
     assert_includes policy.fetch("cli_lanes"), "llama-cli"
   ensure

@@ -380,38 +380,28 @@ class TurnRouterTest < Minitest::Test
   end
   # Regression: this natural-language media request must not fall through into
   # operator-command inference, where the opening word "make" was once treated
-  # as a shell command. It asked for a `lora` tool entrypoint and a
-  # `--video-replicate` flag that no commit in either repo has ever contained,
-  # so the assertion could never pass for the right reason. A moving image is
-  # the video lane of the one media selector now, and this pins that route.
+  # as a shell command. The lora entrypoint is retired (ScriptDispatch answers
+  # its own truthful refusal; STUDIO/lora holds no executable script to
+  # restore), so the route is proven two ways at once: command inference would
+  # raise if the request ever reached it, and the answer that comes back is the
+  # retirement refusal, not a chat sentence pretending the video was made.
   def test_lora_video_request_is_dispatched_before_command_inference
     Dir.mktmpdir("turn-router-lora") do |root|
       still = File.join(root, "STUDIO", "replicate", "lora", "johann", "out", "07.jpg")
       FileUtils.mkdir_p(File.dirname(still))
       File.write(still, "fixture")
 
-      asked = []
-      fake = lambda do |kind, prompt, **_opts|
-        asked << { kind:, prompt: }
-        Master::Result.ok({ "kind" => kind.to_s, "lane" => "media-replicate:test", "path" => still })
-      end
-
       Master::Io::MediaLanes.stub(:paid?, true) do
-        Master::Io::MediaLanes.stub(:generate, fake) do
-          Master::CLI::TurnRouter.stub(:infer_operator_command, ->(*) { raise "media intent fell through to command inference" }) do
-            result = Master::CLI::TurnRouter.call(
-              message: "make a video with the lora of me from #{still}",
-              container: build_container(root:),
-            )
+        Master::CLI::TurnRouter.stub(:infer_operator_command, ->(*) { raise "media intent fell through to command inference" }) do
+          result = Master::CLI::TurnRouter.call(
+            message: "make a video with the lora of me from #{still}",
+            container: build_container(root:),
+          )
 
-            assert result.ok?, -> { result.message.to_s }
-          end
+          refute result.ok?, "a retired entrypoint must not report a made video"
+          assert_match(/lora: retired/, result.message.to_s)
         end
       end
-
-      assert_equal 1, asked.length
-      assert_equal :video, asked.first[:kind]
-      assert_includes asked.first[:prompt], "lora of me"
     end
   end
 
