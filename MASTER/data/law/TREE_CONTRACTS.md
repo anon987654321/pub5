@@ -58,7 +58,7 @@ three before assuming a fix is local.
 
 **Shared deploys as a sibling, not a subdirectory.** The copy-tree deploy
 puts the tracked app at `/home/<app>/app` and its own copy of the engine at
-`/home/<app>/shared`. Every app vendors a separate copy; syncing to the
+`/home/<app>/__shared`. Every app vendors a separate copy; syncing to the
 wrong one makes precompile a silent no-op. `MASTER/contracts/studio.rb`
 resolves the canonical STUDIO media entrypoints from the source or deployed
 tree; callers do not reach into sibling implementation directories.
