@@ -93,6 +93,8 @@ class SharedTopologyContractTest < Minitest::Test
     setup = File.read(File.join(ROOT, "__shared", "app", "controllers", "concerns", "shared", "application_setup.rb"), encoding: "UTF-8")
     search = File.read(File.join(ROOT, "__shared", "app", "views", "shared", "_live_search_form.html.erb"), encoding: "UTF-8")
     locale = File.read(File.join(ROOT, "__shared", "config", "locales", "social.en.yml"), encoding: "UTF-8")
+    package = File.read(File.join(ROOT, "package.json"), encoding: "UTF-8")
+    package_lock = File.read(File.join(ROOT, "package-lock.json"), encoding: "UTF-8")
 
     [operator, legacy_ledger, setup, search, locale].each do |source|
       assert_includes source, "pub5-shared"
@@ -100,6 +102,10 @@ class SharedTopologyContractTest < Minitest::Test
     end
     assert_includes legacy_ledger, "`pub5/RAILS`"
     refute_includes legacy_ledger, "`pub4/RAILS`"
+    [package, package_lock].each do |source|
+      assert_includes source, "pub5-rails-pwa"
+      refute_includes source, "pub4-rails-pwa"
+    end
   end
 
 end
