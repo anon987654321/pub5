@@ -97,7 +97,6 @@ class TestEvidenceTool < Minitest::Test
     assert_equal ["operator reviewed the screenshot"], artifact.fetch("notes")
   end
 
-
   def test_requires_a_note_to_reclassify_a_successful_command
     status, output = run_tool("unexplained", "--verdict", "INCONCLUSIVE", "--", RbConfig.ruby, "-e", "exit 0")
     assert_equal 0, status.exitstatus, output

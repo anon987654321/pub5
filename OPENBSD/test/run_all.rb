@@ -31,7 +31,7 @@ module OpenBSDTestRunner
         assertions: assertions.to_i,
         failures: failures.to_i,
         errors: errors.to_i,
-        skips: skips.to_s.to_i
+        skips: skips.to_s.to_i,
       }
     end.last
   end
