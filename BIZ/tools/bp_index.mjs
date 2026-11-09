@@ -21,8 +21,16 @@ const PLANS = [
 ];
 const total = PLANS.reduce((s, p) => s + parseInt(p[2].split('NOK ')[1].replaceAll(' ', ''), 10), 0);
 if (total !== 2900000) throw new Error(`funding total ${total} ≠ 2900000`);
-for (const [k] of PLANS) {
-  if (!existsSync(`${BIZ_ROOT}/${k}/${k}.html`)) throw new Error(`${k}: published pair missing from the folder tree`);
+// Every linked document must have its published HTML/PDF pair. The archive
+// members are linked too, so they are checked rather than silently allowed
+// to become dead links.
+const PUBLISHED_DOCUMENTS = [...PLANS.map(([key]) => key), 'fetat', 'ai3'];
+for (const key of PUBLISHED_DOCUMENTS) {
+  for (const extension of ['html', 'pdf']) {
+    if (!existsSync(`${BIZ_ROOT}/${key}/${key}.${extension}`)) {
+      throw new Error(`${key}: published ${extension} missing from the folder tree`);
+    }
+  }
 }
 
 const rows = PLANS.map(([k, t, d, s]) =>

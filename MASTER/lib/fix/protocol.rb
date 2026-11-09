@@ -62,7 +62,7 @@ module Master
 
           0.2 ARCHITECTURE EXPLORATION
           For a requested /fix at the repository root, or an exact top-level MASTER,
-          RAILS, OPENBSD or STUDIO target, generate 30-40 materially distinct architecture
+          RAILS, OPENBSD, STUDIO or BIZ target, generate 30-40 materially distinct architecture
           candidates in one structured request per eligible tree (36 by default). Require
           concrete benefits, trade-offs and risks alongside a verification and rollback plan.
           Evidence paths must have been included in the actual source excerpts and hashes;

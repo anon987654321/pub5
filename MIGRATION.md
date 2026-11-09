@@ -238,12 +238,15 @@ These are functional wiring, renamed so pub5 is self-consistent:
 These name state that exists on vm23 or provenance, and change only in the
 operator's box cutover, not in a code port:
 
-- `pub4-admin` (the installed `/usr/local/sbin` tool), the `pub4ci` group,
-  `pub4_rcctl`, `pub4-signal*`, `pub4-alert*`, `pub4-dr`, `pub4-ci*`.
-- `/var/log/pub4*`, `/var/db/pub4*` (log and state directories pinned by
-  `newsyslog.conf`, `rc.d`, and the deploy stamps).
-- The tmux session name `pub4-deploy` and the `PUB4_*` runtime flags other
-  than the two renamed above.
+- `pub4-admin` remains installed for compatibility callers; `pub5-admin`
+  is installed alongside it and is the fixed broker used by the current
+  `vps-deploy` path. The `pub4ci` group, `pub4_rcctl`, `pub4-signal*`,
+  `pub4-alert*`, `pub4-dr` and `pub4-ci*` remain compatibility interfaces.
+- `/var/log/pub4*` and `/var/db/pub4*` remain for legacy application,
+  alert and state interfaces. The current deploy aggregate/per-run logs use
+  `/var/log/pub5`; the current broker receipts use `/var/db/pub5`.
+- The current deploy tmux session is `pub5-deploy`. Legacy `PUB4_*`
+  runtime flags remain where the installed scripts still consume them.
 - `spec.authors = ["pub4"]` in the shared gemspec (historical authorship provenance).
   The gem identity itself was subsequently migrated to `pub5-shared` across
   Gemfiles, lockfiles, deploy checks, and operator metadata.

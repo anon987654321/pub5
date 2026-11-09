@@ -101,18 +101,18 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_disk_recovery_hint_uses_bounded_broker
-    assert_includes SOURCE, "doas /usr/local/sbin/pub4-admin disk-usage $mount_point"
+    assert_includes SOURCE, "doas /usr/local/sbin/pub5-admin disk-usage $mount_point"
     refute_includes SOURCE, "doas du -xk $mount_point"
   end
   # vps-deploy runs as root, so its hints name the broker without doas.
   def test_failure_hints_use_the_bounded_service_broker
-    assert_includes SOURCE, "/usr/local/sbin/pub4-admin service restart <app>"
-    assert_includes SOURCE, "/usr/local/sbin/pub4-admin service start $app"
-    assert_includes SOURCE, "/usr/local/sbin/pub4-admin service restart $other"
+    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service restart <app>"
+    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service start $app"
+    assert_includes SOURCE, "/usr/local/sbin/pub5-admin service restart $other"
   end
 
   def test_vps_deploy_fails_closed_without_root_fallbacks
-    assert_includes SOURCE, '[[ -f /usr/local/sbin/pub4-admin && -x /usr/local/sbin/pub4-admin && ! -L /usr/local/sbin/pub4-admin ]]'
+    assert_includes SOURCE, '[[ -f /usr/local/sbin/pub5-admin && -x /usr/local/sbin/pub5-admin && ! -L /usr/local/sbin/pub5-admin ]]'
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
     refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
@@ -120,10 +120,23 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes SOURCE, 'doas tee "$file"'
   end
   def test_deploy_uses_the_fixed_root_broker_when_installed
-    assert_includes SOURCE, '/usr/local/sbin/pub4-admin service "$action" "$@"'
+    assert_includes SOURCE, '/usr/local/sbin/pub5-admin service "$action" "$@"'
     assert_includes SOURCE, 'admin_request stamp "$name" "$sha" "$stamp_status"'
     assert_includes SOURCE, "admin_request resource-guard"
     assert_includes SOURCE, 'admin_request solid-queue-proof "$app"'
+  end
+
+  def test_operator_installs_pub5_broker_and_its_solid_queue_helper
+    operator = File.read(File.join(ROOT, "OPENBSD", "OPERATOR.sh"))
+
+    # The active deployer is pub5-admin; pub4-admin remains installed for
+    # compatibility callers that have not crossed the broker boundary yet.
+    assert_includes operator, "usr/local/sbin/pub5-admin"
+    assert_includes operator, "chown root:wheel /usr/local/sbin/pub5-admin"
+    assert_includes operator, "chmod 555 /usr/local/sbin/pub5-admin"
+    assert_includes operator, "/usr/local/libexec/pub5"
+    assert_includes operator, "/usr/local/libexec/pub5/solid_queue_proof.rb"
+    assert_includes operator, "chown root:wheel /usr/local/sbin/pub4-admin"
   end
 
   def test_tree_sync_exposes_only_the_fixed_app_user_broker

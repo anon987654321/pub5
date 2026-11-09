@@ -36,7 +36,7 @@ own renderer.
 
 Hands-off path: local preflight, pin SHA, tmux on vm23, `vps-deploy` as root
 (git as `dev`), stream progress until finished, then `vps-state` + public canary.
-Log: `/home/dev/vps-deploy.log`. Session: `pub4-deploy`.
+Log: `/home/dev/vps-deploy.log`. Session: `pub5-deploy`.
 
 The commands live in one place. `data/operator.yml` is the source of the command
 recipes, so do not write another catalogue. From the repository root, the operator

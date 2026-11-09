@@ -1,6 +1,6 @@
 # Operator
 
-Production runbook for pub4. Read this file before live work. Read `MASTER/README.md` for the agent runtime; this file covers the
+Production runbook for pub5. Read this file before live work. Read `MASTER/README.md` for the agent runtime; this file covers the
 VPS and deploy surface, the agent contract, and live-operation safety in one
 place.
 
@@ -12,10 +12,10 @@ From a clean workstation checkout on `origin/main`:
 ./bin/redeploy
 ```
 
-Hands-off: local preflight → pin SHA → `tmux` session `pub4-deploy` on vm23 →
+Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
 `vps-deploy` as **root** (git still as `dev`) → streams the log until finished →
-`vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub4/vps-deploy.log` (aggregate), `/var/log/pub4/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
-Attach: `tmux attach -t pub4-deploy`.
+`vps-state` + public canary. Survives SSH disconnect. Logs: `/var/log/pub5/vps-deploy.log` (aggregate), `/var/log/pub5/runs/deploy-*.log` (per run), also `/home/dev/vps-deploy.log` and `vps-deploy-latest.log` symlinks.
+Attach: `tmux attach -t pub5-deploy`.
 
 ## Log rotation
 
@@ -25,7 +25,7 @@ OpenBSD uses `newsyslog(8)`, not logrotate. The repository mirror is
 
 | Log | count | size (KB) | when | flags |
 |---|---:|---:|---|---|
-| `/var/log/pub4/vps-deploy.log` | 12 | 512 | weekly | Z (compress) |
+| `/var/log/pub5/vps-deploy.log` | 12 | 512 | weekly | Z (compress) |
 | `/home/dev/vps-deploy.log` | 12 | 512 | weekly | Z |
 | Base `/var/log/messages` and other system logs | see config | | | |
 
@@ -43,7 +43,7 @@ doas newsyslog -nv -f OPENBSD/etc/newsyslog.conf
 it exceeds `VPS_DEPLOY_LOG_MAX_BYTES` (default 10 MB) at deploy start. This is
 only a safety net if newsyslog has not run; it does not replace newsyslog.
 
-Per-run logs under `/var/log/pub4/runs/deploy-*.log` have unique names, so
+Per-run logs under `/var/log/pub5/runs/deploy-*.log` have unique names, so
 fixed-path newsyslog rules do not cover them. Prefer a weekly age-prune job
 that retains the last 30 days (roughly one deploy per day). A directory size
 cap that deletes oldest runs is an alternative; newsyslog filename patterns

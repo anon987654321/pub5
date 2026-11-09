@@ -189,6 +189,7 @@ install_root_configs() {
   # Require regular, non-symlink sources before copying anything to /.
   typeset -a privileged_sources=(
     usr/local/sbin/pub4-admin
+    usr/local/sbin/pub5-admin
     usr/local/bin/emergency_cpu.sh
     usr/local/libexec/ci-prepare.ksh
     usr/local/libexec/ci-run.ksh
@@ -213,13 +214,14 @@ install_root_configs() {
   done
 
   # Never copy privileged code through a symlinked system directory or file.
-  for rel in /usr /usr/local /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/local/libexec/pub4; do
+  for rel in /usr /usr/local /usr/local/bin /usr/local/sbin /usr/local/libexec /usr/local/libexec/pub4 /usr/local/libexec/pub5; do
     if [[ -L $rel ]]; then
       log ERROR "refusing symlinked privileged destination directory: $rel"
       return 1
     fi
   done
   for rel in /usr/local/sbin/pub4-admin \
+             /usr/local/sbin/pub5-admin \
              /usr/local/libexec/ci-prepare.ksh \
              /usr/local/libexec/ci-run.ksh \
              /usr/local/libexec/ci-sync.ksh \
@@ -282,6 +284,7 @@ install_root_configs() {
   done
   for f in /usr/local/bin/*(N); do [[ -f $f ]] && chmod 755 "$f"; done
   for f in /usr/local/sbin/pub4-admin \
+           /usr/local/sbin/pub5-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -295,6 +298,7 @@ install_root_configs() {
   # These fixed broker entrypoints must be regular files. A symlink would
   # make root chown/chmod operate on a target outside the install contract.
   for f in /usr/local/sbin/pub4-admin \
+           /usr/local/sbin/pub5-admin \
            /usr/local/libexec/ci-prepare.ksh \
            /usr/local/libexec/ci-run.ksh \
            /usr/local/libexec/ci-sync.ksh \
@@ -311,6 +315,10 @@ install_root_configs() {
   if [[ -f /usr/local/sbin/pub4-admin ]]; then
     chown root:wheel /usr/local/sbin/pub4-admin || return 1
     chmod 555 /usr/local/sbin/pub4-admin || return 1
+  fi
+  if [[ -f /usr/local/sbin/pub5-admin ]]; then
+    chown root:wheel /usr/local/sbin/pub5-admin || return 1
+    chmod 555 /usr/local/sbin/pub5-admin || return 1
   fi
   # libexec holds helpers root dot-sources (stale_ci_cleanup.ksh); they must be
   # root-owned and not group/world writable or the sourcing is a root RCE.
@@ -406,6 +414,21 @@ sync_openbsd_apply() {
 
   [[ -f /usr/local/libexec/pub4/solid_queue_proof.rb && ! -L /usr/local/libexec/pub4/solid_queue_proof.rb ]] || {
     log ERROR "installed Solid Queue proof is missing or symlinked"
+    return 1
+  }
+
+  # pub5-admin has its own fixed helper path. Keep the pub4 copy above for
+  # compatibility callers; the current deploy chain uses this pub5-owned path.
+  if ! install -d -o root -g wheel -m 755 /usr/local/libexec/pub5; then
+    log ERROR "cannot prepare /usr/local/libexec/pub5"
+    return 1
+  fi
+  if ! install -o root -g wheel -m 555 "${SCRIPT_DIR}/checks/solid_queue_proof.rb" /usr/local/libexec/pub5/solid_queue_proof.rb; then
+    log ERROR "pub5 Solid Queue proof install failed - deploy proof would run untrusted checkout code"
+    return 1
+  fi
+  [[ -f /usr/local/libexec/pub5/solid_queue_proof.rb && ! -L /usr/local/libexec/pub5/solid_queue_proof.rb ]] || {
+    log ERROR "installed pub5 Solid Queue proof is missing or symlinked"
     return 1
   }
 
