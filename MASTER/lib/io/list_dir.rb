@@ -7,7 +7,10 @@ module Master
       NAME = "list_dir".freeze
       DESCRIPTION = "List directory contents, depth-limited.".freeze
       MAX_DEPTH = 5
-      MAX_ENTRIES = 2_000
+      # The earlier 2,000-entry ceiling cut off the MASTER inventory before a
+      # broad audit could even enumerate its files (the operator's tree had
+      # 2,986 files). Keep the walk bounded, but above the normal source-tree size.
+      MAX_ENTRIES = 10_000
 
       def initialize(root:, event_bus: nil)
         @root = File.realpath(root)
@@ -20,9 +23,18 @@ module Master
 
         full = resolved.value!
         depth = depth.to_i.clamp(0, MAX_DEPTH)
-        state = { seen: 0, truncated: false }
+        state = {
+          seen: 0, files: 0, directories: 0, truncated: false,
+          depth_limited: false, hidden_entries_excluded: 0, symlinks_skipped: 0
+        }
         lines = list_tree(dir: full, depth:, pattern:, state:)
         lines << "... (max entries reached)" if state[:truncated]
+        complete = !state[:truncated] && !state[:depth_limited]
+        lines << "[tree receipt: entries=#{state[:seen]} files=#{state[:files]} " \
+                  "directories=#{state[:directories]} depth=#{depth} complete=#{complete} " \
+                  "depth_limited=#{state[:depth_limited]} truncated=#{state[:truncated]} " \
+                  "hidden=excluded hidden_entries=#{state[:hidden_entries_excluded]} " \
+                  "symlinks_skipped=#{state[:symlinks_skipped]}]"
         Result.ok(lines.join("\n"))
       end
 
@@ -31,8 +43,12 @@ module Master
       def list_tree(dir:, depth:, pattern:, state:, indent: 0)
         return [] if depth < 0 || state[:truncated]
 
-        entries = Dir.entries(dir).reject { |entry| entry.start_with?(".") }.sort_by do |entry|
-          [File.directory?(File.join(dir, entry)) ? 0 : 1, entry]
+        all_entries = Dir.entries(dir).reject { |entry| %w[. ..].include?(entry) }
+        visible_entries = all_entries.reject { |entry| entry.start_with?(".") }
+        state[:hidden_entries_excluded] += all_entries.size - visible_entries.size
+        entries = visible_entries.sort_by do |entry|
+          path = File.join(dir, entry)
+          [File.directory?(path) && !File.symlink?(path) ? 0 : 1, entry]
         end
 
         entries.flat_map do |entry|
@@ -44,11 +60,26 @@ module Master
 
           full = File.join(dir, entry)
           prefix = "  " * indent
-          state[:seen] += 1
+          # Never follow a symlink directory while walking. A link can point
+          # outside the workspace or back to an ancestor and must not expand
+          # the inventory's authority or create a traversal loop.
+          if File.symlink?(full)
+            state[:symlinks_skipped] += 1
+            next []
+          end
 
+          state[:seen] += 1
           if File.directory?(full)
-            ["#{prefix}#{entry}/"] + list_tree(dir: full, depth: depth - 1, pattern:, state:, indent: indent + 1)
+            state[:directories] += 1
+            if depth <= 0
+              state[:depth_limited] = true
+              ["#{prefix}#{entry}/"]
+            else
+              ["#{prefix}#{entry}/"] +
+                list_tree(dir: full, depth: depth - 1, pattern:, state:, indent: indent + 1)
+            end
           else
+            state[:files] += 1
             ["#{prefix}#{entry}"]
           end
         end

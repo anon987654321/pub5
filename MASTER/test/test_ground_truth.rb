@@ -62,8 +62,24 @@ class TestGroundTruth < Minitest::Test
       assert_includes result.value!, "4\tline 4"
       refute_includes result.value!, "2\tline 2"
       assert_includes result.value!, "sha256=#{Digest::SHA256.hexdigest(content)}"
-      assert_includes result.value!, "bytes=#{content.bytesize} lines=8 shown=2 offset=2 scope=whole_file"
+      assert_includes result.value!, "bytes=#{content.bytesize} lines=8 shown=2 offset=2 content=partial digest_scope=whole_file"
       assert truth.fresh?(path)
+    end
+  end
+
+  def test_read_file_marks_a_complete_full_read
+    Dir.mktmpdir do |dir|
+      content = "first line\nsecond line\n"
+      File.write(File.join(dir, "source.rb"), content)
+      reader = Master::Io::ReadFile.new(root: dir, undo: nil)
+
+      result = reader.call(path: "source.rb", full: true)
+
+      assert result.ok?, result.to_s
+      assert_includes result.value!, "1\tfirst line"
+      assert_includes result.value!, "2\tsecond line"
+      assert_includes result.value!, "sha256=#{Digest::SHA256.hexdigest(content)}"
+      assert_includes result.value!, "content=full digest_scope=whole_file"
     end
   end
 

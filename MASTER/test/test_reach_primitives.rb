@@ -57,6 +57,19 @@ class ReachPrimitivesTest < Minitest::Test
     assert_includes result.value!, "child.txt"
   end
 
+  def test_list_dir_does_not_follow_symlink_directories
+    Dir.mktmpdir do |outside|
+      File.write(File.join(outside, "outside-secret.txt"), "not in this tree")
+      File.symlink(outside, File.join(@dir, "linked"))
+
+      result = Master::Io::ListDir.new(root: @dir).call(path: ".", depth: 5)
+
+      assert result.ok?, result.to_s
+      refute_includes result.value!, "outside-secret.txt"
+      assert_includes result.value!, "symlinks_skipped=1"
+    end
+  end
+
   def test_search_files_finds_match
     FileUtils.mkdir_p(File.join(@dir, "a"))
     File.write(File.join(@dir, "a", "needle.txt"), "findme")

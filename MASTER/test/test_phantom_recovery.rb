@@ -215,6 +215,72 @@ class TestPhantomRecovery < Minitest::Test
     assert harness.bus.events.any? { |event, payload| event == "phantom:detected" && payload[:patterns] == ["empty_tool_response"] }
   end
 
+  class SearchFiles
+    def call(**) = "must not run"
+  end
+
+  class GitContext
+    def call(**) = "must not run"
+  end
+
+  class GitHubRepoMiner
+    def call(**) = "must not run"
+  end
+
+  def test_ruby_style_tool_calls_are_rejected_then_retried_without_streaming_them
+    harness = ReactHarness.new
+    harness.instance_variable_set(:@tools, [SearchFiles.new, GitContext.new, GitHubRepoMiner.new])
+    fake_calls = <<~RUBY
+      results = {}
+      results[:files] = SearchFiles(pattern: "fallback mode", path: ".")
+      results[:git] = GitContext(operation: "log", limit: 5)
+      results[:repos] = GitHubRepoMiner(query: "aider", sort: "stars", limit: 3)
+    RUBY
+    replies = [fake_calls, "I inspected the available evidence."]
+    harness.define_singleton_method(:send_ruby_llm) do |*, **|
+      @sends += 1
+      Master::Result.ok(replies.shift)
+    end
+    streamed = []
+
+    result = harness.send(
+      :react_tool_loop, "m", [{ role: "user", content: "inspect the repository" }],
+      sys: nil, stream: true
+    ) { |chunk| streamed << chunk }
+
+    assert_predicate result, :ok?
+    assert_equal 2, harness.sends
+    assert_equal ["I inspected the available evidence."], streamed
+    assert harness.bus.events.any? { |event, _| event == "react:unexecuted_tool_calls" }
+    assert harness.bus.events.any? { |event, _| event == "react:protocol_repair" }
+    refute_includes streamed.join, "SearchFiles("
+  end
+
+  def test_repeated_ruby_style_tool_calls_fail_without_claiming_execution
+    harness = ReactHarness.new
+    harness.instance_variable_set(:@tools, [SearchFiles.new, GitContext.new])
+    fake_calls = <<~RUBY
+      results = {}
+      results[:files] = SearchFiles(pattern: "fallback mode")
+      results[:git] = GitContext(operation: "log")
+    RUBY
+    harness.define_singleton_method(:send_ruby_llm) do |*, **|
+      @sends += 1
+      Master::Result.ok(fake_calls)
+    end
+
+    result = harness.send(
+      :react_tool_loop, "m", [{ role: "user", content: "inspect the repository" }],
+      sys: nil, stream: true
+    ) { flunk "a fake tool call must never be streamed" }
+
+    assert_predicate result, :err?
+    assert_equal :llm_failure, result.category
+    assert_equal 2, harness.sends
+    assert_match(/no tools were executed/, result.message)
+    assert harness.bus.events.any? { |event, _| event == "react:protocol_failure" }
+  end
+
   def test_malformed_react_tool_call_is_not_returned_as_a_successful_answer
     harness = ReactHarness.new
     malformed = %(<tool_call>{"name":"ReadFile","args": {</tool_call>)

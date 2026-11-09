@@ -262,7 +262,7 @@ module Master
         include ToolForwarding
         DEFAULT_LIMIT = 2000
 
-        description "Read a file with line numbers and a whole-file SHA-256 receipt. Use full=true when the complete file is required; otherwise reads are bounded."
+        description "Read a file with line numbers and a whole-file SHA-256 receipt. The receipt distinguishes content=full from content=partial; use full=true when complete contents are required."
         parameter :path, description: "File path relative to project root", required: true
         parameter :offset, description: "First line to read (0-indexed)", type: "integer", required: false
         parameter :limit, description: "Maximum number of lines to return unless full=true", type: "integer", required: false
@@ -300,7 +300,7 @@ module Master
 
       class Tree < RubyLLM::Tool
         include ToolForwarding
-        description "Summarise the project directory tree to the governed maximum depth. Use for a compact overview before reading files."
+        description "Summarise the project directory tree to the governed maximum depth. This is orientation only; use ListDir for file inventory and coverage receipts."
         parameter :path, description: "Directory path (default: project root)", required: false
 
         def execute(path: ".")
@@ -310,7 +310,7 @@ module Master
 
       class ListDir < RubyLLM::Tool
         include ToolForwarding
-        description "FIRST STEP for an unfamiliar or broad task: list the project tree before sampling files. Depth-limited and root-relative."
+        description "FIRST STEP for an unfamiliar or broad task: list the project tree before sampling files. Root-relative and depth-limited; the receipt reports file/directory counts, depth coverage, truncation, hidden entries and skipped symlinks. complete=true means the visible, non-symlink tree was fully traversed to the requested depth."
         parameter :path, description: "Directory path (default: project root)", required: false
         parameter :depth, description: "Tree depth (1-5)", type: "integer", required: false
 

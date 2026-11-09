@@ -75,7 +75,10 @@ module Master
         suffix = limit && total > offset + limit ? "\n[...truncated, #{total} total lines]" : ""
         output = "#{numbered}#{suffix}"
         output << "\n" unless output.empty? || output.end_with?("\n")
-        output << "[read receipt: sha256=#{digest} bytes=#{content.bytesize} lines=#{total} shown=#{slice.size} offset=#{offset} scope=whole_file]"
+        content_complete = offset.zero? && slice.size == total
+        output << "[read receipt: sha256=#{digest} bytes=#{content.bytesize} lines=#{total} " \
+                  "shown=#{slice.size} offset=#{offset} content=#{content_complete ? "full" : "partial"} " \
+                  "digest_scope=whole_file]"
       end
     end
   end

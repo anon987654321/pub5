@@ -24,15 +24,50 @@ module Master
         # Emulates function calling for models that lack native tool support.
         # Injects a text-format tool schema into the system prompt; parses <tool_call> XML
         # from responses; executes tools directly; loops until no calls remain.
+        MAX_PROTOCOL_RETRIES = 1
+        TOOL_PROTOCOL_CORRECTION = <<~TEXT.strip.freeze
+          Your previous response contained Ruby-style function calls to tools. Those calls did not execute.
+          Invoke a tool only with the exact <tool_call>{"name":"ToolName","args":{"param":"value"}}</tool_call> protocol
+          and JSON object arguments matching its declared parameters. Do not simulate calls in Ruby or Python.
+          If no tool is needed, answer normally. If a tool is unavailable, say so plainly.
+        TEXT
+
         def react_tool_loop(selected_model, messages, sys:, stream:, image: nil, &blk)
           react_sys = build_react_system(sys)
           history = messages.dup
           empty_rounds = 0
+          protocol_retries = 0
 
           REACT_MAX_STEPS.times do |step|
-            result, done = react_step(step, selected_model:, history:, react_sys:, stream:, image:, blk:)
+            # Text-protocol calls are buffered until classified. Streaming them
+            # early leaks fake calls and partial <tool_call> payloads into the
+            # terminal before MASTER knows whether anything actually executed.
+            result, done = react_step(step, selected_model:, history:, react_sys:, stream: false,
+                                      image:, blk: nil)
             return result if result.err?
-            return result if done
+
+            if done == :unexecuted_tool_call
+              if protocol_retries < MAX_PROTOCOL_RETRIES
+                history << { role: "assistant", content: result.to_s[0, 4_000] }
+                history << { role: "user", content: TOOL_PROTOCOL_CORRECTION }
+                protocol_retries += 1
+                @bus&.publish("react:protocol_repair", model: selected_model, attempt: protocol_retries)
+                next
+              end
+
+              @bus&.publish("react:protocol_failure", model: selected_model, attempts: protocol_retries + 1)
+              return Result.err(
+                "react: model emitted Ruby-style tool calls instead of invoking tools; no tools were executed. " \
+                  "Retry with a provider that supports MASTER's tool protocol.",
+                category: :llm_failure,
+              )
+            end
+
+            if done
+              final_text = result.to_s
+              blk.call(final_text) if stream && blk && !final_text.empty?
+              return result
+            end
 
             # data/laws.yml's empty_tool_response: two rounds in which every tool
             # answered nothing is a model calling into a void, not progress.
@@ -57,6 +92,12 @@ module Master
           if Master::PhantomRecovery.malformed_tool_call?(text)
             @bus&.publish("react:malformed_tool_call", model: selected_model, step:)
             return [Result.err("react: malformed tool-call response; no tool was executed", category: :llm_failure), true]
+          end
+
+          if (unexecuted = unexecuted_tool_call_names(text)).size.positive? &&
+             unexecuted_tool_call_response?(text, unexecuted)
+            @bus&.publish("react:unexecuted_tool_calls", model: selected_model, step:, tools: unexecuted.first(8))
+            return [result, :unexecuted_tool_call]
           end
 
           calls = parse_tool_calls(text)
@@ -105,16 +146,39 @@ module Master
           end.join("\n")
 
           react_instructions = <<~INST.strip
-            You have access to these tools. Call a tool with:
+            You have access to these tools. A tool executes only when you emit this exact protocol:
             <tool_call>{"name": "ToolName", "args": {"param": "value"}}</tool_call>
 
             Available tools (* marks a required parameter):
             #{schema}
 
-            Reason step-by-step. When finished, give your final answer without any <tool_call> blocks.
+            Never write Ruby, Python, or other code that merely calls a tool by name (for example,
+            SearchFiles(...), ReadFile(...), or GitContext(...)). Such text does not execute.
+            Do not expose private reasoning or step-by-step scratch work. Invoke tools using the exact
+            protocol, inspect their returned evidence, then give a concise answer. If a tool is
+            unavailable, say so; never invent a result.
           INST
 
           [base_sys, react_instructions].compact.join("\n\n")
+        end
+
+        def unexecuted_tool_call_names(text)
+          prose = text.to_s.gsub(Master::PhantomRecovery::CODE_FENCE, "")
+          return [] if prose.include?("<tool_call>")
+
+          known = @tools.flat_map { |tool| react_tool_names(tool) }.compact.map(&:to_s).uniq
+          known.select { |name| prose.match?(/\b#{Regexp.escape(name)}\s*\(/i) }
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "ReactLoop.unexecuted_tool_call_names")
+          []
+        end
+
+        def unexecuted_tool_call_response?(text, names)
+          return false if names.empty?
+
+          prose = text.to_s.gsub(Master::PhantomRecovery::CODE_FENCE, "")
+          names.uniq.size >= 2 ||
+            prose.match?(/^\s*(?:results?|output|result)\s*(?:\[[^\n]+\])?\s*=/i)
         end
 
         def parse_tool_calls(text)
