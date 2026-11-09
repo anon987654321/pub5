@@ -53,7 +53,7 @@ module Master
 
       # --- variant composition -------------------------------------------------
 
-      def variant_body(generator, variant, subject, seed)
+      def variant_body(generator, variant, subject, _seed)
         case variant
         when "pure_symbol"
           generator.call
@@ -171,7 +171,7 @@ module Master
       # The left hand is the right hand mirrored through the vertical axis of
       # the viewBox, so symmetry is a property of the generator, not a second
       # path to keep in step.
-      def mirror_stroke((kind, anchor, tail), offset)
+      def mirror_stroke((kind, anchor, tail), _offset)
         flip = ->(xy) { [(512 - xy[0]), xy[1]] }
         mirrored_tail = case kind
                         when :segment then flip.call(tail)

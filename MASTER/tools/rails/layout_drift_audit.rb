@@ -62,7 +62,7 @@ module Operator
       if json
         io.puts JSON.pretty_generate(
           repository: root,
-          summary: summary,
+          summary:,
           findings: findings.map(&:to_h)
         )
       else

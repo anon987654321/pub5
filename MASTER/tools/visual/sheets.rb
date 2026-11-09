@@ -126,7 +126,7 @@ module Master
       # The caption is tried and named when it fails: a sheet without labels
       # lies about what it shows more quietly than a warning does.
       def caption_strip(image, text, font, width)
-        caption = Vips::Image.text(text, font: font, dpi: 72, width: width, align: :centre)
+        caption = Vips::Image.text(text, font:, dpi: 72, width:, align: :centre)
         strip = caption.embed(-1, -3, width, caption.height + 4, background: BG)
         strip.join(image, :vertical, expand: true, background: BG)
       rescue Vips::Error => e

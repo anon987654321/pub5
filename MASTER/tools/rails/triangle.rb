@@ -42,10 +42,10 @@ module Deploy
         config = YAML.safe_load_file(File.join(RAILS_ROOT, "apps.yml")).fetch("apps")
         # The face is not a copy-tree app: apps.yml names its real directory in
         # deploy_root, and it is MASTER/web, not RAILS/master.
-        config.map { |name, row|
+        config.map do |name, row|
           dir = File.join(ROOT, row.fetch("deploy_root", File.join("RAILS", name)))
           { name:, port: row.fetch("port"), dir:, rails: true }
-        }
+        end
       end
     end
 

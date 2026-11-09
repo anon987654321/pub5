@@ -187,7 +187,7 @@ module RouteContracts
     secret = target.user[2]
     return cookie unless secret
 
-    challenge = fetch(target, "/two_factor_setup", host, cookie: cookie)
+    challenge = fetch(target, "/two_factor_setup", host, cookie:)
     unless challenge.code.to_i == 200
       abort "route_contracts: 2FA challenge page answered HTTP #{challenge.code} for #{target.user.first}"
     end
