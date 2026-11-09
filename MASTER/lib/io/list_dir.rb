@@ -30,7 +30,7 @@ module Master
         lines = list_tree(dir: full, depth:, pattern:, state:)
         lines << "... (max entries reached)" if state[:truncated]
         complete = !state[:truncated] && !state[:depth_limited]
-        lines << "[tree receipt: entries=#{state[:seen]} files=#{state[:files]} " \
+        lines << "[tree receipt: path=#{path.to_s.inspect} entries=#{state[:seen]} files=#{state[:files]} " \
                   "directories=#{state[:directories]} depth=#{depth} complete=#{complete} " \
                   "depth_limited=#{state[:depth_limited]} truncated=#{state[:truncated]} " \
                   "hidden=excluded hidden_entries=#{state[:hidden_entries_excluded]} " \

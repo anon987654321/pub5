@@ -61,6 +61,7 @@ class TestGroundTruth < Minitest::Test
       assert_includes result.value!, "3\tline 3"
       assert_includes result.value!, "4\tline 4"
       refute_includes result.value!, "2\tline 2"
+      assert_includes result.value!, 'path="source.rb"'
       assert_includes result.value!, "sha256=#{Digest::SHA256.hexdigest(content)}"
       assert_includes result.value!, "bytes=#{content.bytesize} lines=8 shown=2 offset=2 content=partial digest_scope=whole_file"
       assert truth.fresh?(path)
@@ -78,6 +79,7 @@ class TestGroundTruth < Minitest::Test
       assert result.ok?, result.to_s
       assert_includes result.value!, "1\tfirst line"
       assert_includes result.value!, "2\tsecond line"
+      assert_includes result.value!, 'path="source.rb"'
       assert_includes result.value!, "sha256=#{Digest::SHA256.hexdigest(content)}"
       assert_includes result.value!, "content=full digest_scope=whole_file"
     end

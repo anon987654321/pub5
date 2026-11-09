@@ -4,6 +4,7 @@ require_relative "test_helper"
 require "cli/council_crit"
 require "cli/deliberation_prep"
 require "cli/fold_risk"
+require "cli/pipeline_context"
 
 class TestCLI < Minitest::Test
   def setup
@@ -986,6 +987,16 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     end
 
     assert_equal [[:parallel, result], [:capability, result]], seen
+  end
+
+  def test_pipeline_context_success_renders_its_fields_not_object_identity
+    context = Master::CLI::PipelineContext.new(
+      user_message: "status", output: "raw command output", rendered: "human-readable command output"
+    )
+    result = Master::Result.ok(context)
+
+    assert_equal "human-readable command output", @cli.send(:success_text, result)
+    assert_equal "raw command output", @cli.send(:raw_success_text, result)
   end
 
   def test_routine_success_emits_one_line

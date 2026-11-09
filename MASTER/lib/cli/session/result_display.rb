@@ -246,10 +246,11 @@ module Master
       # TypeError that killed the queue worker, not a display.
       def raw_success_text(ok)
         value = ok.value
-        return value.to_s unless value.is_a?(Hash)
+        fields = result_fields(value)
+        return value.to_s unless fields
 
-        output = value[:output].to_s
-        output.empty? ? value[:rendered].to_s : output
+        output = fields[:output].to_s
+        output.empty? ? fields[:rendered].to_s : output
       end
 
       def measured_reply(text)
@@ -276,12 +277,23 @@ module Master
 
       def success_text(ok)
         value = ok.value
-        return value.to_s unless value.is_a?(Hash)
+        fields = result_fields(value)
+        return value.to_s unless fields
 
-        rendered = value[:rendered].to_s
+        rendered = fields[:rendered].to_s
         return rendered unless rendered.empty?
 
-        value[:output].to_s
+        fields[:output].to_s
+      end
+
+      # Commands may return the typed PipelineContext produced by the last
+      # stage, not a plain Hash. It deliberately exposes only [] and key? as
+      # its read surface; render its fields instead of leaking Object#to_s.
+      def result_fields(value)
+        return value if value.is_a?(Hash)
+        return value if value.respond_to?(:key?) && value.respond_to?(:[])
+
+        nil
       end
 
       def routine_success?(text)

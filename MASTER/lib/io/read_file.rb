@@ -76,7 +76,8 @@ module Master
         output = "#{numbered}#{suffix}"
         output << "\n" unless output.empty? || output.end_with?("\n")
         content_complete = offset.zero? && slice.size == total
-        output << "[read receipt: sha256=#{digest} bytes=#{content.bytesize} lines=#{total} " \
+        relative_path = full_path.delete_prefix(@root + File::SEPARATOR)
+        output << "[read receipt: path=#{relative_path.inspect} sha256=#{digest} bytes=#{content.bytesize} lines=#{total} " \
                   "shown=#{slice.size} offset=#{offset} content=#{content_complete ? "full" : "partial"} " \
                   "digest_scope=whole_file]"
       end
