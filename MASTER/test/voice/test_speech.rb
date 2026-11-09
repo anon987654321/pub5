@@ -65,6 +65,92 @@ class TestSpeech < Minitest::Test
     assert_equal message, speech.instance_variable_get(:@last_error)
   end
 
+  # The 2026-11-08 transcript's open ear row wants a host receipt that names
+  # the engine, so the synthesis branches record which one produced the audio
+  # instead of leaving a reader to infer the mouth from absence. One test per
+  # branch: minitest's stub bookkeeping cannot hold two live stubs of one name
+  # at once, so each name is stubbed exactly once per test.
+  def test_last_engine_names_edge_when_edge_synthesises
+    speech = Master::Voice::Speech
+    speech.instance_variable_set(:@last_engine, nil)
+    speech.stub(:available?, true) do
+      speech.stub(:shaped, ->(path) { path }) do
+        speech.stub(:edge_tts_available?, true) do
+          speech.stub(:synthesize_edge, "/tmp/m_tts_engine_probe.mp3") do
+            assert_equal "/tmp/m_tts_engine_probe.mp3", speech.synthesize("a sentence")
+            assert_equal "edge", speech.last_engine
+          end
+        end
+      end
+    end
+  ensure
+    speech.instance_variable_set(:@last_engine, nil)
+  end
+
+  def test_last_engine_names_espeak_when_the_os_voice_recovers
+    speech = Master::Voice::Speech
+    speech.instance_variable_set(:@last_engine, nil)
+    speech.stub(:available?, true) do
+      speech.stub(:shaped, ->(path) { path }) do
+        speech.stub(:edge_tts_available?, false) do
+          speech.stub(:os_voice_fallback?, true) do
+            speech.stub(:espeak_path, "/usr/bin/espeak") do
+              speech.stub(:synthesize_espeak, "/tmp/m_tts_espeak_probe.wav") do
+                assert_equal "/tmp/m_tts_espeak_probe.wav", speech.synthesize("a sentence")
+                assert_equal "espeak", speech.last_engine
+              end
+            end
+          end
+        end
+      end
+    end
+  ensure
+    speech.instance_variable_set(:@last_engine, nil)
+  end
+
+  def test_last_engine_names_say_when_espeak_is_absent
+    speech = Master::Voice::Speech
+    speech.instance_variable_set(:@last_engine, nil)
+    speech.stub(:available?, true) do
+      speech.stub(:shaped, ->(path) { path }) do
+        speech.stub(:edge_tts_available?, false) do
+          speech.stub(:os_voice_fallback?, true) do
+            speech.stub(:espeak_path, nil) do
+              speech.stub(:synthesize_say, "/tmp/m_tts_say_probe.aiff") do
+                assert_equal "/tmp/m_tts_say_probe.aiff", speech.synthesize("a sentence")
+                assert_equal "say", speech.last_engine
+              end
+            end
+          end
+        end
+      end
+    end
+  ensure
+    speech.instance_variable_set(:@last_engine, nil)
+  end
+
+  # A chain that degraded on its way to the ear must not dress the failure up
+  # as an engine: edge answered nothing, so last_engine stays unset even though
+  # synthesize kept walking towards the OS voices.
+  def test_a_failed_engine_is_never_reported_as_the_last_engine
+    speech = Master::Voice::Speech
+    speech.instance_variable_set(:@last_engine, nil)
+    speech.stub(:available?, true) do
+      speech.stub(:shaped, ->(path) { path }) do
+        speech.stub(:edge_tts_available?, true) do
+          speech.stub(:synthesize_edge, nil) do
+            speech.stub(:os_voice_fallback?, false) do
+              assert_nil speech.synthesize("a sentence")
+              assert_nil speech.last_engine, "a failed edge attempt posed as the engine"
+            end
+          end
+        end
+      end
+    end
+  ensure
+    speech.instance_variable_set(:@last_engine, nil)
+  end
+
   def test_tts_timing_is_always_available_and_detailed_logs_are_opt_in
     speech = Master::Voice::Speech
     original = ENV.fetch("MASTER_TTS_TIMING", nil)
@@ -1125,10 +1211,17 @@ class TestSpeech < Minitest::Test
       layered = File.join(dir, "layered.mp3")
       with_profile("asmr") { assert Master::Voice::Layers.apply(source, layered) }
 
+      # The expectation is anchored on what the encoder actually wrote for the
+      # source: an mp3 duration lands on a frame boundary, and the padding a
+      # build adds to 4.0 s of requested audio is not the chain's doing. The
+      # chain owes exactly its declared breath and pause on top of that.
+      source_duration = IO.popen(["ffprobe", "-v", "error", "-show_entries",
+                                  "format=duration", "-of", "csv=p=0", source], &:read).to_f
       probe = IO.popen(["ffprobe", "-v", "error", "-show_entries", "stream=channels", "-show_entries",
                         "format=duration", "-of", "csv=p=0", layered], &:read).split
       assert_equal 2, probe.first.to_i
-      assert_in_delta 4.0 + 0.32 + 0.38, probe.last.to_f, 0.05
+      assert_in_delta source_duration + 0.32 + 0.38, probe.last.to_f, 0.05,
+                      "the layered file is the speech plus the declared breath and pause"
 
       # The gap between the two bursts sits 0.38 s later in the layered file.
       gap = IO.popen(["ffmpeg", "-hide_banner", "-nostats", "-i", layered, "-af",

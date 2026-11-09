@@ -148,6 +148,11 @@ module Master
 
       def last_error = @last_error
 
+      # Which synthesis engine produced the most recent audio: "edge", "espeak",
+      # "say", "transcendent" or "human". A host receipt that names the mouth
+      # the operator heard can read it instead of inferring it from absence.
+      def last_engine = @last_engine
+
       def clear_last_error! = (@last_error = nil)
 
       # Timings stay available to /voice status without requiring debug flags.
@@ -416,6 +421,7 @@ module Master
         voice = resolve_voice(voice) if voice
         if Human.active?
           human = Human.synthesize(text_str, voice: voice_locked ? voice : nil, rate:, pitch:)
+          (@last_engine = "human") if human
           return shaped(human) if human
         end
 
@@ -431,15 +437,19 @@ module Master
 
         if edge_tts_available?
           path = synthesize_edge(text_str, voice:, style_config:)
+          (@last_engine = "edge") if path
           return path if path
         end
 
         return if voice_locked || !os_voice_fallback?
 
         path = synthesize_espeak(text_str) if espeak_path
+        (@last_engine = "espeak") if path
         return path if path
 
-        synthesize_say(text_str)
+        path = synthesize_say(text_str)
+        (@last_engine = "say") if path
+        path
       ensure
         log_timing("synthesis_total", started_at, text_length: text.to_s.length) if started_at
       end
@@ -456,6 +466,7 @@ module Master
           text_str, voice:, style:, rate:, pitch:,
           voice_locked:, style_locked:
         )
+        (@last_engine = "transcendent") if result
         # Expressive mode must pass its generated file through the same output
         # chain as direct speech. This keeps the declared shaping policy active
         # when the opt-in multi-engine mode is selected.

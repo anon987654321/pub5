@@ -120,6 +120,45 @@ rescue StandardError => e
   Check.new(name: "tts-socket", state: :fail, detail: e.message)
 end
 
+# The ear check the 2026-11-08 operator transcript left open: tts-socket only
+# proves the wiring loads, while "voice0: audio playback failed" reached the
+# terminal and no sound reached the operator. This check speaks one synchronous
+# utterance through the real chain and records the receipt the transcript asked
+# for - player, engine, the utterance's outcome, and the first failure line if
+# the chain degraded on its way. A host with no output path, a pipe or a CI run
+# measured nothing: sound through a speaker is the one thing a container cannot
+# verify about itself, so the honest answer is skip, not a guess in either
+# direction.
+def check_voice_utterance
+  reason =
+    if !Master::Voice::Playback.available?
+      "no audio output on this host (looked for #{Master::Voice::Playback::PLAYERS.keys.join(', ')} and native speech)"
+    elsif ENV["CI"] || ENV["MASTER_SKIP_TTS"] == "1" || !$stdout.tty?
+      "sound through a speaker cannot be verified from a pipe or CI run"
+    end
+  if reason
+    return Check.new(name: "voice-utterance", state: :unmeasured,
+                     detail: "#{reason}; INCONCLUSIVE by construction")
+  end
+
+  spoken = Master::Voice::Playback.speak_now("MASTER voice check. If you can hear this, the ear row is closed.")
+  player = Master::Voice::Playback.player&.first || "native speech"
+  engine = Master::Voice::Speech.last_engine || "none"
+  synth_failure = Master::Voice::Speech.last_error
+  play_failure = Master::Voice::Playback.last_error
+  unless spoken
+    first = [synth_failure, play_failure].compact.first || "speak_now reported failure without naming one"
+    return Check.new(name: "voice-utterance", state: :fail,
+                     detail: "no sound reached the ear, first failure: #{first.lines.first.to_s.strip}")
+  end
+
+  detail = "player=#{player}, engine=#{engine}, utterance played"
+  detail += "; degraded chain, first failure: #{synth_failure.lines.first.to_s.strip}" if synth_failure
+  Check.new(name: "voice-utterance", state: :pass, detail:)
+rescue StandardError => e
+  Check.new(name: "voice-utterance", state: :fail, detail: "#{e.class}: #{e.message.lines.first.to_s.strip}")
+end
+
 # The face's ear: whisper.cpp and a model, else Gemini. A phone with neither
 # fails, and says where its setup stands; any other host without one measured
 # nothing, because the deploy box has no microphone to hear with.
@@ -209,6 +248,7 @@ checks = [
   check_content_dedup,
   check_api_keys,
   check_tts_socket,
+  check_voice_utterance,
   check_face_stt,
   check_web_token,
   check_key_rotator,

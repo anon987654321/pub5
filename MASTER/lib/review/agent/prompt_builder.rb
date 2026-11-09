@@ -207,12 +207,13 @@ module Master
         # The model denied capabilities the runtime had: it answered that no tool
         # in the session could generate or play speech while voice0 was on, and
         # that it could not see any output while the probe, read and shell tools
-        # were inside the fold (docs/session-2026-11-08.md, open row 1). Nothing
-        # in the prompt named the session's own surface, so the model answered
-        # from its training identity instead. This section reads the registered
-        # command set and the live voice state, so what the runtime can do is
-        # what the prompt says it can do - and a command that leaves the registry
-        # cannot be invented here, because the list is read, not restated.
+        # were inside the fold (docs/session-2026-11-08.md, the transcript's
+        # capability row). Nothing in the prompt named the session's own surface,
+        # so the model answered from its training identity instead. This section
+        # reads the registered command set and the live voice state, so what the
+        # runtime can do is what the prompt says it can do - and a command that
+        # leaves the registry cannot be invented here, because the list is read,
+        # not restated.
         def runtime_surface_section
           commands = Master::CLI::CommandRegistry::HELP_TOPICS.keys.sort
           return if commands.empty?

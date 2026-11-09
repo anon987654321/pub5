@@ -176,7 +176,7 @@ module Master
 
       # The lane moved under the model mid-session and the answers moved with it:
       # the same runtime said "Grok 4.7, from xAI." and later "I'm Glyph Cluster"
-      # (docs/session-2026-11-08.md, open row 2). The identity block is the one
+      # (docs/session-2026-11-08.md, the transcript's identity row). The identity block is the one
       # place that pins who is speaking, so it names the rule once and never
       # names a lane: no lane id, vendor or model string is interpolated here,
       # and test_identity_and_runtime_surface holds the block byte-identical

@@ -257,9 +257,12 @@ module Master
       def brief
         dilla = PRODUCERS.fetch(:j_dilla)
         timing = dilla.fetch(:timing)
+        # A Ruby Range interpolates as "53..56"; the brief is prose, so a range
+        # reads as "53-56" the way a person would say it.
+        range_text = ->(range) { "#{range.min}-#{range.max}" }
         <<~TEXT.strip
           Production DNA:
-          - J Dilla: #{dilla.fetch(:philosophy)}; #{timing.fetch(:ppqn)} PPQN, #{timing.fetch(:swing_percent)}% swing, #{timing.fetch(:bpm)} BPM.
+          - J Dilla: #{dilla.fetch(:philosophy)}; #{timing.fetch(:ppqn)} PPQN, #{range_text.call(timing.fetch(:swing_percent))}% swing, #{range_text.call(timing.fetch(:bpm))} BPM.
           #{dilla_research_brief.lines.map { |line| "  #{line}" }.join}
           - Flying Lotus: jazz harmony plus electronic haze, unquantized drums, fast heavy sidechain pump, vinyl layer, pitch-down texture.
           - Madlib: SP-303 live triggering, Vinyl Sim grit, cassette/multitrack roughness, speed over polish, minor/jazz harmony.

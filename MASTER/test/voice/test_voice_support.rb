@@ -62,6 +62,33 @@ class TestVoiceSupport < Minitest::Test
     assert_equal ["hello"], spoken
   end
 
+  # The 2026-11-08 transcript read "audio playback failed - /usr/bin/afplay"
+  # and could not tell whether anything else had been tried. play records every
+  # rung it walked, so the refusal a test utterance prints must name that whole
+  # ladder, not only the last player.
+  def test_playback_speak_now_refusal_names_the_whole_ladder_it_tried
+    ladder = "afplay exit 1, sox exit 127 #{Process.pid}"
+    previous_error = PB.instance_variable_get(:@last_error)
+    PB.stub(:enabled?, true) do
+      PB.stub(:available?, true) do
+        PB.stub(:synthesize, "/tmp/m_tts_ladder_probe.mp3") do
+          PB.stub(:play, false) do
+            PB.stub(:android_speak, false) do
+              PB.stub(:native_say, false) do
+                PB.instance_variable_set(:@last_error, ladder)
+                out, = capture_io { refute PB.speak_now("hello") }
+                assert_includes out, ladder,
+                                "the refusal named only the last rung: #{out}"
+              end
+            end
+          end
+        end
+      end
+    end
+  ensure
+    PB.instance_variable_set(:@last_error, previous_error)
+  end
+
   def test_playback_background_speech_does_not_repeat_a_failed_reply_through_native_voice
     spoken = []
     queue = Queue.new
