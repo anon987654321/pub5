@@ -60,9 +60,9 @@ module Master
 
           full = File.join(dir, entry)
           prefix = "  " * indent
-          # Never follow a symlink directory while walking. A link can point
-          # outside the workspace or back to an ancestor and must not expand
-          # the inventory's authority or create a traversal loop.
+          # Never follow a symlink while walking. A link can point outside
+          # the workspace or back to an ancestor and must not expand the
+          # inventory's authority or create a traversal loop.
           if File.symlink?(full)
             state[:symlinks_skipped] += 1
             next []

@@ -57,6 +57,17 @@ class ReachPrimitivesTest < Minitest::Test
     assert_includes result.value!, "child.txt"
   end
 
+  def test_list_dir_marks_a_depth_limited_inventory_incomplete
+    FileUtils.mkdir_p(File.join(@dir, "one", "two", "three"))
+    File.write(File.join(@dir, "one", "two", "three", "end.txt"), "end")
+
+    result = Master::Io::ListDir.new(root: @dir).call(path: ".", depth: 1)
+
+    assert result.ok?, result.to_s
+    assert_includes result.value!, "depth=1 complete=false depth_limited=true"
+    refute_includes result.value!, "end.txt"
+  end
+
   def test_list_dir_does_not_follow_symlink_directories
     Dir.mktmpdir do |outside|
       File.write(File.join(outside, "outside-secret.txt"), "not in this tree")
