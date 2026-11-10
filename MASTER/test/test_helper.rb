@@ -13,6 +13,12 @@ ENV["MASTER_PROOF_STORE"] = "0"
 # A test run must not leave the next real /fix a residual to resume from.
 require "tmpdir"
 ENV["MASTER_FIX_RESIDUAL"] = File.join(Dir.tmpdir, "master-test-residual-#{Process.pid}.json")
+# The semantic disk cache is a run instrument, not a test instrument: a test
+# that judged a file must not hand its verdicts to the next real /fix, and a
+# real run's verdicts must not pre-answer a test. Tests that exercise the
+# cache itself point MASTER_SEMANTIC_CACHE_PATH at their own tmp file and
+# re-enable it locally.
+ENV["MASTER_SEMANTIC_CACHE"] = "0"
 # Scripted CDP doubles answer only the verbs a test names; stress states and
 # extra engines are exercised by their own tests, which switch them on.
 ENV["MASTER_VISUAL_STRESS"] = "0"

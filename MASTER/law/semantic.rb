@@ -208,11 +208,24 @@ module Master
               cache_key = "#{base_key}:#{stream}"
               next @cache[cache_key] if @cache.key?(cache_key)
 
+              # The in-process cache dies with the process, and an unattended
+              # run is chunked: every restart re-paid every model call for a
+              # file the previous chunk had already judged (2026-11-10 OPENBSD:
+              # ~3 min per file per chunk, passes never converging). The disk
+              # layer is keyed by the same stamp (path, file stamp, code
+              # digest, laws mtime), so changed sources or changed laws miss.
+              if (cached = disk_cached_findings(cache_key))
+                next @cache[cache_key] = cached
+              end
+
               operation = stream == :violation ? :scan_semantic_violations : :scan_semantic_opportunities
               prompt = complete_source_prompt(build_prompt(code, path, scoped, mode: stream), path:)
               response = ask_without_tools(prompt, operation:)
 
-              @cache[cache_key] = parse_findings(response, scoped, mode: stream)
+              parsed = parse_findings(response, scoped, mode: stream)
+              @cache[cache_key] = parsed
+              write_disk_cache(cache_key, parsed)
+              parsed
             end
           rescue StandardError => e
             offline = e.message.to_s.match?(OFFLINE_ERRORS_PATTERN)
@@ -277,6 +290,79 @@ module Master
             stat = File.stat(path) if File.file?(path)
             file_stamp = stat && [stat.size, stat.ino, stat.mtime.to_r]
             [path, file_stamp, Digest::SHA256.hexdigest(code), @laws_mtime].join(":")
+          end
+
+          # Disk-backed verdict cache. JSONL of {"key" => ..., "findings" => [...]}
+          # under .master; disabled with MASTER_SEMANTIC_CACHE=0, relocated with
+          # MASTER_SEMANTIC_CACHE_PATH. Every helper fails open (nil / silent)
+          # because a cache fault must never turn a scan into a measurement
+          # failure.
+          def disk_cache_path
+            ENV.fetch(
+              "MASTER_SEMANTIC_CACHE_PATH",
+              File.join(Master::ROOT, ".master", "semantic_cache.jsonl"),
+            )
+          end
+
+          def disk_cache_enabled?
+            ENV["MASTER_SEMANTIC_CACHE"] != "0"
+          end
+
+          def disk_cached_findings(key)
+            return nil unless disk_cache_enabled?
+
+            @disk_cache ||= load_disk_cache
+            return nil unless @disk_cache.key?(key)
+
+            rows = @disk_cache[key]
+            rows.map do |row|
+              Finding.build(
+                law: row.fetch("law"), message: row.fetch("message"), line: row.fetch("line"),
+                severity: row.fetch("severity").to_sym, fix: row["fix"],
+                tags: Array(row["tags"]).map(&:to_sym),
+                reversibility: row["reversibility"], blast_radius: row["blast_radius"],
+              )
+            end
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "SemanticLaw disk cache read", severity: :cosmetic, path: key)
+            nil
+          end
+
+          def write_disk_cache(key, findings)
+            return unless disk_cache_enabled?
+
+            require "json"
+            require "fileutils"
+            dir = File.dirname(disk_cache_path)
+            FileUtils.mkdir_p(dir)
+            rows = findings.map do |finding|
+              {
+                "law" => finding.law.to_s,
+                "message" => finding.message.to_s,
+                "line" => finding.line,
+                "severity" => finding.severity.to_s,
+                "tags" => Array(finding.tags).map(&:to_s),
+                "reversibility" => finding.reversibility,
+                "blast_radius" => finding.blast_radius,
+              }
+            end
+            File.open(disk_cache_path, "a") { |io| io.puts(JSON.generate({ "key" => key, "findings" => rows })) }
+            (@disk_cache ||= {})[key] = rows
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "SemanticLaw disk cache write", severity: :cosmetic, path: key)
+          end
+
+          def load_disk_cache
+            path = disk_cache_path
+            return {} unless File.exist?(path)
+
+            require "json"
+            File.readlines(path).each_with_object({}) do |line, hash|
+              row = JSON.parse(line)
+              hash[row.fetch("key")] = row.fetch("findings")
+            rescue StandardError
+              # A torn tail line (killed process mid-append) loses one entry.
+            end
           end
 
           # One source: semantic review is populated from executable Law definitions.
