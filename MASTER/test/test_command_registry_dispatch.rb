@@ -636,6 +636,51 @@ class TestCommandRegistryDispatch < Minitest::Test
            "internal Pass callers remain fail-closed unless the dispatcher explicitly grants writes"
   end
 
+  def test_audit_runs_bounded_sweep_probes_for_the_target_tree
+    require_relative "../tools/sweep"
+    registry = Registry
+    calls = []
+    results = [
+      Operator::Sweep::ProbeResult.new(
+        tree: "MASTER", unit: "cohesion0", executed: true, process_success: true,
+        summary: "1 finding above ceiling", evidence: [],
+      ),
+      Operator::Sweep::ProbeResult.new(
+        tree: "MASTER", unit: "dupcensus1", executed: true, process_success: false,
+        summary: "probe failed", evidence: ["missing runtime dependency"],
+      ),
+    ]
+    sweep = lambda do |tree, index, detailed:, stop:|
+      calls << [tree, index, detailed, stop.respond_to?(:call)]
+      results
+    end
+
+    lines = Operator::Sweep.stub(:sweep, sweep) do
+      registry.run_audit_probes(targets: [File.join(Master::REPO_ROOT, "MASTER", "lib")])
+    end
+
+    assert_equal [["MASTER", 0, true, true]], calls
+    assert_includes lines.first, "executed=2 process_failures=1"
+    assert lines.any? { |line| line.include?("cohesion0 exit=0") }
+    assert lines.any? { |line| line.include?("dupcensus1 exit!=0") }
+    assert lines.any? { |line| line.include?("missing runtime dependency") }
+    refute lines.any? { |line| line.match?(/\boutcome=PASS\b/) }
+  end
+
+  def test_audit_reports_cancellation_without_starting_tree_probes
+    require_relative "../tools/sweep"
+    calls = []
+    cancellation = Struct.new(:cancelled?).new(true)
+    sweep = ->(*, **){ calls << true; [] }
+
+    lines = Operator::Sweep.stub(:sweep, sweep) do
+      Registry.run_audit_probes(targets: [File.join(Master::REPO_ROOT, "MASTER")], cancellation:)
+    end
+
+    assert_empty calls
+    assert lines.any? { |line| line.include?("INCONCLUSIVE") || line.include?("NOT_RUN") }
+  end
+
   def test_fix_modes_apply_bounded_and_read_only_presets
     apply, critique, only, overrides = Registry.apply_fix_mode(
       "audit", raw: "RAILS", apply: nil, critique: nil, only: nil, overrides: { lane: "standard" },
