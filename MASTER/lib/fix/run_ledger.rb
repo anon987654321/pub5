@@ -218,7 +218,7 @@ module Master
             lines << "fix0: file #{path} law=#{laws} outcome=#{last["outcome"]} attempts=#{entry["attempts"].size}#{detail}"[0, 420]
           end
           remaining = outcomes.size - limit
-          lines << "fix0: file docket contains #{remaining} additional attempted file(s); query RunLedger.file_outcomes for the complete in-memory set" if remaining.positive?
+          lines << "fix0: #{remaining} additional attempted file(s) remain in the in-process docket; only the first #{limit} are printed" if remaining.positive?
           lines
         end
 
