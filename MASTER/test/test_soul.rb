@@ -2,7 +2,9 @@
 
 require_relative "test_helper"
 require_relative "../tools/agent_context"
-require_relative "../lib/review/agent/prompt_builder"
+# PromptBuilder arrives through the zeitwerk-managed Master:: namespace booted
+# by test_helper. A direct require_relative of the nested file would force the
+# parent class to load mid-definition and crash single-file runs.
 
 class TestSoul < Minitest::Test
   # The brief is hard-wrapped for terminals. Wrapping is presentation, so the
@@ -150,7 +152,7 @@ class TestSoul < Minitest::Test
     assert_includes prompt, "replaceable reasoning engine"
     assert_includes prompt, "Never guess the active model's name or version"
     assert_includes prompt, "Capabilities are determined by tools and commands actually supplied"
-    assert_includes prompt, "never deny access to a capability that is present"
+    assert_match(/never deny access to a capability that is present/i, prompt)
   end
 
   def test_agent_prompt_names_the_live_lane_without_inventing_a_vendor_version
