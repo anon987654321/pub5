@@ -23,12 +23,14 @@ class ModelQuotaForecastTest < Minitest::Test
 
     Check.stub(:trackable?, true) do
       Check.stub(:daily_limit, 200) do
-        Check.stub(:count, 100) do
-          forecast = Check.forecast("demo:free", now:)
-          assert_equal 100, forecast[:used]
-          assert_equal 100, forecast[:remaining]
-          assert_in_delta 200, forecast[:projected_daily], 0.01
-          assert_in_delta 12, forecast[:exhaustion_hours], 0.01
+        Check.stub(:free_model_request_count, 100) do
+          Check.stub(:free_model_burn_rate_per_day, 200.0) do
+            forecast = Check.forecast("demo:free", now:)
+            assert_equal 100, forecast[:used]
+            assert_equal 100, forecast[:remaining]
+            assert_in_delta 200, forecast[:projected_daily], 0.01
+            assert_in_delta 12, forecast[:exhaustion_hours], 0.01
+          end
         end
       end
     end
@@ -39,8 +41,10 @@ class ModelQuotaForecastTest < Minitest::Test
 
     Check.stub(:trackable?, true) do
       Check.stub(:daily_limit, 200) do
-        Check.stub(:count, 135) do
-          assert Check.burn_risk?("demo:free", now:)
+        Check.stub(:free_model_request_count, 135) do
+          Check.stub(:free_model_burn_rate_per_day, 405.0) do
+            assert Check.burn_risk?("demo:free", now:)
+          end
         end
       end
     end
@@ -109,7 +113,7 @@ class ModelQuotaForecastTest < Minitest::Test
     Dir.mktmpdir do |dir|
       Check.stub(:path, File.join(dir, "model_quota.json")) do
         Check.stub(:trackable?, true) do
-          Check.stub(:count, 10) do
+          Check.stub(:free_model_request_count, 10) do
             Check.stub(:daily_limit, 50) do
               forecast = Check.forecast("demo:free")
               assert_equal 40, forecast[:remaining]
@@ -158,15 +162,17 @@ class ModelQuotaForecastTest < Minitest::Test
         end
 
         Check.stub(:trackable?, true) do
-          Check.stub(:count, 10) do
+          Check.stub(:free_model_request_count, 10) do
             Check.stub(:daily_limit, 50) do
-              stale_at = now + Check::PROVIDER_REFRESH_TTL_S + 1
+              Check.stub(:free_model_burn_rate_per_day, 20.0) do
+                stale_at = now + Check::PROVIDER_REFRESH_TTL_S + 1
               assert_equal 40, Check.remaining("demo:free", day: "2026-11-08", now: stale_at)
               forecast = Check.forecast("demo:free", day: "2026-11-08", now: stale_at)
               assert_equal "burn_forecast", forecast[:remaining_source]
               provider = Check.provider_quota_snapshot(day: "2026-11-08", now: stale_at)
               assert_equal false, provider[:fresh]
-              assert_equal "stale_provider", provider[:source]
+                assert_equal "stale_provider", provider[:source]
+              end
             end
           end
         end

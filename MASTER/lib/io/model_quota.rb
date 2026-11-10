@@ -249,7 +249,8 @@ module Master
         authoritative = provider_remaining(model, day:, now:)
         return authoritative.zero? unless authoritative.nil?
 
-        count(model, day:) >= daily_limit_for(model)
+        used = FREE_RE.match?(model.to_s) ? free_model_request_count(day:) : count(model, day:)
+        used >= daily_limit_for(model)
       end
 
       # The provider's own remaining answer when one is fresh for today; the
@@ -261,7 +262,8 @@ module Master
         authoritative = provider_remaining(model, day:, now:)
         return authoritative unless authoritative.nil?
 
-        [daily_limit_for(model) - count(model, day:), 0].max
+        used = FREE_RE.match?(model.to_s) ? free_model_request_count(day:) : count(model, day:)
+        [daily_limit_for(model) - used, 0].max
       end
 
       def burn_rate_per_day(model, now: Time.now.utc, day: now.utc.strftime("%Y-%m-%d"))
@@ -290,10 +292,17 @@ module Master
           projected_daily = free_model_burn_rate_per_day(day:, now:)
           remaining_source = "provider"
         else
-          used = count(model, day:)
-          limit = daily_limit_for(model)
+          if FREE_RE.match?(model.to_s)
+            # OpenRouter's free-model cap belongs to the API key, not each slug.
+            used = free_model_request_count(day:)
+            limit = daily_limit
+            projected_daily = free_model_burn_rate_per_day(day:, now:)
+          else
+            used = count(model, day:)
+            limit = daily_limit_for(model)
+            projected_daily = burn_rate_per_day(model, day:, now:)
+          end
           remaining = [limit - used, 0].max
-          projected_daily = burn_rate_per_day(model, day:, now:)
           remaining_source = "burn_forecast"
         end
         exhaustion_hours =
