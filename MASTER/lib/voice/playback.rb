@@ -100,9 +100,9 @@ module Master
         Speech.os_voice_fallback? && which("say") != nil
       end
 
-      # CLI speech is opt-in; the browser uses its own TTS transport and
-      # remains enabled independently. Pipes, CI and the global opt-out stay silent.
-      # On by default; MASTER_CLI_SPEAK=0 or /voice off silences this CLI session.
+      # CLI speech is on by default on an interactive TTY; the browser uses its
+      # own TTS transport. Pipes, CI and MASTER_SKIP_TTS=1 keep the CLI silent.
+      # MASTER_CLI_SPEAK=0 or /voice off silences this CLI session.
       def enabled?
         return false if ENV["MASTER_SKIP_TTS"] == "1"
         return false if ENV["CI"]

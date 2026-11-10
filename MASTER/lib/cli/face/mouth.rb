@@ -35,10 +35,10 @@ module Master
 
         attr_reader :last_error
 
-        # Nil when the mouth can speak. Playback.enabled? requires explicit
-        # MASTER_CLI_SPEAK=1 (or /voice on), with MASTER_SKIP_TTS, CI and non-TTY
-        # still acting as hard stops. A face also needs a synthesiser: player
-        # presence alone says nothing about whether Speech can produce audio.
+        # Nil when the mouth can speak. CLI speech defaults on in interactive
+        # TTY sessions; MASTER_SKIP_TTS, CI, non-TTY and /voice off disable it.
+        # A face also needs a synthesiser: player presence alone says nothing
+        # about whether Speech can produce audio.
         def missing
           return "voice0: off here - replies stay text" unless Master::Voice::Playback.enabled?
           native_tts = @device.android? && Master::Device::Audio.tts_available?

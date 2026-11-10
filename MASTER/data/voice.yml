@@ -1,6 +1,7 @@
 # Voice output rules — extracted from laws.yml (scan corpus stays in laws.yml).
 # TTS synthesis policy: Ruby (speech.rb, tts_controller) and JS (face_speech_runtime.js) read `tts`.
-# CLI playback is off until MASTER_CLI_SPEAK=1 or /voice on; the web TTS route remains independent.
+# CLI speech is on in interactive TTY sessions unless MASTER_CLI_SPEAK=0 or /voice off.
+# CI, pipes and MASTER_SKIP_TTS=1 stay silent; the web TTS route remains independent.
 # Persona registries (personas.yml, soul.yml) affect LLM text/style only when persona_affects_text_only is true.
 # Engine chain / transcendent mode: data/tts.yml (not used by web TtsJob). VPS env: OPENBSD/etc/rc.d/master.
 tts:
