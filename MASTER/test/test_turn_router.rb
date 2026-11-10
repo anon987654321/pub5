@@ -55,32 +55,45 @@ class TurnRouterTest < Minitest::Test
     assert Master::CLI::TurnRouter.question?("what is the current model")
   end
 
-  # /fix is the verb that writes, and the words that mean "go through the tree
-  # and change it" are spellings of it. The reading words argue and change
-  # nothing. /scan is only a spelling of /fix: a reading nobody acts on is what /fix absorbed.
-  def test_a_writing_word_reaches_fix_and_a_reading_word_reaches_the_council
+  # Every former pipeline spelling is a mode of the one /fix dispatcher.
+  def test_legacy_pipeline_words_rewrite_to_one_fix_mode
     router = Master::CLI::TurnRouter
 
     assert_equal "/fix lib/io", router.rewrite_slash("/fix lib/io")
-    assert_equal "/fix RAILS --no-autofix", router.rewrite_slash("/scan RAILS --no-autofix")
-    assert_equal "/fix x", router.rewrite_slash("/sweep x")
-    assert_equal "/fix", router.rewrite_slash("/triad")
-    # /review and /critique are the reading spellings the registry keeps as
-    # compatibility adapters: they rewrite to /fix's reading half and write nothing.
-    %w[review critique].each do |word|
-      assert_equal "/fix #{router::READING_FLAGS} lib", router.rewrite_slash("/#{word} lib")
+    {
+      audit: %w[audit review critique council scan],
+      visual: %w[visual style],
+      elevate: %w[elevate map],
+      all: %w[all workflow triad sweep through self],
+    }.each do |mode, words|
+      words.each do |word|
+        assert_equal "/fix --mode=#{mode} lib", router.rewrite_slash("/#{word} lib"), word
+      end
     end
-    assert_includes router::PIPELINE_SLASH, "review"
-    # /council stays a model alias, not a person-typed spelling.
-    assert_equal "/council lib", router.rewrite_slash("/council lib")
-    refute_includes router::PIPELINE_SLASH, "council"
+
+    assert_equal "/fix --mode=audit RAILS", router.rewrite_slash("/scan RAILS")
+    assert_equal "/fix --mode=visual", router.rewrite_slash("/style")
+    assert_equal "/fix --security lib", router.rewrite_slash("/security lib")
+    assert_equal "/fix --prove history", router.rewrite_slash("/prove history")
+    assert_equal "/fix --mode=audit", router.rewrite_slash("/fix --mode=audit")
+    assert_equal ["fix"], router::PIPELINE_COMMANDS
   end
 
-  def test_scan_is_a_spelling_of_fix_not_a_command
+  def test_a_legacy_pipeline_word_is_accepted_from_model_inference
+    router = Master::CLI::TurnRouter
+
+    assert_equal "fix", router.send(:normalize_inferred_command, "scan")
+    assert_equal "fix", router.send(:normalize_inferred_command, "review")
+    assert_equal "fix", router.send(:normalize_inferred_command, "style")
+    assert_equal "fix", router.send(:normalize_inferred_command, "elevate")
+    assert_equal "fix", router.send(:normalize_inferred_command, "workflow")
+  end
+
+  def test_scan_is_a_read_only_audit_mode_not_a_second_command
     router = Master::CLI::TurnRouter
 
     refute_includes router::PIPELINE_COMMANDS, "scan"
-    assert_equal "/fix lib/io", router.rewrite_slash("/scan lib/io")
+    assert_equal "/fix --mode=audit lib/io", router.rewrite_slash("/scan lib/io")
   end
 
   # The RAILS constitutional check asks for a reading it can grep and no writes.
