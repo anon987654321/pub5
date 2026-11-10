@@ -428,13 +428,24 @@ report what was lost; do not compound it with a second discard.
 every commit beneath yours, including other people's. Name in your report what
 went with you.
 
-**One verb that writes.** `/fix [path]` is the convergence lifecycle: it reads
-the path, lets the council argue about what it found, weighs competing repairs,
-applies the strongest, validates it and reads the path again, until the tree
-converges, stops improving, or reaches a state MASTER may not settle alone. A
-run ends as DONE, PLATEAU, BLOCKED or VALIDATION_FAILED, and only DONE claims
-the work is finished. `/fix --dry-run --critique` reads and argues without writing.
-`/scan` is the detector-only observation surface; `/fix` adds repair and verification.
+**One verb, explicit modes.** `/fix [path] [--mode=repair|audit|visual|elevate|all]`
+is the only pipeline command. `repair` is the default write-enabled observe,
+critique, repair, re-observe and verify lifecycle. `audit` is a whole-lane
+read-only review; `visual` is a read-only style pass; `elevate` selects the
+improvement lane; `all` selects the existing all-work lane. `--dry-run`
+always means no writes. Audit and visual cannot be made write-enabled by
+`--apply`. Elevate and all retain the existing resource, file and stall
+budgets and every sacred-path, visual-custody, transaction and restructuring
+proof gate.
+
+Legacy spellings rewrite to `/fix --mode=...`: `/review`, `/critique`,
+`/scan`, `/audit` and `/council` mean audit; `/style` means visual;
+`/elevate` and `/map` mean elevate; `/workflow`, `/triad`, `/sweep`,
+`/through`, `/self` and `/all` mean all. Use `/fix` in new instructions.
+
+The run footer's file outcome docket names files that entered the repair
+adapter, their Laws, attempts and latest result. It is not a whole-tree census:
+untouched or unmeasured files must not be described as clean.
 
 **That means a fix mutates the tree** — it has broken dilla and MASTER's own
 chat path. `--no-autofix` and `--dry-run` hold it back. Read the printed diff
