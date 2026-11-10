@@ -137,6 +137,16 @@ module Master
         data.sum { |model, used| FREE_RE.match?(model.to_s) ? used.to_i : 0 }
       end
 
+      def free_model_burn_rate_per_day(now: Time.now.utc, day: now.utc.strftime("%Y-%m-%d"))
+        used = free_model_request_count(day:)
+        date = Date.strptime(day, "%Y-%m-%d")
+        start = Time.utc(date.year, date.month, date.day)
+        elapsed = [now.to_f - start.to_f, 300.0].max
+        used.zero? ? 0.0 : used.to_f * 86_400 / elapsed
+      rescue ArgumentError
+        0.0
+      end
+
       # Read GET /api/v1/key with this checkout's active OpenRouter key and
       # store the answer's free_model_daily_requests as today's authoritative
       # remaining. Called from record() - the one funnel every successful free
@@ -269,11 +279,23 @@ module Master
       def forecast(model, now: Time.now.utc, day: now.utc.strftime("%Y-%m-%d"))
         return unless trackable?(model)
 
-        used = count(model, day:)
-        limit = daily_limit_for(model)
-        authoritative = provider_remaining(model, day:, now:)
-        remaining = authoritative.nil? ? [limit - used, 0].max : authoritative
-        projected_daily = burn_rate_per_day(model, day:, now:)
+        provider = FREE_RE.match?(model.to_s) ? provider_quota_snapshot(day:, now:) : nil
+        if provider && provider[:fresh]
+          # OpenRouter's counter is shared by all free model slugs on the key.
+          # Keep its global usage and limit together; never combine a global
+          # remaining count with a single model's local count or configured cap.
+          used = provider[:used] || free_model_request_count(day:)
+          limit = provider[:limit] || daily_limit
+          remaining = provider[:remaining]
+          projected_daily = free_model_burn_rate_per_day(day:, now:)
+          remaining_source = "provider"
+        else
+          used = count(model, day:)
+          limit = daily_limit_for(model)
+          remaining = [limit - used, 0].max
+          projected_daily = burn_rate_per_day(model, day:, now:)
+          remaining_source = "burn_forecast"
+        end
         exhaustion_hours =
           if remaining.zero?
             0.0
@@ -287,7 +309,7 @@ module Master
           used:,
           limit:,
           remaining:,
-          remaining_source: authoritative.nil? ? "burn_forecast" : "provider",
+          remaining_source:,
           projected_daily: projected_daily.round(2),
           exhaustion_hours: exhaustion_hours&.round(2),
         }

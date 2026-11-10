@@ -84,8 +84,11 @@ class ModelQuotaForecastTest < Minitest::Test
           Check.stub(:count, 3) do
             Check.stub(:daily_limit, 50) do
               assert_equal 7, Check.remaining("demo:free", day: "2026-11-08", now:)
-              assert_equal 7, Check.forecast("demo:free", now:)[:remaining]
-              assert_equal "provider", Check.forecast("demo:free", now:)[:remaining_source]
+              provider_forecast = Check.forecast("demo:free", now:)
+              assert_equal 7, provider_forecast[:remaining]
+              assert_equal 50, provider_forecast[:limit]
+              assert_equal 12, provider_forecast[:used]
+              assert_equal "provider", provider_forecast[:remaining_source]
               refute Check.over_quota?("demo:free", day: "2026-11-08", now:)
 
               Check.stub(:active_openrouter_key, "test-key") do
@@ -127,7 +130,7 @@ class ModelQuotaForecastTest < Minitest::Test
         end
 
         Check.stub(:trackable?, true) do
-          assert_equal 7, Check.remaining("demo:free", day: "2026-11-08")
+          assert_equal 7, Check.remaining("demo:free", day: "2026-11-08", now:)
           assert_nil Check.provider_remaining("demo:free", day: "2026-11-09", now:), "yesterday's reading is not today's"
         end
       end
@@ -185,6 +188,10 @@ class ModelQuotaForecastTest < Minitest::Test
         sample = Check.provider_quota_snapshot(now:)
         assert_equal 1, sample[:local_requests_since_read]
         assert_equal 37, Check.remaining("demo:free", now:)
+        forecast = Check.forecast("demo:free", now:)
+        assert_equal 13, forecast[:used]
+        assert_equal 50, forecast[:limit]
+        assert_equal 37, forecast[:remaining]
       end
     end
   end
