@@ -101,7 +101,7 @@ const COMPONENT_REGISTRATIONS = [
   [ "timeago", Timeago ],
 ]
 
-export function bootPub4Stimulus(application) {
+export function bootPub5Stimulus(application) {
   noteSession()
 
   application.register("live-search", LiveSearch)

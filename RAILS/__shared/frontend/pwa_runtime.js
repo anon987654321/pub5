@@ -125,7 +125,7 @@ const send = (record, url, token) => {
       Accept: "text/vnd.turbo-stream.html, text/html",
       "X-CSRF-Token": token,
       "X-Idempotency-Key": record.id,
-      "X-Pub4-Offline-Replay": "1",
+      "X-Pub5-Offline-Replay": "1",
     },
   })
 }
