@@ -5,7 +5,7 @@ hundred hostnames.** Brgen is the city network; its verticals are mountable
 engines under `brgen/engines/`, not sibling app trees. Amber is the wardrobe,
 BSDPorts is a search of the ports tree, MASTER's web face lives on
 `ai.brgen.no`, and Mr Damascy is one Bergen kitchen's ordering app. They run
-on SQLite behind Falcon (mrdamascy behind Puma), on one box called vm23, and
+on SQLite behind Falcon, on one box called vm23, and
 Brgen, Amber and BSDPorts share one engine so that a fix made once is made
 everywhere; MASTER/web and mrdamascy stand alone and mount none of it.
 
