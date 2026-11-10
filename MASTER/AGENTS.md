@@ -438,10 +438,11 @@ always means no writes. Audit and visual cannot be made write-enabled by
 budgets and every sacred-path, visual-custody, transaction and restructuring
 proof gate.
 
-Legacy spellings rewrite to `/fix --mode=...`: `/review`, `/critique`, `/audit` and `/council` mean audit;
-`/scan` means the read-only repair preview; `/style` means visual;
-`/elevate` and `/map` mean elevate; `/workflow`, `/triad`, `/sweep`,
-`/through`, `/self` and `/all` mean all. Use `/fix` in new instructions.
+The existing compatibility spellings rewrite to `/fix --mode=...`: `/review`
+and `/critique` mean audit; `/scan` means the read-only repair preview;
+`/workflow`, `/triad`, `/sweep`, `/through` and `/self` mean all.
+Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection.
+Use `/fix` in new instructions.
 
 The run footer's file outcome docket names files that entered the repair
 adapter, their Laws, attempts and latest result. It is not a whole-tree census:
