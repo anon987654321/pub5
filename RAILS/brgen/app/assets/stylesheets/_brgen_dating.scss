@@ -352,7 +352,7 @@ body.vertical-dating {
   grid-template-rows: auto 1fr auto auto;
   justify-items: center;
   min-height: 100dvh;
-  padding: env(safe-area-inset-bottom) var(--space-4) env(safe-area-inset-bottom);
+  padding: max(var(--space-8), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom));
   background: radial-gradient(closest-side at 50% 48%, var(--dating-splash-bloom), transparent 75%), var(--dating-splash-bg);
   color: var(--dating-splash-ink);
   touch-action: pan-x pan-y;
@@ -548,7 +548,7 @@ body.vertical-dating .hotkey-coach {
   /* --space-16 (4rem) is the largest declared step and clears the tab bar plus
      composer. An undeclared step would invalidate the whole max(), and with it
      all of this panel's padding. */
-  padding: env(safe-area-inset-bottom) var(--space-3) env(safe-area-inset-bottom);
+  padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-3) max(var(--space-16), env(safe-area-inset-bottom));
 }
 
 .dating-discover-panel[hidden] {

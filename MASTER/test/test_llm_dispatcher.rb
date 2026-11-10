@@ -283,6 +283,34 @@ class TestLLMDispatcher < Minitest::Test
     assert streamed.ok?
   end
 
+  def test_react_protocol_failures_record_provider_answers_without_hiding_them
+    dispatcher, = build_dispatcher
+    lane_results = []
+    provider_results = []
+    dispatcher.define_singleton_method(:note_lane_silence) do |result, _model|
+      lane_results << result
+    end
+    dispatcher.define_singleton_method(:record_provider_result) do |model:, result:, started:|
+      provider_results << { model:, result:, started: }
+    end
+
+    failure = Master::Result.err(
+      "react: malformed tool-call response; no tool was executed",
+      category: :llm_failure
+    )
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    settled = dispatcher.send(:settle, failure, "gateway:glm-5.3", started)
+
+    assert_same failure, settled, "the protocol failure must still reach the caller"
+    assert_equal 1, lane_results.size
+    assert_predicate lane_results.first, :ok?, "the answering provider must clear lane silence"
+    assert_equal 1, provider_results.size
+    assert_equal "gateway:glm-5.3", provider_results.first.fetch(:model)
+    assert_predicate provider_results.first.fetch(:result),
+                     :ok?, "provider quota, latency and router accounting must see the answered call"
+  end
+
   def test_ruby_llm_typed_errors_map_to_master_failover_categories
     dispatcher, = build_dispatcher
     cases = [

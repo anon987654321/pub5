@@ -366,16 +366,17 @@ module Master
 
         result = classify_empty_reply(result, streamed_bytes:)
         result = reclassify_provider_error(result, model: selected_model)
-        # A react-protocol failure is model behavior, not lane availability:
-        # the provider answered and the reply failed MASTER's tool-call
-        # contract. Counting it as a dead call silenced whole lanes because
-        # one workspace agent kept emitting prose (BIZ: 3 of 46 files skipped
-        # after three canary calls; OPENBSD and STUDIO likewise). The caller
-        # still gets the error; the lane stays honest about whether it answers.
-        return result if result.is_a?(Master::Result::Err) && result.message.to_s.start_with?("react: ")
+        # A ReAct protocol rejection is a task failure, not a transport failure:
+        # the provider answered, so health and latency accounting must record
+        # that answer even though the caller still receives the protocol error.
+        react_protocol_failure = result.is_a?(Master::Result::Err) &&
+                                 result.message.to_s.start_with?("react: ")
+        provider_result = react_protocol_failure ? Master::Result.ok(nil) : result
 
-        note_lane_silence(result, selected_model)
-        record_provider_result(model: selected_model, result:, started:)
+        note_lane_silence(provider_result, selected_model)
+        record_provider_result(model: selected_model, result: provider_result, started:)
+        return result if react_protocol_failure
+
         result.is_a?(Master::Result::Ok) ? result.with_model(selected_model) : result
       end
 

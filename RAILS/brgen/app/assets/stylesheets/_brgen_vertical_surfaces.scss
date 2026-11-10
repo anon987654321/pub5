@@ -2157,7 +2157,7 @@ body.vertical-maps .place-list {
 /* The places search sits over the list, so it takes the list's column instead
    of running full bleed beside it on a wide screen. */
 body.vertical-maps .layout > main > .search {
-  margin-inline: max(16px, (100% - 128px) / 2 + 16px);
+  margin-inline: max(16px, (100% - 720px) / 2 + 16px);
 }
 
 body.vertical-maps .place-card {

@@ -316,4 +316,28 @@ def test_brgen_old_dialect_outranks_the_social_stack
     end
     assert naming <= 75, "button-small naming grew to #{naming} files; the ratchet only shrinks"
   end
+
+  def test_brgen_maps_search_uses_the_place_list_column
+    source = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_vertical_surfaces.scss"))
+    list = source[/body\.vertical-maps\s+\.place-list\s*\{([^}]*)\}/m, 1]
+    search = source[/body\.vertical-maps\s+\.layout\s*>\s*main\s*>\s*\.search\s*\{([^}]*)\}/m, 1]
+
+    assert list, "the maps place list must retain its measured column"
+    assert search, "the maps search must have its own scoped alignment rule"
+    assert_match(/max-width:\s*min\(100%,\s*720px\)/, list)
+    assert_match(/margin-inline:\s*max\(16px,\s*\(100%\s*-\s*720px\)\s*\/\s*2\s*\+\s*16px\)/, search)
+  end
+
+  def test_dating_and_welcome_surfaces_keep_both_safe_area_insets
+    dating = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_dating.scss"))
+    splash = dating[/\.dating-splash\s*\{([^}]*)\}/m, 1]
+    discover = dating[/\.dating-discover-panel\s*\{([^}]*)\}/m, 1]
+    welcome = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_welcome_onboarding.scss"))
+    onboarding = welcome[/\.welcome-onboarding\s*\{([^}]*)\}/m, 1]
+
+    assert_match(/padding:\s*max\(var\(--space-8\),\s*env\(safe-area-inset-top\)\)\s+var\(--space-4\)\s+max\(var\(--space-6\),\s*env\(safe-area-inset-bottom\)\)/, splash)
+    assert_match(/padding:\s*max\(var\(--space-3\),\s*env\(safe-area-inset-top\)\)\s+var\(--space-3\)\s+max\(var\(--space-16\),\s*env\(safe-area-inset-bottom\)\)/, discover)
+    assert_match(/padding:\s*calc\(var\(--safe-top\)\s*\+\s*var\(--space-4\)\)\s+var\(--space-4\)\s+calc\(var\(--safe-bottom\)\s*\+\s*var\(--space-4\)\)/, onboarding)
+  end
+
 end
