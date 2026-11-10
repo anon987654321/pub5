@@ -1,6 +1,6 @@
 # pub5 — remaining work
 
-Audit snapshot: 2026-11-10, reconciled against `main@0e91d5c20c60ac936bd0c2003a95c0482f0649ea`.
+Audit snapshot: 2026-11-10, reconciled against `main@45668bd97b57aceb7cb0548efa5688a6fc3276de`.
 The register travels with the migration; source-owned status remains in the
 structured ledgers, and completed entries are checked here only when their
 evidence is present.
@@ -408,12 +408,12 @@ The tracked repository has one TODO file: this root `TODO.md`. The cross-tree co
 
 ### 8.1 RAILS refinement survey — two items still open
 
-`RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness. Second pass the same day: the sandbox gained a Debian Ruby 3.3.8, and with `PUB5_RUBY` (the runner's own override in `OPENBSD/lib/ruby_runner.rb`) the source-reading contract suites run for real — design contract 15 runs / 149 assertions, the link-embed privacy contract 5 / 40, the SVG wordmark 2 / 5, all green; only what needs a Rails bundle (rendered pages, migrations) stays NOT_RUN here. 2026-11-08: Ruby 4.0.5 itself now builds in the sandbox (source build, libyaml into `~/.local/ruby-deps`, psych verified), so the same source-reading suites ran on the pinned interpreter without the `PUB5_RUBY` override — design contract 15 / 149, link-embed privacy 5 / 38 (the rebased tree's shape), visual identity (the wordmark's home) 12 / 136, all green; `amber/test/logo_contract_test.rb` still needs the app bundle (its `test_helper` boots the environment) and stays NOT_RUN here. Row evidence still waits on those rendered runs.
+`RAILS/refinements.yml` current snapshot (2026-11-10): 777 rows, 763 marked done, 12 marked invalid, and 2 still open. The older 2026-11-04 survey below is retained as historical evidence. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness. Second pass the same day: the sandbox gained a Debian Ruby 3.3.8, and with `PUB5_RUBY` (the runner's own override in `OPENBSD/lib/ruby_runner.rb`) the source-reading contract suites run for real — design contract 15 runs / 149 assertions, the link-embed privacy contract 5 / 40, the SVG wordmark 2 / 5, all green; only what needs a Rails bundle (rendered pages, migrations) stays NOT_RUN here. 2026-11-08: Ruby 4.0.5 itself now builds in the sandbox (source build, libyaml into `~/.local/ruby-deps`, psych verified), so the same source-reading suites ran on the pinned interpreter without the `PUB5_RUBY` override — design contract 15 / 149, link-embed privacy 5 / 38 (the rebased tree's shape), visual identity (the wordmark's home) 12 / 136, all green; `amber/test/logo_contract_test.rb` still needs the app bundle (its `test_helper` boots the environment) and stays NOT_RUN here. Row evidence still waits on those rendered runs.
 
 - [ ] **shared-010 — Button sizing.** Source landed 2026-11-07: `_buttons.scss` carries `$compact-contexts` only and the class survives behind a default-off `$legacy-small` opt-in; the shared comment/notification/newsletter/artifact partials, four JS-created buttons, amber's flash undo and 32 tree-wide-verified brgen-family sites name no size (each context held only compact buttons at a full-ERB sweep). The mixed containers (rsvp-bar, push-prompt, messenger-details-section, order-actions, the form-wrap--flush forms, the generic `.cluster`/`.page-header`/`.field` primitives, the no-class rows, `_live_search_form` and `_master_invite`) keep the class pending per-site rendered checks; a ratchet in `design_contract_test.rb` pins the naming file count at 75 and only down. Row stays open for that rendered evidence.
 - [ ] **shared-029 — Privacy-preserving embeds.** Source landed 2026-11-07: the thumbnail is fetched once where the oEmbed answer arrives (the link-embed job, the compose preview), written to `storage/link_embeds/thumbnails` content-addressed by the SHA-256 of the provider URL, and served from the app's own `/link_embeds/thumbnails/:digest` endpoint; the partial renders no provider URL and a page view contacts no provider. `link_embed_privacy_contract_test.rb` pins the shape and the render test asserts no provider image host in the page; the contract suite now runs green on the forced sandbox Ruby, the rendered run still does not. Row stays open for rendered evidence.
 
-Close these rows in `RAILS/refinements.yml` only with the corresponding source and rendered evidence. Do not copy the 755 completed or 12 invalid rows back into the active list.
+Close these rows in `RAILS/refinements.yml` only with the corresponding source and rendered evidence. Do not copy the 763 completed or 12 invalid rows back into the active list.
 
 ### 8.2 MASTER UX acceptance matrix — 90 unverified contracts
 
@@ -430,7 +430,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 
 ### 8.3 Product and platform gaps — preserve every unresolved ledger row
 
-`MASTER/data/gaps.yml` has 51 rows: 14 picked, 32 open, 4 blocked and 1 satisfied. The satisfied Dating row is intentionally not repeated as work. A picked row needs its named convergence workstream completed and evidenced. An open row is a decision candidate, not permission to build. A blocked row stays blocked until its stated prerequisite exists. Every implementation remains subject to MASTER's laws and normal /fix gates.
+`MASTER/data/gaps.yml` has 54 rows: 9 picked, 35 open, 4 blocked and 6 satisfied. The satisfied Dating row is intentionally not repeated as work; completed root-index entries stay checked with source evidence. A picked row needs its named convergence workstream completed and evidenced. An open row is a decision candidate, not permission to build. A blocked row stays blocked until its stated prerequisite exists. Every implementation remains subject to MASTER's laws and normal /fix gates.
 
 **Brgen**
 - [ ] `brgen_ai_feed_ranking` — picked; complete `brgen_feed_ranking_deterministic`: deterministic recency plus local-engagement decay, not an opaque model.
@@ -505,7 +505,7 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 
 ### 8.4 MASTER convergence wishlist — 36 unfinished workstreams
 
-`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 15 landed, 27 partial, 7 evidence-dependent and 8 missing workstreams (42 unresolved). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
+`MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 21 landed, 21 partial, 7 evidence-dependent and 8 missing workstreams (36 unresolved; 57 total). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
 
 **Evidence-dependent — 7**
 - [ ] `voice_local_first` — local-first speech ladder and real microphone proof.

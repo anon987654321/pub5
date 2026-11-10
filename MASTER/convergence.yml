@@ -26,7 +26,7 @@ workstreams:
     proof: MASTER/test/test_convergence_measure.rb
   - id: architecture_explain
     state: landed
-    title: Living architecture explanation from the real four-tree topology
+    title: Living architecture explanation from four runtime trees and the fifth BIZ content root
     implementation: MASTER/lib/convergence/architecture.rb
     proof: MASTER/test/test_convergence_architecture.rb
   - id: wishlist_registry
