@@ -26,3 +26,12 @@ targets:
   # first design finding anyone adds, which is the point.
   OPENBSD: 0
   MASTER: 15
+
+# The constitution measures itself (convergence.yml workstream
+# constitution_self_budget): laws.yml carries its own line ceiling under the
+# same only-ratchets-down contract. 6717 is the measured size on main
+# 2026-11-11, not an aspiration; the number moves down in the commit that
+# removed the lines, never up. TestConstitutionalBudget holds the contract.
+constitution_lines:
+  target: MASTER/data/laws.yml
+  ceiling: 6717

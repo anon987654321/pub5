@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "json"
+require "time"
+
 require_relative "receipt"
 require_relative "workstreams"
 
@@ -17,6 +20,7 @@ module Master
           check_commands,
           check_wishlist(root),
           check_snapshot_contract(root),
+          check_aging(root),
         ]
         failed = checks.select { |row| row[:state] == "fail" }
         inconclusive = checks.select { |row| row[:state] == "inconclusive" }
@@ -92,6 +96,60 @@ module Master
         return fail_row("snapshot", "MASTER/tools/snapshot.rb missing") unless File.file?(snapshot)
 
         pass_row("snapshot", "share-size bounded snapshot implementation present")
+      end
+
+      # Tri-state evidence must not settle into permanent amber. An
+      # INCONCLUSIVE row is a wait with a clock: it names the receipt that
+      # first dated it, and if no later receipt carries a verdict for the same
+      # check before the window closes, the aged row reopens as FAIL citing
+      # that receipt. A verdict re-dates the row — a check that went
+      # inconclusive again after an answer starts its own window.
+      REVIEW_WINDOW_DAYS = 14
+
+      def check_aging(root, now: Time.now.utc)
+        aged = aged_inconclusives(root:, now: now)
+        return pass_row("aging", "no INCONCLUSIVE has outlived its #{REVIEW_WINDOW_DAYS}-day review window") if aged.empty?
+
+        oldest = aged.min_by { |row| row[:dated_at] }
+        fail_row("aging", "#{aged.size} INCONCLUSIVE check(s) outlived the #{REVIEW_WINDOW_DAYS}-day window " \
+                          "without a verdict; #{oldest[:name]} first dated by receipt #{oldest[:receipt_id]}")
+      rescue StandardError => e
+        inconclusive_row("aging", "#{e.class}: #{e.message}")
+      end
+
+      def aged_inconclusives(root:, now: Time.now.utc, window: REVIEW_WINDOW_DAYS)
+        pending = Hash.new
+        # oldest first, so a verdict clears only the windows opened before it
+        Receipt.recent(root:, limit: 500).reverse_each do |row|
+          at = safe_time(row["generated_at"])
+          Array(row.dig("details", "checks")).each do |check|
+            name = check["name"]
+            case check["state"]
+            when "inconclusive" then pending[name] ||= at
+            when "pass", "fail" then pending[name] = nil
+            end
+          end
+        end
+        pending.filter_map do |name, dated_at|
+          next if dated_at.nil?
+          next if now - dated_at <= window * 86_400
+
+          { name:, receipt_id: first_receipt_id(root, name, dated_at), dated_at: dated_at.iso8601 }
+        end
+      end
+
+      def first_receipt_id(root, name, at)
+        row = Receipt.recent(root:, limit: 500).reverse_each.find do |candidate|
+          safe_time(candidate["generated_at"]) == at &&
+            Array(candidate.dig("details", "checks")).any? { |check| check["name"] == name && check["state"] == "inconclusive" }
+        end
+        row && row["id"]
+      end
+
+      def safe_time(value)
+        Time.iso8601(value.to_s)
+      rescue ArgumentError
+        nil
       end
 
       def pass_row(name, detail) = { name:, state: "pass", detail: detail.to_s }
