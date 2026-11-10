@@ -141,6 +141,27 @@ class ModelQuotaForecastTest < Minitest::Test
     end
   end
 
+  def test_free_model_usage_sums_slugs_against_one_key_allowance
+    day = "2026-11-10"
+    data = {
+      day => {
+        "qwen/qwen3-coder:free" => 30,
+        "meta-llama/llama-3.3-70b-instruct:free" => 25,
+        "claude-cli:opus" => 900,
+      },
+    }
+
+    Check.stub(:load_data, data) do
+      assert_equal 55, Check.free_model_request_count(day:)
+      Check.stub(:provider_remaining, nil) do
+        Check.stub(:daily_limit, 50) do
+          assert Check.over_quota?("qwen/qwen3-coder:free", day:)
+          assert_equal 0, Check.remaining("meta-llama/llama-3.3-70b-instruct:free", day:)
+        end
+      end
+    end
+  end
+
   def test_normalize_provider_reading_accepts_the_documented_object
     reading = Check.normalize_provider_reading(
       "used" => 12, "limit" => 50, "remaining" => 38,
