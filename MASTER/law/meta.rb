@@ -500,8 +500,11 @@ module Master
         class PathPurposeLaw < Detector
           def self.reads_beyond_file? = true
 
-          SKIP_RE = %r{/(?:test|spec|fixtures|node_modules|vendor|tmp|log|scratch|frames?_|renders?)/|/\.}
-
+          # Skipped path segments, judged below the root only: a checkout under
+          # /tmp (a CI container, this test suite) must not silence the whole
+          # law because the absolute path happens to carry a skipped segment.
+          SKIP_SEGMENTS = %w[test spec fixtures node_modules vendor tmp log scratch].freeze
+          SKIP_PREFIXES = %w[frame frames_ render renders].freeze
 
           def initialize(root: Master::ROOT)
             super()
@@ -525,7 +528,6 @@ module Master
 
           def check(_code, path:)
             return [] if owned.empty?
-            return [] if path.to_s.match?(SKIP_RE)
 
             # PATH_OWNERSHIP.yml describes MASTER's tree and says nothing about
             # its siblings, so it cannot judge them. Without this the prefix
@@ -537,6 +539,7 @@ module Master
             return [] unless under_root?(path)
 
             rel = path.to_s.delete_prefix("#{@root}/")
+            return [] if skip?(rel)
             dir = File.dirname(rel)
             return [] if dir == "." || covered?(rel, dir)
 
@@ -553,6 +556,14 @@ module Master
           end
 
           private
+
+          def skip?(rel)
+            rel.split("/").any? do |segment|
+              segment.start_with?(".") ||
+                SKIP_SEGMENTS.include?(segment) ||
+                SKIP_PREFIXES.any? { |prefix| segment.start_with?(prefix) }
+            end
+          end
 
           def under_root?(path)
             expanded = File.expand_path(path.to_s)

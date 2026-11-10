@@ -14,6 +14,11 @@ doc_numbers:
     why: Same archived heredoc; historical quotation, not a prescription.
   - value: 10px
     why: Same archived heredoc; historical quotation, not a prescription.
+  BIZ/research/bringhurst-strunk-research.md:
+  - value: 3rem
+    why: Typography research quoting the canonical measure formula
+      (max-width:min(66ch, 100% − 3rem)) as scholarship about why the tokens
+      exist; the page prescribes no live dimension of its own.
   MASTER/docs/visual/browserless_ad_audits.md:
   - value: 24px
     why: 'This page is the worked example of the static-audit input format: the dimensions

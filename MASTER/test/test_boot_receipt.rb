@@ -21,7 +21,9 @@ class TestBootReceipt < Minitest::Test
     constitution = Receipt.build[:constitution]
 
     assert_equal Master.load_yaml(MasterPaths.data("soul.yml"))["version"], constitution[:soul_version]
-    assert_operator constitution[:sacred_paths], :>, 0
+    # The declared boundary, whatever its size: empty since the operator
+    # decree of 2026-11-09 retired the protected-path list.
+    assert_equal Master::Soul.sacred_paths.size, constitution[:sacred_paths]
   end
 
   # Normative rows, per-Law policy entries and the loaded detector registry

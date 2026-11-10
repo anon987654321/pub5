@@ -46,7 +46,8 @@ class TestFixProposeTree < Minitest::Test
     Master::Fix::ProposeTree.new(root: @root, agent:).call(n: 2)
 
     prompt = agent.prompts.first
-    assert_includes prompt, "lib/\n  review/\n    rule.rb\n    scan/\n      deep/\n        core.rb"
+    # Sorted entries put master.rb (written in setup) before review/.
+    assert_includes prompt, "lib/\n  master.rb\n  review/\n    rule.rb\n    scan/\n      deep/\n        core.rb"
     assert_match(/files=\d+ dirs=\d+ sprawl=/, prompt)
   end
 
@@ -105,7 +106,9 @@ class TestFixProposeTree < Minitest::Test
     summary = Master::Fix::ProposeTree.new(root: @root, agent: RecordingAgent.new(REPLY, []))
                                       .send(:current_tree)
 
-    assert_match(/"root_clutter":19/, summary)
+    # 19 planted root files plus the setup's master.rb all sit at the lib
+    # boundary, and all of them count.
+    assert_match(/"root_clutter":20/, summary)
   end
 
   def test_root_clutter_counts_root_files_not_top_level_directories

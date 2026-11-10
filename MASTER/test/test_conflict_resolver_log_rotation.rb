@@ -34,7 +34,10 @@ class TestConflictResolverLogRotation < Minitest::Test
       FileUtils.mkdir_p(File.dirname(path))
 
       total_rotations.times do |n|
-        File.write(path, ("x" * Master::Fix::ConflictResolver::LOG_MAX_BYTES) + "\ngen#{n}")
+        # Real JSONL always ends its last line: the compactor tail-keeps
+        # whole lines, so a synthetic file without the final newline would
+        # compact to nothing and prove nothing about retention.
+        File.write(path, ("x" * Master::Fix::ConflictResolver::LOG_MAX_BYTES) + "\ngen#{n}\n")
         resolver.send(:log_conflict, law_a: "A", law_b: "B", resolution: "a_wins", file: "f.rb", line: 1)
       end
 
