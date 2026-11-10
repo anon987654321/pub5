@@ -6643,6 +6643,9 @@ browser_policy:
   allowed_network_methods:
     - GET
     - HEAD
+  browser_scripts_execute: true
+  request_side_effects_possible: true
+  network_method_limit_is_not_a_read_only_guarantee: true
   read_actions: [status, navigate, login, extract, look, follow, paginate, close]
   session_host_bound: true
   screenshot_evidence_required: true
