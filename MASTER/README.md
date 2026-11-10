@@ -38,7 +38,7 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 `--dry-run` remains an unconditional no-write request. Audit and visual modes cannot be made write-enabled by also passing `--apply`. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
 
-The old slash spellings are compatibility rewrites to the same dispatcher: `/review`, `/critique`, `/scan`, `/audit` and `/council` select audit; `/style` selects visual; `/elevate` and `/map` select elevate; `/workflow`, `/triad`, `/sweep`, `/through`, `/self` and `/all` select all. New instructions and scripts should call `/fix` directly.
+The old slash spellings are compatibility rewrites to the same dispatcher: `/review`, `/critique`, `/audit` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/style` selects visual; `/elevate` and `/map` select elevate; `/workflow`, `/triad`, `/sweep`, `/through`, `/self` and `/all` select all. New instructions and scripts should call `/fix` directly.
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
 
