@@ -70,7 +70,7 @@ restore_app() {
 
   log "stopping $app"
   if [[ $DRY_RUN != 1 ]]; then
-    doas /usr/local/sbin/pub4-admin service stop "$app" 2>/dev/null || true
+    doas /usr/local/sbin/pub5-admin service stop "$app" 2>/dev/null || true
   fi
 
   local db
@@ -85,8 +85,8 @@ restore_app() {
 
   log "starting $app"
   if [[ $DRY_RUN != 1 ]]; then
-    doas /usr/local/sbin/pub4-admin service start "$app"
-    doas /usr/local/sbin/pub4-admin service check "$app"
+    doas /usr/local/sbin/pub5-admin service start "$app"
+    doas /usr/local/sbin/pub5-admin service check "$app"
   fi
 }
 

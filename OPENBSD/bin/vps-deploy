@@ -140,6 +140,24 @@ lock_owner=0
 # not a second deploy running beside it. A remote-host or unreadable lock may
 # be reaped only after the recorded TTL, because this checkout cannot inspect
 # the other host's process.
+# BSD date formats an epoch with -r; GNU date reads -r as a file and needs
+# -d @epoch. The reaper prints the owner's start time on both dev hosts and vm23.
+epoch_date() {
+  date -r "$1" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -d "@$1" '+%Y-%m-%d %H:%M:%S' 2>/dev/null
+}
+
+# BSD stat formats with -f; GNU stat reads -f as filesystem status and needs
+# -c. The reaper pins the observed directory by device and inode on both hosts.
+file_identity() {
+  local out
+  out=$(stat -f '%d:%i' "$1" 2>/dev/null)
+  if [[ $out == <->:* ]]; then
+    print -r -- $out
+    return 0
+  fi
+  stat -c '%d:%i' "$1" 2>/dev/null
+}
+
 lock_read_owner() {
   lock_pid= lock_host= lock_epoch=
   [[ -r $lock_dir/owner ]] || return 1
@@ -185,7 +203,7 @@ reap_stale_lock() {
   # Do not enter recovery for a live lock. The second check below closes the
   # race between this observation and claiming the recovery marker.
   reason=$(lock_stale_reason) || return 1
-  before_identity=$(stat -f '%d:%i' "$lock_dir" 2>/dev/null) || return 1
+  before_identity=$(file_identity "$lock_dir") || return 1
 
   # The marker is inside the exact directory observed above, so mkdir is an
   # atomic claim. Inode identity catches a stale directory being replaced by a
@@ -193,7 +211,7 @@ reap_stale_lock() {
   if ! mkdir "$lock_dir/reaping" 2>/dev/null; then
     return 1
   fi
-  after_identity=$(stat -f '%d:%i' "$lock_dir" 2>/dev/null) || {
+  after_identity=$(file_identity "$lock_dir") || {
     rmdir "$lock_dir/reaping" 2>/dev/null || true
     return 1
   }
@@ -247,7 +265,7 @@ acquire_deploy_lock() {
     break
   done
   if lock_read_owner; then
-    print -u2 "vps-deploy: refused - another deploy owns $lock_dir (pid $lock_pid on $lock_host since $(date -r $lock_epoch '+%Y-%m-%d %H:%M:%S'))"
+    print -u2 "vps-deploy: refused - another deploy owns $lock_dir (pid $lock_pid on $lock_host since $(epoch_date $lock_epoch))"
   else
     print -u2 "vps-deploy: refused - another deploy owns $lock_dir"
   fi

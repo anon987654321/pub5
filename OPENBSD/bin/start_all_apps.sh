@@ -16,7 +16,7 @@ if [ "$(id -u)" -eq 0 ]; then
   exit 2
 fi
 
-broker=/usr/local/sbin/pub4-admin
+broker=/usr/local/sbin/pub5-admin
 [ -x "$broker" ] && [ ! -L "$broker" ] || {
   echo "start_all_apps: fixed root broker is missing or symlinked; run the reviewed OPERATOR.sh sync first" >&2
   exit 1

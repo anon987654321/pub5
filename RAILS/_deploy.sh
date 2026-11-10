@@ -28,22 +28,22 @@ deploy_tracked_app() {
 
   need_cmd "$RUBY" "$BUNDLE" doas
 
-  [[ -x /usr/local/sbin/pub4-admin ]] || {
-    log_err "pub4-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub5-admin ]] || {
+    log_err "pub5-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
   [[ -d $SRC_DIR ]] || { log_err "missing source tree: $SRC_DIR"; exit 1; }
 
   log "${app_name} - deploying tracked tree -> ${APP_DIR}"
   deploy_status "$app_name" "sync tree"
-  ${_PRIV} /usr/local/sbin/pub4-admin ensure-app "$app_name" || {
+  ${_PRIV} /usr/local/sbin/pub5-admin ensure-app "$app_name" || {
     log_err "app account/layout preparation failed for $app_name"
     return 1
   }
 
   # Group access to the checkout is needed even on SKIP_CI deployments.
   # Ensure the app is in _pub4ci before the app-user sync traverses /home/dev/pub5.
-  ${_PRIV} /usr/local/sbin/pub4-admin ci-prepare "$app_name" || {
+  ${_PRIV} /usr/local/sbin/pub5-admin ci-prepare "$app_name" || {
     log_err "app checkout access preparation failed for $app_name"
     return 1
   }

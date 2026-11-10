@@ -28,7 +28,10 @@ module Pub5Admin
   CI_SYNC = "/usr/local/libexec/ci-sync.ksh"
   RAILS_TASK = "/usr/local/libexec/rails-task.ksh"
   RAILS_SYNC = "/usr/local/libexec/rails-sync.ksh"
-  BUNDLE_CACHE_BASE = "/var/cache/pub5/bundle"
+  # One shared, digest-verified gem CAS for both brokers: pub4-admin captured
+  # these objects and rails-task.ksh hydrates from the same root (MIGRATION.md
+  # keeps the pub4 installed-state names for state interfaces).
+  BUNDLE_CACHE_BASE = "/var/cache/pub4/bundle"
   RAILS_APPS = %w[brgen amber bsdports mrdamascy].freeze
   RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze
   STAMP_DIR = "/var/db/pub5"

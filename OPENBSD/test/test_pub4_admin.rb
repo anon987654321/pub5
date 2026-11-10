@@ -67,7 +67,10 @@ class Pub4AdminTest < Minitest::Test
     assert_includes source, "File::CREAT | File::EXCL"
     assert_includes source, "File.link(temporary, target)"
     assert_includes source, 'raise "#{target} is a symlink; refusing status write"'
-    assert_includes core, 'pub4-admin deploy-status "$app" "$step" "$state"'
+    # deploy_status is a current-path surface: receipts are written through
+    # pub5-admin into /var/db/pub5. The pub4_rcctl compatibility interface
+    # above keeps its pub4-admin broker by name (MIGRATION.md).
+    assert_includes core, 'pub5-admin deploy-status "$app" "$step" "$state"'
   end
 
   def test_deploy_status_read_returns_only_the_allowlisted_app_record
@@ -260,14 +263,18 @@ class Pub4AdminTest < Minitest::Test
     runtime = File.read(File.expand_path("../../RAILS/_runtime_check.sh", __dir__))
     bundle = File.read(File.expand_path("../../RAILS/_bundle.sh", __dir__))
     assert_includes helper, "bundle-cas-hydrate)"
+    # The shared helper exports PUB4_TASK_RUBY as the compatibility alias and
+    # computes once through the current broker's PUB5_TASK_RUBY name.
     assert_includes helper, 'export PUB4_TASK_RUBY=$ruby_path'
-    assert_includes helper, 'ruby_version=$("$PUB4_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")'
+    assert_includes helper, 'export PUB5_TASK_RUBY=$ruby_path'
+    assert_includes helper, 'ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")'
     refute_includes helper, 'ruby_version=$("$ruby_path"'
     assert_includes helper, 'cp "$source" "$target"'
     assert_includes helper, 'sha256 -q "$source"'
     refute_includes helper, 'ln "$source" "$target"'
     assert_includes runtime, "bundle-cas-hydrate"
-    assert_includes bundle, 'pub4-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"'
+    # _bundle.sh is a current-path surface: bundle-cache runs through pub5-admin.
+    assert_includes bundle, 'pub5-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"'
     cas_block = bundle[/bundle_cas_prepare\(\) \{.*?^\}/m]
     refute_nil cas_block
     refute_match(/\$\{_PRIV\}\s+(?:mkdir|cp|ln|chown)\b/, cas_block)
@@ -426,11 +433,15 @@ class Pub4AdminTest < Minitest::Test
 
   def test_ci_prepare_creates_group_before_changing_checkout_parent
     helper = File.read(File.expand_path("../usr/local/libexec/ci-prepare.ksh", __dir__))
+    # The shared ci-prepare still creates the legacy _pub4ci group when absent,
+    # but the checkout parent and the account move to the current _pub5ci group.
     group_create_at = helper.index("/usr/sbin/groupadd _pub4ci")
-    usermod_at = helper.index("/usr/sbin/usermod -G _pub4ci \"$app\"")
-    chgrp_at = helper.index("/bin/chgrp _pub4ci /home/dev")
+    current_create_at = helper.index("/usr/sbin/groupadd _pub5ci")
+    usermod_at = helper.index('/usr/sbin/usermod -G _pub5ci "$app"')
+    chgrp_at = helper.index("/bin/chgrp _pub5ci /home/dev")
 
-    assert_operator group_create_at, :<, usermod_at
+    assert_operator group_create_at, :<, current_create_at
+    assert_operator current_create_at, :<, usermod_at
     assert_operator usermod_at, :<, chgrp_at
   end
   def test_ci_prepare_is_one_fixed_app_scoped_operation

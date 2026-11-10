@@ -31,7 +31,7 @@ class TestVpsState < Minitest::Test
     source = File.read(SCRIPT)
 
     assert_includes source, 'Open3.capture2e("doas", "-n", broker, "deploy-status-read", app)'
-    assert_includes source, 'broker = "/usr/local/sbin/pub4-admin"'
+    assert_includes source, 'broker = "/usr/local/sbin/pub5-admin"'
     assert_includes source, 'status["unavailable"] ? "unavailable"'
     assert_includes source, 'File.expand_path(STAMP_DIR) == "/var/db/pub4"'
   end

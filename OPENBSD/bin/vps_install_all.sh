@@ -23,11 +23,11 @@ admin_service() {
   local action=${1:-} service=${2:-}
   case "$action" in check|start|stop|restart) ;; *) log "ERR: refused service action: $action"; return 2 ;; esac
   case "$service" in master|brgen|amber|bsdports|mrdamascy) ;; *) log "ERR: refused service: $service"; return 2 ;; esac
-  if [[ -L /usr/local/sbin/pub4-admin ]]; then
-    log "ERR: pub4-admin is a symlink; refusing service control"
+  if [[ -L /usr/local/sbin/pub5-admin ]]; then
+    log "ERR: pub5-admin is a symlink; refusing service control"
     return 1
-  elif [[ -x /usr/local/sbin/pub4-admin ]]; then
-    doas /usr/local/sbin/pub4-admin service "$action" "$service"
+  elif [[ -x /usr/local/sbin/pub5-admin ]]; then
+    doas /usr/local/sbin/pub5-admin service "$action" "$service"
   else
     # Bootstrap fallback only. OPERATOR.sh installs the fixed-path broker.
     doas rcctl "$action" "$service"

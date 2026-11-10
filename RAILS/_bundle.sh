@@ -56,12 +56,12 @@ bundle_cas_prepare() {
     log_err "bundle_cas_prepare: refused app path: $app_dir"
     return 2
   }
-  [[ -x /usr/local/sbin/pub4-admin ]] || {
-    log_err "bundle_cas_prepare: pub4-admin is missing; run OPERATOR.sh before deploying"
+  [[ -x /usr/local/sbin/pub5-admin ]] || {
+    log_err "bundle_cas_prepare: pub5-admin is missing; run OPERATOR.sh before deploying"
     return 1
   }
-  "${_PRIV}" /usr/local/sbin/pub4-admin bundle-cache "$app_name" prepare "$RUBY_CACHE_KEY" || return $?
-  "${_PRIV}" /usr/local/sbin/pub4-admin bundle-cache "$app_name" import "$RUBY_CACHE_KEY" || return $?
+  "${_PRIV}" /usr/local/sbin/pub5-admin bundle-cache "$app_name" prepare "$RUBY_CACHE_KEY" || return $?
+  "${_PRIV}" /usr/local/sbin/pub5-admin bundle-cache "$app_name" import "$RUBY_CACHE_KEY" || return $?
   run_rails_as_app "$app_name" "$app_dir" "bundle-cas-hydrate" "$RUBY_CACHE_KEY"
 }
 
@@ -75,7 +75,7 @@ bundle_cas_capture() {
     log_err "bundle_cas_capture: refused app path: $app_dir"
     return 2
   }
-  "${_PRIV}" /usr/local/sbin/pub4-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"
+  "${_PRIV}" /usr/local/sbin/pub5-admin bundle-cache "$app_name" capture "$RUBY_CACHE_KEY"
 }
 
 # bundle_install_as_app APP_NAME APP_DIR — production bundle as the app user.

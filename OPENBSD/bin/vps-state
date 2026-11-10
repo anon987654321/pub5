@@ -26,8 +26,8 @@ rescue StandardError
 end
 
 def service_state(service)
-  broker = "/usr/local/sbin/pub4-admin"
-  return "unknown (pub4-admin missing)" unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
+  broker = "/usr/local/sbin/pub5-admin"
+  return "unknown (pub5-admin missing)" unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
 
   out, status = Open3.capture2e("doas", "-n", broker, "service", "check", service)
   return "ok" if status.success? && out.include?("(ok)")
@@ -80,9 +80,9 @@ def deploy_in_progress(app)
   # fixed broker instead of treating denied direct reads as "no deploy". A
   # custom stamp directory remains directly readable for tests and local drills.
   if Deploy::Environment.on_vps? && File.expand_path(STAMP_DIR) == "/var/db/pub4"
-    broker = "/usr/local/sbin/pub4-admin"
+    broker = "/usr/local/sbin/pub5-admin"
     unless File.file?(broker) && !File.symlink?(broker) && File.executable?(broker)
-      return unavailable_deploy_status(path, "pub4-admin missing or untrusted")
+      return unavailable_deploy_status(path, "pub5-admin missing or untrusted")
     end
 
     output, result = Open3.capture2e("doas", "-n", broker, "deploy-status-read", app)

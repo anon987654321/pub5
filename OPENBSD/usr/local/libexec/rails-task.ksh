@@ -167,7 +167,9 @@ for part in gems cache; do
     mkdir "$target"
   fi
 done
-ruby_version=$("$PUB4_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
+# The current broker's contract is the PUB5_TASK_* set; the PUB4_TASK_* names
+# remain exported as compatibility aliases for the installed legacy callers.
+ruby_version=$("$PUB5_TASK_RUBY" -e "print RUBY_VERSION.split(46.chr).first(2).join")
 shared="/var/cache/pub4/bundle/ruby$ruby_version"
 if [ -d "$shared" ] && [ ! -L "$shared" ] &&
    [ "$(stat -f %u "$shared")" -eq 0 ] && [ -d "$shared/gems" ] &&
@@ -286,6 +288,10 @@ export PUB4_TASK_APP=$app
 export PUB4_TASK_UID=$app_uid
 export PUB4_TASK_CACHE_KEY=$database
 export PUB4_TASK_RUBY=$ruby_path
+export PUB5_TASK_APP=$app
+export PUB5_TASK_UID=$app_uid
+export PUB5_TASK_CACHE_KEY=$database
+export PUB5_TASK_RUBY=$ruby_path
 export SECRET_KEY_BASE
 unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH
 unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT
