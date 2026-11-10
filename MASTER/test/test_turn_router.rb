@@ -61,7 +61,7 @@ class TurnRouterTest < Minitest::Test
 
     assert_equal "/fix lib/io", router.rewrite_slash("/fix lib/io")
     {
-      audit: %w[audit review critique council scan],
+      audit: %w[audit review critique council],
       visual: %w[visual style],
       elevate: %w[elevate map],
       all: %w[all workflow triad sweep through self],
@@ -71,7 +71,7 @@ class TurnRouterTest < Minitest::Test
       end
     end
 
-    assert_equal "/fix --mode=audit RAILS", router.rewrite_slash("/scan RAILS")
+    assert_equal "/fix --mode=repair --dry-run RAILS", router.rewrite_slash("/scan RAILS")
     assert_equal "/fix --mode=visual", router.rewrite_slash("/style")
     assert_equal "/fix --security lib", router.rewrite_slash("/security lib")
     assert_equal "/fix --prove history", router.rewrite_slash("/prove history")
@@ -93,7 +93,7 @@ class TurnRouterTest < Minitest::Test
     router = Master::CLI::TurnRouter
 
     refute_includes router::PIPELINE_COMMANDS, "scan"
-    assert_equal "/fix --mode=audit lib/io", router.rewrite_slash("/scan lib/io")
+    assert_equal "/fix --mode=repair --dry-run lib/io", router.rewrite_slash("/scan lib/io")
   end
 
   # The RAILS constitutional check asks for a reading it can grep and no writes.
