@@ -16,7 +16,7 @@ module Master
             "path, asks the council what is wrong, weighs competing repairs, applies",
             "the strongest, validates it and reads the path again, until the tree",
             "converges, stops improving or reaches something only you can settle.",
-            "--mode=repair (default) writes; --mode=audit previews scanner and structural findings with council critique, read-only.",
+            "--mode=repair (default) writes; --mode=audit reads tree, trace, structure, scanner, typography and map with council critique; preview only.",
             "--mode=visual is a read-only style pass; --mode=elevate selects improvement;",
             "--mode=all selects the existing all-work lane. All modes keep the run budgets and gates.",
             "/review and /critique are audit aliases; /workflow, /triad, /sweep, /through and /self are all aliases.",
