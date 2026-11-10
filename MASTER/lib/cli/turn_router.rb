@@ -176,13 +176,14 @@ module Master
       PIPELINE_COMMANDS = %w[fix].freeze
       FIX_MODE_ALIASES = {
         "audit" => "audit", "review" => "audit", "critique" => "audit",
-        "council" => "audit", "scan" => "audit",
+        "council" => "audit", "scan" => "repair",
         "visual" => "visual", "style" => "visual",
         "elevate" => "elevate", "map" => "elevate",
         "all" => "all", "workflow" => "all", "triad" => "all",
         "sweep" => "all", "through" => "all", "self" => "all"
       }.freeze
       MODEL_ALIASES = FIX_MODE_ALIASES.keys.freeze
+      FIX_MODE_EXTRA_FLAGS = { "scan" => "--dry-run" }.freeze
       PIPELINE_WORDS = (PIPELINE_COMMANDS + MODEL_ALIASES).freeze
       FOLD_SLASH = %w[fold run].freeze
       READ_SLASH = %w[why laws].freeze
@@ -204,12 +205,13 @@ module Master
         return if !PIPELINE_WORDS.include?(command) && conf < INFER_MIN_CONFIDENCE
 
         mode = FIX_MODE_ALIASES[command]
+        extra_flags = FIX_MODE_EXTRA_FLAGS[command]
         reading = mode.nil? && reading_intent?(command, text)
         command = normalize_inferred_command(command)
         return if READ_SLASH.include?(command)
         return unless answered?(command, container)
 
-        { command:, args: inferred_args(command:, value:, text:, reading:, mode:), confidence: conf }
+        { command:, args: inferred_args(command:, value:, text:, reading:, mode:, extra_flags:), confidence: conf }
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "TurnRouter.infer_operator_command")
         nil
@@ -249,9 +251,9 @@ module Master
 
       # Every /fix spelling takes the same target. A legacy mode word is retained
       # as an explicit --mode flag before the shared dispatcher sees the request.
-      def inferred_args(command:, value:, text:, reading:, mode: nil)
+      def inferred_args(command:, value:, text:, reading:, mode: nil, extra_flags: nil)
         args = PIPELINE_SLASH.include?(command) ? pass_command_args(value, text) : value.args.to_s
-        args = ["--mode=#{mode}", args].reject(&:empty?).join(" ") if mode
+        args = ["--mode=#{mode}", extra_flags, args].reject(&:empty?).join(" ") if mode
         reading ? reading_args(args) : args
       end
 
@@ -410,7 +412,7 @@ module Master
 
       def rewritten_pipeline(name, rest)
         if (mode = FIX_MODE_ALIASES[name])
-          return ["/fix", "--mode=#{mode}", rest].reject(&:empty?).join(" ")
+          return ["/fix", "--mode=#{mode}", FIX_MODE_EXTRA_FLAGS[name], rest].reject(&:empty?).join(" ")
         end
         return ["/fix", rest].reject(&:empty?).join(" ") if name == "fix"
 
