@@ -7,7 +7,8 @@ module Likeable
 
   # delete_all, not destroy: no reaction callback needs to run, and nothing has to load.
   included do
-    has_many :likes, -> { where(kind: "like") }, class_name: "Reaction", as: :reactable, dependent: :delete_all
+    has_many :likes, -> { where(kind: "like") }, class_name: "Reaction", as: :reactable,
+                inverse_of: :reactable, dependent: :delete_all
   end
 
   # True when this was the person's first like.

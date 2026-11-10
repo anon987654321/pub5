@@ -64,7 +64,8 @@
           <% else %>
             <% if deal.image_url.present? %>
               <span class="affiliate_feed_media">
-                <img loading="lazy" decoding="async"
+                <%# reserved: container %>
+              <img loading="lazy" decoding="async"
                      alt="<%= deal.title.presence || t("affiliate.deal_alt") %>"
                      src="<%= deal.image_url %>">
               </span>

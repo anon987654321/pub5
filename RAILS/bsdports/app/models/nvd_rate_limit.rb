@@ -3,6 +3,8 @@
 class NvdRateLimit < ApplicationRecord
   NAME = "nvd"
 
+  validates :name, presence: true, uniqueness: true
+
   def self.interval
     ENV["NVD_API_KEY"].present? ? 0.6.seconds : 6.seconds
   end

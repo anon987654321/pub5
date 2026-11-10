@@ -19,6 +19,9 @@
   display: block;
   flex: 0 0 min(82%, 32rem);
   min-width: 0;
+  /* The box the image answers to, declared before the bytes arrive: the
+     snap cell keeps its shape while the photo loads. */
+  aspect-ratio: 3 / 2;
   scroll-snap-align: start;
 }
 

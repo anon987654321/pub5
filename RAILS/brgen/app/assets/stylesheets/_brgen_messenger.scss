@@ -45,6 +45,16 @@
   min-width: 0;
   padding: 0 var(--space-3) var(--space-3);
 }
+/* The chat attachment answers to a box, not its bytes: the bubble keeps
+   its shape while the image loads, and a tall photo crops instead of
+   pushing the log. */
+.messenger-artifact-image {
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-small, 0.25rem);
+}
+
 .messenger-artifact-kind {
   margin-block: 0 var(--space-2);
   color: var(--text-secondary);

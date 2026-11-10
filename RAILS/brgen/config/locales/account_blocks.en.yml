@@ -2,4 +2,5 @@ en:
   account_blocks:
     heading: Blocked people
     unblock: Unblock
+    confirm_unblock: Unblock this person? You will be able to write to each other again.
     none: You have not blocked anyone.

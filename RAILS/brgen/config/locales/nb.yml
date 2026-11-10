@@ -193,6 +193,7 @@ nb:
     read_state: lest
     dismiss: Fjern
     dismiss_label: Fjern varselet
+    confirm_dismiss: Fjerne dette varselet?
     unread_count:
       one: "%{count} ulest"
       other: "%{count} uleste"

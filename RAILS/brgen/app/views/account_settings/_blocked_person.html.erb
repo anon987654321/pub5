@@ -2,5 +2,5 @@
 <%= tag.li do %>
   <%= link_to block.blocked.display_name, user_path(block.blocked) %>
   <%= button_to t("account_blocks.unblock"), unblock_user_path(block.blocked), method: :delete,
-                class: "button button-small" %>
+                data: { turbo_confirm: t("account_blocks.confirm_unblock") }, class: "button button-small" %>
 <% end %>

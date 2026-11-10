@@ -29,7 +29,8 @@
           <%= audio_tag url_for(artifact_message.attachment), controls: true, preload: "metadata", class: "messenger-artifact-audio" %>
         <% elsif artifact_message.attachment.content_type.to_s.start_with?("image/") %>
           <p class="messenger-artifact-kind"><%= t("messages.artifact_image") %></p>
-          <%= image_tag url_for(artifact_message.attachment), alt: t("messages.artifact_image_alt"), loading: "lazy", decoding: "async", class: "messenger-artifact-image" %>
+          <%# reserved: container %>
+<%= image_tag url_for(artifact_message.attachment), alt: t("messages.artifact_image_alt"), loading: "lazy", decoding: "async", class: "messenger-artifact-image" %>
         <% else %>
           <p class="messenger-artifact-kind"><%= t("messages.artifact_file") %></p>
           <%= link_to t("messages.open_attachment"), url_for(artifact_message.attachment), class: "button button-ghost" %>

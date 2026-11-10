@@ -24,6 +24,7 @@ en:
       one: "Answer up to %{count} question. People can like an answer and reply to it."
       other: "Answer up to %{count} questions. People can like an answer and reply to it."
     prompt_question: "Question"
+    confirm_remove_prompt: "Remove this answer? Your other answers stay."
     prompt_answer: "Your answer"
     add_prompt: "Add answer"
     location_status:

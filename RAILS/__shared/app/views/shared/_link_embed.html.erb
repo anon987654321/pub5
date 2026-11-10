@@ -17,6 +17,7 @@
             shared-029: the image is this app's own cached copy, served from
             /link_embeds/thumbnails/:digest. The provider's CDN is contacted
             once, where the oEmbed answer arrives — never on a page view. %>
+        <%# reserved: container %>
         <img src="<%= link_embed_thumbnail_path(Shared::LinkEmbed.thumbnail_digest(embed.thumbnail_url)) %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="link-embed-thumbnail">
       <% end %>
       <button type="button" class="link-embed-play"

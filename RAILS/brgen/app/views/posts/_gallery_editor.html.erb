@@ -11,7 +11,8 @@
       <% images.each_with_index do |image, index| %>
         <% field_id = "post_image_positions_#{image.id}" %>
         <li>
-          <%= image_tag image.variant(resize_to_limit: [ 160, 160 ]), loading: "lazy",
+          <%= image_tag image.variant(resize_to_limit: [ 160, 160 ]), width: 160, height: 160,
+                loading: "lazy",
                 alt: t("post.photo_of", number: index + 1, total: images.size, title: post.title) %>
           <%= label_tag field_id, t("posts.gallery.position", number: index + 1) %>
           <%= number_field_tag "post[image_positions][#{image.id}]", index + 1, id: field_id,

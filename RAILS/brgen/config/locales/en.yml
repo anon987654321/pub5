@@ -189,6 +189,7 @@ en:
     read_state: read
     dismiss: Dismiss
     dismiss_label: Dismiss notification
+    confirm_dismiss: Dismiss this notification?
     unread_count:
       one: "%{count} unread"
       other: "%{count} unread"

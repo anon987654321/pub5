@@ -24,6 +24,7 @@ nb:
       one: "Svar på opptil %{count} spørsmål. Folk kan like et svar og svare på det."
       other: "Svar på opptil %{count} spørsmål. Folk kan like et svar og svare på det."
     prompt_question: "Spørsmål"
+    confirm_remove_prompt: "Fjerne dette svaret? De andre svarene dine blir værende."
     prompt_answer: "Svaret ditt"
     add_prompt: "Legg til svar"
     location_status:

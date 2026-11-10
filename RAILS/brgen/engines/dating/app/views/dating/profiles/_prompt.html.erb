@@ -1,5 +1,6 @@
 <li id="<%= dom_id(prompt) %>">
   <%= tag.h3 prompt.question_text %>
   <%= tag.p prompt.answer %>
-  <%= button_to t("actions.remove"), profile_prompt_path(prompt), method: :delete, class: "button" %>
+  <%= button_to t("actions.remove"), profile_prompt_path(prompt), method: :delete,
+        data: { turbo_confirm: t("dating.confirm_remove_prompt") }, class: "button" %>
 </li>
