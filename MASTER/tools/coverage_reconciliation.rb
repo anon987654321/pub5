@@ -93,7 +93,13 @@ module Deploy
         raise "inventory root missing: #{base}" unless Dir.exist?(base)
 
         Dir.glob(File.join(base, "**", "*"), File::FNM_DOTMATCH).select do |path|
-          File.file?(path) && !path.split(File::SEPARATOR).any? { |part| @skip.include?(part) }
+          # The skip list names directories inside the trees. Match it against
+          # the path below the repo root only: filtering the absolute prefix
+          # is how a checkout under /tmp, ~/log or a vendor/ parent silently
+          # empties the inventory and the tool passes everything it cannot see.
+          next false unless File.file?(path)
+
+          relative(path).split(File::SEPARATOR).none? { |part| @skip.include?(part) }
         end
       end.map { |path| File.expand_path(path) }.to_set
     end
