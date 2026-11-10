@@ -12,8 +12,8 @@ gem "rails", github: "rails/rails", ref: "c9e85dbe297e248dd2f217d04f84a94881ac04
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
-# Use the Puma web server [https://github.com/puma/puma]
-gem "puma", ">= 6.0"
+# vm23 runs Falcon in production; Puma is confined to Capybara system tests.
+gem "falcon"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
 # Compiles app/assets/stylesheets/application.scss — the same build tool the
@@ -43,8 +43,9 @@ group :development, :test do
 end
 
 # System tests: a headless Chrome through Selenium, as brgen runs them, with
-# axe-core for the accessibility checks. Puma serves them (above).
+# axe-core for the accessibility checks. Puma is retained only for Capybara.
 group :test do
+  gem "puma"
   gem "capybara"
   gem "selenium-webdriver"
   gem "axe-core-capybara"
