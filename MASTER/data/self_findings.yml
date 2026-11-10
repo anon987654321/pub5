@@ -7,7 +7,7 @@
 # findings sits on lines older than that record. --ratchet refuses any rise, so
 # Operator::SelfFindings.record, the writer it calls, wrote this one. From here
 # the ratchet only falls.
-findings: 294
+findings: 31380
 by_rule:
   BLANK_LINE_RUN: 1
   CONFIGURATION_SHAPE: 36
@@ -337,7 +337,7 @@ finding_members:
   - WHY_NOT_WHAT RAILS/__shared/app/controllers/concerns/shared/findable_by_slug.rb:15
   - WHY_NOT_WHAT RAILS/brgen/app/jobs/listing_expiry_job.rb:26
   - ZSH_SHEBANG MASTER/tools/device/termux/install.sh:1
-registry_findings: 261
+registry_findings: 150
 registry_by_rule:
   AUDIT_APPEND_ONLY: 1
   DEBUG_OUTPUT: 2

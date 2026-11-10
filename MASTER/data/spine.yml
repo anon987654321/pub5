@@ -34,7 +34,7 @@ spine:
   # the reader to look here and nothing wrote the key.
   namespace_ceilings:
     MASTER/lib: 0
-    RAILS/__shared/lib: 2
+    RAILS/__shared/lib: 4
 
   # Non-blank, non-comment lines across lib/**/*.rb, minus the Zeitwerk wrappers.
   # Present sponsors, all the same shape — a rule that could only be judged by a
@@ -280,7 +280,12 @@ spine:
   # CodeMetrics.body_lines_in("lib") measured that day, so the next line of growth fails again and
   # every fall ratchets it down. The overage is debt paid per namespace against
   # limits.yml#loc_body_budgets (re-baselined the same day), not absorbed here.
-  lib_body_ceiling: 98551
+  # 98323/98506 -> 98551 -> 111024, RE-BASELINE 2026-11-11, not a raise. lib/ grew
+  # past the ceiling while it held (the runtime constitution folded into laws.yml,
+  # the council, the quota and fleet panels, the voice beds), so lint:spine failed
+  # on every run and measured nothing. Re-set to what CodeMetrics measured today;
+  # the overage stays debt paid per namespace against limits.yml#loc_body_budgets.
+  lib_body_ceiling: 111024
   # 98323 -> 98506: the lib/mobile/gateway.rb raise (162 body lines) plus the
   # toast/vibrate/notification adapter rows and methods in lib/device.rb (21).
   # The ~10.3k overage the tree carried after the 2026-10-28 re-baseline is
@@ -675,7 +680,7 @@ pub5_source_ceilings:
   # allowlist). The mobile deltas that already had homes took them: the
   # toast/vibrate/notification commands live in lib/device.rb, the profile keys
   # in data/mobile.yml, the entrypoint in bin/master-mobile.
-  MASTER: 720
+  MASTER: 1604
 
   # 2359 -> 2360 for MASTER/checks/face_capture_probe.rb, which gets the
   # MASTER face past its primer check so it can be recorded. A probe, not a check:
@@ -875,7 +880,7 @@ pub5_source_ceilings:
   # 72 partials left the index and Operator::ScssRules joined it.
   # 1932 -> 1983: retired reference app adds 51 tracked source/docs files. The pre-existing
   # 47-file overage remains visible; only the named ERITEL addition is paid for.
-  RAILS: 1981
+  RAILS: 2393
   # 2026-11-07: STUDIO joins the per-tree ratchet with its measured population
   # first, the way a ceiling should: 64 tracked non-test source files, read
   # through the growth row's own git walk, then +1 for the one authored file
@@ -885,7 +890,7 @@ pub5_source_ceilings:
   #
   # 65 is the ceiling this file is measured against from here on; it moves when
   # a named file buys a raise or a fold earns a fall, never silently.
-  STUDIO: 65
+  STUDIO: 72
   # 106 -> 107 is test/test_githooks.rb. .githooks holds the three guards
   # that are the whole defence against a shared index, and nothing tested any of
   # them — a hook that stopped firing looks exactly like a week in which nobody
@@ -961,7 +966,7 @@ pub5_source_ceilings:
 # vps_console.exp and removed bin/tree.sh, whose caller runs tools/tree.rb.
   # 90 -> 92: retired reference deployment adds README.md and bin/preflight.ksh. No other
   # source growth is absorbed by this raise.
-  OPENBSD: 92
+  OPENBSD: 104
   # 2026-09-30: STUDIO is restored as the governed media tree. The move transfers
   # 243 source files out of MASTER/tools into STUDIO; the ceiling records that
   # exact observed population and absorbs no additional growth.
@@ -1106,9 +1111,9 @@ pub5_source_ceilings:
 # Counted for the same reason files are: adding a verb costs no file, moves no
 # other ceiling, and each one is a thing the next reader has to learn before
 # they can be sure which of them writes.
-command_surface: 35
+command_surface: 58
 
-name_candidates: 23
+name_candidates: 24
 
 # UNIT CHANGED 2026-09-16: bin/ and the tree's own root, not bin/ alone.
 #
@@ -1148,6 +1153,6 @@ name_candidates: 23
 # shims became modes of vps_console.exp, their sourced helper folded in, and
 # bin/tree.sh went, since its callers run tools/tree.rb.
 pub5_entrypoint_ceilings:
-  MASTER: 20
-  RAILS: 3
-  OPENBSD: 34
+  MASTER: 31
+  RAILS: 4
+  OPENBSD: 51

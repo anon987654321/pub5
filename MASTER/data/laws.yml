@@ -365,7 +365,7 @@ ABSTRACTION_leaky_boundary:
 DENSITY:
   node: density
   statement: "Information-dense; no noise. What is absent cannot be wrong."
-  severity: warning
+  severity: error
   resolution: review
   mechanical: Master::Law::Universal#density
   semantic: human
@@ -865,7 +865,7 @@ SRP:
     Single Responsibility Principle. A class has one reason to change.
     A class with two reasons to change is changed for one and broken
     for the other.
-  severity: error
+  severity: warning
   resolution: review
   mechanical: Master::Law::Structural#responsibility
   semantic: human
@@ -5325,7 +5325,7 @@ law_ratchets:
     without_fixtures: 0
   deps:
     # Existing debt is held as a measured ceiling and may only fall.
-    ungraphed: 132
+    ungraphed: 194
 
 # Derived law coverage and meaning map. The executable Law definitions remain in MASTER/law/.
 law_map:

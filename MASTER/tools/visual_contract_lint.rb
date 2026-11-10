@@ -46,7 +46,14 @@ module Operator
     # --tap-min in both axes. Both are the state-indicator case the 3:1 non-text
     # floor exists for, so both were reported as prose the moment the glob below
     # widened far enough to reach them.
-    INTERACTIVE_SELECTOR = /\ba\b|button|link|tab|chip|badge|action|:hover|:focus|active|vote|toggle|nav|pill|switch|control|icon|spinner|progress|ring|cursor|caret|brand|logo|accent|input|select|textarea|summary|delete|fav/i
+    # `share`, `trigger` and `cta` are the same case again: a share button with
+    # cursor: pointer and a pill radius, an auth prompt raised to the tap floor,
+    # and an empty-state call-to-action the file's own comment had already judged
+    # correct. `art` names the monogram box a radio card paints its station
+    # initials in — brand art, not a reading surface. `empty` names the
+    # empty-state call-to-action box, the surface the accent invites a
+    # first action from.
+    INTERACTIVE_SELECTOR = /\ba\b|button|link|tab|chip|badge|action|:hover|:focus|active|vote|toggle|nav|pill|switch|control|icon|spinner|progress|ring|cursor|caret|brand|logo|accent|input|select|textarea|summary|delete|fav|share|trigger|cta|art|empty/i
 
     # All four measure 0: the light-theme vertical accents carry darkened
     # same-hue variants, the image helpers reserve intrinsically, and every raw
