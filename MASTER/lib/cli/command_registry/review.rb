@@ -103,11 +103,70 @@ module Master
       # Command-line overrides are temporary: a setting on one turn must
       # not change how the next command repairs the repository.
 
+      FIX_MODES = %w[repair audit visual elevate all].freeze
+      MODE_FLAG = /\A--mode(?:=(.*))?\z/i.freeze
+
+      # Returns [mode, remaining arguments, error]. Supports --mode=value and
+      # --mode value, rejecting unknown/conflicting declarations before any work.
+      def extract_fix_mode(raw)
+        tokens = raw.to_s.split(/\s+/)
+        remaining = []
+        mode = nil
+        index = 0
+        while index < tokens.length
+          token = tokens[index]
+          if token.match?(MODE_FLAG)
+            value = token.match(MODE_FLAG)[1].to_s
+            if value.empty?
+              index += 1
+              value = tokens[index].to_s
+            end
+            return [nil, nil, "--mode requires one of: #{FIX_MODES.join(", ")}"] if value.empty? || value.start_with?("--")
+
+            value = value.downcase
+            return [nil, nil, "unknown /fix mode #{value.inspect}; use: #{FIX_MODES.join(", ")}"] unless FIX_MODES.include?(value)
+            return [nil, nil, "conflicting --mode values"] if mode && mode != value
+
+            mode = value
+          else
+            remaining << token
+          end
+          index += 1
+        end
+        [mode || "repair", remaining.join(" "), nil]
+      end
+
+      # Mode presets are defaults, not a second dispatcher. Read modes are
+      # unconditionally non-writing; elevate/all select existing bounded lanes.
+      # An explicit --lane remains authoritative over the mode's lane preset.
+      def apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
+        effective = overrides.dup
+        explicit_lane = raw.to_s.split(/\s+/).any? { |token| LANE_FLAG.match?(token) }
+        case mode
+        when "audit"
+          apply = false
+          critique = true
+          effective[:lane] = "all" unless explicit_lane
+        when "visual"
+          apply = false
+          only = "style" if only.nil?
+        when "elevate"
+          effective[:lane] = "elevate" unless explicit_lane
+        when "all"
+          effective[:lane] = "all" unless explicit_lane
+        end
+        [apply, critique, only, effective]
+      end
+
       def dispatch_fix(scanner:, fix_loop:, deliberation:, root:, bus:, ctx: nil, swarm: nil)
         raw = lane_flag_joined(arg_for(ctx).to_s.strip)
         return convergence_read(raw, root:) if convergence_read?(raw)
+        mode, raw, mode_error = extract_fix_mode(raw)
+        return Master::Result.err("fix: #{mode_error}", category: :validation) if mode_error
+
         apply, critique, aesthetic, only, target = parse_pass_flags(raw)
         overrides = execution_overrides(raw)
+        apply, critique, only, overrides = apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
         previous = fix_state_before
 
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
@@ -122,7 +181,7 @@ module Master
         with_fix_overrides(overrides, previous:) do
           dispatch_fix_parsed(
             scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
-            apply:, critique:, aesthetic:, only:, target:, cancellation:,
+            apply:, critique:, aesthetic:, only:, target:, cancellation:, mode:,
             task_intent: overrides[:task_intent] || "functional_change"
           )
         end
@@ -406,7 +465,7 @@ module Master
 
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
                               apply:, critique:, aesthetic:, only:, target:, cancellation: nil,
-                              task_intent: "functional_change")
+                              mode: "repair", task_intent: "functional_change")
         Master::Fix::RunBudget.with_shared_run(
           root: Master::ROOT,
           max_passes: Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES,
@@ -417,10 +476,10 @@ module Master
 
           writes_requested = writes_requested?(apply:, only:)
           display_target = display_fix_target(target)
-          mode = writes_requested ? "write" : "read-only"
+          execution = writes_requested ? "write" : "read-only"
           boundary = writes_requested ? "current-checkout" : "no-write-or-publish"
           with_dmesg_verbosity(raw, default: "trace") do
-            Master::Trace::Dmesg.status("fix0", "mode=#{mode} target=#{display_target} boundary=#{boundary}")
+            Master::Trace::Dmesg.status("fix0", "command_mode=#{mode} execution=#{execution} target=#{display_target} boundary=#{boundary}")
             next unless Master::Fix::CritiquePin.focus
 
             Master::Trace::Dmesg.status(
