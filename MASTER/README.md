@@ -28,9 +28,21 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 ## One repair workflow
 
-`/scan` observes. `/fix` is the governed source-writing workflow. The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one.
+`/fix` is the one governed pipeline command. Its `--mode=` presets are:
 
-Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
+- `repair` (default): observe, critique when configured, repair, re-observe and verify; writes are enabled unless a read-only flag is supplied.
+- `audit`: whole-lane read-only review (`--dry-run`, council enabled, `--lane=all`).
+- `visual`: read-only style pass (`--dry-run --only=style`).
+- `elevate`: the existing improvement lane (`--lane=elevate`).
+- `all`: the existing all-work lane (`--lane=all`).
+
+`--dry-run` remains an unconditional no-write request. Audit and visual modes cannot be made write-enabled by also passing `--apply`. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
+
+The old slash spellings are compatibility rewrites to the same dispatcher: `/review`, `/critique`, `/scan`, `/audit` and `/council` select audit; `/style` selects visual; `/elevate` and `/map` select elevate; `/workflow`, `/triad`, `/sweep`, `/through`, `/self` and `/all` select all. New instructions and scripts should call `/fix` directly.
+
+The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
+
+The run footer includes a per-run file outcome docket for files that entered the repair adapter. It is not a census of untouched or unmeasured files and must never be read as one.
 
 Run one tree at a time unless evidence establishes a cross-tree dependency. From `MASTER/`, the normal entrypoints are `bin/master /fix MASTER`, `bin/master /fix RAILS`, `bin/master /fix OPENBSD`, `bin/master /fix STUDIO` and `bin/master /fix BIZ` for document production.
 
