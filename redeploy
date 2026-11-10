@@ -17,14 +17,14 @@ for arg in "$@"; do
     --follow) mode=(--follow) ;;
     --detach) mode=(--detach) ;;
     -h|--help)
-      print -r -- "usage: ./redeploy [all|master|brgen|amber|bsdports] [--follow|--detach]"
+      print -r -- "usage: ./redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
       print -r -- "  default: wait for deploy, print progress, run state + public canary"
       exit 0
       ;;
-    all|master|brgen|amber|bsdports) app=$arg ;;
+    all|master|brgen|amber|bsdports|mrdamascy) app=$arg ;;
     *)
       print -u2 "redeploy: unknown argument: $arg"
-      print -u2 "usage: ./redeploy [all|master|brgen|amber|bsdports] [--follow|--detach]"
+      print -u2 "usage: ./redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
       exit 2
       ;;
   esac
