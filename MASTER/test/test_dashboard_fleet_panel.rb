@@ -101,7 +101,7 @@ class TestDashboardFleetPanel < Minitest::Test
 
     [
       '.master-task[data-state="active"] .master-task-status',
-      '.master-task[data-state="waiting-human"] .master-task-status',
+      '.master-task[data-state^="waiting-"] .master-task-status',
       '.master-task[data-state="failed"]',
     ].each do |selector|
       assert_includes source, selector

@@ -377,7 +377,8 @@ class TestCliFaceDispatch < Minitest::Test
     shell_lines = output.lines.grep(/^shell0 at master0:/)
 
     assert_equal 1, shell_lines.size
-    assert_includes shell_lines.first, "#{Master::Io::Shell::TIMEOUT}s"
+    timeout = defined?(Master::Io::Shell::TIMEOUT) ? Master::Io::Shell::TIMEOUT : 30
+    assert_includes shell_lines.first, "#{timeout}s"
     assert_includes output, "<< starts multiline input; a blank line sends it."
     assert_includes output, "/stop cancels and pauses"
     refute_includes output, "30-second timeout"

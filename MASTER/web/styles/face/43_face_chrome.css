@@ -56,7 +56,7 @@
   color: var(--face-fg);
   font-weight: 600;
 }
-.master-task[data-state="waiting-human"] .master-task-status {
+.master-task[data-state^="waiting-"] .master-task-status {
   color: var(--face-fg);
   text-decoration: underline;
   text-decoration-style: dotted;
