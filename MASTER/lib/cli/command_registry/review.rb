@@ -742,9 +742,8 @@ module Master
       end
 
       # `--only critique` and `--only map` select read-only review stages.
-      # /fix is not a review-stage alias: TurnRouter sends it to dispatch_fix,
-      # which owns the complete observe/repair/re-observe lifecycle. There is
-      # no /scan stage; observation is the first step of /fix.
+      # /fix is the only pipeline command. Legacy spellings rewrite to it:
+      # /scan is a repair preview, while /review and /critique select audit mode.
       # Every spelling a flag answers to, and the flag it sets. A table rather
       # than a `case`, because the spellings are data: `--no-autofix` is
       # bin/check --ladder's, and while it was missing it fell through to the path,
