@@ -15,6 +15,7 @@ class RailsStackContractTest < Minitest::Test
     RAILS/brgen
     RAILS/amber
     RAILS/bsdports
+    RAILS/mrdamascy
     MASTER/web
   ].freeze
 
@@ -22,6 +23,7 @@ class RailsStackContractTest < Minitest::Test
     RAILS/brgen
     RAILS/amber
     RAILS/bsdports
+    RAILS/mrdamascy
     MASTER/web
   ].freeze
 
