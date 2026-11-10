@@ -29,6 +29,14 @@ fix_time:
       file_s: 900
       run_s: 7200
       stall_s: 900
+    # The hosted gateway lane (model ids like gateway:glm-5.3) answers a
+    # repair in one to four minutes like claude-cli does; the defaults above
+    # timed out its repairs and left the lane silent mid-run. Same headroom
+    # as claude-cli, so a lane run no longer needs three env overrides.
+    gateway:
+      file_s: 900
+      run_s: 7200
+      stall_s: 900
 
 governor:
   # Calls a minute per tool tier; a ceiling against a runaway loop. Absent means no limit.
