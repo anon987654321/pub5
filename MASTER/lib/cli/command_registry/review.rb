@@ -96,8 +96,9 @@ module Master
       # observes, critiques, generates and picks between repairs, applies one,
       # validates it and observes again, until the tree converges, stops
       # improving, or hands back a state only a person can settle. `--dry-run`
-      # stops after the reading; `--critique` is how the council argues over it
-      # (TurnRouter::READING_FLAGS). The run
+      # stops after the reading; `--mode=audit` adds council critique to the
+      # scanner and structural preview without entering mutation-capable lanes.
+      # The run
       # ends with its wishlist: the governed workstreams and their state.
       #
       # Command-line overrides are temporary: a setting on one turn must
@@ -136,9 +137,10 @@ module Master
         [mode || "repair", remaining.join(" "), nil]
       end
 
-      # Mode presets are defaults, not a second dispatcher. Read modes are
-      # unconditionally non-writing; elevate/all select existing bounded lanes.
-      # An explicit --lane remains authoritative over the mode's lane preset.
+      # Mode presets are defaults, not a second dispatcher. Audit and visual
+      # stop before repair; elevate/all select existing bounded work lanes.
+      # Audit uses FixLoop.preview (scanner + structural sweeps) and the council,
+      # not the mutation-capable WorkLane.all execution.
       def apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
         effective = overrides.dup
         explicit_lane = raw.to_s.split(/\s+/).any? { |token| LANE_FLAG.match?(token) }
@@ -146,7 +148,6 @@ module Master
         when "audit"
           apply = false
           critique = true
-          effective[:lane] = "all" unless explicit_lane
         when "visual"
           apply = false
           only = "style" if only.nil?
@@ -735,7 +736,7 @@ module Master
       end
 
       # The canonical /fix command writes unless a caller explicitly asks for
-      # read-only work. Review/critique adapters pass apply:false themselves.
+      # read-only work. Audit and visual mode presets pass apply:false.
       def writes_requested?(apply:, only:)
         apply != false && fix_stage_selected?(only)
       end
