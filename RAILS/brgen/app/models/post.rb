@@ -89,6 +89,52 @@ class Post < ApplicationRecord
     "(((julianday('now') - julianday(posts.created_at)) * 24.0) + 2.0) DESC, " \
     "posts.created_at DESC"
   )
+
+  # The default feed lane, in the Dating deck's shape: recency bands first, a
+  # local-engagement weight second, a deterministic per-viewer, per-day shuffle
+  # third. Recency is the honest spine of a city network — this morning's post
+  # belongs above last week's, whatever its votes; within a band, the post the
+  # city engaged with outranks the quiet one; the shuffle keeps one author from
+  # holding the top of the feed forever without making the order change on
+  # every reload. Engagement counts only what this city's readers did (the
+  # calling relation is city-scoped): comments count double a vote, because a
+  # thread is the conversation the network exists for and a vote is a nod.
+  # Deliberately not a model, not a global leaderboard, and not RANDOM(): every
+  # term is one readable SQL expression, and the same viewer on the same day
+  # sees the same order.
+  RANK_RECENCY_SQL = <<~SQL.squish
+    CASE
+      WHEN posts.created_at > datetime('now', '-2 days')  THEN 0
+      WHEN posts.created_at > datetime('now', '-14 days') THEN 1
+      ELSE 2
+    END
+  SQL
+  RANK_ENGAGEMENT_SQL =
+    "(posts.score + 2.0 * posts.comments_count + 1.0) / " \
+    "(((julianday('now') - julianday(posts.created_at)) * 24.0) + 2.0)".freeze
+  # The Dating deck's shuffle: a prime modulus with a per-viewer multiplier,
+  # not an offset — adding a constant to every id shifts all of them equally
+  # and leaves the order unchanged; multiplying by a different coprime
+  # genuinely permutes the tail.
+  RANK_SHUFFLE_MODULUS = 997
+
+  def self.ranked_for(viewer: nil, seed: Date.current.to_s)
+    multiplier = (Digest::MD5.hexdigest("feed:#{seed}:#{viewer&.id}")[0, 6].to_i(16) %
+                  (RANK_SHUFFLE_MODULUS - 1)) + 1
+    # Integer() rather than the bare local, for the same reason the Dating deck
+    # does it: Brakeman cannot follow the digest through to an integer, and
+    # ORDER BY cannot take a bind parameter, so interpolation is the only shape
+    # available. Integer() raises instead of coercing, which states the
+    # invariant instead of hiding a violation of it.
+    multiplier = Integer(multiplier)
+    modulus = Integer(RANK_SHUFFLE_MODULUS)
+    kept.order(Arel.sql(<<~SQL.squish))
+      #{RANK_RECENCY_SQL} ASC,
+      #{RANK_ENGAGEMENT_SQL} DESC,
+      ((posts.id * #{multiplier}) % #{modulus}) ASC,
+      posts.created_at DESC
+    SQL
+  end
   READING_WORDS_PER_MINUTE = 200
 
   # Content a moderator has removed never appears in any feed.
@@ -122,15 +168,21 @@ class Post < ApplicationRecord
   # infinite-scroll reflex. They carried twin case statements over the same
   # param before this, which is the two-implementations defect wearing a
   # scope: a lane added to one and not the other pages differently than it
-  # renders. A signed-out "following" falls back to hot rather than raising —
-  # the tab is only rendered for signed-in members, so reaching it signed out
-  # is a crafted URL, not a flow.
+  # renders. A signed-out "following" falls back to the ranked default rather
+  # than raising — the tab is only rendered for signed-in members, so reaching
+  # it signed out is a crafted URL, not a flow. The default lane is
+  # ranked_for: recency bands plus local engagement, deterministic per viewer
+  # and day. :hot stays its own tab (score decay, no recency floor), and the
+  # following lane stays chronological on purpose — ranking what chosen people
+  # said is the fenced AI-feed-ranking horizon item; recency is the honest
+  # order for a lane whose whole point is "the people I picked".
   def self.sorted_lane(sort, viewer: nil)
     case sort
     when "fresh" then fresh
     when "top" then top
-    when "following" then viewer ? followed_by(viewer) : hot
-    else hot
+    when "hot" then hot
+    when "following" then viewer ? followed_by(viewer) : ranked_for(viewer: viewer)
+    else ranked_for(viewer: viewer)
     end
   end
 
