@@ -11,8 +11,10 @@
   display: flex;
   align-items: flex-end;
   padding: 1.25rem;
+  /* #101010 is declared signal ink and #efefef the scheme's dark ink; the
+     warm #f4f0e8 this replaced was a colour nothing declares. */
   background: #101010;
-  color: #f4f0e8;
+  color: #efefef;
 }
 .brgen-splinter-card .art-badge {
   border: 1px solid currentColor;
