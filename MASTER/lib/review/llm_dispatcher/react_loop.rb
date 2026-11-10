@@ -147,7 +147,7 @@ module Master
 
           react_instructions = <<~INST.strip
             You have access to these tools. A tool executes only when you emit this exact protocol:
-            <tool_call>{"name": "ToolName", "args": {"param": "value"}}</tool_call>
+            <tool_call>{"name": "ToolName", "args": {"param": "value"}}</tool_call> — always open and close the <tool_call> tag.
 
             Available tools (* marks a required parameter):
             #{schema}
