@@ -44,6 +44,11 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.mkdir_p(File.join(openbsd, "bin"))
       FileUtils.cp(File.join(ROOT, "bin", "resource_guard.sh"), File.join(openbsd, "bin", "resource_guard.sh"))
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
+      FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
+      %w[Gemfile Gemfile.lock].each do |name|
+        FileUtils.cp(File.join(ROOT, "..", "RAILS", "mrdamascy", name),
+                     File.join(dir, "RAILS", "mrdamascy", name))
+      end
       FileUtils.mkdir_p(File.join(dir, "RAILS"))
       FileUtils.cp(File.join(ROOT, "..", "RAILS", "_runtime_check.sh"),
                    File.join(dir, "RAILS", "_runtime_check.sh"))
@@ -83,6 +88,18 @@ class VpsSafetyCheckTest < Minitest::Test
     with_fixture do |dir, _|
       out, status = run_check(dir)
       assert status.success?, "an unmodified fixture must pass, or the must-flag tests below prove nothing:\n#{out}"
+    end
+  end
+
+  def test_mrdamascy_production_service_must_use_falcon
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub("exec ${_bundle} exec falcon serve", "exec ${_bundle} exec puma")
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy production service must use Falcon"
     end
   end
 
