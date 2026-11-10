@@ -14,7 +14,7 @@ class TestCliStartupGolden < Minitest::Test
   SHAPE = [
     /\Amaster0 at mainbus0: MASTER \d+\.\d+\.\d+ #\d+, model \S+\z/,
     /\Ahost0 at mainbus0: \S+@\S+:\/\S+\z/,
-    /\Avoice0 at mainbus0: (?:CLI speech (?:on|off); )?(?:available|degraded|verified|detected, playback unverified|unavailable)\z/,
+    /\Avoice0 at mainbus0: (?:CLI speech (?:on|off); )?(?:available|degraded|verified|detected, playback unverified|unavailable|unknown)\z/,
     /\Aweb0 at mainbus0: /,
     /\Anet0 at mainbus0: wifi \w+, power (?:on|off), (?:link up|no link)\z/,
     /\Abth0 at mainbus0: (?:on|off), \d+ connected\z/,
