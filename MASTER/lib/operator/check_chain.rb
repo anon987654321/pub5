@@ -48,18 +48,19 @@ module Operator
     ROOT = File.expand_path("../../..", __dir__)
     MASTER = File.join(ROOT, "MASTER")
     RUBY = Operator::RubyRunner.check_ruby
-    BUNDLE = Operator::RubyRunner.bundle_cmd
     CHILD_TIMEOUT_S = 1_800
     DISK_POLL_INTERVAL_S = 30
     SUITE_TIMEOUTS = {
       "MASTER" => 1_800,
       "RAILS contracts" => 1_200,
-      "brgen suite" => 1_200,
-      "amber suite" => 1_200,
-      "bsdports suite" => 1_200,
+      "brgen CI" => 1_200,
+      "amber CI" => 1_200,
+      "bsdports CI" => 1_200,
+      "mrdamascy CI" => 1_200,
       "OPENBSD" => 600,
       "tools" => 900,
       "STUDIO media" => 900,
+      "BIZ documents" => 900,
     }.freeze
 
     # Paths nothing writes by hand. `bin/check --ladder` has said in a comment for months
@@ -509,7 +510,7 @@ module Operator
     # whole under every --tree — the ratchets and the sprawl census are
     # repo-wide measurements by definition, and both are cheap.
     def stages(scan_only:, trees: TREES, stale_ok: false)
-      scope = trees == TREES ? "all four trees" : trees.join(", ")
+      scope = trees == TREES ? "all five governed trees" : trees.join(", ")
       [
         lexical_stage(scan_only:, trees:, scope:),
         rails_stage(scan_only:, trees:),
@@ -577,7 +578,7 @@ module Operator
     end
 
     def suite_purpose(trees)
-      scope = trees == TREES ? "all four trees" : trees.join(", ")
+      scope = trees == TREES ? "all five governed trees" : trees.join(", ")
       "complete test suites over #{scope}"
     end
 
@@ -720,17 +721,6 @@ module Operator
               chdir: ROOT, env: strict_env)
     end
 
-    # Keep this inventory aligned with OPENBSD/test/run_all.rb. It is recursive
-    # so a test moved beneath test/ stays measured, and empty discovery must fail
-    # rather than claim a green suite that ran nothing.
-    OPENBSD_SUITE = <<~SUITE
-      # encoding: UTF-8
-      files = Dir["test/**/test_*.rb"].sort
-      abort("openbsd: no test files discovered") if files.empty?
-      failed = files.reject { |f| system(RbConfig.ruby, f) }
-      abort("openbsd: \#{failed.size} of \#{files.size} file(s) failed - \#{failed.join(", ")}") if failed.any?
-    SUITE
-
     # Whole suites, not the ones the diff touches: a green over hand-picked tests
     # is unmeasured. This is `bin/operator test`'s mapping with every path in it.
     # The fifth element is the tree the suite proves, so --tree can drop the ones
@@ -740,18 +730,24 @@ module Operator
       [
         ["MASTER", [RUBY, File.join(MASTER, "bin", "check"), "--profile=ci"], MASTER, {}, "MASTER"],
         ["RAILS contracts", [RUBY, "test/run_all.rb"], File.join(ROOT, "RAILS"), {}, "RAILS"],
-        *%w[brgen amber bsdports].map do |app|
-          ["#{app} suite", [RUBY, BUNDLE, "exec", RUBY, "-S", "rails", "test"],
-           File.join(ROOT, "RAILS", app), {}, "RAILS"]
+        *%w[brgen amber bsdports mrdamascy].map do |app|
+          ["#{app} CI", [RUBY, "bin/ci"], File.join(ROOT, "RAILS", app), {}, "RAILS"]
         end,
-        ["OPENBSD", [RUBY, "-e", OPENBSD_SUITE], File.join(ROOT, "OPENBSD"), {}, "OPENBSD"],
+        ["OPENBSD", [RUBY, "test/run_all.rb"], File.join(ROOT, "OPENBSD"), {}, "OPENBSD"],
         ["tools", [RUBY, "-S", "rake"], File.join(MASTER, "tools"), {}, "MASTER", true],
         ["STUDIO media", [RUBY, "-S", "rake", "test"], File.join(ROOT, "STUDIO"), {}, "STUDIO", true],
+        ["BIZ documents", ["node", File.join(ROOT, "BIZ", "tools", "bp_check.mjs")],
+         File.join(ROOT, "BIZ"), { "BIZ_OUT_DIR" => File.join(ROOT, "BIZ") }, "BIZ"],
       ].select { |job| trees.include?(job[4]) }
     end
 
     def suites(trees = TREES)
-      results = suite_jobs(trees).map do |name, cmd, dir, env, _tree, unbundled|
+      jobs = suite_jobs(trees)
+      if jobs.empty?
+        return [false, ["suites: no suite jobs registered for #{trees.join(", ")}"], 1]
+      end
+
+      results = jobs.map do |name, cmd, dir, env, _tree, unbundled|
         timeout_s = suite_timeout_s(name)
         Master::Trace::Dmesg.status("suite0", "#{name} starting, timeout #{timeout_s}s")
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)

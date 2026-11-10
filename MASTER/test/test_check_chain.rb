@@ -103,21 +103,46 @@ class TestCheckChain < Minitest::Test
     refute_includes scoped, "rehearse", "the deploy rehearsal covers RAILS and OPENBSD only"
     assert_includes scoped, "ratchets", "the ratchets are repo-wide by definition and cheap"
     assert_equal %w[MASTER tools], G.suite_jobs(%w[MASTER]).map(&:first)
-    assert_equal ["RAILS contracts", "brgen suite", "amber suite", "bsdports suite"],
+    assert_equal ["RAILS contracts", "brgen CI", "amber CI", "bsdports CI", "mrdamascy CI"],
                  G.suite_jobs(%w[RAILS]).map(&:first)
   end
 
-  def test_all_four_tree_suite_jobs_are_reachable
+  def test_all_five_tree_suite_jobs_are_reachable
     jobs = G.suite_jobs(G::TREES)
-    assert_includes jobs.map(&:first), "tools"
-    assert_includes jobs.map(&:first), "STUDIO media"
-    assert_equal 8, jobs.size
+    names = jobs.map(&:first)
+    assert_includes names, "tools"
+    assert_includes names, "STUDIO media"
+    assert_includes names, "BIZ documents"
+    assert_equal 10, jobs.size
+  end
+
+  def test_suite_inventory_cannot_pass_when_a_tree_has_no_registered_jobs
+    G.stub(:suite_jobs, ->(_trees) { [] }) do
+      ok, body, status = G.suites(%w[BIZ])
+
+      refute ok
+      assert_equal 1, status
+      assert_includes body.join, "no suite jobs registered for BIZ"
+    end
+  end
+
+  def test_biz_scope_reads_the_published_documents
+    job = G.suite_jobs(%w[BIZ]).first
+
+    assert_equal "BIZ documents", job[0]
+    assert_equal ["node", File.join(G::ROOT, "BIZ", "tools", "bp_check.mjs")], job[1]
+    assert_equal File.join(G::ROOT, "BIZ"), job[2]
+    assert_equal({ "BIZ_OUT_DIR" => File.join(G::ROOT, "BIZ") }, job[3])
+    assert_equal "BIZ", job[4]
+    assert File.file?(job[1][1])
   end
 
   def test_every_suite_has_a_bounded_timeout_and_operator_overrides_are_respected
     assert_equal 1_800, G.suite_timeout_s("MASTER")
-    assert_equal 1_200, G.suite_timeout_s("brgen suite")
+    assert_equal 1_200, G.suite_timeout_s("brgen CI")
+    assert_equal 1_200, G.suite_timeout_s("mrdamascy CI")
     assert_equal 900, G.suite_timeout_s("STUDIO media")
+    assert_equal 900, G.suite_timeout_s("BIZ documents")
 
     key = "PUB5_CHECK_TIMEOUT_STUDIO_MEDIA"
     previous = ENV[key]
@@ -202,30 +227,17 @@ class TestCheckChain < Minitest::Test
     end
   end
 
-  def test_openbsd_suite_discovers_nested_tests
-    Dir.mktmpdir do |root|
-      nested = File.join(root, "test", "nested")
-      FileUtils.mkdir_p(nested)
-      File.write(File.join(nested, "test_marker.rb"), 'File.write("nested-ran", "ok")')
+  def test_openbsd_suite_uses_the_strict_per_file_runner
+    job = G.suite_jobs(%w[OPENBSD]).first
 
-      output, status = Open3.capture2e(RbConfig.ruby, "-e", G::OPENBSD_SUITE, chdir: root)
-
-      assert status.success?, output
-      assert_equal "ok", File.read(File.join(root, "nested-ran"))
-    end
-  end
-
-  def test_openbsd_suite_refuses_to_pass_with_zero_tests
-    Dir.mktmpdir do |root|
-      output, status = Open3.capture2e(RbConfig.ruby, "-e", G::OPENBSD_SUITE, chdir: root)
-
-      refute status.success?, "an empty test discovery must not report green"
-      assert_includes output, "no test files discovered"
-    end
+    assert_equal [G::RUBY, "test/run_all.rb"], job[1]
+    assert_equal File.join(G::ROOT, "OPENBSD"), job[2]
+    assert File.file?(File.join(job[2], "test", "run_all.rb"))
+    assert File.file?(File.join(job[2], "test", "test_run_all.rb"))
   end
 
   def test_suite_stage_has_a_human_readable_purpose
-    assert_equal "complete test suites over all four trees", G.suite_purpose(G::TREES)
+    assert_equal "complete test suites over all five governed trees", G.suite_purpose(G::TREES)
     assert_equal "complete test suites over MASTER, RAILS, OPENBSD", G.suite_purpose(%w[MASTER RAILS OPENBSD])
   end
 
@@ -500,10 +512,14 @@ class TestCheckChain < Minitest::Test
 
   def test_every_runtime_stage_uses_the_shared_ruby_selection
     assert_equal Operator::RubyRunner.check_ruby, G::RUBY
-    assert_equal Operator::RubyRunner.bundle_cmd, G::BUNDLE
-
-    rails = G.suite_jobs(%w[RAILS]).find { |job| job.first == "brgen suite" }
-    assert_equal [G::RUBY, G::BUNDLE, "exec", G::RUBY, "-S", "rails", "test"], rails[1]
+    rails_jobs = G.suite_jobs(%w[RAILS])
+    %w[brgen amber bsdports mrdamascy].each do |app|
+      rails = rails_jobs.find { |job| job.first == "#{app} CI" }
+      refute_nil rails
+      assert_equal [G::RUBY, "bin/ci"], rails[1]
+      assert_equal File.join(G::ROOT, "RAILS", app), rails[2]
+      assert File.file?(File.join(rails[2], "bin", "ci"))
+    end
 
     tools = G.suite_jobs(%w[MASTER]).find { |job| job.first == "tools" }
     assert_equal [G::RUBY, "-S", "rake"], tools[1]
