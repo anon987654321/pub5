@@ -94,7 +94,7 @@ sync_from_repo() {
 print "vps_ci: $app (sync + mutex + load check)"
 # Establish group access and the private-storage mode before the app-owned
 # synchronizer reads the checkout and updates the CI copy-tree.
-pub4_ensure_ci_lock >/dev/null
+pub5_ensure_ci_lock >/dev/null
 doas /usr/local/sbin/pub5-admin ci-prepare "$app"
 # The checkout is owned by dev, so this permission repair does not cross doas.
 chmod -R u+rX,g+rX "${repo}/MASTER/tools"

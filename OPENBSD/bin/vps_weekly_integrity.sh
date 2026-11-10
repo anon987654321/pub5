@@ -35,7 +35,7 @@ fi
 # One definition of the lock path; it moved out of world-writable /var/tmp.
 . "${ROOT}/OPENBSD/lib/ci_lock.sh"
 . "${ROOT}/OPENBSD/lib/ruby_select.sh"
-LOCK=$(pub4_ci_lock_path)
+LOCK=$(pub5_ci_lock_path)
 
 # Probe the flock with-ci-lock and CiGuard take, rather than asking fuser(1):
 # where fuser is missing the old test was simply false, and the run went ahead
