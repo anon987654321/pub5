@@ -243,6 +243,18 @@ module Master
             end
 
             limit = RunLedger.max_files
+            # Credential paths (secrets, *.env) are refused at write time by
+            # Core::World#within; planning a repair for one would crash the
+            # whole pass inside the transaction. Drop them before the queue so
+            # the guard stays protective and the run carries on without them.
+            taken, left = ordered.partition { |path, _| Master::Core::World.secret?(path) }
+            unless left.empty? || taken.empty?
+              Master::Trace::Dmesg.status(
+                "fix0",
+                "worklist dropped #{taken.size} credential file(s): #{taken.map(&:first).first(3).join(", ")}",
+              )
+            end
+            ordered = left
             taken, left = limit ? ordered.partition.with_index { |_, index| index < limit } : [ordered, []]
             taken.each { |item| queue << item }
             left.each { |path, rows| rows.each { |row| streamed << [path.delete_prefix("#{@root}/"), row[:law].to_s] } }
