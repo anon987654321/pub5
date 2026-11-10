@@ -377,7 +377,7 @@ module Master
 
       class WebBrowse < RubyLLM::Tool
         include ToolForwarding
-        description "Render a page in headless Chrome and return its visible text and links. Use it for shops and other JavaScript sites where web_fetch returns an empty shell; build the site's own search URL (for example https://www.temu.com/search_result.html?search_key=wall+projector). Read-only: no clicks, no login."
+        description "Render a page in headless Chrome and return its visible text and links. Use it for shops and other JavaScript sites where web_fetch returns an empty shell; build the site's own search URL (for example https://www.temu.com/search_result.html?search_key=wall+projector). The network transport permits GET/HEAD only, but page scripts execute and GET endpoints may have side effects. It does not click or log in."
         parameter :url, description: "http(s) URL to render", required: true
         parameter :wait, description: "Seconds to let scripts settle (default 4, max 12)", type: "number", required: false
 
@@ -413,7 +413,7 @@ module Master
 
       class Browser < RubyLLM::Tool
         include ToolForwarding
-        description "Use Browser, a sessionful, SSRF-guarded browser. Actions: status, navigate, login, extract, look, follow, paginate, interact, close. Navigate opens a headless session; login opens a visible window for operator-controlled sign-in, but POST-based login submission is blocked by the GET/HEAD-only transport. Sessions stay bound to their first host and use the pinned-IP transport. Every snapshot saves an owner-only screenshot; look captures the current viewport without re-reading the DOM, for a vision lane to describe. Captions never drive navigation. Follow uses a literal same-host anchor href rather than firing page click handlers. Paginate is bounded to 1-50 pages. Every click, set, or type interaction requires fresh human approval. Do not disguise automation or conceal AI identity. External communication requires recipient consent and per-action human approval."
+        description "Use Browser, a sessionful, SSRF-guarded browser. Actions: status, navigate, login, extract, look, follow, paginate, interact, close. Navigate opens a headless session; login opens a visible window for operator-controlled sign-in, but POST-based login submission is blocked by the GET/HEAD-only transport. Page scripts execute and GET endpoints may have side effects, so GET/HEAD does not guarantee read-only behavior. Sessions stay bound to their first host and use the pinned-IP transport. Every snapshot saves an owner-only screenshot; look captures the current viewport without re-reading the DOM, for a vision lane to describe. Captions never drive navigation. Follow uses a literal same-host anchor href rather than firing page click handlers. Paginate is bounded to 1-50 pages. Every click, set, or type interaction requires fresh human approval. Do not disguise automation or conceal AI identity. External communication requires recipient consent and per-action human approval."
         parameter :action, description: "status, navigate, login, extract, look, follow, paginate, interact, or close", required: true
         parameter :session, description: "Session id (letters, digits, underscore, hyphen; default default)", required: false
         parameter :url, description: "Public http(s) URL for action=navigate or login", required: false
