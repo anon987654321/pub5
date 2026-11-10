@@ -544,12 +544,12 @@ local_servers:
 # free lane of every chain as <name>:<model>. key_env is where a key may be set;
 # with none set, only the models whose listing matches `keyless` are offered.
 # LLM7 serves its turbo tier without a key except the usage-based models.
-# Verified 2026-11-06 from this Mac: GET /models answered keyless (70 rows,
-# 7 keyless turbo: GLM-5.3-Flash, DeepSeek-V4-Flash-0731, codestral-latest,
-# gpt-oss:20b, minimax-m2.7, mistral-Nemo-Instruct-2407, nemotron-3-nano:30b);
-# chat burst-limited (429) during verification, so keyless chat completion is
-# not re-confirmed today — the tier names above are listing facts, not
-# measured completions.
+# Verified 2026-11-06 from this Mac (GET 200, 70 rows, 7 keyless turbo) and
+# re-verified 2026-11-11 from a cold sandbox with zero credentials: GET
+# /models 200 (68 rows) and POST /chat/completions 200 on codestral-latest
+# and gpt-oss:20b. The tier rotates — GLM-5.3-Flash, DeepSeek-V4-Flash-0731,
+# minimax-m2.7 and nemotron-3-nano:30b left between the two dates — and the
+# tier: turbo rule tracks the live listing, so no model is pinned here.
   # Groq, Cerebras and NVIDIA NIM carry larger free quotas behind a free signup
   # key (limits as awesome-freellm-apis lists them, 2026-09; key-gated, so they
   # cannot be probed keyless and have not been re-verified since); with no keyless

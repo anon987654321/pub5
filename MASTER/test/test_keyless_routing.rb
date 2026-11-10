@@ -58,7 +58,11 @@ class TestKeylessRouting < Minitest::Test
 
   def test_llm7_is_reachable_without_an_api_key
     assert Master.keyless_llm_enabled?
-    assert Master.llm_reachable?("llm7:DeepSeek-V4-Flash-0731")
+    # Reachability itself is lane-level, but the id must still be a live
+    # listing row: the turbo tier rotates (DeepSeek-V4-Flash-0731 left it
+    # between the 2026-11-06 and 2026-11-11 verifications), so the test pins
+    # to gpt-oss:20b, present on both dates, and to nothing else.
+    assert Master.llm_reachable?("llm7:gpt-oss:20b")
   end
 
   def test_default_model_prefers_grok_api_with_xai_key
