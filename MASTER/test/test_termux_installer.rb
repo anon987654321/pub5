@@ -117,11 +117,13 @@ class TermuxInstallerTest < Minitest::Test
   end
 
   def test_mobile_installer_installs_and_proves_the_normal_master_bundle
-    commands = %w[
-      ruby bin/deps install
-      ruby bin/deps check
-      ruby bin/deps boot
-      ruby bin/master-mobile doctor
+    # %w would split each phrase on whitespace; these are whole command lines
+    # whose first occurrences must appear in boot order in the installer.
+    commands = [
+      "ruby bin/deps install",
+      "ruby bin/deps check",
+      "ruby bin/deps boot",
+      "ruby bin/master-mobile doctor",
     ]
     positions = commands.map { |command| mobile_source.index(command) }
 

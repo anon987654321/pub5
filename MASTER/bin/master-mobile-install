@@ -3,9 +3,9 @@
 # This is POSIX sh because it runs before Ruby exists.
 set -eu
 
-repo="\${MASTER_REPO_URL:-https://github.com/anon987654321/pub5.git}"
-dir="\${MASTER_INSTALL_DIR:-$HOME/pub5}"
-branch="\${MASTER_BRANCH:-main}"
+repo="${MASTER_REPO_URL:-https://github.com/anon987654321/pub5.git}"
+dir="${MASTER_INSTALL_DIR:-$HOME/pub5}"
+branch="${MASTER_BRANCH:-main}"
 expected_repo="https://github.com/anon987654321/pub5.git"
 demo=0
 runtime=native
@@ -72,7 +72,7 @@ if [ "$demo" -eq 1 ]; then
 fi
 
 command -v pkg >/dev/null 2>&1 || fail "Run this inside Termux, installed from a maintained source."
-[ "\${PREFIX:-}" = "/data/data/com.termux/files/usr" ] || [ "\${PREFIX:-}" = "/data/user/0/com.termux/files/usr" ] ||
+[ "${PREFIX:-}" = "/data/data/com.termux/files/usr" ] || [ "${PREFIX:-}" = "/data/user/0/com.termux/files/usr" ] ||
   fail "Unexpected Termux PREFIX; refusing to install into an unverified environment."
 [ "$(id -u)" != "0" ] || fail "Refusing to install as root."
 [ "$repo" = "$expected_repo" ] || fail "Only the canonical HTTPS repository is allowed: $expected_repo"
@@ -87,7 +87,7 @@ fi
 
 if [ -d "$dir/.git" ]; then
   actual_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
-  [ "$actual_origin" = "$expected_repo" ] || fail "Existing checkout origin must be the canonical HTTPS URL (found \${actual_origin:-<none>})."
+  [ "$actual_origin" = "$expected_repo" ] || fail "Existing checkout origin must be the canonical HTTPS URL (found ${actual_origin:-<none>})."
 fi
 
 printf 'mobile0: preflight PASS; updating Termux packages\n'
