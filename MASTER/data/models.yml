@@ -674,7 +674,13 @@ ollama:
   # cache leave room for the voice stack; the daemon spawn reads kv_cache_type.
   max_num_ctx: 4096
   kv_cache_type: q8_0
-  local_model_allowlist: ["ollama:gemma3:4b"]
+  # The Android hint (Device::Onboarding TEMPLATE and
+  # runtime.local_model_install_hint) tells a phone to pull qwen3.5:0.8b;
+  # an allowlist that names only gemma3:4b turns that hint into a model the
+  # local tier refuses to serve, so the phone's no-key local floor stays dead.
+  # gemma3:4b remains the host bed; qwen3.5:0.8b is the phone bed (~0.6 GB,
+  # fits the 60% LOCAL_FIT rule on devices far smaller than the 8 GB Mac).
+  local_model_allowlist: ["ollama:gemma3:4b", "ollama:qwen3.5:0.8b"]
   # Probe-on warm: while the daemon answers, a one-token generation on the
   # probe model proves the final fallback-chain link and lands in the lane
   # quota state (lane_health.rb warm_probe). The live rehearsal on the 8 GB
