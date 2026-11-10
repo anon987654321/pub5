@@ -291,6 +291,20 @@ module Master
           end
 
           pass_mtimes = mtimes(files)
+          # Credential paths are refused by Core::World#within at fingerprint
+          # time, so one secrets file anywhere in the pass list would crash the
+          # transaction and fail the whole run (STUDIO/lora/johann/subject.env
+          # did exactly that). Drop them once, here, with a note.
+          secrets = files.select { |path| Master::Core::World.secret?(path) }
+          unless secrets.empty?
+            Master::Trace::Dmesg.status(
+              "fix0",
+              "pass #{pass}: dropped #{secrets.size} credential file(s) from the pass: " +
+                secrets.map { |p| File.basename(p) }.first(3).join(", "),
+            )
+            files = files.reject { |path| Master::Core::World.secret?(path) }
+            pass_mtimes = mtimes(files)
+          end
           @pass_progress = false
           @human_decision_required = false
           @coverage_reporter&.call(target, pass)
