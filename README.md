@@ -9,8 +9,8 @@ must satisfy.
 ## The four runtime trees
 
 - `MASTER/` — the constitution, the runtime and the instruments: the Law
-  catalogue, the scanner, `/fix`, `/review`, `/critique`, and the operator and
-  agent entrypoints. Start at `MASTER/README.md`; the workflow contract is
+  catalogue, the scanner, the single `/fix` pipeline (with compatibility mode aliases),
+  and the operator and agent entrypoints. Start at `MASTER/README.md`; the workflow contract is
   `MASTER/AGENTS.md`.
 - `RAILS/` — the applications and their shared engine, with the deploy
   tooling that carries them. Start at `RAILS/README.md`.
