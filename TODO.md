@@ -1,6 +1,6 @@
 # pub5 — remaining work
 
-Audit snapshot: 2026-11-10, reconciled against `main@cdfa42897204a77c8dd66ad0996b1731e9e15d20`.
+Audit snapshot: 2026-11-10, reconciled against `main@96b4e2602a05c60c6a9a7b0928887586d546d356`.
 The register travels with the migration; source-owned status remains in the
 structured ledgers, and completed entries are checked here only when their
 evidence is present.
