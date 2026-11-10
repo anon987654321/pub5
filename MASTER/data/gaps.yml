@@ -32,6 +32,7 @@ sources:
   pass_1: "rows the first ideation pass itself surfaced (source: ideation_pass_1)"
   master_audit: "master-web surface audit 2026-10-27: contracts (CLAUDE.md, routes, dashboard payload) read against what the surface actually renders"
   operator_chat: "operator messages of 2026-10-27 in the same chat (e2c7ceca): 'especially its face, making it more visually appealing and soothing' and 'the tts voice, making it sound way cooler using digital sound processing and/or fm modulation or creative use of audio effects etc.'"
+  root_backlog: "Root TODO.md entries requiring a structured gap identity; reconciled 2026-11-10."
 gaps:
   # --- brgen (the city app proper) ---
   - { id: brgen_ai_feed_ranking, app: brgen, kind: logic, name: "AI feed ranking", source: apps_yml, status: picked, workstream: brgen_feed_ranking_deterministic }
@@ -41,6 +42,7 @@ gaps:
   - { id: brgen_recurring_events, app: brgen, kind: logic, name: "recurring events / ticketing beyond an external link", source: horizon, status: open }
   - { id: brgen_city_population_seeds, app: brgen, kind: content, name: "city population in seeds", source: horizon, status: open, note: "no column or reader in any schema; CitySeed covers all 43 registry cities" }
   - { id: brgen_recent_searches, app: brgen, kind: ux, name: "recent searches in the search palette", source: horizon, status: satisfied, evidence: "SearchRecent#recent_for in the palette (brgen/app/models/search_recent.rb, brgen/app/views/shared/_search_palette.html.erb)" }
+  - { id: brgen_art_ad_banner, app: brgen, kind: ux, name: "minimal art-directed sponsored banner", source: root_backlog, status: open, note: "requires approved sponsored copy, image rights and destination; AdSense remains gated until a certified consent platform is in place" }
   # --- messenger ---
   - { id: messenger_webrtc_calls, app: messenger, kind: logic, name: "messenger voice and video calls (WebRTC)", source: horizon, status: blocked, note: "needs STUN/TURN infra on the host" }
   - { id: messenger_notify_suppression, app: messenger, kind: ux, name: "notification suppressed while its conversation is open", source: horizon, status: open }
@@ -58,6 +60,7 @@ gaps:
   - { id: dating_two_sided_ranked_for, app: dating, kind: logic, name: "two-sided ranked_for (looking_for both ways)", source: horizon, status: satisfied, evidence: "Dating::BaseController#candidate_scope applies Profile.oriented_for (mutual gender preference both ways); see apps.yml Tier 3 parity row" }
   # --- playlist ---
   - { id: playlist_creator_donations, app: playlist, kind: logic, name: "creator donations / ad-free tier", source: apps_yml, status: open, note: "consumes commerce_shared_domain" }
+  - { id: referral_reward_consumption, app: fleet, kind: logic, name: "member-visible benefits for playlist_pro and dating_pro entitlements", source: root_backlog, status: open, note: "define the usable benefits and wire their gates; referral credits currently record entitlement only" }
   # --- takeaway ---
   - { id: takeaway_delivery_area, app: takeaway, kind: logic, name: "delivery-area validation", source: horizon, status: satisfied, evidence: "Takeaway::Restaurant#within_delivery (haversine against delivery_radius_km, engines/takeaway/app/models/takeaway/restaurant.rb)" }
   - { id: takeaway_cart_expiry, app: takeaway, kind: logic, name: "cart expiry", source: horizon, status: satisfied, evidence: "Takeaway::Order stamps CART_TTL_MINUTES on every cart and expire_stale_pending! sweeps it (engines/takeaway/app/models/takeaway/order.rb)" }
@@ -86,6 +89,7 @@ gaps:
   - { id: bsdports_semantic_search, app: bsdports, kind: knowledge, name: "semantic package search", source: horizon, status: open }
   - { id: bsdports_knowledge_graph, app: bsdports, kind: knowledge, name: "infrastructure knowledge graph", source: horizon, status: open }
   - { id: bsdports_package_intel, app: bsdports, kind: knowledge, name: "OpenBSD package intelligence", source: horizon, status: open }
+  - { id: bsdports_cli_sponsorship, app: bsdports, kind: logic, name: "optional pay-what-you-want support handoff", source: root_backlog, status: open, note: "requires a verified recipient and sponsor/payment URL; package search and CLI use remain free and unblocked" }
   # --- master web (the operator's window; found by the surface audit, not by apps.yml) ---
   - { id: master_fleet_health, app: master, kind: logic, name: "dashboard sees only its own container - the three sibling apps sharing the 1GB box are invisible", source: master_audit, status: picked, workstream: master_fleet_panel, note: "CLAUDE.md documents resource_guard shedding amber then bsdports and restart storms spiking load; the console renders none of it" }
   - { id: master_dead_payload_facts, app: master, kind: knowledge, name: "model_quota and cache_efficiency computed into every dashboard/live poll, rendered by no panel", source: master_audit, status: picked, workstream: master_quota_facts }

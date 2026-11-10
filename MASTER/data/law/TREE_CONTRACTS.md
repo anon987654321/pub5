@@ -1,9 +1,10 @@
 # Tree contracts
 
-The one tree-contract file for pub5. RAILS, MASTER/web, and OPENBSD keep
-their sharp edges here; STUDIO reads its project READMEs. The harness doors
-at the repo root route here. The content moved out of the per-tree
-`CLAUDE.md` files; git history holds the originals.
+The one shared tree-contract file for pub5. RAILS, MASTER/web, and OPENBSD keep
+their runtime and operational sharp edges here; STUDIO reads its project READMEs.
+`BIZ/` is the fifth approved content root and owns its document-production
+workflow in `BIZ/README.md`. The harness doors at the repo root route here.
+The content moved out of the per-tree `CLAUDE.md` files; git history holds the originals.
 
 ## RAILS
 RAILS/README.md is the maintained long-form reference (check tables,
@@ -851,6 +852,19 @@ file to sit on.
   the box, a changed IP needing a new PTR, a stale Solid Queue backlog.
   `RUNBOOK.md` lists them, so removing one removes a recovery step an operator
   reads at the worst time.
+
+## BIZ
+
+`BIZ/README.md` is the maintained content/build reference. `BIZ/` owns the
+business plans, their published HTML/PDF pairs, preserved correspondence
+templates, research, editable source documents and the build/check/print/index
+chain. It is the fifth approved uppercase content root, not a runtime service
+or a separate deployment tree. Keep editable bases and tools in `BIZ/tools/`;
+plan folders carry only the reader-facing HTML, artwork and the PDF printed
+from that same document. Run the Node build, retemplate, check, print and index
+commands documented in `BIZ/README.md`. Acceptance compares the HTML and PDF;
+a successful source build alone does not prove rendered pagination, links or
+text placement.
 
 ## Repository mechanics
 

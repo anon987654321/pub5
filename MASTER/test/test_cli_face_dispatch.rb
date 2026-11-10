@@ -367,16 +367,21 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal ["mic0: voice input is off by default"], output
   end
 
-  def test_general_help_discloses_the_zsh_timeout
+  def test_general_help_uses_one_live_shell_cap_and_plain_multiline_guidance
     session = Master::CLI::Session.allocate
     printed = []
     session.define_singleton_method(:print_terminal_output) { |text, **| printed << text }
-    Master::CLI::CommandRegistry.stub(:help_summary, "summary") do
-      session.send(:run_help)
-    end
 
-    assert_includes printed.fetch(0), "30-second timeout"
-    assert_includes printed.fetch(0), "Longer commands may be terminated"
+    session.send(:run_help)
+    output = printed.fetch(0)
+    shell_lines = output.lines.grep(/^shell0 at master0:/)
+
+    assert_equal 1, shell_lines.size
+    assert_includes shell_lines.first, "#{Master::Io::Shell::TIMEOUT}s"
+    assert_includes output, "<< starts multiline input; a blank line sends it."
+    assert_includes output, "/stop cancels and pauses"
+    refute_includes output, "30-second timeout"
+    refute_includes output, "Anything else is a prompt"
   end
 
 end

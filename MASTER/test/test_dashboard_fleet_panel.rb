@@ -95,6 +95,25 @@ class TestDashboardFleetPanel < Minitest::Test
     assert_includes poller, "shed_order", "the poller renders the guard's shed order"
   end
 
+  def test_task_rail_states_have_quiet_visual_distinctions_in_source_and_build
+    source = File.read(File.join(Master::ROOT, "web", "styles", "face", "43_face_chrome.css"))
+    built = File.read(File.join(Master::ROOT, "web", "public", "face.css"))
+
+    [
+      '.master-task[data-state="active"] .master-task-status',
+      '.master-task[data-state="waiting-human"] .master-task-status',
+      '.master-task[data-state="failed"]',
+    ].each do |selector|
+      assert_includes source, selector
+      assert_includes built, selector
+    end
+    assert_includes source, "text-decoration-style: dotted;"
+    assert_includes built, "text-decoration-style: dotted;"
+    assert_includes source, "border-inline-start: 2px solid var(--c-danger);"
+    assert_includes built, "border-inline-start: 2px solid var(--c-danger);"
+    refute_match(/\.master-task-rail\s*\{\s*\}/, source)
+  end
+
   def test_both_locales_declare_every_fleet_and_quota_label
     %w[en nb].each do |locale|
       translations = YAML.safe_load(File.read(File.join(Master::ROOT, "web", "config", "locales", "#{locale}.yml")))

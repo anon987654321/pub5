@@ -30,10 +30,11 @@ Rule for the whole port: **same behaviour, less code; new features wait.**
 
 ## Structure of the port
 
-pub5 carries four governed code trees. The business-plan corpus moved on
-2026-11-08 into the single `BIZ/` tree — published folders, the preserved
-archive and the build tooling together (see "BIZ: one tree" below) — not a
-fifth runtime owner. The old Python `scripts/analysis/` review helpers were intentionally not
+pub5 carries four governed runtime trees (`MASTER/`, `RAILS/`, `OPENBSD/`
+and `STUDIO/`) plus the fifth approved uppercase content root, `BIZ/`. The
+business-plan corpus moved on 2026-11-08 into that single content tree —
+published folders, the preserved archive and the build tooling together
+(see "BIZ: one tree" below) — not a fifth runtime owner. The old Python `scripts/analysis/` review helpers were intentionally not
 carried as files: their screenshot-sheet capability is now owned by the Ruby
 `MASTER/tools/visual/sheets.rb` implementation and its
 `MASTER/test/test_visual_sheets.rb` contract. It uses the repository's

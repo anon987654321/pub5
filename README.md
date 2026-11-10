@@ -1,12 +1,12 @@
 # pub5
 
-**One checkout, four runtime trees, BIZ deliverables, and a written source hierarchy that outranks every
+**One checkout, four runtime trees, a fifth BIZ content root, and a written source hierarchy that outranks every
 agent working in any of them.** pub5 is a self-governing repository: the model
 only proposes; Soul defines global identity, preservation, source order and
 protected paths, while the Law catalogue defines the requirements each change
 must satisfy.
 
-## The four trees
+## The four runtime trees
 
 - `MASTER/` — the constitution, the runtime and the instruments: the Law
   catalogue, the scanner, `/fix`, `/review`, `/critique`, and the operator and
@@ -20,7 +20,7 @@ must satisfy.
 - `STUDIO/` — the media tools: Dilla, photograph and the Replicate client.
   `STUDIO/Rakefile` is the tree's check surface.
 
-## Business and writing deliverables
+## Fifth content root: business and writing deliverables
 
 `BIZ/` holds the business plans as one tree (merged from BPLANS and
 MASTER/tools/biz on 2026-11-08): one folder per plan with its published
@@ -33,10 +33,10 @@ proposals in `BIZ/tools/`. The canonical guide is `BIZ/README.md`.
 contract generated from `MASTER/AGENTS.md`. Gemini, GLM and Cursor have short
 generated pointers to it; Codex and Copilot read it directly. `CLAUDE.md` is
 the bootstrap pointer.
-`MASTER/data/law/TREE_CONTRACTS.md` is the repository's shared tree contract. Root `TODO.md` is
-the one cross-tree action list; structured YAML ledgers remain the owners of
-IDs, evidence receipts, provenance and lifecycle state. Do not create another
-backlog file.
+`MASTER/data/law/TREE_CONTRACTS.md` is the shared runtime/tree contract; `BIZ/README.md`
+owns BIZ's document-production workflow. Root `TODO.md` is the one cross-tree
+action list; structured YAML ledgers remain the owners of IDs, evidence receipts,
+provenance and lifecycle state. Do not create another backlog file.
 
 ## First hour
 

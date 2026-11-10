@@ -1,9 +1,9 @@
 # pub5 — remaining work
 
-Audit snapshot: 2026-11-06, rechecked against `main@40d260cab2c2b92a268e2ccbc24695fcb22cfaa3` immediately before this consolidation.
-Re-audited 2026-11-07 against `main@f827973a7631be5f73e227864223ab2b6e7aee9b` in the
-pub4 -> pub5 migration session; the two dated sections at the tail carry the
-deltas. The register travels with the migration.
+Audit snapshot: 2026-11-10, reconciled against `main@0e91d5c20c60ac936bd0c2003a95c0482f0649ea`.
+The register travels with the migration; source-owned status remains in the
+structured ledgers, and completed entries are checked here only when their
+evidence is present.
 This register replaces the previous 1,275-line, 462-checkbox carry-forward
 dump. It contains unresolved outcomes, not session notes or speculative
 architecture proposals.
@@ -113,8 +113,8 @@ screenshot count or previous revision.
   Verify interruption, rollback, durable mission resumption, orphaned
   Kernel-receipt recovery and checkpoint survival. Then exercise budget and
   collapse behavior, zero-repair ledger honesty and adapter receipt parity.
-- [ ] Run one genuine repository-wide `/fix` over MASTER, RAILS, OPENBSD and
-  STUDIO. Preserve four independent reports, grounded candidates, revision,
+- [ ] Run one genuine repository-wide `/fix` over MASTER, RAILS, OPENBSD, STUDIO and
+  BIZ. Preserve four independent reports, grounded candidates, revision,
   receipts and truthful terminal states (DONE, PLATEAU, HUMAN_DECISION,
   BLOCKED, VALIDATION_FAILED, DELIVERY_FAILED or TIMEOUT). Measure actual
   convergence and repair quality; an architecture map is not runtime proof.
@@ -406,7 +406,7 @@ This section brings the repository's remaining tracked TODOs, backlog rows, UX a
 
 The tracked repository has one TODO file: this root `TODO.md`. The cross-tree contract in `MASTER/test/test_single_backlog_contract.rb` intentionally rejects nested TODO files. Keep that contract. Do not delete the YAML ledgers below; their IDs, states, rejected alternatives and evidence contracts are consumed by MASTER and are not duplicate prose backlogs.
 
-### 8.1 RAILS refinement survey — three items still open
+### 8.1 RAILS refinement survey — two items still open
 
 `RAILS/refinements.yml` was surveyed on 2026-11-04: 770 rows, 755 marked done, 12 marked invalid, and 3 still open. The 12 invalid rows are historical refutations, not work to resurrect without new source evidence. 2026-11-07 session, sandboxed (no Ruby 4.0.5, no Chrome/CDP suite): every Ruby suite run is NOT_RUN; the app bundles compile with dart-sass and the rendered claims below carry their own harness. Second pass the same day: the sandbox gained a Debian Ruby 3.3.8, and with `PUB5_RUBY` (the runner's own override in `OPENBSD/lib/ruby_runner.rb`) the source-reading contract suites run for real — design contract 15 runs / 149 assertions, the link-embed privacy contract 5 / 40, the SVG wordmark 2 / 5, all green; only what needs a Rails bundle (rendered pages, migrations) stays NOT_RUN here. 2026-11-08: Ruby 4.0.5 itself now builds in the sandbox (source build, libyaml into `~/.local/ruby-deps`, psych verified), so the same source-reading suites ran on the pinned interpreter without the `PUB5_RUBY` override — design contract 15 / 149, link-embed privacy 5 / 38 (the rebased tree's shape), visual identity (the wordmark's home) 12 / 136, all green; `amber/test/logo_contract_test.rb` still needs the app bundle (its `test_helper` boots the environment) and stays NOT_RUN here. Row evidence still waits on those rendered runs.
 
@@ -439,7 +439,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `brgen_activitypub_inbound` — open; remote media proxying, per-origin controls, blocklist and moderation must precede storage.
 - [ ] `brgen_recurring_events` — open; decide whether a small recurrence materialiser is warranted; external ticket links remain a valid simpler boundary.
 - [ ] `brgen_city_population_seeds` — open; use a checked-in public-data table for the 43 registry cities if the value is demonstrated.
-- [ ] `brgen_recent_searches` — picked; complete `brgen_recent_searches`: server-side per-reader recents, with the last committed searches available across devices.
+- [x] `brgen_recent_searches` — satisfied: `SearchRecent#recent_for` serves per-reader recents across devices (`RAILS/brgen/app/models/search_recent.rb`, `RAILS/brgen/app/views/shared/_search_palette.html.erb`).
 
 **Messenger**
 - [ ] `messenger_webrtc_calls` — blocked; requires an operator-approved STUN/TURN service and host capacity.
@@ -450,7 +450,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `marketplace_ai_recs` — open; prefer explainable co-view or category/price-band recommendations over a model without useful data.
 - [ ] `marketplace_coupons` — open; one transparent campaign/credit ledger, not a second checkout accounting path.
 - [ ] `marketplace_contact_relay` — blocked; requires inbound mail routing and expiring per-listing addresses on vm23.
-- [ ] `marketplace_duplicates` — picked; complete `marketplace_duplicate_detection`: file a moderation report and leave the decision to a human.
+- [x] `marketplace_duplicates` — satisfied: `Marketplace::Listing#duplicate_of` files an open duplicate `ModerationReport` on creation (`RAILS/brgen/engines/marketplace/app/models/marketplace/listing.rb`).
 - [ ] `marketplace_liquidity` — open; measure empty categories, saved-search demand and unmet supply before advertising.
 - [ ] `marketplace_paid_boosts` — open; preserve quality-weighted organic discovery, clear sponsored labels and caps; payment never buys a trust outcome.
 - [ ] `marketplace_seller_analytics` — open; derive seller/listing analytics from existing events where possible.
@@ -459,8 +459,8 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `dating_premium_boost` — open; any premium, boost or super-like design must preserve consent, avoid dark patterns and never sell moderation or safety outcomes.
 - [ ] `playlist_creator_donations` — open; creator tips may use the shared commerce domain; do not sell an ad-free tier while there are no ads.
 - [ ] `referral_reward_consumption` — open; define the real, member-visible benefits behind `playlist_pro` and `dating_pro`, then wire their gates. Referral credits currently record entitlement only; do not market them as usable Pro access until those features exist.
-- [ ] `takeaway_delivery_area` — picked; complete `takeaway_delivery_area`: validate the reader's stored position against the restaurant's stated radius, nil-safely and with an honest explanation.
-- [ ] `takeaway_cart_expiry` — picked; complete `takeaway_cart_expiry`: expire pending carts through the same state transition as manual cancellation, with notifications and a visible deadline.
+- [x] `takeaway_delivery_area` — satisfied: `Takeaway::Restaurant#within_delivery` checks the stored position against `delivery_radius_km` (`RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/restaurant.rb`).
+- [x] `takeaway_cart_expiry` — satisfied: `Takeaway::Order` stamps `CART_TTL_MINUTES` and sweeps with `expire_stale_pending!` (`RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb`).
 - [ ] `takeaway_pro_surface` — open; promotion, loyalty and coupons depend on shared commerce and liquidity foundations.
 
 **TV, Maps and shared commerce**
@@ -503,7 +503,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 
 The complete candidate records and rejected alternatives live in `MASTER/data/ideations/*.yml`. Their `keep` verdict means a candidate survived adversarial critique; it is not blanket approval to implement. The 14 records are: `amber.yml`, `brgen.yml`, `bsdports.yml`, `creativity_lab.yml`, `dating.yml`, `maps.yml`, `marketplace.yml`, `master_surface_audit.yml`, `master_web_dilla_free.yml`, `master_web_face_voice.yml`, `messenger.yml`, `playlist.yml`, `takeaway.yml` and `tv.yml`. Consult the individual candidate and critique before selecting a direction. The Dating gap `dating_two_sided_ranked_for` is already marked satisfied in the gap ledger and is not open work.
 
-### 8.4 MASTER convergence wishlist — 42 unfinished workstreams
+### 8.4 MASTER convergence wishlist — 36 unfinished workstreams
 
 `MASTER/convergence.yml` is the non-authoritative assistant wishlist and implementation/evidence map. It currently records 15 landed, 27 partial, 7 evidence-dependent and 8 missing workstreams (42 unresolved). These IDs are proof/ownership cross-links to the sections above, not permission to create duplicate implementations. Close each only when its named implementation and proof are real.
 
@@ -520,10 +520,8 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `studio_provenance` — media provenance through every generation stage.
 - [ ] `security_capability_graph` — capability ownership and least-privilege graph.
 - [ ] `event_replay` — canonical event vocabulary, provenance and replay.
-- [ ] `memory_governance` — durable memory provenance, review history, contradiction and forgetting.
 - [ ] `task_scoped_prediction` — separate event-prediction streams across correlated tasks.
 - [ ] `prediction_evaluation` — walk-forward comparison of contextual prediction against shared-stream and baseline models.
-- [ ] `measured_repair_outcomes` — feed terminal /fix outcomes into the evidence-based self-model.
 - [ ] `self_model_calibration` — measure capability outcomes and confidence calibration from explicit evidence.
 - [ ] `cognition_measurement` — report workspace activity and saved-state restoration without consciousness claims.
 - [ ] `task_outcome_learning` — per-target /fix outcome prediction from hashed receipts, scored before learning.
@@ -535,10 +533,6 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `structural_craft` — measured architectural collapse/relocation with proof.
 - [ ] `unified_command_language` — one semantic command surface across CLI, web, voice and device.
 - [ ] `media_effects` — Ruby-native analogue audio and image processing.
-- [ ] `brgen_recent_searches` — server-side, cross-device recent searches.
-- [ ] `marketplace_duplicate_detection` — duplicate listing creates a moderation report; a human decides.
-- [ ] `takeaway_delivery_area` — stated delivery radius validated against the reader's stored position.
-- [ ] `takeaway_cart_expiry` — pending carts expire through the manual-cancel transition.
 - [ ] `master_face_breath` — stipple field breathes in brightness only and freezes under reduced motion.
 - [ ] `master_voice_browser_dsp` — browser builds declared character presets in parity with terminal.
 - [ ] `master_voice_cooler_default` — default voice room/doubler and optional presets; listening acceptance required.
@@ -586,7 +580,7 @@ The authoritative feature/status detail is in `RAILS/apps.yml` and `RAILS/apps.h
 
 `MASTER/data/ideations/creativity_lab.yml` records six experiments as implemented: `spark_cli`, `deploy_story`, `cities`, `domain_ghosts`, `tree_weight` and `law_weight`. Three remain deferred, not active: `city_pack_api` (no consumer/auth design), `semantic_canary` (no offline rubric/model budget) and `dilla_fixture_wav` (needs its STUDIO golden-hash pass).
 
-`MASTER/data/proposals.yml` is the refutation ledger: 13 proposals landed, 17 refuted, none open. Preserve the rejected records and their reasons; do not re-propose them as fresh work without new evidence.
+`MASTER/data/proposals.yml` is the refutation ledger: 13 proposals landed, 18 refuted, none open. Preserve the rejected records and their reasons; do not re-propose them as fresh work without new evidence.
 
 ### 8.8 Runtime-generated wishlist — not present in the GitHub tree
 
@@ -680,7 +674,7 @@ Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
 - [ ] Rank free-load selection by latency: the live-`:free` spread with
   per-model quota buckets landed 2026-11-06, but the catalog carries no
   `free_latency` field, so ranking stays pool order until one exists.
-- [ ] Flip Ollama Tier-D to probe-on warm: periodic one-token probe on `gemma3:4b` recorded into quota state, 2-4K context cap and `OLLAMA_KV_CACHE_TYPE=q8_0` for this 8 GB Mac, rehearsed as the final fallback-chain link.
+Ollama Tier-D remains excluded under the operator's current no-Ollama model-pool decision. Revisit only after access is restored and the operator reopens that lane.
 
 ## simplicity-book laws (candidate batch, researched 2026-11-06)
 
