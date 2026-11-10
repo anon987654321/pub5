@@ -141,11 +141,11 @@ end
     # design_baseline emits its summary before per-app detail; taking the last
     # line hid a live violation behind the detail row.
     def verdict(body)
-      summary = body.reverse.find { |line| line.match?(/\\A[a-z][a-z_]*:\\s/) }
-      (summary || body.last).to_s.sub(/\\A\\w+[_a-z]*:\\s*/, "")
+      summary = body.reverse.find { |line| line.match?(/\A[a-z][a-z_]*:\s/) }
+      (summary || body.last).to_s.sub(/\A\w+[_a-z]*:\s*/, "")
     end
 
-    def dmesg(line) = Master::Trace::Dmesg.emit(line.to_s.gsub(/\\s+/, " ").strip, force: true)
+    def dmesg(line) = Master::Trace::Dmesg.emit(line.to_s.gsub(/\s+/, " ").strip, force: true)
 
     # Detailed mode is consumed by /fix --mode=audit. The default return remains
     # the historic unit/index pairs for the standalone sweep command.
