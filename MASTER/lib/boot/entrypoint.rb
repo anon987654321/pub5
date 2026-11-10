@@ -9,11 +9,15 @@ require "rubygems"
 # 4.0, where json 2.18.0 and date 3.5.1 are the defaults; vm23 runs 3.4, where
 # they are older and the newer copies live only in the deploy bundle. So the
 # deploy bundle joins the gem path first, and each pinned default is activated
-# at its locked version before `require "time"` pulls in date. psych is pinned
-# the same way because lib/mobile requires yaml before Bundler runs, and a newer
-# psych left in the private gem store would otherwise win. This runs at load
-# time, not in prepare!, because reexec_mismatched_bundler! starts a fresh
-# process that loads this file again.
+# at its locked version before `require "time"` pulls in date. This runs at
+# load time, not in prepare!, because reexec_mismatched_bundler! starts a
+# fresh process that loads this file again.
+#
+# On a fresh checkout the locked copies are not installed yet, so this early
+# pass cannot activate them; the same pins are retried in
+# activate_locked_defaults! after the dependency manager has run. require
+# "time" therefore waits for that retry, or the default date activates first
+# and Bundler.setup refuses the locked one (first-boot Gem::LoadError).
 boot_root = File.expand_path("../..", __dir__)
 bundle_config = File.join(boot_root, ".bundle", "config")
 deploy_bundle = File.file?(bundle_config) ? File.binread(bundle_config)[/^BUNDLE_PATH:\s*"?([^"\s]+)"?\s*$/, 1] : nil
@@ -35,13 +39,11 @@ boot_lock = File.file?(boot_lockfile) ? File.binread(boot_lockfile) : ""
     nil
   end
 end
-require "time"
 
 require_relative "dependency_manager"
 require_relative "../trace/dmesg"
 require_relative "../operator/environment"
 require_relative "../operator/ruby_runner"
-require_relative "../mobile/bootstrap"
 
 module Master
   module Boot
@@ -74,9 +76,12 @@ module Master
         true
       end
 
-      # On a phone the build tools must be there before Bundler compiles a native gem,
-      # so the pinned Termux packages install ahead of the dependency check.
+      # Loaded here, not at file top: lib/mobile requires yaml the moment it
+      # loads, which would activate the default psych before the locked copy
+      # could be pinned on a fresh checkout. Off a phone the early load bought
+      # nothing.
       def prepare_mobile!(env:, out:)
+        require_relative "../mobile/bootstrap"
         return unless Master::Mobile::Profile.new(env:).activate!
 
         result = Master::Mobile::Bootstrap.new(env:).ensure!
@@ -118,7 +123,28 @@ module Master
 
         ENV["BUNDLE_GEMFILE"] = gemfile
         activate_locked_bundler(locked_bundler_version(root))
+        activate_locked_defaults!(root)
         require "bundler/setup"
+      end
+
+      # Retry the locked default-gem pins now that the dependency manager has
+      # installed them, then load time/date at the locked version. The early
+      # pass at load time could not do this on a fresh checkout.
+      def activate_locked_defaults!(root)
+        lockfile = File.join(root, "Gemfile.lock")
+        lock = File.file?(lockfile) ? File.binread(lockfile) : ""
+        %w[json date psych].each do |name|
+          pin = lock[/^    #{name} \(([\d.]+)\)$/, 1]
+          next unless pin
+
+          begin
+            gem name, pin
+          rescue Gem::LoadError => e
+            warn "boot0: pin #{name} #{pin} failed, #{e.message}" if ENV["MASTER_BOOT_DEBUG"]
+          end
+        end
+        warn "boot0: Gem.path=#{Gem.path.inspect} date=#{Gem.loaded_specs['date']&.full_name.inspect}" if ENV["MASTER_BOOT_DEBUG"]
+        require "time"
       end
 
       # The lock records the Bundler that wrote it (4.x on Ruby 4.0); vm23's

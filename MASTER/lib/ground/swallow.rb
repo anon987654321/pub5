@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "json"
-require "time"
 # MasterPaths::ROOT rather than Master::ROOT, which is defined in lib/master.rb
 # and therefore only exists after a full runtime boot. lib/io/replicate_client.rb
 # is deliberately standalone-loadable -- MASTER/tools/preprompt and MASTER/tools/replicate both
@@ -54,6 +52,20 @@ module Master
 
         def over_budget?(count) = count.to_i > PLACE_BUDGET
 
+        # json and time load on first telemetry use, not at file top: Swallow
+        # loads beside io/exec during boot, before the locked default gems can
+        # be pinned. An eager require here activated the default json and date
+        # on a fresh checkout, and Bundler.setup then refused the locked copies
+        # ("already activated date 3.3.4"). Time.now needs no require; parse
+        # and iso8601 do.
+        def load_telemetry_stdlib!
+          @telemetry_stdlib_loaded ||= begin
+            require "json"
+            require "time"
+            true
+          end
+        end
+
         def event_bus=(bus)
           @event_bus = bus
         end
@@ -89,6 +101,7 @@ module Master
 
         # Query swallowed errors from structured log. Returns array of hashes.
         def recent(limit: 100, context: nil, since: nil, severity: nil)
+          load_telemetry_stdlib!
           records = last_records(limit)
           records = records.select { |r| r["context"] == context.to_s } if context
           records = records.select { |r| Time.parse(r["at"]) >= since } if since
@@ -160,6 +173,7 @@ module Master
           path = log_path
           return [] unless File.exist?(path)
 
+          load_telemetry_stdlib!
           File.readlines(path, chomp: true).last(limit).filter_map { |line| JSON.parse(line) rescue nil }
         end
 
@@ -175,6 +189,7 @@ module Master
         end
 
         def build_payload(error, context, severity, meta)
+          load_telemetry_stdlib!
           {
             at: Time.now.utc.iso8601,
             context: context.to_s,

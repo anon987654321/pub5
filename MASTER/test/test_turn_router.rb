@@ -65,9 +65,15 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/fix RAILS --no-autofix", router.rewrite_slash("/scan RAILS --no-autofix")
     assert_equal "/fix x", router.rewrite_slash("/sweep x")
     assert_equal "/fix", router.rewrite_slash("/triad")
-    # The reading is a /fix flag, not a word of its own: /review, /critique and /council are not spellings.
-    %w[review critique council].each { |word| assert_equal "/#{word} lib", router.rewrite_slash("/#{word} lib") }
-    refute_includes router::PIPELINE_SLASH, "review"
+    # /review and /critique are the reading spellings the registry keeps as
+    # compatibility adapters: they rewrite to /fix's reading half and write nothing.
+    %w[review critique].each do |word|
+      assert_equal "/fix #{router::READING_FLAGS} lib", router.rewrite_slash("/#{word} lib")
+    end
+    assert_includes router::PIPELINE_SLASH, "review"
+    # /council stays a model alias, not a person-typed spelling.
+    assert_equal "/council lib", router.rewrite_slash("/council lib")
+    refute_includes router::PIPELINE_SLASH, "council"
   end
 
   def test_scan_is_a_spelling_of_fix_not_a_command

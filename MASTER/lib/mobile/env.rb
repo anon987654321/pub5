@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
-require "yaml"
-
 module Master
   module Mobile
     CONFIG_PATH = File.expand_path("../../data/mobile.yml", __dir__)
 
     # data/mobile.yml, read once. A missing or unreadable file is an empty profile.
+    # yaml loads here, not at file top: env.rb loads beside mobile/audited_exec
+    # during boot, before the locked default gems can be pinned, and an eager
+    # require activated the default psych on a fresh checkout (Bundler.setup
+    # then refused the locked psych).
     def self.config(path = CONFIG_PATH)
+      require "yaml"
       @config ||= {}
       @config[path] ||= File.file?(path) ? (YAML.safe_load_file(path) || {}) : {}
     end

@@ -59,12 +59,18 @@ module Master
         target = remainder.split(/\s+/).reject do |token|
           token.match?(DISPATCH_FLAG) || token.match?(ONLY_FLAG) || DMESG_FLAGS.key?(token.downcase)
         end
+        # The proof and the topology measure walk the governed trees, so they
+        # need the repository root. The dispatch root is MASTER/, the runtime's
+        # own directory: passing it here made /fix --prove look for
+        # MASTER/MASTER/convergence.yml and /explain measure every tree as
+        # files=0.
+        repo_root = Master.repo_root
         result = with_dmesg_verbosity(raw) do
           case mode
           when "prove"
-            render_proof(root:, target:)
+            render_proof(root: repo_root, target:)
           when "explain"
-            Master::Convergence::Architecture.render(root:, target: target.join(" "))
+            Master::Convergence::Architecture.render(root: repo_root, target: target.join(" "))
           end
         end
         result
@@ -713,6 +719,14 @@ module Master
       # Repair only the files a red check names, without semantic reads (Fix::CheckFocus).
       BLOCKERS_FLAG = /\A--blockers\z/i
 
+      # The critique pins: /simplify and /security are the /fix spellings whose
+      # council argues one focus only (TurnRouter::FIX_PIN_SLASH). They are
+      # per-dispatch overrides, never part of the target: leaving them out of
+      # DISPATCH_FLAG made the tree scope "--simplify" and the execution trace
+      # refused the run before a single instrument ran.
+      SIMPLIFY_FLAG = /\A--simplify\z/i
+      SECURITY_FLAG = /\A--security\z/i
+
       # code, visual or all: which half of /fix runs (Fix::WorkLane).
       # Any word: WorkLane.parse names the lanes and refuses an unknown one, so
       # --lane=elevate is honoured and a typo stops the run instead of quietly
@@ -726,7 +740,8 @@ module Master
       # Flags read per dispatch (execution_overrides), never part of the target.
       TASK_INTENT_FLAG = /\A--intent=(\S+)\z/i
       DISPATCH_FLAG = Regexp.union(
-        AUTOFIX_FLAG, MAX_FILES_FLAG, BLOCKERS_FLAG, LANE_FLAG, TASK_INTENT_FLAG, /\A--until-checks\z/i
+        AUTOFIX_FLAG, MAX_FILES_FLAG, BLOCKERS_FLAG, LANE_FLAG, TASK_INTENT_FLAG,
+        SIMPLIFY_FLAG, SECURITY_FLAG, /\A--until-checks\z/i
       )
 
       # Status messages are one-line operator evidence. Do not let a path label

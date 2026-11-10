@@ -852,12 +852,6 @@ module Dilla
       target - 1
     end
 
-    def step_time(bar, step)
-      t = bar * @groove.bar_s + step * @groove.sixteenth_s
-      t += @groove.swing_delay_s if step.odd?
-      t
-    end
-
     MELODY_RHYTHMS = {
       "dorian_moan" => [[0, 1.5], [1.5, 0.5], [2, 1.0], [4, 2.0], [7, 1.0]],
       "sweet_soul" => [[0, 1.0], [1, 0.5], [2, 1.5], [4, 1.0], [6, 2.0]],
@@ -1277,7 +1271,7 @@ module Dilla
         phase += body_f * 65_536 / SAMPLE_RATE
         mod_phase += body_f * fm_ratio * 65_536 / SAMPLE_RATE
         index = fm_index * (fm_decay**i) + 0.08
-        modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math.PI)
+        modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math::PI)
         body = Dilla.sine(modulated_phase.round) * env_b
         crack = i < 90 ? NOISE[(i * 3 + off) % NOISE.length] * (1.0 - i / 90.0) * 0.6 : 0.0
         out[i] = (noise * (0.42 + 0.3 * tone) + body * 0.55 + crack) * vel

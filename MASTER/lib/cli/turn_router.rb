@@ -196,16 +196,18 @@ module Master
       # the silently-failing properties — injection, authority, custody,
       # bypasses, delivery. Either way the instruments keep their findings.
       FIX_PIN_SLASH = { "simplify" => "--simplify", "security" => "--security" }.freeze
+      # The reading spellings of /fix. The registry keeps review and critique
+      # as compatibility adapters of the one writing verb: a person typing
+      # them wants the tree read, not written, so each rewrites to
+      # /fix --dry-run --critique (READING_FLAGS) and writes nothing.
+      READING_SLASH = %w[review critique].freeze
       # The slash spellings of /fix: the writing words, the two convergence
-      # reads, and the two critique pins. `/review`, `/critique` and `/council`
-      # are deliberately NOT here — reading is /fix --dry-run --critique, a flag
-      # of the one advertised command, not three verbs of its own. A model may
-      # still answer "review" (MODEL_ALIASES) and normalize_inferred_command
-      # rewrites that to /fix; a person typing "/review" gets the word back
-      # unchanged rather than a fourth spelling to learn.
+      # reads, the two critique pins, and the two reading spellings. A model
+      # may still answer "review" (MODEL_ALIASES) and normalize_inferred_command
+      # rewrites that to /fix; the reading flags then come from READING_WORDS.
       PIPELINE_SLASH = (
         %w[fix scan self workflow triad sweep through] +
-        CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys
+        CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys + READING_SLASH
       ).uniq.freeze
 
       INFER_MIN_CONFIDENCE = 0.62
@@ -443,6 +445,7 @@ module Master
 
       def rewritten_pipeline(name, rest)
         return ["/fix", rest].reject(&:empty?).join(" ") if WRITING_SLASH.include?(name)
+        return ["/fix", READING_FLAGS, rest].reject(&:empty?).join(" ") if READING_SLASH.include?(name)
 
         ["/fix", pinned_flag(name), rest].reject(&:empty?).join(" ")
       end

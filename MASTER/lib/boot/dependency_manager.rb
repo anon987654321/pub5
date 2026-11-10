@@ -576,6 +576,18 @@ module Master
         Gem::Specification.reset
       end
 
+      # Bundler 4 installs a configured path as <path>/ruby/<version>/{gems,specs,...},
+      # a layout plain RubyGems cannot search. The per-Ruby gem dir therefore joins
+      # the search path beside the configured path, so the locked default gems
+      # (date, json, psych) stay activatable outside Bundler, and require "time"
+      # cannot silently activate the default date on a fresh checkout.
+      def gem_search_paths(path)
+        nested = File.join(path, "ruby", RbConfig::CONFIG.fetch("ruby_version"))
+        # Bundler names the specification dir "specifications"; RubyGems "specs".
+        gem_dir = [File.join(nested, "specifications"), File.join(nested, "specs")].find { |dir| File.directory?(dir) }
+        gem_dir ? [path, nested] : [path]
+      end
+
       def gem_command
         candidate = File.join(RbConfig::CONFIG.fetch("bindir"), Gem.default_exec_format.sub("@", "gem"))
         return candidate if File.executable?(candidate)
@@ -599,7 +611,11 @@ module Master
           ].reject(&:empty?).join(File::PATH_SEPARATOR),
           "RUBY" => RbConfig.ruby,
           "GEM_HOME" => bundle_gem_home,
-          "GEM_PATH" => [bundle_gem_home, bundler_gem_home, default_gem_path].uniq.join(File::PATH_SEPARATOR),
+          "GEM_PATH" => [
+            *gem_search_paths(bundle_gem_home),
+            *gem_search_paths(bundler_gem_home),
+            default_gem_path,
+          ].uniq.join(File::PATH_SEPARATOR),
         }
 
         # A user's global ~/.bundle/config, deployment variables, or a stale

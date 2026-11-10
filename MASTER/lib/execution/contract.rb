@@ -2,7 +2,10 @@
 
 require "digest"
 require "securerandom"
-require "time"
+# require "time" is deferred to deadline parsing below: this contract loads
+# beside mobile/audited_exec during boot, before the locked default gems can
+# be pinned, and an eager require activated the default date on a fresh
+# checkout (Bundler.setup then refused the locked date).
 
 module Master
   module Execution
@@ -392,6 +395,7 @@ module Master
 
           if deadline_at
             deadline_at = deadline_at.to_s
+            require "time"
             Time.iso8601(deadline_at)
             deadline_at = deadline_at.freeze
           end

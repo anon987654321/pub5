@@ -599,15 +599,23 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_operator result.length, :<=, 170
   end
 
-  # The reading half of /fix is its --dry-run --critique flags. No registry verb, router spelling or help
-  # page answers to review, critique or council, and the /fix page names the flags.
+  # The reading half of /fix is its --dry-run --critique flags. /review and
+  # /critique are the reading spellings of /fix (TurnRouter::READING_SLASH):
+  # no registry verb, help page or dispatcher answers to them, and the /fix
+  # page names the flags. /council stays a model alias only.
   def test_the_reading_is_a_flag_of_fix_not_a_word
-    %w[review critique council].each do |word|
+    %w[council].each do |word|
       refute built.key?(word), "#{word} is a registry verb again"
       refute_includes Registry::HELP_TOPICS.keys, word
       refute Registry.respond_to?(:"dispatch_#{word}"), "dispatch_#{word} came back"
       refute_includes Master::CLI::TurnRouter::PIPELINE_SLASH, word
-      refute_match(%r{/#{word}\b}, Registry.help_text("fix"))
+    end
+    %w[review critique].each do |word|
+      refute built.key?(word), "#{word} is a registry verb again"
+      refute_includes Registry::HELP_TOPICS.keys, word
+      refute Registry.respond_to?(:"dispatch_#{word}"), "dispatch_#{word} came back"
+      assert_includes Master::CLI::TurnRouter::PIPELINE_SLASH, word
+      assert_equal Master::CLI::CommandRegistry.help_text("fix"), Registry.help_text(word)
     end
     assert_match(/--dry-run --critique/, Registry.help_text("fix"))
   end

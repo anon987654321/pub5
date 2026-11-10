@@ -471,7 +471,11 @@ module Master
             ("#{name} needs more memory than this machine has" unless runs_here?(id))
           end
 
-          def local_server_models = local_server_index.keys
+          # Public read: the council's deliberation and the agent both read the
+          # local server tier under MASTER_LOCAL_ONLY. It was private, so the
+          # candidate list died with NoMethodError and the run's council failed
+          # as circuit_open instead of reading what is actually reachable.
+          public def local_server_models = local_server_index.keys
 
           def local_server_index
             return {} if ENV["MASTER_NO_POOL_PROBES"] == "1"
