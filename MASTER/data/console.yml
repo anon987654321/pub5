@@ -16,6 +16,12 @@ dmesg:
   scan_progress: true
   milestones: true
   flush: true
+  # Raw detail is terminal-only and opt-in; it can reveal source, model replies
+  # and reasoning that ordinary output and shared event ledgers redact.
+  detail_indent: 2
+  detail_max_chars: 240
+  detail_max_lines: 8
+  detail_truncate_marker: "…"
   # SGR for lines printed while MASTER boots: the OpenBSD console's kernel
   # colours, white on blue. Terminals only; the prompt and session stay plain.
   # Empty turns it off, as does NO_COLOR. The blue is 24-bit #0000FF, because

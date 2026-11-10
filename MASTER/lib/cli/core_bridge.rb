@@ -353,10 +353,13 @@ module Master
                                          format: format || Master::Core::Model::SCHEMA, **Hash(ladder&.pinned))
           ladder&.hear(reply)
           why = CoreBridge.reason_in(reply)
-          if why && bus
+          if why
             # The reason can echo prompts, source snippets, paths, or secrets. Persist only
             # bounded diagnostic metadata; the local turn still owns the actual reply.
-            bus.publish("core:reason", Master::Execution::Contract.diagnostic_fields(why, key: :why))
+            bus&.publish("core:reason", Master::Execution::Contract.diagnostic_fields(why, key: :why))
+            # The shared event keeps only digest and size; detail is a separate,
+            # terminal-only view enabled by the operator's explicit flag.
+            Master::Trace::Dmesg.detail("fold0", "reason: #{why}")
           end
           Reply.new(reply)
         end

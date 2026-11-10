@@ -40,7 +40,22 @@ module Master
           next perm if perm.err?
 
           FileUtils.mkdir_p(File.dirname(full))
-          commit_write(full, content, path:)
+          detail_enabled = defined?(Master::Trace::Dmesg) && Master::Trace::Dmesg.detail_enabled?
+          old_src = if detail_enabled && File.file?(full)
+            begin
+              File.binread(full)
+            rescue StandardError
+              nil
+            end
+          elsif detail_enabled
+            "".b
+          end
+          result = commit_write(full, content, path:)
+          if detail_enabled && !result.err? && old_src
+            diff = Master::Trace::Dmesg.diff_head(old_src, content, limit: 6)
+            Master::Trace::Dmesg.detail("write_file", "#{path} (#{content.bytesize} bytes)\n#{diff}")
+          end
+          result
         end
       end
 

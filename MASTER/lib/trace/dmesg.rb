@@ -12,7 +12,8 @@ module Master
     # Shape: "unitN at parent: detail" / "unitN: status". Prose, not key=value:
     # "scan0: 3 violations in 2 files", as the kernel says "sd0: 244198MB".
     # Config: data/console.yml#dmesg (enabled: true). Normal is the configured default; verbose and trace are explicit.
-    # ENV MASTER_DMESG accepts 0, quiet, normal, verbose, or trace.
+    # ENV MASTER_DMESG accepts 0, quiet, normal, verbose, trace or everything.
+    # --detail opts into bounded terminal payloads; ordinary event output stays redacted.
     #
     # This shape is the CLI's whole style guide: append-only, one line per fact,
     # no banner. The machine-readable form of the same facts is the event bus
@@ -20,7 +21,7 @@ module Master
     module Dmesg
       module_function
 
-      LEVELS = %w[quiet normal verbose trace].freeze
+      LEVELS = %w[quiet normal verbose trace everything].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
       @draft_guard = nil
 
@@ -30,7 +31,7 @@ module Master
 
         env = ENV["MASTER_DMESG"].to_s.downcase
         return false if env == "0" || env == "quiet"
-        return true if %w[1 normal verbose trace].include?(env)
+        return true if %w[1 normal verbose trace everything].include?(env)
 
         cfg.fetch("enabled", true) != false
       end
@@ -47,11 +48,33 @@ module Master
       end
 
       def verbose?
-        %w[verbose trace].include?(verbosity)
+        %w[verbose trace everything].include?(verbosity)
       end
 
       def trace?
-        verbosity == "trace"
+        %w[trace everything].include?(verbosity)
+      end
+
+      # "everything" is trace plus the separately gated detail channel.
+      # MASTER_DMESG_DETAIL is an explicit consent switch for terminal payloads.
+      def detail_enabled?
+        return true if verbosity == "everything"
+
+        %w[1 true yes on].include?(ENV["MASTER_DMESG_DETAIL"].to_s.downcase)
+      end
+
+      # Bind the numbered unit emitted by the event console to the operation
+      # that follows it. Fiber-local storage keeps concurrent calls distinct.
+      def bind_detail_unit(kind, unit)
+        (Fiber[:master_dmesg_detail_units] ||= {})[kind.to_s] = unit.to_s
+      end
+
+      def clear_detail_unit(kind)
+        Fiber[:master_dmesg_detail_units]&.delete(kind.to_s)
+      end
+
+      def detail_unit(kind)
+        Fiber[:master_dmesg_detail_units]&.fetch(kind.to_s, nil) || kind.to_s
       end
 
       def with_verbosity(level)
@@ -115,6 +138,23 @@ module Master
       def status(unit, msg, io: $stdout)
         Master::Fix::RunBudget.note_output(unit, msg) if defined?(Master::Fix::RunBudget)
         emit("#{unit}: #{msg}", io:)
+      end
+
+      # A subordinate terminal-only channel for payloads that the event ledger
+      # intentionally redacts. It is silent unless explicitly enabled; it never
+      # publishes to the bus, ring buffer or JSONL. Detail is not narrated.
+      def detail(unit, text, io: $stdout, indent: nil, style: nil)
+        return unless detail_enabled? && enabled?
+
+        settings = cfg
+        indent = Integer(indent || settings.fetch("detail_indent", 2)).clamp(0, 16)
+        maxch = Integer(settings.fetch("detail_max_chars", 240)).clamp(1, 4_000)
+        maxln = Integer(settings.fetch("detail_max_lines", 8)).clamp(1, 100)
+        marker = settings.fetch("detail_truncate_marker", "…").to_s
+        subordinate(detail_unit(unit), text, io:, indent:, style:, maxch:, maxln:, marker:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Trace::Dmesg.detail")
+        nil
       end
 
       # A multi-line message keeps its lines. emit flattens whitespace by
@@ -272,6 +312,56 @@ module Master
         @draft_guard = pair
       end
 
+      # Unlike emit, subordinate lines retain newlines and leading spaces.
+      # A numbered-unit prefix on every line keeps their parent relationship
+      # searchable without changing normal console event grammar.
+      def subordinate(unit, text, io:, indent:, style:, maxch:, maxln:, marker:)
+        body = as_utf8_text(text.to_s).scrub.gsub(ANSI, "").delete("\r")
+        body = body.gsub(/[[:cntrl:]&&[^\n\t]]/, "")
+        lines = body.split("\n", -1)
+        lines.pop if lines.last == "" && body.end_with?("\n")
+        return if lines.empty?
+
+        pad = " " * indent
+        prefix = unit.to_s.empty? ? "" : "#{unit}: "
+        rendered = lines.first(maxln).map do |line|
+          flat = line.rstrip
+          if flat.length > maxch
+            keep = [maxch - marker.length, 0].max
+            flat = "#{flat[0, keep]}#{marker}"
+          end
+          "#{pad}#{prefix}#{flat}"
+        end
+        omitted = lines.size - rendered.size
+        rendered << "#{pad}#{prefix}#{marker} #{omitted} more line(s)" if omitted.positive?
+
+        terminal_write(io:, guard: true) do |target|
+          rendered.each { |line| target.puts(detail_style_line(line, style, target)) }
+          target.flush if target.respond_to?(:flush)
+        end
+        nil
+      end
+
+      def detail_style_line(line, style, target)
+        return line unless ENV["NO_COLOR"].to_s.empty?
+        return line unless target.respond_to?(:tty?) && target.tty?
+
+        colour = case style
+                 when :context, :detail_hi then 244
+                 when :add then 32
+                 when :del then 31
+                 else 240
+                 end
+        supports_256 = ENV["TERM"].to_s.include?("256color") ||
+                       ENV["COLORTERM"].to_s.match?(/\A(?:truecolor|24bit)\z/i)
+        sgr = if colour >= 100
+          supports_256 ? "\e[38;5;#{colour}m" : "\e[90m"
+        else
+          "\e[#{colour}m"
+        end
+        "#{sgr}#{line}\e[0m"
+      end
+
       # A line built from tool output can arrive as bytes. Written to a text IO under
       # bin/master's Encoding.default_internal it raised on the first non-ASCII byte.
       def as_utf8_text(text)
@@ -419,6 +509,21 @@ module Master
 
       def line(unit, parent, detail) = "#{unit} at #{parent}: #{detail}"
 
+      # A bounded diff preview shared by whole-file writes and accepted repairs.
+      # UnifiedDiff owns the comparison; this layer only removes temp-file headers.
+      def diff_head(before, after, limit: 6)
+        require_relative "../fix/unified_diff" unless defined?(Master::Fix::UnifiedDiff)
+        diff = Master::Fix::UnifiedDiff.between(before, after, context: 0)
+        return "diff unavailable" if diff.nil?
+
+        diff.lines.reject do |line|
+          line.start_with?("diff --git ", "index ", "--- ", "+++ ")
+        end.first(Integer(limit)).join.rstrip
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Trace::Dmesg.diff_head")
+        "diff unavailable (#{e.class})"
+      end
+
       def plain(text) = text.to_s.scrub.gsub(ANSI, "").delete("\r")
 
       def collapse(lines)
@@ -519,11 +624,12 @@ module Master
         def llm_send(payload)
           parent = Fiber[:master_unit] || "master0"
           unit = open_unit("llm", llm_key(payload))
+          Dmesg.bind_detail_unit("llm", unit)
           @llm_parent[llm_key(payload)] = parent
           tally = llm_tally(parent)
           tally[:calls] += 1
           tally[:models] << model_name(payload[:model])
-          return ["#{unit} at #{parent}: #{model_name(payload[:model])}"] if Dmesg.verbose? || tally[:calls] <= BURST_AFTER
+          return ["#{unit} at #{parent}: #{model_name(payload[:model])}"] if Dmesg.detail_enabled? || Dmesg.verbose? || tally[:calls] <= BURST_AFTER
 
           rollup(parent, tally)
         end
@@ -537,7 +643,7 @@ module Master
           usage, @usage = @usage, nil
           tally = llm_tally(parent)
           tally[:failed] += 1 unless payload[:status].to_s == "success"
-          return rollup(parent, tally) if !Dmesg.verbose? && tally[:calls] > BURST_AFTER
+          return rollup(parent, tally) if !Dmesg.detail_enabled? && !Dmesg.verbose? && tally[:calls] > BURST_AFTER
 
           unless payload[:status].to_s == "success"
             digest = payload[:error_digest].to_s
@@ -726,11 +832,13 @@ module Master
         def tool_call(payload)
           kind, parent_unit = TOOL_UNITS.fetch(payload[:tool].to_s, [payload[:tool].to_s, "io0"])
           unit = open_unit(kind, "tool:#{payload[:tool]}")
+          Dmesg.bind_detail_unit(payload[:tool], unit)
           [*parent(parent_unit, "master0"), "#{unit} at #{parent_unit}: #{public_subject(payload)}"]
         end
 
         def tool_return(payload)
           unit = @open.delete("tool:#{payload[:tool]}")
+          Dmesg.clear_detail_unit(payload[:tool])
           return [] unless unit
           return ["#{unit}: #{public_error(payload)}"] unless payload[:ok]
 

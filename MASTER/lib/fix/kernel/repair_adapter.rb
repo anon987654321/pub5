@@ -555,6 +555,10 @@ module Master
           @applied_write = RefusedRepair::Write.new(path:, before: old_src, after: new_src)
           @bus&.publish("repair_loop:fix_applied", law: @law.id, file: path)
           FixTrace.accepted(@law.id, path)
+          if Master::Trace::Dmesg.detail_enabled?
+            diff = Master::Trace::Dmesg.diff_head(old_src, new_src, limit: 6)
+            Master::Trace::Dmesg.detail("fix0", "#{@law.id} #{path}\n#{diff}")
+          end
           true
         rescue StandardError => e
           @bus&.publish("repair_loop:write_error", law: @law.id, file: path, error: e.message)

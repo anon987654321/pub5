@@ -39,11 +39,13 @@ module Master
           return identity if identity.is_a?(String)
 
           @bus&.publish("tool:call", { tool: tool_name, invocation_id: }.merge(public_subject_fields(args)))
+          detail_tool_payload("args", args)
           record_trajectory_event(tool: tool_name, args:, phase: "call", ok: nil)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
           result = invoke_tool(args:, identity:, invocation_id:, started:)
           return result if result.is_a?(String)
 
+          detail_tool_payload("result", result.ok? ? result.value! : "error: #{result.message}")
           finish_tool_result(result:, identity:, args:, invocation_id:, started:, &block)
         end
 
@@ -125,6 +127,21 @@ module Master
           record_trajectory_event(tool: tool_name, args:, phase: "return", ok: true, bytes: value.to_s.bytesize)
           Fiber[:master_tree_seen] = true if orientation_tool?
           block ? block.call(value) : value
+        end
+
+        # Args and results are terminal-only, bounded by Dmesg's detail config,
+        # and never enter event payloads or the durable tool observer.
+        def detail_tool_payload(label, payload)
+          return unless defined?(Master::Trace::Dmesg) && Master::Trace::Dmesg.detail_enabled?
+
+          rendered = begin
+            JSON.pretty_generate(payload)
+          rescue StandardError
+            payload.to_s
+          end
+          Master::Trace::Dmesg.detail(tool_name, "#{label}:\n#{rendered}")
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "Trace::Dmesg.tool_detail", tool: tool_name)
         end
 
         def tool_tier

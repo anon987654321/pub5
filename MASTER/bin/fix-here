@@ -51,7 +51,7 @@ end
 if (i = args.index("--lane"))
   args[i, 2] = ["--lane=#{args[i + 1]}"]
 end
-PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks].freeze
+PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks --detail --everything].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
 # --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
@@ -61,7 +61,7 @@ check_stages = checks_flag.to_s.delete_prefix("--checks=")
 tree = args.shift
 USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
         "[--dry] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
-        "[--blockers] [--plan] [--until-checks] " \
+        "[--blockers] [--plan] [--until-checks] [--detail|--everything] " \
         "[--no-critique] [--checks=lexical,sprawl,...]"
 abort USAGE if tree.to_s.empty? || args.any?
 abort "fix-here: #{tree} is not one of #{TREES.join(', ')} and not a path in this checkout" unless TREES.include?(tree) || File.exist?(File.join(ROOT, tree))

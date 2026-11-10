@@ -161,6 +161,10 @@ HELP_USAGE = <<~HELP
     bin/master --fast
     echo '/status' | bin/master
 
+  --detail / --everything prints bounded prompt, reply, tool, file and repair payloads
+  directly to this terminal. It deliberately bypasses output redaction; avoid it
+  on shared terminals or captured logs.
+
   `core` drives the fold spine alone: exit 0 when its scripted done is refused,
   1 when it is admitted, 64 without a goal.
   MASTER/bin/ruby selects a supported Ruby when PATH's is too old to boot.
@@ -182,7 +186,7 @@ end
 
 def initial_message_parser(options)
   OptionParser.new do |opts|
-    opts.banner = "Usage: bin/master [-p PROMPT|-m MSG] [--continue [ID]|--session ID|--fork [ID]|--sessions] [--effort low|medium|high] [--model ID] [--output-format text|json|stream-json] [--permission-mode MODE] [--allowedTools LIST] [--headless] [--fast] [--daemon] [--verbose|--trace] [--web|--no-web] [--boot-status]"
+    opts.banner = "Usage: bin/master [-p PROMPT|-m MSG] [--continue [ID]|--session ID|--fork [ID]|--sessions] [--effort low|medium|high] [--model ID] [--output-format text|json|stream-json] [--permission-mode MODE] [--allowedTools LIST] [--headless] [--fast] [--daemon] [--verbose|--trace|--detail] [--web|--no-web] [--boot-status]"
     opts.on("-h", "--help") { print_master_help }
     opts.on("-m", "--message TEXT") { |text| options[:message] = text }
     opts.on("-p", "--prompt TEXT") { |text| options[:message] = text }
@@ -224,10 +228,18 @@ def initial_message_parser(options)
     opts.on("--no-web") { ENV["MASTER_WEB"] = "0" }
     opts.on("--boot-status") { ENV["MASTER_BOOT_STATUS"] = "1" }
     opts.on("--verbose", "show verbose status and boot detail (unit lines print by default; MASTER_CLI_QUIET=1 hides them)") { ENV["MASTER_CLI_VERBOSE"] = "1" }
-    opts.on("--trace", "show verbose progress and full boot diagnostics") do
+    opts.on("--trace", "show per-file event headers and full boot diagnostics; payloads stay redacted") do
       ENV["MASTER_CLI_TRACE"] = "1"
       ENV["MASTER_CLI_VERBOSE"] = "1"
       ENV["MASTER_BOOT_STATUS"] = "1"
+    end
+    opts.on("--detail", "show bounded prompt, reply, tool, file and repair payloads (terminal-only; bypasses output redaction)") do
+      ENV["MASTER_DMESG"] = "everything"
+      ENV["MASTER_DMESG_DETAIL"] = "1"
+    end
+    opts.on("--everything", "alias for --detail") do
+      ENV["MASTER_DMESG"] = "everything"
+      ENV["MASTER_DMESG_DETAIL"] = "1"
     end
     opts.on("--fast") do
       ENV["MASTER_FAST"] = "1"

@@ -160,10 +160,16 @@ module Master
 
         @bus&.publish("llm:send", model: selected_model)
         Io::LaneSelection.note_use(selected_model, Fiber[:master_operation])
+        detail_capture = Master::Trace::Dmesg.detail_enabled?
+        streamed_detail = +""
         streamed_bytes = 0
         stream_handler = if stream && blk
           lambda do |chunk|
             streamed_bytes += chunk.to_s.bytesize
+            if detail_capture && streamed_detail.bytesize < 2_000
+              remaining = 2_000 - streamed_detail.bytesize
+              streamed_detail << chunk.to_s.byteslice(0, remaining).to_s
+            end
             blk.call(chunk)
           end
         else
@@ -177,7 +183,24 @@ module Master
             end
           end
         end
-        settle(result, selected_model, started, streamed_bytes:)
+        settled = settle(result, selected_model, started, streamed_bytes:)
+        if detail_capture
+          response = if stream
+            streamed_detail
+          elsif settled.respond_to?(:value)
+            settled.value.to_s
+          elsif settled.respond_to?(:message)
+            settled.message.to_s
+          else
+            settled.to_s
+          end
+          Master::Trace::Dmesg.detail("llm", "response: #{response}")
+          Master::Trace::Dmesg.detail(
+            "llm", "latency=#{elapsed_ms(started)}ms response_bytes=#{response.bytesize}",
+            style: :context,
+          )
+        end
+        settled
       rescue Io::CircuitBreaker::CircuitError => err
         record_provider_outcome(selected_model, err.category, latency_ms: elapsed_ms(started), error: err.message)
         Result.err(redact_secrets(err.message), category: err.category)
@@ -475,6 +498,20 @@ module Master
         # already makes.
         messages = redact_outbound_messages(messages)
         sys = sys.nil? ? nil : Ground::Redactor.text(sys.to_s)
+        if Master::Trace::Dmesg.detail_enabled?
+          prompt = messages.map do |entry|
+            role = entry[:role] || entry["role"] || "message"
+            content = entry[:content] || entry["content"]
+            body = content.is_a?(String) ? content : "[structured content: #{content.class}]"
+            "#{role}: #{body}"
+          end.join("\n")
+          Master::Trace::Dmesg.detail("llm", "system: #{sys}") unless sys.to_s.empty?
+          Master::Trace::Dmesg.detail("llm", "prompt:\n#{prompt}")
+          Master::Trace::Dmesg.detail(
+            "llm", "model=#{selected_model} stream=#{stream} temperature=#{temperature.inspect}",
+            style: :context,
+          )
+        end
         # Claude CLI is deliberately text-only (--tools "" and strict MCP config),
         # even when its underlying model supports native tools. Give it MASTER's
         # guarded ReAct loop before the provider-specific early return.
