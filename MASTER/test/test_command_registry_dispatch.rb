@@ -626,6 +626,17 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_match(/conflicting --mode/, Registry.extract_fix_mode("--mode=audit --mode=all RAILS").last)
   end
 
+  def test_plain_fix_writes_by_default_but_explicit_reads_do_not
+    assert Registry.writes_requested?(apply: nil, only: nil), "the canonical /fix default is write-enabled"
+    assert Registry.writes_requested?(apply: true, only: nil)
+    refute Registry.writes_requested?(apply: false, only: nil), "--dry-run must not write"
+    refute Registry.writes_requested?(apply: nil, only: "critique,map"), "read-only stages must not write"
+    assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicit fix stage can write"
+
+    refute Master::CLI::Pipeline::Pass.allocate.send(:default_apply?),
+           "internal Pass callers remain fail-closed unless the dispatcher explicitly grants writes"
+  end
+
   def test_fix_modes_apply_bounded_and_read_only_presets
     apply, critique, only, overrides = Registry.apply_fix_mode(
       "audit", raw: "RAILS", apply: nil, critique: nil, only: nil, overrides: { lane: "standard" },
