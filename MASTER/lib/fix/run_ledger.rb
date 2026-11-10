@@ -22,6 +22,7 @@ module Master
       @file_rejects = Hash.new(0)
       @timeouts = []
       @lane_failures = Hash.new(0)
+      @file_outcomes = {}
       @max_files = nil
 
       class << self
@@ -40,6 +41,7 @@ module Master
 
             @timeouts = []
             @lane_failures = Hash.new(0)
+            @file_outcomes = {}
           end
         end
 
@@ -123,7 +125,29 @@ module Master
           tally.sort_by { |_, count| -count }.first(4).map { |reason, count| "#{reason} #{count}" }.join(", ")
         end
 
-        def rejects_for(file) = @mutex.synchronize { @file_rejects[file.to_s] }
+        # The per-run file docket records only files that entered the repair
+        # adapter. It never calls unvisited files clean or implies full scan
+        # coverage; each attempt keeps its Law, result and refusal reason.
+        def record_file_outcome(file:, law:, outcome:, reason: nil)
+          path = file.to_s
+          return if path.empty?
+
+          row = { "law" => law.to_s, "outcome" => outcome.to_s, "reason" => reason.to_s.strip[0, 300] }
+          @mutex.synchronize do
+            entry = (@file_outcomes[path] ||= { "laws" => [], "attempts" => [] })
+            entry["laws"] << law.to_s unless law.to_s.empty? || entry["laws"].include?(law.to_s)
+            entry["attempts"] << row
+          end
+          nil
+        end
+
+        def file_outcomes
+          @mutex.synchronize do
+            @file_outcomes.to_h do |path, entry|
+              [path, { "laws" => entry["laws"].dup, "attempts" => entry["attempts"].map(&:dup) }]
+            end
+          end
+        end
 
         # A file stops after two rejects: a third proposal costs a lane call and
         # has landed none of the first two.
@@ -173,7 +197,29 @@ module Master
           lines << "fix0: file budget spent on #{timeouts.size} file(s): #{timeouts.first(5).map { |file, _| file.split("/").last }.join(", ")}" if timeouts.any?
           drops = Master::Io::LaneState.run_drops
           lines << "fix0: lanes dropped this run: #{drops.map { |lane, why| "#{lane} (#{why})" }.join(", ")}" if drops.any?
+          lines.concat(file_docket_lines)
           lines.concat(swallowed_lines)
+        end
+
+        # Top of the attempted-file docket; remaining rows stay available through file_outcomes.
+        def file_docket_lines(limit: 20)
+          outcomes = file_outcomes
+          return [] if outcomes.empty?
+
+          latest = outcomes.to_h { |path, entry| [path, entry["attempts"].last || {}] }
+          counts = latest.values.group_by { |row| row["outcome"].to_s }.transform_values(&:size)
+          tally = counts.sort_by { |status, count| [-count, status] }.map { |status, count| "#{status}=#{count}" }
+          lines = ["fix0: file outcome docket #{outcomes.size} attempted file(s): #{tally.join(", ")}"]
+          outcomes.sort_by { |path, _entry| path }.first(limit).each do |path, entry|
+            last = entry["attempts"].last || {}
+            laws = entry["laws"].join(",")
+            reason = last["reason"].to_s
+            detail = reason.empty? ? "" : " reason=#{reason}"
+            lines << "fix0: file #{path} law=#{laws} outcome=#{last["outcome"]} attempts=#{entry["attempts"].size}#{detail}"[0, 420]
+          end
+          remaining = outcomes.size - limit
+          lines << "fix0: file docket contains #{remaining} additional attempted file(s); query RunLedger.file_outcomes for the complete in-memory set" if remaining.positive?
+          lines
         end
 
         # The errors the run caught and carried on past, by where they were caught. A verifier that
