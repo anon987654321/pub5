@@ -13,7 +13,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # per worker is more than this Mac or the CI box can hold.
   parallelize(workers: 1)
 
-  # A cold Puma on a loaded machine can take longer than Capybara's default.
+  # A cold test server on a loaded machine can take longer than Capybara's default.
   # The mock payment pages are absolute URLs built from the routes' default
   # host (localhost:3000 in test), so it points at the test server here.
   setup do
