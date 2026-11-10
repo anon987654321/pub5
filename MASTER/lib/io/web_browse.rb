@@ -6,12 +6,13 @@ require "uri"
 module Master
   module Io
     # Renders a page in headless Chrome and returns visible text and links.
-    # Chrome never receives an unrestricted HTTP request: each GET/HEAD is fetched
-    # by Net::HTTP at SsrfGuard's pinned address, then fulfilled into the page.
+    # Its network transport permits GET/HEAD only, but page JavaScript executes
+    # and GET endpoints may mutate remote state. Every request is fetched by
+    # Net::HTTP at SsrfGuard's pinned address, then fulfilled into the page.
     class WebBrowse
       TIER = :guarded
       NAME = "web_browse"
-      DESCRIPTION = "Render a page in headless Chrome -> title, visible text and links. For JavaScript sites web_fetch cannot read."
+      DESCRIPTION = "Render a page in headless Chrome -> title, visible text and links. Network requests are GET/HEAD only, but page scripts execute and GET endpoints may have side effects."
       TIMEOUT = 30
       REQUEST_TIMEOUT = 10
       SETTLE_SECONDS = 4
@@ -43,7 +44,7 @@ module Master
       # WebSockets). Disable those APIs before untrusted page scripts execute.
       NETWORK_SANDBOX_SCRIPT = <<~JS.freeze
         (() => {
-          const deny = () => { throw new DOMException("Network sockets are disabled in read-only browsing", "SecurityError"); };
+          const deny = () => { throw new DOMException("Network sockets are disabled in GET/HEAD-restricted browsing", "SecurityError"); };
           for (const name of ["WebSocket", "WebTransport", "RTCPeerConnection", "webkitRTCPeerConnection"]) {
             try { Object.defineProperty(window, name, { value: deny, configurable: false, writable: false }); } catch (_) {}
           }
