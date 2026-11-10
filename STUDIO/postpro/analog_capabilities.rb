@@ -98,37 +98,37 @@ module Studio
         %i[dilla vinyl_crackle_density].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#crackle!",
-          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_vinyl_crackle_density_is_seeded_and_amount_scales"
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_vinyl_crackle_density_is_seeded_and_amount_scales",
         }.freeze,
         %i[dilla tape_transient_softening].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#one_pass!",
-          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_tape_transient_softening_rounds_the_peaks_instead_of_pinning"
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_tape_transient_softening_rounds_the_peaks_instead_of_pinning",
         }.freeze,
         %i[dilla sp1200_bandwidth].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#one_pass!",
-          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_the_wear_pass_band_limits_before_it_colours"
+          regression_test: "STUDIO/test/test_dilla_wear_test.rb#test_the_wear_pass_band_limits_before_it_colours",
         }.freeze,
         %i[dilla mpc_twelve_bit].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#crush!",
-          regression_test: "STUDIO/test/test_dilla_crush_test.rb#test_mpc_twelve_bit_quantizes_to_a_step_grid"
+          regression_test: "STUDIO/test/test_dilla_crush_test.rb#test_mpc_twelve_bit_quantizes_to_a_step_grid",
         }.freeze,
         %i[dilla imperfect_sidechain].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#sidechain_curve!",
-          regression_test: "STUDIO/test/test_dilla_sidechain_test.rb#test_the_duck_is_a_ten_millisecond_staircase_on_the_kick_envelope"
+          regression_test: "STUDIO/test/test_dilla_sidechain_test.rb#test_the_duck_is_a_ten_millisecond_staircase_on_the_kick_envelope",
         }.freeze,
         %i[dilla delivery_lufs].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#steer_to_reference!",
-          regression_test: "STUDIO/test/test_dilla_loudness_test.rb#test_steer_to_reference_pulls_a_hot_render_and_leaves_a_quiet_one"
+          regression_test: "STUDIO/test/test_dilla_loudness_test.rb#test_steer_to_reference_pulls_a_hot_render_and_leaves_a_quiet_one",
         }.freeze,
         %i[dilla hit_microtiming].freeze => {
           status: :verified,
           implementation: "STUDIO/dilla/dilla.rb#nudge",
-          regression_test: "STUDIO/test/test_dilla_groove_test.rb#test_the_pocket_nudges_kick_late_and_snare_early"
+          regression_test: "STUDIO/test/test_dilla_groove_test.rb#test_the_pocket_nudges_kick_late_and_snare_early",
         }.freeze,
       }.freeze
       STATUSES = %i[verified unavailable unverified].freeze

@@ -45,7 +45,7 @@ module Studio
       "12.jpg" => "7bafc38f5e95a51086441defff3fd90a791a369c",
       "13.jpg" => "41f036fdefb4b0b6c8842ad629f39512af85e418",
       "14.jpg" => "41092f65d522ff52745fbd4b3d14df2a3606a2b1",
-      "15.jpg" => "b1a4ff18e8270a316f4db3838577fdf75fcf7093"
+      "15.jpg" => "b1a4ff18e8270a316f4db3838577fdf75fcf7093",
     }.freeze
 
     # Human-reviewed face-led starting subset. The other archived frames are
@@ -55,7 +55,7 @@ module Studio
       "10.jpg" => "A close head-and-shoulders photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, wearing dark rectangular eyeglasses and a plain dark top, soft indoor light.",
       "11.jpg" => "A front-facing head-and-shoulders photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, without eyeglasses, wearing a plain dark top against a patterned indoor backdrop.",
       "12.jpg" => "A close indoor portrait photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, wearing dark rectangular eyeglasses and dark clothing, bright natural window light.",
-      "13.jpg" => "A close portrait photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, looking slightly sideways, one hand resting against her cheek, wearing a dark top in soft indoor light."
+      "13.jpg" => "A close portrait photograph of MERETHE, an adult woman with long wavy ash-blonde hair and blue eyes, looking slightly sideways, one hand resting against her cheek, wearing a dark top in soft indoor light.",
     }.freeze
 
     IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze

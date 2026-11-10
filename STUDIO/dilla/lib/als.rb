@@ -53,8 +53,8 @@ module Studio
             "audio_content" => "Audio clips are represented by file references; sample bytes are not embedded in this archive.",
             "device_state" => "Native Ableton device parameters and third-party plug-in state are not interpreted or re-instantiated by this parser.",
             "warp_processing" => "Warp-marker coordinates and warp-enabled flags are exported; the actual warped audio rendering still requires an audio engine or DAW.",
-            "automation" => "Supported automation event points are exported; complex device-specific automation semantics may require Live."
-          }
+            "automation" => "Supported automation event points are exported; complex device-specific automation semantics may require Live.",
+          },
         }
       rescue REXML::ParseException => error
         raise ParseError, "invalid Live Set XML: #{error.message}"
