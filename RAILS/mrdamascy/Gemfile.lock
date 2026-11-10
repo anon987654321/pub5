@@ -500,7 +500,6 @@ DEPENDENCIES
   capybara
   dartsass-rails (~> 0.5.1)
   debug
-  DEPENDENCIES
   falcon
   importmap-rails
   propshaft
