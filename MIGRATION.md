@@ -347,8 +347,21 @@ ownership consolidation, not a silent loss of screenshot-review capability.
 
 At staging time, every one of the 41 BPLANS source blobs matched its
 `pub4@0a5ac0` SHA, as did all seven historical photographs and all 18
-post-cutoff RAILS/STUDIO source files. The three old Python screenshot scripts are intentionally retired in favour
-of the Ruby visual-sheet tool above. The
-four governed code-tree acceptance suites, BPLANS check/build, rendered
-screenshots, native OpenBSD validation and vm23 deployment remain
-**NOT_RUN** or **BLOCKED** until executed in their required environments.
+post-cutoff RAILS/STUDIO source files.
+
+**Later disposition — seven photographs (2026-11-10).** The seven phone
+photographs were imported in `pub5@e2135dd`, then explicitly retired in
+`pub5@616cf247` after review identified them as unassigned hand-drawn UI
+sketches (post list, vote arrows, icon notes, an advertisement placeholder
+and progressive-disclosure notes). No existing project owned them, and their
+root-level paths violated the root inventory. This supersedes the earlier
+"restore seven photographs" catch-up note: they are intentionally absent from
+the current tree, not an untracked migration gap. Their source bytes remain
+available in `pub4@0a5ac0` and pub5 Git history; do not restore them to the
+repository root without a new owner decision.
+
+The three old Python screenshot scripts are intentionally retired in favour
+of the Ruby visual-sheet tool above. The four governed code-tree acceptance
+suites, BIZ check/build, rendered screenshots, native OpenBSD validation and
+vm23 deployment remain **NOT_RUN** or **BLOCKED** until executed in their
+required environments.
