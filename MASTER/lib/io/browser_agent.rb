@@ -14,10 +14,11 @@ end
 
 module Master
   module Io
-    # Sessionful, read-oriented browser. WebBrowse owns the pinned-IP transport,
-    # SSRF checks, GET/HEAD-only policy, network sandbox and request budgets.
-    # A session is bound to the host that opened it. Interactive controls remain
-    # a separate authority boundary and require fresh human approval.
+    # Sessionful browser with a GET/HEAD-limited network transport. Page scripts
+    # execute, and GET endpoints may change remote state, so this is not described
+    # as read-only. WebBrowse owns pinned-IP transport, SSRF checks, request
+    # budgets and the network sandbox. Sessions remain host-bound; controls that
+    # interact with page elements require fresh human approval.
     class BrowserAgent
       NAME = "browser".freeze
       TIER = :guarded
@@ -80,6 +81,7 @@ module Master
           @sessions.sort.map { |key, state| "#{key}=#{state.host} (#{state.headless ? "headless" : "visible"})" }
         end
         Result.ok("browser ready; runtime=#{ferrum_available? ? "ferrum" : "unavailable"}; " \
+                   "network_methods=GET/HEAD; page_scripts=enabled; GET_side_effects=possible; " \
                    "sessions=#{rows.empty? ? "none" : rows.join(", ")}")
       end
 
