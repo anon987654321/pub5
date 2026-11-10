@@ -169,10 +169,12 @@ Never claim a Law is enforced because its name or detector is merely declared.
 
 `MASTER/docs/synonyms.yml` is glossary-only. `MASTER/checks/checks.yml`
 routes operational checks. Neither creates Law identities or normative
-policy, and neither overrides the constitution. The four owners are MASTER/
+policy, and neither overrides the constitution. The four runtime owners are MASTER/
 (runtime, `MASTER/bin/master`), RAILS/ (apps, `MASTER/bin/operator` triangle
 up), OPENBSD/ (deployment and vm23), and STUDIO/ (Dilla, photograph,
-Replicate). `MASTER/tools/` keeps compatibility entrypoints for STUDIO tools.
+Replicate). The fifth uppercase content root is `BIZ/` (business plans and
+document production; see `BIZ/README.md`). `MASTER/tools/` keeps compatibility
+entrypoints for STUDIO tools.
 
 `laws.yml#law_catalogue` is the single source for per-Law severity, mode,
 lifecycle, autofix, language, surface and path exclusion. The catalogue retired
@@ -245,6 +247,7 @@ contradictory file instead of working around it in silence.
 The HTML preservation guard proves source-level invariants only. It does
 not replace rendered, browser, viewport, keyboard, or accessibility
 evidence.
+
 <!-- agent-contract:end -->
 
 ## Working alone in this repo
