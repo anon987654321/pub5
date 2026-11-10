@@ -1,8 +1,8 @@
 // Progressive disclosure for the bottom tab bar ("footer menu").
 //
-// Visible at the page top and on pages too short to scroll; it yields while
-// the reader moves down the page and returns on scroll-up, focus or the peel
-// grip. The first-visit coach keeps the collapsed state discoverable.
+// Progressive disclosure keeps the bar closed on first visit, then reveals
+// it on scroll-up or focus. The peel and first-visit coach keep the closed
+// state discoverable while the bar remains in the accessibility tree.
 import { Controller } from "@hotwired/stimulus"
 import { mayPrompt, YIELD_EVENT } from "pub4/onboarding"
 
@@ -19,13 +19,9 @@ export default class extends Controller {
     this.ticking = false
     this.threshold = 8 // px of travel before reacting, avoids jitter at rest
 
-    // Honour a restored open state, but keep navigation available at the page
-    // top and on pages too short to scroll. Those are the two places where a
-    // hidden bar has no scroll gesture that can bring it back.
-    const restoredOpen = this.#restore() === true
-    const atTop = this.element.scrollTop <= this.threshold
-    const cannotScroll = this.element.scrollHeight <= this.element.clientHeight + 1
-    this.#apply(!(restoredOpen || atTop || cannotScroll))
+    // Default closed. Session restore only if the visitor already opened it
+    // this tab — not across sessions.
+    this.#apply(this.#restore() !== true)
     this.#maybeShowCoach()
 
     // A visually translated bar stays in the accessibility tree. A keyboard
@@ -99,8 +95,8 @@ export default class extends Controller {
       const y = this.element.scrollTop
       const dy = y - this.lastY
       if (Math.abs(dy) > this.threshold) {
-        // Scroll down → hide; scroll up or return to the top → show.
-        // A focused link is kept visible regardless of scroll direction.
+        // Scroll down → hide; scroll up → show. The peel remains available
+        // while closed; a focused link is never hidden by a scroll event.
         if (dy > 0 && y > this.threshold) {
           // Scrolling must not pull the navigation away from a focused link.
           if (!this.hasBarTarget || !this.barTarget.contains(document.activeElement)) this.#apply(true)
@@ -135,20 +131,14 @@ export default class extends Controller {
   }
 
   #markCurrentTab() {
-    if (this.hasBarTarget) {
-      const here = window.location.pathname
-      this.barTarget.querySelectorAll("a[href]").forEach((link) => {
-        const path = new URL(link.getAttribute("href"), window.location.origin).pathname
-        if (path === here) link.setAttribute("aria-current", "page")
-        else link.removeAttribute("aria-current")
-      })
-    }
+    if (!this.hasBarTarget) return
 
-    // Turbo may land on a short page or restore the document to its top.
-    // Make the navigation available there without requiring another gesture.
-    const atTop = this.element.scrollTop <= this.threshold
-    const cannotScroll = this.element.scrollHeight <= this.element.clientHeight + 1
-    if (atTop || cannotScroll) this.#apply(false)
+    const here = window.location.pathname
+    this.barTarget.querySelectorAll("a[href]").forEach((link) => {
+      const path = new URL(link.getAttribute("href"), window.location.origin).pathname
+      if (path === here) link.setAttribute("aria-current", "page")
+      else link.removeAttribute("aria-current")
+    })
   }
 
   #maybeShowCoach() {
