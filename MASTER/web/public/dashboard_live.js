@@ -141,13 +141,26 @@ async function refresh() {
     const used = Object.entries(quota.models || {})
       .map(([model, count]) => `${model}: ${count}`)
       .join(', ');
+    const provider = quota.provider || null;
+    const providerLine = provider
+      ? `${L('labelQuotaProvider', 'provider quota')}: ${provider.used ?? '—'} / ${provider.limit ?? '—'}; ` +
+        `${L('labelQuotaRemaining', 'remaining')}: ${provider.remaining ?? '—'}; ` +
+        `${L(provider.fresh ? 'labelQuotaFresh' : 'labelQuotaStale', provider.fresh ? 'fresh' : 'stale')} ` +
+        `(${L('labelQuotaAge', 'last read')}: ${provider.age_seconds ?? '—'}s)`
+      : `${L('labelQuotaProvider', 'provider quota')}: ${L('i18nUnavailable', 'not available')}`;
+    const forecastRows = Object.values(quota.forecasts || {}).map((forecast) =>
+      `${forecast.model}: ${forecast.remaining} / ${forecast.limit} ` +
+      `(${forecast.remaining_source}; ${L('labelQuotaForecast', 'per-model forecast')})`
+    );
     document.getElementById('quota').textContent = [
       `${L('labelQuotaDay', 'day')}: ${quota.day || '—'}`,
-      `${L('labelQuotaLimit', 'free limit')}: ${quota.limit ?? '—'}`,
-      `${L('labelQuotaUsed', 'used today')}: ${used || L('i18nNone', '(none)')}`,
+      `${L('labelQuotaLimit', 'configured free limit')}: ${quota.limit ?? '—'}`,
+      `${L('labelQuotaUsed', 'used by model')}: ${used || L('i18nNone', '(none)')}`,
       `${L('labelQuotaExhausted', 'exhausted')}: ${(quota.exhausted || []).join(', ') || none}`,
-      `${L('labelCachePct', 'prompt cache')}: ${cache.efficiency_pct ?? 0}%`,
-      `${L('labelCacheTokens', 'cached tokens')}: ${cache.cached_tokens || 0} / ${cache.input_tokens || 0}`
+      providerLine,
+      ...forecastRows,
+      `${L('labelCachePct', 'prompt cache')}: ${cache.measured ? `${cache.efficiency_pct}%` : L('labelCacheUnavailable', 'not measured yet')}`,
+      `${L('labelCacheTokens', 'cached tokens')}: ${cache.measured ? `${cache.cached_tokens} / ${cache.input_tokens}` : L('labelCacheUnavailable', 'not measured yet')}`
     ].join('\n');
 
     document.getElementById('bus').textContent = (d.bus_events || []).slice(-12).map(e => JSON.stringify(e)).join('\n') || L('i18nQuiet', '(quiet)');

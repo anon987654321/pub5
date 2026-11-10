@@ -49,8 +49,15 @@ en:
     quota:
       day: "quota day"
       limit: "free limit"
-      used: "used today"
+      used: "used by model"
       exhausted: "exhausted"
+      provider: "OpenRouter daily requests"
+      remaining: "remaining"
+      fresh: "fresh"
+      stale: "stale"
+      age: "last read"
+      forecast: "per-model forecast"
+      cache_unavailable: "not measured yet"
       cache_pct: "prompt cache"
       cache_tokens: "cached tokens"
     status:

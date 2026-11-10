@@ -76,7 +76,7 @@ class RepoHygieneContractTest < Minitest::Test
     ruby = File.read(File.join(REPO_ROOT, "MASTER/tools/rails/operator/ci_guard.rb"), encoding: "UTF-8")
 
     assert_includes shell, "PUB5_CI_LOCK_DIR=/var/db/pub5"
-    assert_includes shell, "PUB4_CI_LOCK_NAME=ci.lock"
+    assert_includes shell, "PUB5_CI_LOCK_NAME=ci.lock"
     assert_includes ruby, 'LOCK_DIR = "/var/db/pub5"'
     assert_includes ruby, 'DEFAULT_LOCK_PATH = File.join(LOCK_DIR, "ci.lock")'
   end

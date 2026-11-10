@@ -167,10 +167,14 @@ class TestEcosystemFeatures < Minitest::Test
     end
   end
 
-  def test_cache_efficiency_snapshot
+  def test_cache_efficiency_snapshot_distinguishes_unmeasured_from_zero
     Master::Trace::CacheEfficiency.reset!
+    empty = Master::Trace::CacheEfficiency.snapshot
+    refute empty[:measured], "no observed calls is unavailable, not 0% efficiency"
+
     Master::Trace::CacheEfficiency.record(input: 1000, cached: 870)
     snap = Master::Trace::CacheEfficiency.snapshot
+    assert snap[:measured]
     assert_in_delta 87.0, snap[:efficiency_pct], 0.1
     assert_equal 870, snap[:cached_tokens]
   end

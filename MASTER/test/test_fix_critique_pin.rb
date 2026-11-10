@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require_relative "../lib/fix/fix_loop/council_round"
+require_relative "../lib/review/council/critique"
 
 # The critique pin: `/fix --simplify` and `/fix --security` swap the council's
 # critique contract for the pinned one — quality-only, or the silently-failing
@@ -60,6 +61,25 @@ class TestFixCritiquePin < Minitest::Test
     refute_includes briefing, "This is the simplify critique"
   end
 
+  def test_general_preset_selects_its_eight_persona_panel
+    assert_equal %w[Architect Security Reliability Maintainer Skeptic Pragmatist "QA Engineer" "Data Steward"].sort,
+                 critique_panel_names.sort
+  end
+
+  def test_simplify_pin_selects_its_panel_and_keeps_security
+    Master::Fix::CritiquePin.set!(:simplify)
+
+    assert_equal %w[Maintainer Pragmatist Architect Skeptic "QA Engineer" Security].sort,
+                 critique_panel_names.sort
+  end
+
+  def test_security_pin_selects_only_security_critical_personas
+    Master::Fix::CritiquePin.set!(:security)
+
+    assert_equal %w[Security Reliability "Data Steward" Skeptic Maintainer].sort,
+                 critique_panel_names.sort
+  end
+
   def test_the_pinned_briefings_keep_their_anchoring_rows
     Master::Fix::CritiquePin.set!(:simplify)
     assert_includes round.send(:hard_briefing, []), "repository-relative file plus a stable line or symbol"
@@ -68,5 +88,15 @@ class TestFixCritiquePin < Minitest::Test
     Master::Fix::CritiquePin.set!(:security)
     assert_includes round.send(:hard_briefing, []), "repository-relative file plus a stable line or symbol"
     assert_includes round.send(:hard_briefing, []), "smallest deterministic check"
+  end
+
+  private
+
+  def critique_panel_names
+    critique = Master::Review::Council::Critique.new(mode: :general, agent: nil)
+    Master::Review::Council::Deliberation.stub(:local_posture?, false) do
+      preset = critique.send(:load_preset)
+      critique.send(:build_panel, preset).map(&:name)
+    end
   end
 end

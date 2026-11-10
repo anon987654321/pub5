@@ -60,8 +60,15 @@ nb:
     quota:
       day: "kvotedag"
       limit: "gratisgrense"
-      used: "brukt i dag"
+      used: "brukt per modell"
       exhausted: "utmatting"
+      provider: "OpenRouter-forespørsler i dag"
+      remaining: "igjen"
+      fresh: "fersk"
+      stale: "utdatert"
+      age: "sist lest"
+      forecast: "prognose per modell"
+      cache_unavailable: "ikke målt ennå"
       cache_pct: "prompt-cache"
       cache_tokens: "bufrede token"
     status:

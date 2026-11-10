@@ -88,6 +88,10 @@ class TestDashboardFleetPanel < Minitest::Test
     assert_includes poller, "d.fleet", "the poller reads the fleet payload"
     assert_includes poller, "d.model_quota", "the poller reads the quota payload"
     assert_includes poller, "d.cache_efficiency", "the poller reads the cache payload"
+    assert_includes poller, "quota.provider", "the poller renders the provider quota sample"
+    assert_includes poller, "quota.forecasts", "the poller renders per-model forecasts"
+    assert_includes poller, "cache.measured", "the poller distinguishes unknown cache data from zero"
+    assert_includes poller, "provider.fresh", "the poller labels sample freshness"
     assert_includes poller, "shed_order", "the poller renders the guard's shed order"
   end
 

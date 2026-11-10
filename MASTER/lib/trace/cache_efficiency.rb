@@ -34,6 +34,7 @@ module Master
         cached = data[:cached].to_i
         pct = input.positive? ? ((cached.to_f / input) * 100).round(1) : 0.0
         {
+          measured: data[:calls].to_i.positive?,
           efficiency_pct: pct,
           input_tokens: input,
           cached_tokens: cached,

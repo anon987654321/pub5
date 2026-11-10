@@ -75,7 +75,7 @@ class ModelQuotaForecastTest < Minitest::Test
       Check.stub(:path, File.join(dir, "model_quota.json")) do
         now = Time.utc(2026, 11, 8, 10, 0, 0)
         Check.stub(:active_openrouter_key, "test-key") do
-          Check.stub(:fetch_free_model_daily_requests, 7) do
+          Check.stub(:fetch_free_model_daily_requests, { "used" => 12, "limit" => 50, "remaining" => 7 }) do
             assert_equal :refreshed, Check.refresh_from_provider!(now:, day: "2026-11-08")
           end
         end
@@ -83,17 +83,17 @@ class ModelQuotaForecastTest < Minitest::Test
         Check.stub(:trackable?, true) do
           Check.stub(:count, 3) do
             Check.stub(:daily_limit, 50) do
-              assert_equal 7, Check.remaining("demo:free", day: "2026-11-08")
+              assert_equal 7, Check.remaining("demo:free", day: "2026-11-08", now:)
               assert_equal 7, Check.forecast("demo:free", now:)[:remaining]
               assert_equal "provider", Check.forecast("demo:free", now:)[:remaining_source]
-              refute Check.over_quota?("demo:free")
+              refute Check.over_quota?("demo:free", day: "2026-11-08", now:)
 
               Check.stub(:active_openrouter_key, "test-key") do
-                Check.stub(:fetch_free_model_daily_requests, 0) do
+                Check.stub(:fetch_free_model_daily_requests, { "used" => 50, "limit" => 50, "remaining" => 0 }) do
                   assert_equal :refreshed, Check.refresh_from_provider!(now: now + 3600, day: "2026-11-08")
                 end
               end
-              assert Check.over_quota?("demo:free", day: "2026-11-08"), "the provider says nothing is left"
+              assert Check.over_quota?("demo:free", day: "2026-11-08", now: now + 3600), "the provider says nothing is left"
               assert_equal 0, Check.forecast("demo:free", now: now + 3600, day: "2026-11-08")[:remaining]
             end
           end
@@ -123,13 +123,68 @@ class ModelQuotaForecastTest < Minitest::Test
       Check.stub(:path, File.join(dir, "model_quota.json")) do
         now = Time.utc(2026, 11, 8, 10, 0, 0)
         Check.stub(:active_openrouter_key, "test-key") do
-          Check.stub(:fetch_free_model_daily_requests, 7) { Check.refresh_from_provider!(now:, day: "2026-11-08") }
+          Check.stub(:fetch_free_model_daily_requests, { "used" => 12, "limit" => 50, "remaining" => 7 }) { Check.refresh_from_provider!(now:, day: "2026-11-08") }
         end
 
         Check.stub(:trackable?, true) do
           assert_equal 7, Check.remaining("demo:free", day: "2026-11-08")
-          assert_nil Check.provider_remaining("demo:free", day: "2026-11-09"), "yesterday's reading is not today's"
+          assert_nil Check.provider_remaining("demo:free", day: "2026-11-09", now:), "yesterday's reading is not today's"
         end
+      end
+    end
+  end
+
+  def test_normalize_provider_reading_accepts_the_documented_object
+    reading = Check.normalize_provider_reading(
+      "used" => 12, "limit" => 50, "remaining" => 38,
+    )
+
+    assert_equal({ "used" => 12, "limit" => 50, "remaining" => 38 }, reading)
+    assert_nil Check.normalize_provider_reading(38), "a scalar is not the documented response shape"
+    assert_nil Check.normalize_provider_reading("used" => 12, "limit" => 50)
+  end
+
+  def test_stale_provider_reading_is_visible_but_not_used_for_routing
+    Dir.mktmpdir do |dir|
+      now = Time.utc(2026, 11, 8, 10, 0, 0)
+      Check.stub(:path, File.join(dir, "model_quota.json")) do
+        Check.stub(:active_openrouter_key, "test-key") do
+          Check.stub(:fetch_free_model_daily_requests, { "used" => 10, "limit" => 50, "remaining" => 40 }) do
+            assert_equal :refreshed, Check.refresh_from_provider!(now:, day: "2026-11-08")
+          end
+        end
+
+        Check.stub(:trackable?, true) do
+          Check.stub(:count, 10) do
+            Check.stub(:daily_limit, 50) do
+              stale_at = now + Check::PROVIDER_REFRESH_TTL_S + 1
+              assert_equal 40, Check.remaining("demo:free", day: "2026-11-08", now: stale_at)
+              forecast = Check.forecast("demo:free", day: "2026-11-08", now: stale_at)
+              assert_equal "burn_forecast", forecast[:remaining_source]
+              provider = Check.provider_quota_snapshot(day: "2026-11-08", now: stale_at)
+              assert_equal false, provider[:fresh]
+              assert_equal "stale_provider", provider[:source]
+            end
+          end
+        end
+      end
+    end
+  end
+
+  def test_provider_sample_is_adjusted_for_local_calls_after_the_sample
+    Dir.mktmpdir do |dir|
+      now = Time.now.utc
+      Check.stub(:path, File.join(dir, "model_quota.json")) do
+        Check.stub(:active_openrouter_key, "test-key") do
+          Check.stub(:fetch_free_model_daily_requests, { "used" => 12, "limit" => 50, "remaining" => 38 }) do
+            Check.record("demo:free")
+            Check.record("demo:free")
+          end
+        end
+
+        sample = Check.provider_quota_snapshot(now:)
+        assert_equal 1, sample[:local_requests_since_read]
+        assert_equal 37, Check.remaining("demo:free", now:)
       end
     end
   end

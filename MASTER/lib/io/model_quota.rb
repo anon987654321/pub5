@@ -69,16 +69,72 @@ module Master
       # requests, recorded under "provider" in the state file for today. A
       # missing or stale reading answers nil and the burn forecast stands
       # (TRUTHFUL_STATUS: a forecast is a forecast, a reading is a reading).
-      def provider_remaining(model, day: today_key)
+      # OpenRouter returns { used:, limit:, remaining: }, not a scalar.
+      # Reject incomplete or fractional samples; an absent reading is not zero.
+      def normalize_provider_reading(value)
+        return unless value.is_a?(Hash)
+
+        reading = %w[used limit remaining].to_h do |key|
+          number = value[key]
+          return unless number.is_a?(Numeric) && number.finite? && number.to_i == number && number >= 0
+
+          [key, number.to_i]
+        end
+        return if reading["used"] > reading["limit"] || reading["remaining"] > reading["limit"]
+
+        reading
+      rescue NoMethodError, TypeError
+        nil
+      end
+
+      def provider_remaining(model, day: today_key, now: Time.now.utc)
         return unless FREE_RE.match?(model.to_s)
 
-        row = load_data.dig("provider", OPENROUTER_LANE)
-        return unless row.is_a?(Hash) && row["day"] == day && row["free_model_daily_requests"].is_a?(Numeric)
-
-        row["free_model_daily_requests"].to_i
+        reading = provider_quota_snapshot(day:, now:)
+        reading[:remaining] if reading && reading[:fresh]
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ModelQuota.provider_remaining", model: model.to_s)
         nil
+      end
+
+      # Retain stale samples for display, but never use them for routing. The
+      # observed remaining count is adjusted for this checkout's later calls.
+      def provider_quota_snapshot(day: today_key, now: Time.now.utc)
+        row = load_data.dig("provider", OPENROUTER_LANE)
+        return unless row.is_a?(Hash) && row["day"] == day
+
+        value = row["free_model_daily_requests"]
+        reading = if value.is_a?(Hash)
+                    normalize_provider_reading(value)
+                  elsif value.is_a?(Numeric) && value >= 0
+                    { "remaining" => value.to_i }
+                  end
+        return unless reading && row["fetched_at"].is_a?(Numeric)
+
+        fetched_at = row["fetched_at"].to_f
+        age = now.to_f - fetched_at
+        return if age.negative?
+
+        local_delta = [free_model_request_count(day:) - row["local_used_at_fetch"].to_i, 0].max
+        {
+          used: reading["used"] && reading["used"] + local_delta,
+          limit: reading["limit"],
+          remaining: [reading["remaining"].to_i - local_delta, 0].max,
+          reported_remaining: reading["remaining"],
+          local_requests_since_read: local_delta,
+          source: age < PROVIDER_REFRESH_TTL_S ? "provider" : "stale_provider",
+          fetched_at: Time.at(fetched_at).utc.iso8601,
+          age_seconds: age.to_i,
+          fresh: age < PROVIDER_REFRESH_TTL_S,
+        }
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.provider_quota_snapshot")
+        nil
+      end
+
+      def free_model_request_count(day: today_key)
+        data = load_data[day] || {}
+        data.sum { |model, used| FREE_RE.match?(model.to_s) ? used.to_i : 0 }
       end
 
       # Read GET /api/v1/key with this checkout's active OpenRouter key and
@@ -96,14 +152,18 @@ module Master
           return :fresh if row.is_a?(Hash) && row["day"] == day &&
                            row["fetched_at"].to_f > now.to_f - PROVIDER_REFRESH_TTL_S
 
-          remaining = fetch_free_model_daily_requests(key)
-          return :unreadable unless remaining.is_a?(Numeric)
+          reading = fetch_free_model_daily_requests(key)
+          return :unreadable unless reading.is_a?(Hash)
 
           with_state_lock do
             data = load_data
             data["provider"] ||= {}
-            data["provider"][OPENROUTER_LANE] =
-              { "day" => day, "free_model_daily_requests" => remaining.to_i, "fetched_at" => now.to_f }
+            data["provider"][OPENROUTER_LANE] = {
+              "day" => day,
+              "free_model_daily_requests" => reading,
+              "local_used_at_fetch" => free_model_request_count(day:),
+              "fetched_at" => now.to_f,
+            }
             save_data(data)
           end
           :refreshed
@@ -138,7 +198,9 @@ module Master
 
         parsed = JSON.parse(response.body.to_s)
         data = parsed.is_a?(Hash) ? parsed["data"] : nil
-        data["free_model_daily_requests"] if data.is_a?(Hash)
+        return unless data.is_a?(Hash)
+
+        normalize_provider_reading(data["free_model_daily_requests"])
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ModelQuota.fetch_free_model_daily_requests")
         nil
@@ -146,8 +208,6 @@ module Master
 
       def record(model)
         return unless trackable?(model)
-
-        refresh_from_provider! if FREE_RE.match?(model.to_s) && ENV["MASTER_NO_QUOTA_REFRESH"] != "1"
 
         @mutex.synchronize do
           with_state_lock do
@@ -160,6 +220,10 @@ module Master
             save_data(data)
           end
         end
+
+        # record() runs after the successful provider response. Count locally
+        # before sampling the provider so that request is not subtracted twice.
+        refresh_from_provider! if FREE_RE.match?(model.to_s) && ENV["MASTER_NO_QUOTA_REFRESH"] != "1"
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "model_quota.record", model: model.to_s)
         raise "model quota accounting failed: #{e.class}: #{e.message}"
@@ -169,10 +233,10 @@ module Master
         load_data.dig(day, model.to_s).to_i
       end
 
-      def over_quota?(model, day: today_key)
+      def over_quota?(model, day: today_key, now: Time.now.utc)
         return false unless trackable?(model)
 
-        authoritative = provider_remaining(model, day:)
+        authoritative = provider_remaining(model, day:, now:)
         return authoritative.zero? unless authoritative.nil?
 
         count(model, day:) >= daily_limit_for(model)
@@ -181,10 +245,10 @@ module Master
       # The provider's own remaining answer when one is fresh for today; the
       # computed limit-minus-count otherwise. A reading and a forecast never
       # mix in one number.
-      def remaining(model, day: today_key)
+      def remaining(model, day: today_key, now: Time.now.utc)
         return unless trackable?(model)
 
-        authoritative = provider_remaining(model, day:)
+        authoritative = provider_remaining(model, day:, now:)
         return authoritative unless authoritative.nil?
 
         [daily_limit_for(model) - count(model, day:), 0].max
@@ -207,7 +271,7 @@ module Master
 
         used = count(model, day:)
         limit = daily_limit_for(model)
-        authoritative = provider_remaining(model, day:)
+        authoritative = provider_remaining(model, day:, now:)
         remaining = authoritative.nil? ? [limit - used, 0].max : authoritative
         projected_daily = burn_rate_per_day(model, day:, now:)
         exhaustion_hours =
@@ -236,24 +300,26 @@ module Master
         forecasted[:projected_daily] >= forecasted[:limit] * threshold
       end
 
-      def exhausted_models(day: today_key)
+      def exhausted_models(day: today_key, now: Time.now.utc)
         data = load_data[day] || {}
-        data.select { |model, used| trackable?(model) && used.to_i >= daily_limit_for(model) }.keys
+        data.keys.select { |model| trackable?(model) && over_quota?(model, day:, now:) }
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ModelQuota.exhausted_models")
         raise "model quota state unreadable: #{e.class}: #{e.message}"
       end
 
-      def snapshot(day: today_key)
+      def snapshot(day: today_key, now: Time.now.utc)
         data = load_data[day] || {}
         tracked = data.select { |model, _| trackable?(model) }
+        forecasts = tracked.keys.to_h { |model| [model, forecast(model, day:, now:)] }
         {
           day:,
           # The default (:free) limit; per-model limits ride in the forecasts.
           limit: daily_limit,
           models: tracked.transform_values(&:to_i),
-          exhausted: tracked.select { |model, used| used.to_i >= daily_limit_for(model) }.keys,
-          forecasts: tracked.keys.to_h { |model| [model, forecast(model, day:)] },
+          exhausted: forecasts.filter_map { |model, item| model if item && item[:remaining].to_i.zero? },
+          forecasts:,
+          provider: provider_quota_snapshot(day:, now:),
         }
       end
 
