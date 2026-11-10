@@ -275,7 +275,7 @@ about the code more often than the code is wrong about the world. Check a probe
 against a case whose answer is already known before believing what it reports,
 and never report a check as done without its output.
 
-**A census has more than one end, and the tree has four.** A gem is used by the
+**A census has more than one end; four runtime trees share the repository with the BIZ content root.** A gem is used by the
 gems that require it in `Gemfile.lock` as well as by code: `tty-prompt` needs
 `tty-reader`, which needs `wisper`. Every bus topic has a consumer while the
 face is open, because `MASTER/web/app/controllers/events_controller.rb` subscribes
