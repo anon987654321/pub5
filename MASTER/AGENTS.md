@@ -438,8 +438,8 @@ always means no writes. Audit and visual cannot be made write-enabled by
 budgets and every sacred-path, visual-custody, transaction and restructuring
 proof gate.
 
-Legacy spellings rewrite to `/fix --mode=...`: `/review`, `/critique`,
-`/scan`, `/audit` and `/council` mean audit; `/style` means visual;
+Legacy spellings rewrite to `/fix --mode=...`: `/review`, `/critique`, `/audit` and `/council` mean audit;
+`/scan` means the read-only repair preview; `/style` means visual;
 `/elevate` and `/map` mean elevate; `/workflow`, `/triad`, `/sweep`,
 `/through`, `/self` and `/all` mean all. Use `/fix` in new instructions.
 
