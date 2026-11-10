@@ -9,6 +9,13 @@ module Deploy
 
     OPENBSD_RUBY_PATTERN = /\A3\.(?:3|4)\.\d+\z/
 
+    # One supported-range rule with MASTER/lib/operator/environment.rb: the
+    # trees accept the same interpreters, so a checkout does not pass in one
+    # tree and refuse in the other. The operator relaxed the exact-pin
+    # requirement on 2026-11-11; the OpenBSD package pattern stays.
+    SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")
+    SUPPORTED_RUBY_MAX = Gem::Version.new("4.1.0")
+
     def repo_root(from: __dir__)
       # OPENBSD/lib -> OPENBSD -> the tree root, where .ruby-version is pinned.
       File.expand_path("../..", from)
@@ -37,7 +44,7 @@ module Deploy
     def ruby_version_ok?
       return OPENBSD_RUBY_PATTERN.match?(ruby_version.to_s) if on_openbsd?
 
-      ruby_version == required_ruby
+      ruby_version >= SUPPORTED_RUBY_MIN && ruby_version < SUPPORTED_RUBY_MAX
     end
 
     def tree_kind
@@ -84,7 +91,7 @@ module Deploy
       if on_openbsd?
         "Ruby #{RUBY_VERSION} detected; OpenBSD MASTER accepts Ruby 3.3.x or 3.4.x; local .ruby-version is #{required_ruby}"
       else
-        "Ruby #{RUBY_VERSION} detected; pub4 requires .ruby-version"
+        "Ruby #{RUBY_VERSION} detected; the trees support Ruby #{SUPPORTED_RUBY_MIN} to #{SUPPORTED_RUBY_MAX} (exclusive); .ruby-version pins #{required_ruby}"
       end
     end
 
