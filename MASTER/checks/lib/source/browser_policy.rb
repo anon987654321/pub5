@@ -41,6 +41,9 @@ module Deploy
       methods = Array(policy["allowed_network_methods"]).map { |method| method.to_s.upcase }
 
       return failure("browser policy must allow only GET/HEAD browser requests") unless methods.sort == %w[GET HEAD]
+      return failure("browser JavaScript execution must be explicit") unless policy["browser_scripts_execute"] == true
+      return failure("browser GET side effects must be explicit") unless policy["request_side_effects_possible"] == true
+      return failure("GET/HEAD limits must not be described as a read-only guarantee") unless policy["network_method_limit_is_not_a_read_only_guarantee"] == true
       return failure("browser session limit must be four") unless policy["max_sessions"] == 4
       read_actions = Array(policy["read_actions"]).map(&:to_s)
       required_read_actions = %w[status navigate login extract look follow paginate close]
@@ -53,13 +56,14 @@ module Deploy
       return failure("browser page limit must be 50") unless policy["max_pagination_pages"] == 50
       return failure("browser pagination output budget must be 128 KiB") unless policy["max_pagination_output_bytes"] == 131_072
       return failure("browser anchor navigation must use hrefs") unless policy["follow_anchors_by_href_only"] == true
-      return failure("visible login must preserve the read-only boundary") unless policy["visible_login_submission"] == "blocked"
+      return failure("visible login POST submission must remain blocked by current policy") unless policy["visible_login_submission"] == "blocked"
 
       source = File.join(root, "lib", "io", "browser_agent.rb")
       return failure("Browser implementation missing") unless File.file?(source)
 
       content = File.read(source)
       return failure("visible login must disclose blocked POST submissions") unless content.include?("ordinary POST-based login submissions are blocked")
+      return failure("browser implementation must explain GET side effects") unless content.include?("GET endpoints may change remote state")
       evasion_patterns = /navigator\.webdriver|AutomationControlled|browse_randomly|humanize_mouse|stealth_script|user_agents\s*:/i
       browser_config = File.join(root, "data", "browser_agents.yml")
       sources = [content, (File.read(browser_config) if File.file?(browser_config))].compact
