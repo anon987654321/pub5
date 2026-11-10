@@ -139,13 +139,24 @@ module Master
       lane = Master::Io::LaneSelection.live_lanes.first
       return lane if lane
 
-      return "grok-4.3" if api_key_present?("XAI_API_KEY") && !api_key_present?("OPENROUTER_API_KEY")
-      return free_primary_model if api_key_present?("OPENROUTER_API_KEY")
-      return "deepseek-chat" if api_key_present?("DEEPSEEK_API_KEY")
-      return "gemini-2.5-flash" if api_key_present?("GOOGLE_API_KEY") || api_key_present?("GEMINI_API_KEY")
+      # MASTER_FREE_ONLY asks no lane that needs a key, so the keyed floors
+      # below are skipped and the answer is the browser-chat face or nothing
+      # (HostedEndpoints drops the keys the same way).
+      unless free_only?
+        return "grok-4.3" if api_key_present?("XAI_API_KEY") && !api_key_present?("OPENROUTER_API_KEY")
+        return free_primary_model if api_key_present?("OPENROUTER_API_KEY")
+        return "deepseek-chat" if api_key_present?("DEEPSEEK_API_KEY")
+        return "gemini-2.5-flash" if api_key_present?("GOOGLE_API_KEY") || api_key_present?("GEMINI_API_KEY")
+      end
       return "web-chat:grok" if keyless_llm_enabled?
 
       openrouter_default
+    end
+
+    # MASTER_FREE_ONLY: no lane that needs a key is asked. Subscription CLI
+    # lanes keep their own gate — this switch governs API keys, not sign-ins.
+    def free_only?
+      ENV["MASTER_FREE_ONLY"].to_s != ""
     end
 
     def any_api_key_present?
@@ -199,6 +210,10 @@ module Master
     end
 
     def keyless_llm_enabled?
+      # MASTER_NO_KEYLESS is the explicit off: the anonymous tiers and the
+      # browser face are refused, whatever the key state says.
+      return false if ENV["MASTER_NO_KEYLESS"].to_s != ""
+
       ENV["MASTER_KEYLESS"].to_s != "" || ENV["MASTER_WEB_CHAT"].to_s != "" || !any_api_key_present?
     end
 

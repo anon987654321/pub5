@@ -488,6 +488,102 @@ class TestKeylessRouting < Minitest::Test
     server&.close
   end
 
+  # MASTER_NO_KEYLESS is the explicit off for the anonymous tier: a keyless
+  # endpoint offers nothing until a key exists, and the runtime's keyless face
+  # closes with it. A keyed endpoint beside it answers still, so the empty
+  # keyless lane proves the skip and not a fetch failure — its server never
+  # accepts; if the skip broke, the fetch would succeed and its ids would show.
+  def test_master_no_keyless_refuses_the_anonymous_tier
+    keyless_server = TCPServer.new("127.0.0.1", 0)
+    keyed_server = TCPServer.new("127.0.0.1", 0)
+    keyless_body = JSON.generate([{ "name" => "openai-fast", "tier" => "anonymous" }])
+    keyed_body = JSON.generate("data" => [{ "id" => "m1" }, { "id" => "m2" }])
+    keyless_thread = Thread.new do
+      socket = keyless_server.accept
+      headers = []
+      headers << socket.gets.to_s.strip until headers.last == ""
+      socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{keyless_body.bytesize}\r\nConnection: close\r\n\r\n#{keyless_body}")
+      socket.close
+    end
+    keyed_thread = Thread.new do
+      socket = keyed_server.accept
+      headers = []
+      headers << socket.gets.to_s.strip until headers.last == ""
+      socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{keyed_body.bytesize}\r\nConnection: close\r\n\r\n#{keyed_body}")
+      socket.close
+    end
+    ENV.delete("MASTER_NO_POOL_PROBES")
+    ENV["MASTER_NO_KEYLESS"] = "1"
+    ENV["KEYLESS_TEST_KEY"] = "sk-test"
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+    router.instance_variable_get(:@rules)["openai_compatible"] = {
+      "anon" => { "base" => "http://127.0.0.1:#{keyless_server.addr[1]}/v1", "key_env" => ["ANON_TEST_KEY"],
+                  "keyless" => { "tier" => "anonymous" } },
+      "keyed" => { "base" => "http://127.0.0.1:#{keyed_server.addr[1]}/v1", "key_env" => ["KEYLESS_TEST_KEY"] },
+    }
+    router.define_singleton_method(:start_pool_probes) { {} }
+
+    assert_empty router.hosted_models.grep(/\Aanon:/)
+    assert_equal %w[keyed:m1 keyed:m2], router.hosted_models.grep(/\Akeyed:/)
+    refute Master.keyless_llm_enabled?
+  ensure
+    ENV.delete("MASTER_NO_KEYLESS")
+    ENV.delete("KEYLESS_TEST_KEY")
+    ENV.delete("ANON_TEST_KEY")
+    ENV["MASTER_NO_POOL_PROBES"] = "1"
+    keyless_thread&.kill
+    keyed_thread&.kill
+    keyless_server&.close
+    keyed_server&.close
+  end
+
+  # MASTER_FREE_ONLY drops every key: an endpoint serves its keyless rule or
+  # nothing, and the keyed floors in Master.default_model are skipped even
+  # when their key is set.
+  def test_master_free_only_serves_the_keyless_rule_and_skips_keyed_floors
+    rows = [
+      { "name" => "openai-fast", "tier" => "anonymous" },
+      { "name" => "seed-tier", "tier" => "seed" },
+    ]
+    server = TCPServer.new("127.0.0.1", 0)
+    body = JSON.generate(rows)
+    thread = Thread.new do
+      socket = server.accept
+      headers = []
+      headers << socket.gets.to_s.strip until headers.last == ""
+      socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+      socket.close
+    end
+    ENV.delete("MASTER_NO_POOL_PROBES")
+    ENV["MASTER_FREE_ONLY"] = "1"
+    ENV["FREE_ONLY_TEST_KEY"] = "sk-test"
+    router = Master::CLI::Routing::ModelRouter.new(
+      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
+    )
+    router.instance_variable_get(:@rules)["openai_compatible"] = {
+      "pollinations" => { "base" => "http://127.0.0.1:#{server.addr[1]}/openai", "key_env" => ["FREE_ONLY_TEST_KEY"],
+                          "keyless_max_concurrency" => 1, "concurrency_wait_seconds" => 6,
+                          "quota_bucket" => "pollinations", "keyless" => { "tier" => "anonymous" } },
+    }
+    router.define_singleton_method(:start_pool_probes) { {} }
+
+    # The key is dropped, so the seed tier a key would open is not offered.
+    assert_equal ["pollinations:openai-fast"], router.hosted_models
+    assert Master.free_only?
+    # The keyed floors are skipped too: an XAI key no longer pins grok-4.3.
+    ENV["XAI_API_KEY"] = "xai-" + ("a" * 32)
+    assert_equal Master.openrouter_default, Master.default_model
+  ensure
+    ENV.delete("MASTER_FREE_ONLY")
+    ENV.delete("FREE_ONLY_TEST_KEY")
+    ENV.delete("XAI_API_KEY")
+    ENV["MASTER_NO_POOL_PROBES"] = "1"
+    thread&.kill
+    server&.close
+  end
+
   # A local or explicitly trusted OpenAI-compatible gateway joins the
   # existing pool only after its URL is set. The URL's host and model ids are
   # discovered through the same endpoint catalogue used by other hosted lanes.

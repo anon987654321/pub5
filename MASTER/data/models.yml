@@ -554,6 +554,15 @@ local_servers:
   # key (limits as awesome-freellm-apis lists them, 2026-09; key-gated, so they
   # cannot be probed keyless and have not been re-verified since); with no keyless
   # rule they are not asked until their key is set in ~/.config/master/env.
+# privacy_posture is an evidence field, not a guess: a lane earns `anonymous`
+# only from the provider's own written policy, and every hosted lane starts
+# `unknown` until someone cites one. A :sensitive dispatch is refused by every
+# posture except `anonymous` — today that is the local bed only
+# (ModelRouter::PrivacyPosture). Two kill switches govern how these endpoints
+# are asked: MASTER_NO_KEYLESS=1 refuses the anonymous tier, so a keyless
+# endpoint offers nothing until a key exists; MASTER_FREE_ONLY=1 drops every
+# key, so each endpoint serves its keyless rule or nothing and
+# Master.default_model skips the keyed floors.
 openai_compatible:
   llm7:
     base: https://api.llm7.io/v1
@@ -563,6 +572,7 @@ openai_compatible:
     keyless_max_concurrency: 1
     concurrency_wait_seconds: 20
     quota_bucket: llm7
+    privacy_posture: unknown
     keyless:
       tier: turbo
       usage_based_only: false
@@ -572,16 +582,19 @@ openai_compatible:
     base: https://api.groq.com/openai/v1
     key_env: [GROQ_API_KEY, GROQ_API_KEY_2]
     daily_quota: 14400
+    privacy_posture: unknown
   # 10 requests/min, 100/day, 1M tokens/day.
   cerebras:
     base: https://api.cerebras.ai/v1
     key_env: [CEREBRAS_API_KEY, CEREBRAS_API_KEY_2]
     daily_quota: 100
+    privacy_posture: unknown
   # Up to 40 requests/min, including GLM-5.3 Flash. No day cap is documented,
   # so no daily_quota is declared and Io::ModelQuota leaves it untracked.
   nvidia:
     base: https://integrate.api.nvidia.com/v1
     key_env: [NVIDIA_API_KEY, NVIDIA_API_KEY_2]
+    privacy_posture: unknown
   # Verified keyless 2026-11-06 from this Mac: GET /models (381 slugs,
   # `isFree` marks 11 of them) and POST /chat/completions both answered 200
   # with no key; kilo-auto/free routed dots-studio/dots-3-note-preview:free
@@ -594,6 +607,7 @@ openai_compatible:
     keyless_max_concurrency: 1
     concurrency_wait_seconds: 20
     quota_bucket: kilo
+    privacy_posture: unknown
     keyless:
       isFree: true
   # Verified keyless 2026-11-06 from this Mac: GET /models (21 models) and
@@ -608,6 +622,7 @@ openai_compatible:
     keyless_max_concurrency: 1
     concurrency_wait_seconds: 30
     quota_bucket: ovh
+    privacy_posture: unknown
     keyless:
       allow:
         - gpt-oss-120b
@@ -635,6 +650,7 @@ openai_compatible:
     keyless_max_concurrency: 1
     concurrency_wait_seconds: 6
     quota_bucket: pollinations
+    privacy_posture: unknown
     keyless:
       tier: anonymous
   # Z.ai (Zhipu GLM), OpenAI-compatible. Endpoint declared but unverified from
@@ -643,6 +659,7 @@ openai_compatible:
   zai:
     base: https://api.z.ai/api/paas/v4
     key_env: [ZAI_API_KEY]
+    privacy_posture: unknown
 
 # Language models Replicate hosts, asked as replicate:<owner>/<name> with
 # REPLICATE_API_TOKEN. Paid per call, so they sit behind the free lanes.
@@ -668,6 +685,10 @@ ollama:
   # probe: with no remote key configured anywhere, a reachable local daemon
   # becomes the fallback lane by default; MASTER_NO_OLLAMA=1 refuses it.
   probe: true
+  # The operator owns the disk the prompt lands on: the one posture that
+  # earns `anonymous` today, so the local bed is the lane a :sensitive
+  # request may ride (ModelRouter::PrivacyPosture).
+  privacy_posture: anonymous
   default_base_url: "http://localhost:11434"
   keep_alive: 30m
   # Tier-D recovery tier on the 8 GB host: a 4K request window and a q8_0 KV

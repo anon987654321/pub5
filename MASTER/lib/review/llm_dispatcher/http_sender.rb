@@ -52,21 +52,50 @@ module Master
           base = @model_router&.local_server_for(selected_model)
           return Result.err("no local server lists #{selected_model}", category: :model_missing) unless base
 
+          messages = fit_to_window(selected_model, messages)
           openai_chat(base, selected_model.delete_prefix("local:"), messages, sys:, temperature:, lane: "local server")
+        end
+
+        # Context-safe degradation: compact the history to the target's window
+        # before the POST. Master.context_window answers the configured or
+        # registry window and falls back to the 128k default, so a lane whose
+        # window is genuinely unknown compacts only a truly enormous history,
+        # while a small local bed compacts at its real one.
+        def fit_to_window(selected_model, messages)
+          Master::CLI::Routing::ModelRouter::ContextBudget.fit(messages, Master.context_window(selected_model))
+        end
+
+        def refuses_sensitive?(endpoint, sensitivity)
+          !Master::CLI::Routing::ModelRouter::PrivacyPosture.allows?(hosted_posture(endpoint), sensitivity)
+        end
+
+        def hosted_posture(endpoint)
+          endpoint[:posture] || Master::CLI::Routing::ModelRouter::PrivacyPosture::UNKNOWN
         end
 
         # A hosted OpenAI-compatible endpoint the router listed in models.yml
         # openai_compatible; the key rides along only when one is set.
         def hosted_lane?(model_id) = !@model_router&.hosted_endpoint_for(model_id).nil?
 
-        def send_hosted(selected_model, messages, sys:, temperature: nil)
+        def send_hosted(selected_model, messages, sys:, temperature: nil, sensitivity: :normal)
           endpoint = @model_router.hosted_endpoint_for(selected_model)
           name, model = selected_model.split(":", 2)
+          # A request tagged :sensitive rides only lanes whose declared
+          # privacy posture allows it (ModelRouter::PrivacyPosture — the
+          # local bed is the one `anonymous` lane today). Unknown refuses:
+          # "nobody wrote the policy down" is not consent.
+          if refuses_sensitive?(endpoint, sensitivity)
+            return Result.err(
+              "#{name}: privacy posture #{hosted_posture(endpoint)} refuses :sensitive dispatch",
+              category: :privacy,
+            )
+          end
           # The key is resolved at call time: the endpoint index froze the key
           # it was built with, and a lane whose KeyRotator just rotated wants
           # the rotated key on its very next call, not after a router rebuild.
           key = Io::KeyRotator.active_key_for(name) || endpoint[:key]
           headers = key ? { "Authorization" => "Bearer #{key}" } : {}
+          messages = fit_to_window(selected_model, messages)
           request = lambda do
             openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:, lane: name)
           end

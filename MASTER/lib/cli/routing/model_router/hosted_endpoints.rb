@@ -21,6 +21,13 @@ module Master
           # { base:, key: } for a hosted lane id; nil when no endpoint lists it.
           def hosted_endpoint_for(model_id) = hosted_index[model_id.to_s]
 
+          # The lane's declared privacy posture for :sensitive dispatch
+          # decisions (ModelRouter::PrivacyPosture); unknown when no endpoint
+          # lists the id.
+          def hosted_posture_for(model_id)
+            hosted_endpoint_for(model_id)&.fetch(:posture, nil) || PrivacyPosture::UNKNOWN
+          end
+
           def hosted_model?(model_id) = hosted_endpoints.key?(model_id.to_s.split(":", 2).first)
 
           private
@@ -68,14 +75,19 @@ module Master
 
             @hosted_index ||= hosted_endpoints.each_with_object({}) do |(name, spec), index|
               key = hosted_key(spec)
-              # An endpoint with no keyless rule answers nothing without a key,
-              # so it is not asked until one is set.
-              next if key.nil? && !spec.key?("keyless")
+              # MASTER_FREE_ONLY asks no lane that needs a key: the key is
+              # dropped, so an endpoint serves its keyless rule or nothing at
+              # all. MASTER_NO_KEYLESS is the mirror: the anonymous tier is
+              # refused outright, so an endpoint with no key offers nothing
+              # until one is set.
+              key = nil if free_only?
+              next if key.nil? && (no_keyless? || !spec.key?("keyless"))
 
               endpoint = {
                 base: spec["base"],
                 key:,
                 quota_bucket: (spec["quota_bucket"] || name).to_s,
+                posture: PrivacyPosture.parse(spec["privacy_posture"]),
               }
               concurrency_key = if key.nil? && spec.key?("keyless_max_concurrency")
                                    "keyless_max_concurrency"
@@ -96,7 +108,26 @@ module Master
             Array(spec["key_env"]).map { |env| ENV[env].to_s }.find { |value| !value.empty? }
           end
 
+          def free_only? = ENV["MASTER_FREE_ONLY"].to_s != ""
+
+          def no_keyless? = ENV["MASTER_NO_KEYLESS"].to_s != ""
+
           def hosted_ids(spec, key)
+            # The listing is fetched live on every index build; CatalogCache
+            # keeps the last non-empty answer per (endpoint, mode) so an
+            # offline start degrades to the previous catalogue instead of an
+            # empty pool. Cached rows are already-filtered ids — the keyless
+            # rule ran on the live rows — so the cache can never widen what
+            # the rule admits.
+            CatalogCache.ids_for(spec["base"], key ? "keyed" : "keyless") do
+              live_hosted_ids(spec, key)
+            end
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.hosted", endpoint: spec["base"])
+            []
+          end
+
+          def live_hosted_ids(spec, key)
             headers = key ? { "Authorization" => "Bearer #{key}" } : {}
             body = get_json("#{spec["base"].chomp("/")}/models", headers:, timeout: HOSTED_TIMEOUT_S)
             parsed = JSON.parse(body.to_s)
@@ -121,9 +152,11 @@ module Master
               end
             end
             rows.filter_map { |row| row["id"] || row["name"] }
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "model_router.hosted", endpoint: spec["base"])
-            []
+            # No rescue here: a failed or unparseable listing must reach
+            # CatalogCache.ids_for (cached last-known-good) and then
+            # hosted_ids's rescue. A rescue inside this method would answer []
+            # before the cache is ever consulted, and the offline floor would
+            # be dead the moment the network is.
           end
         end
       end

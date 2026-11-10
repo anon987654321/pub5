@@ -45,6 +45,10 @@ LIVE_STATE_DIR = Dir.mktmpdir("master-test-lanes-")
 ENV["MASTER_LANE_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "lane_quota.yml")
 ENV["MASTER_MODEL_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "model_quota.json")
 ENV["MASTER_PROVIDER_HEALTH_PATH"] = File.join(LIVE_STATE_DIR, "provider_health.ndjson")
+# The hosted-listing cache is routing state like the rest: a test must neither
+# read the machine's last-known-good listings nor write its own into the
+# operator's runtime tree.
+ENV["MASTER_CATALOG_CACHE"] = File.join(LIVE_STATE_DIR, "hosted_models.json")
 # A crashed /fix on this machine left its loop claim behind and every
 # dispatch_fix test failed with "loop slot held by fix pid 26971".
 ENV["MASTER_ACTIVE_LOOP_DIR"] = File.join(LIVE_STATE_DIR, "active_loop")

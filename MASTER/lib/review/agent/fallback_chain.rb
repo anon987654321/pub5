@@ -8,8 +8,11 @@ module Master
     class Agent
       module FallbackChain
         # Default when there is no router or no config; the live list comes from
-        # data/models.yml via ModelRouter#failover_skip_categories.
-        NON_RETRYABLE = %i[timeout no_api_key offline auth_error model_missing invalid_request].freeze
+        # data/models.yml via ModelRouter#failover_skip_categories. :privacy is
+        # a policy refusal, not a fault — a posture that refuses :sensitive
+        # work re-refuses on retry, so the queue moves on as it does for a
+        # missing model (ModelRouter::PrivacyPosture).
+        NON_RETRYABLE = %i[timeout no_api_key offline auth_error model_missing invalid_request privacy].freeze
 
         private
 
