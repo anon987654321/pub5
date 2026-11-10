@@ -62,21 +62,21 @@ class TestFixCritiquePin < Minitest::Test
   end
 
   def test_general_preset_selects_its_eight_persona_panel
-    assert_equal %w[Architect Security Reliability Maintainer Skeptic Pragmatist "QA Engineer" "Data Steward"].sort,
+    assert_equal ["Architect", "Security", "Reliability", "Maintainer", "Skeptic", "Pragmatist", "QA Engineer", "Data Steward"].sort,
                  critique_panel_names.sort
   end
 
   def test_simplify_pin_selects_its_panel_and_keeps_security
     Master::Fix::CritiquePin.set!(:simplify)
 
-    assert_equal %w[Maintainer Pragmatist Architect Skeptic "QA Engineer" Security].sort,
+    assert_equal ["Maintainer", "Pragmatist", "Architect", "Skeptic", "QA Engineer", "Security"].sort,
                  critique_panel_names.sort
   end
 
   def test_security_pin_selects_only_security_critical_personas
     Master::Fix::CritiquePin.set!(:security)
 
-    assert_equal %w[Security Reliability "Data Steward" Skeptic Maintainer].sort,
+    assert_equal ["Security", "Reliability", "Data Steward", "Skeptic", "Maintainer"].sort,
                  critique_panel_names.sort
   end
 
