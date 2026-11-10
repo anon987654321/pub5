@@ -6,6 +6,13 @@ class Item < ApplicationRecord
   include MoneyInOre
   money_reader :price
 
+  # Wears-well-with: explainable typed-attribute neighbours from this owner's
+  # wardrobe (WearsWellWith). Brute-force cosine at wardrobe scale; no vector
+  # index, and every match names the shared attributes that produced it.
+  def wears_well_with(limit: 4, minimum: 0.2)
+    WearsWellWith.new(self).neighbors(limit: limit, minimum: minimum)
+  end
+
   include Shared::Reactable
   include Shared::Notifiable
   belongs_to :user
