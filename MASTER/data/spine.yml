@@ -374,7 +374,7 @@ pub5_source_ceilings:
   # stays red with the overage that is actually unexplained.
   # 1044 -> 1045 is test/test_scan_deterministic_mode.rb, which holds
   # MASTER_SCAN_DETERMINISTIC: that the model-backed rules lose their agent
-  # under it, that the council stops running inside /scan, that neither happens
+  # under it, that the council stops running inside /fix --mode=audit, that neither happens
   # by default, and that bin/check --ladder still asks for it. Four claims about a switch
   # whose absence meant the check's first stage had never once reported; a switch
   # nothing requests is the same as no switch, so the last of those is the
