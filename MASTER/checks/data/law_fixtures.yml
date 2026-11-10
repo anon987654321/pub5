@@ -1,6 +1,6 @@
 ---
 schema: 1
-root: pub4
+root: pub5
 laws:
   SIGNAL_COLOR_NAMING:
     status: fixture
@@ -1749,6 +1749,16 @@ laws:
     file: "-"
     bad: "# The bug was fixed by the maintainer."
     good: "# The maintainer fixed the bug."
+  PROSE_OMIT_QUALIFIERS_EN_VALUES:
+    status: fixture
+    file: "-"
+    bad: 'title: This is very fast.'
+    good: 'title: This is fast.'
+  PROSE_ACTIVE_VOICE_EN_VALUES:
+    status: fixture
+    file: "-"
+    bad: 'notice: The bug was fixed by the maintainer.'
+    good: 'notice: The maintainer fixed the bug.'
   PROSE_OMIT_QUALIFIERS_NB:
     status: fixture
     file: "-"
@@ -3227,6 +3237,8 @@ laws:
     file: "-"
     bad: "# RENAMED 2026-08-25 from Foo to Bar"
     good: "# Bar names what it returns, so a caller can tell it from Baz."
+  SPARE_COMMENTS:
+    status: docs
   WHY_NOT_WHAT:
     status: fixture
     file: "-"
@@ -3349,8 +3361,6 @@ laws:
   GUARD_EXPENSIVE:
     status: docs
   ARTIFICIAL_COUPLING:
-    status: docs
-  SPARE_COMMENTS:
     status: docs
   SELF_EXPLAINING:
     status: docs
