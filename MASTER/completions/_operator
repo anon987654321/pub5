@@ -33,6 +33,7 @@ _operator() {
     'snapshot:regenerate the snapshot packs'
     'spark:a high-creativity orientation without a model'
     'status:what is dirty, per tree'
+    'style-sweep:read-only source laws + rendered review'
     'test:smallest complete proof for the paths'
     'tree-weight:tracked-file counts per tree, from git ls-files'
     'triangle:boot brgen, amber, bsdports and the master face locally'
