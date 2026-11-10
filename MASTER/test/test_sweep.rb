@@ -43,6 +43,86 @@ class TestSweep < Minitest::Test
     assert_equal "no summary here", S.verdict(["  detail", "no summary here"])
   end
 
+  def test_detailed_sweep_reports_process_execution_without_claiming_a_law_pass
+    probe = S::Probe.new(unit: "fixture", trees: %w[MASTER], run: -> { [true, ["fixture: 2 findings above ceiling"]] })
+    results = nil
+
+    S.stub(:probes, [probe]) do
+      S.stub(:tree_summary, "fixture tree") do
+        Master::Trace::Dmesg.stub(:attach, nil) do
+          Master::Trace::Dmesg.stub(:status, nil) do
+            results = S.sweep("MASTER", 7, detailed: true)
+          end
+        end
+      end
+    end
+
+    assert_equal 1, results.size
+    result = results.first
+    assert_equal "MASTER", result.tree
+    assert_equal "fixture7", result.unit
+    assert result.executed
+    assert result.process_success
+    assert_equal "2 findings above ceiling", result.summary
+    assert_empty result.evidence
+    refute_equal "PASS", result.process_success.to_s.upcase,
+                 "process exit success is not a Law verdict"
+  end
+
+  def test_detailed_sweep_records_probe_failures_and_continues
+    first = S::Probe.new(unit: "broken", trees: %w[MASTER], run: -> { [false, ["broken: failed", "detail one"]] })
+    second = S::Probe.new(unit: "next", trees: %w[MASTER], run: -> { [true, ["next: completed"]] })
+    results = nil
+
+    S.stub(:probes, [first, second]) do
+      S.stub(:tree_summary, "fixture tree") do
+        Master::Trace::Dmesg.stub(:attach, nil) do
+          Master::Trace::Dmesg.stub(:status, nil) do
+            results = S.sweep("MASTER", 0, detailed: true)
+          end
+        end
+      end
+    end
+
+    assert_equal [false, true], results.map(&:process_success)
+    assert_equal ["detail one"], results.first.evidence
+    assert_equal "completed", results.last.summary
+  end
+
+  def test_detailed_sweep_honours_cancellation_before_the_next_probe
+    called = []
+    probe = S::Probe.new(unit: "stopped", trees: %w[MASTER], run: -> { called << true; [true, ["stopped: done"]] })
+    results = nil
+
+    S.stub(:probes, [probe]) do
+      S.stub(:tree_summary, "fixture tree") do
+        Master::Trace::Dmesg.stub(:attach, nil) do
+          results = S.sweep("MASTER", 0, detailed: true, stop: -> { true })
+        end
+      end
+    end
+
+    assert_empty called
+    refute results.first.executed
+    assert_nil results.first.process_success
+    assert_match(/cancelled/, results.first.summary)
+  end
+
+  def test_legacy_sweep_return_shape_is_unchanged
+    probe = S::Probe.new(unit: "fixture", trees: %w[MASTER], run: -> { [true, ["fixture: ok"]] })
+    result = nil
+
+    S.stub(:probes, [probe]) do
+      S.stub(:tree_summary, "fixture tree") do
+        Master::Trace::Dmesg.stub(:attach, nil) do
+          result = S.sweep("MASTER", 3)
+        end
+      end
+    end
+
+    assert_equal [["fixture", 3]], result
+  end
+
   # A census reported repo-wide under four tree headings is one fact wearing four
   # names. Scoped probes take the tree; unscoped ones say so by not taking it.
   def test_the_cohesion_probe_is_scoped
