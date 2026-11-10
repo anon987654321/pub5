@@ -249,19 +249,29 @@ module Master
         # were rejected on re-scan — every non-apply collapsed to `false` before
         # the one line anyone reads. The tally of these symbols is that line.
         #
-        # One repair, and when the verifier refuses it for a reason the model can act on, one
-        # more with that reason in the prompt. The two-rejects-per-file limit still ends it, and
-        # MASTER_FIX_RETRY=0 switches the second try off.
-        RETRYABLE = %i[out_of_scope reflexion_rejected consensus_rejected rejected].freeze
+        # One bounded retry when a verifier or commit gate supplies actionable
+        # feedback. The two-rejects-per-file and file-time budgets still apply;
+        # MASTER_FIX_RETRY=0 disables the second attempt.
+        RETRYABLE = %i[out_of_scope reflexion_rejected consensus_rejected rejected commit_refused].freeze
 
         def fix_violation(violation)
           RunLedger.take_refusal
           outcome = attempt_fix(violation)
           note = RunLedger.take_refusal
+          RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
+                                        outcome:, reason: note)
           return outcome unless ENV["MASTER_FIX_RETRY"] != "0" && RETRYABLE.include?(outcome) && note
 
           Master::Trace::Dmesg.status("fix0", "retrying #{File.basename(violation[:file].to_s)} #{@law.id} once, told: #{note[0, 140]}")
-          RunLedger.retrying(note) { attempt_fix(violation) }
+          retry_outcome = RunLedger.retrying(note) { attempt_fix(violation) }
+          retry_note = RunLedger.take_refusal
+          RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
+                                        outcome: retry_outcome, reason: retry_note)
+          retry_outcome
+        rescue StandardError => e
+          RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
+                                        outcome: :exception, reason: "#{e.class}: #{e.message}")
+          raise
         end
 
         def attempt_fix(violation)
@@ -364,12 +374,15 @@ module Master
         # committer's defect, and is recorded as one rather than left as "blocked".
         def commit_refused(violation, reason = nil, error: nil)
           put_back_refused_repair
-          if reason.nil? && error.nil?
-            return :commit_refused if @committer.last_refusal
-
-            reason = "the committer answered :blocked and recorded no reason"
+          last_refusal = @committer&.last_refusal
+          if reason.nil? && error.nil? && last_refusal
+            RunLedger.refused_because("commit gate refused the repair: #{last_refusal}")
+            return :commit_refused
           end
+
+          reason ||= "the committer answered :blocked and recorded no reason"
           why = reason.to_s.strip.lines.last(3).join(" ")[0, 300]
+          RunLedger.refused_because("commit refused: #{why}")
           refuse(:commit, violation, reason: why, error:)
           :commit_refused
         end
