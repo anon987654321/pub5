@@ -78,6 +78,29 @@ def parse
   say(:FAIL, "parse", "#{broken.size} file(s) do not parse, first #{Operator::ParseSweep.render(broken.first(1))}")
 end
 
+# --- bundle: a stale install fails every rake run with an error nobody reads ---
+def bundle
+  return say(:warn, "bundle", "bundler not found: gem install bundler") if run("bundle", "--version").last == false
+
+  out, ok = run("bundle", "check", "--gemfile", File.join(MASTER, "Gemfile"))
+  say(ok ? :ok : :warn, "bundle", ok ? "install satisfied" : out.lines.last.to_s.strip[0, 120])
+end
+
+# --- .master: the journal, saved model and run locks live here; a read-only
+# --- directory stalls /fix before it starts, and a held lock means another run
+# --- is live (see bin/operator lock-sweep) ----------------------------------
+def workspace
+  dir = File.join(MASTER, ".master")
+  return say(:warn, ".master", "missing; the first writing run creates it") unless File.directory?(dir)
+
+  if File.writable?(dir)
+    locks = Dir[File.join(dir, "**", "*.lock")].size
+    say(locks.zero? ? :ok : :warn, ".master", "writable; #{locks} .lock file(s) present#{locks.zero? ? '' : ' - a run may be live'}")
+  else
+    say(:FAIL, ".master", "not writable by #{Etc.getlogin || Etc.getpwuid(Process.uid).name}; /fix cannot journal or lock")
+  end
+end
+
 # --- hooks: the commit guards only exist where core.hooksPath points at them -------------
 def hooks
   path, = run("git", "-C", ROOT, "config", "core.hooksPath")
@@ -159,6 +182,7 @@ end
 
 disk
 rubies
+bundle
 boot
 parse
 hooks
@@ -166,6 +190,7 @@ worktrees
 git_state
 lanes
 processes
+workspace
 remote
 puts "doctor0: #{@worst == :ok ? 'all clear' : "#{@worst} above; fix those first"}"
 exit(@worst == :FAIL ? 1 : 0)
