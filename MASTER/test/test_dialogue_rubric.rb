@@ -240,7 +240,7 @@ class TestDialogueRubric < Minitest::Test
     data = Rubric.data(root: Master::ROOT)
 
     assert Rubric.valid?(root: Master::ROOT)
-    assert_equal 9, data.fetch("dimensions").size
+    assert_equal 12, data.fetch("dimensions").size
     assert_equal data.fetch("dimensions").keys, data.fetch("bench").fetch("required_dimensions")
     assert_equal 4, data.fetch("sycophancy_fixtures").size
     assert_equal 4, data.fetch("bench").fetch("sycophancy_fixture_count")

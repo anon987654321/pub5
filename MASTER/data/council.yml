@@ -529,6 +529,55 @@ presets:
       - lib/voice/dilla.rb
       - lib/voice/production_dna.rb
 
+  # The default /fix hard-critique panel. No files key on purpose: the general
+  # mode carries none either, so CouncilRound passes the window /scan and /fix
+  # just touched instead of a fixed product surface. Security is the required
+  # veto role (Critique.build_run_result), so Security stays in the panel even
+  # under local_panel sizing, which spares veto roles and the Maintainer.
+  general_critique:
+    description: Default /fix hard-critique panel for an arbitrary scanned path.
+    panel:
+      - Architect
+      - Security
+      - Reliability
+      - Maintainer
+      - Skeptic
+      - Pragmatist
+      - QA Engineer
+      - Data Steward
+    mode: deliberation
+    cycles: 1
+    cherry_pick: true
+
+  # The pinned panels. A pin set by /fix (--simplify, --security) selects its
+  # preset here, so the pin narrows the panel and not only the briefing text;
+  # Critique.load_preset performs the selection while the pin is set. Security
+  # keeps its seat in both panels, because the general mode's required veto
+  # role is Security and a pin never removes a veto seat.
+  simplify_critique:
+    description: Quality-only panel behind /fix --simplify - reuse, simplification, efficiency, altitude.
+    panel:
+      - Maintainer
+      - Pragmatist
+      - Architect
+      - Skeptic
+      - QA Engineer
+      - Security
+    mode: deliberation
+    cycles: 1
+    cherry_pick: true
+  security_critique:
+    description: Boundaries-only panel behind /fix --security - the properties that fail silently.
+    panel:
+      - Security
+      - Reliability
+      - Data Steward
+      - Skeptic
+      - Maintainer
+    mode: deliberation
+    cycles: 1
+    cherry_pick: true
+
 # Merged from former data/prompts/council.yml — judge and juror prompt templates.
 prompts:
   judge: |
@@ -542,6 +591,13 @@ prompts:
     lifetimes, blast radius) and classify the finding as UNDER-ENGINEERED,
     OVER-ENGINEERED, or PERFECTLY-ENGINEERED - and say why. The verdict follows
     from the load, not from taste.
+
+    Prose contract (mandatory, English and Bokmål alike): omit needless words -
+    very, rather, really, quite, pretty, somewhat, just, basically, simply, and
+    in Bokmål veldig, svært, ganske, nokså, temmelig, virkelig, simpelthen;
+    keep contrastive senses such as "rather than" and "ikke bare". Prefer the
+    active voice and name the actor. State the positive form and the definite,
+    concrete word. Lead with the point.
 
     Jurors:
     %{rounds}
@@ -562,6 +618,11 @@ prompts:
     You are %{persona_name} (%{persona_role}, bias: %{persona_bias}).%{ctx}
     %{axiom_block}%{quality_block}
     %{persona_prompt}%{question_block}
+    Prose contract: omit needless words (English leeches: very, rather, really,
+    quite, pretty, somewhat, just, basically, simply; Bokmål leeches: veldig,
+    svært, ganske, nokså, temmelig, virkelig, simpelthen), prefer the active
+    voice, name the actor, state the positive form, use the concrete word, and
+    lead with the point. This contract governs your findings in both languages.
     %{hostile_block}
     Code:
     %{safe_code}

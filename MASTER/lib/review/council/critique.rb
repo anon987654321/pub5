@@ -211,7 +211,20 @@ module Master
         def load_preset
           return {} unless File.exist?(Master::COUNCIL_PATH)
           data = Master.load_yaml(Master::COUNCIL_PATH) || {}
-          data.dig("presets", @mode[:preset_key]) || {}
+          # A pin selects its own yaml panel (simplify_critique, security_critique)
+          # so the pin narrows the panel, not only the briefing text. An unknown
+          # preset name falls back to the mode's own preset, and a preset without
+          # files keeps the mode's file window.
+          key = pin_preset_key || @mode[:preset_key]
+          data.dig("presets", key) || {}
+        end
+
+        def pin_preset_key
+          pin = Master::Fix::CritiquePin
+          return "simplify_critique" if pin.simplify?
+          return "security_critique" if pin.security?
+
+          nil
         end
 
         def build_panel(preset)

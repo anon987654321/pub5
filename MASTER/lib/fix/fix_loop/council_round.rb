@@ -6,7 +6,9 @@ module Master
     # focus is set, the council inside the loop argues that focus only instead
     # of the full hard review: `--simplify` argues quality (reuse,
     # simplification, efficiency, altitude), `--security` argues the properties
-    # that fail silently. The deterministic instruments keep their findings,
+    # that fail silently. The pin selects its yaml panel in data/council.yml
+    # (simplify_critique, security_critique) besides the pinned briefing text.
+    # The deterministic instruments keep their findings,
     # and the law gates keep their ceilings. Set per dispatch and cleared by
     # the dispatch that set it, the same one-command lifetime the other
     # execution overrides have.

@@ -3879,6 +3879,10 @@ law_catalogue:
       definition_sources: [MASTER/law/prose.rb]
       severity: info
       languages: [yaml, html]
+    PROSE_ACTIVE_VOICE_EN_VALUES:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: info
+      languages: [yaml]
     PROSE_OMIT_QUALIFIERS:
       definition_sources: [MASTER/law/prose.rb]
       severity: warning
@@ -3888,6 +3892,11 @@ law_catalogue:
       severity: warning
       languages: [yaml, html]
       # Bokmål reaches translation values and BIZ HTML only. Scoped there, `bare` is Norwegian.
+    PROSE_OMIT_QUALIFIERS_EN_VALUES:
+      definition_sources: [MASTER/law/prose.rb]
+      severity: warning
+      languages: [yaml]
+      # English reaches translation values only. Scoped there, `bare` and `just` are Ruby.
     PROSE_ONE_TOPIC_PARAGRAPH:
       definition_sources: [MASTER/law/universal.rb]
       severity: info
@@ -4519,6 +4528,35 @@ prose:
     # and neither is one here: they are contrastive, setting what is against
     # what was claimed, which is this repo's recurring subject. 85 and 4 hits
     # respectively, every one of them that use.
+    leeches: [very, rather, really, quite, pretty, somewhat, just, basically, simply]
+    keep:
+      - 'rather than'                              # a contrast, not a degree
+      - 'rather\s*$'                               # "rather than" wrapped mid-phrase
+      - 'just (?:as|because|before|after|when)'    # a comparison
+      - '(?:not|never)\s+(?:just|simply|only)'     # a negation
+      - 'n''t\s+(?:just|simply|only)'
+      - 'just\s+(?:\w+ed|found|said|ran|saw|built)' # moments ago, a tense marker
+      - '(?:the|this|that|its) very'               # a determiner picking a thing out
+    passive:
+      auxiliary: '(?:was|were|been)'
+      participle: '(?:\w+ly\s+)?\w+ed'
+      agent: 'by'
+  # The English locale values (config/locales/*.en.yml) carry the same operator-
+  # facing prose the Bokmål pair already judges in nb.yml: Strunk and White apply
+  # to both languages, so both get a values reach. The scope is the locale file
+  # (see Law::Prose::SCOPES), not every yaml value in the tree.
+  en_values:
+    reads: values
+    ids:
+      qualifiers: PROSE_OMIT_QUALIFIERS_EN_VALUES
+      passive: PROSE_ACTIVE_VOICE_EN_VALUES
+    fixtures:
+      qualifiers: { bad: 'title: This is very fast.', good: 'title: This is fast.' }
+      passive:
+        bad: 'notice: The bug was fixed by the maintainer.'
+        good: 'notice: The maintainer fixed the bug.'
+    # The vocabulary, senses to keep and the absent-on-purpose words are the
+    # English ones above; `actually` and `literally` stay out here too.
     leeches: [very, rather, really, quite, pretty, somewhat, just, basically, simply]
     keep:
       - 'rather than'                              # a contrast, not a degree

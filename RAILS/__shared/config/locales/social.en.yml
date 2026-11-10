@@ -360,7 +360,7 @@ en:
     brgen:
       kicker: "A small guide to Brgen"
       title: "%{city}, right now."
-      lead: "A local front page for people who live here, pass through, or simply want to see what is happening."
+      lead: "A local front page for people who live here, pass through, or want to see what is happening."
       steps:
         1:
           title: "Read nearby"

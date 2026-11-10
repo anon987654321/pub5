@@ -66,6 +66,8 @@ class TestLawPathReach < Minitest::Test
     POINTER_FEEDBACK_EARLY: [RAILS_JS, STUDIO_JS],
     PROSE_ACTIVE_VOICE_NB: ["RAILS/brgen/config/locales/nb.yml", "RAILS/brgen/config/locales/en.yml"],
     PROSE_OMIT_QUALIFIERS_NB: ["RAILS/brgen/config/locales/nb.yml", "RAILS/brgen/config/locales/en.yml"],
+    PROSE_ACTIVE_VOICE_EN_VALUES: ["RAILS/brgen/config/locales/en.yml", "RAILS/brgen/config/locales/nb.yml"],
+    PROSE_OMIT_QUALIFIERS_EN_VALUES: ["RAILS/brgen/config/locales/en.yml", "RAILS/brgen/config/locales/nb.yml"],
     RATE_LIMITING_MISSING: ["RAILS/brgen/app/controllers/things_controller.rb", MODEL],
     README_VISION: ["MASTER/README.md", "RAILS/README.md"],
     SIGNATURE_MOMENT: [RAILS_JS, STUDIO_JS],
