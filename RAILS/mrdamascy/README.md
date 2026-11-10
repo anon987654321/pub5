@@ -63,7 +63,7 @@ Local setup:
 bundle install
 bin/rails db:prepare
 bin/rails db:seed
-bin/rails server
+bundle exec falcon serve --bind http://127.0.0.1:3000
 ```
 
 Run the app's tests with:
@@ -74,8 +74,9 @@ bin/rails test
 
 Deployment is owned by `RAILS/mrdamascy/mrdamascy.sh` and the repository's
 OpenBSD deployment contract (`RAILS/apps.yml` holds the port and domain). The
-app runs as a demo at `https://mrd.brgen.no`: one Puma process on
-`127.0.0.1:47314` behind relayd, payments in mock mode. On vm23, as dev,
+app runs as a demo at `https://mrd.brgen.no`: one Falcon worker on
+`127.0.0.1:47314` behind relayd, with a three-connection Active Record pool
+and payments in mock mode. Puma is retained only for Capybara system tests. On vm23, as dev,
 `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy mrdamascy` deploys it and
 `curl -fsS http://127.0.0.1:47314/up` answers once it is up. No deploy seeds:
 the menu was loaded once, and `db/seeds.rb` destroys every row before it
