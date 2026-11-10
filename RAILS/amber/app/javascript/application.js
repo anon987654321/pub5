@@ -1,2 +1,2 @@
-import "pub4/hotwire"
+import "pub5/hotwire"
 import "controllers"

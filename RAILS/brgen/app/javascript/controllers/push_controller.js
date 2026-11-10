@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { mayPrompt, YIELD_EVENT } from "pub4/onboarding"
+import { mayPrompt, YIELD_EVENT } from "pub5/onboarding"
 
 // The browser's permission sheet is asked for once, in context: right after the
 // reader's first post, comment or message, when "tell me when someone answers"

@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { compressImage, MAX_EDGE, QUALITY } from "pub4/image_compression"
+import { compressImage, MAX_EDGE, QUALITY } from "pub5/image_compression"
 
 export default class extends Controller {
   static targets = ["input", "camera", "preview", "filters", "presets", "guidance"]

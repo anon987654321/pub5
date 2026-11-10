@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { mayPrompt, setWelcomePending } from "pub4/onboarding"
+import { mayPrompt, setWelcomePending } from "pub5/onboarding"
 
 const KEY_PREFIX = "pub4:welcome-onboarding:"
 const FOCUSABLE = "a[href], area[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"

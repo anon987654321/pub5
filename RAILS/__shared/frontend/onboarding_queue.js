@@ -1,4 +1,4 @@
-import { consentDecided } from "pub4/cookie_consent"
+import { consentDecided } from "pub5/cookie_consent"
 
 const SESSIONS_KEY = "pub4:onboarding:sessions"
 const LAST_SEEN_KEY = "pub4:onboarding:last-seen"

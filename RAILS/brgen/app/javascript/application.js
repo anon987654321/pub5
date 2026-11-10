@@ -1,4 +1,4 @@
-import "pub4/hotwire"
+import "pub5/hotwire"
 import "controllers"
 
 if ("periodicSync" in navigator && "serviceWorker" in navigator) {

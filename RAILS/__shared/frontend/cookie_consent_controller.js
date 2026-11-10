@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { PURPOSES, readConsent, saveConsent } from "pub4/cookie_consent"
+import { PURPOSES, readConsent, saveConsent } from "pub5/cookie_consent"
 
 export default class extends Controller {
   static targets = [ "banner", "preferences", "analytics", "advertising" ]

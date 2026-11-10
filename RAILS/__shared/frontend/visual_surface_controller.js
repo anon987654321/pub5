@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { VisualField } from "pub4/visual_field"
+import { VisualField } from "pub5/visual_field"
 
 export default class extends Controller {
   static values = { surface: String }

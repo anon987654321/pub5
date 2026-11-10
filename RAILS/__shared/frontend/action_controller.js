@@ -3,7 +3,7 @@
 // Matches x.com interaction patterns (hover accent, live counts)
 
 import { Controller } from "@hotwired/stimulus"
-import Haptics from "pub4/haptics"
+import Haptics from "pub5/haptics"
 
 export default class extends Controller {
   static targets = ["count"]

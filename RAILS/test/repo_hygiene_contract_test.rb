@@ -69,15 +69,15 @@ class RepoHygieneContractTest < Minitest::Test
 
   # One CI mutex, not two. The Ruby guard and the shell helper have to name the
   # same file or neither excludes the other, which is what happened: CiGuard
-  # locked /var/tmp/pub4-ci.lock while ci_lock.sh pointed three scripts at
-  # /var/db/pub4/ci.lock and called itself the single source.
+  # locked /var/tmp/pub5-ci.lock while ci_lock.sh pointed three scripts at
+  # /var/db/pub5/ci.lock and called itself the single source.
   def test_the_ruby_and_shell_ci_locks_are_the_same_file
     shell = File.read(File.expand_path("../OPENBSD/lib/ci_lock.sh", ROOT), encoding: "UTF-8")
     ruby = File.read(File.join(REPO_ROOT, "MASTER/tools/rails/operator/ci_guard.rb"), encoding: "UTF-8")
 
-    assert_includes shell, "PUB4_CI_LOCK_DIR=/var/db/pub4"
+    assert_includes shell, "PUB5_CI_LOCK_DIR=/var/db/pub5"
     assert_includes shell, "PUB4_CI_LOCK_NAME=ci.lock"
-    assert_includes ruby, 'LOCK_DIR = "/var/db/pub4"'
+    assert_includes ruby, 'LOCK_DIR = "/var/db/pub5"'
     assert_includes ruby, 'DEFAULT_LOCK_PATH = File.join(LOCK_DIR, "ci.lock")'
   end
 

@@ -45,7 +45,7 @@ class RadioBergenManifestTest < ActiveSupport::TestCase
   test "archaeology lines reference pub4 index.html dig" do
     lines = Brgen::RadioBergenManifest.archaeology_lines
 
-    assert_includes lines.join("\n"), "pub4/index.html"
+    assert_includes lines.join("\n"), "pub5/index.html"
     assert_includes lines.join("\n"), "monolithic index.html"
     assert_includes lines.join("\n"), "config/radio_bergen/tracks.yml"
   end

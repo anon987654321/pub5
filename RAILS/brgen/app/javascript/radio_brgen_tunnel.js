@@ -1,4 +1,4 @@
-import { publishVisual } from "pub4/visual_field"
+import { publishVisual } from "pub5/visual_field"
 import { AudioEngine } from "radio_brgen_audio"
 import { initialTrackIndex, OPENING_TRACK_ID } from "radio_brgen_audio"
 import { VisualEngine } from "radio_brgen_visual"

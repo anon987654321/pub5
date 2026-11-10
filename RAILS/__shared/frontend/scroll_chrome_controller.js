@@ -4,7 +4,7 @@
 // it on scroll-up or focus. The peel and first-visit coach keep the closed
 // state discoverable while the bar remains in the accessibility tree.
 import { Controller } from "@hotwired/stimulus"
-import { mayPrompt, YIELD_EVENT } from "pub4/onboarding"
+import { mayPrompt, YIELD_EVENT } from "pub5/onboarding"
 
 const COACH_KEY = "pub4:tab-bar:coach-dismissed"
 

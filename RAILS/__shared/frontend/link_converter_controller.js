@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { allows } from "pub4/cookie_consent"
+import { allows } from "pub5/cookie_consent"
 
 export default class extends Controller {
   static values = { src: String, epi: String }
