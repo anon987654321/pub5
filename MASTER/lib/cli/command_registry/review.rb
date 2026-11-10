@@ -517,12 +517,12 @@ module Master
                       else
                         "exit!=0"
                       end
-          summary = result.summary.to_s.gsub(/[\\x00-\\x1f\\x7f]/, " ").gsub(/\\s+/, " ").strip[0, 280]
+          summary = result.summary.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip[0, 280]
           lines << "audit instrument: #{result.tree}/#{result.unit} #{execution}; #{summary}"
           result.evidence.each do |detail|
             next if result.process_success
 
-            clean = detail.to_s.gsub(/[\\x00-\\x1f\\x7f]/, " ").gsub(/\\s+/, " ").strip[0, 220]
+            clean = detail.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip[0, 220]
             lines << "audit instrument evidence: #{result.tree}/#{result.unit}: #{clean}"
           end
         end
