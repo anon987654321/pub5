@@ -68,7 +68,10 @@ module Master
           allowed_hosts: hosts,
           max_sessions: MAX_SESSIONS,
           persisted_state: true,
-          read_only_transport: true,
+          allowed_network_methods: %w[GET HEAD].freeze,
+          page_scripts_execute: true,
+          request_side_effects_possible: true,
+          form_submission: "blocked",
         }
       end
 
@@ -110,7 +113,7 @@ module Master
               url: snapshot["url"],
               title: snapshot["title"].to_s,
               screenshot: capture(page, key),
-              note: "Read-only navigation only. Form submissions and mutating HTTP methods are blocked.",
+              note: "Network requests are limited to GET/HEAD. Page scripts still execute, and GET endpoints may change remote state; form submissions and other methods are blocked.",
             }
           end
         end
@@ -136,7 +139,7 @@ module Master
               session: key,
               url: state["url"],
               screenshot:,
-              note: "The visible window is operator-controlled. MASTER never reads passwords or OTPs. POST-based login submissions are blocked by the read-only transport; use only a compatible GET-based sign-in flow or an already-authorized browser profile.",
+              note: "The visible window is operator-controlled. MASTER never reads passwords or OTPs. POST-based login submissions are blocked. Page scripts execute, and GET endpoints may still change remote state; use only a compatible GET-based sign-in flow or an already-authorized browser profile.",
             }
           end
         end
