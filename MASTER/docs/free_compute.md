@@ -41,18 +41,24 @@ availability still apply.
 
 ## Quota accounting contract
 
-`openrouter.daily_quota_per_model` is configured as **50** in
-`data/models.yml`. The executable fallback in `Io::ModelQuota` now uses the
-same value when that setting is absent or invalid, rather than silently falling
-back to 200. The configuration remains authoritative when it contains a
-positive override. Regression tests cover both the conservative fallback and
-the configured override.
+`GET /api/v1/key` reports `free_model_daily_requests` as one object with
+`used`, `limit` and `remaining`. It is the provider's current daily
+free-model counter, not a separate allowance for each `:free` slug. MASTER
+uses a fresh provider sample as the routing source; the 30-minute sample
+expires and then the local fallback sums successful `:free` calls across
+slugs against one conservative daily limit. The legacy
+`openrouter.daily_quota_per_model` config name is retained for compatibility;
+its positive value supplies that fallback.
 
-The local counter is deliberately conservative: it does not multiply its
-per-model allowance by the number of configured keys. A provider may impose
-shared limits at account, organization, IP, model, or endpoint level; rotating
-credentials does not erase those boundaries. Provider-issued 429 responses,
-reset headers, and account policy remain authoritative.
+The dashboard labels provider readings separately from per-model counts and
+burn forecasts, including sample age and freshness. A stale provider sample
+remains visible for diagnosis but does not steer routing. Hosted
+OpenAI-compatible free endpoints retain their separately declared
+per-endpoint daily caps.
+
+Configured OpenRouter keys are not treated as multiplied capacity. Key
+rotation changes which credential is used; it does not create additional
+daily allowance. Provider responses and account policy remain authoritative.
 
 ## Task-aware selection versus failover
 

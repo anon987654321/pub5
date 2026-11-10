@@ -9,12 +9,11 @@ require_relative "atomic_write"
 
 module Master
   module Io
-    # Per-model daily request budget for OpenRouter :free slugs and for hosted
-    # free-tier endpoints; config is authoritative. One of three quota objects,
-    # each answering a different question: this one counts calls per free model
-    # per day; QuotaCheck says whether a paid provider still has credit
-    # (test/test_quota_check.rb); ModelSkipCache parks a model that just failed
-    # (test/test_model_skip_cache.rb).
+    # Daily quota accounting for OpenRouter's shared free-model allowance and
+    # hosted endpoints that declare per-lane caps. Local counts stay per slug
+    # for diagnosis, but :free fallback/exhaustion sums them across the key.
+    # QuotaCheck answers whether a paid provider has credit; ModelSkipCache
+    # parks a model that just failed (test/test_model_skip_cache.rb).
     module ModelQuota
       extend self
       include ::Master::Io::AtomicWrite

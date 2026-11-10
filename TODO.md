@@ -491,8 +491,8 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `bsdports_cli_sponsorship` — open; add optional pay-what-you-want support handoff only after a verified recipient and sponsor/payment URL exist; package search and CLI use remain free and unblocked.
 
 **MASTER and STUDIO**
-- [ ] `master_fleet_health` — picked; complete `master_fleet_panel`: sibling-app health, load and resource-guard order on the dashboard.
-- [ ] `master_dead_payload_facts` — picked; complete `master_quota_facts`: show the already-computed model-quota and cache-efficiency facts.
+- [ ] `master_fleet_health` — PARTIAL 2026-11-10: `FleetPanel`, dashboard wiring and injected-probe contract landed; unit suite and live vm23 health/render proof remain NOT_RUN.
+- [ ] `master_dead_payload_facts` — PARTIAL 2026-11-10: provider quota, per-model forecasts and cache-measurement state now render; quota/dashboard suites and browser verification remain NOT_RUN.
 - [ ] `master_pair_admin_surface` — open; add an authenticated operator surface for pairing issue/list/destroy only if its permission boundary is proven.
 - [ ] `master_face_soothing` — picked; complete `master_face_breath` without adding colours or exceeding visual budgets.
 - [ ] `master_voice_dsp_lanes` — picked; complete `master_voice_browser_dsp` so browser and terminal build the same declared voice presets, with honest unsupported-node behaviour.
@@ -548,8 +548,8 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 **Missing — 8**
 - [ ] `brgen_feed_ranking_deterministic` — deterministic recency-plus-engagement ranking in the existing Dating-style shape.
 - [ ] `amber_similarity_right_sized` — wears-well-with from typed attributes and wardrobe-scale similarity.
-- [ ] `master_fleet_panel` — dashboard renders sibling health, load and resource-guard order.
-- [ ] `master_quota_facts` — status strip renders model-quota and cache-efficiency facts.
+- [ ] `master_fleet_panel` — PARTIAL 2026-11-10: source and injected-probe contract landed; unit and live-host proof NOT_RUN.
+- [ ] `master_quota_facts` — PARTIAL 2026-11-10: source and dashboard contract landed; unit and rendered-browser proof NOT_RUN.
 - [ ] `inconclusive_aging` — an INCONCLUSIVE finding that outlives its review window reopens as FAIL with its original receipt.
 - [ ] `constitution_self_budget` — the laws file has an enforced line ceiling under the ratchet-down rule.
 - [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
@@ -664,7 +664,7 @@ OVHcloud AI Endpoints (https://oai.endpoints.kepler.ai.cloud.ovh.net/v1,
 keyless, 2 RPM per IP per model, 20+ models). GitHub Models retired 2026-07-30;
 Gemini free tier hides its numbers; Hugging Face free monthly credits are gone.
 
-- [ ] Read OpenRouter's remaining free quota from `GET /api/v1/key` (`free_model_daily_requests`) into `Io::ModelQuota` instead of forecasting the burn rate.
+- [ ] PARTIAL 2026-11-10: `Io::ModelQuota` now parses `free_model_daily_requests` (`used`/`limit`/`remaining`), retains sample freshness and uses key-wide local fallback; quota suite NOT_RUN and live credential probe NOT_RUN.
 - [ ] Wire the pass-0 walk's lane wheel onto the free-floor verdict. The
   floor suspends honestly twice over (RunPulse `promote_live_lane` and the
   process-local counter in `Io::LaneSelection.note_provider_outcome`,

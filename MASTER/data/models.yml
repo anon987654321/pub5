@@ -431,16 +431,15 @@ openrouter:
   # When true, the router merges live :free slugs from the SQLite provider catalog,
   # which the pool refreshes from OpenRouter when it is a day old (pool.rb).
   use_live_catalog: true
-  # Per-model daily cap before the router skips the slug. Corrected 2026-10-27
-  # against the provider's own terms: OpenRouter free models default to 50
-  # requests/day per model; a one-time $10 credit raises the allowance to
-  # 1,000/day. The old 200 made the router hammer a limit four times past
-  # reality and read the 429s as flapping. See docs/free_compute.md for the
-  # full landscape and its dates.
+  # Conservative fallback when no fresh GET /api/v1/key sample is available.
+  # OpenRouter reports free_model_daily_requests as one used/limit/remaining
+  # counter for free-model requests, not one allowance per :free slug. The
+  # legacy field name is retained for config compatibility; ModelQuota sums
+  # local :free counts across slugs and uses the provider sample when fresh.
   daily_quota_per_model: 50
-  # Multiple operator-configured keys rotate on rate-limit outcomes. The local daily
-  # per-model guard remains conservative and is not multiplied by key count; shared
-  # account/organization limits still apply, and rotation must not defeat them.
+  # Multiple operator-configured keys rotate on rate-limit outcomes. The provider's
+  # reported quota and the local fallback are not multiplied by configured key
+  # count; account-level limits remain authoritative.
   keys_env:
     - OPENROUTER_API_KEY
     - OPENROUTER_API_KEY_2
