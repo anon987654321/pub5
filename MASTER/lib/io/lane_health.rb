@@ -70,7 +70,10 @@ module Master
       # enabled the local lane. A disabled lane is neither probed nor revived.
       def ensure_ollama(base: ollama_base, up: method(:ollama_up?), spawn: method(:spawn_ollama), binary: "ollama")
         unless LaneSelection.ollama_enabled?
-          return Ollama.new(:off, "ollama disabled (set MASTER_OLLAMA_ENABLED=1 to opt in)")
+          # Name the actual refusal: the kill switch cannot be undone by the
+          # opt-in variable, so the hint must not suggest trying it.
+          reason = ENV["MASTER_NO_OLLAMA"] == "1" ? "MASTER_NO_OLLAMA=1 refuses it" : "set MASTER_OLLAMA_ENABLED=1 to opt in"
+          return Ollama.new(:off, "ollama disabled (#{reason})")
         end
         if up.call(base)
           warm_probe(base:)

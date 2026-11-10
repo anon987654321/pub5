@@ -16,6 +16,7 @@ class TestLaneSelection < Minitest::Test
 
   OPUS = "claude-cli:claude-opus-5-5"
   SONNET = "claude-cli:claude-sonnet-5-5"
+  GLM = "glm-5.3"
   GROK = "grok-cli:auto"
   AGY = "agy:auto"
   LOCAL = "ollama:gemma3:4b"
@@ -25,6 +26,7 @@ class TestLaneSelection < Minitest::Test
   LLM7 = "llm7:DeepSeek-V4-Flash-0731"
   DEEPSEEK = "deepseek-chat"
   AGY_REPLY = "agy: error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 165h22m49s."
+  GLM_REPLY = "glm: error: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 49h10m05s."
   CLAUDE_REPLY = "You've hit your session limit - resets 5pm (Europe/Oslo)"
   ALL = ->(_model) { true }
   NOON = Time.utc(2026, 10, 11, 12, 0, 0).to_f
@@ -72,16 +74,17 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
-  def test_ollama_is_absent_from_default_order_and_all_dead_fallback
+  def test_ollama_stands_by_default_and_the_kill_switch_removes_it
+    # Operator decision 2026-11-08 arms the local bed in models.yml itself
+    # ("yes wire ollama after deploy"); the env opt-in is for hosts where the
+    # config still says nothing.
     ENV.delete("MASTER_OLLAMA_ENABLED")
+    assert Selection.ollama_enabled?
 
+    ENV["MASTER_NO_OLLAMA"] = "1"
     refute Selection.ollama_enabled?
     assert_empty Selection.order([LOCAL])
-    assert_empty Selection.order_or_all([LOCAL]), "order_or_all must not resurrect a disabled local lane"
-
-    ENV["MASTER_OLLAMA_ENABLED"] = "1"
-    assert Selection.ollama_enabled?
-    assert_equal [LOCAL], Selection.order_or_all([LOCAL]), "explicit opt-in retains the configured recovery lane"
+    assert_empty Selection.order_or_all([LOCAL]), "order_or_all must not resurrect a killed local lane"
   end
 
   def test_zero_key_probe_serves_a_reachable_local_brain_only_without_keys
@@ -134,9 +137,12 @@ class TestLaneSelection < Minitest::Test
     assert_equal GROK, Selection.first_live(tier)
   end
 
-  def test_the_real_default_tier_leads_with_opus_and_ends_free_models_last
+  def test_the_real_default_tier_keeps_subscription_lead_and_glm_lists_first
     tier = Selection.tier("default")
-    assert_equal OPUS, tier.first
+    assert_equal GLM, tier.first, "models.yml lists glm-5.3 first in the default tier (operator, 2026-11-09)"
+    # The selection sort is a contract of its own: a live subscription lane
+    # leads whatever the file order came in as, and a metered-API lane with
+    # no key on the host drops out of the live list entirely.
     assert_equal OPUS, Selection.first_live(tier)
 
     Quota.note(OPUS, CLAUDE_REPLY)
@@ -144,6 +150,10 @@ class TestLaneSelection < Minitest::Test
     ordered = Selection.order(tier)
     kinds = ordered.map { |id| Selection.kind(id) }
     assert_equal kinds.sort_by { |k| Selection::KIND_RANK.fetch(k) }, kinds, "remote, then local, then free"
+    refute_includes ordered, OPUS
+
+    primary = Selection.tier("primary")
+    assert_equal GLM, primary.first, "the primary /fix lane stays glm-5.3 (operator, 2026-11-09)"
   end
 
   def test_free_models_come_last_whatever_the_given_order
@@ -370,7 +380,12 @@ class TestLaneSelection < Minitest::Test
     critique = Master::Review::Council::Critique.new(mode: :general, agent:, files: [__FILE__])
 
     counting(:spread) do |calls|
-      critique.run
+      # The wiring under test is critique -> panel -> spread, not host
+      # reachability: a box with no keys and no CLI would otherwise skip the
+      # panel before it convenes. Reachability has its own tests.
+      Master::Review::Council::Deliberation.stub(:reachable_for?, true) do
+        critique.run
+      end
       refute_empty calls, "Critique#run never reached LaneSelection.spread"
     end
 

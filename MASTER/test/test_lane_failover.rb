@@ -87,19 +87,28 @@ class TestLaneFailover < Minitest::Test
     agent.send(:retry_on_broke_lane, first, models.first, [{ role: "user", content: "hi" }])
   end
 
-  def test_default_policy_does_not_probe_or_start_ollama
+  def test_default_policy_probes_the_armed_bed_and_the_kill_switch_stays_off
     ENV.delete("MASTER_OLLAMA_ENABLED")
     probes = 0
     starts = 0
 
-    result = Health.ensure_ollama(
-      base: "http://localhost:11434",
-      up: ->(_base) { probes += 1; true },
-      spawn: ->(_binary) { starts += 1 },
-    )
+    # Operator decision 2026-11-08 arms ollama in models.yml itself, so the
+    # default policy probes the endpoint and reports what it found; it still
+    # never spawns a daemon on its own.
+    up = ->(_base) { probes += 1; true }
+    spawn = ->(_binary) { starts += 1 }
+    result = Health.ensure_ollama(base: "http://localhost:11434", up: up, spawn: spawn)
+
+    assert_equal :up, result.state
+    assert_equal 1, probes
+    assert_equal 0, starts, "a healthy bed needs no spawn"
+
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    probes = 0
+    result = Health.ensure_ollama(base: "http://localhost:11434", up: up, spawn: spawn)
 
     assert_equal :off, result.state
-    assert_match(/MASTER_OLLAMA_ENABLED=1/, result.message)
+    assert_match(/MASTER_NO_OLLAMA=1 refuses it/, result.message)
     assert_equal 0, probes
     assert_equal 0, starts
   end

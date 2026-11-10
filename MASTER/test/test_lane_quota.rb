@@ -85,7 +85,7 @@ class TestLaneQuota < Minitest::Test
     rows = Quota.report.to_h { |row| row.split(": ", 2) }
     assert_match(/\Aquota spent, back in 165h/, rows.fetch("agy"))
     assert_match(/\Aunreachable, back in/, rows.fetch("lmstudio"))
-    assert_match(/\Alogin expired, back in/, rows.fetch("claude-cli"))
+    assert_match(/\Alogin or credential rejected, back in/, rows.fetch("claude-cli"))
     assert_match(/\Aquota spent, wait guessed, back in/, rows.fetch("deepseek"))
     assert_equal "unreachable", YAML.safe_load_file(Quota.path).fetch("reason:lmstudio")
 
