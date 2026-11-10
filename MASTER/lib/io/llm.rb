@@ -45,7 +45,6 @@ module Master
           result = invoke_tool(args:, identity:, invocation_id:, started:)
           return result if result.is_a?(String)
 
-          detail_tool_payload("result", result.ok? ? result.value! : "error: #{result.message}")
           finish_tool_result(result:, identity:, args:, invocation_id:, started:, &block)
         end
 
@@ -92,6 +91,7 @@ module Master
           return unknown_outcome_reply(invocation_id) unless persist_tool_result(
             identity:, args:, invocation_id:, result:, outcome:, succeeded:, ms:,
           )
+          detail_tool_payload("result", succeeded ? result.value! : "error: #{result.message}")
           return finish_tool_failure(result:, args:, invocation_id:, outcome:, ms:, identity:) unless succeeded
 
           finish_tool_success(result:, args:, invocation_id:, ms:, &block)
