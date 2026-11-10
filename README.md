@@ -38,6 +38,19 @@ the one cross-tree action list; structured YAML ledgers remain the owners of
 IDs, evidence receipts, provenance and lifecycle state. Do not create another
 backlog file.
 
+## First hour
+
+Install Ruby 3.3 or newer (below 4.1; `.ruby-version` pins 4.0.5) and run `bundle install` in
+`MASTER/`. Keep API keys in the environment, never in Git. Run `MASTER/bin/doctor` and read its
+one-line reports. Then take one narrow dry run from `MASTER/`:
+
+```text
+bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'
+```
+
+Read veto, INCONCLUSIVE and skip lines as failures of proof, never as success. Deploy only
+through the OPENBSD runbook path. Commit path-scoped changes to main; never force-push.
+
 ## Source authority and Laws
 
 `MASTER/data/soul.yml` owns global identity, preservation principles,

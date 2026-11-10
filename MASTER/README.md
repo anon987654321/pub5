@@ -60,9 +60,30 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 - `data/voice.yml` owns speech and voice policy.
 - `data/tokens.yml` and `data/law/minimalism.yml` own shared visual tokens and the minimal interface contract.
 - `data/dialogue_rubric.yml` owns the conversational-support rubric.
+- `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
 - `data/affiliate_sources.yml` owns the affiliate source registry.
 
 Do not copy their values into code, prompts or documentation when a reader can use the canonical source. Secrets belong in the runtime environment, never in Git. Relevant optional settings include `MASTER_BACKGROUND_SCAN=1` for opt-in background scanning, `MASTER_TEST_JOBS=1` for a single test worker, `MASTER_LLM_RECORD=1` for trajectory recording, `MASTER_LLM_GATEWAY_URL` and `MASTER_LLM_GATEWAY_KEY` for a hosted gateway, plus the runtime selectors `RUBY_BOX` and `MASTER_JIT`.
+
+## Doctor, first hour and failures
+
+`bin/doctor` checks the host and reports one line per area: disk, ruby, bundle, boot, parse,
+hooks, worktrees, git state, model lanes, stray processes and `.master/` writability; add
+`--remote` for the vm23 checkout and deploy lock. `ok` means fine, `warn` means it works but is
+about to cost you, and `FAIL` stops work and carries the fix on the same line.
+
+First hour on a new host: install Ruby 3.3 or newer (below 4.1), run `bundle install` in
+`MASTER/`, keep keys in the environment, run `bin/doctor`, then take one narrow dry run,
+`bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
+widening scope.
+
+Failures have owners. `lib/ground/failure_taxonomy.rb` classifies the error and owns the retry
+policy: `exhausted` pauses the paid lane and re-probes on backoff through `Io::QuotaCheck`, so
+the fix is another model or a wait, never an in-place retry; `transient` backs off
+exponentially; `permanent` fails fast; `ambiguous` stops and asks a human. A held lock names
+its holder — wait, stop that run, or let `bin/cleanup` sweep stale `.lock` files. A stopped run
+stays resumable from its journal and is never reported as a successful one. A Ruby outside
+3.3–4.1 is fixed before any other repair. A skipped instrument stays INCONCLUSIVE, never PASS.
 
 ## References
 

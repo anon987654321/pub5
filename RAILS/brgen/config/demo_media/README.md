@@ -35,7 +35,7 @@ on the machine that made them.
 
 Unprocessed sources receive one Postpro pass during the curated seed run. `preset: "random"`
 chooses a valid preset deterministically from the seed key; repeating the seed does not change the
-grade simply because the random number generator changed. A row marked `graded: true` is already
+grade because the random number generator changed. A row marked `graded: true` is already
 processed and must not receive a second pass.
 
 For each new locally supplied image, record its source URL, source name, photographer,

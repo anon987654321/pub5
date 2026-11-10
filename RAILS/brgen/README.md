@@ -160,6 +160,49 @@ ids are set. Email and phone are hashed with SHA-256 and never sent raw, the ord
 dedupe key, and unpaid orders are never uploaded. Consent is sent only when the answer is known,
 and never assumed granted.
 
+## Monetisation
+
+Revenue follows paths the code already serves. The marketplace settles orders through Stripe,
+Vipps and Dintero (`Marketplace::Order` payment providers), and payment webhooks enter at
+`/webhooks/stripe` and `/webhooks/vipps` on the host. No platform fee is wired: `price_cents`
+on an order is the price buyer and seller agreed, so an order today earns the network nothing.
+A take rate is a schema change, a product decision and a legal text, and it waits for all
+three.
+
+The plan that exists is `brgen_business_presence` in `RAILS/__shared/config/plans.yml`: NOK 399
+a month for a local business presence, gated by the `featured_listings` entitlement in the
+marketplace listings controller. The `/billing` page shows a plan whose Stripe price env is
+unset as not yet available, never as an offer nobody can complete.
+
+Affiliate income ships behind approvals: TradeDoubler needs publisher and programme approval
+before `TRADEDOUBLER_TOKEN` exists, Amazon needs a per-storefront Associates tag, and the
+Creators API waits on ten qualifying sales in thirty days. Until then, placeholder rows stay
+labelled and unpaid. Radio and TV take support only with disclosure.
+
+Rejected as planning fiction: global ad scale before local density, an AI premium before a
+daily habit, and paid demand in forty-three cities before one city holds retention. Seed data
+is not an audience.
+
+## SEO and growth
+
+brgen wins on place. Each live apex serves unique local URLs — feed, events, marketplace
+listings and public community pages — so the honest keyword inventory is city plus vertical:
+"bergen markedsplass", "oshlo dating". Growth comes from being crawled correctly and being
+worth citing locally, not from doorway pages.
+
+The mechanics the tree carries: `Shared::SitemapBuilder` and the sitemapable concern emit
+per-host sitemaps; `Shared::SeoKit` renders titles, descriptions and social card meta;
+`/merchant-feed.xml` gives price engines a public, priced and photographed feed with affiliate
+rows excluded; structured events ride on the shared engine. nb and en ship as real
+translations, and a city without a translation serves one honest language.
+
+The rules: public value before login walls where privacy allows; show only apexes that are
+both in the network set and live in `LIVE_DOMAINS`, and say "eleven members, seven live"
+instead of "live in forty-three cities"; disclose affiliate relationships on every hop; upload
+conversions only for paid orders, consent sent when known and never assumed; measure through
+`Shared::GrowthReport` — visits by host, outbound clicks, paid orders — and let that evidence
+decide where the next city opens.
+
 ## IRC bridge
 
 The gateway is a limited channel bridge, not a general IRC server. It supports

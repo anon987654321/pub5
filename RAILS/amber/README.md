@@ -214,6 +214,45 @@ Amber messages addressed to MASTER through `Shared::MasterMessenger`.
 `BrgenCommerce` and `CommerceFit` provide the bounded BRGEN catalogue integration
 listed in the service table above.
 
+## Monetisation
+
+The plan that exists is amber premium: EUR 7.99 a month or EUR 69 a year in
+`RAILS/__shared/config/plans.yml`, gated by the `amber_premium` entitlement. Premium earns its
+keep when the recurring value is real: unlimited wardrobe size, export, multi-wardrobe and the
+analytics the free tier only samples. The `/billing` page shows the plan as not yet available
+while its Stripe price env is unset, so nobody reaches a checkout that cannot complete. Do not
+raise the paywall before import and export work; a wardrobe someone cannot leave is not a
+product someone joins.
+
+Affiliate income stays elective and disclosed: `ShopTheLook` ranks links the owner added
+herself, and its remote half waits on the TradeDoubler token that lives on brgen, and says so
+while that half is dark. B2B seats for stylists, theatres and costume departments wait for
+roles and invoicing that do not exist yet. Cross-promotion with brgen runs only with
+measurement on both sides.
+
+Metrics that decide the next step: weekly active wardrobes, items added per active wardrobe,
+week-4 retention, support tickets per thousand users and payment failure rate.
+
+## SEO and growth
+
+amber is a tool, so it ranks on intent, not geography. Pages that win searches describe
+problems the product solves today: cost per wear, capsule building, the KonMari declutter
+loop, duplicate detection. A page ships with the feature it names; a page for an unshipped
+feature is a promise the tree does not keep.
+
+The mechanics the tree carries: `Shared::SitemapBuilder` with the sitemapable concern,
+`Shared::SeoKit` for titles, descriptions and social card meta, one canonical domain —
+amberapp.art, with registration state owned by `RAILS/apps.yml` — and consent-based remix
+pages creators link to themselves. Accessible forms and fast pages are ranking mechanics too,
+and the shared engine owns them.
+
+The rules: no brand doorway pages, no invented community size, no silent reuse of private
+photos in marketing — a remix page shows a garment only as `WardrobeVisibilityPolicy` answers
+— and no indexing of a wardrobe that is not public. Growth loops that exist: guests try the
+demo wardrobe at /demo without an account, and registration merges the guest's posts, comments
+and message history into the new account; creators publish remixable garments and bring their
+own audience with them.
+
 ## Running it
 
 amber.sh sources the shared deploy contract and copies the tracked tree at RAILS/amber to
