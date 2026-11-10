@@ -11,6 +11,7 @@ class ControlPlaneSpec < Minitest::Test
     Dir.mktmpdir("master-control") do |root|
       runner = []
       plane = Master::Ops::ControlPlane.new(root:, interval: 5, out: StringIO.new)
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:command) do |*argv|
         runner << argv
         { stdout: " M changed\n", stderr: "", status: Status.new(false) }
