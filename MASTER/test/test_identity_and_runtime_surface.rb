@@ -67,6 +67,7 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
 
     assert_match(/Speech: replies (?:stay text this session|are spoken aloud this session)/, prompt)
     assert_includes prompt, Master::Voice::Playback.enabled? ? "are spoken aloud" : "stay text this session"
+    assert_includes prompt, "Never claim MASTER is text-only when CLI speech is enabled"
   end
 
   # The transcript's model said it could not see the terminal. The honest
