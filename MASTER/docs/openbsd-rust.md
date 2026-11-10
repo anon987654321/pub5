@@ -22,8 +22,9 @@ pub5's Laws.
 
 ## The loop
 
-There is no /scan: observation is where a fix starts, not a command. `/fix <path>
---dry-run` is the read-only pass. The fix gate's staged writes (`Fix::Transaction`
+There is no separate scan command: observation is where a fix starts, not a second pipeline.
+`/scan` is a compatibility rewrite to `/fix --mode=audit`; `/fix <path>
+--dry-run` remains the direct read-only pass. The fix gate's staged writes (`Fix::Transaction`
 for per-file repairs, `Fix::Restructure` for multi-file moves, the `WriteGuard` and
 the sacred-path refusal ahead of every write) are built for this checkout's trees; in
 a foreign checkout the same proofs apply with the roles swapped — observation through
