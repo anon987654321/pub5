@@ -393,6 +393,14 @@ to the old file: the tree-contract source moved from root
 That decree supersedes the old protected-path list; do not restore it from
 history as a migration repair.
 
+**Production server correction — 2026-11-10.** The migrated Mr Damascy service
+was still launching Puma even though the vm23 operator contract says Falcon
+only. Its production Gemfile and rc.d entry now use Falcon 0.55.3, with the
+dependency closure sourced from the already-locked BSDPorts bundle. Puma stays
+only in the test group for Capybara. The OpenBSD safety check enforces that
+split. Bundle resolution, focused Rails/OpenBSD tests and a vm23 restart are
+still NOT_RUN until the pinned Ruby 4.0.5 host is available.
+
 The three old Python screenshot scripts are intentionally retired in favour
 of the Ruby visual-sheet tool above. The four governed code-tree acceptance
 suites, BIZ check/build, rendered screenshots, native OpenBSD validation and
