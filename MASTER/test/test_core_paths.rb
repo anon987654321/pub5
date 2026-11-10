@@ -8,11 +8,12 @@ class TestCorePaths < Minitest::Test
     Master::Core::Constitution::Paths.new(root: Master::ROOT)
   end
 
-  def test_soul_owns_the_sacred_paths
-    sacred = paths.sacred_paths
-    assert_empty sacred & %w[data/ lib/review/scan/]
-    expected = %w[data/laws.yml data/soul.yml data/project_context.yml lib/soul.rb lib/ground/pledge.rb bin/master]
-    assert_empty expected - sacred
+  # Operator decree 2026-11-09: the operator retired the protected-path
+  # boundary; nothing is sacred and the declaration list is empty.
+  def test_the_operator_decree_retires_the_sacred_paths
+    assert_empty paths.sacred_paths
+    refute paths.sacred?("data/laws.yml")
+    refute paths.sacred?("bin/master")
   end
 
   def test_authored_fix_code_is_not_sacred
@@ -75,16 +76,19 @@ class TestCorePaths < Minitest::Test
     end
   end
 
-  def test_empty_sacred_path_declaration_fails_closed_including_ratchet_ceiling
+  # Operator decree 2026-11-09: an empty declaration retires the boundary —
+  # nothing is sacred, nothing is refused for sacredness, and the ratchet
+  # ceiling reads the same empty list instead of failing closed.
+  def test_empty_sacred_path_declaration_blocks_nothing_including_ratchet_ceiling
     Dir.mktmpdir("core-paths-empty-soul") do |root|
       data_dir = File.join(root, "data")
       FileUtils.mkdir_p(data_dir)
       File.write(File.join(data_dir, "soul.yml"), "absolute:\n  sacred_paths: []\n")
       repo_paths = Master::Core::Constitution::Paths.new(root:)
 
-      assert_raises(Master::Soul::IntegrityError) { repo_paths.sacred_paths }
-      assert repo_paths.sacred?("lib/fix/fix_loop.rb")
-      assert_includes repo_paths.commit_refusal("data/spine.yml"), "constitution unreadable"
+      assert_empty repo_paths.sacred_paths
+      refute repo_paths.sacred?("lib/fix/fix_loop.rb")
+      assert_nil repo_paths.commit_refusal("data/spine.yml")
     end
   end
 

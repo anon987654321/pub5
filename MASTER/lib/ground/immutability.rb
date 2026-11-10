@@ -49,7 +49,8 @@ module Master
       # A root with no manifest of its own (a scratch tree, a test's tmpdir) is
       # held to MASTER's, so a missing file never makes a sacred path writable
       # and never refuses every write either. A manifest that exists and cannot
-      # be read, or declares nothing, still fails closed.
+      # be read still fails closed; one that declares nothing blocks nothing,
+      # per operator decree 2026-11-09 (nothing is sacred).
       def manifest_path
         own = File.expand_path(MANIFEST_REL, @root)
         File.exist?(own) ? own : Master.data_path("soul.yml")
@@ -60,7 +61,10 @@ module Master
 
         soul = Master.load_yaml(path)
         paths = Array(soul&.dig("absolute", "sacred_paths"))
-        raise Violation, "immutability: sacred manifest has no sacred_paths: #{path}" if paths.empty?
+        # Operator decree 2026-11-09: an empty declaration retires the
+        # boundary — nothing is sacred, so no path is blocked. A manifest
+        # that cannot be read still fails closed above.
+        return [].freeze if paths.empty?
 
         paths.map { |entry| normalize_relative(entry) }.uniq
       end

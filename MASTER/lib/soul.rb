@@ -216,6 +216,12 @@ module Master
       end
 
       def validate_sacred_paths!(paths, enforce_master_floor: true)
+        # Operator decree 2026-11-09: an empty declaration retires the
+        # protected-path boundary — nothing is sacred. A declared list is
+        # still held to the same safety rules, and the master floor still
+        # applies whenever a non-empty list is declared.
+        return paths.freeze if paths.is_a?(Array) && paths.empty?
+
         unless paths.is_a?(Array) && !paths.empty? &&
                paths.all? do |path|
                  path.is_a?(String) && !path.strip.empty? &&

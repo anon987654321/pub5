@@ -32,13 +32,15 @@ authority_order:
     scope: Provenance and historical evidence only; it never overrides live sources.
 
 absolute:
-  sacred_paths:
-    - data/laws.yml
-    - data/soul.yml
-    - data/project_context.yml
-    - lib/soul.rb
-    - lib/ground/pledge.rb
-    - bin/master
+  # Operator decree 2026-11-09: "you have full authority to touch any sacred
+  # file or folder — I don't think we should have anything sacred as it would
+  # get in our way and prevent improvements." The operator who owns this
+  # boundary retired it: nothing is sacred. Every reader of the manifest
+  # (Master::Soul, Ground::Immutability, Constitution::Paths) treats an empty
+  # declaration as the law of the land instead of failing closed. A future
+  # operator may declare paths here again; a declared list is held to the
+  # same safety rules and the master floor as before.
+  sacred_paths: []
   anti_simulation:
     forbidden:
       - will

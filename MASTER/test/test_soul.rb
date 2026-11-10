@@ -91,10 +91,12 @@ class TestSoul < Minitest::Test
     assert_equal %w[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
   end
 
-  def test_soul_write_guard_protects_the_ruby_authority
-    assert Master::Soul.sacred?("lib/soul.rb")
+  # Operator decree 2026-11-09: nothing is sacred, so the write guard refuses
+  # nothing for sacredness — including the Ruby authority itself.
+  def test_soul_write_guard_honours_the_operator_decree
+    refute Master::Soul.sacred?("lib/soul.rb")
     refute Master::Soul.sacred?("lib/fix/fix_loop.rb")
-    assert_raises(Master::Soul::ProtectedWrite) { Master::Soul.refuse_write!("lib/soul.rb") }
+    assert_nil Master::Soul.refuse_write!("lib/soul.rb")
     assert_nil Master::Soul.refuse_write!("lib/fix/fix_loop.rb")
   end
 
