@@ -99,8 +99,8 @@ export default class extends Controller {
       const y = this.element.scrollTop
       const dy = y - this.lastY
       if (Math.abs(dy) > this.threshold) {
-        // Scroll down → hide; scroll up → show. Stay hidden at the very top
-        // until the visitor intentionally peels or scrolls back up mid-page.
+        // Scroll down → hide; scroll up or return to the top → show.
+        // A focused link is kept visible regardless of scroll direction.
         if (dy > 0 && y > this.threshold) {
           // Scrolling must not pull the navigation away from a focused link.
           if (!this.hasBarTarget || !this.barTarget.contains(document.activeElement)) this.#apply(true)
