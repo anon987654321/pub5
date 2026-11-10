@@ -465,6 +465,74 @@ module Master
         end
       end
 
+      # The consolidated repo sweep is measurement-only. Attach its bounded,
+      # per-tree probe receipts to audit mode, never to a write run. A successful
+      # subprocess is recorded as exit=0; it is not a Law PASS.
+      def run_audit_probes(targets:, cancellation: nil)
+        require File.join(Master::REPO_ROOT, "MASTER", "tools", "sweep")
+
+        repo_root = File.expand_path(Master::REPO_ROOT)
+        trees = Array(targets).flat_map do |target|
+          expanded = File.expand_path(target.to_s, repo_root)
+          if expanded == repo_root
+            Operator::Sweep::TREES
+          else
+            tree = Operator::Sweep::TREES.find do |name|
+              base = File.join(repo_root, name)
+              expanded == base || expanded.start_with?("#{base}#{File::SEPARATOR}")
+            end
+            tree ? [tree] : []
+          end
+        end.uniq
+
+        return ["audit instruments: INCONCLUSIVE — target did not resolve to a governed tree"] if trees.empty?
+
+        results = []
+        unit_index = 0
+        trees.each do |tree|
+          if cancellation&.cancelled?
+            Master::Trace::Dmesg.status("audit0", "instrument sweep cancelled before #{tree}")
+            break
+          end
+
+          batch = Operator::Sweep.sweep(
+            tree, unit_index, detailed: true, stop: -> { cancellation&.cancelled? }
+          )
+          unit_index += batch.size
+          results.concat(batch)
+        end
+
+        executed = results.count(&:executed)
+        failed = results.count { |result| result.executed && !result.process_success }
+        not_run = results.count { |result| !result.executed }
+        lines = [
+          "audit instruments: trees=#{trees.join(",")} executed=#{executed} process_failures=#{failed} not_run=#{not_run}",
+          "audit instruments: exit=0 means the probe process completed; read each instrument summary for findings, not as a global Law PASS",
+        ]
+        results.each do |result|
+          execution = if !result.executed
+                        "NOT_RUN"
+                      elsif result.process_success
+                        "exit=0"
+                      else
+                        "exit!=0"
+                      end
+          summary = result.summary.to_s.gsub(/[\\x00-\\x1f\\x7f]/, " ").gsub(/\\s+/, " ").strip[0, 280]
+          lines << "audit instrument: #{result.tree}/#{result.unit} #{execution}; #{summary}"
+          result.evidence.each do |detail|
+            next if result.process_success
+
+            clean = detail.to_s.gsub(/[\\x00-\\x1f\\x7f]/, " ").gsub(/\\s+/, " ").strip[0, 220]
+            lines << "audit instrument evidence: #{result.tree}/#{result.unit}: #{clean}"
+          end
+        end
+        lines << "audit instruments: INCONCLUSIVE — cancellation stopped the remaining probes" if cancellation&.cancelled?
+        lines
+      rescue StandardError => error
+        Master::Trace::Dmesg.status("audit0", "instrument sweep INCONCLUSIVE: #{error.class}: #{error.message}")
+        ["audit instruments: INCONCLUSIVE — #{error.class}: #{error.message}"]
+      end
+
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
                               apply:, critique:, aesthetic:, only:, target:, cancellation: nil,
                               mode: "repair", task_intent: "functional_change")
@@ -538,6 +606,7 @@ module Master
                   cancellation:, task_intent:
                 )
               end
+              audit_lines = mode == "audit" ? run_audit_probes(targets:, cancellation:) : []
               failure = results.find { |result| result.is_a?(Master::Result::Err) }
               next failure if failure
 
@@ -556,7 +625,7 @@ module Master
                 end
                 ::Operator::CheckChain.persist_verified_baselines!(targets)
               end
-              rendered_run = results.join("\n")
+              rendered_run = [results.join("\n"), audit_lines.join("\n")].reject { |part| part.to_s.strip.empty? }.join("\n")
               # The run ends with its record: the governed wishlist, an honest
               # state per workstream — what /fix still owes the trees. A
               # wishlist failure is tail evidence, never a failed repair.
