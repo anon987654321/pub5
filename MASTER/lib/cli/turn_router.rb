@@ -188,9 +188,9 @@ module Master
       READ_SLASH = %w[why laws].freeze
       CONVERGENCE_SLASH = { "prove" => "--prove", "explain" => "--explain" }.freeze
       FIX_PIN_SLASH = { "simplify" => "--simplify", "security" => "--security" }.freeze
-      PIPELINE_SLASH = (
-        %w[fix] + FIX_MODE_ALIASES.keys + CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys
-      ).uniq.freeze
+      # Keep the literal list: the operator ratchet reads this one declaration
+      # without evaluating Ruby, so a formatting refactor must not hide verbs.
+      PIPELINE_SLASH = %w[fix audit review critique council scan visual style elevate map all workflow triad sweep through self prove explain simplify security].freeze
 
       INFER_MIN_CONFIDENCE = 0.62
 
