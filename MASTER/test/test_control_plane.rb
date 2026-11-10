@@ -22,6 +22,58 @@ class ControlPlaneSpec < Minitest::Test
     end
   end
 
+  def test_control_plane_waits_during_a_git_index_lock_without_removing_it
+    Dir.mktmpdir("master-control-lock") do |root|
+      out = StringIO.new
+      seen = []
+      plane = Master::Ops::ControlPlane.new(root:, interval: 5, out:)
+      lock = File.join(root, ".git", "index.lock")
+      FileUtils.mkdir_p(File.dirname(lock))
+      File.write(lock, "owned by another git process")
+      plane.define_singleton_method(:git_dir) { File.join(root, ".git") }
+      plane.define_singleton_method(:clean?) { seen << :status; true }
+      plane.define_singleton_method(:fetch!) { seen << :fetch }
+
+      plane.cycle
+
+      assert_match(/waiting - Git index\.lock in progress/, out.string)
+      assert_empty seen
+      assert File.file?(lock), "MASTER must not remove another process's lock"
+    end
+  end
+
+  def test_control_plane_waits_during_a_rebase
+    Dir.mktmpdir("master-control-rebase") do |root|
+      out = StringIO.new
+      seen = []
+      plane = Master::Ops::ControlPlane.new(root:, interval: 5, out:)
+      rebase = File.join(root, ".git", "rebase-merge")
+      FileUtils.mkdir_p(rebase)
+      plane.define_singleton_method(:git_dir) { File.join(root, ".git") }
+      plane.define_singleton_method(:clean?) { seen << :status; true }
+      plane.define_singleton_method(:fetch!) { seen << :fetch }
+
+      plane.cycle
+
+      assert_match(/waiting - Git rebase in progress/, out.string)
+      assert_empty seen
+      assert Dir.exist?(rebase), "MASTER must leave the user's rebase state intact"
+    end
+  end
+
+  def test_checkout_mutation_blocker_uses_one_absolute_git_dir_probe
+    Dir.mktmpdir("master-control-markers") do |root|
+      plane = Master::Ops::ControlPlane.new(root:, interval: 5, out: StringIO.new)
+      git = File.join(root, ".git")
+      FileUtils.mkdir_p(git)
+      probes = []
+      plane.define_singleton_method(:git_dir) { probes << true; git }
+
+      assert_nil plane.send(:checkout_mutation_blocker)
+      assert_equal [true], probes
+    end
+  end
+
   def test_main_checkout_pulls_when_origin_is_ahead
     Dir.mktmpdir("master-control") do |root|
       plane = Master::Ops::ControlPlane.new(root:, interval: 5, out: StringIO.new)
@@ -32,6 +84,7 @@ class ControlPlaneSpec < Minitest::Test
         [["git", "-C", File.expand_path("..", root), "merge-base", "--is-ancestor", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"], { stdout: "", stderr: "", status: Status.new(true) }],
         [["git", "-C", File.expand_path("..", root), "pull", "--ff-only", "origin", "main"], { stdout: "", stderr: "", status: Status.new(true) }],
       ]
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:command) { |*argv| commands.shift.fetch(1) }
 
       plane.send(:synchronize_refs!)
@@ -64,6 +117,7 @@ class ControlPlaneSpec < Minitest::Test
       { stdout: "", stderr: "", status: Status.new(true) },
     ]
 
+    plane.define_singleton_method(:checkout_mutation_blocker) { nil }
     plane.define_singleton_method(:clean?) { true }
     plane.define_singleton_method(:fetch!) { nil }
     plane.define_singleton_method(:command) do |*argv|
@@ -84,6 +138,7 @@ class ControlPlaneSpec < Minitest::Test
         { stdout: "", stderr: "", status: Status.new(false) },
         { stdout: "", stderr: "", status: Status.new(false) },
       ]
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:command) { |*argv| commands.shift }
 
       assert_raises(Master::Ops::ControlPlane::CommandError) { plane.send(:synchronize_refs!) }
@@ -94,6 +149,7 @@ class ControlPlaneSpec < Minitest::Test
     Dir.mktmpdir("master-control") do |root|
       plane = Master::Ops::ControlPlane.new(root:, interval: 5, out: StringIO.new)
       observed = []
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:clean?) { true }
       plane.define_singleton_method(:fetch!) { observed << Master::Ops::LoopOwner.active.fetch("loop") }
       plane.define_singleton_method(:synchronize_refs!) { observed << Master::Ops::LoopOwner.active.fetch("loop") }
@@ -113,6 +169,7 @@ class ControlPlaneSpec < Minitest::Test
     Dir.mktmpdir("master-control") do |root|
       plane = Master::Ops::ControlPlane.new(root:, interval: 5, out: StringIO.new)
       deployed = []
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:clean?) { true }
       plane.define_singleton_method(:fetch!) { nil }
       plane.define_singleton_method(:synchronize_refs!) { nil }
@@ -136,6 +193,7 @@ class ControlPlaneSpec < Minitest::Test
       out = StringIO.new
       plane = Master::Ops::ControlPlane.new(root:, interval: 5, out:)
       calls = 0
+      plane.define_singleton_method(:checkout_mutation_blocker) { nil }
       plane.define_singleton_method(:command) do |*argv|
         calls += 1
         if argv[-2, 2] == ["status", "--porcelain"]

@@ -73,6 +73,9 @@ module Master
         end
 
         begin
+          if (blocker = checkout_mutation_blocker)
+            return report("control0: waiting - #{blocker}")
+          end
           return report("control0: waiting - working tree is dirty") unless clean?
 
           fetch!
@@ -102,12 +105,43 @@ module Master
         result[:status].success? && result[:stdout].strip.empty?
       end
 
+      # A second Git process may own the index or be resolving a merge/rebase.
+      # Never fetch/pull/deploy through that transaction, and never remove its lock.
+      GIT_OPERATION_MARKERS = {
+        "index.lock" => "Git index.lock",
+        "rebase-merge" => "Git rebase",
+        "rebase-apply" => "Git rebase",
+        "MERGE_HEAD" => "Git merge",
+        "CHERRY_PICK_HEAD" => "Git cherry-pick",
+        "REVERT_HEAD" => "Git revert",
+      }.freeze
+
+      def git_dir
+        text_command("git", "-C", @repo, "rev-parse", "--absolute-git-dir")
+      end
+
+      def checkout_mutation_blocker
+        directory = git_dir
+        GIT_OPERATION_MARKERS.each do |path, label|
+          return "#{label} in progress (#{path})" if File.exist?(File.join(directory, path))
+        end
+        nil
+      end
+
       def fetch!
+        if (blocker = checkout_mutation_blocker)
+          raise CommandError.new(%w[git fetch origin main], blocker)
+        end
+
         result = command("git", "-C", @repo, "fetch", "--prune", "origin", "main")
         raise CommandError.new(%w[git fetch origin main], result[:stderr]) unless result[:status].success?
       end
 
       def synchronize_refs!
+        if (blocker = checkout_mutation_blocker)
+          raise CommandError.new(%w[git pull --ff-only origin main], blocker)
+        end
+
         branch = text_command("git", "-C", @repo, "branch", "--show-current")
         unless branch == "main"
           raise CommandError.new(["git", "branch", "--show-current"], "vm23 control plane requires the main branch; current=#{branch.inspect}")
