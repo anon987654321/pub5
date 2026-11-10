@@ -430,9 +430,10 @@ went with you.
 
 **One verb, explicit modes.** `/fix [path] [--mode=repair|audit|visual|elevate|all]`
 is the only pipeline command. `repair` is the default write-enabled observe,
-critique, repair, re-observe and verify lifecycle. `audit` is a read-only
-scanner and structural-sweep preview with council critique; it does not run
-mutation-capable work lanes. `visual` is a read-only style pass; `elevate` selects the
+critique, repair, re-observe and verify lifecycle. `audit` is a read-only tree review: first-read, execution trace, non-persisting
+backlog review when due, structural review, scanner/structural preview,
+typography and principle map, plus council critique. Repair is replaced by
+preview; review state and proposals are not persisted. `visual` is a read-only style pass; `elevate` selects the
 improvement lane; `all` selects the existing all-work lane. `--dry-run`
 always means no writes. Audit and visual cannot be made write-enabled by
 `--apply`. Elevate and all retain the existing resource, file and stall
