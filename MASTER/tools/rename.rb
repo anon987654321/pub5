@@ -53,7 +53,10 @@ module Operator
 
     def files
       @files ||= TREES.flat_map { |tree| Dir.glob(File.join(ROOT, tree, "**", "*")) }
-                      .reject { |path| path =~ SKIP }
+                      # SKIP names directories inside the tree. Applied to the
+                      # absolute path it also reads the host's own /tmp, and a
+                      # fixture planted there scans to nothing.
+                      .reject { |path| path.delete_prefix("#{ROOT}/") =~ SKIP }
                       .select { |path| File.file?(path) && TEXT_EXTENSIONS.include?(File.extname(path)) }
                       .sort
     end

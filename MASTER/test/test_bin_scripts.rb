@@ -103,7 +103,10 @@ class TestBinScripts < Minitest::Test
       SH
       [old, new].each { |path| File.chmod(0o755, path) }
 
-      out, = Open3.capture2e({ "PATH" => "#{dir}:/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => "#{new}:#{old}" },
+      # The operator's explicit pin must not decide this race; these tests
+      # stage their own candidates and an inherited PUB5_RUBY would win first.
+      out, = Open3.capture2e({ "PATH" => "#{dir}:/usr/bin:/bin", "PUB5_RUBY" => nil,
+                               "MASTER_RUBY_CANDIDATES" => "#{new}:#{old}" },
                              File.join(ROOT, "bin", "dev-bootstrap"), "hello")
 
       assert_includes out, "NEW-PINNED", "the newest in-range Ruby must win, got: #{out}"
@@ -120,14 +123,30 @@ class TestBinScripts < Minitest::Test
       SH
       File.chmod(0o755, stale)
 
-      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => stale,
+      # Run the copy so a previous build under MASTER/.tools cannot answer in
+      # place of the refusal this test proves.
+      script = copied_bootstrap(dir)
+
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "PUB5_RUBY" => nil,
+                                      "MASTER_RUBY_CANDIDATES" => stale,
                                       "MASTER_DEV_BOOTSTRAP_BUILD" => "0" },
-                                    File.join(ROOT, "bin", "dev-bootstrap"))
+                                    script)
 
       refute status.success?, "a 2.7 interpreter is outside the Gemfile's range"
       assert_includes out, "no Ruby >= 3.3"
       refute_includes out, "STALE-PINNED", "an out-of-range Ruby was exec'd"
     end
+  end
+
+  # A copy of dev-bootstrap under a scratch MASTER, so the script's own ROOT,
+  # and with it the step-3 .tools build, points at the scratch and not at this
+  # checkout — which may carry a Ruby a refusal test must not see.
+  def copied_bootstrap(dir)
+    bin_dir = File.join(dir, "MASTER", "bin")
+    FileUtils.mkdir_p(bin_dir)
+    script = File.join(bin_dir, "dev-bootstrap")
+    FileUtils.cp(File.join(ROOT, "bin", "dev-bootstrap"), script)
+    script
   end
 
   def test_dev_bootstrap_prefers_a_ruby_it_already_built
@@ -144,7 +163,8 @@ class TestBinScripts < Minitest::Test
       SH
       File.chmod(0o755, File.join(tools_bin, "ruby"))
 
-      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "MASTER_RUBY_CANDIDATES" => "" },
+      out, status = Open3.capture2e({ "PATH" => "/usr/bin:/bin", "PUB5_RUBY" => nil,
+                                      "MASTER_RUBY_CANDIDATES" => "" },
                                     File.join(master, "bin", "dev-bootstrap"), "-v")
 
       assert status.success?, out
@@ -154,18 +174,25 @@ class TestBinScripts < Minitest::Test
   end
 
   def test_dev_bootstrap_names_the_refusal_when_building_is_disabled
-    env = {
-      "PATH" => "/usr/bin:/bin",
-      "MASTER_DEV_BOOTSTRAP_BUILD" => "0",
-      "HOME" => Dir.mktmpdir,
-    }
-    out, status = Open3.capture2e(env, File.join(ROOT, "bin", "dev-bootstrap"))
+    Dir.mktmpdir do |dir|
+      env = {
+        "PATH" => "/usr/bin:/bin",
+        "PUB5_RUBY" => nil,
+        # This host may carry an in-range Ruby at the probed fixed paths; the
+        # seam list replaces that probe so the host stays out of the proof.
+        "MASTER_RUBY_CANDIDATES" => File.join(dir, "absent-ruby"),
+        "MASTER_DEV_BOOTSTRAP_BUILD" => "0",
+        "HOME" => Dir.mktmpdir,
+      }
+      script = copied_bootstrap(dir)
+      out, status = Open3.capture2e(env, script)
 
-    refute status.success?, "a host with no Ruby must not report success"
-    assert_includes out, "no Ruby >= 3.3"
-    assert_includes out, "MASTER_DEV_BOOTSTRAP_BUILD=0"
+      refute status.success?, "a host with no Ruby must not report success"
+      assert_includes out, "no Ruby >= 3.3"
+      assert_includes out, "MASTER_DEV_BOOTSTRAP_BUILD=0"
+    end
   ensure
-    env["HOME"] && Dir.rmdir(env["HOME"]) rescue nil
+    env && env["HOME"] && Dir.rmdir(env["HOME"]) rescue nil
   end
 
   def test_dev_bootstrap_is_posix_sh_and_ignores_tools_checkouts

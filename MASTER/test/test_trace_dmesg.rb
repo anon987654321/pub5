@@ -131,10 +131,15 @@ class TraceDmesgTest < Minitest::Test
 
   def with_colorterm(value)
     previous = ENV.fetch("COLORTERM", nil)
+    previous_no_color = ENV.fetch("NO_COLOR", nil)
     value ? ENV["COLORTERM"] = value : ENV.delete("COLORTERM")
+    # These tests stage a terminal that wants colour; an ambient NO_COLOR
+    # would test the opt-out again, not the painting under a given terminal.
+    ENV.delete("NO_COLOR")
     yield
   ensure
     previous ? ENV["COLORTERM"] = previous : ENV.delete("COLORTERM")
+    previous_no_color ? ENV["NO_COLOR"] = previous_no_color : ENV.delete("NO_COLOR")
   end
 
   def test_no_color_keeps_the_boot_plain

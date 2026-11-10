@@ -15,6 +15,10 @@ class ToolHooksTest < Minitest::Test
     row["matcher"] = matcher if matcher
     row["on_fault"] = on_fault if on_fault
     File.write(file, YAML.dump("PreToolUse" => [row]))
+    # A hook file is trusted only when no one else can have written it; a
+    # umask that hands the group a write bit would test the refusal, not the
+    # hooks. Pin the mode the trust contract expects.
+    File.chmod(0o600, file)
     file
   end
 
