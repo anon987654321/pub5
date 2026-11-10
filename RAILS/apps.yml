@@ -488,7 +488,7 @@ apps:
         - { name: Two-lane checkout (Vipps Express + Stripe Checkout),            status: done, notes: "payment_method per order; checkout_flow_test, stripe_callback_test, stripe_client_test" }
         - { name: Public order tracking by token,                                 status: done, notes: "token-scoped track/:token + status JSON" }
         - { name: Sahtein-kortet loyalty (10 stars, 10th wrap free),              status: done, notes: "auto-applied at checkout when >= 9 unredeemed stamps" }
-        - { name: Demo deploy at mrd.brgen.no, status: done, notes: "one Puma, mock payments; see RUNBOOK" }
+        - { name: Demo deploy at mrd.brgen.no, status: done, notes: "one Falcon worker, mock payments; see RUNBOOK" }
         - { name: Own domain, status: planned, agent: note, notes: "needs a zone, an acme-client block, a keypair" }
 
 archived_subsystems:
