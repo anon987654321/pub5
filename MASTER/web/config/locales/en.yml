@@ -37,8 +37,22 @@ en:
       skills: "skills"
       pressure: "context pressure"
       providers: "provider health"
+      fleet: "fleet health"
+      quota: "quota and cache"
       repair: "repair queue"
       bus: "recent bus"
+    fleet:
+      load: "load (1 min)"
+      shed_order: "sheds first"
+      shed_strikes: "after strikes"
+      thresholds: "warn/crit"
+    quota:
+      day: "quota day"
+      limit: "free limit"
+      used: "used today"
+      exhausted: "exhausted"
+      cache_pct: "prompt cache"
+      cache_tokens: "cached tokens"
     status:
       model: "model"
       ctx: "ctx"

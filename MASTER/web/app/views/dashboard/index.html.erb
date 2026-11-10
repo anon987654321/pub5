@@ -52,7 +52,17 @@
          data-label-pct="<%= t("dashboard.pressure.pct") %>"
          data-label-headroom="<%= t("dashboard.pressure.headroom") %>"
          data-label-status="<%= t("dashboard.providers.status") %>"
-         data-label-open-breakers="<%= t("dashboard.providers.open_breakers") %>">
+         data-label-open-breakers="<%= t("dashboard.providers.open_breakers") %>"
+         data-label-fleet-load="<%= t("dashboard.fleet.load") %>"
+         data-label-fleet-order="<%= t("dashboard.fleet.shed_order") %>"
+         data-label-fleet-strikes="<%= t("dashboard.fleet.shed_strikes") %>"
+         data-label-fleet-thresholds="<%= t("dashboard.fleet.thresholds") %>"
+         data-label-quota-day="<%= t("dashboard.quota.day") %>"
+         data-label-quota-limit="<%= t("dashboard.quota.limit") %>"
+         data-label-quota-used="<%= t("dashboard.quota.used") %>"
+         data-label-quota-exhausted="<%= t("dashboard.quota.exhausted") %>"
+         data-label-cache-pct="<%= t("dashboard.quota.cache_pct") %>"
+         data-label-cache-tokens="<%= t("dashboard.quota.cache_tokens") %>">
       <%# One section per panel, named by its heading. The panes stay out of the
           live region: every refresh rewrites them, and refresh-state
           alone says whether the refresh worked. %>
@@ -72,6 +82,8 @@
       <%= panel.("skills", t("dashboard.panels.skills")) %>
       <%= panel.("pressure", t("dashboard.panels.pressure")) %>
       <%= panel.("providers", t("dashboard.panels.providers")) %>
+      <%= panel.("fleet", t("dashboard.panels.fleet")) %>
+      <%= panel.("quota", t("dashboard.panels.quota")) %>
       <%= panel.("repair", t("dashboard.panels.repair")) %>
       <%= panel.("bus", t("dashboard.panels.bus")) %>
     </div>

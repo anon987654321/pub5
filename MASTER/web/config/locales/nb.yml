@@ -48,8 +48,22 @@ nb:
       skills: "ferdigheter"
       pressure: "kontekstpress"
       providers: "leverandørhelse"
+      fleet: "flåttehelse"
+      quota: "kvote og cache"
       repair: "reparasjonskø"
       bus: "siste busshendelser"
+    fleet:
+      load: "last (1 min)"
+      shed_order: "kastes først"
+      shed_strikes: "etter streker"
+      thresholds: "warn/crit"
+    quota:
+      day: "kvotedag"
+      limit: "gratisgrense"
+      used: "brukt i dag"
+      exhausted: "utmatting"
+      cache_pct: "prompt-cache"
+      cache_tokens: "bufrede token"
     status:
       model: "modell"
       # ctx, tokens and rtk stay as they are: they are the names MASTER's own

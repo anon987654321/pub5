@@ -123,6 +123,33 @@ async function refresh() {
       const recent = (item.recent || []).join('\n  ');
       return `${item.path} (${item.count || 0} bytes)\n  ${recent}`;
     }).join('\n\n') || L('i18nEmpty', '(empty)');
+
+    const fleet = d.fleet || {};
+    document.getElementById('fleet').textContent = [
+      ...(fleet.apps || []).map((app) =>
+        `${app.name} (${app.domain}:${app.port}): ${app.up ? 'up' : 'down'}`),
+      `${L('labelFleetLoad', 'load (1 min)')}: ${fleet.load ?? 'unknown'}` +
+        (fleet.guard ? `  warn ${fleet.guard.load_warn} / crit ${fleet.guard.load_crit}` : ''),
+      fleet.guard
+        ? `${L('labelFleetOrder', 'sheds first')}: ${fleet.guard.shed_order.join(', then ')}` +
+          `  (${L('labelFleetStrikes', 'after')}: ${fleet.guard.shed_strikes})`
+        : `${L('labelFleetOrder', 'guard order')}: ${L('i18nUnavailable', 'unavailable')}`
+    ].join('\n') || L('i18nEmpty', '(empty)');
+
+    const quota = d.model_quota || {};
+    const cache = d.cache_efficiency || {};
+    const used = Object.entries(quota.models || {})
+      .map(([model, count]) => `${model}: ${count}`)
+      .join(', ');
+    document.getElementById('quota').textContent = [
+      `${L('labelQuotaDay', 'day')}: ${quota.day || '—'}`,
+      `${L('labelQuotaLimit', 'free limit')}: ${quota.limit ?? '—'}`,
+      `${L('labelQuotaUsed', 'used today')}: ${used || L('i18nNone', '(none)')}`,
+      `${L('labelQuotaExhausted', 'exhausted')}: ${(quota.exhausted || []).join(', ') || none}`,
+      `${L('labelCachePct', 'prompt cache')}: ${cache.efficiency_pct ?? 0}%`,
+      `${L('labelCacheTokens', 'cached tokens')}: ${cache.cached_tokens || 0} / ${cache.input_tokens || 0}`
+    ].join('\n');
+
     document.getElementById('bus').textContent = (d.bus_events || []).slice(-12).map(e => JSON.stringify(e)).join('\n') || L('i18nQuiet', '(quiet)');
     refreshState.textContent = `${L('i18nUpdated', 'updated')}: ${new Date().toLocaleTimeString()}`;
     ok = true;

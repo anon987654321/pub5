@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "../services/fleet_panel"
 
 class DashboardController < ApplicationController
   PANEL_TAIL_BYTES = 16 * 1024
@@ -52,6 +53,7 @@ class DashboardController < ApplicationController
       cache_efficiency: Master::Trace::CacheEfficiency.snapshot,
       model_quota: Master::Io::ModelQuota.snapshot,
       repair_queue: repair_queue(root),
+      fleet: FleetPanel.read(root: root),
     }
   end
 
