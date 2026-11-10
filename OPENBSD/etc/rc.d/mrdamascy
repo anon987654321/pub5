@@ -1,6 +1,6 @@
 #!/bin/ksh
 # mrdamascy — the Mr. Damascy ordering PWA, served as the mrd.brgen.no demo.
-# One Puma process (single mode, no cluster), three threads, nothing else resident:
+# One Falcon worker and a three-connection Active Record pool, nothing else resident:
 # the app enqueues no jobs, so there is no mrdamascy_jobs and no Solid Queue
 # supervisor in this process. Vipps, Stripe and Wolt run in their mock modes
 # (each client is mock unless its *_MOCK variable is "0"), so no payment key is
@@ -22,23 +22,19 @@ for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/b
     /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
   if [[ -x $_bundle ]]; then break; fi
 done
-# The -b bind replaces the one config/puma.rb takes from PORT, so the listener is
-# loopback only and relayd is the one public door. RAILS_MAX_THREADS sizes both
-# Puma and the SQLite pool. WEB_CONCURRENCY=0, not 1: Puma 8 reads it as its
-# worker count, and 1 starts a cluster parent plus one worker, two processes.
-_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT} WEB_CONCURRENCY=0"
-_env="${_env} RAILS_MAX_THREADS=3 RAILS_MIN_THREADS=1 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
-_exec="exec ${_bundle} exec puma -b tcp://127.0.0.1:${PORT}"
+# Falcon binds to loopback; relayd remains the only public entrypoint.
+# The small Active Record pool matches this app's one-worker resource budget.
+_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}"
+_env="${_env} RAILS_MAX_THREADS=3 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
+_exec="exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && export ${_env} && ${_exec}'"
 daemon_user="mrdamascy"
 daemon_execdir="/home/mrdamascy/app"
 daemon_logger="daemon.notice"
 daemon_timeout="120"
 . /etc/rc.d/rc.subr
-# rc.subr matches pexp with pgrep -xf, the whole argv, which reads
-# "ruby34 .../bundle34 exec puma -b ..." while booting and Puma's retitled
-# "ruby34: puma 8.x (tcp://127.0.0.1:47314) [app]" after; both end past the port.
-pexp="ruby[0-9.]*.*puma.*${PORT}.*"
+# Match the Ruby Falcon command by its fixed application port.
+pexp="ruby[0-9.]*.*${PORT}"
 rc_bg=YES
 rc_reload=NO
 
@@ -90,7 +86,7 @@ free_port() {
 
 rc_pre() {
   touch /home/dev/pub5/.deploying-mrdamascy 2>/dev/null || true
-  pkill -f "puma.*${PORT}" 2>/dev/null || true
+  pkill -f "falcon.*${PORT}" 2>/dev/null || true
   sleep 1
   PORT_OWNER=mrdamascy
   free_port || { rm -f /home/dev/pub5/.deploying-mrdamascy 2>/dev/null; return 1; }
