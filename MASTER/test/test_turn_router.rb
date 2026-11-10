@@ -61,10 +61,8 @@ class TurnRouterTest < Minitest::Test
 
     assert_equal "/fix lib/io", router.rewrite_slash("/fix lib/io")
     {
-      audit: %w[audit review critique council],
-      visual: %w[visual style],
-      elevate: %w[elevate map],
-      all: %w[all workflow triad sweep through self],
+      audit: %w[review critique],
+      all: %w[workflow triad sweep through self],
     }.each do |mode, words|
       words.each do |word|
         assert_equal "/fix --mode=#{mode} lib", router.rewrite_slash("/#{word} lib"), word
@@ -72,11 +70,11 @@ class TurnRouterTest < Minitest::Test
     end
 
     assert_equal "/fix --mode=repair --dry-run RAILS", router.rewrite_slash("/scan RAILS")
-    assert_equal "/fix --mode=visual", router.rewrite_slash("/style")
     assert_equal "/fix --security lib", router.rewrite_slash("/security lib")
     assert_equal "/fix --prove history", router.rewrite_slash("/prove history")
     assert_equal "/fix --mode=audit", router.rewrite_slash("/fix --mode=audit")
     assert_equal ["fix"], router::PIPELINE_COMMANDS
+    assert_equal %w[fix scan self workflow triad sweep through prove explain simplify security review critique], router::PIPELINE_SLASH
   end
 
   def test_a_legacy_pipeline_word_is_accepted_from_model_inference
