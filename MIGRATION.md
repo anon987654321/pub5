@@ -360,6 +360,39 @@ the current tree, not an untracked migration gap. Their source bytes remain
 available in `pub4@0a5ac0` and pub5 Git history; do not restore them to the
 repository root without a new owner decision.
 
+## Current tree and constitution comparison — 2026-11-10
+
+A recursive Git-tree comparison of `pub4@0a5ac0` and
+`pub5@70dd962` used complete (non-truncated) GitHub tree responses:
+
+- pub4: 6,749 tracked file entries; pub5: 7,205.
+- 5,034 old entries retain the exact blob at the exact same path.
+- 5,588 old file entries have an identical blob somewhere in pub5, including
+  moved files; the largest relocation is the Brgen engine move.
+- Of the 40 old RAILS files whose exact blob is no longer present, 39 have a
+  corresponding file at the mapped `brgen/engines/` destination. The shared
+  gemspec has the deliberate `pub4-shared` → `pub5-shared` identity change.
+- The three old Python screenshot-sheet scripts have the Ruby
+  `MASTER/tools/visual/sheets.rb` replacement. The STUDIO Python reference
+  analyzer has the Ruby `STUDIO/dilla/lib/reference_analyzer.rb` replacement.
+- OPENBSD's four former nested Git hooks moved to the root `.githooks/`.
+  The seven root photographs are covered by the explicit retirement above.
+
+This is a source/blob comparison, not behavioural acceptance: changed blobs
+require their owning tests and runtime evidence. The measured counts do not
+turn an intentional refactor, retirement or missing live test into a PASS.
+
+The constitutional comparison found 154 Law identity rows at the pub4 cutoff
+and 175 in current pub5. **All 154 old identities remain; 21 identities were
+added.** This establishes identity preservation, not detector coverage or
+runtime enforcement. The current `soul.yml` is intentionally not byte-identical
+to the old file: the tree-contract source moved from root
+`TREE_CONTRACTS.md` to `MASTER/data/law/TREE_CONTRACTS.md`, the old
+`MASTER/data/law_runtime.yml` authority-order entry was removed, and the
+2026-11-09 operator decree explicitly set `absolute.sacred_paths: []`.
+That decree supersedes the old protected-path list; do not restore it from
+history as a migration repair.
+
 The three old Python screenshot scripts are intentionally retired in favour
 of the Ruby visual-sheet tool above. The four governed code-tree acceptance
 suites, BIZ check/build, rendered screenshots, native OpenBSD validation and
