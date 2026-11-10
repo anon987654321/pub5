@@ -1,6 +1,6 @@
 ---
 id: session_browser
 version: 1.0.0
-description: Read-only, host-allowlisted browser sessions with persistent owner-only profiles.
+description: Host-allowlisted GET/HEAD browser sessions with persistent owner-only profiles; page scripts execute and GET requests may have side effects.
 entrypoint: session_browser.rb
 observe_actions: [status, inspect]
