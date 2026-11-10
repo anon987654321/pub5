@@ -1,8 +1,9 @@
 # Free compute in MASTER — implementation status
 
-Updated 2026-10-28 against the live routing code. This document separates
-implemented paths from proposals: a configured provider is not proof that it is
-reachable, free at the point of use, or unlimited.
+Updated 2026-11-11 against the live routing code; the keyless lanes below were
+re-probed anonymously, with no credentials, on 2026-11-10/11. This document
+separates implemented paths from proposals: a configured provider is not proof
+that it is reachable, free at the point of use, or unlimited.
 
 ## The practical answer
 
@@ -18,11 +19,19 @@ availability still apply.
   per-model guard. The router's key rotator supports the explicitly configured
   OpenRouter key variables and rotates after rate-limit/quota outcomes.
 - **Hosted OpenAI-compatible providers.** `ModelRouter::HostedEndpoints`
-  discovers models from the `openai_compatible` section. The current config
-  includes LLM7 (with a keyless catalogue filter), Groq, Cerebras, and NVIDIA
-  NIM. Groq, Cerebras, and NVIDIA only become available when the operator
-  configures the relevant API key; quota and availability depend on each
-  provider's current terms and account.
+  discovers models from the `openai_compatible` section. Four providers are
+  verified keyless — no signup, no key, anonymous chat completions probed
+  from a cold sandbox on 2026-11-10/11: LLM7 (`tier: turbo`; 100k tokens/day
+  documented; chat 200 on codestral-latest and gpt-oss:20b), Kilo
+  (`isFree: true`; 200 requests/hour per IP documented; chat 200 on
+  kilo-auto/free), Pollinations (`tier: anonymous`; one concurrent request
+  per 6 seconds documented; chat 200 on openai-fast), and OVH (explicit
+  `allow` list; 2 requests/minute per IP and model documented; chat 200 on
+  gpt-oss-120b). The keyless filter runs against each live `/models`
+  listing on every router build, so provider-side model rotation self-heals.
+  Groq, Cerebras, NVIDIA, and Z.ai carry free tiers behind a signup key and
+  only join the pool when the operator configures the relevant key; quota
+  and availability depend on each provider's current terms and account.
 - **A user-owned OpenAI-compatible gateway.** Setting
   `MASTER_LLM_GATEWAY_URL` opts a local gateway into the same model discovery,
   health, and fallback route. Remote plaintext HTTP is refused; loopback HTTP
@@ -31,9 +40,10 @@ availability still apply.
   best-effort browser fallback. They are fragile, may have provider-specific
   terms, and are not treated as an API entitlement.
 - **Local inference.** The configured Ollama lane is restricted to the
-  explicitly allowlisted local Gemma model. This uses the operator's hardware
-  and has no API token charge, but is bounded by available RAM, CPU/GPU,
-  throughput, and power.
+  explicit `local_model_allowlist`: gemma3:4b as the host bed and
+  qwen3.5:0.8b as the phone bed (~0.6 GB, sized for devices far smaller than
+  the 8 GB host). This uses the operator's hardware and has no API token
+  charge, but is bounded by available RAM, CPU/GPU, throughput, and power.
 - **Cooldown and health.** The existing lane quota, model skip, provider health,
   and fallback components record failures and stop repeatedly asking a lane
   that just refused or exhausted its quota. These are finite safeguards, not a
