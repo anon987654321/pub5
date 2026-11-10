@@ -20,6 +20,20 @@ class LayoutContractSurfacesTest < Minitest::Test
     end
   end
 
+  def test_collapsed_mobile_navigation_remains_in_the_accessibility_tree
+    sources = [
+      File.read(File.join(ROOT, "brgen", "app", "views", "shared", "_mobile_chrome.html.erb")),
+      File.read(LAYOUTS.fetch("amber"))
+    ]
+
+    sources.each do |source|
+      nav = source[/<nav id="app-tab-bar"[^>]*>/m]
+      assert nav, "mobile navigation is missing"
+      refute_match(/aria-hidden\s*=|\binert\b/, nav,
+                   "collapsed navigation must remain exposed to assistive technology")
+    end
+  end
+
   def test_master_chat_is_face_layout
     body = File.read(LAYOUTS.fetch("master_chat"))
     assert_includes body, 'data-layout="face"'

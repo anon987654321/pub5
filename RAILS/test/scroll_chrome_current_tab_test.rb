@@ -36,7 +36,7 @@ class ScrollChromeCurrentTabTest < Minitest::Test
     const controller = new ScrollChrome()
     controller.element = { scrollTop: 0, addEventListener() {}, removeEventListener() {} }
     controller.hasBarTarget = true
-    controller.barTarget = { querySelectorAll: () => links, setAttribute() {}, removeAttribute() {} }
+    controller.barTarget = { querySelectorAll: () => links, addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {}, contains: () => false }
     controller.connect()
     const first = links.map((l) => l.attributes["aria-current"] ?? null)
 
@@ -60,10 +60,118 @@ class ScrollChromeCurrentTabTest < Minitest::Test
     JSON.parse(out.lines.last)
   end
 
+  FOCUS = <<~JS
+    const classes = new Set(["chrome-hidden"])
+    const attributes = { "aria-hidden": "true", inert: "" }
+    const barListeners = {}
+    const link = {
+      getAttribute: () => "/nearby",
+      setAttribute(name, value) { attributes[name] = value },
+      removeAttribute(name) { delete attributes[name] }
+    }
+    globalThis.window = {
+      location: { pathname: "/elsewhere", origin: "https://brgen.no" },
+      sessionStorage: { getItem: () => "0", setItem() {} },
+      localStorage: { getItem: () => null, setItem() {} },
+      addEventListener() {}, removeEventListener() {}
+    }
+    globalThis.document = {
+      activeElement: null,
+      documentElement: {
+        classList: {
+          toggle(name, enabled) { enabled ? classes.add(name) : classes.delete(name) },
+          contains: (name) => classes.has(name)
+        }
+      },
+      addEventListener() {}, removeEventListener() {}
+    }
+
+    const controller = new ScrollChrome()
+    controller.element = { scrollTop: 180, scrollHeight: 2400, clientHeight: 844, addEventListener() {}, removeEventListener() {} }
+    controller.hasBarTarget = true
+    controller.hasPeelTarget = false
+    controller.hasCoachTarget = false
+    controller.barTarget = {
+      querySelectorAll: () => [link],
+      addEventListener: (name, fn) => { barListeners[name] = fn },
+      removeEventListener() {},
+      contains: (node) => node === document.activeElement,
+      setAttribute(name, value) { attributes[name] = value },
+      removeAttribute(name) { delete attributes[name] }
+    }
+    controller.connect()
+    const closed = {
+      hidden: classes.has("chrome-hidden"),
+      ariaHidden: attributes["aria-hidden"] ?? null,
+      inert: Object.hasOwn(attributes, "inert")
+    }
+
+    document.activeElement = link
+    barListeners.focusin()
+    const focused = {
+      hidden: classes.has("chrome-hidden"),
+      ariaHidden: attributes["aria-hidden"] ?? null,
+      inert: Object.hasOwn(attributes, "inert")
+    }
+    console.log(JSON.stringify([closed, focused]))
+  JS
+
+  STATES = <<~JS
+    function hiddenAt(scrollTop, scrollHeight, clientHeight) {
+      const classes = new Set(["chrome-hidden"])
+      globalThis.window = {
+        location: { pathname: "/", origin: "https://brgen.no" },
+        sessionStorage: { getItem: () => "0", setItem() {} },
+        localStorage: { getItem: () => null, setItem() {} },
+        addEventListener() {}, removeEventListener() {}
+      }
+      globalThis.document = {
+        activeElement: null,
+        documentElement: {
+          classList: {
+            toggle(name, enabled) { enabled ? classes.add(name) : classes.delete(name) },
+            contains: (name) => classes.has(name)
+          }
+        },
+        addEventListener() {}, removeEventListener() {}
+      }
+      const controller = new ScrollChrome()
+      controller.element = { scrollTop, scrollHeight, clientHeight, addEventListener() {}, removeEventListener() {} }
+      controller.hasBarTarget = true
+      controller.hasPeelTarget = false
+      controller.hasCoachTarget = false
+      controller.barTarget = {
+        querySelectorAll: () => [],
+        addEventListener() {}, removeEventListener() {},
+        contains: () => false, removeAttribute() {}, setAttribute() {}
+      }
+      controller.connect()
+      return classes.has("chrome-hidden")
+    }
+    console.log(JSON.stringify([
+      hiddenAt(0, 2200, 844),
+      hiddenAt(180, 2200, 844),
+      hiddenAt(0, 844, 844)
+    ]))
+  JS
+
   def test_a_turbo_visit_moves_aria_current_to_the_new_page
     first, after_visit = run_page(VISIT)
 
     assert_equal [ "page", nil, nil ], first
     assert_equal [ nil, nil, "page" ], after_visit
+  end
+
+  def test_a_focused_hidden_tab_bar_stays_in_the_accessibility_tree_and_reveals
+    closed, focused = run_page(FOCUS)
+
+    assert_equal({ "hidden" => true, "ariaHidden" => nil, "inert" => false }, closed)
+    assert_equal({ "hidden" => false, "ariaHidden" => nil, "inert" => false }, focused)
+  end
+
+  def test_the_tab_bar_is_visible_at_the_top_and_when_the_page_cannot_scroll
+    at_top, mid_page, short_page = run_page(STATES)
+
+    assert_equal [ false, true, false ], [ at_top, mid_page, short_page ]
   end
 end

@@ -28,9 +28,7 @@
      class="tab-bar"
      aria-label="<%= t("nav.mobile_nav") %>"
      data-scroll-chrome-target="bar"
-     data-turbo-permanent
-     aria-hidden="true"
-     inert>
+     data-turbo-permanent>
   <%= link_to main_app.root_path, class: "tab-item", aria: { label: t("nav.home"), current: current_page?(main_app.root_path) ? "page" : nil } do %>
     <%= icon :home, size: 26 %>
   <% end %>
