@@ -41,8 +41,10 @@ module Master::Core
     # through World. So the hardened check was live for the tool path and absent
     # from the constitutional one, which is the path that actually runs unattended.
     def self.load(data_dir:, workspace_root: nil, verify: nil, sandbox: nil, probe: nil, capabilities: Capabilities.for(:fix))
-      rules_data = YAML.safe_load_file(File.join(data_dir, "laws.yml"), aliases: true)
       master_root = File.expand_path(File.dirname(data_dir))
+      # One reader of laws.yml: the boot accessor, which also keeps foreign
+      # scanner roots quiet when they carry no constitution of their own.
+      rules_data = Master.load_laws(root: master_root)
       workspace_root = File.expand_path(workspace_root || master_root)
       sacred_paths = Paths.sacred_paths(root: master_root)
       rules = default_rules(rules_data, sacred_paths:, master_root:, workspace_root:, probe:)

@@ -73,7 +73,7 @@ module Master
     # internal order is derived from the node rows in laws.yml. This is not
     # the cross-source authority order, which is owned by soul.yml.
     PRECEDENCE_GRAPH = begin
-      document = YAML.safe_load_file(File.join(ROOT, "data", "laws.yml"), aliases: true)
+      document = Master.laws_document
       nodes = document.filter_map do |_id, row|
         row["node"].to_s if row.is_a?(Hash) && row["node"]
       end
@@ -138,9 +138,7 @@ module Master
       end
 
       def invariant_order(root: ROOT)
-        master_root = resolve_master_root(root)
-        path = File.join(master_root, "data", "laws.yml")
-        document = YAML.safe_load_file(path, aliases: true)
+        document = Master.laws_document(root:)
         raise IntegrityError, "laws.yml must be a mapping" unless document.is_a?(Hash)
 
         nodes = document.filter_map do |_id, row|
@@ -334,8 +332,7 @@ module Master
           raise IntegrityError, "soul references may identify a Law but cannot define one"
         end
 
-        laws_path = File.join(master_root, "data", "laws.yml")
-        laws = YAML.safe_load_file(laws_path, aliases: true)
+        laws = Master.laws_document(root: master_root)
         id = references["golden_law"].to_s
         row = laws[id]
         unless row.is_a?(Hash) && row["statement"].to_s.match?(/preserve/i)
