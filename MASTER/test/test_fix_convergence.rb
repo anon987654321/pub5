@@ -596,7 +596,7 @@ end
     refute_includes Master::CLI::TurnRouter::PIPELINE_COMMANDS, "scan"
     refute Master::CLI::CommandRegistry::HELP_TOPICS.key?("scan")
     refute Master::CLI::CommandRegistry.respond_to?(:dispatch_scan)
-    assert_equal "/fix RAILS", Master::CLI::TurnRouter.rewrite_slash("/scan RAILS")
+    assert_equal "/fix --mode=audit RAILS", Master::CLI::TurnRouter.rewrite_slash("/scan RAILS")
     assert_includes Master::CLI::Pipeline::Pass::STAGES, "fix"
     refute_includes Master::CLI::Pipeline::Pass::STAGES, "scan"
   end
