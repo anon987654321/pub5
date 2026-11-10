@@ -28,12 +28,18 @@ class ImmutablePathsTest < Minitest::Test
     assert_instance_of Master::Core::Verdict::Allow, admit(effect, workspace_root:)
   end
 
-  def test_real_manifest_protects_the_openbsd_pledge_boundary
+  # Operator decree 2026-11-09: nothing is sacred — the real manifest
+  # declares an empty list, and readers treat that as the law of the land.
+  def test_the_real_manifest_declares_nothing_sacred_per_the_2026_11_09_decree
     sacred = Master::Core::Constitution::Paths.sacred_paths(root: Master::ROOT)
-    assert_includes sacred, "lib/ground/pledge.rb"
+    assert_empty sacred
+  end
 
+  # The pledge boundary does not depend on the retired sacred list: the
+  # spine rule itself still blocks a write to the pledge.
+  def test_the_pledge_boundary_still_holds_through_the_spine_rule
     law = Master::Core::Constitution.immutable_paths_rule(
-      sacred, master_root: Master::ROOT, workspace_root: Master::ROOT
+      IMMUTABLE, master_root: Master::ROOT, workspace_root: Master::ROOT
     )
     verdict = law.judge.call(
       Master::Core::Effect.write("lib/ground/pledge.rb", "# bypass\n"),
@@ -99,8 +105,10 @@ class ImmutablePathsTest < Minitest::Test
     assert_blocked effect, by: :immutable_paths
   end
 
-  # Operator decision 2026-10-28: the Fold may not write the laws or the soul.
-  def test_real_manifest_blocks_the_laws_and_the_soul
+  # Operator decree 2026-11-09: nothing is sacred, so the real manifest no
+  # longer blocks the laws or the soul — they are editable like any path,
+  # under invariant admission.
+  def test_the_real_manifest_leaves_the_laws_and_the_soul_editable
     law = real_manifest_law
 
     [
@@ -109,8 +117,7 @@ class ImmutablePathsTest < Minitest::Test
       Master::Core::Effect.git(:commit, paths: ["data/laws.yml"], message: "laws"),
     ].each do |effect|
       verdict = Master::Core::Constitution.new(laws: [law]).admit(effect, nil)
-      assert_instance_of Master::Core::Verdict::Block, verdict, effect.args.inspect
-      assert_equal :immutable_paths, verdict.by
+      assert_instance_of Master::Core::Verdict::Allow, verdict, effect.args.inspect
     end
   end
 

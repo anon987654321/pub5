@@ -124,17 +124,20 @@ class TestConfigurationGuard < Minitest::Test
     assert_equal %w[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
   end
 
-  # Operator decision 2026-10-28: the laws and the soul are off-limits to automation.
-  def test_the_live_soul_protects_the_laws_and_itself
+  # Operator decree 2026-11-09: nothing is sacred. The live soul declares an
+  # empty list and every reader treats that as the law of the land, not a
+  # failure.
+  def test_the_live_soul_declares_nothing_sacred_per_the_2026_11_09_decree
     sacred = YAML.safe_load_file(soul_path, aliases: true).dig("absolute", "sacred_paths")
-    assert_includes sacred, "data/laws.yml"
-    assert_includes sacred, "data/soul.yml"
+    assert_empty sacred
   end
 
-  # The required list is the live soul's own, not a copy: dropping any path it declares is refused.
-  def test_soul_cannot_drop_a_path_the_live_soul_declares
+  # The floor still binds a non-empty declaration: once any path is declared
+  # sacred, dropping a required one is refused.
+  def test_soul_cannot_drop_a_required_path_once_anything_is_declared
     data = YAML.safe_load_file(soul_path, aliases: true)
-    data.fetch("absolute")["sacred_paths"].delete("data/laws.yml")
+    spine = %w[data/laws.yml data/soul.yml data/project_context.yml lib/soul.rb lib/ground/pledge.rb bin/master]
+    data.fetch("absolute")["sacred_paths"] = spine - %w[data/laws.yml]
     reason = Guard.validate(path: soul_path, content: YAML.dump(data))
     assert_match(/critical path protections missing: data\/laws\.yml/, reason)
   end
@@ -151,7 +154,8 @@ class TestConfigurationGuard < Minitest::Test
 
   def test_soul_must_keep_the_critical_spine_guarded
     data = YAML.safe_load_file(soul_path, aliases: true)
-    data.fetch("absolute")["sacred_paths"].delete("lib/ground/pledge.rb")
+    spine = %w[data/laws.yml data/soul.yml data/project_context.yml lib/soul.rb lib/ground/pledge.rb bin/master]
+    data.fetch("absolute")["sacred_paths"] = spine - %w[lib/ground/pledge.rb]
     reason = Guard.validate(path: soul_path, content: YAML.dump(data))
     assert_match(/critical path protections missing/, reason)
   end

@@ -75,7 +75,9 @@ module Master
 
       def sacred?(rel)
         master_relative = @root == Master::REPO_ROOT ? rel.delete_prefix("MASTER/") : rel
-        Master::Ground::Immutability.blocked?(master_relative, root: Master::ROOT) ||
+        # The root's own policy governs, not MASTER's by default — same
+        # contract as PathGuard#sacred?.
+        Master::Ground::Immutability.blocked?(master_relative, root: @root) ||
           SACRED_PATHS.any? do |path|
             sacred = path.chomp("/")
             master_relative == sacred || master_relative.start_with?("#{sacred}/")

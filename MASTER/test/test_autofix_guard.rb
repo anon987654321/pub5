@@ -40,11 +40,12 @@ class TestAutofixGuard < Minitest::Test
     assert_nil Guard.protected_reason("/r/RAILS/brgen/app/models/post.rb")
   end
 
-  # Operator decision 2026-10-28: the live soul declares the laws and itself sacred, so no autofix opens them.
-  def test_the_live_laws_and_soul_are_refused_with_a_reason
+  # Operator decree 2026-11-09: nothing is sacred, so the live laws and soul
+  # are admitted like any other path; the guard's irreplaceable list above
+  # still holds.
+  def test_the_live_laws_and_soul_are_admitted_after_the_2026_11_09_decree
     %w[laws.yml soul.yml].each do |name|
-      reason = Guard.protected_reason(File.join(Master::ROOT, "data", name), root: Master::ROOT)
-      assert_match(/data\/#{name} is sacred: no automated writer may change it/, reason)
+      assert_nil Guard.protected_reason(File.join(Master::ROOT, "data", name), root: Master::ROOT)
     end
   end
 

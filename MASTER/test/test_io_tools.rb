@@ -167,11 +167,16 @@ class TestIoTools < Minitest::Test
     end
   end
 
-  def test_batch_replace_leaves_sacred_paths_alone
+  def test_batch_replace_leaves_declared_sacred_paths_alone
     with_root(manifest: true) do |root|
-      # A file PathGuard names sacred, not all of data/, so an ordinary data file still changes.
-      assert_includes Master::Io::PathGuard::SACRED_PATHS, "lib/soul.rb"
-      sacred = write(root, "lib/soul.rb", "old\n")
+      # Sacred is what the active root's soul declares. MASTER's own live
+      # list is empty per operator decree 2026-11-09, so the constant pins
+      # that and the root's declaration does the refusing. The manifest
+      # itself (data/soul.yml) stays sacred and must survive the batch.
+      assert_empty Master::Io::PathGuard::SACRED_PATHS
+      File.write(File.join(root, "data", "soul.yml"),
+                 "absolute:\n  sacred_paths:\n    - data/soul.yml\n    - lib/keep.rb\n")
+      sacred = write(root, "lib/keep.rb", "old\n")
       before = File.read(sacred)
       ordinary = write(root, "lib/x.txt", "old\n")
 
@@ -579,7 +584,12 @@ class TestIoTools < Minitest::Test
       result = Master::Io::Tree.new(root:).call(path: "sub")
 
       assert result.ok?, result.to_s
-      assert_equal "nested/\n  two.txt\none.txt", result.value!
+      # The receipt line is part of the contract since read receipts were
+      # bound to paths (c2cbae5b): the tree names the path it inventoried.
+      assert_equal "nested/\n  two.txt\none.txt\n" \
+                   '[tree receipt: path="sub" entries=3 files=2 directories=1 ' \
+                   'depth=5 complete=true depth_limited=false truncated=false ' \
+                   'hidden=excluded hidden_entries=0 symlinks_skipped=0]', result.value!
     end
   end
 

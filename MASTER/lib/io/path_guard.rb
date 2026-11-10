@@ -73,7 +73,10 @@ module Master
         return false if Master::Ground::Immutability.writes_allowed?
 
         master_relative = @root == Master::REPO_ROOT ? rel_path.delete_prefix("MASTER/") : rel_path
-        Master::Ground::Immutability.blocked?(master_relative, root: Master::ROOT) ||
+        # The root's own policy governs, not MASTER's by default: Immutability
+        # falls back to MASTER's manifest only when this root has none of its
+        # own, so a declared scratch tree keeps its declared boundary.
+        Master::Ground::Immutability.blocked?(master_relative, root: @root) ||
           SACRED_PATHS.any? do |path|
             sacred = path.chomp("/")
             master_relative == sacred || master_relative.start_with?("#{sacred}/")
