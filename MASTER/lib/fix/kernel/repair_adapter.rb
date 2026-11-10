@@ -374,7 +374,7 @@ module Master
         # committer's defect, and is recorded as one rather than left as "blocked".
         def commit_refused(violation, reason = nil, error: nil)
           put_back_refused_repair
-          last_refusal = @committer&.last_refusal
+          last_refusal = @committer.last_refusal if @committer&.respond_to?(:last_refusal)
           if reason.nil? && error.nil? && last_refusal
             RunLedger.refused_because("commit gate refused the repair: #{last_refusal}")
             return :commit_refused
