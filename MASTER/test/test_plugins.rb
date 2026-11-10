@@ -19,7 +19,10 @@ class TestPlugins < Minitest::Test
     result = plugin.call(action: "status")
     assert_equal "blocked: no allowed hosts configured", result.fetch(:policy)
     assert_equal 4, result.fetch(:max_sessions)
-    assert_equal true, result.fetch(:read_only_transport)
+    assert_equal %w[GET HEAD], result.fetch(:allowed_network_methods)
+    assert_equal true, result.fetch(:page_scripts_execute)
+    assert_equal true, result.fetch(:request_side_effects_possible)
+    assert_equal "blocked", result.fetch(:form_submission)
   end
 
   def test_session_browser_refuses_hosts_until_operator_allowlists_them
