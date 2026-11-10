@@ -87,7 +87,7 @@ class TurnRouterTest < Minitest::Test
     assert_equal "fix", router.send(:normalize_inferred_command, "workflow")
   end
 
-  def test_scan_is_a_read_only_audit_mode_not_a_second_command
+  def test_scan_is_a_read_only_repair_preview_not_a_second_command
     router = Master::CLI::TurnRouter
 
     refute_includes router::PIPELINE_COMMANDS, "scan"
