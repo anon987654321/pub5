@@ -139,8 +139,9 @@ module Master
 
       # Mode presets are defaults, not a second dispatcher. Audit and visual
       # stop before repair; elevate/all select existing bounded work lanes.
-      # Audit uses FixLoop.preview (scanner + structural sweeps) and the council,
-      # not the mutation-capable WorkLane.all execution.
+      # Audit retains first-read, trace, non-persisting backlog/structural review,
+      # scanner/structural preview, typography/map and council; it never enters
+      # mutation-capable repair or persists review proposals.
       def apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
         effective = overrides.dup
         explicit_lane = raw.to_s.split(/\s+/).any? { |token| LANE_FLAG.match?(token) }
