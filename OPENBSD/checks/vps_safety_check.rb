@@ -575,6 +575,29 @@ Dir.glob(File.join(OPENBSD, "etc", "rc.d", "*")).sort.each do |path|
   end
 end
 
+# The vm23 operator contract is Falcon-only. Mr Damascy had drifted to Puma;
+# keep Puma available only to the Capybara test group, never in production.
+mrd_gemfile_path = File.join(ROOT, "RAILS", "mrdamascy", "Gemfile")
+mrd_lock_path = File.join(ROOT, "RAILS", "mrdamascy", "Gemfile.lock")
+mrd_service_path = File.join(OPENBSD, "etc", "rc.d", "mrdamascy")
+if File.file?(mrd_gemfile_path) && File.file?(mrd_lock_path) &&
+   File.file?(mrd_service_path) && !File.symlink?(mrd_service_path)
+  mrd_gemfile = File.read(mrd_gemfile_path)
+  mrd_lock = File.read(mrd_lock_path)
+  mrd_service = File.read(mrd_service_path).lines.reject { |line| line.lstrip.start_with?("#") }.join
+  runtime_gemfile = mrd_gemfile.split(/^group :(?:development|test)\b/).first.to_s
+  lock_dependencies = mrd_lock[/^DEPENDENCIES\n(.*?)(?=^CHECKSUMS)/m, 1].to_s
+
+  failures << "mrdamascy Gemfile must declare Falcon as a runtime dependency" unless runtime_gemfile.match?(/^gem ["']falcon["']/)
+  failures << "mrdamascy Gemfile must keep Puma out of runtime dependencies" if runtime_gemfile.match?(/^gem ["']puma["']/)
+  failures << "mrdamascy Gemfile.lock must lock Falcon and test-only Puma" unless
+    lock_dependencies.lines.map(&:strip).include?("falcon") && lock_dependencies.lines.map(&:strip).include?("puma")
+  failures << "mrdamascy production service must use Falcon" unless
+    mrd_service.include?("exec ${_bundle} exec falcon serve") && !mrd_service.match?(/exec\s+\$\{_bundle\}\s+exec\s+puma/)
+else
+  failures << "missing tracked mrdamascy Falcon Gemfile, lockfile or rc.d service"
+end
+
 if failures.any?
   warn "VPS safety check failures:"
   failures.each { |failure| warn "  - #{failure}" }
