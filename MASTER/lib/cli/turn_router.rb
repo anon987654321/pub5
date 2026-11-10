@@ -171,43 +171,25 @@ module Master
         dispatch_inferred(inferred, container:, felt_sense:, on_turn:, cancellation:)
       end
 
-      # Two vocabularies, and they are not the same size on purpose.
-      #
-      # PIPELINE_COMMANDS is what a person types. There is one operation, /fix:
-      # it observes, critiques, repairs and observes again; its reading half is
-      # /fix --dry-run --critique (READING_FLAGS). /scan rewrites to /fix.
+      # One slash verb; the mode carries the intent. Legacy spellings stay as
+      # thin rewrites so old prompts and scripts reach the same governed owner.
       PIPELINE_COMMANDS = %w[fix].freeze
-
-      # MODEL_ALIASES is what the intent router accepts from a model, which is not
-      # ours to shrink. A model asked to name the command may answer "sweep",
-      # "council" or "review", words no person types here, and the cost of not
-      # accepting them is a request that falls silently to chat. They are read as
-      # /fix; the ones that do not write (READING_WORDS) as its reading half.
-      MODEL_ALIASES = %w[through workflow triad sweep self council review critique].freeze
-      READING_WORDS = %w[council review critique].freeze
+      FIX_MODE_ALIASES = {
+        "audit" => "audit", "review" => "audit", "critique" => "audit",
+        "council" => "audit", "scan" => "audit",
+        "visual" => "visual", "style" => "visual",
+        "elevate" => "elevate", "map" => "elevate",
+        "all" => "all", "workflow" => "all", "triad" => "all",
+        "sweep" => "all", "through" => "all", "self" => "all"
+      }.freeze
+      MODEL_ALIASES = FIX_MODE_ALIASES.keys.freeze
       PIPELINE_WORDS = (PIPELINE_COMMANDS + MODEL_ALIASES).freeze
       FOLD_SLASH = %w[fold run].freeze
       READ_SLASH = %w[why laws].freeze
-      # The reads that are /fix flags now; the standalone names still answer.
       CONVERGENCE_SLASH = { "prove" => "--prove", "explain" => "--explain" }.freeze
-      # The words that pin the write run's critique: /simplify is /fix whose
-      # council argues quality only — reuse, simplification, efficiency,
-      # altitude — and hunts no bugs; /security is /fix whose council argues
-      # the silently-failing properties — injection, authority, custody,
-      # bypasses, delivery. Either way the instruments keep their findings.
       FIX_PIN_SLASH = { "simplify" => "--simplify", "security" => "--security" }.freeze
-      # The reading spellings of /fix. The registry keeps review and critique
-      # as compatibility adapters of the one writing verb: a person typing
-      # them wants the tree read, not written, so each rewrites to
-      # /fix --dry-run --critique (READING_FLAGS) and writes nothing.
-      READING_SLASH = %w[review critique].freeze
-      # The slash spellings of /fix: the writing words, the two convergence
-      # reads, the two critique pins, and the two reading spellings. A model
-      # may still answer "review" (MODEL_ALIASES) and normalize_inferred_command
-      # rewrites that to /fix; the reading flags then come from READING_WORDS.
       PIPELINE_SLASH = (
-        %w[fix scan self workflow triad sweep through] +
-        CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys + READING_SLASH
+        %w[fix] + FIX_MODE_ALIASES.keys + CONVERGENCE_SLASH.keys + FIX_PIN_SLASH.keys
       ).uniq.freeze
 
       INFER_MIN_CONFIDENCE = 0.62
@@ -221,12 +203,13 @@ module Master
         # Always accept through-class commands; other commands need confidence floor.
         return if !PIPELINE_WORDS.include?(command) && conf < INFER_MIN_CONFIDENCE
 
-        reading = reading_intent?(command, text)
+        mode = FIX_MODE_ALIASES[command]
+        reading = mode.nil? && reading_intent?(command, text)
         command = normalize_inferred_command(command)
         return if READ_SLASH.include?(command)
         return unless answered?(command, container)
 
-        { command:, args: inferred_args(command:, value:, text:, reading:), confidence: conf }
+        { command:, args: inferred_args(command:, value:, text:, reading:, mode:), confidence: conf }
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "TurnRouter.infer_operator_command")
         nil
@@ -250,41 +233,29 @@ module Master
         value.intent == :command ? value : nil
       end
 
-      # Every pipeline word becomes /fix. A model that says "scan" gets /fix as
-      # well, because scan was absorbed: observation is the first step of the
-      # writing lifecycle, not a separate command.
+      # Every legacy pipeline spelling is normalized to the one /fix dispatcher.
       def normalize_inferred_command(command)
-        return "fix" if PIPELINE_WORDS.include?(command) || command == "scan"
+        return "fix" if PIPELINE_WORDS.include?(command)
 
         command
       end
 
-      # "fix" and the writing words keep the write; a word for reading, or a sentence that asks for
-      # a preview, gets /fix's reading half.
+      # Preview remains an explicit read; legacy mode aliases already carry a preset.
       def reading_intent?(command, text)
-        return false if WRITING_SLASH.include?(command)
+        return false if FIX_MODE_ALIASES.key?(command)
 
-        READING_WORDS.include?(command) || text.match?(/--dry-run|--no-autofix|\bpreview\b/i)
+        text.match?(/--dry-run|--no-autofix|\bpreview\b/i)
       end
 
-      # Every /fix spelling takes the same target, so "through itself" names MASTER as "fix itself" does.
-      def inferred_args(command:, value:, text:, reading:)
+      # Every /fix spelling takes the same target. A legacy mode word is retained
+      # as an explicit --mode flag before the shared dispatcher sees the request.
+      def inferred_args(command:, value:, text:, reading:, mode: nil)
         args = PIPELINE_SLASH.include?(command) ? pass_command_args(value, text) : value.args.to_s
+        args = ["--mode=#{mode}", args].reject(&:empty?).join(" ") if mode
         reading ? reading_args(args) : args
       end
 
       def reading_args(args) = [READING_FLAGS, args.to_s.strip].reject(&:empty?).join(" ")
-
-      def pass_command_args(value, text)
-        args = value.args.to_s
-        refined = pass_args_from(text)
-        # Prefer refined path when Infer only captured a coarse alias (rails without app).
-        args = refined if !refined.empty? && (args.empty? || refined.start_with?("#{args}/") || refined != args && refined.include?("/"))
-        args = refined if args.empty?
-        args = "master" if args.match?(/\A(?:itself|self)\z/i) && text.match?(/\bmaster\b/i)
-        args = "master" if args.match?(/\Aitself\z/i)
-        args
-      end
 
       def full_workflow_intent?(text)
         route = CLI::IntentRouter.new.route(text)
@@ -426,14 +397,8 @@ module Master
         memory
       end
 
-      # /fix's reading half: --dry-run keeps it write-free and --critique turns the council on,
-      # which /fix leaves off when it is not writing; the principle map reads beside it.
+      # Retained for direct callers that explicitly request the old narrow read.
       READING_FLAGS = "--dry-run --critique --only critique,map"
-
-      # The words that mean "go through the tree and change it". They are
-      # spellings of /fix: a sweep with its own reading-and-repair lifecycle
-      # beside the engine's is a second engine, which is what /fix absorbed.
-      WRITING_SLASH = %w[fix scan sweep through workflow triad self].freeze
 
       def rewrite_slash(input)
         name, rest = input.sub(%r{\A/}, "").split(/\s+/, 2)
@@ -444,8 +409,10 @@ module Master
       end
 
       def rewritten_pipeline(name, rest)
-        return ["/fix", rest].reject(&:empty?).join(" ") if WRITING_SLASH.include?(name)
-        return ["/fix", READING_FLAGS, rest].reject(&:empty?).join(" ") if READING_SLASH.include?(name)
+        if (mode = FIX_MODE_ALIASES[name])
+          return ["/fix", "--mode=#{mode}", rest].reject(&:empty?).join(" ")
+        end
+        return ["/fix", rest].reject(&:empty?).join(" ") if name == "fix"
 
         ["/fix", pinned_flag(name), rest].reject(&:empty?).join(" ")
       end
