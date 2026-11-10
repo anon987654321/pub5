@@ -132,33 +132,52 @@ end
       [false, ["#{e.class}: #{e.message}"]]
     end
 
-    # The last line an instrument prints is its verdict; the rest is evidence.
-    # dmesg is one line per device, so the verdict attaches and the evidence
-    # follows indented only when the verdict is bad.
-    # The instrument's own summary line — the one it prefixes with its name —
-# not simply the last line printed. design_baseline emits its summary before
-# its per-app detail, so "last line" reported a detail row as the verdict and
-# hid a live violation behind it.
-def verdict(body)
-  summary = body.reverse.find { |l| l.match?(/\A[a-z][a-z_]*:\s/) }
-  (summary || body.last).to_s.sub(/\A\w+[_a-z]*:\s*/, "")
-end
+    # One probe result is an execution receipt, not a Law verdict: an instrument
+    # may exit successfully while reporting findings above its own recorded low.
+    ProbeResult = Struct.new(:tree, :unit, :executed, :process_success, :summary, :evidence,
+                             keyword_init: true)
 
-    def dmesg(line) = Master::Trace::Dmesg.emit(line.to_s.gsub(/\s+/, " ").strip, force: true)
+    # The instrument's summary line, not simply the last line printed.
+    # design_baseline emits its summary before per-app detail; taking the last
+    # line hid a live violation behind the detail row.
+    def verdict(body)
+      summary = body.reverse.find { |line| line.match?(/\\A[a-z][a-z_]*:\\s/) }
+      (summary || body.last).to_s.sub(/\\A\\w+[_a-z]*:\\s*/, "")
+    end
 
-    def sweep(tree, unit_index)
+    def dmesg(line) = Master::Trace::Dmesg.emit(line.to_s.gsub(/\\s+/, " ").strip, force: true)
+
+    # Detailed mode is consumed by /fix --mode=audit. The default return remains
+    # the historic unit/index pairs for the standalone sweep command.
+    def sweep(tree, unit_index, detailed: false, stop: nil)
       Master::Trace::Dmesg.attach("#{tree.downcase}0", "sweep0", tree_summary(tree))
-      rows = probes.select { |p| p.trees.include?(tree) }
-      rows.each_with_index do |probe, i|
-        ok, body = probe.scoped ? probe.run.call(tree) : probe.run.call
-        unit = "#{probe.unit}#{unit_index + i}"
-        Master::Trace::Dmesg.attach(unit, "#{tree.downcase}0", verdict(body))
-        next if ok
+      rows = probes.select { |probe| probe.trees.include?(tree) }
+      results = []
+      rows.each_with_index do |probe, index|
+        unit = "#{probe.unit}#{unit_index + index}"
+        if stop&.call
+          results << ProbeResult.new(tree:, unit:, executed: false, process_success: nil,
+                                     summary: "cancelled before probe execution", evidence: [])
+          next
+        end
 
+        ok, body = begin
+          probe.scoped ? probe.run.call(tree) : probe.run.call
+        rescue StandardError => error
+          [false, ["#{error.class}: #{error.message}"]]
+        end
+        body = Array(body).map(&:to_s)
         summary = verdict(body)
-        body.reject { |line| line.include?(summary) }.last(4).each { |line| Master::Trace::Dmesg.status(unit, line) }
+        evidence = body.reject { |line| line.include?(summary) }.last(4)
+        Master::Trace::Dmesg.attach(unit, "#{tree.downcase}0", summary)
+        evidence.each { |line| Master::Trace::Dmesg.status(unit, line) } unless ok
+        results << ProbeResult.new(tree:, unit:, executed: true, process_success: !!ok,
+                                   summary:, evidence:)
       end
-      rows.map.with_index { |p, i| [p.unit, unit_index + i] }
+
+      return results if detailed
+
+      rows.map.with_index { |probe, index| [probe.unit, unit_index + index] }
     end
 
     def tree_summary(tree)
