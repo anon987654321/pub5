@@ -155,22 +155,22 @@ class ModelQuotaForecastTest < Minitest::Test
     Dir.mktmpdir do |dir|
       now = Time.utc(2026, 11, 8, 10, 0, 0)
       Check.stub(:path, File.join(dir, "model_quota.json")) do
-        Check.stub(:active_openrouter_key, "test-key") do
-          Check.stub(:fetch_free_model_daily_requests, { "used" => 10, "limit" => 50, "remaining" => 40 }) do
-            assert_equal :refreshed, Check.refresh_from_provider!(now:, day: "2026-11-08")
+        Check.stub(:free_model_request_count, 10) do
+          Check.stub(:active_openrouter_key, "test-key") do
+            Check.stub(:fetch_free_model_daily_requests, { "used" => 10, "limit" => 50, "remaining" => 40 }) do
+              assert_equal :refreshed, Check.refresh_from_provider!(now:, day: "2026-11-08")
+            end
           end
-        end
 
-        Check.stub(:trackable?, true) do
-          Check.stub(:free_model_request_count, 10) do
+          Check.stub(:trackable?, true) do
             Check.stub(:daily_limit, 50) do
               Check.stub(:free_model_burn_rate_per_day, 20.0) do
                 stale_at = now + Check::PROVIDER_REFRESH_TTL_S + 1
-              assert_equal 40, Check.remaining("demo:free", day: "2026-11-08", now: stale_at)
-              forecast = Check.forecast("demo:free", day: "2026-11-08", now: stale_at)
-              assert_equal "burn_forecast", forecast[:remaining_source]
-              provider = Check.provider_quota_snapshot(day: "2026-11-08", now: stale_at)
-              assert_equal false, provider[:fresh]
+                assert_equal 40, Check.remaining("demo:free", day: "2026-11-08", now: stale_at)
+                forecast = Check.forecast("demo:free", day: "2026-11-08", now: stale_at)
+                assert_equal "burn_forecast", forecast[:remaining_source]
+                provider = Check.provider_quota_snapshot(day: "2026-11-08", now: stale_at)
+                assert_equal false, provider[:fresh]
                 assert_equal "stale_provider", provider[:source]
               end
             end
