@@ -643,7 +643,7 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal false, apply
     assert_equal true, critique
     assert_nil only
-    assert_equal "all", overrides[:lane]
+    assert_equal "standard", overrides[:lane], "audit must not enter mutation-capable WorkLane.all"
 
     apply, critique, only, overrides = Registry.apply_fix_mode(
       "audit", raw: "--lane=code RAILS", apply: true, critique: false, only: nil, overrides: { lane: "code" },
