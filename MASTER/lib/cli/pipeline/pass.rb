@@ -436,21 +436,11 @@ module Master
           raise
         end
 
-# Measure unless asked to write.
-#
-# This returned true, so every route into the pipeline wrote: a flag, a
-# slash command, and — the one that matters — a sentence. On 2026-09-11 a
-# greeting typed into bin/cli on vm23 ("Hei MASTER … hva er du mest stolt
-# av i denne kodebasen?") was routed to the /fix reading with apply=yes against
-# /home/dev/pub5, which is the checkout the deploy syncs from. It scanned
-# 333 of 1109 files before it was interrupted and wrote nothing, and that
-# was luck rather than design.
-#
-# The ladder still writes, because writing is its job: bin/check --ladder says
-# --apply in full-fix mode and --no-autofix in scan-only. Making both
-# explicit is the point — a caller that wants a write now says so, and
-# nothing arrives at one by being misread.
-
+# Fail-closed fallback for direct/internal Pass callers. The canonical /fix CLI
+# computes writes_requested? in CommandRegistry and passes apply explicitly:
+# a normal /fix repair writes; --dry-run, audit and visual pass apply:false.
+# Do not flip this fallback to true. A greeting or a plain question must never
+# become a write request; TurnRouter's question and intent gates own that boundary.
 def default_apply?(*) = false
 
   # The council is the largest model call in a pass: measured on lib/io, 46 files, the two scan phases
