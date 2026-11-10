@@ -46,10 +46,12 @@ class TestRenderer < Minitest::Test
 
     Master::Voice::Speech.stub(:last_error, nil) do
       Master::Voice::Playback.stub(:last_error, nil) do
-        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
-          text = renderer.splash("model")
-          assert_includes strip_ansi(text), "voice0 at mainbus0: detected, playback unverified"
-          refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
+        Master::Voice::Playback.stub(:enabled?, true) do
+          Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+            text = renderer.splash("model")
+            assert_includes strip_ansi(text), "voice0 at mainbus0: CLI speech on; detected, playback unverified"
+            refute_includes strip_ansi(text), "voice0 at mainbus0: ready"
+          end
         end
       end
     end
@@ -63,9 +65,11 @@ class TestRenderer < Minitest::Test
     renderer = FakeRenderer.new(config: {})
 
     assert defined?(Master::Voice::Speech), "speech service should be available to the renderer"
-    Master::Voice::Speech.stub(:last_error, "provider unavailable") do
-      text = renderer.splash("model")
-      assert_includes strip_ansi(text), "voice0 at mainbus0: degraded"
+    Master::Voice::Playback.stub(:enabled?, false) do
+      Master::Voice::Speech.stub(:last_error, "provider unavailable") do
+        text = renderer.splash("model")
+        assert_includes strip_ansi(text), "voice0 at mainbus0: CLI speech off; degraded"
+      end
     end
   ensure
     ENV["MASTER_TTS_DEGRADED"] = old
@@ -87,15 +91,17 @@ class TestRenderer < Minitest::Test
     ENV["MASTER_BOOT_STATUS"] = "1"
     ENV.delete("MASTER_TTS_DEGRADED")
 
-    text = Master::Voice::Speech.stub(:last_error, "synthesis unavailable") do
-      Master::Voice::Playback.stub(:last_error, nil) do
-        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
-          FakeRenderer.new(config: {}).splash("model")
+    text = Master::Voice::Playback.stub(:enabled?, false) do
+      Master::Voice::Speech.stub(:last_error, "synthesis unavailable") do
+        Master::Voice::Playback.stub(:last_error, nil) do
+          Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+            FakeRenderer.new(config: {}).splash("model")
+          end
         end
       end
     end
 
-    assert_includes strip_ansi(text), "voice0 at mainbus0: degraded"
+    assert_includes strip_ansi(text), "voice0 at mainbus0: CLI speech off; degraded"
   ensure
     old_mode ? ENV["MASTER_BOOT_STATUS"] = old_mode : ENV.delete("MASTER_BOOT_STATUS")
     old_degraded ? ENV["MASTER_TTS_DEGRADED"] = old_degraded : ENV.delete("MASTER_TTS_DEGRADED")
@@ -105,10 +111,12 @@ class TestRenderer < Minitest::Test
     ENV["MASTER_BOOT_STATUS"] = "1"
     old_degraded = ENV["MASTER_TTS_DEGRADED"]
     ENV.delete("MASTER_TTS_DEGRADED")
-    lines = Master::Voice::Speech.stub(:last_error, nil) do
-      Master::Voice::Playback.stub(:last_error, nil) do
-        Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
-          FakeRenderer.new(config: {}).splash("model").lines
+    lines = Master::Voice::Playback.stub(:enabled?, true) do
+      Master::Voice::Speech.stub(:last_error, nil) do
+        Master::Voice::Playback.stub(:last_error, nil) do
+          Master::Voice::Playback.stub(:output_status, "detected, playback unverified") do
+            FakeRenderer.new(config: {}).splash("model").lines
+          end
         end
       end
     end
@@ -116,7 +124,7 @@ class TestRenderer < Minitest::Test
     assert_operator lines.size, :>, 10
     assert_operator lines.count { |line| line.include?("boot line") }, :>=, 2
     assert_operator lines.count { |line| line.include?("boot line") }, :<=, 10
-    assert_includes strip_ansi(lines.join), "voice0 at mainbus0: detected, playback unverified"
+    assert_includes strip_ansi(lines.join), "voice0 at mainbus0: CLI speech on; detected, playback unverified"
     refute_includes strip_ansi(lines.join), "voice0 at mainbus0: ready"
   ensure
     ENV.delete("MASTER_BOOT_STATUS")

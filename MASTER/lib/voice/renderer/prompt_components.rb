@@ -137,12 +137,13 @@ module Master
         end
 
         def voice_output_status
-          return "degraded" if ENV["MASTER_TTS_DEGRADED"] == "1"
+          speech = Master::Voice::Playback.enabled? ? "CLI speech on" : "CLI speech off"
+          return "#{speech}; degraded" if ENV["MASTER_TTS_DEGRADED"] == "1"
 
           errors = [Master::Voice::Speech.last_error, Master::Voice::Playback.last_error]
-          return "degraded" if errors.compact.any? { |error| !error.to_s.empty? }
+          return "#{speech}; degraded" if errors.compact.any? { |error| !error.to_s.empty? }
 
-          Master::Voice::Playback.output_status
+          "#{speech}; #{Master::Voice::Playback.output_status}"
         rescue StandardError
           "unknown"
         end

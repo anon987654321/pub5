@@ -223,6 +223,7 @@ module Master
             "Deterministic commands this session answers without a model: #{commands.map { |name| "/#{name}" }.join(' ')}. " \
               "Say the slash form when the operator asks for one of these; they run directly and never need your commentary.",
             "Speech: #{voice_state_line}.",
+            "Answer speech questions from this live state, not general model identity. Never claim MASTER is text-only when CLI speech is enabled; distinguish an enabled path from confirmed audible playback.",
             "You can run governed shell commands and read their recorded output, fetch web pages and search; " \
               "you cannot watch the operator's screen or terminal - when output matters, run the command yourself " \
               "or ask the operator to paste it.",
