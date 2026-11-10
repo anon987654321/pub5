@@ -19,7 +19,7 @@ module Master
           APPS.to_h do |app|
             out, err, status = Master::Io::Exec.capture3("npx", "--yes", SASS, "--no-source-map", "--quiet",
                                               "--load-path=#{app}/app/assets/stylesheets",
-                                              "--load-path=shared/app/assets/stylesheets",
+                                              "--load-path=__shared/app/assets/stylesheets",
                                               "#{app}/app/assets/stylesheets/application.scss", chdir: rails)
             raise "sass failed for #{app}: #{err.lines.first(3).join}" unless status.success?
 

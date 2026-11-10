@@ -30,8 +30,17 @@ module Operator
     TREES = MasterPaths::TREES
 
     # knowledge/ and output/ are vendored or generated and are never committed;
-    # a word in someone else's system prompt is not a reader.
-    SKIP = %r{/(\.git|vendor|node_modules|tmp|log|coverage|\.bundle|knowledge|output)/}
+    # a word in someone else's system prompt is not a reader. Judged below the
+    # root only: a checkout under /tmp (a CI container, this suite's mktmpdir
+    # fixtures) must not skip every file because the absolute prefix happens
+    # to carry a skipped segment — that is how a rename "succeeds" while
+    # rewriting none of its readers.
+    SKIP_SEGMENTS = %w[.git vendor node_modules tmp log coverage .bundle knowledge output].freeze
+
+    def self.skipped?(path, root:)
+      below = path.to_s.delete_prefix("#{File.expand_path(root)}/")
+      below.split("/").any? { |segment| SKIP_SEGMENTS.include?(segment) }
+    end
 
     Reference = Struct.new(:path, :line, :text, :kind, keyword_init: true)
 
@@ -154,7 +163,7 @@ module Operator
         next unless File.exist?(base)
 
         Dir.glob(File.join(base, "**", "*")).each do |path|
-          next if path.match?(SKIP)
+          next if self.class.skipped?(path, root: @root)
           next unless File.file?(path)
           next if File.size(path) > 2_000_000
 

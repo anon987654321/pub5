@@ -48,7 +48,7 @@ module Master
         def self.each_file(root)
           ::Operator::Readers::TREES.flat_map do |tree|
             Dir.glob(File.join(root, tree, "**", "*")).reject do |path|
-              path.match?(::Operator::Readers::SKIP) || path.include?("/builds/") || !File.file?(path) ||
+              ::Operator::Readers.skipped?(path, root:) || path.include?("/builds/") || !File.file?(path) ||
                 File.size(path) > 2_000_000
             end
           end
