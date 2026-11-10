@@ -7,7 +7,7 @@ class DinteroSignatureTest < ActiveSupport::TestCase
     @saved = {
       "DINTERO_ACCOUNT_ID" => ENV["DINTERO_ACCOUNT_ID"],
       "DINTERO_CALLBACK_SECRET" => ENV["DINTERO_CALLBACK_SECRET"],
-      "DINTERO_HOOK_SECRET" => ENV["DINTERO_HOOK_SECRET"]
+      "DINTERO_HOOK_SECRET" => ENV["DINTERO_HOOK_SECRET"],
     }
     ENV["DINTERO_ACCOUNT_ID"] = "P12345678"
     ENV["DINTERO_CALLBACK_SECRET"] = "callback-secret"

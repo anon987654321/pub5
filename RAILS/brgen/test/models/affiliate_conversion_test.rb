@@ -12,7 +12,7 @@ class AffiliateConversionTest < ActiveSupport::TestCase
       "orderValue" => "250.00",
       "currencyId" => "NOK",
       "epi" => "city:bergen|surface:newsletter_weekly",
-      "programId" => "42"
+      "programId" => "42",
     }
 
     first = Shared::AffiliateConversion.record_from_postback!(params)
@@ -43,7 +43,7 @@ class AffiliateConversionTest < ActiveSupport::TestCase
       "transactionId" => "txn-no-visitor",
       "messageTypeId" => "5",
       "epi" => "city:bergen|surface:marketplace",
-      "visitorId" => "network-visitor-secret"
+      "visitorId" => "network-visitor-secret",
     }
 
     record = Shared::AffiliateConversion.record_from_postback!(params)

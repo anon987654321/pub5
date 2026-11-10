@@ -192,7 +192,6 @@ class MarketplaceBolVisualContractTest < Minitest::Test
     assert_match(/position:\s*absolute;/, desktop_mega.body, "the desktop menu must anchor to the nav, not the viewport")
   end
 
-
   def test_logo_falls_back_to_a_visible_static_state_when_animation_loading_fails
     controller = File.read(LOGO_CONTROLLER)
     connect = controller.split("  connect() {", 2).last&.split("\n  disconnect()", 2)&.first

@@ -26,7 +26,7 @@ module VippsHttpStubbing
         path: path,
         headers: headers,
         body: body,
-        body_parsed: body.is_a?(String) && body.start_with?("{") ? JSON.parse(body) : body
+        body_parsed: body.is_a?(String) && body.start_with?("{") ? JSON.parse(body) : body,
       }
       VippsClient.instance_variable_set(:@calls, calls)
 

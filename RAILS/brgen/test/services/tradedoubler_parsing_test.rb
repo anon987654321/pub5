@@ -30,8 +30,8 @@ class TradedoublerParsingTest < ActiveSupport::TestCase
           "priceHistory" => [ { "price" => { "value" => "199.00", "currency" => "NOK" } } ],
           "productUrl" => "http://x/p",
           "programName" => "Shop",
-          "availability" => { "inStock" => true }
-        } ]
+          "availability" => { "inStock" => true },
+        } ],
       } ]
     )
 

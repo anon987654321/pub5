@@ -18,7 +18,7 @@ module SearchHelper
     channels: [ :tv, :channels_url, "tv" ],
     videos: [ :tv, :channels_url, "tv" ],
     sets: [ :playlist, :sets_url, "playlist" ],
-    places: [ :maps, :places_url, "maps" ]
+    places: [ :maps, :places_url, "maps" ],
   }.freeze
 
   # The section's own search, carrying the query, or nil for a section with no

@@ -47,7 +47,6 @@ class Marketplace::OrderTest < ActiveSupport::TestCase
     end
   end
 
-
   test "paid orders consume variant stock without changing listing stock" do
     ActsAsTenant.with_tenant(@city) do
       listing = Marketplace::Listing.create!(user: @seller, category: @category, title: "Shirt",

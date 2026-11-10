@@ -88,7 +88,7 @@ class MarketplaceVariantsTest < ActionDispatch::IntegrationTest
     assert_difference -> { Marketplace::Variant.count }, 1 do
       post marketplace.listing_variants_path(@listing), params: {
         variant: { option_one_name: "Størrelse", option_one_value: "S",
-                               option_two_name: "Farge", option_two_value: "Blå", stock: 3 }
+                               option_two_name: "Farge", option_two_value: "Blå", stock: 3 },
       }
     end
     added = Marketplace::Variant.order(:created_at).last

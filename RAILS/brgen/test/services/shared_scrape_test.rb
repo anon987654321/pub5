@@ -21,7 +21,7 @@ class SharedScrapeTest < ActiveSupport::TestCase
       "http://127.0.0.1/admin",
       "http://169.254.169.254/latest/meta-data",
       "http://192.168.1.10/",
-      "http://[::1]/admin"
+      "http://[::1]/admin",
     ].each do |url|
       refute Shared::Scrape.public_http_url?(url, resolver: public_resolver), url
     end
@@ -86,7 +86,7 @@ class SharedScrapeTest < ActiveSupport::TestCase
       "64:ff9b::808:808" => true,
       "2002:a9fe:a9fe::1" => false,
       "2002:0a00:0001::1" => false,
-      "2002:0808:0808::1" => true
+      "2002:0808:0808::1" => true,
     }.each do |address, expected|
       actual = Shared::Scrape.public_http_url?("https://[#{address}]/")
       assert_equal expected, actual, address

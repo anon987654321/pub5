@@ -71,7 +71,6 @@ class PortMutationsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, watch_port_path(@port)
   end
 
-
   test "legacy executable homepage values render as text rather than links" do
     @port.update_column(:homepage, "javascript:alert(1)")
 
@@ -96,14 +95,14 @@ class PortMutationsTest < ActionDispatch::IntegrationTest
     sign_in_bsdports(user)
     assert_no_difference "Comment.count" do
       post port_comments_path(@port), params: {
-        comment: { content: "Cross-port reply", parent_id: parent.id }
+        comment: { content: "Cross-port reply", parent_id: parent.id },
       }
     end
     assert_response :unprocessable_entity
 
     assert_no_difference "Comment.count" do
       post port_comments_path(@port), params: {
-        comment: { content: "Malformed parent", parent_id: { id: parent.id } }
+        comment: { content: "Malformed parent", parent_id: { id: parent.id } },
       }
     end
     assert_response :unprocessable_entity

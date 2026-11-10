@@ -64,7 +64,6 @@ test("Radio tunnel wires the visual module and left/right keyboard controls", as
   assert.match(source, /this\.visualEngine\.shiftMode\(e\.code === "ArrowRight" \? 1 : -1\)/)
 })
 
-
 test("Radio audio, visual and integration responsibilities live in separate modules", async () => {
   const entry = await readFile(resolve(ROOT, "brgen/app/javascript/radio_brgen_tunnel.js"), "utf8")
   const audio = await readFile(resolve(ROOT, "brgen/app/javascript/radio_brgen_audio.js"), "utf8")

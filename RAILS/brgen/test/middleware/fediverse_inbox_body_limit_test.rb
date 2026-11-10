@@ -39,7 +39,7 @@ class FediverseInboxBodyLimitTest < ActiveSupport::TestCase
       "REQUEST_METHOD" => method,
       "PATH_INFO" => path,
       "CONTENT_LENGTH" => content_length.to_s,
-      "rack.input" => TrackingInput.new(body)
+      "rack.input" => TrackingInput.new(body),
     }
   end
 

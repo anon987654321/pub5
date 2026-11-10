@@ -36,7 +36,7 @@ module Ports
           run_depends: parse_depends(vars["RUN_DEPENDS"]),
           test_depends: parse_depends(vars["TEST_DEPENDS"]),
           lib_depends: parse_depends(vars["LIB_DEPENDS"]),
-          permit_file_distfiles: permit_distfiles?(vars)
+          permit_file_distfiles: permit_distfiles?(vars),
         }
       end
 

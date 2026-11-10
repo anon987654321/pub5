@@ -78,7 +78,7 @@ module Brgen
           build("004", [ @nick, @server, "brgen-bridge", "-", "-" ]),
           numeric("375", "- #{@server} -"),
           numeric("372", "- IRC's honesty, a city's chat. Try /join #brgen"),
-          numeric("376", "End of /MOTD command")
+          numeric("376", "End of /MOTD command"),
         ]
       end
 

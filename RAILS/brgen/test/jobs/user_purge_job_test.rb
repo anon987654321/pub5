@@ -113,7 +113,7 @@ class UserPurgeJobTest < ActiveJob::TestCase
         typing: TypingIndicator.exists?(typing.id),
         merge: AccountMerge.exists?(merge.id),
         rsvp: EventRsvp.exists?(rsvp.id),
-        view: StoryView.exists?(view.id)
+        view: StoryView.exists?(view.id),
       }.each do |name, present|
         assert_not present, "#{name} survived account erasure"
       end
@@ -372,7 +372,7 @@ class UserPurgeJobTest < ActiveJob::TestCase
     ENV["PUB5_RAILS_ROOT"],
     "/home/dev/pub5/RAILS",
     "/home/#{ENV.fetch('PUB4_CI_APP', 'brgen')}/pub4-rails/RAILS",
-    File.expand_path("../../..", __dir__)
+    File.expand_path("../../..", __dir__),
   ].compact.freeze
 
   test "every table the job touches is classified the way the job treats it" do

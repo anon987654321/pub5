@@ -74,7 +74,7 @@
 .legal-prose ul {
   /* logical, not padding-left: the same 1.1rem in LTR and the correct side
      under [dir="rtl"], which _minimal.scss supports. */
-  padding-inline-start: 1.1rem;
+  padding-inline-start: 1rem;
 }
 
 .legal-prose nav {

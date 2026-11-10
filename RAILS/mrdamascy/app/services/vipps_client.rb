@@ -117,7 +117,7 @@ class VippsClient
       return true if mock_mode?
 
       body = {
-        modificationAmount: { currency: "NOK", value: order.total_ore.to_i }
+        modificationAmount: { currency: "NOK", value: order.total_ore.to_i },
       }.to_json
       http_post(
         "/epayment/v1/payments/#{URI.encode_www_form_component(order.vipps_order_id)}/capture",
@@ -147,7 +147,7 @@ class VippsClient
         response_type: "code",
         scope: scopes.join(" "),
         state: state,
-        nonce: nonce
+        nonce: nonce,
       }
       "#{login_base}/access-management-1.0/access/oauth2/auth?#{params.to_query}"
     end
@@ -157,12 +157,12 @@ class VippsClient
     def exchange_login_code!(code:, redirect_uri:)
       headers = {
         "Content-Type" => "application/x-www-form-urlencoded",
-        "Authorization" => "Basic #{Base64.strict_encode64("#{login_env('VIPPS_CLIENT_ID')}:#{login_env('VIPPS_CLIENT_SECRET')}")}"
+        "Authorization" => "Basic #{Base64.strict_encode64("#{login_env('VIPPS_CLIENT_ID')}:#{login_env('VIPPS_CLIENT_SECRET')}")}",
       }
       body = {
         grant_type: "authorization_code",
         code: code,
-        redirect_uri: redirect_uri
+        redirect_uri: redirect_uri,
       }.to_query
       parsed = http_post("/access-management-1.0/access/oauth2/token", headers: headers, body: body)
       parsed["access_token"].presence or raise NotAvailable, "Vipps Login token response had no access_token"
@@ -207,7 +207,7 @@ class VippsClient
           token: order.tracking_token, host: default_host
         ),
         userFlow: "WEB_REDIRECT",
-        paymentDescription: "Mr. Damascy #{order.tracking_token}"
+        paymentDescription: "Mr. Damascy #{order.tracking_token}",
       }
       # Verified phone lets Vipps preselect the customer's wallet — the tap
       # count in the Vipps app goes from "find yourself" to "fingerprint".
@@ -245,7 +245,7 @@ class VippsClient
         "Ocp-Apim-Subscription-Key" => env!("VIPPS_SUBSCRIPTION_KEY"),
         "Merchant-Serial-Number" => env!("VIPPS_MSN"),
         "Vipps-System-Name" => "mrdamascy",
-        "Vipps-System-Version" => "1.0.0"
+        "Vipps-System-Version" => "1.0.0",
       }
       headers["Idempotency-Key"] = idempotency_key if idempotency_key
       headers

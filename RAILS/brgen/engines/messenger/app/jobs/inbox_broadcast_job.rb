@@ -19,7 +19,7 @@ class InboxBroadcastJob < ApplicationJob
   # id prefix a redrawn one is replaced at.
   ROWS = {
     "conversations/conversation_row" => [ "inbox_conversations", :inbox ],
-    "conversations/rail_row" => [ "rail_conversations", :rail ]
+    "conversations/rail_row" => [ "rail_conversations", :rail ],
   }.freeze
 
   # The unread count is drawn in two places, each with its own id: the

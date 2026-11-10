@@ -101,7 +101,7 @@ class ShareTargetTest < ActionDispatch::IntegrationTest
 
     assert_no_difference -> { Post.count } do
       post publish_share_draft_path(draft), params: {
-        post: { title: "City scoped", content: "Only this city", community_id: other_community.id }
+        post: { title: "City scoped", content: "Only this city", community_id: other_community.id },
       }
     end
     assert_redirected_to share_draft_path(draft)

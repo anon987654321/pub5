@@ -33,10 +33,10 @@ class TradedoublerTest < ActiveSupport::TestCase
             "imageUrl" => "https://example.test/j.jpg",
             "productUrl" => "https://clk.tradedoubler.test/click?p=1",
             "program" => { "name" => "XXL", "id" => "999" },
-            "fields" => { "Price" => "1499.00", "Currency" => "NOK" }
-          }
-        ]
-      }
+            "fields" => { "Price" => "1499.00", "Currency" => "NOK" },
+          },
+        ],
+      },
     }
 
     rows = Shared::Tradedoubler.parse(body)
@@ -60,9 +60,9 @@ class TradedoublerTest < ActiveSupport::TestCase
           "clickUrl" => "https://clk.tradedoubler.test/click?p=2",
           "price" => "1699,00",
           "currency" => "NOK",
-          "merchantName" => "XXL"
-        }
-      ]
+          "merchantName" => "XXL",
+        },
+      ],
     }
 
     rows = Shared::Tradedoubler.parse(body)
@@ -90,12 +90,12 @@ class TradedoublerTest < ActiveSupport::TestCase
               "programName" => "Dell",
               "availability" => "In Stock",
               "priceHistory" => [
-                { "price" => { "value" => "617.28", "currency" => "EUR" }, "date" => 1 }
-              ]
-            }
-          ]
-        }
-      ]
+                { "price" => { "value" => "617.28", "currency" => "EUR" }, "date" => 1 },
+              ],
+            },
+          ],
+        },
+      ],
     }
 
     rows = Shared::Tradedoubler.parse(body)

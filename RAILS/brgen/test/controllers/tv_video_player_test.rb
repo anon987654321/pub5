@@ -64,7 +64,7 @@ class TvVideoPlayerTest < ActionDispatch::IntegrationTest
     post tv.channel_videos_path(@channel), params: { video: {
       title: "Med tekst",
       video_file: fixture_file_upload("tiny.mp4", "video/mp4"),
-      captions: Rack::Test::UploadedFile.new(StringIO.new(VTT), "text/vtt", original_filename: "tekst.vtt")
+      captions: Rack::Test::UploadedFile.new(StringIO.new(VTT), "text/vtt", original_filename: "tekst.vtt"),
     } }
 
     video = Tv::Video.find_by!(title: "Med tekst")

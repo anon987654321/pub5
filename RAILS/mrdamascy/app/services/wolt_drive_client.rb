@@ -77,7 +77,7 @@ class WoltDriveClient
         uri = URI("#{API_BASE}/#{require_env('WOLT_DRIVE_CLIENT_ID')}/shipment-promises")
         payload = {
           pickup: pickup_location,
-          dropoff: dropoff_location(order)
+          dropoff: dropoff_location(order),
         }.to_json
 
         response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 10) do |http|
@@ -129,7 +129,7 @@ class WoltDriveClient
         pickup: { location: pickup_location, comment: "Mr. Damascy, Solheimsgaten 60" },
         dropoff: dropoff(order),
         items: item_summary(order),
-        tips: { amount: { value: order.tip_ore.to_i, currency: "NOK" } }
+        tips: { amount: { value: order.tip_ore.to_i, currency: "NOK" } },
       }.to_json
 
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 10) do |http|
@@ -165,7 +165,7 @@ class WoltDriveClient
     def auth_headers
       {
         "Content-Type" => "application/json",
-        "Authorization" => "Bearer #{require_env('WOLT_DRIVE_API_TOKEN')}"
+        "Authorization" => "Bearer #{require_env('WOLT_DRIVE_API_TOKEN')}",
       }
     end
 
@@ -186,7 +186,7 @@ class WoltDriveClient
       {
         count: order.order_items.sum(&:quantity),
         description: order.order_items.map { |line| "#{line.quantity}× #{line.name}" }.join(", "),
-        disclaimer: "Keep warm and flat — shawarma."
+        disclaimer: "Keep warm and flat — shawarma.",
       }
     end
 

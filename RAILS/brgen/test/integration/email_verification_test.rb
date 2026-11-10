@@ -37,8 +37,8 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
       user: {
         email_address: email,
         password: "password12345",
-        password_confirmation: "password12345"
-      }
+        password_confirmation: "password12345",
+      },
     }
     assert_response :redirect
 

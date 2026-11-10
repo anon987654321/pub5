@@ -42,7 +42,7 @@ class OwnershipGuardContractTest < Minitest::Test
     "users_controller.rb" => "edit/update act on @user = Current.user only — never a param-supplied id",
     "account_languages_controller.rb" => "update writes Current.user's own locale — no record id is read from params",
     "account_notification_preferences_controller.rb" =>
-      "update writes Current.user's own preferences — no record id is read from params"
+      "update writes Current.user's own preferences — no record id is read from params",
   }.freeze
 
   def test_every_mutating_controller_has_an_ownership_guard

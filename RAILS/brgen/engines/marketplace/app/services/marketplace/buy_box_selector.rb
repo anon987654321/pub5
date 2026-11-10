@@ -7,14 +7,14 @@ module Marketplace
       delivery: 0.25,
       performance: 0.25,
       stock: 0.10,
-      fulfilment: 0.05
+      fulfilment: 0.05,
     }.freeze
 
     FULFILMENT_SCORES = {
       0 => 0.25,
       1 => 1.0,
       2 => 0.8,
-      3 => 0.55
+      3 => 0.55,
     }.freeze
 
     Score = Data.define(:total, :price, :delivery, :performance, :stock, :fulfilment)

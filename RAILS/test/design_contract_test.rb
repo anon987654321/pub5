@@ -49,7 +49,6 @@ def test_bsdports_styles_load_as_ordered_feature_modules
   assert_includes application_scss("bsdports"), "@include endgame.bsdports;"
 end
 
-
 def test_bsdports_port_header_sticks_only_when_primary_nav_fits_one_row
   pages = stylesheet_module("bsdports", "bsdports_pages")
   mobile, wide = pages.split("@media (min-width: 640px)", 2)
@@ -61,13 +60,11 @@ def test_bsdports_port_header_sticks_only_when_primary_nav_fits_one_row
                "the port meta strip must follow the shared nav height and safe-area inset")
 end
 
-
 def test_bsdports_primary_nav_rules_target_the_rendered_landmark
   layout = File.read(File.join(ROOT, "bsdports", "app", "views", "layouts", "application.html.erb"))
   base_css = stylesheet_module("bsdports", "bsdports_base")
   layout_css = stylesheet_module("bsdports", "bsdports_layout")
   pages_css = stylesheet_module("bsdports", "bsdports_pages")
-
 
     assert_match(/<nav\b[^>]*data-pwa-primary-nav/, layout,
                  "BSDports must expose the canonical primary-navigation marker")

@@ -147,7 +147,7 @@ class StripeClient
         "line_items[0][price_data][currency]": "nok",
         "line_items[0][price_data][unit_amount]": order.total_ore.to_i,
         "line_items[0][price_data][product_data][name]":
-          "Mr. Damascy — bestilling #{order.tracking_token}"
+          "Mr. Damascy — bestilling #{order.tracking_token}",
       }
 
       body = http_post(

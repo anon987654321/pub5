@@ -21,7 +21,7 @@ module SourceReader
         # exists, both `find` guards missed and the chain fell through to the
         # wrong path — 39 errors in brgen's suite on every checkout that is not
         # /home/dev/pub5, which is why the box never saw it.
-        File.expand_path("../..", __dir__)
+        File.expand_path("../..", __dir__),
       ]
       candidates.find { |path| File.readable?(File.join(path, "__shared", "app")) } ||
         candidates.find { |path| File.directory?(File.join(path, "__shared")) } ||

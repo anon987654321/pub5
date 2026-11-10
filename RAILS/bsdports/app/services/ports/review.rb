@@ -52,7 +52,7 @@ module Ports
     def metadata_issues
       [
         (:missing_homepage if @port.homepage.blank?),
-        (:weak_comment if @port.comment.to_s.strip.length < 20)
+        (:weak_comment if @port.comment.to_s.strip.length < 20),
       ].compact
     end
 
@@ -73,7 +73,7 @@ module Ports
         comment: [ @port.comment.to_s.strip, source[:comment].to_s.strip ],
         homepage: [ @port.homepage.to_s.strip, source[:homepage].to_s.strip ],
         maintainer: [ @port[:maintainer].to_s.strip, source[:maintainer].to_s.strip ],
-        version: [ normalized_version(@port.version), normalized_version(source[:version]) ]
+        version: [ normalized_version(@port.version), normalized_version(source[:version]) ],
       }.select do |_field, (indexed, source_value)|
         indexed.present? && source_value.present? && indexed != source_value
       end

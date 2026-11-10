@@ -10,7 +10,7 @@ class AffiliateProductTest < ActiveSupport::TestCase
       title: "Produkt",
       click_url: "https://example.test/p",
       market: "NO",
-      last_seen_at: Time.current
+      last_seen_at: Time.current,
     }.merge(overrides))
   end
 

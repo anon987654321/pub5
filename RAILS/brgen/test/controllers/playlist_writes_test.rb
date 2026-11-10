@@ -131,7 +131,7 @@ class PlaylistWritesTest < ActionDispatch::IntegrationTest
         track: {
           title: "Opptak", artist: "", privacy: "public",
           audio_file: Rack::Test::UploadedFile.new(StringIO.new("ID3fake"), "audio/mpeg", original_filename: "opptak.mp3")
-        }
+        },
       }
     end
     track = Playlist::Track.order(:id).last

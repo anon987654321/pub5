@@ -98,7 +98,6 @@ module Ports
         nil
       end
 
-
       def trusted_signify_key
         configured = ENV["BSDPORTS_SIGNIFY_KEY"].to_s
         return File.file?(configured) ? configured : nil if configured.present?

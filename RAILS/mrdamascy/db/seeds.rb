@@ -58,7 +58,7 @@ kitchen = Kitchen.create!(
   "5020" => [ "Møllendal",        45, 250, 35 ],
   "5141" => [ "Fyllingsdalen",    49, 300, 40 ],
   "5160" => [ "Laksevåg",         49, 300, 40 ],
-  "5221" => [ "Nesttun",          55, 300, 45 ]
+  "5221" => [ "Nesttun",          55, 300, 45 ],
 }.each do |postcode, (name, fee_kr, min_kr, eta)|
   DeliveryZone.create!(
     postcode: postcode,
@@ -77,7 +77,7 @@ category_rows = [
   [ "Tilbehør",       "Sides",         "tilbehor",  "🍟", 3 ],
   [ "Drikke",         "Drinks",        "drikke",    "🥤", 4 ],
   [ "Desserter",      "Desserts",      "desserter", "🍮", 5 ],
-  [ "Bokser",         "Boxes",         "bokser",    "🎁", 6 ]
+  [ "Bokser",         "Boxes",         "bokser",    "🎁", 6 ],
 ]
 categories = {}
 category_rows.each do |name, name_en, slug, emoji, position|
@@ -103,7 +103,7 @@ item_rows = {
     [ "Dubai Gatens Shawarma",       "Dubai Street Shawarma",         "dubai",     1, 135, "🍟", nil,             nil,
       "Pommes i rullen — gatens beste triks fra Dubai." ],
     [ "Blomkål-Pita Miznon-stil",    "Cauliflower Pita Miznon-style", "tel_aviv",  0, 129, "🥦", "veg,signature", nil,
-      "Helstekt blomkål i pita — Miznon-spøken, Tel Aviv." ]
+      "Helstekt blomkål i pita — Miznon-spøken, Tel Aviv." ],
   ],
   "tallerker" => [
     [ "Bursa İskender",              "Bursa İskender",                "bursa",     1, 189, "🧈", "signature",     550,
@@ -115,30 +115,30 @@ item_rows = {
     [ "Stockholm Kebabpizza — helg", "Stockholm Kebabpizza — weekend", "stockholm", 2, 169, "🍕", nil,            nil,
       "Kebab på pizza — Stockholms oppfinnelse. Kun i helgene." ],
     [ "Sydney Snackpack HSP",        "Sydney Snackpack HSP",          "sydney",    2, 149, "🍟", "secret",        nil,
-      "Chips, kjøtt, ost og gravy — nattens ritual fra Sydney." ]
+      "Chips, kjøtt, ost og gravy — nattens ritual fra Sydney." ],
   ],
   "tilbehor" => [
     [ "Hvitløks-Pommes",  "Garlic Fries",     "bergen",    0, 59, "🍟", nil,  nil, "Pommes badet i toum." ],
     [ "Halloumi-Pommes",  "Halloumi Fries",   "bergen",    0, 79, "🧀", nil,  nil, "Saltstekt halloumi over pommes." ],
     [ "Kısır Bulgursal",  "Kısır Bulgur Salad", "gaziantep", 0, 49, "🥗", "veg", nil, "Syrlig bulgursalat med granateple." ],
-    [ "Syltebolle",       "Pickle",           "damaskus",  0, 29, "🥒", nil,  nil, "Én syrisk sylteagurk, kjøkkenets kompliment." ]
+    [ "Syltebolle",       "Pickle",           "damaskus",  0, 29, "🥒", nil,  nil, "Én syrisk sylteagurk, kjøkkenets kompliment." ],
   ],
   "drikke" => [
     [ "Ayran",              "Ayran",              "bursa",     0, 35, "🥛", nil, nil, "Saltet yoghurtdrikk — kebabens beste venn." ],
     [ "Şalgam",             "Şalgam",             "adana",     0, 35, "🍅", nil, nil, "Gjæret turnipsdrikk, Adana-stil." ],
     [ "Tamarind-drikk",     "Tamarind Drink",     "damaskus",  0, 39, "🍹", nil, nil, "Søt-sur tamarind, servert kjølig." ],
     [ "Jallab",             "Jallab",             "beirut",    0, 39, "🍇", nil, nil, "Druemelasse, rose og pinjekjerner." ],
-    [ "Myntesitronlimonade","Mint Lemonade",      "damaskus",  0, 45, "🍋", nil, nil, "Fersk mynte og sitron, presset i dag." ]
+    [ "Myntesitronlimonade","Mint Lemonade",      "damaskus",  0, 45, "🍋", nil, nil, "Fersk mynte og sitron, presset i dag." ],
   ],
   "desserter" => [
     [ "Baklava fra Gaziantep", "Baklava from Gaziantep", "gaziantep", 0, 69, "🍯", nil, nil, "Pistasj, honning og mange lag." ],
     [ "Knefeh fra Damaskus",   "Knefeh from Damascus",   "damaskus",  0, 79, "🧀", "signature", nil, "Varm ost, semulegrot og sirup — Damaskus' morgen." ],
-    [ "Ma'moul",               "Ma'moul",                "damaskus",  0, 59, "🌰", nil, nil, "Semuliekaker med dadler og valnøtt." ]
+    [ "Ma'moul",               "Ma'moul",                "damaskus",  0, 59, "🌰", nil, nil, "Semuliekaker med dadler og valnøtt." ],
   ],
   "bokser" => [
     [ "Damascy Boss-boks", "Damascy Boss Box", "damaskus", 0, 199, "🎁", "deal", nil,
-      "Wrap + pommes + drikke + baklava-bite — hele måltidet i én boks." ]
-  ]
+      "Wrap + pommes + drikke + baklava-bite — hele måltidet i én boks." ],
+  ],
 }
 
 items = {}
@@ -177,7 +177,7 @@ sauces = [
   [ "Toum",               "Toum (garlic sauce)", 0,   true  ],
   [ "Tarator",            "Tarator (tahini sauce)", 0, false ],
   [ "Yoghurt-urt",        "Yoghurt & herbs",     0,   false ],
-  [ "Syrisk sterk chili", "Syrian hot chili",    0,   false ]
+  [ "Syrisk sterk chili", "Syrian hot chili",    0,   false ],
 ]
 toppings = [
   [ "Salat",      "Salad",      0, true  ],
@@ -187,12 +187,12 @@ toppings = [
   [ "Rødkål",     "Red cabbage", 0, true ],
   [ "Mais",       "Corn",       0, false ],
   [ "Jalapeño",   "Jalapeño",   0, false ],
-  [ "Sylteagurk", "Pickles",    0, true  ]
+  [ "Sylteagurk", "Pickles",    0, true  ],
 ]
 extras = [
   [ "Ekstra kjøtt", "Extra meat",    25, false ],
   [ "Dobbel ost",   "Double cheese", 15, false ],
-  [ "Ekstra brød",  "Extra bread",   10, false ]
+  [ "Ekstra brød",  "Extra bread",   10, false ],
 ]
 
 def add_options!(menu_item, rows, kind, start:)
@@ -232,7 +232,7 @@ add_options!(items["Damascy Boss-boks"], [
   "SAHTEIN10" => [ "percent", 10,   0,      "Første bestilling" ],
   "YALLA25" => [ "fixed", 2500,   25000, "Yalla! 25 kr av over 250 kr" ],
   "GRATISLEVERING" => [ "free_delivery", 0, 30000, "Gratis levering over 300 kr" ],
-  "FAMILIE15" => [ "percent", 15,  40000,  "15 % på familiebordet over 400 kr" ]
+  "FAMILIE15" => [ "percent", 15,  40000,  "15 % på familiebordet over 400 kr" ],
 }.each do |code, (kind, value, min_basket_ore, description)|
   PromoCode.create!(
     code: code,
@@ -323,7 +323,7 @@ order_2.update!(
   [ nil, 5.weeks.ago ],
   [ nil, 6.weeks.ago ],
   [ nil, 7.weeks.ago ],
-  [ nil, 8.weeks.ago ]
+  [ nil, 8.weeks.ago ],
 ].each do |order, awarded_at|
   LoyaltyStamp.create!(user: ola, order: order, redeemed: false, awarded_at: awarded_at)
 end

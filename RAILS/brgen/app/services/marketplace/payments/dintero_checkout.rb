@@ -77,7 +77,7 @@ module Marketplace
             "/v1/accounts/#{DinteroClient.account_id}/shopping/orders/#{ERB::Util.url_encode(dintero_order_id)}/captures",
             {
               items: [ capture_item(order, contract:) ],
-              fee_split: contract[:fee_split]
+              fee_split: contract[:fee_split],
             }.compact,
             idempotency_key: "brgen-capture-order-#{order.id}"
           )
@@ -97,7 +97,7 @@ module Marketplace
             "/v1/accounts/#{DinteroClient.account_id}/shopping/orders/#{ERB::Util.url_encode(dintero_order_id)}/refunds",
             {
               items: [ capture_item(order, contract:) ],
-              fee_split: contract[:fee_split]
+              fee_split: contract[:fee_split],
             }.compact,
             idempotency_key: "brgen-refund-order-#{order.id}"
           )
@@ -264,10 +264,10 @@ module Marketplace
               order: {
                 merchant_reference: reference,
                 currency: payable.payment_currency,
-                items: orders.map { |order| draft_item(order) }
+                items: orders.map { |order| draft_item(order) },
               },
               options: {
-                split_draft: false
+                split_draft: false,
               }
             },
             idempotency_key: "brgen-draft-#{reference}"

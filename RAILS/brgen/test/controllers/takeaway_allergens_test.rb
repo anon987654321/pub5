@@ -35,7 +35,7 @@ class TakeawayAllergensTest < ActionDispatch::IntegrationTest
 
   def add_dish(**allergen_params)
     post takeaway.restaurant_menu_items_path(@restaurant), params: {
-      takeaway_menu_item: { name: "Fiskesuppe", price_cents: 18_900, available: "1" }.merge(allergen_params)
+      takeaway_menu_item: { name: "Fiskesuppe", price_cents: 18_900, available: "1" }.merge(allergen_params),
     }
     Takeaway::MenuItem.order(:id).last
   end
@@ -77,13 +77,13 @@ class TakeawayAllergensTest < ActionDispatch::IntegrationTest
     dish = Takeaway::MenuItem.create!(restaurant: @restaurant, name: "Bolle", price_cents: 3_500)
     sign_in_as(@owner)
     patch takeaway.restaurant_menu_item_path(@restaurant, dish), params: {
-      takeaway_menu_item: { allergens: [ "gluten", "eggs" ], allergens_stated: "1" }
+      takeaway_menu_item: { allergens: [ "gluten", "eggs" ], allergens_stated: "1" },
     }
     assert_equal %w[gluten eggs], dish.reload.allergen_keys
 
     sign_in_as(@diner)
     patch takeaway.restaurant_menu_item_path(@restaurant, dish), params: {
-      takeaway_menu_item: { allergens: [], allergens_stated: "1" }
+      takeaway_menu_item: { allergens: [], allergens_stated: "1" },
     }
     assert_equal %w[gluten eggs], dish.reload.allergen_keys
   end

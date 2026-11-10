@@ -25,7 +25,7 @@ class StripeBillingTest < ActiveSupport::TestCase
         "id" => id, "status" => status, "customer" => "cus_1", "cancel_at_period_end" => false,
         "items" => { "data" => [ { "current_period_end" => 30.days.from_now.to_i } ] },
         "metadata" => { "plan" => "brgen_business_presence", "user_id" => @user.id.to_s }
-      } }
+      } },
     }
   end
 

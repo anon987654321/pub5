@@ -154,7 +154,7 @@ class EngineRenderSmokeTest < ActionDispatch::IntegrationTest
       "dating.brgen.no" => "/",
       "radio.brgen.no" => "/",
       "markedsplass.brgen.no" => "/",
-      "takeaway.brgen.no" => "/"
+      "takeaway.brgen.no" => "/",
     }.each do |host, path|
       host! host
       get path

@@ -24,7 +24,7 @@
   color: var(--surface);
   font-family: var(--font);
   font-size: clamp(5rem, 18vw, 9rem);
-  line-height: 0.8;
+  line-height: 1;
 }
 
 .newsletter-capture-art img {
@@ -57,7 +57,7 @@
   max-inline-size: 16ch;
   font-family: var(--font);
   font-size: clamp(2rem, 7vw, 3.5rem);
-  line-height: 0.98;
+  line-height: 1;
 }
 
 .newsletter-capture-copy > p {

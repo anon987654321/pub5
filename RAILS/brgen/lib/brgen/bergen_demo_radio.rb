@@ -40,7 +40,7 @@ module Brgen
             artist: row["artist"],
             title: row["title"],
             source_type: "youtube",
-            source_url: "https://www.youtube.com/watch?v=#{row['id']}"
+            source_url: "https://www.youtube.com/watch?v=#{row['id']}",
           }
         end
       end

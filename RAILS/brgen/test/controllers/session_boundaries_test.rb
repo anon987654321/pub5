@@ -33,7 +33,7 @@ class SessionBoundariesTest < ActionDispatch::IntegrationTest
          params: { email_address: @user.email_address, password: "password123" },
          headers: {
            "Sec-Fetch-Site" => "cross-site",
-           "Origin" => "https://attacker.example"
+           "Origin" => "https://attacker.example",
          }
 
     assert_response :unprocessable_entity
@@ -83,7 +83,7 @@ class SessionBoundariesTest < ActionDispatch::IntegrationTest
          headers: {
            "X-CSRF-Token" => token,
            "Sec-Fetch-Site" => "same-origin",
-           "Origin" => "https://brgen.no"
+           "Origin" => "https://brgen.no",
          }
 
     assert_response :redirect
@@ -102,10 +102,10 @@ class SessionBoundariesTest < ActionDispatch::IntegrationTest
         email_address: email,
         username:,
         password: "password123",
-        password_confirmation: "password123"
+        password_confirmation: "password123",
       },
       accept_terms: "1",
-      accept_age: "1"
+      accept_age: "1",
     }
 
     assert_difference("User.count", 1) do
@@ -130,7 +130,7 @@ class SessionBoundariesTest < ActionDispatch::IntegrationTest
     login_token = controller.send(:form_authenticity_token)
     same_origin = {
       "Sec-Fetch-Site" => "same-origin",
-      "Origin" => "https://brgen.no"
+      "Origin" => "https://brgen.no",
     }
     post session_path,
          params: { email_address: @user.email_address, password: "password123" },
@@ -170,11 +170,11 @@ class SessionBoundariesTest < ActionDispatch::IntegrationTest
          params: {
            authenticity_token: token,
            email_address: @user.email_address,
-           password: "password123"
+           password: "password123",
          },
          headers: {
            "Sec-Fetch-Site" => "cross-site",
-           "Origin" => "https://attacker.example"
+           "Origin" => "https://attacker.example",
          }
 
     assert_response :unprocessable_entity

@@ -220,7 +220,6 @@ class InteractionCampaignRunnerTest < Minitest::Test
     end
   end
 
-
   def test_mapped_test_without_assertions_is_blocked
     Dir.mktmpdir("interaction-campaign-no-assertions") do |evidence_root|
       executor = lambda do |**|

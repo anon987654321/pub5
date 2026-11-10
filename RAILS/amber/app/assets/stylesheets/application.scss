@@ -952,7 +952,7 @@ main#main-content header > nav form {
 
 .item-card .item-title {
   font-weight: var(--weight-bold);
-  line-height: 1.35;
+  line-height: 1.4;
   overflow-wrap: anywhere;
   /* The title is the card's way to the garment: its box reaches --tap-min,
      and an equal negative margin hands the padding back to the card's gap. */
@@ -1986,7 +1986,7 @@ main#main-content .amber-look-title {
   text-align: center;
   font-size: clamp(40px, 13cqi, 88px);
   font-weight: var(--weight-normal);
-  line-height: 1.05;
+  line-height: 1;
   letter-spacing: -0.03em;
 }
 
@@ -2556,7 +2556,7 @@ body[data-surface="luxury"] .item-grid--wardrobe {
 
 body[data-surface="luxury"] .item-card--wardrobe {
   gap: 8px;
-  padding: 0 0 14px;
+  padding: 0 0 12px;
   overflow: hidden;
   border: 1px solid var(--amber-rule);
   border-radius: 16px;
@@ -2708,7 +2708,7 @@ body[data-surface="luxury"] :is(
   font-family: var(--font-beauty-sans);
   font-weight: 400;
   letter-spacing: -0.02em;
-  line-height: 0.98;
+  line-height: 1;
   text-wrap: balance;
   font-kerning: normal;
   font-variant-ligatures: common-ligatures;

@@ -612,7 +612,7 @@ body.vertical-messenger .layout > main#main-content > section.messenger-window {
   max-inline-size: 12ch;
   color: var(--text-secondary);
   font-size: var(--text-extra-small);
-  line-height: 1.35;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -753,7 +753,7 @@ body.vertical-messenger .layout > main#main-content > section.messenger-window {
     max-block-size: 100dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-inline: 6px;
+    padding-inline: 4px;
   }
 
   /* Each pane scrolls to the bottom of the viewport rather than to a viewport's

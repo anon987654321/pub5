@@ -32,7 +32,7 @@ class Dependency < ApplicationRecord
         label: dependency.label,
         pkgpath: child_port&.pkgpath,
         param: child_port&.to_param,
-        children: child_port ? tree_for(child_port, seen:, depth: depth + 1) : []
+        children: child_port ? tree_for(child_port, seen:, depth: depth + 1) : [],
       }
     end
   end
@@ -46,7 +46,7 @@ class Dependency < ApplicationRecord
       name: port.name,
       pkgpath: port.pkgpath,
       version: port.version,
-      depth: 0
+      depth: 0,
     }
     nodes = { port.id => root }
     edges = []
@@ -76,7 +76,7 @@ class Dependency < ApplicationRecord
             name: child.name,
             pkgpath: child.pkgpath,
             version: child.version,
-            depth: depth + 1
+            depth: depth + 1,
           }
           next_frontier << child
         end
@@ -85,7 +85,7 @@ class Dependency < ApplicationRecord
           id: dependency.id,
           from: dependency.port_id,
           to: child.id,
-          type: dependency.dep_type.presence || "run"
+          type: dependency.dep_type.presence || "run",
         }
       end
 

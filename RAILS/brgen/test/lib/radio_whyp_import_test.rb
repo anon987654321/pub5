@@ -86,8 +86,8 @@ class RadioWhypImportTest < ActiveSupport::TestCase
               "duration_seconds" => 42,
               "source_type" => "whyp",
               "source_url" => "https://whyp.it/tracks/test-1",
-              "audio" => relative_audio
-            }
+              "audio" => relative_audio,
+            },
           ]
         )
       )

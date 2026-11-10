@@ -91,7 +91,6 @@ class Dating::VerificationTest < ActiveSupport::TestCase
     assert_equal notification_count, Notification.count
   end
 
-
   private
 
   def build_request

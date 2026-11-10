@@ -538,7 +538,7 @@ body.vertical-marketplace .bol-market-hero-copy h2 {
   max-width: 16ch;
   color: var(--bol-ink);
   font-size: clamp(28px, 4vw, 44px);
-  line-height: 1.05;
+  line-height: 1;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
@@ -686,7 +686,7 @@ body.vertical-marketplace .listing-filter-controls {
 
 body.vertical-marketplace .listing-filter-controls .deal-cat {
   justify-content: flex-start;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -794,7 +794,7 @@ body.vertical-marketplace .search-form input[type="search"] {
 }
 
 body.vertical-marketplace .deal-fav svg {
-  padding: 7px;
+  padding: 8px;
   background: #fff;
 }
 
@@ -824,7 +824,7 @@ body.vertical-marketplace .deal-meta {
 }
 
 body.vertical-marketplace .store-stars {
-  gap: 6px;
+  gap: 4px;
   color: var(--bol-muted);
 }
 
@@ -834,7 +834,7 @@ body.vertical-marketplace .store-stars [role="img"]::before {
 
 body.vertical-marketplace .store-badge {
   min-height: 22px;
-  padding-inline: 7px;
+  padding-inline: 8px;
   border-radius: 2px;
   background: var(--bol-blue-soft);
   color: var(--bol-blue);
@@ -870,7 +870,7 @@ body.vertical-marketplace .marketplace-listing-header h1,
 body.vertical-marketplace .store-pdp-info h1 {
   color: var(--bol-ink);
   font-size: clamp(24px, 3vw, 36px);
-  line-height: 1.1;
+  line-height: 1;
   font-weight: var(--weight-bold);
 }
 
@@ -946,7 +946,7 @@ body.vertical-marketplace .store-buybox .price {
   body.vertical-marketplace #navBar.storefront-nav--bol #bottomHalf {
     grid-template-columns: minmax(0, 1fr);
     min-height: 62px;
-    padding-block: 9px;
+    padding-block: 8px;
   }
 
   body.vertical-marketplace #navBar.storefront-nav--bol .nav-deliver {
@@ -1080,7 +1080,7 @@ body.vertical-marketplace .store-buybox .price {
   body.vertical-marketplace #marketplace-listings .deal-card-body {
     align-self: start;
     padding: 4px 0;
-    gap: 10px;
+    gap: 8px;
   }
 
   body.vertical-marketplace #marketplace-listings .deal-price {
@@ -1103,7 +1103,7 @@ body.vertical-marketplace .store-buybox .price {
   }
 
   body.vertical-marketplace #marketplace-listings .deal-card-body {
-    gap: 7px;
+    gap: 8px;
   }
 }
 
@@ -1249,13 +1249,13 @@ body.vertical-marketplace .storefront-bol-account {
   grid-column: 2;
   grid-row: 1;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
 }
 
 body.vertical-marketplace .storefront-bol-account .nav-block {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: var(--tap-min);
   min-height: var(--tap-min);
   color: #fff;
@@ -1303,7 +1303,7 @@ body.vertical-marketplace .storefront-bol-categories > summary {
   display: inline-flex;
   align-items: center;
   min-height: var(--bol-mainnav-block);
-  padding-inline: 14px;
+  padding-inline: 12px;
   border: 0;
   /* The selected-state bar is a flat border, not an inset shadow: the space
      is reserved on every item so the active state moves no geometry. */
@@ -1375,7 +1375,7 @@ body.vertical-marketplace .storefront-bol-categories[open] .storefront-bol-mega 
 body.vertical-marketplace .storefront-bol-mega section {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1450,7 +1450,7 @@ body.vertical-marketplace #marketplace-listings .deal-card-actions {
   body.vertical-marketplace .storefront-bol-mainnav > a,
   body.vertical-marketplace .storefront-bol-mainnav > .section,
   body.vertical-marketplace .storefront-bol-categories > summary {
-    padding-inline: 18px;
+    padding-inline: 16px;
     font-size: 14px;
   }
 
@@ -1472,7 +1472,7 @@ body.vertical-marketplace #marketplace-listings .deal-card-actions {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 8px;
     padding-top: 4px;
   }
 
@@ -1547,7 +1547,7 @@ body.vertical-marketplace .listing-step-link {
   border: 0;
   background: #fff;
   color: var(--bol-muted);
-  padding: 8px 10px;
+  padding: 8px 8px;
   font: inherit;
   cursor: pointer;
 }
@@ -1593,7 +1593,7 @@ body.vertical-marketplace .listing-step-actions {
 
 body.vertical-marketplace .listing-photo-entry {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 body.vertical-marketplace .listing-photo-camera {
@@ -1601,7 +1601,7 @@ body.vertical-marketplace .listing-photo-camera {
   min-height: 132px;
   width: 100%;
   place-items: center;
-  gap: 6px;
+  gap: 4px;
   border: 2px dashed var(--bol-blue);
   cursor: pointer;
 }
@@ -1615,7 +1615,7 @@ body.vertical-marketplace .listing-photo-camera small {
 body.vertical-marketplace .listing-photo-gallery {
   min-height: var(--tap-min);
   margin-top: 8px;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 0;
   background: #fff;
   color: var(--bol-blue);
@@ -1629,7 +1629,7 @@ body.vertical-marketplace .listing-photo-guidance {
   justify-content: space-between;
   gap: 12px;
   margin-top: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-inline-start: 3px solid var(--bol-blue);
   background: unset;
   color: var(--bol-ink);
@@ -1655,7 +1655,7 @@ body.vertical-marketplace .listing-media-preview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 body.vertical-marketplace .media-thumb {
@@ -1681,13 +1681,13 @@ body.vertical-marketplace .media-thumb-controls {
   display: flex;
   align-items: center;
   gap: 4px;
-  min-height: 34px;
+  min-height: 44px;
   padding: 4px;
 }
 
 body.vertical-marketplace .media-thumb-cover {
   margin-inline-end: auto;
-  padding: 3px 6px;
+  padding: 3px 4px;
   background: var(--bol-blue);
   color: #fff;
   font-size: 12px;
@@ -1729,7 +1729,7 @@ body.vertical-marketplace .listing-source-option {
   gap: 8px;
   min-height: var(--tap-min);
   margin: 0;
-  padding: 8px 10px;
+  padding: 8px 8px;
   border: 0;
   color: var(--bol-ink);
   cursor: pointer;
@@ -1775,8 +1775,8 @@ body.vertical-marketplace .listing-review-title {
 body.vertical-marketplace .listing-draft-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 body.vertical-marketplace .listing-published-notice {
@@ -1795,7 +1795,7 @@ body.vertical-marketplace .listing-published-notice {
 body.vertical-marketplace .listing-source-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 body.vertical-marketplace .listing-source-badge {
@@ -1812,7 +1812,7 @@ body.vertical-marketplace .listing-source-badge--shop {
 @media (min-width: 768px) {
   body.vertical-marketplace .listing-step {
     display: block;
-    padding-bottom: 22px;
+    padding-bottom: 20px;
   border: 0;
   }
 
@@ -1960,13 +1960,13 @@ body.vertical-marketplace .listing-review-cover-image {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-small);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .brgen-media-caption span {
   color: var(--text-secondary);
   font-size: var(--text-extra-small);
-  line-height: 1.35;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -2057,7 +2057,7 @@ html[data-theme="light"] .post-progressive-indicator.is-active {
 .post-progressive-step > h2 {
   margin-block-end: var(--space-1);
   font-size: clamp(1.2rem, 3vw, 1.5rem);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 /* Pointer/programmatic focus stays quiet, but keyboard focus keeps the
@@ -2334,7 +2334,7 @@ body.vertical-marketplace .store-promo-art-copy h2 {
 body.vertical-marketplace .store-promo-art-cta {
   min-height: var(--tap-min);
   margin-top: var(--space-2);
-  padding: 10px 20px 12px;
+  padding: 8px 20px 12px;
   border-radius: 30px;
   background: var(--bol-blue);
   color: #000;
@@ -2370,7 +2370,7 @@ body.vertical-marketplace .listing-filter-controls input {
 }
 
 body.vertical-marketplace .deal-grid {
-  gap: 28px 18px;
+  gap: 28px 16px;
 }
 
 body.vertical-marketplace a.deal-card:hover .deal-card-title,
@@ -2381,7 +2381,7 @@ body.vertical-marketplace .deal-card:hover .deal-card-title {
 }
 
 body.vertical-marketplace .deal-card-img {
-  padding: 18px;
+  padding: 16px;
   border: 1px solid #e7ecf2;
   border-radius: 14px;
   background: #f7f9fc;
@@ -2448,7 +2448,7 @@ body.vertical-marketplace .store-heading {
 
 body.vertical-marketplace .bol-market-hero-copy h2 {
   font-size: clamp(2.25rem, 4.4vw, 4.25rem);
-  line-height: 0.98;
+  line-height: 1;
 }
 
 body.vertical-marketplace :is(
@@ -2470,7 +2470,7 @@ body.vertical-marketplace .marketplace-listing-header h1 {
   font-family: var(--font);
   font-size: clamp(2rem, 3.4vw, 3.5rem);
   font-weight: 400;
-  line-height: 0.98;
+  line-height: 1;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
@@ -2508,7 +2508,7 @@ body:not([data-surface="luxury"]) :is(
 ) {
   font-family: var(--font);
   font-weight: 400;
-  line-height: 1.02;
+  line-height: 1;
   letter-spacing: -0.012em;
   text-wrap: balance;
 }
@@ -2543,7 +2543,7 @@ body.vertical-tv :is(
 ) {
   font-family: var(--font);
   font-weight: 400;
-  line-height: 1.04;
+  line-height: 1;
   letter-spacing: -0.012em;
   text-wrap: balance;
 }
@@ -2552,7 +2552,7 @@ body.vertical-maps .place-card h2,
 body.vertical-maps article.place h1 {
   font-family: var(--font);
   font-weight: 400;
-  line-height: 1.08;
+  line-height: 1;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
@@ -2807,7 +2807,7 @@ html[data-theme="light"] .home-feed-view.is-active {
   color: var(--text);
   text-align: center;
   font-size: 0.875rem;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .demo-media-credit {

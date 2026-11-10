@@ -34,7 +34,7 @@ class Webhooks::TradedoublerControllerTest < ActionDispatch::IntegrationTest
       transactionId: "t-accept",
       orderNumber: "O1",
       publisherCommission: "1.00",
-      epi: "city:bergen"
+      epi: "city:bergen",
     }
     assert_response :ok
     assert Shared::AffiliateConversion.exists?(transaction_id: "t-accept", message_type_id: 5)

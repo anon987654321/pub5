@@ -88,7 +88,7 @@ class PortsController < ApplicationController
     render json: {
       summary: Ports::ExploreAssistant.summarize(@port),
       pkgpath: @port.pkgpath,
-      tree: Dependency.tree_for(@port)
+      tree: Dependency.tree_for(@port),
     }
   end
 
@@ -108,7 +108,7 @@ class PortsController < ApplicationController
       metadata: {
         issues: result.issues.map(&:to_s),
         source_status: result.source_status.to_s,
-        source_path: result.source_path
+        source_path: result.source_path,
       }
     )
     # In place on the page, beside the button; a redirect left the result as

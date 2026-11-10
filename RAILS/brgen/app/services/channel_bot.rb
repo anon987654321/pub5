@@ -25,36 +25,36 @@ class ChannelBot
   PERSONAS = {
     "master" => {
       emoji: "▲",
-      voice: "MASTER, a calm constitutional local AI. Grounded, concrete, active voice, never hedges."
+      voice: "MASTER, a calm constitutional local AI. Grounded, concrete, active voice, never hedges.",
     },
     "echo" => {
       emoji: "◇",
-      voice: "a quick, playful regular who riffs warmly on whatever people say. Keeps it light."
+      voice: "a quick, playful regular who riffs warmly on whatever people say. Keeps it light.",
     },
     "curator" => {
       emoji: "▣",
-      voice: "a sharp-eyed marketplace regular who knows fair prices and spotting a good deal."
+      voice: "a sharp-eyed marketplace regular who knows fair prices and spotting a good deal.",
     },
     "cupid" => {
       emoji: "❤",
-      voice: "a warm, tactful dating-scene regular with low-key first-date ideas."
+      voice: "a warm, tactful dating-scene regular with low-key first-date ideas.",
     },
     "dj" => {
       emoji: "♪",
-      voice: "a crate-digging music head who reacts to tracks and rallies listening parties."
+      voice: "a crate-digging music head who reacts to tracks and rallies listening parties.",
     },
     "critic" => {
       emoji: "▶",
-      voice: "a witty TV/film regular who reacts to what's airing without spoilers."
+      voice: "a witty TV/film regular who reacts to what's airing without spoilers.",
     },
     "foodie" => {
       emoji: "●",
-      voice: "a hungry local who knows how to find a good meal in the city."
+      voice: "a hungry local who knows how to find a good meal in the city.",
     },
     "scout" => {
       emoji: "◎",
-      voice: "a local map scout with directions, hidden spots and honest tips."
-    }
+      voice: "a local map scout with directions, hidden spots and honest tips.",
+    },
   }.freeze
 
   # --- seating & lifecycle ------------------------------------------------

@@ -34,7 +34,7 @@ class Marketplace::ListingKronerFieldsTest < ActionDispatch::IntegrationTest
 
   test "a price typed as 250,50 is stored as 25050 øre" do
     post marketplace.listings_path, params: {
-      listing: { title: "Sykkelhjelm", kind: "goods", price_kroner: "250,50", category_id: @category.id }
+      listing: { title: "Sykkelhjelm", kind: "goods", price_kroner: "250,50", category_id: @category.id },
     }
 
     assert_redirected_to %r{/listings/}
@@ -44,7 +44,7 @@ class Marketplace::ListingKronerFieldsTest < ActionDispatch::IntegrationTest
   test "a price that is not an amount is refused with the form" do
     assert_no_difference -> { Marketplace::Listing.count } do
       post marketplace.listings_path, params: {
-        listing: { title: "Sykkelhjelm", kind: "goods", price_kroner: "tjue", category_id: @category.id }
+        listing: { title: "Sykkelhjelm", kind: "goods", price_kroner: "tjue", category_id: @category.id },
       }
     end
 
@@ -55,7 +55,7 @@ class Marketplace::ListingKronerFieldsTest < ActionDispatch::IntegrationTest
   test "rent and deposit are typed in kroner" do
     post marketplace.listings_path, params: {
       listing: { title: "Hybel", kind: "housing", category_id: @category.id,
-                 housing_detail_attributes: { rent_kroner: "8 500", deposit_kroner: "25000" } }
+                 housing_detail_attributes: { rent_kroner: "8 500", deposit_kroner: "25000" } },
     }
 
     detail = Marketplace::Listing.order(:id).last.housing_detail

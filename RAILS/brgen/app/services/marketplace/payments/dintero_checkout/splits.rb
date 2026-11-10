@@ -66,7 +66,7 @@ module Marketplace
           raise SellerNotReady, "Dintero platform fee exceeds order total" if seller_amount.negative?
 
           splits = [
-            { payout_destination_id: seller_destination, amount: seller_amount }
+            { payout_destination_id: seller_destination, amount: seller_amount },
           ]
           if fee.positive?
             platform_destination = ENV["DINTERO_PLATFORM_PAYOUT_DESTINATION_ID"].to_s

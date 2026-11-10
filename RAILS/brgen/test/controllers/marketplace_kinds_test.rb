@@ -90,7 +90,7 @@ class MarketplaceKindsTest < ActionDispatch::IntegrationTest
     post marketplace.listings_path, params: {
       listing: { title: "Smuglet #{SecureRandom.hex(2)}", kind: "job", category_id: @category.id,
                  job_detail_attributes: { employer: "Ekte" },
-                 housing_detail_attributes: { rent_cents: 999_00 } }
+                 housing_detail_attributes: { rent_cents: 999_00 } },
     }
     listing = Marketplace::Listing.order(:created_at).last
     assert_equal "Ekte", listing.job_detail.employer
@@ -102,7 +102,7 @@ class MarketplaceKindsTest < ActionDispatch::IntegrationTest
     goods = create_listing("goods")
 
     patch marketplace.listing_path(goods), params: {
-      listing: { title: "Sofa, fortsatt", kind: "job", job_detail_attributes: { employer: "Smuglet" } }
+      listing: { title: "Sofa, fortsatt", kind: "job", job_detail_attributes: { employer: "Smuglet" } },
     }
 
     goods.reload
@@ -202,8 +202,8 @@ end
         condition: "very_good",
         location: "Bergen",
         source: "shop",
-        store_id: store.id
-      }
+        store_id: store.id,
+      },
     }
 
     assert_redirected_to %r{/listings/}

@@ -18,7 +18,7 @@ class JobConcurrencyTest < ActiveSupport::TestCase
     GenerateBlurhashJob => [ 42 ],
     ChannelBotReplyJob => [ 7 ],
     ListingExpiryJob => [],
-    SavedSearchAlertJob => []
+    SavedSearchAlertJob => [],
   }.freeze
 
   CASES.each do |klass, args|

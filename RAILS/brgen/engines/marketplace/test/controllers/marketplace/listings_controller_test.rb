@@ -180,7 +180,7 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference -> { Marketplace::Listing.count }, 1 do
       post marketplace.listings_path, params: {
-        listing: { title: "Sykkelhjelm", kind: "goods", price_cents: 34_900, category_id: @category.id }
+        listing: { title: "Sykkelhjelm", kind: "goods", price_cents: 34_900, category_id: @category.id },
       }
     end
 
@@ -202,7 +202,7 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_no_difference -> { Marketplace::Listing.count } do
       post marketplace.listings_path, params: {
-        listing: { title: "", kind: "goods", price_cents: 34_900, category_id: @category.id }
+        listing: { title: "", kind: "goods", price_cents: 34_900, category_id: @category.id },
       }
     end
 
@@ -215,7 +215,7 @@ class Marketplace::ListingsControllerTest < ActionDispatch::IntegrationTest
   test "an anonymous visitor lists without signing up" do
     assert_difference -> { Marketplace::Listing.count }, 1 do
       post marketplace.listings_path, params: {
-        listing: { title: "Stol fra en gjest", kind: "goods", price_cents: 1_500, category_id: @category.id }
+        listing: { title: "Stol fra en gjest", kind: "goods", price_cents: 1_500, category_id: @category.id },
       }
     end
 

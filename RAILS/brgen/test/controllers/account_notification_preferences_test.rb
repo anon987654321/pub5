@@ -35,7 +35,7 @@ class AccountNotificationPreferencesTest < ActionDispatch::IntegrationTest
     post session_path, params: { email_address: @user.email_address, password: "password123" }
 
     patch account_notification_preferences_path, params: {
-      preferences: { follow: { push: "0", email: "1" }, mention: { push: "1", email: "0" } }
+      preferences: { follow: { push: "0", email: "1" }, mention: { push: "1", email: "0" } },
     }
 
     @user.reload

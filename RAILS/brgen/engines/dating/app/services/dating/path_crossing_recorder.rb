@@ -26,7 +26,7 @@ class Dating::PathCrossingRecorder
       longitude: @longitude,
       expires_at: @now + WINDOW,
       created_at: @now,
-      updated_at: @now
+      updated_at: @now,
     }
     Dating::LocationPing.upsert(
       ping,

@@ -55,7 +55,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
       anonymous: "Anonym #{SecureRandom.hex(3)}",
       live: "Live #{SecureRandom.hex(3)}",
       removed: "Fjernet #{SecureRandom.hex(3)}",
-      private: "Lukket #{SecureRandom.hex(3)}"
+      private: "Lukket #{SecureRandom.hex(3)}",
     }
     write = ->(title, community: nil, **state) do
       Post.create!(user: author, city: @city, community:, title:, content: "hei").tap do |row|
@@ -188,7 +188,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
         email_address: email,
         username:,
         password: "password123",
-        password_confirmation: "password123"
+        password_confirmation: "password123",
       }
     }
 

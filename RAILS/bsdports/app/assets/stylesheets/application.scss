@@ -29,7 +29,6 @@ kbd { padding: var(--space-0-5) 4px; border: 1px solid var(--border); border-bot
 // ============================================================ module: bsdports_shared_chrome
 // BSDPorts stylesheet module; loaded by application.scss in cascade order.
 
-
 @include meta.load-css("site_legal");
 
 // The shared brand mark sits fixed at the top inline-start, where the primary
@@ -53,7 +52,6 @@ nav[data-pwa-primary-nav] {
 // ============================================================ ports shell
 // ============================================================ module: bsdports_tokens
 // BSDPorts stylesheet module; loaded by application.scss in cascade order.
-
 
 .nav-actions {
   display: flex;

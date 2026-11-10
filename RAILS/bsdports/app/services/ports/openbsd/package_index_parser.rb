@@ -39,7 +39,7 @@ module Ports
           pkgpath: "#{Ports::Openbsd::PackageIndexParser::SYNTHETIC_PREFIX}/#{stem}",
           category: Ports::Openbsd::PackageIndexParser::SYNTHETIC_CATEGORY,
           comment: nil,
-          maintainer: nil
+          maintainer: nil,
         }
       end
 

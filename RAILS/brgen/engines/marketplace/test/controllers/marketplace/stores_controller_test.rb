@@ -81,7 +81,7 @@ class Marketplace::StoresControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference -> { Marketplace::Store.count }, 1 do
       post marketplace.shops_path, params: {
-        store: { name: "Fjell Sport", vertical: "sports", description: "Utstyr til fjellet" }
+        store: { name: "Fjell Sport", vertical: "sports", description: "Utstyr til fjellet" },
       }
     end
 

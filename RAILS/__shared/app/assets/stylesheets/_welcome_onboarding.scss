@@ -5,7 +5,7 @@
   z-index: var(--z-modal);
   display: grid;
   place-items: center;
-  padding: calc(var(--safe-top) + var(--space-4)) var(--space-4) calc(var(--safe-bottom) + var(--space-4));
+  padding: var(--space-4) var(--space-4) var(--space-4);
   background: var(--scrim-deep);
 }
 
@@ -44,7 +44,7 @@
 .welcome-onboarding-monogram {
   font-family: var(--font-brand);
   font-size: clamp(10rem, 28vw, 24rem);
-  line-height: 0.8;
+  line-height: 1;
   letter-spacing: -0.06em;
   color: var(--text);
   opacity: 0.08;
@@ -118,7 +118,7 @@
 
 .welcome-onboarding-steps strong {
   display: block;
-  margin-top: 0.1rem;
+  margin-top: 0.125rem;
 }
 
 .welcome-onboarding-steps p {

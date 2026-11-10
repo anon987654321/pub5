@@ -12,7 +12,7 @@ class InternalController < ApplicationController
     render json: {
       app: "brgen",
       revision: app_revision,
-      generated_at: Time.now.utc.iso8601
+      generated_at: Time.now.utc.iso8601,
     }
   end
 
@@ -28,7 +28,7 @@ class InternalController < ApplicationController
       tv_live_streams: Tv::LiveStream.live.count,
       dating_profiles: Dating::Profile.count,
       dilla_engine: Shared::DillaProcessor.available?,
-      master_client: Contracts::MasterClient.configured?
+      master_client: Contracts::MasterClient.configured?,
     }
   end
 

@@ -112,7 +112,7 @@ class DomainRegistryTest < ActiveSupport::TestCase
         "www.#{entry.domain}",
         "#{entry.domain}:443",
         "www.#{entry.domain}:8443",
-        "#{entry.domain}."
+        "#{entry.domain}.",
       ].each do |host|
         normalized = Brgen::DomainRegistry.normalize_host(host)
         assert_equal normalized, Brgen::DomainRegistry.normalize_host(normalized),
@@ -135,7 +135,7 @@ class DomainRegistryTest < ActiveSupport::TestCase
       "brgen.no..",
       "bad_host.brgen.no",
       "-bad.brgen.no",
-      "bad-.brgen.no"
+      "bad-.brgen.no",
     ].each do |host|
       assert_equal "", Brgen::DomainRegistry.normalize_host(host), "#{host.inspect} should not normalize to a registered hostname"
       assert_raises(Brgen::DomainRegistry::UnknownHost) { Brgen::DomainRegistry.resolve(host) }

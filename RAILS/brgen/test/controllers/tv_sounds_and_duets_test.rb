@@ -31,7 +31,7 @@ class TvSoundsAndDuetsTest < ActionDispatch::IntegrationTest
 
   def upload(channel, title, **video_params)
     post tv.channel_videos_path(channel), params: {
-      video: { title: title, video_file: video_upload }.merge(video_params)
+      video: { title: title, video_file: video_upload }.merge(video_params),
     }
     Tv::Video.order(:created_at).last
   end

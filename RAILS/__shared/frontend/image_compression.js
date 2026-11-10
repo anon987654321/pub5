@@ -25,7 +25,7 @@ export function fitWithin(width, height, maxEdge = MAX_EDGE) {
 }
 
 export function smaller(original, candidate) {
-  return candidate && candidate.size < original.size ? candidate : original
+  return candidate?.size < original.size ? candidate : original
 }
 
 export async function compressImage(file, { maxEdge = MAX_EDGE, quality = QUALITY } = {}) {
