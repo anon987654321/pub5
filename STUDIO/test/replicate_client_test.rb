@@ -134,7 +134,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
       assert_raises(ArgumentError, url) { @client.send(:api_uri, url) }
     end
   end
-  
+
   def test_download_is_atomic_and_streamed_under_the_declared_byte_cap
     Dir.mktmpdir do |directory|
       target = File.join(directory, "audio.wav")

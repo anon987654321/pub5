@@ -45,7 +45,6 @@ means the inventory is present, while `complete` means all reported directions a
 and enabled. These are separate questions by design. A log file named `postpro.log` also sits
 in the folder; it is output, and git should not carry it.
 
-
 ## Restored historical creative vocabulary
 
 The `pub` v12.9/v13.3.14 and `pub2` v14.2 vocabularies are preserved as

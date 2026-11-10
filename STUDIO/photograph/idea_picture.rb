@@ -81,7 +81,7 @@ module Studio
           output_format: "jpg",
           output_quality: 95,
           go_fast: false,
-          lora_scale: 1.0
+          lora_scale: 1.0,
         }
       end
 
@@ -92,7 +92,7 @@ module Studio
           duration:,
           mode: "quality",
           aspect_ratio: "2:3",
-          resolution: "768p"
+          resolution: "768p",
         }
       end
 

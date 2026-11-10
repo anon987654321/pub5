@@ -119,7 +119,6 @@ module Studio
   end
 end
 
-
 module Studio
   module ALS
     class Inventory

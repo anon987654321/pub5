@@ -425,7 +425,6 @@ class TestDillaIndustrialTechno < Minitest::Test
   end
 end
 
-
 class TestDillaArrangementAndOfflineExport < Minitest::Test
   def test_showcase_is_a_real_24_bar_multi_progression_arrangement
     show = Dilla.showcase_data
@@ -474,7 +473,6 @@ class TestDillaArrangementAndOfflineExport < Minitest::Test
   end
 end
 
-
 class TestDillaStyleProfileRouting < Minitest::Test
   def test_style_profile_selects_its_own_progression_voice_and_groove
     opts = Dilla::Options.new
@@ -493,7 +491,6 @@ class TestDillaStyleProfileRouting < Minitest::Test
     assert_equal "coltrane_soup", plan.fetch(:arrangement)[2].fetch("progression")
   end
 end
-
 
 class TestDillaInstrumentVelocity < Minitest::Test
   def rms(samples)
@@ -522,7 +519,6 @@ class TestDillaInstrumentVelocity < Minitest::Test
     assert_operator rms(loud), :>, rms(quiet)
   end
 end
-
 
 class TestDillaFMDrumVoices < Minitest::Test
   def rms(samples)
@@ -554,7 +550,6 @@ class TestDillaFMDrumVoices < Minitest::Test
     refute_equal dust.dig("hat", "fm_ratio"), basement.dig("hat", "fm_ratio")
   end
 end
-
 
 class TestDillaRoyksoppProfile < Minitest::Test
   def test_royksopp_is_a_distinct_six_chord_synth_pop_lane

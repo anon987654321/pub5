@@ -180,7 +180,6 @@ class TestAbletonLiveSetRecovery < Minitest::Test
   end
 end
 
-
 class TestAbletonArchiveInventory < Minitest::Test
   def test_directory_scan_indexes_good_sets_and_keeps_going_after_bad_files
     Dir.mktmpdir do |directory|
@@ -207,7 +206,6 @@ class TestAbletonArchiveInventory < Minitest::Test
     end
   end
 end
-
 
 class TestAbletonAudioBridge < Minitest::Test
   def executable(path, body)

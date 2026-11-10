@@ -90,7 +90,6 @@ balance, the sample-flip bounds, the reference profile schema and the
 analyzer's tempo measurement. Full-catalogue renders are a session activity,
 not a test.
 
-
 ## Composed profiles and offline score export
 
 The curated showcase is a section-aware 24-bar form, not one progression looped across the entire render. Each section can select a progression, drum grammar, active lanes, source patch and target patch; patch changes are crossfaded sample-by-sample over the section.
@@ -100,7 +99,6 @@ Use `--style` to select a local production profile: `j_dilla`, `flying_lotus`, `
 The optional scale-locked FM accent lane is mixed under the main harmony. Use `--foley` to request it on a normal render. `--midi` writes the sequenced score as a multi-track Standard MIDI file; `--midi-out PATH` selects its destination. The core score, instruments and export are Ruby-only and require no Replicate, OpenRouter, Python packages, or paid API.
 
 A new soul-clap lane is synthesized locally from staggered filtered-noise bursts. Swing, timing offsets and recurring step deviations are independent profile controls: repeated lane/step positions retain their calibrated timing relationship across the arrangement rather than receiving unrelated random offsets every bar. Tape wow/flutter now modulates sample position (transport speed) rather than only changing channel amplitude, with a speed-specific head-bump stage.
-
 
 ## Ableton Live Set recovery
 
@@ -160,7 +158,6 @@ then optionally processed with local FFmpeg filters. Those are optional render s
 export and MIDI generation need no network, API key, Python package or gem.
 Check a local FFmpeg build with `ffmpeg -filters` before relying on a
 particular analog filter.
-
 
 ## Ableton recovery — DeepSeek handoff
 
