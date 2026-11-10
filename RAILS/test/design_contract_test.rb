@@ -335,9 +335,28 @@ def test_brgen_old_dialect_outranks_the_social_stack
     welcome = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_welcome_onboarding.scss"))
     onboarding = welcome[/\.welcome-onboarding\s*\{([^}]*)\}/m, 1]
 
-    assert_match(/padding:\s*max\(var\(--space-8\),\s*env\(safe-area-inset-top\)\)\s+var\(--space-4\)\s+max\(var\(--space-6\),\s*env\(safe-area-inset-bottom\)\)/, splash)
-    assert_match(/padding:\s*max\(var\(--space-3\),\s*env\(safe-area-inset-top\)\)\s+var\(--space-3\)\s+max\(var\(--space-16\),\s*env\(safe-area-inset-bottom\)\)/, discover)
-    assert_match(/padding:\s*calc\(var\(--safe-top\)\s*\+\s*var\(--space-4\)\)\s+var\(--space-4\)\s+calc\(var\(--safe-bottom\)\s*\+\s*var\(--space-4\)\)/, onboarding)
+    splash_padding = %r{
+      padding:\s*
+      max\(var\(--space-8\),\s*env\(safe-area-inset-top\)\)\s+
+      var\(--space-4\)\s+
+      max\(var\(--space-6\),\s*env\(safe-area-inset-bottom\)\)
+    }x
+    discover_padding = %r{
+      padding:\s*
+      max\(var\(--space-3\),\s*env\(safe-area-inset-top\)\)\s+
+      var\(--space-3\)\s+
+      max\(var\(--space-16\),\s*env\(safe-area-inset-bottom\)\)
+    }x
+    onboarding_padding = %r{
+      padding:\s*
+      calc\(var\(--safe-top\)\s*\+\s*var\(--space-4\)\)\s+
+      var\(--space-4\)\s+
+      calc\(var\(--safe-bottom\)\s*\+\s*var\(--space-4\)\)
+    }x
+
+    assert_match(splash_padding, splash)
+    assert_match(discover_padding, discover)
+    assert_match(onboarding_padding, onboarding)
   end
 
 end
