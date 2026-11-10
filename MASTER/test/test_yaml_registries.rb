@@ -381,6 +381,11 @@ class TestConstitutionYamlLoading < Minitest::Test
     # standalone tests that boot no Master to load through
     test/test_configuration_guard.rb
     test/test_laws_reflow.rb
+    # test_conversation_probe derives a mutable rubric variant from the shipped
+    # one and writes it into a temp root; Master.load_yaml returns a deep-frozen
+    # cached tree, so a mutation there would raise FrozenError. The probe's own
+    # runtime read of the written variant still goes through the loader.
+    test/test_conversation_probe.rb
   ].freeze
 
   def test_data_yml_runtime_readers_use_master_loader

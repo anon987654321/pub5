@@ -28,7 +28,10 @@ class TestBootSmoke < Minitest::Test
   end
 
   def test_pre_push_runs_the_smoke
-    hook = File.read(File.join(ROOT, "..", "OPENBSD", "dev", "githooks", "pre-push"))
+    # The canonical hook is .githooks/pre-push at the checkout top; the
+    # OPENBSD/dev/githooks copy was retired with the duplicate trees
+    # (787c8f1b), and this test kept reading the retired path.
+    hook = File.read(File.join(ROOT, "..", ".githooks", "pre-push"))
     assert_includes hook, "boot_smoke.rb"
   end
 end
