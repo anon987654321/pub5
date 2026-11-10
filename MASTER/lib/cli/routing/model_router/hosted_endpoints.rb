@@ -99,7 +99,14 @@ module Master
           def hosted_ids(spec, key)
             headers = key ? { "Authorization" => "Bearer #{key}" } : {}
             body = get_json("#{spec["base"].chomp("/")}/models", headers:, timeout: HOSTED_TIMEOUT_S)
-            rows = Array(JSON.parse(body.to_s)["data"]).select { |row| row.fetch("model_type", "chat") == "chat" }
+            parsed = JSON.parse(body.to_s)
+            # The OpenAI convention is {"data": [...]} of id-keyed rows; some
+            # endpoints (Pollinations) answer a bare array of name-keyed rows
+            # instead. Parse both shapes: indexing a bare array with ["data"]
+            # raises TypeError, and the rescue below would then silently empty
+            # the lane on a 200 response.
+            rows = (parsed.is_a?(Hash) ? Array(parsed["data"]) : Array(parsed))
+                   .select { |row| row.is_a?(Hash) && row.fetch("model_type", "chat") == "chat" }
             unless key
               keyless = spec["keyless"].is_a?(Hash) ? spec["keyless"] : {}
               # `allow` names the keyless model ids outright, for endpoints whose
@@ -108,11 +115,12 @@ module Master
               allow = Array(keyless["allow"]).map(&:to_s)
               rules = keyless.reject { |field, _| field == "allow" }
               rows = rows.select do |row|
-                (allow.empty? || allow.include?(row["id"].to_s)) &&
+                id = row["id"] || row["name"]
+                (allow.empty? || allow.include?(id.to_s)) &&
                   rules.all? { |field, want| row[field] == want }
               end
             end
-            rows.filter_map { |row| row["id"] }
+            rows.filter_map { |row| row["id"] || row["name"] }
           rescue StandardError => e
             Master::Ground::Swallow.log(e, context: "model_router.hosted", endpoint: spec["base"])
             []

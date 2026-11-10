@@ -619,6 +619,24 @@ openai_compatible:
         - Qwen3.5-397B-A17B
         - Qwen3.6-27B
         - Qwen3.8-27B
+  # Verified keyless 2026-11-11 from a cold sandbox, zero credentials: GET
+  # /openai/models and POST /openai/chat/completions both answered 200 and
+  # openai-fast (GPT-OSS 20B relayed via OVH) replied; probe artifacts in the
+  # audit pack's zero_key/verified_lanes.json. The listing is a bare JSON
+  # array of name-keyed rows — hosted_endpoints reads both listing shapes.
+  # The anonymous tier self-describes (`tier: anonymous`, one row today), so
+  # the lane follows catalogue drift without an allow list. Documented
+  # anonymous pacing is 1 concurrent request / 6 s (pollinations GitHub
+  # #4817), mirrored in the caps below. One model deep: a spare rung, not a
+  # spine.
+  pollinations:
+    base: https://text.pollinations.ai/openai
+    key_env: [POLLINATIONS_API_KEY]
+    keyless_max_concurrency: 1
+    concurrency_wait_seconds: 6
+    quota_bucket: pollinations
+    keyless:
+      tier: anonymous
   # Z.ai (Zhipu GLM), OpenAI-compatible. Endpoint declared but unverified from
   # this checkout: verify with a keyed probe on /models before the first paid
   # call, the way the keyless rows above name their verification dates.

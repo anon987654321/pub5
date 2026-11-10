@@ -436,6 +436,54 @@ class TestKeylessRouting < Minitest::Test
     server&.close
   end
 
+  # Pollinations answers GET /models with a bare JSON array of name-keyed
+  # rows — no "data" envelope, no "id" field. hosted_ids reads both listing
+  # shapes (indexing an Array with ["data"] raises TypeError, which the
+  # rescue would swallow into an empty lane), and the anonymous tier
+  # (`tier: anonymous`) joins the keyless lanes without an allow list; a key
+  # still opens every chat row the listing carries.
+  def test_a_bare_array_listing_with_name_keyed_rows_still_serves_keyless
+    rows = [
+      { "name" => "openai-fast", "tier" => "anonymous", "description" => "GPT-OSS 20B Reasoning LLM (OVH)" },
+      { "name" => "seed-tier", "tier" => "seed" },
+    ]
+    server = TCPServer.new("127.0.0.1", 0)
+    body = JSON.generate(rows)
+    thread = Thread.new do
+      2.times do
+        socket = server.accept
+        headers = []
+        headers << socket.gets.to_s.strip until headers.last == ""
+        socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
+        socket.close
+      end
+    end
+    ENV.delete("MASTER_NO_POOL_PROBES")
+    spec = { "base" => "http://127.0.0.1:#{server.addr[1]}/openai", "key_env" => ["POLLINATIONS_TEST_KEY"],
+             "keyless_max_concurrency" => 1, "concurrency_wait_seconds" => 6, "quota_bucket" => "pollinations",
+             "keyless" => { "tier" => "anonymous" } }
+    build = lambda do
+      router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
+      router.instance_variable_get(:@rules)["openai_compatible"] = { "pollinations" => spec }
+      router.define_singleton_method(:start_pool_probes) { {} }
+      router
+    end
+
+    keyless = build.call
+    assert_equal ["pollinations:openai-fast"], keyless.hosted_models
+    assert_equal 1, keyless.hosted_endpoint_for("pollinations:openai-fast")[:max_concurrency]
+    assert_equal "pollinations", keyless.hosted_endpoint_for("pollinations:openai-fast")[:quota_bucket]
+
+    ENV["POLLINATIONS_TEST_KEY"] = "sk-test"
+    keyed = build.call
+    assert_equal ["pollinations:openai-fast", "pollinations:seed-tier"], keyed.hosted_models.sort
+  ensure
+    ENV.delete("POLLINATIONS_TEST_KEY")
+    ENV["MASTER_NO_POOL_PROBES"] = "1"
+    thread&.kill
+    server&.close
+  end
+
   # A local or explicitly trusted OpenAI-compatible gateway joins the
   # existing pool only after its URL is set. The URL's host and model ids are
   # discovered through the same endpoint catalogue used by other hosted lanes.
