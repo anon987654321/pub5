@@ -150,6 +150,18 @@ class TestFixModelPhaseGuards < Minitest::Test
     assert_equal 1, seen.size
   end
 
+  def test_a_commit_refusal_is_retried_once_with_the_committer_reason
+    loop, seen = retry_loop(%i[commit_refused applied])
+
+    out, = capture_io do
+      assert_equal :applied, loop.send(:fix_violation, { file: "lib/a.rb", law: "TEST_LAW" })
+    end
+
+    assert_equal 2, seen.size
+    assert_includes seen.last, "lines 1-9 are outside 4-6"
+    assert_includes out, "retrying a.rb TEST_LAW once"
+  end
+
   def test_the_retry_switch_turns_the_second_try_off
     loop, seen = retry_loop(%i[out_of_scope applied])
     previous = ENV["MASTER_FIX_RETRY"]
