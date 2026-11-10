@@ -318,13 +318,19 @@ module Master
       def subordinate(unit, text, io:, indent:, style:, maxch:, maxln:, marker:)
         body = as_utf8_text(text.to_s).scrub.gsub(ANSI, "").delete("\r")
         body = body.gsub(/[[:cntrl:]&&[^\n\t]]/, "")
-        lines = body.split("\n", -1)
-        lines.pop if lines.last == "" && body.end_with?("\n")
+        total_lines = body.count("\n")
+        total_lines += 1 unless body.empty? || body.end_with?("\n")
+        lines = []
+        body.each_line do |line|
+          break if lines.size >= maxln
+
+          lines << line
+        end
         return if lines.empty?
 
         pad = " " * indent
         prefix = unit.to_s.empty? ? "" : "#{unit}: "
-        rendered = lines.first(maxln).map do |line|
+        rendered = lines.map do |line|
           flat = line.rstrip
           if flat.length > maxch
             keep = [maxch - marker.length, 0].max
@@ -332,7 +338,7 @@ module Master
           end
           "#{pad}#{prefix}#{flat}"
         end
-        omitted = lines.size - rendered.size
+        omitted = total_lines - rendered.size
         rendered << "#{pad}#{prefix}#{marker} #{omitted} more line(s)" if omitted.positive?
 
         terminal_write(io:, guard: true) do |target|

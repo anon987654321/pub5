@@ -135,7 +135,7 @@ module Master
           return unless defined?(Master::Trace::Dmesg) && Master::Trace::Dmesg.detail_enabled?
 
           rendered = begin
-            JSON.pretty_generate(payload)
+            payload.is_a?(String) ? payload : JSON.pretty_generate(payload)
           rescue StandardError
             payload.to_s
           end
