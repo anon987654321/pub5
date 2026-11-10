@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "ground/reminder_time"
 require "ground/assistant_tasks"
 require "cli/session"

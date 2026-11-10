@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require_relative "../lib/fix/repair_loop"
 
 # A model repair must not be asked for a file no automated writer may change:

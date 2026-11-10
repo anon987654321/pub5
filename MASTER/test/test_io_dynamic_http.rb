@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 # DynamicHttp fetches a URL named in data/tools.dynamic.yml, which is a file an
 # operator edits and, through DynamicTools::PATHS, one that can also come from

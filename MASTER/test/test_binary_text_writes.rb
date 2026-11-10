@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "tmpdir"
 require_relative "../lib/trace/log"
 require_relative "../lib/trace/dmesg"

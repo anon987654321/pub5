@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "open3"
 
 # bin/doctor had no test. It is the tool an operator runs first on a host that

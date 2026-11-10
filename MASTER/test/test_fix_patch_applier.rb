@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 # the old backlog, Test coverage: no test named PatchApplier. It shells out to patch(1) and
 # is the mechanism every diff-mode autofix goes through, so "rejects malformed or

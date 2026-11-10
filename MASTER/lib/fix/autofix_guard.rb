@@ -21,7 +21,11 @@ module Master
     # State is per process, which is per run: one /fix is one process.
     module AutofixGuard
       MODES = %w[off dry on].freeze
-      DEFAULT_MAX_FILES = 15
+      # The cap is a runaway guard, not a throttle. The first RAILS /fix run
+      # (2026-11-09) held 2,316 files behind the old 15-file default and
+      # delivered a fraction of the tree; a real run's worklist is larger
+      # than 15 by design. Set MASTER_AUTOFIX_MAX_FILES to bound a run.
+      DEFAULT_MAX_FILES = 100_000
       TEST_TIMEOUT_S = 120
       DATA_EXTENSIONS = %w[.yml .yaml .json .tsv .csv .toml .conf].freeze
 

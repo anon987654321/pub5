@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "cli/skill_fixtures"
 
 # Approval reads every declared fixture first; a declared path was approval

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 # The scan lock was CREAT|EXCL plus an mtime sweep: a crash held the file for
 # five minutes, the sweep could delete a lock a slow scan still held, and a

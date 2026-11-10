@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 # SsrfGuard is the only thing standing between a prompt-injection payload and the runtime's own internal network, and
 # its whole contract is a list of ranges — the cheapest possible thing to get

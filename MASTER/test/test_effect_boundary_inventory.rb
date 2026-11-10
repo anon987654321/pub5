@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 # Consequential tools reach the world under a receipt: lib/builder.rb builds them
 # for the tool dispatcher and MCP, which wrap every call in Trace::ToolObserver,

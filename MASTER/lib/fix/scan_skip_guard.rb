@@ -16,6 +16,15 @@ module Master
       end
     end
 
+    # A mass skip whose cause is a lane cool-off, not a broken tree. The
+    # OPENBSD run of 2026-11-09 died here: three unanswered gateway calls put
+    # the lane silent for five minutes, five of 225 files were skipped, and the
+    # >2% guard aborted the whole pass for an outage that recovers on its own.
+    # The pass runner rescues this subclass, waits out the silence and rescans
+    # once; every other mass skip stays fatal.
+    class LaneCooloffSkipError < MassSkipError
+    end
+
     # Tallies the files a scan could not measure, by failure signature, and
     # refuses to let a systemic failure pass as a clean scan. A refusal of one
     # file (too long, binary, a symlink) is a fact about that file and is not
@@ -25,13 +34,20 @@ module Master
       MIN_SKIPS = 3
       SAME_CLASS_LIMIT = 20
       CLASS_PATTERN = /\b((?:[A-Z]\w*::)*[A-Z]\w*(?:Error|Exception))\b/
+      # The refusals a lane says while it cools off (LaneSilence.message,
+      # LaneQuota dead, lane_health's degraded report). Matched against the
+      # full skip message because the signature of such a refusal is usually
+      # just its wrapper error class.
+      TRANSIENT_PATTERN = /\bno \S+ answer in \d+ calls in a row\b|\bis skipped for \d+ minutes\b|\bdead \(quota\)\b|\bsilent \(no answer lately\)\b/
 
       def initialize
         @skipped = {}
+        @messages = {}
       end
 
       def reset!
         @skipped.clear
+        @messages.clear
         self
       end
 
@@ -41,6 +57,7 @@ module Master
         return if result.category == :validation
 
         @skipped[file] = self.class.signature(result.message)
+        @messages[file] = result.message.to_s
       end
 
       def check!(total:)
@@ -69,7 +86,19 @@ module Master
 
       def error(signature, count, total, reason)
         Master::Trace::Dmesg.status("fix0", "scan aborted, #{count} of #{total} file(s) skipped by #{signature}"[0, 200])
+        if transient?
+          note = "#{reason} (a lane cool-off recovers on its own: the pass waits out the silence and rescans once)"
+          return LaneCooloffSkipError.new(signature:, count:, total:, reason: note)
+        end
+
         MassSkipError.new(signature:, count:, total:, reason:)
+      end
+
+      # True when the mass skip is mostly lane cool-off refusals. Those come
+      # back on their own; a broken tree does not.
+      def transient?
+        transient = @messages.values.count { |message| TRANSIENT_PATTERN.match?(message) }
+        transient * 2 >= @skipped.size
       end
     end
   end

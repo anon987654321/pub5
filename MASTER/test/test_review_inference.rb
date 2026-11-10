@@ -107,7 +107,10 @@ class TestThroughInference < Minitest::Test
     ENV.delete("MASTER_AUTOFIX_MODE")
     Master::Fix::AutofixGuard.reset!
     assert_equal "on", Master::Fix::AutofixGuard.mode
-    assert_equal 15, Master::Fix::AutofixGuard::DEFAULT_MAX_FILES
+    # The cap is a runaway guard, not a throttle: the first RAILS /fix run
+    # (2026-11-09) held 2,316 files behind a 15-file default and delivered a
+    # fraction of the tree. A real run's worklist is larger than 15 by design.
+    assert_equal 100_000, Master::Fix::AutofixGuard::DEFAULT_MAX_FILES
   ensure
     saved.nil? ? ENV.delete("MASTER_AUTOFIX_MODE") : ENV["MASTER_AUTOFIX_MODE"] = saved
     Master::Fix::AutofixGuard.reset!

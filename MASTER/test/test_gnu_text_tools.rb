@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require_relative "../law/definition"
 
 # Master::Io::GnuTextTools is the one judge of data/laws.yml zsh.banned_commands:

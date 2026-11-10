@@ -214,7 +214,39 @@ module Master
           Kernel::RepairAdapter.new(**options)
         end
 
+        # A lane cool-off during the scan recovers on its own, so it must not
+        # cost the pass its life (the OPENBSD run of 2026-11-09 died exactly
+        # there). Wait out the silence, then rescan once; a second cool-off
+        # aborts the pass as before.
+        LANE_COOLOFF_MAX_WAIT_S = Master::Io::LaneSilence::SILENCE_COOLOFF_S + 30
+        LANE_COOLOFF_POLL_S = 10
+
         def violations(files)
+          attempt_violations(files)
+        rescue LaneCooloffSkipError => e
+          @bus&.publish("fix_loop:lane_cooloff", error: e.message[0, 200])
+          Master::Trace::Dmesg.status("fix0", "lane cool-off during scan; waiting for the lane, then rescanning"[0, 180])
+          wait_out_lane_cooloff
+          @skip_guard.reset!
+          attempt_violations(files)
+        end
+
+        def wait_out_lane_cooloff
+          waited = 0
+          while waited < LANE_COOLOFF_MAX_WAIT_S && lane_silent?
+            sleep(LANE_COOLOFF_POLL_S)
+            waited += LANE_COOLOFF_POLL_S
+          end
+        end
+
+        def lane_silent?
+          Master::Io::LaneSilence.silent?
+        rescue StandardError
+          # If the silence store cannot answer, do not wait on its account.
+          false
+        end
+
+        def attempt_violations(files)
           paths = Array(files)
           # Preview calls this outside observe_pass; seed the denominator here too
           # so the systemic-skip guard has accurate evidence in both paths.

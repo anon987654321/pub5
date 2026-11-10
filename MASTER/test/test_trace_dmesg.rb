@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 class TraceDmesgTest < Minitest::Test
   def test_dmesg_unit_is_defined_when_logging_is_loaded

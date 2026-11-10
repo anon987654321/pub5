@@ -7,7 +7,7 @@
 # gate is not closed merely because its test is authored: run it on pinned Ruby,
 # observe the regression, and retain the passing evidence before any fold.
 
-require "test_helper"
+require_relative "test_helper"
 require "tmpdir"
 require "open3"
 require "rbconfig"

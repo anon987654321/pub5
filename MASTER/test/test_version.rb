@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 class TestVersion < Minitest::Test
   def test_release_version_comes_from_the_root_version_file

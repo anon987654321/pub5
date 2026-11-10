@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 require "stringio"
 
 # The interactive session is the one surface that answers a fold's Request.

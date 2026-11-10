@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "test_helper"
 
 class TestRubySelectorEnvironment < Minitest::Test
   def test_malloc_stack_logging_is_removed_before_any_ruby_probe
