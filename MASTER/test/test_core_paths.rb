@@ -37,22 +37,23 @@ class TestCorePaths < Minitest::Test
     end
   end
 
-  # write_refusal judges a path by the MASTER that governs it, from whichever tree the caller works in.
+  # Operator decree 2026-11-09: nothing is sacred, so write_refusal refuses
+  # nothing inside the governed MASTER; paths outside it are still not its to judge.
   def test_write_refusal_names_the_reason_from_master_or_the_checkout
-    reason = "data/laws.yml is sacred: no automated writer may change it (soul.yml absolute.sacred_paths)"
-    assert_equal reason, Master::Core::Constitution::Paths.write_refusal("data/laws.yml", root: Master::ROOT)
-    assert_equal reason,
-                 Master::Core::Constitution::Paths.write_refusal("MASTER/data/laws.yml", root: Master::REPO_ROOT)
+    assert_nil Master::Core::Constitution::Paths.write_refusal("data/laws.yml", root: Master::ROOT)
+    assert_nil Master::Core::Constitution::Paths.write_refusal("MASTER/data/laws.yml", root: Master::REPO_ROOT)
     assert_nil Master::Core::Constitution::Paths.write_refusal("lib/fix/fix_loop.rb", root: Master::ROOT)
     assert_nil Master::Core::Constitution::Paths.write_refusal("../RAILS/brgen/app/models/post.rb", root: Master::ROOT)
   end
 
-  # A tree with no manifest of its own is held to this MASTER's, and its own files are not MASTER's to guard.
+  # A tree with no manifest of its own is held to this MASTER's — which the
+  # operator decree of 2026-11-09 retired: nothing is sacred, so no write is
+  # refused for sacredness, in the bare tree or in MASTER itself.
   def test_write_refusal_in_a_tree_without_a_manifest
     Dir.mktmpdir("core-paths-bare") do |root|
       assert_nil Master::Core::Constitution::Paths.write_refusal("data/laws.yml", root:)
     end
-    assert Master::Core::Constitution::Paths.write_refusal(File.join(Master::ROOT, "data", "soul.yml"))
+    assert_nil Master::Core::Constitution::Paths.write_refusal(File.join(Master::ROOT, "data", "soul.yml"))
   end
 
   def test_path_escape_is_treated_as_protected
