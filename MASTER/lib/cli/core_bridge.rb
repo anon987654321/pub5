@@ -79,7 +79,10 @@ module Master
             written_paths: mission.repository_writes(repository_root: workspace_root),
           )
         end
-        model ||= Master::Core::Model.new(**{ model_id:, chat: agent_chat(container, bus:) }.compact)
+        model ||= begin
+          slug, endpoint = fold_model(model_id, container)
+          Master::Core::Model.new(**{ model_id: slug, endpoint:, chat: agent_chat(container, bus:) }.compact)
+        end
         transcript = []
         observer = build_turn_observer(
           transcript, root: workspace_root, bus:, on_turn:, mission:, repository_delivery: delivery_authorized,
@@ -444,6 +447,49 @@ module Master
         return unless agent.respond_to?(:ask_once)
 
         AgentChat.new(agent, bus, nil, nil, ModelLadder.new(agent:, bus:))
+      end
+
+      # The Fold's brain rides the lane the booted agent resolved — the same id
+      # /model prints. A hosted lane (models.yml openai_compatible) cannot go
+      # to RubyLLM as a bare id: the registry's unknown-slug fallback is the
+      # keyed OpenRouter provider, which dies on the exact device the free
+      # tiers exist for. Hosted lanes translate to their OpenAI-compatible
+      # endpoint, the local bed to the native ollama provider; anything else
+      # keeps the bare-id path (a keyed lane whose slug the registry knows).
+      def fold_model(forced, container)
+        lane = forced.to_s.strip
+        agent = container && container[:agent]
+        if lane.empty? && agent.respond_to?(:model)
+          lane = agent.model.to_s.strip
+        end
+        return [nil, nil] if lane.empty?
+
+        router = agent.respond_to?(:model_router) ? agent.model_router : nil
+        endpoint =
+          if router.respond_to?(:hosted_endpoint_for)
+            router.hosted_endpoint_for(lane)
+          else
+            # The bin/master --fold entry passes no container, so a bare
+            # resolver carries the same rules from models.yml. HostedEndpoints
+            # is mixed into ModelRouter instances, which hold their rules in
+            # @rules (ModelRouter#load_laws reads exactly this file), and its
+            # live listing fetch rides Pool#get_json, so both modules ride the
+            # resolver and @rules is injected to match ModelRouter#initialize.
+            resolver = Object.new.extend(Master::CLI::Routing::ModelRouter::Pool)
+            resolver = resolver.extend(Master::CLI::Routing::ModelRouter::HostedEndpoints)
+            resolver.instance_variable_set(:@rules, Master.load_yaml(File.join(Master::ROOT, "data", "models.yml")) || {})
+            resolver.hosted_endpoint_for(lane)
+          end
+        if endpoint.is_a?(Hash) && endpoint[:base]
+          slug = lane.include?(":") ? lane.split(":", 2).last : lane
+          return [slug, { provider: :openai, base: endpoint[:base], key: endpoint[:key] }]
+        end
+        if lane.start_with?("ollama:") &&
+           (base = Master::Io::LaneSelection.config.dig("ollama", "default_base_url"))
+          return [lane.split(":", 2).last, { provider: :ollama, base: }]
+        end
+
+        [lane, nil]
       end
 
       # The Fold writes through World rather than the Io tools, so the turn's

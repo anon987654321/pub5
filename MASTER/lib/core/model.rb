@@ -158,8 +158,15 @@ module Master::Core
       beside the action, lowercase and terse.
     PROMPT
 
-    def initialize(model_id: ENV.fetch("MASTER_CORE_MODEL", DEFAULT_MODEL), chat: nil)
+    # endpoint: an optional lane the boot already resolved —
+    # { provider: :openai|:ollama, base:, key: } — handed down by
+    # CoreBridge#fold_model. Given an endpoint, chat dispatches to that lane's
+    # own URL instead of resolving @model_id through RubyLLM's registry, whose
+    # unknown-slug fallback is the keyed OpenRouter provider — dead on the
+    # zero-key devices the free tiers exist for.
+    def initialize(model_id: ENV.fetch("MASTER_CORE_MODEL", DEFAULT_MODEL), endpoint: nil, chat: nil)
       @model_id = model_id
+      @endpoint = endpoint
       @chat = chat
     end
 
@@ -208,16 +215,45 @@ module Master::Core
 
     # with_format, not RubyLLM's with_schema: that one parses the reply into a
     # Hash, and parse reads text. A chat without it decodes unconstrained.
+    # Hosted keyless gateways vary in structured-output support and a rejected
+    # response_format would kill the turn, so endpoint lanes stay unconstrained
+    # — parse is total, and a malformed reply is a note the loop can react to.
     def ask(prompt, schema)
       held = chat.with_instructions(SYSTEM)
-      held = held.with_format(schema) if held.respond_to?(:with_format)
+      held = held.with_format(schema) if held.respond_to?(:with_format) && @endpoint.nil?
       held.ask(prompt).content.to_s
     end
 
     def chat
       @chat ||= begin
         require "ruby_llm"
-        RubyLLM.chat(model: @model_id)
+        if @endpoint.is_a?(Hash) && @endpoint[:base]
+          provider_kind = @endpoint.fetch(:provider, :openai)
+          ctx = RubyLLM.context do |config|
+            if provider_kind == :openai
+              # RubyLLM refuses to configure a provider with no credential, so
+              # a keyless lane presents a placeholder value; it never reaches
+              # the wire because the header is dropped below — a hosted
+              # keyless endpoint refuses a bogus bearer (kilo answers 401 to a
+              # placeholder token, 200 to no header at all).
+              config.openai_api_key = @endpoint[:key] || "keyless"
+              config.openai_api_base = @endpoint[:base]
+            else
+              config.ollama_api_base = @endpoint[:base]
+            end
+          end
+          chat = ctx.chat(model: @model_id, provider: provider_kind, assume_model_exists: true)
+          if provider_kind == :openai && @endpoint[:key].nil?
+            # Transport::Connection#prepare stamps @provider.headers on every
+            # request, so a header-less singleton override is the one place a
+            # keyless request can lose its Authorization entirely.
+            provider = chat.instance_variable_get(:@provider)
+            provider&.define_singleton_method(:headers) { {} }
+          end
+          chat
+        else
+          RubyLLM.chat(model: @model_id)
+        end
       end
     end
   end

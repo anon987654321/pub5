@@ -112,13 +112,6 @@ module Master
                       label, errors)
         next unless row.is_a?(Hash)
 
-        # The posture is evidence, not a guess (ModelRouter::PrivacyPosture): a
-        # typo must fail here rather than silently parse to unknown downstream.
-        if row.key?("privacy_posture")
-          errors << "#{label}.privacy_posture must name a declared posture" unless
-            %w[anonymous logs_prompts trains_on_data unknown].include?(row["privacy_posture"])
-        end
-
         errors << "#{label}.base must be a non-empty URL" unless row["base"].is_a?(String) && row["base"].match?(/\Ahttps?:\/\//)
         validate_string_list(row["key_env"], "#{label}.key_env", errors, nonempty: true)
         if row.key?("daily_quota")
@@ -134,6 +127,13 @@ module Master
         end
         if row.key?("quota_bucket")
           errors << "#{label}.quota_bucket must be non-empty text" unless row["quota_bucket"].is_a?(String) && !row["quota_bucket"].empty?
+        end
+        if row.key?("privacy_posture")
+          # privacy_posture is the evidence field read by ModelRouter::HostedEndpoints
+          # (PrivacyPosture.parse); a typo would silently fall to :unknown there, so
+          # the guard pins the vocabulary instead of letting the else-branch absorb it.
+          errors << "#{label}.privacy_posture must be one of: anonymous, logs_prompts, trains_on_data, unknown" unless
+            %w[anonymous logs_prompts trains_on_data unknown].include?(row["privacy_posture"])
         end
         if row.key?("keyless")
           strict_fields(row["keyless"], %w[tier usage_based_only isFree allow], "#{label}.keyless", errors)
@@ -166,12 +166,14 @@ module Master
                                       kv_cache_type warm_probe privacy_posture],
                     "models.yml ollama", errors)
       ollama = data["ollama"].is_a?(Hash) ? data["ollama"] : {}
-      if ollama.key?("privacy_posture")
-        errors << "models.yml ollama.privacy_posture must name a declared posture" unless
-          %w[anonymous logs_prompts trains_on_data unknown].include?(ollama["privacy_posture"])
-      end
       errors << "models.yml ollama.enabled must be boolean" unless [true, false].include?(ollama["enabled"])
       errors << "models.yml ollama.probe must be boolean" if ollama.key?("probe") && ![true, false].include?(ollama["probe"])
+      if ollama.key?("privacy_posture")
+        # The local bed's posture is what lets a :sensitive dispatch ride ollama
+        # (ModelRouter::PrivacyPosture); same strict vocabulary as the hosted rows.
+        errors << "models.yml ollama.privacy_posture must be one of: anonymous, logs_prompts, trains_on_data, unknown" unless
+          %w[anonymous logs_prompts trains_on_data unknown].include?(ollama["privacy_posture"])
+      end
       %w[default_base_url keep_alive kv_cache_type].each do |field|
         errors << "models.yml ollama.#{field} must be non-empty text" unless ollama[field].is_a?(String) && !ollama[field].empty?
       end
