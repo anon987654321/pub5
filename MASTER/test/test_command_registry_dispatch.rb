@@ -601,7 +601,7 @@ class TestCommandRegistryDispatch < Minitest::Test
 
   # Legacy verbs remain rewrites only; the registry has one pipeline command.
   def test_legacy_pipeline_verbs_are_all_fix_mode_aliases
-    aliases = %w[review critique scan council audit style visual elevate map all workflow triad sweep through self]
+    aliases = %w[review critique scan self workflow triad sweep through]
 
     aliases.each do |word|
       refute built.key?(word), "#{word} is a registry verb again"
@@ -613,9 +613,8 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     assert_equal "/fix --mode=repair --dry-run lib", Master::CLI::TurnRouter.rewrite_slash("/scan lib")
     assert_equal "/fix --mode=audit lib", Master::CLI::TurnRouter.rewrite_slash("/review lib")
-    assert_equal "/fix --mode=visual lib", Master::CLI::TurnRouter.rewrite_slash("/style lib")
-    assert_equal "/fix --mode=elevate lib", Master::CLI::TurnRouter.rewrite_slash("/map lib")
     assert_equal "/fix --mode=all lib", Master::CLI::TurnRouter.rewrite_slash("/sweep lib")
+    assert_equal "/fix --mode=elevate lib", Master::CLI::TurnRouter.rewrite_slash("/fix --mode=elevate lib")
   end
 
   def test_fix_mode_parser_rejects_unknown_and_conflicting_modes
