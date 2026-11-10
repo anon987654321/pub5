@@ -44,7 +44,7 @@ module Master
             "marks the operator-facing strings wear, against laws.yml#typography.",
             "On a target inside one RAILS app, /fix then runs the layout loop on that app:",
             "bin/operator design, whose kept edits are local commits for you to review.",
-            "There is no /scan: observation is where a fix starts, not a command.",
+            "There is no separate /scan command: it rewrites to /fix --mode=repair --dry-run.",
           ],
         },
         "deploy" => {
