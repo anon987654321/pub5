@@ -67,6 +67,9 @@ class TestBrowserAgent < Minitest::Test
     result = tool.call(action: "status")
     assert result.ok?
     assert_includes result.value!, "browser ready"
+    assert_includes result.value!, "network_methods=GET/HEAD"
+    assert_includes result.value!, "page_scripts=enabled"
+    assert_includes result.value!, "GET_side_effects=possible"
   end
 
   def test_look_follow_and_paginate_fail_closed_without_a_session
@@ -126,6 +129,9 @@ class TestBrowserAgent < Minitest::Test
     assert_includes policy.fetch("write_actions"), "click"
     assert_equal %w[status navigate login extract look follow paginate close], policy.fetch("read_actions")
     assert_equal true, policy.fetch("session_host_bound")
+    assert_equal true, policy.fetch("browser_scripts_execute")
+    assert_equal true, policy.fetch("request_side_effects_possible")
+    assert_equal true, policy.fetch("network_method_limit_is_not_a_read_only_guarantee")
     assert_equal true, policy.fetch("screenshot_evidence_required")
     assert_equal 500, policy.fetch("max_capture_files")
     assert_equal 50, policy.fetch("max_pagination_pages")
