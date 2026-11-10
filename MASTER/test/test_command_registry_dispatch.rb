@@ -599,25 +599,63 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_operator result.length, :<=, 170
   end
 
-  # The reading half of /fix is its --dry-run --critique flags. /review and
-  # /critique are the reading spellings of /fix (TurnRouter::READING_SLASH):
-  # no registry verb, help page or dispatcher answers to them, and the /fix
-  # page names the flags. /council stays a model alias only.
-  def test_the_reading_is_a_flag_of_fix_not_a_word
-    %w[council].each do |word|
+  # Legacy verbs remain rewrites only; the registry has one pipeline command.
+  def test_legacy_pipeline_verbs_are_all_fix_mode_aliases
+    aliases = %w[review critique scan council audit style visual elevate map all workflow triad sweep through self]
+
+    aliases.each do |word|
       refute built.key?(word), "#{word} is a registry verb again"
       refute_includes Registry::HELP_TOPICS.keys, word
-      refute Registry.respond_to?(:"dispatch_#{word}"), "dispatch_#{word} came back"
-      refute_includes Master::CLI::TurnRouter::PIPELINE_SLASH, word
-    end
-    %w[review critique].each do |word|
-      refute built.key?(word), "#{word} is a registry verb again"
-      refute_includes Registry::HELP_TOPICS.keys, word
-      refute Registry.respond_to?(:"dispatch_#{word}"), "dispatch_#{word} came back"
+      refute Registry.respond_to?("dispatch_#{word}"), "dispatch_#{word} came back"
       assert_includes Master::CLI::TurnRouter::PIPELINE_SLASH, word
-      assert_equal Master::CLI::CommandRegistry.help_text("fix"), Registry.help_text(word)
+      assert_equal Registry.help_text("fix"), Registry.help_text(word)
     end
-    assert_match(/--dry-run --critique/, Registry.help_text("fix"))
+
+    assert_equal "/fix --mode=audit lib", Master::CLI::TurnRouter.rewrite_slash("/review lib")
+    assert_equal "/fix --mode=visual lib", Master::CLI::TurnRouter.rewrite_slash("/style lib")
+    assert_equal "/fix --mode=elevate lib", Master::CLI::TurnRouter.rewrite_slash("/map lib")
+    assert_equal "/fix --mode=all lib", Master::CLI::TurnRouter.rewrite_slash("/sweep lib")
+  end
+
+  def test_fix_mode_parser_rejects_unknown_and_conflicting_modes
+    assert_equal ["audit", "RAILS", nil], Registry.extract_fix_mode("--mode=audit RAILS")
+    assert_equal ["visual", "RAILS", nil], Registry.extract_fix_mode("--mode visual RAILS")
+    assert_equal ["repair", "RAILS", nil], Registry.extract_fix_mode("RAILS")
+    assert_match(/unknown \/fix mode/, Registry.extract_fix_mode("--mode=wild RAILS").last)
+    assert_match(/conflicting --mode/, Registry.extract_fix_mode("--mode=audit --mode=all RAILS").last)
+  end
+
+  def test_fix_modes_apply_bounded_and_read_only_presets
+    apply, critique, only, overrides = Registry.apply_fix_mode(
+      "audit", raw: "RAILS", apply: nil, critique: nil, only: nil, overrides: { lane: "standard" },
+    )
+    assert_equal false, apply
+    assert_equal true, critique
+    assert_nil only
+    assert_equal "all", overrides[:lane]
+
+    apply, critique, only, overrides = Registry.apply_fix_mode(
+      "audit", raw: "--lane=code RAILS", apply: true, critique: false, only: nil, overrides: { lane: "code" },
+    )
+    assert_equal false, apply, "audit cannot be made write-enabled by --apply"
+    assert_equal true, critique
+    assert_equal "code", overrides[:lane], "an explicit lane narrows the read without enabling writes"
+
+    apply, _critique, only, _overrides = Registry.apply_fix_mode(
+      "visual", raw: "RAILS", apply: true, critique: nil, only: nil, overrides: { lane: "standard" },
+    )
+    assert_equal false, apply
+    assert_equal "style", only
+
+    _apply, _critique, _only, overrides = Registry.apply_fix_mode(
+      "elevate", raw: "MASTER", apply: nil, critique: nil, only: nil, overrides: { lane: "code" },
+    )
+    assert_equal "elevate", overrides[:lane]
+
+    _apply, _critique, _only, overrides = Registry.apply_fix_mode(
+      "all", raw: "MASTER", apply: nil, critique: nil, only: nil, overrides: { lane: "code" },
+    )
+    assert_equal "all", overrides[:lane]
   end
 
   # A `*_commands` method is a table of verbs. Only control_commands exists,
