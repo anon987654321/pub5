@@ -190,6 +190,19 @@ class TestEventBus < Minitest::Test
     assert_equal activity.map { |row| row["effect_id"] }, operational.map { |row| row["effect_id"] }
   end
 
+  def test_effect_history_refuses_to_treat_corrupt_receipts_as_empty
+    evidence = Master::Trace::Log::Evidence.new(root: @dir)
+    directory = File.join(@dir, "runtime", "events")
+    FileUtils.mkdir_p(directory)
+    File.write(File.join(directory, "evidence.jsonl"), "{corrupt receipt\\n")
+    bus = Master::Trace::EventBus.new(
+      event_log: Master::Trace::Log::Event.new(root: @dir),
+      evidence_log: evidence,
+    )
+
+    assert_raises(JSON::ParserError) { bus.effect_history }
+  end
+
   def test_publish_required_persists_before_dispatching_subscribers
     observed_record = nil
     @bus.subscribe("critical:before") do |_event|
