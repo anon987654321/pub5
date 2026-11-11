@@ -161,6 +161,35 @@ class StreamStageTest < Minitest::Test
     assert_equal %i[done done], [queue.pop(true), queue.pop(true)]
   end
 
+  def test_stream_cleanup_finishes_after_a_fatal_worker_exception
+    worker_class = Class.new do
+      attr_reader :joined
+
+      def initialize(fatal: false)
+        @fatal = fatal
+        @joined = false
+      end
+
+      def alive? = true
+
+      def join
+        @joined = true
+        raise SystemExit, "fatal worker exit" if @fatal
+      end
+    end
+    failed = worker_class.new(fatal: true)
+    healthy = worker_class.new
+    queue = Queue.new
+
+    errors = stop_workers(queue, [failed, healthy])
+
+    assert failed.joined
+    assert healthy.joined, "a fatal worker must not skip later joins"
+    assert_equal 1, errors.size
+    assert_instance_of SystemExit, errors.first
+    assert_equal %i[done done], [queue.pop(true), queue.pop(true)]
+  end
+
   def test_repairs_start_before_the_scan_finishes
     found, streamed = streaming_observation(%w[/repo/a.rb /repo/b.rb /repo/c.rb], "/repo", 1, Time.now + 60)
 
