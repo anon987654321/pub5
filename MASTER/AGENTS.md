@@ -482,8 +482,9 @@ for the rest of the run. Each file gets 240 s of model time
 summary, and a lane that fails twice is dropped for the run. A repair sends the
 failing finding with forty lines around it and asks for a minimal unified diff;
 a proposal that changes lines more than twenty-five from every finding is
-refused before the verifier is asked, and a file stops after two rejected
-proposals. The pass summary prints the rejects by reason. Without a file cap,
+refused before the verifier is asked, and a file stops after three rejected
+proposals. A finding gets at most three attempts (two bounded retries) when
+its refusal includes actionable feedback. The pass summary prints the rejects by reason. Without a file cap,
 `/fix` scans the complete eligible corpus, then queues files by highest finding
 severity, weighted finding impact, and stable path before any streamed repair
 starts. `--max-files=N` (or `MASTER_FIX_MAX_FILES`) is an explicit bounded lane
