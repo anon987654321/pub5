@@ -745,6 +745,56 @@ class TestReliabilitySecondTranche < Minitest::Test
     end
   end
 
+  def test_delivery_recovery_keeps_pending_transaction_after_push_failure_and_retries
+    Dir.mktmpdir("master-delivery-push-retry") do |root|
+      path = File.join(root, "a.rb")
+      File.write(path, "before\\n")
+      id = "delivery-push-retry"
+      tx = Master::Fix::Transaction.new(root:, paths: [path], id:).begin!
+      File.write(path, "committed-locally\\n")
+      tx.observe!
+      tx.delivery.begin!(head_before: "parent")
+      tx.delivery.record_commit!(head_after: "commit-1")
+      tx.send(:release_lock)
+      tx.instance_variable_set(:@active, false)
+
+      push_count = 0
+      remote_state = [1, 0]
+      fake_git = Object.new
+      fake_git.define_singleton_method(:head) { "commit-1" }
+      fake_git.define_singleton_method(:ahead_behind) { remote_state }
+      fake_git.define_singleton_method(:push) do
+        push_count += 1
+        raise IOError, "temporary remote refusal" if push_count == 1
+
+        remote_state = [0, 0]
+        true
+      end
+      loop = Master::Fix::FixLoop.allocate
+      loop.instance_variable_set(:@root, root)
+      loop.instance_variable_set(:@transaction_root, root)
+      loop.instance_variable_set(:@git, fake_git)
+
+      failed = loop.send(:retry_delivery, transaction_id: id, expected_head: "commit-1")
+
+      refute failed.ok?
+      assert_equal :infrastructure, failed.category
+      assert_includes failed.message, "temporary remote refusal"
+      assert Master::Fix::Transaction::Recovery.persisted?(root:, id:)
+      pending = Master::Fix::Transaction::Recovery.load_persisted(root:, id:)
+      assert pending.delivery.pending?, "a failed push must leave the delivery retryable"
+      pending.send(:release_lock)
+
+      retried = loop.send(:retry_delivery, transaction_id: id, expected_head: "commit-1")
+
+      assert retried.ok?, -> { retried.message.to_s }
+      assert_equal :delivery_recovered, retried.value!
+      assert_equal 2, push_count
+      refute Master::Fix::Transaction::Recovery.persisted?(root:, id:)
+      assert_equal "committed-locally\\n", File.read(path)
+    end
+  end
+
   private
 
   # pub5 ignores MASTER's state directory, so a fixture repo does too; without
