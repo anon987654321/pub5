@@ -313,6 +313,55 @@ class TestBacklog < Minitest::Test
     end
   end
 
+  def test_executor_refuses_a_symlinked_parent_even_when_it_resolves_inside_the_repo
+    fake_mission = Class.new do
+      def self.current(root:) = nil
+      def initialize(root:); end
+      def ensure_queued!(**) = flunk("a symlinked scope must not be queued")
+    end
+
+    Dir.mktmpdir("backlog-symlink-scope") do |root|
+      repo_root = File.join(root, "repo")
+      real = File.join(repo_root, "MASTER", "real")
+      FileUtils.mkdir_p(real)
+      File.write(File.join(real, "example.rb"), "VALUE = 1\\n")
+      File.symlink(real, File.join(repo_root, "MASTER", "alias"))
+      row = {
+        id: "symlink-parent", text: "Repair the aliased file and run its tests.",
+        tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/alias/example.rb"],
+        done_when: "rake test", size: "s", section: "MASTER",
+      }
+      executor = Backlog::Executor.new(root: File.join(root, "state"), repo_root:, mission_class: fake_mission)
+
+      Backlog.stub(:generate, [row]) { assert_equal :idle, executor.enqueue_next! }
+    end
+  end
+
+  def test_executor_refuses_hard_linked_scope_files
+    fake_mission = Class.new do
+      def self.current(root:) = nil
+      def initialize(root:); end
+      def ensure_queued!(**) = flunk("a hard-linked scope must not be queued")
+    end
+
+    Dir.mktmpdir("backlog-hardlink-scope") do |root|
+      repo_root = File.join(root, "repo")
+      target = File.join(repo_root, "MASTER", "linked.rb")
+      FileUtils.mkdir_p(File.dirname(target))
+      outside = File.join(root, "outside.rb")
+      File.write(outside, "VALUE = 1\\n")
+      File.link(outside, target)
+      row = {
+        id: "hard-linked", text: "Repair the linked file and run its tests.",
+        tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/linked.rb"],
+        done_when: "rake test", size: "s", section: "MASTER",
+      }
+      executor = Backlog::Executor.new(root: File.join(root, "state"), repo_root:, mission_class: fake_mission)
+
+      Backlog.stub(:generate, [row]) { assert_equal :idle, executor.enqueue_next! }
+    end
+  end
+
   def test_executor_refuses_design_cross_tree_and_operator_rows
     fake_mission = Class.new do
       def self.current(root:) = nil
