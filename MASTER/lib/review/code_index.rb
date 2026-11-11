@@ -82,6 +82,12 @@ module Master
           unless target == @root || target.start_with?(@root + File::SEPARATOR)
             raise ArgumentError, "code index scope escapes repository root"
           end
+          if path
+            stat = File.lstat(target)
+            unless stat.directory? && !stat.symlink? && File.realpath(target) == target
+              raise ArgumentError, "code index scope must be a real in-root directory"
+            end
+          end
 
           @partial = !path.nil?
           files = Dir.glob(File.join(target, "**", "*.rb")).reject { |f| f.include?("/vendor/") }
