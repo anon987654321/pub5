@@ -256,6 +256,7 @@ module Backlog
       return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
       source_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
       return false unless source_item && item_digest(source_item) == plan["item_digest"]
+      return true if completed_receipts.include?(plan["item_digest"])
 
       FileUtils.mkdir_p(File.join(@root, ".master"))
       path = File.join(@root, RECEIPT_PATH)
