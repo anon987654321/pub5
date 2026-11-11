@@ -121,7 +121,7 @@ class TestBinScripts < Minitest::Test
       SH
       [old, new].each { |path| File.chmod(0o755, path) }
 
-      # The operator's explicit pin must not decide this race; these tests
+      # The explicit override must not decide this fallback-selection test; these tests
       # stage their own candidates and an inherited PUB5_RUBY would win first.
       out, = Open3.capture2e({ "PATH" => "#{dir}:/usr/bin:/bin", "PUB5_RUBY" => nil,
                                "MASTER_RUBY_CANDIDATES" => "#{new}:#{old}" },
