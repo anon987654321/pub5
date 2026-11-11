@@ -203,7 +203,7 @@ module Master
           tasks = Array(tasks)
           results = {}
 
-          tasks.each_slice(MAX_CONCURRENT) do |batch|
+          tasks.each_slice(MAX_CONCURRENT).with_index do |batch, batch_index|
             threads = []
             spawn_error = nil
             begin
@@ -218,15 +218,16 @@ module Master
                   [task[:role], Result.err("worker error: #{error.message}", category: :infrastructure)]
                 end]
               end
-            rescue StandardError => error
+            rescue Exception => error
               spawn_error = error
             end
 
             fatal_error = nil
+            deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
             begin
               threads.each do |task, thread|
                 begin
-                  role, result = join_or_timeout(thread, timeout)
+                  role, result = join_or_timeout(thread, timeout, deadline:)
                   results[role] = result
                 rescue StandardError => error
                   @bus&.publish("swarm:worker_error", role: task[:role], error: error.message)
@@ -273,8 +274,10 @@ module Master
           end
         end
 
-        def join_or_timeout(th, timeout)
-          return th.value if th.join(timeout)
+        def join_or_timeout(th, timeout, deadline: nil)
+          remaining = deadline ? [deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max : timeout
+          return th.value if th.join(remaining)
+
           th.kill rescue ThreadError
           @bus&.publish(:swarm_worker_timeout, timeout:)
           [:timeout, Result.err("worker timed out after #{timeout}s", category: :timeout)]
