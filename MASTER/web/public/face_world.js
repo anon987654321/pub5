@@ -71,7 +71,8 @@
       Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   }
 
-  const SUBJECT_FORMS = new Set(["face", "fugue", "wave", "orbit", "architecture", "leaf", "network", "constellation"]);
+  const SEMANTIC_SUBJECT = SPATIAL.semantic_subject || {};
+  const SUBJECT_FORMS = new Set(["face", "fugue", "wave", "orbit", "architecture", "leaf", "network", "constellation", "object"]);
   const SUBJECT_HINTS = [
     ["fugue", /\b(fugue|counterpoint|polyphony|music|melody|rhythm|beat|jazz|dilla|song|harmony|symphony|tempo|chord)\b/i],
     ["wave", /\b(audio|sound|wave|frequency|signal|radio|spectrum|pitch|voice|speech|vibration)\b/i],
@@ -80,11 +81,186 @@
     ["orbit", /\b(space|planet|cosmos|star|orbit|galaxy|solar|universe|astronomy|celestial)\b/i],
     ["network", /\b(network|graph|system|code|program|repo|repository|dependency|software|git|master|rails|openbsd|studio|github|test|fix|api|model|latency)\b/i]
   ];
+  const OBJECT_HINTS = [
+    ["bridge", /\b(bridge|suspension bridge|span|viaduct)\b/i],
+    ["tree", /\b(tree|forest|oak|pine|trunk|canopy)\b/i],
+    ["planet", /\b(planet|earth|mars|jupiter|saturn|orbiting body)\b/i],
+    ["molecule", /\b(molecule|atom|chemical bond|protein structure)\b/i],
+    ["book", /\b(book|open pages|paperback|hardcover|chapter)\b/i],
+    ["clock", /\b(clock|watch|timepiece|dial|hour hand)\b/i],
+    ["building", /\b(skyscraper|building|tower block|high-rise|facade)\b/i],
+    ["flower", /\b(flower|blossom|petal|rose|sunflower)\b/i],
+    ["vehicle", /\b(vehicle|car|automobile|bicycle|train|truck)\b/i]
+  ];
+
+  function subjectFeatures(kind) {
+    const configured = SEMANTIC_SUBJECT.kinds?.[kind];
+    return Array.isArray(configured) ? configured.map((name) => String(name)) : [];
+  }
+
+  function normalizeVisualSubject(subject) {
+    if (!SEMANTIC_SUBJECT.enabled || !subject || typeof subject !== "object" || Array.isArray(subject)) return null;
+    const kind = String(subject.kind || subject.form || "").toLowerCase().trim();
+    const allowed = subjectFeatures(kind);
+    if (!allowed.length) return null;
+    const confidence = Math.max(0, Math.min(1, finite(subject.confidence, 0.76)));
+    if (confidence < finite(SEMANTIC_SUBJECT.min_confidence, 0.42)) return null;
+
+    const source = Array.isArray(subject.sequence) ? subject.sequence
+      : Array.isArray(subject.features) ? subject.features : allowed;
+    const requested = source.map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (entry && typeof entry === "object") return entry.key || entry.name || "";
+      return "";
+    }).map((entry) => String(entry).toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24));
+    const order = [...new Set(requested.filter((name) => allowed.includes(name)))];
+    allowed.forEach((name) => { if (!order.includes(name)) order.push(name); });
+    const limit = Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6))));
+    const sequence = order.slice(0, limit);
+    const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
+    const label = String(subject.label || subject.name || kind)
+      .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLabel);
+    return Object.freeze({ kind, label: label || kind, confidence, features: sequence, sequence });
+  }
+
+  function inferVisualSubject(value) {
+    const text = String(value || "").normalize("NFKC").slice(0, 6000);
+    if (!text.trim()) return null;
+    for (const [kind, pattern] of OBJECT_HINTS) {
+      const match = text.match(pattern);
+      if (match) return normalizeVisualSubject({
+        kind, label: match[0], confidence: 0.62, sequence: subjectFeatures(kind)
+      });
+    }
+    return null;
+  }
 
   function inferSubjectForm(value) {
     const text = String(value || "").normalize("NFKC").slice(0, 6000);
     if (!text.trim()) return "face";
     return SUBJECT_HINTS.find(([, pattern]) => pattern.test(text))?.[0] || "constellation";
+  }
+
+  function spherePoint(u, v, center, radii) {
+    const theta = u * Math.PI * 2;
+    const phi = Math.acos(1 - 2 * v);
+    const sinPhi = Math.sin(phi);
+    return [
+      center[0] + Math.cos(theta) * sinPhi * radii[0],
+      center[1] + Math.cos(phi) * radii[1],
+      center[2] + Math.sin(theta) * sinPhi * radii[2]
+    ];
+  }
+
+  function linePoint(a, b, t) {
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t
+    ];
+  }
+
+  function semanticFeaturePoint(kind, feature, t, b, c) {
+    const side = b < 0.5 ? -1 : 1;
+    const angle = t * Math.PI * 2;
+    const jitter = (c - 0.5) * 0.035;
+    if (kind === "bridge") {
+      if (feature === "deck") return [1.72 * (t - 0.5), -0.16 + jitter, (b - 0.5) * 0.08];
+      if (feature === "towers") return [side * 0.42, -0.18 + t * 0.92, jitter];
+      if (feature === "cables") return [side * (0.42 + t * 0.43), 0.70 - t * 0.82, jitter];
+      return [side * 0.42, -0.84 + t * 0.66, jitter];
+    }
+    if (kind === "tree") {
+      if (feature === "trunk") return [(b - 0.5) * 0.10, -0.85 + t * 1.42, jitter];
+      if (feature === "branches") return [side * t * 0.58, 0.02 + t * 0.56, jitter + t * 0.12];
+      return spherePoint(t, b, [0, 0.57, 0], [0.62, 0.47, 0.42]);
+    }
+    if (kind === "planet") {
+      if (feature === "body") return spherePoint(t, b, [0, 0, 0], [0.57, 0.57, 0.57]);
+      if (feature === "orbit") return [Math.cos(angle) * 0.88, Math.sin(angle) * 0.30, Math.sin(angle) * 0.62];
+      return spherePoint(t, b, [0.83, 0.24, 0.02], [0.12, 0.12, 0.12]);
+    }
+    if (kind === "molecule") {
+      const atoms = [[-0.48, 0.16, 0], [0.38, 0.30, 0], [0.02, -0.40, 0.05], [0.50, -0.38, -0.08]];
+      if (feature === "bonds") {
+        const bondIndex = Math.min(2, Math.floor(b * 3));
+        const pairs = [[0, 1], [0, 2], [2, 3]];
+        const pair = pairs[bondIndex];
+        return linePoint(atoms[pair[0]], atoms[pair[1]], t);
+      }
+      const atom = atoms[Math.min(atoms.length - 1, Math.floor(b * atoms.length))];
+      return spherePoint(t, c, atom, [0.13, 0.13, 0.13]);
+    }
+    if (kind === "book") {
+      if (feature === "pages") {
+        const pageSide = b < 0.5 ? -1 : 1;
+        return [pageSide * (0.04 + t * 0.54), 0.12 + (c - 0.5) * 0.12, -0.08 + c * 0.30];
+      }
+      if (feature === "spine") return [0, -0.48 + t * 0.96, 0.10 + jitter];
+      return [side * (0.06 + t * 0.55), 0.13 + jitter, 0.28 + (c - 0.5) * 0.035];
+    }
+    if (kind === "clock") {
+      if (feature === "dial") return [Math.cos(angle) * 0.57, Math.sin(angle) * 0.57, jitter];
+      if (feature === "markers") {
+        const markerAngle = Math.floor(t * 12) * Math.PI / 6;
+        return [Math.cos(markerAngle) * 0.48, Math.sin(markerAngle) * 0.48, 0.015];
+      }
+      const handAngle = b < 0.5 ? -Math.PI / 3 : Math.PI / 2.8;
+      return [Math.cos(handAngle) * t * (b < 0.5 ? 0.34 : 0.47), Math.sin(handAngle) * t * (b < 0.5 ? 0.34 : 0.47), 0.035];
+    }
+    if (kind === "building") {
+      if (feature === "base") return [1.15 * (t - 0.5), -0.72 + jitter, (b - 0.5) * 0.62];
+      if (feature === "tower") return [(b - 0.5) * 0.66, -0.66 + t * 1.48, jitter];
+      const row = Math.floor(t * 8);
+      const column = Math.floor(b * 5);
+      return [(column - 2) * 0.16, (row / 7 - 0.42) * 1.35, 0.36 + jitter];
+    }
+    if (kind === "flower") {
+      if (feature === "stem") return [(b - 0.5) * 0.06, -0.88 + t * 1.20, jitter];
+      if (feature === "petals") {
+        const petalAngle = angle;
+        const radius = 0.16 + t * 0.45;
+        return [Math.cos(petalAngle) * radius, 0.30 + Math.sin(petalAngle) * radius * 0.72, Math.sin(petalAngle) * 0.12];
+      }
+      return spherePoint(t, b, [0, 0.30, 0.10], [0.15, 0.14, 0.14]);
+    }
+    if (kind === "vehicle") {
+      if (feature === "chassis") return [1.12 * (t - 0.5), -0.20 + jitter, (b - 0.5) * 0.28];
+      if (feature === "wheels") {
+        const wheelSide = b < 0.5 ? -0.43 : 0.43;
+        return [wheelSide + Math.cos(angle) * 0.18, -0.37 + Math.sin(angle) * 0.18, 0.08];
+      }
+      return [0.13 + (t - 0.5) * 0.42, 0.04 + jitter, 0.12 + (b - 0.5) * 0.24];
+    }
+    return spherePoint(t, b, [0, 0, 0], [0.48, 0.48, 0.48]);
+  }
+
+  function buildSemanticSubjectGeometry(descriptor, count, scale) {
+    const features = subjectFeatures(descriptor.kind);
+    const requested = Array.isArray(descriptor.sequence) ? descriptor.sequence : features;
+    const sequence = [...new Set(requested.filter((name) => features.includes(name)))];
+    features.forEach((name) => { if (!sequence.includes(name)) sequence.push(name); });
+    const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
+    const positions = new Float32Array(count * 3);
+    const stages = new Uint8Array(count);
+    const stageCount = Math.max(1, ordered.length);
+    for (let i = 0; i < count; i += 1) {
+      const stage = Math.min(stageCount - 1, Math.floor(i * stageCount / count));
+      const start = Math.floor(stage * count / stageCount);
+      const end = Math.max(start + 1, Math.floor((stage + 1) * count / stageCount));
+      const local = (i - start) / Math.max(1, end - start - 1);
+      const feature = ordered[stage];
+      const point = semanticFeaturePoint(
+        descriptor.kind, feature, local,
+        seeded(i, 81 + stage), seeded(i, 97 + stage)
+      );
+      const offset = i * 3;
+      positions[offset] = point[0] * scale;
+      positions[offset + 1] = point[1] * scale;
+      positions[offset + 2] = point[2] * scale;
+      stages[i] = stage;
+    }
+    return { positions, stages, sequence: ordered };
   }
 
   function buildSubjectPositions(form) {
