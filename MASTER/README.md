@@ -83,7 +83,7 @@ hooks, worktrees, git state, model lanes, stray processes and `.master/` writabi
 `--remote` for the vm23 checkout and deploy lock. `ok` means fine, `warn` means it works but is
 about to cost you, and `FAIL` stops work and carries the fix on the same line.
 
-First hour on a new host: install Ruby 3.3 or newer (below 4.1), run `bundle install` in
+First hour on a new host: use the installed compatible Ruby (3.3 or newer; no upper bound), run `bundle install` in
 `MASTER/`, keep keys in the environment, run `bin/doctor`, then take one narrow dry run,
 `bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'`, and read it before
 widening scope.
@@ -93,8 +93,7 @@ policy: `exhausted` pauses the paid lane and re-probes on backoff through `Io::Q
 the fix is another model or a wait, never an in-place retry; `transient` backs off
 exponentially; `permanent` fails fast; `ambiguous` stops and asks a human. A held lock names
 its holder — wait, stop that run, or let `bin/cleanup` sweep stale `.lock` files. A stopped run
-stays resumable from its journal and is never reported as a successful one. A Ruby outside
-3.3–4.1 is fixed before any other repair. A skipped instrument stays INCONCLUSIVE, never PASS.
+stays resumable from its journal and is never reported as a successful one. An incompatible Ruby is reported with its actual version before any other repair; no upper version bound is imposed. A skipped instrument stays INCONCLUSIVE, never PASS.
 
 ## External assessment and business direction
 

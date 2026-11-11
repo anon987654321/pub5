@@ -7369,3 +7369,11 @@ visual_rubric:
     edits: "Prefer existing primitives and token substitutions; never invent a new visual system inside a refinement."
     evidence: "A screenshot proves a rendered state; source proves implementation; neither alone proves intent."
     stopping: "When evidence is inconclusive, report INCONCLUSIVE rather than manufacture a taste verdict."
+
+runtime_environment:
+  ruby:
+    compatibility_floor: "3.3"
+    selection: "Use the compatible Ruby already installed and active on the host. Prefer the current interpreter; search other installed interpreters only when it is below the compatibility floor."
+    version_policy: "No patch-level pin, no minor-version pin and no upper bound. Ruby 4.x and later are not rejected by policy."
+    installation: "Do not silently install or download another Ruby merely because a newer version exists. Report a real compatibility failure with its evidence."
+    lockfile: "Do not put a Ruby directive in the Gemfile just to record the local interpreter. Keep Gemfile.lock portable and do not require a host-specific RUBY VERSION entry."

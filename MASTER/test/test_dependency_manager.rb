@@ -52,13 +52,17 @@ class TestDependencyManager < Minitest::Test
     assert_includes source, "IO.pipe"
   end
 
-  def test_master_uses_the_installed_ruby_without_an_exact_lock
+  def test_master_uses_the_installed_ruby_without_a_host_specific_lock
     gemfile = File.read(File.join(Master::ROOT, "Gemfile"))
     lock = File.read(File.join(Master::ROOT, "Gemfile.lock"))
+    policy = Master.load_yaml(Master.data_path("laws.yml")).dig("runtime_environment", "ruby")
 
-    assert_match(/^ruby ">= 3\.3"$/, gemfile)
+    refute_match(/^ruby\s+["']/, gemfile, "the Gemfile must not freeze local Ruby metadata")
     refute_match(/^RUBY VERSION$/, lock)
     refute File.file?(File.join(Master::ROOT, ".ruby-version"))
+    assert_equal "3.3", policy.fetch("compatibility_floor")
+    assert_includes policy.fetch("selection"), "already installed"
+    assert_match(/no upper bound/i, policy.fetch("version_policy"))
   end
 
   def test_watcher_gems_are_locked_with_ffi_in_both_bundles
