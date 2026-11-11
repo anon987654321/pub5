@@ -70,7 +70,7 @@ best_on_path() {
       best_key=$key
       best_ruby=$candidate
     done
-    [ -n "$best_ruby" ] && printf '%s\\n' "$best_ruby"
+    [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
     return
   fi
 
@@ -78,7 +78,7 @@ best_on_path() {
   if [ -n "$generic" ] && [ -x "$generic" ]; then
     version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null || true)
     if key=$(version_key "$version"); then
-      printf '%s\\n' "$generic"
+      printf '%s\n' "$generic"
       return
     fi
   fi
@@ -106,7 +106,7 @@ best_on_path() {
     done
   done
   IFS=$old_ifs
-  [ -n "$best_ruby" ] && printf '%s\\n' "$best_ruby"
+  [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
 }
 
 fetch() {
