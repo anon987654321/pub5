@@ -210,6 +210,25 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_hardlinked_ruby_source_is_not_indexed
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "root")
+      outside = File.join(directory, "outside")
+      Dir.mkdir(root)
+      Dir.mkdir(outside)
+      external = File.join(outside, "private.rb")
+      File.write(external, "class ExternalPrivateSource; end\n")
+      File.link(external, File.join(root, "linked.rb"))
+
+      index = Index.new(root:).build
+
+      refute index.complete?
+      assert_nil index.lookup("ExternalPrivateSource")
+      assert_equal :read, index.errors.fetch(0).fetch(:kind)
+      assert_equal 2, File.stat(external).nlink
+    end
+  end
+
   def test_source_changed_during_parse_is_not_recorded_as_current
     with_tree do |root|
       path = File.join(root, "a.rb")
