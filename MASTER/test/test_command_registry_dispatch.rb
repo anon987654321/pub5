@@ -586,7 +586,30 @@ class TestCommandRegistryDispatch < Minitest::Test
     command = built.fetch("deploy")
     assert_equal :dispatch_deploy, command.method_name
     assert_includes Registry.help_text("deploy"), "/deploy all --confirm"
+    assert_includes Registry.help_text("deploy"), "/deploy rails --confirm"
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy all")))
+    assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy rails")))
+  end
+
+  def test_dispatch_deploy_passes_the_rails_group_to_the_operator
+    status = Struct.new(:exitstatus) do
+      def success? = true
+    end.new(0)
+    calls = []
+    capture = lambda do |*argv, **options|
+      calls << [argv, options]
+      ["vps-deploy: rails ok (brgen mrdamascy amber bsdports)\n", status]
+    end
+
+    result = Master::Io::Exec.stub(:capture2e, capture) do
+      Registry.send(:dispatch_deploy, Master::ROOT, ctx: Struct.new(:args).new("rails --confirm"))
+    end
+
+    assert result.ok?
+    assert_equal "vps", calls.fetch(0).fetch(0).fetch(2)
+    assert_equal "deploy", calls.fetch(0).fetch(0).fetch(3)
+    assert_equal "rails", calls.fetch(0).fetch(0).fetch(4)
+    assert_equal "--remote", calls.fetch(0).fetch(0).fetch(5)
   end
 
   def test_deploy_summary_reports_remote_success_without_the_full_log

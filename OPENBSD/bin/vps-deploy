@@ -1,15 +1,16 @@
 #!/usr/bin/env zsh
 # Serial VPS deploy entrypoint — sync, CI, restart, health, deploy stamp.
-# Usage: zsh OPENBSD/bin/vps-deploy all|brgen|amber|bsdports|mrdamascy|master
+# Usage: zsh OPENBSD/bin/vps-deploy all|rails|APP|master
 set -euo pipefail
 
 # SSH executes this as a non-login shell on vm23; pin the OpenBSD package path.
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
 usage() {
-  print -r -- "usage: zsh OPENBSD/bin/vps-deploy all|APP|master   (runs as root; re-execs via doas)
+  print -r -- "usage: zsh OPENBSD/bin/vps-deploy all|rails|APP|master   (runs as root; re-execs via doas)
 
-  all          master, then every app, amber and bsdports last (master last when the box is short of memory)
+  all          MASTER web and every Rails app
+  rails        brgen, mrdamascy, amber and bsdports; MASTER web is left untouched
   VPS_DEPLOY_SHA=<sha>   deploy exactly this commit (default: origin/main, fetched once)
   VPS_DEPLOY_PREFLIGHT_SHA=<sha>   the operator's machine already proved this commit boots
   VPS_DEPLOY_CI_SHA=<sha>   the operator's machine ran the app's bin/ci green on this commit; the box skips its suite
@@ -88,8 +89,8 @@ app=${1:-}
 [[ -n $app ]] || { usage >&2; exit 2 }
 
 case $app in
-  all|master|brgen|amber|bsdports|mrdamascy) ;;
-  *) print -u2 "vps-deploy: unknown app \"$app\" - allowed: all, master, brgen, amber, bsdports, mrdamascy"; exit 2 ;;
+  all|rails|master|brgen|amber|bsdports|mrdamascy) ;;
+  *) print -u2 "vps-deploy: unknown app \"$app\" - allowed: all, rails, master, brgen, amber, bsdports, mrdamascy"; exit 2 ;;
 esac
 
 # Environment values below participate in shell arithmetic and bounded waits.
@@ -123,7 +124,7 @@ validate_deploy_setting VPS_DEPLOY_MIN_FREE_KB "${VPS_DEPLOY_MIN_FREE_KB:-104857
   exit 1
 }
 
-# One host, one deploy. The parent all process keeps this lock while its
+# One host, one deploy. The parent all/rails process keeps this lock while its
 # re-entrant child processes deploy each app in order; a second top-level deploy
 # is refused rather than running two pulls, precompiles and restarts together.
 lock_dir=${VPS_DEPLOY_LOCK_DIR:-$DEPLOY_HOME/.pub5-vps-deploy.lock}
@@ -272,7 +273,7 @@ acquire_deploy_lock() {
   exit 75
 }
 
-# The re-entrant children of `all` carry VPS_DEPLOY_LOCK_HELD and take nothing.
+# The re-entrant children of `all` and `rails` carry VPS_DEPLOY_LOCK_HELD and take nothing.
 [[ -n ${VPS_DEPLOY_LOCK_HELD:-} ]] || acquire_deploy_lock
 
 # Durable deploy logging.
@@ -283,8 +284,8 @@ acquire_deploy_lock() {
 #   - a per-run log under /var/log/pub5/runs/ with the pid and app in the name
 #   - a stable symlink at $DEPLOY_HOME/vps-deploy.log for operators who still
 #     tail the home path
-# Once per run, not once per app: `vps-deploy all` re-invokes itself and children
-# inherit VPS_DEPLOY_LOGGING so they do not double-tee.
+# Once per run, not once per app: `vps-deploy all` and `vps-deploy rails` re-invoke
+# children inherit VPS_DEPLOY_LOGGING so they do not double-tee.
 deploy_log_dir=${VPS_DEPLOY_LOG_DIR:-/var/log/pub5}
 deploy_log=${VPS_DEPLOY_LOG:-$deploy_log_dir/vps-deploy.log}
 deploy_run_log=${VPS_DEPLOY_RUN_LOG:-}
@@ -597,10 +598,10 @@ finish() {
   fi
   [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
   rm -f -- "$deploy_flag"
-  if (( rc != 0 )) && [[ $app == all ]]; then
-    print -u2 "vps-deploy: all FAILED at stage \"$deploy_stage\" (exit $rc)"
+  if (( rc != 0 )) && [[ $app == all || $app == rails ]]; then
+    print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
   fi
-  if (( rc != 0 )) && [[ $app != all ]]; then
+  if (( rc != 0 )) && [[ $app != all && $app != rails ]]; then
     if (( ! stamp_written )) && (( $+functions[write_stamp] )); then
       write_stamp "$app" failed || true
     fi
@@ -734,6 +735,9 @@ DEPLOY_ALL=(master brgen mrdamascy amber bsdports)
 # above VPS_DEPLOY_MASTER_MIN_AVAIL percent. Otherwise the apps go first and master
 # last, so a master failure halts a pass whose apps are already deployed and up
 # instead of one that has shed them. The restore in the exit trap covers either order.
+# Rails-only fleet omits MASTER but keeps the resource-conscious app order:
+# Brgen, Mr Damascy, Amber, then BSDPorts last.
+DEPLOY_RAILS=(brgen mrdamascy amber bsdports)
 DEPLOY_ALL_DEGRADED=(brgen mrdamascy amber bsdports master)
 choose_deploy_order() {
   local svc port avail why=
@@ -759,11 +763,15 @@ choose_deploy_order() {
   fi
 }
 
-if [[ $app == all ]]; then
+if [[ $app == all || $app == rails ]]; then
   typeset -i first=1
   typeset -a deploy_order
-  choose_deploy_order
-  print "vps-deploy: all order: ${deploy_order}"
+  if [[ $app == all ]]; then
+    choose_deploy_order
+  else
+    deploy_order=($DEPLOY_RAILS)
+  fi
+  print "vps-deploy: $app order: ${deploy_order}"
   for one in $deploy_order; do
     # Let the previous app's deploy drain before starting the next one's CI.
     #
@@ -777,18 +785,18 @@ if [[ $app == all ]]; then
     # CiGuard waits on load too, so this is the cheap half — a fixed pause costs
     # a minute and avoids most of the waiting the guard would otherwise do.
     if (( ! first )); then
-      print "vps-deploy: all - settling for ${PUB5_DEPLOY_COOLDOWN:-60}s before $one"
+      print "vps-deploy: $app - settling for ${PUB5_DEPLOY_COOLDOWN:-60}s before $one"
       sleep ${PUB5_DEPLOY_COOLDOWN:-60}
     fi
     first=0
-    print "vps-deploy: all -> $one"
+    print "vps-deploy: $app -> $one"
     # Re-entrant rather than inlined: each app gets the full path including its
     # own health check and deploy stamp, and a failure halts the pass instead of
     # deploying the next one on top of a broken box.
-    set_stage "all:$one"
-    zsh "$0" "$one" || { halted_app=$one; print -u2 "vps-deploy: all halted at $one"; exit 1 }
+    set_stage "$app:$one"
+    zsh "$0" "$one" || { halted_app=$one; print -u2 "vps-deploy: $app halted at $one"; exit 1 }
   done
-  print "vps-deploy: all ok ($deploy_order)"
+  print "vps-deploy: $app ok ($deploy_order)"
   exit 0
 fi
 

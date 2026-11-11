@@ -108,6 +108,8 @@ class TurnRouterTest < Minitest::Test
     router = Master::CLI::TurnRouter
 
     assert router.deployment_intent?("please deploy MASTER and RAILS and OPENBSD to vm23 --confirm")
+    assert router.deployment_intent?("please redeploy all Rails apps")
+    assert router.deployment_intent?("please re-deploy all Rails apps")
     assert router.deployment_intent?("ship MASTER to production")
     assert router.deployment_intent?("put the Rails fleet live on vm23")
     assert router.deployment_intent?("release brgen to vm23 --confirm")
@@ -120,14 +122,20 @@ class TurnRouterTest < Minitest::Test
     refute router.deployment_intent?("why did deploy fail?")
     refute router.deployment_intent?("check deploy status on vm23")
     refute router.deployment_intent?("deploy status on vm23")
+    refute router.deployment_intent?("check redeploy status on vm23")
+    refute router.deployment_intent?("why did redeploy fail?")
   end
 
-  def test_deployment_args_maps_fleet_language_to_all
+  def test_deployment_args_distinguishes_rails_fleet_from_whole_stack
     router = Master::CLI::TurnRouter
 
+    assert_equal "rails", router.deployment_args("please redeploy all Rails apps")
+    assert_equal "rails", router.deployment_args("put the Rails fleet live on vm23")
+    assert_equal "rails", router.deployment_args("redeploy RAILS")
     assert_equal "all --confirm", router.deployment_args("ship MASTER and RAILS to vm23 --confirm")
-    assert_equal "all", router.deployment_args("put the whole stack live on vm23")
+    assert_equal "all", router.deployment_args("redeploy the whole stack")
     assert_equal "brgen --confirm", router.deployment_args("release brgen to production --confirm")
+    assert_equal "mrdamascy", router.deployment_args("redeploy mrdamascy")
   end
 
   def test_deploy_confirmation_survives_natural_language_routing

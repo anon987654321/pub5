@@ -56,10 +56,12 @@ module Master
           ],
         },
         "deploy" => {
-          summary: "deploy MASTER or the Rails fleet to vm23 through the canonical VPS path",
+          summary: "redeploy MASTER, the Rails fleet, or one app on vm23 through the canonical VPS path",
           detail: [
-            "/deploy all --confirm - deploy MASTER, brgen, amber and bsdports to vm23.",
-            "/deploy master --confirm - deploy MASTER to vm23.",
+            "/deploy rails --confirm - deploy brgen, Mr Damascy, amber and bsdports; leave MASTER web untouched.",
+            "/deploy all --confirm - deploy MASTER web and every Rails app.",
+            "/deploy master --confirm - deploy MASTER web only.",
+            "Natural-language requests such as \"redeploy all Rails apps\" resolve to the rails group.",
             "Deployment is always remote and review-gated. The command delegates to bin/operator",
             "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
           ],
