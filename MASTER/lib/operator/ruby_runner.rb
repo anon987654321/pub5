@@ -31,11 +31,19 @@ module Operator
       return explicit if !explicit.empty? && File.executable?(explicit)
 
       ruby = best_available_ruby(root:)&.fetch(:path, nil)
-      candidates = []
-      if ruby
-        suffix = File.basename(ruby).delete_prefix("ruby")
-        candidates << File.join(File.dirname(ruby), "bundle#{suffix}")
+      suffix = ruby ? File.basename(ruby).delete_prefix("ruby") : ""
+      if !suffix.empty?
+        paired = File.join(File.dirname(ruby), "bundle#{suffix}")
+        return paired if File.executable?(paired)
+
+        paired = openbsd_path("bundle#{suffix}", root:)
+        return paired if paired
+
+        raise "Bundler for selected Ruby package #{File.basename(ruby)} is unavailable"
       end
+
+      candidates = []
+      candidates << File.join(File.dirname(ruby), "bundle") if ruby
       home = File.expand_path("~")
       candidates.concat(
         [
