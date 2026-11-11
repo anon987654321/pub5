@@ -68,6 +68,32 @@ class TestMemory < Minitest::Test
     end
   end
 
+  def test_memory_store_refuses_symlinked_parent_directories
+    Dir.mktmpdir("memory-parent") do |root|
+      outside = File.join(root, "outside")
+      Dir.mkdir(outside)
+      File.write(File.join(outside, "memory.yml"), { "outside" => { "value" => "private" } }.to_yaml)
+      File.symlink(outside, File.join(root, ".master"))
+
+      error = assert_raises(IOError) { Master::Ground::Memory.new(root:) }
+
+      assert_match(/memory store directory escapes|stable in-repository directory/, error.message)
+      assert_equal "private", Master.load_yaml(File.join(outside, "memory.yml")).dig("outside", "value")
+    end
+  end
+
+  def test_memory_version_does_not_follow_a_replaced_parent_symlink
+    memory = @mem
+    outside = File.join(@root, "outside")
+    Dir.mkdir(outside)
+    outside_file = File.join(outside, "memory.yml")
+    File.write(outside_file, { "outside" => { "value" => "private" } }.to_yaml)
+    File.symlink(outside, File.join(@root, ".master"))
+
+    assert_equal "unknown", memory.version
+    assert_equal "private", Master.load_yaml(outside_file).dig("outside", "value")
+  end
+
   def test_corrupt_memory_store_is_preserved_and_not_replaced_with_an_empty_store
     Dir.mktmpdir("corrupt-memory") do |root|
       directory = File.join(root, ".master")
