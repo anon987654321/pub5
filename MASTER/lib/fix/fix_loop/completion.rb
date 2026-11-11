@@ -179,35 +179,44 @@ module Master
           # The durable receipt is the read-back-verified authority; the
           # optional summary adapter may itself be unavailable or partial.
           matrix_status = receipt["matrix_status"].to_s
-          recorded = Integer(value.call(:recorded_cells) || 0)
-          findings = Integer(value.call(:finding_cells) || 0)
-          unassessed = Integer(value.call(:unassessed_cells) || 0)
-          inconclusive = Integer(value.call(:inconclusive_cells) || 0)
+          counts = %i[recorded_cells finding_cells unassessed_cells inconclusive_cells].to_h do |key|
+            raw = value.call(key)
+            [key, raw.nil? ? nil : Integer(raw)]
+          end
+          recorded = counts[:recorded_cells]
+          findings = counts[:finding_cells]
+          unassessed = counts[:unassessed_cells]
+          inconclusive = counts[:inconclusive_cells]
           persisted = receipt["status"] == "persisted" &&
             receipt["readback_verified"] == true && receipt["verification"] == "verified"
           trusted = persisted && provenance_matches == true
           status = if !trusted
                      :error
-                   elsif matrix_status == "complete"
-                     findings.positive? ? :fail : :pass
+                   elsif matrix_status == "complete" && findings && findings.positive?
+                     :fail
+                   elsif matrix_status == "complete" && findings == 0
+                     :pass
                    elsif matrix_status == "not_measured"
                      :unavailable
-                   elsif recorded.positive? && (unassessed.positive? || inconclusive.positive?)
+                   elsif recorded && recorded.positive? && unassessed && inconclusive &&
+                         (unassessed.positive? || inconclusive.positive?)
                      :partial
                    else
                      :inconclusive
                    end
 
+          checked_count = recorded || (receipt["cells"] if matrix_status == "complete")
+          unchecked_count = unassessed + inconclusive if unassessed && inconclusive
           Master::Execution::Contract::VerificationResult.new(
             id: "fix-assessment-#{Digest::SHA256.hexdigest(run_id.to_s)[0, 20]}",
             subject: "four-stream assessment matrix: #{target}",
             verifier: "fix_assessment_matrix",
             status:,
             scope: target.to_s,
-            checked_count: recorded,
+            checked_count:,
             failure_count: findings,
-            unchecked_count: unassessed + inconclusive,
-            complete: trusted && matrix_status == "complete",
+            unchecked_count:,
+            complete: trusted && matrix_status == "complete" && !findings.nil?,
           )
         rescue ArgumentError, TypeError => error
           Master::Execution::Contract::VerificationResult.new(
