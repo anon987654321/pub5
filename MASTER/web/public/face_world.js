@@ -134,13 +134,29 @@
   function inferVisualSubject(value) {
     const text = String(value || "").normalize("NFKC").slice(0, 6000);
     if (!text.trim()) return null;
-    for (const [kind, pattern] of OBJECT_HINTS) {
-      const match = text.match(pattern);
-      if (match) return normalizeVisualSubject({
-        kind, label: match[0], confidence: 0.62, sequence: subjectFeatures(kind)
-      });
-    }
-    return null;
+    const candidates = OBJECT_HINTS.map(([kind, pattern], priority) => {
+      const matcher = new RegExp(pattern.source, pattern.flags.replace("g", "") + "g");
+      const matches = [...text.matchAll(matcher)];
+      return {
+        kind,
+        count: matches.length,
+        firstIndex: matches[0]?.index ?? Infinity,
+        label: matches[0]?.[0] || "",
+        priority
+      };
+    }).filter((candidate) => candidate.count > 0);
+    candidates.sort((a, b) =>
+      b.count - a.count || a.firstIndex - b.firstIndex || a.priority - b.priority
+    );
+    const best = candidates[0];
+    if (!best) return null;
+    const confidence = Math.min(0.84, 0.62 + Math.max(0, best.count - 1) * 0.055);
+    return normalizeVisualSubject({
+      kind: best.kind,
+      label: best.label,
+      confidence,
+      sequence: subjectFeatures(best.kind)
+    });
   }
 
   function inferSubjectForm(value) {
