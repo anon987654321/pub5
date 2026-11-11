@@ -144,3 +144,5 @@ footer{border-top:1px solid var(--brd);margin-top:6px;padding-top:4px;font-size:
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
 }
+
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}

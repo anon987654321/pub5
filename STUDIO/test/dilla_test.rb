@@ -591,5 +591,6 @@ class TestRG69BrowserContract < Minitest::Test
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes File.read(css_path), "prefers-reduced-motion"
+    assert_includes File.read(css_path), ":focus-visible"
   end
 end
