@@ -10,8 +10,8 @@
 # `ruby --disable-gems bin/master --exec-worker -- argv`. This branch is sacred:
 # the worker pledges before it executes the proposed argv, so nothing may load
 # above it.
-# Termux is a host for the Ubuntu guest, not a supported MASTER runtime.
-# The host installer is POSIX sh, so it can provision the guest before Ruby exists.
+# Termux is the host for supported Ubuntu or Debian guests, not a MASTER runtime.
+# The POSIX installer can provision a guest before its Ruby runtime exists.
 def master_proot_distro?
   ENV["container"] == "proot-distro" || !ENV["PD_CONTAINER"].to_s.empty?
 end
@@ -31,15 +31,15 @@ def master_termux_host?
 end
 
 if master_proot_distro?
-  unless master_proot_distro_id == "ubuntu"
+  unless %w[ubuntu debian].include?(master_proot_distro_id)
     guest = master_proot_distro_id.empty? ? "unverified" : master_proot_distro_id
-    warn "master0: BLOCKED: bin/master runs only in proot-distro login ubuntu; current guest is #{guest}. From Termux run MASTER/bin/master-mobile-install."
+    warn "master0: BLOCKED: bin/master runs only inside proot-distro login ubuntu or debian; current guest is #{guest}. From Termux run MASTER/bin/master-mobile-install."
     exit 78
   end
 elsif master_termux_host?
   install_root = File.expand_path("../..", __dir__)
   installer = File.join(install_root, "MASTER", "bin", "master-mobile-install")
-  exec({ "MASTER_INSTALL_DIR" => install_root }, "sh", installer, "--ubuntu", "--launch", "--", *ARGV)
+  exec({ "MASTER_INSTALL_DIR" => install_root }, "sh", installer, "--auto", "--launch", "--", *ARGV)
 end
 
 def prepare_exec_worker_load_path

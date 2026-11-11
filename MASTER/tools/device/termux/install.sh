@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Bootstrap the canonical Ubuntu installer from Termux's private home.
+# Bootstrap the canonical Ubuntu-or-Debian installer from Termux's private home.
 set -eu
 
 fail() { printf 'master-install0: %s\n' "$*" >&2; exit 1; }
@@ -29,4 +29,4 @@ else
   git clone --depth 1 --branch main "$REPO" "$ROOT"
 fi
 
-MASTER_INSTALL_DIR="$ROOT" exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu "$@"
+MASTER_INSTALL_DIR="$ROOT" exec sh "$ROOT/MASTER/bin/master-mobile-install" --auto "$@"

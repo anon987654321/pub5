@@ -47,12 +47,14 @@ class AdVisualContractTest < Minitest::Test
   def test_post_feed_variant_uses_native_sponsored_post_anatomy
     text = read("_affiliate_feed_unit.html.erb")
     %w[
-      affiliate_feed_unit--post affiliate_feed_post_header affiliate_feed_post_avatar
-      affiliate_feed_post_sponsored affiliate_feed_post_ad affiliate_feed_post_menu
-      affiliate_feed_post_media affiliate_feed_post_copy
+      affiliate_feed_unit--post affiliate_feed_post_intro affiliate_feed_post_card
+      affiliate_feed_post_header affiliate_feed_post_avatar affiliate_feed_post_ad
+      affiliate_feed_post_menu affiliate_feed_post_media affiliate_feed_post_copy
     ].each do |class_name|
       assert_includes text, class_name
     end
+    refute_includes text, "affiliate_feed_post_sponsored"
+    assert_includes text, 't("affiliate.feed_unit_intro")'
     assert_includes text, 't("affiliate.sponsored")'
     assert_includes text, 't("affiliate.ad_label")'
     assert_includes text, 't("affiliate.more_options")'
@@ -109,14 +111,20 @@ end
 class SponsoredPostLayoutTest < Minitest::Test
   def test_in_feed_sponsored_card_uses_a_horizontal_media_and_copy_layout
     css = File.read(File.expand_path("../__shared/app/assets/stylesheets/_affiliate_feed_unit.scss", __dir__))
-    post = css.split(".affiliate_feed_unit--post {", 2).last.split("\n}", 2).first
+    post = css.split(".affiliate_feed_post_card {", 2).last.split("\n}", 2).first
+    wrapper = css.split(".affiliate_feed_unit--post {", 2).last.split("\n}", 2).first
 
+    assert_includes wrapper, "display: block"
     assert_includes post, "display: grid"
-    assert_includes post, "grid-template-columns"
-    assert_includes post, "aspect-ratio: 3.65 / 1"
+    assert_includes post, "grid-template-columns: minmax(88px, 31%)"
+    assert_includes post, "aspect-ratio: auto"
     assert_includes post, "border-radius:"
+    assert_includes css, "grid-template-columns: minmax(136px, 27%)"
+    assert_includes css, "aspect-ratio: 3.65 / 1"
+    assert_includes css, ".affiliate_feed_post_intro"
+    assert_includes css, "color-mix(in srgb, var(--cinema-backdrop)"
     assert_includes css, ".affiliate_feed_post_media img"
     assert_includes css, "object-fit: cover"
-    assert_includes css, "@media (max-width: 479px)"
+    assert_includes css, "@media (min-width: 480px)"
   end
 end

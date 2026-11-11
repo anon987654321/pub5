@@ -1,4 +1,6 @@
-# MASTER laws.yml — per-law research notes for the BPLANS restoration
+# BPLANS restoration — historical MASTER Law audit
+
+> Historical audit record only. This note records how the BPLANS restoration applied MASTER Law at the time; it does not define, amend or duplicate current policy. The authoritative Law catalogue remains `MASTER/data/laws.yml`, with executable definitions and checks under `MASTER/law/` and `MASTER/checks/`.
 
 Scope: the whole of `pub4/MASTER/data/laws.yml` (3 736 lines, schema 8) plus
 the operative runtime sections of `data/law_runtime.yml` (tool discipline,

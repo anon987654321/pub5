@@ -14,10 +14,10 @@ class TermuxInstallerTest < Minitest::Test
   def mobile_source = File.read(MOBILE_INSTALLER)
   def master_source = File.read(MASTER_ENTRYPOINT)
 
-  def test_termux_bootstrap_delegates_to_canonical_ubuntu_installer
+  def test_termux_bootstrap_delegates_to_canonical_multi_distro_installer
     assert_match(%r{#!/data/data/com\.termux/files/usr/bin/bash}, source)
     assert_includes source, "master-mobile-install"
-    assert_includes source, "--ubuntu"
+    assert_includes source, "--auto"
     refute_includes source, "ruby bin/deps install"
     refute_includes source, "exec ruby bin/master"
   end
@@ -34,16 +34,16 @@ class TermuxInstallerTest < Minitest::Test
     assert_includes master_source, "master_proot_distro?"
   end
 
-  def test_bin_master_refuses_non_ubuntu_proot_guests
+  def test_bin_master_refuses_unsupported_proot_guests
     assert_includes master_source, 'ENV["container"] == "proot-distro"'
     assert_includes master_source, 'ENV["PD_CONTAINER"]'
-    assert_includes master_source, 'master_proot_distro_id == "ubuntu"'
+    assert_includes master_source, '%w[ubuntu debian].include?(master_proot_distro_id)'
     assert_includes master_source, "exit 78"
   end
 
-  def test_termux_host_automatically_enters_ubuntu_when_ruby_is_present
+  def test_termux_host_automatically_enters_supported_guest_when_ruby_is_present
     assert_includes master_source, 'elsif master_termux_host?'
-    assert_includes master_source, '"--ubuntu", "--launch", "--", *ARGV'
+    assert_includes master_source, '"--auto", "--launch", "--", *ARGV'
     assert_includes master_source, '"MASTER_INSTALL_DIR" => install_root'
   end
 
@@ -62,7 +62,7 @@ class TermuxInstallerTest < Minitest::Test
 
       assert status.success?, output
       assert_includes output, "plan 5/5"
-      assert_includes output, "Ubuntu"
+      assert_includes output, "Ubuntu or Debian"
       assert_empty Dir.children(home)
     end
   end
@@ -95,15 +95,17 @@ class TermuxInstallerTest < Minitest::Test
     end
   end
 
-  def test_installer_defaults_to_ubuntu_and_proves_the_pinned_runtime
-    assert_includes mobile_source, "proot-distro install ubuntu"
-    assert_includes mobile_source, "ruby-build \"$ruby_version\" \"$ruby_home\""
-    assert_includes mobile_source, 'grep -Fx "ubuntu $version" /etc/master-mobile-runtime'
+  def test_installer_reuses_ubuntu_or_debian_then_defaults_to_ubuntu
+    assert_includes mobile_source, 'requested_distro="auto"'
+    assert_match(/grep -Fxq ubuntu; then\s+distro=ubuntu/m, mobile_source)
+    assert_match(/grep -Fxq debian; then\s+distro=debian/m, mobile_source)
+    assert_includes mobile_source, 'proot-distro install "$distro"'
+    assert_includes mobile_source, 'grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime'
+    assert_includes mobile_source, 'ruby-build "$ruby_version" "$ruby_home"'
     assert_includes mobile_source, "ruby bin/deps install"
     assert_includes mobile_source, "ruby bin/deps check"
     assert_includes mobile_source, "ruby bin/deps boot"
-    assert_includes mobile_source, 'printf \'ubuntu %s\\n\' "$ruby_version" > /etc/master-mobile-runtime'
-    refute_includes mobile_source, "proot-distro install debian"
+    assert_match(/printf '%s %s\\n'.*MASTER_RUNTIME_DISTRO/m, mobile_source)
     refute_includes mobile_source, "runtime=native"
   end
 
@@ -113,8 +115,9 @@ class TermuxInstallerTest < Minitest::Test
     assert_includes mobile_source, "--no-launch"
   end
 
-  def test_launcher_reuses_ubuntu_and_forwards_arguments
-    assert_includes mobile_source, 'proot-distro login --bind "$ROOT:/pub5" ubuntu'
+  def test_launcher_reuses_selected_guest_and_forwards_arguments
+    assert_match(/printf 'DISTRO=%s\\n'/, mobile_source)
+    assert_includes mobile_source, 'proot-distro login --bind "$ROOT:/pub5" "$DISTRO"'
     assert_includes mobile_source, 'exec bin/master "$@"'
   end
 

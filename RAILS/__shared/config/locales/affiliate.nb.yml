@@ -12,6 +12,7 @@ nb:
     sponsored: Annonse
     ad_label: Annonse
     more_options: Flere valg
+    feed_unit_intro: Dette kan også interessere deg.
     feed_unit_label: Sponsede produkter
     feed_unit_label_after: Sponsede produkter etter innlegg %{position}
     amazon_label: Amazon Associates

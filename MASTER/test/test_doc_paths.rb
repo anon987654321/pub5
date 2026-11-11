@@ -174,7 +174,7 @@ class TestDocPaths < Minitest::Test
     RAILS/docs/archive/UI_ARCHAEOLOGY.md
     BIZ/research/bringhurst-strunk-research.md
     BIZ/research/business-plan-quality.md
-    BIZ/research/master-laws-research.md
+    MASTER/docs/history/master-laws-research.md
     BIZ/research/typographic-styles.md
     BIZ/tools/future_healthcare_os_proposal.md
     BIZ/tools/future_nato_weapons_proposal.md

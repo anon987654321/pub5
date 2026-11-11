@@ -29,6 +29,8 @@
          data-action="pointermove->parallax-tilt#move pointerleave->parallax-tilt#leave"
          <% end %>>
     <% if post_feed %>
+      <p class="affiliate_feed_post_intro"><%= t("affiliate.feed_unit_intro") %></p>
+      <div class="affiliate_feed_post_card">
       <% deal = visible_deals.first %>
       <% amazon = deal.respond_to?(:source) && deal.source.to_s == "amazon" %>
       <% amazon_content = affiliate_product_content_allowed?(deal) %>
@@ -63,7 +65,6 @@
           <span class="affiliate_feed_post_avatar" aria-hidden="true"><%= advertiser.first(1).upcase %></span>
           <div class="affiliate_feed_post_identity">
             <p class="affiliate_feed_post_merchant"><%= advertiser %></p>
-            <p class="affiliate_feed_post_sponsored"><%= t("affiliate.sponsored") %></p>
           </div>
           <div class="affiliate_feed_post_meta">
             <span class="affiliate_feed_post_ad"><%= t("affiliate.ad_label") %></span>
@@ -89,6 +90,7 @@
           <% end %>
           <p class="affiliate_feed_link_disclosure"><%= t("affiliate.paid_link") %></p>
         </div>
+      </div>
       </div>
     <% else %>
       <header class="affiliate_feed_header">

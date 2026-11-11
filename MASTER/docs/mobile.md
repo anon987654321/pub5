@@ -1,8 +1,8 @@
 # MASTER on Android
 
-The supported Android runtime for MASTER's normal CLI is **Ubuntu under PRoot-Distro**. Native Termux Ruby is not a supported runtime. The Termux app remains the host that installs and enters Ubuntu; MASTER's CLI runs only inside that guest.
+The supported Android runtime for MASTER's normal CLI is **Ubuntu or Debian under PRoot-Distro**. Native Termux Ruby is not a supported runtime. The Termux app remains the host that installs and enters one of those guests; MASTER's CLI runs only inside a verified supported guest.
 
-A direct `bin/master` invocation from a Termux host with Ruby installed hands off to the installer and enters Ubuntu. A direct invocation from a PRoot-Distro guest checks both the PRoot container marker and `/etc/os-release`; it refuses Debian or any unverified guest with status 78. Desktop and OpenBSD continue through the same Ruby entrypoint.
+A direct `bin/master` invocation from a Termux host with Ruby installed hands off to the installer and enters a supported guest. A direct invocation from a PRoot-Distro guest checks both the PRoot container marker and `/etc/os-release`; it permits only Ubuntu or Debian and refuses any other or unverified guest with status 78. Desktop and OpenBSD continue through the same Ruby entrypoint.
 
 ## Install and launch
 
@@ -10,21 +10,21 @@ Use a maintained Termux build. Preview the installer from any POSIX shell withou
 
     curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh -s -- --demo
 
-The first run installs Termux host tools if missing, fast-forwards a clean canonical checkout, installs Ubuntu only when no Ubuntu guest is present, builds the pinned Ruby and locked bundle, verifies the normal CLI boot, then starts MASTER:
+The first run installs Termux host tools if missing, fast-forwards a clean canonical checkout, reuses an installed Ubuntu guest or else Debian, and installs Ubuntu only when neither is present. It builds the pinned Ruby and locked bundle in the selected guest, verifies the normal CLI boot, then starts MASTER:
 
     curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh
 
-The installer checks Termux's expected PREFIX and non-root host account. It permits only the canonical HTTPS pub5 repository, keeps the checkout below Termux HOME, and refuses symlink or non-Git collisions. Existing checkouts must have the canonical origin, the expected branch and a clean working tree before the fast-forward. Existing Ubuntu guests are reused and never reset. An existing Debian guest is left untouched and is not accepted as MASTER's runtime.
+The installer checks Termux's expected PREFIX and non-root host account. It permits only the canonical HTTPS pub5 repository, keeps the checkout below Termux HOME, and refuses symlink or non-Git collisions. Existing checkouts must have the canonical origin, the expected branch and a clean working tree before the fast-forward. Existing Ubuntu or Debian guests are reused and never reset. With no supported guest installed, the default is Ubuntu; `--debian` selects Debian explicitly.
 
-Ubuntu receives the required Linux build libraries. The installer builds the exact Ruby version from `.ruby-version` under `/opt/rubies/`, then runs `bin/deps install`, `bin/deps check` and `bin/deps boot`. It records the pinned runtime in `/etc/master-mobile-runtime` inside Ubuntu. Future launches reuse the guest and pinned Ruby.
+Both guests receive the required Linux build libraries. The installer builds the exact Ruby version from `.ruby-version` under `/opt/rubies/`, then runs `bin/deps install`, `bin/deps check` and `bin/deps boot`. It records both the guest and pinned Ruby in `/etc/master-mobile-runtime`. Future launches reuse the selected guest and pinned Ruby.
 
-The installer adds `~/.local/bin/master` as a Termux-host launcher. Reload `~/.bashrc`, then run `master`; it enters Ubuntu and forwards arguments to `bin/master`. Running `bin/master` from Termux when native Ruby is already installed also follows the automatic install-and-entry path. To provision without starting the CLI, use `--no-launch`. Arguments after `--` are forwarded.
+The installer adds `~/.local/bin/master` as a Termux-host launcher. Reload `~/.bashrc`, then run `master`; it enters the selected guest and forwards arguments to `bin/master`. Running `bin/master` from Termux when native Ruby is already installed also follows the automatic install-and-entry path. To provision without starting the CLI, use `--no-launch`. Arguments after `--` are forwarded.
 
-PRoot-Distro documents the Ubuntu image and the `install ubuntu` / `login ubuntu` workflow. It is a user-space Linux environment, not Android root or a kernel security boundary. [PRoot-Distro documentation](https://github.com/termux/proot-distro).
+PRoot-Distro documents the Ubuntu and Debian images and their `install` / `login` workflows. It is a user-space Linux environment, not Android root or a kernel security boundary. [PRoot-Distro documentation](https://github.com/termux/proot-distro).
 
 ## Termux host and Android capabilities
 
-The Ubuntu guest is the supported runtime for the normal text CLI. Termux remains the host for PRoot-Distro and the Termux:API companion app. Android camera, microphone, speech, browser bridge and other native device features are separate host capabilities; an Ubuntu CLI boot is not proof that those integrations are ready. The installer does not grant Android permissions or claim hardware readiness.
+The Ubuntu or Debian guest is the supported runtime for the normal text CLI. Termux remains the host for PRoot-Distro and the Termux:API companion app. Android camera, microphone, speech, browser bridge and other native device features are separate host capabilities; an Ubuntu CLI boot is not proof that those integrations are ready. The installer does not grant Android permissions or claim hardware readiness.
 
 ## Provider sign-in
 
@@ -40,7 +40,7 @@ Claude uses its browser sign-in. On mobile or a headless terminal, Codex and Gro
 
 ## Optional local model fallback
 
-The local llama.cpp lane is a last resort, not a boot-time download. Build it on the Termux host or in the Ubuntu guest and expose its binary and model to the guest explicitly; MASTER does not download model weights automatically. Start with a modest context because large contexts can exhaust phone memory:
+The local llama.cpp lane is a last resort, not a boot-time download. Build it on the Termux host or in the supported guest and expose its binary and model to the guest explicitly; MASTER does not download model weights automatically. Start with a modest context because large contexts can exhaust phone memory:
 
     pkg install git cmake libandroid-spawn
     git clone https://github.com/ggml-org/llama.cpp
@@ -51,19 +51,19 @@ The local llama.cpp lane is a last resort, not a boot-time download. Build it on
     mkdir -p "$HOME/models"
     export MASTER_LLAMA_MODEL="$HOME/models/your-small-quantised-model.gguf"
 
-Choose a quantised model that fits the phone's available memory and storage. The fallback starts with a 4096-token context and two CPU threads. Keep the model under Termux's private home directory and add an explicit PRoot bind for its directory before setting `MASTER_LLAMA_MODEL` inside Ubuntu. Restart MASTER, then inspect `/model list`. No local HTTP server or OpenAI-compatible endpoint is started.
+Choose a quantised model that fits the phone's available memory and storage. The fallback starts with a 4096-token context and two CPU threads. Keep the model under Termux's private home directory and add an explicit PRoot bind for its directory before setting `MASTER_LLAMA_MODEL` inside the guest. Restart MASTER, then inspect `/model list`. No local HTTP server or OpenAI-compatible endpoint is started.
 
 
 ## Use
 
-`bin/master-mobile` and Android integration commands are not part of the Ubuntu CLI readiness proof. The Ubuntu guest is supported for the normal text CLI. Camera, microphone, Termux:API, the browser bridge and speech output remain separate host capabilities; this installer does not claim they work from inside Ubuntu.
+`bin/master-mobile` and Android integration commands are not part of the Ubuntu CLI readiness proof. Ubuntu and Debian guests are supported for the normal text CLI. Camera, microphone, Termux:API, the browser bridge and speech output remain separate host capabilities; this installer does not claim they work from inside Ubuntu.
 
 A host-side microphone bridge needs an explicit Termux:API adapter and host/guest boundary. Do not grant or assume microphone access merely because the Ubuntu CLI boots. The existing local permission commands remain:
 
     /privacy grant microphone --confirm "GRANT microphone"
     /privacy grant speech_recognition --confirm "GRANT speech_recognition"
 
-The same grants protect microphone capture in both the terminal and browser face, and expire after one hour. Grant them from the normal `bin/master` session before using the browser's listen button. Android still requires microphone permission for the Termux app, the Termux:API companion app, and `pkg install termux-api`. `/voice on` enables spoken replies in the terminal; the mobile browser bridge speaks each reply through Termux:API. Use the normal Termux app user for the Termux:API commands; the Debian PRoot route above is for the Linux CLI/build and is not the mobile API readiness path.
+The same grants protect microphone capture in both the terminal and browser face, and expire after one hour. Grant them from the normal `bin/master` session before using the browser's listen button. Android still requires microphone permission for the Termux app, the Termux:API companion app, and `pkg install termux-api`. `/voice on` enables spoken replies in the terminal; the mobile browser bridge speaks each reply through Termux:API. Use the normal Termux app user for the Termux:API commands; the supported PRoot guest is for the Linux CLI/build and is not the mobile API readiness path.
 
 ## Security boundaries
 

@@ -12,6 +12,7 @@ en:
     sponsored: Sponsored
     ad_label: Ad
     more_options: More options
+    feed_unit_intro: This might also interest you.
     feed_unit_label: Sponsored products
     feed_unit_label_after: Sponsored products after post %{position}
     amazon_label: Amazon Associates

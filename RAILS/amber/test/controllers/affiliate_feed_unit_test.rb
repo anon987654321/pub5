@@ -42,8 +42,11 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "affiliate_feed_unit--post"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_intro", text: I18n.t("affiliate.feed_unit_intro")
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_card"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_header"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_sponsored", count: 0
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_ad", text: I18n.t("affiliate.ad_label")
     assert_select "aside.affiliate_feed_unit--post details.affiliate_feed_post_menu summary[aria-label]"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media img[alt]"
@@ -64,7 +67,7 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
     get feed_posts_url
 
     assert_not_includes response.body, "translation missing"
-    assert_includes response.body, I18n.t("affiliate.sponsored")
+    assert_includes response.body, I18n.t("affiliate.feed_unit_intro")
   end
 
   # An electronics deal between two outfits reads as a banner; a garment reads

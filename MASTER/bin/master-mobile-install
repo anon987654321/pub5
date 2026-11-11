@@ -1,11 +1,12 @@
 #!/usr/bin/env sh
-# Provision and launch MASTER in Ubuntu under Termux PRoot-Distro.
+# Provision and launch MASTER in Ubuntu or Debian under Termux PRoot-Distro.
 # POSIX sh: this entrypoint runs before the guest Ruby exists.
 set -eu
 
 repo="${MASTER_REPO_URL:-https://github.com/anon987654321/pub5.git}"
 dir="${MASTER_INSTALL_DIR:-$HOME/pub5}"
 branch="${MASTER_BRANCH:-main}"
+requested_distro="auto"
 expected_repo="https://github.com/anon987654321/pub5.git"
 demo=0
 launch=1
@@ -13,17 +14,21 @@ launch=1
 fail() { printf 'mobile0: BLOCKED: %s\n' "$*" >&2; exit 1; }
 usage() {
   printf '%s\n' \
-    "usage: master-mobile-install [--ubuntu] [--demo] [--no-launch] [-- ARGS...]" \
-    "  --ubuntu     install or reuse the Ubuntu PRoot-Distro guest (default)" \
+    "usage: master-mobile-install [--auto|--ubuntu|--debian] [--demo] [--no-launch] [-- ARGS...]" \
+    "  --auto       reuse Ubuntu, else Debian; install Ubuntu when neither exists (default)" \
+    "  --ubuntu     install or reuse the Ubuntu PRoot-Distro guest" \
+    "  --debian     install or reuse the Debian PRoot-Distro guest" \
     "  --demo       print the plan without changing the device" \
-    "  --no-launch  provision Ubuntu but leave the CLI stopped" \
-    "  --proot      compatibility alias for --ubuntu"
+    "  --no-launch  provision the selected guest but leave the CLI stopped" \
+    "  --proot      compatibility alias for --auto"
 }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --demo) demo=1; shift ;;
-    --ubuntu|--proot) shift ;;
+    --auto|--proot) requested_distro=auto; shift ;;
+    --ubuntu) requested_distro=ubuntu; shift ;;
+    --debian) requested_distro=debian; shift ;;
     --launch) launch=1; shift ;;
     --no-launch) launch=0; shift ;;
     --) shift; break ;;
@@ -52,9 +57,9 @@ if [ "$demo" -eq 1 ]; then
   fi
   printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and private HOME path (not checked in demo)\n'
   printf 'mobile0: plan 2/5 - install or verify git, curl and proot-distro on the Termux host\n'
-  printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; install Ubuntu only when no Ubuntu guest exists\n'
+  printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; reuse Ubuntu or Debian, otherwise install Ubuntu\n'
   printf 'mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the exact .ruby-version under /opt/rubies\n'
-  printf 'mobile0: plan 5/5 - install/check the locked bundle, prove the CLI boot inside Ubuntu, and install the Termux launcher\n'
+  printf 'mobile0: plan 5/5 - install/check the locked bundle, prove the CLI boot in the selected guest, and install the Termux launcher\n'
   printf 'mobile0: DEMO complete; device, guest and repository checks remain unmeasured\n'
   exit 0
 fi
@@ -105,27 +110,43 @@ dirty="$(git -C "$dir" status --porcelain 2>/dev/null || true)"
 [ -z "$dirty" ] || fail "checkout changed during update; refusing to execute it."
 
 installed_distros="$(proot-distro list --quiet)" || fail "could not inventory installed PRoot-Distro guests."
-if ! printf '%s\n' "$installed_distros" | grep -Fxq ubuntu; then
-  printf 'mobile0: installing Ubuntu guest (existing guests are never reset)\n'
-  proot-distro install ubuntu
+case "$requested_distro" in
+  auto)
+    if printf '%s\n' "$installed_distros" | grep -Fxq ubuntu; then
+      distro=ubuntu
+    elif printf '%s\n' "$installed_distros" | grep -Fxq debian; then
+      distro=debian
+    else
+      distro=ubuntu
+    fi
+    ;;
+  ubuntu|debian) distro="$requested_distro" ;;
+  *) fail "unsupported PRoot-Distro guest: $requested_distro" ;;
+esac
+
+if ! printf '%s\n' "$installed_distros" | grep -Fxq "$distro"; then
+  printf 'mobile0: installing %s guest (existing guests are never reset)\n' "$distro"
+  proot-distro install "$distro"
 else
-  printf 'mobile0: reusing existing Ubuntu guest\n'
+  printf 'mobile0: reusing existing %s guest\n' "$distro"
 fi
 
 guest_ready() {
-  proot-distro login --bind "$dir:/pub5" ubuntu -- bash -lc '
-    set -eu
-    version="$(cat /pub5/.ruby-version)"
-    [ -x "/opt/rubies/$version/bin/ruby" ]
-    grep -Fx "ubuntu $version" /etc/master-mobile-runtime >/dev/null
-  ' >/dev/null 2>&1
+  proot-distro login --bind "$dir:/pub5" "$distro" -- \
+    env MASTER_RUNTIME_DISTRO="$distro" bash -lc '
+      set -eu
+      version="$(cat /pub5/.ruby-version)"
+      [ -x "/opt/rubies/$version/bin/ruby" ]
+      grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime >/dev/null
+    ' >/dev/null 2>&1
 }
 
 if guest_ready; then
-  printf 'mobile0: Ubuntu guest and pinned Ruby are ready\n'
+  printf 'mobile0: %s guest and pinned Ruby are ready\n' "$distro"
 else
-  printf 'mobile0: provisioning Ubuntu and building the pinned Ruby\n'
-  proot-distro login --bind "$dir:/pub5" ubuntu -- bash -s <<'PRootSetup'
+  printf 'mobile0: provisioning %s and building the pinned Ruby\n' "$distro"
+  proot-distro login --bind "$dir:/pub5" "$distro" -- \
+    env MASTER_RUNTIME_DISTRO="$distro" bash -s <<'PRootSetup'
 set -eu
 export DEBIAN_FRONTEND=noninteractive
 
@@ -173,15 +194,15 @@ installed_version="$("$ruby_home/bin/ruby" -e 'print RUBY_VERSION')"
 
 export PATH="$ruby_home/bin:/usr/local/bin:$PATH"
 cd /pub5/MASTER
-printf 'mobile0: installing the locked MASTER bundle in Ubuntu\n'
+printf 'mobile0: installing the locked MASTER bundle in %s\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps install
-printf 'mobile0: checking the locked MASTER bundle in Ubuntu\n'
+printf 'mobile0: checking the locked MASTER bundle in %s\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps check
-printf 'mobile0: proving the normal MASTER CLI boot path in Ubuntu\n'
+printf 'mobile0: proving the normal MASTER CLI boot path in %s\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps boot
-printf 'ubuntu %s\n' "$ruby_version" > /etc/master-mobile-runtime
+printf '%s %s\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version" > /etc/master-mobile-runtime
 chmod 644 /etc/master-mobile-runtime
-printf 'mobile0: Ubuntu guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n'
+printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n' "$MASTER_RUNTIME_DISTRO"
 PRootSetup
 fi
 
@@ -195,23 +216,25 @@ quoted_dir="$(shell_quote "$dir")"
 {
   printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash' 'set -eu'
   printf 'ROOT=%s\n' "$quoted_dir"
+  printf 'DISTRO=%s\n' "$(shell_quote "$distro")"
   cat <<'LauncherBody'
 command -v proot-distro >/dev/null 2>&1 || {
   printf 'master0: proot-distro is unavailable; run the installer again.\n' >&2
   exit 78
 }
-if ! proot-distro list --quiet | grep -Fxq ubuntu; then
-  exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu --launch -- "$@"
+if ! proot-distro list --quiet | grep -Fxq "$DISTRO"; then
+  exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
 fi
-if ! proot-distro login --bind "$ROOT:/pub5" ubuntu -- bash -lc '
-  set -eu
-  version="$(cat /pub5/.ruby-version)"
-  test -x "/opt/rubies/$version/bin/ruby"
-  grep -Fx "ubuntu $version" /etc/master-mobile-runtime >/dev/null
-' >/dev/null 2>&1; then
-  exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu --launch -- "$@"
+if ! proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- \
+  env MASTER_RUNTIME_DISTRO="$DISTRO" bash -lc '
+    set -eu
+    version="$(cat /pub5/.ruby-version)"
+    test -x "/opt/rubies/$version/bin/ruby"
+    grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime >/dev/null
+  ' >/dev/null 2>&1; then
+  exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
 fi
-exec proot-distro login --bind "$ROOT:/pub5" ubuntu -- bash -lc '
+exec proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- bash -lc '
   set -eu
   ruby_version="$(cat /pub5/.ruby-version)"
   export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"
@@ -222,7 +245,7 @@ LauncherBody
 } > "$launcher"
 chmod 700 "$launcher"
 
-printf 'mobile0: Ubuntu guest is ready. The launcher is %s\n' "$launcher"
+printf 'mobile0: %s guest is ready. The launcher is %s\n' "$distro" "$launcher"
 printf 'mobile0: reload your shell or run %s/master\n' "$HOME/.local/bin"
 
 if [ "$launch" -eq 1 ]; then
