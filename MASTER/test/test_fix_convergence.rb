@@ -2236,6 +2236,91 @@ end
     assert_equal Master::REPO_ROOT, rename.instance_variable_get(:@repo_root)
   end
 
+  def test_fix_assessment_verification_maps_complete_clean_matrix_to_pass
+    loop = build_loop([])
+    verification = loop.send(
+      :assessment_verification_result,
+      run_id: "a" * 20,
+      target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => true,
+        "verification" => "verified", "matrix_status" => "complete",
+      },
+      matrix: {
+        status: "complete", recorded_cells: 20, finding_cells: 0,
+        unassessed_cells: 0, inconclusive_cells: 0,
+      },
+      provenance_matches: true,
+    )
+
+    assert_instance_of Master::Execution::Contract::VerificationResult, verification
+    assert_predicate verification, :pass?
+    assert_predicate verification, :conclusive?
+    assert_equal 20, verification.checked_count
+    assert_equal 0, verification.failure_count
+    assert_equal Digest::SHA256.hexdigest(@root), verification.scope_digest
+  end
+
+  def test_fix_assessment_verification_separates_complete_findings_from_incomplete_coverage
+    loop = build_loop([])
+    complete_with_findings = loop.send(
+      :assessment_verification_result,
+      run_id: "b" * 20, target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => true,
+        "verification" => "verified", "matrix_status" => "complete",
+      },
+      matrix: { recorded_cells: 20, finding_cells: 3, unassessed_cells: 0, inconclusive_cells: 0 },
+      provenance_matches: true,
+    )
+    incomplete = loop.send(
+      :assessment_verification_result,
+      run_id: "c" * 20, target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => true,
+        "verification" => "verified", "matrix_status" => "incomplete",
+      },
+      matrix: { recorded_cells: 18, finding_cells: 2, unassessed_cells: 1, inconclusive_cells: 1 },
+      provenance_matches: true,
+    )
+
+    assert_equal :fail, complete_with_findings.status
+    assert_predicate complete_with_findings, :conclusive?
+    assert_equal 3, complete_with_findings.failure_count
+    assert_equal :partial, incomplete.status
+    refute incomplete.complete
+    assert_equal 2, incomplete.unchecked_count
+  end
+
+  def test_fix_assessment_verification_fails_closed_on_missing_readback_or_plan_binding
+    loop = build_loop([])
+    missing_readback = loop.send(
+      :assessment_verification_result,
+      run_id: "d" * 20, target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => false,
+        "verification" => "unavailable", "matrix_status" => "complete",
+      },
+      matrix: { recorded_cells: 20, finding_cells: 0, unassessed_cells: 0, inconclusive_cells: 0 },
+      provenance_matches: true,
+    )
+    unbound = loop.send(
+      :assessment_verification_result,
+      run_id: "e" * 20, target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => true,
+        "verification" => "verified", "matrix_status" => "complete",
+      },
+      matrix: { recorded_cells: 20, finding_cells: 0, unassessed_cells: 0, inconclusive_cells: 0 },
+      provenance_matches: false,
+    )
+
+    assert_equal :error, missing_readback.status
+    refute missing_readback.complete
+    assert_equal :error, unbound.status
+    refute unbound.complete
+  end
+
   def test_a_converged_run_is_done
     result = prove(build_loop([])).run(@root)
 
