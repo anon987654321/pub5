@@ -63,7 +63,7 @@ module Master
       attr_reader :symbols, :references, :built_at
 
       def initialize(root:, event_bus: nil, persist: false)
-        @root = File.expand_path(root)
+        @root = File.realpath(root)
         @store = persist ? CodeIndexStore.new(root: @root) : nil
         @bus = event_bus
         @symbols = {}
