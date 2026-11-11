@@ -302,6 +302,78 @@ class TestCouncilDeliberation < Minitest::Test
     assert_equal 4, second.value!.size
   end
 
+  def test_parallel_collection_joins_siblings_after_an_unexpected_worker_error
+    started = Queue.new
+    release = Queue.new
+    failures = []
+    personas = %w[FAIL SLOW].map do |name|
+      Persona.new(name:, role: "r", bias: "b", prompt: "p")
+    end
+    delib = Master::Review::Council::Deliberation.new(personas:, agent: StubAgent.new, judge_enabled: false)
+    delib.define_singleton_method(:circuit_open?) { |_persona = nil| false }
+    delib.define_singleton_method(:panel_blocked?) { false }
+    delib.define_singleton_method(:ask_persona) do |persona:, **|
+      started << persona.name
+      raise "persona worker failed" if persona.name == "FAIL"
+
+      release.pop
+      { persona: persona.name }
+    end
+    delib.define_singleton_method(:note_persona_failure) { |persona, error| failures << [persona.name, error.message] }
+    result = Queue.new
+    coordinator = Thread.new do
+      result << delib.collect_parallel(code: "x = 1", context: nil, personas:)
+    end
+
+    assert_equal %w[FAIL SLOW], [started.pop, started.pop].sort
+    sleep 0.02
+    assert coordinator.alive?, "a failed persona must not abandon its sibling"
+    release << :continue
+    coordinator.join
+
+    feedback = result.pop
+    assert_equal ["SLOW"], feedback.map { |entry| entry[:persona] }
+    assert_equal [["FAIL", "persona worker failed"]], failures
+  end
+
+  def test_parallel_collection_accounts_for_personas_after_partial_thread_startup
+    started = Queue.new
+    release = Queue.new
+    failures = []
+    personas = %w[FIRST SECOND THIRD].map do |name|
+      Persona.new(name:, role: "r", bias: "b", prompt: "p")
+    end
+    delib = Master::Review::Council::Deliberation.new(personas:, agent: StubAgent.new, judge_enabled: false)
+    delib.define_singleton_method(:circuit_open?) { |_persona = nil| false }
+    delib.define_singleton_method(:panel_blocked?) { false }
+    delib.define_singleton_method(:ask_persona) do |persona:, **|
+      started << persona.name
+      release.pop
+      { persona: persona.name }
+    end
+    delib.define_singleton_method(:note_persona_failure) { |persona, error| failures << [persona.name, error.message] }
+    original_new = Thread.method(:new)
+    calls = 0
+    release_helper = original_new.call do
+      started.pop
+      release << :continue
+    end
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      original_new.call(*args, **kwargs, &block)
+    }) do
+      feedback = delib.collect_parallel(code: "x = 1", context: nil, personas:)
+      assert_equal ["FIRST"], feedback.map { |entry| entry[:persona] }
+    end
+    release_helper.join
+
+    assert_equal 2, calls
+    assert_equal [["SECOND", "thread limit reached"], ["THIRD", "thread limit reached"]], failures
+  end
+
   def test_council_emits_machine_synthesis_without_majority_vote
     events = []
     bus = Struct.new(:events) do
