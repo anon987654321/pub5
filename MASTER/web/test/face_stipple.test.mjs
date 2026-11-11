@@ -63,7 +63,8 @@ test("radio audio telemetry drives a bounded inward face warp and respects still
   assert.match(system, /uAudioWarp: \{ value: 0 \}/);
   assert.match(system, /uniform float uAudioWarp;/);
   assert.match(system, /float audioInward = clamp\(uAudioWarp \* 0\.035 \* uMotionScale, 0\.0, 0\.035\)/);
-  assert.match(system, /u\.uAudioWarp\.value = reducedMotionEnabled\(state\) \|\| stillMode \? 0 : audioEnergy;/);
+  assert.match(system, /const audioFreshness = clamp\(1 - \(performance\.now\(\) - audioUpdatedAt\) \/ 180, 0, 0, 1\)/);
+  assert.match(system, /u\.uAudioWarp\.value = reducedMotionEnabled\(state\) \|\| stillMode \? 0 : audioEnergy \* audioFreshness;/);
   assert.match(system, /audioWarp: value\("uAudioWarp"\)/);
 });
 
