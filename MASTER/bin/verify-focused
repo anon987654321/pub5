@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-# Run the focused MASTER regression list from TODO.md on the installed compatible Ruby.
+# Run the focused MASTER acceptance regressions, including /fix lifecycle, on compatible Ruby.
 # Usage (from MASTER/): bin/verify-focused
 # Exit 0 only if every listed file reports 0 failures and 0 errors.
 
@@ -27,6 +27,13 @@ tests = %w[
   test/test_fix_mission.rb
   test/test_core_no_lib_backedges.rb
   test/test_fix_interruption_restart.rb
+  test/test_fix_crash_leaves_tree.rb
+  test/test_fix_hardening.rb
+  test/test_fix_loop_oscillation.rb
+  test/test_fix_run_budget.rb
+  test/test_run_ledger_per_run.rb
+  test/test_reachability_scope.rb
+  test/test_repair_loop_per_fix_commit.rb
   test/test_ingress_jobs.rb
   test/test_security_audit.rb
   test/test_io_atomic_write.rb
