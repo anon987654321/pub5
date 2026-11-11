@@ -513,7 +513,7 @@ module Master
         false
       end
 
-      def record_fix_proof!(status:, scope_paths:, report:)
+      def record_fix_proof!(status:, scope_paths:, report:, command_proof:)
         text = report.to_s
         return false unless status.to_s == "pass"
         return false unless text.match?(/\bfix done\b/i)
@@ -539,6 +539,28 @@ module Master
           return false unless plan["executor"] == "root_todo" && plan["proof_map_version"].is_a?(Integer)
           return false if required.empty? || required.uniq != required || (required - allowed).any?
 
+          evidence = command_proof.to_h.transform_keys(&:to_s)
+          proof_type = evidence.fetch("proof_type").to_s
+          return false unless required.include?(proof_type)
+          return false unless evidence["status"].to_s == "pass"
+          return false unless evidence["exit_status"].to_i.zero?
+          return false unless evidence["command_digest"].to_s == Digest::SHA256.hexdigest(plan.fetch("done_when").to_s)
+          return false unless evidence["output_digest"].to_s.match?(/\A[0-9a-f]{64}\z/)
+          return false unless evidence["output_bytes"].to_i >= 0
+          return false unless evidence["duration_ms"].to_i >= 0
+          cwd = evidence["cwd"].to_s
+          return false if cwd.empty? || Pathname.new(cwd).absolute? || cwd.split("/").include?("..")
+
+          command_evidence = {
+            "proof_type" => proof_type,
+            "status" => "pass",
+            "exit_status" => 0,
+            "command_digest" => evidence.fetch("command_digest"),
+            "output_digest" => evidence.fetch("output_digest"),
+            "output_bytes" => evidence.fetch("output_bytes").to_i,
+            "cwd" => cwd,
+            "duration_ms" => evidence.fetch("duration_ms").to_i,
+          }
           @record["proof"] = {
             "kind" => "fix_pipeline",
             "status" => "pass",
@@ -547,13 +569,14 @@ module Master
             "proof_summary" => line.byteslice(0, 512),
             "proof_map_version" => plan.fetch("proof_map_version"),
             "required_proof_types" => required,
+            "command_evidence" => command_evidence,
           }
           @record["last_seen_at"] = now
           persist!
         end
         emit("mission:proof", id: @id, source: "fix_pipeline", status: "pass", scope_paths: paths.size)
         true
-      rescue ArgumentError, TypeError, JSON::ParserError, KeyError
+      rescue ArgumentError, TypeError, JSON::ParserError, KeyError, NoMethodError
         false
       end
 
