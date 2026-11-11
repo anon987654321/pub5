@@ -603,7 +603,9 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   root_setup = mrd_service.lines.take_while { |line| !line.start_with?("daemon_flags=") }.join
   secret_boundary = mrd_service.include?('[[ -r /etc/mrdamascy.env ]] ||') &&
                     !root_setup.include?(". /etc/mrdamascy.env") &&
-                    daemon_flags_line.include?('&& set +a && : \"\${SECRET_KEY_BASE:?')
+                    mrd_service.include?('daemon_user="mrdamascy"') &&
+                    daemon_flags_line.include?(". /etc/mrdamascy.env") &&
+                    daemon_flags_line.include?("SECRET_KEY_BASE:?")
   failures << "mrdamascy secret must be checked after dropping to the app user" unless secret_boundary
   falcon_command = mrd_service[/^\s*_exec="([^"]+)"/, 1]
   expected_falcon_command = "exec ${_bundle} exec falcon host ${APP_DIR}/falcon.rb"
