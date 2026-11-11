@@ -348,6 +348,46 @@ end
   # Against the real tree, because the register and the paths it names are the
   # fact under test. The second assertion is the instrument check: an empty
   # register would satisfy the first while measuring nothing.
+  def test_three_identical_method_bodies_are_reported_as_review_candidates
+    root = File.join(@tmp, "MASTER")
+    paths = %w[lib/fix/one.rb lib/fix/two.rb checks/support/three.rb]
+    body = <<~RUBY
+      def safe_slug(value)
+        value.to_s.gsub(/[^a-zA-Z0-9._-]+/, "_")
+      end
+    RUBY
+    paths.each do |relative|
+      path = File.join(root, relative)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, body)
+    end
+
+    scan = Operator::Cohesion.method_shape_scan("MASTER", root: @tmp)
+    cluster = scan[:clusters].find { |row| row[:methods].any? { |method| method[:method] == "safe_slug" } }
+
+    assert_equal 3, scan[:parsed]
+    refute_empty scan[:clusters]
+    assert_equal 3, cluster[:files]
+    assert_equal paths.size, cluster[:methods].map { |method| method[:file] }.uniq.size
+    assert_empty scan[:unreadable]
+  end
+
+  def test_two_method_copies_and_test_fixtures_do_not_create_a_candidate
+    root = File.join(@tmp, "MASTER")
+    body = "def safe_slug(value) = value.to_s.gsub(/x/, \"_\")\\n"
+    %w[lib/a.rb lib/b.rb test/fixture.rb].each do |relative|
+      path = File.join(root, relative)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, body)
+    end
+
+    scan = Operator::Cohesion.method_shape_scan("MASTER", root: @tmp)
+
+    assert_equal 2, scan[:parsed]
+    assert_empty scan[:clusters]
+    assert_empty scan[:unreadable]
+  end
+
   def test_a_family_that_reopens_one_constant_gets_no_regroup
     refute_empty Operator::Cohesion.reopened_paths, "the autoload register did not read"
 
