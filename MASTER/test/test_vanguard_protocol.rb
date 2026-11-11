@@ -83,6 +83,35 @@ class TestVanguardProtocol < Minitest::Test
     assert_includes targets, "Demo::Widget.singleton_helper"
   end
 
+  def test_symbol_visitor_tracks_include_prepend_and_extend_relationships
+    source = <<~RUBY
+      module Contracts
+      end
+      module Priority
+      end
+      module ClassMethods
+      end
+      class Demo
+        include Contracts
+        include Extra::Contract
+        prepend Priority
+        extend ClassMethods
+        include Contracts
+        def runtime
+          include DynamicAtRuntime
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "mixins.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    widget = visitor.symbols.find { |symbol| symbol.fqn == "Demo" }
+
+    assert_equal ["include:Contracts", "include:Extra::Contract", "prepend:Priority", "extend:ClassMethods"],
+                 widget.includes
+  end
+
   def test_symbol_visitor_tracks_macro_alias_and_singleton_definitions
     source = <<~RUBY
       module Dynamic
