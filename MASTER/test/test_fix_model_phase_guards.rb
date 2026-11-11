@@ -552,4 +552,44 @@ end
   ensure
     previous ? ENV["MASTER_FIX_RANK"] = previous : ENV.delete("MASTER_FIX_RANK")
   end
+  def test_file_coverage_docket_names_scanned_and_unmeasured_eligible_paths
+    Dir.mktmpdir("fix_file_coverage") do |root|
+      scanned = File.join(root, "scanned.rb")
+      finding = File.join(root, "finding.rb")
+      missed = File.join(root, "missed.rb")
+      [scanned, finding, missed].each { |path| File.write(path, "puts :fixture\n") }
+
+      runner = Master::Fix::FixLoop::PassRunner.allocate
+      runner.instance_variable_set(:@root, root)
+      observation = {
+        files: [scanned, finding, missed],
+        path_states: {
+          scanned => { state: :scanned, reason: nil },
+          finding => { state: :scanned, reason: nil },
+          missed => { state: :failed, reason: "decoder failed" },
+        },
+        findings: {
+          ["SMALL_FILES", :lexical_violations] => [{ "file" => finding, "law" => "SMALL_FILES" }],
+        },
+        unclassified_findings: [],
+      }
+
+      report = runner.send(:assessment_file_coverage, observation, 2)
+      rows = report.fetch(:files).to_h { |row| [row.fetch(:file), row] }
+
+      assert_equal "incomplete", report.fetch(:status)
+      assert_equal [3, 2, 1], report.values_at(:expected, :scanned, :unmeasured)
+      assert_equal "scanned", rows.fetch("scanned.rb").fetch(:status)
+      assert_equal 0, rows.fetch("scanned.rb").fetch(:finding_count)
+      assert_equal "scanned", rows.fetch("finding.rb").fetch(:status)
+      assert_equal 1, rows.fetch("finding.rb").fetch(:finding_count)
+      assert_equal ["SMALL_FILES"], rows.fetch("finding.rb").fetch(:laws)
+      assert_equal "unmeasured", rows.fetch("missed.rb").fetch(:status)
+      assert_equal "failed", rows.fetch("missed.rb").fetch(:disposition)
+      assert_equal "decoder failed", rows.fetch("missed.rb").fetch(:reason)
+      assert_equal "scanner_observation_only", report.fetch(:scope)
+    end
+  end
+
+
 end

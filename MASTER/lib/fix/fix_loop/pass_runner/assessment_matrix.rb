@@ -263,6 +263,8 @@ module Master
               @assessment_surface_receipts = {}
               @assessment_surface_cache = {}
               @assessment_scope = plan.sources.map { |source| File.expand_path(source.path, plan.root) }.sort.freeze
+              @assessment_file_coverage = nil
+              @assessment_file_coverage = nil
             end
             @bus&.publish(
               "fix_loop:assessment_generation",
@@ -307,6 +309,7 @@ module Master
             @assessment_ledger.summary.merge(
               status: assessment_matrix_status.to_s,
               stream_coverage: @assessment_ledger.coverage(unmeasurable: @assessment_unmeasurable || Set.new),
+              file_coverage: assessment_file_coverage_summary,
               surface_coverage_complete: @assessment_surface_report&.fetch("complete", false) == true,
               surface_coverage_digest: @assessment_surface_report&.fetch("digest", nil),
               surface_coverage: surface_coverage_summary,
@@ -346,6 +349,7 @@ module Master
                 toolchain_digest: @assessment_plan&.toolchain_digest,
                 exclusion_digest: @assessment_plan&.exclusion_digest,
                 adapter_digest: @assessment_plan&.adapter_digest,
+                file_coverage: assessment_file_coverage_summary,
               }
             end
 
@@ -365,6 +369,7 @@ module Master
                 exclusion_digest: @assessment_plan&.exclusion_digest,
                 adapter_digest: @assessment_plan&.adapter_digest,
                 surface_coverage: @assessment_surface_report,
+                file_coverage: @assessment_file_coverage || assessment_file_coverage_summary,
                 ledger: @assessment_ledger.evidence_report,
               }
             end
@@ -377,6 +382,55 @@ module Master
           end
 
           private
+
+          # This is scanner-path coverage, not a clean-Law verdict. The Law × stream ×
+          # surface matrix remains the authority for compliance; this docket names
+          # every eligible path and makes an unvisited path visible.
+          def assessment_file_coverage(observation, pass)
+            findings_by_file = Hash.new { |hash, key| hash[key] = [] }
+            observation.fetch(:findings, {}).each_value do |rows|
+              Array(rows).each { |row| findings_by_file[row["file"]] << row }
+            end
+            Array(observation[:unclassified_findings]).each do |row|
+              findings_by_file[row["file"]] << row
+            end
+
+            root = File.expand_path(@assessment_plan&.root || @root)
+            files = Array(observation[:files]).sort.map do |path|
+              state = observation.fetch(:path_states, {})[path]
+              file_findings = findings_by_file[path]
+              scanned = state && state[:state] == :scanned
+              row = {
+                file: path.delete_prefix("#{root}/"),
+                status: scanned ? "scanned" : "unmeasured",
+                finding_count: file_findings.size,
+                laws: file_findings.map { |finding| finding["law"] }.compact.uniq.sort,
+              }
+              unless scanned
+                row[:disposition] = state ? state[:state].to_s : "not_reached"
+                row[:reason] = state ? state[:reason] : "scanner did not reach this eligible path before the pass ended"
+              end
+              row
+            end
+            scanned = files.count { |row| row[:status] == "scanned" }
+
+            {
+              scope: "scanner_observation_only",
+              pass: Integer(pass),
+              status: scanned == files.size ? "complete" : "incomplete",
+              expected: files.size,
+              scanned:,
+              unmeasured: files.size - scanned,
+              files:,
+            }
+          end
+
+          def assessment_file_coverage_summary
+            report = @assessment_file_coverage
+            return { status: "not_measured", expected: 0, scanned: 0, unmeasured: 0 } unless report
+
+            report.slice(:status, :pass, :expected, :scanned, :unmeasured)
+          end
 
           def surface_coverage_summary
             report = @assessment_surface_report
@@ -439,6 +493,7 @@ module Master
                 signatures:,
                 stale_plan_paths: stale_plan_paths.freeze,
                 scanned: Set.new,
+                path_states: {},
                 refused: {},
                 findings: Hash.new { |hash, key| hash[key] = [] },
                 unclassified_findings: [],
@@ -464,6 +519,7 @@ module Master
               case state
               when :scanned
                 observation[:scanned] << absolute
+                observation[:path_states][absolute] = { state: :scanned, reason: nil }
                 Array(findings).each do |finding|
                   row = finding.respond_to?(:to_h) ? finding.to_h.transform_keys(&:to_sym) : {}
                   raw_id = (row[:law] || row[:law_id] || row[:rule]).to_s.strip
@@ -507,6 +563,7 @@ module Master
                 end
               when :preflight, :failed
                 observation[:refused][absolute] = reason.to_s[0, 200]
+                observation[:path_states][absolute] = { state:, reason: reason.to_s[0, 200] }
               end
             end
           rescue StandardError => e
@@ -521,6 +578,7 @@ module Master
             end
             return unless observation && @assessment_ledger
 
+            @assessment_file_coverage = assessment_file_coverage(observation, pass)
             signatures_stable = observation[:files].all? do |path|
               observation[:signatures][path] == assessment_signature(path)
             end

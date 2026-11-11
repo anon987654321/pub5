@@ -42,7 +42,7 @@ The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
 
-The run footer includes a per-run file outcome docket for files that entered the repair adapter. It is not a census of untouched or unmeasured files and must never be read as one.
+The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record.
 
 Run one tree at a time unless evidence establishes a cross-tree dependency. From `MASTER/`, the normal entrypoints are `bin/master /fix MASTER`, `bin/master /fix RAILS`, `bin/master /fix OPENBSD`, `bin/master /fix STUDIO` and `bin/master /fix BIZ` for document production.
 
