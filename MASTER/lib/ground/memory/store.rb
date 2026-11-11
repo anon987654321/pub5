@@ -127,31 +127,31 @@ module Master
               return if stored.is_a?(Hash) && !stored.key?("value")
 
               # Older stores may still contain a plain scalar. Promote it without
-            # changing the recalled text so a review can govern it safely too.
-            entry = if stored.is_a?(Hash)
-              stored
-            else
-              @store[key.to_s] = { "value" => stored.to_s, "ts" => 0, "type" => "general" }
-            end
+              # changing the recalled text so a review can govern it safely too.
+              entry = if stored.is_a?(Hash)
+                        stored
+                      else
+                        @store[key.to_s] = { "value" => stored.to_s, "ts" => 0, "type" => "general" }
+                      end
 
-            prior = entry["provenance"]
-            provenance = prior.is_a?(Hash) ? prior.dup : legacy_provenance(entry)
-            reviews = Array(provenance["reviews"]).select { |row| row.is_a?(Hash) }
-            reviews << {
-              "verdict" => verdict,
-              "source" => receipt.fetch("source"),
-              "sha256" => receipt.fetch("sha256"),
-              "reviewer" => reviewer[0, 120],
-              "reviewed_at" => Time.now.utc.iso8601,
-            }
-            provenance["reviews"] = reviews.last(8)
-            provenance["status"] = verdict
-            provenance["reviewed_at"] = reviews.last.fetch("reviewed_at")
-            entry["provenance"] = provenance
-            # A consolidated summary may repeat a fact now marked obsolete.
-            # Invalidate both its durable copy and the in-memory summary.
-            @store.delete("_consolidated_summary")
-            @context_summary_cache = nil
+              prior = entry["provenance"]
+              provenance = prior.is_a?(Hash) ? prior.dup : legacy_provenance(entry)
+              reviews = Array(provenance["reviews"]).select { |row| row.is_a?(Hash) }
+              reviews << {
+                "verdict" => verdict,
+                "source" => receipt.fetch("source"),
+                "sha256" => receipt.fetch("sha256"),
+                "reviewer" => reviewer[0, 120],
+                "reviewed_at" => Time.now.utc.iso8601,
+              }
+              provenance["reviews"] = reviews.last(8)
+              provenance["status"] = verdict
+              provenance["reviewed_at"] = reviews.last.fetch("reviewed_at")
+              entry["provenance"] = provenance
+              # A consolidated summary may repeat a fact now marked obsolete.
+              # Invalidate both its durable copy and the in-memory summary.
+              @store.delete("_consolidated_summary")
+              @context_summary_cache = nil
               persist
               provenance.dup
             end
