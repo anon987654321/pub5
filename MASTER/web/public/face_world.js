@@ -260,6 +260,51 @@
     ];
   }
 
+  function customPrimitivePoint(part, t, b, c) {
+    const center = part.center;
+    const size = part.size;
+    const angle = t * Math.PI * 2;
+    const jitter = (c - 0.5) * 0.08;
+    const scaled = (value, halfExtent) => (value - 0.5) * 2 * halfExtent;
+
+    if (part.primitive === "sphere") {
+      return spherePoint(t, b, center, size);
+    }
+    if (part.primitive === "box") {
+      const face = Math.min(5, Math.floor(b * 6));
+      if (face === 0 || face === 1) {
+        return [center[0] + (face === 0 ? -size[0] : size[0]),
+          center[1] + scaled(t, size[1]), center[2] + scaled(c, size[2])];
+      }
+      if (face === 2 || face === 3) {
+        return [center[0] + scaled(t, size[0]),
+          center[1] + (face === 2 ? -size[1] : size[1]), center[2] + scaled(c, size[2])];
+      }
+      return [center[0] + scaled(t, size[0]), center[1] + scaled(c, size[1]),
+        center[2] + (face === 4 ? -size[2] : size[2])];
+    }
+    if (part.primitive === "ring") {
+      return [center[0] + Math.cos(angle) * size[0],
+        center[1] + Math.sin(angle) * size[1], center[2] + jitter * size[2]];
+    }
+    if (part.primitive === "cylinder") {
+      const cylinderAngle = b * Math.PI * 2;
+      return [center[0] + Math.cos(cylinderAngle) * size[0],
+        center[1] + scaled(t, size[1]), center[2] + Math.sin(cylinderAngle) * size[2]];
+    }
+    if (part.primitive === "beam") {
+      const axis = part.axis === "y" ? 1 : part.axis === "z" ? 2 : 0;
+      const first = (axis + 1) % 3;
+      const second = (axis + 2) % 3;
+      const point = center.slice();
+      point[axis] += scaled(t, size[axis]);
+      point[first] += scaled(b, size[first]);
+      point[second] += scaled(c, size[second]);
+      return point;
+    }
+    return center.slice();
+  }
+
   function semanticFeaturePoint(kind, feature, t, b, c) {
     const side = b < 0.5 ? -1 : 1;
     const angle = t * Math.PI * 2;
@@ -336,11 +381,14 @@
   }
 
   function buildSemanticSubjectGeometry(descriptor, count, scale) {
-    const features = subjectFeatures(descriptor.kind);
+    const custom = descriptor.kind === "custom";
+    const parts = custom && Array.isArray(descriptor.parts) ? descriptor.parts : [];
+    const features = custom ? parts.map((part) => part.key) : subjectFeatures(descriptor.kind);
     const requested = Array.isArray(descriptor.sequence) ? descriptor.sequence : features;
     const sequence = [...new Set(requested.filter((name) => features.includes(name)))];
     features.forEach((name) => { if (!sequence.includes(name)) sequence.push(name); });
     const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
+    const partByKey = new Map(parts.map((part) => [part.key, part]));
     const positions = new Float32Array(count * 3);
     const stages = new Float32Array(count);
     const stageIndices = new Uint8Array(count);
@@ -351,10 +399,11 @@
       const end = Math.max(start + 1, Math.floor((stage + 1) * count / stageCount));
       const local = (i - start) / Math.max(1, end - start - 1);
       const feature = ordered[stage];
-      const point = semanticFeaturePoint(
-        descriptor.kind, feature, local,
-        seeded(i, 81 + stage), seeded(i, 97 + stage)
-      );
+      const b = seeded(i, 81 + stage);
+      const c = seeded(i, 97 + stage);
+      const point = custom
+        ? customPrimitivePoint(partByKey.get(feature), local, b, c)
+        : semanticFeaturePoint(descriptor.kind, feature, local, b, c);
       const offset = i * 3;
       positions[offset] = point[0] * scale;
       positions[offset + 1] = point[1] * scale;
