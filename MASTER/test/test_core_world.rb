@@ -170,6 +170,27 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_write_revalidates_parent_after_directory_creation
+    with_world do |world, root|
+      outside = File.join(File.dirname(root), "world-replaced-parent-#{SecureRandom.hex(4)}")
+      Dir.mkdir(outside)
+      original_within = world.method(:within)
+      calls = 0
+      world.define_singleton_method(:within) do |path|
+        checked = original_within.call(path)
+        calls += 1
+        File.symlink(outside, File.join(root, "redirect")) if calls == 1
+        checked
+      end
+
+      result = world.perform(E.write("redirect/escaped.txt", "no"))
+
+      refute result.ok?
+      assert_match(/path escapes workspace/, result.message)
+      refute File.exist?(File.join(outside, "escaped.txt"))
+    end
+  end
+
   def test_write_refuses_dangling_symlink_ancestors_before_mkdir
     with_world do |world, root|
       outside = File.join(File.dirname(root), "world-dangling-#{SecureRandom.hex(4)}")
