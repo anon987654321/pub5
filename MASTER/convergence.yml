@@ -229,12 +229,12 @@ workstreams:
     implementation: RAILS/brgen/app/jobs/takeaway_cart_expiry_sweep_job.rb
     proof: RAILS/brgen/engines/marketplace/engines/takeaway/test/models/takeaway/cart_expiry_test.rb
   - id: brgen_feed_ranking_deterministic
-    state: missing
+    state: partial
     title: Deterministic recency-plus-engagement feed ranking in the dating ranked_for shape
     implementation: RAILS/brgen
     proof: Feed surface test on a Ruby host
   - id: amber_similarity_right_sized
-    state: missing
+    state: partial
     title: Wears-well-with from typed attribute vectors by brute-force cosine at wardrobe scale
     implementation: RAILS/amber
     proof: RAILS/amber/test
@@ -260,12 +260,12 @@ workstreams:
     implementation: MASTER/data/voice.yml
     proof: preset filter strings parse in both lanes; values marked author's judgement per file convention
   - id: master_fleet_panel
-    state: missing
+    state: partial
     title: The dashboard renders the fleet - sibling health, load and the resource_guard order
     implementation: MASTER/web/app/views/dashboard
     proof: dashboard fleet panel on a Ruby host
   - id: master_quota_facts
-    state: missing
+    state: partial
     title: model_quota and cache_efficiency stop being computed and dropped - the status strip renders them
     implementation: MASTER/web/app/views/dashboard
     proof: dashboard status strip on a Ruby host

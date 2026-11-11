@@ -433,7 +433,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 `MASTER/data/gaps.yml` has 54 rows: 9 picked, 35 open, 4 blocked and 6 satisfied. The satisfied Dating row is intentionally not repeated as work; completed root-index entries stay checked with source evidence. A picked row needs its named convergence workstream completed and evidenced. An open row is a decision candidate, not permission to build. A blocked row stays blocked until its stated prerequisite exists. Every implementation remains subject to MASTER's laws and normal /fix gates.
 
 **Brgen**
-- [ ] `brgen_ai_feed_ranking` — picked; complete `brgen_feed_ranking_deterministic`: deterministic recency plus local-engagement decay, not an opaque model.
+- [ ] `brgen_ai_feed_ranking` — PARTIAL 2026-11-11: deterministic recency-plus-local-engagement ranking is implemented in `RAILS/brgen/app/models/post.rb`; `RAILS/test/feed_ranking_contract_test.rb` covers the contract. Run focused and app suites on pinned Ruby 4.0.5; NOT_RUN here.
 - [ ] `brgen_cold_start_feed` — open; consider a labelled follows-plus-city-popular feed so a new reader can see a living city.
 - [ ] `brgen_creator_monetization` — open; depends on the one shared commerce domain.
 - [ ] `brgen_activitypub_inbound` — open; remote media proxying, per-origin controls, blocklist and moderation must precede storage.
@@ -469,7 +469,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 
 **Amber**
 - [ ] `amber_fashion_embeddings` — open; start with owner-tagged typed attributes, not a Postgres/pgvector migration for a personal wardrobe.
-- [ ] `amber_visual_similarity` — picked; complete `amber_similarity_right_sized`: explainable attribute matching and brute-force similarity at wardrobe scale.
+- [ ] `amber_visual_similarity` — PARTIAL 2026-11-11: typed-token cosine matching is implemented in `RAILS/amber/app/services/wears_well_with.rb`; service and contract tests exist. Run focused and app suites on pinned Ruby 4.0.5; NOT_RUN here.
 - [ ] `amber_fitting_room` — open; keep garment-on-silhouette representation honest; do not imply body measurements or fit guarantees.
 - [ ] `amber_mood_matcher` — open; use reader-declared tags or a colour-first alternative; never infer a reader's mood.
 - [ ] `amber_event_outfit_planner` — open; consider outfits against an event the reader selects, with soft formality/season/recent-wear constraints.
@@ -535,10 +535,10 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `free_compute_design_of_record` — dated free-compute landscape and verified quota assumptions.
 
 **Missing — 8**
-- [ ] `brgen_feed_ranking_deterministic` — deterministic recency-plus-engagement ranking in the existing Dating-style shape.
-- [ ] `amber_similarity_right_sized` — wears-well-with from typed attributes and wardrobe-scale similarity.
-- [ ] `master_fleet_panel` — PARTIAL 2026-11-10: source and injected-probe contract landed; unit and live-host proof NOT_RUN.
-- [ ] `master_quota_facts` — PARTIAL 2026-11-10: source and dashboard contract landed; unit and rendered-browser proof NOT_RUN.
+- [ ] `brgen_feed_ranking_deterministic` — PARTIAL: source and `RAILS/test/feed_ranking_contract_test.rb` exist; pinned Ruby 4.0.5 test and full feed verification remain NOT_RUN.
+- [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; pinned Ruby 4.0.5 tests remain NOT_RUN.
+- [ ] `master_fleet_panel` — PARTIAL 2026-11-11: `FleetPanel`, dashboard wiring and `MASTER/test/test_dashboard_fleet_panel.rb` exist; unit execution and live vm23 health/render proof remain NOT_RUN.
+- [ ] `master_quota_facts` — PARTIAL 2026-11-11: quota/cache payload rendering and dashboard contract coverage exist in `MASTER/test/test_dashboard_fleet_panel.rb`; quota suite execution and rendered-browser proof remain NOT_RUN.
 - [ ] `inconclusive_aging` — an INCONCLUSIVE finding that outlives its review window reopens as FAIL with its original receipt.
 - [ ] `constitution_self_budget` — the laws file has an enforced line ceiling under the ratchet-down rule.
 - [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
