@@ -3,8 +3,11 @@
 .brgen-splinter-card {
   max-width: 34rem;
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  /* --border, --surface, --text: the names brgen's :root declares
+     (_section_04). --border-subtle, --bg-surface and --text-main were
+     invented here and resolved to nothing. */
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 .brgen-splinter-card .splinter-artwork {
   min-height: 11rem;
@@ -24,7 +27,7 @@
 }
 .brgen-splinter-card .splinter-content { padding: 1.5rem; }
 .brgen-splinter-card .splinter-headline {
-  color: var(--text-main);
+  color: var(--text);
   /* Swiss trees own one typeface per role (TYPEFACE_PER_ROLE): the editorial
      serif stack this rule replaced drew a law finding on every scan. */
   font-family: var(--font);

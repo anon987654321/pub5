@@ -146,7 +146,7 @@ module Operator
     # setProperty call, and reading only stylesheets would accuse both.
     def source_files
       @source_files ||= scss_files +
-                        Dir.glob(File.join(rails_root, "{*,*/engines/*}/app/{helpers,views,javascript}/**/*.{rb,erb,js}")) +
+                        Dir.glob(File.join(rails_root, "{*,*/engines/*,*/engines/*/*,*/engines/*/engines/*}/app/{helpers,views,javascript}/**/*.{rb,erb,js}")) +
                         Dir.glob(File.join(rails_root, "*/vendor/javascript/**/*.js")) +
                         Dir.glob(File.join(rails_root, "*/frontend/**/*.js"))
     end
@@ -163,10 +163,14 @@ module Operator
     # brgen/engines/<name>/app/assets/stylesheets — outside the first glob.
     # A stale --text-secondary fallback sat in the playlist engine unseen
     # because of it; the same blind spot cost four other scanners 57 views
-    # when the verticals moved.
+    # when the verticals moved. Two deeper shapes followed: radio nests its
+    # engines one level down (engines/radio/<sub>) and takeaway is an engine
+    # of the marketplace engine (engines/marketplace/engines/<name>), which
+    # hid takeaway's inline --progress declaration from undeclared_uses and
+    # failed the 2026-11-11 deploy rehearsal.
     def scss_files
       Dir.glob(File.join(rails_root, "*/app/assets/stylesheets/**/*.scss")) +
-        Dir.glob(File.join(rails_root, "*/engines/*/app/assets/stylesheets/**/*.scss"))
+        Dir.glob(File.join(rails_root, "*/engines/{*,*/*,*/engines/*}/app/assets/stylesheets/**/*.scss"))
     end
 
     def collect_known_values
