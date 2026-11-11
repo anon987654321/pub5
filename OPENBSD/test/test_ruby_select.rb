@@ -34,6 +34,24 @@ class TestRubySelect < Minitest::Test
     ["/bin/sh", *Dir["/bin/zsh", "/usr/bin/zsh", "/opt/homebrew/bin/zsh"].first(1)]
   end
 
+  def test_generic_ruby_wins_over_versioned_package_names
+    with_path("ruby", "ruby40", "bundle", "gem", "bundle40", "gem40") do |dir|
+      shells.each do |shell|
+        out, err, status = resolve(dir, shell: shell)
+        assert status.success?, err
+        assert_equal [File.join(dir, "ruby"), "", File.join(dir, "bundle"), File.join(dir, "gem"), "ruby"], out.split("|")
+      end
+    end
+  end
+
+  def test_unknown_future_package_suffix_is_discovered
+    with_path("ruby42", "bundle42", "gem42") do |dir|
+      out, err, status = resolve(dir)
+      assert status.success?, err
+      assert_equal [File.join(dir, "ruby42"), "42", File.join(dir, "bundle42"), File.join(dir, "gem42"), "ruby42"], out.split("|")
+    end
+  end
+
   def test_uses_first_compatible_versioned_ruby_when_no_generic_exists
     with_path("ruby34", "ruby40", "bundle34", "bundle40", "gem34", "gem40") do |dir|
       shells.each do |shell|
