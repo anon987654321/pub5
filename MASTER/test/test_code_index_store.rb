@@ -139,6 +139,48 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_public_symbol_and_reference_views_cannot_mutate_the_live_graph
+    with_tree do |root|
+      index = Index.new(root:).build
+
+      symbols = index.symbols
+      references = index.references
+      assert_predicate symbols, :frozen?
+      assert_predicate references, :frozen?
+      assert_raises(FrozenError) { symbols.clear }
+      assert_raises(FrozenError) { references.clear }
+
+      symbol = symbols.find { |row| row.fqn == "Alpha#one" }
+      assert_predicate symbol, :frozen?
+      assert_predicate symbol.fqn, :frozen?
+      assert_predicate symbol.includes, :frozen?
+      assert_raises(FrozenError) { symbol.fqn.replace("Corrupted") }
+      assert_raises(FrozenError) { symbol.includes << "Corrupted" }
+
+      reference = references.first
+      assert_predicate reference, :frozen?
+      assert_predicate reference.to_fqn, :frozen?
+      assert_raises(FrozenError) { reference.to_fqn.replace("Corrupted") }
+      assert_equal ["a.rb", 2], index.lookup("Alpha#one")
+      assert index.complete?
+    end
+  end
+
+  def test_errors_are_immutable_snapshots
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "broken.rb"), "def unfinished(\n")
+      index = Index.new(root:).build
+
+      errors = index.errors
+      assert_predicate errors, :frozen?
+      assert_predicate errors.first, :frozen?
+      assert_predicate errors.first.fetch(:message), :frozen?
+      assert_raises(FrozenError) { errors.first.fetch(:message).replace("hidden") }
+      assert_includes index.errors.first.fetch(:message), "Prism"
+    end
+  end
+
   def test_a_never_built_index_is_not_complete
     Dir.mktmpdir do |root|
       index = Index.new(root:)
