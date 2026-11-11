@@ -81,13 +81,13 @@ module Master
       # evidence log keeps operational events only, so its tail reaches further
       # back than the activity log's.
       def receipt_history(limit = RECEIPT_HISTORY)
-        (@evidence_log || @event_log).recent(limit, pattern: '\Atool:execution:')
+        (@evidence_log || @event_log).recent!(limit, pattern: '\Atool:execution:')
       end
 
       # Effect lifecycle receipts are written to the same operational stream.
       # Observers replay them after restart rather than trusting process memory.
       def effect_history(limit = RECEIPT_HISTORY)
-        (@evidence_log || @event_log).recent(limit, pattern: '\Acore:effect:')
+        (@evidence_log || @event_log).recent!(limit, pattern: '\Acore:effect:')
       end
 
       private
