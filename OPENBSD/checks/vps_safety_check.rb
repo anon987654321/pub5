@@ -604,6 +604,10 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   falcon_pexp = mrd_service[/^\s*pexp="([^"]+)"/, 1]
   expected_pexp = "ruby[0-9.]*.*${APP_DIR}/falcon.rb"
   failures << "mrdamascy rc.d process match must identify its Falcon host config" unless falcon_pexp == expected_pexp
+  falcon_stop_pattern = mrd_service[/^\s*pkill -f "([^"]+)"/, 1]
+  expected_stop_pattern = "falcon host ${APP_DIR}/falcon.rb"
+  failures << "mrdamascy rc.d stop pattern must target only its Falcon host config" unless
+    falcon_stop_pattern == expected_stop_pattern
 
   falcon_contract = mrd_falcon.include?('require "falcon/environment/rack"') &&
                     mrd_falcon.include?('service "mrdamascy" do') &&
