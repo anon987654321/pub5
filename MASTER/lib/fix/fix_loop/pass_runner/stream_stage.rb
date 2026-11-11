@@ -437,12 +437,21 @@ module Master
           def repair_context(path)
             graph = @reference_graph
             return { complete: true, files: [] } unless graph # isolated unit tests only; requested /fix always wires it
-            target_source = File.read(path, encoding: "UTF-8")
+            relative = graph.relative(path)
+            target_source = read_related(
+              graph, relative, max_bytes: REPAIR_CONTEXT_MAX_BYTES, verify_digest: false
+            )
+            unless target_source
+              size = File.size(path)
+              return incomplete_repair_context(
+                "complete target source is #{size} bytes, exceeding #{REPAIR_CONTEXT_MAX_BYTES}; no excerpt-only repair was attempted",
+              )
+            end
+
             target_sha256 = Digest::SHA256.hexdigest(target_source)
             refresh_graph_for(graph, path) unless indexed_at?(graph, path, target_sha256)
             return incomplete_repair_context(NOT_INDEXED) unless indexed_at?(graph, path, target_sha256)
 
-            relative = graph.relative(path)
             radius = graph.blast_radius(path)
             inbound = Array(radius[:inbound]) - [relative]
             lock_reasons = interface_lock_reasons(graph:, path:, relative:, inbound:)
@@ -501,7 +510,7 @@ module Master
           # An over-budget relationship is still checked against the graph's
           # digest, but it is hashed in fixed-size chunks instead of being
           # materialised just to discover that it cannot fit in the prompt.
-          def read_related(graph, rel, max_bytes:)
+          def read_related(graph, rel, max_bytes:, verify_digest: true)
             root = File.realpath(graph.root)
             full = File.expand_path(rel, root)
             unless full.start_with?(root + File::SEPARATOR)
@@ -533,6 +542,8 @@ module Master
               end
 
               if opened.size > max_bytes
+                return nil unless verify_digest
+
                 digest = Digest::SHA256.new
                 digest.update(chunk) while (chunk = io.read(64 * 1024))
                 after = io.stat
@@ -550,7 +561,10 @@ module Master
               unless stable_related_file?(opened, after) && source.bytesize <= max_bytes
                 raise IncompleteContext, "dependency changed while reading: #{rel}"
               end
-              unless source.valid_encoding? && Digest::SHA256.hexdigest(source) == graph.source_digest(full)
+              unless source.valid_encoding?
+                raise IncompleteContext, "dependency is not valid UTF-8: #{rel}"
+              end
+              if verify_digest && Digest::SHA256.hexdigest(source) != graph.source_digest(full)
                 raise IncompleteContext, "dependency changed since graph refresh: #{rel}"
               end
 
