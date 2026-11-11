@@ -510,6 +510,7 @@ when "visual"
       max_pages: one_page ? 1 : Master::Fix::ScreenshotSweep::MAX_PAGES,
     )
     puts JSON.pretty_generate(summary.except("rows"))
+    puts "screenshots0: #{summary["directory"]}"
     exit(summary["error"] ? 1 : 0)
   end
   if ARGV.first == "review"
