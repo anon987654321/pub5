@@ -52,7 +52,7 @@ class TestCodeIndexBrief < Minitest::Test
   end
 
   def test_a_backticked_method_name_gets_its_slice
-    source = "module Shop\\n  class WidgetMaker\\n    def refresh_index; end\\n  end\\nend\\n"
+    source = "module Shop\n  class WidgetMaker\n    def refresh_index; end\n  end\nend\n"
     with_index(source:) do |index|
       assert_includes index.summary(focus: "inspect `refresh_index`"), "Shop::WidgetMaker#refresh_index"
     end
