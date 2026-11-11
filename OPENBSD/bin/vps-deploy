@@ -284,8 +284,8 @@ acquire_deploy_lock() {
 #   - a per-run log under /var/log/pub5/runs/ with the pid and app in the name
 #   - a stable symlink at $DEPLOY_HOME/vps-deploy.log for operators who still
 #     tail the home path
-# Once per run, not once per app: `vps-deploy all` and `vps-deploy rails` re-invoke
-# children inherit VPS_DEPLOY_LOGGING so they do not double-tee.
+# Once per run, not once per app: each group re-invokes one child per app.
+# VPS_DEPLOY_LOGGING is inherited so child processes do not double-tee.
 deploy_log_dir=${VPS_DEPLOY_LOG_DIR:-/var/log/pub5}
 deploy_log=${VPS_DEPLOY_LOG:-$deploy_log_dir/vps-deploy.log}
 deploy_run_log=${VPS_DEPLOY_RUN_LOG:-}
