@@ -147,6 +147,20 @@ run the focused set, verify the delivery failure survives and safely retries,
 and then perform one genuine repository-wide `/fix` run with its terminal
 state, repair counts and receipts recorded.
 
+The expanded runner also covers streaming overlap and semantic-cursor budgets,
+deterministic autofix safety, visual pass/custody/completion receipts, Soul and
+Law registry integrity, replay-reader behavior, media lanes, provider/catalogue
+configuration, task-contract preservation and CLI routing. The count-only
+plateau regression confirms the pass runner aborts its active transaction at
+the plateau boundary; rollback is owned by `plateau_result`, not by the
+stagnation detector itself. Streaming now rejects a zero, negative or non-integer
+worker count; `MASTER_FIX_STREAM=0` remains the explicit no-worker mode.
+
+The Kernel lifecycle suite already contains independent-process and independent-
+Kernel lock serialization cases, while the crash/transaction suites assert that
+another writer's later edit survives. These are still source-covered regressions,
+not runtime results.
+
 ## Cross-cutting execution lifecycle
 
 The lifecycle sections below preserve the distinct owners that surround
