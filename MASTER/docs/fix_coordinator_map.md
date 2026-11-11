@@ -106,7 +106,7 @@ Kernel-instance and process serialization, symlink and writable-directory refusa
 both the execution lock and hash-chained audit ledger, open-transaction rollback,
 durable-run resume, journal deletion and Mission checkpoint survival, and orphan
 receipt reconciliation. They are authored but **not run**: this
-environment cannot provide the repository-pinned Ruby 4.0.5 checkout. The Phase 2
+environment cannot provide a compatible installed Ruby checkout. The Phase 2
 runtime gate is therefore still blocked; source consolidation is not proof of
 behavioral parity.
 
@@ -134,8 +134,8 @@ checking that the independent Mission checkpoint and transaction snapshot
 survive. Owner and outcome regressions live in `test_fix_kernel_lifecycle.rb`.
 
 These tests are source changes, **not passing results**. The merge remains
-blocked until the tests run on the pinned Ruby 4.0.5, then the relevant
-release-runtime verification is also recorded. The canonical repository pin is Ruby 4.0.5, shared by root, MASTER and Rails apps.
+blocked until the tests run on the installed compatible Ruby, then the relevant
+release-runtime verification is also recorded. The canonical runtime policy is the installed Ruby 3.3+ selected by MASTER, shared by root, MASTER and Rails apps.
 These tests remain unexecuted in this GitHub editing environment. Still required after the
 process-boundary test: a real budget/collapse regression, truthful per-file
 ledger behavior for zero repairs, the complete adapter receipt-parity matrix,
@@ -252,7 +252,7 @@ rollback on the box is the operator's (operator_seams.yml).
    Its hash-chained `.master/log.jsonl` reader refuses symlinked, hard-linked,
    non-regular or non-private ledger files, blank records and torn tails, and verifies path identity before
    and after reading. Runtime results remain unmeasured here: run the focused
-   replay, lifecycle and process-kill regressions on pinned Ruby 4.0.5, then
+   replay, lifecycle and process-kill regressions on the installed compatible Ruby, then
    prove transaction rollback, durable resumption, orphan-receipt recovery,
    budget/collapse and zero-repair ledger honesty, and the adapter receipt-parity
    matrix. A real repository-wide `/fix` trial still has not run.
