@@ -51,12 +51,20 @@ module Master
 
           max_bytes = Integer(max_bytes)
           raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
+          raise ArgumentError, "download byte limit exceeds #{MAX_DOWNLOAD_BYTES}" if max_bytes > MAX_DOWNLOAD_BYTES
 
           target = File.expand_path(path)
           directory = File.dirname(target)
           FileUtils.mkdir_p(directory)
-          raise ArgumentError, "download target cannot be a symlink" if File.symlink?(target)
-          mode = File.file?(target) ? File.stat(target).mode & 0o7777 : 0o600
+          existing_target = begin
+            File.lstat(target)
+          rescue Errno::ENOENT
+            nil
+          end
+          if existing_target && (!existing_target.file? || existing_target.symlink?)
+            raise ArgumentError, "download target must be a regular non-symlink file"
+          end
+          mode = existing_target ? existing_target.mode & 0o7777 : 0o600
           deadline = monotonic_now + DOWNLOAD_TIMEOUT_SECONDS
 
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
@@ -83,6 +91,19 @@ module Master
             file.fsync
             File.chmod(mode, file.path)
             file.close
+            current_target = begin
+              File.lstat(target)
+            rescue Errno::ENOENT
+              nil
+            end
+            if existing_target
+              unless current_target && current_target.dev == existing_target.dev &&
+                     current_target.ino == existing_target.ino
+                raise IOError, "download target changed during transfer"
+              end
+            elsif current_target
+              raise IOError, "download target appeared during transfer"
+            end
             File.rename(file.path, target)
           end
           path
@@ -417,11 +438,11 @@ module Master
       end
 
       def upload_binary(path, mime:)
-        unless File.file?(path) && File.readable?(path)
-          raise ArgumentError, "upload source must be a readable regular file"
+        source_stat = File.lstat(path)
+        unless source_stat.file? && !source_stat.symlink? && File.readable?(path)
+          raise ArgumentError, "upload source must be a readable regular non-symlink file"
         end
-        size = File.size(path)
-        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if size > MAX_UPLOAD_BYTES
+        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if source_stat.size > MAX_UPLOAD_BYTES
 
         boundary = "ReplicateBoundary#{rand(1_000_000_000)}"
         uri = URI("#{BASE}/files")
@@ -447,9 +468,24 @@ module Master
         body.write("--#{boundary}\r\n".b)
         body.write("Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b)
         body.write("Content-Type: #{mime}\r\n\r\n".b)
-        File.open(path, "rb") do |source|
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(path, flags) do |source|
+          opened = source.stat
+          current = File.lstat(path)
+          unless same_file_stat?(opened, current) && opened.file? && !opened.symlink? &&
+                 opened.size <= MAX_UPLOAD_BYTES
+            raise IOError, "upload source changed before transfer"
+          end
+
           copied = IO.copy_stream(source, body, MAX_UPLOAD_BYTES + 1)
           raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if copied > MAX_UPLOAD_BYTES
+          after = source.stat
+          final_path = File.lstat(path)
+          unless copied == opened.size && same_file_stat?(opened, after) &&
+                 same_file_stat?(after, final_path) && stable_file_stat?(opened, after)
+            raise IOError, "upload source changed during transfer"
+          end
         end
         body.write("\r\n--#{boundary}--\r\n".b)
       end
@@ -642,6 +678,14 @@ module Master
 
       def redacted_provider_error(value)
         "provider error redacted (#{response_detail(value)})"
+      end
+
+      def same_file_stat?(left, right)
+        left.dev == right.dev && left.ino == right.ino
+      end
+
+      def stable_file_stat?(before, after)
+        before.size == after.size && before.mtime == after.mtime && before.ctime == after.ctime
       end
 
       def operation_timeout!(value, label)
