@@ -85,6 +85,17 @@ class TestReplayReader < Minitest::Test
     refute_includes output, "PRIVATE EFFECT PAYLOAD"
   end
 
+  def test_session_command_dispatches_the_read_only_receipt
+    session = Trace::Session.new(root: @dir)
+    session.save!
+
+    output = Master::CLI::CommandRegistry.dispatch_session(session, ctx: { args: "receipt" })
+
+    assert_includes output, "session receipt0: OBSERVED"
+    assert_includes output, "read-only"
+    refute_includes output, "message text"
+  end
+
   def test_session_receipt_is_inconclusive_when_transcript_telemetry_is_corrupt
     session = Trace::Session.new(root: @dir)
     session.add_message(role: :user, content: "not emitted")

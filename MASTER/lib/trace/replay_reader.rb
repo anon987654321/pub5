@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
+require "digest"
 require "json"
 require "open3"
 require "time"
-require "digest"
 
 module Master
   module Trace
@@ -40,7 +40,8 @@ module Master
         transcript = transcript_fingerprint(key)
         activity = session_event_summary("activity")
         evidence = session_event_summary("evidence")
-        status = [transcript, activity, evidence].all? { |source| source["status"] == "read" } ? "OBSERVED" : "INCONCLUSIVE"
+        sources_read = [transcript, activity, evidence].all? { |source| source["status"] == "read" }
+        status = sources_read ? "OBSERVED" : "INCONCLUSIVE"
 
         roles = messages.group_by { |message| (message[:role] || message["role"]).to_s }
         execution = messages.count do |message|
