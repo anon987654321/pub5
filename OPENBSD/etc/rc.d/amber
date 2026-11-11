@@ -31,7 +31,7 @@ daemon="/bin/ksh"
 # header before enabling it, because vm23 has 1 GB.
 # rc.d cannot source the repo, so pick whichever bundler the package manager
 # installed (OpenBSD ships Ruby by version; none is named here).
-for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
+for _bundle in /usr/local/bin/bundle /usr/local/bin/bundle[0-9]*; do
   if [ -x "$_bundle" ]; then break; fi
 done
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/amber.env && set +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/amber && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
