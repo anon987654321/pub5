@@ -140,6 +140,25 @@ class StreamStageTest < Minitest::Test
     end
   end
 
+  def test_an_oversized_target_is_rejected_without_materialising_its_source
+    path = File.join(temporary_path, "target.rb")
+    File.write(path, "# " + ("x" * 260_000) + "\\n")
+    @reference_graph = FakeGraph.new(temporary_path)
+    original_read = File.method(:read)
+
+    context = nil
+    File.stub(:read, lambda { |file, *args, **kwargs|
+      raise "oversized target was materialised" if File.expand_path(file) == path
+
+      original_read.call(file, *args, **kwargs)
+    }) do
+      context = repair_context(path)
+    end
+
+    refute context[:complete]
+    assert_match(/complete target source is \d+ bytes, exceeding/, context[:reason])
+  end
+
   def test_callers_the_graph_cannot_see_lock_the_interface_without_refusing_the_repair
     graph = graph_with(inbound: ["caller.rb"], dynamic: { "caller.rb" => "public_send" })
 
