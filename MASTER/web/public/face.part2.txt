@@ -149,21 +149,21 @@ void main(){
   // The default carved-field portrait uses shallow, local planes rather than
   // copied ceremonial motifs: a quiet brow shelf, recessed eye sockets,
   // raised cheek planes, a narrow bridge, and a restrained chin plane.
-  float eyeSocket = exp(-pow((abs(position.x) - 0.145) / 0.072, 2.0))
-    * exp(-pow((position.y - 0.115) / 0.067, 2.0));
-  float browShelf = exp(-pow((position.y - 0.235) / 0.045, 2.0))
+  float eyeX = 1.0 - smoothstep(0.055, 0.15, abs(abs(position.x) - 0.145));
+  float eyeY = 1.0 - smoothstep(0.040, 0.11, abs(position.y - 0.115));
+  float eyeSocket = eyeX * eyeY;
+  float browShelf = (1.0 - smoothstep(0.035, 0.10, abs(position.y - 0.235)))
     * (1.0 - smoothstep(0.12, 0.42, abs(position.x)));
-  float cheekPlane = exp(-pow((position.y + 0.015) / 0.105, 2.0))
+  float cheekPlane = (1.0 - smoothstep(0.05, 0.16, abs(position.y + 0.015)))
     * smoothstep(0.10, 0.21, abs(position.x))
     * (1.0 - smoothstep(0.22, 0.34, abs(position.x)));
-  float noseBridge = exp(-pow(position.x / 0.060, 2.0))
-    * exp(-pow((position.y - 0.035) / 0.19, 2.0));
-  float chinPlane = exp(-pow((position.y + 0.345) / 0.055, 2.0))
+  float noseBridge = (1.0 - smoothstep(0.025, 0.09, abs(position.x)))
+    * (1.0 - smoothstep(0.10, 0.28, abs(position.y - 0.035)));
+  float chinPlane = (1.0 - smoothstep(0.035, 0.10, abs(position.y + 0.345)))
     * (1.0 - smoothstep(0.08, 0.27, abs(position.x)));
-  // A small seeded imbalance keeps the planes human and avoids a mirrored mask.
-  float sidePhase = sin(position.y * 9.0 + seed * 0.71 + 0.6);
+  // A restrained seeded imbalance keeps the planes human and avoids a mirrored face.
   float sideWeight = position.x < 0.0 ? 1.0 : 0.38;
-  float sideCarve = sidePhase * sideWeight * FACE_CARVE_ASYMMETRY;
+  float sideCarve = (seed - 0.5) * 2.0 * sideWeight * FACE_CARVE_ASYMMETRY;
   p.z -= eyeSocket * FACE_CARVE_ORBITAL * lm;
   p.z += browShelf * FACE_CARVE_BROW * lm;
   p.z += cheekPlane * (FACE_CARVE_CHEEK + sideCarve) * lm;
