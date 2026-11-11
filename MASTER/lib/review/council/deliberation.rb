@@ -483,10 +483,35 @@ module Master
             # than buying the same refusal 22 more times.
             break feedback if panel_blocked? || Master::Review::LLMDispatcher::PassClock.expired?
 
-            threads = batch.map do |persona|
-              Thread.new { ask_persona(persona:, code:, context:, image:) }
+            threads = []
+            spawn_error = nil
+            begin
+              batch.each do |persona|
+                threads << [persona, Thread.new do
+                  Thread.current.report_on_exception = false
+                  ask_persona(persona:, code:, context:, image:)
+                end]
+              end
+            rescue StandardError => error
+              spawn_error = error
             end
-            feedback.concat(threads.filter_map { |thread| join_or_kill(thread, deadline) })
+
+            begin
+              threads.each do |persona, thread|
+                begin
+                  entry = join_or_kill(thread, deadline)
+                  feedback << entry if entry
+                rescue StandardError => error
+                  note_persona_failure(persona, error)
+                end
+              end
+              if spawn_error
+                batch.drop(threads.size).each { |persona| note_persona_failure(persona, spawn_error) }
+                break feedback
+              end
+            ensure
+              stop_persona_threads(threads)
+            end
           end
         end
 
