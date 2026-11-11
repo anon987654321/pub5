@@ -254,7 +254,8 @@ module Master
         end
 
         # Top of the discovered-finding docket; remaining rows stay available
-        # in this run through file_outcomes. No entry implies untouched files pass.
+        # in this run through file_outcomes. No entry means no finding was docketed,
+        # not that the file or every applicable Law was proved clean.
         def file_docket_lines(limit: 20)
           outcomes = file_outcomes
           return [] if outcomes.empty?
