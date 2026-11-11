@@ -449,7 +449,7 @@ class TestBacklog < Minitest::Test
     }
 
     Dir.mktmpdir("backlog-executor") do |root|
-      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT)
+      executor = Backlog::Executor.new(root:, repo_root: File.expand_path("..", Backlog::MASTER_ROOT))
       proof_types = Backlog::ProofMap.types_for(row)
       plan = {
         "executor" => "root_todo",
