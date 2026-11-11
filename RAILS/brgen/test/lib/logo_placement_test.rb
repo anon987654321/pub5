@@ -64,4 +64,37 @@ class LogoPlacementTest < ActiveSupport::TestCase
     refute_match(/\bif\b|\bunless\b/, line,
                  "the mark must render on every surface, not behind a guard")
   end
+
+  def test_marketplace_keeps_its_original_face_and_cart_with_a_bounded_burst
+    logo = Rails.root.join("engines/marketplace/app/views/marketplace/_animated_logo.html.erb").read
+    controller = Rails.root.join("engines/marketplace/app/javascript/controllers/marketplace_logo_controller.js").read
+
+    assert_includes logo, 'id="marketplace-logo-a"'
+    assert_includes logo, 'id="marketplace-logo-j"'
+    assert_equal 8, logo.scan('data-marketplace-logo-target="smileyPath"').size
+    assert_equal 2, logo.scan('data-marketplace-logo-target="cartPath"').size
+    assert_includes controller, "i <= 16"
+    assert_includes controller, "data-marketplace-logo-particle"
+    assert_includes controller, "particles.forEach((particle) => particle.remove())"
+  end
+
+  def test_dating_still_mark_has_five_rings_without_motion
+    splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
+
+    assert_equal 5, splash.scan('<use href="#dating-splash-heart-path"').size
+    refute_match(/stroke-dash(?:array|offset)/, splash)
+    assert_includes stylesheet, ".dating-splash-still use:nth-of-type(even)"
+  end
+
+  def test_playlist_tunnel_has_its_own_decorative_wave_mark
+    tunnel = Rails.root.join("engines/radio/playlist/app/views/playlist/playlists/_radio_tunnel.html.erb").read
+    stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_vertical_surfaces.scss").read
+
+    assert_includes tunnel, '<svg class="radio-brand-mark"'
+    assert_includes tunnel, 'aria-hidden="true" focusable="false"'
+    assert_includes tunnel, '<span><%= t("radio.name") %></span>'
+    assert_includes stylesheet, ".radio-brand-mark"
+    assert_includes stylesheet, "color: var(--color-accent)"
+  end
 end
