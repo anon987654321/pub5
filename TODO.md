@@ -122,14 +122,16 @@ screenshot count or previous revision.
   receipts and truthful terminal states (DONE, PLATEAU, HUMAN_DECISION,
   BLOCKED, VALIDATION_FAILED, DELIVERY_FAILED or TIMEOUT). Measure actual
   convergence and repair quality; an architecture map is not runtime proof.
-  Unattended completion is not yet wired: `Backlog::Store` generates/checks a
-  derived index but does not dispatch work, while `TaskSteward` resumes only a
-  fold mission that already exists with `auto_continue` enabled. The missing
-  part is a dependency-aware intake over this register and its structured
-  owners, creating one scoped Mission/TaskContract at a time and closing rows
-  only when their declared proof exists. Build this into the existing
-  Backlog/Mission/TaskSteward owners; do not add a second queue. Human, rights,
-  provider-spend, device and production-host approvals remain real stop points.
+  A first unattended intake slice now exists behind
+  `MASTER_BACKLOG_AUTORUN=1`: it selects only mechanical, single-tree rows
+  with exact paths, queues one durable Mission, and reuses TaskSteward and the
+  existing /fix pipeline. Terminal delivery receipts require a completed
+  Mission, non-empty summary, current source item and zero pending repository
+  writes. This is partial, not full unattended completion: dependency-aware
+  scheduling across structured owners, explicit proof-type mapping, reliable
+  test/render evidence and automatic root-checkbox reconciliation remain open.
+  Human, rights, provider-spend, device and production-host approvals remain
+  real stop points. Build on these existing owners; do not add a second queue.
 - [ ] Verify shared-checkout lock, writer ownership, interruption cleanup and
   path-scoped commit behavior with another active writer. Never stage another
   writer's changes.
