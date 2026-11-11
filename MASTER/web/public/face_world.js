@@ -247,7 +247,7 @@
     features.forEach((name) => { if (!sequence.includes(name)) sequence.push(name); });
     const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
     const positions = new Float32Array(count * 3);
-    const stages = new Uint8Array(count);
+    const stages = new Float32Array(count);
     const stageCount = Math.max(1, ordered.length);
     for (let i = 0; i < count; i += 1) {
       const stage = Math.min(stageCount - 1, Math.floor(i * stageCount / count));
@@ -263,7 +263,7 @@
       positions[offset] = point[0] * scale;
       positions[offset + 1] = point[1] * scale;
       positions[offset + 2] = point[2] * scale;
-      stages[i] = stage;
+      stages[i] = stage / stageCount;
     }
     return { positions, stages, sequence: ordered };
   }
@@ -436,10 +436,14 @@
       : splatBasePositions?.slice() || null;
     semanticMorphStartedAt = nowMs();
 
-    const facePositions = form === "face" ? null : buildFaceSubjectPositions(form);
+    const primaryGeometry = form === "object" && semanticDescriptor && window.MASTER_FACE?.faceScatter?.length
+      ? buildSemanticSubjectGeometry(semanticDescriptor, window.MASTER_FACE.faceScatter.length / 3, 0.52)
+      : null;
+    const facePositions = form === "face" ? null : primaryGeometry?.positions || buildFaceSubjectPositions(form);
+    const faceStages = primaryGeometry?.stages || null;
     nativeSubjectField = form === "face"
       ? window.MASTER_FACE?.resetSubjectScatter?.() === true
-      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions) === true);
+      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages) === true);
     // The primary field uses the face renderer's existing spring. The bounded
     // FaceWorld point field is the compatibility path, never a second renderer.
     semanticMorphInProgress = !nativeSubjectField && Boolean(splatTargetPositions && splatProxy);
@@ -494,13 +498,17 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
     subjectTransitionGeneration += 1;
     return setSubjectForm("face");
   }
 
-  function setConversationSubject(value) {
-    const next = inferSubjectForm(value);
-    if (next === semanticForm && !pendingSubjectForm) return next;
+  function setConversationSubject(value, visualSubject = null) {
+    const descriptor = normalizeVisualSubject(visualSubject) || inferVisualSubject(value);
+    const next = descriptor ? "object" : inferSubjectForm(value);
+    const signature = subjectSignature(descriptor);
+    if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
+        !pendingSubjectForm) return next;
 
     const currentMorph = Number(window.MASTER_FACE?.morphCurrent);
     const faceStillMorphing = semanticForm === "face" && nativeSubjectField &&
@@ -508,6 +516,7 @@
 
     if (next !== "face" && pendingSubjectForm && semanticForm === "face") {
       pendingSubjectForm = next;
+      pendingSubjectDescriptor = descriptor;
       return next;
     }
 
@@ -515,6 +524,7 @@
         (semanticForm !== "face" || faceStillMorphing)) {
       if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
       pendingSubjectForm = next;
+      pendingSubjectDescriptor = descriptor;
       const generation = ++subjectTransitionGeneration;
       if (semanticForm !== "face") setSubjectForm("face");
       const deadline = Date.now() + SUBJECT_MORPH_SETTLE_TIMEOUT_MS;
@@ -523,9 +533,11 @@
         const morph = Number(window.MASTER_FACE?.morphCurrent);
         if (!Number.isFinite(morph) || morph >= 0.995 || Date.now() >= deadline) {
           const form = pendingSubjectForm;
+          const subject = pendingSubjectDescriptor;
           pendingSubjectForm = null;
+          pendingSubjectDescriptor = null;
           subjectTransitionTimer = null;
-          if (form && form !== "face") setSubjectForm(form);
+          if (form && form !== "face") setSubjectForm(form, subject);
           return;
         }
         subjectTransitionTimer = setTimeout(advanceWhenFaceIsResting, 40);
@@ -537,8 +549,9 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
     subjectTransitionGeneration += 1;
-    return setSubjectForm(next);
+    return setSubjectForm(next, descriptor);
   }
 
   function scheduleFaceRestoration() {
@@ -1227,7 +1240,8 @@
   }
 
   window.MASTER_FACE_WORLD = Object.freeze({
-    load, update, spawnPulse, setSubjectForm, setSubjectFromText, setConversationSubject, restoreFaceSubject, inferSubjectForm
+    load, update, spawnPulse, setSubjectForm, setSubjectFromText, setSubjectFromVisual,
+    setConversationSubject, restoreFaceSubject, inferSubjectForm, inferVisualSubject, normalizeVisualSubject
   });
   window.addEventListener("master:visual", (event) => {
     const detail = event.detail || {};
@@ -1238,6 +1252,11 @@
       spawnPulse(from, to, Number(detail.activity || detail.confidence || 0.5));
     }
   }, { passive: true });
+  window.addEventListener("master:visual-subject", (event) => {
+    const detail = event.detail || {};
+    setConversationSubject(detail.text || detail.title || "", detail.visual_subject || detail.visualSubject || detail);
+  }, { passive: true });
+
   window.addEventListener("master:bus", (event) => {
     const detail = event.detail || {};
     const type = String(detail.type || "");
@@ -1250,7 +1269,8 @@
 
     if (type === "speech:partial" || type === "speech:end" || type === "turn:committed") {
       const text = String(payload.transcript || payload.text || "").trim();
-      if (text) setConversationSubject(text);
+      const visualSubject = payload.visual_subject || payload.visualSubject || null;
+      if (text || visualSubject) setConversationSubject(text, visualSubject);
       if (type !== "speech:partial") scheduleFaceRestoration();
       return;
     }
@@ -1264,6 +1284,7 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
   }, { once: true });
   window.addEventListener("master:face-ready", () => load(), { once: true });
   if (window._primerFired) load();
