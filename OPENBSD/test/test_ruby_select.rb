@@ -54,11 +54,11 @@ class TestRubySelect < Minitest::Test
     end
   end
 
-  def test_falls_back_to_plain_tools_when_suffixed_ones_are_missing
+  def test_requires_matching_bundle_and_gem_for_versioned_ruby
     with_path("ruby34", "bundle", "gem") do |dir|
-      out, = resolve(dir)
-      assert_equal File.join(dir, "bundle"), out.split("|")[2]
-      assert_equal File.join(dir, "gem"), out.split("|")[3]
+      _out, err, status = resolve(dir)
+      refute status.success?
+      assert_match(/matching bundle34 is unavailable/, err)
     end
   end
 
