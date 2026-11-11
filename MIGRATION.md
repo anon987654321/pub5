@@ -454,3 +454,52 @@ but they are authored tests, not passing test runs. The repository's full
 MASTER, RAILS, OPENBSD and STUDIO suites, BIZ build/check, rendered browser
 review, native OpenBSD validation and vm23 restart remain **NOT_RUN** or
 **BLOCKED** until run in their required environments.
+
+## Live migration reconciliation — 2026-11-11 (pub5/main@5b19d609ec1765c3efee441130ea71cd7c0d61a9)
+
+The source-side check was repeated against pub4/main; it is still exactly
+0a5ac0ce6c3e11bb8d9a1c040adf15b00acb3c6b, the recorded port cutoff. There
+are no later pub4 commits to catch up.
+
+A fresh, complete recursive Git-tree comparison used the pub4 cutoff and the
+pub5 tree at 5b19d609ec1765c3efee441130ea71cd7c0d61a9
+(tree 518ed1ffbee0ea33888eca13eba12ce706870728). Neither tree response was
+truncated:
+
+- pub4: 6,749 tracked file blobs.
+- pub5: 7,242 tracked file blobs.
+- 4,835 pub4 blobs remain byte-identical at the same path.
+- 1,248 old paths remain, but their contents have changed.
+- 542 old blobs remain byte-identical at a different path.
+- 124 old blobs have neither their original path nor an identical blob elsewhere.
+
+The 124 non-identical/retired source blobs reconcile by owner and disposition:
+
+| Old source group | Blobs | Current disposition |
+| --- | ---: | --- |
+| Root and MASTER runtime selectors, plus RAILS app selectors | 7 | The root .ruby-version, two MASTER pins and four RAILS app pins were retired. The current contract uses the installed compatible Ruby 3.3+ floor and runtime discovery; no patch-level pin or upper bound is authoritative. |
+| BPLANS/ | 30 | Consolidated into BIZ/: plan folders own published pairs, templates and the authoring/check/print tools live under BIZ/tools/, the old NATO plan is merged into future_nato_weapons/, and the old cover script is superseded by bp_retemplate.mjs. |
+| MASTER/ | 23 | Two runtime selectors are counted above. The backlog became root TODO.md; dialogue policy moved to the voice owner; execution and visual policy were consolidated under the canonical Law catalogue; the permission matrix was renamed PUB5_PERMISSION_MATRIX.md; creative governance moved to MASTER/data/law/; research/repository tools moved under their owners. The four unused legacy face/hero images were retired. The old Smart Turn/ONNX runtime binaries are not tracked in the current tree; their replacement/download integrity is a runtime acceptance concern, not a reason to restore old binaries blindly. |
+| OPENBSD/ | 4 | Nested hooks moved to root .githooks/ and were adapted to the pub5 environment and path contract. |
+| Historical root photographs | 7 | Explicitly retired on 2026-11-10 as unassigned sketches, as recorded above. |
+| RAILS/ | 51 | Four runtime selectors are counted above. Dating, Maps, Marketplace/Takeaway, Messenger and Radio/TV sources moved into the consolidated RAILS/brgen/engines/ hierarchy. The shared gem identity changed from pub4-shared to pub5-shared; several source files evolved after the move rather than remaining byte-identical. |
+| STUDIO/ | 3 | The Python reference analyzer was replaced by the Ruby analyzer. Merethe's preparation package moved to STUDIO/lora/merethe/ and was hardened; it is intentionally not byte-identical to the old location. |
+| Root tree contract | 1 | Moved to MASTER/data/law/TREE_CONTRACTS.md. |
+| Root redeploy shim | 1 | Replaced by the owned MASTER/bin/redeploy entrypoint. |
+| scripts/analysis/ | 3 | Python contact-sheet/crop helpers were replaced by the Ruby/ruby-vips implementation at MASTER/tools/visual/sheets.rb. |
+
+The accounting is exact: 4,835 unchanged in place + 1,248 changed at the same
+path + 542 identical blobs relocated + 124 explained non-identical
+replacements/retirements = 6,749 pub4 blobs. The previous 2026-11-11 snapshot
+at pub5@296121b (4,975 / 1,121 / 549 / 104) is historical and is superseded
+by this live-tree count; the changed count reflects later source evolution and
+the removal of patch-specific Ruby pins.
+
+This is a file/provenance reconciliation, not behavioural acceptance. It does
+not prove that changed RAILS behavior, runtime-fetched model assets, the
+Ragnhild PDF, the BIZ build, browser rendering, full test suites, native
+OpenBSD checks or vm23 deployment passed. Those gates remain exactly where
+their owning rows in root TODO.md and the structured operator seams place
+them. No pub4 tree or retired binary/photo should be copied back merely to
+make blob counts match.
+
