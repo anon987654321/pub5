@@ -123,8 +123,8 @@ class TestBacklog < Minitest::Test
     assert_equal "rake lint:law_parity", gates[:done_when]
   end
 
-  def test_the_pinned_ruby_verification_row_names_its_command
-    pinned = entries.find { |row| row[:text].include?("MASTER on pinned Ruby 4.0.5") }
+  def test_the_installed_ruby_verification_row_names_its_command
+    pinned = entries.find { |row| row[:text].include?("MASTER on the installed compatible Ruby") }
 
     refute_nil pinned
     assert_equal "rake test", pinned[:done_when].split(" ").last(2).join(" ")
