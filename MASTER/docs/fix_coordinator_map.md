@@ -158,22 +158,27 @@ stagnation detector itself. Streaming accepts only worker counts 1–8 (default
 intentionally below the existing critical host thread threshold and is checked
 before any worker is created.
 
-The stream's repair-context reader now checks the target's size before
-materialising it, rejects an oversized target without an excerpt-only repair,
-and hashes over-budget related files in fixed 64 KiB chunks before omitting
-them. It rechecks opened-file identity and every path component, refuses
-symlinked parents and stale graph digests, and returns only in-budget UTF-8
-source to the prompt. Regression cases cover large related and target files,
-digest drift and a symlinked parent. These are source-covered, not runtime
-results.
+The stream's repair-context reader checks the target's size before
+materialising it, rejects oversized targets without excerpt-only repair, and
+hashes over-budget related files in fixed 64 KiB chunks before omitting them.
+It rechecks opened-file identity and path components, refuses symlinked
+parents, hard-linked related files and stale graph digests, and returns only
+in-budget UTF-8 source to the prompt. Partial worker-pool creation also closes
+and joins every worker already started if a later thread creation fails.
+Regression cases cover large related and target files, digest drift,
+symlink/hard-link refusal and partial pool startup. These are source-covered,
+not runtime results.
 
-The unattended backlog bridge now uses ProofMap v2: known shell prefixes are
-normalized, supported full/focused test, lint/audit, visual, accessibility and
-native runtime commands map to the existing TaskContract proof vocabulary, and
-unknown commands remain ineligible. The executor now rejects symlinked path
-components and hard-linked files, including links that resolve elsewhere
-inside the checkout. Tests for these paths and proof forms are authored, not
-run.
+The unattended backlog bridge now uses ProofMap v2. Known shell prefixes and
+the explicitly permitted environment variables are normalized into argv-only
+specifications with a fixed working directory and per-proof timeout. Full and
+focused tests, lint/audit, visual, accessibility and native runtime commands
+map to the existing TaskContract vocabulary; unknown or unsupported commands
+remain ineligible. Acceptance execution records the command/output digests,
+exit status, byte count, working directory and duration in the Mission proof;
+the terminal receipt rejects missing or stale command evidence. The executor
+also refuses symlinked path components and hard-linked scope files. These
+regressions are authored, not runtime-tested here.
 
 The Kernel lifecycle suite already contains independent-process and independent-
 Kernel lock serialization cases, while the crash/transaction suites assert that
