@@ -134,6 +134,21 @@ class TestFixLoopPriorities < Minitest::Test
     assert_equal "SLOW", finished.pop
   end
 
+  def test_rule_join_barrier_finishes_after_a_fatal_worker_exception
+    second_joined = false
+    first = Object.new
+    first.define_singleton_method(:join) { raise SystemExit, "fatal worker exit" }
+    second = Object.new
+    second.define_singleton_method(:join) { second_joined = true }
+    runner = Object.new.extend(Master::Fix::FixLoop::PassRunner::LlmStage)
+
+    error = runner.send(:join_rule_workers, [first, second])
+
+    assert_instance_of SystemExit, error
+    assert_equal "fatal worker exit", error.message
+    assert second_joined, "a fatal worker must not skip later joins"
+  end
+
   def test_tier2_ids_exist_on_the_live_scanner
     require "fix/scanner"
     scanner = Master::Fix::Scanner.build(root: Master::ROOT)
