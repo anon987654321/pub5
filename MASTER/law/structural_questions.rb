@@ -374,11 +374,10 @@ module Master
           proved_by "test/test_scan_law_contracts.rb"
         end
 
-        # Split from CouplerLaw 2026-07-12: laws.yml's rule_deps SRP entry already
-        # referenced FEATURE_ENVY as its own id (SRP: after: [FEATURE_ENVY,
-        # god_class]) — a dangling reference, since the check previously lived
-        # under COUPLER_SMELLS. This gives it a real matching id and a single
-        # responsibility of its own.
+        # FEATURE_ENVY is a law of its own: laws.yml's rule_deps SRP entry
+        # references it directly (SRP: after: [FEATURE_ENVY,
+        # god_class]), so the check lives under that id - one matching id,
+        # one responsibility of its own.
         class FeatureEnvyLaw < Detector
 
           def check(code, path:)

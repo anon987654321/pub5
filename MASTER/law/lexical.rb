@@ -364,17 +364,15 @@ module Master
     end
   end
 
-  # EMPTY_RESCUE was deleted here on 2026-08-12. It shared SilentRescue's
-  # discard_body? predicate with the two rules above and differed only in which
-  # `rescue` lines it matched, so every finding it produced was already produced
-  # by one of them: measured across MASTER at 37 findings, 0 unique. Its own
-  # comment claimed it "doesn't re-flag what those already catch"; it re-flagged
-  # all 37.
+  # The two rules above share SilentRescue's discard_body? predicate and differ
+  # only in which `rescue` lines they match, so between them they already
+  # produce every empty-rescue finding MASTER has: measured across the tree at
+  # 37 findings, 0 unique to a naked-empty rule.
   #
-  # It also made severity depend on comma count. Its naked-class branch matched
-  # `rescue\s+\S+` — one token — so `rescue Errno::ESRCH` was an ERROR while the
-  # identical `rescue Errno::ESRCH, Errno::EPERM` was only NARROW_SILENT_RESCUE's
-  # warning. 8 sites carried both severities at once.
+  # Severity here reads the whole `rescue` line, not its comma count: a
+  # naked-class branch matching `rescue\s+\S+` would grade `rescue Errno::ESRCH`
+  # an ERROR while the identical `rescue Errno::ESRCH, Errno::EPERM` drew only
+  # NARROW_SILENT_RESCUE's warning — one line, two verdicts.
   #
   # Coverage is unchanged by construction, not just by measurement, and
   # test_scan_rule_false_positives.rb pins each shape: bare `rescue`,

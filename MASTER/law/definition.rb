@@ -687,10 +687,9 @@ module Law
     def tags(*names) = @h[:tags] = names.flatten.map(&:to_sym)
 
     # The files this Law judges: a substring of the path ("/db/migrate/") or a
-    # Regexp. A Law with none reaches every file its languages name. Before
-    # a40d93e579 this lived in the catalogue as path/path_pattern; when the
-    # catalogue dropped it, 41 Laws went repo-wide and fired on files they were
-    # never about (COMMERCE_AMBER_DOES_NOT_OWN_BRGEN on brgen's own marketplace).
+    # Regexp. A Law with none reaches every file its languages name and fires
+    # on files it is not about (COMMERCE_AMBER_DOES_NOT_OWN_BRGEN on brgen's
+    # own marketplace).
     def path(subject)
       refuse "path must be a String or a Regexp" unless subject.is_a?(String) || subject.is_a?(Regexp)
       @h[:path] = subject

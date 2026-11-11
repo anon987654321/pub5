@@ -170,16 +170,16 @@ Law.define(:KERNEL_COERCION) do
   X
 end
 
-# KEYWORD_ARGS was deleted here on 2026-08-21 — folded into FEW_ARGUMENTS
-# (see that entry above): two ids, one detector concept, double findings.
+# FEW_ARGUMENTS (see that entry above) is the one id for this detector
+# concept: two ids would count one parameter list twice.
 
-# law/rails.rb was deleted here on 2026-08-21. Its four rules — FIND_EACH,
-# N_PLUS_ONE, NO_UPDATE_ATTRIBUTE, PLUCK_OVER_MAP — declared `languages
-# %i[rails]`, and FILE_LANGUAGE_MAP produces no such language: every .rb
-# file is "ruby". The four laws had never matched a single file; the
+# A rails-only language never matches: FIND_EACH, N_PLUS_ONE,
+# NO_UPDATE_ATTRIBUTE and PLUCK_OVER_MAP declare `languages
+# %i[rails]`, and FILE_LANGUAGE_MAP produces no such language - every .rb
+# file is "ruby". The live implementations of those four rules are the
 # registry twins (ruby_laws.rb, universal_laws.rb), path-scoped to
-# /app/, were the only live implementations all along — the inert-config
-# defect, in the constitution itself. They live once, in the registry.
+# /app/ - the inert-config defect, in the constitution itself. They
+# live once, in the registry.
 
 Law.define(:MIGRATION_ADD_REFERENCE_NO_FK) do
   path "/db/migrate/"
@@ -767,9 +767,9 @@ module Master
           end
         end
 
-        # KEYWORD_ARGS was deleted here on 2026-08-21 — folded into FEW_ARGUMENTS
-        # (universal_laws.rb): two ids counted the same parameter list, one at
-        # :warn and one at :info, and every 3+-positional def carried both.
+        # FEW_ARGUMENTS (universal_laws.rb) is the one id counting a parameter
+        # list: a duplicate id would score every 3+-positional def twice, once
+        # at :warn and once at :info.
 
         ::Law.define(:DEAD_CODE) do
           tags %i[CLEAN_CODE]

@@ -47,8 +47,8 @@ module Master
           LINT_INPUTS = %w[.rubocop.yml .reek.yml config.reek Gemfile.lock].freeze
           PREFETCH_BATCH = 200
 
-          # One linter process over many uncached files, its report split into the entries a run on each
-          # file alone would have kept. A scan of 4,900 files started rubocop and reek once per file, about
+          # One linter process over many uncached files; the report is the union of
+          # the entries a run on each file alone would keep. A scan of 4,900 files started rubocop and reek once per file, about
           # three seconds each and nearly all of it boot, so a cold cache took hours to fill. A batch that
           # fails leaves its files to the single-file run, as before.
           def prefetch(paths)

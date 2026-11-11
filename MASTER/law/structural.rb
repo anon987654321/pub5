@@ -504,8 +504,8 @@ module Master
           end
 
           # The message for a class that is too big, or nil for one that is not.
-          # Split out of check_ast because that method was 21 code lines against
-          # DENSITY's max of 20 — the same law this file's neighbours declare.
+          # Its own method, so check_ast stays inside DENSITY's 20-code-line
+          # ceiling - the same law this file's neighbours declare.
           #
           # Code lines, not span. The raw span charged for rationale comments, so
           # a well-explained class breached while a stripped one passed — the

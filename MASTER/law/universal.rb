@@ -2116,13 +2116,11 @@ module Master
 # live). A second copy here with no applies_to double-counted every css/scss color
 # under the same id (a SINGULARITY violation) and added no coverage worth keeping.
 
-      # UNBOUNDED_RETRY lives once, in law/ (domain files) — the first of the
-      # 72 law/registry twins retired (see the old backlog). The narrowing this block
-      # learned — keyword not symbol, not predicate, not identifier, not regex
-      # alternation, not a line continuation — moved into the law's detector
-      # with each shape pinned as a good fixture, which is what the registry
-      # version never had. Its law/ self-exemption dies with it:
-      # canonical law/ sources arrive conducted, and rule sources that
+      # UNBOUNDED_RETRY lives once, in law/ (domain files). The narrowing this block
+      # learns — keyword not symbol, not predicate, not identifier, not regex
+      # alternation, not a line continuation — lives in the law's detector
+      # with each shape pinned as a good fixture. Its law/ self-exemption
+      # is gone: canonical law/ sources arrive conducted, and rule sources that
       # spell the pattern in strings are counted and triaged rather than excused by path.
 
         ::Law.define(:ONE_SOURCE) do
