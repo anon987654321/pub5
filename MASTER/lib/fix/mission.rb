@@ -536,18 +536,19 @@ module Master
           plan = JSON.parse(@record["plan"].to_s)
           required = Array(plan["proof_types"]).map(&:to_s)
           allowed = TaskContract.template.fetch("proof_types").map(&:to_s)
-          return false unless plan["executor"] == "root_todo" && plan["proof_map_version"].is_a?(Integer)
+          map_version = Backlog::ProofMap::VERSION if defined?(Backlog::ProofMap::VERSION)
+          return false unless plan["executor"] == "root_todo" && plan["proof_map_version"] == map_version
           return false if required.empty? || required.uniq != required || (required - allowed).any?
 
           evidence = command_proof.to_h.transform_keys(&:to_s)
           proof_type = evidence.fetch("proof_type").to_s
           return false unless required.include?(proof_type)
           return false unless evidence["status"].to_s == "pass"
-          return false unless evidence["exit_status"].to_i.zero?
+          return false unless evidence["exit_status"].is_a?(Integer) && evidence["exit_status"].zero?
           return false unless evidence["command_digest"].to_s == Digest::SHA256.hexdigest(plan.fetch("done_when").to_s)
           return false unless evidence["output_digest"].to_s.match?(/\A[0-9a-f]{64}\z/)
-          return false unless evidence["output_bytes"].to_i >= 0
-          return false unless evidence["duration_ms"].to_i >= 0
+          return false unless evidence["output_bytes"].is_a?(Integer) && evidence["output_bytes"] >= 0
+          return false unless evidence["duration_ms"].is_a?(Integer) && evidence["duration_ms"] >= 0
           cwd = evidence["cwd"].to_s
           return false if cwd.empty? || Pathname.new(cwd).absolute? || cwd.split("/").include?("..")
 
