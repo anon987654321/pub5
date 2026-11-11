@@ -6,6 +6,7 @@ require "tmpdir"
 # psych can activate the default-gem date, later in, and split the bundle.
 require_relative "test_helper"
 require "yaml"
+require "json"
 require_relative "../tools/backlog"
 
 # The backlog is the one machine-readable view of TODO.md's checkbox items:
@@ -224,6 +225,70 @@ class TestBacklog < Minitest::Test
       File.write(out, YAML.dump(data))
 
       assert_equal 1, Backlog::Store.check(out:, io: silent)
+    end
+  end
+
+  def test_executor_queues_only_a_single_tree_mechanical_item
+    row = {
+      id: "safe-task", text: "Repair the existing MASTER source and verify it.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/example.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+    fake_mission = Class.new do
+      class << self
+        attr_accessor :queued
+        def current(root:) = nil
+      end
+      def initialize(root:); end
+      def ensure_queued!(**attributes)
+        self.class.queued = attributes
+      end
+    end
+
+    Dir.mktmpdir("backlog-executor") do |root|
+      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT, mission_class: fake_mission)
+      Backlog.stub(:generate, [row]) do
+        assert_equal :queued, executor.enqueue_next!
+      end
+
+      queued = fake_mission.queued
+      assert_equal "backlog", queued.fetch(:origin)
+      assert_equal true, queued.fetch(:auto_continue)
+      assert_equal root, queued.fetch(:scope)
+      plan = JSON.parse(queued.fetch(:plan))
+      assert_equal "safe-task", plan.fetch("item_id")
+      assert_equal ["MASTER/lib/example.rb"], plan.fetch("scope_paths")
+    end
+  end
+
+  def test_executor_refuses_design_cross_tree_and_operator_rows
+    fake_mission = Class.new do
+      def self.current(root:) = nil
+      def initialize(root:); end
+      def ensure_queued!(**) = flunk("ineligible backlog item was queued")
+    end
+    rows = [
+      { id: "design", text: "design", tree: "MASTER", kind: "design", scope_paths: ["MASTER/a.rb"] },
+      { id: "cross", text: "cross", tree: "cross", kind: "mechanical", scope_paths: ["MASTER/a.rb", "RAILS/b.rb"] },
+      { id: "operator", text: "operator", tree: "operator", kind: "operator-only", scope_paths: ["MASTER/a.rb"] },
+    ]
+
+    Dir.mktmpdir("backlog-executor") do |root|
+      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT, mission_class: fake_mission)
+      Backlog.stub(:generate, rows) { assert_equal :idle, executor.enqueue_next! }
+    end
+  end
+
+  def test_executor_requires_terminal_artifact_proof_before_receipting
+    Dir.mktmpdir("backlog-executor") do |root|
+      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT)
+      record = {
+        "origin" => "backlog", "state" => "completed", "stage" => "deliver",
+        "summary" => "proof complete", "artifacts" => [], "repository_writes" => {},
+        "plan" => JSON.generate("executor" => "root_todo", "item_id" => "x", "item_digest" => "digest"),
+      }
+      refute executor.record_completion!(record:)
+      refute File.exist?(File.join(root, Backlog::Executor::RECEIPT_PATH))
     end
   end
 
