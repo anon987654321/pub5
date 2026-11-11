@@ -1067,6 +1067,8 @@ tokens:
           building: [base, tower, windows]
           flower: [stem, petals, center]
           vehicle: [chassis, wheels, cab]
+      topology_aliases:
+        papua-mask: carved-field
       topology_profiles:
         # Legacy identifier retained for older event producers; the canonical
         # default is the original carved-field portrait below.
