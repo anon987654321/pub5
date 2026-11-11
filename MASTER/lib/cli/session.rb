@@ -69,7 +69,10 @@ module Master
         # reply above the prompt, which read as a canned answer to a message not
         # yet typed.
         terminal_puts(@refs.renderer.session_line(@refs.session.messages.size)) if @refs.session.name
-        print_repo_tree unless booted_before?
+        unless booted_before?
+          print_repo_tree
+          print_quick_start
+        end
         run_input(initial_message) if initial_message
         greet_from_model unless initial_message
         @running = true
