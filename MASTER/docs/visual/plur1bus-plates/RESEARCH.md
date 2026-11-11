@@ -74,25 +74,62 @@ the shipped mark.
 | Ultra-crisp pixelated logos: sharp edges, high-contrast grids, mathematical rhythm | <https://www.zekagraphic.com/10-logo-design-trends-2026> | 02 |
 | Retro 8-bit/Y2K pixel logo comeback | <https://www.brandcrowd.com/blog/logo-design-trend-the-retro-pixel-logos> | 02, 03 |
 | Pixel art as 2026 motion-graphics style (loops, icons, transitions) | <https://din-studio.com/pixel-art-style-nostalgic-and-modern-digital-design-trend-of-2026> | 02 |
-| SVG mask + animated gradient text (CodePen staple) | <https://codepen.io/horsted/details/ZKQbKK>, <https://codepen.io/tag/svg%20text> | 04 (frozen), reference |
-| Retro glitch logo treatments | <https://github.com/konstantindenerz/codepen-archive> (animated-logo-glitch-effect-retro-look) | 10 (scanline pass) |
-| Synthwave sun/grid snippets (sliced sun, neon horizon) | <https://speckyboy.com/css-javascript-snippets-synthwave> | 06 |
-| Print grit: overprint misregistration, layered proof aesthetics | <https://littlerockprinting.com/graphic-design-trends-to-modernize-your-print-materials> | 08 |
+| SVG mask + animated gradient text (CodePen staple) | <https://codepen.io/horsted/details/ZKQbKK>, <https://codepen.io/tag/svg%20text> | 04, 05, reference |
 | 2026 trend surveys (motion, minimalism, emerging systems) | <https://digitalsynopsis.com/design/graphic-design-trends-2026>, <https://panze.co/blog/logo-design-trends> | sweep framing |
 
 ## 5. Sparkle pizzazz (rainbows, ponies, shooting stars)
 
 The operator asked for Starks-style pizzazz. The plates keep it inside the
-brand's own geometry: the rainbow is the hairline family re-tinted per line
-(04) or an arc behind the mark (09); the shooting star is the hairline
-family given comet trails and star heads (05); the pony is a pixel sprite
-standing on a hairline (09). No emoji, no copied campaign art, no baked-in
-text — the wordmark stays original pub5 artwork on every plate.
+brand's own geometry: the shooting star is the hairline family given comet
+trails and star heads (07); the rainbow is an arc rising behind the mark and
+the candy ramp inside the letters (08); the pony is a pixel sprite standing
+on a hairline (08). No emoji, no copied campaign art, no baked-in text — the
+wordmark stays original pub5 artwork on every plate.
 
-## 6. Provenance statement
+## 6. Sprite-sheet craft (second pass)
+
+The operator's reference session (a Grok chat log supplied 2026-11-11: strict
+8-bit constraints — blocky pixels, limited 16-color palette, no
+anti-aliasing — then 16-bit technique notes, then avatar-size exports with
+transparent backgrounds) mapped onto the plates as follows. Sources opened to
+back the techniques:
+
+- **Palette discipline / empty palette slots.** Sprite sheets ship indexed
+  palettes; Aseprite's palette control ("Palette Control — copy & paste,
+  resize") is the workflow anchor. Source: <https://www.aseprite.org>.
+  → Plate 02 renders its ramp as a palette rail with three *empty* slots.
+- **Color cycling (palette animation).** "Color cycling animates a picture
+  without touching a single pixel — you rotate the palette underneath it"
+  (Mark Ferrari technique). Sources:
+  <https://the-pixel.art/articles/color-cycling>,
+  <https://blog.prototypr.io/color-cycling-in-pixel-art-c8f20e61b4c4>.
+  → Plate 05 cycles the brand's own 4-stop ramp through the wordmark and
+  documents the cycle as a chip rail (four stops + wrap-around chip).
+- **Frame tags, onion skinning, sprite-sheet export.** Aseprite: "Tag
+  Frames — include several animations in the same file tagging sections";
+  "Onion Skin — see other frames as reference". Source:
+  <https://www.aseprite.org>.
+  → Plate 06 tags its frames: filled chip = live frame, outlined chips =
+  the two onion ghosts, chevrons + tick ruler as the sheet furniture.
+- **Sub-pixel animation.** "'Sub-pixel animation' means animating your
+  anti-aliasing … shifting individual pixels frame-to-frame" — depth and
+  motion without extra frames. Source:
+  <https://2dwillneverdie.com/tutorial/give-your-sprites-depth-with-sub-pixel-animation>.
+  → Plate 06's ghost frames sit at half-unit offsets from the live frame.
+- **Avatar-size cuts with transparent ground.** The reference workflow's
+  final deliverable was avatar-sized icons on alpha-transparent ground.
+  → `plates/avatars/*.svg`: the same locked font and hairlines, no ground
+  rect, shown at 128 / 64 / 32 px on a checker in `all-plates.html`.
+
+The log's content (a pixel-cat mascot brief for a personal brand) is the
+operator's separate project — only its *techniques* transferred here; no
+subject matter, imagery or copy was imported.
+
+## 7. Provenance statement
 
 - Online sources were opened via web search on 2026-11-11; quotes and
-  stylization claims above come from those pages.
-- Repo claims come from live files in this checkout at 8544e23b.
+  stylization claims above come from those pages. The sprite-technique
+  sources (§6) were opened the same day.
+- Repo claims come from live files in this checkout.
 - The plates themselves are original generated artwork (seeded, reproducible
-  via `generate.rb`); no external imagery was embedded.
+  via `node generate.mjs`); no external imagery was embedded.
