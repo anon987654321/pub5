@@ -45,7 +45,7 @@ module Master
           rows = {}
           out.to_s.each_line do |line|
             pid, ppid, cpu, rss = line.split
-            next unless pid && ppid && cpu && rss && pid.match?(/\\A\\d+\\z/)
+            next unless pid && ppid && cpu && rss && pid.match?(/\A\d+\z/)
 
             rows[pid.to_i] = [ppid.to_i, cpu.to_f, rss.to_i * page_kb]
           end
@@ -82,7 +82,7 @@ module Master
                 else
                   Master::Io::Exec.capture2("sysctl", "-n", "vm.loadavg").first.to_s
                 end
-          values = raw.scan(/\\d+(?:\\.\\d+)?/).first(3)
+          values = raw.scan(/\d+(?:\.\d+)?/).first(3)
           return unless values.length == 3
 
           values.map(&:to_f)
