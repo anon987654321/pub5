@@ -213,6 +213,28 @@ class TestTraceSupport < Minitest::Test
     end
   end
 
+  # In normal mode, a provider outage should not print three near-identical
+  # lane failures before the useful aggregate. The full call stream remains
+  # available under verbose/trace and in the event ledger.
+  def test_normal_model_outage_shows_only_the_first_lane_attempt
+    Master::Trace::Dmesg.with_verbosity("normal") do
+      console = Master::Trace::Dmesg::Console.new
+      Fiber[:master_unit] = "master0"
+      printed = 6.times.flat_map do |i|
+        console.lines(event: "llm:send", model: "provider-#{i}") +
+          console.lines(event: "llm:provider_outcome", model: "provider-#{i}", status: :quota_exceeded,
+                        error_digest: "a" * 64, error_bytes: 120)
+      end
+
+      assert_equal 2, printed.size, printed.join("\\n")
+      assert_match(/provider-0/, printed.first)
+      assert_match(/quota_exceeded/, printed.last)
+      refute printed.join("\\n").include?("provider-1")
+    ensure
+      Fiber[:master_unit] = nil
+    end
+  end
+
   def test_command_reports_do_not_restore_column_alignment
     rendered = Master::Trace::Dmesg::Report.render(
       unit: "check0",
