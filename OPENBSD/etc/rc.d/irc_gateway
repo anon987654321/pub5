@@ -14,7 +14,7 @@
 # against the whole argv with pgrep -xf.
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
-for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
+for _bundle in /usr/local/bin/bundle /usr/local/bin/bundle[0-9]*; do
   if [ -x "$_bundle" ]; then break; fi
 done
 daemon="/bin/ksh"
