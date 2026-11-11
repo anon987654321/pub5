@@ -12,6 +12,7 @@
     "tts:interrupt": { targets: ["face"], fields: ["reason", "intent"] },
     "turn:started": { targets: ["face"], fields: ["id", "source"] },
     "turn:committed": { targets: ["face"], fields: ["id", "source", "text"] },
+    "assistant:visual-subject": { targets: ["face"], fields: ["text", "visual_subject"] },
     "turn:discarded": { targets: ["face"], fields: ["id", "reason"] },
     "turn:interrupted": { targets: ["face"], fields: ["id", "reason"] },
     "audio:update": { targets: ["face"], fields: ["rms", "peak", "bass", "mid", "high", "centroid", "onset", "speechActivity"] },
