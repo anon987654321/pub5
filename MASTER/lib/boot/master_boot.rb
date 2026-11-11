@@ -61,7 +61,7 @@ module Master
                    Backlog::Executor.new(root:, repo_root: REPO_ROOT)
                  end
       if executor
-        status = executor.enqueue_next!(model: container.dig(:model, :id))
+        status = executor.enqueue_next!
         container[:bus]&.publish("backlog_executor:intake", status:)
       end
 
