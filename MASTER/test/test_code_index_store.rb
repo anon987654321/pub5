@@ -139,6 +139,29 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_mixin_relationships_survive_persistent_code_index_restore
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "mixins.rb"), <<~RUBY)
+        module IncludedMethods; end
+        module PriorityMethods; end
+        class Widget
+          include IncludedMethods
+          prepend PriorityMethods
+        end
+      RUBY
+
+      cold = Index.new(root:, persist: true).build
+      expected = ["include:IncludedMethods", "prepend:PriorityMethods"]
+      assert_equal expected, cold.query("Widget").first.fetch(:includes)
+      assert_includes cold.summary, "[include:IncludedMethods, prepend:PriorityMethods]"
+
+      warm = Index.new(root:, persist: true).build
+      assert_equal expected, warm.query("Widget").first.fetch(:includes)
+      assert_equal cold.summary, warm.summary
+    end
+  end
+
   def test_public_symbol_and_reference_views_cannot_mutate_the_live_graph
     with_tree do |root|
       cold = Index.new(root:, persist: true).build
