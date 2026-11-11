@@ -8,15 +8,15 @@ class TestTriangleRuntimeContract < Minitest::Test
 
   def test_triangle_uses_the_shared_runtime
     assert_includes SOURCE, 'require_relative "../../lib/operator/ruby_runner"'
-    # The runner prefers the project-pinned rbenv Ruby and falls back to
-    # ruby_cmd: a Homebrew Ruby of the same version carried gems the apps do
-    # not have, and every boot died in db:prepare (2026-11-07).
-    assert_includes SOURCE, 'RUBY = Operator::RubyRunner.rbenv_path("ruby") || Operator::RubyRunner.ruby_cmd'
-    assert_includes SOURCE, 'BUNDLE = Operator::RubyRunner.rbenv_path("bundle") || Operator::RubyRunner.bundle_cmd'
+    # The active process Ruby is preferred; installed alternatives are a
+    # fallback only when it is below the shared compatibility floor.
+    assert_includes SOURCE, "RUBY = Operator::RubyRunner.ruby_cmd"
+    assert_includes SOURCE, "BUNDLE = Operator::RubyRunner.bundle_cmd"
+    refute_includes SOURCE, "rbenv_path"
     refute_includes SOURCE, '"rbenv", "exec"'
   end
 
-  def test_migrate_and_boot_run_the_pinned_ruby_inside_bundle
+  def test_migrate_and_boot_run_the_installed_ruby_inside_bundle
     assert_includes SOURCE, 'BUNDLE, "exec", RUBY, "bin/rails", "db:prepare"'
     assert_includes SOURCE, 'BUNDLE, "exec", RUBY, "bin/rails", "server"'
   end
