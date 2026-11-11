@@ -32,8 +32,15 @@ module Master
           threads.map(&:value)
         ensure
           # Populate the list before spawning: if a later Thread.new fails,
-          # earlier candidates remain reachable and are stopped here.
-          threads&.each { |thread| thread.kill if thread.alive? }
+          # earlier candidates remain reachable. Kill and join on timeout too.
+          Array(threads).each { |thread| thread.kill if thread.alive? }
+          Array(threads).each do |thread|
+            begin
+              thread.join
+            rescue StandardError
+              nil
+            end
+          end
         end
 
         # Ruby's own bookkeeping keys (__recursive_key__ and the like) belong to the thread that made them.
