@@ -128,12 +128,23 @@ module Master
               end
             end
 
-            group.map do |rule|
-              Thread.new do
-                [rule, run_law_once(rule, files, pass, council:,
-                                     external_violations: rule_violations[rule.id.to_s])]
+            group.each_slice(LawOrder::MAX_PARALLEL_LAWS).flat_map do |batch|
+              threads = []
+              begin
+                batch.each do |rule|
+                  threads << Thread.new do
+                    [rule, run_law_once(rule, files, pass, council:,
+                                        external_violations: rule_violations[rule.id.to_s])]
+                  end
+                end
+              ensure
+                # Join the entire batch before reading any value. A failed
+                # worker must not let its siblings keep writing as the pass
+                # unwinds or rolls its transaction back.
+                threads.each(&:join)
               end
-            end.map(&:value)
+              threads.map(&:value)
+            end
           end
 
           # What the council picked this pass, as repairs to weigh rather than
