@@ -23,6 +23,7 @@ module Master
         @pattern_cache = {}
         @event_log = event_log || Master::Trace::Log::Event.new
         @evidence_log = evidence_log
+        @effect_lifecycle_mutex = Mutex.new
         @failure_mutex = Mutex.new
         @failure_warnings = {}
       end
@@ -88,6 +89,12 @@ module Master
       # Observers replay them after restart rather than trusting process memory.
       def effect_history(limit = RECEIPT_HISTORY)
         (@evidence_log || @event_log).recent!(limit, pattern: '\Acore:effect:')
+      end
+
+      # Serialize local effect identity checks and required before/after writes
+      # across observer instances sharing this bus. This is process-local only.
+      def synchronize_effect_lifecycle(&block)
+        @effect_lifecycle_mutex.synchronize(&block)
       end
 
       private
