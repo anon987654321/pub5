@@ -133,7 +133,7 @@ class TestVoiceNarrator < Minitest::Test
     messages = []
 
     Master::Trace::Dmesg.stub(:once, ->(unit, message, **) { messages << [unit, message] }) do
-      Master::Ground::Swallow.stub(:log, ->(*) { flunk "expected lane unavailability is not a defect" }) do
+      Master::Ground::Swallow.stub(:log, ->(*, **) { flunk "expected lane unavailability is not a defect" }) do
         assert_equal :spoken, n.tick
       end
     end
