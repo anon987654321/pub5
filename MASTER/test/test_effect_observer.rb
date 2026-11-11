@@ -169,6 +169,30 @@ class TestEffectObserver < Minitest::Test
     assert_equal 2, bus.events.length
   end
 
+  def test_pending_and_completed_effect_ids_survive_observer_restart
+    Dir.mktmpdir do |root|
+      bus = Master::Trace::EventBus.new(
+        event_log: Master::Trace::Log::Event.new(root:),
+        evidence_log: Master::Trace::Log::Evidence.new(root:)
+      )
+      effect = Master::Core::Effect.write("note.txt", "x")
+      options = { turn: 2, effect:, effect_id: "restart-pending", run_id: "durable-run" }
+      Master::Trace::EffectObserver.new(bus:).call(stage: :before, **options)
+
+      restarted = Master::Trace::EffectObserver.new(bus:)
+      error = assert_raises(ArgumentError) { restarted.call(stage: :before, **options) }
+      assert_match(/duplicate before-event/, error.message)
+
+      restarted.call(
+        stage: :after, **options,
+        observation: Master::Core::Observation.ok("verified")
+      )
+      later = Master::Trace::EffectObserver.new(bus:)
+      duplicate = assert_raises(ArgumentError) { later.call(stage: :before, **options) }
+      assert_match(/duplicate before-event/, duplicate.message)
+    end
+  end
+
   def test_requires_a_bus_with_strict_persistence
     error = assert_raises(ArgumentError) { Master::Trace::EffectObserver.new(bus: Object.new) }
     assert_match(/publish_required/, error.message)
