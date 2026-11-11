@@ -226,12 +226,20 @@ module Backlog
         "Do not deploy, spend money, contact people, alter production data, or cross a human/operator gate.",
         "If the task requires a product decision, external credential, human approval, or unavailable runtime, block with the exact reason.",
       ].join("\n")
+      new_paths = scope.filter_map do |relative|
+        absolute = File.expand_path(relative, @repo_root)
+        next if absolute == @repo_root || !absolute.start_with?(@repo_root + File::SEPARATOR)
+        next if File.exist?(absolute) || File.symlink?(absolute)
+
+        { "path" => relative, "reason" => "Exact path explicitly named by root TODO item #{item.fetch(:id)}." }
+      end
       plan = JSON.generate(
         "executor" => "root_todo",
         "item_id" => item.fetch(:id),
         "item_digest" => item_digest(item),
         "source_digest" => Digest::SHA256.file(Backlog::SOURCE).hexdigest,
         "scope_paths" => scope,
+        "new_paths" => new_paths,
         "done_when" => item[:done_when],
       )
       mission = @mission_class.new(root: @root).ensure_queued!(
