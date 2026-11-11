@@ -2,6 +2,8 @@
 
 require_relative "../io/atomic_write"
 require_relative "../ground/service_supervisor"
+require_relative "../cli/core_bridge"
+require "json"
 require_relative "../../tools/backlog" if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
 
 module Master
@@ -56,6 +58,92 @@ module Master
       container[:heartbeat]&.start!
     end
 
+    # The durable backlog mission supervises the canonical /fix command.
+    # Each exact path gets its own scoped TaskContract, proof, commit and push;
+    # the supervisor advances only after every path has a verified report.
+    def run_backlog_task(root:, container:, mission:, bus: nil, repo_root: REPO_ROOT)
+      handle = nil
+      plan = JSON.parse(mission.fetch("plan").to_s)
+      paths = Array(plan.fetch("scope_paths")).map(&:to_s).uniq
+      raise ArgumentError, "backlog task has no exact scope paths" if paths.empty?
+      raise ArgumentError, "backlog plan is not owned by the root TODO executor" unless plan["executor"] == "root_todo"
+
+      repository = File.realpath(repo_root)
+      paths.each do |relative|
+        absolute = File.expand_path(relative, repository)
+        raise ArgumentError, "backlog scope escapes repository: #{relative}" unless
+          absolute.start_with?(repository + File::SEPARATOR)
+        raise ArgumentError, "backlog target is missing or symlinked: #{relative}" if
+          File.symlink?(absolute) || !(File.file?(absolute) || File.directory?(absolute))
+        real = File.realpath(absolute)
+        raise ArgumentError, "backlog target resolves outside repository: #{relative}" unless
+          real.start_with?(repository + File::SEPARATOR)
+      end
+
+      handle = Fix::Mission.new(root:, bus:).start_or_resume!(
+        goal: mission.fetch("goal"), scope: root, model: mission["model"], effort: mission["effort"],
+        plan: mission.fetch("plan"), origin: "backlog", auto_continue: true,
+        mode: mission.dig("operator", "mode") || "repair",
+        intent: mission.dig("operator", "intent") || :functional_change,
+      )
+      raise ArgumentError, "backlog mission could not be claimed" unless handle.record&.fetch("state", nil) == "running"
+
+      command = container.fetch(:commands).fetch("fix")
+      reports = []
+      paths.each do |relative|
+        handle.hold_lease!
+        result = command.call({ args: "#{relative} --intent=functional_change" })
+        if result.respond_to?(:ok?) && !result.ok?
+          category = result.respond_to?(:category) ? result.category : :validation
+          detail = result.respond_to?(:message) ? result.message : result.to_s
+          raise BacklogRunFailed.new("FIX_FAILED: #{detail}", category:)
+        end
+
+        report = result.respond_to?(:value!) ? result.value!.to_s : result.to_s
+        unless backlog_fix_report_passed?(report)
+          raise BacklogRunFailed, "FIX_PROOF_FAILED: /fix did not return a complete proof for #{relative}"
+        end
+        reports << report
+        CLI::CoreBridge.push_backlog_commit!(mission: handle, root: repository, bus:)
+      end
+
+      unless handle.record_fix_proof!(status: "pass", scope_paths: paths, report: reports.join("\n"))
+        raise BacklogRunFailed, "FIX_PROOF_FAILED: durable /fix proof receipt was rejected"
+      end
+      summary = "root TODO #{plan.fetch("item_id")}: /fix proof passed for #{paths.size} exact scope(s); origin/main verified"
+      handle.finish!(summary:)
+      Master::Result.ok(summary)
+    rescue BacklogRunFailed => error
+      handle&.block!(reason: error.message) unless handle&.record&.fetch("state", nil) == "blocked"
+      Master::Result.err(error.message, category: error.category)
+    rescue StandardError => error
+      reason = "FIX_FAILED: #{error.class}: #{error.message}"
+      handle&.block!(reason:) unless handle&.record&.fetch("state", nil) == "blocked"
+      Master::Result.err(reason, category: :validation)
+    end
+
+    def backlog_fix_report_passed?(report)
+      text = report.to_s
+      return false if text.empty? || text.match?(/DELIVERY_FAILED|FIX_FAILED|fix (?:partial|failed|incomplete)\b/i)
+      return false unless text.match?(/\bfix done\b/i)
+      return false unless text.match?(/\bproof:\s*(?!no proof ran)/i)
+      return false unless text.match?(/hard red 0\b/i)
+      return false unless text.match?(/soft red 0\b/i)
+      return false if text.match?(/unmeasured [1-9]\d*\b/i)
+      return false if text.match?(/review\d+:\s*(?:incomplete|complete with open findings)\b/i)
+
+      true
+    end
+
+    class BacklogRunFailed < StandardError
+      attr_reader :category
+
+      def initialize(message, category: :validation)
+        super(message)
+        @category = category
+      end
+    end
+
     def start_task_steward(root, container)
       executor = if ENV["MASTER_BACKLOG_AUTORUN"] == "1" && ENV["MASTER_TASK_STEWARD"] != "0"
                    Backlog::Executor.new(root:, repo_root: REPO_ROOT)
@@ -68,14 +156,7 @@ module Master
       container[:task_steward] = Fix::TaskSteward.start!(
         root:, bus: container[:bus],
         runner: ->(goal:, mission:) {
-          CLI::CoreBridge.run(
-            goal,
-            root:,
-            bus: container[:bus],
-            model_id: mission["model"],
-            mode: mission.dig("operator", "mode"),
-            container:,
-          )
+          run_backlog_task(root:, container:, mission:, bus: container[:bus], repo_root: REPO_ROOT)
         },
         after_run: ->(mission:, result:) {
           next unless executor && mission && mission["origin"] == "backlog"
