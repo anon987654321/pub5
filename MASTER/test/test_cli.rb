@@ -869,6 +869,43 @@ assert_empty topics - rows, "documented commands missing from the summary"
     refute_predicate result, :ok?
   end
 
+  def test_script_error_from_pipeline_becomes_an_infrastructure_result
+    failure = SyntaxError.new("invalid source in child turn")
+    pipeline = Object.new
+    pipeline.define_singleton_method(:value) { raise failure }
+    @cli.instance_variable_set(:@pipeline_thread, pipeline)
+
+    result = @cli.send(:fetch_pipeline_result)
+
+    assert_equal :infrastructure, result.category
+    assert_includes result.message, "SyntaxError"
+    assert_includes result.message, "invalid source in child turn"
+  end
+
+  def test_memory_error_from_pipeline_becomes_a_named_infrastructure_result
+    failure = NoMemoryError.new("simulated allocation failure")
+    pipeline = Object.new
+    pipeline.define_singleton_method(:value) { raise failure }
+    @cli.instance_variable_set(:@pipeline_thread, pipeline)
+    @cli.stub(:host_oom_message, "host memory exhausted") do
+      result = @cli.send(:fetch_pipeline_result)
+
+      assert_equal :infrastructure, result.category
+      assert_equal "host memory exhausted", result.message
+    end
+  end
+
+  def test_process_exit_and_signal_interrupt_escape_the_pipeline_result_boundary
+    [SystemExit.new(23), Interrupt.new("operator interrupt")].each do |failure|
+      pipeline = Object.new
+      pipeline.define_singleton_method(:value) { raise failure }
+      @cli.instance_variable_set(:@pipeline_thread, pipeline)
+
+      observed = assert_raises(failure.class) { @cli.send(:fetch_pipeline_result) }
+      assert_same failure, observed
+    end
+  end
+
   # user:interrupt had a publisher and no subscriber, so a cancelled turn's
   # subprocesses ran on. The event now carries the turn's children, and the
   # boot subscriber kills them.
