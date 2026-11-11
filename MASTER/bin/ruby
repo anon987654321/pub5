@@ -63,7 +63,7 @@ add_candidate() {
 if [ -n "${PUB5_RUBY:-}" ]; then
   add_candidate "${PUB5_RUBY}"
   if [ -z "$BEST_RUBY" ]; then
-    printf '%s\\n' "ruby0: PUB5_RUBY is not a compatible Ruby >= 3.3: ${PUB5_RUBY}" >&2
+    printf '%s\n' "ruby0: PUB5_RUBY is not a compatible Ruby >= 3.3: ${PUB5_RUBY}" >&2
     exit 1
   fi
   exec "${PUB5_RUBY}" "$@"
@@ -78,7 +78,7 @@ if [ -n "$GENERIC_RUBY" ]; then
   add_candidate "$GENERIC_RUBY"
   if [ "$BEST_RUBY" = "$GENERIC_RUBY" ]; then
     ACTUAL=$("$GENERIC_RUBY" -e 'print RUBY_VERSION')
-    [ "${MASTER_QUIET:-0}" = 1 ] || printf '%s\\n' "ruby0: using installed Ruby $ACTUAL ($GENERIC_RUBY)" >&2
+    [ "${MASTER_QUIET:-0}" = 1 ] || printf '%s\n' "ruby0: using installed Ruby $ACTUAL ($GENERIC_RUBY)" >&2
     exec "$GENERIC_RUBY" "$@"
   fi
 fi
