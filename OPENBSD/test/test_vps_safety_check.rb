@@ -152,6 +152,18 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
+  def test_mrdamascy_falcon_host_preserves_the_slow_boot_health_timeout
+    with_fixture do |dir, _|
+      path = File.join(dir, "RAILS", "mrdamascy", "falcon.rb")
+      text = File.read(path).sub("health_check_timeout 300", "health_check_timeout 30")
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy Falcon host must use one Rack worker on loopback HTTP/1"
+    end
+  end
+
   def test_mrdamascy_falcon_preload_must_initialize_rails
     with_fixture do |dir, _|
       path = File.join(dir, "RAILS", "mrdamascy", "preload.rb")
