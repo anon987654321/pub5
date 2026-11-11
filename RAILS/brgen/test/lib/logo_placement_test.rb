@@ -99,7 +99,7 @@ class LogoPlacementTest < ActiveSupport::TestCase
 
     assert_includes tunnel, '<svg class="radio-brand-mark"'
     assert_includes tunnel, 'aria-hidden="true" focusable="false"'
-    assert_match(/radio-now-playing[\\s\\S]*radio-brand-mark[\\s\\S]*radio-track-display/, tunnel)
+    assert_match(/radio-now-playing.*radio-brand-mark.*radio-track-display/m, tunnel)
     refute_includes tunnel, '<header class="radio-header">'
     assert_includes stylesheet, ".radio-brand-mark"
     assert_includes stylesheet, "color: var(--color-accent)"
