@@ -54,6 +54,9 @@ module Master
               lines << "  not indexed: #{entry[:path]} (#{entry[:kind]}) — #{entry[:message]}"
             end
           end
+          if @built_at && !@partial && @errors.empty?
+            lines << "Index coverage: COMPLETE (repository-wide scan)."
+          end
           lines.join("\n")
         end
 
