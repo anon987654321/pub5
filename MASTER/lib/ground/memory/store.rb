@@ -254,7 +254,27 @@ module Master
         end
 
         def version
-          File.file?(@path) ? Digest::SHA256.file(@path).hexdigest[0, 16] : "empty"
+          refresh_store_if_changed
+          return "empty" unless File.exist?(@path) || File.symlink?(@path)
+
+          stat = File.lstat(@path)
+          unless stat.file? && !stat.symlink? && stat.nlink == 1
+            raise IOError, "memory store must be a singly linked regular file"
+          end
+          flags = File::RDONLY
+          flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+          File.open(@path, flags) do |file|
+            opened = file.stat
+            current = File.lstat(@path)
+            unless current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "memory store path changed while measuring its version"
+            end
+            raw = file.read(MAX_STORE_BYTES + 1)
+            raise IOError, "memory store exceeds the 10 MiB safety limit" if raw.bytesize > MAX_STORE_BYTES
+
+            Digest::SHA256.hexdigest(raw)[0, 16]
+          end
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "memory.version")
           "unknown"
@@ -414,6 +434,15 @@ module Master
             end
             raw = file.read(MAX_STORE_BYTES + 1)
             raise IOError, "memory store exceeds the 10 MiB safety limit" if raw.bytesize > MAX_STORE_BYTES
+            after = file.stat
+            current = File.lstat(@path)
+            unless current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == after.dev && current.ino == after.ino &&
+                   after.dev == opened.dev && after.ino == opened.ino &&
+                   after.size == opened.size && after.mtime == opened.mtime &&
+                   after.ctime == opened.ctime && raw.bytesize == after.size
+              raise IOError, "memory store changed while it was being read"
+            end
 
             loaded = Master.parse_yaml_content(raw, source: @path)
             raise IOError, "memory store must contain a YAML mapping" unless loaded.is_a?(Hash)
