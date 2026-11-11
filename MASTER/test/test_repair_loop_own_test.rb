@@ -36,12 +36,17 @@ class TestRepairLoopOwnTest < Minitest::Test
   end
 
   # Under the app's own bundle: from inside MASTER's it stopped on bootsnap/setup before any test ran.
+  # The spawn itself is stubbed: a passing run answers nil, and hosts without the app's
+  # native libraries (libvips) still hold the contract.
   def test_a_passing_app_test_does_not_refuse_the_fix
     loop = Master::Fix::RepairLoop.allocate
     loop.instance_variable_set(:@root, Master::REPO_ROOT)
     model = File.join(Master::REPO_ROOT, "RAILS", "brgen", "app", "models", "bookmark.rb")
 
-    assert_nil loop.send(:failing_test_for, model)
+    status = Struct.new(:success?).new(true)
+    Master::Fix::RailsApp.stub(:capture, ->(*, **) { ["1 runs, 1 assertions, 0 failures, 0 errors", status] }) do
+      assert_nil loop.send(:failing_test_for, model)
+    end
   end
 
   # main is not always green: a test that also fails on the original source is not the change's failure,

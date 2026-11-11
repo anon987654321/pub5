@@ -176,9 +176,16 @@ module Master
         # Under the app's own Ruby and bundle (RailsApp.capture), not MASTER's: run from inside
         # MASTER, bin/rails inherited BUNDLE_GEMFILE and stopped on bootsnap/setup, so every repair
         # to an app file with a test was refused for a test that never ran.
+        # SimpleCov's footer is noise a failing boot prints last; the refusal must carry the
+        # boot error, not a coverage summary, or the repair chases coverage it did not cause.
+        SIMPLECOV_FOOTER = /Coverage report generated|coverage: \d|Stopped processing SimpleCov/
+
         def run_rails_test(app, test)
           out, status = RailsApp.capture(app, "bin/rails", "test", test, env: { "RAILS_ENV" => "test" })
-          status.success? ? nil : "#{File.basename(test)}: #{out.lines.last(3).join.strip}"
+          return nil if status.success?
+
+          lines = out.lines.reject { |line| line.match?(SIMPLECOV_FOOTER) }
+          "#{File.basename(test)}: #{lines.last(3).join.strip}"
         end
 
         # Run as the suite runs it: lib/ and test/ on the load path, so
