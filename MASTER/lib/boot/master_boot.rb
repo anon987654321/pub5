@@ -164,7 +164,18 @@ module Master
       container[:task_steward] = Fix::TaskSteward.start!(
         root:, bus: container[:bus],
         runner: ->(goal:, mission:) {
-          run_backlog_task(root:, container:, mission:, bus: container[:bus], repo_root: REPO_ROOT)
+          if mission["origin"].to_s == "backlog"
+            run_backlog_task(root:, container:, mission:, bus: container[:bus], repo_root: REPO_ROOT)
+          else
+            CLI::CoreBridge.run(
+              goal,
+              root:,
+              bus: container[:bus],
+              model_id: mission["model"],
+              mode: mission.dig("operator", "mode"),
+              container:,
+            )
+          end
         },
         after_run: ->(mission:, result:) {
           next unless executor && mission && mission["origin"] == "backlog"
