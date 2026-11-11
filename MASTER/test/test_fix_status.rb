@@ -88,7 +88,13 @@ class TestFixStatus < Minitest::Test
       "evidence" => {
         "observations" => 3, "files_observed" => 42, "findings" => 7,
         "quality_delta" => 0.125, "finding_digest" => "a" * 64,
-        "snapshot_digest" => "b" * 64, "authority_digest" => "c" * 64
+        "snapshot_digest" => "b" * 64, "authority_digest" => "c" * 64,
+        "assessment_verification" => {
+          "schema_version" => 1, "id" => "fix-assessment-proof",
+          "subject" => "four-stream assessment matrix", "verifier" => "fix_assessment_matrix",
+          "status" => "partial", "checked_count" => 18, "failure_count" => 2,
+          "unchecked_count" => 3, "complete" => false,
+        },
       },
     )
     write("fix_runs.json", JSON.generate("version" => 1, "runs" => [run]))
@@ -105,6 +111,10 @@ class TestFixStatus < Minitest::Test
     assert_includes row[:receipt], "finding=aaaaaaaaaaaa"
     assert_includes row[:receipt], "snapshot=bbbbbbbbbbbb"
     assert_includes rendered, "result: validation failed: rendered output differs"
+    assert_equal "partial", row[:assessment_verification].fetch("status")
+    assert_equal 18, row[:assessment_verification].fetch("checked_count")
+    assert_equal "partial incomplete checked=18 findings=2 unmeasured=3", row[:assessment_verification_summary]
+    assert_includes rendered, "verification: partial incomplete checked=18 findings=2 unmeasured=3"
     assert_includes rendered, "receipt: recorded"
     assert_includes rendered, "finished: 2026-10-17T20:45:00Z"
     refute_match(/deployment validation passed/i, rendered)
