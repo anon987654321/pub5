@@ -33,6 +33,35 @@ class TestRuntimeCompute < Minitest::Test
     assert_equal (0...16).map { |value| value * 2 }, result
   end
 
+  def test_thread_backend_cleans_up_workers_when_startup_fails_partway
+    original_new = Thread.method(:new)
+    active = []
+    started = Queue.new
+    calls = 0
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      original_new.call(*args, **kwargs) do
+        active << Thread.current
+        started << true
+        block.call
+      end.tap { started.pop }
+    }) do
+      error = assert_raises(ThreadError) do
+        Master::Runtime::Compute.send(:thread_map, [1, 2], workers: 2, timeout: 1) do
+          sleep 30
+        end
+      end
+      assert_equal "thread limit reached", error.message
+    end
+
+    assert_equal 2, calls
+    assert_equal 1, active.size
+    refute active.first.alive?, "a worker created before startup failed must be stopped and joined"
+  end
+
   def test_auto_selects_ractor_for_an_explicit_invoke_protocol
     skip "Ractors unavailable" unless Master::Runtime::Compute.ractor_available?
 
