@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../execution/contract"
+
 module Master
   module Fix
     class FixLoop
@@ -124,6 +126,11 @@ module Master
           matrix_evidence[:ledger_receipt] = assessment_receipt
           evidence[:assessment_matrix] = matrix_evidence
           evidence[:assessment_ledger_receipt] = assessment_receipt
+          assessment_verification = assessment_verification_result(
+            run_id:, target:, receipt: assessment_receipt, matrix: matrix_evidence,
+            provenance_matches:
+          )
+          evidence[:assessment_verification] = assessment_verification.to_h
           run_record = @run_journal.history(limit: RunJournal::MAX_RUNS).find { |row| row["id"] == run_id }
           plan_generation = Array(run_record && run_record["plan_generations"]).last&.fetch("generation", nil)
           evidence[:fix_plan_generation] = plan_generation unless plan_generation.nil?
@@ -152,6 +159,7 @@ module Master
             outcome[:source_digest] = plan_evidence["source_digest"]
           end
           outcome[:assessment_matrix] = matrix_evidence
+          outcome[:assessment_verification] = assessment_verification.to_h
           outcome[:outcome_receipt] = write_outcome_receipt(
             run_id:, target: target_label, state:, result:, convergence: convergence_evidence,
           )
@@ -159,6 +167,55 @@ module Master
           @bus&.publish("fix_loop:terminal", **outcome)
 
           result
+        end
+
+        # A normalized receipt for consumers that share the VerificationResult
+        # vocabulary. It describes matrix measurement separately from the overall
+        # Fix terminal state: a complete matrix may conclusively find failures.
+        def assessment_verification_result(run_id:, target:, receipt:, matrix:, provenance_matches:)
+          value = lambda do |key|
+            matrix[key] || matrix[key.to_s]
+          end
+          matrix_status = value.call(:status).to_s
+          recorded = Integer(value.call(:recorded_cells) || 0)
+          findings = Integer(value.call(:finding_cells) || 0)
+          unassessed = Integer(value.call(:unassessed_cells) || 0)
+          inconclusive = Integer(value.call(:inconclusive_cells) || 0)
+          persisted = receipt["status"] == "persisted" &&
+            receipt["readback_verified"] == true && receipt["verification"] == "verified"
+          trusted = persisted && provenance_matches == true
+          status = if !trusted
+                     :error
+                   elsif matrix_status == "complete"
+                     findings.positive? ? :fail : :pass
+                   elsif matrix_status == "not_measured"
+                     :unavailable
+                   elsif recorded.positive? && (unassessed.positive? || inconclusive.positive?)
+                     :partial
+                   else
+                     :inconclusive
+                   end
+
+          Master::Execution::Contract::VerificationResult.new(
+            id: "fix-assessment-#{Digest::SHA256.hexdigest(run_id.to_s)[0, 20]}",
+            subject: "four-stream assessment matrix: #{target}",
+            verifier: "fix_assessment_matrix",
+            status:,
+            scope: target.to_s,
+            checked_count: recorded,
+            failure_count: findings,
+            unchecked_count: unassessed + inconclusive,
+            complete: trusted && matrix_status == "complete",
+          )
+        rescue ArgumentError, TypeError => error
+          Master::Execution::Contract::VerificationResult.new(
+            id: "fix-assessment-#{Digest::SHA256.hexdigest(run_id.to_s)[0, 20]}",
+            subject: "four-stream assessment matrix: #{target}",
+            verifier: "fix_assessment_matrix",
+            status: :error,
+            scope: target.to_s,
+            complete: false,
+          )
         end
 
         def persist_assessment_receipt(run_id:, target:)
