@@ -130,6 +130,7 @@ module Master
 
             group.each_slice(LawOrder::MAX_PARALLEL_LAWS).flat_map do |batch|
               threads = []
+              start_error = nil
               begin
                 batch.each do |rule|
                   threads << Thread.new do
@@ -137,14 +138,31 @@ module Master
                                         external_violations: rule_violations[rule.id.to_s])]
                   end
                 end
-              ensure
-                # Join the entire batch before reading any value. A failed
-                # worker must not let its siblings keep writing as the pass
-                # unwinds or rolls its transaction back.
-                threads.each(&:join)
+              rescue StandardError => error
+                start_error = error
               end
+
+              join_error = join_rule_workers(threads)
+              raise start_error if start_error
+              raise join_error if join_error
+
               threads.map(&:value)
             end
+          end
+
+          # Ruby's Thread#join re-raises a failed worker. Capture that result
+          # per thread so one exception cannot skip the remaining joins.
+          def join_rule_workers(threads)
+            failure = nil
+            threads.each do |thread|
+              begin
+                thread.join
+              rescue StandardError => error
+                failure ||= error
+              end
+            end
+            failure
+          end
           end
 
           # What the council picked this pass, as repairs to weigh rather than
