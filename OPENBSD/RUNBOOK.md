@@ -9,7 +9,7 @@ place.
 From a clean workstation checkout on `origin/main`:
 
 ```zsh
-./bin/redeploy
+MASTER/bin/redeploy
 ```
 
 Hands-off: local preflight → pin SHA → `tmux` session `pub5-deploy` on vm23 →
@@ -456,7 +456,7 @@ remaining gap and it needs an account.
 
 Always use tmux. `OPERATOR.sh` runs under `doas` because it installs `/etc`.
 `vps-deploy` runs as root (or re-execs via passwordless doas from `dev`); git
-still runs as `dev` (see *Agent contract*). Prefer `./bin/redeploy` from a
+still runs as `dev` (see *Agent contract*). Prefer `MASTER/bin/redeploy` from a
 workstation.
 
 ```zsh
