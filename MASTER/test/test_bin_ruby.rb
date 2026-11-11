@@ -49,7 +49,7 @@ class TestBinRuby < Minitest::Test
     end
   end
 
-  def test_missing_ruby_pin_uses_available_ruby
+  def test_wrapper_uses_compatible_path_ruby_when_available
     old_path = ENV["PATH"]
     Dir.mktmpdir do |root|
       fake = File.join(root, "ruby")
