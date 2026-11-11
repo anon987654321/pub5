@@ -4,7 +4,7 @@
 page of its own, with its dependencies, its security advisories and its maintainer, and finds
 any of them in the time it takes to press a key.
 
-It is a Rails 8.2.0.alpha app on Ruby 4.0.5, with SQLite, Falcon and Hotwire. Search runs
+It is a Rails 8.2.0.alpha app on the installed compatible Ruby runtime (3.3+), with SQLite, Falcon and Hotwire. Search runs
 through an FTS5 index over port names and comments, kept beside the data in the same database.
 The pages use an ultra-minimal white search-page language, inspired by the classic Google
 front page: Arial, white paper, #202124 ink, #4d5156 secondary text and #1a0dab links, with
