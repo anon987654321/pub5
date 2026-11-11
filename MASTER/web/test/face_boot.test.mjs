@@ -217,7 +217,8 @@ test("the carved-field portrait is the canonical default and keeps legacy aliase
   assert.match(rules, /default_topology: carved-field/);
   assert.match(rules, /carved_field:/);
   assert.match(state, /topology: CONTRACT_STATE\.default_topology \|\| "carved-field"/);
-  assert.match(state, /topology === "papua-mask" \? "carved-field" : topology/);
+  assert.match(rules, /topology_aliases:\s+papua-mask: carved-field/);
+  assert.match(state, /CONTRACT_SPATIAL\.topology_aliases/);
   assert.match(world, /topology === "carved-field" \|\| topology === "papua-mask"/);
   assert.match(shader, /FACE_CARVE_ORBITAL/);
   assert.match(shader, /FACE_CARVE_CHEEK/);
@@ -235,6 +236,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
 
   assert.match(rules, /semantic_subject:/);
   assert.match(world, /function normalizeVisualSubject\(subject\)/);
+  assert.match(world, /return SUBJECT_HINTS\.find\(\(\[, pattern\]\) => pattern\.test\(text\)\)\?\.\\[0\\] \|\| "face"/);
   assert.match(world, /declaredKind === "object" \|\| !subjectFeatures\(declaredKind\)\.length/);
   assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
   assert.match(world, /Math\.min\(6, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features/);
