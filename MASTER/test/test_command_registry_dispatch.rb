@@ -201,10 +201,14 @@ class TestCommandRegistryDispatch < Minitest::Test
   def test_help_pages_and_the_built_surface_are_one_set
     assert_equal built.keys.sort, Registry::HELP_TOPICS.keys.sort
   end
-  def test_help_overview_leads_with_fix_and_lists_every_registered_command
+  def test_help_overview_leads_with_plain_language_and_lists_every_registered_command
     summary = Registry.help_summary
 
-    assert_match(/\Afix0 at master0: \/fix \[path\]/, summary)
+    assert_match(/\Ainput0 at master0: describe work in plain language/, summary)
+    assert_includes summary, "try0 at master0:"
+    assert_includes summary, "keys0 at master0: Tab suggests common commands"
+    assert_includes summary, "multi0 at master0: << starts multiline"
+    assert_includes summary, "fix0 at master0: /fix [path]"
     Registry::HELP_TOPICS.each_key { |name| assert_includes summary, "/#{name}" }
     assert_includes summary, "/exit"
     assert_includes summary, "/quit"
