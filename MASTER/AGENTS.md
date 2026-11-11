@@ -273,7 +273,7 @@ An agent arrives with none of the session context that makes the tree
 navigable, so these are the facts that are not deducible from the code and
 that a fresh agent gets wrong on its first attempt.
 
-**Ruby is pinned by `MASTER/.ruby-version` for development.** It is currently 4.0.5. On OpenBSD, `MASTER/bin/ruby` accepts the packaged Ruby 3.3.x/3.4.x lane instead of requiring 4.0.5; bare `ruby` is not the project contract. On a host with no suitable Ruby and no package manager (a container, an agent sandbox), `MASTER/bin/dev-bootstrap` builds one into `MASTER/.tools` without root and execs it — do not hand-compile Ruby again.
+**Ruby follows the host, not a repository patch pin.** Use the installed Ruby already on `PATH` when it is 3.3 or newer; `MASTER/bin/ruby` prefers that interpreter and only searches alternatives when it is below the compatibility floor. Bundler and gem metadata remain authoritative: if a dependency genuinely requires a newer Ruby, report that exact conflict rather than silently switching runtimes. `PUB5_RUBY` is the explicit override. `MASTER/bin/dev-bootstrap` is a fallback only when no compatible interpreter is installed.
 
 **A sandbox can flip the executable bit on every file.** An agent checkout sometimes shows six thousand mode-only diffs (644→755, zero content). That is not work; it is the sandbox's umask. `git config core.fileMode false` silences it so path-scoped commits stay path-scoped.
 
