@@ -17,7 +17,7 @@ module Master
         MAX_STORE_BYTES = 10 * 1024 * 1024
 
         def initialize(root: Dir.pwd)
-          @root = File.expand_path(root)
+          @root = File.realpath(root)
           @path = File.join(@root, ".master", "memory.yml")
           @mutex = Mutex.new
           @store = load_store
