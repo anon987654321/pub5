@@ -25,10 +25,6 @@ esac
 MIN_MAJOR=3
 MIN_MINOR=3
 
-if [ -n "${PUB5_RUBY:-}" ] && [ -x "${PUB5_RUBY}" ]; then
-  exec "${PUB5_RUBY}" "$@"
-fi
-
 BEST_KEY=-1
 BEST_RUBY=
 
@@ -63,6 +59,17 @@ add_candidate() {
     BEST_RUBY=$ruby
   fi
 }
+
+if [ -n "${PUB5_RUBY:-}" ]; then
+  add_candidate "${PUB5_RUBY}"
+  if [ -z "$BEST_RUBY" ]; then
+    printf '%s\\n' "ruby0: PUB5_RUBY is not a compatible Ruby >= 3.3: ${PUB5_RUBY}" >&2
+    exit 1
+  fi
+  exec "${PUB5_RUBY}" "$@"
+fi
+BEST_KEY=-1
+BEST_RUBY=
 
 # Prefer the generic interpreter selected by the user's PATH. It is the Ruby
 # they installed and use; do not silently switch to a different version.
