@@ -24,6 +24,37 @@ class TestCodeIndexStore < Minitest::Test
     Prism.define_singleton_method(:parse, original)
   end
 
+  def test_repeated_async_build_requests_share_the_active_build
+    with_tree do |root|
+      entered = Queue.new
+      release = Queue.new
+      original_parse = Prism.method(:parse)
+      count = 0
+      Prism.define_singleton_method(:parse) do |source, *arguments|
+        count += 1
+        entered << true
+        release.pop
+        original_parse.call(source, *arguments)
+      end
+
+      index = Index.new(root:)
+      index.build_async
+      entered.pop
+      active = index.instance_variable_get(:@build_thread)
+      index.build_async
+
+      assert_same active, index.instance_variable_get(:@build_thread)
+      release << true
+      index.wait_for_build
+      assert index.complete?
+      assert_equal 1, count
+    ensure
+      release << true if release
+      Prism.define_singleton_method(:parse, original_parse) if original_parse
+      index&.wait_for_build
+    end
+  end
+
   def test_warm_boot_parses_nothing_and_answers_the_same
     with_tree do |root|
       cold = Index.new(root:, persist: true).build
