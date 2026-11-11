@@ -370,7 +370,7 @@ body.vertical-dating {
   display: grid;
   place-items: center;
   width: min(80vw, 420px);
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 4 / 3;
 }
 
 .dating-hjerterom-logo {
@@ -378,6 +378,13 @@ body.vertical-dating {
   width: 100%;
   height: auto;
   overflow: visible;
+  color: var(--dating-splash-ink);
+}
+
+/* The historical wordmark was black on Hjerterom's light ground. Re-ink only
+   that text for Dating's dark splash; the heart paths and animation stay exact. */
+.dating-hjerterom-logo text {
+  fill: currentColor;
 }
 
 .dating-splash-title {
