@@ -48,9 +48,9 @@ visible area stays inside the letters. No path is re-drawn or restyled.
 | 02 | `bit8_pixel` | 8-bit bit-reduction | Radial ink quantized to a 7-unit grid in five ramp pastels (16-colour discipline); CRT scanlines fall on the ink; canonical white swoosh | 2026 pixel-logo trend (RESEARCH §4); operator sprite constraints (limited palette, no AA); `motion.default: still` honored |
 | 03 | `dither4_press` | 4-bit Bayer dither on paper | One-bit halftone: dark ink on paper, Bayer 4×4 steering a density ramp from sparse dots at the `a` to solid at the `r`; canonical white swoosh | Bit-reduction brief; `composition.surfaces` "flat and structured"; no gradients — dither only |
 | 04 | `signal_orbit` | Motion graphics | The radial ink's focus roams (18 s loop); wordmark, hairlines and ground frozen | `motion.default: still` honored at the mark level; the *ink* is the only mover |
-| 05 | `hue_flow` | Motion graphics — **palette cycling** | The shipped 4-stop ramp cycles through the wordmark (10 s, offset begins) | 16-bit palette-cycling technique (RESEARCH §7) applied to the brand's own ramp; no new colours |
-| 06 | `zoetrope_frames` | Sprite-sheet frames, frozen | The ink holds three exposure frames split inside the letters — ghost, ghost, live — separated by slivers of ground, like a filmstrip; canonical white swoosh | Aseprite frame-strip workflow depicted (RESEARCH §7); animation depicted, not played |
-| 07 | `starlight` | Shooting stars | Night-sky ink (moonlight vertical ramp) and tiny stars, kept only where they fall inside glyphs; canonical white swoosh | Sparkle ask; original hairline geometry and stroke remain unchanged |
+| 05 | `hue_flow` | Motion graphics — **palette cycling** | The shipped 4-stop ramp cycles through the wordmark (10 s, offset begins) | 16-bit palette-cycling technique (RESEARCH §6) applied to the brand's own ramp; no new colours |
+| 06 | `zoetrope_frames` | Sprite-sheet frames, frozen | The ink holds three exposure frames split inside the letters — ghost, ghost, live — separated by slivers of ground, like a filmstrip; canonical white swoosh | Aseprite frame-strip workflow depicted (RESEARCH §6); animation depicted, not played |
+| 07 | `starlight` | Night-sky star field | Night-sky ink (moonlight vertical ramp) and tiny stars, kept only where they fall inside glyphs; canonical white swoosh | Sparkle ask; original hairline geometry and stroke remain unchanged |
 | 08 | `prism_rainbow` | Sparkle pizzazz | The candy rainbow poured into the letters — prism ink, canonical white swoosh | Rainbow ask, cropped to the law: the prism ramp lives in the ink and nowhere else |
 | 09 | `grade_teal_amber` | Explicit cinematic grade | Amber ink (warm vertical ramp) on a deep teal ground; canonical white swoosh | Color-grading brief; the grade is the ground/ink pair, documented in the plate title |
 | 10 | `duotone_riso` | Riso misregistration | Two ink passes a hair out of register — orange beneath, navy above — both clipped to the glyphs (navy double-clipped, inner clip shifted −3,−2), so the orange rims only the right/bottom edges *inside* the letter silhouettes; canonical white swoosh; signal-green registration dots | Print-grit trend; the mark stays in fixed values; misregistration without bleeding |
@@ -122,7 +122,4 @@ RAILS/amber/__logo/
   plates/avatars/*.svg 3 alpha-transparent avatar cuts
 ```
 
-Home rationale: the logo is owned by Amber, so its generator, previews and research live beside the Amber app. No candidate replaces a production logo until it is selected.
-(`browserless_ad_audits.md`); the plates are brand documentation, not app
-assets, so nothing enters the Rails asset tree. Rendered PNGs stay out of
-the repo — the SVGs are the source of truth.
+Home rationale: the logo is owned by Amber, so its generator, previews and research live beside the app. No candidate replaces the production logo until it is selected. The plates are brand documentation, not production assets; rendered PNGs stay out of the repo and the SVGs remain the source of truth.
