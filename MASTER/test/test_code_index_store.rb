@@ -99,6 +99,43 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_symlinked_ruby_source_outside_the_root_is_not_indexed
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "root")
+      outside = File.join(directory, "outside")
+      Dir.mkdir(root)
+      Dir.mkdir(outside)
+      File.write(File.join(outside, "private.rb"), "class OutsideSecret; end\\n")
+      File.symlink(File.join(outside, "private.rb"), File.join(root, "leak.rb"))
+
+      index = Index.new(root:, persist: true).build
+
+      refute index.complete?
+      assert_nil index.lookup("OutsideSecret")
+      assert_equal :read, index.errors.fetch(0).fetch(:kind)
+      refute File.exist?(Master::Review::CodeIndexStore.new(root:).path)
+    end
+  end
+
+  def test_source_changed_during_parse_is_not_recorded_as_current
+    with_tree do |root|
+      path = File.join(root, "a.rb")
+      original_parse = Prism.method(:parse)
+      Prism.define_singleton_method(:parse) do |source, *arguments|
+        File.write(path, "class Replaced; end\\n") if source.include?("class Alpha")
+        original_parse.call(source, *arguments)
+      end
+      index = Index.new(root:, persist: true).build
+
+      refute index.complete?
+      assert_nil index.lookup("Alpha")
+      assert_equal :changed, index.errors.find { |entry| entry[:path] == "a.rb" }.fetch(:kind)
+      refute File.exist?(Master::Review::CodeIndexStore.new(root:).path)
+    ensure
+      Prism.define_singleton_method(:parse, original_parse) if original_parse
+    end
+  end
+
   def test_deleted_file_is_purged_from_the_snapshot
     with_tree do |root|
       Index.new(root:, persist: true).build
