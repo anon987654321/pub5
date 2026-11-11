@@ -5,8 +5,8 @@ require "time"
 module Master
   module Fix
     # Keeps unfinished conversational missions alive after an individual fold
-    # attempt ends. The mission is the durable objective; this steward only wakes
-    # the same bounded runner again when the persisted record says it is due.
+    # attempt ends. The mission is the durable objective; this steward wakes a bounded fold or
+    # backlog runner again only when the persisted record says it is due.
     class TaskSteward
       POLL_SECONDS = Integer(ENV.fetch("MASTER_TASK_POLL_SECONDS", "15")).clamp(1, 300)
 
