@@ -676,9 +676,12 @@ module Master
         # speaks in rollups — how many were asked, how many failed, how many
         # lanes it walked — and a failure the chain recovered from is not news.
         # Every call is still in runtime/events/activity.jsonl.
-        BURST_AFTER = 3
-        ROLLUP_EVERY = 25
-        ROLLUP_SECONDS = 20
+        # Normal mode gives one lane a visible chance, then reports the
+        # aggregate. Repeated quota/auth failures are not conversational progress;
+        # verbose and trace still expose every call when an operator asks.
+        BURST_AFTER = 1
+        ROLLUP_EVERY = 50
+        ROLLUP_SECONDS = 60
 
         def llm_send(payload)
           parent = Fiber[:master_unit] || "master0"
