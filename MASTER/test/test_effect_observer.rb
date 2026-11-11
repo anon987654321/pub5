@@ -193,6 +193,24 @@ class TestEffectObserver < Minitest::Test
     end
   end
 
+  def test_corrupt_effect_receipt_history_blocks_observer_startup
+    Dir.mktmpdir do |root|
+      directory = File.join(root, "runtime", "events")
+      FileUtils.mkdir_p(directory)
+      path = File.join(directory, "evidence.jsonl")
+      record = { "event" => "core:effect:before", "payload" => "not a mapping" }
+      File.write(path, JSON.generate(record) + "\n")
+      File.chmod(0o600, path)
+      bus = Master::Trace::EventBus.new(
+        event_log: Master::Trace::Log::Event.new(root:),
+        evidence_log: Master::Trace::Log::Evidence.new(root:)
+      )
+
+      error = assert_raises(IOError) { Master::Trace::EffectObserver.new(bus:) }
+      assert_match(/malformed lifecycle payload/, error.message)
+    end
+  end
+
   def test_requires_a_bus_with_strict_persistence
     error = assert_raises(ArgumentError) { Master::Trace::EffectObserver.new(bus: Object.new) }
     assert_match(/publish_required/, error.message)
