@@ -172,8 +172,12 @@ module Master
 
           { "files" => {}, "laws" => {} }.merge(JSON.parse(raw))
         end
-      rescue JSON::ParserError
-        { "files" => {}, "laws" => {} }
+      rescue JSON::ParserError => error
+        # Empty history is not a safe substitute for corrupted learning: it
+        # would re-ask declined findings and reactivate retired detectors.
+        # Preserve the source bytes and stop the caller until an operator can
+        # inspect or restore the damaged state.
+        raise IOError, "repair memory is malformed; original state was preserved (#{error.class})"
       end
 
       def save(data)
