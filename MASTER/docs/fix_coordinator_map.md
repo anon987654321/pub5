@@ -182,8 +182,13 @@ runner preflights the selected Ruby/Bundler and dependencies, then requires a
 nonzero Minitest run summary for every file. Runtime::Compute now incrementally
 tracks its capped thread workers and kills/joins them if startup, timeout or
 caller interruption aborts the operation; its partial-startup regression is
-registered in the runner. The 88 entries are unique, but these suites remain
-authored, not run on the repository's selected runtime.
+registered in the runner.
+
+The generic review Swarm also limits fan-out to eight workers, uses one deadline
+per batch, joins every started worker on timeout or startup failure, and records
+every unstarted task—including tasks in later batches—as an infrastructure
+failure. The 89 runner entries are unique. These suites remain authored, not
+run on the repository's selected runtime.
 
 The unattended backlog bridge now uses ProofMap v2. Known shell prefixes and
 the explicitly permitted environment variables are normalized into argv-only
