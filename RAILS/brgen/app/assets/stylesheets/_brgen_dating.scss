@@ -386,8 +386,19 @@ body.vertical-dating {
   visibility: hidden;
 }
 
-.dating-splash-heart:has(.dating-splash-doodle:defined) .dating-splash-still {
-  display: none;
+/* Use the animated custom element only when motion is allowed. The SVG
+   remains the visible mark for reduced-motion users, even after the custom
+   element has been defined. */
+@media (prefers-reduced-motion: no-preference) {
+  .dating-splash-heart:has(.dating-splash-doodle:defined) .dating-splash-still {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dating-splash-doodle {
+    display: none;
+  }
 }
 
 .dating-splash-still use {
