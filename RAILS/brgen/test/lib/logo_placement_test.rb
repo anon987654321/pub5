@@ -100,7 +100,7 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes logo, 'fill="#DC143C"'
     assert_includes logo, 'id="heartClip-<%= svg_uid %>"'
     assert_equal 14, logo.scan("<path ").size
-    assert_equal 60, logo.scan(/<animate(?:Transform)?\\b/).size
+    assert_equal 60, logo.scan(/<animate(?:Transform)?\b/).size
     assert_includes logo, 'data-dating-splash-target="hjerterom"'
 
     # Reduced motion pauses the original SMIL artwork at its initial frame;
