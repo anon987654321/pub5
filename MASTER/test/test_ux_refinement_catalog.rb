@@ -78,6 +78,29 @@ class TestUXRefinementCatalog < Minitest::Test
 
       assert Master::Fix::UXRefinementCatalog.validate!(payload, root:)
 
+      # A receipt must describe the bytes in the named commit, not merely a
+      # matching file currently present in the working tree.
+      File.write(evidence_path, "different committed evidence\\n")
+      _mismatch_add, mismatch_add_status = Master::Io::Exec.capture2e("git", "-C", root, "add", "evidence.txt")
+      assert mismatch_add_status.success?
+      mismatch_commit_out, mismatch_commit_status = Master::Io::Exec.capture2e(
+        "git", "-C", root, "-c", "user.name=UX Test", "-c", "user.email=ux-test@example.invalid",
+        "commit", "--quiet", "-m", "mismatched evidence bytes"
+      )
+      assert mismatch_commit_status.success?, mismatch_commit_out
+      mismatch_commit, mismatch_commit_status = Master::Io::Exec.capture2(
+        "git", "-C", root, "rev-parse", "HEAD"
+      )
+      assert mismatch_commit_status.success?
+      File.write(evidence_path, evidence_text)
+      wrong_commit = Marshal.load(Marshal.dump(payload))
+      wrong_commit.fetch("refinements").first.fetch("evidence").each do |receipt|
+        receipt["commit"] = mismatch_commit.strip
+      end
+      assert_raises(ArgumentError) do
+        Master::Fix::UXRefinementCatalog.validate!(wrong_commit, root:)
+      end
+
       incomplete = Marshal.load(Marshal.dump(payload))
       incomplete.fetch("refinements").first.fetch("evidence").pop
       assert_raises(ArgumentError) { Master::Fix::UXRefinementCatalog.validate!(incomplete, root:) }
