@@ -32,7 +32,10 @@ module Operator
 
       ruby = best_available_ruby(root:)&.fetch(:path, nil)
       candidates = []
-      candidates << File.join(File.dirname(ruby), "bundle") if ruby
+      if ruby
+        suffix = File.basename(ruby).delete_prefix("ruby")
+        candidates << File.join(File.dirname(ruby), "bundle#{suffix}")
+      end
       home = File.expand_path("~")
       candidates.concat(
         [
