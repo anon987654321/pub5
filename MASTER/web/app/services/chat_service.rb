@@ -140,6 +140,10 @@ conversation: nil)
     # llm:response, not llm:request: the router names a first choice, and the
     # fallback chain can hand the turn to another model before one answers.
     subscribe("llm:response") { |ev| write_event("model", ev[:model]) }
+    subscribe("assistant:visual-subject") do |ev|
+      payload = assistant_visual_subject_payload(ev)
+      write_json_event("visual_subject", payload) if payload
+    end
     subscribe("ctx:footer") { |ev| write_json_event("ctx_footer", ctx_footer_payload(ev)) }
     subscribe("compaction:done") { |ev| write_compaction_event(ev) }
     subscribe("phantom:detected") { |ev| write_json_event("phantom", phantom_payload(ev)) }
@@ -411,6 +415,72 @@ conversation: nil)
 
   def phantom_payload(event)
     { patterns: Array(event[:patterns]), recovery: Array(event[:recovery]) }
+  end
+
+  # The model may describe a visual subject as a bounded, declarative sidecar.
+  # Keep the stream small and conversation-scoped; the browser validates the
+  # primitive allowlist and geometry bounds again before touching the face.
+  def assistant_visual_subject_payload(event)
+    subject = event[:visual_subject] || event["visual_subject"]
+    return unless subject.is_a?(Hash)
+
+    data = subject.with_indifferent_access
+    parts = data[:parts]
+    sequence = data[:sequence] || data[:features]
+    return if parts.is_a?(Array) && parts.length > 6
+    return if sequence.is_a?(Array) && sequence.length > 6
+
+    vector = lambda do |value|
+      next unless value.is_a?(Array) && value.length == 3
+
+      values = value.map do |entry|
+        number = Float(entry)
+        next nil unless number.finite?
+
+        number
+      rescue ArgumentError, TypeError
+        nil
+      end
+      values.all? ? values : ["invalid"]
+    end
+
+    payload = {}
+    { kind: 24, form: 24, label: 48 }.each do |key, limit|
+      value = data[key]
+      payload[key] = value.to_s[0, limit] unless value.nil?
+    end
+    confidence = Float(data[:confidence]) if data[:confidence]
+    payload[:confidence] = confidence.clamp(0.0, 1.0) if confidence&.finite?
+    if sequence.is_a?(Array)
+      payload[:sequence] = sequence.map { |entry| entry.to_s[0, 24] }
+    end
+    if parts.is_a?(Array)
+      payload[:parts] = parts.map do |part|
+        next { key: "", primitive: "" } unless part.is_a?(Hash)
+
+        fields = part.with_indifferent_access
+        item = {
+          key: fields[:key].to_s[0, 24],
+          primitive: fields[:primitive].to_s[0, 12],
+        }
+        axis = fields[:axis]
+        item[:axis] = axis.to_s[0, 1] unless axis.nil?
+        %i[center size].each do |key|
+          next if fields[key].nil?
+
+          item[key] = vector.call(fields[key]) || ["invalid"]
+        end
+        item
+      end
+    end
+    return if payload.empty?
+
+    {
+      text: (event[:text] || event["text"] || "").to_s[0, 500],
+      visual_subject: payload
+    }
+  rescue ArgumentError, TypeError
+    nil
   end
 
   def client_action_payload(event)
