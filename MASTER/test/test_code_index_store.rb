@@ -55,6 +55,23 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_async_index_build_slot_is_released_for_a_later_refresh
+    with_tree do |root|
+      index = Index.new(root:)
+      index.build_async
+      index.wait_for_build
+      assert_nil index.instance_variable_get(:@build_thread)
+
+      File.write(File.join(root, "a.rb"), "class Refreshed; end\n")
+      index.build_async
+      index.wait_for_build
+
+      assert index.complete?
+      assert index.lookup("Refreshed")
+      assert_nil index.instance_variable_get(:@build_thread)
+    end
+  end
+
   def test_warm_boot_parses_nothing_and_answers_the_same
     with_tree do |root|
       cold = Index.new(root:, persist: true).build
