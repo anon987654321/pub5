@@ -8,6 +8,7 @@ require "socket"
 require "yaml"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
+require_relative "ruby_runner"
 require_relative "../../../OPENBSD/lib/deploy_inventory"
 
 module Operator
@@ -358,14 +359,11 @@ module Operator
       [true, "VPS_DEPLOY_CI_SHA=#{sha}"]
     end
 
-    # The app's own bin/ci under the Ruby its .ruby-version pins (rbenv when
-    # present), with the caller's Bundler environment cleared so the app's
-    # Gemfile and gems are the ones that run.
+    # Run each app under the interpreter MASTER selected for this checkout;
+    # clear the caller's Bundler state so the app activates its own Gemfile.
     def local_ci(root:, app:)
       dir = File.join(root, "RAILS", app)
-      version = File.read(File.join(dir, ".ruby-version")).strip
-      rbenv_ruby = File.join(Dir.home, ".rbenv", "versions", version, "bin", "ruby")
-      ruby = File.executable?(rbenv_ruby) ? rbenv_ruby : RbConfig.ruby
+      ruby = RubyRunner.ruby_cmd(root:)
       cleared = %w[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
       env = cleared.merge("PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
       system(env, ruby, "bin/ci", chdir: dir)
