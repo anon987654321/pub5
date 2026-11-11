@@ -336,6 +336,9 @@ class TestCLI < Minitest::Test
     summary = Master::CLI::CommandRegistry.help_text
     fix = Master::CLI::CommandRegistry.help_text("fix")
 
+    assert_match(/^input0 at master0: describe work in plain language/, summary)
+    assert_match(/^try0 at master0:/, summary)
+    assert_match(/^keys0 at master0: Tab suggests common commands/, summary)
     assert_match(%r{^fix0 at master0: /fix \[path\]$}, summary)
     assert_match(/^health0 at master0: \/status \/doctor$/, summary)
     assert_match(/^help0 at master0: \/help \[command\]$/, summary)
