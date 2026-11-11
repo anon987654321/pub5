@@ -29,12 +29,15 @@ export default class extends Controller {
   static targets = ["wrapper", "banner", "smiley", "smileyPath", "cart", "cartPath", "number", "seedPlus"]
 
   connect() {
+    this.connectionToken = (this.connectionToken || 0) + 1
+    const connectionToken = this.connectionToken
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       this.#staticEndState()
       return
     }
     loadAnime().then((anime) => {
-      if (!this.hasBannerTarget) return
+      // A lazy import can resolve after Turbo has removed this controller.
+      if (connectionToken !== this.connectionToken || !this.element.isConnected || !this.hasBannerTarget) return
       if (!anime) {
         this.#staticEndState()
         return
@@ -44,6 +47,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.connectionToken = (this.connectionToken || 0) + 1
     this.animations?.forEach((animation) => animation.pause?.())
     this.animations = []
     if (this.hasBannerTarget) {
@@ -176,7 +180,6 @@ export default class extends Controller {
       this.bannerTarget.appendChild(span)
     }
 
-    const extras = this.bannerTarget.querySelectorAll(":scope > span")
     this.burstAnimation = anime
       .timeline()
       .add({
@@ -186,7 +189,8 @@ export default class extends Controller {
         duration: 1400,
       })
       .add({
-        targets: extras,
+        // Animate only this burst; the logo's permanent seed-plus stays put.
+        targets: particles,
         opacity: [1, 0],
         translateX: () => anime.random(-100, 100),
         translateY: () => anime.random(-300, 0),
