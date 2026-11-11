@@ -118,12 +118,25 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_mrdamascy_rc_d_process_match_uses_the_live_endpoint
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("47314", "47315")
+      text = File.read(path).sub('pexp=".*127\\\\.0\\\\.0\\\\.1:47314.*"',
+                                'pexp=".*127\\\\.0\\\\.0\\\\.1:47315.*"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
       assert_includes out, "mrdamascy rc.d process match must identify the Falcon loopback endpoint"
+    end
+  end
+
+  def test_mrdamascy_rc_d_port_and_host_default_stay_aligned
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub("PORT=47314", "PORT=47315")
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy rc.d service port must remain 47314"
     end
   end
 
