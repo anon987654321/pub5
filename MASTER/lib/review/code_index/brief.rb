@@ -55,8 +55,9 @@ module Master
             end
           end
           if @built_at && !@partial && @errors.empty?
-            lines << "Index coverage: COMPLETE (repository-wide scan)."
+            lines << "Index coverage: COMPLETE (repository-wide Ruby source scan)."
           end
+          lines << "Reference graph: PARTIAL (selected syntactic calls only; reflection, metaprogramming, dynamic dispatch, callbacks and runtime wiring are not resolved)."
           lines.join("\n")
         end
 
