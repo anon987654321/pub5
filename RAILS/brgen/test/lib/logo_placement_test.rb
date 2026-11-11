@@ -75,6 +75,9 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_equal 2, logo.scan('data-marketplace-logo-target="cartPath"').size
     assert_includes controller, "i <= 16"
     assert_includes controller, "data-marketplace-logo-particle"
+    assert_includes controller, "connectionToken !== this.connectionToken"
+    assert_includes controller, "targets: particles"
+    refute_includes controller, 'querySelectorAll(":scope > span")'
     assert_includes controller, "particles.forEach((particle) => particle.remove())"
   end
 
@@ -85,6 +88,9 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_equal 5, splash.scan('<use href="#dating-splash-heart-path"').size
     refute_match(/stroke-dash(?:array|offset)/, splash)
     assert_includes stylesheet, ".dating-splash-still use:nth-of-type(even)"
+    assert_includes stylesheet, "@media (prefers-reduced-motion: no-preference)"
+    assert_includes stylesheet, "@media (prefers-reduced-motion: reduce)"
+    assert_includes stylesheet, ".dating-splash-doodle {\n    display: none;\n  }"
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark
