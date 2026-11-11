@@ -29,6 +29,11 @@ tests = %w[
   test/test_fix_interruption_restart.rb
   test/test_fix_model_phase_guards.rb
   test/test_stream_stage.rb
+  test/test_ast_fixer_transforms.rb
+  test/test_ast_fixer_safety.rb
+  test/test_autofix_guard.rb
+  test/test_autofix_safety_tier.rb
+  test/test_scan_autofix.rb
   test/test_semantic_budget.rb
   test/test_fix_transaction.rb
   test/test_reliability_second_tranche.rb
