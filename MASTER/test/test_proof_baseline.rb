@@ -35,6 +35,20 @@ class TestProofBaseline < Minitest::Test
     assert_respond_to runner, :call
   end
 
+  def test_biz_root_and_child_paths_use_the_published_document_proof
+    pass = Master::CLI::Pipeline::Pass.allocate
+    root = File.join(Operator::CheckChain::ROOT, "BIZ")
+
+    [root, File.join(root, "ragnhild", "ragnhild.html"), File.join(root, "tools", "bp_build.mjs")].each do |target|
+      name, runner = pass.proof_runner(target)
+      assert_equal "BIZ documents", name
+      assert_respond_to runner, :call
+    end
+    job = Operator::CheckChain.suite_jobs(%w[BIZ]).fetch(0)
+    assert_equal "BIZ documents", job.fetch(0)
+    assert_equal ["node", File.join(root, "tools", "bp_check.mjs")], job.fetch(1)
+  end
+
   def test_the_runner_verdict_names_each_failed_check
     reading = Reading.parse(false, RAILS_RED)
 
