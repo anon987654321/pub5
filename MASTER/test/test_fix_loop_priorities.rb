@@ -70,6 +70,31 @@ class TestFixLoopPriorities < Minitest::Test
     assert_operator maximum, :<=, Master::Fix::FixLoop::LawOrder::MAX_PARALLEL_LAWS
   end
 
+  def test_rule_group_joins_partial_startup_before_propagating_thread_error
+    joined = false
+    worker = Object.new
+    worker.define_singleton_method(:join) { joined = true }
+    calls = 0
+    runner = Object.new.extend(Master::Fix::FixLoop::PassRunner::LlmStage)
+    laws = [Law.new("A", :warning), Law.new("B", :warning)]
+    violations = { "A" => [{ file: "a.rb" }], "B" => [{ file: "b.rb" }] }
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      worker
+    }) do
+      error = assert_raises(ThreadError) do
+        runner.send(:run_rule_group, group: laws, files: [], pass: 1, rule_violations: violations, council: nil)
+      end
+      assert_equal "thread limit reached", error.message
+    end
+
+    assert joined, "a partially created rule worker must be joined"
+    assert_equal 2, calls
+  end
+
   def test_rule_group_joins_siblings_before_propagating_a_worker_failure
     started = Queue.new
     release = Queue.new
