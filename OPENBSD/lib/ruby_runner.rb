@@ -8,76 +8,70 @@ module Deploy
     module_function
 
     def ruby_cmd(root: Environment.repo_root)
-      return ENV["PUB4_RUBY"] if ENV["PUB4_RUBY"].to_s != ""
-      path = rbenv_path("ruby", root:)
-      return path if path
-      path = openbsd_path("ruby", root:)
-      return path if path
-      actual = Gem::Version.new(RUBY_VERSION)
-      required = Gem::Version.new(pinned_version(root))
-      return RbConfig.ruby if Environment.ruby_version_ok? || actual == required
+      explicit = ENV["PUB5_RUBY"].to_s
+      explicit = ENV["PUB4_RUBY"].to_s if explicit.empty?
+      unless explicit.empty?
+        return explicit if File.executable?(explicit) && compatible_ruby?(explicit)
 
-      raise Environment.ruby_mismatch_message
+        raise "configured Ruby is unavailable or older than #{Environment::SUPPORTED_RUBY_MIN}: #{explicit}"
+      end
+      return RbConfig.ruby if Environment.ruby_version_ok?
+
+      path = openbsd_path("ruby", root:)
+      return path if path && compatible_ruby?(path)
+
+      path = command_path("ruby")
+      return path if !path.empty? && compatible_ruby?(path)
+
+      raise(Environment.ruby_mismatch_message || "no compatible Ruby found")
     end
 
     def bundle_cmd(root: Environment.repo_root)
-      return ENV["PUB4_BUNDLE"] if ENV["PUB4_BUNDLE"].to_s != ""
-      path = rbenv_path("bundle", root:)
-      return path if path
+      explicit = ENV["PUB5_BUNDLE"].to_s
+      explicit = ENV["PUB4_BUNDLE"].to_s if explicit.empty?
+      return explicit if !explicit.empty? && File.executable?(explicit)
+
+      adjacent = File.join(File.dirname(ruby_cmd(root:)), "bundle")
+      return adjacent if File.executable?(adjacent)
+
       path = openbsd_path("bundle", root:)
       return path if path
-      "bundle"
+
+      command_path("bundle").then { |value| value.empty? ? "bundle" : value }
     end
 
-    # Resolve the project-pinned Ruby on rbenv and the supported package Ruby on
-    # OpenBSD. Callers receive one executable path and do not reproduce host logic.
-    def rbenv_path(name, root: Environment.repo_root)
-      version = pinned_version(root)
-      return if version.empty?
-
-      rbenv_root = ENV["RBENV_ROOT"].to_s
-      rbenv_root = File.expand_path("~/.rbenv") if rbenv_root.empty?
-      direct = File.join(rbenv_root, "versions", version, "bin", name)
-      return direct if File.executable?(direct)
-
-      rbenv = ENV["RBENV"].to_s
-      rbenv = command_path("rbenv") if rbenv.empty?
-      rbenv = File.join(rbenv_root, "bin", "rbenv") if rbenv.empty?
-      return unless File.executable?(rbenv)
-
-      output, status = Open3.capture2e(
-        { "RBENV_VERSION" => version },
-        rbenv, "which", name
-      )
-      path = output.to_s.strip
-      return unless status.success? && File.executable?(path)
-
-      path
-    end
-
+    # Alternate package names are a fallback. The interpreter already running
+    # MASTER wins whenever it meets the compatibility floor.
     def openbsd_path(name, root: Environment.repo_root)
       return unless RUBY_PLATFORM.match?(/openbsd/)
 
-      %w[ruby34 ruby33].each do |ruby_command|
-        command = name == "ruby" ? ruby_command : ruby_command.sub("\\Aruby", "bundle")
+      names = if name == "ruby"
+                %w[ruby ruby42 ruby41 ruby40 ruby34 ruby33]
+              else
+                %w[bundle bundle42 bundle41 bundle40 bundle34 bundle33]
+              end
+      names.each do |command|
         path = command_path(command)
-        return path unless path.empty?
-      end
+        next if path.empty?
+        next if name == "ruby" && !compatible_ruby?(path)
 
+        return path
+      end
       nil
     end
 
     def command_path(name)
-      path_entries = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR)
-      path_entries.filter_map do |directory|
+      ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).filter_map do |directory|
         path = File.join(directory, name)
         path if File.file?(path) && File.executable?(path)
       end.first.to_s
     end
 
-    def pinned_version(root)
-      path = File.join(root, ".ruby-version")
-      File.file?(path) ? File.read(path).strip : ""
+    def compatible_ruby?(path)
+      output, status = Open3.capture2e(path, "-e", "print RUBY_VERSION")
+      status.success? && Gem::Version.new(output.strip) >= Environment::SUPPORTED_RUBY_MIN
+    rescue ArgumentError, SystemCallError
+      false
     end
 
     def check_ruby(root: Environment.repo_root)
@@ -100,8 +94,7 @@ module Deploy
     end
 
     def executable?(name)
-      _, status = Open3.capture2e("command", "-v", name)
-      status.success?
+      !command_path(name).empty?
     end
   end
 end
