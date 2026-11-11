@@ -26,23 +26,22 @@ done
 # The small Active Record pool matches this app's one-worker resource budget.
 _env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}"
 _env="${_env} RAILS_MAX_THREADS=3 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
-_exec="exec ${_bundle} exec falcon serve -n 1 --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
+_exec="exec ${_bundle} exec falcon host ${APP_DIR}/falcon.rb"
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && export ${_env} && ${_exec}'"
 daemon_user="mrdamascy"
 daemon_execdir="/home/mrdamascy/app"
 daemon_logger="daemon.notice"
 daemon_timeout="120"
 . /etc/rc.d/rc.subr
-# Match the Ruby Falcon command by its fixed application port.
-pexp="ruby[0-9.]*.*${PORT}"
+# Host receives its endpoint from falcon.rb; identify this app by its config path.
+pexp="ruby[0-9.]*.*${APP_DIR}/falcon.rb"
 rc_bg=YES
 rc_reload=NO
 
 # port holders: begin
-# The pkills match falcon by its argv, so a process bound to the port under any
-# other name (a worker that retitled itself, a hand-started server, a test run)
-# survives them, the next falcon dies on EADDRINUSE, and rc reports a start that
-# never serves. fstat(1) names every process with a socket on the port whatever
+# Stop this app by its Falcon host config path, then use fstat(1) to catch
+# any orphaned listener by socket rather than by process name. This leaves other
+# Falcon applications alone and refuses to start while any process owns the port.
 # its argv. Its socket lines read USER CMD PID FD internet stream tcp ADDR
 # LOCAL [ARROW PEER]; a listener is the line with no peer, which leaves relayd's
 # connections to the port and the app's accepted ones alone.
@@ -86,7 +85,7 @@ free_port() {
 
 rc_pre() {
   touch /home/dev/pub5/.deploying-mrdamascy 2>/dev/null || true
-  pkill -f "falcon.*${PORT}" 2>/dev/null || true
+  pkill -f "falcon host ${APP_DIR}/falcon.rb" 2>/dev/null || true
   sleep 1
   PORT_OWNER=mrdamascy
   free_port || { rm -f /home/dev/pub5/.deploying-mrdamascy 2>/dev/null; return 1; }
