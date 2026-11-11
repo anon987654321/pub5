@@ -225,10 +225,17 @@ class TestCliReplExit < Minitest::Test
   end
 
   # One ^C clears the line, as zsh does; the second inside the window closes.
-  # The pause is for the prompt to re-arm: a ^C written while Reline is between
-  # two readline calls is read as input rather than raising.
+  # Each ^C waits for the prompt to be on screen again first: a ^C written while
+  # Reline is between two readline calls — or while a slow boot still owns the
+  # terminal under parallel test load — is read as input rather than raising.
   def test_ctrl_c_at_the_prompt_exits_cleanly
-    output, status = drive { |terminal| 2.times { write_terminal(terminal, "\x03"); sleep 1.2 } }
+    output, status = drive do |terminal, output|
+      2.times do
+        wait_for_prompt(output)
+        write_terminal(terminal, "\x03")
+        sleep 1.2
+      end
+    end
 
     assert_equal 0, status.exitstatus, output
     refute_match(/Error|from .+\.rb:\d+/, output)
@@ -363,10 +370,31 @@ class TestCliReplExit < Minitest::Test
     PTY.spawn(boot_env, Master::BUNDLE_BIN, "exec", "ruby", "bin/master", chdir: ROOT) do |reader, writer, pid|
       read_until(reader, output, READY, 30)
       sleep 0.5
-      yield writer
+      yield writer, output
       read_until(reader, output, nil, 10)
       _, status = Process.waitpid2(pid)
       return [output, status]
+    end
+  end
+
+  # Waits until the canonical prompt has been printed and the child has gone
+  # quiet, so a keystroke lands on an armed Reline session and not on a boot or
+  # a repaint in flight. Reline ends its paint with cursor-move escapes, so the
+  # prompt is not necessarily the last bytes; a short silent window is the
+  # signal that it finished.
+  def wait_for_prompt(output, seconds: 30)
+    deadline = Time.now + seconds
+    stable = 0
+    loop do
+      raise "prompt never re-armed: #{output[-400, 400].inspect}" if Time.now >= deadline
+
+      armed = output.match?(READY)
+      quiet = stable >= 3
+      return if armed && quiet
+
+      size = output.size
+      sleep 0.2
+      stable = size == output.size && armed ? stable + 1 : 0
     end
   end
 
