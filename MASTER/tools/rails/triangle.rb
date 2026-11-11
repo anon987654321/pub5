@@ -27,12 +27,10 @@ module Deploy
   module Triangle
     ROOT = File.expand_path("../../..", __dir__)
     RAILS_ROOT = File.join(ROOT, "RAILS")
-    # The apps' bundles are installed for the project-pinned rbenv Ruby. The
-    # general runner picks the newest Ruby and, on a tie with Homebrew's of the
-    # same version, kept Homebrew's, whose gems are not the apps': every boot
-    # died in db:prepare and the design loop reported the apps as down.
-    RUBY = Operator::RubyRunner.rbenv_path("ruby") || Operator::RubyRunner.ruby_cmd
-    BUNDLE = Operator::RubyRunner.rbenv_path("bundle") || Operator::RubyRunner.bundle_cmd
+    # Each app uses its own Gemfile and the interpreter selected by MASTER's
+    # shared runtime policy. Never force an rbenv version from repository metadata.
+    RUBY = Operator::RubyRunner.ruby_cmd
+    BUNDLE = Operator::RubyRunner.bundle_cmd
     RUN_DIR = File.join(RAILS_ROOT, "tmp", "triangle")
     BOOT_TIMEOUT = Integer(ENV.fetch("TRIANGLE_BOOT_TIMEOUT", "180"))
 
@@ -49,17 +47,12 @@ module Deploy
       end
     end
 
-    def self.ruby_version
-      path = File.join(ROOT, ".ruby-version")
-      File.file?(path) ? File.read(path).strip : ENV.fetch("RBENV_VERSION", "")
-    end
-
     # bin/operator runs under MASTER's own bundler environment, and a child `bundle exec`
     # inherits BUNDLE_GEMFILE from it: every app then booted on MASTER/Gemfile and died with
     # "cannot load bootsnap/setup" or "rails/commands". Each app is pinned to its own Gemfile
     # and the parent's bundler state is dropped, so the same command works from any caller.
     def self.env_for(app)
-      { "RBENV_VERSION" => ruby_version, "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
+      { "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
         "RAILS_LOG_LEVEL" => ENV.fetch("RAILS_LOG_LEVEL", "info"),
         "BUNDLE_GEMFILE" => File.join(app[:dir], "Gemfile"),
         "BUNDLE_BIN_PATH" => nil, "BUNDLER_SETUP" => nil, "BUNDLER_VERSION" => nil, "RUBYOPT" => nil, "RUBYLIB" => nil,
