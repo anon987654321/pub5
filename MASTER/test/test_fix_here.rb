@@ -103,8 +103,29 @@ class TestFixHere < Minitest::Test
 
       assert_equal 0, status.exitstatus, output
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --no-critique"
+      assert_includes log, "args=/fix MASTER --no-critique --apply"
       assert_includes log, "checks=lexical,sprawl"
+    end
+  end
+
+  def test_explicit_write_and_read_only_flags_reach_the_run_without_conflicting
+    with_worktree do |_main, worker, tools_bin|
+      _, normal = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe")
+      assert normal.success?
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "args=/fix MASTER --apply"
+
+      _, readonly = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--read-only")
+      assert readonly.success?
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "args=/fix MASTER --read-only"
+      refute_includes log, "--apply"
+
+      _, dry = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--dry-run")
+      assert dry.success?
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "args=/fix MASTER --dry-run"
+      refute_includes log, "--apply"
     end
   end
 
