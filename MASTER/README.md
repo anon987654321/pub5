@@ -22,7 +22,7 @@ Treat Laws as transferable engineering knowledge, not ceremony. Read the governi
 
 For local handwritten archives, `/documents analyze ~/Photos` reads a bounded set of page images one at a time through the configured vision lane, marks uncertain readings and asks the model to group and sequence letters from document evidence. It never modifies source images; the report and SHA-256 manifest are stored locally under `~/.local/share/master/document-archives` with owner-only permissions. JPG, PNG, WebP and GIF are supported; HEIC, TIFF and PDF files are reported as skipped. Each page and the final chronology are sent to the configured vision provider, so use a trusted/private lane for confidential letters.
 
-`bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals.
+`bin/master` is the interactive assistant and command entrypoint. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
 The core execution path is `lib/core/`: an admitted effect passes through Constitution before World dispatches it. Keep capabilities, validation and compensations at that boundary. Extend an existing owner before adding another wrapper, registry or helper.
 
@@ -96,6 +96,30 @@ exponentially; `permanent` fails fast; `ambiguous` stops and asks a human. A hel
 its holder — wait, stop that run, or let `bin/cleanup` sweep stale `.lock` files. A stopped run
 stays resumable from its journal and is never reported as a successful one. A Ruby outside
 3.3–4.1 is fixed before any other repair. A skipped instrument stays INCONCLUSIVE, never PASS.
+
+## External assessment and business direction
+
+MASTER's competition is not another model; it is the ungoverned script. Coding agents write fast and prove little: changes land without evidence, failures stay silent, and history is a log, not a constitution. Vendor-bound assistants inherit one model's limits and one vendor's roadmap. The scarce asset is not intelligence but trustworthy delivery — work that names its authority, measures before it declares done, and stops when the evidence is against it.
+
+### Competitive landscape
+
+General-purpose coding agents optimise for speed of change; few measure, fewer keep evidence. Vendor-bound assistants bind quality to one provider. MASTER's difference is structural: a constitution that gates every effect, an evidence-gated commit path, and ratchets that make quality debt visible instead of ambient. The comparison stays qualitative here; this README invents no market-share figures.
+
+### Business hypothesis and strategy
+
+Hypothesis: a governed runtime that treats every repair as evidence-first work holds quality under continuous agent traffic where ungoverned automation cannot. Strategy: prove it on this repository first — the runtime maintains its own tree under its own laws — then offer the pattern to teams whose agents already outwrite their review capacity. The hypothesis is falsifiable: if `/fix` cannot hold this tree's ratchets green over time, the hypothesis fails.
+
+### Pilot and funding route
+
+The named route is Innovasjon Norge ([innovasjonnorge.no](https://innovasjonnorge.no)), the Norwegian state's instrument for innovation funding. This README does not claim eligibility or approval; it records the direction. A pilot funds the smallest honest step: one external codebase run under the constitution for one month, with receipts.
+
+### Ask and evidence
+
+The ask is access — one real repository, its operator's trust, a month of measured traffic. The evidence that answers the ask is what this tree already produces for itself: before/after defect counts, ratchet movement, repair survival rates and a complete run journal.
+
+### Horizon
+
+The near horizon is self-maintenance: `/fix` holding this repository's suites and ratchets at green is the product demonstration. The next horizon is one external pilot on someone else's tree. Commercial terms, pricing and eligibility wait for pilot evidence; nothing here commits any funder.
 
 ## References
 
