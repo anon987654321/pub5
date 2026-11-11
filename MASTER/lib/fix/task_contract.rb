@@ -3,6 +3,7 @@
 require "digest"
 require "json"
 require "yaml"
+require_relative "../execution/contract"
 
 module Master
   module Fix
@@ -18,7 +19,6 @@ module Master
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
       MAX_PRESERVATION_READ_BYTES = 128 * 1024 * 1024
-      PLAN_DIGEST_PATTERN = /\\A[0-9a-f]{64}\\z/.freeze
       PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
       PRESERVATION_DIMENSIONS_BY_CHECK = {
         "html_markup" => %w[structure],
@@ -212,7 +212,7 @@ module Master
         return unless current
 
         value = digest.to_s.downcase
-        raise Invalid, "FixPlan digest must be a 64-character SHA-256 value" unless PLAN_DIGEST_PATTERN.match?(value)
+        raise Invalid, "FixPlan digest must be a 64-character SHA-256 value" unless Master::Execution::Contract::SHA256.match?(value)
 
         Thread.current[PLAN_KEY] = value.freeze
       end
