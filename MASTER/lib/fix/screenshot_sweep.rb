@@ -5,6 +5,7 @@ require "erb"
 require "fileutils"
 require "json"
 require "time"
+require_relative "../io/exec"
 require_relative "screenshot_sweep/plan"
 require_relative "screenshot_sweep/camera"
 require_relative "screenshot_sweep/review_set"
@@ -45,21 +46,24 @@ module Master
 
       attr_reader :dir
 
-      def initialize(root:, bus: nil, runtime: nil, out: nil)
+      def initialize(root:, bus: nil, runtime: nil, out: nil, widths: nil)
         @root = root
         @bus = bus
         @runtime = runtime || VisualRuntime.new(root:, bus:)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
-        # Only a sweep into the standing folder refreshes the review set and
-        # prunes; one pointed elsewhere (a test, a one-off) leaves both alone.
+        # Only a standing sweep refreshes the review set and prunes old sweeps.
         @standing = out.nil?
-        @dir = out || File.join(root, "MASTER", ".master", "visual_artifacts", "sweep-#{stamp}")
+        @dir = out || File.join(root, "RAILS", "sweep-#{stamp}")
         @plan = Plan.new(root:)
-        @widths = Array(YAML.safe_load_file(File.join(root, GEOMETRY)).fetch("sweep_widths")).map(&:to_i)
+        available_widths = Array(YAML.safe_load_file(File.join(root, GEOMETRY)).fetch("sweep_widths")).map(&:to_i)
+        @widths = Array(widths || available_widths).map(&:to_i).uniq
+        raise ArgumentError, "sweep widths must be declared in geometry_surfaces.yml" if
+          @widths.empty? || (@widths - available_widths).any?
       end
 
-      def run(apps: nil, dialogs: true)
+      def run(apps: nil, dialogs: true, max_pages: MAX_PAGES)
         apps = Array(apps).empty? ? Deploy::Inventory.new(root: @root).app_names : Array(apps)
+        page_limit = Integer(max_pages).clamp(1, MAX_PAGES)
         boot = @runtime.ensure_running!(apps)
         return finish(apps:, rows: [], unresolved: {}, error: "apps not running: #{boot.message}") unless boot.ok?
 
@@ -67,7 +71,7 @@ module Master
         unresolved = {}
         Deploy::GeometryProbe.with_browser(root: @root, warm: []) do |cdp|
           camera = Camera.new(cdp:, widths: @widths, dir: @dir)
-          apps.each { |app| unresolved[app] = sweep_app(app, camera:, rows:, dialogs:) }
+          apps.each { |app| unresolved[app] = sweep_app(app, camera:, rows:, dialogs:, max_pages: page_limit) }
         end
         finish(apps:, rows:, unresolved:)
       ensure
@@ -77,10 +81,10 @@ module Master
       private
 
       # Appends one Row per visited page; returns the routes nothing reached.
-      def sweep_app(app, camera:, rows:, dialogs:)
+      def sweep_app(app, camera:, rows:, dialogs:, max_pages:)
         port = Deploy::GeometryProbe.app_ports(root: @root)[app]
         visit = Visit.new(camera:, port:, frontier: Frontier.new(@plan, app), dialogs:)
-        MAX_PAGES.times do
+        max_pages.times do
           page = visit.frontier.next_page or break
           rows << capture(page, visit).tap { |row| progress(rows.size + 1, row) }
         end
@@ -114,7 +118,8 @@ module Master
       def finish(apps:, rows:, unresolved:, error: nil)
         FileUtils.mkdir_p(@dir)
         summary = totals(rows).merge(
-          "generated_at" => Time.now.utc.iso8601, "apps" => apps, "widths" => @widths, "error" => error,
+          "generated_at" => Time.now.utc.iso8601, "revision" => checkout_revision,
+          "apps" => apps, "widths" => @widths, "error" => error,
           "unresolved" => unresolved, "rows" => rows.map(&:to_h)
         )
         File.write(File.join(@dir, "index.json"), JSON.pretty_generate(summary))
@@ -123,6 +128,15 @@ module Master
         refresh_review_set(rows) if @standing && error.nil?
         @bus&.publish("fix_loop:screenshot_sweep", dir: @dir, **totals(rows).transform_keys(&:to_sym))
         summary
+      end
+
+      def checkout_revision
+        output, status = Master::Io::Exec.capture2e("git", "rev-parse", "--verify", "HEAD", chdir: @root, timeout: 5)
+        revision = output.to_s.strip
+        revision if status&.success? && revision.match?(/\A[0-9a-f]{40}\z/i)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "screenshot_sweep.checkout_revision")
+        nil
       end
 
       def refresh_review_set(rows)
