@@ -235,9 +235,12 @@ test("the carved-field portrait is the canonical default and keeps legacy aliase
   const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
   const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const generated = readFileSync(join(railsRoot, "__shared", "design_tokens.yml"), "utf8");
   const shader = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
 
   assert.match(rules, /default_topology: carved-field/);
+  assert.match(generated, /default_topology: carved-field/);
+  assert.doesNotMatch(generated, /default_topology: papua-mask/);
   assert.match(rules, /carved_field:/);
   assert.match(state, /topology: CONTRACT_STATE\.default_topology \|\| "carved-field"/);
   assert.match(rules, /topology_aliases:\s+papua-mask: carved-field/);

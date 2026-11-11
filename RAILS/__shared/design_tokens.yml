@@ -411,7 +411,7 @@ face_interface:
     - idle
     still_after_activity_ms: 700
     default_mode: idle
-    default_topology: papua-mask
+    default_topology: carved-field
     entropy: 0.18
     confidence: 0.86
     attention: 1.0
