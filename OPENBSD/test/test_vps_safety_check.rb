@@ -121,10 +121,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_mrdamascy_secret_is_checked_inside_the_app_user_command
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub(
-        ' && : \"\${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}\"',
-        ""
-      )
+      text = File.read(path).sub("SECRET_KEY_BASE:?missing", "SECRET_KEY_BASE missing")
       File.write(path, text)
       out, status = run_check(dir)
 
