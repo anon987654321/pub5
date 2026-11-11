@@ -139,7 +139,15 @@ module Master::Core
       # realpath of the existing ancestor must still sit under the real root.
       real_root = File.realpath(@root)
       existing = abs
-      existing = File.dirname(existing) until File.exist?(existing)
+      until File.exist?(existing) || File.symlink?(existing)
+        parent = File.dirname(existing)
+        raise "path escapes workspace: #{path}" if parent == existing
+
+        existing = parent
+      end
+      # File.exist? is false for a dangling symlink. Stop at the link itself:
+      # File.realpath must reject it rather than walking past it to an in-root
+      # parent and allowing mkdir_p to create through an outside target.
       raise "path escapes workspace: #{path}" unless under_root?(File.realpath(existing), real_root)
 
       if File.exist?(abs)
