@@ -86,6 +86,33 @@ class TestScreenshotSweep < Minitest::Test
     def stop_owned! = nil
   end
 
+  def test_standing_sweep_uses_rails_root_and_records_revision_field
+    Dir.mktmpdir("screenshot-root") do |root|
+      FileUtils.mkdir_p(File.dirname(File.join(root, Master::Fix::ScreenshotSweep::GEOMETRY)))
+      FileUtils.cp(File.join(ROOT, Master::Fix::ScreenshotSweep::GEOMETRY),
+                   File.join(root, Master::Fix::ScreenshotSweep::GEOMETRY))
+      File.write(File.join(root, Master::Fix::ScreenshotSweep::Plan::MANIFEST), { "apps" => {} }.to_yaml)
+
+      sweep = Master::Fix::ScreenshotSweep.new(root:, runtime: FailedBoot.new("not started"))
+      assert_match(%r{/RAILS/sweep-\d{8}T\d{6}Z\z}, sweep.dir)
+
+      sweep.run(apps: ["bsdports"])
+      index = JSON.parse(File.read(File.join(sweep.dir, "index.json")))
+      assert index.key?("revision"), "index declares revision even when checkout identity is unavailable"
+    end
+  end
+
+  def test_one_page_mode_can_restrict_capture_width_and_page_count
+    Dir.mktmpdir("screenshot-one-page") do |out|
+      summary = Master::Fix::ScreenshotSweep.new(
+        root: ROOT, runtime: FailedBoot.new("not started"), out:, widths: [390],
+      ).run(apps: ["bsdports"], dialogs: false, max_pages: 1)
+
+      assert_equal [390], summary["widths"]
+      assert_equal 0, summary["screenshots"]
+    end
+  end
+
   def test_apps_that_do_not_boot_leave_an_index_that_says_so
     Dir.mktmpdir do |out|
       summary = Master::Fix::ScreenshotSweep.new(root: ROOT, runtime: FailedBoot.new("port 47312 closed"), out:)
