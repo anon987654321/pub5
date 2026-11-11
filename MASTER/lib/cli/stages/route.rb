@@ -17,7 +17,13 @@ module Master
         # of /help's command count, so the surface stays closed. /tts arrived
         # as "unknown command" while /voice owned the behaviour (Johann's log
         # 2026-11-08).
-        SPELLINGS = { "tts" => "voice" }.freeze
+        SPELLINGS = {
+          "tts" => "voice",
+          "restart" => "reload",
+          "respawn" => "reload",
+          "hot-reload" => "reload",
+          "hotreload" => "reload",
+        }.freeze
 
         def initialize(commands:, agent:, bus: nil)
           @commands = commands
