@@ -207,7 +207,16 @@ module Master::Core
       @write_trees << tree if tree
       path = repository_path(effect.args[:path])
       @write_paths << (path || effect.args[:path].to_s)
-      @write_hashes[path] = Digest::SHA256.hexdigest(effect.args[:content].to_s) if @repository_root && path
+      # A delivery receipt is a claim about the tree, so it is recorded only
+      # while the live file still carries the bytes the fold wrote — the same
+      # discipline authorize_repository_delivery! applies to resumed writes.
+      if @repository_root && path
+        full = File.join(@repository_root, path)
+        digest = Digest::SHA256.hexdigest(effect.args[:content].to_s)
+        if File.file?(full) && !File.symlink?(full) && Digest::SHA256.file(full).hexdigest == digest
+          @write_hashes[path] = digest
+        end
+      end
       @write_lines += effect.args[:content].to_s.lines.size
     end
 

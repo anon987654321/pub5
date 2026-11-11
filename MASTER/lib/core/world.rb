@@ -326,10 +326,13 @@ module Master::Core
       verify_delivery_hashes!(safe_paths, expected)
       # A private temporary index prevents another session's staged entries
       # from being changed even briefly. It starts at HEAD and receives only
-      # this task's exact, content-verified paths.
+      # this task's exact, content-verified paths. A repository with no commits
+      # yet has no HEAD; its first commit still deserves the same isolation, so
+      # the temporary index starts empty instead.
       Dir.mktmpdir("master-git-index-") do |directory|
         index_env = { "GIT_INDEX_FILE" => File.join(directory, "index") }
-        git_capture("read-tree", "HEAD", env: index_env)
+        _head, head_status = Open3.capture2e("git", "-C", @root, "rev-parse", "--verify", "-q", "HEAD")
+        git_capture(*(head_status.success? ? %w[read-tree HEAD] : %w[read-tree --empty]), env: index_env)
         verify_delivery_hashes!(safe_paths, expected)
         git_capture("add", "--", *pathspecs, env: index_env)
         verify_delivery_hashes!(safe_paths, expected)

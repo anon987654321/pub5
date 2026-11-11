@@ -127,13 +127,18 @@ class CoreSmokeTest < Minitest::Test
   end
 
   def fold(root, script, model: ScriptedModel.new(script), max_turns: nil)
+    memory = Master::Core::Memory.new
+    # The harness stands in for the operator who authorises repository
+    # delivery: the same call the CLI bridge makes for an authorised repair
+    # fold, and the one git_commit_scope's receipts are computed against.
+    memory.proof.authorize_repository_delivery!(root:)
     options = {
       model:,
       constitution: Master::Core::Constitution.load(data_dir: DATA),
       # This test harness explicitly approves the irreversible Git effects
       # that the real operator would be asked to approve.
       world: Master::Core::World.new(root:, ask: ->(**) { "yes" }),
-      memory: Master::Core::Memory.new,
+      memory:,
     }
     options[:max_turns] = max_turns if max_turns
     Master::Core::Fold.new(**options)
