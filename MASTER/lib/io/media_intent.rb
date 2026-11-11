@@ -315,7 +315,7 @@ module Master
 
         Process.kill(0, pid)
         pid
-      rescue Errno::ESRCH, Errno::EPERM
+      rescue Errno::ESRCH
         @player_pid = nil
       end
 
@@ -334,7 +334,7 @@ module Master
       def diagnose_live_audio(root: MasterPaths.root)
         pid = player_pid
         rendered = if pid
-                     "audio0: playing (pid #{pid}); MASTER can verify the player process, but not whether the operating-system output route is physically audible."
+                     "audio0: player process running (pid #{pid}); MASTER can verify the process, but not whether the operating-system output route is physically audible."
                    else
                      "audio0: nothing is playing; the Dilla player is not running."
                    end
@@ -414,8 +414,8 @@ module Master
         Master::Music::Realtime.play(shape:, hz:, seconds:)
         line = "played #{shape} at #{hz.round} Hz on the sound card for #{seconds.to_s.sub(/\.0\z/, '')} s"
         Result.ok({ output: line, rendered: line, media: :synth_live })
-      rescue Master::Music::AudioSink::NoPlayerError => e
-        Result.err("#{e.message}: install sox (brew install sox) or ffmpeg, whose ffplay also plays", category: :infrastructure)
+      rescue Master::Music::Synth::NoPlayerError => e
+        Result.err("#{e.message}; install SoX (the `play` command), FFmpeg (`ffplay`) or mpv", category: :infrastructure)
       end
 
       def live_synth?(text)
@@ -735,7 +735,7 @@ module Master
         info = rendered.value!
         stop_player
         @player_pid = Master::Music::Synth.play(info[:path])
-        line = "playing #{info[:progression]}#{" with #{info[:drums]}" if info[:drums]} (pid #{@player_pid}): #{info[:path]}"
+        line = "audio0: player started for #{info[:progression]}#{" with #{info[:drums]}" if info[:drums]} (pid #{@player_pid}): #{info[:path]}"
         Result.ok(output: line, rendered: line, media: :dilla_live, style: info[:progression], path: info[:path],
                   drums: info[:drums], kit: info[:kit])
       rescue Master::Music::AudioSink::NoPlayerError => e
@@ -744,7 +744,7 @@ module Master
         # Only a missing player earns the install hint. Contract failures like
         # "STUDIO output-path failed: ..." name their own cause; appending an
         # install hint to them sent the operator to brew while sox was present.
-        hint = e.message.include?("afplay or ffplay required") ? ": install sox (brew install sox) or ffmpeg, whose ffplay also plays" : ""
+        hint = e.message.include?("afplay or ffplay required") ? "; install SoX (the `play` command), FFmpeg (`ffplay`) or mpv" : ""
         Result.err("#{e.message}#{hint}", category: :infrastructure)
       end
 
