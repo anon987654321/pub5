@@ -71,4 +71,4 @@ measurement is INCONCLUSIVE, never PASS.
 in `MASTER/data/laws.yml` is marked covered — the constitution lives
 in `MASTER/law/` and `MASTER/data/laws.yml`. The working master of the FETAT
 proposal (a document, not policy) lives at `BIZ/tools/fetat_proposal.md`.
-`redeploy` is the workstation deploy entrypoint.
+`MASTER/bin/redeploy` is the workstation deploy entrypoint.
