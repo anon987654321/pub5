@@ -397,7 +397,7 @@ body.vertical-dating {
   stroke-linecap: round;
 }
 
-.dating-splash-still use + use {
+.dating-splash-still use:nth-of-type(even) {
   stroke: var(--danger);
 }
 
