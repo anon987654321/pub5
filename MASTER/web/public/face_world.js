@@ -92,7 +92,7 @@
     ["molecule", /\b(molecule|atom|chemical bond|protein structure)\b/i],
     ["book", /\b(book|open pages|paperback|hardcover|chapter)\b/i],
     ["clock", /\b(clock|watch|timepiece|dial|hour hand)\b/i],
-    ["building", /\b(skyscraper|building|tower block|high-rise|facade)\b/i],
+    ["building", /\b(skyscraper|office building|apartment building|tower block|high-rise|facade)\b/i],
     ["flower", /\b(flower|blossom|petal|rose|sunflower)\b/i],
     ["vehicle", /\b(vehicle|car|automobile|bicycle|train|truck)\b/i]
   ];
