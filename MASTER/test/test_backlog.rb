@@ -73,6 +73,16 @@ class TestBacklog < Minitest::Test
     end
   end
 
+  def test_biz_paths_are_owned_and_captured_as_biz
+    text = "Render and inspect BIZ/ragnhild/ragnhild_legater.html."
+    item = { prose: [text], code: [], h1: "pub5", h2: "pub5 migration record", h3: nil }
+    section = "pub5 — pub5 migration record"
+
+    assert_includes Backlog::TREES, "BIZ"
+    assert_equal "BIZ", Backlog.owner(item:, text:, section:, kind: "mechanical")
+    assert_includes Backlog.scope_paths(text), "BIZ/ragnhild/ragnhild_legater.html"
+  end
+
   def test_done_when_and_its_reason_never_both_speak
     entries.each do |row|
       if row[:done_when]
