@@ -16,6 +16,18 @@ module Master
       EVIDENCE_KEY = :master_fix_task_contract_preservation_evidence
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
+      PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
+      PRESERVATION_DIMENSIONS_BY_CHECK = {
+        "html_markup" => %w[structure],
+        "inline_style_script_svg" => %w[visual_identity behavior assets],
+        "html_visual_contract" => %w[visual_identity assets],
+        "html_behavior_contract" => %w[behavior],
+        "stylesheet_bytes" => %w[visual_identity],
+        "protected_asset" => %w[assets],
+        "protected_assets" => %w[assets],
+        "rendered_visual_custody" => %w[visual_identity layout],
+        "unchanged_bytes" => %w[visual_identity layout structure assets behavior accessibility public_contracts operator_owned_values product_identity content_semantics data_semantics],
+      }.transform_values(&:freeze).freeze
 
       Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths) do
         def to_h
@@ -205,16 +217,30 @@ module Master
             raise Invalid, "preservation path is hard-linked: #{relative}"
           end
         end
+        verifier = verifier.to_s
+        unless PRESERVATION_VERIFIERS.include?(verifier)
+          raise Invalid, "unregistered preservation verifier: #{verifier}"
+        end
+
         value = result.to_h
+        status = (value[:status] || value["status"]).to_s
+        raise Invalid, "unknown preservation result status: #{status}" unless %w[PASS FAIL INCONCLUSIVE].include?(status)
+
+        checks = Array(value[:checks] || value["checks"]).map(&:to_s).uniq
+        if verifier == "visual_custody" && !checks.include?("rendered_visual_custody")
+          raise Invalid, "visual custody receipt must name rendered_visual_custody"
+        end
+        dimensions = checks.flat_map { |check| PRESERVATION_DIMENSIONS_BY_CHECK.fetch(check, []) }.uniq
         contract_digest = Digest::SHA256.hexdigest(JSON.generate(contract.to_h))
         row = {
           "path" => relative,
           "format" => format.to_s.downcase.delete_prefix("."),
           "intent" => contract.intent,
-          "verifier" => verifier.to_s,
-          "evidence_level" => verifier.to_s == "artifact_preservation" ? "source_level" : "runtime_or_external",
-          "status" => (value[:status] || value["status"]).to_s,
-          "checks" => Array(value[:checks] || value["checks"]).map(&:to_s),
+          "verifier" => verifier,
+          "evidence_level" => verifier == "artifact_preservation" ? "source_level" : "runtime_or_external",
+          "status" => status,
+          "checks" => checks,
+          "dimensions" => dimensions,
           "reason" => (value[:reason] || value["reason"])&.to_s&.slice(0, 300),
           "before_sha256" => Digest::SHA256.hexdigest(before.to_s.b),
           "after_sha256" => Digest::SHA256.hexdigest(after.to_s.b),
@@ -235,24 +261,34 @@ module Master
         return { "status" => "not_measured", "results" => [] } unless contract
 
         statuses = rows.map { |row| row["status"] }
+        required = contract.preserve
+        covered = rows.flat_map { |row| Array(row["dimensions"]) }.uniq
+        missing = required - covered
+        source_only = rows.any? { |row| row["evidence_level"] == "source_level" }
+        missing_plan = Thread.current[PLAN_KEY].to_s.empty?
         status = if statuses.include?("FAIL")
                    "FAIL"
                  elsif rows.empty?
                    "not_measured"
-                 elsif statuses.include?("INCONCLUSIVE") || rows.any? { |row| row["evidence_level"] == "source_level" }
+                 elsif statuses.any? { |value| value != "PASS" } || source_only || missing.any? || missing_plan
                    "INCONCLUSIVE"
                  else
                    "PASS"
                  end
-        source_only = rows.any? { |row| row["evidence_level"] == "source_level" }
+        reasons = []
+        reasons << "source-level checks do not prove rendered, runtime or accessibility preservation" if source_only
+        reasons << "required preservation dimensions unmeasured: #{missing.join(', ')}" if missing.any?
+        reasons << "preservation receipts are not bound to a FixPlan" if missing_plan
         {
           "status" => status,
           "contract_digest" => Digest::SHA256.hexdigest(JSON.generate(contract.to_h)),
           "plan_digest" => Thread.current[PLAN_KEY],
-          "required_dimensions" => contract.preserve,
+          "required_dimensions" => required,
+          "covered_dimensions" => covered.sort,
+          "missing_dimensions" => missing.sort,
           "result_count" => rows.size,
           "results" => rows.dup,
-          "reason" => ("source-level checks do not prove rendered, runtime or accessibility preservation" if source_only),
+          "reason" => reasons.empty? ? nil : reasons.join("; "),
         }.compact
       end
 
