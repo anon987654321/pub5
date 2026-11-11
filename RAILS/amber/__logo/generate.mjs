@@ -254,7 +254,7 @@ function p04() {
     `<stop offset="0.66" stop-color="#cce6cc"/><stop offset="1" stop-color="#99e6e6"/></radialGradient>`;
   const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink4)"/>`;
-  const out = doc(4, "amber mark — the radial ink roams behind the letters",
+  const out = doc(4, "amber mark — the radial ink roams inside the letters",
     "#0B0B0B", mark(id, ink, lines), g);
   plate(4, "signal_orbit", "motion — the radial ink roams inside the letters; the hairlines hold still", out);
 }
@@ -433,6 +433,10 @@ function page() {
         background:repeating-conic-gradient(#26262b 0% 25%, #19191d 0% 50%); background-size:18px 18px; }
       .checker img { display:block; border-radius:2px; }
       .figrow { display:flex; gap:12px; align-items:flex-end; margin-top:10px; }
+      @media (max-width: 700px) {
+        body { padding:20px 16px 32px; }
+        .grid, .avatars { grid-template-columns:1fr; }
+      }
     </style></head><body>` +
     `<h1>plur1bus plates — the amber&reg; mark, ten directions</h1>` +
     `<p class="sub">Every study keeps the original Caprasimo glyphs and nine white swoosh paths, widths and opacity. Only the ink treatment changes. Study plates clip the visible swoosh to the letter interiors; the reference preserves the original full-width swoosh.</p>` +
