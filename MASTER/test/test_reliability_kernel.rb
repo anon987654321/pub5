@@ -116,6 +116,9 @@ class TestReliabilityKernel < Minitest::Test
     Dir.mktmpdir("master-reliability") do |root|
       path = File.join(root, Master::Fix::RunJournal::PATH)
       FileUtils.mkdir_p(File.dirname(path))
+      # The guard reads the state directory too, and a umask that hands the
+      # group a write bit would test the directory refusal, not the parser.
+      File.chmod(0o700, File.dirname(path))
       File.write(path, "{not-json")
       File.chmod(0o600, path)
 
@@ -131,6 +134,7 @@ class TestReliabilityKernel < Minitest::Test
     Dir.mktmpdir("master-reliability") do |root|
       path = File.join(root, Master::Fix::RunJournal::PATH)
       FileUtils.mkdir_p(File.dirname(path))
+      File.chmod(0o700, File.dirname(path))
       File.write(path, JSON.generate("version" => 1, "runs" => []))
       File.chmod(0o644, path)
 

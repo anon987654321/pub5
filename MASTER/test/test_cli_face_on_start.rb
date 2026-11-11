@@ -12,49 +12,18 @@ class TestCliFaceOnStart < Minitest::Test
     refute Master::CLI::Face::Window.asked?(["-m", "/face"])
   end
 
-  def test_face_overlay_uses_live_ready_motion_and_the_shared_law_setting
-    seen = []
+  # The face is the web particle face only (Johann 2026-11-07): the terminal
+  # paints no ASCII face, and the /face verb is retired with it. These pin the
+  # retirement - the overlay methods are gone from the session, and the closed
+  # slash surface has no face verb to resurrect them from.
+  def test_the_terminal_paints_no_ascii_face
     session = Master::CLI::Session.allocate
-    renderer = lambda do |**options|
-      seen << options
-      "compact face"
-    end
 
-    rendered = Master::CLI::Face.stub(:frame, renderer) do
-      first = session.face_overlay_text
-      sleep 0.001
-      second = session.face_overlay_text
-      [first, second]
-    end
-
-    assert_equal ["compact face", "compact face"], rendered
-    assert_equal :ready, seen.first.fetch(:state)
-    assert_equal 12, seen.first.fetch(:rows)
-    assert_equal 32, seen.first.fetch(:cols)
-    assert_equal false, seen.first.fetch(:color)
-    assert_nil seen.first.fetch(:show_laws)
-    assert_operator seen.last.fetch(:t), :>, seen.first.fetch(:t)
-    assert_same seen.first.fetch(:motion), seen.last.fetch(:motion)
+    refute_respond_to session, :face_overlay_text
+    refute_respond_to session, :animate_face_intro
   end
 
-  def test_terminal_face_intro_animates_at_a_portrait_termux_width
-    session = Master::CLI::Session.allocate
-    rendered = 0
-    session.define_singleton_method(:face_overlay_text) do |cols:, swarm_budget: nil|
-      rendered += 1
-      Array.new(12, "x" * cols).join("\n")
-    end
-    session.define_singleton_method(:sleep) { |_seconds| }
-    terminal = StringIO.new
-
-    Master::Trace::Dmesg.stub(:terminal_write, ->(&block) { block.call(terminal) }) do
-      TTY::Screen.stub(:height, 40) do
-        session.send(:animate_face_intro, cols: 20, terminal_cols: 40, face_rows: 12)
-      end
-    end
-
-    assert_equal Master::CLI::Session::FACE_INTRO_FRAMES, rendered
-    assert_operator Master::CLI::Session::FACE_OVERLAY_MARKER.length, :<=, 40
+  def test_the_slash_surface_has_no_face_verb
+    refute_includes Master::CLI::CommandRegistry.slash_commands, "/face"
   end
-
 end

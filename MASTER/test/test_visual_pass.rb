@@ -124,7 +124,7 @@ class VisualPassContractTest < Minitest::Test
     with_tmp do |dir|
       # The rubric is read from the pass root's own data/, as it is when /fix runs on a MASTER root.
       FileUtils.mkdir_p(File.join(dir, "data"))
-      FileUtils.cp(File.join(Master::ROOT, "data", "visual_rubric.yml"), File.join(dir, "data"))
+      FileUtils.cp(File.join(Master::ROOT, "data", "law", "visual_rubric.yml"), File.join(dir, "data"))
       pass = Pass.new(agent: :agent, root: dir)
       pass.instance_variable_set(:@dir, dir)
       capture = { surface:, payload: { "elements" => [] }, screenshot: "x.png", journeys: [], platform: {} }

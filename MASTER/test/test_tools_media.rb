@@ -28,8 +28,15 @@ class TestToolsMedia < Minitest::Test
       "200",
       JSON.generate("results" => [], "next" => "https://attacker.invalid/v1/models?cursor=secret"),
     )
+    # attempt_request reads the body through the streaming request block, so
+    # the fake answers the block the way a real Net::HTTP connection does.
+    response.define_singleton_method(:[]) { |_name| nil }
+    response.define_singleton_method(:read_body) { |&block| block.call(body) }
     http = Object.new
-    http.define_singleton_method(:request) { |value| request = value; response }
+    http.define_singleton_method(:request) do |value, &stream|
+      request = value
+      stream.call(response)
+    end
 
     Net::HTTP.stub(:start, ->(_host, _port, **_options, &block) { block.call(http) }) do
       error = assert_raises(ArgumentError) { client.models }
@@ -47,8 +54,13 @@ class TestToolsMedia < Minitest::Test
       "200",
       JSON.generate("results" => [], "next" => "#{Studio::ReplicateClient::BASE}/models"),
     )
+    page.define_singleton_method(:[]) { |_name| nil }
+    page.define_singleton_method(:read_body) { |&block| block.call(body) }
     http = Object.new
-    http.define_singleton_method(:request) { |_value| request_count += 1; page }
+    http.define_singleton_method(:request) do |_value, &stream|
+      request_count += 1
+      stream.call(page)
+    end
 
     Net::HTTP.stub(:start, ->(_host, _port, **_options, &block) { block.call(http) }) do
       error = assert_raises(ArgumentError) { client.models }
@@ -80,8 +92,13 @@ class TestToolsMedia < Minitest::Test
     client = Studio::ReplicateClient.new(token: "studio-replicate-test")
     request = nil
     response = Struct.new(:code, :body).new("200", JSON.generate("username" => "studio"))
+    response.define_singleton_method(:[]) { |_name| nil }
+    response.define_singleton_method(:read_body) { |&block| block.call(body) }
     http = Object.new
-    http.define_singleton_method(:request) { |value| request = value; response }
+    http.define_singleton_method(:request) do |value, &stream|
+      request = value
+      stream.call(response)
+    end
 
     Net::HTTP.stub(:start, lambda { |host, port, **options, &block|
       assert_equal "api.replicate.com", host

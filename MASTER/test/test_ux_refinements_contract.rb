@@ -4,7 +4,7 @@ require_relative "test_helper"
 require "yaml"
 
 class TestUxRefinementsContract < Minitest::Test
-  PATH = File.join(Master::ROOT, "data", "ux_refinements.yml")
+  PATH = File.join(Master::ROOT, "data", "law", "ux_refinements.yml")
   ALLOWED_STATES = %w[acceptance_required verified].freeze
 
   def catalogue
