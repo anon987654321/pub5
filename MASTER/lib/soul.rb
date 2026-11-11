@@ -72,8 +72,12 @@ module Master
     # Compatibility projection for the nine invariant Law nodes. Their
     # internal order is derived from the node rows in laws.yml. This is not
     # the cross-source authority order, which is owned by soul.yml.
+    # Read directly: this file loads below the boot floor (write_guard ->
+    # mechanical_autofix) before lib/master exists, so Master.laws_document
+    # cannot answer yet. The projection is byte-identical either way.
     PRECEDENCE_GRAPH = begin
-      document = Master.laws_document
+      laws_path = File.join(ROOT, "data", "laws.yml")
+      document = File.file?(laws_path) ? YAML.safe_load_file(laws_path, aliases: true) : {}
       nodes = document.filter_map do |_id, row|
         row["node"].to_s if row.is_a?(Hash) && row["node"]
       end

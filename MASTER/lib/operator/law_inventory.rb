@@ -150,6 +150,8 @@ module Operator
       lines.join("\n")
     end
 
+    # The lines come back as text; the caller prints them through the dmesg
+    # report facade. A library module writes no stdout of its own.
     def render_collection(kind, json: false)
       value = case kind
               when :silent then silent
@@ -162,17 +164,18 @@ module Operator
 
       case kind
       when :silent
-        Array(value).each { |id| puts "law:silent #{id}" }
-        value.empty? ? "law:silent: none" : nil
+        rows = Array(value).map { |id| "law:silent #{id}" }
+        rows.empty? ? "law:silent: none" : rows.join("\n")
       when :costly
-        value.each { |row| puts "law:costly #{row[:id]} #{row[:cost_ms]}ms #{row[:samples]} sample(s)" }
-        value.empty? ? "law:costly: no measured rule costs" : nil
+        rows = value.map { |row| "law:costly #{row[:id]} #{row[:cost_ms]}ms #{row[:samples]} sample(s)" }
+        rows.empty? ? "law:costly: no measured rule costs" : rows.join("\n")
       when :twin
-        value.each { |row| puts "law:twin #{row[:id]} #{row[:twin][:kind]}" }
-        value.empty? ? "law:twin: none" : nil
+        rows = value.map { |row| "law:twin #{row[:id]} #{row[:twin][:kind]}" }
+        rows.empty? ? "law:twin: none" : rows.join("\n")
       when :matrix
-        value.each { |row| puts "law:matrix #{row[:persona]} axes=#{row[:axes].join(",")} rules=#{row[:rules].join(",")}" }
-        nil
+        return nil if value.empty?
+
+        value.map { |row| "law:matrix #{row[:persona]} axes=#{row[:axes].join(",")} rules=#{row[:rules].join(",")}" }.join("\n")
       end
     end
 

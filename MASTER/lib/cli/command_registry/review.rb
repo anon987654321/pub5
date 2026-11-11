@@ -524,7 +524,7 @@ module Master
           end
         end.uniq
 
-        return ["audit instruments: INCONCLUSIVE — target did not resolve to a governed tree"] if trees.empty?
+        return ["audit instruments: INCONCLUSIVE - target did not resolve to a governed tree"] if trees.empty?
 
         results = []
         unit_index = 0
@@ -565,12 +565,12 @@ module Master
             lines << "audit instrument evidence: #{result.tree}/#{result.unit}: #{clean}"
           end
         end
-        lines << "audit instruments: INCONCLUSIVE — cancellation stopped the remaining probes" if cancellation&.cancelled?
+        lines << "audit instruments: INCONCLUSIVE - cancellation stopped the remaining probes" if cancellation&.cancelled?
         lines.each { |line| Master::Trace::Dmesg.status("audit0", line) }
         lines
       rescue StandardError => error
         Master::Trace::Dmesg.status("audit0", "instrument sweep INCONCLUSIVE: #{error.class}: #{error.message}")
-        ["audit instruments: INCONCLUSIVE — #{error.class}: #{error.message}"]
+        ["audit instruments: INCONCLUSIVE - #{error.class}: #{error.message}"]
       end
 
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
@@ -675,7 +675,9 @@ module Master
           return rendered unless Master::Fix::CodeWatch.requested?
 
           # A run that stopped for newer code continues on it, in this process.
-          puts rendered
+          # reexec! replaces this process, so the report leaves through the
+          # dmesg report facade here or the operator never sees it.
+          Master::Trace::Dmesg::Report.print("/fix", rendered)
           Master::Fix::CodeWatch.reexec!(root, "/fix #{raw}")
           rendered
         end

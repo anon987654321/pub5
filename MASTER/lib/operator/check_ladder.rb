@@ -3,6 +3,7 @@
 # bin/check loads this, already booted, when it is given a ladder flag; it is a mode of that
 # command, not a second one.
 require_relative "../io/exec"
+require_relative "../trace/dmesg"
 
 # The scan and critique pass over all four trees — two stages of the
 # repo-wide chain, not the chain itself. `MASTER/bin/operator check` is the chain:
@@ -146,11 +147,15 @@ COMMANDS = {
 ASSERT_PATHS = (SELECTED_TREES | ["MASTER"]).freeze
 
 def run_command(*argv, chdir: ROOT)
-  puts "$ #{argv.join(" ")}"
+  Master::Trace::Dmesg.status("check0", "$ #{argv.join(" ")}")
   configured_timeout = Integer(ENV.fetch("MASTER_CHECK_COMMAND_TIMEOUT_S", "1800"), exception: false)
   timeout_s = configured_timeout&.positive? ? [configured_timeout, 86_400].min : 1_800
   stdout, status = Master::Io::Exec.capture2e(*argv, chdir:, timeout: timeout_s)
-  puts stdout
+  # The child's own payload (a git diff, say) replays verbatim, the way the
+  # live stage reader forwards lines; re-prefixing it would corrupt the text
+  # an operator copies out of the failure.
+  $stdout.write(stdout)
+  $stdout.flush
   abort "err: command failed: #{argv.join(" ")}" unless status.success?
 end
 
@@ -183,7 +188,7 @@ INCONCLUSIVE = [
 STAGE_TIMEOUT = Integer(ENV.fetch("MASTER_CHECK_STAGE_TIMEOUT", "1200"))
 
 def run_master_line(line)
-  puts "master> #{line}"
+  Master::Trace::Dmesg.status("check0", "master> #{line}")
   stdout, status = capture_with_timeout(line)
   # capture_with_timeout forwards each child line as it arrives. Keep the buffer
   # only for the inconclusive-verdict check below; replaying it here doubled every
@@ -270,14 +275,14 @@ def assert_clean(*paths)
   ERR
 end
 
-puts "check: mode=#{SCAN_ONLY ? 'scan-only' : 'full-fix'} tier=#{TIER} trees=#{SELECTED_TREES.join(',')}"
+Master::Trace::Dmesg.status("check0", "mode=#{SCAN_ONLY ? 'scan-only' : 'full-fix'} tier=#{TIER} trees=#{SELECTED_TREES.join(',')}")
 
 if EXPLAIN
   COMMANDS.each do |name, lines|
-    puts "  #{name}:"
-    lines.each { |line| puts "    bin/master #{line}" }
+    Master::Trace::Dmesg.status("check0", "#{name}:")
+    lines.each { |line| Master::Trace::Dmesg.status("check0", "bin/master #{line}") }
   end
-  puts "check: --explain, so nothing above was run"
+  Master::Trace::Dmesg.status("check0", "--explain, so nothing above was run")
   exit 0
 end
 
@@ -298,4 +303,4 @@ COMMANDS[:deploy].each { |line| run_master_line(line) }
 git_diff(*ASSERT_PATHS) if lexical
 assert_clean(*ASSERT_PATHS) if lexical && !SCAN_ONLY
 
-puts SCAN_ONLY ? "ok: MASTER check scan-only complete" : "ok: MASTER check clean"
+Master::Trace::Dmesg.status("check0", SCAN_ONLY ? "ok: MASTER check scan-only complete" : "ok: MASTER check clean")
