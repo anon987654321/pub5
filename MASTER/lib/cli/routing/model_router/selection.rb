@@ -73,7 +73,9 @@ module Master
                 ranked,
                 free_last: !free_route?(task_type),
                 latency: method(:latency_s),
-                lead: Io::LaneSelection.route_lead(@rules, task_type),
+                # Keep the measured provider order as the within-tier lead.
+                # Static route order is a tie-breaker, never a reset of learned success.
+                lead: ranked + Io::LaneSelection.route_lead(@rules, task_type),
               ),
               task_type,
             )
