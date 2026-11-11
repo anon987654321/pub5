@@ -6,15 +6,9 @@ require "tmpdir"
 require_relative "../tools/rails/triangle"
 
 class TestTriangleOwnership < Minitest::Test
-  # The apps boot on the project-pinned rbenv Ruby their bundles were installed
-  # for. On a version tie the general runner kept Homebrew's Ruby, and every
-  # boot died in db:prepare.
-  def test_apps_boot_on_the_pinned_rbenv_ruby_when_there_is_one
-    pinned = Operator::RubyRunner.rbenv_path("ruby")
-    skip "no rbenv Ruby for the pinned version on this host" unless pinned
-
-    assert_equal pinned, Deploy::Triangle::RUBY
-    assert_equal Operator::RubyRunner.rbenv_path("bundle"), Deploy::Triangle::BUNDLE
+  def test_apps_use_the_shared_installed_ruby_and_bundler
+    assert_equal Operator::RubyRunner.ruby_cmd, Deploy::Triangle::RUBY
+    assert_equal Operator::RubyRunner.bundle_cmd, Deploy::Triangle::BUNDLE
   end
 
   # A server left behind by a killed /fix run answers /up like a live one. The
