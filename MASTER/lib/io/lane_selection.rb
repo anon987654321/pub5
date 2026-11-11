@@ -271,6 +271,26 @@ module Master
         !vision_family("blind").match?(id) && vision_family("reads_images").match?(id)
       end
 
+      # Human-preference ranking only applies after image capability is known.
+      # It cannot make a text-only model eligible for image-bearing work.
+      def vision_rank_order(models, cfg: config)
+        patterns = Array(cfg.dig("vision_families", "review_rank"))
+        Array(models).map(&:to_s).reject(&:empty?).uniq.select { |id| vision?(id) }
+          .each_with_index.sort_by do |id, index|
+            [vision_review_rank(id, patterns), class_rank(id), index]
+          end.map(&:first)
+      end
+
+      def vision_review_rank(id, patterns)
+        patterns.each_with_index do |pattern, index|
+          return index if Regexp.new(pattern, Regexp::IGNORECASE).match?(id)
+        end
+        patterns.length
+      rescue RegexpError => e
+        Master::Ground::Swallow.log(e, context: "LaneSelection.vision_review_rank", model: id)
+        patterns.length
+      end
+
       def vision_family(key) = Regexp.new(config.fetch("vision_families").fetch(key).join("|"), Regexp::IGNORECASE)
 
       def catalog_modalities(id)
