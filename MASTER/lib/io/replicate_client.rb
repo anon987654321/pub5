@@ -3,6 +3,8 @@
 require "digest"
 require "json"
 require "net/http"
+require "tempfile"
+require "fileutils"
 require "uri"
 require_relative "../ground/failure_taxonomy"
 require_relative "../io/quota_check"
@@ -37,23 +39,97 @@ module Master
           upload_binary(path, mime: "application/zip")
         end
 
-        # Fetch a prediction output URL (e.g. synthesized audio) to a local path.
-        def download_url(url, path)
-          uri = URI(url)
-          raise "refusing non-https download url: #{url}" unless uri.is_a?(URI::HTTPS) && uri.port == 443
-          raise "refusing download URL credentials" unless uri.userinfo.nil?
-          raise "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
+        # Stream under a byte and total-time cap. A failed download leaves the
+        # previous artifact intact; rename is atomic because the temporary file
+        # lives beside the destination.
+        def download_url(url, path, max_bytes: MAX_DOWNLOAD_BYTES)
+          uri = URI(url.to_s)
+          raise ArgumentError, "refusing non-https download url" unless uri.is_a?(URI::HTTPS) && uri.port == 443
+          raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
+          raise ArgumentError, "refusing download URL fragment" unless uri.fragment.nil?
+          raise ArgumentError, "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
 
-          Net::HTTP.start(
-            uri.host, uri.port, use_ssl: true,
-            open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
-          ) do |http|
-            res = http.get(uri.request_uri)
-            raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
+          max_bytes = Integer(max_bytes)
+          raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
+          raise ArgumentError, "download byte limit exceeds #{MAX_DOWNLOAD_BYTES}" if max_bytes > MAX_DOWNLOAD_BYTES
 
-            File.binwrite(path, res.body)
+          target = File.expand_path(path)
+          directory = File.dirname(target)
+          FileUtils.mkdir_p(directory)
+          existing_target = begin
+            File.lstat(target)
+          rescue Errno::ENOENT
+            nil
+          end
+          if existing_target && (!existing_target.file? || existing_target.symlink?)
+            raise ArgumentError, "download target must be a regular non-symlink file"
+          end
+          mode = existing_target ? existing_target.mode & 0o7777 : 0o600
+          deadline = monotonic_now + DOWNLOAD_TIMEOUT_SECONDS
+
+          Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
+            remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "download")
+            Net::HTTP.start(
+              uri.host, uri.port, use_ssl: true,
+              open_timeout: remaining,
+              read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download"),
+              write_timeout: WRITE_TIMEOUT_SECONDS
+            ) do |http|
+              http.request_get(uri.request_uri) do |response|
+                raise "download failed #{response.code}" unless response.code.to_i.between?(200, 299)
+                declared = response["content-length"].to_s
+                if declared.match?(/\A\d+\z/) && declared.to_i > max_bytes
+                  raise ArgumentError, "download over #{max_bytes} bytes"
+                end
+
+                write_capped(response, file, max_bytes, http:, deadline:)
+              end
+            end
+            remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download finalization")
+
+            file.flush
+            file.fsync
+            File.chmod(mode, file.path)
+            file.close
+            current_target = begin
+              File.lstat(target)
+            rescue Errno::ENOENT
+              nil
+            end
+            if existing_target
+              unless current_target && current_target.dev == existing_target.dev &&
+                     current_target.ino == existing_target.ino &&
+                     existing_target.size == current_target.size &&
+                     existing_target.mtime == current_target.mtime &&
+                     existing_target.ctime == current_target.ctime
+                raise IOError, "download target changed during transfer"
+              end
+            elsif current_target
+              raise IOError, "download target appeared during transfer"
+            end
+            File.rename(file.path, target)
           end
           path
+        end
+
+        private
+
+        def write_capped(response, file, max_bytes, http:, deadline:)
+          written = 0
+          response.read_body do |chunk|
+            remaining = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download")
+            http.read_timeout = remaining
+            written += chunk.bytesize
+            raise ArgumentError, "download over #{max_bytes} bytes" if written > max_bytes
+
+            offset = 0
+            while offset < chunk.bytesize
+              count = file.write(chunk.byteslice(offset..))
+              raise IOError, "download wrote no bytes" unless count&.positive?
+
+              offset += count
+            end
+          end
         end
       end
       # LoRA training lifecycle (ostris/flux-dev-lora-trainer): start, poll,
@@ -78,16 +154,18 @@ module Master
           wait: true,
           extra_input: {}
         )
-          create_model(destination) unless model_exists?(destination)
+          timeout = operation_timeout!(timeout, "training timeout")
+          deadline = monotonic_now + timeout
+          create_model(destination, deadline:) unless model_exists?(destination, deadline:)
           trainings_uri, body = build_training_request(
-            photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:
+            photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, deadline:
           )
-          training = post(trainings_uri, body)
-          wait ? wait_for_training(training["id"], timeout:) : training
+          training = post(trainings_uri, body, deadline:)
+          wait ? wait_for_training(training["id"], timeout:, deadline:) : training
         end
 
-        def get_training(id)
-          get(URI("#{BASE}/trainings/#{id}"))
+        def get_training(id, deadline: nil)
+          get(URI("#{BASE}/trainings/#{id}"), deadline:)
         end
 
         def training_weights_url(training)
@@ -103,9 +181,9 @@ module Master
 
         private
 
-        def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:)
+        def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, deadline:)
           trainer_owner, trainer_name = LORA_TRAINER.split("/")
-          trainer_version = latest_version(LORA_TRAINER)
+          trainer_version = latest_version(LORA_TRAINER, deadline:)
           trainings_uri = URI("#{BASE}/models/#{trainer_owner}/#{trainer_name}/versions/#{trainer_version}/trainings")
 
           input = {
@@ -127,6 +205,9 @@ module Master
       include AssetTransfer
       include Training
 
+      # Raised when a bounded API or transfer deadline expires.
+      DeadlineExceeded = Class.new(StandardError)
+      ResponseTooLarge = Class.new(StandardError)
       # Raised for HTTP statuses worth a retry (rate limit, server-side fault).
       # A 4xx other than 429 means the request itself is wrong and retrying
       # retries repeat the same failure.
@@ -149,6 +230,12 @@ module Master
       MAX_MODEL_PAGES = 1_000
       LORA_TRAINER = "ostris/flux-dev-lora-trainer"
       TRANSIENT_STATUS = ((500..599).to_a << 429).freeze
+      MAX_DOWNLOAD_BYTES = 4 * 1024**3
+      MAX_UPLOAD_BYTES = 4 * 1024**3
+      MAX_RESPONSE_BYTES = 16 * 1024**2
+      WRITE_TIMEOUT_SECONDS = 120
+      REQUEST_TIMEOUT_SECONDS = 300
+      DOWNLOAD_TIMEOUT_SECONDS = 1_800
       # replicate.delivery hosts prediction output blobs; replicate.com is the
       # API itself. Refuse to fetch a URL a compromised/odd response pointed
       # us at anywhere else.
@@ -256,10 +343,12 @@ module Master
       # trained LoRA gains a version per training, and frames meant to compare
       # checkpoints have to name the one they came from.
       def predict(model_id, input, timeout: 600)
+        timeout = operation_timeout!(timeout, "prediction timeout")
+        deadline = monotonic_now + timeout
         pinned = model_id.split(":", 2)[1]
-        version = pinned || latest_version(model_id)
-        pred = post(URI("#{BASE}/predictions"), { version:, input: })
-        wait_for(pred["id"], timeout:)
+        version = pinned || latest_version(model_id, deadline:)
+        pred = post(URI("#{BASE}/predictions"), { version:, input: }, deadline:)
+        wait_for(pred["id"], timeout:, deadline:)
       end
 
       # Bounded catalog read used by Replicate search/sync. Replicate returns a
@@ -310,9 +399,9 @@ module Master
         ENV["REPLICATE_USERNAME"].to_s.strip
       end
 
-      def model_exists?(model_id)
+      def model_exists?(model_id, deadline: nil)
         owner, name = model_id.split("/")
-        get(URI("#{BASE}/models/#{owner}/#{name}"))
+        get(URI("#{BASE}/models/#{owner}/#{name}"), deadline:)
         true
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ReplicateClient.model_exists?")
@@ -321,7 +410,7 @@ module Master
 
       # A LoRA destination serves FLUX.1-dev, and gpu-l40s is the smallest SKU
       # Replicate accepts that holds it; the API refuses names off its list.
-      def create_model(model_id, hardware: "gpu-l40s", visibility: "private")
+      def create_model(model_id, hardware: "gpu-l40s", visibility: "private", deadline: nil)
         owner, name = model_id.split("/", 2)
         raise ArgumentError, "destination must be owner/name" if owner.to_s.empty? || name.to_s.empty?
 
@@ -330,7 +419,7 @@ module Master
           name:,
           visibility:,
           hardware:,
-        })
+        }, deadline:)
       end
 
       private
@@ -352,22 +441,57 @@ module Master
       end
 
       def upload_binary(path, mime:)
+        source_stat = File.lstat(path)
+        unless source_stat.file? && !source_stat.symlink? && File.readable?(path)
+          raise ArgumentError, "upload source must be a readable regular non-symlink file"
+        end
+        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if source_stat.size > MAX_UPLOAD_BYTES
+
         boundary = "ReplicateBoundary#{rand(1_000_000_000)}"
-        req = Net::HTTP::Post.new(URI("#{BASE}/files"))
+        uri = URI("#{BASE}/files")
+        req = Net::HTTP::Post.new(uri)
         req["Authorization"] = "Token #{@token}"
         req["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
-        req.body = multipart_body(path, boundary, mime:)
-        data = request(req, URI("#{BASE}/files"))
-        data.dig("urls", "get") || data["serving_url"] || data["url"] || raise("upload missing URL")
+
+        # Do not allocate a second in-memory copy of a potentially multi-GB ZIP.
+        Tempfile.create(["replicate-upload-", ".multipart"], binmode: true) do |body|
+          write_multipart_body(body, path, boundary, mime:)
+          body.flush
+          body.rewind
+          req.body_stream = body
+          req["Content-Length"] = body.size.to_s
+          data = request(req, uri)
+          data.dig("urls", "get") || data["serving_url"] || data["url"] || raise("upload missing URL")
+        end
       end
 
-      def multipart_body(path, boundary, mime: "application/octet-stream")
-        filename = File.basename(path)
-        "--#{boundary}\r\n".b +
-          "Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b +
-          "Content-Type: #{mime}\r\n\r\n".b +
-          File.binread(path) +
-          "\r\n--#{boundary}--\r\n".b
+      def write_multipart_body(body, path, boundary, mime:)
+        filename = File.basename(path).gsub(/[^A-Za-z0-9._-]/, "_")
+        filename = "upload.bin" if filename.empty?
+        body.write("--#{boundary}\r\n".b)
+        body.write("Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b)
+        body.write("Content-Type: #{mime}\r\n\r\n".b)
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(path, flags) do |source|
+          opened = source.stat
+          current = File.lstat(path)
+          unless same_file_stat?(source_stat, opened) && stable_file_stat?(source_stat, opened) &&
+                 same_file_stat?(opened, current) && opened.file? && !opened.symlink? &&
+                 opened.size <= MAX_UPLOAD_BYTES
+            raise IOError, "upload source changed before transfer"
+          end
+
+          copied = IO.copy_stream(source, body, MAX_UPLOAD_BYTES + 1)
+          raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if copied > MAX_UPLOAD_BYTES
+          after = source.stat
+          final_path = File.lstat(path)
+          unless copied == opened.size && same_file_stat?(opened, after) &&
+                 same_file_stat?(after, final_path) && stable_file_stat?(opened, after)
+            raise IOError, "upload source changed during transfer"
+          end
+        end
+        body.write("\r\n--#{boundary}--\r\n".b)
       end
 
       # The input parameter names the provider currently declares, from the same
@@ -387,39 +511,42 @@ module Master
         Array(schema&.keys)
       end
 
-      def latest_version(model_id)
+      def latest_version(model_id, deadline: nil)
         owner, name = model_id.split("/")
-        model = get(URI("#{BASE}/models/#{owner}/#{name}"))
+        model = get(URI("#{BASE}/models/#{owner}/#{name}"), deadline:)
         model.dig("latest_version", "id") || raise("no version for #{model_id}")
       end
 
-      def get(uri)
+      def get(uri, deadline: nil)
         uri = api_uri(uri)
         req = Net::HTTP::Get.new(uri)
         req["Authorization"] = "Token #{@token}"
-        request(req, uri)
+        request(req, uri, deadline:)
       end
 
-      def post(uri, body)
+      def post(uri, body, deadline: nil)
         uri = api_uri(uri)
         req = Net::HTTP::Post.new(uri)
         req["Authorization"] = "Token #{@token}"
         req["Content-Type"] = "application/json"
         req.body = body.to_json
-        request(req, uri)
+        request(req, uri, deadline:)
       end
 
-      def request(req, uri, attempts: 3)
+      def request(req, uri, attempts: 3, deadline: nil)
+        deadline ||= monotonic_now + REQUEST_TIMEOUT_SECONDS
         last_error = nil
         attempts.times do |attempt|
-          return attempt_request(req, uri)
+          req.body_stream.rewind if req.body_stream&.respond_to?(:rewind)
+          return attempt_request(req, uri, deadline:)
         rescue ExhaustedError => e
           # Out of the retry loop entirely, and onto the check: no wait inside
           # this run makes the account solvent, and the caller needs to know
           # the capability is gone rather than that one call failed.
           Master::Io::QuotaCheck.trip!(source: "replicate", message: e.message, model: uri.path)
           raise
-        rescue TransientError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+        rescue TransientError, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout,
+               Errno::ECONNRESET, Errno::ETIMEDOUT => e
           # GET is safe to retry. Replicate throttling 429 explicitly rejects
           # the request, but a POST 5xx/read-timeout/reset can hide a paid create
           # that succeeded before its response was lost.
@@ -428,25 +555,51 @@ module Master
           raise unless retryable
 
           last_error = e.message
-          sleep(retry_delay(attempt)) if attempt < attempts - 1
+          break if attempt >= attempts - 1
+
+          pause = [retry_delay(attempt), remaining_timeout(deadline, REQUEST_TIMEOUT_SECONDS, label: "API request")].min
+          sleep(pause) if pause.positive?
+          remaining_timeout(deadline, REQUEST_TIMEOUT_SECONDS, label: "API request")
         end
         raise last_error
       end
 
-      def attempt_request(req, uri)
+      def attempt_request(req, uri, deadline: monotonic_now + REQUEST_TIMEOUT_SECONDS)
         uri = api_uri(uri)
-        res = Net::HTTP.start(
+        response = nil
+        body = +"".b
+        remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "API request")
+        Net::HTTP.start(
           uri.host, uri.port, use_ssl: true,
-          open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
+          open_timeout: remaining,
+          read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API request"),
+          write_timeout: remaining_timeout(deadline, WRITE_TIMEOUT_SECONDS, label: "API request")
         ) do |http|
-          http.request(req)
-        end
-        code = res.code.to_i
-        return JSON.parse(res.body) if code.between?(200, 299)
+          http.request(req) do |res|
+            response = res
+            declared = res["content-length"].to_s
+            if declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
+              raise ResponseTooLarge, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+            end
 
-        detail = response_detail(res.body)
+            res.read_body do |chunk|
+              http.read_timeout = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API response")
+              if body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
+                raise ResponseTooLarge, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+              end
+              body << chunk
+            end
+          end
+        end
+        remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API response finalization")
+        raise IOError, "Replicate returned no HTTP response" unless response
+
+        code = response.code.to_i
+        return JSON.parse(body) if code.between?(200, 299)
+
+        detail = response_detail(body)
         message = "Replicate API #{code}: response rejected (#{detail})"
-        if exhausted?(code, res.body)
+        if exhausted?(code, body)
           raise ExhaustedError, "Replicate API #{code}: insufficient credit or quota (#{detail})"
         end
         raise TransientError, message if TRANSIENT_STATUS.include?(code)
@@ -475,38 +628,44 @@ module Master
         nil
       end
 
-      def wait_for(id, timeout:)
-        start = Time.now
+      def wait_for(id, timeout:, deadline: nil)
+        timeout = operation_timeout!(timeout, "prediction timeout")
+        deadline ||= monotonic_now + timeout
         loop do
-          pred = get(URI("#{BASE}/predictions/#{id}"))
+          pred = get(URI("#{BASE}/predictions/#{id}"), deadline:)
           case pred["status"]
           when "succeeded" then return pred["output"]
           when "failed" then raise "prediction failed (#{redacted_provider_error(pred["error"])})"
           when "canceled" then raise "prediction canceled"
           end
-          if Time.now - start > timeout
-            cancel_prediction(id)
-            raise "prediction timeout after #{timeout}s (canceled)"
-          end
-          sleep 3
+          remaining = deadline - monotonic_now
+          raise DeadlineExceeded, "prediction deadline exceeded" unless remaining.positive?
+
+          sleep([3, remaining].min)
         end
+      rescue DeadlineExceeded
+        cancel_prediction(id)
+        raise "prediction timeout after #{timeout}s (canceled)"
       end
 
-      def wait_for_training(id, timeout: 3600)
-        start = Time.now
+      def wait_for_training(id, timeout: 3600, deadline: nil)
+        timeout = operation_timeout!(timeout, "training timeout")
+        deadline ||= monotonic_now + timeout
         loop do
-          training = get(URI("#{BASE}/trainings/#{id}"))
+          training = get_training(id, deadline:)
           case training["status"]
           when "succeeded" then return training
           when "failed" then raise "training failed (#{redacted_provider_error(training["error"])})"
           when "canceled" then raise "training canceled"
           end
-          if Time.now - start > timeout
-            cancel_training(id)
-            raise "training timeout after #{timeout}s (canceled)"
-          end
-          sleep 5
+          remaining = deadline - monotonic_now
+          raise DeadlineExceeded, "training deadline exceeded" unless remaining.positive?
+
+          sleep([5, remaining].min)
         end
+      rescue DeadlineExceeded
+        cancel_training(id)
+        raise "training timeout after #{timeout}s (canceled)"
       end
 
       def retry_delay(attempt)
@@ -523,6 +682,38 @@ module Master
 
       def redacted_provider_error(value)
         "provider error redacted (#{response_detail(value)})"
+      end
+
+      def same_file_stat?(left, right)
+        left.dev == right.dev && left.ino == right.ino
+      end
+
+      def stable_file_stat?(before, after)
+        before.size == after.size && before.mtime == after.mtime && before.ctime == after.ctime
+      end
+
+      def operation_timeout!(value, label)
+        seconds = Float(value)
+        unless seconds.finite? && seconds.positive? && seconds <= 86_400
+          raise ArgumentError, "#{label} must be finite and between 0 and 86400 seconds"
+        end
+
+        seconds == seconds.to_i ? seconds.to_i : seconds
+      rescue ArgumentError, TypeError => error
+        raise error if error.is_a?(ArgumentError) && error.message.include?(label)
+
+        raise ArgumentError, "#{label} must be a finite number"
+      end
+
+      def monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      def remaining_timeout(deadline, cap, label:)
+        remaining = deadline - monotonic_now
+        raise DeadlineExceeded, "Replicate #{label} deadline exceeded" unless remaining.positive?
+
+        [remaining, cap].min
       end
     end
   end
