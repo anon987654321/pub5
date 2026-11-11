@@ -17,17 +17,24 @@ class TestConvergenceWorkstreams < Minitest::Test
     assert_includes result, "share-safe"
   end
 
-  # The 2026-11-03 architecture review landed as design of record: rows that
-  # name where their proof will live. A row leaves missing only in the commit
-  # that adds its proof — the same signed edit a ratchet ceiling is.
-  REVIEW_DESIGN_OF_RECORD = %w[
-    inconclusive_aging
-    constitution_self_budget
-    documentation_completeness
-    ops_alert_channel
-  ].freeze
+  # The architecture review names two rows that now have source and focused
+  # proof, but their current pinned-host test acceptance remains unverified.
+  IMPLEMENTED_UNVERIFIED = %w[inconclusive_aging constitution_self_budget].freeze
+  REVIEW_DESIGN_OF_RECORD = %w[documentation_completeness ops_alert_channel].freeze
 
-  def test_review_rows_stay_missing_until_their_proof_exists
+  def test_implemented_review_rows_remain_partial_until_current_host_proof_runs
+    items = Master::Convergence::Workstreams.items(root: Master::ROOT)
+    rows = IMPLEMENTED_UNVERIFIED.map { |id| items.find { |item| item[:id] == id } }
+
+    rows.each do |row|
+      refute_nil row, "an implemented workstream was deleted from convergence.yml"
+      assert_equal "partial", row[:state], "#{row[:id]} has source/tests but remains unverified here"
+      refute_empty row[:implementation], "#{row[:id]} names no implementation"
+      refute_empty row[:proof], "#{row[:id]} names no proof"
+    end
+  end
+
+  def test_unimplemented_review_rows_stay_missing_until_their_proof_exists
     items = Master::Convergence::Workstreams.items(root: Master::ROOT)
     rows = REVIEW_DESIGN_OF_RECORD.map { |id| items.find { |item| item[:id] == id } }
 

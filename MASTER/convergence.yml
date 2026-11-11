@@ -297,7 +297,7 @@ workstreams:
   # review that surfaced them read the tree statically; the numbers each proof
   # needs come from the first measured run, not from the review.
   - id: inconclusive_aging
-    state: missing
+    state: partial
     title: >-
       An INCONCLUSIVE that outlives its operation's review window reopens as
       FAIL carrying the receipt that first dated it, so tri-state evidence
@@ -305,7 +305,7 @@ workstreams:
     implementation: MASTER/lib/convergence/proof.rb
     proof: escalation rows in the convergence receipt; test_convergence_proof fails on a dated INCONCLUSIVE whose window closed without a verdict
   - id: constitution_self_budget
-    state: missing
+    state: partial
     title: >-
       The constitution measures itself: laws.yml carries a line ceiling under
       the same only-ratchets-down contract the scan budgets charge the code

@@ -539,8 +539,8 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; pinned Ruby 4.0.5 tests remain NOT_RUN.
 - [ ] `master_fleet_panel` — PARTIAL 2026-11-11: `FleetPanel`, dashboard wiring and `MASTER/test/test_dashboard_fleet_panel.rb` exist; unit execution and live vm23 health/render proof remain NOT_RUN.
 - [ ] `master_quota_facts` — PARTIAL 2026-11-11: quota/cache payload rendering and dashboard contract coverage exist in `MASTER/test/test_dashboard_fleet_panel.rb`; quota suite execution and rendered-browser proof remain NOT_RUN.
-- [ ] `inconclusive_aging` — an INCONCLUSIVE finding that outlives its review window reopens as FAIL with its original receipt.
-- [ ] `constitution_self_budget` — the laws file has an enforced line ceiling under the ratchet-down rule.
+- [ ] `inconclusive_aging` — PARTIAL 2026-11-11: receipt ageing/reopening logic and `MASTER/test/test_convergence_proof.rb` cases exist; run focused proof suite on pinned Ruby 4.0.5 and inspect a real receipt, NOT_RUN here.
+- [ ] `constitution_self_budget` — PARTIAL 2026-11-11: `MASTER/checks/data/constitutional_budget.yml` carries the 6,717-line ceiling and `MASTER/test/test_constitutional_budget.rb` pins fit + down-only ratchet; run the tests on pinned Ruby 4.0.5, NOT_RUN here.
 - [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
 - [ ] `ops_alert_channel` — heartbeat failures reach one operator-owned relay with an allowlisted endpoint and secret held outside the tree.
 
