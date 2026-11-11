@@ -455,21 +455,21 @@ MASTER, RAILS, OPENBSD and STUDIO suites, BIZ build/check, rendered browser
 review, native OpenBSD validation and vm23 restart remain **NOT_RUN** or
 **BLOCKED** until run in their required environments.
 
-## Live migration reconciliation — 2026-11-11 (pub5/main@5b19d609ec1765c3efee441130ea71cd7c0d61a9)
+## Live migration reconciliation — 2026-11-11 (pub5/main@ff60792298f5d654cc7976fd9dfb3b8d4393d786)
 
 The source-side check was repeated against pub4/main; it is still exactly
 0a5ac0ce6c3e11bb8d9a1c040adf15b00acb3c6b, the recorded port cutoff. There
 are no later pub4 commits to catch up.
 
 A fresh, complete recursive Git-tree comparison used the pub4 cutoff and the
-pub5 tree at 5b19d609ec1765c3efee441130ea71cd7c0d61a9
-(tree 518ed1ffbee0ea33888eca13eba12ce706870728). Neither tree response was
+pub5 tree at ff60792298f5d654cc7976fd9dfb3b8d4393d786
+(tree 823a0dc917d01a4ffbb986de93fa27492e543b0d). Neither tree response was
 truncated:
 
 - pub4: 6,749 tracked file blobs.
 - pub5: 7,242 tracked file blobs.
-- 4,835 pub4 blobs remain byte-identical at the same path.
-- 1,248 old paths remain, but their contents have changed.
+- 4,830 pub4 blobs remain byte-identical at the same path.
+- 1,253 old paths remain, but their contents have changed.
 - 542 old blobs remain byte-identical at a different path.
 - 124 old blobs have neither their original path nor an identical blob elsewhere.
 
@@ -488,12 +488,13 @@ The 124 non-identical/retired source blobs reconcile by owner and disposition:
 | Root redeploy shim | 1 | Replaced by the owned MASTER/bin/redeploy entrypoint. |
 | scripts/analysis/ | 3 | Python contact-sheet/crop helpers were replaced by the Ruby/ruby-vips implementation at MASTER/tools/visual/sheets.rb. |
 
-The accounting is exact: 4,835 unchanged in place + 1,248 changed at the same
+The accounting is exact: 4,830 unchanged in place + 1,253 changed at the same
 path + 542 identical blobs relocated + 124 explained non-identical
-replacements/retirements = 6,749 pub4 blobs. The previous 2026-11-11 snapshot
-at pub5@296121b (4,975 / 1,121 / 549 / 104) is historical and is superseded
-by this live-tree count; the changed count reflects later source evolution and
-the removal of patch-specific Ruby pins.
+replacements/retirements = 6,749 pub4 blobs. The earlier 2026-11-11 snapshots at pub5@296121b (4,975 / 1,121 / 549 / 104)
+and pub5@5b19d609 (4,835 / 1,248 / 542 / 124) are historical and are
+superseded by this live-tree count. Five files that were byte-identical at the
+5b19d609 snapshot have since changed in place; no new paths were added and the
+124 explained replacements/retirements are unchanged.
 
 This is a file/provenance reconciliation, not behavioural acceptance. It does
 not prove that changed RAILS behavior, runtime-fetched model assets, the
