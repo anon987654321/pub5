@@ -130,6 +130,62 @@ class MasterBootTest < Minitest::Test
     end
   end
 
+  def test_backlog_mission_proof_rejects_stale_map_and_coerced_numeric_evidence
+    Dir.mktmpdir("backlog-proof-types") do |root|
+      done_when = "rake test"
+      report = "fix done - proof: 2 of 2 - hard red 0 - soft red 0"
+      evidence = {
+        "proof_type" => "full_suite",
+        "status" => "pass",
+        "exit_status" => 0,
+        "command_digest" => Digest::SHA256.hexdigest(done_when),
+        "output_digest" => "a" * 64,
+        "output_bytes" => 0,
+        "cwd" => "MASTER",
+        "duration_ms" => 0,
+      }
+      plan_for = lambda do |version|
+        JSON.generate(
+          "executor" => "root_todo",
+          "item_id" => "item-proof",
+          "done_when" => done_when,
+          "proof_map_version" => version,
+          "proof_types" => ["full_suite"],
+        )
+      end
+      build_mission = lambda do |name, version|
+        Master::Fix::Mission.new(root: File.join(root, name)).ensure_queued!(
+          goal: "verify backlog proof",
+          scope: root,
+          plan: plan_for.call(version),
+          origin: "backlog",
+        )
+      end
+
+      stale = build_mission.call("stale", Backlog::ProofMap::VERSION - 1)
+      refute stale.record_fix_proof!(
+        status: "pass", scope_paths: ["MASTER/lib/a.rb"],
+        report:, command_proof: evidence
+      )
+
+      current = build_mission.call("current", Backlog::ProofMap::VERSION)
+      ["0", "not-a-status", nil].each do |invalid|
+        refute current.record_fix_proof!(
+          status: "pass", scope_paths: ["MASTER/lib/a.rb"],
+          report:, command_proof: evidence.merge("exit_status" => invalid)
+        )
+      end
+      refute current.record_fix_proof!(
+        status: "pass", scope_paths: ["MASTER/lib/a.rb"],
+        report:, command_proof: evidence.merge("output_bytes" => "0")
+      )
+      refute current.record_fix_proof!(
+        status: "pass", scope_paths: ["MASTER/lib/a.rb"],
+        report:, command_proof: evidence.merge("duration_ms" => "0")
+      )
+    end
+  end
+
   def test_backlog_runner_blocks_when_fix_report_has_no_measured_proof
     Dir.mktmpdir("backlog-runner") do |mission_root|
       Dir.mktmpdir("backlog-repo") do |repo_root|
