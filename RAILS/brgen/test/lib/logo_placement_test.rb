@@ -65,6 +65,28 @@ class LogoPlacementTest < ActiveSupport::TestCase
                  "the mark must render on every surface, not behind a guard")
   end
 
+
+  def test_city_wordmark_uses_helvetica_bold_and_a_reduced_motion_particle_overlay
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+    storefront = Rails.root.join("app/views/shared/_storefront_nav_bar.html.erb").read
+    partial = Rails.root.join("..", "__shared", "app/views/shared/_brand_mark.html.erb").read
+    core = Rails.root.join("app/assets/stylesheets/_brgen_core_shell.scss").read
+    overrides = Rails.root.join("app/assets/stylesheets/_brgen_shared_overrides.scss").read
+
+    assert_includes layout, "particle: true"
+    assert_includes storefront, "particle: true"
+    assert_includes partial, "local_assigns.fetch(:particle, false) == true"
+    assert_includes partial, 'class="brand-text__particles" aria-hidden="true"'
+    assert_includes core, '$brgen-logo-font: "Helvetica Neue", Helvetica, Arial, sans-serif;'
+    assert_includes core, 'font: 700 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 #{$brgen-logo-font};'
+    assert_includes core, "letter-spacing: var(--tracking-tightest)"
+    assert_includes core, "@keyframes brgen-tenant-wordmark-resolve"
+    assert_includes core, "background-image: radial-gradient(circle, currentColor 0.85px, transparent 1px)"
+    assert_includes core, "@media (prefers-reduced-motion: reduce)"
+    assert_includes overrides, 'font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;'
+    assert_includes overrides, "font-weight: 700"
+    assert_includes overrides, "letter-spacing: var(--tracking-tightest)"
+  end
   def test_marketplace_keeps_its_original_face_and_cart_with_a_bounded_burst
     logo = Rails.root.join("engines/marketplace/app/views/marketplace/_animated_logo.html.erb").read
     controller = Rails.root.join("engines/marketplace/app/javascript/controllers/marketplace_logo_controller.js").read
