@@ -143,6 +143,26 @@ test("web lip-sync samples visemes at a finer audio-clock cadence", () => {
   assert.match(playback, /audio\.currentTime \* 1000/);
 });
 
+test("fallback lip sync maps Norwegian vowels through the existing viseme timeline", () => {
+  const source = readFileSync(join(publicDir, "face_speech_playback.js"), "utf8");
+  const sandbox = {
+    window: {},
+    State: { viseme: "neutral", visemeAmp: 0 },
+    emitTtsEvent() {},
+  };
+  runInNewContext(source, sandbox, { filename: "face_speech_playback.js" });
+  const playback = sandbox.window.MASTER_SPEECH_PLAYBACK;
+
+  const plan = playback.fallbackVisemePlan("æ ø å", 900);
+  assert.equal(plan.map((frame) => frame.shape).join("|"), "A|neutral|O|neutral|O");
+  assert.match(source, /const SPOKEN_VOWEL = \/\[aeiouyæøå\]\/i/);
+
+  for (const [letter, shape] of [["æ", "A"], ["ø", "O"], ["å", "O"]]) {
+    playback.setViseme(letter);
+    assert.equal(sandbox.State.viseme, shape, `direct viseme for ${letter}`);
+  }
+});
+
 test("FaceWorld keeps portrait rendering separate from repository overlays", () => {
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
   assert.match(world, /const portrait = topology === "face" \|\| topology === "carved-field" \|\| topology === "papua-mask";/);
