@@ -54,6 +54,9 @@ tests = %w[
   test/test_core_no_lib_backedges.rb
   test/test_fix_interruption_restart.rb
   test/test_fix_loop_committer.rb
+  test/test_io_git_operations.rb
+  test/test_core_world.rb
+  test/test_master_boot.rb
   test/test_fix_plan.rb
   test/test_fix_protocol.rb
   test/test_backlog.rb
