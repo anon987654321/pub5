@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "prism"
 require "set"
 require "monitor"
@@ -136,7 +137,7 @@ module Master
           purge_file(full)
           return unless File.file?(full)
 
-          @mtimes[full] = CodeIndexStore.signature(full) if index_file(full)
+          index_file(full)
           @orientation = nil
         end
       rescue StandardError => e
@@ -156,7 +157,7 @@ module Master
         @mtimes.clear
         @errors.clear
         files.each do |f|
-          @mtimes[f] = CodeIndexStore.signature(f) if index_file(f)
+          index_file(f)
         end
       end
 
@@ -263,7 +264,7 @@ module Master
       end
 
       def index_file(file)
-        src = File.read(file, encoding: "UTF-8")
+        src, signature = CodeIndexStore.read_source(file, root: @root)
         parse_result = Prism.parse(src)
         unless parse_result.success?
           detail = parse_result.errors.first(5).map { |error| error.message.to_s }.join("; ")
@@ -272,10 +273,17 @@ module Master
           return false
         end
 
+        unless CodeIndexStore.signature(file) == signature
+          record_error(file, :changed, "source changed while Prism analyzed it; retry the index build")
+          @bus&.publish("code_index:parse_error", path: file, error: "source changed during analysis")
+          return false
+        end
+
         visitor = SymbolVisitor.new(file:, root: @root)
         parse_result.value.accept(visitor)
         visitor.symbols.each { |symbol| store_symbol(symbol) }
         @references.concat(visitor.references)
+        @mtimes[file] = signature
         true
       rescue StandardError => e
         record_error(file, :read, "#{e.class}: #{e.message}")
