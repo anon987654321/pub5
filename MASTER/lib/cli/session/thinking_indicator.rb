@@ -16,6 +16,7 @@ module Master
       # Below this the row stays plain; the ramp runs amber to red above it.
       SPIN_COLOR_START = 0.35
       SPIN_WHITE_HOT_START = 0.92
+      ACTIVITY_REARM_IDLE_S = 0.45
       STAGE_EVENTS = {
         "infer:resolved" => "infer",
         "infer:confidence" => "infer",
@@ -90,6 +91,7 @@ module Master
         return if paused
 
         @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
+        reserve_activity_row_after_quiet(target)
         line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)))
         @spin_frame += 1
 
@@ -115,6 +117,28 @@ module Master
         else
           "#{tint}#{line}\e[0m"
         end
+      end
+
+      # Reclaim the spinner row only after a burst of dmesg output has
+      # settled. Fast model failover should read like an OpenBSD log, not a
+      # stack of empty rows between device reports.
+      def reserve_activity_row_after_quiet(target)
+        return unless @reading_input && @turn_worker&.alive?
+        return if @activity_row_reserved || @turn_queue_paused || @closed
+
+        last = @last_foreign_write_at
+        return unless last && monotonic_now - last >= ACTIVITY_REARM_IDLE_S
+
+        target.puts
+        target.flush if target.respond_to?(:flush)
+        @activity_row_reserved = true
+        redraw_active_input
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.activity_row.rearm", event_bus: @refs.bus)
+      end
+
+      def monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
 
       def draw_spin_row(target, line)
