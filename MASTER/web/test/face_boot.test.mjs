@@ -154,10 +154,10 @@ test("fallback lip sync maps Norwegian vowels through the existing viseme timeli
   const playback = sandbox.window.MASTER_SPEECH_PLAYBACK;
 
   const plan = playback.fallbackVisemePlan("æ ø å", 900);
-  assert.equal(plan.map((frame) => frame.shape).join("|"), "A|neutral|O|neutral|O");
+  assert.equal(plan.map((frame) => frame.shape).join("|"), "A|neutral|U|neutral|O");
   assert.match(source, /const SPOKEN_VOWEL = \/\[aeiouyæøå\]\/i/);
 
-  for (const [letter, shape] of [["æ", "A"], ["ø", "O"], ["å", "O"]]) {
+  for (const [letter, shape] of [["æ", "A"], ["ø", "U"], ["å", "O"]]) {
     playback.setViseme(letter);
     assert.equal(sandbox.State.viseme, shape, `direct viseme for ${letter}`);
   }
