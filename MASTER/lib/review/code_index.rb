@@ -20,7 +20,7 @@ module Master
         def symbols_in(file)
           with_built_index do
             full = File.expand_path(file, @root)
-            @symbols.values.select { |s| s.file == full }
+            @symbols.values.select { |symbol| symbol.file == full }.freeze
           end
         end
 
@@ -113,7 +113,7 @@ module Master
             incremental_build(files, scope: target)
           end
           save_snapshot if @store && path.nil? && @errors.empty?
-          @built_at = Time.now
+          @built_at = Time.now.freeze
           @orientation = nil
           @bus&.publish("code_index:built", files: files.size, symbols: @symbols.size,
                        complete: @errors.empty? && !@partial, partial: @partial, error_count: @errors.size)
@@ -247,7 +247,7 @@ module Master
         return false unless snapshot
 
         snapshot[:symbols].each { |sym| store_symbol(sym) }
-        @references.concat(snapshot[:references])
+        snapshot[:references].each { |reference| store_reference(reference) }
         @mtimes.merge!(snapshot[:signatures])
         @snapshot_tree = snapshot[:tree_hash]
         true
@@ -312,6 +312,15 @@ module Master
         @symbols[key.freeze] = frozen_symbol
       end
 
+      def store_reference(reference)
+        @references << Reference.new(
+          from_file: reference.from_file.to_s.dup.freeze,
+          from_line: Integer(reference.from_line),
+          to_fqn: reference.to_fqn.to_s.dup.freeze,
+          ref_type: reference.ref_type.to_sym,
+        ).freeze
+      end
+
       def format_summary_entry(sym)
         parent_name = sym.parent
         parent = parent_name && parent_name != "Object" ? " < #{parent_name}" : ""
@@ -349,14 +358,7 @@ module Master
         end
 
         visitor.symbols.each { |symbol| store_symbol(symbol) }
-        visitor.references.each do |reference|
-          @references << Reference.new(
-            from_file: reference.from_file.to_s.dup.freeze,
-            from_line: Integer(reference.from_line),
-            to_fqn: reference.to_fqn.to_s.dup.freeze,
-            ref_type: reference.ref_type.to_sym,
-          ).freeze
-        end
+        visitor.references.each { |reference| store_reference(reference) }
         @mtimes[file] = signature
         true
       rescue StandardError => e
