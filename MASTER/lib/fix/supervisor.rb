@@ -90,6 +90,9 @@ module Master
 
       def due_for_target?(record)
         return false unless record
+        # Root-TODO missions are owned by TaskSteward; the FixLoop supervisor
+        # must never claim or defer that parent while a scoped child /fix runs.
+        return false if record["origin"].to_s == "backlog"
         return false unless record["scope"].to_s == relative_target
         return false unless %w[running waiting].include?(record["state"].to_s)
         return false unless due?(record)
