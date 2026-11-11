@@ -331,6 +331,39 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  def test_new_path_gate_refuses_symlinked_existing_targets_and_parents
+    Dir.mktmpdir("task-contract-links", Master::REPO_ROOT) do |root|
+      Dir.mktmpdir("task-contract-outside") do |outside|
+        relative = root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+        external = File.join(outside, "external.rb")
+        File.write(external, "VALUE = true\n")
+        linked = File.join(root, "linked.rb")
+        File.symlink(external, linked)
+
+        assert_match(/traverses a symlink/, CONTRACT.new_path_refusal(linked))
+
+        nested = File.join(root, "nested")
+        File.symlink(outside, nested)
+        assert_match(/traverses a symlink/, CONTRACT.new_path_refusal(File.join(nested, "new.rb")))
+
+        normal = File.join(root, "normal.rb")
+        File.write(normal, "VALUE = false\n")
+        assert_nil CONTRACT.new_path_refusal(normal)
+      end
+    end
+  end
+
+  def test_new_path_gate_refuses_hardlinked_existing_targets
+    Dir.mktmpdir("task-contract-hardlink", Master::REPO_ROOT) do |root|
+      original = File.join(root, "original.rb")
+      linked = File.join(root, "linked.rb")
+      File.write(original, "VALUE = true\n")
+      File.link(original, linked)
+
+      assert_match(/hard-linked/, CONTRACT.new_path_refusal(linked))
+    end
+  end
+
   def test_a_reviewed_plan_declares_the_paths_it_names
     Dir.mktmpdir("task-contract-declared", Master::REPO_ROOT) do |root|
       relative = File.join(root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR), "planned.rb")
