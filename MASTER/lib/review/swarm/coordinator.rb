@@ -239,7 +239,8 @@ module Master
               end
 
               if spawn_error
-                batch.drop(threads.size).each do |task|
+                unstarted = batch.drop(threads.size) + tasks.drop((batch_index + 1) * MAX_CONCURRENT)
+                unstarted.each do |task|
                   @bus&.publish("swarm:worker_start_failed", role: task[:role], error: spawn_error.message)
                   results[task[:role]] = Result.err("worker could not start: #{spawn_error.message}", category: :infrastructure)
                 end
