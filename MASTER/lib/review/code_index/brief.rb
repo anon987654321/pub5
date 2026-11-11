@@ -74,7 +74,7 @@ module Master
           return [] if names.empty?
 
           @symbols.values.select do |sym|
-            sym.type == :method && names.include?(sym.fqn.split("#").last)
+            sym.type == :method && names.include?(sym.fqn.split(/[.#]/).last)
           end.uniq.sort_by(&:fqn)
         end
 
