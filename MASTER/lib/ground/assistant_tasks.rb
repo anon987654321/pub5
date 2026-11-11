@@ -110,7 +110,9 @@ module Master
         {
           "status" => "ok",
           "count" => rows.size,
-          "tasks" => rows.first(50).map { |task| public_task(task).merge("overdue" => overdue?(task, current_time)) },
+          # The sort stays urgency-first; the bound cuts the tail so the
+          # newest rows survive a full ledger. Search reads every row.
+          "tasks" => rows.last(50).map { |task| public_task(task).merge("overdue" => overdue?(task, current_time)) },
           "truncated" => rows.size > 50,
           "note" => "Overdue tasks are labeled when listed. #{DELIVERY}",
         }

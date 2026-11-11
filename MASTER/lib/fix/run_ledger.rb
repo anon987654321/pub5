@@ -203,6 +203,8 @@ module Master
         # total attempts per finding, and this ceiling also bounds repeated findings.
         def file_done?(file) = rejects_for(file) >= MAX_REJECTS_PER_FILE
 
+        def rejects_for(file) = @mutex.synchronize { @file_rejects[file.to_s] }
+
         def timeout(file, seconds)
           @mutex.synchronize { @timeouts << [file.to_s, seconds] }
         end
