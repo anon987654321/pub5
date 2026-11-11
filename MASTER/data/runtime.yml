@@ -2914,7 +2914,7 @@ ui_philosophy:
     - item: tts_true_streaming
       action: partial bytes shipped; full MSE playback deferred
     - item: release_check_local_ruby
-      action: run via bundle exec ruby34 on VPS; Mac system Ruby 2.6 is not authoritative
+      action: run with the installed compatible Ruby and its matching Bundler; no patch release is preferred
     brutalist_opportunities:
       cli:
       - MASTER_BRUTALIST=1 boot banner exposes H/C/mode dmesg lines
