@@ -91,7 +91,10 @@ module Master
         end
         self
       rescue StandardError => e
-        @lock.synchronize { record_error(path || @root, :build, "#{e.class}: #{e.message}") }
+        @lock.synchronize do
+          record_error(path || @root, :build, "#{e.class}: #{e.message}")
+          @orientation = nil
+        end
         @bus&.publish("code_index:error", error: e.message)
         self
       end
@@ -116,7 +119,7 @@ module Master
       # A usable graph and a fully analyzed graph are different claims. Parse
       # or read failures stay visible instead of looking like an empty index.
       def complete?
-        @lock.synchronize { @errors.empty? && !@partial }
+        @lock.synchronize { !@built_at.nil? && @errors.empty? && !@partial }
       end
 
       def partial?
@@ -183,7 +186,7 @@ module Master
         snapshot = @store&.load
         return false unless snapshot
 
-        snapshot[:symbols].each { |sym| @symbols[sym.fqn] = sym }
+        snapshot[:symbols].each { |sym| store_symbol(sym) }
         @references.concat(snapshot[:references])
         @mtimes.merge!(snapshot[:signatures])
         @snapshot_tree = snapshot[:tree_hash]
@@ -216,10 +219,28 @@ module Master
       end
 
       def find_locked(name)
-        exact = @symbols[name]
-        return [exact] if exact
+        exact = @symbols.values.select { |symbol| symbol.fqn == name.to_s }
+        return exact unless exact.empty?
+
         suffix = name.to_s
-        @symbols.values.select { |sym| sym.fqn.include?(suffix) }
+        @symbols.values.select { |symbol| symbol.fqn.include?(suffix) }
+      end
+
+      # Reopened Ruby classes/modules and methods may have more than one
+      # definition. Keep the first FQN key for compatibility, then retain each
+      # additional definition under a stable path-and-line key.
+      def store_symbol(symbol)
+        key = symbol.fqn
+        if @symbols.key?(key)
+          base = "#{key}@#{relativize(symbol.file)}:#{symbol.line}"
+          key = base
+          duplicate = 2
+          while @symbols.key?(key)
+            key = "#{base}:#{duplicate}"
+            duplicate += 1
+          end
+        end
+        @symbols[key] = symbol
       end
 
       def format_summary_entry(sym)
@@ -252,7 +273,7 @@ module Master
 
         visitor = SymbolVisitor.new(file:, root: @root)
         parse_result.value.accept(visitor)
-        visitor.symbols.each { |s| @symbols[s.fqn] = s }
+        visitor.symbols.each { |symbol| store_symbol(symbol) }
         @references.concat(visitor.references)
         true
       rescue StandardError => e
