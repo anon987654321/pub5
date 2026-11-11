@@ -339,15 +339,8 @@ end
     end
   end
 
-  # A regroup renames every member constant, so a family whose members reopen one
-  # constant defined elsewhere has nothing to rename and the proposal would break
-  # every call site. MASTER declares those files in data/autoload.yml and this
-  # tool did not read it: thirteen files under cli/command_registry declare one
-  # reopened CommandRegistry, and the plan was to split it into eight constants.
-  #
-  # Against the real tree, because the register and the paths it names are the
-  # fact under test. The second assertion is the instrument check: an empty
-  # register would satisfy the first while measuring nothing.
+  # Exact AST matches identify repeated implementations without assuming
+  # that their owners, contracts or callers are interchangeable.
   def test_three_identical_method_bodies_are_reported_as_review_candidates
     root = File.join(@tmp, "MASTER")
     paths = %w[lib/fix/one.rb lib/fix/two.rb checks/support/three.rb]
@@ -374,7 +367,7 @@ end
 
   def test_two_method_copies_and_test_fixtures_do_not_create_a_candidate
     root = File.join(@tmp, "MASTER")
-    body = "def safe_slug(value) = value.to_s.gsub(/x/, \"_\")\\n"
+    body = "def safe_slug(value) = value.to_s.gsub(/x/, \"_\")\n"
     %w[lib/a.rb lib/b.rb test/fixture.rb].each do |relative|
       path = File.join(root, relative)
       FileUtils.mkdir_p(File.dirname(path))
@@ -388,6 +381,10 @@ end
     assert_empty scan[:unreadable]
   end
 
+  # A regroup renames every member constant, so a family whose members reopen one
+  # constant defined elsewhere has nothing to rename and the proposal would break
+  # every call site. MASTER declares those files in data/autoload.yml and this
+  # tool reads it as a live boundary, not an allow-list.
   def test_a_family_that_reopens_one_constant_gets_no_regroup
     refute_empty Operator::Cohesion.reopened_paths, "the autoload register did not read"
 
