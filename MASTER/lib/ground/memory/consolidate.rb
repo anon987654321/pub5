@@ -112,15 +112,17 @@ module Master
           archived = 0
           entries = nil
           @mutex.synchronize do
-            entries = @store.reject { |key, _| key.to_s.start_with?("archive/") }
-            scored_entries(entries, now).each do |entry|
-              next if entry[:key] == "_consolidated_summary"
-              next unless entry[:score] < 0.33
+            with_store_lock do
+              entries = @store.reject { |key, _| key.to_s.start_with?("archive/") }
+              scored_entries(entries, now).each do |entry|
+                next if entry[:key] == "_consolidated_summary"
+                next unless entry[:score] < 0.33
 
-              @store["archive/#{entry[:key]}"] = @store.delete(entry[:key])
-              archived += 1
+                @store["archive/#{entry[:key]}"] = @store.delete(entry[:key])
+                archived += 1
+              end
+              persist
             end
-            persist
           end
           [entries, archived]
         end
