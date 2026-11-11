@@ -227,7 +227,7 @@ module Master
             begin
               threads.each do |task, thread|
                 begin
-                  role, result = join_or_timeout(thread, timeout, deadline:)
+                  role, result = join_or_timeout(thread, timeout, deadline:, role: task[:role])
                   results[role] = result
                 rescue StandardError => error
                   @bus&.publish("swarm:worker_error", role: task[:role], error: error.message)
@@ -275,17 +275,19 @@ module Master
           end
         end
 
-        def join_or_timeout(th, timeout, deadline: nil)
+        def join_or_timeout(th, timeout, deadline: nil, role: :timeout)
           remaining = deadline ? [deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max : timeout
           return th.value if th.join(remaining)
 
           th.kill rescue ThreadError
-          @bus&.publish(:swarm_worker_timeout, timeout:)
-          [:timeout, Result.err("worker timed out after #{timeout}s", category: :timeout)]
+          @bus&.publish(:swarm_worker_timeout, role:, timeout:)
+          [role, Result.err("worker timed out after #{timeout}s", category: :timeout)]
         end
 
         def build_swarm_result(results)
-          eligible = results.reject { |role, _| role == :timeout }
+          eligible = results.reject do |_role, result|
+            result.is_a?(Master::Result) && result.err? && result.category == :timeout
+          end
           successes = eligible.select { |_, r| r.is_a?(Master::Result) && r.ok? }
           artifacts = successes.transform_values(&:value!)
 
