@@ -17,6 +17,72 @@ class TestMemory < Minitest::Test
     FileUtils.remove_entry(@root)
   end
 
+  def test_stale_memory_instances_merge_each_others_writes
+    first = Master::Ground::Memory.new(root: @root)
+    second = Master::Ground::Memory.new(root: @root)
+
+    first.remember("first_process", "first value", embed: false)
+    second.remember("second_process", "second value", embed: false)
+
+    assert_equal "first value", first.recall("first_process")
+    assert_equal "second value", first.recall("second_process")
+    assert_equal "first value", second.recall("first_process")
+    assert_equal "second value", second.recall("second_process")
+  end
+
+  def test_memory_writes_from_two_processes_are_merged
+    skip "fork is unavailable" unless Process.respond_to?(:fork)
+
+    ready_read, ready_write = IO.pipe
+    start_read, start_write = IO.pipe
+    children = %w[WORKER_ALPHA WORKER_BETA].map do |worker|
+      fork do
+        ready_read.close
+        start_write.close
+        ready_write.write("r")
+        ready_write.flush
+        start_read.read(1)
+        Master::Ground::Memory.new(root: @root).remember("worker/#{worker}", worker, embed: false)
+        exit! 0
+      rescue StandardError
+        exit! 1
+      end
+    end
+    ready_write.close
+    start_read.close
+    2.times { ready_read.read(1) }
+    start_write.write("xx")
+    start_write.close
+    statuses = children.map { |pid| Process.wait2(pid).last.exitstatus }
+    assert_equal [0, 0], statuses
+
+    assert_equal "WORKER_ALPHA", @mem.recall("worker/WORKER_ALPHA")
+    assert_equal "WORKER_BETA", @mem.recall("worker/WORKER_BETA")
+  ensure
+    ready_read&.close unless ready_read&.closed?
+    ready_write&.close unless ready_write&.closed?
+    start_read&.close unless start_read&.closed?
+    start_write&.close unless start_write&.closed?
+    children&.each do |pid|
+      Process.wait(pid) rescue Errno::ECHILD
+    end
+  end
+
+  def test_corrupt_memory_store_is_preserved_and_not_replaced_with_an_empty_store
+    Dir.mktmpdir("corrupt-memory") do |root|
+      directory = File.join(root, ".master")
+      FileUtils.mkdir_p(directory)
+      path = File.join(directory, "memory.yml")
+      corrupt = "memory: [unterminated\\n"
+      File.write(path, corrupt)
+
+      error = assert_raises(IOError) { Master::Ground::Memory.new(root:) }
+
+      assert_match(/memory store is malformed/, error.message)
+      assert_equal corrupt, File.read(path)
+    end
+  end
+
   def test_remember_and_recall
     @mem.remember("test_key", "hello world", type: "general")
     assert_equal "hello world", @mem.recall("test_key")
