@@ -217,6 +217,10 @@ class TestLaneSelection < Minitest::Test
     old_path.nil? ? ENV.delete("MASTER_LLAMA_MODEL") : ENV["MASTER_LLAMA_MODEL"] = old_path
   end
 
+  def test_an_explicit_measured_lead_is_preserved_inside_the_subscription_tier
+    assert_equal [GROK, OPUS], Selection.order_or_all([OPUS, GROK], lead: [GROK, OPUS])
+  end
+
   def test_subscription_lanes_lead_in_claude_grok_agy_order_ahead_of_api_keys
     assert_equal [OPUS, GROK, AGY, DEEPSEEK, LOCAL, NEMOTRON], Selection.order([NEMOTRON, DEEPSEEK, AGY, GROK, LOCAL, OPUS])
   end
