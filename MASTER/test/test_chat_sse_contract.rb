@@ -22,6 +22,18 @@ class TestChatSseContract < Minitest::Test
     assert_includes source, "next unless mine && ev[:conversation] == mine"
   end
 
+  def test_chat_service_exposes_the_conversation_scoped_visual_subject_sidecar
+    source = File.read(File.join(WEB_ROOT, "app", "services", "chat_service.rb"))
+    runtime = File.read(File.join(WEB_ROOT, "public", "face.part5.txt"))
+
+    assert_includes source, 'subscribe("assistant:visual-subject")'
+    assert_includes source, 'write_json_event("visual_subject", payload)'
+    assert_includes source, "def assistant_visual_subject_payload(event)"
+    assert_includes source, "next unless mine && ev[:conversation] == mine"
+    assert_includes runtime, "event === 'visual_subject'"
+    assert_includes runtime, "master:visual-subject"
+  end
+
   def test_message_action_sets_sse_headers
     source = File.read(File.join(WEB_ROOT, "app", "controllers", "chat_controller.rb"))
     assert_includes source, "text/event-stream"
