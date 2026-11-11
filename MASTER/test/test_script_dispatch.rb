@@ -34,19 +34,12 @@ class TestScriptDispatch < Minitest::Test
     assert_equal File.join(MasterPaths.repo, "STUDIO", "replicate"), Master::Io::ScriptDispatch.working_directory(workspace, script)
   end
 
-  def test_retired_tools_fail_closed_without_searching_for_similar_scripts
+  def test_lora_uses_the_canonical_studio_photograph_entrypoint
     workspace = File.expand_path("../..", __dir__)
+    path = Master::Io::ScriptDispatch.script_path(workspace, "lora")
 
-    %w[lora].each do |tool|
-      path = Master::Io::ScriptDispatch.script_path(workspace, tool)
-
-      assert_equal File.join(MasterPaths.repo, "STUDIO", tool, "#{tool}.rb"), path
-      refute File.file?(path)
-      result = Master::Io::ScriptDispatch.run(root: workspace, tool:)
-      refute result.ok?
-      assert_match(/retired/, result.message)
-      assert_match(/no executable entrypoint/, result.message)
-    end
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "photograph.rb"), path
+    assert File.file?(path)
   end
 
   # b5acc93bcf deleted postpro by accident on 2026-11-01; the 2026-11-03

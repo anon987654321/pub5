@@ -15,19 +15,13 @@ module Master
       module_function
 
       # Public tool names resolve to one canonical entrypoint. STUDIO owns the
-      # whole provider boundary, and STUDIO/replicate/client.rb is replicate's
-      # one entrypoint. An unknown name keeps the default <tool>/<tool>.rb probe
-      # and reports a missing entrypoint instead of silently widening the search.
-      #
-      # postpro is NOT retired: STUDIO/postpro/postpro.rb is present, tracked and
-      # runs. Listing it here made every /fix media postprocess intent answer
-      # "retired; no executable entrypoint is registered" while the tool sat one
-      # directory away — a live capability reported as gone. lora is: the tree
-      # moved to STUDIO/lora/ with weights and a subject.env but no entrypoint.
+      # whole provider boundary. LoRA generation uses the photograph entrypoint
+      # plus a subject profile; data and weights stay under STUDIO/lora.
       # The repo/ and research/ rows name tools whose canonical entrypoint is
       # nested below their family directory; the legacy root shims are gone.
       TOOL_ENTRYPOINTS = {
         "replicate" => File.join("replicate", "client.rb"),
+        "lora" => "photograph.rb",
         "runs" => File.join("repo", "runs.rb"),
         "repo_inventory" => File.join("repo", "repo_inventory.rb"),
         "sprawl_plan" => File.join("repo", "sprawl_plan.rb"),
@@ -35,17 +29,9 @@ module Master
         "llm_challenges" => File.join("research", "llm_challenges.rb"),
         "llm_trajectory" => File.join("research", "llm_trajectory.rb"),
       }.freeze
-      RETIRED_TOOLS = %w[lora].freeze
 
       def run(root:, tool:, arg: "", env: {})
         name = tool.to_s
-        if RETIRED_TOOLS.include?(name)
-          return Result.err(
-            "#{name}: retired; no executable entrypoint is registered. Restore the owning STUDIO tool and its contract before re-enabling this intent.",
-            category: :validation,
-          )
-        end
-
         requested_root = File.expand_path(root.to_s.empty? ? Dir.pwd : root)
         script = script_path(requested_root, name)
         return Result.err("#{tool}: missing tool entrypoint #{script}", category: :validation) unless File.file?(script)

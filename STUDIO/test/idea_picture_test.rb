@@ -182,6 +182,62 @@ class TestIdeaPictureOutput < Minitest::Test
 
   public
 
+
+  def test_private_replicate_model_name_is_a_supported_fallback_without_a_manifest
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "ragnhild")
+      FileUtils.mkdir_p(subject)
+      File.write(File.join(subject, "subject.env"), <<~ENV)
+        MODEL=ragnhild
+        REPLICATE_MODEL=anon987654321/ragnhild-flux
+        TRIGGER=ragnhild
+      ENV
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "ragnhild", directory: dir,
+        model_manifest: File.join(subject, "weights", "ragnhild", "replicate_training.json")
+      )
+      assert_equal "anon987654321/ragnhild-flux", picture.send(:still_model)
+    end
+  end
+
+  def test_animate_refuses_missing_and_symlink_sources_before_provider_calls
+    Dir.mktmpdir do |dir|
+      client = Object.new
+      client.define_singleton_method(:predict) { |*| flunk "provider must not be called" }
+      picture = Studio::Visual::IdeaPicture.new(subject: "johann", client:, directory: dir)
+
+      error = assert_raises(ArgumentError) { picture.animate(File.join(dir, "missing.jpg"), "motion") }
+      assert_match(/source still is missing/, error.message)
+
+      target = File.join(dir, "real.jpg")
+      File.write(target, "image")
+      link = File.join(dir, "link.jpg")
+      File.symlink(target, link)
+      error = assert_raises(ArgumentError) { picture.animate(link, "motion") }
+      assert_match(/source still is missing/, error.message)
+    end
+  end
+
+
+  def test_validate_model_checks_that_the_private_provider_model_is_reachable
+    Dir.mktmpdir do |dir|
+      manifest = File.join(dir, "replicate_training.json")
+      File.write(manifest, JSON.generate("version" => "owner/model:version-123"))
+      client = Object.new
+      seen = nil
+      client.define_singleton_method(:input_names) do |model|
+        seen = model
+        %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, model_manifest: manifest
+      )
+
+      assert_equal "owner/model:version-123", picture.validate_model!
+      assert_equal "owner/model:version-123", seen
+    end
+  end
+
   def test_subject_manifest_is_configurable_and_missing_manifest_is_actionable
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")

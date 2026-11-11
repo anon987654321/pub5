@@ -723,13 +723,12 @@ back at the repository root:
   against primary pages. No PDF existed in pub4; render the restored HTML and
   visually inspect pagination, links and text before declaring the deliverable
   complete.
-- [ ] **Merethe/Wenche LoRA scaffold.** pub4 held
-  `STUDIO/replicate/lora/merethe/README.md`, `prepare.rb`,
-  `subject.env.example` and `STUDIO/test/merethe_lora_test.rb`; these are
-  absent from pub5. The old preparation script can recover and package source
-  photographs without a consent-record refusal. Port its useful structure
-  only after the consent and photographer-licence gate in §8.10 is executable;
-  do not run the old downloader or restore its consent-blind behavior.
+- [x] **Merethe LoRA preparation restored at the canonical path.** The
+  recovery/preflight package and its test now live under `STUDIO/lora/merethe/`.
+  Its preparation command moves only known local, ignored subject data from the
+  previous `STUDIO/replicate/lora/merethe/` path and refuses symlinks or
+  destination collisions. Paid training and source-rights decisions remain
+  separate gates in §8.10.
 
 The one-shot legacy archive-extraction helper was also intentionally excluded.
 The pub4 repository remains the read-only provenance source; do not revive

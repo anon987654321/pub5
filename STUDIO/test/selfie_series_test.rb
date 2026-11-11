@@ -24,6 +24,10 @@ class TestSelfieSeries < Minitest::Test
       { "output" => "https://replicate.delivery/selfie.jpg" }
     end
 
+    def input_names(_model_id)
+      %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+    end
+
     def download_url(url, path)
       @attempts += 1
       raise IOError, "network lost" if @fail_download_at && @attempts == @fail_download_at
@@ -69,12 +73,37 @@ class TestSelfieSeries < Minitest::Test
     )
   end
 
-  def test_a_series_renders_its_scenes_still_only
+  def test_a_series_renders_stills_with_subject_prefixed_filenames_in_the_lora_root
     rendered = series.run(count: 3)
 
     assert_equal 3, rendered.size
     rendered.each { |path| assert File.file?(path) }
     assert File.file?(rendered.first)
+    assert rendered.all? { |path| File.basename(path).include?("probe_selfie_") }
+  end
+
+  def test_default_output_directory_is_the_lora_root
+    box = Studio::Visual::SelfieSeries.new(subject: "probe", client: @client)
+    assert_equal Studio::Visual::IdeaPicture::SUBJECTS, box.instance_variable_get(:@directory)
+  end
+
+  def test_replace_removes_only_the_selected_subject_series
+    directory = File.join(@dir, "flat")
+    FileUtils.mkdir_p(directory)
+    old = File.join(directory, "probe_selfie_old.jpg")
+    processed = File.join(directory, "postpro_probe_selfie_old_v1.jpg")
+    other = File.join(directory, "ragnhild_selfie_old.jpg")
+    [old, processed, other].each { |path| File.write(path, "old") }
+
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
+    )
+    box.run(count: 1, replace: true)
+
+    refute File.exist?(old)
+    refute File.exist?(processed)
+    assert File.exist?(other)
+    assert_equal 1, ledger_rows("replace_cleanup").first.fetch("deleted")
   end
 
   def test_no_render_carries_the_film_model

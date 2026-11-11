@@ -229,6 +229,52 @@ class MediaIntentTest < Minitest::Test
     end
   end
 
+
+  def test_lora_selfie_series_preflights_both_subjects_then_replaces_only_their_renders
+    calls = []
+    fake = Object.new
+    fake.define_singleton_method(:validate_model) do |subject:|
+      calls << [:preflight, subject]
+      true
+    end
+    fake.define_singleton_method(:selfie_series) do |subject:, count:, replace:|
+      calls << [:render, subject, count, replace]
+      Array.new(count) { |index| "STUDIO/lora/#{subject}_selfie_#{index + 1}.jpg" }
+    end
+
+    Master::Io::IdeaPicture.stub(:new, fake) do
+      result = Master::Io::MediaIntent.dispatch(
+        "delete existing renders and rerender 10 selfies for Johann and 10 for Ragnhild"
+      )
+      assert result.ok?, -> { result.message.to_s }
+      assert_equal :lora_selfie_series, result.value!.fetch(:media)
+      assert_equal 20, result.value!.fetch(:paths).size
+    end
+
+    assert_equal [
+      [:preflight, "johann"], [:preflight, "ragnhild"],
+      [:render, "johann", 10, true], [:render, "ragnhild", 10, true],
+    ], calls
+  end
+
+  def test_lora_image_requests_use_the_named_subject_profile
+    seen = nil
+    fake = Object.new
+    fake.define_singleton_method(:write) do |prompt, film:, subject:|
+      seen = { prompt:, film:, subject: }
+      { still: "STUDIO/lora/#{subject}_selfie.jpg" }
+    end
+
+    Master::Io::IdeaPicture.stub(:new, fake) do
+      result = Master::Io::MediaIntent.dispatch("generate a portrait photo with Johann's LoRA")
+      assert result.ok?, -> { result.message.to_s }
+      assert_equal :lora_image, result.value!.fetch(:media)
+    end
+
+    assert_equal false, seen.fetch(:film)
+    assert_equal "johann", seen.fetch(:subject)
+  end
+
   def test_postpro_literal_is_a_media_intent
     assert Master::Io::MediaIntent.handles?("run postpro.rb over ~/Pictures/new")
     assert Master::Io::MediaIntent.handles?("use postpro for these photos in ~/Pictures/new")

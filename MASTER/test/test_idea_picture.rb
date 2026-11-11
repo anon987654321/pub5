@@ -31,6 +31,26 @@ class TestIdeaPicture < Minitest::Test
     end
   end
 
+
+  def test_validate_model_passes_the_subject_to_the_studio_preflight
+    with_script do |script|
+      calls = []
+      runner = lambda do |*argv, **options|
+        calls << [argv, options]
+        ['{"subject":"ragnhild","model":"anon987654321/ragnhild-flux"}', Status.new(true)]
+      end
+
+      result = Master::Io::Exec.stub(:capture2e, runner) do
+        Master::Io::IdeaPicture.new(script:).validate_model(subject: "ragnhild")
+      end
+
+      assert_equal "anon987654321/ragnhild-flux", result.fetch(:model)
+      assert_equal [
+        RbConfig.ruby, script, "--check-model", "--subject", "ragnhild",
+      ], calls.fetch(0).fetch(0)
+    end
+  end
+
   def test_write_reports_failed_studio_output
     with_script do |script|
       runner = lambda { |*args, **options| ["warning\nrender failed\n", Status.new(false)] }

@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
-require_relative "../replicate/lora/merethe/prepare"
+require_relative "../lora/merethe/prepare"
 
 class TestMeretheLoraPackage < Minitest::Test
+  def test_merethe_lora_uses_the_canonical_subject_root
+    assert_equal File.expand_path("../lora/merethe", __dir__), Studio::MeretheLora::SUBJECT_ROOT
+  end
+
   def test_historical_source_inventory_is_complete_and_pinned
     assert_equal 15, Studio::MeretheLora::SOURCE_FILES.size
     assert_equal "8e1955ae130592ab7c20ee266c024f061431c67e", Studio::MeretheLora::SOURCE_COMMIT
@@ -26,7 +30,7 @@ class TestMeretheLoraPackage < Minitest::Test
   end
 
   def test_preparation_is_local_only
-    source = File.read(File.expand_path("../replicate/lora/merethe/prepare.rb", __dir__))
+    source = File.read(File.expand_path("../lora/merethe/prepare.rb", __dir__))
     refute_match(/train_lora|upload_zip|REPLICATE_API_TOKEN/, source)
   end
 end

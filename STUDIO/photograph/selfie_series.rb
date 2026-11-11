@@ -7,57 +7,58 @@ require_relative "idea_picture"
 
 module Studio
   module Visual
-    # A bounded portrait series for a subject with an approved, trained model:
-    # one selfie-style scene per prompt, each rendered still-only through
-    # IdeaPicture's graded pass, each row recorded in the subject's ledger.
-    # This is the committed runner for the selfie chain -- the earlier series
-    # exist only as led artefacts; from now the run is reproducible from the
-    # tree. Wholesome scenes only: a subject's agreement to being photographed
-    # is not a decision to generate intimate framing.
+    # A bounded, still-only LoRA portrait series. Final graded photographs are
+    # written directly to STUDIO/lora/ with a subject/index prefix. No render
+    # directory is created per person.
     class SelfieSeries
       LIMIT = 24
 
       SCENES = [
-        "a mirror selfie in a bright bathroom, morning light",
-        "a golden-hour car window selfie, sunlight across the cheek",
-        "a cafe table selfie, window light from the left, a coffee cup beside",
-        "a walking sidewalk selfie, the street softly out of focus",
-        "a close-up face selfie, natural window light, no flash",
-        "a gym locker mirror selfie after a workout",
-        "a rooftop selfie, the city skyline blurred behind",
-        "a kitchen selfie while cooking, warm lamp light",
-        "a hallway mirror selfie wearing a good jacket",
-        "a winter street selfie in soft overcast light, coat collar up",
-        "a boat deck selfie, summer light, a lake behind",
-        "a backstage-style selfie lit by one warm practical lamp",
+        "an arm's-length smartphone selfie at a bright cafe window, relaxed candid expression",
+        "a city-walk selfie in soft morning light, an understated everyday outfit",
+        "a close portrait selfie outdoors in open shade, leafy background softly blurred",
+        "a mirror selfie in a tidy, naturally lit hallway, casual jacket",
+        "a sunny waterfront selfie with the harbour softly out of focus",
+        "a warm kitchen selfie while making coffee, window light from the side",
+        "a winter street selfie in soft overcast light, coat collar visible",
+        "a rooftop selfie at golden hour, distant skyline softly blurred",
+        "a weekend market selfie with natural candid expression and gentle background detail",
+        "a quiet home-window selfie in late afternoon light, simple neutral clothing",
       ].freeze
 
+      IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
+
       def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil)
+        @subject = subject.to_s
+        raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = Array(scenes)
-        @subject = subject
-        @series = IdeaPicture.new(
-          subject: subject,
-          directory: directory || default_directory(subject),
-          client: client
-        )
-        @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, "out", @subject, "ledger.jsonl")
+        raise ArgumentError, "selfie series needs at least one scene" if @scenes.empty?
+
+        @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
+        @series = IdeaPicture.new(subject: @subject, directory: @directory, client:)
+        @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
 
-      def run(count: 12)
-        unless Integer(count).between?(1, LIMIT)
-          raise ArgumentError, "count must be between 1 and #{LIMIT}"
-        end
+      def run(count: 12, replace: false)
+        total = Integer(count)
+        raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
+
+        # Check the model before deleting old renders or paying for a new one.
+        @series.validate_model!
+        removed = clear_previous_renders! if replace
+        record("replace_cleanup", deleted: removed) if replace
 
         rendered = []
-        count.times do |index|
+        total.times do |index|
           scene = @scenes[index % @scenes.size]
           begin
-            path = @series.write(scene, film: false).fetch("still")
+            stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
+            path = @series.write(scene, film: false, output_stem: stem).fetch("still")
             record("render", index: index, scene: scene, path: path)
             rendered << path
-          rescue StandardError => e
+          rescue StandardError => error
             record("render_attempt", index: index, scene: scene,
-                   error: "#{e.class}: #{e.message[0, 200]}")
+                   error: "#{error.class}: #{error.message[0, 200]}")
           end
         end
         rendered
@@ -65,16 +66,38 @@ module Studio
 
       private
 
-      def default_directory(subject)
-        File.join(IdeaPicture::SUBJECTS, "out", subject, "selfie_series")
+      def clear_previous_renders!
+        patterns = IMAGE_EXTENSIONS.flat_map do |ext|
+          [
+            File.join(@directory, "#{@subject}_selfie_*.#{ext}"),
+            File.join(@directory, "postpro_#{@subject}_selfie_*.#{ext}"),
+          ]
+        end
+        legacy_output = File.join(IdeaPicture::SUBJECTS, @subject, "out")
+        if File.directory?(legacy_output) && !File.symlink?(legacy_output)
+          patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_output, "**", "*.#{ext}") })
+        end
+        legacy_series = File.join(IdeaPicture::SUBJECTS, "out", @subject, "selfie_series")
+        if File.directory?(legacy_series) && !File.symlink?(legacy_series)
+          patterns.concat(IMAGE_EXTENSIONS.map { |ext| File.join(legacy_series, "*.#{ext}") })
+        end
+
+        paths = patterns.flat_map { |pattern| Dir.glob(pattern) }.uniq
+        paths.count do |path|
+          next false if File.symlink?(path) || !File.file?(path)
+
+          File.delete(path)
+          true
+        end
       end
 
       def record(kind, **fields)
-        dir = File.dirname(@ledger_path)
-        FileUtils.mkdir_p(dir)
-        File.open(@ledger_path, "a") do |f|
-          f.puts JSON.generate({ "at" => Time.now.utc.iso8601, "kind" => kind, "subject" => @subject, **fields })
+        directory = File.dirname(@ledger_path)
+        FileUtils.mkdir_p(directory)
+        File.open(@ledger_path, "a", 0o600) do |file|
+          file.puts JSON.generate({ "at" => Time.now.utc.iso8601, "kind" => kind, "subject" => @subject, **fields })
         end
+        File.chmod(0o600, @ledger_path)
       end
     end
   end

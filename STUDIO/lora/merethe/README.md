@@ -1,8 +1,6 @@
 # Merethe identity LoRA
 
-This subject follows the path already used by \`Studio::Visual::IdeaPicture\`:
-\`STUDIO/replicate/lora/<subject>/\`. Do not create a second \`STUDIO/lora/\`
-implementation; \`IdeaPicture::SUBJECTS\` already points here.
+This subject lives beside the other trained identities at `STUDIO/lora/merethe/`. Generated stills land directly in `STUDIO/lora/`; the subject directory holds private model setup, sources, data and weights.
 
 ## Privacy
 
@@ -22,7 +20,7 @@ unless the subject separately agrees to publication and distribution.
 From the repository root:
 
 \`\`\`sh
-ruby STUDIO/replicate/lora/merethe/prepare.rb --recover
+ruby STUDIO/lora/merethe/prepare.rb --recover
 \`\`\`
 
 This downloads the 15 historical originals from commit
@@ -38,7 +36,7 @@ this avoids teaching a general-purpose identity model from intimate images.
 
 Four clean portraits are not enough for a reliable first training. Add at least
 six more suitable photos (eight to fourteen is better) to the local, ignored
-folder \`STUDIO/replicate/lora/merethe/sources/additional/\`. Prefer ordinary,
+folder \`STUDIO/lora/merethe/sources/additional/\`. Prefer ordinary,
 non-intimate photos with her face clearly visible, varied expressions, angles,
 clothing and everyday settings. Avoid filters, stickers, text overlays, heavy
 retouching and repeated near-duplicates. Each image needs a same-basename \`.txt\`
@@ -54,7 +52,7 @@ sources/additional/photo-01.txt
 After adding and reviewing the images, run:
 
 \`\`\`sh
-ruby STUDIO/replicate/lora/merethe/prepare.rb
+ruby STUDIO/lora/merethe/prepare.rb
 \`\`\`
 
 The preflight refuses fewer than 10 or more than 18 images, missing captions,

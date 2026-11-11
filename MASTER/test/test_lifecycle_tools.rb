@@ -26,10 +26,9 @@ class LifecycleToolsSpec < Minitest::Test
   end
 
   def test_media_tool_compatibility_links_point_at_studio
-    # Each entry names its canonical file: dilla and replicate are one-file
-    # entrypoints, and STUDIO/replicate/client.rb is replicate's. lora and
-    # postpro retired with their STUDIO trees; a symlink must not outlive the
-    # tree it points at. Restoration re-adds the link and this row together.
+    # Each compatibility link names its canonical STUDIO owner. LoRA is
+    # routed through STUDIO/photograph.rb; per-subject profiles and data live
+    # below STUDIO/lora and need no second MASTER/tools implementation.
     homes = { "dilla" => ["dilla", "dilla.rb"], "replicate" => ["replicate", "client.rb"] }
     homes.each do |tool, (home, entry_name)|
       link = File.join(ROOT, "tools", tool)

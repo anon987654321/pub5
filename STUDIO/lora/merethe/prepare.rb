@@ -12,6 +12,10 @@ require "uri"
 module Studio
   module MeretheLora
     SUBJECT_ROOT = File.expand_path(__dir__).freeze
+    # Move ignored subject data left at the former path; never follow symlinks
+    # or overwrite a newer file in the canonical location.
+    LEGACY_SUBJECT_ROOT = File.expand_path("../../replicate/lora/merethe", SUBJECT_ROOT).freeze
+    LEGACY_DATA_ENTRIES = %w[sources dataset .cache weights out subject.env consent.yml].freeze
     SOURCE_ROOT = File.join(SUBJECT_ROOT, "sources").freeze
     ADDITIONAL_ROOT = File.join(SOURCE_ROOT, "additional").freeze
     DATASET_ROOT = File.join(SUBJECT_ROOT, "dataset").freeze
@@ -65,6 +69,7 @@ module Studio
     module_function
 
     def recover!
+      migrate_legacy_local_data!
       secure_directory(SOURCE_ROOT)
       SOURCE_FILES.each do |filename, expected_sha|
         uri = URI("#{SOURCE_BASE_URL}/#{filename}")
@@ -81,6 +86,7 @@ module Studio
     end
 
     def prepare!
+      migrate_legacy_local_data!
       secure_directory(SOURCE_ROOT)
       FileUtils.rm_f(ZIP_PATH)
       FileUtils.rm_rf(DATASET_ROOT) if inside_subject?(DATASET_ROOT)
@@ -145,6 +151,22 @@ module Studio
       }
       write_report(report) rescue nil
       report
+    end
+
+    def migrate_legacy_local_data!
+      return false unless File.directory?(LEGACY_SUBJECT_ROOT) && !File.symlink?(LEGACY_SUBJECT_ROOT)
+
+      LEGACY_DATA_ENTRIES.each do |name|
+        source = File.join(LEGACY_SUBJECT_ROOT, name)
+        destination = File.join(SUBJECT_ROOT, name)
+        next unless File.exist?(source) || File.symlink?(source)
+        raise Error, "refusing legacy symlink: #{source}" if File.symlink?(source)
+        raise Error, "legacy data and new data both exist: #{destination}" if File.exist?(destination) || File.symlink?(destination)
+        raise Error, "legacy data is not a regular file or directory: #{source}" unless File.file?(source) || File.directory?(source)
+
+        File.rename(source, destination)
+      end
+      true
     end
 
     def verified_original?(filename)

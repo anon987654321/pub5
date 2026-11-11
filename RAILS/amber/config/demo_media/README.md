@@ -7,7 +7,7 @@ the only thing that changes from one picture to the next.
 
 The catalogue is default.yml, and it maps a seed key to a file in the images folder beside it.
 Today it holds one row, the camel wrap coat. The prompts for seventeen garments and three
-outfits are written in STUDIO/replicate/lora/seed_media.yml and the other nineteen are not yet
+outfits are written in STUDIO/lora/seed_media.yml and the other nineteen are not yet
 rendered and filed, so most demo items still show only the drawn cut-out. Filing a frame is
 enough: the next seed attaches it, and no code changes.
 
@@ -19,8 +19,8 @@ failed seed blocks every deploy. Setting SKIP_DEMO_MEDIA turns attachment off, a
 environment never attaches.
 
 The frames are rendered on Replicate and graded by postpro before they arrive here.
-install_seed_media.rb in STUDIO/replicate/lora/_toolkit files them, and the prompt, model, seed
-and preset of each render are recorded in STUDIO/replicate/lora/seed_media_manifest.yml.
+install_seed_media.rb in STUDIO/lora/_toolkit files them, and the prompt, model, seed
+and preset of each render are recorded in STUDIO/lora/seed_media_manifest.yml.
 
 These graded copies are tracked in git, which is a deliberate exception to the rule against
 committing generated assets. That rule keeps build output and renders out of history because

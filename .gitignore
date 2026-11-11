@@ -344,6 +344,18 @@ postpro_*.tiff.json
 # Subject media is private; deliberate publication requires git add -f.
 STUDIO/lora/*.mp4
 STUDIO/lora/*.mov
+# Generated portrait stills land flat in this root; never publish subject likenesses.
+STUDIO/lora/*.jpg
+STUDIO/lora/*.jpeg
+STUDIO/lora/*.png
+STUDIO/lora/*.webp
+STUDIO/lora/*/ledger.jsonl
+# Legacy subject-data path: keep ignored until local data has migrated.
+STUDIO/replicate/lora/**/sources/
+STUDIO/replicate/lora/**/dataset/
+STUDIO/replicate/lora/**/.cache/
+STUDIO/replicate/lora/**/weights/
+STUDIO/replicate/lora/**/out/
 
 # Stray render folders. Renders default to ~/Downloads/dilla-renders; these names are
 # what a session hand-made inside the tree before that default existed.

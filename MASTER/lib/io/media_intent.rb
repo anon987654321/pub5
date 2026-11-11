@@ -3,6 +3,7 @@
 require "fileutils"
 require "json"
 require "shellwords"
+require_relative "idea_picture"
 require "time"
 require_relative "../boot/paths"
 require_relative "../../contracts/studio"
@@ -42,8 +43,10 @@ module Master
       # "make a video with the lora of me from <still>". The source still is
       # the only argument the reader names; the run stays a dry run until the
       # operator confirms the spend.
-      LORA_VIDEO_RE = /\b(?:make|create|generate|render)\b.*\bvideo\b.*\blora\b/i.freeze
-      LORA_VIDEO_SOURCE_RE = /\bfrom\s+["']?([~\/][^\s"']+)/i.freeze
+      LORA_VIDEO_RE = /\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b/i.freeze
+      LORA_IMAGE_RE = /\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b/i.freeze
+      LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render)\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
+      LORA_VIDEO_SOURCE_RE = /\bfrom\s+["']?((?:~\/|\/|\.\/|\.\.\/|STUDIO\/)[^\s"']+)/i.freeze
       TECHNO_TRACK_RE = /\b(?:make|create|generate|compose|render|produce)\b.*\btechno\b|\btechno\b.*\b(?:track|music|beat|loop|instrumental)\b/i.freeze
       SYNTH_RE = /\b(?:play|generate|create|make|render)\b.*\b(?:sine|square|triangle|saw|white|brown)\b.*\b(?:wave|noise|tone)\b/i.freeze
       # "Play" means the speakers and "make" means a file. A sentence that says
@@ -89,7 +92,7 @@ module Master
         return false if text.match?(ADVICE_RE) || text.match?(DISCUSSION_RE)
         return true if Mov.handles?(text)
 
-        reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
+        lora_selfie_request?(text) || text.match?(LORA_IMAGE_RE) || reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
           text.match?(BACKGROUND_MUSIC_RE) || text.match?(LIVE_AUDIO_DIAGNOSTIC_RE) || text.match?(AUDIO_RE) || postpro_intent?(text) ||
           text.match?(VIDEO_RE) ||
           text.match?(IMAGE_RE) && text.match?(/\b(?:photo|portrait|image|picture)\b/i)
@@ -104,7 +107,9 @@ module Master
         if reference_followup_request?(text) && !text.match?(INDUSTRIAL_TECHNO_RE) && !text.match?(TECHNO_TRACK_RE) && !text.match?(LIVE_STYLE_RE)
           return generate_from_reference(text, root:)
         end
-        return generate_lora_video(text, root:) if text.match?(LORA_VIDEO_RE)
+        return generate_lora_selfies(text, root: MasterPaths.repo) if lora_selfie_request?(text)
+        return generate_lora_video(text, root: MasterPaths.repo) if text.match?(LORA_VIDEO_RE)
+        return generate_lora_image(text, root: MasterPaths.repo) if text.match?(LORA_IMAGE_RE)
         return generate_kick(text, root:) if text.match?(KICK_RE)
         return generate_industrial_techno(text, root:) if text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE)
         return postpro_capability if POSTPRO_CAPABILITY_RE.match?(text)
@@ -794,16 +799,102 @@ module Master
         Result.ok({ output: result, rendered: result, media: :kick_loop, path: result })
       end
 
-      # The lora video intent routes here even though the lora entrypoint is
-      # retired: ScriptDispatch answers with its own truthful refusal instead
-      # of the sentence falling into chat, and the paid run stays a dry run
-      # until the operator confirms it.
-      def generate_lora_video(text, root: MasterPaths.root)
-        source = text.match(LORA_VIDEO_SOURCE_RE)
-        return Result.err("lora video: name the source still, as in: from ~/out/07.jpg", category: :validation) unless source
+      def lora_subject_names(root: MasterPaths.repo)
+        directory = File.join(root, "STUDIO", "lora")
+        return [] unless File.directory?(directory) && !File.symlink?(directory)
 
-        arg = ["--video-replicate", Shellwords.escape(source[1]), "--dry-run"].join(" ")
-        ScriptDispatch.run(root:, tool: "lora", arg:)
+        Dir.children(directory).select do |name|
+          subject = File.join(directory, name)
+          name.match?(/\A[a-zA-Z0-9_-]+\z/) &&
+            File.directory?(subject) &&
+            !File.symlink?(subject) &&
+            %w[subject.env subject.env.example train.yaml].any? { |entry|
+              path = File.join(subject, entry)
+              File.file?(path) && !File.symlink?(path)
+            }
+        end.sort
+      end
+
+      def lora_subjects_in(text, root: MasterPaths.repo)
+        names = lora_subject_names(root:).sort_by { |name| -name.length }
+        names.select { |name| text.to_s.match?(/(?<![a-zA-Z0-9_-])#{Regexp.escape(name)}(?![a-zA-Z0-9_-])/i) }
+      end
+
+      def lora_subject_for(text, root: MasterPaths.repo)
+        named = lora_subjects_in(text, root:).first
+        configured = ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "").to_s.strip.downcase
+        named || (lora_subject_names(root:).include?(configured) ? configured : nil)
+      end
+
+      def lora_selfie_request?(text)
+        text.to_s.match?(LORA_SELFIE_RE) && !lora_subjects_in(text).empty?
+      end
+
+      def lora_count_for(text)
+        token = text.to_s.match(/\b(\d{1,2}|ten|eleven|twelve)\s+selfies?\b/i)&.captures&.first
+        return 10 if token.to_s.downcase == "ten"
+        return 11 if token.to_s.downcase == "eleven"
+        return 12 if token.to_s.downcase == "twelve"
+
+        token ? token.to_i.clamp(1, 24) : 10
+      end
+
+      def generate_lora_selfies(text, root: MasterPaths.repo)
+        subjects = lora_subjects_in(text, root:)
+        return Result.err("lora selfie series: name a configured subject", category: :validation) if subjects.empty?
+
+        count = lora_count_for(text)
+        replace = text.to_s.match?(/\b(?:delete|replace|rerender|re-render)\b/i)
+        # Validate all selected models before deleting a single old render or
+        # paying for the first prediction. One missing profile cannot leave a
+        # half-completed two-person request.
+        begin
+          subjects.each { |subject| IdeaPicture.new.validate_model(subject:) }
+        rescue StandardError => error
+          return Result.err("lora selfie series preflight: #{error.class}: #{error.message}", category: :validation)
+        end
+
+        paths = []
+        details = []
+        subjects.each do |subject|
+          begin
+            subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace:)).map(&:to_s)
+            paths.concat(subject_paths)
+            details << "#{subject}: #{subject_paths.size} render(s)"
+          rescue StandardError => error
+            details << "#{subject}: #{error.class}: #{error.message}"
+          end
+        end
+        return Result.err("lora selfie series: #{details.join("; ")}", category: :infrastructure) if paths.empty?
+
+        rendered = ["lora selfies: #{paths.size} photo(s) in STUDIO/lora/", *details, *paths].join("\n")
+        Result.ok({ output: rendered, rendered:, media: :lora_selfie_series, paths:, details: })
+      end
+
+      def generate_lora_image(text, root: MasterPaths.repo)
+        subject = lora_subject_for(text, root:)
+        return Result.err("lora image: name a configured LoRA subject or set STUDIO_PHOTOGRAPH_SUBJECT", category: :validation) unless subject
+
+        made = IdeaPicture.new.write(text, film: false, subject:)
+        path = made.fetch(:still)
+        Result.ok({ output: path, rendered: path, media: :lora_image, path:, subject: })
+      rescue StandardError => error
+        Result.err("lora image: #{error.class}: #{error.message}", category: :infrastructure)
+      end
+
+      def generate_lora_video(text, root: MasterPaths.repo)
+        source = text.match(LORA_VIDEO_SOURCE_RE)
+        return Result.err("lora video: name the source still, as in: from ~/lora/johann_selfie_01.jpg", category: :validation) unless source
+
+        subject = lora_subject_for(text, root:)
+        return Result.err("lora video: name the LoRA subject or configure STUDIO_PHOTOGRAPH_SUBJECT", category: :validation) unless subject
+
+        motion = "Subtle natural motion, a gentle head turn and relaxed expression. Preserve the source identity, facial features, clothing, framing and setting. #{text}"
+        made = IdeaPicture.new.animate(source[1], subject:, prompt: motion, duration: 5)
+        path = made.fetch(:clip)
+        Result.ok({ output: path, rendered: path, media: :lora_video, path:, still: made.fetch(:still), subject: })
+      rescue StandardError => error
+        Result.err("lora video: #{error.class}: #{error.message}", category: :infrastructure)
       end
 
       def postpro_preset_for(text)

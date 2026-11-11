@@ -3,6 +3,7 @@
 require "json"
 require "fileutils"
 require "rbconfig"
+require "securerandom"
 require_relative "../output_paths"
 require_relative "../replicate/client"
 require_relative "../subprocess"
@@ -28,7 +29,7 @@ module Studio
 
       def initialize(
         client: nil,
-        directory: File.expand_path("~/ideas"),
+        directory: SUBJECTS,
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
         model_manifest: nil
       )
@@ -41,13 +42,41 @@ module Studio
         @model_manifest = model_manifest || default_model_manifest
       end
 
-      def write(words, film: true, duration: 5)
+      def write(words, film: true, duration: 5, output_stem: nil)
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
-        still = render_still(words, stamp)
+        stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
+        still = render_still(words, stem)
         return { "still" => still } unless film
 
-        { "still" => still, "clip" => render_film(words, still, stamp, duration) }
+        { "still" => still, "clip" => render_film(words, still, stem, duration) }
+      end
+
+      # Animate an existing LoRA still; never regenerate or overwrite its source.
+      def animate(still, words, duration: 5)
+        source = File.expand_path(still.to_s)
+        raise ArgumentError, "source still is missing" unless File.file?(source) && !File.symlink?(source)
+        raise ArgumentError, "source still must be jpg, png or webp" unless %w[.jpg .jpeg .png .webp].include?(File.extname(source).downcase)
+        raise ArgumentError, "source still exceeds 25 MB" if File.size(source) > 25 * 1024 * 1024
+
+        seconds = Integer(duration)
+        raise ArgumentError, "duration must be between 1 and 10 seconds" unless seconds.between?(1, 10)
+
+        FileUtils.mkdir_p(@directory)
+        stamp = "#{safe_stem(@subject)}_film_#{Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")}_#{SecureRandom.hex(3)}"
+        { "still" => source, "clip" => render_film(words, source, stamp, seconds) }
+      end
+
+      def validate_model!
+        model = still_model
+        names = client.input_names(model)
+        raise "Replicate model is unavailable or has no readable input schema: #{model}" if names.empty?
+
+        required = %w[prompt]
+        missing = required - names
+        raise "Replicate model #{model} is missing required inputs: #{missing.join(", ")}" unless missing.empty?
+
+        model
       end
 
       private
@@ -56,15 +85,21 @@ module Studio
         @client ||= Studio::ReplicateClient.new
       end
 
-      def render_still(words, stamp)
-        path = File.join(@directory, "#{stamp}.jpg")
+      def render_still(words, stem)
+        path = File.join(@directory, "#{safe_stem(stem)}.jpg")
+        raise "refusing to replace an existing still: #{path}" if File.exist?(path)
+
         output = client.predict(still_model, still_input(words), timeout: 600)
         client.download_url(first_url(output), path)
-        grade(path)
+        graded = grade(path)
+        File.delete(path) if graded != path && File.file?(path)
+        graded
       end
 
       def render_film(words, still, stamp, duration)
-        path = File.join(@directory, "#{stamp}.mp4")
+        path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
+        raise "refusing to replace an existing film: #{path}" if File.exist?(path)
+
         output = client.predict(FILM, film_input(words, still, duration), timeout: 600)
         client.download_url(first_url(output), path)
         path
@@ -130,17 +165,20 @@ module Studio
 
       def still_model
         path = @model_manifest
-        unless File.file?(path)
-          raise "no trained Replicate version for #{@subject}; expected #{path}. " \
-                "Complete an approved training run or pass a subject with a valid training manifest."
+        if File.file?(path)
+          version = JSON.parse(File.read(path))["version"].to_s
+          raise "training manifest has no valid owner/model:version: #{path}" unless version.match?(/\A[^\/\s:]+\/[^:\s]+:[^:\s]+\z/)
+
+          return version
         end
 
-        version = JSON.parse(File.read(path))["version"].to_s
-        unless version.match?(/\A[^\/\s:]+\/[^:\s]+:[^:\s]+\z/)
-          raise "training manifest has no valid owner/model:version: #{path}"
-        end
+        # A private Replicate model may be pinned by a local training manifest,
+        # or named in subject.env. Bare owner/name resolves the provider's latest
+        # version at prediction time; MASTER records the prediction id/cost.
+        model = subject_env["REPLICATE_MODEL"].to_s.strip
+        return model if model.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
 
-        version
+        raise "no trained Replicate version for #{@subject}; expected #{path} or REPLICATE_MODEL in #{@subject}/subject.env"
       rescue JSON::ParserError => error
         raise "invalid training manifest #{path}: #{error.message}"
       end
@@ -173,6 +211,13 @@ module Studio
         ext = File.extname(path)
         stem = File.basename(path, ext).gsub(/[^0-9A-Za-z_-]+/, "_")
         File.join(File.dirname(path), "postpro_#{stem}_*_v1#{ext}")
+      end
+
+      def safe_stem(value)
+        stem = value.to_s
+        raise ArgumentError, "output name must be a simple filename stem" unless stem.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}\z/)
+
+        stem
       end
 
       def first_url(output)

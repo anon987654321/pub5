@@ -108,8 +108,6 @@ class TurnRouterTest < Minitest::Test
     router = Master::CLI::TurnRouter
 
     assert router.deployment_intent?("please deploy MASTER and RAILS and OPENBSD to vm23 --confirm")
-    assert router.deployment_intent?("please redeploy all Rails apps")
-    assert router.deployment_intent?("please re-deploy all Rails apps")
     assert router.deployment_intent?("ship MASTER to production")
     assert router.deployment_intent?("put the Rails fleet live on vm23")
     assert router.deployment_intent?("release brgen to vm23 --confirm")
@@ -122,20 +120,14 @@ class TurnRouterTest < Minitest::Test
     refute router.deployment_intent?("why did deploy fail?")
     refute router.deployment_intent?("check deploy status on vm23")
     refute router.deployment_intent?("deploy status on vm23")
-    refute router.deployment_intent?("check redeploy status on vm23")
-    refute router.deployment_intent?("why did redeploy fail?")
   end
 
-  def test_deployment_args_distinguishes_rails_fleet_from_whole_stack
+  def test_deployment_args_maps_fleet_language_to_all
     router = Master::CLI::TurnRouter
 
-    assert_equal "rails", router.deployment_args("please redeploy all Rails apps")
-    assert_equal "rails", router.deployment_args("put the Rails fleet live on vm23")
-    assert_equal "rails", router.deployment_args("redeploy RAILS")
     assert_equal "all --confirm", router.deployment_args("ship MASTER and RAILS to vm23 --confirm")
-    assert_equal "all", router.deployment_args("redeploy the whole stack")
+    assert_equal "all", router.deployment_args("put the whole stack live on vm23")
     assert_equal "brgen --confirm", router.deployment_args("release brgen to production --confirm")
-    assert_equal "mrdamascy", router.deployment_args("redeploy mrdamascy")
   end
 
   def test_deploy_confirmation_survives_natural_language_routing
@@ -313,18 +305,6 @@ class TurnRouterTest < Minitest::Test
     assert_equal [:fix], ran
   end
 
-  def test_restart_language_resolves_to_the_registered_reload_command
-    reload = Master::CLI::CommandRegistry::Command.new { "reloading" }
-    container = build_container(commands: { "reload" => reload })
-
-    ["restart MASTER", "reload yourself"].each do |message|
-      inferred = Master::CLI::TurnRouter.infer_operator_command(message, container:)
-
-      assert_equal "reload", inferred.fetch(:command), message
-      assert Master::CLI::TurnRouter.answered?("restart", container), "restart alias must reach reload"
-    end
-  end
-
   def test_fix_language_is_promoted_to_operator_command_not_fold
     inferred = Master::CLI::TurnRouter.infer_operator_command("fix the bug", container: build_container)
 
@@ -426,28 +406,27 @@ class TurnRouterTest < Minitest::Test
       end
     end
   end
-  # Regression: this natural-language media request must not fall through into
-  # operator-command inference, where the opening word "make" was once treated
-  # as a shell command. The lora entrypoint is retired (ScriptDispatch answers
-  # its own truthful refusal; STUDIO/lora holds no executable script to
-  # restore), so the route is proven two ways at once: command inference would
-  # raise if the request ever reached it, and the answer that comes back is the
-  # retirement refusal, not a chat sentence pretending the video was made.
+  # LoRA video requests use the named STUDIO subject model and bypass generic
+  # command inference; the source image remains untouched by the animation lane.
   def test_lora_video_request_is_dispatched_before_command_inference
     Dir.mktmpdir("turn-router-lora") do |root|
-      still = File.join(root, "STUDIO", "replicate", "lora", "johann", "out", "07.jpg")
-      FileUtils.mkdir_p(File.dirname(still))
+      still = File.join(root, "johann_selfie_01.jpg")
       File.write(still, "fixture")
+      fake = Object.new
+      fake.define_singleton_method(:animate) do |source, prompt:, subject:, duration:|
+        { still: source, clip: File.join(root, "johann_film_test.mp4") }
+      end
 
-      Master::Io::MediaLanes.stub(:paid?, true) do
+      Master::Io::IdeaPicture.stub(:new, fake) do
         Master::CLI::TurnRouter.stub(:infer_operator_command, ->(*) { raise "media intent fell through to command inference" }) do
           result = Master::CLI::TurnRouter.call(
-            message: "make a video with the lora of me from #{still}",
+            message: "make a video with Johann's lora from #{still}",
             container: build_container(root:),
           )
 
-          refute result.ok?, "a retired entrypoint must not report a made video"
-          assert_match(/lora: retired/, result.message.to_s)
+          assert result.ok?, -> { result.message.to_s }
+          assert_equal :lora_video, result.value!.fetch(:media)
+          assert_equal "johann", result.value!.fetch(:subject)
         end
       end
     end

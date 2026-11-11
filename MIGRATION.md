@@ -101,8 +101,10 @@ RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
 
 ### Phase 4 — STUDIO
 
-- dilla, photograph, postpro and the Replicate client are carried.
-- The Merethe subject-specific LoRA package (`replicate/lora/merethe/`)
+- dilla, photograph, postpro and the Replicate client are carried. Johann
+  and Ragnhild subject profiles are restored under `STUDIO/lora/`; new graded
+  portrait renders are private, flat files in that root.
+- The Merethe subject-specific LoRA package (`lora/merethe/`)
   carries its recovery/preflight code, private-use instructions, environment
   example and tests. The 15 original subject photographs, derived dataset,
   ZIP and weights remain ignored local data; no image recovery, provider upload
