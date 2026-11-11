@@ -119,7 +119,7 @@ module Master
         FileUtils.mkdir_p(@dir)
         summary = totals(rows).merge(
           "generated_at" => Time.now.utc.iso8601, "revision" => checkout_revision,
-          "apps" => apps, "widths" => @widths, "error" => error,
+          "directory" => @dir, "apps" => apps, "widths" => @widths, "error" => error,
           "unresolved" => unresolved, "rows" => rows.map(&:to_h)
         )
         File.write(File.join(@dir, "index.json"), JSON.pretty_generate(summary))
