@@ -179,7 +179,7 @@ module Master
 
         def prompt_suffix(phase, last_ok, destination:, focused:)
           phase_text = focused ? "" : bounded_prompt_segment(phase_label(phase), 10)
-          git = bounded_prompt_segment(git_prompt_text, 16)
+          git = git_prompt_segment
 
           [git, prompt_destination(destination), phase_text, phase_prompt(last_ok, phase)].reject(&:empty?)
         end
