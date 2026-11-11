@@ -99,7 +99,7 @@ class TestMemory < Minitest::Test
       directory = File.join(root, ".master")
       FileUtils.mkdir_p(directory)
       path = File.join(directory, "memory.yml")
-      corrupt = "memory: [unterminated\\n"
+      corrupt = "memory: [unterminated\n"
       File.write(path, corrupt)
 
       error = assert_raises(IOError) { Master::Ground::Memory.new(root:) }
