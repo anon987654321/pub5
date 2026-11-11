@@ -15,19 +15,14 @@ class TestDependencyContracts < Minitest::Test
     assert_match(/^  reek \(~> 6\.4\)/, lockfile)
   end
 
-  def test_prism_dependency_matches_ruby_language_support
+  def test_prism_dependency_matches_supported_ruby_language_support
     require "prism"
 
-    # .ruby-version is the one owner of the Ruby pin; a former dig went to
-    # laws.yml for a languages.ruby.version key no file carried, so the pin
-    # assertion passed on nil.
-    pinned = File.read(File.join(ROOT, ".ruby-version")).strip
-
-    assert_equal "4.0.5", pinned, ".ruby-version pins the recommended Ruby"
     assert_operator Gem::Version.new(Prism::VERSION), :>=, Gem::Version.new("1.7.0")
+    assert_operator Operator::Environment::SUPPORTED_RUBY_MIN, :<=, Gem::Version.new(RUBY_VERSION)
   end
 
-  def test_rubocop_uses_the_repository_ruby_pin
+  def test_rubocop_does_not_pin_a_ruby_patch
     paths = [
       File.join(ROOT, ".rubocop.yml"),
       File.join(REPO, "RAILS", "__shared", ".rubocop.yml"),
@@ -35,21 +30,17 @@ class TestDependencyContracts < Minitest::Test
 
     paths.each do |path|
       refute_match(/TargetRubyVersion:/, File.read(path),
-                   "#{path} must derive its Ruby target from .ruby-version")
+                   "#{path} must accept the installed compatible Ruby")
     end
   end
 
-  def test_every_ruby_version_file_agrees
-    pins = Dir[File.join(REPO, "{,MASTER/,RAILS/*/}.ruby-version")].to_h do |path|
-      [path.sub("#{REPO}/", ""), File.read(path).strip]
+  def test_repository_does_not_pin_an_exact_ruby_patch
+    pins = Dir[File.join(REPO, "{,MASTER/,MASTER/web/,RAILS/*/}.ruby-version")]
+    assert_empty pins, "Ruby patch pins must not return: #{pins.inspect}"
+
+    [File.join(ROOT, "Gemfile.lock"), File.join(REPO, "MASTER", "web", "Gemfile.lock")].each do |lock|
+      refute_match(/^RUBY VERSION\n/, File.read(lock), "#{lock} must not pin an interpreter")
     end
-
-    refute_empty pins, "no .ruby-version found - this test would pass having measured nothing"
-    assert_equal 1, pins.values.uniq.size, "the pin disagrees with itself: #{pins.inspect}"
-    assert_equal ["4.0.5"], pins.values.uniq, "the repository runtime is pinned to Ruby 4.0.5"
-
-    lock = File.read(File.join(ROOT, "Gemfile.lock"))
-    assert_match(/^  ruby 4\.0\.5$/, lock)
   end
 
 end
