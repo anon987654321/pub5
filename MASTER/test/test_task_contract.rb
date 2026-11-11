@@ -109,6 +109,64 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  def test_preservation_summary_does_not_pass_uncovered_required_dimensions
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new(
+      "PASS", ["rendered_visual_custody"], nil
+    )
+
+    CONTRACT.with_current(contract) do
+      CONTRACT.attach_plan!("bound-plan")
+      row = CONTRACT.record_preservation!(
+        path: File.join(Master::REPO_ROOT, "page.html"),
+        format: "html", before: "same", after: "same", result:,
+        verifier: "visual_custody"
+      )
+      evidence = CONTRACT.preservation_evidence
+
+      assert_equal %w[visual_identity layout], row.fetch("dimensions")
+      assert_equal "INCONCLUSIVE", evidence.fetch("status")
+      assert_includes evidence.fetch("missing_dimensions"), "accessibility"
+      assert_equal "bound-plan", evidence.fetch("plan_digest")
+    end
+  end
+
+  def test_preservation_summary_requires_a_fix_plan_binding
+    contract = CONTRACT.build(intent: "functional_change", scope: ["worker.rb"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new(
+      "PASS", ["rendered_visual_custody"], nil
+    )
+
+    CONTRACT.with_current(contract) do
+      CONTRACT.record_preservation!(
+        path: File.join(Master::REPO_ROOT, "worker.rb"),
+        format: "html", before: "same", after: "same", result:,
+        verifier: "visual_custody"
+      )
+      evidence = CONTRACT.preservation_evidence
+
+      assert_equal "INCONCLUSIVE", evidence.fetch("status")
+      assert_match(/not bound to a FixPlan/, evidence.fetch("reason"))
+    end
+  end
+
+  def test_unregistered_preservation_verifier_cannot_claim_external_evidence
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["rendered_visual_custody"], nil)
+
+    CONTRACT.with_current(contract) do
+      error = assert_raises(CONTRACT::Invalid) do
+        CONTRACT.record_preservation!(
+          path: File.join(Master::REPO_ROOT, "page.html"),
+          format: "html", before: "a", after: "a", result:,
+          verifier: "model_says_pass"
+        )
+      end
+      assert_match(/unregistered preservation verifier/, error.message)
+      assert_equal "not_measured", CONTRACT.preservation_evidence.fetch("status")
+    end
+  end
+
   def test_transaction_rejects_out_of_scope_paths_before_snapshotting
     Dir.mktmpdir("task-contract-transaction") do |root|
       contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
