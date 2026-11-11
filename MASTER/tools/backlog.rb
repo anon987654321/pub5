@@ -189,10 +189,11 @@ module Backlog
     OWNED_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
     RECEIPT_PATH = ".master/backlog-executor.jsonl"
 
-    def initialize(root: Master::ROOT, repo_root: Master::REPO_ROOT, mission_class: Master::Fix::Mission)
+    def initialize(root: Master::ROOT, repo_root: Master::REPO_ROOT, mission_class: nil)
+      require_relative "../lib/fix/mission" unless defined?(Master::Fix::Mission)
       @root = File.expand_path(root)
       @repo_root = File.expand_path(repo_root)
-      @mission_class = mission_class
+      @mission_class = mission_class || Master::Fix::Mission
     end
 
     def enqueue_next!(model: nil, effort: "medium")
