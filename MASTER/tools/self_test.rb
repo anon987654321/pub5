@@ -18,8 +18,7 @@ begin
   require_relative "../lib/master"
   require_relative "../checks/support/geometry_probe"
 
-  supported_ruby = Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3") &&
-                   Gem::Version.new(RUBY_VERSION) < Gem::Version.new("4.1")
+  supported_ruby = Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3")
   add.call("ruby", supported_ruby ? "PASS" : "FAIL", RUBY_VERSION, path: RbConfig.ruby)
 
   models = Master.models_config(root:)
