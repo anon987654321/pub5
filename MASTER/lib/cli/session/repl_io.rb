@@ -5,6 +5,8 @@ module Master
     # The REPL's terminal: help, line reading, completion, history, exit,
     # multiline input and the first-boot screens.
     class Session
+      QUICK_COMMAND_COMPLETIONS = %w[/fix /status /model /session /help].freeze
+
       private
 
       def run_help(command = nil)
@@ -128,7 +130,7 @@ module Master
           elsif line.match?(%r{\A/\S*\z})
             SLASH_COMMANDS.select { |cmd| cmd.start_with?(target.to_s) }
           elsif line.strip.empty?
-            SLASH_COMMANDS.reject { |cmd| %w[/exit /quit].include?(cmd) }.map { |cmd| "#{cmd} " }
+            QUICK_COMMAND_COMPLETIONS.map { |cmd| "#{cmd} " }
           else
             []
           end
@@ -228,6 +230,17 @@ module Master
           end
         end
         lines.join("\n")
+      end
+
+      def print_quick_start
+        return unless $stdin.tty? && $stdout.tty?
+
+        Master::Trace::Dmesg.status(
+          "input0",
+          "describe the task in plain language; Tab shows common commands; /help lists the full surface",
+        )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.quick_start", event_bus: @refs.bus)
       end
 
       def print_repo_tree
