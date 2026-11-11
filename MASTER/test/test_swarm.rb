@@ -208,11 +208,9 @@ class TestSwarm < Minitest::Test
         worker_finished << task
       end
     end
-    tasks = [
     tasks = (1..10).map do |index|
       { role: :"role_#{index}", task: index == 1 ? "first" : "task-#{index}", context_slice: {} }
     end
-    ]
     coordinator_thread = original_new.call do
       Thread.stub(:new, lambda { |*args, **kwargs, &worker_block|
         calls += 1
