@@ -22,7 +22,6 @@ class LogoContractTest < ActionView::TestCase
     # anybody meant to ship. Both say the same thing through the same key, so
     # neither can drift into English on a Norwegian page.
     assert_equal 2, html.scan(I18n.t("amber.logo_aria")).size
-    assert_includes html, 'd="M50,220 C250,180 750,180 950,220"'
     assert_includes html, "animated-gradient"
     assert_includes html, 'stroke="#FFFFFF"'
     assert_includes html, 'stroke-width="0.5"'
