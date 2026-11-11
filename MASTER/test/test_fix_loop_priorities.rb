@@ -73,6 +73,7 @@ class TestFixLoopPriorities < Minitest::Test
   def test_rule_group_joins_partial_startup_before_propagating_thread_error
     joined = false
     worker = Object.new
+    worker.define_singleton_method(:alive?) { false }
     worker.define_singleton_method(:join) { joined = true }
     calls = 0
     runner = Object.new.extend(Master::Fix::FixLoop::PassRunner::LlmStage)
