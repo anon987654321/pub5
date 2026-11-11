@@ -16,7 +16,6 @@
   let splatTargetStages = null;
   let splatMorphFromPositions = null;
   let semanticMorphStartedAt = 0;
-  let faceIntroSettled = false;
   let semanticBlend = 0;
   let semanticBlendTarget = 0;
   let semanticMorphInProgress = false;
@@ -452,6 +451,7 @@
     document.documentElement.dataset.faceSubjectKind = semanticDescriptor?.kind || "";
     document.documentElement.dataset.faceSubjectLabel = semanticDescriptor?.label || "";
     document.documentElement.dataset.faceSubjectSequence = semanticDescriptor?.sequence?.join(">") || "";
+    document.documentElement.dataset.faceSubjectMotion = reducedMotionEnabled() ? "instant" : "staged";
     window.dispatchEvent(new CustomEvent("master:face-subject", {
       detail: {
         form,
@@ -1201,13 +1201,20 @@
       const positionAttribute = splatProxy.geometry.getAttribute("position");
       const positions = positionAttribute?.array;
       if (semanticMorphInProgress && positions && splatTargetPositions) {
-        const ease = reducedMotion ? 1 : 0.065;
+        const stageDuration = Math.max(80, finite(SEMANTIC_SUBJECT.morph_stage_duration_ms, 280));
+        const stageGap = Math.max(0, finite(SEMANTIC_SUBJECT.morph_stage_gap_ms, 72));
+        const from = splatMorphFromPositions || positions;
         let settled = true;
         for (let index = 0; index < positions.length; index += 1) {
+          const point = Math.floor(index / 3);
+          const stage = splatTargetStages?.[point] || 0;
+          const elapsed = now - semanticMorphStartedAt - (stage * stageGap);
+          const raw = reducedMotion ? 1 : Math.max(0, Math.min(1, elapsed / stageDuration));
+          const progress = raw * raw * (3 - (2 * raw));
           const target = splatTargetPositions[index];
-          const next = positions[index] + (target - positions[index]) * ease;
-          positions[index] = Math.abs(target - next) < 0.0005 ? target : next;
-          if (positions[index] !== target) settled = false;
+          const start = from[index];
+          positions[index] = raw >= 1 ? target : start + (target - start) * progress;
+          if (raw < 1) settled = false;
         }
         positionAttribute.needsUpdate = true;
         semanticMorphInProgress = !settled;
