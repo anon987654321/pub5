@@ -140,8 +140,12 @@ screenshot count or previous revision.
   accessibility and runtime commands to TaskContract proof types. The executor
   runs only argv-allowlisted commands and records command/output digests, exit
   status, working directory and duration; unknown commands remain ineligible.
-  Scope intake refuses symlinked path components and hard-linked files. This is
-  still partial: dependency-aware scheduling across structured owners, broader
+  Scope intake refuses symlinked path components, hard-linked files and
+  noncanonical relative paths. Dependency-aware scheduling across structured
+  owners, broader acceptance-command coverage beyond the current allowlist and
+  automatic root-checkbox reconciliation remain open. These runtime paths
+  still need their authored regression suites run on the selected repository
+  Ruby.
   acceptance-command coverage beyond the current allowlist and automatic root
   checkbox reconciliation remain open. These runtime paths still need their
   authored regression suites run on the selected repository Ruby.
