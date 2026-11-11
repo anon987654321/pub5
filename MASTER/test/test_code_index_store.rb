@@ -77,8 +77,8 @@ class TestCodeIndexStore < Minitest::Test
   def test_reopened_definitions_are_retained_across_files_and_snapshots
     Dir.mktmpdir do |root|
       root = File.realpath(root)
-      File.write(File.join(root, "part_a.rb"), "module Shared\\n  class Widget; end\\nend\\n")
-      File.write(File.join(root, "part_b.rb"), "module Shared\\n  class Widget; end\\n")
+      File.write(File.join(root, "part_a.rb"), "module Shared\n  class Widget; end\nend\n")
+      File.write(File.join(root, "part_b.rb"), "module Shared\n  class Widget; end\n")
 
       index = Index.new(root:, persist: true).build
       definitions = index.find("Shared::Widget").select { |symbol| symbol.type == :class }
@@ -111,9 +111,9 @@ class TestCodeIndexStore < Minitest::Test
   def test_path_scoped_build_is_not_claimed_as_a_complete_index
     Dir.mktmpdir do |root|
       root = File.realpath(root)
-      File.write(File.join(root, "root.rb"), "class RootOnly; end\\n")
+      File.write(File.join(root, "root.rb"), "class RootOnly; end\n")
       Dir.mkdir(File.join(root, "lib"))
-      File.write(File.join(root, "lib", "nested.rb"), "class Nested; end\\n")
+      File.write(File.join(root, "lib", "nested.rb"), "class Nested; end\n")
       index = Index.new(root:).build(path: "lib")
 
       assert index.partial?
