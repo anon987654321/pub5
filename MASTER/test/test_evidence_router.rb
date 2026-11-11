@@ -19,6 +19,16 @@ class TestEvidenceRouter < Minitest::Test
     assert_equal :repository, Router.classify("Read MASTER/lib/core.rb and explain the fold.")
   end
 
+  def test_repository_prompt_requires_systematic_local_investigation
+    prompt = Router.prompt_for(:repository)
+
+    assert_includes prompt, "read the complete relevant files"
+    assert_includes prompt, "Trace callers, dependencies"
+    assert_includes prompt, "focused tests"
+    assert_includes prompt, "Do not ask the operator to paste files or logs"
+    assert_includes prompt, "current primary documentation"
+  end
+
   def test_routes_browser_and_device_questions_to_capabilities
     assert_equal :browser, Router.classify("Open the FetLife website and inspect the account page.")
     assert_equal :device, Router.classify("Scan nearby Wi-Fi and Bluetooth devices on Android.")
