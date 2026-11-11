@@ -470,7 +470,7 @@ tokens:
       still_modes: [idle]
       still_after_activity_ms: 700
       default_mode: idle
-      default_topology: papua-mask
+      default_topology: carved-field
       entropy: 0.18
       confidence: 0.86
       attention: 1.0
@@ -1032,8 +1032,52 @@ tokens:
             brow_line: 0.0
             nose_line: 0.0
     spatial:
+      # The old "papua-mask" spelling is retained only as an event alias;
+      # it is not a separate or culturally specific rendered style.
+      carved_field:
+        # Original stylised portrait dials; deliberately unrelated to any
+        # named ceremonial mask pattern or sacred character.
+        brow_relief: 0.030
+        orbital_recess: 0.034
+        cheek_plane: 0.022
+        nose_ridge: 0.018
+        chin_plane: 0.014
+        asymmetry: 0.010
+      semantic_subject:
+        enabled: true
+        schema_version: 1
+        unknown_kind: keep_portrait
+        min_confidence: 0.42
+        max_label_chars: 48
+        max_features: 6
+        morph_stage_duration_ms: 280
+        morph_stage_gap_ms: 72
+        custom_geometry:
+          enabled: true
+          max_parts: 6
+          allowed_primitives: [box, sphere, ring, cylinder, beam]
+          axes: [x, y, z]
+          center_limit: 0.45
+          size_min: 0.06
+          size_max: 0.62
+          default_size: [0.18, 0.18, 0.18]
+        kinds:
+          bridge: [deck, towers, cables, piers]
+          tree: [trunk, branches, canopy]
+          planet: [body, orbit, moons]
+          molecule: [bonds, atoms]
+          book: [pages, spine, cover]
+          clock: [dial, markers, hands]
+          building: [base, tower, windows]
+          flower: [stem, petals, center]
+          vehicle: [chassis, wheels, cab]
+      topology_aliases:
+        papua-mask: carved-field
       topology_profiles:
-        papua-mask: { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
+        # Legacy identifier retained for older event producers; the canonical
+        # default is the original carved-field portrait below.
+        papua-mask:   { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
+        carved-field: { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
         face:        { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
         codebase:    { tilt_x: -0.08, tilt_y: 0.10, density: 1.18, fracture: 0.08 }
         ecology:     { tilt_x: 0.12, tilt_y: -0.06, density: 1.32, fracture: 0.12 }

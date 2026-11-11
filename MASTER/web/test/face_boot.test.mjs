@@ -144,7 +144,7 @@ test("web lip-sync samples visemes at a finer audio-clock cadence", () => {
 
 test("FaceWorld keeps portrait rendering separate from repository overlays", () => {
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
-  assert.match(world, /const portrait = topology === "face" \|\| topology === "papua-mask";/);
+  assert.match(world, /const portrait = topology === "face" \|\| topology === "carved-field" \|\| topology === "papua-mask";/);
   assert.match(world, /node\.visible = !portrait/);
   assert.match(world, /edges\.visible = !portrait/);
   // The splat field stays off a portrait unless a semantic subject is morphing in.
@@ -175,13 +175,15 @@ test("FaceWorld morphs the primary face field into a topic with a bounded fallba
   assert.match(world, /function inferSubjectForm\(value\)/);
   assert.match(world, /counterpoint/);
   assert.match(world, /function buildFaceSubjectPositions\(form\)/);
-  assert.match(world, /MASTER_FACE\?\.setSubjectScatter\?\.\(facePositions\)/);
+  assert.match(world, /MASTER_FACE\?\.setSubjectScatter\?\.\(facePositions, faceStages\)/);
   assert.match(world, /MASTER_FACE\?\.resetSubjectScatter\?\.\(\)/);
   assert.match(world, /faceSubjectRenderer/);
-  assert.match(world, /function setSubjectForm\(value\)/);
+  assert.match(world, /function setSubjectForm\(value, descriptor = null\)/);
   assert.match(world, /function setSubjectFromText\(value\)/);
   assert.match(world, /semanticMorphInProgress/);
-  assert.match(world, /reducedMotion \? 1 : 0\.065/);
+  assert.match(world, /morph_stage_duration_ms/);
+  assert.match(world, /morph_stage_gap_ms/);
+  assert.match(world, /stageIndices/);
   assert.match(world, /splatProxy\.visible = activePoints > 0 && !primaryMorphActive/);
   assert.doesNotMatch(world, /splatProxy\.visible = activePoints > 0;/);
   assert.match(world, /faceCanvas\.style\.opacity/);
@@ -198,11 +200,86 @@ test("FaceWorld morphs the primary face field into a topic with a bounded fallba
   assert.match(part2, /semanticMorphRestoreOnSettled/);
   assert.match(part3, /semanticMorphTarget == null \? automaticMorphTarget/);
   assert.match(part3, /faceMat\.uniforms\.uMorph\.value = morphCurrent/);
-  assert.match(runtime, /function setSubjectScatter\(positions\)/);
+  assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
+  assert.match(runtime, /uSemanticStaged/);
+  assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+  assert.match(runtime, /event === 'visual_subject'/);
+  assert.match(runtime, /new CustomEvent\('master:visual-subject'/);
   assert.match(runtime, /function resetSubjectScatter\(\)/);
   assert.match(runtime, /MASTER_FACE_WORLD\?\.setSubjectFromText\?\.\(v\)/);
 });
 
+
+test("the carved-field portrait is the canonical default and keeps legacy aliases", () => {
+  const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
+  const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const shader = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
+
+  assert.match(rules, /default_topology: carved-field/);
+  assert.match(rules, /carved_field:/);
+  assert.match(state, /topology: CONTRACT_STATE\.default_topology \|\| "carved-field"/);
+  assert.match(rules, /topology_aliases:\s+papua-mask: carved-field/);
+  assert.match(state, /CONTRACT_SPATIAL\.topology_aliases/);
+  assert.match(world, /topology === "carved-field" \|\| topology === "papua-mask"/);
+  assert.match(shader, /FACE_CARVE_ORBITAL/);
+  assert.match(shader, /FACE_CARVE_CHEEK/);
+  assert.match(shader, /FACE_CARVE_NOSE/);
+  assert.match(shader, /FACE_CARVE_CHIN/);
+  assert.match(shader, /float eyeSocket/);
+  assert.match(shader, /float browShelf/);
+});
+
+test("semantic object subjects are validated, bounded and feature-staged", () => {
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
+  const shader = readFileSync(join(publicDir, "face.part2.txt"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+
+  assert.match(rules, /semantic_subject:/);
+  assert.match(world, /function normalizeVisualSubject\(subject\)/);
+  assert.match(world, /return SUBJECT_HINTS\.find\(\(\[, pattern\]\) => pattern\.test\(text\)\)\?\.\[0\] \|\| "face"/);
+  assert.match(world, /declaredKind === "object" \|\| !subjectFeatures\(declaredKind\)\.length/);
+  assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
+  assert.match(world, /const explicitSubject = visualSubject !== null && visualSubject !== undefined/);
+  assert.match(world, /const next = descriptor \? "object" : "face"/);
+  assert.match(world, /Math\.min\(6, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features/);
+  assert.match(world, /function buildSemanticSubjectGeometry\(descriptor, count, scale\)/);
+  assert.match(rules, /custom_geometry:/);
+  assert.match(rules, /allowed_primitives: \[box, sphere, ring, cylinder, beam\]/);
+  assert.match(world, /function normalizeCustomParts\(subject\)/);
+  assert.match(world, /const maximum = Math.max\(1, Math.min\(6/);
+  assert.match(world, /centerLimit/);
+  assert.match(world, /sizeMax/);
+  assert.match(world, /function customPrimitivePoint\(part, t, b, c\)/);
+  assert.match(world, /part\.primitive === "box"/);
+  assert.match(world, /part\.primitive === "sphere"/);
+  assert.match(world, /part\.primitive === "ring"/);
+  assert.match(world, /part\.primitive === "cylinder"/);
+  assert.match(world, /part\.primitive === "beam"/);
+  assert.match(world, /const custom = descriptor\.kind === "custom"/);
+  assert.match(world, /customPrimitivePoint\(partByKey\.get\(feature\), local, b, c\)/);
+  assert.match(world, /detail\.visual_subject \|\| detail\.visualSubject \|\| null/);
+  assert.match(world, /function setSubjectFromVisual\(value, descriptor\)/);
+  assert.match(world, /master:visual-subject/);
+  assert.match(world, /payload\.visual_subject/);
+  assert.match(shader, /attribute float semanticStage/);
+  assert.match(shader, /float stageGate = smoothstep/);
+  assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
+  assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+});
+
+test("completed assistant replies route semantic subjects through the canonical event bus", () => {
+  const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
+  const events = readFileSync(join(publicDir, "master_events.js"), "utf8");
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+
+  assert.match(chat, /type: 'assistant:visual-subject'/);
+  assert.match(chat, /window\.MASTEREvents\.dispatch\(visualEvent\)/);
+  assert.match(events, /"assistant:visual-subject": \{ targets: \["face"\], fields: \["text", "visual_subject"\] \}/);
+  assert.match(world, /type === "assistant:visual-subject"/);
+  assert.match(world, /scheduleFaceRestoration\(\)/);
+});
 test("Face state derives modes and aliases from the shared contract", () => {
   const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
   const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
@@ -1252,8 +1329,9 @@ test("thinking face keeps the single composer ready beneath an ASCII spinner", (
   assert.ok(part5.includes("_turnQueueRunning ? 'thinking' : ''"));
   assert.ok(part5.includes("rootBody.dataset.queuePaused = _turnQueuePaused ? '1' : '0';"));
   assert.ok(part5.includes("syncThinkingStar();"));
-  assert.ok(cliSpinner.includes("TICK_SECONDS = 0.10"));
-  assert.ok(cliSpinner.includes('SPINNER_FRAMES = ["|", "/", "-", "\\\\"].freeze'));
+  assert.ok(cliSpinner.includes("TICK_SECONDS = 0.18"));
+  assert.ok(cliSpinner.includes('SPINNER_FRAMES = [".", ":", ";", "o", "O", "0", "@", "0", "O", "o", ";", ":", ".", "+", "x", "*"].freeze'));
+  assert.ok(cliSpinner.includes("SPIN_WHITE_HOT_START = 0.92"));
 });
 
 test("web chat records monotonic first-token, first-audio and reply-completion latency", () => {

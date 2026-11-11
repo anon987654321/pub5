@@ -560,6 +560,20 @@ OPERATOR_RENDERED_contract:
     - Brand marks are original artwork; wordmark typography does not replace semantic page headings.
     - Generated artwork keeps critical copy editable and out of generative photographic pixels.
     - Never copy another work's wordmark, key art, characters, or protected expression.
+    - Culturally specific visual references remain attributed to their named communities and places; unrelated traditions are never collapsed into a generic style.
+    - Sacred, restricted, funerary, or community-governed motifs are not reproduced as interface decoration; use an original formal abstraction unless permission and context are explicit.
+    - Semantic morphs represent only declared or clearly grounded subjects; uncertain classification stays with the face or a neutral field rather than inventing anatomy or symbolism.
+    - Every staged morph has one real semantic cause, a bounded carrier budget, and a still final-state equivalent under reduced motion.
+
+OPERATOR_RENDERED_cultural_source_fidelity:
+  parent: OPERATOR_RENDERED
+  statement: "A culturally specific visual reference is decontextualized, misattributed, or copied without permission."
+  resolution: review
+
+OPERATOR_RENDERED_semantic_motion:
+  parent: OPERATOR_RENDERED
+  statement: "A morph animates without a grounded semantic cause, bounded stages, or a reduced-motion final state."
+  resolution: review
 
 # ---
 

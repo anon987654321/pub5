@@ -11,7 +11,7 @@
     lastEventAt: 0,
     entropy: 0.18,
     confidence: 0.86,
-    topology: "papua-mask",
+    topology: "carved-field",
     provider: "unknown",
     active: false
   };

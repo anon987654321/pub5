@@ -2,11 +2,11 @@
 // Import map + MASTER_ASSET_PATHS resolve tail module imports at runtime.
 const FACE_RUNTIME_SOURCES = [
   "face.part1.txt?v=d5e6972c5d",
-  "face.part2.txt?v=c801eff38c",
+  "face.part2.txt?v=43072be478",
   "face.part3.txt?v=01005ed2e5",
   "face_speech_runtime.js?v=1d92dfa106",
   "face_speech_playback.js?v=52a9561149",
-  "face.part5.txt?v=44aaaf7290"
+  "face.part5.txt?v=1ebbb2f715"
 ];
 const FACE_RUNTIME_URL = (name) => new URL(name, document.baseURI).href;
 const FACE_RUNTIME_FETCH = (name) => fetch(FACE_RUNTIME_URL(name), { cache: "force-cache" }).then((response) => {

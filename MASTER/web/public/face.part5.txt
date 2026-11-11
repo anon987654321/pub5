@@ -893,6 +893,25 @@ function handleFaceNamedEvent(event, data) {
     } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:council_speech_event", err); }
     return true;
   }
+  if (event === 'visual_subject') {
+    try {
+      const payload = JSON.parse(raw || '{}');
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        const normalized = window.MASTEREvents?.normalize?.({
+          type: 'assistant:visual-subject',
+          data: payload
+        });
+        if (normalized && window.MASTEREvents?.dispatch) {
+          window.MASTEREvents.dispatch(normalized);
+        } else {
+          window.dispatchEvent(new CustomEvent('master:visual-subject', { detail: payload }));
+        }
+      }
+    } catch (err) {
+      window.MASTER_LOG?.warn?.("face_runtime:visual_subject_event", err);
+    }
+    return true;
+  }
   if (event === 'confidence') {
     const c = parseFloat(raw);
     if (!isNaN(c)) {
@@ -1595,14 +1614,26 @@ window._chatSpeakLast = () => {
   if (text) enqueueSpeech(text);
 };
 
-function setSubjectScatter(positions) {
+function setSubjectScatter(positions, stages = null) {
   const attribute = faceGeom?.getAttribute?.("scatter");
-  if (!faceScatter || !attribute || !positions || positions.length !== faceScatter.length) return false;
+  const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
+  if (!faceScatter || !attribute || !stageAttribute || !positions || positions.length !== faceScatter.length) return false;
+  if (stages && stages.length !== faceSeeds.length) return false;
   for (let i = 0; i < positions.length; i++) {
     if (!Number.isFinite(Number(positions[i]))) return false;
   }
+  if (stages) {
+    for (let i = 0; i < stages.length; i++) {
+      const stage = Number(stages[i]);
+      if (!Number.isFinite(stage) || stage < 0 || stage > 1) return false;
+    }
+  }
   faceScatter.set(positions);
   attribute.needsUpdate = true;
+  stageAttribute.array.fill(0);
+  if (stages) stageAttribute.array.set(stages);
+  stageAttribute.needsUpdate = true;
+  if (faceMat?.uniforms?.uSemanticStaged) faceMat.uniforms.uSemanticStaged.value = stages ? 1 : 0;
   semanticMorphTarget = 0;
   semanticMorphRestoreOnSettled = false;
   if (faceReducedMotionActive()) {
@@ -1617,6 +1648,12 @@ function resetSubjectScatter() {
   if (!faceScatter || !FACE_SCATTER_HOME || !attribute) return false;
   faceScatter.set(FACE_SCATTER_HOME);
   attribute.needsUpdate = true;
+  const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
+  if (stageAttribute) {
+    stageAttribute.array.fill(0);
+    stageAttribute.needsUpdate = true;
+  }
+  if (faceMat?.uniforms?.uSemanticStaged) faceMat.uniforms.uSemanticStaged.value = 0;
   semanticMorphTarget = 1;
   semanticMorphRestoreOnSettled = true;
   if (faceReducedMotionActive()) {

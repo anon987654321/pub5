@@ -303,7 +303,20 @@ window._chatOnDone = () => {
   const stageBar = document.getElementById('pipeline-stage');
   if (stageBar) stageBar.textContent = '';
   const finished = (_streamEl?.textContent || '').trim();
-  if (finished) window._chatRememberReply?.(finished);
+  if (finished) {
+    window._chatRememberReply?.(finished);
+    const visualEvent = window.MASTEREvents?.normalize?.({
+      type: 'assistant:visual-subject',
+      data: { text: finished }
+    });
+    if (visualEvent && window.MASTEREvents?.dispatch) {
+      window.MASTEREvents.dispatch(visualEvent);
+    } else {
+      window.dispatchEvent(new CustomEvent('master:visual-subject', {
+        detail: { text: finished }
+      }));
+    }
+  }
   window._chatCollapseLongBlock?.(_streamEl);
   // The turn's confidence is spent with the turn.
   delete document.body.dataset.confidence;

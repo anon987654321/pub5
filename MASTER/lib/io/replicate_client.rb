@@ -455,7 +455,7 @@ module Master
 
         # Do not allocate a second in-memory copy of a potentially multi-GB ZIP.
         Tempfile.create(["replicate-upload-", ".multipart"], binmode: true) do |body|
-          write_multipart_body(body, path, boundary, mime:)
+          write_multipart_body(body, path, boundary, mime:, source_stat:)
           body.flush
           body.rewind
           req.body_stream = body
@@ -465,7 +465,7 @@ module Master
         end
       end
 
-      def write_multipart_body(body, path, boundary, mime:)
+      def write_multipart_body(body, path, boundary, mime:, source_stat:)
         filename = File.basename(path).gsub(/[^A-Za-z0-9._-]/, "_")
         filename = "upload.bin" if filename.empty?
         body.write("--#{boundary}\r\n".b)

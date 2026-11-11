@@ -37,7 +37,7 @@
   ));
   const DEFAULTS = Object.freeze({
     mode: CONTRACT_STATE.default_mode || "idle",
-    topology: CONTRACT_STATE.default_topology || "papua-mask",
+    topology: CONTRACT_STATE.default_topology || "carved-field",
     entropy: Number(CONTRACT_STATE.entropy ?? 0.18),
     confidence: Number(CONTRACT_STATE.confidence ?? 0.86),
     attention: Number(CONTRACT_STATE.attention ?? 1),
@@ -86,6 +86,12 @@
     if (!registry || typeof registry.classifyEvent !== "function") return {};
     const name = String(detail.name || detail.mode || text || "event");
     try { return registry.classifyEvent(name, detail) || {}; } catch (_) { return {}; }
+  }
+
+  function canonicalTopology(value) {
+    const topology = String(value || DEFAULTS.topology).toLowerCase();
+    const aliases = CONTRACT_SPATIAL.topology_aliases || {};
+    return String(aliases[topology] || topology);
   }
 
   function modeFor(detail = {}) {
@@ -145,7 +151,7 @@
     const explicitMode = modeFor(payload);
 
     state.mode = explicitMode || state.mode;
-    state.topology = String(payload.canonical_topology || payload.topology || registry.topology || state.topology);
+    state.topology = canonicalTopology(payload.canonical_topology || payload.topology || registry.topology || state.topology);
     state.entropy = clamp(payload.entropy ?? registry.entropy, state.entropy);
     state.confidence = clamp(payload.confidence ?? registry.confidence, state.confidence);
     state.attention = clamp(payload.attention, state.attention);

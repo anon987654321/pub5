@@ -12,6 +12,10 @@
   let splatBasePositions = null;
   let splatTargetPositions = null;
   let semanticForm = "face";
+  let semanticDescriptor = null;
+  let splatTargetStages = null;
+  let splatMorphFromPositions = null;
+  let semanticMorphStartedAt = 0;
   let semanticBlend = 0;
   let semanticBlendTarget = 0;
   let semanticMorphInProgress = false;
@@ -71,25 +75,351 @@
       Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
   }
 
-  const SUBJECT_FORMS = new Set(["face", "fugue", "wave", "orbit", "architecture", "leaf", "network", "constellation"]);
+  const SEMANTIC_SUBJECT = SPATIAL.semantic_subject || {};
+  const SUBJECT_FORMS = new Set(["face", "fugue", "wave", "orbit", "architecture", "leaf", "network", "constellation", "object"]);
   const SUBJECT_HINTS = [
     ["fugue", /\b(fugue|counterpoint|polyphony|music|melody|rhythm|beat|jazz|dilla|song|harmony|symphony|tempo|chord)\b/i],
     ["wave", /\b(audio|sound|wave|frequency|signal|radio|spectrum|pitch|voice|speech|vibration)\b/i],
     ["architecture", /\b(architecture|building|house|bridge|city|structure|tower|room|design|geometry|facade)\b/i],
     ["leaf", /\b(nature|forest|tree|leaf|plant|garden|ecology|flower|root|branch|growth)\b/i],
     ["orbit", /\b(space|planet|cosmos|star|orbit|galaxy|solar|universe|astronomy|celestial)\b/i],
-    ["network", /\b(network|graph|system|code|program|repo|repository|dependency|software|git|master|rails|openbsd|studio|github|test|fix|api|model|latency)\b/i]
+    ["network", /\b(network|graph|code|program|repo|repository|dependency|software|git|master|rails|openbsd|studio|github|api|model|latency|database|algorithm|compiler|computer|server|protocol|codebase)\b/i]
   ];
+  const OBJECT_HINTS = [
+    ["bridge", /\b(bridge|suspension bridge|span|viaduct)\b/i],
+    ["tree", /\b(tree|forest|oak|pine|trunk|canopy)\b/i],
+    ["planet", /\b(planet|earth|mars|jupiter|saturn|orbiting body)\b/i],
+    ["molecule", /\b(molecule|atom|chemical bond|protein structure)\b/i],
+    ["book", /\b(book|open pages|paperback|hardcover|chapter)\b/i],
+    ["clock", /\b(clock|watch|timepiece|dial|hour hand)\b/i],
+    ["building", /\b(skyscraper|office building|apartment building|tower block|high-rise|facade)\b/i],
+    ["flower", /\b(flower|blossom|petal|rose|sunflower)\b/i],
+    ["vehicle", /\b(vehicle|car|automobile|bicycle|train|truck)\b/i]
+  ];
+
+  function subjectFeatures(kind) {
+    const configured = SEMANTIC_SUBJECT.kinds?.[kind];
+    return Array.isArray(configured) ? configured.map((name) => String(name)) : [];
+  }
+
+  function customGeometryContract() {
+    return SEMANTIC_SUBJECT.custom_geometry || {};
+  }
+
+  function boundedVector(value, fallback, minimum, maximum, symmetric = false) {
+    if (value === undefined || value === null) return fallback.slice();
+    if (!Array.isArray(value) || value.length !== 3) return null;
+    const values = value.map((entry) => Number(entry));
+    if (!values.every(Number.isFinite)) return null;
+    return values.map((entry) => symmetric
+      ? Math.max(-maximum, Math.min(maximum, entry))
+      : Math.max(minimum, Math.min(maximum, entry)));
+  }
+
+  function normalizeCustomParts(subject) {
+    const contract = customGeometryContract();
+    if (!contract.enabled || !Array.isArray(subject.parts)) return null;
+    const maximum = Math.max(1, Math.min(6,
+      Math.floor(finite(contract.max_parts, SEMANTIC_SUBJECT.max_features || 6))));
+    if (subject.parts.length < 1 || subject.parts.length > maximum) return null;
+
+    const primitives = new Set(
+      Array.isArray(contract.allowed_primitives) ? contract.allowed_primitives.map(String) : []
+    );
+    const axes = new Set(Array.isArray(contract.axes) ? contract.axes.map(String) : ["x", "y", "z"]);
+    const centerLimit = Math.max(0.1, Math.min(0.75, finite(contract.center_limit, 0.45)));
+    const sizeMin = Math.max(0.02, Math.min(0.2, finite(contract.size_min, 0.06)));
+    const sizeMax = Math.max(sizeMin, Math.min(0.8, finite(contract.size_max, 0.62)));
+    const defaultSize = boundedVector(contract.default_size, [0.18, 0.18, 0.18], sizeMin, sizeMax);
+    if (!defaultSize) return null;
+
+    const seen = new Set();
+    const parts = [];
+    for (const raw of subject.parts) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+      const key = String(raw.key || raw.name || "")
+        .toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+      const primitive = String(raw.primitive || raw.shape || "").toLowerCase().trim();
+      if (!/^[a-z0-9][a-z0-9_-]{0,23}$/.test(key) || seen.has(key) || !primitives.has(primitive)) return null;
+
+      const center = boundedVector(raw.center, [0, 0, 0], 0, centerLimit, true);
+      const size = boundedVector(raw.size, defaultSize, sizeMin, sizeMax);
+      if (!center || !size) return null;
+
+      const axis = String(raw.axis || "x").toLowerCase();
+      if (primitive === "beam" && !axes.has(axis)) return null;
+      seen.add(key);
+      parts.push(Object.freeze({
+        key, primitive, center: Object.freeze(center),
+        size: Object.freeze(size), axis
+      }));
+    }
+    return Object.freeze(parts);
+  }
+
+  function normalizeVisualSubject(subject) {
+    if (!SEMANTIC_SUBJECT.enabled || !subject || typeof subject !== "object" || Array.isArray(subject)) return null;
+    const declaredKind = String(subject.kind || "").toLowerCase().trim();
+    const declaredForm = String(subject.form || subject.type || "").toLowerCase().trim();
+    const kind = declaredKind === "object" || !subjectFeatures(declaredKind).length
+      ? declaredForm || declaredKind
+      : declaredKind;
+    const confidence = Math.max(0, Math.min(1, finite(subject.confidence, 0.76)));
+    if (confidence < finite(SEMANTIC_SUBJECT.min_confidence, 0.42)) return null;
+
+    if (kind === "custom") {
+      const parts = normalizeCustomParts(subject);
+      if (!parts) return null;
+      const allowed = parts.map((part) => part.key);
+      const source = Array.isArray(subject.sequence) ? subject.sequence
+        : Array.isArray(subject.features) ? subject.features : allowed;
+      const requested = source.map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object") return entry.key || entry.name || "";
+        return "";
+      }).map((entry) => String(entry).toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24));
+      const order = [...new Set(requested.filter((name) => allowed.includes(name)))];
+      allowed.forEach((name) => { if (!order.includes(name)) order.push(name); });
+      const limit = Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6))));
+      const sequence = order.slice(0, limit);
+      const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
+      const label = String(subject.label || subject.name || "object")
+        .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLabel);
+      return Object.freeze({ kind, label: label || "object", confidence, features: sequence, sequence, parts });
+    }
+
+    const allowed = subjectFeatures(kind);
+    if (!allowed.length) return null;
+    const source = Array.isArray(subject.sequence) ? subject.sequence
+      : Array.isArray(subject.features) ? subject.features : allowed;
+    const requested = source.map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (entry && typeof entry === "object") return entry.key || entry.name || "";
+      return "";
+    }).map((entry) => String(entry).toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24));
+    const order = [...new Set(requested.filter((name) => allowed.includes(name)))];
+    allowed.forEach((name) => { if (!order.includes(name)) order.push(name); });
+    const limit = Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6))));
+    const sequence = order.slice(0, limit);
+    const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
+    const label = String(subject.label || subject.name || kind)
+      .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLabel);
+    return Object.freeze({ kind, label: label || kind, confidence, features: sequence, sequence });
+  }
+
+  function inferVisualSubject(value) {
+    const text = String(value || "").normalize("NFKC").slice(0, 6000);
+    if (!text.trim()) return null;
+    const candidates = OBJECT_HINTS.map(([kind, pattern], priority) => {
+      const matcher = new RegExp(pattern.source, pattern.flags.replace("g", "") + "g");
+      const matches = [...text.matchAll(matcher)];
+      return {
+        kind,
+        count: matches.length,
+        firstIndex: matches[0]?.index ?? Infinity,
+        label: matches[0]?.[0] || "",
+        priority
+      };
+    }).filter((candidate) => candidate.count > 0);
+    candidates.sort((a, b) =>
+      b.count - a.count || a.firstIndex - b.firstIndex || a.priority - b.priority
+    );
+    const best = candidates[0];
+    if (!best) return null;
+    const confidence = Math.min(0.84, 0.62 + Math.max(0, best.count - 1) * 0.055);
+    return normalizeVisualSubject({
+      kind: best.kind,
+      label: best.label,
+      confidence,
+      sequence: subjectFeatures(best.kind)
+    });
+  }
 
   function inferSubjectForm(value) {
     const text = String(value || "").normalize("NFKC").slice(0, 6000);
     if (!text.trim()) return "face";
-    return SUBJECT_HINTS.find(([, pattern]) => pattern.test(text))?.[0] || "constellation";
+    return SUBJECT_HINTS.find(([, pattern]) => pattern.test(text))?.[0] || "face";
+  }
+
+  function spherePoint(u, v, center, radii) {
+    const theta = u * Math.PI * 2;
+    const phi = Math.acos(1 - 2 * v);
+    const sinPhi = Math.sin(phi);
+    return [
+      center[0] + Math.cos(theta) * sinPhi * radii[0],
+      center[1] + Math.cos(phi) * radii[1],
+      center[2] + Math.sin(theta) * sinPhi * radii[2]
+    ];
+  }
+
+  function linePoint(a, b, t) {
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t
+    ];
+  }
+
+  function customPrimitivePoint(part, t, b, c) {
+    const center = part.center;
+    const size = part.size;
+    const angle = t * Math.PI * 2;
+    const jitter = (c - 0.5) * 0.08;
+    const scaled = (value, halfExtent) => (value - 0.5) * 2 * halfExtent;
+
+    if (part.primitive === "sphere") {
+      return spherePoint(t, b, center, size);
+    }
+    if (part.primitive === "box") {
+      const face = Math.min(5, Math.floor(b * 6));
+      if (face === 0 || face === 1) {
+        return [center[0] + (face === 0 ? -size[0] : size[0]),
+          center[1] + scaled(t, size[1]), center[2] + scaled(c, size[2])];
+      }
+      if (face === 2 || face === 3) {
+        return [center[0] + scaled(t, size[0]),
+          center[1] + (face === 2 ? -size[1] : size[1]), center[2] + scaled(c, size[2])];
+      }
+      return [center[0] + scaled(t, size[0]), center[1] + scaled(c, size[1]),
+        center[2] + (face === 4 ? -size[2] : size[2])];
+    }
+    if (part.primitive === "ring") {
+      return [center[0] + Math.cos(angle) * size[0],
+        center[1] + Math.sin(angle) * size[1], center[2] + jitter * size[2]];
+    }
+    if (part.primitive === "cylinder") {
+      const cylinderAngle = b * Math.PI * 2;
+      return [center[0] + Math.cos(cylinderAngle) * size[0],
+        center[1] + scaled(t, size[1]), center[2] + Math.sin(cylinderAngle) * size[2]];
+    }
+    if (part.primitive === "beam") {
+      const axis = part.axis === "y" ? 1 : part.axis === "z" ? 2 : 0;
+      const first = (axis + 1) % 3;
+      const second = (axis + 2) % 3;
+      const point = center.slice();
+      point[axis] += scaled(t, size[axis]);
+      point[first] += scaled(b, size[first]);
+      point[second] += scaled(c, size[second]);
+      return point;
+    }
+    return center.slice();
+  }
+
+  function semanticFeaturePoint(kind, feature, t, b, c) {
+    const side = b < 0.5 ? -1 : 1;
+    const angle = t * Math.PI * 2;
+    const jitter = (c - 0.5) * 0.035;
+    if (kind === "bridge") {
+      if (feature === "deck") return [1.72 * (t - 0.5), -0.16 + jitter, (b - 0.5) * 0.08];
+      if (feature === "towers") return [side * 0.42, -0.18 + t * 0.92, jitter];
+      if (feature === "cables") return [side * (0.42 + t * 0.43), 0.70 - t * 0.82, jitter];
+      return [side * 0.42, -0.84 + t * 0.66, jitter];
+    }
+    if (kind === "tree") {
+      if (feature === "trunk") return [(b - 0.5) * 0.10, -0.85 + t * 1.42, jitter];
+      if (feature === "branches") return [side * t * 0.58, 0.02 + t * 0.56, jitter + t * 0.12];
+      return spherePoint(t, b, [0, 0.57, 0], [0.62, 0.47, 0.42]);
+    }
+    if (kind === "planet") {
+      if (feature === "body") return spherePoint(t, b, [0, 0, 0], [0.57, 0.57, 0.57]);
+      if (feature === "orbit") return [Math.cos(angle) * 0.88, Math.sin(angle) * 0.30, Math.sin(angle) * 0.62];
+      return spherePoint(t, b, [0.83, 0.24, 0.02], [0.12, 0.12, 0.12]);
+    }
+    if (kind === "molecule") {
+      const atoms = [[-0.48, 0.16, 0], [0.38, 0.30, 0], [0.02, -0.40, 0.05], [0.50, -0.38, -0.08]];
+      if (feature === "bonds") {
+        const bondIndex = Math.min(2, Math.floor(b * 3));
+        const pairs = [[0, 1], [0, 2], [2, 3]];
+        const pair = pairs[bondIndex];
+        return linePoint(atoms[pair[0]], atoms[pair[1]], t);
+      }
+      const atom = atoms[Math.min(atoms.length - 1, Math.floor(b * atoms.length))];
+      return spherePoint(t, c, atom, [0.13, 0.13, 0.13]);
+    }
+    if (kind === "book") {
+      if (feature === "pages") {
+        const pageSide = b < 0.5 ? -1 : 1;
+        return [pageSide * (0.04 + t * 0.54), 0.12 + (c - 0.5) * 0.12, -0.08 + c * 0.30];
+      }
+      if (feature === "spine") return [0, -0.48 + t * 0.96, 0.10 + jitter];
+      return [side * (0.06 + t * 0.55), 0.13 + jitter, 0.28 + (c - 0.5) * 0.035];
+    }
+    if (kind === "clock") {
+      if (feature === "dial") return [Math.cos(angle) * 0.57, Math.sin(angle) * 0.57, jitter];
+      if (feature === "markers") {
+        const markerAngle = Math.floor(t * 12) * Math.PI / 6;
+        return [Math.cos(markerAngle) * 0.48, Math.sin(markerAngle) * 0.48, 0.015];
+      }
+      const handAngle = b < 0.5 ? -Math.PI / 3 : Math.PI / 2.8;
+      return [Math.cos(handAngle) * t * (b < 0.5 ? 0.34 : 0.47), Math.sin(handAngle) * t * (b < 0.5 ? 0.34 : 0.47), 0.035];
+    }
+    if (kind === "building") {
+      if (feature === "base") return [1.15 * (t - 0.5), -0.72 + jitter, (b - 0.5) * 0.62];
+      if (feature === "tower") return [(b - 0.5) * 0.66, -0.66 + t * 1.48, jitter];
+      const row = Math.floor(t * 8);
+      const column = Math.floor(b * 5);
+      return [(column - 2) * 0.16, (row / 7 - 0.42) * 1.35, 0.36 + jitter];
+    }
+    if (kind === "flower") {
+      if (feature === "stem") return [(b - 0.5) * 0.06, -0.88 + t * 1.20, jitter];
+      if (feature === "petals") {
+        const petalAngle = angle;
+        const radius = 0.16 + t * 0.45;
+        return [Math.cos(petalAngle) * radius, 0.30 + Math.sin(petalAngle) * radius * 0.72, Math.sin(petalAngle) * 0.12];
+      }
+      return spherePoint(t, b, [0, 0.30, 0.10], [0.15, 0.14, 0.14]);
+    }
+    if (kind === "vehicle") {
+      if (feature === "chassis") return [1.12 * (t - 0.5), -0.20 + jitter, (b - 0.5) * 0.28];
+      if (feature === "wheels") {
+        const wheelSide = b < 0.5 ? -0.43 : 0.43;
+        return [wheelSide + Math.cos(angle) * 0.18, -0.37 + Math.sin(angle) * 0.18, 0.08];
+      }
+      return [0.13 + (t - 0.5) * 0.42, 0.04 + jitter, 0.12 + (b - 0.5) * 0.24];
+    }
+    return spherePoint(t, b, [0, 0, 0], [0.48, 0.48, 0.48]);
+  }
+
+  function buildSemanticSubjectGeometry(descriptor, count, scale) {
+    const custom = descriptor.kind === "custom";
+    const parts = custom && Array.isArray(descriptor.parts) ? descriptor.parts : [];
+    const features = custom ? parts.map((part) => part.key) : subjectFeatures(descriptor.kind);
+    const requested = Array.isArray(descriptor.sequence) ? descriptor.sequence : features;
+    const sequence = [...new Set(requested.filter((name) => features.includes(name)))];
+    features.forEach((name) => { if (!sequence.includes(name)) sequence.push(name); });
+    const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
+    const partByKey = new Map(parts.map((part) => [part.key, part]));
+    const positions = new Float32Array(count * 3);
+    const stages = new Float32Array(count);
+    const stageIndices = new Uint8Array(count);
+    const stageCount = Math.max(1, ordered.length);
+    for (let i = 0; i < count; i += 1) {
+      const stage = Math.min(stageCount - 1, Math.floor(i * stageCount / count));
+      const start = Math.floor(stage * count / stageCount);
+      const end = Math.max(start + 1, Math.floor((stage + 1) * count / stageCount));
+      const local = (i - start) / Math.max(1, end - start - 1);
+      const feature = ordered[stage];
+      const b = seeded(i, 81 + stage);
+      const c = seeded(i, 97 + stage);
+      const point = custom
+        ? customPrimitivePoint(partByKey.get(feature), local, b, c)
+        : semanticFeaturePoint(descriptor.kind, feature, local, b, c);
+      const offset = i * 3;
+      positions[offset] = point[0] * scale;
+      positions[offset + 1] = point[1] * scale;
+      positions[offset + 2] = point[2] * scale;
+      stages[i] = stage / stageCount;
+      stageIndices[i] = stage;
+    }
+    return { positions, stages, stageIndices, sequence: ordered };
   }
 
   function buildSubjectPositions(form) {
     if (!splatBasePositions) return null;
     if (form === "face") return splatBasePositions.slice();
+    if (form === "object" && semanticDescriptor) {
+      return buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34).positions;
+    }
 
     const positions = new Float32Array(splatBasePositions.length);
     const count = splatCount;
@@ -155,6 +485,9 @@
   // adding a second cloud around it.
   function buildFaceSubjectPositions(form) {
     const faceScatter = window.MASTER_FACE?.faceScatter;
+    if (form === "object" && semanticDescriptor && faceScatter?.length) {
+      return buildSemanticSubjectGeometry(semanticDescriptor, faceScatter.length / 3, 0.52).positions;
+    }
     if (!faceScatter || faceScatter.length < 3 || faceScatter.length % 3 !== 0) return null;
 
     const count = faceScatter.length / 3;
@@ -220,33 +553,74 @@
     return positions;
   }
 
-  function setSubjectForm(value) {
-    const form = SUBJECT_FORMS.has(String(value || "").toLowerCase())
-      ? String(value).toLowerCase()
-      : "constellation";
-    if (form === semanticForm && splatTargetPositions) return form;
-    semanticForm = form;
-    semanticBlendTarget = form === "face" ? 0 : 1;
-    splatTargetPositions = buildSubjectPositions(form);
+  function subjectSignature(subject) {
+    return subject ? [subject.kind, subject.label, subject.sequence.join(",")].join("|") : "";
+  }
 
-    const facePositions = form === "face" ? null : buildFaceSubjectPositions(form);
+  function setSubjectForm(value, descriptor = null) {
+    const requested = String(value || "").toLowerCase();
+    const normalized = normalizeVisualSubject(descriptor);
+    const form = requested === "object" && normalized
+      ? "object"
+      : SUBJECT_FORMS.has(requested) && requested !== "object" ? requested
+      : "face";
+    const nextDescriptor = form === "object" ? normalized : null;
+    if (form === semanticForm && subjectSignature(nextDescriptor) === subjectSignature(semanticDescriptor) &&
+        (splatTargetPositions || form === "face")) return form;
+
+    semanticForm = form;
+    semanticDescriptor = nextDescriptor;
+    semanticBlendTarget = form === "face" ? 0 : 1;
+    const proxyGeometry = form === "object" && semanticDescriptor && splatCount > 0
+      ? buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34)
+      : null;
+    splatTargetPositions = proxyGeometry?.positions || buildSubjectPositions(form);
+    splatTargetStages = proxyGeometry?.stageIndices || null;
+    const currentPositions = splatProxy?.geometry?.getAttribute?.("position")?.array;
+    splatMorphFromPositions = currentPositions
+      ? new Float32Array(currentPositions)
+      : splatBasePositions?.slice() || null;
+    semanticMorphStartedAt = nowMs();
+
+    const primaryGeometry = form === "object" && semanticDescriptor && window.MASTER_FACE?.faceScatter?.length
+      ? buildSemanticSubjectGeometry(semanticDescriptor, window.MASTER_FACE.faceScatter.length / 3, 0.52)
+      : null;
+    const facePositions = form === "face" ? null : primaryGeometry?.positions || buildFaceSubjectPositions(form);
+    const faceStages = primaryGeometry?.stages || null;
     nativeSubjectField = form === "face"
       ? window.MASTER_FACE?.resetSubjectScatter?.() === true
-      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions) === true);
-    // If the primary renderer can take the semantic field, let its actual face
-    // vertices morph and keep the secondary cloud dormant. Older/no-WebGL builds
-    // retain the bounded FaceWorld cloud as a graceful fallback.
-    semanticMorphInProgress = nativeSubjectField ? false : Boolean(splatTargetPositions);
+      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages) === true);
+    // The primary field uses the face renderer's existing spring. The bounded
+    // FaceWorld point field is the compatibility path, never a second renderer.
+    semanticMorphInProgress = !nativeSubjectField && Boolean(splatTargetPositions && splatProxy);
     document.documentElement.dataset.faceSubject = form;
     document.documentElement.dataset.faceSubjectRenderer = nativeSubjectField ? "primary-points" : "face-world-fallback";
+    document.documentElement.dataset.faceSubjectKind = semanticDescriptor?.kind || "";
+    document.documentElement.dataset.faceSubjectLabel = semanticDescriptor?.label || "";
+    document.documentElement.dataset.faceSubjectSequence = semanticDescriptor?.sequence?.join(">") || "";
+    document.documentElement.dataset.faceSubjectMotion = reducedMotionEnabled() ? "instant" : "staged";
     window.dispatchEvent(new CustomEvent("master:face-subject", {
-      detail: { form, active: semanticBlendTarget > 0, renderer: nativeSubjectField ? "primary-points" : "face-world-fallback" }
+      detail: {
+        form,
+        active: semanticBlendTarget > 0,
+        renderer: nativeSubjectField ? "primary-points" : "face-world-fallback",
+        kind: semanticDescriptor?.kind || null,
+        label: semanticDescriptor?.label || null,
+        sequence: semanticDescriptor?.sequence || [],
+        confidence: semanticDescriptor?.confidence ?? null
+      }
     }));
     return form;
   }
 
   function setSubjectFromText(value) {
-    return setSubjectForm(inferSubjectForm(value));
+    const descriptor = inferVisualSubject(value);
+    return descriptor ? setSubjectForm("object", descriptor) : setSubjectForm(inferSubjectForm(value));
+  }
+
+  function setSubjectFromVisual(value, descriptor) {
+    const normalized = normalizeVisualSubject(descriptor);
+    return normalized ? setSubjectForm("object", normalized) : setSubjectFromText(value);
   }
 
   // The semantic subject follows the active conversation and returns to the
@@ -258,6 +632,7 @@
   let subjectRestoreTimer = null;
   let subjectTransitionTimer = null;
   let pendingSubjectForm = null;
+  let pendingSubjectDescriptor = null;
   let subjectTransitionGeneration = 0;
 
   function clearSubjectRestoreTimer() {
@@ -270,13 +645,20 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
     subjectTransitionGeneration += 1;
     return setSubjectForm("face");
   }
 
-  function setConversationSubject(value) {
-    const next = inferSubjectForm(value);
-    if (next === semanticForm && !pendingSubjectForm) return next;
+  function setConversationSubject(value, visualSubject = null) {
+    const explicitSubject = visualSubject !== null && visualSubject !== undefined;
+    const descriptor = explicitSubject
+      ? normalizeVisualSubject(visualSubject)
+      : inferVisualSubject(value);
+    const next = descriptor ? "object" : "face";
+    const signature = subjectSignature(descriptor);
+    if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
+        !pendingSubjectForm) return next;
 
     const currentMorph = Number(window.MASTER_FACE?.morphCurrent);
     const faceStillMorphing = semanticForm === "face" && nativeSubjectField &&
@@ -284,6 +666,7 @@
 
     if (next !== "face" && pendingSubjectForm && semanticForm === "face") {
       pendingSubjectForm = next;
+      pendingSubjectDescriptor = descriptor;
       return next;
     }
 
@@ -291,6 +674,7 @@
         (semanticForm !== "face" || faceStillMorphing)) {
       if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
       pendingSubjectForm = next;
+      pendingSubjectDescriptor = descriptor;
       const generation = ++subjectTransitionGeneration;
       if (semanticForm !== "face") setSubjectForm("face");
       const deadline = Date.now() + SUBJECT_MORPH_SETTLE_TIMEOUT_MS;
@@ -299,9 +683,11 @@
         const morph = Number(window.MASTER_FACE?.morphCurrent);
         if (!Number.isFinite(morph) || morph >= 0.995 || Date.now() >= deadline) {
           const form = pendingSubjectForm;
+          const subject = pendingSubjectDescriptor;
           pendingSubjectForm = null;
+          pendingSubjectDescriptor = null;
           subjectTransitionTimer = null;
-          if (form && form !== "face") setSubjectForm(form);
+          if (form && form !== "face") setSubjectForm(form, subject);
           return;
         }
         subjectTransitionTimer = setTimeout(advanceWhenFaceIsResting, 40);
@@ -313,8 +699,9 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
     subjectTransitionGeneration += 1;
-    return setSubjectForm(next);
+    return setSubjectForm(next, descriptor);
   }
 
   function scheduleFaceRestoration() {
@@ -813,8 +1200,8 @@
     const budget = window.MASTER_FACE_STATE?.renderBudget?.() || {};
     const reducedMotion = reducedMotionEnabled(state);
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(state.mode) ?? state.mode === "idle";
-    const topology = String(state.topology || "papua-mask");
-    const portrait = topology === "face" || topology === "papua-mask";
+    const topology = String(state.topology || "carved-field");
+    const portrait = topology === "face" || topology === "carved-field" || topology === "papua-mask";
     const topologyProfile = TOPOLOGY_PROFILES[topology] || TOPOLOGY_PROFILES["papua-mask"] || {};
     const kernel = window.ParticleKernel;
     const eyePool = window.MASTER_FACE?.eyePool;
@@ -876,6 +1263,7 @@
     const subjectShellOpacity = nativeSubjectField ? (1 - semanticBlend) : (1 - semanticBlend * 0.68);
     shellMaterial.uniforms.uOpacity.value =
       geometry.shell_opacity * (state.mode === "sleeping" ? 0.35 : 1) *
+      (portrait ? 0.44 : 1) *
       (0.88 + (reducedMotion ? 0 : audioEnergy) * 0.12) * subjectShellOpacity;
     shellMaterial.uniforms.uEntropy.value = state.entropy;
     shellMaterial.uniforms.uColor.value.copy(colorFromCss());
@@ -964,13 +1352,20 @@
       const positionAttribute = splatProxy.geometry.getAttribute("position");
       const positions = positionAttribute?.array;
       if (semanticMorphInProgress && positions && splatTargetPositions) {
-        const ease = reducedMotion ? 1 : 0.065;
+        const stageDuration = Math.max(80, finite(SEMANTIC_SUBJECT.morph_stage_duration_ms, 280));
+        const stageGap = Math.max(0, finite(SEMANTIC_SUBJECT.morph_stage_gap_ms, 72));
+        const from = splatMorphFromPositions || positions;
         let settled = true;
         for (let index = 0; index < positions.length; index += 1) {
+          const point = Math.floor(index / 3);
+          const stage = splatTargetStages?.[point] || 0;
+          const elapsed = now - semanticMorphStartedAt - (stage * stageGap);
+          const raw = reducedMotion ? 1 : Math.max(0, Math.min(1, elapsed / stageDuration));
+          const progress = raw * raw * (3 - (2 * raw));
           const target = splatTargetPositions[index];
-          const next = positions[index] + (target - positions[index]) * ease;
-          positions[index] = Math.abs(target - next) < 0.0005 ? target : next;
-          if (positions[index] !== target) settled = false;
+          const start = from[index];
+          positions[index] = raw >= 1 ? target : start + (target - start) * progress;
+          if (raw < 1) settled = false;
         }
         positionAttribute.needsUpdate = true;
         semanticMorphInProgress = !settled;
@@ -1003,7 +1398,8 @@
   }
 
   window.MASTER_FACE_WORLD = Object.freeze({
-    load, update, spawnPulse, setSubjectForm, setSubjectFromText, setConversationSubject, restoreFaceSubject, inferSubjectForm
+    load, update, spawnPulse, setSubjectForm, setSubjectFromText, setSubjectFromVisual,
+    setConversationSubject, restoreFaceSubject, inferSubjectForm, inferVisualSubject, normalizeVisualSubject
   });
   window.addEventListener("master:visual", (event) => {
     const detail = event.detail || {};
@@ -1014,6 +1410,12 @@
       spawnPulse(from, to, Number(detail.activity || detail.confidence || 0.5));
     }
   }, { passive: true });
+  window.addEventListener("master:visual-subject", (event) => {
+    const detail = event.detail || {};
+    setConversationSubject(detail.text || detail.title || "", detail.visual_subject || detail.visualSubject || null);
+    scheduleFaceRestoration();
+  }, { passive: true });
+
   window.addEventListener("master:bus", (event) => {
     const detail = event.detail || {};
     const type = String(detail.type || "");
@@ -1024,9 +1426,18 @@
       return;
     }
 
+    if (type === "assistant:visual-subject") {
+      const text = String(payload.text || payload.transcript || "").trim();
+      const visualSubject = payload.visual_subject || payload.visualSubject || null;
+      if (text || visualSubject) setConversationSubject(text, visualSubject);
+      scheduleFaceRestoration();
+      return;
+    }
+
     if (type === "speech:partial" || type === "speech:end" || type === "turn:committed") {
       const text = String(payload.transcript || payload.text || "").trim();
-      if (text) setConversationSubject(text);
+      const visualSubject = payload.visual_subject || payload.visualSubject || null;
+      if (text || visualSubject) setConversationSubject(text, visualSubject);
       if (type !== "speech:partial") scheduleFaceRestoration();
       return;
     }
@@ -1040,6 +1451,7 @@
     if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
     subjectTransitionTimer = null;
     pendingSubjectForm = null;
+    pendingSubjectDescriptor = null;
   }, { once: true });
   window.addEventListener("master:face-ready", () => load(), { once: true });
   if (window._primerFired) load();

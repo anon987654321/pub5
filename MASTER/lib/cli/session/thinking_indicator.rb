@@ -9,12 +9,13 @@ require_relative "../../voice/typography"
 module Master
   module CLI
     class Session
-      TICK_SECONDS = 0.10
+      TICK_SECONDS = 0.18
       FAST_TICK_SECONDS = 0.04
-      SPINNER_FRAMES = ["|", "/", "-", "\\"].freeze
+      SPINNER_FRAMES = [".", ":", ";", "o", "O", "0", "@", "0", "O", "o", ";", ":", ".", "+", "x", "*"].freeze
       SPIN_PROBE_SECONDS = 0.5
       # Below this the row stays plain; the ramp runs amber to red above it.
       SPIN_COLOR_START = 0.35
+      SPIN_WHITE_HOT_START = 0.92
       STAGE_EVENTS = {
         "infer:resolved" => "infer",
         "infer:confidence" => "infer",
@@ -99,12 +100,21 @@ module Master
       # The spinner's line: frame, stage word, elapsed time and any queue.
       def spin_line(stage, name)
         stage = "working" if stage.empty?
-        "#{name} #{stage} #{elapsed_seconds}s#{spin_suffix}"
+        detail = stage == "intake" ? %q{ \_} : " #{elapsed_seconds}s"
+        "#{name} #{stage}#{detail}#{spin_suffix}"
       end
 
       def spin_tinted(line, intensity)
         tint = spinner_tint(intensity)
-        tint ? "#{tint}#{line}\e[0m" : line
+        return line unless tint
+
+        if intensity >= SPIN_WHITE_HOT_START && !line.empty?
+          glyph = line[0]
+          rest = line[1..].to_s
+          "\e[1;38;2;255;255;255m#{glyph}\e[0m#{tint}#{rest}\e[0m"
+        else
+          "#{tint}#{line}\e[0m"
+        end
       end
 
       def draw_spin_row(target, line)
@@ -136,8 +146,9 @@ module Master
       # More work spins the star faster and turns it redder: TICK_SECONDS and
       # no tint at rest, FAST_TICK_SECONDS and full red at intensity 1.
       def spin_pause(intensity)
+        normalized = Float(intensity).clamp(0.0, 1.0)
         span = TICK_SECONDS - FAST_TICK_SECONDS
-        FAST_TICK_SECONDS + span * (1.0 - intensity)
+        FAST_TICK_SECONDS + span * (1.0 - normalized)
       end
 
       # The tint reads its amber-to-red stops from face_interface.ascii

@@ -418,6 +418,89 @@ Research references:
 - monospaced MASTER web typography
 - non-empty CLI results preserved when the presenter returns an empty string
 
+## Canonical portrait and semantic subject morphs
+
+The default topology is `carved-field`. Its base remains the existing one-pixel,
+greyscale stipple face; the portrait is refined with shallow local planes for the
+brow shelf, recessed orbital area, cheek planes, nose bridge and chin. These are
+formal geometry cues, not copied motifs. The old `papua-mask` topology string is
+accepted only as a compatibility alias and resolves to `carved-field`.
+
+The face is the opening identity and the resting state. A completed assistant
+reply is sent through the canonical `assistant:visual-subject` event. The event
+may contain a `visual_subject` descriptor, or the renderer may infer one of the
+small set of supported object kinds from the finished reply. For inferred
+subjects, repeated mentions rank ahead of one-off mentions and first mention
+breaks ties. An explicit descriptor always wins. A descriptor is accepted only
+when its kind is in
+`face_interface.spatial.semantic_subject.kinds`; its confidence is bounded,
+its label is sanitized, and its ordered feature list is intersected with that
+kind's allowlist. Unknown or low-confidence subjects leave the portrait intact
+instead of inventing a shape.
+
+Example event payload:
+
+```json
+{
+  "text": "A suspension bridge carries traffic across a wide span.",
+  "visual_subject": {
+    "kind": "bridge",
+    "confidence": 0.91,
+    "sequence": ["deck", "towers", "cables", "piers"]
+  }
+}
+```
+
+For subjects outside the built-in catalogue, the same event accepts
+`kind: "custom"` with up to six named parts. Each part selects one of five
+bounded primitives — `box`, `sphere`, `ring`, `cylinder`, or `beam` — and
+may supply a centre and half-size vector in normalized face space. The browser
+sanitizes names, rejects duplicate/unknown keys and unsupported primitives,
+clamps centre and size values to the token-defined bounds, and accepts only
+the three fixed beam axes. It never evaluates model code or arbitrary geometry.
+The part sequence is the reveal sequence, so an unfamiliar explanation can
+still resolve as a small, ordered construction rather than an unstructured
+cloud.
+
+Example: a bicycle is represented as a frame beam, two wheel rings, and a
+handlebar beam:
+
+```json
+{
+  "text": "A bicycle balances on two wheels with a frame, fork and handlebar.",
+  "visual_subject": {
+    "kind": "custom",
+    "label": "bicycle",
+    "confidence": 0.88,
+    "sequence": ["frame", "rear-wheel", "front-wheel", "handlebar"],
+    "parts": [
+      { "key": "frame", "primitive": "beam", "axis": "x",
+        "center": [0, 0, 0], "size": [0.42, 0.035, 0.035] },
+      { "key": "rear-wheel", "primitive": "ring",
+        "center": [-0.38, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "front-wheel", "primitive": "ring",
+        "center": [0.40, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "handlebar", "primitive": "beam", "axis": "z",
+        "center": [0.30, 0.36, 0], "size": [0.035, 0.035, 0.22] }
+    ]
+  }
+}
+```
+
+The primary face field receives the object coordinates in its existing
+`scatter` attribute and uses a per-carrier `semanticStage` to reveal features
+in sequence. It does not allocate another renderer, animation loop, or particle
+pool. The bounded FaceWorld proxy is a compatibility path only when the primary
+scatter interface is unavailable; it consumes the existing world-point share.
+Normal motion stages the transition. Reduced motion resolves directly to the
+same final geometry without an animation. After the configured quiet interval,
+the subject restores to the carved-field portrait.
+
+This separation is deliberate: identity is stable, the subject is temporary,
+and movement has a reason. The face must remain readable before, during and
+after an explanation; an unknown object is not an excuse to replace it with
+decorative noise.
+
 ## Distant-human morphology
 
 The face uses `MASTER/data/tokens.yml#tokens.face_interface.spatial.morphology` as its
