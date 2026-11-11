@@ -83,6 +83,71 @@ class TestFixModelPhaseGuards < Minitest::Test
     loop
   end
 
+  def test_fix_batch_dockets_every_finding_and_names_same_file_and_policy_skips
+    loop = budget_loop
+    attempts = []
+    findings = [
+      { file: "lib/a.rb", law: "TEST_LAW", line: 4, message: "first", severity: "error" },
+      { file: "lib/a.rb", law: "TEST_LAW", line: 8, message: "second", severity: "warning" },
+      { file: "lib/b.rb", law: "TEST_LAW", line: 2, message: "third", severity: "error" },
+    ]
+
+    loop.stub(:attempt, ->(violation) { attempts << violation; :skip_protected }) do
+      loop.stub(:immediate_delivery_boundary?, false) do
+        Master::Fix::RunBudget.stub(:stopping, false) do
+          Master::Trace::Dmesg.stub(:status, nil) { loop.send(:fix_batch, findings) }
+        end
+      end
+    end
+
+    assert_equal %w[lib/a.rb lib/b.rb], attempts.map { |row| row[:file] }
+    rows = Ledger.file_outcomes
+    assert_equal [4, 8], rows.fetch("lib/a.rb").fetch("findings").map { |row| row.fetch("line") }
+    assert_includes rows.fetch("lib/a.rb").fetch("dispositions").map { |row| row.fetch("outcome") }, "not_attempted_same_file"
+    assert_includes rows.fetch("lib/a.rb").fetch("dispositions").map { |row| row.fetch("outcome") }, "skip_protected"
+    assert_equal ["skip_protected"], rows.fetch("lib/b.rb").fetch("dispositions").map { |row| row.fetch("outcome") }
+  end
+
+  def test_fix_batch_records_findings_left_unattempted_by_the_stall_budget
+    loop = budget_loop
+    findings = [
+      { file: "lib/a.rb", law: "TEST_LAW", line: 4, message: "first" },
+      { file: "lib/b.rb", law: "TEST_LAW", line: 8, message: "second" },
+    ]
+
+    loop.stub(:attempt, ->(_violation) { flunk "a stopped batch must not call the repair attempt" }) do
+      Master::Fix::RunBudget.stub(:stopping, true) do
+        Master::Trace::Dmesg.stub(:status, nil) { loop.send(:fix_batch, findings) }
+      end
+    end
+
+    rows = Ledger.file_outcomes
+    assert_equal %w[not_attempted_budget], rows.fetch("lib/a.rb").fetch("dispositions").map { |row| row.fetch("outcome") }
+    assert_equal %w[not_attempted_budget], rows.fetch("lib/b.rb").fetch("dispositions").map { |row| row.fetch("outcome") }
+  end
+
+  def test_fix_batch_records_files_after_the_one_file_delivery_boundary
+    loop = budget_loop
+    findings = [
+      { file: "lib/a.rb", law: "TEST_LAW", line: 4, message: "first" },
+      { file: "lib/b.rb", law: "TEST_LAW", line: 8, message: "second" },
+    ]
+
+    loop.stub(:attempt, lambda { |violation|
+      Ledger.record_file_outcome(file: violation[:file], law: violation[:law], outcome: :applied)
+      :applied
+    }) do
+      loop.stub(:immediate_delivery_boundary?, ->(result) { result == :applied }) do
+        Master::Fix::RunBudget.stub(:stopping, false) do
+          Master::Trace::Dmesg.stub(:status, nil) { loop.send(:fix_batch, findings) }
+        end
+      end
+    end
+
+    assert_equal ["applied"], Ledger.file_outcomes.fetch("lib/a.rb").fetch("attempts").map { |row| row.fetch("outcome") }
+    assert_equal ["not_attempted_delivery_boundary"], Ledger.file_outcomes.fetch("lib/b.rb").fetch("dispositions").map { |row| row.fetch("outcome") }
+  end
+
   # "no_proposal" alone hid three different causes. Each is named, counted apart from
   # rejected proposals, and kept off the file's two-reject limit.
   def test_a_declined_call_names_its_reason_and_returns_nil
