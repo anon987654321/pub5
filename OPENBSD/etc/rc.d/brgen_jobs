@@ -24,7 +24,7 @@ daemon="/bin/ksh"
 # KEY=value unexported, and the job classes need every key in the file.
 # rc.d cannot source the repo, so pick whichever bundler the package manager
 # installed (OpenBSD ships Ruby by version; none is named here).
-for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
+for _bundle in /usr/local/bin/bundle /usr/local/bin/bundle[0-9]*; do
   if [ -x "$_bundle" ]; then break; fi
 done
 # SOLID_QUEUE_SUPERVISOR_MODE=async runs the dispatcher and workers as threads
