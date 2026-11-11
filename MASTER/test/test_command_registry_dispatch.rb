@@ -647,7 +647,10 @@ class TestCommandRegistryDispatch < Minitest::Test
   def test_plain_fix_writes_by_default_but_explicit_reads_do_not
     assert Registry.writes_requested?(apply: nil, only: nil), "the canonical /fix default is write-enabled"
     assert Registry.writes_requested?(apply: true, only: nil)
-    refute Registry.writes_requested?(apply: false, only: nil), "--dry-run must not write"
+    refute Registry.writes_requested?(apply: false, only: nil), "--dry-run and --read-only must not write"
+    assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--read-only")
+    assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--dry-run")
+    assert_equal [true, nil, true, nil, ""], Registry.parse_pass_flags("--apply")
     refute Registry.writes_requested?(apply: nil, only: "critique,map"), "read-only stages must not write"
     assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicit fix stage can write"
 

@@ -38,6 +38,10 @@
 # the executable bit, so the census could not tell it from a module file that
 # says its own name twice. The fix was the mode, not the ceiling.
 #
+# The mrdamascy production host bought two files on 2026-11-11: falcon.rb,
+# the Falcon service config (one worker, port 47314), and preload.rb, which
+# boots Rails in the host process; the duplicate agent wish list left the same
+# day. tracked_files re-set to the checkout as it stands.
 # The vendorables ruling executed on 2026-11-08: the onnxruntime WASM, the
 # smart-turn model, the face mask and the three web/images JPGs left git
 # (eight files, ~23.6 MiB, three directories — one of them lone — per
@@ -47,6 +51,6 @@
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7208
+tracked_files: 7210
 tracked_directories: 878
 corpus: 4127

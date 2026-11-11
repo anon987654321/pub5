@@ -136,7 +136,12 @@ class TestPersonalityPromptBuilder < Minitest::Test
     %w[STRUNK_WHITE BE_CONCISE PROSE_ACTIVE_VOICE DRY KISS SINGULARITY].each { |id| assert_includes prompt, "#{id}:" }
     assert_includes prompt, "a paragraph is a file"
     refute_includes prompt, "CLAMP_TYPOGRAPHY:"
-    assert_operator prompt.bytesize, :<, 16_000
+    # The budget grew from 16,000 with two deliberate arrivals, not with the
+    # corpus this test refuses: soul's live performance profile (the
+    # temperament block, ~2.7 KB) and the writing/structure laws the style
+    # section renders from law source. The code, CSS and commerce corpus is
+    # 44 KB and stays out.
+    assert_operator prompt.bytesize, :<, 18_000
   end
 
   def test_the_identity_answers_in_the_language_it_is_addressed_in

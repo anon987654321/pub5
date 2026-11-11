@@ -409,3 +409,46 @@ of the Ruby visual-sheet tool above. The four governed code-tree acceptance
 suites, BIZ check/build, rendered screenshots, native OpenBSD validation and
 vm23 deployment remain **NOT_RUN** or **BLOCKED** until executed in their
 required environments.
+
+## Historical tree reconciliation — 2026-11-11
+
+A second complete recursive Git-tree comparison was run against the recorded
+pub4 cutoff and the current pub5 snapshot. Both GitHub tree responses were
+complete (not truncated):
+
+- pub4: `0a5ac0ce6c3e11bb8d9a1c040adf15b00acb3c6b`, 6,749 tracked blobs.
+- pub5: `296121bb2b5fd540963b1bf57a27342e69377907`, 7,213 tracked blobs.
+- 6,096 old paths still exist in pub5. Of those, 4,975 retain the exact old
+  blob; 1,121 have changed contents at the same path.
+- Another 549 old blobs survive byte-for-byte at a different path.
+- The remaining 104 old blobs have neither their old path nor an identical
+  blob elsewhere in pub5. They are accounted for by owner and disposition:
+
+| Old source group | Count | Current disposition |
+| --- | ---: | --- |
+| `RAILS/` | 43 | Every old vertical-engine path has a current `RAILS/brgen/engines/` counterpart; `pub4-shared` has the `pub5-shared` gem identity. |
+| `BPLANS/` | 29 | Consolidated into `BIZ/`; 28 path equivalents were checked. The old cover pass is superseded by `BIZ/tools/bp_retemplate.mjs`. |
+| `MASTER/` | 16 | Backlog merged into root `TODO.md`; permission and creative-governance documents moved/renamed; research and repo tools moved under their owners; four unused legacy images retired; Smart Turn model/runtime binaries are checksummed build-time assets, not tracked files. |
+| `OPENBSD/` | 4 | Nested Git hooks moved to root `.githooks/` and adapted to the pub5 environment namespace. |
+| Historical root photographs | 7 | Explicitly retired on 2026-11-10 as unassigned sketches; not silently lost. |
+| `STUDIO/` | 1 | Python reference analyzer replaced by the Ruby analyzer. |
+| Root tree contract | 1 | Moved to `MASTER/data/law/TREE_CONTRACTS.md`. |
+| `scripts/analysis/` | 3 | Python screenshot-sheet helpers replaced by `MASTER/tools/visual/sheets.rb`. |
+
+The counts reconcile exactly: 4,975 unchanged at path + 1,121 changed at path
++ 549 identical blobs relocated + 104 explained retirements/replacements =
+6,749 pub4 blobs. This is source accounting, not a behavioural PASS. The
+Amber legacy manifest still accurately marks ML garment segmentation /
+background removal and AI-generated closet tips as missing; the current
+silhouette renderer and rule-based `ClosetOrganization` do not claim either
+capability. The archived `pub_attorney` and `mytoonz` entries still require
+an owner restore/retire decision. Neither omission was silently promoted to
+an implementation.
+
+The comparison does not change the acceptance status above. Focused tests
+were added for the Mr Damascy secret privilege boundary, all documented
+`/fix` aliases, and human escalation after three actionable repair refusals,
+but they are authored tests, not passing test runs. The repository's full
+MASTER, RAILS, OPENBSD and STUDIO suites, BIZ build/check, rendered browser
+review, native OpenBSD validation and vm23 restart remain **NOT_RUN** or
+**BLOCKED** until run in their required environments.
