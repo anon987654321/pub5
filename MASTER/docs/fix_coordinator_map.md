@@ -153,10 +153,19 @@ Law registry integrity, replay-reader behavior, media lanes, provider/catalogue
 configuration, task-contract preservation and CLI routing. The count-only
 plateau regression confirms the pass runner aborts its active transaction at
 the plateau boundary; rollback is owned by `plateau_result`, not by the
-stagnation detector itself. Streaming now rejects a zero, negative or non-integer
-worker count to the range 1–8 (default 3); `MASTER_FIX_STREAM=0` remains the
-explicit no-worker mode. The cap is intentionally below the existing critical
-host thread threshold and is checked before any worker is created.
+stagnation detector itself. Streaming accepts only worker counts 1–8 (default
+3); `MASTER_FIX_STREAM=0` remains the explicit no-worker mode. The cap is
+intentionally below the existing critical host thread threshold and is checked
+before any worker is created.
+
+The stream's repair-context reader now checks the target's size before
+materialising it, rejects an oversized target without an excerpt-only repair,
+and hashes over-budget related files in fixed 64 KiB chunks before omitting
+them. It rechecks opened-file identity and every path component, refuses
+symlinked parents and stale graph digests, and returns only in-budget UTF-8
+source to the prompt. Regression cases cover large related and target files,
+digest drift and a symlinked parent. These are source-covered, not runtime
+results.
 
 The unattended backlog bridge now uses ProofMap v2: known shell prefixes are
 normalized, supported full/focused test, lint/audit, visual, accessibility and
