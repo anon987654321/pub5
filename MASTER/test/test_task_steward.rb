@@ -59,12 +59,14 @@ class TaskStewardTest < Minitest::Test
         root:, bus: nil,
         runner: ->(**) {
           Master::Fix::Mission.new(root:).finish!(state: "completed", summary: "focused proof passed")
-          :continued
+          Master::Result.ok(:continued)
         },
         after_run: ->(mission:, result:) { observed = mission },
       )
 
-      assert_equal :continued, steward.tick!
+      result = steward.tick!
+      assert result.ok?
+      assert_equal :continued, result.value!
       assert_equal "completed", observed.fetch("state")
       assert_equal "deliver", observed.fetch("stage")
       assert_equal "backlog", observed.fetch("origin")
