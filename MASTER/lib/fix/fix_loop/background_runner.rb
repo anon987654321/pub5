@@ -114,6 +114,10 @@ module Master
 
         def prepare_background_mission(target)
           current = Mission.current(root: @root)
+          if current && current["origin"].to_s == "backlog"
+            return Result.err("fix_loop background runner does not own the backlog mission")
+          end
+
           relative = relative_target(target)
           if current && current["scope"].to_s == relative && current["state"].to_s == "blocked"
             return Result.err("fix_loop mission blocked: #{current["wake_reason"]}")
