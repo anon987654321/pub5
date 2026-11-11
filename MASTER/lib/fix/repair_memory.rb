@@ -189,7 +189,7 @@ module Master
           expected_root = File.realpath(@root)
           resolved = verified_atomic_directory(directory)
           raise IOError, "repair memory directory escapes its repository" unless
-            resolved == directory && (resolved == expected_root || resolved.start_with?(expected_root + File::SEPARATOR)
+            resolved == directory && (resolved == expected_root || resolved.start_with?(expected_root + File::SEPARATOR))
 
           FileUtils.mkdir_p(directory, mode: 0o700)
           directory_stat = File.lstat(directory)
@@ -209,6 +209,7 @@ module Master
                    current.nlink == 1 && current.dev == opened.dev && current.ino == opened.ino
               raise IOError, "repair memory lock must be a stable singly linked regular file"
             end
+            File.chmod(0o660, lock_path)
             raise IOError, "could not acquire repair memory lock" unless lock.flock(File::LOCK_EX)
 
             begin
