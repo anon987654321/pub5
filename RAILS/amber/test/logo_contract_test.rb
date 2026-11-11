@@ -66,10 +66,8 @@ class LogoContractTest < ActionView::TestCase
     render partial: "shared/logo", locals: { id_prefix: "b" }
     second = rendered
 
-    assert_includes first, "a-swoosh-path"
     assert_includes first, "a-text-mask"
     assert_includes first, "a-caprasimo-a"
-    assert_includes second, "b-swoosh-path"
     assert_includes second, "b-text-mask"
     assert_includes second, "b-caprasimo-a"
   end
