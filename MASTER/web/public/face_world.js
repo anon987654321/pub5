@@ -1037,8 +1037,8 @@
     const budget = window.MASTER_FACE_STATE?.renderBudget?.() || {};
     const reducedMotion = reducedMotionEnabled(state);
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(state.mode) ?? state.mode === "idle";
-    const topology = String(state.topology || "papua-mask");
-    const portrait = topology === "face" || topology === "papua-mask";
+    const topology = String(state.topology || "carved-field");
+    const portrait = topology === "face" || topology === "carved-field" || topology === "papua-mask";
     const topologyProfile = TOPOLOGY_PROFILES[topology] || TOPOLOGY_PROFILES["papua-mask"] || {};
     const kernel = window.ParticleKernel;
     const eyePool = window.MASTER_FACE?.eyePool;
