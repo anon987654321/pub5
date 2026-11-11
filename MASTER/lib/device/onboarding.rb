@@ -171,8 +171,8 @@ module Master
 
       def termux_checks
         [
-          Check.of(:ruby, RUBY_VERSION >= "3.4", "ruby #{RUBY_VERSION}",
-                   "ruby #{RUBY_VERSION} is older than 3.4 - pkg upgrade ruby"),
+          Check.of(:ruby, Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3"), "ruby #{RUBY_VERSION}",
+                   "ruby #{RUBY_VERSION} is older than 3.3 - pkg upgrade ruby"),
           Check.of(:build, BUILD_TOOLS.all? { |cmd| @which.call(cmd) }, "clang, make and pkg-config present",
                    "no compiler for native gems - pkg install build-essential"),
           Check.of(:sqlite, sqlite?, "sqlite3 gem loads",
