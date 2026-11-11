@@ -527,6 +527,7 @@ module Master
           end
         end
         lines << "audit instruments: INCONCLUSIVE — cancellation stopped the remaining probes" if cancellation&.cancelled?
+        lines.each { |line| Master::Trace::Dmesg.status("audit0", line) }
         lines
       rescue StandardError => error
         Master::Trace::Dmesg.status("audit0", "instrument sweep INCONCLUSIVE: #{error.class}: #{error.message}")
