@@ -603,11 +603,11 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   failures << "mrdamascy production service must use the Falcon host config" unless
     falcon_command == expected_falcon_command
   falcon_pexp = mrd_service[/^\s*pexp="([^"]+)"/, 1]
-  expected_pexp = %q{.*127\\.0\\.0\\.1:47314.*}
+  expected_pexp = %q{.*127\\\\.0\\\\.0\\\\.1:47314.*}
   failures << "mrdamascy rc.d process match must identify the Falcon loopback endpoint" unless
     falcon_pexp == expected_pexp
   falcon_stop_pattern = mrd_service[/^\s*pkill -f "([^"]+)"/, 1]
-  expected_stop_pattern = %q{127\\.0\\.0\\.1:47314}
+  expected_stop_pattern = %q{127\\\\.0\\\\.0\\\\.1:47314}
   failures << "mrdamascy rc.d stop pattern must target only the Falcon loopback endpoint" unless
     falcon_stop_pattern == expected_stop_pattern
 
