@@ -1,15 +1,15 @@
 #!/usr/bin/env zsh
 # Workstation deploy entrypoint — one command, hands-off by default.
 #
-#   ./redeploy                 # all apps; wait until done; state + canary
-#   ./redeploy brgen           # one app
-#   ./redeploy --follow        # attach to the box tmux session
-#   ./redeploy --detach        # start and return immediately
+#   MASTER/bin/redeploy                 # all apps; wait until done; state + canary
+#   MASTER/bin/redeploy brgen           # one app
+#   MASTER/bin/redeploy --follow        # attach to the box tmux session
+#   MASTER/bin/redeploy --detach        # start and return immediately
 #
 # Requires: clean origin/main, SSH as dev@brgen.no. doas is nopass on vm23.
 # Survives SSH drop via tmux session pub5-deploy. Log: ~/vps-deploy.log.
 set -euo pipefail
-root=$(cd -- "$(dirname "$0")" && pwd)
+bin_dir=$(cd -- "$(dirname "$0")" && pwd)
 app=all
 mode=()
 for arg in "$@"; do
@@ -17,16 +17,16 @@ for arg in "$@"; do
     --follow) mode=(--follow) ;;
     --detach) mode=(--detach) ;;
     -h|--help)
-      print -r -- "usage: ./redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
+      print -r -- "usage: MASTER/bin/redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
       print -r -- "  default: wait for deploy, print progress, run state + public canary"
       exit 0
       ;;
     all|master|brgen|amber|bsdports|mrdamascy) app=$arg ;;
     *)
       print -u2 "redeploy: unknown argument: $arg"
-      print -u2 "usage: ./redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
+      print -u2 "usage: MASTER/bin/redeploy [all|master|brgen|amber|bsdports|mrdamascy] [--follow|--detach]"
       exit 2
       ;;
   esac
 done
-exec "$root/MASTER/bin/operator" vps deploy "$app" --remote "${mode[@]}"
+exec "$bin_dir/operator" vps deploy "$app" --remote "${mode[@]}"
