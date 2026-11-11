@@ -32,11 +32,16 @@ class TestRuntimeOneSource < Minitest::Test
     assert_includes source, %([BUNDLE, "exec", RUBY, shared_rubocop])
     refute_match(/which ruby\d+/, source)
   end
-  # The preference order is written in three languages and must stay one list.
-  def test_ruby_preference_order_is_the_same_in_every_resolver
+  def test_ruby_selectors_prefer_generic_ruby_and_discover_versioned_packages
     require_relative "../lib/operator/ruby_runner"
-    order = Operator::RubyRunner::RUBY_NAMES
-    assert_equal order.join(" "), read("bin/ruby")[/for name in ([^;]+); do/, 1]
-    assert_equal order.join(" "), read("../OPENBSD/lib/ruby_select.sh")[/for _rs_candidate in ([^;]+); do/, 1]
+    assert_equal ["ruby"], Operator::RubyRunner::RUBY_NAMES
+    wrapper = read("bin/ruby")
+    openbsd = read("../OPENBSD/lib/ruby_select.sh")
+    assert_includes wrapper, 'GENERIC_RUBY=$(command -v ruby'
+    assert_includes wrapper, 'for ruby_path in "$directory"/ruby[0-9]*'
+    assert_includes openbsd, '_rs_find ruby'
+    assert_includes openbsd, '"$_rs_dir"/ruby[0-9]*'
+    refute_includes wrapper, "ruby4.3 ruby43 ruby4.2"
+    refute_includes openbsd, "ruby4.0 ruby40"
   end
 end
