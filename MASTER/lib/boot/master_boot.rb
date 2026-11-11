@@ -136,7 +136,7 @@ module Master
       ENV["MASTER_TTS_DEGRADED"] = "1"
       ENV["MASTER_TTS_REASON"] = reason.to_s[0, 160]
       blocker = Voice::Speech.edge_tts_blocker
-      if ENV["MASTER_CLI_TRACE"] == "1" || ENV["MASTER_BOOT_STATUS"] == "1"
+      if Trace::Dmesg.verbose? || ENV["MASTER_BOOT_STATUS"] == "1"
         Trace::Dmesg.status("voice0", "degraded, #{reason}")
         Trace::Dmesg.status("voice0", "edge blocker, #{blocker}") unless blocker.to_s.empty?
       else

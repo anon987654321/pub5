@@ -86,7 +86,7 @@ module Master
       def render_status_lines(d)
         Master::CLI::PresentationContract.status_lines(
           d,
-          verbose: ENV["MASTER_CLI_VERBOSE"] == "1" || ENV["MASTER_CLI_TRACE"] == "1",
+          verbose: Master::Trace::Dmesg.verbose?,
         )
       end
 

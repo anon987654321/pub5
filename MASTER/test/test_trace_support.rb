@@ -20,15 +20,13 @@ class TestTraceSupport < Minitest::Test
   end
 
   def test_normal_is_the_default_operator_mode
-    previous = ENV["MASTER_DMESG"]
-    previous_quiet = ENV["MASTER_QUIET"]
-    ENV.delete("MASTER_DMESG")
-    ENV.delete("MASTER_QUIET")
+    keys = %w[MASTER_DMESG MASTER_QUIET MASTER_CLI_VERBOSE MASTER_CLI_TRACE]
+    previous = keys.to_h { |key| [key, ENV[key]] }
+    keys.each { |key| ENV.delete(key) }
     Master::Trace::Dmesg.reload!
     assert_equal "normal", Master::Trace::Dmesg.verbosity
   ensure
-    previous.nil? ? ENV.delete("MASTER_DMESG") : ENV["MASTER_DMESG"] = previous
-    previous_quiet.nil? ? ENV.delete("MASTER_QUIET") : ENV["MASTER_QUIET"] = previous_quiet
+    previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
     Master::Trace::Dmesg.reload!
   end
 

@@ -1337,7 +1337,9 @@ RAILS_DOCTRINE:
     The Rails Doctrine. A framework's posture toward its programmer is
     a design decision, and Rails chose: optimize for programmer
     happiness, trust convention over configuration, and treat the
-    whole stack as one integrated system rather than a bag of parts.
+    whole stack as one integrated system rather than a bag of parts. Common
+    workflows have sensible, context-aware defaults: the operator should not
+    have to memorize flags or environment variables to get expected behaviour.
   severity: info
   resolution: review
   mechanical: Master::Law::Rails#doctrine
@@ -1351,7 +1353,20 @@ RAILS_DOCTRINE_optimize_for_programmer_happiness:
 
 RAILS_DOCTRINE_convention_over_configuration:
   parent: RAILS_DOCTRINE
-  statement: "A configuration where a convention the reader already knows would serve."
+  statement: >
+    A configuration, flag, environment variable or repeated choice where a
+    convention the reader already knows would provide the expected common
+    behaviour. Keep configuration for meaningful alternatives, not ceremony.
+  resolution: review
+
+RAILS_DOCTRINE_sensible_defaults:
+  parent: RAILS_DOCTRINE
+  statement: >
+    An ordinary workflow that requires the operator to memorize an option,
+    repeat a choice or perform setup when a safe, unsurprising default can be
+    inferred from reliable context. The common path works without instruction;
+    overrides remain available for genuinely different modes, never to widen
+    authority or permissions.
   resolution: review
 
 RAILS_DOCTRINE_omakase:

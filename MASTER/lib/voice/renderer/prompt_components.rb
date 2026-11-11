@@ -39,9 +39,7 @@ module Master
           return false if ENV["MASTER_QUIET"] == "1"
           return false if %w[0 quiet].include?(ENV["MASTER_DMESG"].to_s.downcase)
 
-          ENV["MASTER_BOOT_STATUS"] == "1" ||
-            ENV["MASTER_CLI_VERBOSE"] == "1" ||
-            ENV["MASTER_CLI_TRACE"] == "1"
+          Master::Trace::Dmesg.verbose? || ENV["MASTER_BOOT_STATUS"] == "1"
         end
 
         def compact_splash(context)

@@ -856,8 +856,8 @@ def test_a_turn_prints_its_units_and_nothing_else
   renderer.define_singleton_method(:render) { |text, mode:| text }
   cli = Master::CLI::Session.new(container: @container.merge(bus:, renderer:, logging:, root: Dir.mktmpdir))
 
-  # Normal verbosity: verbose, the default since 8e84df63b, is the operator mode
-  # that shows every other event too, a swallowed error among them.
+  # Normal is the default operator mode: meaningful model/tool units print,
+  # while scan churn and unrelated bus events stay out of the terminal.
   out, err = capture_io do
     Master::Trace::Dmesg.with_verbosity("normal") do
       cli.send(:init_thinking_state!)
@@ -897,8 +897,10 @@ ensure
   ENV["MASTER_CLI_QUIET"] = previous
 end
 
-def test_the_fix_help_names_the_quiet_opt_out
-  assert_includes Master::CLI::CommandRegistry.help_text("fix"), "MASTER_CLI_QUIET=1"
+def test_the_fix_help_names_normal_output_as_the_default_and_quiet_as_opt_out
+  help = Master::CLI::CommandRegistry.help_text("fix")
+  assert_includes help, "Normal dmesg units appear automatically"
+  assert_includes help, "MASTER_CLI_QUIET=1"
 end
 
 def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close

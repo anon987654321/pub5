@@ -6,13 +6,17 @@ class TestDmesgDetail < Minitest::Test
   Dmesg = Master::Trace::Dmesg
 
   def setup
-    @env = %w[MASTER_DMESG MASTER_DMESG_DETAIL MASTER_QUIET NO_COLOR].to_h do |key|
+    @env = %w[MASTER_DMESG MASTER_DMESG_DETAIL MASTER_QUIET MASTER_CLI_QUIET MASTER_BOOT_STATUS MASTER_CLI_VERBOSE MASTER_CLI_TRACE NO_COLOR].to_h do |key|
       [key, ENV[key]]
     end
     @draft_guard = Dmesg.draft_guard
     ENV.delete("MASTER_DMESG")
     ENV.delete("MASTER_DMESG_DETAIL")
     ENV.delete("MASTER_QUIET")
+    ENV.delete("MASTER_CLI_QUIET")
+    ENV.delete("MASTER_BOOT_STATUS")
+    ENV.delete("MASTER_CLI_VERBOSE")
+    ENV.delete("MASTER_CLI_TRACE")
     ENV.delete("NO_COLOR")
     Dmesg.draft_guard = nil
     Fiber[:master_dmesg_detail_units] = nil
@@ -28,6 +32,52 @@ class TestDmesgDetail < Minitest::Test
 
   def enable_detail
     ENV["MASTER_DMESG_DETAIL"] = "1"
+  end
+
+  def test_interactive_defaults_are_normal_and_redirected_defaults_are_quiet
+    Dmesg.configure_cli_output_default!(stdin_tty: true, stdout_tty: true)
+    assert_nil ENV["MASTER_CLI_QUIET"]
+
+    Dmesg.configure_cli_output_default!(stdin_tty: false, stdout_tty: true)
+    assert_equal "1", ENV["MASTER_CLI_QUIET"]
+  end
+
+  def test_verbose_trace_and_detail_are_one_canonical_verbosity_setting
+    Dmesg.configure_cli_verbosity("verbose")
+    assert_equal "verbose", Dmesg.verbosity
+    assert_equal "0", ENV["MASTER_CLI_QUIET"]
+    assert_equal "1", ENV["MASTER_BOOT_STATUS"]
+
+    Dmesg.configure_cli_verbosity("trace")
+    assert_equal "trace", Dmesg.verbosity
+    assert Dmesg.trace?
+
+    Dmesg.configure_cli_verbosity("everything")
+    assert_equal "everything", Dmesg.verbosity
+    assert Dmesg.detail_enabled?
+  end
+
+  def test_last_verbosity_option_wins_before_boot
+    Dmesg.prime_cli_verbosity!(%w[--verbose --trace --detail])
+
+    assert_equal "everything", Dmesg.verbosity
+    assert Dmesg.detail_enabled?
+  end
+
+  def test_detail_does_not_leak_into_redirected_stdout
+    enable_detail
+    output = StringIO.new
+    previous_stdout = $stdout
+    previous_stdin = $stdin
+    $stdout = output
+    $stdin = StringIO.new
+
+    Dmesg.detail("read0", "private source")
+
+    assert_empty output.string
+  ensure
+    $stdout = previous_stdout if previous_stdout
+    $stdin = previous_stdin if previous_stdin
   end
 
   def test_detail_is_silent_without_explicit_consent

@@ -78,12 +78,13 @@ if ARGV.first == "core"
 end
 
 ENV["PUB5_ROOT"] ||= File.dirname(master_root)
-# The terminal runtime is a quiet, local instruction surface. Repository-wide scanning is opt-in.
-# MASTER_BACKGROUND_SCAN=1 opts in; an explicit skip always wins.
+# The ordinary interactive path is the operator mode: useful unit lines, no
+# event flood, no repository-wide boot scan. Redirected and piped runs stay
+# quiet unless the caller explicitly asks for output.
 ENV["MASTER_WEB"] ||= "0"
 ENV["MASTER_BACKGROUND_SCAN"] ||= "0"
 ENV["MASTER_SKIP_BOOT_SCAN"] ||= (ENV["MASTER_BACKGROUND_SCAN"] == "1" ? "0" : "1")
-ENV["MASTER_CLI_QUIET"] ||= "1"
+Master::Trace::Dmesg.configure_cli_output_default!(stdin_tty: $stdin.tty?, stdout_tty: $stdout.tty?)
 
 if ARGV.first == "replay"
   require_relative "../lib/fix/kernel"
@@ -161,9 +162,10 @@ HELP_USAGE = <<~HELP
     bin/master --fast
     echo '/status' | bin/master
 
-  --detail / --everything prints bounded prompt, reply, tool, file and repair payloads
-  directly to this terminal. It deliberately bypasses output redaction; avoid it
-  on shared terminals or captured logs.
+  Interactive sessions show useful dmesg progress by default; redirected runs
+  stay quiet. --verbose expands status, --trace shows every redacted event, and
+  --detail reveals bounded payloads only on a terminal, never in redirected logs.
+  --boot-status and --everything remain compatibility aliases.
 
   `core` drives the fold spine alone: exit 0 when its scripted done is refused,
   1 when it is admitted, 64 without a goal.
@@ -186,18 +188,13 @@ end
 
 def initial_message_parser(options)
   OptionParser.new do |opts|
-    opts.banner = "Usage: bin/master [-p PROMPT|-m MSG] [--continue [ID]|--session ID|--fork [ID]|--sessions] [--effort low|medium|high] [--model ID] [--output-format text|json|stream-json] [--permission-mode MODE] [--allowedTools LIST] [--headless] [--fast] [--daemon] [--verbose|--trace|--detail] [--web|--no-web] [--boot-status]"
+    opts.banner = "Usage: bin/master [-p PROMPT|-m MSG] [--continue [ID]|--session ID|--fork [ID]|--sessions] [--effort low|medium|high] [--model ID] [--output-format text|json|stream-json] [--permission-mode MODE] [--allowedTools LIST] [--headless] [--fast] [--daemon] [--verbose|--trace|--detail] [--web|--no-web]"
     opts.on("-h", "--help") { print_master_help }
     opts.on("-m", "--message TEXT") { |text| options[:message] = text }
     opts.on("-p", "--prompt TEXT") { |text| options[:message] = text }
     opts.on("--effort LEVEL", %w[low medium high]) { |level| ENV["MASTER_EFFORT"] = level }
     opts.on("--headless", "run one autonomous goal and emit one JSON mission receipt") do
-      ENV["MASTER_HEADLESS"] = "1"
-      ENV["MASTER_FOLD"] = "1"
-      ENV["MASTER_FAST"] = "1"
-      ENV["MASTER_SKIP_BOOT_SCAN"] = "1"
-      ENV["MASTER_SKIP_TTS"] = "1"
-      ENV["MASTER_WEB"] = "0"
+      activate_headless_mode!
     end
     opts.on("-c", "--continue [ID]") { |id| options[:message] = "/session continue #{id}".strip }
     opts.on("--resume [ID]") { |id| options[:message] = "/session continue #{id}".strip }
@@ -226,28 +223,65 @@ def initial_message_parser(options)
     end
     opts.on("--web") { ENV["MASTER_WEB"] = "1" }
     opts.on("--no-web") { ENV["MASTER_WEB"] = "0" }
-    opts.on("--boot-status") { ENV["MASTER_BOOT_STATUS"] = "1" }
-    opts.on("--verbose", "show verbose status and boot detail (unit lines print by default; MASTER_CLI_QUIET=1 hides them)") { ENV["MASTER_CLI_VERBOSE"] = "1" }
-    opts.on("--trace", "show per-file event headers and full boot diagnostics; payloads stay redacted") do
-      ENV["MASTER_CLI_TRACE"] = "1"
-      ENV["MASTER_CLI_VERBOSE"] = "1"
-      ENV["MASTER_BOOT_STATUS"] = "1"
+    opts.on("--boot-status", "legacy alias for --verbose") { Master::Trace::Dmesg.configure_cli_verbosity("verbose") }
+    opts.on("--verbose", "show expanded startup and operational status") { Master::Trace::Dmesg.configure_cli_verbosity("verbose") }
+    opts.on("--trace", "show per-file events and expanded diagnostics; payloads remain redacted") do
+      Master::Trace::Dmesg.configure_cli_verbosity("trace")
     end
-    opts.on("--detail", "show bounded prompt, reply, tool, file and repair payloads (terminal-only; bypasses output redaction)") do
-      ENV["MASTER_DMESG"] = "everything"
-      ENV["MASTER_DMESG_DETAIL"] = "1"
+    opts.on("--detail", "show bounded prompt, reply, tool, file and repair payloads directly on a terminal") do
+      Master::Trace::Dmesg.configure_cli_verbosity("everything")
     end
-    opts.on("--everything", "alias for --detail") do
-      ENV["MASTER_DMESG"] = "everything"
-      ENV["MASTER_DMESG_DETAIL"] = "1"
+    opts.on("--everything", "legacy alias for --detail") do
+      Master::Trace::Dmesg.configure_cli_verbosity("everything")
     end
-    opts.on("--fast") do
-      ENV["MASTER_FAST"] = "1"
-      ENV["MASTER_SKIP_BOOT_SCAN"] = "1"
-      ENV["MASTER_SKIP_TTS"] = "1"
-      ENV["MASTER_WEB"] = "0"
+    opts.on("--fast") { activate_fast_mode! }
+  end
+end
+
+def activate_fast_mode!
+  ENV["MASTER_FAST"] = "1"
+  ENV["MASTER_SKIP_BOOT_SCAN"] = "1"
+  ENV["MASTER_SKIP_TTS"] = "1"
+  ENV["MASTER_WEB"] = "0"
+end
+
+def activate_headless_mode!
+  ENV["MASTER_HEADLESS"] = "1"
+  ENV["MASTER_FOLD"] = "1"
+  activate_fast_mode!
+end
+
+# Prime the process-wide runtime choices before Master.boot. The same flags are
+# parsed again below to construct the message; applying them twice is idempotent.
+def prime_cli_boot_options!(argv)
+  Array(argv).each_with_index do |arg, index|
+    value = argv[index + 1]
+    case arg
+    when "--headless" then activate_headless_mode!
+    when "--fast" then activate_fast_mode!
+    when "--fold" then ENV["MASTER_FOLD"] = "1"
+    when "--web" then ENV["MASTER_WEB"] = "1"
+    when "--no-web" then ENV["MASTER_WEB"] = "0"
+    when "--model" then ENV["MASTER_MODEL"] = value if value && !value.start_with?("--")
+    when "--effort" then ENV["MASTER_EFFORT"] = value if value && !value.start_with?("--")
+    when "--output-format"
+      if %w[text json stream-json].include?(value)
+        ENV["MASTER_OUTPUT_FORMAT"] = value
+        ENV["MASTER_FOLD"] = "1"
+      end
+    when "--permission-mode"
+      if %w[default acceptEdits plan bypassPermissions].include?(value)
+        ENV["MASTER_PERMISSION_MODE"] = value
+        ENV["MASTER_FOLD"] = "1"
+      end
+    when "--allowedTools", "--allowed-tools"
+      if value && !value.start_with?("--")
+        ENV["MASTER_ALLOWED_TOOLS"] = value
+        ENV["MASTER_FOLD"] = "1"
+      end
     end
   end
+  Master::Trace::Dmesg.prime_cli_verbosity!(argv)
 end
 
 def parse_initial_message_options(argv)
@@ -256,8 +290,10 @@ def parse_initial_message_options(argv)
   options
 end
 
-# Flags are read before the runtime boots. Help must print without a boot, which
-# costs seconds and can raise first.
+# Flags that affect boot/runtime defaults are applied before the boot; help still
+# prints without booting at all.
+prime_cli_boot_options!(ARGV)
+
 if ARGV.first == "--help" || ARGV.first == "-h"
   require "optparse"
   print_master_help

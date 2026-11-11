@@ -51,7 +51,7 @@ end
 if (i = args.index("--lane"))
   args[i, 2] = ["--lane=#{args[i + 1]}"]
 end
-PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks --detail --everything].freeze
+PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
 # --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
@@ -61,7 +61,7 @@ check_stages = checks_flag.to_s.delete_prefix("--checks=")
 tree = args.shift
 USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
         "[--dry] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
-        "[--blockers] [--plan] [--until-checks] [--detail|--everything] " \
+        "[--blockers] [--plan] [--until-checks] [--verbose|--trace|--detail] " \
         "[--no-critique] [--checks=lexical,sprawl,...]"
 abort USAGE if tree.to_s.empty? || args.any?
 abort "fix-here: #{tree} is not one of #{TREES.join(', ')} and not a path in this checkout" unless TREES.include?(tree) || File.exist?(File.join(ROOT, tree))
@@ -88,6 +88,12 @@ saved = [target_config, source_config].map { |f| File.file?(f) ? File.read(f)[/^
 model = model_flag == "none" ? nil : (model_flag || saved)
 
 env = { "MASTER_INTERNAL_CHILD" => "1" }
+# The wrapper captures the child's ordinary progress in its followable log;
+# unlike a pipe, this is still an interactive operator run. Preserve an
+# explicit quiet choice from the invoking environment.
+if $stdin.tty? && $stdout.tty? && ENV["MASTER_CLI_QUIET"] != "1"
+  env["MASTER_CLI_QUIET"] = "0"
+end
 env["MASTER_FIX_NO_PUBLISH"] = "1" if no_publish
 env["MASTER_FIX_FRESH"] = "1" unless resume
 env["MASTER_FIX_CHECK_STAGES"] = check_stages unless check_stages.empty?

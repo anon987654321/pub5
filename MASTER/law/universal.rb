@@ -408,14 +408,18 @@ Law.define(:FUNCTIONAL_CORE) do
 end
 
 Law.define(:CONVENTION_OVER_CONFIG) do
-  source "Convention over Configuration (Rails Doctrine, DHH)"
-  ask "Does this require explicit configuration where an established local convention already provides the correct behavior?"
-  fix "Use the existing convention; add configuration only when it changes a real requirement."
+  source "Convention over Configuration and sensible defaults (Rails Doctrine, DHH)"
+  ask "Does a common workflow require the operator to memorize a flag, environment variable or repeated choice where a safe local convention or context-aware default could supply the expected behaviour? Does configuration expose a meaningful alternative, or merely make the common path harder to reach?"
+  fix "Make the safe, unsurprising behaviour work without setup for the common case. Infer only from reliable context such as terminal versus pipe or the measured host budget. Keep an explicit override for a genuinely different operating mode, but never infer authority, widen permissions or hide a material ambiguity."
   bad <<~'X'
-    config = { adapter: :default }
+    def show_progress?
+      ENV["MASTER_CLI_VERBOSE"] == "1"
+    end
   X
   good <<~'X'
-    adapter = default_adapter
+    def show_progress?
+      $stdin.tty? && $stdout.tty? && ENV["MASTER_CLI_QUIET"] != "1"
+    end
   X
 end
 

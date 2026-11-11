@@ -23,6 +23,7 @@ module Master
 
       LEVELS = %w[quiet normal verbose trace everything].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
+      DETAIL_IO_MUTEX = Mutex.new
       @draft_guard = nil
 
       def enabled?
@@ -43,6 +44,8 @@ module Master
         env = ENV["MASTER_DMESG"].to_s.downcase
         return "quiet" if env.empty? && ENV["MASTER_QUIET"] == "1"
         return normalize_verbosity(env) unless env.empty?
+        return "trace" if ENV["MASTER_CLI_TRACE"] == "1"
+        return "verbose" if ENV["MASTER_CLI_VERBOSE"] == "1"
 
         normalize_verbosity(cfg.fetch("verbosity", "verbose"))
       end
@@ -75,6 +78,37 @@ module Master
 
       def detail_unit(kind)
         Fiber[:master_dmesg_detail_units]&.fetch(kind.to_s, nil) || kind.to_s
+      end
+
+      def configure_cli_output_default!(stdin_tty:, stdout_tty:)
+        ENV["MASTER_CLI_QUIET"] ||= "1" unless stdin_tty && stdout_tty
+        ENV["MASTER_CLI_QUIET"]
+      end
+
+      def configure_cli_verbosity(level)
+        level = normalize_verbosity(level)
+        return unless %w[verbose trace everything].include?(level)
+
+        ENV["MASTER_DMESG"] = level
+        ENV["MASTER_CLI_QUIET"] = "0"
+        ENV["MASTER_BOOT_STATUS"] = "1"
+        ENV["MASTER_DMESG_DETAIL"] = "1" if level == "everything"
+        level
+      end
+
+      CLI_VERBOSITY_OPTIONS = {
+        "--verbose" => "verbose",
+        "--boot-status" => "verbose",
+        "--trace" => "trace",
+        "--detail" => "everything",
+        "--everything" => "everything",
+      }.freeze
+
+      # Apply only terminal-level options before boot so startup itself follows
+      # the requested level. The parser later consumes the same flag normally.
+      def prime_cli_verbosity!(argv)
+        level = Array(argv).filter_map { |arg| CLI_VERBOSITY_OPTIONS[arg.to_s] }.last
+        configure_cli_verbosity(level) if level
       end
 
       def with_verbosity(level)
@@ -143,17 +177,32 @@ module Master
       # A subordinate terminal-only channel for payloads that the event ledger
       # intentionally redacts. It is silent unless explicitly enabled; it never
       # publishes to the bus, ring buffer or JSONL. Detail is not narrated.
-      def detail(unit, text, io: $stdout, indent: nil, style: nil)
+      def detail(unit, text, io: nil, indent: nil, style: nil)
         return unless detail_enabled? && enabled?
+
+        target = detail_target(io)
+        return unless target
 
         settings = cfg
         indent = Integer(indent || settings.fetch("detail_indent", 2)).clamp(0, 16)
         maxch = Integer(settings.fetch("detail_max_chars", 240)).clamp(1, 4_000)
         maxln = Integer(settings.fetch("detail_max_lines", 8)).clamp(1, 100)
         marker = settings.fetch("detail_truncate_marker", "…").to_s
-        subordinate(detail_unit(unit), text, io:, indent:, style:, maxch:, maxln:, marker:)
+        subordinate(detail_unit(unit), text, io: target, indent:, style:, maxch:, maxln:, marker:)
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Trace::Dmesg.detail")
+        nil
+      end
+
+      def detail_target(explicit)
+        return explicit if explicit
+        return $stdout if $stdout.respond_to?(:tty?) && $stdout.tty?
+        return unless $stdin.respond_to?(:tty?) && $stdin.tty?
+
+        DETAIL_IO_MUTEX.synchronize do
+          @detail_io ||= File.open("/dev/tty", "w")
+        end
+      rescue StandardError
         nil
       end
 
