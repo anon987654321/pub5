@@ -160,7 +160,10 @@ void main(){
     * exp(-pow((position.y - 0.035) / 0.19, 2.0));
   float chinPlane = exp(-pow((position.y + 0.345) / 0.055, 2.0))
     * (1.0 - smoothstep(0.08, 0.27, abs(position.x)));
-  float sideCarve = position.x < 0.0 ? -FACE_CARVE_ASYMMETRY : FACE_CARVE_ASYMMETRY;
+  // A small seeded imbalance keeps the planes human and avoids a mirrored mask.
+  float sidePhase = sin(position.y * 9.0 + seed * 0.71 + 0.6);
+  float sideWeight = position.x < 0.0 ? 1.0 : 0.38;
+  float sideCarve = sidePhase * sideWeight * FACE_CARVE_ASYMMETRY;
   p.z -= eyeSocket * FACE_CARVE_ORBITAL * lm;
   p.z += browShelf * FACE_CARVE_BROW * lm;
   p.z += cheekPlane * (FACE_CARVE_CHEEK + sideCarve) * lm;
