@@ -4,6 +4,7 @@ require "digest"
 require "fileutils"
 require "json"
 require "set"
+require_relative "../io/atomic_write"
 require_relative "repair_outcomes"
 
 module Master
@@ -16,6 +17,8 @@ module Master
     # past RETIRE_AFTER asks at RETIRE_RATIO it is no longer sent at all, and the
     # run says which rule and why, so the rule is fixed instead.
     class RepairMemory
+      include Master::Io::AtomicWrite
+
       PATH = File.join(".master", "fix_memory.json")
       RETIRE_AFTER = 20
       RETIRE_RATIO = 0.8
@@ -35,12 +38,13 @@ module Master
       # The findings still worth a model call: not declined for the file as it
       # is now, and not of a retired rule.
       def fresh(path, findings)
-        data = load
+        data = with_store_lock { load }
         declined = declined_for(path, data)
         findings.reject { |finding| declined.include?(finding[:law].to_s) || retired?(finding[:law], data) }
       end
 
-      def retired?(law_id, data = load)
+      def retired?(law_id, data = nil)
+        data ||= with_store_lock { load }
         stats = data.dig("laws", law_id.to_s)
         return false unless stats && stats["asked"].to_i >= RETIRE_AFTER
 
@@ -63,7 +67,7 @@ module Master
       # fingerprints existed adopts the current one.
       def sync_detectors(laws)
         marks = laws.to_h { |law| [law.id.to_s, DETECTORS.fetch(law.id.to_s) { DETECTORS[law.id.to_s] = detector_digest(law) }] }
-        LOCK.synchronize do
+        with_store_lock do
           data = load
           changed = marks.count { |id, digest| digest && refingerprint(data, id, digest) }
           save(data) if changed.positive?
@@ -77,7 +81,7 @@ module Master
         verdict = verdict_for(outcomes)
         return if verdict == :unanswered
 
-        LOCK.synchronize do
+        with_store_lock do
           data = load
           law_ids.each { |id| tally(data, id.to_s, verdict) }
           remember_file(data, path, law_ids, verdict)
@@ -148,16 +152,79 @@ module Master
       end
 
       def load
-        return { "files" => {}, "laws" => {} } unless File.file?(@file)
+        return { "files" => {}, "laws" => {} } unless File.exist?(@file) || File.symlink?(@file)
 
-        { "files" => {}, "laws" => {} }.merge(JSON.parse(File.read(@file)))
+        stat = File.lstat(@file)
+        unless stat.file? && !stat.symlink? && stat.nlink == 1
+          raise IOError, "repair memory must be a singly linked regular file"
+        end
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(@file, flags) do |file|
+          opened = file.stat
+          current = File.lstat(@file)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == opened.dev && current.ino == opened.ino
+            raise IOError, "repair memory path changed while opening"
+          end
+          raw = file.read(5 * 1024 * 1024 + 1)
+          raise IOError, "repair memory exceeds the 5 MiB safety limit" if raw.bytesize > 5 * 1024 * 1024
+
+          { "files" => {}, "laws" => {} }.merge(JSON.parse(raw))
+        end
       rescue JSON::ParserError
         { "files" => {}, "laws" => {} }
       end
 
       def save(data)
-        FileUtils.mkdir_p(File.dirname(@file))
-        File.write(@file, JSON.pretty_generate(data) + "\n")
+        write_atomic(@file, JSON.pretty_generate(data) + "\n", mode: 0o660)
+      end
+
+      # The process mutex protects threads; the sidecar flock protects the
+      # read-modify-write cycle between independent MASTER processes sharing
+      # one .master directory. Both reads and writes enter through this gate.
+      def with_store_lock
+        LOCK.synchronize do
+          directory = File.dirname(@file)
+          expected_root = File.realpath(@root)
+          resolved = verified_atomic_directory(directory)
+          raise IOError, "repair memory directory escapes its repository" unless
+            resolved == directory && (resolved == expected_root || resolved.start_with?(expected_root + File::SEPARATOR)
+
+          FileUtils.mkdir_p(directory, mode: 0o700)
+          directory_stat = File.lstat(directory)
+          unless directory_stat.directory? && !directory_stat.symlink? &&
+                 verified_atomic_directory(directory) == directory &&
+                 directory_stat.dev == File.stat(expected_root).dev
+            raise IOError, "repair memory directory is not a stable in-repository directory"
+          end
+
+          lock_path = "#{@file}.lock"
+          flags = File::RDWR | File::CREAT
+          flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+          File.open(lock_path, flags, 0o660) do |lock|
+            opened = lock.stat
+            current = File.lstat(lock_path)
+            unless opened.file? && opened.nlink == 1 && current.file? && !current.symlink? &&
+                   current.nlink == 1 && current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "repair memory lock must be a stable singly linked regular file"
+            end
+            raise IOError, "could not acquire repair memory lock" unless lock.flock(File::LOCK_EX)
+
+            begin
+              current = File.lstat(lock_path)
+              unless current.file? && !current.symlink? && current.nlink == 1 &&
+                     current.dev == opened.dev && current.ino == opened.ino
+                raise IOError, "repair memory lock path changed while waiting"
+              end
+              yield
+            ensure
+              lock.flock(File::LOCK_UN)
+            end
+          end
+        end
+      rescue SystemCallError => error
+        raise IOError, "cannot safely lock repair memory: #{error.class}: #{error.message}"
       end
 
       def digest(path) = File.file?(path) ? Digest::SHA256.file(path).hexdigest : ""
