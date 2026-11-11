@@ -90,11 +90,18 @@ for ruby in "$RBENV_ROOT"/versions/*/bin/ruby; do
   add_candidate "$ruby"
 done
 
-# Common package/Homebrew versioned names, followed by the host's generic ruby.
-for name in ruby4.3 ruby43 ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33;
-  ruby_path=$(command -v "$name" 2>/dev/null || true)
-  [ -n "$ruby_path" ] && add_candidate "$ruby_path"
+# Discover versioned package names from PATH. No static release list may
+# become an accidental upper bound as distributions add new package suffixes.
+OLD_IFS=$IFS
+IFS=:
+for directory in $PATH; do
+  [ -d "$directory" ] || continue
+  for ruby_path in "$directory"/ruby[0-9]*; do
+    [ -x "$ruby_path" ] || continue
+    add_candidate "$ruby_path"
+  done
 done
+IFS=$OLD_IFS
 
 if [ -n "$BEST_RUBY" ]; then
   ACTUAL=$("$BEST_RUBY" -e 'print RUBY_VERSION')
