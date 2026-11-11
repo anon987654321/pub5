@@ -126,6 +126,25 @@ class TestVoiceNarrator < Minitest::Test
     assert_equal 1, n.calls
   end
 
+  def test_expected_lane_unavailability_uses_templates_without_swallowing_an_error
+    n = build
+    n.observe("scan0: reading 14 files")
+    window(n)
+    messages = []
+
+    Master::Trace::Dmesg.stub(:once, ->(unit, message, **) { messages << [unit, message] }) do
+      Master::Ground::Swallow.stub(:log, ->(*) { flunk "expected lane unavailability is not a defect" }) do
+        assert_equal :spoken, n.tick
+      end
+    end
+
+    assert_match(/reading 14 files/, @spoken.join)
+    assert_equal 1, n.instance_variable_get(:@model_failures)
+    assert_equal "voice0", messages.first.first
+    assert_match(/using deterministic templates/, messages.first.last)
+    assert_match(/no lane/, messages.first.last)
+  end
+
   def test_invented_numbers_fall_back_to_the_template
     n = build(writer: ->(**) { "The scan read 900 files." })
     n.observe("scan0: reading 14 files")

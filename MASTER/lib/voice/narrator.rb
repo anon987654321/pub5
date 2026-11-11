@@ -353,13 +353,21 @@ module Master
           @model_failures = 0
         end
         reply
+      rescue LaneWriter::Unavailable => e
+        record_model_failure(now)
+        Master::Trace::Dmesg.once("voice0", "model narration unavailable; using deterministic templates (#{e.message})")
+        nil
       rescue StandardError => e
+        record_model_failure(now)
+        Master::Ground::Swallow.log(e, context: "Voice::Narrator.model")
+        nil
+      end
+
+      def record_model_failure(now)
         @lock.synchronize do
           @model_failures += 1
           @model_down_until = now + 60 * @model_failures if @model_failures >= 2
         end
-        Master::Ground::Swallow.log(e, context: "Voice::Narrator.model")
-        nil
       end
 
       def numbered(job)
