@@ -35,12 +35,7 @@ module Pub5Admin
   RAILS_APPS = %w[brgen amber bsdports mrdamascy].freeze
   RAILS_TASK_APPS = %w[master brgen amber bsdports mrdamascy].freeze
   STAMP_DIR = "/var/db/pub5"
-  RUBY_CANDIDATES = %w[
-    /usr/local/bin/ruby4.0 /usr/local/bin/ruby40
-    /usr/local/bin/ruby3.4 /usr/local/bin/ruby34
-    /usr/local/bin/ruby3.3 /usr/local/bin/ruby33
-    /usr/local/bin/ruby
-  ].freeze
+  RUBY_CANDIDATES = %w[/usr/local/bin/ruby].freeze
 
   module_function
 
@@ -97,8 +92,9 @@ module Pub5Admin
   end
 
   def ruby_path
-    RUBY_CANDIDATES.find { |path| File.file?(path) && File.executable?(path) } ||
-      raise("no supported system Ruby found under /usr/local/bin")
+    candidates = RUBY_CANDIDATES + Dir.glob("/usr/local/bin/ruby[0-9]*").sort
+    candidates.uniq.find { |path| File.file?(path) && File.executable?(path) } ||
+      raise("no system Ruby found under /usr/local/bin")
   end
 
   def ensure_ci_lock
