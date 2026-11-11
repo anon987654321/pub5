@@ -7,9 +7,9 @@ module Operator
   module RubyRunner
     module_function
 
-    # Prefer the newest compatible interpreter actually installed. The running
-    # interpreter wins a version tie so its native gems and bundle remain coherent.
-    RUBY_NAMES = %w[ruby4.3 ruby43 ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby].freeze
+    # The current process interpreter is authoritative when compatible. Only
+    # search other installed Rubies when this process is below the runtime floor.
+    RUBY_NAMES = %w[ruby].freeze
 
     def ruby_cmd(root: Environment.repo_root)
       explicit = ENV["PUB5_RUBY"].to_s
@@ -48,20 +48,17 @@ module Operator
 
     def best_available_ruby(root: Environment.repo_root)
       current = RbConfig.ruby
-      candidates = [current]
-      candidates.concat(Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby")))
-      RUBY_NAMES.each do |name|
-        path = command_path(name)
-        candidates << path unless path.empty?
-      end
-      candidates.concat(path_ruby_candidates)
+      current_version = version_for(current)
+      return { path: current, version: current_version, current: true } if current_version && current_version >= Environment::SUPPORTED_RUBY_MIN
 
+      candidates = Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby"))
+      candidates.concat(path_ruby_candidates)
       candidates.uniq.filter_map do |path|
         version = version_for(path)
         next unless version && version >= Environment::SUPPORTED_RUBY_MIN
 
-        { path:, version:, current: same_interpreter?(path, current) }
-      end.max_by { |candidate| [candidate[:version], candidate[:current] ? 1 : 0] }
+        { path:, version:, current: false }
+      end.max_by { |candidate| candidate[:version] }
     end
 
     # Discover versioned package names as well as ruby on PATH. This prevents
