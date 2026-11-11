@@ -40,6 +40,16 @@ tests = %w[
   test/test_fix_crash_leaves_tree.rb
   test/test_fix_hardening.rb
   test/test_fix_loop_priorities.rb
+  test/test_soul.rb
+  test/test_replay_reader.rb
+  test/test_media_lanes.rb
+  test/test_tools_media.rb
+  test/test_law_registry_audit.rb
+  test/test_boot_checks.rb
+  test/test_provider_config.rb
+  test/test_runtime_catalogue_validation.rb
+  test/test_master_loop.rb
+  test/test_yaml_registries.rb
   test/test_fix_loop_oscillation.rb
   test/test_fix_run_budget.rb
   test/test_run_ledger_per_run.rb
