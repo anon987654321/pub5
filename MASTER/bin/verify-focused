@@ -60,12 +60,14 @@ tests = %w[
   test/test_master_boot.rb
   test/test_inference.rb
   test/test_council_deliberation.rb
+  test/test_council_deliberation.rb
   test/test_task_steward.rb
   test/test_core_bridge.rb
   test/test_fix_plan.rb
   test/test_fix_protocol.rb
   test/test_backlog.rb
   test/test_task_contract.rb
+  test/test_opencrabs_features.rb
   test/test_artifact_preservation.rb
   test/test_fix_model_phase_guards.rb
   test/test_stream_stage.rb
