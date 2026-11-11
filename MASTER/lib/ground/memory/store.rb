@@ -13,11 +13,15 @@ module Master
       module Store
         include ::Master::Io::AtomicWrite
 
+        PERSISTENCE_LOCK = Mutex.new
+        MAX_STORE_BYTES = 10 * 1024 * 1024
+
         def initialize(root: Dir.pwd)
-          @root = root
-          @path = File.join(root, ".master", "memory.yml")
+          @root = File.expand_path(root)
+          @path = File.join(@root, ".master", "memory.yml")
           @mutex = Mutex.new
           @store = load_store
+          @persisted_store = deep_copy_store(@store)
           @store_version = 0
           import_external!
         end
@@ -27,12 +31,14 @@ module Master
           source ||= caller_source
           confidence = confidence.to_f.clamp(0.0, 1.0)
           @mutex.synchronize do
-            prune_stale! if @store.size > CONSOLIDATE_THRESHOLD
-            previous = @store[key.to_s]
-            entry = entry_for(key:, value:, type:, source:, confidence:, embed:)
-            record_conflict!(key.to_s, previous, entry) if conflicting_entry?(key.to_s, previous, entry)
-            @store[key.to_s] = entry
-            persist
+            with_store_lock do
+              prune_stale! if @store.size > CONSOLIDATE_THRESHOLD
+              previous = @store[key.to_s]
+              entry = entry_for(key:, value:, type:, source:, confidence:, embed:)
+              record_conflict!(key.to_s, previous, entry) if conflicting_entry?(key.to_s, previous, entry)
+              @store[key.to_s] = entry
+              persist
+            end
           end
         end
 
@@ -115,11 +121,12 @@ module Master
           raise ArgumentError, "reviewer is required" if reviewer.empty?
 
           @mutex.synchronize do
-            stored = @store[key.to_s]
-            return if stored.nil?
-            return if stored.is_a?(Hash) && !stored.key?("value")
+            with_store_lock do
+              stored = @store[key.to_s]
+              return if stored.nil?
+              return if stored.is_a?(Hash) && !stored.key?("value")
 
-            # Older stores may still contain a plain scalar. Promote it without
+              # Older stores may still contain a plain scalar. Promote it without
             # changing the recalled text so a review can govern it safely too.
             entry = if stored.is_a?(Hash)
               stored
@@ -145,8 +152,9 @@ module Master
             # Invalidate both its durable copy and the in-memory summary.
             @store.delete("_consolidated_summary")
             @context_summary_cache = nil
-            persist
-            provenance.dup
+              persist
+              provenance.dup
+            end
           end
         end
 
@@ -222,13 +230,15 @@ module Master
         def forget(key)
           name = key.to_s
           @mutex.synchronize do
-            @store.delete_if do |stored_key, _|
-              path = stored_key.to_s
-              path == name || path == "archive/#{name}" || path == "_consolidated_summary" ||
-                path.start_with?("conflict/#{name}/", "archive/conflict/#{name}/")
+            with_store_lock do
+              @store.delete_if do |stored_key, _|
+                path = stored_key.to_s
+                path == name || path == "archive/#{name}" || path == "_consolidated_summary" ||
+                  path.start_with?("conflict/#{name}/", "archive/conflict/#{name}/")
+              end
+              @context_summary_cache = nil
+              persist
             end
-            @context_summary_cache = nil
-            persist
           end
         end
 
@@ -379,18 +389,119 @@ module Master
         end
 
         def load_store
-          return {} unless File.exist?(@path)
+          return {} unless File.exist?(@path) || File.symlink?(@path)
 
-          loaded = Master.load_yaml(@path)
-          loaded.is_a?(Hash) ? loaded : {}
-        rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "memory.load_store", path: @path)
-          {}
+          stat = File.lstat(@path)
+          unless stat.file? && !stat.symlink? && stat.nlink == 1
+            raise IOError, "memory store must be a singly linked regular file"
+          end
+          flags = File::RDONLY
+          flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+          File.open(@path, flags) do |file|
+            opened = file.stat
+            current = File.lstat(@path)
+            unless current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "memory store path changed while opening"
+            end
+            raw = file.read(MAX_STORE_BYTES + 1)
+            raise IOError, "memory store exceeds the 10 MiB safety limit" if raw.bytesize > MAX_STORE_BYTES
+
+            loaded = Master.parse_yaml_content(raw, source: @path)
+            raise IOError, "memory store must contain a YAML mapping" unless loaded.is_a?(Hash)
+
+            loaded
+          end
+        rescue Psych::Exception => error
+          raise IOError, "memory store is malformed; original state was preserved (#{error.class})"
+        end
+
+        # Serialize writes from the daemon and the interactive CLI, then merge
+        # only this process's changes since its last successful write onto the
+        # newest disk snapshot. A stale process can no longer replace unrelated
+        # facts written by another process.
+        def with_store_lock
+          PERSISTENCE_LOCK.synchronize do
+            directory = File.dirname(@path)
+            root = File.realpath(@root)
+            resolved = verified_atomic_directory(directory)
+            unless resolved == directory && (resolved == root || resolved.start_with?(root + File::SEPARATOR))
+              raise IOError, "memory store directory escapes its repository"
+            end
+
+            FileUtils.mkdir_p(directory, mode: 0o700)
+            directory_stat = File.lstat(directory)
+            unless directory_stat.directory? && !directory_stat.symlink? &&
+                   directory_stat.dev == File.stat(root).dev &&
+                   verified_atomic_directory(directory) == directory
+              raise IOError, "memory store directory is not a stable in-repository directory"
+            end
+
+            lock_path = "#{@path}.lock"
+            flags = File::RDWR | File::CREAT
+            flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+            File.open(lock_path, flags, 0o600) do |lock|
+              opened = lock.stat
+              current = File.lstat(lock_path)
+              unless opened.file? && opened.nlink == 1 && current.file? && !current.symlink? &&
+                     current.nlink == 1 && current.dev == opened.dev && current.ino == opened.ino
+                raise IOError, "memory store lock must be a stable singly linked regular file"
+              end
+              lock.chmod(0o600)
+              raise IOError, "could not acquire memory store lock" unless lock.flock(File::LOCK_EX)
+
+              begin
+                current = File.lstat(lock_path)
+                unless current.file? && !current.symlink? && current.nlink == 1 &&
+                       current.dev == opened.dev && current.ino == opened.ino
+                  raise IOError, "memory store lock path changed while waiting"
+                end
+                merge_external_store!
+                yield
+              ensure
+                lock.flock(File::LOCK_UN)
+              end
+            end
+          end
+        rescue SystemCallError => error
+          raise IOError, "cannot safely lock memory store: #{error.class}: #{error.message}"
+        end
+
+        def merge_external_store!
+          disk = load_store
+          local = @store
+          baseline = @persisted_store || {}
+          @store = deep_copy_store(disk)
+          (baseline.keys | local.keys).each do |key|
+            next if local.key?(key) == baseline.key?(key) && local[key] == baseline[key]
+
+            if local.key?(key)
+              @store[key] = deep_copy_value(local[key])
+            else
+              @store.delete(key)
+            end
+          end
+          @persisted_store = deep_copy_store(disk)
+          @store_version += 1
+        end
+
+        def deep_copy_store(value)
+          deep_copy_value(value)
+        end
+
+        def deep_copy_value(value)
+          case value
+          when Hash
+            value.each_with_object({}) { |(key, item), copy| copy[deep_copy_value(key)] = deep_copy_value(item) }
+          when Array then value.map { |item| deep_copy_value(item) }
+          when String then value.dup
+          else value
+          end
         end
 
         def persist
-          FileUtils.mkdir_p(File.dirname(@path))
           write_atomic(@path, @store.to_yaml, mode: 0o600)
+          @persisted_store = deep_copy_store(@store)
           @store_version += 1
         end
       end
