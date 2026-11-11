@@ -55,6 +55,10 @@ class TestDmesgDetail < Minitest::Test
     Dmesg.configure_cli_verbosity("everything")
     assert_equal "everything", Dmesg.verbosity
     assert Dmesg.detail_enabled?
+
+    Dmesg.configure_cli_verbosity("trace")
+    assert_equal "trace", Dmesg.verbosity
+    refute Dmesg.detail_enabled?
   end
 
   def test_last_verbosity_option_wins_before_boot

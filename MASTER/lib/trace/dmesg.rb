@@ -92,7 +92,11 @@ module Master
         ENV["MASTER_DMESG"] = level
         ENV["MASTER_CLI_QUIET"] = "0"
         ENV["MASTER_BOOT_STATUS"] = "1"
-        ENV["MASTER_DMESG_DETAIL"] = "1" if level == "everything"
+        if level == "everything"
+          ENV["MASTER_DMESG_DETAIL"] = "1"
+        else
+          ENV.delete("MASTER_DMESG_DETAIL")
+        end
         level
       end
 
