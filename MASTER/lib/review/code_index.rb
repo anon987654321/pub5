@@ -73,6 +73,7 @@ module Master
         @errors = []
         @partial = false
         @lock = Monitor.new
+        @build_thread_mutex = Mutex.new
         @build_thread = nil
       end
 
@@ -118,10 +119,18 @@ module Master
       end
 
       def build_async
-        @lock.synchronize do
+        @build_thread_mutex.synchronize do
           return self if @build_thread&.alive?
 
-          @build_thread = Thread.new { build }
+          @build_thread = Thread.new do
+            begin
+              build
+            ensure
+              @build_thread_mutex.synchronize do
+                @build_thread = nil if @build_thread == Thread.current
+              end
+            end
+          end
         end
         self
       end
@@ -131,7 +140,9 @@ module Master
       end
 
       def wait_for_build
-        @build_thread&.join
+        thread = @build_thread_mutex.synchronize { @build_thread }
+        thread&.join
+        self
       end
 
       def built?
