@@ -299,8 +299,19 @@ module Master
             [weights.max || 0, weights.sum, weights.size]
           end
 
-          def start_workers(queue, streamed, pass, budget)
-            Array.new(WORKERS) { Thread.new { drain_repairs(queue, streamed:, pass:, run_deadline: budget) } }
+          def start_workers(queue, streamed, pass, budget, count: WORKERS)
+            workers = []
+            begin
+              count.times do
+                workers << Thread.new { drain_repairs(queue, streamed:, pass:, run_deadline: budget) }
+              end
+              workers
+            ensure
+              # Thread.new can fail after earlier workers have started. They
+              # are still waiting on this queue, so close and join that partial
+              # pool before the creation error escapes.
+              stop_workers(queue, workers) if workers.size < count
+            end
           end
 
           # A scan that raised leaves the worker mid-queue: it finishes the
