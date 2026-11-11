@@ -191,6 +191,36 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_write_refuses_a_symlink_destination_inside_the_workspace
+    with_world do |world, root|
+      target = File.join(root, "target.txt")
+      File.write(target, "keep")
+      File.symlink(target, File.join(root, "alias.txt"))
+
+      result = world.perform(E.write("alias.txt", "replace"))
+
+      refute result.ok?
+      assert_match(/singly linked regular file/, result.message)
+      assert_equal "keep", File.read(target)
+      assert File.symlink?(File.join(root, "alias.txt"))
+    end
+  end
+
+  def test_write_refuses_a_hardlinked_destination
+    with_world do |world, root|
+      original = File.join(root, "original.txt")
+      File.write(original, "keep")
+      File.link(original, File.join(root, "linked.txt"))
+
+      result = world.perform(E.write("linked.txt", "replace"))
+
+      refute result.ok?
+      assert_match(/singly linked regular file/, result.message)
+      assert_equal "keep", File.read(original)
+      assert_equal "keep", File.read(File.join(root, "linked.txt"))
+    end
+  end
+
   def test_write_refuses_dangling_symlink_ancestors_before_mkdir
     with_world do |world, root|
       outside = File.join(File.dirname(root), "world-dangling-#{SecureRandom.hex(4)}")
