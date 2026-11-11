@@ -237,6 +237,33 @@ def publish_pending! = :nothing_to_publish
     assert_equal persistent, cycles.first[:payload][:violation].to_h.slice(:file, :line, :law, :message)
   end
 
+  def test_count_plateau_aborts_the_open_pass_transaction
+    scans = (1..5).map do |line|
+      [{ law: "TEST_RULE", file: "dummy.yml", line:, message: "distinct finding #{line}" }]
+    end
+    scanner = SequenceScanner.new(scans)
+    committer = CommitterSpy.new
+    loop = nil
+    Master::Fix::FixLoop::Committer.stub(:new, committer) do
+      loop = Master::Fix::FixLoop.new(
+        laws: [StubRule.new("TEST_RULE", :warning)],
+        agent: OpenCircuitAgent.new,
+        scanner:,
+        root: @root,
+        bus: @bus,
+        git: StubGit.new,
+      )
+    end
+    calm(loop)
+
+    result = loop.run(@root, max_passes: 5)
+
+    assert result.ok?, -> { result.message }
+    assert_match(/\\APLATEAU: /, result.value!)
+    assert_equal 1, @bus.events.count { |event| event[:event] == "fix_loop:plateau" }
+    assert_equal [:abort], committer.calls
+  end
+
   def test_run_forever_owns_the_supervisor_not_a_cycle_bound
     mission = Master::Fix::Mission.new(root: @root)
     mission.ensure_queued!(goal: "fix #{@root}", scope: @root)
