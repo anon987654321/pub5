@@ -72,9 +72,13 @@ class LogoPlacementTest < ActiveSupport::TestCase
     partial = Rails.root.join("..", "__shared", "app/views/shared/_brand_mark.html.erb").read
     core = Rails.root.join("app/assets/stylesheets/_brgen_core_shell.scss").read
     overrides = Rails.root.join("app/assets/stylesheets/_brgen_shared_overrides.scss").read
+    amber_layout = Rails.root.join("..", "amber", "app/views/layouts/application.html.erb").read
+    bsdports_layout = Rails.root.join("..", "bsdports", "app/views/layouts/application.html.erb").read
 
     assert_includes layout, "particle: true"
     assert_includes storefront, "particle: true"
+    refute_includes amber_layout, "particle: true"
+    refute_includes bsdports_layout, "particle: true"
     assert_includes partial, "local_assigns.fetch(:particle, false) == true"
     assert_includes partial, 'class="brand-text__particles" aria-hidden="true"'
     assert_includes core, '$brgen-logo-font: "Helvetica Neue", Helvetica, Arial, sans-serif;'
