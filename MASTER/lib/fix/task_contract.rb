@@ -14,6 +14,7 @@ module Master
       PATH = File.expand_path("../../data/task_contract.yml", __dir__).freeze
       REQUIRED = %w[intent scope preserve proof].freeze
       EVIDENCE_KEY = :master_fix_task_contract_preservation_evidence
+      EVIDENCE_OVERFLOW_KEY = :master_fix_task_contract_preservation_evidence_overflow
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
       PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
@@ -169,17 +170,20 @@ module Master
       def with_current(value)
         previous = current
         previous_evidence = Thread.current[EVIDENCE_KEY]
+        previous_overflow = Thread.current[EVIDENCE_OVERFLOW_KEY]
         previous_plan = Thread.current[PLAN_KEY]
         contract = value.nil? ? nil : coerce(value)
         Thread.current[:master_fix_task_contract] = contract
         unless contract && previous == contract
           Thread.current[EVIDENCE_KEY] = []
+          Thread.current[EVIDENCE_OVERFLOW_KEY] = 0
           Thread.current[PLAN_KEY] = nil
         end
         yield
       ensure
         Thread.current[:master_fix_task_contract] = previous
         Thread.current[EVIDENCE_KEY] = previous_evidence
+        Thread.current[EVIDENCE_OVERFLOW_KEY] = previous_overflow
         Thread.current[PLAN_KEY] = previous_plan
       end
 
@@ -248,8 +252,13 @@ module Master
           "plan_digest" => Thread.current[PLAN_KEY],
         }.compact
         rows = Thread.current[EVIDENCE_KEY] ||= []
+        if rows.size >= MAX_PRESERVATION_ROWS
+          # Keep the original receipt set intact. Silently dropping its oldest
+          # rows would let a truncated population look like complete evidence.
+          Thread.current[EVIDENCE_OVERFLOW_KEY] = Thread.current[EVIDENCE_OVERFLOW_KEY].to_i + 1
+          return row.freeze
+        end
         rows << row.freeze
-        rows.shift while rows.size > MAX_PRESERVATION_ROWS
         row
       end
 
@@ -266,11 +275,12 @@ module Master
         missing = required - covered
         source_only = rows.any? { |row| row["evidence_level"] == "source_level" }
         missing_plan = Thread.current[PLAN_KEY].to_s.empty?
+        overflow_count = Thread.current[EVIDENCE_OVERFLOW_KEY].to_i
         status = if statuses.include?("FAIL")
                    "FAIL"
                  elsif rows.empty?
                    "not_measured"
-                 elsif statuses.any? { |value| value != "PASS" } || source_only || missing.any? || missing_plan
+                 elsif statuses.any? { |value| value != "PASS" } || source_only || missing.any? || missing_plan || overflow_count.positive?
                    "INCONCLUSIVE"
                  else
                    "PASS"
@@ -279,6 +289,7 @@ module Master
         reasons << "source-level checks do not prove rendered, runtime or accessibility preservation" if source_only
         reasons << "required preservation dimensions unmeasured: #{missing.join(', ')}" if missing.any?
         reasons << "preservation receipts are not bound to a FixPlan" if missing_plan
+        reasons << "#{overflow_count} additional preservation receipt(s) exceeded the #{MAX_PRESERVATION_ROWS}-row evidence limit" if overflow_count.positive?
         {
           "status" => status,
           "contract_digest" => Digest::SHA256.hexdigest(JSON.generate(contract.to_h)),
@@ -287,6 +298,7 @@ module Master
           "covered_dimensions" => covered.sort,
           "missing_dimensions" => missing.sort,
           "result_count" => rows.size,
+          "overflow_count" => overflow_count,
           "results" => rows.dup,
           "reason" => reasons.empty? ? nil : reasons.join("; "),
         }.compact
