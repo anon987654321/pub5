@@ -161,11 +161,13 @@ class TestSwarm < Minitest::Test
     mutex = Mutex.new
     active = 0
     maximum = 0
+    calls = 0
     coordinator = build_coordinator(FakeAgent.new(default: "ok"))
     coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
     coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
       mutex.synchronize do
         active += 1
+        calls += 1
         maximum = [maximum, active].max
       end
       sleep 0.005
@@ -184,17 +186,20 @@ class TestSwarm < Minitest::Test
     assert_operator maximum, :>, 1
     assert_operator maximum, :<=, Master::Review::Swarm::Coordinator::MAX_CONCURRENT
     assert_equal roles.size, result.value!.artifacts.size
+    assert_equal 21, calls
   end
 
   def test_fan_out_joins_started_workers_and_accounts_for_unstarted_tasks
     original_new = Thread.method(:new)
     started = Queue.new
+    worker_ready = Queue.new
     release = Queue.new
     calls = 0
     coordinator = build_coordinator(FakeAgent.new(default: "ok"))
     coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
     coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
       started << task
+      worker_ready << true
       release.pop
       Result.ok({ "task" => task, "role" => role.to_s })
     end
@@ -204,12 +209,12 @@ class TestSwarm < Minitest::Test
       { role: :coder, task: "third", context_slice: {} },
     ]
     coordinator_thread = original_new.call do
-      Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      Thread.stub(:new, lambda { |*args, **kwargs, &worker_block|
         calls += 1
         raise ThreadError, "thread limit reached" if calls == 2
 
-        original_new.call(*args, **kwargs, &block).tap do
-          raise ThreadError, "first task did not start" unless started.pop(timeout: 2)
+        original_new.call(*args, **kwargs, &worker_block).tap do
+          raise ThreadError, "first task did not start" unless worker_ready.pop(timeout: 2)
         end
       }) do
         coordinator.fan_out(tasks, timeout: 2)
