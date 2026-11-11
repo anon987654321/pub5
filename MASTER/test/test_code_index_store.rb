@@ -83,6 +83,23 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_path_scoped_build_is_not_claimed_as_a_complete_index
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "root.rb"), "class RootOnly; end\\n")
+      Dir.mkdir(File.join(root, "lib"))
+      File.write(File.join(root, "lib", "nested.rb"), "class Nested; end\\n")
+      index = Index.new(root:).build(path: "lib")
+
+      assert index.partial?
+      refute index.complete?
+      index.build
+      refute index.partial?
+      assert index.complete?
+      assert index.lookup("RootOnly")
+    end
+  end
+
   def test_parse_failures_are_visible_and_never_saved_as_complete_snapshots
     Dir.mktmpdir do |root|
       root = File.realpath(root)
