@@ -28,6 +28,87 @@ class TestFixLoopPriorities < Minitest::Test
     end
   end
 
+
+  def test_rule_dependency_cycles_are_refused_instead_of_ordered_arbitrarily
+    Dir.mktmpdir do |dir|
+      laws = [Law.new("A", :warning), Law.new("B", :warning)]
+      order = Master::Fix::FixLoop::LawOrder.new(laws:, learnings: nil, bus: nil, root: dir)
+      raw = { "A" => { "after" => ["B"] }, "B" => { "after" => ["A"] } }
+      dependencies = { "A" => ["B"], "B" => ["A"] }
+
+      Master.stub(:law, raw) do
+        error = assert_raises(ArgumentError) { order.dependency_levels(laws) }
+        assert_match(/dependency cycle/, error.message)
+      end
+      error = assert_raises(ArgumentError) { order.send(:topo_sort, laws, dependencies) }
+      assert_match(/dependency cycle/, error.message)
+    end
+  end
+
+  def test_disjoint_rule_groups_are_batched_to_the_parallel_law_ceiling
+    mutex = Mutex.new
+    active = 0
+    maximum = 0
+    runner = Object.new.extend(Master::Fix::FixLoop::PassRunner::LlmStage)
+    runner.define_singleton_method(:run_law_once) do |law, _files, _pass, **|
+      mutex.synchronize do
+        active += 1
+        maximum = [maximum, active].max
+      end
+      sleep 0.02
+      mutex.synchronize { active -= 1 }
+      { fixed: 0, status: :noop }
+    end
+    laws = (1..19).map { |index| Law.new("RULE_#{index}", :warning) }
+    violations = laws.to_h { |law| [law.id, [{ file: "#{law.id}.rb" }]] }
+
+    results = runner.send(
+      :run_rule_group, group: laws, files: [], pass: 1, rule_violations: violations, council: nil
+    )
+
+    assert_equal laws.size, results.size
+    assert_operator maximum, :<=, Master::Fix::FixLoop::LawOrder::MAX_PARALLEL_LAWS
+  end
+
+  def test_rule_group_joins_siblings_before_propagating_a_worker_failure
+    started = Queue.new
+    release = Queue.new
+    finished = Queue.new
+    runner = Object.new.extend(Master::Fix::FixLoop::PassRunner::LlmStage)
+    runner.define_singleton_method(:run_law_once) do |law, _files, _pass, **|
+      started << law.id
+      if law.id == "FAIL"
+        raise "rule worker failed"
+      end
+      release.pop
+      finished << law.id
+      { fixed: 0, status: :noop }
+    end
+    laws = [Law.new("FAIL", :warning), Law.new("SLOW", :warning)]
+    violations = { "FAIL" => [{ file: "fail.rb" }], "SLOW" => [{ file: "slow.rb" }] }
+    result = Queue.new
+    run = Thread.new do
+      begin
+        runner.send(:run_rule_group, group: laws, files: [], pass: 1, rule_violations: violations, council: nil)
+        result << :unexpected_success
+      rescue StandardError => error
+        result << error
+      end
+    end
+
+    assert_equal "FAIL", started.pop
+    assert_equal "SLOW", started.pop
+    sleep 0.02
+    assert run.alive?, "the coordinator must wait for the sibling worker to finish"
+    release << :continue
+    run.join
+    error = result.pop
+
+    assert_instance_of RuntimeError, error
+    assert_equal "rule worker failed", error.message
+    assert_equal "SLOW", finished.pop
+  end
+
   def test_tier2_ids_exist_on_the_live_scanner
     require "fix/scanner"
     scanner = Master::Fix::Scanner.build(root: Master::ROOT)
