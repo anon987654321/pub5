@@ -198,9 +198,11 @@ focused tests, lint/audit, visual, accessibility and native runtime commands
 map to the existing TaskContract vocabulary; unknown or unsupported commands
 remain ineligible. Acceptance execution records the command/output digests,
 exit status, byte count, working directory and duration in the Mission proof;
-the terminal receipt rejects missing or stale command evidence. The executor
-also refuses symlinked path components and hard-linked scope files. These
-regressions are authored, not runtime-tested here.
+the Mission proof writer requires the exact current ProofMap version and
+integer exit/byte/duration measurements before storing a pass receipt. The
+terminal receipt rejects missing or stale command evidence. Scope intake
+refuses symlinked path components, hard-linked files and noncanonical relative
+paths. These regressions are authored, not runtime-tested here.
 
 The Kernel lifecycle suite already contains independent-process and independent-
 Kernel lock serialization cases, while the crash/transaction suites assert that
