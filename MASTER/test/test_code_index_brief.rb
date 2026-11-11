@@ -67,8 +67,8 @@ class TestCodeIndexBrief < Minitest::Test
   def test_broken_source_is_identified_as_an_incomplete_index
     Dir.mktmpdir do |root|
       root = File.realpath(root)
-      File.write(File.join(root, "healthy.rb"), "class Healthy; end\\n")
-      File.write(File.join(root, "broken.rb"), "def incomplete(\\n")
+      File.write(File.join(root, "healthy.rb"), "class Healthy; end\n")
+      File.write(File.join(root, "broken.rb"), "def incomplete(\n")
       index = Master::Review::CodeIndex.new(root:).build
 
       refute index.complete?
@@ -83,8 +83,8 @@ class TestCodeIndexBrief < Minitest::Test
     Dir.mktmpdir do |root|
       root = File.realpath(root)
       Dir.mkdir(File.join(root, "lib"))
-      File.write(File.join(root, "outside.rb"), "class Outside; end\\n")
-      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\\n")
+      File.write(File.join(root, "outside.rb"), "class Outside; end\n")
+      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\n")
       index = Master::Review::CodeIndex.new(root:).build(path: "lib")
 
       refute index.complete?
