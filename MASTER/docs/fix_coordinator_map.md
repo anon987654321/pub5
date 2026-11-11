@@ -133,14 +133,19 @@ orphaned Kernel receipt. A separate fixture deletes the run journal while
 checking that the independent Mission checkpoint and transaction snapshot
 survive. Owner and outcome regressions live in `test_fix_kernel_lifecycle.rb`.
 
-These tests are source changes, **not passing results**. The merge remains
-blocked until the tests run on the installed compatible Ruby, then the relevant
-release-runtime verification is also recorded. The canonical runtime policy is the installed Ruby 3.3+ selected by MASTER, shared by root, MASTER and Rails apps.
-These tests remain unexecuted in this GitHub editing environment. Still required after the
-process-boundary test: a real budget/collapse regression, truthful per-file
-ledger behavior for zero repairs, the complete adapter receipt-parity matrix,
-delivery-failure recovery, and one real repository-wide `/fix` run whose
-terminal state and repair counts are recorded.
+These tests are source changes, **not passing results**. The runtime gate
+remains blocked until they run on the installed compatible Ruby, followed by
+release-runtime verification. The canonical runtime is the installed Ruby 3.3+
+selected by MASTER, shared by root, MASTER and Rails apps.
+
+The focused runner now includes the existing recovery-gate cases for budget
+exhaustion/collapse refusal, zero-repair accounting and public-command receipt
+parity; the transaction and reliability suites cover delivery-marker recovery,
+retry locking, HEAD races, upstream drift and a newly added failed-push/retry
+case. These regressions are authored, not executed. The remaining proof is to
+run the focused set, verify the delivery failure survives and safely retries,
+and then perform one genuine repository-wide `/fix` run with its terminal
+state, repair counts and receipts recorded.
 
 ## Cross-cutting execution lifecycle
 
