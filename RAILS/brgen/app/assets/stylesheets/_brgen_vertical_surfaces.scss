@@ -463,30 +463,11 @@ display: block;
   height: 100dvh;
 }
 
-.radio-header {
-  position: fixed;
-  inset-block-start: var(--space-8);
-  inset-inline-start: var(--space-8);
-  z-index: 10;
-  pointer-events: none;
-}
-
-.radio-header h1 {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  /* Keep the brand face used by the shared city wordmark. */
-  font-family: var(--font-brand);
-  font-size: var(--text-extra-large);
-  font-weight: var(--weight-bold);
-  margin: 0;
-}
-
 .radio-brand-mark {
   display: block;
   flex: 0 0 auto;
-  width: 1.5em;
-  height: 1.5em;
+  width: 1.2em;
+  height: 1.2em;
   color: var(--color-accent);
 }
 
@@ -558,11 +539,6 @@ font-size: clamp(12px, 3vw, var(--text-small));
   left: 50%;
   right: auto;
   transform: translateX(-50%);
-}
-
-.radio-note-icon {
-  font-size: 1.2em;
-  color: var(--color-accent);
 }
 
 .radio-source-credit {
