@@ -70,7 +70,7 @@ module Master
         # The CLI spinner follows the host CPU load average, not the
         # memory or process-tree score used by the wider resource indicator.
         def cpu_load
-          host_score(system_load_average, logical_cpu_count) || 0.0
+          host_score(system_load_average, logical_cpu_count)
         end
 
         # Weighted 1/5/15-minute load, normalized by logical CPU count.
