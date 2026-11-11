@@ -439,7 +439,14 @@ module Master
       end
 
       def help_summary
-        lines = CATEGORY_ORDER.filter_map do |category|
+        lines = [
+          "input0 at master0: describe work in plain language; slash commands are optional.",
+          "try0 at master0: \"fix MASTER\" | \"show status\" | \"switch model\" | \"explain RAILS\".",
+          "keys0 at master0: Tab suggests common commands; type / then Tab for all; up/down recalls history.",
+          "multi0 at master0: << starts multiline; a blank line sends. While busy, lines queue; /stop pauses; /resume continues.",
+          "approve0 at master0: /approve [N] or /deny answers a pending approval; other input stays queued.",
+        ]
+        lines.concat(CATEGORY_ORDER.filter_map do |category|
           commands = COMMAND_CATEGORIES.filter_map do |name, assigned|
             "/#{name}" if assigned == category
           end
@@ -450,7 +457,6 @@ module Master
           commands.unshift("/help [command]") if category == "help"
           "#{category}0 at master0: #{commands.join(' ')}"
         end
-        lines << "input0 at master0: describe work in plain language; slash commands are optional."
         lines << shell_cap_line
         lines.join("\n")
       end
