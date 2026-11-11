@@ -31,7 +31,7 @@ module Master
           process_pressure = score(cpu, rss_kb)
           averages = load_average
           averages = system_load_average if averages.nil? && !injected_snapshot
-          host_pressure = host_score(averages, cpu_count || Etc.nprocessors)
+          host_pressure = host_score(averages, cpu_count || logical_cpu_count)
           return process_pressure unless host_pressure
 
           (process_pressure * PROCESS_WEIGHT + host_pressure * HOST_WEIGHT).clamp(0.0, 1.0)
@@ -57,6 +57,14 @@ module Master
         def score(cpu, rss_kb)
           0.6 * (cpu.to_f / CPU_CAP).clamp(0.0, 1.0) +
             0.4 * (rss_kb.to_f / MEMORY_CAP_KB).clamp(0.0, 1.0)
+        end
+
+        # An unavailable host CPU count removes only the host component. It must
+        # never turn a usable process-tree measurement into a zero score.
+        def logical_cpu_count
+          Etc.nprocessors
+        rescue StandardError, NotImplementedError
+          nil
         end
 
         # Weighted 1/5/15-minute load, normalized by logical CPU count.
