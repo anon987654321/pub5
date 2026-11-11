@@ -2292,6 +2292,26 @@ end
     assert_equal 2, incomplete.unchecked_count
   end
 
+  def test_fix_assessment_verification_does_not_assume_missing_counts_are_zero
+    loop = build_loop([])
+    verification = loop.send(
+      :assessment_verification_result,
+      run_id: "f" * 20, target: @root,
+      receipt: {
+        "status" => "persisted", "readback_verified" => true,
+        "verification" => "verified", "matrix_status" => "complete",
+        "cells" => 20,
+      },
+      matrix: { status: "complete" },
+      provenance_matches: true,
+    )
+
+    assert_equal :inconclusive, verification.status
+    refute verification.complete
+    assert_equal 20, verification.checked_count
+    assert_nil verification.failure_count
+  end
+
   def test_fix_assessment_verification_fails_closed_on_missing_readback_or_plan_binding
     loop = build_loop([])
     missing_readback = loop.send(
