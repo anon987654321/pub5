@@ -447,7 +447,7 @@ The existing compatibility spellings rewrite to `/fix --mode=...`:
 means the read-only repair preview; `/visual` and `/style` mean visual;
 `/elevate` and `/map` mean elevate; `/all`, `/workflow`, `/triad`,
 `/sweep`, `/through` and `/self` mean all.
-Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection.
+Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection. `--read-only` is an explicit no-write alias for `--dry-run`.
 Use `/fix` in new instructions.
 
 The run footer's file outcome docket names files that entered the repair
@@ -455,7 +455,7 @@ adapter, their Laws, attempts and latest result. It is not a whole-tree census:
 untouched or unmeasured files must not be described as clean.
 
 **That means a fix mutates the tree** — it has broken dilla and MASTER's own
-chat path. `--no-autofix` and `--dry-run` hold it back. Read the printed diff
+chat path. `--no-autofix`, `--read-only` and `--dry-run` hold it back. Read the printed diff
 before committing, and never commit rewrites of generated caches: the scanner
 descends into them.
 
