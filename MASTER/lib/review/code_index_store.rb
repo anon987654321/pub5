@@ -106,7 +106,7 @@ module Master
         return unless raw
 
         data = JSON.parse(raw)
-        return unless data["stamp"] == stamp && data["root"] == @root
+        return unless valid_snapshot?(data)
 
         files = data["files"]
         {
@@ -115,7 +115,10 @@ module Master
           signatures: data["signatures"],
           tree_hash: data["tree_hash"],
         }
-      rescue SystemCallError, IOError, JSON::ParserError
+      rescue StandardError
+        # The cache is derived data. Invalid shape, parser drift, permission
+        # trouble or concurrent replacement means a cold rebuild, never a
+        # repository-wide analysis failure.
         nil
       end
 
@@ -135,6 +138,41 @@ module Master
       end
 
       private
+
+      def valid_snapshot?(data)
+        return false unless data.is_a?(Hash)
+        return false unless data["stamp"] == stamp && data["root"] == @root
+        return false unless data["files"].is_a?(Array) &&
+                            data["files"].all? { |file| file.is_a?(String) && !file.empty? } &&
+                            data["files"].uniq == data["files"]
+        return false unless data["signatures"].is_a?(Hash) &&
+                            data["signatures"].keys == data["files"]
+        return false unless data["signatures"].all? do |_file, signature|
+          signature.is_a?(Array) && signature.size == 3 &&
+            signature[0].is_a?(Integer) && signature[1].is_a?(Integer) && signature[1] >= 0 &&
+            signature[2].is_a?(String) && signature[2].match?(/\\A[0-9a-f]{64}\\z/)
+        end
+        return false unless data["tree_hash"].is_a?(String) &&
+                            data["tree_hash"].match?(/\\A[0-9a-f]{64}\\z/) &&
+                            self.class.tree_hash(data["signatures"]) == data["tree_hash"]
+        return false unless data["symbols"].is_a?(Array) && data["references"].is_a?(Array)
+
+        data["symbols"].all? do |row|
+          row.is_a?(Array) && row.size == 6 &&
+            row[0].is_a?(String) && !row[0].empty? &&
+            row[1].is_a?(String) && %w[class module constant method].include?(row[1]) &&
+            row[2].is_a?(Integer) && row[2].between?(0, data["files"].size - 1) &&
+            row[3].is_a?(Integer) && row[3].positive? &&
+            (row[4].nil? || row[4].is_a?(String)) &&
+            row[5].is_a?(Array) && row[5].all? { |item| item.is_a?(String) }
+        end && data["references"].all? do |row|
+          row.is_a?(Array) && row.size == 4 &&
+            row[0].is_a?(Integer) && row[0].between?(0, data["files"].size - 1) &&
+            row[1].is_a?(Integer) && row[1].positive? &&
+            row[2].is_a?(String) && !row[2].empty? &&
+            row[3].is_a?(String) && !row[3].empty?
+        end
+      end
 
       # Open the cache without following a last-moment symlink replacement,
       # bound the allocation, and verify the opened inode and parent directory
