@@ -182,6 +182,8 @@ module Master
       # The shared face token owns both stops; malformed values degrade to
       # plain ASCII instead of raising in the spinner's paint path.
       def spinner_tint(intensity)
+        return if !ENV["NO_COLOR"].to_s.empty? || ENV["TERM"].to_s.casecmp("dumb").zero?
+
         stops = Master::Face::Contract.spinner_tint || {}
         from = Master::Face::Contract.rgb_channels(stops["from"])
         to = Master::Face::Contract.rgb_channels(stops["to"])
