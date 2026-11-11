@@ -1,6 +1,6 @@
 # pub5 — remaining work
 
-Audit baseline: 2026-11-11, source tree checked against `main@5b19d609ec1765c3efee441130ea71cd7c0d61a9` (complete tree `518ed1ffbee0ea33888eca13eba12ce706870728`).
+Audit baseline: 2026-11-11, source tree checked against `main@ff60792298f5d654cc7976fd9dfb3b8d4393d786` (complete tree `823a0dc917d01a4ffbb986de93fa27492e543b0d`).
 Snapshot: 168 unchecked register rows and 1 checked row (grouped rows are not
 atomic task counts). The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
@@ -10,7 +10,10 @@ structured ledgers, and completed entries are checked here only when their
 evidence is present.
 
 Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
-blob disposition is refreshed in `MIGRATION.md`. PRs #11 (MASTER portrait,
+blob disposition is refreshed in `MIGRATION.md` against `ff607922`. The
+execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
+failed at DNS resolution for github.com. Repository test, lint and build commands
+therefore remain NOT_RUN in this session; no source-code push bypassed `bin/check`. PRs #11 (MASTER portrait,
 semantic subject morphs, CLI feedback and Replicate upload guards) and #12
 (Brgen city wordmark refinement) are merged. No pull request was open at the
 time of this audit. Entries below remain open until their own source, test,
