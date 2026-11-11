@@ -153,10 +153,10 @@ module Master
         return false unless data["signatures"].all? do |_file, signature|
           signature.is_a?(Array) && signature.size == 3 &&
             signature[0].is_a?(Integer) && signature[1].is_a?(Integer) && signature[1] >= 0 &&
-            signature[2].is_a?(String) && signature[2].match?(/\\A[0-9a-f]{64}\\z/)
+            signature[2].is_a?(String) && signature[2].match?(/\A[0-9a-f]{64}\z/)
         end
         return false unless data["tree_hash"].is_a?(String) &&
-                            data["tree_hash"].match?(/\\A[0-9a-f]{64}\\z/) &&
+                            data["tree_hash"].match?(/\A[0-9a-f]{64}\z/) &&
                             self.class.tree_hash(data["signatures"]) == data["tree_hash"]
         return false unless data["symbols"].is_a?(Array) && data["references"].is_a?(Array)
 
