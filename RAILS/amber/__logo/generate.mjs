@@ -18,13 +18,20 @@ import { fileURLToPath } from "node:url";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const OUT = join(DIR, "plates");
-const ROOT = join(DIR, "../../../..");
+const ROOT = join(DIR, "../../..");
 const PARTIAL = join(ROOT, "RAILS/amber/app/views/shared/_logo.html.erb");
 
 const ERB = readFileSync(PARTIAL, "utf8");
 const GLYPHS = Object.fromEntries([...ERB.matchAll(/caprasimo-([a-z]+)" d="([^"]+)"/g)].map(m => [m[1], m[2]]));
 const TRANSFORMS = Object.fromEntries([...ERB.matchAll(/caprasimo-([a-z]+)" transform="([^"]+)"/g)].map(m => [m[1], m[2]]));
 const HAIRLINES = [...ERB.matchAll(/<path stroke="#FFFFFF" stroke-width="([\d.]+)"[^>]*d="([^"]+)"/g)].map(m => [parseFloat(m[1]), m[2]]);
+
+function canonicalHairlines() {
+  // Preserve the source partial's nine exact white paths, widths and opacity.
+  // Candidate plates clip visibility; they never restyle or redraw the swoosh.
+  return HAIRLINES.map(([width, d]) =>
+    `<path stroke="#FFFFFF" stroke-width="${width}" stroke-opacity="1.0" fill="none" d="${d}"/>`).join("");
+}
 
 if (Object.keys(GLYPHS).length !== 6) throw new Error("glyph extraction failed");
 if (HAIRLINES.length !== 9) throw new Error("hairline extraction failed");
@@ -123,14 +130,7 @@ function hairY(y0, x) {
   }
   return y0;
 }
-function steppedLine(y0, grid) {
-  const pts = [];
-  for (let x = 50; x <= 950; x += grid / 2) pts.push([x, hairY(y0, x)]);
-  return pts
-    .filter(p => p[0] >= CX0 && p[0] <= CX1)
-    .map(p => `${pts.indexOf(p) === 0 ? "M" : "L"}${(p[0] / grid).toFixed(0) * grid} ${(p[1] / grid).toFixed(0) * grid}`)
-    .join(" ");
-}
+
 
 // frozen position of the animated radial ink (reference)
 const RADIAL = [500, 250, 560];
@@ -192,14 +192,12 @@ function p01() {
   }
   let sig = "";
   for (let i = 0; i < 6; i++) sig += `<circle cx="${(LOCK.x0 + 18 + r() * 46).toFixed(1)}" cy="${(LOCK.y0 + 40 + r() * 90).toFixed(1)}" r="1.6" fill="#C8F55F"/>`;
-  // the dotted swoosh rides on top of the ink, inside the letters — punched
-  // through in the ground colour so it reads on the pale ink
-  const dots = HAIRLINES.map(([w, d]) =>
-    `<path d="${d}" fill="none" stroke="#0B0B0B" stroke-width="${Math.max(1.1, w)}" stroke-linecap="round" stroke-dasharray="0.1 5.5"/>`).join("");
+  // The original nine white swoosh paths ride above the ink unchanged.
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="#E8E8E6"/>` + holes + sig;
   const out = doc(1, "amber mark — many perforated carriers resolve into one readable form",
-    "#0B0B0B", mark(id, ink, dots));
-  plate(1, "unum_stipple", "perforated ink resolving to solid; the dotted swoosh rides inside the letters", out);
+    "#0B0B0B", mark(id, ink, lines));
+  plate(1, "unum_stipple", "perforated ink resolving to solid; canonical white swoosh inside the glyphs", out);
 }
 
 // ---------- 02 bit8 pixel — bit-reduction ----------
@@ -220,13 +218,10 @@ function p02() {
   // CRT scanlines fall on the phosphor — the ink — not on the ground
   const scan = [];
   for (let y = SY; y < SY + H; y += 6) scan.push(`<rect x="${SX}" y="${y}" width="${W}" height="1.4" fill="#000" opacity="0.12"/>`);
-  const lines = HAIRLINES.map(([w, d]) => {
-    const y0 = parseFloat(d.match(/M50,([\d.]+)/)[1]);
-    return `<path d="${steppedLine(y0, grid)}" fill="none" stroke="#FFFFFF" stroke-width="${w}" shape-rendering="crispEdges"/>`;
-  }).join("");
-  const out = doc(2, "amber mark — 8-bit bit-reduction with stepped swoosh",
+  const lines = canonicalHairlines();
+  const out = doc(2, "amber mark — 8-bit bit-reduction with the original white swoosh",
     "#101013", mark(id, cells + sig + scan.join(""), lines));
-  plate(2, "bit8_pixel", "8-bit bit-reduction — quantized ink, scanlines and a stepped swoosh, all inside the letters", out);
+  plate(2, "bit8_pixel", "8-bit bit-reduction — quantized ink and scanlines; canonical white swoosh", out);
 }
 
 // ---------- 03 dither4 press — 4-bit ordered dither, legible ----------
@@ -243,10 +238,10 @@ function p03() {
       if (b < 0.12 + u * 0.92) cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cell}" height="${cell}" fill="#17130E"/>`;
     }
   }
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#17130E" stroke-width="${w}"/>`).join("");
+  const lines = canonicalHairlines();
   const out = doc(3, "amber mark — 4-bit ordered dither on paper",
     "#F2EFE6", mark(id, cells, lines));
-  plate(3, "dither4_press", "4-bit ordered dither — a halftone ramp across the letters, the swoosh as one-bit rules", out);
+  plate(3, "dither4_press", "4-bit ordered dither — a halftone ramp inside the glyphs; canonical white swoosh", out);
 }
 
 // ---------- 04 signal orbit — motion: the ink roams ----------
@@ -257,7 +252,7 @@ function p04() {
     `<animate attributeName="fy" values="250;200;300;250" dur="18s" repeatCount="indefinite"/>` +
     `<stop offset="0" stop-color="#ffb999"/><stop offset="0.33" stop-color="#e6cce6"/>` +
     `<stop offset="0.66" stop-color="#cce6cc"/><stop offset="1" stop-color="#99e6e6"/></radialGradient>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#F4F4F2" stroke-width="${w}"/>`).join("");
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink4)"/>`;
   const out = doc(4, "amber mark — the radial ink roams behind the letters",
     "#0B0B0B", mark(id, ink, lines), g);
@@ -272,7 +267,7 @@ function p05() {
     `<animate attributeName="stop-color" values="${stops.join(";")};${stops[0]}" dur="10s" begin="${-i * 2.5}s" repeatCount="indefinite"/></stop>`;
   const g = `<linearGradient id="ink5" gradientUnits="userSpaceOnUse" x1="${CX0}" y1="0" x2="${CX1}" y2="0">` +
     stops.map((c, i) => anim(c, i)).join("") + `</linearGradient>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#F4F4F2" stroke-width="${w}"/>`).join("");
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink5)"/>`;
   const out = doc(5, "amber mark — the brand gradient cycles through the letters",
     "#101013", mark(id, ink, lines), g);
@@ -291,13 +286,13 @@ function p06() {
     sliver(SX, t1, 0.22) + sliver(t1, t2, 0.55) + sliver(t2, SX + W, 1) +
     `<rect x="${(t1 - 1.5).toFixed(1)}" y="${SY}" width="3" height="${H}" fill="#F6F1E3"/>` +
     `<rect x="${(t2 - 1.5).toFixed(1)}" y="${SY}" width="3" height="${H}" fill="#F6F1E3"/>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#241D12" stroke-width="${w}" opacity="0.85"/>`).join("");
+  const lines = canonicalHairlines();
   const out = doc(6, "amber mark — three exposure frames of the ink, ghost to live, split inside the letters",
     "#F6F1E3", mark(id, ink, lines));
-  plate(6, "zoetrope_frames", "sprite-sheet strip — the ink steps ghost, ghost, live across the letters", out);
+  plate(6, "zoetrope_frames", "sprite-sheet strip — ghost, ghost, live ink frames inside the glyphs; canonical white swoosh", out);
 }
 
-// ---------- 07 starlight comet — the swoosh as comet trails ----------
+// ---------- 07 starlight — night-sky ink and stars ----------
 function p07() {
   const id = "pl7", r = rng(5707);
   const g = `<linearGradient id="ink7" gradientUnits="userSpaceOnUse" x1="0" y1="${LOCK.y0}" x2="0" y2="${LOCK.y1}">` +
@@ -308,28 +303,24 @@ function p07() {
   for (let i = 0; i < 16; i++) {
     stars += `<circle cx="${(LOCK.x0 + r() * (LOCK.x1 - LOCK.x0)).toFixed(1)}" cy="${(LOCK.y0 + r() * (LOCK.y1 - LOCK.y0)).toFixed(1)}" r="${(1.0 + r() * 0.9).toFixed(2)}" fill="#FFFFFF" opacity="${(0.6 + r() * 0.4).toFixed(2)}"/>`;
   }
-  // comet fade: the swoosh enters each letter as a faint tail and burns to a
-  // bright head at the r — the trails live inside the letters only
-  const tail = `<linearGradient id="tail7" gradientUnits="userSpaceOnUse" x1="${CX0}" y1="0" x2="${CX1}" y2="0">` +
-    `<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/><stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.62"/>` +
-    `<stop offset="1" stop-color="#FFFFFF" stop-opacity="1"/></linearGradient>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="url(#tail7)" stroke-width="${w}"/>`).join("");
+  // The original white swoosh remains identical on every plate.
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink7)"/>` + stars;
-  const out = doc(7, "amber mark — night-sky ink, the swoosh reading as comet trails inside the letters",
-    "#0B1020", mark(id, ink, lines), g + tail);
-  plate(7, "starlight_comet", "night-sky ink; the hairlines read as comet trails inside the letters", out);
+  const out = doc(7, "amber mark — night-sky ink and stars; original white swoosh unchanged",
+    "#0B1020", mark(id, ink, lines), g);
+  plate(7, "starlight", "night-sky ink and stars inside the glyphs; canonical white swoosh", out);
 }
 
-// ---------- 08 pony rainbow — the candy rainbow poured into the letters ----------
+// ---------- 08 prism rainbow — candy ink inside the glyphs ----------
 function p08() {
   const id = "pl8";
   const g = `<linearGradient id="ink8" gradientUnits="userSpaceOnUse" x1="0" y1="${LOCK.y0}" x2="0" y2="${LOCK.y1}">` +
     `<stop offset="0" stop-color="#F0559C"/><stop offset="0.55" stop-color="#8A4BFF"/><stop offset="1" stop-color="#0FA88A"/></linearGradient>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="${w}" opacity="0.95"/>`).join("");
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink8)"/>`;
   const out = doc(8, "amber mark — the candy rainbow poured into the letters",
     "#FFF6E8", mark(id, ink, lines), g);
-  plate(8, "pony_rainbow", "prism ink — the rainbow lives in the letters and nowhere else", out);
+  plate(8, "prism_rainbow", "prism ink — the rainbow lives in the letters; canonical white swoosh", out);
 }
 
 // ---------- 09 grade teal/amber — explicit cinematic grade ----------
@@ -337,11 +328,11 @@ function p09() {
   const id = "pl9";
   const g = `<linearGradient id="ink9" gradientUnits="userSpaceOnUse" x1="0" y1="${LOCK.y0}" x2="0" y2="${LOCK.y1}">` +
     `<stop offset="0" stop-color="#FBD1A2"/><stop offset="1" stop-color="#E89A56"/></linearGradient>`;
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#F7EDE0" stroke-width="${w}" opacity="0.9"/>`).join("");
+  const lines = canonicalHairlines();
   const ink = `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink9)"/>`;
   const out = doc(9, "amber mark — teal shadows, amber highlights; the grade is explicit",
     "#0E2B33", mark(id, ink, lines), g);
-  plate(9, "grade_teal_amber", "explicit grade — teal ground, amber ink, cream swoosh", out);
+  plate(9, "grade_teal_amber", "explicit grade — teal ground, amber ink, canonical white swoosh", out);
 }
 
 // ---------- 10 duotone riso — two ink passes a hair out of register ----------
@@ -357,20 +348,19 @@ function p10() {
     `<circle cx="${LOCK.x0 + 34}" cy="${LOCK.y0 + 52}" r="2.2" fill="#C8F55F"/>` +
     `<circle cx="${LOCK.x0 + 52}" cy="${LOCK.y0 + 96}" r="1.7" fill="#C8F55F"/>` +
     `<circle cx="${LOCK.x0 + 30}" cy="${LOCK.y0 + 120}" r="1.5" fill="#C8F55F"/>`);
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#F5F1E6" stroke-width="${w}"/>`).join("");
+  const lines = canonicalHairlines();
   const out = doc(10, "amber mark — riso duotone, two ink passes a hair out of register",
     "#F5F1E6", orange + navy + sig + `<g clip-path="url(#${id}-text)">${lines}</g>`);
-  plate(10, "duotone_riso", "riso duotone — misregistration rimming the letters, cream swoosh on top", out);
+  plate(10, "duotone_riso", "riso duotone — misregistration inside the glyphs; canonical white swoosh", out);
 }
 
 // ---------- reference (canonical mark, tight stage) ----------
 function pref() {
-  const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="${w}"/>`).join("");
-  const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VB}" role="img" aria-label="canonical amber mark">` +
-    `<title>canonical amber mark — radial ink, hairlines on top, all clipped to the letter interiors</title>` +
+  const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" role="img" aria-label="canonical amber mark">` +
+    `<title>canonical amber mark — production geometry and original full-width swoosh</title>` +
     defs("pl0") + brandRadial("ink0") +
-    `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="#0B0B0B"/>` +
-    mark("pl0", `<rect x="${SX}" y="${SY}" width="${W}" height="${H}" fill="url(#ink0)"/>`, lines) +
+    `<g clip-path="url(#pl0-text)"><rect x="0" y="100" width="1000" height="300" fill="url(#ink0)"/></g>` +
+    canonicalHairlines() +
     `</svg>`;
   writeFileSync(join(OUT, "reference-original.svg"), out);
 }
@@ -390,11 +380,11 @@ function avatars() {
 
   // canon radial ink, white swoosh on top
   {
-    const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="${w}"/>`).join("");
+    const lines = canonicalHairlines();
     wrap("amber-canon.svg", defs("av1") + brandRadial("avink0") +
       mark("av1", `<rect x="${AX0}" y="${AY0}" width="${AW}" height="${AH}" fill="url(#avink0)"/>`, lines));
   }
-  // bit8 quantized ink, stepped hairlines on top
+  // bit8 quantized ink, original white swoosh on top
   {
     const pal = ["#FFE9C7", "#F2C7E2", "#CBE6C9", "#A8DDEA", "#8E7BB8"];
     const r = rng(57021), grid = 7;
@@ -407,17 +397,14 @@ function avatars() {
         cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${grid}" height="${grid}" fill="${pal[idx]}"/>`;
       }
     }
-    const lines = HAIRLINES.map(([w, d]) => {
-      const y0 = parseFloat(d.match(/M50,([\d.]+)/)[1]);
-      return `<path d="${steppedLine(y0, grid)}" fill="none" stroke="#FFFFFF" stroke-width="${w}" shape-rendering="crispEdges"/>`;
-    }).join("");
+    const lines = canonicalHairlines();
     wrap("amber-bit8.svg", defs("av2") + mark("av2", cells, lines));
   }
   // candy prism ink, white swoosh on top
   {
     const g = `<linearGradient id="avink3" gradientUnits="userSpaceOnUse" x1="0" y1="${LOCK.y0}" x2="0" y2="${LOCK.y1}">` +
       `<stop offset="0" stop-color="#F0559C"/><stop offset="0.55" stop-color="#8A4BFF"/><stop offset="1" stop-color="#0FA88A"/></linearGradient>`;
-    const lines = HAIRLINES.map(([w, d]) => `<path d="${d}" fill="none" stroke="#FFFFFF" stroke-width="${w}"/>`).join("");
+    const lines = canonicalHairlines();
     wrap("amber-candy.svg", defs("av3") + g +
       mark("av3", `<rect x="${AX0}" y="${AY0}" width="${AW}" height="${AH}" fill="url(#avink3)"/>`, lines));
   }
@@ -448,13 +435,9 @@ function page() {
       .figrow { display:flex; gap:12px; align-items:flex-end; margin-top:10px; }
     </style></head><body>` +
     `<h1>plur1bus plates — the amber&reg; mark, ten directions</h1>` +
-    `<p class="sub">One law on every plate: the ink is clipped to the glyph mask and the nine swoosh ` +
-    `hairlines ride on top, clipped to the letter interiors as well — nothing bleeds past the letter edges, ` +
-    `the way the masked mark appears on the amber frontpage. A plate may change the ink material, the line ` +
-    `colour and the ground; it may not touch the Caprasimo outlines, the hairline family or the stacking ` +
-    `order. All geometry is extracted live from the shipped partial.</p>` +
+    `<p class="sub">Every study keeps the original Caprasimo glyphs and nine white swoosh paths, widths and opacity. Only the ink treatment changes. Study plates clip the visible swoosh to the letter interiors; the reference preserves the original full-width swoosh.</p>` +
     `<figure class="ref"><img src="plates/reference-original.svg" alt="canonical amber mark, cropped">` +
-    `<figcaption>00 · reference — canonical mark, masked to the letter interiors</figcaption></figure>` +
+    `<figcaption>00 · reference — production mark, original full-width swoosh</figcaption></figure>` +
     `<div class="grid">${cells}</div>` +
     `<h2>avatar cuts — transparent ground</h2>` +
     `<p class="sub">The sprite-workflow deliverable: the same locked font and hairlines with no ground plate — ` +

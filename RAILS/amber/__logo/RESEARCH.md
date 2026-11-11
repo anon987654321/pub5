@@ -50,9 +50,11 @@ truth, verified pixel-equivalent against the browser's own text rendering:
 - Wordmark: the real Caprasimo glyph outlines for "amber®" in font units
   (2048/em), six placements at 120 viewBox units riding descending rotated
   baselines (−9.882° → −0.641°).
-- Swoosh: nine white hairlines in one curve family
+- Swoosh: nine white hairline elements in one curve family
   (`M50,180 C200,100 400,200 600,100 S850,160 950,130` translated down),
-  stroke widths 0.5 → 4 top to bottom.
+  stroke widths 0.5 → 4 top to bottom. In production they sit over the ink
+  and run across the full canvas; study plates preserve the exact paths,
+  widths and opacity but clip their visible region to the glyph interiors.
 - The original textPath carrier curve `M50,220 C250,180 750,180 950,220`
   (dropped as dead code from the partial in 8544e23b, still the canonical
   carrier the letters ride).
@@ -77,16 +79,13 @@ the shipped mark.
 | SVG mask + animated gradient text (CodePen staple) | <https://codepen.io/horsted/details/ZKQbKK>, <https://codepen.io/tag/svg%20text> | 04, 05, reference |
 | 2026 trend surveys (motion, minimalism, emerging systems) | <https://digitalsynopsis.com/design/graphic-design-trends-2026>, <https://panze.co/blog/logo-design-trends> | sweep framing |
 
-## 5. Sparkle pizzazz (rainbows, ponies, shooting stars)
+## 5. Sparkle pizzazz
 
-The operator asked for Starks-style pizzazz. The crop law keeps it inside the
-letters: the shooting star is the hairline family re-stroked with a comet
-fade — faint tail at the `a`, bright head at the `r` — plus seeded stars that
-only survive where they fall inside glyphs (07); the rainbow is the candy
-prism ramp poured into the ink (08). Earlier sketches put an arc, a pixel
-pony and star fields on the ground; they were removed for bleeding past the
-letter edges. No emoji, no copied campaign art, no baked-in text — the
-wordmark stays original pub5 artwork on every plate.
+The rainbow direction uses the candy prism ramp as the ink (08). The
+night-sky direction adds seeded stars that survive only where they fall
+inside the glyphs (07). Both preserve the original nine white swoosh paths,
+stroke widths and opacity; the study clip changes only their visible region.
+No pony, character or external campaign art was imported.
 
 ## 6. Sprite-sheet craft (second pass)
 
