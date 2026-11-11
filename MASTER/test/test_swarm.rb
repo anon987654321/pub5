@@ -201,10 +201,12 @@ class TestSwarm < Minitest::Test
     coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
       started << task
       worker_ready << true
-      release.pop
-      Result.ok({ "task" => task, "role" => role.to_s })
-    ensure
-      worker_finished << task
+      begin
+        release.pop
+        Result.ok({ "task" => task, "role" => role.to_s })
+      ensure
+        worker_finished << task
+      end
     end
     tasks = [
       { role: :analyst, task: "first", context_slice: {} },
