@@ -249,25 +249,47 @@ module Master
         # were rejected on re-scan — every non-apply collapsed to `false` before
         # the one line anyone reads. The tally of these symbols is that line.
         #
-        # One bounded retry when a verifier or commit gate supplies actionable
-        # feedback. The two-rejects-per-file and file-time budgets still apply;
-        # MASTER_FIX_RETRY=0 disables the second attempt.
+        # Two bounded retries (three attempts total) when a verifier or commit
+        # gate supplies actionable feedback. The per-file wall-clock budget,
+        # three-reject ceiling and run stall/resource budgets still apply.
+        # MASTER_FIX_RETRY=0 disables all retries. Human-owned/uncertain outcomes
+        # are deliberately absent from RETRYABLE.
         RETRYABLE = %i[out_of_scope reflexion_rejected consensus_rejected rejected commit_refused].freeze
 
         def fix_violation(violation)
-          RunLedger.take_refusal
-          outcome = attempt_fix(violation)
-          note = RunLedger.take_refusal
-          RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
-                                        outcome:, reason: note)
-          return outcome unless ENV["MASTER_FIX_RETRY"] != "0" && RETRYABLE.include?(outcome) && note
+          attempts = 0
+          outcome = nil
+          note = nil
 
-          Master::Trace::Dmesg.status("fix0", "retrying #{File.basename(violation[:file].to_s)} #{@law.id} once, told: #{note[0, 140]}")
-          retry_outcome = RunLedger.retrying(note) { attempt_fix(violation) }
-          retry_note = RunLedger.take_refusal
-          RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
-                                        outcome: retry_outcome, reason: retry_note)
-          retry_outcome
+          loop do
+            RunLedger.take_refusal
+            outcome = if attempts.zero?
+                        attempt_fix(violation)
+                      else
+                        RunLedger.retrying(note) { attempt_fix(violation) }
+                      end
+            note = RunLedger.take_refusal
+            attempts += 1
+            RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
+                                          outcome:, reason: note)
+
+            break unless ENV["MASTER_FIX_RETRY"] != "0" &&
+                         RETRYABLE.include?(outcome) && !note.to_s.empty? &&
+                         attempts <= MAX_FIX_RETRIES
+
+            Master::Trace::Dmesg.status(
+              "fix0",
+              "retrying #{File.basename(violation[:file].to_s)} #{@law.id} (attempt #{attempts + 1}/#{MAX_FIX_RETRIES + 1}), told: #{note[0, 140]}",
+            )
+          end
+
+          if RETRYABLE.include?(outcome) && !note.to_s.empty? && attempts > MAX_FIX_RETRIES
+            Master::Trace::Dmesg.status(
+              "fix0",
+              "#{File.basename(violation[:file].to_s)} #{@law.id}: retry limit reached after #{attempts} attempts",
+            )
+          end
+          outcome
         rescue StandardError => e
           RunLedger.record_file_outcome(file: violation[:file], law: violation[:law] || @law.id,
                                         outcome: :exception, reason: "#{e.class}: #{e.message}")
