@@ -154,7 +154,7 @@ build() {
   say "built: $PREFIX/bin/ruby"
 }
 
-# 1 and 2: an explicit pin, or the best host Ruby inside the Gemfile's range.
+# 1 and 2: an explicit compatible override, or the generic/available host Ruby.
 if [ -n "${PUB5_RUBY:-}" ]; then
   [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
   version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null || true)
@@ -176,7 +176,7 @@ fi
 # 4: build one, then answer through it.
 if [ "${MASTER_DEV_BOOTSTRAP_BUILD:-1}" = "0" ]; then
   say "no Ruby >= $MIN_MAJOR.$MIN_MINOR on this host, and building is disabled (MASTER_DEV_BOOTSTRAP_BUILD=0)"
-  say "install a Ruby in range, pin it with PUB5_RUBY, or allow the build"
+  say "install a compatible Ruby, set PUB5_RUBY explicitly, or allow the fallback build"
   exit 1
 fi
 
