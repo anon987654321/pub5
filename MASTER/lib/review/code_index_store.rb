@@ -23,6 +23,7 @@ module Master
       SCHEMA = 2
       REL_DIR = File.join(".master", "code_index").freeze
       MAX_SNAPSHOT_BYTES = 128 * 1024 * 1024
+      MAX_SOURCE_BYTES = 32 * 1024 * 1024
 
       def initialize(root:)
         @root = File.realpath(root)
@@ -45,6 +46,7 @@ module Master
         root_real = File.realpath(root) if root
         before = File.lstat(full)
         raise IOError, "code index source is not a regular non-symlink file" unless before.file? && !before.symlink?
+        raise IOError, "code index source exceeds the 32 MiB safety limit" if before.size > MAX_SOURCE_BYTES
 
         flags = File::RDONLY
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
@@ -59,7 +61,8 @@ module Master
             raise IOError, "code index source escapes its repository"
           end
 
-          raw = io.read
+          raw = io.read(MAX_SOURCE_BYTES + 1)
+          raise IOError, "code index source exceeds the 32 MiB safety limit" if raw.bytesize > MAX_SOURCE_BYTES
           after = io.stat
           current = File.lstat(full)
           unless stable_file?(opened, after) && same_file?(current, after)
