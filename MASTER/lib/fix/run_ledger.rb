@@ -125,18 +125,53 @@ module Master
           tally.sort_by { |_, count| -count }.first(4).map { |reason, count| "#{reason} #{count}" }.join(", ")
         end
 
-        # The per-run file docket records only files that entered the repair
-        # adapter. It never calls unvisited files clean or implies full scan
-        # coverage; each attempt keeps its Law, result and refusal reason.
+        # Record every violation delivered to a repair batch before budget,
+        # policy and delivery gates decide whether it can be attempted. This is
+        # evidence of findings, not a clean-file census.
+        def record_discovery(file:, law:, line: nil, message: nil, severity: nil)
+          path = file.to_s
+          return if path.empty?
+
+          row = {
+            "law" => law.to_s,
+            "line" => line.nil? ? nil : line.to_i,
+            "message" => message.to_s.strip[0, 220],
+            "severity" => severity.to_s,
+          }
+          @mutex.synchronize do
+            entry = file_entry(path)
+            add_law(entry, law)
+            entry["findings"] << row unless entry["findings"].include?(row)
+          end
+          nil
+        end
+
+        # Attempt receipts are written by the repair adapter after each proposal.
         def record_file_outcome(file:, law:, outcome:, reason: nil)
           path = file.to_s
           return if path.empty?
 
           row = { "law" => law.to_s, "outcome" => outcome.to_s, "reason" => reason.to_s.strip[0, 300] }
           @mutex.synchronize do
-            entry = (@file_outcomes[path] ||= { "laws" => [], "attempts" => [] })
-            entry["laws"] << law.to_s unless law.to_s.empty? || entry["laws"].include?(law.to_s)
+            entry = file_entry(path)
+            add_law(entry, law)
             entry["attempts"] << row
+          end
+          nil
+        end
+
+        # Dispositions explain why a discovered finding was not sent to the
+        # model, including same-file batching, budget/stall stops and delivery
+        # boundaries. They are not reported as repair attempts.
+        def record_disposition(file:, law:, outcome:, reason:)
+          path = file.to_s
+          return if path.empty?
+
+          row = { "law" => law.to_s, "outcome" => outcome.to_s, "reason" => reason.to_s.strip[0, 300] }
+          @mutex.synchronize do
+            entry = file_entry(path)
+            add_law(entry, law)
+            entry["dispositions"] << row
           end
           nil
         end
@@ -144,10 +179,25 @@ module Master
         def file_outcomes
           @mutex.synchronize do
             @file_outcomes.to_h do |path, entry|
-              [path, { "laws" => entry["laws"].dup, "attempts" => entry["attempts"].map(&:dup) }]
+              [path, {
+                "laws" => entry["laws"].dup,
+                "findings" => entry["findings"].map(&:dup),
+                "attempts" => entry["attempts"].map(&:dup),
+                "dispositions" => entry["dispositions"].map(&:dup),
+              }]
             end
           end
         end
+
+        def file_entry(path)
+          @file_outcomes[path] ||= { "laws" => [], "findings" => [], "attempts" => [], "dispositions" => [] }
+        end
+
+        def add_law(entry, law)
+          value = law.to_s
+          entry["laws"] << value unless value.empty? || entry["laws"].include?(value)
+        end
+        private :file_entry, :add_law
 
         # A file stops after two rejects: a third proposal costs a lane call and
         # has landed none of the first two.
@@ -201,24 +251,32 @@ module Master
           lines.concat(swallowed_lines)
         end
 
-        # Top of the attempted-file docket; remaining rows stay available through file_outcomes.
+        # Top of the discovered-finding docket; remaining rows stay available
+        # in this run through file_outcomes. No entry implies untouched files pass.
         def file_docket_lines(limit: 20)
           outcomes = file_outcomes
           return [] if outcomes.empty?
 
-          latest = outcomes.to_h { |path, entry| [path, entry["attempts"].last || {}] }
-          counts = latest.values.group_by { |row| row["outcome"].to_s }.transform_values(&:size)
-          tally = counts.sort_by { |status, count| [-count, status] }.map { |status, count| "#{status}=#{count}" }
-          lines = ["fix0: file outcome docket #{outcomes.size} attempted file(s): #{tally.join(", ")}"]
+          findings = outcomes.values.sum { |entry| entry["findings"].size }
+          attempts = outcomes.values.flat_map { |entry| entry["attempts"] }
+          dispositions = outcomes.values.flat_map { |entry| entry["dispositions"] }
+          attempt_counts = attempts.group_by { |row| row["outcome"].to_s }.transform_values(&:size)
+          disposition_counts = dispositions.group_by { |row| row["outcome"].to_s }.transform_values(&:size)
+          tally = ->(counts) { counts.sort_by { |status, count| [-count, status] }.map { |status, count| "#{status}=#{count}" }.join(", ") }
+          lines = [
+            "fix0: finding docket #{outcomes.size} file(s), #{findings} Law finding(s); attempts=#{attempts.size} [#{tally.call(attempt_counts)}]; dispositions=#{dispositions.size} [#{tally.call(disposition_counts)}]",
+          ]
           outcomes.sort_by { |path, _entry| path }.first(limit).each do |path, entry|
-            last = entry["attempts"].last || {}
             laws = entry["laws"].join(",")
-            reason = last["reason"].to_s
+            finding_rows = entry["findings"].map { |row| "#{row["law"]}:#{row["line"] || "?"}" }.join(",")
+            attempted = entry["attempts"].map { |row| row["outcome"] }.join(",")
+            decided = entry["dispositions"].map { |row| row["outcome"] }.join(",")
+            reason = (entry["dispositions"].last || entry["attempts"].last || {})["reason"].to_s
             detail = reason.empty? ? "" : " reason=#{reason}"
-            lines << "fix0: file #{path} law=#{laws} outcome=#{last["outcome"]} attempts=#{entry["attempts"].size}#{detail}"[0, 420]
+            lines << "fix0: file #{path} laws=#{laws} findings=#{finding_rows} attempts=#{attempted.empty? ? "none" : attempted} dispositions=#{decided.empty? ? "none" : decided}#{detail}"[0, 520]
           end
           remaining = outcomes.size - limit
-          lines << "fix0: #{remaining} additional attempted file(s) remain in the in-process docket; only the first #{limit} are printed" if remaining.positive?
+          lines << "fix0: #{remaining} additional finding file(s) remain in the in-process docket; only the first #{limit} are printed" if remaining.positive?
           lines
         end
 
