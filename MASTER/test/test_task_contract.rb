@@ -136,7 +136,7 @@ class TestTaskContract < Minitest::Test
 
     CONTRACT.with_current(contract) do
       assert_raises(CONTRACT::Invalid) { CONTRACT.attach_plan!("not-a-digest") }
-      assert_nil CONTRACT.current && CONTRACT.preservation_evidence.fetch("plan_digest")
+      refute CONTRACT.preservation_evidence.key?("plan_digest")
     end
   end
 
