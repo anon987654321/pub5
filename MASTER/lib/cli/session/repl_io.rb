@@ -12,7 +12,6 @@ module Master
       def run_help(command = nil)
         arg = command.to_s.strip
         text = arg.empty? ? Master::CLI::CommandRegistry.help_summary : Master::CLI::CommandRegistry.help_text(arg)
-        text = [text, "<< starts multiline input; a blank line sends it.", "While busy: lines queue; /stop cancels and pauses, /resume continues, /approve [N] or /deny answers approval."].join("\n") if arg.empty?
 
         print_terminal_output(text, mode: :dim)
         Master::Result.ok(text)
