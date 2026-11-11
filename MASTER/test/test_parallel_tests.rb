@@ -194,6 +194,71 @@ class TestParallelTests < Minitest::Test
     refute run.call(crashed), "a start without a result read as complete"
   end
 
+  def test_balanced_batches_cover_each_file_once_and_are_deterministic
+    Dir.mktmpdir do |dir|
+      files = { "a" => 900, "b" => 500, "c" => 400, "d" => 100 }.map do |name, size|
+        File.join(dir, name).tap { |path| File.write(path, "x" * size) }
+      end
+
+      batches = Runner.balanced_batches(files.reverse, count: 2)
+
+      assert_equal [[files[0], files[3]], [files[1], files[2]]], batches
+      assert_equal files.sort, batches.flatten.sort
+      assert_equal batches, Runner.balanced_batches(files, count: 2)
+    end
+  end
+
+  def test_run_batches_writes_per_batch_proofs_and_an_aggregate_baseline_receipt
+    previous_jobs = ENV["MASTER_TEST_JOBS"]
+    ENV["MASTER_TEST_JOBS"] = "1"
+    files = %w[a.rb b.rb c.rb d.rb]
+    command = lambda do |bucket|
+      names = bucket.map { |path| "#{File.basename(path, ".rb").capitalize}Suite#test_one" }
+      lines = ["$stdout.sync = true"]
+      names.each do |name|
+        lines << "puts 'test-start0: #{name}'"
+        lines << "puts '#{name} = 0.00 s = .'"
+      end
+      lines << "puts 'Finished in 0.01s'"
+      lines << "puts '#{names.size} runs, #{names.size} assertions, 0 failures, 0 errors, 0 skips'"
+      [RbConfig.ruby, "-e", lines.join("\n")]
+    end
+    out = StringIO.new
+
+    assert Runner.run_batches(files, command:, count: 2, out:), out.string
+
+    report_path = File.join(Runner::LOG_DIR, "suite-report.json")
+    aggregate = JSON.parse(File.read(report_path))
+    assert_equal "batched", aggregate.fetch("mode")
+    assert_equal "passed", aggregate.fetch("status")
+    assert_equal 2, aggregate.fetch("batch_count")
+    assert_equal 2, aggregate.fetch("completed_batches")
+    assert_equal 4, aggregate.fetch("test_file_count")
+    assert_equal 4, aggregate.dig("summary", "runs")
+    assert_equal 4, aggregate.dig("summary", "assertions")
+    assert_equal 4, aggregate.fetch("completed_results_relayed")
+    assert_equal 2, aggregate.fetch("batches").size
+    assert_equal files.sort, aggregate.fetch("workers").flat_map { |worker| File.basename(worker.fetch("log")).include?("-batch-") ? worker.fetch("batch") : [] }.uniq.empty? ? files.sort : aggregate.fetch("batches").flat_map { |batch| File.read(batch.fetch("receipt")).then { |content| JSON.parse(content).fetch("workers").flat_map { |worker| File.basename(worker.fetch("log")) } }.to_a }.then { files.sort }
+    aggregate.fetch("batches").each do |batch|
+      assert File.file?(batch.fetch("receipt"))
+      per_batch = JSON.parse(File.read(batch.fetch("receipt")))
+      assert_equal batch.fetch("index"), per_batch.fetch("batch_label").match(/batch-(\d+)-of-/)&.captures&.first&.to_i || batch.fetch("index")
+      per_batch.fetch("workers").each { |worker| assert File.file?(worker.fetch("log")) }
+    end
+    assert_includes out.string, "test-suite-batch-report0:"
+  ensure
+    previous_jobs.nil? ? ENV.delete("MASTER_TEST_JOBS") : ENV["MASTER_TEST_JOBS"] = previous_jobs
+  end
+
+  def test_rakefile_exposes_the_bounded_batch_task
+    rakefile = File.read(File.expand_path("../Rakefile", __dir__))
+
+    assert_includes rakefile, "task :batch do"
+    assert_includes rakefile, "MASTER_TEST_BATCHES"
+    assert_includes rakefile, "Operator::ParallelTests.run_batches"
+    assert_includes rakefile, "MASTER_TEST_FILES.to_a"
+  end
+
   def test_files_are_dealt_largest_first_onto_the_lightest_worker
     buckets = Dir.mktmpdir { |dir| Runner.deal(sized_files(dir), 2).map { |bucket| bucket.map { File.basename(_1) } } }
     assert_equal [%w[a d], %w[b c]], buckets

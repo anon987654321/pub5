@@ -374,6 +374,21 @@ task "test:all_trees" do
 end
 
 namespace :test do
+  desc "Run the full MASTER suite in balanced batches and write an aggregate baseline receipt (MASTER_TEST_BATCHES=4)"
+  task :batch do
+    require_relative "lib/operator/parallel_tests"
+    count = Integer(ENV.fetch("MASTER_TEST_BATCHES", "4"), exception: false)
+    unless count&.positive? && count <= MASTER_TEST_FILES.size
+      abort "test:batch: MASTER_TEST_BATCHES must be between 1 and #{MASTER_TEST_FILES.size}"
+    end
+
+    loader = File.join(Gem.loaded_specs.fetch("rake").full_gem_path, "lib", "rake", "rake_test_loader.rb")
+    options = ["-v", *ENV.fetch("TESTOPTS", "").split].uniq
+    command = ->(files) { [RbConfig.ruby, "-Ilib:test", loader, *files, *options] }
+    abort "test:batch: one or more batches failed; inspect .master/check/suite-report.json" unless
+      Operator::ParallelTests.run_batches(MASTER_TEST_FILES.to_a, command:, count:)
+  end
+
   desc "Fold spine tests (lib/core.rb + lib/core/)"
   task :core do
     # Each file runs in its own process: `ruby a.rb b.rb c.rb` runs only a.rb and

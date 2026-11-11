@@ -43,8 +43,12 @@ trusting this page.
    ten-minute tool call; the external agent rebuilt the Rakefile's
    worker command in a private driver outside the repo to measure
    9159 runs and 310053 assertions in four batches. State on main:
-   open. Landing path: a batch task under the existing test namespace,
-   plus the suite-report artifact the Rakefile already inspects.
+   landed in this revision — rake test:batch (MASTER_TEST_BATCHES=4)
+   runs deterministic size-balanced shards under one suite lock,
+   preserves each batch's worker logs and receipt, and replaces the
+   running marker in suite-report.json with an aggregate baseline only
+   after every batch finishes. The receipt records revision, Ruby,
+   test-file fingerprint, counts and worker outcomes.
 
 4. A delivered receipt template. Evidence: AGENTS.md and
    expectations.yml carry the delivered bar in prose; every agent

@@ -2,6 +2,8 @@
 
 require "fileutils"
 require "json"
+require "digest"
+require "open3"
 require_relative "../io/process_spawn"
 
 module Operator
@@ -45,7 +47,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
       buckets = Array.new(count) { [] }
       loads = Array.new(count, 0)
       weight = ->(path) { File.size?(path).to_i + 1 }
-      files.sort_by { |path| -weight.call(path) }.each do |path|
+      files.sort_by { |path| [-weight.call(path), path] }.each do |path|
         lightest = loads.index(loads.min)
         buckets[lightest] << path
         loads[lightest] += weight.call(path)
@@ -57,6 +59,92 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
     # names, so a second suite overwrote the first one's evidence, and two suites on this
     # 8 GB machine starve each other. A held lock refuses rather than waits.
     def run(files, command:, out: $stdout)
+      with_suite_lock(out) { run_locked(files, command:, out:) }
+    end
+
+    # Hold one checkout-wide lock across the whole measurement. The batch
+    # reports are individual proofs; suite-report.json is their aggregate
+    # receipt and remains "running" if the process is interrupted mid-series.
+    def run_batches(files, command:, count:, out: $stdout)
+      suite_files = Array(files).map(&:to_s).uniq.sort
+      batches = balanced_batches(suite_files, count:)
+      with_suite_lock(out) do
+        run_id = "#{Time.now.utc.strftime('%Y%m%dT%H%M%SZ')}-#{Process.pid}"
+        revision = repository_revision
+        report_path = File.join(LOG_DIR, "suite-report.json")
+        progress = {
+          "schema" => 1,
+          "mode" => "batched",
+          "status" => "running",
+          "run_id" => run_id,
+          "revision" => revision,
+          "batch_count" => batches.size,
+          "test_file_count" => suite_files.size,
+          "test_files_sha256" => file_list_digest(suite_files),
+          "completed_batches" => [],
+        }
+        write_receipt(report_path, progress)
+
+        reports = batches.each_with_index.map do |batch_files, index|
+          label = "#{run_id}-batch-#{index + 1}-of-#{batches.size}"
+          batch_path = File.join(LOG_DIR, "suite-#{label}.json")
+          out.puts "test-batch0: #{index + 1}/#{batches.size} files=#{batch_files.size} sha256=#{file_list_digest(batch_files)}"
+
+          begin
+            passed = run_locked(
+              batch_files,
+              command:,
+              out:,
+              batch_label: label,
+              report_path: batch_path,
+            )
+            payload = JSON.parse(File.read(batch_path))
+            raise "batch receipt label mismatch" unless payload["batch_label"] == label
+          rescue StandardError => error
+            passed = false
+            payload = {
+              "schema" => 1,
+              "batch_label" => label,
+              "status" => "delivery_failed",
+              "error" => "#{error.class}: #{error.message}",
+              "workers" => [],
+              "completed_results_relayed" => 0,
+            }
+            write_receipt(batch_path, payload)
+          end
+
+          receipt = {
+            "index" => index + 1,
+            "file_count" => batch_files.size,
+            "files_sha256" => file_list_digest(batch_files),
+            "status" => payload["status"],
+            "execution_passed" => passed,
+            "receipt" => batch_path,
+          }
+          progress["completed_batches"] << receipt
+          write_receipt(report_path, progress)
+          { "index" => index + 1, "files" => batch_files, "path" => batch_path,
+            "payload" => payload, "execution_passed" => passed }
+        end
+
+        aggregate = batch_aggregate(
+          reports,
+          files: suite_files,
+          run_id:,
+          revision:,
+          batch_count: batches.size,
+        )
+        write_receipt(report_path, aggregate)
+        out.puts "test-suite-batch-report0: #{report_path} batches=#{batches.size} " \
+                 "files=#{suite_files.size} runs=#{aggregate.dig("summary", "runs")} status=#{aggregate["status"]}"
+        aggregate["status"] == "passed"
+      end
+    rescue StandardError => error
+      out.puts "test-batches0: delivery_failed #{error.class}: #{error.message}"
+      false
+    end
+
+    def with_suite_lock(out)
       FileUtils.mkdir_p(LOG_DIR)
       File.open(File.join(LOG_DIR, "suite.lock"), File::RDWR | File::CREAT, 0o600) do |lock|
         unless lock.flock(File::LOCK_EX | File::LOCK_NB)
@@ -66,13 +154,107 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
         lock.truncate(0)
         lock.write(Process.pid.to_s)
         lock.flush
-        run_locked(files, command:, out:)
+        yield
       end
     end
 
-    def run_locked(files, command:, out:)
+    def balanced_batches(files, count:)
+      rows = Array(files).map(&:to_s).uniq.sort
+      amount = Integer(count, exception: false)
+      raise ArgumentError, "batch count must be a positive integer" unless amount&.positive?
+      raise ArgumentError, "no test files to batch" if rows.empty?
+      raise ArgumentError, "batch count cannot exceed test file count" if amount > rows.size
+
+      deal(rows, amount)
+    end
+
+    def file_list_digest(files)
+      Digest::SHA256.hexdigest(Array(files).map(&:to_s).sort.join("\0"))
+    end
+
+    def repository_revision
+      output, status = Open3.capture2("git", "rev-parse", "HEAD", chdir: File.expand_path("../../..", __dir__))
+      status.success? ? output.strip : nil
+    rescue Errno::ENOENT
+      nil
+    end
+
+    def write_receipt(path, payload)
+      temporary = "#{path}.tmp-#{Process.pid}"
+      FileUtils.mkdir_p(File.dirname(path))
+      File.open(temporary, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
+        file.write(JSON.pretty_generate(payload))
+        file.write("\n")
+        file.flush
+        file.fsync
+      end
+      File.rename(temporary, path)
+    ensure
+      FileUtils.rm_f(temporary) if temporary
+    end
+
+    def batch_aggregate(reports, files:, run_id:, revision:, batch_count:)
+      workers = reports.flat_map do |report|
+        Array(report.dig("payload", "workers")).map do |worker|
+          worker.merge("batch" => report.fetch("index"))
+        end
+      end
+      summary_keys = %w[runs assertions failures errors skips]
+      summary = summary_keys.to_h do |key|
+        [key, workers.sum { |worker| worker.fetch("summary", {}).to_h.fetch(key, 0) }]
+      end
+      summary["workers"] = workers.size
+      summary["complete_workers"] = workers.count { |worker| worker["summary_present"] }
+
+      tagged_skips = workers.flat_map { |worker| Array(worker["environment_skips"]) }
+      by_tag = tagged_skips.each_with_object(Hash.new(0)) { |row, counts| counts[row.fetch("tag")] += 1 }.sort.to_h
+      skip_analysis = {
+        "total" => summary.fetch("skips"),
+        "environment_tagged" => tagged_skips.size,
+        "unclassified" => [summary.fetch("skips") - tagged_skips.size, 0].max,
+        "integrity" => tagged_skips.size <= summary.fetch("skips") ? "consistent" : "tagged_exceeds_summary",
+        "by_tag" => by_tag,
+      }
+      batch_rows = reports.map do |report|
+        payload = report.fetch("payload")
+        {
+          "index" => report.fetch("index"),
+          "file_count" => report.fetch("files").size,
+          "files_sha256" => file_list_digest(report.fetch("files")),
+          "status" => payload["status"],
+          "execution_passed" => report.fetch("execution_passed"),
+          "receipt" => report.fetch("path"),
+        }
+      end
+      passed = reports.size == batch_count && reports.all? do |report|
+        report.fetch("execution_passed") && report.dig("payload", "status") == "passed"
+      end
+
+      {
+        "schema" => 1,
+        "mode" => "batched",
+        "status" => passed ? "passed" : "failed_or_incomplete",
+        "run_id" => run_id,
+        "generated_at" => Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "revision" => revision,
+        "runtime" => { "ruby" => RUBY_VERSION, "platform" => RUBY_PLATFORM },
+        "batch_count" => batch_count,
+        "completed_batches" => reports.size,
+        "test_file_count" => files.size,
+        "test_files_sha256" => file_list_digest(files),
+        "jobs" => workers.size,
+        "completed_results_relayed" => reports.sum { |report| report.dig("payload", "completed_results_relayed").to_i },
+        "summary" => summary,
+        "skip_analysis" => skip_analysis,
+        "batches" => batch_rows,
+        "workers" => workers,
+      }
+    end
+
+    def run_locked(files, command:, out:, batch_label: nil, report_path: nil)
       workers = deal(files, jobs).each_with_index.map do |bucket, index|
-        start(bucket, log: File.join(LOG_DIR, "test-worker-#{index + 1}.log"), command:)
+        label = batch_label ? "-#{batch_label}" : ""
+        start(bucket, log: File.join(LOG_DIR, "test-worker#{label}-#{index + 1}.log"), command:)
       end
 
       relay_errors = Queue.new
@@ -107,7 +289,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
         worker[:failure_result_lines] = worker_failures(worker)
         worker[:environment_skips] = environment_skips(worker)
       end
-      write_suite_report(workers, progress[:completed], out)
+      write_suite_report(workers, progress[:completed], out, batch_label:, report_path:)
       report(workers, out)
       workers.all? do |worker|
         summary = worker[:summary]
@@ -306,7 +488,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
       !!(red_summary || !worker[:failure_result_lines].empty? || red_exit)
     end
 
-    def write_suite_report(workers, completed_results, out)
+    def write_suite_report(workers, completed_results, out, batch_label: nil, report_path: nil)
       tagged_skips = workers.flat_map { |worker| Array(worker[:environment_skips]) }
       total_skips = workers.sum { |worker| worker[:summary].to_h.fetch("skips", 0) }
       by_tag = tagged_skips.each_with_object(Hash.new(0)) { |row, counts| counts[row.fetch("tag")] += 1 }.sort.to_h
@@ -341,7 +523,8 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
           }
         end,
       }
-      path = File.join(LOG_DIR, "suite-report.json")
+      payload["batch_label"] = batch_label if batch_label
+      path = report_path || File.join(LOG_DIR, "suite-report.json")
       File.write(path, JSON.pretty_generate(payload) + "\n")
       out.puts "test-suite-report0: #{path} completed_results=#{completed_results} status=#{payload["status"]}"
       tags = by_tag.map { |tag, count| "#{tag}:#{count}" }.join(",")
