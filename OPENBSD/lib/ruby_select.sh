@@ -34,13 +34,20 @@ else
   fi
 
   if [ -z "$RUBY" ]; then
-    for _rs_candidate in /usr/local/bin/ruby[0-9]*; do
-      [ -x "$_rs_candidate" ] || continue
-      if _rs_compatible "$_rs_candidate"; then
-        RUBY=$_rs_candidate
-        break
-      fi
+    _rs_old_ifs=$IFS
+    IFS=:
+    for _rs_dir in $PATH; do
+      [ -d "$_rs_dir" ] || continue
+      for _rs_candidate in "$_rs_dir"/ruby[0-9]*; do
+        [ -x "$_rs_candidate" ] || continue
+        if _rs_compatible "$_rs_candidate"; then
+          RUBY=$_rs_candidate
+          break
+        fi
+      done
+      [ -n "$RUBY" ] && break
     done
+    IFS=$_rs_old_ifs
   fi
 fi
 
@@ -61,5 +68,5 @@ RUBY_CACHE_KEY=ruby$("$RUBY" -e 'print RUBY_VERSION.split(".").first(2).join' 2>
 
 BUNDLE_VERSION=${BUNDLE_VERSION:-system}
 export RUBY RUBY_SUFFIX BUNDLE GEM RUBY_CACHE_KEY BUNDLE_VERSION
-unset _rs_name _rs_path _rs_candidate _rs_base
+unset _rs_name _rs_path _rs_candidate _rs_base _rs_old_ifs _rs_dir
 unset -f _rs_find _rs_compatible 2>/dev/null || true
