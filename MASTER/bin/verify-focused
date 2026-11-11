@@ -139,18 +139,30 @@ tests.each do |t|
   cmd = [bundle, "exec", ruby, "-Ilib:test", t]
   puts "\n## #{t}"
   status_code = nil
+  test_summary = nil
   begin
     Open3.popen2e(*cmd) do |stdin, stdout, wait_thread|
       stdin.close
       stdout.each_line do |line|
         $stdout.write(line)
         $stdout.flush
+        test_summary = line if line.match?(/\b\d+ runs?,\s+\d+ assertions?,\s+\d+ failures?,\s+\d+ errors?\b/)
       end
       status_code = wait_thread.value.exitstatus
     end
   rescue SystemCallError => e
     warn "runner_error=#{e.class}: #{e.message}"
     status_code = 127
+  end
+  if status_code == 0
+    run_count = test_summary.to_s[/\b(\d+) runs?\b/, 1]&.to_i
+    if run_count.nil?
+      warn "runner_error=missing Minitest summary; a zero exit alone is not acceptance evidence"
+      status_code = 1
+    elsif run_count.zero?
+      warn "runner_error=Minitest executed zero tests"
+      status_code = 1
+    end
   end
   puts "exit=#{status_code.inspect}"
   results << [t, status_code]
