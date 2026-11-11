@@ -248,6 +248,14 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal 1, Registry.help_summary.lines.count { |line| line.include?("fix0 at master0") }
   end
 
+  def test_reload_help_names_plain_language_restart_phrases
+    help = Registry.help_text("reload")
+
+    assert_includes help, "/reload"
+    assert_includes help, "restart MASTER"
+    assert_includes help, "reload yourself"
+  end
+
   def test_task_and_capability_commands_are_registered_and_documented
     assert_equal :dispatch_task, built.fetch("task").method_name
     assert_equal :dispatch_capabilities, built.fetch("capabilities").method_name
