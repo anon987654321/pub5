@@ -211,11 +211,26 @@ class TestFixModelPhaseGuards < Minitest::Test
     assert_includes out, "attempt 3/3"
   end
 
-  def test_three_refusals_are_final_and_a_non_refusal_is_never_retried
+  def test_three_refusals_escalate_to_a_human_decision_and_a_non_refusal_is_never_retried
     loop, seen = retry_loop(%i[out_of_scope out_of_scope out_of_scope])
-    out, = capture_io { assert_equal :out_of_scope, loop.send(:fix_violation, { file: "lib/a.rb" }) }
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |name, **payload| events << [name, payload] }
+    loop.instance_variable_set(:@bus, bus)
+    loop.instance_variable_set(:@person_required, false)
+    out, = capture_io { assert_equal :needs_person, loop.send(:fix_violation, { file: "lib/a.rb", law: "X" }) }
+
     assert_equal 3, seen.size
-    assert_includes out, "retry limit reached after 3 attempts"
+    assert_includes out, "retry limit reached after 3 refused attempts"
+    assert_equal :human_decision, loop.send(:pass_outcome, 0)
+    disposition = Ledger.file_outcomes.fetch("lib/a.rb").fetch("dispositions").last
+    assert_equal "needs_person", disposition.fetch("outcome")
+    assert_includes disposition.fetch("reason"), "lines 1-9 are outside 4-6"
+    event = events.find { |name, _payload| name == "repair_loop:human_decision_required" }
+    refute_nil event
+    assert_equal "X", event.last.fetch(:law)
+    assert_equal 3, event.last.fetch(:attempts)
+    assert_equal :out_of_scope, event.last.fetch(:last_outcome)
 
     loop, seen = retry_loop(%i[no_proposal])
     assert_equal :no_proposal, loop.send(:fix_violation, { file: "lib/a.rb" })
