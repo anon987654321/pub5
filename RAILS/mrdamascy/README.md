@@ -73,8 +73,11 @@ bin/rails test
 ```
 
 Deployment is owned by `RAILS/mrdamascy/mrdamascy.sh` and the repository's
-OpenBSD deployment contract (`RAILS/apps.yml` holds the port and domain). The
-app runs as a demo at `https://mrd.brgen.no`: one Falcon worker on
+OpenBSD deployment contract (`RAILS/apps.yml` holds the port and domain).
+Local development uses `falcon serve`; production uses the tracked
+`falcon.rb` host configuration and `preload.rb`, launched by rc.d as
+`bundle exec falcon host /home/mrdamascy/app/falcon.rb`. The app runs as a
+demo at `https://mrd.brgen.no`: one Falcon worker on
 `127.0.0.1:47314` behind relayd, with a three-connection Active Record pool
 and payments in mock mode. Puma is retained only for Capybara system tests. On vm23, as dev,
 `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy mrdamascy` deploys it and
