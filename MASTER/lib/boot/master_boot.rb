@@ -74,7 +74,7 @@ module Master
         raise BacklogRunFailed, "DELIVERY_FAILED: backlog requires the existing origin/main checkout"
       end
       remote_url, remote_status = Master::Io::Exec.capture2e("git", "-C", repository, "remote", "get-url", "origin")
-      unless remote_status.success? && remote_url.match?(/github[.]com[:/]/i)
+      unless remote_status.success? && remote_url.match?(%r{github[.]com[:/]}i)
         raise BacklogRunFailed, "DELIVERY_FAILED: origin is not a reachable GitHub remote"
       end
       paths.each do |relative|
