@@ -41,7 +41,7 @@ def usage
       bin/operator fix status [--trees=A,B] [--json]  /fix runs, queue, pass, logs, commits and retained worktrees; read-only
       bin/operator vps state [--json] [--remote]
       bin/operator vps master <status|start|stop|restart> [--remote]
-      bin/operator vps deploy <app|all|master> [--remote] [--follow|--detach]  --remote: preflight, pin SHA, tmux on box; default waits + canary (./bin/redeploy)
+      bin/operator vps deploy <app|all|master> [--remote] [--follow|--detach]  --remote: preflight, pin SHA, tmux on box; default waits + canary (MASTER/bin/redeploy)
       bin/operator vps logs <app> [--lines N] [--remote]
       bin/operator vps canary [--remote] [--app a,b] [--budget-ms N]  post-deploy probe: ports, rcctl, every public GET route (--remote runs on the box, otherwise the public domains)
       bin/operator vps rollback <sha>     prints the manual rollback; vps-deploy takes no SHA, so nothing is run
