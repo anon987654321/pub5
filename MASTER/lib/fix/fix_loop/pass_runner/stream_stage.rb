@@ -326,7 +326,7 @@ module Master
             live.each do |worker|
               begin
                 worker.join
-              rescue StandardError => error
+              rescue Exception => error
                 errors << error
               end
             end
