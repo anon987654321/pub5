@@ -602,18 +602,20 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   failures << "mrdamascy production service must use the Falcon host config" unless
     falcon_command == expected_falcon_command
   falcon_pexp = mrd_service[/^\s*pexp="([^"]+)"/, 1]
-  expected_pexp = "ruby[0-9.]*.*${APP_DIR}/falcon.rb"
-  failures << "mrdamascy rc.d process match must identify its Falcon host config" unless falcon_pexp == expected_pexp
+  expected_pexp = %q{.*127\\.0\\.0\\.1:47314.*}
+  failures << "mrdamascy rc.d process match must identify the Falcon loopback endpoint" unless
+    falcon_pexp == expected_pexp
   falcon_stop_pattern = mrd_service[/^\s*pkill -f "([^"]+)"/, 1]
-  expected_stop_pattern = "falcon host ${APP_DIR}/falcon.rb"
-  failures << "mrdamascy rc.d stop pattern must target only its Falcon host config" unless
+  expected_stop_pattern = %q{127\\.0\\.0\\.1:47314}
+  failures << "mrdamascy rc.d stop pattern must target only the Falcon loopback endpoint" unless
     falcon_stop_pattern == expected_stop_pattern
 
   falcon_contract = mrd_falcon.include?('require "falcon/environment/rack"') &&
                     mrd_falcon.include?('service "mrdamascy" do') &&
                     mrd_falcon.include?("include Falcon::Environment::Rack") &&
                     mrd_falcon.match?(/^\s*count 1$/) &&
-                    mrd_falcon.match?(/^\s*health_check_timeout 300$/) &&
+                    mrd_falcon.match?(/^\s*super\.merge\(health_check_timeout: 300\)$/) &&
+                    mrd_falcon.include?("def container_options") &&
                     mrd_falcon.include?('port { ENV.fetch("PORT", 47314).to_i }') &&
                     mrd_falcon.include?('http://127.0.0.1:#{port}') &&
                     mrd_falcon.include?("Async::HTTP::Protocol::HTTP11")
