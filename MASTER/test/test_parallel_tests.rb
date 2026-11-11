@@ -238,7 +238,24 @@ class TestParallelTests < Minitest::Test
     assert_equal 4, aggregate.dig("summary", "assertions")
     assert_equal 4, aggregate.fetch("completed_results_relayed")
     assert_equal 2, aggregate.fetch("batches").size
-    assert_equal files.sort, aggregate.fetch("workers").flat_map { |worker| File.basename(worker.fetch("log")).include?("-batch-") ? worker.fetch("batch") : [] }.uniq.empty? ? files.sort : aggregate.fetch("batches").flat_map { |batch| File.read(batch.fetch("receipt")).then { |content| JSON.parse(content).fetch("workers").flat_map { |worker| File.basename(worker.fetch("log")) } }.to_a }.then { files.sort }
+    batch_files = aggregate.fetch("batches").flat_map { |batch| batch.fetch("files") }
+    assert_equal files.sort, batch_files.sort
+    assert_equal files.size, batch_files.uniq.size
+    assert_equal({ "complete" => true, "expected" => 4, "covered" => 4,
+                   "duplicates" => [], "missing" => [], "unexpected" => [] },
+                 aggregate.fetch("file_coverage"))
+    aggregate.fetch("batches").each do |batch|
+      assert File.file?(batch.fetch("receipt"))
+      per_batch = JSON.parse(File.read(batch.fetch("receipt")))
+      assert_equal batch.fetch("files"), per_batch.fetch("batch_files")
+      assert_equal batch.fetch("files_sha256"), per_batch.fetch("batch_files_sha256")
+      assert_equal batch.fetch("index"),
+                   per_batch.fetch("batch_label").match(/batch-(\d+)-of-/).captures.first.to_i
+      per_batch.fetch("workers").each do |worker|
+        assert File.basename(worker.fetch("log")).include?("-batch-")
+        assert File.file?(worker.fetch("log"))
+      end
+    end
     aggregate.fetch("batches").each do |batch|
       assert File.file?(batch.fetch("receipt"))
       per_batch = JSON.parse(File.read(batch.fetch("receipt")))
@@ -248,6 +265,27 @@ class TestParallelTests < Minitest::Test
     assert_includes out.string, "test-suite-batch-report0:"
   ensure
     previous_jobs.nil? ? ENV.delete("MASTER_TEST_JOBS") : ENV["MASTER_TEST_JOBS"] = previous_jobs
+  end
+
+  def test_batch_aggregate_refuses_duplicate_or_missing_test_files
+    reports = [
+      { "index" => 1, "files" => %w[a.rb b.rb],
+        "payload" => { "status" => "passed", "workers" => [], "completed_results_relayed" => 0 },
+        "execution_passed" => true, "path" => "batch-1.json" },
+      { "index" => 2, "files" => %w[b.rb d.rb],
+        "payload" => { "status" => "passed", "workers" => [], "completed_results_relayed" => 0 },
+        "execution_passed" => true, "path" => "batch-2.json" },
+    ]
+
+    aggregate = Runner.batch_aggregate(
+      reports, files: %w[a.rb b.rb c.rb d.rb], run_id: "receipt-test",
+      revision: "deadbeef", batch_count: 2
+    )
+
+    assert_equal "failed_or_incomplete", aggregate.fetch("status")
+    assert_equal false, aggregate.dig("file_coverage", "complete")
+    assert_equal ["b.rb"], aggregate.dig("file_coverage", "duplicates")
+    assert_equal ["c.rb"], aggregate.dig("file_coverage", "missing")
   end
 
   def test_rakefile_exposes_the_bounded_batch_task

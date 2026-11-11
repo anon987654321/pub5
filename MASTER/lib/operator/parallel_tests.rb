@@ -100,6 +100,9 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
             )
             payload = JSON.parse(File.read(batch_path))
             raise "batch receipt label mismatch" unless payload["batch_label"] == label
+            payload["batch_files"] = batch_files
+            payload["batch_files_sha256"] = file_list_digest(batch_files)
+            write_receipt(batch_path, payload)
           rescue StandardError => error
             passed = false
             payload = {
@@ -215,20 +218,37 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
         "integrity" => tagged_skips.size <= summary.fetch("skips") ? "consistent" : "tagged_exceeds_summary",
         "by_tag" => by_tag,
       }
+      expected_files = Array(files).map(&:to_s).uniq.sort
+      covered_files = reports.flat_map { |report| Array(report.fetch("files")).map(&:to_s) }
+      frequencies = covered_files.tally
+      duplicates = frequencies.filter_map { |path, count| path if count > 1 }.sort
+      missing = expected_files - frequencies.keys
+      unexpected = frequencies.keys - expected_files
+      file_coverage = {
+        "complete" => duplicates.empty? && missing.empty? && unexpected.empty? &&
+          covered_files.size == expected_files.size,
+        "expected" => expected_files.size,
+        "covered" => covered_files.uniq.size,
+        "duplicates" => duplicates,
+        "missing" => missing,
+        "unexpected" => unexpected.sort,
+      }
       batch_rows = reports.map do |report|
         payload = report.fetch("payload")
         {
           "index" => report.fetch("index"),
           "file_count" => report.fetch("files").size,
+          "files" => report.fetch("files"),
           "files_sha256" => file_list_digest(report.fetch("files")),
           "status" => payload["status"],
           "execution_passed" => report.fetch("execution_passed"),
           "receipt" => report.fetch("path"),
         }
       end
-      passed = reports.size == batch_count && reports.all? do |report|
-        report.fetch("execution_passed") && report.dig("payload", "status") == "passed"
-      end
+      passed = reports.size == batch_count && file_coverage.fetch("complete") &&
+        reports.all? do |report|
+          report.fetch("execution_passed") && report.dig("payload", "status") == "passed"
+        end
 
       {
         "schema" => 1,
@@ -242,6 +262,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
         "completed_batches" => reports.size,
         "test_file_count" => files.size,
         "test_files_sha256" => file_list_digest(files),
+        "file_coverage" => file_coverage,
         "jobs" => workers.size,
         "completed_results_relayed" => reports.sum { |report| report.dig("payload", "completed_results_relayed").to_i },
         "summary" => summary,
