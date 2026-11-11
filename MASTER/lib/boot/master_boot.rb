@@ -78,14 +78,9 @@ module Master
         raise BacklogRunFailed, "DELIVERY_FAILED: origin is not a reachable GitHub remote"
       end
       paths.each do |relative|
-        absolute = File.expand_path(relative, repository)
-        raise ArgumentError, "backlog scope escapes repository: #{relative}" unless
-          absolute.start_with?(repository + File::SEPARATOR)
-        raise ArgumentError, "backlog target is missing or symlinked: #{relative}" if
-          File.symlink?(absolute) || !(File.file?(absolute) || File.directory?(absolute))
-        real = File.realpath(absolute)
-        raise ArgumentError, "backlog target resolves outside repository: #{relative}" unless
-          real.start_with?(repository + File::SEPARATOR)
+        unless Backlog::ProofMap.safe_scope_path?(relative, repo_root: repository)
+          raise ArgumentError, "backlog target is missing or has an unsafe path: #{relative}"
+        end
       end
 
       handle = Fix::Mission.new(root:, bus:).start_or_resume!(
@@ -95,6 +90,13 @@ module Master
         intent: mission.dig("operator", "intent") || :functional_change,
       )
       raise ArgumentError, "backlog mission could not be claimed" unless handle.record&.fetch("state", nil) == "running"
+
+      command_spec = Backlog::ProofMap.execution_spec(
+        plan.fetch("done_when"), tree: plan.fetch("tree"), repo_root: repository
+      )
+      unless command_spec
+        raise BacklogRunFailed, "ACCEPTANCE_BLOCKED: the registered done_when command is not in the bounded execution allowlist"
+      end
 
       command = container.fetch(:commands).fetch("fix")
       reports = []
@@ -114,10 +116,37 @@ module Master
           raise BacklogRunFailed, "FIX_PROOF_FAILED: /fix did not return a complete proof for #{relative}"
         end
         reports << report
-        CLI::CoreBridge.push_backlog_commit!(mission: handle, root: repository, bus:)
       end
 
-      unless handle.record_fix_proof!(status: "pass", scope_paths: paths, report: reports.join("\n"))
+      proof_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      proof_output, proof_status = Master::Io::Exec.capture2e(
+        command_spec.fetch(:env),
+        *backlog_acceptance_argv(command_spec, repository:),
+        chdir: command_spec.fetch(:cwd),
+        timeout: command_spec.fetch(:timeout),
+        raise_on_timeout: true,
+      )
+      proof_duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - proof_started) * 1000).round
+      unless proof_status.success?
+        raise BacklogRunFailed, "ACCEPTANCE_FAILED: #{plan.fetch("done_when")} exited #{proof_status.exitstatus.inspect}"
+      end
+
+      command_proof = {
+        "proof_type" => command_spec.fetch(:proof_type),
+        "status" => "pass",
+        "exit_status" => proof_status.exitstatus,
+        "command_digest" => command_spec.fetch(:command_digest),
+        "output_digest" => Digest::SHA256.hexdigest(proof_output.to_s),
+        "output_bytes" => proof_output.to_s.bytesize,
+        "cwd" => command_spec.fetch(:cwd_relative),
+        "duration_ms" => proof_duration_ms,
+      }
+      CLI::CoreBridge.push_backlog_commit!(mission: handle, root: repository, bus:)
+
+      unless handle.record_fix_proof!(
+        status: "pass", scope_paths: paths, report: reports.join("\n"),
+        command_proof:
+      )
         raise BacklogRunFailed, "FIX_PROOF_FAILED: durable /fix proof receipt was rejected"
       end
       summary = "root TODO #{plan.fetch("item_id")}: /fix proof passed for #{paths.size} exact scope(s); origin/main verified"
@@ -130,6 +159,23 @@ module Master
       reason = "FIX_FAILED: #{error.class}: #{error.message}"
       handle&.block!(reason:) unless handle&.record&.fetch("state", nil) == "blocked"
       Master::Result.err(reason, category: :validation)
+    end
+
+    def backlog_acceptance_argv(spec, repository:)
+      require_relative "../operator/ruby_runner"
+      case spec.fetch(:launcher)
+      when :bundle
+        [Operator::RubyRunner.bundle_cmd(root: repository), "exec", *spec.fetch(:argv)]
+      when :ruby_bundle
+        [
+          Operator::RubyRunner.bundle_cmd(root: repository), "exec",
+          Operator::RubyRunner.ruby_cmd(root: repository), *spec.fetch(:argv)
+        ]
+      when :direct
+        spec.fetch(:argv)
+      else
+        raise ArgumentError, "unknown backlog acceptance launcher: #{spec.fetch(:launcher).inspect}"
+      end
     end
 
     def backlog_fix_report_passed?(report)
