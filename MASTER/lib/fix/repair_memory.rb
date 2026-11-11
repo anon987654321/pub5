@@ -209,9 +209,9 @@ module Master
                    current.nlink == 1 && current.dev == opened.dev && current.ino == opened.ino
               raise IOError, "repair memory lock must be a stable singly linked regular file"
             end
-            # File.open applies the requested group-sharing mode through the
-            # process umask. Never chmod by pathname after opening: a swapped
-            # symlink could redirect that metadata change outside this store.
+            # Change permissions through the already-verified descriptor; a
+            # pathname chmod could follow a swapped symlink outside this store.
+            lock.chmod(0o660)
             raise IOError, "could not acquire repair memory lock" unless lock.flock(File::LOCK_EX)
 
             begin
