@@ -292,8 +292,8 @@ class TestBacklog < Minitest::Test
       "RUBYOPT=-r/tmp/hook.rb rake test", tree: "MASTER", repo_root: repository
     ), "unknown environment injection must be refused"
     refute map.execution_spec(
-      "ruby MASTER/test/test_fix_kernel.rb", tree: "MASTER", repo_root: repository
-    ), "Ruby test source must not be reached through a symlinked scope path"
+      "ruby -e 'puts 1'", tree: "MASTER", repo_root: repository
+    ), "arbitrary Ruby evaluation must not enter unattended intake"
   end
 
   def test_proof_map_does_not_guess_unknown_commands_or_empty_acceptance
