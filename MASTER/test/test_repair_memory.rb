@@ -10,6 +10,36 @@ class TestRepairMemory < Minitest::Test
 
   def finding(law) = { law:, line: 1, message: "m" }
 
+  def test_repair_memory_uses_atomic_private_project_state_and_a_sidecar_lock
+    Dir.mktmpdir do |root|
+      path = File.join(root, "a.rb")
+      File.write(path, "x = 1\\n")
+      memory = Memory.new(root:)
+      memory.record(path, %w[FEATURE_ENVY], { no_proposal: 1 })
+
+      state = File.join(root, ".master", "fix_memory.json")
+      lock = "#{state}.lock"
+      assert File.file?(state)
+      assert File.file?(lock)
+      assert_equal 0o660, File.stat(state).mode & 0o777
+      assert_equal 0o660, File.stat(lock).mode & 0o777
+      assert_empty Dir.glob(File.join(root, ".master", "*.tmp"))
+    end
+  end
+
+  def test_repair_memory_refuses_a_symlinked_state_file
+    Dir.mktmpdir do |root|
+      outside = File.join(root, "outside.json")
+      File.write(outside, JSON.generate("files" => {}, "laws" => {}))
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      File.symlink(outside, File.join(root, ".master", "fix_memory.json"))
+      memory = Memory.new(root:)
+
+      assert_raises(IOError) { memory.fresh("a.rb", [finding("FEATURE_ENVY")]) }
+      assert_equal({ "files" => {}, "laws" => {} }, JSON.parse(File.read(outside)))
+    end
+  end
+
   def test_a_decline_holds_until_the_file_changes
     Dir.mktmpdir do |root|
       path = File.join(root, "a.rb")
