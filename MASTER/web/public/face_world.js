@@ -1412,7 +1412,7 @@
   }, { passive: true });
   window.addEventListener("master:visual-subject", (event) => {
     const detail = event.detail || {};
-    setConversationSubject(detail.text || detail.title || "", detail.visual_subject || detail.visualSubject || detail);
+    setConversationSubject(detail.text || detail.title || "", detail.visual_subject || detail.visualSubject || null);
     scheduleFaceRestoration();
   }, { passive: true });
 
