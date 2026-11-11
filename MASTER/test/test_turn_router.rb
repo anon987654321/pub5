@@ -305,6 +305,18 @@ class TurnRouterTest < Minitest::Test
     assert_equal [:fix], ran
   end
 
+  def test_restart_language_resolves_to_the_registered_reload_command
+    reload = Master::CLI::CommandRegistry::Command.new { "reloading" }
+    container = build_container(commands: { "reload" => reload })
+
+    ["restart MASTER", "reload yourself"].each do |message|
+      inferred = Master::CLI::TurnRouter.infer_operator_command(message, container:)
+
+      assert_equal "reload", inferred.fetch(:command), message
+      assert Master::CLI::TurnRouter.answered?("restart", container), "restart alias must reach reload"
+    end
+  end
+
   def test_fix_language_is_promoted_to_operator_command_not_fold
     inferred = Master::CLI::TurnRouter.infer_operator_command("fix the bug", container: build_container)
 
