@@ -57,7 +57,7 @@ module Deploy
 
     # OpenBSD package suffixes vary by release; recognize the family rather
     # than freezing a list that silently ages out.
-    RUBY_PACKAGE_BINARY = /\\A(?:ruby|bundle|gem)(?:[0-9]+(?:\\.[0-9]+)*)?\\z/
+    RUBY_PACKAGE_BINARY = /\A(?:ruby|bundle|gem)(?:[0-9]+(?:\.[0-9]+)*)?\z/
 
     module_function
 
