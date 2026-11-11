@@ -213,6 +213,7 @@ module Backlog
               when /\Arake test(?::batch)?(?:\s|\z)/i,
                    /\Arake check test(?:\s|\z)/i,
                    /\Aruby\s+(?:MASTER|RAILS|OPENBSD|STUDIO)\/test\/run_all\.rb(?:\s|\z)/i,
+                   /\Aruby\s+test\/run_all\.rb(?:\s|\z)/i,
                    /\A(?:MASTER\/)?bin\/ci(?:\s|\z)/i
                 ["full_suite"]
               when /\Arake test:[a-z0-9_:.-]+(?:\s|\z)/i,
