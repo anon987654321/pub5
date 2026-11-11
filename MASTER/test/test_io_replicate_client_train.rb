@@ -284,7 +284,7 @@ class TestReplicateClientRetry < Minitest::Test
   def test_prediction_failure_redacts_provider_error_text
     client = Client.new(token: "r8_test")
     private_error = "upstream private prompt and credential"
-    client.define_singleton_method(:get) do |_uri|
+    client.define_singleton_method(:get) do |_uri, deadline: nil|
       { "status" => "failed", "error" => private_error }
     end
 
