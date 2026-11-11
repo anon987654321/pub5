@@ -57,10 +57,19 @@ class MasterBootTest < Minitest::Test
           mode: "repair", intent: :functional_change,
         )
         seen = []
+        children = []
+        parent_observations = []
         report = "fix done - 1 commit delivered - proof: 12 of 12 - hard red 0 - soft red 0"
         command = Object.new
         command.define_singleton_method(:call) do |ctx|
           seen << ctx.fetch(:args)
+          target = ctx.fetch(:args).split.first
+          child = Master::Fix::Mission.new(root: mission_root).start_or_resume!(
+            goal: "fix #{target}", scope: target, origin: "manual",
+          )
+          children << child
+          parent_observations << Master::Fix::Mission.current(root: mission_root, namespace: nil)
+          child.finish!(summary: "scoped child fix completed")
           report
         end
         fake_git = Object.new
@@ -93,6 +102,10 @@ class MasterBootTest < Minitest::Test
         end
 
         assert_equal paths.map { |path| "#{path} --intent=functional_change" }, seen
+        assert_equal paths.size, children.size
+        assert parent_observations.all? { |record| record["origin"] == "backlog" && record["id"] == queued.id }
+        assert_equal children.last.id, Master::Fix::Mission.current(root: mission_root, namespace: "fix").fetch("id")
+        assert_equal "completed", Master::Fix::Mission.current(root: mission_root, namespace: "fix").fetch("state")
         completed = Master::Fix::Mission.current(root: mission_root)
         assert_equal "completed", completed.fetch("state")
         assert_equal "fix_pipeline", completed.dig("proof", "kind")
