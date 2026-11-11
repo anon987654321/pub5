@@ -592,8 +592,10 @@ if File.file?(mrd_gemfile_path) && File.file?(mrd_lock_path) &&
   failures << "mrdamascy Gemfile must keep Puma out of runtime dependencies" if runtime_gemfile.match?(/^gem ["']puma["']/)
   failures << "mrdamascy Gemfile.lock must lock Falcon and test-only Puma" unless
     lock_dependencies.lines.map(&:strip).include?("falcon") && lock_dependencies.lines.map(&:strip).include?("puma")
-  failures << "mrdamascy production service must use Falcon" unless
-    mrd_service.include?("exec ${_bundle} exec falcon serve") && !mrd_service.match?(/exec\s+\$\{_bundle\}\s+exec\s+puma/)
+  falcon_command = mrd_service[/^\s*_exec="([^"]+)"/, 1]
+  expected_falcon_command = "exec ${_bundle} exec falcon serve -n 1 --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
+  failures << "mrdamascy production service must use one loopback Falcon worker" unless
+    falcon_command == expected_falcon_command
 else
   failures << "missing tracked mrdamascy Falcon Gemfile, lockfile or rc.d service"
 end
