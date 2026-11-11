@@ -577,13 +577,18 @@ end
 
 # The vm23 operator contract is Falcon-only. Mr Damascy had drifted to Puma;
 # keep Puma available only to the Capybara test group, never in production.
-mrd_gemfile_path = File.join(ROOT, "RAILS", "mrdamascy", "Gemfile")
-mrd_lock_path = File.join(ROOT, "RAILS", "mrdamascy", "Gemfile.lock")
+mrd_app = File.join(ROOT, "RAILS", "mrdamascy")
+mrd_gemfile_path = File.join(mrd_app, "Gemfile")
+mrd_lock_path = File.join(mrd_app, "Gemfile.lock")
+mrd_falcon_config_path = File.join(mrd_app, "falcon.rb")
+mrd_preload_path = File.join(mrd_app, "preload.rb")
 mrd_service_path = File.join(OPENBSD, "etc", "rc.d", "mrdamascy")
-if File.file?(mrd_gemfile_path) && File.file?(mrd_lock_path) &&
-   File.file?(mrd_service_path) && !File.symlink?(mrd_service_path)
+required_mrd_files = [mrd_gemfile_path, mrd_lock_path, mrd_falcon_config_path, mrd_preload_path, mrd_service_path]
+if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   mrd_gemfile = File.read(mrd_gemfile_path)
   mrd_lock = File.read(mrd_lock_path)
+  mrd_falcon = File.read(mrd_falcon_config_path)
+  mrd_preload = File.read(mrd_preload_path)
   mrd_service = File.read(mrd_service_path).lines.reject { |line| line.lstrip.start_with?("#") }.join
   runtime_gemfile = mrd_gemfile.split(/^group :(?:development|test)\b/).first.to_s
   lock_dependencies = mrd_lock[/^DEPENDENCIES\n(.*?)(?=^CHECKSUMS)/m, 1].to_s
@@ -593,11 +598,26 @@ if File.file?(mrd_gemfile_path) && File.file?(mrd_lock_path) &&
   failures << "mrdamascy Gemfile.lock must lock Falcon and test-only Puma" unless
     lock_dependencies.lines.map(&:strip).include?("falcon") && lock_dependencies.lines.map(&:strip).include?("puma")
   falcon_command = mrd_service[/^\s*_exec="([^"]+)"/, 1]
-  expected_falcon_command = "exec ${_bundle} exec falcon serve -n 1 --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
-  failures << "mrdamascy production service must use one loopback Falcon worker" unless
+  expected_falcon_command = "exec ${_bundle} exec falcon host ${APP_DIR}/falcon.rb"
+  failures << "mrdamascy production service must use the Falcon host config" unless
     falcon_command == expected_falcon_command
+  falcon_pexp = mrd_service[/^\s*pexp="([^"]+)"/, 1]
+  expected_pexp = "ruby[0-9.]*.*${APP_DIR}/falcon.rb"
+  failures << "mrdamascy rc.d process match must identify its Falcon host config" unless falcon_pexp == expected_pexp
+
+  falcon_contract = mrd_falcon.include?('require "falcon/environment/rack"') &&
+                    mrd_falcon.include?('service "mrdamascy" do') &&
+                    mrd_falcon.include?("include Falcon::Environment::Rack") &&
+                    mrd_falcon.match?(/^\s*count 1$/) &&
+                    mrd_falcon.include?('port { ENV.fetch("PORT", 47314).to_i }') &&
+                    mrd_falcon.include?('http://127.0.0.1:#{port}') &&
+                    mrd_falcon.include?("Async::HTTP::Protocol::HTTP11")
+  failures << "mrdamascy Falcon host must use one Rack worker on loopback HTTP/1" unless falcon_contract
+  failures << "mrdamascy Falcon preload must load the Rails environment" unless
+    mrd_preload.include?('require_relative "config/environment"')
 else
-  failures << "missing tracked mrdamascy Falcon Gemfile, lockfile or rc.d service"
+  missing = required_mrd_files.reject { |path| File.file?(path) && !File.symlink?(path) }
+  failures << "missing tracked Mr Damascy Falcon production files: #{missing.map { |path| path.delete_prefix(ROOT + File::SEPARATOR) }.join(", ")}"
 end
 
 if failures.any?
