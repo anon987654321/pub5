@@ -98,7 +98,10 @@ module Master
             end
             if existing_target
               unless current_target && current_target.dev == existing_target.dev &&
-                     current_target.ino == existing_target.ino
+                     current_target.ino == existing_target.ino &&
+                     existing_target.size == current_target.size &&
+                     existing_target.mtime == current_target.mtime &&
+                     existing_target.ctime == current_target.ctime
                 raise IOError, "download target changed during transfer"
               end
             elsif current_target
@@ -473,7 +476,8 @@ module Master
         File.open(path, flags) do |source|
           opened = source.stat
           current = File.lstat(path)
-          unless same_file_stat?(opened, current) && opened.file? && !opened.symlink? &&
+          unless same_file_stat?(source_stat, opened) && stable_file_stat?(source_stat, opened) &&
+                 same_file_stat?(opened, current) && opened.file? && !opened.symlink? &&
                  opened.size <= MAX_UPLOAD_BYTES
             raise IOError, "upload source changed before transfer"
           end
