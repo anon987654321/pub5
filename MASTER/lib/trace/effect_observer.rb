@@ -21,6 +21,7 @@ module Master
         @lifecycle_mutex = Mutex.new
         @pending_effects = {}
         @completed_effects = {}
+        restore_lifecycle_history!
       end
 
       def call(stage:, turn:, effect:, effect_id:, operation: :perform, parent_effect_id: nil,
@@ -36,6 +37,7 @@ module Master
         identity = payload.dup.freeze
         references = safe_evidence_refs(evidence_refs)
         payload[:evidence_refs] = references unless references.empty?
+        refresh_lifecycle_history!
 
         case stage.to_sym
         when :before
@@ -70,7 +72,7 @@ module Master
             raise ArgumentError, "duplicate before-event for effect identity"
           end
 
-          @bus.publish_required(BEFORE_EVENT, payload)
+          @bus.publish_required(BEFORE_EVENT, payload.merge(pid: Process.pid))
           @pending_effects[key] = identity
         end
       end
@@ -92,6 +94,61 @@ module Master
           @pending_effects.delete(key)
           @completed_effects[key] = true
         end
+      end
+
+      # Rebuild duplicate-ID protection from the operational receipt stream.
+      # A before-event without an after-event remains pending; it is never
+      # guessed to have succeeded or failed after a process restart.
+      def restore_lifecycle_history!
+        pending = {}
+        completed = {}
+        lifecycle_history.each do |record|
+          next unless record.is_a?(Hash)
+
+          event = record["event"].to_s
+          next unless [BEFORE_EVENT, AFTER_EVENT].include?(event)
+
+          payload = record["payload"]
+          next unless payload.is_a?(Hash)
+
+          identity = identity_from_history(payload)
+          next unless identity
+
+          key = effect_key(identity)
+          if event == BEFORE_EVENT
+            pending[key] = identity
+            completed.delete(key)
+          else
+            pending.delete(key)
+            completed[key] = true
+          end
+        end
+        @lifecycle_mutex.synchronize do
+          @pending_effects.merge!(pending)
+          @completed_effects.merge!(completed)
+        end
+      end
+
+      def refresh_lifecycle_history!
+        restore_lifecycle_history!
+      end
+
+      def lifecycle_history
+        @bus.respond_to?(:effect_history) ? @bus.effect_history : []
+      end
+
+      def identity_from_history(payload)
+        fields = %i[
+          effect_id turn verb capability operation parent_effect_id checkpoint_id
+          run_id attempt_id mission_id scope_digest idempotency_key deadline_at reversibility
+        ]
+        attributes = fields.each_with_object({}) do |field, result|
+          key = field.to_s
+          result[field] = payload[key] if payload.key?(key)
+        end
+        Master::Execution::Contract::EffectEnvelope.new(**attributes).to_h.freeze
+      rescue ArgumentError, TypeError
+        nil
       end
 
       def effect_key(payload)
