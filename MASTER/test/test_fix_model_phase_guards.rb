@@ -5,7 +5,7 @@ require_relative "test_helper"
 # The model phase of /fix, bounded: lanes probed before any file is sent, a
 # wall-clock per file, lane failures remembered for the run, an impact-ranked
 # worklist, proposals that stray outside their finding refused, and a file
-# dropped after two rejects. All with fake lanes; no model is asked.
+# dropped after three rejects. All with fake lanes; no model is asked.
 class TestFixModelPhaseGuards < Minitest::Test
   Ledger = Master::Fix::RunLedger
   Probe = Master::Fix::LaneProbe
@@ -51,16 +51,18 @@ class TestFixModelPhaseGuards < Minitest::Test
     refute Ledger.lane_failed("flaky:model"), "already dropped, not announced twice"
   end
 
-  def test_a_file_stops_after_two_rejects_and_the_summary_counts_reasons
+  def test_a_file_stops_after_three_rejects_and_the_summary_counts_reasons
     refute Ledger.file_done?("a.rb")
     Ledger.reject("new_violations", file: "a.rb")
     Ledger.reject("out_of_scope", file: "a.rb")
+    refute Ledger.file_done?("a.rb")
+    Ledger.reject("new_violations", file: "a.rb")
     Ledger.reject("new_violations", file: "b.rb")
 
     assert Ledger.file_done?("a.rb")
     refute Ledger.file_done?("b.rb")
-    assert_equal({ "new_violations" => 2, "out_of_scope" => 1 }, Ledger.reasons)
-    assert_includes Ledger.summary_lines.first, "proposals rejected 3: new_violations 2, out_of_scope 1"
+    assert_equal({ "new_violations" => 3, "out_of_scope" => 1 }, Ledger.reasons)
+    assert_includes Ledger.summary_lines.first, "proposals rejected 4: new_violations 3, out_of_scope 1"
   end
 
   # The run's summary names the errors it caught and carried on past, the busiest place first.
@@ -188,43 +190,50 @@ class TestFixModelPhaseGuards < Minitest::Test
     seen = []
     loop.define_singleton_method(:attempt_fix) do |_violation|
       seen << Master::Fix::RunLedger.retry_note
-      Master::Fix::RunLedger.refused_because("lines 1-9 are outside 4-6") if seen.size == 1
-      outcomes.shift
+      outcome = outcomes.shift
+      Master::Fix::RunLedger.refused_because("lines 1-9 are outside 4-6") if
+        Master::Fix::Kernel::RepairAdapter::RETRYABLE.include?(outcome)
+      outcome
     end
     [loop, seen]
   end
 
-  def test_a_refused_repair_is_retried_once_with_the_reason
-    loop, seen = retry_loop(%i[out_of_scope applied])
+  def test_a_refused_repair_is_retried_twice_with_the_reason
+    loop, seen = retry_loop(%i[out_of_scope out_of_scope applied])
 
     out, = capture_io { assert_equal :applied, loop.send(:fix_violation, { file: "lib/a.rb", law: "X" }) }
 
-    assert_equal 2, seen.size
+    assert_equal 3, seen.size
     assert_equal "", seen.first
+    assert_includes seen[1], "lines 1-9 are outside 4-6"
     assert_includes seen.last, "lines 1-9 are outside 4-6"
-    assert_includes out, "fix0: retrying a.rb TEST_LAW once, told: lines 1-9 are outside 4-6"
+    assert_includes out, "attempt 2/3"
+    assert_includes out, "attempt 3/3"
   end
 
-  def test_a_second_refusal_is_final_and_a_non_refusal_is_never_retried
-    loop, seen = retry_loop(%i[out_of_scope out_of_scope])
-    capture_io { assert_equal :out_of_scope, loop.send(:fix_violation, { file: "lib/a.rb" }) }
-    assert_equal 2, seen.size
+  def test_three_refusals_are_final_and_a_non_refusal_is_never_retried
+    loop, seen = retry_loop(%i[out_of_scope out_of_scope out_of_scope])
+    out, = capture_io { assert_equal :out_of_scope, loop.send(:fix_violation, { file: "lib/a.rb" }) }
+    assert_equal 3, seen.size
+    assert_includes out, "retry limit reached after 3 attempts"
 
     loop, seen = retry_loop(%i[no_proposal])
     assert_equal :no_proposal, loop.send(:fix_violation, { file: "lib/a.rb" })
     assert_equal 1, seen.size
   end
 
-  def test_a_commit_refusal_is_retried_once_with_the_committer_reason
-    loop, seen = retry_loop(%i[commit_refused applied])
+  def test_a_commit_refusal_is_retried_twice_with_the_committer_reason
+    loop, seen = retry_loop(%i[commit_refused commit_refused applied])
 
     out, = capture_io do
       assert_equal :applied, loop.send(:fix_violation, { file: "lib/a.rb", law: "TEST_LAW" })
     end
 
-    assert_equal 2, seen.size
+    assert_equal 3, seen.size
+    assert_includes seen[1], "lines 1-9 are outside 4-6"
     assert_includes seen.last, "lines 1-9 are outside 4-6"
-    assert_includes out, "retrying a.rb TEST_LAW once"
+    assert_includes out, "attempt 2/3"
+    assert_includes out, "attempt 3/3"
   end
 
   def test_the_retry_switch_turns_the_second_try_off
