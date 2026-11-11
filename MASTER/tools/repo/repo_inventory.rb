@@ -39,7 +39,6 @@ ALLOWED_ROOT_FILES = %w[
   README.md
   TODO.md
   VERSION
-  redeploy
 ].freeze
 GENERATED_ROOT_FILES = %w[
   snapshot_MASTER.md
