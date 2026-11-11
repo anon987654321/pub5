@@ -214,21 +214,28 @@ class TestOpenCrabsFeatures < Minitest::Test
   end
 
   def test_agent_pool_join_all_waits_for_every_worker_before_raising
-    release = Queue.new
-    started = Queue.new
+    release_failed = Queue.new
+    release_healthy = Queue.new
+    failed_started = Queue.new
+    healthy_started = Queue.new
     pool = Master::Review::AgentPool.new(
       governor: nil,
       taxonomy: { "spawn_policy" => { "max_concurrent_children" => 2 } },
     )
-    failed = pool.spawn(type: :explore) { raise "first worker failed" }
+    failed = pool.spawn(type: :explore) do
+      failed_started << true
+      release_failed.pop
+      raise "first worker failed"
+    end
     healthy = pool.spawn(type: :explore) do
-      started << true
-      release.pop
+      healthy_started << true
+      release_healthy.pop
       :finished
     end
     assert failed.ok?
     assert healthy.ok?
-    started.pop
+    failed_started.pop
+    healthy_started.pop
 
     outcome = Queue.new
     joiner = Thread.new do
@@ -238,9 +245,10 @@ class TestOpenCrabsFeatures < Minitest::Test
         outcome << error
       end
     end
+    release_failed << :continue
     sleep 0.02
-    assert joiner.alive?, "join_all must wait for the healthy sibling after a worker failure"
-    release << :continue
+    assert joiner.alive?, "join_all must wait for the healthy sibling after the first worker fails"
+    release_healthy << :continue
     joiner.join
 
     error = outcome.pop
