@@ -24,8 +24,6 @@ esac
 
 MIN_MAJOR=3
 MIN_MINOR=3
-MAX_MAJOR=4
-MAX_MINOR=0
 
 if [ -n "${PUB5_RUBY:-}" ] && [ -x "${PUB5_RUBY}" ]; then
   exec "${PUB5_RUBY}" "$@"
@@ -52,13 +50,10 @@ add_candidate() {
     ""|*[!0-9]*) return 0 ;;
   esac
 
-  if [ "$major" -lt "$MIN_MAJOR" ] || [ "$major" -gt "$MAX_MAJOR" ]; then
+  if [ "$major" -lt "$MIN_MAJOR" ]; then
     return 0
   fi
   if [ "$major" -eq "$MIN_MAJOR" ] && [ "$minor" -lt "$MIN_MINOR" ]; then
-    return 0
-  fi
-  if [ "$major" -eq "$MAX_MAJOR" ] && [ "$minor" -gt "$MAX_MINOR" ]; then
     return 0
   fi
 
@@ -78,7 +73,7 @@ for ruby in "$RBENV_ROOT"/versions/*/bin/ruby; do
 done
 
 # Common package/Homebrew versioned names, followed by the host's generic ruby.
-for name in ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby; do
+for name in ruby4.3 ruby43 ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby; do
   ruby_path=$(command -v "$name" 2>/dev/null || true)
   [ -n "$ruby_path" ] && add_candidate "$ruby_path"
 done
@@ -92,6 +87,6 @@ if [ -n "$BEST_RUBY" ]; then
   exec "$BEST_RUBY" "$@"
 fi
 
-printf '%s\n' "ruby0: no supported Ruby found (requires >= 3.3 and < 4.1)" >&2
-printf '%s\n' "ruby0: install Ruby 4.0.x when available; Ruby 3.4.x or 3.3.x is also supported" >&2
+printf '%s\n' "ruby0: no supported Ruby found (requires Ruby >= 3.3)" >&2
+printf '%s\n' "ruby0: install Ruby 3.3 or newer, or set PUB5_RUBY to a compatible interpreter" >&2
 exit 1
