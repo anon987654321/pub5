@@ -157,7 +157,11 @@ module Master
           out, err, status = capture3_with_timeout(timeout_s, *args)
           return Result.err("agy: #{err.strip}", category: :provider_error) unless status.success?
 
-          out.strip.tap { |said| blk&.call(said) if stream && block_given? }.then { |said| Result.ok(said) }
+          said = out.to_s.strip
+          return Result.err("agy: exited successfully without a reply", category: :provider_error) if said.empty?
+
+          blk&.call(said) if stream && block_given?
+          Result.ok(said)
         rescue Timeout::Error
           Result.err("agy: timed out after #{PassClock.call_deadline(timeout_s)}s", category: :timeout)
         rescue StandardError => e

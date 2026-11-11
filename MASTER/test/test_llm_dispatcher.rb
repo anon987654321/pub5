@@ -191,6 +191,22 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal false, complete.last[:cache_hit]
   end
 
+  def test_estimated_cli_usage_reports_input_and_output_tokens_separately
+    dispatcher, session, bus = build_dispatcher
+    prompt = "p" * 400
+    reply = "r" * 80
+
+    dispatcher.send(:record_estimated_cli_usage, model: "grok-cli:auto", prompt:, reply:)
+
+    cost = bus.events.find { |name, _payload| name == "llm:cost" }.last
+    complete = bus.events.find { |name, _payload| name == "llm:call_complete" }.last
+    assert_equal 120, cost[:tokens]
+    assert_equal 100, complete[:tokens_in]
+    assert_equal 20, complete[:tokens_out]
+    assert_equal true, complete[:estimated]
+    assert_equal 120, session.costs.last[:tokens]
+  end
+
   def test_active_file_types_collects_extensions_from_session_context
     dispatcher, session, _bus = build_dispatcher
     session.topic = "editing MASTER/law/javascript.rb and config/routes.json"
@@ -484,6 +500,19 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal :timeout, result.category
     expected = Master::Review::LLMDispatcher.const_get(:AGY_CLI_TIMEOUT_S)
     assert_match(/timed out after #{expected}s/, result.message)
+  end
+
+  def test_send_agy_cli_rejects_empty_stdout_after_successful_exit
+    dispatcher, = build_dispatcher
+    dispatcher.define_singleton_method(:find_agy_bin) { "/usr/local/bin/agy" }
+    ok_status = Struct.new(:success?).new(true)
+    dispatcher.define_singleton_method(:capture3_with_timeout) { |*_args, **_kwargs| [" \n", "", ok_status] }
+
+    result = dispatcher.send(:send_agy_cli, "auto", [{ role: "user", content: "hello" }], sys: nil)
+
+    assert_instance_of Master::Result::Err, result
+    assert_equal :provider_error, result.category
+    assert_match(/without a reply/, result.message)
   end
 
   def test_send_agy_cli_success

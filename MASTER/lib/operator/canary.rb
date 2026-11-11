@@ -377,7 +377,7 @@ module Operator
       return (lines << "preflight: all #{results.size} checks passed").join("\n") unless failed
 
       lines << failed.detail.to_s.lines.map { |l| "       #{l.rstrip}" }.join("\n")
-      lines << "preflight: #{failed.name} FAILED - this commit does not boot. Nothing was stopped or pulled onto the box."
+      lines << "preflight: #{failed.name} FAILED - deployment blocked during preflight. Nothing was stopped or pulled onto the box."
       lines.join("\n")
     end
   end

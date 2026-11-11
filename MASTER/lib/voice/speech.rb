@@ -602,6 +602,9 @@ module Master
         end
 
         @last_error ||= "streaming synthesis produced empty audio"
+        unless os_voice_fallback? || @last_error.include?("OS voice fallback disabled by tts.os_voice_fallback=false")
+          @last_error = "#{@last_error}; OS voice fallback disabled by tts.os_voice_fallback=false (one-speaker policy)"
+        end
         false
       rescue StandardError => e
         @last_error = "#{e.class}: #{e.message}"
@@ -791,7 +794,12 @@ module Master
         if path && File.size?(path)
           clear_last_error!
         else
-          summarize_tts_failure("neural voices unreachable - speech falls back to the OS voices or stays silent")
+          fallback = if os_voice_fallback?
+                       "enabled (a different system voice may be used)"
+                     else
+                       "disabled by tts.os_voice_fallback=false (one-speaker policy)"
+                     end
+          summarize_tts_failure("neural voices unreachable - OS voice fallback #{fallback}; speech may be silent")
           path = nil
         end
         path

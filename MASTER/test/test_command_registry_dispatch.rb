@@ -588,6 +588,31 @@ class TestCommandRegistryDispatch < Minitest::Test
     )
   end
 
+  def test_deploy_summary_preserves_the_preflight_check_that_blocked_ssh
+    status = Struct.new(:exitstatus) do
+      def success? = false
+    end.new(1)
+    output = <<~LOG
+      ok  preflight syntax
+      ok  preflight law files
+      ok  preflight boot smoke
+      FAIL preflight rehearse
+             FAIL  0.1s  RAILS/test/test_path_idioms_test.rb
+                    1) Failure: stale path assertion
+      rehearsal: 1 of 16 failed - fix these before vps-deploy
+      preflight: rehearse FAILED - deployment blocked during preflight
+    LOG
+
+    result = Registry.send(:deploy_summary, output, status)
+
+    assert_includes result, "deployment blocked before SSH"
+    assert_includes result, "FAIL preflight rehearse"
+    assert_includes result, "RAILS/test/test_path_idioms_test.rb"
+    assert_includes result, "rehearsal: 1 of 16 failed"
+    refute_includes result, "remote exit"
+    refute_includes result, "this commit does not boot"
+  end
+
   def test_deploy_summary_keeps_the_decisive_remote_failure
     status = Struct.new(:exitstatus) do
       def success? = false

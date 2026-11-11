@@ -563,6 +563,16 @@ module Master
         success_line = lines.reverse.find { |line| line.match?(/\bvps-deploy:\s+.+\b(?:ok|complete|ready)\b/i) }
         return "remote: #{success_line}" if status.success? && success_line
 
+        # A local refusal happens before SSH. Keep the failed check and its
+        # diagnostic together; compressing it to the final summary hid the cause.
+        preflight_end = lines.rindex { |line| line.match?(/\Apreflight:\s+\S+\s+FAILED\b/i) }
+        if preflight_end
+          failure_start = lines.rindex { |line| line.match?(/\AFAIL preflight\b/i) }
+          start = failure_start || [preflight_end - 10, 0].max
+          detail = lines[start..preflight_end]
+          return (["deployment blocked before SSH; nothing was sent to vm23:", *detail]).join("\n")
+        end
+
         decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not)\b/i) }
         detail = decisive || lines.last || "no remote output"
         detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 90

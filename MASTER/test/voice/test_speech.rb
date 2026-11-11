@@ -723,6 +723,7 @@ class TestSpeech < Minitest::Test
     end
 
     assert_empty calls
+    assert_match(/OS voice fallback disabled by tts\.os_voice_fallback=false/, Master::Voice::Speech.last_error)
   end
 
   def test_synthesize_falls_back_to_say_when_edge_and_espeak_miss

@@ -72,6 +72,16 @@ class DeployPreflightTest < Minitest::Test
     FileUtils.rm_rf(dir)
   end
 
+  def test_a_rehearsal_failure_is_not_misreported_as_a_boot_failure
+    result = [Pre::Result.new(name: "rehearse", ok: false, detail: "RAILS/test/test_path_idioms_test.rb failed")]
+
+    report = Pre.report(result)
+
+    assert_includes report, "deployment blocked during preflight"
+    assert_includes report, "Nothing was stopped or pulled onto the box"
+    refute_includes report, "this commit does not boot"
+  end
+
   def test_main_exits_one_on_failure_and_zero_on_a_clean_tree
     bad = tree("MASTER/lib/a.rb" => "def (\n")
     good = tree("MASTER/lib/a.rb" => "x = 1\n")
