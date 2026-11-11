@@ -5,7 +5,7 @@ const FACE_RUNTIME_SOURCES = [
   "face.part2.txt?v=43072be478",
   "face.part3.txt?v=01005ed2e5",
   "face_speech_runtime.js?v=1d92dfa106",
-  "face_speech_playback.js?v=ca68268991",
+  "face_speech_playback.js?v=e410f0afef",
   "face.part5.txt?v=1ebbb2f715"
 ];
 const FACE_RUNTIME_URL = (name) => new URL(name, document.baseURI).href;
