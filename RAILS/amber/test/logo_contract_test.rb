@@ -163,6 +163,38 @@ class LogoContractTest < ActionView::TestCase
     refute_includes generator, "steppedLine"
     refute_includes generator, "pony_rainbow"
     refute_includes generator, "starlight_comet"
+    refute_includes generator, "stepped swoosh"
+    refute_includes generator, "roams behind the letters"
+    refute_includes generator, "tail7"
+  end
+  test "logo study gallery paths and plate descriptions stay in sync" do
+    root = Rails.root.join("__logo")
+    html = root.join("all-plates.html").read
+    images = html.scan(/<img\b[^>]*\bsrc="([^"]+)"/).flatten
+
+    assert_equal 20, images.size
+    images.each do |asset|
+      assert File.file?(root.join(asset)), "missing gallery asset: #{asset}"
+    end
+
+    assert_includes html, "07 · starlight — night-sky ink and stars inside the glyphs"
+    refute_includes html, "starlight comet"
+    assert_includes html, "@media (max-width: 700px)"
+
+    pixel = File.read(root.join("plates/02_bit8_pixel.svg"))
+    assert_includes pixel, "the original white swoosh"
+    refute_includes pixel, "stepped swoosh"
+
+    signal_orbit = File.read(root.join("plates/04_signal_orbit.svg"))
+    assert_includes signal_orbit, "the radial ink roams inside the letters"
+    refute_includes signal_orbit, "behind the letters"
+
+    starlight = File.read(root.join("plates/07_starlight.svg"))
+    assert_includes starlight, "original white swoosh unchanged"
+    refute_includes starlight, "tail7"
+
+    generator = root.join("generate.mjs").read
+    assert_includes generator, "@media (max-width: 700px)"
   end
 
 end
