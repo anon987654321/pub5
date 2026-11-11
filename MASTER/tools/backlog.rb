@@ -255,7 +255,6 @@ module Backlog
     end
 
     EXECUTION_ENV = %w[MASTER_TEST_START_MARKERS MASTER_TEST_JOBS MASTER_TEST_PROGRESS_EVERY].freeze
-    EXECUTION_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
     PROOF_TIMEOUTS = {
       "full_suite" => 1800,
       "focused_tests" => 900,
@@ -575,6 +574,7 @@ module Backlog
         "item_digest" => item_digest(item),
         "source_digest" => Digest::SHA256.file(Backlog::SOURCE).hexdigest,
         "scope_paths" => scope,
+        "tree" => item.fetch(:tree),
         "new_paths" => new_paths,
         "done_when" => item[:done_when],
         "proof_map_version" => ProofMap::VERSION,
@@ -656,6 +656,9 @@ module Backlog
       return false unless OWNED_TREES.include?(tree)
       return false unless READY_KINDS.include?(row[:kind].to_s)
       return false unless ProofMap.valid_types?(ProofMap.types_for(row))
+      return false unless ProofMap.execution_spec(
+        row[:done_when], tree:, repo_root: @repo_root
+      )
       paths = Array(row[:scope_paths]).map(&:to_s).uniq
       return false if paths.empty?
       return false unless paths.all? { |path| path.start_with?("#{tree}/") }
@@ -669,29 +672,7 @@ module Backlog
     # check permits an in-repository symlinked parent to redirect a repair,
     # and File.realpath alone does not reject hard-linked source files.
     def safe_scope_path?(relative)
-      absolute = File.expand_path(relative, @repo_root)
-      return false unless absolute.start_with?(@repo_root + File::SEPARATOR)
-
-      cursor = @repo_root
-      components = relative.split("/")
-      components.each_with_index do |component, index|
-        cursor = File.join(cursor, component)
-        return false unless File.exist?(cursor) || File.symlink?(cursor)
-
-        stat = File.lstat(cursor)
-        return false if stat.symlink?
-        if index < components.length - 1 || stat.directory?
-          return false unless stat.directory?
-        else
-          return false unless stat.file? && stat.nlink == 1
-        end
-      end
-
-      real = File.realpath(absolute)
-      real.start_with?(@repo_root + File::SEPARATOR) &&
-        (File.file?(absolute) || File.directory?(absolute))
-    rescue ArgumentError, SystemCallError
-      false
+      ProofMap.safe_scope_path?(relative, repo_root: @repo_root)
     end
 
     def item_digest(row)
