@@ -74,6 +74,15 @@ class TestCLI < Minitest::Test
     end
   end
 
+  def test_tts_status_is_one_compact_dmesg_record
+    registry = Master::CLI::CommandRegistry.allocate
+    status = registry.send(:voice_status)
+
+    refute_match(/[\r\n]/, status)
+    assert_match(/\Avoice0 at mainbus0: (?:on|off); player=/, status)
+    assert_includes status, "timing="
+  end
+
   def test_container_accessor
     assert_same @container, @cli.container
   end
