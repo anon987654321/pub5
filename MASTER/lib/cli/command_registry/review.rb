@@ -866,7 +866,8 @@ module Master
       }.freeze
 
       PASS_FLAGS = {
-        "--dry-run" => [:apply, false], "preview" => [:apply, false], "dry" => [:apply, false],
+        "--dry-run" => [:apply, false], "--read-only" => [:apply, false],
+        "preview" => [:apply, false], "dry" => [:apply, false],
         "--plan" => [:apply, false],
         "--no-autofix" => [:apply, false], "no-autofix" => [:apply, false],
         "--apply" => [:apply, true], "apply" => [:apply, true], "fix" => [:apply, true],
@@ -910,7 +911,7 @@ module Master
       TASK_INTENT_FLAG = /\A--intent=(\S+)\z/i
       DISPATCH_FLAG = Regexp.union(
         AUTOFIX_FLAG, MAX_FILES_FLAG, BLOCKERS_FLAG, LANE_FLAG, TASK_INTENT_FLAG,
-        SIMPLIFY_FLAG, SECURITY_FLAG, /\A--until-checks\z/i
+        SIMPLIFY_FLAG, SECURITY_FLAG, /\A--until-checks\z/i, /\A--read-only\z/i
       )
 
       # Status messages are one-line operator evidence. Do not let a path label
