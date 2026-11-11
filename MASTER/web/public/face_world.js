@@ -83,7 +83,7 @@
     ["architecture", /\b(architecture|building|house|bridge|city|structure|tower|room|design|geometry|facade)\b/i],
     ["leaf", /\b(nature|forest|tree|leaf|plant|garden|ecology|flower|root|branch|growth)\b/i],
     ["orbit", /\b(space|planet|cosmos|star|orbit|galaxy|solar|universe|astronomy|celestial)\b/i],
-    ["network", /\b(network|graph|system|code|program|repo|repository|dependency|software|git|master|rails|openbsd|studio|github|test|fix|api|model|latency)\b/i]
+    ["network", /\b(network|graph|code|program|repo|repository|dependency|software|git|master|rails|openbsd|studio|github|api|model|latency|database|algorithm|compiler|computer|server|protocol|codebase)\b/i]
   ];
   const OBJECT_HINTS = [
     ["bridge", /\b(bridge|suspension bridge|span|viaduct)\b/i],
