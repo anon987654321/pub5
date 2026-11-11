@@ -17,6 +17,7 @@ module Master
       EVIDENCE_OVERFLOW_KEY = :master_fix_task_contract_preservation_evidence_overflow
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
+      MAX_PRESERVATION_READ_BYTES = 128 * 1024 * 1024
       PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
       PRESERVATION_DIMENSIONS_BY_CHECK = {
         "html_markup" => %w[structure],
@@ -285,11 +286,18 @@ module Master
                  else
                    "PASS"
                  end
+        stale_paths = latest_preservation_rows(rows).filter_map do |row|
+          current = current_preservation_digest(row.fetch("path"))
+          row.fetch("path") unless current && current == row.fetch("after_sha256")
+        end
+        status = "INCONCLUSIVE" if stale_paths.any? && status == "PASS"
+
         reasons = []
         reasons << "source-level checks do not prove rendered, runtime or accessibility preservation" if source_only
         reasons << "required preservation dimensions unmeasured: #{missing.join(', ')}" if missing.any?
         reasons << "preservation receipts are not bound to a FixPlan" if missing_plan
         reasons << "#{overflow_count} additional preservation receipt(s) exceeded the #{MAX_PRESERVATION_ROWS}-row evidence limit" if overflow_count.positive?
+        reasons << "current artifact no longer matches its latest preservation receipt: #{stale_paths.first(8).join(', ')}" if stale_paths.any?
         {
           "status" => status,
           "contract_digest" => Digest::SHA256.hexdigest(JSON.generate(contract.to_h)),
@@ -297,11 +305,65 @@ module Master
           "required_dimensions" => required,
           "covered_dimensions" => covered.sort,
           "missing_dimensions" => missing.sort,
+          "stale_paths" => stale_paths.sort,
           "result_count" => rows.size,
           "overflow_count" => overflow_count,
           "results" => rows.dup,
           "reason" => reasons.empty? ? nil : reasons.join("; "),
         }.compact
+      end
+
+      def latest_preservation_rows(rows)
+        rows.each_with_object({}) { |row, latest| latest[row.fetch("path")] = row }.values
+      end
+
+      # A source receipt describes bytes, not merely a path. Re-read the latest
+      # artifact through one bounded descriptor and refuse symlinks, hard links,
+      # replaced parents or a file that changes while it is being hashed.
+      def current_preservation_digest(relative)
+        repository = File.realpath(
+          defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__)
+        )
+        candidate = File.expand_path(relative.to_s, repository)
+        return unless candidate.start_with?(repository + File::SEPARATOR)
+
+        cursor = repository
+        relative.to_s.split(File::SEPARATOR).each_with_index do |segment, index|
+          cursor = File.join(cursor, segment)
+          stat = File.lstat(cursor)
+          return if stat.symlink?
+          return unless index == relative.to_s.split(File::SEPARATOR).length - 1 || stat.directory?
+        end
+        before = File.lstat(candidate)
+        return unless before.file? && !before.symlink? && before.nlink == 1
+        return unless File.realpath(candidate).start_with?(repository + File::SEPARATOR)
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(candidate, flags) do |file|
+          opened = file.stat
+          current = File.lstat(candidate)
+          return unless current.file? && !current.symlink? && current.nlink == 1 &&
+                        current.dev == opened.dev && current.ino == opened.ino &&
+                        opened.dev == before.dev && opened.ino == before.ino
+          return if opened.size > MAX_PRESERVATION_READ_BYTES
+
+          bytes = file.read(MAX_PRESERVATION_READ_BYTES + 1)
+          return if bytes.bytesize > MAX_PRESERVATION_READ_BYTES
+
+          after = file.stat
+          current = File.lstat(candidate)
+          return unless current.file? && !current.symlink? && current.nlink == 1 &&
+                        current.dev == after.dev && current.ino == after.ino &&
+                        after.dev == opened.dev && after.ino == opened.ino &&
+                        after.size == opened.size && after.mtime == opened.mtime &&
+                        after.ctime == opened.ctime && bytes.bytesize == after.size &&
+                        File.realpath(candidate).start_with?(repository + File::SEPARATOR)
+
+          Digest::SHA256.hexdigest(bytes)
+        end
+      rescue ArgumentError, SystemCallError, IOError
+        nil
       end
 
       def covers?(path, scope:)
