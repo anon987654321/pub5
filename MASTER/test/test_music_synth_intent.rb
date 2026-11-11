@@ -7,6 +7,64 @@ require_relative "test_helper"
 class TestMusicSynthIntent < Minitest::Test
   INTENT = Master::Io::MediaIntent
 
+  def with_audio_file
+    Dir.mktmpdir("master-audio-player") do |dir|
+      path = File.join(dir, "track.wav")
+      File.binwrite(path, "RIFF")
+      yield path
+    end
+  end
+
+  def test_file_playback_uses_the_sox_play_command
+    with_audio_file do |path|
+      available = { "play" => "/opt/homebrew/bin/play" }
+      argv = nil
+      Master::Io::Exec.stub(:which, ->(name, prefer:) { available[name] }) do
+        Process.stub(:spawn, ->(*args, **_options) { argv = args; 4242 }) do
+          Process.stub(:detach, ->(_pid) { nil }) do
+            assert_equal 4242, Master::Music::Synth.play(path)
+          end
+        end
+      end
+
+      assert_equal ["/opt/homebrew/bin/play", "-q", path], argv.drop(1)
+    end
+  end
+
+  def test_file_playback_falls_back_when_the_first_player_cannot_start
+    with_audio_file do |path|
+      available = { "afplay" => "/usr/bin/afplay", "play" => "/opt/homebrew/bin/play" }
+      attempts = []
+      Master::Io::Exec.stub(:which, ->(name, prefer:) { available[name] }) do
+        Process.stub(:spawn, lambda { |*args, **_options|
+          attempts << args
+          raise Errno::ENOENT if attempts.one?
+
+          5150
+        }) do
+          Process.stub(:detach, ->(_pid) { nil }) do
+            assert_equal 5150, Master::Music::Synth.play(path)
+          end
+        end
+      end
+
+      assert_equal 2, attempts.size
+      assert_equal "/usr/bin/afplay", attempts.first[1]
+      assert_equal ["/opt/homebrew/bin/play", "-q", path], attempts.last.drop(1)
+    end
+  end
+
+  def test_file_playback_names_all_supported_players_when_none_exist
+    with_audio_file do |path|
+      Master::Io::Exec.stub(:which, ->(_name, prefer:) { nil }) do
+        error = assert_raises(Master::Music::Synth::NoPlayerError) do
+          Master::Music::Synth.play(path)
+        end
+        assert_match(/afplay, play, ffplay, mpv, aucat/, error.message)
+      end
+    end
+  end
+
   def test_render_writes_the_waveform_to_a_file
     seen = nil
     captured_path = nil
@@ -67,7 +125,7 @@ class TestMusicSynthIntent < Minitest::Test
 
     INTENT.instance_variable_set(:@player_pid, Process.pid)
     playing = INTENT.dispatch("i can't hear anything")
-    assert_match(/playing \(pid #{Process.pid}\)/, playing.value[:output])
+    assert_match(/player process running \(pid #{Process.pid}\)/, playing.value[:output])
     assert_match(/MASTER can verify the player process/, playing.value[:output])
   ensure
     INTENT.instance_variable_set(:@player_pid, nil)
