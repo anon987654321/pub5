@@ -424,6 +424,30 @@ class TestBacklog < Minitest::Test
     end
   end
 
+  def test_executor_refuses_noncanonical_scope_path_aliases
+    fake_mission = Class.new do
+      def self.current(root:) = nil
+      def initialize(root:); end
+      def ensure_queued!(**) = flunk("a noncanonical scope alias must not be queued")
+    end
+
+    Dir.mktmpdir("backlog-noncanonical-scope") do |root|
+      repo_root = File.join(root, "repo")
+      target = File.join(repo_root, "MASTER", "safe.rb")
+      FileUtils.mkdir_p(File.dirname(target))
+      File.write(target, "VALUE = 1\\n")
+      row = {
+        id: "noncanonical", text: "Repair the source and run its tests.",
+        tree: "MASTER", kind: "mechanical",
+        scope_paths: ["MASTER/../MASTER/safe.rb"],
+        done_when: "rake test", size: "s", section: "MASTER",
+      }
+      executor = Backlog::Executor.new(root: File.join(root, "state"), repo_root:, mission_class: fake_mission)
+
+      Backlog.stub(:generate, [row]) { assert_equal :idle, executor.enqueue_next! }
+    end
+  end
+
   def test_executor_refuses_design_cross_tree_and_operator_rows
     fake_mission = Class.new do
       def self.current(root:) = nil
