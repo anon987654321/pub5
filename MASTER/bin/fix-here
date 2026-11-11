@@ -51,16 +51,18 @@ end
 if (i = args.index("--lane"))
   args[i, 2] = ["--lane=#{args[i + 1]}"]
 end
-PASSED_FLAGS = %w[--no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
+PASSED_FLAGS = %w[--apply --dry-run --read-only --no-autofix --no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
+read_only = (passthrough & %w[--dry-run --read-only --no-autofix --plan]).any?
+passthrough << "--apply" unless read_only || passthrough.include?("--apply")
 # --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
 checks_flag = args.find { |arg| arg.start_with?("--checks=") }
 args -= [checks_flag] if checks_flag
 check_stages = checks_flag.to_s.delete_prefix("--checks=")
 tree = args.shift
 USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
-        "[--dry] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
+        "[--dry] [--dry-run|--read-only] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
         "[--blockers] [--plan] [--until-checks] [--verbose|--trace|--detail] " \
         "[--no-critique] [--checks=lexical,sprawl,...]"
 abort USAGE if tree.to_s.empty? || args.any?
