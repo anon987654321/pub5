@@ -67,6 +67,12 @@ module Master
           nil
         end
 
+        # The CLI spinner follows the host CPU load average, not the
+        # memory or process-tree score used by the wider resource indicator.
+        def cpu_load
+          host_score(system_load_average, logical_cpu_count) || 0.0
+        end
+
         # Weighted 1/5/15-minute load, normalized by logical CPU count.
         def host_score(load_average, cpu_count)
           values = Array(load_average).first(3).map { |value| Float(value) }
