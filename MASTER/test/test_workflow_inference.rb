@@ -140,11 +140,17 @@ class WorkflowInferenceTest < Minitest::Test
     asked = []
     deliberation = FakeDeliberation.new(asked)
     out = Master::CLI::CommandRegistry.stub(:observe, ->(*, **) { "clean -- no violations" }) do
-      # The wiring under test is the critique stage -> deliberation, not host
-      # reachability: with no keys and no CLI on the box the council refuses
-      # to convene before the fake deliberation is ever consulted.
-      Master::Review::Council::Deliberation.stub(:reachable_for?, true) do
-        read_only_fix(deliberation:, args: ". --dry-run --critique --only critique,map")
+      # A clean checkout diffs to nothing and the critique stage answers
+      # "no changes to review" before any council is consulted; the wiring
+      # under test is the critique stage -> deliberation, so hand the stage a
+      # diff to argue about.
+      Master::CLI::CouncilCrit.stub(:diff_artifact, "diff --git a/x b/x\n+new\n") do
+        # The wiring under test is the critique stage -> deliberation, not host
+        # reachability: with no keys and no CLI on the box the council refuses
+        # to convene before the fake deliberation is ever consulted.
+        Master::Review::Council::Deliberation.stub(:reachable_for?, true) do
+          read_only_fix(deliberation:, args: ". --dry-run --critique --only critique,map")
+        end
       end
     end
 
