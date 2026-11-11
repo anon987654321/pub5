@@ -81,6 +81,23 @@ class LogoContractTest < ActionView::TestCase
     refute_match(%r{render ["']shared/brand_mark["']}, layout)
   end
 
+  test "pixel-anime decorations are isolated from the canonical logo" do
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+    logo = Rails.root.join("app/views/shared/_logo.html.erb").read
+    css = Rails.root.join("app/assets/stylesheets/application.scss").read
+
+    assert_includes layout, 'class="amber-magic-layer" aria-hidden="true"'
+    assert_operator layout.index('class="amber-magic-layer"'), :<,
+                    layout.index('class: "amber-logo-home"')
+    assert_includes layout, 'if home'
+    assert_includes css, ".amber-magic-layer"
+    assert_includes css, "pointer-events: none"
+    assert_includes css, "@media (prefers-reduced-motion: reduce)"
+    # The decorations must never become part of, or style, the canonical SVG.
+    refute_includes logo, "amber-magic"
+    refute_match(/\.amber-magic[^}]*\.amber-logo-svg/m, css)
+  end
+
   test "public brand icons exist with amber palette" do
     root = Rails.root.join("public")
     %w[icon.svg icon.png icon-192.png apple-touch-icon.png favicon.ico].each do |name|
