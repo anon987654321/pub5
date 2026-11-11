@@ -259,7 +259,7 @@ def publish_pending! = :nothing_to_publish
     result = loop.run(@root, max_passes: 5)
 
     assert result.ok?, -> { result.message }
-    assert_match(/\\APLATEAU: /, result.value!)
+    assert_match(/\APLATEAU: /, result.value!)
     assert_equal 1, @bus.events.count { |event| event[:event] == "fix_loop:plateau" }
     assert_equal [:abort], committer.calls
   end
