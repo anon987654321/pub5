@@ -218,7 +218,7 @@ module Master
       # did not exist; flattened by emit, then truncated again by the caller,
       # twice destroyed.
       def block(unit, text, io: $stdout)
-        lines = text.to_s.scrub.delete("\r").split("\n", -1)
+        lines = text.to_s.scrub.delete("\r").lines(chomp: true)
         lines.each_with_index do |line, index|
           body = line.strip
           next emit("", io:) if body.empty?

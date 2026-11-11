@@ -1,8 +1,27 @@
 # frozen_string_literal: true
 
+require "stringio"
 require_relative "test_helper"
 
 class TraceDmesgTest < Minitest::Test
+  def block_output(text)
+    io = StringIO.new
+    Master::Trace::Dmesg.stub(:enabled?, true) do
+      Master::Trace::Dmesg.stub(:narrate, nil) do
+        Master::Trace::Dmesg.block("err0", text, io:)
+      end
+    end
+    io.string
+  end
+
+  def test_dmesg_block_does_not_emit_a_synthetic_blank_after_a_trailing_newline
+    assert_equal "err0: first line\nerr0: second line\n", block_output("first line\nsecond line\n")
+  end
+
+  def test_dmesg_block_preserves_an_intentional_blank_line_between_paragraphs
+    assert_equal "err0: first line\n\nerr0: second line\n", block_output("first line\n\nsecond line\n")
+  end
+
   def test_dmesg_unit_is_defined_when_logging_is_loaded
     load File.expand_path("../lib/trace/logging.rb", __dir__)
 

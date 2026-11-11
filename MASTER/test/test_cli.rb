@@ -737,10 +737,64 @@ end
           agent:, config:, metrics: nil, root: Master::ROOT, arg:
         )
 
-        assert_equal "model: grok-cli:auto; first live lane; /model list names the others", output
+        assert_equal "model: grok-cli:auto; first live lane; /model pick chooses with arrows; /model list names the others", output
         assert_equal "grok-cli:auto", agent.model
       end
     end
+  end
+
+  def test_model_pick_uses_tty_prompt_arrows_filter_and_only_the_live_pool
+    router = Object.new
+    def router.unreachable_reason(_id, wait: false) = nil
+    def router.pool(wait: false) = %w[google/gemini-2.5-flash nvidia/nemotron-3-super-120b-a12b:free]
+    def router.lane_label(_id) = "live"
+    agent = Struct.new(:model, :model_router).new("google/gemini-2.5-flash", router)
+    config = Struct.new(:saved) { def save! = self.saved = true }.new
+    prompt_state = {}
+    prompt = Object.new
+    prompt.define_singleton_method(:select) do |question, choices, **options|
+      prompt_state[:question] = question
+      prompt_state[:choices] = choices
+      prompt_state[:options] = options
+      choices.last.fetch(:value)
+    end
+
+    output = nil
+    $stdin.stub(:tty?, true) do
+      $stdout.stub(:tty?, true) do
+        TTY::Prompt.stub(:new, prompt) do
+          output = Master::CLI::CommandRegistry.dispatch_model(
+            agent:, config:, metrics: nil, root: Master::ROOT, arg: "pick"
+          )
+        end
+      end
+    end
+
+    assert_equal "model: nvidia/nemotron-3-super-120b-a12b:free", output
+    assert_equal "nvidia/nemotron-3-super-120b-a12b:free", agent.model
+    assert config.saved
+    assert_equal "Choose a reachable model", prompt_state.fetch(:question)
+    assert_equal %w[google/gemini-2.5-flash nvidia/nemotron-3-super-120b-a12b:free],
+                 prompt_state.fetch(:choices).map { |choice| choice.fetch(:value) }
+    assert_match(/\(current\)\z/, prompt_state.fetch(:choices).first.fetch(:name))
+    assert_equal prompt_state.fetch(:choices).first.fetch(:name), prompt_state.fetch(:options).fetch(:default)
+    assert_equal 12, prompt_state.fetch(:options).fetch(:per_page)
+    assert_equal true, prompt_state.fetch(:options).fetch(:cycle)
+    assert_equal true, prompt_state.fetch(:options).fetch(:filter)
+  end
+
+  def test_model_pick_refuses_non_interactive_output_without_switching
+    agent = Struct.new(:model, :model_router).new("grok-cli:auto", nil)
+    config = Object.new
+
+    output = $stdin.stub(:tty?, false) do
+      Master::CLI::CommandRegistry.dispatch_model(
+        agent:, config:, metrics: nil, root: Master::ROOT, arg: "pick"
+      )
+    end
+
+    assert_match(/needs an interactive terminal/, output)
+    assert_equal "grok-cli:auto", agent.model
   end
 
   def test_dispatch_model_switches_active_model

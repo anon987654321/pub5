@@ -148,6 +148,7 @@ module Master
         "model" => {
           summary: "show or switch the active model, inspect laboratory outcomes, and connect its subscriptions",
           detail: ["/model",
+                   "/model pick - choose a reachable model with ↑/↓ and Enter; type to filter, Ctrl-C to cancel.",
                    "/model <name> - choose a reachable lane from data/models.yml and the live pool.",
                    "/model list - list the reachable pool and the next steps to grow it.",
                    "/model status and /model current - show the selected route and primary live lane without changing it.",

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "tty-prompt"
+
 module Master
   module CLI
     module CommandRegistry
@@ -15,12 +17,13 @@ module Master
         return list_models(root:, metrics:, agent:) if arg.casecmp?("list")
         return model_health(agent:) if arg.casecmp?("health")
         return compute_models(agent:, root:) if arg.casecmp?("compute")
+        return pick_model(agent:, config:, root:) if %w[pick choose select].include?(arg.strip.downcase)
         if arg == "benchmark" || arg.start_with?("benchmark ")
           benchmark_args = arg.delete_prefix("benchmark").strip
           return ModelBenchmark.new(agent:, router: model_router_of(agent), metrics:, root:).run(benchmark_args)
         end
         if arg.empty? || %w[status current].include?(arg.downcase)
-          return "model: #{agent.model}; #{Io::LaneSelection.primary_report(saved: config["model"])}; /model list names the others"
+          return "model: #{agent.model}; #{Io::LaneSelection.primary_report(saved: config["model"])}; /model pick chooses with arrows; /model list names the others"
         end
 
         chosen, note = reachable_choice(agent, arg)
@@ -45,6 +48,48 @@ module Master
         raise ArgumentError, "#{name} is out of reach: #{reason}" unless twin
 
         [twin, "#{name} itself needs: #{reason}"]
+      end
+
+      # TTY::Prompt owns the arrow-key interaction. Only the live reachable
+      # pool is offered; the larger catalogue is not a list of selectable routes.
+      def pick_model(agent:, config:, root:)
+        return "model: pick needs an interactive terminal; use /model <name> or /model list" unless $stdin.tty? && $stdout.tty?
+
+        router = model_router_of(agent)
+        return "model: live model pool unavailable; use /model <name> or /model list" unless router
+
+        ids = Array(router.pool(wait: true)).map(&:to_s).reject(&:empty?).uniq
+        return "model: no reachable models" if ids.empty?
+
+        selected = select_model_id(ids:, router:, current: agent.model.to_s, root:)
+        return "model: selection cancelled" if selected.to_s.empty?
+        return "model: unchanged (#{agent.model})" if selected == agent.model.to_s
+
+        chosen, note = reachable_choice(agent, selected)
+        agent.model = chosen
+        config.save!
+        ["model: #{agent.model}", note].compact.join("; ")
+      rescue TTY::Reader::InputInterrupt
+        "model: selection cancelled"
+      rescue ArgumentError => e
+        "model: #{e.message}"
+      end
+
+      def select_model_id(ids:, router:, current:, root:)
+        tiers_by_id = model_tiers_by_id(root)
+        choices = ids.map do |id|
+          lane = router.lane_label(id) if router.respond_to?(:lane_label)
+          labels = Array(tiers_by_id.fetch(id, [])) + Array(lane)
+          detail = labels.map(&:to_s).reject(&:empty?).uniq.join(", ")
+          name = detail.empty? ? id : "#{id}  #{detail}"
+          name = "#{name} (current)" if id == current
+          { name:, value: id }
+        end
+        options = { per_page: 12, cycle: true, filter: true }
+        default = choices.find { |choice| choice.fetch(:value) == current }
+        options[:default] = default.fetch(:name) if default
+
+        TTY::Prompt.new.select("Choose a reachable model", choices, **options)
       end
 
       # A table: one row per model the pool can reach, its tiers or its lane in
