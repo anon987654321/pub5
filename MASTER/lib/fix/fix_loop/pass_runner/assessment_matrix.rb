@@ -264,7 +264,6 @@ module Master
               @assessment_surface_cache = {}
               @assessment_scope = plan.sources.map { |source| File.expand_path(source.path, plan.root) }.sort.freeze
               @assessment_file_coverage = nil
-              @assessment_file_coverage = nil
             end
             @bus&.publish(
               "fix_loop:assessment_generation",
@@ -287,6 +286,7 @@ module Master
               @assessment_surface_receipts = {}
               @assessment_surface_cache = {}
               @assessment_scope = plan.sources.map { |source| File.expand_path(source.path, plan.root) }.sort.freeze
+              @assessment_file_coverage = nil
             end
             self
           rescue StandardError => e
@@ -487,6 +487,7 @@ module Master
             end
             stale_plan_paths = paths.select { |path| planned[path] != signatures[path] }
             @assessment_mutex.synchronize do
+              @assessment_file_coverage = nil
               @assessment_observation = {
                 pass: Integer(pass),
                 files: paths,
@@ -557,6 +558,7 @@ module Master
 
                   observation[:findings][[law_id, stream]] << {
                     "file" => absolute,
+                    "law" => law_id,
                     "line" => row[:line].to_i,
                     "message" => row[:message].to_s[0, 180],
                   }
