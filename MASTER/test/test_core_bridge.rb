@@ -112,6 +112,72 @@ class CoreBridgeTest < Minitest::Test
     end
   end
 
+  class FakeBacklogGit
+    attr_reader :pushed
+
+    def initialize(target: "HEAD:main", remote: "origin")
+      @target = target
+      @remote = remote
+      @pushed = false
+    end
+
+    def push_target = [@remote, @target]
+    def push = (@pushed = true)
+  end
+
+  def test_backlog_commit_pushes_to_main_and_verifies_the_remote_head
+    Dir.mktmpdir do |root|
+      sha = "a" * 40
+      mission = Object.new
+      mission.define_singleton_method(:record) { { "origin" => "backlog" } }
+      mission.define_singleton_method(:hold_lease!) { @lease_held = true }
+      mission.define_singleton_method(:lease_held?) { @lease_held }
+      git = FakeBacklogGit.new
+      status = Struct.new(:success?).new(true)
+      bus = FakeBus.new
+      capture = lambda do |*args, **|
+        case args
+        when ["git", "-C", root, "rev-parse", "--show-toplevel"] then [root, status]
+        when ["git", "-C", root, "ls-remote", "origin", "refs/heads/main"] then ["#{sha}\\trefs/heads/main\\n", status]
+        when ["git", "-C", root, "rev-parse", "HEAD"] then ["#{sha}\\n", status]
+        else flunk("unexpected git probe: #{args.inspect}")
+        end
+      end
+
+      Master::Io::GitOperations.stub(:new, ->(_repository) { git }) do
+        Master::Io::Exec.stub(:capture2e, capture) do
+          Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+            result = Master::CLI::CoreBridge.push_backlog_commit!(mission:, root:, bus:)
+            assert_equal sha, result
+          end
+        end
+      end
+
+      assert mission.lease_held?
+      assert git.pushed
+      assert bus.events.any? { |name, payload| name == "backlog_executor:pushed" && payload[:commit] == sha }
+    end
+  end
+
+  def test_backlog_delivery_refuses_a_non_main_push_target
+    Dir.mktmpdir do |root|
+      mission = Object.new
+      mission.define_singleton_method(:record) { { "origin" => "backlog" } }
+      mission.define_singleton_method(:hold_lease!) {}
+      git = FakeBacklogGit.new(target: "HEAD:session/other")
+      status = Struct.new(:success?).new(true)
+      Master::Io::GitOperations.stub(:new, ->(_repository) { git }) do
+        Master::Io::Exec.stub(:capture2e, ->(*, **) { [root, status] }) do
+          error = assert_raises(Master::CLI::CoreBridge::DeliveryFailed) do
+            Master::CLI::CoreBridge.push_backlog_commit!(mission:, root:)
+          end
+          assert_match(/expected origin\\/main/, error.message)
+        end
+      end
+      refute git.pushed
+    end
+  end
+
   def test_trace_failed_mission_is_terminal_unknown_outcome_not_auto_deferred
     mission = Object.new
     mission.define_singleton_method(:finish!) { |state:, summary:| @finished = [state, summary] }
