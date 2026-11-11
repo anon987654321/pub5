@@ -24,12 +24,14 @@ class TestParallelTests < Minitest::Test
   end
 
   def test_environment_skip_helper_emits_a_machine_readable_reason
-    _stdout, stderr = capture_io do
+    _stdout, stderr = capture_subprocess_io do
       assert_raises(Minitest::Skip) do
         skip_for_environment("Browser", reason: "Chrome unavailable\nfor this host")
       end
     end
 
+    assert_raises(ArgumentError) { skip_for_environment("browser tag", reason: "bad tag") }
+    assert_raises(ArgumentError) { skip_for_environment("browser", reason: "   ") }
     assert_includes stderr, "test-environment-skip0: tag=browser"
     assert_includes stderr, "reason=Chrome unavailable for this host"
   end
