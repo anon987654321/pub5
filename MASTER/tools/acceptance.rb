@@ -14,6 +14,8 @@
 # answer as what is left to do, never a skip that reads as a pass.
 
 require "open3"
+require "rbconfig"
+require_relative "../lib/operator/ruby_runner"
 
 module Acceptance
   ROOT = File.expand_path("../..", __dir__)
@@ -60,7 +62,9 @@ module Acceptance
       env[key] = nil
     end
     env["BUNDLE_GEMFILE"] = File.join(dir, "Gemfile")
-    Open3.capture3(env, *app_rails(dir), "test", "test/account_round_trip_test.rb", chdir: dir)
+    ruby = Operator::RubyRunner.ruby_cmd(root: File.expand_path("../../..", dir))
+    env["PATH"] = "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}"
+    Open3.capture3(env, ruby, "bin/rails", "test", "test/account_round_trip_test.rb", chdir: dir)
   end
   def spawn_route(*args) = Open3.capture3(RbConfig.ruby, File.join(TOOLS, "rails", "route_contracts.rb"), *args)
 
@@ -105,18 +109,6 @@ module Acceptance
                       .find { |candidate| File.directory?(candidate) }
   end
 
-  # The documented operator invocation: this Mac's profile never puts rbenv
-  # shims on PATH, so a tree whose .ruby-version names a rbenv-installed
-  # version runs through `rbenv exec`; a host with a native ruby runs
-  # bin/rails as itself.
-  def app_rails(dir)
-    if system("rbenv --version", out: File::NULL, err: File::NULL) &&
-       File.file?(File.join(dir, ".ruby-version"))
-      ["rbenv", "exec", "ruby", "bin/rails"]
-    else
-      ["bin/rails"]
-    end
-  end
 
   def route_contracts(base)
     return Report.new("route contracts", "pending", "needs --base-url (a booted target)") unless base
