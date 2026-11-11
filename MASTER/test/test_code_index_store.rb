@@ -136,7 +136,7 @@ class TestCodeIndexStore < Minitest::Test
       outside = File.join(directory, "outside")
       Dir.mkdir(root)
       Dir.mkdir(outside)
-      File.write(File.join(outside, "private.rb"), "class OutsideSecret; end\\n")
+      File.write(File.join(outside, "private.rb"), "class OutsideSecret; end\n")
       File.symlink(File.join(outside, "private.rb"), File.join(root, "leak.rb"))
 
       index = Index.new(root:, persist: true).build
@@ -153,7 +153,7 @@ class TestCodeIndexStore < Minitest::Test
       path = File.join(root, "a.rb")
       original_parse = Prism.method(:parse)
       Prism.define_singleton_method(:parse) do |source, *arguments|
-        File.write(path, "class Replaced; end\\n") if source.include?("class Alpha")
+        File.write(path, "class Replaced; end\n") if source.include?("class Alpha")
         original_parse.call(source, *arguments)
       end
       index = Index.new(root:, persist: true).build
@@ -179,16 +179,16 @@ class TestCodeIndexStore < Minitest::Test
   def test_scoped_rebuild_preserves_symbols_and_errors_outside_its_scope
     Dir.mktmpdir do |root|
       root = File.realpath(root)
-      File.write(File.join(root, "outside.rb"), "class Outside; end\\n")
+      File.write(File.join(root, "outside.rb"), "class Outside; end\n")
       Dir.mkdir(File.join(root, "lib"))
-      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\\n")
+      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\n")
       index = Index.new(root:).build
 
-      File.write(File.join(root, "outside.rb"), "def incomplete(\\n")
+      File.write(File.join(root, "outside.rb"), "def incomplete(\n")
       index.build
       assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind)
 
-      File.write(File.join(root, "lib", "inside.rb"), "class RevisedInside; end\\n")
+      File.write(File.join(root, "lib", "inside.rb"), "class RevisedInside; end\n")
       index.build(path: "lib")
 
       assert index.partial?
@@ -205,7 +205,7 @@ class TestCodeIndexStore < Minitest::Test
       outside = File.join(directory, "outside")
       Dir.mkdir(root)
       Dir.mkdir(outside)
-      File.write(File.join(outside, "secret.rb"), "class SecretOutside; end\\n")
+      File.write(File.join(outside, "secret.rb"), "class SecretOutside; end\n")
 
       index = Index.new(root:)
 
