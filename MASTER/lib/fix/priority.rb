@@ -29,13 +29,18 @@ module Master
 
       # Shared with ConflictResolver's prior private #build_rules_index --
       # both need the same law_id => law_entry map to resolve law_for.
+      # A root's laws.yml may hold plain registry entries (statement plus a
+      # violates_law tag, no constitutional node); they still rank through
+      # their tag, so the index reads the document's own entries rather than
+      # only the normative catalogue law_entries_in selects.
       def laws_index(root:)
-        Master.law_entries(root:)
-          .each_with_object({}) do |entry, index|
-            next unless entry.is_a?(Hash) && entry["id"]
+        Master.laws_document(root:)
+          .filter_map do |id, row|
+            next unless row.is_a?(Hash)
+            next unless row["statement"] || row["violates_law"] || row["supports_law"]
 
-            index[entry["id"].to_s] = entry
-          end
+            [id.to_s, row.merge("id" => id.to_s)]
+          end.to_h
       end
     end
   end
