@@ -15,7 +15,7 @@
 #
 # Optional apps can be waived the same way deploy-smoke does:
 #   ALLOW_AMBER_DOWN=1 ALLOW_BSDPORTS_DOWN=1
-# UPTIME_PATH_PREFIX lets the test put fake curl, ruby34 and logger first.
+# UPTIME_PATH_PREFIX lets the test put fake curl, ruby and logger first.
 PATH=${UPTIME_PATH_PREFIX:+$UPTIME_PATH_PREFIX:}/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 # Strict on purpose: every fallible command below already carries its own
 # fallback (curl || print 000), so set -e only guards the plumbing.
@@ -31,7 +31,16 @@ bsdports,https://bsdports.org/up'
 
 # name,url per line, master's ai.brgen.no among them.
 app_targets() {
-  ruby34 -ryaml -e '
+  ruby_cmd=$(command -v ruby 2>/dev/null || true)
+  if [[ -z $ruby_cmd ]]; then
+    for candidate in /usr/local/bin/ruby[0-9]*; do
+      [[ -x $candidate ]] || continue
+      ruby_cmd=$candidate
+      break
+    done
+  fi
+  [[ -n $ruby_cmd ]] || return 1
+  "$ruby_cmd" -ryaml -e '
     root = ARGV[0]
     rows = YAML.safe_load(File.read(File.join(root, "RAILS", "apps.yml")))
               .fetch("apps")
