@@ -6,7 +6,7 @@ require "open3"
 require "tmpdir"
 
 # usr/local/bin/uptime-check.sh: a down endpoint is one syslog line at first and a
-# durable pub4-alert record once it persists. Fake curl, ruby34 and logger go first
+# durable pub4-alert record once it persists. Fake curl, ruby and logger go first
 # on PATH; the alert is a recording stub, so nothing leaves the scratch directory.
 class TestUptimeCheck < Minitest::Test
   SCRIPT = File.expand_path("../usr/local/bin/uptime-check.sh", __dir__)
@@ -14,7 +14,7 @@ class TestUptimeCheck < Minitest::Test
   def setup
     @dir = Dir.mktmpdir("uptime-test")
     FileUtils.mkdir_p(File.join(@dir, "fake"))
-    write_fake("ruby34", "printf 'brgen,https://brgen.no/up\\namber,https://amberapp.art/up\\n'")
+    write_fake("ruby", "printf 'brgen,https://brgen.no/up\\namber,https://amberapp.art/up\\n'")
     write_fake("logger", "echo \"$@\" >> #{@dir}/syslog")
     write_fake("curl", "case \"$*\" in *amberapp.art*) echo 'curl: (7)' >&2; exit 7 ;; *) printf 200 ;; esac")
     File.write(File.join(@dir, "alert"), "#!/bin/sh\necho \"$@\" >> #{@dir}/alerts\n")
