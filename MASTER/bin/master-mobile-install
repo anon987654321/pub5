@@ -58,8 +58,8 @@ if [ "$demo" -eq 1 ]; then
   printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and private HOME path (not checked in demo)\n'
   printf 'mobile0: plan 2/5 - install or verify git, curl and proot-distro on the Termux host\n'
   printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; reuse Ubuntu or Debian, otherwise install Ubuntu\n'
-  printf 'mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the exact .ruby-version under /opt/rubies\n'
-  printf 'mobile0: plan 5/5 - install/check the locked bundle, prove the CLI boot in the selected guest, and install the Termux launcher\n'
+  printf 'mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the guest's packaged compatible Ruby\n'
+  printf 'mobile0: plan 5/5 - install/check the locked bundle with the packaged Ruby, prove the CLI boot in the selected guest, and install the Termux launcher\n'
   printf 'mobile0: DEMO complete; device, guest and repository checks remain unmeasured\n'
   exit 0
 fi
@@ -135,16 +135,17 @@ guest_ready() {
   proot-distro login --bind "$dir:/pub5" "$distro" -- \
     env MASTER_RUNTIME_DISTRO="$distro" bash -lc '
       set -eu
-      version="$(cat /pub5/.ruby-version)"
-      [ -x "/opt/rubies/$version/bin/ruby" ]
-      grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime >/dev/null
+      command -v ruby >/dev/null
+      ruby -e '\''require "rubygems"; abort "Ruby >= 3.3 required" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
+      actual="$(ruby -e "print RUBY_VERSION")"
+      grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
     ' >/dev/null 2>&1
 }
 
 if guest_ready; then
-  printf 'mobile0: %s guest and pinned Ruby are ready\n' "$distro"
+  printf 'mobile0: %s guest and packaged Ruby are ready\\n' "$distro"
 else
-  printf 'mobile0: provisioning %s and building the pinned Ruby\n' "$distro"
+  printf 'mobile0: provisioning %s with its packaged Ruby\\n' "$distro"
   proot-distro login --bind "$dir:/pub5" "$distro" -- \
     env MASTER_RUNTIME_DISTRO="$distro" bash -s <<'PRootSetup'
 set -eu
@@ -152,57 +153,26 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends \
-  ca-certificates git curl build-essential autoconf bison pkg-config zsh \
+  ca-certificates git curl build-essential pkg-config zsh \
+  ruby ruby-dev ruby-bundler \
   libssl-dev libreadline-dev zlib1g-dev libffi-dev libyaml-dev \
   libsqlite3-dev libvips-dev libxml2-dev libxslt1-dev \
   libgdbm-dev libdb-dev libncurses-dev libgmp-dev uuid-dev liblzma-dev
 
-ruby_version="$(cat /pub5/.ruby-version)"
-case "$ruby_version" in
-  ""|*[!0-9.]*) printf 'mobile0: BLOCKED: invalid .ruby-version: %s\n' "$ruby_version" >&2; exit 1 ;;
-esac
+command -v ruby >/dev/null
+ruby -e 'require "rubygems"; abort "Ruby >= 3.3 required; installed #{RUBY_VERSION}" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'
+ruby_version="$(ruby -e 'print RUBY_VERSION')"
 
-ruby_build_source=/usr/local/src/ruby-build
-if ! command -v ruby-build >/dev/null 2>&1; then
-  if [ -d "$ruby_build_source/.git" ]; then
-    actual_origin="$(git -C "$ruby_build_source" remote get-url origin 2>/dev/null || true)"
-    [ "$actual_origin" = "https://github.com/rbenv/ruby-build.git" ] || {
-      printf 'mobile0: BLOCKED: unexpected ruby-build source origin\n' >&2
-      exit 1
-    }
-  else
-    [ ! -e "$ruby_build_source" ] || {
-      printf 'mobile0: BLOCKED: %s exists but is not the ruby-build checkout\n' "$ruby_build_source" >&2
-      exit 1
-    }
-    mkdir -p /usr/local/src
-    git clone --depth 1 https://github.com/rbenv/ruby-build.git "$ruby_build_source"
-  fi
-  PREFIX=/usr/local "$ruby_build_source/install.sh"
-fi
-
-ruby_home="/opt/rubies/$ruby_version"
-if [ ! -x "$ruby_home/bin/ruby" ]; then
-  mkdir -p /opt/rubies
-  MAKE_OPTS=-j2 ruby-build "$ruby_version" "$ruby_home"
-fi
-installed_version="$("$ruby_home/bin/ruby" -e 'print RUBY_VERSION')"
-[ "$installed_version" = "$ruby_version" ] || {
-  printf 'mobile0: BLOCKED: pinned Ruby %s requested, found %s\n' "$ruby_version" "$installed_version" >&2
-  exit 1
-}
-
-export PATH="$ruby_home/bin:/usr/local/bin:$PATH"
 cd /pub5/MASTER
-printf 'mobile0: installing the locked MASTER bundle in %s\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: installing the locked MASTER bundle in %s with Ruby %s\\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version"
 ruby bin/deps install
-printf 'mobile0: checking the locked MASTER bundle in %s\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: checking the locked MASTER bundle in %s\\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps check
-printf 'mobile0: proving the normal MASTER CLI boot path in %s\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: proving the normal MASTER CLI boot path in %s\\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps boot
-printf '%s %s\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version" > /etc/master-mobile-runtime
+printf '%s %s\\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version" > /etc/master-mobile-runtime
 chmod 644 /etc/master-mobile-runtime
-printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities remain unmeasured\\n' "$MASTER_RUNTIME_DISTRO"
 PRootSetup
 fi
 
@@ -228,16 +198,16 @@ fi
 if ! proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- \
   env MASTER_RUNTIME_DISTRO="$DISTRO" bash -lc '
     set -eu
-    version="$(cat /pub5/.ruby-version)"
-    test -x "/opt/rubies/$version/bin/ruby"
-    grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime >/dev/null
+    ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
+    actual="$(ruby -e "print RUBY_VERSION")"
+    grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
   ' >/dev/null 2>&1; then
   exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
 fi
 exec proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- bash -lc '
   set -eu
-  ruby_version="$(cat /pub5/.ruby-version)"
-  export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"
+  command -v ruby >/dev/null
+  ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
   cd /pub5/MASTER
   exec bin/master "$@"
 ' master "$@"
