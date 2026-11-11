@@ -35,8 +35,15 @@ module Master
       # fit on one physical terminal row. Long drafts disable row painting rather
       # than risk cursor motion into text owned by Reline.
       def activity_row_safe_to_draw?
-        return false unless @activity_row_reserved && @reading_input
-        return false unless $stdin.tty? && $stdout.tty?
+        @activity_row_reserved && draft_row_safe_to_reuse?($stdout)
+      end
+
+      # Reuse the editable row for a dmesg line when the draft fits on one
+      # physical row. A wrapped/multiline draft keeps the conservative step
+      # below it so no owned text is overwritten.
+      def draft_row_safe_to_reuse?(target)
+        return false unless @reading_input && target.equal?($stdout)
+        return false unless $stdin.tty? && target.respond_to?(:tty?) && target.tty?
 
         width = TTY::Screen.width.to_i
         buffer = Reline.line_buffer.to_s
