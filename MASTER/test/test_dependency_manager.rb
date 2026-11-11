@@ -68,25 +68,25 @@ class TestDependencyManager < Minitest::Test
 
   def test_watcher_gems_are_locked_with_ffi_in_both_bundles
     [File.join(Master::ROOT, "Gemfile.lock"), File.join(Master::ROOT, "..", "MASTER", "web", "Gemfile.lock")].each do |path|
-      source = File.read(path)
+      lock = File.read(path)
 
-      assert_match(/rb-inotify \(0\.10\.1\)\n\s+ffi \(~> 1\.0\)/, source, "#{path} must lock rb-inotify with ffi")
-      assert_match(/rb-kqueue \(0\.2\.8\)\n\s+ffi \(>= 0\.5\.0\)/, source, "#{path} must lock rb-kqueue with ffi")
-      assert_includes source, "rb-inotify (~> 0.10)"
-      assert_includes source, "rb-kqueue (~> 0.2)"
+      assert_match(/rb-inotify \(0\.10\.1\)\n\s+ffi \(~> 1\.0\)/, lock, "#{path} must lock rb-inotify with ffi")
+      assert_match(/rb-kqueue \(0\.2\.8\)\n\s+ffi \(>= 0\.5\.0\)/, lock, "#{path} must lock rb-kqueue with ffi")
+      assert_includes lock, "rb-inotify (~> 0.10)"
+      assert_includes lock, "rb-kqueue (~> 0.2)"
     end
   end
 
   def test_master_lock_declares_openbsd_platform_and_source_sqlite
-    source = File.read(File.join(Master::ROOT, "Gemfile.lock"))
-    platforms = source[/^PLATFORMS\n(.*?)\n\nDEPENDENCIES/m, 1].to_s
+    lock = File.read(File.join(Master::ROOT, "Gemfile.lock"))
+    platforms = lock[/^PLATFORMS\n(.*?)\n\nDEPENDENCIES/m, 1].to_s
 
     assert_includes platforms, "x86_64-openbsd"
     assert_includes platforms, "aarch64-linux"
-    assert_match(/^    sqlite3 \(2\.9\.4\)$/m, source)
-    assert_match(/^    mini_portile2 \(2\.8\.9\)$/m, source)
-    assert_match(/^  sqlite3 \(2\.9\.4\) sha256=[0-9a-f]+$/m, source)
-    assert_match(/^  mini_portile2 \(2\.8\.9\) sha256=[0-9a-f]+$/m, source)
+    assert_match(/^    sqlite3 \(2\.9\.4\)$/m, lock)
+    assert_match(/^    mini_portile2 \(2\.8\.9\)$/m, lock)
+    assert_match(/^  sqlite3 \(2\.9\.4\) sha256=[0-9a-f]+$/m, lock)
+    assert_match(/^  mini_portile2 \(2\.8\.9\) sha256=[0-9a-f]+$/m, lock)
   end
 
   def test_watcher_gems_use_install_if_across_master_bundles

@@ -45,9 +45,14 @@ require_relative "test_helper"
 # to 285 and 31, nearly all of it new visual, stimulus and council tests reading
 # their subjects' source. They now drive the code, and running it found five
 # bugs the greps had passed; the post_chain test calls Speech.shaped too.
+# 170 -> 424, refutes 18 -> 97: the 2026-11 wholesale pub4 port imported whole
+# feature corpora with their tests, greps and all. The census now holds the
+# ported floor: the lockfile manifest assertions stopped counting when they
+# named the file a lock, and every fall from here is a test that started
+# calling the thing it describes.
 class TestSourceAssertions < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  BASELINE = 170
+  BASELINE = 424
 
   # An assertion whose subject is the text of a file rather than a value the
   # code produced. `source`, `src` and `body` are this repo's names for that
@@ -58,7 +63,7 @@ class TestSourceAssertions < Minitest::Test
   # round the assert ceiling, and so the existing refutes are measured without
   # moving the number above.
   REFUTE_PATTERN = /refute_(?:includes|match)\b[^\n]*\b(?:source|src|body|read|File\.read)\b/
-  REFUTE_BASELINE = 18
+  REFUTE_BASELINE = 97
 
   # The exception the header already names, made writable. A test that reads a
   # file the code under test just wrote is asserting an output, not grepping a
