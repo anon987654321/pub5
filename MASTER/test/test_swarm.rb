@@ -209,9 +209,9 @@ class TestSwarm < Minitest::Test
       end
     end
     tasks = [
-      { role: :analyst, task: "first", context_slice: {} },
-      { role: :reviewer, task: "second", context_slice: {} },
-      { role: :coder, task: "third", context_slice: {} },
+    tasks = (1..10).map do |index|
+      { role: :"role_#{index}", task: index == 1 ? "first" : "task-#{index}", context_slice: {} }
+    end
     ]
     coordinator_thread = original_new.call do
       Thread.stub(:new, lambda { |*args, **kwargs, &worker_block|
@@ -234,9 +234,9 @@ class TestSwarm < Minitest::Test
     assert result.ok?
     assert_equal 2, calls
     assert_equal "first", worker_finished.pop(timeout: 2)
-    assert @bus.events.any? { |event| event[:event] == "swarm_worker_start_failed" }
+    assert_equal 9, @bus.events.count { |event| event[:event] == "swarm:worker_start_failed" }
     assert_equal :insufficient_quorum, result.value!.verdict
-    assert_equal :analyst, result.value!.artifacts.keys.first
+    assert_equal :role_1, result.value!.artifacts.keys.first
   end
 
   def test_consensus_predicate
