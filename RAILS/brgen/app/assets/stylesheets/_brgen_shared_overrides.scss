@@ -686,7 +686,7 @@ body.vertical-marketplace .listing-filter-controls {
 
 body.vertical-marketplace .listing-filter-controls .deal-cat {
   justify-content: flex-start;
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -1681,7 +1681,7 @@ body.vertical-marketplace .media-thumb-controls {
   display: flex;
   align-items: center;
   gap: 4px;
-  min-height: 44px;
+  min-height: var(--tap-min);
   padding: 4px;
 }
 
