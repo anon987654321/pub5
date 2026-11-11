@@ -157,6 +157,77 @@ class TestSwarm < Minitest::Test
     assert_equal 1, agent.calls.size
   end
 
+  def test_fan_out_bounds_concurrency_and_accounts_for_every_task
+    mutex = Mutex.new
+    active = 0
+    maximum = 0
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      mutex.synchronize do
+        active += 1
+        maximum = [maximum, active].max
+      end
+      sleep 0.005
+      Result.ok({ "task" => task })
+    ensure
+      mutex.synchronize { active -= 1 }
+    end
+    roles = %i[analyst reviewer coder researcher]
+    tasks = (1..21).map do |index|
+      { role: roles[index % roles.size], task: "task-#{index}", context_slice: {} }
+    end
+
+    result = coordinator.fan_out(tasks)
+
+    assert result.ok?
+    assert_operator maximum, :>, 1
+    assert_operator maximum, :<=, Master::Review::Swarm::Coordinator::MAX_CONCURRENT
+    assert_equal roles.size, result.value!.artifacts.size
+  end
+
+  def test_fan_out_joins_started_workers_and_accounts_for_unstarted_tasks
+    original_new = Thread.method(:new)
+    started = Queue.new
+    release = Queue.new
+    calls = 0
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      started << task
+      release.pop
+      Result.ok({ "task" => task, "role" => role.to_s })
+    end
+    tasks = [
+      { role: :analyst, task: "first", context_slice: {} },
+      { role: :reviewer, task: "second", context_slice: {} },
+      { role: :coder, task: "third", context_slice: {} },
+    ]
+    coordinator_thread = original_new.call do
+      Thread.stub(:new, lambda { |*args, **kwargs, &block|
+        calls += 1
+        raise ThreadError, "thread limit reached" if calls == 2
+
+        original_new.call(*args, **kwargs, &block).tap do
+          raise ThreadError, "first task did not start" unless started.pop(timeout: 2)
+        end
+      }) do
+        coordinator.fan_out(tasks, timeout: 2)
+      end
+    end
+
+    assert_equal "first", started.pop(timeout: 2)
+    release << :continue
+    coordinator_thread.join
+    result = coordinator_thread.value
+
+    assert result.ok?
+    assert_equal 2, calls
+    assert_includes @bus.events, @bus.events.find { |event| event[:event] == "swarm:worker_start_failed" }
+    assert_equal :insufficient_quorum, result.value!.verdict
+    assert_equal :analyst, result.value!.artifacts.keys.first
+  end
+
   def test_consensus_predicate
     coord = build_coordinator(FakeAgent.new(default: "ok"))
     results = {
