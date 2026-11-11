@@ -80,6 +80,18 @@
 </div>
 
 <header class="amber-masthead<%= " amber-masthead--home" if home %>">
+  <% if home %>
+    <%# Decorative pixel-anime layer is a sibling of the canonical logo link.
+        It cannot mask, filter, transform or otherwise touch the SVG. %>
+    <div class="amber-magic-layer" aria-hidden="true">
+      <span class="amber-magic-pixel-star amber-magic-pixel-star--one"></span>
+      <span class="amber-magic-pixel-star amber-magic-pixel-star--two"></span>
+      <span class="amber-magic-pixel-star amber-magic-pixel-star--three"></span>
+      <span class="amber-magic-sakura amber-magic-sakura--one"></span>
+      <span class="amber-magic-sakura amber-magic-sakura--two"></span>
+      <span class="amber-magic-shooting-star"></span>
+    </div>
+  <% end %>
   <%= link_to root_path, class: "amber-logo-home", aria: { label: t("nav.brand_home") } do %>
     <%= render "shared/logo", id_prefix: "amber-nav", view_box: "58 105 410 108" %>
   <% end %>
