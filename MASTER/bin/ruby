@@ -1,5 +1,5 @@
 #!/bin/sh
-# Select the best installed Ruby supported by the project's Gemfile.
+# Use the host's generic Ruby first; discover alternatives only when it is too old.
 set -eu
 
 # macOS libmalloc reads these variables before Ruby starts. Clear them here
@@ -64,8 +64,19 @@ add_candidate() {
   fi
 }
 
-# rbenv installations are authoritative candidates even when rbenv itself is
-# not on PATH: the executable is enough to launch the selected interpreter.
+# Prefer the generic interpreter selected by the user's PATH. It is the Ruby
+# they installed and use; do not silently switch to a different version.
+GENERIC_RUBY=$(command -v ruby 2>/dev/null || true)
+if [ -n "$GENERIC_RUBY" ]; then
+  add_candidate "$GENERIC_RUBY"
+  if [ "$BEST_RUBY" = "$GENERIC_RUBY" ]; then
+    ACTUAL=$("$GENERIC_RUBY" -e 'print RUBY_VERSION')
+    [ "${MASTER_QUIET:-0}" = 1 ] || printf '%s\\n' "ruby0: using installed Ruby $ACTUAL ($GENERIC_RUBY)" >&2
+    exec "$GENERIC_RUBY" "$@"
+  fi
+fi
+
+# Discover alternate package/rbenv interpreters only when generic Ruby is too old.
 RBENV_ROOT=${RBENV_ROOT:-${HOME:-}/.rbenv}
 for ruby in "$RBENV_ROOT"/versions/*/bin/ruby; do
   [ -x "$ruby" ] || continue
@@ -73,7 +84,7 @@ for ruby in "$RBENV_ROOT"/versions/*/bin/ruby; do
 done
 
 # Common package/Homebrew versioned names, followed by the host's generic ruby.
-for name in ruby4.3 ruby43 ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby; do
+for name in ruby4.3 ruby43 ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33;
   ruby_path=$(command -v "$name" 2>/dev/null || true)
   [ -n "$ruby_path" ] && add_candidate "$ruby_path"
 done
