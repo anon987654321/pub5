@@ -61,9 +61,10 @@ module Master
       end
 
       # Persisted before/after events are a protocol, not unrelated log lines.
-      # This in-process guard catches duplicate IDs and mismatched after-events.
-      # It is not a cross-process exactly-once ledger; recovery must still
-      # reconcile durable events before replaying an uncertain external effect.
+      # Startup replays the bounded durable history to restore duplicate-ID
+      # protection; this in-process guard then catches duplicate IDs and
+      # mismatched after-events. It is not a cross-process exactly-once ledger:
+      # callers still reconcile uncertain external effects before retrying.
       def publish_before(identity, payload)
         key = effect_key(identity)
         @lifecycle_mutex.synchronize do
