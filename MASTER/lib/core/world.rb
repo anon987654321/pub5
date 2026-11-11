@@ -466,18 +466,49 @@ module Master::Core
     # core/ does not reach into lib/, so this stays its own few lines rather
     # than inverting that dependency to save them.
     def write_atomic(abs, content)
+      directory = File.dirname(abs)
+      directory_stat = File.lstat(directory)
+      unless directory_stat.directory? && !directory_stat.symlink? &&
+             Master::Io::AtomicWrite.instance_method(:verified_atomic_directory).bind_call(self, directory) == directory
+        raise IOError, "write parent is not a stable workspace directory"
+      end
+
+      original = if File.exist?(abs) || File.symlink?(abs)
+                   stat = File.lstat(abs)
+                   unless stat.file? && !stat.symlink? && stat.nlink == 1
+                     raise IOError, "write destination must be a singly linked regular file"
+                   end
+                   stat
+                 end
       tmp = "#{abs}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}"
       File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o666) do |file|
         file.binmode
         file.write(content)
         file.flush
         file.fsync
+        file.chmod(original.mode & 0o7777) if original
       end
-      # The file keeps its own mode: the rename would replace an executable
-      # with a plain file.
-      File.chmod(File.stat(abs).mode & 0o7777, tmp) if File.exist?(abs)
+
+      current_directory = File.lstat(directory)
+      current_destination = if File.exist?(abs) || File.symlink?(abs)
+                              File.lstat(abs)
+                            end
+      unless current_directory.directory? && !current_directory.symlink? &&
+             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+             Master::Io::AtomicWrite.instance_method(:verified_atomic_directory).bind_call(self, directory) == directory
+        raise IOError, "write parent changed before replacement"
+      end
+      if original
+        unless current_destination&.file? && !current_destination.symlink? && current_destination.nlink == 1 &&
+               current_destination.dev == original.dev && current_destination.ino == original.ino
+          raise IOError, "write destination changed before replacement"
+        end
+      elsif current_destination
+        raise IOError, "write destination appeared before replacement"
+      end
+
       File.rename(tmp, abs)
-      fsync_directory(File.dirname(abs)) unless RUBY_PLATFORM.match?(/win32|mingw/)
+      fsync_directory(directory) unless RUBY_PLATFORM.match?(/win32|mingw/)
     rescue StandardError
       File.delete(tmp) if tmp && File.exist?(tmp)
       raise
