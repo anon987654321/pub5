@@ -47,9 +47,10 @@ module Master
 
         def visit_def_node(node)
           meth = node.name.to_s
-          owner = @scope.last || "(top)"
+          owner = @scope.empty? ? "(top)" : @scope.join("::")
+          separator = node.receiver ? "." : "#"
           @symbols << Symbol.new(
-            fqn: "#{qualified(owner)}##{meth}",
+            fqn: "#{owner}#{separator}#{meth}",
             type: :method,
             file: @file,
             line: node.location.start_line,
