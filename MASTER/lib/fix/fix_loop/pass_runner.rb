@@ -240,7 +240,7 @@ module Master
         end
 
         def lane_silent?
-          Master::Io::LaneSilence.silent?
+          Master::Io::LaneState.any_lane_silent?
         rescue StandardError
           # If the silence store cannot answer, do not wait on its account.
           false

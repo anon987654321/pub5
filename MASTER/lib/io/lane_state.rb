@@ -86,6 +86,10 @@ module Master
         !LaneQuota.manual_probe?(model) && LaneSilence.silent?(LaneSilence.lane_of(model))
       end
 
+      # The any-lane spelling for a waiter that cannot name a model: the pass
+      # runner waits out a scan-time cool-off before it rescans.
+      def any_lane_silent? = LaneSilence.silent?
+
       def parked_reason(id) = ("parked: #{ModelSkipCache.skip_reason(id)}" if ModelSkipCache.skipped?(id))
 
       def spent_reason(id) = ("paid tier spent (QuotaCheck)" if QuotaCheck.blocked?(id))
