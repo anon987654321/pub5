@@ -429,8 +429,10 @@ accepted only as a compatibility alias and resolves to `carved-field`.
 The face is the opening identity and the resting state. A completed assistant
 reply is sent through the canonical `assistant:visual-subject` event. The event
 may contain a `visual_subject` descriptor, or the renderer may infer one of the
-small set of supported object kinds from the finished reply. A descriptor is
-accepted only when its kind is in
+small set of supported object kinds from the finished reply. For inferred
+subjects, repeated mentions rank ahead of one-off mentions and first mention
+breaks ties. An explicit descriptor always wins. A descriptor is accepted only
+when its kind is in
 `face_interface.spatial.semantic_subject.kinds`; its confidence is bounded,
 its label is sanitized, and its ordered feature list is intersected with that
 kind's allowlist. Unknown or low-confidence subjects leave the portrait intact
