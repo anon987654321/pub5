@@ -59,6 +59,7 @@ tests = %w[
   test/test_core_world.rb
   test/test_master_boot.rb
   test/test_inference.rb
+  test/test_council_deliberation.rb
   test/test_task_steward.rb
   test/test_core_bridge.rb
   test/test_fix_plan.rb
