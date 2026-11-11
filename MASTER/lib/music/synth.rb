@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "../io/process_spawn"
 require_relative "waveform"
 
 module Master
@@ -9,6 +10,9 @@ module Master
       RATE = 44_100
       SHAPES = %i[sine square triangle saw white brown].freeze
       NOISES = %i[white brown].freeze
+      PLAYER_NAMES = %w[afplay play ffplay mpv aucat].freeze
+
+      class NoPlayerError < StandardError; end
 
       class << self
         def render(shape: :sine, hz: 440.0, seconds: 1.0, destination: nil, seed: 42)
@@ -20,25 +24,31 @@ module Master
           Waveform.write_wav(destination, samples, rate: RATE)
         end
 
+        # Start a finished audio file using the native player for this host.
+        # SoX's file player is the `play` executable (not `sox input.wav`,
+        # which has no output device argument). Try another installed player
+        # when process creation fails; never report success without a PID.
         def play(path, loop: false)
           raise ArgumentError, "missing audio #{path}" unless File.file?(path)
+          raise ArgumentError, "empty audio #{path}" unless File.size?(path)
 
-          ffplay = player_path("ffplay")
-          cmd = if loop && ffplay
-                  [ffplay, "-loop", "0", "-nodisp", "-autoexit", "-loglevel", "quiet", "-i", path]
-                elsif File.exist?("/usr/bin/afplay")
-                  ["/usr/bin/afplay", path]
-                elsif ffplay
-                  [ffplay, "-nodisp", "-autoexit", "-i", path]
-                else
-                  raise "afplay or ffplay required"
-                end
+          candidates = player_candidates(loop:)
+          failures = []
+          candidates.each do |argv|
+            begin
+              pid = Process.spawn(
+                Master::Io::ProcessSpawn.environment, *argv, path,
+                **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL),
+              )
+              Process.detach(pid)
+              return pid
+            rescue SystemCallError => e
+              failures << "#{File.basename(argv.first)}: #{e.class}"
+            end
+          end
 
-          log = File.open("/tmp/master-synth-play.log", "a")
-          pid = Process.spawn(Master::Io::ProcessSpawn.environment, *cmd, **Master::Io::ProcessSpawn.options(out: log, err: log))
-          log.close
-          Process.detach(pid)
-          pid
+          tried = candidates.empty? ? PLAYER_NAMES.join(", ") : failures.join(", ")
+          raise NoPlayerError, "no audio player could be started (tried #{tried})"
         end
 
         # Public: Realtime.morph generates frame-by-frame rather than as one
@@ -59,6 +69,26 @@ module Master
         def noise_samples(shape, frames, seed: 42) = noise(shape, frames, seed)
 
         private
+
+        def player_candidates(loop:)
+          names = loop ? %w[ffplay] : PLAYER_NAMES
+          names.filter_map do |name|
+            path = player_path(name)
+            next unless path
+
+            args = case name
+                   when "afplay" then []
+                   when "play" then %w[-q]
+                   when "ffplay"
+                     loop ? %w[-loop 0 -nodisp -autoexit -loglevel quiet -i] :
+                            %w[-nodisp -autoexit -loglevel quiet -i]
+                   when "mpv" then %w[--no-video --really-quiet]
+                   when "aucat" then %w[-i]
+                   else next
+                   end
+            [path, *args]
+          end
+        end
 
         def validate_shape!(shape)
           return if SHAPES.include?(shape)
