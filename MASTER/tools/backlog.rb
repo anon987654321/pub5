@@ -229,7 +229,7 @@ module Backlog
       mission = @mission_class.new(root: @root).ensure_queued!(
         goal:, scope: @root, model:, effort:, plan:,
         origin: "backlog", auto_continue: true, mode: "repair",
-        risk: :low, intent: :functional_change,
+        intent: :functional_change,
       )
       return :blocked if mission.respond_to?(:record) && mission.record&.fetch("state", nil) == "blocked"
 
