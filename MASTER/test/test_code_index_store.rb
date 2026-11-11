@@ -139,6 +139,74 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_mixin_relationships_survive_persistent_code_index_restore
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "mixins.rb"), <<~RUBY)
+        module IncludedMethods; end
+        module PriorityMethods; end
+        class Widget
+          include IncludedMethods
+          prepend PriorityMethods
+        end
+      RUBY
+
+      cold = Index.new(root:, persist: true).build
+      expected = ["include:IncludedMethods", "prepend:PriorityMethods"]
+      assert_equal expected, cold.query("Widget").first.fetch(:includes)
+      assert_includes cold.summary, "[include:IncludedMethods, prepend:PriorityMethods]"
+
+      warm = Index.new(root:, persist: true).build
+      assert_equal expected, warm.query("Widget").first.fetch(:includes)
+      assert_equal cold.summary, warm.summary
+    end
+  end
+
+  def test_public_symbol_and_reference_views_cannot_mutate_the_live_graph
+    with_tree do |root|
+      cold = Index.new(root:, persist: true).build
+      warm = Index.new(root:, persist: true).build
+
+      [cold, warm].each do |index|
+      symbols = index.symbols
+      references = index.references
+      assert_predicate symbols, :frozen?
+      assert_predicate references, :frozen?
+      assert_raises(FrozenError) { symbols.clear }
+      assert_raises(FrozenError) { references.clear }
+
+      symbol = symbols.find { |row| row.fqn == "Alpha#one" }
+      assert_predicate symbol, :frozen?
+      assert_predicate symbol.fqn, :frozen?
+      assert_predicate symbol.includes, :frozen?
+      assert_raises(FrozenError) { symbol.fqn.replace("Corrupted") }
+      assert_raises(FrozenError) { symbol.includes << "Corrupted" }
+
+      reference = references.first
+      assert_predicate reference, :frozen?
+      assert_predicate reference.to_fqn, :frozen?
+      assert_raises(FrozenError) { reference.to_fqn.replace("Corrupted") }
+      assert_equal ["a.rb", 2], index.lookup("Alpha#one")
+      assert index.complete?
+      end
+    end
+  end
+
+  def test_errors_are_immutable_snapshots
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "broken.rb"), "def unfinished(\n")
+      index = Index.new(root:).build
+
+      errors = index.errors
+      assert_predicate errors, :frozen?
+      assert_predicate errors.first, :frozen?
+      assert_predicate errors.first.fetch(:message), :frozen?
+      assert_raises(FrozenError) { errors.first.fetch(:message).replace("hidden") }
+      assert_includes index.errors.first.fetch(:message), "Prism"
+    end
+  end
+
   def test_a_never_built_index_is_not_complete
     Dir.mktmpdir do |root|
       index = Index.new(root:)
@@ -162,6 +230,25 @@ class TestCodeIndexStore < Minitest::Test
       assert_nil index.lookup("OutsideSecret")
       assert_equal :read, index.errors.fetch(0).fetch(:kind)
       refute File.exist?(Master::Review::CodeIndexStore.new(root:).path)
+    end
+  end
+
+  def test_hardlinked_ruby_source_is_not_indexed
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "root")
+      outside = File.join(directory, "outside")
+      Dir.mkdir(root)
+      Dir.mkdir(outside)
+      external = File.join(outside, "private.rb")
+      File.write(external, "class ExternalPrivateSource; end\n")
+      File.link(external, File.join(root, "linked.rb"))
+
+      index = Index.new(root:).build
+
+      refute index.complete?
+      assert_nil index.lookup("ExternalPrivateSource")
+      assert_equal :read, index.errors.fetch(0).fetch(:kind)
+      assert_equal 2, File.stat(external).nlink
     end
   end
 
