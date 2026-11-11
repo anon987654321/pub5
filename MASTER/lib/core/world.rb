@@ -467,20 +467,20 @@ module Master::Core
     # than inverting that dependency to save them.
     def write_atomic(abs, content)
       directory = File.dirname(abs)
-      directory_stat = File.lstat(directory)
-      unless directory_stat.directory? && !directory_stat.symlink? &&
-             Master::Io::AtomicWrite.instance_method(:verified_atomic_directory).bind_call(self, directory) == directory
-        raise IOError, "write parent is not a stable workspace directory"
-      end
+      real_directory = File.realpath(directory)
+      real_root = File.realpath(@root)
+      raise IOError, "write parent escapes workspace" unless under_root?(real_directory, real_root)
 
-      original = if File.exist?(abs) || File.symlink?(abs)
-                   stat = File.lstat(abs)
+      directory_stat = File.stat(real_directory)
+      destination = File.join(real_directory, File.basename(abs))
+      original = if File.exist?(destination) || File.symlink?(destination)
+                   stat = File.lstat(destination)
                    unless stat.file? && !stat.symlink? && stat.nlink == 1
                      raise IOError, "write destination must be a singly linked regular file"
                    end
                    stat
                  end
-      tmp = "#{abs}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}"
+      tmp = File.join(real_directory, ".#{File.basename(abs)}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}")
       File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o666) do |file|
         file.binmode
         file.write(content)
@@ -489,13 +489,13 @@ module Master::Core
         file.chmod(original.mode & 0o7777) if original
       end
 
-      current_directory = File.lstat(directory)
-      current_destination = if File.exist?(abs) || File.symlink?(abs)
-                              File.lstat(abs)
+      current_real_directory = File.realpath(directory)
+      current_directory = File.stat(current_real_directory)
+      current_destination = if File.exist?(destination) || File.symlink?(destination)
+                              File.lstat(destination)
                             end
-      unless current_directory.directory? && !current_directory.symlink? &&
-             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
-             Master::Io::AtomicWrite.instance_method(:verified_atomic_directory).bind_call(self, directory) == directory
+      unless current_real_directory == real_directory &&
+             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
         raise IOError, "write parent changed before replacement"
       end
       if original
@@ -507,8 +507,8 @@ module Master::Core
         raise IOError, "write destination appeared before replacement"
       end
 
-      File.rename(tmp, abs)
-      fsync_directory(directory) unless RUBY_PLATFORM.match?(/win32|mingw/)
+      File.rename(tmp, destination)
+      fsync_directory(real_directory) unless RUBY_PLATFORM.match?(/win32|mingw/)
     rescue StandardError
       File.delete(tmp) if tmp && File.exist?(tmp)
       raise
