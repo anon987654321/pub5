@@ -18,6 +18,10 @@ module Master
         # half the tree.
         CONSTANT = /\b[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+(?:::[A-Z]\w*)*\b|\b[A-Z]\w*(?:::[A-Z]\w*)+\b|`([A-Z]\w*)`/
         PATH = %r{[\w./-]+\.rb\b}
+        # Method names enter the brief only when the operator names them as
+        # a qualified call or marks the identifier as code. Ordinary prose
+        # ("run", "build", "call") must not flood the slice with false matches.
+        METHOD = /(?:\b[A-Z]\w*(?:::\w+)*(?:#|\.)([a-z_]\w*[!?=]?)|`([a-z_]\w*[!?=]?)`)/
 
         def summary(focus: nil)
           with_built_index do
@@ -44,7 +48,7 @@ module Master
         def focus_slice(text)
           return if text.empty?
 
-          hits = named_symbols(text) | file_symbols(text)
+          hits = named_symbols(text) | method_symbols(text) | file_symbols(text)
           return if hits.empty?
 
           lines = hits.first(SLICE_MAX_HITS).map { |sym| format_summary_entry(sym) }
@@ -62,6 +66,15 @@ module Master
           names = text.to_enum(:scan, CONSTANT).map { Regexp.last_match[1] || Regexp.last_match[0] }.uniq
           names.flat_map do |name|
             @symbols.values.select { |s| s.fqn == name || s.fqn.end_with?("::#{name}") }
+          end.uniq.sort_by(&:fqn)
+        end
+
+        def method_symbols(text)
+          names = text.to_enum(:scan, METHOD).flat_map { Regexp.last_match.captures.compact }.uniq
+          return [] if names.empty?
+
+          @symbols.values.select do |sym|
+            sym.type == :method && names.include?(sym.fqn.split("#").last)
           end.uniq.sort_by(&:fqn)
         end
 
