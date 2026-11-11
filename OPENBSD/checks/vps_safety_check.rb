@@ -613,6 +613,7 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
                     mrd_falcon.include?('service "mrdamascy" do') &&
                     mrd_falcon.include?("include Falcon::Environment::Rack") &&
                     mrd_falcon.match?(/^\s*count 1$/) &&
+                    mrd_falcon.match?(/^\s*health_check_timeout 300$/) &&
                     mrd_falcon.include?('port { ENV.fetch("PORT", 47314).to_i }') &&
                     mrd_falcon.include?('http://127.0.0.1:#{port}') &&
                     mrd_falcon.include?("Async::HTTP::Protocol::HTTP11")
