@@ -363,7 +363,7 @@ command as `dev` is fine: passwordless doas re-executes it as root.
 - Treat `RAILS/apps.yml` and `OPENBSD/deploy_inventory.json` as inventories, not
   suggestions.
 - Any `/etc` change made on vm23 must be copied back to `OPENBSD/etc/`.
-- Use the available Ruby on OpenBSD (ruby40, ruby34 … resolved by `OPENBSD/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`); `zsh OPENBSD/bin/vps_ci.sh <app>` for
+- Use the available compatible Ruby on OpenBSD (resolved dynamically by `OPENBSD/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`); `zsh OPENBSD/bin/vps_ci.sh <app>` for
   per-app CI.
 - Keep secrets in `/etc/*.env`; never commit them.
 - Keep Rails `config.assume_ssl = true`; do not enable `force_ssl` behind
