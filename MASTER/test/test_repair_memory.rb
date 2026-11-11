@@ -22,7 +22,7 @@ class TestRepairMemory < Minitest::Test
       assert File.file?(state)
       assert File.file?(lock)
       assert_equal 0o660, File.stat(state).mode & 0o777
-      assert_equal 0o660, File.stat(lock).mode & 0o777
+      assert_equal 0, File.stat(lock).mode & 0o007, "the lock must not be accessible to other users"
       assert_empty Dir.glob(File.join(root, ".master", "*.tmp"))
     end
   end
