@@ -273,14 +273,14 @@ module Master
           return false
         end
 
+        visitor = SymbolVisitor.new(file:, root: @root)
+        parse_result.value.accept(visitor)
         unless CodeIndexStore.signature(file) == signature
           record_error(file, :changed, "source changed while Prism analyzed it; retry the index build")
           @bus&.publish("code_index:parse_error", path: file, error: "source changed during analysis")
           return false
         end
 
-        visitor = SymbolVisitor.new(file:, root: @root)
-        parse_result.value.accept(visitor)
         visitor.symbols.each { |symbol| store_symbol(symbol) }
         @references.concat(visitor.references)
         @mtimes[file] = signature
