@@ -247,6 +247,7 @@
     const ordered = sequence.slice(0, Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6)))));
     const positions = new Float32Array(count * 3);
     const stages = new Float32Array(count);
+    const stageIndices = new Uint8Array(count);
     const stageCount = Math.max(1, ordered.length);
     for (let i = 0; i < count; i += 1) {
       const stage = Math.min(stageCount - 1, Math.floor(i * stageCount / count));
@@ -263,8 +264,9 @@
       positions[offset + 1] = point[1] * scale;
       positions[offset + 2] = point[2] * scale;
       stages[i] = stage / stageCount;
+      stageIndices[i] = stage;
     }
-    return { positions, stages, sequence: ordered };
+    return { positions, stages, stageIndices, sequence: ordered };
   }
 
   function buildSubjectPositions(form) {
@@ -428,7 +430,7 @@
       ? buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34)
       : null;
     splatTargetPositions = proxyGeometry?.positions || buildSubjectPositions(form);
-    splatTargetStages = proxyGeometry?.stages || null;
+    splatTargetStages = proxyGeometry?.stageIndices || null;
     const currentPositions = splatProxy?.geometry?.getAttribute?.("position")?.array;
     splatMorphFromPositions = currentPositions
       ? new Float32Array(currentPositions)
