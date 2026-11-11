@@ -36,7 +36,7 @@ module Master
         NB_LOCALE = /[æøåÆØÅ]|\b(?:ikke|jeg|deg|eller|dette|skal|vil|kan|hva|hvor|nå|gjør|kjør|fiks|rydd)\b/i.freeze
 
         INFER_ALIASES = {
-          "restart" => "rebuild",
+          "restart" => "reload",
           "analyze" => "review",
         }.freeze
 
