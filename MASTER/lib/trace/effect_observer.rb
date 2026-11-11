@@ -37,7 +37,6 @@ module Master
         identity = payload.dup.freeze
         references = safe_evidence_refs(evidence_refs)
         payload[:evidence_refs] = references unless references.empty?
-        refresh_lifecycle_history!
 
         case stage.to_sym
         when :before
@@ -124,13 +123,9 @@ module Master
           end
         end
         @lifecycle_mutex.synchronize do
-          @pending_effects.merge!(pending)
-          @completed_effects.merge!(completed)
+          @pending_effects.replace(pending)
+          @completed_effects.replace(completed)
         end
-      end
-
-      def refresh_lifecycle_history!
-        restore_lifecycle_history!
       end
 
       def lifecycle_history
