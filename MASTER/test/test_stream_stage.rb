@@ -164,6 +164,52 @@ class StreamStageTest < Minitest::Test
     assert_match(/1 related file\(s\) not shown/, context[:lock_reasons].last)
   end
 
+  def test_an_oversized_related_file_is_digest_checked_without_materialising_it
+    path = File.join(temporary_path, "large.rb")
+    File.write(path, "# " + ("x" * 260_000) + "\\n")
+    graph = FakeGraph.new(temporary_path)
+    graph.define_singleton_method(:source_digest) do |file|
+      Digest::SHA256.file(file).hexdigest
+    end
+    original_read = File.method(:read)
+
+    result = nil
+    File.stub(:read, lambda { |file, *args, **kwargs|
+      raise "oversized dependency was materialised" if File.expand_path(file) == path
+
+      original_read.call(file, *args, **kwargs)
+    }) do
+      result = read_related(graph, "large.rb", max_bytes: 64)
+    end
+
+    assert_nil result, "over-budget source is checked but never returned to the prompt"
+  end
+
+  def test_an_oversized_related_file_with_a_stale_graph_digest_refuses_the_repair
+    path = File.join(temporary_path, "large.rb")
+    File.write(path, "# " + ("x" * 260_000) + "\\n")
+    graph = FakeGraph.new(temporary_path)
+    graph.define_singleton_method(:source_digest) { |_file| "stale" }
+
+    error = assert_raises(Master::Fix::FixLoop::PassRunner::StreamStage::IncompleteContext) do
+      read_related(graph, "large.rb", max_bytes: 64)
+    end
+    assert_match(/dependency changed since graph refresh/, error.message)
+  end
+
+  def test_a_related_file_under_a_symlinked_parent_refuses_the_repair
+    real = File.join(temporary_path, "real")
+    FileUtils.mkdir_p(real)
+    File.write(File.join(real, "caller.rb"), "x = 1\\n")
+    File.symlink(real, File.join(temporary_path, "alias"))
+    graph = FakeGraph.new(temporary_path)
+
+    error = assert_raises(Master::Fix::FixLoop::PassRunner::StreamStage::IncompleteContext) do
+      read_related(graph, "alias/caller.rb", max_bytes: 64)
+    end
+    assert_match(/dependency is a symlink/, error.message)
+  end
+
   def test_a_related_file_that_changed_since_the_graph_read_it_still_refuses_the_repair
     graph = graph_with(inbound: ["caller.rb"])
     graph.define_singleton_method(:source_digest) { |file| File.basename(file) == "caller.rb" ? "stale" : super(file) }
