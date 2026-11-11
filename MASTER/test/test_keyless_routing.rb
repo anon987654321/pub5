@@ -9,6 +9,7 @@ class TestKeylessRouting < Minitest::Test
   FakeConfig = Master::TestSupport::FakeConfig
 
   def setup
+    Master::Io::LaneSelection.reset_hosted_resolver!
     @saved_env = %w[
       XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY
       DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY LLM7_API_KEY
@@ -36,6 +37,7 @@ class TestKeylessRouting < Minitest::Test
 
   def teardown
     @restore_routing&.call
+    Master::Io::LaneSelection.reset_hosted_resolver!
     @saved_env.each { |key, val| val.nil? ? ENV.delete(key) : ENV[key] = val }
   end
 
@@ -53,10 +55,8 @@ class TestKeylessRouting < Minitest::Test
 
   def test_default_model_prefers_a_discovered_keyless_hosted_lane_before_browser_chat
     resolver = Object.new
-    resolver.define_singleton_method(:hosted_models) { ["llm7:gpt-oss:20b", "ovh:gpt-oss-120b"] }
-    resolver.define_singleton_method(:hosted_endpoint_for) do |id|
-      id.start_with?("llm7:") ? { key: "configured-key" } : { key: nil }
-    end
+    resolver.define_singleton_method(:hosted_models) { ["ovh:gpt-oss-120b"] }
+    resolver.define_singleton_method(:hosted_endpoint_for) { |id| id == "ovh:gpt-oss-120b" ? { key: nil } : nil }
 
     Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
       assert_equal "ovh:gpt-oss-120b", Master.default_model
