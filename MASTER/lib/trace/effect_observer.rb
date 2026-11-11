@@ -66,14 +66,17 @@ module Master
       # mismatched after-events. It is not a cross-process exactly-once ledger:
       # callers still reconcile uncertain external effects before retrying.
       def publish_before(identity, payload)
-        key = effect_key(identity)
-        @lifecycle_mutex.synchronize do
-          if @pending_effects.key?(key) || @completed_effects.key?(key)
-            raise ArgumentError, "duplicate before-event for effect identity"
-          end
+        with_durable_lifecycle_lock do
+          refresh_lifecycle_history! if @bus.respond_to?(:effect_history)
+          key = effect_key(identity)
+          @lifecycle_mutex.synchronize do
+            if @pending_effects.key?(key) || @completed_effects.key?(key)
+              raise ArgumentError, "duplicate before-event for effect identity"
+            end
 
-          @bus.publish_required(BEFORE_EVENT, payload.merge(pid: Process.pid))
-          @pending_effects[key] = identity
+            @bus.publish_required(BEFORE_EVENT, payload.merge(pid: Process.pid))
+            @pending_effects[key] = identity
+          end
         end
       end
 
@@ -81,18 +84,21 @@ module Master
         raise ArgumentError, "after-event requires an observation" unless observation
 
         elapsed_ms = checked_elapsed_ms(elapsed_ms)
-        key = effect_key(identity)
-        @lifecycle_mutex.synchronize do
-          expected = @pending_effects[key]
-          raise ArgumentError, "after-event requires a matching before-event" unless expected
-          raise ArgumentError, "after-event identity differs from its before-event" unless expected == identity
+        with_durable_lifecycle_lock do
+          refresh_lifecycle_history! if @bus.respond_to?(:effect_history)
+          key = effect_key(identity)
+          @lifecycle_mutex.synchronize do
+            expected = @pending_effects[key]
+            raise ArgumentError, "after-event requires a matching before-event" unless expected
+            raise ArgumentError, "after-event identity differs from its before-event" unless expected == identity
 
-          @bus.publish_required(
-            AFTER_EVENT,
-            payload.merge(status: observation.ok? ? "ok" : "error", elapsed_ms:),
-          )
-          @pending_effects.delete(key)
-          @completed_effects[key] = true
+            @bus.publish_required(
+              AFTER_EVENT,
+              payload.merge(status: observation.ok? ? "ok" : "error", elapsed_ms:),
+            )
+            @pending_effects.delete(key)
+            @completed_effects[key] = true
+          end
         end
       end
 
@@ -148,8 +154,15 @@ module Master
       end
 
       def effect_key(payload)
-        [payload[:run_id] || @run_id, payload[:attempt_id] || @attempt_id,
-         payload[:mission_id] || @mission_id, payload[:effect_id]].freeze
+        payload[:effect_id].to_s.freeze
+      end
+
+      def with_durable_lifecycle_lock
+        if @bus.respond_to?(:synchronize_effect_lifecycle)
+          @bus.synchronize_effect_lifecycle { yield }
+        else
+          yield
+        end
       end
 
       def checked_elapsed_ms(value)

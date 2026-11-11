@@ -20,7 +20,7 @@ module Master
         def symbols_in(file)
           with_built_index do
             full = File.expand_path(file, @root)
-            @symbols.values.select { |s| s.file == full }
+            @symbols.values.select { |symbol| symbol.file == full }.freeze
           end
         end
 
@@ -60,7 +60,17 @@ module Master
       Symbol = Struct.new(:fqn, :type, :file, :line, :parent, :includes, keyword_init: true)
       Reference = Struct.new(:from_file, :from_line, :to_fqn, :ref_type, keyword_init: true)
 
-      attr_reader :symbols, :references, :built_at
+      attr_reader :built_at
+
+      # Public graph access is snapshot-only. A consumer must not be able to
+      # mutate the live index behind its lock or invalidate a later PASS claim.
+      def symbols
+        @lock.synchronize { @symbols.values.dup.freeze }
+      end
+
+      def references
+        @lock.synchronize { @references.dup.freeze }
+      end
 
       def initialize(root:, event_bus: nil, persist: false)
         @root = File.realpath(root)
@@ -103,7 +113,7 @@ module Master
             incremental_build(files, scope: target)
           end
           save_snapshot if @store && path.nil? && @errors.empty?
-          @built_at = Time.now
+          @built_at = Time.now.freeze
           @orientation = nil
           @bus&.publish("code_index:built", files: files.size, symbols: @symbols.size,
                        complete: @errors.empty? && !@partial, partial: @partial, error_count: @errors.size)
@@ -160,7 +170,15 @@ module Master
       end
 
       def errors
-        @lock.synchronize { @errors.map(&:dup) }
+        @lock.synchronize do
+          @errors.map do |entry|
+            {
+              path: entry[:path].dup.freeze,
+              kind: entry[:kind],
+              message: entry[:message].dup.freeze,
+            }.freeze
+          end.freeze
+        end
       end
 
       def reindex(file)
@@ -229,7 +247,7 @@ module Master
         return false unless snapshot
 
         snapshot[:symbols].each { |sym| store_symbol(sym) }
-        @references.concat(snapshot[:references])
+        snapshot[:references].each { |reference| store_reference(reference) }
         @mtimes.merge!(snapshot[:signatures])
         @snapshot_tree = snapshot[:tree_hash]
         true
@@ -263,19 +281,27 @@ module Master
 
       def find_locked(name)
         exact = @symbols.values.select { |symbol| symbol.fqn == name.to_s }
-        return exact unless exact.empty?
+        return exact.freeze unless exact.empty?
 
         suffix = name.to_s
-        @symbols.values.select { |symbol| symbol.fqn.include?(suffix) }
+        @symbols.values.select { |symbol| symbol.fqn.include?(suffix) }.freeze
       end
 
       # Reopened Ruby classes/modules and methods may have more than one
       # definition. Keep the first FQN key for compatibility, then retain each
       # additional definition under a stable path-and-line key.
       def store_symbol(symbol)
-        key = symbol.fqn
+        frozen_symbol = Symbol.new(
+          fqn: symbol.fqn.to_s.dup.freeze,
+          type: symbol.type.to_sym,
+          file: symbol.file.to_s.dup.freeze,
+          line: Integer(symbol.line),
+          parent: symbol.parent&.to_s&.dup&.freeze,
+          includes: Array(symbol.includes).map { |name| name.to_s.dup.freeze }.freeze,
+        ).freeze
+        key = frozen_symbol.fqn
         if @symbols.key?(key)
-          base = "#{key}@#{relativize(symbol.file)}:#{symbol.line}"
+          base = "#{key}@#{relativize(frozen_symbol.file)}:#{frozen_symbol.line}"
           key = base
           duplicate = 2
           while @symbols.key?(key)
@@ -283,13 +309,23 @@ module Master
             duplicate += 1
           end
         end
-        @symbols[key] = symbol
+        @symbols[key.freeze] = frozen_symbol
+      end
+
+      def store_reference(reference)
+        @references << Reference.new(
+          from_file: reference.from_file.to_s.dup.freeze,
+          from_line: Integer(reference.from_line),
+          to_fqn: reference.to_fqn.to_s.dup.freeze,
+          ref_type: reference.ref_type.to_sym,
+        ).freeze
       end
 
       def format_summary_entry(sym)
         parent_name = sym.parent
         parent = parent_name && parent_name != "Object" ? " < #{parent_name}" : ""
-        "  #{sym.fqn}#{parent} (#{relativize(sym.file)}:#{sym.line})"
+        mixins = sym.includes.empty? ? "" : " [#{sym.includes.join(", ")}]"
+        "  #{sym.fqn}#{parent}#{mixins} (#{relativize(sym.file)}:#{sym.line})"
       end
 
       def query_entry(sym)
@@ -300,6 +336,7 @@ module Master
           file: relativize(sym.file),
           line: sym.line,
           parent: sym.parent,
+          includes: sym.includes.dup.freeze,
           used_in: refs.first(10).map { |r| "#{relativize(r.from_file)}:#{r.from_line}" },
         }
       end
@@ -323,7 +360,7 @@ module Master
         end
 
         visitor.symbols.each { |symbol| store_symbol(symbol) }
-        @references.concat(visitor.references)
+        visitor.references.each { |reference| store_reference(reference) }
         @mtimes[file] = signature
         true
       rescue StandardError => e
