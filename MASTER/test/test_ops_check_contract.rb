@@ -90,7 +90,7 @@ class CheckContractSpec < Minitest::Test
     refute_includes source, "RUBY_PLATFORM.include?(\"openbsd\")"
   end
 
-  def test_ruby_runtime_contract_allows_openbsd_packages
+  def test_ruby_runtime_contract_uses_the_installed_interpreter
     environment = File.read(File.join(ROOT, "lib", "operator", "environment.rb"))
     deploy_environment = File.read(File.join(ROOT, "../OPENBSD/lib", "environment.rb"))
     entrypoint = File.read(File.join(ROOT, "lib", "boot", "entrypoint.rb"))
@@ -98,12 +98,11 @@ class CheckContractSpec < Minitest::Test
     gemfile = File.read(File.join(ROOT, "Gemfile"))
 
     assert_includes environment, 'SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")'
-    assert_includes environment, 'SUPPORTED_RUBY_MAX = Gem::Version.new("4.1.0")'
-    assert_includes deploy_environment, 'OPENBSD_RUBY_PATTERN = /\A3\.(?:3|4)\.\d+\z/'
+    refute_includes environment, "SUPPORTED_RUBY_MAX"
+    refute_includes deploy_environment, "OPENBSD_RUBY_PATTERN"
     assert_includes entrypoint, "Operator::RubyRunner.best_available_ruby"
-    assert_includes wrapper, "ruby34"
-    assert_includes wrapper, "ruby33"
-    assert_includes gemfile, 'ruby ">= 3.3", "< 4.1"'
+    assert_includes wrapper, "GENERIC_RUBY=$(command -v ruby"
+    assert_includes gemfile, 'ruby ">= 3.3"'
   end
 
   def test_ruby_runner_openbsd_method_is_real_ruby_source
