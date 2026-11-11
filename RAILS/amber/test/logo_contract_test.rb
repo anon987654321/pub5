@@ -167,6 +167,26 @@ class LogoContractTest < ActionView::TestCase
     refute_includes generator, "roams behind the letters"
     refute_includes generator, "tail7"
   end
+  test "GLM logo renders are installed as app-owned public assets" do
+    root = Rails.root.join("public")
+    %w[
+      amber-logo-dither4-press.png
+      amber-logo-signal-orbit.png
+      amber-logo-hue-flow.png
+      amber-logo-starlight.png
+      amber-logo-grade-teal-amber.png
+      amber-logo-avatar-bit8.png
+      amber-logo-avatar-candy.png
+      amber-logo-avatar-canon.png
+      amber-logo-bit8-pixel-ink.png
+      amber-logo-reference.png
+    ].each do |name|
+      path = root.join(name)
+      assert File.file?(path), "missing generated logo asset: #{name}"
+      assert File.size?(path).to_i.positive?, "empty generated logo asset: #{name}"
+    end
+  end
+
   test "logo study gallery paths and plate descriptions stay in sync" do
     root = Rails.root.join("__logo")
     html = root.join("all-plates.html").read
