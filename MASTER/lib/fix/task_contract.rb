@@ -182,15 +182,29 @@ module Master
         contract = current
         return unless contract
 
+        repository = File.realpath(
+          defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__)
+        )
         absolute = File.expand_path(path.to_s)
-        repository = File.expand_path(defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__))
-        relative = if absolute == repository
-                     "."
-                   elsif absolute.start_with?(repository + File::SEPARATOR)
-                     absolute.delete_prefix(repository + File::SEPARATOR)
-                   else
-                     absolute
-                   end
+        unless absolute.start_with?(repository + File::SEPARATOR)
+          raise Invalid, "preservation path is outside the repository"
+        end
+
+        relative = absolute.delete_prefix(repository + File::SEPARATOR)
+        raise Invalid, "preservation path is outside task-contract scope: #{relative}" unless
+          covers?(relative, scope: contract.scope)
+
+        cursor = repository
+        relative.split(File::SEPARATOR).each do |segment|
+          cursor = File.join(cursor, segment)
+          next unless File.exist?(cursor) || File.symlink?(cursor)
+
+          stat = File.lstat(cursor)
+          raise Invalid, "preservation path contains a symlink: #{relative}" if stat.symlink?
+          if cursor == absolute && stat.file? && stat.nlink != 1
+            raise Invalid, "preservation path is hard-linked: #{relative}"
+          end
+        end
         value = result.to_h
         contract_digest = Digest::SHA256.hexdigest(JSON.generate(contract.to_h))
         row = {
