@@ -3,9 +3,8 @@
 require_relative "test_helper"
 require "minitest/mock"
 
-# Hosted free-tier day caps and per-provider key rotation landed on 2026-11-05 from a patch run against no
-# Ruby. These hold its claims: a capped endpoint's lanes are counted against its own cap, an uncapped one
-# stays untracked, and a hosted rotation reaches the next call's key.
+# Hosted free-tier caps are provider-scoped. Credential failover must cross
+# providers, never rotate keys within one provider.
 class TestHostedFreeTiers < Minitest::Test
   Quota = Master::Io::ModelQuota
   Rotator = Master::Io::KeyRotator
@@ -39,22 +38,29 @@ class TestHostedFreeTiers < Minitest::Test
 
   def with_two_keys
     saved = %w[TEST_CEREBRAS_A TEST_CEREBRAS_B].to_h { |var| [var, ENV.fetch(var, nil)] }
-    positions = Rotator.instance_variable_get(:@positions).dup
     ENV["TEST_CEREBRAS_A"] = long("a")
     ENV["TEST_CEREBRAS_B"] = long("b")
     Master.stub(:models_config, CONFIG) { yield }
   ensure
-    Rotator.instance_variable_set(:@positions, positions)
     saved.each { |var, value| value.nil? ? ENV.delete(var) : ENV[var] = value }
   end
 
-  def test_a_hosted_rotation_reaches_the_next_calls_key
+  def test_multiple_populated_keys_for_one_provider_are_refused
     with_two_keys do
-      first = Rotator.active_key_for("cerebras")
-
-      assert Rotator.rotate_for("cerebras:llama-3.3-70b")
-      refute_equal first, Rotator.active_key_for("cerebras")
-      refute Rotator.rotate_for("nvidia:z-ai/glm-5.3-flash"), "one key is a no-op"
+      error = assert_raises(ArgumentError) { Rotator.active_key_for("cerebras") }
+      assert_includes error.message, "multiple populated credentials"
+      refute Rotator.rotate_for("cerebras:llama-3.3-70b")
     end
+  end
+
+  def test_a_single_key_is_used_without_rotation
+    saved = ENV.fetch("TEST_NVIDIA_A", nil)
+    ENV["TEST_NVIDIA_A"] = long("n")
+    Master.stub(:models_config, CONFIG) do
+      assert_equal long("n"), Rotator.active_key_for("nvidia")
+      refute Rotator.rotate_for("nvidia:z-ai/glm-5.3-flash")
+    end
+  ensure
+    saved.nil? ? ENV.delete("TEST_NVIDIA_A") : ENV["TEST_NVIDIA_A"] = saved
   end
 end
