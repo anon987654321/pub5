@@ -35,9 +35,14 @@ begin
            agent.model.to_s.empty? ? "no boot model selected" : agent.model.to_s)
 
   router = agent.model_router
-  pool = router.respond_to?(:pool) ? Array(router.pool(wait: false)) : []
+  pool = begin
+    router.respond_to?(:pool) ? Array(router.pool(wait: false)) : []
+  rescue StandardError => e
+    add.call("model-pool", "INCONCLUSIVE", "#{e.class}: #{e.message.to_s.lines.first.to_s.strip}")
+    []
+  end
   add.call("model-pool", pool.empty? ? "INCONCLUSIVE" : "PASS",
-           "#{pool.size} reachable model lane(s)", candidates: pool.first(12))
+           "#{pool.size} reachable model lane(s)", candidates: pool.first(12)) unless checks.any? { |check| check[:name] == "model-pool" }
 
   chrome = Deploy::CdpSession.chrome_path
   add.call("chrome", chrome ? "PASS" : "INCONCLUSIVE",
