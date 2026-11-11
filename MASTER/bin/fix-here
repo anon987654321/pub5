@@ -1,5 +1,5 @@
 #!/bin/sh
-# bin/ruby picks an installed Ruby; a rbenv shim would refuse MASTER/.ruby-version when it names one this machine lacks.
+# bin/ruby prefers the installed compatible Ruby and discovers versioned fallbacks dynamically.
 exec "$(dirname "$0")/ruby" -x "$0" "$@"
 #!ruby
 # frozen_string_literal: true
