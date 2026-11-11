@@ -57,6 +57,16 @@ test("stipple breath is luminance-only, survives idle stillness and freezes for 
   assert.match(system, /uLuminosity \* breath/);
 });
 
+test("radio audio telemetry drives a bounded inward face warp and respects stillness", () => {
+  assert.match(system, /window\.addEventListener\("audio:update", \(event\) => \{/);
+  assert.match(system, /audioEnergy = Math\.max\(bass \* 0\.58 \+ onset \* 0\.30 \+ rms \* 0\.12, audioEnergy \* 0\.72\)/);
+  assert.match(system, /uAudioWarp: \{ value: 0 \}/);
+  assert.match(system, /uniform float uAudioWarp;/);
+  assert.match(system, /float audioInward = clamp\(uAudioWarp \* 0\.035 \* uMotionScale, 0\.0, 0\.035\)/);
+  assert.match(system, /u\.uAudioWarp\.value = reducedMotionEnabled\(state\) \|\| stillMode \? 0 : audioEnergy;/);
+  assert.match(system, /audioWarp: value\("uAudioWarp"\)/);
+});
+
 test("the primary face settles to neutral idle and wakes on pointer activity", () => {
   assert.match(primaryFaceFrame, /const motionFrozen = reducedMotion \|\| idleStill/);
   assert.match(primaryFaceFrame, /stillAfterActivityMs \?\? 700/);
