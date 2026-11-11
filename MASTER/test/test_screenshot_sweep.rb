@@ -99,6 +99,7 @@ class TestScreenshotSweep < Minitest::Test
       sweep.run(apps: ["bsdports"])
       index = JSON.parse(File.read(File.join(sweep.dir, "index.json")))
       assert index.key?("revision"), "index declares revision even when checkout identity is unavailable"
+      assert_equal sweep.dir, index["directory"]
     end
   end
 
