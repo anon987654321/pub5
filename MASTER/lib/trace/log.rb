@@ -427,6 +427,10 @@ module Master
         def append!(event, payload = {}) = @log.append!(event, payload)
 
         def recent(limit, pattern: nil) = @log.recent(limit, pattern:)
+
+        # Recovery callers must distinguish an empty log from a failed or
+        # corrupted read; do not route this through the forgiving #recent.
+        def recent!(limit, pattern: nil) = @log.recent!(limit, pattern:)
       end
     end
   end
