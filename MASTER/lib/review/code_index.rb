@@ -324,7 +324,8 @@ module Master
       def format_summary_entry(sym)
         parent_name = sym.parent
         parent = parent_name && parent_name != "Object" ? " < #{parent_name}" : ""
-        "  #{sym.fqn}#{parent} (#{relativize(sym.file)}:#{sym.line})"
+        mixins = sym.includes.empty? ? "" : " [#{sym.includes.join(", ")}]"
+        "  #{sym.fqn}#{parent}#{mixins} (#{relativize(sym.file)}:#{sym.line})"
       end
 
       def query_entry(sym)
@@ -335,6 +336,7 @@ module Master
           file: relativize(sym.file),
           line: sym.line,
           parent: sym.parent,
+          includes: sym.includes.dup.freeze,
           used_in: refs.first(10).map { |r| "#{relativize(r.from_file)}:#{r.from_line}" },
         }
       end
