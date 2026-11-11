@@ -262,6 +262,17 @@ module Backlog
 
       plan = JSON.parse(record["plan"].to_s)
       return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
+      proof = record["proof"].is_a?(Hash) ? record["proof"] : {}
+      return false unless proof["kind"] == "fix_pipeline" && proof["status"] == "pass"
+      return false unless Array(proof["scope_paths"]).sort == Array(plan["scope_paths"]).map(&:to_s).sort
+      return false unless proof["report_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
+      return false unless proof["proof_summary"].to_s.match?(/fix done.*proof:/i)
+      pushes = Array(record["repository_pushes"])
+      return false if pushes.empty?
+      return false unless pushes.all? do |push|
+        push.is_a?(Hash) && push["remote"] == "origin" && push["branch"] == "main" &&
+          push["commit"].to_s.match?(/\A[0-9a-f]{40}\z/i)
+      end
       source_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
       return false unless source_item && item_digest(source_item) == plan["item_digest"]
       return true if completed_receipts.include?(plan["item_digest"])
@@ -275,7 +286,7 @@ module Backlog
         "completed_at" => record.fetch("finished_at"),
         "summary" => record.fetch("summary"),
         "artifacts" => Array(record["artifacts"]),
-        "proof_status" => "mission_terminal_delivery_receipt",
+        "proof_status" => "verified_fix_pipeline_and_origin_main",
         "evidence" => {
           "mission_state" => record.fetch("state"),
           "mission_stage" => record.fetch("stage"),
@@ -318,7 +329,7 @@ module Backlog
 
       File.foreach(path).filter_map do |line|
         row = JSON.parse(line)
-        row["item_digest"] if row["proof_status"] == "mission_terminal_delivery_receipt"
+        row["item_digest"] if row["proof_status"] == "verified_fix_pipeline_and_origin_main"
       rescue JSON::ParserError
         nil
       end
