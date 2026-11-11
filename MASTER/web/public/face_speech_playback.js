@@ -2,7 +2,8 @@
 // Concatenated into face.runtime.js by assets:build_face_runtime (after face_speech_runtime.js).
 
 const VISEME_STEP_MS = 45;
-const VOWEL_VISEME = { a: 'A', e: 'E', i: 'I', o: 'O', u: 'U' };
+const VOWEL_VISEME = { a: 'A', e: 'E', i: 'I', o: 'O', u: 'U', y: 'E', æ: 'A', ø: 'O', å: 'O' };
+const SPOKEN_VOWEL = /[aeiouyæøå]/i;
 
 function setViseme(ch) {
   const c = (ch || '').toLowerCase();
@@ -53,7 +54,7 @@ function fallbackVisemeShape(text, index) {
   const pair = source.slice(index, index + 2);
   if (/^(sh|ch|th|zh)/.test(pair)) return 'E';
   const ch = source[index] || ' ';
-  if ('aeiouy'.includes(ch)) return VOWEL_VISEME[ch === 'y' ? 'e' : ch];
+  if (VOWEL_VISEME[ch]) return VOWEL_VISEME[ch];
   if ('mbpfvw'.includes(ch)) return 'M';
   if ('oouu'.includes(pair)) return 'O';
   if (' .,!?;:—-'.includes(ch)) return 'neutral';
@@ -67,7 +68,7 @@ function fallbackVisemePlan(text, durationMs) {
   let total = 0;
   for (let i = 0; i < source.length; i++) {
     const ch = source[i];
-    const weight = /[.,!?;:—-]/.test(ch) ? 1.8 : (/\s/.test(ch) ? 0.24 : (/[aeiouy]/i.test(ch) ? 1.25 : 0.72));
+    const weight = /[.,!?;:—-]/.test(ch) ? 1.8 : (/\s/.test(ch) ? 0.24 : (SPOKEN_VOWEL.test(ch) ? 1.25 : 0.72));
     weights.push(weight);
     total += weight;
   }
@@ -77,7 +78,7 @@ function fallbackVisemePlan(text, durationMs) {
     cursor += weight;
     const shape = fallbackVisemeShape(source, i);
     const pause = /[.,!?;:—-]/.test(source[i]);
-    return { at, shape, amp: pause ? 0.12 : (shape === 'neutral' ? 0.0 : 0.55 + (/[aeiouy]/i.test(source[i]) ? 0.3 : 0.12)) };
+    return { at, shape, amp: pause ? 0.12 : (shape === 'neutral' ? 0.0 : 0.55 + (SPOKEN_VOWEL.test(source[i]) ? 0.3 : 0.12)) };
   });
 }
 
