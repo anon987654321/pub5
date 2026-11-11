@@ -588,6 +588,13 @@ end
       assert_equal "failed", rows.fetch("missed.rb").fetch(:disposition)
       assert_equal "decoder failed", rows.fetch("missed.rb").fetch(:reason)
       assert_equal "scanner_observation_only", report.fetch(:scope)
+
+      empty = runner.send(
+        :assessment_file_coverage,
+        { files: [], path_states: {}, findings: {}, unclassified_findings: [] },
+        3,
+      )
+      assert_equal "not_measured", empty.fetch(:status)
     end
   end
 

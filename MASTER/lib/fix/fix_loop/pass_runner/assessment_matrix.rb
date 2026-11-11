@@ -431,9 +431,9 @@ module Master
 
           def assessment_file_coverage_summary
             report = @assessment_file_coverage
-            return { status: "not_measured", expected: 0, scanned: 0, unmeasured: 0 } unless report
+            return { status: "not_measured", scope: "scanner_observation_only", expected: 0, scanned: 0, unmeasured: 0 } unless report
 
-            report.slice(:status, :pass, :expected, :scanned, :unmeasured)
+            report.slice(:status, :scope, :pass, :expected, :scanned, :unmeasured)
           end
 
           def surface_coverage_summary
