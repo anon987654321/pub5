@@ -367,6 +367,12 @@ class TestReplicateClientRetry < Minitest::Test
     assert_raises(ArgumentError) do
       client.download_url("https://replicate.delivery/audio.wav", "/tmp/not-written.wav", max_bytes: 0)
     end
+    assert_raises(ArgumentError) do
+      client.download_url(
+        "https://replicate.delivery/audio.wav", "/tmp/not-written.wav",
+        max_bytes: Client::MAX_DOWNLOAD_BYTES + 1
+      )
+    end
   end
 
   def test_download_rejects_a_declared_oversize_response_before_streaming
@@ -405,6 +411,45 @@ class TestReplicateClientRetry < Minitest::Test
       assert_includes captured, "Content-Type: application/zip"
       assert_includes captured, "archive bytes"
       assert_includes captured, 'filename="photos.zip"'
+    end
+  end
+
+  def test_upload_refuses_symlink_sources_before_sending_credentials
+    Dir.mktmpdir do |directory|
+      source = File.join(directory, "archive.zip")
+      link = File.join(directory, "linked.zip")
+      File.binwrite(source, "archive")
+      File.symlink(source, link)
+      requests = []
+
+      error = assert_raises(ArgumentError) do
+        Client.new(token: "r8_test").upload_zip(link)
+      end
+
+      assert_match(/regular non-symlink file/, error.message)
+      assert_empty requests
+    end
+  end
+
+  def test_streamed_upload_rewinds_the_body_for_an_explicit_throttle_retry
+    Dir.mktmpdir do |directory|
+      source = File.join(directory, "archive.zip")
+      File.binwrite(source, "archive bytes")
+      requests = []
+      throttled = Struct.new(:code, :body).new("429", '{"detail":"Request was throttled; resets in ~1s."}')
+      accepted = StreamingResponse.new(
+        chunks: ['{"urls":{"get":"https://replicate.delivery/files/archive.zip"}}']
+      )
+      client = Client.new(token: "r8_test")
+      client.define_singleton_method(:sleep) { |_seconds| }
+
+      with_http_responses([throttled, accepted], requests) do
+        client.upload_zip(source)
+      end
+
+      assert_equal 2, requests.length
+      bodies = requests.map { |request| request.instance_variable_get(:@captured_body) }
+      assert_equal bodies.first, bodies.last
     end
   end
 
