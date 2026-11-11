@@ -11,9 +11,9 @@ module Master
     # the reasons were in the log one line at a time and never added up.
     #
     # State is per run: RunBudget.begin_run clears it, because a long MASTER session runs /fix many
-    # times in one process, and a file rejected twice in one run was excluded from every later one.
+    # times in one process, and a file rejected three times in one run is excluded from later attempts.
     module RunLedger
-      MAX_REJECTS_PER_FILE = 2
+      MAX_REJECTS_PER_FILE = 3
       LANE_FAILURES_BEFORE_DROP = 2
 
       @mutex = Mutex.new
@@ -79,7 +79,7 @@ module Master
 
         # A model call that produced nothing to judge: the model said UNCHANGED, sent an
         # empty reply, or sent a diff patch(1) refused. Counted apart from rejected
-        # proposals and never against the file's two-reject limit, but named in the log,
+        # proposals and never against the file's three-reject limit, but named in the log,
         # because "no_proposal" alone said none of this.
         def declined(key, file:, law: nil, detail: nil)
           @mutex.synchronize { @declined[key.to_s] += 1 }
@@ -199,8 +199,8 @@ module Master
         end
         private :file_entry, :add_law
 
-        # A file stops after two rejects: a third proposal costs a lane call and
-        # has landed none of the first two.
+        # A file stops after three rejects; the adapter allows at most three
+        # total attempts per finding, and this ceiling also bounds repeated findings.
         def file_done?(file) = rejects_for(file) >= MAX_REJECTS_PER_FILE
 
         def timeout(file, seconds)
