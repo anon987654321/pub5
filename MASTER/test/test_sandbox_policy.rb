@@ -29,8 +29,34 @@ class TestSandboxPolicy < Minitest::Test
   end
 
   def test_allows_read_only_and_test_commands
-    ["git status", "git diff", "bundle exec rubocop", "rg pattern lib/"].each do |cmd|
+    [
+      "git status", "git diff", "bundle exec rubocop", "rg pattern lib/",
+      "bundle exec rake test",
+      "rake -f MASTER/Rakefile test",
+      "rake -f MASTER/Rakefile audit",
+      "rake -f MASTER/Rakefile ux:baymard",
+      "rake -f STUDIO/Rakefile check",
+      "ruby RAILS/test/run_all.rb",
+      "ruby OPENBSD/test/run_all.rb",
+      "ruby MASTER/checks/runner.rb --all",
+      "MASTER/bin/check --profile=agent",
+    ].each do |cmd|
       assert POLICY.decide(cmd).allow?, "expected allow for #{cmd.inspect}"
+    end
+  end
+
+  def test_unattended_check_allowlist_does_not_widen_publication_or_deploy
+    [
+      "rake deploy",
+      "rake -f MASTER/Rakefile release",
+      "MASTER/bin/check --profile=full",
+      "git push origin main",
+      "bundle exec rails db:migrate",
+      "rake clean",
+    ].each do |cmd|
+      decision = POLICY.decide(cmd)
+      assert decision.ask?, "expected approval or refusal for #{cmd.inspect}"
+      refute decision.allow?, "must not silently allow #{cmd.inspect}"
     end
   end
 
