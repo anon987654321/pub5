@@ -478,6 +478,12 @@ module Master
             flags = File::RDWR | File::CREAT
             flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
             File.open(lock_path, flags, 0o600) do |lock|
+              current_directory = File.lstat(directory)
+              unless current_directory.directory? && !current_directory.symlink? &&
+                     current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+                     verified_atomic_directory(directory) == directory
+                raise IOError, "memory store directory changed while opening its lock"
+              end
               opened = lock.stat
               current = File.lstat(lock_path)
               unless opened.file? && opened.nlink == 1 && current.file? && !current.symlink? &&
@@ -489,9 +495,13 @@ module Master
 
               begin
                 current = File.lstat(lock_path)
+                current_directory = File.lstat(directory)
                 unless current.file? && !current.symlink? && current.nlink == 1 &&
-                       current.dev == opened.dev && current.ino == opened.ino
-                  raise IOError, "memory store lock path changed while waiting"
+                       current.dev == opened.dev && current.ino == opened.ino &&
+                       current_directory.directory? && !current_directory.symlink? &&
+                       current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+                       verified_atomic_directory(directory) == directory
+                  raise IOError, "memory store lock or parent changed while waiting"
                 end
                 merge_external_store!
                 yield
