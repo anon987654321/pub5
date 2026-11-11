@@ -5,7 +5,7 @@
 
 // ============================================================ module: brgen_core_shell
 
-$brgen-logo-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+$brgen-logo-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
 // ============================================================ base
 
@@ -483,7 +483,7 @@ a:hover { text-decoration: underline; }
   }
 }
 
-/* Wordmark is lowercase "brgen" (MASTER .top-left-logo) — pure type only. */
+/* City wordmark: Helvetica Bold remains the identity; particles are a brief secondary resolution layer. */
 .brand-text {
   text-transform: none;
   letter-spacing: var(--tracking-tightest);
@@ -543,6 +543,60 @@ a.brgen-logo-mark,
   outline: none !important;
   /* autofix: removed box-shadow (flat UI) */
   background: transparent !important;
+}
+
+/* The particle pass is clipped to the live tenant letters. The crisp wordmark
+   remains underneath it as the permanent identity and the accessible name. */
+.brgen-logo-mark .brand-text,
+.storefront-bol-brand .brand-text {
+  position: relative;
+  display: inline-block;
+}
+
+@keyframes brgen-tenant-wordmark-resolve {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.16em;
+    background-position: 5px -3px;
+    transform: translate3d(1px, -1px, 0);
+  }
+  46% {
+    opacity: 0.62;
+    letter-spacing: 0;
+    background-position: 1px 1px;
+    transform: translate3d(-0.25px, 0.25px, 0);
+  }
+  100% {
+    opacity: 0.46;
+    letter-spacing: inherit;
+    background-position: 0 0;
+    transform: none;
+  }
+}
+
+.brgen-logo-mark .brand-text__particles,
+.storefront-bol-brand .brand-text__particles {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: visible;
+  color: currentColor;
+  white-space: nowrap;
+  pointer-events: none;
+  background-image: radial-gradient(circle, currentColor 0.85px, transparent 1px);
+  background-size: 3px 3px;
+  background-position: 0 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: brgen-tenant-wordmark-resolve 820ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brgen-logo-mark .brand-text__particles,
+  .storefront-bol-brand .brand-text__particles {
+    animation: none;
+  }
 }
 
 /* :focus-visible is deliberately NOT in this list: `a.brgen-logo-mark:focus-visible`
