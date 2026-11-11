@@ -184,8 +184,13 @@ module Master
       end
 
       def rank_pool(ids, latency:, lead:, cfg:)
-        listed = (Array(lead) + catalogue(cfg:)).uniq
-        ids.each_with_index.sort_by { |id, index| [class_rank(id), subscription_rank(id, listed), free_latency(id, latency), index] }.map(&:first)
+        preferred = Array(lead).map(&:to_s).reject(&:empty?).uniq
+        preferred_rank = preferred.each_with_index.to_h
+        listed = (preferred + catalogue(cfg:)).uniq
+        ids.each_with_index.sort_by do |id, index|
+          within_class = preferred_rank.fetch(id, preferred.length + subscription_rank(id, listed))
+          [class_rank(id), within_class, free_latency(id, latency), index]
+        end.map(&:first)
       end
 
       def subscription_lanes = Array(config.fetch("subscription_lanes"))
