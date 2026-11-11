@@ -23,7 +23,16 @@
   ></canvas>
 
   <header class="radio-header">
-    <h1 data-radio-tunnel-target="heading"><%= t("radio.name") %></h1>
+    <h1 data-radio-tunnel-target="heading">
+      <svg class="radio-brand-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="4" width="40" height="40" rx="8" opacity=".32"/>
+          <rect x="10" y="10" width="28" height="28" rx="5" opacity=".58"/>
+          <path d="M6 24h6l4-7 8 14 8-14 4 7h6"/>
+        </g>
+      </svg>
+      <span><%= t("radio.name") %></span>
+    </h1>
   </header>
 
   <% unless local_assigns.fetch(:minimal, false) %>
