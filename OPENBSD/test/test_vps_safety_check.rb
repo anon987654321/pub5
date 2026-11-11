@@ -94,12 +94,36 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_mrdamascy_production_service_must_use_falcon
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("exec ${_bundle} exec falcon serve", "exec ${_bundle} exec puma")
+      text = File.read(path).sub("falcon serve -n 1", "puma")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy production service must use Falcon"
+      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
+    end
+  end
+
+  def test_mrdamascy_falcon_must_bind_loopback_only
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub("http://127.0.0.1:${PORT}", "http://0.0.0.0:${PORT}")
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
+    end
+  end
+
+  def test_mrdamascy_falcon_worker_count_is_fixed_to_one
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub("falcon serve -n 1", "falcon serve -n 2")
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
     end
   end
 
