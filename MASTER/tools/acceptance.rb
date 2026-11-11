@@ -45,7 +45,23 @@ module Acceptance
   # One spawn seam each, so the tests can answer for the subprocesses; the
   # live anchor runs them for real.
   def spawn_tool(script, args) = Open3.capture3(RbConfig.ruby, script, *args)
-  def spawn_app(dir) = Open3.capture3(*app_rails(dir), "test", "test/account_round_trip_test.rb", chdir: dir)
+
+  # The app's bundler decision belongs to the app. A run under MASTER's own
+  # bundle exec leaks BUNDLE_GEMFILE, RUBYOPT, RUBYLIB (pinned at the caller's
+  # bundler), the GEM_* homes and the BUNDLER_ORIG_* restore handles into the
+  # child, and the app's config/boot.rb keeps what it finds
+  # (`ENV["BUNDLE_GEMFILE"] ||=`), so the app boots MASTER's bundle and dies
+  # on its first gem. Strip the caller's bundler environment wholesale and pin
+  # the app's Gemfile as the one decision left.
+  def spawn_app(dir)
+    # An absent key inherits from this process; only a nil value deletes it.
+    env = ENV.to_h
+    (env.keys.grep(/\ABUNDLE_|BUNDLER_/) + %w[GEM_HOME GEM_PATH RUBYOPT RUBYLIB]).each do |key|
+      env[key] = nil
+    end
+    env["BUNDLE_GEMFILE"] = File.join(dir, "Gemfile")
+    Open3.capture3(env, *app_rails(dir), "test", "test/account_round_trip_test.rb", chdir: dir)
+  end
   def spawn_route(*args) = Open3.capture3(RbConfig.ruby, File.join(TOOLS, "rails", "route_contracts.rb"), *args)
 
   # Each checkable instrument answers pass or fail; the detail is the
