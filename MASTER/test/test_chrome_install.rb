@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "tmpdir"
+require "fileutils"
 require_relative "../tools/chrome_install"
 require_relative "../checks/support/chrome_process"
 
