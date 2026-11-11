@@ -225,6 +225,7 @@
         uniform float uAttract;
         uniform float uEntropy;
         uniform float uMotionScale;
+        uniform float uBreathScale;
         uniform float uDepthReferenceDistance;
         uniform float uDepthScaleMin;
         uniform float uDepthScaleMax;

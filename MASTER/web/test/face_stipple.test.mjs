@@ -36,6 +36,7 @@ test("shared face budgets classify coarse pointers and declared reduced motion",
 
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
+  assert.match(system, /uniform float uBreathScale;/);
   assert.match(system, /float breath = 1\.0 \+ uBreathScale \* 0\.05 \* sin\(uTime \* 0\.5712\)/);
   assert.match(system, /u\.uBreathScale\.value = reducedMotionEnabled\(state\) \? 0 : 1;/);
   assert.match(system, /u\.uMotionScale\.value = motion;/);
