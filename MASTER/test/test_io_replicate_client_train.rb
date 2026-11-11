@@ -182,16 +182,85 @@ class TestReplicateClientRetry < Minitest::Test
       File.write(path, "REPLICATE_API_TOKEN=secret\n")
       File.chmod(0o600, path)
       assert Client.private_token_file?(path)
+      assert_equal "REPLICATE_API_TOKEN=secret\n", Client.read_private_token_file(path)
 
       File.chmod(0o640, path)
       refute Client.private_token_file?(path)
+      assert_nil Client.read_private_token_file(path)
 
       File.chmod(0o600, path)
+      linked = File.join(directory, "hardlink")
+      File.link(path, linked)
+      refute Client.private_token_file?(path)
+      assert_nil Client.read_private_token_file(path)
+      File.unlink(linked)
+
       target = File.join(directory, "secret")
       File.rename(path, target)
       File.symlink(target, path)
       refute Client.private_token_file?(path)
+      assert_nil Client.read_private_token_file(path)
     end
+  end
+
+  def test_replicate_token_file_read_refuses_oversized_input
+    Dir.mktmpdir do |directory|
+      path = File.join(directory, "env")
+      File.binwrite(path, "x" * (Client::MAX_TOKEN_FILE_BYTES + 1))
+      File.chmod(0o600, path)
+
+      refute Client.private_token_file?(path)
+      assert_nil Client.read_private_token_file(path)
+    end
+  end
+
+  def test_provider_error_messages_keep_a_digest_but_not_the_response_body
+    client = Client.new(token: "r8_test")
+    body = '{"detail":"private upstream credential: token-do-not-log"}'
+    response = Struct.new(:code, :body).new("500", body)
+    requests = []
+
+    error = with_http_responses([response], requests) do
+      assert_raises(Client::TransientError) { client.create_model("owner/lora") }
+    end
+
+    refute_includes error.message, "private upstream credential"
+    refute_includes error.message, "token-do-not-log"
+    assert_includes error.message, "response_bytes=#{body.bytesize}"
+    assert_includes error.message, Digest::SHA256.hexdigest(body)
+    assert_equal 1, requests.length
+  end
+
+  def test_prediction_failure_redacts_provider_error_text
+    client = Client.new(token: "r8_test")
+    private_error = "upstream private prompt and credential"
+    client.define_singleton_method(:get) do |_uri|
+      { "status" => "failed", "error" => private_error }
+    end
+
+    error = assert_raises(RuntimeError) { client.send(:wait_for, "prediction-1", timeout: 30) }
+
+    refute_includes error.message, private_error
+    assert_includes error.message, Digest::SHA256.hexdigest(private_error)
+    assert_match(/provider error redacted/, error.message)
+  end
+
+  def test_retry_backoff_uses_equal_jitter_below_the_shared_exponential_cap
+    client = Client.new(token: "r8_test")
+    client.define_singleton_method(:rand) { 0.5 }
+    waits = []
+    client.define_singleton_method(:sleep) { |seconds| waits << seconds }
+    requests = []
+    failed = Struct.new(:code, :body).new("500", '{"detail":"temporary"}')
+    accepted = Struct.new(:code, :body).new("200", '{"results":[{"name":"lora"}]}')
+
+    result = with_http_responses([failed, failed, accepted], requests) do
+      client.models(limit: 1)
+    end
+
+    assert_equal [{ "name" => "lora" }], result
+    assert_equal [0.75, 1.5], waits
+    assert_equal 3, requests.length
   end
 
   def test_get_keeps_retrying_a_transient_server_error

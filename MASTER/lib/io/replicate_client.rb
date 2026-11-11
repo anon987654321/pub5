@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "json"
 require "net/http"
 require "uri"
@@ -140,6 +141,7 @@ module Master
       ExhaustedError = Class.new(StandardError)
 
       CONFIG_PATH = File.expand_path("~/.config/replicate/config.json").freeze
+      MAX_TOKEN_FILE_BYTES = 256 * 1024
       BASE = "https://api.replicate.com/v1"
       API_HOST = "api.replicate.com"
       OPEN_TIMEOUT_SECONDS = 10
@@ -164,8 +166,9 @@ module Master
         token = ENV["REPLICATE_API_KEY"].to_s.strip
         return token unless token.empty?
 
-        if private_token_file?(CONFIG_PATH)
-          return JSON.parse(File.read(CONFIG_PATH))["api_token"].to_s.strip
+        if (contents = read_private_token_file(CONFIG_PATH))
+          config = JSON.parse(contents)
+          return config.is_a?(Hash) ? config["api_token"].to_s.strip : ""
         end
 
         token_from_env_file
@@ -173,21 +176,60 @@ module Master
         ""
       end
 
+      # Validate the path and its opened descriptor before, during and after
+      # reading. The path-only permission check is useful for inspection, but
+      # must never be the authorization for a later File.read.
       def self.private_token_file?(path)
-        file = File.lstat(path)
-        directory = File.lstat(File.dirname(path))
-        file.file? && !file.symlink? && file.nlink == 1 && file.uid == Process.uid &&
-          (file.mode & 0o077).zero? && directory.directory? && !directory.symlink? &&
-          directory.uid == Process.uid && (directory.mode & 0o022).zero?
+        full = File.expand_path(path)
+        private_token_stats?(File.lstat(full), File.lstat(File.dirname(full)))
       rescue SystemCallError
         false
       end
 
+      def self.read_private_token_file(path)
+        full = File.expand_path(path)
+        directory_path = File.dirname(full)
+        before_directory = File.lstat(directory_path)
+        before_file = File.lstat(full)
+        return unless private_token_stats?(before_file, before_directory)
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(full, flags) do |file|
+          opened_file = file.stat
+          current_file = File.lstat(full)
+          current_directory = File.lstat(directory_path)
+          return unless private_token_stats?(opened_file, current_directory) &&
+                        private_token_stats?(current_file, current_directory)
+          return unless same_file?(opened_file, before_file) &&
+                        same_file?(opened_file, current_file) &&
+                        same_file?(before_directory, current_directory)
+
+          file.binmode
+          contents = file.read(MAX_TOKEN_FILE_BYTES + 1)
+          return if contents.bytesize > MAX_TOKEN_FILE_BYTES
+
+          final_file = File.lstat(full)
+          final_opened_file = file.stat
+          final_directory = File.lstat(directory_path)
+          return unless private_token_stats?(final_opened_file, final_directory) &&
+                        private_token_stats?(final_file, final_directory)
+          return unless same_file?(opened_file, final_opened_file) &&
+                        same_file?(final_opened_file, final_file) &&
+                        same_file?(before_directory, final_directory)
+
+          contents
+        end
+      rescue SystemCallError, IOError
+        nil
+      end
+
       def self.token_from_env_file
         path = File.expand_path("~/.config/master/env")
-        return "" unless private_token_file?(path)
+        contents = read_private_token_file(path)
+        return "" unless contents
 
-        File.foreach(path) do |line|
+        contents.each_line do |line|
           key, value = line.strip.sub(/\Aexport\s+/, "").split("=", 2)
           if %w[REPLICATE_API_TOKEN REPLICATE_API_KEY].include?(key) && !value.to_s.empty?
             return value.to_s.delete(%("'))
@@ -197,6 +239,18 @@ module Master
       rescue StandardError
         ""
       end
+
+      def self.private_token_stats?(file, directory)
+        file.file? && !file.symlink? && file.nlink == 1 &&
+          file.size <= MAX_TOKEN_FILE_BYTES && file.uid == Process.uid &&
+          (file.mode & 0o077).zero? && directory.directory? && !directory.symlink? &&
+          directory.uid == Process.uid && (directory.mode & 0o022).zero?
+      end
+
+      def self.same_file?(left, right)
+        left.dev == right.dev && left.ino == right.ino
+      end
+      private_class_method :private_token_stats?, :same_file?
 
       # owner/name:version pins a version; a bare owner/name takes the latest. A
       # trained LoRA gains a version per training, and frames meant to compare
@@ -374,7 +428,7 @@ module Master
           raise unless retryable
 
           last_error = e.message
-          sleep(Master::Ground::FailureTaxonomy.backoff_seconds(attempt)) if attempt < attempts - 1
+          sleep(retry_delay(attempt)) if attempt < attempts - 1
         end
         raise last_error
       end
@@ -390,8 +444,11 @@ module Master
         code = res.code.to_i
         return JSON.parse(res.body) if code.between?(200, 299)
 
-        message = "Replicate API #{code}: #{res.body}"
-        raise ExhaustedError, message if exhausted?(code, res.body)
+        detail = response_detail(res.body)
+        message = "Replicate API #{code}: response rejected (#{detail})"
+        if exhausted?(code, res.body)
+          raise ExhaustedError, "Replicate API #{code}: insufficient credit or quota (#{detail})"
+        end
         raise TransientError, message if TRANSIENT_STATUS.include?(code)
 
         raise message
@@ -424,7 +481,7 @@ module Master
           pred = get(URI("#{BASE}/predictions/#{id}"))
           case pred["status"]
           when "succeeded" then return pred["output"]
-          when "failed" then raise "prediction failed: #{pred['error']}"
+          when "failed" then raise "prediction failed (#{redacted_provider_error(pred["error"])})"
           when "canceled" then raise "prediction canceled"
           end
           if Time.now - start > timeout
@@ -441,7 +498,7 @@ module Master
           training = get(URI("#{BASE}/trainings/#{id}"))
           case training["status"]
           when "succeeded" then return training
-          when "failed" then raise "training failed: #{training['error']}"
+          when "failed" then raise "training failed (#{redacted_provider_error(training["error"])})"
           when "canceled" then raise "training canceled"
           end
           if Time.now - start > timeout
@@ -450,6 +507,22 @@ module Master
           end
           sleep 5
         end
+      end
+
+      def retry_delay(attempt)
+        base = Master::Ground::FailureTaxonomy.backoff_seconds(attempt).to_f
+        # Equal jitter avoids synchronized clients while retaining the shared
+        # taxonomy's exponential ceiling and a non-zero minimum delay.
+        (base / 2.0) + (rand * base / 2.0)
+      end
+
+      def response_detail(body)
+        bytes = body.to_s.b
+        "response_bytes=#{bytes.bytesize} response_sha256=#{Digest::SHA256.hexdigest(bytes)}"
+      end
+
+      def redacted_provider_error(value)
+        "provider error redacted (#{response_detail(value)})"
       end
     end
   end

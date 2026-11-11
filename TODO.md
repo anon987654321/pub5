@@ -342,14 +342,18 @@ measure is already owned by the Bymorgen item above.
   pinned Ruby 4.0.5 run has reported exact member drift. Continue with the
   genuinely open R3/R8–R13/R16–R17/H2–H8 findings. The LLMDispatcher
   Replicate chat poll is source-fixed for URL trust, bearer-token confinement
-  and network deadlines. STUDIO ReplicateClient now validates model, version,
-  training and prediction identifiers before URL interpolation and rejects
-  dot-segment or escaped API paths. Six focused path regressions are added
-  but NOT_RUN. The current transport also caps streamed API JSON responses
-  at 16 MiB, caps uploads/downloads at 4 GiB, applies explicit connect/read/
-  write timeouts, preserves existing downloads on partial failure, and uses
-  monotonic prediction/training deadlines. Seven additional transfer/deadline
-  regressions now cover allowlisted downloads, byte-cap failure cleanup,
+  and network deadlines. MASTER's ReplicateClient now reads private token
+  files through a verified descriptor with a 256 KiB cap, fingerprints
+  provider error bodies instead of exposing their text, and applies equal
+  jitter beneath the shared exponential retry ceiling. Its five focused
+  regressions are authored but NOT_RUN. STUDIO ReplicateClient validates
+  model, version, training and prediction identifiers before URL interpolation
+  and rejects dot-segment or escaped API paths. Six focused path regressions
+  are added but NOT_RUN. The STUDIO transport also caps streamed API JSON
+  responses at 16 MiB, caps uploads/downloads at 4 GiB, applies explicit
+  connect/read/write timeouts, preserves existing downloads on partial
+  failure, and uses monotonic prediction/training deadlines. Seven additional
+  transfer/deadline regressions cover allowlisted downloads, byte-cap failure cleanup,
   response caps, invalid deadlines and upload source validation; these are
   source additions, not executed proof. Live provider/upload integration
   remains open. R8 also has a definite commit-refusal rollback regression;
