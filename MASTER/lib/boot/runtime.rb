@@ -175,10 +175,34 @@ module Master
     # is optional. Refusing those for want of a key sent a keyless laptop
     # with Ollama running to "no key".
     KEYLESS_LANE_PREFIXES =
-      %w[ollama: ollama/ local: claude-cli: codex-cli: grok-cli: agy: llm7: web-chat: gateway:].freeze
+      %w[ollama: ollama/ local: claude-cli: codex-cli: grok-cli: agy: web-chat: gateway:].freeze
 
     def llm_reachable?(model = nil)
-      [model, ENV["MASTER_MODEL"]].any? { |id| id.to_s.start_with?(*KEYLESS_LANE_PREFIXES) } || any_api_key_present?
+      ids = [model, ENV["MASTER_MODEL"]].map { |id| id.to_s.strip }.reject(&:empty?)
+      return true if ids.any? { |id| id.start_with?(*KEYLESS_LANE_PREFIXES) }
+
+      hosted = ids.lazy.map { |id| hosted_lane_reachable?(id) }.find { |verdict| !verdict.nil? }
+      return hosted unless hosted.nil?
+
+      any_api_key_present?
+    end
+
+    # Hosted providers are declared in models.yml, so reachability must follow
+    # their live keyless catalogue instead of hard-coding just the first vendor.
+    # nil means this is not a configured hosted lane; false is a known dead lane.
+    def hosted_lane_reachable?(model, root: ROOT)
+      require_relative "../cli/routing/model_router"
+      resolver = Master::CLI::Routing::ModelRouter.hosted_resolver(root:)
+      return unless resolver.hosted_model?(model)
+
+      endpoint = resolver.hosted_endpoint_for(model)
+      return false unless endpoint
+      return true unless endpoint[:key].nil?
+
+      free_only? || keyless_llm_enabled?
+    rescue StandardError => e
+      Master::Ground::Swallow.log(e, context: "runtime.hosted_lane_reachable", model:)
+      false
     end
 
     def context_window(model = nil, root: ROOT)
