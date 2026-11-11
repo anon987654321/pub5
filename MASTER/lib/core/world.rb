@@ -201,6 +201,7 @@ module Master::Core
       checked = within(path)
       raise "path changed before write: #{path}" unless checked == abs
 
+      validate_write_destination!(abs)
       @undo&.snapshot(abs)
       write_atomic(abs, content)
       Observation.ok("wrote #{path} (#{content.bytesize}b)")
@@ -473,13 +474,7 @@ module Master::Core
 
       directory_stat = File.stat(real_directory)
       destination = File.join(real_directory, File.basename(abs))
-      original = if File.exist?(destination) || File.symlink?(destination)
-                   stat = File.lstat(destination)
-                   unless stat.file? && !stat.symlink? && stat.nlink == 1
-                     raise IOError, "write destination must be a singly linked regular file"
-                   end
-                   stat
-                 end
+      original = validate_write_destination!(destination)
       tmp = File.join(real_directory, ".#{File.basename(abs)}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}")
       File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o666) do |file|
         file.binmode
@@ -510,8 +505,29 @@ module Master::Core
       File.rename(tmp, destination)
       fsync_directory(real_directory) unless RUBY_PLATFORM.match?(/win32|mingw/)
     rescue StandardError
-      File.delete(tmp) if tmp && File.exist?(tmp)
+      if tmp && File.exist?(tmp) && real_directory && directory_stat
+        begin
+          current_real_directory = File.realpath(directory)
+          current_directory = File.stat(current_real_directory)
+          if current_real_directory == real_directory &&
+             current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
+            File.delete(tmp)
+          end
+        rescue SystemCallError
+          # A moved/replaced parent is not safe to clean up through its old path.
+        end
+      end
       raise
+    end
+
+    def validate_write_destination!(path)
+      return unless File.exist?(path) || File.symlink?(path)
+
+      stat = File.lstat(path)
+      unless stat.file? && !stat.symlink? && stat.nlink == 1
+        raise IOError, "write destination must be a singly linked regular file"
+      end
+      stat
     end
 
     # File fsync makes the bytes durable; the parent fsync makes the rename
