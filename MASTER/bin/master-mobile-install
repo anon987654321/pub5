@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Installs MASTER on a phone running Termux, from nothing.
-# This is POSIX sh because it runs before Ruby exists.
+# Provision and launch MASTER in Ubuntu under Termux PRoot-Distro.
+# POSIX sh: this entrypoint runs before the guest Ruby exists.
 set -eu
 
 repo="${MASTER_REPO_URL:-https://github.com/anon987654321/pub5.git}"
@@ -8,124 +8,129 @@ dir="${MASTER_INSTALL_DIR:-$HOME/pub5}"
 branch="${MASTER_BRANCH:-main}"
 expected_repo="https://github.com/anon987654321/pub5.git"
 demo=0
-runtime=native
+launch=1
 
 fail() { printf 'mobile0: BLOCKED: %s\n' "$*" >&2; exit 1; }
 usage() {
   printf '%s\n' \
-    "usage: master-mobile-install [--demo] [--proot]" \
-    "  default    install with native Termux Ruby" \
-    "  --proot    install the pinned Ruby in a Debian PRoot-Distro guest" \
-    "  --demo     print the selected plan without changing the device"
+    "usage: master-mobile-install [--ubuntu] [--demo] [--no-launch] [-- ARGS...]" \
+    "  --ubuntu     install or reuse the Ubuntu PRoot-Distro guest (default)" \
+    "  --demo       print the plan without changing the device" \
+    "  --no-launch  provision Ubuntu but leave the CLI stopped" \
+    "  --proot      compatibility alias for --ubuntu"
 }
 
-for arg in "$@"; do
-  case "$arg" in
-    --demo) demo=1 ;;
-    --proot) runtime=proot ;;
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --demo) demo=1; shift ;;
+    --ubuntu|--proot) shift ;;
+    --launch) launch=1; shift ;;
+    --no-launch) launch=0; shift ;;
+    --) shift; break ;;
     -h|--help) usage; exit 0 ;;
-    *) fail "unknown argument: $arg (use --help)" ;;
+    *) fail "unknown argument: $1 (use --help)" ;;
   esac
 done
 
-# --demo is deliberately portable and read-only; it never calls pkg, git,
-# proot-distro, gem, Ruby or a package manager.
+# --demo is portable and read-only: no package manager, Git, Ruby or PRoot call.
 if [ "$demo" -eq 1 ]; then
   printf 'mobile0: DEMO only; no commands run, packages installed, files written, or Git state changed\n'
   printf 'mobile0: repository %s\n' "$repo"
   printf 'mobile0: install directory %s\n' "$dir"
   printf 'mobile0: branch %s\n' "$branch"
-  if [ "$repo" != "$expected_repo" ]; then
+  [ "$repo" = "$expected_repo" ] || {
     printf 'mobile0: would BLOCK: only the canonical HTTPS repository is allowed\n'
     exit 2
-  fi
+  }
   [ -n "$branch" ] || { printf 'mobile0: would BLOCK: MASTER_BRANCH must not be empty\n'; exit 2; }
   case "$dir" in "$HOME"/*) ;; *) printf 'mobile0: would BLOCK: install directory must be below Termux HOME\n'; exit 2 ;; esac
   [ "$dir" != "$HOME" ] || { printf 'mobile0: would BLOCK: install directory cannot be HOME itself\n'; exit 2; }
   [ ! -L "$dir" ] || { printf 'mobile0: would BLOCK: install directory must not be a symbolic link\n'; exit 2; }
-  if [ "$runtime" = proot ]; then
-    printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and a private HOME path (not checked in demo)\n'
-    printf 'mobile0: plan 2/5 - update Termux packages; install git, curl and proot-distro\n'
-    printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; install Debian only when no Debian guest exists\n'
-    printf 'mobile0: plan 4/5 - bind the checkout at /pub5, install Linux build libraries and build the exact .ruby-version under /opt/rubies\n'
-    printf 'mobile0: plan 5/5 - install/check the locked bundle and prove the normal MASTER CLI boot inside Debian\n'
-  else
-    printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and a private HOME path (not checked in demo)\n'
-    printf 'mobile0: plan 2/5 - update Termux packages; install Ruby, build tools, SQLite, libffi, libyaml, OpenSSL and libvips\n'
-    if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
-      printf 'mobile0: would BLOCK: %s exists but is not a Git checkout\n' "$dir"
-      exit 2
-    elif [ -d "$dir/.git" ]; then
-      printf 'mobile0: plan 3/5 - verify canonical origin and clean checkout, then fast-forward %s\n' "$branch"
-    else
-      printf 'mobile0: plan 3/5 - shallow-clone canonical pub5 branch %s\n' "$branch"
-    fi
-    printf 'mobile0: plan 4/5 - install locked MASTER gem bundle and Falcon\n'
-    printf 'mobile0: plan 5/5 - prove bin/deps boot, run mobile doctor, then print the loopback-only face bridge command\n'
-  fi
   if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
     printf 'mobile0: would BLOCK: %s exists but is not a Git checkout\n' "$dir"
     exit 2
   fi
-  printf 'mobile0: DEMO complete; all device and repository checks remain unmeasured\n'
+  printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and private HOME path (not checked in demo)\n'
+  printf 'mobile0: plan 2/5 - install or verify git, curl and proot-distro on the Termux host\n'
+  printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; install Ubuntu only when no Ubuntu guest exists\n'
+  printf 'mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the exact .ruby-version under /opt/rubies\n'
+  printf 'mobile0: plan 5/5 - install/check the locked bundle, prove the CLI boot inside Ubuntu, and install the Termux launcher\n'
+  printf 'mobile0: DEMO complete; device, guest and repository checks remain unmeasured\n'
   exit 0
 fi
 
-command -v pkg >/dev/null 2>&1 || fail "Run this inside Termux, installed from a maintained source."
-[ "${PREFIX:-}" = "/data/data/com.termux/files/usr" ] || [ "${PREFIX:-}" = "/data/user/0/com.termux/files/usr" ] ||
-  fail "Unexpected Termux PREFIX; refusing to install into an unverified environment."
-[ "$(id -u)" != "0" ] || fail "Refusing to install as root."
-[ "$repo" = "$expected_repo" ] || fail "Only the canonical HTTPS repository is allowed: $expected_repo"
+command -v pkg >/dev/null 2>&1 || fail "run this inside Termux, installed from a maintained source."
+case "${PREFIX:-}" in
+  /data/data/com.termux/files/usr|/data/user/0/com.termux/files/usr) ;;
+  *) fail "unexpected Termux PREFIX; refusing to install into an unverified environment." ;;
+esac
+[ "$(id -u)" != "0" ] || fail "refusing to install as root."
+[ "$repo" = "$expected_repo" ] || fail "only the canonical HTTPS repository is allowed: $expected_repo"
 [ -n "$branch" ] || fail "MASTER_BRANCH must not be empty."
-case "$dir" in "$HOME"/*) ;; *) fail "Install directory must be below Termux HOME." ;; esac
-[ "$dir" != "$HOME" ] || fail "Install directory cannot be HOME itself."
-[ ! -L "$dir" ] || fail "Install directory must not be a symbolic link."
+case "$dir" in "$HOME"/*) ;; *) fail "install directory must be below Termux HOME." ;; esac
+[ "$dir" != "$HOME" ] || fail "install directory cannot be HOME itself."
+[ ! -L "$dir" ] || fail "install directory must not be a symbolic link."
 
 if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
   fail "$dir exists but is not a Git checkout; move it aside and retry."
 fi
 
+if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1 ||
+   ! command -v proot-distro >/dev/null 2>&1; then
+  printf 'mobile0: installing Termux host tools\n'
+  pkg update -y
+  pkg install -y git curl proot-distro
+fi
+command -v git >/dev/null 2>&1 || fail "git is still unavailable after pkg install."
+command -v proot-distro >/dev/null 2>&1 || fail "proot-distro is still unavailable after pkg install."
+
 if [ -d "$dir/.git" ]; then
   actual_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
-  [ "$actual_origin" = "$expected_repo" ] || fail "Existing checkout origin must be the canonical HTTPS URL (found ${actual_origin:-<none>})."
-fi
-
-printf 'mobile0: preflight PASS; updating Termux packages\n'
-pkg update -y
-if [ "$runtime" = proot ]; then
-  pkg install -y git curl proot-distro
-else
-  pkg install -y ruby git clang make libyaml openssl cmake pkg-config sqlite libffi libvips
-fi
-
-if [ -d "$dir/.git" ]; then
+  [ "$actual_origin" = "$expected_repo" ] || fail "existing checkout origin must be the canonical HTTPS URL (found ${actual_origin:-<none>})."
+  dirty="$(git -C "$dir" status --porcelain 2>/dev/null || true)"
+  [ -z "$dirty" ] || fail "checkout has local or untracked changes; refusing to pull or execute it."
+  current_branch="$(git -C "$dir" branch --show-current 2>/dev/null || true)"
+  [ "$current_branch" = "$branch" ] || fail "checkout branch is $current_branch; expected $branch."
+  printf 'mobile0: fast-forwarding the clean checkout to %s\n' "$branch"
   git -C "$dir" pull --ff-only origin "$branch"
 else
+  printf 'mobile0: cloning canonical pub5 branch %s\n' "$branch"
   git clone --depth 1 --branch "$branch" "$repo" "$dir"
 fi
 
-# Recheck the checkout after network operations before executing project code.
 actual_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
-[ "$actual_origin" = "$expected_repo" ] || fail "Checkout origin changed or is not canonical after clone/update."
-git -C "$dir" rev-parse --verify HEAD >/dev/null 2>&1 || fail "Checkout has no verifiable commit."
-git -C "$dir" diff --quiet && git -C "$dir" diff --cached --quiet || fail "Checkout has local modifications; refusing to execute it."
+[ "$actual_origin" = "$expected_repo" ] || fail "checkout origin changed or is not canonical after clone/update."
+git -C "$dir" rev-parse --verify HEAD >/dev/null 2>&1 || fail "checkout has no verifiable commit."
+dirty="$(git -C "$dir" status --porcelain 2>/dev/null || true)"
+[ -z "$dirty" ] || fail "checkout changed during update; refusing to execute it."
 
-if [ "$runtime" = proot ]; then
-  command -v proot-distro >/dev/null 2>&1 || fail "proot-distro was not installed; check the Termux package output and retry."
-  installed_distros="$(proot-distro list --quiet)" || fail "Could not inventory installed PRoot-Distro guests."
-  if ! printf '%s\n' "$installed_distros" | grep -Fxq debian; then
-    printf 'mobile0: installing Debian guest (an existing Debian guest is never reset)\n'
-    proot-distro install debian
-  else
-    printf 'mobile0: reusing existing Debian guest\n'
-  fi
+installed_distros="$(proot-distro list --quiet)" || fail "could not inventory installed PRoot-Distro guests."
+if ! printf '%s\n' "$installed_distros" | grep -Fxq ubuntu; then
+  printf 'mobile0: installing Ubuntu guest (existing guests are never reset)\n'
+  proot-distro install ubuntu
+else
+  printf 'mobile0: reusing existing Ubuntu guest\n'
+fi
 
-  printf 'mobile0: provisioning the Debian guest and building the pinned Ruby\n'
-  proot-distro login --bind "$dir:/pub5" debian -- bash -s <<'PRootSetup'
+guest_ready() {
+  proot-distro login --bind "$dir:/pub5" ubuntu -- bash -lc '
+    set -eu
+    version="$(cat /pub5/.ruby-version)"
+    [ -x "/opt/rubies/$version/bin/ruby" ]
+    grep -Fx "ubuntu $version" /etc/master-mobile-runtime >/dev/null
+  ' >/dev/null 2>&1
+}
+
+if guest_ready; then
+  printf 'mobile0: Ubuntu guest and pinned Ruby are ready\n'
+else
+  printf 'mobile0: provisioning Ubuntu and building the pinned Ruby\n'
+  proot-distro login --bind "$dir:/pub5" ubuntu -- bash -s <<'PRootSetup'
 set -eu
+export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+apt-get install -y --no-install-recommends \
   ca-certificates git curl build-essential autoconf bison pkg-config zsh \
   libssl-dev libreadline-dev zlib1g-dev libffi-dev libyaml-dev \
   libsqlite3-dev libvips-dev libxml2-dev libxslt1-dev \
@@ -168,27 +173,58 @@ installed_version="$("$ruby_home/bin/ruby" -e 'print RUBY_VERSION')"
 
 export PATH="$ruby_home/bin:/usr/local/bin:$PATH"
 cd /pub5/MASTER
-printf 'mobile0: installing the locked MASTER bundle in Debian\n'
+printf 'mobile0: installing the locked MASTER bundle in Ubuntu\n'
 ruby bin/deps install
-printf 'mobile0: checking the locked MASTER bundle in Debian\n'
+printf 'mobile0: checking the locked MASTER bundle in Ubuntu\n'
 ruby bin/deps check
-printf 'mobile0: proving the normal MASTER CLI boot path in Debian\n'
+printf 'mobile0: proving the normal MASTER CLI boot path in Ubuntu\n'
 ruby bin/deps boot
-printf 'mobile0: Debian guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n'
+printf 'ubuntu %s\n' "$ruby_version" > /etc/master-mobile-runtime
+chmod 644 /etc/master-mobile-runtime
+printf 'mobile0: Ubuntu guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n'
 PRootSetup
+fi
 
-  printf '%s\n' 'mobile0: Debian guest is ready. From Termux, enter it with:'
-  printf '%s\n' '  proot-distro login --bind "$HOME/pub5:/pub5" debian -- bash -lc '\''ruby_version="$(cat /pub5/.ruby-version)"; export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"; cd /pub5/MASTER; exec bin/master'\'''
-else
-  cd "$dir/MASTER"
-  printf 'mobile0: installing the locked MASTER Ruby bundle\n'
-  ruby bin/deps install
-  printf 'mobile0: checking the locked MASTER Ruby bundle\n'
-  ruby bin/deps check
-  gem install --no-document falcon
-  printf 'mobile0: proving the normal MASTER CLI boot path\n'
-  ruby bin/deps boot
-  printf 'mobile0: checking Termux device readiness\n'
-  ruby bin/master-mobile doctor
-  printf 'mobile0: install and readiness checks PASS. Run %s/MASTER/bin/master-mobile bridge, then open http://127.0.0.1:8765/face\n' "$dir"
+shell_quote() {
+  printf "'"
+  printf '%s' "$1" | sed "s/'/'\\''/g"
+}
+launcher="$HOME/.local/bin/master"
+mkdir -p "$HOME/.local/bin"
+quoted_dir="$(shell_quote "$dir")"
+{
+  printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash' 'set -eu'
+  printf 'ROOT=%s\n' "$quoted_dir"
+  cat <<'LauncherBody'
+command -v proot-distro >/dev/null 2>&1 || {
+  printf 'master0: proot-distro is unavailable; run the installer again.\n' >&2
+  exit 78
+}
+if ! proot-distro list --quiet | grep -Fxq ubuntu; then
+  exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu --launch -- "$@"
+fi
+if ! proot-distro login --bind "$ROOT:/pub5" ubuntu -- bash -lc '
+  set -eu
+  version="$(cat /pub5/.ruby-version)"
+  test -x "/opt/rubies/$version/bin/ruby"
+  grep -Fx "ubuntu $version" /etc/master-mobile-runtime >/dev/null
+' >/dev/null 2>&1; then
+  exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu --launch -- "$@"
+fi
+exec proot-distro login --bind "$ROOT:/pub5" ubuntu -- bash -lc '
+  set -eu
+  ruby_version="$(cat /pub5/.ruby-version)"
+  export PATH="/opt/rubies/$ruby_version/bin:/usr/local/bin:$PATH"
+  cd /pub5/MASTER
+  exec bin/master "$@"
+' master "$@"
+LauncherBody
+} > "$launcher"
+chmod 700 "$launcher"
+
+printf 'mobile0: Ubuntu guest is ready. The launcher is %s\n' "$launcher"
+printf 'mobile0: reload your shell or run %s/master\n' "$HOME/.local/bin"
+
+if [ "$launch" -eq 1 ]; then
+  exec "$launcher" "$@"
 fi

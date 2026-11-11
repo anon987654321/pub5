@@ -1,64 +1,32 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Install MASTER in Termux's private home, never shared Android storage.
+# Bootstrap the canonical Ubuntu installer from Termux's private home.
 set -eu
 
 fail() { printf 'master-install0: %s\n' "$*" >&2; exit 1; }
-command -v pkg >/dev/null 2>&1 || fail "Run this inside Termux, not Android's shell."
+command -v pkg >/dev/null 2>&1 || fail "run this inside Termux, not Android's shell."
+case "${PREFIX:-}" in
+  /data/data/com.termux/files/usr|/data/user/0/com.termux/files/usr) ;;
+  *) fail "unexpected Termux PREFIX; refusing to install." ;;
+esac
+[ "$(id -u)" != "0" ] || fail "refusing to install as root."
 
-pkg update
-command -v git >/dev/null 2>&1 || pkg install -y git
-
-ROOT="${HOME}/pub5"
+ROOT="${MASTER_INSTALL_DIR:-$HOME/pub5}"
 REPO="https://github.com/anon987654321/pub5.git"
+case "$ROOT" in "$HOME"/*) ;; *) fail "install path must be below Termux HOME." ;; esac
+[ ! -L "$ROOT" ] || fail "install path must not be a symbolic link."
 
-if [ -d "${ROOT}/.git" ]; then
+if ! command -v git >/dev/null 2>&1; then
+  pkg update -y
+  pkg install -y git
+fi
+
+if [ -d "$ROOT/.git" ]; then
   actual_origin="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
-  case "$actual_origin" in
-    "$REPO"|https://github.com/anon987654321/pub5|git@github.com:anon987654321/pub5.git|ssh://git@github.com/anon987654321/pub5.git) ;;
-    *) fail "Existing checkout origin does not match pub5; refusing to run its installer. Found: ${actual_origin:-<none>}" ;;
-  esac
-  [ -f "$ROOT/MASTER/bin/deps" ] || fail "Existing checkout has no MASTER/bin/deps; refusing to continue."
-  printf 'master-install0: using existing checkout %s (no automatic pull or overwrite)\n' "$ROOT"
+  [ "$actual_origin" = "$REPO" ] || fail "existing checkout origin does not match canonical pub5; found ${actual_origin:-<none>}."
+  [ -f "$ROOT/MASTER/bin/master-mobile-install" ] || fail "existing checkout has no canonical mobile installer."
 else
   [ ! -e "$ROOT" ] || fail "$ROOT exists but is not a Git checkout; move it aside and retry."
-  git clone "$REPO" "$ROOT"
+  git clone --depth 1 --branch main "$REPO" "$ROOT"
 fi
 
-cd "$ROOT/MASTER"
-pkg install -y ruby clang make cmake pkg-config sqlite openssl libffi termux-api
-
-ruby -rrubygems -e 'required = Gem::Requirement.new(">= 3.3.0", "< 4.1.0"); actual = Gem::Version.new(RUBY_VERSION); abort "MASTER requires #{required}; found #{actual}" unless required.satisfied_by?(actual)'
-printf 'master-install0: installing Ruby dependencies\n'
-ruby bin/deps install
-printf 'master-install0: checking dependency state\n'
-ruby bin/deps check
-
-# The Termux:API Android companion app and its permissions are separate from
-# the termux-api package installed by pkg.
-if command -v termux-media-player >/dev/null 2>&1; then
-  printf 'master-install0: Termux:API command found; verify the companion app and permissions on-device\n'
-else
-  printf 'master-install0: voice/media support needs the Termux:API app and Android permissions\n'
-fi
-
-mkdir -p "$HOME/.local/bin"
-cat > "$HOME/.local/bin/master" <<'LAUNCHER'
-#!/data/data/com.termux/files/usr/bin/bash
-# MASTER_TERMUX_LAUNCHER
-set -eu
-cd "$HOME/pub5/MASTER"
-exec ruby bin/master "$@"
-LAUNCHER
-chmod 700 "$HOME/.local/bin/master"
-
-# Earlier installer versions escaped the dollar signs, which wrote literal
-# $HOME/$PATH into .bashrc and could discard the inherited PATH. Remove only
-# that exact generated line before ensuring the correct export is present.
-ruby -e 'path = File.join(ENV.fetch("HOME"), ".bashrc"); if File.file?(path); malformed = %q{export PATH="\$HOME/.local/bin:\$PATH"}; lines = File.readlines(path); filtered = lines.reject { |line| line.chomp == malformed }; File.write(path, filtered.join) if filtered.length != lines.length; end'
-if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
-  printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.bashrc"
-fi
-
-printf 'master-install0: checking boot path\n'
-ruby bin/deps boot
-printf 'master-install0: installed; run: source ~/.bashrc && master\n'
+MASTER_INSTALL_DIR="$ROOT" exec sh "$ROOT/MASTER/bin/master-mobile-install" --ubuntu "$@"
