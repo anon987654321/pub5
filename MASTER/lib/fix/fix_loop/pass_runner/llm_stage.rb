@@ -160,20 +160,20 @@ module Master
             Array(threads).each do |thread|
               begin
                 thread.join
-              rescue StandardError
+              rescue Exception
                 nil
               end
             end
           end
 
-          # Ruby's Thread#join re-raises a failed worker. Capture that result
-          # per thread so one exception cannot skip the remaining joins.
+          # Ruby's Thread#join re-raises a failed worker. Capture even fatal
+          # worker exceptions, finish the whole join barrier, then re-raise.
           def join_rule_workers(threads)
             failure = nil
             threads.each do |thread|
               begin
                 thread.join
-              rescue StandardError => error
+              rescue Exception => error
                 failure ||= error
               end
             end
