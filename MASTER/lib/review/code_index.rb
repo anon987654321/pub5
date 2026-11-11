@@ -70,6 +70,7 @@ module Master
         @mtimes = {}
         @built_at = nil
         @errors = []
+        @partial = false
         @lock = Monitor.new
         @build_thread = nil
       end
@@ -77,6 +78,7 @@ module Master
       def build(path: nil)
         @lock.synchronize do
           target = path ? File.expand_path(path, @root) : @root
+          @partial = !path.nil?
           files = Dir.glob(File.join(target, "**", "*.rb")).reject { |f| f.include?("/vendor/") }
           @errors.clear
           restored = path.nil? && @built_at.nil? && restore_snapshot
@@ -85,7 +87,7 @@ module Master
           @built_at = Time.now
           @orientation = nil
           @bus&.publish("code_index:built", files: files.size, symbols: @symbols.size,
-                       complete: @errors.empty?, error_count: @errors.size)
+                       complete: @errors.empty? && !@partial, partial: @partial, error_count: @errors.size)
         end
         self
       rescue StandardError => e
@@ -114,7 +116,11 @@ module Master
       # A usable graph and a fully analyzed graph are different claims. Parse
       # or read failures stay visible instead of looking like an empty index.
       def complete?
-        @lock.synchronize { @errors.empty? }
+        @lock.synchronize { @errors.empty? && !@partial }
+      end
+
+      def partial?
+        @lock.synchronize { @partial }
       end
 
       def errors
@@ -159,6 +165,11 @@ module Master
 
       def reindex_if_stale(file)
         sig = CodeIndexStore.signature(file)
+        unless sig
+          purge_file(file)
+          record_error(file, :stat, "source file could not be inspected")
+          return true
+        end
         return false if @mtimes[file] == sig
 
         purge_file(file)
@@ -166,8 +177,8 @@ module Master
         true
       end
 
-      # Loads the last boot's graph so incremental_build re-parses only the files
-      # whose mtime or size moved. True when a snapshot was loaded.
+      # Loads the last boot's graph so incremental_build re-parses only files
+      # whose timestamp, size or content digest changed. True when restored.
       def restore_snapshot
         snapshot = @store&.load
         return false unless snapshot
