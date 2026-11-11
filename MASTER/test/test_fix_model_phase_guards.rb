@@ -384,6 +384,18 @@ class TestFixModelPhaseGuards < Minitest::Test
     def initialize = @root = "/r"
   end
 
+  def test_stream_worker_count_rejects_zero_negative_and_non_integer_values
+    stream = Master::Fix::FixLoop::PassRunner::StreamStage
+
+    assert_equal 3, stream.send(:worker_count, "3")
+    assert_equal 1, stream.send(:worker_count, 1)
+
+    ["0", "-1", "workers", ""].each do |value|
+      error = assert_raises(ArgumentError) { stream.send(:worker_count, value) }
+      assert_equal "MASTER_FIX_STREAM_WORKERS must be a positive integer", error.message
+    end
+  end
+
   def test_the_worklist_prioritizes_severity_and_hands_deferred_files_to_the_rule_stage
     rows = ->(law, severity, n) { Array.new(n) { { law:, severity: } } }
     ranked = [
