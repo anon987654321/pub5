@@ -43,6 +43,46 @@ class TestVanguardProtocol < Minitest::Test
     assert_match(/exploding_ast AST check failed/, error.message)
   end
 
+  def test_symbol_visitor_qualifies_calls_by_lexical_method_context
+    source = <<~RUBY
+      module Demo
+        class Widget
+          def ping
+            helper
+            self.instance_reset
+            Other.reset
+            worker.run
+          end
+          def helper = true
+          def instance_reset = true
+          def self.reset = true
+          def self.build
+            class_helper
+          end
+          def self.class_helper = true
+          class << self
+            def singleton_ping
+              singleton_helper
+            end
+            def singleton_helper = true
+          end
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "calls.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    targets = visitor.references.map(&:to_fqn)
+
+    assert_includes targets, "Demo::Widget#helper"
+    assert_includes targets, "Demo::Widget#instance_reset"
+    assert_includes targets, "Other.reset"
+    assert_includes targets, "run", "dynamic receivers remain unqualified rather than guessed"
+    assert_includes targets, "Demo::Widget.class_helper"
+    assert_includes targets, "Demo::Widget.singleton_helper"
+  end
+
   def test_symbol_visitor_tracks_macro_alias_and_singleton_definitions
     source = <<~RUBY
       module Dynamic
