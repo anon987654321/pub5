@@ -88,6 +88,17 @@ class TestDoctor < Minitest::Test
     assert_match(/require "master"\n/, source)
   end
 
+  def test_keyless_probe_is_a_real_anonymous_completion_probe
+    source = File.read(DOCTOR)
+    definition = source[/^def check_keyless_completion.*?^end/m]
+    refute_nil definition
+    assert_includes definition, 'ENV["MASTER_FREE_ONLY"] = "1"'
+    assert_includes definition, "Master::Soul.load!"
+    assert_includes definition, "agent.ask_once"
+    assert_includes definition, "failover: false"
+    assert_includes definition, "Master::Io::LaneSelection.reset_hosted_resolver!"
+  end
+
   def test_no_check_is_constructed_with_a_boolean
     code = File.read(DOCTOR).lines.reject { |line| line.strip.start_with?("#") }.join
     refute_match(/Check\.new\([^)]*\bok:/, code, "a Check is still built with ok:")
