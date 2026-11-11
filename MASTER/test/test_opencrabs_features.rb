@@ -277,22 +277,6 @@ class TestOpenCrabsFeatures < Minitest::Test
     assert second_joined, "a fatal worker must not skip later joins"
   end
 
-  def test_agent_pool_join_all_finishes_after_a_fatal_worker_exception
-    second_joined = false
-    first_thread = Object.new
-    first_thread.define_singleton_method(:join) { |_timeout = nil| raise SystemExit, "fatal agent exit" }
-    second_thread = Object.new
-    second_thread.define_singleton_method(:join) { |_timeout = nil| second_joined = true }
-    worker_class = Struct.new(:thread)
-    pool = Master::Review::AgentPool.new(governor: nil, taxonomy: { "spawn_policy" => { "max_concurrent_children" => 2 } })
-    pool.instance_variable_set(:@workers, [worker_class.new(first_thread), worker_class.new(second_thread)])
-
-    error = assert_raises(SystemExit) { pool.join_all }
-
-    assert_equal "fatal agent exit", error.message
-    assert second_joined, "a fatal worker must not skip later joins"
-  end
-
   def test_agent_pool_denies_spawn_when_governor_raises
     events = []
     bus = Object.new
