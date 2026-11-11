@@ -26,7 +26,7 @@ done
 # The small Active Record pool matches this app's one-worker resource budget.
 _env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}"
 _env="${_env} RAILS_MAX_THREADS=3 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
-_exec="exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
+_exec="exec ${_bundle} exec falcon serve -n 1 --health-check-timeout 300 --bind http://127.0.0.1:${PORT}"
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && export ${_env} && ${_exec}'"
 daemon_user="mrdamascy"
 daemon_execdir="/home/mrdamascy/app"
