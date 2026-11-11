@@ -279,7 +279,7 @@ class TestBacklog < Minitest::Test
     end
   end
 
-  def test_executor_requires_terminal_artifact_proof_before_receipting
+  def test_executor_refuses_receipt_when_source_item_has_changed
     Dir.mktmpdir("backlog-executor") do |root|
       executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT)
       record = {
@@ -291,6 +291,39 @@ class TestBacklog < Minitest::Test
       refute File.exist?(File.join(root, Backlog::Executor::RECEIPT_PATH))
     end
   end
+
+  def test_executor_records_a_terminal_mission_receipt_only_for_the_current_item
+    row = {
+      id: "safe-task", text: "Repair the existing MASTER source and verify it.",
+      tree: "MASTER", kind: "mechanical", scope_paths: ["MASTER/lib/example.rb"],
+      done_when: "rake test", size: "s", section: "MASTER",
+    }
+
+    Dir.mktmpdir("backlog-executor") do |root|
+      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT)
+      plan = {
+        "executor" => "root_todo",
+        "item_id" => row.fetch(:id),
+        "item_digest" => executor.send(:item_digest, row),
+      }
+      record = {
+        "origin" => "backlog", "state" => "completed", "stage" => "deliver",
+        "summary" => "proof complete; focused tests passed",
+        "finished_at" => Time.now.utc.iso8601,
+        "artifacts" => [], "repository_writes" => {},
+        "id" => "mission-1", "plan" => JSON.generate(plan),
+      }
+
+      Backlog.stub(:generate, [row]) do
+        assert executor.record_completion!(record:)
+      end
+      receipt = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH)).map { |line| JSON.parse(line) }.first
+      assert_equal "safe-task", receipt.fetch("item_id")
+      assert_equal "mission_terminal_delivery_receipt", receipt.fetch("proof_status")
+      assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
+    end
+  end
+
 
   private
 
