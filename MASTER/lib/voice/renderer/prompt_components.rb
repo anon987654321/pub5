@@ -153,12 +153,9 @@ module Master
         # signs the line: the REPL is <tree> <model>@master$, and surfaces with
         # no model to name fall back to the bare tree ksh shape.
         def shell_prompt(_phase, _last_ok, model: nil, **)
-          prompt = Master::Face::Contract.shell_prompt(
-            path: Dir.pwd,
-            llm: llm_name(model),
-            root: @config["root"] || Master::ROOT,
-          )
-          "#{prompt} "
+          suffix = [git_prompt_segment, "#{llm_name(model)}@master$"].reject(&:empty?).join(" ")
+          path = prompt_path(suffix_length: suffix.length + 1)
+          "#{path} #{suffix} "
         end
 
         def llm_name(model)
@@ -169,7 +166,7 @@ module Master
         end
 
         def operator_state(phase, last_ok, destination:, focused:)
-          words = [bounded_prompt_segment(git_prompt_text, 16), prompt_destination(destination)]
+          words = [prompt_destination(destination)]
           words << bounded_prompt_segment(phase_label(phase), 10) unless focused
           words << "error" unless last_ok
           words.reject(&:empty?).join(" ")
@@ -382,25 +379,25 @@ module Master
           d("root on master0 (#{context[:revision]}) boot #{monotonic_milliseconds - @boot_ms}ms")
         end
 
-        def git_prompt_text
+        # Like an Oh My Zsh theme, Git context appears only inside a worktree.
+        # Keep it plain and short: no Powerline font, shell plugin or colour needed.
+        # OpenBSD's dmesg discipline still owns the output below the prompt.
+        def git_prompt_segment
           state = prompt_git_state
           return "" unless state
 
-          branch_status(**state)
-        end
-
-        def branch_status(branch:, ahead:, behind:, dirty:)
-          branch_name = plain_prompt_segment(branch).split.first.to_s
-          branch_name = bounded_prompt_segment(branch_name, 8)
-          parts = [branch_name]
-          parts << "dirty" if dirty
-          [["ahead", ahead], ["behind", behind]].each do |label, count|
-            next unless count.positive?
-
-            detail = "#{label} #{count}"
-            parts << detail if parts.join(" ").length + detail.length + 1 <= 16
-          end
-          parts.reject(&:empty?).join(" ")
+          branch = state[:branch].to_s.scrub.gsub(ANSI_ESCAPE, "")
+          branch = branch.gsub(/[^A-Za-z0-9_.\/-]/, "-")[0, 12]
+          branch = "detached" if branch.empty?
+          marks = []
+          marks << "*" if state[:dirty]
+          marks << "+#{state[:ahead].to_i}" if state[:ahead].to_i.positive?
+          marks << "-#{state[:behind].to_i}" if state[:behind].to_i.positive?
+          detail = marks.empty? ? "" : " #{marks.join(" ")}"
+          "git:(#{branch}#{detail})"
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "renderer.git_prompt_segment")
+          ""
         end
 
         def prompt_git_state
