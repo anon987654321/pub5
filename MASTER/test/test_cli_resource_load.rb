@@ -69,6 +69,7 @@ class TestCliResourceLoad < Minitest::Test
     assert_equal 1.0, resource_load.host_score([16.0, 16.0, 16.0], 4)
     assert_nil resource_load.host_score([1.0, 2.0], 4)
     assert_nil resource_load.host_score([1.0, Float::INFINITY, 2.0], 4)
+    assert_nil resource_load.host_score([1.0, 2.0, 3.0], Float::INFINITY)
   end
 
   def test_spinner_has_sixteen_portable_ascii_keyframes_and_clamped_cadence
