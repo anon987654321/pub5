@@ -962,4 +962,33 @@ class TestScanRuleFalsePositives < Minitest::Test
     assert_empty findings(:CONTRAST_TOKENS, ".a {\n  background: #555;\n  color: #fff;\n}\n", path: CSS)
     refute_empty findings(:CONTRAST_TOKENS, ".a {\n  background: #777;\n  color: #fff;\n}\n", path: CSS)
   end
+  # Complete print documents are first-class HTML surfaces, but their standalone
+  # stylesheet is an intentional, line-local exception because no asset pipeline
+  # is available to the printed file. The marker must never spill to another line.
+  def test_print_document_inline_style_requires_its_own_intentional_marker
+    marked = '<!-- scan: intentional - standalone print stylesheet --><style>body { color: #000; }</style>\n'
+    unmarked = "<style>body { color: #000; }</style>\n"
+    later = "<!-- scan: intentional - this line is not the style -->\n<style>body { color: #000; }</style>\n"
+
+    assert_empty findings(:NO_INLINE_SCRIPT_BLOCK, marked, path: "BIZ/example.html")
+    refute_empty findings(:NO_INLINE_SCRIPT_BLOCK, unmarked, path: "BIZ/example.html")
+    refute_empty findings(:NO_INLINE_SCRIPT_BLOCK, later, path: "BIZ/example.html")
+  end
+
+  def test_static_html_documents_receive_the_single_h1_law
+    source = "<!doctype html>\n<html lang=\"nb\"><body><h1>One</h1><h1>Two</h1></body></html>\n"
+
+    refute_empty findings(:SINGLE_H1, source, path: "BIZ/example.html")
+    assert_empty findings(:SINGLE_H1, "<html lang=\"nb\"><body><h1>One</h1></body></html>\n",
+                         path: "BIZ/example.html")
+  end
+
+  def test_heading_hierarchy_is_mechanically_checked_for_full_documents
+    bad = "<!doctype html>\n<html><body><h1>Plan</h1><h3>Budget</h3></body></html>\n"
+    good = "<!doctype html>\n<html><body><h1>Plan</h1><h2>Budget</h2><h3>Figures</h3></body></html>\n"
+
+    refute_empty findings(:HTML_HEADING_HIERARCHY, bad, path: "BIZ/example.html")
+    assert_empty findings(:HTML_HEADING_HIERARCHY, good, path: "BIZ/example.html")
+  end
+
 end

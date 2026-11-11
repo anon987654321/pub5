@@ -153,14 +153,14 @@ function escapeHtml(s) {
 }
 
 function markStandalonePrintStyle(html, plan) {
-  const lines = html.split('\\n');
-  const index = lines.findIndex(line => /<style\\b/i.test(line));
-  if (index < 0) throw new Error(`${plan}: standalone print stylesheet missing`);
-  if (!/scan:\\s*intentional\\b/.test(lines[index])) {
-    const indent = lines[index].match(/^\\s*/)[0];
-    lines[index] = `${indent}<!-- scan: intentional - standalone print stylesheet has no asset pipeline -->${lines[index].slice(indent.length)}`;
+  const lines = html.split('\n');
+  const index = lines.findIndex(line => /<style\b/i.test(line));
+  if (index < 0) throw new Error(plan + ': standalone print stylesheet missing');
+  if (!/scan:\s*intentional\b/.test(lines[index])) {
+    const indent = lines[index].match(/^\s*/)[0];
+    lines[index] = indent + '<!-- scan: intentional - standalone print stylesheet has no asset pipeline -->' + lines[index].slice(indent.length);
   }
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 for (const plan of ORDER) {
@@ -245,6 +245,6 @@ ${footer}
 </html>
 `;
 
-  writeFileSync(`${OUT}/${plan}/${plan}.html`, html);
+  writeFileSync(output, markStandalonePrintStyle(html, plan));
   console.log(`${plan}: rebob2 (${html.length} chars, toc ${tocItems.split('\n').length}, faces ${faces ? faces.split('@font-face').length - 1 : 0})`);
 }

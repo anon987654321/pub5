@@ -63,7 +63,9 @@ regenerated from them:
                                       # pdfinfo verifies 442.08 x 663.12 pts
     node BIZ/tools/bp_index.mjs       # this index
 
-`bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint`; its own checks are limited to the bob2/print contract and re-read financial arithmetic. The standalone print stylesheet carries a line-local `scan: intentional` marker because the document has no asset pipeline.\n\n`bp_print.mjs` prints with headless Chromium (no Python anywhere in the
+`bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint`; its own checks are limited to the bob2/print contract and re-read financial arithmetic. The standalone print stylesheet carries a line-local `scan: intentional` marker because the document has no asset pipeline.
+
+`bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
 against the hefte canon (156mm 234mm). `bp_index.mjs` fails if a folder
 table row lacks its published pair or the funding total drifts. The retired
