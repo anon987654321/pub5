@@ -101,7 +101,11 @@ module Master
       end
 
       def build_async
-        @build_thread = Thread.new { build }
+        @lock.synchronize do
+          return self if @build_thread&.alive?
+
+          @build_thread = Thread.new { build }
+        end
         self
       end
 
