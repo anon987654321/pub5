@@ -31,6 +31,15 @@ module Master
               live_config_model(task_type:)
           end
 
+          # Best reachable image-capable lane according to the dated visual
+          # review-family ranking, after capability filtering.
+          def best_vision_model
+            Io::LaneSelection.vision_rank_order(pool).first
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "model_router.best_vision_model")
+            nil
+          end
+
           # Only reachable, non-silent lanes enter the chain. Empirical health and
           # cost ranking order candidates within the final policy: premium/API,
           # free API, browser chat, then local compute. Local availability is not
