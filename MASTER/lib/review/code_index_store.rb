@@ -31,11 +31,68 @@ module Master
       attr_reader :path
 
       def self.signature(file)
-        stat = File.stat(file)
-        [(stat.mtime.to_r * 1_000_000_000).to_i, stat.size, Digest::SHA256.file(file).hexdigest]
-      rescue SystemCallError
+        read_source(file).last
+      rescue SystemCallError, IOError
         nil
       end
+
+      # Read and fingerprint the same open file descriptor. A path may be
+      # replaced between a separate File.read and SHA calculation; signatures
+      # must describe the bytes Prism actually parsed, not a later pathname.
+      def self.read_source(file, root: nil)
+        full = File.expand_path(file)
+        root_real = File.realpath(root) if root
+        before = File.lstat(full)
+        raise IOError, "code index source is not a regular non-symlink file" unless before.file? && !before.symlink?
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(full, flags) do |io|
+          opened = io.stat
+          current = File.lstat(full)
+          unless same_file?(before, opened) && same_file?(current, opened)
+            raise IOError, "code index source path changed while opening"
+          end
+          resolved = File.realpath(full)
+          if root_real && !inside_root?(resolved, root_real)
+            raise IOError, "code index source escapes its repository"
+          end
+
+          raw = io.read
+          after = io.stat
+          current = File.lstat(full)
+          unless stable_file?(opened, after) && same_file?(current, after)
+            raise IOError, "code index source changed while reading"
+          end
+          resolved_after = File.realpath(full)
+          if root_real && !inside_root?(resolved_after, root_real)
+            raise IOError, "code index source moved outside its repository"
+          end
+
+          source = raw.dup.force_encoding(Encoding::UTF_8)
+          signature = [(opened.mtime.to_r * 1_000_000_000).to_i, opened.size, Digest::SHA256.hexdigest(raw)]
+          [source, signature]
+        end
+      rescue SystemCallError => error
+        raise IOError, "cannot safely read code index source: #{error.class}: #{error.message}"
+      end
+
+      def self.same_file?(left, right)
+        left.file? && !left.symlink? && right.file? &&
+          left.dev == right.dev && left.ino == right.ino && left.nlink == right.nlink
+      end
+      private_class_method :same_file?
+
+      def self.stable_file?(before, after)
+        same_file?(before, after) && before.size == after.size &&
+          before.mtime == after.mtime && before.ctime == after.ctime
+      end
+      private_class_method :stable_file?
+
+      def self.inside_root?(path, root)
+        path == root || path.start_with?(root + File::SEPARATOR)
+      end
+      private_class_method :inside_root?
 
       def self.tree_hash(signatures)
         # A file that vanished between the glob and its stat has a nil signature.
