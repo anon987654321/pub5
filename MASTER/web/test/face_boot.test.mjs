@@ -203,6 +203,8 @@ test("FaceWorld morphs the primary face field into a topic with a bounded fallba
   assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
   assert.match(runtime, /uSemanticStaged/);
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+  assert.match(runtime, /event === 'visual_subject'/);
+  assert.match(runtime, /new CustomEvent\('master:visual-subject'/);
   assert.match(runtime, /function resetSubjectScatter\(\)/);
   assert.match(runtime, /MASTER_FACE_WORLD\?\.setSubjectFromText\?\.\(v\)/);
 });
