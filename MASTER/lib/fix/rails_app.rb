@@ -2,6 +2,7 @@
 
 require "pathname"
 require "yaml"
+require_relative "../operator/ruby_runner"
 
 module Master
   module Fix
@@ -108,12 +109,11 @@ module Master
       ].freeze
 
       def self.env(root)
-        version = File.join(root, ".ruby-version")
-        shims = File.expand_path("~/.rbenv/shims")
-        FOREIGN_BUNDLE.to_h { |key| [key, nil] }.tap do |env|
-          env["RBENV_VERSION"] = File.read(version).strip if File.file?(version)
-          env["PATH"] = "#{shims}:#{ENV.fetch("PATH", "")}" if File.directory?(shims)
-        end
+        ruby_dir = File.dirname(Operator::RubyRunner.ruby_cmd(root:))
+        FOREIGN_BUNDLE.to_h { |key| [key, nil] }.merge(
+          "PATH" => "#{ruby_dir}:#{ENV.fetch("PATH", "")}",
+          "RBENV_VERSION" => nil,
+        )
       end
     end
   end
