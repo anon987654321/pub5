@@ -191,7 +191,7 @@ module Master
       FIX_PIN_SLASH = { "simplify" => "--simplify", "security" => "--security" }.freeze
       # Keep the literal list: the operator ratchet reads this one declaration
       # without evaluating Ruby, so a formatting refactor must not hide verbs.
-      PIPELINE_SLASH = %w[fix scan self workflow triad sweep through prove explain simplify security review critique].freeze
+      PIPELINE_SLASH = %w[fix audit review critique council scan visual style elevate map all self workflow triad sweep through prove explain simplify security].freeze
 
       INFER_MIN_CONFIDENCE = 0.62
 
