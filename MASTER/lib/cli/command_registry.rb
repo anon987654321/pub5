@@ -387,6 +387,7 @@ module Master
           "last=none"
         end
         error = [Voice::Speech.last_error, Voice::Playback.last_error].compact.map(&:to_s).find { |item| !item.empty? }
+        error = error.to_s.gsub(/\s+/, " ").strip unless error.nil?
         timings = Voice::Speech.last_timings
         timing = timings.empty? ? "timing=not-recorded" : "timing=#{timings.map { |stage, values| "#{stage}:#{values.fetch(:elapsed_ms)}ms" }.join(",")}"
         [
@@ -395,7 +396,7 @@ module Master
           detail,
           timing,
           ("error=#{error}" if error && !error.empty?),
-        ].compact.join("\n")
+        ].compact.join("; ").gsub(/\s+/, " ").strip
       end
 
       def dispatch_narrate(ctx: nil)
