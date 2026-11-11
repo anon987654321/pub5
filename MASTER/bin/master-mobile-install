@@ -143,9 +143,9 @@ guest_ready() {
 }
 
 if guest_ready; then
-  printf 'mobile0: %s guest and packaged Ruby are ready\\n' "$distro"
+  printf 'mobile0: %s guest and packaged Ruby are ready\n' "$distro"
 else
-  printf 'mobile0: provisioning %s with its packaged Ruby\\n' "$distro"
+  printf 'mobile0: provisioning %s with its packaged Ruby\n' "$distro"
   proot-distro login --bind "$dir:/pub5" "$distro" -- \
     env MASTER_RUNTIME_DISTRO="$distro" bash -s <<'PRootSetup'
 set -eu
@@ -164,15 +164,15 @@ ruby -e 'require "rubygems"; abort "Ruby >= 3.3 required; installed #{RUBY_VERSI
 ruby_version="$(ruby -e 'print RUBY_VERSION')"
 
 cd /pub5/MASTER
-printf 'mobile0: installing the locked MASTER bundle in %s with Ruby %s\\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version"
+printf 'mobile0: installing the locked MASTER bundle in %s with Ruby %s\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version"
 ruby bin/deps install
-printf 'mobile0: checking the locked MASTER bundle in %s\\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: checking the locked MASTER bundle in %s\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps check
-printf 'mobile0: proving the normal MASTER CLI boot path in %s\\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: proving the normal MASTER CLI boot path in %s\n' "$MASTER_RUNTIME_DISTRO"
 ruby bin/deps boot
-printf '%s %s\\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version" > /etc/master-mobile-runtime
+printf '%s %s\n' "$MASTER_RUNTIME_DISTRO" "$ruby_version" > /etc/master-mobile-runtime
 chmod 644 /etc/master-mobile-runtime
-printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities remain unmeasured\\n' "$MASTER_RUNTIME_DISTRO"
+printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities remain unmeasured\n' "$MASTER_RUNTIME_DISTRO"
 PRootSetup
 fi
 
