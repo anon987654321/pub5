@@ -77,7 +77,7 @@ module Master
 
           weighted = values.zip(LOAD_AVERAGE_WEIGHTS).sum { |value, weight| value * weight }
           (weighted / processors).clamp(0.0, 1.0)
-        rescue ArgumentError, TypeError
+        rescue ArgumentError, TypeError, RangeError
           nil
         end
 
