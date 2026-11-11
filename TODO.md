@@ -333,10 +333,11 @@ measure is already owned by the Bymorgen item above.
 - [ ] **Avatar geometry.** Derive deterministic particle positions from the
   recovered avatar reference inside the current renderer; preserve fallback
   and point budgets, then prove narrow/wide browser and GPU behavior.
-- [ ] **Radio-to-face motion.** Implement the audio-modulated inward warp in
-  the existing particle shader and track-driven transitions between the two
-  current visualizers. Keep the existing transport bar; prove beat response,
-  reduced motion and mobile/desktop playback.
+- [ ] **Radio-to-face motion.** The existing stipple shader now applies a bounded,
+  audio-energy inward warp from the shared `audio:update` bus; reduced-motion
+  and still modes force it to zero. Track-driven transitions between the two
+  current visualizers, rendered beat-response proof, and mobile/desktop playback
+  remain open. Keep the existing transport bar.
 - [ ] **Many-to-one face introduction.** Source landed: deterministic carriers now
   converge into the carved-field portrait in the existing stipple renderer;
   duration is token-owned and reduced motion resolves immediately. Rendered
