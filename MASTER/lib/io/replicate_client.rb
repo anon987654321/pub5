@@ -77,6 +77,7 @@ module Master
                 write_capped(response, file, max_bytes, http:, deadline:)
               end
             end
+            remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download finalization")
 
             file.flush
             file.fsync
@@ -550,6 +551,7 @@ module Master
             end
           end
         end
+        remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API response finalization")
         raise IOError, "Replicate returned no HTTP response" unless response
 
         code = response.code.to_i
