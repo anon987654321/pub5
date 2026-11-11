@@ -200,7 +200,7 @@ module Backlog
       current = @mission_class.current(root: @root)
       state = current && current["state"].to_s
       return :busy if %w[running waiting].include?(state)
-      return :blocked if current && current["origin"].to_s == "backlog" && %w[blocked failed].include?(state)
+      return :blocked if %w[blocked failed].include?(state)
       if current && current["origin"].to_s == "backlog" && state == "completed"
         return :blocked unless record_completion!(record: current)
       end
