@@ -100,7 +100,9 @@ module Master
       reports = []
       paths.each do |relative|
         handle.hold_lease!
-        result = command.call({ args: "#{relative} --intent=functional_change" })
+        result = Fix::Mission.with_namespace("fix") do
+          command.call({ args: "#{relative} --intent=functional_change" })
+        end
         if result.respond_to?(:ok?) && !result.ok?
           category = result.respond_to?(:category) ? result.category : :validation
           detail = result.respond_to?(:message) ? result.message : result.to_s
