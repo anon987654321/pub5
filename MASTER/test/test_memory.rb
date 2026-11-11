@@ -51,6 +51,15 @@ class TestMemory < Minitest::Test
     Master::Review::Embeddings.define_singleton_method(:embed, original) if original
   end
 
+  def test_consolidation_sees_entries_written_by_another_memory_instance
+    stale = Master::Ground::Memory.new(root: @root)
+    @mem.remember("arrived_later", "new durable fact", embed: false)
+
+    result = stale.consolidate!
+
+    assert_match(/1 entries checked/, result)
+  end
+
   def test_stale_memory_instances_merge_each_others_writes
     first = Master::Ground::Memory.new(root: @root)
     second = Master::Ground::Memory.new(root: @root)
