@@ -316,8 +316,11 @@ class TestBacklog < Minitest::Test
 
       Backlog.stub(:generate, [row]) do
         assert executor.record_completion!(record:)
+        assert executor.record_completion!(record:)
       end
-      receipt = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH)).map { |line| JSON.parse(line) }.first
+      receipts = File.readlines(File.join(root, Backlog::Executor::RECEIPT_PATH)).map { |line| JSON.parse(line) }
+      assert_equal 1, receipts.length
+      receipt = receipts.first
       assert_equal "safe-task", receipt.fetch("item_id")
       assert_equal "mission_terminal_delivery_receipt", receipt.fetch("proof_status")
       assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
