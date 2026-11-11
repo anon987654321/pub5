@@ -13,6 +13,7 @@ module Master
           @file = file; @root = root
           @symbols = []; @references = []; @scope = []
           @method_depth = 0
+          @method_kinds = []
           @singleton_depth = 0
           @metrics = { classes: 0, modules: 0, defs: 0 }
         end
@@ -51,9 +52,11 @@ module Master
           separator = (node.receiver || @singleton_depth.positive?) ? "." : "#"
           add_method_symbol(node.name, node, separator:)
           @method_depth += 1
+          @method_kinds << separator
           begin
             super
           ensure
+            @method_kinds.pop
             @method_depth -= 1
           end
         end
@@ -79,7 +82,14 @@ module Master
           method_name = node.name.to_s
           return super unless method_name.match?(/\A[_a-z][a-z0-9_]*[!?]?\z/i) && method_name.length > 1
           receiver = receiver_name(node.receiver)
-          to_fqn = receiver ? "#{receiver}##{method_name}" : method_name
+          separator = receiver_separator(node.receiver)
+          to_fqn = if receiver && separator
+                     "#{receiver}#{separator}#{method_name}"
+                   elsif node.receiver.nil? && !@scope.empty?
+                     "#{@scope.join("::")}#{@method_kinds.last || "."}#{method_name}"
+                   else
+                     method_name
+                   end
           @references << Reference.new(
             from_file: @file,
             from_line: node.location.start_line,
@@ -158,9 +168,20 @@ module Master
         def receiver_name(node)
           case node
           when Prism::SelfNode
-            @scope.join("::")
+            @scope.join("::") unless @scope.empty?
           when Prism::ConstantReadNode, Prism::ConstantPathNode, Prism::ConstantPathTargetNode
             const_name_safe(node)
+          else
+            nil
+          end
+        end
+
+        def receiver_separator(node)
+          case node
+          when Prism::SelfNode
+            @method_kinds.last || "."
+          when Prism::ConstantReadNode, Prism::ConstantPathNode, Prism::ConstantPathTargetNode
+            "."
           else
             nil
           end
