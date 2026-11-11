@@ -107,6 +107,21 @@ class TestCliResourceLoad < Minitest::Test
     refute_includes painted, "255;255;255"
   end
 
+  def test_spinner_respects_no_color_and_dumb_terminals
+    session = Master::CLI::Session.allocate
+    no_color = ENV["NO_COLOR"]
+    term = ENV["TERM"]
+
+    ENV["NO_COLOR"] = "1"
+    assert_nil session.send(:spinner_tint, 0.5)
+    ENV.delete("NO_COLOR")
+    ENV["TERM"] = "dumb"
+    assert_nil session.send(:spinner_tint, 0.5)
+  ensure
+    no_color.nil? ? ENV.delete("NO_COLOR") : ENV["NO_COLOR"] = no_color
+    term.nil? ? ENV.delete("TERM") : ENV["TERM"] = term
+  end
+
   def test_spinner_uses_normalized_host_cpu_load_average
     resource_load = Master::CLI::Session::ResourceLoad
     resource_load.stub(:system_load_average, [4.0, 2.0, 1.0]) do
