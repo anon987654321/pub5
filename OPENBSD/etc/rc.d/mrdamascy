@@ -33,8 +33,8 @@ daemon_execdir="/home/mrdamascy/app"
 daemon_logger="daemon.notice"
 daemon_timeout="120"
 . /etc/rc.d/rc.subr
-# Host receives its endpoint from falcon.rb; identify this app by its config path.
-pexp="ruby[0-9.]*.*${APP_DIR}/falcon.rb"
+# Falcon 0.55.3 replaces argv with its endpoint and live statistics after startup.
+pexp=".*127\\.0\\.0\\.1:47314.*"
 rc_bg=YES
 rc_reload=NO
 
@@ -84,7 +84,7 @@ free_port() {
 
 rc_pre() {
   touch /home/dev/pub5/.deploying-mrdamascy 2>/dev/null || true
-  pkill -f "falcon host ${APP_DIR}/falcon.rb" 2>/dev/null || true
+  pkill -f "127\\.0\\.0\\.1:47314" 2>/dev/null || true
   sleep 1
   PORT_OWNER=mrdamascy
   free_port || { rm -f /home/dev/pub5/.deploying-mrdamascy 2>/dev/null; return 1; }
