@@ -89,11 +89,46 @@ module Master
           Master::Result.err("inference: tree search #{e.class}: #{e.message}", category: :handler_exception)
         end
 
+        MAX_PARALLEL = 8
+
         def parallel(agent, prompts, temperature:)
-          threads = prompts.map { |prompt| Thread.new { agent.ask_once(prompt, temperature:) } }
-          threads.map(&:value)
+          Array(prompts).each_slice(MAX_PARALLEL).flat_map do |batch|
+            parallel_batch(agent, batch, temperature:)
+          end
         end
-        private_class_method :parallel
+
+        def parallel_batch(agent, prompts, temperature:)
+          threads = []
+          start_error = nil
+          begin
+            prompts.each do |prompt|
+              threads << Thread.new do
+                Thread.current.report_on_exception = false
+                agent.ask_once(prompt, temperature:)
+              end
+            end
+          rescue StandardError => error
+            start_error = error
+          end
+
+          join_error = nil
+          threads.each do |thread|
+            begin
+              thread.join
+            rescue StandardError => error
+              join_error ||= error
+            end
+          end
+          raise start_error if start_error
+          raise join_error if join_error
+
+          threads.map(&:value)
+        ensure
+          # A caller timeout/interrupt or a non-StandardError worker failure
+          # must not leave any sibling request running after this batch exits.
+          threads&.each { |thread| thread.kill if thread.alive? }
+        end
+        private_class_method :parallel, :parallel_batch
 
         def ask(agent, prompt)
           agent.ask_once(prompt)
