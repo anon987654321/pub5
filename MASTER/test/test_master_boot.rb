@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "open3"
+require_relative "../lib/operator/ruby_runner"
 
 class MasterBootTest < Minitest::Test
   def test_boot_loader_requires_all_modules
