@@ -37,6 +37,17 @@ class TestCliResourceLoad < Minitest::Test
     assert_in_delta expected, score, 1e-6
   end
 
+  def test_turn_keeps_process_pressure_when_host_cpu_count_is_unavailable
+    resource_load = Master::CLI::Session::ResourceLoad
+    snapshot = ->(_argv) { TREE }
+
+    score = resource_load.turn(
+      root_pid: 100, snapshot:, load_average: [4.0, 2.0, 1.0], cpu_count: 0
+    )
+
+    assert_in_delta resource_load.score(130.0, 11_264), score, 1e-6
+  end
+
   def test_turn_without_the_session_row_scores_zero
     snapshot = ->(_argv) { TREE }
 
