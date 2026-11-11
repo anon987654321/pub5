@@ -69,6 +69,7 @@ module Master
         @references = []
         @mtimes = {}
         @built_at = nil
+        @errors = []
         @lock = Monitor.new
         @build_thread = nil
       end
@@ -77,15 +78,18 @@ module Master
         @lock.synchronize do
           target = path ? File.expand_path(path, @root) : @root
           files = Dir.glob(File.join(target, "**", "*.rb")).reject { |f| f.include?("/vendor/") }
+          @errors.clear
           restored = path.nil? && @built_at.nil? && restore_snapshot
           @built_at.nil? && !restored ? first_build(files) : incremental_build(files)
-          save_snapshot if @store && path.nil?
+          save_snapshot if @store && path.nil? && @errors.empty?
           @built_at = Time.now
           @orientation = nil
-          @bus&.publish("code_index:built", files: files.size, symbols: @symbols.size)
+          @bus&.publish("code_index:built", files: files.size, symbols: @symbols.size,
+                       complete: @errors.empty?, error_count: @errors.size)
         end
         self
       rescue StandardError => e
+        @lock.synchronize { record_error(path || @root, :build, "#{e.class}: #{e.message}") }
         @bus&.publish("code_index:error", error: e.message)
         self
       end
@@ -107,14 +111,23 @@ module Master
         !@built_at.nil?
       end
 
+      # A usable graph and a fully analyzed graph are different claims. Parse
+      # or read failures stay visible instead of looking like an empty index.
+      def complete?
+        @lock.synchronize { @errors.empty? }
+      end
+
+      def errors
+        @lock.synchronize { @errors.map(&:dup) }
+      end
+
       def reindex(file)
         @lock.synchronize do
           full = File.expand_path(file, @root)
           purge_file(full)
           return unless File.file?(full)
 
-          index_file(full)
-          @mtimes[full] = CodeIndexStore.signature(full)
+          @mtimes[full] = CodeIndexStore.signature(full) if index_file(full)
           @orientation = nil
         end
       rescue StandardError => e
@@ -132,9 +145,9 @@ module Master
         @symbols.clear
         @references.clear
         @mtimes.clear
+        @errors.clear
         files.each do |f|
-          index_file(f)
-          @mtimes[f] = CodeIndexStore.signature(f)
+          @mtimes[f] = CodeIndexStore.signature(f) if index_file(f)
         end
       end
 
@@ -149,8 +162,7 @@ module Master
         return false if @mtimes[file] == sig
 
         purge_file(file)
-        index_file(file)
-        @mtimes[file] = sig
+        @mtimes[file] = sig if index_file(file)
         true
       end
 
@@ -178,6 +190,8 @@ module Master
         @symbols.delete_if { |_, s| s.file == full }
         @references.reject! { |r| r.from_file == full }
         @mtimes.delete(full)
+        relative = relativize(full)
+        @errors.reject! { |entry| entry[:path] == relative }
         @orientation = nil
       end
 
@@ -218,14 +232,32 @@ module Master
       def index_file(file)
         src = File.read(file, encoding: "UTF-8")
         parse_result = Prism.parse(src)
-        return unless parse_result.success?
+        unless parse_result.success?
+          detail = parse_result.errors.first(5).map { |error| error.message.to_s }.join("; ")
+          record_error(file, :parse, detail.empty? ? "Prism parse failed" : detail)
+          @bus&.publish("code_index:parse_error", path: file, error: detail)
+          return false
+        end
 
         visitor = SymbolVisitor.new(file:, root: @root)
         parse_result.value.accept(visitor)
         visitor.symbols.each { |s| @symbols[s.fqn] = s }
         @references.concat(visitor.references)
+        true
       rescue StandardError => e
+        record_error(file, :read, "#{e.class}: #{e.message}")
         @bus&.publish("code_index:parse_error", path: file, error: e.message)
+        false
+      end
+
+      def record_error(file, kind, message)
+        relative = relativize(File.expand_path(file, @root))
+        @errors.reject! { |entry| entry[:path] == relative }
+        @errors << {
+          path: relative,
+          kind: kind.to_sym,
+          message: message.to_s.slice(0, 240),
+        }.freeze
       end
     end
   end
