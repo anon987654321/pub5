@@ -7,21 +7,34 @@ module Master
   module CLI
     class Session
       # One snapshot of how hard the turn works: CPU and resident memory of the
-      # session process and everything working under it. The spinner samples it
-      # at a slow cadence and maps the score to its speed and color.
+      # session process and everything working under it, blended with host load.
+      # The spinner samples it at a slow cadence and maps the score to speed/color.
       module ResourceLoad
         CPU_CAP = 120.0
         MEMORY_CAP_KB = 512 * 1024
+        PROCESS_WEIGHT = 0.65
+        HOST_WEIGHT = 0.35
+        LOAD_AVERAGE_WEIGHTS = [0.60, 0.30, 0.10].freeze
         # ps prints rss in kilobytes, but as pages on OpenBSD.
         OPENBSD = RUBY_PLATFORM.include?("openbsd")
 
         module_function
 
-        # 0..1 for the whole turn tree; the frame loop never sees a raise.
-        def turn(root_pid: Process.pid, snapshot: nil)
+        # 0..1 for the turn and its host; injected snapshots stay deterministic.
+        def turn(root_pid: Process.pid, snapshot: nil, load_average: nil, cpu_count: nil)
+          injected_snapshot = !snapshot.nil?
           snapshot ||= ->(argv) { Master::Io::Exec.capture2(*argv).first.to_s }
-          cpu, rss_kb = walk(root_pid, parse(snapshot.call(%w[ps -axo pid=,ppid=,%cpu=,rss=])))
-          score(cpu, rss_kb)
+          rows = parse(snapshot.call(%w[ps -axo pid=,ppid=,%cpu=,rss=]))
+          return 0.0 unless rows.key?(root_pid)
+
+          cpu, rss_kb = walk(root_pid, rows)
+          process_pressure = score(cpu, rss_kb)
+          averages = load_average
+          averages = system_load_average if averages.nil? && !injected_snapshot
+          host_pressure = host_score(averages, cpu_count || Etc.nprocessors)
+          return process_pressure unless host_pressure
+
+          (process_pressure * PROCESS_WEIGHT + host_pressure * HOST_WEIGHT).clamp(0.0, 1.0)
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "cli.resource_load")
           0.0
@@ -32,7 +45,7 @@ module Master
           rows = {}
           out.to_s.each_line do |line|
             pid, ppid, cpu, rss = line.split
-            next unless pid && ppid && cpu && rss && pid.match?(/\A\d+\z/)
+            next unless pid && ppid && cpu && rss && pid.match?(/\\A\\d+\\z/)
 
             rows[pid.to_i] = [ppid.to_i, cpu.to_f, rss.to_i * page_kb]
           end
@@ -44,6 +57,37 @@ module Master
         def score(cpu, rss_kb)
           0.6 * (cpu.to_f / CPU_CAP).clamp(0.0, 1.0) +
             0.4 * (rss_kb.to_f / MEMORY_CAP_KB).clamp(0.0, 1.0)
+        end
+
+        # Weighted 1/5/15-minute load, normalized by logical CPU count.
+        def host_score(load_average, cpu_count)
+          values = Array(load_average).first(3).map { |value| Float(value) }
+          return unless values.length == 3 && values.all? { |value| value.finite? && value >= 0 }
+
+          processors = Integer(cpu_count)
+          return unless processors.positive?
+
+          weighted = values.zip(LOAD_AVERAGE_WEIGHTS).sum { |value, weight| value * weight }
+          (weighted / processors).clamp(0.0, 1.0)
+        rescue ArgumentError, TypeError
+          nil
+        end
+
+        # Linux exposes load average as a proc file; the BSD and macOS path uses
+        # the native sysctl interface. Missing permissions/platform support simply
+        # remove the host component rather than breaking the thinking indicator.
+        def system_load_average
+          raw = if File.readable?("/proc/loadavg")
+                  File.read("/proc/loadavg")
+                else
+                  Master::Io::Exec.capture2("sysctl", "-n", "vm.loadavg").first.to_s
+                end
+          values = raw.scan(/\\d+(?:\\.\\d+)?/).first(3)
+          return unless values.length == 3
+
+          values.map(&:to_f)
+        rescue StandardError
+          nil
         end
 
         def page_kb
