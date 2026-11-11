@@ -178,6 +178,126 @@ module Backlog
   end
 end
 
+module Backlog
+  # A deliberately narrow bridge from the generated register to the existing
+  # durable Mission/TaskSteward lifecycle. It never edits TODO.md or treats a
+  # guessed classification as permission.
+  class Executor
+    READY_KINDS = %w[mechanical].freeze
+    OWNED_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+    RECEIPT_PATH = ".master/backlog-executor.jsonl"
+
+    def initialize(root: Master::ROOT, repo_root: Master::REPO_ROOT, mission_class: Master::Fix::Mission)
+      @root = File.expand_path(root)
+      @repo_root = File.expand_path(repo_root)
+      @mission_class = mission_class
+    end
+
+    def enqueue_next!(model: nil, effort: "medium")
+      current = @mission_class.current(root: @root)
+      return :busy if current && %w[running waiting].include?(current["state"].to_s)
+
+      entries = Backlog.generate
+      receipts = completed_receipts
+      item = entries.find do |row|
+        eligible?(row) && !receipts.include?(item_digest(row))
+      end
+      return :idle unless item
+
+      scope = item.fetch(:scope_paths)
+      goal = [
+        "Complete exactly this root TODO item, using MASTER's existing /fix pipeline.",
+        "Backlog item: #{item.fetch(:id)}",
+        "Task: #{item.fetch(:text)}",
+        "Owned tree: #{item.fetch(:tree)}",
+        "Exact repository-relative scope: #{scope.join(', ')}",
+        "Acceptance command from the register: #{item[:done_when] || 'select the narrowest relevant existing proof'}",
+        "Do not edit the TODO checkbox. The executor closes work only from a durable completed Mission with proof artifacts.",
+        "Do not deploy, publish, spend money, contact people, alter production data, or cross a human/operator gate.",
+        "If the task requires a product decision, external credential, human approval, or unavailable runtime, block with the exact reason.",
+      ].join("\\n")
+      plan = JSON.generate(
+        "executor" => "root_todo",
+        "item_id" => item.fetch(:id),
+        "item_digest" => item_digest(item),
+        "source_digest" => Digest::SHA256.file(Backlog::SOURCE).hexdigest,
+        "scope_paths" => scope,
+        "done_when" => item[:done_when],
+      )
+      @mission_class.new(root: @root).ensure_queued!(
+        goal:, scope: @root, model:, effort:, plan:,
+        origin: "backlog", auto_continue: true, mode: "repair",
+        risk: :low, intent: :functional_change,
+      )
+      :queued
+    end
+
+    # Only a terminal Mission with delivery stage, a non-empty summary and
+    # explicit proof artifacts can close an executor item. No checkbox writes.
+    def record_completion!(record: @mission_class.current(root: @root))
+      return false unless record && record["origin"].to_s == "backlog"
+      return false unless record["state"].to_s == "completed" && record["stage"].to_s == "deliver"
+      return false if record["summary"].to_s.strip.empty?
+      return false if Array(record["artifacts"]).empty?
+      return false unless record["repository_writes"].to_h.empty?
+
+      plan = JSON.parse(record["plan"].to_s)
+      return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
+
+      FileUtils.mkdir_p(File.join(@root, ".master"))
+      path = File.join(@root, RECEIPT_PATH)
+      row = {
+        "item_id" => plan.fetch("item_id"),
+        "item_digest" => plan.fetch("item_digest"),
+        "mission_id" => record.fetch("id"),
+        "completed_at" => record.fetch("finished_at"),
+        "summary" => record.fetch("summary"),
+        "artifacts" => Array(record["artifacts"]),
+        "proof_status" => "mission_completed_with_artifacts",
+      }
+      File.open(path, File::WRONLY | File::CREAT | File::APPEND, 0o600) do |file|
+        file.flock(File::LOCK_EX)
+        file.puts(JSON.generate(row))
+        file.flush
+        file.fsync
+      end
+      true
+    rescue JSON::ParserError, KeyError, SystemCallError
+      false
+    end
+
+    private
+
+    def eligible?(row)
+      tree = row[:tree].to_s
+      return false unless OWNED_TREES.include?(tree)
+      return false unless READY_KINDS.include?(row[:kind].to_s)
+      paths = Array(row[:scope_paths]).map(&:to_s).uniq
+      return false if paths.empty?
+      return false unless paths.all? { |path| path.start_with?("#{tree}/") }
+      return false if paths.any? { |path| path.match?(/[*?\\[\\]{}]/) || path.split("/").include?("..") }
+
+      true
+    end
+
+    def item_digest(row)
+      Digest::SHA256.hexdigest([row.fetch(:id), row.fetch(:text), *Array(row[:scope_paths]).sort].join("\\0"))
+    end
+
+    def completed_receipts
+      path = File.join(@root, RECEIPT_PATH)
+      return [] unless File.file?(path)
+
+      File.foreach(path).filter_map do |line|
+        row = JSON.parse(line)
+        row["item_digest"] if row["proof_status"] == "mission_completed_with_artifacts"
+      rescue JSON::ParserError
+        nil
+      end
+    end
+  end
+end
+
 if $PROGRAM_NAME == __FILE__
   run = Backlog::Store.parse_cli(ARGV)
   if run[:check]
