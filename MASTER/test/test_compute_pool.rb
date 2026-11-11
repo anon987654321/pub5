@@ -153,6 +153,62 @@ class TestComputePool < Minitest::Test
     assert_includes strengths.fetch("chitchat"), "fast"
   end
 
+  def test_recent_success_out_ranks_a_repeatedly_failing_subscription
+    opus = "claude-cli:claude-opus-5-5"
+    grok = "grok-cli:auto"
+    now = Time.utc(2026, 11, 12, 12).to_f
+    @pool.instance_variable_set(:@clock, -> { now })
+
+    2.times { @pool.record(model: grok, status: :success, latency_ms: 100) }
+    2.times { @pool.record(model: opus, status: :failure, error: "session quota exhausted") }
+
+    candidate = lambda do |id|
+      _success_rate, _latency_factor, evidence_factor = @pool.send(:empirical_stats, id)
+      Master::CLI::Routing::ComputePool::Candidate.new(
+        id:,
+        quality: 1.0,
+        speed: 1.0,
+        cost: 1.0,
+        context_window: 128_000,
+        availability: 1.0,
+        tool_support: 1.0,
+        success_rate: 1.0,
+        latency_factor: 1.0,
+        evidence_factor:,
+        score: { "quality" => 1.0, "speed" => 1.0, "cost" => 1.0 },
+      )
+    end
+
+    @pool.stub(:candidate, candidate) do
+      assert_equal [grok, opus], @pool.rank([opus, grok])
+    end
+  end
+
+  def test_recent_success_evidence_decays_and_expires
+    model = "grok-cli:auto"
+    now = Time.utc(2026, 11, 12, 12).to_f
+    @pool.instance_variable_set(:@clock, -> { now })
+    @pool.record(model:, status: :success, latency_ms: 100)
+
+    fresh = @pool.send(:empirical_stats, model).last
+    @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_HALF_LIFE_S })
+    decayed = @pool.send(:empirical_stats, model).last
+    @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_WINDOW_S + 1 })
+    expired = @pool.send(:empirical_stats, model).last
+
+    assert_operator fresh, :>, decayed
+    assert_in_delta 1.0, expired, 0.0001
+  end
+
+  def test_recent_model_evidence_survives_a_new_compute_pool
+    model = "grok-cli:auto"
+    @pool.record(model:, status: :success, latency_ms: 100)
+    reloaded = Master::CLI::Routing::ComputePool.new(router: Router.new, root: @pool.instance_variable_get(:@root))
+
+    assert_operator reloaded.send(:empirical_stats, model).last, :>, 1.0
+    assert_in_delta Time.now.to_f, reloaded.snapshot.fetch(model).fetch(:last_success_at), 5.0
+  end
+
   def test_snapshot_is_independent
     @pool.record(model: "ollama:qwen3.5:27b", status: :success, latency_ms: 100)
     copy = @pool.snapshot
