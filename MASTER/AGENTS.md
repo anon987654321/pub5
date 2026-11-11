@@ -37,8 +37,15 @@ RAILS evidence starts with `MASTER/bin/operator browser install`, then
 `MASTER/bin/operator visual sweep APP --one-page` before the full sweep.
 
 The root TODO executor is opt-in: start with `MASTER_BACKLOG_AUTORUN=1 MASTER/bin/master`.
+Use the installed Ruby (the shared floor is 3.3); no patch-level `.ruby-version`
+or interpreter upper bound is authoritative. Bundler's `BUNDLED WITH` line is
+lockfile metadata, not a command to install or re-exec that exact Bundler.
+
 It queues one mechanical, single-tree item at a time through the existing
-Mission/TaskSteward and /fix pipeline. Product choices, design reviews,
+Mission/TaskSteward and /fix pipeline. Each verified coherent slice should be
+committed and pushed to `origin/main` before the next item, after checking
+`git status` and `git log origin/main..HEAD`; report `DELIVERY_FAILED` if the
+push cannot be proved. Product choices, design reviews,
 operator-only seams, external actions and missing proof remain blocked for a
 human. It records terminal delivery receipts; it never edits TODO checkboxes
 on the model's say-so.
