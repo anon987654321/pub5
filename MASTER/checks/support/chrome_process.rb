@@ -34,7 +34,8 @@ module Deploy
     # CdpSession.available? before it considers spawning anything.
     module Discovery
       def chrome_path
-        CHROME_PATHS.find { |path| File.executable?(path) }
+        candidates = [ENV["CHROME_PATH"], *CHROME_PATHS].compact.uniq
+        candidates.find { |path| File.executable?(path) }
       end
 
       def available?
