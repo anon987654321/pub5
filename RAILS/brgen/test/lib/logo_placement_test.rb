@@ -90,7 +90,8 @@ class LogoPlacementTest < ActiveSupport::TestCase
     stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
 
     assert_includes splash, 'render "dating/home/hjerterom_logo"'
-    assert_includes splash, "compact: true"
+    assert_includes splash, 'label: "Hjerterom"'
+    refute_includes splash, "compact: true"
     refute_includes splash, "<css-doodle"
     refute_includes splash, "dating-splash-heart-path"
 
@@ -112,8 +113,10 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, 'addEventListener("change"'
     assert_includes controller, "removeEventListener"
 
+    assert_includes logo, "<%= label.downcase %>"
     assert_includes stylesheet, ".dating-hjerterom-logo"
-    assert_includes stylesheet, "aspect-ratio: 3 / 2"
+    assert_includes stylesheet, "aspect-ratio: 4 / 3"
+    assert_includes stylesheet, "fill: currentColor"
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark
