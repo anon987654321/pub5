@@ -34,10 +34,11 @@ module Master
         end
       end
 
-      def initialize(root:, bus:, runner:)
+      def initialize(root:, bus:, runner:, after_run: nil)
         @root = File.expand_path(root)
         @bus = bus
         @runner = runner
+        @after_run = after_run
         @mutex = Mutex.new
         @condition = ConditionVariable.new
         @stop = false
@@ -93,7 +94,9 @@ module Master
         result = Master::Trace::WorkerReceipt.around(@bus, worker: "task_steward", job: "mission #{record["id"]}") do
           @runner.call(goal:, mission: record)
         end
-        @bus&.publish("task_steward:result", mission: record["id"], ok: result_ok?(result))
+        ok = result_ok?(result)
+        @bus&.publish("task_steward:result", mission: record["id"], ok:)
+        @after_run&.call(mission: Mission.current(root: @root), result:) if ok
         result
       rescue StandardError => e
         defer_failed_mission(e)
@@ -128,7 +131,7 @@ module Master
 
       def eligible?(record)
         return false unless record
-        return false unless record["origin"].to_s == "fold"
+        return false unless %w[fold backlog].include?(record["origin"].to_s)
         return false unless record["auto_continue"] == true
         return false unless %w[running waiting].include?(record["state"].to_s)
 
@@ -168,7 +171,7 @@ module Master
 
       def wait_seconds
         record = Mission.current(root: @root)
-        return POLL_SECONDS unless record && record["origin"].to_s == "fold" && record["auto_continue"] == true
+        return POLL_SECONDS unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
         return 0 if record["state"].to_s == "waiting" && due?(record)
 
         if record["state"].to_s == "waiting"
