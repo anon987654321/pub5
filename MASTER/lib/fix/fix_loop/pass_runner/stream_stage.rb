@@ -16,11 +16,13 @@ module Master
         module StreamStage
           STREAM = ENV.fetch("MASTER_FIX_STREAM", "1") != "0"
 
+          MAX_WORKERS = 8
+
           def self.worker_count(value)
             count = Integer(value, exception: false)
-            return count if count&.positive?
+            return count if count&.positive? && count <= MAX_WORKERS
 
-            raise ArgumentError, "MASTER_FIX_STREAM_WORKERS must be a positive integer"
+            raise ArgumentError, "MASTER_FIX_STREAM_WORKERS must be an integer from 1 to #{MAX_WORKERS}"
           end
           private_class_method :worker_count
 
