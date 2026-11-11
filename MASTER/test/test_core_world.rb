@@ -125,10 +125,10 @@ class WorldTest < Minitest::Test
         observed << [directory, File.read(File.join(directory, "durable.txt"))]
       end
 
-      result = world.perform(E.write("durable.txt", "durable\\n"))
+      result = world.perform(E.write("durable.txt", "durable\n"))
 
       assert result.ok?, result.message
-      assert_equal [[root, "durable\\n"]], observed
+      assert_equal [[root, "durable\n"]], observed
     end
   end
 
