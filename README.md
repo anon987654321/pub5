@@ -40,7 +40,7 @@ provenance and lifecycle state. Do not create another backlog file.
 
 ## First hour
 
-Install Ruby 3.3 or newer (below 4.1; `.ruby-version` pins 4.0.5) and run `bundle install` in
+Use an installed Ruby 3.3 or newer and run `bundle install` in
 `MASTER/`. Keep API keys in the environment, never in Git. Run `MASTER/bin/doctor` and read its
 one-line reports. Then take one narrow dry run from `MASTER/`:
 
