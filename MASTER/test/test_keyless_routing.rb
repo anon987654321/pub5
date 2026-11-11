@@ -13,7 +13,7 @@ class TestKeylessRouting < Minitest::Test
       XAI_API_KEY OPENROUTER_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY
       DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY LLM7_API_KEY
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_CLAUDE_CLI MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
-      MASTER_NO_POOL_PROBES MASTER_LLM_GATEWAY_URL MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
+      MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LLM_GATEWAY_URL MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
     ].to_h { |key| [key, ENV[key]] }
     @saved_env.each_key { |key| ENV.delete(key) }
     # Neutralize both local subscription CLIs so these tests grade keyless and
@@ -51,8 +51,16 @@ class TestKeylessRouting < Minitest::Test
     assert_empty router.fallback_chain(task_type: :exploration).grep(/\Aollama[:\/]/)
   end
 
-  def test_default_model_is_web_chat_grok_without_keys
-    assert_equal "web-chat:grok", Master.default_model
+  def test_default_model_prefers_a_discovered_keyless_hosted_lane_before_browser_chat
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_models) { ["llm7:gpt-oss:20b", "ovh:gpt-oss-120b"] }
+    resolver.define_singleton_method(:hosted_endpoint_for) do |id|
+      id.start_with?("llm7:") ? { key: "configured-key" } : { key: nil }
+    end
+
+    Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
+      assert_equal "ovh:gpt-oss-120b", Master.default_model
+    end
     assert Master.keyless_llm_enabled?
   end
 
