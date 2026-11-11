@@ -148,7 +148,12 @@ module Master::Core
       # File.exist? is false for a dangling symlink. Stop at the link itself:
       # File.realpath must reject it rather than walking past it to an in-root
       # parent and allowing mkdir_p to create through an outside target.
-      raise "path escapes workspace: #{path}" unless under_root?(File.realpath(existing), real_root)
+      resolved_existing = begin
+        File.realpath(existing)
+      rescue SystemCallError
+        nil
+      end
+      raise "path escapes workspace: #{path}" unless resolved_existing && under_root?(resolved_existing, real_root)
 
       if File.exist?(abs)
         canonical_file = File.realpath(abs)
