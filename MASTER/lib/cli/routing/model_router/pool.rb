@@ -109,6 +109,7 @@ module Master
             @live_catalog_models = nil
             @catalog_index = nil
             @agy_catalog_models = nil
+            Io::LaneSelection.reset_hosted_resolver! if Io::LaneSelection.respond_to?(:reset_hosted_resolver!)
             @pool_probes = nil
             start_pool_probes
             self
