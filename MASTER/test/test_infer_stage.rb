@@ -38,6 +38,16 @@ class InferStageTest < Minitest::Test
     assert_equal "scan", out.inferred_command
   end
 
+  def test_explicit_restart_and_reload_language_resolves_to_reload
+    ["restart MASTER", "reload yourself", "hot-reload MASTER", "respawn the agent"].each do |message|
+      result = @infer.call(ctx(message))
+
+      assert result.ok?, message
+      assert_equal :command, result.value!.intent, message
+      assert_equal "reload", result.value!.command, message
+    end
+  end
+
   def test_explain_is_not_a_work_command_alias
     result = @infer.call(ctx("explain your architecture"))
     assert result.ok?
