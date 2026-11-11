@@ -47,6 +47,27 @@ class FixMissionTest < Minitest::Test
     end
   end
 
+  def test_queued_backlog_mission_preserves_origin_intent_and_auto_continue
+    Dir.mktmpdir do |root|
+      mission = Master::Fix::Mission.new(root:).ensure_queued!(
+        goal: "Complete exactly this root TODO item",
+        scope: root,
+        origin: "backlog",
+        auto_continue: true,
+        mode: "repair",
+        intent: :functional_change,
+      )
+
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "waiting", record.fetch("state")
+      assert_equal "backlog", record.fetch("origin")
+      assert_equal true, record.fetch("auto_continue")
+      assert_equal "functional_change", record.dig("operator", "intent")
+      assert_equal "repair", record.dig("operator", "mode")
+      assert_equal mission.id, record.fetch("id")
+    end
+  end
+
   def test_manual_fix_can_supersede_an_unclaimed_waiting_mission
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).ensure_queued!(
