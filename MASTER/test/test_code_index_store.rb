@@ -184,18 +184,23 @@ class TestCodeIndexStore < Minitest::Test
       File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\n")
       index = Index.new(root:).build
 
-      File.write(File.join(root, "outside.rb"), "def incomplete(\n")
-      index.build
-      assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind)
-
       File.write(File.join(root, "lib", "inside.rb"), "class RevisedInside; end\n")
       index.build(path: "lib")
 
       assert index.partial?
-      assert index.lookup("Outside"), "the prior outside symbol remains useful while the scoped graph is partial"
+      assert index.lookup("Outside"), "a scoped rebuild must retain out-of-scope symbols"
       assert index.lookup("RevisedInside")
       assert_nil index.lookup("Inside")
+
+      File.write(File.join(root, "outside.rb"), "def incomplete(\n")
+      index.build
       assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind)
+
+      File.write(File.join(root, "lib", "inside.rb"), "class FinalInside; end\n")
+      index.build(path: "lib")
+      assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind),
+                   "a scoped success must not erase an out-of-scope parse failure"
+      assert index.lookup("FinalInside")
     end
   end
 
