@@ -118,6 +118,20 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_write_fsyncs_the_parent_directory_after_rename
+    with_world do |world, root|
+      observed = []
+      world.define_singleton_method(:fsync_directory) do |directory|
+        observed << [directory, File.read(File.join(directory, "durable.txt"))]
+      end
+
+      result = world.perform(E.write("durable.txt", "durable\\n"))
+
+      assert result.ok?, result.message
+      assert_equal [[root, "durable\\n"]], observed
+    end
+  end
+
   def test_write_replaces_existing_atomically_and_leaves_no_tmp
     with_world do |world, root|
       File.write(File.join(root, "a.rb"), "old\n")
