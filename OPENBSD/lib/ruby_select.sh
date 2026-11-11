@@ -11,7 +11,7 @@ _rs_find() {
   _rs_name=$1
   _rs_path=$(command -v "$_rs_name" 2>/dev/null) || _rs_path=
   case $_rs_path in
-    /*) [ -x "$_rs_path" ] && { printf '%s\\n' "$_rs_path"; return 0; } ;;
+    /*) [ -x "$_rs_path" ] && { printf '%s\n' "$_rs_path"; return 0; } ;;
   esac
   return 1
 }
