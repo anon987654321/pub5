@@ -186,13 +186,17 @@ class TestFixLoopFileCollector < Minitest::Test
     end
   end
 
+  # The collector honours whatever soul.yml declares. Under the operator
+  # decree of 2026-11-09 nothing is declared, so pledge.rb collects like any
+  # other file; a future declaration pulls its paths back out again.
   def test_sacred_paths_are_never_collected
     files = collector(Master::ROOT).collect(Master::ROOT).map { |f| f.delete_prefix("#{Master::ROOT}/") }
 
     sacred = Master::Core::Constitution::Paths.sacred_paths(root: Master::ROOT)
-
-    assert_includes sacred, "lib/ground/pledge.rb"
     sacred.each { |entry| refute_includes files, entry.delete_suffix("/") }
+
+    assert_equal sacred.empty?, files.include?("lib/ground/pledge.rb"),
+                 "a declared sacred path is not collected; an undeclared one is"
     assert_includes files, "lib/core/constitution.rb"
     assert_includes files, "lib/fix/fix_loop.rb"
   end

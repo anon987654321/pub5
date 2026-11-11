@@ -108,15 +108,18 @@ class WriteGuardTest < Minitest::Test
     end
   end
 
-  # Operator decision 2026-10-28: an automated write to the laws or the soul is refused with a reason,
-  # whatever its content.
-  def test_an_automated_write_to_the_laws_or_the_soul_is_refused
+  # Operator decree 2026-11-09: nothing is sacred - the manifest declares an
+  # empty protected-path list, so the boundary refuses nothing and the guard
+  # judges the content alone. A future operator may declare paths again; when
+  # one is declared, the refusal must come back with it.
+  def test_the_retired_boundary_refuses_nothing_while_the_declaration_is_empty
+    assert_empty Master::Soul.sacred_paths, "the decree lives in soul.yml; this test guards its edges"
+
     %w[laws.yml soul.yml].each do |name|
       file = File.join(Master::ROOT, "data", name)
       verdict = @guard.verdict(path: file, content: File.read(file, encoding: "UTF-8"))
 
-      assert_predicate verdict, :blocked?
-      assert_match(/\Asacred_path:0 data\/#{Regexp.escape(name)} is sacred: no automated writer/, verdict.reason)
+      refute_match(/sacred_path/, verdict.reason.to_s)
     end
   end
 
