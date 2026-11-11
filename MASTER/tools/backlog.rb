@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "digest"
+require "json"
+require "fileutils"
 require_relative "backlog_classify"
 require_relative "backlog_reader"
 require_relative "backlog_store"
@@ -215,7 +217,7 @@ module Backlog
         "Do not edit the TODO checkbox. The executor closes work only from a durable completed Mission with proof artifacts.",
         "Do not deploy, publish, spend money, contact people, alter production data, or cross a human/operator gate.",
         "If the task requires a product decision, external credential, human approval, or unavailable runtime, block with the exact reason.",
-      ].join("\\n")
+      ].join("\n")
       plan = JSON.generate(
         "executor" => "root_todo",
         "item_id" => item.fetch(:id),
@@ -281,7 +283,7 @@ module Backlog
     end
 
     def item_digest(row)
-      Digest::SHA256.hexdigest([row.fetch(:id), row.fetch(:text), *Array(row[:scope_paths]).sort].join("\\0"))
+      Digest::SHA256.hexdigest([row.fetch(:id), row.fetch(:text), *Array(row[:scope_paths]).sort].join("\0"))
     end
 
     def completed_receipts
