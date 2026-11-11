@@ -35,7 +35,7 @@ class TestRubySelect < Minitest::Test
   end
 
   def test_uses_first_compatible_versioned_ruby_when_no_generic_exists
-    with_path("ruby34", "ruby40", "bundle34", "bundle40", "gem40") do |dir|
+    with_path("ruby34", "ruby40", "bundle34", "bundle40", "gem34", "gem40") do |dir|
       shells.each do |shell|
         out, err, status = resolve(dir, shell: shell)
         assert status.success?, err
@@ -63,14 +63,14 @@ class TestRubySelect < Minitest::Test
   end
 
   def test_dotted_suffix_outranks_the_undotted_name
-    with_path("ruby3.4", "ruby34", "bundle3.4") do |dir|
+    with_path("ruby3.4", "ruby34", "bundle3.4", "gem3.4") do |dir|
       out, = resolve(dir)
       assert_equal [File.join(dir, "ruby3.4"), "3.4", File.join(dir, "bundle3.4")], out.split("|").first(3)
     end
   end
 
   def test_env_override_wins
-    with_path("ruby34", "ruby40", "bundle34") do |dir|
+    with_path("ruby34", "ruby40", "bundle34", "gem34") do |dir|
       out, = resolve(dir, env: { "RUBY" => File.join(dir, "ruby34") })
       assert_equal [File.join(dir, "ruby34"), "34", File.join(dir, "bundle34")], out.split("|").first(3)
     end
