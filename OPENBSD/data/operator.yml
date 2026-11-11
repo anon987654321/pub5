@@ -39,14 +39,14 @@ domain_ownership:
 
 recipes:
   - want: Redeploy production (the one command)
-    run: ./bin/redeploy
+    run: MASTER/bin/redeploy
     expect: >-
       Hands-off: local preflight, pin origin/main SHA, deploy under tmux on vm23
       as root (git still as dev), wait until finished streaming the log, then
       vps-state + public canary. Survives SSH drop. --follow attaches; --detach
       starts and returns.
   - want: Redeploy one app
-    run: ./bin/redeploy brgen
+    run: MASTER/bin/redeploy brgen
     expect: same path, single app
   - want: See where I am
     run: MASTER/bin/operator status
