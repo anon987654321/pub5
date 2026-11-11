@@ -63,11 +63,11 @@ class TestBootEntrypoint < Minitest::Test
     end
   end
 
-  def test_supported_ruby_window_spans_openbsd_packages_and_ruby_four
+  def test_supported_ruby_floor_has_no_artificial_upper_bound
     env = Operator::Environment
 
-    %w[3.3.9 3.4.9 4.0.5 4.0.7].each do |version|
-      assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new(version) && Gem::Version.new(version) < env::SUPPORTED_RUBY_MAX, version
+    %w[3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each do |version|
+      assert env::SUPPORTED_RUBY_MIN <= Gem::Version.new(version), version
     end
     refute env::SUPPORTED_RUBY_MIN <= Gem::Version.new("3.2.9")
   end
