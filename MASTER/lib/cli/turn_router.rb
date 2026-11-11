@@ -257,6 +257,17 @@ module Master
         reading ? reading_args(args) : args
       end
 
+      def pass_command_args(value, text)
+        args = value.args.to_s
+        refined = pass_args_from(text)
+        # Prefer a narrower tree path when Infer only captured a coarse alias.
+        args = refined if !refined.empty? && (args.empty? || refined.start_with?("#{args}/") || refined != args && refined.include?("/"))
+        args = refined if args.empty?
+        args = "master" if args.match?(/\A(?:itself|self)\z/i) && text.match?(/\bmaster\b/i)
+        args = "master" if args.match?(/\Aitself\z/i)
+        args
+      end
+
       def reading_args(args) = [READING_FLAGS, args.to_s.strip].reject(&:empty?).join(" ")
 
       def full_workflow_intent?(text)

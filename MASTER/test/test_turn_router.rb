@@ -326,6 +326,15 @@ class TurnRouterTest < Minitest::Test
     assert_equal "fix", Master::CLI::TurnRouter.send(:normalize_inferred_command, "scan")
   end
 
+  def test_pipeline_inference_preserves_narrower_target_arguments
+    router = Master::CLI::TurnRouter
+    value = Struct.new(:args).new("rails")
+
+    assert_equal "rails/brgen", router.pass_command_args(value, "review rails/brgen")
+    assert_equal "rails/brgen", router.pass_command_args(Struct.new(:args).new("rails/brgen"), "review rails")
+    assert_equal "master", router.pass_command_args(Struct.new(:args).new("itself"), "run through itself")
+  end
+
   def test_an_inferred_word_no_handler_takes_stays_a_sentence
     inferred = Master::CLI::TurnRouter.infer_operator_command("read lib/trace/dmesg.rb and summarise it",
                                                               container: build_container)
