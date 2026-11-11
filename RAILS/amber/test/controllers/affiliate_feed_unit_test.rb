@@ -13,7 +13,9 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
     count.times do |i|
       Shared::AffiliateProduct.create!(
         source: "tradedoubler", external_id: "fixture-#{category}-#{i}",
-        title: "Linen shirt #{i}", click_url: "https://example.test/p/#{i}",
+        title: "Linen shirt #{i}", description: "Lightweight linen for everyday wear",
+        merchant: "Fjord Studio", image_url: "https://example.test/images/linen-shirt-#{i}.jpg",
+        click_url: "https://example.test/p/#{i}",
         category: category, market: "NO", in_stock: true,
         placeholder: false, last_seen_at: Time.current
       )
@@ -39,9 +41,14 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
     get feed_posts_url
 
     assert_response :success
-    assert_includes response.body, "affiliate_feed_unit"
-    assert_includes response.body, "affiliate_feed_grid"
+    assert_includes response.body, "affiliate_feed_unit--post"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_header"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media img[alt]"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_copy h2", text: /Linen shirt/
+    assert_select "aside.affiliate_feed_unit--post a.affiliate_feed_post_cta", text: I18n.t("affiliate.cta.view_offer")
+    assert_includes response.body, "affiliate_feed_link_disclosure"
     assert_match(/data-outbound-click-epi-value=/, response.body)
+    refute_includes response.body, "affiliate_feed_grid"
   end
 
   # The unit reads the shared locale file. Until the engine loaded every locale
@@ -66,6 +73,7 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
     get feed_posts_url
 
     assert_response :success
+    assert_not_includes response.body, "affiliate_feed_unit--post"
     assert_not_includes response.body, "affiliate_feed_grid"
   end
 
@@ -77,6 +85,7 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
     get feed_posts_url
 
     assert_response :success
+    assert_not_includes response.body, "affiliate_feed_unit--post"
     assert_not_includes response.body, "affiliate_feed_grid"
   end
 

@@ -11,7 +11,8 @@
 <% click_epi = Shared::LinkConverter.request_epi(route: route) %>
 <% if visible_deals.any? %>
   <% unit_classes = ["affiliate_feed_unit",
-                     ("affiliate_feed_unit--brgen affiliate_feed_unit--collage" if brgen_surface),
+                     ("affiliate_feed_unit--brgen affiliate_feed_unit--collage" if brgen_surface && !post_feed),
+                     ("affiliate_feed_unit--post" if post_feed),
                      ("affiliate_feed_unit--in_grid" if local_assigns[:in_grid])].compact.join(" ") %>
   <%# A feed with several bands passes each one the post it follows, so every
       landmark gets its own name; a lone band keeps the plain one. %>
@@ -22,10 +23,61 @@
                   end %>
   <aside class="<%= unit_classes %>"
          aria-label="<%= unit_label %>"
+         <% unless post_feed %>
          data-controller="parallax-tilt"
          data-parallax-tilt-drift-value="<%= brgen_surface %>"
-         data-action="pointermove->parallax-tilt#move pointerleave->parallax-tilt#leave">
-    <header class="affiliate_feed_header">
+         data-action="pointermove->parallax-tilt#move pointerleave->parallax-tilt#leave"
+         <% end %>>
+    <% if post_feed %>
+      <% deal = visible_deals.first %>
+      <% amazon = deal.respond_to?(:source) && deal.source.to_s == "amazon" %>
+      <% amazon_content = affiliate_product_content_allowed?(deal) %>
+      <% restricted_amazon = amazon && !amazon_content %>
+      <% advertiser = restricted_amazon ? t("affiliate.amazon_label") : deal.merchant.presence || affiliate_program_label(deal) %>
+      <% click_data = {
+        controller: "outbound-click",
+        action: "click->outbound-click#record",
+        outbound_click_url_value: deal.click_url,
+        outbound_click_merchant_value: affiliate_program_label(deal),
+        outbound_click_surface_value: local_assigns[:surface].presence || "affiliate_feed",
+        outbound_click_epi_value: click_epi
+      } %>
+      <header class="affiliate_feed_post_header">
+        <span class="affiliate_feed_post_avatar" aria-hidden="true"><%= advertiser.first(1).upcase %></span>
+        <div class="affiliate_feed_post_identity">
+          <p class="affiliate_feed_post_merchant"><%= advertiser %></p>
+          <p class="affiliate_feed_post_sponsored"><%= t("affiliate.sponsored") %></p>
+        </div>
+      </header>
+      <% if restricted_amazon %>
+        <div class="affiliate_feed_post_media affiliate_feed_post_media--restricted" aria-hidden="true">
+          <span class="affiliate_feed_amazon_mark"><%= t("affiliate.amazon_label") %></span>
+          <span class="affiliate_feed_post_restricted_copy"><%= t("affiliate.amazon_shop") %></span>
+        </div>
+      <% elsif deal.image_url.present? %>
+        <%= link_to deal.click_url, target: "_blank", rel: "noopener sponsored",
+                    class: "affiliate_feed_post_media", data: click_data do %>
+          <%= image_tag deal.image_url, alt: deal.title.presence || t("affiliate.deal_alt"),
+                        loading: "lazy", decoding: "async" %>
+        <% end %>
+      <% end %>
+      <div class="affiliate_feed_post_footer">
+        <div class="affiliate_feed_post_copy">
+          <h2><%= restricted_amazon ? t("affiliate.amazon_shop") : deal.title %></h2>
+          <% if !restricted_amazon && deal.description.present? %>
+            <p><%= deal.description %></p>
+          <% end %>
+          <% if deal.placeholder %>
+            <p class="affiliate_feed_placeholder"><%= t("affiliate.placeholder_notice") %></p>
+          <% end %>
+          <p class="affiliate_feed_link_disclosure"><%= t("affiliate.paid_link") %></p>
+        </div>
+        <%= link_to t("affiliate.cta.view_offer"), deal.click_url,
+                    target: "_blank", rel: "noopener sponsored",
+                    class: "affiliate_feed_post_cta", data: click_data %>
+      </div>
+    <% else %>
+      <header class="affiliate_feed_header">
       <hgroup>
         <p class="affiliate_feed_label"><%= t("affiliate.sponsored") %></p>
         <h2><%= t("affiliate.deals_title") %></h2>
@@ -83,6 +135,7 @@
         </a>
       <% end %>
     </div>
+    <% end %>
 
     <%= render "shared/affiliate_disclosure" %>
   </aside>

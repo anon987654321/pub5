@@ -35,6 +35,10 @@ class HomeFeedLandmarkNamesTest < ActionDispatch::IntegrationTest
     labels = css_select("#home-feed aside").map { _1["aria-label"] }
     assert_operator labels.size, :>=, 6, "expected several units between posts"
     assert labels.all?(&:present?), "every unit names itself: #{labels.inspect}"
+    native_ads = css_select("#home-feed aside.affiliate_feed_unit--post")
+    assert_operator native_ads.size, :>, 0, "Brgen post-feed placements use the native sponsored-post format"
+    assert native_ads.all? { |node| node.at_css(".affiliate_feed_post_header .affiliate_feed_post_sponsored") },
+           "every native creative must identify itself as sponsored"
     assert_equal labels.uniq, labels, "two units share a name: #{labels.tally.select { _2 > 1 }.keys.inspect}"
     assert_includes labels, I18n.t("affiliate.feed_unit_label_after", position: 2, locale: :nb)
     assert_includes labels, I18n.t("home.radio_unit.label", position: 5, locale: :nb)

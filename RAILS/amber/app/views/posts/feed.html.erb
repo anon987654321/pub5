@@ -16,7 +16,8 @@
     <% @posts.each_with_index do |post, index| %>
       <%= tag.li render(post) %>
       <% if ((index + 1) % Shared::AffiliateHelper::FEED_EVERY).zero? && index + 1 < @posts.size %>
-        <% band = render("shared/affiliate_feed_unit", category: "fashion") %>
+        <% band = render("shared/affiliate_feed_unit", category: "fashion",
+                                                       post_feed: true, position: index + 1) %>
         <%= tag.li band if band.present? %>
       <% end %>
     <% end %>

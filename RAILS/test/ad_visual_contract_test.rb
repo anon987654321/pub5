@@ -44,6 +44,22 @@ class AdVisualContractTest < Minitest::Test
            "each affiliate link carries its own paid-link disclosure"
   end
 
+  def test_post_feed_variant_uses_native_sponsored_post_anatomy
+    text = read("_affiliate_feed_unit.html.erb")
+    %w[
+      affiliate_feed_unit--post affiliate_feed_post_header affiliate_feed_post_avatar
+      affiliate_feed_post_sponsored affiliate_feed_post_media affiliate_feed_post_copy
+      affiliate_feed_post_cta
+    ].each do |class_name|
+      assert_includes text, class_name
+    end
+    assert_includes text, 't("affiliate.sponsored")'
+    assert_includes text, 't("affiliate.cta.view_offer")'
+    assert_includes text, 'affiliate_product_content_allowed?(deal)'
+    assert_includes text, 'render "shared/affiliate_disclosure"'
+    assert_includes text, 'rel: "noopener sponsored"'
+  end
+
   def test_ad_slot_is_consent_gated_and_labelled
     text = read("_ad_slot.html.erb")
     assert text.include?("advertising_consent?"),

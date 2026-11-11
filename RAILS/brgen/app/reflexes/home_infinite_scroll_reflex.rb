@@ -34,7 +34,7 @@ class HomeInfiniteScrollReflex < Shared::InfiniteScrollReflex
     else
       render(
         partial: "shared/affiliate_feed_unit",
-        locals: { surface: "brgen", position: slot }
+        locals: { surface: "brgen", post_feed: true, position: slot }
       )
     end
   end
