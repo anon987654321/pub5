@@ -20,6 +20,8 @@ module Master
       VERSION = 2
       REL_PATH = ".master/mission.json"
       LOCK_PATH = ".master/mission.lock"
+      NAMESPACE_KEY = :master_fix_mission_namespace
+      NAMESPACE_PATTERN = /\A[a-z][a-z0-9_-]{0,31}\z/.freeze
       MAX_GOAL_BYTES = 2_048
       MAX_PLAN_BYTES = 4_096
       LEASE_SECONDS = 300
@@ -45,8 +47,46 @@ module Master
         @instance_id
       end
 
-      def initialize(root: Master::ROOT, bus: nil, checkpoint: nil)
+      def self.current_namespace
+        Thread.current.thread_variable_get(NAMESPACE_KEY)
+      end
+
+      # Scope a synchronous repair invocation to its own durable mission file.
+      # Thread variables are deliberate: ordinary thread-local state is fiber-local
+      # on modern Ruby and can leak a namespace across a scheduler boundary.
+      def self.with_namespace(namespace)
+        thread = Thread.current
+        previous = thread.thread_variable_get(NAMESPACE_KEY)
+        thread.thread_variable_set(NAMESPACE_KEY, normalize_namespace(namespace))
+        yield
+      ensure
+        thread&.thread_variable_set(NAMESPACE_KEY, previous)
+      end
+
+      def self.normalize_namespace(value)
+        return if value.nil?
+
+        normalized = value.to_s
+        raise ArgumentError, "invalid mission namespace" unless normalized.match?(NAMESPACE_PATTERN)
+
+        normalized.freeze
+      end
+
+      def self.record_path(root:, namespace: current_namespace)
+        suffix = normalize_namespace(namespace)
+        relative = suffix ? ".master/mission-#{suffix}.json" : REL_PATH
+        File.join(File.expand_path(root), relative)
+      end
+
+      def self.lock_file_path(root:, namespace: current_namespace)
+        suffix = normalize_namespace(namespace)
+        relative = suffix ? ".master/mission-#{suffix}.lock" : LOCK_PATH
+        File.join(File.expand_path(root), relative)
+      end
+
+      def initialize(root: Master::ROOT, bus: nil, checkpoint: nil, namespace: self.class.current_namespace)
         @root = File.expand_path(root)
+        @namespace = self.class.normalize_namespace(namespace)
         @bus = bus
         @checkpoint = checkpoint
         @id = nil
@@ -566,8 +606,8 @@ module Master
         @record&.dup
       end
 
-      def self.current(root: Master::ROOT)
-        path = File.join(File.expand_path(root), REL_PATH)
+      def self.current(root: Master::ROOT, namespace: current_namespace)
+        path = record_path(root:, namespace:)
         return unless File.file?(path)
 
         record = JSON.parse(File.read(path, encoding: "UTF-8"))
@@ -877,7 +917,7 @@ module Master
       end
 
       def load_record
-        path = File.join(@root, REL_PATH)
+        path = self.class.record_path(root: @root, namespace: @namespace)
         return unless File.file?(path)
 
         raw = JSON.parse(File.read(path, encoding: "UTF-8"))
@@ -910,7 +950,7 @@ module Master
       end
 
       def persist!
-        path = File.join(@root, REL_PATH)
+        path = self.class.record_path(root: @root, namespace: @namespace)
         persist_record(path, @record)
       end
 
@@ -922,7 +962,7 @@ module Master
       end
 
       def with_lock
-        lock_path = File.join(@root, LOCK_PATH)
+        lock_path = self.class.lock_file_path(root: @root, namespace: @namespace)
         FileUtils.mkdir_p(File.dirname(lock_path), mode: 0o700)
         File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |io|
           io.flock(File::LOCK_EX)
