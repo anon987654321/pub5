@@ -192,7 +192,7 @@ module Master
       end
 
       def reindex_if_stale(file)
-        sig = CodeIndexStore.signature(file)
+        sig = CodeIndexStore.signature(file, root: @root)
         unless sig
           purge_file(file)
           record_error(file, :stat, "source file could not be inspected")
@@ -299,7 +299,7 @@ module Master
 
         visitor = SymbolVisitor.new(file:, root: @root)
         parse_result.value.accept(visitor)
-        unless CodeIndexStore.signature(file) == signature
+        unless CodeIndexStore.signature(file, root: @root) == signature
           record_error(file, :changed, "source changed while Prism analyzed it; retry the index build")
           @bus&.publish("code_index:parse_error", path: file, error: "source changed during analysis")
           return false
