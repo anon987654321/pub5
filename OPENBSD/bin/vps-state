@@ -186,7 +186,7 @@ def print_deploy_in_progress(status)
 end
 
 if ARGV.intersect?(%w[-h --help])
-  puts "usage: ruby34 OPENBSD/bin/vps-state [--json]"
+  puts "usage: ruby OPENBSD/bin/vps-state [--json]"
   puts "  master and every apps.yml app: service, port, deployed SHA and last deploy stamp"
   exit 0
 end
