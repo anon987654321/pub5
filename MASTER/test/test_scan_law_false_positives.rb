@@ -989,6 +989,7 @@ class TestScanRuleFalsePositives < Minitest::Test
 
     refute_empty findings(:HTML_HEADING_HIERARCHY, bad, path: "BIZ/example.html")
     assert_empty findings(:HTML_HEADING_HIERARCHY, good, path: "BIZ/example.html")
+    assert_empty findings(:HTML_HEADING_HIERARCHY, bad, path: "lib/example.rb")
   end
 
 end

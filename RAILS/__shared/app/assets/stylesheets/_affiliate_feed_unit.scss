@@ -61,9 +61,6 @@
   transition: transform 180ms var(--ease-out);
 }
 
-.affiliate_feed_tile {
-  transition: transform 180ms var(--ease-out);
-}
 
 .affiliate_feed_tile:focus-visible {
   outline: 2px solid var(--accent);

@@ -38,6 +38,7 @@ end
 
 Law.define(:HTML_HEADING_HIERARCHY) do
   source "pub prompt lineage - semantic HTML5 structure; h1 for title, h2 for sections, h3 for subsections"
+  path %r{\.(?:html|erb)\z}
   scope :file
   detect do |text|
     levels = text.scan(/<h([1-6])\b/i).flatten.map(&:to_i)
