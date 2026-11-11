@@ -109,7 +109,7 @@ class LogoContractTest < ActionView::TestCase
   end
   test "logo study plates preserve the canonical white swoosh geometry" do
     source = Rails.root.join("app/views/shared/_logo.html.erb").read
-    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
 
     assert_equal 9, canonical.size
     plates = Dir.glob(Rails.root.join("__logo/plates/[0-9][0-9]_*.svg").to_s)
@@ -118,7 +118,7 @@ class LogoContractTest < ActionView::TestCase
     plates.each do |path|
       svg = File.read(path)
       number = File.basename(path)[0, 2].to_i
-      actual = svg.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+      actual = svg.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
       first_line = svg.index('<path stroke="#FFFFFF"')
       line_group = svg.rindex(%(<g clip-path="url(#pl#{number}-text)">), first_line)
       group_end = svg.index("</g>", first_line)
@@ -131,24 +131,24 @@ class LogoContractTest < ActionView::TestCase
 
   test "production logo reference keeps the full-width swoosh outside the ink clip" do
     source = Rails.root.join("app/views/shared/_logo.html.erb").read
-    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
     reference = Rails.root.join("__logo/plates/reference-original.svg").read
 
     assert_includes reference, 'viewBox="0 0 1000 500"'
-    assert_equal canonical, reference.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+    assert_equal canonical, reference.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
     assert_equal 1, reference.scan('<g clip-path="url(#pl0-text)">').size
     assert_operator reference.index("</g>"), :<, reference.index('<path stroke="#FFFFFF"')
   end
 
   test "logo study avatars remain transparent and preserve the canonical swoosh" do
     source = Rails.root.join("app/views/shared/_logo.html.erb").read
-    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+    canonical = source.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
     avatars = Dir.glob(Rails.root.join("__logo/plates/avatars/*.svg").to_s)
 
     assert_equal 3, avatars.size
     avatars.each do |path|
       svg = File.read(path)
-      assert_equal canonical, svg.scan(/<path stroke="#FFFFFF" stroke-width="([\\d.]+)" stroke-opacity="1\\.0" fill="none" d="([^"]+)"\\/>/)
+      assert_equal canonical, svg.scan(/<path stroke="#FFFFFF" stroke-width="([\d.]+)" stroke-opacity="1\.0" fill="none" d="([^"]+)"\/>/)
       refute_includes svg, 'fill="#0B0B0B"', "avatar exports must not include a solid ground"
     end
   end
