@@ -328,6 +328,13 @@ body.vertical-marketplace .search {
   opacity: 0;
 }
 
+/* The operator's smiley is the useful no-script mark: it remains visible as
+   the static identity until the cart/count timeline is available. The motion
+   controller supplies the later end state for reduced motion and failed load. */
+.marketplace .smileyface {
+  opacity: 1;
+}
+
 .shopping_cart {
   position: absolute;
   transform: scale(3);
