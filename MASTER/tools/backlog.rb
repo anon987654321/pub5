@@ -185,25 +185,54 @@ module Backlog
   # Closed mapping from explicit acceptance commands to the existing
   # TaskContract proof vocabulary. An unknown command is not guessed.
   module ProofMap
-    VERSION = 1
+    VERSION = 2
     module_function
 
+    # Normalize only known shell prefixes. This is not a shell parser: an
+    # unfamiliar wrapper stays unmapped and therefore cannot authorize intake.
+    def normalize_command(value)
+      command = value.to_s.strip.sub(/\A\$\s*/, "")
+      loop do
+        normalized = command
+          .sub(/\Acd\s+(?:"[^"]+"|'[^']+'|\S+)\s*&&\s*/, "")
+          .sub(/\A[A-Z_][A-Z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+/, "")
+          .sub(/\Abundle exec\s+/, "")
+        break if normalized == command
+
+        command = normalized.lstrip
+      end
+      command
+    end
+
     def types_for(row = nil, done_when: nil)
-      command = (done_when || (row && row[:done_when])).to_s.strip.sub(/\\Abundle exec /, "")
+      value = done_when || (row && (row[:done_when] || row["done_when"]))
+      command = normalize_command(value)
       return [] if command.empty?
 
       types = case command
-              when "rake test", "rake test:batch"
+              when /\Arake test(?::batch)?(?:\s|\z)/i,
+                   /\Arake check test(?:\s|\z)/i,
+                   /\Aruby\s+(?:MASTER|RAILS|OPENBSD|STUDIO)\/test\/run_all\.rb(?:\s|\z)/i,
+                   /\A(?:MASTER\/)?bin\/ci(?:\s|\z)/i
                 ["full_suite"]
-              when /\\Arake test:[a-z0-9_:.-]+\\z/i,
-                   /\\A(?:ruby -I(?:test|spec)|rspec)(?:\\s|\\z)/
+              when /\Arake test:[a-z0-9_:.-]+(?:\s|\z)/i,
+                   /\Aruby\s+(?:-[^\s]+\s+)*(?:test|spec)\/.*\.rb(?:\s|\z)/i,
+                   /\Aruby\s+(?:MASTER|RAILS|OPENBSD|STUDIO)\/test\/.*_test\.rb(?:\s|\z)/i,
+                   /\Arspec(?:\s|\z)/i
                 ["focused_tests"]
-              when /\\Arake lint(?::[a-z0-9_:.-]+)?\\z/i
+              when /\Arake audit(?:\s|\z)/i,
+                   /\Arake lint(?::[a-z0-9_:.-]+)?(?:\s|\z)/i,
+                   /\A(?:MASTER\/)?bin\/check(?:\s|\z)/i,
+                   /\Aruby\s+MASTER\/checks\/runner\.rb(?:\s|\z)/i
                 ["law_assessment"]
-              when %r{\\A(?:MASTER/)?bin/operator (?:visual )?sweep(?:\\s|\\z)}
+              when %r{\A(?:MASTER/)?bin/operator (?:visual )?sweep(?:\s|\z)}i,
+                   %r{\A(?:MASTER/)?bin/operator visual review(?:\s|\z)}i
                 ["rendered_evidence"]
-              when %r{\\A(?:MASTER/)?bin/operator accessibility(?:\\s|\\z)}
+              when %r{\A(?:MASTER/)?bin/operator accessibility(?:\s|\z)}i
                 ["accessibility_review"]
+              when /\A(?:pfctl|swapctl)\s/i,
+                   %r{\A(?:ssh|MASTER/bin/operator) (?:host|vps|deploy)(?:\s|\z)}i
+                ["runtime_evidence"]
               else
                 []
               end
