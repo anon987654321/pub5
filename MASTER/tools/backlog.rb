@@ -287,6 +287,8 @@ module Backlog
         "summary" => record.fetch("summary"),
         "artifacts" => Array(record["artifacts"]),
         "proof_status" => "verified_fix_pipeline_and_origin_main",
+        "proof" => proof,
+        "repository_pushes" => pushes,
         "evidence" => {
           "mission_state" => record.fetch("state"),
           "mission_stage" => record.fetch("stage"),
