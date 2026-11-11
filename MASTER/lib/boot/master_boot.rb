@@ -57,7 +57,7 @@ module Master
     end
 
     def start_task_steward(root, container)
-      executor = if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
+      executor = if ENV["MASTER_BACKLOG_AUTORUN"] == "1" && ENV["MASTER_TASK_STEWARD"] != "0"
                    Backlog::Executor.new(root:, repo_root: REPO_ROOT)
                  end
       if executor
