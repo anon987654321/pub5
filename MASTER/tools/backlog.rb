@@ -262,7 +262,7 @@ module Backlog
     def initialize(root: Master::ROOT, repo_root: Master::REPO_ROOT, mission_class: nil)
       require_relative "../lib/fix/mission" unless defined?(Master::Fix::Mission)
       @root = File.expand_path(root)
-      @repo_root = File.expand_path(repo_root)
+      @repo_root = File.realpath(repo_root)
       @mission_class = mission_class || Master::Fix::Mission
     end
 
@@ -396,18 +396,38 @@ module Backlog
       return false if paths.empty?
       return false unless paths.all? { |path| path.start_with?("#{tree}/") }
       return false if paths.any? { |path| ["*", "?", "{", "}", "[", "]"].any? { |token| path.include?(token) } || path.split("/").include?("..") }
-      return false unless paths.all? do |path|
-        absolute = File.expand_path(path, @repo_root)
-        next false unless absolute.start_with?(@repo_root + File::SEPARATOR)
-        next false if File.symlink?(absolute) || !(File.file?(absolute) || File.directory?(absolute))
-
-        real = File.realpath(absolute)
-        real.start_with?(@repo_root + File::SEPARATOR)
-      rescue SystemCallError
-        false
-      end
+      return false unless paths.all? { |path| safe_scope_path?(path) }
 
       true
+    end
+
+    # Every path component is checked with lstat. A final-file-only symlink
+    # check permits an in-repository symlinked parent to redirect a repair,
+    # and File.realpath alone does not reject hard-linked source files.
+    def safe_scope_path?(relative)
+      absolute = File.expand_path(relative, @repo_root)
+      return false unless absolute.start_with?(@repo_root + File::SEPARATOR)
+
+      cursor = @repo_root
+      components = relative.split("/")
+      components.each_with_index do |component, index|
+        cursor = File.join(cursor, component)
+        return false unless File.exist?(cursor) || File.symlink?(cursor)
+
+        stat = File.lstat(cursor)
+        return false if stat.symlink?
+        if index < components.length - 1 || stat.directory?
+          return false unless stat.directory?
+        else
+          return false unless stat.file? && stat.nlink == 1
+        end
+      end
+
+      real = File.realpath(absolute)
+      real.start_with?(@repo_root + File::SEPARATOR) &&
+        (File.file?(absolute) || File.directory?(absolute))
+    rescue ArgumentError, SystemCallError
+      false
     end
 
     def item_digest(row)
