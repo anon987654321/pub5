@@ -196,6 +196,11 @@ module Master::Core
     def do_write(path:, content:, **)
       abs = within(path)
       FileUtils.mkdir_p(File.dirname(abs))
+      # Re-resolve after directory creation. A parent replaced by a symlink
+      # between the first check and mkdir_p must not redirect the final write.
+      checked = within(path)
+      raise "path changed before write: #{path}" unless checked == abs
+
       @undo&.snapshot(abs)
       write_atomic(abs, content)
       Observation.ok("wrote #{path} (#{content.bytesize}b)")
