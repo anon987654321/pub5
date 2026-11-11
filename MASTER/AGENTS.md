@@ -442,9 +442,11 @@ always means no writes. Audit and visual cannot be made write-enabled by
 budgets and every sacred-path, visual-custody, transaction and restructuring
 proof gate.
 
-The existing compatibility spellings rewrite to `/fix --mode=...`: `/review`
-and `/critique` mean audit; `/scan` means the read-only repair preview;
-`/workflow`, `/triad`, `/sweep`, `/through` and `/self` mean all.
+The existing compatibility spellings rewrite to `/fix --mode=...`:
+`/audit`, `/review`, `/critique` and `/council` mean audit; `/scan`
+means the read-only repair preview; `/visual` and `/style` mean visual;
+`/elevate` and `/map` mean elevate; `/all`, `/workflow`, `/triad`,
+`/sweep`, `/through` and `/self` mean all.
 Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection.
 Use `/fix` in new instructions.
 
@@ -484,7 +486,10 @@ failing finding with forty lines around it and asks for a minimal unified diff;
 a proposal that changes lines more than twenty-five from every finding is
 refused before the verifier is asked, and a file stops after three rejected
 proposals. A finding gets at most three attempts (two bounded retries) when
-its refusal includes actionable feedback. The pass summary prints the rejects by reason. Without a file cap,
+its refusal includes actionable feedback. Exhausting those attempts records a
+`needs_person` disposition and makes the pass end `HUMAN_DECISION`; repeated
+refusals are not ordinary stagnation. The pass summary prints the rejects by
+reason. Without a file cap,
 `/fix` scans the complete eligible corpus, then queues files by highest finding
 severity, weighted finding impact, and stable path before any streamed repair
 starts. `--max-files=N` (or `MASTER_FIX_MAX_FILES`) is an explicit bounded lane
