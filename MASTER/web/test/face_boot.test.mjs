@@ -235,6 +235,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
 
   assert.match(rules, /semantic_subject:/);
   assert.match(world, /function normalizeVisualSubject\(subject\)/);
+  assert.match(world, /declaredKind === "object" \|\| !subjectFeatures\(declaredKind\)\.length/);
   assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
   assert.match(world, /Math\.min\(6, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features/);
   assert.match(world, /function buildSemanticSubjectGeometry\(descriptor, count, scale\)/);
@@ -245,6 +246,18 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(shader, /float stageGate = smoothstep/);
   assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+});
+
+test("completed assistant replies route semantic subjects through the canonical event bus", () => {
+  const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
+  const events = readFileSync(join(publicDir, "master_events.js"), "utf8");
+  const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
+
+  assert.match(chat, /type: 'assistant:visual-subject'/);
+  assert.match(chat, /window\.MASTEREvents\.dispatch\(visualEvent\)/);
+  assert.match(events, /"assistant:visual-subject": \{ targets: \["face"\], fields: \["text", "visual_subject"\] \}/);
+  assert.match(world, /type === "assistant:visual-subject"/);
+  assert.match(world, /scheduleFaceRestoration\(\)/);
 });
 test("Face state derives modes and aliases from the shared contract", () => {
   const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
