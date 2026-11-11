@@ -126,13 +126,15 @@ screenshot count or previous revision.
   with exact paths, queues one durable Mission, and reuses TaskSteward and the
   existing /fix pipeline. Terminal delivery receipts require a completed
   Mission, non-empty summary, current source item and zero pending repository
-  writes. The closed ProofMap v2 now assigns known full/focused test,
-  lint/audit, visual, accessibility and runtime commands to TaskContract proof
-  types; unknown commands remain ineligible. Scope intake also refuses
-  symlinked path components and hard-linked files. This is still partial:
-  dependency-aware scheduling across structured owners, independently
-  verified test/render evidence and automatic root-checkbox reconciliation
-  remain open.
+  writes. The closed ProofMap v2 maps known test, lint/audit, visual,
+  accessibility and runtime commands to TaskContract proof types. The executor
+  runs only argv-allowlisted commands and records command/output digests, exit
+  status, working directory and duration; unknown commands remain ineligible.
+  Scope intake refuses symlinked path components and hard-linked files. This is
+  still partial: dependency-aware scheduling across structured owners, broader
+  acceptance-command coverage beyond the current allowlist and automatic root
+  checkbox reconciliation remain open. These runtime paths still need their
+  authored regression suites run on the selected repository Ruby.
   Human, rights, provider-spend, device and production-host approvals remain
   real stop points. Build on these existing owners; do not add a second queue.
 - [ ] Verify shared-checkout lock, writer ownership, interruption cleanup and
