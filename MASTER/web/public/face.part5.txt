@@ -897,7 +897,15 @@ function handleFaceNamedEvent(event, data) {
     try {
       const payload = JSON.parse(raw || '{}');
       if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-        window.dispatchEvent(new CustomEvent('master:visual-subject', { detail: payload }));
+        const normalized = window.MASTEREvents?.normalize?.({
+          type: 'assistant:visual-subject',
+          data: payload
+        });
+        if (normalized && window.MASTEREvents?.dispatch) {
+          window.MASTEREvents.dispatch(normalized);
+        } else {
+          window.dispatchEvent(new CustomEvent('master:visual-subject', { detail: payload }));
+        }
       }
     } catch (err) {
       window.MASTER_LOG?.warn?.("face_runtime:visual_subject_event", err);
