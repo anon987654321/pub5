@@ -34,12 +34,12 @@ class TestRubySelect < Minitest::Test
     ["/bin/sh", *Dir["/bin/zsh", "/usr/bin/zsh", "/opt/homebrew/bin/zsh"].first(1)]
   end
 
-  def test_prefers_ruby40_when_both_exist
+  def test_uses_first_compatible_versioned_ruby_when_no_generic_exists
     with_path("ruby34", "ruby40", "bundle34", "bundle40", "gem40") do |dir|
       shells.each do |shell|
         out, err, status = resolve(dir, shell: shell)
         assert status.success?, err
-        assert_equal [File.join(dir, "ruby40"), "40", File.join(dir, "bundle40"), File.join(dir, "gem40"), "ruby40"], out.split("|")
+        assert_equal [File.join(dir, "ruby34"), "34", File.join(dir, "bundle34"), File.join(dir, "gem34"), "ruby34"], out.split("|")
       end
     end
   end
@@ -81,7 +81,7 @@ class TestRubySelect < Minitest::Test
     with_path do |dir|
       _out, err, status = resolve(dir)
       refute status.success?
-      assert_match(/no Ruby found/, err)
+      assert_match(/no compatible Ruby found/, err)
     end
   end
 
