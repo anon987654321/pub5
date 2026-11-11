@@ -64,6 +64,13 @@ class TestCodeIndexBrief < Minitest::Test
     end
   end
 
+  def test_complete_index_is_explicitly_labelled
+    with_index do |index|
+      assert index.complete?
+      assert_includes index.summary, "Index coverage: COMPLETE (repository-wide scan)."
+    end
+  end
+
   def test_never_built_index_is_disclosed_as_not_built
     Dir.mktmpdir do |root|
       index = Master::Review::CodeIndex.new(root:)
