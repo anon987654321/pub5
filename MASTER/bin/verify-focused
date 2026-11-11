@@ -50,6 +50,11 @@ tests = %w[
   test/test_runtime_catalogue_validation.rb
   test/test_master_loop.rb
   test/test_yaml_registries.rb
+  test/test_visual_pass.rb
+  test/test_visual_ghost_stack.rb
+  test/test_visual_completion.rb
+  test/test_rendered_visual_convergence.rb
+  test/test_assessment_matrix_rendered_evidence.rb
   test/test_fix_loop_oscillation.rb
   test/test_fix_run_budget.rb
   test/test_run_ledger_per_run.rb
