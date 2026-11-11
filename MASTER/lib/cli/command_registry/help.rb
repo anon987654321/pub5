@@ -261,6 +261,7 @@ module Master
                    "/doctor device - truthful Android/Termux:API hardware capability report.",
                    "/doctor device battery|camera|sensors|audio - query the matching Termux:API endpoint.",
                    "/doctor device location [gps|network|passive] - explicitly request location; never sampled at boot.",
+                   "/doctor keyless - send a small anonymous hosted-model completion and report model plus latency.",
                    "/doctor tools [reconcile <id> <outcome> <evidence>] - tool calls with an unknown outcome, and their release."],
         },
         "voice" => {
