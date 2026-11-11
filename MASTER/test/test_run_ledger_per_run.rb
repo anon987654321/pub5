@@ -26,22 +26,29 @@ class TestRunLedgerPerRun < Minitest::Test
     assert lines.any? { |line| line.include?("provider_health.ndjson") }
   end
 
-  def test_a_file_outcome_docket_keeps_law_attempts_and_reports_latest_result
+  def test_finding_docket_keeps_discoveries_attempts_and_unattempted_dispositions
+    Ledger.record_discovery(file: "lib/a.rb", law: "SMALL_FILES", line: 4, message: "file too long", severity: "error")
+    Ledger.record_discovery(file: "lib/a.rb", law: "SMALL_FILES", line: 8, message: "second finding", severity: "warning")
     Ledger.record_file_outcome(file: "lib/a.rb", law: "SMALL_FILES", outcome: :commit_refused, reason: "house lint")
     Ledger.record_file_outcome(file: "lib/a.rb", law: "SMALL_FILES", outcome: :applied)
-    Ledger.record_file_outcome(file: "lib/b.rb", law: "NO_GOD_CLASS", outcome: :needs_person, reason: "operator-owned")
+    Ledger.record_discovery(file: "lib/b.rb", law: "NO_GOD_CLASS", line: 12, message: "god class", severity: "error")
+    Ledger.record_disposition(file: "lib/b.rb", law: "NO_GOD_CLASS", outcome: :not_attempted_budget, reason: "stall stop")
+    Ledger.record_disposition(file: "lib/b.rb", law: "NO_GOD_CLASS", outcome: :needs_person, reason: "operator-owned")
 
     rows = Ledger.file_outcomes
     assert_equal %w[SMALL_FILES], rows.fetch("lib/a.rb").fetch("laws")
+    assert_equal 2, rows.fetch("lib/a.rb").fetch("findings").size
     assert_equal %w[commit_refused applied], rows.fetch("lib/a.rb").fetch("attempts").map { |row| row.fetch("outcome") }
+    assert_equal %w[not_attempted_budget needs_person], rows.fetch("lib/b.rb").fetch("dispositions").map { |row| row.fetch("outcome") }
     lines = Ledger.file_docket_lines
-    assert_includes lines.first, "2 attempted file(s)"
-    assert lines.any? { |line| line.include?("lib/a.rb") && line.include?("outcome=applied") }
-    assert lines.any? { |line| line.include?("lib/b.rb") && line.include?("reason=operator-owned") }
+    assert_includes lines.first, "2 file(s), 3 Law finding(s)"
+    assert lines.any? { |line| line.include?("lib/a.rb") && line.include?("attempts=commit_refused,applied") }
+    assert lines.any? { |line| line.include?("lib/b.rb") && line.include?("not_attempted_budget") && line.include?("operator-owned") }
   end
 
   def test_a_new_run_forgets_the_last_runs_rejections_and_keeps_its_file_cap
     2.times { Ledger.reject(:new_violations, file: "lib/a.rb") }
+    Ledger.record_discovery(file: "lib/a.rb", law: "SMALL_FILES", line: 4, message: "fixture")
     Ledger.record_file_outcome(file: "lib/a.rb", law: "SMALL_FILES", outcome: :commit_refused, reason: "house lint")
     assert Ledger.file_done?("lib/a.rb")
     Ledger.max_files = 5
