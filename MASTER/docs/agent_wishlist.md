@@ -109,11 +109,17 @@ trusting this page.
 ## Shared
 
 10. Sibling trees as first-class /fix targets. Evidence:
-    docs/openbsd-rust.md holds the sibling-checkout contract by path
-    convention, and every run re-states the boundary by hand. State on
-    main: open — no sibling target mechanism in the fix kernel.
-    Landing path: a sibling target with the no-cross-tree-write
-    boundary checked, plus tests.
+    docs/openbsd-rust.md describes external roots, but the live resolver
+    rejects them before observation. State on main: open and explicitly
+    bounded — regression coverage now proves that an existing sibling
+    checkout directory and file are refused. FixPlan also requires the
+    target to remain inside its pinned root, and TaskContract scope is
+    repository-relative. The documentation now distinguishes the separate
+    `bin/master core --root PATH --real GOAL` interface from /fix; the
+    default CoreCommand self-test is not a goal run. Remaining work: a
+    dedicated read-only external observer, then an independently proven
+    write boundary in the target's own Git root. Do not relax the current
+    refusal as a shortcut.
 
 ## Where the action lives
 

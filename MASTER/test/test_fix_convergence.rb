@@ -653,6 +653,21 @@ end
     assert_raises(ArgumentError) { resolver.resolve_target("/nonexistent/outside_every_tree.md") }
   end
 
+  def test_fix_target_resolver_rejects_existing_sibling_checkout_paths
+    resolver = Class.new do
+      include Master::CLI::Pipeline::TargetResolver
+      def initialize(root) = @root = root
+    end.new(Master::ROOT)
+
+    Dir.mktmpdir("master-sibling-target") do |sibling|
+      manifest = File.join(sibling, "Cargo.toml")
+      File.write(manifest, "[workspace]\nmembers = []\n")
+
+      assert_raises(ArgumentError) { resolver.resolve_target(sibling) }
+      assert_raises(ArgumentError) { resolver.resolve_target(manifest) }
+    end
+  end
+
   def test_fix_target_resolver_keeps_existing_governed_files
     resolver = Class.new do
       include Master::CLI::Pipeline::TargetResolver
