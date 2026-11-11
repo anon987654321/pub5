@@ -16,7 +16,7 @@ The first run installs Termux host tools if missing, fast-forwards a clean canon
 
 The installer checks Termux's expected PREFIX and non-root host account. It permits only the canonical HTTPS pub5 repository, keeps the checkout below Termux HOME, and refuses symlink or non-Git collisions. Existing checkouts must have the canonical origin, the expected branch and a clean working tree before the fast-forward. Existing Ubuntu or Debian guests are reused and never reset. With no supported guest installed, the default is Ubuntu; `--debian` selects Debian explicitly.
 
-Both guests receive the required Linux build libraries. The installer builds the exact Ruby version from `.ruby-version` under `/opt/rubies/`, then runs `bin/deps install`, `bin/deps check` and `bin/deps boot`. It records both the guest and pinned Ruby in `/etc/master-mobile-runtime`. Future launches reuse the selected guest and pinned Ruby.
+Both guests receive the required Linux build libraries. The installer uses the guest's packaged Ruby when it meets MASTER's shared Ruby 3.3+ compatibility floor, then runs `bin/deps install`, `bin/deps check` and `bin/deps boot`. It records the guest and actual Ruby version in `/etc/master-mobile-runtime`. Future launches reuse the selected guest and installed Ruby; no exact patch release is built or required.
 
 The installer adds `~/.local/bin/master` as a Termux-host launcher. Reload `~/.bashrc`, then run `master`; it enters the selected guest and forwards arguments to `bin/master`. Running `bin/master` from Termux when native Ruby is already installed also follows the automatic install-and-entry path. To provision without starting the CLI, use `--no-launch`. Arguments after `--` are forwarded.
 
