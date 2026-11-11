@@ -38,6 +38,16 @@ end
 
 Law.define(:HTML_HEADING_HIERARCHY) do
   source "pub prompt lineage - semantic HTML5 structure; h1 for title, h2 for sections, h3 for subsections"
+  scope :file
+  detect do |text|
+    levels = text.scan(/<h([1-6])\b/i).flatten.map(&:to_i)
+    previous = nil
+    levels.any? do |level|
+      skipped = previous && level > previous + 1
+      previous = level
+      skipped
+    end
+  end
   ask "Does the rendered document expose a coherent heading hierarchy? Require one meaningful page heading, then descend one level at a time through sections; do not use heading tags for visual sizing or skip from h1 to h3 merely for styling. Return CLEAN when the hierarchy matches the information architecture."
   fix "Use heading levels to express document structure, then control visual size with typography tokens instead of heading-tag jumps."
   bad <<~X

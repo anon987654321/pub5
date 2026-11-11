@@ -104,7 +104,7 @@ module Master
           bad %(<button class="icon-only"><svg></svg></button>\n)
           good %(<button class="icon-only" aria-label="Close"><svg></svg></button>\n)
           check do |src, path|
-            next [] unless path.include?("/app/views/")
+            next [] unless path.include?("/app/views/") || src.match?(/<html\b/i)
             nameless_control_lines(src).map do |line|
               finding(line:, message: "control has no accessible name - give it text content, aria-label, " \
                                       "aria-labelledby, or an id a <label for> points at")

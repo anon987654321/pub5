@@ -152,8 +152,22 @@ function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function markStandalonePrintStyle(html, plan) {
+  const lines = html.split('\\n');
+  const index = lines.findIndex(line => /<style\\b/i.test(line));
+  if (index < 0) throw new Error(`${plan}: standalone print stylesheet missing`);
+  if (!/scan:\\s*intentional\\b/.test(lines[index])) {
+    const indent = lines[index].match(/^\\s*/)[0];
+    lines[index] = `${indent}<!-- scan: intentional - standalone print stylesheet has no asset pipeline -->${lines[index].slice(indent.length)}`;
+  }
+  return lines.join('\\n');
+}
+
 for (const plan of ORDER) {
-  const src = readFileSync(`${OUT}/${plan}/${plan}.html`, 'utf8');
+  const output = `${OUT}/${plan}/${plan}.html`;
+  const original = readFileSync(output, 'utf8');
+  const src = markStandalonePrintStyle(original, plan);
+  if (src !== original) writeFileSync(output, src);
   if (COMPLETED.has(plan)) {
     if (!/class="toc" aria-label="Innhold"/.test(src)) throw new Error(`${plan}: completed base lacks the toc`);
     if (!/Satt i Source Serif 4/.test(src)) throw new Error(`${plan}: completed base lacks the bob2 colophon`);

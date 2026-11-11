@@ -1,191 +1,151 @@
-// Independent verification of the built BIZ HTMLs. Re-reads the OUTPUT
-// files (does not trust the build) and executes the law checks the tree is
-// held to, from MASTER/data/laws.yml:
-//   HTML_LANG, META_CHARSET, SINGLE_H1, HTML_HEADING_HIERARCHY,
-//   FINAL_NEWLINE, TAB_CHARACTER, TRAILING_WHITESPACE, TODO_FIXME,
-//   NO_ASCII_LINE_ART, NO_TRAILING_ARROW, NO_CONSECUTIVE_BLANK_LINES,
-//   STRUNK_WHITE (norwegian leeches), TYPOGRAPHY_DISCIPLINE (char audit),
-//   EVIDENCE_SCORING (arithmetic re-verified here), NO_INLINE_SCRIPT_BLOCK
-//   is accepted by reviewed exemption: standalone print sources carry
-//   inline style and inline fonts because no asset pipeline exists here.
-// Usage: node scripts/bp_check.mjs
-import { readFileSync } from 'node:fs';
-import { OUTPUT_DIR as OUT } from './paths.mjs';
+// Independent BIZ output verification. Common Laws run through MASTER's
+// canonical scanner; this file owns only the business-plan print contract and
+// the financial arithmetic re-read from the published HTML.
+// Usage: node BIZ/tools/bp_check.mjs
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
+
 const ORDER = ['syre', 'speis', 'ragnhild', 'future_nato_weapons', 'norwegianhedge', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os'];
-
-const LEECHES = ['veldig', 'svært', 'ganske', 'nokså', 'temmelig', 'virkelig', 'simpelthen'];
-const ALLOWED_NONASCII = new Set('æøåÆØÅÄäÖöÜüúÚ–—‐‑‘’“”…·™²₂₃³×°éÉè§«»−');
-
-function parseNum(s) {
-  return parseFloat(s
-    .replaceAll('−', '-').replaceAll(' ', '').replaceAll('\u202f', '')
-    .replaceAll('%', '').replace(',', '.'));
-}
-
 const fails = [];
 const notes = [];
-
-const ROW4 = /<tr><td>([^<]+)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><td>([^<]*)<\/td><\/tr>/g;
+const ROW4 = /<tr><td>([^<]+)<\\/td><td>([^<]*)<\\/td><td>([^<]*)<\\/td><td>([^<]*)<\\/td><\\/tr>/g;
 const ROW4_ONE = new RegExp(ROW4.source);
 
-// tfoot values for a 4-cell budget table: returns [v2026, v2027, v2028]
-// (the row's label is dropped), or null when the table cannot be parsed —
-// an inconclusive check must fail loudly, never pass.
+function parseNum(value) {
+  const number = Number.parseFloat(
+    value.replaceAll('−', '-').replaceAll(' ', '').replaceAll('\\u202f', '')
+      .replaceAll('%', '').replace(',', '.')
+  );
+  if (!Number.isFinite(number)) throw new Error(`not a number: ${JSON.stringify(value)}`);
+  return number;
+}
+
+// tfoot values for a 4-cell budget table: [2026, 2027, 2028].
 function footVals(tableHtml) {
-  const inner = tableHtml.match(/<tfoot>([\s\S]*?)<\/tfoot>/);
+  const inner = tableHtml.match(/<tfoot>([\\s\\S]*?)<\\/tfoot>/);
   if (!inner) return null;
   const cap = ROW4_ONE.exec(inner[1]);
   return cap ? [cap[2], cap[3], cap[4]] : null;
 }
 
+const files = ORDER.map(plan => resolve(OUT, plan, `${plan}.html`));
+const masterOperator = resolve(BIZ_ROOT, '..', 'MASTER', 'bin', 'operator');
+const lawRun = spawnSync(masterOperator, ['lint', ...files], {
+  cwd: BIZ_ROOT,
+  encoding: 'utf8',
+  timeout: 900_000,
+  maxBuffer: 16 * 1024 * 1024,
+});
+const lawOutput = [lawRun.stdout, lawRun.stderr].filter(Boolean).join('\\n').trim();
+if (lawRun.error) {
+  fails.push(`MASTER Law scan could not start: ${lawRun.error.message}`);
+} else if (lawRun.status !== 0) {
+  fails.push(`MASTER Law scan failed (exit ${lawRun.status}): ${lawOutput.slice(-6_000) || 'no output'}`);
+} else {
+  notes.push(`MASTER Laws: ${files.length} plan documents checked`);
+}
+
 for (const plan of ORDER) {
-  const file = `${OUT}/${plan}/${plan}.html`;
-  const src = readFileSync(file, 'utf8');
+  const file = resolve(OUT, plan, `${plan}.html`);
+  let src;
+  try {
+    src = (await import('node:fs')).readFileSync(file, 'utf8');
+  } catch (error) {
+    fails.push(`${plan}: cannot read output: ${error.message}`);
+    continue;
+  }
   const body = src.replace(/base64,[^"']+/g, '');
-  const add = (m) => fails.push(`${plan}: ${m}`);
+  const add = message => fails.push(`${plan}: ${message}`);
 
-  // HTML_LANG + META_CHARSET + SINGLE_H1
-  if (!/<html lang="n[bo]">/.test(src)) add('HTML_LANG: no lang="nb"/"no"');
-  if (!/<meta charset="utf-8"/i.test(src)) add('META_CHARSET: missing');
-  const h1s = [...src.matchAll(/<h1[\s>]/g)].length;
-  if (h1s !== 1) add(`SINGLE_H1: found ${h1s}`);
-
-  // heading hierarchy: h2 before h3, h3 before h4 (no skips downward)
-  const levels = [...src.matchAll(/<h([1-4])[\s>]/g)].map(m => Number(m[1]));
-  let prev = 0;
-  for (const l of levels) {
-    if (l > prev + 1) { add(`HTML_HEADING_HIERARCHY: h${l} follows h${prev}`); break; }
-    prev = l;
-  }
-
-  // whitespace / final newline / tabs
-  if (!src.endsWith('\n')) add('FINAL_NEWLINE: file does not end with newline');
-  if (src.includes('\t')) add('TAB_CHARACTER: tab found');
-  if (/ +$/m.test(src)) add('TRAILING_WHITESPACE: found');
-  if (/\n{3,}/.test(src)) add('NO_CONSECUTIVE_BLANK_LINES: found');
-
-  // unfinished work / placeholders / debug leftovers
-  for (const bad of ['TODO', 'FIXME', 'undefined', 'NaN', 'XXX', '【']) {
-    if (body.includes(bad)) add(`unfinished: ${bad} found in text`);
-  }
-
-  // ASCII line art and trailing arrows in links
-  if (/^[\s]*[\-*_=~]{4,}[\s]*$/m.test(body)) add('NO_ASCII_LINE_ART: separator line found');
-  for (const m of src.matchAll(/<a [^>]*>([^<]*)<\/a>/g)) {
-    if (/[→←↔↗⇒»]$/.test(m[1].trim())) add(`NO_TRAILING_ARROW: link text ${JSON.stringify(m[1])}`);
-  }
-
-  // Norwegian prose leeches (STRUNK_WHITE, nb)
-  for (const leech of LEECHES) {
-    const re = new RegExp(`\\b${leech}\\b`, 'i');
-    if (re.test(body)) add(`STRUNK_WHITE: leech "${leech}" found`);
-  }
-
-  // character audit
-  const bad = new Map();
-  for (const ch of body) {
-    if (ch.charCodeAt(0) > 127 && !ALLOWED_NONASCII.has(ch)) bad.set(ch, (bad.get(ch) || 0) + 1);
-  }
-  for (const [c, n] of bad) add(`char: U+${c.charCodeAt(0).toString(16).toUpperCase()} ×${n}`);
-
-  // structure: 8 sections; fonts come from the bob2 starter's Google link,
-  // so nothing is embedded except a plan's own brand mark (Nosifer on
-  // ragnhild). The starter requirement itself is the template check below.
+  // The plan's own mark is artwork, not a typeface for semantic headings.
   const sections = [...src.matchAll(/<section id="([^"]+)"/g)].length;
   if (sections !== 8) add(`sections: ${sections} (expected 8)`);
-  const fonts = [...src.matchAll(/@font-face\{/g)].length;
+  const fonts = [...src.matchAll(/@font-face\\s*\\{/g)].length;
   if (plan === 'ragnhild') {
     if (fonts !== 1) add(`font-face: ${fonts} (expected 1: the Nosifer wordmark)`);
-    if (!/class="mark-brand">Ragnhilds</.test(body)) add('mark-brand: wordmark missing');
-    // wordmark must not be reused as a heading font (checked on body so the
-    // base64 payload cannot create phantom matches)
-    if (/(?:^|\})\s*h[1-4][^{]*\{[^}]*Nosifer/.test(body)) add('wordmark: Nosifer used on a semantic heading');
+    if (!/class="mark-brand">Ragnhilds<\\//.test(body)) add('mark-brand: wordmark missing');
+    if (/(?:^|\\})\\s*h[1-4][^{]*\\{[^}]*Nosifer/.test(body)) add('wordmark: Nosifer used on a semantic heading');
   } else if (fonts !== 0) {
-    add(`font-face: ${fonts} (expected 0: the google link carries the faces)`);
+    add(`font-face: ${fonts} (expected 0: Google Fonts carries the faces)`);
   }
 
-  // BUSPLAN_TEMPLATE_BOB2: the plan renders the bob2 starter - its token
-  // vocabulary, both faces on the fonts link, the toc and the one hefte
-  // print contract (cover is the page, folio in the foot, break hygiene).
-  if (!/--color-link: #005f73/.test(src)) add('bob2: link token missing');
-  if (!/--font-text: "Source Serif 4"/.test(src)) add('bob2: --font-text token missing');
-  if (!/--font-heading: "EB Garamond"/.test(src)) add('bob2: --font-heading token missing');
-  if (!/family=Source\+Serif\+4/.test(src)) add('bob2: Source Serif 4 not on the fonts link');
-  if (!/family=EB\+Garamond/.test(src)) add('bob2: EB Garamond not on the fonts link');
-  if (!/header\.cover/.test(src)) add('bob2: header.cover missing');
-  if (!/@page\{?\s*\{?\s*size:\s*156mm 234mm|@page \{\s*size: 156mm 234mm/.test(src)) add('bob2: hefte page size missing');
-  if (!/@bottom-center \{ content: counter\(page\)/.test(src)) add('bob2: folio missing');
-  // the folio draws in the document's own face: EB Garamond in the seven
-  // compact plans (Source Serif 4 stays fetat's), per the folio-face canon.
-  if (!/@bottom-center \{ content: counter\(page\); font: 0\.75rem\/1\.4 var\(--font-heading\)/.test(src)) add('bob2: folio face is not EB Garamond');
-  if (!/@page :first \{ margin-top: 0; \}/.test(src)) add('bob2: first-page margin rule missing');
-  // the printed column must be the centred column, not the flush one:
-  // pinning body margin to 0 in print shifts every page left of the html.
-  if (/body \{ margin: 0; \}/.test(src)) add('bob2: print body margin pinned to 0');
-  if (!/header\.cover \{ min-height: 221mm; \}/.test(src)) add('bob2: cover-as-page rule missing');
+  // BUSPLAN_TEMPLATE_BOB2: the eight documents share bob2's tokens and one
+  // hefte contract, while each retains its own brand mark and content.
+  if (!/--color-link:\\s*#005f73/i.test(src)) add('bob2: link token missing');
+  if (!/--font-text:\\s*"Source Serif 4"/.test(src)) add('bob2: --font-text token missing');
+  if (!/--font-heading:\\s*"EB Garamond"/.test(src)) add('bob2: --font-heading token missing');
+  if (!/family=Source\\+Serif\\+4/.test(src)) add('bob2: Source Serif 4 not on the fonts link');
+  if (!/family=EB\\+Garamond/.test(src)) add('bob2: EB Garamond not on the fonts link');
+  if (!/header\\.cover/.test(src)) add('bob2: header.cover missing');
+  if (!/@page\\s*\\{[^}]*size:\\s*156mm 234mm/s.test(src)) add('bob2: hefte page size missing');
+  if (!/@bottom-center\\s*\\{[^}]*content:\\s*counter\\(page\\)/s.test(src)) add('bob2: folio missing');
+  if (!/@bottom-center\\s*\\{[^}]*font:\\s*0\\.75rem\\/1\\.4 var\\(--font-heading\\)/s.test(src)) add('bob2: folio face is not EB Garamond');
+  if (!/@page :first\\s*\\{\\s*margin-top:\\s*0;\\s*\\}/.test(src)) add('bob2: first-page margin rule missing');
+  if (/body\\s*\\{\\s*margin:\\s*0;\\s*\\}/.test(src)) add('bob2: print body margin pinned to 0');
+  if (!/header\\.cover\\s*\\{\\s*min-height:\\s*221mm;\\s*\\}/.test(src)) add('bob2: cover-as-page rule missing');
   if (!/class="toc" aria-label="Innhold"/.test(src)) add('bob2: toc missing');
   if (/--paper:|--ink:|--accent:|poise v2|cover revision 2026-11/.test(src)) add('bob2: archive-skin token or poise stylesheet still present');
   if (/class="kicker"/.test(body)) add('cover: kicker still present');
   if (!/Satt i Source Serif 4/.test(body)) add('bob2: colophon does not name the skin');
   if (plan === 'govt_bergen') {
-    if (!/class="mark mark-plain">Bergens Selvstyreparti</.test(body)) add('cover: plain party mark missing');
-    if (/background-clip:text/.test(body)) add('cover: gradient wordmark still present');
+    if (!/class="mark mark-plain">Bergens Selvstyreparti<\\//.test(body)) add('cover: plain party mark missing');
+    if (/background-clip:\\s*text/.test(body)) add('cover: gradient wordmark still present');
   }
 
-  // arithmetic, re-verified from the output file
-  const res = body.match(/<caption>Resultatbudsjett[^<]*<\/caption>[\s\S]*?<\/table>/);
-  if (res) {
-    const tb = res[0].match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
-    const foot = footVals(res[0]);
-    const rows = [...tb.matchAll(ROW4)].map(r => [r[1], r[2], r[3], r[4]]);
-    if (!foot) {
-      add('inconclusive: resultatbudsjett tfoot not parsed');
-    } else for (let c = 0; c < 3; c++) {
-      const inc = parseNum(rows[0][c + 1]);
-      const cost = parseNum(rows[1][c + 1]);
-      const ebit = parseNum(rows[2][c + 1]);
-      const fin = parseNum(rows[3][c + 1]);
-      const pre = parseNum(foot[c]);
-      if (Math.abs(inc + cost - ebit) > 0.011) add(`resultat col${c}: driftsresultat ${inc + cost} ≠ ${ebit}`);
-      if (Math.abs(ebit + fin - pre) > 0.011) add(`resultat col${c}: før skatt ${ebit + fin} ≠ ${pre}`);
+  // Arithmetic is independently re-read from the generated HTML, never copied
+  // from the build's in-memory inputs.
+  const resultTable = body.match(/<caption>Resultatbudsjett[^<]*<\\/caption>[\\s\\S]*?<\\/table>/);
+  if (resultTable) {
+    const tbody = resultTable[0].match(/<tbody>([\\s\\S]*?)<\\/tbody>/);
+    const foot = footVals(resultTable[0]);
+    const rows = tbody ? [...tbody[1].matchAll(ROW4)].map(row => [row[1], row[2], row[3], row[4]]) : [];
+    if (!foot || rows.length < 4) add('inconclusive: resultatbudsjett rows/tfoot not parsed');
+    else for (let column = 0; column < 3; column++) {
+      const income = parseNum(rows[0][column + 1]);
+      const cost = parseNum(rows[1][column + 1]);
+      const operating = parseNum(rows[2][column + 1]);
+      const finance = parseNum(rows[3][column + 1]);
+      const beforeTax = parseNum(foot[column]);
+      if (Math.abs(income + cost - operating) > 0.011) add(`resultat col${column}: driftsresultat ${income + cost} ≠ ${operating}`);
+      if (Math.abs(operating + finance - beforeTax) > 0.011) add(`resultat col${column}: før skatt ${operating + finance} ≠ ${beforeTax}`);
     }
   } else add('resultatbudsjett: table missing');
 
-  const liq = body.match(/<caption>Likviditetsbudsjett[^<]*<\/caption>[\s\S]*?<\/table>/);
-  if (liq) {
-    const tb = liq[0].match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
-    const foot = footVals(liq[0]);
-    const rows = [...tb.matchAll(ROW4)].map(r => [r[1], r[2], r[3], r[4]]);
-    if (!foot) {
-      add('inconclusive: likviditetsbudsjett tfoot not parsed');
-    } else for (let c = 0; c < 3; c++) {
-      const total = rows.reduce((s, r) => s + parseNum(r[c + 1]), 0);
-      if (Math.abs(total - parseNum(foot[c])) > 0.011) add(`likviditet col${c}: sum ${total} ≠ ${foot[c]}`);
-      if (c < 2 && Math.abs(parseNum(foot[c]) - parseNum(rows[0][c + 2])) > 0.011) {
-        add(`likviditet: saldo ${c}→${c + 1} breaks continuity`);
+  const liquidity = body.match(/<caption>Likviditetsbudsjett[^<]*<\\/caption>[\\s\\S]*?<\\/table>/);
+  if (liquidity) {
+    const tbody = liquidity[0].match(/<tbody>([\\s\\S]*?)<\\/tbody>/);
+    const foot = footVals(liquidity[0]);
+    const rows = tbody ? [...tbody[1].matchAll(ROW4)].map(row => [row[1], row[2], row[3], row[4]]) : [];
+    if (!foot || rows.length === 0) add('inconclusive: likviditetsbudsjett rows/tfoot not parsed');
+    else for (let column = 0; column < 3; column++) {
+      const total = rows.reduce((sum, row) => sum + parseNum(row[column + 1]), 0);
+      if (Math.abs(total - parseNum(foot[column])) > 0.011) add(`likviditet col${column}: sum ${total} ≠ ${foot[column]}`);
+      if (column < 2 && rows[0][column + 2] !== undefined &&
+          Math.abs(parseNum(foot[column]) - parseNum(rows[0][column + 2])) > 0.011) {
+        add(`likviditet: saldo ${column}→${column + 1} breaks continuity`);
       }
     }
   } else add('likviditetsbudsjett: table missing');
 
-  const fin = body.match(/<caption>Bevegelsens finansiering[^<]*<\/caption>[\s\S]*?<\/table>/);
-  if (fin) {
-    const tb = fin[0].match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
-    const footInner = fin[0].match(/<tfoot>([\s\S]*?)<\/tfoot>/);
-    const cap = footInner
-      ? /<tr><td>([^<]+)<\/td><td>([^<]*)<\/td><\/tr>/.exec(footInner[1]) : null;
-    const rows = [...tb.matchAll(/<tr><td>([^<]+)<\/td><td>([^<]*)<\/td><\/tr>/g)].map(r => r[2]);
-    if (!cap) add('inconclusive: finansieringstabell tfoot not parsed');
+  const financing = body.match(/<caption>Bevegelsens finansiering[^<]*<\\/caption>[\\s\\S]*?<\\/table>/);
+  if (financing) {
+    const tbody = financing[0].match(/<tbody>([\\s\\S]*?)<\\/tbody>/);
+    const foot = financing[0].match(/<tfoot>([\\s\\S]*?)<\\/tfoot>/);
+    const caption = foot ? /<tr><td>([^<]+)<\\/td><td>([^<]*)<\\/td><\\/tr>/.exec(foot[1]) : null;
+    const rows = tbody ? [...tbody[1].matchAll(/<tr><td>([^<]+)<\\/td><td>([^<]*)<\\/td><\\/tr>/g)].map(row => row[2]) : [];
+    if (!caption || rows.length === 0) add('inconclusive: finansieringstabell rows/tfoot not parsed');
     else {
-      const sum = rows.reduce((s, v) => s + parseNum(v), 0);
-      if (Math.abs(sum - parseNum(cap[2])) > 0.011) add(`finansiering: sum ${sum} ≠ ${cap[2]}`);
-      notes.push(`${plan}: finansiering sum ${sum} = ${cap[2]}`);
+      const sum = rows.reduce((total, value) => total + parseNum(value), 0);
+      if (Math.abs(sum - parseNum(caption[2])) > 0.011) add(`finansiering: sum ${sum} ≠ ${caption[2]}`);
+      notes.push(`${plan}: finansiering sum ${sum} = ${caption[2]}`);
     }
-  }
+  } else add('finansieringstabell: table missing');
 
   notes.push(`${plan}: sections ${sections}, fonts ${fonts}, chars ${src.length}`);
 }
 
-console.log(notes.join('\n'));
+console.log(notes.join('\\n'));
 console.log('=== FAILS ===');
-console.log(fails.length ? fails.join('\n') : 'NONE');
+console.log(fails.length ? fails.join('\\n') : 'NONE');
 if (fails.length) process.exitCode = 1;

@@ -58,12 +58,12 @@ regenerated from them:
 
     node BIZ/tools/bp_build.mjs       # bases + additions -> OUTPUT_DIR
     node BIZ/tools/bp_retemplate.mjs  # bob2 skin onto the builds
-    node BIZ/tools/bp_check.mjs       # laws.yml checks; fails stop publishing
+    node BIZ/tools/bp_check.mjs       # MASTER Law scan + BIZ print/data contract
     BIZ_CHROME_BIN=… node BIZ/tools/bp_print.mjs   # Chromium prints the pdf,
                                       # pdfinfo verifies 442.08 x 663.12 pts
     node BIZ/tools/bp_index.mjs       # this index
 
-`bp_print.mjs` prints with headless Chromium (no Python anywhere in the
+`bp_check.mjs` delegates common HTML, prose and hygiene Laws to `MASTER/bin/operator lint`; its own checks are limited to the bob2/print contract and re-read financial arithmetic. The standalone print stylesheet carries a line-local `scan: intentional` marker because the document has no asset pipeline.\n\n`bp_print.mjs` prints with headless Chromium (no Python anywhere in the
 chain, per laws.yml REACH_non_native_tool) and checks every page size
 against the hefte canon (156mm 234mm). `bp_index.mjs` fails if a folder
 table row lacks its published pair or the funding total drifts. The retired
