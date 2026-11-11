@@ -12,6 +12,11 @@
   let splatBasePositions = null;
   let splatTargetPositions = null;
   let semanticForm = "face";
+  let semanticDescriptor = null;
+  let splatTargetStages = null;
+  let splatMorphFromPositions = null;
+  let semanticMorphStartedAt = 0;
+  let faceIntroSettled = false;
   let semanticBlend = 0;
   let semanticBlendTarget = 0;
   let semanticMorphInProgress = false;
@@ -266,6 +271,9 @@
   function buildSubjectPositions(form) {
     if (!splatBasePositions) return null;
     if (form === "face") return splatBasePositions.slice();
+    if (form === "object" && semanticDescriptor) {
+      return buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34).positions;
+    }
 
     const positions = new Float32Array(splatBasePositions.length);
     const count = splatCount;
@@ -331,6 +339,9 @@
   // adding a second cloud around it.
   function buildFaceSubjectPositions(form) {
     const faceScatter = window.MASTER_FACE?.faceScatter;
+    if (form === "object" && semanticDescriptor && faceScatter?.length) {
+      return buildSemanticSubjectGeometry(semanticDescriptor, faceScatter.length / 3, 0.52).positions;
+    }
     if (!faceScatter || faceScatter.length < 3 || faceScatter.length % 3 !== 0) return null;
 
     const count = faceScatter.length / 3;
