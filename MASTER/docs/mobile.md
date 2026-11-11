@@ -10,7 +10,7 @@ Use a maintained Termux build. Preview the installer from any POSIX shell withou
 
     curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh -s -- --demo
 
-The first run installs Termux host tools if missing, fast-forwards a clean canonical checkout, reuses an installed Ubuntu guest or else Debian, and installs Ubuntu only when neither is present. It builds the pinned Ruby and locked bundle in the selected guest, verifies the normal CLI boot, then starts MASTER:
+The first run installs Termux host tools if missing, fast-forwards a clean canonical checkout, selects an installed Ubuntu guest first, otherwise an installed Debian guest, and installs Ubuntu only when neither is present. It builds the pinned Ruby and locked bundle in the selected guest, verifies the normal CLI boot, then starts MASTER:
 
     curl -fsSL https://raw.githubusercontent.com/anon987654321/pub5/main/MASTER/bin/master-mobile-install | sh
 
@@ -24,7 +24,7 @@ PRoot-Distro documents the Ubuntu and Debian images and their `install` / `login
 
 ## Termux host and Android capabilities
 
-The Ubuntu or Debian guest is the supported runtime for the normal text CLI. Termux remains the host for PRoot-Distro and the Termux:API companion app. Android camera, microphone, speech, browser bridge and other native device features are separate host capabilities; an Ubuntu CLI boot is not proof that those integrations are ready. The installer does not grant Android permissions or claim hardware readiness.
+The Ubuntu or Debian guest is the supported runtime for the normal text CLI. Termux remains the host for PRoot-Distro and the Termux:API companion app. Android camera, microphone, speech, browser bridge and other native device features are separate host capabilities; a successful guest CLI boot is not proof that those integrations are ready. The installer does not grant Android permissions or claim hardware readiness.
 
 ## Provider sign-in
 
@@ -56,9 +56,9 @@ Choose a quantised model that fits the phone's available memory and storage. The
 
 ## Use
 
-`bin/master-mobile` and Android integration commands are not part of the Ubuntu CLI readiness proof. Ubuntu and Debian guests are supported for the normal text CLI. Camera, microphone, Termux:API, the browser bridge and speech output remain separate host capabilities; this installer does not claim they work from inside Ubuntu.
+`bin/master-mobile` and Android integration commands are not part of the PRoot guest CLI readiness proof. Ubuntu and Debian guests are supported for the normal text CLI. Camera, microphone, Termux:API, the browser bridge and speech output remain separate host capabilities; this installer does not claim they work from inside either guest.
 
-A host-side microphone bridge needs an explicit Termux:API adapter and host/guest boundary. Do not grant or assume microphone access merely because the Ubuntu CLI boots. The existing local permission commands remain:
+A host-side microphone bridge needs an explicit Termux:API adapter and host/guest boundary. Do not grant or assume microphone access merely because the supported guest CLI boots. The existing local permission commands remain:
 
     /privacy grant microphone --confirm "GRANT microphone"
     /privacy grant speech_recognition --confirm "GRANT speech_recognition"
