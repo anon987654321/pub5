@@ -2,12 +2,13 @@
 
 module Master
   module Fix
-    # Single ranking primitive shared by LawOrder (which law to fix next)
-    # and ConflictResolver (whether a fix's side effect is bad enough to
-    # reject). Replaces BiasGuard#priority_score (LawOrder's prior use) and
-    # a plain Severity.rank comparison (ConflictResolver's prior use) with
-    # one formula that also weighs constitutional precedence and learned
-    # fix quality, so both call sites agree on what "more important" means.
+    # Common numeric score used by LawOrder and ConflictResolver's
+    # introduced-finding veto. LawOrder deliberately places runtime/rendered
+    # impact and its strict Tier-2 quality precedence ahead of this score;
+    # same-line duplicate suppression follows LawResolver's catalogue order.
+    # The score keeps the shared severity, constitutional-precedence and
+    # learned-quality calculation in one place without flattening those
+    # higher-level ordering contracts into an additive approximation.
     module Priority
       module_function
 
