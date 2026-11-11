@@ -507,6 +507,9 @@ module Master
             unless full.start_with?(root + File::SEPARATOR)
               raise IncompleteContext, "dependency escapes graph root: #{rel}"
             end
+            unless full.delete_prefix(root + File::SEPARATOR) == rel
+              raise IncompleteContext, "dependency path is not canonical: #{rel}"
+            end
 
             cursor = root
             components = rel.split(File::SEPARATOR)
