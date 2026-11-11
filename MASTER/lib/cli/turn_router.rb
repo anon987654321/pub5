@@ -223,7 +223,8 @@ module Master
       # it; every pipeline word rewrites to /fix (rewrite_slash).
       def answered?(command, container)
         commands = container[:commands]
-        PIPELINE_WORDS.include?(command) || !commands.respond_to?(:key?) || commands.key?(command)
+        resolved = Stages::Route::SPELLINGS.fetch(command, command)
+        PIPELINE_WORDS.include?(command) || !commands.respond_to?(:key?) || commands.key?(resolved)
       end
 
       def infer_command_value(text, container:)
