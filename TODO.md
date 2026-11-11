@@ -32,7 +32,7 @@ screenshot count or previous revision.
 
 ## 1. Current-revision acceptance
 
-- [ ] **MASTER on pinned Ruby 4.0.5.** Run focused Law, Soul, configuration,
+- [ ] **MASTER on the installed compatible Ruby.** Run focused Law, Soul, configuration,
   registry, replay-reader, fix-loop oscillation, reachability, run-ledger,
   media and CLI regressions. Then run
   `MASTER_TEST_START_MARKERS=1 MASTER_TEST_JOBS=1 MASTER_TEST_PROGRESS_EVERY=25 rake test`,
@@ -62,8 +62,7 @@ screenshot count or previous revision.
   (17 runs, 386 assertions) passed. The strict per-file runner now forwards
   keyword and positional subprocess environments correctly and rejects empty
   or invalid Minitest summaries. Its new subprocess regressions are source
-  coverage, not a passing run. Run `cd STUDIO && rake check test` on pinned
-  Ruby 4.0.5. Review an actual Dilla render by ear with rights-cleared local
+  coverage, not a passing run. Run `cd STUDIO && rake check test` on the installed compatible Ruby (3.3+). Review an actual Dilla render by ear with rights-cleared local
   source and confirm the sample level leaves voice room.
   2026-11-07: `rake test` ran green — 7 files including the new
   `test_dilla_wear_test.rb` (Sonitex wear-pass battery; three Dilla rig
@@ -107,13 +106,13 @@ screenshot count or previous revision.
   `ruby MASTER/lib/operator/self_findings.rb --ratchet` after source changes
   settle; review member deltas and ensure neither ceiling rises.
 - [ ] **Law and Baymard gates.** Run `rake lint:law_parity` and
-  `rake -f MASTER/Rakefile ux:baymard` on the pinned toolchain. The Baymard
+  `rake -f MASTER/Rakefile ux:baymard` on the installed compatible toolchain. The Baymard
   regression file previously ran 24/24; the full report remains unverified.
   Keep unmeasurable surfaces INCONCLUSIVE and reuse existing Law identities.
 
 ## 2. MASTER /fix convergence and recovery
 
-- [ ] Run `MASTER/test/test_fix_interruption_restart.rb` on pinned Ruby.
+- [ ] Run `MASTER/test/test_fix_interruption_restart.rb` on the installed compatible Ruby.
   Verify interruption, rollback, durable mission resumption, orphaned
   Kernel-receipt recovery and checkpoint survival. Then exercise budget and
   collapse behavior, zero-repair ledger honesty and adapter receipt parity.
@@ -447,7 +446,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 `MASTER/data/gaps.yml` has 54 rows: 9 picked, 35 open, 4 blocked and 6 satisfied. The satisfied Dating row is intentionally not repeated as work; completed root-index entries stay checked with source evidence. A picked row needs its named convergence workstream completed and evidenced. An open row is a decision candidate, not permission to build. A blocked row stays blocked until its stated prerequisite exists. Every implementation remains subject to MASTER's laws and normal /fix gates.
 
 **Brgen**
-- [ ] `brgen_ai_feed_ranking` — PARTIAL 2026-11-11: deterministic recency-plus-local-engagement ranking is implemented in `RAILS/brgen/app/models/post.rb`; `RAILS/test/feed_ranking_contract_test.rb` covers the contract. Run focused and app suites on pinned Ruby 4.0.5; NOT_RUN here.
+- [ ] `brgen_ai_feed_ranking` — PARTIAL 2026-11-11: deterministic recency-plus-local-engagement ranking is implemented in `RAILS/brgen/app/models/post.rb`; `RAILS/test/feed_ranking_contract_test.rb` covers the contract. Run focused and app suites on the installed compatible Ruby; NOT_RUN here.
 - [ ] `brgen_cold_start_feed` — open; consider a labelled follows-plus-city-popular feed so a new reader can see a living city.
 - [ ] `brgen_creator_monetization` — open; depends on the one shared commerce domain.
 - [ ] `brgen_activitypub_inbound` — open; remote media proxying, per-origin controls, blocklist and moderation must precede storage.
@@ -507,7 +506,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `master_face_soothing` — picked; complete `master_face_breath` without adding colours or exceeding visual budgets.
 - [ ] `master_voice_dsp_lanes` — picked; complete `master_voice_browser_dsp` so browser and terminal build the same declared voice presets, with honest unsupported-node behaviour.
 - [ ] `master_voice_cooler` — picked; complete `master_voice_cooler_default` only after listening acceptance; operator taste remains the final gate.
-- [ ] `dilla_corpus_depth` — sample credits, measured timing, 3/5/7-bar form and Bach/Satie lineage now surface in `Voice::Dilla.brief`; exact Donuts chord transcription remains listening-dependent (the empty arrays are deliberate, not guessed). Regression added; NOT_RUN on pinned Ruby 4.0.5.
+- [ ] `dilla_corpus_depth` — sample credits, measured timing, 3/5/7-bar form and Bach/Satie lineage now surface in `Voice::Dilla.brief`; exact Donuts chord transcription remains listening-dependent (the empty arrays are deliberate, not guessed). Regression added; NOT_RUN on the installed compatible Ruby.
 - [ ] `free_model_lanes` — picked; complete `free_compute_design_of_record` with dated quota/source checks and explicit gates; do not wire provider lanes merely because a free tier is listed.
 
 The complete candidate records and rejected alternatives live in `MASTER/data/ideations/*.yml`. Their `keep` verdict means a candidate survived adversarial critique; it is not blanket approval to implement. The 14 records are: `amber.yml`, `brgen.yml`, `bsdports.yml`, `creativity_lab.yml`, `dating.yml`, `maps.yml`, `marketplace.yml`, `master_surface_audit.yml`, `master_web_dilla_free.yml`, `master_web_face_voice.yml`, `messenger.yml`, `playlist.yml`, `takeaway.yml` and `tv.yml`. Consult the individual candidate and critique before selecting a direction. The Dating gap `dating_two_sided_ranked_for` is already marked satisfied in the gap ledger and is not open work.
@@ -549,12 +548,12 @@ The complete candidate records and rejected alternatives live in `MASTER/data/id
 - [ ] `free_compute_design_of_record` — dated free-compute landscape and verified quota assumptions.
 
 **Missing — 8**
-- [ ] `brgen_feed_ranking_deterministic` — PARTIAL: source and `RAILS/test/feed_ranking_contract_test.rb` exist; pinned Ruby 4.0.5 test and full feed verification remain NOT_RUN.
-- [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; pinned Ruby 4.0.5 tests remain NOT_RUN.
+- [ ] `brgen_feed_ranking_deterministic` — PARTIAL: source and `RAILS/test/feed_ranking_contract_test.rb` exist; installed-Ruby test and full feed verification remain NOT_RUN.
+- [ ] `amber_similarity_right_sized` — PARTIAL: source and `RAILS/amber/test/services/wears_well_with_test.rb` plus the bare-Ruby contract exist; installed-Ruby tests remain NOT_RUN.
 - [ ] `master_fleet_panel` — PARTIAL 2026-11-11: `FleetPanel`, dashboard wiring and `MASTER/test/test_dashboard_fleet_panel.rb` exist; unit execution and live vm23 health/render proof remain NOT_RUN.
 - [ ] `master_quota_facts` — PARTIAL 2026-11-11: quota/cache payload rendering and dashboard contract coverage exist in `MASTER/test/test_dashboard_fleet_panel.rb`; quota suite execution and rendered-browser proof remain NOT_RUN.
-- [ ] `inconclusive_aging` — PARTIAL 2026-11-11: receipt ageing/reopening logic and `MASTER/test/test_convergence_proof.rb` cases exist; run focused proof suite on pinned Ruby 4.0.5 and inspect a real receipt, NOT_RUN here.
-- [ ] `constitution_self_budget` — PARTIAL 2026-11-11: `MASTER/checks/data/constitutional_budget.yml` carries the 6,717-line ceiling and `MASTER/test/test_constitutional_budget.rb` pins fit + down-only ratchet; run the tests on pinned Ruby 4.0.5, NOT_RUN here.
+- [ ] `inconclusive_aging` — PARTIAL 2026-11-11: receipt ageing/reopening logic and `MASTER/test/test_convergence_proof.rb` cases exist; run focused proof suite on the installed Ruby and inspect a real receipt, NOT_RUN here.
+- [ ] `constitution_self_budget` — PARTIAL 2026-11-11: `MASTER/checks/data/constitutional_budget.yml` carries the 6,717-line ceiling and `MASTER/test/test_constitutional_budget.rb` pins fit + down-only ratchet; run the tests on the installed compatible Ruby, NOT_RUN here.
 - [ ] `documentation_completeness` — public-contract changes carry documentation-review proof in the same task/commit.
 - [ ] `ops_alert_channel` — heartbeat failures reach one operator-owned relay with an allowlisted endpoint and secret held outside the tree.
 
@@ -709,7 +708,7 @@ sixteen ids to their entries. Runtime proof — rake dogfood, test_law_fixtures,
 test_law_parity, the rendered suite in headless Chrome — is NOT_RUN from this
 sandbox and folds into section 1's Current-revision acceptance.
 
-- [ ] Verify on a Ruby 4.0.5 host: rake dogfood green over law/, test_law_fixtures, test_law_ids_unique, test_law_parity and the test_law_catalogue* family green, and one rendered-suite pass per new snapshot Law in headless Chrome.
+- [ ] Verify on the installed compatible Ruby: rake dogfood green over law/, test_law_fixtures, test_law_ids_unique, test_law_parity and the test_law_catalogue* family green, and one rendered-suite pass per new snapshot Law in headless Chrome.
   PARTIAL 2026-11-07: test_law_fixtures (8 runs) and the catalogue family (test_law_ids_unique, test_law_parity, test_law_catalogue + bootstrap + policy, 6 runs) are green on the pinned 4.0.5 host. rake dogfood (writes) and the headless-Chrome rendered pass remain NOT_RUN.
 - [ ] Apply REDUNDANT_CORE_REQUIRE's fix — the 108 dead requires — through /fix with MASTER_AUTOFIX=1, not by hand.
 - [ ] Tune design_thresholds against measured surfaces once the rendered suite runs: the 0.02 OKLab merge distance and the APCA levels are starting levels, not standards.
