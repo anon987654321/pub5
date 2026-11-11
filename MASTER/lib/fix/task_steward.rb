@@ -11,7 +11,7 @@ module Master
       POLL_SECONDS = Integer(ENV.fetch("MASTER_TASK_POLL_SECONDS", "15")).clamp(1, 300)
 
       class << self
-        def start!(root:, bus: nil, runner:)
+        def start!(root:, bus: nil, runner:, after_run: nil)
           return if ENV["MASTER_TASK_STEWARD"] == "0"
 
           @mutex ||= Mutex.new
@@ -21,7 +21,7 @@ module Master
             current = @instances[key]
             return current if current&.alive?
 
-            steward = new(root:, bus:, runner:)
+            steward = new(root:, bus:, runner:, after_run:)
             @instances[key] = steward.start!
           end
         end
