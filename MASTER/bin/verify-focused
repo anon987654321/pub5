@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-# Run the focused MASTER regression list from TODO.md on the pinned Ruby.
+# Run the focused MASTER regression list from TODO.md on the installed compatible Ruby.
 # Usage (from MASTER/): bin/verify-focused
 # Exit 0 only if every listed file reports 0 failures and 0 errors.
 
