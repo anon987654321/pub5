@@ -11,11 +11,11 @@
   <%= link_to t("dating.splash.start"), root_path(start: 1), class: "dating-splash-start" %>
 
   <div class="dating-splash-heart">
-    <%# The original Hjerterom heart, recovered from pub4 history. Its shape,
-        red ground and animated shards are kept intact; only the vertical label
-        is Dating. The inline SVG pauses at its first frame for reduced motion. %>
-    <%= render "dating/home/hjerterom_logo", compact: true,
-               svg_uid: "dating-splash", label: t("dating.splash.title") %>
+    <%# Complete Hjerterom lockup, restored from pub4 history. The original heart
+        and wordmark stay together; Dating remains the vertical heading below.
+        The inline SVG pauses at its first frame for reduced motion. %>
+    <%= render "dating/home/hjerterom_logo", compact: false,
+               svg_uid: "dating-splash", label: "Hjerterom" %>
   </div>
 
   <%= tag.h1 t("dating.splash.title"), class: "dating-splash-title" %>
