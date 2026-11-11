@@ -204,6 +204,23 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_scoped_build_refuses_a_symlinked_directory
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "root")
+      outside = File.join(directory, "outside")
+      Dir.mkdir(root)
+      Dir.mkdir(outside)
+      File.write(File.join(outside, "secret.rb"), "class SecretOutside; end\n")
+      File.symlink(outside, File.join(root, "linked"))
+
+      index = Index.new(root:).build(path: "linked")
+
+      refute index.complete?
+      assert_equal :build, index.errors.fetch(0).fetch(:kind)
+      assert_nil index.lookup("SecretOutside")
+    end
+  end
+
   def test_scoped_build_cannot_escape_the_repository_root
     Dir.mktmpdir do |directory|
       root = File.join(directory, "root")
