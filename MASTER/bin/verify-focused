@@ -11,10 +11,29 @@ require "open3"
 ROOT = File.expand_path("..", __dir__)
 Dir.chdir(ROOT)
 
-ruby = Operator::RubyRunner.ruby_cmd
-bundle = Operator::RubyRunner.bundle_cmd
-puts "ruby=#{RUBY_VERSION} path=#{ruby}"
+begin
+  ruby = Operator::RubyRunner.ruby_cmd
+  bundle = Operator::RubyRunner.bundle_cmd
+rescue StandardError => e
+  warn "BLOCKED: compatible Ruby/Bundler selection failed: #{e.class}: #{e.message}"
+  exit 127
+end
+
+selected_version = Operator::RubyRunner.version_for(ruby)
+puts "ruby=#{selected_version || "unknown"} path=#{ruby} runner_ruby=#{RUBY_VERSION}"
 puts "cwd=#{ROOT}"
+
+begin
+  bundler_output, bundler_status = Open3.capture2e(bundle, "--version", chdir: ROOT)
+rescue SystemCallError => e
+  warn "BLOCKED: selected Bundler is unavailable (#{bundle}): #{e.class}: #{e.message}"
+  exit 127
+end
+unless bundler_status.success?
+  warn "BLOCKED: selected Bundler preflight failed (exit #{bundler_status.exitstatus}): #{bundler_output.to_s.lines.last(3).join.strip}"
+  exit(bundler_status.exitstatus || 127)
+end
+puts bundler_output.to_s.strip
 
 tests = %w[
   test/test_final_cleanup.rb
