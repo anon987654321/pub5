@@ -9,11 +9,10 @@ class TestBootEntrypoint < Minitest::Test
   GEMFILE = File.read(File.expand_path("../Gemfile", __dir__))
   LOCKFILE = File.read(File.expand_path("../Gemfile.lock", __dir__))
 
-  def test_json_matches_ruby_4_default_gem
-    assert_includes GEMFILE, 'gem "json", "= 2.18.0"'
-    assert_match(/^    json \(2\.18\.0\)$/, LOCKFILE)
-    assert_match(/^  json \(= 2\.18\.0\)$/, LOCKFILE)
-    assert_match(/^  json \(2\.18\.0\) sha256=b10506aee4183f5cf49e0efc48073d7b75843ce3782c68dbeb763351c08fd505$/, LOCKFILE)
+  def test_json_uses_the_bundle_resolution_not_a_ruby_release_pin
+    refute_match(/^gem "json",\\s*"=/, GEMFILE)
+    refute_match(/^  json \\(=/, LOCKFILE)
+    assert_match(/^    json \\(/, LOCKFILE)
   end
 
   def test_dependency_bootstrap_activates_the_master_bundle
