@@ -34,11 +34,14 @@ module Master
           type = TYPES.include?(type.to_s) ? type.to_s : "general"
           source ||= caller_source
           confidence = confidence.to_f.clamp(0.0, 1.0)
+          # Embeddings can be slower than the durable file update. Build the
+          # entry before taking either the instance mutex or process lock so a
+          # local model call cannot block other readers or MASTER sessions.
+          entry = entry_for(key:, value:, type:, source:, confidence:, embed:)
           @mutex.synchronize do
             with_store_lock do
               prune_stale! if @store.size > CONSOLIDATE_THRESHOLD
               previous = @store[key.to_s]
-              entry = entry_for(key:, value:, type:, source:, confidence:, embed:)
               record_conflict!(key.to_s, previous, entry) if conflicting_entry?(key.to_s, previous, entry)
               @store[key.to_s] = entry
               persist
