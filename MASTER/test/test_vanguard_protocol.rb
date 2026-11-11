@@ -43,6 +43,118 @@ class TestVanguardProtocol < Minitest::Test
     assert_match(/exploding_ast AST check failed/, error.message)
   end
 
+  def test_symbol_visitor_qualifies_calls_by_lexical_method_context
+    source = <<~RUBY
+      module Demo
+        class Widget
+          def ping
+            helper
+            self.instance_reset
+            Other.reset
+            worker.run
+          end
+          def helper = true
+          def instance_reset = true
+          def self.reset = true
+          def self.build
+            class_helper
+          end
+          def self.class_helper = true
+          class << self
+            def singleton_ping
+              singleton_helper
+            end
+            def singleton_helper = true
+          end
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "calls.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    targets = visitor.references.map(&:to_fqn)
+
+    assert_includes targets, "Demo::Widget#helper"
+    assert_includes targets, "Demo::Widget#instance_reset"
+    assert_includes targets, "Other.reset"
+    assert_includes targets, "run", "dynamic receivers remain unqualified rather than guessed"
+    assert_includes targets, "Demo::Widget.class_helper"
+    assert_includes targets, "Demo::Widget.singleton_helper"
+  end
+
+  def test_symbol_visitor_tracks_include_prepend_and_extend_relationships
+    source = <<~RUBY
+      module Contracts
+      end
+      module Priority
+      end
+      module ClassMethods
+      end
+      class Demo
+        include Contracts
+        include Extra::Contract
+        prepend Priority
+        extend ClassMethods
+        include Contracts
+        def runtime
+          include DynamicAtRuntime
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "mixins.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    widget = visitor.symbols.find { |symbol| symbol.fqn == "Demo" }
+
+    assert_equal ["include:Contracts", "include:Extra::Contract", "prepend:Priority", "extend:ClassMethods"],
+                 widget.includes
+  end
+
+  def test_symbol_visitor_tracks_macro_alias_and_singleton_definitions
+    source = <<~RUBY
+      module Dynamic
+        class Widget
+          define_method(:computed) {}
+          attr_reader :name, "state"
+          attr_writer :setting
+          attr_accessor :enabled
+          alias renamed computed
+          alias_method :renamed_again, "computed"
+          def self.build = true
+          class << self
+            def from_singleton_class = true
+            define_method(:singleton_dynamic) {}
+            attr_reader :singleton_name
+          end
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "dynamic.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    names = visitor.symbols.map(&:fqn)
+
+    %w[
+      Dynamic::Widget#computed
+      Dynamic::Widget#name
+      Dynamic::Widget#state
+      Dynamic::Widget#setting=
+      Dynamic::Widget#enabled
+      Dynamic::Widget#enabled=
+      Dynamic::Widget#renamed
+      Dynamic::Widget#renamed_again
+      Dynamic::Widget.build
+      Dynamic::Widget.from_singleton_class
+      Dynamic::Widget.singleton_dynamic
+      Dynamic::Widget.singleton_name
+    ].each { |name| assert_includes names, name }
+
+    assert_equal 12, visitor.metrics[:defs]
+  end
+
   def test_symbol_visitor_tracks_metrics
     source = <<~RUBY
       module Demo
