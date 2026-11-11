@@ -115,28 +115,28 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_mrdamascy_rc_d_process_match_is_app_scoped
+  def test_mrdamascy_rc_d_process_match_uses_the_live_endpoint
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("${APP_DIR}/falcon.rb", "${APP_DIR}/other.rb")
+      text = File.read(path).sub("47314", "47315")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy rc.d process match must identify its Falcon host config"
+      assert_includes out, "mrdamascy rc.d process match must identify the Falcon loopback endpoint"
     end
   end
 
-  def test_mrdamascy_rc_d_stop_pattern_is_app_scoped
+  def test_mrdamascy_rc_d_stop_pattern_uses_the_live_endpoint
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub('pkill -f "falcon host ${APP_DIR}/falcon.rb"',
-                                'pkill -f "falcon.*${PORT}"')
+      text = File.read(path).sub('pkill -f "127\\\\.0\\\\.0\\\\.1:47314"',
+                                'pkill -f "127\\\\.0\\\\.0\\\\.1:47315"')
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy rc.d stop pattern must target only its Falcon host config"
+      assert_includes out, "mrdamascy rc.d stop pattern must target only the Falcon loopback endpoint"
     end
   end
 
@@ -155,7 +155,7 @@ class VpsSafetyCheckTest < Minitest::Test
   def test_mrdamascy_falcon_host_preserves_the_slow_boot_health_timeout
     with_fixture do |dir, _|
       path = File.join(dir, "RAILS", "mrdamascy", "falcon.rb")
-      text = File.read(path).sub("health_check_timeout 300", "health_check_timeout 30")
+      text = File.read(path).sub("health_check_timeout: 300", "health_check_timeout: 30")
       File.write(path, text)
       out, status = run_check(dir)
 
