@@ -246,18 +246,38 @@ class TestBacklog < Minitest::Test
     end
 
     Dir.mktmpdir("backlog-executor") do |root|
-      executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT, mission_class: fake_mission)
-      Backlog.stub(:generate, [row]) do
-        assert_equal :queued, executor.enqueue_next!
-      end
+      Dir.mktmpdir("backlog-repo") do |repo_root|
+        full = File.join(repo_root, "MASTER/lib/example.rb")
+        FileUtils.mkdir_p(File.dirname(full))
+        File.write(full, "VALUE = 1\n")
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+        Backlog.stub(:generate, [row]) do
+          assert_equal :queued, executor.enqueue_next!
+        end
 
-      queued = fake_mission.queued
+        queued = fake_mission.queued
       assert_equal "backlog", queued.fetch(:origin)
       assert_equal true, queued.fetch(:auto_continue)
       assert_equal root, queued.fetch(:scope)
       plan = JSON.parse(queued.fetch(:plan))
       assert_equal "safe-task", plan.fetch("item_id")
-      assert_equal ["MASTER/lib/example.rb"], plan.fetch("scope_paths")
+        assert_equal ["MASTER/lib/example.rb"], plan.fetch("scope_paths")
+      end
+    end
+  end
+
+  def test_executor_refuses_a_missing_target_until_it_is_created    Dir.mktmpdir("backlog-executor") do |root|
+      Dir.mktmpdir("backlog-repo") do |repo_root|
+        row = { id: "missing", text: "Add a new file", tree: "MASTER", kind: "mechanical",
+                scope_paths: ["MASTER/lib/not-yet-created.rb"] }
+        fake_mission = Class.new do
+          def self.current(root:) = nil
+          def initialize(root:); end
+          def ensure_queued!(**) = flunk("a missing target cannot enter /fix")
+        end
+        executor = Backlog::Executor.new(root:, repo_root:, mission_class: fake_mission)
+        Backlog.stub(:generate, [row]) { assert_equal :idle, executor.enqueue_next! }
+      end
     end
   end
 
