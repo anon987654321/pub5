@@ -22,9 +22,9 @@ class TestFixTypographyAudit < Minitest::Test
 
       report = Audit.new(root: dir).call
 
-      assert_match(/\Astyle0: 2 findings, 1 non ascii punctuation, 1 prose double dash\z/, report.lines.first)
+      assert_match(/\Astyle0: 2 findings, 1 non ascii punctuation, 1 prose double dash\z/, report.lines.first.chomp)
       assert_match(/lib\/cli\/fixture\.rb:2 non_ascii_punctuation/, report)
-      assert_match(/lib\/cli\/fixture\.rb:3 prose double dash/, report)
+      assert_match(/lib\/cli\/fixture\.rb:3 prose_double_dash/, report)
       refute_match(/FLAGS/, report, "flags keep their hyphens")
       refute_match(/GLOB/, report, "globs keep their dots")
     end

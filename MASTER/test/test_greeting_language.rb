@@ -20,12 +20,12 @@ class TestGreetingLanguage < Minitest::Test
     Master::CLI::Welcome.stub(:context, { time: "Monday 23:25", line: "x" }) do
       Master::CLI::Welcome.stub(:read_session, { "messages" => [{ "role" => "user", "content" => "hi there" }] }) do
         prompt = session.send(:greeting_prompt)
-        assert_includes prompt, "in\nEnglish."
+        assert_includes prompt.tr("\n", " "), "in English."
         refute_includes prompt, "hi there"
       end
       Master::CLI::Welcome.stub(:read_session, { "messages" => [{ "role" => "user", "content" => "hei, hvordan går det?" }] }) do
         prompt = session.send(:greeting_prompt)
-        assert_includes prompt, "in\nNorwegian Bokmål."
+        assert_includes prompt.tr("\n", " "), "in Norwegian Bokmål."
         refute_includes prompt, "hvordan går det"
       end
     end

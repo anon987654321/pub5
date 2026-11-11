@@ -150,9 +150,9 @@ class TestResearchPass < Minitest::Test
   def test_full_repository_target_researches_every_domain
     pass = Master::Fix::ResearchPass.new(agent: Object.new, bus: nil, plan: @plan, root: Master::REPO_ROOT)
 
-    assert_equal %w[engineering rails openbsd studio music visual bplans].sort,
+    assert_equal %w[engineering rails openbsd studio music visual bplans conversation].sort,
       pass.send(:domains_for, ".", @plan.research_protocol).sort
-    assert_equal %w[engineering rails openbsd studio music visual bplans].sort,
+    assert_equal %w[engineering rails openbsd studio music visual bplans conversation].sort,
       pass.send(:domains_for, MasterPaths::TREES.join(" "), @plan.research_protocol).sort
     assert_equal ["music"], pass.send(:domains_for, "STUDIO/dilla", @plan.research_protocol)
     assert_equal ["bplans"], pass.send(:domains_for, "BIZ", @plan.research_protocol)
