@@ -25,11 +25,11 @@ module Backlog
   SOURCE = File.expand_path("../TODO.md", MASTER_ROOT)
   DEST = File.join(MASTER_ROOT, "data", "backlog.yml")
 
-  TREES = %w[MASTER RAILS OPENBSD STUDIO cross operator].freeze
+  TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ cross operator].freeze
   KINDS = %w[verify mechanical design product operator-only plan].freeze
   SIZES = %w[s m l].freeze
 
-  ROOTED_PATH = %r{(?:MASTER|RAILS|OPENBSD|STUDIO|pub4)/[\w.\-]+(?:/[\w.\-]+)*}
+  ROOTED_PATH = %r{(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ|pub4)/[\w.\-]+(?:/[\w.\-]+)*}
   REL_PATH = %r{
     (?<![\w/])(?:lib|bin|data|docs|tools|checks|test|law|man|contracts|
     plugins|app|config|knowledge|public|storage|etc|usr|home|var|dev|db|
