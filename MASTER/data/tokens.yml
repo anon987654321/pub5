@@ -778,6 +778,15 @@ tokens:
       tone_far: "#555555"
       tone_mid: "#A6A6A6"
       tone_near: "#F0F0F0"
+      # The terminal window's own colour, beside the face tones so every
+      # terminal colour has one definition: the status line's accent and cool
+      # annotation (Face::Window), and the activity spinner's ramp, amber at
+      # the tint threshold to red at full intensity (Session's thinking
+      # indicator). Both ends of the ramp hold red and blue; the code
+      # interpolates every channel linearly between the stops.
+      window_accent: "#E0E5EE"
+      window_cool: "#A4AEBE"
+      spinner_tint: { from: "#FFD71E", to: "#FF281E" }
       fit: 0.92
       camera: 3.2
       aspect: 2.0

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tty-screen"
+require_relative "../../face"
 require_relative "resource_load"
 require_relative "../stream_accumulator"
 require_relative "../../voice/typography"
@@ -139,12 +140,22 @@ module Master
         FAST_TICK_SECONDS + span * (1.0 - intensity)
       end
 
+      # The tint reads its amber-to-red stops from face_interface.ascii
+      # (spinner_tint) — colour is a token fact, not a constant here. The
+      # channels interpolate linearly between the stops; below the threshold
+      # the row stays plain, and a missing or malformed token degrades to
+      # plain too rather than raising in the paint path.
       def spinner_tint(intensity)
         return unless intensity > SPIN_COLOR_START
 
+        stops = Master::Face::Contract.spinner_tint || {}
+        from = Master::Face::Contract.rgb_channels(stops["from"])
+        to = Master::Face::Contract.rgb_channels(stops["to"])
+        return unless from && to
+
         ramp = (intensity - SPIN_COLOR_START) / (1.0 - SPIN_COLOR_START)
-        green = (215 - 175 * ramp).round
-        "\e[38;2;255;#{green};30m"
+        channels = from.zip(to).map { |a, b| (a + (b - a) * ramp).round }
+        "\e[38;2;#{channels.join(';')}m"
       end
 
       def init_thinking_state!

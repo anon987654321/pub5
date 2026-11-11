@@ -37,6 +37,30 @@ module Master
       # The prompt glyphs: :input, :continuation or :output.
       def glyph(name, root: Master::ROOT) = ascii(root:).fetch("prompt", {}).fetch(name.to_s)
 
+      # The terminal window's colour and the spinner's ramp, from
+      # face_interface.ascii beside the face tones. A missing token degrades to
+      # no colour: the status line prints plain and the spinner row stays
+      # unlit, never a raised error in the REPL's paint path.
+      def window_accent(root: Master::ROOT) = ascii(root:)["window_accent"]
+      def window_cool(root: Master::ROOT) = ascii(root:)["window_cool"]
+      def spinner_tint(root: Master::ROOT) = ascii(root:)["spinner_tint"]
+
+      # The 8-bit channels of a tokens hex value; nil unless the value is a
+      # six-digit hex colour, so a typo'd token degrades rather than raises.
+      def rgb_channels(hex)
+        rgb = hex.to_s.delete("#")
+        return unless rgb.match?(/\A\h{6}\z/)
+
+        rgb.scan(/../).map { |pair| pair.hex }
+      end
+
+      # A 24-bit SGR foreground escape for a tokens hex value; empty when the
+      # value is not a colour, so callers interpolate it unconditionally.
+      def sgr_fore(hex)
+        channels = rgb_channels(hex)
+        channels ? "\e[38;2;#{channels.join(';')}m" : ""
+      end
+
       def budget(root: Master::ROOT) = spatial(root:).fetch("budget", {})
       def camera(root: Master::ROOT) = spatial(root:).fetch("camera", {})
       def layers(root: Master::ROOT)

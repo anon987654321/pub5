@@ -2,6 +2,7 @@
 
 require "io/console"
 require "io/wait"
+require_relative "../../face"
 require_relative "../../io/exec"
 
 module Master
@@ -23,9 +24,11 @@ module Master
         DIM = "\e[2m"
         PLAIN = "\e[0m"
         # Neutral phosphor keeps the terminal face in the browser's restrained
-        # particle-stipple palette.
-        ACCENT = "\e[38;2;224;229;238m"
-        COOL = "\e[38;2;164;174;190m"
+        # particle-stipple palette. The values are colour facts and live in
+        # data/tokens.yml (face_interface.ascii) beside the face tones; DIM and
+        # PLAIN are SGR controls, not colour, so they stay here.
+        ACCENT = Master::Face::Contract.sgr_fore(Master::Face::Contract.window_accent)
+        COOL = Master::Face::Contract.sgr_fore(Master::Face::Contract.window_cool)
 
         # The legacy full-screen window is not an entry mode. bin/master must
         # always reach Session/Reline first; the face is rendered above that
