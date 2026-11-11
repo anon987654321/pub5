@@ -121,14 +121,14 @@ class WorldTest < Minitest::Test
   def test_write_fsyncs_the_parent_directory_after_rename
     with_world do |world, root|
       observed = []
-      world.define_singleton_method(:fsync_directory) do |directory|
-        observed << [directory, File.read(File.join(directory, "durable.txt"))]
+      world.define_singleton_method(:fsync_directory) do |directory, expected: nil|
+        observed << [directory, File.read(File.join(directory, "durable.txt")), expected&.ino]
       end
 
       result = world.perform(E.write("durable.txt", "durable\n"))
 
       assert result.ok?, result.message
-      assert_equal [[root, "durable\n"]], observed
+      assert_equal [[root, "durable\n", File.stat(root).ino]], observed
     end
   end
 
