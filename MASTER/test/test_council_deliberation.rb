@@ -354,21 +354,19 @@ class TestCouncilDeliberation < Minitest::Test
     delib.define_singleton_method(:note_persona_failure) { |persona, error| failures << [persona.name, error.message] }
     original_new = Thread.method(:new)
     calls = 0
-    release_helper = original_new.call do
-      started.pop
-      release << :continue
-    end
 
     Thread.stub(:new, lambda { |*args, **kwargs, &block|
       calls += 1
       raise ThreadError, "thread limit reached" if calls == 2
 
-      original_new.call(*args, **kwargs, &block)
+      original_new.call(*args, **kwargs, &block).tap do
+        started.pop(timeout: 2)
+        release << :continue
+      end
     }) do
       feedback = delib.collect_parallel(code: "x = 1", context: nil, personas:)
       assert_equal ["FIRST"], feedback.map { |entry| entry[:persona] }
     end
-    release_helper.join
 
     assert_equal 2, calls
     assert_equal [["SECOND", "thread limit reached"], ["THIRD", "thread limit reached"]], failures
