@@ -11,8 +11,8 @@ module Master
     #
     # The file records per-source nanosecond mtime, size and content digest,
     # so same-size edits with preserved timestamps cannot leave a stale graph.
-    # Its name comes from the
-    # workspace root, not from the tree hash: a name keyed by the tree hash
+        # Its name comes from the workspace root, not from the tree hash: a name
+    # keyed by the tree hash
     # changes on every edit and leaves nothing to rebuild incrementally from. The
     # tree hash rides inside the file, so an untouched tree is known without
     # comparing a single row. A stamp of the schema, Prism's version and the
@@ -22,6 +22,7 @@ module Master
 
       SCHEMA = 2
       REL_DIR = File.join(".master", "code_index").freeze
+      MAX_SNAPSHOT_BYTES = 128 * 1024 * 1024
 
       def initialize(root:)
         @root = root
@@ -101,14 +102,10 @@ module Master
 
       # { symbols:, references:, signatures:, tree_hash: } or nil when absent or stale.
       def load
-        directory = verified_atomic_directory(File.dirname(@path))
-        return unless directory == File.dirname(@path)
-        return unless File.file?(@path) && !File.symlink?(@path)
+        raw = read_snapshot
+        return unless raw
 
-        file_stat = File.lstat(@path)
-        return unless file_stat.file? && !file_stat.symlink? && file_stat.nlink == 1
-
-        data = JSON.parse(File.read(@path))
+        data = JSON.parse(raw)
         return unless data["stamp"] == stamp && data["root"] == @root
 
         files = data["files"]
@@ -138,6 +135,50 @@ module Master
       end
 
       private
+
+      # Open the cache without following a last-moment symlink replacement,
+      # bound the allocation, and verify the opened inode and parent directory
+      # both before and after reading. A cache is disposable; unsafe means miss.
+      def read_snapshot
+        directory = File.dirname(@path)
+        directory_stat = File.lstat(directory)
+        return unless directory_stat.directory? && !directory_stat.symlink? &&
+                      verified_atomic_directory(directory) == directory
+
+        before = File.lstat(@path)
+        return unless before.file? && !before.symlink? && before.nlink == 1
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(@path, flags) do |file|
+          opened = file.stat
+          current = File.lstat(@path)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == opened.dev && current.ino == opened.ino &&
+                 opened.dev == before.dev && opened.ino == before.ino
+            raise IOError, "code index snapshot path changed while opening"
+          end
+          raw = file.read(MAX_SNAPSHOT_BYTES + 1)
+          raise IOError, "code index snapshot exceeds the 128 MiB safety limit" if raw.bytesize > MAX_SNAPSHOT_BYTES
+
+          after = file.stat
+          current = File.lstat(@path)
+          parent = File.lstat(directory)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == after.dev && current.ino == after.ino &&
+                 after.dev == opened.dev && after.ino == opened.ino &&
+                 after.size == opened.size && after.mtime == opened.mtime &&
+                 after.ctime == opened.ctime && raw.bytesize == after.size &&
+                 parent.directory? && !parent.symlink? &&
+                 parent.dev == directory_stat.dev && parent.ino == directory_stat.ino &&
+                 verified_atomic_directory(directory) == directory
+            raise IOError, "code index snapshot changed while reading"
+          end
+          raw
+        end
+      rescue Errno::ENOENT
+        nil
+      end
 
       def stamp
         @stamp ||= [SCHEMA, Prism::VERSION, parser_digest]
