@@ -1119,6 +1119,7 @@
     const subjectShellOpacity = nativeSubjectField ? (1 - semanticBlend) : (1 - semanticBlend * 0.68);
     shellMaterial.uniforms.uOpacity.value =
       geometry.shell_opacity * (state.mode === "sleeping" ? 0.35 : 1) *
+      (portrait ? 0.44 : 1) *
       (0.88 + (reducedMotion ? 0 : audioEnergy) * 0.12) * subjectShellOpacity;
     shellMaterial.uniforms.uEntropy.value = state.entropy;
     shellMaterial.uniforms.uColor.value.copy(colorFromCss());
