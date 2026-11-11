@@ -317,9 +317,15 @@ measure is already owned by the Bymorgen item above.
   and local fallback. Report worker failure truthfully. Voice default/startup
   behavior remains an operator decision.
 - [ ] **One face contract.** Keep the existing single FaceWorld/FaceState
-  renderer, frame limits, caching and reduced-motion behavior. Add
+  renderer, frame limits, caching and reduced-motion behavior. Finish
   phoneme-timed lip sync, Norwegian vowel shapes, listening pose, attention
   cues and CLI/web snapshot coverage without a second renderer.
+  2026-11-11: unsupported explicit visual descriptors now leave the portrait
+  intact; fallback lip sync maps æ/ø/å through the existing 45 ms audio-clock
+  path. The generated loader's six source digests were checked. Listening and
+  attention paths already have shared-policy implementations and focused tests.
+  New Node regressions are authored but NOT_RUN; cross-renderer snapshots and
+  real browser/device acceptance remain open.
 - [ ] **Avatar geometry.** Derive deterministic particle positions from the
   recovered avatar reference inside the current renderer; preserve fallback
   and point budgets, then prove narrow/wide browser and GPU behavior.
