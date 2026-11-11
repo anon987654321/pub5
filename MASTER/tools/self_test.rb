@@ -26,6 +26,7 @@ begin
   add.call("model-catalogue", models.fetch("models", {}).empty? ? "FAIL" : "PASS",
            "#{models.fetch("models", {}).size} declared tiers")
 
+  Master::Soul.load!
   runtime = Master::Builder.build(root:)
   agent = runtime[:agent]
   raise "Builder returned no Review::Agent" unless agent&.respond_to?(:ask_once)
