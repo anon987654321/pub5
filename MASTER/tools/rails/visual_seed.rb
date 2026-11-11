@@ -158,11 +158,12 @@ module Deploy
     # The app's own Gemfile and Ruby, the parent's bundler state dropped, the
     # same way triangle boots it.
     def run_rails(app, env, task)
-      version = File.file?(File.join(@root, ".ruby-version")) ? File.read(File.join(@root, ".ruby-version")).strip : ""
-      full = env.merge("RAILS_ENV" => "development", "RBENV_VERSION" => version, "DATABASE_URL" => nil,
+      ruby = Operator::RubyRunner.ruby_cmd(root: @root)
+      full = env.merge("RAILS_ENV" => "development", "PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}",
+                       "RBENV_VERSION" => nil, "DATABASE_URL" => nil,
                        "BUNDLE_GEMFILE" => File.join(app_dir(app), "Gemfile"), "BUNDLE_BIN_PATH" => nil,
                        "BUNDLER_SETUP" => nil, "BUNDLER_VERSION" => nil, "RUBYOPT" => nil, "RUBYLIB" => nil)
-      out, status = Master::Io::Exec.capture2e(full, Operator::RubyRunner.bundle_cmd, "exec", Operator::RubyRunner.ruby_cmd,
+      out, status = Master::Io::Exec.capture2e(full, Operator::RubyRunner.bundle_cmd(root: @root), "exec", ruby,
                                                "bin/rails", task, chdir: app_dir(app), timeout: TIMEOUT)
       @out.puts("visual seed: #{app} #{task} failed\n#{failure_excerpt(out)}") unless status.success?
       status.success?
