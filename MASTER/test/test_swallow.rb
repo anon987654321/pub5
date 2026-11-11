@@ -96,6 +96,23 @@ class TestSwallow < Minitest::Test
     assert_equal "load_bearing", entry["severity"]
   end
 
+  def test_safe_call_does_not_swallow_process_exit_signal_or_memory_errors
+    failures = [
+      SystemExit.new(17),
+      Interrupt.new("operator interrupt"),
+      NoMemoryError.new("allocation failure"),
+    ]
+
+    Master::Ground::Swallow.stub(:log, ->(*) { flunk "fatal exceptions must not be sent to Swallow.log" }) do
+      failures.each do |failure|
+        observed = assert_raises(failure.class) do
+          Master::Ground::Swallow.safe_call(context: unique_context("fatal")) { raise failure }
+        end
+        assert_same failure, observed
+      end
+    end
+  end
+
   def test_the_suite_writes_a_scratch_log_never_the_one_a_fix_run_reads
     ctx = unique_context("scratch")
     real = Master::Ground::Swallow::LOG_PATH
