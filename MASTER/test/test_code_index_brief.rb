@@ -67,7 +67,9 @@ class TestCodeIndexBrief < Minitest::Test
   def test_complete_index_is_explicitly_labelled
     with_index do |index|
       assert index.complete?
-      assert_includes index.summary, "Index coverage: COMPLETE (repository-wide scan)."
+      assert_includes index.summary, "Index coverage: COMPLETE (repository-wide Ruby source scan)."
+      assert_includes index.summary, "Reference graph: PARTIAL"
+      assert_includes index.summary, "dynamic dispatch"
     end
   end
 
