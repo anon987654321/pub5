@@ -92,6 +92,45 @@ module Master
         "wishlist0: failed - #{e.class}: #{e.message}"
       end
 
+      # Standalone spellings of the two convergence reads TurnRouter reaches
+      # through /fix --prove / --explain, and of the wishlist read. Both reads
+      # walk the governed trees, so they measure from the repository root.
+      def dispatch_prove(ctx: nil)
+        raw = arg_for(ctx)
+        render_convergence(mode: "prove", remainder: raw, raw:, root: Master::ROOT)
+      end
+
+      def dispatch_explain(ctx: nil)
+        raw = arg_for(ctx)
+        render_convergence(mode: "explain", remainder: raw, raw:, root: Master::ROOT)
+      end
+
+      def dispatch_wishlist(ctx: nil)
+        wishlist_report
+      end
+
+      # /size sets the face's rendering mode (auto, small, large or WxH). The
+      # terminal ASCII face is retired; the web face window still reads Sizing,
+      # so the session's choice keeps one owner and one spelling. A refused
+      # size changes nothing.
+      def dispatch_size(ctx: nil)
+        face_size(arg_for(ctx)) || "size0: the face renders at #{Master::CLI::Face::Sizing.mode}"
+      end
+
+      # nil accepts and applies the size; a string refuses it and changes nothing.
+      def face_size(raw)
+        words = raw.to_s.strip.split(/\s+/)
+        words.shift if words.first == "size"
+        value = words.join(" ")
+        return nil if value.empty?
+
+        mode = Master::CLI::Face::Sizing.parse(value)
+        return "face0: size is auto, small, large or WxH" unless mode
+
+        Master::CLI::Face::Sizing.mode = mode
+        nil
+      end
+
       # /fix — the convergence lifecycle, and the only pipeline command. It
       # observes, critiques, generates and picks between repairs, applies one,
       # validates it and observes again, until the tree converges, stops
@@ -475,9 +514,9 @@ module Master
         trees = Array(targets).flat_map do |target|
           expanded = File.expand_path(target.to_s, repo_root)
           if expanded == repo_root
-            Operator::Sweep::TREES
+            ::Operator::Sweep::TREES
           else
-            tree = Operator::Sweep::TREES.find do |name|
+            tree = ::Operator::Sweep::TREES.find do |name|
               base = File.join(repo_root, name)
               expanded == base || expanded.start_with?("#{base}#{File::SEPARATOR}")
             end
@@ -495,7 +534,7 @@ module Master
             break
           end
 
-          batch = Operator::Sweep.sweep(
+          batch = ::Operator::Sweep.sweep(
             tree, unit_index, detailed: true, stop: -> { cancellation&.cancelled? }
           )
           unit_index += batch.size

@@ -71,6 +71,10 @@ module Master
           "laws" => command(:dispatch_laws, root),
           "snapshot" => command(:dispatch_snapshot, droot),
           "why" => command(:dispatch_why, d[:agent], droot, d[:memory]),
+          "wishlist" => command(:dispatch_wishlist),
+          "prove" => command(:dispatch_prove),
+          "explain" => command(:dispatch_explain),
+          "size" => command(:dispatch_size),
 
           "help" => command(:help_text, nil),
         ).merge(control_commands(ai[:standing], ai[:soul]))

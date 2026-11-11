@@ -342,6 +342,26 @@ module Master
           detail: ["/why <law|path|scan_rule|anti_pattern|style.key> - Trace::WhyExplainer looks it",
                    "up in the constitution, architecture and path ownership, then asks the model only when nothing matches."],
         },
+        "wishlist" => {
+          summary: "the governed workstreams and their state - what /fix still owes the trees",
+          detail: ["/wishlist renders Master::Convergence::Workstreams for the whole repository:",
+                   "the same read that closes every /fix run, on its own verb."],
+        },
+        "prove" => {
+          summary: "the convergence proof with its durable receipts",
+          detail: ["/prove [history [N]] renders the proof the /fix runs themselves write;",
+                   "history N reads the ledger. It is a read: it reaches no repair pipeline."],
+        },
+        "explain" => {
+          summary: "the measured four-tree topology",
+          detail: ["/explain [MASTER|RAILS|OPENBSD|STUDIO|BIZ] measures the architecture topology",
+                   "for the named tree or all of them. It is a read: it reaches no repair pipeline."],
+        },
+        "size" => {
+          summary: "set the face's rendering mode: auto, small, large or WxH",
+          detail: ["/size <auto|small|large|WxH> stores the session's choice; the web face window",
+                   "sizes from it. A refused size changes nothing."],
+        },
       }.freeze
 
       def help_text(command = nil)
@@ -380,6 +400,10 @@ module Master
         "privacy" => "constitution", "preferences" => "interface", "agenda" => "session", "task" => "session", "skill" => "constitution", "capabilities" => "model",
         "laws" => "review",
         "why" => "review",
+        "wishlist" => "review",
+        "prove" => "review",
+        "explain" => "review",
+        "size" => "interface",
         "commit" => "change", "deploy" => "change", "snapshot" => "change",
         "orders" => "change",
         "voice" => "interface", "narrate" => "interface", "bard" => "interface",
