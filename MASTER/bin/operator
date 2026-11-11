@@ -65,6 +65,7 @@ def usage
       bin/operator push                   replay unpublished main commits onto a moved origin/main and push, no stash
       bin/operator triangle <up|status|down> [app...]  boot brgen, amber, bsdports and the master face on the ports the live checks probe
       bin/operator visual sweep [APP] [--no-dialogs] [--one-page]  captures under RAILS/; one-page is a 390px smoke
+      bin/operator browser install                   install user-scoped Chrome for Testing headless shell
       bin/operator visual review [--app A,B] [--surface ID] [--no-critique] [--no-open] [--out DIR]  read-only rendered review, no fixing
       bin/operator visual <seed [app...] [--yes]|unseed|status|approve <surface>>  believable local content for the visual pass, development database only
       bin/operator premerge [--apps|--pwa|--contracts|--coverage|--checks|--list]  the Rails premerge proof
@@ -486,6 +487,9 @@ when "design"
   require "master"
   require "operator/design_run"
   exit Operator::DesignRun.main(ARGV, root: ROOT)
+when "browser"
+  abort("usage: bin/operator browser install") unless ARGV.shift == "install" && ARGV.empty?
+  exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "chrome_install.rb"))
 when "visual"
   # seed|unseed|status load local development content; approve blesses.
   exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "rails", "visual_seed.rb"), *ARGV) if %w[seed unseed status].include?(ARGV.first)
