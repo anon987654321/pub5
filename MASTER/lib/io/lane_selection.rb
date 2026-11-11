@@ -58,40 +58,23 @@ module Master
       def kind(model, cfg: config)
         id = model.to_s
         return :paid_tail if Io::PaidTail.member?(id)
-        return :free if id.end_with?(":free", ":cloud", "-cloud") ||
-                        id.start_with?("llm7:", "web-chat:")
+        return :free if id.end_with?(":free", ":cloud", "-cloud") || id.start_with?("web-chat:")
         return :local if LaneHealth.local_model?(id)
         return :free if keyless_slug?(id, cfg)
 
         :remote
       end
 
-      # A keyless tier's slugs answer without a key, verified live against the
-      # gateways (kilo verified 2026-11-06). kilo:openrouter/free and
-      # kilo:reflection/beam-free are the free floor exactly the way a
-      # ":free" suffix slug is — and the walk that spent 66 dead attempts on
-      # them never counted their deaths because kind() called them remote.
-      # With the provider's key set the same gateway answers paid slugs, so
-      # the classification holds only for keyless use: the name of the key
-      # decides which lane class we are actually riding.
+      # HostedEndpoints already applies each provider's keyless rule to its
+      # live /models listing (tier, isFree or allow). Classify from that exact
+      # filtered index rather than maintaining a second, weaker copy of those
+      # provider-specific rules here.
       def keyless_slug?(id, cfg)
         lane = cfg.dig("openai_compatible", provider(id))
         return false unless lane.is_a?(Hash) && lane["keyless"].is_a?(Hash)
 
-        envs = Array(lane["key_env"])
-        envs.each { |env| return false if Master.api_key_present?(env) }
-        allow = lane["keyless"]["allow"]
-        slug = id.split(":", 2)[1].to_s
-        return true if allow && !allow.empty? && Array(allow).include?(slug)
-
-        # The gateway lists each slug with its own isFree flag; models.yml can
-        # only blanket-vouch that the family exists, so the slug itself must
-        # read as free-pool: the suffix the gateway prints on its no-cost
-        # routes. A paid partner slug on the same lane must stay :remote,
-        # else every paid death there counts as a floor death.
-        return false unless lane["keyless"]["isFree"] == true
-
-        slug.end_with?(":free", "/free", "-free")
+        endpoint = hosted_endpoint_for(id, cfg:)
+        endpoint && endpoint[:key].nil?
       end
 
       # Live models, remote before local before free, each group in the order given.
@@ -155,13 +138,16 @@ module Master
         live.reject! { |id| ollama_model?(id) && !ollama_enabled?(cfg:) }
         live = live.reject { |id| LaneQuota.dead?(id, manual:) || !LaneState.usable?(id) }
         live = live.reject { |id| kind(id) == :paid_tail && !Io::PaidTail.enabled? }
-        return live unless free_last
+        unless free_last
+          return live unless vision
+
+          return vision_rank_order(live, cfg:) + live.reject { |id| vision?(id) }
+        end
 
         ranked = rank_pool(live, latency:, lead:, cfg:)
         return ranked unless vision
 
-        sighted, blind = ranked.partition { |id| vision?(id) }
-        sighted + blind
+        vision_rank_order(ranked, cfg:) + ranked.reject { |id| vision?(id) }
       end
 
       # The selection sort without the liveness filter. `order` answers [] when
@@ -173,13 +159,16 @@ module Master
       # the class ranks and the suspended floor decide.
       def ranked_order(models, free_last: true, latency: nil, vision: false, lead: [], cfg: config)
         candidates = Array(models).map(&:to_s).reject(&:empty?).uniq
-        return candidates unless free_last
+        unless free_last
+          return candidates unless vision
+
+          return vision_rank_order(candidates, cfg:) + candidates.reject { |id| vision?(id) }
+        end
 
         ranked = rank_pool(candidates, latency:, lead:, cfg:)
         return ranked unless vision
 
-        sighted, blind = ranked.partition { |id| vision?(id) }
-        sighted + blind
+        vision_rank_order(ranked, cfg:) + ranked.reject { |id| vision?(id) }
       end
 
       # The class a lane rides at in the selection sort. A floor the run
@@ -378,9 +367,47 @@ module Master
         Array(cfg.dig("models", name.to_s)).filter_map { |row| row["id"] if row.is_a?(Hash) }
       end
 
-      # Every model the status lines speak about, in order, once.
+      # HostedEndpoints owns live model discovery and provider-specific keyless
+      # filtering. Reuse one resolver for this process; /model refresh invalidates it.
+      def hosted_resolver(root: Master::ROOT)
+        return @hosted_resolver if root.to_s == Master::ROOT.to_s && @hosted_resolver
+
+        require_relative "../cli/routing/model_router"
+        resolver = Master::CLI::Routing::ModelRouter.hosted_resolver(root:)
+        @hosted_resolver = resolver if root.to_s == Master::ROOT.to_s
+        resolver
+      end
+
+      def reset_hosted_resolver! = (@hosted_resolver = nil)
+
+      def hosted_models(cfg: config)
+        return [] unless cfg.equal?(config)
+
+        Array(hosted_resolver.hosted_models)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "LaneSelection.hosted_models")
+        []
+      end
+
+      def hosted_endpoint_for(model, cfg: config)
+        return unless cfg.equal?(config)
+
+        hosted_resolver.hosted_endpoint_for(model)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "LaneSelection.hosted_endpoint_for", model:)
+        nil
+      end
+
+      def hosted_provider?(model, cfg: config)
+        cfg.dig("openai_compatible", provider(model)).is_a?(Hash)
+      end
+
+      # Every model in the declared tiers plus every currently listed hosted
+      # model the same runtime dispatcher can reach.
       def catalogue(cfg: config)
-        CATALOGUE_TIERS.flat_map { |name| tier(name, cfg:) }.uniq
+        ids = CATALOGUE_TIERS.flat_map { |name| tier(name, cfg:) }
+        ids.concat(hosted_models(cfg:)) if cfg.equal?(config)
+        ids.uniq
       end
 
       # The tier's live models whose lane can answer on this machine, in selection order.
@@ -401,6 +428,7 @@ module Master
         end
         return Master.agy_cli_available? if provider(id) == "agy"
         return ollama_alive?(id) if id.start_with?("ollama:")
+        return !hosted_endpoint_for(id).nil? if hosted_provider?(id)
 
         key_present_for?(id)
       end
