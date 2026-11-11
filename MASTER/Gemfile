@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 source "https://rubygems.org"
-# .ruby-version records the preferred development line; focused checks must also run on the Ruby available in constrained environments.
-ruby ">= 3.3", "< 4.1"
+ruby ">= 3.3"
 
 gem "fiddle"
 gem "psych"
