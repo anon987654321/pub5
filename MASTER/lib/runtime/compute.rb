@@ -98,15 +98,23 @@ module Master
         end
 
         timed_out = false
+        thread_error = nil
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
         threads.each do |thread|
           remaining = [deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max
-          next if thread.join(remaining)
+          joined = begin
+            thread.join(remaining)
+          rescue Exception => error
+            thread_error ||= error
+            true
+          end
+          next if joined
 
           timed_out = true
           thread.kill if thread.alive?
         end
         raise TimeoutError, timeout if timed_out
+        raise thread_error if thread_error
 
         return results if failures.empty?
 
