@@ -27,6 +27,7 @@ tests = %w[
   test/test_fix_mission.rb
   test/test_core_no_lib_backedges.rb
   test/test_fix_interruption_restart.rb
+  test/test_fix_model_phase_guards.rb
   test/test_fix_transaction.rb
   test/test_reliability_second_tranche.rb
   test/test_fix_crash_leaves_tree.rb
