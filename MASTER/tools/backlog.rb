@@ -215,7 +215,9 @@ module Backlog
         "Exact repository-relative scope: #{scope.join(', ')}",
         "Acceptance command from the register: #{item[:done_when] || 'select the narrowest relevant existing proof'}",
         "Do not edit the TODO checkbox. The executor records work only from a durable completed Mission with a delivery summary and no pending repository writes.",
-        "Do not deploy, publish, spend money, contact people, alter production data, or cross a human/operator gate.",
+        "Commit and push each coherent, verified slice directly to the existing main branch; do not create PRs, branches, worktrees or GitHub Actions. Stage only task-owned paths after checking git status and preserving unrelated changes.",
+        "If GitHub authentication or the remote is unavailable, preserve the local commit and report DELIVERY_FAILED; never claim a push succeeded.",
+        "Do not deploy, spend money, contact people, alter production data, or cross a human/operator gate.",
         "If the task requires a product decision, external credential, human approval, or unavailable runtime, block with the exact reason.",
       ].join("\n")
       plan = JSON.generate(
