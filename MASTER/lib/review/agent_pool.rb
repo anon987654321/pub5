@@ -64,7 +64,18 @@ module Master
       end
 
       def join_all(timeout: nil)
-        @workers.map { |w| w.thread.join(timeout) }
+        first_error = nil
+        results = @workers.map do |worker|
+          begin
+            worker.thread.join(timeout)
+          rescue StandardError => error
+            first_error ||= error
+            nil
+          end
+        end
+        raise first_error if first_error
+
+        results
       end
 
       def active_count
