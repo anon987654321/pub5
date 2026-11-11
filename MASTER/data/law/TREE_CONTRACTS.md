@@ -15,8 +15,7 @@ rendered-check semantics, deploy blockers, subdomain map) and
 
 `RAILS/_*.sh` files (`_assets`, `_bundle`, `_core`, `_database`,
 `_deploy`, `_runtime_check`, `_service`) are libraries of sourced shell
-functions, not entrypoints. Each app's `deploy.sh` sources them; root
-`redeploy` is the operator's workstation entry; `apps.yml` is the
+functions, not entrypoints. Each app's `deploy.sh` sources them; `MASTER/bin/redeploy` is the operator's workstation entry; `apps.yml` is the
 canonical matrix and `apps.horizon.yml` the planned one — the two must
 not drift without a session note. An app counts as first-class when it
 has an `apps.yml` entry, a `deploy_root` and (when it reaches the VPS) a
