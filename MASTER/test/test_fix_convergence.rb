@@ -2342,10 +2342,27 @@ end
   end
 
   def test_a_converged_run_is_done
-    result = prove(build_loop([])).run(@root)
+    loop = prove(build_loop([]))
+    runner = loop.instance_variable_get(:@pass_runner)
+    runner.define_singleton_method(:assessment_matrix_evidence) do
+      {
+        status: "complete", expected_cells: 20, recorded_cells: 20,
+        finding_cells: 0, unassessed_cells: 0, inconclusive_cells: 0,
+      }
+    end
+    result = loop.run(@root)
 
     assert result.ok?
     assert_match(/\ADONE: /, result.value!)
+
+    terminal = @bus.events.find { |row| row[:event] == "fix_loop:terminal" }
+    refute_nil terminal
+    verification = terminal.fetch(:payload).fetch(:assessment_verification)
+    assert_equal "pass", verification.fetch(:status).to_s
+    assert_equal 20, verification.fetch(:checked_count)
+    record = loop.instance_variable_get(:@run_journal).history(limit: Master::Fix::RunJournal::MAX_RUNS)
+                  .find { |row| row["id"] == terminal.fetch(:payload).fetch(:run_id) }
+    assert_equal verification, record.dig("evidence", "assessment_verification")
   end
 
   def test_wishlist_open_proof_downgrades_done_to_plateau
