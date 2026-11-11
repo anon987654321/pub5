@@ -15,9 +15,19 @@ module Master
         # MASTER_FIX_RANK=1 requests full-scan ranking under that cap.
         module StreamStage
           STREAM = ENV.fetch("MASTER_FIX_STREAM", "1") != "0"
+
+          def self.worker_count(value)
+            count = Integer(value, exception: false)
+            return count if count&.positive?
+
+            raise ArgumentError, "MASTER_FIX_STREAM_WORKERS must be a positive integer"
+          end
+          private_class_method :worker_count
+
           # Files repaired at once. One worker left the machine waiting on one
           # model call at a time; files are disjoint, so workers never share one.
-          WORKERS = Integer(ENV.fetch("MASTER_FIX_STREAM_WORKERS", 3))
+          # When streaming is explicitly disabled, no worker pool is created.
+          WORKERS = STREAM ? worker_count(ENV.fetch("MASTER_FIX_STREAM_WORKERS", 3)) : 1
           # One call per file for every finding it holds (FileRepair); 0 keeps
           # the older call per rule.
           FILE_REPAIR = ENV.fetch("MASTER_FIX_FILE_REPAIR", "1") != "0"
