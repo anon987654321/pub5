@@ -113,6 +113,8 @@ module Master
       end
 
       def spin_tinted(line, intensity)
+        return line if intensity.nil?
+
         tint = spinner_tint(intensity)
         return line unless tint
 
@@ -173,7 +175,7 @@ module Master
       # Higher CPU load spins the star faster: slow at idle, fast at saturation.
       # Its red tint runs independently from light red to deep red over 0..1.
       def spin_pause(intensity)
-        normalized = Float(intensity).clamp(0.0, 1.0)
+        normalized = Float(intensity || 0.0).clamp(0.0, 1.0)
         span = TICK_SECONDS - FAST_TICK_SECONDS
         FAST_TICK_SECONDS + span * (1.0 - normalized)
       end
@@ -203,7 +205,7 @@ module Master
         @think_stage = "intake"
 
         @spin_frame = 0
-        @spin_intensity = 0.0
+        @spin_intensity = nil
         @spin_probe_at = 0.0
         @spin_paused = false
 
