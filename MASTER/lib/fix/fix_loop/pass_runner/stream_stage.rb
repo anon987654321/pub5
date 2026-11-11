@@ -520,24 +520,12 @@ module Master
               raise IncompleteContext, "dependency path is not canonical: #{rel}"
             end
 
-            cursor = root
-            components = rel.split(File::SEPARATOR)
-            components.each_with_index do |component, index|
-              cursor = File.join(cursor, component)
-              stat = File.lstat(cursor)
-              raise IncompleteContext, "dependency is a symlink: #{rel}" if stat.symlink?
-              if index < components.length - 1
-                raise IncompleteContext, "dependency parent is not a directory: #{rel}" unless stat.directory?
-              else
-                raise IncompleteContext, "dependency is not a regular file: #{rel}" unless stat.file?
-              end
-            end
-
-            before = File.lstat(full)
+            before = related_path_stat(root, rel)
             flags = File::RDONLY | File::NOFOLLOW
             File.open(full, flags) do |io|
               opened = io.stat
-              unless same_related_file?(before, opened) && File.realpath(full) == full
+              current = related_path_stat(root, rel)
+              unless same_related_file?(before, opened) && same_related_file?(opened, current)
                 raise IncompleteContext, "dependency changed while opening: #{rel}"
               end
 
@@ -574,6 +562,23 @@ module Master
             raise IncompleteContext, "dependency is a symlink: #{rel}"
           rescue SystemCallError => e
             raise IncompleteContext, "dependency unavailable since graph refresh: #{rel} (#{e.class})"
+          end
+
+          def related_path_stat(root, rel)
+            cursor = root
+            components = rel.split(File::SEPARATOR)
+            stat = nil
+            components.each_with_index do |component, index|
+              cursor = File.join(cursor, component)
+              stat = File.lstat(cursor)
+              raise IncompleteContext, "dependency is a symlink: #{rel}" if stat.symlink?
+              if index < components.length - 1
+                raise IncompleteContext, "dependency parent is not a directory: #{rel}" unless stat.directory?
+              else
+                raise IncompleteContext, "dependency is not a regular file: #{rel}" unless stat.file?
+              end
+            end
+            stat
           end
 
           def same_related_file?(left, right)
