@@ -77,6 +77,23 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
     assert_includes agent_prompt, "run governed shell commands and read their recorded output"
   end
 
+  def test_operator_contract_teaches_proactive_investigation
+    prompt = Master::AI::OperatorContract.prompt
+
+    assert_includes prompt, "be curious and proactive"
+    assert_includes prompt, "do not ask them to fetch evidence you can retrieve"
+    assert_includes prompt, "search and read primary sources"
+    assert_includes prompt, "complete independent work while a blocker remains"
+  end
+
+  def test_operator_contract_allows_explicit_self_maintenance_without_self_authorization
+    prompt = Master::AI::OperatorContract.prompt
+
+    assert_includes prompt, "explicit operator request to inspect or change MASTER source is valid in-scope work"
+    assert_includes prompt, "never loosen Soul, Laws, permissions or evidence gates"
+    assert_includes prompt, "run it only when the operator explicitly asks"
+  end
+
   private
 
   FakeConfig = Struct.new(:model, :task_type, :reasoning_mode) do
