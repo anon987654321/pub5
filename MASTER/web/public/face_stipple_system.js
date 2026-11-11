@@ -35,6 +35,15 @@
   let lastRenderIntervalMs = null;
   const frameIntervals = [];
   let contextState = "ready";
+  // Audio telemetry is a bounded visual signal, never an animation clock.
+  let audioEnergy = 0;
+  window.addEventListener("audio:update", (event) => {
+    const detail = event?.detail || {};
+    const bass = clamp(detail.bass, 0, 0, 1);
+    const onset = clamp(detail.onset, 0, 0, 1);
+    const rms = clamp(detail.rms, 0, 0, 1);
+    audioEnergy = Math.max(bass * 0.58 + onset * 0.30 + rms * 0.12, audioEnergy * 0.72);
+  }, { passive: true });
 
   function reducedMotionEnabled(state = {}) {
     const canonical = window.MASTER_FACE_STATE?.reducedMotion;
@@ -214,7 +223,7 @@
         uRipple: { value: 0 }, uTurbulence: { value: 0 },
         uLuminosity: { value: idle.luminosity }, uAttract: { value: idle.attract },
         uOpacity: { value: 0.74 }, uEntropy: { value: 0.18 },
-        uMotionScale: { value: 0 }, uBreathScale: { value: 0 },
+        uMotionScale: { value: 0 }, uBreathScale: { value: 0 }, uAudioWarp: { value: 0 },
         uColor: { value: new THREE.Color(0.90, 0.89, 0.86) }
       },
       vertexShader: `
@@ -233,6 +242,7 @@
         uniform float uEntropy;
         uniform float uMotionScale;
         uniform float uBreathScale;
+        uniform float uAudioWarp;
         uniform float uDepthReferenceDistance;
         uniform float uDepthScaleMin;
         uniform float uDepthScaleMax;
@@ -249,6 +259,9 @@
           p.y += cos(uTime * 0.61 + aPhase * 1.17) * drift * 0.78;
           p.z += sin(length(position.xy) * 17.0 - uTime * 2.2 + aPhase) * uRipple * 0.013 * uMotionScale;
           p.xy *= 1.0 - uAttract * 0.007;
+          // A beat draws the existing field inward; still/reduced-motion modes zero the warp.
+          float audioInward = clamp(uAudioWarp * 0.035 * uMotionScale, 0.0, 0.035);
+          p.xy *= 1.0 - audioInward;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           // One point, one pixel: depth and bias belong in brightness (vAlpha
@@ -367,6 +380,7 @@
     u.uMotionScale.value = motion;
     // The restrained idle breath is luminance-only; unlike spatial motion it remains in idle.
     u.uBreathScale.value = reducedMotionEnabled(state) ? 0 : 1;
+    u.uAudioWarp.value = reducedMotionEnabled(state) || stillMode ? 0 : audioEnergy;
     u.uOpacity.value = clamp(overrides.opacity, 0.74, 0.1, 1);
     if (swarmConfiguration().enabled === true) {
       // The particle material is pure white; visual identity does not inherit mood palettes.
@@ -729,7 +743,7 @@
       uniforms: {
         density: value("uDensity"), ripple: value("uRipple"), turbulence: value("uTurbulence"),
         luminosity: value("uLuminosity"), attract: value("uAttract"), opacity: value("uOpacity"),
-        time: value("uTime"),
+        time: value("uTime"), audioWarp: value("uAudioWarp"),
         depthReferenceDistance: value("uDepthReferenceDistance"),
         depthScaleMin: value("uDepthScaleMin"),
         depthScaleMax: value("uDepthScaleMax")
