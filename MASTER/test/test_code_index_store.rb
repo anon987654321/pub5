@@ -162,6 +162,31 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_persisted_snapshot_is_private
+    with_tree do |root|
+      Index.new(root:, persist: true).build
+      store = Master::Review::CodeIndexStore.new(root:)
+
+      assert File.file?(store.path)
+      assert_equal 0o600, File.stat(store.path).mode & 0o777
+    end
+  end
+
+  def test_symlinked_cache_directory_is_refused_without_writing_outside
+    with_tree do |root|
+      outside = File.join(File.dirname(root), "code-index-outside-#{SecureRandom.hex(4)}")
+      Dir.mkdir(outside)
+      File.symlink(outside, File.join(root, ".master"))
+
+      index = Index.new(root:, persist: true).build
+      store = Master::Review::CodeIndexStore.new(root:)
+
+      assert index.complete?, "cache availability must not change the in-memory scan result"
+      refute File.exist?(File.join(outside, "code_index"))
+      refute File.exist?(store.path)
+    end
+  end
+
   def test_without_persist_nothing_is_written
     with_tree do |root|
       Index.new(root:).build
