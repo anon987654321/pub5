@@ -3,21 +3,15 @@
 require "fileutils"
 require "rubygems"
 
-# Ruby activates its default gems the moment a stdlib file asks for them, and
-# Bundler then refuses a lockfile that pins a newer one ("already activated date
-# 3.4.1, but your Gemfile requires date 3.5.1"). The lock is written for Ruby
-# 4.0, where json 2.18.0 and date 3.5.1 are the defaults; vm23 runs 3.4, where
-# they are older and the newer copies live only in the deploy bundle. So the
-# deploy bundle joins the gem path first, and each pinned default is activated
-# at its locked version before `require "time"` pulls in date. This runs at
-# load time, not in prepare!, because reexec_mismatched_bundler! starts a
-# fresh process that loads this file again.
+# Ruby may activate a default gem before Bundler.setup. A bundle can resolve a
+# newer compatible copy than the interpreter's bundled default, so make the
+# bundle's installed gem path visible and activate only versions actually
+# recorded in Gemfile.lock before stdlib files load them. No Ruby patch release
+# is selected or required here; the running interpreter remains authoritative.
 #
-# On a fresh checkout the locked copies are not installed yet, so this early
-# pass cannot activate them; the same pins are retried in
-# activate_locked_defaults! after the dependency manager has run. require
-# "time" therefore waits for that retry, or the default date activates first
-# and Bundler.setup refuses the locked one (first-boot Gem::LoadError).
+# On a fresh checkout the locked copies may not be installed yet, so this early
+# pass is best-effort. The same lockfile versions are retried after dependency
+# bootstrap, before require-time activation can conflict with Bundler.
 boot_root = File.expand_path("../..", __dir__)
 bundle_config = File.join(boot_root, ".bundle", "config")
 deploy_bundle = File.file?(bundle_config) ? File.binread(bundle_config)[/^BUNDLE_PATH:\s*"?([^"\s]+)"?\s*$/, 1] : nil
