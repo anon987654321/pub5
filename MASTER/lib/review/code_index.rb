@@ -79,11 +79,22 @@ module Master
       def build(path: nil)
         @lock.synchronize do
           target = path ? File.expand_path(path, @root) : @root
+          unless target == @root || target.start_with?(@root + File::SEPARATOR)
+            raise ArgumentError, "code index scope escapes repository root"
+          end
+
           @partial = !path.nil?
           files = Dir.glob(File.join(target, "**", "*.rb")).reject { |f| f.include?("/vendor/") }
-          @errors.clear
           restored = path.nil? && @built_at.nil? && restore_snapshot
-          @built_at.nil? && !restored ? first_build(files) : incremental_build(files)
+          if @built_at.nil? && !restored
+            first_build(files)
+          else
+            # A scoped scan owns only paths below its target. Keep symbols and
+            # prior errors outside that scope; they remain useful but make the
+            # overall graph explicitly partial until a full scan reconciles it.
+            @errors.reject! { |entry| path_within_scope?(File.expand_path(entry[:path], @root), target) }
+            incremental_build(files, scope: target)
+          end
           save_snapshot if @store && path.nil? && @errors.empty?
           @built_at = Time.now
           @orientation = nil
@@ -165,10 +176,19 @@ module Master
         end
       end
 
-      def incremental_build(files)
-        (@mtimes.keys - files).each { |gone| purge_file(gone) }
-        changed = files.count { |f| reindex_if_stale(f) }
-        @bus&.publish("code_index:incremental", changed:, total: files.size) if changed > 0
+      def incremental_build(files, scope: @root)
+        tracked_scope = @mtimes.keys.select { |file| path_within_scope?(file, scope) }
+        tracked_scope.reject { |file| files.include?(file) }.each { |gone| purge_file(gone) }
+        @errors.reject! do |entry|
+          full = File.expand_path(entry[:path], @root)
+          path_within_scope?(full, scope) && !files.include?(full)
+        end
+        changed = files.count { |file| reindex_if_stale(file) }
+        @bus&.publish("code_index:incremental", changed:, total: files.size, scope: relativize(scope)) if changed > 0
+      end
+
+      def path_within_scope?(file, scope)
+        file == scope || file.start_with?(scope + File::SEPARATOR)
       end
 
       def reindex_if_stale(file)
