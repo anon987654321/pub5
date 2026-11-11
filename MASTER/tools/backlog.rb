@@ -218,12 +218,14 @@ module Backlog
               when /\Arake test:[a-z0-9_:.-]+(?:\s|\z)/i,
                    /\Aruby\s+(?:-[^\s]+\s+)*(?:test|spec)\/.*\.rb(?:\s|\z)/i,
                    /\Aruby\s+(?:MASTER|RAILS|OPENBSD|STUDIO)\/test\/(?:test_.*|.*_test)\.rb(?:\s|\z)/i,
-                   /\Arspec(?:\s|\z)/i
+                   /\Arspec(?:\s|\z)/i,
+                   %r{\A(?:MASTER/)?bin/operator test(?:\s|\z)}i
                 ["focused_tests"]
               when /\Arake audit(?:\s|\z)/i,
                    /\Arake lint(?::[a-z0-9_:.-]+)?(?:\s|\z)/i,
                    /\A(?:MASTER\/)?bin\/check(?:\s|\z)/i,
-                   /\Aruby\s+MASTER\/checks\/runner\.rb(?:\s|\z)/i
+                   %r{\A(?:MASTER/)?bin/operator check(?:\s|\z)}i,
+                   /\Aruby\s+(?:MASTER\/)?checks\/runner\.rb(?:\s|\z)/i
                 ["law_assessment"]
               when %r{\A(?:MASTER/)?bin/operator (?:visual )?sweep(?:\s|\z)}i,
                    %r{\A(?:MASTER/)?bin/operator visual review(?:\s|\z)}i
