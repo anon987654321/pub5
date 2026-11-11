@@ -167,6 +167,27 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  def test_preservation_evidence_overflow_is_inconclusive_without_dropping_old_rows
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
+
+    CONTRACT.with_current(contract) do
+      CONTRACT.attach_plan!("overflow-plan")
+      (CONTRACT::MAX_PRESERVATION_ROWS + 1).times do
+        CONTRACT.record_preservation!(
+          path: File.join(Master::REPO_ROOT, "page.html"),
+          format: "html", before: "same", after: "same", result:
+        )
+      end
+
+      evidence = CONTRACT.preservation_evidence
+      assert_equal "INCONCLUSIVE", evidence.fetch("status")
+      assert_equal CONTRACT::MAX_PRESERVATION_ROWS, evidence.fetch("result_count")
+      assert_equal 1, evidence.fetch("overflow_count")
+      assert_match(/exceeded the #{CONTRACT::MAX_PRESERVATION_ROWS}-row evidence limit/, evidence.fetch("reason"))
+    end
+  end
+
   def test_transaction_rejects_out_of_scope_paths_before_snapshotting
     Dir.mktmpdir("task-contract-transaction") do |root|
       contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
