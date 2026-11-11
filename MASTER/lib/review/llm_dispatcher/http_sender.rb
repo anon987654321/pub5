@@ -90,10 +90,16 @@ module Master
               category: :privacy,
             )
           end
-          # The key is resolved at call time: the endpoint index froze the key
-          # it was built with, and a lane whose KeyRotator just rotated wants
-          # the rotated key on its very next call, not after a router rebuild.
-          key = Io::KeyRotator.active_key_for(name) || endpoint[:key]
+          # FreeOnly is a send-boundary guarantee, not just a discovery rule.
+          # HostedEndpoints drops configured keys when building its anonymous
+          # index, but KeyRotator resolves keys at call time; without this gate
+          # an endpoint with key_env values could silently turn the "free" lane
+          # back into a keyed request.
+          key = if ENV["MASTER_FREE_ONLY"].to_s != ""
+                  nil
+                else
+                  Io::KeyRotator.active_key_for(name) || endpoint[:key]
+                end
           headers = key ? { "Authorization" => "Bearer #{key}" } : {}
           messages = fit_to_window(selected_model, messages)
           request = lambda do
