@@ -651,6 +651,8 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--read-only")
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--dry-run")
     assert_equal [true, nil, true, nil, ""], Registry.parse_pass_flags("--apply")
+    assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--read-only --apply")
+    assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--apply --read-only")
     refute Registry.writes_requested?(apply: nil, only: "critique,map"), "read-only stages must not write"
     assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicit fix stage can write"
 
