@@ -503,7 +503,7 @@ module Master::Core
       end
 
       File.rename(tmp, destination)
-      fsync_directory(real_directory) unless RUBY_PLATFORM.match?(/win32|mingw/)
+      fsync_directory(real_directory, expected: directory_stat) unless RUBY_PLATFORM.match?(/win32|mingw/)
     rescue StandardError
       if tmp && File.exist?(tmp) && real_directory && directory_stat
         begin
@@ -533,9 +533,17 @@ module Master::Core
     # File fsync makes the bytes durable; the parent fsync makes the rename
     # durable. Without both, a power loss can leave a successful-looking path
     # whose directory entry never reached stable storage.
-    def fsync_directory(directory)
+    def fsync_directory(directory, expected: nil)
       descriptor = IO.sysopen(directory, File::RDONLY)
       handle = IO.new(descriptor)
+      opened = handle.stat
+      unless opened.directory? && (!expected || (opened.dev == expected.dev && opened.ino == expected.ino))
+        raise IOError, "directory identity changed before fsync"
+      end
+      current = File.stat(File.realpath(directory))
+      unless current.directory? && current.dev == opened.dev && current.ino == opened.ino
+        raise IOError, "directory path changed before fsync"
+      end
       handle.fsync
     ensure
       handle&.close
