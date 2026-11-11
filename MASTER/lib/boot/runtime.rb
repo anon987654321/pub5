@@ -148,6 +148,10 @@ module Master
         return "deepseek-chat" if api_key_present?("DEEPSEEK_API_KEY")
         return "gemini-2.5-flash" if api_key_present?("GOOGLE_API_KEY") || api_key_present?("GEMINI_API_KEY")
       end
+      if keyless_llm_enabled? || free_only?
+        hosted = keyless_hosted_model
+        return hosted if hosted
+      end
       return "web-chat:grok" if keyless_llm_enabled?
 
       openrouter_default
@@ -270,9 +274,29 @@ module Master
       Array(config["env"]).map { |env_var| [config["ruby_llm_key"].to_sym, env_var, minimum] }
     end
 
+    # Resolve the anonymous hosted catalogue used by the turn router. A live
+    # listing row, not a guessed model slug or GET /models success alone, is
+    # required before it can become the boot default.
+    def keyless_hosted_model(root: ROOT)
+      return if ENV["MASTER_NO_KEYLESS"].to_s != ""
+      return unless free_only? || keyless_llm_enabled?
+
+      require_relative "../cli/routing/model_router"
+      resolver = Master::CLI::Routing::ModelRouter.hosted_resolver(root:)
+      Array(resolver.hosted_models).find do |id|
+        endpoint = resolver.hosted_endpoint_for(id)
+        endpoint && endpoint[:key].nil? &&
+          !Master::Io::ModelQuota.over_quota?(id) &&
+          Master::Io::LaneState.usable?(id)
+      end
+    rescue StandardError => e
+      Master::Ground::Swallow.log(e, context: "boot.keyless_hosted_model")
+      nil
+    end
+
     def keyless_message
-      "No API keys configured - routing via free browser chat (web-chat:grok). " \
-        "Set OPENROUTER_API_KEY / XAI_API_KEY in ~/.config/master/env for API routing."
+      "No API keys configured - trying discovered keyless hosted models first, then browser chat if available. " \
+        "Set OPENROUTER_API_KEY / XAI_API_KEY in ~/.config/master/env for keyed API routing."
     end
   end
 end
