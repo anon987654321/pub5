@@ -304,7 +304,11 @@ module Master
           end
 
           def assessment_matrix_summary
-            return { status: "not_measured", reason: "no scanner-backed Law population was available" } unless @assessment_ledger
+            return {
+              status: "not_measured",
+              reason: "no scanner-backed Law population was available",
+              file_coverage: assessment_file_coverage_summary,
+            } unless @assessment_ledger
 
             @assessment_ledger.summary.merge(
               status: assessment_matrix_status.to_s,
@@ -417,7 +421,7 @@ module Master
             {
               scope: "scanner_observation_only",
               pass: Integer(pass),
-              status: scanned == files.size ? "complete" : "incomplete",
+              status: files.empty? ? "not_measured" : (scanned == files.size ? "complete" : "incomplete"),
               expected: files.size,
               scanned:,
               unmeasured: files.size - scanned,
@@ -517,6 +521,7 @@ module Master
               observation = @assessment_observation
               return unless observation && observation[:files].include?(absolute)
 
+              observation[:path_states] ||= {}
               case state
               when :scanned
                 observation[:scanned] << absolute
