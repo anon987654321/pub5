@@ -48,8 +48,7 @@ fi
 _ruby_suffix=${_ruby##*/}
 _ruby_suffix=${_ruby_suffix#ruby}
 _bundle="/usr/local/bin/bundle${_ruby_suffix}"
-[ -x "$_bundle" ] || _bundle=/usr/local/bin/bundle
-[ -x "$_bundle" ] || { echo "master: matching Bundler is unavailable" >&2; exit 1; }
+[ -x "$_bundle" ] || { echo "master: Bundler for Ruby ${_ruby_suffix:-default} is unavailable" >&2; exit 1; }
 
 daemon_flags="-c 'cd /home/dev/pub5/MASTER/web && set -a && . /etc/master.env && set +a && export PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 RAILS_ENV=production CACHE_VERSION=${CACHE_VERSION} SECRET_KEY_BASE_DUMMY=1 BUNDLE_FROZEN=true && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
 # Prod safety flags (MASTER_SAFE_MODE etc.) live in /etc/master.env (see master.env.sample).
