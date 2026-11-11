@@ -110,7 +110,7 @@ class TestTaskContract < Minitest::Test
   end
 
   def test_preservation_summary_does_not_pass_uncovered_required_dimensions
-    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: ["accessibility"], proof: [])
     result = Master::Fix::ArtifactPreservation::Result.new(
       "PASS", ["rendered_visual_custody"], nil
     )
