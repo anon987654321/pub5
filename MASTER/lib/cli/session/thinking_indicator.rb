@@ -161,8 +161,8 @@ module Master
         queued.to_i.positive? ? " - #{queued} queued" : ""
       end
 
-      # One ps snapshot per SPIN_PROBE_SECONDS; between them the last score
-      # sets speed and color.
+      # One host load-average sample per SPIN_PROBE_SECONDS; between samples
+      # the normalized CPU load sets the star's cadence and red intensity.
       def probe_intensity(intensity, probe_at)
         now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         return intensity, probe_at if now < probe_at
@@ -170,8 +170,8 @@ module Master
         [ResourceLoad.cpu_load, now + SPIN_PROBE_SECONDS]
       end
 
-      # More work spins the star faster and turns it redder: TICK_SECONDS and
-      # no tint at rest, FAST_TICK_SECONDS and full red at intensity 1.
+      # Higher CPU load spins the star faster: slow at idle, fast at saturation.
+      # Its red tint runs independently from light red to deep red over 0..1.
       def spin_pause(intensity)
         normalized = Float(intensity).clamp(0.0, 1.0)
         span = TICK_SECONDS - FAST_TICK_SECONDS
