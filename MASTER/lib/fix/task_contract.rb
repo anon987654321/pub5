@@ -29,7 +29,7 @@ module Master
         "protected_asset" => %w[assets],
         "protected_assets" => %w[assets],
         "rendered_visual_custody" => %w[visual_identity layout],
-        "unchanged_bytes" => %w[visual_identity layout structure assets behavior accessibility public_contracts operator_owned_values product_identity content_semantics data_semantics],
+        "unchanged_bytes" => [],
       }.transform_values(&:freeze).freeze
 
       Contract = Data.define(:schema, :intent, :scope, :preserve, :proof, :new_paths) do
@@ -294,9 +294,12 @@ module Master
 
         statuses = rows.map { |row| row["status"] }
         required = contract.preserve
-        covered = rows.flat_map { |row| Array(row["dimensions"]) }.uniq
+        external_rows = rows.select { |row| row["evidence_level"] == "runtime_or_external" }
+        source_rows = rows.select { |row| row["evidence_level"] == "source_level" }
+        covered = external_rows.flat_map { |row| Array(row["dimensions"]) }.uniq
+        source_checked = source_rows.flat_map { |row| Array(row["dimensions"]) }.uniq
         missing = required - covered
-        source_only = rows.any? { |row| row["evidence_level"] == "source_level" }
+        source_only = source_rows.any? && external_rows.empty?
         active_plan_digest = Thread.current[PLAN_KEY]
         missing_plan = active_plan_digest.to_s.empty?
         contract_digest = Digest::SHA256.hexdigest(JSON.generate(contract.to_h))
@@ -334,6 +337,7 @@ module Master
           "plan_mismatch_count" => plan_mismatch_count,
           "required_dimensions" => required,
           "covered_dimensions" => covered.sort,
+          "source_checked_dimensions" => source_checked.sort,
           "missing_dimensions" => missing.sort,
           "stale_paths" => stale_paths.sort,
           "result_count" => rows.size,
