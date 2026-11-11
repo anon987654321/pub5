@@ -190,7 +190,7 @@ class StreamStageTest < Minitest::Test
     }) do
       context = repair_context(path)
       refute context[:complete]
-      assert_match(/complete target source is \\d+ bytes, exceeding/, context[:reason])
+      assert_match(/complete target source is \d+ bytes, exceeding/, context[:reason])
     end
 
     assert_empty read_sizes, "an oversized target is rejected after stat, without reading its contents"
