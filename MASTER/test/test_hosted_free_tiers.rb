@@ -53,6 +53,32 @@ class TestHostedFreeTiers < Minitest::Test
     end
   end
 
+  def test_multiple_openrouter_credentials_are_refused
+    names = %w[OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3]
+    saved = names.to_h { |var| [var, ENV.fetch(var, nil)] }
+    ENV.delete(names.first)
+    ENV[names[1]] = long("o")
+    ENV[names[2]] = long("p")
+    Master.stub(:models_config, CONFIG) do
+      error = assert_raises(ArgumentError) { Rotator.active_key }
+      assert_includes error.message, "multiple populated credentials"
+    end
+  ensure
+    saved.each { |var, value| value.nil? ? ENV.delete(var) : ENV[var] = value }
+  end
+
+  def test_one_legacy_openrouter_credential_remains_usable
+    names = %w[OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3]
+    saved = names.to_h { |var| [var, ENV.fetch(var, nil)] }
+    names.each { |var| ENV.delete(var) }
+    ENV[names[1]] = long("o")
+    Master.stub(:models_config, CONFIG) do
+      assert_equal long("o"), Rotator.active_key
+    end
+  ensure
+    saved.each { |var, value| value.nil? ? ENV.delete(var) : ENV[var] = value }
+  end
+
   def test_a_single_key_is_used_without_rotation
     saved = ENV.fetch("TEST_NVIDIA_A", nil)
     ENV["TEST_NVIDIA_A"] = long("n")
