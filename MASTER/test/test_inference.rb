@@ -91,6 +91,94 @@ class TestInference < Minitest::Test
     assert_equal 5, @agent.prompts.size
   end
 
+  def test_parallel_search_preserves_order_and_bounds_concurrent_calls
+    mutex = Mutex.new
+    active = 0
+    maximum = 0
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) do |prompt, **|
+      mutex.synchronize do
+        active += 1
+        maximum = [maximum, active].max
+      end
+      sleep 0.005
+      prompt
+    ensure
+      mutex.synchronize { active -= 1 }
+    end
+    prompts = (1..25).map { |index| "prompt-#{index}" }
+
+    rows = Master::Review::Inference::Search.send(:parallel, agent, prompts, temperature: 0.2)
+
+    assert_equal prompts, rows
+    assert_operator maximum, :>, 1
+    assert_operator maximum, :<=, Master::Review::Inference::Search::MAX_PARALLEL
+  end
+
+  def test_parallel_search_joins_siblings_before_propagating_worker_failure
+    started = Queue.new
+    release = Queue.new
+    finished = Queue.new
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) do |prompt, **|
+      started << prompt
+      raise "inference worker failed" if prompt == "FAIL"
+
+      release.pop
+      finished << prompt
+      "ok"
+    end
+    result = Queue.new
+    coordinator = Thread.new do
+      begin
+        Master::Review::Inference::Search.send(:parallel, agent, %w[FAIL SLOW], temperature: 0.2)
+        result << :unexpected_success
+      rescue StandardError => error
+        result << error
+      end
+    end
+
+    assert_equal %w[FAIL SLOW], [started.pop, started.pop].sort
+    sleep 0.02
+    assert coordinator.alive?, "the coordinator must wait for the sibling model call"
+    release << :continue
+    coordinator.join
+    error = result.pop
+
+    assert_instance_of RuntimeError, error
+    assert_equal "inference worker failed", error.message
+    assert_equal "SLOW", finished.pop
+  end
+
+  def test_parallel_search_joins_partial_startup_before_returning_thread_error
+    started = Queue.new
+    finished = Queue.new
+    original_new = Thread.method(:new)
+    calls = 0
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) do |prompt, **|
+      started << prompt
+      finished << prompt
+      prompt
+    end
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      original_new.call(*args, **kwargs, &block)
+    }) do
+      error = assert_raises(ThreadError) do
+        Master::Review::Inference::Search.send(:parallel, agent, %w[first second], temperature: 0.2)
+      end
+      assert_equal "thread limit reached", error.message
+    end
+
+    assert_equal "first", started.pop
+    assert_equal "first", finished.pop
+    assert_equal 2, calls
+  end
+
   def test_denial_forces_each_round_to_carry_the_previous_answer
     result = Master::Review::Inference.run(
       agent: @agent,
