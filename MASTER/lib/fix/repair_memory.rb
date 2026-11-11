@@ -152,6 +152,12 @@ module Master
       end
 
       def load
+        directory = File.dirname(@file)
+        parent_before = File.lstat(directory)
+        unless parent_before.directory? && !parent_before.symlink? &&
+               verified_atomic_directory(directory) == directory
+          raise IOError, "repair memory parent is not a stable in-repository directory"
+        end
         return { "files" => {}, "laws" => {} } unless File.exist?(@file) || File.symlink?(@file)
 
         stat = File.lstat(@file)
@@ -164,11 +170,25 @@ module Master
           opened = file.stat
           current = File.lstat(@file)
           unless current.file? && !current.symlink? && current.nlink == 1 &&
-                 current.dev == opened.dev && current.ino == opened.ino
+                 current.dev == opened.dev && current.ino == opened.ino &&
+                 opened.dev == stat.dev && opened.ino == stat.ino
             raise IOError, "repair memory path changed while opening"
           end
           raw = file.read(5 * 1024 * 1024 + 1)
           raise IOError, "repair memory exceeds the 5 MiB safety limit" if raw.bytesize > 5 * 1024 * 1024
+          after = file.stat
+          current = File.lstat(@file)
+          parent_after = File.lstat(directory)
+          unless current.file? && !current.symlink? && current.nlink == 1 &&
+                 current.dev == after.dev && current.ino == after.ino &&
+                 after.dev == opened.dev && after.ino == opened.ino &&
+                 after.size == opened.size && after.mtime == opened.mtime &&
+                 after.ctime == opened.ctime && raw.bytesize == after.size &&
+                 parent_after.directory? && !parent_after.symlink? &&
+                 parent_after.dev == parent_before.dev && parent_after.ino == parent_before.ino &&
+                 verified_atomic_directory(directory) == directory
+            raise IOError, "repair memory changed while it was being read"
+          end
 
           { "files" => {}, "laws" => {} }.merge(JSON.parse(raw))
         end
