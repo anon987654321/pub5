@@ -13,7 +13,7 @@ class TestRepairMemory < Minitest::Test
   def test_repair_memory_uses_atomic_private_project_state_and_a_sidecar_lock
     Dir.mktmpdir do |root|
       path = File.join(root, "a.rb")
-      File.write(path, "x = 1\\n")
+      File.write(path, "x = 1\n")
       memory = Memory.new(root:)
       memory.record(path, %w[FEATURE_ENVY], { no_proposal: 1 })
 
