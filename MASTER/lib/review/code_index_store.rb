@@ -25,8 +25,8 @@ module Master
       MAX_SNAPSHOT_BYTES = 128 * 1024 * 1024
 
       def initialize(root:)
-        @root = root
-        @path = File.join(root, REL_DIR, "#{Digest::SHA256.hexdigest(root)[0, 16]}.json")
+        @root = File.realpath(root)
+        @path = File.join(@root, REL_DIR, "#{Digest::SHA256.hexdigest(@root)[0, 16]}.json")
       end
 
       attr_reader :path
