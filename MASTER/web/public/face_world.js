@@ -102,6 +102,61 @@
     return Array.isArray(configured) ? configured.map((name) => String(name)) : [];
   }
 
+  function customGeometryContract() {
+    return SEMANTIC_SUBJECT.custom_geometry || {};
+  }
+
+  function boundedVector(value, fallback, minimum, maximum, symmetric = false) {
+    if (value === undefined || value === null) return fallback.slice();
+    if (!Array.isArray(value) || value.length !== 3) return null;
+    const values = value.map((entry) => Number(entry));
+    if (!values.every(Number.isFinite)) return null;
+    return values.map((entry) => symmetric
+      ? Math.max(-maximum, Math.min(maximum, entry))
+      : Math.max(minimum, Math.min(maximum, entry)));
+  }
+
+  function normalizeCustomParts(subject) {
+    const contract = customGeometryContract();
+    if (!contract.enabled || !Array.isArray(subject.parts)) return null;
+    const maximum = Math.max(1, Math.min(6,
+      Math.floor(finite(contract.max_parts, SEMANTIC_SUBJECT.max_features || 6))));
+    if (subject.parts.length < 1 || subject.parts.length > maximum) return null;
+
+    const primitives = new Set(
+      Array.isArray(contract.allowed_primitives) ? contract.allowed_primitives.map(String) : []
+    );
+    const axes = new Set(Array.isArray(contract.axes) ? contract.axes.map(String) : ["x", "y", "z"]);
+    const centerLimit = Math.max(0.1, Math.min(0.75, finite(contract.center_limit, 0.45)));
+    const sizeMin = Math.max(0.02, Math.min(0.2, finite(contract.size_min, 0.06)));
+    const sizeMax = Math.max(sizeMin, Math.min(0.8, finite(contract.size_max, 0.62)));
+    const defaultSize = boundedVector(contract.default_size, [0.18, 0.18, 0.18], sizeMin, sizeMax);
+    if (!defaultSize) return null;
+
+    const seen = new Set();
+    const parts = [];
+    for (const raw of subject.parts) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+      const key = String(raw.key || raw.name || "")
+        .toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+      const primitive = String(raw.primitive || raw.shape || "").toLowerCase().trim();
+      if (!/^[a-z0-9][a-z0-9_-]{0,23}$/.test(key) || seen.has(key) || !primitives.has(primitive)) return null;
+
+      const center = boundedVector(raw.center, [0, 0, 0], 0, centerLimit, true);
+      const size = boundedVector(raw.size, defaultSize, sizeMin, sizeMax);
+      if (!center || !size) return null;
+
+      const axis = String(raw.axis || "x").toLowerCase();
+      if (primitive === "beam" && !axes.has(axis)) return null;
+      seen.add(key);
+      parts.push(Object.freeze({
+        key, primitive, center: Object.freeze(center),
+        size: Object.freeze(size), axis
+      }));
+    }
+    return Object.freeze(parts);
+  }
+
   function normalizeVisualSubject(subject) {
     if (!SEMANTIC_SUBJECT.enabled || !subject || typeof subject !== "object" || Array.isArray(subject)) return null;
     const declaredKind = String(subject.kind || "").toLowerCase().trim();
@@ -109,11 +164,32 @@
     const kind = declaredKind === "object" || !subjectFeatures(declaredKind).length
       ? declaredForm || declaredKind
       : declaredKind;
-    const allowed = subjectFeatures(kind);
-    if (!allowed.length) return null;
     const confidence = Math.max(0, Math.min(1, finite(subject.confidence, 0.76)));
     if (confidence < finite(SEMANTIC_SUBJECT.min_confidence, 0.42)) return null;
 
+    if (kind === "custom") {
+      const parts = normalizeCustomParts(subject);
+      if (!parts) return null;
+      const allowed = parts.map((part) => part.key);
+      const source = Array.isArray(subject.sequence) ? subject.sequence
+        : Array.isArray(subject.features) ? subject.features : allowed;
+      const requested = source.map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object") return entry.key || entry.name || "";
+        return "";
+      }).map((entry) => String(entry).toLowerCase().trim().replace(/[^a-z0-9_-]/g, "").slice(0, 24));
+      const order = [...new Set(requested.filter((name) => allowed.includes(name)))];
+      allowed.forEach((name) => { if (!order.includes(name)) order.push(name); });
+      const limit = Math.max(1, Math.min(6, Math.floor(finite(SEMANTIC_SUBJECT.max_features, 6))));
+      const sequence = order.slice(0, limit);
+      const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
+      const label = String(subject.label || subject.name || "object")
+        .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLabel);
+      return Object.freeze({ kind, label: label || "object", confidence, features: sequence, sequence, parts });
+    }
+
+    const allowed = subjectFeatures(kind);
+    if (!allowed.length) return null;
     const source = Array.isArray(subject.sequence) ? subject.sequence
       : Array.isArray(subject.features) ? subject.features : allowed;
     const requested = source.map((entry) => {
