@@ -5,8 +5,6 @@ canonical reference on top and the avatar cuts underneath. Regenerate with
 `node generate.mjs` (deterministic, seeded; the glyph outlines and the nine
 hairlines are extracted live from `RAILS/amber/app/views/shared/_logo.html.erb`,
 so the wordmark and the swoosh geometry cannot drift from the shipped mark).
-`generate.rb` is the original Ruby provenance of the same idea, kept for the
-record; the Node port is canonical since the working sandbox lost its Ruby.
 
 The brief: ten radically different plates — bit-reduction, motion graphics,
 color grading, sparkle pizzazz — with the operator's constraint that the
@@ -88,8 +86,7 @@ PNGs under `download/amber-logos/`).
 
 ```
 MASTER/docs/visual/plur1bus-plates/
-  generate.mjs         generator (canonical) — extracts glyphs/hairlines from the live partial
-  generate.rb          original Ruby provenance (superseded by the Node port)
+  generate.mjs         generator — extracts glyphs/hairlines from the live partial
   all-plates.html      all ten plates + reference + avatar cuts on one page
   RESEARCH.md          online research with sources
   PROPOSALS.md         this file

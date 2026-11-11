@@ -63,7 +63,7 @@ truth, verified pixel-equivalent against the browser's own text rendering:
 - Contract test: `RAILS/amber/test/logo_contract_test.rb` — viewBox
   0 0 1000 500, hairline widths, outlined glyphs, no `<text>`/webfont.
 
-The generator (`generate.rb`) extracts the glyph outlines and the nine
+The generator (`generate.mjs`) extracts the glyph outlines and the nine
 hairlines from the live partial at run time, so the plates cannot drift from
 the shipped mark.
 

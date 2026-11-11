@@ -536,7 +536,7 @@ function page() {
     `<figcaption>${String(pl.num).padStart(2, "0")} · ${pl.slug.replaceAll("_", " ")} — ${pl.note}</figcaption></figure>`).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1">` +
-    `<title>plur1bus plates — the amber mark, ten directions (rework)</title>` +
+    `<title>plur1bus plates — the amber mark, ten directions</title>` +
     `<style>
       body { margin:0; background:#141416; color:#C9C9CF; font:14px/1.5 Helvetica, Arial, sans-serif; padding:28px 30px 44px; }
       h1 { font-size:15px; letter-spacing:.04em; color:#ECECF2; margin:0 0 4px; font-weight:600; }
@@ -554,10 +554,10 @@ function page() {
       .figrow { display:flex; gap:12px; align-items:flex-end; margin-top:10px; }
     </style></head><body>` +
     `<h1>plur1bus plates — the amber&reg; mark, ten directions</h1>` +
-    `<p class="sub">Rework: every plate is cropped to the lockup — the wordmark fills the frame and the nine ` +
-    `swoosh hairlines are cropped around the letters (fading in at the a, exiting just past the &reg;, threading ` +
-    `behind or around the glyphs). Font and swoosh geometry are extracted live from the shipped partial. ` +
-    `Sprite-sheet craft: plate 02 ships a palette rail with empty slots, plate 05 is palette cycling, ` +
+    `<p class="sub">Every plate is cropped to the lockup — the wordmark fills the frame and the nine ` +
+    `swoosh hairlines fade in at the a, exit just past the &reg;, and thread behind or around the glyphs. ` +
+    `Font and swoosh geometry are extracted live from the shipped partial. ` +
+    `Plate 02 ships a sprite palette rail with empty slots, plate 05 is palette cycling, ` +
     `plate 06 tags its frames like a sprite sheet.</p>` +
     `<figure class="ref"><img src="plates/reference-original.svg" alt="canonical amber mark, cropped">` +
     `<figcaption>00 · reference — canonical mark on the tight stage</figcaption></figure>` +
