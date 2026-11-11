@@ -75,6 +75,33 @@ class StreamStageTest < Minitest::Test
     FileUtils.remove_entry(@temporary_path) if @temporary_path
   end
 
+  def test_partial_worker_startup_is_closed_when_a_later_thread_creation_fails
+    worker = Class.new do
+      attr_reader :joined
+
+      def alive? = true
+      def join = (@joined = true)
+    end.new
+    calls = 0
+    queue = Queue.new
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      worker
+    }) do
+      error = assert_raises(ThreadError) do
+        start_workers(queue, Set.new, 1, Time.now + 60, count: 3)
+      end
+      assert_equal "thread limit reached", error.message
+    end
+
+    assert worker.joined, "the already-started worker must be joined"
+    assert_equal :done, queue.pop(true), "the partial worker must receive its stop sentinel"
+    assert_equal 2, calls
+  end
+
   def test_repairs_start_before_the_scan_finishes
     found, streamed = streaming_observation(%w[/repo/a.rb /repo/b.rb /repo/c.rb], "/repo", 1, Time.now + 60)
 
