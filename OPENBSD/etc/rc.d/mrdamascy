@@ -15,8 +15,7 @@ APP_DIR=/home/mrdamascy/app
 # ensure-secret writes it on the first deploy. It is sourced inside the exec by
 # the app user, never interpolated into daemon_flags, so the secret stays out
 # of ps argv.
-[[ -r /etc/mrdamascy.env ]] && . /etc/mrdamascy.env
-: "${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}"
+[[ -r /etc/mrdamascy.env ]] || { logger -t mrdamascy "missing /etc/mrdamascy.env"; exit 1; }
 daemon="/bin/ksh"
 for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 \
     /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
@@ -27,7 +26,7 @@ done
 _env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}"
 _env="${_env} RAILS_MAX_THREADS=3 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
 _exec="exec ${_bundle} exec falcon host ${APP_DIR}/falcon.rb"
-daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && export ${_env} && ${_exec}'"
+daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && : \"\${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}\" && export ${_env} && ${_exec}'"
 daemon_user="mrdamascy"
 daemon_execdir="/home/mrdamascy/app"
 daemon_logger="daemon.notice"
