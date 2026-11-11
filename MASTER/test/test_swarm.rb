@@ -189,6 +189,31 @@ class TestSwarm < Minitest::Test
     assert_equal 21, calls
   end
 
+  def test_fan_out_keeps_each_timed_out_role_in_the_result_ledger
+    release = Queue.new
+    coordinator = build_coordinator(FakeAgent.new(default: "ok"))
+    coordinator.define_singleton_method(:run_with_subagent_policy) { |_role, &block| block.call }
+    coordinator.define_singleton_method(:dispatch) do |role, task:, context_slice:|
+      return Result.ok({ "task" => task }) if role == :coder
+
+      release.pop
+      Result.ok({ "task" => task })
+    end
+    tasks = %i[analyst reviewer coder].map do |role|
+      { role:, task: role.to_s, context_slice: {} }
+    end
+
+    result = coordinator.fan_out(tasks, timeout: 0.03)
+    done = @bus.events.find { |event| event[:event] == "swarm_fan_out_done" }
+
+    assert result.ok?
+    assert_equal %w[analyst coder reviewer], done.fetch(:roles).map(&:to_s).sort
+    assert_equal :insufficient_quorum, result.value!.verdict
+    assert_equal ["coder"], result.value!.artifacts.keys.map(&:to_s)
+  ensure
+    release << :continue if release
+  end
+
   def test_fan_out_joins_started_workers_and_accounts_for_unstarted_tasks
     original_new = Thread.method(:new)
     started = Queue.new
