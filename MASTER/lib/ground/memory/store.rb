@@ -254,6 +254,7 @@ module Master
         end
 
         def version
+          ensure_memory_directory!
           refresh_store_if_changed
           return "empty" unless File.exist?(@path) || File.symlink?(@path)
 
@@ -417,6 +418,7 @@ module Master
         end
 
         def load_store
+          ensure_memory_directory!
           return {} unless File.exist?(@path) || File.symlink?(@path)
 
           stat = File.lstat(@path)
@@ -451,6 +453,24 @@ module Master
           end
         rescue Psych::Exception => error
           raise IOError, "memory store is malformed; original state was preserved (#{error.class})"
+        end
+
+        def ensure_memory_directory!
+          directory = File.dirname(@path)
+          root = File.realpath(@root)
+          resolved = verified_atomic_directory(directory)
+          unless resolved == directory && (resolved == root || resolved.start_with?(root + File::SEPARATOR))
+            raise IOError, "memory store directory escapes its repository"
+          end
+          return true unless File.exist?(directory) || File.symlink?(directory)
+
+          stat = File.lstat(directory)
+          unless stat.directory? && !stat.symlink? && verified_atomic_directory(directory) == directory
+            raise IOError, "memory store directory is not a stable in-repository directory"
+          end
+          true
+        rescue SystemCallError => error
+          raise IOError, "cannot safely resolve memory store directory: #{error.class}: #{error.message}"
         end
 
         # Serialize writes from the daemon and the interactive CLI, then merge
@@ -536,6 +556,7 @@ module Master
         # Atomic replacement changes the inode. Readers use this cheap stamp
         # to notice another process's write and refresh before exposing memory.
         def memory_store_signature
+          ensure_memory_directory!
           return unless File.exist?(@path) || File.symlink?(@path)
 
           stat = File.lstat(@path)
