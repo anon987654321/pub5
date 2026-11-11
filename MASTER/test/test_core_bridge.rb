@@ -164,6 +164,8 @@ class CoreBridgeTest < Minitest::Test
       mission = Object.new
       mission.define_singleton_method(:record) { { "origin" => "backlog" } }
       mission.define_singleton_method(:hold_lease!) {}
+      mission.define_singleton_method(:block!) { |reason:| @blocked = reason }
+      mission.define_singleton_method(:blocked_reason) { @blocked }
       git = FakeBacklogGit.new(target: "HEAD:session/other")
       status = Struct.new(:success?).new(true)
       Master::Io::GitOperations.stub(:new, ->(_repository) { git }) do
@@ -172,6 +174,7 @@ class CoreBridgeTest < Minitest::Test
             Master::CLI::CoreBridge.push_backlog_commit!(mission:, root:)
           end
           assert_match(/expected origin\\/main/, error.message)
+          assert_match(/DELIVERY_FAILED/, mission.blocked_reason)
         end
       end
       refute git.pushed
