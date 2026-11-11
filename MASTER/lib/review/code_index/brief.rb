@@ -42,6 +42,15 @@ module Master
           lines = ["# Codebase: #{@symbols.size} symbols, #{classes.size} classes and modules (indexed #{stamp})"]
           lines << "Classes and modules by tree: #{counts}"
           lines << "Entry points: #{entries.join(", ")}" if entries.any?
+          if @partial
+            lines << "Index coverage: INCOMPLETE (path-scoped build; not a repository-wide graph)."
+          end
+          unless @errors.empty?
+            lines << "Index coverage: INCOMPLETE (#{@errors.size} source file(s) could not be analyzed)."
+            @errors.first(8).each do |entry|
+              lines << "  not indexed: #{entry[:path]} (#{entry[:kind]}) — #{entry[:message]}"
+            end
+          end
           lines.join("\n")
         end
 
