@@ -129,16 +129,18 @@ module Master
           wait: true,
           extra_input: {}
         )
-          create_model(destination) unless model_exists?(destination)
+          timeout = operation_timeout!(timeout, "training timeout")
+          deadline = monotonic_now + timeout
+          create_model(destination, deadline:) unless model_exists?(destination, deadline:)
           trainings_uri, body = build_training_request(
-            photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:
+            photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, deadline:
           )
-          training = post(trainings_uri, body)
-          wait ? wait_for_training(training["id"], timeout:) : training
+          training = post(trainings_uri, body, deadline:)
+          wait ? wait_for_training(training["id"], timeout:, deadline:) : training
         end
 
-        def get_training(id)
-          get(URI("#{BASE}/trainings/#{id}"))
+        def get_training(id, deadline: nil)
+          get(URI("#{BASE}/trainings/#{id}"), deadline:)
         end
 
         def training_weights_url(training)
@@ -154,9 +156,9 @@ module Master
 
         private
 
-        def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:)
+        def build_training_request(photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, deadline:)
           trainer_owner, trainer_name = LORA_TRAINER.split("/")
-          trainer_version = latest_version(LORA_TRAINER)
+          trainer_version = latest_version(LORA_TRAINER, deadline:)
           trainings_uri = URI("#{BASE}/models/#{trainer_owner}/#{trainer_name}/versions/#{trainer_version}/trainings")
 
           input = {
@@ -316,10 +318,12 @@ module Master
       # trained LoRA gains a version per training, and frames meant to compare
       # checkpoints have to name the one they came from.
       def predict(model_id, input, timeout: 600)
+        timeout = operation_timeout!(timeout, "prediction timeout")
+        deadline = monotonic_now + timeout
         pinned = model_id.split(":", 2)[1]
-        version = pinned || latest_version(model_id)
-        pred = post(URI("#{BASE}/predictions"), { version:, input: })
-        wait_for(pred["id"], timeout:)
+        version = pinned || latest_version(model_id, deadline:)
+        pred = post(URI("#{BASE}/predictions"), { version:, input: }, deadline:)
+        wait_for(pred["id"], timeout:, deadline:)
       end
 
       # Bounded catalog read used by Replicate search/sync. Replicate returns a
@@ -370,9 +374,9 @@ module Master
         ENV["REPLICATE_USERNAME"].to_s.strip
       end
 
-      def model_exists?(model_id)
+      def model_exists?(model_id, deadline: nil)
         owner, name = model_id.split("/")
-        get(URI("#{BASE}/models/#{owner}/#{name}"))
+        get(URI("#{BASE}/models/#{owner}/#{name}"), deadline:)
         true
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ReplicateClient.model_exists?")
@@ -381,7 +385,7 @@ module Master
 
       # A LoRA destination serves FLUX.1-dev, and gpu-l40s is the smallest SKU
       # Replicate accepts that holds it; the API refuses names off its list.
-      def create_model(model_id, hardware: "gpu-l40s", visibility: "private")
+      def create_model(model_id, hardware: "gpu-l40s", visibility: "private", deadline: nil)
         owner, name = model_id.split("/", 2)
         raise ArgumentError, "destination must be owner/name" if owner.to_s.empty? || name.to_s.empty?
 
@@ -390,7 +394,7 @@ module Master
           name:,
           visibility:,
           hardware:,
-        })
+        }, deadline:)
       end
 
       private
@@ -466,9 +470,9 @@ module Master
         Array(schema&.keys)
       end
 
-      def latest_version(model_id)
+      def latest_version(model_id, deadline: nil)
         owner, name = model_id.split("/")
-        model = get(URI("#{BASE}/models/#{owner}/#{name}"))
+        model = get(URI("#{BASE}/models/#{owner}/#{name}"), deadline:)
         model.dig("latest_version", "id") || raise("no version for #{model_id}")
       end
 
@@ -582,38 +586,44 @@ module Master
         nil
       end
 
-      def wait_for(id, timeout:)
-        start = Time.now
+      def wait_for(id, timeout:, deadline: nil)
+        timeout = operation_timeout!(timeout, "prediction timeout")
+        deadline ||= monotonic_now + timeout
         loop do
-          pred = get(URI("#{BASE}/predictions/#{id}"))
+          pred = get(URI("#{BASE}/predictions/#{id}"), deadline:)
           case pred["status"]
           when "succeeded" then return pred["output"]
           when "failed" then raise "prediction failed (#{redacted_provider_error(pred["error"])})"
           when "canceled" then raise "prediction canceled"
           end
-          if Time.now - start > timeout
-            cancel_prediction(id)
-            raise "prediction timeout after #{timeout}s (canceled)"
-          end
-          sleep 3
+          remaining = deadline - monotonic_now
+          raise DeadlineExceeded, "prediction deadline exceeded" unless remaining.positive?
+
+          sleep([3, remaining].min)
         end
+      rescue DeadlineExceeded
+        cancel_prediction(id)
+        raise "prediction timeout after #{timeout}s (canceled)"
       end
 
-      def wait_for_training(id, timeout: 3600)
-        start = Time.now
+      def wait_for_training(id, timeout: 3600, deadline: nil)
+        timeout = operation_timeout!(timeout, "training timeout")
+        deadline ||= monotonic_now + timeout
         loop do
-          training = get(URI("#{BASE}/trainings/#{id}"))
+          training = get_training(id, deadline:)
           case training["status"]
           when "succeeded" then return training
           when "failed" then raise "training failed (#{redacted_provider_error(training["error"])})"
           when "canceled" then raise "training canceled"
           end
-          if Time.now - start > timeout
-            cancel_training(id)
-            raise "training timeout after #{timeout}s (canceled)"
-          end
-          sleep 5
+          remaining = deadline - monotonic_now
+          raise DeadlineExceeded, "training deadline exceeded" unless remaining.positive?
+
+          sleep([5, remaining].min)
         end
+      rescue DeadlineExceeded
+        cancel_training(id)
+        raise "training timeout after #{timeout}s (canceled)"
       end
 
       def retry_delay(attempt)
@@ -630,6 +640,30 @@ module Master
 
       def redacted_provider_error(value)
         "provider error redacted (#{response_detail(value)})"
+      end
+
+      def operation_timeout!(value, label)
+        seconds = Float(value)
+        unless seconds.finite? && seconds.positive? && seconds <= 86_400
+          raise ArgumentError, "#{label} must be finite and between 0 and 86400 seconds"
+        end
+
+        seconds == seconds.to_i ? seconds.to_i : seconds
+      rescue ArgumentError, TypeError => error
+        raise error if error.is_a?(ArgumentError) && error.message.include?(label)
+
+        raise ArgumentError, "#{label} must be a finite number"
+      end
+
+      def monotonic_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      def remaining_timeout(deadline, cap, label:)
+        remaining = deadline - monotonic_now
+        raise DeadlineExceeded, "Replicate #{label} deadline exceeded" unless remaining.positive?
+
+        [remaining, cap].min
       end
     end
   end
