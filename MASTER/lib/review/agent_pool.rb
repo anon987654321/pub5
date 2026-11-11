@@ -68,7 +68,7 @@ module Master
         results = @workers.map do |worker|
           begin
             worker.thread.join(timeout)
-          rescue StandardError => error
+          rescue Exception => error
             first_error ||= error
             nil
           end
