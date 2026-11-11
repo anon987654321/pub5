@@ -498,8 +498,9 @@ body.vertical-marketplace .storefront-bol-brand {
   inset-inline-start: max(var(--bol-gutter), calc((100vw - var(--bol-max)) / 2));
   display: inline-flex;
   align-items: center;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: var(--tracking-tightest);
   text-decoration: none;
 }
 
