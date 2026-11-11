@@ -1160,8 +1160,8 @@ class TestLLMDispatcher < Minitest::Test
 
     old = ENV["MASTER_FREE_ONLY"]
     ENV["MASTER_FREE_ONLY"] = "1"
-    Rotator = Master::Io::KeyRotator unless self.class.const_defined?(:Rotator, false)
-    Rotator.stub(:active_key_for, "rotated-secret") do
+    rotator = Master::Io::KeyRotator
+    rotator.stub(:active_key_for, "rotated-secret") do
       dispatcher.send(:send_hosted, "test-provider:model-a", [{ role: "user", content: "hi" }], sys: nil)
     end
 
