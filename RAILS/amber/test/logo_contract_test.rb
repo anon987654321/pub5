@@ -175,15 +175,34 @@ class LogoContractTest < ActionView::TestCase
       amber-logo-hue-flow.png
       amber-logo-starlight.png
       amber-logo-grade-teal-amber.png
-      amber-logo-avatar-bit8.png
-      amber-logo-avatar-candy.png
-      amber-logo-avatar-canon.png
+      amber-logo-avatar-bit8.svg
+      amber-logo-avatar-candy.svg
+      amber-logo-avatar-canon.svg
       amber-logo-bit8-pixel-ink.png
       amber-logo-reference.png
     ].each do |name|
       path = root.join(name)
       assert File.file?(path), "missing generated logo asset: #{name}"
       assert File.size?(path).to_i.positive?, "empty generated logo asset: #{name}"
+    end
+  end
+
+  test "public avatar cuts are transparent generator-owned SVG exports" do
+    root = Rails.root.join("public")
+    source = Rails.root.join("__logo/plates/avatars")
+    {
+      "amber-logo-avatar-canon.svg" => "amber-canon.svg",
+      "amber-logo-avatar-bit8.svg" => "amber-bit8.svg",
+      "amber-logo-avatar-candy.svg" => "amber-candy.svg"
+    }.each do |public_name, generated_name|
+      public_svg = root.join(public_name).read
+      generated_svg = source.join(generated_name).read
+
+      assert_equal generated_svg, public_svg, "#{public_name} drifted from the generated cut"
+      assert_includes public_svg, "transparent ground"
+      body = public_svg.sub(/\A<svg\b[^>]*>/, "").sub(%r{</svg>\z}, "")
+      body = body.sub(/\A<defs>.*?</defs>/m, "")
+      refute_match(/\A\s*<rect\b/, body, "#{public_name} must not paint a background")
     end
   end
 
