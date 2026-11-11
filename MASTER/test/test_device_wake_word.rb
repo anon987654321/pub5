@@ -6,7 +6,7 @@ require "tmpdir"
 class TestDeviceWakeWord < Minitest::Test
   def test_enable_normalizes_phrases
     Dir.mktmpdir("wake-word") do |root|
-      wake = Master::Device::WakeWord.new(root:, which: ->(_cmd) { true })
+      wake = Master::Device::WakeWord.new(root:, which: ->(_cmd) { true }, permissions: granted_permissions(root))
       wake.enable!(phrases: ["Hey MASTER", " hey master "])
 
       Master::Device.stub(:android?, true) do
@@ -20,12 +20,27 @@ class TestDeviceWakeWord < Minitest::Test
 
   def test_match_accepts_a_phrase_inside_transcription
     Dir.mktmpdir("wake-word") do |root|
-      wake = Master::Device::WakeWord.new(root:, which: ->(_cmd) { true })
+      wake = Master::Device::WakeWord.new(root:, which: ->(_cmd) { true }, permissions: granted_permissions(root))
       wake.enable!(phrases: ["hey mochi"])
 
       assert_equal "hey mochi", wake.send(:match, "Hey Mochi, are you there?")
       assert_nil wake.send(:match, "hello there")
     end
+  end
+
+  # The consent law gates the wake word: grant both scopes through the real
+  # permission store, with the exact purposes the listener checks.
+  def granted_permissions(root)
+    permissions = Master::Ground::PersonalPermissions.new(root: root)
+    permissions.grant(
+      scope: "microphone", confirmed_by: "test",
+      purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE,
+    )
+    permissions.grant(
+      scope: "speech_recognition", confirmed_by: "test",
+      purpose: Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE,
+    )
+    permissions
   end
 
   def test_disabled_listener_does_not_require_microphone
