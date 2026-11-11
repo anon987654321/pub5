@@ -451,6 +451,42 @@ Example event payload:
 }
 ```
 
+For subjects outside the built-in catalogue, the same event accepts
+`kind: "custom"` with up to six named parts. Each part selects one of five
+bounded primitives — `box`, `sphere`, `ring`, `cylinder`, or `beam` — and
+may supply a centre and half-size vector in normalized face space. The browser
+sanitizes names, rejects duplicate/unknown keys and unsupported primitives,
+clamps centre and size values to the token-defined bounds, and accepts only
+the three fixed beam axes. It never evaluates model code or arbitrary geometry.
+The part sequence is the reveal sequence, so an unfamiliar explanation can
+still resolve as a small, ordered construction rather than an unstructured
+cloud.
+
+Example: a bicycle is represented as a frame beam, two wheel rings, and a
+handlebar beam:
+
+```json
+{
+  "text": "A bicycle balances on two wheels with a frame, fork and handlebar.",
+  "visual_subject": {
+    "kind": "custom",
+    "label": "bicycle",
+    "confidence": 0.88,
+    "sequence": ["frame", "rear-wheel", "front-wheel", "handlebar"],
+    "parts": [
+      { "key": "frame", "primitive": "beam", "axis": "x",
+        "center": [0, 0, 0], "size": [0.42, 0.035, 0.035] },
+      { "key": "rear-wheel", "primitive": "ring",
+        "center": [-0.38, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "front-wheel", "primitive": "ring",
+        "center": [0.40, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "handlebar", "primitive": "beam", "axis": "z",
+        "center": [0.30, 0.36, 0], "size": [0.035, 0.035, 0.22] }
+    ]
+  }
+}
+```
+
 The primary face field receives the object coordinates in its existing
 `scatter` attribute and uses a per-carrier `semanticStage` to reveal features
 in sequence. It does not allocate another renderer, animation loop, or particle
