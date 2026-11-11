@@ -64,6 +64,51 @@ class TestTaskContract < Minitest::Test
     assert_equal "not_measured", CONTRACT.preservation_evidence.fetch("status")
   end
 
+  def test_preservation_receipts_must_stay_inside_the_active_task_scope
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
+
+    CONTRACT.with_current(contract) do
+      assert_raises(CONTRACT::Invalid) do
+        CONTRACT.record_preservation!(
+          path: File.join(Master::REPO_ROOT, "outside.html"),
+          format: "html", before: "a", after: "b", result:
+        )
+      end
+      assert_raises(CONTRACT::Invalid) do
+        CONTRACT.record_preservation!(
+          path: File.join(Dir.tmpdir, "outside-repository.html"),
+          format: "html", before: "a", after: "b", result:
+        )
+      end
+      assert_equal "not_measured", CONTRACT.preservation_evidence.fetch("status")
+    end
+  end
+
+  def test_preservation_receipts_refuse_symlinked_paths
+    Dir.mktmpdir("task-contract-link", Master::REPO_ROOT) do |root|
+      Dir.mktmpdir("task-contract-outside") do |outside|
+        relative = root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+        File.write(File.join(outside, "outside.html"), "outside")
+        File.symlink(File.join(outside, "outside.html"), File.join(root, "linked.html"))
+        contract = CONTRACT.build(
+          intent: "content_only", scope: ["#{relative}/**"], preserve: [], proof: []
+        )
+        result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
+
+        CONTRACT.with_current(contract) do
+          error = assert_raises(CONTRACT::Invalid) do
+            CONTRACT.record_preservation!(
+              path: File.join(root, "linked.html"),
+              format: "html", before: "a", after: "b", result:
+            )
+          end
+          assert_match(/symlink/, error.message)
+        end
+      end
+    end
+  end
+
   def test_transaction_rejects_out_of_scope_paths_before_snapshotting
     Dir.mktmpdir("task-contract-transaction") do |root|
       contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
