@@ -98,6 +98,9 @@ tests = %w[
   test/test_assessment_matrix_rendered_evidence.rb
   test/test_fix_loop_oscillation.rb
   test/test_fix_run_budget.rb
+  test/test_fix_model_gate.rb
+  test/test_fix_watchdog.rb
+  test/test_llm_stage_failure.rb
   test/test_run_ledger_per_run.rb
   test/test_reachability_scope.rb
   test/test_repair_loop_per_fix_commit.rb
