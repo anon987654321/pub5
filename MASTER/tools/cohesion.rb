@@ -40,6 +40,8 @@
 
 require "json"
 require "yaml"
+require "digest"
+require "ripper"
 require_relative "../lib/trace/dmesg"
 
 module Operator
@@ -57,6 +59,13 @@ module Operator
     # were "split out of dilla.rb". The proposal was to undo a deliberate split
     # and recreate the file, under the name of the file it came from.
     MAX_MERGED_LINES = 300
+
+    # Exact Ruby method-shape candidates complement the file-family census. They
+    # are suggestions only: same syntax is not proof of shared ownership, and no
+    # candidate is merged or ratcheted automatically.
+    METHOD_SHAPE_MIN_FILES = 3
+    METHOD_SHAPE_LIMIT = 8
+    METHOD_SHAPE_SKIP = %r{/(?:test|spec|fixtures|vendor|node_modules|tmp|log|coverage|storage|\.git|dummy)/}
 
     module_function
 
@@ -425,9 +434,106 @@ module Operator
       rows.flat_map { |dir, plans| plans.map { |plan| "#{dir}##{plan[:family]}" } }.sort
     end
 
+    # Same method AST, with source positions and the method's own name removed.
+    # This finds byte-different source files that repeat a routine; parameters and
+    # local names remain significant, so superficially similar algorithms are not
+    # treated as equivalent. A three-file floor keeps ordinary two-sided adapters
+    # out of the report. Every row still needs owner/caller review before a change.
+    def method_shape_scan(tree = nil, root: REPO)
+      root = File.expand_path(root)
+      base = tree ? File.expand_path(File.join(root, tree.to_s)) : root
+      raise ArgumentError, "method-shape target escapes repository root" unless
+        base == root || base.start_with?("#{root}#{File::SEPARATOR}")
+
+      files = Dir.glob(File.join(base, "**", "*.rb")).sort.reject do |path|
+        path.match?(METHOD_SHAPE_SKIP) || File.symlink?(path) || !File.file?(path)
+      end
+      groups = Hash.new { |hash, key| hash[key] = [] }
+      unreadable = []
+      parsed = 0
+
+      files.each do |path|
+        source = File.read(path, encoding: "UTF-8")
+        ast = Ripper.sexp(source)
+        unless ast
+          unreadable << relative_to(root, path)
+          next
+        end
+        parsed += 1
+        method_definitions(ast).each do |name, line, node|
+          groups[method_shape_digest(node)] << {
+            file: relative_to(root, path), method: name, line:
+          }
+        end
+      rescue StandardError => error
+        unreadable << "#{relative_to(root, path)} (#{error.class})"
+      end
+
+      clusters = groups.values.filter_map do |methods|
+        distinct_files = methods.map { |row| row[:file] }.uniq
+        next if distinct_files.size < METHOD_SHAPE_MIN_FILES
+
+        { files: distinct_files.size, methods: methods.sort_by { |row| [row[:file], row[:line].to_i] } }
+      end.sort_by { |row| [-row[:files], row[:methods].first&.dig(:method).to_s] }
+
+      { files: files.size, parsed:, unreadable:, clusters: clusters }
+    end
+
+    def method_definitions(node, found = [])
+      return found unless node.is_a?(Array)
+
+      if node[0] == :def && node[1].is_a?(Array)
+        found << [node[1][1].to_s, node[1].dig(2, 0), node]
+      elsif node[0] == :defs && node[3].is_a?(Array)
+        found << [node[3][1].to_s, node[3].dig(2, 0), node]
+      end
+      node.each { |child| method_definitions(child, found) if child.is_a?(Array) }
+      found
+    end
+
+    def method_shape_digest(node)
+      normalized = normalize_method_ast(node)
+      normalized[1] = [:method_name] if normalized[0] == :def
+      normalized[3] = [:method_name] if normalized[0] == :defs
+      Digest::SHA256.hexdigest(Marshal.dump(normalized))
+    end
+
+    def normalize_method_ast(node)
+      return node unless node.is_a?(Array)
+      return [node[0], node[1]] if node[0].is_a?(Symbol) && node[0].to_s.start_with?("@")
+
+      node.map { |child| normalize_method_ast(child) }
+    end
+
+    def relative_to(root, path) = path.delete_prefix("#{root}#{File::SEPARATOR}")
+
+    def report_method_shapes(tree)
+      scan = method_shape_scan(tree)
+      label = tree || "repository"
+      if scan[:files].zero?
+        Master::Trace::Dmesg.status("cohesion0", "method shapes: #{label} has no Ruby source files (not applicable)")
+        return scan
+      end
+
+      Master::Trace::Dmesg.status(
+        "cohesion0",
+        "method shapes: #{label} parsed #{scan[:parsed]}/#{scan[:files]} Ruby files; " \
+        "#{scan[:clusters].size} repeated-body candidate(s); source parse/read gaps=#{scan[:unreadable].size}"
+      )
+      scan[:unreadable].first(METHOD_SHAPE_LIMIT).each do |path|
+        Master::Trace::Dmesg.status("cohesion0", "method shape INCONCLUSIVE: #{path}")
+      end
+      scan[:clusters].first(METHOD_SHAPE_LIMIT).each do |cluster|
+        members = cluster[:methods].map { |row| "#{row[:file]}##{row[:method]}:#{row[:line]}" }
+        Master::Trace::Dmesg.status("cohesion0", "possible repeated method body x#{cluster[:files]}: #{members.join(" | ")[0, 420]}")
+      end
+      scan
+    end
+
     def run_census(ratchet: false, list: false, tree: nil)
       rows = census(tree)
       total = rows.sum { |_, plans| plans.size }
+      report_method_shapes(tree)
       scope = tree ? " in #{tree}" : ""
       ceil = tree ? "-" : ceiling
       Master::Trace::Dmesg.attach("cohesion0", "master0", "#{total} families across #{rows.size} directories#{scope}, ceiling #{ceil}")
