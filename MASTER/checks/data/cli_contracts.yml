@@ -14,7 +14,7 @@ entrypoints:
     - "<instruction>"
     - core
     - replay
-    digest: 40398bb4e41f8b650ad965f44cdd13f5024ad2c012d358718cd23dd4f3021e5e
+    digest: 3ebd181f9791e37048475528ec59f047b6f2932c2baca410180c4c4707d2f567
   MASTER/bin/operator:
     exit: 2
     head: operator - repo-wide operator surface
