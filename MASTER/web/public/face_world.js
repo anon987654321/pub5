@@ -104,7 +104,11 @@
 
   function normalizeVisualSubject(subject) {
     if (!SEMANTIC_SUBJECT.enabled || !subject || typeof subject !== "object" || Array.isArray(subject)) return null;
-    const kind = String(subject.kind || subject.form || "").toLowerCase().trim();
+    const declaredKind = String(subject.kind || "").toLowerCase().trim();
+    const declaredForm = String(subject.form || subject.type || "").toLowerCase().trim();
+    const kind = declaredKind === "object" || !subjectFeatures(declaredKind).length
+      ? declaredForm || declaredKind
+      : declaredKind;
     const allowed = subjectFeatures(kind);
     if (!allowed.length) return null;
     const confidence = Math.max(0, Math.min(1, finite(subject.confidence, 0.76)));
@@ -1273,6 +1277,14 @@
 
     if (type === "turn:started") {
       clearSubjectRestoreTimer();
+      return;
+    }
+
+    if (type === "assistant:visual-subject") {
+      const text = String(payload.text || payload.transcript || "").trim();
+      const visualSubject = payload.visual_subject || payload.visualSubject || null;
+      if (text || visualSubject) setConversationSubject(text, visualSubject);
+      scheduleFaceRestoration();
       return;
     }
 
