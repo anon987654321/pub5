@@ -640,6 +640,7 @@ module Master
         word, rest = subcommand(ctx)
         return dispatch_device(root, ctx: rest) if word == "device"
         return dispatch_tools(root, ctx: rest) if word == "tools"
+        return dispatch_keyless_probe(root) if word == "keyless"
 
         script = File.join(root, "bin", "doctor")
         body = if File.file?(script)
@@ -652,6 +653,15 @@ module Master
         audit = Master::Ground::SecurityAudit.report(root:)
         capabilities = ::Operator::CapabilityGraph.new(root:).render(model: ENV["MASTER_MODEL"])
         [body, audit, capabilities].reject { |part| part.to_s.strip.empty? }.join("\n")
+      end
+
+      def dispatch_keyless_probe(root)
+        script = File.join(root, "bin", "doctor")
+        return "keyless0: missing #{script}" unless File.file?(script)
+
+        out, err, status = Master::Io::Exec.capture3(Gem.ruby, script, "--keyless", chdir: root)
+        text = [out, err].map(&:strip).reject(&:empty?).join("\n")
+        status.success? ? text : "#{text}\nkeyless0: exit #{status.exitstatus}"
       end
 
       # /doctor tools lists the tool calls whose outcome nobody knows: each one
