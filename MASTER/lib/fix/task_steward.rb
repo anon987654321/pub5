@@ -189,7 +189,7 @@ module Master
 
       def defer_failed_mission(error)
         record = Mission.current(root: @root)
-        return unless record && record["origin"].to_s == "fold" && record["auto_continue"] == true
+        return unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
         return if leased_by_another_process?(record)
 
         Mission.new(root: @root, bus: @bus).defer!(
