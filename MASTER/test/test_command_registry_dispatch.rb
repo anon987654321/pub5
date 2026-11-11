@@ -654,6 +654,8 @@ class TestCommandRegistryDispatch < Minitest::Test
     refute Registry.writes_requested?(apply: nil, only: "critique,map"), "read-only stages must not write"
     assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicit fix stage can write"
 
+    assert_includes Registry.help_text("fix"), "--read-only"
+
     refute Master::CLI::Pipeline::Pass.allocate.send(:default_apply?),
            "internal Pass callers remain fail-closed unless the dispatcher explicitly grants writes"
   end
