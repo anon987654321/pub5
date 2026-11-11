@@ -47,6 +47,7 @@ class TestLaneSelection < Minitest::Test
   end
 
   def setup
+    Selection.reset_hosted_resolver!
     @saved_ollama_enabled = ENV["MASTER_OLLAMA_ENABLED"]
     @saved_no_ollama = ENV["MASTER_NO_OLLAMA"]
     ENV.delete("MASTER_NO_OLLAMA")
@@ -61,6 +62,7 @@ class TestLaneSelection < Minitest::Test
     Quota.clock = -> { Time.now.to_f }
     @saved_ollama_enabled.nil? ? ENV.delete("MASTER_OLLAMA_ENABLED") : ENV["MASTER_OLLAMA_ENABLED"] = @saved_ollama_enabled
     @saved_no_ollama.nil? ? ENV.delete("MASTER_NO_OLLAMA") : ENV["MASTER_NO_OLLAMA"] = @saved_no_ollama
+    Selection.reset_hosted_resolver!
     FileUtils.remove_entry(@dir)
   end
 
@@ -171,9 +173,28 @@ class TestLaneSelection < Minitest::Test
 
   def test_vision_review_order_uses_human_preference_after_capability_filtering
     models = ["gpt-6.1-sol", "gemini-3.7-flash", "qwen3.8-max", OPUS, "text-only"]
+    expected = [OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"]
     Selection.stub(:vision?, ->(id) { id != "text-only" }) do
-      assert_equal [OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"],
-                   Selection.vision_rank_order(models)
+      assert_equal expected, Selection.vision_rank_order(models)
+      assert_equal expected + ["text-only"], Selection.order(models, free_last: false, vision: true)
+      assert_equal expected + ["text-only"], Selection.ranked_order(models, free_last: false, vision: true)
+    end
+  end
+
+  def test_live_keyless_hosted_models_enter_the_boot_catalogue_and_are_alive
+    resolver = Object.new
+    ids = %w[llm7:gpt-oss:20b ovh:gpt-oss-120b pollinations:openai-fast]
+    resolver.define_singleton_method(:hosted_models) { ids }
+    resolver.define_singleton_method(:hosted_endpoint_for) { |id| ids.include?(id) ? { key: nil } : nil }
+
+    Selection.stub(:hosted_resolver, resolver) do
+      assert_equal ids, Selection.hosted_models
+      assert_includes Selection.catalogue, "llm7:gpt-oss:20b"
+      assert_includes Selection.catalogue, "ovh:gpt-oss-120b"
+      ids.each do |id|
+        assert Selection.alive?(id), "#{id} should be alive without a provider key"
+        assert_equal :free, Selection.kind(id), "#{id} belongs to the keyless free class"
+      end
     end
   end
 
