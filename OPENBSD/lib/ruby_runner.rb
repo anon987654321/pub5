@@ -59,7 +59,7 @@ module Deploy
         next [] unless File.directory?(directory)
 
         Dir.children(directory).filter_map do |entry|
-          next unless entry.match?(/\\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\\.[0-9]+)*)?\\z/)
+          next unless entry.match?(/\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\.[0-9]+)*)?\z/)
 
           path = File.join(directory, entry)
           path if File.file?(path) && File.executable?(path)
