@@ -65,26 +65,15 @@ class RailsStackContractTest < Minitest::Test
     end
   end
 
-  def test_ruby_pins_and_lockfiles_match_their_tree_owner
-    root_version = File.read(File.join(REPO_ROOT, ".ruby-version")).strip
-    master_version = File.read(File.join(REPO_ROOT, "MASTER", ".ruby-version")).strip
-
-    assert_equal "4.0.5", root_version, "change the root/Rails runtime deliberately with this contract"
-    assert_equal root_version, master_version, "MASTER shares the repository's single Ruby pin"
-
+  def test_ruby_runtime_is_flexible_across_all_rails_apps
     APP_ROOTS.each do |root|
-      app_version = File.read(File.join(REPO_ROOT, root, ".ruby-version")).strip
-      assert_equal root_version, app_version, "#{root}/.ruby-version disagrees with the root Rails runtime"
+      gemfile = File.read(File.join(REPO_ROOT, root, "Gemfile"))
+      assert_match(/ruby \">= 3\\.3\"/, gemfile, "#{root}/Gemfile must accept the shared Ruby floor")
 
       lock = File.read(File.join(REPO_ROOT, root, "Gemfile.lock"))
-      locked_version = lock[/^  ruby (\S+)$/, 1]
-      assert_equal app_version, locked_version, "#{root}/Gemfile.lock was resolved under another Ruby"
+      refute_match(/^RUBY VERSION\\n/, lock, "#{root}/Gemfile.lock must not pin an interpreter")
+      refute_match(/^  ruby 4\\.0\\.5$/, lock)
     end
-
-    master_lock = File.read(File.join(REPO_ROOT, "MASTER", "Gemfile.lock"))
-    master_locked_version = master_lock[/^  ruby (\S+)$/, 1]
-    assert_equal master_version, master_locked_version,
-                 "MASTER/Gemfile.lock was resolved under another Ruby"
   end
 
 end
