@@ -5,11 +5,11 @@ require_relative "test_helper"
 # The prompt carried the whole repo's class listing (~290 KB) on every model
 # call. The brief is bounded: orientation always, plus the slice the turn names.
 class TestCodeIndexBrief < Minitest::Test
-  def with_index(extra: 0)
+  def with_index(extra: 0, source: "module Shop\n  class WidgetMaker\n  end\nend\n")
     Dir.mktmpdir do |root|
       root = File.realpath(root)
       Dir.mkdir(File.join(root, "lib"))
-      File.write(File.join(root, "lib", "widget_maker.rb"), "module Shop\n  class WidgetMaker\n  end\nend\n")
+      File.write(File.join(root, "lib", "widget_maker.rb"), source)
       extra.times { |n| File.write(File.join(root, "lib", "filler_#{n}.rb"), "class FillerThing#{n}\nend\n") }
       yield Master::Review::CodeIndex.new(root:).build
     end
@@ -30,6 +30,31 @@ class TestCodeIndexBrief < Minitest::Test
       text = index.summary(focus: "why does WidgetMaker fail?")
       assert_includes text, "## Named in this turn"
       assert_includes text, "Shop::WidgetMaker (lib/widget_maker.rb:2)"
+    end
+  end
+
+  def test_an_explicitly_named_method_gets_its_slice
+    source = <<~RUBY
+      module Shop
+        class WidgetMaker
+          def refresh_index
+          end
+        end
+      end
+    RUBY
+
+    with_index(source:) do |index|
+      text = index.summary(focus: "trace Shop::WidgetMaker#refresh_index")
+      assert_includes text, "## Named in this turn"
+      assert_includes text, "Shop::WidgetMaker#refresh_index"
+      assert_includes text, "lib/widget_maker.rb:3"
+    end
+  end
+
+  def test_a_backticked_method_name_gets_its_slice
+    source = "module Shop\\n  class WidgetMaker\\n    def refresh_index; end\\n  end\\nend\\n"
+    with_index(source:) do |index|
+      assert_includes index.summary(focus: "inspect `refresh_index`"), "Shop::WidgetMaker#refresh_index"
     end
   end
 
