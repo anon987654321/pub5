@@ -45,6 +45,7 @@ module Master
         end
 
         def hybrid_recall(query, top_n: 3)
+          refresh_store_if_changed
           store_snap = @mutex.synchronize { @store.dup }
           return [] if store_snap.empty?
 
@@ -61,11 +62,13 @@ module Master
         end
 
         def keyword_recall(query, top_n: 3)
+          refresh_store_if_changed
           store_snap = @mutex.synchronize { @store.dup }
           keyword_hits(query:, top_n:, store: store_snap)
         end
 
         def fts5_recall(query, top_n: 3)
+          refresh_store_if_changed
           store_snap = @mutex.synchronize { @store.dup }
           fts5_recall_from_store(query:, top_n:, store: store_snap)
         end
