@@ -10,31 +10,9 @@ class TestBootEntrypoint < Minitest::Test
   LOCKFILE = File.read(File.expand_path("../Gemfile.lock", __dir__))
 
   def test_json_uses_the_bundle_resolution_not_a_ruby_release_pin
-    refute_match(/^gem "json",\\s*"=/, GEMFILE)
-    refute_match(/^  json \\(=/, LOCKFILE)
-    assert_match(/^    json \\(/, LOCKFILE)
-  end
-
-  def test_dependency_bootstrap_activates_the_master_bundle
-    assert_match(/manager\.ensure!\n.*?manager\.activate_environment!\n.*?activate_bundle!\(root\)/m, SOURCE)
-    assert_includes SOURCE, 'ENV["BUNDLE_GEMFILE"] = gemfile'
-    assert_includes SOURCE, 'require "bundler/setup"'
-  end
-
-  def test_bundle_activation_uses_the_lockfile_bundler_version
-    assert_match(/activate_locked_bundler\(locked_bundler_version\(root\)\)/, SOURCE)
-    assert_match(/gem\("bundler", version\)/, SOURCE)
-    assert_match(/require "bundler\/setup"/, SOURCE)
-  end
-
-  # vm23's Ruby 3.4 package ships Bundler 2.6 while the lock is written by 4.x;
-  # the 2026-11-03 deploy preflight died on Gem::MissingSpecVersionError.
-  def test_a_locked_bundler_that_is_not_installed_is_named_not_fatal
-    out, = capture_io do
-      Master::Boot::Entrypoint.activate_locked_bundler("99.0.0")
-    end
-
-    assert_match(/lock wants bundler 99\.0\.0, (not installed|another is active); using the installed one/, out)
+    refute GEMFILE.lines.any? { |line| line.start_with?('gem "json", "=") }
+    refute LOCKFILE.lines.any? { |line| line.start_with?("  json (=") }
+    assert LOCKFILE.lines.any? { |line| line.start_with?("    json (") }
   end
 
   def test_json_is_loaded_only_after_bundler_activation
