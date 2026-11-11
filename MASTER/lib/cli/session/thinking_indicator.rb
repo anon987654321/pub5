@@ -11,11 +11,9 @@ module Master
     class Session
       TICK_SECONDS = 0.18
       FAST_TICK_SECONDS = 0.04
-      SPINNER_FRAMES = [".", ":", ";", "o", "O", "0", "@", "0", "O", "o", ";", ":", ".", "+", "x", "*"].freeze
+      # The spinner remains an ASCII asterisk, breathing by adding/removing stars.
+      SPINNER_FRAMES = ["*", "**", "***", "**"].freeze
       SPIN_PROBE_SECONDS = 0.5
-      # Below this the row stays plain; the ramp runs amber to red above it.
-      SPIN_COLOR_START = 0.35
-      SPIN_WHITE_HOT_START = 0.92
       ACTIVITY_REARM_IDLE_S = 0.45
       STAGE_EVENTS = {
         "infer:resolved" => "infer",
@@ -110,20 +108,18 @@ module Master
       def spin_line(stage, name)
         stage = "working" if stage.empty?
         detail = stage == "intake" ? %q{ \_} : " #{elapsed_seconds}s"
-        "#{name} #{stage}#{detail}#{spin_suffix}"
+        label = stage == "intake" ? "" : " #{stage}"
+        "#{name}#{label}#{detail}#{spin_suffix}"
       end
 
       def spin_tinted(line, intensity)
         tint = spinner_tint(intensity)
         return line unless tint
 
-        if intensity >= SPIN_WHITE_HOT_START && !line.empty?
-          glyph = line[0]
-          rest = line[1..].to_s
-          "\e[1;38;2;255;255;255m#{glyph}\e[0m#{tint}#{rest}\e[0m"
-        else
-          "#{tint}#{line}\e[0m"
-        end
+        glyph = line[/\A\*+/]
+        return line unless glyph
+
+        "#{tint}#{glyph}\e[0m#{line.delete_prefix(glyph)}"
       end
 
       # Reclaim the spinner row only after a burst of dmesg output has
@@ -171,7 +167,7 @@ module Master
         now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         return intensity, probe_at if now < probe_at
 
-        [ResourceLoad.turn, now + SPIN_PROBE_SECONDS]
+        [ResourceLoad.cpu_load, now + SPIN_PROBE_SECONDS]
       end
 
       # More work spins the star faster and turns it redder: TICK_SECONDS and
@@ -182,22 +178,20 @@ module Master
         FAST_TICK_SECONDS + span * (1.0 - normalized)
       end
 
-      # The tint reads its amber-to-red stops from face_interface.ascii
-      # (spinner_tint) — colour is a token fact, not a constant here. The
-      # channels interpolate linearly between the stops; below the threshold
-      # the row stays plain, and a missing or malformed token degrades to
-      # plain too rather than raising in the paint path.
+      # Light red at idle, deep red at maximum normalized host CPU load.
+      # The shared face token owns both stops; malformed values degrade to
+      # plain ASCII instead of raising in the spinner's paint path.
       def spinner_tint(intensity)
-        return unless intensity > SPIN_COLOR_START
-
         stops = Master::Face::Contract.spinner_tint || {}
         from = Master::Face::Contract.rgb_channels(stops["from"])
         to = Master::Face::Contract.rgb_channels(stops["to"])
         return unless from && to
 
-        ramp = (intensity - SPIN_COLOR_START) / (1.0 - SPIN_COLOR_START)
+        ramp = Float(intensity).clamp(0.0, 1.0)
         channels = from.zip(to).map { |a, b| (a + (b - a) * ramp).round }
         "\e[38;2;#{channels.join(';')}m"
+      rescue ArgumentError, TypeError
+        nil
       end
 
       def init_thinking_state!
