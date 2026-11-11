@@ -68,6 +68,48 @@ class FixMissionTest < Minitest::Test
     end
   end
 
+  def test_namespaced_fix_mission_keeps_backlog_parent_lease_and_record
+    Dir.mktmpdir do |root|
+      parent = Master::Fix::Mission.new(root:).start!(
+        goal: "Complete exactly this root TODO item", scope: root,
+        plan: '{"executor":"root_todo"}', origin: "backlog", auto_continue: true,
+      )
+      parent_id = parent.id
+      parent_lease = parent.record.fetch("lease_owner")
+      child = nil
+
+      Master::Fix::Mission.with_namespace("fix") do
+        child = Master::Fix::Mission.new(root:).start_or_resume!(
+          goal: "fix MASTER/lib/example.rb", scope: "MASTER/lib/example.rb", origin: "manual",
+        )
+        refute_equal parent_id, child.id
+        assert_equal child.id, Master::Fix::Mission.current(root:).fetch("id")
+        saved_parent = Master::Fix::Mission.current(root:, namespace: nil)
+        assert_equal parent_id, saved_parent.fetch("id")
+        assert_equal "backlog", saved_parent.fetch("origin")
+        assert_equal parent_lease, saved_parent.fetch("lease_owner")
+        child.finish!(summary: "scoped repair complete")
+      end
+
+      assert_nil Master::Fix::Mission.current_namespace
+      assert_equal ".master/mission.json", Master::Fix::Mission.record_path(root:, namespace: nil).delete_prefix("#{root}/")
+      assert_equal ".master/mission-fix.json", Master::Fix::Mission.record_path(root:, namespace: "fix").delete_prefix("#{root}/")
+      assert_equal parent_id, Master::Fix::Mission.current(root:).fetch("id")
+      assert_equal child.id, Master::Fix::Mission.current(root:, namespace: "fix").fetch("id")
+      parent.finish!(summary: "backlog parent completed")
+      assert_equal "completed", Master::Fix::Mission.current(root:).fetch("state")
+      assert_equal "completed", Master::Fix::Mission.current(root:, namespace: "fix").fetch("state")
+    end
+  end
+
+  def test_mission_namespace_is_restored_after_an_exception
+    assert_raises(RuntimeError) do
+      Master::Fix::Mission.with_namespace("fix") { raise "stop" }
+    end
+    assert_nil Master::Fix::Mission.current_namespace
+    assert_raises(ArgumentError) { Master::Fix::Mission.with_namespace("../outside") { flunk("invalid namespace admitted") } }
+  end
+
   def test_manual_fix_can_supersede_an_unclaimed_waiting_mission
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).ensure_queued!(
