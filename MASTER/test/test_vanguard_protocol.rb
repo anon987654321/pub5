@@ -43,6 +43,49 @@ class TestVanguardProtocol < Minitest::Test
     assert_match(/exploding_ast AST check failed/, error.message)
   end
 
+  def test_symbol_visitor_tracks_macro_alias_and_singleton_definitions
+    source = <<~RUBY
+      module Dynamic
+        class Widget
+          define_method(:computed) {}
+          attr_reader :name, "state"
+          attr_writer :setting
+          attr_accessor :enabled
+          alias renamed computed
+          alias_method :renamed_again, "computed"
+          def self.build = true
+          class << self
+            def from_singleton_class = true
+            define_method(:singleton_dynamic) {}
+            attr_reader :singleton_name
+          end
+        end
+      end
+    RUBY
+    ast = Prism.parse(source)
+    assert ast.success?, ast.errors.map(&:message).join("; ")
+    visitor = Review::CodeIndex::SymbolVisitor.new(file: "dynamic.rb", root: Dir.pwd)
+    ast.value.accept(visitor)
+    names = visitor.symbols.map(&:fqn)
+
+    %w[
+      Dynamic::Widget#computed
+      Dynamic::Widget#name
+      Dynamic::Widget#state
+      Dynamic::Widget#setting=
+      Dynamic::Widget#enabled
+      Dynamic::Widget#enabled=
+      Dynamic::Widget#renamed
+      Dynamic::Widget#renamed_again
+      Dynamic::Widget.build
+      Dynamic::Widget.from_singleton_class
+      Dynamic::Widget.singleton_dynamic
+      Dynamic::Widget.singleton_name
+    ].each { |name| assert_includes names, name }
+
+    assert_equal 12, visitor.metrics[:defs]
+  end
+
   def test_symbol_visitor_tracks_metrics
     source = <<~RUBY
       module Demo
