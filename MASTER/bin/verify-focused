@@ -35,6 +35,13 @@ unless bundler_status.success?
 end
 puts bundler_output.to_s.strip
 
+dependencies_output, dependencies_status = Open3.capture2e(bundle, "check", chdir: ROOT)
+unless dependencies_status.success?
+  warn "BLOCKED: selected Bundler dependencies are incomplete."
+  warn dependencies_output.to_s.lines.last(12).join
+  exit(dependencies_status.exitstatus || 127)
+end
+
 tests = %w[
   test/test_final_cleanup.rb
   test/test_fix_loop_observability.rb
