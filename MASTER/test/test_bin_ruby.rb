@@ -64,36 +64,10 @@ class TestBinRuby < Minitest::Test
     ENV["PATH"] = old_path
   end
 
-  def test_rbenv_candidates_are_not_selected_by_a_repo_pin
-    old_path = ENV["PATH"]
-    old_fake_path = ENV["FAKE_RBENV_PATH"]
-    old_rbenv_root = ENV["RBENV_ROOT"]
-
-    Dir.mktmpdir do |root|
-      fake_bin = File.join(root, "bin")
-      FileUtils.mkdir_p(fake_bin)
-      ruby_path = File.join(root, "ruby-4.0.5")
-      File.write(ruby_path, "#!/usr/bin/env ruby\n")
-      File.chmod(0o755, ruby_path)
-      rbenv = File.join(fake_bin, "rbenv")
-      File.write(rbenv, <<~RUBY)
-        #!/usr/bin/env ruby
-        abort "wrong version" unless ENV["RBENV_VERSION"] == "4.0.5"
-        puts ENV.fetch("FAKE_RBENV_PATH")
-      RUBY
-      File.chmod(0o755, rbenv)
-      File.write(File.join(root, ".ruby-version"), "4.0.5\n")
-
-      ENV["PATH"] = "#{fake_bin}#{File::PATH_SEPARATOR}#{old_path}"
-      ENV["FAKE_RBENV_PATH"] = ruby_path
-      ENV["RBENV_ROOT"] = File.join(root, "empty-rbenv")
-
-      assert_equal ruby_path, Operator::RubyRunner.rbenv_path("ruby", root:)
-    ensure
-      ENV["PATH"] = old_path
-      ENV["FAKE_RBENV_PATH"] = old_fake_path
-      ENV["RBENV_ROOT"] = old_rbenv_root
-    end
+  def test_running_compatible_interpreter_is_preferred
+    selected = Operator::RubyRunner.best_available_ruby
+    assert_equal File.expand_path(RbConfig.ruby), File.expand_path(selected.fetch(:path))
+    assert_operator selected.fetch(:version), :>=, Operator::Environment::SUPPORTED_RUBY_MIN
   end
 
   def test_a_failing_script_keeps_its_exit_status
