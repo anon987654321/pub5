@@ -74,7 +74,7 @@ class TestBacklog < Minitest::Test
   end
 
   def test_biz_paths_are_owned_and_captured_as_biz
-    text = "Render and inspect BIZ/ragnhild/ragnhild_legater.html."
+    text = "Render and inspect BIZ/ragnhild/ragnhild_legater.html for pagination."
     item = { prose: [text], code: [], h1: "pub5", h2: "pub5 migration record", h3: nil }
     section = "pub5 — pub5 migration record"
 
