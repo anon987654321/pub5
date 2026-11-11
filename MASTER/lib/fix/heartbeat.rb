@@ -96,6 +96,8 @@ module Master
 
         record = Mission.current(root: @fix_loop.respond_to?(:mission_root) ? @fix_loop.mission_root : @root)
         return unless record
+        # A backlog mission is supervised by TaskSteward, not this FixLoop heartbeat.
+        return if record["origin"].to_s == "backlog"
         return unless %w[running waiting].include?(record["state"].to_s)
 
         expired = record["state"].to_s == "running" && lease_expired?(record)
