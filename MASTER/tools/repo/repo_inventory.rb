@@ -30,7 +30,6 @@ ALLOWED_ROOT_FILES = %w[
   .cursorlaws
   .gitattributes
   .gitignore
-  .ruby-version
   AGENTS.md
   CLAUDE.md
   GEMINI.md
