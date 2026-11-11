@@ -89,8 +89,11 @@ class TestCliResourceLoad < Minitest::Test
 
   def test_spinner_hides_the_internal_intake_label
     session = Master::CLI::Session.allocate
+    session.define_singleton_method(:spin_suffix) { "" }
 
-    assert_equal %q{* \_}, session.send(:spin_line, "intake", "*")
+    line = session.send(:spin_line, "intake", "*")
+    assert_equal %q{* \_}, line
+    refute_includes line, "intake"
   end
 
   def test_spinner_tint_tracks_cpu_load_from_light_to_dark_red
