@@ -74,17 +74,19 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
-  def test_ollama_stands_by_default_and_the_kill_switch_removes_it
-    # Operator decision 2026-11-08 arms the local bed in models.yml itself
-    # ("yes wire ollama after deploy"); the env opt-in is for hosts where the
-    # config still says nothing.
+  def test_ollama_stays_out_of_the_pool_until_explicitly_enabled
     ENV.delete("MASTER_OLLAMA_ENABLED")
-    assert Selection.ollama_enabled?
-
-    ENV["MASTER_NO_OLLAMA"] = "1"
     refute Selection.ollama_enabled?
     assert_empty Selection.order([LOCAL])
-    assert_empty Selection.order_or_all([LOCAL]), "order_or_all must not resurrect a killed local lane"
+    assert_empty Selection.order_or_all([LOCAL]), "a disabled local lane must not be resurrected"
+
+    ENV["MASTER_OLLAMA_ENABLED"] = "1"
+    assert Selection.ollama_enabled?, "the operator can deliberately restore the local lane"
+
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    refute Selection.ollama_enabled?, "the hard-off switch still overrides the opt-in"
+    assert_empty Selection.order([LOCAL])
+    assert_empty Selection.order_or_all([LOCAL])
   end
 
   def test_zero_key_probe_serves_a_reachable_local_brain_only_without_keys

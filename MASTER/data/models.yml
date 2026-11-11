@@ -229,9 +229,9 @@ model_defs:
     <<: *model_defaults
     context_window: 4096
     score: { quality: 0.62, speed: 0.25, cost: 1.0 }
-# Ollama's local tier is retained for an explicitly enabled future recovery
-# path, but is disabled by default while the operator's local account/quota
-# constraint is active. Do not enable it implicitly through discovery.
+# Ollama remains catalogued as a future recovery option, but the
+# operator's current account/quota constraint keeps it out of the live pool.
+# Do not enable it by zero-key discovery or background warmup.
 models:
   grok_primary:
     - *grok_cli_auto
@@ -676,15 +676,11 @@ replicate_chat:
 # proves presence, not permission. keep_alive holds the model between turns;
 # max_num_ctx caps the request window (ollama_sender.rb).
 ollama:
-  # Enabled by operator decision 2026-11-08 ("yes wire ollama after deploy"):
-  # chat went to the free tier's online lanes first and a dead-lane roulette
-  # cost a two-word turn 25 minutes. The local bed leads the free tier now;
-  # with no model present the presence probe says unreachable and the chain
-  # degrades exactly as before, so the enable is safe on every host.
-  enabled: true
-  # probe: with no remote key configured anywhere, a reachable local daemon
-  # becomes the fallback lane by default; MASTER_NO_OLLAMA=1 refuses it.
-  probe: true
+  # Operator instruction 2026-11-11: keep Ollama out of the model pool while
+  # the local account/quota constraint is active. Re-enable only deliberately.
+  enabled: false
+  # No automatic local fallback based on an empty API-key inventory.
+  probe: false
   # The operator owns the disk the prompt lands on: the one posture that
   # earns `anonymous` today, so the local bed is the lane a :sensitive
   # request may ride (ModelRouter::PrivacyPosture).
@@ -707,7 +703,7 @@ ollama:
   # quota state (lane_health.rb warm_probe). The live rehearsal on the 8 GB
   # Mac is the operator's remaining step.
   warm_probe:
-    enabled: true
+    enabled: false
     model: "gemma3:4b"
     interval_s: 900
     num_predict: 1
