@@ -64,6 +64,15 @@ class TestCodeIndexBrief < Minitest::Test
     end
   end
 
+  def test_never_built_index_is_disclosed_as_not_built
+    Dir.mktmpdir do |root|
+      index = Master::Review::CodeIndex.new(root:)
+      refute index.complete?
+      refute index.built?
+      assert_includes index.summary, "Index coverage: NOT_BUILT"
+    end
+  end
+
   def test_broken_source_is_identified_as_an_incomplete_index
     Dir.mktmpdir do |root|
       root = File.realpath(root)
