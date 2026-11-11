@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../execution/contract"
+
 require "json"
 require_relative "../io/exec"
 require "time"
@@ -96,6 +98,7 @@ module Operator
         out << "    result: #{row[:message]}" unless row[:message].empty?
         out << "    receipt: #{row[:receipt]}"
         out << "    assessment: #{row[:assessment_proof]}"
+        out << "    verification: #{row[:assessment_verification_summary]}"
         out << "    finished: #{row[:finished]}" unless row[:finished].empty?
       end
       mission = data[:mission]
@@ -164,12 +167,48 @@ module Operator
         message: run["message"].to_s.gsub(/\s+/, " ").strip[0, 180],
         receipt: receipt_summary(run["evidence"]),
         assessment_proof: assessment_proof_summary(assessment_details),
+        assessment_verification: assessment_verification_details(run),
+        assessment_verification_summary: assessment_verification_summary(assessment_verification_details(run)),
         assessment_details:,
       }
     end
 
     # Assessment integrity is read through the same verifier that /fix uses
     # before DONE. Preserve structured details for JSON/API consumers as well.
+    def assessment_verification_details(run)
+      evidence = run.dig("evidence", "assessment_verification")
+      return { "status" => "not_recorded" } unless evidence.is_a?(Hash)
+
+      status = evidence["status"].to_s
+      unless Master::Execution::Contract::VERIFICATION_STATUSES.map(&:to_s).include?(status)
+        return { "status" => "invalid" }
+      end
+
+      evidence.slice(
+        "schema_version", "id", "subject", "verifier", "status", "scope_digest",
+        "checked_count", "failure_count", "warning_count", "unchecked_count", "complete"
+      )
+    rescue StandardError
+      { "status" => "unavailable" }
+    end
+
+    def assessment_verification_summary(evidence)
+      status = evidence["status"].to_s
+      return "not recorded" if status == "not_recorded"
+      return "unavailable" if status == "unavailable"
+      return "invalid" if status == "invalid"
+
+      checked = evidence["checked_count"]
+      failures = evidence["failure_count"]
+      unchecked = evidence["unchecked_count"]
+      fields = []
+      fields << "checked=#{checked}" unless checked.nil?
+      fields << "findings=#{failures}" unless failures.nil?
+      fields << "unmeasured=#{unchecked}" unless unchecked.nil?
+      completeness = evidence["complete"] == true ? "complete" : "incomplete"
+      [status, completeness, fields.join(" ")].reject(&:empty?).join(" ")
+    end
+
     def assessment_proof_details(run)
       receipt = run["assessment_receipt"]
       return { "status" => "not_recorded" } unless receipt.is_a?(Hash)
