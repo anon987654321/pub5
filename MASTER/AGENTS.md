@@ -36,6 +36,13 @@ probe; only its provider response proves that free compute answered. Rendered
 RAILS evidence starts with `MASTER/bin/operator browser install`, then
 `MASTER/bin/operator visual sweep APP --one-page` before the full sweep.
 
+The root TODO executor is opt-in: start with `MASTER_BACKLOG_AUTORUN=1 MASTER/bin/master`.
+It queues one mechanical, single-tree item at a time through the existing
+Mission/TaskSteward and /fix pipeline. Product choices, design reviews,
+operator-only seams, external actions and missing proof remain blocked for a
+human. It records terminal delivery receipts; it never edits TODO checkboxes
+on the model's say-so.
+
 ## Task entry and artifact preservation
 
 For every substantive change, state intent, repository-relative scope, mandatory preservation
