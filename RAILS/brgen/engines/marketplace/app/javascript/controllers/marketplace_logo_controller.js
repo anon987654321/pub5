@@ -49,6 +49,9 @@ export default class extends Controller {
     if (this.hasBannerTarget) {
       this.bannerTarget.querySelectorAll("[data-marketplace-logo-particle]").forEach((particle) => particle.remove())
     }
+    if (this.hasNumberTarget) {
+      this.numberTarget.querySelectorAll(".marketplace-logo-count-plus").forEach((node) => node.remove())
+    }
     this.burstAnimation = null
   }
 
@@ -62,6 +65,15 @@ export default class extends Controller {
   }
 
   #run(anime) {
+    // Turbo can reconnect this controller after a cached visit. Rebuild the
+    // same opening state instead of inheriting the previous final frame.
+    if (this.hasSmileyTarget) this.smileyTarget.style.opacity = "1"
+    if (this.hasCartTarget) this.cartTarget.style.opacity = "0"
+    if (this.hasNumberTarget) {
+      this.numberTarget.style.opacity = "0"
+      this.numberTarget.textContent = "0"
+    }
+
     const smileyPaths = this.smileyPathTargets
     const cartPaths = this.cartPathTargets
     const blinkPaths = smileyPaths.filter((el) => el.dataset.marketplaceLogoBlinkParam === "true")
@@ -149,7 +161,9 @@ export default class extends Controller {
 
   #burst(anime) {
     if (!this.hasNumberTarget || !this.hasBannerTarget) return
+    this.numberTarget.querySelectorAll(".marketplace-logo-count-plus").forEach((node) => node.remove())
     const plus = document.createElement("span")
+    plus.className = "marketplace-logo-count-plus"
     plus.textContent = "+"
     this.numberTarget.appendChild(plus)
 
