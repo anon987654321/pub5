@@ -161,9 +161,9 @@
     if (!SEMANTIC_SUBJECT.enabled || !subject || typeof subject !== "object" || Array.isArray(subject)) return null;
     const declaredKind = String(subject.kind || "").toLowerCase().trim();
     const declaredForm = String(subject.form || subject.type || "").toLowerCase().trim();
-    const kind = declaredKind === "object" || !subjectFeatures(declaredKind).length
+    const kind = declaredKind === "object"
       ? declaredForm || declaredKind
-      : declaredKind;
+      : declaredKind || declaredForm;
     const confidence = Math.max(0, Math.min(1, finite(subject.confidence, 0.76)));
     if (confidence < finite(SEMANTIC_SUBJECT.min_confidence, 0.42)) return null;
 
@@ -619,8 +619,10 @@
   }
 
   function setSubjectFromVisual(value, descriptor) {
-    const normalized = normalizeVisualSubject(descriptor);
-    return normalized ? setSubjectForm("object", normalized) : setSubjectFromText(value);
+    if (descriptor !== null && descriptor !== undefined) {
+      return setConversationSubject(value, descriptor);
+    }
+    return setSubjectFromText(value);
   }
 
   // The semantic subject follows the active conversation and returns to the
