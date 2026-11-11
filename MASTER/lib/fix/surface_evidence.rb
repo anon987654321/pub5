@@ -33,6 +33,38 @@ module Master
         .rb .rake .gemspec .erb .js .mjs .cjs .ts .tsx .jsx
         .sh .bash .ksh .zsh
       ].freeze
+      RUBY_SYNTAX_PROBE = <<~'RUBY'.freeze
+        ARGV.each do |path|
+          begin
+            if defined?(RubyVM::InstructionSequence)
+              RubyVM::InstructionSequence.compile_file(path)
+            elsif !require("ripper") || !Ripper.sexp(File.read(path))
+              raise SyntaxError, "parse failed"
+            end
+          rescue StandardError, ScriptError => error
+            warn "#{path}: #{error.class}: #{error.message}"
+            exit 1
+          end
+        end
+      RUBY
+      ERB_SYNTAX_PROBE = <<~'RUBY'.freeze
+        require "erb"
+        ARGV.each do |path|
+          begin
+            source = ERB.new(File.read(path), trim_mode: "-").src
+            if defined?(RubyVM::InstructionSequence)
+              RubyVM::InstructionSequence.compile(source, path)
+            elsif !require("ripper") || !Ripper.sexp(source)
+              raise SyntaxError, "parse failed"
+            end
+          rescue StandardError, ScriptError => error
+            warn "#{path}: #{error.class}: #{error.message}"
+            exit 1
+          end
+        end
+      RUBY
+      private_constant :RUBY_SYNTAX_PROBE, :ERB_SYNTAX_PROBE
+
       SOURCE_TYPES = %w[file directory symlink other].freeze
       COMPLETE_STATUSES = %w[assessed_clean not_applicable].freeze
       SURFACES = %w[
@@ -497,8 +529,7 @@ module Master
         end
         if ruby_paths.any?
           command = [
-            RbConfig.ruby, "-e",
-            'ARGV.each { |path| begin; if defined?(RubyVM::InstructionSequence); RubyVM::InstructionSequence.compile_file(path); elsif !require("ripper") || !Ripper.sexp(File.read(path)); raise SyntaxError, "parse failed"; end; rescue Exception => error; warn "#{path}: #{error.class}: #{error.message}"; exit 1; end }',
+            RbConfig.ruby, "-e", RUBY_SYNTAX_PROBE,
             *ruby_paths.map { |path| File.expand_path(path, @root) }
           ]
           outcome = execute_command(command, chdir: @root, deadline:)
@@ -512,8 +543,10 @@ module Master
 
         erb_paths = @plan.sources.map(&:path).select { |path| File.extname(path).downcase == ".erb" }
         if erb_paths.any? && deadline_remaining(deadline).positive?
-          loader = 'require "erb"; ARGV.each { |path| begin; source = ERB.new(File.read(path), trim_mode: "-").src; if defined?(RubyVM::InstructionSequence); RubyVM::InstructionSequence.compile(source, path); elsif !require("ripper") || !Ripper.sexp(source); raise SyntaxError, "parse failed"; end; rescue Exception => error; warn "#{path}: #{error.class}: #{error.message}"; exit 1; end }'
-          outcome = execute_command([RbConfig.ruby, "-e", loader, *erb_paths.map { |path| File.expand_path(path, @root) }], chdir: @root, deadline:)
+          outcome = execute_command(
+            [RbConfig.ruby, "-e", ERB_SYNTAX_PROBE, *erb_paths.map { |path| File.expand_path(path, @root) }],
+            chdir: @root, deadline:
+          )
           checked["erb"] = erb_paths.size
           if outcome["status"] == "failed"
             failures << outcome.merge("language" => "erb")

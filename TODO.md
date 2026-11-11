@@ -340,7 +340,15 @@ measure is already owned by the Bymorgen item above.
   check-registry refusal now have source coverage on `main`; their focused
   test runs remain NOT_RUN. L4's stored census is not re-baselined until a
   pinned Ruby 4.0.5 run has reported exact member drift. Continue with the
-  genuinely open R3/R8–R13/R16–R17/H2–H8 findings. The LLMDispatcher
+  genuinely open R3/R8–R13/R16–R17/H2–H8 findings. R11 now has
+  regression coverage for the load-bearing rescue boundaries: Swallow.safe_call
+  handles StandardError but propagates SystemExit, Interrupt and NoMemoryError;
+  the CLI turn boundary reports child SyntaxError/NoMemoryError as infrastructure
+  results and preserves process exits and operator interrupts. The Ruby/ERB
+  compile-only probes now catch StandardError and ScriptError, not Exception,
+  so signals and process-control failures remain visible. Five focused
+  regressions are authored but NOT_RUN. The full source census of load-bearing
+  rescue sites and review of each fallback's operational consequence remain open. The LLMDispatcher
   Replicate chat poll is source-fixed for URL trust, bearer-token confinement
   and network deadlines. MASTER's ReplicateClient now reads private token
   files through a verified descriptor with a 256 KiB cap, fingerprints
