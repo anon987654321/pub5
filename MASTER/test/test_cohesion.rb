@@ -358,6 +358,7 @@ end
     scan = Operator::Cohesion.method_shape_scan("MASTER", root: @tmp)
     cluster = scan[:clusters].find { |row| row[:methods].any? { |method| method[:method] == "safe_slug" } }
 
+    assert_equal 3, scan[:files], "the temp-directory prefix must not trip a repository-relative exclusion"
     assert_equal 3, scan[:parsed]
     refute_empty scan[:clusters]
     assert_equal 3, cluster[:files]
