@@ -62,7 +62,7 @@ module Acceptance
       env[key] = nil
     end
     env["BUNDLE_GEMFILE"] = File.join(dir, "Gemfile")
-    ruby = Operator::RubyRunner.ruby_cmd(root: File.expand_path("../../..", dir))
+    ruby = Operator::RubyRunner.ruby_cmd(root: File.expand_path("../..", dir))
     env["PATH"] = "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}"
     Open3.capture3(env, ruby, "bin/rails", "test", "test/account_round_trip_test.rb", chdir: dir)
   end
