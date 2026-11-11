@@ -9,8 +9,9 @@ module Master
   module Review
     # Keeps CodeIndex's symbol graph between boots under .master/code_index/.
     #
-    # The file records, per source file, the mtime and size it was parsed at, so
-    # the next boot re-parses only files that differ. Its name comes from the
+    # The file records per-source nanosecond mtime, size and content digest,
+    # so same-size edits with preserved timestamps cannot leave a stale graph.
+    # Its name comes from the
     # workspace root, not from the tree hash: a name keyed by the tree hash
     # changes on every edit and leaves nothing to rebuild incrementally from. The
     # tree hash rides inside the file, so an untouched tree is known without
