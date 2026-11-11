@@ -70,13 +70,26 @@ tests.each do |t|
   next unless File.file?(t)
   cmd = [bundle, "exec", ruby, "-Ilib:test", t]
   puts "\n## #{t}"
-  out, status = Open3.capture2e(*cmd)
-  puts out.lines.last(12).join
-  results << [t, status.exitstatus, out]
+  status_code = nil
+  begin
+    Open3.popen2e(*cmd) do |stdin, stdout, wait_thread|
+      stdin.close
+      stdout.each_line do |line|
+        $stdout.write(line)
+        $stdout.flush
+      end
+      status_code = wait_thread.value.exitstatus
+    end
+  rescue SystemCallError => e
+    warn "runner_error=#{e.class}: #{e.message}"
+    status_code = 127
+  end
+  puts "exit=#{status_code.inspect}"
+  results << [t, status_code]
 end
 
-failed = results.select { |_, code, _| code != 0 }
+failed = results.reject { |_, code| code == 0 }
 puts "\n== summary =="
 puts "ran=#{results.size} failed=#{failed.size} missing=#{missing.size}"
-failed.each { |t, code, _| puts "FAIL #{t} exit=#{code}" }
+failed.each { |t, code| puts "FAIL #{t} exit=#{code.inspect}" }
 exit(failed.empty? && missing.empty? ? 0 : 1)
