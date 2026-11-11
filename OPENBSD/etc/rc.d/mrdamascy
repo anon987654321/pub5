@@ -39,9 +39,9 @@ rc_bg=YES
 rc_reload=NO
 
 # port holders: begin
-# Stop this app by its Falcon host config path, then use fstat(1) to catch
-# any orphaned listener by socket rather than by process name. This leaves other
-# Falcon applications alone and refuses to start while any process owns the port.
+# Falcon 0.55.3 changes the worker title to its endpoint and live statistics;
+# match this service by its unique loopback endpoint. fstat catches orphaned
+# listeners by socket as a fallback and refuses a second owner of the port.
 # fstat rows read USER CMD PID FD internet stream tcp ADDR LOCAL [ARROW PEER];
 # a listener has no peer, so relayd's and the app's accepted connections are ignored.
 port_holders() {
