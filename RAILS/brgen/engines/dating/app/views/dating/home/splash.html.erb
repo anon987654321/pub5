@@ -10,62 +10,12 @@
          data-action="pointerdown->dating-splash#pointerDown pointerup->dating-splash#pointerUp">
   <%= link_to t("dating.splash.start"), root_path(start: 1), class: "dating-splash-start" %>
 
-  <div class="dating-splash-heart" aria-hidden="true">
-    <%# The operator's own heart (CodePen qBmGKWo): five nested css-doodle
-        hearts, each a ring cut from a rotating conic gradient in the
-        operator's palette. Kept as written, with two changes: the grid fills
-        this box instead of 50vmin, and the cut-out paints with the splash
-        background, inherited through the shadow root, instead of the pen's
-        purple. The palette is the operator's and lives in the program, because
-        css-doodle picks from it per cell. scan: intentional %>
-    <css-doodle class="dating-splash-doodle">
-      :doodle {
-        @grid: 5x1 / 100%;
-      }
-
-      @size: calc(100% - @i() * 3%);
-      @place-cell: center;
-      @shape: heart;
-      overflow: hidden;
-
-      :after {
-        content: '';
-        @size: calc(100% - 20px);
-        @shape: heart;
-        background: var(--dating-splash-bg);
-        z-index: 1;
-      }
-
-      :before {
-        content: '';
-        position: absolute;
-        @size: 200%;
-        background: conic-gradient(
-          @pd(#e94e77, #d68189, #c6a49a, #c6e5d9, #f4ead5) @p(10%, 40%),
-          transparent 0
-        );
-        animation: cycle @r(3s, 5s, .1) linear infinite;
-        animation-delay: -@r(8s);
-        z-index: 0;
-      }
-
-      @keyframes cycle {
-        to { transform: rotate(1turn); }
-      }
-    </css-doodle>
-    <%# The same heart standing still: what shows before the library arrives,
-        without script, and for a reader who asked for reduced motion. %>
-    <svg class="dating-splash-still" viewBox="0 0 100 104" focusable="false">
-      <defs>
-        <path id="dating-splash-heart-path" pathLength="100"
-              d="M50 100 C 30 76, 6 54, 6 28 C 6 8, 34 2, 50 24 C 66 2, 94 8, 94 28 C 94 54, 70 76, 50 100 Z"/>
-      </defs>
-      <use href="#dating-splash-heart-path"/>
-      <use href="#dating-splash-heart-path" transform="translate(50 52) scale(.97) translate(-50 -52)"/>
-      <use href="#dating-splash-heart-path" transform="translate(50 52) scale(.94) translate(-50 -52)"/>
-      <use href="#dating-splash-heart-path" transform="translate(50 52) scale(.91) translate(-50 -52)"/>
-      <use href="#dating-splash-heart-path" transform="translate(50 52) scale(.88) translate(-50 -52)"/>
-    </svg>
+  <div class="dating-splash-heart">
+    <%# The original Hjerterom heart, recovered from pub4 history. Its shape,
+        red ground and animated shards are kept intact; only the vertical label
+        is Dating. The inline SVG pauses at its first frame for reduced motion. %>
+    <%= render "dating/home/hjerterom_logo", compact: true,
+               svg_uid: "dating-splash", label: t("dating.splash.title") %>
   </div>
 
   <%= tag.h1 t("dating.splash.title"), class: "dating-splash-title" %>

@@ -79,18 +79,41 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes controller, "targets: particles"
     refute_includes controller, 'querySelectorAll(":scope > span")'
     assert_includes controller, "particles.forEach((particle) => particle.remove())"
+    assert_includes controller, 'if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)'
+    assert_includes controller, "this.#staticEndState()"
   end
 
-  def test_dating_still_mark_has_five_rings_without_motion
+  def test_dating_reuses_the_historical_hjerterom_heart
     splash = Rails.root.join("engines/dating/app/views/dating/home/splash.html.erb").read
+    logo = Rails.root.join("engines/dating/app/views/dating/home/_hjerterom_logo.html.erb").read
+    controller = Rails.root.join("engines/dating/app/javascript/controllers/dating_splash_controller.js").read
     stylesheet = Rails.root.join("app/assets/stylesheets/_brgen_dating.scss").read
 
-    assert_equal 5, splash.scan('<use href="#dating-splash-heart-path"').size
-    refute_match(/stroke-dash(?:array|offset)/, splash)
-    assert_includes stylesheet, ".dating-splash-still use:nth-of-type(even)"
-    assert_includes stylesheet, "@media (prefers-reduced-motion: no-preference)"
-    assert_includes stylesheet, "@media (prefers-reduced-motion: reduce)"
-    assert_includes stylesheet, ".dating-splash-doodle {\n    display: none;\n  }"
+    assert_includes splash, 'render "dating/home/hjerterom_logo"'
+    assert_includes splash, "compact: true"
+    refute_includes splash, "<css-doodle"
+    refute_includes splash, "dating-splash-heart-path"
+
+    # Provenance and geometry are pinned to the old Hjerterom partial in pub4.
+    assert_includes logo, "0f586be5715f91b15ce3b0f0621506726ccef4e2"
+    assert_includes logo, 'M100,26.79625 c-4.9725,-13.4975,-30,-11.4925'
+    assert_includes logo, 'fill="#DC143C"'
+    assert_includes logo, 'id="heartClip-<%= svg_uid %>"'
+    assert_equal 14, logo.scan("<path ").size
+    assert_equal 60, logo.scan(/<animate(?:Transform)?\\b/).size
+    assert_includes logo, 'data-dating-splash-target="hjerterom"'
+
+    # Reduced motion pauses the original SMIL artwork at its initial frame;
+    # changing the preference back resumes it without another logo asset.
+    assert_includes controller, 'window.matchMedia("(prefers-reduced-motion: reduce)")'
+    assert_includes controller, "setCurrentTime?.(0)"
+    assert_includes controller, "pauseAnimations?.()"
+    assert_includes controller, "unpauseAnimations?.()"
+    assert_includes controller, 'addEventListener("change"'
+    assert_includes controller, "removeEventListener"
+
+    assert_includes stylesheet, ".dating-hjerterom-logo"
+    assert_includes stylesheet, "aspect-ratio: 3 / 2"
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark

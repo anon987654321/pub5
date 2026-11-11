@@ -1,19 +1,34 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Dating's first screen: "sveip for å begynne". A swipe in any direction, or the
-// link itself, opens the deck; without script the link alone does, so the page
-// works as plain HTML. The heart is a css-doodle program written in the view;
-// the library is fetched here, on this screen only, and not at all when the
-// reader asks for reduced motion, which keeps the still SVG heart instead.
+// link itself, opens the deck; without script the link alone does. The Hjerterom
+// SVG stays self-contained and its original SMIL motion pauses for reduced motion.
 export default class extends Controller {
   static values = { url: String }
-  static targets = ["doodle"]
+  static targets = ["hjerterom"]
 
   connect() {
     this.origin = null
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    this.motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    this.motionChange = () => this.#syncMotion()
+    this.motionQuery.addEventListener("change", this.motionChange)
+    this.#syncMotion()
+  }
 
-    import("css-doodle").catch(() => {})
+  disconnect() {
+    this.motionQuery?.removeEventListener("change", this.motionChange)
+  }
+
+  #syncMotion() {
+    if (!this.hasHjerteromTarget) return
+
+    const svg = this.hjerteromTarget
+    if (this.motionQuery.matches) {
+      svg.setCurrentTime?.(0)
+      svg.pauseAnimations?.()
+    } else {
+      svg.unpauseAnimations?.()
+    }
   }
 
   pointerDown(event) {
