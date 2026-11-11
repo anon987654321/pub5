@@ -170,6 +170,19 @@ class WorldTest < Minitest::Test
     end
   end
 
+  def test_write_refuses_dangling_symlink_ancestors_before_mkdir
+    with_world do |world, root|
+      outside = File.join(File.dirname(root), "world-dangling-#{SecureRandom.hex(4)}")
+      File.symlink(outside, File.join(root, "redirect"))
+
+      result = world.perform(E.write("redirect/new/deep/escaped.txt", "no"))
+
+      refute result.ok?
+      assert_match(/path escapes workspace/, result.message)
+      refute File.exist?(File.join(outside, "new")), "mkdir_p must not create through a dangling symlink"
+    end
+  end
+
   def test_a_symlink_out_of_the_workspace_cannot_be_read
     with_world do |world, root|
       outside = File.join(File.dirname(root), "outside-#{SecureRandom.hex(4)}.txt")
