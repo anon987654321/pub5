@@ -48,12 +48,14 @@ module Master
         end
 
         def visit_def_node(node)
-          separator = node.receiver || @singleton_depth.positive? ? "." : "#"
+          separator = (node.receiver || @singleton_depth.positive?) ? "." : "#"
           add_method_symbol(node.name, node, separator:)
           @method_depth += 1
-          super
-        ensure
-          @method_depth -= 1
+          begin
+            super
+          ensure
+            @method_depth -= 1
+          end
         end
 
         # class << self changes the meaning of every implicit definition in
