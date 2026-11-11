@@ -193,6 +193,31 @@ class TestEffectObserver < Minitest::Test
     end
   end
 
+  def test_effect_id_cannot_be_reused_by_another_observer_or_run
+    Dir.mktmpdir do |root|
+      bus = Master::Trace::EventBus.new(
+        event_log: Master::Trace::Log::Event.new(root:),
+        evidence_log: Master::Trace::Log::Evidence.new(root:)
+      )
+      effect = Master::Core::Effect.write("note.txt", "x")
+      first = Master::Trace::EffectObserver.new(bus:, run_id: "run-one")
+      second = Master::Trace::EffectObserver.new(bus:, run_id: "run-two")
+      options = { turn: 1, effect:, effect_id: "globally-unique-effect" }
+
+      first.call(stage: :before, **options)
+      error = assert_raises(ArgumentError) { second.call(stage: :before, **options) }
+      assert_match(/duplicate before-event/, error.message)
+
+      first.call(
+        stage: :after, **options,
+        observation: Master::Core::Observation.ok("completed")
+      )
+      restarted = Master::Trace::EffectObserver.new(bus:, run_id: "run-three")
+      duplicate = assert_raises(ArgumentError) { restarted.call(stage: :before, **options) }
+      assert_match(/duplicate before-event/, duplicate.message)
+    end
+  end
+
   def test_corrupt_effect_receipt_history_blocks_observer_startup
     Dir.mktmpdir do |root|
       directory = File.join(root, "runtime", "events")
