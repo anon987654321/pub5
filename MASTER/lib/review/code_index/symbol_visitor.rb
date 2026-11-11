@@ -78,6 +78,7 @@ module Master
         end
 
         def visit_call_node(node)
+          record_mixin_relations(node)
           record_generated_methods(node)
           method_name = node.name.to_s
           return super unless method_name.match?(/\A[_a-z][a-z0-9_]*[!?]?\z/i) && method_name.length > 1
@@ -100,6 +101,35 @@ module Master
         end
 
         private
+
+        def record_mixin_relations(node)
+          return unless @method_depth.zero? && !@scope.empty?
+          return unless node.receiver.nil? || node.receiver.is_a?(Prism::SelfNode)
+          return unless %i[include prepend extend].include?(node.name)
+
+          owner = @scope.join("::")
+          symbol = @symbols.reverse.find do |row|
+            row.fqn == owner && %i[class module].include?(row.type)
+          end
+          return unless symbol
+
+          (node.arguments&.arguments || []).each do |argument|
+            name = static_constant_name(argument)
+            next unless name
+
+            relation = "#{node.name}:#{name}"
+            symbol.includes << relation unless symbol.includes.include?(relation)
+          end
+        end
+
+        def static_constant_name(node)
+          case node
+          when Prism::ConstantReadNode, Prism::ConstantPathNode, Prism::ConstantPathTargetNode
+            const_name(node)
+          else
+            nil
+          end
+        end
 
         def record_generated_methods(node)
           return unless @method_depth.zero?
