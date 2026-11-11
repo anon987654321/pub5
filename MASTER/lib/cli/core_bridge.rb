@@ -324,6 +324,8 @@ module Master
       end
 
       def settle_mission(mission, done)
+        return mission if mission.record&.fetch("state", nil) == "blocked"
+
         if done.reason == :complete
           mission.finish!(state: "completed", summary: done.summary)
         elsif %i[needs_user blocked].include?(done.reason)
@@ -568,10 +570,13 @@ module Master
         bus&.publish("backlog_executor:pushed", remote: "origin", branch: "main", commit: head.strip)
         Master::Trace::Dmesg.status("backlog0", "pushed #{head.strip[0, 12]} to origin/main")
         head.strip
-      rescue DeliveryFailed
+      rescue DeliveryFailed => error
+        mission.block!(reason: error.message)
         raise
       rescue StandardError => error
-        raise DeliveryFailed, "DELIVERY_FAILED: #{error.class}: #{error.message}"
+        failure = DeliveryFailed.new("DELIVERY_FAILED: #{error.class}: #{error.message}")
+        mission.block!(reason: failure.message)
+        raise failure
       end
 
       def build_effect_observer(bus:, mission_id: nil, attempt_id: nil)
