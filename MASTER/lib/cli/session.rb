@@ -183,22 +183,10 @@ module Master
       def foreign_write_end(target)
         return unless @reading_input && tty_target?(target)
 
-        rearm_activity_row_after_foreign_write(target)
+        # Do not print a blank spinner row after every dmesg event. The spinner
+        # reclaims one row only after the event stream has been quiet briefly.
+        @last_foreign_write_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         redraw_active_input
-      end
-
-      # A guarded detail block temporarily yields the reserved spinner row to
-      # its payload. Put the row back before Reline redraws the editable draft.
-      def rearm_activity_row_after_foreign_write(target)
-        return if @activity_row_reserved
-        return unless @spin_thread&.alive? && @turn_worker&.alive?
-        return if @turn_queue_paused || @closed
-
-        target.puts
-        target.flush if target.respond_to?(:flush)
-        @activity_row_reserved = true
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.activity_row.rearm", event_bus: @refs.bus)
       end
 
       def redraw_active_input
