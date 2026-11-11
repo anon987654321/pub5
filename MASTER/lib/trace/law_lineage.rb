@@ -73,29 +73,19 @@ module Master
       end
 
       # Law identity and file order come from the flat catalogue. Constitutional
-      # precedence is the ordered node sequence declared by laws.yml.
+      # precedence is the ordered node sequence declared by laws.yml. A path
+      # explanation names the governing nodes — the nine laws that declare
+      # their own node; every other entry hangs under one of them and would
+      # bury the answer under the whole catalogue.
       def constitutional_laws
         order = Master::Soul.invariant_order
-        rows = Master.law_entries(root: @root)
+        rows = Master.law_entries(root: @root).select { |entry| entry["node"] }
         rows.each_with_index.map do |entry, index|
-          node = constitutional_node(entry, rows)
-          node_index = node && order.index(node)
+          node = entry["node"].to_s
+          node_index = order.index(node)
           position = node_index ? node_index * 100_000 + index : order.length * 100_000 + index
           Law.new(entry.fetch("id").to_s, position, entry.fetch("statement").to_s)
         end
-      end
-
-      def constitutional_node(entry, rows, seen = {})
-        id = entry.fetch("id").to_s
-        return if seen[id]
-        seen[id] = true
-        return entry["node"].to_s if entry["node"]
-
-        parent = entry["parent"]
-        return unless parent
-
-        parent_entry = rows.find { |row| row["id"].to_s.casecmp?(parent.to_s) }
-        parent_entry && constitutional_node(parent_entry, rows, seen)
       end
 
       def render(node)
