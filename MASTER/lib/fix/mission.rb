@@ -8,6 +8,7 @@ require "securerandom"
 require "socket"
 require "time"
 require_relative "../io/atomic_write"
+require_relative "task_contract"
 
 module Master
   module Fix
@@ -488,24 +489,31 @@ module Master
         end
 
         line = text.lines.find { |entry| entry.match?(/fix done/i) && entry.match?(/proof:/i) }.to_s.strip
-        receipt = {
-          "kind" => "fix_pipeline",
-          "status" => "pass",
-          "scope_paths" => paths,
-          "report_digest" => Digest::SHA256.hexdigest(text),
-          "proof_summary" => line.byteslice(0, 512),
-        }
         with_lock do
           load_writable_unlocked!
           return false unless @record && @record["origin"].to_s == "backlog"
 
-          @record["proof"] = receipt
+          plan = JSON.parse(@record["plan"].to_s)
+          required = Array(plan["proof_types"]).map(&:to_s)
+          allowed = TaskContract.template.fetch("proof_types").map(&:to_s)
+          return false unless plan["executor"] == "root_todo" && plan["proof_map_version"].is_a?(Integer)
+          return false if required.empty? || required.uniq != required || (required - allowed).any?
+
+          @record["proof"] = {
+            "kind" => "fix_pipeline",
+            "status" => "pass",
+            "scope_paths" => paths,
+            "report_digest" => Digest::SHA256.hexdigest(text),
+            "proof_summary" => line.byteslice(0, 512),
+            "proof_map_version" => plan.fetch("proof_map_version"),
+            "required_proof_types" => required,
+          }
           @record["last_seen_at"] = now
           persist!
         end
         emit("mission:proof", id: @id, source: "fix_pipeline", status: "pass", scope_paths: paths.size)
         true
-      rescue ArgumentError, TypeError
+      rescue ArgumentError, TypeError, JSON::ParserError, KeyError
         false
       end
 

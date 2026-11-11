@@ -442,6 +442,7 @@ module Master
           "A missing task contract is an empty new_paths declaration: automated writes may edit existing repository paths but must refuse every new tracked path unless its exact path and reason are declared in an active contract.",
           "A new tracked file needs an exact path and non-empty reason in optional new_paths, inside the task scope. A new directory needs a genuine ownership boundary; never create helpers, tests, docs, config or utility folders merely for convenience.",
           "Proof always includes baseline hashes, a path-scoped diff and a Law assessment. Add relevant tests, rendered/runtime evidence, accessibility review, citations or human review.",
+          *(["Active contract proof requirements: #{current.proof.join(", ")}. These are obligations, not evidence; report each result and keep missing proof INCONCLUSIVE or NOT_RUN."] if current),
           "If a required measurement is absent or a format has no verifier, report INCONCLUSIVE or NOT_RUN; do not infer PASS.",
           "Schema: MASTER/data/task_contract.yml.",
         ].join("\n")

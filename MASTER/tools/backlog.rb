@@ -6,6 +6,7 @@ require "fileutils"
 require_relative "backlog_classify"
 require_relative "backlog_reader"
 require_relative "backlog_store"
+require_relative "../lib/fix/task_contract"
 
 # The backlog generator: one YAML row per checkbox item in the root TODO.md.
 #
@@ -181,6 +182,46 @@ module Backlog
 end
 
 module Backlog
+  # Closed mapping from explicit acceptance commands to the existing
+  # TaskContract proof vocabulary. An unknown command is not guessed.
+  module ProofMap
+    VERSION = 1
+    module_function
+
+    def types_for(row = nil, done_when: nil)
+      command = (done_when || (row && row[:done_when])).to_s.strip.sub(/\\Abundle exec /, "")
+      return [] if command.empty?
+
+      types = case command
+              when "rake test", "rake test:batch"
+                ["full_suite"]
+              when /\\Arake test:[a-z0-9_:.-]+\\z/i,
+                   /\\A(?:ruby -I(?:test|spec)|rspec)(?:\\s|\\z)/
+                ["focused_tests"]
+              when /\\Arake lint(?::[a-z0-9_:.-]+)?\\z/i
+                ["law_assessment"]
+              when %r{\\A(?:MASTER/)?bin/operator (?:visual )?sweep(?:\\s|\\z)}
+                ["rendered_evidence"]
+              when %r{\\A(?:MASTER/)?bin/operator accessibility(?:\\s|\\z)}
+                ["accessibility_review"]
+              else
+                []
+              end
+
+      allowed = Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)
+      unknown = types - allowed
+      raise ArgumentError, "proof map names unknown TaskContract types: #{unknown.join(", ")}" unless unknown.empty?
+
+      types.freeze
+    end
+
+    def valid_types?(values)
+      types = Array(values).map(&:to_s)
+      !types.empty? && types.uniq == types &&
+        (types - Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)).empty?
+    end
+  end
+
   # A deliberately narrow bridge from the generated register to the existing
   # durable Mission/TaskSteward lifecycle. It never edits TODO.md or treats a
   # guessed classification as permission.
@@ -213,13 +254,15 @@ module Backlog
       return :idle unless item
 
       scope = item.fetch(:scope_paths)
+      proof_types = ProofMap.types_for(item)
       goal = [
         "Complete exactly this root TODO item, using MASTER's existing /fix pipeline.",
         "Backlog item: #{item.fetch(:id)}",
         "Task: #{item.fetch(:text)}",
         "Owned tree: #{item.fetch(:tree)}",
         "Exact repository-relative scope: #{scope.join(', ')}",
-        "Acceptance command from the register: #{item[:done_when] || 'select the narrowest relevant existing proof'}",
+        "Acceptance command from the register: #{item[:done_when]}",
+        "Required TaskContract proof types (closed proof-map v#{ProofMap::VERSION}): #{proof_types.join(", ")}. Unknown or absent mappings are not auto-queued.",
         "Do not edit the TODO checkbox. The executor records work only from a durable completed Mission with a delivery summary and no pending repository writes.",
         "Commit each coherent, verified slice and push directly to the existing main branch when the repository-delivery policy authorizes that remote action; do not create PRs, branches, worktrees or GitHub Actions. Stage only task-owned paths after checking git status and preserving unrelated changes.",
         "If the external-publication gate, GitHub authentication or the remote blocks a push, preserve the local commit and report DELIVERY_FAILED; never bypass the gate or claim a push succeeded.",
@@ -241,6 +284,8 @@ module Backlog
         "scope_paths" => scope,
         "new_paths" => new_paths,
         "done_when" => item[:done_when],
+        "proof_map_version" => ProofMap::VERSION,
+        "proof_types" => proof_types,
       )
       mission = @mission_class.new(root: @root).ensure_queued!(
         goal:, scope: @root, model:, effort:, plan:,
@@ -262,7 +307,11 @@ module Backlog
 
       plan = JSON.parse(record["plan"].to_s)
       return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
+      return false unless plan["proof_map_version"] == ProofMap::VERSION
+      return false unless ProofMap.valid_types?(plan["proof_types"])
       proof = record["proof"].is_a?(Hash) ? record["proof"] : {}
+      return false unless proof["proof_map_version"] == plan["proof_map_version"]
+      return false unless Array(proof["required_proof_types"]).map(&:to_s) == Array(plan["proof_types"]).map(&:to_s)
       return false unless proof["kind"] == "fix_pipeline" && proof["status"] == "pass"
       return false unless Array(proof["scope_paths"]).sort == Array(plan["scope_paths"]).map(&:to_s).sort
       return false unless proof["report_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
@@ -313,6 +362,7 @@ module Backlog
       tree = row[:tree].to_s
       return false unless OWNED_TREES.include?(tree)
       return false unless READY_KINDS.include?(row[:kind].to_s)
+      return false unless ProofMap.valid_types?(ProofMap.types_for(row))
       paths = Array(row[:scope_paths]).map(&:to_s).uniq
       return false if paths.empty?
       return false unless paths.all? { |path| path.start_with?("#{tree}/") }

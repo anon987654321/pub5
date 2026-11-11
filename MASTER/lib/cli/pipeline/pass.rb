@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require_relative "../../operator/check_chain"
 require_relative "../../fix/outcome_policy"
 require_relative "../../fix/task_contract"
@@ -528,8 +529,28 @@ def default_apply?(*) = false
             intent: @task_intent,
             scope:,
             preserve: [],
-            proof: ["focused_tests"],
+            proof: ["focused_tests", *backlog_proof_types],
           )
+        end
+
+        def backlog_proof_types
+          mission = Master::Fix::Mission.current(root: @root)
+          return [] unless mission && mission["origin"].to_s == "backlog"
+
+          plan = JSON.parse(mission.fetch("plan").to_s)
+          unless plan["executor"] == "root_todo"
+            raise Master::Fix::TaskContract::Invalid, "backlog mission has no root TODO proof contract"
+          end
+
+          types = Array(plan["proof_types"]).map(&:to_s)
+          allowed = Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)
+          if types.empty? || types.uniq != types || (types - allowed).any?
+            raise Master::Fix::TaskContract::Invalid, "backlog mission has absent or invalid proof types"
+          end
+
+          types
+        rescue JSON::ParserError, KeyError => error
+          raise Master::Fix::TaskContract::Invalid, "backlog proof plan is invalid: #{error.message}"
         end
 
         def run_fix(abs)
