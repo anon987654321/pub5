@@ -253,7 +253,7 @@ module Master
       # as an explicit --mode flag before the shared dispatcher sees the request.
       def inferred_args(command:, value:, text:, reading:, mode: nil, extra_flags: nil)
         args = PIPELINE_SLASH.include?(command) ? pass_command_args(value, text) : value.args.to_s
-        args = ["--mode=#{mode}", extra_flags, args].reject(&:empty?).join(" ") if mode
+        args = ["--mode=#{mode}", extra_flags, args].compact.reject(&:empty?).join(" ") if mode
         reading ? reading_args(args) : args
       end
 
@@ -412,11 +412,11 @@ module Master
 
       def rewritten_pipeline(name, rest)
         if (mode = FIX_MODE_ALIASES[name])
-          return ["/fix", "--mode=#{mode}", FIX_MODE_EXTRA_FLAGS[name], rest].reject(&:empty?).join(" ")
+          return ["/fix", "--mode=#{mode}", FIX_MODE_EXTRA_FLAGS[name], rest].compact.reject(&:empty?).join(" ")
         end
         return ["/fix", rest].reject(&:empty?).join(" ") if name == "fix"
 
-        ["/fix", pinned_flag(name), rest].reject(&:empty?).join(" ")
+        ["/fix", pinned_flag(name), rest].compact.reject(&:empty?).join(" ")
       end
 
       def pinned_flag(name)
