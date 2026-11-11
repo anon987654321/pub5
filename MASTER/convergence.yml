@@ -275,14 +275,14 @@ workstreams:
       The shared harmonic vocabulary gains researched Dilla movement grammars (relative-minor answers, the
       J5 IV-iii-vi-ii loop), additive only, every row sourced
     implementation: MASTER/data/music_theory_chords.yml
-    proof: MASTER/test/voice/test_voice_support.rb::test_canonical_music_vocabulary_contains_researched_dilla_grammars_and_voicings (added; pinned Ruby 4.0.5 test NOT_RUN)
+    proof: MASTER/test/voice/test_voice_support.rb::test_canonical_music_vocabulary_contains_researched_dilla_grammars_and_voicings (added; installed compatible Ruby test NOT_RUN)
   - id: dilla_corpus_measures
     state: partial
     title: >-
       Sourced J Dilla microtiming, non-four-bar form, Bach/Satie lineage and Donuts sample-source notes
       are surfaced in the Dilla voice brief without becoming generator settings; exact chord transcription remains a listening gate
     implementation: MASTER/lib/voice/production_dna.rb; MASTER/lib/voice/dilla.rb
-    proof: MASTER/test/voice/test_voice_support.rb::test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator (added; pinned Ruby 4.0.5 test NOT_RUN)
+    proof: MASTER/test/voice/test_voice_support.rb::test_dilla_brief_surfaces_sourced_measurements_without_tuning_the_generator (added; installed compatible Ruby test NOT_RUN)
   - id: free_compute_design_of_record
     state: partial
     title: >-
