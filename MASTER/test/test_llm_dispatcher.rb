@@ -1144,6 +1144,7 @@ class TestLLMDispatcher < Minitest::Test
   public
 
   def test_free_only_never_attaches_a_hosted_provider_key_at_send_time
+    old = ENV["MASTER_FREE_ONLY"]
     dispatcher, = build_dispatcher
     sent = []
     router = Object.new
@@ -1158,7 +1159,6 @@ class TestLLMDispatcher < Minitest::Test
       Master::Result.ok("ok")
     end
 
-    old = ENV["MASTER_FREE_ONLY"]
     ENV["MASTER_FREE_ONLY"] = "1"
     rotator = Master::Io::KeyRotator
     rotator.stub(:active_key_for, "rotated-secret") do
