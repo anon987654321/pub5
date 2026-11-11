@@ -21,14 +21,18 @@ module Master
             ENV["MASTER_FIX_PARALLEL_CANDIDATES"] == "0"
 
           locals = inherited_thread_locals
-          threads = Array.new(count) do |index|
-            Thread.new do
+          threads = []
+          count.times do |index|
+            threads << Thread.new do
+              Thread.current.report_on_exception = false
               locals.each { |key, value| Thread.current[key] = value }
               one_candidate(index, violation:, event:, &block)
             end
           end
           threads.map(&:value)
         ensure
+          # Populate the list before spawning: if a later Thread.new fails,
+          # earlier candidates remain reachable and are stopped here.
           threads&.each { |thread| thread.kill if thread.alive? }
         end
 
