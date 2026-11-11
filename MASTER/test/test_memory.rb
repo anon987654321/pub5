@@ -23,6 +23,8 @@ class TestMemory < Minitest::Test
     release_embedding = Queue.new
     fast_write_finished = Queue.new
     original = Master::Review::Embeddings.method(:embed)
+    original_enabled = Master::Review::Embeddings.method(:enabled?)
+    Master::Review::Embeddings.define_singleton_method(:enabled?) { true }
     Master::Review::Embeddings.define_singleton_method(:embed) do |text, *arguments, **keywords|
       if text == "slow_key slow value"
         embedding_started << true
@@ -49,6 +51,7 @@ class TestMemory < Minitest::Test
     release_embedding << true if release_embedding
     [slow, fast].compact.each(&:join)
     Master::Review::Embeddings.define_singleton_method(:embed, original) if original
+    Master::Review::Embeddings.define_singleton_method(:enabled?, original_enabled) if original_enabled
   end
 
   def test_consolidation_sees_entries_written_by_another_memory_instance
