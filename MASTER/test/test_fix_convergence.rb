@@ -2362,7 +2362,10 @@ end
     assert_equal 20, verification.fetch(:checked_count)
     record = loop.instance_variable_get(:@run_journal).history(limit: Master::Fix::RunJournal::MAX_RUNS)
                   .find { |row| row["id"] == terminal.fetch(:payload).fetch(:run_id) }
-    assert_equal verification, record.dig("evidence", "assessment_verification")
+    persisted = record.dig("evidence", "assessment_verification")
+    assert_equal verification[:id], persisted.fetch("id")
+    assert_equal "pass", persisted.fetch("status")
+    assert_equal 20, persisted.fetch("checked_count")
   end
 
   def test_wishlist_open_proof_downgrades_done_to_plateau
