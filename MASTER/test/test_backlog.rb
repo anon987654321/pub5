@@ -239,6 +239,8 @@ class TestBacklog < Minitest::Test
     assert_equal ["focused_tests"], map.types_for(done_when: "rake test:fix:convergence")
     assert_equal ["focused_tests"], map.types_for(done_when: "ruby -Itest test/test_fix_kernel.rb")
     assert_equal ["focused_tests"], map.types_for(done_when: "ruby MASTER/test/test_fix_kernel.rb")
+    assert_equal ["focused_tests"], map.types_for(done_when: "MASTER/bin/operator test MASTER/test/test_fix_kernel.rb")
+    assert_equal ["focused_tests"], map.types_for(done_when: "cd MASTER && bin/operator test test/test_fix_kernel.rb")
     assert_equal ["focused_tests"], map.types_for(done_when: "rspec spec/fix_spec.rb")
     assert_equal ["law_assessment"], map.types_for(done_when: "rake lint:law_parity")
     assert_equal ["law_assessment"], map.types_for(done_when: "rake audit")
