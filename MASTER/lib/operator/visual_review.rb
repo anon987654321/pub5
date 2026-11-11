@@ -93,7 +93,7 @@ module Operator
       raise Failure, "visual review covers the RAILS tree only, not #{opts.tree}" unless opts.tree == "RAILS"
       raise Failure, "engine #{(opts.engines - DEFAULT_ENGINES).join(",")} is not available, only chrome is wired" unless (opts.engines - DEFAULT_ENGINES).empty?
 
-      opts.out ||= File.join(root, "MASTER", ".master", "visual_review", now.strftime("%Y%m%dT%H%M%S"))
+      opts.out ||= File.join(root, "RAILS", "visual-review-#{now.strftime("%Y%m%dT%H%M%S")}")
       opts
     rescue OptionParser::ParseError => e
       raise Failure, e.message
