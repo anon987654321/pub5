@@ -47,9 +47,13 @@ class MasterBootTest < Minitest::Test
           FileUtils.mkdir_p(File.dirname(full))
           File.write(full, "VALUE = 1\n")
         end
+        done_when = "rake test"
         plan = JSON.generate(
           "executor" => "root_todo", "item_id" => "item-1",
           "item_digest" => "d" * 64, "scope_paths" => paths,
+          "tree" => "MASTER", "done_when" => done_when,
+          "proof_map_version" => Backlog::ProofMap::VERSION,
+          "proof_types" => Backlog::ProofMap.types_for(done_when:),
         )
         goal = "Complete exactly this root TODO item using /fix"
         queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
@@ -75,11 +79,16 @@ class MasterBootTest < Minitest::Test
         fake_git = Object.new
         fake_git.define_singleton_method(:push_target) { ["origin", "HEAD:main"] }
         status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
+        acceptance_commands = []
         capture = lambda do |*args, **|
-          if args.last(3) == ["remote", "get-url", "origin"]
+          argv = args.reject { |argument| argument.is_a?(Hash) }
+          if argv.last(3) == ["remote", "get-url", "origin"]
             ["git@github.com:owner/pub5.git\n", status]
+          elsif argv == ["bundle", "exec", "rake", "test"]
+            acceptance_commands << argv
+            ["suite: 12 runs, 0 failures, 0 errors\n", status]
           else
-            flunk("unexpected preflight command: #{args.inspect}")
+            flunk("unexpected backlog command: #{argv.inspect}")
           end
         end
         push = lambda do |mission:, **|
@@ -90,13 +99,15 @@ class MasterBootTest < Minitest::Test
         end
 
         Master::Io::GitOperations.stub(:new, ->(_root) { fake_git }) do
-          Master::Io::Exec.stub(:capture2e, capture) do
-            Master::CLI::CoreBridge.stub(:push_backlog_commit!, push) do
-              result = Master.run_backlog_task(
-                root: mission_root, container: { commands: { "fix" => command } },
-                mission: queued.record, repo_root:
-              )
-              assert result.ok?, result.message
+          Operator::RubyRunner.stub(:bundle_cmd, "bundle") do
+            Master::Io::Exec.stub(:capture2e, capture) do
+              Master::CLI::CoreBridge.stub(:push_backlog_commit!, push) do
+                result = Master.run_backlog_task(
+                  root: mission_root, container: { commands: { "fix" => command } },
+                  mission: queued.record, repo_root:
+                )
+                assert result.ok?, result.message
+              end
             end
           end
         end
@@ -110,6 +121,9 @@ class MasterBootTest < Minitest::Test
         assert_equal "completed", completed.fetch("state")
         assert_equal "fix_pipeline", completed.dig("proof", "kind")
         assert_equal paths.sort, completed.dig("proof", "scope_paths").sort
+        assert_equal "full_suite", completed.dig("proof", "command_evidence", "proof_type")
+        assert_equal 0, completed.dig("proof", "command_evidence", "exit_status")
+        assert_equal 1, acceptance_commands.size
         assert_equal "origin", completed.dig("repository_pushes", 0, "remote")
       end
     end
@@ -122,8 +136,12 @@ class MasterBootTest < Minitest::Test
         full = File.join(repo_root, path)
         FileUtils.mkdir_p(File.dirname(full))
         File.write(full, "VALUE = 1\n")
+        done_when = "rake test"
         plan = JSON.generate("executor" => "root_todo", "item_id" => "item-2",
-                             "item_digest" => "e" * 64, "scope_paths" => [path])
+                             "item_digest" => "e" * 64, "scope_paths" => [path],
+                             "tree" => "MASTER", "done_when" => done_when,
+                             "proof_map_version" => Backlog::ProofMap::VERSION,
+                             "proof_types" => Backlog::ProofMap.types_for(done_when:))
         queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
           goal: "Complete item 2 using /fix", scope: mission_root, plan:,
           origin: "backlog", auto_continue: true, mode: "repair", intent: :functional_change,
