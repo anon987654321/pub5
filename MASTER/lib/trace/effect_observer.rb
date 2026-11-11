@@ -102,16 +102,16 @@ module Master
         pending = {}
         completed = {}
         lifecycle_history.each do |record|
-          next unless record.is_a?(Hash)
+          raise IOError, "effect history contains a non-mapping record" unless record.is_a?(Hash)
 
           event = record["event"].to_s
           next unless [BEFORE_EVENT, AFTER_EVENT].include?(event)
 
           payload = record["payload"]
-          next unless payload.is_a?(Hash)
+          raise IOError, "effect history contains a malformed lifecycle payload" unless payload.is_a?(Hash)
 
           identity = identity_from_history(payload)
-          next unless identity
+          raise IOError, "effect history contains an invalid lifecycle identity" unless identity
 
           key = effect_key(identity)
           if event == BEFORE_EVENT
