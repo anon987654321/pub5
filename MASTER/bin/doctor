@@ -246,6 +246,7 @@ def check_keyless_completion
   candidates = Array(resolver.hosted_models).reject { |id| Master::Io::ModelQuota.over_quota?(id) }
   return fail_check("keyless-probe", "no eligible anonymous hosted model is currently listed") if candidates.empty?
 
+  Master::Soul.load!
   runtime = Master::Builder.build(root: ROOT)
   agent = runtime[:agent]
   return fail_check("keyless-probe", "agent builder returned no Review::Agent") unless agent
