@@ -407,7 +407,7 @@ module Master
               row = {
                 file: path.delete_prefix("#{root}/"),
                 status: scanned ? "scanned" : "unmeasured",
-                finding_count: file_findings.size,
+                finding_count: observation.fetch(:finding_counts, {}).fetch(path, file_findings.size),
                 laws: file_findings.map { |finding| finding["law"] }.compact.uniq.sort,
               }
               unless scanned
@@ -522,14 +522,22 @@ module Master
               return unless observation && observation[:files].include?(absolute)
 
               observation[:path_states] ||= {}
+              observation[:finding_counts] ||= Hash.new(0)
               case state
               when :scanned
                 observation[:scanned] << absolute
                 observation[:path_states][absolute] = { state: :scanned, reason: nil }
+                observation[:finding_counts][absolute] += Array(findings).size
                 Array(findings).each do |finding|
                   row = finding.respond_to?(:to_h) ? finding.to_h.transform_keys(&:to_sym) : {}
                   raw_id = (row[:law] || row[:law_id] || row[:rule]).to_s.strip
-                  next if raw_id.empty?
+                  if raw_id.empty?
+                    observation[:unclassified_findings] << {
+                      "law" => "[missing]", "file" => absolute,
+                      "reason" => "finding has no Law identity"
+                    }
+                    next
+                  end
 
                   law_id = assessment_existing_law_id(@assessment_law_info || {}, raw_id)
                   unless law_id

@@ -571,7 +571,10 @@ end
         findings: {
           ["SMALL_FILES", :lexical_violations] => [{ "file" => finding, "law" => "SMALL_FILES" }],
         },
-        unclassified_findings: [],
+        finding_counts: { scanned => 0, finding => 2, missed => 0 },
+        unclassified_findings: [
+          { "file" => finding, "law" => "[missing]", "reason" => "finding has no Law identity" },
+        ],
       }
 
       report = runner.send(:assessment_file_coverage, observation, 2)
@@ -582,8 +585,8 @@ end
       assert_equal "scanned", rows.fetch("scanned.rb").fetch(:status)
       assert_equal 0, rows.fetch("scanned.rb").fetch(:finding_count)
       assert_equal "scanned", rows.fetch("finding.rb").fetch(:status)
-      assert_equal 1, rows.fetch("finding.rb").fetch(:finding_count)
-      assert_equal ["SMALL_FILES"], rows.fetch("finding.rb").fetch(:laws)
+      assert_equal 2, rows.fetch("finding.rb").fetch(:finding_count)
+      assert_equal ["[missing]", "SMALL_FILES"], rows.fetch("finding.rb").fetch(:laws)
       assert_equal "unmeasured", rows.fetch("missed.rb").fetch(:status)
       assert_equal "failed", rows.fetch("missed.rb").fetch(:disposition)
       assert_equal "decoder failed", rows.fetch("missed.rb").fetch(:reason)
