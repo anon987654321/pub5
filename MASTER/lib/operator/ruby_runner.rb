@@ -7,18 +7,23 @@ module Operator
   module RubyRunner
     module_function
 
-    # The order OPENBSD/lib/ruby_select.sh and bin/ruby use: the newest Ruby the
-    # host's packages or Homebrew installed wins, the generic name is last.
-    RUBY_NAMES = %w[ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby].freeze
+    # Use the interpreter that booted MASTER first. Alternate installed Rubies
+    # are a recovery path only when the current runtime is below the project floor.
+    RUBY_NAMES = %w[ruby ruby4.2 ruby42 ruby4.1 ruby41 ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33].freeze
 
     def ruby_cmd(root: Environment.repo_root)
       explicit = ENV["PUB5_RUBY"].to_s
-      return explicit if !explicit.empty? && File.executable?(explicit)
+      unless explicit.empty?
+        version = version_for(explicit)
+        return explicit if File.executable?(explicit) && version && version >= Environment::SUPPORTED_RUBY_MIN
+
+        raise "PUB5_RUBY must name an executable Ruby >= #{Environment::SUPPORTED_RUBY_MIN}: #{explicit}"
+      end
 
       candidate = best_available_ruby(root:)
       return candidate[:path] if candidate
 
-      raise Environment.ruby_mismatch_message
+      raise(Environment.ruby_mismatch_message || "no compatible Ruby found")
     end
 
     def bundle_cmd(root: Environment.repo_root)
@@ -42,17 +47,21 @@ module Operator
     end
 
     def best_available_ruby(root: Environment.repo_root)
-      candidates = []
-      candidates << RbConfig.ruby if File.executable?(RbConfig.ruby)
-      candidates.concat(Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby")))
+      current = RbConfig.ruby
+      current_version = version_for(current)
+      if current_version && current_version >= Environment::SUPPORTED_RUBY_MIN
+        return { path: current, version: current_version }
+      end
+
+      candidates = Dir.glob(File.join(rbenv_root_for(root), "versions", "*", "bin", "ruby"))
       RUBY_NAMES.each do |name|
         path = command_path(name)
         candidates << path unless path.empty?
       end
 
-      candidates.filter_map do |path|
+      candidates.uniq.filter_map do |path|
         version = version_for(path)
-        next unless version && Environment::SUPPORTED_RUBY_MIN <= version && version < Environment::SUPPORTED_RUBY_MAX
+        next unless version && version >= Environment::SUPPORTED_RUBY_MIN
 
         { path:, version: }
       end.max_by { |candidate| candidate[:version] }
@@ -86,31 +95,8 @@ module Operator
       nil
     end
 
-    # Resolve the project-pinned Ruby on rbenv and the supported package Ruby on
-    # OpenBSD. Callers receive one executable path and do not reproduce host logic.
-    def rbenv_path(name, root: Environment.repo_root)
-      version = pinned_version(root)
-      return if version.empty?
-
-      rbenv_root = rbenv_root_for(root)
-      direct = File.join(rbenv_root, "versions", version, "bin", name)
-      return direct if File.executable?(direct)
-
-      rbenv = ENV["RBENV"].to_s
-      rbenv = command_path("rbenv") if rbenv.empty?
-      rbenv = File.join(rbenv_root, "bin", "rbenv") if rbenv.empty?
-      return unless File.executable?(rbenv)
-
-      output, status = Master::Io::Exec.capture2e(
-        { "RBENV_VERSION" => version },
-        rbenv, "which", name
-      )
-      path = output.to_s.strip
-      return unless status.success? && File.executable?(path)
-
-      path
-    end
-
+    # Alternative packaged runtimes are consulted only when the current Ruby
+    # is below the compatibility floor; no repository patch release is preferred.
     def openbsd_path(name, root: Environment.repo_root)
       return unless RUBY_PLATFORM.match?(/openbsd/)
 
@@ -124,11 +110,6 @@ module Operator
     end
 
     def command_path(name) = Master::Io::Exec.which(name).to_s
-
-    def pinned_version(root)
-      path = File.join(root, ".ruby-version")
-      File.file?(path) ? File.read(path).strip : ""
-    end
 
     def check_ruby(root: Environment.repo_root)
       ruby_cmd(root:)
