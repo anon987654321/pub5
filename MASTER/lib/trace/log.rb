@@ -326,6 +326,16 @@ module Master
         end
 
         def recent(limit, pattern: nil)
+          recent!(limit, pattern:)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "Log::Event.recent")
+          []
+        end
+
+        # Strict variant for recovery and retry gates. An absent log is an empty
+        # history; an unreadable, malformed or unsafe log is an error, never a
+        # fabricated empty history that could permit replay of an uncertain effect.
+        def recent!(limit, pattern: nil)
           count = Integer(limit)
           raise ArgumentError, "event log limit must not be negative" if count.negative?
           return [] if count.zero?
@@ -354,29 +364,19 @@ module Master
               end
             end
             Master::Trace::Log.verify_file_identity!(file, @path, "event log")
-            # The ring buffer's oldest line sits at next_index once it has wrapped.
             recent_lines.rotate!(next_index)
           end
 
           matcher = pattern && !pattern.empty? ? Regexp.new(pattern) : nil
           lines.filter_map do |line|
-            record = parse_line(line)
-            next unless record
+            record = JSON.parse(line)
             next if matcher && !record["event"].to_s.match?(matcher)
 
-            # Older log generations may predate the privacy transform. Reapply
-            # it before returning history so stored raw payloads aren't leaked
-            # just because the record was written by an older build.
-            # Keys stay strings like the rest of the parsed record; readers dig
-            # with string keys and EventPrivacy answers with symbols.
             if record["payload"].is_a?(Hash)
               record["payload"] = EventPrivacy.persisted(record["event"].to_s, record["payload"]).transform_keys(&:to_s)
             end
             record
           end
-        rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "Log::Event.recent")
-          []
         end
 
         def tail(limit, pattern: nil)
