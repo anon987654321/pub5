@@ -32,8 +32,8 @@ module Master
 
       attr_reader :path
 
-      def self.signature(file)
-        read_source(file).last
+      def self.signature(file, root: nil)
+        read_source(file, root:).last
       rescue SystemCallError, IOError
         nil
       end
