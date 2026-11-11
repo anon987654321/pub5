@@ -155,6 +155,7 @@ module Master
                      wall: -> { Time.now }, out: nil, say: nil, beat_seconds: HEARTBEAT_SECONDS, poll_seconds: 1,
                      limits: nil, killer: nil, resource_budget: nil)
         @root = root
+        @mission_namespace = Mission.current_namespace
         @costs = File.join(root, COSTS)
         @max_passes = max_passes.to_i
         @max_cost = limit(env["MASTER_FIX_MAX_COST"], DEFAULT_MAX_COST)
@@ -410,9 +411,9 @@ module Master
       # keep another worker's lease alive. Long model calls need this: commits
       # alone are too sparse to renew a five-minute lease safely.
       def renew_owned_mission_lease
-        return unless File.file?(File.join(@root, Mission::REL_PATH))
+        return unless File.file?(Mission.record_path(root: @root, namespace: @mission_namespace))
 
-        Mission.new(root: @root).heartbeat!
+        Mission.new(root: @root, namespace: @mission_namespace).heartbeat!
       rescue StandardError => error
         Master::Ground::Swallow.log(error, context: "Fix::RunBudget.mission_heartbeat", severity: :load_bearing)
         @say.call("fix0: mission heartbeat warning #{error.class}: #{error.message.to_s[0, 120]}")
