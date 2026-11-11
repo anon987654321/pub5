@@ -36,7 +36,7 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 - `elevate`: the existing improvement lane (`--lane=elevate`).
 - `all`: the existing all-work lane (`--lane=all`), write-enabled and still subject to existing budgets.
 
-`--dry-run` remains an unconditional no-write request. Audit and visual modes cannot be made write-enabled by also passing `--apply`. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
+`--read-only` and `--dry-run` are unconditional no-write requests. Audit and visual modes cannot be made write-enabled by also passing `--apply`. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
 
 The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/review`, `/critique` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/visual` and `/style` select visual; `/elevate` and `/map` select elevate; `/all`, `/workflow`, `/triad`, `/sweep`, `/through` and `/self` select all. Use `/fix --mode=audit|visual|elevate|all` for explicit mode selection. New instructions and scripts should call `/fix` directly.
 
