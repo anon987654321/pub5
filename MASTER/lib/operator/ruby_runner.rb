@@ -117,12 +117,24 @@ module Operator
     def openbsd_path(name, root: Environment.repo_root)
       return unless RUBY_PLATFORM.match?(/openbsd/)
 
-      RUBY_NAMES.each do |ruby_command|
-        command = name == "ruby" ? ruby_command : ruby_command.sub(/\Aruby/, name)
-        path = command_path(command)
-        return path unless path.empty?
-      end
+      prefix = name.to_s
+      ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |directory|
+        next unless File.directory?(directory)
 
+        Dir.children(directory).sort.each do |entry|
+          next unless entry.match?(/\\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\\.[0-9]+)*)?\\z/)
+
+          path = File.join(directory, entry)
+          next unless File.file?(path) && File.executable?(path)
+          if name.to_s == "ruby"
+            version = version_for(path)
+            next unless version && version >= Environment::SUPPORTED_RUBY_MIN
+          end
+          return path
+        end
+      rescue SystemCallError
+        next
+      end
       nil
     end
 
