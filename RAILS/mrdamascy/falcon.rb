@@ -8,7 +8,10 @@ service "mrdamascy" do
   include Falcon::Environment::Rack
 
   count 1
-  health_check_timeout 300
+  def container_options
+    super.merge(health_check_timeout: 300)
+  end
+
   preload "preload.rb"
   port { ENV.fetch("PORT", 47314).to_i }
 
