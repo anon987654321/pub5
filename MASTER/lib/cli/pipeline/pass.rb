@@ -534,7 +534,9 @@ def default_apply?(*) = false
         end
 
         def backlog_proof_types
-          mission = Master::Fix::Mission.current(root: @root)
+          # The interactive /fix run has its own mission namespace. Its proof
+          # contract belongs to the still-live backlog parent in the default store.
+          mission = Master::Fix::Mission.current(root: @root, namespace: nil)
           return [] unless mission && mission["origin"].to_s == "backlog"
 
           plan = JSON.parse(mission.fetch("plan").to_s)
