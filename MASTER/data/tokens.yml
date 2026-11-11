@@ -1032,6 +1032,26 @@ tokens:
             brow_line: 0.0
             nose_line: 0.0
     spatial:
+      # The historical "papua-mask" topology name is an operator-owned
+      # abstract mask-like silhouette, not a reproduction of any ceremonial
+      # object or named Papua New Guinean tradition.
+      semantic_subject:
+        enabled: true
+        min_confidence: 0.42
+        max_label_chars: 48
+        max_features: 6
+        morph_stage_duration_ms: 280
+        morph_stage_gap_ms: 72
+        kinds:
+          bridge: [deck, towers, cables, piers]
+          tree: [trunk, branches, canopy]
+          planet: [body, orbit, moons]
+          molecule: [bonds, atoms]
+          book: [pages, spine, cover]
+          clock: [dial, markers, hands]
+          building: [base, tower, windows]
+          flower: [stem, petals, center]
+          vehicle: [chassis, wheels, cab]
       topology_profiles:
         papua-mask: { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
         face:        { tilt_x: 0.00, tilt_y: 0.00, density: 1.00, fracture: 0.00 }
