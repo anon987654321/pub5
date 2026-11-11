@@ -61,8 +61,19 @@ case $_rs_base in
   *) RUBY_SUFFIX= ;;
 esac
 
-BUNDLE=$(_rs_find "bundle$RUBY_SUFFIX") || BUNDLE=$(_rs_find bundle) || BUNDLE=bundle
-GEM=$(_rs_find "gem$RUBY_SUFFIX") || GEM=$(_rs_find gem) || GEM=gem
+if [ -n "$RUBY_SUFFIX" ]; then
+  BUNDLE=$(_rs_find "bundle$RUBY_SUFFIX") || {
+    echo "ruby_select: matching bundle$RUBY_SUFFIX is unavailable" >&2
+    return 1 2>/dev/null || exit 1
+  }
+  GEM=$(_rs_find "gem$RUBY_SUFFIX") || {
+    echo "ruby_select: matching gem$RUBY_SUFFIX is unavailable" >&2
+    return 1 2>/dev/null || exit 1
+  }
+else
+  BUNDLE=$(_rs_find bundle) || BUNDLE=bundle
+  GEM=$(_rs_find gem) || GEM=gem
+fi
 RUBY_CACHE_KEY=ruby$("$RUBY" -e 'print RUBY_VERSION.split(".").first(2).join' 2>/dev/null || printf '%s' "$RUBY_SUFFIX")
 
 BUNDLE_VERSION=${BUNDLE_VERSION:-system}
