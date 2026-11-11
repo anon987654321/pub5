@@ -10,6 +10,7 @@ class ChatService
   WRITE_TOOLS = %w[Write Edit Create FilePatch].freeze
   BUS_DMESG_SKIP = %w[
     infer:resolved infer:confidence tool:before tool:after client_action
+    assistant:visual-subject
     pipeline:stage_start pipeline:stage_complete felt:sense
   ].freeze
   BUS_THOUGHT_RE = /:(?:done|error|warn|crit|resolved|confidence|detected)\b/.freeze
