@@ -146,7 +146,7 @@
   function inferSubjectForm(value) {
     const text = String(value || "").normalize("NFKC").slice(0, 6000);
     if (!text.trim()) return "face";
-    return SUBJECT_HINTS.find(([, pattern]) => pattern.test(text))?.[0] || "constellation";
+    return SUBJECT_HINTS.find(([, pattern]) => pattern.test(text))?.[0] || "face";
   }
 
   function spherePoint(u, v, center, radii) {
@@ -422,7 +422,7 @@
     const form = requested === "object" && normalized
       ? "object"
       : SUBJECT_FORMS.has(requested) && requested !== "object" ? requested
-      : "constellation";
+      : "face";
     const nextDescriptor = form === "object" ? normalized : null;
     if (form === semanticForm && subjectSignature(nextDescriptor) === subjectSignature(semanticDescriptor) &&
         (splatTargetPositions || form === "face")) return form;
