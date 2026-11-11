@@ -51,6 +51,26 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_after_run_receives_the_terminal_backlog_mission
+    Dir.mktmpdir do |root|
+      write_mission(root, origin: "backlog")
+      observed = nil
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil,
+        runner: ->(**) {
+          Master::Fix::Mission.new(root:).finish!(state: "completed", summary: "focused proof passed")
+          :continued
+        },
+        after_run: ->(mission:, result:) { observed = mission },
+      )
+
+      assert_equal :continued, steward.tick!
+      assert_equal "completed", observed.fetch("state")
+      assert_equal "deliver", observed.fetch("stage")
+      assert_equal "backlog", observed.fetch("origin")
+    end
+  end
+
   def test_non_fold_missions_are_invisible
     Dir.mktmpdir do |root|
       write_mission(root, origin: "fix")
