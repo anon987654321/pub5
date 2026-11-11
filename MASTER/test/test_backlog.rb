@@ -228,6 +228,36 @@ class TestBacklog < Minitest::Test
     end
   end
 
+
+  def test_proof_map_covers_explicit_test_lint_and_runtime_commands
+    map = Backlog::ProofMap
+
+    assert_equal ["full_suite"], map.types_for(done_when: "rake test")
+    assert_equal ["full_suite"], map.types_for(done_when: "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test")
+    assert_equal ["full_suite"], map.types_for(done_when: "ruby RAILS/test/run_all.rb")
+    assert_equal ["full_suite"], map.types_for(done_when: "cd RAILS/brgen && bin/ci")
+    assert_equal ["focused_tests"], map.types_for(done_when: "rake test:fix:convergence")
+    assert_equal ["focused_tests"], map.types_for(done_when: "ruby -Itest test/test_fix_kernel.rb")
+    assert_equal ["focused_tests"], map.types_for(done_when: "rspec spec/fix_spec.rb")
+    assert_equal ["law_assessment"], map.types_for(done_when: "rake lint:law_parity")
+    assert_equal ["law_assessment"], map.types_for(done_when: "rake audit")
+    assert_equal ["law_assessment"], map.types_for(done_when: "ruby MASTER/checks/runner.rb --all")
+    assert_equal ["rendered_evidence"], map.types_for(done_when: "MASTER/bin/operator visual sweep RAILS/brgen --one-page")
+    assert_equal ["accessibility_review"], map.types_for(done_when: "bin/operator accessibility")
+    assert_equal ["runtime_evidence"], map.types_for(done_when: "pfctl -nf /etc/pf.conf")
+  end
+
+  def test_proof_map_does_not_guess_unknown_commands_or_empty_acceptance
+    map = Backlog::ProofMap
+
+    assert_empty map.types_for(done_when: nil)
+    assert_empty map.types_for(done_when: "git status --short")
+    assert_empty map.types_for(done_when: "ruby tools/unknown-check.rb")
+    refute map.valid_types?([])
+    refute map.valid_types?(["made_up_proof"])
+    assert map.valid_types?(["focused_tests", "runtime_evidence"])
+  end
+
   def test_executor_queues_only_a_single_tree_mechanical_item
     row = {
       id: "safe-task", text: "Repair the existing MASTER source and verify it.",
