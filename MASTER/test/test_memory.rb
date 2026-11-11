@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "master"
+require "timeout"
 
 class TestMemory < Minitest::Test
   def setup
@@ -15,6 +16,39 @@ class TestMemory < Minitest::Test
 
   def teardown
     FileUtils.remove_entry(@root)
+  end
+
+  def test_slow_embedding_does_not_hold_the_cross_process_memory_lock
+    embedding_started = Queue.new
+    release_embedding = Queue.new
+    fast_write_finished = Queue.new
+    original = Master::Review::Embeddings.method(:embed)
+    Master::Review::Embeddings.define_singleton_method(:embed) do |text, *arguments, **keywords|
+      if text == "slow_key slow value"
+        embedding_started << true
+        release_embedding.pop
+        nil
+      else
+        original.call(text, *arguments, **keywords)
+      end
+    end
+
+    slow = Thread.new { Master::Ground::Memory.new(root: @root).remember("slow_key", "slow value") }
+    embedding_started.pop
+    fast = Thread.new do
+      Master::Ground::Memory.new(root: @root).remember("fast_key", "fast value", embed: false)
+      fast_write_finished << true
+    end
+
+    assert_equal true, Timeout.timeout(2) { fast_write_finished.pop }
+    release_embedding << true
+    [slow, fast].each(&:join)
+    assert_equal "slow value", @mem.recall("slow_key")
+    assert_equal "fast value", @mem.recall("fast_key")
+  ensure
+    release_embedding << true if release_embedding
+    [slow, fast].compact.each(&:join)
+    Master::Review::Embeddings.define_singleton_method(:embed, original) if original
   end
 
   def test_stale_memory_instances_merge_each_others_writes
