@@ -217,7 +217,7 @@ class TestCommandRegistryDispatch < Minitest::Test
 
   def test_help_overview_wraps_long_command_groups
     summary = Registry.help_summary
-    session_lines = summary.lines.grep(/\\A(?:session0 at master0:|  )/)
+    session_lines = summary.lines.grep(/\A(?:session0 at master0:|  )/)
 
     assert_operator session_lines.length, :>=, 2
     assert session_lines.all? { |line| line.chomp.length <= 76 }, "session help should not become a wide command ribbon"
