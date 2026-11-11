@@ -176,6 +176,46 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_scoped_rebuild_preserves_symbols_and_errors_outside_its_scope
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "outside.rb"), "class Outside; end\\n")
+      Dir.mkdir(File.join(root, "lib"))
+      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\\n")
+      index = Index.new(root:).build
+
+      File.write(File.join(root, "outside.rb"), "def incomplete(\\n")
+      index.build
+      assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind)
+
+      File.write(File.join(root, "lib", "inside.rb"), "class RevisedInside; end\\n")
+      index.build(path: "lib")
+
+      assert index.partial?
+      assert index.lookup("Outside"), "the prior outside symbol remains useful while the scoped graph is partial"
+      assert index.lookup("RevisedInside")
+      assert_nil index.lookup("Inside")
+      assert_equal :parse, index.errors.find { |entry| entry[:path] == "outside.rb" }.fetch(:kind)
+    end
+  end
+
+  def test_scoped_build_cannot_escape_the_repository_root
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "root")
+      outside = File.join(directory, "outside")
+      Dir.mkdir(root)
+      Dir.mkdir(outside)
+      File.write(File.join(outside, "secret.rb"), "class SecretOutside; end\\n")
+
+      index = Index.new(root:)
+
+      assert_same index, index.build(path: "../outside")
+      refute index.complete?
+      assert_equal :build, index.errors.fetch(0).fetch(:kind)
+      assert_nil index.lookup("SecretOutside")
+    end
+  end
+
   def test_path_scoped_build_is_not_claimed_as_a_complete_index
     Dir.mktmpdir do |root|
       root = File.realpath(root)
