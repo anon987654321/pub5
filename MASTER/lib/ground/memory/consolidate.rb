@@ -53,7 +53,8 @@ module Master
         end
 
         def consolidate!(agent: nil)
-          return "nothing to consolidate" if @store.empty?
+          refresh_store_if_changed
+          return "nothing to consolidate" if @mutex.synchronize { @store.empty? }
 
           entries, archived = archive_old_entries(Time.now.to_i)
           summarize_active_entries(agent) if agent
@@ -70,6 +71,7 @@ module Master
         end
 
         def active_entries
+          refresh_store_if_changed
           @mutex.synchronize do
             @store.reject { |key, value| key == "_consolidated_summary" || !context_eligible?(key, value) }
           end
