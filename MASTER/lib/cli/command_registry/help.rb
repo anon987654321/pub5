@@ -28,7 +28,7 @@ module Master
             "redirected runs stay quiet. --verbose expands status; --trace shows every redacted",
             "event; --detail shows bounded raw payloads on a terminal only.",
             "--normal and --quiet reduce /fix output; MASTER_CLI_QUIET=1 is the explicit CLI opt-out.",
-            "--dry-run stops after the reading and says what it would take on.",
+            "--read-only and --dry-run stop after the reading and say what it would take on.",
             "--dry-run --critique --only critique,map is the reading with the council",
             "and the principle map and nothing written; --critique alone is the",
             "council alone (--only critique).",
