@@ -15,7 +15,7 @@
 #
 # Order of preference:
 #   1. $PUB5_RUBY                       (the operator's explicit pin)
-#   2. a Ruby on PATH within the Gemfile's range (>= 3.3, < 4.1)
+#   2. a Ruby on PATH within the Gemfile's declared Ruby floor (>= 3.3)
 #   3. a Ruby this script built earlier (MASTER/.tools/ruby)
 #   4. build one: libyaml + Ruby into MASTER/.tools (idempotent, resumable)
 #
@@ -30,8 +30,6 @@ PREFIX="$TOOLS/ruby"
 YAML_PREFIX="$TOOLS/yaml"
 MIN_MAJOR=3
 MIN_MINOR=3
-MAX_MAJOR=4
-MAX_MINOR=0
 RUBY_VER=3.3.6
 
 say() { printf 'dev-bootstrap: %s\n' "$*"; }
@@ -51,9 +49,7 @@ version_key() {
   case $minor in *[!0-9]*|'') return 1 ;; esac
   case $patch in *[!0-9]*|'') return 1 ;; esac
   [ "$major" -lt "$MIN_MAJOR" ] && return 1
-  [ "$major" -gt "$MAX_MAJOR" ] && return 1
   [ "$major" -eq "$MIN_MAJOR" ] && [ "$minor" -lt "$MIN_MINOR" ] && return 1
-  [ "$major" -eq "$MAX_MAJOR" ] && [ "$minor" -gt "$MAX_MINOR" ] && return 1
   printf '%d\n' $((major * 1000000 + minor * 1000 + patch))
 }
 
@@ -147,7 +143,7 @@ fi
 
 # 4: build one, then answer through it.
 if [ "${MASTER_DEV_BOOTSTRAP_BUILD:-1}" = "0" ]; then
-  say "no Ruby >= $MIN_MAJOR.$MIN_MINOR and <= $MAX_MAJOR.$MAX_MINOR on this host, and building is disabled (MASTER_DEV_BOOTSTRAP_BUILD=0)"
+  say "no Ruby >= $MIN_MAJOR.$MIN_MINOR on this host, and building is disabled (MASTER_DEV_BOOTSTRAP_BUILD=0)"
   say "install a Ruby in range, pin it with PUB5_RUBY, or allow the build"
   exit 1
 fi
