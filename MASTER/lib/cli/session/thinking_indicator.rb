@@ -100,7 +100,8 @@ module Master
       # The spinner's line: frame, stage word, elapsed time and any queue.
       def spin_line(stage, name)
         stage = "working" if stage.empty?
-        "#{name} #{stage} #{elapsed_seconds}s#{spin_suffix}"
+        detail = stage == "intake" ? %q{ \\_} : " #{elapsed_seconds}s"
+        "#{name} #{stage}#{detail}#{spin_suffix}"
       end
 
       def spin_tinted(line, intensity)
