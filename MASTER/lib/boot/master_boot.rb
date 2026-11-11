@@ -2,6 +2,7 @@
 
 require_relative "../io/atomic_write"
 require_relative "../ground/service_supervisor"
+require_relative "../../tools/backlog" if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
 
 module Master
   # Builder and CLI boot orchestration for Master.*.
@@ -56,8 +57,17 @@ module Master
     end
 
     def start_task_steward(root, container)
+      executor = if ENV["MASTER_BACKLOG_AUTORUN"] == "1"
+                   Backlog::Executor.new(root:, repo_root: REPO_ROOT)
+                 end
+      if executor
+        status = executor.enqueue_next!(model: container.dig(:model, :id))
+        container[:bus]&.publish("backlog_executor:intake", status:)
+      end
+
       container[:task_steward] = Fix::TaskSteward.start!(
-        root:, bus: container[:bus], runner: ->(goal:, mission:) {
+        root:, bus: container[:bus],
+        runner: ->(goal:, mission:) {
           CLI::CoreBridge.run(
             goal,
             root:,
@@ -66,7 +76,14 @@ module Master
             mode: mission.dig("operator", "mode"),
             container:,
           )
-        }
+        },
+        after_run: ->(mission:, result:) {
+          next unless executor && mission && mission["state"] == "completed"
+          next unless executor.record_completion!(record: mission)
+
+          status = executor.enqueue_next!(model: mission["model"])
+          container[:bus]&.publish("backlog_executor:intake", status:)
+        },
       )
     end
 
