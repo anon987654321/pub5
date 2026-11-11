@@ -617,6 +617,17 @@ class TestCommandRegistryDispatch < Minitest::Test
     help = Registry.help_text("fix")
     assert_includes help, "/audit, /review, /critique and /council"
     assert_includes help, "/elevate and /map"
+    readme = File.read(File.join(Master::ROOT, "README.md"))
+    agents = File.read(File.join(Master::ROOT, "AGENTS.md"))
+    [readme, agents].each do |document|
+      assert_includes document, "/audit"
+      assert_includes document, "/council"
+      assert_includes document, "/visual"
+      assert_includes document, "/style"
+      assert_includes document, "/elevate"
+      assert_includes document, "/map"
+      assert_includes document, "/all"
+    end
     assert_equal "/fix --mode=audit lib", Master::CLI::TurnRouter.rewrite_slash("/council lib")
     assert_equal "/fix --mode=visual lib", Master::CLI::TurnRouter.rewrite_slash("/style lib")
     assert_equal "/fix --mode=elevate lib", Master::CLI::TurnRouter.rewrite_slash("/map lib")
