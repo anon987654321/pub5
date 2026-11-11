@@ -78,7 +78,7 @@ class TestCliResourceLoad < Minitest::Test
   def test_intake_spinner_shows_instruction_cue_without_elapsed_seconds
     session = Master::CLI::Session.allocate
 
-    assert_equal %q{o intake \\_}, session.send(:spin_line, "intake", "o")
+    assert_equal %q{o intake \_}, session.send(:spin_line, "intake", "o")
   end
 
   def test_spinner_tint_ramps_amber_to_red_above_its_threshold
