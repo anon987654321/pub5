@@ -472,13 +472,22 @@ display: block;
 }
 
 .radio-header h1 {
-/* The brand face, as shared/_layout_chrome.scss sets it for the same
-   wordmark. .radio-tunnel sets --font, so without this "brgen" would read in
-   the body face here and the brand face everywhere else in the app. */
-font-family: var(--font-brand);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* Keep the brand face used by the shared city wordmark. */
+  font-family: var(--font-brand);
   font-size: var(--text-extra-large);
   font-weight: var(--weight-bold);
   margin: 0;
+}
+
+.radio-brand-mark {
+  display: block;
+  flex: 0 0 auto;
+  width: 1.5em;
+  height: 1.5em;
+  color: var(--color-accent);
 }
 
 .radio-nav {
