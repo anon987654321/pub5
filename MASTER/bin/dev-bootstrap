@@ -14,10 +14,11 @@
 #   bin/dev-bootstrap [args...]      # ensure a Ruby, then exec it with args
 #
 # Order of preference:
-#   1. $PUB5_RUBY                       (the operator's explicit pin)
-#   2. a Ruby on PATH within the Gemfile's declared Ruby floor (>= 3.3)
-#   3. a Ruby this script built earlier (MASTER/.tools/ruby)
-#   4. build one: libyaml + Ruby into MASTER/.tools (idempotent, resumable)
+#   1. $PUB5_RUBY                       (the operator's explicit compatible override)
+#   2. the generic Ruby already selected by PATH (>= 3.3)
+#   3. another compatible installed Ruby, only if generic Ruby is too old
+#   4. a Ruby this script built earlier (MASTER/.tools/ruby)
+#   5. build one only when no compatible interpreter exists
 #
 # MASTER_DEV_BOOTSTRAP_BUILD=0 refuses step 4 (use it where the network is
 # unavailable and the honest answer is a named failure, not a hang).
@@ -56,20 +57,33 @@ version_key() {
 best_on_path() {
   best_key=-1
   best_ruby=
-  # MASTER_RUBY_CANDIDATES overrides the probe list (colon-separated) — the
-  # seam the suite uses to keep its process tests hermetic on hosts that carry
-  # their own in-range Ruby at the fixed paths.
+
+  # Hermetic test seam; production always checks generic PATH Ruby first.
   if [ -n "${MASTER_RUBY_CANDIDATES:+x}" ]; then
     set -- $(printf '%s' "$MASTER_RUBY_CANDIDATES" | tr ':' ' ')
-  else
-    set -- \
-      $(command -v ruby 2>/dev/null || true) \
-      /usr/local/bin/ruby /usr/bin/ruby \
-      "$HOME"/.rubies/*/bin/ruby \
-      "$HOME"/.rbenv/versions/*/bin/ruby
+    for candidate in "$@"; do
+      [ -n "$candidate" ] || continue
+      [ -x "$candidate" ] || continue
+      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      key=$(version_key "$version") || continue
+      [ "$key" -gt "$best_key" ] || continue
+      best_key=$key
+      best_ruby=$candidate
+    done
+    [ -n "$best_ruby" ] && printf '%s\\n' "$best_ruby"
+    return
   fi
-  for candidate in "$@"; do
-    [ -n "$candidate" ] || continue
+
+  generic=$(command -v ruby 2>/dev/null || true)
+  if [ -n "$generic" ] && [ -x "$generic" ]; then
+    version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null || true)
+    if key=$(version_key "$version"); then
+      printf '%s\\n' "$generic"
+      return
+    fi
+  fi
+
+  for candidate in "$HOME"/.rubies/*/bin/ruby "$HOME"/.rbenv/versions/*/bin/ruby; do
     [ -x "$candidate" ] || continue
     version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
     key=$(version_key "$version") || continue
@@ -77,7 +91,22 @@ best_on_path() {
     best_key=$key
     best_ruby=$candidate
   done
-  [ -n "$best_ruby" ] && printf '%s\n' "$best_ruby"
+
+  old_ifs=$IFS
+  IFS=:
+  for directory in $PATH; do
+    [ -d "$directory" ] || continue
+    for candidate in "$directory"/ruby[0-9]*; do
+      [ -x "$candidate" ] || continue
+      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      key=$(version_key "$version") || continue
+      [ "$key" -gt "$best_key" ] || continue
+      best_key=$key
+      best_ruby=$candidate
+    done
+  done
+  IFS=$old_ifs
+  [ -n "$best_ruby" ] && printf '%s\\n' "$best_ruby"
 }
 
 fetch() {
@@ -126,7 +155,10 @@ build() {
 }
 
 # 1 and 2: an explicit pin, or the best host Ruby inside the Gemfile's range.
-if [ -n "${PUB5_RUBY:-}" ] && [ -x "${PUB5_RUBY}" ]; then
+if [ -n "${PUB5_RUBY:-}" ]; then
+  [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
+  version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null || true)
+  key=$(version_key "$version") || { say "PUB5_RUBY must be Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${version:-unreadable})"; exit 1; }
   exec "$PUB5_RUBY" "$@"
 fi
 
