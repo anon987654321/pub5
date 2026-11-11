@@ -37,7 +37,7 @@ module Master
           Array(threads).each do |thread|
             begin
               thread.join
-            rescue StandardError
+            rescue Exception
               nil
             end
           end
