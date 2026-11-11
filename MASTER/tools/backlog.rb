@@ -288,7 +288,7 @@ module Backlog
       paths = Array(row[:scope_paths]).map(&:to_s).uniq
       return false if paths.empty?
       return false unless paths.all? { |path| path.start_with?("#{tree}/") }
-      return false if paths.any? { |path| %w[* ? { } [ ]].any? { |token| path.include?(token) } || path.split("/").include?("..") }
+      return false if paths.any? { |path| ["*", "?", "{", "}", "[", "]"].any? { |token| path.include?(token) } || path.split("/").include?("..") }
 
       true
     end
