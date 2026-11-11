@@ -63,7 +63,7 @@ module Master
 
       # Prepare an objective without consuming an execution attempt. The background
       # supervisor uses this to create work that will be claimed only when due.
-      def ensure_queued!(goal:, scope: @root, model: nil, effort: "medium", plan: nil)
+      def ensure_queued!(goal:, scope: @root, model: nil, effort: "medium", plan: nil, origin: "unknown", auto_continue: false, mode: "repair", risk: nil, intent: nil)
         with_lock do
           current = load_record
           if current && current["goal"].to_s == goal.to_s && current["scope"].to_s == relative(scope).to_s &&
@@ -78,7 +78,7 @@ module Master
 
           raise active_mission_conflict(current, goal:, scope:) if active_for_other_target?(current, goal:, scope:)
 
-          start_unlocked!(goal:, scope:, model:, effort:, plan:)
+          start_unlocked!(goal:, scope:, model:, effort:, plan:, origin:, auto_continue:, mode:, risk:, intent:)
           @record["state"] = "waiting"
           @record["stage"] = "discover"
           @record["attempt_count"] = 0
