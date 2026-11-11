@@ -169,6 +169,14 @@ class TestLaneSelection < Minitest::Test
     assert_equal [DEEPSEEK, LLM7], Selection.order([LLM7, DEEPSEEK])
   end
 
+  def test_vision_review_order_uses_human_preference_after_capability_filtering
+    models = ["gpt-6.1-sol", "gemini-3.7-flash", "qwen3.8-max", OPUS, "text-only"]
+    Selection.stub(:vision?, ->(id) { id != "text-only" }) do
+      assert_equal [OPUS, "qwen3.8-max", "gemini-3.7-flash", "gpt-6.1-sol"],
+                   Selection.vision_rank_order(models)
+    end
+  end
+
   def test_llama_cpp_cli_is_local_and_stays_after_remote_lanes
     assert_equal :local, Selection.kind(LLAMA_LOCAL)
     assert_equal [OPUS, DEEPSEEK, LLAMA_LOCAL, NEMOTRON],
