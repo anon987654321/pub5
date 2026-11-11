@@ -575,16 +575,48 @@ end
     Reline.singleton_class.send(:define_method, :redisplay, original)
   end
 
-  def test_a_foreign_write_clears_the_draft_row_and_repaints_the_editable_line
+  def test_a_foreign_write_clears_the_draft_without_leaving_an_empty_spinner_row
     io = DraftIO.new
+    alive = Object.new
+    alive.define_singleton_method(:alive?) { true }
     @cli.instance_variable_set(:@reading_input, true)
+    @cli.instance_variable_set(:@turn_worker, alive)
+    @cli.instance_variable_set(:@spin_thread, alive)
 
     with_redisplay_counter do |counter|
       @cli.send(:terminal_write, io:) { |target| target.puts("turn0: reply row") }
 
       assert_equal "\r\e[K\r\nturn0: reply row\n", io.buffer
       assert_equal [1], counter
+      assert_kind_of Numeric, @cli.instance_variable_get(:@last_foreign_write_at)
     end
+  end
+
+  def test_spinner_row_waits_for_a_quiet_gap_after_foreign_output
+    io = DraftIO.new
+    alive = Object.new
+    alive.define_singleton_method(:alive?) { true }
+    redraws = []
+    @cli.instance_variable_set(:@reading_input, true)
+    @cli.instance_variable_set(:@turn_worker, alive)
+    @cli.instance_variable_set(:@activity_row_reserved, false)
+    @cli.instance_variable_set(:@turn_queue_paused, false)
+    @cli.instance_variable_set(:@closed, false)
+    @cli.instance_variable_set(:@last_foreign_write_at, Process.clock_gettime(Process::CLOCK_MONOTONIC))
+
+    @cli.stub(:redraw_active_input, -> { redraws << true }) do
+      @cli.send(:reserve_activity_row_after_quiet, io)
+      assert_empty io.buffer
+      refute @cli.instance_variable_get(:@activity_row_reserved)
+
+      @cli.instance_variable_set(:@last_foreign_write_at,
+                                 Process.clock_gettime(Process::CLOCK_MONOTONIC) - 1)
+      @cli.send(:reserve_activity_row_after_quiet, io)
+    end
+
+    assert_equal "\n", io.buffer
+    assert @cli.instance_variable_get(:@activity_row_reserved)
+    assert_equal [true], redraws
   end
 
   def test_a_non_tty_write_takes_no_draft_rows_or_redisplays
