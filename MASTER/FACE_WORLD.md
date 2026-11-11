@@ -49,6 +49,14 @@ envelope and phoneme shape.
 
 ## Primary material: particle stipple
 
+The first-load introduction reuses this same field and renderer: deterministic
+seed-derived particles begin dispersed around the head and converge onto the
+real face points over the token-defined interval. It is an original many-to-one
+reveal, not a copy of another show's title treatment. The reveal shares the
+existing render clock and point budget; no second canvas, pool or animation loop
+is created. Reduced motion resolves directly to the completed portrait.
+
+
 FaceWorld's material is greyscale particle stipple, named in `tokens.visual_identity.material`
 and governed by the law `VISUAL_PARTICLE_STIPPLE_PRIMARY`. The face is not a solid skin. It is a
 field of many carriers that resolve into one readable head: out of many, one. A renderer may

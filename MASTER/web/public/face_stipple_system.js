@@ -167,6 +167,7 @@
     const samples = Array.from(input || []).slice(0, MAX_POINTS);
     if (!samples.length) throw new Error("at least one valid stipple sample is required");
     const positions = new Float32Array(samples.length * 3);
+    const introScatter = new Float32Array(samples.length * 3);
     const phases = new Float32Array(samples.length);
     const thresholds = new Float32Array(samples.length);
     const zones = new Float32Array(samples.length);
@@ -180,6 +181,9 @@
       if (![x, y, z].every(Number.isFinite)) throw new Error("sample coordinates must be finite");
       const j = index * 3;
       positions[j] = x; positions[j + 1] = y; positions[j + 2] = z;
+      introScatter[j] = (rand(index, 41) - 0.5) * 2.8;
+      introScatter[j + 1] = (rand(index, 42) - 0.5) * 2.2;
+      introScatter[j + 2] = (rand(index, 43) - 0.5) * 1.2;
       depthRanks[index] = clamp(0.5 + z * 0.5, 0.5, 0, 1);
       homeDepths[index] = z;
       phases[index] = rand(index, 17) * Math.PI * 2;
@@ -190,6 +194,7 @@
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("aIntroScatter", new THREE.BufferAttribute(introScatter, 3));
     geometry.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
     geometry.setAttribute("aThreshold", new THREE.BufferAttribute(thresholds, 1));
     geometry.setAttribute("aZone", new THREE.BufferAttribute(zones, 1));
@@ -202,7 +207,7 @@
         uDepthReferenceDistance: { value: clamp(depth.reference_distance, DEFAULT_DEPTH_RESPONSE.reference_distance, 1.0, 20.0) },
         uDepthScaleMin: { value: clamp(depth.scale_min, DEFAULT_DEPTH_RESPONSE.scale_min, 0.1, 2.0) },
         uDepthScaleMax: { value: clamp(depth.scale_max, DEFAULT_DEPTH_RESPONSE.scale_max, 0.1, 2.0) },
-        uTime: { value: 0 },
+        uTime: { value: 0 }, uIntroProgress: { value: 0 },
         uDepthFromRank: { value: swarmConfiguration().size_from_depth === true ? 1.0 : 0.0 },
         uDepthSteps: { value: Math.max(2, Array.isArray(swarmConfiguration().glyph_ramp) ? swarmConfiguration().glyph_ramp.length : 2) },
         uDensity: { value: idle.density },
@@ -218,7 +223,9 @@
         attribute float aZone;
         attribute float aBias;
         attribute float aDepthRank;
+        attribute vec3 aIntroScatter;
         uniform float uTime;
+        uniform float uIntroProgress;
         uniform float uDensity;
         uniform float uRipple;
         uniform float uTurbulence;
@@ -235,7 +242,7 @@
         varying float vThreshold;
         varying float vDepthRank;
         void main() {
-          vec3 p = position;
+          vec3 p = mix(aIntroScatter, position, uIntroProgress);
           float zoneWeight = 0.72 + aZone * 0.035;
           float drift = sin(uTime * 0.72 + aPhase) * 0.008 * uTurbulence * uMotionScale;
           p.x += drift * (aZone < 2.0 ? 0.6 : 1.0);
@@ -292,6 +299,7 @@
     points.frustumCulled = false;
     return {
       points, geometry, material, count: samples.length, root: null,
+      introStartedAt: null,
       swarm: { velocities, homePositions: positions.slice(), homeDepths, lastTime: null }
     };
   }
@@ -516,10 +524,17 @@
   function tick(system, state, timeSeconds) {
     if (!system?.material) return;
     const time = Number(timeSeconds) || 0;
+    if (system.introStartedAt == null) system.introStartedAt = time;
+    const reducedMotion = reducedMotionEnabled(state);
+    const durationMs = clamp(window.MASTER_FACE_CONTRACT?.stipple?.intro_duration_ms, 1200, 400, 2200);
+    const elapsed = Math.max(0, time - system.introStartedAt);
+    const rawProgress = reducedMotion ? 1 : clamp(elapsed / (durationMs / 1000), 1, 0, 1);
+    const introProgress = rawProgress * rawProgress * (3 - 2 * rawProgress);
+    system.material.uniforms.uIntroProgress.value = introProgress;
     const previous = system.swarm?.lastTime;
     const delta = previous == null ? 1 / 60 : clamp(time - previous, 0, 0, 0.05);
     if (system.swarm) system.swarm.lastTime = time;
-    system.material.uniforms.uTime.value = reducedMotionEnabled(state) ? 0 : time;
+    system.material.uniforms.uTime.value = reducedMotion ? 0 : time;
     updateSwarm(system, state, delta, time);
     syncFromFaceState(system, state);
   }

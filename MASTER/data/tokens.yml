@@ -482,6 +482,7 @@ tokens:
     # How the stipple layer looks in each state in `modes` above; the web face
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
+      intro_duration_ms: 1200
       # Point sprites stay one pixel; camera depth changes brightness, never size.
       depth_response:
         reference_distance: 5.0

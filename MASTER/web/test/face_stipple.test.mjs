@@ -34,6 +34,19 @@ test("shared face budgets classify coarse pointers and declared reduced motion",
   assert.match(sparseField, /const reduced = reducedMotionEnabled\(state\)/);
 });
 
+test("particle introduction converges into the face on the shared render clock", () => {
+  assert.match(tokens, /intro_duration_ms: 1200/);
+  assert.match(system, /const introScatter = new Float32Array\(samples\.length \* 3\)/);
+  assert.match(system, /introScatter\[j\] = \(rand\(index, 41\) - 0\.5\) \* 2\.8/);
+  assert.match(system, /geometry\.setAttribute\("aIntroScatter", new THREE\.BufferAttribute\(introScatter, 3\)\)/);
+  assert.match(system, /uniform float uIntroProgress;/);
+  assert.match(system, /vec3 p = mix\(aIntroScatter, position, uIntroProgress\)/);
+  assert.match(system, /system\.material\.uniforms\.uIntroProgress\.value = introProgress/);
+  assert.match(system, /const reducedMotion = reducedMotionEnabled\(state\)/);
+  assert.match(system, /const rawProgress = reducedMotion \? 1 :/);
+  assert.doesNotMatch(system, /requestAnimationFrame/);
+});
+
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);
   assert.match(system, /uniform float uBreathScale;/);

@@ -421,6 +421,7 @@ face_interface:
     activity: 0.14
     risk: 0.0
   stipple:
+    intro_duration_ms: 1200
     depth_response:
       reference_distance: 5.0
       scale_min: 0.75

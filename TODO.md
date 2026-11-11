@@ -337,13 +337,11 @@ measure is already owned by the Bymorgen item above.
   the existing particle shader and track-driven transitions between the two
   current visualizers. Keep the existing transport bar; prove beat response,
   reduced motion and mobile/desktop playback.
-- [ ] **Many-to-one face introduction.** Finish the original particle-to-portrait
-  opening requested in earlier face work: dispersed carriers assemble into the
-  carved-field portrait, then hand off to normal listening/attention and
-  semantic-object morphs. Reuse the existing primer, renderer and frame clock;
-  do not copy the show's title treatment or community-governed mask motifs.
-  Reduced motion must land directly on the completed portrait. Prove first and
-  repeat visits, boot failure recovery, and narrow/wide browser rendering.
+- [ ] **Many-to-one face introduction.** Source landed: deterministic carriers now
+  converge into the carved-field portrait in the existing stipple renderer;
+  duration is token-owned and reduced motion resolves immediately. Rendered
+  first/repeat-visit, boot-recovery and narrow/wide browser proof remains open.
+  Do not copy the show's title treatment or community-governed mask motifs.
 - [ ] **Conversation evaluation.** Replay representative prior conversations
   for answer-first behavior, no repeated known facts, one necessary question
   at most, natural interruption/resumption, preference use and uncertainty.
