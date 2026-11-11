@@ -949,7 +949,7 @@ pub5_source_ceilings:
 # disagreement with the zones it was checking.
 #
 # The check reads the policy file now. OPERATOR.sh cannot: its constants are
-# sourced before anything runs, and making the deploy script shell out to ruby34
+# sourced before anything runs, and making the deploy script shell out to ruby
 # to boot would put it behind an interpreter it installs. The duplication stays
 # and this test is what it costs.
 # 114 -> 115 for test/test_vps_deploy_contract.rb. bin/vps-deploy is the
