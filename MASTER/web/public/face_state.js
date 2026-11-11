@@ -90,7 +90,8 @@
 
   function canonicalTopology(value) {
     const topology = String(value || DEFAULTS.topology).toLowerCase();
-    return topology === "papua-mask" ? "carved-field" : topology;
+    const aliases = CONTRACT_SPATIAL.topology_aliases || {};
+    return String(aliases[topology] || topology);
   }
 
   function modeFor(detail = {}) {
