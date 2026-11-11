@@ -41,11 +41,24 @@ daemon="/bin/ksh"
 # generates sets RUBY_YJIT_ENABLE=1, and a future Ruby may turn it on at build
 # time. Without this line the box would quietly start paying for it, and the
 # symptom would be swap rather than anything that names YJIT.
-# rc.d cannot source the repo, so pick whichever bundler the package manager
-# installed (OpenBSD ships Ruby by version; none is named here).
-for _bundle in /usr/local/bin/bundle4.0 /usr/local/bin/bundle40 /usr/local/bin/bundle3.4 /usr/local/bin/bundle34 /usr/local/bin/bundle3.3 /usr/local/bin/bundle33 /usr/local/bin/bundle; do
-  if [ -x "$_bundle" ]; then break; fi
-done
+# Select the generic compatible Ruby first; otherwise discover an installed
+# versioned package and require its matching Bundler executable.
+_ruby=/usr/local/bin/ruby
+if [ ! -x "$_ruby" ] || ! "$_ruby" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+  _ruby=
+  for _candidate in /usr/local/bin/ruby[0-9]*; do
+    [ -x "$_candidate" ] || continue
+    if "$_candidate" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+      _ruby=$_candidate
+      break
+    fi
+  done
+fi
+[ -n "$_ruby" ] || { echo "brgen: Ruby >= 3.3 is required" >&2; exit 1; }
+_ruby_suffix=${_ruby##*/}
+_ruby_suffix=${_ruby_suffix#ruby}
+_bundle="/usr/local/bin/bundle${_ruby_suffix}"
+[ -x "$_bundle" ] || { echo "brgen: matching Bundler is unavailable" >&2; exit 1; }
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/brgen.env && set +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/brgen PUB5_ROOT=/home/dev/pub5 PUB5_RAILS_ROOT=/home/dev/pub5/RAILS && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
 daemon_user="brgen"
 daemon_execdir="/home/brgen/app"
