@@ -515,6 +515,20 @@ module Master
           end
         end
 
+        # A timeout, worker exception or partial thread startup must not
+        # leave another persona speaking after this council batch has ended.
+        def stop_persona_threads(threads)
+          workers = Array(threads).map(&:last)
+          workers.each { |thread| thread.kill if thread.alive? }
+          workers.each do |thread|
+            begin
+              thread.join
+            rescue StandardError
+              nil
+            end
+          end
+        end
+
         def collect_sequential(code:, context:, personas: @personas, image: nil)
           deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + TOTAL_BUDGET_S
           personas.each_with_object([]) do |persona, feedback|
