@@ -16,6 +16,7 @@
     Params:
       label  -- the wordmark text. Defaults to the app name.
       href   -- where home is. Defaults to the app's root_path.
+      particle -- optional aria-hidden grain overlay; off unless an app opts in.
 
     The mark is the brand and nothing else. brgen used to pass a prefix and a
     suffix so a vertical's mark read markedsplass.brgen.no, which printed a URL
@@ -30,8 +31,9 @@
 <%# brgen passes its historical class alongside so every rule already written
     against .brgen-logo-mark keeps applying. %>
 <% mark_class = local_assigns.fetch(:class_name, "brand-mark") %>
+<% particle_overlay = local_assigns.fetch(:particle, false) == true %>
 <header>
   <%= link_to mark_href, class: mark_class do %>
-    <span class="brand-text"><%= mark_label %></span>
+    <span class="brand-text"><%= mark_label %><% if particle_overlay %><span class="brand-text__particles" aria-hidden="true"><%= mark_label %></span><% end %></span>
   <% end %>
 </header>
