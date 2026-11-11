@@ -21,7 +21,7 @@ class TestBinRuby < Minitest::Test
 
   def test_wrapper_has_no_artificial_upper_version
     source = File.read(BIN)
-    assert_includes source, "MIN_MAJOR=3\\nMIN_MINOR=3"
+    assert_includes source, "MIN_MAJOR=3\nMIN_MINOR=3"
     refute_includes source, "MAX_MAJOR="
   end
 
