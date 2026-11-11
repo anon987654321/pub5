@@ -288,6 +288,7 @@ module Master
         "reload" => {
           summary: "restart the current session in place",
           detail: ["/reload - restart this session in place so edits to lib/ and data/ take effect.",
+                   "Say \"restart MASTER\" or \"reload yourself\" to invoke the same command.",
                    "The conversation is kept; the beat and speech stop first."],
         },
         "bard" => {
