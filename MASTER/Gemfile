@@ -6,8 +6,6 @@ ruby ">= 3.3"
 gem "fiddle"
 gem "psych"
 gem "yaml"
-# Keep the locked JSON API stable across the declared Ruby 3.3+ range; the dependency manager activates this bundle before application boot.
-gem "json", "= 2.18.0"
 
 gem "ruby_llm", "~> 2.1.0"
 gem "mcp", "~> 1.6"
