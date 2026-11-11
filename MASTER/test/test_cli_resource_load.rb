@@ -134,6 +134,17 @@ class TestCliResourceLoad < Minitest::Test
     end
   end
 
+  def test_spinner_stays_uncoloured_when_cpu_load_is_unavailable
+    session = Master::CLI::Session.allocate
+
+    Master::CLI::Session::ResourceLoad.stub(:cpu_load, nil) do
+      intensity, = session.send(:probe_intensity, nil, 0.0)
+      assert_nil intensity
+      assert_equal "** working", session.send(:spin_tinted, "** working", intensity)
+      assert_equal Master::CLI::Session::TICK_SECONDS, session.send(:spin_pause, intensity)
+    end
+  end
+
   def test_spinner_probe_uses_cpu_load_not_process_pressure
     session = Master::CLI::Session.allocate
 
