@@ -25,8 +25,7 @@ module Master
   COUNCIL_PATH = File.join(DATA, "council.yml").freeze
   LAWS_PATH = File.join(DATA, "laws.yml").freeze
 
-  # The bundler of the Ruby that is running (ruby34 -> bundle34, ruby -> bundle).
-  # OpenBSD installs Ruby by version, so no version is named here.
+  # Prefer the Bundler paired with the Ruby currently running; generic names are the default.
   BUNDLE_BIN = begin
     versioned = "bundle#{RbConfig::CONFIG["ruby_install_name"].delete_prefix("ruby")}"
     on_path = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, versioned)) }
