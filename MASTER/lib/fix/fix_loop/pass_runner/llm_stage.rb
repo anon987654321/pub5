@@ -130,24 +130,39 @@ module Master
 
             group.each_slice(LawOrder::MAX_PARALLEL_LAWS).flat_map do |batch|
               threads = []
-              start_error = nil
               begin
-                batch.each do |rule|
-                  threads << Thread.new do
-                    Thread.current.report_on_exception = false
-                    [rule, run_law_once(rule, files, pass, council:,
-                                        external_violations: rule_violations[rule.id.to_s])]
+                start_error = nil
+                begin
+                  batch.each do |rule|
+                    threads << Thread.new do
+                      Thread.current.report_on_exception = false
+                      [rule, run_law_once(rule, files, pass, council:,
+                                          external_violations: rule_violations[rule.id.to_s])]
+                    end
                   end
+                rescue StandardError => error
+                  start_error = error
                 end
-              rescue StandardError => error
-                start_error = error
+
+                join_error = join_rule_workers(threads)
+                raise start_error if start_error
+                raise join_error if join_error
+
+                threads.map(&:value)
+              ensure
+                stop_rule_workers(threads)
               end
+            end
+          end
 
-              join_error = join_rule_workers(threads)
-              raise start_error if start_error
-              raise join_error if join_error
-
-              threads.map(&:value)
+          def stop_rule_workers(threads)
+            Array(threads).each { |thread| thread.kill if thread.alive? }
+            Array(threads).each do |thread|
+              begin
+                thread.join
+              rescue StandardError
+                nil
+              end
             end
           end
 
