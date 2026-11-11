@@ -29,6 +29,25 @@ class TestLawRegistryAudit < Minitest::Test
     assert status.success?, output
   end
 
+  def test_definition_sources_must_resolve_inside_the_repository
+    Dir.mktmpdir do |directory|
+      root = File.join(directory, "repo")
+      outside = File.join(directory, "outside")
+      FileUtils.mkdir_p([File.join(root, "law"), outside])
+      inside_file = File.join(root, "law", "inside.rb")
+      outside_file = File.join(outside, "outside.rb")
+      File.write(inside_file, "Law = true\\n")
+      File.write(outside_file, "Law = false\\n")
+      File.symlink(outside_file, File.join(root, "law", "linked.rb"))
+      audit = Master::Review::Scan::LawRegistryAudit.new(root: File.join(root, "MASTER"))
+      repository = File.realpath(root)
+
+      assert audit.send(:source_file_in_repository?, "law/inside.rb", repository)
+      refute audit.send(:source_file_in_repository?, "../outside/outside.rb", repository)
+      refute audit.send(:source_file_in_repository?, "law/linked.rb", repository)
+    end
+  end
+
   def test_audit_reports_yaml_and_registry_counts
     report = audit.call
     assert_operator report.yaml_laws, :>, 100
