@@ -284,10 +284,21 @@ module Master
           end
 
           if RETRYABLE.include?(outcome) && !note.to_s.empty? && attempts > MAX_FIX_RETRIES
-            Master::Trace::Dmesg.status(
-              "fix0",
-              "#{File.basename(violation[:file].to_s)} #{@law.id}: retry limit reached after #{attempts} attempts",
+            reason = "retry limit reached after #{attempts} refused attempts: #{note}"
+            @person_required = true
+            RunLedger.record_disposition(
+              file: violation[:file], law: violation[:law] || @law.id,
+              outcome: :needs_person, reason:
             )
+            @bus&.publish(
+              "repair_loop:human_decision_required",
+              law: violation[:law] || @law.id, file: violation[:file],
+              reason:, attempts:, last_outcome: outcome,
+            )
+            Master::Trace::Dmesg.gap(
+              "fix0", "#{File.basename(violation[:file].to_s)} #{@law.id}: #{reason}", reason
+            )
+            outcome = :needs_person
           end
           outcome
         rescue StandardError => e
