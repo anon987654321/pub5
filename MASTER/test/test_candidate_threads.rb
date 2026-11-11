@@ -42,7 +42,7 @@ class TestCandidateThreads < Minitest::Test
         workers << Thread.current
         started << true
         block.call
-      end
+      end.tap { started.pop(timeout: 2) }
     }) do
       error = assert_raises(ThreadError) do
         repair.send(:candidate_threads, 2, violation: {}, event: "test") { sleep 30 }
@@ -50,7 +50,6 @@ class TestCandidateThreads < Minitest::Test
       assert_equal "thread limit reached", error.message
     end
 
-    assert started.pop(timeout: 2), "the first candidate should have started"
     workers.each { |thread| thread.join(2) }
     refute workers.any?(&:alive?), "a partially started candidate must not outlive startup failure"
   end
