@@ -319,6 +319,21 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_group_or_world_readable_snapshot_is_ignored_and_rebuilt
+    with_tree do |root|
+      Index.new(root:, persist: true).build
+      store = Master::Review::CodeIndexStore.new(root:)
+      File.chmod(0o644, store.path)
+
+      parsed_files do |parsed|
+        rebuilt = Index.new(root:, persist: true).build
+        assert_equal %w[Alpha Beta], parsed.sort
+        assert rebuilt.complete?
+        assert_equal 0o600, File.stat(store.path).mode & 0o777
+      end
+    end
+  end
+
   def test_symlinked_cache_directory_is_refused_without_writing_outside
     with_tree do |root|
       outside = File.join(File.dirname(root), "code-index-outside-#{SecureRandom.hex(4)}")
