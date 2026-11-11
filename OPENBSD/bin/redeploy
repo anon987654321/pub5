@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # On-box one-shot redeploy. Runs as root via vps-deploy's doas re-exec.
-# Prefer ./redeploy from a workstation.
+# Prefer MASTER/bin/redeploy from a workstation.
 set -euo pipefail
 cd "${PUB5_ROOT:-/home/dev/pub5}"
 app=${1:-all}
