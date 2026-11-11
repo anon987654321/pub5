@@ -318,11 +318,19 @@ module Master
           # file in hand and takes no other, so no write is cut in half.
           def stop_workers(queue, workers)
             live = Array(workers).select(&:alive?)
-            return if live.empty?
+            return [] if live.empty?
 
             queue.clear
             live.size.times { queue << :done }
-            live.each(&:join)
+            errors = []
+            live.each do |worker|
+              begin
+                worker.join
+              rescue StandardError => error
+                errors << error
+              end
+            end
+            errors
           end
 
           def finish_stream(fixed, found, files, pass)
