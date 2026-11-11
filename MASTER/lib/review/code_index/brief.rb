@@ -42,6 +42,9 @@ module Master
           lines = ["# Codebase: #{@symbols.size} symbols, #{classes.size} classes and modules (indexed #{stamp})"]
           lines << "Classes and modules by tree: #{counts}"
           lines << "Entry points: #{entries.join(", ")}" if entries.any?
+          unless @built_at
+            lines << "Index coverage: NOT_BUILT (no source scan has completed)."
+          end
           if @partial
             lines << "Index coverage: INCOMPLETE (path-scoped build; not a repository-wide graph)."
           end
