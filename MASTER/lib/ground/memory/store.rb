@@ -22,6 +22,7 @@ module Master
           @mutex = Mutex.new
           @store = load_store
           @persisted_store = deep_copy_store(@store)
+          @disk_signature = memory_store_signature
           @store_version = 0
           import_external!
         end
@@ -173,6 +174,7 @@ module Master
         end
 
         def provenance(key)
+          refresh_store_if_changed
           @mutex.synchronize do
             value = @store[key.to_s]
             value.is_a?(Hash) ? (value["provenance"] || legacy_provenance(value)) : nil
@@ -180,6 +182,7 @@ module Master
         end
 
         def conflicts_for(key)
+          refresh_store_if_changed
           prefix = "conflict/#{key}/"
           @mutex.synchronize do
             @store.filter_map do |conflict_key, value|
@@ -190,6 +193,7 @@ module Master
         end
 
         def by_type(type)
+          refresh_store_if_changed
           @mutex.synchronize do
             @store.select do |key, value|
               typed_entry?(key:, value:, type: type.to_s) && context_eligible?(key, value)
@@ -198,6 +202,7 @@ module Master
         end
 
         def type_counts
+          refresh_store_if_changed
           @mutex.synchronize do
             @store.each_with_object(Hash.new(0)) do |(key, value), counts|
               next if archived_or_summary?(key)
@@ -221,6 +226,7 @@ module Master
         end
 
         def recall(key)
+          refresh_store_if_changed
           @mutex.synchronize { @store.dig(key.to_s, "value") }
         end
 
@@ -243,6 +249,7 @@ module Master
         end
 
         def all
+          refresh_store_if_changed
           @mutex.synchronize { @store.transform_values { |value| value.is_a?(Hash) ? value["value"] : value } }
         end
 
@@ -256,6 +263,7 @@ module Master
         private
 
         def store_version
+          refresh_store_if_changed
           @mutex.synchronize { @store_version }
         end
 
@@ -482,7 +490,28 @@ module Master
             end
           end
           @persisted_store = deep_copy_store(disk)
+          @disk_signature = memory_store_signature
           @store_version += 1
+        end
+
+        # Atomic replacement changes the inode. Readers use this cheap stamp
+        # to notice another process's write and refresh before exposing memory.
+        def memory_store_signature
+          return unless File.exist?(@path) || File.symlink?(@path)
+
+          stat = File.lstat(@path)
+          unless stat.file? && !stat.symlink? && stat.nlink == 1
+            raise IOError, "memory store must be a singly linked regular file"
+          end
+          [stat.dev, stat.ino, stat.size, stat.mtime.to_r, stat.ctime.to_r]
+        rescue Errno::ENOENT
+          nil
+        end
+
+        def refresh_store_if_changed
+          return if memory_store_signature == @disk_signature
+
+          @mutex.synchronize { with_store_lock {} }
         end
 
         def deep_copy_store(value)
@@ -502,6 +531,7 @@ module Master
         def persist
           write_atomic(@path, @store.to_yaml, mode: 0o600)
           @persisted_store = deep_copy_store(@store)
+          @disk_signature = memory_store_signature
           @store_version += 1
         end
       end
