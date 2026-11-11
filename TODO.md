@@ -146,9 +146,6 @@ screenshot count or previous revision.
   automatic root-checkbox reconciliation remain open. These runtime paths
   still need their authored regression suites run on the selected repository
   Ruby.
-  acceptance-command coverage beyond the current allowlist and automatic root
-  checkbox reconciliation remain open. These runtime paths still need their
-  authored regression suites run on the selected repository Ruby.
   Human, rights, provider-spend, device and production-host approvals remain
   real stop points. Build on these existing owners; do not add a second queue.
 - [ ] Verify shared-checkout lock, writer ownership, interruption cleanup and
