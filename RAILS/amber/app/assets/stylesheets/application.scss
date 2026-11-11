@@ -491,13 +491,32 @@ h2 {
   inline-size: 4px;
   block-size: 4px;
   background: #ffb999;
-  box-shadow:
-    0 -8px 0 #ffb999,
-    0 8px 0 #ffb999,
-    -8px 0 0 #ffb999,
-    8px 0 0 #ffb999,
-    0 0 0 4px #e6cce6;
+  outline: 4px solid #e6cce6;
   animation: amber-pixel-twinkle 4.8s steps(2, end) infinite;
+}
+
+/* The quincunx arms are painted as two hard-stop bars, flat like the centre
+   square; box-shadow is barred from first-party UI. */
+.amber-magic-pixel-star::before,
+.amber-magic-pixel-star::after {
+  content: "";
+  position: absolute;
+  background: linear-gradient(#ffb999 0 4px, transparent 4px 16px, #ffb999 16px 20px);
+}
+
+.amber-magic-pixel-star::before {
+  inline-size: 4px;
+  block-size: 20px;
+  inset-block-start: -12px;
+  inset-inline-start: 0;
+}
+
+.amber-magic-pixel-star::after {
+  inline-size: 20px;
+  block-size: 4px;
+  inset-block-start: 0;
+  inset-inline-start: -12px;
+  background: linear-gradient(90deg, #ffb999 0 4px, transparent 4px 16px, #ffb999 16px 20px);
 }
 
 .amber-magic-pixel-star--one {
@@ -509,12 +528,27 @@ h2 {
   inset-block-start: 31%;
   inset-inline-end: 13%;
   background: #99e6e6;
-  box-shadow:
-    0 -6px 0 #99e6e6,
-    0 6px 0 #99e6e6,
-    -6px 0 0 #99e6e6,
-    6px 0 0 #99e6e6;
   animation-delay: -1.7s;
+}
+
+.amber-magic-pixel-star--two::before,
+.amber-magic-pixel-star--two::after {
+  background: linear-gradient(#99e6e6 0 4px, transparent 4px 12px, #99e6e6 12px 16px);
+}
+
+.amber-magic-pixel-star--two::before {
+  inline-size: 4px;
+  block-size: 16px;
+  inset-block-start: -10px;
+  inset-inline-start: 0;
+}
+
+.amber-magic-pixel-star--two::after {
+  inline-size: 16px;
+  block-size: 4px;
+  inset-block-start: 0;
+  inset-inline-start: -10px;
+  background: linear-gradient(90deg, #99e6e6 0 4px, transparent 4px 12px, #99e6e6 12px 16px);
 }
 
 .amber-magic-pixel-star--three {
@@ -523,21 +557,57 @@ h2 {
   inline-size: 3px;
   block-size: 3px;
   background: #cce6cc;
-  box-shadow: 0 -6px 0 #cce6cc, 0 6px 0 #cce6cc, -6px 0 0 #cce6cc, 6px 0 0 #cce6cc;
   animation-delay: -3.1s;
+}
+
+.amber-magic-pixel-star--three::before,
+.amber-magic-pixel-star--three::after {
+  background: linear-gradient(#cce6cc 0 3px, transparent 3px 12px, #cce6cc 12px 15px);
+}
+
+.amber-magic-pixel-star--three::before {
+  inline-size: 3px;
+  block-size: 15px;
+  inset-block-start: -7.5px;
+  inset-inline-start: 0;
+}
+
+.amber-magic-pixel-star--three::after {
+  inline-size: 15px;
+  block-size: 3px;
+  inset-block-start: 0;
+  inset-inline-start: -7.5px;
+  background: linear-gradient(90deg, #cce6cc 0 3px, transparent 3px 12px, #cce6cc 12px 15px);
 }
 
 .amber-magic-sakura {
   inline-size: 5px;
   block-size: 5px;
   background: #ffb999;
-  box-shadow:
-    0 -5px 0 #e6cce6,
-    5px 0 0 #ffb999,
-    0 5px 0 #e6cce6,
-    -5px 0 0 #ffb999,
-    0 0 0 2px #fff;
+  outline: 2px solid #fff;
   animation: amber-petal-drift 12s ease-in-out infinite;
+}
+
+.amber-magic-sakura::before,
+.amber-magic-sakura::after {
+  content: "";
+  position: absolute;
+}
+
+.amber-magic-sakura::before {
+  inline-size: 5px;
+  block-size: 15px;
+  inset-block-start: -10px;
+  inset-inline-start: 0;
+  background: linear-gradient(#e6cce6 0 5px, transparent 5px 10px, #e6cce6 10px 15px);
+}
+
+.amber-magic-sakura::after {
+  inline-size: 15px;
+  block-size: 5px;
+  inset-block-start: 0;
+  inset-inline-start: -10px;
+  background: linear-gradient(90deg, #ffb999 0 5px, transparent 5px 10px, #ffb999 10px 15px);
 }
 
 .amber-magic-sakura--one {
