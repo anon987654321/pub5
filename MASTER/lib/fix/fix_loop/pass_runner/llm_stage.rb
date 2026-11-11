@@ -134,6 +134,7 @@ module Master
               begin
                 batch.each do |rule|
                   threads << Thread.new do
+                    Thread.current.report_on_exception = false
                     [rule, run_law_once(rule, files, pass, council:,
                                         external_violations: rule_violations[rule.id.to_s])]
                   end
