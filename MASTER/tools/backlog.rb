@@ -317,6 +317,16 @@ module Backlog
       return false if paths.empty?
       return false unless paths.all? { |path| path.start_with?("#{tree}/") }
       return false if paths.any? { |path| ["*", "?", "{", "}", "[", "]"].any? { |token| path.include?(token) } || path.split("/").include?("..") }
+      return false unless paths.all? do |path|
+        absolute = File.expand_path(path, @repo_root)
+        next false unless absolute.start_with?(@repo_root + File::SEPARATOR)
+        next false if File.symlink?(absolute) || !(File.file?(absolute) || File.directory?(absolute))
+
+        real = File.realpath(absolute)
+        real.start_with?(@repo_root + File::SEPARATOR)
+      rescue SystemCallError
+        false
+      end
 
       true
     end
