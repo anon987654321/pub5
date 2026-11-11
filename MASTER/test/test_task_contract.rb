@@ -31,7 +31,7 @@ class TestTaskContract < Minitest::Test
     result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
 
     CONTRACT.with_current(first) do
-      CONTRACT.attach_plan!("plan-one")
+      CONTRACT.attach_plan!("a" * 64)
       row = CONTRACT.record_preservation!(
         path: File.join(Master::REPO_ROOT, "page.html"),
         format: "html",
@@ -39,13 +39,13 @@ class TestTaskContract < Minitest::Test
         after: "<p>after</p>",
         result:,
       )
-      assert_equal "plan-one", row.fetch("plan_digest")
+      assert_equal "a" * 64, row.fetch("plan_digest")
       assert_match(/\A[0-9a-f]{64}\z/, row.fetch("before_sha256"))
       assert_equal "INCONCLUSIVE", CONTRACT.preservation_evidence.fetch("status")
 
       CONTRACT.with_current(second) do
         assert_equal "not_measured", CONTRACT.preservation_evidence.fetch("status")
-        CONTRACT.attach_plan!("plan-two")
+        CONTRACT.attach_plan!("b" * 64)
         CONTRACT.record_preservation!(
           path: File.join(Master::REPO_ROOT, "worker.rb"),
           format: "rb",
@@ -53,11 +53,11 @@ class TestTaskContract < Minitest::Test
           after: "x = 2",
           result: Master::Fix::ArtifactPreservation::Result.new("INCONCLUSIVE", [], "no Ruby source verifier"),
         )
-        assert_equal "plan-two", CONTRACT.preservation_evidence.fetch("plan_digest")
+        assert_equal "b" * 64, CONTRACT.preservation_evidence.fetch("plan_digest")
       end
 
       evidence = CONTRACT.preservation_evidence
-      assert_equal "plan-one", evidence.fetch("plan_digest")
+      assert_equal "a" * 64, evidence.fetch("plan_digest")
       assert_equal ["page.html"], evidence.fetch("results").map { |entry| entry.fetch("path") }
     end
 
@@ -116,7 +116,7 @@ class TestTaskContract < Minitest::Test
     )
 
     CONTRACT.with_current(contract) do
-      CONTRACT.attach_plan!("bound-plan")
+      CONTRACT.attach_plan!("c" * 64)
       row = CONTRACT.record_preservation!(
         path: File.join(Master::REPO_ROOT, "page.html"),
         format: "html", before: "same", after: "same", result:,
@@ -127,7 +127,36 @@ class TestTaskContract < Minitest::Test
       assert_equal %w[visual_identity layout], row.fetch("dimensions")
       assert_equal "INCONCLUSIVE", evidence.fetch("status")
       assert_includes evidence.fetch("missing_dimensions"), "accessibility"
-      assert_equal "bound-plan", evidence.fetch("plan_digest")
+      assert_equal "c" * 64, evidence.fetch("plan_digest")
+    end
+  end
+
+  def test_attach_plan_rejects_unvalidated_digest_strings
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+
+    CONTRACT.with_current(contract) do
+      assert_raises(CONTRACT::Invalid) { CONTRACT.attach_plan!("not-a-digest") }
+      assert_nil CONTRACT.current && CONTRACT.preservation_evidence.fetch("plan_digest")
+    end
+  end
+
+  def test_preservation_receipts_from_an_older_fix_plan_cannot_prove_the_new_generation
+    contract = CONTRACT.build(intent: "content_only", scope: ["page.html"], preserve: [], proof: [])
+    result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
+
+    CONTRACT.with_current(contract) do
+      CONTRACT.attach_plan!("1" * 64)
+      CONTRACT.record_preservation!(
+        path: File.join(Master::REPO_ROOT, "page.html"),
+        format: "html", before: "before", after: "after", result:
+      )
+      CONTRACT.attach_plan!("2" * 64)
+
+      evidence = CONTRACT.preservation_evidence
+      assert_equal "INCONCLUSIVE", evidence.fetch("status")
+      assert_equal "2" * 64, evidence.fetch("plan_digest")
+      assert_equal 1, evidence.fetch("plan_mismatch_count")
+      assert_match(/different FixPlan/, evidence.fetch("reason"))
     end
   end
 
@@ -172,7 +201,7 @@ class TestTaskContract < Minitest::Test
     result = Master::Fix::ArtifactPreservation::Result.new("PASS", ["html_markup"], nil)
 
     CONTRACT.with_current(contract) do
-      CONTRACT.attach_plan!("overflow-plan")
+      CONTRACT.attach_plan!("d" * 64)
       (CONTRACT::MAX_PRESERVATION_ROWS + 1).times do
         CONTRACT.record_preservation!(
           path: File.join(Master::REPO_ROOT, "page.html"),
@@ -203,7 +232,7 @@ class TestTaskContract < Minitest::Test
       )
 
       CONTRACT.with_current(contract) do
-        CONTRACT.attach_plan!("stale-plan")
+        CONTRACT.attach_plan!("e" * 64)
         CONTRACT.record_preservation!(
           path:, format: "html", before:, after:, result:, verifier: "visual_custody"
         )
@@ -237,7 +266,7 @@ class TestTaskContract < Minitest::Test
         )
 
         CONTRACT.with_current(contract) do
-          CONTRACT.attach_plan!("symlink-plan")
+          CONTRACT.attach_plan!("f" * 64)
           CONTRACT.record_preservation!(
             path:, format: "html", before:, after:, result:, verifier: "visual_custody"
           )
