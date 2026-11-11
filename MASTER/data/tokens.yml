@@ -1052,6 +1052,15 @@ tokens:
         max_features: 6
         morph_stage_duration_ms: 280
         morph_stage_gap_ms: 72
+        custom_geometry:
+          enabled: true
+          max_parts: 6
+          allowed_primitives: [box, sphere, ring, cylinder, beam]
+          axes: [x, y, z]
+          center_limit: 0.45
+          size_min: 0.06
+          size_max: 0.62
+          default_size: [0.18, 0.18, 0.18]
         kinds:
           bridge: [deck, towers, cables, piers]
           tree: [trunk, branches, canopy]
