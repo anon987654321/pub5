@@ -99,13 +99,12 @@ trusting this page.
 
 9. A session post-mortem receipt. Evidence: the external agent built
    docs/session-2026-11-08.md by hand from a pasted transcript; MASTER
-   watched the same session happen. State on main: open — run-level
-   receipts and named discards appear in the 2026-11-09 transcript
-   ("run ended reason=command scope ended", "receipt=not written
-   (read-only)"), and a second page, docs/session-2026-11-09.md, was
-   again built by hand; the chat-visible session receipt is still
-   missing. Landing path: a read-only receipt over existing telemetry
-   and the session log.
+   watched the same session happen. State on main: landed in this revision —
+   /session receipt summarizes the active transcript fingerprint, role/layer
+   counts, bounded activity and evidence event names, and failure-like event
+   counts. It never emits message text, tool arguments or event payloads;
+   corrupt or unreadable sources produce INCONCLUSIVE. Tests cover privacy
+   and corrupt telemetry.
 
 ## Shared
 

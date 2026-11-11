@@ -277,7 +277,7 @@ module Master
       # restored around a block is a worse way to say the same thing.
       def self.conversation_key = Fiber[:master_conversation] || LOCAL
 
-      attr_reader :cost, :tokens_billed, :phase, :snapshots, :budget_max
+      attr_reader :root, :cost, :tokens_billed, :phase, :snapshots, :budget_max
       attr_accessor :topic, :last_inferred_command, :last_inferred_args
 
       def initialize(root: Dir.pwd, budget_max: 10.0, req_max: 1.0)

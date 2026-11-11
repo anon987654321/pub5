@@ -98,7 +98,8 @@ module Master
         when "", "list" then dispatch_sessions(session)
         when "continue", "resume" then dispatch_continue(session, ctx: rest)
         when "fork" then dispatch_fork(session, ctx: rest)
-        else "session  session continue <id>  session fork [id]"
+        when "receipt" then Trace::ReplayReader.new(root: session.root).render_session_receipt(session:)
+        else "session  session receipt  session continue <id>  session fork [id]"
         end
       end
 

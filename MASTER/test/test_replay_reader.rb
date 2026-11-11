@@ -56,6 +56,49 @@ class TestReplayReader < Minitest::Test
     assert_includes output, "ops:commit"
   end
 
+  def test_session_receipt_summarizes_private_transcript_and_telemetry_without_payloads
+    session = Trace::Session.new(root: @dir)
+    session.add_message(role: :user, content: "Private question: never print this phrase")
+    session.add_message(role: :assistant, content: "Private answer: never print this phrase")
+    session.add_message(role: :user, content: "Private shell output: never print this phrase", layer: :execution)
+    session.save!
+
+    Trace::Log::Event.new(root: @dir, stream: "activity").append!(
+      "tool:after", { tool: "read_file", output: "PRIVATE TOOL PAYLOAD" }
+    )
+    Trace::Log::Event.new(root: @dir, stream: "evidence").append!(
+      "core:effect:complete", { output: "PRIVATE EFFECT PAYLOAD" }
+    )
+
+    output = Trace::ReplayReader.new(root: @dir).render_session_receipt(session:)
+
+    assert_includes output, "session receipt0: OBSERVED"
+    assert_includes output, "sha256="
+    assert_includes output, "persisted_messages=3"
+    assert_includes output, "memory_messages=3"
+    assert_includes output, "execution=1"
+    assert_includes output, "tool:after=1"
+    assert_includes output, "core:effect:complete=1"
+    refute_includes output, "Private question"
+    refute_includes output, "Private answer"
+    refute_includes output, "PRIVATE TOOL PAYLOAD"
+    refute_includes output, "PRIVATE EFFECT PAYLOAD"
+  end
+
+  def test_session_receipt_is_inconclusive_when_transcript_telemetry_is_corrupt
+    session = Trace::Session.new(root: @dir)
+    session.add_message(role: :user, content: "not emitted")
+    session.save!
+    write_private(File.join(@events_dir, "activity.jsonl"), "{broken json\n")
+
+    output = Trace::ReplayReader.new(root: @dir).render_session_receipt(session:)
+
+    assert_includes output, "session receipt0: INCONCLUSIVE"
+    assert_includes output, "status=unavailable"
+    refute_includes output, "not emitted"
+    refute_includes output, "broken json"
+  end
+
   def test_replay_failures_filters_error_events
     path = File.join(@events_dir, "activity.jsonl")
     write_private(path, [

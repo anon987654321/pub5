@@ -310,8 +310,9 @@ module Master
           detail: ["/clear - does not undo file changes."],
         },
         "session" => {
-          summary: "the conversations: list, continue or branch one",
+          summary: "the conversations: inspect, continue or branch one",
           detail: ["/session - list sessions; the current one is marked with *.",
+                   "/session receipt - read-only post-mortem over the saved transcript and this process's telemetry.",
                    "/session continue <id> - switch the active conversation; resume is the same word.",
                    "/session fork [id] - clone the current conversation and continue in the new branch."],
         },

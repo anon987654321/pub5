@@ -3,6 +3,7 @@
 require "json"
 require "open3"
 require "time"
+require "digest"
 
 module Master
   module Trace
@@ -31,6 +32,140 @@ module Master
         else
           render_events(limit: mode.is_a?(Integer) ? mode : 20)
         end
+      end
+
+      def render_session_receipt(session:)
+        key = session.current_key
+        messages = session.messages(key)
+        transcript = transcript_fingerprint(key)
+        activity = session_event_summary("activity")
+        evidence = session_event_summary("evidence")
+        status = [transcript, activity, evidence].all? { |source| source["status"] == "read" } ? "OBSERVED" : "INCONCLUSIVE"
+
+        roles = messages.group_by { |message| (message[:role] || message["role"]).to_s }
+        execution = messages.count do |message|
+          layer = message[:layer] || message["layer"]
+          Master::CLI::ContextLayers.normalize(layer) == :execution
+        end
+        timestamps = messages.filter_map do |message|
+          value = message[:ts] || message["ts"]
+          Integer(value, exception: false)
+        end.sort
+        time_range = if timestamps.empty?
+                       "not recorded"
+                     else
+                       "#{Time.at(timestamps.first).utc.iso8601}..#{Time.at(timestamps.last).utc.iso8601}"
+                     end
+
+        [
+          "session receipt0: #{status} (read-only; message text and event payloads omitted)",
+          "transcript0: #{transcript_line(transcript, messages.size)}",
+          "messages0: total=#{messages.size} user=#{roles.fetch("user", []).size} assistant=#{roles.fetch("assistant", []).size} execution=#{execution} time=#{time_range}",
+          "activity0: #{event_summary_line(activity)}",
+          "evidence0: #{event_summary_line(evidence)}",
+          "privacy0: raw transcript text, tool arguments and telemetry payloads are not included",
+        ].join("\n")
+      rescue StandardError => error
+        "session receipt0: INCONCLUSIVE (read-only summary failed: #{error.class})"
+      end
+
+      private
+
+      def transcript_fingerprint(key)
+        local = key.to_s == Session::LOCAL.to_s
+        filename = local ? "session.json" : "conversations.json"
+        path = File.join(@root, ".master", filename)
+        return { "status" => "missing", "path" => ".master/#{filename}" } unless File.exist?(path) || File.symlink?(path)
+
+        bytes = read_private_snapshot(path)
+        data = JSON.parse(bytes)
+        messages = if local
+                     data["messages"]
+                   else
+                     data.dig(key.to_s, "messages") if data.is_a?(Hash) && data[key.to_s].is_a?(Hash)
+                   end
+        raise JSON::ParserError, "stored transcript messages are not an array" unless messages.is_a?(Array)
+
+        {
+          "status" => "read",
+          "path" => ".master/#{filename}",
+          "bytes" => bytes.bytesize,
+          "sha256" => Digest::SHA256.hexdigest(bytes),
+          "persisted_messages" => messages.size,
+        }
+      rescue StandardError => error
+        { "status" => "unavailable", "path" => ".master/#{filename}", "error" => error.class.to_s }
+      end
+
+      def read_private_snapshot(path)
+        before = File.lstat(path)
+        unless before.file? && !before.symlink? && before.nlink == 1
+          raise ArgumentError, "transcript must be a singly linked regular file"
+        end
+
+        flags = File::RDONLY
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(path, flags) do |file|
+          opened = file.stat
+          unless opened.file? && opened.dev == before.dev && opened.ino == before.ino &&
+                 (opened.mode & 0o077).zero?
+            raise ArgumentError, "transcript identity or permissions changed"
+          end
+
+          content = file.read
+          after = File.lstat(path)
+          unless after.file? && !after.symlink? && after.dev == opened.dev && after.ino == opened.ino
+            raise ArgumentError, "transcript changed while being read"
+          end
+          content
+        end
+      end
+
+      def session_event_summary(stream)
+        records = Log::Event.new(root: @root, stream:).recent!(500)
+        session_id = Log.session
+        scoped = records.select { |record| record["session"] == session_id }
+        counts = scoped.each_with_object(Hash.new(0)) do |record, out|
+          name = record["event"].to_s
+          out[name] += 1 unless name.empty?
+        end
+        ordered = counts.sort_by { |name, count| [-count, name] }
+        flagged = ordered.select { |name, _count| name.match?(/error|fail|violation|veto|timeout|rollback|discard|drop|reject/i) }
+        {
+          "status" => "read",
+          "sampled" => records.size,
+          "session_events" => scoped.size,
+          "event_types" => ordered.first(8),
+          "omitted_types" => [ordered.size - 8, 0].max,
+          "failure_like" => flagged,
+        }
+      rescue StandardError => error
+        { "status" => "unavailable", "error" => error.class.to_s, "sampled" => 0, "session_events" => 0 }
+      end
+
+      def transcript_line(transcript, memory_count)
+        detail = ["status=#{transcript.fetch("status")}"]
+        detail << "path=#{transcript["path"]}" if transcript["path"]
+        detail << "bytes=#{transcript["bytes"]}" if transcript["bytes"]
+        detail << "sha256=#{transcript["sha256"]}" if transcript["sha256"]
+        detail << "persisted_messages=#{transcript["persisted_messages"]}" if transcript["persisted_messages"]
+        detail << "memory_messages=#{memory_count}"
+        detail << "error=#{transcript["error"]}" if transcript["error"]
+        detail.join(" ")
+      end
+
+      def event_summary_line(summary)
+        types = Array(summary["event_types"]).map { |name, count| "#{name}=#{count}" }
+        failure = Array(summary["failure_like"]).map { |name, count| "#{name}=#{count}" }
+        [
+          "status=#{summary.fetch("status")}",
+          "sampled=#{summary.fetch("sampled", 0)}",
+          "session_events=#{summary.fetch("session_events", 0)}",
+          "types=#{types.empty? ? "none" : types.join(",")}",
+          ("omitted_types=#{summary["omitted_types"]}" if summary["omitted_types"].to_i.positive?),
+          ("failure_like=#{failure.join(",")}" unless failure.empty?),
+          ("error=#{summary["error"]}" if summary["error"]),
+        ].compact.join(" ")
       end
 
       private
