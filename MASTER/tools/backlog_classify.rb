@@ -68,6 +68,11 @@ module Backlog
         %r{\bSTUDIO\b}, %r{\bdilla\b}i, %r{\bpostpro\b}i, %r{\baudio\b}i,
         %r{\bvisualiz}i, %r{\bmusic\b}i,
       ],
+      "BIZ" => [
+        %r{\bBIZ\b}, %r{\bBPLANS\b}i, %r{\bbusiness[- ]plan\b}i,
+        %r{\bgrant[- ]application\b}i, %r{\bragnhild\b}i,
+        %r{\bbob2?\.html\b}i,
+      ],
     }.freeze
 
     module_function
