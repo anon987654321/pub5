@@ -36,12 +36,56 @@ end
 class TestReplicateClientRetry < Minitest::Test
   Client = Master::Io::ReplicateClient
 
+  class StreamingResponse
+    attr_reader :code, :read_count, :body
+
+    def initialize(code: "200", chunks: [], headers: {})
+      @code = code
+      @chunks = chunks.map { |chunk| chunk.to_s.b }
+      @body = @chunks.join
+      @headers = headers.transform_keys { |name| name.downcase }
+      @read_count = 0
+    end
+
+    def [](name) = @headers[name.downcase]
+
+    def read_body
+      @read_count += 1
+      @chunks.each { |chunk| yield chunk }
+    end
+  end
+
   def with_http_responses(responses, requests)
     http = Object.new
-    http.define_singleton_method(:request) do |request|
+    http.define_singleton_method(:read_timeout=) { |value| @read_timeout = value }
+    http.define_singleton_method(:request) do |request, &block|
       requests << request
-      responses.shift || raise("unexpected HTTP request")
+      if request.body_stream
+        stream = request.body_stream
+        stream.rewind if stream.respond_to?(:rewind)
+        request.instance_variable_set(:@captured_body, stream.read)
+        stream.rewind if stream.respond_to?(:rewind)
+      end
+
+      raw = responses.shift || raise("unexpected HTTP request")
+      response = if raw.respond_to?(:read_body)
+                   raw
+                 else
+                   bytes = raw.body.to_s.b
+                   StreamingResponse.new(code: raw.code, chunks: [bytes],
+                                         headers: { "content-length" => bytes.bytesize.to_s })
+                 end
+      block ? (block.call(response); response) : response
     end
+    starter = lambda { |_host, _port, **_options, &block| block.call(http) }
+
+    Net::HTTP.stub(:start, starter) { yield }
+  end
+
+  def with_download_response(response)
+    http = Object.new
+    http.define_singleton_method(:read_timeout=) { |value| @read_timeout = value }
+    http.define_singleton_method(:request_get) { |_path, &block| block.call(response) }
     starter = lambda { |_host, _port, **_options, &block| block.call(http) }
 
     Net::HTTP.stub(:start, starter) { yield }
