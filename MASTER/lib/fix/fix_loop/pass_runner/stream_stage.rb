@@ -486,8 +486,8 @@ module Master
             omitted = []
 
             ordered.each do |rel|
-              source = read_related(graph, rel)
-              if source.bytesize > room
+              source = read_related(graph, rel, max_bytes: room)
+              if source.nil?
                 omitted << rel
               else
                 room -= source.bytesize
@@ -498,15 +498,74 @@ module Master
             [entries, omitted]
           end
 
-          def read_related(graph, rel)
-            full = File.expand_path(rel, graph.root)
-            raise IncompleteContext, "dependency is a symlink: #{rel}" if File.symlink?(full)
-            raise IncompleteContext, "dependency disappeared since graph refresh: #{rel}" unless File.file?(full)
+          # An over-budget relationship is still checked against the graph's
+          # digest, but it is hashed in fixed-size chunks instead of being
+          # materialised just to discover that it cannot fit in the prompt.
+          def read_related(graph, rel, max_bytes:)
+            root = File.realpath(graph.root)
+            full = File.expand_path(rel, root)
+            unless full.start_with?(root + File::SEPARATOR)
+              raise IncompleteContext, "dependency escapes graph root: #{rel}"
+            end
 
-            source = File.read(full, encoding: "UTF-8")
-            return source if graph.source_digest(full) == Digest::SHA256.hexdigest(source)
+            cursor = root
+            components = rel.split(File::SEPARATOR)
+            components.each_with_index do |component, index|
+              cursor = File.join(cursor, component)
+              stat = File.lstat(cursor)
+              raise IncompleteContext, "dependency is a symlink: #{rel}" if stat.symlink?
+              if index < components.length - 1
+                raise IncompleteContext, "dependency parent is not a directory: #{rel}" unless stat.directory?
+              else
+                raise IncompleteContext, "dependency is not a regular file: #{rel}" unless stat.file?
+              end
+            end
 
-            raise IncompleteContext, "dependency changed since graph refresh: #{rel}"
+            before = File.lstat(full)
+            flags = File::RDONLY | File::NOFOLLOW
+            File.open(full, flags) do |io|
+              opened = io.stat
+              unless same_related_file?(before, opened) && File.realpath(full) == full
+                raise IncompleteContext, "dependency changed while opening: #{rel}"
+              end
+
+              if opened.size > max_bytes
+                digest = Digest::SHA256.new
+                digest.update(chunk) while (chunk = io.read(64 * 1024))
+                after = io.stat
+                unless stable_related_file?(opened, after)
+                  raise IncompleteContext, "dependency changed while reading: #{rel}"
+                end
+                unless digest.hexdigest == graph.source_digest(full)
+                  raise IncompleteContext, "dependency changed since graph refresh: #{rel}"
+                end
+                return nil
+              end
+
+              source = io.read(max_bytes + 1).to_s.force_encoding(Encoding::UTF_8)
+              after = io.stat
+              unless stable_related_file?(opened, after) && source.bytesize <= max_bytes
+                raise IncompleteContext, "dependency changed while reading: #{rel}"
+              end
+              unless source.valid_encoding? && Digest::SHA256.hexdigest(source) == graph.source_digest(full)
+                raise IncompleteContext, "dependency changed since graph refresh: #{rel}"
+              end
+
+              source
+            end
+          rescue Errno::ELOOP
+            raise IncompleteContext, "dependency is a symlink: #{rel}"
+          rescue SystemCallError => e
+            raise IncompleteContext, "dependency unavailable since graph refresh: #{rel} (#{e.class})"
+          end
+
+          def same_related_file?(left, right)
+            left.dev == right.dev && left.ino == right.ino
+          end
+
+          def stable_related_file?(before, after)
+            same_related_file?(before, after) && before.size == after.size &&
+              before.mtime == after.mtime && before.ctime == after.ctime
           end
 
           # Define-style calls make methods; they never call the target by a name this graph cannot see.
