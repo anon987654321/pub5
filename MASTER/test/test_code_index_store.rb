@@ -308,6 +308,23 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_structurally_invalid_snapshot_falls_back_to_a_full_build
+    with_tree do |root|
+      Index.new(root:, persist: true).build
+      store = Master::Review::CodeIndexStore.new(root:)
+      data = JSON.parse(File.read(store.path))
+      data["symbols"] = nil
+      File.write(store.path, JSON.generate(data))
+
+      parsed_files do |parsed|
+        rebuilt = Index.new(root:, persist: true).build
+        assert_equal %w[Alpha Beta], parsed.sort
+        assert rebuilt.complete?
+        assert rebuilt.lookup("Beta#two")
+      end
+    end
+  end
+
   def test_a_corrupt_snapshot_falls_back_to_a_full_build
     with_tree do |root|
       Index.new(root:, persist: true).build
