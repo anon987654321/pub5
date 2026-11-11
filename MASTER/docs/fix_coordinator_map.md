@@ -172,12 +172,13 @@ not runtime results.
 The Law scheduler also refuses dependency cycles instead of choosing an
 arbitrary remaining rule. Independent Law repairs are batched at no more than
 eight workers; every started worker is joined before a failure or cancellation
-can return control to transaction cleanup. Candidate generation keeps its
-parent thread-local state, tracks partial startup, and kills/joins on timeout.
-Inference search preserves prompt order in batches of at most eight; Council
-retains its four-person batch and single global deadline while accounting for
-worker failures and partial startup. AgentPool keeps its validated configured
-cap and joins the full worker set before re-raising a worker error. The focused
+can return control to transaction cleanup, including when a worker raises a
+non-StandardError exception. Candidate generation keeps its parent thread-local
+state, tracks partial startup, and kills/joins on timeout. Inference search
+preserves prompt order in batches of at most eight; Council retains its
+four-person batch and single global deadline while accounting for worker
+failures and partial startup. AgentPool keeps its validated configured cap,
+joins the full worker set even after fatal worker exits, then re-raises. The focused
 runner preflights the selected Ruby/Bundler and dependencies, then requires a
 nonzero Minitest run summary for every file. Runtime::Compute now incrementally
 tracks its capped thread workers and kills/joins them if startup, timeout or
