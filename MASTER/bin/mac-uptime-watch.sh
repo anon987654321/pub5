@@ -31,8 +31,10 @@ lock_appears_live() {
   fi
 
   # A creator may be between mkdir and writing pid. Give it a short grace
-  # period; after that, an absent or dead owner is safe to reap.
+  # period; after that, an absent or dead owner is safe to reap. The mtime
+  # reader follows the host's stat: BSD -f on macOS, GNU -c on Linux.
   lock_mtime=$(stat -f %m "$LOCKDIR" 2>/dev/null)
+  [[ "$lock_mtime" == <-> ]] || lock_mtime=$(stat -c %Y "$LOCKDIR" 2>/dev/null)
   [[ "$lock_mtime" == <-> ]] || return 0
   current=$(date +%s)
   (( current - lock_mtime < STALE_LOCK_AGE ))

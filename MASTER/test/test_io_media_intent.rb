@@ -151,21 +151,22 @@ class MediaIntentSpec < Minitest::Test
     end
   end
 
-  def test_routes_explicit_image_requests_to_replicate
+  def test_routes_explicit_image_requests_to_media_lanes
     captured = nil
-    runner = lambda do |**kwargs|
-      captured = kwargs
-      Master::Result.ok("rendered")
-    end
-
-    with_dispatch_stub(runner) do
+    made = Master::Result.ok({ "path" => "/tmp/bergen.png", "lane" => "replicate" })
+    result = nil
+    Master::Io::MediaLanes.stub(:generate, lambda { |kind, prompt, **|
+      captured = [kind, prompt]
+      made
+    }) do
       result = MediaIntent.dispatch("generate a photo of Bergen at the fjord")
       assert result.ok?
-      assert_equal :replicate, result.value![:media]
+      assert_equal "replicate", result.value![:media]
+      assert_equal "/tmp/bergen.png", result.value![:path]
     end
 
-    assert_equal "replicate", captured[:tool]
-    assert_includes captured[:arg], "--prompt generate\\ a\\ photo\\ of\\ Bergen\\ at\\ the\\ fjord"
+    assert_equal :image, captured[0]
+    assert_equal "generate a photo of Bergen at the fjord", captured[1]
   end
 
   def with_fake_bus

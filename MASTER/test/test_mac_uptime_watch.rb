@@ -72,7 +72,9 @@ class TestMacUptimeWatch < Minitest::Test
       "PUB5_TEST_HTTP_CODE" => code,
       "PUB5_TEST_NOTIFY_LOG" => @notifications,
     }
-    system(env, "/bin/zsh", SCRIPT, out: File::NULL, err: File::NULL)
+    # zsh comes from PATH, not the /bin spelling: a Linux checkout builds it
+    # into ~/.local/bin, and macOS finds /bin/zsh there too.
+    system(env, "zsh", SCRIPT, out: File::NULL, err: File::NULL)
     $?.exitstatus
   end
 end

@@ -41,8 +41,9 @@ class TestMelodicConcat < Minitest::Test
     out = File.join(@dir, "out.mp3")
 
     assert E.send(:concat_mp3, parts, out, @dir)
-    # 0.5 + 0.3 + 0.5. mp3 frame granularity is ~26ms per part, so allow slack.
-    assert_in_delta 1.3, duration(out), 0.12
+    # 0.5 + 0.3 + 0.5. Three parts and the rest each round up to an mp3 frame
+    # (~26ms), so allow 0.2 — a skipped rest still reads 1.0 and fails.
+    assert_in_delta 1.3, duration(out), 0.2
   end
 
   def test_no_rest_means_no_added_silence
