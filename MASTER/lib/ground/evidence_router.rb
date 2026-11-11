@@ -119,7 +119,7 @@ module Master
           "#{RESEARCH_PROMPT} This turn asks for research. Start with SearchKnowledge " \
             "when relevant, then WebSearch and WebFetch; compare independent sources before concluding."
         when :repository
-          "Evidence rule: this turn concerns the repository. Read/search the actual files before making claims about its current state."
+          "Evidence rule: this turn concerns the repository. Start with the current tree to orient, then search the actual source and read the complete relevant files. Trace callers, dependencies, loaders, command/routes, configuration, documentation and focused tests; use the symbol index and references when available. Inspect current diffs, logs and existing test commands when they can explain behavior. Do not ask the operator to paste files or logs that your tools can retrieve. If implementation depends on an unfamiliar or changing API, framework or platform detail, research current primary documentation and compare it with the pinned project version. A tree or symbol map is orientation, not proof; state unavailable evidence plainly."
         when :browser
           "Capability rule: this turn concerns a website. You have a GET/HEAD-limited WebBrowse tool and a sessionful Browser. " \
           "Page scripts still execute, and GET endpoints may change remote state; do not call either browser read-only. " \
