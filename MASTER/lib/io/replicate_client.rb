@@ -180,6 +180,7 @@ module Master
 
       # Raised when a bounded API or transfer deadline expires.
       DeadlineExceeded = Class.new(StandardError)
+      ResponseTooLarge = Class.new(StandardError)
       # Raised for HTTP statuses worth a retry (rate limit, server-side fault).
       # A 4xx other than 429 means the request itself is wrong and retrying
       # retries repeat the same failure.
@@ -471,33 +472,36 @@ module Master
         model.dig("latest_version", "id") || raise("no version for #{model_id}")
       end
 
-      def get(uri)
+      def get(uri, deadline: nil)
         uri = api_uri(uri)
         req = Net::HTTP::Get.new(uri)
         req["Authorization"] = "Token #{@token}"
-        request(req, uri)
+        request(req, uri, deadline:)
       end
 
-      def post(uri, body)
+      def post(uri, body, deadline: nil)
         uri = api_uri(uri)
         req = Net::HTTP::Post.new(uri)
         req["Authorization"] = "Token #{@token}"
         req["Content-Type"] = "application/json"
         req.body = body.to_json
-        request(req, uri)
+        request(req, uri, deadline:)
       end
 
-      def request(req, uri, attempts: 3)
+      def request(req, uri, attempts: 3, deadline: nil)
+        deadline ||= monotonic_now + REQUEST_TIMEOUT_SECONDS
         last_error = nil
         attempts.times do |attempt|
-          return attempt_request(req, uri)
+          req.body_stream.rewind if req.body_stream&.respond_to?(:rewind)
+          return attempt_request(req, uri, deadline:)
         rescue ExhaustedError => e
           # Out of the retry loop entirely, and onto the check: no wait inside
           # this run makes the account solvent, and the caller needs to know
           # the capability is gone rather than that one call failed.
           Master::Io::QuotaCheck.trip!(source: "replicate", message: e.message, model: uri.path)
           raise
-        rescue TransientError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, Errno::ETIMEDOUT => e
+        rescue TransientError, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout,
+               Errno::ECONNRESET, Errno::ETIMEDOUT => e
           # GET is safe to retry. Replicate throttling 429 explicitly rejects
           # the request, but a POST 5xx/read-timeout/reset can hide a paid create
           # that succeeded before its response was lost.
@@ -506,25 +510,50 @@ module Master
           raise unless retryable
 
           last_error = e.message
-          sleep(retry_delay(attempt)) if attempt < attempts - 1
+          break if attempt >= attempts - 1
+
+          pause = [retry_delay(attempt), remaining_timeout(deadline, REQUEST_TIMEOUT_SECONDS, label: "API request")].min
+          sleep(pause) if pause.positive?
+          remaining_timeout(deadline, REQUEST_TIMEOUT_SECONDS, label: "API request")
         end
         raise last_error
       end
 
-      def attempt_request(req, uri)
+      def attempt_request(req, uri, deadline: monotonic_now + REQUEST_TIMEOUT_SECONDS)
         uri = api_uri(uri)
-        res = Net::HTTP.start(
+        response = nil
+        body = +"".b
+        remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "API request")
+        Net::HTTP.start(
           uri.host, uri.port, use_ssl: true,
-          open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
+          open_timeout: remaining,
+          read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API request"),
+          write_timeout: remaining_timeout(deadline, WRITE_TIMEOUT_SECONDS, label: "API request")
         ) do |http|
-          http.request(req)
-        end
-        code = res.code.to_i
-        return JSON.parse(res.body) if code.between?(200, 299)
+          http.request(req) do |res|
+            response = res
+            declared = res["content-length"].to_s
+            if declared.match?(/\A\d+\z/) && declared.to_i > MAX_RESPONSE_BYTES
+              raise ResponseTooLarge, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+            end
 
-        detail = response_detail(res.body)
+            res.read_body do |chunk|
+              http.read_timeout = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "API response")
+              if body.bytesize + chunk.bytesize > MAX_RESPONSE_BYTES
+                raise ResponseTooLarge, "Replicate response exceeds #{MAX_RESPONSE_BYTES} bytes"
+              end
+              body << chunk
+            end
+          end
+        end
+        raise IOError, "Replicate returned no HTTP response" unless response
+
+        code = response.code.to_i
+        return JSON.parse(body) if code.between?(200, 299)
+
+        detail = response_detail(body)
         message = "Replicate API #{code}: response rejected (#{detail})"
-        if exhausted?(code, res.body)
+        if exhausted?(code, body)
           raise ExhaustedError, "Replicate API #{code}: insufficient credit or quota (#{detail})"
         end
         raise TransientError, message if TRANSIENT_STATUS.include?(code)
