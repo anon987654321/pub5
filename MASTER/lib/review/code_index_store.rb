@@ -11,7 +11,7 @@ module Master
     #
     # The file records per-source nanosecond mtime, size and content digest,
     # so same-size edits with preserved timestamps cannot leave a stale graph.
-        # Its name comes from the workspace root, not from the tree hash: a name
+    # Its name comes from the workspace root, not from the tree hash: a name
     # keyed by the tree hash
     # changes on every edit and leaves nothing to rebuild incrementally from. The
     # tree hash rides inside the file, so an untouched tree is known without
@@ -196,8 +196,9 @@ module Master
           current = File.lstat(@path)
           unless current.file? && !current.symlink? && current.nlink == 1 &&
                  current.dev == opened.dev && current.ino == opened.ino &&
-                 opened.dev == before.dev && opened.ino == before.ino
-            raise IOError, "code index snapshot path changed while opening"
+                 opened.dev == before.dev && opened.ino == before.ino &&
+                 (opened.mode & 0o077).zero?
+            raise IOError, "code index snapshot path is unsafe or changed while opening"
           end
           raw = file.read(MAX_SNAPSHOT_BYTES + 1)
           raise IOError, "code index snapshot exceeds the 128 MiB safety limit" if raw.bytesize > MAX_SNAPSHOT_BYTES
