@@ -176,7 +176,9 @@ module Master
           value = lambda do |key|
             matrix[key] || matrix[key.to_s]
           end
-          matrix_status = value.call(:status).to_s
+          # The durable receipt is the read-back-verified authority; the
+          # optional summary adapter may itself be unavailable or partial.
+          matrix_status = receipt["matrix_status"].to_s
           recorded = Integer(value.call(:recorded_cells) || 0)
           findings = Integer(value.call(:finding_cells) || 0)
           unassessed = Integer(value.call(:unassessed_cells) || 0)
