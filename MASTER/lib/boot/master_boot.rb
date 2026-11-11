@@ -69,6 +69,14 @@ module Master
       raise ArgumentError, "backlog plan is not owned by the root TODO executor" unless plan["executor"] == "root_todo"
 
       repository = File.realpath(repo_root)
+      remote, target = Master::Io::GitOperations.new(repository).push_target
+      unless remote == "origin" && target == "HEAD:main"
+        raise BacklogRunFailed, "DELIVERY_FAILED: backlog requires the existing origin/main checkout"
+      end
+      remote_url, remote_status = Master::Io::Exec.capture2e("git", "-C", repository, "remote", "get-url", "origin")
+      unless remote_status.success? && remote_url.match?(/github\\.com[:/]/i)
+        raise BacklogRunFailed, "DELIVERY_FAILED: origin is not a reachable GitHub remote"
+      end
       paths.each do |relative|
         absolute = File.expand_path(relative, repository)
         raise ArgumentError, "backlog scope escapes repository: #{relative}" unless
