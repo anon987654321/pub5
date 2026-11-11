@@ -169,6 +169,19 @@ Regression cases cover large related and target files, digest drift,
 symlink/hard-link refusal and partial pool startup. These are source-covered,
 not runtime results.
 
+The Law scheduler also refuses dependency cycles instead of choosing an
+arbitrary remaining rule. Independent Law repairs are batched at no more than
+eight workers; every started worker is joined before a failure or cancellation
+can return control to transaction cleanup. Candidate generation keeps its
+parent thread-local state, tracks partial startup, and kills/joins on timeout.
+Inference search preserves prompt order in batches of at most eight; Council
+retains its four-person batch and single global deadline while accounting for
+worker failures and partial startup. AgentPool keeps its validated configured
+cap and joins the full worker set before re-raising a worker error. The focused
+runner preflights the selected Ruby/Bundler and dependencies, then requires a
+nonzero Minitest run summary for every file. The 87 entries are unique, but
+these suites remain authored, not run on the repository's selected runtime.
+
 The unattended backlog bridge now uses ProofMap v2. Known shell prefixes and
 the explicitly permitted environment variables are normalized into argv-only
 specifications with a fixed working directory and per-proof timeout. Full and
