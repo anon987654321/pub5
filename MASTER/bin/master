@@ -136,6 +136,10 @@ if ARGV.first == "--fix-context"
   )
 end
 
+if ARGV.first == "--self-test"
+  exec(RbConfig.ruby, File.join(master_root, "tools", "self_test.rb"), *ARGV.drop(1))
+end
+
 # Flags the slash commands read from their own argument text (/fix --max-files=25,
 # /fix --no-critique, /fix --dry-run). The top-level parser does not know them and
 # must not reject them or drop them: a dropped --dry-run is a write run.
