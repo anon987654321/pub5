@@ -13,7 +13,7 @@
     confidence: 0.88,
     activity: 0.18,
     weather: "calm",
-    topology: "papua-mask",
+    topology: "carved-field",
     provider: "unknown",
     lastEventAt: performance.now(),
     terrainPhase: 0,
