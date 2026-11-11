@@ -65,7 +65,7 @@ class TestCliResourceLoad < Minitest::Test
     frames = Master::CLI::Session::SPINNER_FRAMES
 
     assert_equal 16, frames.length
-    assert frames.all? { |frame| frame.match?(/\\A[ -~]\\z/) }
+    assert frames.all? { |frame| frame.match?(/\A[ -~]\z/) }
     assert_equal 0.18, Master::CLI::Session::TICK_SECONDS
     assert_equal 0.04, Master::CLI::Session::FAST_TICK_SECONDS
     assert_equal 0.18, session.send(:spin_pause, 0.0)
@@ -84,9 +84,9 @@ class TestCliResourceLoad < Minitest::Test
   def test_spinner_tint_ramps_amber_to_red_above_its_threshold
     session = Master::CLI::Session.allocate
 
-    refute_includes session.send(:spinner_tint, 0.2).inspect, "\\e[38;2"
+    refute_includes session.send(:spinner_tint, 0.2).inspect, "\e[38;2"
     refute_nil session.send(:spinner_tint, 0.4)
-    greens = [0.5, 1.0].map { |i| Integer(session.send(:spinner_tint, i)[/\\e\\[38;2;255;(\\d+);30m/, 1]) }
+    greens = [0.5, 1.0].map { |i| Integer(session.send(:spinner_tint, i)[/\e\[38;2;255;(\d+);30m/, 1]) }
     assert_operator greens.first, :>, greens.last
     assert_equal 40, greens.last
   end
@@ -96,7 +96,7 @@ class TestCliResourceLoad < Minitest::Test
 
     painted = session.send(:spin_tinted, "x working", 0.99)
 
-    assert_match(/\\A\\e\\[1;38;2;255;255;255mx\\e\\[0m/, painted)
-    assert_includes painted, "\\e[38;2;"
+    assert_match(/\A\e\[1;38;2;255;255;255mx\e\[0m/, painted)
+    assert_includes painted, "\e[38;2;"
   end
 end
