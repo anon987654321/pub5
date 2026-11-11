@@ -443,6 +443,19 @@ module Master
         end
       end
 
+      # Startup card for the registered terminal surface. It reuses the same
+      # command/help taxonomy as /help; registration is not a claim that every
+      # provider, plugin or external device is currently reachable.
+      def boot_capability_line
+        surface = command_surface
+        groups = surface.map { |row| row.fetch(:category) }.uniq
+        ordered = CATEGORY_ORDER.select { |category| groups.include?(category) && category != "help" }
+        ordered.concat((groups - CATEGORY_ORDER).reject { |category| category == "help" }.sort)
+        return "tasks0 at mainbus0: no registered command groups; /help" if ordered.empty?
+
+        "tasks0 at mainbus0: #{ordered.join(" ")}; /help by task"
+      end
+
       def help_summary
         lines = [
           "input0 at master0: describe work in plain language; slash commands are optional.",

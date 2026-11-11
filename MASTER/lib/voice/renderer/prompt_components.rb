@@ -24,7 +24,8 @@ module Master
           context = splash_context(model)
           text = if verbose_boot?
                    lines = [*identity_lines(context), *splash_dmesg_lines, *device_lines_for(context),
-                            *boot_status_lines, root_on_line(context)]
+                            *boot_status_lines, d(Master::CLI::CommandRegistry.boot_capability_line),
+                            root_on_line(context)]
                    host_status = Master::Ground::HostBudget.status_line
                    lines << d(host_status) if host_status
                    lines.join("\n")
@@ -57,6 +58,7 @@ module Master
             d("host0 at mainbus0: #{context[:user]}@#{context[:host]}:#{@config['root'] || Dir.pwd}"),
             d("voice0 at mainbus0: #{voice}"),
             d("web0 at mainbus0: #{web}"),
+            d(Master::CLI::CommandRegistry.boot_capability_line),
             *radio_lines,
             d("root on master0"),
           ].join("\n")

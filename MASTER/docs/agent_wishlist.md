@@ -79,12 +79,12 @@ trusting this page.
 7. A capability card at boot, and task-grouped help. Evidence: the
    transcript operator learned by trial that /tts was a spelling of
    /voice, that the zsh passthrough caps at thirty seconds, and that
-   /narrate and /bard existed. State on main: partially landed —
-   /help names the governed-shell cap and the one-shot boot shows lane
-   evidence; capability discovery is exposed only when the catalog
-   tool is present (50782097, fa2f9006) and read-only model status
-   commands are documented (66e9f98f, da650670); the interactive
-   welcome line still summarises state, not capability.
+   /narrate and /bard existed. State on main: landed in this revision —
+   compact and verbose splash modes render a task card from the same
+   COMMAND_CATEGORIES and command_surface used by /help. It names only
+   registered CLI groups, not provider reachability or plugin execution;
+   /help remains the detailed command index. Renderer tests hold the
+   category ordering and splash inclusion.
 
 8. Provider errors classified with remediation. Evidence: thirteen
    lanes answered "User not found." and the transcript never names the

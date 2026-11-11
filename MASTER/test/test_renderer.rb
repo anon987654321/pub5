@@ -39,6 +39,28 @@ class TestRenderer < Minitest::Test
     end
   end
 
+  def test_boot_capability_card_uses_the_task_groups_from_the_help_registry
+    surface = [
+      { cmd: "/mov", category: "media" },
+      { cmd: "/fix", category: "fix" },
+      { cmd: "/status", category: "health" },
+      { cmd: "/bard", category: "interface" },
+      { cmd: "/help", category: "help" },
+    ]
+
+    Master::CLI::CommandRegistry.stub(:command_surface, surface) do
+      assert_equal "tasks0 at mainbus0: fix health interface media; /help by task",
+                   Master::CLI::CommandRegistry.boot_capability_line
+    end
+  end
+
+  def test_compact_splash_includes_the_registered_task_card
+    text = strip_ansi(FakeRenderer.new(config: {}).splash("model"))
+
+    assert_includes text, Master::CLI::CommandRegistry.boot_capability_line
+    assert_match(/tasks0 at mainbus0: .*; \/help by task/, text)
+  end
+
   def test_compact_splash_calls_a_capability_probe_available_not_ready
     old_degraded = ENV["MASTER_TTS_DEGRADED"]
     ENV.delete("MASTER_TTS_DEGRADED")
