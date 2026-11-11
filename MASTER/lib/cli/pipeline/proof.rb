@@ -49,6 +49,7 @@ module Master
           "MASTER" => ::Operator::CheckChain::MASTER,
           "OPENBSD" => File.join(::Operator::CheckChain::ROOT, "OPENBSD"),
           "STUDIO" => File.join(::Operator::CheckChain::ROOT, "STUDIO"),
+          "BIZ" => File.join(::Operator::CheckChain::ROOT, "BIZ"),
         }.freeze
 
         NAMES_SHOWN = 8
@@ -287,6 +288,9 @@ module Master
           # the whole suites answer for the whole tree. A file or directory took the full suites
           # of its tree for every pass, thirty minutes to repair one file.
           return [tree, -> { suite_proof(chain, tree) }] if abs == root
+          # BIZ's complete proof is its document inventory/build check; the
+          # node runner owns every published HTML/PDF pair, not per-file Ruby tests.
+          return ["BIZ documents", -> { suite_proof(chain, tree) }] if tree == "BIZ"
 
           ["#{tree} tests for #{File.basename(abs)}", -> { targeted_proof(chain, abs) }]
         end
