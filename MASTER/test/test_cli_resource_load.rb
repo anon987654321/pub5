@@ -72,12 +72,12 @@ class TestCliResourceLoad < Minitest::Test
     assert_nil resource_load.host_score([1.0, 2.0, 3.0], Float::INFINITY)
   end
 
-  def test_spinner_has_sixteen_portable_ascii_keyframes_and_clamped_cadence
+  def test_spinner_keeps_an_ascii_star_and_clamped_cadence
     session = Master::CLI::Session.allocate
     frames = Master::CLI::Session::SPINNER_FRAMES
 
-    assert_equal 16, frames.length
-    assert frames.all? { |frame| frame.match?(/\A[ -~]\z/) }
+    assert_equal ["*", "**", "***", "**"], frames
+    assert frames.all? { |frame| frame.match?(/\A\*+\z/) }
     assert_equal 0.18, Master::CLI::Session::TICK_SECONDS
     assert_equal 0.04, Master::CLI::Session::FAST_TICK_SECONDS
     assert_equal 0.18, session.send(:spin_pause, 0.0)
@@ -87,28 +87,42 @@ class TestCliResourceLoad < Minitest::Test
     assert_operator session.send(:spin_pause, 0.9), :<, session.send(:spin_pause, 0.3)
   end
 
-  def test_intake_spinner_shows_instruction_cue_without_elapsed_seconds
+  def test_spinner_hides_the_internal_intake_label
     session = Master::CLI::Session.allocate
 
-    assert_equal %q{o intake \_}, session.send(:spin_line, "intake", "o")
+    assert_equal %q{* \_}, session.send(:spin_line, "intake", "*")
   end
 
-  def test_spinner_tint_ramps_amber_to_red_above_its_threshold
+  def test_spinner_tint_tracks_cpu_load_from_light_to_dark_red
     session = Master::CLI::Session.allocate
 
-    refute_includes session.send(:spinner_tint, 0.2).inspect, "\e[38;2"
-    refute_nil session.send(:spinner_tint, 0.4)
-    greens = [0.5, 1.0].map { |i| Integer(session.send(:spinner_tint, i)[/\e\[38;2;255;(\d+);30m/, 1]) }
-    assert_operator greens.first, :>, greens.last
-    assert_equal 40, greens.last
+    assert_equal "\e[38;2;255;119;119m", session.send(:spinner_tint, 0.0)
+    assert_equal "\e[38;2;143;16;16m", session.send(:spinner_tint, 1.0)
+    low = session.send(:spinner_tint, 0.25)
+    high = session.send(:spinner_tint, 0.75)
+    assert_equal "\e[38;2;227;93;93m", low
+    assert_equal "\e[38;2;171;42;42m", high
+    painted = session.send(:spin_tinted, "** working", 1.0)
+    assert_match(/\A\e\[38;2;143;16;16m\*\*\e\[0m working\z/, painted)
+    refute_includes painted, "255;255;255"
   end
 
-  def test_spinner_leading_glyph_turns_white_hot_at_critical_intensity
+  def test_spinner_uses_normalized_host_cpu_load_average
+    resource_load = Master::CLI::Session::ResourceLoad
+    resource_load.stub(:system_load_average, [4.0, 2.0, 1.0]) do
+      resource_load.stub(:logical_cpu_count, 4) do
+        assert_in_delta 0.775, resource_load.cpu_load, 1e-6
+      end
+    end
+  end
+
+  def test_spinner_probe_uses_cpu_load_not_process_pressure
     session = Master::CLI::Session.allocate
 
-    painted = session.send(:spin_tinted, "x working", 0.99)
-
-    assert_match(/\A\e\[1;38;2;255;255;255mx\e\[0m/, painted)
-    assert_includes painted, "\e[38;2;"
+    Master::CLI::Session::ResourceLoad.stub(:cpu_load, 0.625) do
+      intensity, next_probe = session.send(:probe_intensity, 0.0, 0.0)
+      assert_equal 0.625, intensity
+      assert_operator next_probe, :>, 0.0
+    end
   end
 end
