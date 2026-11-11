@@ -66,6 +66,27 @@ class TestFallbackChain < Minitest::Test
     Master::Io::ModelSkipCache.clear!
   end
 
+  def test_one_failed_model_is_named_in_the_final_receipt
+    dispatcher = CountingDispatcher.new(
+      "llm7:gpt-oss:20b" => -> { Master::Result.err("provider timed out after 5s", category: :timeout) },
+    )
+    agent = build_agent(dispatcher)
+
+    response = agent.send(
+      :attempt_chat_with_fallbacks,
+      candidate_models: ["llm7:gpt-oss:20b"],
+      prompt: "hi",
+      context: [],
+      stream: false,
+    )
+
+    assert response.err?
+    assert_includes response.message, "no model answered: llm7:gpt-oss:20b: provider timed out after 5s"
+    assert_equal ["llm7:gpt-oss:20b"], dispatcher.calls
+  ensure
+    Master::Io::ModelSkipCache.clear!
+  end
+
   def test_timeout_skips_retries_and_later_modes_for_same_model
     dispatcher = CountingDispatcher.new(
       "claude-cli:claude-opus-4-8" => -> { Master::Result.err("timed out", category: :timeout) },
