@@ -18,6 +18,7 @@ module Master
       PLAN_KEY = :master_fix_task_contract_plan_digest
       MAX_PRESERVATION_ROWS = 256
       MAX_PRESERVATION_READ_BYTES = 128 * 1024 * 1024
+      PLAN_DIGEST_PATTERN = /\\A[0-9a-f]{64}\\z/.freeze
       PRESERVATION_VERIFIERS = %w[artifact_preservation visual_custody].freeze
       PRESERVATION_DIMENSIONS_BY_CHECK = {
         "html_markup" => %w[structure],
@@ -210,7 +211,10 @@ module Master
       def attach_plan!(digest)
         return unless current
 
-        Thread.current[PLAN_KEY] = digest.to_s
+        value = digest.to_s.downcase
+        raise Invalid, "FixPlan digest must be a 64-character SHA-256 value" unless PLAN_DIGEST_PATTERN.match?(value)
+
+        Thread.current[PLAN_KEY] = value.freeze
       end
 
       def record_preservation!(path:, format:, before:, after:, result:, verifier: "artifact_preservation")
@@ -293,13 +297,19 @@ module Master
         covered = rows.flat_map { |row| Array(row["dimensions"]) }.uniq
         missing = required - covered
         source_only = rows.any? { |row| row["evidence_level"] == "source_level" }
-        missing_plan = Thread.current[PLAN_KEY].to_s.empty?
+        active_plan_digest = Thread.current[PLAN_KEY]
+        missing_plan = active_plan_digest.to_s.empty?
+        contract_digest = Digest::SHA256.hexdigest(JSON.generate(contract.to_h))
+        plan_mismatch_count = rows.count do |row|
+          row["contract_digest"] != contract_digest || row["plan_digest"] != active_plan_digest
+        end
         overflow_count = Thread.current[EVIDENCE_OVERFLOW_KEY].to_i
         status = if statuses.include?("FAIL")
                    "FAIL"
                  elsif rows.empty?
                    "not_measured"
-                 elsif statuses.any? { |value| value != "PASS" } || source_only || missing.any? || missing_plan || overflow_count.positive?
+                 elsif statuses.any? { |value| value != "PASS" } || source_only || missing.any? ||
+                       missing_plan || plan_mismatch_count.positive? || overflow_count.positive?
                    "INCONCLUSIVE"
                  else
                    "PASS"
@@ -314,12 +324,14 @@ module Master
         reasons << "source-level checks do not prove rendered, runtime or accessibility preservation" if source_only
         reasons << "required preservation dimensions unmeasured: #{missing.join(', ')}" if missing.any?
         reasons << "preservation receipts are not bound to a FixPlan" if missing_plan
+        reasons << "#{plan_mismatch_count} preservation receipt(s) belong to a different FixPlan or task contract" if plan_mismatch_count.positive?
         reasons << "#{overflow_count} additional preservation receipt(s) exceeded the #{MAX_PRESERVATION_ROWS}-row evidence limit" if overflow_count.positive?
         reasons << "current artifact no longer matches its latest preservation receipt: #{stale_paths.first(8).join(', ')}" if stale_paths.any?
         {
           "status" => status,
-          "contract_digest" => Digest::SHA256.hexdigest(JSON.generate(contract.to_h)),
-          "plan_digest" => Thread.current[PLAN_KEY],
+          "contract_digest" => contract_digest,
+          "plan_digest" => active_plan_digest,
+          "plan_mismatch_count" => plan_mismatch_count,
           "required_dimensions" => required,
           "covered_dimensions" => covered.sort,
           "missing_dimensions" => missing.sort,
