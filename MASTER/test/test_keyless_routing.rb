@@ -67,10 +67,31 @@ class TestKeylessRouting < Minitest::Test
   def test_llm7_is_reachable_without_an_api_key
     assert Master.keyless_llm_enabled?
     # Reachability itself is lane-level, but the id must still be a live
-    # listing row: the turbo tier rotates (DeepSeek-V4-Flash-0731 left it
-    # between the 2026-11-06 and 2026-11-11 verifications), so the test pins
-    # to gpt-oss:20b, present on both dates, and to nothing else.
+    # listing row: the turbo tier rotates, so pin to a model present today.
     assert Master.llm_reachable?("llm7:gpt-oss:20b")
+  end
+
+  def test_other_declared_keyless_hosted_providers_are_reachable_without_an_api_key
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_model?) { |id| id.start_with?("ovh:") }
+    resolver.define_singleton_method(:hosted_endpoint_for) do |id|
+      id == "ovh:gpt-oss-120b" ? { key: nil } : nil
+    end
+
+    Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
+      assert Master.llm_reachable?("ovh:gpt-oss-120b")
+    end
+  end
+
+  def test_no_keyless_switch_blocks_anonymous_hosted_reachability
+    ENV["MASTER_NO_KEYLESS"] = "1"
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_model?) { |id| id.start_with?("ovh:") }
+    resolver.define_singleton_method(:hosted_endpoint_for) { |_id| { key: nil } }
+
+    Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
+      refute Master.llm_reachable?("ovh:gpt-oss-120b")
+    end
   end
 
   def test_default_model_prefers_grok_api_with_xai_key
