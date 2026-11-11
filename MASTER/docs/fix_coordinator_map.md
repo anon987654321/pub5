@@ -186,10 +186,11 @@ caller interruption aborts the operation; its partial-startup regression is
 registered in the runner.
 
 The generic review Swarm also limits fan-out to eight workers, uses one deadline
-per batch, joins every started worker on timeout or startup failure, and records
+per batch, joins every started worker on timeout or startup failure, records
 every unstarted task—including tasks in later batches—as an infrastructure
-failure. The 89 runner entries are unique. These suites remain authored, not
-run on the repository's selected runtime.
+failure, and preserves each timed-out role in the result ledger. The 89 runner
+entries are unique. These suites remain authored, not run on the repository's
+selected runtime.
 
 The unattended backlog bridge now uses ProofMap v2. Known shell prefixes and
 the explicitly permitted environment variables are normalized into argv-only
