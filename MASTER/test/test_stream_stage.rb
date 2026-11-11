@@ -75,6 +75,36 @@ class StreamStageTest < Minitest::Test
     FileUtils.remove_entry(@temporary_path) if @temporary_path
   end
 
+  def test_stream_cleanup_joins_every_live_worker_after_one_join_raises
+    worker_class = Class.new do
+      attr_reader :joined
+
+      def initialize(error: nil)
+        @error = error
+        @joined = false
+      end
+
+      def alive? = true
+
+      def join
+        @joined = true
+        raise @error if @error
+      end
+    end
+    failed = worker_class.new(error: RuntimeError.new("worker exploded"))
+    healthy = worker_class.new
+    queue = Queue.new
+    queue << :pending
+
+    errors = stop_workers(queue, [failed, healthy])
+
+    assert failed.joined
+    assert healthy.joined
+    assert_equal 1, errors.size
+    assert_equal "worker exploded", errors.first.message
+    assert_equal %i[done done], [queue.pop(true), queue.pop(true)]
+  end
+
   def test_partial_worker_startup_is_closed_when_a_later_thread_creation_fails
     worker = Class.new do
       attr_reader :joined
