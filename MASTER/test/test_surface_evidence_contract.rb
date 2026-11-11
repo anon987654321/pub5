@@ -26,6 +26,17 @@ class TestSurfaceEvidenceContract < Minitest::Test
     refute evidence.send(:valid_rendered_capture?, capture_row("rendered_status" => "inconclusive"))
   end
 
+  def test_ruby_and_erb_syntax_probes_handle_parse_errors_without_catching_fatal_exceptions
+    scripts = %i[RUBY_SYNTAX_PROBE ERB_SYNTAX_PROBE].map do |name|
+      Master::Fix::SurfaceEvidence.const_get(name, false)
+    end
+
+    scripts.each do |script|
+      assert_includes script, "rescue StandardError, ScriptError => error"
+      refute_includes script, "rescue Exception"
+    end
+  end
+
   def test_media_inventory_does_not_ignore_symlinked_assets
     inventory = {
       "records" => [
