@@ -23,6 +23,17 @@ class TestParallelTests < Minitest::Test
     @previous_progress.nil? ? ENV.delete("MASTER_TEST_PROGRESS_EVERY") : ENV["MASTER_TEST_PROGRESS_EVERY"] = @previous_progress
   end
 
+  def test_environment_skip_helper_emits_a_machine_readable_reason
+    _stdout, stderr = capture_io do
+      assert_raises(Minitest::Skip) do
+        skip_for_environment("Browser", reason: "Chrome unavailable\nfor this host")
+      end
+    end
+
+    assert_includes stderr, "test-environment-skip0: tag=browser"
+    assert_includes stderr, "reason=Chrome unavailable for this host"
+  end
+
   # A second suite refused while the first holds the lock: both share fixed log names.
   def test_a_second_suite_refuses_while_one_runs
     FileUtils.mkdir_p(Runner::LOG_DIR)
@@ -106,6 +117,30 @@ class TestParallelTests < Minitest::Test
     incomplete = payload["workers"].select { |worker| worker["outcome"] == "incomplete" }
     refute_empty incomplete
     assert_equal "Early#test_gone", incomplete.first["last_started_test"]
+  end
+
+  def test_environment_tagged_skips_are_grouped_in_the_suite_receipt
+    script = [
+      '$stdout.sync = true',
+      'puts "test-start0: BrowserSuite#test_needs_chrome"',
+      'STDERR.puts "test-environment-skip0: tag=browser test=BrowserSuite#test_needs_chrome reason=Chrome unavailable"',
+      'puts "BrowserSuite#test_needs_chrome = 0.00 s = S"',
+      'puts "Finished in 0.01s"',
+      'puts "1 runs, 0 assertions, 0 failures, 0 errors, 1 skips"'
+    ].join("\n")
+    out = StringIO.new
+
+    assert Runner.run(%w[browser-skip], command: ->(_files) { [RbConfig.ruby, "-e", script] }, out:), out.string
+    assert_includes out.string, "test-skip-summary0: total=1 environment_tagged=1 unclassified=0 by_tag=browser:1"
+
+    payload = JSON.parse(File.read(File.join(Runner::LOG_DIR, "suite-report.json")))
+    assert_equal(
+      { "total" => 1, "environment_tagged" => 1, "unclassified" => 0,
+        "integrity" => "consistent", "by_tag" => { "browser" => 1 } },
+      payload.fetch("skip_analysis")
+    )
+    assert_equal "Chrome unavailable",
+                 payload.fetch("workers").first.fetch("environment_skips").first.fetch("reason")
   end
 
   def test_exit_zero_with_failure_summary_still_fails_the_run

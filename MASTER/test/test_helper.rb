@@ -138,6 +138,19 @@ Minitest::Test.class_eval do
 
   def test_timeout = MASTER_TEST_TIMEOUT
 
+  # Environment-dependent skips name the missing capability so a supervised
+  # suite can separate host limitations from unexplained skipped coverage.
+  def skip_for_environment(tag, reason:)
+    label = tag.to_s.strip.downcase
+    detail = reason.to_s.gsub(/\s+/, " ").strip
+    raise ArgumentError, "environment skip tag must be a lowercase identifier" unless label.match?(/\A[a-z][a-z0-9_.-]*\z/)
+    raise ArgumentError, "environment skip needs a reason" if detail.empty?
+
+    test_name = "#{self.class.name || self.class}##{name}"
+    STDERR.puts "test-environment-skip0: tag=#{label} test=#{test_name} reason=#{detail}"
+    skip("environment[#{label}]: #{detail}")
+  end
+
   def run(*args)
     if ENV["MASTER_TEST_START_MARKERS"] == "1"
       STDERR.puts "test-start0: #{self.class}##{name}"

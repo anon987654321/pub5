@@ -18,9 +18,12 @@ trusting this page.
 1. A claim-to-check map, generated and machine-readable. Evidence:
    three sessions re-derived which check carries which claim by
    reading laws.yml, checks/ and lib by hand; tools/agent_context.rb
-   emits context but not the mapping. State on main: open. Landing
-   path: an agent_context extension with a source test, no new
-   registry. Update 2026-11-09: adjacent guidance landed without the
+   emits context but not the mapping. State on main: landed at
+   ee13e18 — opt-in agent_context --json --checks projects every check's
+   declared claim, implementation, prerequisites and composite from the
+   existing checks.yml; regression tests compare the projection with every
+   registry row. It is a map of declarations, not execution evidence.
+   Update 2026-11-09: adjacent guidance landed without the
    map - handler success distinguished from verified effects
    (d9ef4f35, c6e389a3), skipped and inconclusive results named apart
    from failures (72c87366), execution evidence bounded and redacted
@@ -29,8 +32,11 @@ trusting this page.
 2. Environment-tagged skips. Evidence: the container measured 127
    failures and 62 skips at 4aa90499 and separated real breakage from
    foreign environment only by hand-triaging 199 failure blocks.
-   State on main: open. Landing path: a tag convention in
-   test_helper.rb and a summary line in the supervised runner.
+   State on main: landed in this revision — test_helper.rb emits explicit
+   environment-tag markers, the supervised runner groups them by tag in
+   its JSON receipt and prints tagged versus unclassified skip counts.
+   Chrome-dependent fixtures now use the convention. Unconverted skips
+   remain unclassified, not silently attributed to an environment.
 
 3. First-class suite sharding and a baseline receipt. Evidence: the
    canonical MASTER_TEST_JOBS=1 rake test cannot finish inside a

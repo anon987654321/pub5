@@ -21,6 +21,7 @@ SPLIT_START = /\A(\S+#\S+) = test-start0: (\S+#\S+)\s*\z/
 SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
     REPORT_START = /\AFinished in /
     SUMMARY_LINE = /\A(\d+) runs?, (\d+) assertions?, (\d+) failures?, (\d+) errors?, (\d+) skips?\s*\z/i
+    ENVIRONMENT_SKIP_LINE = /\Atest-environment-skip0: tag=([a-z][a-z0-9_.-]*) test=(\S+#\S+) reason=(.+)\z/
     DEFAULT_WORKER_TIMEOUT = 1800
     POLL_INTERVAL = 0.1
 
@@ -104,6 +105,7 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
         worker[:summary] = summary_data(worker)
         worker[:summary_present] = !worker[:summary].nil?
         worker[:failure_result_lines] = worker_failures(worker)
+        worker[:environment_skips] = environment_skips(worker)
       end
       write_suite_report(workers, progress[:completed], out)
       report(workers, out)
@@ -275,6 +277,17 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
       []
     end
 
+    def environment_skips(worker)
+      log_lines(worker).filter_map do |line|
+        match = ENVIRONMENT_SKIP_LINE.match(line)
+        next unless match
+
+        { "tag" => match[1], "test" => match[2], "reason" => match[3] }
+      end
+    rescue Errno::ENOENT
+      []
+    end
+
     def worker_outcome(worker)
       summary = worker[:summary]
       return "timeout" if worker[:timed_out]
@@ -294,8 +307,19 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
     end
 
     def write_suite_report(workers, completed_results, out)
+      tagged_skips = workers.flat_map { |worker| Array(worker[:environment_skips]) }
+      total_skips = workers.sum { |worker| worker[:summary].to_h.fetch("skips", 0) }
+      by_tag = tagged_skips.each_with_object(Hash.new(0)) { |row, counts| counts[row.fetch("tag")] += 1 }.sort.to_h
+      skip_analysis = {
+        "total" => total_skips,
+        "environment_tagged" => tagged_skips.size,
+        "unclassified" => [total_skips - tagged_skips.size, 0].max,
+        "integrity" => tagged_skips.size <= total_skips ? "consistent" : "tagged_exceeds_summary",
+        "by_tag" => by_tag,
+      }
       payload = {
         "schema" => 1,
+        "skip_analysis" => skip_analysis,
         "status" => (workers.all? { |worker| worker_outcome(worker) == "passed" } ? "passed" : "failed_or_incomplete"),
         "completed_results_relayed" => completed_results,
         "jobs" => workers.size,
@@ -313,12 +337,16 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
             "last_started_test" => last_started_test(worker),
             "failure_result_lines" => worker[:failure_result_lines],
             "known_red" => known_red?(worker),
+            "environment_skips" => Array(worker[:environment_skips]),
           }
         end,
       }
       path = File.join(LOG_DIR, "suite-report.json")
       File.write(path, JSON.pretty_generate(payload) + "\n")
       out.puts "test-suite-report0: #{path} completed_results=#{completed_results} status=#{payload["status"]}"
+      tags = by_tag.map { |tag, count| "#{tag}:#{count}" }.join(",")
+      out.puts "test-skip-summary0: total=#{total_skips} environment_tagged=#{tagged_skips.size} " \
+               "unclassified=#{skip_analysis["unclassified"]}#{tags.empty? ? "" : " by_tag=#{tags}"}"
 
       incomplete = payload["workers"].reject { |worker| worker["outcome"] == "passed" }
       return if incomplete.empty?

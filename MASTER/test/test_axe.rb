@@ -32,7 +32,7 @@ class TestAxe < Minitest::Test
 
   # The real thing, once: Chrome loads the fixture, axe runs inside it, no node involved.
   def test_axe_runs_in_a_real_page_over_cdp
-    skip "no Chrome here" unless Deploy::CdpSession.available?
+    skip_for_environment("browser", reason: "Chrome unavailable") unless Deploy::CdpSession.available?
 
     cdp = Deploy::CdpSession.new
     cdp.start

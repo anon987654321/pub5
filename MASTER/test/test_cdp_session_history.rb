@@ -9,7 +9,7 @@ require File.expand_path("../checks/support/cdp_session", __dir__)
 # skipped where Chrome is absent.
 class TestCdpSessionHistory < Minitest::Test
   def with_two_pages
-    skip "no headless Chrome" unless Deploy::CdpSession.available?
+    skip_for_environment("browser", reason: "headless Chrome unavailable") unless Deploy::CdpSession.available?
     Dir.mktmpdir("cdp-history") do |dir|
       %w[a b].each { |name| File.write(File.join(dir, "#{name}.html"), "<html><body><h1>#{name}</h1></body></html>") }
       Deploy::CdpSession.open do |cdp|
@@ -49,7 +49,7 @@ end
 # and ended a whole brgen review at surface 149 of 154.
 class TestWebPlatformProbeOnSvg < Minitest::Test
   def test_a_tall_inline_svg_does_not_break_the_probe
-    skip "no headless Chrome" unless Deploy::CdpSession.available?
+    skip_for_environment("browser", reason: "headless Chrome unavailable") unless Deploy::CdpSession.available?
     require File.expand_path("../checks/support/web_platform_probe", __dir__)
     surface = Struct.new(:viewport).new("mobile")
     html = "<body><svg width='300' height='260' style='height:260px'><rect width='9' height='9'/></svg></body>"
