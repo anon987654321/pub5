@@ -31,8 +31,8 @@ module Master
       DETECTORS = {}
 
       def initialize(root:)
-        @root = root
-        @file = File.join(root, PATH)
+        @root = File.realpath(root)
+        @file = File.join(@root, PATH)
       end
 
       # The findings still worth a model call: not declined for the file as it
