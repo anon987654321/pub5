@@ -194,7 +194,9 @@ class TestRenderer < Minitest::Test
 
   def test_prompt_line_handles_missing_model
     renderer = FakeRenderer.new(config: {})
-    state, prompt = renderer.prompt_line(nil, "idle", tokens: 0)
+    state, prompt = renderer.stub(:git_prompt_state, nil) do
+      renderer.prompt_line(nil, "idle", tokens: 0)
+    end
 
     assert_match(/\bno model, /, strip_ansi(state))
     refute_match(/\n|\r/, strip_ansi(prompt))
@@ -309,10 +311,12 @@ class TestRenderer < Minitest::Test
   def test_tree_ksh_prompt_names_llm_when_no_model_is_known
     renderer = FakeRenderer.new(config: {})
 
-    Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
-      _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
+    renderer.stub(:git_prompt_state, nil) do
+      Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
+        _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
 
-      assert_equal "pub5/MASTER llm@master$ ", strip_ansi(prompt)
+        assert_equal "pub5/MASTER llm@master$ ", strip_ansi(prompt)
+      end
     end
   end
 
@@ -323,7 +327,7 @@ class TestRenderer < Minitest::Test
     clean = strip_ansi(prompt)
     assert_equal 1, clean.lines.size
     assert_match(/\A.+@master\$ \z/, clean)
-    refute_includes clean, ":", "no host segment: the prompt is not a shell login"
+    refute_match(/@[^ ]+\./, clean, "no host segment: the prompt is not a shell login")
     refute_match(/\e\[/, prompt, "the ksh-console prompt does not need ANSI segment styling")
     assert_operator clean.chomp.length, :<=, Master::Voice::Renderer::PromptComponents::PROMPT_MAX_CHARS
   end
@@ -351,9 +355,29 @@ class TestRenderer < Minitest::Test
       refute_match(/\n|\r/, clean)
       assert_operator clean.length, :<=, Master::Voice::Renderer::PromptComponents::PROMPT_MAX_CHARS
       assert_includes state_text, "read only irc a very"
-      assert_includes state_text, "feature dirty"
+      refute_includes state_text, "feature"
+      assert_includes clean, "git:(feature/this* +1234 -987)"
       assert_includes state_text, "a phase na"
       assert_match(/\A.+@master\$ \z/, clean)
+    end
+  end
+
+  def test_git_prompt_segment_is_conditional_and_marks_worktree_state
+    renderer = FakeRenderer.new(config: {})
+    clean = { branch: "main", ahead: 0, behind: 0, dirty: false }
+    dirty = { branch: "main", ahead: 2, behind: 1, dirty: true }
+
+    renderer.stub(:git_prompt_state, nil) do
+      _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
+      refute_includes strip_ansi(prompt), "git:("
+    end
+    renderer.stub(:git_prompt_state, clean) do
+      _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
+      assert_includes strip_ansi(prompt), "git:(main)"
+    end
+    renderer.stub(:git_prompt_state, dirty) do
+      _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
+      assert_includes strip_ansi(prompt), "git:(main* +2 -1)"
     end
   end
 
