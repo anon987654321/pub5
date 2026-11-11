@@ -15,6 +15,7 @@ but the implementation is owned here.
   Rendered output is replaceable:
   a new run may delete and replace it, and no rendered-sound default moves on
   one person's judgement.
+- `rg69.html`, `rg69.css` and `rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is loaded from a version-pinned CDN and failure is reported visibly.
 - `photograph.rb` and `photograph/idea_picture.rb` — the image-generation
   entrypoint and its IdeaPicture implementation.
 - `replicate/client.rb` — the Studio-owned Replicate provider client

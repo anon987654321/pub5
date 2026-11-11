@@ -14,6 +14,15 @@ task :check do
   raise "output_paths: render_directory is not absolute" unless Studio::OutputPaths.render_directory.start_with?(File::SEPARATOR)
   raise "output_paths: reference_root collides with the checkout" if Studio::OutputPaths.inside_repository?(Studio::OutputPaths.reference_root)
 
+  rg69_files = %w[rg69.html rg69.css rg69.js].map { |name| File.join(STUDIO_ROOT, name) }
+  missing_rg69 = rg69_files.reject { |path| File.file?(path) }
+  raise "RG-69 assets missing: #{missing_rg69.map { |path| File.basename(path) }.join(', ')}" unless missing_rg69.empty?
+  rg69_html = File.read(rg69_files.fetch(0))
+  raise "RG-69 retains an inline style or script block" if rg69_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
+  raise "RG-69 references a missing local stylesheet" unless rg69_html.include?('href="rg69.css"')
+  raise "RG-69 references a missing local application script" unless rg69_html.include?('src="rg69.js"')
+  raise "RG-69 Tone.js dependency is not version-pinned" unless rg69_html.include?("tone/14.8.49/Tone.min.js")
+
   dilla = File.join(STUDIO_ROOT, "dilla", "dilla.rb")
   raise "dilla/dilla.rb is missing" unless File.file?(dilla)
 

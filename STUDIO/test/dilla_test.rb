@@ -563,3 +563,33 @@ class TestDillaRoyksoppProfile < Minitest::Test
     assert_equal "on_grid", plan.fetch(:profile)
   end
 end
+
+
+class TestRG69BrowserContract < Minitest::Test
+  def studio_root
+    File.expand_path("..", __dir__)
+  end
+
+  def test_rg69_assets_are_separate_and_resolve
+    html_path = File.join(studio_root, "rg69.html")
+    css_path = File.join(studio_root, "rg69.css")
+    js_path = File.join(studio_root, "rg69.js")
+    [html_path, css_path, js_path].each { |path| assert File.file?(path), "missing #{path}" }
+
+    html = File.read(html_path)
+    assert_match(/<html[^>]+lang=["']en["']/i, html)
+    assert_match(/<meta\s+charset=["']?utf-8/i, html)
+    assert_includes html, 'href="rg69.css"'
+    assert_includes html, 'src="rg69.js"'
+    assert_includes html, "tone/14.8.49/Tone.min.js"
+    assert_includes html, 'href="#main-content"'
+    assert_includes html, 'id="main-content"'
+    refute_match(/<style\b|<script(?![^>]*\bsrc=)/i, html)
+    refute_match(/\sstyle=["']/i, html)
+
+    javascript = File.read(js_path)
+    refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
+    assert_includes javascript, "document.createTextNode"
+    assert_includes File.read(css_path), "prefers-reduced-motion"
+  end
+end

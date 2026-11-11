@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111">
+<meta name="description" content="RG-69 analog beat machine. Single HTML file sequencer with Tone.js.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎹</text></svg>">
+<title>RG-69 | Beat Machine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="rg69.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to sequencer</a>
+<div id="welcome" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-describedby="welcome-description">
+  <div class="welcome-dialog">
+    <p class="welcome-title" id="welcome-title">RG-69</p>
+    <p class="welcome-sub" id="welcome-description">Analog beat machine</p>
+    <div class="welcome-chips">
+      <span class="welcome-chip">Space play</span>
+      <span class="welcome-chip">R randomize</span>
+      <span class="welcome-chip">E export wav</span>
+      <span class="welcome-chip">T theme</span>
+      <span class="welcome-chip">M mute track</span>
+      <span class="welcome-chip">Ctrl+Z undo</span>
+    </div>
+    <button id="welcome-start" type="button">▶ start</button>
+  </div>
+</div>
+<header>
+<h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1>
+<button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
+</header>
+<div class="transport">
+<button id="play" data-kind="primary" title="Play/Pause (Space)">▶ play</button>
+<button id="stop" type="button" aria-label="Stop" title="Stop (S)">⏹</button>
+<label class="ctrl-bpm">bpm <input id="bpm" type="range" min="60" max="170" value="94"> <output id="bpm-o">94</output></label>
+<button id="tap" title="Tap Tempo">tap</button>
+<button id="steps" type="button" aria-label="Change step count" title="Step count">⟨16⟩</button>
+<button id="random" title="Randomize (R)">⇌ rnd</button>
+<button id="export" title="Export WAV (E)">↓ wav</button>
+<button id="record" data-kind="danger" title="Record">● rec</button>
+<button id="shareBtn" title="Share URL">link</button>
+<button id="layout" type="button" aria-label="Cycle layout" title="Cycle layout (L)">⊞</button>
+<button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">⟲</button>
+<button id="panic" data-kind="danger" title="Panic (Esc)">✖ panic</button>
+</div>
+<p id="status" role="status" aria-live="polite">idle</p>
+<div class="vu-meter" id="vu" aria-label="VU Meter"></div>
+<main id="main-content" tabindex="-1">
+<article aria-label="Sequencer" role="region">
+<p id="seq-hint">Mute: <kbd>M</kbd> · Probability: right-click · Ratchet: shift+click</p>
+<div class="tracks" id="tracks"></div>
+<canvas id="viz" width="400" height="28" title="Waveform" aria-label="Audio waveform visualizer" role="img"></canvas>
+</article>
+<details open>
+<summary>Styles</summary>
+<div class="tab-bar">
+<button class="tab-btn tab-sm active" id="tab-styles">Styles</button>
+<button class="tab-btn tab-sm" id="tab-moods">Moods</button>
+<input type="text" id="style-search" class="tab-search" placeholder="filter…" aria-label="Search presets">
+</div>
+<div class="styles" id="styles"></div>
+<div class="styles is-hidden" id="moods"></div>
+</details>
+<details>
+<summary>Controls</summary>
+<div class="two-col">
+<fieldset><legend>Master</legend>
+<label for="swing">Swing <output id="swing-o">30</output></label><input id="swing" type="range" min="0" max="90" value="30" title="Swing">
+<label for="drive">Drive <output id="drive-o">25</output></label><input id="drive" type="range" min="0" max="100" value="25" title="Drive">
+<label for="tape">Tape <output id="tape-o">8</output></label><input id="tape" type="range" min="0" max="100" value="8" title="Tape">
+<label for="comp">Comp <output id="comp-o">70</output></label><input id="comp" type="range" min="0" max="100" value="70" title="Comp">
+<label for="width">Width <output id="width-o">40</output></label><input id="width" type="range" min="0" max="100" value="40" title="Width">
+</fieldset>
+<fieldset><legend>FX</legend>
+<label for="reverb">Reverb <output id="reverb-o">30</output></label><input id="reverb" type="range" min="0" max="100" value="30" title="Reverb">
+<label for="delay">Delay <output id="delay-o">20</output></label><input id="delay" type="range" min="0" max="100" value="20" title="Delay">
+<label for="filter">Filter <output id="filter-o">80</output></label><input id="filter" type="range" min="0" max="100" value="80" title="Filter">
+<label for="wobble">Wobble <output id="wobble-o">5</output></label><input id="wobble" type="range" min="0" max="100" value="5" title="Wobble">
+<label for="vinyl">Vinyl <output id="vinyl-o">15</output></label><input id="vinyl" type="range" min="0" max="100" value="15" title="Vinyl">
+<label for="crackle">Crackle <output id="crackle-o">10</output></label><input id="crackle" type="range" min="0" max="100" value="10" title="Crackle">
+</fieldset>
+</div>
+</details>
+<details>
+<summary>Mix</summary>
+<fieldset>
+<label for="drum-vol">Drums <output id="drum-vol-o">80</output></label><input id="drum-vol" type="range" min="0" max="100" value="80">
+<label for="bass-vol">Bass <output id="bass-vol-o">70</output></label><input id="bass-vol" type="range" min="0" max="100" value="70">
+<label for="keys-vol">Keys <output id="keys-vol-o">60</output></label><input id="keys-vol" type="range" min="0" max="100" value="60">
+<label for="pads-vol">Pads <output id="pads-vol-o">50</output></label><input id="pads-vol" type="range" min="0" max="100" value="50">
+<label for="master-vol">Master <output id="master-vol-o">75</output></label><input id="master-vol" type="range" min="0" max="100" value="75">
+</fieldset>
+</details>
+<details>
+<summary>Patterns</summary>
+<fieldset>
+<label>Drums <button class="lock-btn" data-lock="drum" title="Lock">🔓</button> <span id="root-display"></span></label><select id="drum-pat" aria-label="Drum pattern"></select>
+<label>Bass <button class="lock-btn" data-lock="bass" title="Lock">🔓</button></label><select id="bass-pat" aria-label="Bass pattern"></select>
+<label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select>
+<label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select>
+</fieldset>
+</details>
+<details>
+<summary>Terminal</summary>
+<div id="trace-wrap">
+<aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside>
+<div class="term-input-row">
+<span class="term-prompt">$</span>
+<input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="help" aria-label="Terminal command">
+</div>
+</div>
+</details>
+</main>
+<footer id="meta">rg-69 / init</footer>
+<div id="progress-wrap">
+<p>Exporting… <span id="progress-pct">0%</span></p>
+<div id="progress-bar"><div id="progress-fill"></div></div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<div class="ctx-menu" id="ctx-menu"></div>
+
+<script src="rg69.js" defer></script>
+</body>
+</html>
