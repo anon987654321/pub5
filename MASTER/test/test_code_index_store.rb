@@ -141,8 +141,10 @@ class TestCodeIndexStore < Minitest::Test
 
   def test_public_symbol_and_reference_views_cannot_mutate_the_live_graph
     with_tree do |root|
-      index = Index.new(root:).build
+      cold = Index.new(root:, persist: true).build
+      warm = Index.new(root:, persist: true).build
 
+      [cold, warm].each do |index|
       symbols = index.symbols
       references = index.references
       assert_predicate symbols, :frozen?
@@ -163,6 +165,7 @@ class TestCodeIndexStore < Minitest::Test
       assert_raises(FrozenError) { reference.to_fqn.replace("Corrupted") }
       assert_equal ["a.rb", 2], index.lookup("Alpha#one")
       assert index.complete?
+      end
     end
   end
 
