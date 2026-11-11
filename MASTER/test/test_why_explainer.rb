@@ -55,6 +55,21 @@ class WhyExplainerTest < Minitest::Test
     assert_nil explainer.explain("   ")
   end
 
+  def test_delivery_receipt_is_a_render_only_evidence_template
+    out = explainer.explain("receipt")
+
+    assert_includes out, "delivery receipt - fill with observed evidence"
+    assert_includes out, "baseline:"
+    assert_includes out, "SHA-256 of its original bytes"
+    assert_includes out, "after:"
+    assert_includes out, "SHA-256 of resulting bytes"
+    assert_includes out, "git diff --no-ext-diff --no-renames -- [exact paths]"
+    assert_includes out, "name: [registered check ID or exact falsifiable command]"
+    assert_includes out, "result: [PASS | FAIL | INCONCLUSIVE | NOT_RUN]"
+    assert_includes out, "never fill a field from memory or infer PASS"
+    assert_equal out, explainer.explain("delivery_receipt")
+  end
+
   def test_explain_path_returns_constitutional_lineage
     out = explainer.explain("lib/trace/why_explainer.rb")
 

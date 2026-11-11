@@ -52,9 +52,11 @@ trusting this page.
 
 4. A delivered receipt template. Evidence: AGENTS.md and
    expectations.yml carry the delivered bar in prose; every agent
-   re-derives it per session. State on main: open. Landing path: /why
-   renders the fill-in receipt (baseline hash, after hash,
-   path-scoped diff, check name and result); render-only, with a test.
+   re-derives it per session. State on main: landed in this revision —
+   /why receipt (also /why delivery_receipt) renders a read-only template
+   for baseline and after hashes, exact path-scoped diff, falsifiable check,
+   observed result and Law assessment. Placeholders cannot become evidence;
+   a test holds the fields and alias.
 
 5. Prompt generated from the capability registry, identity pinned
    against the lane. Evidence: docs/session-2026-11-08.md, former open

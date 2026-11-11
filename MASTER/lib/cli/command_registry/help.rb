@@ -344,9 +344,9 @@ module Master
                    "bin/operator laws <ID> prints one in full."],
         },
         "why" => {
-          summary: "what a law says, and where it comes from",
-          detail: ["/why <law|path|scan_rule|anti_pattern|style.key> - Trace::WhyExplainer looks it",
-                   "up in the constitution, architecture and path ownership, then asks the model only when nothing matches."],
+          summary: "what a law says, where it comes from, or the delivery evidence bar",
+          detail: ["/why receipt - render the delivery template; fill it with actual evidence",
+                   "/why <law|path|scan_rule|anti_pattern|style.key> - Trace::WhyExplainer traces local sources before the model."],
         },
         "wishlist" => {
           summary: "the governed workstreams and their state - what /fix still owes the trees",

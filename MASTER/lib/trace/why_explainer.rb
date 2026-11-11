@@ -15,6 +15,7 @@ module Master
       def explain(id)
         key = id.to_s.strip
         return if key.empty?
+        return delivery_receipt_template if %w[receipt delivery_receipt].include?(key.downcase)
 
         rule_lineage(key) ||
           design_law(key) ||
@@ -29,6 +30,32 @@ module Master
       end
 
       private
+
+      # A fill-in aid, not a stored receipt. It mirrors the delivery bar in
+      # docs/expectations.yml and refuses to turn placeholders into evidence.
+      def delivery_receipt_template
+        [
+          "delivery receipt - fill with observed evidence, never estimates",
+          "status: [DELIVERED | FAILED | STOPPED | INCONCLUSIVE | NOT_RUN]",
+          "scope: [tree and exact repository-relative paths]",
+          "baseline:",
+          "  revision: [git rev-parse HEAD before the change]",
+          "  paths: [each changed path and SHA-256 of its original bytes]",
+          "after:",
+          "  revision: [git rev-parse HEAD after the change, or unchanged if uncommitted]",
+          "  paths: [same paths and SHA-256 of resulting bytes]",
+          "diff:",
+          "  command: git diff --no-ext-diff --no-renames -- [exact paths]",
+          "  evidence: [diff summary and retained patch/receipt location]",
+          "check:",
+          "  name: [registered check ID or exact falsifiable command]",
+          "  result: [PASS | FAIL | INCONCLUSIVE | NOT_RUN]",
+          "  evidence: [exit status, relevant summary and saved output path]",
+          "law assessment: [result and evidence, or explicitly NOT_RUN]",
+          "delivered requires both hash sets, the exact path-scoped diff, and one falsifiable check that actually ran and passed.",
+          "Missing evidence stays INCONCLUSIVE or NOT_RUN; never fill a field from memory or infer PASS.",
+        ].join("\n")
+      end
 
       def rule_lineage(key)
         return unless key.include?("/") || File.exist?(File.join(@root, key))

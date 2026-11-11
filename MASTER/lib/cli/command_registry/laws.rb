@@ -96,9 +96,10 @@ module Master
       # model only when nothing local matches.
       def dispatch_why(agent:, root:, memory: nil, ctx: nil)
         law = arg_for(ctx)
-        return "usage: /why <law|path|scan_rule|anti_pattern|style.key>" if law.empty?
+        return "usage: /why <law|path|scan_rule|anti_pattern|style.key|receipt>" if law.empty?
 
         local = Trace::WhyExplainer.new(root:).explain(law)
+        return local if %w[receipt delivery_receipt].include?(law.downcase)
         answer = local || agent.ask_once(Voice::Personality.why_prompt(law))
         receipt = Ground::BootReceipt.session(root:, agent:, memory:)
         return answer if receipt.empty?
