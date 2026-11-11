@@ -196,8 +196,9 @@ module Master
       def save_snapshot
         return if @snapshot_tree && @snapshot_tree == CodeIndexStore.tree_hash(@mtimes)
 
-        @store.save(symbols: @symbols.values, references: @references, signatures: @mtimes)
-        @snapshot_tree = CodeIndexStore.tree_hash(@mtimes)
+        saved = @store.save(symbols: @symbols.values, references: @references, signatures: @mtimes)
+        @snapshot_tree = CodeIndexStore.tree_hash(@mtimes) if saved
+        saved
       end
 
       def purge_file(full)
