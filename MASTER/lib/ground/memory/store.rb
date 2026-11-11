@@ -22,7 +22,10 @@ module Master
           @mutex = Mutex.new
           @store = load_store
           @persisted_store = deep_copy_store(@store)
-          @disk_signature = memory_store_signature
+          # Use the descriptor fingerprint captured by load_store. A separate
+          # pathname stat here could observe a replacement that the loaded
+          # snapshot never contained, making stale memory appear current.
+          @disk_signature = @last_loaded_signature
           @store_version = 0
           import_external!
         end
@@ -160,6 +163,7 @@ module Master
         end
 
         def context_eligible?(key, entry = nil)
+          refresh_store_if_changed if entry.nil?
           name = key.to_s
           return false if name.start_with?("archive/", "conflict/") || name == "_consolidated_summary"
 
@@ -419,7 +423,10 @@ module Master
 
         def load_store
           ensure_memory_directory!
-          return {} unless File.exist?(@path) || File.symlink?(@path)
+          unless File.exist?(@path) || File.symlink?(@path)
+            @last_loaded_signature = nil
+            return {}
+          end
 
           stat = File.lstat(@path)
           unless stat.file? && !stat.symlink? && stat.nlink == 1
@@ -449,6 +456,7 @@ module Master
             loaded = Master.parse_yaml_content(raw, source: @path)
             raise IOError, "memory store must contain a YAML mapping" unless loaded.is_a?(Hash)
 
+            @last_loaded_signature = memory_signature_for(after)
             loaded
           end
         rescue Psych::Exception => error
@@ -549,7 +557,7 @@ module Master
             end
           end
           @persisted_store = deep_copy_store(disk)
-          @disk_signature = memory_store_signature
+          @disk_signature = @last_loaded_signature
           @store_version += 1
         end
 
@@ -563,9 +571,13 @@ module Master
           unless stat.file? && !stat.symlink? && stat.nlink == 1
             raise IOError, "memory store must be a singly linked regular file"
           end
-          [stat.dev, stat.ino, stat.size, stat.mtime.to_r, stat.ctime.to_r]
+          memory_signature_for(stat)
         rescue Errno::ENOENT
           nil
+        end
+
+        def memory_signature_for(stat)
+          [stat.dev, stat.ino, stat.size, stat.mtime.to_r, stat.ctime.to_r]
         end
 
         def refresh_store_if_changed
