@@ -200,7 +200,7 @@ class TestFixHere < Minitest::Test
     end
   end
 
-  def test_the_launchers_run_when_the_ruby_on_path_refuses_the_pinned_version
+  def test_the_launchers_fall_back_when_the_path_ruby_is_unusable
     Dir.mktmpdir("shim") do |dir|
       File.write(File.join(dir, "ruby"), "#!/bin/sh\necho \"rbenv: version 9.9.9 is not installed\" >&2\nexit 1\n")
       FileUtils.chmod(0o755, File.join(dir, "ruby"))
