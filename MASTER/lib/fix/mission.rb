@@ -472,6 +472,43 @@ module Master
         false
       end
 
+      def record_fix_proof!(status:, scope_paths:, report:)
+        text = report.to_s
+        return false unless status.to_s == "pass"
+        return false unless text.match?(/\bfix done\b/i)
+        return false unless text.match?(/\bproof:\s*(?!no proof ran)/i)
+        return false unless text.match?(/hard red 0\b/i)
+        return false if text.match?(/unmeasured [1-9]\d*\b/i)
+        return false if text.match?(/review\d+:\s*(?:incomplete|complete with open findings)\b/i)
+
+        paths = Array(scope_paths).map(&:to_s).uniq
+        return false if paths.empty? || paths.size > 128
+        return false unless paths.all? do |path|
+          !path.empty? && !Pathname.new(path).absolute? && !path.split("/").include?("..")
+        end
+
+        line = text.lines.find { |entry| entry.match?(/fix done/i) && entry.match?(/proof:/i) }.to_s.strip
+        receipt = {
+          "kind" => "fix_pipeline",
+          "status" => "pass",
+          "scope_paths" => paths,
+          "report_digest" => Digest::SHA256.hexdigest(text),
+          "proof_summary" => line.byteslice(0, 512),
+        }
+        with_lock do
+          load_writable_unlocked!
+          return false unless @record && @record["origin"].to_s == "backlog"
+
+          @record["proof"] = receipt
+          @record["last_seen_at"] = now
+          persist!
+        end
+        emit("mission:proof", id: @id, source: "fix_pipeline", status: "pass", scope_paths: paths.size)
+        true
+      rescue ArgumentError, TypeError
+        false
+      end
+
       def record_repository_push!(remote:, branch:, commit:)
         return false unless remote.to_s == "origin" && branch.to_s == "main"
         return false unless commit.to_s.match?(/\A[0-9a-f]{40}\z/i)
