@@ -3,7 +3,7 @@
 
 # Build nokogiri for OpenBSD and install it into the given bundles.
 #
-#   doas ruby34 OPENBSD/bin/nokogiri-openbsd 1.19.7 /home/brgen/.bundle/gems/ruby/3.4:brgen ...
+#   doas ruby OPENBSD/bin/nokogiri-openbsd 1.19.7 /home/brgen/.bundle/gems/ruby/3.4:brgen ...
 #
 # nokogiri 1.19.5 to 1.19.7 vendor a gumbo hashmap.c whose function-pointer
 # variables are named __malloc, __realloc and __free. OpenBSD's <sys/cdefs.h>
