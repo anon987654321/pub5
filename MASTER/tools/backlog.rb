@@ -226,11 +226,13 @@ module Backlog
         "scope_paths" => scope,
         "done_when" => item[:done_when],
       )
-      @mission_class.new(root: @root).ensure_queued!(
+      mission = @mission_class.new(root: @root).ensure_queued!(
         goal:, scope: @root, model:, effort:, plan:,
         origin: "backlog", auto_continue: true, mode: "repair",
         risk: :low, intent: :functional_change,
       )
+      return :blocked if mission.respond_to?(:record) && mission.record&.fetch("state", nil) == "blocked"
+
       :queued
     end
 
@@ -240,11 +242,12 @@ module Backlog
       return false unless record && record["origin"].to_s == "backlog"
       return false unless record["state"].to_s == "completed" && record["stage"].to_s == "deliver"
       return false if record["summary"].to_s.strip.empty?
-      return false if Array(record["artifacts"]).empty?
       return false unless record["repository_writes"].to_h.empty?
 
       plan = JSON.parse(record["plan"].to_s)
       return false unless plan["executor"] == "root_todo" && plan["item_id"] && plan["item_digest"]
+      source_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
+      return false unless source_item && item_digest(source_item) == plan["item_digest"]
 
       FileUtils.mkdir_p(File.join(@root, ".master"))
       path = File.join(@root, RECEIPT_PATH)
@@ -255,7 +258,13 @@ module Backlog
         "completed_at" => record.fetch("finished_at"),
         "summary" => record.fetch("summary"),
         "artifacts" => Array(record["artifacts"]),
-        "proof_status" => "mission_completed_with_artifacts",
+        "proof_status" => "mission_terminal_delivery_receipt",
+        "evidence" => {
+          "mission_state" => record.fetch("state"),
+          "mission_stage" => record.fetch("stage"),
+          "summary" => record.fetch("summary"),
+          "pending_repository_writes" => 0,
+        },
       }
       File.open(path, File::WRONLY | File::CREAT | File::APPEND, 0o600) do |file|
         file.flock(File::LOCK_EX)
@@ -292,7 +301,7 @@ module Backlog
 
       File.foreach(path).filter_map do |line|
         row = JSON.parse(line)
-        row["item_digest"] if row["proof_status"] == "mission_completed_with_artifacts"
+        row["item_digest"] if row["proof_status"] == "mission_terminal_delivery_receipt"
       rescue JSON::ParserError
         nil
       end
