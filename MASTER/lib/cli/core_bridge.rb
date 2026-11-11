@@ -2,6 +2,7 @@
 
 require_relative "../design/authoring"
 require_relative "../trace/effect_observer"
+require_relative "../io/git_operations"
 require_relative "fold_risk"
 
 module Master
@@ -12,6 +13,8 @@ module Master
     # Turns stream to the event bus as they happen, so the terminal and the web
     # dashboard see the same live trace they get from the legacy path.
     module CoreBridge
+      class DeliveryFailed < StandardError; end
+
       # A report shows each turn as one line: the first line of what came back,
       # cut here, and how much was left out. An observation can be a whole file;
       # a blocked fold printed all of AGENTS.md as forty err0 lines.
@@ -291,7 +294,11 @@ module Master
         record = Master::Fix::Mission.current(root: mission.root)
         return unless record && %w[running waiting].include?(record["state"].to_s)
 
-        mission.fail!("#{error.class}: #{error.message}")
+        if error.is_a?(DeliveryFailed)
+          mission.block!(reason: error.message)
+        else
+          mission.fail!("#{error.class}: #{error.message}")
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "CoreBridge.defer_mission_on_error")
       end
@@ -495,9 +502,14 @@ module Master
             )
           elsif repository_delivery && effect.verb == :git &&
                 effect.args[:operation].to_s.to_sym == :commit && observation.ok?
-            mission.record_repository_commit!(
+            committed = mission.record_repository_commit!(
               expected_hashes: effect.args[:expected_hashes], repository_root: root,
             )
+            if mission.record&.fetch("origin", nil) == "backlog"
+              raise DeliveryFailed, "DELIVERY_FAILED: commit write receipt could not be reconciled" unless committed
+
+              push_backlog_commit!(mission:, root:, bus:)
+            end
           end
           if effect.verb == :write && observation.ok?
             Master::Trace::WriteTracker.current&.record(File.expand_path(effect.args[:path].to_s, root))
@@ -528,6 +540,40 @@ module Master
 
       # The lifecycle stream intentionally excludes effect arguments: argv, URLs,
       # prompts and write content may contain secrets or private user data.
+      # A backlog commit is not complete while it exists only in a local
+      # checkout. Push each path-scoped commit immediately through the existing
+      # GitOperations policy and pre-push hook; never bypass a multi-session veto.
+      def push_backlog_commit!(mission:, root:, bus: nil)
+        mission.hold_lease!
+        repository, status = Master::Io::Exec.capture2e("git", "-C", root, "rev-parse", "--show-toplevel")
+        raise DeliveryFailed, "DELIVERY_FAILED: repository root could not be resolved" unless status.success?
+
+        repository = File.realpath(repository.strip)
+        git = Master::Io::GitOperations.new(repository)
+        remote, target = git.push_target
+        unless remote == "origin" && target == "HEAD:main"
+          raise DeliveryFailed, "DELIVERY_FAILED: expected origin/main, got #{remote}:#{target}"
+        end
+
+        git.push
+        remote_output, remote_status = Master::Io::Exec.capture2e(
+          "git", "-C", repository, "ls-remote", "origin", "refs/heads/main",
+        )
+        head, head_status = Master::Io::Exec.capture2e("git", "-C", repository, "rev-parse", "HEAD")
+        unless remote_status.success? && head_status.success? &&
+               remote_output.split.first == head.strip && head.to_s.strip.match?(/\A[0-9a-f]{40}\z/i)
+          raise DeliveryFailed, "DELIVERY_FAILED: origin/main does not prove the current HEAD after push"
+        end
+
+        bus&.publish("backlog_executor:pushed", remote: "origin", branch: "main", commit: head.strip)
+        Master::Trace::Dmesg.status("backlog0", "pushed #{head.strip[0, 12]} to origin/main")
+        head.strip
+      rescue DeliveryFailed
+        raise
+      rescue StandardError => error
+        raise DeliveryFailed, "DELIVERY_FAILED: #{error.class}: #{error.message}"
+      end
+
       def build_effect_observer(bus:, mission_id: nil, attempt_id: nil)
         Master::Trace::EffectObserver.new(bus:, mission_id:, attempt_id:)
       end
