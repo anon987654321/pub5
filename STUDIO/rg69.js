@@ -10,6 +10,18 @@ window.addEventListener('error', (event) => {
   console.error('Global error:', event.error || event.message);
 });
 
+if(!window.Tone){
+  const warning=document.createElement("p");
+  warning.className="engine-error";
+  warning.setAttribute("role","alert");
+  warning.textContent="The RG-69 audio engine (Tone.js 14.8.49) did not load. Check your connection and reload.";
+  document.body.prepend(warning);
+  throw new Error("RG-69 audio engine unavailable");
+}
+
+const INSTANCE_KEY="rg69_inst",INSTANCE_TTL=8e3,selfId=`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const bc=("BroadcastChannel"in window)?new BroadcastChannel("rg69"):null;
+const $id=s=>document.getElementById(s),DP=s=>$id(s).parentElement;
 const welcomeStart=$id("welcome-start");
 if(welcomeStart){
   welcomeStart.focus({preventScroll:true});
@@ -24,19 +36,6 @@ function dismissWelcome(){
   $id("welcome").style.display="none";
   $id("play").focus({preventScroll:true});
 }
-
-if(!window.Tone){
-  const warning=document.createElement("p");
-  warning.className="engine-error";
-  warning.setAttribute("role","alert");
-  warning.textContent="The RG-69 audio engine (Tone.js 14.8.49) did not load. Check your connection and reload.";
-  document.body.prepend(warning);
-  throw new Error("RG-69 audio engine unavailable");
-}
-
-const INSTANCE_KEY="rg69_inst",INSTANCE_TTL=8e3,selfId=`${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const bc=("BroadcastChannel"in window)?new BroadcastChannel("rg69"):null;
-const $id=s=>document.getElementById(s),DP=s=>$id(s).parentElement;
 const log=(message,level="i")=>{
   const entry=document.createElement("span");
   entry.classList.add("trace-line");
