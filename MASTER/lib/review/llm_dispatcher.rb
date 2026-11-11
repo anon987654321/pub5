@@ -474,7 +474,9 @@ module Master
       end
 
       def vision_model_for(current)
-        @model_router&.best_vision_model || current
+        return current unless @model_router&.respond_to?(:best_vision_model)
+
+        @model_router.best_vision_model || current
       end
 
       def system_prompt
