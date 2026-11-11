@@ -10,7 +10,7 @@
 #
 #   OPENBSD/bin/deploy [all|brgen|amber|bsdports|mrdamascy|master] [--follow|--detach]
 #
-# Workstation one-command deploys keep using the root ./redeploy, which routes
+# Workstation one-command deploys use MASTER/bin/redeploy, which routes
 # through MASTER/bin/operator; this entrypoint names the same stages directly.
 
 APPS = %w[all brgen amber bsdports mrdamascy master].freeze
