@@ -215,6 +215,15 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes summary, "/help [command]"
   end
 
+  def test_help_overview_wraps_long_command_groups
+    summary = Registry.help_summary
+    session_lines = summary.lines.grep(/\\A(?:session0 at master0:|  )/)
+
+    assert_operator session_lines.length, :>=, 2
+    assert session_lines.all? { |line| line.chomp.length <= 76 }, "session help should not become a wide command ribbon"
+    Registry::HELP_TOPICS.each_key { |name| assert_includes summary, "/#{name}" }
+  end
+
   def test_command_surface_and_help_list_stay_in_parity
     surface = Registry.command_surface.map { |entry| entry.fetch(:cmd) }.sort
     assert_equal Registry.slash_commands.sort, surface
