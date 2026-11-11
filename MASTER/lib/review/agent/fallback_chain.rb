@@ -56,9 +56,9 @@ module Master
 
           tried = stage_warnings.filter_map { |line| line[/\Allm failed in \S+ on (.*)\z/m, 1] }
                                 .uniq { |line| line.split(": ", 2).first }
-          return last_response if tried.size < 2
+          return last_response if tried.empty?
 
-          Result.err("no model answered: #{tried.map { |line| line.lines.first.strip[0, 90] }.join('; ')}",
+          Result.err("no model answered: #{tried.map { |line| line.lines.first.strip[0, 120] }.join('; ')}",
                      category: last_response.category)
         end
 
