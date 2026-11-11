@@ -748,10 +748,10 @@ class TestReliabilitySecondTranche < Minitest::Test
   def test_delivery_recovery_keeps_pending_transaction_after_push_failure_and_retries
     Dir.mktmpdir("master-delivery-push-retry") do |root|
       path = File.join(root, "a.rb")
-      File.write(path, "before\\n")
+      File.write(path, "before\n")
       id = "delivery-push-retry"
       tx = Master::Fix::Transaction.new(root:, paths: [path], id:).begin!
-      File.write(path, "committed-locally\\n")
+      File.write(path, "committed-locally\n")
       tx.observe!
       tx.delivery.begin!(head_before: "parent")
       tx.delivery.record_commit!(head_after: "commit-1")
@@ -791,7 +791,7 @@ class TestReliabilitySecondTranche < Minitest::Test
       assert_equal :delivery_recovered, retried.value!
       assert_equal 2, push_count
       refute Master::Fix::Transaction::Recovery.persisted?(root:, id:)
-      assert_equal "committed-locally\\n", File.read(path)
+      assert_equal "committed-locally\n", File.read(path)
     end
   end
 
