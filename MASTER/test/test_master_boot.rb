@@ -38,6 +38,107 @@ class MasterBootTest < Minitest::Test
     assert Master.respond_to?(:validate_data!)
   end
 
+  def test_backlog_runner_uses_scoped_fix_and_records_verified_origin_delivery
+    Dir.mktmpdir("backlog-runner") do |mission_root|
+      Dir.mktmpdir("backlog-repo") do |repo_root|
+        paths = %w[MASTER/lib/a.rb MASTER/lib/b.rb]
+        paths.each do |path|
+          full = File.join(repo_root, path)
+          FileUtils.mkdir_p(File.dirname(full))
+          File.write(full, "VALUE = 1\n")
+        end
+        plan = JSON.generate(
+          "executor" => "root_todo", "item_id" => "item-1",
+          "item_digest" => "d" * 64, "scope_paths" => paths,
+        )
+        goal = "Complete exactly this root TODO item using /fix"
+        queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
+          goal:, scope: mission_root, plan:, origin: "backlog", auto_continue: true,
+          mode: "repair", intent: :functional_change,
+        )
+        seen = []
+        report = "fix done - 1 commit delivered - proof: 12 of 12 - hard red 0 - soft red 0"
+        command = Object.new
+        command.define_singleton_method(:call) do |ctx|
+          seen << ctx.fetch(:args)
+          report
+        end
+        fake_git = Object.new
+        fake_git.define_singleton_method(:push_target) { ["origin", "HEAD:main"] }
+        status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
+        capture = lambda do |*args, **|
+          if args.last(3) == ["remote", "get-url", "origin"]
+            ["git@github.com:owner/pub5.git\n", status]
+          else
+            flunk("unexpected preflight command: #{args.inspect}")
+          end
+        end
+        push = lambda do |mission:, **|
+          assert mission.record_repository_push!(
+            remote: "origin", branch: "main", commit: "a" * 40
+          )
+          "a" * 40
+        end
+
+        Master::Io::GitOperations.stub(:new, ->(_root) { fake_git }) do
+          Master::Io::Exec.stub(:capture2e, capture) do
+            Master::CLI::CoreBridge.stub(:push_backlog_commit!, push) do
+              result = Master.run_backlog_task(
+                root: mission_root, container: { commands: { "fix" => command } },
+                mission: queued.record, repo_root:
+              )
+              assert result.ok?, result.message
+            end
+          end
+        end
+
+        assert_equal paths.map { |path| "#{path} --intent=functional_change" }, seen
+        completed = Master::Fix::Mission.current(root: mission_root)
+        assert_equal "completed", completed.fetch("state")
+        assert_equal "fix_pipeline", completed.dig("proof", "kind")
+        assert_equal paths.sort, completed.dig("proof", "scope_paths").sort
+        assert_equal "origin", completed.dig("repository_pushes", 0, "remote")
+      end
+    end
+  end
+
+  def test_backlog_runner_blocks_when_fix_report_has_no_measured_proof
+    Dir.mktmpdir("backlog-runner") do |mission_root|
+      Dir.mktmpdir("backlog-repo") do |repo_root|
+        path = "MASTER/lib/a.rb"
+        full = File.join(repo_root, path)
+        FileUtils.mkdir_p(File.dirname(full))
+        File.write(full, "VALUE = 1\n")
+        plan = JSON.generate("executor" => "root_todo", "item_id" => "item-2",
+                             "item_digest" => "e" * 64, "scope_paths" => [path])
+        queued = Master::Fix::Mission.new(root: mission_root).ensure_queued!(
+          goal: "Complete item 2 using /fix", scope: mission_root, plan:,
+          origin: "backlog", auto_continue: true, mode: "repair", intent: :functional_change,
+        )
+        command = Object.new
+        command.define_singleton_method(:call) { |*| "fix done - proof: no proof ran - hard red 0 - soft red 0" }
+        fake_git = Object.new
+        fake_git.define_singleton_method(:push_target) { ["origin", "HEAD:main"] }
+        status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
+        capture = ->(*, **){ ["git@github.com:owner/pub5.git\n", status] }
+
+        Master::Io::GitOperations.stub(:new, ->(_root) { fake_git }) do
+          Master::Io::Exec.stub(:capture2e, capture) do
+            result = Master.run_backlog_task(
+              root: mission_root, container: { commands: { "fix" => command } },
+              mission: queued.record, repo_root:
+            )
+            refute result.ok?
+          end
+        end
+
+        blocked = Master::Fix::Mission.current(root: mission_root)
+        assert_equal "blocked", blocked.fetch("state")
+        assert_match(/FIX_PROOF_FAILED/, blocked.fetch("wake_reason"))
+      end
+    end
+  end
+
   def test_data_validation_detects_rapid_file_edits
     Dir.mktmpdir do |dir|
       data = File.join(dir, "data")
