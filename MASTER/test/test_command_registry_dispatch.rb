@@ -614,6 +614,9 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal "/fix --mode=repair --dry-run lib", Master::CLI::TurnRouter.rewrite_slash("/scan lib")
     assert_equal "/fix --mode=audit lib", Master::CLI::TurnRouter.rewrite_slash("/review lib")
     assert_equal "/fix --mode=all lib", Master::CLI::TurnRouter.rewrite_slash("/sweep lib")
+    help = Registry.help_text("fix")
+    assert_includes help, "/audit, /review, /critique and /council"
+    assert_includes help, "/elevate and /map"
     assert_equal "/fix --mode=audit lib", Master::CLI::TurnRouter.rewrite_slash("/council lib")
     assert_equal "/fix --mode=visual lib", Master::CLI::TurnRouter.rewrite_slash("/style lib")
     assert_equal "/fix --mode=elevate lib", Master::CLI::TurnRouter.rewrite_slash("/map lib")
