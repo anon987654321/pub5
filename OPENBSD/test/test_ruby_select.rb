@@ -86,7 +86,7 @@ class TestRubySelect < Minitest::Test
   end
 
 def test_bundler_stays_on_the_installed_version
-  with_path("ruby34", "bundle34") do |dir|
+  with_path("ruby34", "bundle34", "gem34") do |dir|
     shells.each do |shell|
       out, err, status = Open3.capture3({ "PATH" => dir }, shell, "-c", %q(. "$1" && printf "%s" "$BUNDLE_VERSION"), shell, LIB, unsetenv_others: true)
       assert status.success?, err
