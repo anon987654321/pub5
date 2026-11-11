@@ -5,12 +5,14 @@
 # Exit 0 only if every listed file reports 0 failures and 0 errors.
 
 require "rbconfig"
+require_relative "../lib/operator/ruby_runner"
 require "open3"
 
 ROOT = File.expand_path("..", __dir__)
 Dir.chdir(ROOT)
 
-ruby = RbConfig.ruby
+ruby = Operator::RubyRunner.ruby_cmd
+bundle = Operator::RubyRunner.bundle_cmd
 puts "ruby=#{RUBY_VERSION} path=#{ruby}"
 puts "cwd=#{ROOT}"
 
@@ -59,7 +61,7 @@ end
 results = []
 tests.each do |t|
   next unless File.file?(t)
-  cmd = ["bundle", "exec", ruby, "-Ilib:test", t]
+  cmd = [bundle, "exec", ruby, "-Ilib:test", t]
   puts "\n## #{t}"
   out, status = Open3.capture2e(*cmd)
   puts out.lines.last(12).join
