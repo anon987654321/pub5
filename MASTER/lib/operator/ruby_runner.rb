@@ -122,7 +122,7 @@ module Operator
         next unless File.directory?(directory)
 
         Dir.children(directory).sort.each do |entry|
-          next unless entry.match?(/\\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\\.[0-9]+)*)?\\z/)
+          next unless entry.match?(/\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\.[0-9]+)*)?\\z/)
 
           path = File.join(directory, entry)
           next unless File.file?(path) && File.executable?(path)
