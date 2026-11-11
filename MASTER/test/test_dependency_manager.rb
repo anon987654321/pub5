@@ -18,9 +18,6 @@ class TestDependencyManager < Minitest::Test
 
       DEPENDENCIES
 
-      RUBY VERSION
-        ruby 4.0.5
-
       BUNDLED WITH
         4.0.5
     LOCK
@@ -55,15 +52,13 @@ class TestDependencyManager < Minitest::Test
     assert_includes source, "IO.pipe"
   end
 
-  def test_master_requires_the_pinned_ruby_in_gemfile_and_lock
+  def test_master_uses_the_installed_ruby_without_an_exact_lock
     gemfile = File.read(File.join(Master::ROOT, "Gemfile"))
     lock = File.read(File.join(Master::ROOT, "Gemfile.lock"))
 
-    assert_match(/^ruby ">= 3\.3", "< 4\.1"$/, gemfile)
-    locked = lock[/^RUBY VERSION\n  ruby (\d+\.\d+\.\d+)$/m, 1]
-    refute_nil locked, "Gemfile.lock must record the exact Ruby that resolved it"
-    assert Gem::Requirement.new(">= 3.3", "< 4.1").satisfied_by?(Gem::Version.new(locked))
-    assert_equal locked, File.read(File.join(Master::ROOT, ".ruby-version")).strip
+    assert_match(/^ruby ">= 3\.3"$/, gemfile)
+    refute_match(/^RUBY VERSION$/, lock)
+    refute File.file?(File.join(Master::ROOT, ".ruby-version"))
   end
 
   def test_watcher_gems_are_locked_with_ffi_in_both_bundles
