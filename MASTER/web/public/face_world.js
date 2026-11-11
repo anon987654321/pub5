@@ -1268,6 +1268,7 @@
   window.addEventListener("master:visual-subject", (event) => {
     const detail = event.detail || {};
     setConversationSubject(detail.text || detail.title || "", detail.visual_subject || detail.visualSubject || detail);
+    scheduleFaceRestoration();
   }, { passive: true });
 
   window.addEventListener("master:bus", (event) => {
