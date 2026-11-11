@@ -360,7 +360,7 @@ class TestCouncilDeliberation < Minitest::Test
       raise ThreadError, "thread limit reached" if calls == 2
 
       original_new.call(*args, **kwargs, &block).tap do
-        started.pop(timeout: 2)
+        raise ThreadError, "first persona did not start" unless started.pop(timeout: 2)
         release << :continue
       end
     }) do
