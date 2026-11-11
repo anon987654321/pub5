@@ -188,6 +188,70 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  def test_preservation_receipts_go_stale_when_the_artifact_changes_after_verification
+    Dir.mktmpdir("task-contract-stale", Master::REPO_ROOT) do |root|
+      relative = root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+      path = File.join(root, "page.html")
+      before = "<main>before</main>"
+      after = "<main>after</main>"
+      File.write(path, after)
+      contract = CONTRACT.build(
+        intent: "content_only", scope: ["#{relative}/page.html"], preserve: [], proof: []
+      )
+      result = Master::Fix::ArtifactPreservation::Result.new(
+        "PASS", ["rendered_visual_custody"], nil
+      )
+
+      CONTRACT.with_current(contract) do
+        CONTRACT.attach_plan!("stale-plan")
+        CONTRACT.record_preservation!(
+          path:, format: "html", before:, after:, result:, verifier: "visual_custody"
+        )
+        current = CONTRACT.preservation_evidence
+        assert_empty current.fetch("stale_paths")
+
+        File.write(path, "<main>changed later</main>")
+        stale = CONTRACT.preservation_evidence
+        assert_equal "INCONCLUSIVE", stale.fetch("status")
+        assert_equal ["#{relative}/page.html"], stale.fetch("stale_paths")
+        assert_match(/no longer matches/, stale.fetch("reason"))
+      end
+    end
+  end
+
+  def test_preservation_receipt_becomes_stale_if_its_artifact_is_replaced_by_a_symlink
+    Dir.mktmpdir("task-contract-symlinked-after", Master::REPO_ROOT) do |root|
+      Dir.mktmpdir("task-contract-symlink-target") do |outside|
+        relative = root.delete_prefix(Master::REPO_ROOT + File::SEPARATOR)
+        path = File.join(root, "page.html")
+        external = File.join(outside, "page.html")
+        before = "before"
+        after = "after"
+        File.write(path, after)
+        File.write(external, after)
+        contract = CONTRACT.build(
+          intent: "content_only", scope: ["#{relative}/page.html"], preserve: [], proof: []
+        )
+        result = Master::Fix::ArtifactPreservation::Result.new(
+          "PASS", ["rendered_visual_custody"], nil
+        )
+
+        CONTRACT.with_current(contract) do
+          CONTRACT.attach_plan!("symlink-plan")
+          CONTRACT.record_preservation!(
+            path:, format: "html", before:, after:, result:, verifier: "visual_custody"
+          )
+          File.delete(path)
+          File.symlink(external, path)
+
+          evidence = CONTRACT.preservation_evidence
+          assert_equal "INCONCLUSIVE", evidence.fetch("status")
+          assert_equal ["#{relative}/page.html"], evidence.fetch("stale_paths")
+        end
+      end
+    end
+  end
+
   def test_transaction_rejects_out_of_scope_paths_before_snapshotting
     Dir.mktmpdir("task-contract-transaction") do |root|
       contract = CONTRACT.build(intent: "functional_change", scope: ["allowed.txt"], preserve: [], proof: [])
