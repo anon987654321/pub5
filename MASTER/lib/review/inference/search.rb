@@ -115,7 +115,7 @@ module Master
           threads.each do |thread|
             begin
               thread.join
-            rescue StandardError => error
+            rescue Exception => error
               join_error ||= error
             end
           end
