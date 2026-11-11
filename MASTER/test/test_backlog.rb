@@ -253,6 +253,49 @@ class TestBacklog < Minitest::Test
     assert_equal ["runtime_evidence"], map.types_for(done_when: "pfctl -nf /etc/pf.conf")
   end
 
+  def test_acceptance_command_specs_are_argv_only_and_read_only
+    repository = File.expand_path("..", Backlog::MASTER_ROOT)
+    map = Backlog::ProofMap
+
+    focused = map.execution_spec(
+      "cd MASTER && MASTER_TEST_JOBS=1 bundle exec ruby -Itest test/test_fix_kernel.rb",
+      tree: "MASTER", repo_root: repository
+    )
+    assert_equal "focused_tests", focused.fetch(:proof_type)
+    assert_equal "MASTER", focused.fetch(:cwd_relative)
+    assert_equal "1", focused.fetch(:env).fetch("MASTER_TEST_JOBS")
+    assert_equal "ruby_bundle", focused.fetch(:launcher)
+    assert_includes focused.fetch(:argv), File.join(Backlog::MASTER_ROOT, "test/test_fix_kernel.rb")
+
+    full = map.execution_spec("rake test", tree: "MASTER", repo_root: repository)
+    assert_equal "full_suite", full.fetch(:proof_type)
+    assert_equal "bundle", full.fetch(:launcher)
+    assert_equal ["rake", "test"], full.fetch(:argv)
+
+    check = map.execution_spec(
+      "MASTER/bin/operator check --scan-only --tree=MASTER",
+      tree: "MASTER", repo_root: repository
+    )
+    assert_equal "law_assessment", check.fetch(:proof_type)
+    assert_equal "ruby_bundle", check.fetch(:launcher)
+
+    refute map.execution_spec(
+      "MASTER/bin/operator check --tree=MASTER", tree: "MASTER", repo_root: repository
+    ), "operator check without a read-only flag must not be auto-run"
+    refute map.execution_spec(
+      "rake test; echo unsafe", tree: "MASTER", repo_root: repository
+    ), "shell operators must not enter argv execution"
+    refute map.execution_spec(
+      "ssh host.example 'deploy now'", tree: "OPENBSD", repo_root: repository
+    ), "remote commands must remain outside unattended intake"
+    refute map.execution_spec(
+      "RUBYOPT=-r/tmp/hook.rb rake test", tree: "MASTER", repo_root: repository
+    ), "unknown environment injection must be refused"
+    refute map.execution_spec(
+      "ruby MASTER/test/test_fix_kernel.rb", tree: "MASTER", repo_root: repository
+    ), "Ruby test source must not be reached through a symlinked scope path"
+  end
+
   def test_proof_map_does_not_guess_unknown_commands_or_empty_acceptance
     map = Backlog::ProofMap
 
