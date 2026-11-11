@@ -6,16 +6,18 @@ module Master
     # for ordinary failover; credentials for one provider are never rotated to
     # evade that provider's quota or rate limits.
     module KeyRotator
-      @mutex = Mutex.new
+      LEGACY_OPENROUTER_KEY_ENV = %w[
+        OPENROUTER_API_KEY OPENROUTER_API_KEY_2 OPENROUTER_API_KEY_3
+      ].freeze
 
       module_function
 
       def env_vars
         vars = Master.models_config.dig("openrouter", "keys_env")
-        configured = Array(vars).map(&:to_s).reject(&:empty?)
-        configured = %w[OPENROUTER_API_KEY] if configured.empty?
+        configured = (Array(vars).map(&:to_s) + LEGACY_OPENROUTER_KEY_ENV).reject(&:empty?).uniq
         enforce_single_key!("openrouter", configured)
-        configured
+        populated = configured.select { |var| ENV[var].to_s.length >= Master::MIN_API_KEY_LENGTH_HEURISTIC }
+        populated.empty? ? %w[OPENROUTER_API_KEY] : populated
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "KeyRotator.env_vars")
         raise
