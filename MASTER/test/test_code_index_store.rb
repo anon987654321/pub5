@@ -52,6 +52,28 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_same_size_edit_with_preserved_mtime_is_reparsed
+    with_tree do |root|
+      Index.new(root:, persist: true).build
+      path = File.join(root, "a.rb")
+      before = File.stat(path)
+      replacement = "class Alpha\\n  def two = 2\\nend\\n"
+      assert_equal before.size, replacement.bytesize
+      File.write(path, replacement)
+      File.utime(before.atime, before.mtime, path)
+      after = File.stat(path)
+      assert_equal before.mtime, after.mtime
+      assert_equal before.size, after.size
+
+      parsed_files do |parsed|
+        warm = Index.new(root:, persist: true).build
+        assert_equal ["Alpha"], parsed
+        assert warm.lookup("Alpha#two")
+        assert_nil warm.lookup("Alpha#one")
+      end
+    end
+  end
+
   def test_deleted_file_is_purged_from_the_snapshot
     with_tree do |root|
       Index.new(root:, persist: true).build
