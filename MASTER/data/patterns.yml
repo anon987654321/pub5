@@ -181,7 +181,7 @@ infer:
       capture: none
     restart:
       patterns:
-      - "\\b(?:restart|hot[\\s-]?reload|respawn)\\s+(?:master|the\\s+agent|process)?\\b"
+      - "\\b(?:reload|restart|hot[\\s-]?reload|respawn)\\s+(?:master|yourself|the\\s+agent|process)?\\b"
       capture: none
   negative:
   - pattern: "\\bexplain\\s+(?:the\\s+)?(?:bug|error|issue|failure|stack\\s*trace)\\b"
