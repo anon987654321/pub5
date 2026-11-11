@@ -435,12 +435,12 @@ conversation: nil)
       next unless value.is_a?(Array) && value.length == 3
 
       values = value.map do |entry|
-        number = Float(entry)
-        next nil unless number.finite?
-
-        number
-      rescue ArgumentError, TypeError
-        nil
+        begin
+          number = Float(entry)
+          number.finite? ? number : nil
+        rescue ArgumentError, TypeError
+          nil
+        end
       end
       values.all? ? values : ["invalid"]
     end
@@ -450,8 +450,12 @@ conversation: nil)
       value = data[key]
       payload[key] = value.to_s[0, limit] unless value.nil?
     end
-    confidence = Float(data[:confidence]) if data[:confidence]
-    payload[:confidence] = confidence.clamp(0.0, 1.0) if confidence&.finite?
+    unless data[:confidence].nil?
+      confidence = Float(data[:confidence])
+      return unless confidence.finite?
+
+      payload[:confidence] = confidence.clamp(0.0, 1.0)
+    end
     if sequence.is_a?(Array)
       payload[:sequence] = sequence.map { |entry| entry.to_s[0, 24] }
     end
