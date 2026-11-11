@@ -465,21 +465,12 @@ module Master
         return [nil, nil] if lane.empty?
 
         router = agent.respond_to?(:model_router) ? agent.model_router : nil
-        endpoint =
-          if router.respond_to?(:hosted_endpoint_for)
-            router.hosted_endpoint_for(lane)
-          else
-            # The bin/master --fold entry passes no container, so a bare
-            # resolver carries the same rules from models.yml. HostedEndpoints
-            # is mixed into ModelRouter instances, which hold their rules in
-            # @rules (ModelRouter#load_laws reads exactly this file), and its
-            # live listing fetch rides Pool#get_json, so both modules ride the
-            # resolver and @rules is injected to match ModelRouter#initialize.
-            resolver = Object.new.extend(Master::CLI::Routing::ModelRouter::Pool)
-            resolver = resolver.extend(Master::CLI::Routing::ModelRouter::HostedEndpoints)
-            resolver.instance_variable_set(:@rules, Master.load_yaml(File.join(Master::ROOT, "data", "models.yml")) || {})
-            resolver.hosted_endpoint_for(lane)
-          end
+        resolver = if router.respond_to?(:hosted_endpoint_for)
+                     router
+                   else
+                     Master::CLI::Routing::ModelRouter.hosted_resolver(root: Master::ROOT)
+                   end
+        endpoint = resolver.hosted_endpoint_for(lane)
         if endpoint.is_a?(Hash) && endpoint[:base]
           slug = lane.include?(":") ? lane.split(":", 2).last : lane
           return [slug, { provider: :openai, base: endpoint[:base], key: endpoint[:key] }]
