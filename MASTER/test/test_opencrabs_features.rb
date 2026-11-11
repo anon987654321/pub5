@@ -256,7 +256,8 @@ class TestOpenCrabsFeatures < Minitest::Test
     assert_equal "first worker failed", error.message
     assert_equal 0, pool.active_count
   ensure
-    release << :continue if release && healthy&.ok?
+    release_failed << :continue if release_failed
+    release_healthy << :continue if release_healthy
     joiner&.join(1)
   end
 
