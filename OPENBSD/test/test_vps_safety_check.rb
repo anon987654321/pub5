@@ -45,7 +45,7 @@ class VpsSafetyCheckTest < Minitest::Test
       FileUtils.cp(File.join(ROOT, "bin", "resource_guard.sh"), File.join(openbsd, "bin", "resource_guard.sh"))
       FileUtils.cp(File.join(ROOT, "OPERATOR.sh"), File.join(openbsd, "OPERATOR.sh"))
       FileUtils.mkdir_p(File.join(dir, "RAILS", "mrdamascy"))
-      %w[Gemfile Gemfile.lock].each do |name|
+      %w[Gemfile Gemfile.lock falcon.rb preload.rb].each do |name|
         FileUtils.cp(File.join(ROOT, "..", "RAILS", "mrdamascy", name),
                      File.join(dir, "RAILS", "mrdamascy", name))
       end
@@ -91,39 +91,50 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
-  def test_mrdamascy_production_service_must_use_falcon
+  def test_mrdamascy_production_service_must_use_falcon_host
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("falcon serve -n 1", "puma")
+      text = File.read(path).sub("falcon host", "falcon serve")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
+      assert_includes out, "mrdamascy production service must use the Falcon host config"
     end
   end
 
-  def test_mrdamascy_falcon_must_bind_loopback_only
+  def test_mrdamascy_falcon_host_must_bind_loopback_only
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("http://127.0.0.1:${PORT}", "http://0.0.0.0:${PORT}")
+      path = File.join(dir, "RAILS", "mrdamascy", "falcon.rb")
+      text = File.read(path).sub("http://127.0.0.1:", "http://0.0.0.0:")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
+      assert_includes out, "mrdamascy Falcon host must use one Rack worker on loopback HTTP/1"
     end
   end
 
-  def test_mrdamascy_falcon_worker_count_is_fixed_to_one
+  def test_mrdamascy_falcon_host_worker_count_is_fixed_to_one
     with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
-      text = File.read(path).sub("falcon serve -n 1", "falcon serve -n 2")
+      path = File.join(dir, "RAILS", "mrdamascy", "falcon.rb")
+      text = File.read(path).sub("count 1", "count 2")
       File.write(path, text)
       out, status = run_check(dir)
 
       refute status.success?
-      assert_includes out, "mrdamascy production service must use one loopback Falcon worker"
+      assert_includes out, "mrdamascy Falcon host must use one Rack worker on loopback HTTP/1"
+    end
+  end
+
+  def test_mrdamascy_falcon_preload_must_initialize_rails
+    with_fixture do |dir, _|
+      path = File.join(dir, "RAILS", "mrdamascy", "preload.rb")
+      File.write(path, "# frozen_string_literal: true\\n")
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy Falcon preload must load the Rails environment"
     end
   end
 
