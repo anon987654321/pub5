@@ -48,6 +48,7 @@ class TestVanguardProtocol < Minitest::Test
       module Demo
         class Widget
           def ping = true
+          def self.reset = true
         end
       end
     RUBY
@@ -56,6 +57,9 @@ class TestVanguardProtocol < Minitest::Test
     ast.accept(visitor)
     assert_equal 1, visitor.metrics[:modules]
     assert_equal 1, visitor.metrics[:classes]
-    assert_equal 1, visitor.metrics[:defs]
+    assert_equal 2, visitor.metrics[:defs]
+    names = visitor.symbols.map(&:fqn)
+    assert_includes names, "Demo::Widget#ping"
+    assert_includes names, "Demo::Widget.reset"
   end
 end
