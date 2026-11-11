@@ -57,7 +57,7 @@ class TestCodeIndexStore < Minitest::Test
       Index.new(root:, persist: true).build
       path = File.join(root, "a.rb")
       before = File.stat(path)
-      replacement = "class Alpha\\n  def two = 2\\nend\\n"
+      replacement = "class Alpha\n  def two = 2\nend\n"
       assert_equal before.size, replacement.bytesize
       File.write(path, replacement)
       File.utime(before.atime, before.mtime, path)
@@ -87,7 +87,7 @@ class TestCodeIndexStore < Minitest::Test
     Dir.mktmpdir do |root|
       root = File.realpath(root)
       path = File.join(root, "broken.rb")
-      File.write(path, "def incomplete(\\n")
+      File.write(path, "def incomplete(\n")
       index = Index.new(root:, persist: true).build
       store = Master::Review::CodeIndexStore.new(root:)
 
@@ -96,7 +96,7 @@ class TestCodeIndexStore < Minitest::Test
       assert_equal :parse, index.errors.fetch(0).fetch(:kind)
       refute File.exist?(store.path), "an incomplete graph must not become a warm snapshot"
 
-      File.write(path, "module Recovered\\n  def self.ok = true\\nend\\n")
+      File.write(path, "module Recovered\n  def self.ok = true\nend\n")
       index.build
       assert index.complete?
       assert_empty index.errors
