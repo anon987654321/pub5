@@ -593,6 +593,7 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
   runtime_gemfile = mrd_gemfile.split(/^group :(?:development|test)\b/).first.to_s
   lock_dependencies = mrd_lock[/^DEPENDENCIES\n(.*?)(?=^CHECKSUMS)/m, 1].to_s
 
+  failures << "mrdamascy rc.d service port must remain 47314" unless mrd_service.match?(/^PORT=47314$/)
   failures << "mrdamascy Gemfile must declare Falcon as a runtime dependency" unless runtime_gemfile.match?(/^gem ["']falcon["']/)
   failures << "mrdamascy Gemfile must keep Puma out of runtime dependencies" if runtime_gemfile.match?(/^gem ["']puma["']/)
   failures << "mrdamascy Gemfile.lock must lock Falcon and test-only Puma" unless
