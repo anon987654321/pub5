@@ -51,6 +51,14 @@ module Master
           start_pool_probes
         end
 
+        # Boot and Core/Fold need the same live hosted endpoint rules without
+        # constructing a full router or starting its background probe threads.
+        def self.hosted_resolver(root: Master::ROOT)
+          resolver = Object.new.extend(Pool).extend(HostedEndpoints)
+          resolver.instance_variable_set(:@rules, Master.models_config(root:))
+          resolver
+        end
+
         def compute_pool
           @compute_pool
         end
