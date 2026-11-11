@@ -42,10 +42,13 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "affiliate_feed_unit--post"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_header"
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_ad", text: I18n.t("affiliate.ad_label")
+    assert_select "aside.affiliate_feed_unit--post details.affiliate_feed_post_menu summary[aria-label]"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_media img[alt]"
     assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_copy h2", text: /Linen shirt/
-    assert_select "aside.affiliate_feed_unit--post a.affiliate_feed_post_cta", text: I18n.t("affiliate.cta.view_offer")
+    assert_select "aside.affiliate_feed_unit--post .affiliate_feed_post_menu_panel a[rel='noopener sponsored']", text: I18n.t("affiliate.cta.view_offer")
     assert_includes response.body, "affiliate_feed_link_disclosure"
     assert_match(/data-outbound-click-epi-value=/, response.body)
     refute_includes response.body, "affiliate_feed_grid"

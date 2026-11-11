@@ -273,39 +273,94 @@
 
 
 
-// Native sponsored post used only between Brgen and Amber posts. It follows
-// the social-feed hierarchy without pretending to have engagement data or
-// copying another platform's palette.
+// The in-feed sponsored card follows the reference's horizontal image/copy
+// composition. The collage and catalogue variants above remain independent.
 .affiliate_feed_unit--post {
+  display: grid;
+  grid-template-columns: minmax(136px, 27%) minmax(0, 1fr);
   width: min(100%, var(--feed-max));
   max-width: var(--feed-max);
+  min-height: 10rem;
+  aspect-ratio: 3.65 / 1;
   margin-inline: auto;
-  padding: var(--space-3);
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--surface);
+  border-radius: calc(var(--radius-large) + var(--space-3));
+  background: var(--surface-elevated);
   color: var(--text);
   text-align: start;
 }
 
+.affiliate_feed_post_media {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.affiliate_feed_post_image_link {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.affiliate_feed_post_media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.affiliate_feed_post_media--restricted,
+.affiliate_feed_post_media--empty {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 10rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface);
+}
+
+.affiliate_feed_post_restricted_copy {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  text-align: center;
+}
+
+.affiliate_feed_post_content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
 .affiliate_feed_post_header {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: var(--space-2);
-  margin-block-end: var(--space-3);
+  margin: 0;
 }
 
 .affiliate_feed_post_avatar {
   display: grid;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 50%;
-  background: var(--surface-elevated);
+  background: var(--surface);
   color: var(--text);
-  font-size: var(--text-base);
+  font-size: var(--text-small);
   font-weight: var(--weight-heavy);
 }
 
@@ -318,9 +373,12 @@
 }
 
 .affiliate_feed_post_merchant {
+  overflow: hidden;
   color: var(--text);
-  font-size: var(--text-small);
-  font-weight: var(--weight-heavy);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .affiliate_feed_post_sponsored {
@@ -329,46 +387,81 @@
   font-size: var(--text-extra-small);
 }
 
-.affiliate_feed_post_media {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: var(--surface-elevated);
-  color: var(--text);
+.affiliate_feed_post_meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
-.affiliate_feed_post_media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.affiliate_feed_post_ad {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: 1;
 }
 
-.affiliate_feed_post_media:focus-visible,
-.affiliate_feed_post_cta:focus-visible {
+.affiliate_feed_post_menu { position: relative; }
+
+.affiliate_feed_post_menu summary {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.affiliate_feed_post_menu summary::-webkit-details-marker { display: none; }
+
+.affiliate_feed_post_dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.affiliate_feed_post_dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.affiliate_feed_post_menu summary:hover { background: var(--hover); }
+
+.affiliate_feed_post_menu summary:focus-visible,
+.affiliate_feed_post_image_link:focus-visible,
+.affiliate_feed_post_copy a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
-.affiliate_feed_post_media--restricted {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
+.affiliate_feed_post_menu_panel {
+  position: absolute;
+  z-index: var(--z-overlay);
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-end: 0;
+  min-width: 9rem;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
 }
 
-.affiliate_feed_post_restricted_copy {
-  color: var(--text-secondary);
+.affiliate_feed_post_menu_panel a {
+  display: block;
+  padding: var(--space-2);
+  color: var(--text);
   font-size: var(--text-small);
-}
-
-.affiliate_feed_post_footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-3);
-  padding-block-start: var(--space-3);
+  text-decoration: none;
 }
 
 .affiliate_feed_post_copy { min-width: 0; }
@@ -376,49 +469,43 @@
 .affiliate_feed_post_copy h2 {
   margin: 0;
   color: var(--text);
-  font-size: var(--text-large);
+  font-size: var(--text-extra-large);
   font-weight: var(--weight-heavy);
   line-height: var(--leading-snug);
 }
 
+.affiliate_feed_post_copy h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.affiliate_feed_post_copy h2 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 .affiliate_feed_post_copy > p:not(.affiliate_feed_placeholder, .affiliate_feed_link_disclosure) {
   margin-block-start: var(--space-1);
   color: var(--text-secondary);
-  font-size: var(--text-small);
+  font-size: var(--text-base);
   line-height: var(--leading-normal);
 }
 
 .affiliate_feed_post_copy .affiliate_feed_link_disclosure {
-  margin-block-start: var(--space-1);
+  margin-block-start: var(--space-2);
 }
-
-.affiliate_feed_post_cta {
-  display: inline-flex;
-  min-width: 112px;
-  min-height: var(--tap-min);
-  align-items: center;
-  justify-content: center;
-  padding-inline: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--surface-elevated);
-  color: var(--text);
-  font-size: var(--text-small);
-  font-weight: var(--weight-heavy);
-  line-height: var(--leading-tight);
-  text-align: center;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.affiliate_feed_post_cta:hover { background: var(--hover); }
 
 @media (max-width: 479px) {
-  .affiliate_feed_unit--post { padding: var(--space-2); }
-  .affiliate_feed_post_footer { grid-template-columns: minmax(0, 1fr); }
-  .affiliate_feed_post_cta { width: 100%; }
-}
+  .affiliate_feed_unit--post {
+    grid-template-columns: minmax(88px, 31%) minmax(0, 1fr);
+    min-height: 10rem;
+    aspect-ratio: auto;
+  }
 
-@media (min-width: 480px) {
-  .affiliate_feed_unit--post { padding: var(--space-3); }
+  .affiliate_feed_post_content { padding: var(--space-3); gap: var(--space-2); }
+  .affiliate_feed_post_avatar { flex-basis: 30px; width: 30px; height: 30px; }
+  .affiliate_feed_post_header { gap: var(--space-1); }
+  .affiliate_feed_post_merchant { font-size: var(--text-small); }
+  .affiliate_feed_post_sponsored { font-size: 0.6875rem; }
+  .affiliate_feed_post_ad { min-height: 30px; padding-inline: var(--space-2); font-size: var(--text-extra-small); }
+  .affiliate_feed_post_menu summary { width: 30px; height: 30px; }
+  .affiliate_feed_post_copy h2 { font-size: var(--text-large); }
+  .affiliate_feed_post_copy > p:not(.affiliate_feed_placeholder, .affiliate_feed_link_disclosure) { font-size: var(--text-small); }
 }

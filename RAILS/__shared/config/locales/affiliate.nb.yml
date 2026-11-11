@@ -10,6 +10,8 @@ nb:
     deal_alt: Partnertilbud
     placeholder_notice: Eksempeloppføring — ikke en sporet partnerlenke
     sponsored: Annonse
+    ad_label: Annonse
+    more_options: Flere valg
     feed_unit_label: Sponsede produkter
     feed_unit_label_after: Sponsede produkter etter innlegg %{position}
     amazon_label: Amazon Associates

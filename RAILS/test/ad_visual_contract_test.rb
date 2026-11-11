@@ -48,12 +48,14 @@ class AdVisualContractTest < Minitest::Test
     text = read("_affiliate_feed_unit.html.erb")
     %w[
       affiliate_feed_unit--post affiliate_feed_post_header affiliate_feed_post_avatar
-      affiliate_feed_post_sponsored affiliate_feed_post_media affiliate_feed_post_copy
-      affiliate_feed_post_cta
+      affiliate_feed_post_sponsored affiliate_feed_post_ad affiliate_feed_post_menu
+      affiliate_feed_post_media affiliate_feed_post_copy
     ].each do |class_name|
       assert_includes text, class_name
     end
     assert_includes text, 't("affiliate.sponsored")'
+    assert_includes text, 't("affiliate.ad_label")'
+    assert_includes text, 't("affiliate.more_options")'
     assert_includes text, 't("affiliate.cta.view_offer")'
     assert_includes text, 'affiliate_product_content_allowed?(deal)'
     assert_includes text, 'render "shared/affiliate_disclosure"'
@@ -100,5 +102,21 @@ class AdVisualContractTest < Minitest::Test
 
   def read(partial)
     File.read(File.join(SHARED, partial), encoding: "UTF-8")
+  end
+end
+
+
+class SponsoredPostLayoutTest < Minitest::Test
+  def test_in_feed_sponsored_card_uses_a_horizontal_media_and_copy_layout
+    css = File.read(File.expand_path("../__shared/app/assets/stylesheets/_affiliate_feed_unit.scss", __dir__))
+    post = css.split(".affiliate_feed_unit--post {", 2).last.split("\n}", 2).first
+
+    assert_includes post, "display: grid"
+    assert_includes post, "grid-template-columns"
+    assert_includes post, "aspect-ratio: 3.65 / 1"
+    assert_includes post, "border-radius:"
+    assert_includes css, ".affiliate_feed_post_media img"
+    assert_includes css, "object-fit: cover"
+    assert_includes css, "@media (max-width: 479px)"
   end
 end
