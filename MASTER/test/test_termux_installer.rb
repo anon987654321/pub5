@@ -100,8 +100,12 @@ class TermuxInstallerTest < Minitest::Test
     assert_match(/grep -Fxq ubuntu; then\s+distro=ubuntu/m, mobile_source)
     assert_match(/grep -Fxq debian; then\s+distro=debian/m, mobile_source)
     assert_includes mobile_source, 'proot-distro install "$distro"'
-    assert_includes mobile_source, 'grep -Fx "$MASTER_RUNTIME_DISTRO $version" /etc/master-mobile-runtime'
-    assert_includes mobile_source, 'ruby-build "$ruby_version" "$ruby_home"'
+    assert_includes mobile_source, "ruby ruby-dev ruby-bundler"
+    assert_includes mobile_source, 'Gem::Version.new("3.3")'
+    assert_includes mobile_source, 'grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime'
+    refute_includes mobile_source, ".ruby-version"
+    refute_includes mobile_source, "ruby-build"
+    refute_includes mobile_source, "/opt/rubies/"
     assert_includes mobile_source, "ruby bin/deps install"
     assert_includes mobile_source, "ruby bin/deps check"
     assert_includes mobile_source, "ruby bin/deps boot"
