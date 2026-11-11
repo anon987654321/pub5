@@ -1,6 +1,6 @@
 # pub5 — remaining work
 
-Audit baseline: 2026-11-11, checked against `main@495edd50d148bc3fe19410cc0f288a8658fa475f`.
+Audit baseline: 2026-11-11, source tree checked against `main@5b19d609ec1765c3efee441130ea71cd7c0d61a9` (complete tree `518ed1ffbee0ea33888eca13eba12ce706870728`).
 Snapshot: 168 unchecked register rows and 1 checked row (grouped rows are not
 atomic task counts). The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
@@ -8,6 +8,13 @@ existing structured ledgers. No parallel plan or backlog file is needed.
 The register travels with the migration; source-owned status remains in the
 structured ledgers, and completed entries are checked here only when their
 evidence is present.
+
+Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
+blob disposition is refreshed in `MIGRATION.md`. PRs #11 (MASTER portrait,
+semantic subject morphs, CLI feedback and Replicate upload guards) and #12
+(Brgen city wordmark refinement) are merged. No pull request was open at the
+time of this audit. Entries below remain open until their own source, test,
+rendered or external evidence is actually recorded.
 This register replaces the previous 1,275-line, 462-checkbox carry-forward
 dump. It contains unresolved outcomes, not session notes or speculative
 architecture proposals.
