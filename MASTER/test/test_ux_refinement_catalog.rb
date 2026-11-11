@@ -80,7 +80,7 @@ class TestUXRefinementCatalog < Minitest::Test
 
       # A receipt must describe the bytes in the named commit, not merely a
       # matching file currently present in the working tree.
-      File.write(evidence_path, "different committed evidence\\n")
+      File.write(evidence_path, "different committed evidence\n")
       _mismatch_add, mismatch_add_status = Master::Io::Exec.capture2e("git", "-C", root, "add", "evidence.txt")
       assert mismatch_add_status.success?
       mismatch_commit_out, mismatch_commit_status = Master::Io::Exec.capture2e(
