@@ -1,7 +1,7 @@
 # pub5 — remaining work
 
 Audit baseline: 2026-11-11, source tree checked against `main@ff60792298f5d654cc7976fd9dfb3b8d4393d786` (complete tree `823a0dc917d01a4ffbb986de93fa27492e543b0d`).
-Snapshot: 168 unchecked register rows and 1 checked row (grouped rows are not
+Snapshot: 169 unchecked register rows and 1 checked row (grouped rows are not
 atomic task counts). The tracked tree contains no `PLAN.md`; root `TODO.md` is
 the sole cross-tree Markdown action register, with detailed state owned by the
 existing structured ledgers. No parallel plan or backlog file is needed.
@@ -337,6 +337,13 @@ measure is already owned by the Bymorgen item above.
   the existing particle shader and track-driven transitions between the two
   current visualizers. Keep the existing transport bar; prove beat response,
   reduced motion and mobile/desktop playback.
+- [ ] **Many-to-one face introduction.** Finish the original particle-to-portrait
+  opening requested in earlier face work: dispersed carriers assemble into the
+  carved-field portrait, then hand off to normal listening/attention and
+  semantic-object morphs. Reuse the existing primer, renderer and frame clock;
+  do not copy the show's title treatment or community-governed mask motifs.
+  Reduced motion must land directly on the completed portrait. Prove first and
+  repeat visits, boot failure recovery, and narrow/wide browser rendering.
 - [ ] **Conversation evaluation.** Replay representative prior conversations
   for answer-first behavior, no repeated known facts, one necessary question
   at most, natural interruption/resumption, preference use and uncertainty.
