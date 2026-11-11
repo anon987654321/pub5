@@ -64,6 +64,35 @@ class TestCodeIndexBrief < Minitest::Test
     end
   end
 
+  def test_broken_source_is_identified_as_an_incomplete_index
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "healthy.rb"), "class Healthy; end\\n")
+      File.write(File.join(root, "broken.rb"), "def incomplete(\\n")
+      index = Master::Review::CodeIndex.new(root:).build
+
+      refute index.complete?
+      text = index.summary
+      assert_includes text, "Index coverage: INCOMPLETE"
+      assert_includes text, "broken.rb"
+      refute_includes text, "Index coverage: COMPLETE"
+    end
+  end
+
+  def test_path_scoped_index_is_disclosed_in_the_prompt_brief
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      Dir.mkdir(File.join(root, "lib"))
+      File.write(File.join(root, "outside.rb"), "class Outside; end\\n")
+      File.write(File.join(root, "lib", "inside.rb"), "class Inside; end\\n")
+      index = Master::Review::CodeIndex.new(root:).build(path: "lib")
+
+      refute index.complete?
+      assert index.partial?
+      assert_includes index.summary, "path-scoped build"
+    end
+  end
+
   def test_size_stays_bounded_however_large_the_index
     with_index(extra: 400) do |index|
       names = (0...400).map { |n| "FillerThing#{n}" }.join(" ")
