@@ -214,7 +214,7 @@ module Backlog
         "Owned tree: #{item.fetch(:tree)}",
         "Exact repository-relative scope: #{scope.join(', ')}",
         "Acceptance command from the register: #{item[:done_when] || 'select the narrowest relevant existing proof'}",
-        "Do not edit the TODO checkbox. The executor closes work only from a durable completed Mission with proof artifacts.",
+        "Do not edit the TODO checkbox. The executor records work only from a durable completed Mission with a delivery summary and no pending repository writes.",
         "Do not deploy, publish, spend money, contact people, alter production data, or cross a human/operator gate.",
         "If the task requires a product decision, external credential, human approval, or unavailable runtime, block with the exact reason.",
       ].join("\n")
@@ -237,7 +237,7 @@ module Backlog
     end
 
     # Only a terminal Mission with delivery stage, a non-empty summary and
-    # explicit proof artifacts can close an executor item. No checkbox writes.
+    # durable terminal delivery evidence can close an executor item. No checkbox writes.
     def record_completion!(record: @mission_class.current(root: @root))
       return false unless record && record["origin"].to_s == "backlog"
       return false unless record["state"].to_s == "completed" && record["stage"].to_s == "deliver"
