@@ -17,7 +17,7 @@ module Master
     # comparing a single row. A stamp of the schema, Prism's version and the
     # parser's own source rejects a snapshot made by different parsing logic.
     class CodeIndexStore
-      SCHEMA = 1
+      SCHEMA = 2
       REL_DIR = File.join(".master", "code_index").freeze
 
       def initialize(root:)
@@ -29,7 +29,7 @@ module Master
 
       def self.signature(file)
         stat = File.stat(file)
-        [(stat.mtime.to_r * 1_000_000_000).to_i, stat.size]
+        [(stat.mtime.to_r * 1_000_000_000).to_i, stat.size, Digest::SHA256.file(file).hexdigest]
       rescue SystemCallError
         nil
       end
