@@ -45,7 +45,9 @@ module Master
         full = File.expand_path(file)
         root_real = File.realpath(root) if root
         before = File.lstat(full)
-        raise IOError, "code index source is not a regular non-symlink file" unless before.file? && !before.symlink?
+        unless before.file? && !before.symlink? && before.nlink == 1
+          raise IOError, "code index source must be a singly linked regular file"
+        end
         raise IOError, "code index source exceeds the 32 MiB safety limit" if before.size > MAX_SOURCE_BYTES
 
         flags = File::RDONLY
