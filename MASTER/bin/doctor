@@ -103,8 +103,9 @@ def check_api_keys
   if present.any?
     return Check.new(name: "api-keys", state: :pass, detail: present.join(", "))
   end
-  # No key is not a sick host: routing falls back to the keyless browser lanes.
-  Check.new(name: "api-keys", state: :pass, detail: "keyless browser mode (web-chat:grok -> chatgpt -> kimi)")
+  # The route now discovers anonymous hosted APIs before browser chat. This is
+  # configuration evidence only; --keyless performs the real completion probe.
+  Check.new(name: "api-keys", state: :pass, detail: "no API key; hosted keyless catalogue and browser fallback are eligible")
 end
 
 def check_tts_socket
@@ -225,6 +226,64 @@ def check_provider_catalog
 end
 
 require "master"
+
+# A deliberate, small completion probe. It clears configured hosted-provider
+# keys for this process only, forces the anonymous lane policy, and restores the
+# environment on every exit. This proves POST /chat/completions, not GET /models.
+def check_keyless_completion
+  return fail_check("keyless-probe", "MASTER_NO_KEYLESS=1 explicitly disables anonymous lanes") if ENV["MASTER_NO_KEYLESS"].to_s != ""
+
+  rows = Master.models_config(root: ROOT).fetch("openai_compatible", {})
+  key_names = rows.values.grep(Hash).flat_map { |row| Array(row["key_env"]) }.uniq
+  saved = key_names.to_h { |name| [name, ENV.delete(name)] }
+  old_free_only = ENV["MASTER_FREE_ONLY"]
+  old_model = ENV["MASTER_MODEL"]
+  ENV["MASTER_FREE_ONLY"] = "1"
+  ENV.delete("MASTER_MODEL")
+  Master::Io::LaneSelection.reset_hosted_resolver!
+
+  resolver = Master::CLI::Routing::ModelRouter.hosted_resolver(root: ROOT)
+  candidates = Array(resolver.hosted_models).reject { |id| Master::Io::ModelQuota.over_quota?(id) }
+  return fail_check("keyless-probe", "no eligible anonymous hosted model is currently listed") if candidates.empty?
+
+  runtime = Master::Builder.build(root: ROOT)
+  agent = runtime[:agent]
+  return fail_check("keyless-probe", "agent builder returned no Review::Agent") unless agent
+
+  previous_tools = Fiber[:master_no_tools]
+  Fiber[:master_no_tools] = true
+  failures = []
+  candidates.first(3).each do |model|
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    begin
+      answer = Timeout.timeout(18) do
+        agent.ask_once("Reply with exactly OK.", model:, law: false, temperature: 0.0, failover: false)
+      end
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      return Check.new(name: "keyless-probe", state: :pass,
+                       detail: "#{model} answered in #{format('%.2f', elapsed)}s (#{answer.to_s.strip[0, 24]})") unless answer.to_s.strip.empty?
+
+      failures << "#{model}: empty completion"
+    rescue StandardError => e
+      failures << "#{model}: #{e.class}: #{e.message.to_s.lines.first.to_s.strip[0, 120]}"
+    end
+  end
+  fail_check("keyless-probe", failures.join("; "))
+rescue StandardError => e
+  fail_check("keyless-probe", "#{e.class}: #{e.message.to_s.lines.first.to_s.strip}")
+ensure
+  Fiber[:master_no_tools] = previous_tools
+  Master::Io::LaneSelection.reset_hosted_resolver! if defined?(Master::Io::LaneSelection)
+  key_names&.each { |name| saved&.fetch(name, nil) ? ENV[name] = saved[name] : ENV.delete(name) }
+  old_free_only.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old_free_only
+  old_model.nil? ? ENV.delete("MASTER_MODEL") : ENV["MASTER_MODEL"] = old_model
+end
+
+if ARGV.delete("--keyless")
+  check = check_keyless_completion
+  puts "#{check.label} keyless-probe: #{check.detail}"
+  exit(check.ok ? 0 : 1)
+end
 
 if ARGV.include?("--fix")
   require "fileutils"
