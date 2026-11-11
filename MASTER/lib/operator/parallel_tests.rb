@@ -81,6 +81,15 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
           "batch_count" => batches.size,
           "test_file_count" => suite_files.size,
           "test_files_sha256" => file_list_digest(suite_files),
+          "batch_plan" => batches.each_with_index.map do |batch_files, index|
+            {
+              "index" => index + 1,
+              "file_count" => batch_files.size,
+              "files" => batch_files,
+              "files_sha256" => file_list_digest(batch_files),
+              "status" => "pending",
+            }
+          end,
           "completed_batches" => [],
         }
         write_receipt(report_path, progress)
@@ -89,6 +98,9 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
           label = "#{run_id}-batch-#{index + 1}-of-#{batches.size}"
           batch_path = File.join(LOG_DIR, "suite-#{label}.json")
           out.puts "test-batch0: #{index + 1}/#{batches.size} files=#{batch_files.size} sha256=#{file_list_digest(batch_files)}"
+          progress["active_batch"] = index + 1
+          progress["batch_plan"][index]["status"] = "running"
+          write_receipt(report_path, progress)
 
           begin
             passed = run_locked(
@@ -125,6 +137,8 @@ SPLIT_RESULT = /\A[\d.]+ s = [.FES]\s*\z/
             "receipt" => batch_path,
           }
           progress["completed_batches"] << receipt
+          progress["batch_plan"][index] = progress["batch_plan"][index].merge(receipt)
+          progress["active_batch"] = nil
           write_receipt(report_path, progress)
           { "index" => index + 1, "files" => batch_files, "path" => batch_path,
             "payload" => payload, "execution_passed" => passed }

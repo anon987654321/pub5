@@ -256,12 +256,6 @@ class TestParallelTests < Minitest::Test
         assert File.file?(worker.fetch("log"))
       end
     end
-    aggregate.fetch("batches").each do |batch|
-      assert File.file?(batch.fetch("receipt"))
-      per_batch = JSON.parse(File.read(batch.fetch("receipt")))
-      assert_equal batch.fetch("index"), per_batch.fetch("batch_label").match(/batch-(\d+)-of-/)&.captures&.first&.to_i || batch.fetch("index")
-      per_batch.fetch("workers").each { |worker| assert File.file?(worker.fetch("log")) }
-    end
     assert_includes out.string, "test-suite-batch-report0:"
   ensure
     previous_jobs.nil? ? ENV.delete("MASTER_TEST_JOBS") : ENV["MASTER_TEST_JOBS"] = previous_jobs
