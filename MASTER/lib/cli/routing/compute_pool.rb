@@ -19,8 +19,14 @@ module Master
       class ComputePool
         include ::Master::Io::AtomicWrite
         Candidate = Struct.new(:id, :quality, :speed, :cost, :context_window,
-          :availability, :tool_support, :success_rate, :latency_factor, :score,
+          :availability, :tool_support, :success_rate, :latency_factor, :evidence_factor, :score,
           keyword_init: true)
+
+        OUTCOME_HISTORY_LIMIT = 32
+        OUTCOME_WINDOW_S = 7 * 24 * 60 * 60
+        OUTCOME_HALF_LIFE_S = 24 * 60 * 60
+        OUTCOME_CONFIDENCE_SAMPLES = 4.0
+        OUTCOME_FACTOR_SPAN = 0.50
 
         DEFAULTS = {
           quality: 0.5,
@@ -36,15 +42,18 @@ module Master
           @root = root
           @rules = load_laws
           @stats = load_stats
+          @clock = -> { Time.now.to_f }
           @catalog = nil
           @mutex = Mutex.new
         end
 
         def rank(ids, task_type: :exploration, empirical_best: nil)
           candidates = Array(ids).filter_map { |id| candidate(id) }
-          ranked = candidates.sort_by { |entry| [-utility(entry, task_type:, empirical_best:), entry.id] }
-                             .map(&:id)
-          Io::LaneSelection.subscriptions_first(ranked, lead: Io::LaneSelection.route_lead(@rules, task_type))
+          lead = Io::LaneSelection.route_lead(@rules, task_type)
+          lead_rank = lead.each_with_index.to_h
+          candidates.sort_by do |entry|
+            [-utility(entry, task_type:, empirical_best:), lead_rank.fetch(entry.id, Float::INFINITY), entry.id]
+          end.map(&:id)
         end
 
         def select(ids, task_type: :exploration, empirical_best: nil)
@@ -76,15 +85,28 @@ module Master
           return if key.empty?
 
           @mutex.synchronize do
-            stat = (@stats[key] ||= { calls: 0, successes: 0, failures: 0, latency_ms: 0.0, last_error: nil })
+            stat = (@stats[key] ||= { calls: 0, successes: 0, failures: 0, latency_ms: 0.0, last_error: nil,
+                                      recent_outcomes: [] })
             stat[:calls] += 1
-            if status.to_sym == :success
+            now = @clock.call.to_f
+            success = status.to_sym == :success
+            if success
               stat[:successes] += 1
               stat[:latency_ms] = rolling_average(stat[:latency_ms], latency_ms.to_f, stat[:successes])
+              stat[:last_success_at] = now
             else
               stat[:failures] += 1
+              stat[:last_failure_at] = now
               stat[:last_error] = error.to_s unless error.to_s.empty?
             end
+            history = Array(stat[:recent_outcomes]).filter_map do |row|
+              next unless row.is_a?(Hash)
+              at = Float(row["at"] || row[:at], exception: false)
+              outcome = (row["status"] || row[:status]).to_s
+              { "at" => at, "status" => outcome } if at&.finite? && %w[success failure].include?(outcome)
+            end
+            history << { "at" => now, "status" => success ? "success" : "failure" }
+            stat[:recent_outcomes] = history.last(OUTCOME_HISTORY_LIMIT)
             persist_stats
           end
         end
@@ -116,7 +138,7 @@ module Master
           return unless row
 
           score = row.fetch("score", {})
-          success_rate, latency_factor = empirical_stats(id)
+          success_rate, latency_factor, evidence_factor = empirical_stats(id)
           Candidate.new(
             id: id.to_s,
             quality: score.fetch("quality", DEFAULTS[:quality]).to_f,
@@ -127,6 +149,7 @@ module Master
             tool_support: @router.tool_capable?(id) ? 1.0 : DEFAULTS[:tool_support],
             success_rate:,
             latency_factor:,
+            evidence_factor:,
             score:,
           )
         rescue StandardError => e
@@ -140,13 +163,46 @@ module Master
           successes = stat&.fetch(:successes, 0).to_i
           success_rate = calls.zero? ? 1.0 : successes.fdiv(calls)
           latency = stat&.fetch(:latency_ms, 0).to_f
-          [success_rate, latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min]
+          [success_rate, latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min,
+           recent_evidence_factor(stat)]
+        end
+
+        # Recent real completions outrank stale declarations. Evidence decays
+        # with a 24-hour half-life and expires after seven days; a four-sample
+        # confidence cap keeps one lucky call from permanently owning the pool.
+        # Legacy counters without timestamps remain visible but are not treated
+        # as fresh evidence after an upgrade.
+        def recent_evidence_factor(stat)
+          return 1.0 unless stat.is_a?(Hash)
+
+          now = @clock.call.to_f
+          weighted_success = 0.0
+          total_weight = 0.0
+          Array(stat[:recent_outcomes]).each do |row|
+            next unless row.is_a?(Hash)
+
+            at = Float(row["at"] || row[:at], exception: false)
+            status = (row["status"] || row[:status]).to_s
+            next unless at&.finite? && %w[success failure].include?(status)
+
+            age = now - at
+            next if age.negative? || age > OUTCOME_WINDOW_S
+
+            weight = Math.exp(-Math.log(2.0) * age / OUTCOME_HALF_LIFE_S)
+            total_weight += weight
+            weighted_success += weight if status == "success"
+          end
+          return 1.0 unless total_weight.positive?
+
+          rate = weighted_success / total_weight
+          confidence = [total_weight / OUTCOME_CONFIDENCE_SAMPLES, 1.0].min
+          1.0 + ((rate - 0.5) * OUTCOME_FACTOR_SPAN * confidence)
         end
 
         def utility(entry, task_type:, empirical_best:)
           return 0.0 if entry.availability <= 0.0
 
-          quality = entry.quality * entry.success_rate
+          quality = entry.quality * entry.success_rate * (entry.evidence_factor || 1.0)
           speed = entry.speed * entry.latency_factor
           economic_factor = [entry.cost, 0.1].max
           task_factor = task_factor(entry, task_type)
