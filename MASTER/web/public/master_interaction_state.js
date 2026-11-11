@@ -40,7 +40,7 @@
       sentencePosition: 0, sampleRate: 0, channels: 0, analyserWindow: 0,
       latencyMs: null, playbackBufferMs: null, underruns: 0, version: 0
     },
-    visual: { state: "idle", topology: "papua-mask", version: 0 },
+    visual: { state: "idle", topology: "carved-field", version: 0 },
     task: { state: "idle", active: null, records: [], version: 0 },
     tool: { state: "idle", active: null, records: [], version: 0 },
     memory: { records: [], version: 0 },
