@@ -106,6 +106,14 @@ module Master
           raise ArgumentError, "#{row["id"]}: evidence needs a full commit SHA" unless commit.match?(/\A[0-9a-f]{40}\z/i)
           _output, status = Master::Io::Exec.capture2("git", "-C", root_path, "cat-file", "-e", "#{commit}^{commit}")
           raise ArgumentError, "#{row["id"]}: evidence commit is not present in this repository" unless status.success?
+
+          committed_content, committed_status = Master::Io::Exec.capture2(
+            "git", "-C", root_path, "show", "#{commit}:#{location}"
+          )
+          raise ArgumentError, "#{row["id"]}: evidence artifact is absent from its recorded commit" unless committed_status.success?
+          unless Digest::SHA256.hexdigest(committed_content).casecmp?(expected_digest)
+            raise ArgumentError, "#{row["id"]}: evidence digest does not match bytes in its recorded commit"
+          end
           proof_type
         end
         missing = Array(row["proof"]).map(&:to_s).uniq - proof_types.uniq
