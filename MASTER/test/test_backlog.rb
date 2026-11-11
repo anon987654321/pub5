@@ -296,6 +296,20 @@ class TestBacklog < Minitest::Test
     ), "arbitrary Ruby evaluation must not enter unattended intake"
   end
 
+  def test_execution_spec_preserves_the_original_command_with_allowed_environment_prefixes
+    command = "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test"
+    spec = Backlog::ProofMap.execution_spec(command, tree: "MASTER", repo_root: Master::REPO_ROOT)
+
+    refute_nil spec
+    assert_equal "full_suite", spec.fetch(:proof_type)
+    assert_equal :bundle, spec.fetch(:launcher)
+    assert_equal ["rake", "test"], spec.fetch(:argv)
+    assert_equal "1", spec.fetch(:env).fetch("MASTER_TEST_JOBS")
+    assert_equal "MASTER", spec.fetch(:cwd_relative)
+    assert_equal Digest::SHA256.hexdigest(command), spec.fetch(:command_digest)
+    assert_equal 1800, spec.fetch(:timeout)
+  end
+
   def test_proof_map_does_not_guess_unknown_commands_or_empty_acceptance
     map = Backlog::ProofMap
 
