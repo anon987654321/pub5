@@ -13,6 +13,15 @@ class BrandAssetsTest < ActiveSupport::TestCase
     assert_no_match(/\d\.\d/, logo[/ d="[^"]*"/], "path data keeps whole viewBox units")
   end
 
+  test "the brand bar shows the full original vector without cropping" do
+    layout = Rails.root.join("app/views/layouts/application.html.erb").read
+    base = Rails.root.join("app/assets/stylesheets/_base.scss").read
+
+    assert_includes layout, 'image_tag "/logo.svg"'
+    assert_match(/\.brand-logo\s*\{[^}]*height:\s*32px;[^}]*width:\s*auto;[^}]*object-fit:\s*contain;/m, base)
+    assert_includes base, "object-position: left center"
+  end
+
   test "the original wordmark is blended into the brand bar without editing the asset" do
     logo = Rails.public_path.join("logo.svg").read
     tokens = Rails.root.join("app/assets/stylesheets/_tokens.scss").read
