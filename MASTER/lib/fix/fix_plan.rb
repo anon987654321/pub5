@@ -41,7 +41,7 @@ module Master
       # engine that interprets, persists and terminalizes its evidence. Adding
       # or changing an adapter invalidates the same provenance fingerprint.
       RUNTIME_GLOBS = %w[law/**/*.rb lib/fix/**/*.rb].freeze
-      TOOLCHAIN_FILES = %w[.ruby-version Gemfile.lock].freeze
+      TOOLCHAIN_FILES = %w[Gemfile Gemfile.lock lib/operator/ruby_runner.rb bin/ruby].freeze
       MAX_EXCLUSION_SAMPLE = 20
 
       Source = Data.define(:path, :sha256, :bytes)
