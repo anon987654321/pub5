@@ -439,7 +439,6 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `brgen_activitypub_inbound` — open; remote media proxying, per-origin controls, blocklist and moderation must precede storage.
 - [ ] `brgen_recurring_events` — open; decide whether a small recurrence materialiser is warranted; external ticket links remain a valid simpler boundary.
 - [ ] `brgen_city_population_seeds` — open; use a checked-in public-data table for the 43 registry cities if the value is demonstrated.
-- [x] `brgen_recent_searches` — satisfied: `SearchRecent#recent_for` serves per-reader recents across devices (`RAILS/brgen/app/models/search_recent.rb`, `RAILS/brgen/app/views/shared/_search_palette.html.erb`).
 
 **Messenger**
 - [ ] `messenger_webrtc_calls` — blocked; requires an operator-approved STUN/TURN service and host capacity.
@@ -450,7 +449,6 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `marketplace_ai_recs` — open; prefer explainable co-view or category/price-band recommendations over a model without useful data.
 - [ ] `marketplace_coupons` — open; one transparent campaign/credit ledger, not a second checkout accounting path.
 - [ ] `marketplace_contact_relay` — blocked; requires inbound mail routing and expiring per-listing addresses on vm23.
-- [x] `marketplace_duplicates` — satisfied: `Marketplace::Listing#duplicate_of` files an open duplicate `ModerationReport` on creation (`RAILS/brgen/engines/marketplace/app/models/marketplace/listing.rb`).
 - [ ] `marketplace_liquidity` — open; measure empty categories, saved-search demand and unmet supply before advertising.
 - [ ] `marketplace_paid_boosts` — open; preserve quality-weighted organic discovery, clear sponsored labels and caps; payment never buys a trust outcome.
 - [ ] `marketplace_seller_analytics` — open; derive seller/listing analytics from existing events where possible.
@@ -459,8 +457,6 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `dating_premium_boost` — open; any premium, boost or super-like design must preserve consent, avoid dark patterns and never sell moderation or safety outcomes.
 - [ ] `playlist_creator_donations` — open; creator tips may use the shared commerce domain; do not sell an ad-free tier while there are no ads.
 - [ ] `referral_reward_consumption` — open; define the real, member-visible benefits behind `playlist_pro` and `dating_pro`, then wire their gates. Referral credits currently record entitlement only; do not market them as usable Pro access until those features exist.
-- [x] `takeaway_delivery_area` — satisfied: `Takeaway::Restaurant#within_delivery` checks the stored position against `delivery_radius_km` (`RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/restaurant.rb`).
-- [x] `takeaway_cart_expiry` — satisfied: `Takeaway::Order` stamps `CART_TTL_MINUTES` and sweeps with `expire_stale_pending!` (`RAILS/brgen/engines/marketplace/engines/takeaway/app/models/takeaway/order.rb`).
 - [ ] `takeaway_pro_surface` — open; promotion, loyalty and coupons depend on shared commerce and liquidity foundations.
 
 **TV, Maps and shared commerce**
@@ -497,7 +493,6 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 - [ ] `master_face_soothing` — picked; complete `master_face_breath` without adding colours or exceeding visual budgets.
 - [ ] `master_voice_dsp_lanes` — picked; complete `master_voice_browser_dsp` so browser and terminal build the same declared voice presets, with honest unsupported-node behaviour.
 - [ ] `master_voice_cooler` — picked; complete `master_voice_cooler_default` only after listening acceptance; operator taste remains the final gate.
-- [x] `dilla_grammar_beauty` — five additive movement grammars and six descriptive voicing guides in `MASTER/data/music_theory_chords.yml`; a direct catalogue regression now exists in `MASTER/test/voice/test_voice_support.rb` (added, NOT_RUN on pinned Ruby 4.0.5).
 - [ ] `dilla_corpus_depth` — sample credits, measured timing, 3/5/7-bar form and Bach/Satie lineage now surface in `Voice::Dilla.brief`; exact Donuts chord transcription remains listening-dependent (the empty arrays are deliberate, not guessed). Regression added; NOT_RUN on pinned Ruby 4.0.5.
 - [ ] `free_model_lanes` — picked; complete `free_compute_design_of_record` with dated quota/source checks and explicit gates; do not wire provider lanes merely because a free tier is listed.
 

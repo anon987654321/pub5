@@ -172,6 +172,20 @@ class TestDocPaths < Minitest::Test
     RAILS/docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX.md
     RAILS/docs/archive/SURFACE_MICRO_REFINEMENT_MATRIX_II.md
     RAILS/docs/archive/UI_ARCHAEOLOGY.md
+    BIZ/research/bringhurst-strunk-research.md
+    BIZ/research/business-plan-quality.md
+    BIZ/research/master-laws-research.md
+    BIZ/research/typographic-styles.md
+    BIZ/tools/future_healthcare_os_proposal.md
+    BIZ/tools/future_nato_weapons_proposal.md
+    MASTER/docs/agent_wishlist.md
+    MASTER/docs/design_sweep.md
+    MASTER/docs/openbsd-rust.md
+    MASTER/docs/session-2026-11-08.md
+    MASTER/docs/session-2026-11-09.md
+    MASTER/lib/cli/face/contract.md
+    MIGRATION.md
+    STUDIO/docs/fetat/proposal.md
   ].freeze
 
   # README.md is the human entry point at each tree/project boundary. Other
@@ -276,6 +290,7 @@ class TestDocPaths < Minitest::Test
     bin/snapshot
     MASTER/output/
     MASTER/knowledge/
+    MASTER/.tools
   ].freeze
 
   def repo_path?(candidate)
