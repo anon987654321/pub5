@@ -120,6 +120,7 @@ tests = %w[
   test/test_strict_mode.rb
   test/test_ecosystem_features.rb
   test/test_compute_pool.rb
+  test/test_runtime_compute.rb
   test/test_provider_concurrency.rb
   test/test_keyless_routing.rb
   test/test_llm_dispatcher.rb
