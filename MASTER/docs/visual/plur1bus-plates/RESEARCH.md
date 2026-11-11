@@ -79,11 +79,13 @@ the shipped mark.
 
 ## 5. Sparkle pizzazz (rainbows, ponies, shooting stars)
 
-The operator asked for Starks-style pizzazz. The plates keep it inside the
-brand's own geometry: the shooting star is the hairline family given comet
-trails and star heads (07); the rainbow is an arc rising behind the mark and
-the candy ramp inside the letters (08); the pony is a pixel sprite standing
-on a hairline (08). No emoji, no copied campaign art, no baked-in text — the
+The operator asked for Starks-style pizzazz. The crop law keeps it inside the
+letters: the shooting star is the hairline family re-stroked with a comet
+fade — faint tail at the `a`, bright head at the `r` — plus seeded stars that
+only survive where they fall inside glyphs (07); the rainbow is the candy
+prism ramp poured into the ink (08). Earlier sketches put an arc, a pixel
+pony and star fields on the ground; they were removed for bleeding past the
+letter edges. No emoji, no copied campaign art, no baked-in text — the
 wordmark stays original pub5 artwork on every plate.
 
 ## 6. Sprite-sheet craft (second pass)
@@ -97,25 +99,30 @@ back the techniques:
 - **Palette discipline / empty palette slots.** Sprite sheets ship indexed
   palettes; Aseprite's palette control ("Palette Control — copy & paste,
   resize") is the workflow anchor. Source: <https://www.aseprite.org>.
-  → Plate 02 renders its ramp as a palette rail with three *empty* slots.
+  → Plate 02 quantizes its ink to the five-ramp palette on a strict grid —
+  the discipline is the palette itself, not a rail drawn on the ground
+  (an earlier rail was removed under the crop law).
 - **Color cycling (palette animation).** "Color cycling animates a picture
   without touching a single pixel — you rotate the palette underneath it"
   (Mark Ferrari technique). Sources:
   <https://the-pixel.art/articles/color-cycling>,
   <https://blog.prototypr.io/color-cycling-in-pixel-art-c8f20e61b4c4>.
-  → Plate 05 cycles the brand's own 4-stop ramp through the wordmark and
-  documents the cycle as a chip rail (four stops + wrap-around chip).
+  → Plate 05 cycles the brand's own 4-stop ramp through the wordmark — the
+  cycle is the ink itself (an earlier chip rail was removed under the crop
+  law).
 - **Frame tags, onion skinning, sprite-sheet export.** Aseprite: "Tag
   Frames — include several animations in the same file tagging sections";
   "Onion Skin — see other frames as reference". Source:
   <https://www.aseprite.org>.
-  → Plate 06 tags its frames: filled chip = live frame, outlined chips =
-  the two onion ghosts, chevrons + tick ruler as the sheet furniture.
+  → Plate 06 lays the ink out as a sprite-sheet strip: three exposure
+  frames split inside the letters — ghost, ghost, live — separated by
+  slivers of ground, the sheet furniture cropped away.
 - **Sub-pixel animation.** "'Sub-pixel animation' means animating your
   anti-aliasing … shifting individual pixels frame-to-frame" — depth and
   motion without extra frames. Source:
   <https://2dwillneverdie.com/tutorial/give-your-sprites-depth-with-sub-pixel-animation>.
-  → Plate 06's ghost frames sit at half-unit offsets from the live frame.
+  → Plate 06's frame strip reads left-to-right across the letters, the
+  stepping depicted statically inside the glyph mask.
 - **Avatar-size cuts with transparent ground.** The reference workflow's
   final deliverable was avatar-sized icons on alpha-transparent ground.
   → `plates/avatars/*.svg`: the same locked font and hairlines, no ground
