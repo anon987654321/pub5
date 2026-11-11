@@ -3,6 +3,8 @@
 require "digest"
 require "json"
 require "net/http"
+require "tempfile"
+require "fileutils"
 require "uri"
 require_relative "../ground/failure_taxonomy"
 require_relative "../io/quota_check"
@@ -37,23 +39,72 @@ module Master
           upload_binary(path, mime: "application/zip")
         end
 
-        # Fetch a prediction output URL (e.g. synthesized audio) to a local path.
-        def download_url(url, path)
-          uri = URI(url)
-          raise "refusing non-https download url: #{url}" unless uri.is_a?(URI::HTTPS) && uri.port == 443
-          raise "refusing download URL credentials" unless uri.userinfo.nil?
-          raise "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
+        # Stream under a byte and total-time cap. A failed download leaves the
+        # previous artifact intact; rename is atomic because the temporary file
+        # lives beside the destination.
+        def download_url(url, path, max_bytes: MAX_DOWNLOAD_BYTES)
+          uri = URI(url.to_s)
+          raise ArgumentError, "refusing non-https download url" unless uri.is_a?(URI::HTTPS) && uri.port == 443
+          raise ArgumentError, "refusing download URL credentials" unless uri.userinfo.nil?
+          raise ArgumentError, "refusing download URL fragment" unless uri.fragment.nil?
+          raise ArgumentError, "refusing download from untrusted host: #{uri.host}" unless uri.host.to_s.match?(ALLOWED_DOWNLOAD_HOST)
 
-          Net::HTTP.start(
-            uri.host, uri.port, use_ssl: true,
-            open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS
-          ) do |http|
-            res = http.get(uri.request_uri)
-            raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
+          max_bytes = Integer(max_bytes)
+          raise ArgumentError, "download byte limit must be positive" unless max_bytes.positive?
 
-            File.binwrite(path, res.body)
+          target = File.expand_path(path)
+          directory = File.dirname(target)
+          FileUtils.mkdir_p(directory)
+          raise ArgumentError, "download target cannot be a symlink" if File.symlink?(target)
+          mode = File.file?(target) ? File.stat(target).mode & 0o7777 : 0o600
+          deadline = monotonic_now + DOWNLOAD_TIMEOUT_SECONDS
+
+          Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
+            remaining = remaining_timeout(deadline, OPEN_TIMEOUT_SECONDS, label: "download")
+            Net::HTTP.start(
+              uri.host, uri.port, use_ssl: true,
+              open_timeout: remaining,
+              read_timeout: remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download"),
+              write_timeout: WRITE_TIMEOUT_SECONDS
+            ) do |http|
+              http.request_get(uri.request_uri) do |response|
+                raise "download failed #{response.code}" unless response.code.to_i.between?(200, 299)
+                declared = response["content-length"].to_s
+                if declared.match?(/\A\d+\z/) && declared.to_i > max_bytes
+                  raise ArgumentError, "download over #{max_bytes} bytes"
+                end
+
+                write_capped(response, file, max_bytes, http:, deadline:)
+              end
+            end
+
+            file.flush
+            file.fsync
+            File.chmod(mode, file.path)
+            file.close
+            File.rename(file.path, target)
           end
           path
+        end
+
+        private
+
+        def write_capped(response, file, max_bytes, http:, deadline:)
+          written = 0
+          response.read_body do |chunk|
+            remaining = remaining_timeout(deadline, READ_TIMEOUT_SECONDS, label: "download")
+            http.read_timeout = remaining
+            written += chunk.bytesize
+            raise ArgumentError, "download over #{max_bytes} bytes" if written > max_bytes
+
+            offset = 0
+            while offset < chunk.bytesize
+              count = file.write(chunk.byteslice(offset..))
+              raise IOError, "download wrote no bytes" unless count&.positive?
+
+              offset += count
+            end
+          end
         end
       end
       # LoRA training lifecycle (ostris/flux-dev-lora-trainer): start, poll,
@@ -127,6 +178,8 @@ module Master
       include AssetTransfer
       include Training
 
+      # Raised when a bounded API or transfer deadline expires.
+      DeadlineExceeded = Class.new(StandardError)
       # Raised for HTTP statuses worth a retry (rate limit, server-side fault).
       # A 4xx other than 429 means the request itself is wrong and retrying
       # retries repeat the same failure.
@@ -149,6 +202,12 @@ module Master
       MAX_MODEL_PAGES = 1_000
       LORA_TRAINER = "ostris/flux-dev-lora-trainer"
       TRANSIENT_STATUS = ((500..599).to_a << 429).freeze
+      MAX_DOWNLOAD_BYTES = 4 * 1024**3
+      MAX_UPLOAD_BYTES = 4 * 1024**3
+      MAX_RESPONSE_BYTES = 16 * 1024**2
+      WRITE_TIMEOUT_SECONDS = 120
+      REQUEST_TIMEOUT_SECONDS = 300
+      DOWNLOAD_TIMEOUT_SECONDS = 1_800
       # replicate.delivery hosts prediction output blobs; replicate.com is the
       # API itself. Refuse to fetch a URL a compromised/odd response pointed
       # us at anywhere else.
@@ -352,22 +411,41 @@ module Master
       end
 
       def upload_binary(path, mime:)
+        unless File.file?(path) && File.readable?(path)
+          raise ArgumentError, "upload source must be a readable regular file"
+        end
+        size = File.size(path)
+        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if size > MAX_UPLOAD_BYTES
+
         boundary = "ReplicateBoundary#{rand(1_000_000_000)}"
-        req = Net::HTTP::Post.new(URI("#{BASE}/files"))
+        uri = URI("#{BASE}/files")
+        req = Net::HTTP::Post.new(uri)
         req["Authorization"] = "Token #{@token}"
         req["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
-        req.body = multipart_body(path, boundary, mime:)
-        data = request(req, URI("#{BASE}/files"))
-        data.dig("urls", "get") || data["serving_url"] || data["url"] || raise("upload missing URL")
+
+        # Do not allocate a second in-memory copy of a potentially multi-GB ZIP.
+        Tempfile.create(["replicate-upload-", ".multipart"], binmode: true) do |body|
+          write_multipart_body(body, path, boundary, mime:)
+          body.flush
+          body.rewind
+          req.body_stream = body
+          req["Content-Length"] = body.size.to_s
+          data = request(req, uri)
+          data.dig("urls", "get") || data["serving_url"] || data["url"] || raise("upload missing URL")
+        end
       end
 
-      def multipart_body(path, boundary, mime: "application/octet-stream")
-        filename = File.basename(path)
-        "--#{boundary}\r\n".b +
-          "Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b +
-          "Content-Type: #{mime}\r\n\r\n".b +
-          File.binread(path) +
-          "\r\n--#{boundary}--\r\n".b
+      def write_multipart_body(body, path, boundary, mime:)
+        filename = File.basename(path).gsub(/[^A-Za-z0-9._-]/, "_")
+        filename = "upload.bin" if filename.empty?
+        body.write("--#{boundary}\r\n".b)
+        body.write("Content-Disposition: form-data; name=\"content\"; filename=\"#{filename}\"\r\n".b)
+        body.write("Content-Type: #{mime}\r\n\r\n".b)
+        File.open(path, "rb") do |source|
+          copied = IO.copy_stream(source, body, MAX_UPLOAD_BYTES + 1)
+          raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if copied > MAX_UPLOAD_BYTES
+        end
+        body.write("\r\n--#{boundary}--\r\n".b)
       end
 
       # The input parameter names the provider currently declares, from the same
