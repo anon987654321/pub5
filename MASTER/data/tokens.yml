@@ -782,12 +782,11 @@ tokens:
       # The terminal window's own colour, beside the face tones so every
       # terminal colour has one definition: the status line's accent and cool
       # annotation (Face::Window), and the activity spinner's ramp, amber at
-      # the tint threshold to red at full intensity (Session's thinking
-      # indicator). Both ends of the ramp hold red and blue; the code
-      # interpolates every channel linearly between the stops.
+      # The CLI star follows normalized host CPU load: light red at idle,
+      # deep red at full load. Red and blue both move; there is no white flash.
       window_accent: "#E0E5EE"
       window_cool: "#A4AEBE"
-      spinner_tint: { from: "#FFD71E", to: "#FF281E" }
+      spinner_tint: { from: "#FF7777", to: "#8F1010" }
       fit: 0.92
       camera: 3.2
       aspect: 2.0
