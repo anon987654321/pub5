@@ -133,7 +133,7 @@ class CoreBridgeTest < Minitest::Test
       mission.define_singleton_method(:hold_lease!) { @lease_held = true }
       mission.define_singleton_method(:lease_held?) { @lease_held }
       git = FakeBacklogGit.new
-      status = Struct.new(:success?).new(true)
+      status = Object.new.tap { |value| value.define_singleton_method(:success?) { true } }
       bus = FakeBus.new
       capture = lambda do |*args, **|
         case args
