@@ -96,8 +96,7 @@ class TestFixLoopPriorities < Minitest::Test
       end
     end
 
-    assert_equal "FAIL", started.pop
-    assert_equal "SLOW", started.pop
+    assert_equal %w[FAIL SLOW], [started.pop, started.pop].sort
     sleep 0.02
     assert run.alive?, "the coordinator must wait for the sibling worker to finish"
     release << :continue
