@@ -122,8 +122,13 @@ main.shell {
 }
 
 .brand-logo {
+  display: block;
+  flex: 0 0 auto;
   height: 32px;
   width: auto;
+  max-width: min(42vw, 144px);
+  object-fit: contain;
+  object-position: left center;
 }
 
 .brand-name {
