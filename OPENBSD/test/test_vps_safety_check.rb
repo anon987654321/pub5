@@ -103,6 +103,36 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
+  def test_mrdamascy_secret_is_not_loaded_by_the_root_rc_script
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub(
+        '[[ -r /etc/mrdamascy.env ]] || { logger -t mrdamascy "missing /etc/mrdamascy.env"; exit 1; }',
+        '[[ -r /etc/mrdamascy.env ]] && . /etc/mrdamascy.env'
+      )
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy secret must be checked after dropping to the app user"
+    end
+  end
+
+  def test_mrdamascy_secret_is_checked_inside_the_app_user_command
+    with_fixture do |dir, _|
+      path = File.join(dir, "OPENBSD", "etc", "rc.d", "mrdamascy")
+      text = File.read(path).sub(
+        ' && : \"\${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}\"',
+        ""
+      )
+      File.write(path, text)
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy secret must be checked after dropping to the app user"
+    end
+  end
+
   def test_mrdamascy_falcon_host_must_bind_loopback_only
     with_fixture do |dir, _|
       path = File.join(dir, "RAILS", "mrdamascy", "falcon.rb")
