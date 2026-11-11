@@ -37,9 +37,9 @@ npm ci && npm run build:pwa               # rebuild the Workbox service worker
 
 `RAILS/test/*.rb` are standalone Minitest files run under bare `ruby` — they
 read source as text and never boot Rails. App tests under
-`RAILS/<app>/test/` need the app bundle. Ruby 4.0.5 is pinned by
-`.ruby-version` at the repo root and in each app directory, so app commands
-resolve the same interpreter from any cwd.
+`RAILS/<app>/test/` need the app bundle. Ruby is not pinned to a patch release:
+use the installed Ruby 3.3+ selected by MASTER's shared runtime policy. Each
+app command must use the same interpreter for Ruby and Bundler.
 
 Which check proves the work: source change → the check that owns it
 (`runner.rb --list`); app code → that app's `bin/ci`; anything measuring
@@ -123,7 +123,7 @@ MASTER runs on itself, and `/fix` mutates the working tree.
   outage looks like `curl 000` rather than a 5xx. Check ports 61352 and 47312
   directly.
 - **App suites run in the checkout.**
-  `cd RAILS/<app> && RBENV_VERSION=4.0.5 rbenv exec bundle exec rails test`
+  `cd RAILS/<app> && MASTER/bin/ruby -S bundle exec rails test`
   prepares its own sqlite from the checked-in schema. The local fleet
   (`bin/operator triangle up`) serves this checkout, so a view change shows in
   the rendered checks as soon as it is saved.
