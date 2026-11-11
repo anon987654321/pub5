@@ -145,7 +145,7 @@ class VisualReviewTest < Minitest::Test
     assert_equal %w[core], opts.surfaces
     refute opts.critique
     refute opts.open
-    assert_equal "/r/MASTER/.master/visual_review/20260102T030405", opts.out
+    assert_equal "/r/RAILS/visual-review-20260102T030405", opts.out
   end
 
   def test_parse_refuses_other_trees_engines_and_unknown_flags
