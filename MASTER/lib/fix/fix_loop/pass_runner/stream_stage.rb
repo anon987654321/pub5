@@ -533,7 +533,9 @@ module Master
                 return nil unless verify_digest
 
                 digest = Digest::SHA256.new
-                digest.update(chunk) while (chunk = io.read(64 * 1024))
+                while (chunk = io.read(64 * 1024))
+                  digest.update(chunk)
+                end
                 after = io.stat
                 unless stable_related_file?(opened, after)
                   raise IncompleteContext, "dependency changed while reading: #{rel}"
