@@ -460,6 +460,7 @@ async function swapMask(imageUrl) {
     const ng = new THREE.BufferGeometry();
     ng.setAttribute('position',  new THREE.BufferAttribute(nd.home, 3));
     ng.setAttribute('scatter',   new THREE.BufferAttribute(nd.scatter, 3));
+    ng.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(nd.seeds.length), 1));
     ng.setAttribute('seed',      new THREE.BufferAttribute(nd.seeds, 1));
     ng.setAttribute('curvature', new THREE.BufferAttribute(nd.curvature, 1));
     ng.setAttribute('boundary',  new THREE.BufferAttribute(nd.boundary, 1));
