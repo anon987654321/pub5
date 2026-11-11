@@ -31,8 +31,17 @@ module Deploy
       explicit = ENV["PUB4_BUNDLE"].to_s if explicit.empty?
       return explicit if !explicit.empty? && File.executable?(explicit)
 
-      adjacent = File.join(File.dirname(ruby_cmd(root:)), "bundle")
+      ruby = ruby_cmd(root:)
+      suffix = File.basename(ruby).delete_prefix("ruby")
+      adjacent = File.join(File.dirname(ruby), "bundle#{suffix}")
       return adjacent if File.executable?(adjacent)
+
+      if !suffix.empty?
+        path = openbsd_path("bundle#{suffix}", root:)
+        return path if path
+
+        raise "Bundler for selected Ruby package #{File.basename(ruby)} is unavailable"
+      end
 
       path = openbsd_path("bundle", root:)
       return path if path
