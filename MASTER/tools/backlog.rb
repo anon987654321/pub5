@@ -341,10 +341,14 @@ module Backlog
     # source files are not valid unattended scopes.
     def safe_scope_path?(relative, repo_root:)
       repository = File.realpath(repo_root)
-      absolute = File.expand_path(relative.to_s, repository)
+      relative = relative.to_s
+      absolute = File.expand_path(relative, repository)
       return false unless absolute.start_with?(repository + File::SEPARATOR)
 
-      components = absolute.delete_prefix(repository + File::SEPARATOR).split(File::SEPARATOR)
+      canonical = absolute.delete_prefix(repository + File::SEPARATOR)
+      return false unless canonical == relative
+
+      components = canonical.split(File::SEPARATOR)
       return false if components.empty? || components.any? { |part| part.empty? || part == "." || part == ".." }
 
       cursor = repository
