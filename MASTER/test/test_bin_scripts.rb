@@ -73,10 +73,9 @@ class TestBinScripts < Minitest::Test
   # bin/dev-bootstrap is the constrained-environment answer bin/ruby cannot
   # give: bin/ruby probes the Rubies a macOS workstation already has, while an
   # agent container has nothing to probe and no root to install with. The
-  # contract is pinned here as a process: a pin wins, a host Ruby in the
-  # Gemfile's range wins, a previously built .tools Ruby wins, and a host with
-  # none names the refusal instead of reaching for the network.
-  def test_dev_bootstrap_execs_the_operators_pin_verbatim
+  # Contract: explicit compatible override, generic PATH Ruby, compatible
+  # alternatives, existing local fallback, then a bounded bootstrap build.
+  def test_dev_bootstrap_execs_the_operators_ruby_override_verbatim
     Dir.mktmpdir do |dir|
       fake = File.join(dir, "fake_ruby")
       File.write(fake, "#!/bin/sh\necho \"FAKE $*\"\n")
@@ -86,6 +85,25 @@ class TestBinScripts < Minitest::Test
 
       assert status.success?, out
       assert_includes out, "FAKE -Itest test/x.rb"
+    end
+  end
+
+  def test_dev_bootstrap_prefers_generic_path_ruby_over_newer_package_names
+    Dir.mktmpdir do |dir|
+      generic = File.join(dir, "ruby")
+      newer = File.join(dir, "ruby40")
+      File.write(generic, "#!/bin/sh\\ncase \\" $* \\" in *\\" print RUBY_VERSION \\"*) printf 3.3.8 ;; *) echo GENERIC-RUBY ;; esac\\n")
+      File.write(newer, "#!/bin/sh\\ncase \\" $* \\" in *\\" print RUBY_VERSION \\"*) printf 4.0.5 ;; *) echo NEWER-RUBY ;; esac\\n")
+      [generic, newer].each { |file| File.chmod(0o755, file) }
+
+      out, status = Open3.capture2e(
+        { "PATH" => "#{dir}:/usr/bin:/bin", "PUB5_RUBY" => nil, "MASTER_RUBY_CANDIDATES" => nil },
+        File.join(ROOT, "bin", "dev-bootstrap"), "hello",
+      )
+
+      assert status.success?, out
+      assert_includes out, "GENERIC-RUBY"
+      refute_includes out, "NEWER-RUBY"
     end
   end
 
