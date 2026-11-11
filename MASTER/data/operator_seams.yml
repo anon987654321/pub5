@@ -26,7 +26,7 @@ seams:
     needs: device
     evidence: >-
       Fresh native install and update from the maintained Termux source, plus the opt-in --proot path:
-      Debian guest creation and reuse, checkout bind, exact .ruby-version build, locked bundle install/check
+      Debian guest creation and reuse, checkout bind, packaged Ruby 3.3+ selection, locked bundle install/check
       and normal CLI boot, with real command output. Then verify native Termux:API, native gem install,
       offline and local-model fallback, microphone permission and Norwegian and English recognition. Record
       Android and Termux versions; run the mobile doctor only in native Termux, never inside the Debian guest.
