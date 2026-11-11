@@ -78,6 +78,14 @@ class ToolObserverTest < Minitest::Test
     FileUtils.rm_rf(@dir)
   end
 
+  def test_event_bus_reads_receipt_and_effect_histories_from_strict_evidence_log
+    @bus.publish_required("tool:execution:before", invocation_id: "history-tool-1")
+    @bus.publish_required("core:effect:before", effect_id: "history-effect-1")
+
+    assert_equal ["tool:execution:before"], @bus.receipt_history.map { |row| row.fetch("event") }
+    assert_equal ["core:effect:before"], @bus.effect_history.map { |row| row.fetch("event") }
+  end
+
   def test_durable_receipts_pair_and_keep_arguments_private_in_activity_and_evidence
     args = { path: "/private/source.rb", content: "the source contains a private note" }
     identity = @observer.before(tool: "write_file", tier: "guarded", args:, invocation_id: "call-receipt-1")
