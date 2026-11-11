@@ -7,8 +7,8 @@ require "open3"
 
 # OPENBSD/lib/ruby_select.sh is the one place the deploy path picks a Ruby, so
 # these run it under sh and zsh against a throwaway PATH holding fake
-# interpreters: the box has only ruby34, a developer machine may have ruby40,
-# and the same scripts must run on both without naming either.
+# generic and versioned interpreters; the selector must not depend on a
+# hard-coded release list.
 class TestRubySelect < Minitest::Test
   LIB = File.expand_path("../lib/ruby_select.sh", __dir__)
 
