@@ -129,8 +129,18 @@ module Master
       return unless value.is_a?(Hash)
 
       strict_keys(value, %w[enabled verbosity style format env through scan_progress milestones flush boot_sgr
-                            boot_sgr_basic], "dmesg", errors)
+                            boot_sgr_basic detail_indent detail_max_chars detail_max_lines detail_truncate_marker],
+                  "dmesg", errors)
       %w[boot_sgr boot_sgr_basic].each { |key| validate_boot_sgr(value, errors, key:) }
+      # The detail channel's own bounds, clamped identically by Trace::Dmesg.detail.
+      errors << "dmesg.detail_indent must be an integer between 0 and 16" unless
+        value["detail_indent"].is_a?(Integer) && value["detail_indent"].between?(0, 16)
+      errors << "dmesg.detail_max_chars must be an integer between 1 and 4000" unless
+        value["detail_max_chars"].is_a?(Integer) && value["detail_max_chars"].between?(1, 4_000)
+      errors << "dmesg.detail_max_lines must be an integer between 1 and 100" unless
+        value["detail_max_lines"].is_a?(Integer) && value["detail_max_lines"].between?(1, 100)
+      errors << "dmesg.detail_truncate_marker must be non-empty text" unless
+        value["detail_truncate_marker"].is_a?(String) && !value["detail_truncate_marker"].empty?
       %w[verbosity style format env].each do |field|
         errors << "dmesg.#{field} must be non-empty text" unless
           value[field].is_a?(String) && !value[field].strip.empty?

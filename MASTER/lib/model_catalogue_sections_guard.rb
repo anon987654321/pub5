@@ -107,9 +107,17 @@ module Master
       compatible = data["openai_compatible"].is_a?(Hash) ? data["openai_compatible"] : {}
       compatible.each do |name, row|
         label = "models.yml openai_compatible.#{name}"
-        strict_fields(row, %w[base key_env keyless_max_concurrency concurrency_wait_seconds quota_bucket keyless daily_quota],
+        strict_fields(row, %w[base key_env keyless_max_concurrency concurrency_wait_seconds quota_bucket keyless daily_quota
+                              privacy_posture],
                       label, errors)
         next unless row.is_a?(Hash)
+
+        # The posture is evidence, not a guess (ModelRouter::PrivacyPosture): a
+        # typo must fail here rather than silently parse to unknown downstream.
+        if row.key?("privacy_posture")
+          errors << "#{label}.privacy_posture must name a declared posture" unless
+            %w[anonymous logs_prompts trains_on_data unknown].include?(row["privacy_posture"])
+        end
 
         errors << "#{label}.base must be a non-empty URL" unless row["base"].is_a?(String) && row["base"].match?(/\Ahttps?:\/\//)
         validate_string_list(row["key_env"], "#{label}.key_env", errors, nonempty: true)
@@ -155,9 +163,13 @@ module Master
       end
 
       strict_fields(data["ollama"], %w[enabled default_base_url keep_alive max_num_ctx local_model_allowlist probe
-                                      kv_cache_type warm_probe],
+                                      kv_cache_type warm_probe privacy_posture],
                     "models.yml ollama", errors)
       ollama = data["ollama"].is_a?(Hash) ? data["ollama"] : {}
+      if ollama.key?("privacy_posture")
+        errors << "models.yml ollama.privacy_posture must name a declared posture" unless
+          %w[anonymous logs_prompts trains_on_data unknown].include?(ollama["privacy_posture"])
+      end
       errors << "models.yml ollama.enabled must be boolean" unless [true, false].include?(ollama["enabled"])
       errors << "models.yml ollama.probe must be boolean" if ollama.key?("probe") && ![true, false].include?(ollama["probe"])
       %w[default_base_url keep_alive kv_cache_type].each do |field|
