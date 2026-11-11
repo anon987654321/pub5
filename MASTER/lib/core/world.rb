@@ -449,7 +449,8 @@ module Master::Core
     # than inverting that dependency to save them.
     def write_atomic(abs, content)
       tmp = "#{abs}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}"
-      File.open(tmp, "wb") do |file|
+      File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o666) do |file|
+        file.binmode
         file.write(content)
         file.flush
         file.fsync
@@ -458,9 +459,21 @@ module Master::Core
       # with a plain file.
       File.chmod(File.stat(abs).mode & 0o7777, tmp) if File.exist?(abs)
       File.rename(tmp, abs)
+      fsync_directory(File.dirname(abs)) unless RUBY_PLATFORM.match?(/win32|mingw/)
     rescue StandardError
       File.delete(tmp) if tmp && File.exist?(tmp)
       raise
+    end
+
+    # File fsync makes the bytes durable; the parent fsync makes the rename
+    # durable. Without both, a power loss can leave a successful-looking path
+    # whose directory entry never reached stable storage.
+    def fsync_directory(directory)
+      descriptor = IO.sysopen(directory, File::RDONLY)
+      handle = IO.new(descriptor)
+      handle.fsync
+    ensure
+      handle&.close
     end
 
     def git_repo?
