@@ -28,15 +28,54 @@ module Master
         ].freeze
 
         def fix_batch(violations)
+          grouped = violations.group_by { |violation| violation[:file].to_s }
+          grouped.each do |file, findings|
+            findings.each do |violation|
+              RunLedger.record_discovery(
+                file:, law: violation[:law] || @law.id, line: violation[:line],
+                message: violation[:message], severity: violation[:severity],
+              )
+            end
+            findings.drop(1).each do |violation|
+              RunLedger.record_disposition(
+                file:, law: violation[:law] || @law.id, outcome: :not_attempted_same_file,
+                reason: "one finding per file is selected in this batch; this finding remains discovered",
+              )
+            end
+          end
+
+          unique = violations.uniq { |violation| violation[:file] }
           results = []
-          violations.uniq { |violation| violation[:file] }.each do |violation|
+          unique.each_with_index do |violation, index|
             # The stall guard's stop ends the repair now: checked only at pass boundaries, a stopped
             # run kept attempting files for 40 minutes after it said STOPPING.
-            break if RunBudget.stopping
+            if RunBudget.stopping
+              unique[index..].each do |pending|
+                RunLedger.record_disposition(
+                  file: pending[:file], law: pending[:law] || @law.id, outcome: :not_attempted_budget,
+                  reason: "run budget or stall stop was active before this finding was attempted",
+                )
+              end
+              break
+            end
 
             result = attempt(violation)
             results << result
-            break if immediate_delivery_boundary?(result)
+            if result.to_s.start_with?("skip_")
+              RunLedger.record_disposition(
+                file: violation[:file], law: violation[:law] || @law.id, outcome: result,
+                reason: "repair policy gate skipped model work for this finding",
+              )
+            end
+            if immediate_delivery_boundary?(result)
+              unique.drop(index + 1).each do |pending|
+                RunLedger.record_disposition(
+                  file: pending[:file], law: pending[:law] || @law.id, outcome: :not_attempted_delivery_boundary,
+                  reason: "the one-file delivery boundary ended this batch after #{result}",
+                )
+              end
+              break
+            end
           end
           @all_skipped = results.any? && results.all? { |r| r.to_s.start_with?("skip_") }
           log_outcome_breakdown(results)
