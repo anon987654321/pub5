@@ -9,21 +9,23 @@ module Master
       private
 
       def display_result(result:, accumulated:, streamed:, units_console: false)
-        print_answer_attribution
         case result
         in Master::Result::Ok => ok
           @last_ok = true
           @exit_code = 0
+          print_answer_attribution("answered")
           display_ok(ok:, accumulated:, streamed:, units_console:)
         in Master::Result::Err => err
           # A turn the operator cancelled did what was asked; ^C already
-          # echoed, so there is nothing to add.
+          # echoed, so there is nothing to add — and "answered" would lie
+          # about a turn no one saw complete.
           return if err.category == :abort
 
           @last_ok = false
           @exit_code = exit_code_for(err)
           return exit_cli if err.category == :shutdown
 
+          print_answer_attribution("failed")
           print_error(err)
         end
       end
@@ -263,16 +265,30 @@ module Master
       # several lines waiting, the answer read as belonging to whichever
       # message was typed last (Johann's log 2026-11-08: the depression answer
       # read as a reply to "hey hey"). One dim line binds a turn running off
-      # the queue to the line that started it.
-      def print_answer_attribution
+      # the queue to the line that started it, and names the outcome: a
+      # confirm-gated command is not answered, it failed (deploy log
+      # 2026-11-11 printed "answered:" over a review refusal).
+      def print_answer_attribution(verb)
         return unless Thread.current == @turn_worker && $stdout.tty?
 
-        question = @last_input.to_s.scrub.gsub(/\s+/, " ").strip
+        question = queue_question_brief(@last_input)
         return if question.empty?
 
-        Master::Trace::Dmesg.status("queue0", "answered: #{question[0, 72]}")
+        Master::Trace::Dmesg.status("queue0", "#{verb}: #{question}")
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "cli.answer_attribution", event_bus: @refs.bus)
+      end
+
+      # The queued line as a receipt shows it: one space run, capped at 72
+      # columns on a word boundary, the cut marked. Cutting inside a word
+      # invented a command that was never typed ("vm23" -> "vm2", deploy log
+      # 2026-11-11) and sent the reader hunting a host that was never named.
+      def queue_question_brief(text, cap = 72)
+        line = text.to_s.scrub.gsub(/\s+/, " ").strip
+        return line if line.length <= cap
+
+        head = line[0, cap].sub(/\s+\S*\z/, "")
+        "#{head}\u2026"
       end
 
       def success_text(ok)
