@@ -42,7 +42,9 @@ class TestCandidateThreads < Minitest::Test
         workers << Thread.current
         started << true
         block.call
-      end.tap { started.pop(timeout: 2) }
+      end.tap do
+        raise ThreadError, "first candidate did not start" unless started.pop(timeout: 2)
+      end
     }) do
       error = assert_raises(ThreadError) do
         repair.send(:candidate_threads, 2, violation: {}, event: "test") { sleep 30 }
