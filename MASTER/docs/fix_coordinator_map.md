@@ -179,8 +179,11 @@ retains its four-person batch and single global deadline while accounting for
 worker failures and partial startup. AgentPool keeps its validated configured
 cap and joins the full worker set before re-raising a worker error. The focused
 runner preflights the selected Ruby/Bundler and dependencies, then requires a
-nonzero Minitest run summary for every file. The 87 entries are unique, but
-these suites remain authored, not run on the repository's selected runtime.
+nonzero Minitest run summary for every file. Runtime::Compute now incrementally
+tracks its capped thread workers and kills/joins them if startup, timeout or
+caller interruption aborts the operation; its partial-startup regression is
+registered in the runner. The 88 entries are unique, but these suites remain
+authored, not run on the repository's selected runtime.
 
 The unattended backlog bridge now uses ProofMap v2. Known shell prefixes and
 the explicitly permitted environment variables are normalized into argv-only
