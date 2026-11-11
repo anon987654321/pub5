@@ -453,13 +453,9 @@ openrouter:
   # legacy field name is retained for config compatibility; ModelQuota sums
   # local :free counts across slugs and uses the provider sample when fresh.
   daily_quota_per_model: 50
-  # Multiple operator-configured keys rotate on rate-limit outcomes. The provider's
-  # reported quota and the local fallback are not multiplied by configured key
-  # count; account-level limits remain authoritative.
-  keys_env:
-    - OPENROUTER_API_KEY
-    - OPENROUTER_API_KEY_2
-    - OPENROUTER_API_KEY_3
+  # One credential per provider. Quota failures move to a distinct provider
+  # or the local floor; they never rotate credentials for this account.
+  keys_env: [OPENROUTER_API_KEY]
   # GitHub Models is NOT a lane: retired 2026-07-30 (playground, catalog,
   # inference API and BYOK all withdrawn; GitHub points at Azure AI Foundry).
   # Recorded so no future pass adds a dead provider to a fallback chain —
