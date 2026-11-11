@@ -45,14 +45,20 @@ module Deploy
     def openbsd_path(name, root: Environment.repo_root)
       return unless RUBY_PLATFORM.match?(/openbsd/)
 
-      names = if name == "ruby"
-                %w[ruby ruby42 ruby41 ruby40 ruby34 ruby33]
-              else
-                %w[bundle bundle42 bundle41 bundle40 bundle34 bundle33]
-              end
-      names.each do |command|
-        path = command_path(command)
-        next if path.empty?
+      prefix = name == "ruby" ? "ruby" : "bundle"
+      candidates = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).flat_map do |directory|
+        next [] unless File.directory?(directory)
+
+        Dir.children(directory).filter_map do |entry|
+          next unless entry.match?(/\\A#{Regexp.escape(prefix)}(?:[0-9]+(?:\\.[0-9]+)*)?\\z/)
+
+          path = File.join(directory, entry)
+          path if File.file?(path) && File.executable?(path)
+        end
+      rescue SystemCallError
+        []
+      end
+      candidates.uniq.each do |path|
         next if name == "ruby" && !compatible_ruby?(path)
 
         return path
