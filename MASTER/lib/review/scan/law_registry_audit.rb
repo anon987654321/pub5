@@ -293,8 +293,7 @@ module Master
             without_deterministic_detector << id unless detector_present?(registry, id)
 
             sources.uniq.each do |source|
-              full_path = File.expand_path(source, repo_root)
-              next if full_path.start_with?(repo_root + File::SEPARATOR) && File.file?(full_path)
+              next if source_file_in_repository?(source, repo_root)
 
               missing_source_files << "#{id}:#{source}"
             end
@@ -311,6 +310,16 @@ module Master
               manifest_without_deterministic_detector: without_deterministic_detector.sort.freeze,
             }.freeze,
           }.freeze
+        end
+
+        def source_file_in_repository?(source, repo_root)
+          candidate = File.expand_path(source.to_s, repo_root)
+          return false unless candidate.start_with?(repo_root + File::SEPARATOR)
+
+          resolved = File.realpath(candidate)
+          File.file?(resolved) && resolved.start_with?(repo_root + File::SEPARATOR)
+        rescue ArgumentError, SystemCallError
+          false
         end
 
         # The Laws whose detector is a `check` or a class: the population the
