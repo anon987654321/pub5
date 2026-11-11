@@ -40,7 +40,7 @@ many carriers resolve into.
 **Repo tie-in.** This is the same material the repo already mandates
 (`tokens.visual_identity.material`, law-family `VISUAL_PARTICLE_STIPPLE_*`):
 a face/mark that is a field of carriers, never a solid skin. Plate 01 is the
-direct homage; plate 07 shows the same idea as motion frames.
+direct homage; plate 07 is a separate seeded star field, not a motion-frame treatment.
 
 ## 3. The canonical amber mark (what every plate must keep)
 
