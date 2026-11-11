@@ -126,7 +126,14 @@ module Master
         ensure
           # A caller timeout/interrupt or a non-StandardError worker failure
           # must not leave any sibling request running after this batch exits.
-          threads&.each { |thread| thread.kill if thread.alive? }
+          Array(threads).each { |thread| thread.kill if thread.alive? }
+          Array(threads).each do |thread|
+            begin
+              thread.join
+            rescue StandardError
+              nil
+            end
+          end
         end
         private_class_method :parallel, :parallel_batch
 
