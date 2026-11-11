@@ -3,6 +3,7 @@
 require "digest"
 require "json"
 require "fileutils"
+require "shellwords"
 require_relative "backlog_classify"
 require_relative "backlog_reader"
 require_relative "backlog_store"
@@ -233,8 +234,8 @@ module Backlog
                 ["rendered_evidence"]
               when %r{\A(?:MASTER/)?bin/operator accessibility(?:\s|\z)}i
                 ["accessibility_review"]
-              when /\A(?:pfctl|swapctl)\s/i,
-                   %r{\A(?:ssh|MASTER/bin/operator) (?:host|vps|deploy)(?:\s|\z)}i
+              when /\Apfctl\s/i,
+                   /\Aswapctl\s/i
                 ["runtime_evidence"]
               else
                 []
@@ -251,6 +252,266 @@ module Backlog
       types = Array(values).map(&:to_s)
       !types.empty? && types.uniq == types &&
         (types - Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)).empty?
+    end
+
+    EXECUTION_ENV = %w[MASTER_TEST_START_MARKERS MASTER_TEST_JOBS MASTER_TEST_PROGRESS_EVERY].freeze
+    EXECUTION_TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
+    PROOF_TIMEOUTS = {
+      "full_suite" => 1800,
+      "focused_tests" => 900,
+      "law_assessment" => 900,
+      "rendered_evidence" => 1800,
+      "accessibility_review" => 1800,
+      "runtime_evidence" => 120,
+    }.freeze
+
+    # Produce an argv-only command spec for an acceptance command we own.
+    # A nil result means the item must stay out of unattended intake.
+    def execution_spec(value, tree:, repo_root:)
+      raw = value.to_s.strip.sub(/\A\$\s*/, "")
+      return if raw.empty?
+
+      repository = File.realpath(repo_root)
+      working_directory = nil
+      if (match = raw.match(/\Acd\s+(.+?)\s*&&\s*(.+)\z/))
+        directory = Shellwords.shellsplit(match[1])
+        return unless directory.one?
+
+        working_directory = safe_directory(repository, directory.first)
+        return unless working_directory
+
+        raw = match[2]
+      end
+
+      environment = {}
+      loop do
+        match = raw.match(/\A([A-Z_][A-Z0-9_]*)=(?:"([^"]*)"|'([^']*)'|(\S+))\s+(.+)\z/)
+        break unless match
+
+        key = match[1]
+        value = match[2] || match[3] || match[4]
+        return unless EXECUTION_ENV.include?(key)
+        return unless value.match?(/\A\d+\z/)
+        return if key == "MASTER_TEST_JOBS" && value.to_i < 1
+        return if key == "MASTER_TEST_START_MARKERS" && !%w[0 1].include?(value)
+
+        environment[key] = value
+        raw = match[5]
+      end
+
+      raw = raw.sub(/\Abundle exec\s+/, "")
+      argv = Shellwords.shellsplit(raw)
+      return if argv.empty? || argv.any? { |token| token.match?(/[;&|<>]/) }
+
+      proof_types = types_for(done_when: value)
+      return unless proof_types.one?
+      proof_type = proof_types.first
+      return unless PROOF_TIMEOUTS.key?(proof_type)
+
+      if working_directory.nil?
+        root_relative = argv.any? { |token| token.match?(/\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)\//) }
+        working_directory = if root_relative
+                              repository
+                            else
+                              safe_directory(repository, tree.to_s)
+                            end
+      end
+      return unless working_directory
+
+      launcher, command_argv = executable_argv(
+        argv, proof_type:, repository:, working_directory:
+      )
+      return unless launcher && command_argv
+
+      {
+        proof_type:,
+        launcher:,
+        argv: command_argv,
+        cwd: working_directory,
+        cwd_relative: working_directory == repository ? "." : working_directory.delete_prefix("#{repository}/"),
+        env: environment.freeze,
+        command_digest: Digest::SHA256.hexdigest(value.to_s),
+        timeout: PROOF_TIMEOUTS.fetch(proof_type),
+      }.freeze
+    rescue ArgumentError, SystemCallError
+      nil
+    end
+
+    # Every component is lstat-checked. Symlinked parents and hard-linked
+    # source files are not valid unattended scopes.
+    def safe_scope_path?(relative, repo_root:)
+      repository = File.realpath(repo_root)
+      absolute = File.expand_path(relative.to_s, repository)
+      return false unless absolute.start_with?(repository + File::SEPARATOR)
+
+      components = absolute.delete_prefix(repository + File::SEPARATOR).split(File::SEPARATOR)
+      return false if components.empty? || components.any? { |part| part.empty? || part == "." || part == ".." }
+
+      cursor = repository
+      components.each_with_index do |component, index|
+        cursor = File.join(cursor, component)
+        stat = File.lstat(cursor)
+        return false if stat.symlink?
+        if index < components.length - 1 || stat.directory?
+          return false unless stat.directory?
+        else
+          return false unless stat.file? && stat.nlink == 1
+        end
+      end
+      true
+    rescue ArgumentError, SystemCallError
+      false
+    end
+
+    def safe_directory(repository, relative)
+      candidate = File.expand_path(relative.to_s, repository)
+      return unless candidate == repository || candidate.start_with?(repository + File::SEPARATOR)
+      return repository if candidate == repository
+
+      cursor = repository
+      candidate.delete_prefix(repository + File::SEPARATOR).split(File::SEPARATOR).each do |component|
+        return if component.empty? || component == "." || component == ".."
+
+        cursor = File.join(cursor, component)
+        stat = File.lstat(cursor)
+        return if stat.symlink? || !stat.directory?
+      end
+      cursor
+    rescue ArgumentError, SystemCallError
+      nil
+    end
+
+    def safe_file(repository, working_directory, relative)
+      absolute = File.expand_path(relative.to_s, working_directory)
+      return unless absolute.start_with?(repository + File::SEPARATOR)
+
+      components = absolute.delete_prefix(repository + File::SEPARATOR).split(File::SEPARATOR)
+      return if components.empty? || components.any? { |part| part.empty? || part == "." || part == ".." }
+
+      cursor = repository
+      components.each_with_index do |component, index|
+        cursor = File.join(cursor, component)
+        stat = File.lstat(cursor)
+        return if stat.symlink?
+        if index < components.length - 1
+          return unless stat.directory?
+        else
+          return unless stat.file? && stat.nlink == 1
+        end
+      end
+      cursor
+    rescue ArgumentError, SystemCallError
+      nil
+    end
+
+    def executable_argv(argv, proof_type:, repository:, working_directory:)
+      command = argv.first.to_s
+      args = argv.drop(1)
+
+      case command
+      when "rake"
+        allowed = case proof_type
+                  when "full_suite"
+                    args == ["test"] || args == ["test:batch"] || args == ["check", "test"]
+                  when "focused_tests"
+                    args.size == 1 && args.first.match?(/\Atest:[a-z0-9_:.-]+\z/i)
+                  when "law_assessment"
+                    args == ["audit"] || args == ["lint"] ||
+                      (args.size == 1 && args.first.match?(/\Alint:[a-z0-9_:.-]+\z/i))
+                  else
+                    false
+                  end
+        return unless allowed
+        [:bundle, ["rake", *args]]
+      when "ruby"
+        options = []
+        index = 0
+        while index < args.length
+          token = args[index]
+          if token == "-I"
+            return unless args[index + 1] && args[index + 1].match?(/\A[\w.\-:\/]+\z/)
+            options.concat(["-I", args[index + 1]])
+            index += 2
+          elsif token.start_with?("-I") && token.length > 2 && token.match?(/\A-I[\w.\-:\/]+\z/)
+            options << token
+            index += 1
+          else
+            break
+          end
+        end
+        script = args[index]
+        return unless script
+        script_path = safe_file(repository, working_directory, script)
+        return unless script_path
+        tail = args.drop(index + 1)
+        relative = script_path.delete_prefix(repository + File::SEPARATOR)
+
+        allowed = case proof_type
+                  when "full_suite"
+                    relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/test/run_all\.rb\z}) ||
+                      relative == "test/run_all.rb"
+                  when "focused_tests"
+                    relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/test/(?:test_.*|.*_test)\.rb\z}) ||
+                      relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/spec/.*_spec\.rb\z}) ||
+                      relative.match?(%r{\Atest/(?:test_.*|.*_test)\.rb\z}) ||
+                      relative.match?(%r{\Aspec/.*_spec\.rb\z})
+                  when "law_assessment"
+                    relative == "MASTER/checks/runner.rb" && tail.include?("--scan-only")
+                  else
+                    false
+                  end
+        return unless allowed
+        [:ruby_bundle, [*options, script_path, *tail]]
+      when "rspec"
+        return unless proof_type == "focused_tests" && args.any?
+        files = args.map { |path| safe_file(repository, working_directory, path) }
+        return if files.any?(&:nil?)
+        return unless args.all? { |path| path.match?(%r{\Aspec/.*_spec\.rb\z}) }
+        [:bundle, ["rspec", *files]]
+      when "bin/operator", "MASTER/bin/operator"
+        operator = if command.start_with?("MASTER/")
+                     safe_file(repository, repository, command)
+                   else
+                     safe_file(repository, working_directory, command)
+                   end
+        return unless operator
+        valid = case args.first
+                when "test"
+                  proof_type == "focused_tests"
+                when "check"
+                  proof_type == "law_assessment" && (args.include?("--scan-only") || args.include?("--no-autofix"))
+                when "visual"
+                  proof_type == "rendered_evidence" && %w[sweep review].include?(args[1])
+                when "accessibility"
+                  proof_type == "accessibility_review"
+                else
+                  false
+                end
+        return unless valid
+        [:ruby_bundle, [operator, *args]]
+      when "bin/check", "MASTER/bin/check"
+        return unless proof_type == "law_assessment"
+        script = command.start_with?("MASTER/") ? safe_file(repository, repository, command) :
+                                                  safe_file(repository, working_directory, command)
+        return unless script
+        [:ruby_bundle, [script, *args]]
+      when "bin/ci", "MASTER/bin/ci"
+        return unless proof_type == "full_suite"
+        script = command.start_with?("MASTER/") ? safe_file(repository, repository, command) :
+                                                  safe_file(repository, working_directory, command)
+        return unless script && File.executable?(script)
+        [:direct, [script, *args]]
+      when "pfctl"
+        return unless proof_type == "runtime_evidence" && RUBY_PLATFORM.match?(/openbsd/i)
+        return unless args == ["-nf", "/etc/pf.conf"]
+        [:direct, [command, *args]]
+      when "swapctl"
+        return unless proof_type == "runtime_evidence" && RUBY_PLATFORM.match?(/openbsd/i)
+        return unless args == ["-l"]
+        [:direct, [command, *args]]
+      else
+        nil
+      end
     end
   end
 
