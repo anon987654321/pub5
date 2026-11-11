@@ -1142,7 +1142,7 @@ skills_registry:
     triggers:
     - "\\b(?:brand(?:ing|ed)?|on-brand|visual\\s+identity|style\\s+guide|house\\s+style|brand\\s+guidelines)\\b"
     body: |-
-      The brand skill applies pub5's identity to a surface. The identity is data: colour roles, type roles and spacing live in data/tokens.yml, the type pairing in its font_pairings registry (swiss_house is the house default), and the standing prohibitions in data/law/visual_directives.yml. Read those files first and bind every colour and every typeface on the surface to a named role. Do not carry values over from another brand, from a skill written for one, or from memory.
+      The brand skill applies pub5's identity to a surface. The identity is data: colour roles, type roles and spacing live in data/tokens.yml, the type pairing in its font_pairings registry (swiss_house is the house default), and the standing prohibitions in data/laws.yml#visual_directives. Read those files first and bind every colour and every typeface on the surface to a named role. Do not carry values over from another brand, from a skill written for one, or from memory.
 
       The house sets sans-serif only. A serif face is refused by name in the directives, so a request for one is answered with the sans pairing and one sentence of reason. Rendered values (a colour, a font, a graded look) belong to the operator; when a role the surface needs has no token, stop and name the seam instead of choosing a value.
 

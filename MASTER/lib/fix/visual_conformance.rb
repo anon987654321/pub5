@@ -58,8 +58,7 @@ module Master
       module_function
 
       def rules
-        path = File.expand_path("../../data/law/visual_directives.yml", __dir__)
-        Array(YAML.safe_load_file(path)["rules"])
+        Array(Master.law("visual_directives")["rules"])
       end
 
       # Each captured surface against every rule whose scope matches its app.

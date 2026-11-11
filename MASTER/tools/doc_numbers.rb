@@ -27,15 +27,11 @@ module Operator
     # An archived handoff quotes retired app code; it prescribes nothing.
     SKIP = %r{/(?:node_modules|vendor|knowledge|output|tmp|\.master)/|/handoffs/MEGA_ALL_APPS\.md\z}
 
-    # Naming any of these makes the number traceable. minimalism.yml is here
-    # because it owns touch_target_px: 44, the floor SCREENSHOT_LAW_ADHERENCE
-    # quotes by name; README.md names it a co-owner of shared visual tokens, and
-    # leaving it out made the document that cites the token fail for citing it.
-    # Bare names, because that is how a document cites a file in prose; the
-    # directory-qualified spelling is listed too for a document that uses it.
+    # The central Law file owns touch targets, spacing, minimalism and every
+    # normative visual constraint. Bare names remain for documents that cite it.
     SOURCES = %w[
-      MASTER/data/tokens.yml MASTER/data/law/minimalism.yml
-      tokens.yml minimalism.yml
+      MASTER/data/tokens.yml MASTER/data/laws.yml
+      tokens.yml laws.yml
       _dialect_tokens.scss tokens.css design_system
     ].freeze
 

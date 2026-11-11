@@ -564,7 +564,7 @@ module Law
   end
 
   ::Law.define(:ACTION_LABEL_BRIEF) do
-    source "Krug, Don't Make Me Think: omit half the words, then half again; minimalism.yml microcopy.label_max_words"
+    source "Krug, Don't Make Me Think: omit half the words, then half again; laws.yml#minimalism microcopy.label_max_words"
     tags %i[BE_CONCISE]
     path %r{\.(?:html\.)?erb\z}
     reads_beyond_file true
@@ -665,10 +665,10 @@ module Law
   end
 
   ::Law.define(:ICON_CARRIES_WORD) do
-    source "Norman, signifiers; Krug; minimalism.yml law.icon_policy, words before icons"
+    source "Norman, signifiers; Krug; laws.yml#minimalism law.icon_policy, words before icons"
     tags %i[ACCESSIBILITY DESIGN]
     path M::VIEWS
-    fix "Give the icon its word (\"Fremhev\") or use the word alone; minimalism.yml icon_words_optional may go bare."
+    fix "Give the icon its word (\"Fremhev\") or use the word alone; laws.yml#minimalism icon_words_optional may go bare."
     bad "<button class=\"boost\"><svg viewBox=\"0 0 9 9\"><path d=\"M0 0h9\"/></svg></button>\n"
     good "<button class=\"boost\"><svg viewBox=\"0 0 9 9\"><path d=\"M0 0h9\"/></svg> Fremhev</button>\n"
     check do |src, _path|

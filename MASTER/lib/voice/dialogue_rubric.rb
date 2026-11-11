@@ -9,15 +9,12 @@ module Master
     # reach the model. Bench code reads the same file, so law and proof cannot
     # quietly diverge.
     module DialogueRubric
-      PATH = File.join(Master::DATA, "dialogue_rubric.yml").freeze
+      PATH = Master::LAWS_PATH
 
       module_function
 
       def data(root: Master::ROOT)
-        path = File.join(root, "data", "dialogue_rubric.yml")
-        return {} unless File.file?(path)
-
-        payload = Master.load_yaml(path) || {}
+        payload = Master.law("dialogue_rubric", root:)
         validate!(payload)
         payload
       end

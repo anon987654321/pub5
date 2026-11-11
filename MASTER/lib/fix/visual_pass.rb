@@ -413,7 +413,7 @@ module Master
       end
 
       def visual_rubric_context
-        rubric = Master.load_yaml(File.join(Master.master_root(root: @root), "data", "law", "visual_rubric.yml"), default: {}) || {}
+        rubric = Master.law("visual_rubric", root: Master.master_root(root: @root))
         dimensions = rubric.fetch("dimensions", {})
         judgment = rubric.fetch("judgment", {})
         constraints = rubric.fetch("constraints", {})

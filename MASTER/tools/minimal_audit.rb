@@ -7,8 +7,8 @@ require "time"
 require "yaml"
 
 root = File.expand_path(ENV.fetch("PUB5_ROOT", File.join(__dir__, "../..")))
-law_path = File.join(root, "MASTER/data/law/minimalism.yml")
-law = YAML.safe_load_file(law_path, permitted_classes: [], aliases: false)
+policy_path = File.join(root, "MASTER/data/laws.yml")
+law = YAML.safe_load_file(policy_path, permitted_classes: [], aliases: false).fetch("minimalism")
 
 options = { output: nil }
 OptionParser.new do |opts|

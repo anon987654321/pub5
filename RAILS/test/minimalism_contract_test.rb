@@ -6,7 +6,7 @@ class MinimalismContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
   def test_minimalism_law_is_the_house_source
-    source = File.read(File.join(ROOT, "MASTER/data/law/minimalism.yml"))
+    source = File.read(File.join(ROOT, "MASTER/data/laws.yml"))
     assert_includes source, "bordered_nesting_max: 2"
     assert_includes source, "max_zones: 3"
     assert_includes source, "console_errors: 0"

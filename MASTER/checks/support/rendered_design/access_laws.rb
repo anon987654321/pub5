@@ -15,7 +15,7 @@ module Deploy
       CONTROL_TYPES = /\A(?:text|email|tel|url|search|password|number|date|)\z/
       GESTURE = /\b(?:touch(?:start|move|end)|pointer(?:down|move|up)|swipe\w*)->([\w-]+)#(\w+)/
       TAP = /\b(?:click|submit|keydown[\w.]*)->([\w-]+#\w+)/
-      MINIMALISM = File.join(ROOT, "data/law/minimalism.yml")
+      MINIMALISM = "minimalism"
 
       module_function
 
@@ -128,7 +128,7 @@ module Deploy
       end
 
       def icon_words
-        @icon_words ||= Array(YAML.safe_load_file(MINIMALISM).dig("law", "icon_words_optional")).map(&:downcase)
+        @icon_words ||= Array(Master.law(MINIMALISM).dig("law", "icon_words_optional")).map(&:downcase)
       rescue Errno::ENOENT # scan: intentional - no allow-list: every icon carries a word, the stricter reading
         []
       end

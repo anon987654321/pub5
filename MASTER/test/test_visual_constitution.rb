@@ -44,8 +44,7 @@ class TestVisualConstitution < Minitest::Test
   end
 
   def test_visual_rubric_places_console_style_above_prompt_trends
-    path = File.expand_path("../data/law/visual_rubric.yml", __dir__)
-    rubric = YAML.safe_load_file(path)
+    rubric = YAML.safe_load_file(Master::LAWS_PATH).fetch("visual_rubric")
 
     assert_includes rubric.fetch("dimensions").fetch("console"), "OpenBSD dmesg"
     assert_includes rubric.fetch("judgment").fetch("console_first"), "primary visual reference"

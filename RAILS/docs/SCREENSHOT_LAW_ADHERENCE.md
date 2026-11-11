@@ -4,12 +4,12 @@
 family holds its line better than any single surface holds it perfectly.** This document
 records, surface by surface, how the new RAILS screenshot sets adhere to the house rules
 in `MASTER/law/` (cosmetic, css, web, brand, rails, interface, surface, universal),
-`MASTER/data/tokens.yml` (dialects, shared chrome, visual identity), `visual_directives.yml`,
-`visual_rubric.yml` and `minimalism.yml`. It is a reading of rendered evidence, not a
+`MASTER/data/tokens.yml` (dialects, shared chrome, visual identity) and the visual policy
+sections in `MASTER/data/laws.yml`. It is a reading of rendered evidence, not a
 restyle proposal: rendered values stay operator-owned (RENDERED_VALUES), so every defect
 below is a finding with a law tag, never a silent patch.
 
-Method follows `visual_rubric.yml`: a screenshot proves a rendered state and source proves
+Method follows `MASTER/data/laws.yml#visual_rubric`: a screenshot proves a rendered state and source proves
 implementation, so every strong claim was cross-checked against the tree (locale files,
 seeds, view partials) before it was written down. Where the capture alone cannot decide —
 lazy-loaded regions, animation, runtime contrast — the finding says INCONCLUSIVE instead of
@@ -26,7 +26,7 @@ Graphic design — `AESTHETIC_FLAT_SEMANTIC` (flat surfaces on an 8px rhythm; no
 shadow, blur or glow), `NO_DECORATIVE_GRADIENT`, `NO_ORDINAL_ORNAMENT`, `NO_TRAILING_ARROW`,
 `NO_DOT_SEPARATED_META` (two or more dot separators on one line), `SIGNAL_COLOR_IS_SEMANTIC`
 (the signal marks selection and state, never ordinary paint), `CONTRAST_TOKENS`
-(≥ 4.5:1), `WHITESPACE_RHYTHM`, plus `minimalism.yml`: 44px touch floor, at most three
+(≥ 4.5:1), `WHITESPACE_RHYTHM`, plus the `minimalism` policy in `MASTER/data/laws.yml`: 44px touch floor, at most three
 accent zones, words before icons, an empty state of one truth sentence and one verb, labels
 of at most three words.
 

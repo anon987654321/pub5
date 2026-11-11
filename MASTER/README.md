@@ -69,9 +69,8 @@ A scan-only run does not authorize edits. Source checks do not prove rendered be
 ## Configuration has owners
 
 - `data/providers.yml` and `data/models.yml` own provider and model configuration. See [free-compute and routing notes](docs/free_compute.md).
-- `data/voice.yml` owns speech and voice policy.
-- `data/tokens.yml` and `data/law/minimalism.yml` own shared visual tokens and the minimal interface contract.
-- `data/dialogue_rubric.yml` owns the conversational-support rubric.
+- `data/voice.yml` owns speech runtime configuration.
+- `data/tokens.yml` owns visual values; `data/laws.yml` owns minimal-interface, visual, dialogue and constitutional policy.
 - `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
 - `data/affiliate_sources.yml` owns the affiliate source registry.
 

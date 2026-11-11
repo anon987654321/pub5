@@ -164,7 +164,7 @@ class TestSelfTest < Minitest::Test
 
     # Parenthesised: unwrapped, the do block bound to refute, and any? with no
     # block asked whether there was any finding at all.
-    rubrics = ["data/dialogue_rubric.yml", "data/law/visual_rubric.yml"].map { |rel| File.join(Master::ROOT, rel) }
+    rubrics = ["data/laws.yml"].map { |rel| File.join(Master::ROOT, rel) }
     refute(findings.any? do |finding|
       finding[:message].include?("top-level fact dimensions") && rubrics.include?(finding[:path])
     end)
