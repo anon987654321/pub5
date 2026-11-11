@@ -193,6 +193,7 @@ class TestSwarm < Minitest::Test
     original_new = Thread.method(:new)
     started = Queue.new
     worker_ready = Queue.new
+    worker_finished = Queue.new
     release = Queue.new
     calls = 0
     coordinator = build_coordinator(FakeAgent.new(default: "ok"))
@@ -202,6 +203,8 @@ class TestSwarm < Minitest::Test
       worker_ready << true
       release.pop
       Result.ok({ "task" => task, "role" => role.to_s })
+    ensure
+      worker_finished << task
     end
     tasks = [
       { role: :analyst, task: "first", context_slice: {} },
@@ -228,7 +231,8 @@ class TestSwarm < Minitest::Test
 
     assert result.ok?
     assert_equal 2, calls
-    assert_includes @bus.events, @bus.events.find { |event| event[:event] == "swarm:worker_start_failed" }
+    assert_equal "first", worker_finished.pop(timeout: 2)
+    assert @bus.events.any? { |event| event[:event] == "swarm_worker_start_failed" }
     assert_equal :insufficient_quorum, result.value!.verdict
     assert_equal :analyst, result.value!.artifacts.keys.first
   end
