@@ -8,7 +8,6 @@ module Operator
     module_function
 
     SUPPORTED_RUBY_MIN = Gem::Version.new("3.3.0")
-    SUPPORTED_RUBY_MAX = Gem::Version.new("4.1.0")
 
     def repo_root(from: __dir__)
       File.expand_path("../../..", from)
@@ -30,18 +29,8 @@ module Operator
       Gem::Version.new(RUBY_VERSION)
     end
 
-    def preferred_ruby
-      path = File.join(repo_root, ".ruby-version")
-      return unless File.file?(path)
-
-      value = File.read(path).strip
-      value.empty? ? nil : Gem::Version.new(value)
-    rescue ArgumentError
-      nil
-    end
-
     def ruby_version_ok?
-      ruby_version >= SUPPORTED_RUBY_MIN && ruby_version < SUPPORTED_RUBY_MAX
+      ruby_version >= SUPPORTED_RUBY_MIN
     end
 
     def tree_kind
@@ -84,7 +73,7 @@ module Operator
     def ruby_mismatch_message
       return if ruby_version_ok?
 
-      "Ruby #{RUBY_VERSION} detected; MASTER supports Ruby >= 3.3 and < 4.1; preferred .ruby-version is #{preferred_ruby || "unset"}"
+      "Ruby #{RUBY_VERSION} detected; MASTER requires Ruby >= #{SUPPORTED_RUBY_MIN}. Use the installed Ruby or set PUB5_RUBY to another compatible interpreter."
     end
 
     def next_command_for(mode = self.mode)
