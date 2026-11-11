@@ -65,7 +65,7 @@ module Operator
     # candidate is merged or ratcheted automatically.
     METHOD_SHAPE_MIN_FILES = 3
     METHOD_SHAPE_LIMIT = 8
-    METHOD_SHAPE_SKIP = %r{/(?:test|spec|fixtures|vendor|node_modules|tmp|log|coverage|storage|\.git|dummy)/}
+    METHOD_SHAPE_SKIP = %r{(?:\A|/)(?:test|spec|fixtures|vendor|node_modules|tmp|log|coverage|storage|\.git|dummy)(?:/|\z)}
 
     module_function
 
@@ -446,7 +446,8 @@ module Operator
         base == root || base.start_with?("#{root}#{File::SEPARATOR}")
 
       files = Dir.glob(File.join(base, "**", "*.rb")).sort.reject do |path|
-        path.match?(METHOD_SHAPE_SKIP) || File.symlink?(path) || !File.file?(path)
+        relative = relative_to(root, path)
+        relative.match?(METHOD_SHAPE_SKIP) || File.symlink?(path) || !File.file?(path)
       end
       groups = Hash.new { |hash, key| hash[key] = [] }
       unreadable = []
