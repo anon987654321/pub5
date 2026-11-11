@@ -105,26 +105,26 @@ The focused set is:
 
 ```zsh
 cd MASTER
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_execution_contract.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_proof_adapters.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_finding_metadata.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_skills.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_enhance_stage.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_core_cancellation.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_core_bridge.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_turn_router.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_cli.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_outcome_policy.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_err_classification.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_instrument_check.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_fix_transaction.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_provider_health_cache.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_provider_canary.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_llm_dispatcher.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_trace_support.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_feedback_ledger.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_reflexion_ledger.rb
-RBENV_VERSION=4.0.5 rbenv exec ruby -Itest test/test_command_registry_dispatch.rb
+ruby -Itest test/test_execution_contract.rb
+ruby -Itest test/test_proof_adapters.rb
+ruby -Itest test/test_finding_metadata.rb
+ruby -Itest test/test_skills.rb
+ruby -Itest test/test_enhance_stage.rb
+ruby -Itest test/test_core_cancellation.rb
+ruby -Itest test/test_core_bridge.rb
+ruby -Itest test/test_turn_router.rb
+ruby -Itest test/test_cli.rb
+ruby -Itest test/test_outcome_policy.rb
+ruby -Itest test/test_err_classification.rb
+ruby -Itest test/test_instrument_check.rb
+ruby -Itest test/test_fix_transaction.rb
+ruby -Itest test/test_provider_health_cache.rb
+ruby -Itest test/test_provider_canary.rb
+ruby -Itest test/test_llm_dispatcher.rb
+ruby -Itest test/test_trace_support.rb
+ruby -Itest test/test_feedback_ledger.rb
+ruby -Itest test/test_reflexion_ledger.rb
+ruby -Itest test/test_command_registry_dispatch.rb
 ```
 
 After focused tests pass, run the full canonical MASTER suite and relevant operator checks. For changes that touch RAILS, OPENBSD or STUDIO, run their canonical checks too. Source inspection, a committed test, or a remote commit is never reported as an executed test or a verified deployment.
