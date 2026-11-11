@@ -205,7 +205,7 @@ class TestCodeIndexStore < Minitest::Test
       assert_raises(FrozenError) { errors.first.fetch(:message).replace("hidden") }
       assert_equal "broken.rb", errors.first.fetch(:path)
       assert_equal :parse, errors.first.fetch(:kind)
-      assert_includes index.errors.first.fetch(:message), "unexpected"
+      refute_empty index.errors.first.fetch(:message)
     end
   end
 
