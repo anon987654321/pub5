@@ -277,8 +277,10 @@ TLS terminates at relayd. Rails sets `config.assume_ssl = true`; do not enable
 
 `https://mrd.brgen.no` serves RAILS/mrdamascy, the restaurant's ordering PWA, as
 a demo for its owner. It is an ordinary inventory app (apps.yml port 47314,
-`rc.d/mrdamascy`, `vps-deploy mrdamascy`) kept deliberately light: one Falcon
-worker with a three-connection Active Record pool, SQLite under `/home/mrdamascy/app/storage`, no jobs
+`rc.d/mrdamascy`, `vps-deploy mrdamascy`) kept deliberately light: production
+uses Falcon's tracked `RAILS/mrdamascy/falcon.rb` host configuration and
+`preload.rb`, one loopback-only worker with a three-connection Active Record
+pool, SQLite under `/home/mrdamascy/app/storage`, no jobs
 worker (the app enqueues none), and Vipps, Stripe and Wolt in mock mode, so no
 payment key exists on the box. `mrd` is an A record in the brgen.no zone and a
 SAN on the brgen.no certificate; `/etc/ssl/mrd.brgen.no.crt` and
