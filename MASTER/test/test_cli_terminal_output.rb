@@ -52,6 +52,39 @@ class TestCLITerminalOutput < Minitest::Test
     saved.nil? ? ENV.delete("MASTER_PAGER") : ENV["MASTER_PAGER"] = saved
   end
 
+  def test_empty_tab_completion_prioritises_common_commands_and_slash_opens_full_surface
+    cli = session
+    previous = Reline.completion_proc
+    cli.send(:setup_completion)
+    completion = Reline.completion_proc
+
+    Reline.stub(:line_buffer, "") do
+      expected = Master::CLI::Session::QUICK_COMMAND_COMPLETIONS.map { |command| "#{command} " }
+      assert_equal expected, completion.call("")
+    end
+    Reline.stub(:line_buffer, "/") do
+      expected = Master::CLI::CommandRegistry.slash_commands.reject { |command| %w[/exit /quit].include?(command) }
+      assert_equal expected, completion.call("")
+    end
+  ensure
+    Reline.completion_proc = previous
+  end
+
+  def test_first_run_hint_uses_one_plain_actionable_dmesg_line
+    cli = session
+    rows = []
+    Master::Trace::Dmesg.stub(:status, ->(unit, message, **_options) { rows << [unit, message] }) do
+      $stdin.stub(:tty?, true) do
+        $stdout.stub(:tty?, true) { cli.send(:print_quick_start) }
+      end
+    end
+
+    assert_equal "input0", rows.fetch(0).fetch(0)
+    assert_match(/plain language/, rows.fetch(0).fetch(1))
+    assert_match(/Tab/, rows.fetch(0).fetch(1))
+    assert_match(%r{/help}, rows.fetch(0).fetch(1))
+  end
+
   def test_piped_output_stays_plain_and_does_not_start_a_pager
     text = "row\n" * 30
     stdout, = capture_io do
