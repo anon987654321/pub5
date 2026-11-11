@@ -78,8 +78,16 @@ module Master
           )
         },
         after_run: ->(mission:, result:) {
-          next unless executor && mission && mission["state"] == "completed"
-          next unless executor.record_completion!(record: mission)
+          next unless executor && mission && mission["origin"] == "backlog"
+          next unless mission["state"] == "completed"
+          unless executor.record_completion!(record: mission)
+            container[:bus]&.publish(
+              "backlog_executor:blocked",
+              mission: mission["id"],
+              reason: "terminal mission lacks a current-item delivery receipt; inspect summary and pending writes",
+            )
+            next
+          end
 
           status = executor.enqueue_next!(model: mission["model"])
           container[:bus]&.publish("backlog_executor:intake", status:)
