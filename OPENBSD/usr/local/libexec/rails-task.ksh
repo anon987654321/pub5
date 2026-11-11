@@ -77,17 +77,20 @@ if [ -e "$app_dir/storage" ] || [ -L "$app_dir/storage" ]; then
 fi
 
 bundle=/usr/local/bin/bundle
-found_ruby=0
-for ruby_path in /usr/local/bin/ruby4.0 /usr/local/bin/ruby40 /usr/local/bin/ruby3.4 /usr/local/bin/ruby34 /usr/local/bin/ruby3.3 /usr/local/bin/ruby33 /usr/local/bin/ruby; do
-  if [ -x "$ruby_path" ]; then
-    found_ruby=1
-    base=${ruby_path##*/}
-    suffix=${base#ruby}
-    candidate="/usr/local/bin/bundle$suffix"
-    [ ! -x "$candidate" ] || bundle=$candidate
+ruby_path=/usr/local/bin/ruby
+if [ ! -x "$ruby_path" ]; then
+  ruby_path=
+  for candidate in /usr/local/bin/ruby[0-9]*; do
+    [ -x "$candidate" ] || continue
+    ruby_path=$candidate
     break
-  fi
-done
+  done
+fi
+[ -n "$ruby_path" ] || { echo "rails-task: no system Ruby found" >&2; exit 127; }
+base=${ruby_path##*/}
+suffix=${base#ruby}
+candidate="/usr/local/bin/bundle$suffix"
+[ ! -x "$candidate" ] || bundle=$candidate
 [ "$found_ruby" -eq 1 ] || { echo "rails-task: no supported system Ruby found" >&2; exit 127; }
 [ -x "$bundle" ] || { echo "rails-task: no supported system Bundler found" >&2; exit 127; }
 
