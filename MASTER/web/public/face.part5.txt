@@ -893,6 +893,17 @@ function handleFaceNamedEvent(event, data) {
     } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:council_speech_event", err); }
     return true;
   }
+  if (event === 'visual_subject') {
+    try {
+      const payload = JSON.parse(raw || '{}');
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        window.dispatchEvent(new CustomEvent('master:visual-subject', { detail: payload }));
+      }
+    } catch (err) {
+      window.MASTER_LOG?.warn?.("face_runtime:visual_subject_event", err);
+    }
+    return true;
+  }
   if (event === 'confidence') {
     const c = parseFloat(raw);
     if (!isNaN(c)) {
