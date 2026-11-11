@@ -256,17 +256,18 @@ class TestBacklog < Minitest::Test
         end
 
         queued = fake_mission.queued
-      assert_equal "backlog", queued.fetch(:origin)
-      assert_equal true, queued.fetch(:auto_continue)
-      assert_equal root, queued.fetch(:scope)
-      plan = JSON.parse(queued.fetch(:plan))
-      assert_equal "safe-task", plan.fetch("item_id")
+        assert_equal "backlog", queued.fetch(:origin)
+        assert_equal true, queued.fetch(:auto_continue)
+        assert_equal root, queued.fetch(:scope)
+        plan = JSON.parse(queued.fetch(:plan))
+        assert_equal "safe-task", plan.fetch("item_id")
         assert_equal ["MASTER/lib/example.rb"], plan.fetch("scope_paths")
       end
     end
   end
 
-  def test_executor_refuses_a_missing_target_until_it_is_created    Dir.mktmpdir("backlog-executor") do |root|
+  def test_executor_refuses_a_missing_target_until_it_is_created
+    Dir.mktmpdir("backlog-executor") do |root|
       Dir.mktmpdir("backlog-repo") do |repo_root|
         row = { id: "missing", text: "Add a new file", tree: "MASTER", kind: "mechanical",
                 scope_paths: ["MASTER/lib/not-yet-created.rb"] }
