@@ -389,10 +389,11 @@ class TestFixModelPhaseGuards < Minitest::Test
 
     assert_equal 3, stream.send(:worker_count, "3")
     assert_equal 1, stream.send(:worker_count, 1)
+    assert_equal 8, stream.send(:worker_count, "8")
 
-    ["0", "-1", "workers", ""].each do |value|
+    ["0", "-1", "9", "10000", "workers", ""].each do |value|
       error = assert_raises(ArgumentError) { stream.send(:worker_count, value) }
-      assert_equal "MASTER_FIX_STREAM_WORKERS must be a positive integer", error.message
+      assert_equal "MASTER_FIX_STREAM_WORKERS must be an integer from 1 to 8", error.message
     end
   end
 
