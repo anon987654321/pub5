@@ -2,7 +2,7 @@
 // Concatenated into face.runtime.js by assets:build_face_runtime (after face_speech_runtime.js).
 
 const VISEME_STEP_MS = 45;
-const VOWEL_VISEME = { a: 'A', e: 'E', i: 'I', o: 'O', u: 'U', y: 'E', æ: 'A', ø: 'O', å: 'O' };
+const VOWEL_VISEME = { a: 'A', e: 'E', i: 'I', o: 'O', u: 'U', y: 'E', æ: 'A', ø: 'U', å: 'O' };
 const SPOKEN_VOWEL = /[aeiouyæøå]/i;
 
 function setViseme(ch) {
