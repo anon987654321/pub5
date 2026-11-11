@@ -449,16 +449,19 @@ module Master
           "multi0 at master0: << starts multiline; a blank line sends. While busy, lines queue; /stop pauses; /resume continues.",
           "approve0 at master0: /approve [N] or /deny answers a pending approval; other input stays queued.",
         ]
-        lines.concat(CATEGORY_ORDER.filter_map do |category|
+        lines.concat(CATEGORY_ORDER.flat_map do |category|
           commands = COMMAND_CATEGORIES.filter_map do |name, assigned|
             "/#{name}" if assigned == category
           end
-          next if commands.empty?
+          next [] if commands.empty?
 
           commands = commands.map { |command| command == "/fix" ? "/fix [path]" : command }
           commands = commands.reject { |command| command == "/help" } if category == "help"
           commands.unshift("/help [command]") if category == "help"
-          "#{category}0 at master0: #{commands.join(' ')}"
+          commands.each_slice(5).with_index.map do |group, index|
+            prefix = index.zero? ? "#{category}0 at master0: " : "  "
+            "#{prefix}#{group.join(' ')}"
+          end
         end)
         lines << shell_cap_line
         lines.join("\n")
