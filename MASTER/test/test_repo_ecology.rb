@@ -56,6 +56,18 @@ class TestRepoEcology < Minitest::Test
     end
   end
 
+  def test_scan_can_skip_git_history_without_building_a_cache
+    Dir.mktmpdir("repo_ecology_read_only") do |dir|
+      File.write(File.join(dir, "sample.rb"), "puts :read_only\n")
+      ecology = CountingEcology.new(root: dir)
+
+      report = ecology.scan(include_history: false)
+
+      assert_nil ecology.build_count, "read-only scans must not build or persist the co-change graph"
+      assert_empty report[:co_change_pairs]
+    end
+  end
+
   def test_co_change_graph_persists_between_instances
     Dir.mktmpdir("repo_ecology_cache") do |dir|
       # A real repository: the cache key is the commit SHA returned by

@@ -433,8 +433,8 @@ is the only pipeline command. `repair` is the default write-enabled observe,
 critique, repair, re-observe and verify lifecycle. `audit` is a read-only tree review: first-read, execution trace, non-persisting
 backlog review when due, structural review, scanner/structural preview,
 typography and principle map, council critique, and the existing per-tree repo
-sweep probes (Cohesion, DupCensus, data/law reach, namespace, design baseline
-and tree-specific checks). Probe exit success is not a Law PASS. Repair is
+sweep probes (RepoEcology without its history cache, SprawlCensus, Cohesion,
+DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe exit success is not a Law PASS. Repair is
 replaced by preview; tree, backlog and structural-review proposals are not persisted. `visual` is a read-only style pass; `elevate` selects the
 improvement lane; `all` selects the existing all-work lane. `--dry-run`
 always means no writes. Audit and visual cannot be made write-enabled by

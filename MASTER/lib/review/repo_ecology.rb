@@ -144,12 +144,17 @@ module Master
         { symbols: symbol_count, files: file_count, edges: edge_count, hotspots: }
       end
 
-      def scan(path: nil)
+      def scan(path: nil, include_history: true)
         base = path ? File.expand_path(path, @root) : @root
         files = collect_files(base)
         records = files.map { |file| analyze_file(file) }
-        report = build_scan_report(records, co_change_graph)
-        @bus&.publish("repo_ecology:scan", files: records.size, score: report[:score])
+        # Audit mode is strictly read-only. The co-change graph is useful history,
+        # but building its cache writes beneath .master; callers that need a
+        # measurement without side effects can omit history explicitly.
+        graph = include_history ? co_change_graph : {}
+        report = build_scan_report(records, graph)
+        @bus&.publish("repo_ecology:scan", files: records.size, score: report[:score],
+                                            history_measured: include_history)
         report
       end
 

@@ -43,6 +43,23 @@ class TestSweep < Minitest::Test
     assert_equal "no summary here", S.verdict(["  detail", "no summary here"])
   end
 
+  def test_repo_ecology_is_registered_per_tree_and_marks_history_unmeasured
+    probe = S.probes.find { |row| row.unit == "repoecology" }
+
+    refute_nil probe
+    assert probe.scoped
+    assert_equal S::TREES, probe.trees
+  end
+
+  def test_full_sprawl_census_is_a_single_read_only_master_probe
+    probe = S.probes.find { |row| row.unit == "sprawl" }
+
+    refute_nil probe
+    refute probe.scoped
+    assert_equal %w[MASTER], probe.trees
+    assert_equal 1, S.probes.count { |row| row.unit == "sprawl" }
+  end
+
   def test_detailed_sweep_reports_process_execution_without_claiming_a_law_pass
     probe = S::Probe.new(unit: "fixture", trees: %w[MASTER], run: -> { [true, ["fixture: 2 findings above ceiling"]] })
     results = nil

@@ -9,11 +9,10 @@
 # ran. No rule in data/laws.yml names any of those, because they are not
 # properties of a file — they are properties of a claim and its reader.
 #
-# What already existed: seven instruments that each answer one such question for
-# one population — dup_census, data_reach, reader_singularity, rule_reach,
-# namespace_ratchet, design_baseline, cohesion. Each with its own
-# invocation, its own ceiling file, and no shared vocabulary. `MASTER/bin/operator measure`
-# aggregates the ratchets; nothing aggregates the *questions*.
+# The instruments have different owners: repo ecology and sprawl read the whole
+# tree; cohesion, duplication, data/law reach, readers, namespaces, design and
+# the tree-specific checks each measure their own bounded population. This is
+# the read-only rendezvous, not a replacement for any instrument's authority.
 #
 # This does, per tree, in dmesg form, because a sweep that prints a wall of prose
 # is a sweep whose middle nobody reads.
@@ -53,6 +52,9 @@ module Operator
         Probe.new(unit: "spine", trees: %w[MASTER], run: -> { rake("lint:spine") }),
         Probe.new(unit: "cohesion", trees: TREES, scoped: true,
                   run: ->(tree) { tool("cohesion.rb", "--census", "--tree=#{tree}") }),
+        Probe.new(unit: "repoecology", trees: TREES, scoped: true,
+                  run: ->(tree) { repo_ecology(tree) }),
+        Probe.new(unit: "sprawl", trees: %w[MASTER], run: -> { sprawl_census }),
         Probe.new(unit: "dupcensus", trees: %w[MASTER], run: -> { tool("audit/dup_census.rb") }),
         Probe.new(unit: "datareach", trees: %w[MASTER], run: -> { tool("audit/data_reach.rb") }),
         Probe.new(unit: "readersing", trees: %w[MASTER], run: -> { tool("reader_singularity.rb") }),
@@ -119,6 +121,35 @@ def biz_check
   capture({ "BIZ_OUT_DIR" => dir }, "node", File.join(ROOT, "BIZ", "tools", "bp_check.mjs"),
           chdir: dir)
 end
+
+    def repo_ecology(tree)
+      require File.join(MASTER, "lib", "review", "repo_ecology")
+      report = Master::Review::RepoEcology.new(root: ROOT).scan(
+        path: File.join(ROOT, tree),
+        include_history: false,
+      )
+      score = report.fetch(:score)
+      details = [
+        "files=#{report.fetch(:files)}",
+        "score=#{score.fetch(:grade)}(#{score.fetch(:value)}/100)",
+        "dead_files=#{Array(report[:dead_file_candidates]).size}",
+        "dead_methods=#{Array(report[:dead_method_candidates]).size}",
+        "duplicate_basenames=#{Array(report[:duplicate_basenames]).size}",
+        "similar_clusters=#{Array(report[:similar_clusters]).size}",
+        "large_files=#{Array(report[:large_files]).size}",
+        "history=not_measured",
+      ]
+      [true, ["repoecology: #{details.join(" ")}"]]
+    rescue StandardError => e
+      [false, ["repoecology: #{e.class}: #{e.message}"]]
+    end
+
+    # The full census is read-only unless --ratchet is supplied; audit never
+    # supplies it. Keep the complete metrics together as one probe receipt.
+    def sprawl_census
+      ok, lines = tool("lib/operator/sprawl_census.rb")
+      [ok, ["sprawl_census: #{lines.map(&:strip).reject(&:empty?).join("; ")}"]]
+    end
 
     def rake(task)
       capture(RbConfig.ruby, "-S", "rake", task, chdir: MASTER)

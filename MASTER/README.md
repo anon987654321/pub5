@@ -31,7 +31,7 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 `/fix` is the one governed pipeline command. Its `--mode=` presets are:
 
 - `repair` (default): observe, critique when configured, repair, re-observe and verify; writes are enabled unless a read-only flag is supplied.
-- `audit`: read-only tree review: first-read, execution trace, non-persisting backlog review when due, structural review, scanner/structural preview, typography and principle map, council critique, and the existing per-tree repo-sweep probes (Cohesion file-family and repeated-method-shape reports, DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe output distinguishes subprocess completion from instrument findings; exit 0 is not a Law PASS. Repair is replaced by preview; tree/backlog/structural review proposals are not persisted.
+- `audit`: read-only tree review: first-read, execution trace, non-persisting backlog review when due, structural review, scanner/structural preview, typography and principle map, council critique, and the existing per-tree repo-sweep probes (RepoEcology (history cache disabled during audit), the full SprawlCensus, Cohesion file-family and repeated-method-shape reports, DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe output distinguishes subprocess completion from instrument findings; exit 0 is not a Law PASS. Repair is replaced by preview; tree/backlog/structural review proposals are not persisted.
 - `visual`: read-only style pass (`--dry-run --only=style`).
 - `elevate`: the existing improvement lane (`--lane=elevate`).
 - `all`: the existing all-work lane (`--lane=all`), write-enabled and still subject to existing budgets.
