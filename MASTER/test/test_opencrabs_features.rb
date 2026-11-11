@@ -213,6 +213,45 @@ class TestOpenCrabsFeatures < Minitest::Test
     pool&.join_all(timeout: 1)
   end
 
+  def test_agent_pool_join_all_waits_for_every_worker_before_raising
+    release = Queue.new
+    started = Queue.new
+    pool = Master::Review::AgentPool.new(
+      governor: nil,
+      taxonomy: { "spawn_policy" => { "max_concurrent_children" => 2 } },
+    )
+    failed = pool.spawn(type: :explore) { raise "first worker failed" }
+    healthy = pool.spawn(type: :explore) do
+      started << true
+      release.pop
+      :finished
+    end
+    assert failed.ok?
+    assert healthy.ok?
+    started.pop
+
+    outcome = Queue.new
+    joiner = Thread.new do
+      begin
+        outcome << pool.join_all
+      rescue StandardError => error
+        outcome << error
+      end
+    end
+    sleep 0.02
+    assert joiner.alive?, "join_all must wait for the healthy sibling after a worker failure"
+    release << :continue
+    joiner.join
+
+    error = outcome.pop
+    assert_instance_of RuntimeError, error
+    assert_equal "first worker failed", error.message
+    assert_equal 0, pool.active_count
+  ensure
+    release << :continue if release && healthy&.ok?
+    joiner&.join(1)
+  end
+
   def test_agent_pool_denies_spawn_when_governor_raises
     events = []
     bus = Object.new
