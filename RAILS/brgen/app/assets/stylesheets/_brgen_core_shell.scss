@@ -520,7 +520,7 @@ a.brgen-logo-mark,
   min-height: var(--tap-min);
   min-width: var(--tap-min);
   padding: 0.25rem 4px;
-  font: var(--weight-heavy) clamp(0.9375rem, 2.8vw, 1.125rem) / 1 #{$brgen-logo-font};
+  font: 700 clamp(0.9375rem, 2.8vw, 1.125rem) / 1 #{$brgen-logo-font};
   letter-spacing: var(--tracking-tightest);
   color: var(--text);
   text-decoration: none;
