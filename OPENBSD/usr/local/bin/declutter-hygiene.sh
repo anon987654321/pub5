@@ -12,12 +12,20 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 export PATH
 
-# This installs to /usr/local/bin and cannot source the repo's ruby_select.sh:
-# take the first Ruby the packages left beside it.
-RUBY=
-for _r in ruby4.0 ruby40 ruby3.4 ruby34 ruby3.3 ruby33 ruby; do
-  if [ -x "/usr/local/bin/$_r" ]; then RUBY="/usr/local/bin/$_r"; break; fi
-done
+# This installed helper cannot source the checkout's selector. Prefer
+# generic packaged Ruby, then discover any versioned package dynamically.
+RUBY=/usr/local/bin/ruby
+if [ ! -x "$RUBY" ] || ! "$RUBY" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+  RUBY=
+  for _r in /usr/local/bin/ruby[0-9]*; do
+    [ -x "$_r" ] || continue
+    if "$_r" -e 'require "rubygems"; exit(Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3") ? 1 : 0)' >/dev/null 2>&1; then
+      RUBY=$_r
+      break
+    fi
+  done
+fi
+[ -n "$RUBY" ] || { echo "installed helper: Ruby >= 3.3 is required" >&2; exit 1; }
 
 CEILING=${DECLUTTER_HYGIENE_LOAD_CEILING:-3.0}
 WAIT_TICKS=${DECLUTTER_HYGIENE_WAIT_TICKS:-15}
