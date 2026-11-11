@@ -28,6 +28,33 @@ class TestCandidateThreads < Minitest::Test
     end
   end
 
+  def test_partial_candidate_startup_is_killed_when_a_later_thread_creation_fails
+    started = Queue.new
+    workers = []
+    original_new = Thread.method(:new)
+    calls = 0
+
+    Thread.stub(:new, lambda { |*args, **kwargs, &block|
+      calls += 1
+      raise ThreadError, "thread limit reached" if calls == 2
+
+      original_new.call(*args, **kwargs) do
+        workers << Thread.current
+        started << true
+        block.call
+      end
+    }) do
+      error = assert_raises(ThreadError) do
+        repair.send(:candidate_threads, 2, violation: {}, event: "test") { sleep 30 }
+      end
+      assert_equal "thread limit reached", error.message
+    end
+
+    assert started.pop(timeout: 2), "the first candidate should have started"
+    workers.each { |thread| thread.join(2) }
+    refute workers.any?(&:alive?), "a partially started candidate must not outlive startup failure"
+  end
+
   # The file budget ends a repair with Timeout; a candidate still asking its model must not outlive it.
   def test_a_candidate_still_running_when_the_caller_gives_up_is_killed
     started = Queue.new
