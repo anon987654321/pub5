@@ -10,6 +10,7 @@
 #   ruby MASTER/tools/agent_context.rb                 # the standing context
 #   ruby MASTER/tools/agent_context.rb "<prompt>"      # plus what matches it
 #   ruby MASTER/tools/agent_context.rb --json          # the same, as data
+#   ruby MASTER/tools/agent_context.rb --json --checks # plus the claim-to-check map
 #   ruby MASTER/tools/agent_context.rb --json --tree   # plus the tree map
 #
 # Designed for a UserPromptSubmit hook, so it has to be small: data/laws.yml is
@@ -17,6 +18,7 @@
 # go out — the binding half: the conduct rules that govern how to work, what the
 # check can actually block on, and how much of the law is unmeasured right now.
 
+require "yaml"
 require_relative "../lib/fix/protocol"
 require_relative "../lib/operator/capability_manifest"
 
@@ -216,13 +218,59 @@ module Operator
       out.join("\n")
     end
 
-    # The same standing context as #render, as data. For harnesses and session
-    # handoffs that consume JSON rather than prose: the conduct rules in
-    # force, the rules that can refuse a write, coverage, and the operator
-    # shell contract. Every field is read from the same methods the prose
-    # mode prints — this is a serialization of one authority, never a second
-    # one. With --tree, the rendered tree lines ride along under "tree".
-    def session_json(tree: false, tree_root: REPO_ROOT, tree_depth: TREE_DEFAULT_DEPTH, tree_max_entries: TREE_DEFAULT_MAX_ENTRIES)
+    # Project the operational check registry for agents that need to connect a
+    # stated claim to the instrument and preconditions that produce it. The
+    # runner remains the execution authority; this projection is not evidence
+    # that a check ran or passed, and it is not a second registry.
+    def claim_check_map
+      source = "MASTER/checks/checks.yml"
+      path = File.join(MASTER_DIR, "checks", "checks.yml")
+      registry = YAML.safe_load_file(path, aliases: false)
+      raise "check registry root must be a mapping" unless registry.is_a?(Hash)
+
+      entries = registry.sort.map do |name, row|
+        raise "check registry row #{name} must be a mapping" unless row.is_a?(Hash)
+
+        has_class = row.key?("class")
+        has_script = row.key?("script")
+        raise "check registry row #{name} must declare exactly one instrument" unless has_class ^ has_script
+
+        instrument = if has_script
+                       { "kind" => "script", "path" => row.fetch("script") }
+                     else
+                       { "kind" => "class", "class" => row.fetch("class") }
+                     end
+        instrument["require"] = row["require"] if row["require"].is_a?(String)
+
+        claim = row["pass"].to_s.strip
+        entry = {
+          "check" => name.to_s,
+          "claim" => claim.empty? ? nil : claim,
+          "claim_status" => claim.empty? ? "not_declared" : "declared",
+          "instrument" => instrument,
+          "needs" => Array(row["needs"]).map(&:to_s),
+        }
+        entry["covered_by"] = row["covered_by"].to_s if row["covered_by"]
+        entry["gap"] = row["gap"] if row["gap"].is_a?(Hash)
+        entry
+      end
+
+      {
+        "schema" => 1,
+        "source" => source,
+        "execution_command" => "ruby MASTER/checks/runner.rb --all",
+        "interpretation" => "Registry claims and instruments only; not evidence of execution or success.",
+        "entry_count" => entries.size,
+        "entries" => entries,
+      }
+    rescue StandardError => e
+      { "schema" => 1, "source" => source, "status" => "unavailable", "error" => e.class.to_s }
+    end
+
+    # The same standing context as #render, as data. The full operational
+    # claim-to-check map is opt-in with --checks so routine prompt context stays
+    # bounded; --tree adds the rendered source tree under "tree".
+    def session_json(tree: false, tree_root: REPO_ROOT, tree_depth: TREE_DEFAULT_DEPTH, tree_max_entries: TREE_DEFAULT_MAX_ENTRIES, checks: false)
       require "json"
       authority_order = source_authority
       payload = {
@@ -236,6 +284,7 @@ module Operator
         "task_contract_schema" => Master::Fix::TaskContract.agent_schema,
         "capabilities" => Operator::CapabilityManifest.new(root: REPO_ROOT).call,
       }
+      payload["claim_check_map"] = claim_check_map if checks
       payload["tree"] = render_tree(root: tree_root, max_depth: tree_depth, max_entries: tree_max_entries) if tree
       payload
     end
@@ -249,12 +298,14 @@ if $PROGRAM_NAME == __FILE__
   elsif ARGV.include?("--json")
     require "json"
     tree = ARGV.include?("--tree")
+    checks = ARGV.include?("--checks")
     root, depth, max_entries = tree ? Operator::AgentContext.tree_args(ARGV) : nil
     puts JSON.generate(Operator::AgentContext.session_json(
                          tree:,
                          tree_root: root,
                          tree_depth: depth,
                          tree_max_entries: max_entries,
+                         checks:,
                        ))
   elsif (options = Operator::AgentContext.tree_args(ARGV))
     root, depth, max_entries = options
