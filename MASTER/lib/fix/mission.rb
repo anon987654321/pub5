@@ -3,6 +3,7 @@
 require "json"
 require "digest"
 require "fileutils"
+require "pathname"
 require "securerandom"
 require "socket"
 require "time"
