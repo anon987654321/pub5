@@ -32,7 +32,7 @@ class TestRepairMemory < Minitest::Test
 
     Dir.mktmpdir do |root|
       source = File.join(root, "a.rb")
-      File.write(source, "x = 1\\n")
+      File.write(source, "x = 1\n")
       ready_read, ready_write = IO.pipe
       start_read, start_write = IO.pipe
       children = %w[LAW_ALPHA LAW_BETA].map do |law|
@@ -67,6 +67,23 @@ class TestRepairMemory < Minitest::Test
       children&.each do |pid|
         Process.wait(pid) rescue Errno::ECHILD
       end
+    end
+  end
+
+  def test_corrupt_repair_memory_fails_closed_without_erasing_the_original
+    Dir.mktmpdir do |root|
+      directory = File.join(root, ".master")
+      FileUtils.mkdir_p(directory)
+      state = File.join(directory, "fix_memory.json")
+      corrupt = "{ this is not valid JSON\n"
+      File.write(state, corrupt)
+      File.chmod(0o660, state)
+      memory = Memory.new(root:)
+
+      error = assert_raises(IOError) { memory.fresh("a.rb", [finding("FEATURE_ENVY")]) }
+
+      assert_match(/repair memory is malformed/, error.message)
+      assert_equal corrupt, File.read(state)
     end
   end
 
