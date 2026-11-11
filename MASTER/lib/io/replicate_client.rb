@@ -199,7 +199,8 @@ module Master
           opened_file = file.stat
           current_file = File.lstat(full)
           current_directory = File.lstat(directory_path)
-          return unless private_token_stats?(opened_file, current_directory)
+          return unless private_token_stats?(opened_file, current_directory) &&
+                        private_token_stats?(current_file, current_directory)
           return unless same_file?(opened_file, before_file) &&
                         same_file?(opened_file, current_file) &&
                         same_file?(before_directory, current_directory)
@@ -209,9 +210,12 @@ module Master
           return if contents.bytesize > MAX_TOKEN_FILE_BYTES
 
           final_file = File.lstat(full)
+          final_opened_file = file.stat
           final_directory = File.lstat(directory_path)
-          return unless private_token_stats?(opened_file, final_directory)
-          return unless same_file?(opened_file, final_file) &&
+          return unless private_token_stats?(final_opened_file, final_directory) &&
+                        private_token_stats?(final_file, final_directory)
+          return unless same_file?(opened_file, final_opened_file) &&
+                        same_file?(final_opened_file, final_file) &&
                         same_file?(before_directory, final_directory)
 
           contents
