@@ -1252,8 +1252,9 @@ test("thinking face keeps the single composer ready beneath an ASCII spinner", (
   assert.ok(part5.includes("_turnQueueRunning ? 'thinking' : ''"));
   assert.ok(part5.includes("rootBody.dataset.queuePaused = _turnQueuePaused ? '1' : '0';"));
   assert.ok(part5.includes("syncThinkingStar();"));
-  assert.ok(cliSpinner.includes("TICK_SECONDS = 0.10"));
-  assert.ok(cliSpinner.includes('SPINNER_FRAMES = ["|", "/", "-", "\\\\"].freeze'));
+  assert.ok(cliSpinner.includes("TICK_SECONDS = 0.18"));
+  assert.ok(cliSpinner.includes('SPINNER_FRAMES = [".", ":", ";", "o", "O", "0", "@", "0", "O", "o", ";", ":", ".", "+", "x", "*"].freeze'));
+  assert.ok(cliSpinner.includes("SPIN_WHITE_HOT_START = 0.92"));
 });
 
 test("web chat records monotonic first-token, first-audio and reply-completion latency", () => {
