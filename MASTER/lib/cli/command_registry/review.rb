@@ -965,10 +965,12 @@ module Master
 
       def parse_pass_flags(raw)
         flags = { apply: nil, critique: nil, aesthetic: true, only: nil }
+        explicit_read_only = false
         path_bits = []
         joined_only(raw.split(/\s+/)).each do |token|
           if (flag = PASS_FLAGS[token.downcase])
             flags[flag.first] = flag.last
+            explicit_read_only ||= flag.first == :apply && flag.last == false
           elsif DMESG_FLAGS.key?(token.downcase)
             next
           elsif token.match?(DISPATCH_FLAG)
@@ -981,6 +983,9 @@ module Master
             path_bits << token
           end
         end
+        # A read-only request is a safety constraint, not an order-sensitive toggle.
+        # A later compatibility --apply cannot undo --dry-run, --read-only, --plan or --no-autofix.
+        flags[:apply] = false if explicit_read_only
         flags.values_at(:apply, :critique, :aesthetic, :only) + [path_bits.join(" ")]
       end
 
