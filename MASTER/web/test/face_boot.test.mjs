@@ -239,6 +239,8 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(world, /return SUBJECT_HINTS\.find\(\(\[, pattern\]\) => pattern\.test\(text\)\)\?\.\[0\] \|\| "face"/);
   assert.match(world, /declaredKind === "object" \|\| !subjectFeatures\(declaredKind\)\.length/);
   assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
+  assert.match(world, /const explicitSubject = visualSubject !== null && visualSubject !== undefined/);
+  assert.match(world, /const next = descriptor \? "object" : "face"/);
   assert.match(world, /Math\.min\(6, Math\.floor\(finite\(SEMANTIC_SUBJECT\.max_features/);
   assert.match(world, /function buildSemanticSubjectGeometry\(descriptor, count, scale\)/);
   assert.match(world, /function setSubjectFromVisual\(value, descriptor\)/);
