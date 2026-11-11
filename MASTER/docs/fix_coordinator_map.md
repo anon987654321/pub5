@@ -154,7 +154,17 @@ configuration, task-contract preservation and CLI routing. The count-only
 plateau regression confirms the pass runner aborts its active transaction at
 the plateau boundary; rollback is owned by `plateau_result`, not by the
 stagnation detector itself. Streaming now rejects a zero, negative or non-integer
-worker count; `MASTER_FIX_STREAM=0` remains the explicit no-worker mode.
+worker count to the range 1–8 (default 3); `MASTER_FIX_STREAM=0` remains the
+explicit no-worker mode. The cap is intentionally below the existing critical
+host thread threshold and is checked before any worker is created.
+
+The unattended backlog bridge now uses ProofMap v2: known shell prefixes are
+normalized, supported full/focused test, lint/audit, visual, accessibility and
+native runtime commands map to the existing TaskContract proof vocabulary, and
+unknown commands remain ineligible. The executor now rejects symlinked path
+components and hard-linked files, including links that resolve elsewhere
+inside the checkout. Tests for these paths and proof forms are authored, not
+run.
 
 The Kernel lifecycle suite already contains independent-process and independent-
 Kernel lock serialization cases, while the crash/transaction suites assert that
