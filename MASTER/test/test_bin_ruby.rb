@@ -6,28 +6,23 @@ require "tmpdir"
 require "fileutils"
 require_relative "../lib/operator/ruby_runner"
 
-# bin/ruby picks the exact .ruby-version interpreter and execs the rest of the line.
+# bin/ruby uses the host Ruby first and execs the rest of the line.
 # Whichever it picks, the line must run under it with its arguments intact.
 class TestBinRuby < Minitest::Test
   BIN = File.expand_path("../bin/ruby", __dir__)
 
-  def test_supported_window_accepts_packaged_openbsd_and_ruby_four_versions
+  def test_supported_ruby_floor_has_no_artificial_upper_bound
     window = Operator::Environment
-    ok = ->(version) { window::SUPPORTED_RUBY_MIN <= Gem::Version.new(version) && Gem::Version.new(version) < window::SUPPORTED_RUBY_MAX }
+    ok = ->(version) { window::SUPPORTED_RUBY_MIN <= Gem::Version.new(version) }
 
-    %w[3.3.9 3.4.9 4.0.5 4.0.7].each { |version| assert ok.(version), version }
+    %w[3.3.8 3.4.9 4.0.5 4.0.7 4.1.0 4.2.0].each { |version| assert ok.(version), version }
     refute ok.("3.2.9")
-    refute ok.("4.1.0")
   end
 
-  def test_the_wrapper_window_matches_the_supported_window
+  def test_wrapper_has_no_artificial_upper_version
     source = File.read(BIN)
-    min = Operator::Environment::SUPPORTED_RUBY_MIN.segments
-    max = Operator::Environment::SUPPORTED_RUBY_MAX.segments
-
-    assert_includes source, "MIN_MAJOR=#{min[0]}\nMIN_MINOR=#{min[1]}"
-    # The wrapper's upper bound is inclusive (4.0), the module's exclusive (< 4.1).
-    assert_includes source, "MAX_MAJOR=#{max[0]}\nMAX_MINOR=#{max[1] - 1}"
+    assert_includes source, "MIN_MAJOR=3\\nMIN_MINOR=3"
+    refute_includes source, "MAX_MAJOR="
   end
 
   def test_it_execs_a_ruby_with_the_arguments_intact
@@ -69,7 +64,7 @@ class TestBinRuby < Minitest::Test
     ENV["PATH"] = old_path
   end
 
-  def test_rbenv_path_uses_the_repo_pinned_version
+  def test_rbenv_candidates_are_not_selected_by_a_repo_pin
     old_path = ENV["PATH"]
     old_fake_path = ENV["FAKE_RBENV_PATH"]
     old_rbenv_root = ENV["RBENV_ROOT"]
