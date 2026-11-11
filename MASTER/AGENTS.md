@@ -19,6 +19,23 @@ this block and run `cd MASTER && rake docs:agent_contracts`; `rake
 lint:agent_contracts` checks the contract and all pointers. One source,
 four generated files, one complete policy copy.
 
+## First-run quickstart
+
+Use `MASTER/docs/COLD_START.md` for the complete first-run sequence. The
+essential checks are:
+
+```sh
+MASTER/bin/dev-bootstrap
+MASTER/bin/master --self-test
+MASTER/bin/master
+```
+
+`--self-test` emits a JSON boot/capability receipt and does not send a prompt.
+At the prompt, `/doctor keyless` sends the small anonymous hosted completion
+probe; only its provider response proves that free compute answered. Rendered
+RAILS evidence starts with `MASTER/bin/operator browser install`, then
+`MASTER/bin/operator visual sweep APP --one-page` before the full sweep.
+
 ## Task entry and artifact preservation
 
 For every substantive change, state intent, repository-relative scope, mandatory preservation
