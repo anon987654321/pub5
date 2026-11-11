@@ -308,10 +308,19 @@ class TestBacklog < Minitest::Test
       }
       record = {
         "origin" => "backlog", "state" => "completed", "stage" => "deliver",
-        "summary" => "proof complete; focused tests passed",
+        "summary" => "proof complete; focused tests passed and pushed",
         "finished_at" => Time.now.utc.iso8601,
         "artifacts" => [], "repository_writes" => {},
-        "id" => "mission-1", "plan" => JSON.generate(plan),
+        "proof" => {
+          "kind" => "fix_pipeline", "status" => "pass",
+          "scope_paths" => ["MASTER/lib/example.rb"],
+          "report_digest" => "a" * 64,
+          "proof_summary" => "fix done - 1 commit delivered - proof: 12 of 12 - hard red 0",
+        },
+        "repository_pushes" => [
+          { "remote" => "origin", "branch" => "main", "commit" => "b" * 40, "pushed_at" => Time.now.utc.iso8601 },
+        ],
+        "id" => "mission-1", "plan" => JSON.generate(plan.merge("scope_paths" => ["MASTER/lib/example.rb"])),
       }
 
       Backlog.stub(:generate, [row]) do
@@ -322,8 +331,10 @@ class TestBacklog < Minitest::Test
       assert_equal 1, receipts.length
       receipt = receipts.first
       assert_equal "safe-task", receipt.fetch("item_id")
-      assert_equal "mission_terminal_delivery_receipt", receipt.fetch("proof_status")
+      assert_equal "verified_fix_pipeline_and_origin_main", receipt.fetch("proof_status")
       assert_equal 0, receipt.dig("evidence", "pending_repository_writes")
+      assert_equal "fix_pipeline", receipt.dig("proof", "kind")
+      assert_equal "origin", receipt.dig("repository_pushes", 0, "remote")
     end
   end
 
