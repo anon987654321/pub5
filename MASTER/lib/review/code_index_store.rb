@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require "digest"
-require "fileutils"
 require "json"
 require "prism"
+require_relative "../io/atomic_write"
 
 module Master
   module Review
@@ -18,6 +18,8 @@ module Master
     # comparing a single row. A stamp of the schema, Prism's version and the
     # parser's own source rejects a snapshot made by different parsing logic.
     class CodeIndexStore
+      include Master::Io::AtomicWrite
+
       SCHEMA = 2
       REL_DIR = File.join(".master", "code_index").freeze
 
@@ -42,6 +44,13 @@ module Master
 
       # { symbols:, references:, signatures:, tree_hash: } or nil when absent or stale.
       def load
+        directory = verified_atomic_directory(File.dirname(@path))
+        return unless directory == File.dirname(@path)
+        return unless File.file?(@path) && !File.symlink?(@path)
+
+        file_stat = File.lstat(@path)
+        return unless file_stat.file? && !file_stat.symlink? && file_stat.nlink == 1
+
         data = JSON.parse(File.read(@path))
         return unless data["stamp"] == stamp && data["root"] == @root
 
@@ -52,12 +61,11 @@ module Master
           signatures: data["signatures"],
           tree_hash: data["tree_hash"],
         }
-      rescue SystemCallError, JSON::ParserError
+      rescue SystemCallError, IOError, JSON::ParserError
         nil
       end
 
       def save(symbols:, references:, signatures:)
-        FileUtils.mkdir_p(File.dirname(@path))
         # Files repeat on every row, so rows carry an index into one table.
         files = signatures.keys
         index = files.each_with_index.to_h
@@ -66,11 +74,9 @@ module Master
           symbols: symbols.map { |s| [s.fqn, s.type, index.fetch(s.file), s.line, s.parent, s.includes] },
           references: references.map { |r| [index.fetch(r.from_file), r.from_line, r.to_fqn, r.ref_type] }
         }
-        tmp = "#{@path}.#{Process.pid}.tmp"
-        File.write(tmp, JSON.generate(body))
-        File.rename(tmp, @path)
-      rescue SystemCallError
-        FileUtils.rm_f(tmp) if tmp
+        write_atomic(@path, JSON.generate(body), mode: 0o600)
+        true
+      rescue SystemCallError, IOError
         nil
       end
 
