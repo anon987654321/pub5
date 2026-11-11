@@ -407,33 +407,69 @@
     return positions;
   }
 
-  function setSubjectForm(value) {
-    const form = SUBJECT_FORMS.has(String(value || "").toLowerCase())
-      ? String(value).toLowerCase()
+  function subjectSignature(subject) {
+    return subject ? [subject.kind, subject.label, subject.sequence.join(",")].join("|") : "";
+  }
+
+  function setSubjectForm(value, descriptor = null) {
+    const requested = String(value || "").toLowerCase();
+    const normalized = normalizeVisualSubject(descriptor);
+    const form = requested === "object" && normalized
+      ? "object"
+      : SUBJECT_FORMS.has(requested) && requested !== "object" ? requested
       : "constellation";
-    if (form === semanticForm && splatTargetPositions) return form;
+    const nextDescriptor = form === "object" ? normalized : null;
+    if (form === semanticForm && subjectSignature(nextDescriptor) === subjectSignature(semanticDescriptor) &&
+        (splatTargetPositions || form === "face")) return form;
+
     semanticForm = form;
+    semanticDescriptor = nextDescriptor;
     semanticBlendTarget = form === "face" ? 0 : 1;
-    splatTargetPositions = buildSubjectPositions(form);
+    const proxyGeometry = form === "object" && semanticDescriptor && splatCount > 0
+      ? buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34)
+      : null;
+    splatTargetPositions = proxyGeometry?.positions || buildSubjectPositions(form);
+    splatTargetStages = proxyGeometry?.stages || null;
+    const currentPositions = splatProxy?.geometry?.getAttribute?.("position")?.array;
+    splatMorphFromPositions = currentPositions
+      ? new Float32Array(currentPositions)
+      : splatBasePositions?.slice() || null;
+    semanticMorphStartedAt = nowMs();
 
     const facePositions = form === "face" ? null : buildFaceSubjectPositions(form);
     nativeSubjectField = form === "face"
       ? window.MASTER_FACE?.resetSubjectScatter?.() === true
       : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions) === true);
-    // If the primary renderer can take the semantic field, let its actual face
-    // vertices morph and keep the secondary cloud dormant. Older/no-WebGL builds
-    // retain the bounded FaceWorld cloud as a graceful fallback.
-    semanticMorphInProgress = nativeSubjectField ? false : Boolean(splatTargetPositions);
+    // The primary field uses the face renderer's existing spring. The bounded
+    // FaceWorld point field is the compatibility path, never a second renderer.
+    semanticMorphInProgress = !nativeSubjectField && Boolean(splatTargetPositions && splatProxy);
     document.documentElement.dataset.faceSubject = form;
     document.documentElement.dataset.faceSubjectRenderer = nativeSubjectField ? "primary-points" : "face-world-fallback";
+    document.documentElement.dataset.faceSubjectKind = semanticDescriptor?.kind || "";
+    document.documentElement.dataset.faceSubjectLabel = semanticDescriptor?.label || "";
+    document.documentElement.dataset.faceSubjectSequence = semanticDescriptor?.sequence?.join(">") || "";
     window.dispatchEvent(new CustomEvent("master:face-subject", {
-      detail: { form, active: semanticBlendTarget > 0, renderer: nativeSubjectField ? "primary-points" : "face-world-fallback" }
+      detail: {
+        form,
+        active: semanticBlendTarget > 0,
+        renderer: nativeSubjectField ? "primary-points" : "face-world-fallback",
+        kind: semanticDescriptor?.kind || null,
+        label: semanticDescriptor?.label || null,
+        sequence: semanticDescriptor?.sequence || [],
+        confidence: semanticDescriptor?.confidence ?? null
+      }
     }));
     return form;
   }
 
   function setSubjectFromText(value) {
-    return setSubjectForm(inferSubjectForm(value));
+    const descriptor = inferVisualSubject(value);
+    return descriptor ? setSubjectForm("object", descriptor) : setSubjectForm(inferSubjectForm(value));
+  }
+
+  function setSubjectFromVisual(value, descriptor) {
+    const normalized = normalizeVisualSubject(descriptor);
+    return normalized ? setSubjectForm("object", normalized) : setSubjectFromText(value);
   }
 
   // The semantic subject follows the active conversation and returns to the
@@ -445,6 +481,7 @@
   let subjectRestoreTimer = null;
   let subjectTransitionTimer = null;
   let pendingSubjectForm = null;
+  let pendingSubjectDescriptor = null;
   let subjectTransitionGeneration = 0;
 
   function clearSubjectRestoreTimer() {
