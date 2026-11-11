@@ -8,6 +8,7 @@ require "socket"
 require "yaml"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
+require_relative "../../../OPENBSD/lib/deploy_inventory"
 
 module Operator
   # The post-deploy canary. It answers one question after vps-deploy: is the box
@@ -313,6 +314,9 @@ module Operator
     # leaves the suite to the box.
     def remote_command(root:, app:, env: ENV, git: method(:git_out), runner: method(:capture), out: $stdout,
                        ci_runner: method(:local_ci))
+      inventory = Deploy::Inventory.new(root:)
+      return [false, "unknown deployment target #{app.inspect}; no inventory match"] if inventory.target_kind(app) == :unknown
+
       git.call(root, "fetch", "-q", "origin", "main")
       sha = git.call(root, "rev-parse", "HEAD")
       return [false, "cannot read HEAD of #{root}"] if sha.empty?
@@ -337,18 +341,18 @@ module Operator
         out.puts("ci0: #{app} bin/ci on #{sha[0, 9]} here; a green run lets the box skip its suite")
         ci_runner.call(root:, app:)
       end
-      ok, ci_word = ci_attestation(app:, sha:, env:, run: run_ci)
+      ok, ci_word = ci_attestation(root:, app:, sha:, env:, run: run_ci)
       return [false, ci_word] unless ok
 
       [true, ["#{lead} VPS_DEPLOY_PREFLIGHT_SHA=#{sha}", ci_word, tail].compact.join(" ")]
     end
 
-    CI_APPS = %w[brgen amber bsdports].freeze
-
-    # [true, nil] when the box keeps its own suite, [true, "VPS_DEPLOY_CI_SHA=..."]
-    # after a green bin/ci here, [false, reason] after a red one.
-    def ci_attestation(app:, sha:, env:, run:)
-      return [true, nil] unless CI_APPS.include?(app) && env["VPS_DEPLOY_LOCAL_CI"] != "0"
+    # Local CI applies to any single inventory app whose deploy_root belongs to
+    # RAILS. Group targets leave per-app CI to their serial VPS child processes.
+    def ci_attestation(root:, app:, sha:, env:, run:)
+      inventory = Deploy::Inventory.new(root:)
+      row = inventory.apps.find { |candidate| candidate.name == app }
+      return [true, nil] unless row&.deploy_group == "rails" && env["VPS_DEPLOY_LOCAL_CI"] != "0"
       return [false, "#{app} bin/ci failed here on #{sha[0, 9]}; nothing was sent to the box"] unless run.call
 
       [true, "VPS_DEPLOY_CI_SHA=#{sha}"]

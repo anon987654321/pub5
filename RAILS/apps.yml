@@ -3,6 +3,8 @@
 # deploy_root: tracked tree copied to /home/<app>/app by <app>.sh
 # status: done | port | missing | planned
 #
+# deploy_order controls serial production ordering; groups are derived from the
+# namespace segment of deploy_root. App additions/removals need no router edits.
 # Verify claims: cd MASTER && bundle exec ruby bin/check --scan-only --tree=RAILS
 # Human summary: RAILS/README.md and per-app README.md
 # Shared layer: RAILS/__shared (pub5-shared gem)
@@ -65,6 +67,7 @@ apps:
 
   brgen:
     title: Brgen
+    deploy_order: 20
     domain: brgen.no
     brand:
       category: city_network
@@ -315,6 +318,7 @@ apps:
   # stays greyscale and the chat stays monospaced, as the CLI face is.
   master:
     title: MASTER
+    deploy_order: 10
     domain: ai.brgen.no
     brand:
       category: personal_ai
@@ -345,6 +349,7 @@ apps:
 
   amber:
     title: Amber
+    deploy_order: 40
     brand:
       category: personal_wardrobe_intelligence
       promise: "Know what you own. Wear what matters."
@@ -429,6 +434,7 @@ apps:
 
   bsdports:
     title: bsdports
+    deploy_order: 50
     domain: bsdports.org
     brand:
       category: open_source_package_intelligence
@@ -466,6 +472,7 @@ apps:
 
   mrdamascy:
     title: Mr. Damascy
+    deploy_order: 30
     domain: mrd.brgen.no
     brand:
       category: bergen_street_kebab_pwa

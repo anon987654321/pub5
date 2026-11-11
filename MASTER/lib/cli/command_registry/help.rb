@@ -56,12 +56,12 @@ module Master
           ],
         },
         "deploy" => {
-          summary: "redeploy MASTER, the Rails fleet, or one app on vm23 through the canonical VPS path",
+          summary: "deploy a registered app, inventory group, or the complete production fleet through the canonical VPS path",
           detail: [
-            "/deploy rails --confirm - deploy brgen, Mr Damascy, amber and bsdports; leave MASTER web untouched.",
-            "/deploy all --confirm - deploy MASTER web and every Rails app.",
-            "/deploy master --confirm - deploy MASTER web only.",
-            "Natural-language requests such as \"redeploy all Rails apps\" resolve to the rails group.",
+            "/deploy <group> --confirm - deploy every registered app whose deploy_root belongs to that group.",
+            "/deploy <app> --confirm - deploy one app registered in RAILS/apps.yml.",
+            "/deploy all --confirm - deploy every active registered surface, including MASTER web.",
+            "App IDs, aliases, deployment groups and ordering are resolved from the live inventory, not router lists.",
             "Deployment is always remote and review-gated. The command delegates to bin/operator",
             "and OPENBSD/bin/vps-deploy; it does not create a second deploy implementation.",
           ],

@@ -11,10 +11,9 @@ fi
 repo=${PUB5_ROOT:-/home/dev/pub5}
 script=${repo}/OPENBSD/bin/vps_ci.sh
 source "${repo}/OPENBSD/lib/ruby_select.sh"
-# The fleet is apps.yml's, in its order; a literal list here keeps testing three
-# apps after a fourth ships.
+# Every app in the RAILS deploy_root namespace participates automatically.
 apps=(${(f)"$("$RUBY" -r"${repo}/OPENBSD/lib/deploy_inventory" \
-  -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$repo")"})
+  -e 'puts Deploy::Inventory.new(root: ARGV[0]).ordered_apps(group: "rails").map(&:name)' "$repo")"})
 (( ${#apps} )) || { print -u2 "vps_ci_all: no apps read from ${repo}/RAILS/apps.yml"; exit 1 }
 max_load=${PUB4_CI_MAX_LOAD:-4}
 
@@ -39,11 +38,9 @@ wait_for_load() {
   done
 }
 
-# master is skipped: vps_ci.sh and pub4-admin ci-sync run CI in a copy-tree under
-# /home/<app>/app, and master has none — it runs in place under MASTER/web, so
-# its bin/ci runs from the checkout (MASTER/tools/rails/premerge.rb), not here.
+# MASTER has its own web preflight. The RAILS namespace is selected from
+# deploy_root, so there is no per-app exception list in this runner.
 for app in $apps; do
-  [[ $app == master ]] && continue
   wait_for_load
   zsh "$script" "$app" || exit $?
   sleep 10

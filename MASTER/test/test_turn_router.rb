@@ -3,15 +3,16 @@
 require_relative "test_helper"
 require "fileutils"
 require "shellwords"
+require "json"
 require "tmpdir"
 
 class TurnRouterTest < Minitest::Test
-  def build_container(commands: nil, root: Dir.pwd)
+  def build_container(commands: nil, root: Dir.pwd, agent: nil)
     renderer = Object.new
     renderer.define_singleton_method(:render) { |text, **| text }
     {
       session: Struct.new(:budget_max, :cost).new(0, 0.0),
-      agent: Struct.new(:model).new("test-model"),
+      agent: agent || Struct.new(:model).new("test-model"),
       renderer:,
       commands: commands || { "status" => Master::CLI::CommandRegistry::Command.new { "status-ok" } },
       root:,
@@ -104,38 +105,75 @@ class TurnRouterTest < Minitest::Test
     assert_equal "/fix --dry-run ../RAILS/amber", rewritten
   end
 
-  def test_deployment_intent_understands_natural_variants
-    router = Master::CLI::TurnRouter
+  def test_semantic_operator_routing_resolves_inventory_aliases_and_exclusions
+    response = {
+      "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
+      "target_type" => "public", "target" => "public", "exclude" => ["master"],
+      "confidence" => 0.96, "reason" => "All public app surfaces except the AI service.",
+    }
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) { |prompt, **options|
+      raise "schema was not supplied" unless options[:format].is_a?(Hash)
+      raise "inventory context missing" unless prompt.include?("Brgen")
+      JSON.generate(response)
+    }
+    routed = nil
+    Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+      routed = command
+      Master::Result.ok({ rendered: "captured" })
+    }) do
+      Master::CLI::TurnRouter.call(
+        message: "Please refresh the public applications, but leave the AI service untouched",
+        container: build_container(agent:),
+      )
+    end
 
-    assert router.deployment_intent?("please deploy MASTER and RAILS and OPENBSD to vm23 --confirm")
-    assert router.deployment_intent?("ship MASTER to production")
-    assert router.deployment_intent?("put the Rails fleet live on vm23")
-    assert router.deployment_intent?("release brgen to vm23 --confirm")
+    assert_equal "/deploy rails", routed
   end
 
-  def test_deployment_intent_does_not_turn_status_questions_into_mutations
-    router = Master::CLI::TurnRouter
+  def test_semantic_operator_routing_preserves_only_explicit_confirmation
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) do |_prompt, **|
+      JSON.generate(
+        "intent" => "operator_action", "operation" => "deploy", "environment" => "production",
+        "target_type" => "group", "target" => "rails", "exclude" => [],
+        "confidence" => 0.97, "reason" => "The requested application group.",
+      )
+    end
+    routed = nil
+    Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+      routed = command
+      Master::Result.ok({ rendered: "captured" })
+    }) do
+      Master::CLI::TurnRouter.call(
+        message: "Could you roll out the Rails applications --confirm",
+        container: build_container(agent:),
+      )
+    end
 
-    refute router.deployment_intent?("did the deploy work?")
-    refute router.deployment_intent?("why did deploy fail?")
-    refute router.deployment_intent?("check deploy status on vm23")
-    refute router.deployment_intent?("deploy status on vm23")
+    assert_equal "/deploy rails --confirm", routed
   end
 
-  def test_deployment_args_maps_fleet_language_to_all
-    router = Master::CLI::TurnRouter
+  def test_semantic_operator_question_is_not_dispatched_as_a_mutation
+    agent = Object.new
+    agent.define_singleton_method(:ask_once) do |_prompt, **|
+      JSON.generate(
+        "intent" => "conversation", "operation" => "none", "environment" => "unknown",
+        "target_type" => "all", "target" => "all", "exclude" => [],
+        "confidence" => 0.99, "reason" => "This is a question about a deployment.",
+      )
+    end
+    reached = nil
+    Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) { reached = :chat; Master::Result.ok({ rendered: "answer" }) }) do
+      Master::CLI::TurnRouter.stub(:dispatch_slash, ->(*) { reached = :dispatch; flunk "a question must not dispatch" }) do
+        Master::CLI::TurnRouter.call(
+          message: "Why did the last deploy fail?",
+          container: build_container(agent:),
+        )
+      end
+    end
 
-    assert_equal "all --confirm", router.deployment_args("ship MASTER and RAILS to vm23 --confirm")
-    assert_equal "all", router.deployment_args("put the whole stack live on vm23")
-    assert_equal "brgen --confirm", router.deployment_args("release brgen to production --confirm")
-  end
-
-  def test_deploy_confirmation_survives_natural_language_routing
-    args = Master::CLI::TurnRouter.deployment_args(
-      "please deploy MASTER and RAILS and OPENBSD to vm23 --confirm",
-    )
-
-    assert_equal "all --confirm", args
+    assert_equal :chat, reached
   end
 
   def test_a_file_read_is_not_casual_for_an_operator

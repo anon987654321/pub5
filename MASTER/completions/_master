@@ -11,7 +11,7 @@ _master() {
     'capabilities:discover core tools and optional plugin observation capabilities'
     'clear:clear the session transcript'
     'commit:commit the named paths'
-    'deploy:redeploy MASTER, the Rails fleet, or one app on vm23 through the canonical VPS path'
+    'deploy:deploy a registered app, inventory group, or the complete production fleet'
     'doctor:host, provider, exposure and hardware health'
     'documents:transcribe and sequence a local folder of photographed letters without altering the originals'
     'exit:leave the current MASTER session'

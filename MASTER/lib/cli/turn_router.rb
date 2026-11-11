@@ -2,6 +2,7 @@
 
 require "shellwords"
 require_relative "../io/media_intent"
+require_relative "operator_intent"
 
 module Master
   module CLI
@@ -39,8 +40,22 @@ module Master
         if text.match?(FIX_COMMAND)
           return dispatch_slash(rewrite_slash("/#{text}"), container:, felt_sense:, on_turn:, cancellation:)
         end
-        if deployment_intent?(text)
-          return dispatch_slash("/deploy #{deployment_args(text)}".strip, container:, felt_sense:, on_turn:)
+        proposal = OperatorIntent.new(
+          root: (Master::REPO_ROOT if defined?(Master::REPO_ROOT)) || container.fetch(:root, Dir.pwd),
+          agent: container[:agent],
+          event_bus: container[:bus],
+        ).call(text)
+        case proposal&.status
+        when :deploy
+          args = proposal.target.to_s
+          args = "#{args} --confirm" if text.match?(/(?:^|\s)--confirm(?:\s|$)/i)
+          return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:)
+        when :ambiguous
+          return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
+        when :unavailable
+          return Master::Result.err(proposal.message, category: :infrastructure)
+        when :unsupported
+          return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
         end
         if (shorthand = imperative_shorthand(text))
           return dispatch_slash(shorthand, container:, felt_sense:, on_turn:, cancellation:)
@@ -121,45 +136,6 @@ module Master
       FIX_SUBJECT = /\b(?:bugs?|violations?|lint|tests?|specs?|errors?|failures?|code|build|checks?)\b/i
       FIX_COMMAND = /\A\s*fix(?:\s*[.!]?\s*\z|#{FIX_TARGET}|\b(?=.*#{FIX_SUBJECT}))/i
 
-      DEPLOY_ACTION_WORDS = %w[deploy redeploy release ship publish launch push promote rollout].freeze
-      DEPLOY_DESTINATION_WORDS = %w[vm23 production prod live].freeze
-      DEPLOY_NEGATIVE_WORDS = %w[why when what how status check inspect logs log failed failing failure worked work working].freeze
-      DEPLOY_REFERENCE = /\b(?:re[- ]?deploy|deploy)(?:ment)?\b/i.freeze
-
-      def deployment_intent?(text)
-        value = text.to_s.strip
-        return false if value.empty?
-        return false if value.match?(/\?\s*\z/) && value.match?(/\b(?:#{DEPLOY_NEGATIVE_WORDS.join("|")})\b/i)
-        return false if value.match?(/\b(?:#{DEPLOY_NEGATIVE_WORDS.join("|")})\b.*#{DEPLOY_REFERENCE}|#{DEPLOY_REFERENCE}.*\b(?:#{DEPLOY_NEGATIVE_WORDS.join("|")})\b/i)
-        action = value.match?(/\b(?:re[- ]?deploy|#{DEPLOY_ACTION_WORDS.join("|")})\b/i) ||
-                 value.match?(/\bput\b.*\b(?:#{DEPLOY_DESTINATION_WORDS.join("|")})\b/i)
-        return false unless action
-        return true if value.match?(/\b(?:re[- ]?deploy|deploy)\b/i)
-        value.match?(/\b(?:#{DEPLOY_DESTINATION_WORDS.join("|")})\b/i) ||
-          value.match?(/\b(?:master|rails?|brgen|amber|bsdports|mrdamascy)\b/i)
-      end
-
-      def deployment_args(text)
-        value = text.to_s
-        components = value.scan(/\b(?:master|rails?|openbsd|brgen|amber|bsdports|mrdamascy)\b/i).map(&:downcase).uniq
-        rails_only = value.match?(/\brails?\b/i) &&
-                     !value.match?(/\b(?:master|openbsd)\b/i) &&
-                     !value.match?(/\b(?:whole|entire|everything)\s+(?:stack|repo|system|fleet)\b|\ball\s+(?:services|surfaces|stack)\b/i)
-        target = if rails_only
-          "rails"
-        elsif components.length >= 2 ||
-              value.match?(/\b(?:all|everything|fleet|whole|stack)\b/i)
-          "all"
-        elsif value.match?(/\bmaster\b/i)
-          "master"
-        elsif (app = value[/\b(?:brgen|amber|bsdports|mrdamascy)\b/i])
-          app.downcase
-        else
-          "all"
-        end
-        target += " --confirm" if value.match?(/(?:^|\s)--confirm(?:\s|$)/i)
-        target
-      end
 
       # A sentence that is exactly a registry word, "status" or "help", runs that
       # command without a model's inference. Below the visitor check, as every route

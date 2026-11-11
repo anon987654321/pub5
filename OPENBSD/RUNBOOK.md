@@ -579,14 +579,18 @@ when its pid is gone; every exit, including a halted `all`, releases it.
 
 ## Deploy-all disambiguation
 
+The operator resolves deployment groups and app IDs from `RAILS/apps.yml`.
+Group membership follows `deploy_root`, while `deploy_order` controls the
+serial order. MASTER belongs to its own namespace; a RAILS group request cannot
+silently include it. The degraded order moves the MASTER namespace last.
 Four scripts read as “do everything”, and they do four different things. Pick
 deliberately:
 
 | Script | CI | Scope | When |
 |--------|----|-------|------|
 | `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
-| `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | brgen, amber, bsdports | Normal code change; tests must pass |
-| `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | master + every app, in vps-deploy's order; `DEMO_SEED_ON_DEPLOY=1` adds brgen's demo seed | Fast hotfix; skips test check |
+| `zsh OPENBSD/bin/vps_ci_all.sh` | **Yes** — serial `vps_ci.sh` per app | Every app in the inventory's RAILS namespace | Normal code change; tests must pass |
+| `I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_production_push.sh` | **No** — `SKIP_CI=1 SKIP_RUNTIME_CHECK=1 bin/vps-deploy all`; only the post-restart checks run, and the runtime skip requires that exact acknowledgement. | Every active inventory app, in `deploy_order`; `DEMO_SEED_ON_DEPLOY=1` adds Brgen's demo seed | Fast hotfix; skips test check |
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
 | `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Calls the fixed `pub4-admin start-all-apps` broker verb; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 

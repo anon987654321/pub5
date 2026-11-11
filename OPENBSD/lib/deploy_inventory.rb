@@ -7,7 +7,9 @@ module Deploy
   class Inventory
     # Single canonical inventory implementation. MASTER's support path is a
     # require-only adapter into this file, so both toolchains share behavior.
-    App = Struct.new(:name, :title, :domain, :port, :deploy_script, :deploy_root, :public, keyword_init: true) unless defined?(App)
+    App = Struct.new(:name, :title, :domain, :port, :deploy_script, :deploy_root, :public, :deploy_order, keyword_init: true) do
+      def deploy_group = deploy_root.to_s.split("/", 2).first.to_s.downcase
+    end unless defined?(App)
 
     attr_reader :root
 
@@ -21,6 +23,31 @@ module Deploy
 
     def app_names
       apps.map(&:name)
+    end
+
+    def group_names
+      apps.map(&:deploy_group).reject(&:empty?).uniq.sort
+    end
+
+    def apps_for_group(name)
+      apps.select { |app| app.deploy_group == name.to_s.downcase }
+    end
+
+    def target_kind(target)
+      value = target.to_s.downcase
+      return :all if value == "all"
+      return :app if apps.any? { |app| app.name.casecmp?(value) }
+      return :group if group_names.include?(value)
+
+      :unknown
+    end
+
+    def ordered_apps(group: nil, degraded: false)
+      selected = group ? apps_for_group(group) : apps
+      selected.each_with_index.sort_by do |(app, index)|
+        master_last = degraded && app.deploy_group == "master" ? 1 : 0
+        [master_last, app.deploy_order || (10_000 + index), index]
+      end.map(&:first)
     end
 
     def master_apps(path: File.join(root, "OPENBSD", "deploy_inventory.json"))
@@ -71,7 +98,8 @@ module Deploy
         port: metadata.fetch("port").to_i,
         deploy_script: metadata.fetch("deploy_script"),
         deploy_root: metadata.fetch("deploy_root"),
-        public: metadata.fetch("public", false)
+        public: metadata.fetch("public", false),
+        deploy_order: metadata["deploy_order"]&.to_i
       )
     end
 
@@ -82,7 +110,9 @@ module Deploy
         domain: entry.fetch("domain"),
         port: entry.fetch("port").to_i,
         deploy_script: entry["deploy_script"],
-        deploy_root: entry["deploy_root"]
+        deploy_root: entry["deploy_root"],
+        public: entry.fetch("public", false),
+        deploy_order: entry["deploy_order"]&.to_i
       )
     end
   end

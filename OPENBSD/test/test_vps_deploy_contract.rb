@@ -21,30 +21,30 @@ class VpsDeployContractTest < Minitest::Test
   APPS = Deploy::Inventory.new(root: ROOT).app_names
   MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
 
-  def deploy_all
-    SOURCE[/^DEPLOY_ALL=\(([^)]*)\)/, 1]&.split
+  def test_deploy_scope_and_order_are_derived_from_inventory
+    inventory = Deploy::Inventory.new(root: ROOT)
+    all = inventory.ordered_apps
+    rails = inventory.ordered_apps(group: "rails")
+    degraded = inventory.ordered_apps(degraded: true)
+
+    assert_equal inventory.apps.map(&:name).sort, all.map(&:name).sort
+    assert_equal inventory.apps_for_group("rails").map(&:name).sort, rails.map(&:name).sort
+    assert_equal all.map(&:name).sort, degraded.map(&:name).sort
+    assert_equal "master", all.first.deploy_group
+    assert_equal "master", degraded.last.deploy_group
+    assert_includes SOURCE, "Deploy::Inventory.new"
+    assert_includes SOURCE, "ordered_apps"
+    assert_includes SOURCE, "target_kind"
+    refute_match(/DEPLOY_ALL=\([^)]*(?:brgen|amber|bsdports|mrdamascy)/, SOURCE)
   end
 
-  def test_the_fleet_it_deploys_is_the_fleet_apps_yml_declares
-    refute_nil deploy_all, "DEPLOY_ALL not found - the scan broke, not the script"
-
-    assert_equal APPS.sort, deploy_all.sort
-  end
-
-  # The script's own comment carries the argument: master leads because it is
-  # independent of the Rails apps and is the one that gets forgotten; amber and
-  # bsdports go last because every deploy sheds them, so deploying them last folds
-  # the restore into the same pass instead of leaving a window with nobody looking.
-  def test_the_order_that_survives_its_own_side_effects
-    assert_equal "master", deploy_all.first
-    assert_equal %w[amber bsdports], deploy_all.last(2).sort
-    degraded = SOURCE[/^DEPLOY_ALL_DEGRADED=\(([^)]*)\)/, 1]&.split
-    assert_equal "master", degraded&.last, "when the box cannot take master first, master goes last"
-    assert_equal deploy_all.sort, degraded.sort
-
-    runbook = File.read(File.join(ROOT, "OPENBSD", "RUNBOOK.md"))
-    assert_includes runbook, "Otherwise: brgen, mrdamascy, amber, bsdports, master."
-    assert_includes runbook, "remaining started services such as mrdamascy"
+  def test_deploy_root_controls_group_membership_without_app_name_rules
+    inventory = Deploy::Inventory.new(root: ROOT)
+    inventory.apps.each do |app|
+      assert_equal app.deploy_root.split("/", 2).first.downcase, app.deploy_group
+    end
+    assert_equal :unknown, inventory.target_kind("../outside")
+    assert_includes SOURCE, "unknown app or group"
   end
 
   def test_deploy_paths_export_openbsd_package_path
@@ -54,11 +54,11 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_it_rejects_an_unknown_deploy_target
-    assert_match(
-      /case \$app in\n\s+all\|master\|brgen\|amber\|bsdports\|mrdamascy\) ;;.*\n\s+\*\) .*exit 2/,
-      SOURCE,
-      "an arbitrary app name must not reach filesystem, service or deploy-stamp paths"
-    )
+    inventory = Deploy::Inventory.new(root: ROOT)
+
+    assert_equal :unknown, inventory.target_kind("../outside")
+    assert_includes SOURCE, "deploy_target_kind"
+    assert_includes SOURCE, "unknown app or group"
   end
 
   def test_master_deploy_refuses_root_override

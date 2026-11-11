@@ -1,16 +1,17 @@
 #!/usr/bin/env zsh
 # Serial VPS deploy entrypoint — sync, CI, restart, health, deploy stamp.
-# Usage: zsh OPENBSD/bin/vps-deploy all|rails|APP|master
+# Usage: zsh OPENBSD/bin/vps-deploy all|GROUP|APP
 set -euo pipefail
 
 # SSH executes this as a non-login shell on vm23; pin the OpenBSD package path.
 export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
 usage() {
-  print -r -- "usage: zsh OPENBSD/bin/vps-deploy all|rails|APP|master   (runs as root; re-execs via doas)
+  print -r -- "usage: zsh OPENBSD/bin/vps-deploy all|GROUP|APP   (runs as root; re-execs via doas)
 
-  all          MASTER web and every Rails app
-  rails        brgen, mrdamascy, amber and bsdports; MASTER web is left untouched
+  all          every active registered surface, including MASTER web
+  GROUP        every registered app whose deploy_root belongs to that namespace
+  APP          one exact app ID from RAILS/apps.yml
   VPS_DEPLOY_SHA=<sha>   deploy exactly this commit (default: origin/main, fetched once)
   VPS_DEPLOY_PREFLIGHT_SHA=<sha>   the operator's machine already proved this commit boots
   VPS_DEPLOY_CI_SHA=<sha>   the operator's machine ran the app's bin/ci green on this commit; the box skips its suite
@@ -68,6 +69,29 @@ fi
 # Unprivileged owner of the checkout and GitHub credentials on this box.
 DEPLOY_USER=${VPS_DEPLOY_USER:-dev}
 DEPLOY_HOME=${VPS_DEPLOY_HOME:-/home/$DEPLOY_USER}
+repo=${PUB5_ROOT:-/home/dev/pub5}
+source "$repo/OPENBSD/lib/ruby_select.sh"
+inventory_target_kind() {
+  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e \
+    'print Deploy::Inventory.new(root: ARGV[0]).target_kind(ARGV[1])' "$repo" "$1"
+}
+
+inventory_app_group() {
+  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e '
+    app = Deploy::Inventory.new(root: ARGV[0]).apps.find { |row| row.name == ARGV[1] }
+    print app&.deploy_group
+  ' "$repo" "$1"
+}
+
+inventory_names() {
+  local target=$1 degraded=${2:-0}
+  "$RUBY" -r"$repo/OPENBSD/lib/deploy_inventory" -e '
+    inventory = Deploy::Inventory.new(root: ARGV[0])
+    rows = ARGV[1] == "all" ? inventory.ordered_apps(degraded: ARGV[2] == "1") :
+                              inventory.ordered_apps(group: ARGV[1])
+    puts rows.map(&:name)
+  ' "$repo" "$target" "$degraded"
+}
 
 # Run a shell snippet as DEPLOY_USER without pulling root's environment into
 # the checkout. Always su: root may change to DEPLOY_USER without a doas rule.
@@ -88,10 +112,19 @@ git_as_deploy_user() {
 app=${1:-}
 [[ -n $app ]] || { usage >&2; exit 2 }
 
-case $app in
-  all|rails|master|brgen|amber|bsdports|mrdamascy) ;;
-  *) print -u2 "vps-deploy: unknown app \"$app\" - allowed: all, rails, master, brgen, amber, bsdports, mrdamascy"; exit 2 ;;
-esac
+# Restrict the log/path component to a safe identifier before inventory lookup.
+[[ $app != *[^A-Za-z0-9_-]* ]] || {
+  print -u2 "vps-deploy: invalid target identifier"
+  exit 2
+}
+# Until the pinned checkout is ready, the current inventory is only a
+# best-effort restore-order hint for services shed during preflight. These arrays
+# are refreshed from VPS_DEPLOY_SHA before target validation or deployment.
+deploy_target_kind=unknown
+typeset -a DEPLOY_ALL DEPLOY_ALL_DEGRADED DEPLOY_RAILS
+DEPLOY_ALL=(${(@f)"$(inventory_names all 2>/dev/null || true)"})
+DEPLOY_ALL_DEGRADED=(${(@f)"$(inventory_names all 1 2>/dev/null || true)"})
+DEPLOY_RAILS=(${(@f)"$(inventory_names rails 2>/dev/null || true)"})
 
 # Environment values below participate in shell arithmetic and bounded waits.
 # Validate their decimal spelling and limits before acquiring a lock or touching
@@ -390,8 +423,6 @@ if [[ -z ${VPS_DEPLOY_LOGGING:-} ]]; then
   log "argv: $*"
 fi
 
-repo=${PUB5_ROOT:-/home/dev/pub5}
-
 # Transitional adapter: use the fixed root-owned broker once installed. The
 # fallback remains until the operator sync has installed it on vm23.
 admin_service() {
@@ -530,7 +561,7 @@ restore_started() {
   local -a want order failed restored
   local svc port origin
   want=( ${=VPS_DEPLOY_STARTED} )
-  for svc in brgen amber bsdports master; do (( ${want[(Ie)$svc]} )) && order+=($svc); done
+  for svc in $DEPLOY_ALL_DEGRADED; do (( ${want[(Ie)$svc]} )) && order+=($svc); done
   for svc in $want; do (( ${order[(Ie)$svc]} )) || order+=($svc); done
   for svc in $order; do
     admin_service check "$svc" >/dev/null 2>&1 && continue
@@ -598,10 +629,10 @@ finish() {
   fi
   [[ -n $flag_keeper ]] && kill $flag_keeper 2>/dev/null
   rm -f -- "$deploy_flag"
-  if (( rc != 0 )) && [[ $app == all || $app == rails ]]; then
+  if (( rc != 0 )) && [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
     print -u2 "vps-deploy: $app FAILED at stage \"$deploy_stage\" (exit $rc)"
   fi
-  if (( rc != 0 )) && [[ $app != all && $app != rails ]]; then
+  if (( rc != 0 )) && [[ $deploy_target_kind != all && $deploy_target_kind != group && $deploy_target_kind != unknown ]]; then
     if (( ! stamp_written )) && (( $+functions[write_stamp] )); then
       write_stamp "$app" failed || true
     fi
@@ -614,7 +645,7 @@ finish() {
       print -u2 "            doas zsh OPENBSD/bin/vps-deploy $app"
     fi
     local other
-    for other in amber bsdports; do
+    for other in $DEPLOY_RAILS; do
       [[ $other == "$app" ]] && continue
       admin_service get "$other" >/dev/null 2>&1 || continue
       admin_service check "$other" >/dev/null 2>&1 \
@@ -666,8 +697,7 @@ trap 'exit 143' TERM
 deploy_refuse() { log "refused: $1"; print -u2 "vps-deploy: refused - $1"; print -u2 "            Nothing was stopped."; exit 1 }
 if (( lock_owner )); then
   set_stage pin
-  source "$repo/OPENBSD/lib/ruby_select.sh"
-  retry "${VPS_DEPLOY_GIT_RETRIES:-3}" 2 git_as_deploy_user fetch -q origin main \
+    retry "${VPS_DEPLOY_GIT_RETRIES:-3}" 2 git_as_deploy_user fetch -q origin main \
     || deploy_refuse "git fetch origin main failed (as $DEPLOY_USER) after retries"
   pin=$(git_as_deploy_user rev-parse --verify -q "${VPS_DEPLOY_SHA:-FETCH_HEAD}^{commit}") \
     || deploy_refuse "${VPS_DEPLOY_SHA:-origin/main} is not a commit this checkout can see"
@@ -708,7 +738,6 @@ if (( lock_owner )); then
     restore_preflight_checkout || deploy_refuse "cannot return to $preflight_back_to after preflight"
   fi
   git_as_deploy_user merge -q --ff-only "$pin" || deploy_refuse "cannot fast-forward $repo to $pin"
-  ensure_smart_turn_assets
   set_stage snapshot
   VPS_DEPLOY_STARTED="$(admin_service list-started 2>/dev/null)"
   VPS_DEPLOY_STARTED=${VPS_DEPLOY_STARTED//$'\n'/ }
@@ -716,35 +745,27 @@ if (( lock_owner )); then
   print "vps-deploy: started before this deploy: $VPS_DEPLOY_STARTED"
 fi
 
-# The whole fleet, in the order that survives its own side effects.
-#
-# master is not under /home/*/app, so an operator enumerating the app homes does
-# not see it and a typed list leaves it behind. Naming the four here makes the
-# set a definition rather than a habit.
-#
-# Order is load-bearing. Every deploy sheds amber and bsdports — they go to
-# rcctl failed with their ports closed while TLS keeps answering, so the outage
-# reads as a hang rather than a 5xx and nothing reports it. Deploying those two
-# last folds the restore into the same pass instead of leaving a window where
-# they are down and nobody is looking. master leads because it is independent of
-# the Rails apps and is the one that gets forgotten.
-DEPLOY_ALL=(master brgen mrdamascy amber bsdports)
+  # Resolve against the inventory in the checkout after it has been fast-forwarded
+  # to VPS_DEPLOY_SHA. A stale box checkout must not define target membership.
+  deploy_target_kind=$(inventory_target_kind "$app") || deploy_refuse "could not read the pinned deployment inventory for $app"
+  [[ $deploy_target_kind != unknown ]] || deploy_refuse "unknown app or group $app in the pinned RAILS/apps.yml"
+  DEPLOY_ALL=(${(@f)$(inventory_names all)})
+  DEPLOY_ALL_DEGRADED=(${(@f)$(inventory_names all 1)})
+  DEPLOY_RAILS=(${(@f)$(inventory_names rails)})
+  (( ${#DEPLOY_ALL} )) || deploy_refuse "the pinned deployment inventory has no active apps"
+  deploy_app_group=$(inventory_app_group "$app")
+  if [[ $deploy_target_kind == all || $deploy_app_group == master ]]; then
+    ensure_smart_turn_assets
+  fi
 
-# master leads only when the box can take it: every app that was started is
-# answering /up and memory availability (the last resource_guard tick) is at or
-# above VPS_DEPLOY_MASTER_MIN_AVAIL percent. Otherwise the apps go first and master
-# last, so a master failure halts a pass whose apps are already deployed and up
-# instead of one that has shed them. The restore in the exit trap covers either order.
-# Rails-only fleet omits MASTER but keeps the resource-conscious app order:
-# Brgen, Mr Damascy, Amber, then BSDPorts last.
-DEPLOY_RAILS=(brgen mrdamascy amber bsdports)
-DEPLOY_ALL_DEGRADED=(brgen mrdamascy amber bsdports master)
+# The deployment sequence is data in RAILS/apps.yml. Degraded mode
+# moves the MASTER namespace last; all other relative order stays unchanged.
 choose_deploy_order() {
   local svc port avail why=
   load_deploy_ports
   avail=$("$RUBY" -e 'print File.readlines(ARGV[0]).last.to_s[/mem_avail=(\d+)/, 1].to_s' \
     "${VPS_DEPLOY_GUARD_LOG:-/var/log/resource_guard_history.log}" 2>/dev/null)
-  for svc in brgen amber bsdports; do
+  for svc in $DEPLOY_RAILS; do
     (( ${${=VPS_DEPLOY_STARTED:-}[(Ie)$svc]} )) || continue
     port=${deploy_ports[$svc]:-}
     [[ -n $port ]] && wait_up "$port" 5 || why="$svc is not answering /up"
@@ -758,49 +779,38 @@ choose_deploy_order() {
   if [[ -z $why ]]; then
     deploy_order=($DEPLOY_ALL)
   else
-    print "vps-deploy: all - master goes last: $why"
+    print "vps-deploy: all - MASTER moved to the end: $why"
     deploy_order=($DEPLOY_ALL_DEGRADED)
   fi
 }
 
-if [[ $app == all || $app == rails ]]; then
+if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
   typeset -i first=1
   typeset -a deploy_order
-  if [[ $app == all ]]; then
+  if [[ $deploy_target_kind == all ]]; then
     choose_deploy_order
   else
-    deploy_order=($DEPLOY_RAILS)
+    deploy_order=(${(@f)$(inventory_names "$app")})
   fi
+  (( ${#deploy_order} )) || { print -u2 "vps-deploy: deployment group $app is empty"; exit 2 }
   print "vps-deploy: $app order: ${deploy_order}"
   for one in $deploy_order; do
     # Let the previous app's deploy drain before starting the next one's CI.
-    #
-    # One CPU, four apps back to back: each deploy leaves precompile, a restart
-    # and a settling app server behind it, and the next app's test suite walks
-    # straight into that. brgen's CI was killed mid-run on 2026-08-14 at load
-    # 3.43 during exactly this loop, and the same commit passed at load 0.32
-    # when run alone. The load is the pass's own wake, so the pass should wait
-    # for it rather than hand the bill to whichever app is next.
-    #
-    # CiGuard waits on load too, so this is the cheap half — a fixed pause costs
-    # a minute and avoids most of the waiting the guard would otherwise do.
+    # Serial builds protect this one-core host from overlapping load peaks.
     if (( ! first )); then
       print "vps-deploy: $app - settling for ${PUB5_DEPLOY_COOLDOWN:-60}s before $one"
       sleep ${PUB5_DEPLOY_COOLDOWN:-60}
     fi
     first=0
     print "vps-deploy: $app -> $one"
-    # Re-entrant rather than inlined: each app gets the full path including its
-    # own health check and deploy stamp, and a failure halts the pass instead of
-    # deploying the next one on top of a broken box.
+    # Each child executes the complete per-app CI, sync, migration, restart,
+    # health-check and deploy-stamp path. A failure halts this group.
     set_stage "$app:$one"
     zsh "$0" "$one" || { halted_app=$one; print -u2 "vps-deploy: $app halted at $one"; exit 1 }
   done
-  print "vps-deploy: $app ok ($deploy_order)"
+  print "vps-deploy: $app ok (${deploy_order})"
   exit 0
 fi
-
-source "$repo/OPENBSD/lib/ruby_select.sh"
 
 # SHA and time are captured at write_stamp, not here. vps_deploy_master.sh
 # pulls origin/main; reading HEAD before that call stamped the pre-pull SHA
@@ -814,8 +824,8 @@ write_stamp() {
   admin_request stamp "$name" "$sha" "$stamp_status"
 }
 
-set_stage master
-if [[ $app == master ]]; then
+set_stage "$deploy_app_group"
+if [[ $deploy_app_group == master ]]; then
   print "vps-deploy: master web"
   # master's bundle, native gem builds and precompile run as long as an app's CI,
   # and this branch never reached the keeper below: on 2026-10-27 the guard read
@@ -826,21 +836,21 @@ if [[ $app == master ]]; then
     # The loopback journeys that need no browser, for this app only.
     set_stage master-flows
     hold_deploy_flag
-    if ! FLOW_APP=master MASTER_STRICT=deploy CHECK_AUTOFIX=0 CHECK_REQUIRE_LIVE=1 "$RUBY" "$repo/MASTER/checks/runner.rb" flow_journey; then
-      write_stamp master failed
+    if ! FLOW_APP="$app" MASTER_STRICT=deploy CHECK_AUTOFIX=0 CHECK_REQUIRE_LIVE=1 "$RUBY" "$repo/MASTER/checks/runner.rb" flow_journey; then
+      write_stamp "$app" failed
       print -u2 "vps-deploy: master flow journeys failed - see the per-flow lines above"
       exit 1
     fi
     set_stage restore-shed
     restore_started && restore_ok=1 || restore_ok=0
-    write_stamp master ok
+    write_stamp "$app" ok
     (( restore_ok )) || { print -u2 "vps-deploy: master deployed, but a service that was running before is still down"; exit 1 }
     exit 0
   fi
   # A failed run stamps failed, or last_deploy_master.json keeps saying ok
   # from the last good run and /health reports a live SHA while :53187 is
   # closed (measured 2026-08-13).
-  write_stamp master failed
+  write_stamp "$app" failed
   exit 1
 fi
 
@@ -1074,8 +1084,8 @@ fi
 
 set_stage solid_queue
 queue_schema="$repo/RAILS/${app}/db/queue_schema.rb"
-# An app whose production config runs jobs in-process (mrdamascy: :async) has
-# no worker to prove; the proof would demand one, or an hourly drain, for nothing.
+# An app whose production config runs jobs in-process has no worker to prove;
+# demanding one, or an hourly drain, would be meaningless.
 # UTF-8 explicitly: the box runs this with no LANG, and production.rb has em dashes.
 queue_async=0
 "$RUBY" -e 'exit File.read(ARGV[0], encoding: "UTF-8").match?(/queue_adapter\s*=\s*:async\b/)' \

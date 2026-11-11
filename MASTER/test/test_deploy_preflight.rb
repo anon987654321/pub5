@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require "tmpdir"
 require "fileutils"
+require "yaml"
 require_relative "../lib/operator/canary"
 
 # The preflight refuses a commit that does not boot before anything on the box is
@@ -105,7 +106,28 @@ class DeployPreflightTest < Minitest::Test
 
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
              ci_runner: ->(**) { flunk "bin/ci must not run" }, **git)
-    dir = tree("MASTER/lib/ok.rb" => "x = 1\n")
+    apps = {
+      "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53187,
+                    "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
+                    "public" => true, "deploy_order" => 10 },
+      "brgen" => { "title" => "Brgen", "domain" => "brgen.example.test", "port" => 38182,
+                   "deploy_script" => "RAILS/brgen/deploy.sh", "deploy_root" => "RAILS/brgen",
+                   "public" => true, "deploy_order" => 20 },
+      "amber" => { "title" => "Amber", "domain" => "amber.example.test", "port" => 61352,
+                   "deploy_script" => "RAILS/amber/deploy.sh", "deploy_root" => "RAILS/amber",
+                   "public" => true, "deploy_order" => 30 },
+      "bsdports" => { "title" => "BSDPorts", "domain" => "bsdports.example.test", "port" => 47312,
+                      "deploy_script" => "RAILS/bsdports/deploy.sh", "deploy_root" => "RAILS/bsdports",
+                      "public" => true, "deploy_order" => 40 },
+      "future_service" => { "title" => "Future Service", "domain" => "future.example.test", "port" => 47313,
+                            "deploy_script" => "RAILS/future_service/deploy.sh",
+                            "deploy_root" => "RAILS/future_service", "public" => true, "deploy_order" => 50 },
+    }
+    dir = Dir.mktmpdir
+    FileUtils.mkdir_p(File.join(dir, "MASTER", "lib"))
+    FileUtils.mkdir_p(File.join(dir, "RAILS"))
+    File.write(File.join(dir, "MASTER", "lib", "ok.rb"), "x = 1\n")
+    File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => apps))
     Pre.remote_command(root: dir, app:, env:, git: fake_git(**git), runner:, out: StringIO.new, ci_runner:)
   ensure
     FileUtils.rm_rf(dir)
@@ -136,6 +158,23 @@ class DeployPreflightTest < Minitest::Test
 
     assert ok
     refute_includes command, "VPS_DEPLOY_CI_SHA"
+  end
+
+  def test_new_inventory_app_gets_local_ci_without_a_code_list_change
+    ran = []
+    ok, command = remote(app: "future_service", ci_runner: ->(root:, app:) { ran << app; true })
+
+    assert ok
+    assert_equal ["future_service"], ran
+    assert_includes command, "VPS_DEPLOY_CI_SHA=#{SHA}"
+  end
+
+  def test_rails_group_leaves_ci_to_its_serial_remote_children
+    ok, command = remote(app: "rails", ci_runner: ->(**) { flunk "group CI runs per remote child" })
+
+    assert ok
+    refute_includes command, "VPS_DEPLOY_CI_SHA"
+    assert_includes command, "vps-deploy rails"
   end
 
   def test_remote_command_pins_the_sha_and_attests_the_preflight
