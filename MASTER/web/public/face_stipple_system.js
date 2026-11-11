@@ -209,7 +209,7 @@
         uRipple: { value: 0 }, uTurbulence: { value: 0 },
         uLuminosity: { value: idle.luminosity }, uAttract: { value: idle.attract },
         uOpacity: { value: 0.74 }, uEntropy: { value: 0.18 },
-        uMotionScale: { value: 0 },
+        uMotionScale: { value: 0 }, uBreathScale: { value: 0 },
         uColor: { value: new THREE.Color(0.90, 0.89, 0.86) }
       },
       vertexShader: `
@@ -250,7 +250,7 @@
           // still while it waits. The breath rides brightness only — the same
           // seam the one-pixel law owns — and freezes twice over under reduced
           // motion: uTime stops and uMotionScale goes to 0.
-          float breath = 1.0 + uMotionScale * 0.05 * sin(uTime * 0.5712);
+          float breath = 1.0 + uBreathScale * 0.05 * sin(uTime * 0.5712);
           float depthScale = clamp(uDepthReferenceDistance / max(1.0, -mv.z),
             uDepthScaleMin, uDepthScaleMax);
           gl_PointSize = 1.0;
@@ -356,6 +356,8 @@
     u.uAttract.value = clamp(profile.attract + (modulation.attract || 0), 0, 0, 1);
     u.uEntropy.value = entropy;
     u.uMotionScale.value = motion;
+    // The restrained idle breath is luminance-only; unlike spatial motion it remains in idle.
+    u.uBreathScale.value = reducedMotionEnabled(state) ? 0 : 1;
     u.uOpacity.value = clamp(overrides.opacity, 0.74, 0.1, 1);
     if (swarmConfiguration().enabled === true) {
       // The particle material is pure white; visual identity does not inherit mood palettes.

@@ -23,7 +23,7 @@ method: >
 gaps: [master_face_soothing, master_voice_dsp_lanes, master_voice_cooler]
 candidates:
   # master_face_soothing
-  - { id: masterweb_f01, gap: master_face_soothing, spec: "Breathing luminosity: a slow (~11 s period, +/-5%) sine folded into the stipple field's vAlpha brightness seam, scaled by uMotionScale so reduced motion freezes it; no new colours, no point-size change.", hyperlocal: high, synergy: high, cost: S, laws_delta: none, reversibility: high }
+  - { id: masterweb_f01, gap: master_face_soothing, spec: "Breathing luminosity: a slow (~11 s period, +/-5%) sine folded into the stipple field's vAlpha brightness seam, scaled by a dedicated uBreathScale so it survives normal idle stillness but freezes for reduced motion; no new colours, no point-size change.", hyperlocal: high, synergy: high, cost: S, laws_delta: none, reversibility: high }
   - { id: masterweb_f02, gap: master_face_soothing, spec: "A new soothing palette: pastel tokens, softer accents, warmer background across the face chrome.", hyperlocal: low, synergy: low, cost: M, laws_delta: new-budget, reversibility: low }
   - { id: masterweb_f03, gap: master_face_soothing, spec: "Calm-profile damping: [data-runtime-profile=\"calm\"] also drops the flash-class canvas filters (topology-flash, laughter, face-flash) and softens chrome borders via color-mix of existing tokens; conversation leading moves one token looser within budget.", hyperlocal: high, synergy: high, cost: S, laws_delta: none, reversibility: high }
   - { id: masterweb_f04, gap: master_face_soothing, spec: "An aurora/nebula particle backdrop behind the field - slow drifting colour washes for atmosphere.", hyperlocal: low, synergy: low, cost: M, laws_delta: decorative-fx, reversibility: medium }
@@ -55,11 +55,11 @@ picks:
     winner: masterweb_f01
     rationale: >
       The breath rides the seam the one-pixel law already owns - depth in
-      brightness, not size - costs three shader lines, freezes itself under
-      reduced motion twice over (uTime at 0 and uMotionScale at 0), and is the
-      only candidate that makes the face feel alive while adding nothing to
-      look at. Implemented this pass alongside f03's calm damping, which is
-      the same direction in CSS.
+      brightness, not size - and remains separate from idle spatial motion.
+      Its dedicated scale lets the face feel quietly alive while waiting, while
+      reduced motion freezes both its scale and time. It adds no colour, point
+      size change or second animation loop. Implemented alongside f03's calm
+      damping, which is the same direction in CSS.
     losers: { masterweb_f02: "budget full; the ratchet only goes down", masterweb_f04: "NO_DECORATIVE_FX exists to refuse this exact thing" }
   - gap: master_voice_dsp_lanes
     winner: masterweb_v01

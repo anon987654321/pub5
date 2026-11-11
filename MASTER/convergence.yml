@@ -243,8 +243,8 @@ workstreams:
     title: The stipple field breathes in brightness only, frozen by reduced motion twice over
     implementation: MASTER/web/public/face_stipple_system.js
     proof: >-
-      shaders static-checked; breath rides vAlpha with uMotionScale and uTime both zeroed by the
-      reduced-motion path
+      shader contract covers alpha-only idle breath via uBreathScale; reduced motion zeros uBreathScale
+      and uTime while the still-mode spatial-motion scale remains zero
   - id: master_voice_browser_dsp
     state: partial
     title: >-

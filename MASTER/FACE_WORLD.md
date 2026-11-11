@@ -78,8 +78,11 @@ Motion defaults to still. The only canonical still mode is declared by
 (700 ms). The live terminal face, primary browser face, sparse field, stipple layer and FaceWorld
 all consume that policy. Pointer interaction, speech, state transitions and explicit events may
 wake their relevant layer; the terminal swarm and face keep responding through the same settle
-interval, then return to a stable pose and stop autonomous drift. This is distinct from reduced
-motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
+interval, then return to a stable pose and stop autonomous drift. The browser stipple retains one
+separate, five-percent luminance breath while idle; it changes alpha only, not position, point size
+or colour. Its own `uBreathScale` is zero under reduced motion, so normal stillness can feel quietly
+alive without re-enabling spatial drift or overriding the accessibility preference. This is distinct
+from reduced motion: it is the normal resting state, not an accessibility override. Gather, ripple, fragment
 and settle run only when a state supplies the cause, and reduced motion keeps the turned and
 unturned contrast readable without animation.
 Idle keeps its residual individuality as static original sample positions; a field with no individual variation is a fog. In moving residual states such as warning, the swarm contract's `face_interface.swarm.residual.fraction` and `.strength` apply a gentle home tether to a deterministic subset. The Ruby terminal swarm and browser stipple swarm use the same seeded selector, so both preserve the same individual carriers. This reuses existing carriers, adds no pool, and lets the rest of a moving field cohere. The stipple profile's density, ripple, turbulence, luminosity and attraction are also modulated by canonical activity, arousal, focus, confidence and risk dials. Their weights live in `face_interface.stipple.dial_modulation`; each adjustment is measured from the canonical state defaults and clamped, so the named mode profile remains the baseline rather than being replaced.

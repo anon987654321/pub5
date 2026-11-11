@@ -34,6 +34,15 @@ test("shared face budgets classify coarse pointers and declared reduced motion",
   assert.match(sparseField, /const reduced = reducedMotionEnabled\(state\)/);
 });
 
+test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
+  assert.match(system, /uBreathScale: \{ value: 0 \}/);
+  assert.match(system, /float breath = 1\.0 \+ uBreathScale \* 0\.05 \* sin\(uTime \* 0\.5712\)/);
+  assert.match(system, /u\.uBreathScale\.value = reducedMotionEnabled\(state\) \? 0 : 1;/);
+  assert.match(system, /u\.uMotionScale\.value = motion;/);
+  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /uLuminosity \* breath/);
+});
+
 test("the primary face settles to neutral idle and wakes on pointer activity", () => {
   assert.match(primaryFaceFrame, /const motionFrozen = reducedMotion \|\| idleStill/);
   assert.match(primaryFaceFrame, /stillAfterActivityMs \?\? 700/);
