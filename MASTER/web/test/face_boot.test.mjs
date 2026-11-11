@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { runInNewContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -239,7 +240,8 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(rules, /semantic_subject:/);
   assert.match(world, /function normalizeVisualSubject\(subject\)/);
   assert.match(world, /return SUBJECT_HINTS\.find\(\(\[, pattern\]\) => pattern\.test\(text\)\)\?\.\[0\] \|\| "face"/);
-  assert.match(world, /declaredKind === "object" \|\| !subjectFeatures\(declaredKind\)\.length/);
+  assert.match(world, /const kind = declaredKind === "object" \?\s*declaredForm \|\| declaredKind\s*:\s*declaredKind \|\| declaredForm;/);
+  assert.match(rules, /unknown_kind: keep_portrait/);
   assert.match(world, /confidence < finite\(SEMANTIC_SUBJECT\.min_confidence/);
   assert.match(world, /const explicitSubject = visualSubject !== null && visualSubject !== undefined/);
   assert.match(world, /const next = descriptor \? "object" : "face"/);
@@ -267,6 +269,41 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(shader, /float stageGate = smoothstep/);
   assert.match(runtime, /function setSubjectScatter\(positions, stages = null\)/);
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
+});
+
+test("explicit visual subjects fail closed and never fall through to text guesses", () => {
+  const source = readFileSync(join(publicDir, "face_world.js"), "utf8");
+  const window = {
+    MASTER_FACE_CONTRACT: {
+      spatial: {
+        semantic_subject: {
+          enabled: true,
+          min_confidence: 0.42,
+          max_label_chars: 48,
+          max_features: 6,
+          kinds: { bridge: ["deck", "towers", "cables", "piers"] }
+        }
+      }
+    },
+    addEventListener() {},
+    dispatchEvent() {}
+  };
+  const sandbox = {
+    window,
+    document: { documentElement: { dataset: {}, style: { setProperty() {} } } },
+    CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
+    performance: { now: () => 0 }
+  };
+  runInNewContext(source, sandbox, { filename: "face_world.js" });
+  const faceWorld = window.MASTER_FACE_WORLD;
+
+  assert.equal(faceWorld.normalizeVisualSubject({
+    kind: "unsupported", form: "bridge", confidence: 0.95
+  }), null);
+  assert.equal(faceWorld.setSubjectFromVisual(
+    "A bridge crosses the river.",
+    { kind: "unsupported", confidence: 0.95 }
+  ), "face");
 });
 
 test("completed assistant replies route semantic subjects through the canonical event bus", () => {
