@@ -84,6 +84,12 @@ module Master
         (@evidence_log || @event_log).recent(limit, pattern: '\Atool:execution:')
       end
 
+      # Effect lifecycle receipts are written to the same operational stream.
+      # Observers replay them after restart rather than trusting process memory.
+      def effect_history(limit = RECEIPT_HISTORY)
+        (@evidence_log || @event_log).recent(limit, pattern: '\Acore:effect:')
+      end
+
       private
 
       # Handlers are allowed to publish follow-up events, but those events are
