@@ -86,6 +86,7 @@ if [ ! -x "$ruby_path" ]; then
     break
   done
 fi
+found_ruby=1
 [ -n "$ruby_path" ] || { echo "rails-task: no system Ruby found" >&2; exit 127; }
 base=${ruby_path##*/}
 suffix=${base#ruby}
