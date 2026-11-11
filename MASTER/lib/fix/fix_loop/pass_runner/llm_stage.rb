@@ -179,7 +179,6 @@ module Master
             end
             failure
           end
-          end
 
           # What the council picked this pass, as repairs to weigh rather than
           # instructions to copy. The fixer still answers to the rule and to
