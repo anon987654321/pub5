@@ -80,8 +80,9 @@ module Master
         results = Array.new(items.size)
         failures = []
 
-        threads = Array.new(worker_count) do
-          Thread.new do
+        threads = []
+        worker_count.times do
+          threads << Thread.new do
             loop do
               index = mutex.synchronize do
                 cursor += 1
@@ -105,13 +106,24 @@ module Master
           timed_out = true
           thread.kill if thread.alive?
         end
-        threads.each { |thread| thread.join(0.1) if thread.alive? }
         raise TimeoutError, timeout if timed_out
 
         return results if failures.empty?
 
         index, error = failures.min_by(&:first)
         raise ExecutionError.new(index:, operation: "thread", message: "#{error.class}: #{error.message}")
+      ensure
+        # Keep each handle as soon as it starts. If a later Thread.new fails,
+        # or the caller is interrupted during join, no earlier worker may
+        # outlive the operation that owns the result array.
+        Array(threads).each { |thread| thread.kill if thread.alive? }
+        Array(threads).each do |thread|
+          begin
+            thread.join
+          rescue StandardError
+            nil
+          end
+        end
       end
 
       def ractor_map(items, operation:, workers:, timeout:)
