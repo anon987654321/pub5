@@ -482,7 +482,7 @@ The row-level owner trees, proof types and receipt requirements remain in `MASTE
 
 **Amber**
 - [ ] `amber_fashion_embeddings` — open; start with owner-tagged typed attributes, not a Postgres/pgvector migration for a personal wardrobe.
-- [ ] `amber_visual_similarity` — PARTIAL 2026-11-11: typed-token cosine matching is implemented in `RAILS/amber/app/services/wears_well_with.rb`; service and contract tests exist. Run focused and app suites on pinned Ruby 4.0.5; NOT_RUN here.
+- [ ] `amber_visual_similarity` — PARTIAL 2026-11-11: typed-token cosine matching is implemented in `RAILS/amber/app/services/wears_well_with.rb`; service and contract tests exist. Run focused and app suites on the installed compatible Ruby; NOT_RUN here.
 - [ ] `amber_fitting_room` — open; keep garment-on-silhouette representation honest; do not imply body measurements or fit guarantees.
 - [ ] `amber_mood_matcher` — open; use reader-declared tags or a colour-first alternative; never infer a reader's mood.
 - [ ] `amber_event_outfit_planner` — open; consider outfits against an event the reader selects, with soft formality/season/recent-wear constraints.
