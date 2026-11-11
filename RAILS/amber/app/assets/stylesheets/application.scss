@@ -457,6 +457,137 @@ h2 {
   padding-block: var(--space-8) var(--space-6);
 }
 
+/* Pixel-anime accents live beside the logo, never on it. The canonical
+   SVG remains byte-for-byte unchanged; this layer is home-page-only, inert,
+   and clipped to the masthead's generous white space. */
+.amber-masthead--home {
+  position: relative;
+  isolation: isolate;
+}
+
+.amber-magic-layer {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.amber-masthead--home .amber-logo-home {
+  position: relative;
+  z-index: 1;
+}
+
+.amber-magic-pixel-star,
+.amber-magic-sakura,
+.amber-magic-shooting-star {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.amber-magic-pixel-star {
+  inline-size: 4px;
+  block-size: 4px;
+  background: #ffb999;
+  box-shadow:
+    0 -8px 0 #ffb999,
+    0 8px 0 #ffb999,
+    -8px 0 0 #ffb999,
+    8px 0 0 #ffb999,
+    0 0 0 4px #e6cce6;
+  animation: amber-pixel-twinkle 4.8s steps(2, end) infinite;
+}
+
+.amber-magic-pixel-star--one {
+  inset-block-start: 24%;
+  inset-inline-start: 12%;
+}
+
+.amber-magic-pixel-star--two {
+  inset-block-start: 31%;
+  inset-inline-end: 13%;
+  background: #99e6e6;
+  box-shadow:
+    0 -6px 0 #99e6e6,
+    0 6px 0 #99e6e6,
+    -6px 0 0 #99e6e6,
+    6px 0 0 #99e6e6;
+  animation-delay: -1.7s;
+}
+
+.amber-magic-pixel-star--three {
+  inset-block-end: 19%;
+  inset-inline-start: 21%;
+  inline-size: 3px;
+  block-size: 3px;
+  background: #cce6cc;
+  box-shadow: 0 -6px 0 #cce6cc, 0 6px 0 #cce6cc, -6px 0 0 #cce6cc, 6px 0 0 #cce6cc;
+  animation-delay: -3.1s;
+}
+
+.amber-magic-sakura {
+  inline-size: 5px;
+  block-size: 5px;
+  background: #ffb999;
+  box-shadow:
+    0 -5px 0 #e6cce6,
+    5px 0 0 #ffb999,
+    0 5px 0 #e6cce6,
+    -5px 0 0 #ffb999,
+    0 0 0 2px #fff;
+  animation: amber-petal-drift 12s ease-in-out infinite;
+}
+
+.amber-magic-sakura--one {
+  inset-block-start: 38%;
+  inset-inline-start: 7%;
+}
+
+.amber-magic-sakura--two {
+  inset-block-end: 30%;
+  inset-inline-end: 8%;
+  transform: scale(.8);
+  animation-delay: -6s;
+}
+
+.amber-magic-shooting-star {
+  inset-block-start: 18%;
+  inset-inline-end: 28%;
+  inline-size: 30px;
+  block-size: 2px;
+  background: linear-gradient(90deg, #e6cce6, #ffb999 65%, transparent);
+  transform: rotate(-24deg);
+  transform-origin: right center;
+  animation: amber-shooting-star 9s steps(8, end) infinite;
+  animation-delay: -4s;
+}
+
+@keyframes amber-pixel-twinkle {
+  0%, 100% { opacity: .35; transform: scale(.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes amber-petal-drift {
+  0%, 100% { opacity: .65; translate: 0 0; }
+  50% { opacity: 1; translate: 8px 12px; }
+}
+
+@keyframes amber-shooting-star {
+  0%, 78%, 100% { opacity: 0; translate: 0 0; }
+  81% { opacity: .9; }
+  88% { opacity: 0; translate: -72px 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amber-magic-layer *,
+  .amber-magic-layer *::before,
+  .amber-magic-layer *::after {
+    animation: none !important;
+  }
+}
+
 .amber-logo-home {
   display: block;
   line-height: 0; // intentional: collapses the inline-SVG descender gap
