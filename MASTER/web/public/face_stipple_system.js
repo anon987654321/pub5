@@ -37,12 +37,14 @@
   let contextState = "ready";
   // Audio telemetry is a bounded visual signal, never an animation clock.
   let audioEnergy = 0;
+  let audioUpdatedAt = 0;
   window.addEventListener("audio:update", (event) => {
     const detail = event?.detail || {};
     const bass = clamp(detail.bass, 0, 0, 1);
     const onset = clamp(detail.onset, 0, 0, 1);
     const rms = clamp(detail.rms, 0, 0, 1);
     audioEnergy = Math.max(bass * 0.58 + onset * 0.30 + rms * 0.12, audioEnergy * 0.72);
+    audioUpdatedAt = performance.now();
   }, { passive: true });
 
   function reducedMotionEnabled(state = {}) {
@@ -380,7 +382,8 @@
     u.uMotionScale.value = motion;
     // The restrained idle breath is luminance-only; unlike spatial motion it remains in idle.
     u.uBreathScale.value = reducedMotionEnabled(state) ? 0 : 1;
-    u.uAudioWarp.value = reducedMotionEnabled(state) || stillMode ? 0 : audioEnergy;
+    const audioFreshness = clamp(1 - (performance.now() - audioUpdatedAt) / 180, 0, 0, 1);
+    u.uAudioWarp.value = reducedMotionEnabled(state) || stillMode ? 0 : audioEnergy * audioFreshness;
     u.uOpacity.value = clamp(overrides.opacity, 0.74, 0.1, 1);
     if (swarmConfiguration().enabled === true) {
       // The particle material is pure white; visual identity does not inherit mood palettes.
