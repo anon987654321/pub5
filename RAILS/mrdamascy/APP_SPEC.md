@@ -36,7 +36,7 @@ Single source of truth for the **Mr. Damascy** app. Every contributor/agent impl
 - No gems beyond Rails defaults; `VippsClient` uses `Net::HTTP` (stdlib).
 - Auth: phone-number + mock OTP (dev/test code `1234`), plain `Session` model with token cookie. Roles: `customer/staff/courier/admin` (enum on users).
 - App module namespace `MrDamascy` (mirror `amber/config/application.rb` structure).
-- `.ruby-version` = `3.3.6`.
+- Runtime: use the installed compatible Ruby 3.3+ selected by MASTER; no app-specific patch pin.
 
 ## 3. Routes (config/routes.rb — final, no deviations)
 
