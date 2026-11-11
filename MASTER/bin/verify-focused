@@ -55,7 +55,6 @@ tests = %w[
   test/test_fix_interruption_restart.rb
   test/test_fix_loop_committer.rb
   test/test_candidate_threads.rb
-  test/test_candidate_threads.rb
   test/test_io_git_operations.rb
   test/test_core_world.rb
   test/test_master_boot.rb
