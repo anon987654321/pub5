@@ -1,6 +1,10 @@
 # pub5 — remaining work
 
-Audit snapshot: 2026-11-10, reconciled against `main@96b4e2602a05c60c6a9a7b0928887586d546d356`.
+Audit baseline: 2026-11-11, checked against `main@495edd50d148bc3fe19410cc0f288a8658fa475f`.
+Snapshot: 168 unchecked register rows and 1 checked row (grouped rows are not
+atomic task counts). The tracked tree contains no `PLAN.md`; root `TODO.md` is
+the sole cross-tree Markdown action register, with detailed state owned by the
+existing structured ledgers. No parallel plan or backlog file is needed.
 The register travels with the migration; source-owned status remains in the
 structured ledgers, and completed entries are checked here only when their
 evidence is present.
@@ -118,6 +122,14 @@ screenshot count or previous revision.
   receipts and truthful terminal states (DONE, PLATEAU, HUMAN_DECISION,
   BLOCKED, VALIDATION_FAILED, DELIVERY_FAILED or TIMEOUT). Measure actual
   convergence and repair quality; an architecture map is not runtime proof.
+  Unattended completion is not yet wired: `Backlog::Store` generates/checks a
+  derived index but does not dispatch work, while `TaskSteward` resumes only a
+  fold mission that already exists with `auto_continue` enabled. The missing
+  part is a dependency-aware intake over this register and its structured
+  owners, creating one scoped Mission/TaskContract at a time and closing rows
+  only when their declared proof exists. Build this into the existing
+  Backlog/Mission/TaskSteward owners; do not add a second queue. Human, rights,
+  provider-spend, device and production-host approvals remain real stop points.
 - [ ] Verify shared-checkout lock, writer ownership, interruption cleanup and
   path-scoped commit behavior with another active writer. Never stage another
   writer's changes.
