@@ -78,7 +78,13 @@ class TestBinScripts < Minitest::Test
   def test_dev_bootstrap_execs_the_operators_ruby_override_verbatim
     Dir.mktmpdir do |dir|
       fake = File.join(dir, "fake_ruby")
-      File.write(fake, "#!/bin/sh\necho \"FAKE $*\"\n")
+      File.write(fake, <<~SH)
+        #!/bin/sh
+        case " $* " in
+          *" print RUBY_VERSION "*) printf "3.3.8" ;;
+          *) echo "FAKE $*" ;;
+        esac
+      SH
       File.chmod(0o755, fake)
 
       out, status = Open3.capture2e({ "PUB5_RUBY" => fake }, File.join(ROOT, "bin", "dev-bootstrap"), "-Itest", "test/x.rb")
@@ -92,8 +98,20 @@ class TestBinScripts < Minitest::Test
     Dir.mktmpdir do |dir|
       generic = File.join(dir, "ruby")
       newer = File.join(dir, "ruby40")
-      File.write(generic, "#!/bin/sh\\ncase \\" $* \\" in *\\" print RUBY_VERSION \\"*) printf 3.3.8 ;; *) echo GENERIC-RUBY ;; esac\\n")
-      File.write(newer, "#!/bin/sh\\ncase \\" $* \\" in *\\" print RUBY_VERSION \\"*) printf 4.0.5 ;; *) echo NEWER-RUBY ;; esac\\n")
+      File.write(generic, <<~SH)
+        #!/bin/sh
+        case " $* " in
+          *" print RUBY_VERSION "*) printf "3.3.8" ;;
+          *) echo GENERIC-RUBY ;;
+        esac
+      SH
+      File.write(newer, <<~SH)
+        #!/bin/sh
+        case " $* " in
+          *" print RUBY_VERSION "*) printf "4.0.5" ;;
+          *) echo NEWER-RUBY ;;
+        esac
+      SH
       [generic, newer].each { |file| File.chmod(0o755, file) }
 
       out, status = Open3.capture2e(
