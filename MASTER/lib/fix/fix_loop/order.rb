@@ -12,6 +12,7 @@ module Master
         # key was constant. NO_GOD_CLASS is SIMPLEST_WORKS, FEATURE_ENVY is
         # the SRP detector, FEW_ARGUMENTS is the conciseness one.
         TIER2_QUALITY_LAW_IDS = %w[NO_GOD_CLASS FEATURE_ENVY FEW_ARGUMENTS].freeze
+        MAX_PARALLEL_LAWS = 8
         # What a user meets first outranks what a reviewer reads. A JavaScript exception, a
         # route answering 4xx/5xx or a stylesheet that never arrives breaks the page; a
         # rendered defect makes it worse; a code law makes the source worse. The browser
@@ -66,7 +67,11 @@ module Master
           levels = []
           until remaining.empty?
             ready = remaining.select { |id| Array(deps[id]).none? { |dep| remaining.include?(dep) } }
-            ready = [remaining.first] if ready.empty?
+            if ready.empty?
+              blocked = remaining.to_a.map(&:to_s).sort
+              raise ArgumentError, "fix_loop: law dependency cycle leaves unordered rules: #{blocked.join(", ")}"
+            end
+
             levels << ready.filter_map { |id| id_map[id] }
             ready.each { |id| remaining.delete(id) }
           end
@@ -126,7 +131,12 @@ module Master
             sorted << id_map[id]
             adj[id].each { |nxt| in_deg[nxt] -= 1; queue << nxt if in_deg[nxt].zero? }
           end
-          sorted + (laws - sorted)
+          blocked = laws - sorted
+          unless blocked.empty?
+            raise ArgumentError, "fix_loop: law dependency cycle blocks ordering: #{blocked.map { |law| law.id.to_s }.sort.join(", ")}"
+          end
+
+          sorted
         end
 
         def load_deps
