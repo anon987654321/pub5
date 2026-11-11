@@ -363,18 +363,22 @@ class TestRenderer < Minitest::Test
   end
 
   def test_git_prompt_segment_is_conditional_and_marks_worktree_state
-    renderer = FakeRenderer.new(config: {})
     clean = { branch: "main", ahead: 0, behind: 0, dirty: false }
     dirty = { branch: "main", ahead: 2, behind: 1, dirty: true }
 
+    renderer = FakeRenderer.new(config: {})
     renderer.stub(:git_prompt_state, nil) do
       _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
       refute_includes strip_ansi(prompt), "git:("
     end
+
+    renderer = FakeRenderer.new(config: {})
     renderer.stub(:git_prompt_state, clean) do
       _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
       assert_includes strip_ansi(prompt), "git:(main)"
     end
+
+    renderer = FakeRenderer.new(config: {})
     renderer.stub(:git_prompt_state, dirty) do
       _state, prompt = renderer.prompt_line("model", "idle", tokens: 1)
       assert_includes strip_ansi(prompt), "git:(main* +2 -1)"
