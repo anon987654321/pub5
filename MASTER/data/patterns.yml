@@ -950,7 +950,7 @@ operator_playbook:
       area: openbsd
       signal: "relayctl show hosts marks backend empty/down while curl http://127.0.0.1:PORT/up returns 200; HTTPS empty reply"
       action: "doas rcctl restart relayd after mass app restarts. Cron runs /usr/local/bin/relayd-watchdog every 5 min to auto-heal stale tables."
-      proof: "relayctl show hosts -> all tables active; ruby34 OPENBSD/checks/health_check.rb"
+      proof: "relayctl show hosts -> all tables active; ruby OPENBSD/checks/health_check.rb"
 
     - id: resource_guard_shedding
       area: openbsd
@@ -1021,7 +1021,7 @@ operator_playbook:
     - id: post_sync_vps_proof
       area: deploy
       signal: "Code pushed but services stale or untested on vm23"
-      action: "After git pull: SKIP_MASTER_SCAN=1 I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_on_vm_install.sh; doas rcctl restart master; bundle34 exec bin/ci per app; bundle34 exec bin/smoke in MASTER; ruby34 OPENBSD/checks/health_check.rb; curl https://ai.brgen.no/up"
+      action: "After git pull: SKIP_MASTER_SCAN=1 I_UNDERSTAND_FAST_DEPLOY=1 zsh OPENBSD/bin/vps_on_vm_install.sh; doas rcctl restart master; bundle exec bin/ci per app; bundle exec bin/smoke in MASTER; ruby34 OPENBSD/checks/health_check.rb; curl https://ai.brgen.no/up"
       proof: "doas rcctl check master brgen amber bsdports; browser smoke on ai.brgen.no face"
 
     - id: rails_rcd_canonical_names
