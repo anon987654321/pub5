@@ -168,6 +168,7 @@ module Master
         WORKER_WEIGHTS = { reviewer: 3, analyst: 2, researcher: 2, coder: 1 }.freeze
 
         WORKER_TIMEOUT = 30
+        MAX_CONCURRENT = 8
         SYNTHESIS_TRUNCATE_LIMIT = 200
         MIN_QUORUM = 2
         CONSENSUS_THRESHOLD = 0.66
@@ -199,20 +200,59 @@ module Master
         end
 
         def fan_out(tasks, timeout: WORKER_TIMEOUT)
-          threads = tasks.map do |t|
-            Thread.new do
-              run_with_subagent_policy(t[:role]) do
-                [t[:role], dispatch(t[:role], task: t[:task], context_slice: t.fetch(:context_slice, {}))]
+          tasks = Array(tasks)
+          results = {}
+
+          tasks.each_slice(MAX_CONCURRENT) do |batch|
+            threads = []
+            spawn_error = nil
+            begin
+              batch.each do |task|
+                threads << [task, Thread.new do
+                  Thread.current.report_on_exception = false
+                  run_with_subagent_policy(task[:role]) do
+                    [task[:role], dispatch(task[:role], task: task[:task], context_slice: task.fetch(:context_slice, {}))]
+                  end
+                rescue StandardError => error
+                  @bus&.publish("swarm:worker_error", role: task[:role], error: error.message)
+                  [task[:role], Result.err("worker error: #{error.message}", category: :infrastructure)]
+                end]
               end
-            rescue StandardError => e
-              @bus&.publish("swarm:worker_error", role: t[:role], error: e.message)
-              [t[:role], Result.err("worker error: #{e.message}", category: :infrastructure)]
+            rescue StandardError => error
+              spawn_error = error
             end
+
+            fatal_error = nil
+            begin
+              threads.each do |task, thread|
+                begin
+                  role, result = join_or_timeout(thread, timeout)
+                  results[role] = result
+                rescue StandardError => error
+                  @bus&.publish("swarm:worker_error", role: task[:role], error: error.message)
+                  results[task[:role]] = Result.err("worker error: #{error.message}", category: :infrastructure)
+                rescue Exception => error
+                  fatal_error ||= error
+                  results[task[:role]] = Result.err("worker error: #{error.class}", category: :infrastructure)
+                end
+              end
+
+              if spawn_error
+                batch.drop(threads.size).each do |task|
+                  @bus&.publish("swarm:worker_start_failed", role: task[:role], error: spawn_error.message)
+                  results[task[:role]] = Result.err("worker could not start: #{spawn_error.message}", category: :infrastructure)
+                end
+                fatal_error ||= spawn_error unless spawn_error.is_a?(StandardError)
+                break unless fatal_error
+              end
+            ensure
+              stop_workers(threads)
+            end
+            raise fatal_error if fatal_error
           end
 
-          results = threads.map { |th| join_or_timeout(th, timeout) }.to_h
           sr = build_swarm_result(results)
-          sr = direct_fallback(tasks.first&.dig(:task).to_s) if sr.verdict == :error
+          sr = direct_fallback(tasks.first&.dig(:task).to_s) if sr.verdict == :error && !tasks.empty?
 
           @bus&.publish(:swarm_fan_out_done, roles: results.keys, verdict: sr.verdict,
                         synthesis: sr.reasoning[0..SYNTHESIS_TRUNCATE_LIMIT])
@@ -220,6 +260,18 @@ module Master
         end
 
         private
+
+        def stop_workers(entries)
+          threads = Array(entries).map(&:last)
+          threads.each { |thread| thread.kill if thread.alive? }
+          threads.each do |thread|
+            begin
+              thread.join
+            rescue StandardError
+              nil
+            end
+          end
+        end
 
         def join_or_timeout(th, timeout)
           return th.value if th.join(timeout)
