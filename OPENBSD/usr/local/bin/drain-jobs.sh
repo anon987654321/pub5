@@ -56,7 +56,16 @@ stamp() {
 # the spike it caused itself — see the header of prune-guests.sh, where that
 # cost a night's work before anyone noticed.
 load_is_low() {
-  ruby34 -e '
+  ruby_cmd=$(command -v ruby 2>/dev/null || true)
+  if [ -z "$ruby_cmd" ]; then
+    for candidate in /usr/local/bin/ruby[0-9]*; do
+      [ -x "$candidate" ] || continue
+      ruby_cmd=$candidate
+      break
+    done
+  fi
+  [ -n "$ruby_cmd" ] || return 1
+  "$ruby_cmd" -e '
     n = `sysctl -n vm.loadavg 2>/dev/null`.scan(/\d+(?:\.\d+)?/)
     exit(1) if n.size < 3
     exit(n[1].to_f <= ARGV[0].to_f ? 0 : 1)
