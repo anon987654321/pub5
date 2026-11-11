@@ -265,6 +265,7 @@ module Master
           refresh_store_if_changed
           return "empty" unless File.exist?(@path) || File.symlink?(@path)
 
+          parent_before = memory_directory_identity
           stat = File.lstat(@path)
           unless stat.file? && !stat.symlink? && stat.nlink == 1
             raise IOError, "memory store must be a singly linked regular file"
@@ -280,6 +281,17 @@ module Master
             end
             raw = file.read(MAX_STORE_BYTES + 1)
             raise IOError, "memory store exceeds the 10 MiB safety limit" if raw.bytesize > MAX_STORE_BYTES
+            after = file.stat
+            current = File.lstat(@path)
+            parent_after = memory_directory_identity
+            unless current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == after.dev && current.ino == after.ino &&
+                   after.dev == opened.dev && after.ino == opened.ino &&
+                   after.size == opened.size && after.mtime == opened.mtime &&
+                   after.ctime == opened.ctime && raw.bytesize == after.size &&
+                   parent_before && parent_after == parent_before
+              raise IOError, "memory store or parent changed while measuring its version"
+            end
 
             Digest::SHA256.hexdigest(raw)[0, 16]
           end
@@ -426,6 +438,7 @@ module Master
 
         def load_store
           ensure_memory_directory!
+          parent_before = memory_directory_identity
           unless File.exist?(@path) || File.symlink?(@path)
             @last_loaded_signature = nil
             return {}
@@ -448,12 +461,14 @@ module Master
             raise IOError, "memory store exceeds the 10 MiB safety limit" if raw.bytesize > MAX_STORE_BYTES
             after = file.stat
             current = File.lstat(@path)
+            parent_after = memory_directory_identity
             unless current.file? && !current.symlink? && current.nlink == 1 &&
                    current.dev == after.dev && current.ino == after.ino &&
                    after.dev == opened.dev && after.ino == opened.ino &&
                    after.size == opened.size && after.mtime == opened.mtime &&
-                   after.ctime == opened.ctime && raw.bytesize == after.size
-              raise IOError, "memory store changed while it was being read"
+                   after.ctime == opened.ctime && raw.bytesize == after.size &&
+                   parent_before && parent_after == parent_before
+              raise IOError, "memory store or parent changed while it was being read"
             end
 
             loaded = Master.parse_yaml_content(raw, source: @path)
@@ -568,15 +583,30 @@ module Master
         # to notice another process's write and refresh before exposing memory.
         def memory_store_signature
           ensure_memory_directory!
+          parent_before = memory_directory_identity
           return unless File.exist?(@path) || File.symlink?(@path)
 
           stat = File.lstat(@path)
           unless stat.file? && !stat.symlink? && stat.nlink == 1
             raise IOError, "memory store must be a singly linked regular file"
           end
+          parent_after = memory_directory_identity
+          raise IOError, "memory store parent changed while measuring its signature" unless parent_before && parent_after == parent_before
+
           memory_signature_for(stat)
         rescue Errno::ENOENT
           nil
+        end
+
+        def memory_directory_identity
+          directory = File.dirname(@path)
+          return unless File.exist?(directory) || File.symlink?(directory)
+
+          stat = File.lstat(directory)
+          unless stat.directory? && !stat.symlink? && verified_atomic_directory(directory) == directory
+            raise IOError, "memory store parent is not a stable in-repository directory"
+          end
+          [stat.dev, stat.ino]
         end
 
         def memory_signature_for(stat)
