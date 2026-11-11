@@ -149,18 +149,36 @@ module Master
       # `declared` lets a caller whose own reviewed plan names the exact paths (a
       # restructure plan) stand as the declaration instead of a task contract.
       def new_path_refusal(path, contract: current, repo_root: nil, declared: [])
-
-        root = File.expand_path(
+        root = File.realpath(
           repo_root || (defined?(Master::REPO_ROOT) ? Master::REPO_ROOT : File.expand_path("../../..", __dir__))
         )
         absolute = File.expand_path(path.to_s, root)
         return unless absolute.start_with?(root + File::SEPARATOR)
-        return if File.exist?(absolute) || File.symlink?(absolute)
 
         relative = absolute.delete_prefix(root + File::SEPARATOR)
+        cursor = root
+        segments = relative.split(File::SEPARATOR)
+        segments.each_with_index do |segment, index|
+          cursor = File.join(cursor, segment)
+          next unless File.exist?(cursor) || File.symlink?(cursor)
+
+          stat = File.lstat(cursor)
+          return "tracked path #{relative} traverses a symlink; use the canonical in-repository path" if stat.symlink?
+          if index < segments.length - 1
+            return "tracked path #{relative} has a non-directory parent" unless stat.directory?
+          else
+            return "tracked path #{relative} is not a regular file" unless stat.file?
+            return "tracked path #{relative} is hard-linked" unless stat.nlink == 1
+
+            return
+          end
+        end
+
         return if declared_paths(contract, declared).include?(relative)
 
         "new tracked path #{relative} is undeclared; extend an existing owner or declare the exact path and reason in task_contract.new_paths"
+      rescue ArgumentError, SystemCallError => error
+        "tracked path cannot be safely resolved: #{error.class}"
       end
 
       def declared_paths(contract, extra)
