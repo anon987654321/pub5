@@ -118,7 +118,7 @@ module Master
           unless %i[cancelled trace_failed needs_user blocked unknown_outcome recovery_failed].include?(done.reason)
             mission.transition!(:verify, summary: continuation_summary(done))
           end
-          settle_mission(mission, done)
+          settle_mission(mission, done, proof: memory.proof.scope)
 
           { mission: mission.record, reason: done.reason, turns: done.turns, summary: done.summary,
             transcript:, risk: memory.proof.risk }
@@ -323,10 +323,14 @@ module Master
         done.summary.to_s.empty? ? "attempt ended: #{done.reason}" : done.summary
       end
 
-      def settle_mission(mission, done)
+      def settle_mission(mission, done, proof: nil)
         return mission if mission.record&.fetch("state", nil) == "blocked"
 
         if done.reason == :complete
+          if mission.record&.fetch("origin", nil) == "backlog" && !mission.record_proof!(proof:)
+            mission.block!(reason: "PROOF_MISSING: completed fold did not persist its proof receipt")
+            return mission
+          end
           mission.finish!(state: "completed", summary: done.summary)
         elsif %i[needs_user blocked].include?(done.reason)
           mission.block!(reason: done.summary.to_s)
@@ -567,6 +571,9 @@ module Master
           raise DeliveryFailed, "DELIVERY_FAILED: origin/main does not prove the current HEAD after push"
         end
 
+        unless mission.record_repository_push!(remote: "origin", branch: "main", commit: head.strip)
+          raise DeliveryFailed, "DELIVERY_FAILED: remote push could not be recorded on the mission"
+        end
         bus&.publish("backlog_executor:pushed", remote: "origin", branch: "main", commit: head.strip)
         Master::Trace::Dmesg.status("backlog0", "pushed #{head.strip[0, 12]} to origin/main")
         head.strip
