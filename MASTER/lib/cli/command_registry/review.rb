@@ -588,7 +588,7 @@ module Master
           display_target = display_fix_target(target)
           execution = writes_requested ? "write" : "read-only"
           boundary = writes_requested ? "current-checkout" : "no-write-or-publish"
-          with_dmesg_verbosity(raw, default: "trace") do
+          with_dmesg_verbosity(raw) do
             Master::Trace::Dmesg.status("fix0", "command_mode=#{mode} execution=#{execution} target=#{display_target} boundary=#{boundary}")
             next unless Master::Fix::CritiquePin.focus
 
@@ -609,7 +609,7 @@ module Master
           trace_scope = execution_trace_scopes(target)
 
           rendered = Master::Trace::Dmesg.with_log_voice do
-            with_dmesg_verbosity(raw, default: "trace") do
+            with_dmesg_verbosity(raw) do
               next cancelled_fix_result(cancellation) if cancellation&.cancelled?
               first_read_results = first_read(
                 deliberation:, bus:, targets:, persist: writes_requested, cancellation:,

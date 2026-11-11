@@ -50,6 +50,29 @@ class TestThroughInference < Minitest::Test
                  registry.parse_pass_flags("--quiet MASTER")
   end
 
+  def test_fix_dmesg_verbosity_respects_the_configured_level_and_explicit_flags
+    registry = Master::CLI::CommandRegistry
+    dmesg = Master::Trace::Dmesg
+
+    dmesg.with_verbosity("normal") do
+      registry.with_dmesg_verbosity("MASTER") do
+        assert_equal "normal", dmesg.verbosity
+      end
+
+      registry.with_dmesg_verbosity("--verbose MASTER") do
+        assert_equal "verbose", dmesg.verbosity
+      end
+
+      registry.with_dmesg_verbosity("--trace MASTER") do
+        assert_equal "trace", dmesg.verbosity
+      end
+
+      registry.with_dmesg_verbosity("--quiet MASTER") do
+        assert_equal "quiet", dmesg.verbosity
+      end
+    end
+  end
+
   def test_infer_promotes_through_master_phrase
     ctx = Master::CLI::PipelineContext.build(
       user_message: "run this through master",
