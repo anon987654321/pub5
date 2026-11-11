@@ -36,6 +36,21 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+
+  def test_backlog_origin_is_eligible_for_the_existing_steward
+    Dir.mktmpdir do |root|
+      write_mission(root, origin: "backlog")
+      calls = []
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil,
+        runner: ->(goal:, mission:) { calls << mission["origin"]; :continued },
+      )
+
+      assert_equal :continued, steward.tick!
+      assert_equal ["backlog"], calls
+    end
+  end
+
   def test_non_fold_missions_are_invisible
     Dir.mktmpdir do |root|
       write_mission(root, origin: "fix")
