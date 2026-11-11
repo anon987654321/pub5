@@ -132,7 +132,7 @@ designer discovery, repair/recycling and travel packing.
 The old READMEs and shell installers mention Rails 8.0, Ruby 3.3, PostgreSQL, Redis, Devise,
 ActsAsTenant, Mapbox, StimulusReflex, ActionCable as the general real-time layer, Nginx and
 standalone app-per-vertical deployments. Those instructions do not describe the current
-repository. The active stack is pinned in `RAILS/apps.yml`: Rails 8.2.0.alpha, Ruby 4.0.5,
+repository. The active stack is declared in `RAILS/apps.yml`: Rails 8.2.0.alpha, the installed compatible Ruby (3.3+),
 SQLite, Falcon, Hotwire, Solid Queue/Cache, relayd and the shared `pub5-shared` engine.
 
 Do not restore legacy `rails/*.sh` installers into production. Recover product requirements from
