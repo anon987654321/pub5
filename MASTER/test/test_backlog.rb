@@ -352,10 +352,13 @@ class TestBacklog < Minitest::Test
 
     Dir.mktmpdir("backlog-executor") do |root|
       executor = Backlog::Executor.new(root:, repo_root: Backlog::MASTER_ROOT)
+      proof_types = Backlog::ProofMap.types_for(row)
       plan = {
         "executor" => "root_todo",
         "item_id" => row.fetch(:id),
         "item_digest" => executor.send(:item_digest, row),
+        "proof_map_version" => Backlog::ProofMap::VERSION,
+        "proof_types" => proof_types,
       }
       record = {
         "origin" => "backlog", "state" => "completed", "stage" => "deliver",
@@ -364,6 +367,8 @@ class TestBacklog < Minitest::Test
         "artifacts" => [], "repository_writes" => {},
         "proof" => {
           "kind" => "fix_pipeline", "status" => "pass",
+          "proof_map_version" => Backlog::ProofMap::VERSION,
+          "required_proof_types" => proof_types,
           "scope_paths" => ["MASTER/lib/example.rb"],
           "report_digest" => "a" * 64,
           "proof_summary" => "fix done - 1 commit delivered - proof: 12 of 12 - hard red 0",
