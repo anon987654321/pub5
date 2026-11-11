@@ -474,8 +474,7 @@ module Master
       end
 
       def vision_model_for(current)
-        return current if vision_capable?(current)
-        @model_router&.preferred(task_type: :vision) || current
+        @model_router&.best_vision_model || current
       end
 
       def system_prompt
