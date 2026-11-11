@@ -147,7 +147,9 @@ end
     # The full census is read-only unless --ratchet is supplied; audit never
     # supplies it. Keep the complete metrics together as one probe receipt.
     def sprawl_census
-      ok, lines = tool("lib/operator/sprawl_census.rb")
+      ok, lines = capture(
+        RbConfig.ruby, File.join(MASTER, "lib", "operator", "sprawl_census.rb"), chdir: MASTER
+      )
       [ok, ["sprawl_census: #{lines.map(&:strip).reject(&:empty?).join("; ")}"]]
     end
 
