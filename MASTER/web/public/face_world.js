@@ -526,8 +526,11 @@
   }
 
   function setConversationSubject(value, visualSubject = null) {
-    const descriptor = normalizeVisualSubject(visualSubject) || inferVisualSubject(value);
-    const next = descriptor ? "object" : inferSubjectForm(value);
+    const explicitSubject = visualSubject !== null && visualSubject !== undefined;
+    const descriptor = explicitSubject
+      ? normalizeVisualSubject(visualSubject)
+      : inferVisualSubject(value);
+    const next = descriptor ? "object" : "face";
     const signature = subjectSignature(descriptor);
     if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
         !pendingSubjectForm) return next;
