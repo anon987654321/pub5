@@ -44,8 +44,12 @@ export default class extends Controller {
   }
 
   disconnect() {
-    this.animations?.forEach((a) => a.pause?.())
+    this.animations?.forEach((animation) => animation.pause?.())
     this.animations = []
+    if (this.hasBannerTarget) {
+      this.bannerTarget.querySelectorAll("[data-marketplace-logo-particle]").forEach((particle) => particle.remove())
+    }
+    this.burstAnimation = null
   }
 
   #staticEndState() {
@@ -149,14 +153,17 @@ export default class extends Controller {
     plus.textContent = "+"
     this.numberTarget.appendChild(plus)
 
-    for (let i = 1; i <= 40; i++) {
+    const particles = []
+    for (let i = 1; i <= 16; i++) {
       const span = document.createElement("span")
       span.textContent = "+"
+      span.dataset.marketplaceLogoParticle = "true"
+      particles.push(span)
       this.bannerTarget.appendChild(span)
     }
 
     const extras = this.bannerTarget.querySelectorAll(":scope > span")
-    anime
+    this.burstAnimation = anime
       .timeline()
       .add({
         targets: this.numberTarget.querySelector("span"),
@@ -174,6 +181,11 @@ export default class extends Controller {
         easing: "easeInOutBack",
         delay: anime.stagger(80),
         duration: 6000,
+        complete: () => {
+          particles.forEach((particle) => particle.remove())
+          this.burstAnimation = null
+        },
       })
+    this.animations.push(this.burstAnimation)
   }
 }
