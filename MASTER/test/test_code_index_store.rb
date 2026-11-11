@@ -168,26 +168,26 @@ class TestCodeIndexStore < Minitest::Test
       warm = Index.new(root:, persist: true).build
 
       [cold, warm].each do |index|
-      symbols = index.symbols
-      references = index.references
-      assert_predicate symbols, :frozen?
-      assert_predicate references, :frozen?
-      assert_raises(FrozenError) { symbols.clear }
-      assert_raises(FrozenError) { references.clear }
+        symbols = index.symbols
+        references = index.references
+        assert_predicate symbols, :frozen?
+        assert_predicate references, :frozen?
+        assert_raises(FrozenError) { symbols.clear }
+        assert_raises(FrozenError) { references.clear }
 
-      symbol = symbols.find { |row| row.fqn == "Alpha#one" }
-      assert_predicate symbol, :frozen?
-      assert_predicate symbol.fqn, :frozen?
-      assert_predicate symbol.includes, :frozen?
-      assert_raises(FrozenError) { symbol.fqn.replace("Corrupted") }
-      assert_raises(FrozenError) { symbol.includes << "Corrupted" }
+        symbol = symbols.find { |row| row.fqn == "Alpha#one" }
+        assert_predicate symbol, :frozen?
+        assert_predicate symbol.fqn, :frozen?
+        assert_predicate symbol.includes, :frozen?
+        assert_raises(FrozenError) { symbol.fqn.replace("Corrupted") }
+        assert_raises(FrozenError) { symbol.includes << "Corrupted" }
 
-      reference = references.first
-      assert_predicate reference, :frozen?
-      assert_predicate reference.to_fqn, :frozen?
-      assert_raises(FrozenError) { reference.to_fqn.replace("Corrupted") }
-      assert_equal ["a.rb", 2], index.lookup("Alpha#one")
-      assert index.complete?
+        reference = references.first
+        assert_predicate reference, :frozen?
+        assert_predicate reference.to_fqn, :frozen?
+        assert_raises(FrozenError) { reference.to_fqn.replace("Corrupted") }
+        assert_equal ["a.rb", 2], index.lookup("Alpha#one")
+        assert index.complete?
       end
     end
   end
@@ -203,7 +203,9 @@ class TestCodeIndexStore < Minitest::Test
       assert_predicate errors.first, :frozen?
       assert_predicate errors.first.fetch(:message), :frozen?
       assert_raises(FrozenError) { errors.first.fetch(:message).replace("hidden") }
-      assert_includes index.errors.first.fetch(:message), "Prism"
+      assert_equal "broken.rb", errors.first.fetch(:path)
+      assert_equal :parse, errors.first.fetch(:kind)
+      assert_includes index.errors.first.fetch(:message), "unexpected"
     end
   end
 
