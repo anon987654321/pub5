@@ -578,6 +578,7 @@ module Master
                 raise IncompleteContext, "dependency parent is not a directory: #{rel}" unless stat.directory?
               else
                 raise IncompleteContext, "dependency is not a regular file: #{rel}" unless stat.file?
+                raise IncompleteContext, "dependency is hard-linked: #{rel}" unless stat.nlink == 1
               end
             end
             stat
