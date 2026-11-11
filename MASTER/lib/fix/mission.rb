@@ -432,6 +432,66 @@ module Master
         false
       end
 
+      def record_proof!(proof:)
+        source = proof.is_a?(Hash) ? proof : {}
+        value = lambda do |key|
+          source.key?(key) ? source[key] : source[key.to_s]
+        end
+        paths = lambda do |key|
+          Array(value.call(key)).map(&:to_s).uniq.select do |path|
+            !path.empty? && !Pathname.new(path).absolute? && !path.split("/").include?("..")
+          end.first(128)
+        end
+        receipt = {
+          "proved" => value.call(:proved) == true,
+          "answerable" => value.call(:answerable) == true,
+          "evidence_score" => Integer(value.call(:evidence) || 0),
+          "repository_delivery" => value.call(:repository_delivery) == true,
+          "write_paths" => paths.call(:write_paths),
+          "delivery_paths" => paths.call(:delivery_paths),
+          "council_cleared" => value.call(:cleared) == true,
+          "ideation_satisfied" => value.call(:writable) == true,
+          "generation" => Integer(value.call(:generation) || 0),
+          "write_lines" => Integer(value.call(:write_lines) || 0),
+        }
+        return false unless receipt["proved"] || receipt["answerable"]
+
+        with_lock do
+          load_writable_unlocked!
+          return false unless @record
+
+          @record["proof"] = receipt
+          @record["last_seen_at"] = now
+          persist!
+        end
+        emit("mission:proof", id: @id, proved: receipt["proved"], answerable: receipt["answerable"],
+                             evidence_score: receipt["evidence_score"], write_paths: receipt["write_paths"].size)
+        true
+      rescue ArgumentError, TypeError
+        false
+      end
+
+      def record_repository_push!(remote:, branch:, commit:)
+        return false unless remote.to_s == "origin" && branch.to_s == "main"
+        return false unless commit.to_s.match?(/\A[0-9a-f]{40}\z/i)
+
+        with_lock do
+          load_writable_unlocked!
+          return false unless @record && @record["origin"].to_s == "backlog"
+
+          pushes = @record["repository_pushes"] ||= []
+          pushes << { "remote" => "origin", "branch" => "main", "commit" => commit.to_s,
+                      "pushed_at" => now }
+          @record["repository_pushes"] = pushes.uniq { |row| row["commit"] }.last(32)
+          @record["last_seen_at"] = now
+          persist!
+        end
+        emit("mission:repository_push", id: @id, remote: "origin", branch: "main", commit:)
+        true
+      rescue ArgumentError, TypeError
+        false
+      end
+
       def record_repository_commit!(expected_hashes:, repository_root:)
         repo = File.realpath(repository_root)
         receipts = expected_hashes.is_a?(Hash) ? expected_hashes : {}
@@ -505,6 +565,15 @@ module Master
           "intent" => operator["intent"],
         }.compact
         out["repository_write_root"] = nil unless out["repository_write_root"].is_a?(String)
+        out["proof"] = out["proof"].is_a?(Hash) ? out["proof"] : nil
+        pushes = Array(out["repository_pushes"])
+        out["repository_pushes"] = pushes.filter_map do |row|
+          next unless row.is_a?(Hash) && row["remote"] == "origin" && row["branch"] == "main"
+          next unless row["commit"].to_s.match?(/\A[0-9a-f]{40}\z/i)
+
+          { "remote" => "origin", "branch" => "main", "commit" => row["commit"].to_s,
+            "pushed_at" => row["pushed_at"].to_s }
+        end.uniq { |row| row["commit"] }.last(32)
         writes = out["repository_writes"].is_a?(Hash) ? out["repository_writes"] : {}
         out["repository_writes"] = writes.each_with_object({}) do |(path, digest), clean|
           key = path.to_s
@@ -542,6 +611,8 @@ module Master
           "finished_at" => record["finished_at"],
           "checkpoint" => record["checkpoint"],
           "artifacts" => Array(record["artifacts"]).map(&:to_s).uniq.last(32),
+          "proof" => nil,
+          "repository_pushes" => [],
           "repository_write_root" => nil,
           "repository_writes" => {},
           "error" => record["error"],
@@ -712,6 +783,8 @@ module Master
           "finished_at" => nil,
           "checkpoint" => nil,
           "artifacts" => [],
+          "proof" => nil,
+          "repository_pushes" => [],
           "repository_write_root" => nil,
           "repository_writes" => {},
           "error" => nil,
