@@ -74,6 +74,31 @@ class TestCodeIndexStore < Minitest::Test
     end
   end
 
+  def test_reopened_definitions_are_retained_across_files_and_snapshots
+    Dir.mktmpdir do |root|
+      root = File.realpath(root)
+      File.write(File.join(root, "part_a.rb"), "module Shared\\n  class Widget; end\\nend\\n")
+      File.write(File.join(root, "part_b.rb"), "module Shared\\n  class Widget; end\\n")
+
+      index = Index.new(root:, persist: true).build
+      definitions = index.find("Shared::Widget").select { |symbol| symbol.type == :class }
+      assert_equal 2, definitions.size
+      assert_equal %w[part_a.rb part_b.rb], definitions.map { |symbol| File.basename(symbol.file) }.sort
+
+      warm = Index.new(root:, persist: true).build
+      warm_definitions = warm.find("Shared::Widget").select { |symbol| symbol.type == :class }
+      assert_equal 2, warm_definitions.size
+    end
+  end
+
+  def test_a_never_built_index_is_not_complete
+    Dir.mktmpdir do |root|
+      index = Index.new(root:)
+      refute index.built?
+      refute index.complete?
+    end
+  end
+
   def test_deleted_file_is_purged_from_the_snapshot
     with_tree do |root|
       Index.new(root:, persist: true).build
