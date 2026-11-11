@@ -140,24 +140,35 @@ class StreamStageTest < Minitest::Test
     end
   end
 
-  def test_an_oversized_target_is_rejected_without_materialising_its_source
+  def test_an_oversized_target_is_rejected_without_reading_its_contents
     path = File.join(temporary_path, "target.rb")
     File.write(path, "# " + ("x" * 260_000) + "\\n")
     @reference_graph = FakeGraph.new(temporary_path)
-    original_read = File.method(:read)
+    original_open = File.method(:open)
+    read_sizes = []
 
-    context = nil
-    File.stub(:read, lambda { |file, *args, **kwargs|
-      raise "oversized target was materialised" if File.expand_path(file) == path
-
-      original_read.call(file, *args, **kwargs)
+    File.stub(:open, lambda { |file, *args, **kwargs, &block|
+      if File.expand_path(file.to_s) == path
+        original_open.call(file, *args, **kwargs) do |io|
+          original_read = io.method(:read)
+          io.define_singleton_method(:read) do |length = nil, *read_args|
+            read_sizes << length
+            original_read.call(length, *read_args)
+          end
+          block.call(io)
+        end
+      else
+        original_open.call(file, *args, **kwargs, &block)
+      end
     }) do
       context = repair_context(path)
+      refute context[:complete]
+      assert_match(/complete target source is \\d+ bytes, exceeding/, context[:reason])
     end
 
-    refute context[:complete]
-    assert_match(/complete target source is \d+ bytes, exceeding/, context[:reason])
+    assert_empty read_sizes, "an oversized target is rejected after stat, without reading its contents"
   end
+
 
   def test_callers_the_graph_cannot_see_lock_the_interface_without_refusing_the_repair
     graph = graph_with(inbound: ["caller.rb"], dynamic: { "caller.rb" => "public_send" })
@@ -183,26 +194,38 @@ class StreamStageTest < Minitest::Test
     assert_match(/1 related file\(s\) not shown/, context[:lock_reasons].last)
   end
 
-  def test_an_oversized_related_file_is_digest_checked_without_materialising_it
+  def test_an_oversized_related_file_is_digest_checked_with_bounded_reads
     path = File.join(temporary_path, "large.rb")
     File.write(path, "# " + ("x" * 260_000) + "\\n")
     graph = FakeGraph.new(temporary_path)
     graph.define_singleton_method(:source_digest) do |file|
       Digest::SHA256.file(file).hexdigest
     end
-    original_read = File.method(:read)
+    original_open = File.method(:open)
+    read_sizes = []
 
-    result = nil
-    File.stub(:read, lambda { |file, *args, **kwargs|
-      raise "oversized dependency was materialised" if File.expand_path(file) == path
-
-      original_read.call(file, *args, **kwargs)
+    File.stub(:open, lambda { |file, *args, **kwargs, &block|
+      if File.expand_path(file.to_s) == path
+        original_open.call(file, *args, **kwargs) do |io|
+          original_read = io.method(:read)
+          io.define_singleton_method(:read) do |length = nil, *read_args|
+            read_sizes << length
+            original_read.call(length, *read_args)
+          end
+          block.call(io)
+        end
+      else
+        original_open.call(file, *args, **kwargs, &block)
+      end
     }) do
       result = read_related(graph, "large.rb", max_bytes: 64)
+      assert_nil result, "over-budget source is checked but never returned to the prompt"
     end
 
-    assert_nil result, "over-budget source is checked but never returned to the prompt"
+    assert_operator read_sizes.size, :>, 1
+    assert read_sizes.all? { |size| size == 64 * 1024 }, read_sizes.inspect
   end
+
 
   def test_an_oversized_related_file_with_a_stale_graph_digest_refuses_the_repair
     path = File.join(temporary_path, "large.rb")
@@ -228,6 +251,20 @@ class StreamStageTest < Minitest::Test
     end
     assert_match(/dependency is a symlink/, error.message)
   end
+
+  def test_a_related_hard_link_is_refused_before_its_contents_are_read
+    source = File.join(temporary_path, "outside.rb")
+    linked = File.join(temporary_path, "linked.rb")
+    File.write(source, "SECRET = :outside\\n")
+    File.link(source, linked)
+    graph = FakeGraph.new(temporary_path)
+
+    error = assert_raises(Master::Fix::FixLoop::PassRunner::StreamStage::IncompleteContext) do
+      read_related(graph, "linked.rb", max_bytes: 64)
+    end
+    assert_match(/dependency is hard-linked/, error.message)
+  end
+
 
   def test_a_related_file_that_changed_since_the_graph_read_it_still_refuses_the_repair
     graph = graph_with(inbound: ["caller.rb"])
