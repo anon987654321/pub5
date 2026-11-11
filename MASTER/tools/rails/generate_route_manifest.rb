@@ -76,12 +76,9 @@ module Deploy
       Digest::SHA256.hexdigest(route_sources(app).map { |f| File.read(f) }.join("\n"))[0, 16]
     end
 
-    # The apps' bundles are installed for the project-pinned rbenv Ruby; the
-    # general runner picks Homebrew's of the same version, whose gems are not
-    # the apps' — bin/rails routes then dies in bundler/setup. The same fix as
-    # tools/rails/triangle.rb, from which it comes.
-    RUBY = Operator::RubyRunner.rbenv_path("ruby") || Operator::RubyRunner.ruby_cmd
-    BUNDLE = Operator::RubyRunner.rbenv_path("bundle") || Operator::RubyRunner.bundle_cmd
+    # Each app uses its own Gemfile and the runtime already selected by MASTER.
+    RUBY = Operator::RubyRunner.ruby_cmd
+    BUNDLE = Operator::RubyRunner.bundle_cmd
 
     def capture_routes(app)
       out, status = Open3.capture2e(
