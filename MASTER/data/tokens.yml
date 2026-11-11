@@ -1046,6 +1046,12 @@ tokens:
         asymmetry: 0.010
       semantic_subject:
         enabled: true
+        schema_version: 1
+        event: assistant:visual-subject
+        field: visual_subject
+        form_field: form
+        sequence_fields: [sequence, features]
+        unknown_kind: keep_portrait
         min_confidence: 0.42
         max_label_chars: 48
         max_features: 6
