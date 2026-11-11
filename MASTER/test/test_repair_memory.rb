@@ -27,6 +27,49 @@ class TestRepairMemory < Minitest::Test
     end
   end
 
+  def test_two_processes_preserve_each_others_repair_memory_updates
+    skip "fork is unavailable" unless Process.respond_to?(:fork)
+
+    Dir.mktmpdir do |root|
+      source = File.join(root, "a.rb")
+      File.write(source, "x = 1\\n")
+      ready_read, ready_write = IO.pipe
+      start_read, start_write = IO.pipe
+      children = %w[LAW_ALPHA LAW_BETA].map do |law|
+        fork do
+          ready_read.close
+          start_write.close
+          ready_write.write("r")
+          ready_write.flush
+          start_read.read(1)
+          Memory.new(root:).record(source, [law], { applied: 1 })
+          exit! 0
+        rescue StandardError
+          exit! 1
+        end
+      end
+      ready_write.close
+      start_read.close
+      2.times { ready_read.read(1) }
+      start_write.write("xx")
+      start_write.close
+      statuses = children.map { |pid| Process.wait2(pid).last.exitstatus }
+      assert_equal [0, 0], statuses
+
+      data = JSON.parse(File.read(File.join(root, ".master", "fix_memory.json")))
+      assert_equal 1, data.fetch("laws").fetch("LAW_ALPHA").fetch("asked")
+      assert_equal 1, data.fetch("laws").fetch("LAW_BETA").fetch("asked")
+    ensure
+      ready_read&.close unless ready_read&.closed?
+      ready_write&.close unless ready_write&.closed?
+      start_read&.close unless start_read&.closed?
+      start_write&.close unless start_write&.closed?
+      children&.each do |pid|
+        Process.wait(pid) rescue Errno::ECHILD
+      end
+    end
+  end
+
   def test_repair_memory_refuses_a_symlinked_state_file
     Dir.mktmpdir do |root|
       outside = File.join(root, "outside.json")
