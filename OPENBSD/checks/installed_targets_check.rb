@@ -55,10 +55,9 @@ module Deploy
       vips ffmpeg node npm doas su tee logger newsyslog drill dig sendmail curl wget
     ].freeze
 
-    # Ruby arrives by version (OPENBSD/lib/ruby_select.sh lists them); every
-    # suffix it may pick is provided by the package of that version.
-    RUBY_SUFFIXES = ["4.0", "40", "3.4", "34", "3.3", "33", ""].freeze
-    RUBY_PACKAGE_BINARIES = RUBY_SUFFIXES.flat_map { |suffix| %w[ruby bundle gem].map { |tool| "#{tool}#{suffix}" } }.freeze
+    # OpenBSD package suffixes vary by release; recognize the family rather
+    # than freezing a list that silently ages out.
+    RUBY_PACKAGE_BINARY = /\\A(?:ruby|bundle|gem)(?:[0-9]+(?:\\.[0-9]+)*)?\\z/
 
     module_function
 
@@ -83,7 +82,7 @@ module Deploy
       referrers.each_with_object({}) do |path, acc|
         read(path).scan(TARGET) do |dir, name|
           name = name.sub(/\.\z/, "") # prose punctuation, not part of the filename
-          next if PROVIDED_BY_PACKAGES.include?(name) || RUBY_PACKAGE_BINARIES.include?(name)
+          next if PROVIDED_BY_PACKAGES.include?(name) || RUBY_PACKAGE_BINARY.match?(name)
 
           (acc["#{dir}/#{name}"] ||= []) << path.delete_prefix("#{root}/")
         end
