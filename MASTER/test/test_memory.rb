@@ -123,7 +123,7 @@ class TestMemory < Minitest::Test
 
       error = assert_raises(IOError) { Master::Ground::Memory.new(root:) }
 
-      assert_match(/memory store directory escapes|stable in-repository directory/, error.message)
+      assert_match(/symlinked atomic-write directory component/, error.message)
       assert_equal "private", Master.load_yaml(File.join(outside, "memory.yml")).dig("outside", "value")
     end
   end
