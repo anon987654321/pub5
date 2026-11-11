@@ -267,7 +267,8 @@ module Backlog
     # Produce an argv-only command spec for an acceptance command we own.
     # A nil result means the item must stay out of unattended intake.
     def execution_spec(value, tree:, repo_root:)
-      raw = value.to_s.strip.sub(/\A\$\s*/, "")
+      acceptance_command = value.to_s
+      raw = acceptance_command.strip.sub(/\A\$\s*/, "")
       return if raw.empty?
 
       repository = File.realpath(repo_root)
@@ -288,13 +289,13 @@ module Backlog
         break unless match
 
         key = match[1]
-        value = match[2] || match[3] || match[4]
+        env_value = match[2] || match[3] || match[4]
         return unless EXECUTION_ENV.include?(key)
-        return unless value.match?(/\A\d+\z/)
-        return if key == "MASTER_TEST_JOBS" && value.to_i < 1
-        return if key == "MASTER_TEST_START_MARKERS" && !%w[0 1].include?(value)
+        return unless env_value.match?(/\A\d+\z/)
+        return if key == "MASTER_TEST_JOBS" && env_value.to_i < 1
+        return if key == "MASTER_TEST_START_MARKERS" && !%w[0 1].include?(env_value)
 
-        environment[key] = value
+        environment[key] = env_value
         raw = match[5]
       end
 
@@ -302,7 +303,7 @@ module Backlog
       argv = Shellwords.shellsplit(raw)
       return if argv.empty? || argv.any? { |token| token.match?(/[;&|<>]/) }
 
-      proof_types = types_for(done_when: value)
+      proof_types = types_for(done_when: acceptance_command)
       return unless proof_types.one?
       proof_type = proof_types.first
       return unless PROOF_TIMEOUTS.key?(proof_type)
@@ -329,7 +330,7 @@ module Backlog
         cwd: working_directory,
         cwd_relative: working_directory == repository ? "." : working_directory.delete_prefix("#{repository}/"),
         env: environment.freeze,
-        command_digest: Digest::SHA256.hexdigest(value.to_s),
+        command_digest: Digest::SHA256.hexdigest(acceptance_command),
         timeout: PROOF_TIMEOUTS.fetch(proof_type),
       }.freeze
     rescue ArgumentError, SystemCallError
