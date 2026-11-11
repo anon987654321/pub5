@@ -41,7 +41,6 @@ module Operator
         [
           File.join(home, "bin", "bundle"),
           File.join(home, ".local", "bin", "bundle"),
-          File.join(home, ".rbenv", "shims", "bundle"),
         ],
       )
       candidates << openbsd_path("bundle", root:)
