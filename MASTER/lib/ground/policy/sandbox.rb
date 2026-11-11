@@ -58,12 +58,27 @@ module Master
           /\bdeploy\b/i,
         ].freeze
 
+        # Exact repository-owned proof entrypoints may run unattended. Keep
+        # this list narrower than "rake" or "bin/*": deploy, database, Git
+        # publication and unknown tasks must continue through ASK_PATTERNS or
+        # the unknown-command approval path.
+        SAFE_CHECK_PATTERNS = [
+          /\A(?:bundle exec )?rake (?:test|test:serial|test:all_trees|audit|selftest|selfcheck)\z/,
+          /\A(?:bundle exec )?rake -f MASTER\/Rakefile (?:test|test:serial|test:core|test:subsystems|test:all_trees|audit|selftest|selfcheck|lint:law_parity|ux:baymard)\z/,
+          /\A(?:bundle exec )?rake -f STUDIO\/Rakefile (?:check|test)\z/,
+          /\Aruby RAILS\/test\/run_all\.rb\z/,
+          /\Aruby OPENBSD\/test\/run_all\.rb\z/,
+          /\Aruby MASTER\/checks\/runner\.rb --all\z/,
+          /\AMASTER\/bin\/check --profile=agent\z/,
+        ].freeze
+
         ALLOW_PATTERNS = [
           /\Agit\s+(status|diff|log|show|branch)\b/,
           /\A(?:bundle\s+exec\s+)?ruby\s+-c\b/,
           /\A(?:bundle\s+exec\s+)?rspec\b/,
           /\A(?:bundle\s+exec\s+)?rubocop\b/,
           /\A(?:bundle\s+exec\s+)?rails\s+test\b/,
+          *SAFE_CHECK_PATTERNS,
           /\Als\b|\Afind\b|\Agrep\b|\Arg\b/,
         ].freeze
 
