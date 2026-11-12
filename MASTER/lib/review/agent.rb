@@ -143,6 +143,12 @@ module Master
 
         prepare_evidence(message) if prepare_evidence_for?(message, task_type)
         dispatch = prepare_chat_dispatch(message, task_type)
+        if task_type.to_s == "nsfw" && dispatch[:selected_model].to_s != Io::LaneSelection.nsfw_model_id.to_s
+          return Result.err(
+            "NSFW lane unavailable. Set MASTER_NSFW=1 and MASTER_NSFW_MODEL to an installed local Ollama model; MASTER_NO_OLLAMA=1 remains a hard off.",
+            category: :policy,
+          )
+        end
 
         rate_err = check_rate_limit(dispatch[:selected_model])
         return rate_err if rate_err
