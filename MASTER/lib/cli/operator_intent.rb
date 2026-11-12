@@ -17,6 +17,7 @@ module Master
       CONFIDENCE_FLOOR = 0.72
       REPOSITORY_TARGET_RE = /\b(?:pub5|repo(?:sitory)?|codebase|whole\s+(?:repo|repository)|entire\s+(?:repo|repository))\b/i.freeze
       DEPLOY_ACTION_RE = /\b(?:deploy(?:ment)?|re[- ]?deploy|release|ship|publish|rollout?)\b/i.freeze
+      DIRECT_DEPLOY_REQUEST_RE = /\A\s*(?:(?:please|can you|could you|i need you to|i want you to|go ahead and)\s+)?(?:deploy|re[- ]?deploy|release|ship|publish)\b/i.freeze
       NON_PRODUCTION_ENV_RE = /\b(?:local|development|dev|test|staging|stage|preview)\b/i.freeze
       REQUIRED_KEYS = %w[intent operation environment target_type target exclude confidence reason].freeze
 
@@ -94,7 +95,7 @@ module Master
       # --confirm review gate before any production effect.
       def repository_wide_deployment?(text, inventory)
         request = text.to_s
-        return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DEPLOY_ACTION_RE)
+        return false unless request.match?(REPOSITORY_TARGET_RE) && request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
 
         named_app = inventory.ordered_apps.any? do |app|
