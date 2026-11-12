@@ -145,9 +145,13 @@ module Master
         raw_worker = if async_quit_supported?(browser)
                        browser.quit(wait: false)
                      else
-                       Thread.new { browser.quit }
+                       Thread.new do
+                         Thread.current.report_on_exception = false
+                         browser.quit
+                       end
                      end
         raise ProviderError, "#{@provider}: browser cleanup did not return a worker" unless raw_worker.is_a?(Thread)
+        raw_worker.report_on_exception = false if raw_worker.respond_to?(:report_on_exception=)
 
         # Observe both Ferrum's native worker and the compatibility worker.
         # Thread#join does not surface an exception; #value does. Keep a small
