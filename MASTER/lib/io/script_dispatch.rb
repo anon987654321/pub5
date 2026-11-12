@@ -39,11 +39,24 @@ module Master
         argv = Shellwords.split(arg.to_s)
         cmd = env.empty? ? [RbConfig.ruby] : [env.transform_keys(&:to_s).transform_values(&:to_s), RbConfig.ruby]
         out, status = Master::Io::Exec.capture2e(*cmd, script, *argv, chdir: working_directory(requested_root, script))
-        status.success? ? Result.ok(out.strip) : Result.err("#{tool}: exit=#{status.exitstatus}\n#{out.strip}")
+        return Result.ok(out.strip) if status.success?
+
+        Result.err("#{tool}: #{failure_detail(status)}\n#{out.strip}", category: :infrastructure)
       rescue ArgumentError => e
         Result.err("#{tool}: bad arguments: #{e.message}", category: :validation)
       rescue StandardError => e
         Result.err("#{tool}: #{e.class}: #{e.message}", category: :infrastructure)
+      end
+
+      def failure_detail(status)
+        if status.signaled?
+          signal = status.termsig
+          "terminated by signal #{Signal.list.key(signal) || signal}"
+        elsif status.exited?
+          "exit=#{status.exitstatus}"
+        else
+          "ended without a normal exit status (#{status})"
+        end
       end
 
       # Resolve known Studio tools first; explicit aliases name tools whose
