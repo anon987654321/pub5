@@ -7,6 +7,10 @@ require_relative "minitest_helper"
 require_relative "../photograph/selfie_series"
 
 class TestSelfieSeries < Minitest::Test
+  module AllowConsent
+    def self.required_source_sets(**) = []
+    def self.require!(**) = true
+  end
   # A stand-in for the Replicate predict/download round trip, in the shape
   # idea_picture_test.rb already established for graded stills.
   class FakeClient
@@ -69,7 +73,8 @@ class TestSelfieSeries < Minitest::Test
       subject: "probe",
       client: fail_download_at ? FakeClient.new(fail_download_at:) : @client,
       directory: File.join(@dir, "stills"),
-      ledger_path: File.join(@dir, "ledger.jsonl")
+      ledger_path: File.join(@dir, "ledger.jsonl"),
+      consent: AllowConsent
     )
   end
 
@@ -96,7 +101,8 @@ class TestSelfieSeries < Minitest::Test
     [old, processed, other].each { |path| File.write(path, "old") }
 
     box = Studio::Visual::SelfieSeries.new(
-      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl")
+      subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
+      consent: AllowConsent
     )
     box.run(count: 1, replace: true)
 
