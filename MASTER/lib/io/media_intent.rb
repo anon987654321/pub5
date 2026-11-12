@@ -622,10 +622,29 @@ module Master
         menu = dilla_menu(root)
         return menu unless menu.ok?
 
-        choices = menu.value!
+        settings = dilla_render_settings(text, menu.value!)
+        output ||= dilla_unique_render_path("#{settings[:progression]}-#{settings[:pattern]}")
+        FileUtils.mkdir_p(File.dirname(output))
+        argv = dilla_render_arguments(settings, output)
+        result = ScriptDispatch.run(root:, tool: "dilla", arg: argv.map { |value| Shellwords.escape(value) }.join(" "))
+        return result unless result.ok?
+
+        Result.ok(dilla_render_result(result.value!, output, settings))
+      end
+
+      def dilla_render_settings(text, choices)
         named = text[/\bprogression\s+(\d+)\b/i, 1] || text[/\A\s*(\d+)(?![\d.])/, 1]
         progression = choices[:progressions].include?(named) ? named : choices[:progressions].sample
-        # Explicit Dilla requests must not depend on prior reference analysis.
+        reference_context = dilla_request_reference(text)
+        reference = reference_context[:reference]
+        dilla_pocket = reference_context[:dilla_pocket]
+        pattern = dilla_pattern_selection(text, choices, reference, dilla_pocket)
+        groove = dilla_groove_selection(choices, reference, dilla_pocket)
+        tuning = dilla_reference_settings(text, reference, dilla_pocket)
+        { progression:, pattern:, groove:, dilla_pocket:, **tuning }
+      end
+
+      def dilla_request_reference(text)
         explicit_dilla = text.match?(/\b(?:j\s*dilla|dilla|boom[ -]?bap|hip[ -]?hop)\b/i)
         named_other_style = text.match?(/\b(?:bach|baroque|flying lotus|flylo|madlib|royksopp|industrial[ -]?techno|techno)\b/i) && !explicit_dilla
         reference = if explicit_dilla
@@ -633,50 +652,73 @@ module Master
                     elsif !named_other_style && active_reference_style == "j_dilla"
                       dilla_reference_profile
                     end
-        dilla_pocket = !named_other_style && (reference || explicit_dilla)
-        named_pattern = choices[:drums].find { |id| text.match?(/\b#{Regexp.escape(id)}\b/) }
-        dilla_patterns = %w[dilla_shadow_full dilla_broken_full dilla_shadow dilla_broken dusty_laid_back boom_bap]
-        density = reference_feature(reference, "onset_density_per_bar") if dilla_pocket
-        offbeat = reference_feature(reference, "offbeat_onset_share") if dilla_pocket
-        ranked_patterns = []
-        ranked_patterns << "dusty_laid_back" if density && density < 7.5
-        ranked_patterns << "dilla_broken_full" if offbeat && offbeat > 0.60
-        ranked_patterns.concat(dilla_patterns)
-        pattern = named_pattern || if dilla_pocket
-                                     ranked_patterns.uniq.find { |id| choices[:drums].include?(id) } || choices[:drums].sample
-                                   else
-                                     choices[:drums].sample
-                                   end
-        groove = if dilla_pocket
-                   preferred = reference&.fetch("groove_profile", nil)
-                   [preferred, "dilla_shadow", "behind_the_beat", "late_snare"].compact.find { |name| choices[:profiles].include?(name) }
-                 end
-        groove_scale = reference_groove_scale(reference) if dilla_pocket
-        explicit_bpm = text.match(/\b(\d{2,3}(?:\.\d+)?)\s*bpm\b/i)&.captures&.first
-        bpm = explicit_bpm ? explicit_bpm.to_f : (reference&.fetch("target_bpm", nil) || (dilla_pocket ? 92 : nil))
-        drum_balance = reference_balance_adjustment(reference, "drums_energy_share") if dilla_pocket
-        chord_balance = reference_balance_adjustment(reference, "other_energy_share") if dilla_pocket
-        unless output
-          output = dilla_unique_render_path("#{progression}-#{pattern}")
+        { reference:, dilla_pocket: !named_other_style && (reference || explicit_dilla) }
+      end
+
+      def dilla_pattern_selection(text, choices, reference, dilla_pocket)
+        named = choices[:drums].find { |id| text.match?(/\b#{Regexp.escape(id)}\b/) }
+        return named if named
+        return choices[:drums].sample unless dilla_pocket
+
+        density = reference_feature(reference, "onset_density_per_bar")
+        offbeat = reference_feature(reference, "offbeat_onset_share")
+        ranked = []
+        ranked << "dusty_laid_back" if density && density < 7.5
+        ranked << "dilla_broken_full" if offbeat && offbeat > 0.60
+        ranked.concat(%w[dilla_shadow_full dilla_broken_full dilla_shadow dilla_broken dusty_laid_back boom_bap])
+        ranked.uniq.find { |id| choices[:drums].include?(id) } || choices[:drums].sample
+      end
+
+      def dilla_groove_selection(choices, reference, dilla_pocket)
+        return unless dilla_pocket
+
+        preferred = reference&.fetch("groove_profile", nil)
+        [preferred, "dilla_shadow", "behind_the_beat", "late_snare"].compact.find do |name|
+          choices[:profiles].include?(name)
         end
-        FileUtils.mkdir_p(File.dirname(output))
-        argv = ["--progression", progression, "--out", output]
-        argv.concat(["--drums", pattern]) if pattern
-        argv.concat(["--profile", groove]) if groove
-        argv.concat(["--groove", groove_scale.to_s]) unless groove_scale.nil?
-        argv.concat(["--bpm", bpm.to_s]) if bpm
-        argv.concat(["--drum-balance", drum_balance.to_s]) unless drum_balance.nil?
-        argv.concat(["--chord-balance", chord_balance.to_s]) unless chord_balance.nil?
-        if dilla_pocket
+      end
+
+      def dilla_reference_settings(text, reference, dilla_pocket)
+        explicit_bpm = text.match(/\b(\d{2,3}(?:\.\d+)?)\s*bpm\b/i)&.captures&.first
+        {
+          groove_scale: dilla_pocket ? reference_groove_scale(reference) : nil,
+          bpm: explicit_bpm ? explicit_bpm.to_f : (reference&.fetch("target_bpm", nil) || (dilla_pocket ? 92 : nil)),
+          drum_balance: dilla_pocket ? reference_balance_adjustment(reference, "drums_energy_share") : nil,
+          chord_balance: dilla_pocket ? reference_balance_adjustment(reference, "other_energy_share") : nil,
+        }
+      end
+
+      def dilla_render_arguments(settings, output)
+        argv = ["--progression", settings[:progression], "--out", output]
+        argv.concat(["--drums", settings[:pattern]]) if settings[:pattern]
+        argv.concat(["--profile", settings[:groove]]) if settings[:groove]
+        argv.concat(["--groove", settings[:groove_scale].to_s]) unless settings[:groove_scale].nil?
+        argv.concat(["--bpm", settings[:bpm].to_s]) if settings[:bpm]
+        argv.concat(["--drum-balance", settings[:drum_balance].to_s]) unless settings[:drum_balance].nil?
+        argv.concat(["--chord-balance", settings[:chord_balance].to_s]) unless settings[:chord_balance].nil?
+        if settings[:dilla_pocket]
           argv.concat(["--effect-rig", "dilla_night", "--kit", "kit_dust", "--voice", "rhodes_mark1",
                        "--sonitex", "subtle", "--sonitex-instances", "2", "--vcs", "0.54"])
         end
-        result = ScriptDispatch.run(root:, tool: "dilla", arg: argv.map { |v| Shellwords.escape(v) }.join(" "))
-        return result unless result.ok?
-
-        Result.ok({ log: result.value!, path: output, progression:, drums: pattern, groove:, groove_scale:, bpm:,
-                    drum_balance:, chord_balance:, kit: dilla_pocket ? "kit_dust" : nil })
+        argv
       end
+
+      def dilla_render_result(log, output, settings)
+        {
+          log:, path: output,
+          progression: settings[:progression],
+          drums: settings[:pattern],
+          groove: settings[:groove],
+          groove_scale: settings[:groove_scale],
+          bpm: settings[:bpm],
+          drum_balance: settings[:drum_balance],
+          chord_balance: settings[:chord_balance],
+          kit: settings[:dilla_pocket] ? "kit_dust" : nil,
+        }
+      end
+      private_class_method :dilla_render_settings, :dilla_request_reference,
+                           :dilla_pattern_selection, :dilla_groove_selection,
+                           :dilla_reference_settings, :dilla_render_arguments, :dilla_render_result
 
       def reference_feature(profile, feature)
         features = profile&.fetch("features", nil)
