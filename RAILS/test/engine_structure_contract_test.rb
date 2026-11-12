@@ -5,7 +5,8 @@ require "minitest/autorun"
 class EngineStructureContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
   BRGEN = File.join(ROOT, "brgen")
-  TAKEAWAY = "brgen/engines/marketplace/engines/takeaway"
+  TAKEAWAY = "engines/marketplace/engines/takeaway"
+  EXPECTED_NESTED_ENGINE = "brgen/#{TAKEAWAY}"
 
   def read(path)
     File.read(File.join(ROOT, path))
@@ -34,7 +35,7 @@ class EngineStructureContractTest < Minitest::Test
                 .select { |path| File.directory?(path) }
                 .map { |path| path.delete_prefix("#{ROOT}/") }
                 .sort
-    assert_equal [TAKEAWAY], nested
+    assert_equal [EXPECTED_NESTED_ENGINE], nested
   end
 
   def test_architecture_contract_keeps_the_nested_food_boundary_explicit
