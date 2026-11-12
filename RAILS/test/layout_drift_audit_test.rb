@@ -48,6 +48,29 @@ class LayoutDriftAuditTest < Minitest::Test
     assert_match(/\.feed_list\.post-card-list > li\s*\{\s*display:\s*block;/, css)
   end
 
+  def repository_audit
+    @repository_audit ||= Operator::LayoutDriftAudit.new(root: File.expand_path("../..", __dir__))
+  end
+
+  def test_vertical_front_pages_have_primary_headings
+    findings = repository_audit.run
+    %w[brgen amber marketplace dating tv maps takeaway radio messenger bsdports mrdamascy].each do |vertical|
+      finding = findings.find { |item| item.code == "vertical.#{vertical}.primary_heading" }
+      assert finding, "missing heading audit for #{vertical}"
+      assert_equal "PASS", finding.status, finding.message
+    end
+  end
+
+  def test_shared_post_updates_do_not_touch_post_rows
+    findings = repository_audit.run
+    %w[post_card.root_identity post_card.brgen_vote_event post_card.brgen_vote_no_post_touch
+       post_card.brgen_comment_count_event post_card.brgen_comment_no_post_touch].each do |code|
+      finding = findings.find { |item| item.code == code }
+      assert finding, "missing shared-post audit for #{code}"
+      assert_equal "PASS", finding.status, finding.message
+    end
+  end
+
   def test_report_marks_browser_and_runtime_evidence_as_not_run
     Dir.mktmpdir do |root|
       report = Operator::LayoutDriftAudit.new(root:)
