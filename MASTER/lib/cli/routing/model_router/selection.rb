@@ -10,6 +10,12 @@ module Master
         # replaceable collaborators owned by the existing router.
         module Selection
           def preferred(task_type: :exploration)
+            if task_type.to_sym == :nsfw
+              model = Io::LaneSelection.nsfw_model_id
+              return model if model && Io::LaneSelection.alive?(model)
+
+              return nil
+            end
             return @config.model unless enabled?
             return preferred_local(task_type:) if local_only?
 
@@ -45,6 +51,12 @@ module Master
           # free API, browser chat, then local compute. Local availability is not
           # an offline contract.
           def fallback_chain(task_type: :exploration)
+            if task_type.to_sym == :nsfw
+              model = Io::LaneSelection.nsfw_model_id
+              return [] unless model && Io::LaneSelection.alive?(model) && Io::LaneState.usable?(model)
+
+              return [model]
+            end
             return [@config.model] unless enabled?
 
             candidates = Routing::RoutePolicy.normalize(chain_for(task_type))
@@ -90,6 +102,7 @@ module Master
           def latency_s(model_id) = (@compute_pool.latency_s(model_id) if @compute_pool.respond_to?(:latency_s))
 
           def chain_for(task_type)
+            return [Io::LaneSelection.nsfw_model_id].compact if task_type.to_sym == :nsfw
             return local_only_chain(task_type:) if local_only?
 
             lanes = { pref: [preferred(task_type:)], tiers: tier_ids.reject { |id| ollama_model?(id) },
