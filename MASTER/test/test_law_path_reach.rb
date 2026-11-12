@@ -39,7 +39,7 @@ class TestLawPathReach < Minitest::Test
     CAPABILITY_REDUCTION_IS_MONOTONIC: ["MASTER/lib/core.rb", "MASTER/lib/core_helpers.rb"],
     CLI_ANALYZE_TARGET_ROUTING: ["MASTER/data/patterns.yml", "MASTER/data/new_registry.yml"],
     CLI_FACE_DEDICATED_TTY: ["MASTER/lib/cli/command_registry.rb", "MASTER/lib/cli/web_server.rb"],
-    CLI_PROMPT_COMPOSITION: ["MASTER/lib/voice/renderer/prompt.rb", "MASTER/lib/voice/speech.rb"],
+    CLI_PROMPT_COMPOSITION: ["MASTER/lib/cli/session/repl_io.rb", "MASTER/lib/voice/speech.rb"],
     CLI_TREE_TARGET_RESOLUTION: ["MASTER/lib/cli/tree.rb", "MASTER/lib/fix/tree.rb"],
 
     COMMERCE_AMBER_DOES_NOT_OWN_BRGEN: [AMBER_ORDER, MARKETPLACE_ORDER],
@@ -58,7 +58,7 @@ class TestLawPathReach < Minitest::Test
 
     MIGRATION_REMOVE_COLUMN: [MIGRATION, MODEL],
     NO_SILENT_TEST_SKIP: ["MASTER/test/test_thing.rb", "MASTER/lib/thing.rb"],
-    OPENBSD_DMESG_CONSOLE_STYLE: ["MASTER/lib/voice/speech.rb", "MASTER/lib/cli/speech.rb"],
+    OPENBSD_DMESG_CONSOLE_STYLE: ["MASTER/lib/cli/session/repl_io.rb", "MASTER/lib/core/world.rb"],
     PAPER_NOT_PURE_WHITE: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
     PARAMETRIC_MARK_ONLY: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
     SIGNAL_COLOR_NAMING: ["RAILS/mrdamascy/app/assets/stylesheets/a.css", "RAILS/brgen/app/assets/stylesheets/a.css"],
@@ -80,7 +80,7 @@ class TestLawPathReach < Minitest::Test
     VISUAL_IDENTITY_SOURCE_OF_TRUTH: ["MASTER/data/tokens.yml", "MASTER/data/new_registry.yml"],
 
     VISUAL_PARTICLE_STIPPLE_PRIMARY: ["MASTER/data/tokens.yml", "MASTER/data/new_registry.yml"],
-    VOICE_FAILURES_ARE_ACTIONABLE: ["MASTER/lib/voice/speech.rb", "MASTER/lib/cli/speech.rb"],
+    VOICE_FAILURES_ARE_ACTIONABLE: ["MASTER/lib/io/media_intent.rb", "MASTER/lib/core/world.rb"],
     WAITING_STATE_MEANING: [RAILS_JS, STUDIO_JS],
   }.freeze
 
@@ -96,6 +96,36 @@ class TestLawPathReach < Minitest::Test
 
       assert law.applies?("/repo/#{inside}", language(inside)), "#{id} must reach #{inside}"
       refute law.applies?("/repo/#{outside}", language(outside)), "#{id} must not reach #{outside}"
+    end
+  end
+
+  def test_openbsd_cli_laws_cover_the_full_operator_path
+    scopes = {
+      OPENBSD_DMESG_CONSOLE_STYLE: %w[
+        MASTER/bin/master
+        MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/cli/command_registry.rb
+        MASTER/lib/voice/renderer/prompt.rb
+        MASTER/lib/trace/dmesg.rb
+      ],
+      CLI_PROMPT_COMPOSITION: %w[
+        MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/voice/renderer/prompt.rb
+      ],
+      VOICE_FAILURES_ARE_ACTIONABLE: %w[
+        MASTER/lib/cli/command_registry.rb
+        MASTER/lib/io/media_intent.rb
+        MASTER/lib/io/script_dispatch.rb
+        MASTER/lib/voice/speech.rb
+      ],
+    }
+
+    scopes.each do |id, paths|
+      law = ::Law.definitions.fetch(id)
+      paths.each do |path|
+        assert law.applies?(File.expand_path(path, "/repo"), language(path)),
+               "#{id} must cover #{path}"
+      end
     end
   end
 
