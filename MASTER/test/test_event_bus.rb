@@ -73,6 +73,18 @@ class TestEventBus < Minitest::Test
     assert_equal 1, @bus.instance_variable_get(:@failure_warnings).values.count(true)
   end
 
+  def test_dispatch_restores_the_fiber_conversation_when_persistence_aborts
+    Fiber[:master_conversation] = "active-conversation"
+    broken_log = Object.new
+    broken_log.define_singleton_method(:append) do |*|
+      raise NotImplementedError, "simulated non-standard persistence failure"
+    end
+    @bus.instance_variable_set(:@event_log, broken_log)
+
+    assert_raises(NotImplementedError) { @bus.publish("unpersistable:event") }
+    assert_equal "active-conversation", Fiber[:master_conversation]
+  end
+
   def test_publish_stamps_the_fiber_conversation
     seen = nil
     @bus.subscribe("tool:before") { |ev| seen = ev }
