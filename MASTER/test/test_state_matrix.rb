@@ -88,17 +88,16 @@ class TestStateMatrix < Minitest::Test
     check = Deploy::StateMatrixCheck.new(config: { "components" => [row] })
     result = Deploy::CheckResult.new
 
-    Deploy::GeometryProbe.stub(:available?, true) do
+    Deploy::GeometryProbe.stub(:available?, false) do
       Deploy::GeometryProbe.stub(:surfaces, []) do
-        Deploy::GeometryProbe.stub(:reachable, []) do
-          check.send(:measure, result)
-        end
+        check.send(:measure, result)
       end
     end
 
     assert result.incomplete?
     assert_equal :inconclusive, result.outcome
     assert result.unchecked.any? { |message| message.include?("missing/example references missing surface") }
+    assert result.unchecked.any? { |message| message.include?("no Chrome - states not rendered") }
   end
 
   def test_every_variant_is_planned_when_the_cap_allows
