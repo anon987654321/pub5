@@ -22,6 +22,18 @@ module Master
     ].freeze
     MODEL_ARRAY_SECTIONS = %w[tool_capable_prefixes subscription_lanes local_servers replicate_chat].freeze
     MODEL_SCORE_FIELDS = %w[quality speed cost].freeze
+
+    # Tiers that may be an explicitly empty list. models.yml declares nsfw: []
+    # with the comment "It is never included in the default, strong, review, or
+    # fix tiers": the route's selection never reads the tier (ModelRouter
+    # Selection special-cases task_type :nsfw onto the env-gated
+    # local_uncensored lane, LaneSelection#nsfw_model_id), so the tier is a
+    # marker that the route exists, not a pool. Demanding a non-empty list
+    # forced either a fake model row into the catalogue or a boot that no
+    # configuration could pass — every bin/master command died on the invariant
+    # with "models.nsfw must be a non-empty list".
+    EMPTY_ALLOWED_TIERS = %w[nsfw].freeze
+
     def validate(data, path:)
       errors = []
       errors << "models.yml schema must be 1" unless data["schema"] == 1
@@ -117,10 +129,11 @@ module Master
 
       if data["models"].is_a?(Hash)
         tiers.each do |tier, rows|
-          unless tier.to_s.match?(/\A[a-z][a-z0-9_]*\z/)
+          name = tier.to_s
+          unless name.match?(/\A[a-z][a-z0-9_]*\z/)
             errors << "models.yml has invalid model tier #{tier.inspect}"
           end
-          unless rows.is_a?(Array) && !rows.empty?
+          unless rows.is_a?(Array) && (!rows.empty? || EMPTY_ALLOWED_TIERS.include?(name))
             errors << "models.#{tier} must be a non-empty list"
             next
           end
