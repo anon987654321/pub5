@@ -688,7 +688,7 @@ module Master
     def reobservation
       return unless @observation_totals.key?("obs0") && @observed_counts.key?("obs0")
 
-      Reobservation.new(
+      Pipeline::Reobservation.new(
         git: repo_git,
         root: @root,
         first_total: @observation_totals["obs0"],
