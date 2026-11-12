@@ -33,8 +33,7 @@ module Studio
         directory: SUBJECTS,
         subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild"),
         model_manifest: nil,
-        subject_directory: nil,
-        consent: Studio::Lora::Consent
+        subject_directory: nil
       )
         @client = client
         @directory = directory
@@ -43,7 +42,6 @@ module Studio
 
         @subject_directory = File.expand_path(subject_directory || File.join(SUBJECTS, @subject))
         @model_manifest = model_manifest || default_model_manifest
-        @consent = consent
       end
 
       def write(words, film: true, duration: 5, output_stem: nil)
@@ -108,10 +106,10 @@ module Studio
       private
 
       def require_subject_consent!
-        required = @consent.required_source_sets(
+        required = Studio::Lora::Consent.required_source_sets(
           subject: @subject, subject_directory: @subject_directory
         )
-        @consent.require!(
+        Studio::Lora::Consent.require!(
           subject: @subject, subject_directory: @subject_directory, required_sources: required
         )
       end
