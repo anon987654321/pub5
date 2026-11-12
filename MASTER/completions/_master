@@ -23,6 +23,7 @@ _master() {
     'model:show or switch the active model, inspect laboratory outcomes, and connect its subscriptions'
     'mov:find and download films and series from the free, legal collections, into ~/Downloads'
     'narrate:story narration of what MASTER is doing, on by default'
+    'nsfw:local-only adult-content lane, opt-in and isolated from general model routing'
     'orders:the objective ledger - the work that runs without being asked'
     'pair:issue and redeem one-time pairing codes for consent-gated local access'
     'play:play the curated Blue Hour Dilla showcase or a named progression through the canonical effects rig'
