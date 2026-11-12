@@ -62,11 +62,11 @@ class TestProofAdapters < Minitest::Test
 
     assert proof.metadata.frozen?
     assert proof.evidence.frozen?
-    assert proof.evidence["paths"].frozen?
-    assert metadata.frozen? == false
-    assert metadata[:details].frozen? == false
-    assert evidence.frozen? == false
-    assert evidence[:paths].frozen? == false
+    assert proof.evidence[:paths].frozen?
+    refute metadata.frozen?
+    refute metadata[:details].frozen?
+    refute evidence.frozen?
+    refute evidence[:paths].frozen?
 
     evidence[:paths] << "later.rb"
     metadata[:details] << "later"
