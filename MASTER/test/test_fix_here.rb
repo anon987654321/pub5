@@ -60,6 +60,7 @@ class TestFixHere < Minitest::Test
       assert status.success?, output
       log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
       assert_includes log, "child-model=UNSET"
+      assert_includes log, "fix-probe=0", "--no-probe must disable the in-process LaneProbe as well"
     end
   end
 
@@ -186,17 +187,17 @@ class TestFixHere < Minitest::Test
     end
   end
 
-  def test_a_failed_lane_check_shows_what_the_call_printed
+  def test_lane_readiness_is_owned_by_the_single_fix_runtime
     with_worktree do |main, worker, tools_bin|
       write_main_model(main)
-      output, status = run_fix_here(
-        worker, tools_bin, "MASTER",
-        env: { "FAKE_FIRST_LINE" => "rbenv: version 4.0.7 is not installed", "FAKE_EXIT" => "3" }
-      )
+      output, status = run_fix_here(worker, tools_bin, "MASTER")
 
-      refute status.success?, output
-      assert_includes output, "the lane check wrote no metrics"
-      assert_includes output, "rbenv: version 4.0.7 is not installed"
+      assert status.success?, output
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "child-model=saved-model"
+      assert_includes log, "fix-probe=UNSET", "the normal /fix preflight owns the request"
+      assert_includes log, "args=/fix MASTER --apply"
+      refute_includes log, "what bug does def total", "the wrapper must not boot a second chat session"
     end
   end
 
