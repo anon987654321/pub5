@@ -205,9 +205,29 @@ end
 def check_model_quota
   require "io/model_quota" unless defined?(Master::Io::ModelQuota)
   snap = Master::Io::ModelQuota.snapshot
-  exhausted = snap[:exhausted]
-  detail = exhausted.empty? ? "ok (#{snap[:models].size} tracked)" : "exhausted: #{exhausted.join(', ')}"
-  Check.new(name: "model-quota", state: (exhausted.empty?) ? :pass : :fail, detail: detail)
+  models = snap[:models].is_a?(Hash) ? snap[:models] : {}
+  provider = snap[:provider]
+  provider_measured = provider.is_a?(Hash) && provider[:fresh] == true &&
+                     provider[:remaining].is_a?(Numeric)
+  exhausted = Array(snap[:exhausted])
+  exhausted << "openrouter:free" if provider_measured && provider[:remaining].zero?
+  exhausted.uniq!
+
+  if models.empty? && !provider_measured && exhausted.empty?
+    return Check.new(
+      name: "model-quota", state: :unmeasured,
+      detail: "no quota observations for tracked lanes",
+    )
+  end
+
+  detail = if exhausted.any?
+             "exhausted: #{exhausted.join(', ')}"
+           elsif models.any?
+             "ok (#{models.size} tracked)"
+           else
+             "ok (OpenRouter reports #{provider[:remaining]} remaining)"
+           end
+  Check.new(name: "model-quota", state: exhausted.empty? ? :pass : :fail, detail:)
 rescue NameError
   Check.new(name: "model-quota", state: :unmeasured, detail: "Io::ModelQuota did not load")
 end
