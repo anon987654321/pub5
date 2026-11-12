@@ -164,19 +164,20 @@ module Studio
     # Stage both artefacts on the same filesystem, retain the previous pair
     # until both new paths are in place, and roll back ordinary rename failures.
     # No failed validation/build is allowed to erase the last usable package.
-    def publish_prepared_artifacts!(staged_dataset:, staged_zip:, staging_root:)
+    def publish_prepared_artifacts!(staged_dataset:, staged_zip:, staging_root:,
+                                       dataset_path: DATASET_ROOT, zip_path: ZIP_PATH)
       unless File.directory?(staged_dataset) && !File.symlink?(staged_dataset) &&
              File.file?(staged_zip) && !File.symlink?(staged_zip) && File.size(staged_zip).positive?
         raise Error, "staged dataset and non-empty training ZIP are required"
       end
 
-      if [DATASET_ROOT, ZIP_PATH].any? { |path| File.symlink?(path) }
+      if [dataset_path, zip_path].any? { |path| File.symlink?(path) }
         raise Error, "refusing to replace a symlinked prepared artifact"
       end
-      if File.exist?(DATASET_ROOT) && !File.directory?(DATASET_ROOT)
+      if File.exist?(dataset_path) && !File.directory?(dataset_path)
         raise Error, "existing prepared dataset is not a directory"
       end
-      if File.exist?(ZIP_PATH) && !File.file?(ZIP_PATH)
+      if File.exist?(zip_path) && !File.file?(zip_path)
         raise Error, "existing training ZIP path is not a regular file"
       end
 
@@ -185,26 +186,26 @@ module Studio
       previous_dataset = previous_zip = published_dataset = published_zip = false
 
       begin
-        if File.exist?(DATASET_ROOT)
-          File.rename(DATASET_ROOT, backup_dataset)
+        if File.exist?(dataset_path)
+          File.rename(dataset_path, backup_dataset)
           previous_dataset = true
         end
-        if File.exist?(ZIP_PATH)
-          File.rename(ZIP_PATH, backup_zip)
+        if File.exist?(zip_path)
+          File.rename(zip_path, backup_zip)
           previous_zip = true
         end
 
-        File.rename(staged_dataset, DATASET_ROOT)
+        File.rename(staged_dataset, dataset_path)
         published_dataset = true
-        File.rename(staged_zip, ZIP_PATH)
+        File.rename(staged_zip, zip_path)
         published_zip = true
-        File.chmod(0o700, DATASET_ROOT)
-        File.chmod(0o600, ZIP_PATH)
+        File.chmod(0o700, dataset_path)
+        File.chmod(0o600, zip_path)
       rescue StandardError
-        FileUtils.remove_entry(DATASET_ROOT) if published_dataset && File.directory?(DATASET_ROOT) && !File.symlink?(DATASET_ROOT)
-        FileUtils.rm_f(ZIP_PATH) if published_zip && File.file?(ZIP_PATH) && !File.symlink?(ZIP_PATH)
-        File.rename(backup_dataset, DATASET_ROOT) if previous_dataset && File.exist?(backup_dataset)
-        File.rename(backup_zip, ZIP_PATH) if previous_zip && File.exist?(backup_zip)
+        FileUtils.remove_entry(dataset_path) if published_dataset && File.directory?(dataset_path) && !File.symlink?(dataset_path)
+        FileUtils.rm_f(zip_path) if published_zip && File.file?(zip_path) && !File.symlink?(zip_path)
+        File.rename(backup_dataset, dataset_path) if previous_dataset && File.exist?(backup_dataset)
+        File.rename(backup_zip, zip_path) if previous_zip && File.exist?(backup_zip)
         raise
       end
 
