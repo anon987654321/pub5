@@ -306,6 +306,12 @@ class TestDillaHistoricalMaterial < Minitest::Test
       assert_in_delta 7.0 / 6.0, duration, 0.0001
     end
     assert_match(/engine approximation only/, progress.fetch("chord_timing_note"))
+
+    plan = sequencer(progress).send(:build_chord_plan, progress.fetch("loop_bars"), progress.fetch("loop_bars"))
+    assert_equal (0...progress.fetch("chords").length).to_a, plan.map { |slot| slot.fetch(:index) }
+    plan.zip(progress.fetch("chord_bars")).each do |slot, expected|
+      assert_in_delta expected, slot.fetch(:bars), 0.0001
+    end
   end
 
   def test_time_keeps_render_tempo_separate_from_conflicting_community_reference
