@@ -14,8 +14,8 @@
     <%# Complete Hjerterom lockup, restored from pub4 history. The original heart
         and wordmark stay together; Dating remains the vertical heading below.
         The inline SVG pauses at its first frame for reduced motion. %>
-    <%= render "dating/home/hjerterom_logo", compact: false,
-               svg_uid: "dating-splash", label: "Hjerterom" %>
+    <%# chrome_i18n: ok – the lockup wordmark is brand copy, not translated %>
+    <%= render "dating/home/hjerterom_logo", compact: false, svg_uid: "dating-splash", label: "Hjerterom" %>
   </div>
 
   <%= tag.h1 t("dating.splash.title"), class: "dating-splash-title" %>

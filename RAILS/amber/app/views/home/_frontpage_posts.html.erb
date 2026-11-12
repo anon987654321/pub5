@@ -1,5 +1,14 @@
 <% if posts.present? %>
-  <%= turbo_stream_from "posts" %>
+  <%# The live stream is a member feature: amber’s cable posture refuses a
+      connection with nobody behind it (Shared::CableIdentity
+      allow_anonymous_connection? defaults false, unlike brgen’s public
+      front page), so a guest’s stream element could never connect – it sat
+      on the page as a dead turbo-cable-stream-source and failed every guest
+      system visit at turbo’s connect assertion. Guests read the frontpage
+      feed statically; signed-in visitors keep the live stream. %>
+  <% if authenticated? %>
+    <%= turbo_stream_from "posts" %>
+  <% end %>
   <section class="amber-home-posts" aria-labelledby="amber-home-posts-title">
     <div class="page-header">
       <%= tag.h2 t("pages.community"), id: "amber-home-posts-title" %>
