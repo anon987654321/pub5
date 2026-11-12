@@ -265,35 +265,57 @@ module Deploy
     # One scan, with a bound. Returns the output and either the exit status or
     # :timeout — the child is killed, so a stalled scan costs SCAN_TIMEOUT_S
     # rather than the rest of the day.
-    def bounded_scan(line)
-      Open3.popen2e(SAFE_ENV, RUBY, BUNDLE, "exec", RUBY, "bin/master", chdir: MASTER) do |stdin, out, wait|
+    def bounded_scan(line, ruby: RUBY, bundle: BUNDLE, master: MASTER, timeout: SCAN_TIMEOUT_S)
+      Open3.popen2e(SAFE_ENV, ruby, bundle, "exec", ruby, "bin/master", chdir: master, pgroup: true) do |stdin, out, wait|
         stdin.write("#{line}\n")
         stdin.close
         output = +""
         # Read on a thread: the pipe fills at 64KB and a scan prints more than
         # that, so waiting on the process first deadlocks against its own output.
         reader = Thread.new { output << out.read.to_s }
-        finished = wait.join(SCAN_TIMEOUT_S)
-        unless finished
+        deadline = now + timeout
+        process_finished = wait.join([deadline - now, 0].max)
+        reader_finished = reader.join([deadline - now, 0].max)
+        unless process_finished && reader_finished
           kill_tree(wait.pid)
-          reader.join(5)
+          wait.join(2)
+          reader.join(2)
+          reader.kill if reader.alive?
+          reader.join
           next [output, :timeout]
         end
 
-        reader.join
         [output, wait.value]
       end
     end
 
-    # The CLI runs the scan in the same process, but a boot that shells out
-    # leaves the child holding the pipe — TERM first, then KILL, so a process
-    # ignoring the polite one still goes.
-    def kill_tree(pid)
-      Process.kill("TERM", pid)
-      sleep 2
-      Process.kill("KILL", pid)
+    # The scan owns its own process group. A leader can exit while a descendant
+    # still holds the combined output pipe, so timeout covers both the child
+    # wait and pipe EOF. TERM gets a short grace; KILL is confined to that group.
+    def kill_tree(pid, term_grace: 0.25)
+      signal_group("TERM", pid)
+      deadline = now + term_grace
+      while process_group_alive?(pid) && now < deadline
+        sleep 0.025
+      end
+      signal_group("KILL", pid) if process_group_alive?(pid)
+      !process_group_alive?(pid)
+    end
+
+    def signal_group(signal, pid)
+      Process.kill(signal, -pid)
+      true
     rescue Errno::ESRCH, Errno::EPERM
-      nil
+      false
+    end
+
+    def process_group_alive?(pid)
+      Process.kill(0, -pid)
+      true
+    rescue Errno::ESRCH
+      false
+    rescue Errno::EPERM
+      true
     end
 
     # Same contract as MASTER's rake lint:spine: the number only moves down, and
