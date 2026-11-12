@@ -17,7 +17,7 @@ module Master
       LAW_ID = "ELEVATION_IDEAL"
 
       # Severity rides the improvement lane: elevation never blocks a run.
-      SEVERITY = 3
+      SEVERITY = :warning
       CONFIDENCE = 0.8
       MAX_FINDINGS = 8
     end
