@@ -282,7 +282,7 @@ module Dilla
     puts "Progressions:"
     progressions.each_with_index do |p, i|
       source_tag = {
-        "artist_verified" => "[record]",
+        "artist_verified" => "[restored]",
         "chart_reference" => "[chart]",
         "engine_study" => "[study]",
         "engine" => "[original]",
@@ -292,6 +292,7 @@ module Dilla
       puts format("  %2d  %-18s %-28s %s %s", i + 1, p["id"], p["title"].to_s[0, 28],
                   "#{p['key']} #{tempo}", source_tag)
     end
+    puts "Source note: [restored] marks the recovered legacy table; it is not an independent transcription verdict."
     puts "Drum patterns: #{catalogue.fetch('drum_patterns').keys.reject { |k| k == 'comment' }.join(', ')}"
     puts "Groove profiles: #{catalogue.fetch('groove_profiles').keys.reject { |k| k == 'comment' }.join(', ')}"
     puts "Kits: #{catalogue.fetch('kits').keys.reject { |k| k == 'comment' }.join(', ')}"
