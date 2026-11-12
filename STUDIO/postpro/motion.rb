@@ -21,11 +21,28 @@ module Postpro
   module Motion
     class Unavailable < StandardError; end
 
-    # The active video frame's bounded gate-weave offset. It is set only while
-    # one frame is graded and cleared by the stream reader even on failure.
-    def self.gate_weave_offset = @gate_weave_offset
-    def self.gate_weave_offset=(value)
-      @gate_weave_offset = value
+    # Immutable values for one decoded frame. Temporal effects receive this
+    # explicitly; no render may borrow another render's frame state.
+    FrameContext = Struct.new(:index, :time_seconds, :gate_weave, keyword_init: true) do
+      def initialize(index:, time_seconds:, gate_weave: nil)
+        frame_index = Integer(index)
+        timestamp = Float(time_seconds)
+        raise ArgumentError, "frame index must be non-negative" if frame_index.negative?
+        raise ArgumentError, "frame timestamp must be finite and non-negative" unless timestamp.finite? && timestamp >= 0
+
+        offsets = if gate_weave
+                    raise ArgumentError, "gate-weave offsets must be a Hash" unless gate_weave.is_a?(Hash)
+
+                    {
+                      x: Float(gate_weave.fetch(:x)),
+                      y: Float(gate_weave.fetch(:y))
+                    }.tap do |values|
+                      raise ArgumentError, "gate-weave offsets must be finite" unless values.values.all?(&:finite?)
+                    end.freeze
+                  end
+        super(index: frame_index, time_seconds: timestamp, gate_weave: offsets)
+        freeze
+      end
     end
 
     Probe = Struct.new(:width, :height, :fps, :frames, :duration, :has_audio, :rate, keyword_init: true)
