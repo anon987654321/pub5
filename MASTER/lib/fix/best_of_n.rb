@@ -56,6 +56,7 @@ module Master
         extra_authors = Hash.new { |hash, key| hash[key] = [] }
         extra = (1...n).filter_map do |i|
           prompt = loop.send(:build_prompt_for, violation:, src: original, path:) + "\n\n#{VARIANTS[(i - 1) % VARIANTS.size]}"
+          Thread.current[:master_llm_answer_model] = nil
           raw = loop.send(:ask_agent, prompt, image: loop.instance_variable_get(:@visual_image)).to_s
           candidate = loop.send(:extract_code, raw, ext)
           author = Thread.current[:master_llm_answer_model]
