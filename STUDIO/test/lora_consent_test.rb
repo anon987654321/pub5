@@ -90,7 +90,7 @@ class TestLoraConsent < Minitest::Test
 
   def test_evidence_must_be_present_private_and_inside_the_subject_directory
     write_record
-    File.chmod(0o644, File.join(@subject_dir, "rights-note.txt"))
+    File.chmod(0o644, File.join(@subject_dir, "evidence", "rights-note.txt"))
     report = Consent.validate(subject: "probe", subject_directory: @subject_dir)
 
     refute report.fetch("valid")
@@ -99,10 +99,10 @@ class TestLoraConsent < Minitest::Test
 
   def test_evidence_symlinks_are_refused
     write_record
-    File.delete(File.join(@subject_dir, "rights-note.txt"))
+    File.delete(File.join(@subject_dir, "evidence", "rights-note.txt"))
     File.write(File.join(@root, "outside.txt"), "not local evidence")
     File.chmod(0o600, File.join(@root, "outside.txt"))
-    File.symlink(File.join(@root, "outside.txt"), File.join(@subject_dir, "rights-note.txt"))
+    File.symlink(File.join(@root, "outside.txt"), File.join(@subject_dir, "evidence", "rights-note.txt"))
     report = Consent.validate(subject: "probe", subject_directory: @subject_dir)
 
     refute report.fetch("valid")
@@ -152,7 +152,7 @@ class TestLoraConsent < Minitest::Test
       "granted_by" => "recorded test authority",
       "granted_on" => "2026-11-12",
       "covers" => %w[generation_use provider_processing],
-      "stored_at" => "rights-note.txt"
+      "stored_at" => "evidence/rights-note.txt"
     }.merge(overrides)
   end
 
@@ -164,8 +164,12 @@ class TestLoraConsent < Minitest::Test
   )
     FileUtils.mkdir_p(@subject_dir, mode: 0o700)
     File.chmod(0o700, @subject_dir)
-    File.write(File.join(@subject_dir, "rights-note.txt"), "synthetic rights evidence\n", mode: "w", perm: 0o600)
-    File.chmod(0o600, File.join(@subject_dir, "rights-note.txt"))
+    evidence_dir = File.join(@subject_dir, "evidence")
+    FileUtils.mkdir_p(evidence_dir, mode: 0o700)
+    File.chmod(0o700, evidence_dir)
+    evidence_path = File.join(evidence_dir, "rights-note.txt")
+    File.write(evidence_path, "synthetic rights evidence\n", mode: "w", perm: 0o600)
+    File.chmod(0o600, evidence_path)
     source_rights ||= {
       "generation_use" => true,
       "provider_processing" => true,
