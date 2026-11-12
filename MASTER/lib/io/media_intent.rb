@@ -173,44 +173,67 @@ module Master
 
       def postprocess(text, root:)
         intent = NaturalIntent.resolve(text)
+        source, refusal = postprocess_source(text, intent)
+        return refusal if refusal
+        return postprocess_glob(source, text, root:) if postprocess_glob?(source)
+
+        postprocess_local_source(source, text, intent:, root:)
+      end
+
+      def postprocess_source(text, intent)
         entities = intent&.entities || {}
         downloads = entities[:location] == "downloads" ||
                     text.match?(/\b(?:my\s+|the\s+)?(?:local\s+)?downloads?(?:\s+folder)?\b/i)
         source = downloads_directory if downloads
-        return Result.err("postpro: Downloads folder not found", category: :validation) if downloads && source.to_s.empty?
+        if downloads && source.to_s.empty?
+          return [nil, Result.err("postpro: Downloads folder not found", category: :validation)]
+        end
+
         desktop = text.match?(DESKTOP_RE)
         source = desktop_directory if desktop
-        return Result.err("postpro: Desktop folder not found", category: :validation) if desktop && source.to_s.empty?
+        if desktop && source.to_s.empty?
+          return [nil, Result.err("postpro: Desktop folder not found", category: :validation)]
+        end
         source ||= entities[:path]
         source ||= text.match(POSTPRO_SUBJECT_RE)&.captures&.first
         source ||= text.match(POSTPRO_SUBJECT_TOKEN_RE)&.captures&.first
         source ||= text.match(POSTPRO_PATH_TOKEN_RE)&.captures&.first
         source ||= text.match(IMAGE_PATH_RE)&.captures&.compact&.first
-        return Result.err("postpro: include an existing image file or directory path", category: :validation) if source.to_s.empty?
+        return [nil, Result.err("postpro: include an existing image file or directory path", category: :validation)] if source.to_s.empty?
 
-        if source.to_s.match?(/[*?\[\]{}]/)
-          files = image_glob_files(source)
-          return run_postpro_random(files, text, root:) if postpro_random_request?(text)
-          return run_postpro_selection(files, text, root:) unless files.empty?
-          return Result.err("postpro: glob matched no images #{File.expand_path(source)}", category: :validation)
-        end
+        [source, nil]
+      end
 
+      def postprocess_glob?(source)
+        source.to_s.match?(/[*?\[\]{}]/)
+      end
+
+      def postprocess_glob(source, text, root:)
+        files = image_glob_files(source)
+        return run_postpro_random(files, text, root:) if postpro_random_request?(text)
+        return run_postpro_selection(files, text, root:) unless files.empty?
+
+        Result.err("postpro: glob matched no images #{File.expand_path(source)}", category: :validation)
+      end
+
+      def postprocess_local_source(source, text, intent:, root:)
         source = File.expand_path(source)
-        return Result.err("postpro: input not found #{source}", category: :validation) unless File.file?(source) || File.directory?(source)
-
-        if File.directory?(source) && postpro_random_request?(text)
-          return run_postpro_random(source, text, root:)
+        unless File.file?(source) || File.directory?(source)
+          return Result.err("postpro: input not found #{source}", category: :validation)
         end
+        return run_postpro_random(source, text, root:) if File.directory?(source) && postpro_random_request?(text)
 
         selection = postpro_selection(text, source, intent:)
         return run_postpro_selection(selection[:files], text, root:) if selection
         return run_postpro_file(source, text, root:) if File.file?(source)
 
-        args = [source]
-        result = ScriptDispatch.run(root:, tool: "postpro",
-                                    arg: args.map { |value| Shellwords.escape(value) }.join(" "))
+        result = ScriptDispatch.run(
+          root:, tool: "postpro", arg: [source].map { |value| Shellwords.escape(value) }.join(" ")
+        )
         result.ok? ? Result.ok({ output: result.value!, rendered: result.value!, media: :postpro, path: source }) : result
       end
+
+      private_class_method :postprocess_source, :postprocess_glob?, :postprocess_glob, :postprocess_local_source
 
       def desktop_directory
         [

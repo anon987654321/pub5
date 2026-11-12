@@ -191,6 +191,25 @@ class MediaIntentTest < Minitest::Test
   # A moving image is the video lane, not a still and not a tool named `lora`.
   # The paid request says what it would take on instead of silently writing
   # nothing or quietly charging for a clip.
+  def test_missing_downloads_directory_blocks_postpro_before_tool_dispatch
+    Dir.mktmpdir("media-home") do |home|
+      previous_home = ENV["HOME"]
+      ENV["HOME"] = home
+      calls = []
+      with_dispatch_stub(lambda do |**kwargs|
+        calls << kwargs
+        flunk("Postpro must not run without an existing Downloads directory")
+      end) do
+        result = MediaIntent.postprocess("post-process my Downloads folder", root: MasterPaths.root)
+        refute result.ok?
+        assert_equal "postpro: Downloads folder not found", result.message
+      end
+      assert_empty calls
+    ensure
+      previous_home ? ENV["HOME"] = previous_home : ENV.delete("HOME")
+    end
+  end
+
   def test_video_request_routes_to_the_video_lane_and_plans_when_paid_is_off
     Master::Io::MediaLanes.stub(:paid?, false) do
       Master::Io::MediaLanes.stub(:generate, ->(*) { flunk "a parked lane must not be asked" }) do
