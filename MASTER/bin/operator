@@ -12,7 +12,12 @@ require "shellwords"
 # from the repo root above it.
 ROOT = File.expand_path(ENV.fetch("MASTER_OPERATOR_ROOT", File.expand_path("../..", __dir__)))
 OPENBSD_OPS = File.join(ROOT, "OPENBSD")
-master_lib = File.join(Master::ROOT, "lib")
+# The running operator's own MASTER/lib, derived from this file's location:
+# a681c83 referenced Master::ROOT here, but lib/master.rb (which defines it)
+# is not loaded until a command file asks for it, so every invocation died on
+# NameError before option parsing and the pre-commit lint refused commits
+# with a crash it misread as findings.
+master_lib = File.join(File.expand_path("..", __dir__), "lib")
 $LOAD_PATH.unshift(master_lib) if File.directory?(master_lib) && !$LOAD_PATH.include?(master_lib)
 repo_master_lib = File.join(ROOT, "MASTER", "lib")
 $LOAD_PATH.unshift(repo_master_lib) if File.directory?(repo_master_lib) && !$LOAD_PATH.include?(repo_master_lib)
