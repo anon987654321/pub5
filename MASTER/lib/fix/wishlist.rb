@@ -383,18 +383,29 @@ module Master
         FileUtils.mkdir_p(directory, mode: 0o700)
         directory_stat = File.lstat(directory)
         unless directory_stat.directory? && !directory_stat.symlink? &&
-               (directory_stat.mode & 0o022).zero?
-          raise IOError, "wishlist directory must be a stable, real, private directory"
+               (directory_stat.mode & 0o002).zero?
+          raise IOError, "wishlist directory must be a stable, real, non-world-writable directory"
         end
 
+        group_shared = (directory_stat.mode & 0o020).positive?
+        lock_mode = group_shared ? 0o660 : 0o600
         lock_path = "#{ledger_path}.lock"
         raise IOError, "refusing symlinked wishlist lock" if File.symlink?(lock_path)
         flags = File::RDWR | File::CREAT
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
-        File.open(lock_path, flags, 0o600) do |file|
+        File.open(lock_path, flags, lock_mode) do |file|
           opened = file.stat
-          unless opened.file? && opened.nlink == 1 && (opened.mode & 0o077).zero?
-            raise IOError, "wishlist lock must be a private singly linked regular file"
+          if opened.uid == Process.uid && (opened.mode & 0o777) != lock_mode
+            file.chmod(lock_mode)
+            opened = file.stat
+          end
+          permissions = opened.mode & 0o777
+          shared_permissions = group_shared ?
+            (permissions & 0o060) == 0o060 && opened.gid == directory_stat.gid :
+            (permissions & 0o070).zero?
+          unless opened.file? && opened.nlink == 1 && (permissions & 0o007).zero? &&
+                 (permissions & 0o600) == 0o600 && shared_permissions
+            raise IOError, "wishlist lock permissions do not match its directory's sharing policy"
           end
           current = File.lstat(lock_path)
           unless current.file? && !current.symlink? && current.dev == opened.dev && current.ino == opened.ino
@@ -407,7 +418,7 @@ module Master
             current = File.lstat(lock_path)
             unless current_directory.directory? && !current_directory.symlink? &&
                    current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
-                   (current_directory.mode & 0o022).zero? &&
+                   (current_directory.mode & 0o002).zero? &&
                    current.file? && !current.symlink? && current.nlink == 1 &&
                    current.dev == opened.dev && current.ino == opened.ino
               raise IOError, "wishlist ledger lock identity changed while waiting"

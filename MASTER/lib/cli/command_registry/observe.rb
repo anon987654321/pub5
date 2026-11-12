@@ -4,6 +4,7 @@ require_relative "../scan/report"
 require_relative "../scan/request"
 require_relative "../scan/live"
 require_relative "../../fix/scan/mechanical_autofix"
+require_relative "../../fix/kernel"
 
 module Master
   module CLI
@@ -21,30 +22,34 @@ module Master
       # on_total hears the final count, for a caller that reports it; the text
       # stays the report.
       def observe(scanner:, root:, ctx: nil, on_total: nil)
-        Scan::Live.ensure_sync!
-        _arg, dry_run, no_autofix, clean_arg, do_autofix = parse_scan_args(ctx)
+        Master::Fix::Kernel.with_settings_lock do
+          Scan::Live.ensure_sync!
+          _arg, dry_run, no_autofix, clean_arg, do_autofix = parse_scan_args(ctx)
 
-        Scan::Live.with_interrupt_dump(root:, snapshot: !dry_run) do |holder|
-          text = mechanically(scanner) do
-            scan_pass(scanner:, root:, clean_arg:, dry_run:, no_autofix:, do_autofix:, holder:, on_total:)
+          Scan::Live.with_interrupt_dump(root:, snapshot: !dry_run) do |holder|
+            text = mechanically(scanner) do
+              scan_pass(scanner:, root:, clean_arg:, dry_run:, no_autofix:, do_autofix:, holder:, on_total:)
+            end
+            report_file_counts(holder, ctx&.dig(:on_counts), dry_run:)
+            text
           end
-          report_file_counts(holder, ctx&.dig(:on_counts), dry_run:)
-          text
         end
       end
 
       # The same reading of only the files named in context[:files], for a second look at what a repair
       # changed. context[:on_counts] hears the count per file, as it does after a whole-tree reading.
       def observe_files(scanner:, root:, context:, on_total: nil)
-        Scan::Live.ensure_sync!
-        _arg, dry_run, _no_autofix, _clean_arg, do_autofix = parse_scan_args(context)
+        Master::Fix::Kernel.with_settings_lock do
+          Scan::Live.ensure_sync!
+          _arg, dry_run, _no_autofix, _clean_arg, do_autofix = parse_scan_args(context)
 
-        # Mechanical, as the first reading is: the model tier belongs to the fix passes, and twenty
-        # changed files read with it hold the lane for twenty minutes.
-        requests = mechanically(scanner) do
-          context.fetch(:files).map { |file| Scan::Request.new(scanner:, root:, arg: file, autofix: do_autofix).call }
+          # Mechanical, as the first reading is: the model tier belongs to the fix passes, and twenty
+          # changed files read with it hold the lane for twenty minutes.
+          requests = mechanically(scanner) do
+            context.fetch(:files).map { |file| Scan::Request.new(scanner:, root:, arg: file, autofix: do_autofix).call }
+          end
+          report_files(requests, dry_run:, on_total:, on_counts: context[:on_counts])
         end
-        report_files(requests, dry_run:, on_total:, on_counts: context[:on_counts])
       end
 
       def report_files(requests, dry_run:, on_total:, on_counts:)

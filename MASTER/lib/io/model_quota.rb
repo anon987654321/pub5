@@ -152,8 +152,9 @@ module Master
       # Read GET /api/v1/key with this checkout's active OpenRouter key and
       # store the answer's free_model_daily_requests as today's authoritative
       # remaining. Called from record() - the one funnel every successful free
-      # call passes - and so never from a read path; the TTL keeps it one GET
-      # per half hour. Every failure is a word, never a raised error: quota
+      # call passes - and so never from a read path; record() schedules the
+      # bounded worker and the TTL keeps it one GET per half hour. Every failure
+      # is a word, never a raised error: quota
       # bookkeeping must not break the call that fed it.
       def refresh_from_provider!(now: Time.now.utc, day: today_key)
         key = active_openrouter_key

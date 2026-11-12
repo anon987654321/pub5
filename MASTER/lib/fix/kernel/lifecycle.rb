@@ -73,64 +73,64 @@ module Master
 
           Master::Fix::Kernel.with_settings_lock do
             @execution_mutex.synchronize do
-            previous_run_id = @current_run_id
-            previous_attempt_id = @current_attempt_id
+              previous_run_id = @current_run_id
+              previous_attempt_id = @current_attempt_id
 
-            adapter.with_cancellation(cancellation) do
-              coordinator_run_id = nil
-              attempt_id = SecureRandom.hex(12)
-              begin
-                @current_run_id = nil
-                @current_attempt_id = attempt_id
-                cancellation.activate! if cancellation&.respond_to?(:activate!)
-                reconcile_coordinated_runs!
-                result = adapter.run_unlocked(
-                  target, max_passes:, budget_seconds:, incremental:, requested:
-                )
-
-                # A normal run binds its durable RunJournal ID from inside FixLoop
-                # before the first repair pass. Short preflight exits still receive
-                # a truthful coordinator receipt without inventing a second active ID.
-                coordinator_run_id = @current_run_id
-                unless coordinator_run_id
-                  coordinator_run_id = begin_coordinated_run(
-                    target:, max_passes:, budget_seconds:, requested:,
-                    run_id: SecureRandom.hex(12), attempt_id: @current_attempt_id
-                  )
-                  @current_run_id = coordinator_run_id
-                end
-                current_attempt_id = @current_attempt_id || attempt_id
-                state = adapter.last_terminal_state || OutcomePolicy.terminal_state(result) || :unknown_outcome
-                finish_coordinated_run(
-                  run_id: coordinator_run_id, attempt_id: current_attempt_id, state:, outcome: result,
-                )
-                result
-              rescue StandardError => error
-                coordinator_run_id ||= @current_run_id
-                current_attempt_id = @current_attempt_id || attempt_id
+              adapter.with_cancellation(cancellation) do
+                coordinator_run_id = nil
+                attempt_id = SecureRandom.hex(12)
                 begin
+                  @current_run_id = nil
+                  @current_attempt_id = attempt_id
+                  cancellation.activate! if cancellation&.respond_to?(:activate!)
+                  reconcile_coordinated_runs!
+                  result = adapter.run_unlocked(
+                    target, max_passes:, budget_seconds:, incremental:, requested:
+                  )
+
+                  # A normal run binds its durable RunJournal ID from inside FixLoop
+                  # before the first repair pass. Short preflight exits still receive
+                  # a truthful coordinator receipt without inventing a second active ID.
+                  coordinator_run_id = @current_run_id
                   unless coordinator_run_id
                     coordinator_run_id = begin_coordinated_run(
                       target:, max_passes:, budget_seconds:, requested:,
-                      run_id: SecureRandom.hex(12), attempt_id: current_attempt_id
+                      run_id: SecureRandom.hex(12), attempt_id: @current_attempt_id
                     )
                     @current_run_id = coordinator_run_id
                   end
+                  current_attempt_id = @current_attempt_id || attempt_id
+                  state = adapter.last_terminal_state || OutcomePolicy.terminal_state(result) || :unknown_outcome
                   finish_coordinated_run(
-                    run_id: coordinator_run_id, attempt_id: current_attempt_id,
-                    state: :unknown_outcome, error:
+                    run_id: coordinator_run_id, attempt_id: current_attempt_id, state:, outcome: result,
                   )
-                rescue StandardError => receipt_error
-                  Master::Ground::Swallow.log(
-                    receipt_error, context: "fix_kernel.coordinator_terminal", event_bus: @bus
-                  )
+                  result
+                rescue StandardError => error
+                  coordinator_run_id ||= @current_run_id
+                  current_attempt_id = @current_attempt_id || attempt_id
+                  begin
+                    unless coordinator_run_id
+                      coordinator_run_id = begin_coordinated_run(
+                        target:, max_passes:, budget_seconds:, requested:,
+                        run_id: SecureRandom.hex(12), attempt_id: current_attempt_id
+                      )
+                      @current_run_id = coordinator_run_id
+                    end
+                    finish_coordinated_run(
+                      run_id: coordinator_run_id, attempt_id: current_attempt_id,
+                      state: :unknown_outcome, error:
+                    )
+                  rescue StandardError => receipt_error
+                    Master::Ground::Swallow.log(
+                      receipt_error, context: "fix_kernel.coordinator_terminal", event_bus: @bus
+                    )
+                  end
+                  raise
+                ensure
+                  @current_run_id = previous_run_id
+                  @current_attempt_id = previous_attempt_id
                 end
-                raise
-              ensure
-                @current_run_id = previous_run_id
-                @current_attempt_id = previous_attempt_id
               end
-            end
             end
           end
         end

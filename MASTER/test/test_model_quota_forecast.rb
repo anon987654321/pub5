@@ -237,6 +237,7 @@ class ModelQuotaForecastTest < Minitest::Test
       end
     end
   end
+
   def test_record_does_not_wait_for_a_single_flight_provider_refresh
     Dir.mktmpdir do |dir|
       path = File.join(dir, "model_quota.json")
