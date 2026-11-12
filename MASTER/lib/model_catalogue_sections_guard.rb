@@ -195,9 +195,10 @@ module Master
 
       def validate_keyless_tier(value, label, errors)
         selectors = value.key?("allow") || value.key?("isFree")
-        if value["tier"].nil?
+        tier = value["tier"]
+        if tier.nil?
           errors << "#{label}.keyless.tier must be non-empty text unless allow or isFree selects" unless selectors
-        elsif value["tier"].empty?
+        elsif !tier.is_a?(String) || tier.empty?
           errors << "#{label}.keyless.tier must be non-empty text"
         end
       end

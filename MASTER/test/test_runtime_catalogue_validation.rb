@@ -63,6 +63,16 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text unless allow or isFree selects/, error)
   end
 
+  def test_keyless_endpoint_rejects_non_text_tier_without_raising
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openai_compatible").fetch("llm7").fetch("keyless")["tier"] = 7
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text/, error)
+  end
+
   def test_media_lanes_must_reference_declared_media_providers
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
