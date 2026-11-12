@@ -15,7 +15,7 @@ module Studio
       # File upload/download helpers — separate from ReplicateClient's own
       # prediction/training/model-catalog API.
       module AssetTransfer
-        def upload_file(path)
+        def upload_file(path, subject:)
           mime = case File.extname(path).downcase
                  when ".jpg", ".jpeg" then "image/jpeg"
                  when ".png" then "image/png"
@@ -25,12 +25,41 @@ module Studio
                    raise ArgumentError, "unsupported image type #{File.extname(path)}"
                  end
 
+          validate_upload_source!(path)
+          require_subject_consent!(subject)
           upload_binary(path, mime:)
         end
 
-        def upload_zip(path)
+        def upload_zip(path, subject:)
+          validate_upload_source!(path)
+          require_subject_consent!(subject)
           upload_binary(path, mime: "application/zip")
         end
+
+        private
+
+        def validate_upload_source!(path)
+          raise ArgumentError, "upload source must be a readable regular, non-symlink file" unless
+            File.file?(path) && !File.symlink?(path) && File.readable?(path)
+
+          raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if File.size(path) > MAX_UPLOAD_BYTES
+
+          path
+        end
+
+        def require_subject_consent!(subject)
+          name = subject.to_s
+          subject_directory = File.join(Studio::Lora::Consent::ROOT, name)
+          Studio::Lora::Consent.require!(
+            subject: name,
+            subject_directory:,
+            required_sources: Studio::Lora::Consent.required_source_sets(
+              subject: name, subject_directory:
+            )
+          )
+        end
+
+        public
 
         # Fetch a prediction output URL (e.g. synthesized audio) to a local path.
         # Streamed under a byte cap, so a response that misstates its size cannot
@@ -522,9 +551,7 @@ module Studio
       end
 
       def upload_binary(path, mime:)
-        raise ArgumentError, "upload source must be a readable regular file" unless File.file?(path) && File.readable?(path)
-        size = File.size(path)
-        raise ArgumentError, "upload exceeds #{MAX_UPLOAD_BYTES} bytes" if size > MAX_UPLOAD_BYTES
+        validate_upload_source!(path)
 
         boundary = "ReplicateBoundary#{SecureRandom.hex(18)}"
         uri = URI("#{BASE}/files")
