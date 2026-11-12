@@ -563,21 +563,32 @@ module Master
         require File.join(Master::REPO_ROOT, "MASTER", "tools", "sweep")
 
         repo_root = File.expand_path(Master::REPO_ROOT)
-        trees = Array(targets).flat_map do |target|
-          expanded = File.expand_path(target.to_s, repo_root)
-          if expanded == repo_root
-            ::Operator::Sweep::TREES
-          else
-            tree = ::Operator::Sweep::TREES.find do |name|
-              base = File.join(repo_root, name)
-              expanded == base || expanded.start_with?("#{base}#{File::SEPARATOR}")
-            end
-            tree ? [tree] : []
-          end
-        end.uniq
-
+        trees = resolve_audit_probe_trees(targets, repo_root)
         return ["audit instruments: INCONCLUSIVE - target did not resolve to a governed tree"] if trees.empty?
 
+        results = execute_audit_probe_sweeps(trees, cancellation)
+        lines = audit_probe_report_lines(trees, results, cancellation)
+        lines.each { |line| Master::Trace::Dmesg.status("audit0", line) }
+        lines
+      rescue StandardError => error
+        Master::Trace::Dmesg.status("audit0", "instrument sweep INCONCLUSIVE: #{error.class}: #{error.message}")
+        ["audit instruments: INCONCLUSIVE - #{error.class}: #{error.message}"]
+      end
+
+      def resolve_audit_probe_trees(targets, repo_root)
+        Array(targets).flat_map do |target|
+          expanded = File.expand_path(target.to_s, repo_root)
+          next ::Operator::Sweep::TREES if expanded == repo_root
+
+          tree = ::Operator::Sweep::TREES.find do |name|
+            base = File.join(repo_root, name)
+            expanded == base || expanded.start_with?("#{base}#{File::SEPARATOR}")
+          end
+          tree ? [tree] : []
+        end.uniq
+      end
+
+      def execute_audit_probe_sweeps(trees, cancellation)
         results = []
         unit_index = 0
         trees.each do |tree|
@@ -592,7 +603,10 @@ module Master
           unit_index += batch.size
           results.concat(batch)
         end
+        results
+      end
 
+      def audit_probe_report_lines(trees, results, cancellation)
         executed = results.count(&:executed)
         failed = results.count { |result| result.executed && !result.process_success }
         not_run = results.count { |result| !result.executed }
@@ -600,29 +614,31 @@ module Master
           "audit instruments: trees=#{trees.join(",")} executed=#{executed} process_failures=#{failed} not_run=#{not_run}",
           "audit instruments: exit=0 means the probe process completed; read each instrument summary for findings, not as a global Law PASS",
         ]
-        results.each do |result|
-          execution = if !result.executed
-                        "NOT_RUN"
-                      elsif result.process_success
-                        "exit=0"
-                      else
-                        "exit!=0"
-                      end
-          summary = result.summary.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip[0, 280]
-          lines << "audit instrument: #{result.tree}/#{result.unit} #{execution}; #{summary}"
-          result.evidence.each do |detail|
-            next if result.process_success
-
-            clean = detail.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip[0, 220]
-            lines << "audit instrument evidence: #{result.tree}/#{result.unit}: #{clean}"
-          end
-        end
+        results.each { |result| lines.concat(audit_probe_result_lines(result)) }
         lines << "audit instruments: INCONCLUSIVE - cancellation stopped the remaining probes" if cancellation&.cancelled?
-        lines.each { |line| Master::Trace::Dmesg.status("audit0", line) }
         lines
-      rescue StandardError => error
-        Master::Trace::Dmesg.status("audit0", "instrument sweep INCONCLUSIVE: #{error.class}: #{error.message}")
-        ["audit instruments: INCONCLUSIVE - #{error.class}: #{error.message}"]
+      end
+
+      def audit_probe_result_lines(result)
+        execution = if !result.executed
+                      "NOT_RUN"
+                    elsif result.process_success
+                      "exit=0"
+                    else
+                      "exit!=0"
+                    end
+        summary = clean_audit_probe_text(result.summary, 280)
+        lines = ["audit instrument: #{result.tree}/#{result.unit} #{execution}; #{summary}"]
+        return lines if result.process_success
+
+        result.evidence.each do |detail|
+          lines << "audit instrument evidence: #{result.tree}/#{result.unit}: #{clean_audit_probe_text(detail, 220)}"
+        end
+        lines
+      end
+
+      def clean_audit_probe_text(value, limit)
+        value.to_s.gsub(/[\x00-\x1f\x7f]/, " ").gsub(/\s+/, " ").strip[0, limit]
       end
 
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,

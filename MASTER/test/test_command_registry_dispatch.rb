@@ -1067,4 +1067,39 @@ class TestCommandRegistryDispatch < Minitest::Test
     Fiber[:master_visitor] = old_visitor
   end
 
+  def test_audit_probe_offsets_continue_across_governed_trees
+    require_relative "../tools/sweep"
+    calls = []
+    first_batch = [
+      Operator::Sweep::ProbeResult.new(
+        tree: "MASTER", unit: "first", executed: true, process_success: true,
+        summary: "first probe", evidence: [],
+      ),
+      Operator::Sweep::ProbeResult.new(
+        tree: "MASTER", unit: "second", executed: true, process_success: true,
+        summary: "second probe", evidence: [],
+      ),
+    ]
+    second_batch = [
+      Operator::Sweep::ProbeResult.new(
+        tree: "RAILS", unit: "third", executed: false, process_success: false,
+        summary: "not run", evidence: ["cancelled"],
+      ),
+    ]
+    sweep = lambda do |tree, index, detailed:, stop:|
+      calls << [tree, index, detailed, stop.respond_to?(:call)]
+      tree == "MASTER" ? first_batch : second_batch
+    end
+    targets = %w[MASTER RAILS].map { |tree| File.join(Master::REPO_ROOT, tree) }
+
+    lines = Operator::Sweep.stub(:sweep, sweep) do
+      Registry.run_audit_probes(targets:)
+    end
+
+    assert_equal [["MASTER", 0, true, true], ["RAILS", 2, true, true]], calls
+    assert_includes lines.first, "executed=2"
+    assert_includes lines.first, "not_run=1"
+    assert lines.any? { |line| line.include?("RAILS/third NOT_RUN") }
+  end
+
 end
