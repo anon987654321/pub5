@@ -238,6 +238,46 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_still_schema_preflight_catches_every_field_before_prediction
+    Dir.mktmpdir do |dir|
+      manifest = File.join(dir, "replicate_training.json")
+      File.write(manifest, JSON.generate("version" => "owner/model:version-123"))
+      client = Object.new
+      client.define_singleton_method(:input_names) { |_model| %w[prompt] }
+      client.define_singleton_method(:predict) { |*| flunk "prediction must not start with an incomplete input schema" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, model_manifest: manifest
+      )
+
+      error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
+      assert_match(/missing inputs used by the still renderer/, error.message)
+      assert_match(/aspect_ratio/, error.message)
+      assert_empty Dir.children(dir).grep(/\\.jpg\\z/)
+    end
+  end
+
+  def test_film_schema_preflight_happens_before_still_generation_or_upload
+    Dir.mktmpdir do |dir|
+      manifest = File.join(dir, "replicate_training.json")
+      File.write(manifest, JSON.generate("version" => "owner/model:version-123"))
+      still_fields = %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+      client = Object.new
+      client.define_singleton_method(:input_names) do |model|
+        model == Studio::Visual::IdeaPicture::FILM ? %w[prompt image] : still_fields
+      end
+      client.define_singleton_method(:predict) { |*| flunk "still prediction must not start before film schema review" }
+      client.define_singleton_method(:upload_file) { |*| flunk "still upload must not start before film schema review" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, model_manifest: manifest
+      )
+
+      error = assert_raises(RuntimeError) { picture.write("portrait", film: true) }
+      assert_match(/film model/, error.message)
+      assert_match(/duration/, error.message)
+      assert_empty Dir.children(dir).grep(/\\.jpg\\z/)
+    end
+  end
+
   def test_subject_manifest_is_configurable_and_missing_manifest_is_actionable
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
