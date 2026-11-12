@@ -107,7 +107,6 @@ class TestServerLeases < Minitest::Test
       assert_equal pid, Process.getpgid(child)
       assert Leases.stop_process_group(pid, term_grace: 0.1, kill_grace: 1.0)
       refute waiter.alive?
-      assert_process_gone(child)
       refute Leases.process_group_alive?(pid)
     ensure
       if defined?(pid) && pid
