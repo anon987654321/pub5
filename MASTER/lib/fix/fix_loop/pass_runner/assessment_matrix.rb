@@ -735,135 +735,173 @@ module Master
                                      visual:, opportunities:)
             declared_surfaces = Array(info[:surfaces]).map(&:to_sym)
             return assessment_result(:not_applicable, reason: "Law does not declare the #{surface} surface") unless declared_surfaces.include?(surface)
+
             owned = assessment_stream_ownership(law_id:, info:, stream:, evidence:)
             return owned if owned
 
             per_law_visual = assessment_visual_cell(law_id:, info:, stream:, surface:, evidence:)
             return per_law_visual if per_law_visual
 
-            if info[:source_kind] != :visual &&
-               law_id.to_s.casecmp?(VisualPass::LAW_ID) &&
-               stream == :visual && surface == :rendered_ui
-              return assessment_result(:inconclusive, reason: "rendered visual review returned no result", evidence:) unless visual
-              return assessment_result(:inconclusive, reason: visual.message.to_s, evidence:) if visual.err?
+            rendered_law = assessment_rendered_law_cell(law_id:, info:, stream:, surface:, visual:, evidence:)
+            return rendered_law if rendered_law
 
-              rendered_receipt = (@assessment_surface_receipts || {})["rendered_ui"]
-              unless valid_rendered_ui_receipt?(rendered_receipt)
-                reason = rendered_receipt.is_a?(Hash) ? rendered_receipt["reason"].to_s : "rendered UI receipt is missing"
-                reason = "rendered UI receipt is absent, incomplete or lacks valid screenshot/geometry evidence" if reason.empty?
-                return assessment_result(:inconclusive, reason:, evidence:)
-              end
+            surface_evidence, surface_result = assessment_target_surface_result(law_id:, info:, surface:, evidence:)
+            return surface_result if surface_result
 
-              visual_value = visual.value!
-              unless visual_value.is_a?(Hash) &&
-                     (visual_value.key?(:findings) || visual_value.key?("findings"))
-                return assessment_result(:inconclusive, reason: "rendered visual review did not return a law-findings collection", evidence:)
-              end
+            source_result = assessment_source_kind_cell_result(
+              law_id:, info:, stream:, surface:, signatures_stable:, evidence:, surface_evidence:,
+              visual:, opportunities:
+            )
+            return source_result if source_result
 
-              visual_rows = Array(visual_value[:findings] || visual_value["findings"]).select do |row|
-                (row[:law] || row["law"]).to_s.casecmp?(law_id)
-              end
-              visual_evidence = Array(evidence) + [{
-                "surface_probe" => "rendered_ui",
-                "status" => "assessed_clean",
-                "evidence_sha256" => rendered_receipt["evidence_sha256"],
-                "counts" => rendered_receipt["counts"],
-              }]
-              return assessment_result(visual_rows.any? ? :violation_found : :assessed_clean,
-                evidence: visual_evidence, findings: visual_rows)
+            assessment_file_cell_result(
+              law_id:, info:, stream:, surface:, observation:, signatures_stable:,
+              semantic_gaps:, pending:, evidence:, surface_evidence:
+            )
+          end
+
+          def assessment_rendered_law_cell(law_id:, info:, stream:, surface:, visual:, evidence:)
+            special_law = info[:source_kind] != :visual && law_id.to_s.casecmp?(VisualPass::LAW_ID)
+            return unless special_law && stream == :visual && surface == :rendered_ui
+            return assessment_result(:inconclusive, reason: "rendered visual review returned no result", evidence:) unless visual
+            return assessment_result(:inconclusive, reason: visual.message.to_s, evidence:) if visual.err?
+
+            rendered_receipt = (@assessment_surface_receipts || {})["rendered_ui"]
+            receipt_problem = assessment_rendered_ui_receipt_problem(rendered_receipt)
+            return assessment_result(:inconclusive, reason: receipt_problem, evidence:) if receipt_problem
+
+            visual_value = visual.value!
+            unless visual_value.is_a?(Hash) && (visual_value.key?(:findings) || visual_value.key?("findings"))
+              return assessment_result(:inconclusive, reason: "rendered visual review did not return a law-findings collection", evidence:)
             end
 
-            surface_evidence = nil
-            if SurfaceEvidence::SURFACES.include?(surface.to_s)
-              surface_receipt = @assessment_surface_receipts[surface.to_s]
-              unless surface_receipt.is_a?(Hash)
-                return assessment_result(:inconclusive, reason: "target-level #{surface} surface receipt is missing", evidence:)
-              end
+            visual_rows = assessment_findings_for_law(visual_value[:findings] || visual_value["findings"], law_id)
+            visual_evidence = Array(evidence) + [{
+              "surface_probe" => "rendered_ui",
+              "status" => "assessed_clean",
+              "evidence_sha256" => rendered_receipt["evidence_sha256"],
+              "counts" => rendered_receipt["counts"],
+            }]
+            assessment_result(visual_rows.any? ? :violation_found : :assessed_clean,
+              evidence: visual_evidence, findings: visual_rows)
+          end
 
-              probe_status = (surface_receipt["status"] || surface_receipt[:status]).to_s
-              probe_reason = (surface_receipt["reason"] || surface_receipt[:reason]).to_s
-              surface_evidence = {
-                "surface_probe" => surface.to_s,
-                "status" => probe_status,
-                "evidence_sha256" => surface_receipt["evidence_sha256"] || surface_receipt[:evidence_sha256],
-                "counts" => surface_receipt["counts"] || surface_receipt[:counts],
-                "plan_digest" => @assessment_plan&.digest,
-                "source_digest" => @assessment_plan&.source_digest,
-              }.compact
-              base_evidence = Array(evidence) + [surface_evidence]
-              case probe_status
-              when "not_applicable"
-                return assessment_result(:not_applicable, reason: probe_reason.empty? ? "target has no #{surface} surface" : probe_reason, evidence: base_evidence)
-              when "inconclusive"
-                return assessment_result(:inconclusive, reason: probe_reason.empty? ? "#{surface} probe was inconclusive" : probe_reason, evidence: base_evidence,
-                  findings: Array(surface_receipt["findings"] || surface_receipt[:findings]))
-              when "violation_found"
-                findings = Array(surface_receipt["findings"] || surface_receipt[:findings])
-                if info[:source_kind] == :visual
-                  return assessment_result(:violation_found, reason: probe_reason, evidence: base_evidence, findings:)
-                end
-                return assessment_result(:inconclusive,
-                  reason: "#{surface} probe found a target-level issue not attributed to Law #{law_id}: #{probe_reason}",
-                  evidence: base_evidence, findings:)
-              when "assessed_clean"
-                # The target-level receipt proves this surface was measured. The
-                # active Law's existing scanner/semantic assessor still supplies
-                # law-specific findings over the planned source scope.
-              else
-                return assessment_result(:inconclusive, reason: "#{surface} probe returned unknown status #{probe_status.inspect}", evidence: base_evidence)
-              end
+          def assessment_rendered_ui_receipt_problem(receipt)
+            return if valid_rendered_ui_receipt?(receipt)
+
+            reason = receipt.is_a?(Hash) ? receipt["reason"].to_s : "rendered UI receipt is missing"
+            reason = "rendered UI receipt is absent, incomplete or lacks valid screenshot/geometry evidence" if reason.empty?
+            reason
+          end
+
+          def assessment_findings_for_law(rows, law_id)
+            Array(rows).select { |row| (row[:law] || row["law"]).to_s.casecmp?(law_id) }
+          end
+
+          def assessment_target_surface_result(law_id:, info:, surface:, evidence:)
+            return [nil, nil] unless SurfaceEvidence::SURFACES.include?(surface.to_s)
+
+            receipt = (@assessment_surface_receipts || {})[surface.to_s]
+            unless receipt.is_a?(Hash)
+              return [nil, assessment_result(:inconclusive, reason: "target-level #{surface} surface receipt is missing", evidence:)]
             end
 
+            surface_evidence = assessment_surface_probe_evidence(surface, receipt)
+            base_evidence = Array(evidence) + [surface_evidence]
+            result = assessment_surface_probe_result(
+              law_id:, info:, surface:, receipt:, status: surface_evidence["status"],
+              reason: (receipt["reason"] || receipt[:reason]).to_s, evidence: base_evidence
+            )
+            [surface_evidence, result]
+          end
+
+          def assessment_surface_probe_evidence(surface, receipt)
+            {
+              "surface_probe" => surface.to_s,
+              "status" => (receipt["status"] || receipt[:status]).to_s,
+              "evidence_sha256" => receipt["evidence_sha256"] || receipt[:evidence_sha256],
+              "counts" => receipt["counts"] || receipt[:counts],
+              "plan_digest" => @assessment_plan&.digest,
+              "source_digest" => @assessment_plan&.source_digest,
+            }.compact
+          end
+
+          def assessment_surface_probe_result(law_id:, info:, surface:, receipt:, status:, reason:, evidence:)
+            case status
+            when "not_applicable"
+              assessment_result(:not_applicable, reason: reason.empty? ? "target has no #{surface} surface" : reason, evidence:)
+            when "inconclusive"
+              assessment_result(:inconclusive, reason: reason.empty? ? "#{surface} probe was inconclusive" : reason,
+                evidence:, findings: Array(receipt["findings"] || receipt[:findings]))
+            when "violation_found"
+              findings = Array(receipt["findings"] || receipt[:findings])
+              return assessment_result(:violation_found, reason:, evidence:, findings:) if info[:source_kind] == :visual
+
+              assessment_result(:inconclusive,
+                reason: "#{surface} probe found a target-level issue not attributed to Law #{law_id}: #{reason}",
+                evidence:, findings:)
+            when "assessed_clean"
+              nil
+            else
+              assessment_result(:inconclusive, reason: "#{surface} probe returned unknown status #{status.inspect}", evidence:)
+            end
+          end
+
+          def assessment_source_kind_cell_result(law_id:, info:, stream:, surface:, signatures_stable:,
+                                                 evidence:, surface_evidence:, visual:, opportunities:)
             case info[:source_kind]
             when :opportunity
-              return assessment_result(:inconclusive, reason: "opportunity assessor returned no result", evidence:) unless opportunities
-              return assessment_result(:inconclusive, reason: opportunities.message.to_s, evidence:) if opportunities.err?
-
-              values = opportunities.value!
-              rows = Array(values[:findings] || values["findings"]).select do |row|
-                (row[:law] || row["law"]).to_s.casecmp?(law_id)
-              end
-              receipt = values[:assessment_evidence] || values["assessment_evidence"]
-              receipt_value = lambda do |key|
-                receipt.is_a?(Hash) ? (receipt[key.to_sym] || receipt[key.to_s]) : nil
-              end
-              receipt_reason = Array(receipt_value.call(:reasons)).map(&:to_s).reject(&:empty?).first
-              receipt_bound = receipt_value.call(:status).to_s == "complete" &&
-                @assessment_plan &&
-                receipt_value.call(:plan_digest).to_s == @assessment_plan.digest.to_s &&
-                receipt_value.call(:source_digest).to_s == @assessment_plan.source_digest.to_s &&
-                receipt_value.call(:scope_digest).to_s == @assessment_plan.scope_digest.to_s &&
-                receipt_value.call(:target).to_s == @assessment_plan.target.to_s &&
-                receipt_value.call(:source_hashes_verified) == true &&
-                receipt_value.call(:snapshot_sha256).to_s == receipt_value.call(:snapshot_after_sha256).to_s
-              cell_evidence = Array(evidence) + (receipt.is_a?(Hash) ? [receipt] : [])
-              unless receipt_bound
-                reason = receipt_reason || "opportunity assessment receipt is missing, unstable or not bound to the current FixPlan"
-                return assessment_result(:inconclusive, reason:, evidence: cell_evidence, findings: rows)
-              end
-
-              return assessment_result(:opportunity_found, evidence: cell_evidence, findings: rows) if rows.any?
-
-              assessment_result(:assessed_clean, evidence: cell_evidence)
+              assessment_opportunity_cell(law_id:, opportunities:, evidence:)
             when :visual
-              return assessment_result(:inconclusive, reason: "source generation changed during visual assessment", evidence:) unless signatures_stable
-              return assessment_result(:inconclusive, reason: "rendered review returned no result", evidence:) unless visual
-              return assessment_result(:inconclusive, reason: visual.message.to_s, evidence:) if visual.err?
-              if surface == :interactive_behavior
-                return assessment_result(:assessed_clean, evidence: Array(evidence) + [surface_evidence].compact)
-              end
+              assessment_visual_source_cell(law_id:, surface:, signatures_stable:, evidence:, surface_evidence:, visual:)
+            end
+          end
 
-              values = visual.value!
-              rows = Array(values[:findings] || values["findings"]).select do |row|
-                (row[:law] || row["law"]).to_s.casecmp?(law_id)
-              end
-              status = rows.any? ? :violation_found : :assessed_clean
-              return assessment_result(status, evidence:, findings: rows)
+          def assessment_opportunity_cell(law_id:, opportunities:, evidence:)
+            return assessment_result(:inconclusive, reason: "opportunity assessor returned no result", evidence:) unless opportunities
+            return assessment_result(:inconclusive, reason: opportunities.message.to_s, evidence:) if opportunities.err?
+
+            values = opportunities.value!
+            rows = assessment_findings_for_law(values[:findings] || values["findings"], law_id)
+            receipt = values[:assessment_evidence] || values["assessment_evidence"]
+            receipt_value = ->(key) { receipt.is_a?(Hash) ? (receipt[key.to_sym] || receipt[key.to_s]) : nil }
+            cell_evidence = Array(evidence) + (receipt.is_a?(Hash) ? [receipt] : [])
+            unless assessment_opportunity_receipt_bound?(receipt_value)
+              reason = Array(receipt_value.call(:reasons)).map(&:to_s).reject(&:empty?).first
+              reason ||= "opportunity assessment receipt is missing, unstable or not bound to the current FixPlan"
+              return assessment_result(:inconclusive, reason:, evidence: cell_evidence, findings: rows)
             end
 
+            assessment_result(rows.any? ? :opportunity_found : :assessed_clean,
+              evidence: cell_evidence, findings: rows)
+          end
+
+          def assessment_opportunity_receipt_bound?(receipt_value)
+            @assessment_plan &&
+              receipt_value.call(:status).to_s == "complete" &&
+              receipt_value.call(:plan_digest).to_s == @assessment_plan.digest.to_s &&
+              receipt_value.call(:source_digest).to_s == @assessment_plan.source_digest.to_s &&
+              receipt_value.call(:scope_digest).to_s == @assessment_plan.scope_digest.to_s &&
+              receipt_value.call(:target).to_s == @assessment_plan.target.to_s &&
+              receipt_value.call(:source_hashes_verified) == true &&
+              receipt_value.call(:snapshot_sha256).to_s == receipt_value.call(:snapshot_after_sha256).to_s
+          end
+
+          def assessment_visual_source_cell(law_id:, surface:, signatures_stable:, evidence:, surface_evidence:, visual:)
+            return assessment_result(:inconclusive, reason: "source generation changed during visual assessment", evidence:) unless signatures_stable
+            return assessment_result(:inconclusive, reason: "rendered review returned no result", evidence:) unless visual
+            return assessment_result(:inconclusive, reason: visual.message.to_s, evidence:) if visual.err?
+            return assessment_result(:assessed_clean, evidence: Array(evidence) + [surface_evidence].compact) if surface == :interactive_behavior
+
+            values = visual.value!
+            rows = assessment_findings_for_law(values[:findings] || values["findings"], law_id)
+            assessment_result(rows.any? ? :violation_found : :assessed_clean, evidence:, findings: rows)
+          end
+
+          def assessment_file_cell_result(law_id:, info:, stream:, surface:, observation:,
+                                          signatures_stable:, semantic_gaps:, pending:, evidence:, surface_evidence:)
             scoped_files = observation[:files].select do |path|
-              assessment_law_applies?(info, path, stream:) &&
-                assessment_surface_applies?(info, surface, path, stream:)
+              assessment_law_applies?(info, path, stream:) && assessment_surface_applies?(info, surface, path, stream:)
             end
             return assessment_result(:not_applicable, reason: "no eligible file matches this Law/surface scope") if scoped_files.empty?
             unless assessment_surface_supported?(info, surface, stream:)
@@ -871,48 +909,64 @@ module Master
             end
 
             cell_evidence = Array(evidence) + [surface_evidence].compact
-            if surface == :structured_data
-              parsed = scoped_files.map { |path| parse_structured_surface(path) }
-              failure = parsed.find { |row| row[:status] != :assessed_clean }
-              if failure
-                return assessment_result(:inconclusive, reason: failure[:reason], evidence: cell_evidence)
-              end
-              cell_evidence += parsed.flat_map { |row| row[:evidence] }
-            elsif surface == :syntax_tree
-              receipts = @scanner.respond_to?(:ast_assessments) ? @scanner.ast_assessments : {}
-              source_hashes = @assessment_plan.source_hashes.to_h do |relative, sha|
-                [File.expand_path(relative, @assessment_plan.root), sha]
-              end
-              missing = []
-              receipt_evidence = []
-              scoped_files.each do |path|
-                receipt = receipts[File.expand_path(path)]
-                expected = source_hashes[File.expand_path(path)]
-                unless receipt && receipt["status"] == "assessed" &&
-                       expected && receipt["sha256"] == expected
-                  missing << path
-                  next
-                end
-                receipt_evidence << "prism_ast=#{File.basename(path)} sha256=#{receipt["sha256"]}"
-              end
-              if missing.any?
-                return assessment_result(
-                  :inconclusive,
-                  reason: "syntax tree receipt missing/stale for #{missing.first(4).map { |path| path.delete_prefix("#{@root}/") }.join(", ")}",
-                  evidence: cell_evidence,
-                )
-              end
-              cell_evidence += receipt_evidence
-            end
+            cell_evidence, receipt_result = assessment_file_surface_evidence(surface, scoped_files, cell_evidence)
+            return receipt_result if receipt_result
 
-            found = Array(observation[:findings][[law_id, stream]]).select do |row|
-              scoped_files.include?(row["file"])
-            end
+            found = Array(observation[:findings][[law_id, stream]]).select { |row| scoped_files.include?(row["file"]) }
             assessment_result_for_scope(
               stream:, applicable: scoped_files, found:, observation:, signatures_stable:,
               semantic: %i[semantic_violations semantic_opportunities].include?(stream),
               semantic_gaps:, pending:, evidence: cell_evidence
             )
+          end
+
+          def assessment_file_surface_evidence(surface, scoped_files, evidence)
+            case surface
+            when :structured_data
+              assessment_structured_file_evidence(scoped_files, evidence)
+            when :syntax_tree
+              assessment_syntax_tree_file_evidence(scoped_files, evidence)
+            else
+              [evidence, nil]
+            end
+          end
+
+          def assessment_structured_file_evidence(scoped_files, evidence)
+            parsed = scoped_files.map { |path| parse_structured_surface(path) }
+            failure = parsed.find { |row| row[:status] != :assessed_clean }
+            return [evidence, assessment_result(:inconclusive, reason: failure[:reason], evidence:)] if failure
+
+            [evidence + parsed.flat_map { |row| row[:evidence] }, nil]
+          end
+
+          def assessment_syntax_tree_file_evidence(scoped_files, evidence)
+            receipts = @scanner.respond_to?(:ast_assessments) ? @scanner.ast_assessments : {}
+            source_hashes = @assessment_plan.source_hashes.to_h do |relative, sha|
+              [File.expand_path(relative, @assessment_plan.root), sha]
+            end
+            missing, receipt_evidence = assessment_ast_receipt_rows(scoped_files, receipts, source_hashes)
+            if missing.any?
+              paths = missing.first(4).map { |path| path.delete_prefix("#{@root}/") }.join(", ")
+              reason = "syntax tree receipt missing/stale for #{paths}"
+              return [evidence, assessment_result(:inconclusive, reason:, evidence:)]
+            end
+
+            [evidence + receipt_evidence, nil]
+          end
+
+          def assessment_ast_receipt_rows(scoped_files, receipts, source_hashes)
+            missing = []
+            receipt_evidence = []
+            scoped_files.each do |path|
+              receipt = receipts[File.expand_path(path)]
+              expected = source_hashes[File.expand_path(path)]
+              unless receipt && receipt["status"] == "assessed" && expected && receipt["sha256"] == expected
+                missing << path
+                next
+              end
+              receipt_evidence << "prism_ast=#{File.basename(path)} sha256=#{receipt["sha256"]}"
+            end
+            [missing, receipt_evidence]
           end
 
           VISUAL_SURFACES = %i[rendered_ui interactive_behavior].freeze

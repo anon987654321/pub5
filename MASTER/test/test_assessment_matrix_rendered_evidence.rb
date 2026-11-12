@@ -148,4 +148,38 @@ class TestAssessmentMatrixRenderedEvidence < Minitest::Test
     assert_equal [:inconclusive, true], rendered.values_at(:status, :unmeasurable)
     assert_equal :not_applicable, source.fetch(:status)
   end
+  def test_target_surface_violation_is_attributed_when_the_source_is_visual
+    findings = [{ "path" => "index.html", "message" => "rendered control is broken" }]
+    receipt = { "status" => "violation_found", "reason" => "rendered issue", "findings" => findings }
+
+    result = cell(matrix("rendered_ui" => receipt), law_id: "OTHER_LAW",
+      stream: :lexical_violations, surface: :rendered_ui, info: { source_kind: :visual })
+
+    assert_equal :violation_found, result.fetch(:status)
+    assert_equal findings, result.fetch(:findings)
+  end
+
+  def test_target_surface_violation_without_law_attribution_is_inconclusive
+    receipt = { "status" => "violation_found", "reason" => "rendered issue",
+                "findings" => [{ "path" => "index.html" }] }
+
+    result = cell(matrix("rendered_ui" => receipt), law_id: "OTHER_LAW",
+      stream: :lexical_violations, surface: :rendered_ui)
+
+    assert_equal :inconclusive, result.fetch(:status)
+    assert_match(/not attributed to Law OTHER_LAW/, result.fetch(:reason))
+  end
+
+  def test_interactive_visual_cell_keeps_target_surface_receipt
+    receipt = { "status" => "assessed_clean", "evidence_sha256" => "e" * 64,
+                "counts" => { "journeys" => 4 } }
+
+    result = cell(matrix("interactive_behavior" => receipt), law_id: "OTHER_LAW",
+      stream: :visual, surface: :interactive_behavior, info: { source_kind: :visual })
+
+    assert_equal :assessed_clean, result.fetch(:status)
+    assert_equal "interactive_behavior", result.fetch(:evidence).last.fetch("surface_probe")
+    assert_equal "e" * 64, result.fetch(:evidence).last.fetch("evidence_sha256")
+  end
+
 end
