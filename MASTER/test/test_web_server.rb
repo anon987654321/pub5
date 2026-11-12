@@ -85,12 +85,12 @@ class TestWebServer < Minitest::Test
 
   def test_lsof_errors_and_unexpected_empty_success_fail_closed
     failure = fake_status(success: false, exitstatus: 127)
-    Master::Io::Exec.stub(:capture3, ->(*) { ["", "lsof unavailable", failure] }) do
+    Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { ["", "lsof unavailable", failure] }) do
       refute Master::CLI::WebServer.port_available?(53_187, io: StringIO.new)
     end
 
     success_without_evidence = fake_status(success: true, exitstatus: 0)
-    Master::Io::Exec.stub(:capture3, ->(*) { ["", "", success_without_evidence] }) do
+    Master::Io::Exec.stub(:capture3, ->(*_args, **_options) { ["", "", success_without_evidence] }) do
       refute Master::CLI::WebServer.port_available?(53_187, io: StringIO.new)
     end
   end
