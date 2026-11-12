@@ -15,7 +15,26 @@ class TestStudioReplicateClientPaths < Minitest::Test
 
     def get(uri)
       @requests << [:get, uri]
-      {}
+      properties = {
+        "prompt" => {},
+        "input_images" => {},
+        "trigger_word" => {},
+        "steps" => {},
+        "lora_rank" => {},
+        "seed" => {}
+      }
+      schema = {
+        "properties" => properties,
+        "required" => []
+      }
+      if uri.path.include?("/versions/")
+        { "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } } }
+      else
+        { "latest_version" => {
+          "id" => "c" * 64,
+          "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } }
+        } }
+      end
     end
 
     def post(uri, body, headers: {})
@@ -32,8 +51,10 @@ class TestStudioReplicateClientPaths < Minitest::Test
                    else
                      { "prompt" => {}, "latest_parameter" => {} }
                    end
-      schema = { "components" => { "schemas" => { "Input" => { "properties" => properties } } } }
-      uri.path.include?("/versions/") ? { "openapi_schema" => schema } : { "latest_version" => { "openapi_schema" => schema } }
+      input = { "properties" => properties, "required" => ["prompt"] }
+      schema = { "components" => { "schemas" => { "Input" => input } } }
+      uri.path.include?("/versions/") ? { "openapi_schema" => schema } :
+        { "latest_version" => { "id" => "d" * 64, "openapi_schema" => schema } }
     end
   end
 
@@ -158,6 +179,28 @@ class TestStudioReplicateClientPaths < Minitest::Test
       assert_raises(ArgumentError) { @client.models(limit:) }
     end
     assert_empty @client.requests
+  end
+
+  def test_predictions_reject_unknown_fields_before_submission
+    version = "c" * 64
+    error = assert_raises(ArgumentError) do
+      @client.run("owner/model:#{version}", { "prompt" => "ok", "not_a_field" => true })
+    end
+
+    assert_match(/unsupported inputs/, error.message)
+    assert_equal [:get], @client.requests.map(&:first)
+    assert_match(%r{/versions/#{version}\\z}, @client.requests.first.fetch(1).path)
+  end
+
+  def test_predictions_require_schema_mandatory_fields_before_submission
+    client = SchemaClient.new
+    version = "d" * 64
+    error = assert_raises(ArgumentError) do
+      client.run("owner/model:#{version}", {})
+    end
+
+    assert_match(/missing required inputs.*prompt/, error.message)
+    assert_equal [:get], client.requests.map(&:first)
   end
 
   def test_pinned_input_schema_uses_the_version_specific_endpoint
