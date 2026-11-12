@@ -1,5 +1,5 @@
 {
-  "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies.",
+  "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies. Published chart references (including Flying Lotus Never Catch Me) have their own source tier and are not mislabeled as the narrower artist_verified corpus.",
   "provenance": {
     "transcription_sources": [
       "https://jdillabasslines.wordpress.com/fantastic-vol-2/",
@@ -499,7 +499,8 @@
       "sources": [
         "Stuart Nicholson, The Ahmad Jamal Live Performances 1958–62: Dm7 vamp followed by Ebm7 vamp",
         "Miles Davis, 1958: “All my inspiration today comes from the Chicago pianist Ahmad Jamal”"
-      ]
+      ],
+      "bars": 8
     },
     {
       "id": "so_what_miles",
@@ -528,7 +529,8 @@
       "sources": [
         "Kind of Blue (1959), 32-bar AABA: Dm7 for 16 bars, Ebm7 for 8, Dm7 for 8",
         "Coltrane's Impressions (1961) reuses the form and harmony"
-      ]
+      ],
+      "bars": 32
     },
     {
       "id": "untitled_dangelo_add9",
@@ -917,6 +919,38 @@
       ],
       "source": "Historical pub4 MELODY_CHOP_HZ",
       "status": "generic engine lead-chop material, not an artist transcription"
+    }
+  ],
+  "chart_references": [
+    {
+      "id": "never_catch_me_flylo",
+      "title": "Never Catch Me",
+      "artist": "Flying Lotus",
+      "album": "You're Dead!",
+      "key": "C minor / Ab",
+      "loop_bars": 8,
+      "bars_per_chord": 1,
+      "chords": [
+        "Dm9",
+        "Cm11nc",
+        "AbMaj13s11",
+        "Gm7",
+        "Eb7",
+        "A7nc",
+        "Dmaj9nc",
+        "DMaj7overG"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_published_chart_reference",
+      "sources": [
+        "Danny Fratina's published chord analysis for Flying Lotus — Never Catch Me (historical pub4 EXTENDED_TENSION_CHORDS comments)",
+        "Historical pub4 wonky_camel reference profile retains the sequence and the chord-specific voicings"
+      ],
+      "note": "Preserved as a published-chart reference, not folded into the narrower artist_verified table."
     }
   ]
 }
