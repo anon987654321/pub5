@@ -26,7 +26,7 @@ deploy_tracked_app() {
     *) log_err "deploy_tracked_app: refused unknown app: $app_name"; return 2 ;;
   esac
 
-  need_cmd "$RUBY" "$BUNDLE" doas
+  need_cmd "$RUBY" "$BUNDLE" doas curl
 
   [[ -x /usr/local/sbin/pub5-admin ]] || {
     log_err "pub5-admin is missing; run OPERATOR.sh before deploying"
@@ -118,6 +118,8 @@ deploy_tracked_app() {
   fi
   deploy_status "$app_name" "restart"
   pub4_rcctl restart "$APP_NAME" || pub4_rcctl start "$APP_NAME"
+  post_restart_probe "$APP_NAME" "$APP_PORT" \
+    || { deploy_status "$app_name" "restart" "failed"; exit 1; }
   if [[ $app_name == brgen ]]; then
     warm_brgen_after_restart "$APP_PORT"
   fi
