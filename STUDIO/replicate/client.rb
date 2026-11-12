@@ -377,7 +377,7 @@ module Studio
       def models(limit: 100, query: nil)
         requested = if limit.is_a?(Integer)
                       limit
-                    elsif limit.is_a?(String) && limit.match?(/\A\\d+\z/)
+                    elsif limit.is_a?(String) && limit.match?(/\A\d+\z/)
                       Integer(limit, 10)
                     end
         raise ArgumentError, "model limit must be a positive integer" unless requested&.positive?
@@ -505,15 +505,8 @@ module Studio
         body.write("\r\n--#{boundary}--\r\n".b)
       end
 
-      # The input parameter names the provider currently declares, from the same
-      # GET latest_version already makes.
-      #
-      # replicate keeps its own MODEL_CAPABILITIES table so it can refuse an
-      # unsupported option rather than let the API ignore it — which is the right
-      # call, and is also a second source of truth. When Replicate changes a
-      # schema the table goes stale, the tests stay green because they only check
-      # the table against itself, and the drift shows up as a 422 in production
-      # or, worse, as a setting silently dropped.
+      # Read the provider's OpenAPI schema for the exact pinned version.
+      # A local capability table would become a second, drifting source of truth.
       def input_keys(model_id)
         owner, name, pinned = model_reference!(model_id)
         if pinned
