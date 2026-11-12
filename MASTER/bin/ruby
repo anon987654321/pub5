@@ -80,6 +80,7 @@ if [ -n "$GENERIC_RUBY" ]; then
     ACTUAL=$("$GENERIC_RUBY" -e 'print RUBY_VERSION')
     VERBOSE=${MASTER_DMESG:-}
     case "$VERBOSE" in 1|true|yes|verbose|trace|everything) SHOW_RUBY=1 ;; *) SHOW_RUBY=0 ;; esac
+    [ "${MASTER_VERBOSE:-0}" = 1 ] && SHOW_RUBY=1
     for arg in "$@"; do
       case "$arg" in --verbose|--boot-status|--trace|--detail|--everything) SHOW_RUBY=1 ;; esac
     done

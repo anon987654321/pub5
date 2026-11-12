@@ -26,7 +26,9 @@ class TestBinRuby < Minitest::Test
   end
 
   def test_it_execs_a_ruby_with_the_arguments_intact
-    out, err, status = unbundled { Open3.capture3(BIN, "-e", "print RUBY_VERSION, ' ', ARGV.join(',')", "--", "a b", "c") }
+    out, err, status = without_cli_verbosity do
+      unbundled { Open3.capture3(BIN, "-e", "print RUBY_VERSION, ' ', ARGV.join(',')", "--", "a b", "c") }
+    end
 
     assert status.success?, err
     assert_empty err
@@ -77,7 +79,27 @@ class TestBinRuby < Minitest::Test
     assert_equal 7, status.exitstatus
   end
 
+  def test_verbose_mode_restores_the_interpreter_diagnostic
+    old = ENV["MASTER_VERBOSE"]
+    ENV["MASTER_VERBOSE"] = "1"
+    out, err, status = unbundled { Open3.capture3(BIN, "-e", "exit 0") }
+
+    assert status.success?, err
+    assert_match(/ruby0: using installed Ruby/, err)
+  ensure
+    old.nil? ? ENV.delete("MASTER_VERBOSE") : ENV["MASTER_VERBOSE"] = old
+  end
+
   private
+
+  def without_cli_verbosity
+    keys = %w[MASTER_DMESG MASTER_VERBOSE MASTER_CLI_VERBOSE MASTER_CLI_TRACE MASTER_QUIET]
+    saved = keys.to_h { |key| [key, ENV[key]] }
+    keys.each { |key| ENV.delete(key) }
+    yield
+  ensure
+    saved.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
 
   # The suite runs under bundle exec; the Ruby bin/ruby picks may not share that
   # bundle, so the child gets a clean environment.

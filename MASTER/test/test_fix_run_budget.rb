@@ -54,6 +54,24 @@ class TestFixRunBudget < Minitest::Test
     refute_match(/pass 0\/0/, line)
   end
 
+  def test_normal_heartbeat_keeps_progress_and_hides_machine_counters
+    pulse = Master::Fix::RunPulse.new(max_passes: 8, clock: -> { @now }, load: -> { 0.5 })
+    pulse.observe("fix_loop:pass_start", pass: 1, file_count: 10)
+
+    line = Master::Trace::Dmesg.stub(:verbose?, false) do
+      pulse.line(elapsed: 12, tokens: 1234, eta: "ETA ~2m")
+    end
+    assert_match(/pass 1\/8/, line)
+    assert_includes line, "elapsed"
+    refute_match(/tokens =|load 0\.5|tuples fused/, line)
+
+    detailed = Master::Trace::Dmesg.stub(:verbose?, true) do
+      pulse.line(elapsed: 12, tokens: 1234, eta: "ETA ~2m")
+    end
+    assert_includes detailed, "tokens = 1234"
+    assert_includes detailed, "load 0.5"
+  end
+
   def test_cost_limit_stops_with_a_named_reason
     run = budget({"MASTER_FIX_MAX_COST" => "1.0"})
     cost(1.5, 10)

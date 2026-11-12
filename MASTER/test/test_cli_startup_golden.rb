@@ -23,7 +23,7 @@ class TestCliStartupGolden < Minitest::Test
   def test_the_first_lines_have_the_dmesg_shape_in_order
     skip "set MASTER_PTY_TESTS=1 to boot bin/master in a terminal" unless ENV["MASTER_PTY_TESTS"] == "1"
 
-    attach = boot_lines.grep(/\A(?:master0|host0|voice0|web0|net0|bth0|root on) /)
+    attach = boot_lines.grep(/\A(?:master0|host0|voice0|web0|net0|bth0|root on)(?: |:)/)
     ranks = attach.map { |line| rank(line) }
 
     assert_operator attach.size, :>=, 3, attach.join("\n")
