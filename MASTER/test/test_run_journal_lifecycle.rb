@@ -501,4 +501,61 @@ class TestRunJournalLifecycle < Minitest::Test
     end
   end
 
+  def test_assessment_matrix_validator_rejects_duplicate_axes
+    report = {
+      "schema_version" => 3,
+      "status" => "incomplete",
+      "ledger" => {
+        "schema_version" => 2,
+        "summary" => {},
+        "cells" => [],
+        "streams" => %w[lexical_violations lexical_violations],
+        "surfaces" => ["whole_file"],
+        "laws" => [],
+      },
+    }
+
+    result = Master::Fix::RunJournal.allocate.send(:validate_assessment_matrix_report, report)
+
+    assert_equal "matrix_duplicate_axes", result.fetch("status")
+  end
+
+  def test_assessment_matrix_validator_rejects_a_false_clean_streak
+    report = {
+      "schema_version" => 3,
+      "status" => "incomplete",
+      "ledger" => {
+        "schema_version" => 2,
+        "summary" => {
+          "clean_passes_required" => 1,
+          "generation" => 1,
+          "last_mutation_iteration" => 0,
+          "laws" => 1,
+          "expected_cells" => 1,
+        },
+        "cells" => [{
+          "law" => "FIXTURE_LAW",
+          "stream" => "lexical_violations",
+          "surface" => "whole_file",
+          "status" => "assessed_clean",
+          "readings" => [{
+            "status" => "assessed_clean",
+            "iteration" => 1,
+            "generation" => 1,
+            "evidence" => ["fixture evidence"],
+          }],
+          "clean_streak" => 0,
+        }],
+        "streams" => ["lexical_violations"],
+        "surfaces" => ["whole_file"],
+        "laws" => ["FIXTURE_LAW"],
+      },
+    }
+
+    result = Master::Fix::RunJournal.allocate.send(:validate_assessment_matrix_report, report)
+
+    assert_equal "matrix_clean_streak_mismatch", result.fetch("status")
+    assert_equal ["FIXTURE_LAW", "lexical_violations", "whole_file"], result.fetch("cell")
+  end
+
 end
