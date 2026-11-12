@@ -30,11 +30,11 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 `/fix` is the one governed pipeline command. Its `--mode=` presets are:
 
-- `repair` (default): observe, critique when configured, repair, re-observe and verify; writes are enabled unless a read-only flag is supplied.
+- `repair` (default): observe, critique when configured, repair, re-observe and verify; writes are enabled unless a read-only flag is supplied. Every requested repair lane records the canonical Law × stream × surface assessment and a universal quality receipt (engineering, editorial, visual, experience and operations).
 - `audit`: read-only tree review: first-read, execution trace, non-persisting backlog review when due, structural review, scanner/structural preview, typography and principle map, council critique, and the existing per-tree repo-sweep probes (RepoEcology (history cache disabled during audit), the full SprawlCensus, Cohesion file-family and repeated-method-shape reports, DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe output distinguishes subprocess completion from instrument findings; exit 0 is not a Law PASS. Repair is replaced by preview; tree/backlog/structural review proposals are not persisted.
 - `visual`: read-only style pass (`--dry-run --only=style`).
 - `elevate`: the existing improvement lane (`--lane=elevate`).
-- `all`: the existing all-work lane (`--lane=all`), write-enabled and still subject to existing budgets.
+- `all`: research, architecture, rendered RAILS review, grouped visual repair for RAILS targets, ordinary code-law repair, every improvement domain (code, prose, visual and music), ideation and restructuring; write-enabled and still subject to existing budgets.
 
 `--read-only` and `--dry-run` are unconditional no-write requests. Audit and visual modes cannot be made write-enabled by also passing `--apply`. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
 
@@ -42,7 +42,7 @@ The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The [coordinator ownership map](docs/fix_coordinator_map.md) records the actual owners and remaining migration boundaries.
 
-The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record.
+The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record. Its quality projection reports engineering, editorial, visual, experience and operations separately. `compliance_status` must be PASS before repair can finish DONE; `overall_status` also records external evidence, which remains INCONCLUSIVE until document rendering, assistive technology, live-host, listening or qualified business/legal review is actually supplied.
 
 Run one tree at a time unless evidence establishes a cross-tree dependency. From `MASTER/`, the normal entrypoints are `bin/master /fix MASTER`, `bin/master /fix RAILS`, `bin/master /fix OPENBSD`, `bin/master /fix STUDIO` and `bin/master /fix BIZ` for document production.
 

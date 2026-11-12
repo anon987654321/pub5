@@ -49,6 +49,8 @@ class FixConvergenceWiringTest < Minitest::Test
     end
     assert_includes loop_source, "def with_cancellation(token)"
     assert_includes completion_source, "finish_run"
+    assert_includes completion_source, "compliance_status"
+    assert_includes completion_source, "universal Law compliance"
     assert_includes wishlist_source, 'LEDGER_PATH = ".master/fix_wishlist.json"'
     refute_includes wishlist_source, "runtime/wishlist.md"
     assert_includes journal_source, "def remaining_seconds(run_id)"

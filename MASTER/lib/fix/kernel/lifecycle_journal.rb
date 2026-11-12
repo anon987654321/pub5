@@ -182,6 +182,10 @@ module Master
               quality = report[:quality_contract] || report["quality_contract"] || {}
               (quality[:overall_status] || quality["overall_status"]).to_s
             end,
+            "compliance_status" => begin
+              quality = report[:quality_contract] || report["quality_contract"] || {}
+              (quality[:compliance_status] || quality["compliance_status"]).to_s
+            end,
             "cells" => Array(cells).size,
             "readings" => Array(cells).sum do |cell|
               Array(cell[:readings] || cell["readings"]).size
@@ -201,7 +205,7 @@ module Master
             "fix:assessment_receipt_persisted",
             run_id: id, path: receipt["path"], sha256: receipt["sha256"],
             cells: receipt["cells"], readings: receipt["readings"], status: receipt["matrix_status"],
-            quality_status: receipt["quality_status"]
+            quality_status: receipt["quality_status"], compliance_status: receipt["compliance_status"]
           )
           prune_assessment_reports!(keep_ids: history(limit: MAX_RUNS).map { |entry| entry["id"] })
           receipt

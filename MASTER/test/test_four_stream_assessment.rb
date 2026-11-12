@@ -264,18 +264,25 @@ class TestFourStreamAssessment < Minitest::Test
   end
 
   def test_quality_contract_keeps_document_and_business_review_external
+    ids = %w[BRINGHURST_measure VISUAL_COMPOSITION ACCESSIBILITY_TOUCH_TARGET OPENBSD_DAEMON_HEALTH DRY]
     ledger = {
-      summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },
-      cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
+      summary: { laws: ids.size, expected_cells: ids.size, recorded_cells: ids.size,
+                 clean_passes_required: 2, complete: true },
+      cells: ids.map { |law| { law:, status: "assessed_clean", clean_streak: 2 } },
+    }
+    tags = {
+      "VISUAL_COMPOSITION" => [:VISUAL_DESIGN],
+      "ACCESSIBILITY_TOUCH_TARGET" => [:ACCESSIBILITY],
+      "OPENBSD_DAEMON_HEALTH" => [:OPENBSD],
     }
     report = Master::Fix::QualityContract.build(
       ledger:, surface_report: { complete: true, surfaces: {} },
-      target: "BIZ", files: ["BIZ/plan.docx"], lane: :code
+      target: "BIZ", files: ["BIZ/plan.docx"], lane: :code, law_tags: tags
     )
 
+    assert_equal "PASS", report[:compliance_status]
     assert_equal "INCONCLUSIVE", report[:external_validation][:document_rendering][:status]
     assert_equal "INCONCLUSIVE", report[:external_validation][:business_and_legal_review][:status]
-    assert_equal "PASS", report[:compliance_status]
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 

@@ -67,10 +67,13 @@ dimensions and the proof required before editing. The canonical schema is
 Intent is not inferred from a file extension. The validator adds mandatory
 preservation dimensions even when the caller omits them. HTML source checks prove
 only named source invariants; they do not prove responsive layout, accessibility,
-correct interactions or a browser render. Changed DOCX, PDF, XLSX and PPTX files
-remain INCONCLUSIVE until a format-aware source check and rendered-output
-comparison exist. An unchanged binary may pass exact-byte comparison; a redesign
-needs rendered visual and accessibility evidence.
+correct interactions or a browser render. Every requested /fix repair lane must
+project the canonical Law × stream × surface ledger into engineering, editorial,
+visual, experience and operations receipts. A missing or unmeasured dimension is
+INCONCLUSIVE, never PASS. Compliance proof and external acceptance are separate:
+changed DOCX, PDF, XLSX and PPTX files remain INCONCLUSIVE until a format-aware
+source check and rendered-output comparison exist. An unchanged binary may pass
+exact-byte comparison; a redesign needs rendered visual and accessibility evidence.
 
 The existing evidence spine is canonical. FixPlan records eligible source hashes,
 task scope, Law identity, authority, toolchain and adapter digests. The validated
