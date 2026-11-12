@@ -1187,13 +1187,13 @@ class TestLLMDispatcher < Minitest::Test
     messages = [{ role: "user", content: "hello" }]
 
     Master::Io::WebChat.stub(
-      :call, ->(**) { raise Master::Io::WebChat::ProviderError, "grok: input not found (login required)" }
+      :call, ->(**_kwargs) { raise Master::Io::WebChat::ProviderError, "grok: input not found (login required)" }
     ) do
       result = dispatcher.send(:send_web_chat, "grok", messages, sys: nil)
       assert_equal :auth_error, result.category
     end
 
-    Master::Io::WebChat.stub(:call, ->(**) { raise StandardError, "temporary upstream 503" }) do
+    Master::Io::WebChat.stub(:call, ->(**_kwargs) { raise StandardError, "temporary upstream 503" }) do
       result = dispatcher.send(:send_web_chat, "grok", messages, sys: nil)
       assert_equal :provider_error, result.category
     end
