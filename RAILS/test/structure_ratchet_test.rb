@@ -7,7 +7,7 @@ class StructureRatchetTest < Minitest::Test
   EXISTING_NESTED_ENGINE = "brgen/engines/marketplace/engines/takeaway"
 
   def test_no_new_nested_engine_roots_are_added
-    nested = Dir.glob(File.join(ROOT, "brgen/engines/**/engines/*")).map do |path|
+    nested = Dir.glob(File.join(ROOT, "brgen/engines/**/engines/*")).select { |path| File.directory?(path) }.map do |path|
       path.delete_prefix("#{ROOT}/")
     end.sort
 
