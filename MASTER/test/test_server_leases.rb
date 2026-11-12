@@ -74,12 +74,12 @@ class TestServerLeases < Minitest::Test
       owner_path = "#{pid_path}.owner"
       lease(run_dir, "amber", owner: 111, pid: 61_352)
       killer = lambda do |_pid|
-        File.write(owner_path, "222 61352\\n")
+        File.write(owner_path, "222 61352\n")
         true
       end
 
       assert_empty Leases.reap_orphans!(run_dir, alive: ->(_owner) { false }, killer:)
-      assert_equal "222 61352\\n", File.read(owner_path)
+      assert_equal "222 61352\n", File.read(owner_path)
     end
   end
 
