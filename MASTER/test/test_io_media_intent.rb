@@ -348,6 +348,20 @@ class MediaIntentSpec < Minitest::Test
     assert_raises(Errno::ECHILD) { Process.waitpid(child, Process::WNOHANG) }
   end
 
+  def test_live_stop_escalates_and_reaps_a_child_that_ignores_term
+    child = Process.spawn(
+      RbConfig.ruby, "-e", 'Signal.trap("TERM", "IGNORE"); sleep 30'
+    )
+    with_clean_player do
+      MediaIntent.instance_variable_set(:@player_pid, child)
+      assert_equal child, MediaIntent.player_pid
+      stopped = MediaIntent.stop_player(grace: 0.05)
+      assert_equal child, stopped
+      assert_nil MediaIntent.player_pid
+    end
+    assert_raises(Errno::ECHILD) { Process.waitpid(child, Process::WNOHANG) }
+  end
+
   def test_live_stop_does_not_signal_a_pid_that_is_not_our_child
     with_clean_player do
       MediaIntent.instance_variable_set(:@player_pid, Process.pid)
