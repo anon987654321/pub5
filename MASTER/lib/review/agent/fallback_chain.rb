@@ -198,6 +198,7 @@ module Master
 
         def record_failover_skip(model, response)
           cat = response.respond_to?(:category) ? response.category : :provider_error
+          cat = :quota_exceeded if cat == :exhausted
           Io::ModelSkipCache.skip!(model, reason: response.message, category: cat)
           @bus&.publish("llm:failover_skip", model:, category: cat, ttl_ms: Io::ModelSkipCache.skip_ttl_ms)
         end
