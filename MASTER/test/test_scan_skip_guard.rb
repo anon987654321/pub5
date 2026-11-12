@@ -148,6 +148,7 @@ class TestScanSkipGuard < Minitest::Test
     assert_equal 1, processor.semantic_gaps.size
     assert_match(/provider spend\/quota limit reached/, processor.semantic_gaps.values.first)
   end
+
   def test_untyped_runtime_error_with_the_same_message_is_not_swallowed
     processor = Master::Fix::Scan::FileProcessor.new
     mechanical = Object.new
