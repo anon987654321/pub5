@@ -54,8 +54,8 @@ class TestConsensus < Minitest::Test
       @calls = []
     end
 
-    def ask_once(_prompt, model:, failover:)
-      @calls << { model:, failover: }
+    def ask_once(_prompt, model:, failover:, format:)
+      @calls << { model:, failover:, format: }
       '{"approved":true,"reason":"independent vote"}'
     end
   end
@@ -83,6 +83,8 @@ class TestConsensus < Minitest::Test
     assert approved
     assert_equal ["grok-cli:auto", "moonshotai/kimi-k2"], agent.calls.map { |row| row.fetch(:model) }
     assert agent.calls.all? { |row| row.fetch(:failover) == false }
+    assert agent.calls.all? { |row| row.fetch(:format) == Master::Review::Consensus::VOTE_SCHEMA }
+    assert_equal %w[approved reason], Master::Review::Consensus::VOTE_SCHEMA.fetch(:required)
     result = bus.events.find { |event, _payload| event == "consensus:result" }
     assert_equal ["claude-sonnet-5-5"], result.last.fetch(:excluded_models)
   end
