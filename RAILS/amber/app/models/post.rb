@@ -78,21 +78,10 @@ class Post < ApplicationRecord
 
   private
 
-  # Vote, comment and counter writes touch the post. Re-rendering the whole
-  # feed on those writes interrupts reading and redraws viewer-specific state;
-  # send the counters instead. Content/visibility changes still refresh the
-  # page so every reader sees the new card. Creates and deletes also retain the
-  # established refresh behaviour until Amber has a staged-arrival surface.
-  TOUCH_ONLY_COLUMNS = %w[updated_at lock_version].freeze
-
+  # Only explicit interaction events use the counter stream. An ordinary touch
+  # can also come from an outfit or item rename, which changes card metadata and
+  # must therefore retain the full refresh path.
   def broadcast_live_refresh
-    changed = saved_changes.keys.map(&:to_s)
-    touch_only = changed.any? && (changed - TOUCH_ONLY_COLUMNS).empty?
-    if !destroyed? && !previously_new_record? && touch_only
-      broadcast_live_counts
-      return
-    end
-
     broadcast_refresh_to "posts"
     broadcast_refresh_to self
   end
