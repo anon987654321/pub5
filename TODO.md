@@ -417,12 +417,20 @@ measure is already owned by the Bymorgen item above.
   gives Chrome an isolated process group, TERM/KILLs that group with bounded
   waits, confirms the leader was reaped and the group gone, and preserves the
   profile when shutdown is inconclusive. Its real-spawn/renderer regression is
-  authored but NOT_RUN. WebDriver driver teardown and the broader process-kill
+  authored but NOT_RUN. WebDriver now starts its direct driver child in an
+  isolated process group, confirms direct-child reap and renderer-group exit,
+  and retains PID/session state when shutdown is unconfirmed; actual spawn and
+  renderer regressions are authored but NOT_RUN. Triangle down and /fix server
+  leases now use bounded TERM/KILL group shutdown; PID/owner records are kept
+  until process-group exit and exact lease identity are confirmed. The no-PID
+  fallback requires an app-owned listener that is its own process-group leader.
+  Real-group, retry, replacement-lease and refusal regressions are authored but
+  NOT_RUN. Triangle's sibling-worktree reap path and the broader process-kill
   and provider-boundary audits remain open. The constitutional scan runner now
   puts its child in an isolated process group and applies one monotonic deadline
-  to both process exit and output-pipe EOF; timeout escalates TERM to KILL on
-  that group. A regression covers an exited leader with a descendant holding
-  the pipe open; authored but NOT_RUN. MASTER's Replicate API URL validator also
+  to both process exit and output-pipe EOF; timeout escalates TERM to KILL and
+  checks group disappearance. A regression covers an exited leader with a
+  descendant holding the pipe open; authored but NOT_RUN. MASTER's Replicate API URL validator also
   rejects dot, escaped and backslash path segments before attaching its bearer
   token. Focused regressions are authored/extended but NOT_RUN.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
