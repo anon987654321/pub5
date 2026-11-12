@@ -32,7 +32,7 @@
     <%= link_to post_path(@post, anchor: "comments"), class: "feed-action",
           aria: { label: t("post.comment_aria", count: @post.comment_count) } do %>
       <%= render "shared/feed_icon", name: "comment" %>
-      <span class="feed-action-count"><%= @post.comment_count.to_i.positive? ? @post.comment_count : "" %></span>
+      <span class="feed-action-count" data-post-comment-count="<%= dom_id(@post) %>"><%= @post.comment_count.to_i.positive? ? @post.comment_count : "" %></span>
     <% end %>
     <%= render "posts/like_button", post: @post %>
     <%= render "shared/post_embed_action", post: @post, url: post_url(@post) %>
