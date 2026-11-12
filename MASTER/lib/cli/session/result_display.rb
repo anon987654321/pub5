@@ -30,6 +30,14 @@ module Master
         end
       end
 
+      def cancellation_status
+        reason = @turn_cancellation&.reason.to_s
+        return "cancelled by /stop" if reason.start_with?("/stop ")
+        return "interrupted by Ctrl-C" if reason.start_with?("Ctrl-C ")
+
+        "cancelled"
+      end
+
       # One line for a one-line error; its own lines for a structured one. The
       # fold reports as header, turn evidence and summary — flattened into a
       # ribbon and cut mid-word, that evidence was unreadable, which is a
