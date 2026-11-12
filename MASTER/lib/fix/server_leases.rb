@@ -30,14 +30,20 @@ module Master
       # Remove only this process's exact ownership record. A changed PID is a
       # different server and must never inherit the old run's lease.
       def release(pid_path:, pid:, owner: Process.pid)
+        return false unless lease_record_matches?(pid_path:, pid:, owner:)
+
+        FileUtils.rm_f("#{pid_path}#{OWNER_SUFFIX}")
+        true
+      rescue StandardError
+        false
+      end
+
+      def lease_record_matches?(pid_path:, pid:, owner:)
         owner_path = "#{pid_path}#{OWNER_SUFFIX}"
         return false unless File.file?(owner_path)
 
         owner_pid, server_pid = File.read(owner_path).split.map(&:to_i)
-        return false unless owner_pid == owner.to_i && server_pid == pid.to_i
-
-        FileUtils.rm_f(owner_path)
-        true
+        owner_pid == owner.to_i && server_pid == pid.to_i
       rescue StandardError
         false
       end
@@ -121,27 +127,38 @@ module Master
 
       def reap(lease, owner:, pid:, killer:)
         pid_path = lease.delete_suffix(OWNER_SUFFIX)
-        unless File.file?(pid_path) && File.read(pid_path).to_i == pid
+        unless File.file?(pid_path) && File.read(pid_path).to_i == pid &&
+               lease_record_matches?(pid_path:, pid:, owner:)
           release(pid_path:, pid:, owner:)
           return
         end
 
-        stopped = stop_server(pid_path, pid:, killer:)
+        stopped = stop_server(pid_path, pid:, owner:, killer:)
         return unless stopped
         return unless release(pid_path:, pid:, owner:)
 
         File.basename(pid_path, ".pid")
       end
 
-      def stop_server(pid_path, pid:, killer:)
+      def stop_server(pid_path, pid:, owner:, killer:)
+        return false unless File.file?(pid_path) && File.read(pid_path).to_i == pid
+        return false unless lease_record_matches?(pid_path:, pid:, owner:)
+
         stopped = killer.call(pid)
         return false unless stopped == true || stopped == :already_gone
+        return false unless File.file?(pid_path) && File.read(pid_path).to_i == pid
+        return false unless lease_record_matches?(pid_path:, pid:, owner:)
 
-        FileUtils.rm_f(pid_path) if File.file?(pid_path) && File.read(pid_path).to_i == pid
+        FileUtils.rm_f(pid_path)
         true
       rescue Errno::ESRCH
-        FileUtils.rm_f(pid_path) if File.file?(pid_path) && File.read(pid_path).to_i == pid
+        return false unless File.file?(pid_path) && File.read(pid_path).to_i == pid
+        return false unless lease_record_matches?(pid_path:, pid:, owner:)
+
+        FileUtils.rm_f(pid_path)
         true
+      rescue SystemCallError, ArgumentError, TypeError
+        false
       end
 
       def alive?(pid)
