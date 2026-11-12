@@ -154,4 +154,34 @@ class TestWebChat < Minitest::Test
   ensure
     old.nil? ? ENV.delete("MASTER_WEB_CHAT_SCREENSHOT_DIR") : ENV["MASTER_WEB_CHAT_SCREENSHOT_DIR"] = old
   end
+
+  def test_slow_browser_cleanup_does_not_block_and_prevents_profile_reuse
+    chat = build_chat
+    release = Queue.new
+    browser = Object.new
+    browser.define_singleton_method(:quit) { release.pop }
+    worker = nil
+
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      chat.send(:cleanup_browser, browser)
+      worker = Master::Io::WebChat::PROFILE_CLEANUP.fetch(:thread)
+      assert worker&.alive?, "the deliberately blocked quit must remain in its worker"
+      assert_raises(Master::Io::WebChat::ProviderError) do
+        chat.send(:refuse_if_cleanup_pending!)
+      end
+    end
+
+    release << true
+    worker.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      chat.send(:refuse_if_cleanup_pending!)
+      assert_nil Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+    end
+  ensure
+    release << true if release
+    worker&.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil
+    end
+  end
 end
