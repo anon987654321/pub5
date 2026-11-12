@@ -204,7 +204,6 @@ module Master
           refusal = TaskContract.new_path_refusal(absolute, repo_root: @root, declared: plan.writes.keys)
           raise TaskContract::Invalid, refusal if refusal
 
-          FileUtils.mkdir_p(File.dirname(absolute))
           write_atomic(absolute, content)
           @applied_states[path] = Digest::SHA256.hexdigest(content.to_s.b)
         end
@@ -231,7 +230,6 @@ module Master
           end
 
           if content
-            FileUtils.mkdir_p(File.dirname(full(path)))
             raise "restructure rollback refused: symlinked path #{path}" if symlinked_path?(path)
 
             write_atomic(full(path), content)
