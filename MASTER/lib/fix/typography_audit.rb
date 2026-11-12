@@ -13,7 +13,10 @@ module Master
     # ("--dry-run"), globs and paths are exempt by shape, so a finding is a
     # sentence that reached a person wearing the wrong mark.
     class TypographyAudit
-      SCOPE = %w[lib/cli lib/voice lib/trace].freeze
+      SCOPE = %w[lib/cli lib/voice lib/trace lib/fix].freeze
+      PUNCTUATION_SCOPE = %w[lib/cli lib/voice lib/trace].freeze
+      TERMINAL_LINE_LIMIT = 72
+      OUTPUT_CALL = /(?:.s*(?:status|say|emit|puts|print|warn)|(?:puts|print|warn|say))/.freeze
       # The marks proper typography sets in copy and a terminal does not print.
       TERMINAL_MARK = /[\u2014\u2013\u00B7\u2022\u2026\u201C\u201D\u2018\u2019\u2192\u2190\u00D7\u2265\u2264]/.freeze
       PROSE_DOUBLE_DASH = /(?<=\s)--(?=\s)/.freeze
@@ -56,7 +59,7 @@ module Master
           text = line.scan(STRING_LITERAL).map(&:first).join(" ")
           next if text.empty?
 
-          kind = violation_kind(text)
+          kind = violation_kind(text, line, relative)
           next unless kind
 
           Finding.new(file: relative, line: index + 1, kind:, snippet: text[0, 80])
@@ -65,9 +68,11 @@ module Master
         []
       end
 
-      def violation_kind(text)
-        return "non_ascii_punctuation" if text.match?(TERMINAL_MARK)
-        return "prose_double_dash" if text.match?(PROSE_DOUBLE_DASH)
+      def violation_kind(text, line, relative)
+        terminal_copy = PUNCTUATION_SCOPE.any? { |scope| relative.start_with?(scope + "/") }
+        return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
+        return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
+        return "terminal_measure" if line.match?(OUTPUT_CALL) && text.length > TERMINAL_LINE_LIMIT
 
         nil
       end
