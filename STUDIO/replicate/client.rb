@@ -571,8 +571,8 @@ module Studio
                       (e.is_a?(TransientError) && e.message.start_with?("Replicate API 429:"))
           raise unless retryable
 
-          last_error = e.message
-          sleep(retry_delay(last_error, attempt)) if attempt < attempts - 1
+          last_error = e
+          sleep(retry_delay(e.message, attempt)) if attempt < attempts - 1
         end
         raise last_error
       end
