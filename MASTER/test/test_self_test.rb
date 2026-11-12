@@ -97,6 +97,38 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_deploy_density_spares_a_method_at_the_twenty_code_line_limit
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      body = (1..20).map { |index| "      value_#{index} = #{index}" }.join("\n")
+      File.write(path, "class Fixture\n  def work\n#{body}\n  end\nend\n")
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_small_functions_findings)
+
+      assert_empty findings, "exactly twenty code lines are within the existing limit"
+    end
+  end
+
+  def test_deploy_density_flags_a_method_over_the_twenty_code_line_limit
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      body = (1..21).map { |index| "      value_#{index} = #{index}" }.join("\n")
+      File.write(path, "class Fixture\n  def work\n#{body}\n  end\nend\n")
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_small_functions_findings)
+
+      assert_equal 1, findings.size
+      assert_includes findings.first[:message], "method work is 21 code lines (max 20)"
+      assert_includes findings.first[:message], "(DENSITY)"
+    end
+  end
+
   def test_deploy_abstraction_measures_each_class_not_all_defs_in_a_file
     Dir.mktmpdir do |workspace|
       root = File.join(workspace, "MASTER")

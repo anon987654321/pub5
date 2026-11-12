@@ -95,18 +95,26 @@ module Master
           def deploy_god_class_findings
             law = Laws::GodClassLaw.new
             deploy_paths.select { |path| path.end_with?(".rb") }
-              .flat_map { |path| deploy_law_findings(path, law, "ABSTRACTION") }
+              .flat_map { |path| deploy_law_findings(path, law, "ABSTRACTION", context: "SelfTest.deploy_god_class") }
           end
 
-          # Deploy code uses the same class-level AST contract as MASTER. Counting
-          # every def in a file merged separate classes/modules into one imaginary
-          # god object, and missed the 300-code-line half of the actual law.
-          def deploy_law_findings(path, law, dimension)
+          # Deploy Ruby uses the same method-size contract as MASTER/lib.
+          # Measuring only total file bytes left long methods in operational code
+          # outside DENSITY, despite sharing the same maintenance risk.
+          def deploy_small_functions_findings
+            law = Laws::SmallFunctionsLaw.new
+            deploy_paths.select { |path| path.end_with?(".rb") }
+              .flat_map { |path| deploy_law_findings(path, law, "DENSITY", context: "SelfTest.deploy_small_functions") }
+          end
+
+          # Reuse each canonical AST detector so MASTER and deploy code share
+          # thresholds, code-line counting, and parse-failure behavior.
+          def deploy_law_findings(path, law, dimension, context:)
             law.check(read_text(path), path:).map do |result|
               finding(path:, line: result.line, message: "#{result.message} (#{dimension})")
             end
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "SelfTest.deploy_god_class", severity: :load_bearing)
+            Master::Ground::Swallow.log(e, context:, severity: :load_bearing)
             [finding(path:, line: 1, message: "unreadable deploy file - #{dimension} unmeasured, not clean")]
           end
           MAX_DEPLOY_FILE_BYTES = 24_000
@@ -219,7 +227,7 @@ module Master
             ["LINEARITY", lambda { structural_findings(Laws::NestingDepthLaw.new) + deploy_nesting_findings }],
             ["PROXIMITY", lambda { law_test_proximity_findings }],
             ["ABSTRACTION", lambda { structural_findings(Laws::GodClassLaw.new) + deploy_god_class_findings }],
-            ["DENSITY", lambda { structural_findings(Laws::SmallFunctionsLaw.new) + deploy_small_files_findings + face_pool_findings }],
+            ["DENSITY", lambda { structural_findings(Laws::SmallFunctionsLaw.new) + deploy_small_functions_findings + deploy_small_files_findings + face_pool_findings }],
             ["KERNEL_ADHERENCE", lambda { kernel_wiring_findings }],
             ["LAW_MAP", lambda { law_map_findings }],
           ]
