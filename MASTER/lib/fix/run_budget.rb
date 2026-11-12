@@ -500,11 +500,21 @@ module Master
       end
 
       # Spelled from @root, as the autofix recorded its writes: --show-toplevel answers with symlinks
-      # resolved (/private/var for /var), and no path would match.
+      # resolved (/private/var for /var), and no path would match. Scratch roots
+      # used by browserless /fix tests are not Git checkouts; treat their absent
+      # index as an empty rollback set without leaking Git's usage text to stderr.
       def uncommitted_paths
-        up, = Master::Io::Exec.capture2("git", "-C", @root, "rev-parse", "--show-cdup")
+        up, root_status = Master::Io::Exec.capture2e(
+          "git", "-C", @root, "rev-parse", "--show-cdup", timeout: 15
+        )
+        return [] unless root_status&.success?
+
         top = File.expand_path(up.strip, @root)
-        listing, = Master::Io::Exec.capture2("git", "-C", top, "diff", "--name-only", "HEAD")
+        listing, diff_status = Master::Io::Exec.capture2e(
+          "git", "-C", top, "diff", "--name-only", "HEAD", timeout: 30
+        )
+        return [] unless diff_status&.success?
+
         listing.lines.map { |path| File.join(top, path.strip) }
       end
 

@@ -381,6 +381,27 @@ class TestFixWatchdog < Minitest::Test
 
   def git(*args) = Master::Io::Exec.capture2e("git", "-C", @root, "-c", "user.name=t", "-c", "user.email=t@t", *args)
 
+  def test_uncommitted_paths_are_empty_for_a_scratch_root_without_git
+    run = budget
+
+    _stdout, stderr = capture_io do
+      assert_empty run.send(:uncommitted_paths)
+    end
+
+    assert_empty stderr, "a non-repository test root must not leak git fatal/usage output"
+  end
+
+  def test_uncommitted_paths_name_modified_files_in_the_run_repository
+    git("init", "-q")
+    path = File.join(@root, "x.rb")
+    File.write(path, "x = 1\\n")
+    git("add", "-A")
+    git("commit", "-q", "-m", "base")
+    File.write(path, "x = 2\\n")
+
+    assert_equal [path], budget.send(:uncommitted_paths)
+  end
+
   def test_a_protected_path_changed_by_the_run_trips_the_kill_switch_and_an_old_one_does_not
     git("init", "-q")
     tokens = File.join(@root, "MASTER", "data", "tokens.yml")
