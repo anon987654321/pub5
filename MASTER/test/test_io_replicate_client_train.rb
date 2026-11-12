@@ -159,6 +159,21 @@ class TestReplicateClientRetry < Minitest::Test
     refute requests.any? { |request| request["Host"] == "attacker.invalid" }
   end
 
+  def test_api_url_validator_rejects_dot_and_escaped_path_segments
+    client = Client.new(token: "replicate-test-secret")
+    [
+      "https://api.replicate.com/v1/models/../account",
+      "https://api.replicate.com/v1/models/%2e%2e/account",
+      "https://api.replicate.com/v1/models/%2faccount",
+      "https://api.replicate.com/v1/models/%252e%252e/account",
+    ].each do |value|
+      error = assert_raises(ArgumentError, value) do
+        client.send(:api_uri, URI(value))
+      end
+      assert_match(/outside the Replicate API origin/, error.message)
+    end
+  end
+
   def test_model_pagination_rejects_a_repeated_cursor_without_a_second_request
     client = Client.new(token: "replicate-test-secret")
     requests = []
