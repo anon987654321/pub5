@@ -204,6 +204,15 @@ module Operator
       vote_path = "RAILS/__shared/app/views/shared/_post_vote_rail.html.erb"
       expect("post_card.vote_rail_target", vote_path, read(vote_path), "dom_id(post, :vote_rail)",
              "The reader-specific vote rail needs a stable replacement target.")
+      brgen_vote_response_path = "RAILS/brgen/app/views/votes/create.turbo_stream.erb"
+      brgen_vote_response = read(brgen_vote_response_path)
+      expect("post_card.brgen_vote_only_replace", brgen_vote_response_path, brgen_vote_response,
+             "dom_id(@votable, :vote_rail)",
+             "Brgen post votes must replace only the current reader's vote rail.")
+      brgen_vote_controller_path = "RAILS/brgen/app/controllers/votes_controller.rb"
+      expect("post_card.brgen_vote_score_refresh", brgen_vote_controller_path,
+             read(brgen_vote_controller_path), "@votable.reload if @votable.is_a?(Post)",
+             "The local vote response must reload the SQL-updated score before rendering the rail.")
       brgen_vote_path = "RAILS/brgen/app/models/vote.rb"
       brgen_vote = read(brgen_vote_path)
       expect("post_card.brgen_vote_event", brgen_vote_path, brgen_vote, "after_commit :broadcast_votable_counts",
