@@ -38,10 +38,32 @@ same family in every app, and a fifth face is a decision and not an accident.
 Three of those decisions have been taken, on the operator's word (2026-10-29 and,
 delegated, 2026-10-31), and are recorded so that no one reopens them as drift:
 
-- The commerce surfaces, markedsplass and takeaway, wear the store dialect measured
-  from bol.com and Kaufland.de, because the marketplace competes at that class. It
-  keeps their 1px field and tile rules, their corner radii and the commerce sans
-  (`--font-commerce-sans`, a Helvetica Neue stack). That is the named exception to
+- **Amber's primary fashion reference is Toteme.** Use it as a close structural
+  template for collection-led discovery, restrained navigation, image-first grids,
+  consistent product-image wells, quiet metadata, useful filters/sort, and a clear
+  product-detail gallery beside its facts. Translate those patterns into a private
+  wardrobe: lifecycle/category/usage filters, garment facts and wear actions replace
+  retail price, seller and checkout mechanics. Amber remains wardrobe intelligence,
+  not a fashion shop. Its existing warm-neutral luxury tokens, Helvetica Neue Pro
+  sans stack, original masthead and truthful garment colours remain authoritative;
+  no copied wordmark, campaign art, typeface, product photography or exact brand skin.
+- **Marketplace and Takeaway use bol.com and Kaufland.de as close commerce templates.**
+  Borrow their information architecture and interaction patterns: prominent search,
+  hierarchical category navigation, shortcut rails, filter groups and counts, useful
+  sort controls, scannable result grids, a stable price/title/rating/facts hierarchy,
+  and media beside a decision-ready detail/buy box. For Marketplace, the facts are
+  price, seller, locality, condition, delivery and offer/cart actions. For Takeaway,
+  adapt the same grammar to restaurant discovery and menu ordering: cuisine, truthful
+  open status, delivery fee, minimum order, ratings, dish price, dietary/allergen
+  facts, quantity and one clear order action. Never invent availability, ratings,
+  delivery promises or scarcity.
+  
+  These are user-selected structural templates, not permission to reproduce the
+  references' logos, wordmarks, campaign art, photography, copy, distinctive
+  typography or exact branded visual skin. Brgen retains its deep-blue city identity,
+  local voice and city-first product logic. The store dialect retains its current
+  1px field and tile rules, corner radii and commerce sans
+  (`--font-commerce-sans`, a Helvetica Neue stack). This is the named exception to
   "flat, no hairline rules" and to the one family, scoped under
   `body.vertical-marketplace`. It does not travel to any other surface.
 - That dialect is two layers in brgen's stylesheet, the Kaufland `--store-*` rules
