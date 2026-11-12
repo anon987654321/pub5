@@ -19,7 +19,7 @@ class CityCatalogueContractTest < Minitest::Test
   end
 
   def test_catalogue_has_unique_complete_city_records
-    refute_empty records
+    assert_equal 43, records.length, "registered city inventory changed; review DNS and product facts before removing a city"
     domains = records.map { |record| record.fetch("domain") }
     assert_equal domains.length, domains.uniq.length, "city domains must be unique"
 
