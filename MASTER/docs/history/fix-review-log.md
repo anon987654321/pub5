@@ -275,3 +275,18 @@ The items below are the residual findings after the P01–P11 source changes and
 - **Security boundaries — source reconciled, tests NOT_RUN:** H2's `MASTER/lib/cli/tool_hooks.rb` denies on hook faults by default; `on_fault: allow` is the explicit opt-in, and untrusted/malformed configured files refuse effects. `test/test_tool_hooks.rb` covers those paths. H3's `McpCoordinator#local_sse_url!` accepts only loopback HTTP(S) endpoints without credentials/query/fragment, and enabled entries in `data/mcp_servers.yml` pin their package versions; the unpinned git server remains disabled. `test/test_io_mcp_and_web_chat.rb` covers remote/private/metadata hosts and URL credentials. H7 is now source-covered for three concrete paths: `CLI::WebServer` starts only after `lsof` confirms the exact TCP listening port is free and refuses unknown/inconclusive listeners; Dilla keeps its player as an unreaped direct child and signals/reaps only that child; `TtsSupervisor` keeps daemon workers as waitable direct children, refuses command-line PID sweeps, refuses non-canonical/unowned socket paths and only retires its own pool-slot child. Regression additions are in `test/test_web_server.rb`, `test/test_io_media_intent.rb`, `test/test_music_synth_intent.rb` and `test/voice/test_tts_supervisor.rb`. H6 is partial: `OPENBSD/etc/.zshrc` verifies the operator env file is user-owned and has no group/other permission bits. `Deploy::PermissionAudit` now also checks `/etc/<app>.env` owner/group (`root:<app>`), storage owner (`<app>`), daemon-log owner and symlinks in every path component; `health_check.rb` uses `lstat`, includes `/etc/rails/*.env`, and records uid/gid names. `test_permission_audit.rb` adds wrong-owner, wrong-group, leaf-symlink and parent-symlink cases. Those tests are authored but NOT_RUN. A dedicated zsh source test (including the operator.env parent chain) and a live vm23 permission run remain open. All tests above remain NOT_RUN; none of these rows is a runtime PASS. The RAILS-side token timing, CSRF, and persistent ingress rate limiting remain **inconclusive**, because they were outside the review snapshot (H8).
 
 The review roadmap remains the triage reference. Work on remaining items in small, path-scoped changes with a regression instrument for each. No item is closed by documentation alone, and no test is called green until its output exists.
+
+## Follow-on local TTS child recovery
+
+The local MLX TTS server remains a deliberately warm, background service, but
+its launcher no longer treats the first spawn as permanent success. It keeps
+the detached wait handle for the exact child, reuses that child while it is
+alive, and clears/reaps the completed waiter before attempting a fresh start.
+This fixes the prior one-shot latch: when the daemon exited during a MASTER
+session, later speech requests could never restart it.
+
+A new regression launches a real temporary server stub, proves a second start
+does not duplicate the live child, terminates that child, and proves a later
+start obtains a new waitable child. The test has been authored but NOT_RUN.
+This is one scoped result in the process-ownership census, not closure of the
+remaining detached-service, process-group, or browser-runtime checks.
