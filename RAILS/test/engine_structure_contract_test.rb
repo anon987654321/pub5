@@ -8,10 +8,6 @@ class EngineStructureContractTest < Minitest::Test
   TAKEAWAY = "engines/marketplace/engines/takeaway"
   EXPECTED_NESTED_ENGINE = "brgen/#{TAKEAWAY}"
 
-  def read(path)
-    File.read(File.join(ROOT, path))
-  end
-
   def test_takeaway_remains_the_marketplace_food_engine
     assert File.file?(File.join(BRGEN, "engines/marketplace/engines/takeaway/lib/takeaway/engine.rb"))
     assert File.file?(File.join(BRGEN, "engines/marketplace/lib/marketplace.rb"))
