@@ -15,6 +15,13 @@ module Master
       # OH_INTERNAL_SERVER_URL: 32768 bytes accepted, 33000 refused) and accepts
       # the same text as a user turn. FoldLongSystem needs the flag set.
       FOLD_SYSTEM = "1"
+      # The agent server relays to a hosted model, so a repair-sized prompt can
+      # sit silent past the dispatcher's 60 s read-idle budget before the first
+      # token (measured: a 16 k-token prompt answers in 15 s cold, and a repair
+      # with a long generation can exceed a minute). The idle budget is the
+      # repo's own operator surface for a slow gateway; the sandbox is the one
+      # place that knows this lane is the relayed agent server, so it widens it.
+      READ_IDLE_S = "300"
 
       module_function
 
@@ -38,6 +45,7 @@ module Master
         env["MASTER_LLM_GATEWAY_URL"] = "#{base.chomp('/')}/v1"
         env["MASTER_LLM_GATEWAY_KEY"] = key
         env["MASTER_LLM_GATEWAY_FOLD_SYSTEM"] ||= FOLD_SYSTEM
+        env["MASTER_LLM_READ_IDLE_S"] ||= READ_IDLE_S
         env["MASTER_LLM_GATEWAY_URL"]
       end
 

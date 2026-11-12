@@ -59,4 +59,18 @@ class TestOpenhandsSandbox < Minitest::Test
     Sandbox.wire!(env)
     assert_equal "0", env["MASTER_LLM_GATEWAY_FOLD_SYSTEM"]
   end
+
+  def test_the_relayed_agent_server_gets_a_wider_read_idle_budget
+    env = sandbox_env
+    Sandbox.wire!(env)
+
+    assert_equal Sandbox::READ_IDLE_S, env["MASTER_LLM_READ_IDLE_S"]
+  end
+
+  def test_an_operator_read_idle_budget_is_left_untouched
+    env = sandbox_env("MASTER_LLM_READ_IDLE_S" => "45")
+    Sandbox.wire!(env)
+
+    assert_equal "45", env["MASTER_LLM_READ_IDLE_S"]
+  end
 end

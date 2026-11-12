@@ -46,6 +46,7 @@ ENV.delete("MASTER_MODEL_STRICT")
 ENV.delete("MASTER_LLM_GATEWAY_URL")
 ENV.delete("MASTER_LLM_GATEWAY_KEY")
 ENV.delete("MASTER_LLM_GATEWAY_FOLD_SYSTEM")
+ENV.delete("MASTER_LLM_READ_IDLE_S")
 
 LIVE_STATE_DIR = Dir.mktmpdir("master-test-lanes-")
 ENV["MASTER_LANE_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "lane_quota.yml")

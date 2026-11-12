@@ -175,7 +175,7 @@ module Master
             answer
           end
         rescue Net::ReadTimeout => e
-          Result.err("#{lane} went silent longer than #{READ_IDLE_TIMEOUT_S}s: #{e.message}", category: :timeout)
+          Result.err("#{lane} went silent longer than #{read_idle_timeout_s}s: #{e.message}", category: :timeout)
         end
 
         # SSE deltas as they arrive. An event is the fields up to the next blank
