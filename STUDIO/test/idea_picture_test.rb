@@ -244,6 +244,25 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_likeness_render_blocks_before_provider_schema_access_without_consent
+    Dir.mktmpdir do |dir|
+      subject = "consent_probe_#{Process.pid}_#{object_id}"
+      subject_directory = File.join(Studio::Visual::IdeaPicture::SUBJECTS, subject)
+      refute File.exist?(subject_directory), "the test subject must not already have local data"
+
+      client = Object.new
+      client.define_singleton_method(:input_names) { |_model| flunk "provider must not be called without consent" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: subject, client:, directory: dir
+      )
+
+      error = assert_raises(Studio::Lora::Consent::Error) do
+        picture.write("portrait", film: false)
+      end
+      assert_match(/private subject directory is missing/, error.message)
+    end
+  end
+
   def test_still_schema_preflight_catches_every_field_before_prediction
     Dir.mktmpdir do |dir|
       manifest = File.join(dir, "replicate_training.json")
