@@ -205,6 +205,21 @@ class OrderTest < ActiveSupport::TestCase
     assert_not_equal a.tracking_token, b.tracking_token
   end
 
+  test "a stale delivery attempt cannot award a second loyalty stamp" do
+    order = seed_order!(user: @user, kitchen: @kitchen, state: "picked_up")
+    current = Order.find(order.id)
+    stale = Order.find(order.id)
+
+    assert_difference "LoyaltyStamp.count", 1 do
+      current.deliver!
+    end
+    assert_raises(Order::InvalidTransition) { stale.deliver! }
+
+    assert_equal "delivered", order.reload.state
+    assert_equal 1, LoyaltyStamp.where(order_id: order.id).count
+  end
+
+
   private
 
   # Guards may raise or return false — both count as a refusal. What must
@@ -220,17 +235,5 @@ class OrderTest < ActiveSupport::TestCase
     assert_equal before, order.state, "#{method} should be refused from #{before}"
   end
 
-test "a stale delivery attempt cannot award a second loyalty stamp" do
-    order = seed_order!(user: @user, kitchen: @kitchen, state: "picked_up")
-    current = Order.find(order.id)
-    stale = Order.find(order.id)
 
-    assert_difference "LoyaltyStamp.count", 1 do
-      current.deliver!
-    end
-    assert_raises(Order::InvalidTransition) { stale.deliver! }
-
-    assert_equal "delivered", order.reload.state
-    assert_equal 1, LoyaltyStamp.where(order_id: order.id).count
-  end
 end
