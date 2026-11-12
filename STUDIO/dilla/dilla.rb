@@ -366,8 +366,8 @@ module Dilla
   # seed, and the seed is recorded in the provenance sidecar.
   class Rng
     def initialize(seed)
-      @rng = seed.nil? ? Random.new : Random.new(Integer(seed))
-      @seed = seed.nil? ? @rng.rand(1..999_999_999) : Integer(seed)
+      @seed = seed.nil? ? Random.new.rand(1..999_999_999) : Integer(seed)
+      @rng = Random.new(@seed)
     end
 
     attr_reader :seed
@@ -1374,8 +1374,9 @@ module Dilla
   # ------------------------------------------------------------- drums
 
   class DrumKit
-    def initialize(kit)
+    def initialize(kit, rng: Random.new)
       @kit = kit
+      @rng = rng
     end
 
     # SP-12 style kick: pitch drops fast into the forties, click transient on
@@ -1431,7 +1432,7 @@ module Dilla
       fm_ratio = @kit["snare"].fetch("fm_ratio", 2.82).to_f
       fm_index = @kit["snare"].fetch("fm_index", 2.4).to_f
       fm_decay = Math.exp(-1.0 / (@kit["snare"].fetch("fm_decay", 0.023).to_f.clamp(0.002, 0.2) * SAMPLE_RATE))
-      off = Random.rand(NOISE.length / 2)
+      off = @rng.rand(NOISE.length / 2)
       i = 0
       while i < len
         env_n = noise_decay**i
@@ -1464,8 +1465,8 @@ module Dilla
       operator_weights = [0.34, 0.28, 0.22, 0.16]
       carrier_phases = Array.new(operator_hz.length, 0.0)
       modulator_phases = Array.new(operator_hz.length, 0.0)
-      off = Random.rand(NOISE.length / 2)
-      speed = 0.97 + Random.rand * 0.06
+      off = @rng.rand(NOISE.length / 2)
+      speed = 0.97 + @rng.rand * 0.06
       i = 0
       while i < len
         noise = NOISE[((i * speed).floor + off) % NOISE.length]
@@ -1499,7 +1500,7 @@ module Dilla
       len = (decay * SAMPLE_RATE).to_i + 1
       out = Array.new(len, 0.0)
       decay_coef = Math.exp(-1.0 / (decay * 0.3 * SAMPLE_RATE))
-      off = Random.rand(NOISE.length / 2)
+      off = @rng.rand(NOISE.length / 2)
       i = 0
       while i < len
         s = NOISE[(i + off) % NOISE.length]
@@ -1538,7 +1539,7 @@ module Dilla
       out = Array.new(len, 0.0)
       decay_coef = Math.exp(-1.0 / (decay * 0.4 * SAMPLE_RATE))
       attack = (0.008 * SAMPLE_RATE).to_i
-      off = Random.rand(NOISE.length / 2)
+      off = @rng.rand(NOISE.length / 2)
       i = 0
       while i < len
         env = (i < attack ? i / attack.to_f : 1.0) * (decay_coef**i)
@@ -2452,7 +2453,6 @@ module Dilla
     t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     plan = resolve_render_plan(opts, showcase:)
     rng = Rng.new(opts.seed)
-    srand(rng.seed)
     performers = catalogue.fetch("performers")
     performer = performers.find { |p| p["id"] == plan[:performer_id] } || rng.pick(performers)
     profile = catalogue.fetch("groove_profiles").fetch(plan[:profile]).dup
@@ -2468,7 +2468,7 @@ module Dilla
     duration = bar_count * groove.bar_s + tail_s
     mixer = Mixer.new(duration, rig, rng, bpm: plan[:bpm])
     instruments = Instruments.new(kit, voice, theory)
-    drum_kit = DrumKit.new(kit)
+    drum_kit = DrumKit.new(kit, rng: Random.new(rng.seed ^ 0xD11A))
     seq = Sequencer.new(
       progress: plan[:progression], groove:, drums: drums_cfg, rig:, rng:, performer:,
       opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley }
@@ -2997,7 +2997,6 @@ module Dilla
     opts.bars = (opts.bars || 16).to_i.clamp(1, 128)
     seed = opts.seed
     rng = Rng.new(seed)
-    srand(rng.seed)
     performer = catalogue.fetch("performers").first
     profile = { "spread_ms" => 2.0, "nudge" => { "kick" => 0.0, "snare" => 0.0, "hat" => 0.0, "ghost" => 0.0 }, "drag_ms" => 0.0, "anticipation" => 0.0 }
     groove = Groove.new(bpm: opts.bpm, swing: 50.0, profile: profile, performer: performer)
@@ -3005,7 +3004,7 @@ module Dilla
     rig = catalogue.fetch("rigs").fetch("basement")
     duration = opts.bars.to_i * groove.bar_s + 2.5
     mixer = Mixer.new(duration, rig, rng)
-    drum_kit = DrumKit.new(kit)
+    drum_kit = DrumKit.new(kit, rng: Random.new(rng.seed ^ 0xD11A))
     n_bars = opts.bars
     events = []
     n_bars.times do |bar|
