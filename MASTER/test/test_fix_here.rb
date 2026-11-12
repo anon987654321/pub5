@@ -76,6 +76,37 @@ class TestFixHere < Minitest::Test
     end
   end
 
+  def test_lane_flag_requires_a_value
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(worker, tools_bin, "MASTER", "--lane")
+
+      refute status.success?
+      assert_includes output, "--lane requires"
+      refute File.exist?(File.join(worker, "MASTER/.master"))
+    end
+  end
+
+  def test_lane_option_after_the_target_is_normalised_and_forwarded
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--lane", "visual")
+
+      assert status.success?, output
+      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      assert_includes log, "args=/fix MASTER --lane=visual --apply"
+    end
+  end
+
+  def test_help_is_handled_before_disk_or_tree_validation
+    with_worktree do |_main, worker, tools_bin|
+      output, status = run_fix_here(worker, tools_bin, "--help")
+
+      assert status.success?, output
+      assert_includes output, "--model ID"
+      assert_includes output, "--lane LANE"
+      refute File.exist?(File.join(worker, "MASTER/.master"))
+    end
+  end
+
   def test_model_flag_requires_a_value
     with_worktree do |_main, worker, tools_bin|
       output, status = run_fix_here(worker, tools_bin, "MASTER", "--model")

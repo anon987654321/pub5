@@ -20,7 +20,6 @@ exec "$(dirname "$0")/ruby" -x "$0" "$@"
 
 require "open3"
 require "fileutils"
-require "json"
 require "optparse"
 
 ROOT = File.expand_path("../..", __dir__)
