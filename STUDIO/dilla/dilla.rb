@@ -433,6 +433,8 @@ module Dilla
         if candidate.match?(/\A[A-G][#b]?\z/)
           bass = candidate
           rest = rest[0...i]
+        elsif !candidate.match?(/\A\d+\z/)
+          raise ArgumentError, "unknown slash-bass note #{candidate.inspect}"
         end
       end
 
