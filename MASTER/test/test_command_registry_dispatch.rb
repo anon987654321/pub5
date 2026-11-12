@@ -282,6 +282,38 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_includes Registry.help_text("capabilities"), "/capabilities describe"
   end
 
+  def test_nsfw_command_requires_local_opt_in_and_passes_an_nsfw_task
+    previous = %w[MASTER_NSFW MASTER_NSFW_MODEL MASTER_NO_OLLAMA].to_h { |key| [key, ENV[key]] }
+    previous_visitor = Fiber[:master_visitor]
+    ENV["MASTER_NSFW"] = "1"
+    ENV["MASTER_NSFW_MODEL"] = "dolphin3:8b"
+    ENV.delete("MASTER_NO_OLLAMA")
+    Fiber[:master_visitor] = nil
+    received = nil
+    agent = Object.new
+    agent.define_singleton_method(:call) { |context| received = context; :handled }
+
+    result = Registry.dispatch_nsfw(agent, ctx: { args: "write an adult romance" })
+
+    assert_equal :handled, result
+    assert_equal "nsfw", received.fetch(:task_type)
+    assert_equal "write an adult romance", received.fetch(:message)
+
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    blocked = Registry.dispatch_nsfw(agent, ctx: { args: "write an adult romance" })
+    assert_instance_of Master::Result::Err, blocked
+    assert_equal :policy, blocked.category
+
+    Fiber[:master_visitor] = true
+    ENV.delete("MASTER_NO_OLLAMA")
+    visitor = Registry.dispatch_nsfw(agent, ctx: { args: "write an adult romance" })
+    assert_instance_of Master::Result::Err, visitor
+    assert_equal :policy, visitor.category
+  ensure
+    previous&.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+    Fiber[:master_visitor] = previous_visitor
+  end
+
   def test_skill_review_command_approves_and_revokes_only_the_exact_revision
     require "tmpdir"
     old_visitor = Fiber[:master_visitor]
