@@ -6,6 +6,7 @@ require_relative "../lib/fix/visual_custody_blocking"
 require_relative "../lib/fix/visual_quality_checks"
 require_relative "../lib/fix/transaction"
 require_relative "../checks/support/geometry_probe"
+require_relative "../checks/lib/rendered/reflow"
 
 class TestVisualCompletion < Minitest::Test
   class AuthorizedCustody
@@ -34,6 +35,23 @@ class TestVisualCompletion < Minitest::Test
     required = [320, 360, 375, 390, 430, 480, 640, 768, 1024, 1279, 1280, 1281]
 
     assert_empty required - Deploy::GeometryProbe.reflow_widths
+  end
+
+  def test_reflow_sweep_samples_resolve_to_priority_product_surfaces
+    priorities = Deploy::GeometryProbe.config.fetch("reflow_priority")
+    surfaces = Deploy::GeometryProbe.surfaces.map { |surface| "#{surface.app}/#{surface.label}" }
+
+    priorities.each do |app, labels|
+      labels.each { |label| assert_includes surfaces, "#{app}/#{label}" }
+    end
+
+    picked = Deploy::ReflowCheck.new.send(:pick_surfaces).map { |surface| "#{surface.app}/#{surface.label}" }
+    %w[
+      brgen/messenger
+      brgen/markedsplass_marketplace_listings_index
+      amber/outfits
+      bsdports/ports_index
+    ].each { |surface| assert_includes picked, surface }
   end
 
   def test_only_bounded_layout_rules_bypass_operator_owned_visual_decisions
