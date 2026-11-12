@@ -74,6 +74,7 @@ class TestFailoverPolicy < Minitest::Test
 
     assert_equal Master::Review::Agent::FallbackChain::NON_RETRYABLE, chain.skip_categories
     assert chain.failover_skip_model?(Master::Result.err("nope", category: :timeout))
+    assert chain.failover_skip_model?(Master::Result.err("quota spent", category: :exhausted))
     refute chain.failover_skip_model?(Master::Result.err("nope", category: :rate_limit))
   end
 
