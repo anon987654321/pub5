@@ -13,7 +13,7 @@ header which line on the box pins it.
 Start with `RUNBOOK.md`, the single operational companion for live VPS work. Read it
 before SSH, `doas`, deploy, DNS, relayd, NSD or recovery. `CLAUDE.md` holds the sharp
 edges that have burned agents here, and `PATH_OWNERSHIP.yml` says what every path is
-for. Read the man page for a file and its daemon before you change either.
+for. Every edit under `OPENBSD/` starts with a complete read of the target file and its relevant dependencies/contracts. Before using any OpenBSD-native command/tool, operating a daemon/service, or editing an interface-bearing file, read the complete exact-target-release and architecture manuals for every involved tool, configuration format, owning daemon, validator/reloader/control interface and relevant `SEE ALSO` page. All subsystems and file types are covered; non-native prose/data files still require full source and schema/contract review. Missing or partial evidence blocks the operation. `RUNBOOK.md` defines the preflight and receipt.
 
 ## Visual identity
 
@@ -93,15 +93,23 @@ deploy stamp. `bin/domain_watch.rb` asks the registries which domains are still
 ours, and with `--tls` it asks every public host for its certificate and a
 health answer, the way a visitor would.
 
-## Local manual pages
+## Manual pages and preflight
 
 The deploy and privileged-broker references are under `man/man8/`. From the
-repository root, use:
+repository root, render the complete local pages without an interactive pager:
 
 ```zsh
-MANPATH="$PWD/OPENBSD/man" man vps-deploy
-MANPATH="$PWD/OPENBSD/man" man pub4-admin
+MANPATH="$PWD/OPENBSD/man" man -P cat 8 vps-deploy
+MANPATH="$PWD/OPENBSD/man" man -P cat 8 pub5-admin
 ```
 
-Read `RUNBOOK.md` before live production work. The manual pages do not replace
-preflight, approval, health verification or recovery procedures.
+These local pages document pub5 tools only. Every edit under `OPENBSD/`
+requires a complete read of the target file and its relevant dependencies,
+callers and tests. Before any OpenBSD-native tool, daemon/service action or
+interface-bearing file edit, read the complete manuals for the exact target
+release and architecture: all involved commands, file formats, daemons,
+validators, reload/control interfaces and relevant `SEE ALSO` pages. This
+covers every subsystem, not an allowlist. Non-native prose/data files require
+full source and schema/contract review, not irrelevant man pages. Record the
+target identity and each page's source, section, SHA-256, byte/line count and
+complete status. Missing, partial or mismatched manuals mean BLOCKED.
