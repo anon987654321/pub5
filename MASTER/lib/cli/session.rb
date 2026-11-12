@@ -169,10 +169,17 @@ module Master
       # fresh row below it: the payload never mixes with the prompt glyphs and
       # never lands on the row Reline is editing.
       def foreign_write_begin(target)
-        return unless @reading_input && tty_target?(target)
+        return unless tty_target?(target)
 
-        clear_reserved_activity_row(target) if @activity_row_reserved
-        target.print("\r\e[K\r\n")
+        if @reading_input
+          clear_reserved_activity_row(target) if @activity_row_reserved
+          target.print("\r\e[K\r\n")
+        elsif @spinner_row_visible
+          # A queued turn paints the star on the current blank row. Clear only
+          # that row before a log event writes there; never move the cursor.
+          target.print("\r\e[K")
+          @spinner_row_visible = false
+        end
       end
 
       # Called under Dmesg's mutex, after the payload. Reline's differential
