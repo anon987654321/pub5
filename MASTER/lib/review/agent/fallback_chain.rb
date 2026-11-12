@@ -12,7 +12,7 @@ module Master
         # a policy refusal, not a fault — a posture that refuses :sensitive
         # work re-refuses on retry, so the queue moves on as it does for a
         # missing model (ModelRouter::PrivacyPosture).
-        NON_RETRYABLE = %i[timeout no_api_key offline auth_error quota_exceeded model_missing invalid_request privacy].freeze
+        NON_RETRYABLE = %i[timeout no_api_key offline auth_error quota_exceeded exhausted model_missing invalid_request privacy].freeze
 
         private
 
