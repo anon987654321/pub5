@@ -40,6 +40,7 @@ class TestThroughInference < Minitest::Test
 
     assert_equal [nil, nil, true, "fix", "lib/io"], registry.parse_pass_flags("--only fix lib/io")
     assert_equal [nil, nil, true, "critique", "lib"], registry.parse_pass_flags("--only=critique lib")
+    assert_equal [nil, nil, true, "fix", "lib"], registry.parse_pass_flags("--only=Fix lib")
     assert_equal [false, nil, true, "fix", "../RAILS/amber"],
                  registry.parse_pass_flags("--only fix --no-autofix ../RAILS/amber")
     assert_equal [nil, nil, true, nil, "MASTER"],
