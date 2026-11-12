@@ -208,7 +208,7 @@ class TestComputePool < Minitest::Test
     @pool.record(model:, status: :success, latency_ms: 100)
     reloaded = Master::CLI::Routing::ComputePool.new(router: Router.new, root: @pool.instance_variable_get(:@root))
 
-    assert_operator reloaded.send(:empirical_stats, model).last, :>, 1.0
+    assert_operator reloaded.send(:empirical_stats, model).first, :>, 1.0
     assert_in_delta Time.now.to_f, reloaded.snapshot.fetch(model).fetch(:last_success_at), 5.0
   end
 
