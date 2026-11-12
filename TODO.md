@@ -13,7 +13,7 @@ Follow-up audit: pub4/main remains at the recorded migration cutoff; the live
 blob disposition is refreshed in `MIGRATION.md` against `ff607922`. The
 execution container has Ruby 3.3.8 but no repository checkout; a shallow clone
 failed at DNS resolution for github.com. Repository test, lint and build commands
-therefore remain NOT_RUN in this session; no source-code push bypassed `bin/check`. PRs #11 (MASTER portrait,
+therefore remain NOT_RUN in this session. Subsequent source and regression-test commits were pushed through the repository API after source review, but could not be executed through `bin/check`; their current-revision status is NOT_RUN, not PASS. They remain pending acceptance on the installed compatible Ruby. PRs #11 (MASTER portrait,
 semantic subject morphs, CLI feedback and Replicate upload guards) and #12
 (Brgen city wordmark refinement) are merged. No pull request was open at the
 time of this audit. Entries below remain open until their own source, test,
