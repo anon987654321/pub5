@@ -154,6 +154,7 @@ module Master
       def send_with_cache(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
                           &blk)
         call_started = false
+        completed_result = nil
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         selected_model = answering_model(selected_model, image)
         refusal = local_only_refusal(selected_model) || refusal_before_send(selected_model)
@@ -192,6 +193,7 @@ module Master
           end
         end
         settled = settle(result, selected_model, started, streamed_bytes:)
+        completed_result = settled
         if detail_capture
           response = if stream
             streamed_detail
@@ -211,21 +213,26 @@ module Master
         settled
       rescue Io::CircuitBreaker::CircuitError => err
         record_provider_outcome(selected_model, err.category, latency_ms: elapsed_ms(started), error: err.message)
-        Result.err(redact_secrets(err.message), category: err.category)
+        completed_result = Result.err(redact_secrets(err.message), category: err.category)
       rescue Timeout::Error
         # Every dispatcher deadline is actionable, not just council deadlines:
         # park the lane and record a timeout so fallback does not ask it again.
-        call_deadline_exceeded(selected_model, started)
+        completed_result = call_deadline_exceeded(selected_model, started)
       rescue StandardError => err
         record_provider_outcome(selected_model, :llm_call_failure, latency_ms: elapsed_ms(started), error: err.message)
-        classified_call_failure(err)
+        completed_result = classified_call_failure(err)
       ensure
         # A :crash result deliberately bypasses provider-health accounting.
-        # The run pulse still needs a terminal event or it reports this model
-        # as in-flight forever, even though the dispatcher returned.
+        # Preserve its typed, redacted diagnosis on the completion event so
+        # Dmesg can close the unit without pretending the provider failed.
         if call_started
           begin
-            @bus&.publish("llm:call_finished", model: selected_model)
+            finished = { model: selected_model }
+            if completed_result.is_a?(Master::Result::Err) && completed_result.category == :crash
+              finished[:status] = :crash
+              finished.merge!(Master::Execution::Contract.diagnostic_fields(completed_result.message))
+            end
+            @bus&.publish("llm:call_finished", **finished)
           rescue StandardError => event_error
             Master::Ground::Swallow.log(event_error, context: "LLMDispatcher.call_finished", model: selected_model.to_s)
           end
