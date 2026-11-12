@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "pathname"
 require_relative "restructure"
 require_relative "transformation_plan"
 require_relative "commit_message"
@@ -74,7 +75,7 @@ module Master
         end
 
         unless agent&.respond_to?(:ask)
-          return Master::Result.err("apply requires a configured review agent; no files changed", category: :blocked)
+          return Master::Result.err("apply requires a configured review agent; no files changed", category: :policy)
         end
 
         review = lambda do |diff|
