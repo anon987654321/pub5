@@ -5,6 +5,7 @@ require "tmpdir"
 require "yaml"
 require_relative "minitest_helper"
 require_relative "../lora/consent"
+require_relative "../lora/validate"
 
 class TestLoraConsent < Minitest::Test
   Consent = Studio::Lora::Consent
@@ -26,6 +27,23 @@ class TestLoraConsent < Minitest::Test
     assert report.fetch("valid"), report.fetch("errors").join("; ")
     assert_empty report.fetch("errors")
     assert_equal File.join(@subject_dir, "consent.yml"), report.fetch("consent_path")
+  end
+
+  def test_lora_validator_reports_missing_consent_as_a_training_blocker
+    root = File.join(@root, "profiles")
+    subject = File.join(root, "probe")
+    FileUtils.mkdir_p(subject)
+    File.write(File.join(subject, "subject.env.example"), <<~ENV)
+      TRIGGER=PROBE
+      MODEL=probe
+      DESCRIPTOR=synthetic test profile
+    ENV
+
+    report = Studio::Lora::Validator.new(root:).validate_subject("probe")
+
+    refute report.fetch("training_ready")
+    refute report.fetch("consent_valid")
+    assert report.fetch("blockers").any? { |item| item.fetch("id") == "subject_consent" }
   end
 
   def test_missing_record_blocks_without_creating_or_repairing_it
