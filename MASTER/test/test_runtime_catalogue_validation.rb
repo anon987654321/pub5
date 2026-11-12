@@ -73,6 +73,13 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_match(/models.yml media_lanes.image\[0\].provider must name a declared media provider/, error)
   end
 
+  def test_validator_helpers_are_private_without_hiding_public_helpers
+    refute Master::ModelCatalogueGuard.respond_to?(:validate_top_level)
+    assert Master::ModelCatalogueGuard.respond_to?(:validate_scores)
+    refute Master::ModelCatalogueSectionsGuard.respond_to?(:validate_cli_lane)
+    assert Master::ModelCatalogueSectionsGuard.respond_to?(:strict_fields)
+  end
+
   def test_ollama_enabled_must_be_a_boolean
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
