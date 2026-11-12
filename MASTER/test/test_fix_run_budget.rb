@@ -269,7 +269,7 @@ class TestFixRunBudget < Minitest::Test
     [bus, ->(event, **payload) { bus.publish(event, payload) }]
   end
 
-  def test_heartbeat_never_leaves_a_gap_over_thirty_seconds
+  def test_heartbeat_never_leaves_a_gap_over_sixty_seconds
     run = budget
     run.note_output("scan0", "reading the corpus")
     beats = []
@@ -278,9 +278,9 @@ class TestFixRunBudget < Minitest::Test
       beats << second if run.beat
     end
 
-    assert_equal [28, 56, 84, 112, 140, 168, 196, 224, 252, 280], beats
-    assert_operator (beats + [300]).each_cons(2).map { |a, b| b - a }.max, :<, 30
-    assert_equal 10, @said.size
+    assert_equal [60, 120, 180, 240, 300], beats
+    assert_operator (beats + [360]).each_cons(2).map { |a, b| b - a }.max, :<=, 60
+    assert_equal 5, @said.size
   end
 
   def test_heartbeat_carries_phase_files_fixes_lane_tokens_elapsed_and_load
