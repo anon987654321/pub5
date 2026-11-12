@@ -14,6 +14,10 @@ class VotesController < ApplicationController
       vote.update!(value:)
     end
 
+    # Vote updates the score with SQL; the controller's original post instance
+    # still holds the old value. Reload before rendering only the vote rail.
+    @post.reload
+
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_back fallback_location: root_path }
