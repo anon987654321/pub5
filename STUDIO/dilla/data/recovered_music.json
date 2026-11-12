@@ -492,12 +492,12 @@
       ],
       "bars": 7,
       "chord_bars": [
-        1.16666667,
-        1.16666667,
-        1.16666667,
-        1.16666667,
-        1.16666667,
-        1.16666667
+        1.1666666666666667,
+        1.1666666666666667,
+        1.1666666666666667,
+        1.1666666666666667,
+        1.1666666666666667,
+        1.1666666666666667
       ],
       "chord_timing_status": "source_loop_length_only",
       "chord_timing_note": "The cited analysis documents a seven-bar loop and chord transcription, but individual chord onsets have not been imported. Equal 7/6-bar slots are an engine approximation only.",
