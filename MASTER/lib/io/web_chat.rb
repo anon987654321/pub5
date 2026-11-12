@@ -161,9 +161,13 @@ module Master
         PROFILE_CLEANUP[:thread] = worker
         return if worker.join(PROFILE_CLEANUP_WAIT_S)
 
-        Master::Trace::Dmesg.status(
-          "web0", "#{@provider}: browser cleanup continues; shared profile temporarily unavailable"
-        )
+        begin
+          Master::Trace::Dmesg.status(
+            "web0", "#{@provider}: browser cleanup continues; shared profile temporarily unavailable"
+          )
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_status", provider: @provider)
+        end
       rescue StandardError => e
         PROFILE_CLEANUP[:failed] ||= e.class.name
         Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_start", provider: @provider)
