@@ -303,6 +303,20 @@ class TestFixRunBudget < Minitest::Test
     refute_match(/waiting on/, run.beat)
   end
 
+  def test_call_finished_clears_a_model_fault_from_the_in_flight_line
+    run = budget
+    _bus, say = pulse_bus
+    run.announce(target: "MASTER", bus: _bus)
+    @now = 10.0
+    say.call("llm:send", model: "web-chat:kimi")
+    @now = 28.0
+    assert_includes run.beat, "waiting on web-chat:kimi for 18s"
+
+    say.call("llm:call_finished", model: "web-chat:kimi")
+    @now = 56.0
+    refute_match(/waiting on web-chat:kimi/, run.beat)
+  end
+
   def test_pass_summary_block_counts_before_after_fixes_skips_and_commits
     run = budget
     bus, say = pulse_bus
