@@ -1142,7 +1142,8 @@ module Master
       # needs a carried flag and a branch that reads as a third kind of token.
       def joined_only(tokens)
         tokens.each_with_object([]) do |token, out|
-          out.last&.casecmp?("--only") ? out[-1] = "--only=#{token}" : out << token
+          split_value = out.last&.casecmp?("--only") && !token.start_with?("--")
+          split_value ? out[-1] = "--only=#{token}" : out << token
         end
       end
 

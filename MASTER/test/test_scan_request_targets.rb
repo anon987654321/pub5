@@ -85,6 +85,13 @@ class TestScanRequestTargets < Minitest::Test
     assert_equal "../RAILS/amber", path
   end
 
+  def test_split_only_does_not_swallow_a_following_safety_flag
+    assert_equal [false, nil, true, nil, ""],
+                 Master::CLI::CommandRegistry.parse_pass_flags("--only --read-only")
+    assert_equal [false, nil, true, nil, ""],
+                 Master::CLI::CommandRegistry.parse_pass_flags("--only --apply --dry-run")
+  end
+
   def test_aesthetic_profile_walks_only_aesthetic_rules
     scanner = RecordingScanner.new
     def scanner.laws
