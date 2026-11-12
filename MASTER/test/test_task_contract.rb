@@ -619,7 +619,7 @@ class TestTaskContract < Minitest::Test
 
   def test_openbsd_command_admission_requires_the_specific_manual
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"]),
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master", "OPENBSD/etc/pf.conf"]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:

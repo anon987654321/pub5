@@ -437,9 +437,6 @@ module Master
         )
         return manual_error if manual_error
         shell_page = remote && declared_shell_manual(contract&.openbsd_preflight)
-        if remote && !shell_page
-          return "RTFM_FIRST requires openbsd_preflight with the declared target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
-        end
         command_manuals << shell_page if shell_page
         command_manuals.concat(command_entries.flat_map { |entry| COMMAND_SUPPORT_MANUALS.fetch(entry[:name], []) })
         command_manuals.uniq!
@@ -452,6 +449,9 @@ module Master
         declared = Array(preflight.fetch("native_interfaces"))
         missing = command_manuals - declared
         return "RTFM_FIRST missing declared manual interface(s): #{missing.join(', ')}" unless missing.empty?
+        if remote && !shell_page
+          return "RTFM_FIRST requires openbsd_preflight with the declared target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
+        end
         if (remote || openbsd_script) && declared.empty?
           return "RTFM_FIRST requires native interfaces and complete manuals to be enumerated"
         end
