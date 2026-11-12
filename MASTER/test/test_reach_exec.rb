@@ -3,6 +3,7 @@
 require "minitest/autorun"
 require "rbconfig"
 require "timeout"
+require "tmpdir"
 require_relative "../lib/io/exec"
 
 class TestReachExec < Minitest::Test
@@ -161,7 +162,7 @@ class TestReachExec < Minitest::Test
       end
 
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-      child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
+      _child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
       output, = error.result
       assert_includes output, "parent exited"
       assert_operator elapsed, :<, 5, "the inherited output pipe must share the process deadline"
