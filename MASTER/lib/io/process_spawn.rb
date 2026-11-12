@@ -10,26 +10,17 @@ module Master
       module_function
 
       # libmalloc's stack-logging diagnostic is inherited by every child even
-      # though MASTER does not use malloc stack logging. Remove the whole named
-      # family at the spawn boundary, including values supplied by an explicit
-      # child environment hash. A nil value tells Process.spawn to unset a key.
-      def scrub_parent_environment!
-        ENV.keys.each do |key|
-          ENV.delete(key) if key.start_with?("MallocStackLogging")
-        end
-      end
-
+      # though MASTER does not use malloc stack logging. Pass nil overrides to
+      # Process.spawn so only the child environment is cleaned; never mutate the
+      # long-lived parent's ENV while preparing an unrelated subprocess.
       def environment(overrides = {})
-        scrub_parent_environment!
         env = overrides.dup
-        env.keys.each do |key|
-          env[key] = nil if key.to_s.start_with?("MallocStackLogging")
-        end
+        ENV.keys.grep(/\AMallocStackLogging/).each { |key| env[key] = nil }
+        env.keys.each { |key| env[key] = nil if key.to_s.start_with?("MallocStackLogging") }
         env
       end
 
       def options(options = {})
-        scrub_parent_environment!
         result = options.dup
         result[:close_others] = true unless result.key?(:close_others)
         lock_fd = ENV["MASTER_PROCESS_LOCK_FD"].to_i
