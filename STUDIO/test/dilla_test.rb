@@ -247,9 +247,23 @@ class TestDillaHistoricalMaterial < Minitest::Test
       refute_empty row.fetch("sources"), "#{row['id']} needs source notes"
       assert_equal "historical_verified_table", row.fetch("source_status")
     end
+    charts = Dilla.progressions.select { |row| row["source"] == "chart_reference" }
+    assert_equal 1, charts.length
+    assert_equal "never_catch_me_flylo", charts.first.fetch("id")
     studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
     assert_equal 2, studies.length
     assert studies.all? { |row| row.fetch("note").include?("not a transcription") }
+  end
+
+  def test_source_record_tempo_and_form_override_the_generic_profile
+    brown_sugar = Dilla::Options.new
+    brown_sugar.progression = "brown_sugar_dangelo"
+    assert_equal 83.0, Dilla.resolve_render_plan(brown_sugar).fetch(:bpm)
+
+    so_what = Dilla::Options.new
+    so_what.progression = "so_what_miles"
+    plan = Dilla.resolve_render_plan(so_what)
+    assert_equal 32, plan.fetch(:bars)
   end
 
   def test_so_what_retains_its_aaba_harmonic_durations
