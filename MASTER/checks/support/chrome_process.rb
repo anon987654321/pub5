@@ -79,7 +79,7 @@ module Deploy
         break if leader_reaped && !chrome_group_alive?(pid)
         break if monotonic >= deadline
 
-        sleep STOP_POLL_S
+        sleep chrome_stop_poll
       end
 
       stopped = leader_reaped && !chrome_group_alive?(pid)
