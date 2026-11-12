@@ -17,7 +17,9 @@ module Master
       LOGIN_POLL_INTERVAL_S = 1.0
       COMPOSER_TIMEOUT_S = 20
       PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
+      PROFILE_CLEANUP_WAIT_S = 0.25
       PROFILE_MUTEX = Mutex.new
+      PROFILE_CLEANUP = { thread: nil }
 
       DisabledError = Class.new(StandardError)
       ProviderError = Class.new(StandardError)
@@ -85,6 +87,7 @@ module Master
       def with_browser
         require "ferrum"
         PROFILE_MUTEX.synchronize do
+          refuse_if_cleanup_pending!
           browser = nil
           begin
             FileUtils.mkdir_p(profile_path, mode: 0o700)
@@ -97,13 +100,37 @@ module Master
             )
             yield browser.create_page
           ensure
-            begin
-              browser&.quit
-            rescue StandardError => e
-              Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup", provider: @provider)
-            end
+            cleanup_browser(browser) if browser
           end
         end
+      end
+
+      # Ferrum 0.17.1's quit is synchronous. When the dispatcher deadline fires,
+      # waiting for teardown here defeats that deadline. Finish teardown off-thread;
+      # do not reopen the shared profile until that cleanup has actually exited.
+      def cleanup_browser(browser)
+        worker = Thread.new do
+          begin
+            browser.quit
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup", provider: @provider)
+          end
+        end
+        PROFILE_CLEANUP[:thread] = worker
+        return if worker.join(PROFILE_CLEANUP_WAIT_S)
+
+        Master::Trace::Dmesg.status(
+          "web0", "#{@provider}: browser cleanup continues; shared profile temporarily unavailable"
+        )
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "WebChat.browser_cleanup_start", provider: @provider)
+      end
+
+      def refuse_if_cleanup_pending!
+        worker = PROFILE_CLEANUP[:thread]
+        raise ProviderError, "#{@provider}: prior browser cleanup is still running; shared profile is unavailable" if worker&.alive?
+
+        PROFILE_CLEANUP[:thread] = nil
       end
 
       def converse(page, text)
