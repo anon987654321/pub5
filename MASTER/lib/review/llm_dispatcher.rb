@@ -167,17 +167,16 @@ module Master
         streamed_detail = +""
         streamed_bytes = 0
         stream_started = false
-        first_token_recorded = false
+        first_token_latency_ms = nil
         provider_started = nil
         stream_handler = if stream && blk
           lambda do |chunk|
             chunk_bytes = chunk.to_s.bytesize
             streamed_bytes += chunk_bytes
-            if chunk_bytes.positive? && !first_token_recorded
+            if chunk_bytes.positive? && !stream_started
               stream_started = true
-              first_token_recorded = true
               @bus&.publish("llm:stream_started", model: selected_model)
-              record_first_token_latency(selected_model, elapsed_ms(provider_started)) if provider_started
+              first_token_latency_ms = elapsed_ms(provider_started) if provider_started
             end
             if detail_capture && streamed_detail.bytesize < 2_000
               remaining = 2_000 - streamed_detail.bytesize
@@ -198,6 +197,9 @@ module Master
           end
         end
         settled = settle(result, selected_model, started, streamed_bytes:)
+        if first_token_latency_ms && Result.wrap(settled).ok?
+          record_first_token_latency(selected_model, first_token_latency_ms)
+        end
         completed_result = settled
         if detail_capture
           response = if stream
