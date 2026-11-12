@@ -206,15 +206,17 @@ class TestIoMcpAndWebChat < Minitest::Test
     chat = Master::Io::WebChat.new(provider: "grok")
     Master.stub(:any_api_key_present?, true) do
       with_env("MASTER_WEB_CHAT" => nil, "MASTER_KEYLESS" => nil, "MASTER_NO_WEB_CHAT" => nil,
-               "MASTER_LOCAL_ONLY" => nil) do
+               "MASTER_NO_KEYLESS" => nil, "MASTER_LOCAL_ONLY" => nil) do
         refute Master::Io::WebChat.enabled?
         assert_raises(Master::Io::WebChat::DisabledError) { chat.ask(prompt: "hi") }
       end
 
-      with_env("MASTER_WEB_CHAT" => "1") do
+      with_env("MASTER_WEB_CHAT" => "1", "MASTER_NO_KEYLESS" => nil, "MASTER_NO_WEB_CHAT" => nil,
+               "MASTER_LOCAL_ONLY" => nil) do
         assert Master::Io::WebChat.enabled?
       end
-      with_env("MASTER_KEYLESS" => "1") do
+      with_env("MASTER_KEYLESS" => "1", "MASTER_NO_KEYLESS" => nil, "MASTER_NO_WEB_CHAT" => nil,
+               "MASTER_LOCAL_ONLY" => nil) do
         assert Master::Io::WebChat.enabled?
       end
     end
