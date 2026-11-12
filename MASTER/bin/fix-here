@@ -21,6 +21,7 @@ exec "$(dirname "$0")/ruby" -x "$0" "$@"
 require "open3"
 require "fileutils"
 require "json"
+require "optparse"
 
 ROOT = File.expand_path("../..", __dir__)
 MASTER = File.join(ROOT, "MASTER")
@@ -35,36 +36,72 @@ rescue StandardError
 end
 TREES = %w[MASTER RAILS OPENBSD STUDIO BIZ].freeze
 
-args = ARGV.dup
-dry = args.delete("--dry")
-probe = !args.delete("--no-probe")
-no_publish = args.delete("--no-publish")
-resume = args.delete("--resume")
-model_flag = nil
-if (i = args.index("--model"))
-  abort "fix-here: --model requires an ID or 'none'" if args[i + 1].to_s.empty? || args[i + 1].start_with?("--")
+options = { probe: true, dry: false, no_publish: false, resume: false }
+wrapper_args = []
+args = []
+index = 0
+while index < ARGV.length
+  token = ARGV[index]
+  case token
+  when "--dry", "--no-probe", "--no-publish", "--resume", "-h", "--help"
+    wrapper_args << token
+  when "--model", "--lane"
+    wrapper_args << token
+    value = ARGV[index + 1]
+    if value.nil? || value.start_with?("--")
+      raise OptionParser::MissingArgument, token
+    end
+    wrapper_args << value
+    index += 1
+  when /\A--(?:model|lane|checks)=/
+    wrapper_args << token
+  else
+    args << token
+  end
+  index += 1
+end
 
-  args.delete_at(i)
-  model_flag = args.delete_at(i)
+parser = OptionParser.new do |opts|
+  opts.banner = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [options]"
+  opts.on("--dry", "Check readiness without starting /fix") { options[:dry] = true }
+  opts.on("--no-probe", "Skip the bounded in-process /fix lane request") { options[:probe] = false }
+  opts.on("--no-publish", "Keep verified commits local") { options[:no_publish] = true }
+  opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }
+  opts.on("--model ID", "Pin a model, or use none for automatic routing") { |value| options[:model] = value }
+  opts.on("--lane LANE", "Select the /fix lane") { |value| options[:lane] = value }
+  opts.on("--checks=LIST", "Limit check stages, comma-separated") { |value| options[:checks] = value }
+  opts.on("-h", "--help", "Show this help") do
+    puts opts
+    exit 0
+  end
 end
-# --lane code|standard|visual|all picks which half of /fix runs; /fix reads the joined spelling.
-if (i = args.index("--lane"))
-  args[i, 2] = ["--lane=#{args[i + 1]}"]
+
+begin
+  parser.parse!(wrapper_args)
+rescue OptionParser::ParseError => error
+  detail = error.message
+  detail = "--model requires an ID or 'none'" if detail.match?(/missing argument: --model/)
+  detail = "--lane requires a lane name" if detail.match?(/missing argument: --lane/)
+  abort "fix-here: #{detail}\n#{parser}"
 end
+
+dry = options[:dry]
+probe = options[:probe]
+no_publish = options[:no_publish]
+resume = options[:resume]
+model_flag = options[:model]
 PASSED_FLAGS = %w[--apply --dry-run --read-only --no-autofix --no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
+passthrough << "--lane=#{options[:lane]}" if options[:lane]
 read_only = (passthrough & %w[--dry-run --read-only --no-autofix --plan]).any?
 passthrough << "--apply" unless read_only || passthrough.include?("--apply")
-# --checks=lexical,sprawl limits the baseline and closing check stages (MASTER_FIX_CHECK_STAGES).
-checks_flag = args.find { |arg| arg.start_with?("--checks=") }
-args -= [checks_flag] if checks_flag
-check_stages = checks_flag.to_s.delete_prefix("--checks=")
+check_stages = options[:checks].to_s
 tree = args.shift
 USAGE = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [--model ID|none] [--no-probe] [--no-publish] " \
         "[--dry] [--dry-run|--read-only] [--autofix=off|dry|on] [--max-files=N] [--lane code|standard|visual|all] [--resume] " \
         "[--blockers] [--plan] [--until-checks] [--verbose|--trace|--detail] " \
-        "[--no-critique] [--checks=lexical,sprawl,...]"
+        "[--no-critique] [--checks=lexical,sprawl,...] [--help]"
 abort USAGE if tree.to_s.empty? || args.any?
 abort "fix-here: #{tree} is not one of #{TREES.join(', ')} and not a path in this checkout" unless TREES.include?(tree) || File.exist?(File.join(ROOT, tree))
 
