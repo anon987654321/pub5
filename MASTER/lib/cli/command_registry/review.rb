@@ -1011,7 +1011,7 @@ module Master
             # Per-dispatch and dmesg flags do not become target path tokens.
             next
           when ONLY_FLAG
-            flags[:only] = Regexp.last_match(1)
+            flags[:only] = ONLY_FLAG.match(token)[1]
           else
             path_bits << token
           end

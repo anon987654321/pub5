@@ -243,6 +243,34 @@ class TestStructuralShapeRules < Minitest::Test
     RUBY
   end
 
+  # NO_GOD_CLASS — charge the class that owns the code, not a nested namespace.
+
+  def god_class_flags(source)
+    parsed = Prism.parse(source)
+    assert parsed.success?, parsed.errors.map(&:message).join("; ")
+    Laws::GodClassLaw.new.check_ast(parsed.value, source, path: "lib/thing.rb").map(&:message)
+  end
+
+  def test_god_class_does_not_charge_nested_role_module_lines_to_its_parent
+    methods = (1..35).map do |index|
+      body = (1..10).map { |line| "      step_#{line} = #{index + line}" }.join("\n")
+      "    def operation_#{index}\n#{body}\n      step_10\n    end"
+    end.join("\n")
+    source = "class Router\\n  module Operations\\n#{methods}\\n  end\\nend\\n"
+
+    assert_empty god_class_flags(source)
+  end
+
+  def test_god_class_still_counts_large_logic_owned_directly_by_a_class
+    body = (1..301).map { |line| "      value_#{line} = #{line}" }.join("\n")
+    source = "class Large\\n  def build\\n#{body}\\n    value_301\\n  end\\nend\\n"
+
+    found = god_class_flags(source)
+    assert_equal 1, found.size
+    assert_includes found.first, "god class Large is"
+    assert_includes found.first, "code lines (max 300)"
+  end
+
   # NESTING_DEPTH — depth over the AST, not over the margin.
 
   def ast_flags(source)

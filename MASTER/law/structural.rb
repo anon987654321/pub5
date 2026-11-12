@@ -520,10 +520,40 @@ module Master
               return "god class #{name} has #{public_defs} public methods (max #{METHOD_LIMIT}) - decompose"
             end
 
-            line_count = nodes.sum { |node| CodeMetrics.method_code_lines(node, lines) }
+            # A nested class/module owns its own body. Charging its entire source
+            # span to the enclosing class makes an already-extracted role module
+            # count twice and turns a namespace into a false GodClass finding.
+            line_count = nodes.sum { |node| class_code_lines(node, lines) }
             return unless line_count > LINE_LIMIT
 
             "god class #{name} is #{line_count} code lines (max #{LINE_LIMIT}) - split at responsibility boundaries"
+          end
+
+          # Count the class's own source, excluding nested namespace bodies.
+          # The nested node's complete span (including its closing end) is removed.
+          def class_code_lines(node, lines)
+            own = CodeMetrics.method_code_lines(node, lines)
+            nested = nested_namespace_nodes(node).sum { |child| namespace_code_lines(child, lines) }
+            [own - nested, 0].max
+          end
+
+          def nested_namespace_nodes(node, found = [])
+            return found unless node.respond_to?(:compact_child_nodes)
+
+            node.compact_child_nodes.each do |child|
+              if child.is_a?(Prism::ClassNode) || child.is_a?(Prism::ModuleNode)
+                found << child
+              else
+                nested_namespace_nodes(child, found)
+              end
+            end
+            found
+          end
+
+          def namespace_code_lines(node, lines)
+            first = node.location.start_line - 1
+            last = node.location.end_line
+            (lines[first...last] || []).count { |line| CodeMetrics.code_line?(line) }
           end
         end
 
