@@ -121,6 +121,10 @@ class TestStudioOutputPaths < Minitest::Test
 end
 
 class TestIdeaPictureOutput < Minitest::Test
+  module AllowConsent
+    def self.required_source_sets(**) = []
+    def self.require!(**) = true
+  end
   def test_idea_picture_has_one_canonical_implementation
     root = File.expand_path("..", __dir__)
     canonical = File.join(root, "photograph", "idea_picture.rb")
@@ -230,7 +234,7 @@ class TestIdeaPictureOutput < Minitest::Test
         %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
       end
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest
+        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
       )
 
       assert_equal "owner/model:version-123", picture.validate_model!
@@ -246,7 +250,7 @@ class TestIdeaPictureOutput < Minitest::Test
       client.define_singleton_method(:input_names) { |_model| %w[prompt] }
       client.define_singleton_method(:predict) { |*| flunk "prediction must not start with an incomplete input schema" }
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest
+        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
       )
 
       error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
@@ -268,7 +272,7 @@ class TestIdeaPictureOutput < Minitest::Test
       client.define_singleton_method(:predict) { |*| flunk "still prediction must not start before film schema review" }
       client.define_singleton_method(:upload_file) { |*| flunk "still upload must not start before film schema review" }
       picture = Studio::Visual::IdeaPicture.new(
-        subject: "probe", client:, directory: dir, model_manifest: manifest
+        subject: "probe", client:, directory: dir, model_manifest: manifest, consent: AllowConsent
       )
 
       error = assert_raises(RuntimeError) { picture.write("portrait", film: true) }
