@@ -33,7 +33,13 @@ module Deploy
         return result.inconclusive!("state_matrix: no Chrome - states not rendered", gap: Master::Gap::NO_BROWSER)
       end
 
-      live = components.select { |_row, surface| GeometryProbe.reachable([surface]).any? }
+      declared = components
+      declared.each do |row, surface|
+        next if surface
+
+        result.incomplete!("state_matrix: #{row["id"]} references missing surface #{row["surface"]}")
+      end
+      live = declared.select { |_row, surface| surface && GeometryProbe.reachable([surface]).any? }
       return result.inconclusive!("state_matrix: no declared component's app is reachable") if live.empty?
 
       GeometryProbe.with_browser(warm: live.map(&:last)) do |cdp|
@@ -41,12 +47,13 @@ module Deploy
       end
     end
 
-    # Each declared component with the first surface it names; the inventory is mobile first.
+    # Keep every declaration in the result. A typo must make the matrix incomplete,
+    # not disappear behind filter_map and leave the remaining components looking green.
     def components
       surfaces = GeometryProbe.surfaces
-      Array(@config["components"]).filter_map do |row|
+      Array(@config["components"]).map do |row|
         surface = surfaces.find { |candidate| "#{candidate.app}/#{candidate.label}" == row["surface"] }
-        [row, surface] if surface
+        [row, surface]
       end
     end
 
