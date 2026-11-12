@@ -295,6 +295,15 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal [76, 74, 72, 69, 67], events.map(&:midi)
   end
 
+  def test_held_chords_carry_the_melody_through_their_full_duration
+    progress = Dilla.progression_by_ref("so_what_miles").merge("melody_midi" => [76, 74, 72, 69, 67, 65])
+    seq = sequencer(progress)
+    chord = Dilla::ChordParser.parse("Dm7", Dilla.theory)
+    events = seq.send(:melody_events, chord, { start_bar: 0, bars: 16 }, nil)
+    assert_equal 80, events.length, "five-note rhythm should repeat across sixteen held bars"
+    assert_operator events.last.time, :>, seq.instance_variable_get(:@groove).bar_s * 15.0
+  end
+
   def test_generated_melody_stays_in_the_chord_or_scale
     progress = Dilla.progressions.find { |row| row["source"] == "artist_verified" && !row["melody_midi"] }
     seq = sequencer(progress)
