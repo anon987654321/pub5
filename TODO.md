@@ -406,9 +406,13 @@ measure is already owned by the Bymorgen item above.
   no-provider-call regression is authored but NOT_RUN. H2/H3 now have source
   coverage: tool hooks default to deny on faults, MCP SSE is loopback-only and
   enabled package versions are pinned (the git server remains disabled). H7's
-  local web startup refuses unknown port listeners, and Dilla player shutdown
-  signals/reaps only its owned direct child. Focused regressions are
-  authored/extended but NOT_RUN; the broader process-kill census remains open.
+  local web startup refuses unknown port listeners; Dilla player shutdown
+  signals/reaps only its owned direct child; TTS workers remain waitable direct
+  children and retirement refuses command-line sweeps or unowned socket paths.
+  MASTER's Replicate API URL validator also rejects dot, escaped and backslash
+  path segments before attaching its bearer token. Focused regressions are
+  authored/extended but NOT_RUN; the broader process-kill and provider-boundary
+  audits remain open.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
   bits, and the host permission audit checks secrets/storage/logs; a source-path
   symlink review and dedicated zsh-source test remain open. R8 also has a definite commit-refusal rollback regression;
