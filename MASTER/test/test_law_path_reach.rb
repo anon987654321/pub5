@@ -103,7 +103,9 @@ class TestLawPathReach < Minitest::Test
     scopes = {
       OPENBSD_DMESG_CONSOLE_STYLE: %w[
         MASTER/bin/master
+        MASTER/bin/doctor
         MASTER/lib/cli/session/repl_io.rb
+        MASTER/lib/cli/turn_router.rb
         MASTER/lib/cli/command_registry.rb
         MASTER/lib/voice/renderer/prompt.rb
         MASTER/lib/trace/dmesg.rb
@@ -122,6 +124,10 @@ class TestLawPathReach < Minitest::Test
 
     scopes.each do |id, paths|
       law = ::Law.definitions.fetch(id)
+      policy = ::Law.catalogue_entry(id)
+      assert_equal "error", policy.fetch("severity"), "#{id} must remain blocking"
+      assert_equal "violation", policy.fetch("mode"), "#{id} must remain a violation"
+      assert_equal "active", policy.fetch("lifecycle"), "#{id} must remain active"
       paths.each do |path|
         assert law.applies?(File.expand_path(path, "/repo"), language(path)),
                "#{id} must cover #{path}"
