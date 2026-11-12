@@ -413,10 +413,14 @@ measure is already owned by the Bymorgen item above.
   children and retirement refuses command-line sweeps or unowned socket paths.
   The local MLX TTS server also retains its detached waiter, avoids duplicate
   starts while that child lives, and retries after the owned child exits; the
-  real-child restart regression is authored but NOT_RUN. MASTER's Replicate API
-  URL validator also rejects dot, escaped and backslash path segments before
-  attaching its bearer token. Focused regressions are authored/extended but
-  NOT_RUN; the broader process-kill and provider-boundary audits remain open.
+  real-child restart regression is authored but NOT_RUN. The CDP runner now
+  gives Chrome an isolated process group, TERM/KILLs that group with bounded
+  waits, confirms the leader was reaped and the group gone, and preserves the
+  profile when shutdown is inconclusive. Its real-spawn/renderer regression is
+  authored but NOT_RUN. WebDriver driver teardown and the broader process-kill
+  and provider-boundary audits remain open. MASTER's Replicate API URL validator
+  also rejects dot, escaped and backslash path segments before attaching its
+  bearer token. Focused regressions are authored/extended but NOT_RUN.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
   bits; `PermissionAudit` checks `/etc/<app>.env` as `root:<app>`, storage owner
   as `<app>`, daemon-log owner and symlinks in every protected path component.
