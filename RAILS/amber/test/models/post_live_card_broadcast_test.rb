@@ -34,15 +34,24 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
            "a vote must not redraw the feed or its reader-specific controls"
   end
 
-  test "a comment and its deletion update the detail-page count" do
+  test "a comment and its deletion update the shared feed count" do
     comment = nil
-    added = capture_turbo_stream_broadcasts(@post) do
+    added = capture_turbo_stream_broadcasts("posts") do
       comment = Comment.create!(user: @reader, commentable: @post, content: "Godt poeng")
     end
     assert_count_update(added, "1")
 
-    removed = capture_turbo_stream_broadcasts(@post) { comment.destroy! }
+    removed = capture_turbo_stream_broadcasts("posts") { comment.destroy! }
     assert_count_update(removed, "")
+  end
+
+  test "comment changes refresh only subscribers to that post's detail stream" do
+    streams = capture_turbo_stream_broadcasts(@post) do
+      Comment.create!(user: @reader, commentable: @post, content: "Godt poeng")
+    end
+
+    assert streams.any? { |stream| stream["action"] == "refresh" },
+           "the open detail thread did not receive a viewer-safe refresh"
   end
 
   test "a like count has its own targeted update" do
