@@ -104,4 +104,23 @@ class PruneGuestUsersJobTest < ActiveSupport::TestCase
     assert_includes File.read(Rails.root.join("db/schema.rb")),
                     "index_users_on_guest_and_created_at"
   end
+
+test "prunes a guest who is a blocked user and notification actor" do
+    guest = build_guest(created_at: 30.days.ago)
+    recipient = User.create!(
+      email_address: "recipient_#{SecureRandom.hex(4)}@example.com",
+      password: "secret123", guest: false
+    )
+    block = Block.create!(blocker: recipient, blocked: guest)
+    notification = Notification.create!(
+      user: recipient, actor: guest, kind: "follow",
+      title: "New follower", body: "A guest followed you"
+    )
+
+    Shared::PruneGuestUsersJob.perform_now
+
+    refute User.exists?(guest.id)
+    refute Block.exists?(block.id), "incoming block must be destroyed with the blocked account"
+    assert_nil notification.reload.actor_id, "the recipient's inbox entry should survive without its actor"
+  end
 end
