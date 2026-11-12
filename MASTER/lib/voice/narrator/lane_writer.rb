@@ -15,6 +15,7 @@ module Master
         SESSION_ENV = { "CLAUDECODE" => nil, "CLAUDE_CODE_ENTRYPOINT" => nil }.freeze
         TEXT_ONLY = ["--tools", "", "--strict-mcp-config", "--settings", '{"disableAllHooks":true}'].freeze
         UNSUPPORTED_LANES = %w[grok-cli codex-cli agy web-chat].freeze
+        REFUSAL_PREFIX = /\\A(?:you['’]ve hit your (?:session|usage|weekly|daily|message) limit|you exceeded your current quota|individual quota (?:reached|exceeded)|quota (?:reached|exceeded|exhausted)|rate limit exceeded|HTTP\\s*429|(?:401|403)\\s+unauthori[sz]ed|please run \/login)\\b?/i.freeze
 
         def initialize(config, lanes: Master::Io::LaneSelection, runner: Master::Io::Exec)
           @config = config
@@ -50,9 +51,12 @@ module Master
           ) if !combined.empty? && Master::Trace::Dmesg.detail_enabled?
 
           # A limit or login refusal can arrive with exit status 1. Record the
-          # provider's words before interpreting the exit code, so the shared
-          # lane pool stops asking an exhausted subscription.
-          if Master::Io::LaneQuota.note(model, combined)
+          # provider's words before interpreting the exit code. On exit 0, only
+          # accept a short, provider-shaped refusal at the beginning of stdout;
+          # an ordinary narration that quotes a quota phrase is still an answer.
+          refusal = status.success? ? provider_refusal_output?(out) : !combined.empty?
+          refusal_text = status.success? ? out.to_s.strip : combined
+          if refusal && Master::Io::LaneQuota.note(model, refusal_text)
             reason = Master::Io::LaneQuota.report_for(model) || "claude-cli quota or login refusal"
             raise Unavailable, reason
           end
@@ -78,6 +82,13 @@ module Master
           Master::Io::LaneSilence.silence(lane, reason: "narration call timed out after #{timeout_s}s")
           Master::Trace::Dmesg.once("llm0-#{lane}", Master::Io::LaneSilence.message(lane))
           raise Unavailable, "claude-cli timed out after #{timeout_s}s; #{lane} skipped for #{Master::Io::LaneSilence::SILENCE_COOLOFF_S / 60} minutes"
+        end
+
+        def provider_refusal_output?(text)
+          lines = text.to_s.lines.map(&:strip).reject(&:empty?)
+          return false if lines.empty? || lines.size > 3
+
+          REFUSAL_PREFIX.match?(lines.first)
         end
 
         def via_ruby_llm(model, system, prompt, max_tokens)
