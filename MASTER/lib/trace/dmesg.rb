@@ -731,7 +731,14 @@ module Master
           unit = @open.delete(key)
           @llm_parent.delete(key)
           Dmesg.clear_detail_unit("llm")
-          unit ? ["#{unit}: call ended without provider outcome"] : []
+          return [] unless unit
+
+          digest = payload[:error_digest].to_s
+          bytes = payload[:error_bytes]
+          diagnostic = "diagnostic #{digest[0, 12]} (#{bytes} bytes)" unless digest.empty?
+          summary = payload[:status].to_s == "crash" ? ["MASTER fault", diagnostic].compact.join(", ") :
+                    "call ended without provider outcome"
+          ["#{unit}: #{summary}"]
         end
 
         def llm_tally(parent)
