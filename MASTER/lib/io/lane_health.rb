@@ -70,15 +70,22 @@ module Master
 
       # Starts `ollama serve` only when the canonical model policy has explicitly
       # enabled the local lane. A disabled lane is neither probed nor revived.
-      def ensure_ollama(base: ollama_base, up: method(:ollama_up?), spawn: method(:spawn_ollama), binary: "ollama")
-        unless LaneSelection.ollama_enabled?
-          # Name the actual refusal: the kill switch cannot be undone by the
-          # opt-in variable, so the hint must not suggest trying it.
-          reason = ENV["MASTER_NO_OLLAMA"] == "1" ? "MASTER_NO_OLLAMA=1 refuses it" : "set MASTER_OLLAMA_ENABLED=1 to opt in"
+      def ensure_ollama(base: ollama_base, up: method(:ollama_up?), spawn: method(:spawn_ollama), binary: "ollama", nsfw: false)
+        enabled = nsfw ? LaneSelection.nsfw_enabled? : LaneSelection.ollama_enabled?
+        unless enabled
+          # The NSFW gate and the ordinary local-model gate are independent;
+          # neither can override the global MASTER_NO_OLLAMA hard-off.
+          reason = if ENV["MASTER_NO_OLLAMA"] == "1"
+                     "MASTER_NO_OLLAMA=1 refuses local inference"
+                   elsif nsfw
+                     "set MASTER_NSFW=1 and MASTER_NSFW_MODEL to an installed model"
+                   else
+                     "set MASTER_OLLAMA_ENABLED=1 to opt in"
+                   end
           return Ollama.new(:off, "ollama disabled (#{reason})")
         end
         if up.call(base)
-          warm_probe(base:)
+          warm_probe(base:) unless nsfw
           return Ollama.new(:up, "ollama is up at "+base)
         end
         return Ollama.new(:failed, "ollama is down at "+base+" and is not local, start it there") unless local?(base)
@@ -216,10 +223,10 @@ module Master
       # this predicate knew only `ollama:` while kind() also counted `local:`
       # and `llama-cli:`, so the tier that ends in a llama.cpp file read as
       # ending in no local lane with no daemon to start.
-      LOCAL_PREFIXES = %w[ollama: ollama/ local: llama-cli:].freeze
+      LOCAL_PREFIXES = %w[ollama: ollama/ local_uncensored: local: llama-cli:].freeze
       CLOUD_SUFFIXES = %w[:cloud -cloud].freeze
       # Only these need the Ollama daemon up; a llama.cpp file is its own model.
-      OLLAMA_PREFIXES = %w[ollama: ollama/].freeze
+      OLLAMA_PREFIXES = %w[ollama: ollama/ local_uncensored:].freeze
 
       def local_model?(model)
         id = model.to_s
