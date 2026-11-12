@@ -163,9 +163,15 @@ module Master
         detail_capture = Master::Trace::Dmesg.detail_enabled?
         streamed_detail = +""
         streamed_bytes = 0
+        stream_started = false
         stream_handler = if stream && blk
           lambda do |chunk|
-            streamed_bytes += chunk.to_s.bytesize
+            chunk_bytes = chunk.to_s.bytesize
+            streamed_bytes += chunk_bytes
+            if stream && chunk_bytes.positive? && !stream_started
+              stream_started = true
+              @bus&.publish("llm:stream_started", model: selected_model)
+            end
             if detail_capture && streamed_detail.bytesize < 2_000
               remaining = 2_000 - streamed_detail.bytesize
               streamed_detail << chunk.to_s.byteslice(0, remaining).to_s
