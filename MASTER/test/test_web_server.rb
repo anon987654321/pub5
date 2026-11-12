@@ -57,6 +57,21 @@ class TestWebServer < Minitest::Test
     end
   end
 
+  def test_spawn_local_refuses_an_occupied_port_before_spawning
+    ensure_services = ->(**options) { assert_equal Master::ROOT, options.fetch(:root) }
+    Master.stub(:ensure_services!, ensure_services) do
+      Master::CLI::WebServer.stub(:port_available?, ->(port, io:) {
+        assert_equal 53_187, port
+        refute_nil io
+        false
+      }) do
+        refute Master::CLI::WebServer.spawn_local(
+          config: {}, host: "127.0.0.1", port: 53_187, io: StringIO.new
+        )
+      end
+    end
+  end
+
   def test_port_is_free_only_when_lsof_confirms_no_listener
     free = fake_status(success: false, exitstatus: 1)
     Master::Io::Exec.stub(:capture3, ->(*args, **options) {
