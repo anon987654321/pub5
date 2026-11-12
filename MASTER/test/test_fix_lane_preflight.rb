@@ -6,12 +6,22 @@ require_relative "../lib/fix/lane_preflight"
 class TestFixLanePreflight < Minitest::Test
   Preflight = Master::Fix::LanePreflight
   OPUS = "claude-cli:claude-opus-5-5"
+  GROK = "grok-cli:auto"
   GEMMA = "ollama:gemma3:4b"
 
   class Agent
     def initialize(routes) = @routes = routes
 
     def model_for(operation:) = @routes.fetch(operation, OPUS)
+  end
+
+  class RoutedAgent < Agent
+    def initialize(routes, candidates)
+      super(routes)
+      @candidates = candidates
+    end
+
+    def candidate_models(_message = nil, task_type: nil) = @candidates
   end
 
   # A probing agent: the routes agent plus the ask_once the preflight probe
@@ -83,6 +93,40 @@ class TestFixLanePreflight < Minitest::Test
     assert_kind_of Master::Result::Err, result
     assert_match(/tree would run on #{Regexp.escape(GEMMA)} \(local\) while #{OPUS} is live/, result.message)
     assert_includes lines, "structural_review -> #{OPUS} (remote)"
+  end
+
+  def test_only_a_better_provider_for_the_same_operation_blocks_the_free_floor
+    result = nil
+    agent = RoutedAgent.new({ tree: GEMMA }, [GROK, GEMMA])
+
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+        Master::Io::LaneSelection.stub(:live_lanes, [OPUS, GEMMA]) do
+          Master::Io::LaneSelection.stub(:order, ->(ids, **_options) { ids }) do
+            result = Preflight.check(agent:, env: {})
+          end
+        end
+      end
+    end
+
+    assert_kind_of Master::Result::Err, result
+    assert_includes result.message, "while #{GROK} is live"
+    refute_includes result.message, "while #{OPUS} is live"
+  end
+
+  def test_a_live_provider_outside_the_operation_route_does_not_block_the_floor
+    result = nil
+    agent = RoutedAgent.new({ tree: GEMMA }, [GEMMA])
+
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(*) {}) do
+        Master::Io::LaneSelection.stub(:live_lanes, [OPUS, GEMMA]) do
+          result = Preflight.check(agent:, env: {})
+        end
+      end
+    end
+
+    assert_nil result
   end
 
   def test_every_operation_on_a_subscription_lane_starts

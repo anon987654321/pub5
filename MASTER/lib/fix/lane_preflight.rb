@@ -36,11 +36,19 @@ module Master
 
         rows = routes(agent)
         explain_skipped
-        weak = rows.find { |row| free_class?(row.model) }
-        better = Master::Io::LaneSelection.live_lanes.find { |id| !free_class?(id) }
-        if weak && better && env["MASTER_FIX_FREE_OK"] != "1"
+        conflict = nil
+        rows.each do |row|
+          next unless free_class?(row.model)
+
+          better = better_model(agent, row.operation)
+          next unless better
+
+          conflict = [row, better]
+          break
+        end
+        if conflict && env["MASTER_FIX_FREE_OK"] != "1"
           mark_probed!
-          return refuse(weak, better)
+          return refuse(*conflict)
         end
 
         probe_refusal(agent)
@@ -112,6 +120,19 @@ module Master
         message = "fix: no model provider answered after #{rows.size} readiness checks"
         Master::Result.err("#{message}. Inspect /doctor keyless or /model list; no files were changed.",
                            category: :offline)
+      end
+
+      # Agent#candidate_models is the router's complete, reachable fallback
+      # chain for this operation. The global inventory can contain a live model
+      # that this operation is not allowed to use, so it is only a compatibility
+      # fallback for small diagnostic agents without that interface.
+      def better_model(agent, operation)
+        candidates = if agent.respond_to?(:candidate_models)
+                       agent.candidate_models(task_type: operation)
+                     else
+                       Master::Io::LaneSelection.live_lanes
+                     end
+        Master::Io::LaneSelection.order(Array(candidates)).find { |id| !free_class?(id) }
       end
 
       def free_class?(model)

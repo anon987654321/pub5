@@ -253,6 +253,7 @@ models:
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *agy_auto
+    - *grok_cli_auto
     - *nemotron_super
     - *gemini_flash_openrouter
     # Local recovery stays behind remote lanes. Ollama requires its explicit opt-in;

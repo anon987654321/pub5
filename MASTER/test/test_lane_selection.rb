@@ -95,6 +95,13 @@ class TestLaneSelection < Minitest::Test
     Selection.singleton_class.send(:remove_method, method_name)
   end
 
+  def test_default_repair_tier_keeps_live_subscription_cli_ahead_of_free_floor
+    tier = Selection.tier("default")
+
+    assert_includes tier, GROK
+    assert_operator tier.index(GROK), :<, tier.index(NEMOTRON)
+  end
+
   def test_ollama_stays_out_of_the_pool_until_explicitly_enabled
     ENV.delete("MASTER_OLLAMA_ENABLED")
     refute Selection.ollama_enabled?
