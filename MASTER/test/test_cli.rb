@@ -628,6 +628,30 @@ end
     assert_equal [true], redraws
   end
 
+  def test_ascii_star_remains_visible_after_a_queued_turn_starts
+    io = DraftIO.new
+    @cli.instance_variable_set(:@reading_input, false)
+    @cli.instance_variable_set(:@turn_current_started, true)
+    @cli.instance_variable_set(:@spinner_row_visible, false)
+
+    @cli.send(:draw_spin_row, io, "* waiting")
+
+    assert_equal "\r\e[K* waiting", io.buffer
+    assert @cli.instance_variable_get(:@spinner_row_visible)
+  end
+
+  def test_log_write_clears_the_queued_turn_star_before_printing
+    io = DraftIO.new
+    @cli.instance_variable_set(:@reading_input, false)
+    @cli.instance_variable_set(:@spinner_row_visible, true)
+
+    @cli.send(:foreign_write_begin, io)
+    io.puts("llm0: quota exceeded")
+
+    assert_equal "\r\e[Kllm0: quota exceeded\n", io.buffer
+    refute @cli.instance_variable_get(:@spinner_row_visible)
+  end
+
   def test_a_non_tty_write_takes_no_draft_rows_or_redisplays
     io = StringIO.new
     @cli.instance_variable_set(:@reading_input, true)
