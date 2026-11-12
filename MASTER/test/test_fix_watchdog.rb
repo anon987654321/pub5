@@ -394,10 +394,10 @@ class TestFixWatchdog < Minitest::Test
   def test_uncommitted_paths_name_modified_files_in_the_run_repository
     git("init", "-q")
     path = File.join(@root, "x.rb")
-    File.write(path, "x = 1\\n")
+    File.write(path, "x = 1\n")
     git("add", "-A")
     git("commit", "-q", "-m", "base")
-    File.write(path, "x = 2\\n")
+    File.write(path, "x = 2\n")
 
     assert_equal [path], budget.send(:uncommitted_paths)
   end
