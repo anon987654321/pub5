@@ -686,71 +686,124 @@ module Master
       def validate!(payload)
         dimensions = payload["dimensions"]
         fixtures = payload["sycophancy_fixtures"]
+        bench = validate_rubric_bench!(payload, dimensions, fixtures)
+        validate_support_practice!(payload["support_practice"])
+        validate_ux_probe!(payload, bench)
+        validate_dialogue_examples!(dimensions, fixtures)
+        true
+      end
+
+      def validate_rubric_bench!(payload, dimensions, fixtures)
         raise ArgumentError, "dialogue rubric dimensions missing" unless dimensions.is_a?(Hash) && dimensions.any?
         raise ArgumentError, "dialogue rubric fixtures missing" unless fixtures.is_a?(Array) && fixtures.any?
 
         bench = payload["bench"]
         raise ArgumentError, "dialogue rubric bench missing" unless bench.is_a?(Hash)
         required_dimensions = Array(bench["required_dimensions"]).map(&:to_s)
-        raise ArgumentError, "dialogue rubric required dimensions drift" unless required_dimensions == dimensions.keys.map(&:to_s)
+        unless required_dimensions == dimensions.keys.map(&:to_s)
+          raise ArgumentError, "dialogue rubric required dimensions drift"
+        end
         raise ArgumentError, "dialogue rubric fixture count drift" unless bench["sycophancy_fixture_count"] == fixtures.length
-        question_limit = bench["questions_per_turn_max"]
-        raise ArgumentError, "dialogue rubric question limit missing" unless question_limit.is_a?(Integer) && question_limit >= 0
 
-        support = payload["support_practice"]
+        question_limit = bench["questions_per_turn_max"]
+        unless question_limit.is_a?(Integer) && question_limit >= 0
+          raise ArgumentError, "dialogue rubric question limit missing"
+        end
+        bench
+      end
+
+      def validate_support_practice!(support)
         raise ArgumentError, "support practice missing" unless support.is_a?(Hash)
+
         support_keys = %w[
           activation response_contract privacy_and_memory clinical_methods relationship_safety manipulation_resilience
           martial_and_contemplative_practice evidence_and_research crisis_and_referral research_sources
           evaluation_scenarios
         ]
-        missing_support = support_keys.select { |key| support[key].nil? }
-        raise ArgumentError, "support practice sections missing: #{missing_support.join(", ")}" unless missing_support.empty?
+        missing = support_keys.select { |key| support[key].nil? }
+        raise ArgumentError, "support practice sections missing: #{missing.join(", ")}" unless missing.empty?
+
+        validate_support_practice_sections!(support, support_keys)
+        validate_support_practice_sources!(support["research_sources"])
+        validate_support_practice_scenarios!(support["evaluation_scenarios"])
+      end
+
+      def validate_support_practice_sections!(support, support_keys)
         support_keys.reject { |key| %w[activation research_sources evaluation_scenarios].include?(key) }.each do |key|
           raise ArgumentError, "support practice #{key} empty" unless support[key].is_a?(Array) && support[key].any?
         end
-        sources = support["research_sources"]
+      end
+
+      def validate_support_practice_sources!(sources)
         raise ArgumentError, "support practice sources missing" unless sources.is_a?(Array) && sources.size >= 6
+
         sources.each do |source|
-          raise ArgumentError, "support practice source missing field" unless %w[name url use].all? { |key| source[key].to_s.strip != "" }
+          unless %w[name url use].all? { |key| source[key].to_s.strip != "" }
+            raise ArgumentError, "support practice source missing field"
+          end
           raise ArgumentError, "support practice source topics missing" unless source["topics"].is_a?(Array) && source["topics"].any?
           raise ArgumentError, "support practice source URL invalid" unless source["url"].to_s.match?(%r{\Ahttps://\S+\z})
         end
-        scenarios = support["evaluation_scenarios"]
-        raise ArgumentError, "support practice scenarios missing" unless scenarios.is_a?(Array) && scenarios.size >= 6
-        scenario_ids = scenarios.map { |scenario| scenario["id"].to_s }
-        raise ArgumentError, "support scenario ids missing or duplicated" unless scenario_ids.none?(&:empty?) && scenario_ids.uniq == scenario_ids
-        scenarios.each do |scenario|
-          raise ArgumentError, "support scenario missing user/must" if scenario["user"].to_s.empty? ||
-                                                                         !scenario["must"].is_a?(Array) || scenario["must"].empty?
-        end
+      end
 
+      def validate_support_practice_scenarios!(scenarios)
+        raise ArgumentError, "support practice scenarios missing" unless scenarios.is_a?(Array) && scenarios.size >= 6
+
+        scenario_ids = scenarios.map { |scenario| scenario["id"].to_s }
+        unless scenario_ids.none?(&:empty?) && scenario_ids.uniq == scenario_ids
+          raise ArgumentError, "support scenario ids missing or duplicated"
+        end
+        scenarios.each do |scenario|
+          next if !scenario["user"].to_s.empty? && scenario["must"].is_a?(Array) && scenario["must"].any?
+
+          raise ArgumentError, "support scenario missing user/must"
+        end
+      end
+
+      def validate_ux_probe!(payload, bench)
         ux_scenarios = payload.dig("ux_probe", "scenarios")
         raise ArgumentError, "ux probe block missing" unless payload["ux_probe"].is_a?(Hash)
         raise ArgumentError, "ux probe scenarios missing" unless ux_scenarios.is_a?(Array) && ux_scenarios.size >= 6
         raise ArgumentError, "ux probe scenario count drift" unless bench["ux_probe_scenario_count"] == ux_scenarios.length
+
         ux_ids = ux_scenarios.map { |scenario| scenario["id"].to_s }
-        raise ArgumentError, "ux probe ids missing or duplicated" unless ux_ids.none?(&:empty?) && ux_ids.uniq == ux_ids
-        ux_intents = %w[day_to_day chitchat support]
-        ux_scenarios.each do |scenario|
-          raise ArgumentError, "ux probe scenario missing user/must" if scenario["user"].to_s.empty? ||
-                                                                        !scenario["must"].is_a?(Array) || scenario["must"].empty?
-          unless ux_intents.include?(scenario["intent"].to_s)
-            raise ArgumentError, "ux probe scenario #{scenario['id'].to_s.empty? ? "(unnamed)" : scenario["id"]} unknown intent #{scenario["intent"].inspect}"
-          end
+        unless ux_ids.none?(&:empty?) && ux_ids.uniq == ux_ids
+          raise ArgumentError, "ux probe ids missing or duplicated"
+        end
+        ux_scenarios.each { |scenario| validate_ux_probe_scenario!(scenario) }
+      end
+
+      def validate_ux_probe_scenario!(scenario)
+        if scenario["user"].to_s.empty? || !scenario["must"].is_a?(Array) || scenario["must"].empty?
+          raise ArgumentError, "ux probe scenario missing user/must"
         end
 
+        ux_intents = %w[day_to_day chitchat support]
+        return if ux_intents.include?(scenario["intent"].to_s)
+
+        name = scenario["id"].to_s.empty? ? "(unnamed)" : scenario["id"]
+        raise ArgumentError, "ux probe scenario #{name} unknown intent #{scenario["intent"].inspect}"
+      end
+
+      def validate_dialogue_examples!(dimensions, fixtures)
         dimensions.each do |name, item|
           raise ArgumentError, "dialogue rubric #{name} missing rule" if item["rule"].to_s.strip.empty?
-          raise ArgumentError, "dialogue rubric #{name} missing bad/good fixture" if item["bad"].to_s.empty? || item["good"].to_s.empty?
+          if item["bad"].to_s.empty? || item["good"].to_s.empty?
+            raise ArgumentError, "dialogue rubric #{name} missing bad/good fixture"
+          end
         end
         fixtures.each do |fixture|
           raise ArgumentError, "dialogue fixture missing id" if fixture["id"].to_s.empty?
-          raise ArgumentError, "dialogue fixture missing user/bad/good" if [fixture["user"], fixture["bad"], fixture["good"]].any? { |value| value.to_s.empty? }
+          next unless [fixture["user"], fixture["bad"], fixture["good"]].any? { |value| value.to_s.empty? }
+
+          raise ArgumentError, "dialogue fixture missing user/bad/good"
         end
-        true
       end
-      private_class_method :validate!
+      private_class_method :validate!, :validate_rubric_bench!, :validate_support_practice!,
+                           :validate_support_practice_sections!, :validate_support_practice_sources!,
+                           :validate_support_practice_scenarios!, :validate_ux_probe!,
+                           :validate_ux_probe_scenario!, :validate_dialogue_examples!
+
     end
   end
 end

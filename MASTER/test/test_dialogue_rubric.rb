@@ -262,6 +262,34 @@ class TestDialogueRubric < Minitest::Test
     assert_includes block, "Disagree when a claim is wrong"
   end
 
+  def test_rubric_validation_rejects_non_https_research_source_urls
+    payload = JSON.parse(JSON.generate(Rubric.data(root: Master::ROOT)))
+    payload.fetch("support_practice").fetch("research_sources").first["url"] = "http://example.invalid/source"
+
+    error = assert_raises(ArgumentError) { Rubric.send(:validate!, payload) }
+
+    assert_equal "support practice source URL invalid", error.message
+  end
+
+  def test_rubric_validation_rejects_duplicate_ux_scenario_ids
+    payload = JSON.parse(JSON.generate(Rubric.data(root: Master::ROOT)))
+    scenarios = payload.fetch("ux_probe").fetch("scenarios")
+    scenarios[1]["id"] = scenarios[0]["id"]
+
+    error = assert_raises(ArgumentError) { Rubric.send(:validate!, payload) }
+
+    assert_equal "ux probe ids missing or duplicated", error.message
+  end
+
+  def test_rubric_validation_rejects_unknown_ux_scenario_intents
+    payload = JSON.parse(JSON.generate(Rubric.data(root: Master::ROOT)))
+    payload.fetch("ux_probe").fetch("scenarios").first["intent"] = "unbounded"
+    
+    error = assert_raises(ArgumentError) { Rubric.send(:validate!, payload) }
+
+    assert_match(/unknown intent "unbounded"/, error.message)
+  end
+
   def test_support_practice_is_routed_only_to_relevant_turns
     prompt = SupportPromptHost.new("I am overwhelmed and keep putting off a necessary task.")
                     .support_practice_for_turn
