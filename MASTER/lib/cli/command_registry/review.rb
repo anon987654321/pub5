@@ -592,7 +592,6 @@ module Master
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         announce_fix_scope(raw:, mode:, target:, writes_requested:)
-        return unless Master::Fix::CritiquePin.focus
 
         targets = fix_targets(target, root:)
         ::Operator::CheckChain.clear_verified_fix_snapshots! if writes_requested
