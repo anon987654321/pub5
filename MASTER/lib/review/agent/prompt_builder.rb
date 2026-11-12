@@ -148,6 +148,7 @@ module Master
           parts << Master::AI::OperatorContract.filesystem_context(root:, profile: Ground::Tool::Profile.current)
           parts << CLI::SubagentContext.brief
           parts << conversational_register_line if casual_task?
+          parts << nsfw_lane_section if @config.respond_to?(:task_type) && @config.task_type.to_s == "nsfw"
           parts << runtime_surface_section
           parts << support_practice_for_turn
           parts << felt_sense_section if @felt_sense.is_a?(Hash)
@@ -163,6 +164,15 @@ module Master
           parts << @memory.preference_context if @memory&.respond_to?(:preference_context)
           parts << @memory.turn_recall(last_user_message) if @memory.respond_to?(:turn_recall)
           parts.compact.join("\n\n").then { |s| s.empty? ? nil : filter_prompt(s) }
+        end
+
+        def nsfw_lane_section
+          [
+            "<master_nsfw_lane>",
+            "This is an explicitly opted-in, local-only adult-content lane. It is for lawful, consensual content involving adults aged 18 or older. Do not sexualize minors or age-ambiguous people; do not assist coercion, exploitation, trafficking, non-consensual sexual imagery or abuse. Do not treat this lane as permission to bypass safety, privacy or legal constraints. If a request crosses those boundaries, refuse that part and offer a safe alternative.",
+            "The provider must remain the exact local_uncensored model selected by MASTER_NSFW_MODEL; never substitute a cloud or general-purpose model.",
+            "</master_nsfw_lane>",
+          ].join("\n")
         end
 
         def preference_scope
