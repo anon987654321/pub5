@@ -16,8 +16,8 @@ availability still apply.
 
 - **OpenRouter free catalog.** `data/models.yml` enables live `:free` model
   discovery through the SQLite provider catalog and configures a daily
-  per-model guard. The router's key rotator supports the explicitly configured
-  OpenRouter key variables and rotates after rate-limit/quota outcomes.
+  per-model guard. The stable credential selector accepts one distinct
+  populated OpenRouter credential; it never switches keys after a limit.
 - **Hosted OpenAI-compatible providers.** `ModelRouter::HostedEndpoints`
   discovers models from the `openai_compatible` section. Four providers are
   verified keyless — no signup, no key, anonymous chat completions probed
@@ -66,9 +66,10 @@ remains visible for diagnosis but does not steer routing. Hosted
 OpenAI-compatible free endpoints retain their separately declared
 per-endpoint daily caps.
 
-Configured OpenRouter keys are not treated as multiplied capacity. Key
-rotation changes which credential is used; it does not create additional
-daily allowance. Provider responses and account policy remain authoritative.
+Configured OpenRouter credentials are not treated as multiplied capacity.
+MASTER refuses multiple distinct populated keys for one provider instead of
+cycling identities after a rate, quota or budget response. It preserves
+cross-provider model fallback and the provider's own reset/cooldown boundary.
 
 ## Task-aware selection versus failover
 
@@ -117,7 +118,7 @@ documented or deliberately conservative operator limit is available.
 | Proposal | Status in MASTER | Decision |
 | --- | --- | --- |
 | Pool free models from multiple providers | Existing provider/model fallback already does this | Prefer independent supported providers and measured availability over a second router |
-| OpenRouter multi-key rotation | Implemented for configured OpenRouter keys | Keep quota accounting conservative; do not infer multiplied capacity |
+| Stable credential per provider | Enforced; no intra-provider rotation | Fail over across providers while respecting each provider's quota and cooldown |
 | Generic local key-pool proxy | Can be reached through `MASTER_LLM_GATEWAY_URL` | Optional and operator-owned; inspect its credential, quota, and logging behavior |
 | Puter.js browser bridge | Not implemented | Verify the supported interface, account terms, and user-pays behavior before adding an adapter |
 | Fingerprint-rotated browser sessions | Not implemented | Do not impersonate browser identities or add jitter to defeat rate limits |
@@ -145,10 +146,11 @@ A provider catalog entry alone is not a successful runtime probe. Any change to
 the pool should preserve the existing route policy, budget limits, operation
 quality floors, and evidence requirements.
 
-## Status 2026-11-06: hosted free tiers and rotation
+## Historical status 2026-11-06: hosted free tiers
 
-Two gaps closed against the contract above; no new provider was admitted, so
-the admission gates were not exercised.
+The hosted day-cap work below remains current. The key-rotation description in
+the original 2026-11-06 entry was superseded on 2026-11-12: distinct keys for
+one provider are not an independent quota pool and are no longer rotated.
 
 - **Hosted free-tier day caps are enforced.** `openai_compatible` endpoints may
   declare `daily_quota` (groq 14,400; cerebras 100 — the same figures their
@@ -158,13 +160,11 @@ the admission gates were not exercised.
   endpoint without a documented day cap (nvidia, llm7) stays untracked rather
   than guessed. The OpenRouter conservative-counter rule is unchanged: the
   hosted counter counts calls, not multiplied capacity.
-- **Key rotation is per provider.** A hosted endpoint may list a second key
-  variable in its `key_env` (for example `GROQ_API_KEY_2`); `Io::KeyRotator`
-  rotates the endpoint's keys on rate-limit/quota outcomes and
-  `HttpSender#send_hosted` resolves the active key per call, so a rotation
-  takes effect on the next request. One configured key remains a full no-op,
-  and rotation still advances only on provider-stated limits, never to defeat
-  account-level boundaries.
+- **Historical credential rotation (superseded 2026-11-12).** The earlier
+  implementation cycled credentials within one provider after limit responses.
+  The current selector refuses multiple distinct populated credentials and
+  keeps one stable key. Failover crosses to another eligible provider; it never
+  changes account identity to evade a shared quota or a configured key budget.
 - **Replicate chat lanes stay out of the ranked pool.** Score rows for the
   `replicate_chat` slugs were proposed and withdrawn: without a `model_defs`
   row `ComputePool#candidate` drops a lane from the ranking, so the rows would
