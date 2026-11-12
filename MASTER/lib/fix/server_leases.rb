@@ -128,8 +128,8 @@ module Master
 
         stopped = stop_server(pid_path, pid:, killer:)
         return unless stopped
+        return unless release(pid_path:, pid:, owner:)
 
-        release(pid_path:, pid:, owner:)
         File.basename(pid_path, ".pid")
       end
 
