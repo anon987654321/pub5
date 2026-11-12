@@ -26,8 +26,6 @@ module Master
 
         private
 
-        # Tests substitute their own idle budget; no operator surface.
-        def read_idle_timeout_s = READ_IDLE_TIMEOUT_S
         REPLICATE_API = "https://api.replicate.com/v1"
         REPLICATE_WAIT_S = 60
         REPLICATE_MAX_POLLS = 240
@@ -38,10 +36,11 @@ module Master
         REPLICATE_API_HOST = "api.replicate.com"
         REPLICATE_MAX_TOKENS = 4096
 
-        # Tests substitute their own idle budget; no operator surface.
-        def read_idle_timeout_s = READ_IDLE_TIMEOUT_S
-
-        private
+        # Tests substitute their own idle budget; no operator surface. An operator
+        # may widen it for a slow gateway: MASTER_LLM_READ_IDLE_S.
+        def read_idle_timeout_s
+          Integer(ENV.fetch("MASTER_LLM_READ_IDLE_S", READ_IDLE_TIMEOUT_S.to_s), exception: false) || READ_IDLE_TIMEOUT_S
+        end
 
         def local_server_model?(model_id) = model_id.to_s.start_with?("local:")
 
