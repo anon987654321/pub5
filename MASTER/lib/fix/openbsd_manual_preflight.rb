@@ -21,6 +21,9 @@ module Master
 
       COMMAND_MANUALS = {
         "pfctl" => "pfctl(8)", "rcctl" => "rcctl(8)", "doas" => "doas(1)",
+        "env" => "env(1)", "sh" => "sh(1)", "ksh" => "ksh(1)",
+        "nice" => "nice(1)", "nohup" => "nohup(1)", "su" => "su(1)",
+        "chroot" => "chroot(8)",
         "ifconfig" => "ifconfig(8)", "route" => "route(8)", "netstat" => "netstat(1)",
         "sysctl" => "sysctl(8)", "pkg_add" => "pkg_add(1)", "pkg_delete" => "pkg_delete(1)",
         "pkg_info" => "pkg_info(1)", "relayd" => "relayd(8)", "httpd" => "httpd(8)",
@@ -57,6 +60,24 @@ module Master
         "nsd-checkconf" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
         "nsd-checkzone" => %w[nsd.conf(5) nsd(8) nsd-control(8)],
         "nsd-control" => %w[nsd.conf(5) nsd(8) nsd-checkconf(8)]
+      }.freeze
+      REMOTE_COMMAND_SEPARATORS = %w[&& || | & ;].freeze
+      REMOTE_CONTROL_WORDS = %w[
+        if then else elif fi do done case in esac while until for select time
+        function coproc
+      ].freeze
+      SHELL_BUILTINS = %w[
+        cd command exec exit return set unset export readonly read shift
+        getopts trap umask wait jobs fg bg alias unalias type hash times
+        break continue local typeset let eval source test true false echo printf
+      ].freeze
+      SHELL_MANUAL_PAGES = %w[ksh(1) sh(1) zsh(1)].freeze
+      WRAPPER_VALUE_OPTIONS = {
+        "doas" => %w[-u -C],
+        "env" => %w[-u -C],
+        "nice" => %w[-n],
+        "chroot" => %w[-u],
+        "su" => %w[-c -s]
       }.freeze
       RC_SERVICE_ACTIONS = %w[check configtest reload restart start stop].freeze
       RC_SERVICE_NAME = /\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/.freeze
@@ -393,8 +414,8 @@ module Master
         end
 
         argv = Shellwords.shellsplit(text)
-        tokens = argv.flat_map { |token| token.include?(" ") ? Shellwords.shellsplit(token) : [token] }
         remote = openbsd_ssh_command?(argv)
+        tokens = remote ? ssh_remote_command_tokens(argv) : argv
         remote_targets = remote ? remote_openbsd_path_sources(tokens) : []
         remote_targets.each do |relative|
           reason = refusal_for_path(path: File.join(repo_root, relative), contract:, repo_root:)
@@ -404,14 +425,22 @@ module Master
           reason = refusal_for_path(path: target, contract:, repo_root:)
           return reason if reason
         end
-        command_names = tokens.map { |token| File.basename(token) }
-        command_manuals = COMMAND_MANUALS.filter_map do |name, page|
-          page if command_names.include?(name)
-        end
-        command_manuals.concat(command_names.flat_map { |name| COMMAND_SUPPORT_MANUALS.fetch(name, []) })
-        command_manuals.uniq!
-        service_sources = rc_service_source_paths(tokens)
+
         openbsd_sources = openbsd_source_paths(tokens)
+        command_entries = remote_command_entries(tokens)
+        command_manuals, manual_error = command_manual_requirements(
+          command_entries, contract&.openbsd_preflight, openbsd_sources, repo_root:
+        )
+        return manual_error if manual_error
+        shell_page = remote && declared_shell_manual(contract&.openbsd_preflight)
+        if remote && !shell_page
+          return "RTFM_FIRST requires the verified target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
+        end
+        command_manuals << shell_page if shell_page
+        command_manuals.concat(command_entries.flat_map { |entry| COMMAND_SUPPORT_MANUALS.fetch(entry[:name], []) })
+        command_manuals.uniq!
+
+        service_sources = rc_service_source_paths(tokens)
         openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
         local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
         return unless remote || openbsd_script || (local_openbsd && command_manuals.any?)
@@ -432,6 +461,177 @@ module Master
         source_staleness(preflight, root: repo_root)
       rescue ArgumentError => error
         "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
+      end
+
+      def ssh_remote_command_tokens(argv)
+        values = Array(argv)
+        return [] unless File.basename(values.first.to_s) == "ssh"
+
+        index = 1
+        while index < values.length
+          token = values[index].to_s
+          if token == "--"
+            index += 1
+            break
+          elsif SSH_OPTIONS_WITH_VALUE.include?(token)
+            index += 2
+          elsif token.start_with?("-")
+            index += 1
+          else
+            break
+          end
+        end
+        index += 1 # destination
+        (values[index..] || []).flat_map { |value| Shellwords.shellsplit(value.to_s) }
+      end
+
+      def remote_command_entries(tokens)
+        remote_command_segments(tokens).flat_map { |segment| command_entries_for_segment(segment) }
+      end
+
+      def remote_command_segments(tokens)
+        segments = []
+        current = []
+        Array(tokens).each do |raw|
+          token = raw.to_s
+          if REMOTE_COMMAND_SEPARATORS.include?(token)
+            segments << current unless current.empty?
+            current = []
+          elsif token.end_with?(";") && token != ";"
+            stem = token.delete_suffix(";")
+            current << stem unless stem.empty?
+            segments << current unless current.empty?
+            current = []
+          else
+            current << token
+          end
+        end
+        segments << current unless current.empty?
+        segments
+      end
+
+      def command_entries_for_segment(segment)
+        index = command_token_index(segment)
+        return [] unless index
+
+        token = segment[index]
+        name = File.basename(token.to_s)
+        entry = { name:, token: }
+        entries = [entry]
+        nested = nested_command_tokens(name, segment[(index + 1)..] || [])
+        entries.concat(remote_command_entries(nested)) if nested
+        entries
+      end
+
+      def command_token_index(segment)
+        index = 0
+        while index < segment.length
+          token = segment[index].to_s
+          if token.match?(/\A\d*(?:>>?|<<?|>&|<&)/)
+            index += 1
+            index += 1 if token.match?(/\A\d*(?:>>?|<<?|>&|<&)\z/)
+          elsif token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=/) || REMOTE_CONTROL_WORDS.include?(token) || %w[! { ( } )].include?(token)
+            index += 1
+          else
+            return index
+          end
+        end
+        nil
+      end
+
+      def nested_command_tokens(name, arguments)
+        args = Array(arguments).dup
+        case name
+        when "su"
+          command_index = args.index { |value| value == "-c" || value.start_with?("-c") }
+          return Shellwords.shellsplit(args[command_index + 1].to_s) if command_index
+          args = skip_wrapper_options(name, args)
+          args unless args.empty?
+        when "doas", "env", "nice", "chroot"
+          args = skip_wrapper_options(name, args)
+          args = args.drop(1) if name == "chroot" && args.any?
+          args unless args.empty?
+        when "nohup", "command", "exec"
+          args = args.drop_while { |value| value.start_with?("-") }
+          args unless args.empty?
+        when "sh", "ksh", "zsh"
+          command_index = args.index { |value| value == "-c" || (value.start_with?("-") && value.include?("c")) }
+          return unless command_index
+          command = args[command_index + 1].to_s
+          Shellwords.shellsplit(command)
+        end
+      end
+
+      def skip_wrapper_options(name, arguments)
+        value_options = WRAPPER_VALUE_OPTIONS.fetch(name, [])
+        args = Array(arguments)
+        index = 0
+        while index < args.length
+          token = args[index].to_s
+          break if token == "--"
+          break unless token.start_with?("-")
+
+          index += 1
+          index += 1 if value_options.include?(token)
+        end
+        args[index + (args[index] == "--" ? 1 : 0)..] || []
+      end
+
+      def command_manual_requirements(entries, preflight, source_paths, root:)
+        declared = Array(preflight&.fetch("native_interfaces", []))
+        manuals = []
+        entries.each do |entry|
+          name = entry.fetch(:name)
+          if SHELL_BUILTINS.include?(name)
+            shell = declared_shell_manual(preflight)
+            return [[], "RTFM_FIRST requires a verified shell manual for builtin #{name}"] unless shell
+            manuals << shell
+            next
+          end
+
+          script = source_paths.find { |path| File.basename(path) == File.basename(entry.fetch(:token).to_s) }
+          if script
+            page = script_interpreter_manual(script, root:)
+            return [[], "RTFM_FIRST cannot identify the interpreter manual for #{script}"] unless page
+            manuals << page
+            next
+          end
+
+          page = COMMAND_MANUALS[name]
+          unless page
+            candidates = declared.grep(/\A#{Regexp.escape(name)}\([1-9]\)\z/)
+            return [[], "RTFM_FIRST has no canonical manual mapping for remote command #{name}; read and declare its exact target-release page"] if candidates.empty?
+            return [[], "RTFM_FIRST has ambiguous manual pages for remote command #{name}: #{candidates.join(', ')}"] if candidates.size > 1
+            page = candidates.first
+          end
+          manuals << page
+        end
+        [manuals, nil]
+      end
+
+      def declared_shell_manual(preflight)
+        declared = Array(preflight&.fetch("native_interfaces", []))
+        SHELL_MANUAL_PAGES.find { |page| declared.include?(page) }
+      end
+
+      def script_interpreter_manual(relative, root:)
+        path = File.expand_path(relative, root)
+        language = Master.language_for(path)
+        return "ruby(1)" if language == "ruby"
+
+        first_line = File.open(path, "rb", &:readline).force_encoding(Encoding::UTF_8)
+        return unless first_line.start_with?("#!")
+
+        interpreter = Shellwords.shellsplit(first_line.delete_prefix("#!").strip)
+        return if interpreter.empty?
+
+        name = File.basename(interpreter.first)
+        if name == "env"
+          name = interpreter.drop(1).find { |token| !token.start_with?("-") && !token.include?("=") }.to_s
+        end
+        { "zsh" => "zsh(1)", "ksh" => "ksh(1)", "sh" => "sh(1)", "ruby" => "ruby(1)" }[name]
+      rescue EOFError, SystemCallError, ArgumentError
+        nil
       end
 
       READ_ONLY_OPENBSD_COMMANDS = %w[

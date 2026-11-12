@@ -712,6 +712,50 @@ class TestTaskContract < Minitest::Test
     )
   end
 
+  def test_unknown_remote_command_requires_its_exact_manual_page
+    contract = openbsd_task_contract
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'sysupgrade -n'", contract:
+    )
+    assert_match(/no canonical manual mapping for remote command sysupgrade/, reason)
+
+    approved = openbsd_task_contract(
+      openbsd_preflight_fixture(interfaces: %w[ksh(1) sysupgrade(8)]),
+    )
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'sysupgrade -n'", contract: approved
+    )
+  end
+
+  def test_remote_command_chain_checks_every_executable
+    contract = openbsd_task_contract
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'cd /home/dev/pub5 && sysupgrade -n'", contract:
+    )
+
+    assert_match(/no canonical manual mapping for remote command sysupgrade/, reason)
+  end
+
+  def test_remote_doas_wrapper_requires_the_wrapper_and_wrapped_command_manuals
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(interfaces: %w[ksh(1) doas(1) sysupgrade(8)]),
+    )
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'doas sysupgrade -n'", contract:
+    )
+  end
+
+  def test_remote_shell_builtin_requires_a_shell_manual
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(interfaces: ["pfctl(8)"]),
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'cd /home/dev/pub5'", contract:
+    )
+
+    assert_match(/verified shell manual for builtin cd/, reason)
+  end
+
   def test_openbsd_script_execution_requires_a_complete_source_read
     contract = openbsd_task_contract
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
@@ -723,7 +767,7 @@ class TestTaskContract < Minitest::Test
 
   def test_openbsd_script_execution_accepts_a_complete_source_read
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"]),
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
