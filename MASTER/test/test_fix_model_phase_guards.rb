@@ -183,6 +183,25 @@ class TestFixModelPhaseGuards < Minitest::Test
     assert_includes Ledger.summary_lines, "fix0: no proposal 3: patch_rejected 2, model_said_unchanged 1"
     assert_equal "patch_rejected 2, model_said_unchanged 1", Ledger.why_line
   end
+  def test_declined_calls_keep_counts_but_only_print_file_detail_when_verbose
+    events = []
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(*args) { events << args }) do
+        Ledger.declined("empty_reply", file: "lib/quiet.rb")
+      end
+    end
+    assert_empty events
+    assert_equal({ "empty_reply" => 1 }, Ledger.declined_reasons)
+
+    Master::Trace::Dmesg.stub(:verbose?, true) do
+      Master::Trace::Dmesg.stub(:status, ->(*args) { events << args }) do
+        Ledger.declined("patch_rejected", file: "lib/detail.rb", law: "DRY")
+      end
+    end
+    assert_equal 1, events.size
+    assert_includes events.first.last, "lib/detail.rb DRY"
+    assert_equal({ "empty_reply" => 1, "patch_rejected" => 1 }, Ledger.declined_reasons)
+  end
 
   def test_the_why_line_merges_rejections_and_declined_calls_and_is_nil_when_empty
     assert_nil Ledger.why_line
