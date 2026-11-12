@@ -160,6 +160,42 @@ class TestDillaTheory < Minitest::Test
     assert_equal 4, parsed[:bass]
   end
 
+  def test_modifiers_replace_the_natural_interval_they_alter
+    {
+      "C7b5" => [0, 4, 6, 10],
+      "C7#5" => [0, 4, 8, 10],
+      "C9b9" => [0, 4, 7, 10, 13],
+      "C11#11" => [0, 4, 7, 10, 14, 18],
+      "C13b13" => [0, 4, 10, 14, 20],
+      "D7alt" => [0, 4, 10, 15, 19]
+    }.each do |symbol, expected|
+      assert_equal expected, Dilla::ChordParser.parse(symbol, Dilla.theory)[:intervals], symbol
+    end
+  end
+
+  def test_historical_chart_spellings_and_slash_extensions_parse
+    expected = {
+      "Ebm7fil" => ["m9", [0, 3, 7, 10, 14]],
+      "E7climax" => ["9", [0, 4, 7, 10, 14]],
+      "Cm11nc" => ["m11", [0, 3, 7, 10, 14, 17]],
+      "A7nc" => ["7", [0, 4, 7, 10]],
+      "Dmaj9nc" => ["maj9", [0, 4, 7, 11, 14]],
+      "AbMaj13s11" => ["maj13", [0, 4, 7, 11, 14, 18, 21]],
+      "Asus9" => ["sus9", [0, 5, 7, 14]]
+    }
+    expected.each do |symbol, (quality, intervals)|
+      parsed = Dilla::ChordParser.parse(symbol, Dilla.theory)
+      assert_equal quality, parsed[:quality], symbol
+      assert_equal intervals, parsed[:intervals], symbol
+    end
+
+    slash = Dilla::ChordParser.parse("D6/9/F#", Dilla.theory)
+    assert_equal "6/9", slash[:quality]
+    assert_equal 6, slash[:bass]
+    assert_equal 7, Dilla::ChordParser.parse("DMaj7overG", Dilla.theory)[:bass]
+    assert_nil Dilla::ChordParser.parse("C6/9", Dilla.theory)[:bass]
+  end
+
   def test_voicer_keeps_inner_voices_close_and_top_voice_high
     voicer = Dilla::Voicer.new(Dilla.theory)
     rng = Dilla::Rng.new(12)
@@ -183,6 +219,100 @@ class TestDillaTheory < Minitest::Test
     get_dis_money = rec.fetch("progressions").find { |p| p["id"] == "get_dis_money" }
     assert_equal 7, get_dis_money.fetch("loop_bars"), "Get Dis Money is the documented seven-bar loop"
     assert_equal "E", get_dis_money.fetch("pedal")
+  end
+end
+
+class TestDillaHistoricalMaterial < Minitest::Test
+  def sequencer(progress, seed: 7)
+    groove = Dilla::Groove.new(
+      bpm: progress["bpm"] || 86, swing: (progress.dig("feel", "swing") || 54),
+      profile: Dilla.catalogue.fetch("groove_profiles").fetch("dilla_shadow"),
+      performer: Dilla.catalogue.fetch("performers").first
+    )
+    Dilla::Sequencer.new(
+      progress: progress, groove: groove, drums: {}, rig: {},
+      rng: Dilla::Rng.new(seed), performer: Dilla.catalogue.fetch("performers").first
+    )
+  end
+
+  def test_historical_artist_corpus_is_a_separate_first_class_source
+    rows = Dilla.progressions.select { |row| row["source"] == "artist_verified" }
+    assert_equal 16, rows.length
+    assert_equal rows.length, rows.map { |row| row["id"] }.uniq.length
+    %w[time_donut fall_in_love get_dis_money climax_slum_village so_what_miles
+       brown_sugar_dangelo spanish_joint_dangelo the_root_dangelo].each do |id|
+      assert rows.any? { |row| row["id"] == id }, "missing historical recording #{id}"
+    end
+    rows.each do |row|
+      refute_empty row.fetch("sources"), "#{row['id']} needs source notes"
+      assert_equal "historical_verified_table", row.fetch("source_status")
+    end
+    studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
+    assert_equal 2, studies.length
+    assert studies.all? { |row| row.fetch("note").include?("not a transcription") }
+  end
+
+  def test_so_what_retains_its_aaba_harmonic_durations
+    progress = Dilla.progression_by_ref("so_what_miles")
+    seq = sequencer(progress)
+    plan = seq.send(:build_chord_plan, 8, 32)
+    assert_equal %w[Dm7 Ebm7 Dm7], plan.map { |slot| progress.fetch("chords").fetch(slot[:index]) }
+    assert_equal [16.0, 8.0, 8.0], plan.map { |slot| slot[:bars] }
+  end
+
+  def test_record_specific_voicings_survive_the_generic_voicer
+    chord = Dilla::ChordParser.parse("Ebm7fil", Dilla.theory)
+    assert_equal [51, 54, 58, 61, 65], chord[:voicing_midi]
+    voiced = Dilla::Voicer.new(Dilla.theory).voice([chord], Dilla::Rng.new(1)).first
+    assert_equal [63, 66, 70, 73, 77], voiced
+  end
+
+  def test_minor_eleventh_can_use_the_five_note_quartal_stack
+    chord = Dilla::ChordParser.parse("Cm11", Dilla.theory)
+    voiced = Dilla::Voicer.new(Dilla.theory).voice([chord], Dilla::Rng.new(1)).first
+    assert_equal [55, 60, 65, 70, 75], voiced
+  end
+
+  def test_time_keeps_the_historical_measured_chop_contour
+    progress = Dilla.progression_by_ref("time_donut")
+    seq = sequencer(progress)
+    chord = Dilla::ChordParser.parse(progress.fetch("chords").first, Dilla.theory)
+    events = seq.send(:melody_events, chord, { start_bar: 0, bars: 1 }, nil)
+    assert_equal [76, 74, 72, 69, 67], events.map(&:midi)
+  end
+
+  def test_generated_melody_stays_in_the_chord_or_scale
+    progress = Dilla.progressions.find { |row| row["source"] == "artist_verified" && !row["melody_midi"] }
+    seq = sequencer(progress)
+    chord = Dilla::ChordParser.parse("Bbmaj7", Dilla.theory)
+    scale = Dilla.scale_for(chord, Dilla.theory)
+    allowed = (chord[:intervals].map { |iv| (chord[:root] + iv) % 12 } +
+               scale.map { |degree| (chord[:root] + degree) % 12 }).uniq
+
+    40.times do
+      note = seq.send(:pick_melody_note, chord, scale, chord[:root], false, "sweet_soul")
+      assert note.between?(72, 83)
+      assert_includes allowed, note % 12
+    end
+  end
+
+  def test_float_melody_steps_are_not_mistaken_for_integer_sixteenths
+    groove = Dilla::Groove.new(bpm: 86, swing: 58, profile: {}, performer: {})
+    seq = sequencer({})
+    straight = groove.sixteenth_s
+    assert_in_delta 1.5 * straight, seq.send(:step_time, 0, 1.5, "melody"), 1e-12
+    assert_in_delta straight + groove.swing_delay_s("melody"),
+                    seq.send(:step_time, 0, 1, "melody"), 1e-12
+  end
+
+  def test_soul_clap_leads_the_snare
+    profile = Dilla.catalogue.fetch("groove_profiles").fetch("dilla_shadow")
+    groove = Dilla::Groove.new(
+      bpm: 86, swing: 54, profile: profile,
+      performer: Dilla.catalogue.fetch("performers").first
+    )
+    assert_equal(-18.0, groove.clap_early_ms)
+    assert_operator groove.clap_early_ms, :<, groove.nudge("snare")
   end
 end
 
