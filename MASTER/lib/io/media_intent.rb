@@ -816,12 +816,31 @@ module Master
         Result.err("#{e.message}#{hint}", category: :infrastructure)
       end
 
-      def stop_player
+      def stop_player(grace: 0.4)
         pid = player_pid
-        Process.kill("TERM", pid) if pid
+        return unless pid
+
+        Process.kill("TERM", pid)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + grace.to_f
+        loop do
+          if Process.waitpid(pid, Process::WNOHANG)
+            @player_pid = nil
+            return pid
+          end
+          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep 0.02
+        end
+
+        # The child is still ours and remains unreaped, so its PID cannot have
+        # been recycled between the TERM and this final bounded escalation.
+        Process.kill("KILL", pid)
+        Process.waitpid(pid)
         @player_pid = nil
-      rescue Errno::ESRCH
+        pid
+      rescue Errno::ECHILD, Errno::ESRCH
         @player_pid = nil
+        nil
       end
 
       def play_background_music(text, root: MasterPaths.root, bus: nil)
