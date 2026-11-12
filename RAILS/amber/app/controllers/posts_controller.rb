@@ -11,7 +11,7 @@ class PostsController < ApplicationController
   end
 
   def feed
-    @pagy, @posts = pagy(Current.user.feed_posts.includes(:outfit, :item, user: :profile))
+    @pagy, @posts = pagy(Current.user.feed_posts.with_feed_comment_count.includes(:outfit, :item, user: :profile))
   end
 
   def show
