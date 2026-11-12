@@ -95,22 +95,34 @@ module Master
       def stop_owned!
         return [] if @owned.empty?
 
-        manager = triangle
         stopped = []
+        remaining = {}
         @owned.each do |name, lease|
           current = read_pid(lease[:pid_path])
-          next unless current == lease[:pid]
+          unless current == lease[:pid]
+            ServerLeases.release(pid_path: lease[:pid_path], pid: lease[:pid])
+            next
+          end
 
-          @killer.call(current)
+          confirmed = @killer.call(current)
+          unless confirmed == true || confirmed == :already_gone
+            remaining[name] = lease
+            Master::Trace::Dmesg.status("fix0", "kept #{name} server lease; process-group exit is unconfirmed (pid #{current})")
+            next
+          end
+
           FileUtils.rm_f(lease[:pid_path]) if read_pid(lease[:pid_path]) == current
+          ServerLeases.release(pid_path: lease[:pid_path], pid: current)
           stopped << name
         rescue Errno::ESRCH
           FileUtils.rm_f(lease[:pid_path]) if read_pid(lease[:pid_path]) == lease[:pid]
+          ServerLeases.release(pid_path: lease[:pid_path], pid: lease[:pid])
           stopped << name
         rescue StandardError => e
+          remaining[name] = lease
           Master::Ground::Swallow.log(e, context: "fix.visual_runtime.stop", event_bus: @bus, app: name, pid: lease[:pid])
         end
-        @owned.clear
+        @owned = remaining
         publish(:released, stopped:) if stopped.any?
         stopped
       rescue StandardError => e
@@ -156,7 +168,7 @@ module Master
       end
 
       def kill_process_group(pid)
-        Process.kill("TERM", -Integer(pid))
+        ServerLeases.stop_process_group(Integer(pid))
       end
 
       def success(message, already_running)
