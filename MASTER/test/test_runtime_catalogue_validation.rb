@@ -53,6 +53,26 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_match(/models.fast must be a non-empty list/, error)
   end
 
+  def test_keyless_endpoint_requires_a_selection_rule
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("openai_compatible").fetch("llm7").fetch("keyless")["tier"] = nil
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml openai_compatible.llm7.keyless.tier must be non-empty text unless allow or isFree selects/, error)
+  end
+
+  def test_media_lanes_must_reference_declared_media_providers
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    data.fetch("media_lanes").fetch("image").first["provider"] = "missing_provider"
+
+    error = Guard.validate(path:, content: YAML.dump(data))
+
+    assert_match(/models.yml media_lanes.image\\[0\\].provider must name a declared media provider/, error)
+  end
+
   def test_ollama_enabled_must_be_a_boolean
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
