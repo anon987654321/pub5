@@ -12,7 +12,7 @@ class TestCliStartupGolden < Minitest::Test
   ANSI = /\e\[[0-9;?]*[A-Za-z]|\e[()][A-Z0-9]/
 
   SHAPE = [
-    /\Amaster0 at mainbus0: MASTER \d+\.\d+\.\d+ #\d+, model \S+\z/,
+    /\Amaster0 at mainbus0: MASTER \d+\.\d+\.\d+ #\d+, configured model \S+\z/,
     /\Ahost0 at mainbus0: \S+@\S+:\/\S+\z/,
     /\Avoice0 at mainbus0: (?:CLI speech (?:on|off); )?(?:available|degraded|verified|detected, playback unverified|unavailable|unknown)\z/,
     /\Aweb0 at mainbus0: /,
@@ -35,7 +35,7 @@ class TestCliStartupGolden < Minitest::Test
   end
 
   def test_the_shape_accepts_the_lines_a_real_boot_prints
-    sample = ["master0 at mainbus0: MASTER 1.0.3 #22497, model claude-sonnet-5-5",
+    sample = ["master0 at mainbus0: MASTER 1.0.3 #22497, configured model claude-opus-5-5",
               "host0 at mainbus0: mac@Mac.localdomain:/Users/mac/pub5/MASTER",
               "voice0 at mainbus0: CLI speech on; detected, playback unverified", "web0 at mainbus0: ready, token set",
               "net0 at mainbus0: wifi en0, power on, link up", "bth0 at mainbus0: on, 1 connected", "root on master0"]
