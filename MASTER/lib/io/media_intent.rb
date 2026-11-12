@@ -590,6 +590,10 @@ module Master
         argv = ["--showcase", "--no-video", "--out", output]
         result = ScriptDispatch.run(root:, tool: "dilla", arg: argv.map { |value| Shellwords.escape(value) }.join(" "))
         return result unless result.ok?
+        unless File.file?(output) && File.size?(output)
+          return Result.err("dilla: renderer exited successfully without writing a non-empty WAV at #{output}",
+                            category: :infrastructure)
+        end
 
         Result.ok({ log: result.value!, path: output, progression: "Blue Hour - Dilla Minor Dub Cut",
                     drums: "dilla_shadow_full", groove: "dilla_shadow", kit: "kit_dust", tempo_range: [92, 116] })
