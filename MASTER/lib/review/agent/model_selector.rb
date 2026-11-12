@@ -17,6 +17,8 @@ module Master
 
         def routed_models(message = nil, task_type: nil)
           chain = routed_chain(message, task_type:)
+          return chain if normalize_task_type(task_type || @config.task_type) == :nsfw
+
           pin_boot_model_once!
           return preference_led(chain) unless @pinned_model
           return chain unless Io::LaneState.usable?(@pinned_model)
@@ -43,12 +45,14 @@ module Master
         end
 
         def routed_chain(message, task_type:)
+          task = normalize_task_type(task_type || @config.task_type)
+          return [] if task == :nsfw && !@model_router
+
           unless @model_router
             chain = route_fallback_candidates
             @bus&.publish("llm:route_fallback", source: "router_missing", candidate_count: chain.length)
             return chain
           end
-          task = normalize_task_type(task_type || @config.task_type)
           task = @model_router.classify_intent(message) if task == :general && message
           chain = @model_router.fallback_chain(task_type: task)
           bias = @homeostat&.model_tier_bias
@@ -68,6 +72,8 @@ module Master
           fallback
         rescue StandardError => e
           @bus&.publish("llm:route_error", error_class: e.class.name, **Master::Execution::Contract.diagnostic_fields(e.message))
+          return [] if task == :nsfw
+
           chain = route_fallback_candidates
           @bus&.publish("llm:route_fallback", source: "models_catalogue", candidate_count: chain.length)
           chain
