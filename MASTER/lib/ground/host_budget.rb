@@ -93,28 +93,37 @@ module Master
         []
       end
 
+      # A stopped process with a matching command line is not necessarily a
+      # stale process from this invocation. It may be an operator's suspended
+      # session. Startup therefore reports candidates but never signals them;
+      # reclaiming memory is an explicit, separately verified operator action.
       def reap_suspended_ruby!(user: ENV["USER"], io: $stderr)
         pids = suspended_ruby_pids(user:)
         return 0 if pids.empty?
 
-        pids.each do |pid|
-          Process.kill("KILL", pid)
-        rescue Errno::ESRCH
-          nil
-        end
-        Master::Trace::Dmesg.status("host0", "reaped #{pids.size} suspended ruby (#{pids.join(", ")})", io:)
-        pids.size
+        Master::Trace::Dmesg.status(
+          "host0",
+          "refused to reap stopped Ruby PID(s) #{pids.join(", ")}: command-line matches do not prove process ownership",
+          io:
+        )
+        0
       end
 
       def warn_or_reap_suspended!(io: $stderr)
         pids = suspended_ruby_pids
         return if pids.empty?
 
-        if constrained?
-          reap_suspended_ruby!(io:)
-        else
-          Master::Trace::Dmesg.status("host0", "suspended ruby PIDs #{pids.join(", ")}, Ctrl-Z leaves memory; kill or /reap", io:)
-        end
+        detail = if constrained?
+                   "constrained host; "
+                 else
+                   ""
+                 end
+        Master::Trace::Dmesg.status(
+          "host0",
+          "#{detail}stopped Ruby PID(s) #{pids.join(", ")} left running; command-line matches do not prove ownership",
+          io:
+        )
+        nil
       end
 
       def cli_tty?
