@@ -796,3 +796,34 @@ class TestRG69BrowserContract < Minitest::Test
     assert_includes File.read(css_path), ":focus-visible"
   end
 end
+
+class TestDillaSeedReproducibility < Minitest::Test
+  def test_generated_seed_replays_the_exact_random_stream
+    initial = Dilla::Rng.new(nil)
+    recorded_seed = initial.seed
+    first_draws = Array.new(24) { initial.rand }
+
+    replay = Dilla::Rng.new(recorded_seed)
+    assert_equal first_draws, Array.new(24) { replay.rand }
+  end
+
+  def test_seeded_drum_textures_repeat_without_process_global_randomness
+    kit = Dilla.catalogue.fetch("kits").fetch("kit_break")
+    render_hits = lambda do |seed|
+      drums = Dilla::DrumKit.new(kit, rng: Random.new(seed ^ 0xD11A))
+      {
+        snare: drums.snare(0.82),
+        hat: drums.hat(0.55),
+        ride: drums.ride(0.4),
+        perc: drums.perc(0.35)
+      }
+    end
+
+    first = render_hits.call(23)
+    repeat = render_hits.call(23)
+    another_take = render_hits.call(24)
+
+    assert_equal first, repeat
+    refute_equal first, another_take
+  end
+end
