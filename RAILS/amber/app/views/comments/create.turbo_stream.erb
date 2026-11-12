@@ -1,4 +1,3 @@
-<%# The Comment after_commit broadcasts the new row to every open post page. %>
-<%# This response only resets the submitting reader's form; appending here too %>
-<%# would render the same comment twice for that reader. %>
+<%# Comment#after_commit refreshes the post detail stream with each reader's own thread controls. %>
+<%# This response resets the submitting reader's form; the refresh supplies the new thread. %>
 <%= turbo_stream.replace "comment_form", partial: "comments/form", locals: { comment: Comment.new, commentable: @post } %>
