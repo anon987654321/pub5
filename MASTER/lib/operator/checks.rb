@@ -212,8 +212,11 @@ module Deploy
       stdout, status = bounded_scan(line)
       elapsed = (now - started).round
       if status == :timeout
-        @result.fail("constitutional scan for #{path} passed #{SCAN_TIMEOUT_S}s and was killed - " \
+        @result.fail("constitutional scan for #{path} passed #{SCAN_TIMEOUT_S}s and its process group was stopped - " \
                      "raise CHECK_SCAN_TIMEOUT_S if the tree really is that big, or find what it is waiting on")
+        return
+      elsif status == :termination_failed
+        @result.inconclusive!("constitutional scan for #{path} timed out, but its process group did not disappear after TERM/KILL; cleanup is unverified")
         return
       end
 
@@ -277,12 +280,15 @@ module Deploy
         process_finished = wait.join([deadline - now, 0].max)
         reader_finished = reader.join([deadline - now, 0].max)
         unless process_finished && reader_finished
-          kill_tree(wait.pid)
+          stopped = kill_tree(wait.pid)
           wait.join(2)
           reader.join(2)
-          reader.kill if reader.alive?
-          reader.join
-          next [output, :timeout]
+          if reader.alive?
+            out.close rescue nil
+            reader.kill
+            reader.join(1)
+          end
+          next [output, stopped ? :timeout : :termination_failed]
         end
 
         [output, wait.value]
@@ -292,14 +298,22 @@ module Deploy
     # The scan owns its own process group. A leader can exit while a descendant
     # still holds the combined output pipe, so timeout covers both the child
     # wait and pipe EOF. TERM gets a short grace; KILL is confined to that group.
-    def kill_tree(pid, term_grace: 0.25)
+    def kill_tree(pid, term_grace: 0.25, kill_grace: 2.0)
       signal_group("TERM", pid)
-      deadline = now + term_grace
-      while process_group_alive?(pid) && now < deadline
+      return true if wait_for_group_exit(pid, term_grace)
+
+      signal_group("KILL", pid)
+      wait_for_group_exit(pid, kill_grace)
+    end
+
+    def wait_for_group_exit(pid, timeout)
+      deadline = now + timeout
+      loop do
+        return true unless process_group_alive?(pid)
+        return false if now >= deadline
+
         sleep 0.025
       end
-      signal_group("KILL", pid) if process_group_alive?(pid)
-      !process_group_alive?(pid)
     end
 
     def signal_group(signal, pid)
