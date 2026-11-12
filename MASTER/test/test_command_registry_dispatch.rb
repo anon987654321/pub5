@@ -235,6 +235,16 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal Registry.help_text("fix"), Registry.help_text("Fix")
   end
 
+  def test_help_resolves_route_aliases_to_the_canonical_topic
+    assert_equal Registry.help_text("voice"), Registry.help_text("tts")
+    assert_equal Registry.help_text("reload"), Registry.help_text("restart")
+  end
+
+  def test_help_suggests_a_nearby_command_without_executing_it
+    assert_includes Registry.help_text("statuz"), "did you mean /status?"
+    assert_includes Registry.help_text("zzzzzzzz"), "/help lists the surface"
+  end
+
   def test_every_public_help_topic_has_a_summary_and_detail_list
     Registry::HELP_TOPICS.each do |name, topic|
       refute_empty topic.fetch(:summary).to_s, "#{name} needs a useful summary"
