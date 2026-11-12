@@ -54,10 +54,13 @@ class TestVisualRuntime < Minitest::Test
   def runtime(root, triangle, **options)
     killed = options.delete(:killed) || []
     checker = options.delete(:tcp_checker) || ->(_port) { false }
+    killer = options.delete(:killer) || lambda do |pid|
+      killed << pid
+      true
+    end
     instance = Master::Fix::VisualRuntime.new(
       root:, triangle:, database_url: options.delete(:database_url),
-      host_os: "Darwin", tcp_checker: checker,
-      killer: ->(pid) { killed << pid },
+      host_os: "Darwin", tcp_checker: checker, killer:,
       **options
     )
     [instance, killed]
@@ -94,6 +97,30 @@ class TestVisualRuntime < Minitest::Test
       assert_equal ["brgen"], visual.stop_owned!
       assert_equal [41_234], killed
       refute File.exist?(pid_path)
+      refute File.exist?("#{pid_path}.owner")
+    end
+  end
+
+  def test_unconfirmed_stop_keeps_the_pid_and_owner_lease_for_a_later_retry
+    with_root do |root|
+      manager = FakeTriangle.new(root:, pid: 41_250)
+      attempts = 0
+      visual, = runtime(root, manager, killer: lambda { |_pid|
+        attempts += 1
+        attempts > 1
+      })
+      assert visual.ensure_running!([ "brgen" ]).ok?
+      pid_path = manager.pid_file(manager.apps.first)
+      owner_path = "#{pid_path}.owner"
+
+      assert_empty visual.stop_owned!
+      assert_equal 41_250, File.read(pid_path).to_i
+      assert File.exist?(owner_path), "unconfirmed shutdown must keep the owner lease"
+
+      assert_equal [ "brgen" ], visual.stop_owned!
+      refute File.exist?(pid_path)
+      refute File.exist?(owner_path)
+      assert_equal 2, attempts
     end
   end
 
@@ -149,7 +176,9 @@ class TestVisualRuntime < Minitest::Test
       visual.stop_owned!
 
       assert_empty killed
-      assert_equal 42_000, File.read(manager.pid_file(manager.apps.first)).to_i
+      pid_path = manager.pid_file(manager.apps.first)
+      assert_equal 42_000, File.read(pid_path).to_i
+      refute File.exist?("#{pid_path}.owner"), "the old owner lease must not claim a replacement PID"
     end
   end
 
