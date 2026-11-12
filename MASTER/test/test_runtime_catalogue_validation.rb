@@ -70,7 +70,7 @@ class TestRuntimeCatalogueValidation < Minitest::Test
 
     error = Guard.validate(path:, content: YAML.dump(data))
 
-    assert_match(/models.yml media_lanes.image\\[0\\].provider must name a declared media provider/, error)
+    assert_match(/models.yml media_lanes.image\[0\].provider must name a declared media provider/, error)
   end
 
   def test_ollama_enabled_must_be_a_boolean

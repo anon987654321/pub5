@@ -133,8 +133,8 @@ module Master
       return unless value.is_a?(Hash)
 
       validate_string_list(value["args"], "#{label}.signed_in.args", errors, nonempty: true)
-      errors << "#{label}.signed_in.match must be non-empty text" if value.key?("match") && !nonempty_text?(value["match"])
-      errors << "#{label}.signed_in.refuse must be non-empty text" if value.key?("refuse") && !nonempty_text?(value["refuse"])
+      errors << "#{label}.signed_in.match must be non-empty text" if value.key?("match") && !(value["match"].is_a?(String) && !value["match"].empty?)
+      errors << "#{label}.signed_in.refuse must be non-empty text" if value.key?("refuse") && !(value["refuse"].is_a?(String) && !value["refuse"].empty?)
       errors << "#{label}.signed_in must declare match or refuse" unless value.key?("match") || value.key?("refuse")
     end
 
