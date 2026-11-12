@@ -15,7 +15,9 @@ subject_consent:
 source_rights:
   generation_use: false
   provider_processing: false
-  # One entry per source set: who granted it, when, and where it is stored.
+  # One entry per source set: who granted it, when, scope, and evidence path.
+  # stored_at is relative to this subject directory; the file and directories
+  # must be private and must not be symlinks.
   evidence: {}
   # me2_archive:
   #   granted_by: "..."
