@@ -16,8 +16,11 @@ class TestStructuralRecipes < Minitest::Test
     recipe = @catalogue.fetch("slugged_vertical_base")
     assert_equal "RAILS", recipe.tree
     assert_equal "merge", recipe.operation
-    assert_equal 5, recipe.plan.writes.size
+    assert_equal 8, recipe.plan.writes.size
     assert_equal [], recipe.plan.deletes
+    assert_includes recipe.plan.writes.keys, "RAILS/brgen/engines/marketplace/app/controllers/marketplace/listings_controller.rb"
+    assert_includes recipe.plan.writes.keys, "RAILS/brgen/engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb"
+    assert_includes recipe.plan.writes.keys, "RAILS/brgen/engines/radio/playlist/app/controllers/playlist/playlists_controller.rb"
     assert_equal ["test/controllers/vertical_base_controller_test.rb"],
                  recipe.proofs.map { |proof| proof.fetch("path") }
   end
