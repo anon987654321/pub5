@@ -333,6 +333,7 @@ module Master
           FixTrace.begin_attempt(@law.id, violation[:file])
           @model_failed = false
           @model_unavailable = false
+          Thread.current[:master_fix_candidate_author_models] = []
           return :model_unavailable unless @agent
           ModelGate.before_call(@agent, resources: model_gate_resources, bus: @bus)
           start_file_budget
@@ -463,10 +464,17 @@ module Master
           @consensus_error = nil
           return true unless consensus_required?(violation)
 
+          author_models = Array(Thread.current[:master_fix_candidate_author_models]).map(&:to_s).reject(&:empty?).uniq
+          if author_models.empty? && @agent.is_a?(Master::Review::Agent)
+            @consensus_error = "the accepted candidate's author model was not captured; independent review cannot be proven"
+            @bus&.publish("consensus:blocked", reason: :author_provenance_missing, law: @law.id, file: violation[:file])
+            return false
+          end
           @agent.consensus.approve_fix?(
             prompt: "Law #{@law.id} on #{violation[:file]}",
             candidate:,
             violation:,
+            author_models:,
           )
         rescue StandardError => e
           # A broken quorum must not silently approve. Refuse and say why.
