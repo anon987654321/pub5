@@ -42,6 +42,19 @@ module Master
         false
       end
 
+      # Read and release the exact owner record associated with this server.
+      # Used by the CLI shutdown path, where the current process is not
+      # necessarily the process that wrote the lease.
+      def release_record(pid_path:, pid:)
+        owner_path = "#{pid_path}#{OWNER_SUFFIX}"
+        return false unless File.file?(owner_path)
+
+        owner, server = File.read(owner_path).split.map(&:to_i)
+        return false unless server == pid.to_i
+
+        release(pid_path:, pid:, owner:)
+      end
+
       def held = @held.dup
 
       def stop_all!
@@ -102,21 +115,21 @@ module Master
           owner, pid = File.read(lease).split.map(&:to_i)
           next if alive.call(owner)
 
-          reap(lease, pid:, killer:)
+          reap(lease, owner:, pid:, killer:)
         end
       end
 
-      def reap(lease, pid:, killer:)
+      def reap(lease, owner:, pid:, killer:)
         pid_path = lease.delete_suffix(OWNER_SUFFIX)
         unless File.file?(pid_path) && File.read(pid_path).to_i == pid
-          FileUtils.rm_f(lease)
+          release(pid_path:, pid:, owner:)
           return
         end
 
         stopped = stop_server(pid_path, pid:, killer:)
         return unless stopped
 
-        FileUtils.rm_f(lease)
+        release(pid_path:, pid:, owner:)
         File.basename(pid_path, ".pid")
       end
 
