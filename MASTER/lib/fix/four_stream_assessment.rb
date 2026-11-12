@@ -491,7 +491,7 @@ module Master
                     "FAIL"
                   elsif statuses.include?("BLOCKED")
                     "BLOCKED"
-                  elsif statuses.include?("INCONCLUSIVE", "NOT_RUN") || matrix[:status] != "complete"
+                  elsif statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) } || matrix[:status] != "complete"
                     "INCONCLUSIVE"
                   elsif statuses.include?("PASS")
                     "PASS"

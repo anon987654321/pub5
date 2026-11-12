@@ -205,25 +205,45 @@ class TestFourStreamAssessment < Minitest::Test
     assert_raises(ArgumentError) { build(surfaces: [:made_up_surface]) }
   end
 
-  def test_quality_contract_projects_ledger_into_universal_dimensions
+  def test_quality_contract_projects_canonical_laws_into_all_dimensions
+    ids = %w[
+      BRINGHURST_measure PARENTHETICAL_DASH VISUAL_COMPOSITION
+      ACCESSIBILITY_TOUCH_TARGET OPENBSD_DAEMON_HEALTH DRY
+    ]
     ledger = {
-      summary: { laws: 3, expected_cells: 3, recorded_cells: 3, clean_passes_required: 2, complete: true },
-      cells: [
-        { law: "BRINGHURST_measure", status: "assessed_clean", clean_streak: 2 },
-        { law: "PARENTHETICAL_DASH", status: "assessed_clean", clean_streak: 2 },
-        { law: "DRY", status: "assessed_clean", clean_streak: 2 },
-      ],
+      summary: { laws: ids.size, expected_cells: ids.size, recorded_cells: ids.size,
+                 clean_passes_required: 2, complete: true },
+      cells: ids.map { |law| { law:, status: "assessed_clean", clean_streak: 2 } },
     }
     report = Master::Fix::QualityContract.build(
-      ledger:, target: "MASTER", files: [], lane: :code,
-      law_tags: { "PARENTHETICAL_DASH" => [:TYPOGRAPHY] }
+      ledger:, surface_report: { complete: true, surfaces: {} },
+      target: "MASTER", files: [], lane: :code,
+      law_tags: {
+        "PARENTHETICAL_DASH" => [:TYPOGRAPHY],
+        "VISUAL_COMPOSITION" => [:VISUAL_DESIGN],
+        "ACCESSIBILITY_TOUCH_TARGET" => [:ACCESSIBILITY],
+        "OPENBSD_DAEMON_HEALTH" => [:OPENBSD],
+      }
     )
 
-    assert_equal "PASS", report[:dimensions][:editorial][:status]
+    %i[engineering editorial visual experience operations].each do |dimension|
+      assert_equal "PASS", report[:dimensions][dimension][:status], dimension.to_s
+    end
     assert_equal ["BRINGHURST_measure", "PARENTHETICAL_DASH"], report[:dimensions][:editorial][:law_ids]
-    assert_equal "PASS", report[:dimensions][:engineering][:status]
     assert_equal "NOT_RUN", report[:workflows][:grouped_visual_repair][:status]
     assert_equal "PASS", report[:overall_status]
+  end
+
+  def test_a_missing_universal_dimension_and_missing_surface_receipt_never_pass
+    ledger = {
+      summary: { laws: 1, expected_cells: 1, recorded_cells: 1, clean_passes_required: 2, complete: true },
+      cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
+    }
+    report = Master::Fix::QualityContract.build(ledger:, target: "MASTER", files: [], lane: :code)
+
+    assert_equal "NOT_RUN", report[:dimensions][:editorial][:status]
+    assert_equal "NOT_RUN", report[:matrix][:surface_evidence]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 
   def test_quality_contract_keeps_failures_and_unmeasured_cells_distinct
@@ -247,11 +267,27 @@ class TestFourStreamAssessment < Minitest::Test
       cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
     }
     report = Master::Fix::QualityContract.build(
-      ledger:, target: "BIZ", files: ["BIZ/plan.docx"], lane: :code
+      ledger:, surface_report: { complete: true, surfaces: {} },
+      target: "BIZ", files: ["BIZ/plan.docx"], lane: :code
     )
 
     assert_equal "INCONCLUSIVE", report[:external_validation][:document_rendering][:status]
     assert_equal "INCONCLUSIVE", report[:external_validation][:business_and_legal_review][:status]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
+  end
+
+  def test_visual_media_review_is_explicit_for_studio_outputs
+    ledger = {
+      summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },
+      cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
+    }
+    report = Master::Fix::QualityContract.build(
+      ledger:, surface_report: { complete: true, surfaces: {} },
+      target: "STUDIO/postpro", files: [], lane: :code
+    )
+
+    assert_equal "INCONCLUSIVE", report[:external_validation][:visual_media_review][:status]
+    assert_equal "NOT_RUN", report[:external_validation][:human_listening][:status]
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 

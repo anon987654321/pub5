@@ -71,7 +71,13 @@ class TestFixTypographyAudit < Minitest::Test
     assert_equal "nb", ::Law::Typesetting.locale("BIZ/plan.html")
     assert_equal "en", ::Law::Typesetting.locale("MASTER/README.md")
     assert ::Law::Typesetting::PATH.match?("BIZ/plan.html")
+    assert ::Law::Typesetting::PATH.match?("BIZ/research/bringhurst-strunk-research.md")
     assert ::Law::Typesetting::PATH.match?("MASTER/README.md")
+
+    require File.expand_path("../law/prose", __dir__) unless defined?(::Law::Prose)
+    assert ::Law::Prose::SCOPES.fetch("nb").match?("BIZ/research/bringhurst-strunk-research.md")
+    assert_includes ::Law.catalogue_entry("PROSE_OMIT_QUALIFIERS_NB").fetch("languages"), "markdown"
+    assert_includes ::Law.catalogue_entry("PROSE_ACTIVE_VOICE_NB").fetch("languages"), "markdown"
   end
 
   def test_a_scope_that_is_not_there_is_not_an_error
