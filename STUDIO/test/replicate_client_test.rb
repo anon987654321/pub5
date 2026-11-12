@@ -502,12 +502,50 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_empty @client.requests
   end
 
+  def test_image_upload_requires_subject_consent_before_any_provider_request
+    Dir.mktmpdir do |directory|
+      source = File.join(directory, "portrait.jpg")
+      File.write(source, "synthetic image bytes")
+      subject = "upload_consent_probe_#{Process.pid}_#{object_id}"
+      refute File.exist?(File.join(Studio::Lora::Consent::ROOT, subject))
+
+      Net::HTTP.stub(:start, ->(*_args, **_options) {
+        flunk "image upload must be refused before contacting the provider"
+      }) do
+        error = assert_raises(Studio::Lora::Consent::Error) do
+          @client.upload_file(source, subject:)
+        end
+        assert_match(/private subject directory is missing/, error.message)
+      end
+      assert File.file?(source), "refused uploads must not alter the source file"
+    end
+  end
+
+  def test_zip_upload_requires_subject_consent_before_any_provider_request
+    Dir.mktmpdir do |directory|
+      source = File.join(directory, "training.zip")
+      File.write(source, "synthetic ZIP bytes")
+      subject = "zip_consent_probe_#{Process.pid}_#{object_id}"
+      refute File.exist?(File.join(Studio::Lora::Consent::ROOT, subject))
+
+      Net::HTTP.stub(:start, ->(*_args, **_options) {
+        flunk "ZIP upload must be refused before contacting the provider"
+      }) do
+        error = assert_raises(Studio::Lora::Consent::Error) do
+          @client.upload_zip(source, subject:)
+        end
+        assert_match(/private subject directory is missing/, error.message)
+      end
+      assert File.file?(source), "refused uploads must not alter the source file"
+    end
+  end
+
   def test_upload_requires_a_readable_regular_file
     Dir.mktmpdir do |directory|
       source = File.join(directory, "notes.txt")
       File.write(source, "not an image")
-      assert_raises(ArgumentError) { @client.upload_file(source) }
-      assert_raises(ArgumentError) { @client.upload_zip(File.join(directory, "missing.zip")) }
+      assert_raises(ArgumentError) { @client.upload_file(source, subject: "probe") }
+      assert_raises(ArgumentError) { @client.upload_zip(File.join(directory, "missing.zip"), subject: "probe") }
       assert_empty @client.requests
     end
   end
