@@ -52,15 +52,23 @@ module Master
         root = File.basename(root) == "MASTER" ? File.dirname(root) : root
         original = File.read(path, encoding: "UTF-8")
         ext = File.extname(path).downcase
+        initial_authors = Array(Thread.current[:master_fix_candidate_author_models])
+        extra_authors = Hash.new { |hash, key| hash[key] = [] }
         extra = (1...n).filter_map do |i|
           prompt = loop.send(:build_prompt_for, violation:, src: original, path:) + "\n\n#{VARIANTS[(i - 1) % VARIANTS.size]}"
-          loop.send(:extract_code, loop.send(:ask_agent, prompt, image: loop.instance_variable_get(:@visual_image)).to_s, ext)
+          raw = loop.send(:ask_agent, prompt, image: loop.instance_variable_get(:@visual_image)).to_s
+          candidate = loop.send(:extract_code, raw, ext)
+          author = Thread.current[:master_llm_answer_model]
+          extra_authors[candidate] << author if candidate && !author.to_s.empty?
+          candidate
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "BestOfN.candidate") if defined?(Master::Ground::Swallow)
           nil
         end
-        rank([first, *extra], original:, surfaces: custody.surfaces, root:, measurer:, anchors: [violation[:anchor]].compact,
-             write: ->(src) { loop.send(:write_atomic, path, src) })
+        selected = rank([first, *extra], original:, surfaces: custody.surfaces, root:, measurer:, anchors: [violation[:anchor]].compact,
+                        write: ->(src) { loop.send(:write_atomic, path, src) })
+        Thread.current[:master_fix_candidate_author_models] = (initial_authors + Array(extra_authors[selected])).compact.map(&:to_s).reject(&:empty?).uniq.freeze if selected
+        selected
       end
 
       def rank(candidates, original:, surfaces:, root:, measurer:, write:, anchors: [])
