@@ -94,6 +94,7 @@ module Master
         return refuse_dead_catalogue if models.empty?
 
         rows = LaneProbe.run(models:, ask: LaneProbe.ask_with(agent), stop_on_success: true)
+        return refuse_dead_catalogue if rows.empty?
         return if rows.any? { |row| row.status == :ok }
 
         refuse_no_lane(rows)

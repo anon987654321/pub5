@@ -95,7 +95,9 @@ module Master
 
       def say_verdict(rows)
         winner = rows.find { |row| row.status == :ok }
-        text = if winner
+        text = if rows.empty?
+                 "lane probe: no eligible provider to check"
+               elsif winner
                  "lane probe: #{Master::Io::LaneSelection.provider(winner.model)} answered after #{rows.size} check(s)"
                else
                  "lane probe: no reply from #{rows.size} eligible provider(s)"

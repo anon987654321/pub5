@@ -177,6 +177,31 @@ class TestFixLanePreflight < Minitest::Test
     refute(lines.any? { |line| line.include?("lane probe") })
   end
 
+  def test_preflight_distinguishes_unavailable_candidates_from_failed_probes
+    result = nil
+    lines = []
+
+    Master::Trace::Dmesg.stub(:verbose?, false) do
+      Master::Trace::Dmesg.stub(:status, ->(_unit, text, **) { lines << text }) do
+        Master::Io::LaneSelection.stub(:alive?, ->(_id) { true }) do
+          Master::Io::LaneSelection.stub(:order, ->(_ids, **_options) { [] }) do
+            Master::Io::LaneSelection.stub(:live_lanes, [OPUS]) do
+              result = Preflight.check(
+                agent: ProbingAgent.new({}, answers: true, candidates: [OPUS]),
+                env: {},
+              )
+            end
+          end
+        end
+      end
+    end
+
+    assert_kind_of Master::Result::Err, result
+    assert_match(/no eligible model provider is available/, result.message)
+    refute_match(/after 0 readiness checks/, result.message)
+    assert_includes lines, "lane probe: no eligible provider to check"
+  end
+
   def test_a_run_with_one_answering_lane_starts
     result, = probe({}, live: [OPUS], answers: true)
 
