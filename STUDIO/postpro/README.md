@@ -181,7 +181,10 @@ refuses ambiguous/variable-rate inputs because silently normalising their timest
 change the edit. Per-frame presentation timestamps are read from ffprobe JSON rather than CSV:
 Every frame must have a finite presentation timestamp; missing values and numeric overflow such as `1e999` are inconclusive input, not usable timing evidence. H.264 side-data can be appended to the first CSV timestamp line and otherwise make a valid frame
 look missing. The focused motion tests include that side-data shape. Audio is copied instead of re-encoded. Grain moves deterministically by frame
-by default; `--grain-hold` pins it for a scanned-print texture. Work is bounded before decoding
+by default; `--grain-hold` pins it for a scanned-print texture. When a preset includes
+`gate_weave`, its frame-to-frame registration uses a seeded, bounded filtered-noise
+source shared with Dilla's tape-speed variation; still-image gate weave remains
+one deterministic offset. Work is bounded before decoding
 (600 frames, 500 million pixel-frames, a 300-second budget and a 1 GB graded-frame spool by
 default); `POSTPRO_VIDEO_MAX_FRAMES`, `POSTPRO_VIDEO_MAX_PIXELS`,
 `POSTPRO_VIDEO_MAX_SECONDS`, `POSTPRO_VIDEO_MAX_TEMP_BYTES` and

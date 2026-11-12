@@ -27,6 +27,7 @@ but the implementation is owned here.
 - `output_paths.rb` — where generated output is allowed to land. The render
   directory is absolute and must not collide with the checkout.
 - `subprocess.rb` — the one child-process helper the tools share.
+- `analog_core.rb` — a seeded, bounded filtered-noise source shared by Dilla tape-speed variation and Postpro's frame-to-frame gate weave; no added gem or native dependency.
 
 ## Checks
 
