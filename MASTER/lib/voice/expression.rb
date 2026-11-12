@@ -2,16 +2,16 @@
 
 module Master
   module Voice
-  # Expression — authoritative mapping from runtime signals to TTS + face/particle expression.
-  # Single source for how council reversibility, speech register (creative vs factual),
-  # Osman creative styles, entropy/pressure, and mood arc become rich parameters for
-  # both edge-tts prosody and the ParticleKernel (arousal, pressure, valence, breath,
-  # eye behavior, ecology spirits, terrain, etc.).
-  #
-  # This is the clean extraction point for the large body of interconnectedness ideas
-  # in runtime_ui_direction.md. All future style-specific, reversibility-weighted,
-  # pre-speech anticipation, post-speech decay, vertical timbre, and mood persistence
-  # logic belongs here.
+    # Expression — authoritative mapping from runtime signals to TTS + face/particle expression.
+    # Single source for how council reversibility, speech register (creative vs factual),
+    # Osman creative styles, entropy/pressure, and mood arc become rich parameters for
+    # both edge-tts prosody and the ParticleKernel (arousal, pressure, valence, breath,
+    # eye behavior, ecology spirits, terrain, etc.).
+    #
+    # This is the clean extraction point for the large body of interconnectedness ideas
+    # in runtime_ui_direction.md. All future style-specific, reversibility-weighted,
+    # pre-speech anticipation, post-speech decay, vertical timbre, and mood persistence
+    # logic belongs here.
     module Expression
       CREATIVE_STYLES = %i[dramatic intense energetic storyteller ethereal].freeze
       LOW_STYLES = %i[whispered intimate robotic calm].freeze
@@ -158,11 +158,7 @@ module Master
         hints = []
         clean.each_char do |c|
           shape = VOWEL_SHAPES[c] || CONSONANT_SHAPES[c] || "E"
-          ms = if shape == "M"
-55
-else
-(VOWEL_SHAPES[c] ? 85 : 62)
-end
+          ms = shape == "M" ? 55 : (VOWEL_SHAPES[c] ? 85 : 62)
           amp = shape == "M" ? 0.72 : 0.85
           if hints.last && hints.last[:shape] == shape
             hints.last[:ms] += ms
@@ -341,7 +337,7 @@ end
         end
       end
 
-      private_class_method def viseme_timing_scale(style, rate)
+      def viseme_timing_scale(style, rate)
         style_key = style.to_s.downcase.to_sym if style
         base = STYLE_RATE_SCALE[style_key] || 1.0
         return base unless rate
@@ -352,8 +348,9 @@ end
         rate_factor = 1.0 - (pct / 100.0) * 0.35
         (base * rate_factor).clamp(0.55, 1.65)
       end
+      private_class_method :viseme_timing_scale
 
-      private_class_method def decay_rate_for(style_name)
+      def decay_rate_for(style_name)
         s = style_name.to_s.downcase.to_sym
         return 0.12 if s == :dramatic
         return 0.88 if s == :whispered
@@ -362,23 +359,21 @@ end
 
         0.50
       end
+      private_class_method :decay_rate_for
 
-      private_class_method def face_params_for(register:, style:, risk:, reversibility:)
+      def face_params_for(register:, style:, risk:, reversibility:)
         creative = register == :creative
         high_stakes = (reversibility == :low || risk == :critical || risk == :high)
 
         {
           arousal: creative ? 0.9 : 0.55,
-          pressure: if high_stakes
-0.7
-else
-(creative ? 0.65 : 0.4)
-end,
+          pressure: high_stakes ? 0.7 : (creative ? 0.65 : 0.4),
           valence: creative ? 0.25 : -0.05,
           attention: high_stakes ? 0.85 : 0.6,
           breath: creative ? 1.35 : 1.0,
         }
       end
+      private_class_method :face_params_for
     end
   end
 end
