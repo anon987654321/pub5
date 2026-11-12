@@ -58,6 +58,29 @@ class LikeCountStreamTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the feed card offers a comment action without a per-card count query" do
+    record = @user.posts.create!(body: "Ny kåpe")
+
+    get posts_path
+
+    assert_response :success
+    assert_select ".feed-card-actions a[href=?][aria-label=?]",
+                  post_path(record, anchor: "comments"), I18n.t("comments.title")
+  end
+
+  test "the detail-page comment action describes its live count target" do
+    record = @user.posts.create!(body: "Ny kåpe")
+    target = ActionView::RecordIdentifier.dom_id(record, :comment_count)
+
+    get post_path(record)
+
+    assert_response :success
+    assert_select ".post-show-actions a[aria-label=?][aria-describedby=?]",
+                  I18n.t("comments.title"), target
+    assert_select ".post-show-actions span##{target}[data-post-comment-count=?]",
+                  ActionView::RecordIdentifier.dom_id(record)
+  end
+
   test "voting a post replaces only the reader's vote rail" do
     record = @user.posts.create!(body: "Ny kåpe")
     target = ActionView::RecordIdentifier.dom_id(record, :vote_rail)
@@ -84,8 +107,7 @@ class LikeCountStreamTest < ActionDispatch::IntegrationTest
     assert_operator record.reload.updated_at, :>, before
   end
 
-  # The like buttons only carried the count, so a viewer could not hear whether
-  # they had already liked a post or an outfit.
+  # Like state is reader-specific; the count remains a separate live target.
   test "like buttons say whether the viewer has liked" do
     record = @user.posts.create!(body: "Ny kåpe")
     outfit = Outfit.create!(user: @user, name: "Høst")
