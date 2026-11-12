@@ -12,7 +12,7 @@ class TestChromeProcessSupervision < Minitest::Test
 
     attr_accessor :pid
 
-    def initialize(pid)
+    def initialize(pid = nil)
       @pid = pid
     end
 
@@ -22,41 +22,53 @@ class TestChromeProcessSupervision < Minitest::Test
     def chrome_stop_poll = 0.01
   end
 
-  def test_reaper_kills_the_isolated_chrome_group_and_reaps_its_leader
+  def test_spawn_and_reaper_own_the_complete_chrome_process_group
     Dir.mktmpdir("chrome-reaper") do |dir|
       leader_file = File.join(dir, "leader.pid")
       child_file = File.join(dir, "renderer.pid")
-      child_script = <<~'RUBY'
+      worker_code = <<~'RUBY'
         Signal.trap("TERM", "IGNORE")
-        File.write(ARGV.fetch(0), Process.pid.to_s)
+        File.write(CHILD_PID_FILE, Process.pid.to_s)
         sleep 60
       RUBY
-      leader_script = <<~'RUBY'
+      browser_code = <<~RUBY
+        require "rbconfig"
         Process.spawn(
-          RbConfig.ruby, "-e", ARGV.fetch(2), ARGV.fetch(1),
+          RbConfig.ruby, "-e", #{worker_code.dump},
           out: File::NULL, err: File::NULL
         )
-        File.write(ARGV.fetch(0), Process.pid.to_s)
+        File.write(#{leader_file.dump}, Process.pid.to_s)
         sleep 60
       RUBY
-      leader = Process.spawn(
-        RbConfig.ruby, "-e", leader_script, leader_file, child_file, child_script,
-        out: File::NULL, err: File::NULL, pgroup: true
+      executable = File.join(dir, "fake-chrome")
+      File.write(
+        executable,
+        "#!/bin/sh\nCHILD_PID_FILE=#{child_file.dump} exec #{RbConfig.ruby} -e #{browser_code.dump}\n"
       )
+      File.chmod(0o700, executable)
+
+      # ChromeProcess#spawn_chrome must create the isolated process group itself;
+      # the fake browser then creates a renderer that inherits that group.
+      reaper = Reaper.new
+      reaper.instance_variable_set(:@profile, dir)
+      reaper.instance_variable_set(:@host_map, {})
+      reaper.instance_variable_set(:@webgl, false)
+      reaper.pid = reaper.spawn_chrome(executable)
+
       child = wait_for_file(child_file).to_i
+      leader = reaper.pid
       assert_equal leader, File.read(leader_file).to_i
       assert_equal leader, Process.getpgid(leader)
       assert_equal leader, Process.getpgid(child), "renderer must remain inside the owned browser group"
 
-      reaper = Reaper.new(leader)
       assert reaper.reap_chrome, "teardown must prove group exit and direct-child reap"
       assert_nil reaper.pid
       assert_process_gone(leader)
       assert_process_gone(child)
     ensure
-      if defined?(leader) && leader
-        Process.kill("KILL", -leader) rescue nil
-        Process.waitpid(leader) rescue nil
+      if defined?(reaper) && reaper&.pid
+        Process.kill("KILL", -reaper.pid) rescue nil
+        Process.waitpid(reaper.pid) rescue nil
       end
     end
   end
