@@ -40,9 +40,13 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
       comment = Comment.create!(user: @reader, commentable: @post, content: "Godt poeng")
     end
     assert_count_update(added, "1")
+    assert added.none? { |stream| stream["action"] == "refresh" || stream["action"] == "replace" },
+           "a comment must not redraw every open feed"
 
     removed = capture_turbo_stream_broadcasts("posts") { comment.destroy! }
     assert_count_update(removed, "")
+    assert removed.none? { |stream| stream["action"] == "refresh" || stream["action"] == "replace" },
+           "deleting a comment must not redraw every open feed"
   end
 
   test "comment changes refresh only subscribers to that post's detail stream" do
