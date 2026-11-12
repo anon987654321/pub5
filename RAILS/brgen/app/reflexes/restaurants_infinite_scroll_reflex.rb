@@ -7,6 +7,7 @@ class RestaurantsInfiniteScrollReflex < Shared::InfiniteScrollReflex
 
   def scope
     scope = Takeaway::Restaurant.publicly_visible.includes(:user)
+    @sort = Takeaway::Restaurant::SORTS.include?(element.dataset["sort"].to_s) ? element.dataset["sort"].to_s : "popular"
     scope = scope.where(cuisine_type: element.dataset["cuisine"]) if element.dataset["cuisine"].present?
     if element.dataset["q"].present?
       term = "%#{ActiveRecord::Base.sanitize_sql_like(element.dataset["q"])}%"
@@ -15,6 +16,6 @@ class RestaurantsInfiniteScrollReflex < Shared::InfiniteScrollReflex
         term, term, term, term
       )
     end
-    scope.merge(Takeaway::Restaurant.sorted(element.dataset["sort"]))
+    scope.merge(Takeaway::Restaurant.sorted(@sort))
   end
 end
