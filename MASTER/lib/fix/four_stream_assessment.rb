@@ -483,15 +483,31 @@ module Master
         workflows = workflow_receipts
         assessed = dimensions.values + validation.values.select { |row| row[:applicable] } +
           workflows.values.select { |row| row[:applicable] }
-        statuses = assessed.map { |row| row[:status] }.uniq
         matrix = matrix_summary
+        dimension_statuses = dimensions.values.map { |row| row[:status] }
+        compliance_status = if @ledger.nil?
+                              "BLOCKED"
+                            elsif dimension_statuses.include?("FAIL")
+                              "FAIL"
+                            elsif dimension_statuses.include?("BLOCKED")
+                              "BLOCKED"
+                            elsif matrix[:status] != "complete" ||
+                                  dimension_statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
+                              "INCONCLUSIVE"
+                            elsif dimension_statuses.all? { |status| status == "PASS" }
+                              "PASS"
+                            else
+                              "NOT_RUN"
+                            end
+        statuses = assessed.map { |row| row[:status] }.uniq
         overall = if @ledger.nil?
                     "BLOCKED"
                   elsif statuses.include?("FAIL")
                     "FAIL"
                   elsif statuses.include?("BLOCKED")
                     "BLOCKED"
-                  elsif statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) } || matrix[:status] != "complete"
+                  elsif compliance_status != "PASS" ||
+                        statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
                     "INCONCLUSIVE"
                   elsif statuses.include?("PASS")
                     "PASS"
@@ -499,7 +515,7 @@ module Master
                     "NOT_RUN"
                   end
         {
-          schema_version: 1, overall_status: overall, dimensions:,
+          schema_version: 1, overall_status: overall, compliance_status:, dimensions:,
           external_validation: validation, workflows:,
           matrix: matrix_summary,
           rule: "local compliance and external product proof are separate; missing evidence never passes",

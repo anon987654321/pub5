@@ -231,6 +231,7 @@ class TestFourStreamAssessment < Minitest::Test
     end
     assert_equal ["BRINGHURST_measure", "PARENTHETICAL_DASH"], report[:dimensions][:editorial][:law_ids]
     assert_equal "NOT_RUN", report[:workflows][:grouped_visual_repair][:status]
+    assert_equal "PASS", report[:compliance_status]
     assert_equal "PASS", report[:overall_status]
   end
 
@@ -243,6 +244,7 @@ class TestFourStreamAssessment < Minitest::Test
 
     assert_equal "NOT_RUN", report[:dimensions][:editorial][:status]
     assert_equal "NOT_RUN", report[:matrix][:surface_evidence]
+    assert_equal "INCONCLUSIVE", report[:compliance_status]
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 
@@ -273,6 +275,7 @@ class TestFourStreamAssessment < Minitest::Test
 
     assert_equal "INCONCLUSIVE", report[:external_validation][:document_rendering][:status]
     assert_equal "INCONCLUSIVE", report[:external_validation][:business_and_legal_review][:status]
+    assert_equal "PASS", report[:compliance_status]
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 

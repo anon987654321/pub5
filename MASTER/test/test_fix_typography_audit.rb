@@ -64,9 +64,11 @@ class TestFixTypographyAudit < Minitest::Test
     require File.expand_path("../law/definition", __dir__) unless defined?(::Law::Definition)
     require File.expand_path("../law/typesetting", __dir__) unless defined?(::Law::Typesetting)
     html = ::Law::Typesetting.each_text("<p>En lesbar plan.</p>", "BIZ/plan.html").to_a
+    business_markdown = ::Law::Typesetting.each_text("# Plan\nEn lesbar plan.", "BIZ/research/bringhurst-strunk-research.md").to_a
     readme = ::Law::Typesetting.each_text("A readable paragraph.", "MASTER/README.md").to_a
 
     assert_equal "En lesbar plan.", html.first.first
+    assert_equal "En lesbar plan.", business_markdown.last.first
     assert_equal "A readable paragraph.", readme.first.first
     assert_equal "nb", ::Law::Typesetting.locale("BIZ/plan.html")
     assert_equal "en", ::Law::Typesetting.locale("MASTER/README.md")

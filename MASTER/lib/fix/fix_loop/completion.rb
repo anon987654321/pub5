@@ -122,9 +122,9 @@ module Master
           matrix_evidence = matrix_evidence.dup
           matrix_evidence[:ledger_receipt] = assessment_receipt
           quality_contract = matrix_evidence[:quality_contract] || matrix_evidence["quality_contract"] || {}
-          quality_status = quality_contract[:overall_status] || quality_contract["overall_status"] || "BLOCKED"
-          if terminal_state_for(result) == :done && %w[FAIL BLOCKED].include?(quality_status.to_s)
-            result = terminal(:blocked, "universal quality contract #{quality_status}; inspect the persisted quality receipt")
+          compliance_status = quality_contract[:compliance_status] || quality_contract["compliance_status"] || "BLOCKED"
+          if terminal_state_for(result) == :done && compliance_status.to_s != "PASS"
+            result = terminal(:blocked, "universal Law compliance #{compliance_status}; inspect the persisted quality receipt")
           end
           RunBudget.finish_run(reason: run_end_reason(result))
           state = terminal_state_for(result)
