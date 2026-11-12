@@ -130,11 +130,15 @@ module Studio
           owner, name, pinned = model_reference!(destination)
           raise ArgumentError, "training destination must be owner/name without a version" if pinned
           destination = "#{owner}/#{name}"
-          create_model(destination) unless model_exists?(destination)
 
           trainings_uri, body = build_training_request(
             photos_zip_url, destination, trigger_word:, steps:, lora_rank:, webhook:, webhook_events_filter:, extra_input:, version:
           )
+          trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
+          trainer_version_id = resource_id!(version || trainer_version, "trainer version")
+          validate_input_schema!("#{trainer_owner}/#{trainer_name}:#{trainer_version_id}", body.fetch(:input))
+          create_model(destination) unless model_exists?(destination)
+
           training = post(trainings_uri, body)
           wait ? wait_for_training(training["id"], timeout:) : training
         end
@@ -247,6 +251,7 @@ module Studio
           timeout = operation_timeout!(timeout, "prediction timeout")
           owner, name, pinned = model_reference!(model_id)
           version = pinned || latest_version("#{owner}/#{name}")
+          validate_input_schema!("#{owner}/#{name}:#{version}", input)
           headers = {
             "Prefer" => "wait=#{[timeout, MAX_SYNC_WAIT].min}",
             "Cancel-After" => "#{timeout.clamp(CANCEL_AFTER_RANGE)}s",
@@ -258,6 +263,27 @@ module Studio
         # The input names a model declares, for refusing a key it would ignore.
         def input_names(model_id)
           input_keys(model_id)
+        end
+
+        private
+
+        def validate_input_schema!(model_id, input)
+          raise ArgumentError, "prediction input must be a Hash" unless input.is_a?(Hash)
+
+          schema = input_schema(model_id)
+          properties = schema.fetch("properties")
+          allowed = properties.keys.map(&:to_s)
+          supplied = input.keys.map(&:to_s)
+          raise ArgumentError, "prediction input contains duplicate string/symbol keys" unless supplied.uniq.length == supplied.length
+
+          unknown = supplied - allowed
+          raise ArgumentError, "unsupported inputs for #{model_id}: #{unknown.join(", ")}" unless unknown.empty?
+
+          required = Array(schema["required"]).map(&:to_s)
+          missing = required - supplied
+          raise ArgumentError, "missing required inputs for #{model_id}: #{missing.join(", ")}" unless missing.empty?
+
+          true
         end
       end
 
@@ -272,6 +298,8 @@ module Studio
 
       # A non-retryable 4xx response retains its status so callers can
       # distinguish a genuinely missing model from denied access or bad input.
+      SchemaUnavailable = Class.new(StandardError)
+
       APIError = Class.new(StandardError) do
         attr_reader :status, :response_body
 
@@ -507,17 +535,28 @@ module Studio
 
       # Read the provider's OpenAPI schema for the exact pinned version.
       # A local capability table would become a second, drifting source of truth.
-      def input_keys(model_id)
+      def input_schema(model_id)
         owner, name, pinned = model_reference!(model_id)
-        if pinned
-          version = get(URI("#{BASE}/models/#{owner}/#{name}/versions/#{pinned}"))
-          schema = version.dig("openapi_schema", "components", "schemas", "Input", "properties")
-        else
-          model = get(URI("#{BASE}/models/#{owner}/#{name}"))
-          schema = model.dig("latest_version", "openapi_schema",
-                             "components", "schemas", "Input", "properties")
+        cache_key = [owner, name, pinned || "latest"].join("/")
+        @input_schema_cache ||= {}
+        return @input_schema_cache.fetch(cache_key) if @input_schema_cache.key?(cache_key)
+
+        schema = if pinned
+                   version = get(URI("#{BASE}/models/#{owner}/#{name}/versions/#{pinned}"))
+                   version.dig("openapi_schema", "components", "schemas", "Input")
+                 else
+                   model = get(URI("#{BASE}/models/#{owner}/#{name}"))
+                   model.dig("latest_version", "openapi_schema", "components", "schemas", "Input")
+                 end
+        unless schema.is_a?(Hash) && schema["properties"].is_a?(Hash) && !schema["properties"].empty?
+          raise SchemaUnavailable, "Replicate did not provide an input schema for #{owner}/#{name}#{pinned ? ":#{pinned}" : ""}"
         end
-        Array(schema&.keys)
+
+        @input_schema_cache[cache_key] = schema
+      end
+
+      def input_keys(model_id)
+        input_schema(model_id).fetch("properties").keys
       end
 
       def latest_version(model_id)
