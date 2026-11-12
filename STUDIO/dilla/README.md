@@ -28,6 +28,40 @@ dilla_night / basement / dub_stairs. Sonitex wear: subtle / boom_bap /
 aggressive_lofi / phone_wear. Groove profiles: dilla_shadow /
 behind_the_beat / late_snare / on_grid.
 
+## Record-sourced harmony
+
+`--list` marks the source tier: `[record]` is restored from the historical
+artist-transcription table, `[chart]` is a separately retained published chart,
+`[study]` is an engine exercise rather than a song transcription, `[original]`
+is authored in the current catalogue, and `[recovered]` is lower-confidence
+recovery material. Duplicate aliases for the same recording are kept as source
+notes or chord variants rather than counted as extra tracks.
+
+Examples:
+
+```sh
+ruby dilla.rb --progression time_donut --seed 7 --out time.wav
+ruby dilla.rb --progression fall_in_love --seed 7 --out fall_in_love.wav
+ruby dilla.rb --progression get_dis_money --seed 7 --out get_dis_money.wav
+ruby dilla.rb --progression climax_slum_village --seed 7 --out climax.wav
+ruby dilla.rb --progression so_what_miles --seed 7 --out so_what.wav
+ruby dilla.rb --progression never_catch_me_flylo --seed 7 --out never_catch_me.wav
+```
+
+The restored material includes Dilla-produced Slum Village records, Dilla's
+`Time (The Donut of the Heart)`, Ahmad Jamal's `Pavanne`, Miles Davis's
+`So What`, D'Angelo recordings, and a separately labelled Flying Lotus chart
+reference. Chord spellings from the old charts (including slash-bass and
+source-specific aliases) are preserved, and historic named MIDI grips take
+precedence over generic shell voicings.
+
+Melody evidence is narrower than the chord corpus: the old tree retained a
+measured six-note sample/chop contour for the `Time` profile and legacy
+profile pitch material, but not complete note-for-note lead transcriptions for
+every record. Those motifs are identified as such. Other melodies are generated
+from chord tones and the selected scale, with stepwise voice-leading; they are
+not presented as recovered song melodies.
+
 A render writes `<name>.wav` plus three sidecars: `.quality.json` (measured
 peak, crest, LUFS estimate, stem energy shares), `.session.json` (what was
 arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
