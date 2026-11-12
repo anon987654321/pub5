@@ -2,15 +2,21 @@
 
 class Vote < ApplicationRecord
   belongs_to :user
-  belongs_to :votable, polymorphic: true, touch: true
+  belongs_to :votable, polymorphic: true
 
   validates :value, inclusion: { in: [ -1, 1 ] }
   validates :user_id, uniqueness: { scope: [ :votable_type, :votable_id ] }
 
   after_save :apply_score_delta
   after_destroy :apply_score_delta
+  after_commit :broadcast_post_counts
 
   private
+
+  def broadcast_post_counts
+    target = votable
+    target.broadcast_live_counts if target.respond_to?(:broadcast_live_counts)
+  end
 
   def apply_score_delta
     klass = votable_type.to_s.safe_constantize
