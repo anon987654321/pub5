@@ -202,6 +202,40 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     assert_select "#menu .deal-card input.qty-field[name=?]", "takeaway_order[items][#{@soup.id}]"
   end
 
+  test "restaurant discovery sorts by recorded delivery fee and minimum order" do
+    low_fee = Takeaway::Restaurant.create!(
+      user: @owner, name: "Low fee #{SecureRandom.hex(3)}", address: "Fee Street 1",
+      cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: 100, min_order_cents: 5_000
+    )
+    high_fee = Takeaway::Restaurant.create!(
+      user: @owner, name: "High fee #{SecureRandom.hex(3)}", address: "Fee Street 2",
+      cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: 350, min_order_cents: 2_000
+    )
+    low_minimum = Takeaway::Restaurant.create!(
+      user: @owner, name: "Low minimum #{SecureRandom.hex(3)}", address: "Order Street 1",
+      cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: 400, min_order_cents: 1_000
+    )
+    high_minimum = Takeaway::Restaurant.create!(
+      user: @owner, name: "High minimum #{SecureRandom.hex(3)}", address: "Order Street 2",
+      cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: 100, min_order_cents: 8_000
+    )
+
+    host! "markedsplass.brgen.no"
+    get "/food", params: { sort: "delivery_fee" }
+    assert_response :success
+    fee_hrefs = Nokogiri::HTML(response.body).css(".deal-card.restaurant .deal-card-hit").map { |link| link["href"] }
+    assert_operator fee_hrefs.index("/food/restaurants/#{low_fee.to_param}"), :<,
+                    fee_hrefs.index("/food/restaurants/#{high_fee.to_param}")
+    assert_select "nav.store-pills a[aria-current=page]", text: I18n.t("takeaway.sorts.delivery_fee")
+
+    get "/food", params: { sort: "minimum_order" }
+    assert_response :success
+    minimum_hrefs = Nokogiri::HTML(response.body).css(".deal-card.restaurant .deal-card-hit").map { |link| link["href"] }
+    assert_operator minimum_hrefs.index("/food/restaurants/#{low_minimum.to_param}"), :<,
+                    minimum_hrefs.index("/food/restaurants/#{high_minimum.to_param}")
+    assert_select "nav.store-pills a[aria-current=page]", text: I18n.t("takeaway.sorts.minimum_order")
+  end
+
   # A guest can order, so the kitchen advancing a guest's order notifies a user
   # with no browser subscription that counts. The push must stand down, not 500.
   test "advancing a guest's order sends no push to the guest" do
