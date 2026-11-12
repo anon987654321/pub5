@@ -34,7 +34,8 @@ require "digest"
 require "time"
 require "tmpdir"
 require "tempfile"
-require_relative "../subprocess"\nrequire_relative "../analog_core"
+require_relative "../subprocess"
+require_relative "../analog_core"
 require_relative "lib/reference_analyzer"
 
 module Dilla

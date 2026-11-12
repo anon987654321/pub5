@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "tempfile"\nrequire_relative "../analog_core"
+require "tempfile"
+require_relative "../analog_core"
 
 module Postpro
   module Motion
