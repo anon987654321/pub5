@@ -71,6 +71,25 @@ module Master
         permissions = Master::Ground::PersonalPermissions.new(root:)
         voice_args = Shellwords.split(arg_for(ctx).to_s)
         voice_scope = voice_args[1].to_s.downcase
+        if voice_args[0].to_s.downcase == "grant" && voice_scope == "notifications"
+          confirmation = "GRANT notifications"
+          expected = ["grant", "notifications", "--confirm", confirmation]
+          unless voice_args == expected
+            return "privacy: notification consent requires the exact command /privacy grant notifications --confirm \"#{confirmation}\""
+          end
+          permissions.grant(
+            scope: "notifications", confirmed_by: "local operator",
+            purpose: Master::Ground::NotificationAggregator::PURPOSE,
+          )
+          return "privacy: local notification storage enabled; revoke with /privacy revoke notifications"
+        end
+        if voice_args[0].to_s.downcase == "revoke" && voice_scope == "notifications"
+          revoked = permissions.revoke(
+            scope: "notifications", confirmed_by: "local operator",
+            reason: "local notification storage revoked by owner",
+          )
+          return revoked ? "privacy: local notification storage disabled immediately" : "privacy: no active notification grant"
+        end
         if voice_args[0].to_s.downcase == "grant" && %w[microphone speech_recognition].include?(voice_scope)
           purpose = voice_scope == "microphone" ?
             Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE :
@@ -103,7 +122,8 @@ module Master
           if voice_args.empty? || voice_args == ["status"]
             microphone = permissions.allowed?(scope: "microphone", purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE)
             speech_recognition = permissions.allowed?(scope: "speech_recognition", purpose: Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE)
-            return "privacy: microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; personal memory requires a paired local subject"
+            notifications = permissions.allowed?(scope: "notifications", purpose: Master::Ground::NotificationAggregator::PURPOSE)
+            return "privacy: microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; notifications #{notifications ? "enabled" : "disabled"}; personal memory requires a paired local subject"
           end
           return "privacy: no paired subject; pair the local owner before enabling personal memory"
         end
@@ -119,7 +139,8 @@ module Master
           )
           microphone = permissions.allowed?(scope: "microphone", purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE)
           speech_recognition = permissions.allowed?(scope: "speech_recognition", purpose: Master::Ground::PersonalPermissions::SPEECH_RECOGNITION_PURPOSE)
-          "privacy: personal profile and memory #{active ? "enabled" : "disabled"}; local calendar #{calendar ? "enabled" : "disabled"}; microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; voice grants expire after one hour"
+          notifications = permissions.allowed?(scope: "notifications", purpose: Master::Ground::NotificationAggregator::PURPOSE)
+          "privacy: personal profile and memory #{active ? "enabled" : "disabled"}; local calendar #{calendar ? "enabled" : "disabled"}; microphone #{microphone ? "enabled" : "disabled"}; speech recognition #{speech_recognition ? "enabled" : "disabled"}; notifications #{notifications ? "enabled" : "disabled"}; voice grants expire after one hour"
         when "grant personal_memory"
           permissions.grant(
             scope: "personal_memory", subject:, confirmed_by: "local operator",
@@ -155,7 +176,7 @@ module Master
           )
           revoked ? "privacy: personal profile and memory disabled immediately" : "privacy: no active personal-memory grant"
         else
-          "privacy: status | grant personal_memory | revoke personal_memory | grant microphone | grant speech_recognition | revoke microphone | revoke speech_recognition"
+          "privacy: status | grant personal_memory | revoke personal_memory | grant notifications --confirm \"GRANT notifications\" | revoke notifications | grant microphone | grant speech_recognition | revoke microphone | revoke speech_recognition"
         end
       rescue StandardError => e
         "privacy0: unavailable - #{e.class}: #{e.message}"
