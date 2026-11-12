@@ -331,7 +331,7 @@ class TestVoiceNarrator < Minitest::Test
   end
 
   def test_claude_session_limit_reply_parses_the_stated_reset_before_exit_status
-    reply = "You've hit your session limit - resets in 3h\\nsubscription limit"
+    reply = "You've hit your session limit - resets in 3h\nsubscription limit"
     verdict = Master::Io::LaneReply.read(reply, now: 1_000)
 
     assert_equal :spent, verdict.kind
