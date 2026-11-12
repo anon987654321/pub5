@@ -167,13 +167,17 @@ module Master
         streamed_detail = +""
         streamed_bytes = 0
         stream_started = false
+        first_token_recorded = false
+        provider_started = nil
         stream_handler = if stream && blk
           lambda do |chunk|
             chunk_bytes = chunk.to_s.bytesize
             streamed_bytes += chunk_bytes
-            if stream && chunk_bytes.positive? && !stream_started
+            if chunk_bytes.positive? && !first_token_recorded
               stream_started = true
+              first_token_recorded = true
               @bus&.publish("llm:stream_started", model: selected_model)
+              record_first_token_latency(selected_model, elapsed_ms(provider_started)) if provider_started
             end
             if detail_capture && streamed_detail.bytesize < 2_000
               remaining = 2_000 - streamed_detail.bytesize
@@ -188,6 +192,7 @@ module Master
         result = breaker_for(selected_model).call(estimate_cost(messages.last[:content], selected_model)) do
           Timeout.timeout(call_deadline_for(selected_model)) do
             @cache.fetch(cache_key, selected_model) do
+              provider_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
               send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &stream_handler)
             end
           end
@@ -629,6 +634,13 @@ module Master
         ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * MS_PER_SECOND).round
       end
 
+      def record_first_token_latency(model, latency_ms)
+        return unless @model_router&.respond_to?(:record_first_token)
+
+        @model_router.record_first_token(model:, latency_ms:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "LLMDispatcher.record_first_token", model: model.to_s)
+      end
       def record_provider_result(model:, result:, started:)
         latency_ms = elapsed_ms(started)
         if Result.wrap(result).ok?
