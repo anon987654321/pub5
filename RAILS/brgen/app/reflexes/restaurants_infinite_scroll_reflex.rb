@@ -6,7 +6,7 @@ class RestaurantsInfiniteScrollReflex < Shared::InfiniteScrollReflex
   private
 
   def scope
-    scope = Takeaway::Restaurant.publicly_visible.includes(:user)
+    scope = Takeaway::Restaurant.indexable.with_attached_cover.includes(:user, :city)
     @sort = Takeaway::Restaurant::SORTS.include?(element.dataset["sort"].to_s) ? element.dataset["sort"].to_s : "popular"
     scope = scope.where(cuisine_type: element.dataset["cuisine"]) if element.dataset["cuisine"].present?
     if element.dataset["q"].present?
