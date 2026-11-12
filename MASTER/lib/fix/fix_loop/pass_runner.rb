@@ -491,8 +491,12 @@ module Master
           @elevation_used_for_pass = pass
           engine = Improve::Engine.new(root: @root, lane:)
           found = engine.elevate(files:)
-          found += ideas_to_findings(engine.ideate(files:), pass:) if WorkLane.runs?(:ideate)
-          found += restructure_to_findings(engine.restructure_proposals(files:), pass:) if WorkLane.runs?(:restructure_drive)
+          ideas = WorkLane.runs?(:ideate) ? engine.ideate(files:) : []
+          restructures = WorkLane.runs?(:restructure_drive) ? engine.restructure_proposals(files:) : []
+          found += ideas_to_findings(ideas, pass:)
+          found += restructure_to_findings(restructures, pass:)
+          record_improvement_assessment!(pass:, findings: found.size, ideas: ideas.size, restructures: restructures.size) if
+            respond_to?(:record_improvement_assessment!)
           unless found.empty?
             Master::Trace::Dmesg.status(
               "fix0", "pass #{pass}, elevation #{found.size} step(s) toward the ideal (lane=#{lane})"

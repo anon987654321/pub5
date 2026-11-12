@@ -30,6 +30,8 @@ class FixConvergenceWiringTest < Minitest::Test
     assert_includes evidence_source, "run_opportunity_pass"
     assert_includes evidence_source, "run_visual_stage"
     assert_includes evidence_source, "run_opportunity_stage"
+    assert_includes lifecycle_source, "WorkLane.runs?(:visual_groups)"
+    assert_includes lifecycle_source, "refresh_fix_plan!(target:, files:, max_passes:, budget_seconds:, run_id:)"
     assert_includes runner_source, "Wishlist.findings"
     assert_includes llm_source, "run_wishlist_stage"
     assert_includes llm_source, "Wishlist::LAW_ID"

@@ -50,10 +50,18 @@ class TestWorkLane < Minitest::Test
     end
   end
 
-  def test_all_keeps_every_stage_fix_ran_before_lanes
-    %i[research architecture layout_sweep browser_checks visual_pass code_passes].each do |stage|
+  def test_all_runs_research_rendering_grouped_visual_and_every_elevation_stage
+    %i[research architecture layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes
+       improve_code improve_prose improve_visual improve_music ideate restructure_drive].each do |stage|
       assert Lane.runs?(stage, :all), "all lane must run #{stage}"
     end
+  end
+
+  def test_rendered_target_detection_is_shared_and_case_insensitive
+    assert Lane.rendered_target?("RAILS")
+    assert Lane.rendered_target?("/repo/pub5/rails/brgen")
+    refute Lane.rendered_target?("BIZ")
+    refute Lane.rendered_target?("MASTER")
   end
 
   def test_the_summary_names_the_lane_and_what_it_skipped

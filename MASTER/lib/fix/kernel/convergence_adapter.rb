@@ -567,11 +567,13 @@ module Master
       # The lane proves only what its resweep shows, so a repaired but unmeasured group never
       # reads as DONE, and the ending says which lane ran and what it left.
       def visual_terminal(outcome)
+        @pass_runner.record_visual_group_result!(outcome.to_h) if @pass_runner.respond_to?(:record_visual_group_result!)
         resweep = outcome.resweep ? "" : " (no repair, no resweep)"
         detail = "#{outcome.findings} rendered finding(s) in #{outcome.groups} group(s), " \
                  "#{outcome.cleared} cleared, #{outcome.remaining} group(s) remain#{resweep}; report #{outcome.report}"
         Master::Trace::Dmesg.status("visual0", "#{WorkLane.summary}; #{detail}")
-        return terminal(:done, "visual lane: the sweep reported no rendered finding") if outcome.findings.zero?
+        return terminal(:done, "visual lane: rendered groups cleared by the resweep") if
+          outcome.findings.zero? || (outcome.resweep && outcome.remaining.zero?)
 
         terminal(:plateau, "visual lane: #{detail}")
       end

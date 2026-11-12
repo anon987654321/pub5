@@ -113,6 +113,18 @@ module Master
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           return finish_run(run_visual_lane(target), target, run_id, mission:, requested:) if WorkLane.visual?
 
+          # The full lane adds grouped rendered repair, then refreshes the same
+          # immutable plan before ordinary repair passes assess the resulting tree.
+          if requested && WorkLane.runs?(:visual_groups) && WorkLane.rendered_target?(target)
+            run_visual_lane(target)
+            return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
+
+            fresh_files = StreamCursor.order(@root, target, @file_collector.collect(target))
+            files.replace(fresh_files)
+            refresh_fix_plan!(target:, files:, max_passes:, budget_seconds:, run_id:)
+            @reachability.verify!(target, files:, subset: CheckFocus.blockers?)
+          end
+
           remaining = repair_seconds_left(journal)
           spent = budget_spent_before_pass(journal, resumed.value!) unless remaining.positive?
           return finish_run(spent, target, run_id, mission:, requested:) if spent

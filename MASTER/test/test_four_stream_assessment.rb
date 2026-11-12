@@ -204,4 +204,54 @@ class TestFourStreamAssessment < Minitest::Test
   def test_unknown_surfaces_are_rejected
     assert_raises(ArgumentError) { build(surfaces: [:made_up_surface]) }
   end
+
+  def test_quality_contract_projects_ledger_into_universal_dimensions
+    ledger = {
+      summary: { laws: 2, expected_cells: 2, recorded_cells: 2, clean_passes_required: 2, complete: true },
+      cells: [
+        { law: "BRINGHURST_measure", status: "assessed_clean", clean_streak: 2 },
+        { law: "DRY", status: "assessed_clean", clean_streak: 2 },
+      ],
+    }
+    report = Master::Fix::QualityContract.build(ledger:, target: "MASTER", files: [], lane: :code)
+
+    assert_equal "PASS", report[:dimensions][:editorial][:status]
+    assert_equal "PASS", report[:dimensions][:engineering][:status]
+    assert_equal "NOT_RUN", report[:workflows][:grouped_visual_repair][:status]
+    assert_equal "PASS", report[:overall_status]
+  end
+
+  def test_quality_contract_keeps_failures_and_unmeasured_cells_distinct
+    ledger = {
+      summary: { laws: 2, expected_cells: 2, recorded_cells: 2, clean_passes_required: 2, complete: false },
+      cells: [
+        { law: "STRUNK_PROSE_ACTIVE", status: "violation_found", clean_streak: 0 },
+        { law: "DRY", status: "inconclusive", clean_streak: 0 },
+      ],
+    }
+    report = Master::Fix::QualityContract.build(ledger:, target: "MASTER", files: [], lane: :code)
+
+    assert_equal "FAIL", report[:dimensions][:editorial][:status]
+    assert_equal "INCONCLUSIVE", report[:dimensions][:engineering][:status]
+    assert_equal "FAIL", report[:overall_status]
+  end
+
+  def test_quality_contract_keeps_document_and_business_review_external
+    ledger = {
+      summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },
+      cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
+    }
+    report = Master::Fix::QualityContract.build(
+      ledger:, target: "BIZ", files: ["BIZ/plan.docx"], lane: :code
+    )
+
+    assert_equal "INCONCLUSIVE", report[:external_validation][:document_rendering][:status]
+    assert_equal "INCONCLUSIVE", report[:external_validation][:business_and_legal_review][:status]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
+  end
+
+  def test_missing_ledger_is_blocked
+    report = Master::Fix::QualityContract.build(ledger: nil, target: "MASTER", files: [], lane: :code)
+    assert_equal "BLOCKED", report[:overall_status]
+  end
 end

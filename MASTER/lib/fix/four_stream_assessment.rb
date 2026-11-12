@@ -445,6 +445,230 @@ module Master
       def record_args(key, status, iteration, **values)
         { law: key[0], stream: key[1], surface: key[2], status:, iteration:, **values }
       end
+
+ 
+    # Dimension-level read model over the canonical Law ledger. It does not
+    # declare Laws or duplicate their authority; it groups the same measured
+    # cells into engineering, editorial, visual, experience and operations.
+    class QualityContract
+      SPECIALISTS = {
+        editorial: /BRINGHURST|STRUNK|PROSE|TYPOGRAPHY|READABILITY|GRAMMAR|CLARITY|EDITORIAL|COPY/,
+        visual: /VISUAL|DESIGN|AESTHETIC|COMPOSITION|PROPORTION|WHITESPACE|GRID|COLOR|COLOUR|CONTRAST|ALIGNMENT|LAYOUT|TYPE_HIERARCHY/,
+        experience: /ACCESS|ARIA|INTERACTION|USABILITY|UX|CONVERSATION|KEYBOARD|FOCUS|FORM|MOBILE|TOUCH|NAVIGATION|FEEDBACK|INPUT/,
+        operations: /OPENBSD|DEPLOY|HOST|DAEMON|SERVICE|BACKUP|RESTORE|RELEASE|PORTABILITY|SHELL|UNIX|OPERAT/,
+      }.freeze
+      DIMENSIONS = %i[engineering editorial visual experience operations].freeze
+
+      def self.build(ledger:, surface_report: nil, target: nil, files: [], lane: :code,
+                     visual_groups: nil, improvement: nil)
+        new(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:).build
+      end
+
+      def initialize(ledger:, surface_report:, target:, files:, lane:, visual_groups:, improvement:)
+        @ledger = ledger
+        @surface_report = surface_report || {}
+        @target = target.to_s.tr("\\", "/")
+        @files = Array(files).map { |path| path.to_s.tr("\\", "/") }
+        @lane = lane.to_s
+        @visual_groups = visual_groups
+        @improvement = improvement
+      end
+
+      def build
+        dimensions = DIMENSIONS.to_h { |name| [name, dimension(name)] }
+        validation = external_validation
+        workflows = workflow_receipts
+        assessed = dimensions.values + validation.values.select { |row| row[:applicable] } +
+          workflows.values.select { |row| row[:applicable] }
+        statuses = assessed.map { |row| row[:status] }.uniq
+        overall = if @ledger.nil?
+                    "BLOCKED"
+                  elsif statuses.include?("FAIL")
+                    "FAIL"
+                  elsif statuses.include?("BLOCKED")
+                    "BLOCKED"
+                  elsif statuses.include?("INCONCLUSIVE")
+                    "INCONCLUSIVE"
+                  elsif statuses.include?("PASS")
+                    "PASS"
+                  else
+                    "NOT_RUN"
+                  end
+        {
+          schema_version: 1, overall_status: overall, dimensions:,
+          external_validation: validation, workflows:,
+          matrix: matrix_summary,
+          rule: "local compliance and external product proof are separate; missing evidence never passes",
+        }
+      rescue StandardError => e
+        {
+          schema_version: 1, overall_status: "BLOCKED",
+          reason: "quality contract could not be assembled: #{e.class}: #{e.message.to_s[0, 180]}",
+          dimensions: {}, external_validation: {}, workflows: {},
+        }
+      end
+
+      private
+
+      def read(hash, key, fallback = nil)
+        return fallback unless hash.is_a?(Hash)
+
+        hash.key?(key) ? hash[key] : hash.fetch(key.to_s, fallback)
+      end
+
+      def cells = Array(read(@ledger, :cells))
+
+      def matrix_summary
+        summary = read(@ledger, :summary, {})
+        {
+          status: read(summary, :complete) == true ? "complete" : "incomplete",
+          laws: read(summary, :laws, 0).to_i,
+          expected_cells: read(summary, :expected_cells, 0).to_i,
+          recorded_cells: read(summary, :recorded_cells, 0).to_i,
+          inconclusive_cells: read(summary, :inconclusive_cells, 0).to_i,
+          clean_passes_required: read(summary, :clean_passes_required, 2).to_i,
+        }
+      end
+
+      def dimension_for(law_id)
+        SPECIALISTS.each { |name, pattern| return name if law_id.match?(pattern) }
+
+        :engineering
+      end
+
+      def dimension(name)
+        rows = cells.select { |row| dimension_for(read(row, :law).to_s) == name }
+        applicable = rows.reject { |row| read(row, :status).to_s == "not_applicable" }
+        required = [read(read(@ledger, :summary, {}), :clean_passes_required, 2).to_i, 1].max
+        failures = applicable.count { |row| read(row, :status).to_s == "violation_found" }
+        opportunities = applicable.count { |row| read(row, :status).to_s == "opportunity_found" }
+        inconclusive = applicable.count do |row|
+          state = read(row, :status).to_s
+          state == "inconclusive" || state == "pending" ||
+            (state == "assessed_clean" && read(row, :clean_streak, 0).to_i < required)
+        end
+        status = if applicable.empty?
+                   "NOT_RUN"
+                 elsif failures.positive?
+                   "FAIL"
+                 elsif opportunities.positive? || inconclusive.positive?
+                   "INCONCLUSIVE"
+                 elsif applicable.all? { |row| read(row, :status).to_s == "assessed_clean" }
+                   "PASS"
+                 else
+                   "INCONCLUSIVE"
+                 end
+        {
+          status:, applicable: !applicable.empty?,
+          law_ids: rows.map { |row| read(row, :law).to_s }.uniq.sort,
+          cells: rows.size, applicable_cells: applicable.size,
+          failures:, open_opportunities: opportunities, inconclusive:,
+          not_applicable: rows.size - applicable.size,
+          evidence: "FourStreamAssessment Law × stream × surface ledger",
+        }
+      end
+
+      def target_has?(tree)
+        [@target, *@files].any? { |path| path.split("/").include?(tree) }
+      end
+
+      def surface_status(name)
+        surfaces = read(@surface_report, :surfaces, {})
+        row = read(surfaces, name, {})
+        case read(row, :status).to_s
+        when "assessed_clean" then "PASS"
+        when "violation_found" then "FAIL"
+        when "inconclusive" then "INCONCLUSIVE"
+        when "not_applicable" then "NOT_RUN"
+        else "NOT_RUN"
+        end
+      end
+
+      def local_surface(name)
+        status = surface_status(name)
+        { status:, applicable: status != "NOT_RUN", evidence: "SurfaceEvidence receipt: #{name}" }
+      end
+
+      def external_row(applicable, reason)
+        {
+          status: applicable ? "INCONCLUSIVE" : "NOT_RUN",
+          applicable:,
+          reason: applicable ? reason : "surface is not present in this target",
+        }
+      end
+
+      def external_validation
+        documents = target_has?("BIZ") || @files.any? { |path| path.match?(/\.(?:pdf|docx|xlsx|pptx)\z/i) }
+        rails = target_has?("RAILS")
+        openbsd = target_has?("OPENBSD")
+        studio = target_has?("STUDIO") || @files.any? { |path| path.match?(/\.(?:wav|mp3|m4a|aac|ogg|flac)\z/i) }
+        biz = target_has?("BIZ")
+        {
+          local_test_suite: local_surface("tests"),
+          local_runtime: local_surface("runtime"),
+          local_deployment_manifest: local_surface("deployment"),
+          document_rendering: external_row(
+            documents, "format-aware source check and rendered-output comparison are not established by file signatures",
+          ),
+          assistive_technology: external_row(
+            rails, "browser and DOM checks do not prove screen-reader or real-device acceptance",
+          ),
+          live_openbsd_host: external_row(
+            openbsd, "local manifests do not prove the live host, daemon or deployed service state",
+          ),
+          human_listening: external_row(
+            studio, "asset integrity and signal checks do not establish musical or listening quality",
+          ),
+          business_and_legal_review: external_row(
+            biz, "business assumptions, factual claims and legal effect require qualified human review",
+          ),
+          user_acceptance: {
+            status: "NOT_RUN", applicable: false,
+            reason: "operator/user acceptance remains a human decision outside an automated repair run",
+          },
+        }
+      end
+
+      def workflow_receipts
+        visual_applicable = target_has?("RAILS")
+        visual_scheduled = %w[all elevate visual].include?(@lane)
+        visual = if !visual_applicable || !visual_scheduled
+                   { status: "NOT_RUN", applicable: false, reason: "grouped visual repair is not scheduled for this target/lane" }
+                 elsif !@visual_groups.is_a?(Hash)
+                   { status: "INCONCLUSIVE", applicable: true, reason: "grouped visual repair ran without a recorded outcome" }
+                 else
+                   findings = read(@visual_groups, :findings, 0).to_i
+                   remaining = read(@visual_groups, :remaining, findings).to_i
+                   resweep = read(@visual_groups, :resweep) == true
+                   status = if findings.zero? || (resweep && remaining.zero?)
+                              "PASS"
+                            elsif resweep
+                              "FAIL"
+                            else
+                              "INCONCLUSIVE"
+                            end
+                   {
+                     status:, applicable: true, findings:,
+                     groups: read(@visual_groups, :groups, 0).to_i,
+                     cleared: read(@visual_groups, :cleared, 0).to_i,
+                     remaining:, resweep:,
+                     report: read(@visual_groups, :report),
+                   }
+                 end
+        improvement_scheduled = %w[all elevate].include?(@lane)
+        improvement = if !improvement_scheduled
+                        { status: "NOT_RUN", applicable: false, reason: "improvement lane not selected" }
+                      elsif !@improvement.is_a?(Hash) || read(@improvement, :evaluated_passes, 0).to_i.zero?
+                        { status: "INCONCLUSIVE", applicable: true, reason: "improvement engine recorded no assessment" }
+                      else
+                        findings = read(@improvement, :findings, 0).to_i
+                        fixed = read(@improvement, :fixed, 0).to_i
+                        status = findings.zero? || fixed >= findings ? "PASS" : "INCONCLUSIVE"
+                        @improvement.merge(status:, applicable: true)
+                      end
+        { grouped_visual_repair: visual, continuous_improvement: improvement }
+      end
+    end
     end
   end
 end

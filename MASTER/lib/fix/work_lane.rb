@@ -5,14 +5,10 @@ module Master
     # Which half of /fix a run does (not a model lane, Io::LaneSelection). A RAILS run once
     # rendered, researched and mapped for fifty minutes before a one-line RuboCop repair.
     module WorkLane
-      # code: code laws only, no claim about anything rendered. standard (the bare default on a
-      # rendered target, Johann 2026-11-07): code laws PLUS the rendered observation — layout sweep,
-      # browser checks, screenshot sweep, rendered visual review — so a plain "/fix RAILS/..." sees
-      # the pages before and after its repairs without anyone asking for it. visual (RAILS only,
-      # explicit): one sweep grouped by cause, mechanical fixers first. all: both plus research and
-      # architecture, as /fix ran before lanes. elevate: the improvement lane — /fix does not only
-      # repair, it improves, ideates and restructures toward each domain's ideal (code, prose,
-      # visual, music) per laws.yml.
+      # Lanes choose work depth; the Law and quality assessment remain universal. Standard
+      # observes rendered RAILS surfaces, visual performs grouped RAILS repair, all combines
+      # research/architecture/rendered review/grouped repair with every elevation stage, and
+      # elevate concentrates on improvement, ideation and restructuring.
       NAMES = %i[code standard visual all elevate].freeze
       DEFAULT = :code
 
@@ -35,7 +31,7 @@ module Master
         code: %i[conversation code_passes],
         standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
-        all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes],
+        all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_prose improve_visual improve_music ideate restructure_drive],
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze
 
@@ -61,6 +57,11 @@ module Master
         rendered = relative.upcase == "RAILS" || relative.upcase.start_with?("RAILS/")
 
         rendered ? :standard : DEFAULT
+      end
+
+      def rendered_target?(target)
+        relative = target.to_s.sub(%r{\A.*?(?=RAILS(?:/|\z))}i, "")
+        relative.upcase == "RAILS" || relative.upcase.start_with?("RAILS/")
       end
 
       def current = @lock.synchronize { @current }

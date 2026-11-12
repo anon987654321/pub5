@@ -103,6 +103,8 @@ module Master
             @assessment_unclassified = []
             @assessment_unmeasurable = Set.new
             @assessment_last_pass = 0
+            @assessment_visual_group_result = nil
+            @assessment_improvement_state = { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
 
             require File.join(Master::ROOT, "law", "definition") unless defined?(::Law::Definition)
             ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
@@ -322,9 +324,43 @@ module Master
             { status: "incomplete", reason: "matrix summary failed: #{e.class}: #{e.message.to_s[0, 150]}" }
           end
 
+          def record_visual_group_result!(result)
+            @assessment_visual_group_result = result.respond_to?(:to_h) ? result.to_h : result
+            self
+          end
+
+          def record_improvement_assessment!(pass:, findings:, ideas: 0, restructures: 0)
+            @assessment_improvement_state ||= { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
+            @assessment_improvement_state[:evaluated_passes] += 1
+            @assessment_improvement_state[:last_pass] = Integer(pass)
+            @assessment_improvement_state[:findings] += Integer(findings)
+            @assessment_improvement_state[:ideas] += Integer(ideas)
+            @assessment_improvement_state[:restructures] += Integer(restructures)
+            self
+          end
+
+          def record_improvement_repair!(findings:, fixed:)
+            @assessment_improvement_state ||= { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
+            @assessment_improvement_state[:fixed] += [Integer(fixed), Integer(findings)].min
+            self
+          end
+
+          def assessment_quality_contract
+            QualityContract.build(
+              ledger: @assessment_ledger&.evidence_report,
+              surface_report: @assessment_surface_report,
+              target: @assessment_plan&.target,
+              files: Array(@assessment_plan&.sources).map(&:path),
+              lane: WorkLane.current,
+              visual_groups: @assessment_visual_group_result,
+              improvement: @assessment_improvement_state,
+            )
+          end
+
           def assessment_matrix_evidence
             {
               status: assessment_matrix_status.to_s,
+              quality_contract: assessment_quality_contract,
               plan_digest: @assessment_plan&.digest,
               source_digest: @assessment_plan&.source_digest,
               **assessment_matrix_summary,
@@ -354,6 +390,7 @@ module Master
                 exclusion_digest: @assessment_plan&.exclusion_digest,
                 adapter_digest: @assessment_plan&.adapter_digest,
                 file_coverage: assessment_file_coverage_summary,
+                quality_contract: assessment_quality_contract,
               }
             end
 
@@ -375,6 +412,7 @@ module Master
                 surface_coverage: @assessment_surface_report,
                 file_coverage: @assessment_file_coverage || assessment_file_coverage_summary,
                 ledger: @assessment_ledger.evidence_report,
+                quality_contract: assessment_quality_contract,
               }
             end
           rescue StandardError => e

@@ -105,9 +105,6 @@ module Master
             )
           end
           result = blocked_by_gaps(result)
-          RunBudget.finish_run(reason: run_end_reason(result))
-          state = terminal_state_for(result)
-          @last_terminal_state = state
           convergence_evidence = @convergence_discipline.receipt if @convergence_discipline.respond_to?(:receipt)
           evidence = convergence_evidence&.dup || {}
           plan_evidence = @fix_plan&.to_h&.slice(
@@ -124,6 +121,15 @@ module Master
                             end
           matrix_evidence = matrix_evidence.dup
           matrix_evidence[:ledger_receipt] = assessment_receipt
+          quality_contract = matrix_evidence[:quality_contract] || matrix_evidence["quality_contract"] || {}
+          quality_status = quality_contract[:overall_status] || quality_contract["overall_status"] || "BLOCKED"
+          if terminal_state_for(result) == :done && %w[FAIL BLOCKED].include?(quality_status.to_s)
+            result = terminal(:blocked, "universal quality contract #{quality_status}; inspect the persisted quality receipt")
+          end
+          RunBudget.finish_run(reason: run_end_reason(result))
+          state = terminal_state_for(result)
+          @last_terminal_state = state
+          evidence[:quality_contract] = quality_contract
           evidence[:assessment_matrix] = matrix_evidence
           evidence[:assessment_ledger_receipt] = assessment_receipt
           assessment_verification = assessment_verification_result(

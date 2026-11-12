@@ -86,6 +86,7 @@ module Master
             ].join("\n\n")
             result = loop.run_once(files, external_violations: findings)
             fixed = result[:fixed].to_i
+            record_improvement_repair!(findings: findings.size, fixed:) if respond_to?(:record_improvement_repair!)
             breakdown = result[:breakdown].to_h
             Master::Trace::Dmesg.status(
               "fix0",
