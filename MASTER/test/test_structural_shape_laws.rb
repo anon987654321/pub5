@@ -4,9 +4,8 @@ require_relative "test_helper"
 require "review/scan/law_tree"
 require "prism"
 
-# Five shape rules from structural_rules.rb that nothing named until now:
-# FileLayoutLaw, CyclomaticComplexityLaw, DataClassLaw, MiddleManLaw and
-# NestingDepthLaw.
+# Structural AST rules in the Prism law tree. Every detector needs both a known-positive
+# and a known-negative fixture; thresholds and intentional exemptions are part of the law.
 #
 # Each is tested the way law/ tests its own — a source it must flag and a source
 # it must not — because a detector proved only to fire says nothing about what it
@@ -17,6 +16,65 @@ class TestStructuralShapeRules < Minitest::Test
 
   def flags(rule, source, path: "lib/thing.rb")
     rule.check(source, path:).map(&:message)
+  end
+
+  # PREDICATE_SIDE_EFFECTS — syntactic writes and command calls in query-named methods.
+  def test_predicate_side_effects_flags_a_predicate_that_writes_instance_state
+    found = flags(Laws::PredicateSideEffectsLaw.new, <<~RUBY)
+      def ready?
+        @ready = true
+        true
+      end
+    RUBY
+
+    assert_equal 1, found.size
+    assert_includes found.first, "ready?"
+    assert_includes found.first, "variable write"
+  end
+
+  def test_predicate_side_effects_flags_command_calls_in_getters_and_finders
+    found = flags(Laws::PredicateSideEffectsLaw.new, <<~RUBY)
+      def get_user(id)
+        User.create!(id:)
+      end
+
+      def find_user(id)
+        User.find_by!(id:)
+      end
+    RUBY
+
+    assert_equal 2, found.size
+    assert_includes found.first, "create!"
+    assert_includes found.last, "find_by!"
+  end
+
+  def test_predicate_side_effects_spares_observational_queries_and_explicit_commands
+    assert_empty flags(Laws::PredicateSideEffectsLaw.new, <<~RUBY)
+      def ready?
+        !!@ready
+      end
+
+      def find_user(id)
+        User.find_by(id:)
+      end
+
+      def mark_ready
+        @ready = true
+        save!
+      end
+    RUBY
+  end
+
+  def test_predicate_side_effects_keeps_block_side_effects_in_the_method_scope
+    found = flags(Laws::PredicateSideEffectsLaw.new, <<~RUBY)
+      def all_saved?
+        records.each { |record| record.save! }
+        true
+      end
+    RUBY
+
+    assert_equal 1, found.size
+    assert_includes found.first, "save!"
   end
 
   # FILE_LAYOUT — the header and the position of the private marker.
