@@ -64,6 +64,8 @@ class TestCLITerminalOutput < Minitest::Test
       assert_includes expected, "/review "
       assert_includes expected, "/critique "
       assert_includes expected, "/doctor "
+      assert_empty Master::CLI::Session::QUICK_COMMAND_COMPLETIONS - Master::CLI::CommandRegistry.slash_commands
+      refute_includes expected, "/deploy "
     end
     Reline.stub(:line_buffer, "/") do
       expected = Master::CLI::CommandRegistry.slash_commands.reject { |command| %w[/exit /quit].include?(command) }
