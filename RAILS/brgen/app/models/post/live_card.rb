@@ -79,8 +79,8 @@ class Post
       broadcast_card_replacement if saved_change_to_title? || saved_change_to_content?
     end
 
-    # Read from the table: Vote moves the score with update_all and the comment
-    # count is a counter cache, so neither is on this instance.
+    # Read from the table: Vote moves the score with update_all; comments and
+    # reposts move their counter-cache columns, so none is on this instance.
     def live_counts_content
       rows = Post.unscoped.where(id:)
       score, comments, reposts = rows.pick(:score, :comments_count, :reposts_count)
