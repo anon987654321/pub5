@@ -159,11 +159,15 @@ class TestComputePool < Minitest::Test
     now = Time.utc(2026, 11, 12, 12).to_f
     @pool.instance_variable_set(:@clock, -> { now })
 
+    # Old failures remain in the lifetime counters but expire from route choice.
+    5.times { @pool.record(model: grok, status: :failure, error: "old outage") }
+    @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_WINDOW_S + 1 })
     2.times { @pool.record(model: grok, status: :success, latency_ms: 100) }
+    @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_WINDOW_S + 2 })
     2.times { @pool.record(model: opus, status: :failure, error: "session quota exhausted") }
 
     candidate = lambda do |id|
-      _success_rate, _latency_factor, evidence_factor = @pool.send(:empirical_stats, id)
+      success_rate, latency_factor = @pool.send(:empirical_stats, id)
       Master::CLI::Routing::ComputePool::Candidate.new(
         id:,
         quality: 1.0,
@@ -172,9 +176,8 @@ class TestComputePool < Minitest::Test
         context_window: 128_000,
         availability: 1.0,
         tool_support: 1.0,
-        success_rate: 1.0,
-        latency_factor: 1.0,
-        evidence_factor:,
+        success_rate:,
+        latency_factor:,
         score: { "quality" => 1.0, "speed" => 1.0, "cost" => 1.0 },
       )
     end
@@ -190,11 +193,11 @@ class TestComputePool < Minitest::Test
     @pool.instance_variable_set(:@clock, -> { now })
     @pool.record(model:, status: :success, latency_ms: 100)
 
-    fresh = @pool.send(:empirical_stats, model).last
+    fresh = @pool.send(:empirical_stats, model).first
     @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_HALF_LIFE_S })
-    decayed = @pool.send(:empirical_stats, model).last
+    decayed = @pool.send(:empirical_stats, model).first
     @pool.instance_variable_set(:@clock, -> { now + Master::CLI::Routing::ComputePool::OUTCOME_WINDOW_S + 1 })
-    expired = @pool.send(:empirical_stats, model).last
+    expired = @pool.send(:empirical_stats, model).first
 
     assert_operator fresh, :>, decayed
     assert_in_delta 1.0, expired, 0.0001
