@@ -78,6 +78,7 @@ module Master
       def stop_process_group(pid, term_grace: TERM_GRACE_S, kill_grace: KILL_GRACE_S)
         group = Integer(pid)
         return false unless group.positive?
+        return false if group == Process.getpgrp
 
         signal_group("TERM", group)
         return true if wait_for_group_exit(group, term_grace)
