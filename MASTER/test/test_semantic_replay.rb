@@ -28,7 +28,10 @@ class TestSemanticReplay < Minitest::Test
 
     def check(_code, path:)
       @calls += 1
-      raise "semantic assessment INCONCLUSIVE: lane down" if @answer == :inconclusive
+      if @answer == :inconclusive
+        raise Master::Review::Scan::Detector::SemanticAssessmentInconclusive,
+              "semantic assessment INCONCLUSIVE: lane down"
+      end
 
       [Finding.build(law: "MODEL", message: "drift in #{File.basename(path)}", line: 2)]
     end
