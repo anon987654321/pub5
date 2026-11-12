@@ -8,10 +8,16 @@
 <% media = capture do %>
   <% cache [post, :embed, I18n.locale] do %><%= render("shared/link_embed", embed:) %><% end %>
 <% end if embed %>
+<% comment_count = post.comment_count.to_i %>
 <% post_actions = capture do %>
   <%= link_to post_path(post, anchor: "comments"), class: "feed-action",
-        aria: { label: t("comments.title") }, title: t("comments.title") do %>
+        aria: { label: t("comments.title"), describedby: dom_id(post, :comment_count) },
+        title: t("comments.title") do %>
     <%= render "shared/feed_icon", name: "comment" %>
+    <%= tag.span(comment_count.positive? ? comment_count : "",
+                 id: dom_id(post, :comment_count),
+                 class: "feed-action-count",
+                 data: { post_comment_count: dom_id(post) }) %>
   <% end %>
   <% unless guest? %>
     <%= render "posts/like_button", post: post %>
