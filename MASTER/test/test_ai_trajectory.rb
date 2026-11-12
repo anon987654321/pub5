@@ -31,6 +31,9 @@ class TestAiTrajectory < Minitest::Test
     assert_includes prompt, "remote commands follow the verified target shell"
     assert_includes prompt, "target-release manuals"
     assert_includes prompt, "never assume GNU/Linux options or paths"
+    assert_includes prompt, "every file edit under OPENBSD/"
+    assert_includes prompt, "all OPENBSD file types and subsystems are covered"
+    assert_includes prompt, "missing/partial evidence = BLOCKED"
     assert_includes prompt, "OpenBSD base shells: ksh and /bin/sh"
     assert_includes prompt, "bash is not assumed"
     assert_includes prompt, "Deploy::Inventory is app inventory, not host inventory"
@@ -39,7 +42,7 @@ class TestAiTrajectory < Minitest::Test
     assert_includes prompt, "read-only evidence first"
     assert_includes prompt, "preconditions, privilege, blast radius and recovery"
     refute_includes prompt, "shell execution: zsh only"
-    assert_operator prompt.bytesize, :<, 7_000
+    assert_operator prompt.bytesize, :<, 8_000
   end
 
   def test_operator_manifest_exposes_openbsd_shell_and_rollout_contract
@@ -51,6 +54,11 @@ class TestAiTrajectory < Minitest::Test
     assert_equal 1, manifest.dig("operations", "default_concurrency")
     assert_equal "OPENBSD/data/operator.yml#host_scope", manifest.dig("operations", "host_scope_source")
     assert_equal "SERIAL_ROLLOUT", manifest.dig("operations", "rollout")[7]
+    manuals = manifest.fetch("manual_pages")
+    assert_equal true, manuals.fetch("required_before_openbsd_file_edits")
+    assert_equal true, manuals.fetch("required_before_native_interface_use")
+    assert_equal "all_files_under_OPENBSD", manuals.fetch("repository_scope")
+    assert_equal "BLOCKED", manuals.fetch("missing_or_partial")
   end
 
   def test_openbsd_host_scope_is_single_host_and_never_fans_out_from_app_inventory

@@ -154,14 +154,65 @@ established first.
 
 ## Command selection and diagnosis
 
-The target host determines command semantics. Begin with bounded, read-only facts:
-`uname -srm`, `uname -v`, `id`, `pwd`, and `command -v <utility>`. Record
-the release and relevant PATH entries; do not dump the full environment, which
-may contain secrets. Use `man <utility>` and `man -k <topic>` on the target.
-If a local manual is unavailable, consult the explicit release path
-at `https://man.openbsd.org/OpenBSD-<release>/<page>` and cite the release actually
-observed; current-manual pages are not proof for an older host. Never assume
-Linux `/proc`, GNU-only flags, or an optional package exists on the host.
+### Mandatory full-source and full-manual preflight
+
+This gate covers **every file under `OPENBSD/`** and every OpenBSD-native
+command, tool, daemon and configuration interface. It is not limited to
+`rc`, `rcctl`, or configuration files under `etc/`.
+
+Before editing any file in this tree, read the entire current file and the
+relevant dependencies, callers, consumers, generators, schemas and tests.
+Before invoking or relying on an OpenBSD-native interface, read the complete
+manual pages for the exact target release and architecture:
+
+- every native command/tool the operation will invoke;
+- each configuration-file format/interface it reads or changes;
+- the owning daemon/service and its lifecycle/control interface;
+- the validation, reload, restart, update or recovery tools involved;
+- every relevant `SEE ALSO` page needed to understand the interface.
+
+This applies across boot and init, services, accounts, permissions, storage,
+filesystems, packages, patching, kernel/sysctl, devices, networking, PF, DNS,
+NSD, relayd, TLS/certificates, cron, logging, monitoring, backup and recovery.
+Those examples are illustrative, not a finite list. It applies to shell/ksh,
+Ruby, service scripts, config, data, checks, tests, installers, documentation
+and generated inputs. A prose/data file with no native interface still needs
+complete source and schema/contract review; do not invent irrelevant manuals.
+
+1. Establish the target host, OS release and architecture from authoritative
+   inventory or a minimal read-only identity probe. Record hostname,
+   `uname -srm`, `uname -v` and relevant PATH entries. Do not dump secrets.
+2. Read each required page in full, including all sections; a synopsis,
+   `man -k` result, search excerpt or remembered behavior is not a read.
+   On the target, use the native manual reader with a non-interactive pager
+   such as `man -P cat <section> <page>`. Follow relevant `SEE ALSO`
+   references until the tool, file format and service lifecycle are clear.
+3. Record one receipt per page: host, OS release, architecture, canonical
+   page and section, source (target-local manual or exact release-versioned
+   manual URL), SHA-256 of the full rendered text, byte count, line count and
+   `complete=true`. The full content must be available for inspection;
+   a hash alone does not prove it was read.
+4. If a page is missing, mismatched, partial, truncated or unverifiable,
+   report BLOCKED. Do not invoke the native tool, operate the daemon, edit
+   the file or continue with dependent operations. Do not substitute current
+   manuals for an older target release or training-data assumptions. When
+   the target manual is unavailable locally, use only the exact release page
+   at `https://man.openbsd.org/OpenBSD-<release>/<page>`, and cite that
+   release; a current-manual URL is not equivalent.
+
+The manual-reading interface itself and the minimum read-only identity probe
+needed to establish an unknown target are the only preflight exceptions.
+For example, a PF change requires the full target-release `pfctl(8)` and
+`pf.conf(5)` pages plus relevant network/anchor pages; an NSD change needs
+the relevant `nsd(8)`, `nsd.conf(5)`, zone-format and reload pages; a package
+change needs the package tools and package-specific documentation. Apply the
+same dependency-driven rule to every native interface; these examples do not
+limit it.
+
+The target host determines command semantics. Begin with bounded, read-only
+identity facts only, then satisfy the preflight above before using other
+utilities. Never assume Linux `/proc`, GNU-only flags, or an optional package
+exists on the host.
 
 For a daemon incident, distinguish configured, enabled, running, locally healthy,
 and publicly reachable. Check the relevant `rcctl configtest` and `rcctl check`,

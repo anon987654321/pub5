@@ -57,6 +57,7 @@ class TestFixProtocol < Minitest::Test
     autonomy = ::Law.definitions.fetch(:OPERATOR_AUTONOMY)
     minimal = ::Law.definitions.fetch(:MINIMAL_FOOTPRINT)
     collapse = ::Law.definitions.fetch(:COLLAPSE_BEFORE_ADDING)
+    rtfm = ::Law.definitions.fetch(:RTFM_FIRST)
 
     # The protocol text renders with wrapped lines; whitespace-normalize the
     # practice the same way the other prose assertions below do.
@@ -69,6 +70,10 @@ class TestFixProtocol < Minitest::Test
     assert_match(/Git-reversible source edits/i, autonomy.practice)
     assert_match(/tracked edits, refactors, renames and deletions/i, minimal.practice)
     assert_match(/adding is the last resort/i, collapse.practice)
+    assert_match(/any file under OPENBSD\//i, rtfm.practice)
+    assert_match(/all relevant SEE ALSO pages/i, rtfm.practice)
+    assert_match(/Missing, mismatched, partial or unverifiable/i, rtfm.practice)
+    assert_match(/mean BLOCKED/i, rtfm.practice)
   end
 
   def test_external_context_carries_the_cross_tree_operating_model

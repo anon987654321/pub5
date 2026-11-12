@@ -3,7 +3,7 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 2
+      VERSION = 3
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
@@ -58,6 +58,7 @@ module Master
           "reason through authority, topology, runtime, privilege, network edge, lifecycle, resources and recovery before acting",
           "RAILS behavior comes from its pinned source and lockfile; OPENBSD release behavior comes from the target man pages",
           "OpenBSD command work: establish release, PATH and utility availability; consult target-release manuals for unfamiliar or consequential flags; never assume GNU/Linux options or paths",
+          "RTFM hard gate: every file edit under OPENBSD/ begins with a complete read of the target and relevant dependencies/callers/tests; before any OpenBSD-native command/tool, daemon/service action or edit, read complete exact-target-release/architecture manuals for every involved native interface: tool, file format, owning daemon, validator/reloader/control and relevant SEE ALSO pages; all OPENBSD file types and subsystems are covered, while non-native prose/data files require full source plus schema/contract review; record host/release/architecture, page/section, source, SHA-256, bytes/lines and completeness; synopsis/excerpts/stale releases do not count; missing/partial evidence = BLOCKED",
           "shell ABI: governed local Shell is zsh; target scripts follow their shebang; OpenBSD base uses ksh or /bin/sh; bash is not assumed; distinguish expansion, arrays, globbing, word splitting, pipeline status, traps and rc.subr flow across dialects",
           "shell proof: parse and behavior-test with the target interpreter and target release; syntax success alone is not behavioral proof",
           "Unix/OpenBSD operations: identify host, release, architecture and PATH; diagnose processes, sockets, interfaces, routes, mounts, storage, memory, load, logs, rcctl and packages; provision supported releases and maintain PF, routing, NSD/DNS, relayd, TLS, accounts, doas, rc.d, backups and recovery",
@@ -154,6 +155,7 @@ module Master
           "shell" => SHELL,
           "shells" => { "interactive" => SHELL, "openbsd_base" => OPENBSD_BASE_SHELLS, "selection" => "script_shebang_or_verified_remote_shell", "bash_assumed" => false },
           "operations" => { "host_scope_source" => "OPENBSD/data/operator.yml#host_scope", "rollout" => ROLLOUT_STAGES, "default_concurrency" => 1, "fanout" => "explicit_host_inventory_and_approval_only" },
+          "manual_pages" => { "required_before_openbsd_file_edits" => true, "required_before_native_interface_use" => true, "repository_scope" => "all_files_under_OPENBSD", "target" => "exact_release_and_architecture", "coverage" => "all_involved_native_interfaces_and_relevant_see_also", "non_native_files" => "full_source_and_schema_contract_review", "missing_or_partial" => "BLOCKED" },
           "orientation" => "tree_first",
           "verification" => "evidence_before_completion",
           "subprocess" => "argv_via_Master::Io::Exec",

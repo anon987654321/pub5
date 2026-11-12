@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "yaml"
 require "fileutils"
 require "json"
 require "stringio"
@@ -510,5 +511,20 @@ class Pub5AdminTest < Minitest::Test
     assert_includes runbook, "`pfctl -nf /etc/pf.conf`"
     assert_includes runbook, "configured, enabled, running, locally healthy,"
     assert_includes runbook, "Do not infer success from a wrapper's exit code"
+
+    assert_includes runbook, "### Mandatory full-source and full-manual preflight"
+    assert_includes runbook, "every file under `OPENBSD/`"
+    assert_includes runbook, "every OpenBSD-native"
+    assert_includes runbook, "all relevant `SEE ALSO` pages"
+    assert_includes runbook, "SHA-256 of the full rendered text"
+    assert_includes runbook, "a hash alone does not prove it was read"
+    assert_includes runbook, "report BLOCKED"
+    assert_includes runbook, "https://man.openbsd.org/OpenBSD-<release>/<page>"
+    policy = YAML.safe_load_file(File.expand_path("../data/operator.yml", __dir__)).fetch("manual_page_policy")
+    assert_equal "all_files_under_OPENBSD", policy.fetch("repository_scope")
+    assert_equal true, policy.dig("coverage", "all_openbsd_subsystems")
+    assert_equal true, policy.dig("coverage", "all_openbsd_file_types")
+    assert_equal true, policy.fetch("receipt_requires_full_content_read")
+    assert_equal "BLOCKED", policy.fetch("failure_status")
   end
 end

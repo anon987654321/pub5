@@ -19,6 +19,35 @@ host_scope:
     - host-scoped preflight, privilege policy, health checks and recovery evidence
     - explicit operator approval of the target set and rollout window
 
+# Applies to every path beneath OPENBSD/, not only etc/ or live operations.
+# Detailed process and receipt format live in OPENBSD/RUNBOOK.md.
+manual_page_policy:
+  repository_scope: all_files_under_OPENBSD
+  before_edit:
+    - read_complete_target_file
+    - read_relevant_dependencies_callers_consumers_generators_schemas_tests
+  before_native_use:
+    - command_or_tool
+    - daemon_or_service_action
+    - configuration_interface_read_or_write
+  manual_scope:
+    - exact_target_release_and_architecture
+    - complete_command_or_tool_page
+    - complete_configuration_format_page_when_applicable
+    - owning_daemon_and_service_lifecycle_pages
+    - validator_reload_restart_update_and_recovery_pages_as_applicable
+    - all_relevant_see_also_pages
+  coverage:
+    all_openbsd_subsystems: true
+    all_openbsd_file_types: true
+    examples_are_not_an_allowlist: true
+    non_native_prose_and_data: full_source_and_schema_contract_review
+  receipt_fields: [hostname, os_release, architecture, page, section, source, sha256, bytes, lines, complete]
+  receipt_requires_full_content_read: true
+  bootstrap_exceptions: [manual_reader, minimum_read_only_target_identity_probe]
+  reject: [synopsis_only, search_excerpt, remembered_behavior, current_manual_for_older_release, missing_page, truncated_output, unverified_digest]
+  failure_status: BLOCKED
+
 stack:
   app_server: Falcon only on vm23 (falcon serve in rc.d). No Puma in production.
   solid_queue: >-

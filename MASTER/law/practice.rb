@@ -146,14 +146,32 @@ end
 Law.define(:RTFM_FIRST) do
   source "MASTER constitution (soul.yml absolute.rules)"
   practice <<~TEXT
-    read the man page or upstream reference docs before using any command,
-    config file, framework, operating system, or programming language.
-    Training-data assumptions about flags, syntax, and behavior are unreliable
-    - verify against the source.
+    before using any OpenBSD-native command or tool, operating a daemon or
+    service, or editing any file under OPENBSD/, read the complete current
+    target file and its direct dependencies/callers/tests as applicable.
+    For every native interface the file invokes, defines, configures or affects,
+    read the complete manual page for the exact target release and architecture:
+    command/tool, configuration format, owning daemon/service, validator,
+    reload/control interface, and all relevant SEE ALSO pages. Follow relevant
+    cross-references until the interface and its consequences are understood.
+    This applies across every subsystem and every file type in OPENBSD/:
+    source, shell, ksh, Ruby, service scripts, config, data, checks, tests,
+    installer, documentation and generated inputs. A file with no native
+    interface still requires complete source and contract/schema review; do
+    not invent irrelevant manual pages. A synopsis, search result, excerpt,
+    remembered behavior, or current manual for an older release is not a read.
+    Identify the target host, OS release and architecture; record each page's
+    canonical name/section, source, SHA-256, byte/line count and complete status
+    in the operation preflight. Missing, mismatched, partial or unverifiable
+    required manuals mean BLOCKED: do not invoke the command, operate the
+    daemon, edit the file or proceed with a dependent operation. Only the
+    manual-reading interface and the minimum read-only identity probe needed
+    to establish the target are exempt. Training-data assumptions are not
+    operational authority.
   TEXT
-  fix "read the man page or upstream reference docs before using any command, config file, framework, operating syste"
-  bad  "guesses the flag from memory"
-  good "reads the man page on the box first"
+  fix "Read the full target file and relevant contracts, then complete exact-target manuals for each native interface and dependency before acting; otherwise BLOCK."
+  bad  "edits an OPENBSD file or runs a native tool from memory, then checks the manual afterwards"
+  good "reads the full source and dependencies, pins host/release/architecture, reads all applicable manuals in full, records digest/length receipts, then acts"
 end
 
 Law.define(:VERIFY_THE_INSTRUMENT) do

@@ -4076,7 +4076,8 @@ law_catalogue:
       autofix: never
     RTFM_FIRST:
       definition_sources: [MASTER/law/practice.rb]
-      severity: warning
+      severity: error
+      autofix: never
     rubocop:
       definition_sources: [MASTER/law/linters.rb]
       severity: warning
