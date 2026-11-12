@@ -1010,6 +1010,83 @@ module Master
           proved_by "test/test_structural_shape_laws.rb"
         end
 
+        # Predicate and lookup names advertise observation. This detector catches
+        # only concrete AST writes and known command calls; it does not infer
+        # boolean return types or judge arbitrary method names by prose.
+        class PredicateSideEffectsLaw < Detector
+          LOOKUP_NAME = /\A(?:get|find)_/
+          MUTATING_CALLS = %i[
+            save save! update update! update_attribute update_attributes
+            destroy destroy! delete delete! delete_all clear clear!
+            push push! pop shift unshift append prepend concat insert replace
+            add add! remove remove! create create! touch increment! decrement!
+            write write_attribute []= <<
+          ].freeze
+
+          def check_ast(ast, _code, path:)
+            return [] unless ast
+
+            walk(ast).filter_map do |node|
+              next unless node.is_a?(Prism::DefNode)
+
+              name = node.name.to_s
+              next unless name.end_with?("?") || name.match?(LOOKUP_NAME)
+
+              effects = side_effect_evidence(node.body)
+              next if effects.empty?
+
+              finding(
+                line: node.location.start_line,
+                message: "#{name} reads by name but has side effects (#{effects.join(", ")}) - separate the query from the command",
+              )
+            end
+          end
+
+          private
+
+          def side_effect_evidence(body)
+            effects = []
+            walk_method_body(body) do |node|
+              if variable_write?(node)
+                effects << "variable write"
+              elsif node.is_a?(Prism::CallNode) && MUTATING_CALLS.include?(node.name)
+                effects << node.name.to_s
+              end
+            end
+            effects.uniq
+          end
+
+          # Do not attribute a nested method/class definition's body to the
+          # surrounding predicate; blocks and lambdas remain part of its work.
+          def walk_method_body(node, root: true, &block)
+            return unless node.is_a?(Prism::Node)
+            return if !root && (node.is_a?(Prism::DefNode) || node.is_a?(Prism::ClassNode) || node.is_a?(Prism::ModuleNode))
+
+            block.call(node)
+            node.compact_child_nodes.each { |child| walk_method_body(child, root: false, &block) }
+          end
+
+          def variable_write?(node)
+            node.class.name.match?(/::(?:Instance|Class|Global)Variable(?:And|Or|Operator)?WriteNode\\z/)
+          end
+        end
+
+        ::Law.define(:PREDICATE_SIDE_EFFECTS) do
+          detector PredicateSideEffectsLaw
+          tags %i[POLS CQS CLEAN_CODE]
+          source "Command-query separation and principle of least surprise"
+          ask "Does a predicate, getter or finder perform a concrete state write or command-like side effect despite advertising an observation?"
+          fix "Keep query-named methods observational; move state changes to an explicitly named command."
+          bad <<~'X'
+          def ready?; @ready = true; save!; end
+          X
+          good <<~'X'
+          def ready?; !!@ready; end
+          def mark_ready; @ready = true; save!; end
+          X
+          proved_by "test/test_structural_shape_laws.rb"
+        end
+
         StructuralRules = Module.new
       end
     end
