@@ -7,6 +7,7 @@ require "securerandom"
 require "tempfile"
 require "timeout"
 require "uri"
+require_relative "../lora/consent"
 
 module Studio
   # Studio-owned provider client. MASTER has its own client and runtime policies.
@@ -116,8 +117,17 @@ module Studio
           webhook_events_filter: nil,
           wait: true,
           extra_input: {},
-          version: nil
+          version: nil,
+          subject:
         )
+          subject = subject.to_s
+          subject_directory = File.join(Studio::Lora::Consent::ROOT, subject)
+          Studio::Lora::Consent.require!(
+            subject:, subject_directory:, required_sources: Studio::Lora::Consent.required_source_sets(
+              subject:, subject_directory:
+            )
+          )
+
           timeout = operation_timeout!(timeout, "training timeout")
           photos_zip_url = training_zip_url!(photos_zip_url)
           trigger_word = training_trigger!(trigger_word)
