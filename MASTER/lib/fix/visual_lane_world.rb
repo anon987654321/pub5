@@ -232,6 +232,11 @@ module Master
       # A layout sweep as VisualLane reads it: its findings, and from the browser sweep's
       # evidence manifest the page URL and screenshot of every route/viewport cell.
       class SweepEvidence
+        # A review must judge this run's render, never a previous one's: the fallback
+        # below is bounded to manifests written after this process started, so a stale
+        # sweep left in tmp cannot become the picture the critic reasons about.
+        PROCESS_STARTED_AT = Time.now
+
         def initialize(bus: nil) = @bus = bus
 
         def read(result)
@@ -256,14 +261,17 @@ module Master
         def surface_id(row) = [row["app"], row["surface"], row["viewport"]].join("/")
 
         # Named in the sweep's warnings when it rendered; otherwise the newest manifest, which a
-        # replayed sweep (Deploy::SweepReplay) read its rows from.
+        # replayed sweep (Deploy::SweepReplay) read its rows from. A manifest older than this
+        # process is a previous run's render, so it is refused rather than reviewed as current.
         def manifest_for(result)
           named = Array(result.warnings).filter_map { |line| line[/evidence manifest (\S+manifest\.json)/, 1] }.last
           return named if named
 
           default = File.join(Dir.tmpdir, "pub5-browser-diagnostics")
           base = File.expand_path(ENV.fetch("CHECK_BROWSER_DIAGNOSTICS_OUTPUT", default))
-          Dir.glob(File.join(base, "*", "manifest.json")).max_by { |path| File.mtime(path) }
+          Dir.glob(File.join(base, "*", "manifest.json"))
+             .select { |path| File.mtime(path) >= PROCESS_STARTED_AT }
+             .max_by { |path| File.mtime(path) }
         end
       end
     end

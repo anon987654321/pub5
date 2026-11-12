@@ -24,11 +24,12 @@ module Master
           @sweep_dir = sweep_dir
         end
 
-        # Copies each page's WIDTH shot out of the sweep; returns how many.
+        # Copies each page's WIDTH shot out of the sweep; returns how many. The
+        # old set goes first, always: a review must never read a shot this sweep
+        # did not render. A sweep that captured nothing therefore leaves no
+        # review set rather than last run's pictures under this run's name.
         def publish!(rows)
           picks = rows.filter_map { |row| pick(row) }
-          return 0 if picks.empty?
-
           Dir.glob(File.join(@rails, PATTERN)).each do |old|
             remove_shot(old)
           end

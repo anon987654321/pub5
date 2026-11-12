@@ -31,12 +31,13 @@ class TestScreenshotReviewSet < Minitest::Test
     end
   end
 
-  def test_a_sweep_that_captured_nothing_keeps_the_last_set
+  def test_a_sweep_that_captured_nothing_leaves_no_review_set
     Dir.mktmpdir do |root|
       png(File.join(root, "RAILS", "screenshot_brgen_brgen_no.png"))
 
       assert_equal 0, ReviewSet.new(root:, sweep_dir: File.join(root, "sweep-x")).publish!([])
-      assert File.exist?(File.join(root, "RAILS", "screenshot_brgen_brgen_no.png"))
+      refute File.exist?(File.join(root, "RAILS", "screenshot_brgen_brgen_no.png")),
+             "a stale shot must never survive a sweep that rendered nothing"
     end
   end
 
