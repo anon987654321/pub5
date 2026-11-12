@@ -20,7 +20,7 @@ if $PROGRAM_NAME == __FILE__
     parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
   end.parse!
 
-  result =
+  result = begin
     if options[:check_model]
       abort "--replace is not valid with --check-model" if options[:replace]
       { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject]).validate_model! }
@@ -46,5 +46,9 @@ if $PROGRAM_NAME == __FILE__
         prompt, film: options[:film], duration: options[:duration]
       )
     end
+  rescue Studio::Lora::Consent::Error => error
+    warn "BLOCKED: #{error.message}"
+    exit 2
+  end
   puts JSON.generate(result)
 end
