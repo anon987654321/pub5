@@ -118,6 +118,11 @@ class EngineRenderSmokeTest < ActionDispatch::IntegrationTest
     restaurant.menu_items.create!(name: "Smoke soup", price_cents: 12_900, menu_category: category)
 
     host! "markedsplass.brgen.no"
+    get "/food"
+    assert_response :success, "canonical Marketplace food index 500'd: #{@response.body[0, 300]}"
+    assert_select ".deal-cats"
+    assert_select ".deal-card.restaurant .deal-card-hit", href: %r{\\A/food/restaurants/}
+
     get "/food/restaurants/#{restaurant.to_param}"
     assert_response :success, "marketplace food 500'd: #{@response.body[0, 300]}"
     assert_includes response.body, "Smoke Food"
