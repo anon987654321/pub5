@@ -918,7 +918,7 @@ end
       end
     end
 
-    expected = [:status, "fix0", "mode=read-only target=MASTER boundary=no-write-or-publish"]
+    expected = [:status, "fix0", "command_mode=repair execution=read-only target=MASTER boundary=no-write-or-publish"]
     assert_equal expected, events.first
     assert_operator events.index(expected), :<, events.index([:observe]),
                     "the operator must see the execution mode before preflight"
@@ -926,14 +926,15 @@ end
 
   def test_dispatch_announces_mode_before_target_preflight
     events = []
-    expected = [:status, "fix0", "mode=read-only target=MASTER boundary=no-write-or-publish"]
+    expected = [:status, "fix0", "command_mode=repair execution=read-only target=MASTER boundary=no-write-or-publish"]
 
     Master::Trace::Dmesg.stub(
       :status,
       ->(unit, message, **_options) { events << [:status, unit, message] },
     ) do
-      Master::CLI::CommandRegistry.stub(
-        :fix_targets,
+      Master::Fix::CritiquePin.stub(:focus, nil) do
+        Master::CLI::CommandRegistry.stub(
+          :fix_targets,
         lambda do |_target, root:|
           assert_equal expected, events.first,
                        "the operator must see mode and write boundary before target preflight"
@@ -947,6 +948,7 @@ end
           )
         end
         assert_equal "preflight sentinel", error.message
+        end
       end
     end
 
