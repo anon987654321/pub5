@@ -689,6 +689,29 @@ class TestTaskContract < Minitest::Test
     assert_match(/rc\.d\(8\)/, reason)
   end
 
+  def test_remote_absolute_openbsd_config_paths_require_the_tracked_source_read
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(interfaces: %w[pf(4) pf.conf(5) pfctl(8)]),
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
+    )
+
+    assert_match(/source-read receipt for existing target OPENBSD\/etc\/pf\.conf/, reason)
+  end
+
+  def test_remote_absolute_openbsd_config_paths_pass_with_source_and_manual_receipts
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(
+        source_paths: ["OPENBSD/etc/pf.conf"],
+        interfaces: %w[pf(4) pf.conf(5) pfctl(8)],
+      ),
+    )
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
+    )
+  end
+
   def test_openbsd_script_execution_requires_a_complete_source_read
     contract = openbsd_task_contract
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(

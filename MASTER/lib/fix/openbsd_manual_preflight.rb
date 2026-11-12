@@ -394,6 +394,12 @@ module Master
 
         argv = Shellwords.shellsplit(text)
         tokens = argv.flat_map { |token| token.include?(" ") ? Shellwords.shellsplit(token) : [token] }
+        remote = openbsd_ssh_command?(argv)
+        remote_targets = remote ? remote_openbsd_path_sources(tokens) : []
+        remote_targets.each do |relative|
+          reason = refusal_for_path(path: File.join(repo_root, relative), contract:, repo_root:)
+          return reason if reason
+        end
         if (target = openbsd_write_target(text, argv))
           reason = refusal_for_path(path: target, contract:, repo_root:)
           return reason if reason
@@ -406,7 +412,6 @@ module Master
         command_manuals.uniq!
         service_sources = rc_service_source_paths(tokens)
         openbsd_sources = openbsd_source_paths(tokens)
-        remote = openbsd_ssh_command?(argv)
         openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
         local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
         return unless remote || openbsd_script || (local_openbsd && command_manuals.any?)
@@ -487,6 +492,20 @@ module Master
           paths << "OPENBSD/etc/rc.d/#{match[1]}" if match
         end
         paths.uniq
+      end
+
+      def remote_openbsd_path_sources(tokens)
+        Array(tokens).filter_map do |token|
+          path = token.to_s
+          case path
+          when %r{\A/etc/(.+)\z}
+            "OPENBSD/etc/#{Regexp.last_match(1)}"
+          when %r{\A/var/nsd/(.+)\z}
+            "OPENBSD/var/nsd/#{Regexp.last_match(1)}"
+          when %r{\A/usr/local/(bin|sbin)/(.+)\z}
+            "OPENBSD/usr/local/#{Regexp.last_match(1)}/#{Regexp.last_match(2)}"
+          end
+        end.uniq
       end
 
       def openbsd_source_paths(tokens)
