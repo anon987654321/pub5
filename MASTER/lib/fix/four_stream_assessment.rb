@@ -485,8 +485,14 @@ module Master
           workflows.values.select { |row| row[:applicable] }
         matrix = matrix_summary
         dimension_statuses = dimensions.values.map { |row| row[:status] }
-        workflow_statuses = workflows.values.select { |row| row[:applicable] }.map { |row| row[:status] }
-        local_statuses = dimension_statuses + workflow_statuses
+        # Grouped visual repair is a local defect-removal gate. Continuous
+        # improvement is deliberately separate: an open elevation opportunity
+        # belongs in overall_status, not in the compliance verdict.
+        compliance_workflows = [:grouped_visual_repair].filter_map do |name|
+          row = workflows[name]
+          row[:status] if row && row[:applicable]
+        end
+        local_statuses = dimension_statuses + compliance_workflows
         compliance_status = if @ledger.nil?
                               "BLOCKED"
                             elsif local_statuses.include?("FAIL")
@@ -706,7 +712,10 @@ module Master
                       else
                         findings = read(@improvement, :findings, 0).to_i
                         fixed = read(@improvement, :fixed, 0).to_i
-                        status = findings.zero? || fixed >= findings ? "PASS" : "INCONCLUSIVE"
+                        # Findings are the latest post-repair assessment, not a
+                        # cumulative count of opportunities repeated across passes.
+                        # Only a clean re-observation proves this workflow complete.
+                        status = findings.zero? ? "PASS" : "INCONCLUSIVE"
                         @improvement.merge(status:, applicable: true)
                       end
         { grouped_visual_repair: visual, continuous_improvement: improvement }

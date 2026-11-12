@@ -15,7 +15,10 @@ module Law
     # Bringhurst governs all reader-facing copy, including Markdown read in a
     # terminal. Terminal output keeps its separate ASCII profile.
     TERMINAL_OUTPUT = %r{MASTER/(?:lib/(?:cli|voice/renderer|trace)|bin)/|face_ascii|dmesg}
-    PATH = %r{(?:/config/locales/[^/]+\.yml|\.html(?:\.erb)?|/docs/[^/]+\.md|/README\.md)\z}
+    # Every Markdown file is reader-facing copy, including BIZ plans, TODOs,
+    # tree READMEs and nested documentation. HTML/ERB and locale values remain
+    # scoped by their own readers below.
+    PATH = %r{(?:/config/locales/[^/]+\.yml|\.html(?:\.erb)?|\.md)\z}
     POINTS = { laquo: 0xAB, raquo: 0xBB, ndash: 0x2013, mdash: 0x2014, nbsp: 0xA0, times: 0xD7, degree: 0xB0,
                section: 0xA7, ellipsis: 0x2026 }.freeze
     MARKS = POINTS.transform_values { |point| [point].pack("U") }.freeze

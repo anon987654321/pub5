@@ -41,6 +41,13 @@ class TestImproveEngine < Minitest::Test
     assert finding[:fix].length > 20
   end
 
+  def test_business_plan_html_and_markdown_are_prose_elevation_surfaces
+    assert_equal :prose, Master::Fix::Improve::Domains.domain_for("BIZ/plan.html")
+    assert_equal :prose, Master::Fix::Improve::Domains.domain_for("BIZ/research/plan.md")
+    assert_equal :visual, Master::Fix::Improve::Domains.domain_for("RAILS/brgen/app/views/posts/index.html.erb")
+    assert_equal :visual, Master::Fix::Improve::Domains.domain_for("RAILS/brgen/app/assets/stylesheets/posts.scss")
+  end
+
   def test_elevates_prose_placeholders
     path = write("docs/README.md", "# X\n\n" + ("word " * 80) + "\n\nTODO: write this later.\n")
     findings = @engine.elevate(files: [path])

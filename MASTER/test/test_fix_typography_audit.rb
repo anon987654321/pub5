@@ -75,9 +75,14 @@ class TestFixTypographyAudit < Minitest::Test
     assert ::Law::Typesetting::PATH.match?("BIZ/plan.html")
     assert ::Law::Typesetting::PATH.match?("BIZ/research/bringhurst-strunk-research.md")
     assert ::Law::Typesetting::PATH.match?("MASTER/README.md")
+    assert ::Law::Typesetting::PATH.match?("TODO.md")
+    assert ::Law::Typesetting::PATH.match?("OPENBSD/docs/operations.md")
 
     require File.expand_path("../law/prose", __dir__) unless defined?(::Law::Prose)
     assert ::Law::Prose::SCOPES.fetch("nb").match?("BIZ/research/bringhurst-strunk-research.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("MASTER/README.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("MASTER/docs/quality.md")
+    assert ::Law::Prose::SCOPES.fetch("en").match?("MASTER/lib/cli/entry.rb")
     assert_includes ::Law.catalogue_entry("PROSE_OMIT_QUALIFIERS_NB").fetch("languages"), "markdown"
     assert_includes ::Law.catalogue_entry("PROSE_ACTIVE_VOICE_NB").fetch("languages"), "markdown"
   end

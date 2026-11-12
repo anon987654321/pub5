@@ -68,6 +68,10 @@ module Law
     # and in the Norwegian business plans, whose HTML is the canonical source. The
     # English values pair reads the same kind of file in English: the locale strings.
     SCOPES = {
+      # English prose reaches Ruby comments as before, plus reader-facing
+      # Markdown (README files, TODO and nested docs). Bokmål reaches the
+      # translation values and canonical BIZ HTML/Markdown sources.
+      "en" => %r{(?:\.rb\z|(?:\A|/)(?:[^/]+/)*README\.md\z|(?:\A|/)docs/.+\.md\z|(?:\A|/)TODO\.md\z},
       "nb" => %r{(?:\A|[/.])nb\.yml\z|(?:\A|/)BIZ/.+\.(?:html|md)\z},
       "en_values" => %r{(?:\A|[/.])en\.yml\z},
     }.freeze

@@ -333,9 +333,11 @@ module Master
             @assessment_improvement_state ||= { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
             @assessment_improvement_state[:evaluated_passes] += 1
             @assessment_improvement_state[:last_pass] = Integer(pass)
-            @assessment_improvement_state[:findings] += Integer(findings)
-            @assessment_improvement_state[:ideas] += Integer(ideas)
-            @assessment_improvement_state[:restructures] += Integer(restructures)
+            # These fields describe the latest read-back assessment. Repeated
+            # opportunities across passes are not distinct work items.
+            @assessment_improvement_state[:findings] = Integer(findings)
+            @assessment_improvement_state[:ideas] = Integer(ideas)
+            @assessment_improvement_state[:restructures] = Integer(restructures)
             self
           end
 

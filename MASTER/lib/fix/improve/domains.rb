@@ -29,9 +29,17 @@ module Master
         end
 
         def domain_for(path)
-          case File.extname(path).downcase
+          normalized = path.to_s.tr("\\", "/")
+          extension = File.extname(normalized).downcase
+          # BIZ HTML is a document source, not an application view. Its visual
+          # styling is governed by document typography, while the prose engine
+          # evaluates the content a business-plan reader actually meets.
+          return :prose if normalized.split("/").include?("BIZ") &&
+            %w[.erb .html .md .rst .txt .tex].include?(extension)
+
+          case extension
           when ".rb" then :code
-          when ".md" then :prose
+          when ".md", ".rst", ".txt", ".tex" then :prose
           when ".erb", ".scss", ".css", ".html" then :visual
           when ".mid", ".midi", ".wav", ".flac", ".sco", ".orc", ".csd" then :music
           end
@@ -86,8 +94,20 @@ module Master
         def scan_prose(root:, files:)
           files.filter_map do |path|
             text = File.read(path, encoding: "UTF-8", invalid: :replace)
-            words = text.split(/\s+/).size
-            headings = text.scan(/^#+\s+/m).size
+            prose = text
+              .gsub(/<script\b.*?<\/script>/im, " ")
+              .gsub(/<style\b.*?<\/style>/im, " ")
+              .gsub(/<%.*?%>/m, " ")
+              .gsub(/<!--.*?-->/m, " ")
+              .gsub(/<[^>]+>/, " ")
+              .gsub(/\x60[^\x60]*\x60/, " ")
+              .gsub(/\A\s*(?:\x60{3}|~{3}).*?^\s*(?:\x60{3}|~{3})\s*$/m, " ")
+            words = prose.scan(/[\p{L}\p{N}]+/).size
+            headings = if File.extname(path).downcase == ".html"
+                         text.scan(/<h[1-6]\b/i).size
+                       else
+                         prose.scan(/^#+\s+/m).size
+                       end
             if words < 60 && File.basename(path) =~ /README|CONTRIBUTING|ARCHITECTURE/i
               Opportunity.new(
                 domain: :prose, path:, signal: "thin_document",
