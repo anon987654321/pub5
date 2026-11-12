@@ -155,6 +155,14 @@ class TestWebChat < Minitest::Test
     old.nil? ? ENV.delete("MASTER_WEB_CHAT_SCREENSHOT_DIR") : ENV["MASTER_WEB_CHAT_SCREENSHOT_DIR"] = old
   end
 
+  def test_ferrum_process_start_timeout_is_classified_as_timeout
+    error_class = Class.new(StandardError)
+    error_class.define_singleton_method(:name) { "Ferrum::ProcessTimeoutError" }
+    error = error_class.new("Browser did not produce websocket url within 45 seconds")
+
+    assert_equal :timeout, Master::Io::WebChat.failure_category(error)
+  end
+
   def test_dispatcher_timeout_is_not_relabelled_as_web_chat_provider_error
     chat = build_chat
     chat.define_singleton_method(:enabled?) { true }
