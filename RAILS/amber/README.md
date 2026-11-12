@@ -11,8 +11,13 @@ Hotwire, Active Storage, Solid Queue and relayd, and it listens on port 61352.
 Amber is a personal wardrobe intelligence, not a fashion shop. Its territory is warmth, intimacy
 and taste with evidence: the wardrobe is the source of truth, a recommendation explains itself,
 and the product helps its owner wear and understand what already hangs in the closet before it
-encourages another purchase. The design values come from MASTER/data/tokens.yml through
-Master.tokens, and the feature matrix is RAILS/apps.yml under amber.
+encourages another purchase. Toteme is Amber's primary fashion-design reference: borrow its
+collection-led navigation, image-first grids, restrained product metadata and clear item-detail
+composition, translating them into wardrobe organisation and wear decisions rather than retail
+selling. Keep Amber's warm-neutral token dialect, original masthead, sans typography and truthful
+garment imagery; never import another brand's wordmark, campaign art or exact visual skin. The
+design values come from MASTER/data/tokens.yml through Master.tokens, and the feature matrix is
+RAILS/apps.yml under amber.
 
 The app defaults to Norwegian. The default locale is nb, with en available, and a request picks
 its language from a ?locale= parameter, then the session, then Accept-Language, then nb. A
