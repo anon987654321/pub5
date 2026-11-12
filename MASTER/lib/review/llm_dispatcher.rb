@@ -153,11 +153,13 @@ module Master
       # caller's parser stays the backstop.
       def send_with_cache(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
                           &blk)
+        call_started = false
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         selected_model = answering_model(selected_model, image)
         refusal = local_only_refusal(selected_model) || refusal_before_send(selected_model)
         return refusal if refusal
 
+        call_started = true
         @bus&.publish("llm:send", model: selected_model)
         Io::LaneSelection.note_use(selected_model, Fiber[:master_operation])
         detail_capture = Master::Trace::Dmesg.detail_enabled?
@@ -217,6 +219,17 @@ module Master
       rescue StandardError => err
         record_provider_outcome(selected_model, :llm_call_failure, latency_ms: elapsed_ms(started), error: err.message)
         classified_call_failure(err)
+      ensure
+        # A :crash result deliberately bypasses provider-health accounting.
+        # The run pulse still needs a terminal event or it reports this model
+        # as in-flight forever, even though the dispatcher returned.
+        if call_started
+          begin
+            @bus&.publish("llm:call_finished", model: selected_model)
+          rescue StandardError => event_error
+            Master::Ground::Swallow.log(event_error, context: "LLMDispatcher.call_finished", model: selected_model.to_s)
+          end
+        end
       end
 
       def agy_model?(model_id) = model_id.to_s.start_with?("agy:") || model_id.to_s == "agy"
