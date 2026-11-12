@@ -2,6 +2,7 @@
 
 require_relative "minitest_helper"
 require "tmpdir"
+require "fileutils"
 require "yaml"
 require_relative "../lora/validate"
 
