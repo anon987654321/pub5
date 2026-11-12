@@ -103,6 +103,15 @@ module Master
             "Plain speech routes here too: \"grab us a few new movies\" and \"find and download a movie\" need no slash.",
           ],
         },
+        "nsfw" => {
+          summary: "local-only adult-content lane, opt-in and isolated from general model routing",
+          detail: [
+            "/nsfw <prompt> - use only the explicitly named local Ollama model for lawful, consensual adult-only content.",
+            "Requires MASTER_NSFW=1 and MASTER_NSFW_MODEL=<installed-local-model>; it never downloads a model or falls back to cloud/general lanes.",
+            "MASTER_NO_OLLAMA=1 disables it. Ordinary review, coding, council and /fix routes exclude this lane.",
+            "It is not a safety or legal bypass: minors, coercion, exploitation and non-consensual sexual content remain disallowed.",
+          ],
+        },
         "support" => {
           summary: "practical personal support and a bounded synthetic quality benchmark",
           detail: [
