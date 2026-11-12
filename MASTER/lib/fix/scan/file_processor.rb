@@ -52,7 +52,8 @@ module Master
           MAX_LINES
         end
 
-        def initialize(event_bus: nil, skip_semantic: false, cache_root: Master::ROOT)
+        def initialize(event_bus: nil, skip_semantic: false, root: Master::ROOT, cache_root: Master::ROOT)
+          @root = Master.master_root(root:)
           @bus = event_bus
           @skip_semantic = skip_semantic
           @semantic_gap_mutex = Mutex.new
@@ -207,8 +208,16 @@ module Master
         def law_conducted(path, code)
           return code unless path.to_s.match?(%r{/law/[^/]+\.rb\z})
 
-          require File.join(Master::ROOT, "law", "definition") unless defined?(Law)
+          require law_definition_path(path) unless defined?(Law)
           Law.conduct(code)
+        end
+
+        def law_definition_path(path)
+          candidate_root = Master.master_root(root: @root)
+          candidate = File.join(candidate_root, "law", "definition")
+          return candidate if File.file?("#{candidate}.rb")
+
+          File.join(Master::ROOT, "law", "definition")
         end
 
         def read_disk(path)

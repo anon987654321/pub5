@@ -53,6 +53,25 @@ class TestSemanticReplay < Minitest::Test
     processor.apply_laws(code:, ast: nil, path: PATH, law_set: [CheapLaw.new, law])
   end
 
+  def test_law_definition_comes_from_the_scanner_target_root
+    target = File.join(@dir, "project")
+    FileUtils.mkdir_p(File.join(target, "law"))
+    FileUtils.mkdir_p(File.join(target, "data"))
+    File.write(File.join(target, "data", "laws.yml"), "{}\n")
+    File.write(File.join(target, "law", "definition.rb"), "module Law; end\n")
+    processor = Master::Fix::Scan::FileProcessor.new(root: target, cache_root: @dir)
+
+    assert_equal File.join(target, "law", "definition"),
+                 processor.send(:law_definition_path, File.join(target, "law", "example.rb"))
+  end
+
+  def test_law_definition_falls_back_to_the_installed_master_root
+    processor = Master::Fix::Scan::FileProcessor.new(root: @dir, cache_root: @dir)
+
+    assert_equal File.join(Master::ROOT, "law", "definition"),
+                 processor.send(:law_definition_path, File.join(@dir, "law", "example.rb"))
+  end
+
   def test_a_read_with_findings_is_replayed_for_unchanged_text
     law = ModelLaw.new(:drift)
     first = scan(law)

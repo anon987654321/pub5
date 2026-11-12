@@ -18,7 +18,7 @@ module Master
 
         autoloop = (Master.config_section("autoloop") rescue nil) || {}
         sleep_s = ENV["MASTER_AUTOFIX"] == "1" ? autoloop["scan_file_sleep_s"].to_f : 0
-        scanner = new(event_bus: bus, file_sleep_s: sleep_s)
+        scanner = new(root:, event_bus: bus, file_sleep_s: sleep_s)
 
         # Every Law is one ::Law.define, and LawTree builds what the scanner runs
         # for it. This walked a self-registering class registry, then a hand list
@@ -51,12 +51,13 @@ module Master
           Master.language_for(path)
         end
 
-        def initialize(laws: [], event_bus: nil, file_sleep_s: 0)
+        def initialize(laws: [], root: Master::ROOT, event_bus: nil, file_sleep_s: 0)
           @laws = Array(laws)
           @bus = event_bus
           @mutex = Mutex.new
           @file_sleep_s = file_sleep_s.to_f
-          @file_processor = Master::Fix::Scan::FileProcessor.new(event_bus: @bus)
+          @root = Master.master_root(root:)
+          @file_processor = Master::Fix::Scan::FileProcessor.new(event_bus: @bus, root: @root)
           @stream_autofixes = []
           @law_dispatch = build_law_dispatch(@laws)
         end
