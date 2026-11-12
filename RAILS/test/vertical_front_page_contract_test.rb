@@ -66,6 +66,24 @@ class VerticalFrontPageContractTest < Minitest::Test
     end
   end
 
+
+  def test_marketplace_front_page_classes_have_loaded_responsive_styles
+    page = source("brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb")
+    styles = source("brgen/app/assets/stylesheets/_brgen_marketplace.scss")
+    application = source("brgen/app/assets/stylesheets/application.scss")
+
+    assert_includes application, '@use "brgen_marketplace";'
+    %w[bol-market-hero bol-market-hero-copy bol-market-hero-media bol-market-kicker
+       bol-market-hero-price bol-primary bol-kind-tabs bol-catalog-layout
+       bol-filter-column bol-results-column].each do |name|
+      assert_includes page, name, "marketplace page is missing #{name}"
+      assert_includes styles, ".#{name}", "marketplace stylesheet is missing .#{name}"
+    end
+
+    assert_includes styles, "@media (max-width: 767px)"
+    assert_includes styles, "grid-template-columns: minmax(0, 1fr)"
+  end
+
   def test_front_pages_keep_distinct_content_postures
     brgen = source("brgen/app/views/home/index.html.erb")
     amber_home = source("amber/app/views/home/index.html.erb")
