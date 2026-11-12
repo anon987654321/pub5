@@ -29,6 +29,68 @@ class TestMeretheLoraPackage < Minitest::Test
     assert_match(/\A[0-9a-f]{64}\z/, Studio::MeretheLora::TRAINER_VERSION)
   end
 
+  def test_prepared_dataset_and_zip_replace_as_one_recoverable_pair
+    Dir.mktmpdir("merethe-publish-") do |root|
+      dataset_path = File.join(root, "dataset")
+      zip_path = File.join(root, "training.zip")
+      staging_root = File.join(root, "stage")
+      staged_dataset = File.join(staging_root, "dataset")
+      staged_zip = File.join(staging_root, "training.zip")
+      FileUtils.mkdir_p(File.join(dataset_path))
+      File.write(File.join(dataset_path, "old.txt"), "previous dataset")
+      File.write(zip_path, "previous zip")
+      FileUtils.mkdir_p(staged_dataset)
+      File.write(File.join(staged_dataset, "new.txt"), "new dataset")
+      File.write(staged_zip, "new zip")
+
+      result = Studio::MeretheLora.publish_prepared_artifacts!(
+        staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:
+      )
+
+      assert_equal true, result
+      assert_equal "new dataset", File.read(File.join(dataset_path, "new.txt"))
+      refute File.exist?(File.join(dataset_path, "old.txt"))
+      assert_equal "new zip", File.read(zip_path)
+      assert_equal 0o700, File.stat(dataset_path).mode & 0o777
+      assert_equal 0o600, File.stat(zip_path).mode & 0o777
+    end
+  end
+
+  def test_failed_pair_publication_restores_the_previous_dataset_and_zip
+    Dir.mktmpdir("merethe-rollback-") do |root|
+      dataset_path = File.join(root, "dataset")
+      zip_path = File.join(root, "training.zip")
+      staging_root = File.join(root, "stage")
+      staged_dataset = File.join(staging_root, "dataset")
+      staged_zip = File.join(staging_root, "training.zip")
+      FileUtils.mkdir_p(dataset_path)
+      File.write(File.join(dataset_path, "old.txt"), "previous dataset")
+      File.write(zip_path, "previous zip")
+      FileUtils.mkdir_p(staged_dataset)
+      File.write(File.join(staged_dataset, "new.txt"), "new dataset")
+      File.write(staged_zip, "new zip")
+
+      original_rename = File.method(:rename)
+      failing_rename = lambda do |source, target|
+        raise Errno::EACCES, staged_zip if source == staged_zip
+
+        original_rename.call(source, target)
+      end
+
+      File.stub(:rename, failing_rename) do
+        assert_raises(Errno::EACCES) do
+          Studio::MeretheLora.publish_prepared_artifacts!(
+            staged_dataset:, staged_zip:, staging_root:, dataset_path:, zip_path:
+          )
+        end
+      end
+
+      assert_equal "previous dataset", File.read(File.join(dataset_path, "old.txt"))
+      refute File.exist?(File.join(dataset_path, "new.txt"))
+      assert_equal "previous zip", File.read(zip_path)
+    end
+  end
+
   def test_preparation_is_local_only
     source = File.read(File.expand_path("../lora/merethe/prepare.rb", __dir__))
     refute_match(/train_lora|upload_zip|REPLICATE_API_TOKEN/, source)
