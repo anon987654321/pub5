@@ -71,7 +71,7 @@ module Shared
       model = scope_model
       FTS_SCOPE_BY_MODEL.fetch(model) do
         FTS_SCOPE_BY_MODEL[model] = model.respond_to?(:search) &&
-                                    scope_connection.data_source_exists?("#{model.table_name}_fts")
+                                    scope_connection.tables.include?("#{model.table_name}_fts")
       end
     rescue StandardError
       false
