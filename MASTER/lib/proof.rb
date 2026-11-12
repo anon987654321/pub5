@@ -51,9 +51,11 @@ module Master
     def self.freeze_value(value)
       case value
       when Hash
-        value.each { |key, item| freeze_value(key); freeze_value(item) }.freeze
+        value.each_with_object({}) do |(key, item), copy|
+          copy[freeze_value(key)] = freeze_value(item)
+        end.freeze
       when Array
-        value.each { |item| freeze_value(item) }.freeze
+        value.map { |item| freeze_value(item) }.freeze
       when String
         value.dup.freeze
       else
