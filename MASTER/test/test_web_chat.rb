@@ -163,6 +163,14 @@ class TestWebChat < Minitest::Test
     assert_equal :timeout, Master::Io::WebChat.failure_category(error)
   end
 
+  def test_ferrum_pending_connections_deadline_is_classified_as_timeout
+    error_class = Class.new(StandardError)
+    error_class.define_singleton_method(:name) { "Ferrum::PendingConnectionsError" }
+    error = error_class.new("main frame still has pending connections")
+
+    assert_equal :timeout, Master::Io::WebChat.failure_category(error)
+  end
+
   def test_dispatcher_timeout_is_not_relabelled_as_web_chat_provider_error
     chat = build_chat
     chat.define_singleton_method(:enabled?) { true }
