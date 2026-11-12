@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
+require_relative "../lib/fix/structural_recipes"
+require_relative "../lib/cli/command_registry"
 
 class TestStructuralRecipes < Minitest::Test
   def setup
@@ -51,6 +53,14 @@ class TestStructuralRecipes < Minitest::Test
     assert_includes output, "usage:"
     assert_includes output, "--dry-run"
     assert_includes output, "--apply"
+  end
+
+  def test_fix_help_documents_recipe_preview_and_apply
+    detail = Master::CLI::CommandRegistry::HELP_TOPICS.fetch("fix").fetch(:detail).join("\n")
+
+    assert_includes detail, "/fix --list-recipes"
+    assert_includes detail, "/fix --recipe NAME --dry-run"
+    assert_includes detail, "/fix --recipe NAME --apply"
   end
 
   def test_unknown_recipe_is_refused_without_mutation
