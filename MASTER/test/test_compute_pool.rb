@@ -211,6 +211,20 @@ class TestComputePool < Minitest::Test
     assert_operator reloaded.send(:empirical_stats, model).first, :>, 1.0
     assert_in_delta Time.now.to_f, reloaded.snapshot.fetch(model).fetch(:last_success_at), 5.0
   end
+  def test_first_token_latency_is_persisted_and_preferred_to_completion_latency
+    model = "grok-cli:auto"
+    @pool.record(model:, status: :success, latency_ms: 9_000)
+    @pool.record_first_token(model:, latency_ms: 2_500)
+
+    reloaded = Master::CLI::Routing::ComputePool.new(router: Router.new, root: @pool.instance_variable_get(:@root))
+    stat = reloaded.snapshot.fetch(model)
+
+    assert_equal 9_000.0, stat.fetch(:latency_ms)
+    assert_equal 2_500.0, stat.fetch(:first_token_ms)
+    assert_equal 1, stat.fetch(:first_token_samples)
+    assert_in_delta 9.0, reloaded.latency_s(model), 0.001
+    assert_in_delta 0.4, reloaded.send(:empirical_stats, model).last, 0.001
+  end
 
   def test_snapshot_is_independent
     @pool.record(model: "ollama:qwen3.5:27b", status: :success, latency_ms: 100)
@@ -230,6 +244,7 @@ class TestComputePool < Minitest::Test
     assert_equal "local", row[:lane]
     assert_equal 1.0, row[:success_rate]
     assert_equal 100.0, row[:latency_ms]
+    assert_equal 0.0, row[:first_token_ms]
     assert_equal :available, row[:quota_state]
   end
 
