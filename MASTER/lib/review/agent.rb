@@ -402,6 +402,7 @@ module Master
       # research, or a website still must receive its evidence route. The task_type
       # label describes presentation; it must not turn off browser selection.
       def prepare_evidence_for?(message, task_type)
+        return false if task_type.to_s == "nsfw"
         return true unless task_type.to_s == "chat"
 
         !%i[conversation unknown].include?(Ground::EvidenceRouter.classify(message))
