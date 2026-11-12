@@ -79,9 +79,9 @@ class Post < ApplicationRecord
 
   private
 
-  # Only explicit interaction events use the counter stream. An ordinary touch
-  # can also come from an outfit or item rename, which changes card metadata and
-  # must therefore retain the full refresh path.
+  # Only explicit Vote and Comment callbacks use the counter stream. A bare
+  # Post touch has no reliable interaction context, so it retains the full
+  # refresh path rather than guessing that an arbitrary update changed a count.
   def broadcast_live_refresh
     broadcast_refresh_to "posts"
     broadcast_refresh_to self
