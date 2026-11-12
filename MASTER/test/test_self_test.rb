@@ -97,6 +97,40 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_deploy_abstraction_measures_each_class_not_all_defs_in_a_file
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      classes = 2.times.map do |index|
+        methods = 6.times.map { |method| "  def method_#{index}_#{method}; end" }.join("\\n")
+        "class Type#{index}\\n#{methods}\\nend"
+      end
+      File.write(path, classes.join("\\n"))
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_god_class_findings)
+
+      assert_empty findings, "two ordinary six-method classes are not one twelve-method god class"
+    end
+  end
+
+  def test_deploy_abstraction_still_flags_one_class_over_the_public_method_limit
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      methods = 11.times.map { |index| "  def method_#{index}; end" }.join("\\n")
+      File.write(path, "class Large\\n#{methods}\\nend\\n")
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_god_class_findings)
+
+      assert_equal 1, findings.size
+      assert_includes findings.first[:message], "god class Large has 11 public methods"
+    end
+  end
+
   def test_only_law_ids_are_checked_under_singularity
     Dir.mktmpdir do |root|
       write_fixture_tree(root)

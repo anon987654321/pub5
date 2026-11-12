@@ -93,17 +93,22 @@ module Master
           end
 
           def deploy_god_class_findings
-            deploy_paths.select { |p| p.end_with?(".rb") }.flat_map do |path|
-              code = begin
-                read_text(path)
-              rescue StandardError => e
-                Master::Ground::Swallow.log(e, context: "SelfTest.deploy_god_class", severity: :load_bearing)
-                next [finding(path:, line: 1, message: "unreadable deploy file - ABSTRACTION unmeasured, not clean")]
-              end
-              code.scan(/^\s*def\s+\w+/).size > 10 ? [finding(path:, line: 1, message: "potential god class in OPERATOR rails (>10 defs)")] : []
-            end
+            law = Laws::GodClassLaw.new
+            deploy_paths.select { |path| path.end_with?(".rb") }
+              .flat_map { |path| deploy_law_findings(path, law, "ABSTRACTION") }
           end
 
+          # Deploy code uses the same class-level AST contract as MASTER. Counting
+          # every def in a file merged separate classes/modules into one imaginary
+          # god object, and missed the 300-code-line half of the actual law.
+          def deploy_law_findings(path, law, dimension)
+            law.check(read_text(path), path:).map do |result|
+              finding(path:, line: result.line, message: "#{result.message} (#{dimension})")
+            end
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "SelfTest.deploy_god_class", severity: :load_bearing)
+            [finding(path:, line: 1, message: "unreadable deploy file - #{dimension} unmeasured, not clean")]
+          end
           MAX_DEPLOY_FILE_BYTES = 24_000
 
           def deploy_small_files_findings
