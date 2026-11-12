@@ -235,5 +235,4 @@ class LogoContractTest < ActionView::TestCase
     generator = root.join("generate.mjs").read
     assert_includes generator, "@media (max-width: 700px)"
   end
-
 end

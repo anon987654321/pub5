@@ -33,7 +33,7 @@ class AccountMergerTest < ActiveSupport::TestCase
     now = Time.current
     Message.insert_all!([
       { sender_id: guest.id, recipient_id: member.id, body: outgoing_body, created_at: now, updated_at: now },
-      { sender_id: member.id, recipient_id: guest.id, body: incoming_body, created_at: now, updated_at: now },
+      { sender_id: member.id, recipient_id: guest.id, body: incoming_body, created_at: now, updated_at: now }
     ])
 
     result = AccountMerger.new(guest_user: guest, user: member).call
@@ -43,8 +43,8 @@ class AccountMergerTest < ActiveSupport::TestCase
     refute Session.exists?(id: stale_guest_session.id),
            "a guest cookie must not become a registered account session"
     assert post.anonymous?, "a guest post must keep its anonymous presentation after ownership transfer"
-    assert_equal [member.id, member.id],
-                 [Message.find_by!(body: outgoing_body).sender_id, Message.find_by!(body: incoming_body).recipient_id]
+    assert_equal [ member.id, member.id ],
+                 [ Message.find_by!(body: outgoing_body).sender_id, Message.find_by!(body: incoming_body).recipient_id ]
     merge = AccountMerge.find_by!(guest_user_id: guest.id, user_id: member.id)
     assert_equal "merged", merge.status
     assert merge.merged_at.present?

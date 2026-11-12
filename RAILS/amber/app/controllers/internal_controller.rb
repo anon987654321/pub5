@@ -11,7 +11,7 @@ class InternalController < ApplicationController
     render json: {
       app: "amber",
       revision: app_revision,
-      generated_at: Time.now.utc.iso8601,
+      generated_at: Time.now.utc.iso8601
     }
   end
 
@@ -23,7 +23,7 @@ class InternalController < ApplicationController
       outfits: Outfit.count,
       users: User.count,
       wardrobe_items: (defined?(WardrobeItem) ? WardrobeItem.count : 0),
-      master_client: Contracts::MasterClient.configured?,
+      master_client: Contracts::MasterClient.configured?
     }
   end
 end

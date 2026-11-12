@@ -69,7 +69,7 @@ class Post < ApplicationRecord
   # like button carry each reader's own pressed state, so a counter tick must
   # never replace either control for somebody else.
   def broadcast_live_counts(streams: nil)
-    streams ||= ["posts", self]
+    streams ||= [ "posts", self ]
     score, likes_count = self.class.unscoped.where(id:).pick(:score, :likes_count)
     comments_count = comments.count
     key = ActionView::RecordIdentifier.dom_id(self)

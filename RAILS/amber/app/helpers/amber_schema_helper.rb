@@ -29,9 +29,9 @@ module AmberSchemaHelper
         {
           "@type" => "ListItem",
           "position" => position,
-          "item" => demo_garment_schema(item, context: false),
+          "item" => demo_garment_schema(item, context: false)
         }
-      end,
+      end
     }.compact
   end
 
@@ -47,7 +47,7 @@ module AmberSchemaHelper
       "color" => schema_colour(item),
       "material" => item.material.presence,
       "brand" => ({ "@type" => "Brand", "name" => item.brand } if item.brand.present?),
-      "image" => demo_photo_url(item),
+      "image" => demo_photo_url(item)
     }.compact
   end
 
@@ -65,20 +65,17 @@ module AmberSchemaHelper
       "description" => outfit.description.presence,
       "url" => outfit_url(outfit),
       "numberOfItems" => garments.size,
-      "itemListElement" => garments,
+      "itemListElement" => garments
     }.compact
   end
 
   private
 
+  # An outfit names its garments without the demo catalogue's public URL and
+  # photo — an outfit page is not a product page — so its garment schema is
+  # the demo garment schema minus what only the catalogue can promise.
   def outfit_garment_schema(item)
-    {
-      "@type" => "Product",
-      "name" => item.title,
-      "category" => item.category.presence,
-      "color" => schema_colour(item),
-      "brand" => ({ "@type" => "Brand", "name" => item.brand } if item.brand.present?),
-    }.compact
+    demo_garment_schema(item, context: false).except("url", "image", "material")
   end
 
   # Item#color holds either a name or a hex value written by the dominant-colour

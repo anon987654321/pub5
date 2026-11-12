@@ -17,7 +17,7 @@ class PageTitlesTest < ActionDispatch::IntegrationTest
       posts_path => [ I18n.t("pages.community"), I18n.t("post.index_description") ],
       feed_posts_path => [ I18n.t("pages.feed"), I18n.t("post.feed_description") ],
       new_post_path => [ I18n.t("post.share_look"), nil ],
-      user_path(@user) => [ @user.display_name, I18n.t("users.profile_description", name: @user.display_name) ],
+      user_path(@user) => [ @user.display_name, I18n.t("users.profile_description", name: @user.display_name) ]
     }
 
     pages.each do |path, (title, description)|

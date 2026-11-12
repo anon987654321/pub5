@@ -32,10 +32,10 @@ class WardrobeAnalytics
       by_category: items.group(:category).count,
       by_season: items.group(:season).count,
       cost_per_wear: average_cost_per_wear,
-      tips: tips,
+      tips:,
       tips_source: "rules",
-      overdue_challenges: overdue_challenges,
-      active_challenges: DeclutterChallenge.where(user: user).active.count,
+      overdue_challenges:,
+      active_challenges: DeclutterChallenge.where(user:).active.count,
     }
   end
 

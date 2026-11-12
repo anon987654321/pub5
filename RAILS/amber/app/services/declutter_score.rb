@@ -14,8 +14,8 @@ class DeclutterScore
       cost_pressure: cost_pressure,
       repair_pressure: repair_pressure,
       total_release_score: total_release_score.round(3),
-      quadrant: quadrant,
-      recommendation: recommendation,
+      quadrant:,
+      recommendation:
     }
   end
 

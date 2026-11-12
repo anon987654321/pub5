@@ -31,17 +31,22 @@ class Weather
       uri = URI("#{API_URL}?latitude=#{BERGEN_LAT}&longitude=#{BERGEN_LNG}" \
                 "&current=temperature_2m,weathercode,windspeed_10m" \
                 "&forecast_days=1")
-      data = JSON.parse(get(uri))
-      current = data["current"]
+      observe(JSON.parse(get(uri))["current"])
+    rescue StandardError => error
+      Rails.logger.warn("Weather: #{error.message}")
+      nil
+    end
+
+    # The named stage between the API's payload and the app's forecast: one
+    # reading turned into the four numbers the wardrobe screens show.
+    def observe(current)
+      code = current["weathercode"].to_i
       {
         temp:        current["temperature_2m"].to_f,
-        code:        current["weathercode"].to_i,
+        code:,
         wind:        current["windspeed_10m"].to_f,
-        description: decode_weather(current["weathercode"].to_i),
+        description: decode_weather(code),
       }
-    rescue StandardError => e
-      Rails.logger.warn("Weather: #{e.message}")
-      nil
     end
 
     def decode_weather(code)

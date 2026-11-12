@@ -45,7 +45,7 @@ class WearsWellWithTest < ActiveSupport::TestCase
     garment(owner, "Wool coat", category: "Outerwear", material: "wool")
 
     assert_empty WearsWellWith.new(blank).neighbors
-    assert_equal ["category:dresses"], WearsWellWith.new(blank).tokens
+    assert_equal [ "category:dresses" ], WearsWellWith.new(blank).tokens
   end
 
   test "retired and inactive garments are not suggested" do

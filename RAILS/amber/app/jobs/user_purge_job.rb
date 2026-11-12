@@ -47,7 +47,7 @@ class UserPurgeJob < ApplicationJob
     { model: "Outfit", key: :user_id },
     { model: "Item", key: :user_id },
     { model: "WardrobeItem", key: :user_id },
-    { model: "Session", key: :user_id },
+    { model: "Session", key: :user_id }
   ].freeze
 
   # Public posts and comments remain on the anonymised user so conversations
@@ -57,25 +57,27 @@ class UserPurgeJob < ApplicationJob
   def perform
     return unless User.column_names.include?("deletion_scheduled_at")
 
-    failures = []
-    User.where.not(deletion_scheduled_at: nil)
-        .where("deletion_scheduled_at <= ?", Time.current)
-        .find_each do |user|
-      begin
-        erase!(user)
-      rescue StandardError => error
-        # Keep this user's deletion marker so the next run retries it, but do
-        # not let one corrupt record prevent unrelated due accounts being erased.
-        Rails.logger.error("[privacy] Amber erasure failed user_id=#{user.id} error=#{error.class}")
-        failures << [user.id, error.class.name]
-      end
-    end
+    failures = User.where.not(deletion_scheduled_at: nil)
+                   .where("deletion_scheduled_at <= ?", Time.current)
+                   .filter_map { |user| erase_result(user) }
     return if failures.empty?
 
-    raise "Amber account erasure failures: #{failures.map { |id, kind| "#{id}=#{kind}" }.join(", ")}"
+    raise "Amber account erasure failures: #{failures.join(", ")}"
   end
 
   private
+
+  # "id=Class" when the erasure failed, nil when it succeeded — the pair the
+  # batch raise names for every failed account. The deletion marker itself is
+  # left in place for the next run's retry.
+  def erase_result(user)
+    erase!(user)
+    nil
+  rescue StandardError => error
+    # Keep this user's deletion marker so the next run retries it, but do
+    # not let one corrupt record prevent unrelated due accounts being erased.
+    "#{user.id}=#{error.class}"
+  end
 
   def erase!(user)
     former_email = user.try(:email_address)
@@ -196,20 +198,20 @@ class UserPurgeJob < ApplicationJob
 
   def canonical_reaction_model
     return ::Reaction if defined?(::Reaction)
-    return Shared::Reaction if defined?(Shared::Reaction)
+    Shared::Reaction if defined?(Shared::Reaction)
   end
 
   def canonical_notification_model
     return ::Notification if defined?(::Notification)
-    return Shared::Notification if defined?(Shared::Notification)
+    Shared::Notification if defined?(Shared::Notification)
   end
 
   def resolve!(name)
     model = case name
-            when "Reaction" then canonical_reaction_model
-            when "Notification" then canonical_notification_model
-            else name.safe_constantize
-            end
+    when "Reaction" then canonical_reaction_model
+    when "Notification" then canonical_notification_model
+    else name.safe_constantize
+    end
     raise "erasure model unavailable: #{name}" unless model
     raise "erasure table unavailable: #{name}" unless model.respond_to?(:table_exists?) && model.table_exists?
 

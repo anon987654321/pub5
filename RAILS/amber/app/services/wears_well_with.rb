@@ -47,9 +47,9 @@ class WearsWellWith
     mine = tokens
     theirs = self.class.tokens_for(other)
     shared = (mine & theirs).sort
-    return [0.0, []] if shared.empty? || mine.empty? || theirs.empty?
+    return [ 0.0, [] ] if shared.empty? || mine.empty? || theirs.empty?
 
-    [shared.size / Math.sqrt(mine.size * theirs.size), shared]
+    [ shared.size / Math.sqrt(mine.size * theirs.size), shared ]
   end
 
   def tokens = self.class.tokens_for(item)

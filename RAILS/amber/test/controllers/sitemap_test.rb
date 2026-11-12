@@ -5,10 +5,9 @@ require "test_helper"
 # The demo wardrobe is amber's one public catalogue and the sitemap left it
 # out, along with the public feed it links from.
 class SitemapTest < ActionDispatch::IntegrationTest
-
   setup do
-    @demo = member(Amber::DemoWardrobe::DEMO_EMAIL)
-    @garment = @demo.items.create!(title: "Ivory silk slip dress", category: "Dresses")
+    demo = member(Amber::DemoWardrobe::DEMO_EMAIL)
+    @garment = demo.items.create!(title: "Ivory silk slip dress", category: "Dresses")
     owner = member("creator-#{SecureRandom.hex(4)}@example.test")
     @public_profile = owner.create_creator_profile!(handle: "pub#{SecureRandom.hex(3)}", display_name: "Shown",
                                                     public: true)

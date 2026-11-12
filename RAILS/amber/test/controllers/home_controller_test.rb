@@ -18,9 +18,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_response :success, path
       assert_includes response.body, "legal-prose"
     end
+  end
+
+  def test_the_guest_footer_links_the_amber_legal_pages
     get root_url
     # amber's own footer, not the shared one: safety and rules were missing here.
-    [privacy_path, safety_path, rules_path].each { |path| assert_includes response.body, %(href="#{path}") }
+    body = response.body
+    [ privacy_path, safety_path, rules_path ].each { |path| assert_includes body, %(href="#{path}") }
   end
 
   # The operator's home page, 2026-09-25: two icons in the corner, the mark

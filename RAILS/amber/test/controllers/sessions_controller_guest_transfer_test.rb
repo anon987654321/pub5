@@ -28,7 +28,7 @@ class SessionsControllerGuestTransferTest < ActionDispatch::IntegrationTest
     begin
       post session_path, params: {
         email_address: member.email_address,
-        password: "long-enough-password",
+        password: "long-enough-password"
       }
     ensure
       AccountMerger.singleton_class.remove_method(:new)

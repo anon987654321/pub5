@@ -6,7 +6,7 @@ class WardrobeGap
     "Bottoms" => 3,
     "Shoes" => 2,
     "Outerwear" => 1,
-    "Accessories" => 2,
+    "Accessories" => 2
   }.freeze
 
   # `key` names the locale entry under `gaps.connectors`; the display name is
@@ -16,7 +16,7 @@ class WardrobeGap
     { key: :neutral_top, category: "Tops", colors: %w[white black navy grey beige] },
     { key: :dark_bottom, category: "Bottoms", colors: %w[black navy denim charcoal] },
     { key: :weather_layer, category: "Outerwear", colors: %w[black navy beige olive] },
-    { key: :versatile_shoe, category: "Shoes", colors: %w[black white brown] },
+    { key: :versatile_shoe, category: "Shoes", colors: %w[black white brown] }
   ].freeze
 
   def initialize(user)
@@ -34,7 +34,7 @@ class WardrobeGap
         owned: count,
         target: minimum,
         missing: minimum - count,
-        reason: I18n.t("gaps.category_minimum", count: minimum, category: category.downcase),
+        reason: I18n.t("gaps.category_minimum", count: minimum, category: category.downcase)
       }
     end + connector_gaps
   end
@@ -52,17 +52,24 @@ class WardrobeGap
 
   def connector_gaps
     CONNECTORS.filter_map do |connector|
-      exists = @user.items.by_category(connector[:category]).any? do |item|
-        connector[:colors].include?(item.color.to_s.downcase)
-      end
-      next if exists
+      key, category, colours = connector.values_at(:key, :category, :colors)
+      next if connector_colour_present?(category:, colours:)
 
+      label = I18n.t("gaps.connectors.#{key}")
       {
         kind: "connector",
-        category: connector[:category],
-        name: I18n.t("gaps.connectors.#{connector[:key]}"),
-        reason: I18n.t("gaps.connector", name: I18n.t("gaps.connectors.#{connector[:key]}")),
+        category:,
+        name: label,
+        reason: I18n.t("gaps.connector", name: label)
       }
+    end
+  end
+
+  # A connector matters when the wardrobe holds no item in its category
+  # wearing one of the colours that bridge between clothing groups.
+  def connector_colour_present?(category:, colours:)
+    @user.items.by_category(category).any? do |item|
+      colours.include?(item.color.to_s.downcase)
     end
   end
 end

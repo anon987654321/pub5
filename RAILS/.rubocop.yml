@@ -4,3 +4,16 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # Large apps exceed omakase Metrics thresholds; check style without blocking deploy CI.
 Metrics:
   Enabled: false
+
+# The TRAILING_COMMAS law (MASTER/law/ruby.rb) requires a trailing comma on
+# every multi-line collection — "the comma that stabilizes diffs". Omakase's
+# consistent_bracketing style removes exactly those commas, so autocorrect and
+# the law fought over every touched line: autocorrect stripped them, the
+# pre-commit lint refused them. RAILS joins shared and MASTER in committing to
+# the comma, per the contract the law's fixer documents.
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma

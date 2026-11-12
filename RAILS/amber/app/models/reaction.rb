@@ -8,5 +8,5 @@ class Reaction < ApplicationRecord
   belongs_to :reactable, polymorphic: true
 
   validates :kind, presence: true, inclusion: { in: %w[like] }
-  validates :user_id, uniqueness: { scope: [:reactable_type, :reactable_id, :kind] }
+  validates :user_id, uniqueness: { scope: [ :reactable_type, :reactable_id, :kind ] }
 end

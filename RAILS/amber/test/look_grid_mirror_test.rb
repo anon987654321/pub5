@@ -34,5 +34,4 @@ class LookGridMirrorTest < Minitest::Test
     assert_includes rule, "hyphens: none"
     assert_includes rule, "font-size: clamp(2.2rem, 4.5vw, 4rem)"
   end
-
 end

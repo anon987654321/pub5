@@ -10,6 +10,6 @@ class CreateEncounters < ActiveRecord::Migration[8.2]
       t.string :status, null: false, default: "waiting"
       t.timestamps
     end
-    add_index :encounters, [:status, :created_at]
+    add_index :encounters, [ :status, :created_at ]
   end
 end

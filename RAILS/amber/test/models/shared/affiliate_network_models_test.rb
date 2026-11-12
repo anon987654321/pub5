@@ -12,7 +12,7 @@ class SharedAffiliateNetworkModelsTest < ActiveSupport::TestCase
       "orderValue" => "250.00",
       "currencyId" => "NOK",
       "epi" => "city:bergen|surface:newsletter_weekly",
-      "programId" => "42",
+      "programId" => "42"
     }
 
     first = Shared::AffiliateConversion.record_from_postback!(params)

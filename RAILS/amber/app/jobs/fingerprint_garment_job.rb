@@ -29,7 +29,7 @@ class FingerprintGarmentJob < ApplicationJob
         kind: "fingerprint_not_embedding",
         text: item.embedding_text,
         fingerprinted_at: Time.current.iso8601,
-      },
+      }
     }
     embedding = item.garment_embedding
     embedding ? embedding.update!(attributes) : item.create_garment_embedding!(attributes)

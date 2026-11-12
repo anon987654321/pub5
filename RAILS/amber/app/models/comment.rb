@@ -21,7 +21,7 @@ class Comment < ApplicationRecord
     # Feed readers need only the new count. Readers on the detail page need
     # the complete thread, whose controls are rendered for each viewer; refresh
     # that narrower stream rather than broadcasting one reader's comment UI.
-    target.broadcast_live_counts(streams: ["posts"])
+    target.broadcast_live_counts(streams: [ "posts" ])
     target.broadcast_refresh_to target
   end
 end
