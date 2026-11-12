@@ -277,8 +277,8 @@ module Master
         when "llm:send" then @calls[Thread.current.object_id] = [payload[:model].to_s, @clock.call]
         when "llm:provider_outcome" then finish_call(payload)
         when "llm:call_finished"
-          @calls.delete(Thread.current.object_id)
-          attempted { @errored += 1; @pass_errored += 1 } if payload[:status].to_s == "crash"
+          active = @calls.delete(Thread.current.object_id)
+          attempted { @errored += 1; @pass_errored += 1 } if active && payload[:status].to_s == "crash"
         when "fix_loop:pass_start" then start_pass(payload)
         when "fix_loop:terminal", "fix_loop:crash" then end_tree
         when "fix_loop:phase" then enter_phase(payload)
