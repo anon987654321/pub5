@@ -13,6 +13,7 @@ module Studio
       MAX_EVIDENCE_BYTES = 5 * 1024 * 1024
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
       REQUIRED_COVERAGE = %w[generation_use provider_processing].freeze
+      SUBJECT_CONSENT_COVERAGE = %w[likeness_generation provider_processing].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
 
       class Error < StandardError; end
@@ -88,6 +89,12 @@ module Studio
           errors << "subject_consent must explicitly approve likeness_generation and provider_processing"
         end
 
+        consent_evidence = subject_consent.is_a?(Hash) ? subject_consent["evidence"] : nil
+        errors.concat(validate_evidence(
+          "subject_consent", consent_evidence, directory:,
+          required_coverage: SUBJECT_CONSENT_COVERAGE
+        ))
+
         rights = document["source_rights"]
         unless rights.is_a?(Hash) &&
                rights["generation_use"] == true &&
@@ -123,7 +130,7 @@ module Studio
         raise Error, "#{subject}: likeness generation and provider processing blocked: #{report.fetch("errors").join("; ")}"
       end
 
-      def validate_evidence(source, entry, directory:)
+      def validate_evidence(source, entry, directory:, required_coverage: REQUIRED_COVERAGE)
         errors = []
         unless source.match?(SUBJECT_NAME)
           return ["source-rights evidence contains an invalid source-set name"]
@@ -151,7 +158,7 @@ module Studio
         covers = entry["covers"]
         covers = covers.split(",").map(&:strip) if covers.is_a?(String)
         covers = Array(covers).map(&:to_s)
-        missing = REQUIRED_COVERAGE - covers
+        missing = required_coverage - covers
         errors << "#{source}: covers must include #{missing.join(" and ")}" unless missing.empty?
 
         stored_at = entry["stored_at"]
