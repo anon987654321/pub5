@@ -28,11 +28,13 @@ retain normal checkout permissions. The whole `evidence/` directory is ignored
 by Git.
 
 The shared `STUDIO/lora/consent.rb` gate checks the record and evidence without
-creating, editing or inferring permission. It runs before source recovery,
-dataset construction and likeness generation. Merethe's archived ME2 material
-requires a `me2_archive` evidence entry; any additional photographs also
-require an `additional_images` entry. Missing, mismatched, public, symlinked
-or incomplete records block the operation.
+creating, editing or inferring permission. A separate written subject-consent
+document is mandatory; the two boolean flags alone do not establish consent.
+Each source set also needs its own rights-evidence entry. It runs before source
+recovery, dataset construction and likeness generation. Merethe's archived ME2
+material requires a `me2_archive` evidence entry; any additional photographs
+also require an `additional_images` entry. Missing, mismatched, public,
+symlinked or incomplete records block the operation.
 
 This is not approval to upload a ZIP, start paid training, publish a model or
 distribute generated images. Those remain separate, explicit decisions.
