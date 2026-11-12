@@ -51,6 +51,7 @@ module Master
           "mov" => command(:dispatch_mov, droot),
           "documents" => command(:dispatch_documents, droot, d[:agent]),
           "support" => command(:dispatch_support, d[:agent], droot),
+          "nsfw" => command(:dispatch_nsfw, d[:agent]),
           "screen" => command(:dispatch_screen, root),
           "android" => command(:dispatch_android, root),
           "ios" => command(:dispatch_ios, root),
@@ -212,6 +213,21 @@ module Master
         "support0 at master0: invalid arguments - #{e.message}"
       rescue StandardError => e
         "support0 at master0: FAILED #{e.class}"
+      end
+
+      # Explicit local-only route for adult material. No general lane is a
+      # fallback, and public visitors never receive this operator command.
+      def dispatch_nsfw(agent, ctx: nil)
+        prompt = arg_for(ctx).to_s.strip
+        return help_text("nsfw") if prompt.empty?
+        return Master::Result.err("NSFW lane unavailable: set MASTER_NSFW=1 and MASTER_NSFW_MODEL to an installed local Ollama model. MASTER_NO_OLLAMA=1 remains a hard off.", category: :policy) unless Io::LaneSelection.nsfw_enabled? && Io::LaneSelection.nsfw_model_id
+        return Master::Result.err("NSFW lane is local-operator only", category: :policy) if Fiber[:master_visitor]
+        return Master::Result.err("NSFW lane unavailable: the agent is not running", category: :infrastructure) unless agent
+
+        agent.call({ message: prompt, task_type: "nsfw" })
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "CommandRegistry.dispatch_nsfw")
+        Master::Result.err("NSFW lane failed: #{e.class}: #{e.message}", category: :handler_exception)
       end
 
       # /play is the MASTER front door to Dilla. Bare /play plays the curated
