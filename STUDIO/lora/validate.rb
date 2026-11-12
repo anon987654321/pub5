@@ -190,9 +190,9 @@ module Studio
         remote = env["REPLICATE_MODEL"].to_s.strip
         return if remote.empty?
 
-        if remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
+        if remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
           pass_check(report, "replicate_version_pin", "Replicate model reference pins a version")
-        elsif remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
+        elsif remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
           report["warnings"] << "REPLICATE_MODEL is unpinned; predictions resolve the provider's latest version"
           block(report, "replicate_version_pin", "Pin owner/model:version or supply a local training manifest before treating renders as reproducible")
         else
