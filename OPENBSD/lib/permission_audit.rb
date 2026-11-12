@@ -24,6 +24,12 @@ module Deploy
     # deployment contract explicitly guarantees. Returns failure lines.
     def failures(secrets:, private_dirs:, daemon_logs:, daemon_user:)
       lines = []
+      (secrets + private_dirs + daemon_logs).each do |entry|
+        if entry[:symlink]
+          lines << "permissions: #{entry[:path]} is a symlink; refusing to trust a redirected permission target"
+        end
+      end
+
       (secrets + private_dirs).each do |entry|
         mode = entry[:mode].to_i
         if mode.anybits?(0o007)
