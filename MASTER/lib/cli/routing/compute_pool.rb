@@ -118,7 +118,11 @@ module Master
           stat = @mutex.synchronize { @stats[model.to_s]&.dup }
           return unless stat
 
-          return stat[:latency_ms].to_f / 1000 if stat[:successes].to_i.positive? && stat[:latency_ms].to_f.positive?
+          if stat[:successes].to_i.positive?
+            first_token = stat[:first_token_ms].to_f
+            return first_token / 1000 if first_token.positive?
+            return stat[:latency_ms].to_f / 1000 if stat[:latency_ms].to_f.positive?
+          end
 
           Master::Io::LaneSelection::SLOW_S if stat[:failures].to_i.positive?
         end
