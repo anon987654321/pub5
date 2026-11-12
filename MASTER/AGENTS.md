@@ -882,11 +882,12 @@ because agents read the Law one identity at a time. Reopen with a duplicate body
   that reads its output. `Data.define` values and the contract tests hold the
   boundaries that have broken. Reopen with an interface mismatch that shipped
   and that a signature would have caught.
-- **Model order is quality order, not least recently used.** OpenClaw rotates
-  auth profiles least recently used first, and `Io::KeyRotator` already does
-  that for keys. Applied to models it would put sonnet ahead of opus by turns.
-  The starvation it guards against was an idle lane read as unhealthy, fixed in
-  `ProviderHealth` (a 15-minute window) and `ModelRouter#recently_failed?`.
+- **Model order is quality order, not least recently used.** Keep model
+  preferences deterministic within the declared quality and task constraints.
+  `Io::KeyRotator` enforces one distinct credential per provider; quota and
+  rate-limit outcomes never rotate account identity. The starvation this law
+  guards against was an idle lane read as unhealthy, fixed in `ProviderHealth`
+  (a 15-minute window) and `ModelRouter#recently_failed?`.
 - **The Rails 8.2 alpha pin moves only by a deliberate change.** Never float it.
   An upgrade is its own commit with compatible Gemfiles and lockfiles and the
   app, contract and browser suites after it. Reopen on an upstream release or a
