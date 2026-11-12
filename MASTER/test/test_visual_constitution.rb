@@ -40,7 +40,10 @@ class TestVisualConstitution < Minitest::Test
 
     assert_includes law.source, "xsa/openbsd-dmesgs"
     assert_includes law.fix, "one concise factual line per event"
-    assert_includes law.fix, "Do not create a second event logging format"
+    assert_includes law.ask, "Distinguish configured from observed health"
+    assert_includes law.ask, "the presence of a URL, token, executable or saved preference alone does not establish reachability or readiness"
+    assert_includes law.fix, "Report configured, discovered, reachable, selected and successful as distinct evidence states"
+    assert_includes law.fix, "Do not add another event, status or logging framework"
   end
 
   def test_visual_rubric_places_console_style_above_prompt_trends
