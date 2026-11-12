@@ -115,6 +115,32 @@ class TestMusicSynthIntent < Minitest::Test
     end
   end
 
+  def test_synth_player_remains_waitable_by_the_calling_process
+    Dir.mktmpdir("master-audio-child") do |directory|
+      audio = File.join(directory, "tone.wav")
+      File.binwrite(audio, "synthetic audio fixture")
+      pid = nil
+      reaped = false
+
+      Master::Music::Synth.stub(
+        :player_candidates, [[RbConfig.ruby, "-e", "sleep 30"]]
+      ) do
+        pid = Master::Music::Synth.play(audio)
+        assert_predicate pid, :positive?
+        assert_nil Process.waitpid(pid, Process::WNOHANG),
+                    "a running player must remain a direct, waitable child"
+        Process.kill("TERM", pid)
+        assert_equal pid, Process.waitpid(pid)
+        reaped = true
+      end
+    ensure
+      unless reaped || !pid
+        Process.kill("KILL", pid) rescue nil
+        Process.waitpid(pid) rescue nil
+      end
+    end
+  end
+
   def test_cant_hear_is_a_live_audio_diagnostic_not_a_chat_claim
     assert INTENT.handles?("i can't hear anything")
     INTENT.instance_variable_set(:@player_pid, nil)
