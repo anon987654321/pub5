@@ -628,6 +628,24 @@ class TestFixTransaction < Minitest::Test
     end
   end
 
+  def test_initial_snapshot_hashes_each_source_only_once_after_copying_it
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "note.txt"), "snapshot bytes")
+      tx = Master::Fix::Transaction.new(root: dir, paths: ["note.txt"], id: "single-scan")
+      original = tx.method(:fingerprint)
+      calls = 0
+      tx.define_singleton_method(:fingerprint) do |path|
+        calls += 1
+        original.call(path)
+      end
+
+      tx.begin!
+
+      assert_equal 1, calls, "the initial observation should reuse the fingerprint computed while snapshotting"
+      assert tx.rollback!.ok?
+    end
+  end
+
   def test_initial_snapshot_refuses_a_source_changed_during_capture
     Dir.mktmpdir do |dir|
       path = File.join(dir, "note.txt")

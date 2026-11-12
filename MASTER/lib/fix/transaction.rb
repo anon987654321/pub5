@@ -53,6 +53,7 @@ module Master
         @pending_marker_owned = false
         @seen = Hash.new { |hash, path| hash[path] = [] }
         @snapshots = {}
+        @snapshot_fingerprints = {}
         @dir = File.join(@root, ROOT_DIR, @id)
         @lock = nil
         @active = false
@@ -93,7 +94,7 @@ module Master
       def observe!(verify_snapshot: false)
         @paths.each do |path|
           current = fingerprint(absolute(path))
-          if verify_snapshot && !snapshot_matches_fingerprint?(@snapshots.fetch(path), current)
+          if verify_snapshot && @snapshot_fingerprints.fetch(path) != current
             raise "transaction source changed during initial snapshot: #{path}"
           end
           @seen[path] << current
@@ -601,18 +602,24 @@ module Master
 
       def snapshot(path, versioned: false)
         abs = absolute(path)
-        return Snapshot.new(path, false, :missing, nil, nil, nil) unless File.exist?(abs) || File.symlink?(abs)
+        unless File.exist?(abs) || File.symlink?(abs)
+          @snapshot_fingerprints[path] = "missing"
+          return Snapshot.new(path, false, :missing, nil, nil, nil)
+        end
 
         stat = File.lstat(abs)
         if stat.symlink?
-          Snapshot.new(path, true, :symlink, stat.mode & 0o7777, File.readlink(abs), nil)
+          link = File.readlink(abs)
+          @snapshot_fingerprints[path] = "symlink:#{stat.mode}:#{link}"
+          Snapshot.new(path, true, :symlink, stat.mode & 0o7777, link, nil)
         elsif stat.file?
           name = encoded(path)
           name = "#{name}.#{SecureRandom.hex(8)}" if versioned
           store = File.join(@dir, "files", name)
-          snapshot_file(abs, store)
+          @snapshot_fingerprints[path] = snapshot_file(abs, store)
           Snapshot.new(path, true, :file, stat.mode & 0o7777, nil, store)
         else
+          @snapshot_fingerprints[path] = "other:#{stat.mode}:#{stat.size}"
           Snapshot.new(path, true, :other, stat.mode & 0o7777, nil, nil)
         end
       end
@@ -620,17 +627,20 @@ module Master
       def snapshot_file(source, destination)
         raise "transaction snapshot storage is a symlink" if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, "files")].any? { |path| File.symlink?(path) }
         FileUtils.mkdir_p(File.dirname(destination))
-        before = fingerprint(source)
         temporary = "#{destination}.tmp.#{Process.pid}.#{SecureRandom.hex(4)}"
+        digest = Digest::SHA256.new
         File.open(source, "rb") do |input|
           File.open(temporary, "wb", 0o600) do |output|
-            IO.copy_stream(input, output)
+            while (chunk = input.read(1024 * 1024))
+              digest.update(chunk)
+              output.write(chunk)
+            end
             output.flush
             output.fsync
           end
         end
-        raise "source changed during snapshot: #{source}" unless before == fingerprint(source)
         File.rename(temporary, destination)
+        "file:#{digest.hexdigest}"
       ensure
         File.delete(temporary) if defined?(temporary) && temporary && File.exist?(temporary)
       end
