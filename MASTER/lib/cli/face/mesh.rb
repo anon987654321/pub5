@@ -152,6 +152,12 @@ module Master
           sum
         end
 
+        # Keep the public mesh surface to its read/query/morph contract.
+        # Ruby already treats initialize as private; naming it here also makes
+        # that visibility explicit to the structural audit.
+        private :initialize, :face
+        private_class_method :stl, :obj, :blend
+
         private
 
         def concavity

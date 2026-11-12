@@ -36,6 +36,19 @@ class TestCliAsciiFace < Minitest::Test
     old.each { |k, v| ENV[k.to_s] = v }
   end
 
+  def test_mesh_parser_and_face_helpers_are_not_public_api
+    mesh = Face::Mesh.parse("v 0 0 0\\nv 1 0 0\\nv 0 1 0\\nf 1 2 3\\n")
+
+    assert_respond_to Face::Mesh, :parse
+    assert_respond_to Face::Mesh, :read
+    assert_respond_to Face::Mesh, :morph
+    assert_respond_to mesh, :volume
+    refute_respond_to Face::Mesh, :stl
+    refute_respond_to Face::Mesh, :obj
+    refute_respond_to Face::Mesh, :blend
+    refute_respond_to mesh, :face
+  end
+
   def test_golden_frame_is_exact
     # The heredoc stops at the last drawn row; the twelfth row is blank.
     assert_equal GOLDEN.each_line(chomp: true).to_a + [""], head_frame(12, 24, Face::Motion.rest).lines
