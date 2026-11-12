@@ -321,8 +321,11 @@ models:
   local:
     - *ollama_gemma
     - *llama_cli_gguf
+  # It is never included in the default, strong, review, or fix tiers.
+  nsfw: []
 
 routes:
+  nsfw: nsfw
   detect_lexical: free
   code_generation: default
   code: default
