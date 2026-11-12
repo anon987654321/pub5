@@ -305,3 +305,16 @@ inconclusive group-shutdown result and profile preservation. The new test is
 authored but NOT_RUN. The WebDriver engine has a separate launcher/teardown
 path that still needs bounded process ownership review; this does not close
 the broad process-termination census.
+## Follow-on constitutional scan process and pipe deadline
+
+The constitutional preflight now creates an isolated process group for each
+scan. One monotonic deadline covers both the scan leader and the combined
+stdout/stderr pipe reaching EOF; an exited leader no longer makes the reader
+join unbounded when a descendant inherited the pipe. Timeout sends TERM to
+the owned group, waits briefly, then escalates to KILL. The focused regression
+starts a fake bundle process which exits after spawning a descendant that
+holds stdout open, then asserts the scan times out and the descendant is gone.
+
+The regression is authored but NOT_RUN. The WebDriver engine's separate
+driver/browser process lifecycle remains an open item, as does the broader
+process-termination census.
