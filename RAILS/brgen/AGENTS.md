@@ -10,8 +10,10 @@ same `<subapp>.<apex>` rule.
 
 Apex names are the city with a vowel dropped (or similar): Bergen → `brgen.no`,
 Oslo → `oshlo.no`, Los Angeles → `lsangeles.com`, London → `lndon.uk`. Do not
-invent a host; the list is only `ENTRIES`. `CITY_NETWORK_DOMAINS` is product
-membership and `LIVE_DOMAINS` is the operator-verified TLS/deployment set.
+invent a host; the source records are `config/cities.yml`, projected as the stable
+six-field `DomainRegistry::ENTRIES` API. `CitySeed` derives coordinates and time zones
+from those same records. `CITY_NETWORK_DOMAINS` is product membership and
+`LIVE_DOMAINS` is the operator-verified TLS/deployment set.
 The footer, search palette and mobile switcher use
 `DomainRegistry.live_network_entries`: only their intersection is linked;
 pending members remain quiet until DNS and TLS are verified.
