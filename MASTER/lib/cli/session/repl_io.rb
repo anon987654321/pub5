@@ -5,7 +5,7 @@ module Master
     # The REPL's terminal: help, line reading, completion, history, exit,
     # multiline input and the first-boot screens.
     class Session
-      QUICK_COMMAND_COMPLETIONS = %w[/fix /review /critique /status /doctor /model /session /help].freeze
+      QUICK_COMMAND_COMPLETIONS = %w[/fix /status /doctor /model /session /help].freeze
 
       private
 
