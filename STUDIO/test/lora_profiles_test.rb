@@ -52,21 +52,23 @@ class TestStudioLoraValidator < Minitest::Test
   end
 
   def test_training_manifest_lookup_refuses_symlinked_weights
-    with_subject do |root, directory|
-      write_descriptor(directory)
-      outside = Dir.mktmpdir("lora-outside-")
-      FileUtils.mkdir_p(File.join(outside, "sample"))
-      File.write(File.join(outside, "sample", "replicate_training.json"),
-                 JSON.generate("version" => "owner/model:" + ("a" * 64)))
-      File.symlink(outside, File.join(directory, "weights"))
-      write_training_plan(directory, dataset: "")
+    outside = Dir.mktmpdir("lora-outside-")
+    begin
+      with_subject do |root, directory|
+        write_descriptor(directory)
+        FileUtils.mkdir_p(File.join(outside, "sample"))
+        File.write(File.join(outside, "sample", "replicate_training.json"),
+                   JSON.generate("version" => "owner/model:" + ("a" * 64)))
+        File.symlink(outside, File.join(directory, "weights"))
+        write_training_plan(directory, dataset: "")
 
-      report = Studio::Lora::Validator.new(root:).validate_subject("sample")
+        report = Studio::Lora::Validator.new(root:).validate_subject("sample")
 
-      assert_equal "FAIL", report.fetch("state")
-      assert_includes report.fetch("blockers").map { |item| item["id"] }, "replicate_manifest_path"
+        assert_equal "FAIL", report.fetch("state")
+        assert_includes report.fetch("blockers").map { |item| item["id"] }, "replicate_manifest_path"
+      end
     ensure
-      FileUtils.remove_entry(outside) if outside && File.directory?(outside)
+      FileUtils.remove_entry(outside) if File.directory?(outside)
     end
   end
 
