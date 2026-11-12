@@ -931,6 +931,28 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal "routed-model", first_tokens.first.first
     assert_operator first_tokens.first.last, :>=, 0
   end
+  def test_failed_stream_does_not_record_a_successful_first_token_sample
+    dispatcher, = recording_dispatcher
+    first_tokens = []
+    router = Object.new
+    router.define_singleton_method(:record_first_token) do |model:, latency_ms:|
+      first_tokens << [model, latency_ms]
+    end
+    dispatcher.instance_variable_set(:@model_router, router)
+    dispatcher.define_singleton_method(:send_llm_request) do |_model, *_args, **_kwargs, &on_chunk|
+      on_chunk.call("partial")
+      Master::Result.err("provider failed after partial output", category: :provider_error)
+    end
+
+    result = Master.stub(:any_api_key_present?, true) do
+      dispatcher.send_with_cache(
+        "routed-model", [{ role: "user", content: "hi" }], stream: true
+      ) { |_chunk| nil }
+    end
+
+    assert result.err?
+    assert_empty first_tokens
+  end
 
   def test_the_catalog_verifies_zero_from_the_providers_row_not_the_price_column
     require "io/catalog_index"
