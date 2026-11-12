@@ -34,6 +34,7 @@ module Master
       end
 
       def publish(event, payload = {})
+        event = event.to_s
         state = Thread.current.thread_variable_get(:master_event_dispatch)
         unless state
           state = { queue: [], dispatched: 0, warned: false }
@@ -55,6 +56,7 @@ module Master
       # Unlike ordinary telemetry, persistence failure raises to the caller.
       # Subscribers still run through the shared bounded dispatch queue.
       def publish_required(event, payload = {})
+        event = event.to_s
         conversation = Fiber[:master_conversation]
         enriched = payload.merge(event:, ts: elapsed_ms)
         enriched[:conversation] = conversation if conversation
@@ -122,6 +124,7 @@ module Master
       end
 
       def dispatch_one(event, payload, conversation, already_persisted: false)
+        event = event.to_s
         previous_conversation = Fiber[:master_conversation]
         ts = elapsed_ms
         # One process-wide bus. ChatService (and anything else that writes a
