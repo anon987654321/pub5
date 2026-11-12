@@ -16,6 +16,9 @@ module Master
       POLL_INTERVAL_S = 0.5
       LOGIN_POLL_INTERVAL_S = 1.0
       COMPOSER_TIMEOUT_S = 20
+      # The dispatcher caps free calls at 60s. Ferrum gets a shorter per-operation
+      # ceiling so navigation/input failures unwind before the outer call expires.
+      FERRUM_TIMEOUT_S = 45
       PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
       PROFILE_CLEANUP_WAIT_S = 0.25
       PROFILE_MUTEX = Mutex.new
@@ -92,6 +95,8 @@ module Master
         Master.models_config.dig("ferrum_web_chat") || {}
       end
 
+      def ferrum_timeout_s = [timeout_seconds, FERRUM_TIMEOUT_S].min
+
       def profile_path
         raw = ferrum_config["profile_dir"].to_s
         raw = "~/.config/master/web-chat-profile" if raw.empty?
@@ -108,8 +113,8 @@ module Master
             File.chmod(0o700, profile_path)
             browser = Ferrum::Browser.new(
               headless: ENV[HEADFUL_ENV] != "1",
-              timeout: timeout_seconds,
-              process_timeout: timeout_seconds,
+              timeout: ferrum_timeout_s,
+              process_timeout: ferrum_timeout_s,
               browser_options: { "user-data-dir" => profile_path },
             )
             yield browser.create_page
