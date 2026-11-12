@@ -18,15 +18,28 @@ module Deploy
   module PermissionAudit
     module_function
 
-    # entries: [{ path:, mode:, owner: }] — mode as File::Stat#mode, owner as a
-    # user name. Returns failure lines.
+    # entries: [{ path:, mode:, owner:, group:, expected_owner:, expected_group: }]
+    # — mode is File::Stat#mode; owner/group are names (or numeric fallback).
+    # Expected fields are optional so this audit can check only what the
+    # deployment contract explicitly guarantees. Returns failure lines.
     def failures(secrets:, private_dirs:, daemon_logs:, daemon_user:)
       lines = []
       (secrets + private_dirs).each do |entry|
-        next unless entry[:mode].to_i.anybits?(0o007)
+        mode = entry[:mode].to_i
+        if mode.anybits?(0o007)
+          lines << format("permissions: %<path>s is %<mode>04o - other can reach it", path: entry[:path],
+                                                                                      mode: mode & 0o7777)
+        end
 
-        lines << format("permissions: %<path>s is %<mode>04o - other can reach it", path: entry[:path],
-                                                                                    mode: entry[:mode] & 0o7777)
+        expected_owner = entry[:expected_owner]
+        if expected_owner && entry[:owner] != expected_owner
+          lines << "permissions: #{entry[:path]} is owned by #{entry[:owner]}, expected #{expected_owner}"
+        end
+
+        expected_group = entry[:expected_group]
+        if expected_group && entry[:group] != expected_group
+          lines << "permissions: #{entry[:path]} has group #{entry[:group]}, expected #{expected_group}"
+        end
       end
       daemon_logs.each do |entry|
         next if entry[:owner] == daemon_user
