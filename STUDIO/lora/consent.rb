@@ -56,10 +56,6 @@ module Studio
           errors << "private subject directory is missing or is a symlink"
           return result(subject, directory, errors)
         end
-        unless private_mode?(directory, directory: true)
-          errors << "subject directory must not be accessible by group or other users (mode 0700)"
-        end
-
         path = File.join(directory, "consent.yml")
         unless File.file?(path) && !File.symlink?(path)
           errors << "private consent.yml is missing"
