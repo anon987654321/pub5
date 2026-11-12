@@ -219,12 +219,19 @@ module Master
         # park the lane and record a timeout so fallback does not ask it again.
         completed_result = call_deadline_exceeded(selected_model, started)
       rescue StandardError => err
-        # Provider adapters execute inside CircuitBreaker#execute_with_tracking,
-        # which converts their failures to typed Result errors. An exception
-        # escaping this boundary came from MASTER's routing/cache/dispatch
-        # machinery; blaming the chosen provider would poison healthy lanes.
-        diagnostic = "#{err.class}: #{redact_secrets(err.message.to_s)}"
-        completed_result = Result.err("MASTER fault: #{diagnostic}", category: :crash)
+        if completed_result
+          # The model has already settled. A later detail/formatting fault must
+          # not overwrite its answer or turn its successful provider outcome
+          # into a second failed attempt.
+          Master::Ground::Swallow.log(err, context: "LLMDispatcher.after_settle", severity: :load_bearing)
+        else
+          # Provider adapters execute inside CircuitBreaker#execute_with_tracking,
+          # which converts their failures to typed Result errors. An exception
+          # escaping this boundary came from MASTER's routing/cache/dispatch
+          # machinery; blaming the chosen provider would poison healthy lanes.
+          diagnostic = "#{err.class}: #{redact_secrets(err.message.to_s)}"
+          completed_result = Result.err("MASTER fault: #{diagnostic}", category: :crash)
+        end
       ensure
         # A :crash result deliberately bypasses provider-health accounting.
         # Preserve its typed, redacted diagnosis on the completion event so
