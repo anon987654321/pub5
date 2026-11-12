@@ -709,6 +709,14 @@ module Master
                         { status: "NOT_RUN", applicable: false, reason: "improvement lane not selected" }
                       elsif !@improvement.is_a?(Hash) || read(@improvement, :evaluated_passes, 0).to_i.zero?
                         { status: "INCONCLUSIVE", applicable: true, reason: "improvement engine recorded no assessment" }
+                      elsif read(@improvement, :measured_files, 0).to_i.zero?
+                        {
+                          status: "INCONCLUSIVE", applicable: true,
+                          reason: "no supported improvement domain was measured; file presence is not proof",
+                          files_seen: read(@improvement, :files_seen, 0).to_i,
+                          measured_files: 0,
+                          domains: [],
+                        }
                       else
                         findings = read(@improvement, :findings, 0).to_i
                         fixed = read(@improvement, :fixed, 0).to_i

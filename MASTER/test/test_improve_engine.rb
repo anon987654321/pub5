@@ -48,6 +48,25 @@ class TestImproveEngine < Minitest::Test
     assert_equal :visual, Master::Fix::Improve::Domains.domain_for("RAILS/brgen/app/assets/stylesheets/posts.scss")
   end
 
+  def test_audio_files_are_not_claimed_as_machine_assessed_music
+    assert_nil Master::Fix::Improve::Domains.domain_for("STUDIO/dilla/blue-hour.wav")
+    assert_nil Master::Fix::Improve::Domains.domain_for("STUDIO/dilla/blue-hour.flac")
+    assert_equal :music, Master::Fix::Improve::Domains.domain_for("STUDIO/dilla/blue-hour.sco")
+  end
+
+  def test_improvement_coverage_reports_only_files_with_a_real_domain_probe
+    score = Master::Fix::Improve::Domains.coverage(files: [
+      write("lib/reader.rb", "# frozen_string_literal: true\n"),
+      write("bin/start.sh", "#!/bin/sh\n"),
+      write("music/blue-hour.wav", "not audio"),
+      write("docs/README.md", "# Read me\n"),
+    ])
+
+    assert_equal 4, score[:files_seen]
+    assert_equal 2, score[:measured_files]
+    assert_equal %w[code prose], score[:domains]
+  end
+
   def test_elevates_prose_placeholders
     path = write("docs/README.md", "# X\n\n" + ("word " * 80) + "\n\nTODO: write this later.\n")
     findings = @engine.elevate(files: [path])

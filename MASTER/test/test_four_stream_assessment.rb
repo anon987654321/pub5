@@ -369,6 +369,33 @@ class TestFourStreamAssessment < Minitest::Test
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 
+  def test_continuous_improvement_cannot_pass_without_a_measured_domain
+    ids = %w[BRINGHURST_measure PARENTHETICAL_DASH VISUAL_COMPOSITION ACCESSIBILITY_TOUCH_TARGET OPENBSD_DAEMON_HEALTH DRY]
+    ledger = {
+      summary: { laws: ids.size, expected_cells: ids.size, recorded_cells: ids.size,
+                 clean_passes_required: 2, complete: true },
+      cells: ids.map { |law| { law:, status: "assessed_clean", clean_streak: 2 } },
+    }
+    tags = {
+      "PARENTHETICAL_DASH" => [:TYPOGRAPHY],
+      "VISUAL_COMPOSITION" => [:VISUAL_DESIGN],
+      "ACCESSIBILITY_TOUCH_TARGET" => [:ACCESSIBILITY],
+      "OPENBSD_DAEMON_HEALTH" => [:OPENBSD],
+    }
+    report = Master::Fix::QualityContract.build(
+      ledger:, surface_report: { complete: true, surfaces: {} },
+      target: "MASTER", files: [], lane: :all, law_tags: tags,
+      improvement: {
+        evaluated_passes: 1, findings: 0, fixed: 0,
+        files_seen: 4, measured_files: 0, domains: [],
+      },
+    )
+
+    assert_equal "INCONCLUSIVE", report[:workflows][:continuous_improvement][:status]
+    assert_equal "PASS", report[:compliance_status]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
+  end
+
   def test_deferred_tests_are_not_reported_as_failed
     surface_report = {
       complete: false,

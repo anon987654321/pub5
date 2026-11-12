@@ -104,7 +104,10 @@ module Master
             @assessment_unmeasurable = Set.new
             @assessment_last_pass = 0
             @assessment_visual_group_result = nil
-            @assessment_improvement_state = { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
+            @assessment_improvement_state = {
+              evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0,
+              files_seen: 0, measured_files: 0, domains: [],
+            }
 
             require File.join(Master::ROOT, "law", "definition") unless defined?(::Law::Definition)
             ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
@@ -329,8 +332,12 @@ module Master
             self
           end
 
-          def record_improvement_assessment!(pass:, findings:, ideas: 0, restructures: 0)
-            @assessment_improvement_state ||= { evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0 }
+          def record_improvement_assessment!(pass:, findings:, ideas: 0, restructures: 0,
+                                              files_seen: 0, measured_files: 0, domains: [])
+            @assessment_improvement_state ||= {
+              evaluated_passes: 0, findings: 0, fixed: 0, ideas: 0, restructures: 0,
+              files_seen: 0, measured_files: 0, domains: [],
+            }
             @assessment_improvement_state[:evaluated_passes] += 1
             @assessment_improvement_state[:last_pass] = Integer(pass)
             # These fields describe the latest read-back assessment. Repeated
@@ -338,6 +345,9 @@ module Master
             @assessment_improvement_state[:findings] = Integer(findings)
             @assessment_improvement_state[:ideas] = Integer(ideas)
             @assessment_improvement_state[:restructures] = Integer(restructures)
+            @assessment_improvement_state[:files_seen] = Integer(files_seen)
+            @assessment_improvement_state[:measured_files] = Integer(measured_files)
+            @assessment_improvement_state[:domains] = Array(domains).map(&:to_s).uniq.sort
             self
           end
 

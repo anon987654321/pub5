@@ -15,6 +15,17 @@ module Master
         # probe below is a read plus arithmetic, no LLM, no subprocess per file.
         DOMAIN_WEIGHT = { code: 1.0, prose: 0.9, visual: 1.1, music: 0.8 }.freeze
 
+        def coverage(files:)
+          scoped = Array(files).select { |path| File.file?(path) }
+          measured = scoped.select { |path| domain_for(path) }
+          {
+            files_seen: scoped.size,
+            measured_files: measured.size,
+            domains: measured.map { |path| domain_for(path) }.uniq.map(&:to_s).sort,
+            unmeasured_files: scoped.size - measured.size,
+          }
+        end
+
         def scan(root:, files:)
           scoped = files.select { |path| File.file?(path) }
           implementations = {
@@ -41,7 +52,9 @@ module Master
           when ".rb" then :code
           when ".md", ".rst", ".txt", ".tex" then :prose
           when ".erb", ".scss", ".css", ".html" then :visual
-          when ".mid", ".midi", ".wav", ".flac", ".sco", ".orc", ".csd" then :music
+          # Audio assets are not text scores: file presence is not a musical
+          # assessment. Listening remains the explicit external proof.
+          when ".sco", ".orc", ".csd" then :music
           end
         end
 

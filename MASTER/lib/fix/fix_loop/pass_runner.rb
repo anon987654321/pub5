@@ -493,10 +493,14 @@ module Master
           found = engine.elevate(files:)
           ideas = WorkLane.runs?(:ideate) ? engine.ideate(files:) : []
           restructures = WorkLane.runs?(:restructure_drive) ? engine.restructure_proposals(files:) : []
+          coverage = Improve::Domains.coverage(files:)
           found += ideas_to_findings(ideas, pass:)
           found += restructure_to_findings(restructures, pass:)
-          record_improvement_assessment!(pass:, findings: found.size, ideas: ideas.size, restructures: restructures.size) if
-            respond_to?(:record_improvement_assessment!)
+          record_improvement_assessment!(
+            pass:, findings: found.size, ideas: ideas.size, restructures: restructures.size,
+            files_seen: coverage.fetch(:files_seen), measured_files: coverage.fetch(:measured_files),
+            domains: coverage.fetch(:domains),
+          ) if respond_to?(:record_improvement_assessment!)
           unless found.empty?
             Master::Trace::Dmesg.status(
               "fix0", "pass #{pass}, elevation #{found.size} step(s) toward the ideal (lane=#{lane})"
