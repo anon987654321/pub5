@@ -28,493 +28,500 @@ module Master
 
       private
 
-      # One line that repaints while a turn runs, and above it the turn as a
-      # dmesg: each model call, file, command and request the turn makes, as a
-      # unit attached to its parent. Routine bus events stay in the event log;
-      # one /fix reading publishes about 28,700 of them.
-      # The spinner may use the reserved row only while the prompt and draft
-      # fit on one physical terminal row. Long drafts disable row painting rather
-      # than risk cursor motion into text owned by Reline.
-      def activity_row_safe_to_draw?
-        @activity_row_reserved && draft_row_safe_to_reuse?($stdout)
-      end
+      module ThinkingIndicator
+        private
 
-      # Reuse the editable row for a dmesg line when the draft fits on one
-      # physical row. A wrapped/multiline draft keeps the conservative step
-      # below it so no owned text is overwritten.
-      def draft_row_safe_to_reuse?(target)
-        return false unless @reading_input && target.equal?($stdout)
-        return false unless $stdin.tty? && target.respond_to?(:tty?) && target.tty?
 
-        width = TTY::Screen.width.to_i
-        buffer = Reline.line_buffer.to_s
-        prompt = @active_prompt.to_s
-        width.positive? && prompt.length + buffer.length * 2 + 2 < width
-      rescue StandardError
-        false
-      end
-
-      # Called under Dmesg's terminal mutex. Save and restore the input cursor
-      # while clearing the preceding row; if the draft wraps, abandon the row.
-      def clear_reserved_activity_row(target)
-        return false unless @activity_row_reserved
-
-        safe = activity_row_safe_to_draw? && target.respond_to?(:tty?) && target.tty?
-        if safe
-          target.print("\e7\e[1A\r\e[K\e8")
-          target.flush if target.respond_to?(:flush)
+        # One line that repaints while a turn runs, and above it the turn as a
+        # dmesg: each model call, file, command and request the turn makes, as a
+        # unit attached to its parent. Routine bus events stay in the event log;
+        # one /fix reading publishes about 28,700 of them.
+        # The spinner may use the reserved row only while the prompt and draft
+        # fit on one physical terminal row. Long drafts disable row painting rather
+        # than risk cursor motion into text owned by Reline.
+        def activity_row_safe_to_draw?
+          @activity_row_reserved && draft_row_safe_to_reuse?($stdout)
         end
-        @activity_row_reserved = false
-        safe
-      rescue StandardError => e
-        @activity_row_reserved = false
-        Master::Ground::Swallow.log(e, context: "cli.activity_row.clear", event_bus: @refs.bus)
-        false
-      end
 
-      def print_thinking_indicator
-        init_thinking_state!
-        return unless $stdout.tty?
+        # Reuse the editable row for a dmesg line when the draft fits on one
+        # physical row. A wrapped/multiline draft keeps the conservative step
+        # below it so no owned text is overwritten.
+        def draft_row_safe_to_reuse?(target)
+          return false unless @reading_input && target.equal?($stdout)
+          return false unless $stdin.tty? && target.respond_to?(:tty?) && target.tty?
 
-        @spin_thread = Thread.new do
-          loop do
-            # The spinner owns its row: guarded off, or every tick would step
-            # below the draft first.
-            Master::Trace::Dmesg.terminal_write(guard: false) { |target| paint_spin_row(target) }
-            break if @spin_paused
+          width = TTY::Screen.width.to_i
+          buffer = Reline.line_buffer.to_s
+          prompt = @active_prompt.to_s
+          width.positive? && prompt.length + buffer.length * 2 + 2 < width
+        rescue StandardError
+          false
+        end
 
-            sleep spin_pause(@spin_intensity)
+        # Called under Dmesg's terminal mutex. Save and restore the input cursor
+        # while clearing the preceding row; if the draft wraps, abandon the row.
+        def clear_reserved_activity_row(target)
+          return false unless @activity_row_reserved
+
+          safe = activity_row_safe_to_draw? && target.respond_to?(:tty?) && target.tty?
+          if safe
+            target.print("\e7\e[1A\r\e[K\e8")
+            target.flush if target.respond_to?(:flush)
+          end
+          @activity_row_reserved = false
+          safe
+        rescue StandardError => e
+          @activity_row_reserved = false
+          Master::Ground::Swallow.log(e, context: "cli.activity_row.clear", event_bus: @refs.bus)
+          false
+        end
+
+        def print_thinking_indicator
+          init_thinking_state!
+          return unless $stdout.tty?
+
+          @spin_thread = Thread.new do
+            loop do
+              # The spinner owns its row: guarded off, or every tick would step
+              # below the draft first.
+              Master::Trace::Dmesg.terminal_write(guard: false) { |target| paint_spin_row(target) }
+              break if @spin_paused
+
+              sleep spin_pause(@spin_intensity)
+            end
+          rescue StandardError => e
+            Master::Ground::Swallow.log(e, context: "cli.spinner", event_bus: @refs.bus)
+          end
+        end
+
+        # One repaint under the dmesg terminal mutex; @spin_paused stops the
+        # thread when the fold's ask held the row. All of the spinner's mutable
+        # state advances here; the helpers below stay pure.
+        def paint_spin_row(target)
+          paused, stage = @think_mutex.synchronize { [@think_paused, @think_stage.to_s] }
+          @spin_paused = paused
+          return if paused
+
+          @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
+          reserve_activity_row_after_quiet(target)
+          line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)))
+          @spin_frame += 1
+
+          draw_spin_row(target, spin_tinted(line, @spin_intensity))
+          target.flush
+        end
+
+        # The spinner's line: frame, stage word, elapsed time and any queue.
+        def spin_line(stage, name)
+          stage = "working" if stage.empty?
+          detail = stage == "intake" ? %q{ \_} : " #{elapsed_seconds}s"
+          label = stage == "intake" ? "" : " #{stage}"
+          "#{name}#{label}#{detail}#{spin_suffix}"
+        end
+
+        def spin_tinted(line, intensity)
+          return line if intensity.nil?
+
+          tint = spinner_tint(intensity)
+          return line unless tint
+
+          glyph = line[/\A\*+/]
+          return line unless glyph
+
+          "#{tint}#{glyph}\e[0m#{line.delete_prefix(glyph)}"
+        end
+
+        # Reclaim the spinner row only after a burst of dmesg output has
+        # settled. Fast model failover should read like an OpenBSD log, not a
+        # stack of empty rows between device reports.
+        def reserve_activity_row_after_quiet(target)
+          return unless @reading_input && @turn_worker&.alive?
+          return if @activity_row_reserved || @turn_queue_paused || @closed
+
+          last = @last_foreign_write_at
+          return unless last && monotonic_now - last >= ACTIVITY_REARM_IDLE_S
+
+          target.puts
+          target.flush if target.respond_to?(:flush)
+          @activity_row_reserved = true
+          redraw_active_input
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.activity_row.rearm", event_bus: @refs.bus)
+        end
+
+        def monotonic_now
+          Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        end
+
+        def draw_spin_row(target, line)
+          if @reading_input
+            # A reserved row above Reline's prompt keeps the animation
+            # visible without painting over the user's editable draft.
+            target.print("\e7\e[1A\r\e[K#{line}\e8") if activity_row_safe_to_draw?
+          else
+            # Once a queued turn starts, it still owns a clean status row. The
+            # next dmesg write clears this row first; the spinner paints again
+            # below that event on its next tick.
+            target.print("\r\e[K#{line}")
+            @spinner_row_visible = true
+          end
+        end
+
+        # Busy-turn queue receipts ride the spinner row (Johann 2026-11-07:
+        # separate queue0 lines churned the display under the spinner).
+        def spin_suffix
+          queued = @turn_queue_mutex.synchronize { @turn_queue.size } if @turn_worker&.alive?
+          queued.to_i.positive? ? " - #{queued} queued" : ""
+        end
+
+        # One host load-average sample per SPIN_PROBE_SECONDS; between samples
+        # the normalized CPU load sets the star's cadence and red intensity.
+        def probe_intensity(intensity, probe_at)
+          now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          return intensity, probe_at if now < probe_at
+
+          [ResourceLoad.cpu_load, now + SPIN_PROBE_SECONDS]
+        end
+
+        # Higher CPU load spins the star faster: slow at idle, fast at saturation.
+        # Its red tint runs independently from light red to deep red over 0..1.
+        def spin_pause(intensity)
+          normalized = Float(intensity || 0.0).clamp(0.0, 1.0)
+          span = TICK_SECONDS - FAST_TICK_SECONDS
+          FAST_TICK_SECONDS + span * (1.0 - normalized)
+        end
+
+        # Light red at idle, deep red at maximum normalized host CPU load.
+        # The shared face token owns both stops; malformed values degrade to
+        # plain ASCII instead of raising in the spinner's paint path.
+        def spinner_tint(intensity)
+          return if !ENV["NO_COLOR"].to_s.empty? || ENV["TERM"].to_s.casecmp("dumb").zero?
+
+          stops = Master::Face::Contract.spinner_tint || {}
+          from = Master::Face::Contract.rgb_channels(stops["from"])
+          to = Master::Face::Contract.rgb_channels(stops["to"])
+          return unless from && to
+
+          ramp = Float(intensity).clamp(0.0, 1.0)
+          channels = from.zip(to).map { |a, b| (a + (b - a) * ramp).round }
+          "\e[38;2;#{channels.join(';')}m"
+        rescue ArgumentError, TypeError
+          nil
+        end
+
+        def init_thinking_state!
+          @think_mutex = Mutex.new
+          @think_t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          @think_paused = false
+          @think_stage = "intake"
+          @think_stopping = false
+
+          @spin_frame = 0
+          @spinner_row_visible = false
+          @spin_intensity = nil
+          @spin_probe_at = 0.0
+          @spin_paused = false
+
+          @activity&.reset!
+          # `**`: a single star is colon-free names only, and every stage event has one.
+          @think_sub = @refs.bus&.subscribe("**") { |payload| update_think_stage(payload) }
+          @unit_sub = @refs.logging.listen { |line| print_unit_line(line) } if units_console?
+        end
+
+        # The fold stops to ask a person about a push, a hard reset or a deploy,
+        # and a terminal the operator is typing into is a person. The operator
+        # said approval belongs there, so the interactive session answers; the
+        # daemon, a pipe and the web face build no asker and still refuse.
+        #
+        # Carried as a fiber local because the turn runs on its own thread and
+        # CoreBridge builds the World deep below it. A thread spawned inside the
+        # turn inherits fiber storage, so the asker answers only on the thread
+        # the turn owns: a standing order firing mid-turn runs unattended and is
+        # refused, as it is everywhere else.
+        def terminal_ask(owner)
+          return unless $stdin.tty? && $stdout.tty?
+
+          lambda do |prompt:, options: nil, **|
+            next "no: asked off the terminal turn" unless Thread.current == owner
+
+            answer_at_terminal(prompt, options:)
+          end
+        end
+
+        # y/N, with the spinner held still so the question is not painted over.
+        # Anything but a yes is a no, which Core::Fold decides.
+        # Keep the established direct approval reader for synchronous turns. A
+        # background turn must not compete with Reline for stdin, so it refuses
+        # an approval-dependent operation safely while the next prompt is active.
+        # In an asynchronous interactive turn, Reline remains the sole owner
+        # of stdin. Hand approval requests back to the main input loop instead of
+        # starting a second reader that can steal a draft.
+        def answer_at_terminal(prompt, options: nil)
+          choices = normalize_ask_options(options)
+          return auto_approved(prompt, choices) if auto_approve?
+
+          if @turn_worker&.alive? && Thread.current == @pipeline_thread && $stdin.tty? && $stdout.tty?
+            request = { answer: nil, choices: }
+            @terminal_ask_mutex.synchronize { @pending_terminal_ask = request }
+            label = @refs.renderer.render("ask0: #{prompt}", mode: :dmesg)
+            rows = [label, *choices.each_with_index.map { |choice, index| "  #{index + 1}) #{choice.fetch(:name)}" }]
+            rows << (choices.empty? ? "enter /approve or /deny; other input stays queued" : "enter /approve N or /deny; other input stays queued")
+            terminal_puts(rows.join("\n"))
+            answer = @terminal_ask_mutex.synchronize do
+              @terminal_ask_cv.wait(@terminal_ask_mutex) while @pending_terminal_ask.equal?(request) && request[:answer].nil?
+              request[:answer]
+            end
+            return answer.to_s.strip if choices.empty?
+            index = Integer(answer, exception: false)
+            choice = index && choices[index - 1]
+            return choice ? choice.fetch(:value).to_s : ""
+          end
+
+          @think_mutex&.synchronize { @think_paused = true }
+          terminal_print("\r\e[K")
+          return answer_choice_at_terminal(prompt, choices) unless choices.empty?
+          terminal_print("#{@refs.renderer.render("ask0: #{prompt} [y/N]", mode: :dmesg)} ")
+          $stdin.gets.to_s.strip
+        ensure
+          if defined?(request) && request
+            @terminal_ask_mutex.synchronize do
+              @pending_terminal_ask = nil if @pending_terminal_ask.equal?(request)
+              @terminal_ask_cv.broadcast
+            end
+          end
+          @think_mutex&.synchronize { @think_paused = false }
+        end
+
+        # The operator decided the session approves on its own; the line stays in the log.
+        def auto_approve?
+          config = @refs.respond_to?(:config) ? @refs.config : nil
+          (config.respond_to?(:fetch) ? config.fetch("auto_approve", true) : true) != false
+        end
+
+        def auto_approved(prompt, choices)
+          terminal_puts(@refs.renderer.render("ask0: auto-approved, #{prompt}", mode: :dmesg))
+          return "yes" if choices.empty?
+
+          (choices.find { |choice| choice.fetch(:value) == "approve" } || choices.first).fetch(:value).to_s
+        end
+
+        def terminal_ask_pending?
+          @terminal_ask_mutex.synchronize { !@pending_terminal_ask.nil? }
+        end
+
+        def answer_pending_terminal_ask(line)
+          text = line.to_s.strip
+          @terminal_ask_mutex.synchronize do
+            request = @pending_terminal_ask
+            return false unless request
+
+            if text.match?(%r{\A/deny\z}i)
+              request[:answer] = "no"
+            elsif text.match?(%r{\A/approve(?:\s+.*)?\z}i)
+              value = text.sub(%r{\A/approve}i, "").strip
+              request[:answer] = value.empty? && request[:choices].empty? ? "yes" : value
+            else
+              return false
+            end
+            @terminal_ask_cv.broadcast
+            true
+          end
+        end
+
+        # LLMs may serialize approval choices as an array, a single choice object,
+        # or a name => value map. Normalize those shapes before indexing; an
+        # unnormalized Hash was enumerated as key/value pairs and raised a
+        # Symbol-to-Integer TypeError when the renderer treated an Array as a Hash.
+        def normalize_ask_options(options)
+          entries = case options
+                    when Array then options
+                    when Hash
+                      if %i[name label value].any? { |key| options.key?(key) || options.key?(key.to_s) }
+                        [options]
+                      else
+                        options.map { |name, value| { name:, value: } }
+                      end
+                    else []
+                    end
+
+          entries.filter_map do |entry|
+            case entry
+            when Hash
+              name = entry[:name] || entry["name"] || entry[:label] || entry["label"]
+              value = entry[:value] || entry["value"] || name
+              next if name.nil?
+
+              { name: name.to_s, value: value.to_s }
+            when String, Symbol
+              { name: entry.to_s, value: entry.to_s }
+            end
+          end
+        end
+
+        def answer_choice_at_terminal(prompt, options)
+          choices = options.each_with_index.map { |option, index| "#{index + 1}) #{option.fetch(:name)}" }
+          terminal_write do |target|
+            target.print @refs.renderer.render("ask0: #{prompt}", mode: :dmesg)
+            target.print "\n  #{choices.join("\n  ")}\n> "
+            target.flush
+          end
+          selected = $stdin.gets.to_s.strip
+          index = Integer(selected, exception: false)
+          option = index && options[index - 1]
+          option ? option.fetch(:value).to_s : ""
+        end
+
+        # The spinner stops when a reply streams; detailed events still print.
+        def stop_thinking_indicator
+          @think_mutex&.synchronize { @think_paused = true }
+          @spin_thread&.join
+          @spin_thread = nil
+          @think_sub&.call
+          @think_sub = nil
+          if @activity_row_reserved
+            Master::Trace::Dmesg.terminal_write(guard: false) { |target| clear_reserved_activity_row(target) }
+          elsif $stdout.tty?
+            terminal_print("\r\e[K")
+          end
+          @spinner_row_visible = false
+        end
+
+        # Detailed dmesg is the default; MASTER_CLI_QUIET=1 is the opt-out.
+        def verbose_output?
+          ENV["MASTER_CLI_QUIET"] != "1"
+        end
+
+        def units_console?
+          @refs.logging.respond_to?(:listen) && Master::Trace::Dmesg.enabled?
+        end
+
+        def close_unit_console
+          @unit_sub&.call
+          @unit_sub = nil
+        end
+
+        def update_think_stage(payload)
+          event = payload[:event].to_s
+          @activity&.record(event, payload)
+          stage = stage_for(event, payload)
+          @think_mutex&.synchronize do
+            if event == "user:interrupt"
+              @think_stopping = true
+              @think_stage = stage || "stopping"
+            elsif !@think_stopping && stage
+              @think_stage = stage
+            end
+          end
+        end
+
+        def stage_for(event, payload)
+          return stage_with_detail(event, payload) if event.start_with?("stage:")
+          return payload[:stage].to_s.downcase if event == "pipeline:stage_start"
+          return provider_outcome_stage(payload) if event == "llm:provider_outcome"
+
+          stage = STAGE_EVENTS[event]
+          return stage unless %w[llm:send llm:stream_started].include?(event)
+
+          provider_stage(stage, payload[:model])
+        end
+
+        # Provider outcomes are per-attempt, not whole-turn outcomes. Name a
+        # timeout or completed response while fallback/tools continue; the next
+        # llm:send replaces it with the next actual provider.
+        def provider_outcome_stage(payload)
+          stage = case payload[:status].to_s
+                  when "success" then "received"
+                  when "timeout" then "timeout"
+                  when "rate_limit" then "rate limit"
+                  when "quota_exceeded" then "quota"
+                  when "llm_call_failure", "provider_error", "failure" then "provider error"
+                  else "provider status"
+                  end
+          provider_stage(stage, payload[:model])
+        end
+
+        # The dispatch event names the lane that actually passed the send gate,
+        # not the route's earlier candidate. Keep the spinner useful on failover
+        # without printing a long model id or untrusted terminal control text.
+        def provider_stage(stage, model)
+          provider = Master::Io::LaneSelection.provider(model).to_s
+          provider = provider.gsub(/[^A-Za-z0-9_.:-]/, "")[0, 18]
+          provider.empty? ? stage : "#{stage} #{provider}"
+        rescue StandardError
+          stage
+        end
+
+        # "stage:*" events name their own unit and may carry a live detail — the
+        # media lane's download fraction, for one. The row reads "mov0 34% of
+        # 667.6MB — Title"; one_row keeps it inside the screen's width.
+        def stage_with_detail(event, payload)
+          name = event.delete_prefix("stage:")
+          detail = payload[:detail].to_s.strip
+          detail.empty? ? name : "#{name} #{detail}"
+        end
+
+        # What is worth saying out loud while a pass runs. A pass prints hundreds
+        # of unit lines and speaking each would be a torrent; these are the ones a
+        # person waiting for it would want called out — a reading finished, a pass
+        # of repairs counted, the council's verdict, the pass itself ending.
+        # Spoken as they happen, so the reply at the end has only its footer left
+        # to say instead of the whole log.
+        MILESTONE = /\A(?:obs\d+: done|scan\d+: (?:done|pass \d)|fix\d+: pass \d|crit\d+: |review\d+: (?:complete|incomplete))/
+
+        # A line the units console prints. While the draft is being edited the
+        # guard moves the line to a row of its own below the cursor and the
+        # editable line repaints afterwards; while the turn runs inline the
+        # legacy rows stand — clear the row, print, as the line always did.
+        def print_unit_line(line)
+          return unless Master::Trace::Dmesg.enabled?
+
+          Master::Voice::Playback.speak(line) if line.match?(MILESTONE) && !Master::Trace::Dmesg.log_voice_active?
+          return unless verbose_output?
+
+          io = $stdout.isatty ? $stdout : $stderr
+          @think_mutex&.synchronize { @think_stage = line[/\A[^\s:]+/] }
+          Master::Trace::Dmesg.terminal_write(io:) do |target|
+            unit_line_rows(io, target)
+            target.puts @refs.renderer.render(line, mode: :dim)
+            target.flush
           end
         rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "cli.spinner", event_bus: @refs.bus)
+          Master::Ground::Swallow.log(e, context: "cli.print_unit_line", event_bus: @refs.bus)
+        end
+
+        # The unit row is the guard's job while a draft is edited (plain payload
+        # below the cursor, repaint afterwards). Only the inline turn keeps the
+        # legacy rows: give up the spinner's row, clear, then the line prints.
+        def unit_line_rows(io, target)
+          return if io.equal?($stdout) && @reading_input && tty_target?(target)
+
+          clear_reserved_activity_row(target) if io.equal?($stdout)
+          target.print "\r\e[K" if tty_target?(target)
+        end
+
+        # The spinner repaints with \r\e[K, which clears one row. A line wider
+        # than the screen wraps onto a second row that nothing clears, and every
+        # tick left another copy behind it. Unit lines are printed once and may
+        # wrap. The spinner's own row cuts at a word's edge on one ellipsis.
+        def one_row(text)
+          width = TTY::Screen.width - 1
+          return text unless width.positive? && text.length > width
+
+          Master::Voice::Typography.ellipsis(text, width)
+        rescue StandardError
+          text
+        end
+
+        def elapsed_seconds
+          (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @think_t0.to_f).floor
+        end
+
+        def build_stream_handler(buffer, &on_text)
+          Master::CLI::StreamAccumulator.new(buffer, &on_text)
         end
       end
 
-      # One repaint under the dmesg terminal mutex; @spin_paused stops the
-      # thread when the fold's ask held the row. All of the spinner's mutable
-      # state advances here; the helpers below stay pure.
-      def paint_spin_row(target)
-        paused, stage = @think_mutex.synchronize { [@think_paused, @think_stage.to_s] }
-        @spin_paused = paused
-        return if paused
-
-        @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
-        reserve_activity_row_after_quiet(target)
-        line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)))
-        @spin_frame += 1
-
-        draw_spin_row(target, spin_tinted(line, @spin_intensity))
-        target.flush
-      end
-
-      # The spinner's line: frame, stage word, elapsed time and any queue.
-      def spin_line(stage, name)
-        stage = "working" if stage.empty?
-        detail = stage == "intake" ? %q{ \_} : " #{elapsed_seconds}s"
-        label = stage == "intake" ? "" : " #{stage}"
-        "#{name}#{label}#{detail}#{spin_suffix}"
-      end
-
-      def spin_tinted(line, intensity)
-        return line if intensity.nil?
-
-        tint = spinner_tint(intensity)
-        return line unless tint
-
-        glyph = line[/\A\*+/]
-        return line unless glyph
-
-        "#{tint}#{glyph}\e[0m#{line.delete_prefix(glyph)}"
-      end
-
-      # Reclaim the spinner row only after a burst of dmesg output has
-      # settled. Fast model failover should read like an OpenBSD log, not a
-      # stack of empty rows between device reports.
-      def reserve_activity_row_after_quiet(target)
-        return unless @reading_input && @turn_worker&.alive?
-        return if @activity_row_reserved || @turn_queue_paused || @closed
-
-        last = @last_foreign_write_at
-        return unless last && monotonic_now - last >= ACTIVITY_REARM_IDLE_S
-
-        target.puts
-        target.flush if target.respond_to?(:flush)
-        @activity_row_reserved = true
-        redraw_active_input
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.activity_row.rearm", event_bus: @refs.bus)
-      end
-
-      def monotonic_now
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-
-      def draw_spin_row(target, line)
-        if @reading_input
-          # A reserved row above Reline's prompt keeps the animation
-          # visible without painting over the user's editable draft.
-          target.print("\e7\e[1A\r\e[K#{line}\e8") if activity_row_safe_to_draw?
-        else
-          # Once a queued turn starts, it still owns a clean status row. The
-          # next dmesg write clears this row first; the spinner paints again
-          # below that event on its next tick.
-          target.print("\r\e[K#{line}")
-          @spinner_row_visible = true
-        end
-      end
-
-      # Busy-turn queue receipts ride the spinner row (Johann 2026-11-07:
-      # separate queue0 lines churned the display under the spinner).
-      def spin_suffix
-        queued = @turn_queue_mutex.synchronize { @turn_queue.size } if @turn_worker&.alive?
-        queued.to_i.positive? ? " - #{queued} queued" : ""
-      end
-
-      # One host load-average sample per SPIN_PROBE_SECONDS; between samples
-      # the normalized CPU load sets the star's cadence and red intensity.
-      def probe_intensity(intensity, probe_at)
-        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        return intensity, probe_at if now < probe_at
-
-        [ResourceLoad.cpu_load, now + SPIN_PROBE_SECONDS]
-      end
-
-      # Higher CPU load spins the star faster: slow at idle, fast at saturation.
-      # Its red tint runs independently from light red to deep red over 0..1.
-      def spin_pause(intensity)
-        normalized = Float(intensity || 0.0).clamp(0.0, 1.0)
-        span = TICK_SECONDS - FAST_TICK_SECONDS
-        FAST_TICK_SECONDS + span * (1.0 - normalized)
-      end
-
-      # Light red at idle, deep red at maximum normalized host CPU load.
-      # The shared face token owns both stops; malformed values degrade to
-      # plain ASCII instead of raising in the spinner's paint path.
-      def spinner_tint(intensity)
-        return if !ENV["NO_COLOR"].to_s.empty? || ENV["TERM"].to_s.casecmp("dumb").zero?
-
-        stops = Master::Face::Contract.spinner_tint || {}
-        from = Master::Face::Contract.rgb_channels(stops["from"])
-        to = Master::Face::Contract.rgb_channels(stops["to"])
-        return unless from && to
-
-        ramp = Float(intensity).clamp(0.0, 1.0)
-        channels = from.zip(to).map { |a, b| (a + (b - a) * ramp).round }
-        "\e[38;2;#{channels.join(';')}m"
-      rescue ArgumentError, TypeError
-        nil
-      end
-
-      def init_thinking_state!
-        @think_mutex = Mutex.new
-        @think_t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        @think_paused = false
-        @think_stage = "intake"
-        @think_stopping = false
-
-        @spin_frame = 0
-        @spinner_row_visible = false
-        @spin_intensity = nil
-        @spin_probe_at = 0.0
-        @spin_paused = false
-
-        @activity&.reset!
-        # `**`: a single star is colon-free names only, and every stage event has one.
-        @think_sub = @refs.bus&.subscribe("**") { |payload| update_think_stage(payload) }
-        @unit_sub = @refs.logging.listen { |line| print_unit_line(line) } if units_console?
-      end
-
-      # The fold stops to ask a person about a push, a hard reset or a deploy,
-      # and a terminal the operator is typing into is a person. The operator
-      # said approval belongs there, so the interactive session answers; the
-      # daemon, a pipe and the web face build no asker and still refuse.
-      #
-      # Carried as a fiber local because the turn runs on its own thread and
-      # CoreBridge builds the World deep below it. A thread spawned inside the
-      # turn inherits fiber storage, so the asker answers only on the thread
-      # the turn owns: a standing order firing mid-turn runs unattended and is
-      # refused, as it is everywhere else.
-      def terminal_ask(owner)
-        return unless $stdin.tty? && $stdout.tty?
-
-        lambda do |prompt:, options: nil, **|
-          next "no: asked off the terminal turn" unless Thread.current == owner
-
-          answer_at_terminal(prompt, options:)
-        end
-      end
-
-      # y/N, with the spinner held still so the question is not painted over.
-      # Anything but a yes is a no, which Core::Fold decides.
-      # Keep the established direct approval reader for synchronous turns. A
-      # background turn must not compete with Reline for stdin, so it refuses
-      # an approval-dependent operation safely while the next prompt is active.
-      # In an asynchronous interactive turn, Reline remains the sole owner
-      # of stdin. Hand approval requests back to the main input loop instead of
-      # starting a second reader that can steal a draft.
-      def answer_at_terminal(prompt, options: nil)
-        choices = normalize_ask_options(options)
-        return auto_approved(prompt, choices) if auto_approve?
-
-        if @turn_worker&.alive? && Thread.current == @pipeline_thread && $stdin.tty? && $stdout.tty?
-          request = { answer: nil, choices: }
-          @terminal_ask_mutex.synchronize { @pending_terminal_ask = request }
-          label = @refs.renderer.render("ask0: #{prompt}", mode: :dmesg)
-          rows = [label, *choices.each_with_index.map { |choice, index| "  #{index + 1}) #{choice.fetch(:name)}" }]
-          rows << (choices.empty? ? "enter /approve or /deny; other input stays queued" : "enter /approve N or /deny; other input stays queued")
-          terminal_puts(rows.join("\n"))
-          answer = @terminal_ask_mutex.synchronize do
-            @terminal_ask_cv.wait(@terminal_ask_mutex) while @pending_terminal_ask.equal?(request) && request[:answer].nil?
-            request[:answer]
-          end
-          return answer.to_s.strip if choices.empty?
-          index = Integer(answer, exception: false)
-          choice = index && choices[index - 1]
-          return choice ? choice.fetch(:value).to_s : ""
-        end
-
-        @think_mutex&.synchronize { @think_paused = true }
-        terminal_print("\r\e[K")
-        return answer_choice_at_terminal(prompt, choices) unless choices.empty?
-        terminal_print("#{@refs.renderer.render("ask0: #{prompt} [y/N]", mode: :dmesg)} ")
-        $stdin.gets.to_s.strip
-      ensure
-        if defined?(request) && request
-          @terminal_ask_mutex.synchronize do
-            @pending_terminal_ask = nil if @pending_terminal_ask.equal?(request)
-            @terminal_ask_cv.broadcast
-          end
-        end
-        @think_mutex&.synchronize { @think_paused = false }
-      end
-
-      # The operator decided the session approves on its own; the line stays in the log.
-      def auto_approve?
-        config = @refs.respond_to?(:config) ? @refs.config : nil
-        (config.respond_to?(:fetch) ? config.fetch("auto_approve", true) : true) != false
-      end
-
-      def auto_approved(prompt, choices)
-        terminal_puts(@refs.renderer.render("ask0: auto-approved, #{prompt}", mode: :dmesg))
-        return "yes" if choices.empty?
-
-        (choices.find { |choice| choice.fetch(:value) == "approve" } || choices.first).fetch(:value).to_s
-      end
-
-      def terminal_ask_pending?
-        @terminal_ask_mutex.synchronize { !@pending_terminal_ask.nil? }
-      end
-
-      def answer_pending_terminal_ask(line)
-        text = line.to_s.strip
-        @terminal_ask_mutex.synchronize do
-          request = @pending_terminal_ask
-          return false unless request
-
-          if text.match?(%r{\A/deny\z}i)
-            request[:answer] = "no"
-          elsif text.match?(%r{\A/approve(?:\s+.*)?\z}i)
-            value = text.sub(%r{\A/approve}i, "").strip
-            request[:answer] = value.empty? && request[:choices].empty? ? "yes" : value
-          else
-            return false
-          end
-          @terminal_ask_cv.broadcast
-          true
-        end
-      end
-
-      # LLMs may serialize approval choices as an array, a single choice object,
-      # or a name => value map. Normalize those shapes before indexing; an
-      # unnormalized Hash was enumerated as key/value pairs and raised a
-      # Symbol-to-Integer TypeError when the renderer treated an Array as a Hash.
-      def normalize_ask_options(options)
-        entries = case options
-                  when Array then options
-                  when Hash
-                    if %i[name label value].any? { |key| options.key?(key) || options.key?(key.to_s) }
-                      [options]
-                    else
-                      options.map { |name, value| { name:, value: } }
-                    end
-                  else []
-                  end
-
-        entries.filter_map do |entry|
-          case entry
-          when Hash
-            name = entry[:name] || entry["name"] || entry[:label] || entry["label"]
-            value = entry[:value] || entry["value"] || name
-            next if name.nil?
-
-            { name: name.to_s, value: value.to_s }
-          when String, Symbol
-            { name: entry.to_s, value: entry.to_s }
-          end
-        end
-      end
-
-      def answer_choice_at_terminal(prompt, options)
-        choices = options.each_with_index.map { |option, index| "#{index + 1}) #{option.fetch(:name)}" }
-        terminal_write do |target|
-          target.print @refs.renderer.render("ask0: #{prompt}", mode: :dmesg)
-          target.print "\n  #{choices.join("\n  ")}\n> "
-          target.flush
-        end
-        selected = $stdin.gets.to_s.strip
-        index = Integer(selected, exception: false)
-        option = index && options[index - 1]
-        option ? option.fetch(:value).to_s : ""
-      end
-
-      # The spinner stops when a reply streams; detailed events still print.
-      def stop_thinking_indicator
-        @think_mutex&.synchronize { @think_paused = true }
-        @spin_thread&.join
-        @spin_thread = nil
-        @think_sub&.call
-        @think_sub = nil
-        if @activity_row_reserved
-          Master::Trace::Dmesg.terminal_write(guard: false) { |target| clear_reserved_activity_row(target) }
-        elsif $stdout.tty?
-          terminal_print("\r\e[K")
-        end
-        @spinner_row_visible = false
-      end
-
-      # Detailed dmesg is the default; MASTER_CLI_QUIET=1 is the opt-out.
-      def verbose_output?
-        ENV["MASTER_CLI_QUIET"] != "1"
-      end
-
-      def units_console?
-        @refs.logging.respond_to?(:listen) && Master::Trace::Dmesg.enabled?
-      end
-
-      def close_unit_console
-        @unit_sub&.call
-        @unit_sub = nil
-      end
-
-      def update_think_stage(payload)
-        event = payload[:event].to_s
-        @activity&.record(event, payload)
-        stage = stage_for(event, payload)
-        @think_mutex&.synchronize do
-          if event == "user:interrupt"
-            @think_stopping = true
-            @think_stage = stage || "stopping"
-          elsif !@think_stopping && stage
-            @think_stage = stage
-          end
-        end
-      end
-
-      def stage_for(event, payload)
-        return stage_with_detail(event, payload) if event.start_with?("stage:")
-        return payload[:stage].to_s.downcase if event == "pipeline:stage_start"
-        return provider_outcome_stage(payload) if event == "llm:provider_outcome"
-
-        stage = STAGE_EVENTS[event]
-        return stage unless %w[llm:send llm:stream_started].include?(event)
-
-        provider_stage(stage, payload[:model])
-      end
-
-      # Provider outcomes are per-attempt, not whole-turn outcomes. Name a
-      # timeout or completed response while fallback/tools continue; the next
-      # llm:send replaces it with the next actual provider.
-      def provider_outcome_stage(payload)
-        stage = case payload[:status].to_s
-                when "success" then "received"
-                when "timeout" then "timeout"
-                when "rate_limit" then "rate limit"
-                when "quota_exceeded" then "quota"
-                when "llm_call_failure", "provider_error", "failure" then "provider error"
-                else "provider status"
-                end
-        provider_stage(stage, payload[:model])
-      end
-
-      # The dispatch event names the lane that actually passed the send gate,
-      # not the route's earlier candidate. Keep the spinner useful on failover
-      # without printing a long model id or untrusted terminal control text.
-      def provider_stage(stage, model)
-        provider = Master::Io::LaneSelection.provider(model).to_s
-        provider = provider.gsub(/[^A-Za-z0-9_.:-]/, "")[0, 18]
-        provider.empty? ? stage : "#{stage} #{provider}"
-      rescue StandardError
-        stage
-      end
-
-      # "stage:*" events name their own unit and may carry a live detail — the
-      # media lane's download fraction, for one. The row reads "mov0 34% of
-      # 667.6MB — Title"; one_row keeps it inside the screen's width.
-      def stage_with_detail(event, payload)
-        name = event.delete_prefix("stage:")
-        detail = payload[:detail].to_s.strip
-        detail.empty? ? name : "#{name} #{detail}"
-      end
-
-      # What is worth saying out loud while a pass runs. A pass prints hundreds
-      # of unit lines and speaking each would be a torrent; these are the ones a
-      # person waiting for it would want called out — a reading finished, a pass
-      # of repairs counted, the council's verdict, the pass itself ending.
-      # Spoken as they happen, so the reply at the end has only its footer left
-      # to say instead of the whole log.
-      MILESTONE = /\A(?:obs\d+: done|scan\d+: (?:done|pass \d)|fix\d+: pass \d|crit\d+: |review\d+: (?:complete|incomplete))/
-
-      # A line the units console prints. While the draft is being edited the
-      # guard moves the line to a row of its own below the cursor and the
-      # editable line repaints afterwards; while the turn runs inline the
-      # legacy rows stand — clear the row, print, as the line always did.
-      def print_unit_line(line)
-        return unless Master::Trace::Dmesg.enabled?
-
-        Master::Voice::Playback.speak(line) if line.match?(MILESTONE) && !Master::Trace::Dmesg.log_voice_active?
-        return unless verbose_output?
-
-        io = $stdout.isatty ? $stdout : $stderr
-        @think_mutex&.synchronize { @think_stage = line[/\A[^\s:]+/] }
-        Master::Trace::Dmesg.terminal_write(io:) do |target|
-          unit_line_rows(io, target)
-          target.puts @refs.renderer.render(line, mode: :dim)
-          target.flush
-        end
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "cli.print_unit_line", event_bus: @refs.bus)
-      end
-
-      # The unit row is the guard's job while a draft is edited (plain payload
-      # below the cursor, repaint afterwards). Only the inline turn keeps the
-      # legacy rows: give up the spinner's row, clear, then the line prints.
-      def unit_line_rows(io, target)
-        return if io.equal?($stdout) && @reading_input && tty_target?(target)
-
-        clear_reserved_activity_row(target) if io.equal?($stdout)
-        target.print "\r\e[K" if tty_target?(target)
-      end
-
-      # The spinner repaints with \r\e[K, which clears one row. A line wider
-      # than the screen wraps onto a second row that nothing clears, and every
-      # tick left another copy behind it. Unit lines are printed once and may
-      # wrap. The spinner's own row cuts at a word's edge on one ellipsis.
-      def one_row(text)
-        width = TTY::Screen.width - 1
-        return text unless width.positive? && text.length > width
-
-        Master::Voice::Typography.ellipsis(text, width)
-      rescue StandardError
-        text
-      end
-
-      def elapsed_seconds
-        (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @think_t0.to_f).floor
-      end
-
-      def build_stream_handler(buffer, &on_text)
-        Master::CLI::StreamAccumulator.new(buffer, &on_text)
-      end
+      include ThinkingIndicator
     end
   end
 end

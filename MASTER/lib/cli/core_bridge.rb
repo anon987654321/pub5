@@ -186,45 +186,42 @@ module Master
       def read_only_probe(root:)
         workspace = File.realpath(root)
         lambda do |argv|
-          values = Array(argv)
-          if values == %w[git ls-files] || values == %w[git ls-files -z] || whitespace_check?(values)
-            nil
-          elsif git_reading_verb?(values)
-            nil
-          elsif values.length == 3 && values[0] == "wc" && values[1] == "-l" &&
-                in_tree_relative_path?(values[2], workspace)
-            nil
-          elsif values.length == 3 && values[0] == "ruby" && values[1] == "-c"
-            path = values[2]
-            if path.empty? || path.start_with?(File::SEPARATOR) ||
-               path.split(/[\\\/]/).include?("..") || File.extname(path) != ".rb"
-              "ruby -c requires one relative .rb path"
-            else
-              expanded = File.expand_path(path, workspace)
-              real = File.realpath(expanded) if File.file?(expanded)
-              if !real || !(real == workspace || real.start_with?("#{workspace}#{File::SEPARATOR}"))
-                "probe path is missing or escapes the workspace"
-              else
-                nil
-              end
-            end
-          else
-            # The refusal echoes what arrived: a bare "allowed: ..." sent the
-            # caller back to blind variations of the same command, and the
-            # fold died of repeated refusals (Johann's log 2026-11-08). The
-            # canonical whitespace check also answers under its natural
-            # spellings — "git diff --check" is the same read-only request
-            # as the fully-flagged form.
-            tried = values.first(4).join(" ")[0, 80]
-            "probe refused: #{tried.inspect} - only ruby -c on one in-tree .rb file, " \
-              "wc -l on one in-tree file, git ls-files, or git's reading verbs " \
-              "(status, log, show, diff) are allowed"
-          end
+          read_only_probe_refusal(Array(argv), workspace)
         rescue StandardError => e
           "probe policy could not establish scope: #{e.class}"
         end
       rescue StandardError => e
         ->(_argv) { "probe workspace unavailable: #{e.class}" }
+      end
+
+      def read_only_probe_refusal(values, workspace)
+        return if values == %w[git ls-files] || values == %w[git ls-files -z]
+        return if whitespace_check?(values) || git_reading_verb?(values)
+        return if values.length == 3 && values[0] == "wc" && values[1] == "-l" &&
+                  in_tree_relative_path?(values[2], workspace)
+        return ruby_syntax_probe_refusal(values[2], workspace) if ruby_syntax_probe_command?(values)
+
+        tried = values.first(4).join(" ")[0, 80]
+        "probe refused: #{tried.inspect} - only ruby -c on one in-tree .rb file, " \
+          "wc -l on one in-tree file, git ls-files, or git's reading verbs " \
+          "(status, log, show, diff) are allowed"
+      end
+
+      def ruby_syntax_probe_command?(values)
+        values.length == 3 && values[0] == "ruby" && values[1] == "-c"
+      end
+
+      def ruby_syntax_probe_refusal(path, workspace)
+        invalid = path.empty? || path.start_with?(File::SEPARATOR) ||
+                  path.split(/[\\\/]/).include?("..") || File.extname(path) != ".rb"
+        return "ruby -c requires one relative .rb path" if invalid
+
+        expanded = File.expand_path(path, workspace)
+        real = File.realpath(expanded) if File.file?(expanded)
+        return "probe path is missing or escapes the workspace" unless
+          real && (real == workspace || real.start_with?("#{workspace}#{File::SEPARATOR}"))
+
+        nil
       end
 
       # git diff --check reads the working tree against the index and names

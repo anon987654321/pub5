@@ -1002,16 +1002,15 @@ module Master
         explicit_read_only = false
         path_bits = []
         joined_only(raw.split(/\s+/)).each do |token|
-          if (flag = PASS_FLAGS[token.downcase])
+          case token.downcase
+          when *PASS_FLAGS.keys
+            flag = PASS_FLAGS.fetch(token.downcase)
             flags[flag.first] = flag.last
             explicit_read_only ||= flag.first == :apply && flag.last == false
-          elsif DMESG_FLAGS.key?(token.downcase)
+          when *DMESG_FLAGS.keys, DISPATCH_FLAG
+            # Per-dispatch and dmesg flags do not become target path tokens.
             next
-          elsif token.match?(DISPATCH_FLAG)
-            # Parsed below as per-dispatch options; parsing must not mutate the
-            # next command's behavior in a long-lived interactive session.
-            next
-          elsif token =~ ONLY_FLAG
+          when ONLY_FLAG
             flags[:only] = Regexp.last_match(1)
           else
             path_bits << token
