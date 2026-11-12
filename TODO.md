@@ -386,21 +386,21 @@ measure is already owned by the Bymorgen item above.
   regressions are authored but NOT_RUN. The full source census of load-bearing
   rescue sites and review of each fallback's operational consequence remain open. The LLMDispatcher
   Replicate chat poll is source-fixed for URL trust, bearer-token confinement
-  and network deadlines. MASTER's ReplicateClient now reads private token
-  files through a verified descriptor with a 256 KiB cap, fingerprints
-  provider error bodies instead of exposing their text, and applies equal
-  jitter beneath the shared exponential retry ceiling. Its five focused
+  and network deadlines. MASTER's ReplicateClient reads private token files through a verified
+  descriptor with a 256 KiB cap, fingerprints provider error bodies instead
+  of exposing their text, applies equal jitter beneath the shared exponential
+  retry ceiling, rejects dot/escaped/backslash API path segments, restricts
+  pagination cursors to `/v1/models`, rejects redirects and caps download/API
+  bytes under monotonic deadlines. Its API-path, cursor, download and response
   regressions are authored but NOT_RUN. STUDIO ReplicateClient validates
   model, version, training and prediction identifiers before URL interpolation
-  and rejects dot-segment or escaped API paths. Six focused path regressions
-  are added but NOT_RUN. The STUDIO transport also caps streamed API JSON
-  responses at 16 MiB, caps uploads/downloads at 4 GiB, applies explicit
-  connect/read/write timeouts, preserves existing downloads on partial
-  failure, and uses monotonic prediction/training deadlines. Seven additional
-  transfer/deadline regressions cover allowlisted downloads, byte-cap failure cleanup,
-  response caps, invalid deadlines and upload source validation; these are
-  source additions, not executed proof. Live provider/upload integration
-  remains open. The later source pass also closes the direct STUDIO training
+  and rejects dot-segment or escaped API paths. Its transport caps streamed API
+  JSON responses at 16 MiB, caps uploads/downloads at 4 GiB, refuses symlink and
+  non-regular download targets, canonicalizes the output parent, clamps socket
+  timeouts to a monotonic total transfer deadline, preserves existing downloads
+  on partial failure, and uses monotonic prediction/training deadlines. The
+  additional transfer/deadline regressions are source additions, not executed
+  proof. Live provider/upload integration remains open. The later source pass also closes the direct STUDIO training
   bypass: `ReplicateClient#train_lora` now requires `subject:` and checks the
   shared consent record before schema lookup/model creation/provider POST; its
   no-provider-call regression is authored but NOT_RUN. H2/H3 now have source
