@@ -148,6 +148,8 @@ surfaces:
   - { app: brgen, label: users_new, host: brgen.no, path: "/users/new", viewports: [mobile, desktop] }
   - { app: brgen, label: users_show, host: brgen.no, path: "/users/5512", viewports: [mobile, desktop] }
   - { app: brgen, label: conversations_search, host: brgen.no, path: "/conversations/search", viewports: [mobile, desktop] }
+  - { app: brgen, label: takeaway_restaurants, host: markedsplass.brgen.no, path: "/food", viewports: [mobile, desktop] }
+  - { app: brgen, label: takeaway_restaurant, host: markedsplass.brgen.no, path: "/food/restaurants/pizzabakeren", viewports: [mobile, desktop] }
   - { app: brgen, label: group_conversations_new, host: brgen.no, path: "/groups/new", viewports: [mobile, desktop] }
   - { app: brgen, label: tv_tv_feed_index, host: tv.brgen.no, path: "/feed", viewports: [mobile, desktop] }
   - { app: brgen, label: tv_tv_channels_new, host: tv.brgen.no, path: "/channels/new", viewports: [mobile, desktop] }
@@ -237,7 +239,7 @@ settle_images:
 # Representative pages for the bounded width sweep. Keep a product's most
 # geometry-sensitive surfaces in the sweep instead of relying on YAML row order.
 reflow_priority:
-  brgen: [messenger, core, markedsplass_marketplace_listings_index]
+  brgen: [messenger, core, markedsplass_marketplace_listings_index, takeaway_restaurants]
   amber: [home, wardrobe, outfits]
   bsdports: [home, ports_index, search_results]
 
@@ -264,6 +266,9 @@ state_matrix:
     - { id: brgen/marketplace/filter_toggle, surface: brgen/markedsplass_marketplace_listings_index, selector: "summary.listing-filters-toggle" }
     - { id: brgen/messenger/search, surface: brgen/conversations_search, selector: ".messenger-compose-form input[type=search]" }
     - { id: brgen/messenger/channel_link, surface: brgen/messenger, selector: ".messenger-rail-room" }
+    - { id: brgen/takeaway/restaurant_card, surface: brgen/takeaway_restaurants, selector: ".deal-card.restaurant .deal-card-hit" }
+    - { id: brgen/takeaway/menu_action, surface: brgen/takeaway_restaurant, selector: ".listing-buy-bar-actions .button-primary" }
+    - { id: brgen/takeaway/menu_quantity, surface: brgen/takeaway_restaurant, selector: "input.qty-field" }
     - { id: amber/wardrobe/add_item, surface: amber/wardrobe, selector: ".wardrobe-action-group a.button-primary" }
     - { id: amber/outfits/occasion, surface: amber/outfits, selector: "input[name=occasion]" }
     - { id: bsdports/ports_index/search, surface: bsdports/ports_index, selector: "input[type=search], input[name=q]" }
