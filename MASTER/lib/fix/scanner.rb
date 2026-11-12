@@ -249,6 +249,8 @@ module Master
         end
 
         def emit_autofixed(dir:, path:, applied:)
+          return unless Master::Trace::Dmesg.verbose?
+
           rel = path.sub(dir, "").delete_prefix("/")
           transforms = applied.flat_map { |row| Array(row.transforms) }.uniq.first(8).join(" ")
           unit = @scan_progress&.dig(:unit) || @through_scan_unit || "scan0"
