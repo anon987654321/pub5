@@ -204,6 +204,14 @@ module Operator
       like_path = "RAILS/amber/app/views/posts/_like_button.html.erb"
       expect("post_card.amber_like_count_target", like_path, read(like_path), "data-post-like-count",
              "Amber's like count must be independently replaceable.")
+      amber_card_path = "RAILS/amber/app/views/posts/_post.html.erb"
+      expect("post_card.amber_feed_comment_count_target", amber_card_path, read(amber_card_path),
+             "data: { post_comment_count:",
+             "Amber feed cards must expose the live comment-count target.")
+      amber_post_path = "RAILS/amber/app/models/post.rb"
+      expect("post_card.amber_feed_comment_count_query", amber_post_path, read(amber_post_path),
+             "scope :with_feed_comment_count",
+             "Feed cards must project comment counts in one query rather than issue N+1 count reads.")
       show_path = "RAILS/amber/app/views/posts/show.html.erb"
       expect("post_card.amber_comment_count_target", show_path, read(show_path), "data-post-comment-count",
              "Amber's post detail must expose a live comment-count target.")
