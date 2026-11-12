@@ -84,6 +84,34 @@ class TestDesignScale < Minitest::Test
     assert_equal once, fix(once)[:content]
   end
 
+  # A computed function spans its whole argument list. `max(16px, (100% - 720px)
+  # / 2 + 16px)` is one part, so its 720px is the build's arithmetic, not a step;
+  # a `[^()]*` body stopped at the inner paren and snapped 720px to 128px.
+  def test_fix_leaves_lengths_nested_inside_a_computed_function
+    source = "body { margin-inline: max(16px, (100% - 720px) / 2 + 16px); }\n"
+
+    assert_equal source, fix(source)[:content]
+    assert_nil SCALE.snap("margin-inline", "max(16px, (100% - 720px) / 2 + 16px)")
+  end
+
+  # The slot that hides a computed part held its index between NULs, and
+  # BARE_LENGTH read the index as a length: with five or more computed parts the
+  # off-scale index 5 snapped to 8 and the wrong part came back.
+  def test_fix_keeps_every_part_when_many_computed_values_share_a_declaration
+    value = "max(var(--a), env(t)) var(--b) max(var(--c), env(u)) var(--d) max(var(--e), env(v))"
+    source = ".c { padding: #{value}; }\n"
+
+    assert_equal source, fix(source)[:content]
+    assert_nil SCALE.snap("padding", value)
+  end
+
+  # A computed part is untouched, but a bare length beside it still snaps.
+  def test_fix_still_snaps_bare_lengths_beside_computed_parts
+    assert_equal "8px var(--x) 12px", SCALE.snap("padding", "7px var(--x) 11px")
+    assert_equal "max(16px, (100% - 720px)/2 + 16px) 4px",
+                 SCALE.snap("padding", "max(16px, (100% - 720px)/2 + 16px) 6px")
+  end
+
   private
 
   def findings(source)

@@ -31,7 +31,11 @@ module Master
       LENGTH = /\A(-?[\d.]+)(px|rem|em)?\z/
       DECLARATION = /(?<prop>[-a-z]+)\s*:\s*(?<value>[^;{}]+)[;}]/
       OPT_OUT = "scale: ok"
-      COMPUTED = /\b(?:var|calc|clamp|min|max|env|minmax|repeat)\([^()]*\)/
+      # A computed function spans its whole argument list, nested parens included:
+      # `max(16px, (100% - 720px) / 2 + 16px)` is one part, so its 720px is the
+      # build's arithmetic and never a step to snap. A `[^()]*` body stopped at
+      # the inner `(100% ...)`, left `720px` visible, and snapped it to 128px.
+      COMPUTED = /\b(?:var|calc|clamp|min|max|env|minmax|repeat)(?<call>\((?:[^()]|\g<call>)*\))/
 
       # rem is normalised at 16, not at brgen's 18. A scale step is a design
       # decision expressed in one unit or the other, and 0.75rem and 12px are the
@@ -106,7 +110,12 @@ module Master
 
       private
 
-      BARE_LENGTH = /(?<![\w.#$-])(-?)(\d*\.?\d+)(px|rem|em)?(?![\w%.])/
+      # The slot sentinel holds the index between NULs; BARE_LENGTH must not read
+      # that index as a length. With five or more computed parts the index 5 is
+      # off-scale, so `\u00005\u0000` was snapped to `\u00008\u0000` and the wrong
+      # part came back — a three-part `padding: max(...) var(--b) max(...)` lost
+      # two of its parts. The NUL exclusion keeps the sentinel invisible.
+      BARE_LENGTH = /(?<![\w.#$\u0000-])(-?)(\d*\.?\d+)(px|rem|em)?(?![\w%.\u0000])/
       SLOT = /\u0000(\d+)\u0000/
 
       # Token by token, so a computed part keeps every character it had: each is
