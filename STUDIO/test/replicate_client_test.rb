@@ -131,7 +131,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
     @client = StubClient.new
   end
 
-  def test_pinned_model_reference_is_accepted_without_a_lookup
+  def test_pinned_model_reference_uses_its_version_schema_before_prediction
     version = "a" * 64
 
     assert_equal "ok", @client.predict("owner/model-name:#{version}", {})
