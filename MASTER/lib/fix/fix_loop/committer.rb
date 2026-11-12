@@ -59,8 +59,7 @@ module Master
       class Committer
         include RepoScope
 
-        LINT_TIMEOUT_SECONDS = 20
-        FINDING_LINES = 40
+        LINT_TIMEOUT_SECONDS = 120
 
         def initialize(git:, bus: nil, root: nil, ground_truth: nil, preserve_user_intent: nil)
           @git = git
@@ -559,8 +558,7 @@ def stage_commit_mode?
           end.uniq
           return message.to_s if lines.empty?
 
-          extra = lines.size > FINDING_LINES ? ["and #{lines.size - FINDING_LINES} more"] : []
-          [message.to_s, "", *lines.first(FINDING_LINES), *extra].join("\n")
+          [message.to_s, "", *lines].join("\n")
         end
 
         def own_changes(owned_paths)
@@ -646,7 +644,7 @@ def stage_commit_mode?
 
         # The lint the pre-commit hook runs, and rubocop beside it, are the lint gate; every other
         # refusal here is the commit gate.
-        LINT_REFUSALS = %w[house_lint rubocop rubocop_unavailable].freeze
+        LINT_REFUSALS = %w[house_lint rubocop rubocop_unavailable rubocop_timeout rubocop_execution_error].freeze
 
         # The bus event for subscribers, and one refusal row (Fix::Refusals) so the log says why a
         # fix that passed every check was still not committed.
@@ -727,15 +725,23 @@ def stage_commit_mode?
           # lint that did not finish blocks the commit. Timeout.timeout around it
           # waited for rubocop anyway, then counted the timeout as a pass, and
           # the commit went in unlinted.
-          _out, _err, status = Master::Io::Exec.capture3(*cmd, chdir: @root, timeout: LINT_TIMEOUT_SECONDS)
+          _out, _err, status = Master::Io::Exec.capture3(
+            *cmd, chdir: @root, timeout: LINT_TIMEOUT_SECONDS, raise_on_timeout: true
+          )
           if status.success?
             true
           else
             refuse_commit(reason: "rubocop", files:)
             false
           end
-        rescue Errno::ENOENT, StandardError => e
+        rescue Master::Io::Exec::TimeoutError => e
+          refuse_commit(reason: "rubocop_timeout", error: e.message)
+          false
+        rescue Errno::ENOENT => e
           refuse_commit(reason: "rubocop_unavailable", error: e.message)
+          false
+        rescue StandardError => e
+          refuse_commit(reason: "rubocop_execution_error", error: e.message)
           false
         end
 
