@@ -885,7 +885,7 @@ module Master
           return [nil, { "status" => "matrix_clean_streak_mismatch", "cell" => key }] unless
             Integer(cell["clean_streak"]) == streak
 
-          assessment_matrix_cell_verdict(reading_state, streak, context)
+          [assessment_matrix_cell_verdict(reading_state, streak, context), nil]
         end
 
         def assessment_matrix_cell_readings(cell, key, context)
