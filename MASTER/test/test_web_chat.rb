@@ -223,6 +223,9 @@ class TestWebChat < Minitest::Test
     chat = build_chat
     release = Queue.new
     native_worker = Thread.new { release.pop }
+    # Named before the block: a local assigned inside it is out of scope in
+    # the ensure below, which joins both workers.
+    cleanup_worker = nil
     browser = Object.new
     browser.define_singleton_method(:quit) do |wait: true|
       raise "wait must be false" unless wait == false
