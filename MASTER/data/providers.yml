@@ -93,7 +93,7 @@ zai:
 # The LaneSelection NSFW gate is the only reader; this is not a general model tier.
 local_uncensored:
   env: [MASTER_NSFW_MODEL]
-  strengths: [local, privacy, adult_content]
+  strengths: [local, privacy]
   default_model: local_uncensored:configured
 
 local:
