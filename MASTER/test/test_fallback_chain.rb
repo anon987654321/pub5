@@ -111,6 +111,31 @@ class TestFallbackChain < Minitest::Test
     assert_equal "z-ai/glm-4.5-air:free", dispatcher.calls[1]
   end
 
+  def test_browser_profile_refusal_skips_same_model_and_moves_to_next_candidate
+    dispatcher = CountingDispatcher.new(
+      "web-chat:grok" => -> { Master::Result.err("login required", category: :auth_error) },
+      "claude-cli:sonnet" => -> { Master::Result.ok("fallback answered") },
+      :default => -> { Master::Result.err("unexpected retry", category: :provider_error) },
+    )
+    agent = build_agent(dispatcher)
+    agent.define_singleton_method(:backoff_before_retry) do |model, *_|
+      flunk "browser profile refusal must not retry #{model} in another mode"
+    end
+
+    response = agent.send(
+      :attempt_chat_with_fallbacks,
+      candidate_models: %w[web-chat:grok claude-cli:sonnet],
+      prompt: "inspect the project",
+      context: [],
+      stream: false,
+    )
+
+    assert_equal "fallback answered", response.value!
+    assert_equal %w[web-chat:grok claude-cli:sonnet], dispatcher.calls
+  ensure
+    Master::Io::ModelSkipCache.clear!
+  end
+
   def test_an_explicit_model_does_not_get_replaced_by_automatic_failover
     dispatcher = CountingDispatcher.new(
       "chosen-model" => -> { Master::Result.err("offline", category: :offline) },
