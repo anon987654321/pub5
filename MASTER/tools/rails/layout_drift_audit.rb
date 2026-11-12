@@ -175,6 +175,9 @@ module Operator
 
       expect("post_card.shared_markup", shared_view_path, shared_view, 'class: "feed-card post-reading-card"',
              "The shared post renderer must own the common card identity.")
+      expect("post_card.root_identity", shared_view_path, shared_view,
+             "data: { post_card: true, post_id: post.id }",
+             "Every shared social card must expose a stable root identity for future scoped interactions.")
       expect("post_card.vote_rail", shared_view_path, shared_view, 'render "shared/post_vote_rail"',
              "The shared post renderer must own the vote rail.")
       expect("post_card.mobile_spacing", shared_css_path, shared_css, "padding: var(--space-4) var(--space-3);",
@@ -201,6 +204,26 @@ module Operator
       vote_path = "RAILS/__shared/app/views/shared/_post_vote_rail.html.erb"
       expect("post_card.vote_rail_target", vote_path, read(vote_path), "dom_id(post, :vote_rail)",
              "The reader-specific vote rail needs a stable replacement target.")
+      brgen_vote_path = "RAILS/brgen/app/models/vote.rb"
+      brgen_vote = read(brgen_vote_path)
+      expect("post_card.brgen_vote_event", brgen_vote_path, brgen_vote, "after_commit :broadcast_votable_counts",
+             "Brgen votes must publish targeted post counters without relying on a parent touch.")
+      expect("post_card.brgen_vote_non_post_touch", brgen_vote_path, brgen_vote, "after_commit :touch_non_post_votable",
+             "Votes on other votable records must retain their own cache/timestamp invalidation.")
+      add(brgen_vote&.match?(/belongs_to :votable, polymorphic: true, touch: true/) ? "FAIL" : "PASS",
+          "post_card.brgen_vote_no_post_touch", brgen_vote_path,
+          "A post vote must not touch the Post row or invalidate every cached card.", source: brgen_vote)
+      brgen_comment_path = "RAILS/brgen/app/models/comment.rb"
+      brgen_comment = read(brgen_comment_path)
+      expect("post_card.brgen_comment_count_event", brgen_comment_path, brgen_comment,
+             "after_commit :broadcast_commentable_counts",
+             "Brgen comments must publish counter changes from their own commit.")
+      expect("post_card.brgen_comment_non_post_touch", brgen_comment_path, brgen_comment,
+             "after_commit :touch_non_post_commentable",
+             "Non-post commentables must keep their previous last-activity touch semantics.")
+      add(brgen_comment&.match?(/belongs_to :commentable, polymorphic: true, touch: true/) ? "FAIL" : "PASS",
+          "post_card.brgen_comment_no_post_touch", brgen_comment_path,
+          "A post comment must update its counter without touching the Post row.", source: brgen_comment)
       like_path = "RAILS/amber/app/views/posts/_like_button.html.erb"
       expect("post_card.amber_like_count_target", like_path, read(like_path), "data-post-like-count",
              "Amber's like count must be independently replaceable.")
@@ -263,6 +286,10 @@ module Operator
                    ["map-morph-guard", "map-point-list"]],
         "takeaway" => ["RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb",
                        ["shared/promotional_art", "takeaway-restaurants"]],
+        "radio" => ["RAILS/brgen/engines/radio/playlist/app/views/playlist/playlists/index.html.erb",
+                    ["playlist/playlists/radio_tunnel", "auto_start: false", "show_library: true"]],
+        "messenger" => ["RAILS/brgen/app/views/conversations/index.html.erb",
+                        ["messenger-window", "messenger_window_title", "messenger-inbox-list"]],
         "bsdports" => ["RAILS/bsdports/app/views/ports/index.html.erb",
                        ["live_search_index", "auto_discovery_link_tag"]],
         "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]]
@@ -279,6 +306,24 @@ module Operator
             "vertical.#{name}.not_a_social_post", path,
             "Only Brgen and Amber social posts use the shared social post card.",
             source:, needle: "shared/post_card")
+      end
+
+      headings = {
+        "brgen" => ["RAILS/brgen/app/views/layouts/application.html.erb", '<h1 class="visually-hidden">'],
+        "amber" => ["RAILS/amber/app/views/home/index.html.erb", '<h1 class="visually-hidden"'],
+        "marketplace" => [pages.fetch("marketplace").first, '<h1 class="visually-hidden">'],
+        "dating" => [pages.fetch("dating").first, "<h1>"],
+        "tv" => [pages.fetch("tv").first, 'tag.h1 t("tv.home_title")'],
+        "maps" => [pages.fetch("maps").first, '<h1 class="visually-hidden">'],
+        "takeaway" => [pages.fetch("takeaway").first, 'tag.h1 t("takeaway.order_food"), class: "visually-hidden"'],
+        "radio" => [pages.fetch("radio").first, 'tag.h1 t("playlist.home_title"), class: "visually-hidden"'],
+        "messenger" => [pages.fetch("messenger").first, 'tag.h1 t(@list_title_key)'],
+        "bsdports" => [pages.fetch("bsdports").first, 'tag.h1 t("pages.ports")'],
+        "mrdamascy" => [pages.fetch("mrdamascy").first, '<h1 class="page-title">']
+      }
+      headings.each do |name, (path, marker)|
+        expect("vertical.#{name}.primary_heading", path, read(path), marker,
+               "#{name} must expose one page-level heading in its document outline.")
       end
 
       market_path = pages.fetch("marketplace").first
