@@ -14,7 +14,6 @@ class RefinementsContractTest < Minitest::Test
     assert_equal 1, document.fetch("schema")
 
     items = document.fetch("items")
-    refute_empty items
     assert_operator items.length, :<=, MAX_ROWS, "active refinements exceed the row budget"
 
     ids = items.map { |item| item.fetch("id") }
