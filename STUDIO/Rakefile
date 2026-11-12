@@ -11,6 +11,13 @@ RUBY = RbConfig.ruby
 desc "Load every STUDIO entrypoint and prove the contracts answer"
 task :check do
   require_relative "output_paths"
+  require_relative "lora/validate"
+  lora_report = Studio::Lora::Validator.new.validate_all
+  invalid_lora = lora_report.fetch("subjects").select { |subject| subject.fetch("state") != "PASS" }
+  raise "LoRA subject validation failed: #{invalid_lora.map { |subject| subject.fetch("subject") }.join(", ")}" if invalid_lora.any?
+  puts "lora0: #{lora_report.fetch("subject_count")} subject profile(s) structurally valid; " \
+       "#{lora_report.fetch("subjects").count { |subject| !subject.fetch("training_ready") }} require local preparation"
+
   raise "output_paths: render_directory is not absolute" unless Studio::OutputPaths.render_directory.start_with?(File::SEPARATOR)
   raise "output_paths: reference_root collides with the checkout" if Studio::OutputPaths.inside_repository?(Studio::OutputPaths.reference_root)
 
@@ -44,7 +51,7 @@ task :check do
   end
 
   %w[
-    bin/studio photograph.rb photograph/idea_picture.rb replicate/client.rb subprocess.rb test_runner.rb
+    bin/studio photograph.rb photograph/idea_picture.rb replicate/client.rb lora/validate.rb subprocess.rb test_runner.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
     analog_core.rb postpro/postpro.rb postpro/motion.rb postpro/motion_process.rb
     postpro/lib/effects_print.rb postpro/lib/sidecars.rb
