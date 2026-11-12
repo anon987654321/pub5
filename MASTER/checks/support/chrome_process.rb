@@ -43,22 +43,78 @@ module Deploy
       end
     end
 
+    TERM_GRACE_S = 5.0
+    KILL_GRACE_S = 2.0
+    STOP_POLL_S = 0.05
+
+    # Chrome owns a process group created specifically for this session. Its
+    # renderer/GPU/network children must not outlive the browser leader and keep
+    # writing into the profile while teardown removes it.
+    #
+    # Do not forget the PID or remove the profile unless both facts are proved:
+    # the direct child has been reaped, and its process group no longer exists.
+    # If a signal is refused or a child remains, retain the PGID for a later
+    # cleanup attempt and leave the profile as evidence.
     def reap_chrome
-      return unless @pid
+      pid = @pid
+      return true unless pid
 
-      Process.kill("TERM", @pid)
-      deadline = monotonic + 5
+      signal_chrome_group("TERM", pid)
+      deadline = monotonic + TERM_GRACE_S
+      leader_reaped = false
+
       loop do
-        break if Process.waitpid(@pid, Process::WNOHANG)
-        break if monotonic > deadline
+        leader_reaped ||= reap_chrome_leader(pid)
+        break if leader_reaped && !chrome_group_alive?(pid)
+        break if monotonic >= deadline
 
-        sleep 0.05
+        sleep STOP_POLL_S
       end
-      Process.kill("KILL", @pid) if monotonic > deadline
-    rescue Errno::ESRCH, Errno::ECHILD
-      nil
-    ensure
-      @pid = nil
+
+      signal_chrome_group("KILL", pid) unless leader_reaped && !chrome_group_alive?(pid)
+      deadline = monotonic + KILL_GRACE_S
+
+      loop do
+        leader_reaped ||= reap_chrome_leader(pid)
+        break if leader_reaped && !chrome_group_alive?(pid)
+        break if monotonic >= deadline
+
+        sleep STOP_POLL_S
+      end
+
+      stopped = leader_reaped && !chrome_group_alive?(pid)
+      @pid = nil if stopped
+      stopped
+    rescue StandardError => e
+      warn "CDP Chrome cleanup inconclusive for PID #{pid}: #{e.class}: #{e.message}"
+      false
+    end
+
+    def reap_chrome_leader(pid)
+      Process.waitpid(pid, Process::WNOHANG)
+      true
+    rescue Errno::ECHILD
+      true
+    rescue Errno::EINTR
+      retry
+    end
+
+    def chrome_group_alive?(pid)
+      Process.kill(0, -pid)
+      true
+    rescue Errno::ESRCH
+      false
+    rescue Errno::EPERM
+      true
+    end
+
+    def signal_chrome_group(signal, pid)
+      Process.kill(signal, -pid)
+      true
+    rescue Errno::ESRCH
+      false
+    rescue Errno::EPERM
+      false
     end
 
     def spawn_chrome(chrome)
@@ -95,7 +151,8 @@ module Deploy
         rules = @host_map.map { |host, target| "MAP #{host} #{target}" }.join(", ")
         args.insert(-2, "--host-resolver-rules=#{rules}")
       end
-      spawn(*args, out: File::NULL, err: File::NULL)
+      # Keep every browser helper in a process group owned by this CDP session.
+      spawn(*args, out: File::NULL, err: File::NULL, pgroup: true)
     end
 
     def devtools_port
