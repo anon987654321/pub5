@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Static layout drift audit for Brgen, Amber and MASTER.
+# Static layout drift audit for social posts, vertical front pages and MASTER.
 #
 # Run from any directory:
 #   ruby MASTER/tools/rails/layout_drift_audit.rb
