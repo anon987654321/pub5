@@ -595,21 +595,23 @@ openai_compatible:
     keyless:
       tier: turbo
       usage_based_only: false
-  # 30 requests/min, 14,400/day. A second key var is declared so Io::KeyRotator
-  # can spread the minute window across keys when the operator sets one.
+  # 30 requests/min, 14,400/day. The second key variable is a legacy
+  # configuration alias; distinct populated credentials are refused, not rotated.
   groq:
     base: https://api.groq.com/openai/v1
     key_env: [GROQ_API_KEY, GROQ_API_KEY_2]
     daily_quota: 14400
     privacy_posture: unknown
-  # 10 requests/min, 100/day, 1M tokens/day.
+  # 10 requests/min, 100/day, 1M tokens/day. The second key variable is
+  # retained as a compatibility alias; it does not create another quota.
   cerebras:
     base: https://api.cerebras.ai/v1
     key_env: [CEREBRAS_API_KEY, CEREBRAS_API_KEY_2]
     daily_quota: 100
     privacy_posture: unknown
   # Up to 40 requests/min, including GLM-5.3 Flash. No day cap is documented,
-  # so no daily_quota is declared and Io::ModelQuota leaves it untracked.
+  # so no daily_quota is declared and Io::ModelQuota leaves it untracked. A
+  # second key variable is a compatibility alias, never automatic failover.
   nvidia:
     base: https://integrate.api.nvidia.com/v1
     key_env: [NVIDIA_API_KEY, NVIDIA_API_KEY_2]
