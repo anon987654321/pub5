@@ -30,8 +30,8 @@ class TestVisualConstitution < Minitest::Test
     law = Law.definitions.fetch(:CLI_PROMPT_COMPOSITION)
 
     assert_includes law.source, "OpenBSD dmesg"
-    assert_includes law.ask, "no Starship/powerline-style segments"
-    assert_includes law.fix, "plain Git state"
+    assert_includes law.ask, "Reject Starship/powerline segments"
+    assert_includes law.fix, "useful Git state"
     refute_includes law.source.downcase, "starship bounded prompt"
   end
 
