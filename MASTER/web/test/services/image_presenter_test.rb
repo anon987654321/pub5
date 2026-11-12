@@ -1,4 +1,4 @@
-# frozen_string_literal: true
+<sub># frozen_string_literal: true
 
 require "test_helper"
 
@@ -22,6 +22,27 @@ class ImagePresenterTest < ActiveSupport::TestCase
     refute ran
   end
 
+  test "a descendant holding the output pipe is stopped under the same deadline" do
+    Dir.mktmpdir("postpro-pipe") do |dir|
+      child_pid_file = File.join(dir, "descendant.pid")
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_pid_file.dump}, Process.pid.to_s); sleep 30"
+      parent_code = "Process.spawn(RbConfig.ruby, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
+      presenter = ImagePresenter.new
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      output, status = presenter.send(
+        :run_bounded, [RbConfig.ruby, "-e", parent_code], chdir: dir, timeout_s: 0.2
+      )
+
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      child = Integer(File.read(child_pid_file), 10)
+      assert_nil status, "an inherited pipe held open past the deadline must be reported as timeout"
+      assert_includes output, "parent exited"
+      assert_operator elapsed, :<, 4.0, "a descendant holding stdout must not turn the timeout into an unbounded wait"
+      assert_process_group_gone(child)
+    end
+  end
+
   test "a grade that outlives its limit is killed, not waited for" do
     presenter = ImagePresenter.new
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -32,3 +53,4 @@ class ImagePresenterTest < ActiveSupport::TestCase
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 10
   end
 end
+</sub>
