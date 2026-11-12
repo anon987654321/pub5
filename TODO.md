@@ -418,9 +418,13 @@ measure is already owned by the Bymorgen item above.
   waits, confirms the leader was reaped and the group gone, and preserves the
   profile when shutdown is inconclusive. Its real-spawn/renderer regression is
   authored but NOT_RUN. WebDriver driver teardown and the broader process-kill
-  and provider-boundary audits remain open. MASTER's Replicate API URL validator
-  also rejects dot, escaped and backslash path segments before attaching its
-  bearer token. Focused regressions are authored/extended but NOT_RUN.
+  and provider-boundary audits remain open. The constitutional scan runner now
+  puts its child in an isolated process group and applies one monotonic deadline
+  to both process exit and output-pipe EOF; timeout escalates TERM to KILL on
+  that group. A regression covers an exited leader with a descendant holding
+  the pipe open; authored but NOT_RUN. MASTER's Replicate API URL validator also
+  rejects dot, escaped and backslash path segments before attaching its bearer
+  token. Focused regressions are authored/extended but NOT_RUN.
   H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
   bits; `PermissionAudit` checks `/etc/<app>.env` as `root:<app>`, storage owner
   as `<app>`, daemon-log owner and symlinks in every protected path component.
