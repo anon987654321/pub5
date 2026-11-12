@@ -643,7 +643,10 @@ class TestTaskContract < Minitest::Test
 
   def test_rc_service_file_edits_require_rc_framework_manuals
     contract = openbsd_task_contract(
-      openbsd_preflight_fixture(interfaces: ["rcctl(8)"]),
+      openbsd_preflight_fixture(
+        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"],
+        interfaces: ["rcctl(8)"],
+      ),
     )
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
       path: File.join(Master::REPO_ROOT, "OPENBSD/etc/rc.d/master"), contract:
@@ -678,7 +681,7 @@ class TestTaskContract < Minitest::Test
       attached = Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
         contract:, repo_root: root, receipt_path: path
       )
-      assert_equal ["rcctl(8)"], attached.openbsd_preflight.fetch("native_interfaces")
+      assert_equal %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1)], attached.openbsd_preflight.fetch("native_interfaces")
       CONTRACT.with_current(contract) do
         assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_path(
           path: File.join(root, "OPENBSD/RUNBOOK.md"), repo_root: root, receipt_path: path
