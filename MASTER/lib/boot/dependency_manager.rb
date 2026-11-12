@@ -858,6 +858,7 @@ module Master
     end
 
     module DependencyManagerProcessCapture
+      Result = DependencyManager::Result
       LOCK_WAIT_SECONDS = DependencyManager::LOCK_WAIT_SECONDS
       CAPTURE_DEADLINE_SECONDS = DependencyManager::CAPTURE_DEADLINE_SECONDS
       CAPTURE_POLL_SECONDS = DependencyManager::CAPTURE_POLL_SECONDS

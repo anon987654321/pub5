@@ -44,6 +44,19 @@ class TestDependencyManager < Minitest::Test
     manager
   end
 
+  def test_process_capture_result_helpers_use_the_canonical_result_type
+    manager = fake_manager([])
+
+    success = manager.send(:ok_result, "ok", changed: false)
+    assert_instance_of MANAGER::Result, success
+    assert success.success?
+
+    failure = manager.send(:fail_result, "failed", output: "details")
+    assert_instance_of MANAGER::Result, failure
+    refute failure.success?
+    assert_equal "details", failure.output
+  end
+
   def test_dependency_bootstrap_does_not_preload_open3_or_timeout
     source = File.read(File.join(Master::ROOT, "lib", "boot", "dependency_manager.rb"))
 
