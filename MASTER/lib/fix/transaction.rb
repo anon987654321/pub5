@@ -198,7 +198,7 @@ module Master
           elsif !selected.all? { |path| snapshot_matches_fingerprint?(staged.fetch(path), fingerprint(absolute(path))) }
             Result.err("transaction source changed while checkpointing", category: :policy)
           else
-            old = [@snapshots, @seen, @state, @delivery_head_before, @delivery_head_after]
+            old = [@snapshots, @seen, @state, @delivery_head_before, @delivery_head_after, @delivery_marked]
             old_stores = selected.filter_map { |path| @snapshots[path]&.store }
             @snapshots = @snapshots.merge(staged)
             @seen = @seen.to_h.transform_values(&:dup)
@@ -215,7 +215,9 @@ module Master
       rescue StandardError => e
         raise if @lifecycle_observer.failed?
 
-        @snapshots, @seen, @state, @delivery_head_before, @delivery_head_after = old if defined?(old) && !persisted_state_matches?
+        if defined?(old) && !persisted_state_matches?
+          @snapshots, @seen, @state, @delivery_head_before, @delivery_head_after, @delivery_marked = old
+        end
         emit("fix:transaction_checkpoint_failed", id: @id, error: e.message)
         Result.err("transaction checkpoint: #{e.class}", category: :infrastructure)
       end
@@ -768,6 +770,9 @@ module Master
         return false if [File.join(@root, ".master"), File.join(@root, ROOT_DIR), @dir, File.join(@dir, MANIFEST)].any? { |path| File.symlink?(path) }
         data = JSON.parse(File.read(File.join(@dir, MANIFEST), encoding: "UTF-8"))
         data["state"] == @state && data["paths"] == @paths && data["seen"] == @seen &&
+          data["delivery_head_before"] == @delivery_head_before &&
+          data["delivery_head_after"] == @delivery_head_after &&
+          data["delivery_marked"] == (@delivery_marked == true) &&
           data["snapshots"] == JSON.parse(JSON.generate(@snapshots.transform_values(&:to_h)))
       rescue StandardError
         false
