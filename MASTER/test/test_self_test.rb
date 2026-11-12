@@ -97,6 +97,62 @@ class TestSelfTest < Minitest::Test
     end
   end
 
+  def test_deploy_ruby_nesting_allows_four_levels
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      File.write(path, <<~RUBY)
+        def call(a, b, c, d)
+          if a
+            if b
+              if c
+                if d
+                  true
+                end
+              end
+            end
+          end
+        end
+      RUBY
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_nesting_findings)
+
+      assert_empty findings
+    end
+  end
+
+  def test_deploy_ruby_nesting_flags_the_fifth_control_flow_level
+    Dir.mktmpdir do |workspace|
+      root = File.join(workspace, "MASTER")
+      openbsd = File.join(workspace, "OPENBSD")
+      FileUtils.mkdir_p(openbsd)
+      path = File.join(openbsd, "OPERATOR.rb")
+      File.write(path, <<~RUBY)
+        def call(a, b, c, d, e)
+          if a
+            if b
+              if c
+                if d
+                  if e
+                    true
+                  end
+                end
+              end
+            end
+          end
+        end
+      RUBY
+
+      findings = Master::Review::Scan::SelfTest.new(root:).send(:deploy_nesting_findings)
+
+      assert_equal 1, findings.size
+      assert_includes findings.first[:message], "nesting depth exceeds 4"
+      assert_includes findings.first[:message], "(LINEARITY)"
+    end
+  end
+
   def test_deploy_density_spares_a_method_at_the_twenty_code_line_limit
     Dir.mktmpdir do |workspace|
       root = File.join(workspace, "MASTER")

@@ -54,6 +54,8 @@ module Master
             case File.extname(path).downcase
             when ".sh", ".zsh", ".ksh" then shell_nesting_findings(path)
             when ".erb" then erb_nesting_findings(path)
+            when ".rb"
+              deploy_law_findings(path, Laws::NestingDepthLaw.new, "LINEARITY", context: "SelfTest.deploy_nesting")
             else []
             end
           end
