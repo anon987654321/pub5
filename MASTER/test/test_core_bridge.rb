@@ -173,7 +173,7 @@ class CoreBridgeTest < Minitest::Test
           error = assert_raises(Master::CLI::CoreBridge::DeliveryFailed) do
             Master::CLI::CoreBridge.push_backlog_commit!(mission:, root:)
           end
-          assert_match(/expected origin\\/main/, error.message)
+          assert_match(/expected origin\/main/, error.message)
           assert_match(/DELIVERY_FAILED/, mission.blocked_reason)
         end
       end

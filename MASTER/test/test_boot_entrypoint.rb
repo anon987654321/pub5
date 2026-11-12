@@ -10,7 +10,7 @@ class TestBootEntrypoint < Minitest::Test
   LOCKFILE = File.read(File.expand_path("../Gemfile.lock", __dir__))
 
   def test_json_uses_the_bundle_resolution_not_a_ruby_release_pin
-    refute GEMFILE.lines.any? { |line| line.start_with?('gem "json", "=") }
+    refute GEMFILE.lines.any? { |line| line.start_with?('gem "json", "=') }
     refute LOCKFILE.lines.any? { |line| line.start_with?("  json (=") }
     assert LOCKFILE.lines.any? { |line| line.start_with?("    json (") }
   end
