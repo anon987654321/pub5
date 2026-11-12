@@ -2,6 +2,7 @@
 
 require "json"
 require "pathname"
+require "yaml"
 require_relative "../../OPENBSD/lib/deploy_inventory"
 require_relative "../../OPENBSD/lib/check_result"
 require_relative "../../OPENBSD/bin/render_dns"
@@ -10,6 +11,7 @@ module Deploy
   class DomainAlignmentCheck
     ROOT = Pathname.new(File.expand_path("../..", __dir__))
     REGISTRY = ROOT.join("RAILS", "brgen", "lib", "brgen", "domain_registry.rb")
+    CITY_CATALOGUE = ROOT.join("RAILS", "brgen", "config", "cities.yml")
     DEPLOY_INVENTORY = ROOT.join("OPENBSD", "deploy_inventory.json")
     RELAYD = ROOT.join("OPENBSD", "etc", "relayd.conf")
     COMMON_SUBAPPS = %w[radio dating tv takeaway maps messenger].freeze
@@ -144,8 +146,13 @@ module Deploy
     end
 
     def parse_registry_entries
-      text = REGISTRY.read
-      text.scan(/Entry\.new\("([^"]+)",\s*"[^"]+",\s*"[^"]+",\s*:[^,]+,\s*"[^"]+",\s*"([^"]+)"\)/).to_h
+      # ENTRIES no longer literally writes Entry.new rows: domain_registry.rb
+      # derives ENTRIES from CITY_RECORDS, which loads this catalogue. The old
+      # single-line Entry.new text scan matched nothing after that refactor, so
+      # every LIVE_DOMAINS name read as absent from ENTRIES. Reading the
+      # catalogue keeps the check on the registry's real source of truth.
+      records = YAML.safe_load_file(CITY_CATALOGUE, aliases: false)
+      records.to_h { |record| [record.fetch("domain"), record.fetch("marketplace_subdomain")] }
     end
 
     def parse_registry_subdomains
