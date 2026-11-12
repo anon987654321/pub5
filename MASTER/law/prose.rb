@@ -68,7 +68,7 @@ module Law
     # and in the Norwegian business plans, whose HTML is the canonical source. The
     # English values pair reads the same kind of file in English: the locale strings.
     SCOPES = {
-      "nb" => %r{(?:\A|[/.])nb\.yml\z|(?:\A|/)BIZ/[^/]+\.html\z},
+      "nb" => %r{(?:\A|[/.])nb\.yml\z|(?:\A|/)BIZ/.+\.(?:html|md)\z},
       "en_values" => %r{(?:\A|[/.])en\.yml\z},
     }.freeze
   end

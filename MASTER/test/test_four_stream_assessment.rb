@@ -254,4 +254,29 @@ class TestFourStreamAssessment < Minitest::Test
     report = Master::Fix::QualityContract.build(ledger: nil, target: "MASTER", files: [], lane: :code)
     assert_equal "BLOCKED", report[:overall_status]
   end
+
+  def test_incomplete_surface_evidence_prevents_a_quality_pass
+    ledger = {
+      summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },
+      cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }],
+    }
+    surface_report = { complete: false, surfaces: { tests: { status: "inconclusive", reason: "test runner unavailable" } } }
+    report = Master::Fix::QualityContract.build(ledger:, surface_report:, target: "MASTER", files: [], lane: :code)
+
+    assert_equal "INCONCLUSIVE", report[:matrix][:surface_evidence]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
+  end
+
+  def test_deferred_tests_are_not_reported_as_failed
+    surface_report = {
+      complete: false,
+      surfaces: { tests: { status: "inconclusive", reason: "test execution deferred until a clean scanner candidate pass" } },
+    }
+    ledger = { summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },
+               cells: [{ law: "DRY", status: "assessed_clean", clean_streak: 2 }] }
+    report = Master::Fix::QualityContract.build(ledger:, surface_report:, target: "MASTER", files: [], lane: :code)
+
+    assert_equal "NOT_RUN", report[:external_validation][:local_test_suite][:status]
+    assert_equal "INCONCLUSIVE", report[:overall_status]
+  end
 end

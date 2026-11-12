@@ -31,7 +31,13 @@ module Law
 
     def mark(name) = MARKS.fetch(name)
 
-    def locale(path) = File.basename(path.to_s)[/\A(nb|nn|no|en)\b/, 1]&.then { |code| code == "en" ? "en" : "nb" }
+    def locale(path)
+      value = path.to_s.tr("\\", "/")
+      return "en" if value.match?(%r{(?:\A|/)MASTER/docs/|(?:\A|/)README\.md\z})
+      return "nb" if value.match?(%r{(?:\A|/)BIZ/})
+
+      File.basename(value)[/\A(nb|nn|no|en)\b/, 1]&.then { |code| code == "en" ? "en" : "nb" }
+    end
 
     def unquote(raw)
       text = raw.to_s.strip

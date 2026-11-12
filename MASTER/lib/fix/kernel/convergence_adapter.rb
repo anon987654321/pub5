@@ -573,7 +573,8 @@ module Master
                  "#{outcome.cleared} cleared, #{outcome.remaining} group(s) remain#{resweep}; report #{outcome.report}"
         Master::Trace::Dmesg.status("visual0", "#{WorkLane.summary}; #{detail}")
         return terminal(:done, "visual lane: rendered groups cleared by the resweep") if
-          outcome.findings.zero? || (outcome.resweep && outcome.remaining.zero?)
+          outcome.findings.zero? ||
+          (outcome.resweep && outcome.remaining.zero? && outcome.cleared == outcome.groups)
 
         terminal(:plateau, "visual lane: #{detail}")
       end

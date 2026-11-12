@@ -447,11 +447,11 @@ module Master
       end
 
  
+    end
+
     # Dimension-level read model over the canonical Law ledger. It does not
     # declare Laws or duplicate their authority; it groups the same measured
     # cells into engineering, editorial, visual, experience and operations.
-    end
-
     class QualityContract
       SPECIALISTS = {
         editorial: /BRINGHURST|STRUNK|PROSE|TYPOGRAPHY|READABILITY|GRAMMAR|CLARITY|EDITORIAL|COPY/,
@@ -483,13 +483,14 @@ module Master
         assessed = dimensions.values + validation.values.select { |row| row[:applicable] } +
           workflows.values.select { |row| row[:applicable] }
         statuses = assessed.map { |row| row[:status] }.uniq
+        matrix = matrix_summary
         overall = if @ledger.nil?
                     "BLOCKED"
                   elsif statuses.include?("FAIL")
                     "FAIL"
                   elsif statuses.include?("BLOCKED")
                     "BLOCKED"
-                  elsif statuses.include?("INCONCLUSIVE")
+                  elsif statuses.include?("INCONCLUSIVE") || matrix[:status] != "complete"
                     "INCONCLUSIVE"
                   elsif statuses.include?("PASS")
                     "PASS"
@@ -522,8 +523,11 @@ module Master
 
       def matrix_summary
         summary = read(@ledger, :summary, {})
+        surface_complete = read(@surface_report, :complete)
+        complete = read(summary, :complete) == true && (surface_complete.nil? || surface_complete == true)
         {
-          status: read(summary, :complete) == true ? "complete" : "incomplete",
+          status: complete ? "complete" : "incomplete",
+          surface_evidence: surface_complete.nil? ? "NOT_RUN" : (surface_complete ? "PASS" : "INCONCLUSIVE"),
           laws: read(summary, :laws, 0).to_i,
           expected_cells: read(summary, :expected_cells, 0).to_i,
           recorded_cells: read(summary, :recorded_cells, 0).to_i,
@@ -577,12 +581,18 @@ module Master
       def surface_status(name)
         surfaces = read(@surface_report, :surfaces, {})
         row = read(surfaces, name, {})
-        case read(row, :status).to_s
+        return "NOT_RUN" unless row.is_a?(Hash) && !row.empty?
+
+        state = read(row, :status).to_s
+        reason = read(row, :reason).to_s
+        return "NOT_RUN" if state == "inconclusive" && reason.match?(/deferred|not run|not executed/i)
+
+        case state
         when "assessed_clean" then "PASS"
         when "violation_found" then "FAIL"
         when "inconclusive" then "INCONCLUSIVE"
         when "not_applicable" then "NOT_RUN"
-        else "NOT_RUN"
+        else "INCONCLUSIVE"
         end
       end
 
@@ -642,17 +652,18 @@ module Master
                    findings = read(@visual_groups, :findings, 0).to_i
                    remaining = read(@visual_groups, :remaining, findings).to_i
                    resweep = read(@visual_groups, :resweep) == true
-                   status = if findings.zero? || (resweep && remaining.zero?)
+                   cleared = read(@visual_groups, :cleared, 0).to_i
+                   groups = read(@visual_groups, :groups, 0).to_i
+                   status = if findings.zero? || (resweep && remaining.zero? && cleared == groups)
                               "PASS"
-                            elsif resweep
+                            elsif resweep && remaining.positive?
                               "FAIL"
                             else
                               "INCONCLUSIVE"
                             end
                    {
                      status:, applicable: true, findings:,
-                     groups: read(@visual_groups, :groups, 0).to_i,
-                     cleared: read(@visual_groups, :cleared, 0).to_i,
+                     groups:, cleared,
                      remaining:, resweep:,
                      report: read(@visual_groups, :report),
                    }

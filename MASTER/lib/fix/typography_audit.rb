@@ -69,7 +69,8 @@ module Master
       end
 
       def violation_kind(text, line, relative)
-        terminal_copy = PUNCTUATION_SCOPE.any? { |scope| relative.start_with?(scope + "/") }
+        terminal_copy = PUNCTUATION_SCOPE.any? { |scope| relative.start_with?(scope + "/") } ||
+          (relative.start_with?("lib/fix/") && line.match?(OUTPUT_CALL))
         return "non_ascii_punctuation" if terminal_copy && text.match?(TERMINAL_MARK)
         return "prose_double_dash" if terminal_copy && text.match?(PROSE_DOUBLE_DASH)
         return "terminal_measure" if line.match?(OUTPUT_CALL) && text.length > TERMINAL_LINE_LIMIT
