@@ -136,8 +136,11 @@ class TestStudioReplicateClientPaths < Minitest::Test
 
     assert_equal "ok", @client.predict("owner/model-name:#{version}", {})
 
-    assert_equal 1, @client.requests.length
-    method, uri, body, = @client.requests.fetch(0)
+    assert_equal %i[get post], @client.requests.map(&:first)
+    schema_method, schema_uri = @client.requests.fetch(0)
+    assert_equal :get, schema_method
+    assert_equal "/v1/models/owner/model-name/versions/#{version}", schema_uri.path
+    method, uri, body, = @client.requests.fetch(1)
     assert_equal :post, method
     assert_equal "/v1/predictions", uri.path
     assert_equal version, body.fetch(:version)
