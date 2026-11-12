@@ -31,6 +31,8 @@ module Deploy
       end
 
       (secrets + private_dirs).each do |entry|
+        next if entry[:symlink]
+
         mode = entry[:mode].to_i
         if mode.anybits?(0o007)
           lines << format("permissions: %<path>s is %<mode>04o - other can reach it", path: entry[:path],
