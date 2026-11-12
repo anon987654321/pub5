@@ -39,7 +39,7 @@ class TestStructuralShapeRules < Minitest::Test
       end
 
       def find_user(id)
-        User.find_by!(id:)
+        User.find_or_create_by!(id:)
       end
     RUBY
 
