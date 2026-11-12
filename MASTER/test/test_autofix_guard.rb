@@ -40,6 +40,22 @@ class TestAutofixGuard < Minitest::Test
     assert_nil Guard.protected_reason("/r/RAILS/brgen/app/models/post.rb")
   end
 
+  def test_protected_changes_fails_closed_when_git_root_cannot_be_resolved
+    status_type = Struct.new(:ok) { def success? = ok }
+    success = status_type.new(true)
+    failure = status_type.new(false)
+    calls = 0
+    runner = lambda do |*_, **_|
+      calls += 1
+      calls == 1 ? ["MASTER/data/tokens.yml\\n", success] : ["fatal: not a git repository", failure]
+    end
+
+    Master::Io::Exec.stub(:capture2e, runner) do
+      assert_empty Guard.protected_changes("/tmp/not-a-repository")
+    end
+    assert_equal 2, calls
+  end
+
   # Operator decree 2026-11-09: nothing is sacred, so the live laws and soul
   # are admitted like any other path; the guard's irreplaceable list above
   # still holds.

@@ -245,7 +245,11 @@ module Master
           out, status = Master::Io::Exec.capture2e("git", "-C", root.to_s, "diff", "--name-only", timeout: 30)
           return [] unless status&.success?
 
-          top, = Master::Io::Exec.capture2e("git", "-C", root.to_s, "rev-parse", "--show-toplevel", timeout: 15)
+          top, root_status = Master::Io::Exec.capture2e(
+            "git", "-C", root.to_s, "rev-parse", "--show-toplevel", timeout: 15
+          )
+          return [] unless root_status&.success?
+
           base = top.to_s.strip
           out.lines.map(&:strip).reject(&:empty?).select { |rel| protected_reason(File.join(base, rel), root:) }
         end
