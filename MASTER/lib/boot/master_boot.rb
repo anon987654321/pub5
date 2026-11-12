@@ -165,11 +165,11 @@ module Master
       require_relative "../operator/ruby_runner"
       case spec.fetch(:launcher)
       when :bundle
-        [Operator::RubyRunner.bundle_cmd(root: repository), "exec", *spec.fetch(:argv)]
+        [::Operator::RubyRunner.bundle_cmd(root: repository), "exec", *spec.fetch(:argv)]
       when :ruby_bundle
         [
-          Operator::RubyRunner.bundle_cmd(root: repository), "exec",
-          Operator::RubyRunner.ruby_cmd(root: repository), *spec.fetch(:argv)
+          ::Operator::RubyRunner.bundle_cmd(root: repository), "exec",
+          ::Operator::RubyRunner.ruby_cmd(root: repository), *spec.fetch(:argv)
         ]
       when :direct
         spec.fetch(:argv)
