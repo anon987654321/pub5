@@ -401,9 +401,11 @@ measure is already owned by the Bymorgen item above.
   on partial failure, and uses monotonic prediction/training deadlines. The
   additional transfer/deadline regressions are source additions, not executed
   proof. Live provider/upload integration remains open. The later source pass also closes the direct STUDIO training
-  bypass: `ReplicateClient#train_lora` now requires `subject:` and checks the
-  shared consent record before schema lookup/model creation/provider POST; its
-  no-provider-call regression is authored but NOT_RUN. H2/H3 now have source
+  bypass: `ReplicateClient#train_lora`, `upload_file` and `upload_zip` now
+  require `subject:` and check the shared consent record before provider
+  schema lookup, model creation, file upload or training. Tests prove the
+  direct training/image/ZIP paths refuse before provider requests; authored,
+  NOT_RUN. H2/H3 now have source
   coverage: tool hooks default to deny on faults, MCP SSE is loopback-only and
   enabled package versions are pinned (the git server remains disabled). H7's
   local web startup refuses unknown port listeners; Dilla player shutdown
