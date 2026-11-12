@@ -224,7 +224,7 @@ module Master
 
           Result.ok(path)
         rescue StandardError => e
-          Result.err("file validation failed: #{e.message}", category: :validation)
+          Result.err("file unreadable: #{e.class}: #{e.message}", category: :validation)
         end
 
         # Recorded where an unanswered semantic read is, so the file blocks DONE as
