@@ -7,6 +7,7 @@ require "json"
 require "net/http"
 require "open3"
 require "tempfile"
+require "tmpdir"
 require "uri"
 
 module Studio
