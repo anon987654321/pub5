@@ -50,6 +50,10 @@ class TestLaneSelection < Minitest::Test
     Selection.reset_hosted_resolver!
     @saved_ollama_enabled = ENV["MASTER_OLLAMA_ENABLED"]
     @saved_no_ollama = ENV["MASTER_NO_OLLAMA"]
+    @saved_nsfw = ENV["MASTER_NSFW"]
+    @saved_nsfw_model = ENV["MASTER_NSFW_MODEL"]
+    ENV.delete("MASTER_NSFW")
+    ENV.delete("MASTER_NSFW_MODEL")
     ENV.delete("MASTER_NO_OLLAMA")
     ENV["MASTER_OLLAMA_ENABLED"] = "1"
     @dir = Dir.mktmpdir
@@ -62,6 +66,8 @@ class TestLaneSelection < Minitest::Test
     Quota.clock = -> { Time.now.to_f }
     @saved_ollama_enabled.nil? ? ENV.delete("MASTER_OLLAMA_ENABLED") : ENV["MASTER_OLLAMA_ENABLED"] = @saved_ollama_enabled
     @saved_no_ollama.nil? ? ENV.delete("MASTER_NO_OLLAMA") : ENV["MASTER_NO_OLLAMA"] = @saved_no_ollama
+    @saved_nsfw.nil? ? ENV.delete("MASTER_NSFW") : ENV["MASTER_NSFW"] = @saved_nsfw
+    @saved_nsfw_model.nil? ? ENV.delete("MASTER_NSFW_MODEL") : ENV["MASTER_NSFW_MODEL"] = @saved_nsfw_model
     Selection.reset_hosted_resolver!
     FileUtils.remove_entry(@dir)
   end
@@ -115,6 +121,26 @@ class TestLaneSelection < Minitest::Test
     refute Selection.ollama_enabled?, "the hard-off switch still overrides the opt-in"
     assert_empty Selection.order([LOCAL])
     assert_empty Selection.order_or_all([LOCAL])
+  end
+
+  def test_nsfw_model_requires_two_opt_ins_and_never_enters_ordinary_pools
+    refute Selection.nsfw_enabled?
+    assert_nil Selection.nsfw_model_id
+
+    ENV["MASTER_NSFW"] = "1"
+    ENV["MASTER_NSFW_MODEL"] = "dolphin3:8b"
+    assert Selection.nsfw_enabled?
+    model = "local_uncensored:dolphin3:8b"
+    assert_equal model, Selection.nsfw_model_id
+    assert_equal :nsfw, Selection.kind(model)
+    refute_includes Selection.catalogue, model
+    assert_empty Selection.order([model])
+    assert_empty Selection.order_or_all([model])
+    assert_empty Selection.ranked_order([model])
+
+    ENV["MASTER_NO_OLLAMA"] = "1"
+    refute Selection.nsfw_enabled?, "the global local-model hard off cannot be bypassed"
+    assert_nil Selection.nsfw_model_id
   end
 
   def test_zero_key_probe_serves_a_reachable_local_brain_only_without_keys
