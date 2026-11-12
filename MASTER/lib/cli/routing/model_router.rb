@@ -87,6 +87,11 @@ module Master
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "model_router.record_provider_outcome")
         end
+        def record_first_token(model:, latency_ms:)
+          @compute_pool&.record_first_token(model:, latency_ms:)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "model_router.record_first_token", model: model.to_s)
+        end
 
         INTENT_PATTERNS = {
           code_generation: /\b(implement|build|add|create|write|make|generate|scaffold|port|wire)\b/i,
