@@ -161,17 +161,30 @@ module Studio
           pass_check(report, "subject_descriptor_text", "A descriptive prompt anchor is present")
         end
 
-        manifest = File.join(directory, "weights", model, "replicate_training.json")
-        if File.file?(manifest) && !File.symlink?(manifest)
-          raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
-
-          version = JSON.parse(File.read(manifest, encoding: "UTF-8"))["version"].to_s
-          if version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
-            pass_check(report, "replicate_version_pin", "Local training manifest pins the Replicate model version")
+        if model.match?(/\A[a-zA-Z0-9_.-]{1,96}\z/)
+          weights_directory = File.join(directory, "weights")
+          model_directory = File.join(weights_directory, model)
+          manifest = File.join(model_directory, "replicate_training.json")
+          if [weights_directory, model_directory, manifest].any? { |path| File.symlink?(path) }
+            fail_check(report, "replicate_manifest_path", "Local training manifest path contains a symlink")
             return
           end
-          fail_check(report, "replicate_training_manifest", "Local training manifest does not contain a pinned owner/model:version")
-          return
+          if File.file?(manifest)
+            resolved_manifest = File.realpath(manifest)
+            unless inside?(resolved_manifest, File.realpath(directory))
+              fail_check(report, "replicate_manifest_scope", "Local training manifest resolves outside this subject's private directory")
+              return
+            end
+            raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
+
+            version = JSON.parse(File.read(manifest, encoding: "UTF-8"))["version"].to_s
+            if version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
+              pass_check(report, "replicate_version_pin", "Local training manifest pins the Replicate model version")
+              return
+            end
+            fail_check(report, "replicate_training_manifest", "Local training manifest does not contain a pinned owner/model:version")
+            return
+          end
         end
 
         remote = env["REPLICATE_MODEL"].to_s.strip
