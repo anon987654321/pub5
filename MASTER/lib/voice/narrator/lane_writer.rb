@@ -54,8 +54,8 @@ module Master
           # provider's words before interpreting the exit code. On exit 0, only
           # accept a short, provider-shaped refusal at the beginning of stdout;
           # an ordinary narration that quotes a quota phrase is still an answer.
-          refusal = status.success? ? provider_refusal_output?(out) : !combined.empty?
-          refusal_text = status.success? ? out.to_s.strip : combined
+          refusal = status.success? ? provider_refusal_output?(combined) : !combined.empty?
+          refusal_text = combined
           if refusal && Master::Io::LaneQuota.note(model, refusal_text)
             reason = Master::Io::LaneQuota.report_for(model) || "claude-cli quota or login refusal"
             raise Unavailable, reason
