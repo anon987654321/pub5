@@ -58,6 +58,13 @@ class TurnRouterTest < Minitest::Test
     assert Master::CLI::TurnRouter.question?("Can you refactor this method?")
   end
 
+  def test_direct_explain_and_describe_instructions_are_not_questions
+    ["Explain why the tests fail", "Describe the API", "Please explain the failure"].each do |text|
+      refute Master::CLI::TurnRouter.question?(text), text
+    end
+    assert Master::CLI::TurnRouter.question?("Why do the tests fail")
+  end
+
   def test_an_instruction_is_still_not_a_question
     refute Master::CLI::TurnRouter.question?("run the tests in lib/io")
     refute Master::CLI::TurnRouter.question?("review rails")

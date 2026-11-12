@@ -6,6 +6,7 @@ require_relative "../lib/fix/wishlist"
 require "tmpdir"
 require "fileutils"
 require "json"
+require "timeout"
 
 class TestFixWishlist < Minitest::Test
   class RecordingAgent
@@ -198,6 +199,51 @@ class TestFixWishlist < Minitest::Test
     Master::Fix::Wishlist.new(root: @root, agent: RecordingAgent.new(reply)).call(state: "done", target: @root, run_id: "r15")
 
     assert_equal ["Wish 1", "Wish 2"], Master::Fix::Wishlist.pending_titles(@root, target: @root, limit: 2)
+  end
+
+  def test_empty_yaml_array_is_a_valid_empty_wishlist
+    assert_empty Master::Fix::Wishlist.new(root: @root, agent: nil).send(:parse, "[]")
+  end
+
+  def test_invalid_or_non_array_yaml_is_a_parse_error
+    wishlist = Master::Fix::Wishlist.new(root: @root, agent: nil)
+    assert_raises(Master::Fix::Wishlist::ParseError) { wishlist.send(:parse, "- title: [") }
+    assert_raises(Master::Fix::Wishlist::ParseError) { wishlist.send(:parse, "title: not a list") }
+  end
+
+  def test_call_reports_parse_failure_instead_of_drafting_an_empty_queue
+    agent = RecordingAgent.new("- title: [")
+    result = Master::Fix::Wishlist.new(root: @root, agent:, event_bus: @bus).call(
+      state: "done", target: @root, run_id: "bad-yaml"
+    )
+    assert_match(/wishlist: ParseError:/, result)
+    refute_match(/drafted 0/, result)
+    assert_includes @bus.events.map { |event| event[:event] }, "wishlist:error"
+  end
+
+  def test_ledger_lock_serializes_separate_wishlist_instances
+    first = Master::Fix::Wishlist.new(root: @root, agent: nil)
+    second = Master::Fix::Wishlist.new(root: @root, agent: nil)
+    entered = Queue.new
+    release = Queue.new
+    second_entered = Queue.new
+    holder = Thread.new do
+      first.send(:with_ledger_lock) do
+        entered << true
+        release.pop
+      end
+    end
+    Timeout.timeout(2) { entered.pop }
+    contender = Thread.new do
+      second.send(:with_ledger_lock) { second_entered << true }
+    end
+    assert_raises(Timeout::Error) { Timeout.timeout(0.05) { second_entered.pop } }
+    release << true
+    Timeout.timeout(2) { second_entered.pop }
+    Timeout.timeout(2) { holder.join; contender.join }
+  ensure
+    release << true if release && holder&.alive?
+    [holder, contender].compact.each { |thread| thread.join(2) }
   end
 
 end

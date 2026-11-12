@@ -249,8 +249,6 @@ module Master
         apply, critique, aesthetic, only, target = parse_pass_flags(raw)
         overrides = execution_overrides(raw)
         apply, critique, only, overrides = apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
-        previous = fix_state_before
-
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)
 
@@ -267,7 +265,7 @@ module Master
         # overrides below. A rejected concurrent caller must not change the
         # active run's mode, lane, check focus or critique pin even briefly.
         Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target:) do
-          with_fix_overrides(overrides, previous:) do
+          with_fix_overrides(overrides) do
             dispatch_fix_parsed(
               scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
               apply:, critique:, aesthetic:, only:, target:, cancellation:, mode:,
@@ -280,18 +278,23 @@ module Master
       # The execution overrides a single dispatch sets, and what the next
       # command inherits: set the run's mode, lane and pin, yield the run,
       # then restore — the same one-command lifetime the critique pin has.
-      def with_fix_overrides(overrides, previous:)
-        Master::Fix::AutofixGuard.mode = overrides[:autofix_mode] if overrides[:autofix_mode]
-        Master::Fix::RunLedger.max_files = overrides[:max_files] if overrides[:max_files]
-        Master::Fix::CheckFocus.blockers! if overrides[:blockers]
-        Master::Fix::CheckFocus.plan! if overrides[:plan]
-        Master::Fix::CheckFocus.until_checks! if overrides[:until_checks]
-        Master::Fix::WorkLane.set!(overrides.fetch(:lane))
-        Master::Fix::CritiquePin.set!(critique_pin_focus(overrides))
-        yield
-      ensure
-        Master::Fix::CritiquePin.clear
-        restore_fix_state(previous)
+      def with_fix_overrides(overrides)
+        Master::Fix::Kernel.with_settings_lock do
+          previous = fix_state_before
+          begin
+            Master::Fix::AutofixGuard.mode = overrides[:autofix_mode] if overrides[:autofix_mode]
+            Master::Fix::RunLedger.max_files = overrides[:max_files] if overrides[:max_files]
+            Master::Fix::CheckFocus.blockers! if overrides[:blockers]
+            Master::Fix::CheckFocus.plan! if overrides[:plan]
+            Master::Fix::CheckFocus.until_checks! if overrides[:until_checks]
+            Master::Fix::WorkLane.set!(overrides.fetch(:lane))
+            Master::Fix::CritiquePin.set!(critique_pin_focus(overrides))
+            yield
+          ensure
+            Master::Fix::CritiquePin.clear
+            restore_fix_state(previous)
+          end
+        end
       end
 
       # The execution state a single dispatch momentarily rewrites, and the

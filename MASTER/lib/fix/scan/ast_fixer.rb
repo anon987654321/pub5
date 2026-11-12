@@ -59,6 +59,37 @@ module Master
         # unguarded (a CSS `}` gains a comma; a live JS branch reads as dead).
         UNIVERSAL_TRANSFORMS = %i[strip_accidental_sub_wrapper expand_tabs collapse_blank_lines strip_trailing_whitespace ensure_final_newline].freeze
 
+        # Runtime transform safety policy is part of the existing Law catalogue.
+        # Invalid policy fails closed; Ruby does not keep a shadow default.
+        def self.transformation_policy
+          @transformation_policy ||= begin
+            raw = Master.law("transformation_policy").fetch("ast_fixer")
+            patterns = raw.fetch("protected_path_patterns")
+            raise ArgumentError, "transformation_policy.ast_fixer protected paths must be a non-empty array" unless
+              patterns.is_a?(Array) && !patterns.empty?
+
+            protected_patterns = patterns.map do |pattern|
+              raise ArgumentError, "transformation_policy.ast_fixer paths must be regex strings" unless
+                pattern.is_a?(String) && !pattern.empty?
+
+              Regexp.new(pattern)
+            end.freeze
+
+            line_length = Integer(raw.fetch("generated_line_length"))
+            raise ArgumentError, "transformation_policy.ast_fixer generated line length must be positive" unless line_length.positive?
+
+            tab_pattern = raw.fetch("tab_significant_filename_pattern")
+            raise ArgumentError, "transformation_policy.ast_fixer tab pattern must be a regex string" unless
+              tab_pattern.is_a?(String) && !tab_pattern.empty?
+
+            {
+              protected_path_patterns: protected_patterns,
+              generated_line_length: line_length,
+              tab_significant_filename_pattern: Regexp.new(tab_pattern, Regexp::IGNORECASE),
+            }.freeze
+          end
+        end
+
         include SyntaxTransforms
         include WebTransforms
         include ScaleTransforms
@@ -110,31 +141,8 @@ module Master
           @transforms = []
         end
 
-        # OPENBSD/etc, /usr and /var mirror files installed verbatim on the VPS
-        # — newsyslog.conf's own header says taken verbatim from etc.tgz and
-        # validated before installing, and tabs are load-bearing in
-        # termcap-style files like login.conf. A rewrite here breaks
-        # diffability against upstream at best and a daemon at worst; on
-        # 2026-08-18 one pass re-indented login.conf, newsyslog.conf and an
-        # rc.d script and injected strict mode into cron scripts written to
-        # tolerate failure.
-        VERBATIM_MIRROR_RE = %r{/OPENBSD/(?:etc|usr|var)/}
-
-        # law/*.rb fixtures are load-bearing bad inputs: SQUINT_TEST's bad
-        # fixture IS four consecutive blank lines, and collapse_blank_lines
-        # "fixed" it — the fixture stopped flagging, prove! raised at load,
-        # and a keyword-mismatch rescue turned that into half the law silently
-        # missing (every id after squint_test). A file whose job is to hold the
-        # forbidden pattern must never be cleaned of it, and law/
-        # holds fixtures as law/ does.
-        LAW_DIR_RE = %r{/law/[^/]+\.rb\z}
-
-        # A line no human wrote: minified Workbox bundles run 23k chars/line,
-        # while the densest hand-written file in the repo peaks at ~2.7k.
-        # Rewriting a generated bundle is churn at best (it comes back on the
-        # next build) and a broken service worker at worst — one pass
-        # converted var to const across four Workbox bundles twice in one day.
-        GENERATED_LINE_LENGTH = 5000
+        # OpenBSD mirrors and Law fixtures are protected because transforms
+        # break upstream fidelity or erase load-bearing fixtures.
 
         def apply
           candidate = propose
@@ -152,7 +160,7 @@ module Master
         end
 
         def propose
-          return unchanged if verbatim_mirror? || law_file? || generated_bundle?
+          return unchanged if protected_path? || generated_bundle?
 
           out = apply_strategies(@source)
           Result.new(path: @path, changed: out != @source, transforms: @transforms, content: out)
@@ -358,11 +366,9 @@ module Master
         # output in Go, and convention in .conf mirrors — expanding them is a
         # break, not a cleanup. dilla's demo_manifest.tsv lost its columns to
         # this on 2026-08-18.
-        TAB_SIGNIFICANT_RE = /\A(?:makefile.*|.*\.(?:mk|conf|tsv|go))\z/i
-
         def expand_tabs(src)
           return src unless src.include?("\t")
-          return src if TAB_SIGNIFICANT_RE.match?(File.basename(@path.to_s))
+          return src if self.class.transformation_policy.fetch(:tab_significant_filename_pattern).match?(File.basename(@path.to_s))
 
           out = src.gsub("\t", "  ")
           @transforms << :expand_tabs if out != src
@@ -400,11 +406,16 @@ module Master
 
         def markdown? = File.extname(@path).downcase == ".md"
 
-        def verbatim_mirror? = @path.to_s.match?(VERBATIM_MIRROR_RE)
+        def protected_path?
+          self.class.transformation_policy.fetch(:protected_path_patterns).any? do |pattern|
+            @path.to_s.match?(pattern)
+          end
+        end
 
-        def law_file? = @path.to_s.match?(LAW_DIR_RE)
-
-        def generated_bundle? = @source.each_line.any? { |line| line.length > GENERATED_LINE_LENGTH }
+        def generated_bundle?
+          threshold = self.class.transformation_policy.fetch(:generated_line_length)
+          @source.each_line.any? { |line| line.length > threshold }
+        end
 
         def shell? = %w[.zsh .sh .bash].include?(File.extname(@path).downcase)
 

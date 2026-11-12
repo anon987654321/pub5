@@ -4767,6 +4767,12 @@ phantom_recovery:
 
 transformation_policy:
   version: 1
+  ast_fixer:
+    protected_path_patterns:
+      - '/OPENBSD/(?:etc|usr|var)/'
+      - '/law/[^/]+\.rb\z'
+    generated_line_length: 5000
+    tab_significant_filename_pattern: '\A(?:makefile.*|.*\.(?:mk|conf|tsv|go))\z'
   invariants:
     public_api: "Keep public constants, public method signatures, command verbs, routes, and observable behaviour unchanged."
     public_import_paths: "Keep existing require and import paths; when a path must move, retain a tested compatibility shim and prove its loader contract."

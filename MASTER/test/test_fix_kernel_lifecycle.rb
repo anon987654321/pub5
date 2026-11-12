@@ -69,6 +69,29 @@ class TestFixKernelLifecycle < Minitest::Test
     refute adapter.cancellation_requested?
   end
 
+  def test_kernel_settings_lock_is_reentrant_and_serializes_competing_runs
+    entered = Queue.new
+    release = Queue.new
+    next_entered = Queue.new
+    holder = Thread.new do
+      K.with_settings_lock do
+        K.with_settings_lock { entered << true }
+        other_fiber = Fiber.new { K.with_settings_lock { :wrongly_entered } }
+        assert_raises(ThreadError) { other_fiber.resume }
+        release.pop
+      end
+    end
+    Timeout.timeout(2) { entered.pop }
+    contender = Thread.new { K.with_settings_lock { next_entered << true } }
+    assert_raises(Timeout::Error) { Timeout.timeout(0.05) { next_entered.pop } }
+    release << true
+    Timeout.timeout(2) { next_entered.pop }
+    Timeout.timeout(2) { holder.join; contender.join }
+  ensure
+    release << true if release && holder&.alive?
+    [holder, contender].compact.each { |thread| thread.join(2) }
+  end
+
   def test_kernel_activation_error_is_recorded_as_unknown_outcome
     with_workspace do |root|
       kernel = K.new(root:)

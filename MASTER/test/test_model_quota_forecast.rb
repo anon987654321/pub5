@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "time"
+require "timeout"
 
 class ModelQuotaForecastTest < Minitest::Test
   Check = Master::Io::ModelQuota
@@ -236,4 +237,45 @@ class ModelQuotaForecastTest < Minitest::Test
       end
     end
   end
+  def test_record_does_not_wait_for_a_single_flight_provider_refresh
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "model_quota.json")
+      started = Queue.new
+      release = Queue.new
+      requests = 0
+      previous_worker = Check.instance_variable_get(:@refresh_thread)
+      Timeout.timeout(12) { previous_worker.join } if previous_worker&.alive?
+
+      Check.stub(:path, path) do
+        Check.stub(:active_openrouter_key, "test-key") do
+          fetch = lambda do |_key|
+            requests += 1
+            started << true
+            release.pop
+            { "used" => 1, "limit" => 50, "remaining" => 49 }
+          end
+          Check.stub(:fetch_free_model_daily_requests, fetch) do
+            ENV.stub("MASTER_NO_QUOTA_REFRESH", nil) do
+              first = Thread.new { Check.record("demo:free") }
+              Timeout.timeout(2) { started.pop }
+              second = Thread.new { Check.record("demo:free") }
+              Timeout.timeout(2) { second.join }
+              assert_equal 2, Check.count("demo:free")
+              assert_equal 1, requests
+              release << true
+              Timeout.timeout(3) { first.join }
+              worker = Check.instance_variable_get(:@refresh_thread)
+              Timeout.timeout(3) { worker.join } if worker
+              assert_equal 1, requests
+            ensure
+              release << true
+              first&.join(3)
+              second&.join(3)
+            end
+          end
+        end
+      end
+    end
+  end
+
 end

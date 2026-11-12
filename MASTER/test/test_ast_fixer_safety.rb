@@ -59,6 +59,23 @@ class TestAstFixerSafety < Minitest::Test
 
   def fixer(name) = Master::Fix::Scan::AstFixer.new(name, "")
 
+  def test_ast_safety_thresholds_and_exclusions_come_from_the_law_policy
+    policy = Master::Fix::Scan::AstFixer.transformation_policy
+    assert_equal 5000, policy.fetch(:generated_line_length)
+    assert_equal 2, policy.fetch(:protected_path_patterns).size
+    assert policy.fetch(:protected_path_patterns).first.match?("/repo/OPENBSD/etc/rc.conf")
+    assert policy.fetch(:protected_path_patterns).last.match?("/repo/law/squint_test.rb")
+
+    openbsd = Master::Fix::Scan::AstFixer.propose("/repo/OPENBSD/etc/rc.conf", "X = 1")
+    law_fixture = Master::Fix::Scan::AstFixer.propose("/repo/law/squint_test.rb", "X = 1")
+    generated = Master::Fix::Scan::AstFixer.propose("bundle.js", "x" * 5001)
+    makefile = Master::Fix::Scan::AstFixer.propose("Makefile", "\tall:\n\t@echo ok\n")
+    refute openbsd.changed
+    refute law_fixture.changed
+    refute generated.changed
+    refute_includes makefile.transforms, :expand_tabs
+  end
+
   def test_style_balance_check_reads_structure_not_text
     css = fixer("theme.css")
 

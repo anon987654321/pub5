@@ -32,6 +32,8 @@ module Master
       AUTO_IMPLEMENTATIONS = %w[next_fix].freeze
       LAW_ID = "CONVERGENCE_WISHLIST"
 
+      class ParseError < StandardError; end
+
       Law = PassLaw
 
       def initialize(root:, agent:, event_bus: nil)
@@ -49,12 +51,15 @@ module Master
         items = Personas.collect(agent: @agent, base:, parse: method(:parse), normalize: method(:normalize))
         items = normalize(parse(@agent.ask(base))) if items.empty?
         items = items.first(MAX_NEW_ITEMS)
-        ledger = load_ledger
-        added = merge_new_items!(ledger, items, state:, target:, run_id:)
-        save_ledger(ledger)
+        added, queued = with_ledger_lock do
+          ledger = load_ledger
+          added = merge_new_items!(ledger, items, state:, target:, run_id:)
+          save_ledger(ledger)
 
-        queued = ledger["proposals"].count do |item|
-          item["status"] == "queued" && AUTO_IMPLEMENTATIONS.include?(item["implementation"])
+          queued = ledger["proposals"].count do |item|
+            item["status"] == "queued" && AUTO_IMPLEMENTATIONS.include?(item["implementation"])
+          end
+          [added, queued]
         end
         @bus&.publish(
           "wishlist:done",
@@ -85,75 +90,77 @@ module Master
       end
 
       def claimable(target:, limit: BATCH_SIZE, run_id: nil)
-        ledger = load_ledger
-        head = @git.head
-        changed = false
-        rows = ledger["proposals"].filter_map do |proposal|
-          if proposal["status"] == "claimed"
-            proposal["status"] = "queued"
-            proposal.delete("claimed_at")
-            proposal.delete("claimed_run")
-            changed = true
-          end
-          next unless proposal["status"] == "queued"
-          next unless AUTO_IMPLEMENTATIONS.include?(proposal["implementation"])
+        with_ledger_lock do
+          ledger = load_ledger
+          head = @git.head
+          changed = false
+          rows = ledger["proposals"].filter_map do |proposal|
+            if proposal["status"] == "claimed"
+              proposal["status"] = "queued"
+              proposal.delete("claimed_at")
+              proposal.delete("claimed_run")
+              changed = true
+            end
+            next unless proposal["status"] == "queued"
+            next unless AUTO_IMPLEMENTATIONS.include?(proposal["implementation"])
 
-          anchor = anchor_file(proposal["anchor"])
-          unless anchor
-            proposal["status"] = "stale"
-            proposal["stale_reason"] = "anchor missing"
-            changed = true
-            next
-          end
-          next unless anchor_in_target?(anchor, target)
+            anchor = anchor_file(proposal["anchor"])
+            unless anchor
+              proposal["status"] = "stale"
+              proposal["stale_reason"] = "anchor missing"
+              changed = true
+              next
+            end
+            next unless anchor_in_target?(anchor, target)
 
-          current_digest = Digest::SHA256.file(anchor).hexdigest
-          recorded_digest = proposal["anchor_sha256"].to_s
-          if recorded_digest.empty? || recorded_digest != current_digest
-            proposal["status"] = "stale"
-            proposal["stale_reason"] = "anchor changed since proposal"
-            proposal["stale_at"] = Master::Clock.utc_now.iso8601
-            changed = true
-            @bus&.publish("wishlist:stale", id: proposal["uid"], reason: proposal["stale_reason"])
-            next
-          end
+            current_digest = Digest::SHA256.file(anchor).hexdigest
+            recorded_digest = proposal["anchor_sha256"].to_s
+            if recorded_digest.empty? || recorded_digest != current_digest
+              proposal["status"] = "stale"
+              proposal["stale_reason"] = "anchor changed since proposal"
+              proposal["stale_at"] = Master::Clock.utc_now.iso8601
+              changed = true
+              @bus&.publish("wishlist:stale", id: proposal["uid"], reason: proposal["stale_reason"])
+              next
+            end
 
-          if head.to_s.empty?
-            next
-          elsif proposal["basis_head"].to_s != head.to_s
-            proposal["basis_head"] = head
-            proposal["rebased_at"] = Master::Clock.utc_now.iso8601
-            changed = true
-          end
+            if head.to_s.empty?
+              next
+            elsif proposal["basis_head"].to_s != head.to_s
+              proposal["basis_head"] = head
+              proposal["rebased_at"] = Master::Clock.utc_now.iso8601
+              changed = true
+            end
 
-          next if run_id && proposal["last_attempt_run"].to_s == run_id.to_s
-          proposal
-        end.then { |rows| Personas.order(rows) }.first(limit.to_i)
+            next if run_id && proposal["last_attempt_run"].to_s == run_id.to_s
+            proposal
+          end.then { |rows| Personas.order(rows) }.first(limit.to_i)
 
-        save_ledger(ledger) if changed
-        rows
+          save_ledger(ledger) if changed
+          rows        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claimable", event_bus: @bus)
         []
       end
 
       def claim!(proposals, run_id:)
-        ids = Array(proposals).map { |proposal| proposal["uid"].to_s }.reject(&:empty?)
-        return [] if ids.empty?
+        with_ledger_lock do
+          ids = Array(proposals).map { |proposal| proposal["uid"].to_s }.reject(&:empty?)
+          return [] if ids.empty?
 
-        ledger = load_ledger
-        now = Master::Clock.utc_now.iso8601
-        claimed = ledger["proposals"].filter_map do |proposal|
-          next unless ids.include?(proposal["uid"].to_s) && proposal["status"] == "queued"
+          ledger = load_ledger
+          now = Master::Clock.utc_now.iso8601
+          claimed = ledger["proposals"].filter_map do |proposal|
+            next unless ids.include?(proposal["uid"].to_s) && proposal["status"] == "queued"
 
-          proposal["status"] = "claimed"
-          proposal["claimed_at"] = now
-          proposal["claimed_run"] = run_id.to_s
-          proposal
-        end
-        save_ledger(ledger)
-        @bus&.publish("wishlist:claimed", run_id:, count: claimed.size)
-        claimed
+            proposal["status"] = "claimed"
+            proposal["claimed_at"] = now
+            proposal["claimed_run"] = run_id.to_s
+            proposal
+          end
+          save_ledger(ledger)
+          @bus&.publish("wishlist:claimed", run_id:, count: claimed.size)
+          claimed        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claim!", event_bus: @bus)
         []
@@ -162,127 +169,131 @@ module Master
       alias claim claim!
 
       def mark_attempt(proposal_id:, fixed:, status:, message:, run_id:)
-        ledger = load_ledger
-        proposal = ledger["proposals"].find { |item| item["uid"].to_s == proposal_id.to_s }
-        return unless proposal
+        with_ledger_lock do
+          ledger = load_ledger
+          proposal = ledger["proposals"].find { |item| item["uid"].to_s == proposal_id.to_s }
+          return unless proposal
 
-        attempts = proposal.fetch("attempts", 0).to_i + 1
-        proposal["attempts"] = attempts
-        proposal["last_attempt_run"] = run_id.to_s
-        proposal["last_outcome"] = status.to_s
-        proposal["last_message"] = message.to_s.byteslice(0, 500)
+          attempts = proposal.fetch("attempts", 0).to_i + 1
+          proposal["attempts"] = attempts
+          proposal["last_attempt_run"] = run_id.to_s
+          proposal["last_outcome"] = status.to_s
+          proposal["last_message"] = message.to_s.byteslice(0, 500)
 
-        if fixed.to_i.positive?
-          proposal["status"] = "claimed"
-          proposal["last_fixed"] = fixed.to_i
-        elsif %i[human_decision needs_person].include?(status.to_sym)
-          proposal["status"] = "blocked"
-        elsif attempts >= MAX_ATTEMPTS
-          proposal["status"] = "blocked"
-          proposal["blocked_reason"] = "attempt limit reached"
-        else
-          proposal["status"] = "queued"
-        end
+          if fixed.to_i.positive?
+            proposal["status"] = "claimed"
+            proposal["last_fixed"] = fixed.to_i
+          elsif %i[human_decision needs_person].include?(status.to_sym)
+            proposal["status"] = "blocked"
+          elsif attempts >= MAX_ATTEMPTS
+            proposal["status"] = "blocked"
+            proposal["blocked_reason"] = "attempt limit reached"
+          else
+            proposal["status"] = "queued"
+          end
 
-        save_ledger(ledger)
-        @bus&.publish(
-          "wishlist:attempt",
-          id: proposal_id,
-          status: proposal["status"],
-          outcome: status,
-          fixed: fixed.to_i,
-          attempts:,
-        )
-        proposal
+          save_ledger(ledger)
+          @bus&.publish(
+            "wishlist:attempt",
+            id: proposal_id,
+            status: proposal["status"],
+            outcome: status,
+            fixed: fixed.to_i,
+            attempts:,
+          )
+          proposal        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_attempt", event_bus: @bus)
         nil
       end
 
       def mark_delivered(proposal_ids:, run_id:)
-        ids = Array(proposal_ids).map(&:to_s)
-        return [] if ids.empty?
+        with_ledger_lock do
+          ids = Array(proposal_ids).map(&:to_s)
+          return [] if ids.empty?
 
-        ledger = load_ledger
-        changed = ledger["proposals"].filter_map do |proposal|
-          next unless ids.include?(proposal["uid"].to_s)
-          next unless proposal["status"] == "claimed"
-          next unless proposal.fetch("last_fixed", 0).to_i.positive?
+          ledger = load_ledger
+          changed = ledger["proposals"].filter_map do |proposal|
+            next unless ids.include?(proposal["uid"].to_s)
+            next unless proposal["status"] == "claimed"
+            next unless proposal.fetch("last_fixed", 0).to_i.positive?
 
-          proposal["status"] = "applied"
-          proposal["applied_at"] = Master::Clock.utc_now.iso8601
-          proposal["applied_run"] = run_id.to_s
-          proposal.delete("claimed_at")
-          proposal.delete("claimed_run")
-          proposal
-        end
-        save_ledger(ledger) unless changed.empty?
-        changed
+            proposal["status"] = "applied"
+            proposal["applied_at"] = Master::Clock.utc_now.iso8601
+            proposal["applied_run"] = run_id.to_s
+            proposal.delete("claimed_at")
+            proposal.delete("claimed_run")
+            proposal
+          end
+          save_ledger(ledger) unless changed.empty?
+          changed        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_delivered", event_bus: @bus)
         []
       end
 
       def mark_verified(proposal_ids:, run_id:)
-        ids = Array(proposal_ids).map(&:to_s)
-        return [] if ids.empty?
+        with_ledger_lock do
+          ids = Array(proposal_ids).map(&:to_s)
+          return [] if ids.empty?
 
-        ledger = load_ledger
-        changed = ledger["proposals"].filter_map do |proposal|
-          next unless ids.include?(proposal["uid"].to_s)
-          next unless proposal["status"] == "applied"
+          ledger = load_ledger
+          changed = ledger["proposals"].filter_map do |proposal|
+            next unless ids.include?(proposal["uid"].to_s)
+            next unless proposal["status"] == "applied"
 
-          proof = ProofContract.verify(proposal, root: @root)
-          proposal["proof_state"] = proof[:state].to_s
-          proposal["proof_checks"] = Array(proof[:checks]).first(6)
+            proof = ProofContract.verify(proposal, root: @root)
+            proposal["proof_state"] = proof[:state].to_s
+            proposal["proof_checks"] = Array(proof[:checks]).first(6)
 
-          case proof[:state]
-          when :proven
-            proposal["status"] = "verified"
-            proposal["verified_at"] = Master::Clock.utc_now.iso8601
-            proposal["verified_run"] = run_id.to_s
-          when :failed
-            proposal["status"] = "blocked"
-            proposal["blocked_reason"] = "wishlist proof failed"
-            proposal["blocked_at"] = Master::Clock.utc_now.iso8601
-          else
-            proposal["status"] = "applied"
-            proposal["verification_reason"] = "proof contract requires external validation"
+            case proof[:state]
+            when :proven
+              proposal["status"] = "verified"
+              proposal["verified_at"] = Master::Clock.utc_now.iso8601
+              proposal["verified_run"] = run_id.to_s
+            when :failed
+              proposal["status"] = "blocked"
+              proposal["blocked_reason"] = "wishlist proof failed"
+              proposal["blocked_at"] = Master::Clock.utc_now.iso8601
+            else
+              proposal["status"] = "applied"
+              proposal["verification_reason"] = "proof contract requires external validation"
+            end
+            proposal
           end
-          proposal
-        end
-        save_ledger(ledger) unless changed.empty?
-        changed
+          save_ledger(ledger) unless changed.empty?
+          changed        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_verified", event_bus: @bus)
         []
       end
 
       def record_reflection!(reflection:, state:, target:, run_id:)
-        return false unless reflection.respond_to?(:repair?) && reflection.repair?
-        law = reflection.law.to_s
-        anchor = reflection.anchor.to_s
-        evidence = reflection.evidence.to_s
-        change = reflection.next_action.to_s
-        return false if law.empty? || anchor.empty? || evidence.empty? || change.empty?
+        with_ledger_lock do
+          return false unless reflection.respond_to?(:repair?) && reflection.repair?
+          law = reflection.law.to_s
+          anchor = reflection.anchor.to_s
+          evidence = reflection.evidence.to_s
+          change = reflection.next_action.to_s
+          return false if law.empty? || anchor.empty? || evidence.empty? || change.empty?
 
-        item = {
-          "id" => "reflection_#{Digest::SHA256.hexdigest([law, anchor, evidence, change].join("\n"))[0, 16]}",
-          "title" => reflection.summary.to_s,
-          "rationale" => reflection.summary.to_s,
-          "anchor" => anchor,
-          "change" => change,
-          "effort" => "medium",
-          "reversibility" => "guarded",
-          "implementation" => "next_fix",
-          "evidence" => evidence,
-          "proof" => ["same law and anchor must hold after mutation"],
-        }
-        ledger = load_ledger
-        added = merge_new_items!(ledger, [item], state:, target:, run_id:)
-        save_ledger(ledger) if added.positive?
-        @bus&.publish("wishlist:reflection", added:, law:, anchor:, run_id:)
-        added.positive?
+          item = {
+            "id" => "reflection_#{Digest::SHA256.hexdigest([law, anchor, evidence, change].join("\n"))[0, 16]}",
+            "title" => reflection.summary.to_s,
+            "rationale" => reflection.summary.to_s,
+            "anchor" => anchor,
+            "change" => change,
+            "effort" => "medium",
+            "reversibility" => "guarded",
+            "implementation" => "next_fix",
+            "evidence" => evidence,
+            "proof" => ["same law and anchor must hold after mutation"],
+          }
+          ledger = load_ledger
+          added = merge_new_items!(ledger, [item], state:, target:, run_id:)
+          save_ledger(ledger) if added.positive?
+          @bus&.publish("wishlist:reflection", added:, law:, anchor:, run_id:)
+          added.positive?        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "Fix::Wishlist.record_reflection!", event_bus: @bus)
         false
@@ -363,6 +374,51 @@ module Master
 
       def ledger_path
         File.join(@root, LEDGER_PATH)
+      end
+
+      # One lock covers the full ledger read-modify-write transaction.
+      # Atomic rename prevents partial JSON, not lost updates.
+      def with_ledger_lock
+        directory = File.dirname(ledger_path)
+        FileUtils.mkdir_p(directory, mode: 0o700)
+        directory_stat = File.lstat(directory)
+        unless directory_stat.directory? && !directory_stat.symlink? &&
+               (directory_stat.mode & 0o022).zero?
+          raise IOError, "wishlist directory must be a stable, real, private directory"
+        end
+
+        lock_path = "#{ledger_path}.lock"
+        raise IOError, "refusing symlinked wishlist lock" if File.symlink?(lock_path)
+        flags = File::RDWR | File::CREAT
+        flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+        File.open(lock_path, flags, 0o600) do |file|
+          opened = file.stat
+          unless opened.file? && opened.nlink == 1 && (opened.mode & 0o077).zero?
+            raise IOError, "wishlist lock must be a private singly linked regular file"
+          end
+          current = File.lstat(lock_path)
+          unless current.file? && !current.symlink? && current.dev == opened.dev && current.ino == opened.ino
+            raise IOError, "wishlist lock path changed while opening"
+          end
+          raise IOError, "could not acquire wishlist ledger lock" unless file.flock(File::LOCK_EX)
+
+          begin
+            current_directory = File.lstat(directory)
+            current = File.lstat(lock_path)
+            unless current_directory.directory? && !current_directory.symlink? &&
+                   current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino &&
+                   (current_directory.mode & 0o022).zero? &&
+                   current.file? && !current.symlink? && current.nlink == 1 &&
+                   current.dev == opened.dev && current.ino == opened.ino
+              raise IOError, "wishlist ledger lock identity changed while waiting"
+            end
+            yield
+          ensure
+            file.flock(File::LOCK_UN)
+          end
+        end
+      rescue SystemCallError => e
+        raise IOError, "cannot safely lock wishlist ledger: #{e.class}: #{e.message}"
       end
 
       def load_ledger
@@ -509,10 +565,11 @@ module Master
       def parse(text)
         body = text.to_s.sub(/\A.*?(?=^- |\A- )/m, "").sub(/\n```.*\z/m, "").strip
         data = YAML.safe_load(body, aliases: false)
-        data.is_a?(Array) ? data : []
+        raise ParseError, "wishlist response must be a YAML array" unless data.is_a?(Array)
+
+        data
       rescue Psych::Exception => e
-        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.parse")
-        []
+        raise ParseError, "wishlist response contains invalid YAML: #{e.message}"
       end
 
       def normalize(items)

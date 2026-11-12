@@ -303,7 +303,7 @@ module Master
         value.match?(PUBLIC_SITE) && value.match?(PUBLIC_RESEARCH_ACTION)
       end
 
-      QUESTION_START = /\A(?:please\s+)?(?:in\s+(?:one|a\s+few)\s+(?:sentence|word)s?,?\s+)?(?:what|why|how|which|where|when|who|whom|whose|does|do|did|is|are|was|were|can|could|should|would|will|explain|describe)\b/i.freeze
+      QUESTION_START = /\A(?:please\s+)?(?:in\s+(?:one|a\s+few)\s+(?:sentence|word)s?,?\s+)?(?:what|why|how|which|where|when|who|whom|whose|does|do|did|is|are|was|were|can|could|should|would|will)\b/i.freeze
       QUESTION_IMPERATIVE = /\A(?:please\s+)?(?:do|can|will)\s+(?:fix|refactor|add|implement|make|create|build|update|change|remove|delete|write|generate)\b/i.freeze
 
       def question?(text)

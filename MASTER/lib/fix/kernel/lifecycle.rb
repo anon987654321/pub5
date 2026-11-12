@@ -71,7 +71,8 @@ module Master
             raise ArgumentError, "Fix adapter must implement #with_cancellation"
           end
 
-          @execution_mutex.synchronize do
+          Master::Fix::Kernel.with_settings_lock do
+            @execution_mutex.synchronize do
             previous_run_id = @current_run_id
             previous_attempt_id = @current_attempt_id
 
@@ -129,6 +130,7 @@ module Master
                 @current_run_id = previous_run_id
                 @current_attempt_id = previous_attempt_id
               end
+            end
             end
           end
         end

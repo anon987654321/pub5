@@ -17,6 +17,28 @@ module Master
     class Kernel
       include Lifecycle
 
+      # Class-level compatibility settings remain visible to adapters. Serialize
+      # every Kernel-backed fix run for the whole settings lifetime.
+      SETTINGS_LOCK = Mutex.new
+
+      def self.with_settings_lock
+        owner = Thread.current.thread_variable_get(:master_fix_settings_owner)
+        if owner
+          raise ThreadError, "fix settings are owned by another fiber" unless owner.equal?(Fiber.current)
+
+          return yield
+        end
+
+        SETTINGS_LOCK.synchronize do
+          Thread.current.thread_variable_set(:master_fix_settings_owner, Fiber.current)
+          begin
+            yield
+          ensure
+            Thread.current.thread_variable_set(:master_fix_settings_owner, nil)
+          end
+        end
+      end
+
       GENESIS = "0" * 64
       LOG_RELATIVE_PATH = ".master/log.jsonl"
 

@@ -26,6 +26,9 @@ module Master
       PROVIDER_REFRESH_TTL_S = 1800
 
       @mutex = Mutex.new
+      @refresh_mutex = Mutex.new
+      @provider_refresh_mutex = Mutex.new
+      @refresh_thread = nil
 
       module_function
 
@@ -155,31 +158,75 @@ module Master
       def refresh_from_provider!(now: Time.now.utc, day: today_key)
         key = active_openrouter_key
         return :no_key unless key
+        return :in_flight unless @provider_refresh_mutex.try_lock
 
-        @mutex.synchronize do
-          row = load_data.dig("provider", OPENROUTER_LANE)
-          return :fresh if row.is_a?(Hash) && row["day"] == day &&
-                           row["fetched_at"].to_f > now.to_f - PROVIDER_REFRESH_TTL_S
+        begin
+          return :fresh if provider_reading_fresh?(day:, now:)
 
+          # Network I/O stays outside the accounting mutex and state flock.
+          # Local requests keep counting while the provider is slow or down.
           reading = fetch_free_model_daily_requests(key)
           return :unreadable unless reading.is_a?(Hash)
 
-          with_state_lock do
-            data = load_data
-            data["provider"] ||= {}
-            data["provider"][OPENROUTER_LANE] = {
-              "day" => day,
-              "free_model_daily_requests" => reading,
-              "local_used_at_fetch" => free_model_request_count(day:),
-              "fetched_at" => now.to_f,
-            }
-            save_data(data)
+          @mutex.synchronize do
+            with_state_lock do
+              data = load_data
+              row = data.dig("provider", OPENROUTER_LANE)
+              return :fresh if fresh_provider_row?(row, day:, now:)
+
+              # Count from before the request. Calls made while it is in flight
+              # are subtracted as local delta: conservative, never overstated.
+              local_used = data.fetch(day, {}).sum do |model, used|
+                FREE_RE.match?(model.to_s) ? used.to_i : 0
+              end
+              data["provider"] ||= {}
+              data["provider"][OPENROUTER_LANE] = {
+                "day" => day,
+                "free_model_daily_requests" => reading,
+                "local_used_at_fetch" => local_used,
+                "fetched_at" => now.to_f,
+              }
+              save_data(data)
+            end
           end
           :refreshed
+        ensure
+          @provider_refresh_mutex.unlock
         end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "ModelQuota.refresh_from_provider!")
         :failed
+      end
+
+      # Schedule a single one-shot worker, replacing it only after completion.
+      # A slow provider therefore cannot create an unbounded thread pool.
+      def schedule_provider_refresh!(now: Time.now.utc, day: today_key)
+        return :no_key unless active_openrouter_key
+        return :fresh if provider_reading_fresh?(day:, now:)
+
+        @refresh_mutex.synchronize do
+          return :in_flight if @refresh_thread&.alive? || @provider_refresh_mutex.locked?
+
+          @refresh_thread = Thread.new { refresh_from_provider!(now:, day:) }
+          @refresh_thread.report_on_exception = false
+        end
+        :scheduled
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "ModelQuota.schedule_provider_refresh!")
+        :failed
+      end
+
+      def provider_reading_fresh?(day:, now:)
+        @mutex.synchronize do
+          with_state_lock do
+            fresh_provider_row?(load_data.dig("provider", OPENROUTER_LANE), day:, now:)
+          end
+        end
+      end
+
+      def fresh_provider_row?(row, day:, now:)
+        row.is_a?(Hash) && row["day"] == day &&
+          row["fetched_at"].to_f > now.to_f - PROVIDER_REFRESH_TTL_S
       end
 
       # The key this checkout rides: the rotator's active key first, then the
@@ -232,7 +279,7 @@ module Master
 
         # record() runs after the successful provider response. Count locally
         # before sampling the provider so that request is not subtracted twice.
-        refresh_from_provider! if FREE_RE.match?(model.to_s) && ENV["MASTER_NO_QUOTA_REFRESH"] != "1"
+        schedule_provider_refresh! if FREE_RE.match?(model.to_s) && ENV["MASTER_NO_QUOTA_REFRESH"] != "1"
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "model_quota.record", model: model.to_s)
         raise "model quota accounting failed: #{e.class}: #{e.message}"
