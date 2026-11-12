@@ -50,7 +50,14 @@ module Master
       # a real timeout/offline browser must not be retried in another mode.
       def self.failure_category(error)
         message = error.message.to_s
-        return :timeout if error.is_a?(Timeout::Error) || message.match?(/timed out/i)
+        # Ferrum::ProcessTimeoutError says the browser did not produce a
+        # websocket URL "within N seconds"; it is not Timeout::Error and its
+        # message does not contain "timed out". Treat it as a hard timeout or
+        # the fallback chain retries the same browser profile after 30/60s.
+        timeout_class = error.class.ancestors.any? do |ancestor|
+          ancestor.name.to_s.match?(/\\A(?:Ferrum::)?(?:Process)?TimeoutError\\z/)
+        end
+        return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
         return :offline if error.is_a?(SystemCallError)
         return :model_missing if message.match?(/unknown web chat provider/i)
         return :auth_error if error.is_a?(DisabledError) || error.is_a?(ProviderError)
