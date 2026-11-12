@@ -20,9 +20,9 @@ class Post
       # which is the behaviour the roadmap names first. The append lands in a hidden
       # staging list and a chip offers it, so nothing moves until the reader says so.
       after_create_commit :broadcast_to_city_feed
-      # The card once it is on a page: its score on a vote (a vote touches the
-      # post), its text on an edit, and the card itself when it is deleted or a
-      # moderator takes it down. Comments send the count from their own side.
+      # The card once it is on a page: content-changing edits and other mutations
+      # that change what every reader sees. Votes and comments publish their
+      # reader-independent counters from their own commits.
       after_update_commit :broadcast_card_changes
       after_destroy_commit :broadcast_removal
     end
@@ -133,9 +133,8 @@ class Post
 
     # A refresh re-renders the page under its reader, so it is kept for what
     # only a re-render can show: a post created, deleted, or rewritten. A vote
-    # or a comment touches the post too, and refreshing for those closed every
-    # open reply box on the page; the counts and the comment arrive on their
-    # own (broadcast_live_counts, Comment#broadcast_to_thread).
+    # or comment publishes narrow counter/thread updates without touching the
+    # post; refreshing for those would close every open reply box on the page.
     def broadcast_live_refresh
       return unless refresh_worthy_commit?
 
