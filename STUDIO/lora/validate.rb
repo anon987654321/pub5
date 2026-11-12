@@ -10,7 +10,7 @@ module Studio
     # model, starts training, or writes into a subject directory.
     class Validator
       ROOT = File.expand_path(__dir__).freeze
-      SUBJECT_NAME = /\\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\\z/.freeze
+      SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_MODEL].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       MINIMUM_IMAGES = 10
@@ -109,7 +109,7 @@ module Studio
           stripped = line.strip
           next if stripped.empty? || stripped.start_with?("#")
 
-          match = /\\A([A-Z][A-Z0-9_]*)=(.*)\\z/.match(stripped)
+          match = /\A([A-Z][A-Z0-9_]*)=(.*)\z/.match(stripped)
           unless match
             fail_check(report, "subject_descriptor_syntax", "#{File.basename(path)}:#{number} is not KEY=value")
             next
@@ -141,14 +141,14 @@ module Studio
 
       def validate_descriptor(env, report, directory)
         trigger = env["TRIGGER"].to_s
-        if trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
+        if trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
           pass_check(report, "trigger_word", "Subject trigger is a simple, non-empty token")
         else
           fail_check(report, "trigger_word", "TRIGGER must be a 1–64 character alphanumeric token")
         end
 
         model = env["MODEL"].to_s
-        if model.match?(/\\A[a-zA-Z0-9_.-]{1,96}\\z/)
+        if model.match?(/\A[a-zA-Z0-9_.-]{1,96}\z/)
           pass_check(report, "model_directory", "MODEL is safe as a local manifest directory")
         else
           fail_check(report, "model_directory", "MODEL must be a simple local directory name")
@@ -166,7 +166,7 @@ module Studio
           raise ArgumentError, "training manifest exceeds 64 KB" if File.size(manifest) > 65_536
 
           version = JSON.parse(File.read(manifest, encoding: "UTF-8"))["version"].to_s
-          if version.match?(/\\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\\z/)
+          if version.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
             pass_check(report, "replicate_version_pin", "Local training manifest pins the Replicate model version")
             return
           end
@@ -177,9 +177,9 @@ module Studio
         remote = env["REPLICATE_MODEL"].to_s.strip
         return if remote.empty?
 
-        if remote.match?(/\\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\\z/)
+        if remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}:[A-Za-z0-9][A-Za-z0-9_-]{0,127}\z/)
           pass_check(report, "replicate_version_pin", "Replicate model reference pins a version")
-        elsif remote.match?(/\\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\z/)
+        elsif remote.match?(/\A[A-Za-z0-9][A-Za-z0-9._-]{0,127}\\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\z/)
           report["warnings"] << "REPLICATE_MODEL is unpinned; predictions resolve the provider's latest version"
           block(report, "replicate_version_pin", "Pin owner/model:version or supply a local training manifest before treating renders as reproducible")
         else
