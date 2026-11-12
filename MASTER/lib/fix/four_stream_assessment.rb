@@ -450,6 +450,8 @@ module Master
     # Dimension-level read model over the canonical Law ledger. It does not
     # declare Laws or duplicate their authority; it groups the same measured
     # cells into engineering, editorial, visual, experience and operations.
+    end
+
     class QualityContract
       SPECIALISTS = {
         editorial: /BRINGHURST|STRUNK|PROSE|TYPOGRAPHY|READABILITY|GRAMMAR|CLARITY|EDITORIAL|COPY/,
@@ -668,7 +670,6 @@ module Master
                       end
         { grouped_visual_repair: visual, continuous_improvement: improvement }
       end
-    end
     end
   end
 end
