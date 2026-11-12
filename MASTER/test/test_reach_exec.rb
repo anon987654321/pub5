@@ -149,6 +149,28 @@ class TestReachExec < Minitest::Test
     refute status.success?
   end
 
+  def test_timeout_covers_a_descendant_holding_the_pipe_after_its_leader_exits
+    Dir.mktmpdir("exec-inherited-pipe") do |dir|
+      child_pid_file = File.join(dir, "descendant.pid")
+      child_code = "Signal.trap('TERM', 'IGNORE'); File.write(#{child_pid_file.dump}, [Process.pid, Process.getpgrp].join(' ')); sleep 30"
+      parent_code = "Process.spawn(#{RbConfig.ruby.dump}, '-e', #{child_code.dump}); puts 'parent exited'; STDOUT.flush; exit 0"
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+      error = assert_raises(E::TimeoutError) do
+        E.capture2e(RbConfig.ruby, "-e", parent_code, timeout: 0.2, raise_on_timeout: true)
+      end
+
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      child, group = File.read(child_pid_file).split.map { |value| Integer(value, 10) }
+      output, = error.result
+      assert_includes output, "parent exited"
+      assert_operator elapsed, :<, 5, "the inherited output pipe must share the process deadline"
+      assert_process_group_gone(group)
+    ensure
+      Process.kill("KILL", -group) rescue nil if defined?(group) && group
+    end
+  end
+
   def test_timeout_returns_fast_non_success_and_reaps_tree
     marker = "master_exec_timeout_probe_#{Process.pid}"
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -257,4 +279,19 @@ class TestReachExec < Minitest::Test
 
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 4
   end
+  def assert_process_group_gone(group)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2
+    loop do
+      begin
+        Process.kill(0, -group)
+      rescue Errno::ESRCH
+        return
+      end
+      flunk "executor descendant process group #{group} survived its timeout" if
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.01
+    end
+  end
+
 end
