@@ -45,6 +45,15 @@ class TestFixRunBudget < Minitest::Test
     assert_match(/ETA ~\d+m/, @lines[1])
   end
 
+  def test_zero_repair_passes_use_a_read_only_heartbeat_label
+    pulse = Master::Fix::RunPulse.new(max_passes: 0, clock: -> { @now }, load: -> { 0.0 })
+
+    line = pulse.line(elapsed: 12.0, tokens: 0, eta: "ETA unknown")
+
+    assert_match(/\Afix0: read-only\b/, line)
+    refute_match(/pass 0\/0/, line)
+  end
+
   def test_cost_limit_stops_with_a_named_reason
     run = budget({"MASTER_FIX_MAX_COST" => "1.0"})
     cost(1.5, 10)
