@@ -157,6 +157,9 @@ module Master
       end
 
       def path_refusal(plan)
+        symlinked = plan.paths.select { |path| symlinked_path?(path) }
+        return "contains symlinked path components: #{symlinked.first(3).join(", ")}" unless symlinked.empty?
+
         outside = plan.paths.reject { |path| inside_tree?(path) }
         return "outside #{@tree}/, immutable or off limits: #{outside.first(3).join(", ")}" unless outside.empty?
 
@@ -165,6 +168,14 @@ module Master
 
         dirty = plan.paths & changed_paths
         "has uncommitted changes: #{dirty.join(", ")}" unless dirty.empty?
+      end
+
+      def symlinked_path?(path)
+        current = @root
+        path.to_s.split("/").any? do |part|
+          current = File.join(current, part)
+          File.symlink?(current)
+        end
       end
 
       def inside_tree?(path)
@@ -195,14 +206,20 @@ module Master
           FileUtils.mkdir_p(File.dirname(absolute))
           write_atomic(absolute, content)
         end
-        plan.deletes.each { |path| File.delete(full(path)) }
+        plan.deletes.each do |path|
+          raise "restructure delete refused: symlinked path #{path}" if symlinked_path?(path)
+
+          File.delete(full(path))
+        end
       end
 
       def undo(originals, failure)
         originals.each do |path, content|
           if content
             FileUtils.mkdir_p(File.dirname(full(path)))
-            File.write(full(path), content)
+            raise "restructure rollback refused: symlinked path #{path}" if symlinked_path?(path)
+
+            write_atomic(full(path), content)
           elsif File.exist?(full(path))
             File.delete(full(path))
           end
