@@ -163,4 +163,11 @@ class EventTest < ActiveSupport::TestCase
       event(title: "Til stripen")
     end
   end
+
+test "an event without a price is free" do
+    party = event(title: "Gratis #{SecureRandom.hex(3)}", price_cents: nil)
+
+    assert party.free?
+    assert_nil party.price_display
+  end
 end
