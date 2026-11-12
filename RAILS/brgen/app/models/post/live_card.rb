@@ -127,9 +127,17 @@ class Post
       city_id.present? && !(community_id && Community.exists?(id: community_id, privacy: "private"))
     end
 
-    # The post's own page reads every change; the city's front pages only those
-    # every reader there may see.
-    def live_streams = [ (self.class.city_feed_stream(city_id) if city_feed_public?), self ].compact
+    # Both city feed surfaces subscribe independently: root stages new posts,
+    # while /posts is the searchable/sortable index. The post's own page gets its
+    # own stream. Private-community counters stay on the detail stream only.
+    def live_streams
+      city_streams = if city_feed_public?
+        [ self.class.city_feed_stream(city_id), self.class.city_posts_stream(city_id) ]
+      else
+        []
+      end
+      [ *city_streams, self ]
+    end
 
     # A refresh re-renders the page under its reader, so it is kept for what
     # only a re-render can show: a post created, deleted, or rewritten. A vote
