@@ -200,7 +200,7 @@ module Studio
 
       def private_mode?(path, directory: false)
         expected_mode = directory ? 0o700 : 0o600
-        (File.stat(path).mode & 0o777) == expected_mode
+        (File.stat(path).mode & 0o7777) == expected_mode
       rescue SystemCallError
         false
       end
