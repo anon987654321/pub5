@@ -324,6 +324,7 @@ class TestFixRunBudget < Minitest::Test
     say.call("llm:call_finished", model: "web-chat:kimi")
     @now = 56.0
     refute_match(/waiting on web-chat:kimi/, run.beat)
+    assert_equal 0, run.counts.fetch(:attempts), "an ordinary completion without status is not a failed attempt"
   end
 
   def test_master_dispatcher_crash_counts_as_a_failed_attempt
