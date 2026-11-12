@@ -37,7 +37,7 @@ module Master
           def complete_source_prompt(prompt, path:)
             return prompt if prompt.bytesize <= MAX_MODEL_CONTEXT_BYTES
 
-            raise "semantic assessment INCONCLUSIVE: complete source prompt for #{path} is #{prompt.bytesize} bytes, " \
+            raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: complete source prompt for #{path} is #{prompt.bytesize} bytes, " \
               "above MASTER_FIX_SEMANTIC_CONTEXT_MAX_BYTES=#{MAX_MODEL_CONTEXT_BYTES}"
           end
 
@@ -142,7 +142,7 @@ module Master
             limited = note_model_failure(e)
             if offline || limited
               detail = offline ? "provider capability/configuration unavailable" : "provider spend/quota limit reached"
-              raise "semantic assessment INCONCLUSIVE: #{detail} for #{path} (#{e.class}: #{e.message})"
+              raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: #{detail} for #{path} (#{e.class}: #{e.message})"
             end
 
             Master::Ground::Swallow.log(e, context: "#{self.class}#check", severity: :load_bearing, path:)
@@ -193,7 +193,7 @@ module Master
             # language-agnostic, while lexical and AST adapters keep their dispatch.
             lang = language(path)
             if quota_paused?
-              raise "semantic assessment INCONCLUSIVE: quota check paused model assessment for #{path}"
+              raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: quota check paused model assessment for #{path}"
             end
 
             reload_semantic_laws_if_stale
@@ -232,7 +232,7 @@ module Master
             limited = note_model_failure(e)
             if offline || limited
               detail = offline ? "provider capability/configuration unavailable" : "provider spend/quota limit reached"
-              raise "semantic assessment INCONCLUSIVE: #{detail} for #{path} (#{e.class}: #{e.message})"
+              raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: #{detail} for #{path} (#{e.class}: #{e.message})"
             end
 
             Master::Ground::Swallow.log(e, context: "#{self.class}#check", severity: :load_bearing, path:)
@@ -494,23 +494,23 @@ module Master
             expected_empty = stream == :opportunity ? "NONE" : "CLEAN"
             lines = response.to_s.lines.map(&:strip).reject(&:empty?)
             return [] if lines == [expected_empty]
-            raise "semantic assessment INCONCLUSIVE: empty response for #{stream} stream" if lines.empty?
+            raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: empty response for #{stream} stream" if lines.empty?
 
             lines.map do |stripped|
               match = stripped.match(/\A([A-Z_][A-Z0-9_]*):(\d+):(.+)\z/)
               unless match
-                raise "semantic assessment INCONCLUSIVE: malformed #{stream} response record: " \
+                raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: malformed #{stream} response record: " \
                       "#{stripped[0, 120].inspect}"
               end
 
               law_id = match[1]
               unless scoped.key?(law_id)
-                raise "semantic assessment INCONCLUSIVE: response named unrequested Law #{law_id}"
+                raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: response named unrequested Law #{law_id}"
               end
 
               axiom = scoped.fetch(law_id)
               line = Integer(match[2])
-              raise "semantic assessment INCONCLUSIVE: non-positive finding line for #{law_id}" unless line.positive?
+              raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: non-positive finding line for #{law_id}" unless line.positive?
 
               Finding.build(
                 law: law_id,
@@ -528,9 +528,8 @@ module Master
               )
             end
           rescue ArgumentError => e
-            raise if e.message.start_with?("semantic assessment INCONCLUSIVE:")
 
-            raise "semantic assessment INCONCLUSIVE: malformed finding line number (#{e.message})"
+            raise Detector::SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: malformed finding line number (#{e.message})"
           end
         end
 
