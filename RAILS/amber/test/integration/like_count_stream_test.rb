@@ -58,14 +58,18 @@ class LikeCountStreamTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the feed card offers a comment action without a per-card count query" do
+  test "the feed card exposes a projected live comment count" do
     record = @user.posts.create!(body: "Ny kåpe")
+    Comment.create!(user: @user, commentable: record, content: "Fin kombinasjon")
+    target = ActionView::RecordIdentifier.dom_id(record, :comment_count)
 
     get posts_path
 
     assert_response :success
-    assert_select ".feed-card-actions a[href=?][aria-label=?]",
-                  post_path(record, anchor: "comments"), I18n.t("comments.title")
+    assert_select ".feed-card-actions a[href=?][aria-label=?][aria-describedby=?]",
+                  post_path(record, anchor: "comments"), I18n.t("comments.title"), target
+    assert_select ".feed-card-actions span##{target}[data-post-comment-count=?]",
+                  ActionView::RecordIdentifier.dom_id(record), "1"
   end
 
   test "the detail-page comment action describes its live count target" do
