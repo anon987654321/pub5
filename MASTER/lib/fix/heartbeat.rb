@@ -3,13 +3,13 @@
 require "yaml"
 require_relative "../cli/routing/provider_canary"
 require_relative "../operator/dream_observer"
+require_relative "../trace/undo"
 
 module Master
   module Fix
     class Heartbeat
       include ::Master::Io::AtomicWrite
       POLL_INTERVAL = 60
-      JOURNAL_KEEP = 50
       STATE_PATH = ".master/heartbeat_state.yml".freeze
 
       RESULT_TRUNCATE = 200
@@ -221,15 +221,9 @@ module Master
       end
 
       def prune_undo_journal
-        journal_path = File.join(@root, ".master", "undo.jsonl")
-        return "no journal" unless File.exist?(journal_path)
-
-        lines = File.readlines(journal_path)
-        return "journal empty" if lines.empty?
-
-        keep = [lines.size / 2, JOURNAL_KEEP].max
-        File.write(journal_path, lines.last(keep).join)
-        "pruned undo: kept #{keep}/#{lines.size} entries"
+        undo = Master::Trace::Undo.new(session: nil, event_bus: @bus, root: @root)
+        removed = undo.prune!
+        "pruned undo: removed #{removed} entries; retained at most #{Master::Trace::Undo::MAX_JOURNAL}"
       end
 
       def personal_pulse
