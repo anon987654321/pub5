@@ -83,6 +83,8 @@ class OperatorIntentTest < Minitest::Test
              "explicit non-production environments must not become vm23 deployments"
       refute intent.send(:repository_wide_deployment?, "deploy city_app from pub5 to vm23", inventory),
              "an explicit app target must be left to the inventory classifier"
+      refute intent.send(:repository_wide_deployment?, "how do I deploy pub5 to vm23?", inventory),
+             "deployment questions must remain conversational"
     end
   end
 
