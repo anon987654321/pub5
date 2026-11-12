@@ -91,7 +91,7 @@ class SharedLiveSearchTest < Minitest::Test
 
   def test_related_terms_on_zero_results
     connection = Class.new do
-      def data_source_exists?(_) = false
+      def tables = []
       def adapter_name = "SQLite"
     end.new
     model = Class.new do
@@ -116,5 +116,20 @@ class SharedLiveSearchTest < Minitest::Test
     result = Shared::LiveSearch.search(scope, query: "bicycles", columns: %w[title], vertical: "test", app: "test")
     assert_equal 0, result.result_count
     assert_includes result.suggestions, "bicycles"
+  end
+
+def test_a_listed_fts_virtual_table_uses_the_model_search_scope
+    connection = Object.new
+    connection.define_singleton_method(:tables) { ["items_fts"] }
+    model = Class.new do
+      define_singleton_method(:table_name) { "items" }
+      define_singleton_method(:search) { |_query| :fts_results }
+    end
+    scope = Object.new
+    scope.define_singleton_method(:klass) { model }
+    scope.define_singleton_method(:connection) { connection }
+    scope.define_singleton_method(:merge) { |filtered| filtered }
+
+    assert_equal :fts_results, Shared::LiveSearch.call(scope, query: "bergen", columns: %w[title])
   end
 end
