@@ -33,6 +33,23 @@ class TestChitchatAgentRouting < Minitest::Test
     assert models.any?
   end
 
+  def test_nsfw_route_uses_only_its_opted_in_local_model
+    model = "local_uncensored:dolphin3:8b"
+    Master::Io::LaneSelection.stub(:nsfw_model_id, model) do
+      Master::Io::LaneSelection.stub(:alive?, true) do
+        Master::Io::LaneState.stub(:usable?, true) do
+          assert_equal [model], @router.fallback_chain(task_type: :nsfw)
+          assert_equal [model], @agent.send(:routed_models, "write an adult romance", task_type: :nsfw)
+        end
+      end
+    end
+
+    Master::Io::LaneSelection.stub(:nsfw_model_id, nil) do
+      assert_empty @router.fallback_chain(task_type: :nsfw)
+      assert_empty @agent.send(:routed_models, "write an adult romance", task_type: :nsfw)
+    end
+  end
+
   def test_routed_models_work_request_avoids_chitchat_head
     models = @agent.send(:routed_models, "please implement a fix for the scanner")
     refute_equal :chitchat, @router.classify_intent("please implement a fix for the scanner")
