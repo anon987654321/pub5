@@ -114,6 +114,27 @@ class TestSelfieSeries < Minitest::Test
     refute_includes models, "prunaai/p-video-2-pro", "a series never renders film"
   end
 
+  def test_missing_consent_blocks_before_provider_access_and_replace_cleanup
+    subject = "consent_probe_#{Process.pid}_#{object_id}"
+    subject_directory = File.join(Studio::Visual::IdeaPicture::SUBJECTS, subject)
+    refute File.exist?(subject_directory), "the test subject must not already have local data"
+
+    directory = File.join(@dir, "flat")
+    FileUtils.mkdir_p(directory)
+    previous = File.join(directory, "#{subject}_selfie_old.jpg")
+    File.write(previous, "keep this prior output")
+    box = Studio::Visual::SelfieSeries.new(
+      subject: subject, client: @client, directory:,
+      ledger_path: File.join(@dir, "ledger.jsonl")
+    )
+
+    assert_raises(Studio::Lora::Consent::Error) do
+      box.run(count: 1, replace: true)
+    end
+    assert File.file?(previous), "refused runs must not delete previous images"
+    assert_empty @client.predictions, "refused runs must not contact the provider"
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)
