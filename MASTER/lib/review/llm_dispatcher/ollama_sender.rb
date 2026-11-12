@@ -36,14 +36,18 @@ module Master
 
         private
 
-        def ollama_model?(model_id) = model_id.to_s.start_with?("ollama:", "ollama/")
+        def ollama_model?(model_id) = model_id.to_s.start_with?("ollama:", "ollama/", "local_uncensored:")
 
         # Local inference is free, so there is no cost to record — but the token
         # counts still are, because a run's token total is how the session
         # reports what it did and a local model that answered silently would
         # read as a model that never ran.
         def send_ollama(selected_model, messages, sys:, stream: false, temperature: nil, format: nil, &blk)
-          model = selected_model.to_s.sub(/\Aollama[:\/]/, "")
+          nsfw = selected_model.to_s.start_with?("local_uncensored:")
+          if nsfw && selected_model.to_s != Io::LaneSelection.nsfw_model_id
+            return Result.err("NSFW lane refused: model identity is not the currently opted-in local model", category: :policy)
+          end
+          model = selected_model.to_s.sub(/\A(?:ollama[:\/]|local_uncensored:)/, "")
           rows = ollama_messages(messages, sys)
           # Ollama Cloud models take no schema, so a :cloud id is asked plainly.
           format = nil if model.end_with?(":cloud")
@@ -51,7 +55,7 @@ module Master
                    options: ollama_options(rows, temperature:, format:) }
           body[:format] = format if format
           response = ollama_post(body, stream:, &blk)
-          response = ollama_post(body, stream:, &blk) if ollama_down?(response) && ollama_daemon_started?
+          response = ollama_post(body, stream:, &blk) if ollama_down?(response) && ollama_daemon_started?(nsfw:)
           return response unless response.ok?
 
           text, tokens = response.value!
@@ -78,8 +82,8 @@ module Master
 
         # The local tail is the lane that needs no network and no quota, so a
         # daemon that is merely not running is started once instead of failing the call.
-        def ollama_daemon_started?
-          outcome = Io::LaneHealth.ensure_ollama(base: ollama_base_url)
+        def ollama_daemon_started?(nsfw: false)
+          outcome = Io::LaneHealth.ensure_ollama(base: ollama_base_url, nsfw:)
           Master::Trace::Dmesg.once("llm0-ollama-start", outcome.message) unless outcome.state == :up
           outcome.state == :started
         end
