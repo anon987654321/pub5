@@ -122,6 +122,26 @@ module Master
 
           Master::Io::LaneSelection::SLOW_S if stat[:failures].to_i.positive?
         end
+        # Streaming calls expose a separate, user-visible latency: time to the
+        # first content chunk. Keep completion latency as well; tool-heavy and
+        # non-streaming calls still need a full-call measurement.
+        def record_first_token(model:, latency_ms:)
+          value = Float(latency_ms)
+          raise ArgumentError, "first-token latency must be non-negative" unless value.finite? && value >= 0
+
+          key = model.to_s
+          return if key.empty?
+
+          @mutex.synchronize do
+            stat = (@stats[key] ||= { calls: 0, successes: 0, failures: 0, latency_ms: 0.0, last_error: nil,
+                                      recent_outcomes: [] })
+            samples = stat[:first_token_samples].to_i
+            stat[:first_token_ms] = rolling_average(stat[:first_token_ms].to_f, value, samples + 1)
+            stat[:first_token_samples] = samples + 1
+            stat[:first_token_observed_at] = @clock.call.to_f
+            persist_stats
+          end
+        end
 
         def snapshot
           @mutex.synchronize do
@@ -164,7 +184,10 @@ module Master
 
           def empirical_stats(id)
             stat = @mutex.synchronize { @stats[id.to_s]&.dup }
-            latency = stat&.fetch(:latency_ms, 0).to_f
+            # Prefer measured first-token time when a streaming sample exists;
+            # otherwise retain the established full-completion measurement.
+            latency = stat&.fetch(:first_token_ms, 0).to_f
+            latency = stat&.fetch(:latency_ms, 0).to_f unless latency.positive?
             [recent_evidence_factor(stat),
              latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min]
           end
@@ -374,6 +397,7 @@ module Master
               calls: stat.fetch(:calls, 0).to_i,
               success_rate: success_rate(stat),
               latency_ms: stat.fetch(:latency_ms, 0).to_f,
+              first_token_ms: stat.fetch(:first_token_ms, 0).to_f,
               quota_remaining: quota_remaining(id),
               quota_state: quota_state(id),
             }
