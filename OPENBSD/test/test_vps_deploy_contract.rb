@@ -225,7 +225,7 @@ class VpsDeployContractTest < Minitest::Test
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
     assert_includes service, 'pub5-admin relayd-check "$app" "$domain" "$port"'
     assert_includes deploy, 'relayd_add_relay "$APP_NAME" "$APP_DOMAIN" "$APP_PORT"'
-    health_probe = service[/relayd_confirm_live\(\) \{.*?^\}/m]
+    probe = service[/post_restart_probe\(\) \{.*?^\}/m]
     refute_nil health_probe
     refute_match(/\$\{_PRIV\}.*\$RUBY/m, health_probe)
   end
