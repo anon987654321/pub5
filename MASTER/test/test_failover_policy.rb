@@ -65,6 +65,7 @@ class TestFailoverPolicy < Minitest::Test
 
     assert chain.failover_skip_model?(Master::Result.err("nope", category: :rate_limit))
     assert chain.failover_skip_model?(Master::Result.err("nope", category: :budget))
+    assert chain.failover_skip_model?(Master::Result.err("quota spent", category: :exhausted))
     refute chain.failover_skip_model?(Master::Result.err("nope", category: :provider_error))
   end
 
