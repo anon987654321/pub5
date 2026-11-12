@@ -93,10 +93,12 @@ class Order < ApplicationRecord
   end
 
   def deliver!
-    raise InvalidTransition, "cannot deliver an order in #{state.inspect}" unless state == "picked_up"
+    with_lock do
+      raise InvalidTransition, "cannot deliver an order in #{state.inspect}" unless state == "picked_up"
 
-    move_to!("delivered")
-    award_stamp!
+      move_to!("delivered")
+      award_stamp!
+    end
     self
   end
 
