@@ -328,6 +328,7 @@ end
 
     assert_equal "answer", @agent.ask_once("hi", model: "first-model")
     assert_equal %w[first-model second-model final-model], calls
+    assert_equal "final-model", Thread.current[:master_llm_answer_model]
   end
 
   def test_master_model_respects_local_only_boundary
