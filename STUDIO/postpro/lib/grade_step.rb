@@ -79,7 +79,7 @@ EFFECT_MIX = {
 # measured 2026-10-27, the uncalibrated path ran bloom at four times and bleach
 # at two and a half times the strength the presets give them, blurred sharp
 # photographs the taper would have spared, and wrecked 69% of its takes.
-def grade_step(fx, processed, p, head, owner = "chain")
+def grade_step(fx, processed, p, head, owner = "chain", frame_context: nil)
   level = p[:intensity]
   mix = level * EFFECT_MIX.fetch(fx, 1.0)
   stock = p[:stock]
@@ -156,7 +156,7 @@ def grade_step(fx, processed, p, head, owner = "chain")
   when "fixing_bath_fog"     then fixing_bath_fog(processed, mix)
   when "reticulation"        then reticulation(processed, mix)
   when "expired_film"        then expired_film(processed, p.fetch(:age, 0.60))
-  when "gate_weave"          then gate_weave(processed, mix)
+  when "gate_weave"          then gate_weave(processed, mix, offsets: frame_context&.gate_weave)
   when "lens_ghosting"       then lens_ghosting(processed, mix)
   when "ortho_film"          then ortho_film(processed, mix)
   when "tilt_shift"          then tilt_shift(processed, mix)
