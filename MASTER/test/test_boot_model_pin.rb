@@ -165,6 +165,30 @@ class TestBootModelPin < Minitest::Test
     assert_equal %w[free/final local/secondary paid/primary configured/last-resort], chain
   end
 
+  def test_prompt_and_model_status_read_the_promoted_runtime_lane
+    router = Struct.new(:reachable) do
+      def unreachable_reason(_model, wait: false) = reachable ? nil : "provider unavailable"
+    end.new(true)
+    agent = Object.new
+    agent.extend(Master::Review::Agent::ModelOverride)
+    agent.instance_variable_set(:@runtime_model, "grok-cli:auto")
+    agent.instance_variable_set(:@model_router, router)
+    agent.instance_variable_set(:@bus, nil)
+    agent.define_singleton_method(:routed_models) { ["claude-cli:claude-opus-5-5"] }
+
+    assert_equal "grok-cli:auto", agent.model
+    status = Master::CLI::CommandRegistry.dispatch_model(
+      agent:, config: { "model" => "saved-default" }, metrics: nil, root: Master::ROOT, arg: "status"
+    )
+    assert_includes status, "model: grok-cli:auto"
+    state = Master::Voice::Renderer.new(config: {}).state_line(agent.model)
+    assert_includes state, "grok-cli:auto"
+
+    router.reachable = false
+    assert_equal "claude-cli:claude-opus-5-5", agent.model
+    assert_nil agent.instance_variable_get(:@runtime_model)
+  end
+
   def test_empty_router_ladder_uses_the_independent_fallback_catalogue
     router = Object.new
     router.define_singleton_method(:fallback_chain) { |task_type:| [] }
