@@ -266,7 +266,7 @@ class TestDillaHistoricalMaterial < Minitest::Test
     end
     rows.each do |row|
       refute_empty row.fetch("sources"), "#{row['id']} needs source notes"
-      assert_equal "historical_verified_table", row.fetch("source_status")
+      assert_equal "restored_legacy_unverified", row.fetch("source_status")
     end
     charts = Dilla.progressions.select { |row| row["source"] == "chart_reference" }
     assert_equal 1, charts.length
@@ -274,6 +274,44 @@ class TestDillaHistoricalMaterial < Minitest::Test
     studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
     assert_equal 2, studies.length
     assert studies.all? { |row| row.fetch("note").include?("not a transcription") }
+  end
+
+  def test_archived_corpus_chord_timing_is_explicit_and_loop_complete
+    rows = Dilla.progressions.select { |row| row["source"] == "artist_verified" }
+
+    rows.each do |row|
+      durations = row.fetch("chord_bars")
+      assert_equal row.fetch("chords").length, durations.length, "#{row['id']} chord duration count"
+      assert durations.all? { |value| value.is_a?(Numeric) && value.finite? && value.positive? },
+             "#{row['id']} has invalid chord durations"
+      assert_in_delta row.fetch("loop_bars"), durations.sum, 0.0001, "#{row['id']} loop duration"
+      assert_includes %w[published_form source_loop_length_only engine_grid_assumption],
+                      row.fetch("chord_timing_status")
+      refute_empty row.fetch("chord_timing_note")
+      refute_empty row.fetch("melody_status")
+    end
+  end
+
+  def test_get_dis_money_separates_documented_loop_length_from_approximate_chord_positions
+    progress = Dilla.progression_by_ref("get_dis_money")
+
+    assert_equal 7, progress.fetch("loop_bars")
+    assert_equal "source_loop_length_only", progress.fetch("chord_timing_status")
+    progress.fetch("chord_bars").each do |duration|
+      assert_in_delta 7.0 / 6.0, duration, 0.0001
+    end
+    assert_match(/engine approximation only/, progress.fetch("chord_timing_note"))
+  end
+
+  def test_time_keeps_render_tempo_separate_from_conflicting_community_reference
+    progress = Dilla.progression_by_ref("time_donut")
+    evidence = progress.fetch("tempo_evidence")
+
+    assert_equal 86, progress.fetch("bpm")
+    assert_equal "conflicting_secondary_reference", evidence.fetch("status")
+    assert_equal 86, evidence.fetch("render_bpm")
+    assert_equal 95, evidence.fetch("reported_bpm")
+    assert_match(/pending direct audio measurement/, evidence.fetch("note"))
   end
 
   def test_source_record_tempo_and_form_override_the_generic_profile
