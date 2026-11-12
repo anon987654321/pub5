@@ -175,7 +175,8 @@ module Deploy
         preferred = Array(priority[app]).filter_map do |label|
           rows.find { |surface| surface.label == label }
         end
-        (preferred + rows).uniq { |surface| "#{surface.app}/#{surface.label}" }.first(3)
+        limit = [3, preferred.size].max
+        (preferred + rows).uniq { |surface| "#{surface.app}/#{surface.label}" }.first(limit)
       end
     end
 
