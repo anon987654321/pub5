@@ -131,6 +131,15 @@ class TestLoraConsent < Minitest::Test
     assert report.fetch("errors").any? { |error| error.include?("owner-only") }
   end
 
+  def test_consent_record_with_special_permission_bits_is_not_exactly_private
+    write_record
+    File.chmod(0o4600, File.join(@subject_dir, "consent.yml"))
+    report = Consent.validate(subject: "probe", subject_directory: @subject_dir)
+
+    refute report.fetch("valid")
+    assert report.fetch("errors").any? { |error| error.include?("owner-only") }
+  end
+
   def test_source_evidence_must_cover_generation_and_provider_processing
     write_record(evidence: {
       "me2_archive" => evidence_entry("covers" => ["generation_use"])
