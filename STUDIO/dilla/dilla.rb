@@ -708,7 +708,7 @@ module Dilla
       end
       t = step_time(bar, step, groove_lane) + (@groove.nudge(groove_lane) / 1000.0) +
           (@groove.step_offset_ms(groove_lane, step) / 1000.0) + offset
-      vel = (vel * (1.0 + @rng.jitter_ms(4.0) / 100.0)).clamp(0.05, 1.0)
+      vel = (vel * (1.0 + @rng.jitter_ms(2.8) / 100.0)).clamp(0.05, 1.0)
       Event.new(t + @groove.drag_s, 0.0, lane.to_sym, nil, vel, nil)
     end
 
@@ -774,24 +774,33 @@ module Dilla
       plan
     end
 
-    # Chords anticipate the drums (~100ms in the microtiming research), bass
-    # follows the harmony with its own style, melody repeats its loop with
-    # identical deviations — meticulously executed, never sloppy.
+    # Harmony rides the MPC grid itself; only the drum kit carries lane
+    # nudges and loop drag. The reference corpus measures chords ~18 ms
+    # ahead of the kick-anchored grid — exactly where the straight grid
+    # sits once the kick is nudged late.
     def build_melodic(plan, loop_bars, bar_count)
       voicer = Voicer.new(Dilla.theory)
       parsed = @progress["chords"].map { |sym| Dilla::ChordParser.parse(sym, Dilla.theory) }
       voiced = voicer.voice(parsed, @rng)
       feel = @progress["feel"] || {}
-      ant = @groove.anticipation_s
       out = { chord: [], bass: [], melody: [] }
 
       plan.each do |slot|
         chord = parsed.fetch(slot[:index])
         voicing = voiced.fetch(slot[:index])
-        start = slot[:start_bar] * @groove.bar_s - ant + @groove.drag_s
+        start = slot[:start_bar] * @groove.bar_s
         dur = slot[:bars] * @groove.bar_s * 0.98
         vel = 0.6 + @rng.jitter_ms(3.0) / 100.0
         out[:chord] << Event.new(start, dur, :chord, voicing, vel, { symbol: chord[:symbol] })
+        # Mid-slot Rhodes bounce: the second, softer rearticulation that
+        # carries the Dilla comping feel. Skipped sometimes so it breathes.
+        if slot[:bars] >= 0.9 && @rng.chance(0.65)
+          stab_at = slot[:start_bar] * @groove.bar_s + @groove.beat_s * 2.5
+          if stab_at < (slot[:start_bar] + slot[:bars]) * @groove.bar_s
+            out[:chord] << Event.new(stab_at, dur * 0.42, :chord, voicing,
+                                     (vel * 0.58).clamp(0.1, 1.0), { symbol: chord[:symbol] })
+          end
+        end
         out[:bass].concat(bass_events(chord, slot, parsed, plan))
         out[:melody].concat(melody_events(chord, slot, plan))
       end
@@ -805,19 +814,20 @@ module Dilla
       root_midi = 24 + chord[:root] # low register
       root_midi += 12 while root_midi < 33
       events = []
-      ant = @groove.anticipation_s
-      drag = @groove.drag_s
       case style
       when "dub"
-        t = start_bar * @groove.bar_s - ant + drag
-        events << Event.new(t, span_s * 0.62, :bass, root_midi, 0.85, nil)
+        t = start_bar * @groove.bar_s
+        # Three hits, not two: the off-beat "and" at a third of the span is
+        # the dub bounce the reference bass stems carry (~5.5 onsets/bar).
+        events << Event.new(t, span_s * 0.30, :bass, root_midi, 0.85, nil)
+        events << Event.new(t + span_s * 0.33, span_s * 0.24, :bass, root_midi, 0.62, nil)
         events << Event.new(t + span_s * 0.66, span_s * 0.3, :bass, root_midi, 0.7, nil)
         events << Event.new(t, span_s * 0.62, :bass, root_midi + 12, 0.3, nil) if @rng.chance(0.25)
       when "walk"
         beats = (slot[:bars] * 4).ceil
         next_chord = parsed.fetch((slot[:index] + 1) % parsed.length) { chord }
         beats.times do |b|
-          t = start_bar * @groove.bar_s + b * @groove.beat_s - ant + drag
+          t = start_bar * @groove.bar_s + b * @groove.beat_s
           midi = if b.zero?
                    root_midi
                  elsif b == beats - 1
@@ -828,15 +838,15 @@ module Dilla
           events << Event.new(t, @groove.beat_s * 0.9, :bass, midi, 0.8, nil)
         end
       when "pedal"
-        events << Event.new(start_bar * @groove.bar_s - ant + drag, span_s, :bass, 28, 0.75, nil)
-        events << Event.new(start_bar * @groove.bar_s - ant + drag, span_s, :bass, 40, 0.4, nil)
+        events << Event.new(start_bar * @groove.bar_s, span_s, :bass, 28, 0.75, nil)
+        events << Event.new(start_bar * @groove.bar_s, span_s, :bass, 40, 0.4, nil)
       when "thumb"
         steps = { 0 => 0.9, 6 => 0.75, 10 => 0.85, 13 => 0.6 }
         bars = slot[:bars].ceil
         bars.times do |b|
           steps.each do |step, vel|
-            t = step_time(slot[:start_bar] + b, step) - ant * 0.5 + drag
-            next unless t >= slot[:start_bar] * @groove.bar_s - ant + drag
+            t = step_time(slot[:start_bar] + b, step)
+            next unless t >= slot[:start_bar] * @groove.bar_s
 
             midi = step.zero? ? root_midi : [root_midi, root_midi + 12, root_midi + 7].fetch(@rng.rand(3))
             events << Event.new(t, @groove.sixteenth_s * 2.2, :bass, midi, vel * 0.85, nil)
@@ -870,13 +880,11 @@ module Dilla
       root_pc = chord[:root]
       rhythm = MELODY_RHYTHMS.fetch(style)
       events = []
-      ant = @groove.anticipation_s
-      drag = @groove.drag_s
       base = slot[:start_bar] * @groove.bar_s
       span = slot[:bars] * @groove.bar_s
       scale_steps = nil
       rhythm.each do |step, length|
-        t = base + step * @groove.sixteenth_s - ant + drag
+        t = base + step * @groove.sixteenth_s
         next unless t < base + span
 
         strong = (step % 4).zero?
@@ -904,7 +912,9 @@ module Dilla
     # Scale-locked upper-register FM droplets and broken arpeggio fragments.
     def build_foley(chord_plan)
       parsed = @progress["chords"].map { |symbol| Dilla::ChordParser.parse(symbol, Dilla.theory) }
-      positions = [[1, 0.24], [5, 0.18], [10, 0.30], [14, 0.16]]
+      # Seven droplet slots per bar: the reference corpus measures ~9 visible
+      # harmonic onsets per bar; four slots left the arrangement bare.
+      positions = [[1, 0.24], [3, 0.16], [5, 0.18], [7, 0.12], [10, 0.30], [12, 0.20], [14, 0.16]]
       events = []
       chord_plan.each do |slot|
         chord = parsed.fetch(slot[:index])
@@ -912,13 +922,14 @@ module Dilla
         chord_pcs = chord[:intervals].map { |iv| (chord[:root] + iv) % 12 }
         slot[:bars].ceil.times do |bar_index|
           positions.each_with_index do |(step, level), index|
-            next if index == 1 && @rng.chance(0.4)
-            next if index == 3 && @rng.chance(0.5)
+            next if index == 1 && @rng.chance(0.22)
+            next if index == 3 && @rng.chance(0.3)
+            next if index == 5 && @rng.chance(0.2)
+            next if index == 6 && @rng.chance(0.25)
             pool = index.even? ? chord_pcs : scale.map { |degree| (chord[:root] + degree) % 12 }
             midi = 84 + pool.fetch(@rng.rand(pool.length))
             at = (slot[:start_bar] + bar_index) * @groove.bar_s + step * @groove.sixteenth_s
             at += @groove.swing_delay_s("hat") if step.odd?
-            at -= @groove.anticipation_s * 0.35
             next if at >= (slot[:start_bar] + slot[:bars]) * @groove.bar_s
             events << Event.new(at, 0.06 + @rng.rand * 0.13, :foley, midi, level * (0.75 + @rng.rand * 0.45), { "synth" => "fm_glass" })
           end
@@ -1176,12 +1187,15 @@ module Dilla
       f = midi_hz(midi)
       len = (dur_s * SAMPLE_RATE).to_i + 1
       out = Dilla.render_tone(
-        len, f, 0.9 * vel,
+        len, f, 1.3 * vel,
         env: { attack: 0.005, decay: [dur_s * 0.9, 0.5].max, sustain: 0.3 },
-        partials: [[1.0, 1.0, 1.0], [2.0, 0.3, 0.7], [3.0, 0.1, 0.4]],
-        lp: 950
+        # Reference bass stems measure ~93% low share but a ~660 Hz centroid:
+        # the fundamentals dominate, yet the 2nd-4th harmonics are clearly
+        # audible. The old near-sine tone measured a ~320 Hz centroid.
+        partials: [[1.0, 1.0, 1.0], [2.0, 0.45, 0.65], [3.0, 0.34, 0.5], [4.0, 0.18, 0.35]],
+        lp: 1150
       )
-      soft_clip(out, 1.15)
+      soft_clip(out, 1.35)
     end
 
     def midi_hz(midi)
@@ -1239,7 +1253,7 @@ module Dilla
         modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math::PI)
         s = Dilla.sine(modulated_phase.round)
         s = Math.tanh(s * 1.6) * 0.85
-        s += NOISE[(i * 7 + 11) % NOISE.length] * (i < click_len ? 0.5 * (1.0 - i / click_len.to_f) : 0.0)
+        s += NOISE[(i * 7 + 11) % NOISE.length] * (i < click_len ? 0.22 * (1.0 - i / click_len.to_f) : 0.0)
         out[i] = s * env * vel * 0.95
         i += 1
       end
@@ -1278,7 +1292,7 @@ module Dilla
         i += 1
       end
       highpass!(out, 320.0)
-      tone_shape!(out, tone, 7800)
+      tone_shape!(out, tone, 4600)
       crush!(out, @kit["snare"]["crush"])
       out
     end
@@ -1309,11 +1323,16 @@ module Dilla
                   Math.sin(modulator_phases[operator]) * index * 65_536.0 / (2.0 * Math::PI)
           metallic += Dilla.sine(phase.round) * operator_weights[operator]
         end
-        out[i] = (noise * 0.68 + metallic * 0.24) * (decay_coef**i) * vel
+        out[i] = (noise * 0.68 + metallic * 0.18) * (decay_coef**i) * vel
         i += 1
       end
       highpass!(out, 6200.0)
       highpass!(out, 4200.0)
+      # Reference stems sit dark: hats carry almost nothing above ~4 kHz on
+      # the records this engine imitates, so a gentle post-highpass shelf
+      # keeps the tick but loses the fizz.
+      tone_shape!(out, 0.18, 8600)
+      tone_shape!(out, 0.5, 8600)
       crush!(out, @kit["hat"]["crush"])
       scale = open ? @kit["openhat"]["level"].to_f : @kit["hat"]["level"].to_f
       out.each_with_index { |v, idx| out[idx] = v * scale * 2.2 }
@@ -1334,6 +1353,7 @@ module Dilla
         i += 1
       end
       highpass!(out, 3400.0)
+      tone_shape!(out, 0.35, 4200)
       out.each_with_index { |v, idx| out[idx] = v * @kit["ride"]["level"].to_f * 2.0 }
       out
     end
@@ -1370,7 +1390,7 @@ module Dilla
         out[i] = NOISE[(i + off) % NOISE.length] * env * vel
         i += 1
       end
-      bandpass_ish!(out, 5200.0, 0.6)
+      bandpass_ish!(out, 3200.0, 0.6)
       out.each_with_index { |v, idx| out[idx] = v * @kit["perc"]["level"].to_f * 2.0 }
       out
     end
@@ -1378,9 +1398,9 @@ module Dilla
     # The 40 Hz sub: kick-gated sine with a short gate and release, exactly the
     # production-dna mix note ("40Hz oscillator triggered by kick").
     def sub(vel)
-      decay = @kit["sub"]["decay"].to_f
-      hold = (0.05 * SAMPLE_RATE).to_i
+      hold = (0.045 * SAMPLE_RATE).to_i
       release = (0.12 * SAMPLE_RATE).to_i
+      attack = (0.008 * SAMPLE_RATE).to_i
       len = hold + release
       out = Array.new(len, 0.0)
       f = 40.0 * (2.0**(@kit["sub"]["tune"].to_f / 12.0))
@@ -1388,8 +1408,13 @@ module Dilla
       phase = 0
       i = 0
       while i < len
-        env = if i < hold
-                i.to_f / hold
+        # Fast 8 ms attack: the sub must hit WITH the kick, not trail it —
+        # a slow ramp smears the low-band transient and shifts the whole
+        # pocket measurement.
+        env = if i < attack
+                i.to_f / attack
+              elsif i < hold
+                1.0
               else
                 1.0 - (i - hold).to_f / release
               end
@@ -1572,8 +1597,8 @@ module Dilla
         chords: Stereo.new(@n), melody: Stereo.new(@n), foley: Stereo.new(@n),
         sample: Stereo.new(@n), vinyl: Stereo.new(@n)
       }
-      @gain = { drums: 1.4, sub: 1.0, bass: 0.72, chords: 0.48, melody: 0.4,
-                foley: 0.24, sample: 0.5, vinyl: 0.0 }
+      @gain = { drums: 1.4, sub: 0.8, bass: 1.25, chords: 0.38, melody: 0.36,
+                foley: 0.30, sample: 0.5, vinyl: 0.0 }
     end
 
     attr_reader :buses
@@ -2293,7 +2318,7 @@ module Dilla
       meta = ev.meta.is_a?(Hash) ? ev.meta : {}
       voice_name = meta["voice"] || plan[:voice]
       config = catalogue.fetch("voices").fetch(voice_name)
-      config = config.merge("brightness" => (config.fetch("brightness", 0.5).to_f + (lane == :melody ? 0.15 : 0.0)).clamp(0.0, 0.95))
+      config = config.merge("brightness" => (config.fetch("brightness", 0.5).to_f + (lane == :melody ? 0.22 : 0.0)).clamp(0.0, 0.95))
       engine = (voice_name == plan[:voice] && lane != :melody) ? instruments : Instruments.new(kit, config, theory)
       target_name = meta["morph_to"]
       if target_name && meta.fetch("morph_mix", 0.0).to_f.positive?
@@ -2725,6 +2750,59 @@ module Dilla
   rescue Studio::DillaReference::AnalysisError, SystemCallError, IOError => error
     warn "dilla reference: Ruby analyzer failed: #{error.class}: #{error.message}"
     false
+  end
+
+  # Maps measured features into the profile schema MASTER's media intent reads:
+  # target_bpm, groove_profile and the feature dict drive pattern ranking,
+  # pocket scaling and mix balance on the next render. Restored after the
+  # Python/Demucs migration dropped the method while reference() and the
+  # suite still called it.
+  def build_profile(features, meta, style, wav, stems_dir)
+    target_bpm = features.fetch("bpm", 90.0).to_f
+    spread = features.fetch("timing_spread_ms", 8.0).to_f
+    swing = features.fetch("swing_ratio", 0.5).to_f
+    offbeat = features.fetch("offbeat_onset_share", 0.5).to_f
+    groove_profile = if swing >= 0.565 && spread > 9.0
+                       "dilla_shadow"
+                     elsif swing >= 0.565
+                       "late_snare"
+                     elsif spread > 10.5
+                       "behind_the_beat"
+                     else
+                       "dilla_shadow"
+                     end
+    {
+      "style_key" => style,
+      "target_bpm" => target_bpm.round(1),
+      "groove_profile" => groove_profile,
+      "features" => {
+        "bpm" => target_bpm.round(2),
+        "bpm_confidence" => features.fetch("bpm_confidence", 0.0).to_f.round(3),
+        "onset_density_per_bar" => features.fetch("onset_density_per_bar", 8.0).to_f.round(2),
+        "offbeat_onset_share" => offbeat.round(3),
+        "timing_spread_ms" => spread.round(2),
+        "swing_ratio" => swing.round(3),
+        "drums_energy_share" => features.fetch("drums_energy_share", 0.25).to_f.round(3),
+        "bass_energy_share" => features.fetch("bass_energy_share", 0.2).to_f.round(3),
+        "other_energy_share" => features.fetch("other_energy_share", 0.3).to_f.round(3),
+        "vocal_energy_share" => features.fetch("vocal_energy_share", 0.0).to_f.round(3),
+        "brightness_hz" => features.fetch("brightness_hz", 1500.0).to_f.round(1)
+      },
+      "analysis" => {
+        "key" => features.dig("harmony", "key"),
+        "chord_changes" => features.dig("harmony", "chord_changes"),
+        "chords" => features.dig("harmony", "chords"),
+        "melody" => features.fetch("melody", {}),
+        "drum_grid" => features.fetch("drum_grid", {}),
+        "sections" => features.fetch("sections", [])
+      },
+      "source" => {
+        "title" => meta["title"], "url" => meta["url"], "path" => meta["path"],
+        "wav" => wav, "stems_dir" => stems_dir, "duration_s" => features.fetch("duration_s", nil)
+      },
+      "engine" => { "name" => "dilla", "version" => VERSION },
+      "created_at" => Time.now.utc.iso8601
+    }
   end
 
   # ------------------------------------------------------------- industrial techno
