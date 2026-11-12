@@ -858,7 +858,6 @@ class VpsDeployContractTest < Minitest::Test
                     "invalid environment must be rejected before a deployment lock is created"
   end
 
-
   def test_each_rails_deploy_proves_app_health_after_its_restart
     service = File.read(File.join(ROOT, "RAILS", "_service.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
@@ -873,5 +872,4 @@ class VpsDeployContractTest < Minitest::Test
     assert_operator restart, :<, health
     assert_operator health, :<, done
   end
-
 end
