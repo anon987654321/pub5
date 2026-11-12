@@ -13,6 +13,16 @@ class TestStudioReplicateClientPaths < Minitest::Test
       super(token: "test-token")
     end
 
+    # These tests exercise request construction, not human permissions. Keep
+    # the consent bypass local to this test double; production clients use the
+    # real filesystem-backed gate.
+    def train_lora(*arguments, **options)
+      options[:subject] ||= "probe"
+      Studio::Lora::Consent.stub(:require!, true) do
+        super(*arguments, **options)
+      end
+    end
+
     def get(uri)
       @requests << [:get, uri]
       properties = {
@@ -225,6 +235,37 @@ class TestStudioReplicateClientPaths < Minitest::Test
     method, uri = client.requests.fetch(0)
     assert_equal :get, method
     assert_equal "/v1/models/owner/model/versions/#{version}", uri.path
+  end
+
+  def test_training_requires_subject_consent_before_any_provider_request
+    client = Class.new(Studio::ReplicateClient) do
+      def initialize
+        @requests = []
+        super(token: "test-token")
+      end
+
+      attr_reader :requests
+
+      def get(uri)
+        @requests << [:get, uri]
+        flunk "provider schema lookup must not happen before consent"
+      end
+
+      def post(uri, body, headers: {})
+        @requests << [:post, uri, body, headers]
+        flunk "provider training must not start before consent"
+      end
+    end.new
+
+    error = assert_raises(Studio::Lora::Consent::Error) do
+      client.train_lora(
+        "https://files.replicate.delivery/photos.zip", "owner/model",
+        subject: "missing_subject", wait: false
+      )
+    end
+
+    assert_match(/private subject directory is missing/, error.message)
+    assert_empty client.requests
   end
 
   def test_training_schema_is_checked_before_destination_model_creation
