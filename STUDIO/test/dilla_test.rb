@@ -308,6 +308,34 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal [55, 60, 65, 70, 75], voiced
   end
 
+  def test_bass_lane_honours_slash_bass_inversions
+    progress = {
+      "id" => "slash_bass_dub",
+      "chords" => ["Bb/E"],
+      "feel" => { "bass" => "dub" }
+    }
+    seq = sequencer(progress)
+    chord = Dilla::ChordParser.parse("Bb/E", Dilla.theory)
+    slot = { index: 0, start_bar: 0, bars: 1 }
+
+    events = seq.send(:bass_events, chord, slot, [chord], [slot])
+    assert_equal [40, 40, 40], events.first(3).map(&:midi)
+  end
+
+  def test_walking_bass_approaches_the_next_slash_bass_note
+    progress = {
+      "id" => "slash_bass_walk",
+      "chords" => ["Bb/E", "C/F#"],
+      "feel" => { "bass" => "walk" }
+    }
+    seq = sequencer(progress)
+    parsed = progress.fetch("chords").map { |symbol| Dilla::ChordParser.parse(symbol, Dilla.theory) }
+    slot = { index: 0, start_bar: 0, bars: 1 }
+
+    events = seq.send(:bass_events, parsed.first, slot, parsed, [slot])
+    assert_equal 41, events.last.midi, "F2 leads by a semitone into the next F#2 slash bass"
+  end
+
   def test_time_keeps_the_historical_measured_chop_contour
     progress = Dilla.progression_by_ref("time_donut")
     seq = sequencer(progress)
