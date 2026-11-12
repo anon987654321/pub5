@@ -64,7 +64,7 @@ class TestScanner < Minitest::Test
     reporter.instance_variable_set(:@mutex, Mutex.new)
     reporter.instance_variable_set(:@scan_progress, { last_beat: 0.0 })
     now = 0.0
-    Process.stub(:clock_gettime, ->(*) { now }) do
+    Process.stub(:clock_gettime, ->(*_args) { now }) do
       refute reporter.send(:heartbeat_due?)
       now = 59.9
       refute reporter.send(:heartbeat_due?)
