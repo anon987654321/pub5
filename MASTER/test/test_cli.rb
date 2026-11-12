@@ -991,6 +991,27 @@ def test_spinner_names_the_provider_actually_waiting_or_streaming
   assert_equal "stopping", @cli.send(:stage_for, "user:interrupt", reason: "stop")
 end
 
+def test_spinner_names_provider_timeout_and_success_outcomes
+  assert_equal "timeout claude-cli",
+               @cli.send(:stage_for, "llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :timeout)
+  assert_equal "received grok-cli",
+               @cli.send(:stage_for, "llm:provider_outcome", model: "grok-cli:auto", status: :success)
+  assert_equal "rate limit agy",
+               @cli.send(:stage_for, "llm:provider_outcome", model: "agy:gemini-3.1-pro-high", status: :rate_limit)
+end
+
+def test_spinner_keeps_stopping_visible_until_the_turn_finishes
+  @cli.instance_variable_set(:@think_mutex, Mutex.new)
+  @cli.instance_variable_set(:@think_stage, "streaming grok-cli")
+  @cli.instance_variable_set(:@think_stopping, false)
+
+  @cli.send(:update_think_stage, event: "user:interrupt", reason: "stop")
+  @cli.send(:update_think_stage, event: "llm:provider_outcome", model: "grok-cli:auto", status: :timeout)
+
+  assert_equal "stopping", @cli.instance_variable_get(:@think_stage)
+  assert @cli.instance_variable_get(:@think_stopping)
+end
+
 def test_spinner_provider_changes_when_a_fallback_lane_is_sent
   stages = [
     @cli.send(:stage_for, "llm:send", model: "claude-cli:claude-opus-5-5"),
@@ -1084,6 +1105,8 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     token = Master::Core::CancellationToken.new
     token.cancel!(reason: "/stop requested cancellation")
     @cli.instance_variable_set(:@turn_cancellation, token)
+    @cli.instance_variable_set(:@last_ok, true)
+    @cli.instance_variable_set(:@exit_code, 3)
 
     out, err = capture_io do
       @cli.send(:display_result, result: Master::Result.err("interrupted", category: :abort), accumulated: "", streamed: false)
@@ -1091,6 +1114,21 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
 
     assert_match(/turn0: cancelled by \/stop/, out + err)
     refute_match(/answered|complete/i, out + err)
+    refute @cli.instance_variable_get(:@last_ok)
+    assert_equal 2, @cli.instance_variable_get(:@exit_code)
+  end
+
+  def test_ctrl_c_abort_uses_the_conventional_interrupt_exit_code
+    token = Master::Core::CancellationToken.new
+    token.cancel!(reason: "Ctrl-C requested cancellation")
+    @cli.instance_variable_set(:@turn_cancellation, token)
+
+    capture_io do
+      @cli.send(:display_result, result: Master::Result.err("interrupted", category: :abort), accumulated: "", streamed: false)
+    end
+
+    assert_equal 130, @cli.instance_variable_get(:@exit_code)
+    refute @cli.instance_variable_get(:@last_ok)
   end
 
   # A late cursor-position reply was saved as "[38;51Rh" and replayed each boot.
