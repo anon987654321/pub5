@@ -34,7 +34,7 @@ require "digest"
 require "time"
 require "tmpdir"
 require "tempfile"
-require_relative "../subprocess"
+require_relative "../subprocess"\nrequire_relative "../analog_core"
 require_relative "lib/reference_analyzer"
 
 module Dilla
@@ -2111,23 +2111,40 @@ module Dilla
       dropouts!(mix, cfg["dropout"].to_f, rng) if cfg["dropout"].to_f.positive?
     end
 
-    # Tape speed instability moves sample position (pitch/time), not channel
-    # amplitude. Bounded sinusoidal offsets avoid drift and preserve endpoints.
+    # Tape speed instability moves sample position, not channel amplitude.
+    # A pair of bounded, seeded filtered-noise walks replaces the repeating
+    # 0.55/5.7 Hz sine pair. The first sample is anchored, and interpolation
+    # keeps source reads inside the available sample range.
     def wow_flutter!(mix, cfg, rng)
-      wow = cfg["wow"].to_f * 0.00035
-      flutter = cfg.fetch("flutter", 0.35).to_f * 0.00008
-      return if wow <= 0 && flutter <= 0
-      phases = [rng.rand * 2.0 * Math::PI, rng.rand * 2.0 * Math::PI]
-      [mix.l, mix.r].each_with_index do |channel, side|
+      wow = [cfg["wow"].to_f, 0.0].max * 0.00035
+      flutter = [cfg.fetch("flutter", 0.35).to_f, 0.0].max * 0.00008
+      return if (wow <= 0.0 && flutter <= 0.0) || mix.l.empty? || mix.r.empty?
+
+      [mix.l, mix.r].each do |channel|
         source = channel.dup
-        w0 = Math.sin(phases[0] + side * 0.29)
-        f0 = Math.sin(phases[1] + side * 0.41)
-        wow_amp = wow * SAMPLE_RATE / (2.0 * Math::PI * 0.55)
-        flutter_amp = flutter * SAMPLE_RATE / (2.0 * Math::PI * 5.7)
+        channel_rng = Random.new(rng.rand(2**31))
+        wow_walk = AnalogCore::StochasticWalk.new(
+          rate_hz: 0.55, depth: 1.0, rng: Random.new(channel_rng.rand(2**31)),
+          sample_rate: SAMPLE_RATE
+        ) if wow.positive?
+        flutter_walk = AnalogCore::StochasticWalk.new(
+          rate_hz: 5.7, depth: 1.0, rng: Random.new(channel_rng.rand(2**31)),
+          sample_rate: SAMPLE_RATE
+        ) if flutter.positive?
+        wow_origin = wow_walk&.next_value
+        flutter_origin = flutter_walk&.next_value
+        wow_scale = wow * SAMPLE_RATE / (2.0 * Math::PI * 0.55)
+        flutter_scale = flutter * SAMPLE_RATE / (2.0 * Math::PI * 5.7)
+
         channel.each_index do |i|
-          t = i.to_f / SAMPLE_RATE
-          offset = wow_amp * (Math.sin(2.0 * Math::PI * 0.55 * t + phases[0] + side * 0.29) - w0) +
-                   flutter_amp * (Math.sin(2.0 * Math::PI * 5.7 * t + phases[1] + side * 0.41) - f0)
+          offset = 0.0
+          if i.positive? && wow_walk
+            offset += (wow_walk.next_value - wow_origin).clamp(-2.0, 2.0) * wow_scale
+          end
+          if i.positive? && flutter_walk
+            offset += (flutter_walk.next_value - flutter_origin).clamp(-2.0, 2.0) * flutter_scale
+          end
+
           position = (i + offset).clamp(0.0, source.length - 1.0)
           left = position.floor
           fraction = position - left

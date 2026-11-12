@@ -170,9 +170,19 @@ end
 
 def gate_weave(image, intensity = 0.40)
   w, h = image.width, image.height
-  rng = postpro_rng(53)
-  dx = (rng.rand - 0.5) * intensity * w * 0.004
-  dy = (rng.rand - 0.5) * intensity * h * 0.002
+  offsets = if defined?(Postpro::Motion) && Postpro::Motion.respond_to?(:gate_weave_offset)
+              Postpro::Motion.gate_weave_offset
+            end
+  if offsets.is_a?(Hash)
+    # Motion supplies a continuous, seeded offset sampled at the video's frame
+    # rate. Still images keep one stable, reproducible registration error.
+    dx = Float(offsets.fetch(:x, 0.0)) * intensity * w * 0.00133
+    dy = Float(offsets.fetch(:y, 0.0)) * intensity * h * 0.000667
+  else
+    rng = postpro_rng(53)
+    dx = (rng.rand - 0.5) * intensity * w * 0.004
+    dy = (rng.rand - 0.5) * intensity * h * 0.002
+  end
   x = Vips::Image.xyz(w, h).extract_band(0).linear([1.0], [-dx])
   y = Vips::Image.xyz(w, h).extract_band(1).linear([1.0], [-dy])
   coords = x.bandjoin(y)

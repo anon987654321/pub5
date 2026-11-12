@@ -21,6 +21,13 @@ module Postpro
   module Motion
     class Unavailable < StandardError; end
 
+    # The active video frame's bounded gate-weave offset. It is set only while
+    # one frame is graded and cleared by the stream reader even on failure.
+    def self.gate_weave_offset = @gate_weave_offset
+    def self.gate_weave_offset=(value)
+      @gate_weave_offset = value
+    end
+
     Probe = Struct.new(:width, :height, :fps, :frames, :duration, :has_audio, :rate, keyword_init: true)
 
     MAX_FRAME_PIXELS = 33_554_432

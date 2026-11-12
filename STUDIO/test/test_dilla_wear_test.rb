@@ -27,6 +27,56 @@ class TestDillaWear < Minitest::Test
     }
   end
 
+  def test_shared_stochastic_walk_is_seeded_bounded_and_nonperiodic
+    first = AnalogCore::StochasticWalk.new(
+      rate_hz: 0.8, depth: 0.5, rng: Random.new(23), sample_rate: 100
+    ).run(5_000)
+    repeat = AnalogCore::StochasticWalk.new(
+      rate_hz: 0.8, depth: 0.5, rng: Random.new(23), sample_rate: 100
+    ).run(5_000)
+
+    assert_equal first, repeat
+    assert first.all?(&:finite?)
+    assert first.all? { |value| value.abs <= 1.5 }
+    assert_operator first.uniq.length, :>, 1_000
+    rms = Math.sqrt(first.sum { |value| value * value } / first.length)
+    assert_operator rms, :>, 0.35
+    assert_operator rms, :<, 0.65
+  end
+
+  def test_shared_stochastic_walk_rejects_invalid_domains
+    assert_raises(ArgumentError) do
+      AnalogCore::StochasticWalk.new(
+        rate_hz: 51, depth: 1, rng: Random.new(1), sample_rate: 100
+      )
+    end
+    assert_raises(ArgumentError) do
+      AnalogCore::StochasticWalk.new(
+        rate_hz: 1, depth: -1, rng: Random.new(1), sample_rate: 100
+      )
+    end
+    zeros = AnalogCore::StochasticWalk.new(
+      rate_hz: 0, depth: 1, rng: Random.new(1), sample_rate: 100
+    ).run(10)
+    assert_equal Array.new(10, 0.0), zeros
+  end
+
+  def test_wow_flutter_is_seeded_and_keeps_the_first_sample
+    source = Array.new(80_000) { |index| Math.sin(2.0 * Math::PI * 440 * index / Dilla::SAMPLE_RATE) }
+    config = cfg.merge("wow" => 0.8, "flutter" => 0.45, "crackle" => 0.0, "hiss" => 0.0)
+    first = stereo(source)
+    repeat = stereo(source)
+    Dilla::Sonitex.wow_flutter!(first, config, Random.new(31))
+    Dilla::Sonitex.wow_flutter!(repeat, config, Random.new(31))
+
+    assert_equal first.l, repeat.l
+    assert_equal first.r, repeat.r
+    assert_in_delta source.first, first.l.first, 1e-12
+    refute_equal source, first.l
+    assert first.l.all?(&:finite?)
+    assert first.r.all?(&:finite?)
+  end
+
   def test_compounded_wear_variation_is_seeded_and_bounded
     first = Dilla::Sonitex.vary(cfg, Random.new(19))
     repeat = Dilla::Sonitex.vary(cfg, Random.new(19))

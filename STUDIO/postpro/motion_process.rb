@@ -1,12 +1,23 @@
 # frozen_string_literal: true
 
-require "tempfile"
+require "tempfile"\nrequire_relative "../analog_core"
 
 module Postpro
   module Motion
     def self.stream_and_grade(input, probe, graded, deadline, limits, seed, grain, io, grade_frame)
       frame_bytes = probe.width * probe.height * 3
       count = 0
+      # Gate weave is a temporal registration error. Use one bounded,
+      # seeded low-frequency walk per axis across the clip, not an unrelated
+      # random jump on every frame. Grain retains its separate frame seed.
+      weave_x = AnalogCore::StochasticWalk.new(
+        rate_hz: [0.35, probe.fps * 0.40].min, depth: 0.5,
+        rng: Random.new(Integer(seed) ^ 0x475758), sample_rate: probe.fps
+      )
+      weave_y = AnalogCore::StochasticWalk.new(
+        rate_hz: [0.47, probe.fps * 0.40].min, depth: 0.5,
+        rng: Random.new(Integer(seed) ^ 0x475759), sample_rate: probe.fps
+      )
       command = [
         "ffmpeg", "-nostdin", "-v", "error", "-i", input,
         "-map", "0:v:0", "-an", "-sn", "-dn", "-vsync", "0",
@@ -34,9 +45,14 @@ module Postpro
                 target = File.join(graded, format("%06d.png", count))
                 frame_seed = seed_for(count - 1, seed, grain:)
                 begin
+                  Postpro::Motion.gate_weave_offset = {
+                    x: weave_x.next_value, y: weave_y.next_value
+                  }.freeze
                   grade_frame.call(bytes, probe.width, probe.height, target, frame_seed)
                 rescue StandardError => e
                   raise Unavailable, "grading frame #{count} failed: #{e.class}: #{e.message}"
+                ensure
+                  Postpro::Motion.gate_weave_offset = nil
                 end
                 unless File.file?(target) && File.size(target).positive?
                   raise Unavailable, "frame #{count} did not produce a readable output"
