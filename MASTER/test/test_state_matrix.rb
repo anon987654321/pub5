@@ -13,12 +13,13 @@ class TestStateMatrix < Minitest::Test
 
   # Paints each cell's crop a colour chosen by the state the session was last put in.
   class FakeCdp
-    attr_reader :calls
+    attr_reader :calls, :scripts
 
     def initialize(focus_paints:, overflow_at: nil)
       @focus_paints = focus_paints
       @overflow_at = overflow_at
       @calls = []
+      @scripts = []
       @state = "default"
     end
 
@@ -33,6 +34,7 @@ class TestStateMatrix < Minitest::Test
     end
 
     def evaluate(script)
+      @scripts << script
       return unless script.include?("getBoundingClientRect")
 
       { "x" => 16, "y" => 100, "w" => 120, "h" => 44, "overflow" => @width == @overflow_at }
@@ -53,12 +55,14 @@ class TestStateMatrix < Minitest::Test
   def test_the_plan_is_every_state_at_390_then_narrower_widths_and_stops_at_the_cap
     cells = SM.plan(CONFIG)
 
-    assert_equal 12, cells.size
+    assert_equal 15, cells.size
     states = %w[default hover focus-visible active disabled loading error empty long-text]
 
     assert_equal states, cells.first(9).map(&:state)
     assert(cells.first(9).all? { |cell| cell.width == 390 })
-    assert_equal [360, 320, 768], cells.drop(9).map(&:width)
+    assert_equal [360, 320, 768], cells.drop(9).first(3).map(&:width)
+    assert_equal ["default 640px x2 nb light", "default 390px en light", "default 390px nb dark"],
+                 cells.drop(12).map(&:label)
   end
 
   def test_every_variant_is_planned_when_the_cap_allows
@@ -67,6 +71,18 @@ class TestStateMatrix < Minitest::Test
     assert_includes cells.map(&:label), "default 640px x2 nb light"
     assert_includes cells.map(&:label), "default 390px en light"
     assert_includes cells.map(&:label), "default 390px nb dark"
+  end
+
+  def test_empty_and_long_text_states_mutate_form_control_values
+    cdp = FakeCdp.new(focus_paints: true)
+    target = SM::Target.new(url: "http://127.0.0.1:1/", selector: "input[name=q]")
+
+    target.apply(cdp, "empty")
+    assert_includes cdp.scripts.last, "el.value = '';"
+    assert_includes cdp.scripts.last, "el.matches('input, textarea')"
+
+    target.apply(cdp, "long-text")
+    assert_includes cdp.scripts.last, "el.value = 'Langtekst for et smalt felt '.repeat(6);"
   end
 
   def test_a_focus_state_identical_to_default_is_a_finding
