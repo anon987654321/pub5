@@ -371,7 +371,7 @@ if on_box
       stat.gid.to_s
     end
 
-    { path:, mode: stat.mode, owner:, group:, symlink: stat.symlink? }
+    { path:, mode: stat.mode, owner:, group:, symlink: Deploy::PermissionAudit.path_contains_symlink?(path) }
   end
   secret_paths = (Dir.glob("/etc/*.env") + Dir.glob("/etc/rails/*.env")).uniq
   secrets = secret_paths.map do |path|
