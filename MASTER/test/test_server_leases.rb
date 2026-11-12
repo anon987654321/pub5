@@ -88,7 +88,7 @@ class TestServerLeases < Minitest::Test
     group = Process.getpgrp
 
     refute Leases.stop_process_group(group, term_grace: 0, kill_grace: 0)
-    assert_equal 0, Process.kill(0, Process.pid)
+    assert_equal 1, Process.kill(0, Process.pid)
   end
 
   def test_process_group_stop_escalates_and_waits_for_the_group_to_disappear
