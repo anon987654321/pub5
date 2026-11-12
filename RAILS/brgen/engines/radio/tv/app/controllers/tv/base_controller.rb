@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# The parent of every tv/* controller. Videos, channels and shows are slug-routed,
-# so nested lookups resolve slug-or-id here once.
-class Tv::BaseController < ApplicationController
-  include Shared::FindableBySlug # videos are slug-routed; nested lookups resolve slug-or-id
+# Videos, channels and shows retain slug-or-id resolution through the shared base.
+class Tv::BaseController < Shared::SluggedVerticalController
 end
