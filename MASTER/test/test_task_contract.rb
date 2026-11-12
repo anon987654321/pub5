@@ -552,8 +552,12 @@ class TestTaskContract < Minitest::Test
 
 
   def openbsd_preflight_fixture(scope: ["OPENBSD/**"], release: "7.8", source_path: "OPENBSD/RUNBOOK.md",
-                                interfaces: ["rcctl(8)"])
-    source = File.binread(File.join(Master::REPO_ROOT, source_path))
+                                source_paths: nil,
+                                interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1)])
+    source_paths = Array(source_paths || [source_path]).uniq
+    source_reads = source_paths.map do |path|
+      { path:, content: File.binread(File.join(Master::REPO_ROOT, path)), complete: true }
+    end
     manuals = interfaces.map do |identifier|
       page, section = identifier.match(/\A(.+)\(([1-9])\)\z/).captures
       content = "#{page.upcase}(#{section})\nNAME\n  #{page} - fixture manual text\nSYNOPSIS\n  #{page} [options]\nDESCRIPTION\n  Complete fixture body for the receipt validation test.\nSEE ALSO\n  operator(8)\n"
@@ -565,8 +569,7 @@ class TestTaskContract < Minitest::Test
     end
     {
       hostname: "vm23", os_release: release, architecture: "amd64", scope:,
-      source_reads: [{ path: source_path, content: source, complete: true }],
-      native_interfaces: interfaces, manual_pages: manuals
+      source_reads:, native_interfaces: interfaces, manual_pages: manuals
     }
   end
 
@@ -584,7 +587,7 @@ class TestTaskContract < Minitest::Test
     assert_equal "vm23", receipt.fetch("hostname")
     assert_equal "7.8", receipt.fetch("os_release")
     assert_equal "amd64", receipt.fetch("architecture")
-    assert_equal ["rcctl(8)"], receipt.fetch("native_interfaces")
+    assert_equal %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1)], receipt.fetch("native_interfaces")
     assert_equal File.binread(File.join(Master::REPO_ROOT, "OPENBSD/RUNBOOK.md")),
                  receipt.fetch("source_reads").first.fetch("content")
     manual = receipt.fetch("manual_pages").first
@@ -611,7 +614,9 @@ class TestTaskContract < Minitest::Test
   end
 
   def test_openbsd_command_admission_requires_the_specific_manual
-    contract = openbsd_task_contract
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"]),
+    )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
       command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
     )
@@ -619,6 +624,41 @@ class TestTaskContract < Minitest::Test
       command: "ssh -o BatchMode=yes dev@brgen.no 'pfctl -nf /etc/pf.conf'", contract:
     )
     assert_match(/pfctl\(8\)/, reason)
+  end
+
+  def test_rcctl_restart_requires_the_rc_framework_not_only_rcctl_manual
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(
+        source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/etc/rc.d/master"],
+        interfaces: ["rcctl(8)"],
+      ),
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
+    )
+
+    assert_match(/rc\(8\)/, reason)
+    assert_match(/rc\.d\(8\)/, reason)
+  end
+
+  def test_rc_service_file_edits_require_rc_framework_manuals
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(interfaces: ["rcctl(8)"]),
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+      path: File.join(Master::REPO_ROOT, "OPENBSD/etc/rc.d/master"), contract:
+    )
+
+    assert_match(/rc\.d\(8\)/, reason)
+  end
+
+  def test_rcctl_restart_requires_the_exact_service_source_read
+    contract = openbsd_task_contract
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'rcctl restart master'", contract:
+    )
+
+    assert_match(/source-read receipt for controlled service OPENBSD\/etc\/rc\.d\/master/, reason)
   end
 
   def test_saved_openbsd_preflight_is_revision_and_time_bound

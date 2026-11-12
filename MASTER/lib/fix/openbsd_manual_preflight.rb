@@ -32,6 +32,19 @@ module Master
         "chown" => "chown(8)", "chmod" => "chmod(1)", "reboot" => "reboot(8)",
         "shutdown" => "shutdown(8)", "halt" => "halt(8)"
       }.freeze
+
+      # rcctl configures rc.conf.local and invokes rc.d scripts. Its safe use
+      # depends on the complete rc startup framework, not only rcctl(8).
+      RC_FRAMEWORK_MANUALS = %w[
+        rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1)
+      ].freeze
+      COMMAND_SUPPORT_MANUALS = {
+        "rc" => RC_FRAMEWORK_MANUALS,
+        "rcctl" => RC_FRAMEWORK_MANUALS
+      }.freeze
+      RC_SERVICE_ACTIONS = %w[check configtest reload restart start stop].freeze
+      RC_SERVICE_NAME = /\A[A-Za-z0-9_][A-Za-z0-9_.-]*\z/.freeze
+
       SSH_OPTIONS_WITH_VALUE = %w[
         -B -b -c -D -E -e -F -I -i -J -L -l -m -O -o -p -Q -R -S -W -w
       ].freeze
@@ -341,6 +354,10 @@ module Master
         if File.file?(absolute) && !preflight.fetch("source_reads").any? { |row| row.fetch("path") == relative }
           return "RTFM_FIRST requires a complete source-read receipt for existing target #{relative}"
         end
+        missing_manuals = required_path_manuals(relative) - Array(preflight.fetch("native_interfaces"))
+        unless missing_manuals.empty?
+          return "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing_manuals.join(', ')}"
+        end
         source_staleness(preflight, root: repo_root)
       end
 
@@ -361,11 +378,15 @@ module Master
           reason = refusal_for_path(path: target, contract:, repo_root:)
           return reason if reason
         end
+        command_names = tokens.map { |token| File.basename(token) }
         command_manuals = COMMAND_MANUALS.filter_map do |name, page|
-          page if tokens.any? { |token| File.basename(token) == name }
-        end.uniq
+          page if command_names.include?(name)
+        end
+        command_manuals.concat(command_names.flat_map { |name| COMMAND_SUPPORT_MANUALS.fetch(name, []) })
+        command_manuals.uniq!
+        service_sources = rc_service_source_paths(tokens)
         remote = openbsd_ssh_command?(argv)
-        openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/(?:bin|sbin)/}) } && !openbsd_read_only_command?(tokens)
+        openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
         local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
         return unless remote || openbsd_script || (local_openbsd && command_manuals.any?)
         return "RTFM_FIRST requires an active TaskContract with openbsd_preflight before native use" unless contract
@@ -378,6 +399,8 @@ module Master
         if (remote || openbsd_script) && declared.empty?
           return "RTFM_FIRST requires native interfaces and complete manuals to be enumerated"
         end
+        missing_service_sources = service_source_refusals(service_sources, preflight, root: repo_root)
+        return missing_service_sources.first unless missing_service_sources.empty?
         source_staleness(preflight, root: repo_root)
       rescue ArgumentError => error
         "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
@@ -390,6 +413,59 @@ module Master
       WRITE_OPENBSD_COMMANDS = %w[
         cp mv install tee touch rm mkdir rmdir chmod chown chgrp ln truncate dd
       ].freeze
+
+      # Configuration and service files have supporting manual pages in
+      # addition to the command page that edits or controls them.
+      def required_path_manuals(relative)
+        path = relative.to_s.tr("\\", "/")
+        return RC_FRAMEWORK_MANUALS if path.match?(%r{\AOPENBSD/etc/rc\.d/[^/]+\z})
+        return %w[rc(8) rc.conf(8) rc.d(8) rcctl(8)] if path.match?(%r{\AOPENBSD/etc/rc\.conf(?:\.local)?\z})
+
+        []
+      end
+
+      def rc_service_source_paths(tokens)
+        paths = []
+        tokens.each_with_index do |token, index|
+          next unless File.basename(token) == "rcctl"
+
+          tail = tokens[(index + 1)..] || []
+          action_index = tail.index { |value| RC_SERVICE_ACTIONS.include?(value) }
+          next unless action_index
+
+          services = tail[(action_index + 1)..] || []
+          services.each do |service|
+            next if service.start_with?("-")
+            break unless service.match?(RC_SERVICE_NAME)
+
+            paths << "OPENBSD/etc/rc.d/#{service}"
+          end
+        end
+        tokens.each do |token|
+          match = token.match(%r{(?:\A|/)etc/rc\.d/([^/]+)\z})
+          paths << "OPENBSD/etc/rc.d/#{match[1]}" if match
+        end
+        paths.uniq
+      end
+
+      def service_source_refusals(paths, preflight, root:)
+        reads = Array(preflight.fetch("source_reads")).map { |row| row.fetch("path") }
+        paths.filter_map do |relative|
+          absolute = File.expand_path(relative, root)
+          unless File.file?(absolute)
+            next "RTFM_FIRST has no reviewed repository source for controlled service #{relative}"
+          end
+          unless reads.include?(relative)
+            next "RTFM_FIRST requires a complete source-read receipt for controlled service #{relative}"
+          end
+
+          missing = required_path_manuals(relative) - Array(preflight.fetch("native_interfaces"))
+          unless missing.empty?
+            next "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing.join(', ')}"
+          end
+          nil
+        end
+      end
 
       def openbsd_write_target(command, argv)
         tokens = Array(argv).map(&:to_s)
