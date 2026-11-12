@@ -68,6 +68,7 @@ module Master
           end
 
           def keyless_mode?
+            return false unless ENV["MASTER_NO_KEYLESS"].to_s.empty?
             return true if ENV["MASTER_KEYLESS"].to_s != ""
             return true if auto_keyless? && !Master.any_api_key_present?
             false
