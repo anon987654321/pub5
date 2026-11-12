@@ -286,6 +286,30 @@ class TestFourStreamAssessment < Minitest::Test
     assert_equal "INCONCLUSIVE", report[:overall_status]
   end
 
+  def test_scheduled_grouped_visual_repair_failure_blocks_local_compliance
+    ids = %w[BRINGHURST_measure VISUAL_COMPOSITION ACCESSIBILITY_TOUCH_TARGET OPENBSD_DAEMON_HEALTH DRY]
+    ledger = {
+      summary: { laws: ids.size, expected_cells: ids.size, recorded_cells: ids.size,
+                 clean_passes_required: 2, complete: true },
+      cells: ids.map { |law| { law:, status: "assessed_clean", clean_streak: 2 } },
+    }
+    tags = {
+      "VISUAL_COMPOSITION" => [:VISUAL_DESIGN],
+      "ACCESSIBILITY_TOUCH_TARGET" => [:ACCESSIBILITY],
+      "OPENBSD_DAEMON_HEALTH" => [:OPENBSD],
+    }
+    report = Master::Fix::QualityContract.build(
+      ledger:, surface_report: { complete: true, surfaces: {} },
+      target: "RAILS", files: ["RAILS/brgen"], lane: :all,
+      law_tags: tags,
+      visual_groups: { findings: 5, groups: 3, cleared: 2, remaining: 1, resweep: true },
+      improvement: { evaluated_passes: 1, findings: 0, fixed: 0 },
+    )
+
+    assert_equal "FAIL", report[:workflows][:grouped_visual_repair][:status]
+    assert_equal "FAIL", report[:compliance_status]
+  end
+
   def test_visual_media_review_is_explicit_for_studio_outputs
     ledger = {
       summary: { laws: 1, expected_cells: 1, recorded_cells: 1, complete: true },

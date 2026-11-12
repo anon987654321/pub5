@@ -485,16 +485,18 @@ module Master
           workflows.values.select { |row| row[:applicable] }
         matrix = matrix_summary
         dimension_statuses = dimensions.values.map { |row| row[:status] }
+        workflow_statuses = workflows.values.select { |row| row[:applicable] }.map { |row| row[:status] }
+        local_statuses = dimension_statuses + workflow_statuses
         compliance_status = if @ledger.nil?
                               "BLOCKED"
-                            elsif dimension_statuses.include?("FAIL")
+                            elsif local_statuses.include?("FAIL")
                               "FAIL"
-                            elsif dimension_statuses.include?("BLOCKED")
+                            elsif local_statuses.include?("BLOCKED")
                               "BLOCKED"
                             elsif matrix[:status] != "complete" ||
-                                  dimension_statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
+                                  local_statuses.any? { |status| %w[INCONCLUSIVE NOT_RUN].include?(status) }
                               "INCONCLUSIVE"
-                            elsif dimension_statuses.all? { |status| status == "PASS" }
+                            elsif local_statuses.all? { |status| status == "PASS" }
                               "PASS"
                             else
                               "NOT_RUN"
@@ -671,7 +673,7 @@ module Master
 
       def workflow_receipts
         visual_applicable = target_has?("RAILS")
-        visual_scheduled = %w[all elevate visual].include?(@lane)
+        visual_scheduled = %w[all visual].include?(@lane)
         visual = if !visual_applicable || !visual_scheduled
                    { status: "NOT_RUN", applicable: false, reason: "grouped visual repair is not scheduled for this target/lane" }
                  elsif !@visual_groups.is_a?(Hash)
