@@ -3890,6 +3890,10 @@ law_catalogue:
     PRESERVE_FIRST:
       definition_sources: [MASTER/law/practice.rb]
       severity: error
+    PREDICATE_SIDE_EFFECTS:
+      definition_sources: [MASTER/law/structural.rb]
+      severity: info
+      languages: [ruby]
     PRIMITIVE_OBSESSION:
       definition_sources: [MASTER/law/structural_questions.rb]
       severity: info
