@@ -99,6 +99,7 @@ class TestLanePool < Minitest::Test
 
     assert_equal 60, door.send(:call_deadline_for, GEMMA), "unmeasured free lanes get the configured ceiling"
     assert_equal 60, door.send(:call_deadline_for, LIGHTNING), "a fast short probe does not predict large-prompt latency"
+    assert_equal 60, door.send(:call_deadline_for, "web-chat:kimi"), "browser chat is a free lane and inherits the same hard ceiling"
     assert_equal 300, door.send(:call_deadline_for, OPUS), "subscription calls retain the dispatcher deadline"
   end
 
