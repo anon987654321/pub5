@@ -12,10 +12,10 @@ require_relative "../checks/support/rendered_design"
 
 module Law
   module Typesetting
-    # MASTER/docs is read by agents in a terminal as often as by people in a browser, so it
-    # keeps its ASCII too (2026-11-06; reversible here).
-    TERMINAL_OUTPUT = %r{MASTER/(?:lib/(?:cli|voice/renderer|trace)|bin|docs)/|face_ascii|dmesg}
-    PATH = %r{(?:/config/locales/[^/]+\.yml|\.html\.erb|/docs/[^/]+\.md)\z}
+    # Bringhurst governs all reader-facing copy, including Markdown read in a
+    # terminal. Terminal output keeps its separate ASCII profile.
+    TERMINAL_OUTPUT = %r{MASTER/(?:lib/(?:cli|voice/renderer|trace)|bin)/|face_ascii|dmesg}
+    PATH = %r{(?:/config/locales/[^/]+\.yml|\.html(?:\.erb)?|/docs/[^/]+\.md|/README\.md)\z}
     POINTS = { laquo: 0xAB, raquo: 0xBB, ndash: 0x2013, mdash: 0x2014, nbsp: 0xA0, times: 0xD7, degree: 0xB0,
                section: 0xA7, ellipsis: 0x2026 }.freeze
     MARKS = POINTS.transform_values { |point| [point].pack("U") }.freeze
@@ -24,7 +24,7 @@ module Law
     CHROME_KEYS = %w[nav buttons actions empty flash notices errors auth search onboarding].freeze
     SKIP_BLOCK = %r{<(script|style|pre|code)\b}i
     BLOCK_SCALAR = /\A[|>][-+]?\s*\z/
-    READERS = { /\.yml\z/ => :locale_values, /\.erb\z/ => :erb_text, /\.md\z/ => :markdown_text }.freeze
+    READERS = { /\.yml\z/ => :locale_values, /\.html(?:\.erb)?\z/ => :erb_text, /\.md\z/ => :markdown_text }.freeze
     QUOTES = { "'" => ["''", "'"], '"' => ['\\"', '"'] }.freeze
 
     module_function
