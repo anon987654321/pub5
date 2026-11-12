@@ -400,7 +400,18 @@ measure is already owned by the Bymorgen item above.
   transfer/deadline regressions cover allowlisted downloads, byte-cap failure cleanup,
   response caps, invalid deadlines and upload source validation; these are
   source additions, not executed proof. Live provider/upload integration
-  remains open. R8 also has a definite commit-refusal rollback regression;
+  remains open. The later source pass also closes the direct STUDIO training
+  bypass: `ReplicateClient#train_lora` now requires `subject:` and checks the
+  shared consent record before schema lookup/model creation/provider POST; its
+  no-provider-call regression is authored but NOT_RUN. H2/H3 now have source
+  coverage: tool hooks default to deny on faults, MCP SSE is loopback-only and
+  enabled package versions are pinned (the git server remains disabled). H7's
+  local web startup refuses unknown port listeners, and Dilla player shutdown
+  signals/reaps only its owned direct child. Focused regressions are
+  authored/extended but NOT_RUN; the broader process-kill census remains open.
+  H6 is partial: `.zshrc` checks operator-file ownership and group/other mode
+  bits, and the host permission audit checks secrets/storage/logs; a source-path
+  symlink review and dedicated zsh-source test remain open. R8 also has a definite commit-refusal rollback regression;
   the full transaction-aware candidate/apply and later-verification recovery
   path remains open.
 - [ ] **Local Claude hooks.** On macOS, launch a real Claude Code session and
