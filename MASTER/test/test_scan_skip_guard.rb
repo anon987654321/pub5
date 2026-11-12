@@ -150,6 +150,11 @@ class TestScanSkipGuard < Minitest::Test
   end
   def test_untyped_runtime_error_with_the_same_message_is_not_swallowed
     processor = Master::Fix::Scan::FileProcessor.new
+    mechanical = Object.new
+    mechanical.define_singleton_method(:id) { "TEST_MECHANICAL" }
+    mechanical.define_singleton_method(:check) do |_code, path:|
+      [{ law: "TEST_MECHANICAL", severity: :warning, line: 1, message: "mechanical finding" }]
+    end
     semantic = Object.new
     semantic.define_singleton_method(:id) { "semantic" }
     semantic.define_singleton_method(:check) do |_code, path:|
@@ -162,7 +167,7 @@ class TestScanSkipGuard < Minitest::Test
         code: "value = 1\n",
         ast: nil,
         path: "tmp/runtime_fault.rb",
-        law_set: [semantic],
+        law_set: [mechanical, semantic],
       )
     end
 
