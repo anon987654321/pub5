@@ -1434,6 +1434,16 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_predicate token, :cancelled?
   end
 
+  def test_stop_reason_survives_cooperative_cancellation_and_final_status
+    token = Master::Core::CancellationToken.new.activate!
+    @cli.instance_variable_set(:@turn_cancellation, token)
+
+    @cli.send(:request_or_interrupt_turn, Object.new, nil, reason: "stop")
+
+    assert_equal "/stop requested cancellation", token.reason
+    assert_equal "cancelled by /stop", @cli.send(:cancellation_status)
+  end
+
   def test_stop_interactive_queue_uses_the_shared_cancellation_policy
     turn = Object.new
     alive = true
