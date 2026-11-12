@@ -28,7 +28,7 @@ module Master
         true
       end
 
-      def min_ruby = config.dig("profile", "min_ruby") || "3.3.0"
+      def min_ruby = config.dig("profile", "min_ruby") || "3.2.0"
 
       def auto_approve?
         chosen = @env["MASTER_MOBILE_AUTO_APPROVE"].to_s

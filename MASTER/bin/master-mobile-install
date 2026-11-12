@@ -136,7 +136,7 @@ guest_ready() {
     env MASTER_RUNTIME_DISTRO="$distro" bash -lc '
       set -eu
       command -v ruby >/dev/null
-      ruby -e '\''require "rubygems"; abort "Ruby >= 3.3 required" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
+      ruby -e '\''require "rubygems"; abort "Ruby >= 3.2 required" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
       actual="$(ruby -e "print RUBY_VERSION")"
       grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
     ' >/dev/null 2>&1
@@ -160,7 +160,7 @@ apt-get install -y --no-install-recommends \
   libgdbm-dev libdb-dev libncurses-dev libgmp-dev uuid-dev liblzma-dev
 
 command -v ruby >/dev/null
-ruby -e 'require "rubygems"; abort "Ruby >= 3.3 required; installed #{RUBY_VERSION}" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'
+ruby -e 'require "rubygems"; abort "Ruby >= 3.2 required; installed #{RUBY_VERSION}" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'
 ruby_version="$(ruby -e 'print RUBY_VERSION')"
 
 cd /pub5/MASTER
@@ -198,7 +198,7 @@ fi
 if ! proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- \
   env MASTER_RUNTIME_DISTRO="$DISTRO" bash -lc '
     set -eu
-    ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
+    ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
     actual="$(ruby -e "print RUBY_VERSION")"
     grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
   ' >/dev/null 2>&1; then
@@ -207,7 +207,7 @@ fi
 exec proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- bash -lc '
   set -eu
   command -v ruby >/dev/null
-  ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")'\''
+  ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
   cd /pub5/MASTER
   exec bin/master "$@"
 ' master "$@"

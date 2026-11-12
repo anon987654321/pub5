@@ -15,7 +15,7 @@
 #
 # Order of preference:
 #   1. $PUB5_RUBY                       (the operator's explicit compatible override)
-#   2. the generic Ruby already selected by PATH (>= 3.3)
+#   2. the generic Ruby already selected by PATH (>= 3.2)
 #   3. another compatible installed Ruby, only if generic Ruby is too old
 #   4. a Ruby this script built earlier (MASTER/.tools/ruby)
 #   5. build one only when no compatible interpreter exists
@@ -31,12 +31,12 @@ PREFIX="$TOOLS/ruby"
 YAML_PREFIX="$TOOLS/yaml"
 MIN_MAJOR=3
 MIN_MINOR=3
-RUBY_VER=3.3.6
+RUBY_VER=3.2.6
 
 say() { printf 'dev-bootstrap: %s\n' "$*"; }
 
 version_key() {
-  # "3.3.6" -> 3*1000000+3*1000+6 ; unsuitable versions print nothing.
+  # "3.2.6" -> 3*1000000+3*1000+6 ; unsuitable versions print nothing.
   version=$1
   case $version in
     *.*.*) ;;
@@ -141,7 +141,7 @@ build() {
   if [ ! -f ruby-$RUBY_VER/.built ]; then
     say "fetching ruby $RUBY_VER (this is the long step; re-running resumes)"
     if [ ! -d ruby-$RUBY_VER ]; then
-      fetch "https://cache.ruby-lang.org/pub/ruby/3.3/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
+      fetch "https://cache.ruby-lang.org/pub/ruby/3.2/ruby-$RUBY_VER.tar.gz" ruby.tar.gz
       tar xzf ruby.tar.gz
     fi
     (cd ruby-$RUBY_VER \

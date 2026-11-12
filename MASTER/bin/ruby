@@ -23,7 +23,7 @@ EOF
 esac
 
 MIN_MAJOR=3
-MIN_MINOR=3
+MIN_MINOR=2
 
 BEST_KEY=-1
 BEST_RUBY=
@@ -63,7 +63,7 @@ add_candidate() {
 if [ -n "${PUB5_RUBY:-}" ]; then
   add_candidate "${PUB5_RUBY}"
   if [ -z "$BEST_RUBY" ]; then
-    printf '%s\n' "ruby0: PUB5_RUBY is not a compatible Ruby >= 3.3: ${PUB5_RUBY}" >&2
+    printf '%s\n' "ruby0: PUB5_RUBY is not a compatible Ruby >= 3.2: ${PUB5_RUBY}" >&2
     exit 1
   fi
   exec "${PUB5_RUBY}" "$@"
@@ -120,6 +120,6 @@ if [ -n "$BEST_RUBY" ]; then
   exec "$BEST_RUBY" "$@"
 fi
 
-printf '%s\n' "ruby0: no supported Ruby found (requires Ruby >= 3.3)" >&2
-printf '%s\n' "ruby0: install Ruby 3.3 or newer, or set PUB5_RUBY to a compatible interpreter" >&2
+printf '%s\n' "ruby0: no supported Ruby found (requires Ruby >= 3.2)" >&2
+printf '%s\n' "ruby0: install Ruby 3.2 or newer, or set PUB5_RUBY to a compatible interpreter" >&2
 exit 1
