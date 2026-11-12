@@ -74,7 +74,7 @@ class Event < ApplicationRecord
   def readable_by?(user)
     status != "draft" || (user.present? && user.id == user_id)
   end
-  def free? = price_cents.to_i.zero?
+  def free? = (price_cents || 0).zero?
 
   # Organisers type kroner ("150" or "150,50"); the column keeps øre. Asking
   # for øre made 150 kr a 15000 to type with step 100, and one zero short sold
