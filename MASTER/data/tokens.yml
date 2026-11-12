@@ -12,7 +12,8 @@ tokens:
   # Dialect → consumer map (do not merge casually):
   #   social       → brgen + shared shell (IRIX flat dark/light)
   #   light        → light-mode overlay for social apps (theme toggle)
-  #   luxury       → amber wardrobe (Aesop/Toteme warm neutrals)
+  #   luxury       → amber wardrobe (Toteme is the primary editorial-fashion reference;
+  #                    retain Amber's existing warm-neutral dialect and operator-owned values)
   #   openbsd_wscons → terminal green, opt-in via body class; bsdports itself is
   #                    ultraminimal white (RAILS/apps.yml visual_character)
   #   face_root    → MASTER web face.css :root only (CRT-flat, all radii 0)
