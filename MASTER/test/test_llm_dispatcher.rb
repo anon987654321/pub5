@@ -1182,6 +1182,23 @@ class TestLLMDispatcher < Minitest::Test
     assert_match(/Retry-After: 30/, limited.message)
   end
 
+  def test_web_chat_dispatch_preserves_non_retryable_profile_failures
+    dispatcher, = build_dispatcher
+    messages = [{ role: "user", content: "hello" }]
+
+    Master::Io::WebChat.stub(
+      :call, ->(**) { raise Master::Io::WebChat::ProviderError, "grok: input not found (login required)" }
+    ) do
+      result = dispatcher.send(:send_web_chat, "grok", messages, sys: nil)
+      assert_equal :auth_error, result.category
+    end
+
+    Master::Io::WebChat.stub(:call, ->(**) { raise StandardError, "temporary upstream 503" }) do
+      result = dispatcher.send(:send_web_chat, "grok", messages, sys: nil)
+      assert_equal :provider_error, result.category
+    end
+  end
+
   private
 
   def build_dispatcher
