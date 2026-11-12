@@ -2,6 +2,7 @@
 
 require_relative "test_helper"
 require "json"
+require "yaml"
 
 class TestAiTrajectory < Minitest::Test
   def test_operator_contract_is_available_from_master_load
@@ -30,10 +31,37 @@ class TestAiTrajectory < Minitest::Test
     assert_includes prompt, "remote commands follow the verified target shell"
     assert_includes prompt, "target-release manuals"
     assert_includes prompt, "never assume GNU/Linux options or paths"
+    assert_includes prompt, "OpenBSD base shells: ksh and /bin/sh"
+    assert_includes prompt, "bash is not assumed"
+    assert_includes prompt, "Deploy::Inventory is app inventory, not host inventory"
+    assert_includes prompt, "one-host canary, serial by default"
+    assert_includes prompt, "wildcard fan-out is forbidden"
     assert_includes prompt, "read-only evidence first"
     assert_includes prompt, "preconditions, privilege, blast radius and recovery"
     refute_includes prompt, "shell execution: zsh only"
-    assert_operator prompt.bytesize, :<, 4_000
+    assert_operator prompt.bytesize, :<, 7_000
+  end
+
+  def test_operator_manifest_exposes_openbsd_shell_and_rollout_contract
+    manifest = Master::AI::OperatorContract.manifest
+
+    assert_equal "zsh", manifest.dig("shells", "interactive")
+    assert_equal %w[ksh /bin/sh], manifest.dig("shells", "openbsd_base")
+    refute manifest.dig("shells", "bash_assumed")
+    assert_equal 1, manifest.dig("operations", "default_concurrency")
+    assert_equal "OPENBSD/data/operator.yml#host_scope", manifest.dig("operations", "host_scope_source")
+    assert_equal "SERIAL_ROLLOUT", manifest.dig("operations", "rollout")[7]
+  end
+
+  def test_openbsd_host_scope_is_single_host_and_never_fans_out_from_app_inventory
+    authority = YAML.safe_load_file(File.expand_path("../../OPENBSD/data/operator.yml", __dir__))
+    scope = authority.fetch("host_scope")
+
+    assert_equal "single_host", scope.fetch("model")
+    assert_equal ["vm23"], scope.fetch("canonical_hosts")
+    assert_equal true, scope.fetch("app_inventory_is_not_host_inventory")
+    assert_equal false, scope.fetch("automatic_fanout")
+    assert_equal 1, scope.fetch("rollout_concurrency")
   end
 
   def test_benchmark_rejects_linux_shell_reflexes

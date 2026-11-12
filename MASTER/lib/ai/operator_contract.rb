@@ -3,10 +3,12 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 1
+      VERSION = 2
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
+      OPENBSD_BASE_SHELLS = %w[ksh /bin/sh].freeze
+      ROLLOUT_STAGES = %w[DISCOVER INVENTORY ASSESS PLAN LAW_CHECK APPROVAL CANARY SERIAL_ROLLOUT VERIFY RECONCILE AUDIT].freeze
 
       module_function
 
@@ -22,7 +24,7 @@ module Master
       def prompt_identity
         [
           "MASTER operator ABI v#{VERSION}.",
-          "style: #{STYLE}; implementation: #{LANGUAGE}; interactive shell: #{SHELL}; target shell: shebang or verified remote shell",
+          "style: #{STYLE}; implementation: #{LANGUAGE}; interactive shell: #{SHELL}; target shell: shebang or verified remote shell; OpenBSD base shells: #{OPENBSD_BASE_SHELLS.join(" and ")}",
           "treat the repository like a Unix system: orient, inspect, act, verify",
           "each turn receives a compact live orientation frame; treat it as context, not proof",
           "broad or unfamiliar work: establish the source tree before selecting files",
@@ -56,6 +58,12 @@ module Master
           "reason through authority, topology, runtime, privilege, network edge, lifecycle, resources and recovery before acting",
           "RAILS behavior comes from its pinned source and lockfile; OPENBSD release behavior comes from the target man pages",
           "OpenBSD command work: establish release, PATH and utility availability; consult target-release manuals for unfamiliar or consequential flags; never assume GNU/Linux options or paths",
+          "shell ABI: governed local Shell is zsh; target scripts follow their shebang; OpenBSD base uses ksh or /bin/sh; bash is not assumed; distinguish expansion, arrays, globbing, word splitting, pipeline status, traps and rc.subr flow across dialects",
+          "shell proof: parse and behavior-test with the target interpreter and target release; syntax success alone is not behavioral proof",
+          "Unix/OpenBSD operations: identify host, release, architecture and PATH; diagnose processes, sockets, interfaces, routes, mounts, storage, memory, load, logs, rcctl and packages; provision supported releases and maintain PF, routing, NSD/DNS, relayd, TLS, accounts, doas, rc.d, backups and recovery",
+          "network safety: model addressing, VLANs, trust zones, routes, DNS, PF and relayd end-to-end; preserve console/out-of-band access and tested rollback before remote-access changes",
+          "host scope: OPENBSD/data/operator.yml#host_scope is authoritative; Deploy::Inventory is app inventory, not host inventory; fleet method: #{ROLLOUT_STAGES.join(" -> ")}; one-host canary, serial by default, stop at first failed gate",
+          "configuration: use idempotent fixed-argv changes; render and diff before apply; never infer host identity from DNS, app names, IP ranges or SSH reachability",
         ]
       end
 
@@ -63,6 +71,8 @@ module Master
         [
           "diagnostics: read-only evidence first; distinguish config validity, process/service state, loopback health and public reachability",
           "before mutation: state preconditions, privilege, blast radius and recovery; never upgrade, reboot, change PF/doas policy, or delete data on a guess",
+          "fleet mutation: every target must match reviewed host inventory and independently observed identity; concurrency defaults to one; wildcard fan-out is forbidden",
+          "disk, route, PF, doas, account, DNS, TLS, package, release-upgrade and reboot changes require explicit operator approval, recovery access and target-native validation; remote receipts record host/release, argv, privilege, pre/postconditions, exit status, deployed SHA and recovery result, with secrets redacted",
           "file/data parsing and rewriting: Ruby",
           "Ruby subprocesses: argv through Master::Io::Exec; avoid backticks and shell interpolation when argv is enough",
           "interactive command shell: zsh; scripts follow their shebang; remote commands follow the verified target shell and installed tools",
@@ -142,6 +152,8 @@ module Master
           "style" => STYLE,
           "language" => LANGUAGE,
           "shell" => SHELL,
+          "shells" => { "interactive" => SHELL, "openbsd_base" => OPENBSD_BASE_SHELLS, "selection" => "script_shebang_or_verified_remote_shell", "bash_assumed" => false },
+          "operations" => { "host_scope_source" => "OPENBSD/data/operator.yml#host_scope", "rollout" => ROLLOUT_STAGES, "default_concurrency" => 1, "fanout" => "explicit_host_inventory_and_approval_only" },
           "orientation" => "tree_first",
           "verification" => "evidence_before_completion",
           "subprocess" => "argv_via_Master::Io::Exec",

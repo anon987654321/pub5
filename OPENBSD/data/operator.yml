@@ -6,6 +6,19 @@ meta:
   vps: dev@brgen.no
   repo_on_vps: /home/dev/pub5
 
+# The app deploy inventory is not a host inventory. This is the complete
+# production host scope today; do not infer a fleet from app/domain entries.
+host_scope:
+  model: single_host
+  canonical_hosts: [vm23]
+  app_inventory_is_not_host_inventory: true
+  automatic_fanout: false
+  rollout_concurrency: 1
+  expansion_requires:
+    - versioned per-host identity, release, architecture and access metadata
+    - host-scoped preflight, privilege policy, health checks and recovery evidence
+    - explicit operator approval of the target set and rollout window
+
 stack:
   app_server: Falcon only on vm23 (falcon serve in rc.d). No Puma in production.
   solid_queue: >-

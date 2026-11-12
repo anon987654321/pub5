@@ -189,17 +189,26 @@ ROBUSTNESS_unbounded_retry:
 
 ROBUSTNESS_fail_safe_defaults:
   parent: ROBUSTNESS
-  statement: "A default that fails open."
+  statement: >
+    A default that fails open, grants implicit privilege, or expands a remote
+    operation beyond its explicitly inventoried and approved targets.
   resolution: review
 
 ROBUSTNESS_portability_is_verified:
   parent: ROBUSTNESS
-  statement: "A platform, release, architecture or runtime is declared supported without native proof for that target, or platform-specific assumptions leak across a boundary."
+  statement: >
+    A platform, release, architecture, runtime or shell dialect is declared
+    supported without native proof for that target; command flags, paths,
+    utility semantics, or process, network and service controls are assumed
+    from a different operating system or interpreter.
   resolution: review
 
 ROBUSTNESS_production_release_is_pinned:
   parent: ROBUSTNESS
-  statement: "A production release moves between revisions, or the deployed revision differs from the one proved by its required attestations."
+  statement: >
+    A production release moves between revisions, the deployed revision differs
+    from its required attestations, or a remote operation targets a host outside
+    the canonical, reviewed host scope.
   resolution: never
 
 ROBUSTNESS_bounded_operation_lifecycle:
