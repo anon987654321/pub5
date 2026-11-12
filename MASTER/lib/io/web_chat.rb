@@ -7,8 +7,8 @@ require "digest"
 module Master
   module Io
     # Browser bridge to free web chat UIs (Grok, ChatGPT, Kimi, Gemini). This
-    # needs a signed-in provider website profile, not an API key; it stays in the
-    # fallback pool even when API keys exist and is disabled only by explicit opt-out.
+    # needs a signed-in provider website profile, not an API key; it is an
+    # automatic fallback only in keyless mode, unless an operator opts in.
     class WebChat
       DEFAULT_TIMEOUT = 120
       ENABLE_ENV = "MASTER_WEB_CHAT"
@@ -61,7 +61,7 @@ module Master
 
       private
 
-      def enabled? = self.class.enabled?(rules: ferrum_config)
+      def enabled? = self.class.enabled?(rules: Master.models_config)
 
       def disabled_message
         "web chat needs a keyless setup or explicit opt-in (MASTER_WEB_CHAT=1 or MASTER_KEYLESS=1)"
