@@ -19,7 +19,7 @@ module Master
       class ComputePool
         include ::Master::Io::AtomicWrite
         Candidate = Struct.new(:id, :quality, :speed, :cost, :context_window,
-          :availability, :tool_support, :success_rate, :latency_factor, :evidence_factor, :score,
+          :availability, :tool_support, :success_rate, :latency_factor, :score,
           keyword_init: true)
 
         OUTCOME_HISTORY_LIMIT = 32
@@ -138,7 +138,7 @@ module Master
           return unless row
 
           score = row.fetch("score", {})
-          success_rate, latency_factor, evidence_factor = empirical_stats(id)
+          success_rate, latency_factor = empirical_stats(id)
           Candidate.new(
             id: id.to_s,
             quality: score.fetch("quality", DEFAULTS[:quality]).to_f,
@@ -149,7 +149,6 @@ module Master
             tool_support: @router.tool_capable?(id) ? 1.0 : DEFAULTS[:tool_support],
             success_rate:,
             latency_factor:,
-            evidence_factor:,
             score:,
           )
         rescue StandardError => e
@@ -163,8 +162,8 @@ module Master
           successes = stat&.fetch(:successes, 0).to_i
           success_rate = calls.zero? ? 1.0 : successes.fdiv(calls)
           latency = stat&.fetch(:latency_ms, 0).to_f
-          [success_rate, latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min,
-           recent_evidence_factor(stat)]
+          [recent_evidence_factor(stat),
+           latency.zero? ? 1.0 : [1000.0 / [latency, 1000.0].max, 1.0].min]
         end
 
         # Recent real completions outrank stale declarations. Evidence decays
@@ -202,7 +201,7 @@ module Master
         def utility(entry, task_type:, empirical_best:)
           return 0.0 if entry.availability <= 0.0
 
-          quality = entry.quality * entry.success_rate * (entry.evidence_factor || 1.0)
+          quality = entry.quality * entry.success_rate
           speed = entry.speed * entry.latency_factor
           economic_factor = [entry.cost, 0.1].max
           task_factor = task_factor(entry, task_type)
