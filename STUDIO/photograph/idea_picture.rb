@@ -43,6 +43,8 @@ module Studio
       end
 
       def write(words, film: true, duration: 5, output_stem: nil)
+        validate_model!
+        validate_film_model! if film
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
@@ -62,6 +64,7 @@ module Studio
         seconds = Integer(duration)
         raise ArgumentError, "duration must be between 1 and 10 seconds" unless seconds.between?(1, 10)
 
+        validate_film_model!
         FileUtils.mkdir_p(@directory)
         stamp = "#{safe_stem(@subject)}_film_#{Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")}_#{SecureRandom.hex(3)}"
         { "still" => source, "clip" => render_film(words, source, stamp, seconds) }
@@ -69,14 +72,31 @@ module Studio
 
       def validate_model!
         model = still_model
+        return model if @validated_still_model == model
+
         names = client.input_names(model)
         raise "Replicate model is unavailable or has no readable input schema: #{model}" if names.empty?
 
-        required = %w[prompt]
+        required = still_input("").keys.map(&:to_s)
         missing = required - names
-        raise "Replicate model #{model} is missing required inputs: #{missing.join(", ")}" unless missing.empty?
+        raise "Replicate model #{model} is missing inputs used by the still renderer: #{missing.join(", ")}" unless missing.empty?
 
+        @validated_still_model = model
         model
+      end
+
+      def validate_film_model!
+        return FILM if @validated_film_model
+
+        names = client.input_names(FILM)
+        raise "Replicate film model is unavailable or has no readable input schema: #{FILM}" if names.empty?
+
+        required = %w[prompt image duration mode aspect_ratio resolution]
+        missing = required - names
+        raise "Replicate film model #{FILM} is missing inputs used by the animation renderer: #{missing.join(", ")}" unless missing.empty?
+
+        @validated_film_model = FILM
+        FILM
       end
 
       private
