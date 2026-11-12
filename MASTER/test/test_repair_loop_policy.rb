@@ -336,6 +336,19 @@ class TestRepairLoopPolicy < Minitest::Test
       assert_operator scanner.paths.size, :>=, 2, "baseline and candidate must both be measured"
     end
   end
+  def test_best_candidate_keeps_the_actual_writer_model_with_the_selected_source
+    Dir.mktmpdir do |root|
+      path = File.join(root, "sample.rb")
+      File.write(path, "violation\n")
+      loop = build_loop(root:, bus: FakeBus.new, scanner: RecordingScanner.new, agent: Agent.new)
+      proposal = loop.send(:candidate_proposal, "clean\n", "claude-cli:claude-opus-5-5")
+
+      assert_equal "clean\n", loop.send(:best_candidate, [proposal], path, original: "violation\n")
+      assert_equal ["claude-cli:claude-opus-5-5"], Thread.current[:master_fix_candidate_author_models]
+    end
+  ensure
+    Thread.current[:master_fix_candidate_author_models] = nil
+  end
 
   def test_best_candidate_rejects_candidates_that_increase_violations
     Dir.mktmpdir do |root|
