@@ -1012,6 +1012,17 @@ def test_spinner_keeps_stopping_visible_until_the_turn_finishes
   assert @cli.instance_variable_get(:@think_stopping)
 end
 
+def test_spinner_moves_from_timed_out_provider_to_the_fallback_provider
+  @cli.instance_variable_set(:@think_mutex, Mutex.new)
+  @cli.instance_variable_set(:@think_stopping, false)
+
+  @cli.send(:update_think_stage, event: "llm:provider_outcome", model: "claude-cli:claude-opus-5-5", status: :timeout)
+  assert_equal "timeout claude-cli", @cli.instance_variable_get(:@think_stage)
+
+  @cli.send(:update_think_stage, event: "llm:send", model: "agy:gemini-3.1-pro-high")
+  assert_equal "waiting agy", @cli.instance_variable_get(:@think_stage)
+end
+
 def test_spinner_provider_changes_when_a_fallback_lane_is_sent
   stages = [
     @cli.send(:stage_for, "llm:send", model: "claude-cli:claude-opus-5-5"),
@@ -1508,6 +1519,18 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     assert_match(%r{/stop cancellation requested}, output)
     refute_match(/current turn cancelled/, output)
     assert @cli.instance_variable_get(:@turn_queue_paused)
+  end
+
+  def test_stop_reports_when_a_queued_local_operation_will_continue
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    @cli.instance_variable_set(:@pipeline_thread, nil)
+
+    output, = capture_io { @cli.send(:stop_interactive_queue) }
+
+    assert_match(/queue paused; current operation continues/, output)
+    refute_match(/cancellation requested|cancelled/, output)
   end
 
   def test_queued_ctrl_c_keeps_its_own_cancellation_reason
