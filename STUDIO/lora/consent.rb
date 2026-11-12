@@ -162,7 +162,8 @@ module Studio
       private_class_method :validate_evidence
 
       def private_evidence_file(relative, directory:)
-        return nil if relative.empty? || relative.include?("\\") || relative.start_with?(File::SEPARATOR)
+        return nil unless relative.start_with?("evidence#{File::SEPARATOR}")
+        return nil if relative.include?("\\") || relative.start_with?(File::SEPARATOR)
 
         parts = relative.split(File::SEPARATOR)
         return nil if parts.any? { |part| part.empty? || part == "." || part == ".." }
