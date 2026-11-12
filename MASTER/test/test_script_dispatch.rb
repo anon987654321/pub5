@@ -60,6 +60,20 @@ class TestScriptDispatch < Minitest::Test
     assert File.file?(path)
   end
 
+  def test_reports_signal_termination_instead_of_an_empty_exit_status
+    Dir.mktmpdir("master-tool-signal") do |root|
+      tool_dir = File.join(root, "tools")
+      FileUtils.mkdir_p(tool_dir)
+      File.write(File.join(tool_dir, "probe.rb"), "Process.kill(\"TERM\", Process.pid)\n")
+
+      result = Master::Io::ScriptDispatch.run(root:, tool: "probe")
+
+      refute result.ok?
+      assert_match(/terminated by signal TERM/, result.message)
+      refute_match(/exit=$/, result.message)
+    end
+  end
+
   def test_tool_child_inherits_master_bundle_environment
     Dir.mktmpdir("master-tool-dispatch") do |root|
       tool_dir = File.join(root, "tools", "probe")
