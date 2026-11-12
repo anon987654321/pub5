@@ -391,6 +391,73 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  def test_download_refuses_symlink_targets_before_network
+    Dir.mktmpdir do |directory|
+      original = File.join(directory, "original.wav")
+      target = File.join(directory, "download.wav")
+      File.write(original, "keep original")
+      File.symlink(original, target)
+
+      Net::HTTP.stub(:start, ->(*) { flunk "symlink target must be refused before network" }) do
+        error = assert_raises(ArgumentError) do
+          @client.download_url("https://replicate.delivery/audio.wav", target)
+        end
+        assert_match(/symlink download target/, error.message)
+      end
+
+      assert File.symlink?(target)
+      assert_equal "keep original", File.read(original)
+    end
+  end
+
+  def test_download_refuses_a_directory_as_its_target_before_network
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "download")
+      Dir.mkdir(target)
+
+      Net::HTTP.stub(:start, ->(*) { flunk "directory target must be refused before network" }) do
+        error = assert_raises(ArgumentError) do
+          @client.download_url("https://replicate.delivery/audio.wav", target)
+        end
+        assert_match(/not a regular file/, error.message)
+      end
+    end
+  end
+
+  def test_download_deadline_must_be_positive_and_finite_before_network
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "download.wav")
+      Net::HTTP.stub(:start, ->(*) { flunk "invalid deadline must be refused before network" }) do
+        [0, -1, Float::INFINITY, Float::NAN, "not-a-number"].each do |timeout|
+          assert_raises(ArgumentError) do
+            @client.download_url("https://replicate.delivery/audio.wav", target, timeout:)
+          end
+        end
+      end
+    end
+  end
+
+  def test_download_enforces_total_monotonic_deadline_and_preserves_previous_output
+    Dir.mktmpdir do |directory|
+      target = File.join(directory, "audio.wav")
+      File.write(target, "previous output")
+      response = FakeResponse.new(headers: { "content-length" => "4" }, chunks: ["be", "at"])
+      times = [0.0, 2.0]
+
+      @client.stub(:monotonic_now, -> { times.shift || 2.0 }) do
+        with_http(response) do
+          error = assert_raises(IOError) do
+            @client.download_url("https://replicate.delivery/audio.wav", target, timeout: 1)
+          end
+          assert_match(/monotonic deadline/, error.message)
+        end
+      end
+
+      assert_equal "previous output", File.read(target)
+      assert_empty Dir.children(directory).grep(/replicate-download-/)
+    end
+  end
+
   def test_download_rejects_untrusted_hosts_and_invalid_limits_before_network
     assert_raises(ArgumentError) do
       @client.download_url("https://files.example.invalid/archive.zip", "/tmp/not-written.zip")
