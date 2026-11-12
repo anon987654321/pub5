@@ -68,6 +68,7 @@ module Master
       # no terminal the Governor refused every one ("non-TTY: cannot prompt"), and
       # with one it would stop an unattended run to ask per page.
       def research_sources(queries:, sources:, max_queries: 2, max_sources: 3, &progress)
+        previous_protocol_read = Fiber[:master_protocol_read]
         Fiber[:master_protocol_read] = true
         records = []
         query_list = Array(queries).first(max_queries.to_i.clamp(0, 5))
@@ -133,7 +134,7 @@ module Master
         end
         records
       ensure
-        Fiber[:master_protocol_read] = nil
+        Fiber[:master_protocol_read] = previous_protocol_read
       end
 
       def chat(message, image: nil, stream: true, escalation_depth: 0, task_type: nil, &blk)
