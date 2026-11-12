@@ -2539,8 +2539,9 @@ law_catalogue:
       languages: [ruby]
     CLI_PROMPT_COMPOSITION:
       definition_sources: [MASTER/law/interface.rb]
-      severity: warning
-      mode: opportunity
+      severity: error
+      mode: violation
+      lifecycle: active
       languages: [ruby]
     CLI_TREE_TARGET_RESOLUTION:
       definition_sources: [MASTER/law/interface.rb]
