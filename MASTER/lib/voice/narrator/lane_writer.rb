@@ -39,13 +39,38 @@ module Master
 
         def via_claude_cli(model, system, prompt)
           claude = Master::Io::Exec.cli_binary("claude") || "claude"
-          out, _err, status = @runner.capture3(
+          out, err, status = @runner.capture3(
             SESSION_ENV, claude, "--print", "--model", model.split(":", 2).last, *TEXT_ONLY, "--system-prompt", system,
             stdin_data: prompt, timeout: Float(@config.fetch("model_timeout_s", 20))
           )
-          raise Unavailable, "claude-cli exited #{status.exitstatus.inspect}" unless status.success?
-          raise Unavailable, "claude-cli limit reached" if out.match?(/\A\s*You've hit your/i)
+          combined = [out, err].filter_map { |value| value.to_s.strip unless value.to_s.strip.empty? }.join("\n")
+          Master::Trace::Dmesg.detail(
+            "voice", "claude-cli output: #{Master::Ground::Redactor.text(combined)}"
+          ) if !combined.empty? && Master::Trace::Dmesg.detail_enabled?
 
+          # A limit or login refusal can arrive with exit status 1. Record the
+          # provider's words before interpreting the exit code, so the shared
+          # lane pool stops asking an exhausted subscription.
+          if Master::Io::LaneQuota.note(model, combined)
+            reason = Master::Io::LaneQuota.report_for(model) || "claude-cli quota or login refusal"
+            raise Unavailable, reason
+          end
+
+          lane = Master::Io::LaneSilence.lane_of(model)
+          unless status.success?
+            evidence = Master::Execution::Contract.diagnostic_fields(combined)
+            detail = if combined.empty?
+                       "no stdout or stderr"
+                     else
+                       "diagnostic #{evidence.fetch(:error_digest)[0, 12]} (#{evidence.fetch(:error_bytes)} bytes)"
+                     end
+            if Master::Io::LaneSilence.record(false, lane, reason: detail)
+              Master::Trace::Dmesg.once("llm0-#{lane}", Master::Io::LaneSilence.message(lane))
+            end
+            raise Unavailable, "claude-cli exited #{status.exitstatus.inspect}; #{detail}"
+          end
+
+          Master::Io::LaneSilence.record(true, lane)
           out
         end
 
