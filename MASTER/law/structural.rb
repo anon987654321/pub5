@@ -1069,7 +1069,7 @@ module Master
           end
 
           def variable_write?(node)
-            node.class.name.match?(/::(?:Instance|Class|Global)Variable(?:And|Or|Operator)?WriteNode\\z/)
+            node.class.name.match?(/::(?:Instance|Class|Global)Variable(?:And|Or|Operator)?WriteNode\z/)
           end
         end
 
