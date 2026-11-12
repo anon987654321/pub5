@@ -1,3 +1,4 @@
-<%= turbo_stream.replace dom_id(@post) do %>
-  <%= render "posts/post", post: @post %>
+<%= turbo_stream.replace dom_id(@post, :vote_rail) do %>
+  <%= render "shared/post_vote_rail", post: @post,
+        vote_path: post_vote_path(@post), vote_score: @post.score %>
 <% end %>
