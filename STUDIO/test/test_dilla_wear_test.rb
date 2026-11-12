@@ -27,6 +27,17 @@ class TestDillaWear < Minitest::Test
     }
   end
 
+  def test_compounded_wear_variation_is_seeded_and_bounded
+    first = Dilla::Sonitex.vary(cfg, Random.new(19))
+    repeat = Dilla::Sonitex.vary(cfg, Random.new(19))
+    refute_equal cfg, first
+    assert_equal first, repeat
+    assert_operator first.fetch("drive"), :>=, cfg.fetch("drive") * 0.90
+    assert_operator first.fetch("drive"), :<=, cfg.fetch("drive") * 1.10
+    assert_operator first.fetch("lowpass"), :>=, cfg.fetch("lowpass") * 0.95
+    assert_operator first.fetch("lowpass"), :<=, cfg.fetch("lowpass") * 1.05
+  end
+
   # DILLA rig key vinyl_crackle_density: spike density comes from the rig
   # amount, the spikes come from the run's seeded rng, and the same seed must
   # reproduce the same surface — a render the listener could re-run exactly.
