@@ -385,6 +385,7 @@ module Master
         command_manuals.concat(command_names.flat_map { |name| COMMAND_SUPPORT_MANUALS.fetch(name, []) })
         command_manuals.uniq!
         service_sources = rc_service_source_paths(tokens)
+        openbsd_sources = openbsd_source_paths(tokens)
         remote = openbsd_ssh_command?(argv)
         openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
         local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
@@ -401,6 +402,8 @@ module Master
         end
         missing_service_sources = service_source_refusals(service_sources, preflight, root: repo_root)
         return missing_service_sources.first unless missing_service_sources.empty?
+        missing_openbsd_sources = source_read_refusals(openbsd_sources, preflight, root: repo_root)
+        return missing_openbsd_sources.first unless missing_openbsd_sources.empty?
         source_staleness(preflight, root: repo_root)
       rescue ArgumentError => error
         "RTFM_FIRST cannot parse operation argv for manual preflight: #{error.message}"
@@ -446,6 +449,34 @@ module Master
           paths << "OPENBSD/etc/rc.d/#{match[1]}" if match
         end
         paths.uniq
+      end
+
+      def openbsd_source_paths(tokens)
+        Array(tokens).filter_map do |token|
+          match = token.to_s.match(%r{(?:\A|/)OPENBSD/[A-Za-z0-9_.\/-]+})
+          next unless match
+
+          candidate = match[0].sub(/\A.*?(?=OPENBSD\/)/, "")
+          candidate = candidate.sub(/[),;]+\z/, "")
+          TaskContract.safe_path(candidate)
+          candidate if candidate.start_with?("OPENBSD/")
+        rescue TaskContract::Invalid
+          nil
+        end.uniq
+      end
+
+      def source_read_refusals(paths, preflight, root:)
+        reads = Array(preflight.fetch("source_reads")).map { |row| row.fetch("path") }
+        paths.filter_map do |relative|
+          absolute = File.expand_path(relative, root)
+          unless File.file?(absolute)
+            next "RTFM_FIRST has no reviewed repository source for OpenBSD path #{relative}"
+          end
+          unless reads.include?(relative)
+            next "RTFM_FIRST requires a complete source-read receipt for OpenBSD path #{relative}"
+          end
+          nil
+        end
       end
 
       def service_source_refusals(paths, preflight, root:)

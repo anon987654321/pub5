@@ -655,6 +655,24 @@ class TestTaskContract < Minitest::Test
     assert_match(/rc\.d\(8\)/, reason)
   end
 
+  def test_openbsd_script_execution_requires_a_complete_source_read
+    contract = openbsd_task_contract
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
+    )
+
+    assert_match(/source-read receipt for OpenBSD path OPENBSD\/bin\/vps-deploy/, reason)
+  end
+
+  def test_openbsd_script_execution_accepts_a_complete_source_read
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"]),
+    )
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
+    )
+  end
+
   def test_rcctl_restart_requires_the_exact_service_source_read
     contract = openbsd_task_contract
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_command(
