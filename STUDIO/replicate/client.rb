@@ -66,8 +66,9 @@ module Studio
           Tempfile.create(["replicate-download-", ".part"], directory, binmode: true) do |file|
             Net::HTTP.start(
               uri.host, uri.port, use_ssl: true,
-              open_timeout: OPEN_TIMEOUT_SECONDS, read_timeout: READ_TIMEOUT_SECONDS,
-              write_timeout: WRITE_TIMEOUT_SECONDS
+              open_timeout: [OPEN_TIMEOUT_SECONDS, timeout].min,
+              read_timeout: [READ_TIMEOUT_SECONDS, timeout].min,
+              write_timeout: [WRITE_TIMEOUT_SECONDS, timeout].min
             ) do |http|
               http.request_get(uri.request_uri) do |res|
                 raise "download failed #{res.code}" unless res.code.to_i.between?(200, 299)
