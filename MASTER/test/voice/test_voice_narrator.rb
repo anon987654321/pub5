@@ -368,6 +368,27 @@ class TestVoiceNarrator < Minitest::Test
     assert_includes noted.last, "subscription limit"
   end
 
+  def test_lane_writer_does_not_mark_empty_cli_reply_as_healthy
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
+    runner = Object.new
+    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| ["  \n", "", status] }
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+
+    Master::Io::LaneSilence.stub(:record, ->(answered, _lane) {
+      flunk "empty narration must not report provider success" if answered
+      true
+    }) do
+      error = assert_raises(Narrator::LaneWriter::Unavailable) do
+        writer.call(system: "s", prompt: "p", max_tokens: 90)
+      end
+      assert_match(/answered nothing/, error.message)
+    end
+  end
+
   def test_lane_writer_detects_exit_zero_subscription_refusal
     lanes = Object.new
     def lanes.tier(_name) = ["claude-cli:sonnet"]
