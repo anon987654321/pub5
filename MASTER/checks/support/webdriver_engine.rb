@@ -69,7 +69,10 @@ module Deploy
       def close
         post_quietly("/session/#{@session}", method: :delete) if @session
         pid = @pid
-        return true unless pid
+        unless pid
+          @session = nil
+          return true
+        end
         unless stop_driver_group(pid)
           warn "#{@name} driver process group #{pid} is still present; PID ownership retained"
           return false
