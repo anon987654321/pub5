@@ -52,7 +52,8 @@ class Post < ApplicationRecord
   # Send only reader-independent counters across open feeds. The vote rail and
   # like button carry each reader's own pressed state, so a counter tick must
   # never replace either control for somebody else.
-  def broadcast_live_counts
+  def broadcast_live_counts(streams: nil)
+    streams ||= ["posts", self]
     score, likes_count = self.class.unscoped.where(id:).pick(:score, :likes_count)
     comments_count = comments.count
     key = ActionView::RecordIdentifier.dom_id(self)
@@ -65,7 +66,7 @@ class Post < ApplicationRecord
       )
     ].join
 
-    ["posts", self].each do |stream|
+    streams.each do |stream|
       Turbo::StreamsChannel.broadcast_stream_to(stream, content:)
     end
   rescue StandardError => e
