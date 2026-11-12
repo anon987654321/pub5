@@ -108,13 +108,18 @@ module Master
         # detector's own rescue. A missing agent is how the scanner was built, not a
         # model fault: raised inside that rescue it wrote a load_bearing swallow row
         # per file (3,627 a run), and returned as [] it read as an answer of clean.
+        # A semantic assessment that could not produce a verdict is not a
+        # provider/runtime crash and must never be confused with a clean result.
+        # Callers classify this type, not a phrase in an arbitrary error message.
+        class SemanticAssessmentInconclusive < RuntimeError; end
+
         module AgentGuard
           def agent? = !@agent.nil?
 
           def check(code, path:)
             return super if agent?
 
-            raise "semantic assessment INCONCLUSIVE: no model agent configured for #{path}"
+            raise SemanticAssessmentInconclusive, "semantic assessment INCONCLUSIVE: no model agent configured for #{path}"
           end
         end
 
