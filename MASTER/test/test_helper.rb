@@ -40,6 +40,13 @@ ENV["MASTER_NO_ENV_FILES"] = "1"
 # graded that pin instead of the choice they set up, so every pinned /fix proved red against itself.
 ENV.delete("MASTER_MODEL")
 ENV.delete("MASTER_MODEL_STRICT")
+# A live gateway in the operator's shell decided which lane routing tests saw
+# (the OpenHands sandbox auto-wires MASTER_LLM_GATEWAY_URL at boot). Tests that
+# exercise the gateway set it themselves; the rest route against empty state.
+ENV.delete("MASTER_LLM_GATEWAY_URL")
+ENV.delete("MASTER_LLM_GATEWAY_KEY")
+ENV.delete("MASTER_LLM_GATEWAY_FOLD_SYSTEM")
+ENV.delete("MASTER_LLM_READ_IDLE_S")
 
 LIVE_STATE_DIR = Dir.mktmpdir("master-test-lanes-")
 ENV["MASTER_LANE_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "lane_quota.yml")

@@ -109,7 +109,7 @@ module Master
       ].freeze
 
       def self.env(root)
-        ruby_dir = File.dirname(Operator::RubyRunner.ruby_cmd(root:))
+        ruby_dir = File.dirname(::Operator::RubyRunner.ruby_cmd(root:))
         FOREIGN_BUNDLE.to_h { |key| [key, nil] }.merge(
           "PATH" => "#{ruby_dir}:#{ENV.fetch("PATH", "")}",
           "RBENV_VERSION" => nil,

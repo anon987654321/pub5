@@ -174,13 +174,18 @@ module Master
         result.to_s
       end
 
-      def ask_once(prompt, system: nil, law: true, model: nil, image: nil, temperature: nil, format: nil, failover: true)
+      # `operation` names the caller's task so the router can constrain the lane
+      # and the outcome is recorded against it; the conversation probe asks by
+      # operation, so a bare `model` argument is not enough.
+      def ask_once(prompt, system: nil, law: true, model: nil, image: nil, temperature: nil, format: nil,
+                   failover: true, operation: nil)
         Thread.current[:master_llm_answer_model] = nil
         messages = [{ role: "user", content: prompt }]
-        chosen = model || self.model
+        chosen = model || (operation ? model_for(operation:) : self.model)
         sys = role_system(system, law:)
         result = @dispatcher.send_with_cache(chosen, messages, system: sys, stream: false, image:, temperature:, format:)
         result = retry_on_broke_lane(result, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) if failover
+        record_capability_outcome(operation:, selected_model: chosen, result:)
         remember_answer_model(result, chosen)
         raise_failure(result)
         result.to_s

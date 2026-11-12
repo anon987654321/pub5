@@ -59,16 +59,25 @@ module Master
               raise ArgumentError, "unencrypted remote gateway refused; use loopback HTTP or HTTPS"
             end
 
-            {
+            spec = {
               "base" => base.chomp("/"),
               "key_env" => %w[MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY],
               "keyless" => {},
             }
+            # A gateway that caps the system turn (the local agent server refuses
+            # a system message over 32 KiB, then accepts the same text as a user
+            # turn) cannot carry MASTER's constitution in a system role. When
+            # MASTER_LLM_GATEWAY_FOLD_SYSTEM is set, the dispatcher folds an
+            # over-limit system prompt into a leading user turn for this lane.
+            spec["fold_system"] = true if fold_system_requested?
+            spec
           end
 
           def loopback_gateway_host?(host)
             %w[localhost 127.0.0.1 ::1 [::1]].include?(host.to_s.downcase)
           end
+
+          def fold_system_requested? = ENV["MASTER_LLM_GATEWAY_FOLD_SYSTEM"].to_s != ""
 
           def hosted_index
             return {} if ENV["MASTER_NO_POOL_PROBES"] == "1"
@@ -89,6 +98,7 @@ module Master
                 quota_bucket: (spec["quota_bucket"] || name).to_s,
                 posture: PrivacyPosture.parse(spec["privacy_posture"]),
               }
+              endpoint[:fold_system] = true if spec["fold_system"]
               concurrency_key = if key.nil? && spec.key?("keyless_max_concurrency")
                                    "keyless_max_concurrency"
                                  else

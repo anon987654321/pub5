@@ -37,7 +37,7 @@ class TestCliAsciiFace < Minitest::Test
   end
 
   def test_mesh_parser_and_face_helpers_are_not_public_api
-    mesh = Face::Mesh.parse("v 0 0 0\\nv 1 0 0\\nv 0 1 0\\nf 1 2 3\\n")
+    mesh = Face::Mesh.parse("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n")
 
     assert_respond_to Face::Mesh, :parse
     assert_respond_to Face::Mesh, :read

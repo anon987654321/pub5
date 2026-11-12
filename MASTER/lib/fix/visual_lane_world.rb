@@ -220,7 +220,7 @@ module Master
 
         def build_css(app)
           require_relative "../operator/design_run"
-          Operator::DesignRun.build_css(app, root: @repo_root)
+          ::Operator::DesignRun.build_css(app, root: @repo_root)
         end
 
         def probe

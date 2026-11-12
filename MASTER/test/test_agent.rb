@@ -421,8 +421,31 @@ end
     refute_match(/\b(will|would|could|might)\b/i, prose)
     assert_includes code, "will = :kept"
   end
-  # Single-shot calls use the same live chain as chat. A provider error must
-  # not strand the turn on one lane.
+  # The conversation probe asks a live turn by operation. ask_once used to
+  # accept only `model`, so the call raised ArgumentError and every live
+  # conversation case reported "unknown keyword: :operation" instead of a grade.
+  def test_ask_once_routes_and_records_by_operation
+    calls = []
+    recorded = []
+    fake = Object.new
+    fake.define_singleton_method(:send_with_cache) do |model, *_args, **|
+      calls << model
+      Master::Result.ok("answer")
+    end
+    @agent.instance_variable_set(:@dispatcher, fake)
+
+    router = Object.new
+    def router.constrained_for(operation:) = "conversation-model"
+    def router.record_capability_outcome(**) = nil
+    router.define_singleton_method(:record_capability_outcome) { |**kw| recorded << kw }
+    @agent.instance_variable_set(:@model_router, router)
+
+    assert_equal "answer", @agent.ask_once("hi", operation: :conversation_probe)
+    assert_equal %w[conversation-model], calls
+    assert_equal [:conversation_probe], recorded.map { |row| row[:task_type] }
+    assert_equal [true], recorded.map { |row| row[:success] }
+  end
+
   def test_ask_once_walks_the_live_fallback_chain
     calls = []
     fake = Object.new

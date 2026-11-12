@@ -24,11 +24,13 @@ fix_time:
     file_s: 240
     run_s: 1800
     stall_s: 600
+    probe_s: 20
   lanes:
     claude-cli:
       file_s: 900
       run_s: 7200
       stall_s: 900
+      probe_s: 90
     # The hosted gateway lane (model ids like gateway:glm-5.3) answers a
     # repair in one to four minutes like claude-cli does; the defaults above
     # timed out its repairs and left the lane silent mid-run. Same headroom
@@ -37,6 +39,11 @@ fix_time:
       file_s: 900
       run_s: 7200
       stall_s: 900
+      # The readiness probe carries the lane's full system prompt, so a cold
+      # gateway answer takes 18-30 s. The default's 20 s dropped the only lane
+      # a pinned run had (2026-11-12: "no model provider answered after 4
+      # readiness checks") and the run ended before its first file.
+      probe_s: 90
 
 governor:
   # Calls a minute per tool tier; a ceiling against a runaway loop. Absent means no limit.

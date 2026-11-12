@@ -20,8 +20,21 @@ module Master
 
       module_function
 
-      def budget_s
-        Integer(ENV.fetch("MASTER_FIX_PROBE_S", BUDGET_S.to_s), exception: false) || BUDGET_S
+      def budget_s(model: nil)
+        override = Integer(ENV["MASTER_FIX_PROBE_S"].to_s, exception: false)
+        return override if override&.positive?
+
+        lane = model.to_s.empty? ? nil : Master::Io::LaneState.lane_of(model)
+        Integer(config.dig("lanes", lane, "probe_s") || config.fetch("default").fetch("probe_s"))
+      end
+
+      # Read on every call for the same reason FixTime does: a test that writes
+      # its own limits must not depend on the order the suite ran in.
+      def config
+        section = Master.config_section("fix_time")
+        raise "data/budgets.yml has no fix_time section" unless section.is_a?(Hash) && section["default"].is_a?(Hash)
+
+        section
       end
 
       def enabled? = ENV["MASTER_FIX_PROBE"] != "0"
@@ -29,11 +42,13 @@ module Master
       # Probes the first model of each distinct live lane, in selection order,
       # and drops the lanes that are slow or dead. `ask` is
       # ->(model) { reply }, so a test drives it with a fake lane.
-      def run(models:, ask:, budget: budget_s, max_lanes: MAX_LANES, stop_on_success: false,
+      # A nil `budget` reads the per-lane allowance (budget_s(model:)), so a
+      # lane that answers in a minute is not dropped by the default's seconds.
+      def run(models:, ask:, budget: nil, max_lanes: MAX_LANES, stop_on_success: false,
               clock: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
         rows = []
         pick(models, max_lanes).each do |model|
-          row = probe(model, ask:, budget:, clock:)
+          row = probe(model, ask:, budget: budget || budget_s(model:), clock:)
           rows << row
           Master::Io::LaneQuota.drop_for_run!(row.lane, "probe #{row.status}: #{row.detail}") unless row.status == :ok
           break if stop_on_success && row.status == :ok

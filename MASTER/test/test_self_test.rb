@@ -511,5 +511,4 @@ class TestSelfTest < Minitest::Test
         name: two
     YAML
   end
-
 end

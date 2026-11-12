@@ -26,8 +26,6 @@ module Master
 
         private
 
-        # Tests substitute their own idle budget; no operator surface.
-        def read_idle_timeout_s = READ_IDLE_TIMEOUT_S
         REPLICATE_API = "https://api.replicate.com/v1"
         REPLICATE_WAIT_S = 60
         REPLICATE_MAX_POLLS = 240
@@ -38,10 +36,11 @@ module Master
         REPLICATE_API_HOST = "api.replicate.com"
         REPLICATE_MAX_TOKENS = 4096
 
-        # Tests substitute their own idle budget; no operator surface.
-        def read_idle_timeout_s = READ_IDLE_TIMEOUT_S
-
-        private
+        # Tests substitute their own idle budget; no operator surface. An operator
+        # may widen it for a slow gateway: MASTER_LLM_READ_IDLE_S.
+        def read_idle_timeout_s
+          Integer(ENV.fetch("MASTER_LLM_READ_IDLE_S", READ_IDLE_TIMEOUT_S.to_s), exception: false) || READ_IDLE_TIMEOUT_S
+        end
 
         def local_server_model?(model_id) = model_id.to_s.start_with?("local:")
 
@@ -103,7 +102,8 @@ module Master
           headers = key ? { "Authorization" => "Bearer #{key}" } : {}
           messages = fit_to_window(selected_model, messages)
           request = lambda do
-            openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:, lane: name)
+            openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:,
+                        lane: name, fold_system: endpoint[:fold_system] == true)
           end
           return request.call unless endpoint[:max_concurrency]
 
@@ -116,8 +116,22 @@ module Master
           Result.err("#{name}: concurrency budget is saturated; trying the next lane", category: :timeout)
         end
 
-        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {})
-          body = { model:, messages: ollama_messages(messages, sys), stream: true }
+        # The gateway cap is on the system role only (the agent server refuses a
+        # system turn over 32 KiB but accepts the same text as a user turn). A
+        # system turn that would be refused is delivered as a leading user turn
+        # instead, so the lane carries the constitution it could not otherwise.
+        def fold_long_system(rows, limit: 32_768)
+          head = rows.first
+          return rows unless head.is_a?(Hash) && head[:role].to_s == "system"
+          return rows if head[:content].to_s.bytesize <= limit
+
+          [{ role: "user", content: head[:content].to_s }] + rows.drop(1)
+        end
+
+        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false)
+          rows = ollama_messages(messages, sys)
+          rows = fold_long_system(rows) if fold_system
+          body = { model:, messages: rows, stream: true }
           body[:temperature] = temperature if temperature
           request = Net::HTTP::Post.new(URI("#{base.chomp('/')}/chat/completions").request_uri,
                                         headers.merge("Content-Type" => "application/json"))
@@ -161,7 +175,7 @@ module Master
             answer
           end
         rescue Net::ReadTimeout => e
-          Result.err("#{lane} went silent longer than #{READ_IDLE_TIMEOUT_S}s: #{e.message}", category: :timeout)
+          Result.err("#{lane} went silent longer than #{read_idle_timeout_s}s: #{e.message}", category: :timeout)
         end
 
         # SSE deltas as they arrive. An event is the fields up to the next blank

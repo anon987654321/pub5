@@ -51,13 +51,21 @@ module Deploy
     # inherits BUNDLE_GEMFILE from it: every app then booted on MASTER/Gemfile and died with
     # "cannot load bootsnap/setup" or "rails/commands". Each app is pinned to its own Gemfile
     # and the parent's bundler state is dropped, so the same command works from any caller.
+    #
+    # The BUNDLER_ORIG_* handles are the same leak by another door: a parent that ran
+    # bundler/setup exports them, and the child's own bundler/setup restores GEM_HOME,
+    # GEM_PATH and BUNDLE_PATH from them, overwriting the nils below with MASTER's paths.
+    # An app then resolved its lockfile against MASTER's bundle and died on GemNotFound
+    # naming gems MASTER never installs. Dropping the restore handles keeps the nils true.
     def self.env_for(app)
-      { "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
-        "RAILS_LOG_LEVEL" => ENV.fetch("RAILS_LOG_LEVEL", "info"),
-        "BUNDLE_GEMFILE" => File.join(app[:dir], "Gemfile"),
-        "BUNDLE_BIN_PATH" => nil, "BUNDLER_SETUP" => nil, "BUNDLER_VERSION" => nil, "RUBYOPT" => nil, "RUBYLIB" => nil,
-        "GEM_HOME" => nil, "GEM_PATH" => nil, "BUNDLE_PATH" => nil, "BUNDLE_APP_CONFIG" => nil,
-        "BUNDLE_USER_CONFIG" => nil, "BUNDLE_DISABLE_SHARED_GEMS" => nil, "BUNDLE_LOCKFILE" => nil }
+      env = { "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
+              "RAILS_LOG_LEVEL" => ENV.fetch("RAILS_LOG_LEVEL", "info"),
+              "BUNDLE_GEMFILE" => File.join(app[:dir], "Gemfile"),
+              "BUNDLE_BIN_PATH" => nil, "BUNDLER_SETUP" => nil, "BUNDLER_VERSION" => nil, "RUBYOPT" => nil, "RUBYLIB" => nil,
+              "GEM_HOME" => nil, "GEM_PATH" => nil, "BUNDLE_PATH" => nil, "BUNDLE_APP_CONFIG" => nil,
+              "BUNDLE_USER_CONFIG" => nil, "BUNDLE_DISABLE_SHARED_GEMS" => nil, "BUNDLE_LOCKFILE" => nil }
+      ENV.each_key { |key| env[key] = nil if key.start_with?("BUNDLER_ORIG_") }
+      env
     end
 
     def self.listening?(port)

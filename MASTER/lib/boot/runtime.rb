@@ -52,6 +52,8 @@ module Master
       ENV["MASTER_UNSAFE_PROCESS_DEFAULTS"] = "1" if unsafe
       require_relative "../ground/env_loader"
       Ground::EnvLoader.load!
+      require_relative "../ground/openhands_sandbox"
+      Ground::OpenhandsSandbox.wire!
       install_regexp_timeout!
       apply_process_defaults!
       require_relative "../ground/host_budget"
