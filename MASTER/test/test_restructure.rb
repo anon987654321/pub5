@@ -82,9 +82,10 @@ class TestRestructure < Minitest::Test
     value = result.value!
     refute value.fetch(:already_applied)
     assert_includes value.fetch(:diff), "second.rb"
-    assert_equal before, plan.paths.to_h do |path|
+    after = plan.paths.to_h do |path|
       [path, File.file?(File.join(@repo, path)) ? read(path) : nil]
     end
+    assert_equal before, after
     assert_empty sh("git", "status", "--porcelain", chdir: @repo)
   end
 
@@ -106,6 +107,35 @@ class TestRestructure < Minitest::Test
     refute result.ok?
     assert_includes result.message, "symlinked path"
     assert_equal "OUTSIDE = 1\\n", File.read(outside)
+  end
+
+  def test_rollback_preserves_a_concurrent_edit_to_a_written_path
+    path = "MASTER/lib/big.rb"
+    original = read(path)
+    plan = Restructure::Plan.parse(<<~TEXT)
+      SUMMARY: Change Big
+      OPERATIONS: merge
+      === WRITE #{path}
+      class Big
+        def a = :planned
+        def b = 2
+      end
+      === END
+    TEXT
+
+    result = restructure.call(
+      plan,
+      message: "Change Big",
+      review: lambda do |_diff|
+        write(path, "class Big; def a = :someone_elses_edit; end; end\\n")
+        "concurrent edit arrived during review"
+      end,
+    )
+
+    refute result.ok?
+    assert_includes result.message, "concurrent modification preserved"
+    assert_equal "class Big; def a = :someone_elses_edit; end; end\\n", read(path)
+    refute_equal original, read(path)
   end
 
   def test_a_plan_reads_its_explicit_operations
