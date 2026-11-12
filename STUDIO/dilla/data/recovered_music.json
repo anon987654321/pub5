@@ -1,5 +1,5 @@
 {
-  "comment": "Recovered chord transcriptions. Sources are the same measured references MASTER's production_dna carries (fantastic vol 2 / vol 1, Donuts, The Shining). These play as first-class progressions; no second copy of the data lives anywhere else.",
+  "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies.",
   "provenance": {
     "transcription_sources": [
       "https://jdillabasslines.wordpress.com/fantastic-vol-2/",
@@ -9,117 +9,914 @@
       "The Guardian, J Dilla: the Mozart of hip-hop (2011)",
       "21st Century Funk: A Microtiming Analysis of the Beats of J Dilla (academia.edu 29812748)"
     ],
-    "note": "Recovered 2026-11 from the surviving production_dna tables after the STUDIO/dilla tree was found untracked. Chord symbols keep the transcribers' spellings."
+    "note": "Recovered 2026-11 from the surviving production_dna tables after the STUDIO/dilla tree was found untracked. Chord symbols keep the transcribers' spellings.",
+    "historical_corpus_restoration": {
+      "repository": "anon987654321/pub4",
+      "commit": "3e39fd7802f62e1befa6e0f5db78d1ccae92b517",
+      "file": "STUDIO/dilla/dilla.rb",
+      "section": "ARTIST_VERIFIED_PROGRESSIONS",
+      "note": "Restored canonical recordings with duplicate aliases deduplicated. The source table's artist_verified label is retained as provenance; individual source descriptions are preserved per row."
+    }
   },
   "progressions": [
     {
       "id": "fall_in_love",
-      "title": "Fall in Love (recovered)",
-      "key": "Fm", "bpm": 91, "loop_bars": 4,
-      "chords": ["Bbm9", "Abmaj9", "Fm7", "Fm9"],
-      "roman": ["iv", "bIII", "i7", "i"],
-      "sample": "Gap Mangione, Diana in the Autumn Wind (1968)",
-      "feel": { "bass": "dub", "melody": "sweet_soul", "swing": 55.0, "grit": 0.7 }
+      "title": "Fall in Love (source transcription)",
+      "key": "Ebm",
+      "bpm": 88,
+      "loop_bars": 4,
+      "chords": [
+        "Ebm7fil",
+        "Bbm7fil",
+        "Ebm7fil",
+        "Bbm7fil"
+      ],
+      "roman": [
+        "iv",
+        "bIII",
+        "i7",
+        "i"
+      ],
+      "sample": "Gap Mangione — Diana in the Autumn Wind",
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54,
+        "grit": 0.7
+      },
+      "bars_per_chord": 1
     },
     {
       "id": "get_dis_money",
-      "title": "Get Dis Money (recovered)",
-      "key": "C#m", "bpm": 90, "loop_bars": 7,
-      "chords": ["C#m7", "G#m7", "A#7", "C#m9"],
-      "roman": ["i", "v", "VI7", "i"],
+      "title": "Get Dis Money (source transcription)",
+      "key": "E pedal",
+      "bpm": 82,
+      "loop_bars": 7,
+      "chords": [
+        "D/E",
+        "Db/E",
+        "C/E",
+        "Bm/E",
+        "Bbm/E",
+        "Am/E"
+      ],
+      "roman": [
+        "i",
+        "v",
+        "VI7",
+        "i"
+      ],
       "pedal": "E",
-      "bars_per_chord": 2,
-      "sample": "Herbie Hancock, Come Running to Me (1978), slowed 4 semitones, bass tuned 50 cents sharp",
-      "feel": { "bass": "pedal", "melody": "dorian_moan", "swing": 56.0, "grit": 0.8 }
+      "bars_per_chord": 1.1666666666666667,
+      "sample": "Herbie Hancock — Come Running To Me (Sunlight, 2:08)",
+      "feel": {
+        "bass": "pedal",
+        "melody": "dorian_moan",
+        "swing": 56,
+        "grit": 0.8
+      }
     },
     {
       "id": "players",
       "title": "Players (recovered)",
-      "key": "Ebm", "bpm": 93, "loop_bars": 4,
-      "chords": ["Ebm9", "Abm7", "Fm9", "Bbm7"],
-      "roman": ["i7", "iv7", "ii7", "v7"],
+      "key": "Ebm",
+      "bpm": 93,
+      "loop_bars": 4,
+      "chords": [
+        "Ebm9",
+        "Abm7",
+        "Fm9",
+        "Bbm7"
+      ],
+      "roman": [
+        "i7",
+        "iv7",
+        "ii7",
+        "v7"
+      ],
       "sample": "The Singers Unlimited, Clair (1974)",
-      "feel": { "bass": "walk", "melody": "horn_stabs", "swing": 54.0, "grit": 0.6 }
+      "feel": {
+        "bass": "walk",
+        "melody": "horn_stabs",
+        "swing": 54,
+        "grit": 0.6
+      }
     },
     {
       "id": "clair_moon",
-      "title": "Clair de Lune soup (recovered climax)",
-      "key": "E", "bpm": 96, "loop_bars": 4,
-      "chords": ["Emaj9", "G#m7", "G#m9", "G#maj7"],
-      "roman": ["Imaj7", "iii7", "iii7", "IIImaj7"],
+      "title": "Clair de Lune / Tomita study (engine adaptation)",
+      "key": "E",
+      "bpm": 96,
+      "loop_bars": 4,
+      "chords": [
+        "Emaj9",
+        "G#m7",
+        "G#m9",
+        "G#maj7"
+      ],
+      "roman": [
+        "Imaj7",
+        "iii7",
+        "iii7",
+        "IIImaj7"
+      ],
       "sample": "Isao Tomita, Clair de Lune; Steve Miller Band, Space Intro",
-      "feel": { "bass": "dub", "melody": "sweet_soul", "swing": 53.0, "grit": 0.5 }
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 53,
+        "grit": 0.5
+      }
     },
     {
       "id": "time_donut",
-      "title": "Time: The Donut of the Heart (recovered)",
-      "key": "Ab/Fm", "bpm": 94, "loop_bars": 4,
-      "chords": ["Dbmaj9", "Cm7", "Fm9", "Bbm7"],
-      "roman": ["IVmaj7", "iii7", "vi7", "ii7"],
-      "sample": "The Jackson 5, All I Do Is Think of You (1975); Sweet Charles, Yes It's You",
-      "feel": { "bass": "thumb", "melody": "music_box", "swing": 55.5, "grit": 0.75 }
+      "title": "Time (The Donut of the Heart) — source chart",
+      "key": "Ab",
+      "bpm": 86,
+      "loop_bars": 4,
+      "chords": [
+        "Dbmaj7",
+        "Cm7",
+        "Fm7",
+        "Bbm7"
+      ],
+      "roman": [
+        "IVmaj7",
+        "iii7",
+        "vi7",
+        "ii7"
+      ],
+      "sample": "Jackson 5 — All I Do Is Think of You; Sweet Charles — Yes It's You",
+      "feel": {
+        "bass": "thumb",
+        "melody": "music_box",
+        "swing": 55.5,
+        "grit": 0.75
+      },
+      "bars_per_chord": 1,
+      "alternate_chords": [
+        "Dbmaj9",
+        "Cm9",
+        "Fm9",
+        "Bbm9"
+      ],
+      "melody_midi": [
+        76,
+        74,
+        72,
+        69,
+        67,
+        65
+      ],
+      "melody_status": "historical measured sample/chop contour; not a complete note-for-note lead transcription"
     },
     {
       "id": "selfish_g",
       "title": "Selfish (recovered)",
-      "key": "G", "bpm": 90, "loop_bars": 4,
-      "chords": ["Cmaj9", "Bm7", "Am9", "D13"],
-      "roman": ["IVmaj7", "iii7", "ii7", "V7"],
+      "key": "G",
+      "bpm": 90,
+      "loop_bars": 4,
+      "chords": [
+        "Cmaj9",
+        "Bm7",
+        "Am9",
+        "D13"
+      ],
+      "roman": [
+        "IVmaj7",
+        "iii7",
+        "ii7",
+        "V7"
+      ],
       "sample": "Slum Village, Selfish",
-      "feel": { "bass": "walk", "melody": "sweet_soul", "swing": 54.0, "grit": 0.55 }
+      "feel": {
+        "bass": "walk",
+        "melody": "sweet_soul",
+        "swing": 54,
+        "grit": 0.55
+      }
     },
     {
       "id": "two_way_d",
       "title": "5 Ela dual-tonal (recovered)",
-      "key": "Dm/A", "bpm": 92, "loop_bars": 3,
-      "chords": ["Dm9", "Em7", "C#m7"],
-      "roman": ["i9", "ii7", "#vii7"],
+      "key": "Dm/A",
+      "bpm": 92,
+      "loop_bars": 3,
+      "chords": [
+        "Dm9",
+        "Em7",
+        "C#m7"
+      ],
+      "roman": [
+        "i9",
+        "ii7",
+        "#vii7"
+      ],
       "sample": "The Gap Band, Yearning for Your Love; Patrice Rushen, Remind Me",
-      "feel": { "bass": "dub", "melody": "dorian_moan", "swing": 56.0, "grit": 0.8 }
+      "feel": {
+        "bass": "dub",
+        "melody": "dorian_moan",
+        "swing": 56,
+        "grit": 0.8
+      }
     },
     {
       "id": "so_far_to_go",
       "title": "So Far to Go (recovered)",
-      "key": "Bb", "bpm": 88, "loop_bars": 4,
-      "chords": ["Dm9", "Cm9", "F13", "Gm9"],
-      "roman": ["iii7", "ii7", "V7", "vi7"],
+      "key": "Bb",
+      "bpm": 88,
+      "loop_bars": 4,
+      "chords": [
+        "Dm9",
+        "Cm9",
+        "F13",
+        "Gm9"
+      ],
+      "roman": [
+        "iii7",
+        "ii7",
+        "V7",
+        "vi7"
+      ],
       "sample": "The Isley Brothers, Don't Say Goodnight (1980)",
-      "feel": { "bass": "dub", "melody": "sweet_soul", "swing": 55.0, "grit": 0.65 }
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 55,
+        "grit": 0.65
+      }
     },
     {
       "id": "look_of_love",
       "title": "Look of Love (recovered voicing)",
-      "key": "G", "bpm": 89, "loop_bars": 4,
-      "chords": ["Bm7", "Bm7", "Cmaj9", "Em9"],
-      "roman": ["iii7", "iii7", "IVmaj7", "vi7"],
+      "key": "G",
+      "bpm": 89,
+      "loop_bars": 4,
+      "chords": [
+        "Bm7",
+        "Bm7",
+        "Cmaj9",
+        "Em9"
+      ],
+      "roman": [
+        "iii7",
+        "iii7",
+        "IVmaj7",
+        "vi7"
+      ],
       "sample": "Minnie Riperton, Inside My Love (1975), repitched",
-      "feel": { "bass": "dub", "melody": "dorian_moan", "swing": 54.5, "grit": 0.7 }
+      "feel": {
+        "bass": "dub",
+        "melody": "dorian_moan",
+        "swing": 54.5,
+        "grit": 0.7
+      }
     },
     {
       "id": "accordion_dm",
       "title": "Accordion skeleton (recovered)",
-      "key": "Dm", "bpm": 96, "loop_bars": 4,
-      "chords": ["Dm9", "Gm9", "Am7", "Dm11"],
-      "roman": ["i", "iv", "v", "i"],
+      "key": "Dm",
+      "bpm": 96,
+      "loop_bars": 4,
+      "chords": [
+        "Dm9",
+        "Gm9",
+        "Am7",
+        "Dm11"
+      ],
+      "roman": [
+        "i",
+        "iv",
+        "v",
+        "i"
+      ],
       "sample": "Madlib, Accordion (Madvillainy)",
-      "feel": { "bass": "dub", "melody": "music_box", "swing": 52.5, "grit": 0.85 }
+      "feel": {
+        "bass": "dub",
+        "melody": "music_box",
+        "swing": 52.5,
+        "grit": 0.85
+      }
     },
     {
       "id": "untitled_a",
       "title": "Untitled / Herbie flip (recovered)",
-      "key": "A", "bpm": 90, "loop_bars": 4,
-      "chords": ["Amaj9", "Dm11", "E7#9", "D9"],
-      "roman": ["I", "iv", "V7", "IV7"],
+      "key": "A",
+      "bpm": 90,
+      "loop_bars": 4,
+      "chords": [
+        "Amaj9",
+        "Dm11",
+        "E7#9",
+        "D9"
+      ],
+      "roman": [
+        "I",
+        "iv",
+        "V7",
+        "IV7"
+      ],
       "sample": "Herbie Hancock, You'll Know When You Get There (1971)",
-      "feel": { "bass": "walk", "melody": "horn_stabs", "swing": 54.0, "grit": 0.7 }
+      "feel": {
+        "bass": "walk",
+        "melody": "horn_stabs",
+        "swing": 54,
+        "grit": 0.7
+      }
     },
     {
       "id": "thelonious_eb",
       "title": "Thelonious two-chord (recovered)",
-      "key": "Ebm", "bpm": 92, "loop_bars": 4,
-      "chords": ["Ebm9", "Bbm7", "Ebm9", "Abm9"],
-      "roman": ["i", "v", "i", "iv"],
-      "feel": { "bass": "dub", "melody": "dorian_moan", "swing": 56.0, "grit": 0.8 }
+      "key": "Ebm",
+      "bpm": 92,
+      "loop_bars": 4,
+      "chords": [
+        "Ebm9",
+        "Bbm7",
+        "Ebm9",
+        "Abm9"
+      ],
+      "roman": [
+        "i",
+        "v",
+        "i",
+        "iv"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "dorian_moan",
+        "swing": 56,
+        "grit": 0.8
+      }
+    }
+  ],
+  "artist_verified_progressions": [
+    {
+      "id": "time_donut",
+      "title": "Time (The Donut of the Heart)",
+      "artist": "J Dilla",
+      "album": "Donuts",
+      "key": "Ab",
+      "bpm": 86,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Dbmaj7",
+        "Cm7",
+        "Fm7",
+        "Bbm7"
+      ],
+      "alternate_chords": [
+        "Dbmaj9",
+        "Cm9",
+        "Fm9",
+        "Bbm9"
+      ],
+      "feel": {
+        "bass": "thumb",
+        "melody": "music_box",
+        "swing": 55.5
+      },
+      "melody_midi": [
+        76,
+        74,
+        72,
+        69,
+        67,
+        65
+      ],
+      "melody_status": "historical measured sample/chop contour; not a complete note-for-note lead transcription",
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Hooktheory: Ab IV–iii–vi–ii (Dbmaj7–Cm7–Fm7–Bbm7)",
+        "RG-69 researched Donuts symbols",
+        "Historical pub4 INLINE_SONIC_PROFILES.dilla_timeless: melody_chop_hz [659.25, 587.33, 523.25, 440.0, 392.0, 349.23]"
+      ]
+    },
+    {
+      "id": "fall_in_love",
+      "title": "Fall in Love",
+      "artist": "Slum Village",
+      "producer": "J Dilla",
+      "sample": "Gap Mangione — Diana in the Autumn Wind",
+      "key": "Ebm",
+      "bpm": 88,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Ebm7fil",
+        "Bbm7fil",
+        "Ebm7fil",
+        "Bbm7fil"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "r/jdilla: “chords for Fall in Love?” — sample identification: Gap Mangione, Diana in the Autumn Wind",
+        "ChordU Ebm7/Bbm7 loop transcription",
+        "Historical pub4 extended chord voicings: Ebm7fil and Bbm7fil"
+      ]
+    },
+    {
+      "id": "get_dis_money",
+      "title": "Get Dis Money",
+      "artist": "Slum Village",
+      "producer": "J Dilla",
+      "sample": "Herbie Hancock — Come Running To Me (Sunlight, 2:08)",
+      "key": "E pedal",
+      "bpm": 82,
+      "loop_bars": 7,
+      "bars_per_chord": 1.1666666666666667,
+      "pedal": "E",
+      "chords": [
+        "D/E",
+        "Db/E",
+        "C/E",
+        "Bm/E",
+        "Bbm/E",
+        "Am/E"
+      ],
+      "feel": {
+        "bass": "pedal",
+        "melody": "dorian_moan",
+        "swing": 56
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Ethan Hein, 2022 transcription: https://ethanhein.com/wp/2022/get-dis-money/",
+        "D/E = E9sus4; then Db/E, C/E, Bm/E, Bbm/E and Am/E over the E pedal"
+      ]
+    },
+    {
+      "id": "climax_slum_village",
+      "title": "Climax",
+      "artist": "Slum Village",
+      "producer": "J Dilla",
+      "key": "E",
+      "bpm": 94,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Emaj7",
+        "G#m7",
+        "C#m7",
+        "E7climax"
+      ],
+      "feel": {
+        "bass": "walk",
+        "melody": "sweet_soul",
+        "swing": 53
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "ChordU Climax transcription",
+        "Historical pub4 extended chord voicings: Emaj7 and E7climax"
+      ]
+    },
+    {
+      "id": "pavanne_jamal",
+      "title": "Pavanne",
+      "artist": "Ahmad Jamal",
+      "composer": "Morton Gould",
+      "recorded": "1955-10-25",
+      "key": "D minor / Eb minor",
+      "loop_bars": 8,
+      "bars_per_chord": 4,
+      "chords": [
+        "Dm7",
+        "Ebm7"
+      ],
+      "feel": {
+        "bass": "pedal",
+        "melody": "music_box",
+        "swing": 50
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Stuart Nicholson, The Ahmad Jamal Live Performances 1958–62: Dm7 vamp followed by Ebm7 vamp",
+        "Miles Davis, 1958: “All my inspiration today comes from the Chicago pianist Ahmad Jamal”"
+      ]
+    },
+    {
+      "id": "so_what_miles",
+      "title": "So What",
+      "artist": "Miles Davis",
+      "album": "Kind of Blue",
+      "derived_from": "Ahmad Jamal — Pavanne (1955)",
+      "key": "D Dorian / Eb Dorian",
+      "loop_bars": 32,
+      "chord_bars": [
+        16,
+        8,
+        8
+      ],
+      "chords": [
+        "Dm7",
+        "Ebm7",
+        "Dm7"
+      ],
+      "feel": {
+        "bass": "pedal",
+        "melody": "music_box",
+        "swing": 50
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Kind of Blue (1959), 32-bar AABA: Dm7 for 16 bars, Ebm7 for 8, Dm7 for 8",
+        "Coltrane's Impressions (1961) reuses the form and harmony"
+      ]
+    },
+    {
+      "id": "untitled_dangelo_add9",
+      "title": "Untitled (How Does It Feel)",
+      "artist": "D'Angelo",
+      "album": "Voodoo",
+      "key": "D",
+      "loop_bars": 8,
+      "bars_per_chord": 1,
+      "chords": [
+        "Dadd9",
+        "A7sus4",
+        "G6",
+        "C9",
+        "F#m9",
+        "B9",
+        "Em9",
+        "Asus9"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "ChordU / Voodoo published chord analysis"
+      ]
+    },
+    {
+      "id": "untitled_dangelo_mixo",
+      "title": "Untitled (How Does It Feel) — 6/8 reading",
+      "artist": "D'Angelo",
+      "album": "Voodoo",
+      "key": "D Mixolydian",
+      "bpm": 113,
+      "meter": "6/8",
+      "loop_bars": 5,
+      "bars_per_chord": 1,
+      "chords": [
+        "Bm9/D",
+        "D6/9/F#",
+        "Cadd9/G",
+        "Am7",
+        "G13"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "rendering_note": "The source meter is retained as metadata; the current sequencer's bar clock is 4/4.",
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Hooktheory theorytab: https://www.hooktheory.com/theorytab/view/dangelo/untitled-how-does-it-feel",
+        "Play Like the Greats: note-for-note tabs for Untitled (How Does It Feel)"
+      ]
+    },
+    {
+      "id": "brown_sugar_dangelo",
+      "title": "Brown Sugar",
+      "artist": "D'Angelo",
+      "album": "Brown Sugar",
+      "key": "E minor",
+      "bpm": 83,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Em9",
+        "A13",
+        "Bm9",
+        "F13"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Open Studio / youllhearit.com Brown Sugar episode: chords and gospel lineage",
+        "TalkBass Brown Sugar discussion: F13 tritone-sub approach"
+      ]
+    },
+    {
+      "id": "spanish_joint_dangelo",
+      "title": "Spanish Joint",
+      "artist": "D'Angelo",
+      "album": "Brown Sugar",
+      "key": "D minor",
+      "bpm": 88,
+      "loop_bars": 8,
+      "bars_per_chord": 1,
+      "chords": [
+        "Dm9",
+        "Am9",
+        "Dm9",
+        "Gm7",
+        "Bbmaj7",
+        "Am7",
+        "D7b9",
+        "Gm7"
+      ],
+      "feel": {
+        "bass": "thumb",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "James L. Salter transcription: jameslsalter.co.uk/transcriptions/dangelospanishjoint",
+        "Guitar World, D'Angelo's Voodoo at Twenty-Five (Charlie Hunter); Brown Sugar charts at guitartabs.cc"
+      ]
+    },
+    {
+      "id": "really_love_dangelo",
+      "title": "Really Love",
+      "artist": "D'Angelo",
+      "album": "Black Messiah",
+      "key": "A minor",
+      "bpm": 79,
+      "loop_bars": 5,
+      "bars_per_chord": 1,
+      "chords": [
+        "Am7",
+        "D9",
+        "Gmaj7",
+        "B7#9",
+        "Em7"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Ethan Hein professor breakdown, via MusicRadar: lopsided phrasing",
+        "Hooktheory theorytab: dangelo/really-love"
+      ]
+    },
+    {
+      "id": "the_root_dangelo",
+      "title": "The Root",
+      "artist": "D'Angelo",
+      "album": "Voodoo",
+      "key": "C minor",
+      "bpm": 120,
+      "loop_bars": 8,
+      "bars_per_chord": 1,
+      "chords": [
+        "Cm7",
+        "Cm7",
+        "Fm9",
+        "Fm9",
+        "Cm7",
+        "Cm7",
+        "Cmmaj9",
+        "G7alt"
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Nathan the Composer, Voodoo chord analysis (YouTube); songbpm.com/the-root"
+      ]
+    },
+    {
+      "id": "send_it_on_dangelo",
+      "title": "Send It On",
+      "artist": "D'Angelo",
+      "album": "Voodoo",
+      "key": "C",
+      "bpm": 127,
+      "meter": "3/4",
+      "loop_bars": 5,
+      "bars_per_chord": 1,
+      "chords": [
+        "Cmaj7",
+        "Am7",
+        "Gm7",
+        "C7sus4",
+        "Fmaj7"
+      ],
+      "feel": {
+        "bass": "walk",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "rendering_note": "The source meter is retained as metadata; the current sequencer's bar clock is 4/4.",
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Hooktheory theorytab: dangelo/send-it-on (Sea of Tranquility interpolation)",
+        "Jeff Schneider intro-swell analysis; freebasstranscriptions.com/send-it-on-live"
+      ]
+    },
+    {
+      "id": "another_life_dangelo",
+      "title": "Another Life",
+      "artist": "D'Angelo",
+      "album": "Black Messiah",
+      "key": "C pedal",
+      "bpm": 63,
+      "loop_bars": 9,
+      "bars_per_chord": 1,
+      "chords": [
+        "Ebdim7/C",
+        "Dm/C",
+        "C",
+        "Bbmaj7/C",
+        "Fmaj7/A",
+        "Abdim7",
+        "Gm7",
+        "C7sus4",
+        "C7b9"
+      ],
+      "feel": {
+        "bass": "pedal",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Wikichords Another Life; tutorial: https://www.youtube.com/watch?v=cO6hZzVpTQU"
+      ]
+    },
+    {
+      "id": "sugah_daddy_dangelo",
+      "title": "Sugah Daddy",
+      "artist": "D'Angelo",
+      "album": "Black Messiah",
+      "key": "F dominant",
+      "bpm": 93,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "G7",
+        "Gb7",
+        "E7",
+        "F7"
+      ],
+      "feel": {
+        "bass": "walk",
+        "melody": "horn_stabs",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "Ethan Hein, flypaper.soundfly.com: How D'Angelo uses funky dominant sevenths in Sugah Daddy",
+        "Piano Couture: d'angelo-sugah-daddy-lick (root–3rd–b7 shell)"
+      ]
+    },
+    {
+      "id": "left_and_right_dangelo",
+      "title": "Left & Right",
+      "artist": "D'Angelo",
+      "album": "Voodoo",
+      "key": "F minor",
+      "bpm": 92,
+      "loop_bars": 3,
+      "bars_per_chord": 1,
+      "chords": [
+        "Fm9",
+        "Am7b5",
+        "Bbm7"
+      ],
+      "feel": {
+        "bass": "walk",
+        "melody": "sweet_soul",
+        "swing": 54
+      },
+      "source_status": "historical_verified_table",
+      "sources": [
+        "songbpm.com D'Angelo / Method Man Left & Right; Meters sample documented"
+      ]
+    }
+  ],
+  "engine_modules": [
+    {
+      "id": "gospel_69_ballad_walk",
+      "title": "Gospel 6/9 ballad walk (engine study)",
+      "key": "D",
+      "bpm": 63,
+      "loop_bars": 5,
+      "bars_per_chord": 1,
+      "chords": [
+        "D",
+        "D/F#",
+        "G",
+        "G#dim7",
+        "D/A"
+      ],
+      "source_status": "engine_study",
+      "sources": [
+        "Piano Lessons Online: R&B piano chord / gospel voicing toolkit"
+      ],
+      "note": "A harmonic module, not a transcription of a specific recording."
+    },
+    {
+      "id": "minor11_ballad_drift",
+      "title": "Minor-11 ballad drift (engine study)",
+      "key": "D minor",
+      "bpm": 64,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Dm11",
+        "Gm11",
+        "Dm11",
+        "Gm11"
+      ],
+      "source_status": "engine_study",
+      "sources": [
+        "MotifKit neo-soul chord progression material"
+      ],
+      "note": "A harmonic module, not a transcription of a specific recording."
+    }
+  ],
+  "melody_motifs": [
+    {
+      "id": "dilla_timeless_chop",
+      "recording": "Time (The Donut of the Heart)",
+      "artist": "J Dilla",
+      "midi": [
+        76,
+        74,
+        72,
+        69,
+        67,
+        65
+      ],
+      "hz": [
+        659.25,
+        587.33,
+        523.25,
+        440,
+        392,
+        349.23
+      ],
+      "source": "Historical pub4 INLINE_SONIC_PROFILES.dilla_timeless melody_chop_hz",
+      "status": "measured sample/chop contour; not a full lead melody transcription"
+    },
+    {
+      "id": "madlib_eye_profile_chop",
+      "artist": "Madlib",
+      "profile": "madlib_eye",
+      "midi": [
+        76,
+        74,
+        72,
+        69,
+        67,
+        65
+      ],
+      "hz": [
+        659.25,
+        587.33,
+        523.25,
+        440,
+        392,
+        349.23
+      ],
+      "source": "Historical pub4 INLINE_SONIC_PROFILES.madlib_eye melody_chop_hz",
+      "status": "legacy profile pitch contour; recording title and full melody were not preserved"
+    },
+    {
+      "id": "legacy_lead_chop",
+      "midi": [
+        67,
+        65,
+        63,
+        61,
+        60,
+        58
+      ],
+      "hz": [
+        392,
+        349.23,
+        311.13,
+        277.18,
+        261.63,
+        233.08
+      ],
+      "source": "Historical pub4 MELODY_CHOP_HZ",
+      "status": "generic engine lead-chop material, not an artist transcription"
     }
   ]
 }
