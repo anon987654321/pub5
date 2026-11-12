@@ -514,7 +514,7 @@ class TestFixRunBudget < Minitest::Test
     calls = 0
     failing_finish = lambda do |reason: "completed"|
       calls += 1
-      raise "simulated finish failure" if calls == 2
+      raise "simulated finish failure" if calls == 1
 
       original_finish.call(reason:)
     end

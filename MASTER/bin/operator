@@ -10,9 +10,12 @@ require "shellwords"
 
 # Two levels: this lives in MASTER/bin/, and every sibling tree is reached
 # from the repo root above it.
-ROOT = File.expand_path("../..", __dir__)
+ROOT = File.expand_path(ENV.fetch("MASTER_OPERATOR_ROOT", File.expand_path("../..", __dir__)))
 OPENBSD_OPS = File.join(ROOT, "OPENBSD")
-$LOAD_PATH.unshift(File.join(ROOT, "MASTER", "lib")) unless $LOAD_PATH.include?(File.join(ROOT, "MASTER", "lib"))
+master_lib = File.join(Master::ROOT, "lib")
+$LOAD_PATH.unshift(master_lib) if File.directory?(master_lib) && !$LOAD_PATH.include?(master_lib)
+repo_master_lib = File.join(ROOT, "MASTER", "lib")
+$LOAD_PATH.unshift(repo_master_lib) if File.directory?(repo_master_lib) && !$LOAD_PATH.include?(repo_master_lib)
 
 require "operator/environment"
 require "operator/ruby_runner"
@@ -424,7 +427,7 @@ when "lint"
   require "operator/lint"
   changed_only = !ARGV.delete("--changed-lines").nil?
   staged = !ARGV.delete("--staged").nil?
-  scanner = Master::Fix::Scanner.build(root: Master::ROOT, agent: nil)
+  scanner = Master::Fix::Scanner.build(root: ROOT, agent: nil)
   lint = Operator::Lint.new(root: ROOT, scanner:, staged:, changed_only:)
   files = lint.targets(ARGV)
   findings = lint.findings(files)

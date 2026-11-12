@@ -40,7 +40,7 @@ module Master
       RUN_LOCK = Mutex.new
 
       class << self
-        attr_reader :current
+        def current = RUN_LOCK.synchronize { @current }
 
         # Every run whose watchdog is beating, current or not. A run replaced or
         # dropped without stop! is still here, so whoever must end them all can.

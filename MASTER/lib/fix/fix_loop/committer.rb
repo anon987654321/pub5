@@ -23,7 +23,7 @@ module Master
         # The lint0 findings, or [] when clean. A lint that fails without naming one is still a
         # finding, and its last lines of output are the reason.
         def findings(paths, root:)
-          target_root = File.expand_path(root)
+          target_root = File.realpath(root)
           repo_root = repository_root(target_root)
           return [] unless repo_root && (target_root == repo_root || target_root.start_with?("#{repo_root}/"))
 
@@ -53,8 +53,11 @@ module Master
 
         def run(files, root:)
           operator = File.join(Master::ROOT, "bin", "operator")
-          Master::Io::Exec.capture3(RbConfig.ruby, operator, "lint", "--changed-lines", *files,
-                                    chdir: root, timeout: TIMEOUT_SECONDS)
+          Master::Io::Exec.capture3(
+            { "MASTER_OPERATOR_ROOT" => root },
+            RbConfig.ruby, operator, "lint", "--changed-lines", *files,
+            chdir: root, timeout: TIMEOUT_SECONDS
+          )
         end
 
       end
