@@ -76,7 +76,7 @@ class TestScanner < Minitest::Test
 
   def test_mechanical_autofix_file_detail_is_verbose_only
     scanner = Master::Fix::Scanner.allocate
-    applied = [Struct.new(:transforms).new(["spacing"]) ]
+    applied = [Struct.new(:transforms).new(["spacing"])]
     events = []
     Master::Trace::Dmesg.stub(:status, ->(*args) { events << args }) do
       Master::Trace::Dmesg.stub(:verbose?, false) do
