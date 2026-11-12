@@ -25,8 +25,9 @@ fallback_policy:
   # categories this codebase produces, so wiring it as written would have matched
   # nothing. These are the categories `Result.err(category:)` actually carries.
   #
-  # A rate-limited or out-of-budget model cannot succeed on an immediate retry,
-  # so both belong here, and so does a model the provider does not hold.
+  # A rate-limited, quota-exhausted or out-of-budget model cannot succeed on
+  # an immediate retry, so all three belong here, as does a model the provider
+  # does not hold. Live adapters emit both :budget and :quota_exceeded.
   # `provider_error` deliberately does not: a transient 5xx is what in-place
   # retry exists for. `retries_per_tier` was removed — the retry count has one
   # source, `failover.max_retries` below.
@@ -37,6 +38,7 @@ fallback_policy:
     - auth_error
     - rate_limit
     - budget
+    - quota_exceeded
     - model_missing
     - invalid_request
 
