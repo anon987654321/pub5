@@ -29,25 +29,33 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     ActsAsTenant.current_tenant = nil
   end
 
-  test "a vote sends the new score to the front page and to the post's own page" do
+  test "a vote sends the new score without touching or replacing the post" do
+    @post.update_column(:updated_at, 1.day.ago)
+    previous_updated_at = @post.reload.updated_at
     streams = capture_turbo_stream_broadcasts(@stream) { Vote.create!(user: @voter, votable: @post, value: 1) }
     score = streams.find { |stream| stream["targets"] == %([data-post-score="post_#{@post.id}"]) }
 
     assert score, "no score update on the city stream"
     assert_equal "update", score["action"]
     assert_equal "1", score.at_css("template").inner_html.strip
+    assert_equal previous_updated_at, @post.reload.updated_at, "a vote must not touch the post"
     assert_turbo_stream_broadcasts(@post) { Vote.create!(user: @author, votable: @post, value: 1) }
   end
 
-  test "a comment and its deletion send the comment count" do
+  test "a comment and its deletion send one count update without touching the post" do
+    @post.update_column(:updated_at, 1.day.ago)
+    previous_updated_at = @post.reload.updated_at
     comment = nil
     added = capture_turbo_stream_broadcasts(@stream) do
       comment = Comment.create!(user: @voter, commentable: @post, content: "<p>Enig</p>")
     end
     assert_equal "1", count_update(added)
+    assert_equal 1, added.count { |stream| stream["targets"] == %([data-post-comment-count="post_#{@post.id}"]) }
+    assert_equal previous_updated_at, @post.reload.updated_at, "a comment must not touch the post"
 
     removed = capture_turbo_stream_broadcasts(@stream) { comment.destroy! }
     assert_equal "", count_update(removed)
+    assert_equal previous_updated_at, @post.reload.updated_at, "deleting a comment must not touch the post"
   end
 
   test "an edit sends the card rendered for nobody, marked so" do
@@ -61,6 +69,19 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     html = card.at_css("template").inner_html
     assert_includes html, "Rettet tittel"
     assert_not_includes html, "post-vote-button", "a card for the stream must not carry the editor's vote buttons"
+  end
+
+  test "a vote on a comment touches only the comment, not its post" do
+    comment = Comment.create!(user: @author, commentable: @post, content: "<p>Undertråd</p>")
+    @post.update_column(:updated_at, 1.day.ago)
+    comment.update_column(:updated_at, 2.days.ago)
+    post_updated_at = @post.reload.updated_at
+    comment_updated_at = comment.reload.updated_at
+
+    Vote.create!(user: @voter, votable: comment, value: 1)
+
+    assert_equal post_updated_at, @post.reload.updated_at
+    refute_equal comment_updated_at, comment.reload.updated_at
   end
 
   test "a vote does not resend the card" do
