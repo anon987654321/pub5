@@ -15,7 +15,7 @@ module Master
         [/qwen|tongyi/i, "qwen"],
         [/glm|zhipu|zai/i, "zhipu"],
         [/gemini|gemma|google/i, "google"],
-        [/gpt-|openai|\\bo[1-9](?:-|\\b)/i, "openai"],
+        [/gpt-|openai|(?:^|[^a-z0-9])o[1-9](?:-|$)/i, "openai"],
         [/llama|meta-llama/i, "meta"],
         [/mistral|codestral/i, "mistral"],
         [/nemotron|nvidia/i, "nvidia"],
