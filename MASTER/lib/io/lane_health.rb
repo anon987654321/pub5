@@ -41,6 +41,7 @@ module Master
       START_WAIT_S = 10
       PROBE_TIMEOUT_S = 2
       WARM_PROBE_INTERVAL_S = 900
+      WARM_PROBE_RETRY_AFTER_FAILURE_S = 30
       WARM_PROBE_TIMEOUT_S = 10
       RETRY_AFTER_FAILED_START_S = 60
       DEFAULT_BASE = "http://localhost:11434"
@@ -48,6 +49,7 @@ module Master
       @mutex = Mutex.new
       @failed_at = nil
       @warm_probed_at = nil
+      @warm_probe_ok_at = nil
       @clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
 
       attr_writer :clock
@@ -100,7 +102,9 @@ module Master
 
         interval = spec["interval_s"].to_i.positive? ? spec["interval_s"].to_i : WARM_PROBE_INTERVAL_S
         @mutex.synchronize do
-          return :fresh if @warm_probed_at && now.to_f - @warm_probed_at < interval
+          return :fresh if @warm_probe_ok_at && now.to_f - @warm_probe_ok_at < interval
+          return :cooldown if @warm_probed_at && now.to_f - @warm_probed_at < WARM_PROBE_RETRY_AFTER_FAILURE_S &&
+                              (!@warm_probe_ok_at || now.to_f - @warm_probe_ok_at >= interval)
 
           @warm_probed_at = now.to_f
         end
@@ -113,6 +117,7 @@ module Master
           return :silent
         end
 
+        @mutex.synchronize { @warm_probe_ok_at = now.to_f }
         lane = LaneQuota.lane_of(model)
         LaneQuota.revive(lane)
         LaneQuota.clear_probe!(lane)
