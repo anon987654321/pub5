@@ -368,6 +368,46 @@ class TestVoiceNarrator < Minitest::Test
     assert_includes noted.last, "subscription limit"
   end
 
+  def test_lane_writer_detects_exit_zero_subscription_refusal
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
+    runner = Object.new
+    runner.define_singleton_method(:capture3) do |*_args, **_kwargs|
+      ["You've hit your session limit - resets in 3h", "", status]
+    end
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+
+    Master::Io::LaneQuota.stub(:note, ->(_model, reply) { assert_match(/session limit/, reply); 123.0 }) do
+      Master::Io::LaneQuota.stub(:report_for, ->(_model) { "claude-cli: quota spent, back in 3h" }) do
+        error = assert_raises(Narrator::LaneWriter::Unavailable) do
+          writer.call(system: "s", prompt: "p", max_tokens: 90)
+        end
+        assert_match(/quota spent, back in 3h/, error.message)
+      end
+    end
+  end
+
+  def test_successful_narration_that_quotes_a_quota_phrase_is_not_marked_dead
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(true, 0)
+    runner = Object.new
+    answer = "The log says: You've hit your session limit - resets in 3h. The provider recovered."
+    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| [answer, "", status] }
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+
+    Master::Io::LaneQuota.stub(:note, ->(*) { flunk "quoted words in a successful narration are not a provider refusal" }) do
+      Master::Io::LaneSilence.stub(:record, ->(*) { true }) do
+        assert_equal answer, writer.call(system: "s", prompt: "p", max_tokens: 90)
+      end
+    end
+  end
+
   def test_lane_writer_silences_a_timed_out_claude_cli_immediately
     lanes = Object.new
     def lanes.tier(_name) = ["claude-cli:sonnet"]
