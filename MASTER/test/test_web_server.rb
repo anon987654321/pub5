@@ -88,7 +88,7 @@ class TestWebServer < Minitest::Test
     calls = []
     Master::Io::Exec.stub(:capture3, ->(*args, **options) {
       calls << [args, options]
-      ["4242\\n", "", listener]
+      ["4242\n", "", listener]
     }) do
       io = StringIO.new
       refute Master::CLI::WebServer.port_available?(53_187, io:)
