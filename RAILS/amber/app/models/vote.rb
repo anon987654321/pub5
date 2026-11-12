@@ -14,8 +14,9 @@ class Vote < ApplicationRecord
   private
 
   def broadcast_post_counts
-    target = votable
-    target.broadcast_live_counts if target.respond_to?(:broadcast_live_counts)
+    return unless votable_type == "Post"
+
+    Post.find_by(id: votable_id)&.broadcast_live_counts
   end
 
   def apply_score_delta
