@@ -45,9 +45,8 @@ module Master
         return unless Dir.exist?(web_dir)
 
         Master.ensure_services!(root: Master::ROOT)
-        pids_out, = Master::Io::Exec.capture2e("lsof", "-ti", ":#{port}")
-        pids_out.split.each { |pid| Process.kill("TERM", pid.to_i) rescue Errno::ESRCH }
-        sleep 0.5
+        return false unless port_available?(port, io:)
+
         count = ENV.fetch("FALCON_COUNT", "2")
         env = spawn_env(web_dir).merge(
           "RAILS_ENV" => "production", "SECRET_KEY_BASE" => stable_secret(config),
@@ -58,6 +57,45 @@ module Master
           chdir: web_dir, out: File::NULL, err: File::NULL, unsetenv_others: true
         )
         Master::Trace::Dmesg.status("web0", "http://#{host}:#{port}", io:)
+      end
+
+      # A configured port is not authority to terminate whoever owns it.
+      # lsof's no-match exit (1 with empty streams) is the only free-port proof;
+      # every other failure is inconclusive and refuses the spawn. We never kill
+      # an arbitrary listener just to make this local convenience command work.
+      def port_available?(port, io: $stderr)
+        port = Integer(port)
+        raise ArgumentError, "web port must be between 1 and 65535" unless port.between?(1, 65_535)
+
+        out, err, status = Master::Io::Exec.capture3(
+          "lsof", "-nP", "-t", "-iTCP:#{port}", "-sTCP:LISTEN", timeout: 3
+        )
+        listeners = out.to_s.lines.map(&:strip).reject(&:empty?)
+        if status&.success? && listeners.any?
+          pids = listeners.filter_map do |value|
+            pid = Integer(value, 10) rescue nil
+            pid if pid&.positive?
+          end.uniq
+          detail = pids.empty? ? "an unparseable listener" : "PID(s) #{pids.join(", ")}"
+          Master::Trace::Dmesg.status(
+            "web0", "port #{port} is occupied by #{detail}; refusing to stop an unknown process", io:
+          )
+          return false
+        end
+
+        return true if status&.exitstatus == 1 && listeners.empty? && err.to_s.empty?
+
+        reason = status ? "lsof exit #{status.exitstatus.inspect}" : "lsof returned no process status"
+        reason = "#{reason}: #{err.to_s.strip}" unless err.to_s.strip.empty?
+        Master::Trace::Dmesg.status(
+          "web0", "cannot verify port #{port} is free (#{reason}); refusing to start", io:
+        )
+        false
+      rescue StandardError => error
+        Master::Trace::Dmesg.status(
+          "web0", "cannot verify port #{port} is free (#{error.class}: #{error.message}); refusing to start", io:
+        )
+        false
       end
 
       # Rails refuses to boot in production without a stable SECRET_KEY_BASE,
