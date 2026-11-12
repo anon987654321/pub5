@@ -156,21 +156,25 @@ module Master
       end
 
       def ask(prompt, context: nil, operation: nil, image: nil, temperature: nil)
+        Thread.current[:master_llm_answer_model] = nil
         messages = Array(context) + [{ role: "user", content: apply_reasoning_mode(prompt) }]
         selected_model = operation ? model_for(operation:) : routed_models.first
         result = @dispatcher.send_with_cache(selected_model, messages, stream: false, image:, temperature:)
         result = retry_on_broke_lane(result, selected_model, messages, image:, temperature:, promote: true)
         record_capability_outcome(operation:, selected_model:, result:)
+        remember_answer_model(result, selected_model)
         raise_failure(result)
         result.to_s
       end
 
       def ask_once(prompt, system: nil, law: true, model: nil, image: nil, temperature: nil, format: nil, failover: true)
+        Thread.current[:master_llm_answer_model] = nil
         messages = [{ role: "user", content: prompt }]
         chosen = model || self.model
         sys = role_system(system, law:)
         result = @dispatcher.send_with_cache(chosen, messages, system: sys, stream: false, image:, temperature:, format:)
         result = retry_on_broke_lane(result, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) if failover
+        remember_answer_model(result, chosen)
         raise_failure(result)
         result.to_s
       end
@@ -258,7 +262,10 @@ module Master
           attempted << fallback
           @bus&.publish("llm:ask_failover", from: chosen, to: fallback, category: last.category)
           hopped = @dispatcher.send_with_cache(fallback, messages, system:, stream: false, image:, temperature:)
-          return record_single_call_substitution(chosen, fallback, hopped, promote:) if hopped.is_a?(Master::Result::Ok)
+          if hopped.is_a?(Master::Result::Ok)
+            Thread.current[:master_llm_answer_model] = hopped.model || fallback
+            return record_single_call_substitution(chosen, fallback, hopped, promote:)
+          end
 
           last = hopped
           park_failed_single_call(fallback, last)
@@ -268,6 +275,14 @@ module Master
         offline_when_exhausted(last, chosen)
       end
 
+      # Preserve the actual successful lane for the repair candidate that follows.
+      # retry_on_broke_lane records a fallback before returning; the selected model
+      # is only the fallback when the dispatcher did not attach Result::Ok#model.
+      def remember_answer_model(result, selected_model)
+        return Thread.current[:master_llm_answer_model] = nil unless result.is_a?(Master::Result::Ok)
+
+        Thread.current[:master_llm_answer_model] ||= result.model || selected_model
+      end
       # A failed one-shot call parks that model for the bounded cache TTL, so
       # the next request does not repeat the same known failure immediately.
       def park_failed_single_call(model, result)
