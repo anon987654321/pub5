@@ -1436,8 +1436,9 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
 
   def test_stop_interactive_queue_uses_the_shared_cancellation_policy
     turn = Object.new
-    turn.define_singleton_method(:alive?) { true }
-    turn.define_singleton_method(:join) { |*_args| self }
+    alive = true
+    turn.define_singleton_method(:alive?) { alive }
+    turn.define_singleton_method(:join) { |*_args| alive = false; self }
     children = Object.new
     requested = nil
     @cli.instance_variable_set(:@pipeline_thread, turn)
@@ -1449,8 +1450,27 @@ def test_ctrl_c_at_the_prompt_raises_interrupt_for_repl_loop_to_close
     output, = capture_io { @cli.send(:stop_interactive_queue) }
 
     assert_equal [turn, children, "stop"], requested
-    assert_match(/cancellation requested/, output)
+    assert_match(%r{/stop cancellation requested}, output)
+    refute_match(/current turn cancelled/, output)
     assert @cli.instance_variable_get(:@turn_queue_paused)
+  end
+
+  def test_queued_ctrl_c_keeps_its_own_cancellation_reason
+    worker = Object.new
+    worker.define_singleton_method(:alive?) { true }
+    turn = Object.new
+    turn.define_singleton_method(:alive?) { true }
+    turn.define_singleton_method(:join) { |*_args| self }
+    @cli.instance_variable_set(:@turn_worker, worker)
+    @cli.instance_variable_set(:@pipeline_thread, turn)
+    requested = nil
+    @cli.define_singleton_method(:stop_interactive_queue) do |reason:|
+      requested = reason
+    end
+
+    @cli.send(:on_int).join(2)
+
+    assert_equal "ctrl_c", requested
   end
 
   def test_non_fold_stop_receipt_preserves_stop_instead_of_claiming_ctrl_c
