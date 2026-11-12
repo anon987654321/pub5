@@ -37,14 +37,18 @@ module Deploy
 
     # One cell of the matrix, and how a session is put into it.
     Cell = Data.define(:state, :width, :scale, :locale, :scheme) do
-      def height = width <= MOBILE_MAX ? 844 : 900
+      # A 2x device scale with half the CSS viewport emulates desktop zoom:
+      # keep desktop input/layout mode and halve both viewport dimensions.
+      def height = scale > 1 ? 900 / scale : (width <= MOBILE_MAX ? 844 : 900)
+
+      def mobile? = scale == 1 && width <= MOBILE_MAX
 
       def label = "#{state} #{width}px#{" x#{scale}" if scale > 1} #{locale} #{scheme}"
 
       def twin = with(state: "default")
 
       def emulate(cdp, url)
-        cdp.viewport(width, height, mobile: width <= MOBILE_MAX, scale:)
+        cdp.viewport(width, height, mobile: mobile?, scale:)
         cdp.command("Emulation.setEmulatedMedia", features: [{ name: "prefers-color-scheme", value: scheme }])
         cdp.headers("Accept-Language" => LOCALES.fetch(locale, locale))
         cdp.navigate(url)
