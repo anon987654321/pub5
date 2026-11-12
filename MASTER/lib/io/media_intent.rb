@@ -330,28 +330,27 @@ module Master
         bus&.publish("client_action", { action: "dilla_bg" }.merge(payload))
       end
 
-      # The player a /play started. dilla.rb renders a file and ends; the sound
-      # card is MASTER's, so MASTER holds the pid and is the one that stops it.
+      # The player is a direct child of this MASTER process. Keep it unreaped
+      # while it is active: waitpid, rather than kill(0), distinguishes our child
+      # from an unrelated process that later reuses the same numeric PID.
       def player_pid
         pid = @player_pid
         return unless pid
 
-        Process.kill(0, pid)
-        pid
-      rescue Errno::ESRCH
+        return pid unless Process.waitpid(pid, Process::WNOHANG)
+
+        @player_pid = nil
+        nil
+      rescue Errno::ECHILD, Errno::ESRCH
         @player_pid = nil
       end
 
       def stop_live_audio(root: MasterPaths.root, bus: nil)
         Voice::Playback.interrupt!("operator requested audio stop") if defined?(Voice::Playback)
-        pid = player_pid
-        Process.kill("TERM", pid) if pid
-        @player_pid = nil
+        pid = stop_player
         publish_face_music(bus, stop: true)
         line = pid ? "stopped the Dilla player (pid #{pid})" : "nothing is playing"
         Result.ok({ output: line, rendered: line, media: :dilla_stop })
-      rescue Errno::ESRCH
-        Result.ok({ output: "nothing is playing", rendered: "nothing is playing", media: :dilla_stop })
       end
 
       def diagnose_live_audio(root: MasterPaths.root)
