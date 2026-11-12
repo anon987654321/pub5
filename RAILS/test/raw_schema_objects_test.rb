@@ -140,7 +140,7 @@ class RawSchemaObjectsTest < Minitest::Test
   # Every use of one of these objects must either guard or be reachable only
   # where migrations have run. An unguarded use in a request path is the one
   # shape that turns this from "untested" into "a 500".
-  GUARDS = /data_source_exists\?|table_exists\?|rescue\b|skip\b/
+  GUARDS = /data_source_exists\?|tables\.include\?|table_exists\?|rescue\b|skip\b/
 
   def test_no_request_path_touches_a_raw_object_without_a_guard
     unguarded = APPS.flat_map do |app|
@@ -179,7 +179,7 @@ class RawSchemaObjectsTest < Minitest::Test
       when :returns
         # Either spelling of the guard: a one-line `return unless`, or an `unless`
         # block that logs the skip before it returns.
-        assert_match(/(?:return )?unless\s.*(?:data_source_exists\?|table_exists\?)(?:.*\n)*?\s*return\b/, body,
+        assert_match(/(?:return )?unless\s.*(?:data_source_exists\?|tables\.include\?|table_exists\?)(?:.*\n)*?\s*return\b/, body,
                      "#{relative} no longer guards; it now raises in every schema-loaded environment")
       when :rescues
         assert_match(/rescue StandardError/, body, "#{relative} no longer rescues")
