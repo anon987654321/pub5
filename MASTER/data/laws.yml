@@ -3764,8 +3764,9 @@ law_catalogue:
       severity: warning
     OPENBSD_DMESG_CONSOLE_STYLE:
       definition_sources: [MASTER/law/interface.rb]
-      severity: warning
-      mode: opportunity
+      severity: error
+      mode: violation
+      lifecycle: active
       languages: [ruby]
     OPERATOR_AUTONOMY:
       definition_sources: [MASTER/law/practice.rb]
@@ -4462,8 +4463,9 @@ law_catalogue:
       languages: [yaml]
     VOICE_FAILURES_ARE_ACTIONABLE:
       definition_sources: [MASTER/law/interface.rb]
-      severity: info
-      mode: opportunity
+      severity: error
+      mode: violation
+      lifecycle: active
       languages: [ruby]
     VOICE_TERSE_UNIX:
       definition_sources: [MASTER/law/practice.rb]
