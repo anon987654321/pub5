@@ -526,6 +526,10 @@ class TestTaskContract < Minitest::Test
     )
   end
 
+  def test_ordinary_local_command_does_not_enter_the_openbsd_manual_gate
+    assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(command: "ls -la")
+  end
+
   def test_unrelated_ssh_hosts_do_not_trigger_the_openbsd_manual_gate
     [
       "ssh git@github.com 'git-upload-pack /anon987654321/pub5.git'",

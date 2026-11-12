@@ -427,6 +427,10 @@ module Master
         end
 
         openbsd_sources = openbsd_source_paths(tokens)
+        openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
+        local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
+        return unless remote || openbsd_script || local_openbsd
+
         command_entries = remote_command_entries(tokens)
         command_manuals, manual_error = command_manual_requirements(
           command_entries, contract&.openbsd_preflight, openbsd_sources, repo_root:
@@ -434,16 +438,13 @@ module Master
         return manual_error if manual_error
         shell_page = remote && declared_shell_manual(contract&.openbsd_preflight)
         if remote && !shell_page
-          return "RTFM_FIRST requires openbsd_preflight with the verified target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
+          return "RTFM_FIRST requires openbsd_preflight with the declared target shell manual (ksh(1), sh(1), or zsh(1)) before remote command execution"
         end
         command_manuals << shell_page if shell_page
         command_manuals.concat(command_entries.flat_map { |entry| COMMAND_SUPPORT_MANUALS.fetch(entry[:name], []) })
         command_manuals.uniq!
 
         service_sources = rc_service_source_paths(tokens)
-        openbsd_script = tokens.any? { |token| token.match?(%r{(?:\A|/)OPENBSD/}) } && !openbsd_read_only_command?(tokens)
-        local_openbsd = RUBY_PLATFORM.match?(/openbsd/i)
-        return unless remote || openbsd_script || (local_openbsd && command_manuals.any?)
         return "RTFM_FIRST requires an active TaskContract with openbsd_preflight before native use" unless contract
 
         preflight = contract.openbsd_preflight
@@ -630,7 +631,7 @@ module Master
           name = interpreter.drop(1).find { |token| !token.start_with?("-") && !token.include?("=") }.to_s
         end
         { "zsh" => "zsh(1)", "ksh" => "ksh(1)", "sh" => "sh(1)", "ruby" => "ruby(1)" }[name]
-      rescue EOFError, SystemCallError, ArgumentError
+      rescue StandardError
         nil
       end
 
