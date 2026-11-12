@@ -9,6 +9,10 @@
   <% cache [post, :embed, I18n.locale] do %><%= render("shared/link_embed", embed:) %><% end %>
 <% end if embed %>
 <% post_actions = capture do %>
+  <%= link_to post_path(post, anchor: "comments"), class: "feed-action",
+        aria: { label: t("comments.title") }, title: t("comments.title") do %>
+    <%= render "shared/feed_icon", name: "comment" %>
+  <% end %>
   <% unless guest? %>
     <%= render "posts/like_button", post: post %>
     <%= render "shared/post_embed_action", post: post, url: post_url(post) %>
