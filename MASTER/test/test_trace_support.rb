@@ -191,7 +191,7 @@ class TestTraceSupport < Minitest::Test
     end
 
     assert_equal ["llm0 at master0: test-provider:model"], send_lines
-    assert_equal ["llm0: call ended without provider outcome"], finished_lines
+    assert_equal ["llm0: MASTER fault, diagnostic aaaaaaaaaaaa (12 bytes)"], finished_lines
     assert_equal "llm", Master::Trace::Dmesg.detail_unit("llm")
 
     next_lines = Master::Trace::Dmesg.with_verbosity("verbose") do
