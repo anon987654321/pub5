@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "minitest/mock"
+require "tmpdir"
+require "fileutils"
 require_relative "../lora/merethe/prepare"
 
 class TestMeretheLoraPackage < Minitest::Test
