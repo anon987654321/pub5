@@ -37,6 +37,12 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  class ReadTimeoutClient < StubClient
+    def attempt_request(_request, _uri)
+      raise Net::ReadTimeout, "simulated read timeout"
+    end
+  end
+
   class StatusClient < Studio::ReplicateClient
     def initialize(status)
       @status = status
@@ -120,6 +126,16 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
 
     assert_empty @client.requests
+  end
+
+  def test_retry_exhaustion_preserves_the_original_network_exception
+    client = ReadTimeoutClient.new
+    uri = URI("https://api.replicate.com/v1/models")
+
+    error = assert_raises(Net::ReadTimeout) do
+      client.send(:request, Net::HTTP::Get.new(uri), uri, attempts: 1)
+    end
+    assert_match(/simulated read timeout/, error.message)
   end
 
   def test_model_lookup_only_treats_http_404_as_absent
