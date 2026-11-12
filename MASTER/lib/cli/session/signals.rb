@@ -48,20 +48,26 @@ module Master
       # commands retain the established immediate interruption path.
       def request_or_interrupt_turn(turn, children, reason:)
         token = @turn_cancellation
-        token&.cancel!(reason: reason.to_s == "ctrl_c" ? "Ctrl-C requested cancellation" : "operator requested cancellation")
+        cancellation_reason = case reason.to_s
+                              when "ctrl_c" then "Ctrl-C requested cancellation"
+                              when "stop" then "/stop requested cancellation"
+                              else "operator requested cancellation"
+                              end
+        token&.cancel!(reason: cancellation_reason)
         if token&.active?
           answer_pending_terminal_ask("/deny") if terminal_ask_pending?
           @refs.bus&.publish("user:interrupt", reason:, source: "cli", children:)
         else
-          cancel_turn(turn, children)
+          cancel_turn(turn, children, reason:)
         end
       end
 
       # The thread first, so the turn takes no next step, then its children,
-      # which the thread is otherwise left waiting on.
-      def cancel_turn(turn, children)
+      # which the thread is otherwise left waiting on. Preserve the initiating
+      # control in the receipt; /stop must not be recorded as Ctrl-C.
+      def cancel_turn(turn, children, reason: "ctrl_c")
         turn.kill
-        @refs.bus&.publish("user:interrupt", reason: "ctrl_c", source: "cli", children:)
+        @refs.bus&.publish("user:interrupt", reason:, source: "cli", children:)
       end
     end
   end
