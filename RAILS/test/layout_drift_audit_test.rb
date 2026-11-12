@@ -65,7 +65,8 @@ class LayoutDriftAuditTest < Minitest::Test
     findings = repository_audit.run
     %w[post_card.root_identity post_card.brgen_vote_event post_card.brgen_vote_no_post_touch
        post_card.brgen_vote_only_replace post_card.brgen_vote_score_refresh
-       post_card.brgen_comment_count_event post_card.brgen_comment_no_post_touch].each do |code|
+       post_card.brgen_comment_count_event post_card.brgen_comment_no_post_touch
+       post_card.brgen_repost_event post_card.brgen_repost_target].each do |code|
       finding = findings.find { |item| item.code == code }
       assert finding, "missing shared-post audit for #{code}"
       assert_equal "PASS", finding.status, finding.message
