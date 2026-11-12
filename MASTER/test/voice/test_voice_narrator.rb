@@ -359,6 +359,32 @@ class TestVoiceNarrator < Minitest::Test
     assert_includes noted.last, "subscription limit"
   end
 
+  def test_lane_writer_silences_a_timed_out_claude_cli_immediately
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    runner = Object.new
+    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| raise Timeout::Error }
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+    silenced = nil
+
+    Master::Io::LaneSilence.stub(:silence, ->(lane, reason:) { silenced = [lane, reason] }) do
+      Master::Io::LaneSilence.stub(:message, ->(_lane) { "claude-cli quiet" }) do
+        Master::Trace::Dmesg.stub(:once, ->(*) {}) do
+          error = assert_raises(Narrator::LaneWriter::Unavailable) do
+            writer.call(system: "s", prompt: "p", max_tokens: 90)
+          end
+          assert_match(/timed out after 5s/, error.message)
+          assert_match(/5 minutes/, error.message)
+        end
+      end
+    end
+
+    assert_equal "claude-cli", silenced.first
+    assert_match(/timed out after 5s/, silenced.last)
+  end
+
   def test_lane_writer_keeps_nonzero_exit_diagnostic_bounded_and_silences_repeated_failure
     lanes = Object.new
     def lanes.tier(_name) = ["claude-cli:sonnet"]
