@@ -26,6 +26,23 @@ class TestUndo < Minitest::Test
     end
   end
 
+  def test_separate_undo_instances_merge_snapshots_instead_of_overwriting
+    Dir.mktmpdir do |dir|
+      first_path = File.join(dir, "first.txt")
+      second_path = File.join(dir, "second.txt")
+      File.write(first_path, "first before")
+      File.write(second_path, "second before")
+      first = Master::Trace::Undo.new(session: Session.new([]), root: dir)
+      second = Master::Trace::Undo.new(session: Session.new([]), root: dir)
+
+      assert first.snapshot(first_path).ok?
+      assert second.snapshot(second_path).ok?
+
+      journal = File.readlines(File.join(dir, ".master", "undo_journal.jsonl")).map { |line| JSON.parse(line) }
+      assert_equal [first_path, second_path], journal.map { |entry| entry.fetch("path") }
+    end
+  end
+
   def test_undo_removes_a_file_that_did_not_exist_before_the_write
     Dir.mktmpdir do |dir|
       path = File.join(dir, "new.txt")
