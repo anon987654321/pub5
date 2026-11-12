@@ -11,6 +11,7 @@ module Master
     class RepairLoop
       module FixStrategies
         include CandidateThreads
+        CandidateProposal = Data.define(:source, :author_models)
 
         ARCHITECTURE_PLAN_GUIDANCE = <<~TEXT.strip
           Before answering, perform a depth check:
@@ -207,6 +208,7 @@ module Master
               suffix: "Return one unified diff for this candidate only. Do not combine it with any other candidate."
             )
             response = ask_agent(prompt, image: @visual_image).to_s
+            author_model = Thread.current[:master_llm_answer_model]
             next if response.strip == "UNCHANGED"
 
             applied = PatchApplier.apply(src, response)
@@ -216,7 +218,7 @@ module Master
                 law: @law.id, file: path, candidate: index + 1,
                 approach: UserSimulation.approach(index).fetch(:name), format: :diff
               )
-              applied.source
+              candidate_proposal(applied.source, author_model)
             else
               @bus&.publish(
                 "repair_loop:candidate_rejected",
@@ -226,7 +228,7 @@ module Master
               nil
             end
           end
-          candidates = rows.compact.uniq
+          candidates = rows.compact
 
           selected = best_candidate(candidates, path, original: src, violation:)
           return selected if selected
@@ -290,8 +292,12 @@ module Master
         end
 
         def best_candidate(candidates, path, original: nil, violation: nil)
-          return if candidates.empty?
+          Thread.current[:master_fix_candidate_author_models] = []
+          proposals = normalize_candidate_proposals(candidates)
+          return if proposals.empty?
 
+          proposal_authors = proposals.to_h { |row| [row.source, row.author_models] }
+          candidates = proposals.map(&:source)
           original ||= File.read(path, encoding: "UTF-8")
           unless File.file?(path) && File.read(path, encoding: "UTF-8") == original
             @bus&.publish(
@@ -306,7 +312,7 @@ module Master
             count = rescan_candidate(candidate, path)
             next if count > baseline
 
-            { source: candidate, findings: count, diff_bytes: (candidate.bytesize - original.bytesize).abs }
+            { source: candidate, findings: count, diff_bytes: (candidate.bytesize - original.bytesize).abs, author_models: proposal_authors.fetch(candidate, []) }
           end
           return if viable.empty?
 
@@ -338,6 +344,7 @@ module Master
               [row.fetch(:findings), UserSimulation.rank(status), row.fetch(:diff_bytes)],
               row.fetch(:source),
               proof,
+              row.fetch(:author_models),
             ]
           end
           selected = ranked.min_by(&:first)
@@ -350,6 +357,7 @@ module Master
             return
           end
 
+          Thread.current[:master_fix_candidate_author_models] = Array(selected[3]).map(&:to_s).reject(&:empty?).uniq.freeze
           proof = selected[2]
           proof_status = proof.fetch(:status).to_sym
           selection_event = proof_status == :unavailable ?
@@ -404,17 +412,20 @@ module Master
           ext = File.extname(path).downcase
           rows = candidate_threads(count, violation:, event:) do |index|
             prompt = candidate_prompt(violation:, src:, path:, style:, index:, suffix:)
-            # codes answers nil when no lane answers; `.first` on it raised for every file once the
-            # claude lane's quota ran out, and each was logged as a fresh NoMethodError.
+            # Capture the model that returned the source, not the configured route head.
+            # Agent records the actual fallback lane in the current candidate thread.
             candidate = if model
                           response = ask_once_agent(prompt, model:, image: @visual_image).to_s
+                          author_model = Thread.current[:master_llm_answer_model]
                           extract_code(response, ext)
                         else
-                          Array(fix_attempt(violation, attempts: 1, event:).codes(
+                          codes = fix_attempt(violation, attempts: 1, event:).codes(
                             prompt:, ext:, source: src,
                             wait_context: { rule: @law.id, file: path, mode: "candidate-#{index + 1}" },
                             image: @visual_image
-                          )).first
+                          )
+                          author_model = Thread.current[:master_llm_answer_model]
+                          Array(codes).first
                         end
             next if candidate.to_s.strip.empty? || candidate.strip == src.strip
 
@@ -423,11 +434,27 @@ module Master
               law: @law.id, file: path, candidate: index + 1,
               approach: UserSimulation.approach(index).fetch(:name), format: style
             )
-            candidate
+            candidate_proposal(candidate, author_model)
           end
-          rows.compact.uniq
+          rows.compact
         end
 
+        def candidate_proposal(source, author_model = nil)
+          authors = Array(author_model).map(&:to_s).reject(&:empty?).uniq.freeze
+          CandidateProposal.new(source.to_s, authors)
+        end
+
+        def normalize_candidate_proposals(candidates)
+          Array(candidates).filter_map do |candidate|
+            source = candidate.respond_to?(:source) ? candidate.source.to_s : candidate.to_s
+            next if source.strip.empty?
+
+            authors = candidate.respond_to?(:author_models) ? Array(candidate.author_models) : []
+            candidate_proposal(source, authors)
+          end.group_by(&:source).map do |source, rows|
+            candidate_proposal(source, rows.flat_map(&:author_models))
+          end
+        end
         def candidate_fix(violation:, src:, path:, style:, suffix: nil, event: "repair_loop:fix_error", model: nil)
           candidates = propose_candidates(violation:, src:, path:, style:, suffix:, event:, model:)
           best_candidate(candidates, path, original: src, violation:)
