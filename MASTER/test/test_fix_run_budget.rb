@@ -326,6 +326,21 @@ class TestFixRunBudget < Minitest::Test
     refute_match(/waiting on web-chat:kimi/, run.beat)
   end
 
+  def test_master_dispatcher_crash_counts_as_a_failed_attempt
+    run = budget
+    _bus, say = pulse_bus
+    run.announce(target: "MASTER", bus: _bus)
+    @now = 10.0
+    say.call("llm:send", model: "claude-cli:claude-opus-5-5")
+    @now = 12.0
+    say.call("llm:call_finished", model: "claude-cli:claude-opus-5-5", status: :crash,
+                                               error_digest: "a" * 64, error_bytes: 12)
+
+    assert_equal 1, run.counts.fetch(:failed)
+    assert_equal 1, run.counts.fetch(:attempts)
+    refute_match(/waiting on claude-cli/, run.beat)
+  end
+
   def test_pass_summary_block_counts_before_after_fixes_skips_and_commits
     run = budget
     bus, say = pulse_bus
