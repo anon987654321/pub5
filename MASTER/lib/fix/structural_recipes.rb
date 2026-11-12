@@ -185,7 +185,7 @@ module Master
           unless app_relative && app_relative.start_with?("RAILS/")
             raise Invalid, "#{name}: proof names an unregistered RAILS app #{app.inspect}"
           end
-          unless relative.start_with?("test/") && !relative.match?(/[\\x00-\\x1f]/)
+          unless relative.start_with?("test/") && !relative.match?(/[\x00-\x1f]/)
             raise Invalid, "#{name}: proof path must be a repository-relative app test: #{app}/#{relative}"
           end
 
