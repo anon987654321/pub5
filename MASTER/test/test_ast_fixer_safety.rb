@@ -92,6 +92,44 @@ class TestAstFixerSafety < Minitest::Test
     refute js.send(:javascript_parses?, "const a = ;")
   end
 
+  def test_html_validator_catches_mismatched_tags_but_accepts_void_and_optional_tags
+    html = fixer("page.html")
+
+    assert html.send(:html_tags_balanced?, "<main><p>One<p>Two<br><img src='x'></main>")
+    assert html.send(:html_tags_balanced?, "<div title='1 > 0'><script>if (a < b) {}</script></div>")
+    refute html.send(:html_tags_balanced?, "<main><span></main>")
+  end
+
+  def test_html_transform_is_discarded_when_it_breaks_tag_balance
+    html = fixer("page.html")
+
+    assert html.send(:broke_syntax?, "<main><span>x</span></main>", "<main><span>x</main>")
+    refute html.send(:broke_syntax?, "<main></main>", "<main><section></section></main>")
+  end
+
+  def test_yaml_and_json_validators_reject_malformed_candidates
+    yaml = fixer("config.yml")
+    json = fixer("data.json")
+
+    assert yaml.send(:yaml_parses?, "root:\n  child: true\n")
+    refute yaml.send(:yaml_parses?, "root:\n child: [\n")
+    assert json.send(:json_parses?, %({"enabled":true}))
+    refute json.send(:json_parses?, %({"enabled":}))
+    assert yaml.send(:broke_syntax?, "root: true\n", "root: [\n")
+    assert json.send(:broke_syntax?, %({"enabled":true}), %({"enabled":}))
+  end
+
+  def test_markdown_validator_catches_an_unclosed_fence
+    markdown = fixer("README.md")
+    fence = "\x60" * 3
+    valid = "Text\n\n#{fence}ruby\nx = 1\n#{fence}\n"
+    invalid = "Text\n\n#{fence}ruby\nx = 1\n"
+
+    assert markdown.send(:markdown_fences_balanced?, valid)
+    refute markdown.send(:markdown_fences_balanced?, invalid)
+    assert markdown.send(:broke_syntax?, valid, invalid)
+  end
+
   def test_no_validator_means_no_verdict
     assert_nil fixer("notes.md").send(:syntax_validator)
     refute fixer("notes.md").send(:broke_syntax?, "before", "after")

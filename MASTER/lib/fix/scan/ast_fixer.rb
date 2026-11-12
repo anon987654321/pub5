@@ -2,6 +2,8 @@
 
 require "prism"
 require "set"
+require "yaml"
+require "json"
 require_relative "../../io/exec"
 require "strscan"
 require_relative "ast_fixer/syntax_transforms"
@@ -26,6 +28,9 @@ module Master
         JS_EXTS = %w[.js .ts .jsx .tsx].freeze
 
         STYLE_EXTS = %w[.css .scss].freeze
+        HTML_VOID_TAGS = %w[area base br col embed hr img input link meta param source track wbr].freeze
+        HTML_OPTIONAL_END_TAGS = %w[li p dt dd rt rp optgroup option thead tbody tfoot tr td th].freeze
+        HTML_TAG_TOKEN = /<\s*(\/?)\s*([a-z][a-z0-9:-]*)\b((?:"[^"]*"|'[^']*'|[^'">])*)>/im
 
         Result = Struct.new(:path, :changed, :transforms, :content, keyword_init: true)
         Strategy = Struct.new(:predicate, :transforms, keyword_init: true)
@@ -217,8 +222,89 @@ module Master
           return :parses? if ruby?
           return :javascript_parses? if javascript? && self.class.node_available?
           return :style_balanced? if style?
+          return :html_tags_balanced? if html?
+          return :yaml_parses? if yaml?
+          return :json_parses? if json?
+          return :markdown_fences_balanced? if markdown?
 
           nil
+        end
+
+        def yaml? = %w[.yml .yaml].include?(File.extname(@path).downcase)
+
+        def json? = File.extname(@path).downcase == ".json"
+
+        def yaml_parses?(src)
+          YAML.parse(src)
+          true
+        rescue Psych::SyntaxError
+          false
+        end
+
+        def json_parses?(src)
+          JSON.parse(src)
+          true
+        rescue JSON::ParserError
+          false
+        end
+
+        def html_tags_balanced?(src)
+          text = src.gsub(/<%.*?%>/m, "").gsub(/<!--.*?-->/m, "")
+          text = text.gsub(/(<\s*(script|style|textarea|title)\b[^>]*>).*?(<\s*\/\s*\2\s*>)/im) do
+            "#{$1}#{$3}"
+          end
+          stack = []
+
+          text.scan(HTML_TAG_TOKEN) do |closing, raw_name, attributes|
+            name = raw_name.downcase
+            if closing == "/"
+              index = stack.rindex(name)
+              return false unless index
+              return false if stack[(index + 1)..].any? { |open| !HTML_OPTIONAL_END_TAGS.include?(open) }
+
+              stack.slice!(index..)
+              next
+            end
+
+            close_optional_before_start(stack, name)
+            self_closing = attributes.to_s.match?(%r{/\s*\z})
+            stack << name unless self_closing || HTML_VOID_TAGS.include?(name)
+          end
+
+          stack.all? { |name| HTML_OPTIONAL_END_TAGS.include?(name) }
+        end
+
+        def close_optional_before_start(stack, name)
+          closable = case name
+                     when "li" then %w[li]
+                     when "dt", "dd" then %w[dt dd]
+                     when "p" then %w[p]
+                     when "option" then %w[option]
+                     when "optgroup" then %w[option optgroup]
+                     when "tr" then %w[td th tr]
+                     when "td", "th" then %w[td th]
+                     when "thead", "tbody", "tfoot" then %w[td th tr thead tbody tfoot]
+                     else
+                       %w[address article aside blockquote div dl fieldset footer form h1 h2 h3 h4 h5 h6
+                          header hr menu nav ol pre section table ul].include?(name) ? %w[p] : []
+                     end
+          stack.pop while closable.include?(stack.last)
+        end
+
+        def markdown_fences_balanced?(src)
+          fence = nil
+          src.each_line do |line|
+            marker = line.match(/\A {0,3}(\x60{3,}|~{3,})/)
+            next unless marker
+
+            token = marker[1]
+            if fence
+              fence = nil if token[0] == fence[0] && token.length >= fence.length
+            else
+              fence = token
+            end
+          end
+          fence.nil?
         end
 
         def parses?(src) = !Prism.parse(src).failure?
