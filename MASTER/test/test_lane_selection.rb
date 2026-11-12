@@ -722,18 +722,22 @@ class TestLaneSelection < Minitest::Test
       @floor_notice = nil
     end
     Selection.watch_free_class!
-    # Suspension is justified only after a non-free lane has actually answered.
-    Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+    # Suspension is justified only after a non-free lane has actually answered
+    # and remains usable. Model that external health evidence deterministically.
+    Selection.stub(:live_savior, OPUS) do
+      Master::Io::LaneState.stub(:usable?, ->(id) { id == OPUS }) do
+        Selection.note_provider_outcome(OPUS, :success, alive: ALL)
+        3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
+        assert_predicate Selection, :free_floor_suspended?
+        assert_nil Selection.suspend_free_floor!(OPUS),
+                   "the guard refuses a second suspension; the first verdict holds"
 
-    3.times { Selection.note_provider_outcome(NANO, :timeout, alive: ALL) }
-    assert_predicate Selection, :free_floor_suspended?
-    assert_nil Selection.suspend_free_floor!(OPUS),
-               "the guard refuses a second suspension; the first verdict holds"
-
-    # A new /fix turn re-arms the watch and clears the suspension with the count.
-    Selection.watch_free_class!
-    refute_predicate Selection, :free_floor_suspended?,
-                     "the next turn is allowed to try the floor again"
+        # A new /fix turn re-arms the watch and clears the suspension with the count.
+        Selection.watch_free_class!
+        refute_predicate Selection, :free_floor_suspended?,
+                         "the next turn is allowed to try the floor again"
+      end
+    end
   ensure
     Selection.watch_free_class!(false)
   end
