@@ -27,7 +27,15 @@ module Master
           model = pick or raise Unavailable, "no live #{@config["lane_tier"]} lane"
           reply = model.start_with?("claude-cli:") ? via_claude_cli(model, system, prompt) : via_ruby_llm(model, system, prompt, max_tokens)
           text = reply.to_s.strip
-          raise Unavailable, "#{model} answered nothing" if text.empty?
+          if text.empty?
+            if model.start_with?("claude-cli:")
+              lane = Master::Io::LaneSilence.lane_of(model)
+              if Master::Io::LaneSilence.record(false, lane, reason: "narration returned an empty reply")
+                Master::Trace::Dmesg.once("llm0-#{lane}", Master::Io::LaneSilence.message(lane))
+              end
+            end
+            raise Unavailable, "#{model} answered nothing"
+          end
 
           Master::Io::LaneSilence.record(true, Master::Io::LaneSilence.lane_of(model)) if model.start_with?("claude-cli:")
           text
