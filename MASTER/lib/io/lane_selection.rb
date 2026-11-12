@@ -179,7 +179,7 @@ module Master
       # free_last: false and never reaches this sort.
       def class_rank(id)
         rank = KIND_RANK.fetch(kind(id))
-        return rank unless @floor_suspended == true && FREE_CLASS_KINDS.include?(kind(id))
+        return rank unless free_floor_suspended? && FREE_CLASS_KINDS.include?(kind(id))
 
         FLOOR_SUSPENDED_RANK
       end

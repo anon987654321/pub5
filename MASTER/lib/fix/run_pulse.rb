@@ -306,8 +306,10 @@ module Master
           return
         end
 
-        @dead_streak += 1
-        @promote_pending = true if @dead_streak >= DEAD_STREAK_LIMIT && @promoted_live.nil?
+        if Master::Io::LaneSelection::FREE_CLASS_KINDS.include?(Master::Io::LaneSelection.kind(payload[:model]))
+          @dead_streak += 1
+          @promote_pending = true if @dead_streak >= DEAD_STREAK_LIMIT && @promoted_live.nil?
+        end
         attempted do
           @errored += 1
           @pass_errored += 1
