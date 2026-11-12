@@ -256,14 +256,14 @@ class TestStructuralShapeRules < Minitest::Test
       body = (1..10).map { |line| "      step_#{line} = #{index + line}" }.join("\n")
       "    def operation_#{index}\n#{body}\n      step_10\n    end"
     end.join("\n")
-    source = "class Router\\n  module Operations\\n#{methods}\\n  end\\nend\\n"
+    source = "class Router\n  module Operations\n#{methods}\n  end\nend\n"
 
     assert_empty god_class_flags(source)
   end
 
   def test_god_class_still_counts_large_logic_owned_directly_by_a_class
     body = (1..301).map { |line| "      value_#{line} = #{line}" }.join("\n")
-    source = "class Large\\n  def build\\n#{body}\\n    value_301\\n  end\\nend\\n"
+    source = "class Large\n  def build\n#{body}\n    value_301\n  end\nend\n"
 
     found = god_class_flags(source)
     assert_equal 1, found.size
