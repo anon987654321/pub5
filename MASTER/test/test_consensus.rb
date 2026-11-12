@@ -47,6 +47,71 @@ class TestConsensus < Minitest::Test
     assert_equal ["only/one"], consensus.instance_variable_get(:@models)
   end
 
+  class RecordingAgent
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def ask_once(_prompt, model:, failover:)
+      @calls << { model:, failover: }
+      '{"approved":true,"reason":"independent vote"}'
+    end
+  end
+
+  class RecordingBus
+    attr_reader :events
+
+    def initialize = (@events = [])
+    def publish(event, **payload) = @events << [event, payload]
+  end
+
+  def test_writer_family_is_excluded_and_reviewers_cannot_fail_over
+    agent = RecordingAgent.new
+    bus = RecordingBus.new
+    consensus = Master::Review::Consensus.new(
+      agent:, event_bus: bus, models: ["claude-sonnet-5-5", "grok-cli:auto", "moonshotai/kimi-k2"], quorum: 2
+    )
+
+    approved = consensus.approve_fix?(
+      prompt: "test", candidate: "safe",
+      violation: { law: "TEST", severity: :error, file: "a.rb", line: 1, message: "fix" },
+      author_models: ["claude-cli:claude-opus-5-5"]
+    )
+
+    assert approved
+    assert_equal ["grok-cli:auto", "moonshotai/kimi-k2"], agent.calls.map { |row| row.fetch(:model) }
+    assert agent.calls.all? { |row| row.fetch(:failover) == false }
+    result = bus.events.find { |event, _payload| event == "consensus:result" }
+    assert_equal ["claude-sonnet-5-5"], result.last.fetch(:excluded_models)
+  end
+
+  def test_consensus_blocks_when_author_exclusion_cannot_meet_quorum_and_family_floor
+    agent = RecordingAgent.new
+    bus = RecordingBus.new
+    consensus = Master::Review::Consensus.new(
+      agent:, event_bus: bus, models: ["claude-sonnet-5-5", "claude-opus-5-5", "grok-cli:auto"], quorum: 2
+    )
+
+    refute consensus.approve_fix?(
+      prompt: "test", candidate: "safe",
+      violation: { law: "TEST", severity: :error, file: "a.rb", line: 1, message: "fix" },
+      author_models: ["claude-cli:claude-opus-5-5"]
+    )
+    assert_empty agent.calls
+    blocked = bus.events.find { |event, _payload| event == "consensus:blocked" }
+    assert_equal :insufficient_independent_reviewers, blocked.last.fetch(:reason)
+    assert_equal 2, blocked.last.fetch(:minimum_families)
+  end
+
+  def test_model_family_tracks_the_model_across_provider_aliases
+    assert_equal "anthropic", Master::Review::Consensus.model_family("claude-cli:claude-opus-5-5")
+    assert_equal "anthropic", Master::Review::Consensus.model_family("openrouter:anthropic/claude-sonnet-5-5")
+    assert_equal "moonshot", Master::Review::Consensus.model_family("moonshotai/kimi-k2")
+    assert_equal "openai", Master::Review::Consensus.model_family("openrouter:openai/o3")
+  end
+
   def test_quorum_comes_from_models_yml_and_fits_the_pool
     declared = Master.load_yaml(Master.data_path("models.yml")).fetch("three_mirror_redundancy").fetch("quorum")
     consensus = Master::Review::Consensus.new(agent: nil)
