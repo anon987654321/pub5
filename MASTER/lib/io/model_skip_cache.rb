@@ -48,7 +48,10 @@ module Master
         @clock = callable
       end
 
-      def now_ms = (@clock ? @clock.call : Process.clock_gettime(Process::CLOCK_REALTIME) * 1000).round
+      # Parks and strike windows are durations, so wall-clock corrections must
+      # not extend or shorten them. Provider reset headers and clock phrases are
+      # absolute wall times; skip! supplies realtime separately to LaneReply.
+      def now_ms = (@clock ? @clock.call : Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1000).round
 
       def skip_ttl_ms
         env = ENV["MASTER_FALLBACK_SKIP_TTL_MS"].to_s
@@ -71,7 +74,8 @@ module Master
         return if cat && !SKIP_CATEGORIES.include?(cat)
 
         now = now_ms
-        ttl = ttl_ms(category: cat, reason: reason.to_s, now_ms: now, strikes: strike!(model, now))
+        parser_now = @clock ? now : Process.clock_gettime(Process::CLOCK_REALTIME) * 1000
+        ttl = ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes: strike!(model, now))
         return if ttl <= 0 || model.to_s.empty?
 
         @mutex.synchronize do
