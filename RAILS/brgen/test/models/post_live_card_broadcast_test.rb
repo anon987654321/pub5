@@ -105,6 +105,27 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
            "a comment count change must not refresh or replace the index page"
   end
 
+  test "a repost and undo update only the shared repost count" do
+    added = capture_turbo_stream_broadcasts(@stream) do
+      Repost.create!(user: @voter, post: @post)
+    end
+    target = %([data-post-repost-count="post_#{@post.id}"])
+    update = added.find { |stream| stream["targets"] == target }
+
+    assert update, "no repost count update on the city feed"
+    assert_equal "update", update["action"]
+    assert_equal "1", update.at_css("template").inner_html.strip
+    assert added.none? { |stream| %w[refresh replace].include?(stream["action"]) },
+           "a repost must not replace another reader's button or refresh their page"
+
+    removed = capture_turbo_stream_broadcasts(@stream) do
+      Repost.find_by!(user: @voter, post: @post).destroy!
+    end
+    update = removed.find { |stream| stream["targets"] == target }
+    assert update, "undoing a repost did not update its counter"
+    assert_equal "", update.at_css("template").inner_html.strip
+  end
+
   test "a vote does not resend the card" do
     streams = capture_turbo_stream_broadcasts(@stream) { Vote.create!(user: @voter, votable: @post, value: 1) }
 
