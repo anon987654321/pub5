@@ -106,6 +106,8 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
   end
 
   test "a repost and undo update only the shared repost count" do
+    @post.update_column(:updated_at, 1.day.ago)
+    previous_updated_at = @post.reload.updated_at
     added = capture_turbo_stream_broadcasts(@stream) do
       Repost.create!(user: @voter, post: @post)
     end
@@ -115,6 +117,7 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     assert update, "no repost count update on the city feed"
     assert_equal "update", update["action"]
     assert_equal "1", update.at_css("template").inner_html.strip
+    assert_equal previous_updated_at, @post.reload.updated_at, "a repost must not touch the post"
     assert added.none? { |stream| %w[refresh replace].include?(stream["action"]) },
            "a repost must not replace another reader's button or refresh their page"
 
@@ -124,6 +127,7 @@ class PostLiveCardBroadcastTest < ActiveSupport::TestCase
     update = removed.find { |stream| stream["targets"] == target }
     assert update, "undoing a repost did not update its counter"
     assert_equal "", update.at_css("template").inner_html.strip
+    assert_equal previous_updated_at, @post.reload.updated_at, "undoing a repost must not touch the post"
   end
 
   test "a vote does not resend the card" do
