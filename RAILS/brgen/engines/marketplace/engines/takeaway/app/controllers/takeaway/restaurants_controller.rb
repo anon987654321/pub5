@@ -14,12 +14,13 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
     # :city as well as :user — the card renders restaurant.city, which was one
     # query per restaurant (14 on a full page).
     scope = Takeaway::Restaurant.indexable.with_attached_cover.includes(:user, :city)
+    @sort = Takeaway::Restaurant::SORTS.include?(params[:sort].to_s) ? params[:sort].to_s : "popular"
     scope = scope.where(cuisine_type: params[:cuisine]) if params[:cuisine].present?
     scope = apply_live_search(scope, columns: %w[name city cuisine_type description], vertical: "takeaway") if live_search_query.present?
     if params[:lat].present? && params[:lng].present?
       scope = scope.near(params[:lat], params[:lng], params[:radius_km] || 5) if scope.respond_to?(:near)
     end
-    @pagy, @restaurants = pagy(live_search_query.present? ? scope : scope.popular)
+    @pagy, @restaurants = pagy(scope.merge(Takeaway::Restaurant.sorted(@sort)))
     @promo_restaurant, @promo_menu_item = promotional_menu_feature if live_search_query.blank? && params[:cuisine].blank?
     finish_storefront_search(partial: "takeaway/restaurants/live_search_results")
   end
