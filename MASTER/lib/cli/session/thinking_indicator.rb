@@ -154,8 +154,12 @@ module Master
           # A reserved row above Reline's prompt keeps the animation
           # visible without painting over the user's editable draft.
           target.print("\e7\e[1A\r\e[K#{line}\e8") if activity_row_safe_to_draw?
-        elsif !@turn_current_started
+        else
+          # Once a queued turn starts, it still owns a clean status row. The
+          # next dmesg write clears this row first; the spinner paints again
+          # below that event on its next tick.
           target.print("\r\e[K#{line}")
+          @spinner_row_visible = true
         end
       end
 
@@ -209,6 +213,7 @@ module Master
         @think_stopping = false
 
         @spin_frame = 0
+        @spinner_row_visible = false
         @spin_intensity = nil
         @spin_probe_at = 0.0
         @spin_paused = false
@@ -374,6 +379,7 @@ module Master
         elsif $stdout.tty?
           terminal_print("\r\e[K")
         end
+        @spinner_row_visible = false
       end
 
       # Detailed dmesg is the default; MASTER_CLI_QUIET=1 is the opt-out.
