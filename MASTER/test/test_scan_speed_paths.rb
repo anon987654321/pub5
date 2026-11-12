@@ -174,6 +174,27 @@ class TestScanSpeedPaths < Minitest::Test
     end
   end
 
+  def test_unreadable_file_validation_is_a_skippable_refusal
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "unreadable.rb")
+      File.write(path, "value = 1\n")
+      processor = Master::Fix::Scan::FileProcessor.new(skip_semantic: true)
+      original_size = File.method(:size)
+      unreadable_size = lambda do |candidate|
+        raise Errno::EACCES, "permission denied" if candidate == path
+
+        original_size.call(candidate)
+      end
+
+      result = File.stub(:size, unreadable_size) { processor.send(:validate_file, path) }
+
+      assert result.err?
+      assert_equal :validation, result.category
+      assert_match(/\Afile unreadable: Errno::EACCES:/, result.message)
+      assert Master::Fix::Scanner.new.send(:refused?, result), "one inaccessible file must not abort a tree scan"
+    end
+  end
+
   def test_structured_data_budget_covers_dilla_catalogue_and_stays_bounded
     path = File.expand_path("../../STUDIO/dilla/data/dilla.json", __dir__)
     assert File.file?(path), "the canonical Dilla catalogue must remain present"
