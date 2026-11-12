@@ -156,16 +156,74 @@ class ImagePresenter
     false
   end
 
-  # Its own process group, so the kill takes the libvips children with it.
+  # Its own process group, so the timeout covers the direct process and any
+  # libvips/codec child that inherited stdout. A leader can exit before that
+  # descendant closes the pipe; reader completion therefore shares the same
+  # monotonic deadline instead of becoming an unbounded join.
   def run_bounded(argv, chdir:, timeout_s: POSTPRO_TIMEOUT_S)
     Open3.popen2e(*argv, chdir:, pgroup: true) do |_stdin, output, waiter|
-      reader = Thread.new { output.read }
-      unless waiter.join(timeout_s)
-        Process.kill("KILL", -waiter.pid)
-        @logger.warn("postpro killed after #{timeout_s}s")
-        return [ reader.value, nil ]
+      captured = +""
+      reader = Thread.new do
+        loop { captured << output.readpartial(16_384) }
+      rescue EOFError, IOError
+        captured
       end
-      [ reader.value, waiter.value ]
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout_s.to_f
+      process_finished = waiter.join([deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max)
+      reader_finished = reader.join([deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0].max)
+      unless process_finished && reader_finished
+        group_stopped = stop_postpro_group(waiter.pid)
+        leader_reaped = waiter.join(1)
+        reader.join(0.2)
+        if reader.alive?
+          output.close rescue nil
+          reader.kill
+          reader.join(0.2)
+        end
+        detail = group_stopped && leader_reaped && !reader.alive? ? "process group stopped" : "shutdown unverified"
+        @logger.warn("postpro exceeded #{timeout_s}s; #{detail}")
+        next [captured, nil]
+      end
+      [captured, waiter.value]
     end
+  end
+
+  TERM_GRACE_S = 0.2
+  KILL_GRACE_S = 2.0
+  STOP_POLL_S = 0.025
+
+  def stop_postpro_group(pid)
+    group = Integer(pid)
+    return false unless group.positive?
+    return false if group == Process.getpgrp
+
+    Process.kill("TERM", -group)
+    return true if wait_postpro_group_exit(group, TERM_GRACE_S)
+
+    Process.kill("KILL", -group)
+    wait_postpro_group_exit(group, KILL_GRACE_S)
+  rescue Errno::ESRCH
+    true
+  rescue Errno::EPERM, ArgumentError, TypeError
+    false
+  end
+
+  def wait_postpro_group_exit(group, timeout)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+    loop do
+      return true unless postpro_group_alive?(group)
+      return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep STOP_POLL_S
+    end
+  end
+
+  def postpro_group_alive?(group)
+    Process.kill(0, -group)
+    true
+  rescue Errno::ESRCH
+    false
+  rescue Errno::EPERM
+    true
   end
 end
