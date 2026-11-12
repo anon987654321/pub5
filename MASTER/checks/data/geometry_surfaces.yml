@@ -267,6 +267,7 @@ state_matrix:
     - { id: brgen/messenger/search, surface: brgen/conversations_search, selector: ".messenger-compose-form input[type=search]" }
     - { id: brgen/messenger/channel_link, surface: brgen/messenger, selector: ".messenger-rail-room" }
     - { id: brgen/takeaway/restaurant_card, surface: brgen/takeaway_restaurants, selector: ".deal-card.restaurant .deal-card-hit" }
+    - { id: brgen/takeaway/sort_options, surface: brgen/takeaway_restaurants, selector: ".store-pills a" }
     - { id: brgen/takeaway/menu_action, surface: brgen/takeaway_restaurant, selector: ".listing-buy-bar-actions .button-primary" }
     - { id: brgen/takeaway/menu_quantity, surface: brgen/takeaway_restaurant, selector: "input.qty-field" }
     - { id: amber/wardrobe/add_item, surface: amber/wardrobe, selector: ".wardrobe-action-group a.button-primary" }
