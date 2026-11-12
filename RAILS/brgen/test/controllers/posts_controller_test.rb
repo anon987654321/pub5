@@ -25,6 +25,29 @@ class PostsControllerTest < ActionDispatch::IntegrationTest
   # The card's Copy link and Share passed the URL as data-clipboard-source-value,
   # but the vendored clipboard controller reads a `source` target, so every
   # press threw "Missing target" and copied nothing.
+  test "a post vote replaces only the current reader's vote rail" do
+    city = brgen_city
+    author = User.create!(email_address: "post-vote-author-#{SecureRandom.hex(4)}@example.com",
+                          password: "password12345", city:)
+    voter = User.create!(email_address: "post-vote-reader-#{SecureRandom.hex(4)}@example.com",
+                         password: "password12345", city:)
+    post_record = ActsAsTenant.with_tenant(city) do
+      Post.create!(user: author, title: "Scoped vote", content: "Only the rail should change.", city:)
+    end
+
+    host! "brgen.no"
+    post session_url, params: { email_address: voter.email_address, password: "password12345" }
+    post post_vote_path(post_record), params: { vote: { value: 1 } }, as: :turbo_stream
+
+    assert_response :success
+    rail = "post_#{post_record.id}_vote_rail"
+    assert_select "turbo-stream[action='replace'][target=?]", rail, 1
+    assert_select "turbo-stream[action='replace'][target='post_#{post_record.id}']", 0
+    assert_includes response.body, 'aria-pressed="true"'
+    assert_includes response.body, "data-post-score=\"post_#{post_record.id}\""
+    assert_includes response.body, ">1</span>"
+  end
+
   test "the card's copy and share buttons carry their URL to a controller that reads it" do
     city = brgen_city
     user = User.create!(email_address: "post-copy-#{SecureRandom.hex(4)}@example.com",
