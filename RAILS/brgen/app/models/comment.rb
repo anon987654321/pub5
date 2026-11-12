@@ -11,7 +11,7 @@ class Comment < ApplicationRecord
   belongs_to :user
   # counter_cache is opt-in per type on a polymorphic belongs_to: Rails only
   # maintains it where the column exists, and posts is the one that has it.
-  belongs_to :commentable, polymorphic: true, touch: true, counter_cache: :comments_count
+  belongs_to :commentable, polymorphic: true, counter_cache: :comments_count
 
   include Shared::RichTextLength
 
@@ -30,6 +30,8 @@ class Comment < ApplicationRecord
   # The count on every card and page showing the post. The counter cache
   # increments with SQL, so the post runs no callback of its own for it.
   after_commit :broadcast_commentable_counts, on: [ :create, :destroy ]
+  # Posts publish their count directly; other commentable records retain touch semantics.
+  after_commit :touch_non_post_commentable
 
   # Editing is bounded as messages are (Message::EDIT_WINDOW): a comment that
   # can be rewritten hours later is one its replies may no longer answer.
@@ -170,6 +172,15 @@ class Comment < ApplicationRecord
     return unless commentable_type == "Post"
 
     Post.unscoped.find_by(id: commentable_id)&.broadcast_live_counts
+  end
+
+  # Do not touch Post: its count has a targeted stream update of its own.
+  # Events, items and outfits retain the previous last-activity timestamp behaviour.
+  def touch_non_post_commentable
+    return if commentable_type == "Post"
+
+    klass = commentable_type.to_s.safe_constantize
+    klass.unscoped.find_by(id: commentable_id)&.touch if klass.respond_to?(:unscoped)
   end
 
   # Changed words mark the comment edited; a summary or vote does not.
