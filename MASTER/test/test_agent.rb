@@ -31,7 +31,7 @@ class TestAgent < Minitest::Test
   def test_research_sources_restores_an_outer_protocol_read_grant
     previous = Fiber[:master_protocol_read]
     Fiber[:master_protocol_read] = :outer_grant
-    agent = allocate_agent_for_research_test
+    agent = @agent
     agent.define_singleton_method(:evidence_tool) { |_name| nil }
 
     agent.research_sources(queries: [], sources: [])
