@@ -253,9 +253,12 @@ state_matrix:
     - { id: brgen/core/first_action, surface: brgen/core, selector: "main :is(button, a[href])" }
     - { id: amber/home/first_action, surface: amber/home, selector: "main :is(button, a[href])" }
     - { id: bsdports/home/search, surface: bsdports/home, selector: "input[type=search], input[name=q]" }
-    - { id: brgen/marketplace/card, surface: brgen/marketplace, selector: ".deal-card" }
+    - { id: brgen/marketplace/hero_action, surface: brgen/marketplace, selector: ".bol-market-hero .bol-primary" }
+    - { id: brgen/marketplace/filter_toggle, surface: brgen/markedsplass_marketplace_listings_index, selector: "summary.listing-filters-toggle" }
     - { id: brgen/messenger/search, surface: brgen/conversations_search, selector: ".messenger-compose-form input[type=search]" }
+    - { id: brgen/messenger/channel_link, surface: brgen/messenger, selector: ".messenger-rail-room" }
     - { id: amber/wardrobe/add_item, surface: amber/wardrobe, selector: ".wardrobe-action-group a.button-primary" }
+    - { id: amber/outfits/occasion, surface: amber/outfits, selector: "input[name=occasion]" }
     - { id: bsdports/ports_index/search, surface: bsdports/ports_index, selector: "input[type=search], input[name=q]" }
 
 # Written by /fix's visual lane when a rendered group is cleared and approved
