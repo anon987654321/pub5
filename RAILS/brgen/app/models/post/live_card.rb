@@ -53,9 +53,9 @@ class Post
     # Counts, not cards. A card carries the viewer's own vote, repost and quote,
     # so one rendered for the stream would show every reader somebody else's — or
     # nobody's, which takes the vote buttons away from everyone signed in. The
-    # score and the comment count are the same for every reader, so only they are
-    # sent, into the elements that carry them. Public because Comment calls it:
-    # the counter cache moves the count with SQL and runs no callback here.
+    # Score, comment and repost counts are the same for every reader, so only
+    # those facts are sent, into their stable targets. Each counter moves with
+    # SQL and its own model commit publishes the update.
     def broadcast_live_counts
       content = live_counts_content
       live_streams.each { |stream| Turbo::StreamsChannel.broadcast_stream_to(stream, content:) }
@@ -83,11 +83,12 @@ class Post
     # count is a counter cache, so neither is on this instance.
     def live_counts_content
       rows = Post.unscoped.where(id:)
-      score, comments = rows.pick(:score, :comments_count)
+      score, comments, reposts = rows.pick(:score, :comments_count, :reposts_count)
       key = ActionView::RecordIdentifier.dom_id(self)
       [
         live_count_update(%([data-post-score="#{key}"]), score.to_i.to_s),
-        live_count_update(%([data-post-comment-count="#{key}"]), comments.to_i.positive? ? comments.to_s : "")
+        live_count_update(%([data-post-comment-count="#{key}"]), comments.to_i.positive? ? comments.to_s : ""),
+        live_count_update(%([data-post-repost-count="#{key}"]), reposts.to_i.positive? ? reposts.to_s : "")
       ].join
     end
 
