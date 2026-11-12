@@ -260,12 +260,20 @@ module Master
         refusal = Master::CLI::Pipeline::TreeTarget.refusal(target)
         return Master::Result.err("fix: #{refusal}", category: :validation) if refusal
 
-        with_fix_overrides(overrides, previous:) do
-          dispatch_fix_parsed(
-            scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
-            apply:, critique:, aesthetic:, only:, target:, cancellation:, mode:,
-            task_intent: overrides[:task_intent] || "functional_change"
-          )
+        writes_requested = writes_requested?(apply:, only:)
+        max_passes = writes_requested ? Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES : 0
+
+        # Acquire run ownership before touching the process-wide compatibility
+        # overrides below. A rejected concurrent caller must not change the
+        # active run's mode, lane, check focus or critique pin even briefly.
+        Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target:) do
+          with_fix_overrides(overrides, previous:) do
+            dispatch_fix_parsed(
+              scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
+              apply:, critique:, aesthetic:, only:, target:, cancellation:, mode:,
+              task_intent: overrides[:task_intent] || "functional_change"
+            )
+          end
         end
       end
 

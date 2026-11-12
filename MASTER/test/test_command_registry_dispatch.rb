@@ -999,15 +999,62 @@ class TestCommandRegistryDispatch < Minitest::Test
       "preflight stubbed"
     end
 
-    Registry.stub(:dispatch_fix_parsed, parsed) do
-      result = Registry.dispatch_fix(
-        scanner: nil, fix_loop: nil, deliberation: nil, root: Master::ROOT, bus: nil, ctx:,
-      )
-      assert_equal "preflight stubbed", result
+    no_op_budget = ->(**_options, &block) { block.call }
+    Master::Fix::RunBudget.stub(:with_shared_run, no_op_budget) do
+      Registry.stub(:dispatch_fix_parsed, parsed) do
+        result = Registry.dispatch_fix(
+          scanner: nil, fix_loop: nil, deliberation: nil, root: Master::ROOT, bus: nil, ctx:,
+        )
+        assert_equal "preflight stubbed", result
+      end
     end
 
     assert_predicate token, :active?
     assert_same token, captured.fetch(:cancellation)
+  end
+
+  def test_rejected_concurrent_fix_does_not_change_active_run_overrides
+    budget = Master::Fix::RunBudget
+    active = Object.new
+    old_mode = Master::Fix::AutofixGuard.explicit_mode_override
+    old_lane = Master::Fix::WorkLane.current
+    old_focus = Master::Fix::CheckFocus.blockers?
+    budget::RUN_LOCK.synchronize do
+      budget.instance_variable_set(:@current, active)
+      budget.instance_variable_set(:@run_owner, Fiber.current)
+      budget.instance_variable_set(:@starting, false)
+    end
+    outcome = Queue.new
+    ctx = Master::CLI::PipelineContext.new(
+      user_message: "/fix --lane visual --autofix=off", args: "--lane visual --autofix=off"
+    )
+
+    worker = Thread.new do
+      begin
+        Registry.dispatch_fix(
+          scanner: nil, fix_loop: nil, deliberation: nil, root: Master::ROOT, bus: nil, ctx:
+        )
+        outcome << :unexpected_success
+      rescue StandardError => error
+        outcome << error
+      end
+    end
+    result = outcome.pop
+    worker.join
+
+    assert_instance_of RuntimeError, result
+    assert_match(/already active in another fiber/, result.message)
+    assert_equal old_mode, Master::Fix::AutofixGuard.explicit_mode_override
+    assert_equal old_lane, Master::Fix::WorkLane.current
+    assert_equal old_focus, Master::Fix::CheckFocus.blockers?
+    assert_same active, budget.current
+  ensure
+    worker&.kill
+    budget::RUN_LOCK.synchronize do
+      budget.instance_variable_set(:@current, nil)
+      budget.instance_variable_set(:@run_owner, nil)
+      budget.instance_variable_set(:@starting, false)
+    end
   end
 
   def test_documents_command_is_registered_and_local_only
