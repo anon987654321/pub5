@@ -22,6 +22,16 @@ module Deploy
     # — mode is File::Stat#mode; owner/group are names (or numeric fallback).
     # Expected fields are optional so this audit can check only what the
     # deployment contract explicitly guarantees. Returns failure lines.
+    # Inspect every component from the filesystem root: lstat on only the
+    # leaf would miss a secret reached through a symlinked parent directory.
+    def path_contains_symlink?(path)
+      current = File::SEPARATOR
+      File.expand_path(path.to_s).split(File::SEPARATOR).reject(&:empty?).any? do |part|
+        current = File.join(current, part)
+        File.symlink?(current)
+      end
+    end
+
     def failures(secrets:, private_dirs:, daemon_logs:, daemon_user:)
       lines = []
       (secrets + private_dirs + daemon_logs).each do |entry|
