@@ -1019,7 +1019,7 @@ module Master
             save save! update update! update_attribute update_attributes
             destroy destroy! delete delete! delete_all clear clear!
             push push! pop shift unshift append prepend concat insert replace
-            add add! remove remove! create create! touch increment! decrement!
+            add add! remove remove! create create! find_or_create_by! touch increment! decrement!
             write write_attribute []= <<
           ].freeze
 
