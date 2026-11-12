@@ -4,7 +4,7 @@ class Vote < ApplicationRecord
   tracks_activity created: "VoteCreated", source_vertical: "social", visibility: "private", actor: :user
 
   belongs_to :user
-  belongs_to :votable, polymorphic: true, touch: true
+  belongs_to :votable, polymorphic: true
 
   validates :value, inclusion: { in: [ -1, 1 ] }
   validates :user_id, uniqueness: { scope: [ :votable_type, :votable_id ] }
@@ -13,6 +13,10 @@ class Vote < ApplicationRecord
   after_destroy :rescore_author
   after_save    :apply_score_delta
   after_destroy :apply_score_delta
+  # Post counters are broadcast directly; touching Post would invalidate its card cache.
+  after_commit :broadcast_votable_counts
+  # Votes on comments still touch the comment itself, but no longer cascade into its post.
+  after_commit :touch_non_post_votable
 
   private
 
@@ -39,6 +43,22 @@ class Vote < ApplicationRecord
     return if delta.zero?
 
     klass.where(id: votable_id).update_all([ "score = COALESCE(score, 0) + ?", delta ])
+  end
+
+  # A post vote changes a reader-independent counter, not the post's content timestamp.
+  def broadcast_votable_counts
+    return unless votable_type == "Post"
+
+    Post.unscoped.find_by(id: votable_id)&.broadcast_live_counts
+  end
+
+  # Preserve the prior touch semantics for other votable types (currently comments).
+  # Post gets the targeted counter event above instead of a timestamp/cache invalidation.
+  def touch_non_post_votable
+    return if votable_type == "Post"
+
+    klass = votable_type.to_s.safe_constantize
+    klass.unscoped.find_by(id: votable_id)&.touch if klass.respond_to?(:unscoped)
   end
 
   # `votable.user` was a lazy belongs_to read on a votable the controller loaded
