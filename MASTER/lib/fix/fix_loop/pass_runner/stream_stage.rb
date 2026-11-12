@@ -391,7 +391,9 @@ module Master
             fixed = if FILE_REPAIR then repair_file(path, rows, runnable, rel, stream)
                     else run_streamed_rules(runnable, path, rel, stream)
                     end
-            Master::Trace::Dmesg.status("fix0", "pass #{stream.pass}, #{rel}: #{fixed} of #{rows.size} fixed in stream")
+            if Master::Trace::Dmesg.verbose?
+              Master::Trace::Dmesg.status("fix0", "pass #{stream.pass}, #{rel}: #{fixed} of #{rows.size} fixed in stream")
+            end
             fixed
           end
 
