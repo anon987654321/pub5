@@ -108,4 +108,31 @@ task :test do
   puts "test0: #{tests.size} file(s) passed with non-empty Minitest summaries"
 end
 
+namespace :test do
+  desc "Run the bounded Postpro motion regression suite"
+  task :motion do
+    require_relative "subprocess"
+    require_relative "test_runner"
+
+    path = File.join(STUDIO_ROOT, "test", "postpro_motion_test.rb")
+    abort "Postpro motion tests are missing: #{path}" unless File.file?(path)
+
+    timeout_s = Integer(ENV.fetch("STUDIO_TEST_TIMEOUT_S", "300"))
+    abort "STUDIO_TEST_TIMEOUT_S must be positive" unless timeout_s.positive?
+
+    output, error_output, status = Studio::Subprocess.capture3(
+      RUBY, path,
+      timeout: timeout_s,
+      chdir: STUDIO_ROOT,
+      env: { "MT_NO_PLUGINS" => "1" }
+    )
+    result = Studio::TestRunner.classify([output, error_output].join("\n"), status)
+    detail = result.summary ? Studio::TestRunner.summary_line(result.summary) : result.reason
+    puts "studio-test0: #{result.state.to_s.upcase} postpro_motion_test.rb#{detail ? " - #{detail}" : ""}"
+    abort "Postpro motion test suite did not pass" unless result.state == :pass
+  rescue Studio::Subprocess::TimeoutError => error
+    abort "Postpro motion test suite timed out: #{error.message}"
+  end
+end
+
 task default: %i[check test]
