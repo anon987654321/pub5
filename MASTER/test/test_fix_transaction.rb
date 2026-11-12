@@ -502,6 +502,28 @@ class TestFixTransaction < Minitest::Test
     end
   end
 
+  def test_checkpoint_failure_restores_delivery_metadata
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "note.txt"), "before\n")
+      tx = Master::Fix::Transaction.new(root: dir, paths: ["note.txt"], id: "checkpoint-delivery").begin!
+      tx.update_delivery!(head_before: "before-head", head_after: "after-head", marked: true)
+      original_persist = tx.method(:persist!)
+      tx.define_singleton_method(:persist!) do
+        original_persist.call
+        raise "simulated post-rename checkpoint failure"
+      end
+
+      result = tx.checkpoint!(["note.txt"])
+
+      refute result.ok?
+      assert_equal "before-head", tx.delivery_head_before
+      assert_equal "after-head", tx.delivery_head_after
+      assert tx.delivery_marked?
+      tx.define_singleton_method(:persist!) { original_persist.call }
+      assert tx.rollback!.ok?
+    end
+  end
+
   def git(dir, *args)
     out, status = Open3.capture2e("git", "-C", dir, "-c", "core.hooksPath=/dev/null", "-c", "user.name=t",
                                   "-c", "user.email=t@example.invalid", *args)
