@@ -428,7 +428,10 @@ module Master
         uri = value.is_a?(URI::Generic) ? value : URI.parse(value.to_s)
         allowed = uri.is_a?(URI::HTTPS) && uri.host == API_HOST && uri.port == 443 &&
                   uri.userinfo.nil? && uri.fragment.nil? && uri.path.start_with?("/v1/")
-        raise ArgumentError, "refusing URL outside the Replicate API origin" unless allowed
+        safe_path = uri.path.split("/").none? do |segment|
+          segment == "." || segment == ".." || segment.include?("%") || segment.include?("\\\\")
+        end
+        raise ArgumentError, "refusing URL outside the Replicate API origin" unless allowed && safe_path
 
         uri
       end
