@@ -29,7 +29,7 @@ module Master
 
       MODELS = File.expand_path("../../data/models.yml", __dir__)
       CLI_BINARIES = { "claude-cli" => "claude", "grok-cli" => "grok", "llama-cli" => "llama-cli" }.freeze
-      KIND_RANK = { remote: 0, paid_tail: 1, local: 2, free: 3 }.freeze
+      KIND_RANK = { remote: 0, paid_tail: 1, nsfw: 2, local: 2, free: 3 }.freeze
       FREE_CLASS_KINDS = %i[free local].freeze
       # Where a suspended floor rides in the selection sort: the same rank
       # ModelRouter#fallback_rank hands it, so the per-call chain and the
@@ -58,6 +58,7 @@ module Master
 
       def kind(model, cfg: config)
         id = model.to_s
+        return :nsfw if nsfw_model?(id)
         return :paid_tail if Io::PaidTail.member?(id)
         return :free if id.end_with?(":free", ":cloud", "-cloud") || id.start_with?("web-chat:")
         return :local if LaneHealth.local_model?(id)
@@ -85,6 +86,25 @@ module Master
       # `latency` answers seconds for a model or nil when it was never measured.
       # `vision: true` puts the lanes that read images ahead of those that do not.
       def ollama_model?(model) = model.to_s.start_with?("ollama:", "ollama/")
+
+      # NSFW is a separate, local-only route. It requires two explicit opt-ins:
+      # the lane switch and an exact installed Ollama model tag. The ordinary
+      # Ollama switch does not add this model to any general-purpose pool.
+      def nsfw_model?(model) = model.to_s.start_with?("local_uncensored:")
+
+      def nsfw_enabled?
+        return false unless ENV["MASTER_NSFW"] == "1" && ENV["MASTER_NO_OLLAMA"] != "1"
+
+        name = ENV["MASTER_NSFW_MODEL"].to_s.strip
+        name.match?(/\A[a-z0-9][a-z0-9._\/:\-]{0,127}\z/i) &&
+          !name.include?("..") && !name.end_with?(":cloud", "-cloud")
+      end
+
+      def nsfw_model_id
+        return unless nsfw_enabled?
+
+        "local_uncensored:#{ENV.fetch("MASTER_NSFW_MODEL").strip}"
+      end
 
       # The local CLI is usable only when its explicitly configured GGUF file is
       # present. A binary alone is not a model, and discovery never downloads one.
@@ -136,6 +156,7 @@ module Master
       def order(models, free_last: true, latency: nil, vision: false, manual: LaneQuota.manual_dead, lead: [],
                 cfg: config)
         live = Array(models).map(&:to_s).reject(&:empty?).uniq
+        live.reject! { |id| nsfw_model?(id) }
         live.reject! { |id| ollama_model?(id) && !ollama_enabled?(cfg:) }
         live = live.reject { |id| LaneQuota.dead?(id, manual:) || !LaneState.usable?(id) }
         live = live.reject { |id| kind(id) == :paid_tail && !Io::PaidTail.enabled? }
@@ -159,7 +180,7 @@ module Master
       # that must try something, or name why it cannot, does it in the order
       # the class ranks and the suspended floor decide.
       def ranked_order(models, free_last: true, latency: nil, vision: false, lead: [], cfg: config)
-        candidates = Array(models).map(&:to_s).reject(&:empty?).uniq
+        candidates = Array(models).map(&:to_s).reject(&:empty?).uniq.reject { |id| nsfw_model?(id) }
         unless free_last
           return candidates unless vision
 
@@ -423,6 +444,12 @@ module Master
 
       def alive?(model)
         id = model.to_s
+        if nsfw_model?(id)
+          return false unless id == nsfw_model_id
+          return false if Master::Io::ModelQuota.over_quota?(id)
+
+          return ollama_alive?(id, nsfw: true)
+        end
         return false if ollama_model?(id) && !ollama_enabled?
         return false if Master::Io::ModelQuota.over_quota?(id)
 
@@ -451,11 +478,11 @@ module Master
       end
 
       # A local model needs the daemon, which this starts once when it is down.
-      def ollama_alive?(id)
-        return false unless ollama_enabled?
+      def ollama_alive?(id, nsfw: false)
+        return false unless nsfw ? (id == nsfw_model_id) : ollama_enabled?
         return false if LaneQuota.dead?(id)
 
-        %i[up started].include?(LaneHealth.ensure_ollama.state)
+        %i[up started].include?(LaneHealth.ensure_ollama(nsfw:).state)
       end
 
       def on_path?(binary) = !Master::Io::Exec.cli_binary(binary).nil?
