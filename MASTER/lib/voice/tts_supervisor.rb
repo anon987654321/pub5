@@ -222,12 +222,13 @@ module Master
           # wait_for_child uses waitpid and the child remains unreaped, so this
           # PID still names the same worker when the bounded escalation runs.
           Process.kill("KILL", pid)
-          wait_for_child(pid, 1.0)
+          return nil unless wait_for_child(pid, 1.0)
         end
         @daemon_pids.delete(index)
         pid
       rescue Errno::ESRCH
-        wait_for_child(pid, 0.1) if pid
+        return nil unless pid && wait_for_child(pid, 0.1)
+
         @daemon_pids.delete(index)
         pid
       rescue Errno::ECHILD
