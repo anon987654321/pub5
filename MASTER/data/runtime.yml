@@ -2445,8 +2445,8 @@ routing_architecture:
     issue: four pick-a-model abstractions contradicted each other
     fix: ModelRouter selector + CatalogIndex data source consolidated
   - id: no_quota_rotation
-    issue: no per-model daily budget or multi-key round-robin
-    fix: Ground::KeyRotator multi-key OpenRouter round-robin
+    issue: no provider-scoped daily budget or stable credential selection
+    fix: LaneQuota cooldowns and one distinct credential per provider; fallback crosses providers
   budget_aware_ladder:
   - tier: S
     name: Opus 4.8 primary when funded
@@ -2485,7 +2485,7 @@ routing_architecture:
   - pick entry tier once at turn start
   - escalate upward only on low confidence for critical operations
   - degrade downward on failure or exhausted quota
-  - rotate by least-recently-used within tier
+  - keep provider credentials stable; cross-provider fallback respects each provider quota and cooldown
   - skip models in cooldown or over daily quota
   applied_changes:
   - Io::WebChat Ferrum-backed opt-in web chat
@@ -2494,7 +2494,7 @@ routing_architecture:
   - vision routing fixed with vision tier
   - primary tier for Opus subscription and paid paths
   - live_free_models from CatalogIndex
-  - KeyRotator multi-key round-robin
+  - provider-scoped quota accounting with one stable credential and cross-provider fallback
   - stale id refresh and free tier de-duplication
 runtime:
   enhancements:
