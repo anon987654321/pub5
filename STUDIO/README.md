@@ -8,8 +8,11 @@ but the implementation is owned here.
 ## The tools
 
 - `dilla/` — the Ruby-only music engine, canonical music data, dependency-free
-  spectral reference analyzer, and Ableton Live Set recovery tools. The renderer
-  remains owned by `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
+  spectral reference analyzer, and Ableton Live Set recovery tools. The recovered
+  corpus records restoration provenance, per-chord bar spans, and whether timing
+  is source-described or an engine grid assumption; measured melody fragments are
+  not presented as complete transcriptions. The renderer remains owned by
+  `dilla/dilla.rb`; the stdlib-only `dilla/lib/als*.rb` tools
   recover composition archives and MIDI from `.als` files. The unified
   `bin/studio` CLI exposes `dilla`, `postpro`, `lora` validation and
   `ableton inventory|export|midi`.
