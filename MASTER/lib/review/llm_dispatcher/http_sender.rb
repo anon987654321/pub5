@@ -103,7 +103,8 @@ module Master
           headers = key ? { "Authorization" => "Bearer #{key}" } : {}
           messages = fit_to_window(selected_model, messages)
           request = lambda do
-            openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:, lane: name)
+            openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:,
+                        lane: name, fold_system: endpoint[:fold_system] == true)
           end
           return request.call unless endpoint[:max_concurrency]
 
@@ -116,8 +117,22 @@ module Master
           Result.err("#{name}: concurrency budget is saturated; trying the next lane", category: :timeout)
         end
 
-        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {})
-          body = { model:, messages: ollama_messages(messages, sys), stream: true }
+        # The gateway cap is on the system role only (the agent server refuses a
+        # system turn over 32 KiB but accepts the same text as a user turn). A
+        # system turn that would be refused is delivered as a leading user turn
+        # instead, so the lane carries the constitution it could not otherwise.
+        def fold_long_system(rows, limit: 32_768)
+          head = rows.first
+          return rows unless head.is_a?(Hash) && head[:role].to_s == "system"
+          return rows if head[:content].to_s.bytesize <= limit
+
+          [{ role: "user", content: head[:content].to_s }] + rows.drop(1)
+        end
+
+        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false)
+          rows = ollama_messages(messages, sys)
+          rows = fold_long_system(rows) if fold_system
+          body = { model:, messages: rows, stream: true }
           body[:temperature] = temperature if temperature
           request = Net::HTTP::Post.new(URI("#{base.chomp('/')}/chat/completions").request_uri,
                                         headers.merge("Content-Type" => "application/json"))
