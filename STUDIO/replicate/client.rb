@@ -223,6 +223,18 @@ module Studio
       # retries repeat the same failure.
       TransientError = Class.new(StandardError)
 
+      # A non-retryable 4xx response retains its status so callers can
+      # distinguish a genuinely missing model from denied access or bad input.
+      APIError = Class.new(StandardError) do
+        attr_reader :status, :response_body
+
+        def initialize(status, response_body)
+          @status = Integer(status)
+          @response_body = response_body.to_s.freeze
+          super("Replicate API #{@status}: #{@response_body}")
+        end
+      end
+
       # A spend limit. The status codes alone could not tell this apart: a
       # 402 already fell through to the plain raise and was handled correctly
       # by accident, but Replicate also answers 429 when the account is out of
@@ -316,7 +328,14 @@ module Studio
       # Bounded catalog read used by Replicate search/sync. Replicate returns a
       # cursor URL; only follow it until the caller's explicit limit is met.
       def models(limit: 100, query: nil)
-        remaining = [[limit.to_i, 1].max, 1_000].min
+        requested = if limit.is_a?(Integer)
+                      limit
+                    elsif limit.is_a?(String) && limit.match?(/\\A\\d+\\z/)
+                      Integer(limit, 10)
+                    end
+        raise ArgumentError, "model limit must be a positive integer" unless requested&.positive?
+
+        remaining = [requested, 1_000].min
         uri = URI("#{BASE}/models")
         rows = []
         seen_cursors = {}
@@ -365,9 +384,10 @@ module Studio
         owner, name, = model_reference!(model_id)
         get(URI("#{BASE}/models/#{owner}/#{name}"))
         true
-      rescue StandardError => e
-        warn("replicate model lookup failed: #{e.class}: #{e.message}")
-        false
+      rescue APIError => error
+        return false if error.status == 404
+
+        raise
       end
 
       # A LoRA destination serves FLUX.1-dev, and gpu-l40s is the smallest SKU
@@ -537,7 +557,7 @@ module Studio
         raise ExhaustedError, message if exhausted?(code, body)
         raise TransientError, message if TRANSIENT_STATUS.include?(code)
 
-        raise message
+        raise APIError.new(code, body)
       end
 
       # Replicate says when a throttle clears ("resets in ~30s"); waiting that
