@@ -26,8 +26,21 @@ module Master
 
       def render(root:, target: nil, depth: DEFAULT_DEPTH, max_entries: MAX_ENTRIES)
         root = File.realpath(root)
-        repo_root = File.basename(root) == "MASTER" ? File.expand_path("..", root) : root
-        parts = [
+        repo_root = repository_root(root)
+        parts = orientation_header(root, repo_root, target)
+        append_session_context(parts, root, target)
+        append_repository_context(parts, root, repo_root, depth:, max_entries:)
+        parts.join("\n")
+      rescue StandardError => e
+        "MASTER orientation unavailable: #{e.class}: #{e.message}"
+      end
+
+      def repository_root(root)
+        File.basename(root) == "MASTER" ? File.expand_path("..", root) : root
+      end
+
+      def orientation_header(root, repo_root, target)
+        [
           "MASTER orientation v#{VERSION}",
           "repo: #{repo_root}",
           "target: #{target ? relative(target, repo_root) : relative(root, repo_root)}",
@@ -38,29 +51,26 @@ module Master
           "head: #{git_head(repo_root)}",
           "docs: #{key_docs(repo_root).join(", ")}",
         ]
+      end
 
+      def append_session_context(parts, root, target)
         plan = active_plan(root)
         parts << "active plan: #{compact(plan)}" unless plan.to_s.empty?
-
         wishes = pending_wishes(root)
         parts << "pending wishes: #{wishes.join(", ")}" unless wishes.empty?
-
         history = repair_history(root)
         parts << history if history
-
         taste = taste_memory(root, target)
         parts << taste if taste
+      end
 
+      def append_repository_context(parts, root, repo_root, depth:, max_entries:)
         atlas = repository_atlas(repo_root)
         parts << atlas unless atlas.to_s.empty?
-
         parts << "tree:"
         parts.concat(tree_section(root, depth:, max_entries:))
         reading = settings["read_in_full"].to_s
         parts << "reading: #{reading}" unless reading.empty?
-        parts.join("\n")
-      rescue StandardError => e
-        "MASTER orientation unavailable: #{e.class}: #{e.message}"
       end
 
       # What `console.yml orientation:` says: the tree is the /fix Tree (every directory with its size and the
@@ -86,20 +96,24 @@ module Master
         openbsd = openbsd_atlas(repo_root)
         return if rails.nil? && openbsd.nil?
 
-        lines = [
+        bounded_atlas(atlas_lines(repo_root, rails, openbsd))
+      end
+
+      def atlas_lines(repo_root, rails, openbsd)
+        [
           "cross-tree atlas:",
           "lenses: #{LENSES.join(", ")}",
           rails,
           openbsd,
-          "evidence_ladder: source authority -> executable proof -> live evidence; " +
-          "disagreement means drift to diagnose, not permission to guess",
+          "evidence_ladder: source authority -> executable proof -> live evidence; disagreement means drift to diagnose, not permission to guess",
           "bridge: RAILS/apps.yml -> OPENBSD/deploy_inventory.json -> vps-deploy -> rcctl -> public health",
           "inventory_alignment: #{inventory_alignment(repo_root)}",
-          "bridge: source authority is MASTER/data/soul.yml > MASTER/data/laws.yml > executable laws/gates > tree contracts > Git history; " +
-          "MASTER/checks/ is the cross-tree verification plane",
-          "research pointers: Rails=RAILS/CLAUDE.md + RAILS/apps.yml; " +
-          "OpenBSD=OPENBSD/CLAUDE.md + OPENBSD/RUNBOOK.md + OPENBSD/data/operator.yml",
+          "bridge: source authority is MASTER/data/soul.yml > MASTER/data/laws.yml > executable laws/gates > tree contracts > Git history; MASTER/checks/ is the cross-tree verification plane",
+          "research pointers: Rails=RAILS/CLAUDE.md + RAILS/apps.yml; OpenBSD=OPENBSD/CLAUDE.md + OPENBSD/RUNBOOK.md + OPENBSD/data/operator.yml",
         ].compact
+      end
+
+      def bounded_atlas(lines)
         atlas = []
         bytes = 0
         lines.each do |line|
@@ -117,9 +131,18 @@ module Master
         path = File.join(repo_root, "RAILS", "apps.yml")
         return unless File.file?(path)
 
+        rows = rails_app_labels(path)
+        return if rows.empty? && !File.file?(File.join(repo_root, "RAILS", "CLAUDE.md"))
+
+        rails_atlas_summary(rows)
+      rescue StandardError
+        "rails: feature_truth=RAILS/apps.yml; architecture=RAILS/CLAUDE.md; inventory unavailable"
+      end
+
+      def rails_app_labels(path)
         data = YAML.safe_load_file(path, aliases: true)
         apps = data.is_a?(Hash) ? data.fetch("apps", {}) : {}
-        rows = apps.filter_map do |name, config|
+        apps.filter_map do |name, config|
           next unless config.is_a?(Hash)
 
           domain = config["domain"].to_s
@@ -127,8 +150,9 @@ module Master
           label = [name.to_s, domain.empty? ? nil : domain, port.positive? ? port : nil].compact.join(":")
           label unless label.empty?
         end
-        return if rows.empty? && !File.file?(File.join(repo_root, "RAILS", "CLAUDE.md"))
+      end
 
+      def rails_atlas_summary(rows)
         "rails: feature_truth=RAILS/apps.yml; architecture=RAILS/CLAUDE.md; " +
         "shared=RAILS/__shared; tools=MASTER/tools/rails; design=MASTER/data/laws.yml; entry=MASTER/bin/operator triangle; " +
         "coupling=shared engine + sibling copy-tree affects every Rails app; " +
@@ -137,12 +161,10 @@ module Master
         "live=OPENBSD/bin/check-vps+OPENBSD/bin/vps-state; " +
         "rendered=Chrome/CDP via rendered_suite; " +
         "visual_graph=MASTER/lib/fix/rails_visual_graph.rb; active_apps=#{rows.join(", ")}"
-      rescue StandardError
-        "rails: feature_truth=RAILS/apps.yml; architecture=RAILS/CLAUDE.md; inventory unavailable"
       end
 
       def inventory_alignment(repo_root)
-                unless defined?(Deploy::Inventory)
+        unless defined?(Deploy::Inventory)
           require_relative "../../checks/support/deploy_inventory"
         end
         return "unmeasured" unless defined?(Deploy::Inventory)
