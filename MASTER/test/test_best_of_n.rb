@@ -90,9 +90,12 @@ class BestOfNTest < Minitest::Test
   end
 
   class FakeLoop
-    def initialize(replies) = (@replies = replies; @visual_image = nil)
+    def initialize(replies, models: []) = (@replies = replies; @models = models; @visual_image = nil)
     def build_prompt_for(violation:, src:, path:) = "fix #{path}"
-    def ask_agent(_prompt, image: nil) = @replies.shift
+    def ask_agent(_prompt, image: nil)
+      Thread.current[:master_llm_answer_model] = @models.shift
+      @replies.shift
+    end
     def extract_code(text, _ext) = text
     def write_atomic(path, src) = File.write(path, src)
   end
@@ -108,6 +111,23 @@ class BestOfNTest < Minitest::Test
     assert_equal @original, File.read(@path)
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")
+  end
+  def test_pick_tracks_the_writer_of_the_visual_winner
+    ENV["MASTER_FIX_BEST_OF"] = "3"
+    custody = Struct.new(:surfaces).new([@surface])
+    bad = ".a { margin: 3px; } /* kind-bad */\n"
+    good = ".a { margin: 16px; } /* kind-good */\n"
+    loop = FakeLoop.new([bad, good], models: ["grok-cli:auto", "moonshotai/kimi-k2"])
+    Thread.current[:master_fix_candidate_author_models] = ["claude-cli:claude-opus-5-5"]
+
+    assert_equal good, B.pick(loop, { law: B::LAW_ID, file: @path },
+                              ".a { margin: 12px; } /* kind-mid */\n", custody:, root: @root, measurer:)
+    assert_equal ["claude-cli:claude-opus-5-5", "moonshotai/kimi-k2"],
+                 Thread.current[:master_fix_candidate_author_models]
+  ensure
+    ENV.delete("MASTER_FIX_BEST_OF")
+    Thread.current[:master_fix_candidate_author_models] = nil
+    Thread.current[:master_llm_answer_model] = nil
   end
 end
 
