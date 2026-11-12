@@ -55,7 +55,7 @@ module Master
         private
 
         def merge_target_for(path)
-          lines = File.readlines(path, encoding: "UTF-8", invalid: :replace).size
+          lines = File.foreach(path).count
           return unless lines < TINY_LINES
 
           parent = File.dirname(File.dirname(path))
