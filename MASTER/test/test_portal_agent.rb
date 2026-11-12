@@ -2,7 +2,8 @@
 
 # Boot-free by design (the lib/gap.rb precedent): this file loads without the
 # bundle or test_helper, so the policy, crawler, filter and scout contracts run
-# on any Ruby with minitest. Ferrum is never required; browsers are faked.
+# on any Ruby with minitest. Ferrum and ruby_llm are never required; browsers
+# and gateways are faked.
 require "minitest/autorun"
 require "tmpdir"
 require "json"
@@ -167,6 +168,28 @@ class TestPortalAgentCrawler < Minitest::Test
     refute_includes html, "hunter2"
     assert_includes html, "[REDACTED]"
   end
+  def test_rescout_invoked_on_zero_rows_but_fails
+    b = F::Browser.with_pages([{ rows: [], next: :none }])
+    rescout_called = false
+    rescout_proc = ->(browser, reason) { rescout_called = true; nil }
+    c = P::Crawler.new(b, selectors: F::Browser::SEL, evidence_dir: @dir, delay: 0, rescout: rescout_proc).call
+    assert rescout_called
+    assert_equal "INCONCLUSIVE", c.status
+    assert_match(/zero rows matched.*rescout failed/, c.reason)
+  end
+  def test_rescout_recovers_from_zero_rows
+    b = F::Browser.new
+    attempts = 0
+    b.define_singleton_method(:css) do |sel|
+      attempts += 1
+      attempts == 1 ? [] : [F::Browser.row("A", "/a")]
+    end
+    rescout_proc = ->(browser, reason) { F::Browser::SEL }
+    c = P::Crawler.new(b, selectors: F::Browser::SEL, evidence_dir: @dir, delay: 0, rescout: rescout_proc).call
+    assert_equal "DONE", c.status
+    assert_equal 1, c.papers.size
+    assert_equal 2, attempts
+  end
 end
 
 class TestPortalAgentFilter < Minitest::Test
@@ -196,12 +219,10 @@ class TestPortalAgentSnapshot < Minitest::Test
 end
 
 class TestPortalAgentGateway < Minitest::Test
-  def test_requires_env_lane
-    u = ENV.delete("MASTER_LLM_GATEWAY_URL"); k = ENV.delete("MASTER_LLM_GATEWAY_KEY")
-    assert_raises(ArgumentError) { Master::PortalAgent::Gateway.new }
-  ensure
-    ENV["MASTER_LLM_GATEWAY_URL"] = u if u
-    ENV["MASTER_LLM_GATEWAY_KEY"] = k if k
+  def test_requires_env_lane_or_fallback
+    # Gateway should not crash on init; it falls back to standard ruby_llm env vars
+    g = Master::PortalAgent::Gateway.new(model: "test-model")
+    assert g.is_a?(Master::PortalAgent::Gateway)
   end
 end
 

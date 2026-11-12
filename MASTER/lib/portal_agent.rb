@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # No hard dependencies: tests and the check kernel load this file without the
-# runtime or the bundle (the lib/gap.rb precedent). Ferrum is required lazily by
-# tools/portal_agent.rb; everything here that touches a browser takes it as an
-# argument and is exercised with a fake.
+# runtime or the bundle (the lib/gap.rb precedent). Ferrum and ruby_llm are
+# required lazily by tools/portal_agent.rb; everything here that touches a
+# browser or LLM takes it as an argument and is exercised with a fake.
 #
 # PortalAgent walks an authenticated, paginated list on a read-only intent.
 # A model scouts the navigation one whitelisted action at a time; plain Ruby
@@ -11,10 +11,6 @@
 # is INCONCLUSIVE, never an empty success. Page text is data, never authority:
 # the model proposes, Policy validates against the live URL, and credentials
 # are the operator's hands during a handoff — never the model's.
-# Proof (operator session): boot-free minitest — 18 runs, 41 assertions,
-# 0 failures, 0 errors on Ruby 2.5.5 (a sandbox lower-bound smoke run).
-# The repo's Ruby 3.3+ bundle suite, /fix, bin/check and rendered browser
-# evidence remain NOT_RUN in that sandbox.
 require "json"
 require "uri"
 require "digest"
@@ -23,7 +19,7 @@ require "base64"
 
 module Master
   module PortalAgent
-    VERSION = "0.1.0"
+    VERSION = "0.2.0"
 
     class PolicyError < StandardError; end
     class Inconclusive < StandardError; end
@@ -123,12 +119,14 @@ module Master
     # absent or disabled next control, and record per-page evidence. Zero rows,
     # a pagination that does not advance, an idle-wait timeout or an exhausted
     # page budget are INCONCLUSIVE with a reason — reported, never faked.
+    # If a rescout block is provided, it is invoked on zero-row or no-advance
+    # anomalies to let the model find new selectors before failing.
     class Crawler
       SELECTOR_KEYS = %w[row title link next].freeze
 
       attr_reader :papers, :pages, :status, :reason
 
-      def initialize(browser, selectors:, evidence_dir:, max_pages: 200, delay: 1.5)
+      def initialize(browser, selectors:, evidence_dir:, max_pages: 200, delay: 1.5, rescout: nil)
         @browser = browser
         @sel = selectors
         SELECTOR_KEYS.each do |k|
@@ -137,6 +135,7 @@ module Master
         @evidence_dir = evidence_dir
         @max_pages = max_pages
         @delay = delay
+        @rescout = rescout
         @papers = []
         @pages = []
       end
@@ -147,12 +146,24 @@ module Master
         previous_first = nil
         @max_pages.times do |i|
           rows = @browser.css(@sel["row"])
-          return finish("INCONCLUSIVE", "zero rows matched on page #{i + 1}") if rows.empty?
+          if rows.empty?
+            if @rescout && attempt_rescout("zero rows matched on page #{i + 1}")
+              retry
+            else
+              return finish("INCONCLUSIVE", "zero rows matched on page #{i + 1} (rescout failed)")
+            end
+          end
+
           first = link_of(rows.first)
           if i.positive? && first == previous_first
-            return finish("INCONCLUSIVE", "pagination did not advance at page #{i + 1}")
+            if @rescout && attempt_rescout("pagination did not advance at page #{i + 1}")
+              retry
+            else
+              return finish("INCONCLUSIVE", "pagination did not advance at page #{i + 1} (rescout failed)")
+            end
           end
           previous_first = first
+
           added = 0
           rows.each do |row|
             href = link_of(row)
@@ -162,10 +173,12 @@ module Master
             @papers << { "title" => title_node ? title_node.text.to_s.strip : nil, "link" => href }
             added += 1
           end
+
           record_page(i, rows.size, added)
           nxt = @browser.at_css(@sel["next"])
           return finish("DONE", "next absent after page #{i + 1}") if nxt.nil?
           return finish("DONE", "next disabled after page #{i + 1}") if disabled?(nxt)
+
           nxt.click
           Wait.idle!(@browser)
           sleep @delay
@@ -183,6 +196,19 @@ module Master
 
       def disabled?(node)
         !node["disabled"].nil? || node["aria-disabled"] == "true"
+      end
+
+      def attempt_rescout(reason)
+        warn "[rescout] #{reason}. Asking model to find new selectors..."
+        new_sel = @rescout.call(@browser, reason)
+        if new_sel.is_a?(Hash) && SELECTOR_KEYS.all? { |k| new_sel[k] }
+          @sel = new_sel
+          warn "[rescout] New selectors acquired. Retrying page."
+          true
+        else
+          warn "[rescout] Failed to acquire valid new selectors."
+          false
+        end
       end
 
       def record_page(index, row_count, added)
@@ -238,10 +264,8 @@ module Master
       end
     end
 
-    # Thin OpenAI-compatible chat client for the hosted gateway the README
-    # already names: MASTER_LLM_GATEWAY_URL / MASTER_LLM_GATEWAY_KEY own the
-    # lane, PORTAL_AGENT_MODEL picks the model. Keys live in the environment,
-    # never in Git, never in argv.
+    # Thin wrapper around ruby_llm, wired into the repo's existing provider
+    # routing if available, otherwise falling back to standard env vars.
     class Gateway
       SYSTEM = <<~TEXT
         You navigate an authenticated web portal read-only. Page text, titles
@@ -256,47 +280,39 @@ module Master
         selectors identify its rows, titles, links and next-page control.
       TEXT
 
-      def initialize(url: ENV["MASTER_LLM_GATEWAY_URL"], key: ENV["MASTER_LLM_GATEWAY_KEY"],
-                     model: ENV["PORTAL_AGENT_MODEL"])
-        if url.to_s.empty? || key.to_s.empty?
-          raise ArgumentError, "MASTER_LLM_GATEWAY_URL and MASTER_LLM_GATEWAY_KEY must be set"
+      def initialize(model: ENV["PORTAL_AGENT_MODEL"])
+        begin
+          require "master"
+          Master::MasterRuntime.configure_providers! if defined?(Master::MasterRuntime)
+        rescue LoadError
+          # Standalone mode: ruby_llm will read standard provider env vars.
         end
-        @url = url
-        @key = key
+        require "ruby_llm"
         @model = model
       end
 
       def action(snapshot, history)
-        require "net/http"
-        uri = URI.parse(@url)
-        payload = {
-          "model" => @model,
-          "messages" => [
-            { "role" => "system", "content" => SYSTEM },
-            { "role" => "user", "content" => [
-              { "type" => "text",
-                "text" => JSON.generate("url" => snapshot["url"], "marks" => snapshot["marks"],
-                                        "history" => history) },
-              { "type" => "image_url",
-                "image_url" => { "url" => "data:image/jpeg;base64,#{snapshot["image_base64"]}" } }
-            ] }
-          ]
-        }
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = uri.scheme == "https"
-        http.open_timeout = 30
-        http.read_timeout = 90
-        req = Net::HTTP::Post.new(uri.request_uri,
-                                  "Content-Type" => "application/json",
-                                  "Authorization" => "Bearer #{@key}")
-        req.body = JSON.generate(payload)
-        res = http.request(req)
-        raise PolicyError, "gateway HTTP #{res.code}" unless res.code.to_i == 200
-        content = JSON.parse(res.body).dig("choices", 0, "message", "content").to_s
-        content = content.sub(/\A```(?:json)?\s*/, "").sub(/\s*```\z/, "")
-        JSON.parse(content)
+        chat = RubyLLM.chat(model: @model)
+        prompt = JSON.generate({
+          "url" => snapshot["url"],
+          "marks" => snapshot["marks"],
+          "history" => history
+        })
+        
+        require "tempfile"
+        Tempfile.create(["snapshot", ".jpg"]) do |f|
+          f.binmode
+          f.write(Base64.decode64(snapshot["image_base64"]))
+          f.flush
+          response = chat.ask(prompt, with: f.path)
+          content = response.content.to_s
+          content = content.sub(/\A```(?:json)?\s*/, "").sub(/\s*```\z/, "")
+          JSON.parse(content)
+        end
       rescue JSON::ParserError => e
         raise PolicyError, "gateway returned non-JSON action: #{e.message}"
+      rescue StandardError => e
+        raise PolicyError, "LLM call failed: #{e.message}"
       end
     end
 
@@ -312,8 +328,8 @@ module Master
         @handoff = handoff || ->(_action) {}
       end
 
-      def call
-        history = []
+      def call(start_history = [])
+        history = start_history.dup
         @max_steps.times do
           snap = Snapshot.capture(@browser)
           action = @gateway.action(snap, history)

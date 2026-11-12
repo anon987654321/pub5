@@ -12,8 +12,8 @@
 #
 # Gateway lane comes from the environment the README already names:
 # MASTER_LLM_GATEWAY_URL / MASTER_LLM_GATEWAY_KEY, model via PORTAL_AGENT_MODEL.
-# Ferrum is a MASTER Gemfile dependency (~> 0.15); it is required lazily so
-# --presort runs without a browser.
+# Ferrum and ruby_llm are MASTER Gemfile dependencies; they are required lazily
+# so --presort runs without a browser or LLM.
 require "optparse"
 require "json"
 require "uri"
@@ -58,9 +58,19 @@ module Master
         browser = Ferrum::Browser.new(headless: @opts[:headless], window_size: [1440, 900], timeout: 20)
         begin
           browser.goto(@opts[:url])
-          selectors = @opts[:selectors] ? parse_selectors(@opts[:selectors]) : scout(browser, policy)
+          selectors = if @opts[:selectors]
+                        parse_selectors(@opts[:selectors])
+                      else
+                        scout(browser, policy)
+                      end
+          
+          rescout_proc = lambda do |browser, reason|
+            warn "[rescout] Triggered: #{reason}. Re-evaluating page..."
+            scout(browser, policy, [])
+          end
+          
           crawler = Crawler.new(browser, selectors: selectors, evidence_dir: evidence,
-                                max_pages: @opts[:max_pages], delay: @opts[:delay]).call
+                                max_pages: @opts[:max_pages], delay: @opts[:delay], rescout: rescout_proc).call
           buckets = Filter.presort(crawler.papers)
           File.write(File.join(evidence, "buckets.json"), JSON.pretty_generate(buckets))
           report(crawler, buckets, evidence)
@@ -93,14 +103,16 @@ module Master
         sel
       end
 
-      def scout(browser, policy)
-        warn "[handoff] Log in yourself in the browser window (credentials never pass through the model), then press Enter."
-        $stdin.gets
+      def scout(browser, policy, start_history = [])
+        warn "[handoff] Log in yourself in the browser window (credentials never pass through the model), then press Enter." if start_history.empty?
+        $stdin.gets if start_history.empty?
+        
         handoff = lambda do |action|
           warn "[handoff] #{action["reason"] || "operator action needed (2FA/CAPTCHA)"}. Resolve it in the window, then press Enter."
           $stdin.gets
         end
-        Scout.new(browser, policy: policy, gateway: Gateway.new(model: @opts[:model]), handoff: handoff).call
+        
+        Scout.new(browser, policy: policy, gateway: Gateway.new(model: @opts[:model]), handoff: handoff).call(start_history)
       end
 
       def report(crawler, buckets, evidence)
