@@ -24,6 +24,17 @@ class TestStudioReplicateClientPaths < Minitest::Test
     end
   end
 
+  class StatusClient < Studio::ReplicateClient
+    def initialize(status)
+      @status = status
+      super(token: "test-token")
+    end
+
+    def get(_uri)
+      raise Studio::ReplicateClient::APIError.new(@status, "provider response")
+    end
+  end
+
   class FakeResponse
     attr_reader :code
 
@@ -95,6 +106,23 @@ class TestStudioReplicateClientPaths < Minitest::Test
       assert_match(/owner\/name/, error.message)
     end
 
+    assert_empty @client.requests
+  end
+
+  def test_model_lookup_only_treats_http_404_as_absent
+    refute StatusClient.new(404).model_exists?("owner/model-name")
+
+    error = assert_raises(Studio::ReplicateClient::APIError) do
+      StatusClient.new(401).model_exists?("owner/model-name")
+    end
+    assert_equal 401, error.status
+    assert_match(/provider response/, error.message)
+  end
+
+  def test_model_catalog_limit_rejects_invalid_values_before_network
+    ["ten", "", "1.5", 0, -1, 1.5].each do |limit|
+      assert_raises(ArgumentError) { @client.models(limit:) }
+    end
     assert_empty @client.requests
   end
 
