@@ -155,6 +155,20 @@ class TestWebChat < Minitest::Test
     old.nil? ? ENV.delete("MASTER_WEB_CHAT_SCREENSHOT_DIR") : ENV["MASTER_WEB_CHAT_SCREENSHOT_DIR"] = old
   end
 
+  def test_dispatcher_timeout_is_not_relabelled_as_web_chat_provider_error
+    chat = build_chat
+    chat.define_singleton_method(:enabled?) { true }
+    chat.define_singleton_method(:with_browser) { |_unused = nil, &block| raise Timeout::Error }
+    assert_raises(Timeout::Error) { chat.ask(prompt: "ping") }
+  end
+
+  def test_web_chat_own_timeout_is_reported_as_provider_error
+    chat = build_chat
+    chat.define_singleton_method(:enabled?) { true }
+    chat.define_singleton_method(:with_browser) { raise Master::Io::WebChat::RequestTimeout }
+    assert_raises(Master::Io::WebChat::ProviderError) { chat.ask(prompt: "ping") }
+  end
+
   def test_slow_browser_cleanup_does_not_block_and_prevents_profile_reuse
     chat = build_chat
     release = Queue.new
