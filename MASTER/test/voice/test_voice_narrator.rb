@@ -330,6 +330,67 @@ class TestVoiceNarrator < Minitest::Test
     assert_raises(Narrator::LaneWriter::Unavailable) { writer.call(system: "s", prompt: "p", max_tokens: 9) }
   end
 
+  def test_lane_writer_records_quota_before_reporting_a_nonzero_cli_exit
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(false, 1)
+    runner = Object.new
+    runner.define_singleton_method(:capture3) do |*_args, **_kwargs|
+      ["You've hit your session limit - resets in 3h", "subscription limit", status]
+    end
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+    noted = nil
+
+    Master::Io::LaneQuota.stub(:note, ->(model, reply) { noted = [model, reply]; 123.0 }) do
+      Master::Io::LaneQuota.stub(:report_for, ->(_model) { "claude-cli: quota spent, back in 3h" }) do
+        Master::Io::LaneSilence.stub(:record, ->(*) { flunk "quota refusals are not generic silence" }) do
+          error = assert_raises(Narrator::LaneWriter::Unavailable) do
+            writer.call(system: "s", prompt: "p", max_tokens: 90)
+          end
+          assert_match(/quota spent, back in 3h/, error.message)
+        end
+      end
+    end
+
+    assert_equal "claude-cli:sonnet", noted.first
+    assert_includes noted.last, "You've hit your session limit"
+    assert_includes noted.last, "subscription limit"
+  end
+
+  def test_lane_writer_keeps_nonzero_exit_diagnostic_bounded_and_silences_repeated_failure
+    lanes = Object.new
+    def lanes.tier(_name) = ["claude-cli:sonnet"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+    status = Struct.new(:ok, :exitstatus) { def success? = ok }.new(false, 1)
+    runner = Object.new
+    runner.define_singleton_method(:capture3) { |*_args, **_kwargs| ["", "private upstream detail", status] }
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast", "model_timeout_s" => 5 }, lanes:, runner:)
+    recorded = nil
+
+    Master::Io::LaneQuota.stub(:note, nil) do
+      Master::Io::LaneQuota.stub(:report_for, nil) do
+        Master::Io::LaneSilence.stub(
+          :record, ->(answered, lane, reason:) { recorded = [answered, lane, reason]; true }
+        ) do
+          Master::Trace::Dmesg.stub(:once, ->(*) {}) do
+            error = assert_raises(Narrator::LaneWriter::Unavailable) do
+              writer.call(system: "s", prompt: "p", max_tokens: 90)
+            end
+            assert_match(/exited 1; diagnostic [0-9a-f]{12} \(23 bytes\)/, error.message)
+            refute_includes error.message, "private upstream detail"
+          end
+        end
+      end
+    end
+
+    assert_equal false, recorded[0]
+    assert_equal "claude-cli", recorded[1]
+    assert_match(/diagnostic [0-9a-f]{12}/, recorded[2])
+  end
+
   def test_facade_is_quiet_without_a_speaker
     Narrator.reset_instance!
     previous = ENV["MASTER_CLI_SPEAK"]
