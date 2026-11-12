@@ -55,7 +55,7 @@ module Master
         # message does not contain "timed out". Treat it as a hard timeout or
         # the fallback chain retries the same browser profile after 30/60s.
         timeout_class = error.class.ancestors.any? do |ancestor|
-          ancestor.name.to_s.match?(/\\A(?:Ferrum::)?(?:Process)?TimeoutError\\z/)
+          ancestor.name.to_s.match?(/\A(?:Ferrum::)?(?:Process)?TimeoutError\z/)
         end
         return :timeout if timeout_class || error.is_a?(Timeout::Error) || message.match?(/timed out/i)
         return :offline if error.is_a?(SystemCallError)
