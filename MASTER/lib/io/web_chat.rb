@@ -40,6 +40,19 @@ module Master
         rules.dig("ferrum_web_chat", "auto_when_keyless") != false && !Master.any_api_key_present?
       end
 
+      # Browser-session failures are not transient provider 5xxs. A missing
+      # login, stale composer or absent assistant reply must skip this profile;
+      # a real timeout/offline browser must not be retried in another mode.
+      def self.failure_category(error)
+        message = error.message.to_s
+        return :timeout if error.is_a?(Timeout::Error) || message.match?(/timed out/i)
+        return :offline if error.is_a?(SystemCallError)
+        return :model_missing if message.match?(/unknown web chat provider/i)
+        return :auth_error if error.is_a?(DisabledError) || error.is_a?(ProviderError)
+
+        :provider_error
+      end
+
       def initialize(provider:)
         @provider = provider.to_s
         @config = provider_config(@provider)
