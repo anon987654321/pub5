@@ -941,8 +941,7 @@ module Dilla
       start_bar = slot[:start_bar]
       span_s = slot[:bars] * @groove.bar_s
       bass_pc = chord[:bass] || chord[:root]
-      root_midi = 24 + bass_pc # honour slash-bass inversions in the low register
-      root_midi += 12 while root_midi < 33
+      root_midi = bass_note_for_pc(bass_pc) # honour slash-bass inversions in the low register
       events = []
       case style
       when "dub"
@@ -986,10 +985,15 @@ module Dilla
       events
     end
 
+    # Keep every bass pitch class in the same A1..G#2 octave window.
+    # The old approach-note arithmetic used a different C-based offset and
+    # could lead into a semitone unrelated to the target chord.
+    def bass_note_for_pc(pitch_class)
+      33 + ((Integer(pitch_class) % 12 - 9) % 12)
+    end
+
     def approach(root_pc)
-      target = 33 + root_pc
-      target += 12 while target < 36
-      target - 1
+      bass_note_for_pc(root_pc) - 1
     end
 
     MELODY_RHYTHMS = {
