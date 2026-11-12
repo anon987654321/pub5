@@ -29,7 +29,9 @@ module Master
         "acme-client" => "acme-client(1)", "newsyslog" => "newsyslog(8)",
         "nsd" => "nsd(8)", "nsd-checkconf" => "nsd-checkconf(8)",
         "nsd-checkzone" => "nsd-checkzone(8)", "nsd-control" => "nsd-control(8)",
-        "relayctl" => "relayctl(8)",
+        "relayctl" => "relayctl(8)", "makemap" => "makemap(8)",
+        "cron" => "cron(8)", "zsh" => "zsh(1)", "ruby" => "ruby(1)",
+        "git" => "git(1)", "stat" => "stat(1)", "ssh" => "ssh(1)",
         "mount" => "mount(8)", "umount" => "umount(8)", "disklabel" => "disklabel(8)",
         "bioctl" => "bioctl(8)", "installboot" => "installboot(8)", "fsck" => "fsck(8)",
         "useradd" => "useradd(8)", "usermod" => "usermod(8)", "userdel" => "userdel(8)",
@@ -368,7 +370,11 @@ module Master
         if File.file?(absolute) && !preflight.fetch("source_reads").any? { |row| row.fetch("path") == relative }
           return "RTFM_FIRST requires a complete source-read receipt for existing target #{relative}"
         end
-        missing_manuals = required_path_manuals(relative) - Array(preflight.fetch("native_interfaces"))
+        path_manuals = required_path_manuals(relative)
+        if path_manuals.nil?
+          return "RTFM_FIRST has no reviewed manual/schema map for native target #{relative}; identify its format, owner and validator before editing"
+        end
+        missing_manuals = path_manuals - Array(preflight.fetch("native_interfaces"))
         unless missing_manuals.empty?
           return "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing_manuals.join(', ')}"
         end
@@ -444,12 +450,17 @@ module Master
         return %w[doas.conf(5) doas(1)] if path == "OPENBSD/etc/doas.conf"
         return %w[login.conf(5) login(1)] if path == "OPENBSD/etc/login.conf"
         return %w[smtpd.conf(5) smtpd(8) smtpctl(8)] if path == "OPENBSD/etc/mail/smtpd.conf"
+        return %w[smtpd.conf(5) table(5) smtpd(8) makemap(8)] if %w[OPENBSD/etc/mail/domains OPENBSD/etc/mail/virtuals].include?(path)
         return %w[newsyslog(8)] if path == "OPENBSD/etc/newsyslog.conf"
         return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/etc/daily.local OPENBSD/etc/weekly.local].include?(path)
+        return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/etc/crontab.vm23"
+        return %w[zsh(1)] if path == "OPENBSD/etc/.zshrc"
+        return %w[sshd_config(5) sshd(8) ssh(1)] if path == "OPENBSD/etc/ssh/sshd_config"
         return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/var/nsd/etc/nsd.conf"
         if path.match?(%r{\AOPENBSD/var/nsd/zones/master/[^/]+\.zone\z})
           return %w[nsd.conf(5) nsd(8) nsd-checkzone(8) nsd-control(8)]
         end
+        return nil if path.start_with?("OPENBSD/etc/", "OPENBSD/var/")
 
         []
       end
@@ -517,7 +528,11 @@ module Master
             next "RTFM_FIRST requires a complete source-read receipt for controlled service #{relative}"
           end
 
-          missing = required_path_manuals(relative) - Array(preflight.fetch("native_interfaces"))
+          path_manuals = required_path_manuals(relative)
+          if path_manuals.nil?
+            next "RTFM_FIRST has no reviewed manual map for controlled service #{relative}"
+          end
+          missing = path_manuals - Array(preflight.fetch("native_interfaces"))
           unless missing.empty?
             next "RTFM_FIRST missing required supporting manual page(s) for #{relative}: #{missing.join(', ')}"
           end

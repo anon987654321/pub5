@@ -641,6 +641,19 @@ class TestTaskContract < Minitest::Test
     assert_match(/rc\.d\(8\)/, reason)
   end
 
+  def test_unmapped_openbsd_native_paths_fail_closed
+    relative = "OPENBSD/etc/litestream.yml"
+    contract = openbsd_task_contract(
+      openbsd_preflight_fixture(source_paths: [relative], interfaces: ["nsd(8)"]),
+    )
+    reason = Master::Fix::OpenBSDManualPreflight.refusal_for_path(
+      path: File.join(Master::REPO_ROOT, relative), contract:
+    )
+
+    assert_match(/no reviewed manual\/schema map/, reason)
+    assert_match(/litestream\.yml/, reason)
+  end
+
   def test_openbsd_native_configuration_edits_require_their_format_and_daemon_manuals
     cases = [
       ["OPENBSD/etc/pf.conf", "pfctl(8)", "pf.conf(5)"],
