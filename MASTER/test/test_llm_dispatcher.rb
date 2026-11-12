@@ -430,12 +430,13 @@ class TestLLMDispatcher < Minitest::Test
   def test_master_fault_still_closes_the_run_pulse_call
     dispatcher, _session, bus = build_dispatcher
     cache = Object.new
-    cache.define_singleton_method(:fetch) { |*_args| yield }
+    cache.define_singleton_method(:fetch) { |*_args, &block| block.call }
     breaker = Object.new
     breaker.define_singleton_method(:call) { |_cost, &block| block.call }
     dispatcher.instance_variable_set(:@cache, cache)
     dispatcher.instance_variable_set(:@circuit_breaker, breaker)
     dispatcher.instance_variable_set(:@tools, [])
+    dispatcher.define_singleton_method(:breaker_for) { |_model| breaker }
     dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
     dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
     dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
