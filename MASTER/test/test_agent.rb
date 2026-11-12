@@ -28,6 +28,18 @@ class TestAgent < Minitest::Test
     ))
   end
 
+  def test_research_sources_restores_an_outer_protocol_read_grant
+    previous = Fiber[:master_protocol_read]
+    Fiber[:master_protocol_read] = :outer_grant
+    agent = allocate_agent_for_research_test
+    agent.define_singleton_method(:evidence_tool) { |_name| nil }
+
+    agent.research_sources(queries: [], sources: [])
+
+    assert_equal :outer_grant, Fiber[:master_protocol_read]
+  ensure
+    Fiber[:master_protocol_read] = previous
+  end
   def test_chat_turn_stages_a_preference_candidate_only_after_repeated_opted_in_corrections
     require "tmpdir"
     root = Dir.mktmpdir("agent-preference-feedback")
