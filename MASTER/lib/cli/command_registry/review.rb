@@ -578,52 +578,73 @@ module Master
                               mode: "repair", task_intent: "functional_change")
         writes_requested = writes_requested?(apply:, only:)
         max_passes = writes_requested ? Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES : 0
-        Master::Fix::RunBudget.with_shared_run(
-          root: Master::ROOT,
-          max_passes:,
-          bus:,
-          target:,
-        ) do
-          next cancelled_fix_result(cancellation) if cancellation&.cancelled?
-          display_target = display_fix_target(target)
-          execution = writes_requested ? "write" : "read-only"
-          boundary = writes_requested ? "current-checkout" : "no-write-or-publish"
-          with_dmesg_verbosity(raw) do
-            Master::Trace::Dmesg.status("fix0", "command_mode=#{mode} execution=#{execution} target=#{display_target} boundary=#{boundary}")
-            next unless Master::Fix::CritiquePin.focus
+        Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target:) do
+          run_fix_in_shared_scope(
+            scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:, apply:, critique:,
+            aesthetic:, only:, target:, cancellation:, mode:, task_intent:, writes_requested:
+          )
+        end
+      end
 
-            Master::Trace::Dmesg.status(
-              "fix0", "#{Master::Fix::CritiquePin.focus} pin: council argues its focus only, instruments keep their findings"
+      def run_fix_in_shared_scope(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
+                                  apply:, critique:, aesthetic:, only:, target:, cancellation:,
+                                  mode:, task_intent:, writes_requested:)
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+
+        announce_fix_scope(raw:, mode:, target:, writes_requested:)
+        return unless Master::Fix::CritiquePin.focus
+
+        targets = fix_targets(target, root:)
+        ::Operator::CheckChain.clear_verified_fix_snapshots! if writes_requested
+        Master::Trace::Dmesg.status("fix0", "target queue: #{targets.join(", ")}") if targets.size > 1
+        lane_refusal = Master::Fix::WorkLane.refusal(target)
+        return Master::Result.err("fix: #{lane_refusal}", category: :validation) if lane_refusal
+
+        Master::Trace::Dmesg.status("fix0", Master::Fix::WorkLane.summary)
+        refusal = Master::Fix::LanePreflight.check(agent: deliberation.agent) if deliberation
+        return cancelled_fix_result(cancellation) if cancellation&.cancelled?
+        return refusal if refusal
+
+        trace_scope = execution_trace_scopes(target)
+        rendered = render_fix_with_voice(
+          scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:, cancellation:,
+          writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
+        )
+        return rendered unless Master::Fix::CodeWatch.requested?
+
+        # A run that stopped for newer code continues on it, in this process.
+        # reexec! replaces this process, so the report leaves through the
+        # dmesg report facade here or the operator never sees it.
+        Master::Trace::Dmesg::Report.print("/fix", rendered)
+        Master::Fix::CodeWatch.reexec!(root, "/fix #{raw}")
+        rendered
+      end
+
+      def announce_fix_scope(raw:, mode:, target:, writes_requested:)
+        display_target = display_fix_target(target)
+        execution = writes_requested ? "write" : "read-only"
+        boundary = writes_requested ? "current-checkout" : "no-write-or-publish"
+        with_dmesg_verbosity(raw) do
+          Master::Trace::Dmesg.status(
+            "fix0", "command_mode=#{mode} execution=#{execution} target=#{display_target} boundary=#{boundary}"
+          )
+          focus = Master::Fix::CritiquePin.focus
+          Master::Trace::Dmesg.status(
+            "fix0", "#{focus} pin: council argues its focus only, instruments keep their findings"
+          ) if focus
+        end
+      end
+
+      def render_fix_with_voice(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
+                                cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:, mode:,
+                                task_intent:, trace_scope:)
+        Master::Trace::Dmesg.with_log_voice do
+          with_dmesg_verbosity(raw) do
+            render_fix_workflow(
+              scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
+              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
             )
           end
-          targets = fix_targets(target, root:)
-          ::Operator::CheckChain.clear_verified_fix_snapshots! if writes_requested
-          Master::Trace::Dmesg.status("fix0", "target queue: #{targets.join(", ")}") if targets.size > 1
-          lane_refusal = Master::Fix::WorkLane.refusal(target)
-          next Master::Result.err("fix: #{lane_refusal}", category: :validation) if lane_refusal
-          Master::Trace::Dmesg.status("fix0", Master::Fix::WorkLane.summary)
-          refusal = Master::Fix::LanePreflight.check(agent: deliberation.agent) if deliberation
-          next cancelled_fix_result(cancellation) if cancellation&.cancelled?
-          next refusal if refusal
-
-          trace_scope = execution_trace_scopes(target)
-
-          rendered = Master::Trace::Dmesg.with_log_voice do
-            with_dmesg_verbosity(raw) do
-              render_fix_workflow(
-                scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
-                writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
-              )
-            end
-          end
-          return rendered unless Master::Fix::CodeWatch.requested?
-
-          # A run that stopped for newer code continues on it, in this process.
-          # reexec! replaces this process, so the report leaves through the
-          # dmesg report facade here or the operator never sees it.
-          Master::Trace::Dmesg::Report.print("/fix", rendered)
-          Master::Fix::CodeWatch.reexec!(root, "/fix #{raw}")
-          rendered
         end
       end
 

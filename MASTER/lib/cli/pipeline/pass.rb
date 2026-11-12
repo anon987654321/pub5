@@ -16,6 +16,286 @@ module Master
       class Pass
         include TargetResolver
         include Proof
+
+        # Lifecycle and presentation are separate responsibilities of the
+        # pass; keeping their implementation in same-file modules preserves
+        # Zeitwerk's single owner while keeping Pass itself easy to audit.
+        PREVIEW_SHOWN = 6
+
+        module FixLifecycle
+          private
+
+          def non_success_fix_terminal?(message)
+            state = message.to_s.match(/\A([A-Z_]+):/)&.captures&.first&.downcase&.to_sym
+            state && state != :done && Master::Fix::FixLoop::TERMINAL_STATES.include?(state)
+          end
+  
+          def run_fix_loop(abs)
+            parameters = @fix_loop.method(:run).parameters
+            accepts_keyword = lambda do |name|
+              parameters.any? do |kind, parameter|
+                kind == :keyrest || (%i[key keyreq].include?(kind) && parameter == name)
+              end
+            end
+            options = { requested: true }
+            options[:cancellation] = @cancellation if accepts_keyword.call(:cancellation)
+            contract = @task_contract || Master::Fix::TaskContract.current
+            options[:task_contract] = contract if contract && accepts_keyword.call(:task_contract)
+  
+            runner = -> { @fix_loop.run(abs, **options) }
+            contract ? Master::Fix::TaskContract.with_current(contract, &runner) : runner.call
+          end
+  
+          # Pin every interactive write-enabled /fix to a validated, repository-
+          # relative scope before the FixLoop inventories or mutates its target.
+          def build_task_contract(target)
+            repo_root = File.expand_path(Master::REPO_ROOT)
+            absolute = File.expand_path(target.to_s)
+            unless absolute == repo_root || absolute.start_with?(repo_root + File::SEPARATOR)
+              raise Master::Fix::TaskContract::Invalid, "fix target escapes repository scope"
+            end
+  
+            relative = absolute == repo_root ? nil : absolute.delete_prefix(repo_root + File::SEPARATOR)
+            scope = if relative.nil?
+                      MasterPaths::TREES.map { |tree| "#{tree}/**" }
+                    elsif File.directory?(absolute)
+                      ["#{relative}/**"]
+                    else
+                      [relative]
+                    end
+            Master::Fix::TaskContract.build(
+              intent: @task_intent,
+              scope:,
+              preserve: [],
+              proof: ["focused_tests", *backlog_proof_types],
+            )
+          end
+  
+          def backlog_proof_types
+            # The interactive /fix run has its own mission namespace. Its proof
+            # contract belongs to the still-live backlog parent in the default store.
+            mission = Master::Fix::Mission.current(root: @root, namespace: nil)
+            return [] unless mission && mission["origin"].to_s == "backlog"
+  
+            plan = JSON.parse(mission.fetch("plan").to_s)
+            unless plan["executor"] == "root_todo"
+              raise Master::Fix::TaskContract::Invalid, "backlog mission has no root TODO proof contract"
+            end
+  
+            types = Array(plan["proof_types"]).map(&:to_s)
+            allowed = Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)
+            if types.empty? || types.uniq != types || (types - allowed).any?
+              raise Master::Fix::TaskContract::Invalid, "backlog mission has absent or invalid proof types"
+            end
+  
+            types
+          rescue JSON::ParserError, KeyError => error
+            raise Master::Fix::TaskContract::Invalid, "backlog proof plan is invalid: #{error.message}"
+          end
+  
+          def run_fix(abs)
+            # On vm23 the control plane shares this process and owns Git sync + deploy.
+            # Claim the same execution slot around an interactive /fix so the control
+            # plane cannot fetch, rebase or deploy while the fix loop is mutating main.
+            claimed = Master::Ops::LoopOwner.with_claim("fix") do
+              head = git.head
+              result = run_fix_loop(abs)
+              fix_verdict(result, fix_commits_since(head))
+            end
+            return claimed unless claimed == false
+  
+            holder = Master::Ops::LoopOwner.active || {}
+            fail_stage("fix", "loop slot held by #{holder["loop"]} pid #{holder["pid"]}")
+            Master::Trace::Dmesg.status("fix0", "failed, loop slot held by #{holder["loop"]} pid #{holder["pid"]}; no repair ran")
+            "fix failed: loop slot held by #{holder["loop"]} pid #{holder["pid"]}"
+          rescue StandardError => e
+            @fix_crashed = true
+            stage_failure("fix", "fix0", e)
+          end
+  
+          def fix_verdict(result, delivered)
+            ok = result.ok?
+            @fix_crashed = true if !ok && result.category == :crash
+            msg = ok ? result.value!.to_s : result.message.to_s
+            outcome = self.class.fix_outcome(ok:, msg:, delivered:, ending: loop_ending)
+            @scored = { outcome:, delivered: }
+            return fix_done(msg) if outcome == :done
+            return fix_partial(msg, delivered) if outcome == :partial
+  
+            fail_stage("fix", msg)
+            Master::Trace::Dmesg.status("fix0", "#{outcome}, #{msg[0, 120]}")
+            "fix #{outcome}: #{msg}"
+          end
+  
+          # :reek:ManualDispatch -- test doubles for the fix loop do not report a terminal state
+          def loop_ending = @fix_loop.respond_to?(:last_terminal_state) ? @fix_loop.last_terminal_state : nil
+  
+          def fix_done(msg)
+            Master::Trace::Dmesg.status("fix0", msg[0, 120])
+            msg
+          end
+  
+          def fix_partial(msg, delivered)
+            Master::Trace::Dmesg.status("fix0", "partial, #{delivered} commit(s) delivered; stopped #{msg[0, 100]}")
+            "fix partial: #{delivered} verified commit(s) delivered; stopped: #{msg}"
+          end
+  
+          # Commits /fix made since head: CommitMessage's marker line and MASTER's trailer together, because
+          # other writers in the shared checkout use the same trailer.
+          def fix_commits_since(head)
+            return 0 if head.to_s.empty?
+  
+            greps = ["--all-match", "--grep=^#{Master::Fix::CommitMessage::MARKER}$",
+                     "--grep=#{Master::Core::World::COMMIT_TRAILER}"]
+            command = ["git", "-C", @root.to_s, "rev-list", "--count", *greps, "#{head}..HEAD"]
+            out, status = Master::Io::Exec.capture2e(*command)
+            status.success? ? out.to_i : 0
+          end
+  
+          # One place decides what a stage exception means. Defects propagate;
+          # everything else becomes a reported failure that also marks the run
+          # incomplete, so no stage can crash quietly into a "complete" footer.
+        end
+        include FixLifecycle
+
+        module PreviewPresentation
+          private
+
+          def run_fix_preview(abs)
+            result = @fix_loop.preview(abs)
+            if result.ok?
+              v = result.value!
+              Master::Trace::Dmesg.status("fix0", "preview, #{v[:total]} findings")
+              preview_lines(v)
+            else
+              Master::Trace::Dmesg.status("fix0", "preview failed: #{result.message}")
+              "preview: #{result.message}"
+            end
+          rescue StandardError => e
+            stage_failure("preview", "fix0", e)
+          end
+  
+          # What the repair would take on, as two lines a person reads rather than
+          # two Ruby hashes printed with #inspect. The dump ran past the width of a
+          # terminal, so the counts that matter were wherever the wrap happened to
+          # put them, and it named every file by its full path when the pass has
+          # already said which tree it is in.
+  
+          def preview_lines(value)
+            [blocker_line(value[:blockers]), *finding_lines(value)].compact.join("\n")
+          end
+          # The preview's wording, read from a preview's value alone.
+          public :preview_lines
+  
+          # --plan: the files a red check names come first, because the run would repair them first.
+          def blocker_line(blockers)
+            named = Array(blockers)
+            return if named.empty?
+  
+            shown = named.first(PREVIEW_SHOWN).join(", ")
+            "preview blockers: #{named.size} file(s) named by a red check, first: #{shown}"
+          end
+  
+          def finding_lines(value) = (summary_rows(value) + detail_rows(value)).compact.join("\n")
+  
+          def summary_rows(value)
+            [total_line(value[:total].to_i), semantic_note(value[:gaps]), preview_row("laws", value[:laws])]
+          end
+  
+          def detail_rows(value)
+            files = value[:files].to_h.transform_keys { |path| File.basename(path.to_s) }
+            order = Array(value[:transformation_order]).join(" > ")
+            [preview_row("files", files), preview_structure_row(Array(value[:structure])),
+             preview_row("transformations", { "order" => order })]
+          end
+  
+          # The repair's queue: every finding at warning or above once conflicts are resolved, one per place, where
+          # the observation's report groups findings by law and message. "repairs" read as work already decided.
+          def total_line(total) = "preview: #{total} #{total == 1 ? "finding" : "findings"} at warning or above to repair"
+  
+          def semantic_note(gaps)
+            gaps = (gaps || {}).to_h
+            inconclusive = gaps.fetch(:semantic_inconclusive, gaps.fetch("semantic_inconclusive", {})).to_h
+            pending = gaps.fetch(:semantic_pending, gaps.fetch("semantic_pending", {})).to_h
+            parts = []
+            parts << "INCONCLUSIVE #{inconclusive.size} file(s)" if inconclusive.any?
+            parts << "PENDING #{pending.size} file(s)" if pending.any?
+            "preview semantic: #{parts.join("; ")}; model-backed coverage incomplete" if parts.any?
+          end
+  
+          def preview_structure_row(structure)
+            return "preview structure: 0 problem(s)" if structure.empty?
+  
+            shown = structure.first(PREVIEW_SHOWN).map do |problem|
+              operations = Array(problem[:candidate_operations]).join("/")
+              "#{problem[:problem_id]} #{operations}"
+            end
+            rest = structure.size - shown.size
+            line = "preview structure: #{shown.join(', ')}"
+            rest.positive? ? "#{line}, and #{rest} more problem(s)" : line
+          end
+  
+          def preview_row(label, counts)
+            counts = counts.to_h
+            return if counts.empty?
+  
+            shown = counts.first(PREVIEW_SHOWN).map { |name, count| "#{name} #{count}" }
+            rest = counts.size - shown.size
+            line = "preview #{label}: #{shown.join(', ')}"
+            rest.positive? ? "#{line}, and #{rest} more" : line
+          end
+        end
+        include PreviewPresentation
+
+        module CritiquePresentation
+          private
+
+          def run_critique(abs)
+            unless @deliberation
+              fail_stage("critique", "deliberation not configured")
+              Master::Trace::Dmesg.status("crit0", "failed, deliberation not configured")
+              return "critique failed: deliberation not configured"
+            end
+  
+            [swarm_review(abs), deliberation_critique(abs)].compact.join("\n")
+          end
+  
+          # Review::Swarm::Coordinator is built under MASTER_FULL_BOOT=1, placed in
+          # the bundle as `swarm:`, and until now read by nothing: 546 lines of
+          # analyst/reviewer fan-out with a vote engine sitting in the boot graph,
+          # 99 of 278 body lines unreached. It runs here because a per-file reading
+          # is what `analyse_and_review` is for, and ahead of the deliberation
+          # because the council argues better with one in front of it. A lean boot
+          # passes nil and this returns nil, so the default pass is unchanged.
+          def swarm_review(abs)
+            return unless @swarm && File.file?(abs)
+  
+            result = @swarm.analyse_and_review(file_path: abs, code: File.read(abs))
+            return "swarm: #{result.message}" unless result.ok?
+  
+            reading = result.value!
+            verdict = reading[:approved] ? "approved" : "not approved"
+            "swarm: #{verdict} - #{reading[:review].to_s.gsub(/\s+/, " ")[0, SWARM_EXCERPT]}"
+          rescue StandardError => e
+            stage_failure("swarm", "crit0", e)
+          end
+  
+          def deliberation_critique(abs)
+            result = Master::CLI::CouncilCrit.run(
+              root: abs,
+              deliberation: @deliberation,
+              bus: @bus,
+            )
+            return result.value! if result.ok?
+  
+            fail_stage("critique", result.message)
+            Master::Trace::Dmesg.status("crit0", "failed, #{result.message}")
+            "critique failed: #{result.message}"
+          rescue StandardError => e
+            stage_failure("critique", "crit0", e)
+          end
+        end
+        include CritiquePresentation
         # PassResult defines this pass's Result and keeps this file small.
 
         # Whether a pass convenes the council when no flag says: only when it is asked for (PassClock), a
@@ -487,136 +767,6 @@ def default_apply?(*) = false
         # Read the canonical FixLoop state vocabulary instead of maintaining
         # a second list of failure-shaped terminal strings here. Only DONE
         # means this lifecycle proved completion; every other terminal is a halt.
-        def non_success_fix_terminal?(message)
-          state = message.to_s.match(/\A([A-Z_]+):/)&.captures&.first&.downcase&.to_sym
-          state && state != :done && Master::Fix::FixLoop::TERMINAL_STATES.include?(state)
-        end
-
-        def run_fix_loop(abs)
-          parameters = @fix_loop.method(:run).parameters
-          accepts_keyword = lambda do |name|
-            parameters.any? do |kind, parameter|
-              kind == :keyrest || (%i[key keyreq].include?(kind) && parameter == name)
-            end
-          end
-          options = { requested: true }
-          options[:cancellation] = @cancellation if accepts_keyword.call(:cancellation)
-          contract = @task_contract || Master::Fix::TaskContract.current
-          options[:task_contract] = contract if contract && accepts_keyword.call(:task_contract)
-
-          runner = -> { @fix_loop.run(abs, **options) }
-          contract ? Master::Fix::TaskContract.with_current(contract, &runner) : runner.call
-        end
-
-        # Pin every interactive write-enabled /fix to a validated, repository-
-        # relative scope before the FixLoop inventories or mutates its target.
-        def build_task_contract(target)
-          repo_root = File.expand_path(Master::REPO_ROOT)
-          absolute = File.expand_path(target.to_s)
-          unless absolute == repo_root || absolute.start_with?(repo_root + File::SEPARATOR)
-            raise Master::Fix::TaskContract::Invalid, "fix target escapes repository scope"
-          end
-
-          relative = absolute == repo_root ? nil : absolute.delete_prefix(repo_root + File::SEPARATOR)
-          scope = if relative.nil?
-                    MasterPaths::TREES.map { |tree| "#{tree}/**" }
-                  elsif File.directory?(absolute)
-                    ["#{relative}/**"]
-                  else
-                    [relative]
-                  end
-          Master::Fix::TaskContract.build(
-            intent: @task_intent,
-            scope:,
-            preserve: [],
-            proof: ["focused_tests", *backlog_proof_types],
-          )
-        end
-
-        def backlog_proof_types
-          # The interactive /fix run has its own mission namespace. Its proof
-          # contract belongs to the still-live backlog parent in the default store.
-          mission = Master::Fix::Mission.current(root: @root, namespace: nil)
-          return [] unless mission && mission["origin"].to_s == "backlog"
-
-          plan = JSON.parse(mission.fetch("plan").to_s)
-          unless plan["executor"] == "root_todo"
-            raise Master::Fix::TaskContract::Invalid, "backlog mission has no root TODO proof contract"
-          end
-
-          types = Array(plan["proof_types"]).map(&:to_s)
-          allowed = Master::Fix::TaskContract.template.fetch("proof_types").map(&:to_s)
-          if types.empty? || types.uniq != types || (types - allowed).any?
-            raise Master::Fix::TaskContract::Invalid, "backlog mission has absent or invalid proof types"
-          end
-
-          types
-        rescue JSON::ParserError, KeyError => error
-          raise Master::Fix::TaskContract::Invalid, "backlog proof plan is invalid: #{error.message}"
-        end
-
-        def run_fix(abs)
-          # On vm23 the control plane shares this process and owns Git sync + deploy.
-          # Claim the same execution slot around an interactive /fix so the control
-          # plane cannot fetch, rebase or deploy while the fix loop is mutating main.
-          claimed = Master::Ops::LoopOwner.with_claim("fix") do
-            head = git.head
-            result = run_fix_loop(abs)
-            fix_verdict(result, fix_commits_since(head))
-          end
-          return claimed unless claimed == false
-
-          holder = Master::Ops::LoopOwner.active || {}
-          fail_stage("fix", "loop slot held by #{holder["loop"]} pid #{holder["pid"]}")
-          Master::Trace::Dmesg.status("fix0", "failed, loop slot held by #{holder["loop"]} pid #{holder["pid"]}; no repair ran")
-          "fix failed: loop slot held by #{holder["loop"]} pid #{holder["pid"]}"
-        rescue StandardError => e
-          @fix_crashed = true
-          stage_failure("fix", "fix0", e)
-        end
-
-        def fix_verdict(result, delivered)
-          ok = result.ok?
-          @fix_crashed = true if !ok && result.category == :crash
-          msg = ok ? result.value!.to_s : result.message.to_s
-          outcome = self.class.fix_outcome(ok:, msg:, delivered:, ending: loop_ending)
-          @scored = { outcome:, delivered: }
-          return fix_done(msg) if outcome == :done
-          return fix_partial(msg, delivered) if outcome == :partial
-
-          fail_stage("fix", msg)
-          Master::Trace::Dmesg.status("fix0", "#{outcome}, #{msg[0, 120]}")
-          "fix #{outcome}: #{msg}"
-        end
-
-        # :reek:ManualDispatch -- test doubles for the fix loop do not report a terminal state
-        def loop_ending = @fix_loop.respond_to?(:last_terminal_state) ? @fix_loop.last_terminal_state : nil
-
-        def fix_done(msg)
-          Master::Trace::Dmesg.status("fix0", msg[0, 120])
-          msg
-        end
-
-        def fix_partial(msg, delivered)
-          Master::Trace::Dmesg.status("fix0", "partial, #{delivered} commit(s) delivered; stopped #{msg[0, 100]}")
-          "fix partial: #{delivered} verified commit(s) delivered; stopped: #{msg}"
-        end
-
-        # Commits /fix made since head: CommitMessage's marker line and MASTER's trailer together, because
-        # other writers in the shared checkout use the same trailer.
-        def fix_commits_since(head)
-          return 0 if head.to_s.empty?
-
-          greps = ["--all-match", "--grep=^#{Master::Fix::CommitMessage::MARKER}$",
-                   "--grep=#{Master::Core::World::COMMIT_TRAILER}"]
-          command = ["git", "-C", @root.to_s, "rev-list", "--count", *greps, "#{head}..HEAD"]
-          out, status = Master::Io::Exec.capture2e(*command)
-          status.success? ? out.to_i : 0
-        end
-
-        # One place decides what a stage exception means. Defects propagate;
-        # everything else becomes a reported failure that also marks the run
-        # incomplete, so no stage can crash quietly into a "complete" footer.
         def stage_failure(label, unit, error)
           raise error if DEFECT_ERRORS.any? { |klass| error.is_a?(klass) }
 
@@ -629,136 +779,6 @@ def default_apply?(*) = false
         def fail_stage(label, cause)
           @failed_stages << label unless @failed_stages.include?(label)
           (@causes ||= {})[label] ||= cause.to_s.strip[0, 240]
-        end
-
-        def run_fix_preview(abs)
-          result = @fix_loop.preview(abs)
-          if result.ok?
-            v = result.value!
-            Master::Trace::Dmesg.status("fix0", "preview, #{v[:total]} findings")
-            preview_lines(v)
-          else
-            Master::Trace::Dmesg.status("fix0", "preview failed: #{result.message}")
-            "preview: #{result.message}"
-          end
-        rescue StandardError => e
-          stage_failure("preview", "fix0", e)
-        end
-
-        # What the repair would take on, as two lines a person reads rather than
-        # two Ruby hashes printed with #inspect. The dump ran past the width of a
-        # terminal, so the counts that matter were wherever the wrap happened to
-        # put them, and it named every file by its full path when the pass has
-        # already said which tree it is in.
-        PREVIEW_SHOWN = 6
-
-        def preview_lines(value)
-          [blocker_line(value[:blockers]), *finding_lines(value)].compact.join("\n")
-        end
-        # The preview's wording, read from a preview's value alone.
-        public :preview_lines
-
-        # --plan: the files a red check names come first, because the run would repair them first.
-        def blocker_line(blockers)
-          named = Array(blockers)
-          return if named.empty?
-
-          shown = named.first(PREVIEW_SHOWN).join(", ")
-          "preview blockers: #{named.size} file(s) named by a red check, first: #{shown}"
-        end
-
-        def finding_lines(value) = (summary_rows(value) + detail_rows(value)).compact.join("\n")
-
-        def summary_rows(value)
-          [total_line(value[:total].to_i), semantic_note(value[:gaps]), preview_row("laws", value[:laws])]
-        end
-
-        def detail_rows(value)
-          files = value[:files].to_h.transform_keys { |path| File.basename(path.to_s) }
-          order = Array(value[:transformation_order]).join(" > ")
-          [preview_row("files", files), preview_structure_row(Array(value[:structure])),
-           preview_row("transformations", { "order" => order })]
-        end
-
-        # The repair's queue: every finding at warning or above once conflicts are resolved, one per place, where
-        # the observation's report groups findings by law and message. "repairs" read as work already decided.
-        def total_line(total) = "preview: #{total} #{total == 1 ? "finding" : "findings"} at warning or above to repair"
-
-        def semantic_note(gaps)
-          gaps = (gaps || {}).to_h
-          inconclusive = gaps.fetch(:semantic_inconclusive, gaps.fetch("semantic_inconclusive", {})).to_h
-          pending = gaps.fetch(:semantic_pending, gaps.fetch("semantic_pending", {})).to_h
-          parts = []
-          parts << "INCONCLUSIVE #{inconclusive.size} file(s)" if inconclusive.any?
-          parts << "PENDING #{pending.size} file(s)" if pending.any?
-          "preview semantic: #{parts.join("; ")}; model-backed coverage incomplete" if parts.any?
-        end
-
-        def preview_structure_row(structure)
-          return "preview structure: 0 problem(s)" if structure.empty?
-
-          shown = structure.first(PREVIEW_SHOWN).map do |problem|
-            operations = Array(problem[:candidate_operations]).join("/")
-            "#{problem[:problem_id]} #{operations}"
-          end
-          rest = structure.size - shown.size
-          line = "preview structure: #{shown.join(', ')}"
-          rest.positive? ? "#{line}, and #{rest} more problem(s)" : line
-        end
-
-        def preview_row(label, counts)
-          counts = counts.to_h
-          return if counts.empty?
-
-          shown = counts.first(PREVIEW_SHOWN).map { |name, count| "#{name} #{count}" }
-          rest = counts.size - shown.size
-          line = "preview #{label}: #{shown.join(', ')}"
-          rest.positive? ? "#{line}, and #{rest} more" : line
-        end
-
-        def run_critique(abs)
-          unless @deliberation
-            fail_stage("critique", "deliberation not configured")
-            Master::Trace::Dmesg.status("crit0", "failed, deliberation not configured")
-            return "critique failed: deliberation not configured"
-          end
-
-          [swarm_review(abs), deliberation_critique(abs)].compact.join("\n")
-        end
-
-        # Review::Swarm::Coordinator is built under MASTER_FULL_BOOT=1, placed in
-        # the bundle as `swarm:`, and until now read by nothing: 546 lines of
-        # analyst/reviewer fan-out with a vote engine sitting in the boot graph,
-        # 99 of 278 body lines unreached. It runs here because a per-file reading
-        # is what `analyse_and_review` is for, and ahead of the deliberation
-        # because the council argues better with one in front of it. A lean boot
-        # passes nil and this returns nil, so the default pass is unchanged.
-        def swarm_review(abs)
-          return unless @swarm && File.file?(abs)
-
-          result = @swarm.analyse_and_review(file_path: abs, code: File.read(abs))
-          return "swarm: #{result.message}" unless result.ok?
-
-          reading = result.value!
-          verdict = reading[:approved] ? "approved" : "not approved"
-          "swarm: #{verdict} - #{reading[:review].to_s.gsub(/\s+/, " ")[0, SWARM_EXCERPT]}"
-        rescue StandardError => e
-          stage_failure("swarm", "crit0", e)
-        end
-
-        def deliberation_critique(abs)
-          result = Master::CLI::CouncilCrit.run(
-            root: abs,
-            deliberation: @deliberation,
-            bus: @bus,
-          )
-          return result.value! if result.ok?
-
-          fail_stage("critique", result.message)
-          Master::Trace::Dmesg.status("crit0", "failed, #{result.message}")
-          "critique failed: #{result.message}"
-        rescue StandardError => e
-          stage_failure("critique", "crit0", e)
         end
 
         def map_line
