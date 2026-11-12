@@ -983,6 +983,11 @@ def publish_a_call_and_a_fetch(bus)
   bus.publish("tool:return", tool: "web_fetch", ok: true, bytes: 14_203, ms: 310)
 end
 
+def test_spinner_distinguishes_provider_waiting_from_live_streaming
+  assert_equal "waiting", @cli.send(:stage_for, "llm:send", model: "grok-cli:auto")
+  assert_equal "streaming", @cli.send(:stage_for, "llm:stream_started", model: "grok-cli:auto")
+end
+
 def test_a_turn_prints_its_units_and_nothing_else
   silent_log = Object.new.tap { |log| log.define_singleton_method(:append) { |*| nil } }
   bus = Master::Trace::EventBus.new(event_log: silent_log)
