@@ -43,6 +43,37 @@ class TestHostBudget < Minitest::Test
     end
   end
 
+  def test_startup_reports_stopped_processes_without_signalling_them
+    fake = "60670 T /usr/local/bin/ruby bin/master\n"
+    Master::Io::Exec.stub(:capture2, [fake, nil]) do
+      Master::Ground::HostBudget.stub(:constrained?, true) do
+        kills = []
+        output = StringIO.new
+        Process.stub(:kill, ->(*args) { kills << args }) do
+          Master::Ground::HostBudget.warn_or_reap_suspended!(io: output)
+        end
+
+        assert_empty kills
+        assert_match(/left running/, output.string)
+        assert_match(/do not prove ownership/, output.string)
+      end
+    end
+  end
+
+  def test_explicit_reaper_refuses_unowned_process_signals
+    fake = "60670 T /usr/local/bin/ruby bin/master\n"
+    Master::Io::Exec.stub(:capture2, [fake, nil]) do
+      kills = []
+      output = StringIO.new
+      Process.stub(:kill, ->(*args) { kills << args }) do
+        assert_equal 0, Master::Ground::HostBudget.reap_suspended_ruby!(user: "dev", io: output)
+      end
+
+      assert_empty kills
+      assert_match(/refused to reap/, output.string)
+    end
+  end
+
   # HostBudget measures the host; OPENBSD/vm_resource.yml declares it. The two
   # must agree that the declared box is constrained, or vm23 boots with TTS, the
   # boot scan and the background loops on.
