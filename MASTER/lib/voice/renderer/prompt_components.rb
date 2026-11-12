@@ -45,8 +45,10 @@ module Master
 
         def compact_splash(context)
           model = short_model(context[:model])
+          # A configured URL and token are not a health check. Boot must not
+          # call the web surface ready without an observed request/response.
           web = if splash_web_url.to_s.include?("http")
-                  @config["web_token"].to_s.empty? ? "ready" : "ready, token set, /pair issue for a code"
+                  @config["web_token"].to_s.empty? ? "configured" : "configured, token set, /pair issue for a code"
                 else
                   "not configured"
                 end
