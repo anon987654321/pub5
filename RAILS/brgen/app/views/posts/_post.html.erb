@@ -66,7 +66,8 @@
                     aria: { label: t("post.repost"), pressed: reposted },
                     title: t("post.repost") do %>
         <%= render "shared/feed_icon", name: "repost" %>
-        <span class="feed-action-count"><%= post.reposts_count.positive? ? post.reposts_count : "" %></span>
+        <%= tag.span post.reposts_count.positive? ? post.reposts_count : "",
+            class: "feed-action-count", data: { post_repost_count: dom_id(post) } %>
       <% end %>
       <%# post-menu, not the vendored dropdown: Escape closes, the first item takes
           focus on open and the trigger gets it back on close. %>
