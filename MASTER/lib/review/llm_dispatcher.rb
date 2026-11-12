@@ -394,7 +394,7 @@ module Master
         return unless @model_router&.respond_to?(:unreachable_reason)
 
         id = model.to_s
-        return unless id.start_with?("ollama:", "ollama/", "local:")
+        return unless id.start_with?("ollama:", "ollama/", "local:", "local_uncensored:")
 
         reason = @model_router.unreachable_reason(id, wait: false)
         return if reason.to_s.empty? || reason.to_s.start_with?("checking ")
@@ -566,6 +566,7 @@ module Master
         # even when its underlying model supports native tools. Give it MASTER's
         # guarded ReAct loop before the provider-specific early return.
         if format.nil? && !Fiber[:master_no_tools] && @tools.any? &&
+           !Io::LaneSelection.nsfw_model?(selected_model) &&
            (claude_cli_model?(selected_model) || !tool_capable?(selected_model))
           return react_tool_loop(selected_model, messages, sys:, stream:, image:, &blk)
         end
