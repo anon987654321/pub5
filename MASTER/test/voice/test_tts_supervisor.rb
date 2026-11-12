@@ -77,7 +77,7 @@ class TestTtsSupervisor < Minitest::Test
     assert_nil @pids[slot], "retired slot must not keep pointing at a dead pid"
   end
 
-  def test_retire_daemon_escalates_when_a_detached_worker_ignores_term
+  def test_retire_daemon_escalates_and_reaps_a_direct_child_that_ignores_term
     reader, writer = IO.pipe
     pid = Process.spawn(
       RbConfig.ruby, "-e", 'Signal.trap("TERM", "IGNORE"); puts "ready"; STDOUT.flush; sleep 60',
@@ -92,7 +92,7 @@ class TestTtsSupervisor < Minitest::Test
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     Sup.retire_daemon(slot)
 
-    refute Sup.process_alive?(pid), "retire_daemon must KILL a detached worker that ignores TERM"
+    refute Sup.process_alive?(pid), "retire_daemon must KILL and reap its child when it ignores TERM"
     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 4.0
   ensure
     reader&.close
@@ -103,6 +103,7 @@ class TestTtsSupervisor < Minitest::Test
     Dir.mktmpdir("master_tts_foreign") do |root|
       FileUtils.mkdir_p(File.join(root, ".master"))
       Sup.stub(:pool_size, 2) do
+        @pids.delete(0)
         path = Sup.socket_path(root, index: 0)
         server = UNIXServer.new(path)
 
@@ -114,6 +115,25 @@ class TestTtsSupervisor < Minitest::Test
         end
 
         assert File.socket?(path), "the foreign worker socket must not be unlinked"
+        server.close
+      ensure
+        server&.close
+      end
+    end
+  end
+
+  def test_replace_worker_refuses_to_clobber_a_foreign_socket
+    Dir.mktmpdir("master_tts_foreign_replace") do |root|
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      Sup.stub(:pool_size, 2) do
+        @pids.delete(0)
+        path = Sup.socket_path(root, index: 0)
+        server = UNIXServer.new(path)
+
+        Sup.stub(:spawn_daemon, ->(**_options) { flunk "foreign socket must not be replaced" }) do
+          refute Sup.replace_worker(root:, path:, index: 0)
+        end
+        assert File.socket?(path)
         server.close
       ensure
         server&.close
