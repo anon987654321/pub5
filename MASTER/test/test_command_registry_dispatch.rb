@@ -515,6 +515,44 @@ class TestCommandRegistryDispatch < Minitest::Test
     Fiber[:master_visitor] = old_visitor
   end
 
+  def test_notifications_consent_is_local_explicit_and_revocable
+    require "tmpdir"
+    old_visitor = Fiber[:master_visitor]
+    Dir.mktmpdir("notifications-consent") do |root|
+      Fiber[:master_visitor] = nil
+      permissions = Master::Ground::PersonalPermissions.new(root:)
+      purpose = Master::Ground::NotificationAggregator::PURPOSE
+      refute permissions.allowed?(scope: "notifications", purpose:)
+
+      denied = Registry.dispatch_privacy(
+        root, ctx: Master::CLI::PipelineContext.new(
+          user_message: "/privacy grant notifications", args: "grant notifications",
+        )
+      )
+      assert_match(/exact command/, denied)
+      refute permissions.allowed?(scope: "notifications", purpose:)
+
+      grant = Registry.dispatch_privacy(
+        root, ctx: Master::CLI::PipelineContext.new(
+          user_message: "/privacy grant notifications --confirm GRANT notifications",
+          args: 'grant notifications --confirm "GRANT notifications"',
+        )
+      )
+      assert_match(/enabled/, grant)
+      assert permissions.allowed?(scope: "notifications", purpose:)
+
+      revoke = Registry.dispatch_privacy(
+        root, ctx: Master::CLI::PipelineContext.new(
+          user_message: "/privacy revoke notifications", args: "revoke notifications",
+        )
+      )
+      assert_match(/disabled immediately/, revoke)
+      refute permissions.allowed?(scope: "notifications", purpose:)
+    end
+  ensure
+    Fiber[:master_visitor] = old_visitor
+  end
+
   def test_agenda_is_registered_and_requires_scoped_calendar_consent
     assert Registry.slash_commands.include?("/agenda")
     assert_includes Registry.help_text("agenda"), "/privacy grant calendar_read"
