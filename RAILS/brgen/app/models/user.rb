@@ -174,9 +174,10 @@ class User < ApplicationRecord
   # whole point is that it reaches the followers.
   def timeline_posts
     author_ids = [ id ] + follows_as_follower.pluck(:followed_id)
-    Post.where(user_id: author_ids)
-        .or(Post.where(id: Repost.where(user_id: author_ids).select(:post_id)))
-        .order(created_at: :desc)
+    visible = Post.kept.visible_to(self)
+    visible.where(user_id: author_ids)
+           .or(visible.where(id: Repost.where(user_id: author_ids).select(:post_id)))
+           .order(created_at: :desc)
   end
 
   def unfollow!(other)
@@ -184,6 +185,8 @@ class User < ApplicationRecord
   end
 
   has_many :blocks_as_blocker, class_name: "Block", foreign_key: :blocker_id, dependent: :destroy, inverse_of: :blocker
+  has_many :blocks_as_blocked, class_name: "Block", foreign_key: :blocked_id,
+                               dependent: :destroy, inverse_of: :blocked
   has_many :blocked_users, through: :blocks_as_blocker, source: :blocked
 
   # A block ends any follow between the two, both ways: left standing, the
