@@ -219,6 +219,10 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
       user: @owner, name: "High minimum #{SecureRandom.hex(3)}", address: "Order Street 2",
       cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: 100, min_order_cents: 8_000
     )
+    unknown_values = Takeaway::Restaurant.create!(
+      user: @owner, name: "Unstated fees #{SecureRandom.hex(3)}", address: "Order Street 3",
+      cuisine_type: "Pizza", city: @city, active: true, delivery_fee_cents: nil, min_order_cents: nil
+    )
 
     host! "markedsplass.brgen.no"
     get "/food", params: { sort: "delivery_fee" }
@@ -226,6 +230,8 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     fee_hrefs = Nokogiri::HTML(response.body).css(".deal-card.restaurant .deal-card-hit").map { |link| link["href"] }
     assert_operator fee_hrefs.index("/food/restaurants/#{low_fee.to_param}"), :<,
                     fee_hrefs.index("/food/restaurants/#{high_fee.to_param}")
+    assert_operator fee_hrefs.index("/food/restaurants/#{low_fee.to_param}"), :<,
+                    fee_hrefs.index("/food/restaurants/#{unknown_values.to_param}")
     assert_select "nav.store-pills a[aria-current=page]", text: I18n.t("takeaway.sorts.delivery_fee")
 
     get "/food", params: { sort: "minimum_order" }
@@ -233,6 +239,8 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
     minimum_hrefs = Nokogiri::HTML(response.body).css(".deal-card.restaurant .deal-card-hit").map { |link| link["href"] }
     assert_operator minimum_hrefs.index("/food/restaurants/#{low_minimum.to_param}"), :<,
                     minimum_hrefs.index("/food/restaurants/#{high_minimum.to_param}")
+    assert_operator minimum_hrefs.index("/food/restaurants/#{low_minimum.to_param}"), :<,
+                    minimum_hrefs.index("/food/restaurants/#{unknown_values.to_param}")
     assert_select "nav.store-pills a[aria-current=page]", text: I18n.t("takeaway.sorts.minimum_order")
   end
 
