@@ -9,6 +9,18 @@ require "tmpdir"
 require_relative "../lib/fix/transaction"
 
 class TestFixTransaction < Minitest::Test
+  def test_conflicts_does_not_install_an_unobserved_path_in_the_seen_map
+    tx = Master::Fix::Transaction.allocate
+    seen = Hash.new { |hash, path| hash[path] = [] }
+    tx.instance_variable_set(:@paths, ["unobserved.txt"])
+    tx.instance_variable_set(:@seen, seen)
+    tx.define_singleton_method(:absolute) { |path| path }
+    tx.define_singleton_method(:fingerprint) { |_path| "missing" }
+
+    assert_equal ["unobserved.txt"], tx.conflicts
+    refute seen.key?("unobserved.txt"), "a read of conflict state must not create a write"
+  end
+
   def test_transaction_id_collision_preserves_the_existing_manifest
     Dir.mktmpdir do |dir|
       path = File.join(dir, "note.txt")
