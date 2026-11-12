@@ -73,6 +73,33 @@ class TestFixLoopCommitter < Minitest::Test
     bus.events.any? { |event, _payload| event == "fix_loop:commit_blocked" }
   end
 
+  def test_observe_own_writes_acquires_its_mutex_explicitly
+    mutex = Class.new do
+      attr_reader :synchronize_calls
+
+      def initialize
+        @synchronize_calls = 0
+      end
+
+      def synchronize
+        @synchronize_calls += 1
+        yield
+      end
+
+      def owned?
+        raise "owned? must not be used as a locking shortcut"
+      end
+    end.new
+    committer = Master::Fix::FixLoop::Committer.new(
+      git: FakeGit.new([], []), root: @dir
+    )
+    committer.instance_variable_set(:@commit_mutex, mutex)
+
+    committer.send(:observe_own_writes, [File.join(@dir, "untracked.rb")])
+
+    assert_equal 1, mutex.synchronize_calls
+  end
+
   def test_commits_when_changed_ruby_parses
     write_file("lib/ok.rb", "FOO = {\n  a: 1,\n}.freeze\n")
     git = FakeGit.new([], ["lib/ok.rb"])

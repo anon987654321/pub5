@@ -198,13 +198,15 @@ module Master
         # A write /fix makes during a pass is recorded with the pass transaction, so a crash rolls it
         # back. Unrecorded, it read as another writer's edit and the rollback refused every path.
         def observe_own_writes(paths)
-          observe = lambda do
-            transaction = @transaction
-            tracked = transaction&.active? ? transaction.tracked(paths) : []
-            transaction.observe_paths!(tracked) unless tracked.empty?
-          end
+          @commit_mutex.synchronize { observe_own_writes_locked(paths) }
+        end
 
-          @commit_mutex.owned? ? observe.call : @commit_mutex.synchronize(&observe)
+        # The caller owns @commit_mutex. Keeping this boundary explicit avoids
+        # treating Mutex#owned? as a substitute for synchronization.
+        def observe_own_writes_locked(paths)
+          transaction = @transaction
+          tracked = transaction&.active? ? transaction.tracked(paths) : []
+          transaction.observe_paths!(tracked) unless tracked.empty?
         end
 
         def written_unchanged?(path) = @ground_truth.recorded_unchanged?(File.expand_path(path, @root))
