@@ -41,14 +41,25 @@ class TestVisualCompletion < Minitest::Test
     priorities = Deploy::GeometryProbe.config.fetch("reflow_priority")
     surfaces = Deploy::GeometryProbe.surfaces.map { |surface| "#{surface.app}/#{surface.label}" }
 
+    mobile_surfaces = Deploy::GeometryProbe.surfaces
+                                               .select { |surface| surface.viewport == "mobile" }
+                                               .map { |surface| "#{surface.app}/#{surface.label}" }
     priorities.each do |app, labels|
-      labels.each { |label| assert_includes surfaces, "#{app}/#{label}" }
+      labels.each do |label|
+        surface = "#{app}/#{label}"
+        assert_includes surfaces, surface, "priority surface must exist"
+        assert_includes mobile_surfaces, surface, "priority surface must be eligible for the mobile-first sweep"
+      end
     end
 
     picked = Deploy::ReflowCheck.new.send(:pick_surfaces).map { |surface| "#{surface.app}/#{surface.label}" }
+    priorities.each do |app, labels|
+      labels.each { |label| assert_includes picked, "#{app}/#{label}", "priority surface must be sampled" }
+    end
     %w[
       brgen/messenger
       brgen/markedsplass_marketplace_listings_index
+      brgen/takeaway_restaurants
       amber/outfits
       bsdports/ports_index
     ].each { |surface| assert_includes picked, surface }
