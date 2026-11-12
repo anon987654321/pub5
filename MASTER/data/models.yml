@@ -139,6 +139,16 @@ model_defs:
     id: glm-5.3
     <<: *model_defaults
     score: { quality: 0.95, speed: 0.80, cost: 0.85 }
+  # The OpenHands sandbox's own agent-server endpoint, discovered as
+  # gateway:openhands_Default (Ground::OpenhandsSandbox wires
+  # MASTER_LLM_GATEWAY_URL from OH_INTERNAL_SERVER_URL at boot). It costs
+  # nothing and is always reachable where the sandbox runs, so it sits just
+  # behind GLM-5.3 in the live chains: a keyless run answers here instead of
+  # walking the remote free tier. Absent a sandbox it is simply unreachable.
+  sandbox_gateway: &sandbox_gateway
+    id: gateway:openhands_Default
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.75, cost: 1.0 }
   claude_cli_sonnet: &claude_cli_sonnet
     id: claude-cli:claude-sonnet-5-5
     <<: *model_defaults
@@ -250,6 +260,7 @@ models:
     - *web_chat_gemini
   default:
     - *glm_5_3
+    - *sandbox_gateway
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *agy_auto
@@ -262,8 +273,10 @@ models:
     - *llama_cli_gguf
   primary:
     # GLM-5.3 leads every /fix run as the primary #1 lane (operator, 2026-11-09);
-    # without ZAI_API_KEY it falls through exactly like any dead lane.
+    # without ZAI_API_KEY it falls through exactly like any dead lane. The
+    # sandbox gateway follows it so a keyless OpenHands run answers next.
     - *glm_5_3
+    - *sandbox_gateway
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *agy_auto
@@ -273,6 +286,7 @@ models:
     - *llama_cli_gguf
   strong:
     - *glm_5_3
+    - *sandbox_gateway
     - *claude_cli_opus
     - *claude_cli_sonnet
     - *claude_opus_api
@@ -314,6 +328,7 @@ models:
     # hoists this list over the live free lanes): a turn that needs no
     # provider's opinion answers in zero milliseconds of network roulette.
     - *ollama_gemma
+    - *sandbox_gateway
     - *nemotron_super
   claude_code:
     - *claude_cli_opus

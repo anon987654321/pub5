@@ -445,7 +445,11 @@ module Master
 
       def key_present_for?(id)
         # The user-owned gateway is the key boundary itself: the URL is the opt-in and its key is optional.
-        return true if id.start_with?("gateway:") && !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty?
+        # A `gateway:` id now also sits in the declared tiers, so the answer is the URL's presence,
+        # never the generic any-key floor below (which would call it alive on a machine with an
+        # unrelated provider key and no gateway configured).
+        return !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty? if id.start_with?("gateway:")
+
         _pattern, envs = api_keys.find { |pattern, _envs| pattern.match?(id) }
         envs ? envs.any? { |env| Master.api_key_present?(env) } : Master.any_api_key_present?
       end
