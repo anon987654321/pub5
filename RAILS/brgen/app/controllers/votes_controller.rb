@@ -27,6 +27,10 @@ class VotesController < ApplicationController
       vote.update!(value:)
     end
 
+    # Score changes use update_all in Vote#apply_score_delta; the local
+    # association is stale until it is explicitly reloaded for the rail.
+    @votable.reload if @votable.is_a?(Post)
+
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_back fallback_location: root_path }
