@@ -712,7 +712,9 @@ module Master
         end
         turn = @pipeline_thread
         if turn&.alive?
-          canceler = Thread.new { cancel_turn(turn, @turn_children) }
+          # Use the same cancellation policy as Ctrl-C: Fold-owned work stops
+          # at a safe boundary; only non-Fold work takes the immediate kill path.
+          canceler = Thread.new { request_or_interrupt_turn(turn, @turn_children, reason: "stop") }
           canceler.join(2)
           turn.join(1) unless Thread.current == turn
         end
