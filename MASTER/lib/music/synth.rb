@@ -40,7 +40,9 @@ module Master
                 Master::Io::ProcessSpawn.environment, *argv, path,
                 **Master::Io::ProcessSpawn.options(out: File::NULL, err: File::NULL),
               )
-              Process.detach(pid)
+              # Leave the child waitable by the caller. A retained, unreaped child
+              # PID cannot be recycled for an unrelated process while MASTER
+              # still owns the playback handle.
               return pid
             rescue SystemCallError => e
               failures << "#{File.basename(argv.first)}: #{e.class}"
