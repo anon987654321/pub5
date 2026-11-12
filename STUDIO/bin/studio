@@ -23,6 +23,7 @@ RUBY = RbConfig.ruby
 TOOLS = {
   "dilla" => File.join(STUDIO_ROOT, "dilla", "dilla.rb"),
   "postpro" => File.join(STUDIO_ROOT, "postpro", "postpro.rb"),
+  "lora" => File.join(STUDIO_ROOT, "lora", "validate.rb"),
 }.freeze
 
 ABLETON_TOOLS = {
@@ -32,11 +33,12 @@ ABLETON_TOOLS = {
 }.freeze
 
 def usage
-  warn "usage: bin/studio <dilla|postpro> [args...]"
+  warn "usage: bin/studio <dilla|postpro|lora> [args...]"
   warn "       bin/studio ableton <inventory|export|midi> [args...]"
   warn "       bin/studio --list"
   warn "  dilla     the beat engine — see STUDIO/dilla/README.md"
   warn "  postpro   the film grade — see STUDIO/postpro/README.md"
+  warn "  lora      read-only private LoRA profile audit — --help for options"
   warn "  ableton   Live Set inventory, composition export and MIDI recovery"
 end
 
