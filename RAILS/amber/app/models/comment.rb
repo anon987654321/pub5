@@ -13,8 +13,10 @@ class Comment < ApplicationRecord
   private
 
   def broadcast_post_comment
-    target = commentable
-    return unless target.respond_to?(:broadcast_live_counts)
+    return unless commentable_type == "Post"
+
+    target = Post.find_by(id: commentable_id)
+    return unless target
 
     # Feed readers need only the new count. Readers on the detail page need
     # the complete thread, whose controls are rendered for each viewer; refresh
