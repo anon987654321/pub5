@@ -244,7 +244,8 @@ module Operator
           expect("vertical.#{name}.#{marker}", path, source, marker,
                  "#{name} must retain its own front-page or primary-surface interaction.")
         end
-        add(source&.include?("shared/post_card") ? "FAIL" : "PASS",
+        social_post_card = source.nil? || source.include?("shared/post_card")
+        add(social_post_card ? "FAIL" : "PASS",
             "vertical.#{name}.not_a_social_post", path,
             "Only Brgen and Amber social posts use the shared social post card.",
             source:, needle: "shared/post_card")
