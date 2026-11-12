@@ -79,6 +79,8 @@ RAILS/*/vendor/bundle/
 RAILS/visual_contract/*.png
 # Generated visual evidence lives under RAILS/ but is reproducible and never committed.
 # The curated one-shot review images remain directly at RAILS/screenshot_*.png.
+# Raw captures live outside the repo under the system temp directory; this
+# pattern stays only to ignore a stale sweep folder a previous build left here.
 RAILS/sweep-*/
 RAILS/visual-review-*/
 RAILS/screenshot_*.png

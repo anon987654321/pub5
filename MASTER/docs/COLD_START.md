@@ -88,10 +88,11 @@ MASTER/bin/operator visual sweep
 MASTER/bin/operator visual review --app brgen,amber --no-open
 ```
 
-Standing sweep artifacts and review reports live directly under `RAILS/` in
-revision-stamped folders. The curated per-page phone review shots are written
-as `RAILS/screenshot_<app>_<page>.png`. Generated folders and shots are ignored
-by Git; the sweep's `index.json` records its source revision.
+Standing sweep captures are written outside the repo, under the system temp
+directory, so a sweep adds no folder to the checkout. The curated per-page phone
+review shots are written flat and directly at `RAILS/screenshot_<app>_<page>.png`,
+replaced whole each sweep. Generated shots are ignored by Git; the sweep's
+`index.json`, beside the captures in temp, records its source revision.
 
 The visual review asks the configured review agent. For image-bearing work,
 MASTER filters for image-capable lanes first, then applies the dated human

@@ -5,6 +5,7 @@ require "erb"
 require "fileutils"
 require "json"
 require "time"
+require "tmpdir"
 require_relative "../io/exec"
 require_relative "screenshot_sweep/plan"
 require_relative "screenshot_sweep/camera"
@@ -53,7 +54,10 @@ module Master
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
         # Only a standing sweep refreshes the review set and prunes old sweeps.
         @standing = out.nil?
-        @dir = out || File.join(root, "RAILS", "sweep-#{stamp}")
+        # Captures land outside the repo (TREE_CONTRACTS: rendered artifacts live
+        # under the system temp directory). The RAILS root holds the review set
+        # itself, written flat by ReviewSet; a standing sweep adds no folder there.
+        @dir = out || File.join(Dir.tmpdir, "pub5-screenshot-sweep", "sweep-#{stamp}")
         @plan = Plan.new(root:)
         available_widths = Array(YAML.safe_load_file(File.join(root, GEOMETRY)).fetch("sweep_widths")).map(&:to_i)
         @widths = Array(widths || available_widths).map(&:to_i).uniq

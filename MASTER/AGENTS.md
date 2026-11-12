@@ -416,9 +416,11 @@ sweep is active, or expect `Timeout::ExitException` from `cdp_framing.rb`.
 
 **The committed PNGs are documentation; the review set is not.** `RAILS/docs/screenshots/`
 and the per-engine `screenshots/` dirs are static docs (only
-`test_visual_sheets.rb` names one). `RAILS/screenshot_*.png` and `RAILS/sweep-*/`
-are git-ignored run artifacts. Neither the review path nor the critic reads the
-committed docs; both read what the current sweep rendered.
+`test_visual_sheets.rb` names one). `RAILS/screenshot_*.png` is the flat review
+set and raw captures live in temp (`pub5-screenshot-sweep/`), so a sweep creates
+no folder under `RAILS/`. The review set is git-ignored run artifact. Neither the
+review path nor the critic reads the committed docs; both read what the current
+sweep rendered.
 
 ## Judging your own work
 

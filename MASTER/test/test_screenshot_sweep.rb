@@ -86,7 +86,7 @@ class TestScreenshotSweep < Minitest::Test
     def stop_owned! = nil
   end
 
-  def test_standing_sweep_uses_rails_root_and_records_revision_field
+  def test_standing_sweep_captures_outside_the_repo_and_records_revision_field
     Dir.mktmpdir("screenshot-root") do |root|
       FileUtils.mkdir_p(File.dirname(File.join(root, Master::Fix::ScreenshotSweep::GEOMETRY)))
       FileUtils.cp(File.join(ROOT, Master::Fix::ScreenshotSweep::GEOMETRY),
@@ -94,7 +94,9 @@ class TestScreenshotSweep < Minitest::Test
       File.write(File.join(root, Master::Fix::ScreenshotSweep::Plan::MANIFEST), { "apps" => {} }.to_yaml)
 
       sweep = Master::Fix::ScreenshotSweep.new(root:, runtime: FailedBoot.new("not started"))
-      assert_match(%r{/RAILS/sweep-\d{8}T\d{6}Z\z}, sweep.dir)
+      refute sweep.dir.start_with?(root),
+             "raw captures must not create a folder inside the checkout"
+      assert_match(%r{/pub5-screenshot-sweep/sweep-\d{8}T\d{6}Z\z}, sweep.dir)
 
       sweep.run(apps: ["bsdports"])
       index = JSON.parse(File.read(File.join(sweep.dir, "index.json")))

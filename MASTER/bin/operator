@@ -74,7 +74,7 @@ def usage
       bin/operator land -m <msg> <path>...  commit path-scoped, re-check, push current branch
       bin/operator push                   replay unpublished main commits onto a moved origin/main and push, no stash
       bin/operator triangle <up|status|down> [app...]  boot brgen, amber, bsdports and the master face on the ports the live checks probe
-      bin/operator visual sweep [APP] [--no-dialogs] [--one-page]  captures under RAILS/; one-page is a 390px smoke
+      bin/operator visual sweep [APP] [--no-dialogs] [--one-page]  review shots into RAILS/, raw captures in temp; one-page is a 390px smoke
       bin/operator browser install                   install user-scoped Chrome for Testing headless shell
       bin/operator visual review [--app A,B] [--surface ID] [--no-critique] [--no-open] [--out DIR]  read-only rendered review, no fixing
       bin/operator visual <seed [app...] [--yes]|unseed|status|approve <surface>>  believable local content for the visual pass, development database only
@@ -582,8 +582,9 @@ when "visual"
   # Blesses a parked chrome-geometry baseline; the /fix loop never does this itself.
   require File.join(ROOT, "MASTER", "lib", "fix", "visual_drift_budget")
   if ARGV.first == "sweep"
-    # Captures are revision-stamped under RAILS/. --one-page is the quick
-    # rendering smoke; the full /fix lane retains every declared width/page.
+    # Raw captures are revision-stamped outside the repo, in temp; the curated
+    # review shots land flat in RAILS/. --one-page is the quick rendering smoke;
+    # the full /fix lane retains every declared width/page.
     require "json"
     require File.join(ROOT, "MASTER", "lib", "fix", "screenshot_sweep")
     args = ARGV.drop(1)
