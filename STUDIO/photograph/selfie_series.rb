@@ -37,8 +37,7 @@ module Studio
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:,
-          subject_directory: @subject_directory
+          subject: @subject, directory: @directory, client:
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
