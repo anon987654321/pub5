@@ -337,7 +337,7 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_includes rows.map { |row| row.fetch("meter") }, "6/8"
 
     rows.each do |row|
-      assert_match(/current sequencer's bar clock is 4\\/4/, row.fetch("rendering_note"))
+      assert_match(/current sequencer's bar clock is 4\/4/, row.fetch("rendering_note"))
     end
 
     untitled = Dilla.progression_by_ref("untitled_dangelo_mixo")
