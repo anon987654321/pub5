@@ -24,20 +24,21 @@ module Studio
         case subject.to_s
         when "merethe"
           additional = File.join(subject_directory, "sources", "additional")
-          has_additional = File.directory?(additional) && !File.symlink?(additional) &&
-                           Dir.children(additional).any? do |name|
-                             IMAGE_EXTENSIONS.include?(File.extname(name).downcase) &&
-                               File.file?(File.join(additional, name)) &&
-                               !File.symlink?(File.join(additional, name))
-                           end
+          has_additional = File.symlink?(additional)
+          if File.directory?(additional) && !File.symlink?(additional)
+            has_additional = Dir.children(additional).any? do |name|
+              IMAGE_EXTENSIONS.include?(File.extname(name).downcase) &&
+                (File.file?(File.join(additional, name)) || File.symlink?(File.join(additional, name)))
+            end
+          end
           has_additional ? %w[me2_archive additional_images] : %w[me2_archive]
         when "wenche"
           %w[me2_archive website_photographs]
         else
           []
         end
-      rescue SystemCallError
-        []
+      rescue SystemCallError => error
+        raise Error, "cannot inventory #{subject} source sets: #{error.class}: #{error.message}"
       end
 
       def validate(subject:, subject_directory:, required_sources: nil)
@@ -170,7 +171,7 @@ module Studio
 
       def private_evidence_file(relative, directory:)
         return nil unless relative.start_with?("evidence#{File::SEPARATOR}")
-        return nil if relative.include?("\\") || relative.start_with?(File::SEPARATOR)
+        return nil if relative.include?("\\") || relative.include?("\0") || relative.start_with?(File::SEPARATOR)
 
         parts = relative.split(File::SEPARATOR)
         return nil if parts.any? { |part| part.empty? || part == "." || part == ".." }
@@ -198,11 +199,8 @@ module Studio
       private_class_method :private_evidence_file
 
       def private_mode?(path, directory: false)
-        stat = File.stat(path)
-        return false if (stat.mode & 0o077).positive?
-
-        required_bit = directory ? 0o100 : 0o400
-        (stat.mode & required_bit).positive?
+        expected_mode = directory ? 0o700 : 0o600
+        (File.stat(path).mode & 0o777) == expected_mode
       rescue SystemCallError
         false
       end
