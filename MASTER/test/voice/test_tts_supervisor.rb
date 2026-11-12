@@ -22,25 +22,27 @@ class TestTtsSupervisor < Minitest::Test
   def setup
     @pids = Sup.instance_variable_get(:@daemon_pids)
     @strikes = Sup.instance_variable_get(:@busy_strikes)
-    @waiters = Sup.instance_variable_get(:@daemon_waiters)
-    @saved = [@pids.dup, @strikes.dup, @waiters.dup]
+    @saved = [@pids.dup, @strikes.dup]
     @spawned = []
   end
 
   def teardown
     @spawned.each do |pid|
+      # Check child ownership before signalling. A still-unreaped child keeps
+      # its PID reserved even when the test has already sent it TERM.
+      next if Process.waitpid(pid, Process::WNOHANG)
+
       Process.kill("KILL", pid)
-    rescue Errno::ESRCH
+      Process.waitpid(pid)
+    rescue Errno::ESRCH, Errno::ECHILD
       nil
     end
     @pids.replace(@saved[0])
     @strikes.replace(@saved[1])
-    @waiters.replace(@saved[2])
   end
 
   def stub_daemon
     pid = Process.spawn("sleep", "60", out: File::NULL, err: File::NULL)
-    Process.detach(pid)
     @spawned << pid
     pid
   end
@@ -83,7 +85,6 @@ class TestTtsSupervisor < Minitest::Test
     )
     writer.close
     assert_equal "ready\n", reader.gets, "worker must install its TERM handler before retirement"
-    Process.detach(pid)
     @spawned << pid
     slot = 95
     @pids[slot] = pid
@@ -96,6 +97,40 @@ class TestTtsSupervisor < Minitest::Test
   ensure
     reader&.close
     writer&.close
+  end
+
+  def test_retire_socket_does_not_unlink_or_signal_an_unowned_worker_socket
+    Dir.mktmpdir("master_tts_foreign") do |root|
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      Sup.stub(:pool_size, 2) do
+        path = Sup.socket_path(root, index: 0)
+        server = UNIXServer.new(path)
+
+        Master::Io::Exec.stub(:capture2, ->(*_args, **_options) {
+          flunk "retire_socket must not search for foreign workers by command line"
+        }) do
+          refute Sup.retire_socket(path, root:),
+                 "a socket without a worker child owned by this process must be left alone"
+        end
+
+        assert File.socket?(path), "the foreign worker socket must not be unlinked"
+        server.close
+      ensure
+        server&.close
+      end
+    end
+  end
+
+  def test_retire_socket_rejects_a_noncanonical_path_without_touching_slot_zero
+    Dir.mktmpdir("master_tts_bad_path") do |root|
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      arbitrary = File.join(root, ".master", "other.sock")
+
+      Sup.stub(:pool_size, 2) do
+        refute Sup.retire_socket(arbitrary, root:)
+        refute File.exist?(Sup.socket_path(root, index: 0))
+      end
+    end
   end
 
   def test_retire_daemon_is_safe_when_nothing_was_spawned
