@@ -980,26 +980,30 @@ module Dilla
       events = []
       base = slot[:start_bar] * @groove.bar_s
       span = slot[:bars] * @groove.bar_s
-      last_midi = nil
-      motif_index = 0
-      rhythm.each do |step, length|
-        t = step_time(slot[:start_bar], step.to_f, "melody")
-        next unless t < base + span
-        next if motif.empty? && step.to_f.positive? && @rng.chance(0.08)
+      last_midi = @last_melody_midi
+      motif_index = (slot[:start_bar].to_f * rhythm.length).round
+      slot[:bars].ceil.times do |bar_offset|
+        rhythm.each do |step, length|
+          bar = slot[:start_bar] + bar_offset
+          t = step_time(bar, step.to_f, "melody")
+          next unless t < base + span
+          next if motif.empty? && step.to_f.positive? && @rng.chance(0.08)
 
-        strong = (step.to_f % 4).zero?
-        midi = if motif.empty?
-                 pick_melody_note(chord, scale, root_pc, strong, style, last_midi)
-               else
-                 note = motif[motif_index % motif.length]
-                 motif_index += 1
-                 note
-               end
-        last_midi = midi
-        dur = length * @groove.sixteenth_s * 0.92
-        events << Event.new(t, dur, :melody, midi, 0.62 + @rng.jitter_ms(5.0) / 100.0, nil)
-        events << Event.new(t, dur, :melody, midi + 12, 0.3, nil) if style == "horn_stabs" && strong
+          strong = (step.to_f % 4).zero?
+          midi = if motif.empty?
+                   pick_melody_note(chord, scale, root_pc, strong, style, last_midi)
+                 else
+                   note = motif[motif_index % motif.length]
+                   motif_index += 1
+                   note
+                 end
+          last_midi = midi
+          dur = length * @groove.sixteenth_s * 0.92
+          events << Event.new(t, dur, :melody, midi, 0.62 + @rng.jitter_ms(5.0) / 100.0, nil)
+          events << Event.new(t, dur, :melody, midi + 12, 0.3, nil) if style == "horn_stabs" && strong
+        end
       end
+      @last_melody_midi = last_midi
       events
     end
 
