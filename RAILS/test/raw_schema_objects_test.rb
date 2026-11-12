@@ -19,7 +19,7 @@ require "minitest/autorun"
 # uses them fails in the quietest possible way:
 #
 #   Post.search / Port.search             raise "no such table"
-#   NightlySearchIndexRebuildJob          `return unless data_source_exists?`
+#   NightlySearchIndexRebuildJob          checks the connection table inventory
 #   Ports::Importer#rebuild_fts           rescue StandardError, log a warning
 #
 # Two of those three are guards that were added because the thing they guard
