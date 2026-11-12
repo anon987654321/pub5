@@ -807,75 +807,121 @@ module Operator
       paths = [ROOT, chdir, Dir.tmpdir]
       display = label.to_s.empty? ? nil : "#{label}: "
       Master::Trace::Dmesg.status(heartbeat_unit, "#{label} running") if label
+      failure = capture_disk_preflight(paths:, display:, label:, heartbeat_unit:)
+      return failure if failure
+
+      ok, output, exitstatus = capture_command(
+        cmd, chdir:, env:, unbundled:, timeout_s:, paths:, disk_poll_s:,
+        display:, label:, heartbeat_unit:
+      )
+      [ok, output.lines.map(&:rstrip).reject(&:empty?), exitstatus]
+    rescue StandardError => error
+      [false, ["#{error.class}: #{error.message}"], 1]
+    end
+
+    def capture_disk_preflight(paths:, display:, label:, heartbeat_unit:)
       initial = disk_state(paths)
-      if initial[:critical]
-        reason = "#{display}#{disk_stop_reason(initial, prefix: "disk preflight")}"
-        Master::Trace::Dmesg.status(heartbeat_unit, reason)
-        return [false, [reason], 1]
-      end
+      return unless initial[:critical]
 
+      reason = "#{display}#{disk_stop_reason(initial, prefix: "disk preflight")}"
+      Master::Trace::Dmesg.status(heartbeat_unit, reason)
+      [false, [reason], 1]
+    end
+
+    def capture_command(cmd, chdir:, env:, unbundled:, timeout_s:, paths:, disk_poll_s:,
+                        display:, label:, heartbeat_unit:)
       runner = lambda do
-        output = +""
-        stopped_for = nil
-        stop_lock = Mutex.new
-        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        watchdog = nil
-        Open3.popen2e(Master::Io::ProcessSpawn.environment(ENV.to_h.merge(stage_child_env(env))), *cmd, chdir:, pgroup: true) do |stdin, stream, wait|
-          stdin.close
-          last_heartbeat = 0.0
-          watchdog = Thread.new do
-            loop do
-              sleep [disk_poll_s.to_f, 0.01].max
-              elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
-              if label && elapsed >= last_heartbeat + 28
-                Master::Trace::Dmesg.status(heartbeat_unit, "#{label} running, elapsed #{elapsed.round}s")
-                last_heartbeat = elapsed
-              end
-              if timeout_s && elapsed >= timeout_s.to_f
-                stop_lock.synchronize { stopped_for ||= "#{display}check child timeout after #{timeout_s.to_f.round(1)}s" }
-                terminate_child_group(wait.pid)
-                break
-              end
-
-              current = disk_state(paths)
-              next unless current[:critical]
-
-              stop_lock.synchronize { stopped_for ||= "#{display}#{disk_stop_reason(current, prefix: "disk guard")}" }
-              terminate_child_group(wait.pid)
-              break
-            end
-          end
-
-          stream.each_line do |line|
-            output << line
-            Master::Trace::Dmesg.terminal_write do |io|
-              io.write(line)
-              io.flush
-            end
-          end
-          status = wait.value
-          watchdog.kill if watchdog&.alive?
-          watchdog&.join
-          stopped_for = stop_lock.synchronize { stopped_for }
-          if stopped_for
-            output << "#{stopped_for}\n"
-            [false, output, stopped_for.include?("check child timeout") ? 124 : 1]
-          else
-            [status.success?, output, status.exitstatus]
-          end
-        ensure
-          watchdog&.kill
-          watchdog&.join
-        end
+        capture_child_process(
+          cmd, chdir:, env:, timeout_s:, paths:, disk_poll_s:, display:, label:, heartbeat_unit:
+        )
       end
-      ok, out, exitstatus = if unbundled && defined?(Bundler)
-                              Bundler.with_unbundled_env { runner.call }
-                            else
-                              runner.call
-                            end
-      [ok, out.lines.map(&:rstrip).reject(&:empty?), exitstatus]
-    rescue StandardError => e
-      [false, ["#{e.class}: #{e.message}"], 1]
+      unbundled && defined?(Bundler) ? Bundler.with_unbundled_env { runner.call } : runner.call
+    end
+
+    def capture_child_process(cmd, chdir:, env:, timeout_s:, paths:, disk_poll_s:,
+                              display:, label:, heartbeat_unit:)
+      output = +""
+      stop_lock = Mutex.new
+      stopped = { reason: nil }
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      child_env = Master::Io::ProcessSpawn.environment(ENV.to_h.merge(stage_child_env(env)))
+      Open3.popen2e(child_env, *cmd, chdir:, pgroup: true) do |stdin, stream, wait|
+        stdin.close
+        capture_child_session(
+          output:, stream:, wait:, started:, timeout_s:, paths:, disk_poll_s:, display:,
+          label:, heartbeat_unit:, stop_lock:, stopped:
+        )
+      end
+    end
+
+    def capture_child_session(output:, stream:, wait:, started:, timeout_s:, paths:, disk_poll_s:,
+                              display:, label:, heartbeat_unit:, stop_lock:, stopped:)
+      watchdog = start_capture_watchdog(
+        wait.pid, started:, timeout_s:, paths:, disk_poll_s:, display:, label:,
+        heartbeat_unit:, stop_lock:, stopped:
+      )
+      stream.each_line { |line| forward_capture_line(output, line) }
+      status = wait.value
+      watchdog.kill if watchdog&.alive?
+      watchdog&.join
+      stopped_for = stop_lock.synchronize { stopped[:reason] }
+      capture_child_outcome(status, output, stopped_for)
+    ensure
+      watchdog&.kill
+      watchdog&.join
+    end
+
+    def start_capture_watchdog(pid, started:, timeout_s:, paths:, disk_poll_s:, display:,
+                               label:, heartbeat_unit:, stop_lock:, stopped:)
+      Thread.new do
+        capture_child_watchdog(
+          pid, started:, timeout_s:, paths:, disk_poll_s:, display:, label:,
+          heartbeat_unit:, stop_lock:, stopped:
+        )
+      end
+    end
+
+    def capture_child_watchdog(pid, started:, timeout_s:, paths:, disk_poll_s:, display:,
+                               label:, heartbeat_unit:, stop_lock:, stopped:)
+      last_heartbeat = 0.0
+      loop do
+        sleep [disk_poll_s.to_f, 0.01].max
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        if label && elapsed >= last_heartbeat + 28
+          Master::Trace::Dmesg.status(heartbeat_unit, "#{label} running, elapsed #{elapsed.round}s")
+          last_heartbeat = elapsed
+        end
+        reason = capture_watchdog_stop_reason(elapsed, timeout_s:, paths:, display:)
+        next unless reason
+
+        stop_lock.synchronize { stopped[:reason] ||= reason }
+        terminate_child_group(pid)
+        break
+      end
+    end
+
+    def capture_watchdog_stop_reason(elapsed, timeout_s:, paths:, display:)
+      return "#{display}check child timeout after #{timeout_s.to_f.round(1)}s" if timeout_s && elapsed >= timeout_s.to_f
+
+      current = disk_state(paths)
+      current[:critical] ? "#{display}#{disk_stop_reason(current, prefix: "disk guard")}" : nil
+    end
+
+    def forward_capture_line(output, line)
+      output << line
+      Master::Trace::Dmesg.terminal_write do |io|
+        io.write(line)
+        io.flush
+      end
+    end
+
+    def capture_child_outcome(status, output, stopped_for)
+      if stopped_for
+        output << "#{stopped_for}\n"
+        [false, output, stopped_for.include?("check child timeout") ? 124 : 1]
+      else
+        [status.success?, output, status.exitstatus]
+      end
     end
 
     def child_timeout_s
