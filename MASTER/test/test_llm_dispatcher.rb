@@ -806,6 +806,30 @@ class TestLLMDispatcher < Minitest::Test
     [dispatcher, asked]
   end
 
+  def test_streaming_status_starts_on_the_first_nonempty_response_chunk
+    dispatcher, = recording_dispatcher
+    bus = dispatcher.instance_variable_get(:@bus)
+    chunks = []
+    dispatcher.define_singleton_method(:send_llm_request) do |_model, *_args, **_kwargs, &on_chunk|
+      on_chunk.call("")
+      on_chunk.call("hello")
+      on_chunk.call(" world")
+      Master::Result.ok("hello world")
+    end
+
+    result = Master.stub(:any_api_key_present?, true) do
+      dispatcher.send_with_cache(
+        "routed-model", [{ role: "user", content: "hi" }], stream: true
+      ) { |chunk| chunks << chunk }
+    end
+
+    assert_equal "hello world", result.value!
+    assert_equal ["", "hello", " world"], chunks
+    starts = bus.events.select { |name, _payload| name == "llm:stream_started" }
+    assert_equal 1, starts.size
+    assert_equal "routed-model", starts.first.last[:model]
+  end
+
   def test_the_catalog_verifies_zero_from_the_providers_row_not_the_price_column
     require "io/catalog_index"
     Dir.mktmpdir do |dir|
