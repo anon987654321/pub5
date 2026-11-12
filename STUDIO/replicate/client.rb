@@ -186,7 +186,7 @@ module Studio
 
         def training_trigger!(value)
           trigger = value.to_s
-          raise ArgumentError, "trigger_word must be a simple 1-64 character token" unless trigger.match?(/\\A[A-Za-z][A-Za-z0-9_-]{0,63}\\z/)
+          raise ArgumentError, "trigger_word must be a simple 1-64 character token" unless trigger.match?(/\A[A-Za-z][A-Za-z0-9_-]{0,63}\z/)
 
           trigger
         end
@@ -204,7 +204,7 @@ module Studio
           normalized = {}
           value.each do |key, item|
             name = key.to_s
-            raise ArgumentError, "invalid trainer input key #{name.inspect}" unless name.match?(/\\A[a-z][a-z0-9_]*\\z/)
+            raise ArgumentError, "invalid trainer input key #{name.inspect}" unless name.match?(/\A[a-z][a-z0-9_]*\z/)
             raise ArgumentError, "extra_input cannot override #{name}" if protected.include?(name)
             raise ArgumentError, "duplicate trainer input key #{name}" if normalized.key?(name)
 
@@ -377,7 +377,7 @@ module Studio
       def models(limit: 100, query: nil)
         requested = if limit.is_a?(Integer)
                       limit
-                    elsif limit.is_a?(String) && limit.match?(/\\A\\d+\\z/)
+                    elsif limit.is_a?(String) && limit.match?(/\A\\d+\z/)
                       Integer(limit, 10)
                     end
         raise ArgumentError, "model limit must be a positive integer" unless requested&.positive?
