@@ -46,6 +46,19 @@ class TestLoraConsent < Minitest::Test
     assert report.fetch("blockers").any? { |item| item.fetch("id") == "subject_consent" }
   end
 
+  def test_subject_consent_flags_without_a_written_evidence_file_do_not_pass
+    write_record(
+      subject_consent: {
+        "likeness_generation" => true,
+        "provider_processing" => true
+      }
+    )
+    report = Consent.validate(subject: "probe", subject_directory: @subject_dir)
+
+    refute report.fetch("valid")
+    assert report.fetch("errors").any? { |error| error.include?("subject_consent") }
+  end
+
   def test_missing_record_blocks_without_creating_or_repairing_it
     FileUtils.mkdir_p(@subject_dir, mode: 0o700)
     File.chmod(0o700, @subject_dir)
@@ -156,10 +169,17 @@ class TestLoraConsent < Minitest::Test
     }.merge(overrides)
   end
 
+  def subject_consent_entry
+    evidence_entry(
+      "covers" => %w[likeness_generation provider_processing],
+      "stored_at" => "evidence/subject-consent.txt"
+    )
+  end
+
   def write_record(
     subject: "probe",
     evidence: { "example_source" => evidence_entry },
-    subject_consent: { "likeness_generation" => true, "provider_processing" => true },
+    subject_consent: { "likeness_generation" => true, "provider_processing" => true, "evidence" => subject_consent_entry },
     source_rights: nil
   )
     FileUtils.mkdir_p(@subject_dir, mode: 0o700)
@@ -170,6 +190,9 @@ class TestLoraConsent < Minitest::Test
     evidence_path = File.join(evidence_dir, "rights-note.txt")
     File.write(evidence_path, "synthetic rights evidence\n", mode: "w", perm: 0o600)
     File.chmod(0o600, evidence_path)
+    subject_evidence_path = File.join(evidence_dir, "subject-consent.txt")
+    File.write(subject_evidence_path, "synthetic subject consent evidence\n", mode: "w", perm: 0o600)
+    File.chmod(0o600, subject_evidence_path)
     source_rights ||= {
       "generation_use" => true,
       "provider_processing" => true,
