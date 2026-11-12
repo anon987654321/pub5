@@ -252,7 +252,7 @@ class TestIdeaPictureOutput < Minitest::Test
       error = assert_raises(RuntimeError) { picture.write("portrait", film: false) }
       assert_match(/missing inputs used by the still renderer/, error.message)
       assert_match(/aspect_ratio/, error.message)
-      assert_empty Dir.children(dir).grep(/\\.jpg\\z/)
+      assert_empty Dir.children(dir).grep(/\\.jpg\z/)
     end
   end
 
@@ -274,7 +274,7 @@ class TestIdeaPictureOutput < Minitest::Test
       error = assert_raises(RuntimeError) { picture.write("portrait", film: true) }
       assert_match(/film model/, error.message)
       assert_match(/duration/, error.message)
-      assert_empty Dir.children(dir).grep(/\\.jpg\\z/)
+      assert_empty Dir.children(dir).grep(/\\.jpg\z/)
     end
   end
 
