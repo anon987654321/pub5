@@ -86,6 +86,10 @@ class TestAgent < Minitest::Test
     Fiber[:master_visitor] = previous_visitor
   end
 
+  def test_nsfw_task_never_triggers_external_evidence_preflight
+    assert_equal false, @agent.send(:prepare_evidence_for?, "look up current adult content laws", "nsfw")
+  end
+
   def test_unknown_factual_turn_gets_evidence_preflight
     agent = @agent
     knowledge = Object.new
