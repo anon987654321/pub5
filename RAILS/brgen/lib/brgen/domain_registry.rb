@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "yaml"
+
 module Brgen
   class DomainRegistry
     Entry = Data.define(:domain, :city, :country, :locale, :currency, :marketplace_subdomain)
@@ -56,56 +58,73 @@ module Brgen
 
     LOCAL_HOSTS = [ "127.0.0.1", "localhost" ].freeze
 
-    # Entry.locale is the language of the city, not a promise that we ship a
-    # YAML file for it. LocaleBridge.resolve is what I18n.locale becomes —
-    # da/sv/fi/is → nb, and everything else → en. Do not add a thin locale
-    # file that is a copy of another language; that is a claim.
-    ENTRIES = [
-      Entry.new("brgen.no", "Bergen", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("longyearbyn.no", "Longyearbyen", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("oshlo.no", "Oslo", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("stvanger.no", "Stavanger", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("trmso.no", "Tromsø", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("trndheim.no", "Trondheim", "NO", :nb, "NOK", "markedsplass"),
-      Entry.new("reykjavk.is", "Reykjavik", "IS", :is, "ISK", "markadur"),
-      Entry.new("kbenhvn.dk", "København", "DK", :da, "DKK", "markedsplads"),
-      Entry.new("gtebrg.se", "Göteborg", "SE", :sv, "SEK", "marknadsplats"),
-      Entry.new("mlmoe.se", "Malmö", "SE", :sv, "SEK", "marknadsplats"),
-      Entry.new("stholm.se", "Stockholm", "SE", :sv, "SEK", "marknadsplats"),
-      Entry.new("hlsinki.fi", "Helsinki", "FI", :fi, "EUR", "markkinapaikka"),
-      Entry.new("brmingham.uk", "Birmingham", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("cardff.uk", "Cardiff", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("edinbrgh.uk", "Edinburgh", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("glasgw.uk", "Glasgow", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("lndon.uk", "London", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("lverpool.uk", "Liverpool", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("mnchester.uk", "Manchester", "GB", :"en-GB", "GBP", "marketplace"),
-      Entry.new("amstrdam.nl", "Amsterdam", "NL", :nl, "EUR", "marktplaats"),
-      Entry.new("rottrdam.nl", "Rotterdam", "NL", :nl, "EUR", "marktplaats"),
-      Entry.new("utrcht.nl", "Utrecht", "NL", :nl, "EUR", "marktplaats"),
-      Entry.new("brssels.be", "Brussels", "BE", :"fr-BE", "EUR", "marche"),
-      Entry.new("zrich.ch", "Zürich", "CH", :"de-CH", "CHF", "marktplatz"),
-      Entry.new("lchtenstein.li", "Liechtenstein", "LI", :"de-LI", "CHF", "marktplatz"),
-      Entry.new("frankfrt.de", "Frankfurt", "DE", :de, "EUR", "marktplatz"),
-      Entry.new("brdeaux.fr", "Bordeaux", "FR", :fr, "EUR", "marche"),
-      Entry.new("mrseille.fr", "Marseille", "FR", :fr, "EUR", "marche"),
-      Entry.new("mlan.it", "Milan", "IT", :it, "EUR", "mercato"),
-      Entry.new("lisbon.pt", "Lisbon", "PT", :pt, "EUR", "mercado"),
-      Entry.new("wrsawa.pl", "Warszawa", "PL", :pl, "PLN", "marktplatz"),
-      Entry.new("gdnsk.pl", "Gdańsk", "PL", :pl, "PLN", "marktplatz"),
-      Entry.new("austn.us", "Austin", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("chcago.us", "Chicago", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("denvr.us", "Denver", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("dllas.us", "Dallas", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("dtroit.us", "Detroit", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("houstn.us", "Houston", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("lsangeles.com", "Los Angeles", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("mnnesota.com", "Minneapolis / Minnesota", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("newyrk.us", "New York", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("prtland.com", "Portland", "US", :"en-US", "USD", "marketplace"),
-      Entry.new("wshingtondc.com", "Washington DC", "US", :"en-US", "USD", "marketplace")
-    ].freeze
+    # One city catalogue carries the identity used by host resolution and the
+    # additional location facts used by deterministic city seeding. Operator
+    # ownership, DNS/TLS readiness and public network membership are separate
+    # facts and deliberately remain outside this file.
+    CITY_CATALOGUE_PATH = File.expand_path("../../config/cities.yml", __dir__).freeze
+    CITY_RECORDS = begin
+      records = YAML.safe_load_file(CITY_CATALOGUE_PATH, aliases: false)
+      required_keys = %w[
+        city country currency domain latitude longitude locale marketplace_subdomain time_zone
+      ].sort
+      raise ArgumentError, "city catalogue must contain an array of records" unless records.is_a?(Array) && !records.empty?
 
+      domains = records.map.with_index do |record, index|
+        unless record.is_a?(Hash) && record.keys.sort == required_keys
+          raise ArgumentError, "city catalogue record #{index + 1} has an invalid field set"
+        end
+
+        %w[domain city country locale currency time_zone marketplace_subdomain].each do |key|
+          value = record.fetch(key)
+          unless value.is_a?(String) && !value.empty?
+            raise ArgumentError, "city catalogue record #{index + 1} has invalid #{key}"
+          end
+        end
+
+        unless record.fetch("domain").match?(/\A[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\z/)
+          raise ArgumentError, "city catalogue record #{index + 1} has invalid domain"
+        end
+        unless record.fetch("country").match?(/\A[A-Z]{2}\z/) &&
+            record.fetch("locale").match?(/\A[a-z]{2}(?:-[A-Z]{2})?\z/) &&
+            record.fetch("currency").match?(/\A[A-Z]{3}\z/)
+          raise ArgumentError, "city catalogue record #{index + 1} has invalid country, locale or currency"
+        end
+        unless record.fetch("marketplace_subdomain").match?(/\A[a-z0-9-]+\z/) &&
+            record.fetch("time_zone").match?(/\A[A-Za-z0-9_+-]+(?:\/[A-Za-z0-9_+-]+)+\z/)
+          raise ArgumentError, "city catalogue record #{index + 1} has invalid subdomain or time zone"
+        end
+
+        latitude = record.fetch("latitude")
+        longitude = record.fetch("longitude")
+        unless latitude.is_a?(Numeric) && latitude.between?(-90, 90) &&
+            longitude.is_a?(Numeric) && longitude.between?(-180, 180)
+          raise ArgumentError, "city catalogue record #{index + 1} has invalid coordinates"
+        end
+
+        record.fetch("domain")
+      end
+      raise ArgumentError, "city catalogue contains duplicate domains" unless domains.uniq.length == domains.length
+
+      records.map do |record|
+        record.transform_values { |value| value.is_a?(String) ? value.freeze : value }.freeze
+      end.freeze
+    rescue Psych::Exception => error
+      raise ArgumentError, "city catalogue could not be parsed: #{error.message}"
+    end
+
+    # Entry remains the stable, narrow host-resolution API. Additional city
+    # metadata is read from CITY_RECORDS by CitySeed rather than widening Entry.
+    ENTRIES = CITY_RECORDS.map do |record|
+      Entry.new(
+        record.fetch("domain"),
+        record.fetch("city"),
+        record.fetch("country"),
+        record.fetch("locale").to_sym,
+        record.fetch("currency"),
+        record.fetch("marketplace_subdomain")
+      )
+    end.freeze
     ENTRIES_BY_DOMAIN = ENTRIES.index_by(&:domain).freeze
 
     # The city apexes that belong to the public city network. This is deliberately
@@ -152,8 +171,8 @@ module Brgen
 
     # The city apexes that actually serve this app. Every other ENTRIES row is a
     # domain we intend to run and have wired into OPERATOR.sh#ALL_DOMAINS, but
-    # relayd only answers for an apex whose certificate exists on disk — see
-    # the old backlog "City vanity TLS". LIVE_DOMAINS stays deployment evidence, not
+    # relayd only answers for an apex whose certificate exists on disk — see the
+    # old backlog "City vanity TLS". LIVE_DOMAINS stays deployment evidence, not
     # navigation data.
     #
     # Ground truth is `grep keypair /etc/relayd.conf` on vm23, and domain_alignment
