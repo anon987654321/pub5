@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "fileutils"
+require "tmpdir"
 require_relative "../lib/permission_audit"
 
 class TestPermissionAudit < Minitest::Test
@@ -90,6 +92,21 @@ class TestPermissionAudit < Minitest::Test
 
     assert_equal 1, failures.length
     assert_includes failures.first, "is a symlink"
+  end
+
+  def test_path_component_symlinks_are_found_not_only_leaf_symlinks
+    Dir.mktmpdir("permission-audit") do |root|
+      real_dir = File.join(root, "real")
+      FileUtils.mkdir_p(real_dir)
+      target = File.join(real_dir, "brgen.env")
+      File.write(target, "SECRET_KEY_BASE=private\n")
+      redirected = File.join(root, "redirected")
+      File.symlink(real_dir, redirected)
+
+      refute Deploy::PermissionAudit.path_contains_symlink?(target)
+      assert Deploy::PermissionAudit.path_contains_symlink?(File.join(redirected, "brgen.env"))
+      assert Deploy::PermissionAudit.path_contains_symlink?(File.join(redirected, "missing.env"))
+    end
   end
 
   def test_a_daemon_log_owned_by_root_fails
