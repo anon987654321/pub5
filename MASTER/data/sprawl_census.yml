@@ -60,9 +60,14 @@
 # checkout four files smaller than the one carrying it and even a commit that
 # adds nothing could not pass the gate. No path added by this session; the
 # count is corrected, not raised above what HEAD already contains.
+# 2026-11-13 (2): upstream commits between the re-set above and this one
+# (read-only tool/model/MCP inventory, agent_work bootstrap artifacts among
+# them) bought ten paths into two new directories; ls-files and ls-tree agree
+# on 7297 files and the growth instrument reads 889 directories. No path
+# added by this session; the count follows what HEAD already contains.
 lone_dirs: 37
 stutter: 0
 vague_names: 0
-tracked_files: 7287
-tracked_directories: 887
+tracked_files: 7297
+tracked_directories: 889
 corpus: 4127
