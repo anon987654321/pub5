@@ -161,6 +161,30 @@ class GitOperationsTest < Minitest::Test
     refute @git.dirty?(".")
   end
 
+  def test_commit_refuses_a_stale_content_receipt
+    write("lib/verified.rb", "VERIFIED = 1\n")
+    stale = Digest::SHA256.hexdigest("VERIFIED = 0\n")
+    before = @git.head
+
+    error = assert_raises(RuntimeError) do
+      @git.commit("stale receipt", paths: ["lib/verified.rb"], expected_hashes: { "lib/verified.rb" => stale })
+    end
+
+    assert_includes error.message, "changed since its proof"
+    assert_equal before, @git.head
+    assert_equal "", sh("git", "diff", "--cached", "--name-only", chdir: @repo)
+  end
+
+  def test_commit_accepts_a_matching_content_receipt
+    content = "VERIFIED = 1\n"
+    write("lib/verified.rb", content)
+
+    @git.commit("verified write", paths: ["lib/verified.rb"],
+                expected_hashes: { "lib/verified.rb" => Digest::SHA256.hexdigest(content) })
+
+    assert_includes sh("git", "show", "--format=", "--name-only", "HEAD", chdir: @repo), "lib/verified.rb"
+  end
+
   def test_commit_normalizes_subject_case_prefix_and_layout
     write("lib/style.rb", "# style\n")
 
@@ -209,8 +233,8 @@ class GitOperationsTest < Minitest::Test
     argv = []
     pathspecs = []
 
-    @git.define_singleton_method(:git!) do |*args|
-      argv << args
+    @git.define_singleton_method(:git!) do |*args, **kwargs|
+      argv << [args, kwargs]
       argument = args.find { |value| value.start_with?("--pathspec-from-file=") }
       pathspecs << File.binread(argument.delete_prefix("--pathspec-from-file=")) if argument
       ""
@@ -218,9 +242,9 @@ class GitOperationsTest < Minitest::Test
 
     @git.commit("bulk change", paths:)
 
-    assert_equal 2, argv.length
-    assert_equal paths, pathspecs.first.split("\0").reject(&:empty?)
-    refute argv.flatten.any? { |arg| paths.include?(arg) }, "large path sets must not become argv entries"
+    assert_equal %w[read-tree add commit], argv.map { |args, _kwargs| args.first }
+    assert_equal [paths, paths], pathspecs.map { |data| data.split("\0").reject(&:empty?) }
+    refute argv.flat_map(&:first).any? { |arg| paths.include?(arg) }, "large path sets must not become argv entries"
   end
 
   def test_commit_refuses_without_paths
