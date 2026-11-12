@@ -132,13 +132,20 @@ module Studio
           return ["#{source}: evidence entry must be a mapping"]
         end
 
-        granted_by = entry["granted_by"].to_s.strip
-        errors << "#{source}: granted_by is missing" if granted_by.empty?
+        granted_by = entry["granted_by"]
+        unless granted_by.is_a?(String) && !granted_by.strip.empty?
+          errors << "#{source}: granted_by must name the person or organisation granting permission"
+        end
 
-        begin
-          Date.iso8601(entry["granted_on"].to_s)
-        rescue Date::Error
-          errors << "#{source}: granted_on must be an ISO date (YYYY-MM-DD)"
+        granted_on = entry["granted_on"]
+        unless granted_on.is_a?(String)
+          errors << "#{source}: granted_on must be a quoted ISO date (YYYY-MM-DD)"
+        else
+          begin
+            Date.iso8601(granted_on)
+          rescue Date::Error
+            errors << "#{source}: granted_on must be a quoted ISO date (YYYY-MM-DD)"
+          end
         end
 
         covers = entry["covers"]
@@ -147,9 +154,9 @@ module Studio
         missing = REQUIRED_COVERAGE - covers
         errors << "#{source}: covers must include #{missing.join(" and ")}" unless missing.empty?
 
-        stored_at = entry["stored_at"].to_s
-        evidence_path = private_evidence_file(stored_at, directory:)
-        errors << "#{source}: stored_at must name an existing private, non-symlink evidence file inside the subject directory" unless evidence_path
+        stored_at = entry["stored_at"]
+        evidence_path = private_evidence_file(stored_at, directory:) if stored_at.is_a?(String) && stored_at != "consent.yml"
+        errors << "#{source}: stored_at must name a separate, existing private, non-symlink evidence file inside the subject directory" unless evidence_path
         errors
       end
       private_class_method :validate_evidence
