@@ -645,8 +645,9 @@ end
     @cli.instance_variable_set(:@reading_input, false)
     @cli.instance_variable_set(:@spinner_row_visible, true)
 
-    @cli.send(:foreign_write_begin, io)
-    io.puts("llm0: quota exceeded")
+    @cli.send(:terminal_write, io:) do |target|
+      target.puts("llm0: quota exceeded")
+    end
 
     assert_equal "\r\e[Kllm0: quota exceeded\n", io.buffer
     refute @cli.instance_variable_get(:@spinner_row_visible)
