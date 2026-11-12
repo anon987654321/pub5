@@ -231,7 +231,8 @@ class TestWebChat < Minitest::Test
 
     Master::Io::WebChat::PROFILE_MUTEX.synchronize do
       chat.send(:cleanup_browser, browser)
-      assert_same native_worker, Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+      cleanup_worker = Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+      assert cleanup_worker&.alive?, "the lease tracks the native cleanup worker"
       assert_raises(Master::Io::WebChat::ProviderError) do
         chat.send(:refuse_if_cleanup_pending!)
       end
@@ -239,6 +240,7 @@ class TestWebChat < Minitest::Test
 
     release << true
     native_worker.join(1)
+    cleanup_worker&.join(1)
     Master::Io::WebChat::PROFILE_MUTEX.synchronize do
       chat.send(:refuse_if_cleanup_pending!)
       assert_nil Master::Io::WebChat::PROFILE_CLEANUP[:thread]
@@ -246,7 +248,38 @@ class TestWebChat < Minitest::Test
   ensure
     release << true if release
     native_worker&.join(1)
-    Master::Io::WebChat::PROFILE_MUTEX.synchronize { Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil }
+    cleanup_worker&.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil
+      Master::Io::WebChat::PROFILE_CLEANUP[:failed] = nil
+    end
+  end
+
+  def test_failed_browser_cleanup_keeps_the_profile_unavailable
+    chat = build_chat
+    browser = Object.new
+    browser.define_singleton_method(:quit) { raise IOError, "cleanup failed" }
+    worker = nil
+
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      chat.send(:cleanup_browser, browser)
+      worker = Master::Io::WebChat::PROFILE_CLEANUP[:thread]
+    end
+    worker.join(1)
+
+    assert_equal "IOError", Master::Io::WebChat::PROFILE_CLEANUP[:failed]
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      error = assert_raises(Master::Io::WebChat::ProviderError) do
+        chat.send(:refuse_if_cleanup_pending!)
+      end
+      assert_match(/cleanup failed.*shared profile is unavailable until restart/, error.message)
+    end
+  ensure
+    worker&.join(1)
+    Master::Io::WebChat::PROFILE_MUTEX.synchronize do
+      Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil
+      Master::Io::WebChat::PROFILE_CLEANUP[:failed] = nil
+    end
   end
 
   def test_slow_browser_cleanup_does_not_block_and_prevents_profile_reuse
@@ -276,6 +309,7 @@ class TestWebChat < Minitest::Test
     worker&.join(1)
     Master::Io::WebChat::PROFILE_MUTEX.synchronize do
       Master::Io::WebChat::PROFILE_CLEANUP[:thread] = nil
+      Master::Io::WebChat::PROFILE_CLEANUP[:failed] = nil
     end
   end
 end
