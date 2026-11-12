@@ -4,6 +4,7 @@ require "json"
 require "net/http"
 require "uri"
 require_relative "../../../io/lane_selection"
+require_relative "../../../io/web_chat"
 
 module Master
   module CLI
@@ -92,16 +93,9 @@ module Master
             Array(@rules.dig("ferrum_web_chat", "free_latest"))
           end
 
-          # Browser chat is the final remote fallback even when an API key
-          # exists but its provider is out of quota. Operators can disable this
-          # capability explicitly; it is not gated on having zero API keys.
-          def web_chat_enabled?
-            return false if ENV["MASTER_LOCAL_ONLY"] == "1"
-            return false if ENV["MASTER_NO_WEB_CHAT"] == "1"
-            return false if ENV["MASTER_WEB_CHAT"].to_s == "0"
-
-            true
-          end
+          # WebChat owns the shared keyless/explicit-opt-in policy so route
+          # discovery and the actual browser bridge cannot disagree.
+          def web_chat_enabled? = Master::Io::WebChat.enabled?(rules: @rules)
 
           def auto_keyless?
             @rules.dig("ferrum_web_chat", "auto_when_keyless") != false
