@@ -17,13 +17,12 @@ fallback_policy:
   # Error categories that stop retrying a model and move to the next one, read by
   # ModelRouter#failover_skip_categories.
   #
-  # Three things were wrong with this block and all three are why it did nothing.
-  # The key was written bare as `on:`, which YAML 1.1 parses as the boolean true —
-  # `fallback_policy["on"]` was nil and `fallback_policy[true]` held the list. It
-  # had no reader at all. And its vocabulary was invented: `network_error`,
-  # `refusal`, `insufficient_balance` and `quota_exceeded` are not Result
-  # categories this codebase produces, so wiring it as written would have matched
-  # nothing. These are the categories `Result.err(category:)` actually carries.
+  # The original key was written bare as `on:`, which YAML 1.1 parsed
+  # as boolean true; the reader therefore found no string key. The first
+  # proposed vocabulary also included names this runtime does not emit
+  # (`network_error`, `refusal`, `insufficient_balance`). The current list
+  # below uses actual Result categories, including the live adapter's
+  # `quota_exceeded` category.
   #
   # A rate-limited, quota-exhausted or out-of-budget model cannot succeed on
   # an immediate retry, so all three belong here, as does a model the provider
