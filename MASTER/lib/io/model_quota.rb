@@ -164,6 +164,18 @@ module Master
         begin
           return :fresh if provider_reading_fresh?(day:, now:)
 
+          # Capture local usage before the GET. Requests recorded while the
+          # provider is in flight are then subtracted from its returned remaining
+          # count, a conservative adjustment if the provider already saw them.
+          local_used_at_request = @mutex.synchronize do
+            with_state_lock do
+              data = load_data
+              data.fetch(day, {}).sum do |model, used|
+                FREE_RE.match?(model.to_s) ? used.to_i : 0
+              end
+            end
+          end
+
           # Network I/O stays outside the accounting mutex and state flock.
           # Local requests keep counting while the provider is slow or down.
           reading = fetch_free_model_daily_requests(key)
@@ -175,16 +187,11 @@ module Master
               row = data.dig("provider", OPENROUTER_LANE)
               return :fresh if fresh_provider_row?(row, day:, now:)
 
-              # Count from before the request. Calls made while it is in flight
-              # are subtracted as local delta: conservative, never overstated.
-              local_used = data.fetch(day, {}).sum do |model, used|
-                FREE_RE.match?(model.to_s) ? used.to_i : 0
-              end
               data["provider"] ||= {}
               data["provider"][OPENROUTER_LANE] = {
                 "day" => day,
                 "free_model_daily_requests" => reading,
-                "local_used_at_fetch" => local_used,
+                "local_used_at_fetch" => local_used_at_request,
                 "fetched_at" => now.to_f,
               }
               save_data(data)

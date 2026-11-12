@@ -268,6 +268,9 @@ class ModelQuotaForecastTest < Minitest::Test
               worker = Check.instance_variable_get(:@refresh_thread)
               Timeout.timeout(3) { worker.join } if worker
               assert_equal 1, requests
+              snapshot = Check.provider_quota_snapshot(day: Check.today_key)
+              assert_equal 1, snapshot[:local_requests_since_read]
+              assert_equal 48, snapshot[:remaining]
             ensure
               release << true
               first&.join(3)
