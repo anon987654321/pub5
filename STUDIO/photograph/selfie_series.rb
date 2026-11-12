@@ -28,18 +28,16 @@ module Studio
 
       IMAGE_EXTENSIONS = %w[jpg jpeg png webp].freeze
 
-      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil,
-                     consent: Studio::Lora::Consent)
+      def initialize(subject:, client: nil, directory: nil, scenes: SCENES, ledger_path: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = Array(scenes)
         raise ArgumentError, "selfie series needs at least one scene" if @scenes.empty?
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
-        @consent = consent
         @subject_directory = File.join(IdeaPicture::SUBJECTS, @subject)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:, consent: @consent,
+          subject: @subject, directory: @directory, client:,
           subject_directory: @subject_directory
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
@@ -50,10 +48,10 @@ module Studio
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
         # Consent is checked before a provider schema request, cleanup or render.
-        required = @consent.required_source_sets(
+        required = Studio::Lora::Consent.required_source_sets(
           subject: @subject, subject_directory: @subject_directory
         )
-        @consent.require!(
+        Studio::Lora::Consent.require!(
           subject: @subject, subject_directory: @subject_directory, required_sources: required
         )
         @series.validate_model!
