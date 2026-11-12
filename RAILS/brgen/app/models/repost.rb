@@ -55,6 +55,7 @@ class Repost < ApplicationRecord
   after_create_commit :notify_author
   # Announce is repost. This is the dependency 2.1 had on 1.1.
   after_create_commit :federate
+  after_commit :broadcast_post_counts, on: [ :create, :destroy ]
 
   # Reposting your own post is allowed — it is how you resurface something you
   # wrote, the same as on x.com — but you do not get notified about yourself.
@@ -78,5 +79,14 @@ class Repost < ApplicationRecord
       body: quoted? ? comment : strict_safe(:post)&.title,
       source: self
     )
+  end
+
+  private
+
+  # The counter cache changes on the repost row's commit. Publish that shared
+  # fact directly rather than touching/replacing a card with another reader's
+  # pressed repost button.
+  def broadcast_post_counts
+    Post.unscoped.find_by(id: post_id)&.broadcast_live_counts
   end
 end
