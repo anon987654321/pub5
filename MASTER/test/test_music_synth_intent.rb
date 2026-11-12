@@ -123,11 +123,13 @@ class TestMusicSynthIntent < Minitest::Test
     assert_equal :dilla_audio_diagnostic, result.value[:media]
     assert_match(/nothing is playing/, result.value[:output])
 
-    INTENT.instance_variable_set(:@player_pid, Process.pid)
+    child = Process.spawn(RbConfig.ruby, "-e", "sleep 30")
+    INTENT.instance_variable_set(:@player_pid, child)
     playing = INTENT.dispatch("i can't hear anything")
-    assert_match(/player process running \(pid #{Process.pid}\)/, playing.value[:output])
+    assert_match(/player process running \\(pid #{child}\\)/, playing.value[:output])
     assert_match(/MASTER can verify the player process/, playing.value[:output])
   ensure
+    INTENT.stop_player
     INTENT.instance_variable_set(:@player_pid, nil)
   end
 
